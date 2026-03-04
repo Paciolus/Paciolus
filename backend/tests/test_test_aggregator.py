@@ -18,6 +18,7 @@ from shared.testing_enums import RiskTier, Severity, score_to_risk_tier
 # MOCK DATACLASSES
 # =============================================================================
 
+
 @dataclass
 class MockEntry:
     row_number: int = 0
@@ -64,6 +65,7 @@ def _make_test_result(
 # SCORE_TO_RISK_TIER TESTS
 # =============================================================================
 
+
 class TestScoreToRiskTier:
     """Tests for score_to_risk_tier in shared testing_enums."""
 
@@ -72,30 +74,27 @@ class TestScoreToRiskTier:
         assert score_to_risk_tier(5) == RiskTier.LOW
         assert score_to_risk_tier(9.9) == RiskTier.LOW
 
-    def test_elevated_tier(self):
-        assert score_to_risk_tier(10) == RiskTier.ELEVATED
-        assert score_to_risk_tier(15) == RiskTier.ELEVATED
-        assert score_to_risk_tier(24.9) == RiskTier.ELEVATED
-
     def test_moderate_tier(self):
+        assert score_to_risk_tier(11) == RiskTier.MODERATE
+        assert score_to_risk_tier(15) == RiskTier.MODERATE
         assert score_to_risk_tier(25) == RiskTier.MODERATE
-        assert score_to_risk_tier(35) == RiskTier.MODERATE
-        assert score_to_risk_tier(49.9) == RiskTier.MODERATE
+
+    def test_elevated_tier(self):
+        assert score_to_risk_tier(26) == RiskTier.ELEVATED
+        assert score_to_risk_tier(35) == RiskTier.ELEVATED
+        assert score_to_risk_tier(50) == RiskTier.ELEVATED
 
     def test_high_tier(self):
-        assert score_to_risk_tier(50) == RiskTier.HIGH
+        assert score_to_risk_tier(51) == RiskTier.HIGH
         assert score_to_risk_tier(60) == RiskTier.HIGH
-        assert score_to_risk_tier(74.9) == RiskTier.HIGH
-
-    def test_critical_tier(self):
-        assert score_to_risk_tier(75) == RiskTier.CRITICAL
-        assert score_to_risk_tier(80) == RiskTier.CRITICAL
-        assert score_to_risk_tier(100) == RiskTier.CRITICAL
+        assert score_to_risk_tier(80) == RiskTier.HIGH
+        assert score_to_risk_tier(100) == RiskTier.HIGH
 
 
 # =============================================================================
 # CALCULATE_COMPOSITE_SCORE TESTS
 # =============================================================================
+
 
 class TestCalculateCompositeScore:
     """Tests for the calculate_composite_score function."""
@@ -202,10 +201,7 @@ class TestCalculateCompositeScore:
 
     def test_top_findings_limit(self):
         """Top findings respects top_n parameter."""
-        results = [
-            _make_test_result(f"Test {i}", Severity.LOW, [i], total=100)
-            for i in range(1, 11)
-        ]
+        results = [_make_test_result(f"Test {i}", Severity.LOW, [i], total=100) for i in range(1, 11)]
         result = calculate_composite_score(results, 100, top_n=3)
         assert len(result.top_findings) <= 3
 
@@ -239,6 +235,7 @@ class TestCalculateCompositeScore:
 
     def test_custom_row_accessor(self):
         """Custom row accessor for engines using different row identifiers."""
+
         @dataclass
         class PayrollEntry:
             _row_index: int = 0
@@ -261,16 +258,19 @@ class TestCalculateCompositeScore:
             PayrollFlagged(entry=PayrollEntry(_row_index=1), severity="high"),
             PayrollFlagged(entry=PayrollEntry(_row_index=2), severity="high"),
         ]
-        results = [PayrollTestResult(
-            test_name="PR-T1",
-            flag_rate=0.2,
-            entries_flagged=2,
-            flagged_entries=flagged,
-            severity="high",
-        )]
+        results = [
+            PayrollTestResult(
+                test_name="PR-T1",
+                flag_rate=0.2,
+                entries_flagged=2,
+                flagged_entries=flagged,
+                severity="high",
+            )
+        ]
 
         result = calculate_composite_score(
-            results, 10,
+            results,
+            10,
             row_accessor=lambda fe: fe.entry._row_index,
             severity_accessor=lambda fe: fe.severity,
             test_severity_accessor=lambda tr: tr.severity,

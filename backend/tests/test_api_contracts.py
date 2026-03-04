@@ -8,6 +8,7 @@ models and frontend expectations WITHOUT making HTTP requests.
 
 Strategy: Test model schemas directly via model_fields and model_json_schema.
 """
+
 from typing import get_args, get_origin
 
 import pytest
@@ -66,6 +67,7 @@ from shared.testing_response_schemas import (
 # Helpers
 # ═══════════════════════════════════════════════════════════════
 
+
 def get_field_names(model_cls) -> set:
     """Get all field names from a Pydantic model."""
     return set(model_cls.model_fields.keys())
@@ -91,17 +93,21 @@ def get_literal_values(model_cls, field_name: str) -> tuple:
 # Testing Tool Response Models
 # ═══════════════════════════════════════════════════════════════
 
+
 class TestTestingToolContracts:
     """Validate testing tool response models have expected structure."""
 
-    @pytest.mark.parametrize("model_cls,expected_fields", [
-        (JETestingResponse, {"composite_score", "test_results", "data_quality"}),
-        (APTestingResponse, {"composite_score", "test_results", "data_quality"}),
-        (PayrollTestingResponse, {"composite_score", "test_results", "data_quality"}),
-        (RevenueTestingResponse, {"composite_score", "test_results", "data_quality"}),
-        (FATestingResponse, {"composite_score", "test_results", "data_quality"}),
-        (InvTestingResponse, {"composite_score", "test_results", "data_quality"}),
-    ])
+    @pytest.mark.parametrize(
+        "model_cls,expected_fields",
+        [
+            (JETestingResponse, {"composite_score", "test_results", "data_quality"}),
+            (APTestingResponse, {"composite_score", "test_results", "data_quality"}),
+            (PayrollTestingResponse, {"composite_score", "test_results", "data_quality"}),
+            (RevenueTestingResponse, {"composite_score", "test_results", "data_quality"}),
+            (FATestingResponse, {"composite_score", "test_results", "data_quality"}),
+            (InvTestingResponse, {"composite_score", "test_results", "data_quality"}),
+        ],
+    )
     def test_standard_testing_response_fields(self, model_cls, expected_fields):
         """All standard testing tools must have composite_score, test_results, data_quality."""
         fields = get_field_names(model_cls)
@@ -153,7 +159,7 @@ class TestCompositeScoreContract:
 
     def test_risk_tier_literal_values(self):
         values = get_literal_values(CompositeScoreResponse, "risk_tier")
-        expected = {"low", "elevated", "moderate", "high", "critical"}
+        expected = {"low", "moderate", "elevated", "high"}
         assert set(values) == expected, f"risk_tier values {values} != {expected}"
 
 
@@ -179,15 +185,18 @@ class TestBenfordAnalysisContract:
 class TestTestResultContracts:
     """Validate test result models have consistent structure."""
 
-    @pytest.mark.parametrize("model_cls", [
-        JETestResultResponse,
-        APTestResultResponse,
-        ARTestResultResponse,
-        PayrollTestResultResponse,
-        RevenueTestResultResponse,
-        FATestResultResponse,
-        InvTestResultResponse,
-    ])
+    @pytest.mark.parametrize(
+        "model_cls",
+        [
+            JETestResultResponse,
+            APTestResultResponse,
+            ARTestResultResponse,
+            PayrollTestResultResponse,
+            RevenueTestResultResponse,
+            FATestResultResponse,
+            InvTestResultResponse,
+        ],
+    )
     def test_test_result_has_core_fields(self, model_cls):
         """All test result models must have test_name, test_key, test_tier, entries_flagged."""
         fields = get_field_names(model_cls)
@@ -197,14 +206,17 @@ class TestTestResultContracts:
         assert "entries_flagged" in fields, f"{model_cls.__name__} missing 'entries_flagged'"
         assert "severity" in fields, f"{model_cls.__name__} missing 'severity'"
 
-    @pytest.mark.parametrize("model_cls", [
-        JETestResultResponse,
-        APTestResultResponse,
-        ARTestResultResponse,
-        PayrollTestResultResponse,
-        FATestResultResponse,
-        InvTestResultResponse,
-    ])
+    @pytest.mark.parametrize(
+        "model_cls",
+        [
+            JETestResultResponse,
+            APTestResultResponse,
+            ARTestResultResponse,
+            PayrollTestResultResponse,
+            FATestResultResponse,
+            InvTestResultResponse,
+        ],
+    )
     def test_test_tier_literal_values(self, model_cls):
         """Test tier must be structural, statistical, or advanced."""
         values = get_literal_values(model_cls, "test_tier")
@@ -222,16 +234,26 @@ class TestTestResultContracts:
 # Diagnostic Tool Response Models
 # ═══════════════════════════════════════════════════════════════
 
+
 class TestDiagnosticContracts:
     """Validate diagnostic tool response models."""
 
     def test_trial_balance_core_fields(self):
         fields = get_field_names(TrialBalanceResponse)
         for required in (
-            "status", "balanced", "total_debits", "total_credits",
-            "difference", "row_count", "timestamp", "message",
-            "abnormal_balances", "materiality_threshold",
-            "risk_summary", "classification_quality", "balance_sheet_validation",
+            "status",
+            "balanced",
+            "total_debits",
+            "total_credits",
+            "difference",
+            "row_count",
+            "timestamp",
+            "message",
+            "abnormal_balances",
+            "materiality_threshold",
+            "risk_summary",
+            "classification_quality",
+            "balance_sheet_validation",
         ):
             assert required in fields, f"TrialBalanceResponse missing '{required}'"
 
@@ -316,15 +338,23 @@ class TestMovementLiteralContracts:
 # Engagement + Follow-Up Models
 # ═══════════════════════════════════════════════════════════════
 
+
 class TestEngagementContracts:
     """Validate engagement response models."""
 
     def test_engagement_response_fields(self):
         fields = get_field_names(EngagementResponse)
         for required in (
-            "id", "client_id", "period_start", "period_end", "status",
-            "materiality_basis", "performance_materiality_factor",
-            "trivial_threshold_factor", "created_by", "created_at",
+            "id",
+            "client_id",
+            "period_start",
+            "period_end",
+            "status",
+            "materiality_basis",
+            "performance_materiality_factor",
+            "trivial_threshold_factor",
+            "created_by",
+            "created_at",
         ):
             assert required in fields, f"EngagementResponse missing '{required}'"
 
@@ -357,8 +387,10 @@ class TestEngagementContracts:
     def test_materiality_response_fields(self):
         fields = get_field_names(MaterialityResponse)
         for required in (
-            "overall_materiality", "performance_materiality",
-            "trivial_threshold", "performance_materiality_factor",
+            "overall_materiality",
+            "performance_materiality",
+            "trivial_threshold",
+            "performance_materiality_factor",
         ):
             assert required in fields
 
@@ -369,8 +401,14 @@ class TestFollowUpContracts:
     def test_follow_up_item_fields(self):
         fields = get_field_names(FollowUpItemResponse)
         for required in (
-            "id", "engagement_id", "description", "tool_source",
-            "severity", "disposition", "created_at", "updated_at",
+            "id",
+            "engagement_id",
+            "description",
+            "tool_source",
+            "severity",
+            "disposition",
+            "created_at",
+            "updated_at",
         ):
             assert required in fields, f"FollowUpItemResponse missing '{required}'"
 
@@ -406,6 +444,7 @@ class TestFollowUpContracts:
 # Settings Response Models
 # ═══════════════════════════════════════════════════════════════
 
+
 class TestSettingsContracts:
     """Validate settings response models."""
 
@@ -421,6 +460,7 @@ class TestSettingsContracts:
 # Three-Way Match Literal Contracts
 # ═══════════════════════════════════════════════════════════════
 
+
 class TestThreeWayMatchLiterals:
     """Validate Three-Way Match Literal values."""
 
@@ -434,33 +474,37 @@ class TestThreeWayMatchLiterals:
 # Schema Generation Smoke Tests
 # ═══════════════════════════════════════════════════════════════
 
+
 class TestSchemaGeneration:
     """Ensure all response models can generate valid JSON schemas."""
 
-    @pytest.mark.parametrize("model_cls", [
-        # Diagnostic
-        TrialBalanceResponse,
-        FluxAnalysisResponse,
-        PeriodComparisonResponse,
-        MovementSummaryResponse,
-        ThreeWayMovementSummaryResponse,
-        AdjustingEntryResponse,
-        AdjustedTrialBalanceResponse,
-        # Testing
-        JETestingResponse,
-        APTestingResponse,
-        BankRecResponse,
-        ThreeWayMatchResponse,
-        ARAgingResponse,
-        PayrollTestingResponse,
-        RevenueTestingResponse,
-        FATestingResponse,
-        InvTestingResponse,
-        # Engagement
-        EngagementResponse,
-        WorkpaperIndexResponse,
-        FollowUpItemResponse,
-    ])
+    @pytest.mark.parametrize(
+        "model_cls",
+        [
+            # Diagnostic
+            TrialBalanceResponse,
+            FluxAnalysisResponse,
+            PeriodComparisonResponse,
+            MovementSummaryResponse,
+            ThreeWayMovementSummaryResponse,
+            AdjustingEntryResponse,
+            AdjustedTrialBalanceResponse,
+            # Testing
+            JETestingResponse,
+            APTestingResponse,
+            BankRecResponse,
+            ThreeWayMatchResponse,
+            ARAgingResponse,
+            PayrollTestingResponse,
+            RevenueTestingResponse,
+            FATestingResponse,
+            InvTestingResponse,
+            # Engagement
+            EngagementResponse,
+            WorkpaperIndexResponse,
+            FollowUpItemResponse,
+        ],
+    )
     def test_model_generates_json_schema(self, model_cls):
         """Every response model must produce a valid JSON schema for OpenAPI."""
         schema = model_cls.model_json_schema()

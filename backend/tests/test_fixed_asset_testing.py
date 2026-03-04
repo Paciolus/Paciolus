@@ -66,6 +66,7 @@ from shared.testing_enums import RiskTier, Severity, TestTier
 # FIXTURE HELPERS
 # =============================================================================
 
+
 def make_entries(rows: list[dict], columns: list[str] | None = None) -> list[FixedAssetEntry]:
     """Parse rows into FixedAssetEntry objects using auto-detection."""
     if columns is None:
@@ -144,15 +145,22 @@ def sample_fa_rows() -> list[dict]:
 # COLUMN DETECTION TESTS
 # =============================================================================
 
+
 class TestColumnDetection:
     """Tests for fixed asset column detection."""
 
     def test_exact_column_names(self):
         columns = [
-            "Asset ID", "Description", "Original Cost",
-            "Accumulated Depreciation", "Acquisition Date",
-            "Useful Life", "Depreciation Method", "Residual Value",
-            "Location", "Category",
+            "Asset ID",
+            "Description",
+            "Original Cost",
+            "Accumulated Depreciation",
+            "Acquisition Date",
+            "Useful Life",
+            "Depreciation Method",
+            "Residual Value",
+            "Location",
+            "Category",
         ]
         result = detect_fa_columns(columns)
         assert result.asset_id_column == "Asset ID"
@@ -168,10 +176,16 @@ class TestColumnDetection:
 
     def test_alternative_column_names(self):
         columns = [
-            "Tag Number", "Asset Name", "Cost",
-            "Accum Depr", "Date Acquired",
-            "Life Years", "Depr Method", "Salvage Value",
-            "Site", "Asset Class",
+            "Tag Number",
+            "Asset Name",
+            "Cost",
+            "Accum Depr",
+            "Date Acquired",
+            "Life Years",
+            "Depr Method",
+            "Salvage Value",
+            "Site",
+            "Asset Class",
         ]
         result = detect_fa_columns(columns)
         assert result.asset_id_column == "Tag Number"
@@ -209,8 +223,7 @@ class TestColumnDetection:
         columns = ["Cost", "Original Cost", "Asset ID"]
         result = detect_fa_columns(columns)
         # Both match "cost" but only the best match gets assigned
-        assigned = [result.cost_column, result.accumulated_depreciation_column,
-                    result.net_book_value_column]
+        assigned = [result.cost_column, result.accumulated_depreciation_column, result.net_book_value_column]
         assigned_set = set(c for c in assigned if c is not None)
         assert len(assigned_set) == len([c for c in assigned if c is not None])
 
@@ -234,21 +247,25 @@ class TestMatchColumn:
 
     def test_exact_match(self):
         from fixed_asset_testing_engine import FA_ASSET_ID_PATTERNS
+
         conf = _match_column("Asset ID", FA_ASSET_ID_PATTERNS)
         assert conf == 1.0
 
     def test_partial_match(self):
         from fixed_asset_testing_engine import FA_COST_PATTERNS
+
         conf = _match_column("Total Cost Amount", FA_COST_PATTERNS)
         assert conf > 0.0  # "cost" substring match
 
     def test_no_match(self):
         from fixed_asset_testing_engine import FA_ASSET_ID_PATTERNS
+
         conf = _match_column("xyz_random", FA_ASSET_ID_PATTERNS)
         assert conf == 0.0
 
     def test_case_insensitive(self):
         from fixed_asset_testing_engine import FA_ASSET_ID_PATTERNS
+
         conf = _match_column("ASSET ID", FA_ASSET_ID_PATTERNS)
         assert conf == 1.0
 
@@ -256,6 +273,7 @@ class TestMatchColumn:
 # =============================================================================
 # HELPER TESTS
 # =============================================================================
+
 
 class TestHelpers:
     """Tests for helper functions."""
@@ -327,6 +345,7 @@ class TestHelpers:
 # PARSER TESTS
 # =============================================================================
 
+
 class TestParser:
     """Tests for FA entry parser."""
 
@@ -357,6 +376,7 @@ class TestParser:
 # =============================================================================
 # DATA QUALITY TESTS
 # =============================================================================
+
 
 class TestDataQuality:
     """Tests for FA data quality assessment."""
@@ -401,31 +421,29 @@ class TestDataQuality:
 # RISK TIER TESTS
 # =============================================================================
 
+
 class TestRiskTier:
     """Tests for score_to_risk_tier."""
 
     def test_low(self):
         assert score_to_risk_tier(5) == RiskTier.LOW
 
-    def test_elevated(self):
-        assert score_to_risk_tier(15) == RiskTier.ELEVATED
-
     def test_moderate(self):
-        assert score_to_risk_tier(30) == RiskTier.MODERATE
+        assert score_to_risk_tier(15) == RiskTier.MODERATE
+
+    def test_elevated(self):
+        assert score_to_risk_tier(30) == RiskTier.ELEVATED
 
     def test_high(self):
         assert score_to_risk_tier(60) == RiskTier.HIGH
 
-    def test_critical(self):
-        assert score_to_risk_tier(80) == RiskTier.CRITICAL
-
     def test_boundary_low(self):
         assert score_to_risk_tier(0) == RiskTier.LOW
 
-    def test_boundary_elevated(self):
-        assert score_to_risk_tier(10) == RiskTier.ELEVATED
-
     def test_boundary_moderate(self):
+        assert score_to_risk_tier(10) == RiskTier.LOW
+
+    def test_boundary_elevated(self):
         assert score_to_risk_tier(25) == RiskTier.MODERATE
 
 
@@ -433,28 +451,44 @@ class TestRiskTier:
 # TIER 1 — STRUCTURAL TESTS
 # =============================================================================
 
+
 class TestFullyDepreciated:
     """FA-01: Fully Depreciated Assets."""
 
     def test_flags_fully_depreciated(self):
-        entries = [FixedAssetEntry(
-            asset_id="A1", cost=100000, accumulated_depreciation=100000, row_number=1,
-        )]
+        entries = [
+            FixedAssetEntry(
+                asset_id="A1",
+                cost=100000,
+                accumulated_depreciation=100000,
+                row_number=1,
+            )
+        ]
         result = run_fully_depreciated_test(entries, FixedAssetTestingConfig())
         assert result.entries_flagged == 1
         assert result.test_key == "fully_depreciated"
 
     def test_skips_not_fully_depreciated(self):
-        entries = [FixedAssetEntry(
-            asset_id="A1", cost=100000, accumulated_depreciation=50000, row_number=1,
-        )]
+        entries = [
+            FixedAssetEntry(
+                asset_id="A1",
+                cost=100000,
+                accumulated_depreciation=50000,
+                row_number=1,
+            )
+        ]
         result = run_fully_depreciated_test(entries, FixedAssetTestingConfig())
         assert result.entries_flagged == 0
 
     def test_flags_over_depreciated(self):
-        entries = [FixedAssetEntry(
-            asset_id="A1", cost=50000, accumulated_depreciation=55000, row_number=1,
-        )]
+        entries = [
+            FixedAssetEntry(
+                asset_id="A1",
+                cost=50000,
+                accumulated_depreciation=55000,
+                row_number=1,
+            )
+        ]
         result = run_fully_depreciated_test(entries, FixedAssetTestingConfig())
         assert result.entries_flagged == 1
 
@@ -464,9 +498,13 @@ class TestFullyDepreciated:
         assert result.entries_flagged == 0
 
     def test_high_severity_large_cost(self):
-        entries = [FixedAssetEntry(
-            cost=200000, accumulated_depreciation=200000, row_number=1,
-        )]
+        entries = [
+            FixedAssetEntry(
+                cost=200000,
+                accumulated_depreciation=200000,
+                row_number=1,
+            )
+        ]
         result = run_fully_depreciated_test(entries, FixedAssetTestingConfig())
         assert result.flagged_entries[0].severity == Severity.HIGH
 
@@ -481,17 +519,26 @@ class TestMissingFields:
     """FA-02: Missing Required Fields."""
 
     def test_flags_no_identifier(self):
-        entries = [FixedAssetEntry(
-            cost=5000, acquisition_date="2025-01-01", row_number=1,
-        )]
+        entries = [
+            FixedAssetEntry(
+                cost=5000,
+                acquisition_date="2025-01-01",
+                row_number=1,
+            )
+        ]
         result = run_missing_fields_test(entries, FixedAssetTestingConfig())
         assert result.entries_flagged == 1
         assert "identifier" in result.flagged_entries[0].issue
 
     def test_flags_zero_cost(self):
-        entries = [FixedAssetEntry(
-            asset_id="A1", cost=0, acquisition_date="2025-01-01", row_number=1,
-        )]
+        entries = [
+            FixedAssetEntry(
+                asset_id="A1",
+                cost=0,
+                acquisition_date="2025-01-01",
+                row_number=1,
+            )
+        ]
         result = run_missing_fields_test(entries, FixedAssetTestingConfig())
         assert result.entries_flagged == 1
         assert "cost" in result.flagged_entries[0].issue
@@ -509,16 +556,26 @@ class TestMissingFields:
         assert result.flagged_entries[0].severity == Severity.HIGH
 
     def test_clean_entry_not_flagged(self):
-        entries = [FixedAssetEntry(
-            asset_id="A1", cost=5000, acquisition_date="2025-01-01", row_number=1,
-        )]
+        entries = [
+            FixedAssetEntry(
+                asset_id="A1",
+                cost=5000,
+                acquisition_date="2025-01-01",
+                row_number=1,
+            )
+        ]
         result = run_missing_fields_test(entries, FixedAssetTestingConfig())
         assert result.entries_flagged == 0
 
     def test_description_as_identifier(self):
-        entries = [FixedAssetEntry(
-            description="Office Chair", cost=500, acquisition_date="2025-01-01", row_number=1,
-        )]
+        entries = [
+            FixedAssetEntry(
+                description="Office Chair",
+                cost=500,
+                acquisition_date="2025-01-01",
+                row_number=1,
+            )
+        ]
         result = run_missing_fields_test(entries, FixedAssetTestingConfig())
         assert result.entries_flagged == 0
 
@@ -533,34 +590,54 @@ class TestNegativeValues:
     """FA-03: Negative Cost or Accumulated Depreciation."""
 
     def test_flags_negative_cost(self):
-        entries = [FixedAssetEntry(
-            asset_id="A1", cost=-50000, accumulated_depreciation=10000, row_number=1,
-        )]
+        entries = [
+            FixedAssetEntry(
+                asset_id="A1",
+                cost=-50000,
+                accumulated_depreciation=10000,
+                row_number=1,
+            )
+        ]
         result = run_negative_values_test(entries, FixedAssetTestingConfig())
         assert result.entries_flagged == 1
         assert "negative cost" in result.flagged_entries[0].issue
 
     def test_flags_negative_accum_depr(self):
-        entries = [FixedAssetEntry(
-            asset_id="A1", cost=50000, accumulated_depreciation=-5000, row_number=1,
-        )]
+        entries = [
+            FixedAssetEntry(
+                asset_id="A1",
+                cost=50000,
+                accumulated_depreciation=-5000,
+                row_number=1,
+            )
+        ]
         result = run_negative_values_test(entries, FixedAssetTestingConfig())
         assert result.entries_flagged == 1
         assert "negative accum depr" in result.flagged_entries[0].issue
 
     def test_flags_both_negative(self):
-        entries = [FixedAssetEntry(
-            asset_id="A1", cost=-50000, accumulated_depreciation=-5000, row_number=1,
-        )]
+        entries = [
+            FixedAssetEntry(
+                asset_id="A1",
+                cost=-50000,
+                accumulated_depreciation=-5000,
+                row_number=1,
+            )
+        ]
         result = run_negative_values_test(entries, FixedAssetTestingConfig())
         assert result.entries_flagged == 1
         assert "negative cost" in result.flagged_entries[0].issue
         assert "negative accum depr" in result.flagged_entries[0].issue
 
     def test_positive_values_not_flagged(self):
-        entries = [FixedAssetEntry(
-            asset_id="A1", cost=50000, accumulated_depreciation=10000, row_number=1,
-        )]
+        entries = [
+            FixedAssetEntry(
+                asset_id="A1",
+                cost=50000,
+                accumulated_depreciation=10000,
+                row_number=1,
+            )
+        ]
         result = run_negative_values_test(entries, FixedAssetTestingConfig())
         assert result.entries_flagged == 0
 
@@ -580,39 +657,63 @@ class TestOverDepreciation:
     """FA-04: Depreciation Exceeds Cost."""
 
     def test_flags_excess_depreciation(self):
-        entries = [FixedAssetEntry(
-            asset_id="A1", cost=100000, accumulated_depreciation=120000, row_number=1,
-        )]
+        entries = [
+            FixedAssetEntry(
+                asset_id="A1",
+                cost=100000,
+                accumulated_depreciation=120000,
+                row_number=1,
+            )
+        ]
         result = run_over_depreciation_test(entries, FixedAssetTestingConfig())
         assert result.entries_flagged == 1
         assert result.test_key == "over_depreciation"
 
     def test_skips_equal_amounts(self):
         """FA-01 catches this; FA-04 only flags excess >1%."""
-        entries = [FixedAssetEntry(
-            asset_id="A1", cost=100000, accumulated_depreciation=100000, row_number=1,
-        )]
+        entries = [
+            FixedAssetEntry(
+                asset_id="A1",
+                cost=100000,
+                accumulated_depreciation=100000,
+                row_number=1,
+            )
+        ]
         result = run_over_depreciation_test(entries, FixedAssetTestingConfig())
         assert result.entries_flagged == 0
 
     def test_skips_rounding_difference(self):
-        entries = [FixedAssetEntry(
-            asset_id="A1", cost=100000, accumulated_depreciation=100500, row_number=1,
-        )]
+        entries = [
+            FixedAssetEntry(
+                asset_id="A1",
+                cost=100000,
+                accumulated_depreciation=100500,
+                row_number=1,
+            )
+        ]
         result = run_over_depreciation_test(entries, FixedAssetTestingConfig())
         assert result.entries_flagged == 0
 
     def test_flags_meaningful_excess(self):
-        entries = [FixedAssetEntry(
-            asset_id="A1", cost=100000, accumulated_depreciation=115000, row_number=1,
-        )]
+        entries = [
+            FixedAssetEntry(
+                asset_id="A1",
+                cost=100000,
+                accumulated_depreciation=115000,
+                row_number=1,
+            )
+        ]
         result = run_over_depreciation_test(entries, FixedAssetTestingConfig())
         assert result.entries_flagged == 1
 
     def test_high_severity_large_excess(self):
-        entries = [FixedAssetEntry(
-            cost=100000, accumulated_depreciation=150000, row_number=1,
-        )]
+        entries = [
+            FixedAssetEntry(
+                cost=100000,
+                accumulated_depreciation=150000,
+                row_number=1,
+            )
+        ]
         result = run_over_depreciation_test(entries, FixedAssetTestingConfig())
         assert result.flagged_entries[0].severity == Severity.HIGH
 
@@ -632,29 +733,45 @@ class TestOverDepreciation:
 # TIER 2 — STATISTICAL TESTS
 # =============================================================================
 
+
 class TestUsefulLifeOutliers:
     """FA-05: Useful Life Outliers."""
 
     def test_flags_too_short(self):
-        entries = [FixedAssetEntry(
-            asset_id="A1", cost=5000, useful_life=0.1, row_number=1,
-        )]
+        entries = [
+            FixedAssetEntry(
+                asset_id="A1",
+                cost=5000,
+                useful_life=0.1,
+                row_number=1,
+            )
+        ]
         result = run_useful_life_test(entries, FixedAssetTestingConfig())
         assert result.entries_flagged == 1
         assert "below minimum" in result.flagged_entries[0].issue
 
     def test_flags_too_long(self):
-        entries = [FixedAssetEntry(
-            asset_id="A1", cost=5000, useful_life=60.0, row_number=1,
-        )]
+        entries = [
+            FixedAssetEntry(
+                asset_id="A1",
+                cost=5000,
+                useful_life=60.0,
+                row_number=1,
+            )
+        ]
         result = run_useful_life_test(entries, FixedAssetTestingConfig())
         assert result.entries_flagged == 1
         assert "above maximum" in result.flagged_entries[0].issue
 
     def test_normal_life_not_flagged(self):
-        entries = [FixedAssetEntry(
-            asset_id="A1", cost=5000, useful_life=10.0, row_number=1,
-        )]
+        entries = [
+            FixedAssetEntry(
+                asset_id="A1",
+                cost=5000,
+                useful_life=10.0,
+                row_number=1,
+            )
+        ]
         result = run_useful_life_test(entries, FixedAssetTestingConfig())
         assert result.entries_flagged == 0
 
@@ -690,20 +807,14 @@ class TestCostZScoreOutliers:
     """FA-06: Cost Z-Score Outliers."""
 
     def test_flags_outlier(self):
-        entries = [
-            FixedAssetEntry(cost=1000, row_number=i)
-            for i in range(1, 21)
-        ]
+        entries = [FixedAssetEntry(cost=1000, row_number=i) for i in range(1, 21)]
         entries.append(FixedAssetEntry(cost=500000, row_number=21))
         result = run_zscore_test(entries, FixedAssetTestingConfig())
         assert result.entries_flagged >= 1
         assert result.test_key == "cost_zscore_outliers"
 
     def test_uniform_costs_not_flagged(self):
-        entries = [
-            FixedAssetEntry(cost=10000 + i * 100, row_number=i)
-            for i in range(1, 21)
-        ]
+        entries = [FixedAssetEntry(cost=10000 + i * 100, row_number=i) for i in range(1, 21)]
         result = run_zscore_test(entries, FixedAssetTestingConfig())
         assert result.entries_flagged == 0
 
@@ -795,16 +906,23 @@ class TestAgeConcentration:
 # TIER 3 — ADVANCED TESTS
 # =============================================================================
 
+
 class TestDuplicateAssets:
     """FA-08: Duplicate Asset Detection."""
 
     def test_flags_duplicates(self):
         entries = [
             FixedAssetEntry(
-                cost=25000, description="Laptop", acquisition_date="2024-01-01", row_number=1,
+                cost=25000,
+                description="Laptop",
+                acquisition_date="2024-01-01",
+                row_number=1,
             ),
             FixedAssetEntry(
-                cost=25000, description="Laptop", acquisition_date="2024-01-01", row_number=2,
+                cost=25000,
+                description="Laptop",
+                acquisition_date="2024-01-01",
+                row_number=2,
             ),
         ]
         result = run_duplicate_test(entries, FixedAssetTestingConfig())
@@ -866,24 +984,39 @@ class TestResidualValueAnomalies:
     """FA-09: Residual Value Anomalies."""
 
     def test_flags_high_residual(self):
-        entries = [FixedAssetEntry(
-            asset_id="A1", cost=100000, residual_value=50000, row_number=1,
-        )]
+        entries = [
+            FixedAssetEntry(
+                asset_id="A1",
+                cost=100000,
+                residual_value=50000,
+                row_number=1,
+            )
+        ]
         result = run_residual_test(entries, FixedAssetTestingConfig())
         assert result.entries_flagged == 1
         assert result.test_key == "residual_value_anomalies"
 
     def test_normal_residual_not_flagged(self):
-        entries = [FixedAssetEntry(
-            asset_id="A1", cost=100000, residual_value=10000, row_number=1,
-        )]
+        entries = [
+            FixedAssetEntry(
+                asset_id="A1",
+                cost=100000,
+                residual_value=10000,
+                row_number=1,
+            )
+        ]
         result = run_residual_test(entries, FixedAssetTestingConfig())
         assert result.entries_flagged == 0
 
     def test_flags_negative_residual(self):
-        entries = [FixedAssetEntry(
-            asset_id="A1", cost=100000, residual_value=-5000, row_number=1,
-        )]
+        entries = [
+            FixedAssetEntry(
+                asset_id="A1",
+                cost=100000,
+                residual_value=-5000,
+                row_number=1,
+            )
+        ]
         result = run_residual_test(entries, FixedAssetTestingConfig())
         assert result.entries_flagged == 1
         assert result.flagged_entries[0].severity == Severity.HIGH
@@ -919,6 +1052,7 @@ class TestResidualValueAnomalies:
 # =============================================================================
 # BATTERY + SCORING TESTS
 # =============================================================================
+
 
 class TestBattery:
     """Tests for the full test battery."""
@@ -985,8 +1119,10 @@ class TestCompositeScoring:
         """Entries flagged by 3+ tests get a score multiplier."""
         entries = [
             FixedAssetEntry(
-                cost=-50000, accumulated_depreciation=-100000,
-                useful_life=0.01, residual_value=-500,
+                cost=-50000,
+                accumulated_depreciation=-100000,
+                useful_life=0.01,
+                residual_value=-500,
                 row_number=1,
             ),
         ]
@@ -996,9 +1132,12 @@ class TestCompositeScoring:
 
     def test_to_dict(self):
         score = FACompositeScore(
-            score=25.5, risk_tier=RiskTier.MODERATE,
-            tests_run=9, total_entries=100,
-            total_flagged=10, flag_rate=0.1,
+            score=25.5,
+            risk_tier=RiskTier.MODERATE,
+            tests_run=9,
+            total_entries=100,
+            total_flagged=10,
+            flag_rate=0.1,
         )
         d = score.to_dict()
         assert d["score"] == 25.5
@@ -1009,6 +1148,7 @@ class TestCompositeScoring:
 # =============================================================================
 # FULL PIPELINE TESTS
 # =============================================================================
+
 
 class TestFullPipeline:
     """Tests for the complete run_fixed_asset_testing pipeline."""
@@ -1040,8 +1180,14 @@ class TestFullPipeline:
 
     def test_problematic_data(self):
         rows = [
-            {"Asset ID": "A1", "Cost": -50000, "Accumulated Depreciation": 60000,
-             "Acquisition Date": "2020-01-01", "Useful Life": 200, "Residual Value": -1000},
+            {
+                "Asset ID": "A1",
+                "Cost": -50000,
+                "Accumulated Depreciation": 60000,
+                "Acquisition Date": "2020-01-01",
+                "Useful Life": 200,
+                "Residual Value": -1000,
+            },
         ]
         columns = list(rows[0].keys())
         result = run_fixed_asset_testing(rows, columns)
@@ -1052,13 +1198,17 @@ class TestFullPipeline:
 # SERIALIZATION TESTS
 # =============================================================================
 
+
 class TestSerialization:
     """Tests for to_dict methods."""
 
     def test_fixed_asset_entry_to_dict(self):
         e = FixedAssetEntry(
-            asset_id="FA-001", description="Building", cost=500000,
-            accumulated_depreciation=100000, row_number=1,
+            asset_id="FA-001",
+            description="Building",
+            cost=500000,
+            accumulated_depreciation=100000,
+            row_number=1,
         )
         d = e.to_dict()
         assert d["asset_id"] == "FA-001"
@@ -1069,9 +1219,11 @@ class TestSerialization:
     def test_flagged_fixed_asset_to_dict(self):
         f = FlaggedFixedAsset(
             entry=FixedAssetEntry(cost=50000, row_number=1),
-            test_name="Test", test_key="test_key",
+            test_name="Test",
+            test_key="test_key",
             test_tier=TestTier.STRUCTURAL,
-            severity=Severity.HIGH, issue="Issue",
+            severity=Severity.HIGH,
+            issue="Issue",
         )
         d = f.to_dict()
         assert d["test_key"] == "test_key"
@@ -1081,10 +1233,13 @@ class TestSerialization:
 
     def test_test_result_to_dict(self):
         r = FATestResult(
-            test_name="Test", test_key="test_key",
+            test_name="Test",
+            test_key="test_key",
             test_tier=TestTier.STATISTICAL,
-            entries_flagged=5, total_entries=100,
-            flag_rate=0.05, severity=Severity.MEDIUM,
+            entries_flagged=5,
+            total_entries=100,
+            flag_rate=0.05,
+            severity=Severity.MEDIUM,
             description="Desc",
         )
         d = r.to_dict()
@@ -1109,26 +1264,31 @@ class TestSerialization:
 # API ROUTE TESTS
 # =============================================================================
 
+
 class TestFixedAssetTestingRoute:
     """Tests for route registration."""
 
     def test_route_registered(self):
         from main import app
+
         paths = [r.path for r in app.routes if hasattr(r, "path")]
         assert "/audit/fixed-assets" in paths
 
     def test_engagement_model_has_fixed_assets(self):
         from engagement_model import ToolName
+
         assert hasattr(ToolName, "FIXED_ASSET_TESTING")
         assert ToolName.FIXED_ASSET_TESTING.value == "fixed_asset_testing"
 
     def test_tool_name_count(self):
         from engagement_model import ToolName
+
         assert len(ToolName) == 13
 
     def test_workpaper_index_labels(self):
         from engagement_model import ToolName
         from workpaper_index_generator import TOOL_LABELS, TOOL_LEAD_SHEET_REFS
+
         assert ToolName.FIXED_ASSET_TESTING in TOOL_LABELS
         assert ToolName.FIXED_ASSET_TESTING in TOOL_LEAD_SHEET_REFS
         assert TOOL_LABELS[ToolName.FIXED_ASSET_TESTING] == "Fixed Asset Testing"

@@ -5,9 +5,19 @@ Config-driven wrapper around shared memo template.
 Domain: ISA 240 / ISA 500 / PCAOB AS 2401 — presumed fraud risk in revenue recognition.
 """
 
+from collections import Counter
 from typing import Any, Optional
 
-from shared.memo_template import TestingMemoConfig, generate_testing_memo
+from reportlab.lib.units import inch
+from reportlab.platypus import Paragraph, Spacer
+
+from pdf_generator import LedgerRule
+from shared.drill_down import (
+    build_drill_down_table,
+    format_currency,
+    safe_str_value,
+)
+from shared.memo_template import TestingMemoConfig, _roman, generate_testing_memo
 
 REVENUE_TEST_DESCRIPTIONS = {
     "large_manual_entries": "Flags manual revenue entries exceeding performance materiality threshold (ISA 240 fraud risk indicator).",
@@ -78,6 +88,127 @@ _REVENUE_CONFIG = TestingMemoConfig(
 )
 
 
+def _build_revenue_extra_sections(
+    story: list,
+    styles: dict,
+    doc_width: float,
+    result: dict[str, Any],
+    section_counter: int,
+) -> int:
+    """Build revenue-specific drill-down sections (DRILL-04, DRILL-06).
+
+    DRILL-04: Cut-off risk entry detail with days from period boundary.
+    DRILL-06: Preparer concentration analysis.
+    """
+    test_results = result.get("test_results", [])
+    has_detail = False
+
+    # DRILL-04: Cut-off risk detail
+    cutoff_tests = [
+        tr for tr in test_results if tr.get("test_key") == "cutoff_risk" and tr.get("entries_flagged", 0) > 0
+    ]
+    if cutoff_tests:
+        flagged = cutoff_tests[0].get("flagged_entries", [])
+        rows = []
+        for fe in flagged:
+            entry = fe.get("entry", {})
+            details = fe.get("details") or {}
+            # Compute days from boundary if not already present
+            days_from = details.get("days_from_boundary")
+            if days_from is None:
+                entry_date_str = details.get("entry_date") or entry.get("date")
+                period_end_str = details.get("period_end")
+                if entry_date_str and period_end_str:
+                    try:
+                        from datetime import datetime
+
+                        ed = datetime.strptime(str(entry_date_str)[:10], "%Y-%m-%d")
+                        pe = datetime.strptime(str(period_end_str)[:10], "%Y-%m-%d")
+                        days_from = abs((ed - pe).days)
+                    except (ValueError, TypeError):
+                        days_from = None
+
+            rows.append(
+                [
+                    safe_str_value(entry.get("reference")),
+                    safe_str_value(entry.get("date")),
+                    str(days_from) if days_from is not None else "—",
+                    safe_str_value(entry.get("account_name"), "")[:20],
+                    format_currency(entry.get("amount", 0)),
+                    safe_str_value(entry.get("description"), "")[:30],
+                ]
+            )
+
+        if rows:
+            if not has_detail:
+                section_label = _roman(section_counter)
+                story.append(Paragraph(f"{section_label}. Revenue Detail Analysis", styles["MemoSection"]))
+                story.append(LedgerRule(doc_width))
+                has_detail = True
+
+            build_drill_down_table(
+                story,
+                styles,
+                doc_width,
+                title=f"Cut-Off Risk Entries ({len(flagged)} flagged)",
+                headers=["Reference", "Date", "Days From Period End", "Account", "Amount", "Description"],
+                rows=rows,
+                total_flagged=len(flagged),
+                col_widths=[0.8 * inch, 0.7 * inch, 1.0 * inch, 1.2 * inch, 0.9 * inch, 2.0 * inch],
+                right_align_cols=[2, 4],
+            )
+
+    # DRILL-06: Preparer concentration
+    preparer_flagged: Counter[str] = Counter()
+    total_flagged_with_preparer = 0
+    total_flagged_count = 0
+
+    for tr in test_results:
+        for fe in tr.get("flagged_entries", []):
+            total_flagged_count += 1
+            posted_by = (fe.get("entry") or {}).get("posted_by")
+            if posted_by:
+                total_flagged_with_preparer += 1
+                preparer_flagged[posted_by] += 1
+
+    if total_flagged_count > 0 and total_flagged_with_preparer / total_flagged_count >= 0.6:
+        if not has_detail:
+            section_label = _roman(section_counter)
+            story.append(Paragraph(f"{section_label}. Revenue Detail Analysis", styles["MemoSection"]))
+            story.append(LedgerRule(doc_width))
+            has_detail = True
+
+        story.append(
+            Paragraph(
+                f"{total_flagged_with_preparer} of {total_flagged_count} flagged entries "
+                f"({total_flagged_with_preparer / total_flagged_count:.0%}) include preparer identification:",
+                styles["MemoBody"],
+            )
+        )
+        story.append(Spacer(1, 4))
+
+        rows = []
+        for name, flagged_count in preparer_flagged.most_common(5):
+            flag_rate = flagged_count / total_flagged_with_preparer if total_flagged_with_preparer > 0 else 0
+            rows.append([name, str(flagged_count), f"{flag_rate:.1%}"])
+
+        build_drill_down_table(
+            story,
+            styles,
+            doc_width,
+            title="",
+            headers=["Preparer", "Flagged Entries", "% of Flagged"],
+            rows=rows,
+            col_widths=[3.0 * inch, 1.5 * inch, 2.1 * inch],
+            right_align_cols=[1, 2],
+        )
+
+    if has_detail:
+        section_counter += 1
+
+    return section_counter
+
+
 def generate_revenue_testing_memo(
     revenue_result: dict[str, Any],
     filename: str = "revenue_testing",
@@ -102,5 +233,6 @@ def generate_revenue_testing_memo(
         workpaper_date=workpaper_date,
         source_document_title=source_document_title,
         source_context_note=source_context_note,
+        build_extra_sections=_build_revenue_extra_sections,
         include_signoff=include_signoff,
     )

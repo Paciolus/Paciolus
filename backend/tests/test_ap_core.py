@@ -51,6 +51,7 @@ from shared.parsing_helpers import parse_date, safe_float, safe_str
 # FIXTURE HELPERS
 # =============================================================================
 
+
 def make_payments(rows: list[dict], columns: list[str] | None = None) -> list[APPayment]:
     """Parse rows into APPayment objects using auto-detection."""
     if columns is None:
@@ -116,15 +117,23 @@ def sample_ap_rows() -> list[dict]:
 def sample_ap_columns() -> list[str]:
     """Standard AP column names."""
     return [
-        "Invoice Number", "Invoice Date", "Payment Date",
-        "Vendor Name", "Vendor ID", "Amount",
-        "Check Number", "Description", "GL Account", "Payment Method",
+        "Invoice Number",
+        "Invoice Date",
+        "Payment Date",
+        "Vendor Name",
+        "Vendor ID",
+        "Amount",
+        "Check Number",
+        "Description",
+        "GL Account",
+        "Payment Method",
     ]
 
 
 # =============================================================================
 # TEST CLASSES
 # =============================================================================
+
 
 class TestAPColumnDetection:
     """12 tests for AP column detection."""
@@ -687,10 +696,7 @@ class TestRoundDollarAmounts:
         assert result.entries_flagged == 0
 
     def test_max_flags_respected(self):
-        rows = [
-            {"Vendor Name": f"V{i}", "Amount": 50000 * (i + 1), "Payment Date": "2025-01-01"}
-            for i in range(60)
-        ]
+        rows = [{"Vendor Name": f"V{i}", "Amount": 50000 * (i + 1), "Payment Date": "2025-01-01"} for i in range(60)]
         payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date"])
         config = APTestingConfig(round_amount_max_flags=5)
         result = run_round_amounts_test(payments, config)
@@ -720,20 +726,28 @@ class TestPaymentBeforeInvoice:
         assert result.entries_flagged == 0
 
     def test_payment_before_invoice_flagged(self):
-        rows = [{
-            "Vendor Name": "Acme", "Amount": 5000,
-            "Invoice Date": "2025-02-15", "Payment Date": "2025-01-15",
-        }]
+        rows = [
+            {
+                "Vendor Name": "Acme",
+                "Amount": 5000,
+                "Invoice Date": "2025-02-15",
+                "Payment Date": "2025-01-15",
+            }
+        ]
         payments = make_payments(rows, ["Vendor Name", "Amount", "Invoice Date", "Payment Date"])
         config = APTestingConfig()
         result = run_payment_before_invoice_test(payments, config)
         assert result.entries_flagged == 1
 
     def test_severity_high_over_30_days(self):
-        rows = [{
-            "Vendor Name": "Acme", "Amount": 5000,
-            "Invoice Date": "2025-03-15", "Payment Date": "2025-01-01",
-        }]
+        rows = [
+            {
+                "Vendor Name": "Acme",
+                "Amount": 5000,
+                "Invoice Date": "2025-03-15",
+                "Payment Date": "2025-01-01",
+            }
+        ]
         payments = make_payments(rows, ["Vendor Name", "Amount", "Invoice Date", "Payment Date"])
         config = APTestingConfig()
         result = run_payment_before_invoice_test(payments, config)
@@ -741,10 +755,14 @@ class TestPaymentBeforeInvoice:
         assert result.flagged_entries[0].confidence == 0.95
 
     def test_severity_medium_over_7_days(self):
-        rows = [{
-            "Vendor Name": "Acme", "Amount": 5000,
-            "Invoice Date": "2025-01-20", "Payment Date": "2025-01-05",
-        }]
+        rows = [
+            {
+                "Vendor Name": "Acme",
+                "Amount": 5000,
+                "Invoice Date": "2025-01-20",
+                "Payment Date": "2025-01-05",
+            }
+        ]
         payments = make_payments(rows, ["Vendor Name", "Amount", "Invoice Date", "Payment Date"])
         config = APTestingConfig()
         result = run_payment_before_invoice_test(payments, config)
@@ -752,10 +770,14 @@ class TestPaymentBeforeInvoice:
         assert result.flagged_entries[0].confidence == 0.85
 
     def test_severity_low_under_7_days(self):
-        rows = [{
-            "Vendor Name": "Acme", "Amount": 5000,
-            "Invoice Date": "2025-01-10", "Payment Date": "2025-01-05",
-        }]
+        rows = [
+            {
+                "Vendor Name": "Acme",
+                "Amount": 5000,
+                "Invoice Date": "2025-01-10",
+                "Payment Date": "2025-01-05",
+            }
+        ]
         payments = make_payments(rows, ["Vendor Name", "Amount", "Invoice Date", "Payment Date"])
         config = APTestingConfig()
         result = run_payment_before_invoice_test(payments, config)
@@ -763,10 +785,14 @@ class TestPaymentBeforeInvoice:
         assert result.flagged_entries[0].confidence == 0.70
 
     def test_disabled(self):
-        rows = [{
-            "Vendor Name": "Acme", "Amount": 5000,
-            "Invoice Date": "2025-02-15", "Payment Date": "2025-01-15",
-        }]
+        rows = [
+            {
+                "Vendor Name": "Acme",
+                "Amount": 5000,
+                "Invoice Date": "2025-02-15",
+                "Payment Date": "2025-01-15",
+            }
+        ]
         payments = make_payments(rows, ["Vendor Name", "Amount", "Invoice Date", "Payment Date"])
         config = APTestingConfig(payment_before_invoice_enabled=False)
         result = run_payment_before_invoice_test(payments, config)
@@ -784,10 +810,14 @@ class TestPaymentBeforeInvoice:
         assert result.entries_flagged == 0
 
     def test_details_structure(self):
-        rows = [{
-            "Vendor Name": "Acme", "Amount": 5000,
-            "Invoice Date": "2025-02-15", "Payment Date": "2025-01-15",
-        }]
+        rows = [
+            {
+                "Vendor Name": "Acme",
+                "Amount": 5000,
+                "Invoice Date": "2025-02-15",
+                "Payment Date": "2025-01-15",
+            }
+        ]
         payments = make_payments(rows, ["Vendor Name", "Amount", "Invoice Date", "Payment Date"])
         config = APTestingConfig()
         result = run_payment_before_invoice_test(payments, config)
@@ -809,9 +839,15 @@ class TestAPCompositeScoring:
         """Clean test results should yield a low score."""
         results = [
             APTestResult(
-                test_name="Test", test_key="t1", test_tier=TestTier.STRUCTURAL,
-                entries_flagged=0, total_entries=100, flag_rate=0.0,
-                severity=Severity.HIGH, description="", flagged_entries=[],
+                test_name="Test",
+                test_key="t1",
+                test_tier=TestTier.STRUCTURAL,
+                entries_flagged=0,
+                total_entries=100,
+                flag_rate=0.0,
+                severity=Severity.HIGH,
+                description="",
+                flagged_entries=[],
             ),
         ]
         score = calculate_ap_composite_score(results, 100)
@@ -823,16 +859,26 @@ class TestAPCompositeScoring:
         payment = APPayment(vendor_name="Test", amount=1000, row_number=1)
         flagged = [
             FlaggedPayment(
-                entry=payment, test_name="T", test_key="t1",
-                test_tier=TestTier.STRUCTURAL, severity=Severity.HIGH,
-                issue="test", confidence=0.9,
+                entry=payment,
+                test_name="T",
+                test_key="t1",
+                test_tier=TestTier.STRUCTURAL,
+                severity=Severity.HIGH,
+                issue="test",
+                confidence=0.9,
             )
         ]
         results = [
             APTestResult(
-                test_name="Test", test_key="t1", test_tier=TestTier.STRUCTURAL,
-                entries_flagged=1, total_entries=1, flag_rate=1.0,
-                severity=Severity.HIGH, description="", flagged_entries=flagged,
+                test_name="Test",
+                test_key="t1",
+                test_tier=TestTier.STRUCTURAL,
+                entries_flagged=1,
+                total_entries=1,
+                flag_rate=1.0,
+                severity=Severity.HIGH,
+                description="",
+                flagged_entries=flagged,
             ),
         ]
         score = calculate_ap_composite_score(results, 1)
@@ -840,10 +886,10 @@ class TestAPCompositeScoring:
 
     def test_risk_tier_mapping(self):
         assert score_to_risk_tier(5) == RiskTier.LOW
-        assert score_to_risk_tier(15) == RiskTier.ELEVATED
-        assert score_to_risk_tier(30) == RiskTier.MODERATE
+        assert score_to_risk_tier(15) == RiskTier.MODERATE
+        assert score_to_risk_tier(30) == RiskTier.ELEVATED
         assert score_to_risk_tier(60) == RiskTier.HIGH
-        assert score_to_risk_tier(80) == RiskTier.CRITICAL
+        assert score_to_risk_tier(80) == RiskTier.HIGH
 
     def test_multi_flag_multiplier(self):
         """Entries flagged by 3+ tests should increase score."""
@@ -853,16 +899,28 @@ class TestAPCompositeScoring:
         for i in range(3):
             flagged = [
                 FlaggedPayment(
-                    entry=payment, test_name=f"T{i}", test_key=f"t{i}",
-                    test_tier=TestTier.STRUCTURAL, severity=Severity.HIGH,
-                    issue="test", confidence=0.9,
+                    entry=payment,
+                    test_name=f"T{i}",
+                    test_key=f"t{i}",
+                    test_tier=TestTier.STRUCTURAL,
+                    severity=Severity.HIGH,
+                    issue="test",
+                    confidence=0.9,
                 )
             ]
-            results.append(APTestResult(
-                test_name=f"Test{i}", test_key=f"t{i}", test_tier=TestTier.STRUCTURAL,
-                entries_flagged=1, total_entries=1, flag_rate=1.0,
-                severity=Severity.HIGH, description="", flagged_entries=flagged,
-            ))
+            results.append(
+                APTestResult(
+                    test_name=f"Test{i}",
+                    test_key=f"t{i}",
+                    test_tier=TestTier.STRUCTURAL,
+                    entries_flagged=1,
+                    total_entries=1,
+                    flag_rate=1.0,
+                    severity=Severity.HIGH,
+                    description="",
+                    flagged_entries=flagged,
+                )
+            )
 
         score = calculate_ap_composite_score(results, 1)
         assert score.score > 0
@@ -872,16 +930,26 @@ class TestAPCompositeScoring:
         payment = APPayment(vendor_name="Test", amount=1000, row_number=1)
         flagged = [
             FlaggedPayment(
-                entry=payment, test_name="T", test_key="t1",
-                test_tier=TestTier.STRUCTURAL, severity=Severity.HIGH,
-                issue="test", confidence=0.9,
+                entry=payment,
+                test_name="T",
+                test_key="t1",
+                test_tier=TestTier.STRUCTURAL,
+                severity=Severity.HIGH,
+                issue="test",
+                confidence=0.9,
             )
         ]
         results = [
             APTestResult(
-                test_name="Dup Check", test_key="t1", test_tier=TestTier.STRUCTURAL,
-                entries_flagged=1, total_entries=10, flag_rate=0.1,
-                severity=Severity.HIGH, description="", flagged_entries=flagged,
+                test_name="Dup Check",
+                test_key="t1",
+                test_tier=TestTier.STRUCTURAL,
+                entries_flagged=1,
+                total_entries=10,
+                flag_rate=0.1,
+                severity=Severity.HIGH,
+                description="",
+                flagged_entries=flagged,
             ),
         ]
         score = calculate_ap_composite_score(results, 10)
@@ -982,8 +1050,10 @@ class TestAPSerialization:
 
     def test_ap_payment_to_dict(self):
         p = APPayment(
-            invoice_number="INV-001", vendor_name="Acme",
-            amount=5000.0, row_number=1,
+            invoice_number="INV-001",
+            vendor_name="Acme",
+            amount=5000.0,
+            row_number=1,
         )
         d = p.to_dict()
         assert d["invoice_number"] == "INV-001"
@@ -994,9 +1064,13 @@ class TestAPSerialization:
     def test_flagged_payment_to_dict(self):
         p = APPayment(vendor_name="Acme", amount=5000.0, row_number=1)
         fp = FlaggedPayment(
-            entry=p, test_name="Test", test_key="t1",
-            test_tier=TestTier.STRUCTURAL, severity=Severity.HIGH,
-            issue="test issue", confidence=0.95,
+            entry=p,
+            test_name="Test",
+            test_key="t1",
+            test_tier=TestTier.STRUCTURAL,
+            severity=Severity.HIGH,
+            issue="test issue",
+            confidence=0.95,
         )
         d = fp.to_dict()
         assert d["test_name"] == "Test"
@@ -1007,9 +1081,12 @@ class TestAPSerialization:
 
     def test_composite_score_to_dict(self):
         score = APCompositeScore(
-            score=42.5, risk_tier=RiskTier.MODERATE,
-            tests_run=5, total_entries=100,
-            total_flagged=10, flag_rate=0.1,
+            score=42.5,
+            risk_tier=RiskTier.MODERATE,
+            tests_run=5,
+            total_entries=100,
+            total_flagged=10,
+            flag_rate=0.1,
         )
         d = score.to_dict()
         assert d["score"] == 42.5

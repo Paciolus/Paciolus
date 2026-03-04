@@ -242,6 +242,23 @@ def _generate_sampling_memo(
             story.append(Paragraph(line, styles["MemoLeader"]))
         story.append(Spacer(1, 8))
 
+        # ─── TM Derivation Note (CONTENT-10) ──────────────────
+        tm_value = design_result.get("tolerable_misstatement", 0)
+        story.append(Paragraph("<b>Tolerable Misstatement Derivation</b>", styles["MemoBody"]))
+        story.append(
+            Paragraph(
+                f"The tolerable misstatement of ${tm_value:,.2f} was entered by the practitioner "
+                "based on the engagement's overall materiality assessment. Per ISA 320.11, "
+                "tolerable misstatement is the amount set by the auditor at less than materiality "
+                "for the financial statements as a whole to reduce to an appropriately low level "
+                "the probability that the aggregate of uncorrected and undetected misstatements "
+                "exceeds materiality. The practitioner should document the basis for this amount "
+                "in the engagement's materiality workpaper (e.g., WP-MAT-001).",
+                styles["MemoBody"],
+            )
+        )
+        story.append(Spacer(1, 8))
+
         # ─── Stratification Table ─────────────────────────────
         strata = design_result.get("strata_summary", [])
         if strata:
@@ -453,6 +470,26 @@ def _generate_sampling_memo(
             )
         )
         story.append(Spacer(1, 12))
+
+    # ─── Next Steps (CONTENT-10) ─────────────────────────────
+    # Determine section number for Next Steps: follows Conclusion/Status
+    if evaluation_result or design_result:
+        next_steps_num = _roman_after(next_num2)
+    else:
+        next_steps_num = _roman_after(next_num)
+    story.append(Paragraph(f"{next_steps_num}. Next Steps", styles["MemoSection"]))
+    story.append(LedgerRule(doc_width))
+
+    next_steps = [
+        "1. Select the sample items identified above from the source population.",
+        "2. Perform the planned audit procedure on each selected item.",
+        "3. Document the results and any deviations/misstatements found.",
+        "4. Evaluate the results using the sampling methodology (e.g., project misstatements).",
+        "5. Form a conclusion on whether the account balance or transaction class requires further investigation.",
+    ]
+    for step in next_steps:
+        story.append(Paragraph(step, styles["MemoBody"]))
+    story.append(Spacer(1, 12))
 
     # ─── 7. Workpaper Signoff ─────────────────────────────────
     build_workpaper_signoff(

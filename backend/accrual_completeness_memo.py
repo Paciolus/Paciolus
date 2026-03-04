@@ -190,9 +190,62 @@ def generate_accrual_completeness_memo(
         story.append(acct_table)
         story.append(Spacer(1, 8))
 
-    # ── III. RUN-RATE ANALYSIS (conditional) ──
+    # ── Expected Accrual Checklist (CONTENT-09) ──
+    expected_checklist = report_result.get("expected_accrual_checklist", [])
+    if expected_checklist:
+        section_num = "III" if accrual_accounts else "II"
+        story.append(Paragraph(f"{section_num}. Expected Accrual Checklist", styles["MemoSection"]))
+        story.append(LedgerRule(doc_width))
+
+        checklist_data = [["Expected Accrual", "Detected?", "Balance", "Risk if Absent"]]
+        for item in expected_checklist:
+            if isinstance(item, dict):
+                detected = item.get("detected", False)
+                balance = item.get("balance")
+                checklist_data.append(
+                    [
+                        Paragraph(str(item.get("expected_name", "")), styles["MemoTableCell"]),
+                        "Yes" if detected else "No",
+                        f"${balance:,.2f}" if balance is not None else "\u2014",
+                        Paragraph(str(item.get("risk_if_absent", "")), styles["MemoTableCell"]),
+                    ]
+                )
+
+        checklist_table = Table(
+            checklist_data,
+            colWidths=[1.8 * inch, 0.9 * inch, 1.3 * inch, 2.5 * inch],
+            repeatRows=1,
+        )
+        checklist_table.setStyle(
+            TableStyle(
+                [
+                    ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
+                    ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
+                    ("FONTSIZE", (0, 0), (-1, -1), 9),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
+                    ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
+                    ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
+                    ("ALIGN", (1, 0), (1, -1), "CENTER"),
+                    ("ALIGN", (2, 0), (2, -1), "RIGHT"),
+                    ("FONTNAME", (2, 1), (2, -1), "Courier"),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("TOPPADDING", (0, 0), (-1, -1), 3),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                    ("LEFTPADDING", (0, 0), (0, -1), 0),
+                ]
+            )
+        )
+        story.append(checklist_table)
+        story.append(Spacer(1, 8))
+
+    # ── Run-Rate Analysis (conditional) ──
+    run_rate_section = (
+        "IV"
+        if (accrual_accounts and expected_checklist)
+        else ("III" if (accrual_accounts or expected_checklist) else "II")
+    )
     if prior_available and monthly_run_rate is not None:
-        story.append(Paragraph("III. Run-Rate Analysis", styles["MemoSection"]))
+        story.append(Paragraph(f"{run_rate_section}. Run-Rate Analysis", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
         analysis_data = [["Metric", "Value"]]

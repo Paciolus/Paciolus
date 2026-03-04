@@ -232,6 +232,7 @@ class MultiPeriodMemoInput(WorkpaperMetadata):
     significant_movements: list = []
     lead_sheet_summaries: list = []
     dormant_account_count: int = 0
+    dormant_accounts: list[str] = []
     filename: str = "multi_period_comparison"
 
 

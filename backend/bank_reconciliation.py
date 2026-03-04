@@ -16,7 +16,9 @@ Audit Standards References:
 """
 
 import csv
+import re
 from dataclasses import dataclass, field
+from datetime import date
 from enum import Enum
 from io import StringIO
 from typing import Optional
@@ -304,13 +306,20 @@ class BankRecResult:
     summary: ReconciliationSummary
     bank_column_detection: BankColumnDetectionResult
     ledger_column_detection: BankColumnDetectionResult
+    rec_tests: list["RecTestResult"] = field(default_factory=list)
+    outstanding_aging: list["OutstandingItemsAging"] = field(default_factory=list)
 
     def to_dict(self) -> dict:
-        return {
+        result = {
             "summary": self.summary.to_dict(),
             "bank_column_detection": self.bank_column_detection.to_dict(),
             "ledger_column_detection": self.ledger_column_detection.to_dict(),
         }
+        if self.rec_tests:
+            result["rec_tests"] = [t.to_dict() for t in self.rec_tests]
+        if self.outstanding_aging:
+            result["outstanding_aging"] = [a.to_dict() for a in self.outstanding_aging]
+        return result
 
 
 # =============================================================================
@@ -626,6 +635,319 @@ def export_reconciliation_csv(summary: ReconciliationSummary) -> str:
 
 
 # =============================================================================
+# RECONCILIATION TESTS (CONTENT-03)
+# =============================================================================
+
+
+@dataclass
+class RecFlaggedItem:
+    """A single item flagged by a reconciliation test."""
+
+    test_name: str
+    description: str
+    amount: float = 0.0
+    date: Optional[str] = None
+    reference: Optional[str] = None
+    details: Optional[dict] = None
+
+    def to_dict(self) -> dict:
+        result: dict = {
+            "test_name": self.test_name,
+            "description": self.description,
+            "amount": round(self.amount, 2),
+        }
+        if self.date:
+            result["date"] = self.date
+        if self.reference:
+            result["reference"] = self.reference
+        if self.details:
+            result["details"] = self.details
+        return result
+
+
+@dataclass
+class RecTestResult:
+    """Result of a single reconciliation test."""
+
+    test_name: str
+    flagged_count: int = 0
+    severity: str = "low"  # "low", "medium", "high"
+    flagged_items: list[RecFlaggedItem] = field(default_factory=list)
+
+    def to_dict(self) -> dict:
+        return {
+            "test_name": self.test_name,
+            "flagged_count": self.flagged_count,
+            "severity": self.severity,
+            "flagged_items": [item.to_dict() for item in self.flagged_items],
+        }
+
+
+@dataclass
+class OutstandingItemsAging:
+    """Aging statistics for outstanding (unmatched) items."""
+
+    category: str  # "bank_only" or "ledger_only"
+    total_count: int = 0
+    over_10_days: int = 0
+    over_30_days: int = 0
+    oldest_item_days: Optional[int] = None
+    oldest_item_date: Optional[str] = None
+    oldest_item_amount: float = 0.0
+
+    def to_dict(self) -> dict:
+        return {
+            "category": self.category,
+            "total_count": self.total_count,
+            "over_10_days": self.over_10_days,
+            "over_30_days": self.over_30_days,
+            "oldest_item_days": self.oldest_item_days,
+            "oldest_item_date": self.oldest_item_date,
+            "oldest_item_amount": round(self.oldest_item_amount, 2),
+        }
+
+
+def _compute_item_age_days(date_str: Optional[str], reference_date: Optional[date] = None) -> Optional[int]:
+    """Compute age in days from a date string relative to reference date."""
+    if not date_str:
+        return None
+    parsed = parse_date(date_str)
+    if not parsed:
+        return None
+    ref = reference_date or date.today()
+    return (ref - parsed).days
+
+
+def _test_stale_deposits(
+    bank_only_items: list[ReconciliationMatch],
+    reference_date: Optional[date] = None,
+) -> RecTestResult:
+    """Flag bank-only items older than 10 days (stale deposits in transit)."""
+    flagged: list[RecFlaggedItem] = []
+    for m in bank_only_items:
+        txn = m.bank_txn
+        if not txn:
+            continue
+        age = _compute_item_age_days(txn.date, reference_date)
+        if age is not None and age > 10:
+            flagged.append(
+                RecFlaggedItem(
+                    test_name="Stale Deposits",
+                    description=f"Deposit outstanding {age} days: {txn.description[:50]}",
+                    amount=txn.amount,
+                    date=txn.date,
+                    reference=txn.reference,
+                    details={"age_days": age},
+                )
+            )
+
+    severity = "high" if len(flagged) > 5 else ("medium" if len(flagged) > 0 else "low")
+    return RecTestResult(
+        test_name="Stale Deposits (>10 days)",
+        flagged_count=len(flagged),
+        severity=severity,
+        flagged_items=flagged,
+    )
+
+
+def _test_stale_checks(
+    ledger_only_items: list[ReconciliationMatch],
+    reference_date: Optional[date] = None,
+) -> RecTestResult:
+    """Flag ledger-only items older than 90 days (stale outstanding checks)."""
+    flagged: list[RecFlaggedItem] = []
+    for m in ledger_only_items:
+        txn = m.ledger_txn
+        if not txn:
+            continue
+        age = _compute_item_age_days(txn.date, reference_date)
+        if age is not None and age > 90:
+            flagged.append(
+                RecFlaggedItem(
+                    test_name="Stale Checks",
+                    description=f"Check outstanding {age} days: {txn.description[:50]}",
+                    amount=txn.amount,
+                    date=txn.date,
+                    reference=txn.reference,
+                    details={"age_days": age},
+                )
+            )
+
+    severity = "high" if len(flagged) > 3 else ("medium" if len(flagged) > 0 else "low")
+    return RecTestResult(
+        test_name="Stale Checks (>90 days)",
+        flagged_count=len(flagged),
+        severity=severity,
+        flagged_items=flagged,
+    )
+
+
+_NSF_KEYWORDS = re.compile(
+    r"\b(nsf|returned|bounced|chargeback|charge\s*back|dishono[u]?red)\b",
+    re.IGNORECASE,
+)
+
+
+def _test_nsf_items(
+    all_items: list[ReconciliationMatch],
+) -> RecTestResult:
+    """Flag items with NSF/returned/bounced/chargeback keywords in descriptions."""
+    flagged: list[RecFlaggedItem] = []
+    for m in all_items:
+        for txn_source, txn in [("bank", m.bank_txn), ("ledger", m.ledger_txn)]:
+            if not txn:
+                continue
+            if _NSF_KEYWORDS.search(txn.description):
+                flagged.append(
+                    RecFlaggedItem(
+                        test_name="NSF/Returned Items",
+                        description=f"NSF keyword in {txn_source}: {txn.description[:60]}",
+                        amount=txn.amount,
+                        date=txn.date,
+                        reference=txn.reference,
+                        details={"source": txn_source},
+                    )
+                )
+
+    severity = "high" if len(flagged) > 3 else ("medium" if len(flagged) > 0 else "low")
+    return RecTestResult(
+        test_name="NSF / Returned Items",
+        flagged_count=len(flagged),
+        severity=severity,
+        flagged_items=flagged,
+    )
+
+
+def _test_interbank_transfers(
+    all_items: list[ReconciliationMatch],
+    threshold: float = 10_000.0,
+) -> RecTestResult:
+    """Flag same-day debit/credit pairs exceeding threshold (potential interbank transfers)."""
+    flagged: list[RecFlaggedItem] = []
+
+    # Collect all transactions with dates
+    txns_by_date: dict[str, list[tuple[str, BankTransaction | LedgerTransaction]]] = {}
+    for m in all_items:
+        for source, txn in [("bank", m.bank_txn), ("ledger", m.ledger_txn)]:
+            if txn and txn.date:
+                txns_by_date.setdefault(txn.date, []).append((source, txn))
+
+    for txn_date, day_txns in txns_by_date.items():
+        debits = [(s, t) for s, t in day_txns if t.amount < 0 and abs(t.amount) >= threshold]
+        credits = [(s, t) for s, t in day_txns if t.amount > 0 and t.amount >= threshold]
+
+        for d_src, d_txn in debits:
+            for c_src, c_txn in credits:
+                if abs(abs(d_txn.amount) - c_txn.amount) < 0.01:
+                    flagged.append(
+                        RecFlaggedItem(
+                            test_name="Interbank Transfers",
+                            description=(f"Same-day debit/credit pair on {txn_date}: ${abs(d_txn.amount):,.2f}"),
+                            amount=abs(d_txn.amount),
+                            date=txn_date,
+                            details={
+                                "debit_description": d_txn.description[:40],
+                                "credit_description": c_txn.description[:40],
+                            },
+                        )
+                    )
+
+    severity = "medium" if len(flagged) > 0 else "low"
+    return RecTestResult(
+        test_name="Interbank Transfers",
+        flagged_count=len(flagged),
+        severity=severity,
+        flagged_items=flagged,
+    )
+
+
+def _test_high_value_transactions(
+    all_items: list[ReconciliationMatch],
+    materiality: float = 50_000.0,
+) -> RecTestResult:
+    """Flag single transactions exceeding the materiality threshold."""
+    flagged: list[RecFlaggedItem] = []
+    for m in all_items:
+        for source, txn in [("bank", m.bank_txn), ("ledger", m.ledger_txn)]:
+            if not txn:
+                continue
+            if abs(txn.amount) > materiality:
+                flagged.append(
+                    RecFlaggedItem(
+                        test_name="High Value Transactions",
+                        description=f"{source.title()} txn > materiality: {txn.description[:50]}",
+                        amount=txn.amount,
+                        date=txn.date,
+                        reference=txn.reference,
+                        details={"source": source, "materiality": materiality},
+                    )
+                )
+
+    severity = "high" if len(flagged) > 5 else ("medium" if len(flagged) > 0 else "low")
+    return RecTestResult(
+        test_name="High Value (>Materiality)",
+        flagged_count=len(flagged),
+        severity=severity,
+        flagged_items=flagged,
+    )
+
+
+def run_reconciliation_tests(
+    matches: list[ReconciliationMatch],
+    materiality: float = 50_000.0,
+    reference_date: Optional[date] = None,
+) -> list[RecTestResult]:
+    """Run all 5 reconciliation tests on the match results."""
+    bank_only = [m for m in matches if m.match_type == MatchType.BANK_ONLY]
+    ledger_only = [m for m in matches if m.match_type == MatchType.LEDGER_ONLY]
+
+    return [
+        _test_stale_deposits(bank_only, reference_date),
+        _test_stale_checks(ledger_only, reference_date),
+        _test_nsf_items(matches),
+        _test_interbank_transfers(matches),
+        _test_high_value_transactions(matches, materiality),
+    ]
+
+
+def compute_outstanding_items_aging(
+    matches: list[ReconciliationMatch],
+    reference_date: Optional[date] = None,
+) -> list[OutstandingItemsAging]:
+    """Compute aging statistics for bank-only and ledger-only items."""
+    results: list[OutstandingItemsAging] = []
+
+    for category, match_type, txn_attr in [
+        ("bank_only", MatchType.BANK_ONLY, "bank_txn"),
+        ("ledger_only", MatchType.LEDGER_ONLY, "ledger_txn"),
+    ]:
+        items = [m for m in matches if m.match_type == match_type]
+        aging = OutstandingItemsAging(category=category, total_count=len(items))
+
+        oldest_days: Optional[int] = None
+        for m in items:
+            txn = getattr(m, txn_attr)
+            if not txn:
+                continue
+            age = _compute_item_age_days(txn.date, reference_date)
+            if age is None:
+                continue
+            if age > 10:
+                aging.over_10_days += 1
+            if age > 30:
+                aging.over_30_days += 1
+            if oldest_days is None or age > oldest_days:
+                oldest_days = age
+                aging.oldest_item_days = age
+                aging.oldest_item_date = txn.date
+                aging.oldest_item_amount = txn.amount
+
+        results.append(aging)
+
+    return results
+
+
+# =============================================================================
 # MAIN ENTRY POINT
 # =============================================================================
 
@@ -697,8 +1019,16 @@ def reconcile_bank_statement(
     # 4. Calculate summary
     summary = calculate_summary(matches)
 
+    # 5. Run reconciliation tests
+    rec_tests = run_reconciliation_tests(matches)
+
+    # 6. Compute outstanding items aging
+    outstanding_aging = compute_outstanding_items_aging(matches)
+
     return BankRecResult(
         summary=summary,
         bank_column_detection=bank_detection,
         ledger_column_detection=ledger_detection,
+        rec_tests=rec_tests,
+        outstanding_aging=outstanding_aging,
     )

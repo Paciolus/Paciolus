@@ -15,24 +15,26 @@ from enum import Enum
 
 
 class RiskTier(str, Enum):
-    """Composite risk tier for testing results."""
-    LOW = "low"                  # Score 0-9
-    ELEVATED = "elevated"        # Score 10-24
-    MODERATE = "moderate"        # Score 25-49
-    HIGH = "high"                # Score 50-74
-    CRITICAL = "critical"        # Score 75+
+    """Composite risk tier for testing results (4-tier scale)."""
+
+    LOW = "low"  # Score 0-10
+    MODERATE = "moderate"  # Score 11-25
+    ELEVATED = "elevated"  # Score 26-50
+    HIGH = "high"  # Score 51-100
 
 
 class TestTier(str, Enum):
     """Test classification tier."""
-    STRUCTURAL = "structural"    # Tier 1: Basic structural checks
+
+    STRUCTURAL = "structural"  # Tier 1: Basic structural checks
     STATISTICAL = "statistical"  # Tier 2: Statistical analysis
-    ADVANCED = "advanced"        # Tier 3: Advanced patterns / fraud indicators
-    CONTRACT = "contract"        # Tier 4: Standards-compliance checks (ASC 606 / IFRS 15)
+    ADVANCED = "advanced"  # Tier 3: Advanced patterns / fraud indicators
+    CONTRACT = "contract"  # Tier 4: Standards-compliance checks (ASC 606 / IFRS 15)
 
 
 class Severity(str, Enum):
     """Severity of a flagged entry."""
+
     HIGH = "high"
     MEDIUM = "medium"
     LOW = "low"
@@ -48,18 +50,17 @@ SEVERITY_WEIGHTS: dict[Severity, float] = {
 def score_to_risk_tier(score: float) -> RiskTier:
     """Map a composite score (0-100) to a risk tier.
 
+    4-tier scale: 0–10 Low | 11–25 Moderate | 26–50 Elevated | 51–100 High Risk.
     Used by all testing engines for consistent tier assignment.
     """
-    if score < 10:
+    if score <= 10:
         return RiskTier.LOW
-    elif score < 25:
-        return RiskTier.ELEVATED
-    elif score < 50:
+    elif score <= 25:
         return RiskTier.MODERATE
-    elif score < 75:
-        return RiskTier.HIGH
+    elif score <= 50:
+        return RiskTier.ELEVATED
     else:
-        return RiskTier.CRITICAL
+        return RiskTier.HIGH
 
 
 def zscore_to_severity(z: float) -> Severity:

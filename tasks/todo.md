@@ -106,6 +106,89 @@
 
 ## Active Phase
 
+### Sprint 486 — Report Engine Content Improvements & Bug Fixes (Full Plan)
+**Status:** COMPLETE
+**Goal:** Comprehensive content audit implementation: 4 bug fixes, 6 drill-downs, 11 content additions, 1 new report type, 5 enhancements.
+
+#### Wave 1: Bug Fixes
+- [x] BUG-01: Benford's Law display format (.2% → .3%)
+- [x] BUG-02: Three-Way Match section numbering (chr() arithmetic → _roman() counter)
+- [x] BUG-03: Risk Score Scale refactor to 4-tier (removed CRITICAL, added MODERATE)
+- [x] BUG-04: Reference Number consistency (dynamic refs for preflight + population profile)
+
+#### Wave 2: Drill-Down Detail Tables
+- [x] Created `shared/drill_down.py` utility
+- [x] DRILL-01: JET high severity entry detail tables
+- [x] DRILL-02: APT high severity payment detail
+- [x] DRILL-03: APT vendor name variation pairs
+- [x] DRILL-04: RVT cut-off risk entry detail
+- [x] DRILL-05: ARA credit limit breach customer detail
+- [x] DRILL-06: Preparer concentration (JE + Revenue)
+
+#### Wave 3: Missing Core Content
+- [x] CONTENT-01: AR aging schedule table
+- [x] CONTENT-02: AR allowance gap quantification
+- [x] CONTENT-03: Bank rec expanded tests (5 new tests + outstanding items aging)
+- [x] CONTENT-04: Financial statements key ratios (8 ratios)
+- [x] CONTENT-05: Quality of earnings paragraph
+- [x] CONTENT-06: Multi-period ratio trend table
+- [x] CONTENT-07: Multi-period sign change & dormant account names
+- [x] CONTENT-08: Inventory turnover & duration breakdown
+- [x] CONTENT-09: Accrual completeness expected vs. detected checklist
+- [x] CONTENT-10: Sampling design TM derivation & next steps
+- [x] CONTENT-11: ISA 520 flux missing accounts & sign-off fields
+
+#### Wave 4: Engagement Risk Dashboard
+- [x] DASH-01: New `engagement_dashboard_engine.py` + `engagement_dashboard_memo.py`
+
+#### Wave 5: Enhancements
+- [x] ENHANCE-01: Suggested follow-up procedures (`shared/follow_up_procedures.py` + memo_template wiring)
+- [x] ENHANCE-02: Bank rec totals clarification note
+- [x] ENHANCE-03: Currency conversion monetary/non-monetary flag (IAS 21)
+- [x] ENHANCE-04: Pre-flight downstream impact column
+- [x] ENHANCE-05: Data quality score verification (confirmed dynamic — no code changes needed)
+
+#### Verification
+- [x] `npm run build` passes
+- [x] `pytest` — 5,620 passed (38 pre-existing failures unrelated to changes)
+- [x] Fixed banned language in sampling memo (CONTENT-10 agent output)
+
+---
+
+### Sprint 484 — CONTENT-09 through CONTENT-11: Report Engine Enhancements
+**Status:** COMPLETE (superseded by Sprint 486)
+**Goal:** Add expected accrual checklist (CONTENT-09), sampling TM derivation & next steps (CONTENT-10), and ISA 520 flux missing accounts & sign-off fields (CONTENT-11).
+
+- [x] CONTENT-09: Add `EXPECTED_ACCRUALS` lookup table to `accrual_completeness_engine.py`
+- [x] CONTENT-09: Add expected accrual checklist matching logic to engine
+- [x] CONTENT-09: Add "Expected Accrual Checklist" section to `accrual_completeness_memo.py`
+- [x] CONTENT-10: Add TM derivation subsection in Design Parameters section of `sampling_memo_generator.py`
+- [x] CONTENT-10: Add "Next Steps" section after Conclusion in sampling memo
+- [x] CONTENT-11: Show ALL high/medium risk accounts in `flux_expectations_memo.py` (not just documented ones)
+- [x] CONTENT-11: Add per-account conclusion placeholder lines
+- [x] CONTENT-11: Add formal sign-off table at end of document
+- [x] Build verification: `npm run build` passes
+- [x] Backend verification: `pytest` passes (106 relevant tests passing)
+
+---
+
+### Sprint 485 — CONTENT-01 through CONTENT-05: Report Engine Enhancements
+**Status:** COMPLETE
+**Goal:** Add AR aging schedule table (CONTENT-01), AR allowance gap quantification (CONTENT-02), bank rec expanded tests (CONTENT-03), financial statement key ratios (CONTENT-04), quality of earnings paragraph (CONTENT-05).
+
+- [x] CONTENT-01: Add `compute_aging_schedule()` to `ar_aging_engine.py` and include in `to_dict()` output
+- [x] CONTENT-01: Add aging schedule table section to `ar_aging_memo_generator.py`
+- [x] CONTENT-02: Add allowance gap quantification section to `ar_aging_memo_generator.py`
+- [x] CONTENT-03: Add 5 new test functions + dataclasses to `bank_reconciliation.py`
+- [x] CONTENT-03: Add outstanding items aging computation to `bank_reconciliation.py`
+- [x] CONTENT-03: Add reconciliation tests + aging sections to `bank_reconciliation_memo_generator.py`
+- [x] CONTENT-04: Add key financial ratios section to `pdf_generator.py` (financial statements PDF)
+- [x] CONTENT-05: Add quality of earnings paragraph to `pdf_generator.py`
+- [x] Build verification: `npm run build` passes
+- [x] Backend verification: `pytest` passes (130 AR + 55 bank rec + 35 FS + 34 AR memo + 20 bank rec memo — all pass)
+
+---
+
 ### Sprint 483 — Homepage Atmospheric Background Images
 **Status:** COMPLETE
 **Goal:** Introduce two subtle background images as atmospheric layers on the marketing homepage — heritage ledger texture and modern architecture — blended at very low opacity with gradient masking.

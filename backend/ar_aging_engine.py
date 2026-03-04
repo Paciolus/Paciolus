@@ -42,9 +42,11 @@ from shared.testing_enums import (
 # CONFIGURATION
 # =============================================================================
 
+
 @dataclass
 class ARAgingConfig:
     """Configurable thresholds for all AR aging tests."""
+
     # AR-01: Sign anomalies
     sign_anomaly_enabled: bool = True
 
@@ -287,9 +289,11 @@ def classify_aging_bucket(days: int) -> str:
 # DATA MODELS
 # =============================================================================
 
+
 @dataclass
 class TBAccount:
     """A single account from the trial balance."""
+
     account_name: Optional[str] = None
     account_number: Optional[str] = None
     balance: float = 0.0
@@ -309,6 +313,7 @@ class TBAccount:
 @dataclass
 class ARSubledgerEntry:
     """A single line from the AR sub-ledger."""
+
     customer_name: Optional[str] = None
     customer_id: Optional[str] = None
     invoice_number: Optional[str] = None
@@ -338,6 +343,7 @@ class ARSubledgerEntry:
 @dataclass
 class AREntry:
     """Generic AR entry — can represent a TB account or sub-ledger line."""
+
     account_name: Optional[str] = None
     account_number: Optional[str] = None
     customer_name: Optional[str] = None
@@ -365,6 +371,7 @@ class AREntry:
 @dataclass
 class FlaggedAR:
     """An AR item flagged by a test."""
+
     entry: AREntry
     test_name: str
     test_key: str
@@ -390,6 +397,7 @@ class FlaggedAR:
 @dataclass
 class ARTestResult:
     """Result of a single AR aging test."""
+
     test_name: str
     test_key: str
     test_tier: TestTier
@@ -421,6 +429,7 @@ class ARTestResult:
 @dataclass
 class TBColumnDetection:
     """Result of TB column detection."""
+
     account_name_column: Optional[str] = None
     account_number_column: Optional[str] = None
     balance_column: Optional[str] = None
@@ -452,6 +461,7 @@ class TBColumnDetection:
 @dataclass
 class SLColumnDetection:
     """Result of sub-ledger column detection."""
+
     customer_name_column: Optional[str] = None
     customer_id_column: Optional[str] = None
     invoice_number_column: Optional[str] = None
@@ -486,6 +496,7 @@ class SLColumnDetection:
 @dataclass
 class ARDataQuality:
     """Quality assessment of the AR data."""
+
     completeness_score: float
     field_fill_rates: dict[str, float] = field(default_factory=dict)
     detected_issues: list[str] = field(default_factory=list)
@@ -507,6 +518,7 @@ class ARDataQuality:
 @dataclass
 class ARCompositeScore:
     """Overall AR aging composite score."""
+
     score: float
     risk_tier: RiskTier
     tests_run: int
@@ -529,18 +541,65 @@ class ARCompositeScore:
         }
 
 
+def compute_aging_schedule(sl_entries: list["ARSubledgerEntry"]) -> list[dict]:
+    """Bucket all sub-ledger entries into standard aging schedule.
+
+    Returns a list of dicts with bucket, count, amount, and percentage for each
+    aging bucket: Current (0-30), 31-60, 61-90, 91-120, 120+.
+    """
+    bucket_labels = [
+        ("Current (0-30)", 0, 30),
+        ("31-60", 31, 60),
+        ("61-90", 61, 90),
+        ("91-120", 91, 120),
+        ("120+", 121, 999999),
+    ]
+
+    # Initialize accumulators
+    buckets: list[dict] = []
+    for label, low, high in bucket_labels:
+        buckets.append({"bucket": label, "low": low, "high": high, "count": 0, "amount": 0.0})
+
+    total_amount = 0.0
+    for entry in sl_entries:
+        days = entry.aging_days if entry.aging_days is not None else 0
+        total_amount += entry.amount
+        for b in buckets:
+            if b["low"] <= days <= b["high"]:
+                b["count"] += 1
+                b["amount"] += entry.amount
+                break
+
+    # Build result with percentages
+    schedule: list[dict] = []
+    for b in buckets:
+        pct = (b["amount"] / total_amount * 100) if total_amount != 0 else 0.0
+        schedule.append(
+            {
+                "bucket": b["bucket"],
+                "count": b["count"],
+                "amount": round(b["amount"], 2),
+                "percentage": round(pct, 1),
+            }
+        )
+
+    return schedule
+
+
 @dataclass
 class ARAgingResult:
     """Complete result of AR aging analysis."""
+
     composite_score: ARCompositeScore
     test_results: list[ARTestResult] = field(default_factory=list)
     data_quality: Optional[ARDataQuality] = None
     tb_column_detection: Optional[TBColumnDetection] = None
     sl_column_detection: Optional[SLColumnDetection] = None
     ar_summary: Optional[dict] = None
+    aging_schedule: Optional[list[dict]] = None
 
     def to_dict(self) -> dict:
-        return {
+        result = {
             "composite_score": self.composite_score.to_dict(),
             "test_results": [t.to_dict() for t in self.test_results],
             "data_quality": self.data_quality.to_dict() if self.data_quality else None,
@@ -548,6 +607,9 @@ class ARAgingResult:
             "sl_column_detection": self.sl_column_detection.to_dict() if self.sl_column_detection else None,
             "ar_summary": self.ar_summary,
         }
+        if self.aging_schedule is not None:
+            result["aging_schedule"] = self.aging_schedule
+        return result
 
 
 # =============================================================================
@@ -563,8 +625,13 @@ TB_COLUMN_CONFIGS: list[ColumnFieldConfig] = [
 ]
 
 SL_COLUMN_CONFIGS: list[ColumnFieldConfig] = [
-    ColumnFieldConfig("amount_column", SL_AMOUNT_PATTERNS, required=True,
-                      missing_note="No amount column detected in sub-ledger", priority=10),
+    ColumnFieldConfig(
+        "amount_column",
+        SL_AMOUNT_PATTERNS,
+        required=True,
+        missing_note="No amount column detected in sub-ledger",
+        priority=10,
+    ),
     ColumnFieldConfig("customer_name_column", SL_CUSTOMER_NAME_PATTERNS, priority=15),
     ColumnFieldConfig("customer_id_column", SL_CUSTOMER_ID_PATTERNS, priority=20),
     ColumnFieldConfig("invoice_number_column", SL_INVOICE_NUMBER_PATTERNS, priority=25),
@@ -579,6 +646,7 @@ SL_COLUMN_CONFIGS: list[ColumnFieldConfig] = [
 # =============================================================================
 # TB COLUMN DETECTION
 # =============================================================================
+
 
 def detect_tb_columns(column_names: list[str]) -> TBColumnDetection:
     """Detect TB column roles using shared column detector."""
@@ -612,15 +680,22 @@ def detect_tb_columns(column_names: list[str]) -> TBColumnDetection:
 # SUB-LEDGER COLUMN DETECTION
 # =============================================================================
 
+
 def detect_sl_columns(column_names: list[str]) -> SLColumnDetection:
     """Detect sub-ledger column roles using shared column detector."""
     det = detect_columns(column_names, SL_COLUMN_CONFIGS, min_confidence=0.50)
     detection = SLColumnDetection(all_columns=det.all_columns)
 
     field_names = [
-        "customer_name_column", "customer_id_column", "invoice_number_column",
-        "invoice_date_column", "due_date_column", "amount_column",
-        "aging_days_column", "aging_bucket_column", "credit_limit_column",
+        "customer_name_column",
+        "customer_id_column",
+        "invoice_number_column",
+        "invoice_date_column",
+        "due_date_column",
+        "amount_column",
+        "aging_days_column",
+        "aging_bucket_column",
+        "credit_limit_column",
     ]
     for field_name in field_names:
         col = det.get_column(field_name)
@@ -646,6 +721,7 @@ def detect_sl_columns(column_names: list[str]) -> SLColumnDetection:
 # =============================================================================
 # ACCOUNT CLASSIFICATION
 # =============================================================================
+
 
 def _classify_account(account_name: str) -> tuple[str, float]:
     """Classify a TB account based on name. Returns (classification, confidence)."""
@@ -680,6 +756,7 @@ def _classify_account(account_name: str) -> tuple[str, float]:
 # TB PARSING
 # =============================================================================
 
+
 def parse_tb_accounts(
     rows: list[dict],
     detection: TBColumnDetection,
@@ -713,13 +790,15 @@ def parse_tb_accounts(
 
         classification, _ = _classify_account(acct_name or "")
 
-        accounts.append(TBAccount(
-            account_name=acct_name,
-            account_number=acct_number,
-            balance=balance,
-            classification=classification,
-            row_number=i + 1,
-        ))
+        accounts.append(
+            TBAccount(
+                account_name=acct_name,
+                account_number=acct_number,
+                balance=balance,
+                classification=classification,
+                row_number=i + 1,
+            )
+        )
 
     return accounts
 
@@ -727,6 +806,7 @@ def parse_tb_accounts(
 # =============================================================================
 # SUB-LEDGER PARSING
 # =============================================================================
+
 
 def _parse_date_to_str(val) -> Optional[str]:
     """Normalize a date value to string."""
@@ -741,6 +821,7 @@ def _compute_aging_days(due_date_str: Optional[str], reference_date_str: Optiona
     if not due_date_str:
         return None
     from datetime import date, datetime
+
     try:
         # Try common date formats
         for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y", "%Y/%m/%d", "%m-%d-%Y", "%d-%m-%Y"):
@@ -855,18 +936,20 @@ def parse_sl_entries(
         if amount == 0.0 and not customer_name and not customer_id:
             continue
 
-        entries.append(ARSubledgerEntry(
-            customer_name=customer_name,
-            customer_id=customer_id,
-            invoice_number=invoice_number,
-            invoice_date=invoice_date,
-            due_date=due_date,
-            amount=amount,
-            aging_days=aging_days,
-            aging_bucket=aging_bucket,
-            credit_limit=credit_limit,
-            row_number=i + 1,
-        ))
+        entries.append(
+            ARSubledgerEntry(
+                customer_name=customer_name,
+                customer_id=customer_id,
+                invoice_number=invoice_number,
+                invoice_date=invoice_date,
+                due_date=due_date,
+                amount=amount,
+                aging_days=aging_days,
+                aging_bucket=aging_bucket,
+                credit_limit=credit_limit,
+                row_number=i + 1,
+            )
+        )
 
     return entries
 
@@ -874,6 +957,7 @@ def parse_sl_entries(
 # =============================================================================
 # DATA QUALITY ASSESSMENT
 # =============================================================================
+
 
 def assess_data_quality(
     accounts: list[TBAccount],
@@ -926,6 +1010,7 @@ def assess_data_quality(
 # HELPER: Convert TB account to AREntry
 # =============================================================================
 
+
 def _tb_to_entry(acct: TBAccount) -> AREntry:
     return AREntry(
         account_name=acct.account_name,
@@ -952,6 +1037,7 @@ def _sl_to_entry(e: ARSubledgerEntry) -> AREntry:
 # TEST BATTERY — TIER 1: STRUCTURAL
 # =============================================================================
 
+
 def test_ar_sign_anomalies(
     accounts: list[TBAccount],
     config: ARAgingConfig,
@@ -965,15 +1051,17 @@ def test_ar_sign_anomalies(
             # AR should have debit (positive) balance; credit = anomaly
             if acct.balance < 0:
                 severity = Severity.HIGH if abs(acct.balance) > 10000 else Severity.MEDIUM
-                flagged.append(FlaggedAR(
-                    entry=_tb_to_entry(acct),
-                    test_name="AR Balance Sign Anomalies",
-                    test_key="ar_sign_anomalies",
-                    test_tier=TestTier.STRUCTURAL,
-                    severity=severity,
-                    issue=f"AR account has credit balance of {acct.balance:,.2f} — expected debit",
-                    details={"balance": acct.balance},
-                ))
+                flagged.append(
+                    FlaggedAR(
+                        entry=_tb_to_entry(acct),
+                        test_name="AR Balance Sign Anomalies",
+                        test_key="ar_sign_anomalies",
+                        test_tier=TestTier.STRUCTURAL,
+                        severity=severity,
+                        issue=f"AR account has credit balance of {acct.balance:,.2f} — expected debit",
+                        details={"balance": acct.balance},
+                    )
+                )
 
     total = len(ar_accounts)
     return ARTestResult(
@@ -1001,16 +1089,18 @@ def test_missing_allowance(
     if config.missing_allowance_enabled and ar_accounts and not allowance_accounts:
         # Flag the largest AR account as the representative flag
         largest_ar = max(ar_accounts, key=lambda a: abs(a.balance))
-        flagged.append(FlaggedAR(
-            entry=_tb_to_entry(largest_ar),
-            test_name="Missing Contra-Account",
-            test_key="missing_allowance",
-            test_tier=TestTier.STRUCTURAL,
-            severity=Severity.HIGH,
-            issue="No Allowance for Doubtful Accounts detected in trial balance — required under IFRS 9/ASC 326",
-            confidence=0.90,
-            details={"total_ar": sum(a.balance for a in ar_accounts)},
-        ))
+        flagged.append(
+            FlaggedAR(
+                entry=_tb_to_entry(largest_ar),
+                test_name="Missing Contra-Account",
+                test_key="missing_allowance",
+                test_tier=TestTier.STRUCTURAL,
+                severity=Severity.HIGH,
+                issue="No Allowance for Doubtful Accounts detected in trial balance — required under IFRS 9/ASC 326",
+                confidence=0.90,
+                details={"total_ar": sum(a.balance for a in ar_accounts)},
+            )
+        )
 
     total = len(ar_accounts)
     return ARTestResult(
@@ -1036,15 +1126,17 @@ def test_negative_aging(
     if config.negative_aging_enabled:
         for e in sl_entries:
             if e.aging_days is not None and e.aging_days < 0:
-                flagged.append(FlaggedAR(
-                    entry=_sl_to_entry(e),
-                    test_name="Negative Aging Buckets",
-                    test_key="negative_aging",
-                    test_tier=TestTier.STRUCTURAL,
-                    severity=Severity.MEDIUM,
-                    issue=f"Aging days is negative ({e.aging_days}) — due date is in the future or date logic error",
-                    details={"aging_days": e.aging_days, "due_date": e.due_date},
-                ))
+                flagged.append(
+                    FlaggedAR(
+                        entry=_sl_to_entry(e),
+                        test_name="Negative Aging Buckets",
+                        test_key="negative_aging",
+                        test_tier=TestTier.STRUCTURAL,
+                        severity=Severity.MEDIUM,
+                        issue=f"Aging days is negative ({e.aging_days}) — due date is in the future or date logic error",
+                        details={"aging_days": e.aging_days, "due_date": e.due_date},
+                    )
+                )
 
     total = len(sl_entries)
     return ARTestResult(
@@ -1080,19 +1172,21 @@ def test_unreconciled_detail(
     if difference > threshold and tb_ar_total != 0:
         severity = Severity.HIGH if difference > abs(tb_ar_total) * 0.05 else Severity.MEDIUM
         # Flag the difference as a conceptual entry
-        flagged.append(FlaggedAR(
-            entry=AREntry(
-                account_name="Reconciliation Difference",
-                amount=tb_ar_total - sl_total,
-                entry_source="reconciliation",
-            ),
-            test_name="Unreconciled AR Detail",
-            test_key="unreconciled_detail",
-            test_tier=TestTier.STRUCTURAL,
-            severity=severity,
-            issue=f"Sub-ledger total ({sl_total:,.2f}) differs from TB AR balance ({tb_ar_total:,.2f}) by {difference:,.2f}",
-            details={"tb_ar_total": tb_ar_total, "sl_total": sl_total, "difference": difference},
-        ))
+        flagged.append(
+            FlaggedAR(
+                entry=AREntry(
+                    account_name="Reconciliation Difference",
+                    amount=tb_ar_total - sl_total,
+                    entry_source="reconciliation",
+                ),
+                test_name="Unreconciled AR Detail",
+                test_key="unreconciled_detail",
+                test_tier=TestTier.STRUCTURAL,
+                severity=severity,
+                issue=f"Sub-ledger total ({sl_total:,.2f}) differs from TB AR balance ({tb_ar_total:,.2f}) by {difference:,.2f}",
+                details={"tb_ar_total": tb_ar_total, "sl_total": sl_total, "difference": difference},
+            )
+        )
 
     total = len(ar_accounts) + len(sl_entries)
     return ARTestResult(
@@ -1102,7 +1196,9 @@ def test_unreconciled_detail(
         entries_flagged=len(flagged),
         total_entries=total,
         flag_rate=1.0 if flagged else 0.0,
-        severity=Severity.HIGH if flagged and flagged[0].severity == Severity.HIGH else (Severity.MEDIUM if flagged else Severity.LOW),
+        severity=Severity.HIGH
+        if flagged and flagged[0].severity == Severity.HIGH
+        else (Severity.MEDIUM if flagged else Severity.LOW),
         description="Reconciliation of sub-ledger detail to TB AR balance",
         flagged_entries=flagged,
     )
@@ -1111,6 +1207,7 @@ def test_unreconciled_detail(
 # =============================================================================
 # TEST BATTERY — TIER 2: STATISTICAL
 # =============================================================================
+
 
 def test_bucket_concentration(
     sl_entries: list[ARSubledgerEntry],
@@ -1125,8 +1222,10 @@ def test_bucket_concentration(
             test_name="Aging Bucket Concentration",
             test_key="bucket_concentration",
             test_tier=TestTier.STATISTICAL,
-            entries_flagged=0, total_entries=len(sl_entries),
-            flag_rate=0.0, severity=Severity.LOW,
+            entries_flagged=0,
+            total_entries=len(sl_entries),
+            flag_rate=0.0,
+            severity=Severity.LOW,
             description="Concentration of AR balance across aging buckets",
         )
 
@@ -1148,15 +1247,17 @@ def test_bucket_concentration(
             # Flag representative entries from this bucket (top 5 by amount)
             top_entries = sorted(bucket_entries[bucket], key=lambda x: abs(x.amount), reverse=True)[:5]
             for entry in top_entries:
-                flagged.append(FlaggedAR(
-                    entry=_sl_to_entry(entry),
-                    test_name="Aging Bucket Concentration",
-                    test_key="bucket_concentration",
-                    test_tier=TestTier.STATISTICAL,
-                    severity=severity,
-                    issue=f"Bucket '{bucket}' holds {pct:.1%} of total AR ({amount:,.2f} of {total_ar:,.2f})",
-                    details={"bucket": bucket, "bucket_pct": round(pct, 4), "bucket_total": amount},
-                ))
+                flagged.append(
+                    FlaggedAR(
+                        entry=_sl_to_entry(entry),
+                        test_name="Aging Bucket Concentration",
+                        test_key="bucket_concentration",
+                        test_tier=TestTier.STATISTICAL,
+                        severity=severity,
+                        issue=f"Bucket '{bucket}' holds {pct:.1%} of total AR ({amount:,.2f} of {total_ar:,.2f})",
+                        details={"bucket": bucket, "bucket_pct": round(pct, 4), "bucket_total": amount},
+                    )
+                )
 
     total = len(sl_entries)
     return ARTestResult(
@@ -1185,8 +1286,10 @@ def test_past_due_concentration(
             test_name="Past-Due Concentration",
             test_key="past_due_concentration",
             test_tier=TestTier.STATISTICAL,
-            entries_flagged=0, total_entries=len(sl_entries),
-            flag_rate=0.0, severity=Severity.LOW,
+            entries_flagged=0,
+            total_entries=len(sl_entries),
+            flag_rate=0.0,
+            severity=Severity.LOW,
             description="Concentration of AR balance in past-due categories",
         )
 
@@ -1200,15 +1303,17 @@ def test_past_due_concentration(
         # Flag top past-due entries
         top_entries = sorted(past_due, key=lambda x: abs(x.amount), reverse=True)[:10]
         for entry in top_entries:
-            flagged.append(FlaggedAR(
-                entry=_sl_to_entry(entry),
-                test_name="Past-Due Concentration",
-                test_key="past_due_concentration",
-                test_tier=TestTier.STATISTICAL,
-                severity=severity,
-                issue=f"Past-due {entry.aging_days} days — {past_due_pct:.1%} of AR is past due (>{config.past_due_days} days)",
-                details={"aging_days": entry.aging_days, "past_due_pct": round(past_due_pct, 4)},
-            ))
+            flagged.append(
+                FlaggedAR(
+                    entry=_sl_to_entry(entry),
+                    test_name="Past-Due Concentration",
+                    test_key="past_due_concentration",
+                    test_tier=TestTier.STATISTICAL,
+                    severity=severity,
+                    issue=f"Past-due {entry.aging_days} days — {past_due_pct:.1%} of AR is past due (>{config.past_due_days} days)",
+                    details={"aging_days": entry.aging_days, "past_due_pct": round(past_due_pct, 4)},
+                )
+            )
 
     total = len(sl_entries)
     return ARTestResult(
@@ -1241,33 +1346,37 @@ def test_allowance_adequacy(
         ratio = total_allowance / total_ar
 
         if ratio < config.allowance_low_pct:
-            flagged.append(FlaggedAR(
-                entry=AREntry(
-                    account_name="Allowance Adequacy",
-                    amount=total_allowance,
-                    entry_source="analysis",
-                ),
-                test_name="Allowance Adequacy Ratio",
-                test_key="allowance_adequacy",
-                test_tier=TestTier.STATISTICAL,
-                severity=Severity.HIGH,
-                issue=f"Allowance/AR ratio is {ratio:.2%} — below {config.allowance_low_pct:.0%} threshold (potential under-provisioning)",
-                details={"ratio": round(ratio, 4), "total_ar": total_ar, "total_allowance": total_allowance},
-            ))
+            flagged.append(
+                FlaggedAR(
+                    entry=AREntry(
+                        account_name="Allowance Adequacy",
+                        amount=total_allowance,
+                        entry_source="analysis",
+                    ),
+                    test_name="Allowance Adequacy Ratio",
+                    test_key="allowance_adequacy",
+                    test_tier=TestTier.STATISTICAL,
+                    severity=Severity.HIGH,
+                    issue=f"Allowance/AR ratio is {ratio:.2%} — below {config.allowance_low_pct:.0%} threshold (potential under-provisioning)",
+                    details={"ratio": round(ratio, 4), "total_ar": total_ar, "total_allowance": total_allowance},
+                )
+            )
         elif ratio > config.allowance_high_pct:
-            flagged.append(FlaggedAR(
-                entry=AREntry(
-                    account_name="Allowance Adequacy",
-                    amount=total_allowance,
-                    entry_source="analysis",
-                ),
-                test_name="Allowance Adequacy Ratio",
-                test_key="allowance_adequacy",
-                test_tier=TestTier.STATISTICAL,
-                severity=Severity.MEDIUM,
-                issue=f"Allowance/AR ratio is {ratio:.2%} — above {config.allowance_high_pct:.0%} threshold (potential over-provisioning)",
-                details={"ratio": round(ratio, 4), "total_ar": total_ar, "total_allowance": total_allowance},
-            ))
+            flagged.append(
+                FlaggedAR(
+                    entry=AREntry(
+                        account_name="Allowance Adequacy",
+                        amount=total_allowance,
+                        entry_source="analysis",
+                    ),
+                    test_name="Allowance Adequacy Ratio",
+                    test_key="allowance_adequacy",
+                    test_tier=TestTier.STATISTICAL,
+                    severity=Severity.MEDIUM,
+                    issue=f"Allowance/AR ratio is {ratio:.2%} — above {config.allowance_high_pct:.0%} threshold (potential over-provisioning)",
+                    details={"ratio": round(ratio, 4), "total_ar": total_ar, "total_allowance": total_allowance},
+                )
+            )
 
     total = len(ar_accounts)
     return ARTestResult(
@@ -1296,8 +1405,10 @@ def test_customer_concentration(
             test_name="Customer Concentration",
             test_key="customer_concentration",
             test_tier=TestTier.STATISTICAL,
-            entries_flagged=0, total_entries=len(sl_entries),
-            flag_rate=0.0, severity=Severity.LOW,
+            entries_flagged=0,
+            total_entries=len(sl_entries),
+            flag_rate=0.0,
+            severity=Severity.LOW,
             description="Concentration of AR balance by customer",
         )
 
@@ -1317,15 +1428,17 @@ def test_customer_concentration(
             # Flag representative entries
             top = sorted(customer_entries[customer], key=lambda x: abs(x.amount), reverse=True)[:3]
             for entry in top:
-                flagged.append(FlaggedAR(
-                    entry=_sl_to_entry(entry),
-                    test_name="Customer Concentration",
-                    test_key="customer_concentration",
-                    test_tier=TestTier.STATISTICAL,
-                    severity=severity,
-                    issue=f"Customer '{customer}' holds {pct:.1%} of total AR ({amount:,.2f} of {total_ar:,.2f})",
-                    details={"customer": customer, "customer_pct": round(pct, 4), "customer_total": amount},
-                ))
+                flagged.append(
+                    FlaggedAR(
+                        entry=_sl_to_entry(entry),
+                        test_name="Customer Concentration",
+                        test_key="customer_concentration",
+                        test_tier=TestTier.STATISTICAL,
+                        severity=severity,
+                        issue=f"Customer '{customer}' holds {pct:.1%} of total AR ({amount:,.2f} of {total_ar:,.2f})",
+                        details={"customer": customer, "customer_pct": round(pct, 4), "customer_total": amount},
+                    )
+                )
 
     total = len(sl_entries)
     return ARTestResult(
@@ -1365,25 +1478,27 @@ def test_dso_trend(
             severity = Severity.HIGH if abs(change) > config.dso_high_threshold else Severity.MEDIUM
             direction = "increased" if change > 0 else "decreased"
 
-            flagged.append(FlaggedAR(
-                entry=AREntry(
-                    account_name="DSO Trend Analysis",
-                    amount=total_ar,
-                    entry_source="analysis",
-                ),
-                test_name="DSO Trend Variance",
-                test_key="dso_trend",
-                test_tier=TestTier.STATISTICAL,
-                severity=severity,
-                issue=f"DSO {direction} {abs(change):.1%}: current {current_dso:.1f} days vs prior {config.prior_period_dso:.1f} days",
-                details={
-                    "current_dso": round(current_dso, 1),
-                    "prior_dso": config.prior_period_dso,
-                    "change_pct": round(change, 4),
-                    "total_ar": total_ar,
-                    "total_revenue": total_revenue,
-                },
-            ))
+            flagged.append(
+                FlaggedAR(
+                    entry=AREntry(
+                        account_name="DSO Trend Analysis",
+                        amount=total_ar,
+                        entry_source="analysis",
+                    ),
+                    test_name="DSO Trend Variance",
+                    test_key="dso_trend",
+                    test_tier=TestTier.STATISTICAL,
+                    severity=severity,
+                    issue=f"DSO {direction} {abs(change):.1%}: current {current_dso:.1f} days vs prior {config.prior_period_dso:.1f} days",
+                    details={
+                        "current_dso": round(current_dso, 1),
+                        "prior_dso": config.prior_period_dso,
+                        "change_pct": round(change, 4),
+                        "total_ar": total_ar,
+                        "total_revenue": total_revenue,
+                    },
+                )
+            )
 
     total = len(ar_accounts)
     return ARTestResult(
@@ -1405,6 +1520,7 @@ def test_dso_trend(
 # TEST BATTERY — TIER 3: ADVANCED
 # =============================================================================
 
+
 def test_rollforward_reconciliation(
     accounts: list[TBAccount],
     sl_entries: list[ARSubledgerEntry],
@@ -1425,31 +1541,33 @@ def test_rollforward_reconciliation(
 
         if difference > threshold:
             severity = Severity.HIGH if difference > abs(ending_ar) * 0.10 else Severity.MEDIUM
-            flagged.append(FlaggedAR(
-                entry=AREntry(
-                    account_name="Roll-Forward Reconciliation",
-                    amount=difference,
-                    entry_source="analysis",
-                ),
-                test_name="Roll-Forward Reconciliation",
-                test_key="rollforward_reconciliation",
-                test_tier=TestTier.ADVANCED,
-                severity=severity,
-                issue=(
-                    f"Roll-forward difference: {difference:,.2f}. "
-                    f"Beginning ({config.beginning_ar_balance:,.2f}) + Revenue ({total_revenue:,.2f}) "
-                    f"- Collections ({config.collections_total:,.2f}) = {expected_ending:,.2f} "
-                    f"vs Ending AR ({ending_ar:,.2f})"
-                ),
-                details={
-                    "beginning_ar": config.beginning_ar_balance,
-                    "revenue": total_revenue,
-                    "collections": config.collections_total,
-                    "expected_ending": expected_ending,
-                    "actual_ending": ending_ar,
-                    "difference": difference,
-                },
-            ))
+            flagged.append(
+                FlaggedAR(
+                    entry=AREntry(
+                        account_name="Roll-Forward Reconciliation",
+                        amount=difference,
+                        entry_source="analysis",
+                    ),
+                    test_name="Roll-Forward Reconciliation",
+                    test_key="rollforward_reconciliation",
+                    test_tier=TestTier.ADVANCED,
+                    severity=severity,
+                    issue=(
+                        f"Roll-forward difference: {difference:,.2f}. "
+                        f"Beginning ({config.beginning_ar_balance:,.2f}) + Revenue ({total_revenue:,.2f}) "
+                        f"- Collections ({config.collections_total:,.2f}) = {expected_ending:,.2f} "
+                        f"vs Ending AR ({ending_ar:,.2f})"
+                    ),
+                    details={
+                        "beginning_ar": config.beginning_ar_balance,
+                        "revenue": total_revenue,
+                        "collections": config.collections_total,
+                        "expected_ending": expected_ending,
+                        "actual_ending": ending_ar,
+                        "difference": difference,
+                    },
+                )
+            )
 
     skipped = config.beginning_ar_balance is None or config.collections_total is None
     total = len(ar_accounts)
@@ -1480,8 +1598,10 @@ def test_credit_limit_breaches(
             test_name="Credit Limit Breaches",
             test_key="credit_limit_breaches",
             test_tier=TestTier.ADVANCED,
-            entries_flagged=0, total_entries=len(sl_entries),
-            flag_rate=0.0, severity=Severity.LOW,
+            entries_flagged=0,
+            total_entries=len(sl_entries),
+            flag_rate=0.0,
+            severity=Severity.LOW,
             description="Customer AR balances exceeding approved credit limits",
             skipped=True,
             skip_reason="Credit limit testing disabled",
@@ -1504,8 +1624,10 @@ def test_credit_limit_breaches(
             test_name="Credit Limit Breaches",
             test_key="credit_limit_breaches",
             test_tier=TestTier.ADVANCED,
-            entries_flagged=0, total_entries=len(sl_entries),
-            flag_rate=0.0, severity=Severity.LOW,
+            entries_flagged=0,
+            total_entries=len(sl_entries),
+            flag_rate=0.0,
+            severity=Severity.LOW,
             description="Customer AR balances exceeding approved credit limits",
             skipped=True,
             skip_reason="No credit limit data in sub-ledger",
@@ -1521,15 +1643,22 @@ def test_credit_limit_breaches(
 
             top = sorted(customer_entries[customer], key=lambda x: abs(x.amount), reverse=True)[:3]
             for entry in top:
-                flagged.append(FlaggedAR(
-                    entry=_sl_to_entry(entry),
-                    test_name="Credit Limit Breaches",
-                    test_key="credit_limit_breaches",
-                    test_tier=TestTier.ADVANCED,
-                    severity=severity,
-                    issue=f"Customer '{customer}' AR ({total:,.2f}) exceeds credit limit ({limit:,.2f}) — {ratio:.0%} utilized",
-                    details={"customer": customer, "total_ar": total, "credit_limit": limit, "utilization": round(ratio, 2)},
-                ))
+                flagged.append(
+                    FlaggedAR(
+                        entry=_sl_to_entry(entry),
+                        test_name="Credit Limit Breaches",
+                        test_key="credit_limit_breaches",
+                        test_tier=TestTier.ADVANCED,
+                        severity=severity,
+                        issue=f"Customer '{customer}' AR ({total:,.2f}) exceeds credit limit ({limit:,.2f}) — {ratio:.0%} utilized",
+                        details={
+                            "customer": customer,
+                            "total_ar": total,
+                            "credit_limit": limit,
+                            "utilization": round(ratio, 2),
+                        },
+                    )
+                )
 
     total = len(sl_entries)
     return ARTestResult(
@@ -1548,6 +1677,7 @@ def test_credit_limit_breaches(
 # =============================================================================
 # SKIPPED TEST RESULT FACTORY
 # =============================================================================
+
 
 def _skipped_result(
     test_name: str,
@@ -1575,6 +1705,7 @@ def _skipped_result(
 # TEST BATTERY ORCHESTRATOR
 # =============================================================================
 
+
 def run_ar_test_battery(
     accounts: list[TBAccount],
     sl_entries: list[ARSubledgerEntry],
@@ -1592,38 +1723,63 @@ def run_ar_test_battery(
         results.append(test_negative_aging(sl_entries, config))
         results.append(test_unreconciled_detail(accounts, sl_entries, config))
     else:
-        results.append(_skipped_result(
-            "Negative Aging Buckets", "negative_aging", TestTier.STRUCTURAL,
-            "Sub-ledger entries with negative aging days", "Requires sub-ledger file",
-        ))
-        results.append(_skipped_result(
-            "Unreconciled AR Detail", "unreconciled_detail", TestTier.STRUCTURAL,
-            "Reconciliation of sub-ledger to TB", "Requires sub-ledger file",
-        ))
+        results.append(
+            _skipped_result(
+                "Negative Aging Buckets",
+                "negative_aging",
+                TestTier.STRUCTURAL,
+                "Sub-ledger entries with negative aging days",
+                "Requires sub-ledger file",
+            )
+        )
+        results.append(
+            _skipped_result(
+                "Unreconciled AR Detail",
+                "unreconciled_detail",
+                TestTier.STRUCTURAL,
+                "Reconciliation of sub-ledger to TB",
+                "Requires sub-ledger file",
+            )
+        )
 
     # T2 — Statistical (AR05, AR06, AR08 need sub-ledger; AR07, AR09 are TB-only)
     if has_subledger:
         results.append(test_bucket_concentration(sl_entries, config))
         results.append(test_past_due_concentration(sl_entries, config))
     else:
-        results.append(_skipped_result(
-            "Aging Bucket Concentration", "bucket_concentration", TestTier.STATISTICAL,
-            "Concentration of AR balance across aging buckets", "Requires sub-ledger file",
-        ))
-        results.append(_skipped_result(
-            "Past-Due Concentration", "past_due_concentration", TestTier.STATISTICAL,
-            "Concentration of AR balance in past-due categories", "Requires sub-ledger file",
-        ))
+        results.append(
+            _skipped_result(
+                "Aging Bucket Concentration",
+                "bucket_concentration",
+                TestTier.STATISTICAL,
+                "Concentration of AR balance across aging buckets",
+                "Requires sub-ledger file",
+            )
+        )
+        results.append(
+            _skipped_result(
+                "Past-Due Concentration",
+                "past_due_concentration",
+                TestTier.STATISTICAL,
+                "Concentration of AR balance in past-due categories",
+                "Requires sub-ledger file",
+            )
+        )
 
     results.append(test_allowance_adequacy(accounts, config))
 
     if has_subledger:
         results.append(test_customer_concentration(sl_entries, config))
     else:
-        results.append(_skipped_result(
-            "Customer Concentration", "customer_concentration", TestTier.STATISTICAL,
-            "Concentration of AR balance by customer", "Requires sub-ledger file",
-        ))
+        results.append(
+            _skipped_result(
+                "Customer Concentration",
+                "customer_concentration",
+                TestTier.STATISTICAL,
+                "Concentration of AR balance by customer",
+                "Requires sub-ledger file",
+            )
+        )
 
     results.append(test_dso_trend(accounts, config))
 
@@ -1632,14 +1788,24 @@ def run_ar_test_battery(
         results.append(test_rollforward_reconciliation(accounts, sl_entries, config))
         results.append(test_credit_limit_breaches(sl_entries, config))
     else:
-        results.append(_skipped_result(
-            "Roll-Forward Reconciliation", "rollforward_reconciliation", TestTier.ADVANCED,
-            "AR roll-forward reconciliation", "Requires sub-ledger file",
-        ))
-        results.append(_skipped_result(
-            "Credit Limit Breaches", "credit_limit_breaches", TestTier.ADVANCED,
-            "Customer credit limit breach detection", "Requires sub-ledger file",
-        ))
+        results.append(
+            _skipped_result(
+                "Roll-Forward Reconciliation",
+                "rollforward_reconciliation",
+                TestTier.ADVANCED,
+                "AR roll-forward reconciliation",
+                "Requires sub-ledger file",
+            )
+        )
+        results.append(
+            _skipped_result(
+                "Credit Limit Breaches",
+                "credit_limit_breaches",
+                TestTier.ADVANCED,
+                "Customer credit limit breach detection",
+                "Requires sub-ledger file",
+            )
+        )
 
     return results
 
@@ -1647,6 +1813,7 @@ def run_ar_test_battery(
 # =============================================================================
 # AR SUMMARY
 # =============================================================================
+
 
 def build_ar_summary(
     accounts: list[TBAccount],
@@ -1761,6 +1928,7 @@ def calculate_ar_composite_score(
 # MAIN ENTRY POINT
 # =============================================================================
 
+
 def run_ar_aging(
     tb_rows: list[dict],
     tb_columns: list[str],
@@ -1790,8 +1958,7 @@ def run_ar_aging(
     # 1. Detect TB columns
     tb_detection = detect_tb_columns(tb_columns)
     if tb_column_mapping:
-        for attr in ("account_name_column", "account_number_column", "balance_column",
-                      "debit_column", "credit_column"):
+        for attr in ("account_name_column", "account_number_column", "balance_column", "debit_column", "credit_column"):
             if attr in tb_column_mapping:
                 setattr(tb_detection, attr, tb_column_mapping[attr])
         tb_detection.overall_confidence = 1.0
@@ -1807,9 +1974,17 @@ def run_ar_aging(
     if has_subledger:
         sl_detection = detect_sl_columns(sl_columns or [])
         if sl_column_mapping:
-            for attr in ("customer_name_column", "customer_id_column", "invoice_number_column",
-                          "invoice_date_column", "due_date_column", "amount_column",
-                          "aging_days_column", "aging_bucket_column", "credit_limit_column"):
+            for attr in (
+                "customer_name_column",
+                "customer_id_column",
+                "invoice_number_column",
+                "invoice_date_column",
+                "due_date_column",
+                "amount_column",
+                "aging_days_column",
+                "aging_bucket_column",
+                "credit_limit_column",
+            ):
                 if attr in sl_column_mapping:
                     setattr(sl_detection, attr, sl_column_mapping[attr])
             sl_detection.overall_confidence = 1.0
@@ -1825,7 +2000,10 @@ def run_ar_aging(
     # 6. Build AR summary
     ar_summary = build_ar_summary(accounts, sl_entries, has_subledger)
 
-    # 7. Calculate composite score
+    # 7. Compute aging schedule (requires sub-ledger)
+    aging_schedule = compute_aging_schedule(sl_entries) if has_subledger and sl_entries else None
+
+    # 8. Calculate composite score
     composite = calculate_ar_composite_score(test_results, has_subledger)
 
     return ARAgingResult(
@@ -1835,4 +2013,5 @@ def run_ar_aging(
         tb_column_detection=tb_detection,
         sl_column_detection=sl_detection,
         ar_summary=ar_summary,
+        aging_schedule=aging_schedule,
     )

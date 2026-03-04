@@ -7,6 +7,7 @@ Domain: PCAOB AS 1215 / ISA 530.
 Uses build_extra_sections callback for the JE-specific Benford's Law analysis table.
 """
 
+from collections import Counter
 from typing import Any, Optional
 
 from reportlab.lib.units import inch
@@ -21,6 +22,11 @@ from pdf_generator import (
     ClassicalColors,
     LedgerRule,
     create_leader_dots,
+)
+from shared.drill_down import (
+    build_drill_down_table,
+    format_currency,
+    safe_str_value,
 )
 from shared.memo_template import (
     TestingMemoConfig,
@@ -134,9 +140,9 @@ def _build_benford_section(
             benford_data.append(
                 [
                     str(d),
-                    f"{exp_val:.2%}",
-                    f"{act_val:.2%}",
-                    f"{dev_val:+.2%}",
+                    f"{exp_val:.3%}",
+                    f"{act_val:.3%}",
+                    f"{dev_val:+.3%}",
                 ]
             )
 
@@ -160,6 +166,205 @@ def _build_benford_section(
     story.append(Spacer(1, 8))
 
     return section_counter + 1
+
+
+def _build_high_severity_detail(
+    story: list,
+    styles: dict,
+    doc_width: float,
+    result: dict[str, Any],
+    section_counter: int,
+) -> int:
+    """Build detail tables for high-severity flagged entries (DRILL-01).
+
+    Shows entry-level detail for unbalanced entries, holiday postings, and
+    other high-severity tests where drill-down aids investigation.
+    """
+    test_results = result.get("test_results", [])
+    high_sev_tests = [tr for tr in test_results if tr.get("severity") == "high" and tr.get("entries_flagged", 0) > 0]
+    if not high_sev_tests:
+        return section_counter
+
+    section_label = _roman(section_counter)
+    story.append(Paragraph(f"{section_label}. High Severity Entry Detail", styles["MemoSection"]))
+    story.append(LedgerRule(doc_width))
+
+    for tr in high_sev_tests:
+        test_key = tr.get("test_key", "")
+        flagged = tr.get("flagged_entries", [])
+        if not flagged:
+            continue
+
+        if test_key == "unbalanced_entries":
+            rows = []
+            for fe in flagged:
+                entry = fe.get("entry", {})
+                details = fe.get("details") or {}
+                rows.append(
+                    [
+                        safe_str_value(entry.get("entry_id")),
+                        safe_str_value(entry.get("entry_date")),
+                        safe_str_value(entry.get("account")),
+                        format_currency(entry.get("debit", 0)),
+                        format_currency(entry.get("credit", 0)),
+                        format_currency(details.get("difference", entry.get("debit", 0) - entry.get("credit", 0))),
+                        safe_str_value(entry.get("description"), "")[:40],
+                    ]
+                )
+            build_drill_down_table(
+                story,
+                styles,
+                doc_width,
+                title=f"Unbalanced Entries ({len(flagged)} flagged)",
+                headers=["JE #", "Date", "Account", "Debit", "Credit", "Difference", "Description"],
+                rows=rows,
+                total_flagged=len(flagged),
+                col_widths=[0.7 * inch, 0.7 * inch, 1.2 * inch, 0.8 * inch, 0.8 * inch, 0.8 * inch, 1.6 * inch],
+                right_align_cols=[3, 4, 5],
+            )
+        elif test_key == "holiday_postings":
+            rows = []
+            for fe in flagged:
+                entry = fe.get("entry", {})
+                details = fe.get("details") or {}
+                amt = max(entry.get("debit", 0), entry.get("credit", 0))
+                rows.append(
+                    [
+                        safe_str_value(entry.get("entry_id")),
+                        safe_str_value(entry.get("entry_date")),
+                        safe_str_value(entry.get("account")),
+                        format_currency(amt),
+                        safe_str_value(details.get("holiday"), ""),
+                        safe_str_value(entry.get("description"), "")[:30],
+                        safe_str_value(entry.get("posted_by"), ""),
+                    ]
+                )
+            build_drill_down_table(
+                story,
+                styles,
+                doc_width,
+                title=f"Holiday Postings ({len(flagged)} flagged)",
+                headers=["JE #", "Date", "Account", "Amount", "Holiday", "Description", "Posted By"],
+                rows=rows,
+                total_flagged=len(flagged),
+                col_widths=[0.6 * inch, 0.7 * inch, 1.0 * inch, 0.8 * inch, 1.0 * inch, 1.2 * inch, 1.3 * inch],
+                right_align_cols=[3],
+            )
+        else:
+            # Generic high-severity detail table
+            rows = []
+            for fe in flagged:
+                entry = fe.get("entry", {})
+                amt = max(entry.get("debit", 0), entry.get("credit", 0))
+                rows.append(
+                    [
+                        safe_str_value(entry.get("entry_id")),
+                        safe_str_value(entry.get("entry_date")),
+                        safe_str_value(entry.get("account")),
+                        format_currency(amt),
+                        safe_str_value(fe.get("issue"), "")[:50],
+                    ]
+                )
+            build_drill_down_table(
+                story,
+                styles,
+                doc_width,
+                title=f"{tr.get('test_name', test_key)} ({len(flagged)} flagged)",
+                headers=["JE #", "Date", "Account", "Amount", "Issue"],
+                rows=rows,
+                total_flagged=len(flagged),
+                col_widths=[0.7 * inch, 0.7 * inch, 1.2 * inch, 0.9 * inch, 3.1 * inch],
+                right_align_cols=[3],
+            )
+
+    return section_counter + 1
+
+
+def _build_preparer_analysis(
+    story: list,
+    styles: dict,
+    doc_width: float,
+    result: dict[str, Any],
+    section_counter: int,
+) -> int:
+    """Build Preparer Concentration analysis section (DRILL-06).
+
+    Only rendered if >60% of flagged entries have a posted_by value.
+    Shows top 5 preparers by flagged entry count.
+    """
+    test_results = result.get("test_results", [])
+    total_entries = result.get("composite_score", {}).get("total_entries", 0)
+
+    # Collect all flagged entries with preparer info
+    preparer_flagged: Counter[str] = Counter()
+    preparer_total: Counter[str] = Counter()
+    total_flagged_with_preparer = 0
+    total_flagged_count = 0
+
+    for tr in test_results:
+        for fe in tr.get("flagged_entries", []):
+            total_flagged_count += 1
+            posted_by = (fe.get("entry") or {}).get("posted_by")
+            if posted_by:
+                total_flagged_with_preparer += 1
+                preparer_flagged[posted_by] += 1
+
+    # Only render if >60% of flagged entries have preparer info
+    if total_flagged_count == 0 or total_flagged_with_preparer / total_flagged_count < 0.6:
+        return section_counter
+
+    section_label = _roman(section_counter)
+    story.append(Paragraph(f"{section_label}. Preparer Concentration Analysis", styles["MemoSection"]))
+    story.append(LedgerRule(doc_width))
+
+    story.append(
+        Paragraph(
+            f"{total_flagged_with_preparer} of {total_flagged_count} flagged entries "
+            f"({total_flagged_with_preparer / total_flagged_count:.0%}) include preparer identification. "
+            "The following table shows the top preparers by flagged entry count:",
+            styles["MemoBody"],
+        )
+    )
+    story.append(Spacer(1, 4))
+
+    top_preparers = preparer_flagged.most_common(5)
+    rows = []
+    for name, flagged_count in top_preparers:
+        flag_rate = flagged_count / total_flagged_with_preparer if total_flagged_with_preparer > 0 else 0
+        rows.append(
+            [
+                name,
+                str(flagged_count),
+                f"{flag_rate:.1%}",
+            ]
+        )
+
+    build_drill_down_table(
+        story,
+        styles,
+        doc_width,
+        title="",
+        headers=["Preparer", "Flagged Entries", "% of Flagged"],
+        rows=rows,
+        col_widths=[3.0 * inch, 1.5 * inch, 2.1 * inch],
+        right_align_cols=[1, 2],
+    )
+
+    return section_counter + 1
+
+
+def _build_je_extra_sections(
+    story: list,
+    styles: dict,
+    doc_width: float,
+    result: dict[str, Any],
+    section_counter: int,
+) -> int:
+    """Chain all JE extra sections: high-severity detail, Benford, preparer."""
+    section_counter = _build_high_severity_detail(story, styles, doc_width, result, section_counter)
+    section_counter = _build_benford_section(story, styles, doc_width, result, section_counter)
+    section_counter = _build_preparer_analysis(story, styles, doc_width, result, section_counter)
+    return section_counter
 
 
 def generate_je_testing_memo(
@@ -186,6 +391,6 @@ def generate_je_testing_memo(
         workpaper_date=workpaper_date,
         source_document_title=source_document_title,
         source_context_note=source_context_note,
-        build_extra_sections=_build_benford_section,
+        build_extra_sections=_build_je_extra_sections,
         include_signoff=include_signoff,
     )

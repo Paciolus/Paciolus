@@ -13,6 +13,7 @@ Typed Pydantic models replacing response_model=dict for:
 - Fixed Asset Testing
 - Inventory Testing
 """
+
 from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict
@@ -21,10 +22,12 @@ from pydantic import BaseModel, ConfigDict
 # Shared Models (reused across tools)
 # ═══════════════════════════════════════════════════════════════
 
+
 class CompositeScoreResponse(BaseModel):
     """Testing composite score — shared by JE and AP."""
+
     score: float
-    risk_tier: Literal["low", "elevated", "moderate", "high", "critical"]
+    risk_tier: Literal["low", "moderate", "elevated", "high"]
     tests_run: int
     total_entries: int
     total_flagged: int
@@ -35,6 +38,7 @@ class CompositeScoreResponse(BaseModel):
 
 class DataQualityResponse(BaseModel):
     """Data quality assessment — shared by JE and AP."""
+
     completeness_score: float
     field_fill_rates: dict[str, float]
     detected_issues: list[str]
@@ -43,6 +47,7 @@ class DataQualityResponse(BaseModel):
 
 class BenfordAnalysisResponse(BaseModel):
     """Benford's Law first-digit analysis — shared by JE (and Payroll/Revenue in Sprint 219)."""
+
     passed_prechecks: bool
     precheck_message: Optional[str] = None
     eligible_count: int
@@ -61,8 +66,10 @@ class BenfordAnalysisResponse(BaseModel):
 # Journal Entry Testing
 # ═══════════════════════════════════════════════════════════════
 
+
 class JournalEntryResponse(BaseModel):
     """Individual parsed journal entry."""
+
     entry_id: Optional[str] = None
     entry_date: Optional[str] = None
     posting_date: Optional[str] = None
@@ -79,6 +86,7 @@ class JournalEntryResponse(BaseModel):
 
 class JEFlaggedEntryResponse(BaseModel):
     """Flagged journal entry with test metadata."""
+
     entry: JournalEntryResponse
     test_name: str
     test_key: str
@@ -91,6 +99,7 @@ class JEFlaggedEntryResponse(BaseModel):
 
 class JETestResultResponse(BaseModel):
     """Single JE test result with flagged entries."""
+
     test_name: str
     test_key: str
     test_tier: Literal["structural", "statistical", "advanced"]
@@ -104,6 +113,7 @@ class JETestResultResponse(BaseModel):
 
 class GLColumnDetectionResponse(BaseModel):
     """GL column auto-detection result."""
+
     date_column: Optional[str] = None
     account_column: Optional[str] = None
     debit_column: Optional[str] = None
@@ -127,6 +137,7 @@ class GLColumnDetectionResponse(BaseModel):
 
 class MultiCurrencyWarningResponse(BaseModel):
     """Multi-currency detection warning."""
+
     currencies_found: list[str]
     primary_currency: Optional[str] = None
     entry_counts_by_currency: dict[str, int]
@@ -135,6 +146,7 @@ class MultiCurrencyWarningResponse(BaseModel):
 
 class SamplingStratumResponse(BaseModel):
     """Stratified sampling stratum."""
+
     name: str
     criteria: str
     population_size: int
@@ -144,6 +156,7 @@ class SamplingStratumResponse(BaseModel):
 
 class SamplingResultResponse(BaseModel):
     """Stratified sampling result — standalone endpoint response."""
+
     total_population: int
     total_sampled: int
     strata: list[SamplingStratumResponse]
@@ -158,6 +171,7 @@ class JETestingResponse(BaseModel):
     Uses extra='allow' as a safety net during migration — any fields
     not yet modeled still pass through to the frontend.
     """
+
     model_config = ConfigDict(extra="allow")
 
     composite_score: CompositeScoreResponse
@@ -173,8 +187,10 @@ class JETestingResponse(BaseModel):
 # AP Payment Testing
 # ═══════════════════════════════════════════════════════════════
 
+
 class APPaymentResponse(BaseModel):
     """Individual parsed AP payment entry."""
+
     invoice_number: Optional[str] = None
     invoice_date: Optional[str] = None
     payment_date: Optional[str] = None
@@ -190,6 +206,7 @@ class APPaymentResponse(BaseModel):
 
 class APFlaggedEntryResponse(BaseModel):
     """Flagged AP payment entry with test metadata."""
+
     entry: APPaymentResponse
     test_name: str
     test_key: str
@@ -202,6 +219,7 @@ class APFlaggedEntryResponse(BaseModel):
 
 class APTestResultResponse(BaseModel):
     """Single AP test result with flagged entries."""
+
     test_name: str
     test_key: str
     test_tier: Literal["structural", "statistical", "advanced"]
@@ -215,6 +233,7 @@ class APTestResultResponse(BaseModel):
 
 class APColumnDetectionResponse(BaseModel):
     """AP column auto-detection result."""
+
     vendor_name_column: Optional[str] = None
     amount_column: Optional[str] = None
     payment_date_column: Optional[str] = None
@@ -238,6 +257,7 @@ class APTestingResponse(BaseModel):
 
     Uses extra='allow' as a safety net during migration.
     """
+
     model_config = ConfigDict(extra="allow")
 
     composite_score: CompositeScoreResponse
@@ -250,8 +270,10 @@ class APTestingResponse(BaseModel):
 # Bank Reconciliation
 # ═══════════════════════════════════════════════════════════════
 
+
 class TransactionResponse(BaseModel):
     """Bank or ledger transaction."""
+
     date: Optional[str] = None
     description: str
     amount: float
@@ -261,6 +283,7 @@ class TransactionResponse(BaseModel):
 
 class ReconciliationMatchResponse(BaseModel):
     """Single reconciliation match pair."""
+
     bank_txn: Optional[TransactionResponse] = None
     ledger_txn: Optional[TransactionResponse] = None
     match_type: Literal["matched", "bank_only", "ledger_only"]
@@ -269,6 +292,7 @@ class ReconciliationMatchResponse(BaseModel):
 
 class ReconciliationSummaryResponse(BaseModel):
     """Reconciliation summary with match statistics."""
+
     matched_count: int
     matched_amount: float
     bank_only_count: int
@@ -283,6 +307,7 @@ class ReconciliationSummaryResponse(BaseModel):
 
 class BankColumnDetectionResponse(BaseModel):
     """Bank/ledger column auto-detection result."""
+
     date_column: Optional[str] = None
     amount_column: Optional[str] = None
     description_column: Optional[str] = None
@@ -296,6 +321,7 @@ class BankColumnDetectionResponse(BaseModel):
 
 class BankRecResponse(BaseModel):
     """Complete bank reconciliation response."""
+
     summary: ReconciliationSummaryResponse
     bank_column_detection: BankColumnDetectionResponse
     ledger_column_detection: BankColumnDetectionResponse
@@ -305,8 +331,10 @@ class BankRecResponse(BaseModel):
 # Three-Way Match
 # ═══════════════════════════════════════════════════════════════
 
+
 class PurchaseOrderResponse(BaseModel):
     """Individual purchase order."""
+
     po_number: Optional[str] = None
     vendor: str
     description: str
@@ -322,6 +350,7 @@ class PurchaseOrderResponse(BaseModel):
 
 class InvoiceResponse(BaseModel):
     """Individual invoice."""
+
     invoice_number: Optional[str] = None
     po_reference: Optional[str] = None
     vendor: str
@@ -336,6 +365,7 @@ class InvoiceResponse(BaseModel):
 
 class ReceiptResponse(BaseModel):
     """Individual receipt."""
+
     receipt_number: Optional[str] = None
     po_reference: Optional[str] = None
     invoice_reference: Optional[str] = None
@@ -350,6 +380,7 @@ class ReceiptResponse(BaseModel):
 
 class MatchVarianceResponse(BaseModel):
     """Variance between matched documents."""
+
     field: str
     po_value: Optional[float] = None
     invoice_value: Optional[float] = None
@@ -361,6 +392,7 @@ class MatchVarianceResponse(BaseModel):
 
 class ThreeWayMatchItemResponse(BaseModel):
     """Single three-way match result (full or partial)."""
+
     po: Optional[PurchaseOrderResponse] = None
     invoice: Optional[InvoiceResponse] = None
     receipt: Optional[ReceiptResponse] = None
@@ -371,6 +403,7 @@ class ThreeWayMatchItemResponse(BaseModel):
 
 class UnmatchedDocumentResponse(BaseModel):
     """Unmatched PO, invoice, or receipt."""
+
     document: dict[str, Any]
     document_type: Literal["purchase_order", "invoice", "receipt"]
     reason: str
@@ -378,6 +411,7 @@ class UnmatchedDocumentResponse(BaseModel):
 
 class ThreeWayMatchSummaryResponse(BaseModel):
     """Summary statistics for three-way match."""
+
     total_pos: int
     total_invoices: int
     total_receipts: int
@@ -395,6 +429,7 @@ class ThreeWayMatchSummaryResponse(BaseModel):
 
 class ThreeWayMatchDataQualityResponse(BaseModel):
     """Data quality assessment for three-way match."""
+
     po_count: int
     invoice_count: int
     receipt_count: int
@@ -414,6 +449,7 @@ class ThreeWayMatchDataQualityResponse(BaseModel):
 
 class ThreeWayMatchConfigResponse(BaseModel):
     """Three-way match configuration parameters."""
+
     amount_tolerance: float
     quantity_tolerance: float
     date_window_days: int
@@ -425,6 +461,7 @@ class ThreeWayMatchConfigResponse(BaseModel):
 
 class POColumnDetectionResponse(BaseModel):
     """PO column auto-detection result."""
+
     po_number_column: Optional[str] = None
     vendor_column: Optional[str] = None
     description_column: Optional[str] = None
@@ -443,6 +480,7 @@ class POColumnDetectionResponse(BaseModel):
 
 class InvoiceColumnDetectionResponse(BaseModel):
     """Invoice column auto-detection result."""
+
     invoice_number_column: Optional[str] = None
     po_reference_column: Optional[str] = None
     vendor_column: Optional[str] = None
@@ -460,6 +498,7 @@ class InvoiceColumnDetectionResponse(BaseModel):
 
 class ReceiptColumnDetectionResponse(BaseModel):
     """Receipt column auto-detection result."""
+
     receipt_number_column: Optional[str] = None
     po_reference_column: Optional[str] = None
     invoice_reference_column: Optional[str] = None
@@ -477,6 +516,7 @@ class ReceiptColumnDetectionResponse(BaseModel):
 
 class TWMColumnDetectionResponse(BaseModel):
     """Typed column detection for all three document types."""
+
     po: POColumnDetectionResponse
     invoice: InvoiceColumnDetectionResponse
     receipt: ReceiptColumnDetectionResponse
@@ -487,6 +527,7 @@ class ThreeWayMatchResponse(BaseModel):
 
     Uses extra='allow' as a safety net during migration.
     """
+
     model_config = ConfigDict(extra="allow")
 
     full_matches: list[ThreeWayMatchItemResponse]
@@ -505,8 +546,10 @@ class ThreeWayMatchResponse(BaseModel):
 # AR Aging Analysis
 # ═══════════════════════════════════════════════════════════════
 
+
 class AREntryResponse(BaseModel):
     """Individual AR entry (from TB or sub-ledger)."""
+
     account_name: Optional[str] = None
     account_number: Optional[str] = None
     customer_name: Optional[str] = None
@@ -520,6 +563,7 @@ class AREntryResponse(BaseModel):
 
 class ARFlaggedEntryResponse(BaseModel):
     """Flagged AR entry with test metadata."""
+
     entry: AREntryResponse
     test_name: str
     test_key: str
@@ -532,6 +576,7 @@ class ARFlaggedEntryResponse(BaseModel):
 
 class ARTestResultResponse(BaseModel):
     """Single AR test result with flagged entries."""
+
     test_name: str
     test_key: str
     test_tier: Literal["structural", "statistical", "advanced"]
@@ -547,8 +592,9 @@ class ARTestResultResponse(BaseModel):
 
 class ARCompositeScoreResponse(BaseModel):
     """AR composite score — differs from shared (tests_skipped, has_subledger)."""
+
     score: float
-    risk_tier: Literal["low", "elevated", "moderate", "high", "critical"]
+    risk_tier: Literal["low", "moderate", "elevated", "high"]
     tests_run: int
     tests_skipped: int
     total_flagged: int
@@ -559,6 +605,7 @@ class ARCompositeScoreResponse(BaseModel):
 
 class ARDataQualityResponse(BaseModel):
     """AR data quality — differs from shared (tb/subledger counts)."""
+
     completeness_score: float
     field_fill_rates: dict[str, float]
     detected_issues: list[str]
@@ -569,6 +616,7 @@ class ARDataQualityResponse(BaseModel):
 
 class ARTBColumnDetectionResponse(BaseModel):
     """AR trial balance column auto-detection result."""
+
     account_name_column: Optional[str] = None
     account_number_column: Optional[str] = None
     balance_column: Optional[str] = None
@@ -582,6 +630,7 @@ class ARTBColumnDetectionResponse(BaseModel):
 
 class ARSLColumnDetectionResponse(BaseModel):
     """AR sub-ledger column auto-detection result."""
+
     customer_name_column: Optional[str] = None
     customer_id_column: Optional[str] = None
     invoice_number_column: Optional[str] = None
@@ -598,6 +647,7 @@ class ARSLColumnDetectionResponse(BaseModel):
 
 class ARSummaryResponse(BaseModel):
     """AR aging summary — 6 required + 6 conditional fields."""
+
     total_ar_balance: float
     ar_account_count: int
     total_allowance: float
@@ -618,6 +668,7 @@ class ARAgingResponse(BaseModel):
 
     Uses extra='allow' as a safety net during migration.
     """
+
     model_config = ConfigDict(extra="allow")
 
     composite_score: ARCompositeScoreResponse
@@ -632,8 +683,10 @@ class ARAgingResponse(BaseModel):
 # Payroll Testing
 # ═══════════════════════════════════════════════════════════════
 
+
 class PayrollEntryResponse(BaseModel):
     """Individual parsed payroll entry."""
+
     employee_id: Optional[str] = None
     employee_name: str
     department: Optional[str] = None
@@ -654,6 +707,7 @@ class PayrollEntryResponse(BaseModel):
 
 class PayrollFlaggedEntryResponse(BaseModel):
     """Flagged payroll entry with test metadata."""
+
     entry: PayrollEntryResponse
     test_name: str
     test_key: str
@@ -666,6 +720,7 @@ class PayrollFlaggedEntryResponse(BaseModel):
 
 class PayrollTestResultResponse(BaseModel):
     """Single payroll test result with flagged entries."""
+
     test_name: str
     test_key: str
     test_tier: Literal["structural", "statistical", "advanced"]
@@ -679,6 +734,7 @@ class PayrollTestResultResponse(BaseModel):
 
 class PayrollColumnDetectionResponse(BaseModel):
     """Payroll column auto-detection result."""
+
     employee_name_column: Optional[str] = None
     gross_pay_column: Optional[str] = None
     pay_date_column: Optional[str] = None
@@ -707,6 +763,7 @@ class PayrollColumnDetectionResponse(BaseModel):
 
 class PayrollCompositeScoreResponse(BaseModel):
     """Payroll composite score — top_findings are dicts, not strings."""
+
     score: float
     risk_tier: str
     tests_run: int
@@ -722,6 +779,7 @@ class PayrollTestingResponse(BaseModel):
 
     Uses extra='allow' as a safety net during migration.
     """
+
     model_config = ConfigDict(extra="allow")
 
     composite_score: PayrollCompositeScoreResponse
@@ -735,8 +793,10 @@ class PayrollTestingResponse(BaseModel):
 # Revenue Testing
 # ═══════════════════════════════════════════════════════════════
 
+
 class RevenueEntryResponse(BaseModel):
     """Individual parsed revenue GL entry."""
+
     date: Optional[str] = None
     amount: float
     account_name: Optional[str] = None
@@ -757,6 +817,7 @@ class RevenueEntryResponse(BaseModel):
 
 class RevenueFlaggedEntryResponse(BaseModel):
     """Flagged revenue entry with test metadata."""
+
     entry: RevenueEntryResponse
     test_name: str
     test_key: str
@@ -769,6 +830,7 @@ class RevenueFlaggedEntryResponse(BaseModel):
 
 class RevenueTestResultResponse(BaseModel):
     """Single revenue test result with flagged entries."""
+
     test_name: str
     test_key: str
     test_tier: Literal["structural", "statistical", "advanced", "contract"]
@@ -784,6 +846,7 @@ class RevenueTestResultResponse(BaseModel):
 
 class RevenueColumnDetectionResponse(BaseModel):
     """Revenue GL column auto-detection result."""
+
     date_column: Optional[str] = None
     amount_column: Optional[str] = None
     account_name_column: Optional[str] = None
@@ -807,6 +870,7 @@ class RevenueColumnDetectionResponse(BaseModel):
 
 class ContractEvidenceLevelResponse(BaseModel):
     """Contract data availability assessment (ASC 606 / IFRS 15)."""
+
     level: Literal["full", "partial", "minimal", "none"]
     confidence_modifier: float
     detected_fields: list[str]
@@ -819,6 +883,7 @@ class RevenueTestingResponse(BaseModel):
 
     Uses extra='allow' as a safety net during migration.
     """
+
     model_config = ConfigDict(extra="allow")
 
     composite_score: CompositeScoreResponse
@@ -832,8 +897,10 @@ class RevenueTestingResponse(BaseModel):
 # Fixed Asset Testing
 # ═══════════════════════════════════════════════════════════════
 
+
 class FixedAssetEntryResponse(BaseModel):
     """Individual parsed fixed asset entry."""
+
     asset_id: Optional[str] = None
     description: Optional[str] = None
     cost: float
@@ -850,6 +917,7 @@ class FixedAssetEntryResponse(BaseModel):
 
 class FAFlaggedEntryResponse(BaseModel):
     """Flagged fixed asset entry with test metadata."""
+
     entry: FixedAssetEntryResponse
     test_name: str
     test_key: str
@@ -862,6 +930,7 @@ class FAFlaggedEntryResponse(BaseModel):
 
 class FATestResultResponse(BaseModel):
     """Single fixed asset test result with flagged entries."""
+
     test_name: str
     test_key: str
     test_tier: Literal["structural", "statistical", "advanced"]
@@ -875,6 +944,7 @@ class FATestResultResponse(BaseModel):
 
 class FAColumnDetectionResponse(BaseModel):
     """Fixed asset column auto-detection result."""
+
     asset_id_column: Optional[str] = None
     description_column: Optional[str] = None
     cost_column: Optional[str] = None
@@ -897,6 +967,7 @@ class FATestingResponse(BaseModel):
 
     Uses extra='allow' as a safety net during migration.
     """
+
     model_config = ConfigDict(extra="allow")
 
     composite_score: CompositeScoreResponse
@@ -909,8 +980,10 @@ class FATestingResponse(BaseModel):
 # Inventory Testing
 # ═══════════════════════════════════════════════════════════════
 
+
 class InventoryEntryResponse(BaseModel):
     """Individual parsed inventory entry."""
+
     item_id: Optional[str] = None
     description: Optional[str] = None
     quantity: float
@@ -924,6 +997,7 @@ class InventoryEntryResponse(BaseModel):
 
 class InvFlaggedEntryResponse(BaseModel):
     """Flagged inventory entry with test metadata."""
+
     entry: InventoryEntryResponse
     test_name: str
     test_key: str
@@ -936,6 +1010,7 @@ class InvFlaggedEntryResponse(BaseModel):
 
 class InvTestResultResponse(BaseModel):
     """Single inventory test result with flagged entries."""
+
     test_name: str
     test_key: str
     test_tier: Literal["structural", "statistical", "advanced"]
@@ -949,6 +1024,7 @@ class InvTestResultResponse(BaseModel):
 
 class InvColumnDetectionResponse(BaseModel):
     """Inventory column auto-detection result."""
+
     item_id_column: Optional[str] = None
     description_column: Optional[str] = None
     quantity_column: Optional[str] = None
@@ -968,6 +1044,7 @@ class InvTestingResponse(BaseModel):
 
     Uses extra='allow' as a safety net during migration.
     """
+
     model_config = ConfigDict(extra="allow")
 
     composite_score: CompositeScoreResponse
@@ -980,8 +1057,10 @@ class InvTestingResponse(BaseModel):
 # Statistical Sampling (Tool 12)
 # ═══════════════════════════════════════════════════════════════
 
+
 class SamplingSelectedItemResponse(BaseModel):
     """A single item selected for the sample."""
+
     row_index: int
     item_id: str
     description: str
@@ -993,6 +1072,7 @@ class SamplingSelectedItemResponse(BaseModel):
 
 class SamplingStratumSummaryResponse(BaseModel):
     """Summary of a stratification stratum."""
+
     stratum: str
     threshold: str
     count: int
@@ -1002,6 +1082,7 @@ class SamplingStratumSummaryResponse(BaseModel):
 
 class SamplingDesignResponse(BaseModel):
     """Complete sampling design result (Phase 1)."""
+
     method: Literal["mus", "random"]
     confidence_level: float
     confidence_factor: float
@@ -1023,6 +1104,7 @@ class SamplingDesignResponse(BaseModel):
 
 class SamplingErrorResponse(BaseModel):
     """A misstatement found during sample evaluation."""
+
     row_index: int
     item_id: str
     recorded_amount: float
@@ -1033,6 +1115,7 @@ class SamplingErrorResponse(BaseModel):
 
 class SamplingEvaluationResponse(BaseModel):
     """Complete sampling evaluation result (Phase 2)."""
+
     method: Literal["mus", "random"]
     confidence_level: float
     tolerable_misstatement: float

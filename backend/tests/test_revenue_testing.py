@@ -76,6 +76,7 @@ from shared.testing_enums import RiskTier, Severity, TestTier
 # FIXTURE HELPERS
 # =============================================================================
 
+
 def make_entries(rows: list[dict], columns: list[str] | None = None) -> list[RevenueEntry]:
     """Parse rows into RevenueEntry objects using auto-detection."""
     if columns is None:
@@ -133,20 +134,23 @@ def sample_revenue_rows() -> list[dict]:
 def make_many_entries(n: int = 100, base_amount: float = 1000.0) -> list[RevenueEntry]:
     """Generate n revenue entries with varying amounts for statistical tests."""
     import random
+
     random.seed(42)
     entries = []
     for i in range(n):
-        entries.append(RevenueEntry(
-            date=f"2025-{((i % 12) + 1):02d}-{((i % 28) + 1):02d}",
-            amount=-(base_amount + random.gauss(0, base_amount * 0.3)),
-            account_name=f"Revenue Account {i % 5}",
-            account_number=f"4{i % 5}00",
-            description=f"Transaction {i}",
-            entry_type="auto" if i % 4 != 0 else "manual",
-            reference=f"REF-{i:04d}",
-            posted_by="system" if i % 3 != 0 else "user1",
-            row_number=i + 1,
-        ))
+        entries.append(
+            RevenueEntry(
+                date=f"2025-{((i % 12) + 1):02d}-{((i % 28) + 1):02d}",
+                amount=-(base_amount + random.gauss(0, base_amount * 0.3)),
+                account_name=f"Revenue Account {i % 5}",
+                account_number=f"4{i % 5}00",
+                description=f"Transaction {i}",
+                entry_type="auto" if i % 4 != 0 else "manual",
+                reference=f"REF-{i:04d}",
+                posted_by="system" if i % 3 != 0 else "user1",
+                row_number=i + 1,
+            )
+        )
     return entries
 
 
@@ -154,12 +158,21 @@ def make_many_entries(n: int = 100, base_amount: float = 1000.0) -> list[Revenue
 # COLUMN DETECTION TESTS
 # =============================================================================
 
+
 class TestColumnDetection:
     """Tests for detect_revenue_columns."""
 
     def test_standard_column_names(self):
-        cols = ["Entry Date", "Amount", "Account Name", "Account Number",
-                "Description", "Entry Type", "Reference", "Posted By"]
+        cols = [
+            "Entry Date",
+            "Amount",
+            "Account Name",
+            "Account Number",
+            "Description",
+            "Entry Type",
+            "Reference",
+            "Posted By",
+        ]
         result = detect_revenue_columns(cols)
         assert result.date_column == "Entry Date"
         assert result.amount_column == "Amount"
@@ -172,8 +185,16 @@ class TestColumnDetection:
         assert result.overall_confidence >= 0.80
 
     def test_alternative_column_names(self):
-        cols = ["Posting Date", "Revenue Amount", "GL Account Name", "GL Code",
-                "Memo", "Source Type", "Document Number", "Entered By"]
+        cols = [
+            "Posting Date",
+            "Revenue Amount",
+            "GL Account Name",
+            "GL Code",
+            "Memo",
+            "Source Type",
+            "Document Number",
+            "Entered By",
+        ]
         result = detect_revenue_columns(cols)
         assert result.date_column == "Posting Date"
         assert result.amount_column == "Revenue Amount"
@@ -217,25 +238,30 @@ class TestColumnDetection:
 # MATCH COLUMN TESTS
 # =============================================================================
 
+
 class TestMatchColumn:
     """Tests for _match_column helper."""
 
     def test_exact_match(self):
         from revenue_testing_engine import REVENUE_DATE_PATTERNS
+
         assert _match_column("entry date", REVENUE_DATE_PATTERNS) >= 0.95
 
     def test_partial_match(self):
         from revenue_testing_engine import REVENUE_AMOUNT_PATTERNS
+
         assert _match_column("total_amount_usd", REVENUE_AMOUNT_PATTERNS) > 0.0
 
     def test_no_match(self):
         from revenue_testing_engine import REVENUE_DATE_PATTERNS
+
         assert _match_column("foobar_xyz", REVENUE_DATE_PATTERNS) == 0.0
 
 
 # =============================================================================
 # HELPER TESTS
 # =============================================================================
+
 
 class TestHelpers:
     """Tests for safe_str, safe_float, parse_date, etc."""
@@ -314,6 +340,7 @@ class TestHelpers:
 # PARSER TESTS
 # =============================================================================
 
+
 class TestParser:
     """Tests for parse_revenue_entries."""
 
@@ -341,6 +368,7 @@ class TestParser:
 # =============================================================================
 # DATA QUALITY TESTS
 # =============================================================================
+
 
 class TestDataQuality:
     """Tests for assess_revenue_data_quality."""
@@ -386,6 +414,7 @@ class TestDataQuality:
 # =============================================================================
 # TIER 1 — STRUCTURAL TESTS
 # =============================================================================
+
 
 class TestLargeManualEntries:
     """RT-01: Large manual revenue entries."""
@@ -497,9 +526,7 @@ class TestRoundRevenueAmounts:
         assert result.entries_flagged == 0
 
     def test_max_flags_respected(self):
-        entries = [
-            RevenueEntry(amount=-50000, row_number=i) for i in range(1, 60)
-        ]
+        entries = [RevenueEntry(amount=-50000, row_number=i) for i in range(1, 60)]
         config = RevenueTestingConfig(round_amount_threshold=10000, round_amount_max_flags=10)
         result = run_round_amounts_test(entries, config)
         assert result.entries_flagged <= 10
@@ -544,9 +571,9 @@ class TestSignAnomalies:
 
     def test_severity_tiers(self):
         entries = [
-            RevenueEntry(amount=60000, row_number=1, account_name="Revenue"),   # HIGH
-            RevenueEntry(amount=20000, row_number=2, account_name="Revenue"),   # MEDIUM
-            RevenueEntry(amount=500, row_number=3, account_name="Revenue"),     # LOW
+            RevenueEntry(amount=60000, row_number=1, account_name="Revenue"),  # HIGH
+            RevenueEntry(amount=20000, row_number=2, account_name="Revenue"),  # MEDIUM
+            RevenueEntry(amount=500, row_number=3, account_name="Revenue"),  # LOW
         ]
         result = run_sign_anomalies_test(entries, RevenueTestingConfig())
         severities = [f.severity for f in result.flagged_entries]
@@ -590,6 +617,7 @@ class TestUnclassifiedEntries:
 # TIER 2 — STATISTICAL TESTS
 # =============================================================================
 
+
 class TestZScoreOutliers:
     """RT-06: Z-score outlier detection."""
 
@@ -625,18 +653,14 @@ class TestRevenueTrendVariance:
 
     def test_large_increase_flagged(self):
         entries = [RevenueEntry(amount=-1000, row_number=i) for i in range(1, 11)]
-        config = RevenueTestingConfig(
-            prior_period_total=5000, trend_variance_pct=0.30
-        )
+        config = RevenueTestingConfig(prior_period_total=5000, trend_variance_pct=0.30)
         result = run_trend_variance_test(entries, config)
         # Current: 10,000, Prior: 5,000 → 100% increase
         assert result.entries_flagged == 1
 
     def test_within_threshold_not_flagged(self):
         entries = [RevenueEntry(amount=-1000, row_number=i) for i in range(1, 11)]
-        config = RevenueTestingConfig(
-            prior_period_total=9000, trend_variance_pct=0.30
-        )
+        config = RevenueTestingConfig(prior_period_total=9000, trend_variance_pct=0.30)
         result = run_trend_variance_test(entries, config)
         # Current: 10,000, Prior: 9,000 → 11.1% change
         assert result.entries_flagged == 0
@@ -649,9 +673,7 @@ class TestRevenueTrendVariance:
 
     def test_very_large_variance_high_severity(self):
         entries = [RevenueEntry(amount=-1000, row_number=i) for i in range(1, 11)]
-        config = RevenueTestingConfig(
-            prior_period_total=2000, trend_variance_pct=0.30
-        )
+        config = RevenueTestingConfig(prior_period_total=2000, trend_variance_pct=0.30)
         result = run_trend_variance_test(entries, config)
         # 400% increase → HIGH severity
         assert result.entries_flagged == 1
@@ -672,10 +694,7 @@ class TestConcentrationRisk:
         assert result.entries_flagged >= 1
 
     def test_diversified_not_flagged(self):
-        entries = [
-            RevenueEntry(amount=-1000, account_name=f"Client {i}", row_number=i)
-            for i in range(1, 11)
-        ]
+        entries = [RevenueEntry(amount=-1000, account_name=f"Client {i}", row_number=i) for i in range(1, 11)]
         config = RevenueTestingConfig(concentration_threshold_pct=0.50)
         result = run_concentration_test(entries, config)
         assert result.entries_flagged == 0
@@ -738,12 +757,14 @@ class TestCutoffRisk:
 # TIER 3 — ADVANCED TESTS
 # =============================================================================
 
+
 class TestBenfordLaw:
     """RT-10: Benford's Law analysis."""
 
     def test_benford_with_uniform_distribution(self):
         """Uniformly distributed first digits should deviate from Benford's."""
         import random
+
         random.seed(99)
         entries = []
         for i in range(200):
@@ -857,15 +878,21 @@ class TestContraRevenueAnomalies:
 # SCORING TESTS
 # =============================================================================
 
+
 class TestCompositeScoring:
     """Tests for calculate_revenue_composite_score."""
 
     def test_clean_data_low_score(self):
         results = [
             RevenueTestResult(
-                test_name="Test 1", test_key="t1", test_tier=TestTier.STRUCTURAL,
-                entries_flagged=0, total_entries=100, flag_rate=0.0,
-                severity=Severity.LOW, description="Clean",
+                test_name="Test 1",
+                test_key="t1",
+                test_tier=TestTier.STRUCTURAL,
+                entries_flagged=0,
+                total_entries=100,
+                flag_rate=0.0,
+                severity=Severity.LOW,
+                description="Clean",
             ),
         ]
         score = calculate_revenue_composite_score(results, 100)
@@ -876,16 +903,24 @@ class TestCompositeScoring:
         flagged = [
             FlaggedRevenue(
                 entry=RevenueEntry(amount=-1000, row_number=i),
-                test_name="Test", test_key="t", test_tier=TestTier.STRUCTURAL,
-                severity=Severity.HIGH, issue="Flagged",
+                test_name="Test",
+                test_key="t",
+                test_tier=TestTier.STRUCTURAL,
+                severity=Severity.HIGH,
+                issue="Flagged",
             )
             for i in range(1, 51)
         ]
         results = [
             RevenueTestResult(
-                test_name="Test 1", test_key="t1", test_tier=TestTier.STRUCTURAL,
-                entries_flagged=50, total_entries=100, flag_rate=0.50,
-                severity=Severity.HIGH, description="Many flags",
+                test_name="Test 1",
+                test_key="t1",
+                test_tier=TestTier.STRUCTURAL,
+                entries_flagged=50,
+                total_entries=100,
+                flag_rate=0.50,
+                severity=Severity.HIGH,
+                description="Many flags",
                 flagged_entries=flagged,
             ),
         ]
@@ -902,20 +937,31 @@ class TestCompositeScoring:
         flagged = [
             FlaggedRevenue(
                 entry=RevenueEntry(amount=-1000, row_number=1),
-                test_name="T", test_key="t", test_tier=TestTier.STRUCTURAL,
-                severity=Severity.HIGH, issue="High",
+                test_name="T",
+                test_key="t",
+                test_tier=TestTier.STRUCTURAL,
+                severity=Severity.HIGH,
+                issue="High",
             ),
             FlaggedRevenue(
                 entry=RevenueEntry(amount=-500, row_number=2),
-                test_name="T", test_key="t", test_tier=TestTier.STRUCTURAL,
-                severity=Severity.MEDIUM, issue="Med",
+                test_name="T",
+                test_key="t",
+                test_tier=TestTier.STRUCTURAL,
+                severity=Severity.MEDIUM,
+                issue="Med",
             ),
         ]
         results = [
             RevenueTestResult(
-                test_name="T", test_key="t", test_tier=TestTier.STRUCTURAL,
-                entries_flagged=2, total_entries=10, flag_rate=0.20,
-                severity=Severity.HIGH, description="Mixed",
+                test_name="T",
+                test_key="t",
+                test_tier=TestTier.STRUCTURAL,
+                entries_flagged=2,
+                total_entries=10,
+                flag_rate=0.20,
+                severity=Severity.HIGH,
+                description="Mixed",
                 flagged_entries=flagged,
             ),
         ]
@@ -925,9 +971,12 @@ class TestCompositeScoring:
 
     def test_to_dict(self):
         score = RevenueCompositeScore(
-            score=25.5, risk_tier=RiskTier.MODERATE,
-            tests_run=12, total_entries=100,
-            total_flagged=15, flag_rate=0.15,
+            score=25.5,
+            risk_tier=RiskTier.MODERATE,
+            tests_run=12,
+            total_entries=100,
+            total_flagged=15,
+            flag_rate=0.15,
         )
         d = score.to_dict()
         assert d["score"] == 25.5
@@ -941,23 +990,20 @@ class TestScoreToRiskTier:
     def test_low(self):
         assert score_to_risk_tier(5) == RiskTier.LOW
 
-    def test_elevated(self):
-        assert score_to_risk_tier(15) == RiskTier.ELEVATED
-
     def test_moderate(self):
-        assert score_to_risk_tier(35) == RiskTier.MODERATE
+        assert score_to_risk_tier(15) == RiskTier.MODERATE
+
+    def test_elevated(self):
+        assert score_to_risk_tier(35) == RiskTier.ELEVATED
 
     def test_high(self):
         assert score_to_risk_tier(60) == RiskTier.HIGH
-
-    def test_critical(self):
-        assert score_to_risk_tier(80) == RiskTier.CRITICAL
 
     def test_boundary_0(self):
         assert score_to_risk_tier(0) == RiskTier.LOW
 
     def test_boundary_10(self):
-        assert score_to_risk_tier(10) == RiskTier.ELEVATED
+        assert score_to_risk_tier(10) == RiskTier.LOW
 
     def test_boundary_25(self):
         assert score_to_risk_tier(25) == RiskTier.MODERATE
@@ -966,6 +1012,7 @@ class TestScoreToRiskTier:
 # =============================================================================
 # BATTERY TESTS
 # =============================================================================
+
 
 class TestBattery:
     """Tests for run_revenue_test_battery."""
@@ -1006,6 +1053,7 @@ class TestBattery:
 # =============================================================================
 # FULL PIPELINE TESTS
 # =============================================================================
+
 
 class TestFullPipeline:
     """Tests for run_revenue_testing (main entry point)."""
@@ -1050,13 +1098,17 @@ class TestFullPipeline:
 # SERIALIZATION TESTS
 # =============================================================================
 
+
 class TestSerialization:
     """Tests for to_dict methods."""
 
     def test_revenue_entry_to_dict(self):
         e = RevenueEntry(
-            date="2025-01-15", amount=-5000, account_name="Revenue",
-            account_number="4000", row_number=1,
+            date="2025-01-15",
+            amount=-5000,
+            account_name="Revenue",
+            account_number="4000",
+            row_number=1,
         )
         d = e.to_dict()
         assert d["date"] == "2025-01-15"
@@ -1067,9 +1119,11 @@ class TestSerialization:
     def test_flagged_revenue_to_dict(self):
         f = FlaggedRevenue(
             entry=RevenueEntry(amount=-1000, row_number=1),
-            test_name="Test", test_key="test_key",
+            test_name="Test",
+            test_key="test_key",
             test_tier=TestTier.STRUCTURAL,
-            severity=Severity.HIGH, issue="Issue",
+            severity=Severity.HIGH,
+            issue="Issue",
         )
         d = f.to_dict()
         assert d["test_key"] == "test_key"
@@ -1079,10 +1133,13 @@ class TestSerialization:
 
     def test_test_result_to_dict(self):
         r = RevenueTestResult(
-            test_name="Test", test_key="test_key",
+            test_name="Test",
+            test_key="test_key",
             test_tier=TestTier.STATISTICAL,
-            entries_flagged=5, total_entries=100,
-            flag_rate=0.05, severity=Severity.MEDIUM,
+            entries_flagged=5,
+            total_entries=100,
+            flag_rate=0.05,
+            severity=Severity.MEDIUM,
             description="Desc",
         )
         d = r.to_dict()
@@ -1109,11 +1166,13 @@ class TestSerialization:
 # CONTRACT EVIDENCE LEVEL TESTS (Sprint 352)
 # =============================================================================
 
+
 class TestContractEvidenceLevel:
     """Tests for assess_contract_evidence()."""
 
     def test_full_evidence(self):
         from revenue_testing_engine import assess_contract_evidence
+
         det = RevenueColumnDetection(
             contract_id_column="Contract ID",
             performance_obligation_id_column="PO ID",
@@ -1129,6 +1188,7 @@ class TestContractEvidenceLevel:
 
     def test_partial_evidence(self):
         from revenue_testing_engine import assess_contract_evidence
+
         det = RevenueColumnDetection(
             contract_id_column="Contract ID",
             performance_obligation_id_column="PO ID",
@@ -1141,6 +1201,7 @@ class TestContractEvidenceLevel:
 
     def test_minimal_evidence(self):
         from revenue_testing_engine import assess_contract_evidence
+
         det = RevenueColumnDetection(
             obligation_satisfaction_date_column="Satisfaction Date",
         )
@@ -1151,6 +1212,7 @@ class TestContractEvidenceLevel:
 
     def test_no_evidence(self):
         from revenue_testing_engine import assess_contract_evidence
+
         det = RevenueColumnDetection()
         ev = assess_contract_evidence(det)
         assert ev.level == "none"
@@ -1162,6 +1224,7 @@ class TestContractEvidenceLevel:
 # RT-13: RECOGNITION BEFORE SATISFACTION TESTS (Sprint 352)
 # =============================================================================
 
+
 class TestRecognitionBeforeSatisfaction:
     """Tests for test_recognition_before_satisfaction (RT-13)."""
 
@@ -1171,6 +1234,7 @@ class TestRecognitionBeforeSatisfaction:
 
     def test_flags_high_premature(self):
         from revenue_testing_engine import test_recognition_before_satisfaction
+
         entries = [
             RevenueEntry(date="2025-01-01", amount=5000, obligation_satisfaction_date="2025-02-15", row_number=1),
         ]
@@ -1183,6 +1247,7 @@ class TestRecognitionBeforeSatisfaction:
 
     def test_flags_medium_small_gap(self):
         from revenue_testing_engine import test_recognition_before_satisfaction
+
         entries = [
             RevenueEntry(date="2025-01-10", amount=5000, obligation_satisfaction_date="2025-01-15", row_number=1),
         ]
@@ -1194,10 +1259,14 @@ class TestRecognitionBeforeSatisfaction:
 
     def test_exempt_over_time(self):
         from revenue_testing_engine import test_recognition_before_satisfaction
+
         entries = [
             RevenueEntry(
-                date="2025-01-01", amount=5000, obligation_satisfaction_date="2025-06-01",
-                recognition_method="over-time", row_number=1,
+                date="2025-01-01",
+                amount=5000,
+                obligation_satisfaction_date="2025-06-01",
+                recognition_method="over-time",
+                row_number=1,
             ),
         ]
         evidence = self._make_evidence(["contract_id", "obligation_satisfaction_date", "recognition_method"])
@@ -1207,6 +1276,7 @@ class TestRecognitionBeforeSatisfaction:
 
     def test_same_day_ok(self):
         from revenue_testing_engine import test_recognition_before_satisfaction
+
         entries = [
             RevenueEntry(date="2025-03-15", amount=5000, obligation_satisfaction_date="2025-03-15", row_number=1),
         ]
@@ -1217,6 +1287,7 @@ class TestRecognitionBeforeSatisfaction:
 
     def test_skipped_without_column(self):
         from revenue_testing_engine import test_recognition_before_satisfaction
+
         entries = [RevenueEntry(date="2025-01-01", amount=5000, row_number=1)]
         evidence = self._make_evidence(["contract_id"])  # No obligation_satisfaction_date
         config = RevenueTestingConfig()
@@ -1229,6 +1300,7 @@ class TestRecognitionBeforeSatisfaction:
 # RT-14: MISSING OBLIGATION LINKAGE TESTS (Sprint 352)
 # =============================================================================
 
+
 class TestMissingObligationLinkage:
     """Tests for test_missing_obligation_linkage (RT-14)."""
 
@@ -1238,6 +1310,7 @@ class TestMissingObligationLinkage:
 
     def test_contract_without_po(self):
         from revenue_testing_engine import test_missing_obligation_linkage
+
         entries = [
             RevenueEntry(contract_id="C001", performance_obligation_id=None, amount=1000, row_number=1),
         ]
@@ -1248,6 +1321,7 @@ class TestMissingObligationLinkage:
 
     def test_po_without_contract(self):
         from revenue_testing_engine import test_missing_obligation_linkage
+
         entries = [
             RevenueEntry(contract_id=None, performance_obligation_id="PO-A", amount=1000, row_number=1),
         ]
@@ -1258,6 +1332,7 @@ class TestMissingObligationLinkage:
 
     def test_both_present_clean(self):
         from revenue_testing_engine import test_missing_obligation_linkage
+
         entries = [
             RevenueEntry(contract_id="C001", performance_obligation_id="PO-A", amount=1000, row_number=1),
         ]
@@ -1267,6 +1342,7 @@ class TestMissingObligationLinkage:
 
     def test_skipped_without_either_column(self):
         from revenue_testing_engine import test_missing_obligation_linkage
+
         entries = [RevenueEntry(amount=1000, row_number=1)]
         evidence = self._make_evidence(["recognition_method"])  # Neither contract_id nor PO
         result = test_missing_obligation_linkage(entries, RevenueTestingConfig(), evidence)
@@ -1277,6 +1353,7 @@ class TestMissingObligationLinkage:
 # RT-15: MODIFICATION TREATMENT MISMATCH TESTS (Sprint 352)
 # =============================================================================
 
+
 class TestModificationTreatmentMismatch:
     """Tests for test_modification_treatment_mismatch (RT-15)."""
 
@@ -1286,6 +1363,7 @@ class TestModificationTreatmentMismatch:
 
     def test_mixed_treatments_high(self):
         from revenue_testing_engine import test_modification_treatment_mismatch
+
         entries = [
             RevenueEntry(contract_id="C001", contract_modification="prospective", amount=1000, row_number=1),
             RevenueEntry(contract_id="C001", contract_modification="catch-up", amount=2000, row_number=2),
@@ -1297,6 +1375,7 @@ class TestModificationTreatmentMismatch:
 
     def test_consistent_ok(self):
         from revenue_testing_engine import test_modification_treatment_mismatch
+
         entries = [
             RevenueEntry(contract_id="C001", contract_modification="prospective", amount=1000, row_number=1),
             RevenueEntry(contract_id="C001", contract_modification="prospective", amount=2000, row_number=2),
@@ -1307,6 +1386,7 @@ class TestModificationTreatmentMismatch:
 
     def test_partial_tracking_medium(self):
         from revenue_testing_engine import test_modification_treatment_mismatch
+
         entries = [
             RevenueEntry(contract_id="C001", contract_modification="prospective", amount=1000, row_number=1),
             RevenueEntry(contract_id="C001", contract_modification=None, amount=2000, row_number=2),
@@ -1318,6 +1398,7 @@ class TestModificationTreatmentMismatch:
 
     def test_single_entry_contract_ok(self):
         from revenue_testing_engine import test_modification_treatment_mismatch
+
         entries = [
             RevenueEntry(contract_id="C001", contract_modification="prospective", amount=1000, row_number=1),
         ]
@@ -1327,6 +1408,7 @@ class TestModificationTreatmentMismatch:
 
     def test_skipped_without_columns(self):
         from revenue_testing_engine import test_modification_treatment_mismatch
+
         entries = [RevenueEntry(amount=1000, row_number=1)]
         evidence = self._make_evidence(["contract_id"])  # No contract_modification
         result = test_modification_treatment_mismatch(entries, RevenueTestingConfig(), evidence)
@@ -1337,6 +1419,7 @@ class TestModificationTreatmentMismatch:
 # RT-16: ALLOCATION INCONSISTENCY TESTS (Sprint 352)
 # =============================================================================
 
+
 class TestAllocationInconsistency:
     """Tests for test_allocation_inconsistency (RT-16)."""
 
@@ -1346,6 +1429,7 @@ class TestAllocationInconsistency:
 
     def test_multiple_bases_high(self):
         from revenue_testing_engine import test_allocation_inconsistency
+
         entries = [
             RevenueEntry(contract_id="C001", allocation_basis="observable price", amount=1000, row_number=1),
             RevenueEntry(contract_id="C001", allocation_basis="residual approach", amount=2000, row_number=2),
@@ -1357,6 +1441,7 @@ class TestAllocationInconsistency:
 
     def test_consistent_ok(self):
         from revenue_testing_engine import test_allocation_inconsistency
+
         entries = [
             RevenueEntry(contract_id="C001", allocation_basis="observable price", amount=1000, row_number=1),
             RevenueEntry(contract_id="C001", allocation_basis="observable price", amount=2000, row_number=2),
@@ -1367,6 +1452,7 @@ class TestAllocationInconsistency:
 
     def test_sparse_low(self):
         from revenue_testing_engine import test_allocation_inconsistency
+
         entries = [
             RevenueEntry(contract_id="C001", allocation_basis="observable price", amount=1000, row_number=1),
             RevenueEntry(contract_id="C001", allocation_basis=None, amount=2000, row_number=2),
@@ -1378,6 +1464,7 @@ class TestAllocationInconsistency:
 
     def test_skipped_without_columns(self):
         from revenue_testing_engine import test_allocation_inconsistency
+
         entries = [RevenueEntry(amount=1000, row_number=1)]
         evidence = self._make_evidence(["contract_id"])  # No allocation_basis
         result = test_allocation_inconsistency(entries, RevenueTestingConfig(), evidence)
@@ -1388,6 +1475,7 @@ class TestAllocationInconsistency:
 # BATTERY WITH CONTRACT TESTS (Sprint 352)
 # =============================================================================
 
+
 class TestBatteryWithContractTests:
     """Tests for battery integration with contract tests."""
 
@@ -1395,18 +1483,27 @@ class TestBatteryWithContractTests:
 
         entries = [
             RevenueEntry(
-                date="2025-01-01", amount=5000, account_name="Sales",
-                contract_id="C001", performance_obligation_id="PO-A",
-                obligation_satisfaction_date="2025-02-01", row_number=1,
+                date="2025-01-01",
+                amount=5000,
+                account_name="Sales",
+                contract_id="C001",
+                performance_obligation_id="PO-A",
+                obligation_satisfaction_date="2025-02-01",
+                row_number=1,
             ),
             RevenueEntry(
-                date="2025-01-15", amount=3000, account_name="Sales",
-                contract_id="C001", performance_obligation_id="PO-B",
-                obligation_satisfaction_date="2025-01-10", row_number=2,
+                date="2025-01-15",
+                amount=3000,
+                account_name="Sales",
+                contract_id="C001",
+                performance_obligation_id="PO-B",
+                obligation_satisfaction_date="2025-01-10",
+                row_number=2,
             ),
         ]
         evidence = ContractEvidenceLevel(
-            level="partial", confidence_modifier=0.70,
+            level="partial",
+            confidence_modifier=0.70,
             detected_fields=["contract_id", "performance_obligation_id", "obligation_satisfaction_date"],
         )
         results = run_revenue_test_battery(entries, evidence=evidence)
@@ -1430,15 +1527,18 @@ class TestBatteryWithContractTests:
 # API ROUTE TESTS
 # =============================================================================
 
+
 class TestRevenueTestingRoute:
     """Tests for route registration."""
 
     def test_route_registered(self):
         from main import app
+
         paths = [r.path for r in app.routes if hasattr(r, "path")]
         assert "/audit/revenue-testing" in paths
 
     def test_engagement_model_has_revenue(self):
         from engagement_model import ToolName
+
         assert hasattr(ToolName, "REVENUE_TESTING")
         assert ToolName.REVENUE_TESTING.value == "revenue_testing"

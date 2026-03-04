@@ -305,9 +305,25 @@ def generate_currency_conversion_memo(
     story.append(
         Paragraph(
             "Conversion Method: Closing rate applied uniformly to all account balances. "
-            "No distinction is made between monetary and non-monetary items in this MVP. "
             "Rounding uses banker's rounding (round half to even) with 4 decimal places internally "
             "and 2 decimal places for display.",
+            styles["MemoBody"],
+        )
+    )
+
+    # ENHANCE-03: Monetary/non-monetary classification warning
+    story.append(Spacer(1, 6))
+    story.append(
+        Paragraph(
+            "<b>Monetary vs. Non-Monetary Note:</b> Under IAS 21, monetary items "
+            "(cash, receivables, payables) should be translated at the closing rate, "
+            "while non-monetary items (inventory, PP&E, intangible assets) carried at "
+            "historical cost should be translated at the historical rate. "
+            "This conversion applies the closing rate uniformly to all accounts. "
+            "Non-monetary accounts translated at the closing rate may produce "
+            "translation differences that do not reflect economic reality. "
+            "The auditor should evaluate whether material non-monetary balances "
+            "require adjustment to historical rates.",
             styles["MemoBody"],
         )
     )

@@ -36,13 +36,50 @@ from je_testing_engine import (
 # FIXTURES (duplicated from test_je_core.py for pipeline tests)
 # =============================================================================
 
+
 def sample_gl_rows() -> list[dict]:
     """Standard GL rows for testing."""
     return [
-        {"Entry ID": "JE001", "Date": "2025-01-15", "Account": "Cash", "Debit": 1000, "Credit": 0, "Description": "Payment received", "Posted By": "jsmith", "Reference": "INV-001"},
-        {"Entry ID": "JE001", "Date": "2025-01-15", "Account": "Accounts Receivable", "Debit": 0, "Credit": 1000, "Description": "Payment received", "Posted By": "jsmith", "Reference": "INV-001"},
-        {"Entry ID": "JE002", "Date": "2025-01-20", "Account": "Office Supplies", "Debit": 250, "Credit": 0, "Description": "Office supplies purchase", "Posted By": "jdoe", "Reference": "PO-100"},
-        {"Entry ID": "JE002", "Date": "2025-01-20", "Account": "Accounts Payable", "Debit": 0, "Credit": 250, "Description": "Office supplies purchase", "Posted By": "jdoe", "Reference": "PO-100"},
+        {
+            "Entry ID": "JE001",
+            "Date": "2025-01-15",
+            "Account": "Cash",
+            "Debit": 1000,
+            "Credit": 0,
+            "Description": "Payment received",
+            "Posted By": "jsmith",
+            "Reference": "INV-001",
+        },
+        {
+            "Entry ID": "JE001",
+            "Date": "2025-01-15",
+            "Account": "Accounts Receivable",
+            "Debit": 0,
+            "Credit": 1000,
+            "Description": "Payment received",
+            "Posted By": "jsmith",
+            "Reference": "INV-001",
+        },
+        {
+            "Entry ID": "JE002",
+            "Date": "2025-01-20",
+            "Account": "Office Supplies",
+            "Debit": 250,
+            "Credit": 0,
+            "Description": "Office supplies purchase",
+            "Posted By": "jdoe",
+            "Reference": "PO-100",
+        },
+        {
+            "Entry ID": "JE002",
+            "Date": "2025-01-20",
+            "Account": "Accounts Payable",
+            "Debit": 0,
+            "Credit": 250,
+            "Description": "Office supplies purchase",
+            "Posted By": "jdoe",
+            "Reference": "PO-100",
+        },
     ]
 
 
@@ -54,21 +91,28 @@ def sample_gl_columns() -> list[str]:
 # T6: BENFORD'S LAW (Sprint 65)
 # =============================================================================
 
+
 class TestBenfordLaw:
     """Tests for test_benford_law()."""
 
     def _make_benford_entries(self, n=600):
         """Generate entries following Benford's distribution for testing."""
         import random
+
         random.seed(42)
         entries = []
         for i in range(1, n + 1):
             # Generate amounts roughly following Benford's Law
             # Using log-uniform distribution
             amt = 10 ** (random.uniform(1, 5))  # $10 to $100,000
-            entries.append(JournalEntry(
-                account="Revenue", debit=amt, posting_date="2025-01-15", row_number=i,
-            ))
+            entries.append(
+                JournalEntry(
+                    account="Revenue",
+                    debit=amt,
+                    posting_date="2025-01-15",
+                    row_number=i,
+                )
+            )
         return entries
 
     def _make_non_benford_entries(self, n=600):
@@ -82,9 +126,14 @@ class TestBenfordLaw:
             # Spread across magnitudes (50+, 500+, 5000+) — all start with 5
             magnitude = i % 3  # 0, 1, 2
             amt = 5 * (10 ** (magnitude + 1)) + (i % 50)
-            entries.append(JournalEntry(
-                account="Revenue", debit=amt, posting_date="2025-01-15", row_number=i,
-            ))
+            entries.append(
+                JournalEntry(
+                    account="Revenue",
+                    debit=amt,
+                    posting_date="2025-01-15",
+                    row_number=i,
+                )
+            )
         return entries
 
     def test_insufficient_entries_precheck(self):
@@ -96,10 +145,7 @@ class TestBenfordLaw:
 
     def test_insufficient_magnitude_precheck(self):
         # All amounts in same order of magnitude
-        entries = [
-            JournalEntry(debit=100 + i, row_number=i)
-            for i in range(1, 600)
-        ]
+        entries = [JournalEntry(debit=100 + i, row_number=i) for i in range(1, 600)]
         config = JETestingConfig(benford_min_entries=100)
         result, benford = run_benford_test(entries, config)
         assert benford.passed_prechecks is False
@@ -158,14 +204,8 @@ class TestBenfordLaw:
 
     def test_sub_dollar_excluded(self):
         # Entries below min_amount should be excluded
-        entries = [
-            JournalEntry(debit=0.50, row_number=i)
-            for i in range(1, 600)
-        ]
-        entries.extend([
-            JournalEntry(debit=10 ** (i % 4 + 1), row_number=600 + i)
-            for i in range(1, 100)
-        ])
+        entries = [JournalEntry(debit=0.50, row_number=i) for i in range(1, 600)]
+        entries.extend([JournalEntry(debit=10 ** (i % 4 + 1), row_number=600 + i) for i in range(1, 100)])
         config = JETestingConfig(benford_min_entries=50, benford_min_amount=1.0)
         _, benford = run_benford_test(entries, config)
         # Only non-sub-dollar entries should be counted
@@ -178,10 +218,7 @@ class TestBenfordLaw:
         assert result.test_tier == TestTier.STATISTICAL
 
     def test_custom_min_entries(self):
-        entries = [
-            JournalEntry(debit=10 ** (i % 4 + 1), row_number=i)
-            for i in range(1, 200)
-        ]
+        entries = [JournalEntry(debit=10 ** (i % 4 + 1), row_number=i) for i in range(1, 200)]
         config = JETestingConfig(benford_min_entries=100)
         _, benford = run_benford_test(entries, config)
         assert benford.passed_prechecks is True
@@ -190,6 +227,7 @@ class TestBenfordLaw:
 # =============================================================================
 # T7: WEEKEND POSTINGS (Sprint 65)
 # =============================================================================
+
 
 class TestWeekendPostings:
     """Tests for test_weekend_postings()."""
@@ -270,6 +308,7 @@ class TestWeekendPostings:
 # T8: MONTH-END CLUSTERING (Sprint 65)
 # =============================================================================
 
+
 class TestMonthEndClustering:
     """Tests for test_month_end_clustering()."""
 
@@ -277,9 +316,13 @@ class TestMonthEndClustering:
         # Entries spread evenly across the month
         entries = []
         for day in range(1, 29):
-            entries.append(JournalEntry(
-                posting_date=f"2025-01-{day:02d}", debit=100, row_number=day,
-            ))
+            entries.append(
+                JournalEntry(
+                    posting_date=f"2025-01-{day:02d}",
+                    debit=100,
+                    row_number=day,
+                )
+            )
         result = run_month_end_test(entries, JETestingConfig())
         assert result.entries_flagged == 0
 
@@ -287,13 +330,21 @@ class TestMonthEndClustering:
         # 5 entries spread across month + 20 crammed into last 3 days
         entries = []
         for i in range(1, 6):
-            entries.append(JournalEntry(
-                posting_date=f"2025-01-{i:02d}", debit=100, row_number=i,
-            ))
+            entries.append(
+                JournalEntry(
+                    posting_date=f"2025-01-{i:02d}",
+                    debit=100,
+                    row_number=i,
+                )
+            )
         for i in range(20):
-            entries.append(JournalEntry(
-                posting_date=f"2025-01-{29 + (i % 3):02d}", debit=100, row_number=6 + i,
-            ))
+            entries.append(
+                JournalEntry(
+                    posting_date=f"2025-01-{29 + (i % 3):02d}",
+                    debit=100,
+                    row_number=6 + i,
+                )
+            )
         result = run_month_end_test(entries, JETestingConfig())
         assert result.entries_flagged > 0
 
@@ -310,14 +361,22 @@ class TestMonthEndClustering:
         # High multiplier = fewer flags
         entries = []
         for day in range(1, 25):
-            entries.append(JournalEntry(
-                posting_date=f"2025-01-{day:02d}", debit=100, row_number=day,
-            ))
+            entries.append(
+                JournalEntry(
+                    posting_date=f"2025-01-{day:02d}",
+                    debit=100,
+                    row_number=day,
+                )
+            )
         # Add some month-end entries
         for i in range(10):
-            entries.append(JournalEntry(
-                posting_date="2025-01-31", debit=100, row_number=25 + i,
-            ))
+            entries.append(
+                JournalEntry(
+                    posting_date="2025-01-31",
+                    debit=100,
+                    row_number=25 + i,
+                )
+            )
         # With very high multiplier, should not flag
         config = JETestingConfig(month_end_volume_multiplier=100.0)
         result = run_month_end_test(entries, config)
@@ -328,14 +387,22 @@ class TestMonthEndClustering:
         entries = []
         # January: even
         for day in range(1, 29):
-            entries.append(JournalEntry(
-                posting_date=f"2025-01-{day:02d}", debit=100, row_number=day,
-            ))
+            entries.append(
+                JournalEntry(
+                    posting_date=f"2025-01-{day:02d}",
+                    debit=100,
+                    row_number=day,
+                )
+            )
         # February: all crammed at month end
         for i in range(15):
-            entries.append(JournalEntry(
-                posting_date=f"2025-02-{26 + (i % 3):02d}", debit=100, row_number=29 + i,
-            ))
+            entries.append(
+                JournalEntry(
+                    posting_date=f"2025-02-{26 + (i % 3):02d}",
+                    debit=100,
+                    row_number=29 + i,
+                )
+            )
         result = run_month_end_test(entries, JETestingConfig())
         # Feb should be flagged but not Jan
         flagged_dates = [f.details.get("month") for f in result.flagged_entries]
@@ -353,6 +420,7 @@ class TestMonthEndClustering:
 # SCORING CALIBRATION FIXTURES (Sprint 65)
 # =============================================================================
 
+
 class TestScoringCalibration:
     """Validate scoring engine produces expected risk tiers for known profiles."""
 
@@ -360,16 +428,24 @@ class TestScoringCalibration:
         """Generate a clean GL: balanced entries, no anomalies."""
         entries = []
         for i in range(1, n + 1):
-            entries.append(JournalEntry(
-                entry_id=f"JE{i:04d}", account="Cash",
-                posting_date=f"2025-01-{(i % 28) + 1:02d}",
-                debit=100 + (i * 7.3), row_number=i * 2 - 1,
-            ))
-            entries.append(JournalEntry(
-                entry_id=f"JE{i:04d}", account="Revenue",
-                posting_date=f"2025-01-{(i % 28) + 1:02d}",
-                credit=100 + (i * 7.3), row_number=i * 2,
-            ))
+            entries.append(
+                JournalEntry(
+                    entry_id=f"JE{i:04d}",
+                    account="Cash",
+                    posting_date=f"2025-01-{(i % 28) + 1:02d}",
+                    debit=100 + (i * 7.3),
+                    row_number=i * 2 - 1,
+                )
+            )
+            entries.append(
+                JournalEntry(
+                    entry_id=f"JE{i:04d}",
+                    account="Revenue",
+                    posting_date=f"2025-01-{(i % 28) + 1:02d}",
+                    credit=100 + (i * 7.3),
+                    row_number=i * 2,
+                )
+            )
         return entries
 
     def _generate_moderate_risk_gl(self, n=200):
@@ -377,21 +453,34 @@ class TestScoringCalibration:
         entries = self._generate_clean_gl(n)
         # Add duplicates (10% of entries)
         for i in range(n // 10):
-            entries.append(JournalEntry(
-                entry_id=f"JE{1:04d}", account="Cash",
-                posting_date="2025-01-01", debit=107.3, row_number=len(entries) + 1,
-            ))
+            entries.append(
+                JournalEntry(
+                    entry_id=f"JE{1:04d}",
+                    account="Cash",
+                    posting_date="2025-01-01",
+                    debit=107.3,
+                    row_number=len(entries) + 1,
+                )
+            )
         # Add entries with missing fields
         for i in range(n // 10):
-            entries.append(JournalEntry(
-                account="", debit=100, row_number=len(entries) + 1,
-            ))
+            entries.append(
+                JournalEntry(
+                    account="",
+                    debit=100,
+                    row_number=len(entries) + 1,
+                )
+            )
         # Add round amounts
         for i in range(n // 10):
-            entries.append(JournalEntry(
-                account="Expense", debit=100000, posting_date="2025-01-15",
-                row_number=len(entries) + 1,
-            ))
+            entries.append(
+                JournalEntry(
+                    account="Expense",
+                    debit=100000,
+                    posting_date="2025-01-15",
+                    row_number=len(entries) + 1,
+                )
+            )
         return entries
 
     def _generate_high_risk_gl(self, n=200):
@@ -399,36 +488,55 @@ class TestScoringCalibration:
         entries = []
         # Unbalanced entries (25% of base)
         for i in range(1, n // 4 + 1):
-            entries.append(JournalEntry(
-                entry_id=f"BAD{i:04d}", account="Cash",
-                posting_date="2025-01-15", debit=5000, row_number=len(entries) + 1,
-            ))
-            entries.append(JournalEntry(
-                entry_id=f"BAD{i:04d}", account="Revenue",
-                posting_date="2025-01-15", credit=3000, row_number=len(entries) + 1,
-            ))
+            entries.append(
+                JournalEntry(
+                    entry_id=f"BAD{i:04d}",
+                    account="Cash",
+                    posting_date="2025-01-15",
+                    debit=5000,
+                    row_number=len(entries) + 1,
+                )
+            )
+            entries.append(
+                JournalEntry(
+                    entry_id=f"BAD{i:04d}",
+                    account="Revenue",
+                    posting_date="2025-01-15",
+                    credit=3000,
+                    row_number=len(entries) + 1,
+                )
+            )
         # Duplicates (many identical)
         for i in range(n // 3):
-            entries.append(JournalEntry(
-                account="Cash", posting_date="2025-01-10", debit=999,
-                description="duplicate payment", row_number=len(entries) + 1,
-            ))
+            entries.append(
+                JournalEntry(
+                    account="Cash",
+                    posting_date="2025-01-10",
+                    debit=999,
+                    description="duplicate payment",
+                    row_number=len(entries) + 1,
+                )
+            )
         # Missing fields
         for i in range(n // 5):
             entries.append(JournalEntry(row_number=len(entries) + 1))
         # Round amounts
         for i in range(n // 5):
-            entries.append(JournalEntry(
-                account="Expense", debit=100000, posting_date="2025-01-15",
-                row_number=len(entries) + 1,
-            ))
+            entries.append(
+                JournalEntry(
+                    account="Expense",
+                    debit=100000,
+                    posting_date="2025-01-15",
+                    row_number=len(entries) + 1,
+                )
+            )
         return entries
 
     def test_clean_gl_low_risk(self):
         entries = self._generate_clean_gl(200)
         results, _ = run_test_battery(entries)
         score = calculate_composite_score(results, len(entries))
-        assert score.risk_tier in (RiskTier.LOW, RiskTier.ELEVATED)
+        assert score.risk_tier in (RiskTier.LOW, RiskTier.MODERATE)
         assert score.score < 25
 
     def test_moderate_risk_gl(self):
@@ -445,7 +553,7 @@ class TestScoringCalibration:
         score = calculate_composite_score(results, len(entries))
         # Should be elevated or higher (Tier 2 tests dilute average since they find fewer flags)
         assert score.score >= 15
-        assert score.risk_tier in (RiskTier.ELEVATED, RiskTier.MODERATE, RiskTier.HIGH, RiskTier.CRITICAL)
+        assert score.risk_tier in (RiskTier.MODERATE, RiskTier.ELEVATED, RiskTier.HIGH)
 
     def test_clean_fewer_flagged_than_risky(self):
         clean = self._generate_clean_gl(200)
@@ -470,6 +578,7 @@ class TestScoringCalibration:
 # =============================================================================
 # FULL PIPELINE WITH BENFORD (Sprint 65)
 # =============================================================================
+
 
 class TestFullPipelineWithBenford:
     """Tests for run_je_testing with Benford integration."""

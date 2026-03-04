@@ -62,6 +62,7 @@ from shared.testing_enums import RiskTier, Severity, TestTier
 # FIXTURE HELPERS
 # =============================================================================
 
+
 def make_entries(rows: list[dict], columns: list[str] | None = None) -> list[InventoryEntry]:
     """Parse rows into InventoryEntry objects using auto-detection."""
     if columns is None:
@@ -130,16 +131,18 @@ def make_large_dataset(n: int = 20) -> list[dict]:
     """Generate n rows for statistical tests."""
     rows = []
     for i in range(n):
-        rows.append({
-            "Item ID": f"INV-{i+1:04d}",
-            "Description": f"Item {i+1}",
-            "Quantity": 100.0 + i * 10,
-            "Unit Cost": 50.0 + i * 5,
-            "Extended Value": (100.0 + i * 10) * (50.0 + i * 5),
-            "Location": f"Loc-{i % 3}",
-            "Last Movement Date": "2025-11-01",
-            "Category": f"Cat-{i % 4}",
-        })
+        rows.append(
+            {
+                "Item ID": f"INV-{i + 1:04d}",
+                "Description": f"Item {i + 1}",
+                "Quantity": 100.0 + i * 10,
+                "Unit Cost": 50.0 + i * 5,
+                "Extended Value": (100.0 + i * 10) * (50.0 + i * 5),
+                "Location": f"Loc-{i % 3}",
+                "Last Movement Date": "2025-11-01",
+                "Category": f"Cat-{i % 4}",
+            }
+        )
     return rows
 
 
@@ -147,14 +150,20 @@ def make_large_dataset(n: int = 20) -> list[dict]:
 # COLUMN DETECTION TESTS
 # =============================================================================
 
+
 class TestColumnDetection:
     """Tests for inventory column detection."""
 
     def test_exact_column_names(self):
         columns = [
-            "Item ID", "Description", "Quantity",
-            "Unit Cost", "Extended Value",
-            "Location", "Last Movement Date", "Category",
+            "Item ID",
+            "Description",
+            "Quantity",
+            "Unit Cost",
+            "Extended Value",
+            "Location",
+            "Last Movement Date",
+            "Category",
         ]
         result = detect_inv_columns(columns)
         assert result.item_id_column == "Item ID"
@@ -169,9 +178,14 @@ class TestColumnDetection:
 
     def test_alternative_column_names(self):
         columns = [
-            "SKU", "Product Name", "Qty On Hand",
-            "Average Cost", "Total Value",
-            "Warehouse", "Last Activity Date", "Product Type",
+            "SKU",
+            "Product Name",
+            "Qty On Hand",
+            "Average Cost",
+            "Total Value",
+            "Warehouse",
+            "Last Activity Date",
+            "Product Type",
         ]
         result = detect_inv_columns(columns)
         assert result.item_id_column == "SKU"
@@ -200,7 +214,8 @@ class TestColumnDetection:
         # Both "Cost" and "Unit Cost" match unit_cost patterns
         # The best match gets assigned; no column should be used twice
         assigned = [
-            result.item_id_column, result.unit_cost_column,
+            result.item_id_column,
+            result.unit_cost_column,
             result.extended_value_column,
         ]
         non_none = [c for c in assigned if c is not None]
@@ -240,26 +255,31 @@ class TestColumnDetection:
 # MATCH COLUMN HELPER TESTS
 # =============================================================================
 
+
 class TestMatchColumn:
     """Tests for the _match_column helper."""
 
     def test_exact_match_full_confidence(self):
         from inventory_testing_engine import INV_ITEM_ID_PATTERNS
+
         score = _match_column("item id", INV_ITEM_ID_PATTERNS)
         assert score == 1.0
 
     def test_partial_match_lower_confidence(self):
         from inventory_testing_engine import INV_ITEM_ID_PATTERNS
+
         score = _match_column("my_item_id_field", INV_ITEM_ID_PATTERNS)
         assert 0.0 < score < 1.0
 
     def test_no_match_zero(self):
         from inventory_testing_engine import INV_ITEM_ID_PATTERNS
+
         score = _match_column("xyz_random_col", INV_ITEM_ID_PATTERNS)
         assert score == 0.0
 
     def test_case_insensitive(self):
         from inventory_testing_engine import INV_QUANTITY_PATTERNS
+
         score = _match_column("QUANTITY", INV_QUANTITY_PATTERNS)
         assert score > 0.90
 
@@ -267,6 +287,7 @@ class TestMatchColumn:
 # =============================================================================
 # HELPER FUNCTION TESTS
 # =============================================================================
+
 
 class TestHelpers:
     """Tests for safe parsing helpers."""
@@ -354,6 +375,7 @@ class TestHelpers:
 # PARSING TESTS
 # =============================================================================
 
+
 class TestParsing:
     """Tests for parsing rows into InventoryEntry objects."""
 
@@ -399,6 +421,7 @@ class TestParsing:
 # =============================================================================
 # DATA QUALITY TESTS
 # =============================================================================
+
 
 class TestDataQuality:
     """Tests for data quality assessment."""
@@ -457,43 +480,39 @@ class TestDataQuality:
 # RISK TIER TESTS
 # =============================================================================
 
+
 class TestRiskTier:
     """Tests for score_to_risk_tier mapping."""
 
     def test_low(self):
         assert score_to_risk_tier(5.0) == RiskTier.LOW
 
-    def test_elevated(self):
-        assert score_to_risk_tier(15.0) == RiskTier.ELEVATED
-
     def test_moderate(self):
-        assert score_to_risk_tier(30.0) == RiskTier.MODERATE
+        assert score_to_risk_tier(15.0) == RiskTier.MODERATE
+
+    def test_elevated(self):
+        assert score_to_risk_tier(30.0) == RiskTier.ELEVATED
 
     def test_high(self):
         assert score_to_risk_tier(60.0) == RiskTier.HIGH
 
-    def test_critical(self):
-        assert score_to_risk_tier(80.0) == RiskTier.CRITICAL
-
     def test_boundary_low(self):
         assert score_to_risk_tier(0.0) == RiskTier.LOW
 
-    def test_boundary_elevated(self):
-        assert score_to_risk_tier(10.0) == RiskTier.ELEVATED
-
     def test_boundary_moderate(self):
+        assert score_to_risk_tier(10.0) == RiskTier.LOW
+
+    def test_boundary_elevated(self):
         assert score_to_risk_tier(25.0) == RiskTier.MODERATE
 
     def test_boundary_high(self):
-        assert score_to_risk_tier(50.0) == RiskTier.HIGH
-
-    def test_boundary_critical(self):
-        assert score_to_risk_tier(75.0) == RiskTier.CRITICAL
+        assert score_to_risk_tier(50.0) == RiskTier.ELEVATED
 
 
 # =============================================================================
 # TIER 1 — STRUCTURAL TESTS
 # =============================================================================
+
 
 class TestMissingRequiredFields:
     """IN-01: Missing Required Fields."""
@@ -652,6 +671,7 @@ class TestExtendedValueMismatch:
 # TIER 2 — STATISTICAL TESTS
 # =============================================================================
 
+
 class TestUnitCostOutliers:
     """IN-04: Unit Cost Outliers (Z-Score)."""
 
@@ -664,8 +684,9 @@ class TestUnitCostOutliers:
 
     def test_extreme_outlier_flagged(self):
         rows = make_large_dataset(20)
-        rows.append({"Item ID": "OUTLIER", "Quantity": 10, "Unit Cost": 99999,
-                     "Extended Value": 999990, "Category": "Cat-0"})
+        rows.append(
+            {"Item ID": "OUTLIER", "Quantity": 10, "Unit Cost": 99999, "Extended Value": 999990, "Category": "Cat-0"}
+        )
         entries = make_entries(rows)
         config = InventoryTestingConfig()
         result = run_cost_outliers_test(entries, config)
@@ -682,8 +703,7 @@ class TestUnitCostOutliers:
         assert "requires" in result.description.lower()
 
     def test_identical_costs_skipped(self):
-        rows = [{"Item ID": f"I-{i}", "Quantity": 10, "Unit Cost": 50, "Extended Value": 500}
-                for i in range(15)]
+        rows = [{"Item ID": f"I-{i}", "Quantity": 10, "Unit Cost": 50, "Extended Value": 500} for i in range(15)]
         entries = make_entries(rows)
         config = InventoryTestingConfig()
         result = run_cost_outliers_test(entries, config)
@@ -692,8 +712,9 @@ class TestUnitCostOutliers:
 
     def test_z_score_in_details(self):
         rows = make_large_dataset(20)
-        rows.append({"Item ID": "OUT", "Quantity": 10, "Unit Cost": 99999,
-                     "Extended Value": 999990, "Category": "Cat-0"})
+        rows.append(
+            {"Item ID": "OUT", "Quantity": 10, "Unit Cost": 99999, "Extended Value": 999990, "Category": "Cat-0"}
+        )
         entries = make_entries(rows)
         config = InventoryTestingConfig()
         result = run_cost_outliers_test(entries, config)
@@ -713,8 +734,9 @@ class TestQuantityOutliers:
 
     def test_extreme_outlier_flagged(self):
         rows = make_large_dataset(20)
-        rows.append({"Item ID": "QOUT", "Quantity": 99999, "Unit Cost": 50,
-                     "Extended Value": 4999950, "Category": "Cat-0"})
+        rows.append(
+            {"Item ID": "QOUT", "Quantity": 99999, "Unit Cost": 50, "Extended Value": 4999950, "Category": "Cat-0"}
+        )
         entries = make_entries(rows)
         config = InventoryTestingConfig()
         result = run_qty_outliers_test(entries, config)
@@ -728,8 +750,7 @@ class TestQuantityOutliers:
         assert result.entries_flagged == 0
 
     def test_identical_quantities_skipped(self):
-        rows = [{"Item ID": f"I-{i}", "Quantity": 100, "Unit Cost": 50, "Extended Value": 5000}
-                for i in range(15)]
+        rows = [{"Item ID": f"I-{i}", "Quantity": 100, "Unit Cost": 50, "Extended Value": 5000} for i in range(15)]
         entries = make_entries(rows)
         config = InventoryTestingConfig()
         result = run_qty_outliers_test(entries, config)
@@ -748,8 +769,16 @@ class TestSlowMovingInventory:
 
     def test_old_movement_flagged(self):
         old_date = (date.today() - timedelta(days=250)).strftime("%Y-%m-%d")
-        rows = [{"Item ID": "OLD", "Quantity": 50, "Unit Cost": 25,
-                 "Extended Value": 1250, "Last Movement Date": old_date, "Category": "Raw"}]
+        rows = [
+            {
+                "Item ID": "OLD",
+                "Quantity": 50,
+                "Unit Cost": 25,
+                "Extended Value": 1250,
+                "Last Movement Date": old_date,
+                "Category": "Raw",
+            }
+        ]
         entries = make_entries(rows)
         config = InventoryTestingConfig(slow_moving_days=180)
         result = run_slow_moving_test(entries, config)
@@ -757,8 +786,16 @@ class TestSlowMovingInventory:
 
     def test_very_old_high_severity(self):
         old_date = (date.today() - timedelta(days=400)).strftime("%Y-%m-%d")
-        rows = [{"Item ID": "VERY-OLD", "Quantity": 50, "Unit Cost": 25,
-                 "Extended Value": 1250, "Last Movement Date": old_date, "Category": "Raw"}]
+        rows = [
+            {
+                "Item ID": "VERY-OLD",
+                "Quantity": 50,
+                "Unit Cost": 25,
+                "Extended Value": 1250,
+                "Last Movement Date": old_date,
+                "Category": "Raw",
+            }
+        ]
         entries = make_entries(rows)
         config = InventoryTestingConfig(slow_moving_days=180)
         result = run_slow_moving_test(entries, config)
@@ -775,8 +812,16 @@ class TestSlowMovingInventory:
 
     def test_within_threshold_not_flagged(self):
         recent_date = (date.today() - timedelta(days=90)).strftime("%Y-%m-%d")
-        rows = [{"Item ID": "RECENT", "Quantity": 50, "Unit Cost": 25,
-                 "Extended Value": 1250, "Last Movement Date": recent_date, "Category": "Raw"}]
+        rows = [
+            {
+                "Item ID": "RECENT",
+                "Quantity": 50,
+                "Unit Cost": 25,
+                "Extended Value": 1250,
+                "Last Movement Date": recent_date,
+                "Category": "Raw",
+            }
+        ]
         entries = make_entries(rows)
         config = InventoryTestingConfig(slow_moving_days=180)
         result = run_slow_moving_test(entries, config)
@@ -784,8 +829,16 @@ class TestSlowMovingInventory:
 
     def test_details_include_days(self):
         old_date = (date.today() - timedelta(days=200)).strftime("%Y-%m-%d")
-        rows = [{"Item ID": "OLD2", "Quantity": 50, "Unit Cost": 25,
-                 "Extended Value": 1250, "Last Movement Date": old_date, "Category": "Raw"}]
+        rows = [
+            {
+                "Item ID": "OLD2",
+                "Quantity": 50,
+                "Unit Cost": 25,
+                "Extended Value": 1250,
+                "Last Movement Date": old_date,
+                "Category": "Raw",
+            }
+        ]
         entries = make_entries(rows)
         config = InventoryTestingConfig(slow_moving_days=180)
         result = run_slow_moving_test(entries, config)
@@ -807,11 +860,11 @@ class TestCategoryConcentration:
         rows = []
         # 9 items with tiny value in Cat-A
         for i in range(9):
-            rows.append({"Item ID": f"I-{i}", "Quantity": 1, "Unit Cost": 1,
-                         "Extended Value": 1, "Category": "Cat-A"})
+            rows.append({"Item ID": f"I-{i}", "Quantity": 1, "Unit Cost": 1, "Extended Value": 1, "Category": "Cat-A"})
         # 1 item with massive value in Cat-B
-        rows.append({"Item ID": "BIG", "Quantity": 1, "Unit Cost": 100000,
-                     "Extended Value": 100000, "Category": "Cat-B"})
+        rows.append(
+            {"Item ID": "BIG", "Quantity": 1, "Unit Cost": 100000, "Extended Value": 100000, "Category": "Cat-B"}
+        )
         entries = make_entries(rows)
         config = InventoryTestingConfig(category_concentration_threshold_pct=0.50)
         result = run_concentration_test(entries, config)
@@ -825,8 +878,7 @@ class TestCategoryConcentration:
         assert result.entries_flagged == 0
 
     def test_zero_total_value(self):
-        rows = [{"Item ID": "X", "Quantity": 0, "Unit Cost": 0,
-                 "Extended Value": 0, "Category": "Cat-A"}]
+        rows = [{"Item ID": "X", "Quantity": 0, "Unit Cost": 0, "Extended Value": 0, "Category": "Cat-A"}]
         entries = make_entries(rows)
         config = InventoryTestingConfig()
         result = run_concentration_test(entries, config)
@@ -835,10 +887,10 @@ class TestCategoryConcentration:
     def test_high_severity_above_70pct(self):
         rows = []
         # 1 item with 90%+ concentration
-        rows.append({"Item ID": "HUGE", "Quantity": 1, "Unit Cost": 90000,
-                     "Extended Value": 90000, "Category": "Dominant"})
-        rows.append({"Item ID": "SMALL", "Quantity": 1, "Unit Cost": 1000,
-                     "Extended Value": 1000, "Category": "Minor"})
+        rows.append(
+            {"Item ID": "HUGE", "Quantity": 1, "Unit Cost": 90000, "Extended Value": 90000, "Category": "Dominant"}
+        )
+        rows.append({"Item ID": "SMALL", "Quantity": 1, "Unit Cost": 1000, "Extended Value": 1000, "Category": "Minor"})
         entries = make_entries(rows)
         config = InventoryTestingConfig(category_concentration_threshold_pct=0.50)
         result = run_concentration_test(entries, config)
@@ -849,6 +901,7 @@ class TestCategoryConcentration:
 # =============================================================================
 # TIER 3 — ADVANCED TESTS
 # =============================================================================
+
 
 class TestDuplicateItems:
     """IN-08: Duplicate Item Detection."""
@@ -863,10 +916,22 @@ class TestDuplicateItems:
 
     def test_duplicate_desc_and_cost_flagged(self):
         rows = [
-            {"Item ID": "D1", "Description": "Widget A", "Quantity": 10,
-             "Unit Cost": 25, "Extended Value": 250, "Category": "Raw"},
-            {"Item ID": "D2", "Description": "Widget A", "Quantity": 20,
-             "Unit Cost": 25, "Extended Value": 500, "Category": "Raw"},
+            {
+                "Item ID": "D1",
+                "Description": "Widget A",
+                "Quantity": 10,
+                "Unit Cost": 25,
+                "Extended Value": 250,
+                "Category": "Raw",
+            },
+            {
+                "Item ID": "D2",
+                "Description": "Widget A",
+                "Quantity": 20,
+                "Unit Cost": 25,
+                "Extended Value": 500,
+                "Category": "Raw",
+            },
         ]
         entries = make_entries(rows)
         config = InventoryTestingConfig()
@@ -875,10 +940,22 @@ class TestDuplicateItems:
 
     def test_same_desc_different_cost_not_flagged(self):
         rows = [
-            {"Item ID": "D1", "Description": "Widget A", "Quantity": 10,
-             "Unit Cost": 25, "Extended Value": 250, "Category": "Raw"},
-            {"Item ID": "D2", "Description": "Widget A", "Quantity": 20,
-             "Unit Cost": 30, "Extended Value": 600, "Category": "Raw"},
+            {
+                "Item ID": "D1",
+                "Description": "Widget A",
+                "Quantity": 10,
+                "Unit Cost": 25,
+                "Extended Value": 250,
+                "Category": "Raw",
+            },
+            {
+                "Item ID": "D2",
+                "Description": "Widget A",
+                "Quantity": 20,
+                "Unit Cost": 30,
+                "Extended Value": 600,
+                "Category": "Raw",
+            },
         ]
         entries = make_entries(rows)
         config = InventoryTestingConfig()
@@ -893,10 +970,22 @@ class TestDuplicateItems:
 
     def test_high_severity_above_50k(self):
         rows = [
-            {"Item ID": "D1", "Description": "Expensive", "Quantity": 100,
-             "Unit Cost": 500, "Extended Value": 50000, "Category": "Raw"},
-            {"Item ID": "D2", "Description": "Expensive", "Quantity": 100,
-             "Unit Cost": 500, "Extended Value": 50000, "Category": "Raw"},
+            {
+                "Item ID": "D1",
+                "Description": "Expensive",
+                "Quantity": 100,
+                "Unit Cost": 500,
+                "Extended Value": 50000,
+                "Category": "Raw",
+            },
+            {
+                "Item ID": "D2",
+                "Description": "Expensive",
+                "Quantity": 100,
+                "Unit Cost": 500,
+                "Extended Value": 50000,
+                "Category": "Raw",
+            },
         ]
         entries = make_entries(rows)
         config = InventoryTestingConfig()
@@ -967,6 +1056,7 @@ class TestZeroValueItems:
 # BATTERY + SCORING TESTS
 # =============================================================================
 
+
 class TestBattery:
     """Tests for run_inv_test_battery."""
 
@@ -980,9 +1070,15 @@ class TestBattery:
         results = run_inv_test_battery(entries)
         keys = [r.test_key for r in results]
         expected = [
-            "missing_fields", "negative_values", "value_mismatch",
-            "unit_cost_outliers", "quantity_outliers", "slow_moving",
-            "category_concentration", "duplicate_items", "zero_value_items",
+            "missing_fields",
+            "negative_values",
+            "value_mismatch",
+            "unit_cost_outliers",
+            "quantity_outliers",
+            "slow_moving",
+            "category_concentration",
+            "duplicate_items",
+            "zero_value_items",
         ]
         assert keys == expected
 
@@ -1056,6 +1152,7 @@ class TestCompositeScore:
 # FULL PIPELINE TESTS
 # =============================================================================
 
+
 class TestFullPipeline:
     """Tests for run_inventory_testing end-to-end."""
 
@@ -1105,6 +1202,7 @@ class TestFullPipeline:
 # =============================================================================
 # SERIALIZATION TESTS
 # =============================================================================
+
 
 class TestSerialization:
     """Tests for to_dict serialization."""
@@ -1164,37 +1262,44 @@ class TestSerialization:
 # API INTEGRATION TESTS
 # =============================================================================
 
+
 class TestAPIIntegration:
     """Tests for API route registration and enum membership."""
 
     def test_route_registered(self):
         from main import app
+
         paths = [route.path for route in app.routes if hasattr(route, "path")]
         assert "/audit/inventory-testing" in paths
 
     def test_engagement_model_has_inventory(self):
         from engagement_model import ToolName
+
         assert hasattr(ToolName, "INVENTORY_TESTING")
         assert ToolName.INVENTORY_TESTING.value == "inventory_testing"
 
     def test_tool_name_count(self):
         from engagement_model import ToolName
+
         assert len(ToolName) == 13
 
     def test_workpaper_index_labels(self):
         from engagement_model import ToolName
         from workpaper_index_generator import TOOL_LABELS, TOOL_LEAD_SHEET_REFS
+
         assert ToolName.INVENTORY_TESTING in TOOL_LABELS
         assert ToolName.INVENTORY_TESTING in TOOL_LEAD_SHEET_REFS
 
     def test_workpaper_label_value(self):
         from engagement_model import ToolName
         from workpaper_index_generator import TOOL_LABELS
+
         assert TOOL_LABELS[ToolName.INVENTORY_TESTING] == "Inventory Testing"
 
     def test_workpaper_lead_sheet_ref(self):
         from engagement_model import ToolName
         from workpaper_index_generator import TOOL_LEAD_SHEET_REFS
+
         refs = TOOL_LEAD_SHEET_REFS[ToolName.INVENTORY_TESTING]
         assert len(refs) >= 1
         assert any("IN-" in r for r in refs)

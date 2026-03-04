@@ -9,10 +9,16 @@ Uses custom scope builder for dual-input mode (TB + optional sub-ledger).
 
 from typing import Any, Optional
 
+from reportlab.lib.units import inch
 from reportlab.platypus import Paragraph, Spacer
 
 from pdf_generator import LedgerRule, create_leader_dots
-from shared.memo_template import TestingMemoConfig, generate_testing_memo
+from shared.drill_down import (
+    build_drill_down_table,
+    format_currency,
+    safe_str_value,
+)
+from shared.memo_template import TestingMemoConfig, _roman, generate_testing_memo
 
 AR_AGING_TEST_DESCRIPTIONS = {
     "ar_sign_anomalies": "Flags AR accounts with credit balances, indicating potential overpayments, misclassifications, or contra-AR entries.",
@@ -121,6 +127,180 @@ def _build_ar_scope_section(
     story.append(Spacer(1, 8))
 
 
+def _build_ar_extra_sections(
+    story: list,
+    styles: dict,
+    doc_width: float,
+    result: dict[str, Any],
+    section_counter: int,
+) -> int:
+    """Build AR-specific drill-down sections.
+
+    CONTENT-01: Aging schedule table with narrative.
+    CONTENT-02: Allowance gap quantification.
+    DRILL-05: Credit limit breach customer detail, deduplicated by customer.
+    """
+    # ── CONTENT-01: Aging Schedule Table ──
+    aging_schedule = result.get("aging_schedule")
+    if aging_schedule:
+        section_label = _roman(section_counter)
+        story.append(Paragraph(f"{section_label}. Aging Schedule", styles["MemoSection"]))
+        story.append(LedgerRule(doc_width))
+
+        # Compute past-due percentage (everything beyond Current bucket)
+        total_amount = sum(b.get("amount", 0) for b in aging_schedule)
+        past_due_amount = sum(b.get("amount", 0) for b in aging_schedule if b.get("bucket", "") != "Current (0-30)")
+        past_due_pct = (past_due_amount / total_amount * 100) if total_amount != 0 else 0.0
+
+        narrative = (
+            f"The following table summarizes the distribution of accounts receivable "
+            f"across standard aging buckets. "
+            f"Past-due receivables (beyond 30 days) represent "
+            f"{past_due_pct:.1f}% of total outstanding balances "
+            f"({format_currency(past_due_amount)} of {format_currency(total_amount)})."
+        )
+        story.append(Paragraph(narrative, styles["MemoBody"]))
+        story.append(Spacer(1, 4))
+
+        schedule_rows = []
+        for bucket in aging_schedule:
+            schedule_rows.append(
+                [
+                    bucket.get("bucket", ""),
+                    str(bucket.get("count", 0)),
+                    format_currency(bucket.get("amount", 0)),
+                    f"{bucket.get('percentage', 0):.1f}%",
+                ]
+            )
+
+        build_drill_down_table(
+            story,
+            styles,
+            doc_width,
+            title="",
+            headers=["Aging Bucket", "Count", "Amount", "% of Total"],
+            rows=schedule_rows,
+            total_flagged=len(schedule_rows),
+            col_widths=[2.0 * inch, 1.0 * inch, 1.8 * inch, 1.2 * inch],
+            right_align_cols=[1, 2, 3],
+        )
+        section_counter += 1
+
+    # ── CONTENT-02: Allowance Gap Quantification ──
+    ar_summary = result.get("ar_summary") or {}
+    total_ar_balance = ar_summary.get("total_ar_balance")
+    recorded_allowance = ar_summary.get("total_allowance")
+
+    if total_ar_balance is not None and recorded_allowance is not None and total_ar_balance > 0:
+        section_label = _roman(section_counter)
+        story.append(Paragraph(f"{section_label}. Allowance Gap Analysis", styles["MemoSection"]))
+        story.append(LedgerRule(doc_width))
+
+        allowance_3pct = total_ar_balance * 0.03
+        allowance_4pct = total_ar_balance * 0.04
+        gap_at_3pct = allowance_3pct - recorded_allowance
+        gap_at_4pct = allowance_4pct - recorded_allowance
+
+        story.append(
+            Paragraph(
+                "The following analysis compares the recorded allowance for doubtful accounts "
+                "against common benchmark rates applied to the total AR balance. "
+                "This is an anomaly indicator, not a sufficiency determination — "
+                "allowance adequacy requires management judgment per ISA 540 / PCAOB AS 2501.",
+                styles["MemoBody"],
+            )
+        )
+        story.append(Spacer(1, 4))
+
+        gap_rows = [
+            ["Total AR Balance", format_currency(total_ar_balance)],
+            ["Allowance at 3%", format_currency(allowance_3pct)],
+            ["Allowance at 4%", format_currency(allowance_4pct)],
+            ["Recorded Allowance", format_currency(recorded_allowance)],
+            ["Gap at 3%", format_currency(gap_at_3pct)],
+            ["Gap at 4%", format_currency(gap_at_4pct)],
+        ]
+
+        build_drill_down_table(
+            story,
+            styles,
+            doc_width,
+            title="",
+            headers=["Metric", "Amount"],
+            rows=gap_rows,
+            total_flagged=len(gap_rows),
+            col_widths=[3.0 * inch, 2.5 * inch],
+            right_align_cols=[1],
+        )
+        section_counter += 1
+
+    # ── DRILL-05: Credit limit breach customer detail ──
+    test_results = result.get("test_results", [])
+
+    credit_tests = [
+        tr for tr in test_results if tr.get("test_key") == "credit_limit_breaches" and tr.get("entries_flagged", 0) > 0
+    ]
+    if not credit_tests:
+        return section_counter
+
+    flagged = credit_tests[0].get("flagged_entries", [])
+
+    # Deduplicate by customer
+    seen_customers: set[str] = set()
+    rows = []
+    for fe in flagged:
+        details = fe.get("details") or {}
+        entry = fe.get("entry") or {}
+        customer = details.get("customer", "")
+        if customer in seen_customers:
+            continue
+        seen_customers.add(customer)
+        credit_limit = details.get("credit_limit", 0)
+        total_ar = details.get("total_ar", 0)
+        over_limit = (
+            total_ar - credit_limit
+            if isinstance(total_ar, (int, float)) and isinstance(credit_limit, (int, float))
+            else 0
+        )
+        aging_days = entry.get("aging_days", details.get("aging_days", ""))
+        rows.append(
+            [
+                safe_str_value(customer)[:25],
+                format_currency(credit_limit),
+                format_currency(total_ar),
+                format_currency(max(over_limit, 0)),
+                str(aging_days) if aging_days else "—",
+            ]
+        )
+
+    if rows:
+        section_label = _roman(section_counter)
+        story.append(Paragraph(f"{section_label}. Credit Limit Breach Detail", styles["MemoSection"]))
+        story.append(LedgerRule(doc_width))
+        story.append(
+            Paragraph(
+                f"{len(rows)} customer(s) exceed their approved credit limit:",
+                styles["MemoBody"],
+            )
+        )
+        story.append(Spacer(1, 4))
+
+        build_drill_down_table(
+            story,
+            styles,
+            doc_width,
+            title="",
+            headers=["Customer", "Credit Limit", "Outstanding", "Over Limit", "Aging Days"],
+            rows=rows,
+            total_flagged=len(rows),
+            col_widths=[2.0 * inch, 1.2 * inch, 1.2 * inch, 1.2 * inch, 1.0 * inch],
+            right_align_cols=[1, 2, 3, 4],
+        )
+        section_counter += 1
+
+    return section_counter
+
+
 def generate_ar_aging_memo(
     ar_result: dict[str, Any],
     filename: str = "ar_aging",
@@ -146,5 +326,6 @@ def generate_ar_aging_memo(
         source_document_title=source_document_title,
         source_context_note=source_context_note,
         build_scope=_build_ar_scope_section,
+        build_extra_sections=_build_ar_extra_sections,
         include_signoff=include_signoff,
     )

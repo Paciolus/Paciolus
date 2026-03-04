@@ -21,9 +21,11 @@ from column_detector import (
 # Dataclasses
 # ═══════════════════════════════════════════════════════════════
 
+
 @dataclass
 class ColumnQuality:
     """Detection confidence for a single column role."""
+
     role: str  # "account", "debit", "credit"
     detected_name: str | None
     confidence: float
@@ -33,6 +35,7 @@ class ColumnQuality:
 @dataclass
 class DuplicateEntry:
     """A group of duplicate account codes."""
+
     account_code: str
     count: int
 
@@ -40,6 +43,7 @@ class DuplicateEntry:
 @dataclass
 class EncodingAnomaly:
     """An account name with non-ASCII characters."""
+
     row_index: int
     value: str
     column: str
@@ -48,6 +52,7 @@ class EncodingAnomaly:
 @dataclass
 class MixedSignAccount:
     """An account with both positive and negative values in debit column."""
+
     account: str
     positive_count: int
     negative_count: int
@@ -56,16 +61,19 @@ class MixedSignAccount:
 @dataclass
 class PreFlightIssue:
     """A single pre-flight quality issue."""
+
     category: str  # column_detection, null_values, duplicates, encoding, mixed_signs, zero_balance
     severity: str  # "high", "medium", "low"
     message: str
     affected_count: int
     remediation: str
+    downstream_impact: str = ""
 
 
 @dataclass
 class PreFlightReport:
     """Complete pre-flight quality assessment."""
+
     filename: str
     row_count: int
     column_count: int
@@ -88,32 +96,51 @@ class PreFlightReport:
             "readiness_score": round(self.readiness_score, 1),
             "readiness_label": self.readiness_label,
             "columns": [
-                {"role": c.role, "detected_name": c.detected_name,
-                 "confidence": round(c.confidence, 2), "status": c.status}
+                {
+                    "role": c.role,
+                    "detected_name": c.detected_name,
+                    "confidence": round(c.confidence, 2),
+                    "status": c.status,
+                }
                 for c in self.columns
             ],
             "issues": [
-                {"category": i.category, "severity": i.severity,
-                 "message": i.message, "affected_count": i.affected_count,
-                 "remediation": i.remediation}
+                {
+                    "category": i.category,
+                    "severity": i.severity,
+                    "message": i.message,
+                    "affected_count": i.affected_count,
+                    "remediation": i.remediation,
+                    "downstream_impact": i.downstream_impact,
+                }
                 for i in self.issues
             ],
-            "duplicates": [
-                {"account_code": d.account_code, "count": d.count}
-                for d in self.duplicates
-            ],
+            "duplicates": [{"account_code": d.account_code, "count": d.count} for d in self.duplicates],
             "encoding_anomalies": [
                 {"row_index": e.row_index, "value": e.value, "column": e.column}
                 for e in self.encoding_anomalies[:20]  # Cap for response size
             ],
             "mixed_sign_accounts": [
-                {"account": m.account, "positive_count": m.positive_count,
-                 "negative_count": m.negative_count}
+                {"account": m.account, "positive_count": m.positive_count, "negative_count": m.negative_count}
                 for m in self.mixed_sign_accounts
             ],
             "zero_balance_count": self.zero_balance_count,
             "null_counts": self.null_counts,
         }
+
+
+# ═══════════════════════════════════════════════════════════════
+# Downstream impact descriptions per issue category
+# ═══════════════════════════════════════════════════════════════
+
+DOWNSTREAM_IMPACT: dict[str, str] = {
+    "column_detection": "All diagnostic tools depend on correct column mapping. Incorrect detection causes miscalculated balances, failed ratio analysis, and unreliable anomaly detection across every downstream report.",
+    "null_values": "Missing values in critical columns produce incomplete trial balance totals, skewed ratio calculations, and may cause accounts to be silently excluded from testing tools.",
+    "duplicates": "Duplicate account codes inflate balance totals, distort ratio analysis, and may trigger false anomaly flags in JE Testing, AP Testing, and classification validators.",
+    "encoding": "Non-ASCII characters can cause account matching failures in lead sheet mapping, classification rules, and cross-period comparisons (Multi-Period TB analysis).",
+    "mixed_signs": "Inconsistent sign conventions produce incorrect debit/credit separation, unreliable balance sheet classification, and distorted abnormal balance detection.",
+    "zero_balance": "Zero-balance rows add noise to statistical tests (Benford's Law, sampling), inflate account counts, and reduce the signal-to-noise ratio in anomaly detection.",
+}
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -147,6 +174,7 @@ _NON_ASCII_RE = re.compile(r"[^\x00-\x7F]")
 # ═══════════════════════════════════════════════════════════════
 # Main engine function
 # ═══════════════════════════════════════════════════════════════
+
 
 def run_preflight(
     column_names: list[str],
@@ -192,6 +220,9 @@ def run_preflight(
     # ── Check 6: Zero-balance rows (weight 10%) ──
     zero_count = _check_zero_balances(rows, debit_col, credit_col, row_count, issues)
 
+    # ── Populate downstream impact descriptions ──
+    _populate_downstream_impact(issues)
+
     # ── Calculate readiness score ──
     readiness_score = _calculate_readiness(issues)
     if readiness_score >= 80:
@@ -221,6 +252,7 @@ def run_preflight(
 # Individual check functions
 # ═══════════════════════════════════════════════════════════════
 
+
 def _check_column_detection(
     detection: ColumnDetectionResult,
     columns_quality: list[ColumnQuality],
@@ -245,30 +277,36 @@ def _check_column_detection(
 
     if missing:
         names = ", ".join(c.role for c in missing)
-        issues.append(PreFlightIssue(
-            category="column_detection",
-            severity="high",
-            message=f"Required column(s) not detected: {names}",
-            affected_count=len(missing),
-            remediation="Use column mapping to manually assign the missing column(s), "
-                        "or rename columns to standard names (Account, Debit, Credit).",
-        ))
+        issues.append(
+            PreFlightIssue(
+                category="column_detection",
+                severity="high",
+                message=f"Required column(s) not detected: {names}",
+                affected_count=len(missing),
+                remediation="Use column mapping to manually assign the missing column(s), "
+                "or rename columns to standard names (Account, Debit, Credit).",
+            )
+        )
     elif detection.overall_confidence < 0.80:
-        issues.append(PreFlightIssue(
-            category="column_detection",
-            severity="high",
-            message=f"Overall column detection confidence is low ({detection.overall_confidence:.0%})",
-            affected_count=len(low_conf),
-            remediation="Review detected columns and use column mapping if assignments are incorrect.",
-        ))
+        issues.append(
+            PreFlightIssue(
+                category="column_detection",
+                severity="high",
+                message=f"Overall column detection confidence is low ({detection.overall_confidence:.0%})",
+                affected_count=len(low_conf),
+                remediation="Review detected columns and use column mapping if assignments are incorrect.",
+            )
+        )
     elif detection.overall_confidence < 0.95:
-        issues.append(PreFlightIssue(
-            category="column_detection",
-            severity="medium",
-            message=f"Column detection confidence is moderate ({detection.overall_confidence:.0%})",
-            affected_count=len(low_conf),
-            remediation="Verify detected columns are correct before proceeding.",
-        ))
+        issues.append(
+            PreFlightIssue(
+                category="column_detection",
+                severity="medium",
+                message=f"Column detection confidence is moderate ({detection.overall_confidence:.0%})",
+                affected_count=len(low_conf),
+                remediation="Verify detected columns are correct before proceeding.",
+            )
+        )
 
 
 def _check_null_values(
@@ -310,14 +348,16 @@ def _check_null_values(
             severity = "medium"
         else:
             severity = "low"
-        issues.append(PreFlightIssue(
-            category="null_values",
-            severity=severity,
-            message=f"Column '{col}' has {count} null/empty values ({pct:.1%} of rows)",
-            affected_count=count,
-            remediation=f"Review rows with missing '{col}' values. "
-                        "Fill in missing data or remove incomplete rows before analysis.",
-        ))
+        issues.append(
+            PreFlightIssue(
+                category="null_values",
+                severity=severity,
+                message=f"Column '{col}' has {count} null/empty values ({pct:.1%} of rows)",
+                affected_count=count,
+                remediation=f"Review rows with missing '{col}' values. "
+                "Fill in missing data or remove incomplete rows before analysis.",
+            )
+        )
 
     return null_counts
 
@@ -354,32 +394,38 @@ def _check_duplicates(
 
     # If >80% rows are duplicates, likely a detailed TB (sub-ledger) — lower severity
     if dup_pct > 0.80:
-        issues.append(PreFlightIssue(
-            category="duplicates",
-            severity="low",
-            message=f"{len(duplicates)} account codes appear multiple times ({dup_pct:.0%} of rows). "
-                    "This may indicate a detailed/sub-ledger trial balance.",
-            affected_count=len(duplicates),
-            remediation="If this is a summarized TB, review for unintended duplicate entries. "
-                        "Detailed TBs with multiple lines per account are supported.",
-        ))
+        issues.append(
+            PreFlightIssue(
+                category="duplicates",
+                severity="low",
+                message=f"{len(duplicates)} account codes appear multiple times ({dup_pct:.0%} of rows). "
+                "This may indicate a detailed/sub-ledger trial balance.",
+                affected_count=len(duplicates),
+                remediation="If this is a summarized TB, review for unintended duplicate entries. "
+                "Detailed TBs with multiple lines per account are supported.",
+            )
+        )
     elif dup_pct > 0.10:
-        issues.append(PreFlightIssue(
-            category="duplicates",
-            severity="high",
-            message=f"{len(duplicates)} duplicate account codes found ({dup_pct:.0%} of rows)",
-            affected_count=len(duplicates),
-            remediation="Review and consolidate duplicate account entries before analysis. "
-                        "Duplicates may cause incorrect balance calculations.",
-        ))
+        issues.append(
+            PreFlightIssue(
+                category="duplicates",
+                severity="high",
+                message=f"{len(duplicates)} duplicate account codes found ({dup_pct:.0%} of rows)",
+                affected_count=len(duplicates),
+                remediation="Review and consolidate duplicate account entries before analysis. "
+                "Duplicates may cause incorrect balance calculations.",
+            )
+        )
     elif dup_pct > 0.05:
-        issues.append(PreFlightIssue(
-            category="duplicates",
-            severity="medium",
-            message=f"{len(duplicates)} duplicate account codes found ({dup_pct:.0%} of rows)",
-            affected_count=len(duplicates),
-            remediation="Verify that duplicate account codes are intentional (e.g., sub-ledger detail).",
-        ))
+        issues.append(
+            PreFlightIssue(
+                category="duplicates",
+                severity="medium",
+                message=f"{len(duplicates)} duplicate account codes found ({dup_pct:.0%} of rows)",
+                affected_count=len(duplicates),
+                remediation="Verify that duplicate account codes are intentional (e.g., sub-ledger detail).",
+            )
+        )
 
     return duplicates
 
@@ -409,14 +455,16 @@ def _check_encoding(
     else:
         severity = "low"
 
-    issues.append(PreFlightIssue(
-        category="encoding",
-        severity=severity,
-        message=f"{len(anomalies)} account names contain non-ASCII characters ({pct:.1%} of rows)",
-        affected_count=len(anomalies),
-        remediation="Non-ASCII characters (accented letters, special symbols) may cause "
-                    "matching issues. Consider normalizing account names to ASCII.",
-    ))
+    issues.append(
+        PreFlightIssue(
+            category="encoding",
+            severity=severity,
+            message=f"{len(anomalies)} account names contain non-ASCII characters ({pct:.1%} of rows)",
+            affected_count=len(anomalies),
+            remediation="Non-ASCII characters (accented letters, special symbols) may cause "
+            "matching issues. Consider normalizing account names to ASCII.",
+        )
+    )
 
     return anomalies
 
@@ -470,14 +518,16 @@ def _check_mixed_signs(
     else:
         severity = "medium"
 
-    issues.append(PreFlightIssue(
-        category="mixed_signs",
-        severity=severity,
-        message=f"{len(mixed)} accounts have both positive and negative debit values ({pct:.0%} of accounts)",
-        affected_count=len(mixed),
-        remediation="Mixed signs in the debit column may indicate sign convention inconsistency. "
-                    "Verify that debits are consistently positive (or consistently negative).",
-    ))
+    issues.append(
+        PreFlightIssue(
+            category="mixed_signs",
+            severity=severity,
+            message=f"{len(mixed)} accounts have both positive and negative debit values ({pct:.0%} of accounts)",
+            affected_count=len(mixed),
+            remediation="Mixed signs in the debit column may indicate sign convention inconsistency. "
+            "Verify that debits are consistently positive (or consistently negative).",
+        )
+    )
 
     return mixed
 
@@ -518,14 +568,16 @@ def _check_zero_balances(
     else:
         return 0
 
-    issues.append(PreFlightIssue(
-        category="zero_balance",
-        severity=severity,
-        message=f"{zero_count} rows have zero balance in both debit and credit columns ({pct:.0%} of rows)",
-        affected_count=zero_count,
-        remediation="Zero-balance rows add noise to the analysis. Consider filtering them "
-                    "out if they represent closed or inactive accounts.",
-    ))
+    issues.append(
+        PreFlightIssue(
+            category="zero_balance",
+            severity=severity,
+            message=f"{zero_count} rows have zero balance in both debit and credit columns ({pct:.0%} of rows)",
+            affected_count=zero_count,
+            remediation="Zero-balance rows add noise to the analysis. Consider filtering them "
+            "out if they represent closed or inactive accounts.",
+        )
+    )
 
     return zero_count
 
@@ -533,6 +585,14 @@ def _check_zero_balances(
 # ═══════════════════════════════════════════════════════════════
 # Readiness score calculation
 # ═══════════════════════════════════════════════════════════════
+
+
+def _populate_downstream_impact(issues: list[PreFlightIssue]) -> None:
+    """Populate downstream_impact field for all issues from the category mapping."""
+    for issue in issues:
+        if not issue.downstream_impact:
+            issue.downstream_impact = DOWNSTREAM_IMPACT.get(issue.category, "")
+
 
 def _calculate_readiness(issues: list[PreFlightIssue]) -> float:
     """Calculate readiness score (0-100).

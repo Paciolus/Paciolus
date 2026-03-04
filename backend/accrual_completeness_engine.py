@@ -40,6 +40,63 @@ NEAR_ZERO = 1e-10
 DEFAULT_THRESHOLD_PCT = 50.0
 MONTHS_PER_YEAR = 12
 
+# ═══════════════════════════════════════════════════════════════
+# Expected Accruals Checklist (CONTENT-09)
+# ═══════════════════════════════════════════════════════════════
+
+EXPECTED_ACCRUALS: list[dict[str, str | list[str]]] = [
+    {
+        "name": "Payroll Accrual",
+        "keywords": ["payroll", "salary", "salaries", "wages", "compensation"],
+        "risk_if_absent": "Understated labor costs",
+    },
+    {
+        "name": "Interest Accrual",
+        "keywords": ["interest payable", "accrued interest"],
+        "risk_if_absent": "Understated financing costs",
+    },
+    {
+        "name": "Tax Accrual",
+        "keywords": ["tax payable", "income tax", "tax provision"],
+        "risk_if_absent": "Understated tax liabilities",
+    },
+    {
+        "name": "Rent Accrual",
+        "keywords": ["rent payable", "accrued rent", "lease"],
+        "risk_if_absent": "Understated occupancy costs",
+    },
+    {
+        "name": "Utilities Accrual",
+        "keywords": ["utilities", "electric", "gas", "water"],
+        "risk_if_absent": "Understated operating costs",
+    },
+    {
+        "name": "Insurance Accrual",
+        "keywords": ["insurance", "premium"],
+        "risk_if_absent": "Understated insurance obligations",
+    },
+    {
+        "name": "Warranty Accrual",
+        "keywords": ["warranty", "guarantee"],
+        "risk_if_absent": "Understated contingent liabilities",
+    },
+    {
+        "name": "Bonus Accrual",
+        "keywords": ["bonus", "incentive"],
+        "risk_if_absent": "Understated compensation",
+    },
+    {
+        "name": "Legal Accrual",
+        "keywords": ["legal", "litigation", "settlement"],
+        "risk_if_absent": "Understated legal obligations",
+    },
+    {
+        "name": "Professional Fees",
+        "keywords": ["audit", "consulting", "professional"],
+        "risk_if_absent": "Understated service obligations",
+    },
+]
+
 
 # ═══════════════════════════════════════════════════════════════
 # Dataclasses
@@ -63,6 +120,24 @@ class AccrualAccount:
 
 
 @dataclass
+class ExpectedAccrualCheck:
+    """One row in the expected accrual checklist."""
+
+    expected_name: str
+    detected: bool
+    balance: Optional[float]
+    risk_if_absent: str
+
+    def to_dict(self) -> dict:
+        return {
+            "expected_name": self.expected_name,
+            "detected": self.detected,
+            "balance": round(self.balance, 2) if self.balance is not None else None,
+            "risk_if_absent": self.risk_if_absent,
+        }
+
+
+@dataclass
 class AccrualCompletenessReport:
     """Complete accrual completeness estimator result."""
 
@@ -76,6 +151,7 @@ class AccrualCompletenessReport:
     prior_operating_expenses: Optional[float] = None
     prior_available: bool = False
     narrative: str = ""
+    expected_accrual_checklist: list[ExpectedAccrualCheck] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return {
@@ -93,6 +169,7 @@ class AccrualCompletenessReport:
             else None,
             "prior_available": self.prior_available,
             "narrative": self.narrative,
+            "expected_accrual_checklist": [c.to_dict() for c in self.expected_accrual_checklist],
         }
 
 
@@ -115,6 +192,54 @@ def _is_accrual_account(account_name: str) -> Optional[str]:
             return kw
 
     return None
+
+
+# ═══════════════════════════════════════════════════════════════
+# Expected accrual checklist matching
+# ═══════════════════════════════════════════════════════════════
+
+
+def _build_expected_accrual_checklist(
+    accrual_accounts: list[AccrualAccount],
+) -> list[ExpectedAccrualCheck]:
+    """Match detected accrual accounts against the EXPECTED_ACCRUALS lookup.
+
+    For each expected accrual type, checks whether any detected account's
+    matched_keyword maps to the expected type's keywords. Produces one
+    checklist row per expected accrual type.
+    """
+    checklist: list[ExpectedAccrualCheck] = []
+
+    for expected in EXPECTED_ACCRUALS:
+        expected_name: str = expected["name"]  # type: ignore[assignment]
+        expected_keywords: list[str] = expected["keywords"]  # type: ignore[assignment]
+        risk: str = expected["risk_if_absent"]  # type: ignore[assignment]
+
+        # Search detected accounts for a keyword match
+        detected = False
+        total_balance: float = 0.0
+
+        for acct in accrual_accounts:
+            acct_name_lower = acct.account_name.lower()
+            kw_lower = acct.matched_keyword.lower()
+            # Check if any expected keyword appears in the matched keyword
+            # or in the account name itself
+            for ek in expected_keywords:
+                if ek in kw_lower or ek in acct_name_lower:
+                    detected = True
+                    total_balance += acct.balance
+                    break
+
+        checklist.append(
+            ExpectedAccrualCheck(
+                expected_name=expected_name,
+                detected=detected,
+                balance=round(total_balance, 2) if detected else None,
+                risk_if_absent=risk,
+            )
+        )
+
+    return checklist
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -201,6 +326,9 @@ def compute_accrual_completeness(
         prior_available,
     )
 
+    # Build expected accrual checklist (CONTENT-09)
+    expected_checklist = _build_expected_accrual_checklist(accrual_accounts)
+
     return AccrualCompletenessReport(
         accrual_accounts=accrual_accounts,
         total_accrued_balance=total_accrued,
@@ -212,6 +340,7 @@ def compute_accrual_completeness(
         prior_operating_expenses=prior_operating_expenses,
         prior_available=prior_available,
         narrative=narrative,
+        expected_accrual_checklist=expected_checklist,
     )
 
 

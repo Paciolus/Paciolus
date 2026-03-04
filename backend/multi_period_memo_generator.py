@@ -8,8 +8,8 @@ Renaissance Ledger aesthetic consistent with existing PDF exports.
 Sections:
 1. Header (client, periods, preparer)
 2. Scope (periods compared, total accounts, materiality, significance breakdown)
-3. Movement Summary (counts by movement type)
-4. Significant Account Movements (material/significant items table)
+3. Movement Summary (counts by movement type, sign change details, dormant account names)
+4. Significant Account Movements (material/significant items table, ratio trends)
 5. Lead Sheet Summary (net changes by lead sheet category)
 6. Conclusion (professional assessment)
 """
@@ -119,6 +119,269 @@ def _build_significant_movements_table(
         )
 
 
+# =============================================================================
+# CONTENT-06: Ratio Trend Keyword Patterns
+# =============================================================================
+
+_REVENUE_KEYWORDS = [
+    "revenue",
+    "sales",
+    "service income",
+    "fee income",
+    "interest income",
+    "consulting income",
+    "subscription",
+    "commission income",
+]
+_COGS_KEYWORDS = [
+    "cost of goods",
+    "cogs",
+    "cost of sales",
+    "cost of revenue",
+    "cost of services",
+    "direct cost",
+    "purchases",
+]
+_SALARY_KEYWORDS = [
+    "salary",
+    "salaries",
+    "wages",
+    "payroll",
+    "compensation",
+    "employee benefits",
+    "staff cost",
+]
+
+
+def _match_keyword(account_name: str, keywords: list[str]) -> bool:
+    """Check if an account name matches any keyword (case-insensitive)."""
+    lower = account_name.lower()
+    return any(kw in lower for kw in keywords)
+
+
+def _build_ratio_trends_table(
+    story: list,
+    styles: dict,
+    movements: list[dict],
+    prior_label: str,
+    current_label: str,
+) -> None:
+    """CONTENT-06: Build a ratio trends table derived from significant movements.
+
+    Computes GP margin proxy and salary-to-revenue ratio from keyword-matched
+    accounts. Only rendered if at least one ratio can be computed.
+    """
+    # Accumulate totals from significant movements by keyword category
+    prior_revenue = 0.0
+    current_revenue = 0.0
+    prior_cogs = 0.0
+    current_cogs = 0.0
+    prior_salary = 0.0
+    current_salary = 0.0
+
+    for m in movements:
+        name = m.get("account_name", "")
+        prior_bal = abs(m.get("prior_balance", 0))
+        current_bal = abs(m.get("current_balance", 0))
+
+        if _match_keyword(name, _REVENUE_KEYWORDS):
+            prior_revenue += prior_bal
+            current_revenue += current_bal
+        if _match_keyword(name, _COGS_KEYWORDS):
+            prior_cogs += prior_bal
+            current_cogs += current_bal
+        if _match_keyword(name, _SALARY_KEYWORDS):
+            prior_salary += prior_bal
+            current_salary += current_bal
+
+    # Compute ratios
+    ratios: list[tuple[str, str, str, str]] = []
+
+    if prior_revenue > 0 or current_revenue > 0:
+        prior_gp = (prior_revenue - prior_cogs) / prior_revenue if prior_revenue > 0 else None
+        current_gp = (current_revenue - current_cogs) / current_revenue if current_revenue > 0 else None
+        prior_gp_str = f"{prior_gp:.1%}" if prior_gp is not None else "N/A"
+        current_gp_str = f"{current_gp:.1%}" if current_gp is not None else "N/A"
+        if prior_gp is not None and current_gp is not None:
+            change_str = f"{current_gp - prior_gp:+.1%}"
+        else:
+            change_str = "N/A"
+        ratios.append(("Gross Profit Margin (Proxy)", prior_gp_str, current_gp_str, change_str))
+
+    if (prior_revenue > 0 or current_revenue > 0) and (prior_salary > 0 or current_salary > 0):
+        prior_ratio = prior_salary / prior_revenue if prior_revenue > 0 else None
+        current_ratio = current_salary / current_revenue if current_revenue > 0 else None
+        prior_str = f"{prior_ratio:.1%}" if prior_ratio is not None else "N/A"
+        current_str = f"{current_ratio:.1%}" if current_ratio is not None else "N/A"
+        if prior_ratio is not None and current_ratio is not None:
+            change_str = f"{current_ratio - prior_ratio:+.1%}"
+        else:
+            change_str = "N/A"
+        ratios.append(("Salary-to-Revenue Ratio", prior_str, current_str, change_str))
+
+    if not ratios:
+        return
+
+    story.append(Paragraph("<b>Ratio Trends</b>", styles["MemoBody"]))
+    story.append(Spacer(1, 4))
+
+    headers = ["Ratio", prior_label, current_label, "Change"]
+    col_widths = [2.6 * inch, 1.4 * inch, 1.4 * inch, 1.3 * inch]
+    data: list[list] = [headers]
+    for ratio_name, prior_val, current_val, change_val in ratios:
+        data.append([ratio_name, prior_val, current_val, change_val])
+
+    table = Table(data, colWidths=col_widths, repeatRows=1)
+    table.setStyle(
+        TableStyle(
+            [
+                ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
+                ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
+                ("FONTSIZE", (0, 0), (-1, -1), 8),
+                ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
+                ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
+                ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
+                ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("TOPPADDING", (0, 0), (-1, -1), 3),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                ("LEFTPADDING", (0, 0), (0, -1), 0),
+            ]
+        )
+    )
+    story.append(table)
+    story.append(
+        Paragraph(
+            "Note: Ratios are proxy estimates derived from keyword-matched accounts "
+            "within the significant movements population. They should be corroborated "
+            "with management-prepared financial data.",
+            styles["MemoBodySmall"],
+        )
+    )
+    story.append(Spacer(1, 8))
+
+
+# =============================================================================
+# CONTENT-07: Sign Change & Dormant Account Detail Tables
+# =============================================================================
+
+
+def _build_sign_change_table(
+    story: list,
+    styles: dict,
+    movements: list[dict],
+) -> None:
+    """Build a detail table for accounts with sign changes."""
+    sign_changes = [m for m in movements if m.get("movement_type") == "sign_change"]
+    if not sign_changes:
+        return
+
+    story.append(Paragraph("<b>Sign Changes</b>", styles["MemoBody"]))
+    story.append(Spacer(1, 4))
+
+    headers = ["Account", "Prior Balance", "Current Balance", "Nature of Change"]
+    col_widths = [2.4 * inch, 1.3 * inch, 1.3 * inch, 1.7 * inch]
+    data: list[list] = [headers]
+
+    for m in sign_changes[:20]:
+        name = m.get("account_name", "")
+        prior = m.get("prior_balance", 0)
+        current = m.get("current_balance", 0)
+        if prior >= 0 and current < 0:
+            nature = "Debit to Credit"
+        elif prior < 0 and current >= 0:
+            nature = "Credit to Debit"
+        else:
+            nature = "Sign Reversal"
+        data.append(
+            [
+                Paragraph(name, styles["MemoTableCell"]),
+                _format_currency(prior),
+                _format_currency(current),
+                nature,
+            ]
+        )
+
+    table = Table(data, colWidths=col_widths, repeatRows=1)
+    table.setStyle(
+        TableStyle(
+            [
+                ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
+                ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
+                ("FONTSIZE", (0, 0), (-1, -1), 8),
+                ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
+                ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
+                ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
+                ("ALIGN", (1, 0), (2, -1), "RIGHT"),
+                ("ALIGN", (3, 0), (3, -1), "CENTER"),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("TOPPADDING", (0, 0), (-1, -1), 3),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                ("LEFTPADDING", (0, 0), (0, -1), 0),
+            ]
+        )
+    )
+    story.append(table)
+
+    if len(sign_changes) > 20:
+        story.append(
+            Paragraph(
+                f"+ {len(sign_changes) - 20} additional sign changes (see CSV export for full list)",
+                styles["MemoBodySmall"],
+            )
+        )
+    story.append(Spacer(1, 8))
+
+
+def _build_dormant_accounts_table(
+    story: list,
+    styles: dict,
+    dormant_accounts: list[str],
+) -> None:
+    """Build a detail table listing dormant account names."""
+    if not dormant_accounts:
+        return
+
+    story.append(Paragraph("<b>Dormant Accounts</b>", styles["MemoBody"]))
+    story.append(Spacer(1, 4))
+
+    headers = ["#", "Account Name"]
+    col_widths = [0.5 * inch, 6.2 * inch]
+    data: list[list] = [headers]
+
+    for idx, name in enumerate(dormant_accounts[:20], 1):
+        data.append([str(idx), Paragraph(name, styles["MemoTableCell"])])
+
+    table = Table(data, colWidths=col_widths, repeatRows=1)
+    table.setStyle(
+        TableStyle(
+            [
+                ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
+                ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
+                ("FONTSIZE", (0, 0), (-1, -1), 8),
+                ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
+                ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
+                ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
+                ("ALIGN", (0, 0), (0, -1), "CENTER"),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("TOPPADDING", (0, 0), (-1, -1), 3),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                ("LEFTPADDING", (0, 0), (0, -1), 0),
+            ]
+        )
+    )
+    story.append(table)
+
+    if len(dormant_accounts) > 20:
+        story.append(
+            Paragraph(
+                f"+ {len(dormant_accounts) - 20} additional dormant accounts (see CSV export for full list)",
+                styles["MemoBodySmall"],
+            )
+        )
+    story.append(Spacer(1, 8))
+
+
 def _build_lead_sheet_table(
     story: list,
     styles: dict,
@@ -215,6 +478,7 @@ def generate_multi_period_memo(
     significant_movements = comparison_result.get("significant_movements", [])
     lead_sheet_summaries = comparison_result.get("lead_sheet_summaries", [])
     dormant_count = comparison_result.get("dormant_account_count", 0)
+    dormant_accounts = comparison_result.get("dormant_accounts", [])
 
     material_count = movements_by_significance.get("material", 0)
     significant_count = movements_by_significance.get("significant", 0)
@@ -296,11 +560,20 @@ def generate_multi_period_memo(
             )
     story.append(Spacer(1, 8))
 
+    # CONTENT-07: Sign change detail table (inside Movement Summary)
+    _build_sign_change_table(story, styles, significant_movements)
+
+    # CONTENT-07: Dormant account names table (inside Movement Summary)
+    _build_dormant_accounts_table(story, styles, dormant_accounts)
+
     # 4. SIGNIFICANT ACCOUNT MOVEMENTS
     story.append(Paragraph("III. Significant Account Movements", styles["MemoSection"]))
     story.append(LedgerRule(doc.width))
     _build_significant_movements_table(story, styles, significant_movements)
     story.append(Spacer(1, 8))
+
+    # CONTENT-06: Ratio Trends subsection (derived from significant movements)
+    _build_ratio_trends_table(story, styles, significant_movements, prior_label, current_label)
 
     # 5. LEAD SHEET SUMMARY
     section_num = "IV"

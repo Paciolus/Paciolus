@@ -157,25 +157,27 @@ def generate_flux_expectations_memo(
     )
 
     # ── II. PRACTITIONER EXPECTATIONS VS. OBSERVED VARIANCES ──
+    # CONTENT-11: Show ALL high/medium risk accounts, not just those with documented expectations
     story.append(Paragraph("II. Practitioner Expectations vs. Observed Variances", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
 
-    # Filter to items that have expectations documented
-    items_with_expectations = [item for item in items if item.get("account", "") in expectations]
+    # Filter to all high/medium risk items
+    high_medium_items = [item for item in items if item.get("risk_level", "low").lower() in ("high", "medium")]
 
-    if not items_with_expectations:
+    if not high_medium_items:
         story.append(
             Paragraph(
-                "No expectations have been documented for this analysis.",
+                "No high or medium risk accounts were identified in this analysis.",
                 styles["MemoBody"],
             )
         )
     else:
-        for item in items_with_expectations:
+        for item in high_medium_items:
             account = item.get("account", "Unknown")
             exp_data = expectations.get(account, {})
-            expectation_text = exp_data.get("auditor_expectation", "").strip()
-            explanation_text = exp_data.get("auditor_explanation", "").strip()
+            has_expectation = account in expectations
+            expectation_text = exp_data.get("auditor_expectation", "").strip() if has_expectation else ""
+            explanation_text = exp_data.get("auditor_explanation", "").strip() if has_expectation else ""
 
             # Account header
             story.append(Spacer(1, 6))
@@ -219,7 +221,7 @@ def generate_flux_expectations_memo(
             story.append(Paragraph("<b>Practitioner Expectation:</b>", styles["MemoBody"]))
             story.append(
                 Paragraph(
-                    expectation_text if expectation_text else "<i>[Not documented]</i>",
+                    expectation_text if expectation_text else "\u2014",
                     styles["MemoBody"],
                 )
             )
@@ -228,7 +230,16 @@ def generate_flux_expectations_memo(
             story.append(Paragraph("<b>Explanation of Variance:</b>", styles["MemoBody"]))
             story.append(
                 Paragraph(
-                    explanation_text if explanation_text else "<i>[Not documented]</i>",
+                    explanation_text if explanation_text else "\u2014",
+                    styles["MemoBody"],
+                )
+            )
+
+            # Per-account conclusion placeholder (CONTENT-11)
+            story.append(Spacer(1, 4))
+            story.append(
+                Paragraph(
+                    "[ ] Conclusion: _______________________________________________",
                     styles["MemoBody"],
                 )
             )
@@ -272,8 +283,41 @@ def generate_flux_expectations_memo(
     # ── Intelligence Stamp ──
     build_intelligence_stamp(story, styles, client_name=client_name, period_tested=period_tested)
 
-    # ── IV. DISCLAIMER ──
-    story.append(Paragraph("IV. Disclaimer", styles["MemoSection"]))
+    # ── IV. FORMAL SIGN-OFF (CONTENT-11) ──
+    story.append(Paragraph("IV. Formal Sign-Off", styles["MemoSection"]))
+    story.append(LedgerRule(doc_width))
+
+    signoff_data = [
+        ["Role", "Name", "Signature", "Date"],
+        ["Prepared by", prepared_by or "_______________", "", "____/____/________"],
+        ["Reviewed by", reviewed_by or "_______________", "", "____/____/________"],
+        ["Partner", "_______________", "", "____/____/________"],
+    ]
+    signoff_table = Table(
+        signoff_data,
+        colWidths=[1.2 * inch, 2.0 * inch, 2.0 * inch, 1.5 * inch],
+    )
+    signoff_table.setStyle(
+        TableStyle(
+            [
+                ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
+                ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
+                ("FONTSIZE", (0, 0), (-1, -1), 9),
+                ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
+                ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
+                ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("TOPPADDING", (0, 0), (-1, -1), 6),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                ("LEFTPADDING", (0, 0), (0, -1), 0),
+            ]
+        )
+    )
+    story.append(signoff_table)
+    story.append(Spacer(1, 12))
+
+    # ── V. DISCLAIMER ──
+    story.append(Paragraph("V. Disclaimer", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
     build_disclaimer(
         story,

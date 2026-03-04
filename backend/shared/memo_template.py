@@ -27,6 +27,7 @@ from reportlab.platypus import (
 
 from pdf_generator import LedgerRule, generate_reference_number
 from security_utils import log_secure_operation
+from shared.follow_up_procedures import get_follow_up_procedure
 from shared.framework_resolution import ResolvedFramework
 from shared.memo_base import (
     build_disclaimer,
@@ -225,15 +226,34 @@ def generate_testing_memo(
     # Track section numbering (I=Scope, II=Methodology, III=Results)
     section_counter = 4  # next section is IV
 
-    # 5. KEY FINDINGS (conditional)
+    # 5. KEY FINDINGS (conditional) with follow-up procedure suggestions
     top_findings = composite.get("top_findings", [])
     fmt = format_finding or _default_format_finding
     if top_findings:
         section_label = _roman(section_counter)
         story.append(Paragraph(f"{section_label}. Key Findings", styles["MemoSection"]))
         story.append(LedgerRule(doc.width))
+
+        # Map finding text to test_key for follow-up lookup
+        finding_test_keys: dict[int, str] = {}
+        flagged_tests = sorted(test_results, key=lambda t: t.get("flag_rate", 0), reverse=True)
+        for idx, tr in enumerate(flagged_tests):
+            if tr.get("entries_flagged", 0) > 0 and idx < 5:
+                finding_test_keys[idx] = tr.get("test_key", "")
+
         for i, finding in enumerate(top_findings[:5], 1):
             story.append(Paragraph(f"{i}. {fmt(finding)}", styles["MemoBody"]))
+            # Add follow-up suggestion if available
+            test_key = finding_test_keys.get(i - 1, "")
+            procedure = get_follow_up_procedure(test_key)
+            if procedure:
+                story.append(
+                    Paragraph(
+                        f"<i>Suggested follow-up: {procedure}</i>",
+                        styles["MemoBodySmall"],
+                    )
+                )
+
         story.append(Spacer(1, 8))
         section_counter += 1
 
@@ -267,12 +287,12 @@ def generate_testing_memo(
     story.append(LedgerRule(doc.width))
 
     score_val = composite.get("score", 0)
-    if score_val < 10:
+    if score_val <= 10:
         assessment = config.risk_assessments["low"]
-    elif score_val < 25:
-        assessment = config.risk_assessments["elevated"]
-    elif score_val < 50:
+    elif score_val <= 25:
         assessment = config.risk_assessments["moderate"]
+    elif score_val <= 50:
+        assessment = config.risk_assessments["elevated"]
     else:
         assessment = config.risk_assessments["high"]
 

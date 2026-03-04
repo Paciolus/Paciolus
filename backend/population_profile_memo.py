@@ -12,7 +12,14 @@ from typing import Optional
 from reportlab.lib.units import inch
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-from pdf_generator import ClassicalColors, DoubleRule, LedgerRule, create_leader_dots, format_classical_date
+from pdf_generator import (
+    ClassicalColors,
+    DoubleRule,
+    LedgerRule,
+    create_leader_dots,
+    format_classical_date,
+    generate_reference_number,
+)
 from shared.framework_resolution import ResolvedFramework
 from shared.memo_base import build_disclaimer, build_intelligence_stamp, build_workpaper_signoff, create_memo_styles
 from shared.report_chrome import (
@@ -70,6 +77,7 @@ def generate_population_profile_memo(
     doc_width = doc.width
     styles = create_memo_styles()
     story: list = []
+    reference = generate_reference_number().replace("PAC-", "PPR-")
 
     # ── Cover Page (diagonal color bands) ──
     logo_path = find_logo()
@@ -80,6 +88,7 @@ def generate_population_profile_memo(
         source_document=filename,
         source_document_title=source_document_title or "",
         source_context_note=source_context_note or "",
+        reference=reference,
     )
     build_cover_page(story, styles, cover_metadata, doc_width, logo_path)
 
@@ -89,7 +98,7 @@ def generate_population_profile_memo(
         story.append(Paragraph(client_name, styles["MemoSubtitle"]))
     story.append(
         Paragraph(
-            f"{format_classical_date()} &nbsp;&bull;&nbsp; WP-PP-001",
+            f"{format_classical_date()} &nbsp;&bull;&nbsp; {reference}",
             styles["MemoRef"],
         )
     )

@@ -41,6 +41,7 @@ from shared.memo_base import (
     build_workpaper_signoff,
     create_memo_styles,
 )
+from shared.memo_template import _roman
 from shared.report_chrome import (
     ReportMetadata,
     build_cover_page,
@@ -343,9 +344,10 @@ def generate_three_way_match_memo(
     unmatched_receipts = twm_result.get("unmatched_receipts", [])
     total_unmatched = len(unmatched_pos) + len(unmatched_invoices) + len(unmatched_receipts)
 
-    section_num = "IV" if material_variances else "III"
+    # Track section numbering as integers (I=Scope, II=Match Results, III=Material Variances if present)
+    section_counter = 4 if material_variances else 3
     if total_unmatched > 0:
-        story.append(Paragraph(f"{section_num}. Unmatched Documents", styles["MemoSection"]))
+        story.append(Paragraph(f"{_roman(section_counter)}. Unmatched Documents", styles["MemoSection"]))
         story.append(LedgerRule(doc.width))
 
         unmatched_lines = [
@@ -367,9 +369,7 @@ def generate_three_way_match_memo(
             )
 
         story.append(Spacer(1, 8))
-        next_section = chr(ord(section_num[0]) + 1)
-    else:
-        next_section = section_num
+        section_counter += 1
 
     # METHODOLOGY STATEMENT + AUTHORITATIVE REFERENCES
     build_methodology_statement(
@@ -387,12 +387,12 @@ def generate_three_way_match_memo(
         tool_domain="three_way_match",
         framework=resolved_framework,
         domain_label="three-way match validation",
-        section_label=f"{next_section}.",
+        section_label=f"{_roman(section_counter)}.",
     )
-    next_section = chr(ord(next_section[0]) + 1) if len(next_section) == 1 else next_section
+    section_counter += 1
 
     # CONCLUSION
-    story.append(Paragraph(f"{next_section}. Conclusion", styles["MemoSection"]))
+    story.append(Paragraph(f"{_roman(section_counter)}. Conclusion", styles["MemoSection"]))
     story.append(LedgerRule(doc.width))
 
     if risk == "low":

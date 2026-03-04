@@ -49,6 +49,7 @@ from shared.parsing_helpers import safe_str as _safe_str
 # FIXTURES
 # =============================================================================
 
+
 def make_entries(rows: list[dict], columns: list[str] | None = None) -> list[JournalEntry]:
     """Helper to create JournalEntry list from row dicts."""
     if columns is None:
@@ -60,10 +61,46 @@ def make_entries(rows: list[dict], columns: list[str] | None = None) -> list[Jou
 def sample_gl_rows() -> list[dict]:
     """Standard GL rows for testing."""
     return [
-        {"Entry ID": "JE001", "Date": "2025-01-15", "Account": "Cash", "Debit": 1000, "Credit": 0, "Description": "Payment received", "Posted By": "jsmith", "Reference": "INV-001"},
-        {"Entry ID": "JE001", "Date": "2025-01-15", "Account": "Accounts Receivable", "Debit": 0, "Credit": 1000, "Description": "Payment received", "Posted By": "jsmith", "Reference": "INV-001"},
-        {"Entry ID": "JE002", "Date": "2025-01-20", "Account": "Office Supplies", "Debit": 250, "Credit": 0, "Description": "Office supplies purchase", "Posted By": "jdoe", "Reference": "PO-100"},
-        {"Entry ID": "JE002", "Date": "2025-01-20", "Account": "Accounts Payable", "Debit": 0, "Credit": 250, "Description": "Office supplies purchase", "Posted By": "jdoe", "Reference": "PO-100"},
+        {
+            "Entry ID": "JE001",
+            "Date": "2025-01-15",
+            "Account": "Cash",
+            "Debit": 1000,
+            "Credit": 0,
+            "Description": "Payment received",
+            "Posted By": "jsmith",
+            "Reference": "INV-001",
+        },
+        {
+            "Entry ID": "JE001",
+            "Date": "2025-01-15",
+            "Account": "Accounts Receivable",
+            "Debit": 0,
+            "Credit": 1000,
+            "Description": "Payment received",
+            "Posted By": "jsmith",
+            "Reference": "INV-001",
+        },
+        {
+            "Entry ID": "JE002",
+            "Date": "2025-01-20",
+            "Account": "Office Supplies",
+            "Debit": 250,
+            "Credit": 0,
+            "Description": "Office supplies purchase",
+            "Posted By": "jdoe",
+            "Reference": "PO-100",
+        },
+        {
+            "Entry ID": "JE002",
+            "Date": "2025-01-20",
+            "Account": "Accounts Payable",
+            "Debit": 0,
+            "Credit": 250,
+            "Description": "Office supplies purchase",
+            "Posted By": "jdoe",
+            "Reference": "PO-100",
+        },
     ]
 
 
@@ -74,6 +111,7 @@ def sample_gl_columns() -> list[str]:
 # =============================================================================
 # GL COLUMN DETECTION
 # =============================================================================
+
 
 class TestGLColumnDetection:
     """Tests for detect_gl_columns()."""
@@ -171,6 +209,7 @@ class TestGLColumnDetection:
 # GL ENTRY PARSING
 # =============================================================================
 
+
 class TestGLParsing:
     """Tests for parse_gl_entries()."""
 
@@ -237,6 +276,7 @@ class TestGLParsing:
 # SAFE HELPERS
 # =============================================================================
 
+
 class TestSafeHelpers:
     """Tests for _safe_str and _safe_float."""
 
@@ -276,6 +316,7 @@ class TestSafeHelpers:
 # =============================================================================
 # DATA QUALITY SCORING
 # =============================================================================
+
 
 class TestDataQuality:
     """Tests for assess_data_quality()."""
@@ -321,6 +362,7 @@ class TestDataQuality:
 # =============================================================================
 # MULTI-CURRENCY DETECTION
 # =============================================================================
+
 
 class TestMultiCurrency:
     """Tests for detect_multi_currency()."""
@@ -381,6 +423,7 @@ class TestMultiCurrency:
 # COMPOSITE SCORING
 # =============================================================================
 
+
 class TestCompositeScoring:
     """Tests for calculate_composite_score() and score_to_risk_tier()."""
 
@@ -405,9 +448,13 @@ class TestCompositeScoring:
         flagged = [
             FlaggedEntry(
                 entry=JournalEntry(row_number=i),
-                test_name="T1", test_key="t1", test_tier=TestTier.STRUCTURAL,
-                severity=Severity.HIGH, issue="Unbalanced",
-            ) for i in range(1, 101)
+                test_name="T1",
+                test_key="t1",
+                test_tier=TestTier.STRUCTURAL,
+                severity=Severity.HIGH,
+                issue="Unbalanced",
+            )
+            for i in range(1, 101)
         ]
         results = [
             TestResult("T1", "t1", TestTier.STRUCTURAL, 100, 100, 1.0, Severity.HIGH, "", flagged),
@@ -417,24 +464,30 @@ class TestCompositeScoring:
 
     def test_risk_tier_mapping(self):
         assert score_to_risk_tier(5) == RiskTier.LOW
-        assert score_to_risk_tier(15) == RiskTier.ELEVATED
-        assert score_to_risk_tier(30) == RiskTier.MODERATE
+        assert score_to_risk_tier(15) == RiskTier.MODERATE
+        assert score_to_risk_tier(30) == RiskTier.ELEVATED
         assert score_to_risk_tier(60) == RiskTier.HIGH
-        assert score_to_risk_tier(80) == RiskTier.CRITICAL
+        assert score_to_risk_tier(80) == RiskTier.HIGH
 
     def test_flags_by_severity_counted(self):
         flagged_high = [
             FlaggedEntry(
                 entry=JournalEntry(row_number=1),
-                test_name="T1", test_key="t1", test_tier=TestTier.STRUCTURAL,
-                severity=Severity.HIGH, issue="Issue",
+                test_name="T1",
+                test_key="t1",
+                test_tier=TestTier.STRUCTURAL,
+                severity=Severity.HIGH,
+                issue="Issue",
             )
         ]
         flagged_low = [
             FlaggedEntry(
                 entry=JournalEntry(row_number=2),
-                test_name="T2", test_key="t2", test_tier=TestTier.STRUCTURAL,
-                severity=Severity.LOW, issue="Issue",
+                test_name="T2",
+                test_key="t2",
+                test_tier=TestTier.STRUCTURAL,
+                severity=Severity.LOW,
+                issue="Issue",
             )
         ]
         results = [
@@ -449,8 +502,11 @@ class TestCompositeScoring:
         flagged = [
             FlaggedEntry(
                 entry=JournalEntry(row_number=1),
-                test_name="T1", test_key="t1", test_tier=TestTier.STRUCTURAL,
-                severity=Severity.HIGH, issue="Issue",
+                test_name="T1",
+                test_key="t1",
+                test_tier=TestTier.STRUCTURAL,
+                severity=Severity.HIGH,
+                issue="Issue",
             )
         ]
         results = [
@@ -462,8 +518,12 @@ class TestCompositeScoring:
 
     def test_composite_score_to_dict(self):
         score = CompositeScore(
-            score=25.5, risk_tier=RiskTier.MODERATE, tests_run=5,
-            total_entries=100, total_flagged=10, flag_rate=0.1,
+            score=25.5,
+            risk_tier=RiskTier.MODERATE,
+            tests_run=5,
+            total_entries=100,
+            total_flagged=10,
+            flag_rate=0.1,
         )
         d = score.to_dict()
         assert d["score"] == 25.5
@@ -474,6 +534,7 @@ class TestCompositeScoring:
 # =============================================================================
 # TEST BATTERY
 # =============================================================================
+
 
 class TestBattery:
     """Tests for run_test_battery()."""
@@ -527,6 +588,7 @@ class TestBattery:
 # =============================================================================
 # FULL PIPELINE
 # =============================================================================
+
 
 class TestRunJETesting:
     """Tests for run_je_testing() full pipeline."""
@@ -588,14 +650,20 @@ class TestRunJETesting:
 # SERIALIZATION
 # =============================================================================
 
+
 class TestSerialization:
     """Tests for to_dict() on all major types."""
 
     def test_test_result_to_dict(self):
         tr = TestResult(
-            test_name="Test", test_key="test", test_tier=TestTier.STRUCTURAL,
-            entries_flagged=5, total_entries=100, flag_rate=0.05,
-            severity=Severity.MEDIUM, description="A test",
+            test_name="Test",
+            test_key="test",
+            test_tier=TestTier.STRUCTURAL,
+            entries_flagged=5,
+            total_entries=100,
+            flag_rate=0.05,
+            severity=Severity.MEDIUM,
+            description="A test",
         )
         d = tr.to_dict()
         assert d["test_name"] == "Test"
@@ -606,8 +674,11 @@ class TestSerialization:
     def test_flagged_entry_to_dict(self):
         fe = FlaggedEntry(
             entry=JournalEntry(account="Cash", debit=100, row_number=1),
-            test_name="T1", test_key="t1", test_tier=TestTier.STRUCTURAL,
-            severity=Severity.HIGH, issue="Bad entry",
+            test_name="T1",
+            test_key="t1",
+            test_tier=TestTier.STRUCTURAL,
+            severity=Severity.HIGH,
+            issue="Bad entry",
         )
         d = fe.to_dict()
         assert d["entry"]["account"] == "Cash"
@@ -616,13 +687,17 @@ class TestSerialization:
 
     def test_risk_tier_enum_values(self):
         assert RiskTier.LOW.value == "low"
-        assert RiskTier.CRITICAL.value == "critical"
+        assert RiskTier.HIGH.value == "high"
 
     def test_je_testing_result_no_currency(self):
         result = JETestingResult(
             composite_score=CompositeScore(
-                score=0.0, risk_tier=RiskTier.LOW, tests_run=0,
-                total_entries=0, total_flagged=0, flag_rate=0.0,
+                score=0.0,
+                risk_tier=RiskTier.LOW,
+                tests_run=0,
+                total_entries=0,
+                total_flagged=0,
+                flag_rate=0.0,
             ),
         )
         d = result.to_dict()
@@ -646,8 +721,12 @@ class TestSerialization:
     def test_je_testing_result_with_benford(self):
         result = JETestingResult(
             composite_score=CompositeScore(
-                score=10.0, risk_tier=RiskTier.ELEVATED, tests_run=8,
-                total_entries=100, total_flagged=5, flag_rate=0.05,
+                score=10.0,
+                risk_tier=RiskTier.ELEVATED,
+                tests_run=8,
+                total_entries=100,
+                total_flagged=5,
+                flag_rate=0.05,
             ),
             benford_result=BenfordResult(passed_prechecks=False, precheck_message="Not enough data"),
         )
@@ -659,6 +738,7 @@ class TestSerialization:
 # =============================================================================
 # HELPER FUNCTIONS (Sprint 65)
 # =============================================================================
+
 
 class TestHelperFunctions:
     """Tests for _get_first_digit and _parse_date helpers."""

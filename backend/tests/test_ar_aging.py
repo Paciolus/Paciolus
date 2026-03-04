@@ -5,6 +5,7 @@ Covers: column detection (TB + sub-ledger), account classification,
 11 test functions, composite scoring, data quality, pipeline, serialization,
 route registration.
 """
+
 import pytest
 
 from ar_aging_engine import (
@@ -94,6 +95,7 @@ from shared.testing_enums import RiskTier, Severity, TestTier
 # FIXTURES / HELPERS
 # =============================================================================
 
+
 def sample_tb_rows() -> list[dict]:
     """Standard TB with AR, allowance, revenue, and other accounts."""
     return [
@@ -110,14 +112,62 @@ def sample_tb_rows() -> list[dict]:
 def sample_sl_rows() -> list[dict]:
     """Standard sub-ledger with aging data."""
     return [
-        {"Customer Name": "Acme Corp", "Invoice Number": "INV-001", "Amount": 100000, "Aging Days": 15, "Due Date": "2025-12-01"},
-        {"Customer Name": "Acme Corp", "Invoice Number": "INV-002", "Amount": 50000, "Aging Days": 45, "Due Date": "2025-11-01"},
-        {"Customer Name": "Beta Inc", "Invoice Number": "INV-003", "Amount": 80000, "Aging Days": 10, "Due Date": "2025-12-10"},
-        {"Customer Name": "Gamma LLC", "Invoice Number": "INV-004", "Amount": 120000, "Aging Days": 75, "Due Date": "2025-10-01"},
-        {"Customer Name": "Delta Co", "Invoice Number": "INV-005", "Amount": 30000, "Aging Days": 100, "Due Date": "2025-09-15"},
-        {"Customer Name": "Epsilon SA", "Invoice Number": "INV-006", "Amount": 70000, "Aging Days": 20, "Due Date": "2025-11-25"},
-        {"Customer Name": "Acme Corp", "Invoice Number": "INV-007", "Amount": 40000, "Aging Days": 150, "Due Date": "2025-07-01"},
-        {"Customer Name": "Beta Inc", "Invoice Number": "INV-008", "Amount": 60000, "Aging Days": 5, "Due Date": "2025-12-15"},
+        {
+            "Customer Name": "Acme Corp",
+            "Invoice Number": "INV-001",
+            "Amount": 100000,
+            "Aging Days": 15,
+            "Due Date": "2025-12-01",
+        },
+        {
+            "Customer Name": "Acme Corp",
+            "Invoice Number": "INV-002",
+            "Amount": 50000,
+            "Aging Days": 45,
+            "Due Date": "2025-11-01",
+        },
+        {
+            "Customer Name": "Beta Inc",
+            "Invoice Number": "INV-003",
+            "Amount": 80000,
+            "Aging Days": 10,
+            "Due Date": "2025-12-10",
+        },
+        {
+            "Customer Name": "Gamma LLC",
+            "Invoice Number": "INV-004",
+            "Amount": 120000,
+            "Aging Days": 75,
+            "Due Date": "2025-10-01",
+        },
+        {
+            "Customer Name": "Delta Co",
+            "Invoice Number": "INV-005",
+            "Amount": 30000,
+            "Aging Days": 100,
+            "Due Date": "2025-09-15",
+        },
+        {
+            "Customer Name": "Epsilon SA",
+            "Invoice Number": "INV-006",
+            "Amount": 70000,
+            "Aging Days": 20,
+            "Due Date": "2025-11-25",
+        },
+        {
+            "Customer Name": "Acme Corp",
+            "Invoice Number": "INV-007",
+            "Amount": 40000,
+            "Aging Days": 150,
+            "Due Date": "2025-07-01",
+        },
+        {
+            "Customer Name": "Beta Inc",
+            "Invoice Number": "INV-008",
+            "Amount": 60000,
+            "Aging Days": 5,
+            "Due Date": "2025-12-15",
+        },
     ]
 
 
@@ -142,6 +192,7 @@ def make_sl_entries(rows: list[dict] | None = None) -> list[ARSubledgerEntry]:
 # =============================================================================
 # TB COLUMN DETECTION
 # =============================================================================
+
 
 class TestTBColumnDetection:
     """Tests for detect_tb_columns."""
@@ -188,6 +239,7 @@ class TestTBColumnDetection:
 # SUB-LEDGER COLUMN DETECTION
 # =============================================================================
 
+
 class TestSLColumnDetection:
     """Tests for detect_sl_columns."""
 
@@ -216,8 +268,17 @@ class TestSLColumnDetection:
         assert result.overall_confidence < 1.0
 
     def test_sl_all_columns_present(self):
-        cols = ["Customer Name", "Customer ID", "Invoice Number", "Invoice Date",
-                "Due Date", "Amount", "Aging Days", "Aging Bucket", "Credit Limit"]
+        cols = [
+            "Customer Name",
+            "Customer ID",
+            "Invoice Number",
+            "Invoice Date",
+            "Due Date",
+            "Amount",
+            "Aging Days",
+            "Aging Bucket",
+            "Credit Limit",
+        ]
         result = run_detect_sl_columns(cols)
         assert result.customer_name_column is not None
         assert result.amount_column is not None
@@ -227,6 +288,7 @@ class TestSLColumnDetection:
 # =============================================================================
 # ACCOUNT CLASSIFICATION
 # =============================================================================
+
 
 class TestAccountClassification:
     """Tests for _classify_account."""
@@ -275,6 +337,7 @@ class TestAccountClassification:
 # =============================================================================
 # PARSING UTILITIES
 # =============================================================================
+
 
 class TestParsingUtilities:
     """Tests for safe conversion and parsing helpers."""
@@ -343,6 +406,7 @@ class TestParsingUtilities:
 # TB PARSING
 # =============================================================================
 
+
 class TestTBParsing:
     """Tests for parse_tb_accounts."""
 
@@ -389,6 +453,7 @@ class TestTBParsing:
 # =============================================================================
 # SUB-LEDGER PARSING
 # =============================================================================
+
 
 class TestSLParsing:
     """Tests for parse_sl_entries."""
@@ -437,6 +502,7 @@ class TestSLParsing:
 # DATA QUALITY
 # =============================================================================
 
+
 class TestDataQuality:
     """Tests for assess_data_quality."""
 
@@ -470,6 +536,7 @@ class TestDataQuality:
 # =============================================================================
 # T1-AR01: SIGN ANOMALIES
 # =============================================================================
+
 
 class TestSignAnomalies:
     """Tests for test_ar_sign_anomalies."""
@@ -514,6 +581,7 @@ class TestSignAnomalies:
 # T1-AR02: MISSING ALLOWANCE
 # =============================================================================
 
+
 class TestMissingAllowance:
     """Tests for test_missing_allowance."""
 
@@ -546,6 +614,7 @@ class TestMissingAllowance:
 # T1-AR03: NEGATIVE AGING
 # =============================================================================
 
+
 class TestNegativeAging:
     """Tests for test_negative_aging."""
 
@@ -574,6 +643,7 @@ class TestNegativeAging:
 # =============================================================================
 # T1-AR04: UNRECONCILED DETAIL
 # =============================================================================
+
 
 class TestUnreconciledDetail:
     """Tests for test_unreconciled_detail."""
@@ -604,6 +674,7 @@ class TestUnreconciledDetail:
 # =============================================================================
 # T2-AR05: BUCKET CONCENTRATION
 # =============================================================================
+
 
 class TestBucketConcentration:
     """Tests for test_bucket_concentration."""
@@ -649,6 +720,7 @@ class TestBucketConcentration:
 # T2-AR06: PAST-DUE CONCENTRATION
 # =============================================================================
 
+
 class TestPastDueConcentration:
     """Tests for test_past_due_concentration."""
 
@@ -683,6 +755,7 @@ class TestPastDueConcentration:
 # =============================================================================
 # T2-AR07: ALLOWANCE ADEQUACY
 # =============================================================================
+
 
 class TestAllowanceAdequacy:
     """Tests for test_allowance_adequacy."""
@@ -726,6 +799,7 @@ class TestAllowanceAdequacy:
 # T2-AR08: CUSTOMER CONCENTRATION
 # =============================================================================
 
+
 class TestCustomerConcentration:
     """Tests for test_customer_concentration."""
 
@@ -763,6 +837,7 @@ class TestCustomerConcentration:
 # =============================================================================
 # T2-AR09: DSO TREND
 # =============================================================================
+
 
 class TestDSOTrend:
     """Tests for test_dso_trend."""
@@ -808,6 +883,7 @@ class TestDSOTrend:
 # T3-AR10: ROLL-FORWARD RECONCILIATION
 # =============================================================================
 
+
 class TestRollForward:
     """Tests for test_rollforward_reconciliation."""
 
@@ -840,6 +916,7 @@ class TestRollForward:
 # =============================================================================
 # T3-AR11: CREDIT LIMIT BREACHES
 # =============================================================================
+
 
 class TestCreditLimits:
     """Tests for test_credit_limit_breaches."""
@@ -888,6 +965,7 @@ class TestCreditLimits:
 # TEST BATTERY
 # =============================================================================
 
+
 class TestBattery:
     """Tests for run_ar_test_battery."""
 
@@ -932,6 +1010,7 @@ class TestBattery:
 # COMPOSITE SCORING
 # =============================================================================
 
+
 class TestCompositeScoring:
     """Tests for calculate_ar_composite_score."""
 
@@ -945,17 +1024,14 @@ class TestCompositeScoring:
     def test_risk_tier_low(self):
         assert score_to_risk_tier(5.0) == RiskTier.LOW
 
-    def test_risk_tier_elevated(self):
-        assert score_to_risk_tier(15.0) == RiskTier.ELEVATED
-
     def test_risk_tier_moderate(self):
-        assert score_to_risk_tier(35.0) == RiskTier.MODERATE
+        assert score_to_risk_tier(15.0) == RiskTier.MODERATE
+
+    def test_risk_tier_elevated(self):
+        assert score_to_risk_tier(35.0) == RiskTier.ELEVATED
 
     def test_risk_tier_high(self):
         assert score_to_risk_tier(60.0) == RiskTier.HIGH
-
-    def test_risk_tier_critical(self):
-        assert score_to_risk_tier(80.0) == RiskTier.CRITICAL
 
     def test_tracks_tests_skipped(self):
         accounts = make_tb_accounts()
@@ -976,7 +1052,9 @@ class TestCompositeScoring:
             assert len(composite.top_findings) > 0
 
     def test_score_capped_at_100(self):
-        composite = ARCompositeScore(score=150.0, risk_tier=RiskTier.CRITICAL, tests_run=11, tests_skipped=0, total_flagged=100)
+        composite = ARCompositeScore(
+            score=150.0, risk_tier=RiskTier.HIGH, tests_run=11, tests_skipped=0, total_flagged=100
+        )
         # Just verify the model allows it; actual scoring caps at 100
         assert composite.score == 150.0  # Model doesn't cap; function does
 
@@ -984,6 +1062,7 @@ class TestCompositeScoring:
 # =============================================================================
 # AR SUMMARY
 # =============================================================================
+
 
 class TestARSummary:
     """Tests for build_ar_summary."""
@@ -1017,6 +1096,7 @@ class TestARSummary:
 # =============================================================================
 # FULL PIPELINE
 # =============================================================================
+
 
 class TestFullPipeline:
     """Tests for run_ar_aging end-to-end."""
@@ -1053,7 +1133,8 @@ class TestFullPipeline:
     def test_pipeline_with_column_mapping(self):
         tb_rows = [{"Col_A": "AR Trade", "Col_B": "1200", "Col_C": 500000}]
         result = run_ar_aging(
-            tb_rows, ["Col_A", "Col_B", "Col_C"],
+            tb_rows,
+            ["Col_A", "Col_B", "Col_C"],
             tb_column_mapping={"account_name_column": "Col_A", "balance_column": "Col_C"},
         )
         assert result.tb_column_detection.account_name_column == "Col_A"
@@ -1068,6 +1149,7 @@ class TestFullPipeline:
 # =============================================================================
 # SERIALIZATION
 # =============================================================================
+
 
 class TestSerialization:
     """Tests for to_dict() methods."""
@@ -1086,9 +1168,14 @@ class TestSerialization:
 
     def test_test_result_serialization(self):
         result = ARTestResult(
-            test_name="Test", test_key="test_key", test_tier=TestTier.STRUCTURAL,
-            entries_flagged=0, total_entries=10, flag_rate=0.0,
-            severity=Severity.LOW, description="desc",
+            test_name="Test",
+            test_key="test_key",
+            test_tier=TestTier.STRUCTURAL,
+            entries_flagged=0,
+            total_entries=10,
+            flag_rate=0.0,
+            severity=Severity.LOW,
+            description="desc",
         )
         d = result.to_dict()
         assert d["test_tier"] == "structural"
@@ -1097,8 +1184,12 @@ class TestSerialization:
     def test_flagged_entry_serialization(self):
         entry = AREntry(account_name="AR", amount=1000, entry_source="tb")
         flagged = FlaggedAR(
-            entry=entry, test_name="T", test_key="k", test_tier=TestTier.STRUCTURAL,
-            severity=Severity.HIGH, issue="test issue",
+            entry=entry,
+            test_name="T",
+            test_key="k",
+            test_tier=TestTier.STRUCTURAL,
+            severity=Severity.HIGH,
+            issue="test issue",
         )
         d = flagged.to_dict()
         assert d["entry"]["account_name"] == "AR"
@@ -1106,8 +1197,12 @@ class TestSerialization:
 
     def test_composite_score_serialization(self):
         score = ARCompositeScore(
-            score=25.5, risk_tier=RiskTier.MODERATE, tests_run=9,
-            tests_skipped=2, total_flagged=5, has_subledger=True,
+            score=25.5,
+            risk_tier=RiskTier.MODERATE,
+            tests_run=9,
+            tests_skipped=2,
+            total_flagged=5,
+            has_subledger=True,
         )
         d = score.to_dict()
         assert d["score"] == 25.5
@@ -1131,18 +1226,21 @@ class TestSerialization:
 # ROUTE REGISTRATION
 # =============================================================================
 
+
 class TestRouteRegistration:
     """Tests for AR aging route registration."""
 
     def test_route_registered(self):
         from main import app
-        paths = [r.path for r in app.routes if hasattr(r, 'path')]
+
+        paths = [r.path for r in app.routes if hasattr(r, "path")]
         assert "/audit/ar-aging" in paths
 
     def test_route_accepts_post(self):
         from main import app
+
         for route in app.routes:
-            if hasattr(route, 'path') and route.path == "/audit/ar-aging":
+            if hasattr(route, "path") and route.path == "/audit/ar-aging":
                 assert "POST" in route.methods
                 break
         else:
@@ -1153,24 +1251,29 @@ class TestRouteRegistration:
 # EXISTING TEST UPDATES (tool count assertions)
 # =============================================================================
 
+
 class TestToolNameEnum:
     """Tests for ToolName enum including AR_AGING."""
 
     def test_ar_aging_in_enum(self):
         from engagement_model import ToolName
+
         assert hasattr(ToolName, "AR_AGING")
         assert ToolName.AR_AGING.value == "ar_aging"
 
     def test_enum_has_all_tools(self):
         from engagement_model import ToolName
+
         assert len(ToolName) == 13
 
     def test_workpaper_labels_has_ar(self):
         from engagement_model import ToolName
         from workpaper_index_generator import TOOL_LABELS
+
         assert ToolName.AR_AGING in TOOL_LABELS
 
     def test_workpaper_refs_has_ar(self):
         from engagement_model import ToolName
         from workpaper_index_generator import TOOL_LEAD_SHEET_REFS
+
         assert ToolName.AR_AGING in TOOL_LEAD_SHEET_REFS

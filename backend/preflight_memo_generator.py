@@ -13,7 +13,7 @@ from typing import Optional
 from reportlab.lib.units import inch
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-from pdf_generator import ClassicalColors, LedgerRule, create_leader_dots
+from pdf_generator import ClassicalColors, LedgerRule, create_leader_dots, generate_reference_number
 from shared.framework_resolution import ResolvedFramework
 from shared.memo_base import build_disclaimer, build_intelligence_stamp, build_workpaper_signoff, create_memo_styles
 from shared.report_chrome import ReportMetadata, build_cover_page, draw_page_footer, find_logo
@@ -66,6 +66,7 @@ def generate_preflight_memo(
     doc_width = doc.width
     styles = create_memo_styles()
     story: list = []
+    reference = generate_reference_number().replace("PAC-", "PFR-")
 
     # ── Cover Page ──
     logo_path = find_logo()
@@ -76,7 +77,7 @@ def generate_preflight_memo(
         source_document=filename,
         source_document_title=source_document_title or "",
         source_context_note=source_context_note or "",
-        reference="WP-PF-001",
+        reference=reference,
     )
     build_cover_page(story, styles, metadata, doc_width, logo_path)
 
@@ -164,7 +165,7 @@ def generate_preflight_memo(
     if not issues:
         story.append(Paragraph("No data quality issues detected.", styles["MemoBody"]))
     else:
-        issue_data = [["Category", "Severity", "Description", "Affected", "Remediation"]]
+        issue_data = [["Category", "Severity", "Description", "Affected", "Remediation", "Downstream Impact"]]
         for issue in sorted(issues, key=lambda i: {"high": 0, "medium": 1, "low": 2}.get(i.get("severity", "low"), 3)):
             issue_data.append(
                 [
@@ -173,11 +174,14 @@ def generate_preflight_memo(
                     Paragraph(issue.get("message", ""), styles["MemoTableCell"]),
                     str(issue.get("affected_count", 0)),
                     Paragraph(issue.get("remediation", ""), styles["MemoTableCell"]),
+                    Paragraph(issue.get("downstream_impact", ""), styles["MemoTableCell"]),
                 ]
             )
 
         issue_table = Table(
-            issue_data, colWidths=[1.0 * inch, 0.7 * inch, 2.0 * inch, 0.6 * inch, 2.3 * inch], repeatRows=1
+            issue_data,
+            colWidths=[0.8 * inch, 0.55 * inch, 1.6 * inch, 0.5 * inch, 1.7 * inch, 1.85 * inch],
+            repeatRows=1,
         )
         issue_table.setStyle(
             TableStyle(

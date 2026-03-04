@@ -241,6 +241,14 @@ def generate_bank_rec_memo(
         )
     )
     story.append(balance_table)
+    story.append(Spacer(1, 2))
+    story.append(
+        Paragraph(
+            "Note: Bank Statement and General Ledger totals above represent aggregate "
+            "transaction activity (sum of matched and unmatched items), not ending account balances.",
+            styles["MemoBodySmall"],
+        )
+    )
     story.append(Spacer(1, 8))
 
     # 4. OUTSTANDING ITEMS
@@ -297,6 +305,108 @@ def generate_bank_rec_memo(
             )
         story.append(Spacer(1, 8))
 
+    # Track section number dynamically (I=Scope, II=Results, III=Outstanding if present)
+    _next_section = 4 if has_outstanding else 3
+    _roman_numerals = {3: "III", 4: "IV", 5: "V", 6: "VI", 7: "VII", 8: "VIII"}
+
+    # ── RECONCILIATION TESTS (CONTENT-03) ──
+    rec_tests = rec_result.get("rec_tests", [])
+    if rec_tests:
+        _sec = _roman_numerals.get(_next_section, str(_next_section))
+        story.append(Paragraph(f"{_sec}. Reconciliation Tests", styles["MemoSection"]))
+        story.append(LedgerRule(doc.width))
+
+        story.append(
+            Paragraph(
+                "The following automated tests were applied to the reconciliation results "
+                "to identify items warranting additional investigation:",
+                styles["MemoBody"],
+            )
+        )
+        story.append(Spacer(1, 4))
+
+        test_data = [["Test", "Flagged", "Severity"]]
+        for rt in rec_tests:
+            test_data.append(
+                [
+                    rt.get("test_name", ""),
+                    str(rt.get("flagged_count", 0)),
+                    rt.get("severity", "low").title(),
+                ]
+            )
+
+        test_table = Table(test_data, colWidths=[3.5 * inch, 1.0 * inch, 1.5 * inch])
+        test_table.setStyle(
+            TableStyle(
+                [
+                    ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
+                    ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
+                    ("FONTSIZE", (0, 0), (-1, -1), 9),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
+                    ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
+                    ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
+                    ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
+                    ("TOPPADDING", (0, 0), (-1, -1), 3),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                    ("LEFTPADDING", (0, 0), (0, -1), 0),
+                ]
+            )
+        )
+        story.append(test_table)
+        story.append(Spacer(1, 8))
+        _next_section += 1
+
+    # ── OUTSTANDING ITEMS AGING (CONTENT-03) ──
+    outstanding_aging = rec_result.get("outstanding_aging", [])
+    aging_items_with_data = [a for a in outstanding_aging if a.get("total_count", 0) > 0]
+    if aging_items_with_data:
+        _sec = _roman_numerals.get(_next_section, str(_next_section))
+        story.append(Paragraph(f"{_sec}. Outstanding Items Aging", styles["MemoSection"]))
+        story.append(LedgerRule(doc.width))
+
+        story.append(
+            Paragraph(
+                "Aging analysis of unmatched items to identify items that may require follow-up or reclassification:",
+                styles["MemoBody"],
+            )
+        )
+        story.append(Spacer(1, 4))
+
+        aging_data = [["Category", "Total", ">10 Days", ">30 Days", "Oldest (Days)"]]
+        for a in aging_items_with_data:
+            cat_label = "Bank-Only" if a["category"] == "bank_only" else "Ledger-Only"
+            oldest = str(a.get("oldest_item_days", "")) if a.get("oldest_item_days") is not None else "N/A"
+            aging_data.append(
+                [
+                    cat_label,
+                    str(a.get("total_count", 0)),
+                    str(a.get("over_10_days", 0)),
+                    str(a.get("over_30_days", 0)),
+                    oldest,
+                ]
+            )
+
+        aging_table = Table(aging_data, colWidths=[2.0 * inch, 1.0 * inch, 1.0 * inch, 1.0 * inch, 1.5 * inch])
+        aging_table.setStyle(
+            TableStyle(
+                [
+                    ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
+                    ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
+                    ("FONTSIZE", (0, 0), (-1, -1), 9),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
+                    ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
+                    ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
+                    ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
+                    ("TOPPADDING", (0, 0), (-1, -1), 3),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                    ("LEFTPADDING", (0, 0), (0, -1), 0),
+                ]
+            )
+        )
+        story.append(aging_table)
+        story.append(Spacer(1, 8))
+        _next_section += 1
+
     # METHODOLOGY STATEMENT + AUTHORITATIVE REFERENCES
     build_methodology_statement(
         story,
@@ -306,7 +416,7 @@ def generate_bank_rec_memo(
         framework=resolved_framework,
         domain_label="bank reconciliation analysis",
     )
-    ref_num = "IV" if has_outstanding else "III"
+    ref_num = _roman_numerals.get(_next_section, str(_next_section))
     build_authoritative_reference_block(
         story,
         styles,
@@ -316,9 +426,10 @@ def generate_bank_rec_memo(
         domain_label="bank reconciliation analysis",
         section_label=f"{ref_num}.",
     )
+    _next_section += 1
 
     # CONCLUSION
-    conclusion_num = "V" if has_outstanding else "IV"
+    conclusion_num = _roman_numerals.get(_next_section, str(_next_section))
     story.append(Paragraph(f"{conclusion_num}. Conclusion", styles["MemoSection"]))
     story.append(LedgerRule(doc.width))
 

@@ -1159,6 +1159,123 @@ def generate_financial_statements_pdf(
             for note in cf.notes:
                 story.append(Paragraph(f"<i>Note: {note}</i>", styles["DocumentRef"]))
 
+    # ── KEY FINANCIAL RATIOS (CONTENT-04) ──
+    _has_ratios = False
+    if statements.total_revenue and statements.total_revenue != 0:
+        _has_ratios = True
+        story.append(Spacer(1, 8))
+        story.append(Paragraph("❧", styles["SectionOrnament"]))
+        story.append(Spacer(1, 8))
+
+        story.append(Paragraph("Key Financial Ratios", styles["SectionHeader"]))
+        story.append(LedgerRule(color=ClassicalColors.OBSIDIAN_DEEP, thickness=1))
+        story.append(Spacer(1, 8))
+
+        ratio_lines: list[tuple[str, str]] = []
+
+        # Profitability Ratios
+        if statements.gross_profit is not None:
+            gp_margin = statements.gross_profit / statements.total_revenue
+            ratio_lines.append(("Gross Profit Margin", f"{gp_margin:.1%}"))
+
+        if statements.operating_income is not None:
+            op_margin = statements.operating_income / statements.total_revenue
+            ratio_lines.append(("Operating Margin", f"{op_margin:.1%}"))
+
+        if statements.net_income is not None:
+            net_margin = statements.net_income / statements.total_revenue
+            ratio_lines.append(("Net Margin", f"{net_margin:.1%}"))
+
+        # Leverage
+        if statements.total_equity and statements.total_equity != 0:
+            de_ratio = statements.total_liabilities / statements.total_equity
+            ratio_lines.append(("Debt-to-Equity Ratio", f"{de_ratio:.2f}x"))
+
+        # Efficiency
+        if statements.total_assets and statements.total_assets != 0:
+            asset_turnover = statements.total_revenue / statements.total_assets
+            ratio_lines.append(("Asset Turnover", f"{asset_turnover:.2f}x"))
+
+        # Current Ratio and Working Capital from lead sheet data (A-C = current assets, G-H = current liabilities)
+        # These are available from the FinancialStatements dataclass via balance_sheet items
+        _current_assets = 0.0
+        _current_liabilities = 0.0
+        _total_ar = 0.0
+        _found_ca = False
+        _found_cl = False
+        for item in statements.balance_sheet:
+            if item.label == "Total Current Assets" and item.is_subtotal:
+                _current_assets = item.amount
+                _found_ca = True
+            elif item.label == "Total Current Liabilities" and item.is_subtotal:
+                _current_liabilities = item.amount
+                _found_cl = True
+            elif item.lead_sheet_ref == "B" and item.indent_level == 1:
+                _total_ar = item.amount
+
+        if _found_ca and _found_cl:
+            if _current_liabilities != 0:
+                current_ratio = _current_assets / _current_liabilities
+                ratio_lines.append(("Current Ratio", f"{current_ratio:.2f}x"))
+            working_capital = _current_assets - _current_liabilities
+            ratio_lines.append(("Working Capital", f"${working_capital:,.2f}"))
+        else:
+            ratio_lines.append(("Current Ratio", "Requires current/non-current classification"))
+
+        # DSO
+        if _total_ar and statements.total_revenue != 0:
+            dso = (_total_ar / statements.total_revenue) * 365
+            ratio_lines.append(("Days Sales Outstanding (DSO)", f"{dso:.0f} days"))
+
+        for label, value in ratio_lines:
+            line = create_leader_dots(f"      {label}", value)
+            story.append(Paragraph(line, styles["LeaderLine"]))
+
+        story.append(Spacer(1, 4))
+
+    # ── QUALITY OF EARNINGS (CONTENT-05) ──
+    if statements.cash_flow_statement is not None and statements.net_income is not None and statements.net_income != 0:
+        operating_cf = statements.cash_flow_statement.operating.subtotal
+
+        if not _has_ratios:
+            story.append(Spacer(1, 8))
+            story.append(Paragraph("❧", styles["SectionOrnament"]))
+            story.append(Spacer(1, 8))
+
+        story.append(Paragraph("Quality of Earnings", styles["SubsectionHeader"]))
+        story.append(LedgerRule(color=ClassicalColors.OBSIDIAN_DEEP, thickness=0.5))
+        story.append(Spacer(1, 4))
+
+        ocf_ni_ratio = operating_cf / statements.net_income
+
+        # Interpretation
+        if ocf_ni_ratio > 1.0:
+            interpretation = (
+                f"The OCF/NI ratio of {ocf_ni_ratio:.2f}x indicates that cash earnings exceed reported "
+                f"net income — strong earnings quality. Operating cash flow "
+                f"(${operating_cf:,.2f}) exceeds net income (${statements.net_income:,.2f}), "
+                f"suggesting conservative accrual practices and reliable cash conversion."
+            )
+        elif ocf_ni_ratio >= 0.8:
+            interpretation = (
+                f"The OCF/NI ratio of {ocf_ni_ratio:.2f}x indicates acceptable earnings quality. "
+                f"Operating cash flow (${operating_cf:,.2f}) is reasonably aligned with "
+                f"net income (${statements.net_income:,.2f})."
+            )
+        else:
+            interpretation = (
+                f"The OCF/NI ratio of {ocf_ni_ratio:.2f}x indicates that net income "
+                f"(${statements.net_income:,.2f}) may not be fully supported by operating cash flows "
+                f"(${operating_cf:,.2f}). This warrants investigation of accrual quality, "
+                f"non-cash revenue recognition, or working capital management practices."
+            )
+
+        ocf_line = create_leader_dots("      Operating Cash Flow / Net Income", f"{ocf_ni_ratio:.2f}x")
+        story.append(Paragraph(ocf_line, styles["LeaderLine"]))
+        story.append(Spacer(1, 4))
+        story.append(Paragraph(interpretation, styles["DocumentRef"]))
+        story.append(Spacer(1, 8))
+
     # ── ACCOUNT MAPPING TRACE (Sprint 284) ──
     if statements.mapping_trace:
         story.append(Spacer(1, 8))
