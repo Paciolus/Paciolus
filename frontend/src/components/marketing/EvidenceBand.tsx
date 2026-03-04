@@ -57,8 +57,14 @@ const CELLS: EvidenceCell[] = [
 
 export function EvidenceBand() {
   return (
-    <section className="py-16 px-6">
-      <div className="max-w-5xl mx-auto">
+    <section className="relative py-16 px-6 overflow-hidden">
+      {/* Background texture */}
+      <div
+        className="absolute inset-0 bg-cover bg-center opacity-[0.07] pointer-events-none"
+        style={{ backgroundImage: "url('/backgrounds/background4.jpg')" }}
+        aria-hidden="true"
+      />
+      <div className="max-w-5xl mx-auto relative z-10">
 
         {/* Section Header */}
         <Reveal className="text-center mb-8">

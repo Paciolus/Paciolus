@@ -826,8 +826,14 @@ export default function PricingPage() {
       </div>
 
       {/* -- Plan Your Cost (merged Estimator + Seat Calculator) -- */}
-      <section className="pb-16 px-6 py-16 bg-oatmeal-200/4">
-        <div className="max-w-6xl mx-auto">
+      <section className="relative pb-16 px-6 py-16 bg-oatmeal-200/4 overflow-hidden">
+        {/* Background texture */}
+        <div
+          className="absolute inset-0 bg-cover bg-center opacity-[0.06] pointer-events-none"
+          style={{ backgroundImage: "url('/backgrounds/background5.jpg')" }}
+          aria-hidden="true"
+        />
+        <div className="max-w-6xl mx-auto relative z-10">
           <motion.div
             variants={fadeUp}
             initial="hidden"
