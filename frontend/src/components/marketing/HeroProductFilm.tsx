@@ -55,8 +55,8 @@ const STEP_POSITIONS: Record<FilmStep, number> = {
 
 /** Per-step dwell times (ms) before sweeping to the next */
 const DWELL_BY_STEP: Record<FilmStep, number> = {
-  upload: 5500,
-  analyze: 12000,
+  upload: 6000,
+  analyze: 11000,
   export: 4000,
 }
 
@@ -563,7 +563,7 @@ const FORMAT_BADGES = ['CSV', 'XLSX', 'OFX', 'PDF', 'QBO'] as const
 
 // ── Upload Layer — Cursor + File Card ───────────────────────────────
 
-const UPLOAD_PHASES = [0, 500, 1800, 3000, 3800] as const
+const UPLOAD_PHASES = [300, 1000, 1500, 2800, 3600, 4400] as const
 const DATA_LINES = ['847 transactions', '62 accounts', 'FY 2025'] as const
 
 function UploadLayer({ opacity, isActive }: { opacity: MotionValue<number>; isActive: boolean }) {
@@ -574,13 +574,38 @@ function UploadLayer({ opacity, isActive }: { opacity: MotionValue<number>; isAc
       className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6"
       style={{ opacity }}
     >
-      {/* Drop zone container */}
-      <div className="relative w-full max-w-[280px]">
-        {/* Drop zone target */}
+      {/* Stage — file card source + drop zone + cursor */}
+      <div className="relative w-full max-w-[300px]">
+        {/* Source file card at rest (upper-right, before cursor grabs it) */}
+        {phase < 3 && (
+          <motion.div
+            className="absolute -top-6 -right-2 z-10"
+            initial={{ opacity: 0, y: 8 }}
+            animate={
+              phase >= 2
+                ? { opacity: 1, y: -4, scale: 1.05 }
+                : { opacity: 1, y: 0, scale: 1 }
+            }
+            transition={
+              phase >= 2
+                ? { duration: 0.2, ease: 'easeOut' as const }
+                : { duration: 0.4, ease: 'easeOut' as const }
+            }
+          >
+            <div className={`flex items-center gap-2 px-3 py-2 rounded-lg bg-white border shadow-sm whitespace-nowrap transition-shadow duration-200 ${
+              phase >= 2 ? 'border-sage-400/40 shadow-md' : 'border-obsidian-200'
+            }`}>
+              <BrandIcon name="file-plus" className="w-4 h-4 text-sage-500 flex-shrink-0" />
+              <span className="font-mono text-[10px] text-obsidian-700">FY2025.xlsx</span>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Drop zone target (always visible) */}
         <motion.div
           className="relative flex flex-col items-center justify-center gap-2 py-8 px-6 rounded-xl border-2 border-dashed overflow-hidden"
           animate={
-            phase >= 1 && phase < 3
+            phase >= 3 && phase < 4
               ? {
                   borderColor: [
                     'rgba(74,124,89,0.2)',
@@ -588,18 +613,18 @@ function UploadLayer({ opacity, isActive }: { opacity: MotionValue<number>; isAc
                     'rgba(74,124,89,0.2)',
                   ],
                 }
-              : phase >= 3
+              : phase >= 4
                 ? { borderColor: 'rgba(74,124,89,0.4)' }
                 : { borderColor: 'rgba(74,124,89,0.15)' }
           }
           transition={
-            phase >= 1 && phase < 3
-              ? { duration: 1.5, repeat: Infinity, ease: 'easeInOut' as const }
+            phase >= 3 && phase < 4
+              ? { duration: 1.2, repeat: Infinity, ease: 'easeInOut' as const }
               : { duration: 0.3 }
           }
         >
           {/* Sage glow pulse on drop */}
-          {phase >= 3 && (
+          {phase >= 4 && (
             <motion.div
               className="absolute inset-0 bg-sage-400/10 rounded-xl pointer-events-none"
               initial={{ opacity: 0 }}
@@ -608,11 +633,11 @@ function UploadLayer({ opacity, isActive }: { opacity: MotionValue<number>; isAc
             />
           )}
 
-          {/* Placeholder text before file arrives */}
-          {phase < 3 && (
+          {/* Placeholder text (before file drops in) */}
+          {phase < 4 && (
             <motion.div
               className="flex flex-col items-center gap-1"
-              animate={phase >= 1 ? { opacity: 0.4 } : { opacity: 0.6 }}
+              animate={phase >= 3 ? { opacity: 0.3 } : { opacity: 0.6 }}
             >
               <BrandIcon name="cloud-upload" className="w-8 h-8 text-obsidian-300" />
               <span className="font-sans text-xs text-obsidian-400">Drop your file here</span>
@@ -620,7 +645,7 @@ function UploadLayer({ opacity, isActive }: { opacity: MotionValue<number>; isAc
           )}
 
           {/* Settled file card (after drop) */}
-          {phase >= 3 && (
+          {phase >= 4 && (
             <motion.div
               className="flex items-center gap-3 px-4 py-3 rounded-lg bg-white border border-sage-400/40 shadow-sm w-full"
               initial={{ scale: 1.1, opacity: 0, y: -8 }}
@@ -645,24 +670,37 @@ function UploadLayer({ opacity, isActive }: { opacity: MotionValue<number>; isAc
           )}
         </motion.div>
 
-        {/* Animated cursor + file card (dragging into drop zone) */}
-        {phase >= 2 && phase < 3 && (
+        {/* Cursor — persists across phases 1→3, position driven by phase */}
+        {phase >= 1 && phase < 4 && (
           <motion.div
             className="absolute pointer-events-none z-20"
-            initial={{ x: 180, y: -90, opacity: 0 }}
-            animate={{ x: 55, y: 50, opacity: 1 }}
-            transition={{ duration: 1.1, ease: [0.32, 0.0, 0.22, 1] }}
+            initial={{ x: 260, y: -50, opacity: 0 }}
+            animate={
+              phase >= 3
+                ? { x: 90, y: 55, opacity: 1 }
+                : phase >= 2
+                  ? { x: 195, y: -15, opacity: 1 }
+                  : { x: 220, y: -30, opacity: 1 }
+            }
+            transition={
+              phase >= 3
+                ? { duration: 1.1, ease: [0.32, 0.0, 0.22, 1] }
+                : { duration: 0.6, ease: [0.32, 0.0, 0.22, 1] }
+            }
           >
             <CursorIcon className="w-5 h-5 text-obsidian-600 drop-shadow-md" />
-            <motion.div
-              className="absolute top-3 left-4 flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-obsidian-200 shadow-lg whitespace-nowrap"
-              initial={{ rotate: -8, scale: 0.9 }}
-              animate={{ rotate: 0, scale: 1 }}
-              transition={{ delay: 0.5, duration: 0.4, ease: 'easeOut' as const }}
-            >
-              <BrandIcon name="file-plus" className="w-4 h-4 text-sage-500 flex-shrink-0" />
-              <span className="font-mono text-[10px] text-obsidian-700">FY2025.xlsx</span>
-            </motion.div>
+            {/* File card attaches to cursor during drag */}
+            {phase >= 3 && (
+              <motion.div
+                className="absolute top-3 left-4 flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-obsidian-200 shadow-lg whitespace-nowrap"
+                initial={{ rotate: -6 }}
+                animate={{ rotate: 0 }}
+                transition={{ duration: 0.3, ease: 'easeOut' as const }}
+              >
+                <BrandIcon name="file-plus" className="w-4 h-4 text-sage-500 flex-shrink-0" />
+                <span className="font-mono text-[10px] text-obsidian-700">FY2025.xlsx</span>
+              </motion.div>
+            )}
           </motion.div>
         )}
       </div>
@@ -673,7 +711,7 @@ function UploadLayer({ opacity, isActive }: { opacity: MotionValue<number>; isAc
           <motion.p
             key={line}
             className="font-mono text-sm font-medium text-obsidian-700"
-            animate={phase >= 4 ? { opacity: 1, y: 0 } : { opacity: 0, y: 6 }}
+            animate={phase >= 5 ? { opacity: 1, y: 0 } : { opacity: 0, y: 6 }}
             transition={{ delay: i * 0.15, duration: 0.25, ease: 'easeOut' as const }}
           >
             {line}
@@ -684,7 +722,7 @@ function UploadLayer({ opacity, isActive }: { opacity: MotionValue<number>; isAc
       {/* Format badges */}
       <motion.div
         className="flex items-center gap-2"
-        animate={phase >= 5 ? { opacity: 1 } : { opacity: 0 }}
+        animate={phase >= 6 ? { opacity: 1 } : { opacity: 0 }}
         transition={{ duration: 0.3 }}
       >
         {FORMAT_BADGES.map((fmt, i) => (
@@ -702,7 +740,7 @@ function UploadLayer({ opacity, isActive }: { opacity: MotionValue<number>; isAc
       {/* Speed indicator */}
       <motion.p
         className="font-mono text-[11px] text-sage-600 uppercase tracking-widest"
-        animate={phase >= 5 ? { opacity: 1 } : { opacity: 0 }}
+        animate={phase >= 6 ? { opacity: 1 } : { opacity: 0 }}
         transition={{ delay: 0.15, duration: 0.3 }}
       >
         {ANALYSIS_LABEL_SHORT}
@@ -713,7 +751,7 @@ function UploadLayer({ opacity, isActive }: { opacity: MotionValue<number>; isAc
 
 // ── Analyze Layer — Scanning Matrix ─────────────────────────────────
 
-const ANALYZE_PHASES = [0, 400, 1400, 4200, 5800] as const
+const ANALYZE_PHASES = [0, 800, 2400, 5500, 7500] as const
 
 function AnalyzeLayer({ opacity, isActive }: { opacity: MotionValue<number>; isActive: boolean }) {
   const phase = usePhaseTimer(isActive, ANALYZE_PHASES)
