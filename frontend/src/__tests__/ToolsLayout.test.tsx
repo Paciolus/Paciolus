@@ -1,17 +1,12 @@
 /**
- * Sprint 231: ToolsLayout tests — verifies layout-level concerns
- * (ToolNav, VerificationBanner, EngagementProvider) that were moved
- * from individual pages in Sprint 207.
+ * Sprint 231 / Sprint 482: ToolsLayout tests
+ *
+ * Rewritten for Sprint 475 layout refactor: ToolsLayout now renders
+ * AuthenticatedShell (UnifiedToolbar + VerificationBanner) + EngagementProvider.
  */
-import { usePathname } from 'next/navigation'
+import React from 'react'
 import ToolsLayout from '@/app/tools/layout'
 import { render, screen } from '@/test-utils'
-
-jest.mock('@/contexts/AuthContext', () => ({
-  useAuth: jest.fn(() => ({
-    user: { is_verified: true }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token',
-  })),
-}))
 
 jest.mock('@/contexts/EngagementContext', () => ({
   EngagementProvider: ({ children }: { children: React.ReactNode }) => <div data-testid="engagement-provider">{children}</div>,
@@ -26,14 +21,11 @@ jest.mock('next/navigation', () => ({
   useRouter: jest.fn(() => ({ push: jest.fn(), replace: jest.fn() })),
 }))
 
-jest.mock('@/components/shared', () => ({
-  ToolNav: ({ currentTool }: { currentTool: string }) => <nav data-testid="tool-nav" data-tool={currentTool}>Nav</nav>,
+jest.mock('@/components/shell', () => ({
+  AuthenticatedShell: ({ children }: { children: React.ReactNode }) => <div data-testid="authenticated-shell">{children}</div>,
 }))
 jest.mock('@/components/shared/SonificationToggle', () => ({
   SonificationToggle: () => <div data-testid="sonification-toggle" />,
-}))
-jest.mock('@/components/auth', () => ({
-  VerificationBanner: () => <div data-testid="verification-banner">Verify</div>,
 }))
 jest.mock('@/components/engagement', () => ({
   EngagementBanner: () => <div data-testid="engagement-banner">Engagement</div>,
@@ -41,22 +33,14 @@ jest.mock('@/components/engagement', () => ({
 }))
 
 
-const mockUsePathname = usePathname as jest.Mock
-
 describe('ToolsLayout', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockUsePathname.mockReturnValue('/tools/trial-balance')
   })
 
-  it('renders ToolNav', () => {
+  it('renders AuthenticatedShell', () => {
     render(<ToolsLayout><div>child</div></ToolsLayout>)
-    expect(screen.getByTestId('tool-nav')).toBeInTheDocument()
-  })
-
-  it('renders VerificationBanner', () => {
-    render(<ToolsLayout><div>child</div></ToolsLayout>)
-    expect(screen.getByTestId('verification-banner')).toBeInTheDocument()
+    expect(screen.getByTestId('authenticated-shell')).toBeInTheDocument()
   })
 
   it('wraps children in EngagementProvider', () => {
@@ -70,21 +54,13 @@ describe('ToolsLayout', () => {
     expect(screen.getByTestId('engagement-banner')).toBeInTheDocument()
   })
 
-  it('derives currentTool from pathname for trial-balance', () => {
-    mockUsePathname.mockReturnValue('/tools/trial-balance')
+  it('renders SonificationToggle', () => {
     render(<ToolsLayout><div>child</div></ToolsLayout>)
-    expect(screen.getByTestId('tool-nav')).toHaveAttribute('data-tool', 'tb-diagnostics')
+    expect(screen.getByTestId('sonification-toggle')).toBeInTheDocument()
   })
 
-  it('derives currentTool from pathname for journal-entry-testing', () => {
-    mockUsePathname.mockReturnValue('/tools/journal-entry-testing')
-    render(<ToolsLayout><div>child</div></ToolsLayout>)
-    expect(screen.getByTestId('tool-nav')).toHaveAttribute('data-tool', 'je-testing')
-  })
-
-  it('defaults to tb-diagnostics for unknown segments', () => {
-    mockUsePathname.mockReturnValue('/tools/unknown-tool')
-    render(<ToolsLayout><div>child</div></ToolsLayout>)
-    expect(screen.getByTestId('tool-nav')).toHaveAttribute('data-tool', 'tb-diagnostics')
+  it('renders children inside the shell', () => {
+    render(<ToolsLayout><div data-testid="page-content">Page</div></ToolsLayout>)
+    expect(screen.getByTestId('page-content')).toBeInTheDocument()
   })
 })

@@ -27,6 +27,10 @@ jest.mock('@/contexts/EngagementContext', () => ({
   useOptionalEngagementContext: jest.fn(() => null),
 }))
 
+jest.mock('@/contexts/CanvasAccentContext', () => ({
+  useCanvasAccent: jest.fn(() => ({ accentState: 'idle', setAccentState: jest.fn() })),
+}))
+
 jest.mock('@/hooks/useStatisticalSampling', () => ({
   useStatisticalSampling: jest.fn(() => ({
     designStatus: 'idle', designResult: null, designError: '',
@@ -40,6 +44,24 @@ jest.mock('@/hooks/useTestingExport', () => ({
   useTestingExport: jest.fn(() => ({
     exporting: null, handleExportMemo: mockHandleExportMemo, handleExportCSV: mockHandleExportCSV,
   })),
+}))
+
+jest.mock('@/components/shared', () => ({
+  GuestCTA: ({ description }: any) => <div data-testid="guest-cta">{description}<a href="/login">Sign In</a><a href="/register">Create Account</a></div>,
+  ZeroStorageNotice: () => <div data-testid="zero-storage-notice">Zero-Storage</div>,
+  DisclaimerBox: ({ children }: any) => <div data-testid="disclaimer-box">{children}</div>,
+  UpgradeGate: ({ children, toolName }: any) => {
+    const { useAuth } = jest.requireMock('@/contexts/AuthContext')
+    const { user } = useAuth()
+    const tier = user?.tier ?? 'free'
+    const freeTierTools = new Set(['trial_balance', 'flux_analysis'])
+    if (tier === 'free' && !freeTierTools.has(toolName)) {
+      return <div><h3>Upgrade Required</h3><a href="/pricing">View Plans</a></div>
+    }
+    return <>{children}</>
+  },
+  Citation: ({ code }: any) => <span data-testid="citation">{code}</span>,
+  CitationFooter: () => <div data-testid="citation-footer">Citations</div>,
 }))
 
 jest.mock('@/components/statisticalSampling', () => ({
@@ -166,7 +188,7 @@ describe('StatisticalSamplingPage', () => {
 
   it('shows disclaimer for authenticated users', () => {
     render(<StatisticalSamplingPage />)
-    expect(screen.getByText(/ISA 530 \(Audit Sampling\)/)).toBeInTheDocument()
+    expect(screen.getByTestId('disclaimer-box')).toBeInTheDocument()
   })
 
   it('shows success dot on design tab when design completes', () => {

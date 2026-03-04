@@ -39,6 +39,8 @@ jest.mock('@/components/shared', () => ({
   DisclaimerBox: ({ children }: any) => <div data-testid="disclaimer-box">{children}</div>,
   ToolStatePresence: ({ children }: any) => <div data-testid="tool-state-presence">{children}</div>,
   UpgradeGate: ({ children }: any) => <>{children}</>,
+  Citation: ({ code }: any) => <span data-testid="citation">{code}</span>,
+  CitationFooter: () => <div data-testid="citation-footer">Citations</div>,
 }))
 jest.mock('@/components/shared/proof', () => ({
   ProofSummaryBar: () => <div data-testid="proof-summary-bar">Proof</div>,

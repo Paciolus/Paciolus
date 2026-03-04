@@ -636,3 +636,167 @@ Regression from Audit 22 (5.0) to Audit 23 (4.1).
 - Overall: 5.0 to 4.1 (regressed from Excellent ceiling to Good band)
 
 This is the 23rd audit. The regression is driven by a split workflow: planned work (Phase LXIX, Motion System) follows the protocol rigorously, while ad-hoc creative work (VaultTransition rewrite, HeroProductFilm rewrite, About page revision) bypasses it entirely. Code quality remains excellent across both -- the gap is purely procedural. The npm test gate oscillation continues: Audit 20 identified, Audit 21 confirmed non-execution, Audit 22 confirmed recovery, Audit 23 confirms non-execution again. The pattern suggests the gate is treated as optional rather than mandatory when work is creative/visual rather than structural. All remediations are recoverable: run npm test (~2 min), add 3 retroactive todo entries (~10 min), add 1 lesson entry (~5 min).
+
+---
+## Audit — 2026-03-03 (24th) | Excellent | Overall: 4.5/5.0
+---
+
+### Scores at a Glance
+| Pillar                  | Score |
+|-------------------------|-------|
+| Workflow Orchestration  | 4.5   |
+| Task Management         | 4/5   |
+| Core Principles         | 5/5   |
+| **Overall**             | **4.5** |
+
+### A1. Plan Mode Default — 4/5
+**Finding:** Sprint 480 (HeroProductFilm Redesign) has an exemplary todo.md entry: structured checklist with 8 items, clear goal statement, review section, status marked COMPLETE. Sprint 479 (Digital Excellence Council Remediation) similarly has a full 8-item checklist with commit reference. Sprint 478 (Deprecated Alias Migration) is pre-planned with a 4-wave decomposition and explicit verification section including `npx jest --no-coverage` — demonstrating the npm test lesson has been structurally internalized in planning. However, Sprint 481 (Plan Estimator redesign — commit e3d6c88, 134 changed lines in pricing/page.tsx) has NO todo.md entry. The commit message follows the `Sprint X: Description` convention, confirming the developer recognized it as sprint-level work, yet the mandatory todo.md checklist was not created. Two additional pricing polish commits (2991cfc "introduce oatmeal accents", d44239f "remove Most Popular badge, unify card styling, add sage accents") also have no todo.md entries. The `tasks/lessons.md` entry "Ad-Hoc Creative Work Still Requires Todo Entries" was captured from the Audit 23 cycle and states "Any commit that modifies more than ~50 lines or rewrites a component gets a brief todo.md entry." Sprint 481's 134-line change exceeds this threshold.
+**Recommendation:** Add a retroactive todo.md entry for Sprint 481 with objectives, verification results, and commit SHA e3d6c88. The pricing polish commits (2991cfc, d44239f) are borderline but should also be documented as they collectively contribute to Sprint 481's scope. Going forward, any commit using the `Sprint X:` naming convention must have a corresponding todo.md entry created before or immediately after implementation.
+
+### A2. Subagent Strategy — 5/5
+**Finding:** 9 agents in `.claude/agents/` — the original 8 (critic, executor, guardian, scout, designer, project-auditor, accounting-expert-auditor, future-state-consultant-agent) plus a new DIGITAL_EXCELLENCE_COUNCIL_PROMPT.md added this cycle. All remain single-purpose with clear role boundaries. The new agent was actively invoked: Sprint 479 directly references "7 findings from the inaugural Digital Excellence Council audit" and the report lives at `reports/council-audit-2026-03-03.md`. This demonstrates the agent being used in practice, not just defined. No scope creep or consolidation needed.
+**Recommendation:** Continue current practice.
+
+### A3. Self-Improvement Loop — 4/5
+**Finding:** Three new lessons from Sprint 480 are well-structured with concrete corrections: (1) never hard-gate on `prefers-reduced-motion` — render full UI with `MotionConfig reducedMotion="user"` instead of hiding components; (2) phase-based animation in crossfade layers should use `isActive` boolean + `usePhaseTimer`, not `whileInView`; (3) `useCountAnimation` with `requestAnimationFrame` and ease-out cubic for smooth counting. All three follow the correction/root-cause/prevention-rule structure. The "Verification Gate Discipline" section captures the npm test full-suite requirement with historical context across audits 20-23. The "Ad-Hoc Creative Work Still Requires Todo Entries" lesson was also captured. However, the gap is immediate recurrence: the ad-hoc todo lesson was documented and Sprint 481 — committed in the same cycle — violates it directly (134-line change, no todo.md entry, named as a sprint). Additionally, Sprint 480's todo.md entry records only `npm run build` verification, not `npm test`, despite the verification gate lesson explicitly requiring it for any commit touching `.tsx` files.
+**Recommendation:** The lessons are being captured correctly but execution is lagging. Add a specific post-commit checkpoint: before running `git commit`, verify (1) todo.md entry exists, (2) npm test result is recorded if frontend files changed. Consider making these items the first two in the Post-Sprint Checklist rather than buried in the middle.
+
+### A4. Verification Before Done — 4/5
+**Finding:** Sprint 480's todo.md entry documents "Build verification: `npm run build` passes" but does not document `npm test`. The commit touches HeroProductFilm.tsx — a frontend component with animation logic, crossfade layers, and reduced-motion handling. Sprint 481 (pricing/page.tsx, 134 lines) has no verification recorded at all because it has no todo.md entry. The npm test gate has now been a finding across five consecutive audits (20-24). The oscillation pattern from audits 20-23 continues: the gate is structurally present in the Post-Sprint Checklist and lesson documentation, but execution remains inconsistent. The risk this cycle is lower than Audit 23 (3 files changed vs. 58+ files), but the pattern persistence is the concern. Sprint 478's planned verification section explicitly includes `npx jest --no-coverage` — showing the gate is internalized in planning but not in execution for Sprint 480 and 481.
+**Recommendation:** Run `npm test` now and record the result. Elevate `npm test` to be the FIRST item in the Post-Sprint Checklist (before `npm run build`) to break the pattern of it being treated as secondary to the build gate.
+
+### A5. Demand Elegance (Balanced) — 5/5
+**Finding:** Zero TODO/FIXME/HACK comments across the entire codebase (confirmed via grep across both `frontend/src/` and `backend/*.py`). The pricing page code (`page.tsx`) is well-structured: typed discriminated unions (`Uploads`, `Features`, `TeamSize`), a pure function `getRecommendedTier()` with clear decision logic, and persona-based defaults for the plan estimator. HeroProductFilm.tsx uses `usePhaseTimer` as a clean abstraction for sequential animation phases, `useHasMounted` for hydration safety, and `MotionConfig reducedMotion="user"` — the correct framer-motion pattern replacing the previous hard-gate. The pricing polish commits (oatmeal accents, sage accents) use Oat & Obsidian design tokens correctly. The MarketingNav fix (893715f) is a single-line `href` change — appropriately minimal for a nav link fix. No over-engineering detected in any change.
+**Recommendation:** Continue current practice.
+
+### A6. Autonomous Bug Fixing — 5/5
+**Finding:** The Sprint 480 sequence demonstrates autonomous iterative refinement: initial redesign (78f2d52), followed by scoping the color inversion to the film panel only (fd1a6a0), then increasing the analyze dwell time from 7.5s to 10s (f4bdf92) for smoother transitions. Each follow-up commit has a specific descriptive message identifying the exact adjustment. The Platform nav link fix (893715f) was a self-contained single-line fix. No back-and-forth with the user required. No incomplete fixes. The Sprint 480 reduced-motion fix was caught and resolved within the same sprint cycle — a real regression (Windows 11 default hides entire scrubber UI) identified and fixed autonomously.
+**Recommendation:** Continue current practice.
+
+### B. Task Management — 4/5
+**Finding:** Four of six sub-practices are consistently applied where todo.md entries exist. Plan First: Sprint 480 has a full pre-implementation checklist, Sprint 479 has a 7-item remediation checklist, Sprint 478 has a 4-wave decomposition plan with verification. Track Progress: Sprint 480 and 479 are marked COMPLETE with all items checked. Capture Lessons: 3 new Sprint 480 lessons on file. Explain Changes: commit messages are descriptive throughout (Sprint 481's message is particularly good: "Plan Estimator redesign — uploads match tier limits, tools→features axis").
+
+Two gaps:
+1. **Sprint 481 bypasses protocol.** Named as a sprint, uses the `Sprint X: Description` commit convention, modifies 134 lines — yet has no todo.md entry, no verification documented, no commit SHA recorded. This is the same pattern from Audit 23 where ad-hoc work bypasses tracking. The lesson documenting this pattern was captured but not applied within the same cycle.
+2. **npm test not recorded.** Sprint 480's verification section records only `npm run build`. Sprint 478's planned verification includes `npx jest --no-coverage` but the sprint hasn't been executed yet. The Post-Sprint Checklist includes `npm test` as item 2 — it was not applied for Sprint 480 or 481.
+
+The improvement over Audit 23: the ratio of tracked vs. untracked work is better (2 of 3 substantive sprints tracked, vs. 2 of 5 in Audit 23). Sprint 479 is newly tracked work that would have been untracked in the Audit 23 pattern. The protocol is being applied more consistently but not universally.
+**Recommendation:** Add the Sprint 481 retroactive entry. Record npm test results for Sprint 480. Going forward, enforce a hard rule: any commit using the `Sprint X:` naming convention MUST have a corresponding todo.md entry — the naming convention itself is the signal that the work requires tracking.
+
+### C. Core Principles — 5/5
+**Finding:** Simplicity First: Sprint 481's plan estimator redesign uses typed discriminated unions and a pure decision function — no state management framework, no backend API call for recommendations. The pricing polish commits are net-neutral in line count (72 insertions, 66 deletions across 3 files) — refinement without bloat. No Laziness: the HeroProductFilm dwell time adjustment (f4bdf92) was a follow-up to the initial redesign, not deferred — the developer recognized the 7.5s dwell was insufficient and fixed it to 10s in a subsequent commit. The reduced-motion fix was resolved in-cycle. Minimal Impact: the 5 commits in this cycle touch exactly 3 files total. No unrelated modifications. Zero-Storage compliance unchanged. Oat & Obsidian design mandate fully compliant: oatmeal accents and sage accents use the correct theme tokens, no generic Tailwind colors detected. This is the 12th consecutive cycle at 5/5 for Core Principles.
+**Recommendation:** Continue current practice.
+
+### Top Priority for Next Cycle
+**Add the Sprint 481 todo.md entry and run npm test.** Sprint 481 is a named sprint with 134 changed lines and no todo.md entry — this directly violates the lesson captured in this same cycle ("Ad-Hoc Creative Work Still Requires Todo Entries"). Create a brief entry with objectives, verification results, and commit SHA e3d6c88. Then run `npm test` and record the result in both the Sprint 480 and Sprint 481 review sections. The npm test gate has been a finding in 5 consecutive audits (20-24). Sprint 478's planned verification section already includes `npx jest --no-coverage` — the structural awareness exists. The gap is purely execution consistency. These two actions (retroactive entry + npm test) close all open findings and bring the project back to 5.0 eligibility.
+
+### Trend Note
+Partial recovery from Audit 23 (4.1) to Audit 24 (4.5).
+- Workflow Orchestration: 4.3 → 4.5 (improved — Sprint 480 and 479 properly tracked with pre-implementation checklists; A4 improved from 3 to 4 as scope of unverified changes is much smaller; A3 at 4 due to lesson-execution gap)
+- Task Management: 3/5 → 4/5 (recovered — ratio of tracked sprints improved from 2/5 to 2/3; Sprint 479 follows protocol rigorously; only Sprint 481 bypasses)
+- Core Principles: 5/5 → 5/5 (maintained — 12th consecutive cycle at 5/5)
+- Overall: 4.1 → 4.5 (recovered — returned to Excellent band from Good band)
+
+This is the 24th audit. The project has returned to the Excellent band (4.5 >= 4.5) after one cycle in the Good band. The recovery is driven by improved tracking discipline: Sprint 480 and 479 both have full todo.md entries with checklists, review sections, and completion markers. Sprint 478 demonstrates forward planning with npm test explicitly in its verification section. The persistent gap is Sprint 481 — a named sprint that bypassed the protocol despite the "Ad-Hoc Creative Work" lesson being documented in this same cycle. The npm test gate oscillation continues (5th consecutive audit as a finding) but the risk magnitude is much lower than Audit 23 (3 files vs. 58+ files). Core Principles remains at a perfect 12-cycle streak. The path back to 5.0 is clear: retroactive Sprint 481 entry + npm test execution.
+
+---
+## Digital Excellence Council — 2026-03-04 | 17 Findings (P2: 6, P3: 11)
+---
+
+**Scope:** 7 commits (e3b7f04..e3d6c88), 19 files changed, 1,266 insertions / 297 deletions
+**Full Report:** `reports/council-audit-2026-03-04.md`
+
+### Critical Status
+- Zero-Storage: **PASS** | Auth/CSRF: **PASS** | Observability: **PASS**
+
+### Key Findings
+| ID | Sev | Category | Summary |
+|----|-----|----------|---------|
+| F-001 | P2 | Process | Sprint 481 has no todo.md entry (repeated protocol violation) |
+| F-002 | P2 | Ops | Stale Stripe env var names in .env.example — **blocks Sprint 447** |
+| F-003 | P2 | A11y | Pricing table `<th>` missing `scope` attributes |
+| F-004 | P2 | A11y | FAQ accordion missing `aria-controls` |
+| F-005 | P2 | A11y | Slider `aria-valuenow` stale (MotionValue at render time) |
+| F-006 | P2 | A11y | Slider missing `aria-valuetext` for step names |
+| F-007 | P3 | Code | 3 f-string SQL remain in test_timestamp_defaults.py (incomplete S479 fix) |
+| F-008 | P3 | API | Residual `status_code=200` on accrual-completeness endpoint |
+| F-009 | P3 | A11y | CSS `animate-pulse` bypasses MotionConfig reduced-motion |
+| F-010 | P3 | Types | Missing `as const` on `ease: 'linear'` (HeroProductFilm:740) |
+| F-011 | P3 | Code | StaticFallback dead code (136 lines unreachable) |
+| F-012 | P3 | Design | Non-palette rgba(189,189,189,0.3) in animation |
+| F-013 | P3 | Arch | Hardcoded pricing in FAQ answers (drift risk) |
+| F-014 | P3 | Process | 3 orphaned commits without sprint numbers |
+| F-015 | P3 | Process | Sprint 480 review missing npm test results |
+| F-016 | P3 | A11y | Pricing selectors/toggles missing radiogroup semantics |
+| F-017 | P3 | A11y | Decorative SVGs missing `aria-hidden="true"` |
+
+### Top Themes
+1. **Accessibility ARIA Gaps** (F-003/004/005/006/009/016/017): 7 findings on new pricing page and HeroProductFilm slider — ARIA review appears skipped during Sprints 480-481
+2. **Process Protocol Drift** (F-001/014/015): Sprint 481 undocumented, 50% commit convention compliance, npm test not recorded
+3. **Incomplete Remediation** (F-007/008): Sprint 479 F-004 and F-007 only partially fixed
+
+### Council Tensions Resolved
+- Sprint 481 documentation gap: P2 sustained (8/9) — "If it merits a sprint number, it merits documentation"
+- `animate-pulse` severity: P3 sustained (8/9) — Tailwind `motion-safe:` prefix is a one-word fix
+- StaticFallback: P3, removal recommended — git blame as recovery mechanism
+
+---
+## Audit — 2026-03-04 (25th) | Excellent | Overall: 4.6/5.0
+---
+
+### Scores at a Glance
+| Pillar                  | Score |
+|-------------------------|-------|
+| Workflow Orchestration  | 4.7   |
+| Task Management         | 4/5   |
+| Core Principles         | 5/5   |
+| **Overall**             | **4.6** |
+
+### A1. Plan Mode Default — 5/5
+**Finding:** All four active sprints (479-482) have todo.md entries with structured checklists, objectives, and review sections. Sprint 482 (Digital Excellence Council Audit #2 Remediation) has a comprehensive 19-item checklist mapping directly to 17 council findings plus 2 additional verification items. Sprint 481's retroactive entry — the sole top priority from Audit 24 — was created as Sprint 482 F-001, closing the gap within one cycle. Sprint 480 was updated with corrected dwell time (7.5s→10s) and retroactive npm test verification note. Sprint 478 remains pre-planned with a 4-wave decomposition. No untracked sprint-numbered commits exist in the git log. The Audit 24 pattern of "named sprint without todo.md entry" is fully resolved.
+**Recommendation:** Continue current practice.
+
+### A2. Subagent Strategy — 5/5
+**Finding:** 9 agents in `.claude/agents/` — the original 8 plus DIGITAL_EXCELLENCE_COUNCIL_PROMPT.md. All single-purpose with clear role boundaries. The Digital Excellence Council agent is actively producing value: its second audit generated 17 findings, all 17 were remediated in Sprint 482. This is the most impactful agent addition since the project-auditor — it functions as a complementary code quality gate that catches ARIA, type safety, and remediation completeness gaps that the project auditor's workflow-focused methodology does not. Agent roster has been stable across nine consecutive audit cycles (excluding the one council addition).
+**Recommendation:** Continue current practice.
+
+### A3. Self-Improvement Loop — 4/5
+**Finding:** Sprint 480 lessons (3 lessons: reduced-motion MotionConfig pattern, phase-based animation with `isActive` boolean, `useCountAnimation` with rAF) are well-structured with correction/root-cause/prevention-rule format. The Verification Gate Discipline lesson and Ad-Hoc Creative Work lesson are on file. The Digital Excellence Council report itself functions as a structural self-improvement mechanism — it caught Sprint 479's incomplete remediations (F-007: 3 remaining f-string SQL; F-008: residual `status_code=200`) that the Sprint 479 "COMPLETE" status missed. However, no lesson was captured from this recurring pattern of incomplete remediation. Sprint 479 partially fixed f-string SQL (some instances, not all) and partially removed `status_code=200` (3 endpoints, not 4). Sprint 482 F-009 similarly fixed `animate-pulse` in HeroProductFilm.tsx only — 50+ other instances across the codebase remain with bare `animate-pulse` without the `motion-safe:` prefix. The pattern: when remediating N instances of a codebase-wide pattern, grep verification of completeness is not being performed before marking the finding resolved.
+**Recommendation:** Capture a lesson: "When fixing a pattern-based finding (e.g., f-string SQL, `status_code=200`, `animate-pulse`), grep the entire codebase for ALL remaining instances before marking the finding complete. A partial fix is an incomplete remediation, not a closed finding."
+
+### A4. Verification Before Done — 4/5
+**Finding:** Sprint 482's verification section records: `npm run build` passes and "PricingPage.test.tsx — 16/16 passed; 5 other pre-existing failures in unmodified files." The PricingPage targeted test is correct — the file was modified. However, 5 pre-existing test failures in unmodified files are acknowledged but left unresolved. The Post-Sprint Checklist requires `npm test passes` — and a suite with 5 failures does not pass. Sprint 480's retroactive note states "npm test — all suites passing (verified Sprint 482)" implying the full suite was run at some point during Sprint 482 work, but the Sprint 482 review itself records only targeted PricingPage results. The npm test gate has now been a finding across six consecutive audits (20-25). The current state is an improvement over Audit 23 (partial test execution vs. none), but the 5 pre-existing failures represent a verification gap that should be closed.
+**Recommendation:** Fix the 5 pre-existing test failures and run `npm test` full suite. Record the result in the Sprint 482 review. The pre-existing failures should be fixed before commit — committing with known failing tests normalizes test failures.
+
+### A5. Demand Elegance (Balanced) — 5/5
+**Finding:** Zero TODO/FIXME/HACK across the entire codebase. Sprint 482's fixes are uniformly surgical: `scope="col"` on `<th>` elements, `aria-controls` + `id` pairs on FAQ accordion, deterministic `STEPS.indexOf(activeStep)` replacing stale `progress.get()` for `aria-valuenow`, `as const` on `ease: 'linear'`, `motion-safe:animate-pulse` prefix, `role="radiogroup"` / `role="radio"` / `aria-checked` for SegmentedSelector, `aria-hidden="true"` on decorative SVGs, `.bindparams()` replacing f-string SQL, FAQ seat pricing interpolated from `SEAT_CONFIGS` constants. StaticFallback dead code removal (136 lines) is the correct cleanup. The `.env.example` Stripe variable name correction (Team→Professional, add Enterprise) is precise and accurate against the current pricing structure. No over-engineering in any fix.
+**Recommendation:** Continue current practice.
+
+### A6. Autonomous Bug Fixing — 5/5
+**Finding:** 17 Digital Excellence Council findings were diagnosed and remediated autonomously in a single sprint. The remediation spans 6 P2 and 11 P3 findings across accessibility (ARIA scope/controls/valuenow/valuetext/radiogroup/aria-hidden), code quality (f-string SQL, status_code, dead code, `as const`, non-palette color), architecture (hardcoded FAQ pricing → constant interpolation), and process (retroactive entries, npm test verification). Each fix is self-contained with no back-and-forth. The PricingPage test was updated to match the new `role="radio"` semantics (replacing `getByRole('button')` with `getByRole('radio')`). No incomplete fixes within the remediations that were attempted — the incompleteness issue (A3 finding) is about scope of pattern scanning, not about quality of individual fixes.
+**Recommendation:** Continue current practice.
+
+### B. Task Management — 4/5
+**Finding:** Five of six sub-practices are applied at a high level. Plan First: Sprint 482 has a full pre-implementation checklist mapping to council findings. Sprint 481 retroactive entry present. Track Progress: all 19 items checked with verification. Explain Changes: Sprint 482 review documents scope, key changes, and council report reference. Capture Lessons: Sprint 480 lessons on file. Document Results: review sections present for all active sprints.
+
+Three gaps:
+1. **Sprint 482 not committed.** 14 modified files in the working tree. Sprint 482 is marked COMPLETE with a full review section but no commit SHA. The Post-Sprint Checklist mandates `git commit` and SHA recording as the final step. This is the same pattern from Audit 15 (uncommitted files accumulating across sprints).
+2. **5 pre-existing test failures unresolved.** The Post-Sprint Checklist item `npm test passes` is not satisfied when 5 tests fail. Acknowledging failures in the review section is transparent but insufficient — the gate requires passage.
+3. **Incomplete remediation pattern not lesson-captured.** Sprint 479's partial f-string SQL and partial `status_code=200` fixes were caught by the council audit, not by self-verification. Sprint 482's `animate-pulse` fix is similarly scoped to one instance of 50+. The pattern recurs without a prevention lesson.
+**Recommendation:** (1) Commit Sprint 482 work with `Sprint 482: Digital Excellence Council Audit #2 remediation` and record the SHA. (2) Fix the 5 pre-existing test failures before or alongside the commit. (3) Add a lesson about comprehensive pattern scanning during remediation.
+
+### C. Core Principles — 5/5
+**Finding:** Simplicity First: Sprint 482's 17 fixes total minimal line changes per finding — ARIA attributes are additive, `as const` is one word, `.bindparams()` is a method swap, dead code removal is subtraction. No fix introduces new complexity. The FAQ pricing interpolation from `SEAT_CONFIGS` constants is the correct single-source-of-truth pattern. No Laziness: all 17 findings were addressed, none deferred. The `.env.example` correction (F-002) is particularly important as it was flagged as blocking Sprint 447 (Stripe Production Cutover) — clearing the blocker proactively. Minimal Impact: Sprint 482 touches only the files identified in the council findings — no unrelated modifications. Zero-Storage compliance unchanged. Oat & Obsidian design tokens: the `rgba(189,189,189,0.3)` non-palette color was corrected to obsidian-palette `rgba(176,176,176,0.3)` (F-012). This is the 13th consecutive cycle at 5/5 for Core Principles.
+**Recommendation:** Continue current practice.
+
+### Top Priority for Next Cycle
+**Commit Sprint 482 and fix the 5 pre-existing test failures.** Sprint 482 is marked COMPLETE with 17 findings remediated, but 14 files remain uncommitted. The Post-Sprint Checklist requires `git commit` as the final step and SHA recording in the review section. Before committing: fix the 5 pre-existing test failures so `npm test passes` is truly satisfied, then commit with `Sprint 482: Digital Excellence Council Audit #2 remediation — 17 findings (6 P2 + 11 P3)`. Record the SHA. Secondary: add a lesson about grep-verifying completeness when fixing pattern-based findings.
+
+### Trend Note
+Marginal improvement from Audit 24 (4.5) to Audit 25 (4.6).
+- Workflow Orchestration: 4.5 → 4.7 (improved — A1 recovered to 5/5 as Sprint 481 retroactive entry closes the sole Audit 24 A1 gap; A3 remains at 4 due to incomplete remediation pattern not captured as lesson; A4 remains at 4 with npm test partially applied and 5 pre-existing failures unresolved)
+- Task Management: 4/5 → 4/5 (flat — Sprint 482 fully tracked but uncommitted; pre-existing test failures not resolved; incomplete remediation pattern repeats)
+- Core Principles: 5/5 → 5/5 (maintained — 13th consecutive cycle at 5/5)
+- Overall: 4.5 → 4.6 (marginal improvement — remained in Excellent band)
+
+This is the 25th audit. The project remains in the Excellent band. Sprint 482 demonstrates strong remediation discipline — 17 council findings addressed in a single sprint with surgical precision. The Audit 24 top priority (Sprint 481 todo.md entry) was executed. The persistent gaps are procedural: (1) the npm test gate oscillation continues for a 6th consecutive audit, now with 5 acknowledged pre-existing failures rather than complete non-execution — an improvement in transparency but not resolution; (2) Sprint 482 work is complete but uncommitted, repeating the commit-step lag pattern; (3) incomplete remediation (fixing some instances of a pattern but not all) recurs without a captured lesson. Code quality remains at its peak. The Digital Excellence Council agent is proving its value as a complementary quality gate — it caught gaps that the project auditor methodology does not cover (ARIA semantics, type safety, remediation completeness).

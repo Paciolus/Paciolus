@@ -115,7 +115,7 @@ function useCountAnimation(target: number, durationSec: number, isActive: boolea
 
 function CursorIcon({ className = '' }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor" stroke="none">
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true">
       <path d="M5 2L19 12L12 13L15 21L12 22L9 14L5 17V2Z" />
     </svg>
   )
@@ -380,7 +380,8 @@ function TimelineScrubber({
         aria-label="Timeline scrubber"
         aria-valuemin={0}
         aria-valuemax={100}
-        aria-valuenow={Math.round(progress.get() * 100)}
+        aria-valuenow={Math.round((STEPS.indexOf(activeStep) / (STEPS.length - 1)) * 100)}
+        aria-valuetext={STEP_LABELS[activeStep]}
         tabIndex={0}
       >
         {/* Track background */}
@@ -415,7 +416,7 @@ function TimelineScrubber({
           " />
 
           {/* Glow ring */}
-          <div className="absolute inset-0 -m-1 rounded-full bg-sage-400/20 animate-pulse pointer-events-none" />
+          <div className="absolute inset-0 -m-1 rounded-full bg-sage-400/20 motion-safe:animate-pulse pointer-events-none" />
         </motion.div>
       </div>
     </div>
@@ -737,7 +738,7 @@ function AnalyzeLayer({ opacity, isActive }: { opacity: MotionValue<number>; isA
             className="absolute top-0 bottom-0 w-0.5 bg-gradient-to-b from-transparent via-sage-400/60 to-transparent z-10 pointer-events-none"
             initial={{ left: 0 }}
             animate={{ left: '100%' }}
-            transition={{ duration: 2.0, repeat: Infinity, ease: 'linear' }}
+            transition={{ duration: 2.0, repeat: Infinity, ease: 'linear' as const }}
           />
         )}
 
@@ -759,7 +760,7 @@ function AnalyzeLayer({ opacity, isActive }: { opacity: MotionValue<number>; isA
                       ? { borderColor: 'rgba(74,124,89,0.5)', opacity: 1 }
                       : isActiveTile
                         ? { borderColor: 'rgba(74,124,89,0.3)', opacity: 1 }
-                        : { borderColor: 'rgba(189,189,189,0.3)', opacity: 0.5 }
+                        : { borderColor: 'rgba(176,176,176,0.3)', opacity: 0.5 }
                   }
                   transition={{ delay: tileDelay, duration: 0.2 }}
                 >
@@ -1020,12 +1021,12 @@ function FilmStage({
             aria-label={isAutoPlaying ? 'Pause auto-play' : 'Resume auto-play'}
           >
             {isAutoPlaying ? (
-              <svg className="w-2.5 h-2.5" viewBox="0 0 12 12" fill="currentColor">
+              <svg className="w-2.5 h-2.5" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
                 <rect x="1" y="1" width="3.5" height="10" rx="0.75" />
                 <rect x="7.5" y="1" width="3.5" height="10" rx="0.75" />
               </svg>
             ) : (
-              <svg className="w-2.5 h-2.5" viewBox="0 0 12 12" fill="currentColor">
+              <svg className="w-2.5 h-2.5" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
                 <path d="M2.5 1.5a.5.5 0 0 1 .76-.43l7.5 4.5a.5.5 0 0 1 0 .86l-7.5 4.5A.5.5 0 0 1 2.5 10.5v-9z" />
               </svg>
             )}
@@ -1065,148 +1066,6 @@ function FilmStage({
         </div>
       </div>
     </div>
-  )
-}
-
-// ── Reduced Motion Fallback ──────────────────────────────────────────
-// Kept for potential SSR/noscript use. The main HeroScrollSection always
-// renders ScrubberHero, with MotionConfig handling reduced-motion gracefully.
-
-function StaticFallback() {
-  const { isAuthenticated } = useAuth()
-  const mounted = useHasMounted()
-  const [activeStep, setActiveStep] = useState<FilmStep>('export')
-
-  return (
-    <section className="relative z-10 pt-28 pb-24 px-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-center">
-          <div className="text-center lg:text-left">
-            <h1 className="type-display-xl text-oatmeal-100 mb-6 text-center lg:text-left">
-              The Workpapers
-              <br />
-              <span className="bg-gradient-to-r from-sage-400 via-sage-300 to-oatmeal-300 bg-clip-text text-transparent">
-                Write Themselves
-              </span>
-            </h1>
-
-            <p className="font-sans text-lg text-oatmeal-400 max-w-lg mb-10 text-center lg:text-left">
-              Professional-grade diagnostics, testing, and workpapers — built on ISA and PCAOB standards. Zero data retained.
-            </p>
-
-            <div className="flex items-center justify-center lg:justify-start gap-4">
-              {mounted && !isAuthenticated && (
-                <Link
-                  href="/register"
-                  className="group relative px-8 py-3.5 bg-sage-600 rounded-xl text-white font-sans font-medium hover:bg-sage-500 transition-all shadow-lg shadow-sage-600/25 hover:shadow-xl hover:shadow-sage-600/30"
-                  onClick={() => trackEvent('hero_cta_click', { cta: 'start_trial' })}
-                >
-                  <span className="relative z-10">Start Free Trial</span>
-                </Link>
-              )}
-              <Link
-                href="/demo"
-                className="px-8 py-3.5 bg-transparent border border-oatmeal-400/30 rounded-xl text-oatmeal-300 font-sans font-medium hover:border-oatmeal-400/50 hover:bg-oatmeal-200/5 transition-all"
-                onClick={() => trackEvent('hero_cta_click', { cta: 'explore_demo' })}
-              >
-                Explore Demo
-              </Link>
-            </div>
-          </div>
-
-          {/* Static panel with step tabs */}
-          <div className="w-full max-w-md mx-auto lg:max-w-none">
-            <div className="rounded-2xl border border-obsidian-200/30 bg-white/90 backdrop-blur-xl overflow-hidden shadow-xl shadow-obsidian-200/20">
-              {/* Tab navigation */}
-              <div className="flex border-b border-obsidian-200/20">
-                {STEPS.map((step) => (
-                  <button
-                    key={step}
-                    onClick={() => setActiveStep(step)}
-                    className={`flex-1 px-3 py-2.5 font-sans text-xs font-medium uppercase tracking-wider transition-colors ${
-                      step === activeStep
-                        ? 'text-obsidian-800 border-b-2 border-sage-500'
-                        : 'text-obsidian-400 hover:text-obsidian-600'
-                    }`}
-                  >
-                    {STEP_LABELS[step]}
-                  </button>
-                ))}
-              </div>
-
-              <div className="min-h-[280px] md:min-h-[260px] lg:min-h-[280px] bg-oatmeal-50 flex flex-col items-center justify-center gap-4 p-5">
-                {activeStep === 'upload' && (
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-white border border-sage-400/40 shadow-sm">
-                      <BrandIcon name="file-plus" className="w-6 h-6 text-sage-500" />
-                      <div>
-                        <p className="font-mono text-xs text-obsidian-800 font-medium">Your_Company_FY2025.xlsx</p>
-                        <p className="font-mono text-[10px] text-obsidian-400">2.4 MB</p>
-                      </div>
-                      <BrandIcon name="checkmark" className="w-4 h-4 text-sage-500" />
-                    </div>
-                    <p className="font-mono text-sm text-obsidian-700">847 transactions &middot; 62 accounts &middot; FY 2025</p>
-                  </div>
-                )}
-
-                {activeStep === 'analyze' && (
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="grid grid-cols-3 gap-1.5 w-full max-w-[280px]">
-                      {TOOL_TILES.slice(0, 9).map((tile) => (
-                        <div
-                          key={tile.name}
-                          className={`rounded-lg border px-1.5 py-2 flex items-center justify-center ${
-                            tile.activates
-                              ? 'bg-white border-sage-400/50'
-                              : 'bg-oatmeal-100/50 border-obsidian-200/30 opacity-30'
-                          }`}
-                        >
-                          <span className="font-sans text-[9px] uppercase tracking-wider text-center leading-tight text-obsidian-700">
-                            {tile.name}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                    <p className="font-sans text-xs text-obsidian-500">108 tests run across 9 tools &middot; 3 findings flagged</p>
-                  </div>
-                )}
-
-                {activeStep === 'export' && (
-                  <div className="flex flex-col items-center gap-3 w-full max-w-[320px]">
-                    <div className="w-full flex flex-col gap-2.5">
-                      <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-white border border-obsidian-200/40 shadow-sm">
-                        <BrandIcon name="spreadsheet" className="w-5 h-5 text-sage-500 flex-shrink-0" />
-                        <span className="font-sans text-sm text-obsidian-800 font-medium flex-1 min-w-0 truncate">
-                          Your_Company_Workpapers.xlsx
-                        </span>
-                        <BrandIcon name="download-arrow" className="w-4 h-4 text-sage-500" />
-                      </div>
-                      <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-white border border-obsidian-200/40 shadow-sm">
-                        <BrandIcon name="document-blank" className="w-5 h-5 text-obsidian-500 flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <span className="font-sans text-sm text-obsidian-800 font-medium">17 PDF Memos</span>
-                          <p className="font-sans text-[11px] text-obsidian-400 truncate mt-0.5">
-                            JE Testing &middot; Revenue &middot; AP &middot; Sampling &middot; ...
-                          </p>
-                        </div>
-                        <BrandIcon name="download-arrow" className="w-4 h-4 text-sage-500" />
-                      </div>
-                    </div>
-                    <div className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-sage-500 text-white">
-                      <BrandIcon name="download-arrow" className="w-4 h-4" />
-                      <span className="font-sans text-sm font-medium">Download Engagement File</span>
-                    </div>
-                    <p className="font-sans text-[11px] text-obsidian-400 italic text-center">
-                      Processed in-memory and immediately destroyed. Raw financial data is never stored.
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
   )
 }
 

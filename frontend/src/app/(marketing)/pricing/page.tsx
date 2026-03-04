@@ -169,14 +169,17 @@ function SegmentedSelector<T extends string>({
   value: T
   onChange: (v: T) => void
 }) {
+  const labelId = `segment-label-${label.replace(/\s+/g, '-').toLowerCase()}`
   return (
     <div>
-      <p className="font-sans text-sm text-oatmeal-400 mb-2">{label}</p>
-      <div className="flex rounded-xl border border-oatmeal-500/20 overflow-hidden">
+      <p id={labelId} className="font-sans text-sm text-oatmeal-400 mb-2">{label}</p>
+      <div className="flex rounded-xl border border-oatmeal-500/20 overflow-hidden" role="radiogroup" aria-labelledby={labelId}>
         {options.map((opt) => (
           <button
             key={opt.value}
             type="button"
+            role="radio"
+            aria-checked={value === opt.value}
             onClick={() => onChange(opt.value)}
             className={`flex-1 py-2 px-3 text-xs font-sans transition-colors ${
               value === opt.value
@@ -205,9 +208,11 @@ function BillingToggle({
 }) {
   return (
     <div className="flex items-center justify-center gap-3">
-      <div className="inline-flex rounded-full border border-obsidian-500/30 bg-obsidian-800/60 p-1">
+      <div className="inline-flex rounded-full border border-obsidian-500/30 bg-obsidian-800/60 p-1" role="radiogroup" aria-label="Billing interval">
         <button
           type="button"
+          role="radio"
+          aria-checked={interval === 'monthly'}
           onClick={() => onChange('monthly')}
           className={`relative px-5 py-2 rounded-full font-sans text-sm font-medium transition-colors ${
             interval === 'monthly'
@@ -219,6 +224,8 @@ function BillingToggle({
         </button>
         <button
           type="button"
+          role="radio"
+          aria-checked={interval === 'annual'}
           onClick={() => onChange('annual')}
           className={`relative px-5 py-2 rounded-full font-sans text-sm font-medium transition-colors ${
             interval === 'annual'
@@ -490,7 +497,7 @@ const faqItems: FaqItem[] = [
   },
   {
     question: 'How do seats work?',
-    answer: 'Professional includes 7 seats with additional seats at $65/month ($650/year) each, up to 20 total. Enterprise includes 20 seats with additional seats at $45/month ($450/year) each, up to 100 total. Solo is a single-seat plan.',
+    answer: `Professional includes ${SEAT_CONFIGS[0]!.baseSeats} seats with additional seats at $${SEAT_CONFIGS[0]!.seatMonthly}/month ($${SEAT_CONFIGS[0]!.seatAnnual}/year) each, up to ${SEAT_CONFIGS[0]!.maxSeats} total. Enterprise includes ${SEAT_CONFIGS[1]!.baseSeats} seats with additional seats at $${SEAT_CONFIGS[1]!.seatMonthly}/month ($${SEAT_CONFIGS[1]!.seatAnnual}/year) each, up to ${SEAT_CONFIGS[1]!.maxSeats} total. Solo is a single-seat plan.`,
   },
   {
     question: 'What is the difference between Solo and Professional?',
@@ -498,7 +505,7 @@ const faqItems: FaqItem[] = [
   },
   {
     question: 'What does Enterprise include beyond Professional?',
-    answer: 'Enterprise ($1,000/mo) adds unlimited uploads, 20 seats included (expandable to 100 at $45/seat), bulk upload (up to 5 files at once), custom PDF branding with your firm logo, a dedicated account manager, and a custom SLA.',
+    answer: `Enterprise ($${tiers[2]!.monthlyPrice.toLocaleString()}/mo) adds unlimited uploads, ${SEAT_CONFIGS[1]!.baseSeats} seats included (expandable to ${SEAT_CONFIGS[1]!.maxSeats} at $${SEAT_CONFIGS[1]!.seatMonthly}/seat), bulk upload (up to 5 files at once), custom PDF branding with your firm logo, a dedicated account manager, and a custom SLA.`,
   },
   {
     question: 'What can Free users access?',
@@ -736,7 +743,7 @@ export default function PricingPage() {
                 <ul className="space-y-2.5 mb-6 flex-1">
                   {tier.features.map((feature) => (
                     <li key={feature.text} className="flex items-start gap-2.5">
-                      <svg className="w-4 h-4 text-sage-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="w-4 h-4 text-sage-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
                       <span className="font-sans text-sm text-oatmeal-300">{feature.text}</span>
@@ -883,13 +890,14 @@ export default function PricingPage() {
 
             <div className="overflow-x-auto rounded-2xl border border-sage-500/20">
               <table className="w-full text-left min-w-[700px]">
+                <caption className="sr-only">Feature comparison across Free, Solo, Professional, and Enterprise tiers</caption>
                 <thead>
                   <tr className="border-b border-obsidian-500/30">
-                    <th className="font-serif text-sm text-oatmeal-400 py-4 px-5 w-[20%]">Feature</th>
-                    <th className="font-serif text-xs text-oatmeal-400 py-4 px-3 text-center w-[20%]">Free</th>
-                    <th className="font-serif text-xs text-oatmeal-400 py-4 px-3 text-center w-[20%]">Solo</th>
-                    <th className="font-serif text-xs text-sage-400 py-4 px-3 text-center w-[20%]">Professional</th>
-                    <th className="font-serif text-xs text-oatmeal-400 py-4 px-3 text-center w-[20%]">Enterprise</th>
+                    <th scope="col" className="font-serif text-sm text-oatmeal-400 py-4 px-5 w-[20%]">Feature</th>
+                    <th scope="col" className="font-serif text-xs text-oatmeal-400 py-4 px-3 text-center w-[20%]">Free</th>
+                    <th scope="col" className="font-serif text-xs text-oatmeal-400 py-4 px-3 text-center w-[20%]">Solo</th>
+                    <th scope="col" className="font-serif text-xs text-sage-400 py-4 px-3 text-center w-[20%]">Professional</th>
+                    <th scope="col" className="font-serif text-xs text-oatmeal-400 py-4 px-3 text-center w-[20%]">Enterprise</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -900,7 +908,7 @@ export default function PricingPage() {
                         idx % 2 === 0 ? 'bg-obsidian-800/60' : 'bg-obsidian-800/30'
                       }`}
                     >
-                      <td className="font-sans text-sm text-oatmeal-300 py-3 px-5">{row.feature}</td>
+                      <th scope="row" className="font-sans text-sm text-oatmeal-300 py-3 px-5 font-normal">{row.feature}</th>
                       <td className="py-3 px-3 text-center"><CellContent value={row.free} /></td>
                       <td className="py-3 px-3 text-center"><CellContent value={row.solo} /></td>
                       <td className="py-3 px-3 text-center"><CellContent value={row.professional} /></td>
@@ -944,9 +952,11 @@ export default function PricingPage() {
                     }`}
                   >
                     <button
+                      id={`faq-question-${idx}`}
                       onClick={() => toggleFaq(idx)}
                       className="w-full flex items-center justify-between py-4 px-6 text-left group"
                       aria-expanded={isOpen}
+                      aria-controls={`faq-answer-${idx}`}
                     >
                       <span className="font-sans text-sm text-oatmeal-200 group-hover:text-oatmeal-100 transition-colors pr-4">
                         {item.question}
@@ -964,7 +974,7 @@ export default function PricingPage() {
                       </svg>
                     </button>
                     {isOpen && (
-                      <div className="px-6 pb-4">
+                      <div id={`faq-answer-${idx}`} role="region" aria-labelledby={`faq-question-${idx}`} className="px-6 pb-4">
                         <p className="type-body-sm text-oatmeal-400">
                           {item.answer}
                         </p>

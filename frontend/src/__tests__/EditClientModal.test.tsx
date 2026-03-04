@@ -3,7 +3,12 @@
  *
  * Tests: visibility, pre-populated form, validation,
  * delta-only submission, and close behavior.
+ *
+ * React 19 compat: Uses fireEvent.change + act-wrapped fireEvent.submit
+ * instead of userEvent.type on controlled inputs, which drops characters
+ * with React 19's batched state updates.
  */
+import { act, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { EditClientModal } from '@/components/portfolio/EditClientModal'
 import { render, screen, waitFor } from '@/test-utils'
@@ -68,12 +73,11 @@ describe('EditClientModal', () => {
   })
 
   it('shows validation error for empty name', async () => {
-    const user = userEvent.setup()
     render(<EditClientModal {...defaultProps} />)
 
     const nameInput = screen.getByLabelText(/Client Name/)
-    await user.clear(nameInput)
-    await user.tab() // trigger blur
+    fireEvent.change(nameInput, { target: { value: '' } })
+    fireEvent.blur(nameInput)
 
     await waitFor(() => {
       expect(screen.getByText('Client name is required')).toBeInTheDocument()
@@ -81,10 +85,11 @@ describe('EditClientModal', () => {
   })
 
   it('calls onClose without submit when no changes made', async () => {
-    const user = userEvent.setup()
     render(<EditClientModal {...defaultProps} />)
 
-    await user.click(screen.getByText('Save Changes'))
+    await act(async () => {
+      fireEvent.submit(screen.getByLabelText(/Client Name/).closest('form')!)
+    })
 
     await waitFor(() => {
       expect(defaultProps.onClose).toHaveBeenCalled()
@@ -93,13 +98,14 @@ describe('EditClientModal', () => {
   })
 
   it('submits only changed fields (delta)', async () => {
-    const user = userEvent.setup()
     render(<EditClientModal {...defaultProps} />)
 
     const nameInput = screen.getByLabelText(/Client Name/)
-    await user.clear(nameInput)
-    await user.type(nameInput, 'New Name')
-    await user.click(screen.getByText('Save Changes'))
+    fireEvent.change(nameInput, { target: { value: 'New Name' } })
+
+    await act(async () => {
+      fireEvent.submit(nameInput.closest('form')!)
+    })
 
     await waitFor(() => {
       expect(defaultProps.onSubmit).toHaveBeenCalledWith(1, { name: 'New Name' })

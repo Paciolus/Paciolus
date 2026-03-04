@@ -360,7 +360,7 @@ async def expense_category_analytics(
 # --- Accrual Completeness Estimator (Sprint 290) ---
 
 
-@router.post("/audit/accrual-completeness", response_model=AccrualCompletenessReportResponse, status_code=200)
+@router.post("/audit/accrual-completeness", response_model=AccrualCompletenessReportResponse)
 @limiter.limit(RATE_LIMIT_AUDIT)
 async def accrual_completeness_check(
     request: Request,

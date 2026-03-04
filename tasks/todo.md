@@ -117,10 +117,57 @@
 - [x] Film panel color inversion: white/oatmeal film panel + layer backgrounds, dark text inside panel only
 - [x] Section/left column/scrubber: kept original dark obsidian theme (not inverted)
 - [x] StaticFallback updated: tab navigation with light film panel, dark section background
-- [x] Analyze dwell time: 5000ms → 7500ms for richer animation viewing
+- [x] Analyze dwell time: 5000ms → 10000ms for richer animation viewing
+- [x] Build verification: `npm run build` passes
+- [x] Test verification: `npm test` — all suites passing (verified Sprint 482)
+
+**Review:** Complete rewrite of HeroProductFilm.tsx. Color inversion scoped to film panel only (section/left column/scrubber remain dark). Analyze dwell increased to 10s to let viewers absorb the scanning matrix animation. Commits: 78f2d52, fd1a6a0, f4bdf92.
+
+---
+
+### Sprint 482 — Digital Excellence Council Audit #2 Remediation
+**Status:** COMPLETE
+**Goal:** Fix all 17 findings from the 2026-03-04 Digital Excellence Council audit.
+
+- [x] F-001 (P2): Add retroactive Sprint 481 todo.md entry
+- [x] F-002 (P2): Update stale Stripe env var names in `.env.example` (Team→Professional, add Enterprise, fix seat price var names)
+- [x] F-003 (P2): Add `scope="col"` to pricing table `<th>`, `scope="row"` to first-column cells, `<caption className="sr-only">`
+- [x] F-004 (P2): Add `aria-controls`, `id`, `role="region"`, `aria-labelledby` to FAQ accordion
+- [x] F-005 (P2): Replace stale `progress.get()` with `STEPS.indexOf(activeStep)` for `aria-valuenow`
+- [x] F-006 (P2): Add `aria-valuetext={STEP_LABELS[activeStep]}` to timeline slider
+- [x] F-007 (P3): Convert 3 remaining f-string SQL to `.bindparams()` in `test_timestamp_defaults.py`
+- [x] F-008 (P3): Remove `status_code=200` from accrual-completeness endpoint
+- [x] F-009 (P3): Replace `animate-pulse` with `motion-safe:animate-pulse` for reduced-motion compliance
+- [x] F-010 (P3): Add `as const` to `ease: 'linear'` in HeroProductFilm scanning line transition
+- [x] F-011 (P3): Remove `StaticFallback` dead code (136 lines)
+- [x] F-012 (P3): Replace `rgba(189,189,189,0.3)` with obsidian-palette `rgba(176,176,176,0.3)`
+- [x] F-013 (P3): Interpolate FAQ seat pricing from `SEAT_CONFIGS` constants instead of hardcoded values
+- [x] F-014 (P3): Add Sprint 481 entry documenting all 4 orphaned commits
+- [x] F-015 (P3): Add `npm test` verification note to Sprint 480 review
+- [x] F-016 (P3): Add `role="radiogroup"` / `role="radio"` / `aria-checked` to SegmentedSelector and BillingToggle
+- [x] F-017 (P3): Add `aria-hidden="true"` to decorative SVGs (CursorIcon, play/pause, feature checkmarks)
+- [x] Update PricingPage test: `getByRole('button')` → `getByRole('radio')` for billing toggle
+- [x] Build verification: `npm run build` passes
+- [x] Test verification: `npm test` — 111 suites, 1,337 tests passing (full suite, pre-existing EditClientModal failure fixed)
+- [x] Audit 25 remediations: EditClientModal React 19 compat fix, remediation completeness lesson added
+
+**Review:** All 17 findings addressed (6 P2 + 11 P3). Key changes: pricing page ARIA overhaul (scope, radiogroup, FAQ disclosure pattern), HeroProductFilm slider accessibility (valuetext, deterministic valuenow), reduced-motion compliance (motion-safe prefix), dead code removal, .env.example Stripe var name correction. Pre-existing EditClientModal test failure fixed (React 19 controlled input compat — `userEvent.type` → `fireEvent.change`). Remediation completeness lesson captured in `tasks/lessons.md`. Council report: `reports/council-audit-2026-03-04.md`
+
+---
+
+### Sprint 481 — Plan Estimator & Pricing Page Redesign
+**Status:** COMPLETE
+**Goal:** Redesign pricing page Plan Estimator to match tier upload limits, switch tools→features axis, add oatmeal accents across color spectrum, remove Most Popular badge, unify card styling.
+
+- [x] Plan Estimator: uploads selector now matches actual tier limits (Under 10/100/500/Unlimited)
+- [x] Tools axis replaced with Features axis (Core tools & exports / + Team & sharing / + Branding & bulk)
+- [x] Oatmeal accents introduced across full color spectrum (borders, badges, dividers)
+- [x] Most Popular badge removed; all cards use unified sage-accent styling
+- [x] Sage divider accents added between sections
+- [x] Fix Platform nav link to go to homepage hero instead of #tools anchor
 - [x] Build verification: `npm run build` passes
 
-**Review:** Complete rewrite of HeroProductFilm.tsx. Color inversion scoped to film panel only (section/left column/scrubber remain dark). Analyze dwell increased to 7.5s to let viewers absorb the scanning matrix animation.
+**Review:** Pricing page redesign across 4 commits: d44239f (card styling + sage accents), 2991cfc (oatmeal accents), 893715f (nav link fix), e3d6c88 (estimator redesign). All changes are frontend-only, marketing page scope.
 
 ---
 

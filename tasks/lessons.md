@@ -14,6 +14,16 @@
 
 ---
 
+## Remediation Completeness (Sprint 482 / Audit 25)
+
+**Pattern:** When fixing a pattern-based finding (e.g., f-string SQL, `status_code=200`, `animate-pulse`), partial fixes are marked COMPLETE without verifying that ALL instances were addressed. Sprint 479 fixed f-string SQL in `test_timestamp_defaults.py` but left 3 instances — caught by the council audit. Sprint 479 removed `status_code=200` from 3 endpoints but missed the accrual-completeness endpoint — caught by the council audit.
+
+**Rule:** Before marking any pattern-based remediation finding as complete, run a codebase-wide grep for ALL remaining instances of the pattern. If the grep returns results, fix them or document why they are intentionally excluded. A partial fix is an incomplete remediation, not a closed finding.
+
+**Prevention:** After applying a fix, immediately run: `grep -r "<pattern>" <scope>` to verify zero remaining instances. Record the grep command and "0 results" in the sprint checklist.
+
+---
+
 ## Verification Gate Discipline
 
 ### npm test Must Run Full Suite — Never Targeted Subsets

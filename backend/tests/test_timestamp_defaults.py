@@ -95,8 +95,8 @@ class TestDBGeneratedTimestamps:
             text(
                 "INSERT INTO activity_logs (user_id, filename_hash, record_count, total_debits, total_credits, "
                 "materiality_threshold, was_balanced) "
-                f"VALUES ({user_id}, 'abc123', 100, 1000.0, 1000.0, 50.0, 1)"
-            )
+                "VALUES (:uid, 'abc123', 100, 1000.0, 1000.0, 50.0, 1)"
+            ).bindparams(uid=user_id)
         )
         db_session.flush()
         ts = db_session.execute(text("SELECT timestamp FROM activity_logs LIMIT 1")).scalar()
@@ -114,9 +114,9 @@ class TestDBGeneratedTimestamps:
         user_id = db_session.execute(text("SELECT id FROM users WHERE email = 'client@example.com'")).scalar()
         db_session.execute(
             text(
-                f"INSERT INTO clients (user_id, name, industry, fiscal_year_end, reporting_framework, entity_type, jurisdiction_country, settings) "
-                f"VALUES ({user_id}, 'Test Corp', 'other', '12-31', 'auto', 'other', 'US', '{{}}')"
-            )
+                "INSERT INTO clients (user_id, name, industry, fiscal_year_end, reporting_framework, entity_type, jurisdiction_country, settings) "
+                "VALUES (:uid, 'Test Corp', 'other', '12-31', 'auto', 'other', 'US', '{}')"
+            ).bindparams(uid=user_id)
         )
         db_session.flush()
         row = db_session.execute(text("SELECT created_at, updated_at FROM clients LIMIT 1")).fetchone()
@@ -136,18 +136,18 @@ class TestDBGeneratedTimestamps:
         user_id = db_session.execute(text("SELECT id FROM users WHERE email = 'eng@example.com'")).scalar()
         db_session.execute(
             text(
-                f"INSERT INTO clients (user_id, name, industry, fiscal_year_end, reporting_framework, entity_type, jurisdiction_country, settings) "
-                f"VALUES ({user_id}, 'EngCorp', 'other', '12-31', 'auto', 'other', 'US', '{{}}')"
-            )
+                "INSERT INTO clients (user_id, name, industry, fiscal_year_end, reporting_framework, entity_type, jurisdiction_country, settings) "
+                "VALUES (:uid, 'EngCorp', 'other', '12-31', 'auto', 'other', 'US', '{}')"
+            ).bindparams(uid=user_id)
         )
         db_session.flush()
         client_id = db_session.execute(text("SELECT id FROM clients LIMIT 1")).scalar()
         db_session.execute(
             text(
-                f"INSERT INTO engagements (client_id, period_start, period_end, status, "
-                f"performance_materiality_factor, trivial_threshold_factor, created_by) "
-                f"VALUES ({client_id}, '2025-01-01', '2025-12-31', 'active', 0.75, 0.05, {user_id})"
-            )
+                "INSERT INTO engagements (client_id, period_start, period_end, status, "
+                "performance_materiality_factor, trivial_threshold_factor, created_by) "
+                "VALUES (:cid, '2025-01-01', '2025-12-31', 'active', 0.75, 0.05, :uid)"
+            ).bindparams(cid=client_id, uid=user_id)
         )
         db_session.flush()
         row = db_session.execute(text("SELECT created_at, updated_at FROM engagements LIMIT 1")).fetchone()

@@ -161,7 +161,7 @@ describe('PricingPage', () => {
 
   it('billing toggle switches to annual prices', () => {
     render(<PricingPage />)
-    const annualButton = screen.getByRole('button', { name: 'Annual' })
+    const annualButton = screen.getByRole('radio', { name: 'Annual' })
     fireEvent.click(annualButton)
     // Solo annual = $1,000
     expect(screen.getByText('$1,000')).toBeInTheDocument()
@@ -174,9 +174,9 @@ describe('PricingPage', () => {
   it('billing toggle switches back to monthly prices', () => {
     render(<PricingPage />)
     // Switch to annual first
-    fireEvent.click(screen.getByRole('button', { name: 'Annual' }))
+    fireEvent.click(screen.getByRole('radio', { name: 'Annual' }))
     // Switch back to monthly
-    fireEvent.click(screen.getByRole('button', { name: 'Monthly' }))
+    fireEvent.click(screen.getByRole('radio', { name: 'Monthly' }))
     // Solo monthly = $100
     expect(screen.getByText('$100')).toBeInTheDocument()
     // Professional monthly = $500

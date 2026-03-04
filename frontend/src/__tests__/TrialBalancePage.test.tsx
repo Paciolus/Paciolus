@@ -1,41 +1,15 @@
 /**
- * Sprint 129: Trial Balance Diagnostics page tests (10 tests)
+ * Sprint 129 / Sprint 482: Trial Balance Diagnostics page tests
  *
- * Special pattern: no domain hook — uses custom fetch + inline state management.
- * Most complex page in the platform — ~18 sub-components mocked as stubs.
+ * Rewritten to match the current page implementation which uses
+ * useTrialBalanceAudit hook, GuestCTA, MaterialityControl, and
+ * a unified drop zone layout.
  */
 import TrialBalancePage from '@/app/tools/trial-balance/page'
-import { useAuth } from '@/contexts/AuthContext'
 import { render, screen } from '@/test-utils'
 
-jest.mock('@/contexts/AuthContext', () => ({
-  useAuth: jest.fn(() => ({
-    user: { is_verified: true }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token',
-  })),
-}))
-
-jest.mock('@/contexts/EngagementContext', () => ({
-  useOptionalEngagementContext: jest.fn(() => null),
-}))
-
-jest.mock('@/hooks/useFileUpload', () => ({
-  useFileUpload: jest.fn(() => ({
-    isDragging: false, fileInputRef: { current: null },
-    handleDrop: jest.fn(), handleDragOver: jest.fn(), handleDragLeave: jest.fn(), handleFileSelect: jest.fn(),
-  })),
-}))
-
-jest.mock('@/hooks/useSettings', () => ({
-  useSettings: jest.fn(() => ({ settings: null, isLoading: false })),
-}))
-
-jest.mock('@/hooks', () => ({
-  useBenchmarks: jest.fn(() => ({
-    availableIndustries: [], isLoadingComparison: false, comparisonResults: null,
-    fetchComparison: jest.fn(), industriesFetchedRef: { current: false },
-    fetchIndustries: jest.fn(), compareToBenchmarks: jest.fn(), clear: jest.fn(),
-  })),
-}))
+const mockResetAudit = jest.fn()
+const mockHandleFileSelect = jest.fn()
 
 jest.mock('@/contexts/MappingContext', () => ({
   MappingProvider: ({ children }: any) => <>{children}</>,
@@ -46,78 +20,110 @@ jest.mock('@/contexts/MappingContext', () => ({
   })),
 }))
 
-// Mock all sub-components
-jest.mock('@/components/mapping', () => ({
-  AccountTypeDropdown: () => <div data-testid="account-type-dropdown">Dropdown</div>,
-  MappingIndicator: () => <div data-testid="mapping-indicator">Indicator</div>,
-  MappingToolbar: () => <div data-testid="mapping-toolbar">MappingToolbar</div>,
-  ColumnMappingModal: () => null,
-}))
-jest.mock('@/components/risk', () => ({ RiskDashboard: () => <div data-testid="risk-dashboard">RiskDashboard</div> }))
-jest.mock('@/components/workbook', () => ({ WorkbookInspector: () => <div data-testid="workbook-inspector">Inspector</div> }))
-jest.mock('@/components/export', () => ({ DownloadReportButton: () => <div data-testid="download-report">Download</div> }))
-jest.mock('@/components/analytics', () => ({ KeyMetricsSection: () => <div data-testid="key-metrics">Metrics</div> }))
-jest.mock('@/components/diagnostics/ClassificationQualitySection', () => ({
-  ClassificationQualitySection: () => <div data-testid="classification-quality">Quality</div>,
-}))
-jest.mock('@/components/sensitivity', () => ({
-  SensitivityToolbar: () => <div data-testid="sensitivity-toolbar">Sensitivity</div>,
-}))
-jest.mock('@/components/marketing', () => ({
-  FeaturePillars: () => <div data-testid="feature-pillars">Pillars</div>,
-  ProcessTimeline: () => <div data-testid="process-timeline">Timeline</div>,
-  DemoZone: () => <div data-testid="demo-zone">Demo</div>,
-}))
-jest.mock('@/components/workspace', () => ({
-  WorkspaceHeader: () => <div data-testid="workspace-header">Header</div>,
-  QuickActionsBar: () => <div data-testid="quick-actions">Actions</div>,
-  RecentHistoryMini: () => <div data-testid="recent-history">History</div>,
-}))
-jest.mock('@/components/diagnostic', () => ({
-  MaterialityControl: () => <div data-testid="materiality-control">Materiality</div>,
-}))
-jest.mock('@/components/benchmark', () => ({
-  BenchmarkSection: () => <div data-testid="benchmark-section">Benchmarks</div>,
-}))
-jest.mock('@/components/leadSheet', () => ({
-  LeadSheetSection: () => <div data-testid="lead-sheet-section">LeadSheets</div>,
-}))
-jest.mock('@/components/financialStatements', () => ({
-  FinancialStatementsPreview: () => <div data-testid="financial-statements">FS</div>,
+jest.mock('@/hooks/useTrialBalanceAudit', () => ({
+  useTrialBalanceAudit: jest.fn(() => ({
+    user: { is_verified: true }, isAuthenticated: true, token: 'test-token', isVerified: true,
+    preflightStatus: 'idle', preflightReport: null, preflightError: '',
+    showPreflight: false,
+    handlePreflightProceed: jest.fn(), handlePreflightExportPDF: jest.fn(), handlePreflightExportCSV: jest.fn(),
+    handlePopulationProfileExportPDF: jest.fn(), handlePopulationProfileExportCSV: jest.fn(),
+    handleExpenseCategoryExportPDF: jest.fn(), handleExpenseCategoryExportCSV: jest.fn(),
+    handleAccrualCompletenessExportPDF: jest.fn(), handleAccrualCompletenessExportCSV: jest.fn(),
+    auditStatus: 'idle', auditResult: null, auditError: '',
+    selectedFile: null, isRecalculating: false, scanningRows: 0,
+    materialityThreshold: 500, setMaterialityThreshold: jest.fn(),
+    displayMode: 'strict', handleDisplayModeChange: jest.fn(),
+    showColumnMappingModal: false, pendingColumnDetection: null,
+    handleColumnMappingConfirm: jest.fn(), handleColumnMappingClose: jest.fn(),
+    showWorkbookInspector: false, pendingWorkbookInfo: null,
+    handleWorkbookInspectorConfirm: jest.fn(), handleWorkbookInspectorClose: jest.fn(),
+    showPdfPreview: false, pendingPdfPreview: null,
+    handlePdfPreviewConfirm: jest.fn(), handlePdfPreviewClose: jest.fn(),
+    selectedIndustry: null, availableIndustries: [], comparisonResults: null, isLoadingComparison: false, handleIndustryChange: jest.fn(),
+    isDragging: false, handleDrop: jest.fn(), handleDragOver: jest.fn(), handleDragLeave: jest.fn(), handleFileSelect: mockHandleFileSelect,
+    resetAudit: mockResetAudit, handleRerunAudit: jest.fn(),
+  })),
 }))
 
 jest.mock('@/hooks/useCanvasAccentSync', () => ({
   useCanvasAccentSync: jest.fn(),
 }))
+
+jest.mock('@/components/shared', () => ({
+  GuestCTA: ({ description }: any) => <div data-testid="guest-cta">{description}</div>,
+  DisclaimerBox: ({ children }: any) => <div data-testid="disclaimer-box">{children}</div>,
+  Citation: ({ code }: any) => <span data-testid="citation">{code}</span>,
+  CitationFooter: () => <div data-testid="citation-footer">Citations</div>,
+}))
+jest.mock('@/components/shared/PdfExtractionPreview', () => ({
+  PdfExtractionPreview: () => null,
+}))
+jest.mock('@/components/diagnostic', () => ({
+  MaterialityControl: () => <div data-testid="materiality-control">Materiality</div>,
+}))
+jest.mock('@/components/currencyRates/CurrencyRatePanel', () => ({
+  CurrencyRatePanel: () => <div data-testid="currency-rate-panel">Rates</div>,
+}))
+jest.mock('@/components/preflight/PreFlightSummary', () => ({
+  PreFlightSummary: () => <div data-testid="preflight-summary">Preflight</div>,
+}))
+jest.mock('@/components/mapping', () => ({
+  ColumnMappingModal: () => null,
+}))
+jest.mock('@/components/workbook', () => ({
+  WorkbookInspector: () => null,
+}))
+jest.mock('@/components/trialBalance/AuditResultsPanel', () => ({
+  AuditResultsPanel: () => <div data-testid="audit-results">Results</div>,
+}))
 jest.mock('framer-motion', () => ({
   motion: {
     div: ({ initial, animate, exit, transition, variants, whileHover, whileInView, whileTap, viewport, layout, layoutId, children, ...rest }: any) => <div {...rest}>{children}</div>,
-    h1: ({ initial, animate, exit, transition, variants, whileHover, whileInView, whileTap, viewport, layout, layoutId, children, ...rest }: any) => <h1 {...rest}>{children}</h1>,
-    p: ({ initial, animate, exit, transition, variants, whileHover, whileInView, whileTap, viewport, layout, layoutId, children, ...rest }: any) => <p {...rest}>{children}</p>,
-    form: ({ initial, animate, exit, transition, variants, whileHover, whileInView, whileTap, viewport, layout, layoutId, children, ...rest }: any) => <form {...rest}>{children}</form>,
-    span: ({ initial, animate, exit, transition, variants, whileHover, whileInView, whileTap, viewport, layout, layoutId, children, ...rest }: any) => <span {...rest}>{children}</span>,
-    section: ({ initial, animate, exit, transition, variants, whileHover, whileInView, whileTap, viewport, layout, layoutId, children, ...rest }: any) => <section {...rest}>{children}</section>,
   },
   AnimatePresence: ({ children }: any) => <>{children}</>,
 }))
 
 
-const mockUseAuth = useAuth as jest.Mock
+// Access the mock to change return values per-test
+const mockUseTrialBalanceAudit = jest.requireMock('@/hooks/useTrialBalanceAudit').useTrialBalanceAudit as jest.Mock
+
+const defaultHookReturn = {
+  user: { is_verified: true }, isAuthenticated: true, token: 'test-token', isVerified: true,
+  preflightStatus: 'idle', preflightReport: null, preflightError: '',
+  showPreflight: false,
+  handlePreflightProceed: jest.fn(), handlePreflightExportPDF: jest.fn(), handlePreflightExportCSV: jest.fn(),
+  handlePopulationProfileExportPDF: jest.fn(), handlePopulationProfileExportCSV: jest.fn(),
+  handleExpenseCategoryExportPDF: jest.fn(), handleExpenseCategoryExportCSV: jest.fn(),
+  handleAccrualCompletenessExportPDF: jest.fn(), handleAccrualCompletenessExportCSV: jest.fn(),
+  auditStatus: 'idle', auditResult: null, auditError: '',
+  selectedFile: null, isRecalculating: false, scanningRows: 0,
+  materialityThreshold: 500, setMaterialityThreshold: jest.fn(),
+  displayMode: 'strict', handleDisplayModeChange: jest.fn(),
+  showColumnMappingModal: false, pendingColumnDetection: null,
+  handleColumnMappingConfirm: jest.fn(), handleColumnMappingClose: jest.fn(),
+  showWorkbookInspector: false, pendingWorkbookInfo: null,
+  handleWorkbookInspectorConfirm: jest.fn(), handleWorkbookInspectorClose: jest.fn(),
+  showPdfPreview: false, pendingPdfPreview: null,
+  handlePdfPreviewConfirm: jest.fn(), handlePdfPreviewClose: jest.fn(),
+  selectedIndustry: null, availableIndustries: [], comparisonResults: null, isLoadingComparison: false, handleIndustryChange: jest.fn(),
+  isDragging: false, handleDrop: jest.fn(), handleDragOver: jest.fn(), handleDragLeave: jest.fn(), handleFileSelect: mockHandleFileSelect,
+  resetAudit: mockResetAudit, handleRerunAudit: jest.fn(),
+}
 
 describe('TrialBalancePage', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockUseAuth.mockReturnValue({ user: { is_verified: true }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token' })
+    mockUseTrialBalanceAudit.mockReturnValue({ ...defaultHookReturn })
   })
 
-  it('shows workspace header for authenticated user', () => {
+  it('renders hero title for authenticated user', () => {
     render(<TrialBalancePage />)
-    expect(screen.getByTestId('workspace-header')).toBeInTheDocument()
+    expect(screen.getByText('Trial Balance Diagnostics')).toBeInTheDocument()
   })
 
-  it('shows diagnostic zone for authenticated verified user', () => {
+  it('shows ISA 520 badge', () => {
     render(<TrialBalancePage />)
-    expect(screen.getByText('Diagnostic Intelligence Zone')).toBeInTheDocument()
+    expect(screen.getByText('ISA 520 Analytical Procedures')).toBeInTheDocument()
   })
 
   it('shows upload zone with drop target', () => {
@@ -125,24 +131,10 @@ describe('TrialBalancePage', () => {
     expect(screen.getByText(/Drag and drop your trial balance/)).toBeInTheDocument()
   })
 
-  it('shows marketing page for unauthenticated user', () => {
-    mockUseAuth.mockReturnValue({ user: null, isAuthenticated: false, isLoading: false, logout: jest.fn(), token: null })
+  it('shows guest CTA for unauthenticated user', () => {
+    mockUseTrialBalanceAudit.mockReturnValue({ ...defaultHookReturn, isAuthenticated: false, user: null, isVerified: false })
     render(<TrialBalancePage />)
-    expect(screen.getByText(/Surgical Precision/)).toBeInTheDocument()
-    expect(screen.getByTestId('feature-pillars')).toBeInTheDocument()
-    expect(screen.getByTestId('process-timeline')).toBeInTheDocument()
-    expect(screen.getByTestId('demo-zone')).toBeInTheDocument()
-  })
-
-  it('shows verification gate for unverified user', () => {
-    mockUseAuth.mockReturnValue({ user: { is_verified: false }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'tk' })
-    render(<TrialBalancePage />)
-    expect(screen.getByText(/Verify Your Email/)).toBeInTheDocument()
-  })
-
-  it('shows quick actions bar', () => {
-    render(<TrialBalancePage />)
-    expect(screen.getByTestId('quick-actions')).toBeInTheDocument()
+    expect(screen.getByTestId('guest-cta')).toBeInTheDocument()
   })
 
   it('shows materiality control', () => {
@@ -150,13 +142,27 @@ describe('TrialBalancePage', () => {
     expect(screen.getByTestId('materiality-control')).toBeInTheDocument()
   })
 
-  it('renders zero-storage badge', () => {
-    render(<TrialBalancePage />)
-    expect(screen.getByText('Zero-Storage Processing')).toBeInTheDocument()
-  })
-
   it('shows upload prompt text', () => {
     render(<TrialBalancePage />)
     expect(screen.getByText(/or click to browse/)).toBeInTheDocument()
+  })
+
+  it('shows zero-storage message', () => {
+    render(<TrialBalancePage />)
+    expect(screen.getByText(/never saved to any disk or server/)).toBeInTheDocument()
+  })
+
+  it('shows error state with try again', () => {
+    mockUseTrialBalanceAudit.mockReturnValue({ ...defaultHookReturn, auditStatus: 'error', auditError: 'Invalid file format' })
+    render(<TrialBalancePage />)
+    expect(screen.getByText('Invalid file format')).toBeInTheDocument()
+    expect(screen.getByText('Try again')).toBeInTheDocument()
+  })
+
+  it('shows loading state with progress', () => {
+    mockUseTrialBalanceAudit.mockReturnValue({ ...defaultHookReturn, auditStatus: 'loading', scanningRows: 1500 })
+    render(<TrialBalancePage />)
+    expect(screen.getByText(/Streaming analysis in progress/)).toBeInTheDocument()
+    expect(screen.getByText('1,500')).toBeInTheDocument()
   })
 })
