@@ -219,24 +219,35 @@ class ReportMetadata:
 # =============================================================================
 
 _LOGO_FILENAME = "PaciolusLogo_LightBG.png"
+_LOGO_FILENAME_DARK = "PaciolusLogo_DarkBG.png"
 
 
-def find_logo() -> Optional[str]:
-    """Search standard paths for the Paciolus logo.
+def _find_logo_file(filename: str) -> Optional[str]:
+    """Search standard paths for a logo file by name.
 
     Returns the absolute path as a string if found, or ``None``.
     Never raises — a missing logo is non-fatal.
     """
     backend_dir = Path(__file__).resolve().parent.parent  # backend/
     search_paths = [
-        backend_dir.parent / "frontend" / "public" / _LOGO_FILENAME,
-        backend_dir.parent / _LOGO_FILENAME,
-        backend_dir / "assets" / _LOGO_FILENAME,
+        backend_dir.parent / "frontend" / "public" / filename,
+        backend_dir.parent / filename,
+        backend_dir / "assets" / filename,
     ]
     for path in search_paths:
         if path.exists():
             return str(path)
     return None
+
+
+def find_logo() -> Optional[str]:
+    """Return the light-background logo path (for page headers)."""
+    return _find_logo_file(_LOGO_FILENAME)
+
+
+def find_logo_dark() -> Optional[str]:
+    """Return the dark-background logo path (for the cover page)."""
+    return _find_logo_file(_LOGO_FILENAME_DARK)
 
 
 # =============================================================================
@@ -268,10 +279,11 @@ def build_cover_page(
     # 0. Inverted Dark Field background
     story.append(CoverBands())
 
-    # 1. Logo or text lockup
-    if logo_path:
+    # 1. Logo or text lockup — prefer dark-BG variant for dark cover
+    cover_logo = find_logo_dark() or logo_path
+    if cover_logo:
         try:
-            logo = Image(logo_path, width=1.2 * inch, height=0.4 * inch, kind="proportional")
+            logo = Image(cover_logo, width=1.2 * inch, height=0.4 * inch, kind="proportional")
             logo.hAlign = "CENTER"
             story.append(logo)
             story.append(Spacer(1, SPACE_COVER_AFTER_LOGO))
