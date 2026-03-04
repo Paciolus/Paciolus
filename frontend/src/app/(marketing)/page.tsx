@@ -41,8 +41,8 @@ export default function HomePage() {
         <div className="lobby-divider" />
       </div>
 
-      {/* Feature Pillars — accent surface + sage glow + heritage atmosphere + parallax */}
-      <ParallaxSection className="lobby-surface-accent lobby-glow-sage lobby-atmosphere-heritage relative z-10" speed={0.06}>
+      {/* Feature Pillars — accent surface + sage glow + parallax */}
+      <ParallaxSection className="lobby-surface-accent lobby-glow-sage relative z-10" speed={0.06}>
         <Reveal>
           <FeaturePillars />
         </Reveal>

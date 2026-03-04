@@ -77,7 +77,7 @@ const professionalsCards = [
 /* ---------- Page Component ---------- */
 export default function AboutPage() {
   return (
-    <div className="relative z-10 min-h-screen bg-gradient-obsidian">
+    <div className="relative z-10 min-h-screen bg-gradient-obsidian lobby-atmosphere-heritage">
       {/* ===== Pacioli Connection ===== */}
       <motion.section
         className="relative pt-32 pb-10 px-6"
