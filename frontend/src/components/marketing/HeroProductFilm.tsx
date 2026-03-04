@@ -1098,7 +1098,7 @@ function ScrubberHero() {
 
   return (
     <section
-      className="relative z-10 min-h-screen flex flex-col justify-center pt-20 pb-8 px-6"
+      className="relative z-10 min-h-[600px] lg:min-h-[700px] max-h-[900px] flex flex-col justify-center pt-20 pb-8 px-6"
       aria-label="Product demonstration"
     >
       <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col justify-center">
