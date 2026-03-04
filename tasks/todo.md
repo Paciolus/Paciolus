@@ -151,7 +151,7 @@
 - [x] Test verification: `npm test` — 111 suites, 1,337 tests passing (full suite, pre-existing EditClientModal failure fixed)
 - [x] Audit 25 remediations: EditClientModal React 19 compat fix, remediation completeness lesson added
 
-**Review:** All 17 findings addressed (6 P2 + 11 P3). Key changes: pricing page ARIA overhaul (scope, radiogroup, FAQ disclosure pattern), HeroProductFilm slider accessibility (valuetext, deterministic valuenow), reduced-motion compliance (motion-safe prefix), dead code removal, .env.example Stripe var name correction. Pre-existing EditClientModal test failure fixed (React 19 controlled input compat — `userEvent.type` → `fireEvent.change`). Remediation completeness lesson captured in `tasks/lessons.md`. Council report: `reports/council-audit-2026-03-04.md`
+**Review:** All 17 findings addressed (6 P2 + 11 P3). Key changes: pricing page ARIA overhaul (scope, radiogroup, FAQ disclosure pattern), HeroProductFilm slider accessibility (valuetext, deterministic valuenow), reduced-motion compliance (motion-safe prefix), dead code removal, .env.example Stripe var name correction. Pre-existing EditClientModal test failure fixed (React 19 controlled input compat — `userEvent.type` → `fireEvent.change`). Remediation completeness lesson captured in `tasks/lessons.md`. Council report: `reports/council-audit-2026-03-04.md`. Commit: 42fe787
 
 ---
 
