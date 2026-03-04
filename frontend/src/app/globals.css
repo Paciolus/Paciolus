@@ -605,6 +605,25 @@
       linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
   }
 
+  /* Foil texture — metallic sage foil, mostly opaque */
+  .lobby-atmosphere-foil {
+    position: relative;
+    overflow: hidden;
+  }
+  .lobby-atmosphere-foil::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url('/backgrounds/background3.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    opacity: 0.18;
+    mix-blend-mode: soft-light;
+    pointer-events: none;
+    z-index: 0;
+  }
+
   /* ============================================
      Editorial Composition Utilities
      Reusable layout patterns for premium typography.

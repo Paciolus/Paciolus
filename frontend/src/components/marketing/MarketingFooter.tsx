@@ -67,7 +67,7 @@ function FooterLinkList({ title, links }: { title: string; links: FooterLink[] }
 
 export function MarketingFooter() {
   return (
-    <footer className="relative z-10">
+    <footer className="relative z-10 lobby-atmosphere-foil">
       {/* Sage accent line */}
       <div className="h-px bg-gradient-to-r from-transparent via-sage-500/30 to-transparent" />
 

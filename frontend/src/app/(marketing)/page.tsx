@@ -70,8 +70,8 @@ export default function HomePage() {
         <div className="lobby-divider-wide" />
       </div>
 
-      {/* Bottom Proof — Standards + Closing CTA */}
-      <Reveal className="lobby-surface-raised relative z-10">
+      {/* Bottom Proof — Standards + Closing CTA + foil texture */}
+      <Reveal className="lobby-surface-raised lobby-atmosphere-foil relative z-10">
         <BottomProof />
       </Reveal>
 
