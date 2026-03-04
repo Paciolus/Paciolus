@@ -55,8 +55,8 @@ const STEP_POSITIONS: Record<FilmStep, number> = {
 
 /** Per-step dwell times (ms) before sweeping to the next */
 const DWELL_BY_STEP: Record<FilmStep, number> = {
-  upload: 3500,
-  analyze: 10000,
+  upload: 5500,
+  analyze: 12000,
   export: 4000,
 }
 
@@ -563,7 +563,7 @@ const FORMAT_BADGES = ['CSV', 'XLSX', 'OFX', 'PDF', 'QBO'] as const
 
 // ── Upload Layer — Cursor + File Card ───────────────────────────────
 
-const UPLOAD_PHASES = [0, 300, 1200, 1800, 2400] as const
+const UPLOAD_PHASES = [0, 500, 1800, 3000, 3800] as const
 const DATA_LINES = ['847 transactions', '62 accounts', 'FY 2025'] as const
 
 function UploadLayer({ opacity, isActive }: { opacity: MotionValue<number>; isActive: boolean }) {
@@ -645,20 +645,20 @@ function UploadLayer({ opacity, isActive }: { opacity: MotionValue<number>; isAc
           )}
         </motion.div>
 
-        {/* Animated cursor + file card (dragging phase) */}
+        {/* Animated cursor + file card (dragging into drop zone) */}
         {phase >= 2 && phase < 3 && (
           <motion.div
             className="absolute pointer-events-none z-20"
-            initial={{ x: -80, y: -60, opacity: 0 }}
-            animate={{ x: 40, y: 30, opacity: 1 }}
-            transition={{ duration: 0.8, ease: [0.25, 0.1, 0.25, 1] }}
+            initial={{ x: 180, y: -90, opacity: 0 }}
+            animate={{ x: 55, y: 50, opacity: 1 }}
+            transition={{ duration: 1.1, ease: [0.32, 0.0, 0.22, 1] }}
           >
             <CursorIcon className="w-5 h-5 text-obsidian-600 drop-shadow-md" />
             <motion.div
               className="absolute top-3 left-4 flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-obsidian-200 shadow-lg whitespace-nowrap"
-              initial={{ rotate: -6 }}
-              animate={{ rotate: 0 }}
-              transition={{ delay: 0.4, duration: 0.3 }}
+              initial={{ rotate: -8, scale: 0.9 }}
+              animate={{ rotate: 0, scale: 1 }}
+              transition={{ delay: 0.5, duration: 0.4, ease: 'easeOut' as const }}
             >
               <BrandIcon name="file-plus" className="w-4 h-4 text-sage-500 flex-shrink-0" />
               <span className="font-mono text-[10px] text-obsidian-700">FY2025.xlsx</span>
@@ -713,7 +713,7 @@ function UploadLayer({ opacity, isActive }: { opacity: MotionValue<number>; isAc
 
 // ── Analyze Layer — Scanning Matrix ─────────────────────────────────
 
-const ANALYZE_PHASES = [0, 200, 600, 2800, 3400] as const
+const ANALYZE_PHASES = [0, 400, 1400, 4200, 5800] as const
 
 function AnalyzeLayer({ opacity, isActive }: { opacity: MotionValue<number>; isActive: boolean }) {
   const phase = usePhaseTimer(isActive, ANALYZE_PHASES)
