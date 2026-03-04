@@ -123,7 +123,7 @@ export default function AboutPage() {
         transition={{ duration: 0.5, delay: 0.3, ease: 'easeOut' as const }}
       >
         <div className="max-w-3xl mx-auto">
-          <blockquote className="border-l-4 border-sage-500 bg-obsidian-700/80 backdrop-blur-sm rounded-r-lg pl-6 pr-8 py-6">
+          <blockquote className="border-l-4 border-sage-500 bg-obsidian-700/60 backdrop-blur-sm rounded-r-lg pl-6 pr-8 py-6">
             <p className="font-serif text-xl md:text-2xl text-oatmeal-200 italic leading-relaxed">
               &ldquo;The moment when you need a defensible answer shouldn&rsquo;t depend on the size of your firm. We built Paciolus so it doesn&rsquo;t.&rdquo;
             </p>
@@ -149,7 +149,7 @@ export default function AboutPage() {
           <div className="grid md:grid-cols-2 gap-8">
             {/* Left card — What It IS */}
             <motion.div
-              className="bg-obsidian-700/80 backdrop-blur-sm border border-sage-500/30 rounded-lg p-8"
+              className="bg-obsidian-700/60 backdrop-blur-sm border border-sage-500/30 rounded-lg p-8"
               variants={cardReveal}
             >
               <h3 className="font-serif text-xl text-sage-400 mb-6 flex items-center gap-3">
@@ -172,7 +172,7 @@ export default function AboutPage() {
 
             {/* Right card — What It Is NOT */}
             <motion.div
-              className="bg-obsidian-700/80 backdrop-blur-sm border border-clay-500/30 rounded-lg p-8"
+              className="bg-obsidian-700/60 backdrop-blur-sm border border-clay-500/30 rounded-lg p-8"
               variants={cardReveal}
             >
               <h3 className="font-serif text-xl text-clay-400 mb-6 flex items-center gap-3">
@@ -207,7 +207,7 @@ export default function AboutPage() {
           <h2 className="type-headline text-oatmeal-100 text-center mb-8">
             Zero-Storage Commitment
           </h2>
-          <div className="bg-obsidian-700/80 backdrop-blur-sm border border-obsidian-500/30 rounded-lg p-8">
+          <div className="bg-obsidian-700/60 backdrop-blur-sm border border-obsidian-500/30 rounded-lg p-8">
             <p className="type-body text-oatmeal-400 leading-relaxed">
               Paciolus processes all financial data entirely in-memory. Nothing is written to disk,
               stored in a database, or retained after your session ends. There is no persistent raw financial data
@@ -240,7 +240,7 @@ export default function AboutPage() {
             {professionalsCards.map((card, i) => (
               <motion.div
                 key={card.title}
-                className="bg-obsidian-700/80 backdrop-blur-sm border border-obsidian-500/30 rounded-lg p-6"
+                className="bg-obsidian-700/60 backdrop-blur-sm border border-obsidian-500/30 rounded-lg p-6"
                 custom={i}
                 variants={fadeUp}
               >
@@ -293,7 +293,7 @@ export default function AboutPage() {
             ].map((item) => (
               <motion.div
                 key={item.title}
-                className="bg-obsidian-700/80 backdrop-blur-sm border border-obsidian-500/30 rounded-lg p-6"
+                className="bg-obsidian-700/60 backdrop-blur-sm border border-obsidian-500/30 rounded-lg p-6"
                 variants={cardReveal}
               >
                 <h3 className="font-serif text-lg text-sage-400 mb-3">{item.title}</h3>
@@ -315,7 +315,7 @@ export default function AboutPage() {
           <h2 className="type-headline text-oatmeal-100 text-center mb-8">
             Where Paciolus Fits in Your Workflow
           </h2>
-          <div className="bg-obsidian-700/80 backdrop-blur-sm border border-obsidian-500/30 rounded-lg p-8">
+          <div className="bg-obsidian-700/60 backdrop-blur-sm border border-obsidian-500/30 rounded-lg p-8">
             <p className="type-body text-oatmeal-400 mb-6">
               Paciolus is a standalone analytics platform that complements your existing tools. It accepts 10 file formats including QuickBooks exports (QBO, IIF), bank feeds (OFX), Excel, CSV, TSV, TXT, PDF tables, and ODS spreadsheets.
             </p>
