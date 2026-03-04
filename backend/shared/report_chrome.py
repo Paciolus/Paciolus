@@ -5,11 +5,10 @@ Cover page, page header, and page footer shared by all PDF generators.
 Replaces the per-generator header/footer implementations with a single
 set of composable building blocks.
 
-Diagonal Color Bands (cover page background):
-  5 overlapping bands at 20° sweep using Oat & Obsidian brand palette
-  (Obsidian, Gold Institutional, Sage) at varying opacities (5%–82%).
-  Bands occupy the lower-left to upper-right region, leaving clear space
-  for title and metadata in the upper portion.
+Inverted Dark Field (cover page background):
+  Solid dark (#1c1c1c) fill with 4 geometric triangles in muted
+  brand-adjacent tones (sage, warm stone, light gold).  Gold gradient
+  rules frame the title block.
 
 Usage:
     from shared.report_chrome import (
@@ -22,12 +21,14 @@ Usage:
     doc.build(story, onFirstPage=draw_page_footer, onLaterPages=draw_page_footer)
 """
 
-import math
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
 
+from reportlab.lib.colors import Color, HexColor
+from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.platypus import (
     Flowable,
@@ -41,7 +42,6 @@ from reportlab.platypus import (
 
 from pdf_generator import (
     ClassicalColors,
-    DoubleRule,
     format_classical_date,
 )
 from shared.report_styles import (
@@ -77,38 +77,26 @@ def _safe_style(styles: dict, *names: str) -> Any:
 
 
 # =============================================================================
-# Diagonal Color Bands — Cover Page Background
+# Inverted Dark Field — Cover Page Background
 # =============================================================================
 
-_BAND_ANGLE_DEG = 20
-_BAND_BLEED = 60  # horizontal bleed beyond page edges (pt)
-_BAND_TAN = math.tan(math.radians(_BAND_ANGLE_DEG))
-_BAND_COS = math.cos(math.radians(_BAND_ANGLE_DEG))
-
-# Band definitions: (y_base_pt, perp_width_pt, color, alpha)
-# y_base: where the lower edge intersects x=0 (from page bottom)
-# perp_width: perpendicular thickness of the band
-# Ordered back-to-front for correct visual layering
-_COVER_BANDS: list[tuple] = [
-    (-60, 200, ClassicalColors.OBSIDIAN, 0.05),  # Wide subtle wash
-    (10, 130, ClassicalColors.OBSIDIAN_DEEP, 0.82),  # Primary bold band
-    (75, 35, ClassicalColors.SAGE, 0.30),  # Sage accent stripe
-    (130, 80, ClassicalColors.GOLD_INSTITUTIONAL, 0.45),  # Gold accent band
-    (210, 18, ClassicalColors.GOLD_INSTITUTIONAL, 0.15),  # Thin gold highlight
+# Triangle definitions: ((x1,y1, x2,y2, x3,y3), hex_color, alpha)
+# Coordinates in absolute page space (origin bottom-left, Letter 612×792 pt)
+_COVER_TRIANGLES: list[tuple] = [
+    ((306, 792, 612, 792, 612, 512), "#4a5c42", 0.35),  # Upper-right, sage
+    ((428, 792, 612, 792, 612, 624), "#8a7a5a", 0.30),  # Upper-right, warm stone
+    ((520, 792, 612, 792, 612, 708), "#c4b48a", 0.25),  # Upper-right, light gold
+    ((0, 0, 306, 0, 0, 232), "#4a5c42", 0.20),  # Lower-left echo, sage
 ]
 
 
 class CoverBands(Flowable):
-    """Diagonal color bands — cover page background element.
+    """Inverted Dark Field — cover page background element.
 
-    Zero-height flowable that renders 5 overlapping diagonal bands across the
-    full page using the Oat & Obsidian brand palette.  Must be the FIRST
-    element in the story so bands render behind subsequent cover page content
-    (logo, title, metadata) in PDF's painter-model draw order.
-
-    Design: 5 bands at 20° sweep (lower-left → upper-right), varying widths
-    (18–200 pt) and opacities (5%–82%) for layered depth.  A faint oatmeal
-    background tint (3%) provides warmth.
+    Zero-height flowable that renders a solid dark (#1c1c1c) full-page fill
+    overlaid with 4 geometric triangles in muted brand-adjacent tones.
+    Must be the FIRST element in the story so the background renders behind
+    subsequent cover page content in PDF's painter-model draw order.
     """
 
     def wrap(self, availWidth: float, availHeight: float) -> tuple[float, float]:
@@ -119,8 +107,6 @@ class CoverBands(Flowable):
         page_w, page_h = c._pagesize
 
         # Determine canvas-to-page coordinate offset.
-        # As the first 0-height flowable, the canvas origin is at
-        # (frame._x1, frame._y2) in absolute page coordinates.
         frame = getattr(c, "_frame", None)
         if frame is not None:
             off_x = frame._x1
@@ -129,38 +115,70 @@ class CoverBands(Flowable):
             off_x = 0.75 * 72  # fallback: 0.75" left margin
             off_y = page_h - 1.0 * 72  # fallback: 1" top margin
 
-        # Faint oatmeal background tint (3% opacity)
+        # Solid dark background fill
         c.saveState()
-        c.setFillColor(ClassicalColors.OATMEAL)
-        c.setFillAlpha(0.03)
-        c.rect(-off_x, -off_y, page_w, page_h, fill=1, stroke=0)
+        c.setFillColor(HexColor("#1c1c1c"))
+        c.rect(-off_x, -off_y, page_w, page_h, stroke=0, fill=1)
         c.restoreState()
 
-        # Draw diagonal bands (back-to-front)
-        x_l = -_BAND_BLEED
-        x_r = page_w + _BAND_BLEED
+        # Geometric triangles
+        for verts, hex_color, alpha in _COVER_TRIANGLES:
+            x1, y1, x2, y2, x3, y3 = verts
+            c.saveState()
+            c.setFillColor(HexColor(hex_color))
+            c.setFillAlpha(alpha)
+            p = c.beginPath()
+            p.moveTo(x1 - off_x, y1 - off_y)
+            p.lineTo(x2 - off_x, y2 - off_y)
+            p.lineTo(x3 - off_x, y3 - off_y)
+            p.close()
+            c.drawPath(p, stroke=0, fill=1)
+            c.restoreState()
 
-        for y_base, width, color, alpha in _COVER_BANDS:
-            vert = width / _BAND_COS  # vertical offset for perpendicular width
 
-            # Lower edge endpoints: y = y_base + x * tan(angle)
-            y_bl = y_base + x_l * _BAND_TAN
-            y_br = y_base + x_r * _BAND_TAN
-            # Upper edge: offset by vert
-            y_tl = y_bl + vert
-            y_tr = y_br + vert
+# =============================================================================
+# Gold gradient rule — simulated fade for cover page
+# =============================================================================
+
+_GRADIENT_SEGMENTS = 30
+_GOLD_RULE = HexColor("#c9a84c")
+
+
+class GoldGradientRule(Flowable):
+    """Horizontal 1 pt rule that fades transparent -> gold -> transparent.
+
+    Simulates a gradient stroke by drawing short line segments with stepped
+    opacity (0->0.8 over the left third, 0.8 across the middle, 0.8->0
+    over the right third).
+    """
+
+    def __init__(self, width: float, spaceAfter: float = 0) -> None:
+        super().__init__()
+        self._rule_width = width
+        self.spaceAfter = spaceAfter
+
+    def wrap(self, availWidth: float, availHeight: float) -> tuple[float, float]:
+        return (self._rule_width, 1)
+
+    def draw(self) -> None:
+        c = self.canv
+        w = self._rule_width
+        seg_w = w / _GRADIENT_SEGMENTS
+
+        for i in range(_GRADIENT_SEGMENTS):
+            frac = i / _GRADIENT_SEGMENTS
+            if frac < 1 / 3:
+                alpha = 0.8 * (frac * 3)
+            elif frac < 2 / 3:
+                alpha = 0.8
+            else:
+                alpha = 0.8 * (1 - (frac - 2 / 3) * 3)
 
             c.saveState()
-            c.setFillColor(color)
-            c.setFillAlpha(alpha)
-
-            p = c.beginPath()
-            p.moveTo(x_l - off_x, y_bl - off_y)
-            p.lineTo(x_r - off_x, y_br - off_y)
-            p.lineTo(x_r - off_x, y_tr - off_y)
-            p.lineTo(x_l - off_x, y_tl - off_y)
-            p.close()
-            c.drawPath(p, fill=1, stroke=0)
+            c.setStrokeColor(_GOLD_RULE)
+            c.setStrokeAlpha(alpha)
+            c.setLineWidth(1)
+            c.line(i * seg_w, 0, (i + 1) * seg_w, 0)
             c.restoreState()
 
 
@@ -236,17 +254,18 @@ def build_cover_page(
     """Append cover page flowables to *story*.
 
     Structure:
-      0. Diagonal color bands (background — rendered behind all content)
+      0. Inverted Dark Field background (dark fill + triangles)
       1. Logo (or text-only "PACIOLUS" lockup if missing)
-      2. Report title
-      3. Subtitle (if provided)
-      4. Gold DoubleRule
-      5. Metadata table (client, period, source, reference, timestamp)
-      6. PageBreak — content starts on page 2
+      2. Gold gradient rule above title
+      3. Report title
+      4. Subtitle (if provided)
+      5. Gold gradient rule below title
+      6. Metadata table (client, period, source, reference, timestamp)
+      7. PageBreak — content starts on page 2
 
     The function modifies *story* in-place and returns None.
     """
-    # 0. Diagonal color bands background
+    # 0. Inverted Dark Field background
     story.append(CoverBands())
 
     # 1. Logo or text lockup
@@ -261,38 +280,46 @@ def build_cover_page(
     else:
         _append_text_lockup(story, styles)
 
-    # 2. Title
+    # 2. Gold gradient rule above title
+    story.append(GoldGradientRule(width=doc_width, spaceAfter=8))
+
+    # 3. Title
     title_style = _safe_style(styles, "ClassicalTitle", "MemoTitle")
-    story.append(Paragraph(metadata.title, title_style))
+    cover_title = ParagraphStyle(
+        "_CoverTitle",
+        parent=title_style,
+        textColor=HexColor("#f5f0e8"),
+    )
+    story.append(Paragraph(metadata.title, cover_title))
     story.append(Spacer(1, SPACE_COVER_AFTER_TITLE))
 
-    # 3. Subtitle (optional)
+    # 4. Subtitle (optional)
     if metadata.subtitle:
         subtitle_style = _safe_style(styles, "ClassicalSubtitle", "MemoSubtitle")
-        story.append(Paragraph(metadata.subtitle, subtitle_style))
+        cover_subtitle = ParagraphStyle(
+            "_CoverSubtitle",
+            parent=subtitle_style,
+            textColor=HexColor("#888888"),
+        )
+        story.append(Paragraph(metadata.subtitle, cover_subtitle))
 
-    # 4. DoubleRule
-    story.append(
-        DoubleRule(width=doc_width, color=ClassicalColors.GOLD_INSTITUTIONAL, spaceAfter=SPACE_COVER_AFTER_RULE)
-    )
+    # 5. Gold gradient rule below title
+    story.append(GoldGradientRule(width=doc_width, spaceAfter=SPACE_COVER_AFTER_RULE))
 
-    # 5. Metadata table
+    # 6. Metadata table
     _append_metadata_table(story, styles, metadata, doc_width)
 
-    # 6. PageBreak
+    # 7. PageBreak
     story.append(PageBreak())
 
 
 def _append_text_lockup(story: list, styles: dict) -> None:
     """Fallback text lockup when the logo image is unavailable."""
-    from reportlab.lib.enums import TA_CENTER
-    from reportlab.lib.styles import ParagraphStyle
-
     lockup_title = ParagraphStyle(
         "_CoverLockupTitle",
         fontName=FONT_TITLE,
         fontSize=18,
-        textColor=ClassicalColors.GOLD_INSTITUTIONAL,
+        textColor=HexColor("#c9a84c"),
         alignment=TA_CENTER,
         spaceAfter=2,
     )
@@ -300,12 +327,12 @@ def _append_text_lockup(story: list, styles: dict) -> None:
         "_CoverLockupSubtitle",
         fontName=FONT_ITALIC,
         fontSize=10,
-        textColor=ClassicalColors.OBSIDIAN_500,
+        textColor=HexColor("#8a7a5a"),
         alignment=TA_CENTER,
         spaceAfter=SPACE_COVER_AFTER_LOGO,
     )
     story.append(Paragraph("PACIOLUS", lockup_title))
-    story.append(Paragraph("Audit Intelligence", lockup_subtitle))
+    story.append(Paragraph("Particularis de Computis", lockup_subtitle))
 
 
 def _append_metadata_table(
@@ -315,7 +342,6 @@ def _append_metadata_table(
     doc_width: float,
 ) -> None:
     """Build the clean key-value metadata table on the cover page."""
-    body_style = _safe_style(styles, "MemoBody", "BodyText")
     rows: list[list[str]] = []
 
     if metadata.client_name:
@@ -344,13 +370,26 @@ def _append_metadata_table(
     if not rows:
         return
 
-    # Wrap cells in Paragraphs for consistent styling
+    # Cover-specific styles for dark background
+    label_style = ParagraphStyle(
+        "_CoverMetaLabel",
+        fontName=FONT_BODY,
+        fontSize=10,
+        textColor=HexColor("#f5f0e8"),
+    )
+    value_style = ParagraphStyle(
+        "_CoverMetaValue",
+        fontName=FONT_BODY,
+        fontSize=10,
+        textColor=Color(1, 1, 1, alpha=0.6),
+    )
+
     table_data = []
     for label, value in rows:
         table_data.append(
             [
-                Paragraph(f"<b>{label}</b>", body_style),
-                Paragraph(value, body_style),
+                Paragraph(f"<b>{label}</b>", label_style),
+                Paragraph(value, value_style),
             ]
         )
 
@@ -361,8 +400,8 @@ def _append_metadata_table(
             [
                 ("FONTNAME", (0, 0), (-1, -1), FONT_BODY),
                 ("FONTSIZE", (0, 0), (-1, -1), 10),
-                ("TEXTCOLOR", (0, 0), (-1, -1), ClassicalColors.OBSIDIAN_600),
-                ("LINEBELOW", (0, 0), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
+                ("LINEABOVE", (0, 0), (-1, 0), 1, HexColor("#c9a84c")),
+                ("LINEBELOW", (0, 0), (-1, -1), 0.25, Color(1, 1, 1, alpha=0.15)),
                 ("TOPPADDING", (0, 0), (-1, -1), 4),
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
                 ("LEFTPADDING", (0, 0), (0, -1), 0),
@@ -424,22 +463,27 @@ _DISCLAIMER_LINE = (
 def draw_page_footer(canvas: Any, doc: Any) -> None:
     """Canvas callback for all pages.
 
-    Draws a centered page number and one-line zero-storage disclaimer
-    at the bottom of every page.
+    Cover page (page 1): subtle disclaimer only, no page number.
+    Later pages: centered page number and disclaimer.
     """
     page_width = letter[0]
 
     canvas.saveState()
 
-    # Page number — classical style: — N —
-    page_num = doc.page
-    canvas.setFont(FONT_BODY, SIZE_FOOTER + 1)
-    canvas.setFillColor(ClassicalColors.OBSIDIAN_500)
-    canvas.drawCentredString(page_width / 2, SPACE_FOOTER_Y, f"\u2014 {page_num} \u2014")
+    if doc.page == 1:
+        # Cover page — no page number; subtle disclaimer for dark background
+        canvas.setFont(FONT_BODY, 7)
+        canvas.setFillColor(Color(1, 1, 1, alpha=0.25))
+        canvas.drawCentredString(page_width / 2, SPACE_FOOTER_Y - 12, _DISCLAIMER_LINE)
+    else:
+        # Page number — classical style: — N —
+        canvas.setFont(FONT_BODY, SIZE_FOOTER + 1)
+        canvas.setFillColor(ClassicalColors.OBSIDIAN_500)
+        canvas.drawCentredString(page_width / 2, SPACE_FOOTER_Y, f"\u2014 {doc.page} \u2014")
 
-    # Disclaimer line
-    canvas.setFont(FONT_BODY, SIZE_DISCLAIMER)
-    canvas.setFillColor(ClassicalColors.OBSIDIAN_500)
-    canvas.drawCentredString(page_width / 2, SPACE_FOOTER_Y - 12, _DISCLAIMER_LINE)
+        # Disclaimer line
+        canvas.setFont(FONT_BODY, SIZE_DISCLAIMER)
+        canvas.setFillColor(ClassicalColors.OBSIDIAN_500)
+        canvas.drawCentredString(page_width / 2, SPACE_FOOTER_Y - 12, _DISCLAIMER_LINE)
 
     canvas.restoreState()

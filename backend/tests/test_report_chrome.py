@@ -162,8 +162,8 @@ class TestDrawPageFooter:
         doc = MagicMock()
         doc.page = 1
         draw_page_footer(canvas, doc)
-        # Should have called drawCentredString at least twice (page num + disclaimer)
-        assert canvas.drawCentredString.call_count >= 2
+        # Cover page (page 1): disclaimer only, no page number
+        assert canvas.drawCentredString.call_count >= 1
 
     def test_footer_page_number_format(self):
         """Footer renders page number in classical style."""
