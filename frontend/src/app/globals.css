@@ -554,6 +554,58 @@
   }
 
   /* ============================================
+     Atmospheric Background Layers
+     Faint photographic textures blended behind sections.
+     Uses ::after to avoid conflict with ::before glow/vignette.
+     ============================================ */
+
+  /* Heritage texture — ledger + feather pen, sage-tinted */
+  .lobby-atmosphere-heritage {
+    position: relative;
+    overflow: hidden;
+  }
+  .lobby-atmosphere-heritage::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url('/backgrounds/background1.jpg');
+    background-size: cover;
+    background-position: center 30%;
+    background-repeat: no-repeat;
+    opacity: 0.07;
+    mix-blend-mode: luminosity;
+    pointer-events: none;
+    z-index: 0;
+    mask-image:
+      radial-gradient(ellipse 90% 80% at 50% 50%, black 30%, transparent 75%);
+    -webkit-mask-image:
+      radial-gradient(ellipse 90% 80% at 50% 50%, black 30%, transparent 75%);
+  }
+
+  /* Modern texture — green city architecture */
+  .lobby-atmosphere-modern {
+    position: relative;
+    overflow: hidden;
+  }
+  .lobby-atmosphere-modern::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url('/backgrounds/background2.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    opacity: 0.06;
+    mix-blend-mode: luminosity;
+    pointer-events: none;
+    z-index: 0;
+    mask-image:
+      linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
+    -webkit-mask-image:
+      linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
+  }
+
+  /* ============================================
      Editorial Composition Utilities
      Reusable layout patterns for premium typography.
      ============================================ */

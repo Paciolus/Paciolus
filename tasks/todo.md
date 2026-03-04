@@ -106,6 +106,20 @@
 
 ## Active Phase
 
+### Sprint 483 — Homepage Atmospheric Background Images
+**Status:** COMPLETE
+**Goal:** Introduce two subtle background images as atmospheric layers on the marketing homepage — heritage ledger texture and modern architecture — blended at very low opacity with gradient masking.
+
+- [x] Add background images to `frontend/public/backgrounds/` (optimized: 93KB + 270KB)
+- [x] Add `lobby-atmosphere-heritage` and `lobby-atmosphere-modern` CSS classes in globals.css
+- [x] Wire heritage texture behind FeaturePillars section (mid-page)
+- [x] Wire modern architecture behind ToolSlideshow section
+- [x] Build verification: `npm run build` passes
+
+**Review:** Two atmospheric background layers added to the marketing homepage. Background1 (heritage ledger + feather pen) placed behind FeaturePillars — reinforces accounting heritage roots alongside the value proposition cards. Background2 (modern green city architecture) placed behind ToolSlideshow — reinforces technological modernity alongside the 12-tool carousel. Both images at 6-7% opacity with `mix-blend-mode: luminosity` and CSS mask gradients (radial vignette for heritage, vertical fade for modern) to prevent hard edges. Images optimized from ~9MB to 93KB/270KB via Pillow resize+compression. No pseudo-element conflicts (heritage uses `::after`, glow-sage uses `::before`). No layout or structure changes.
+
+---
+
 ### Sprint 480 — HeroProductFilm Redesign
 **Status:** COMPLETE
 **Goal:** Fix broken animation on PC (reduced-motion fallback hiding scrubber), add rich animations to all 3 slides, invert color scheme to oatmeal.

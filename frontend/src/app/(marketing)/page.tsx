@@ -31,8 +31,8 @@ export default function HomePage() {
       {/* Hero Section — Scroll-Linked Product Film */}
       <HeroScrollSection />
 
-      {/* Tool Slideshow — Animated slideshow with rich previews */}
-      <Reveal className="lobby-surface-recessed relative z-10">
+      {/* Tool Slideshow — Animated slideshow with rich previews + modern city atmosphere */}
+      <Reveal className="lobby-surface-recessed lobby-atmosphere-modern relative z-10">
         <ToolSlideshow />
       </Reveal>
 
@@ -41,8 +41,8 @@ export default function HomePage() {
         <div className="lobby-divider" />
       </div>
 
-      {/* Feature Pillars — accent surface + sage glow + parallax */}
-      <ParallaxSection className="lobby-surface-accent lobby-glow-sage relative z-10" speed={0.06}>
+      {/* Feature Pillars — accent surface + sage glow + heritage atmosphere + parallax */}
+      <ParallaxSection className="lobby-surface-accent lobby-glow-sage lobby-atmosphere-heritage relative z-10" speed={0.06}>
         <Reveal>
           <FeaturePillars />
         </Reveal>
