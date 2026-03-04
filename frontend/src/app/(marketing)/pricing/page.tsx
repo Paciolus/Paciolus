@@ -774,108 +774,6 @@ export default function PricingPage() {
         <div className="h-px bg-gradient-to-r from-transparent via-sage-500/40 to-transparent" />
       </div>
 
-      {/* -- Seat Calculator ------------------- */}
-      <section className="pb-20 px-6">
-        <div className="max-w-xl mx-auto">
-          <motion.div
-            variants={fadeUp}
-            initial="hidden"
-            animate="visible"
-          >
-            <h2 className="type-headline-sm text-sage-300 text-center mb-6">
-              Need More Seats?
-            </h2>
-            <p className="font-sans text-sm text-oatmeal-400 text-center mb-6">
-              Professional includes 7 seats (up to 20). Enterprise includes 20 seats (up to 100).
-            </p>
-            <SeatCalculator interval={billingInterval} />
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Oatmeal divider */}
-      <div className="max-w-xs mx-auto px-6 pb-12">
-        <div className="h-px bg-gradient-to-r from-transparent via-oatmeal-400/30 to-transparent" />
-      </div>
-
-      {/* -- Plan Estimator -------------------- */}
-      <section className="pb-16 px-6 py-16 bg-oatmeal-200/4 rounded-none">
-        <div className="max-w-3xl mx-auto">
-          <motion.div
-            variants={fadeUp}
-            initial="hidden"
-            animate="visible"
-          >
-            <h2 className="type-headline-sm text-sage-300 text-center mb-8">
-              Find Your Plan
-            </h2>
-
-            {/* Persona toggles */}
-            <div className="flex flex-wrap justify-center gap-3 mb-8">
-              {personas.map((persona) => (
-                <button
-                  key={persona.key}
-                  type="button"
-                  onClick={() => selectPersona(persona)}
-                  className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl border font-sans text-sm transition-colors ${
-                    activePersona === persona.key
-                      ? 'border-sage-500/50 bg-sage-500/15 text-sage-300'
-                      : 'border-obsidian-500/30 bg-obsidian-800/50 text-oatmeal-400 hover:text-oatmeal-200 hover:border-obsidian-400/40'
-                  }`}
-                >
-                  <PersonaIcon icon={persona.icon} className="w-5 h-5" />
-                  <span>{persona.label}</span>
-                </button>
-              ))}
-            </div>
-
-            {/* Input selectors */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <SegmentedSelector
-                label="Monthly Uploads"
-                options={uploadOptions}
-                value={uploads}
-                onChange={handleUploads}
-              />
-              <SegmentedSelector
-                label="Features Needed"
-                options={featureOptions}
-                value={features}
-                onChange={handleFeatures}
-              />
-              <SegmentedSelector
-                label="Team Size"
-                options={teamOptions}
-                value={teamSize}
-                onChange={handleTeamSize}
-              />
-            </div>
-
-            {/* Recommendation line */}
-            <div className="mt-8 text-center">
-              <AnimatePresence mode="wait">
-                <motion.p
-                  key={recommendedTier}
-                  initial={{ opacity: 0, y: 4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -4 }}
-                  transition={{ duration: 0.2, ease: 'easeOut' as const }}
-                  className="font-sans text-sm text-oatmeal-300"
-                >
-                  Based on your needs, we recommend{' '}
-                  <span className="text-sage-400 font-semibold">{recommendedTier}</span>.
-                </motion.p>
-              </AnimatePresence>
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Sage divider */}
-      <div className="max-w-xs mx-auto px-6 pb-12">
-        <div className="h-px bg-gradient-to-r from-transparent via-sage-500/40 to-transparent" />
-      </div>
-
       {/* -- Feature Comparison Table ---------- */}
       <section className="pb-20 px-6">
         <div className="max-w-5xl mx-auto">
@@ -917,6 +815,103 @@ export default function PricingPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Oatmeal divider */}
+      <div className="max-w-xs mx-auto px-6 pb-12">
+        <div className="h-px bg-gradient-to-r from-transparent via-oatmeal-400/30 to-transparent" />
+      </div>
+
+      {/* -- Plan Your Cost (merged Estimator + Seat Calculator) -- */}
+      <section className="pb-16 px-6 py-16 bg-oatmeal-200/4">
+        <div className="max-w-6xl mx-auto">
+          <motion.div
+            variants={fadeUp}
+            initial="hidden"
+            animate="visible"
+          >
+            <h2 className="type-headline-sm text-sage-300 text-center mb-3">
+              Plan Your Cost
+            </h2>
+            <p className="font-sans text-sm text-oatmeal-400 text-center mb-10 max-w-lg mx-auto">
+              Estimate your tier and calculate seat pricing — all in one place.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+              {/* Left column: Plan Estimator */}
+              <div className="rounded-2xl border border-obsidian-500/30 bg-obsidian-800/40 p-6">
+                <h3 className="font-serif text-base text-oatmeal-200 mb-6">Find Your Plan</h3>
+
+                {/* Persona toggles */}
+                <div className="flex flex-wrap gap-2 mb-6">
+                  {personas.map((persona) => (
+                    <button
+                      key={persona.key}
+                      type="button"
+                      onClick={() => selectPersona(persona)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-xl border font-sans text-sm transition-colors ${
+                        activePersona === persona.key
+                          ? 'border-sage-500/50 bg-sage-500/15 text-sage-300'
+                          : 'border-obsidian-500/30 bg-obsidian-800/50 text-oatmeal-400 hover:text-oatmeal-200 hover:border-obsidian-400/40'
+                      }`}
+                    >
+                      <PersonaIcon icon={persona.icon} className="w-4 h-4" />
+                      <span>{persona.label}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Input selectors */}
+                <div className="space-y-5">
+                  <SegmentedSelector
+                    label="Monthly Uploads"
+                    options={uploadOptions}
+                    value={uploads}
+                    onChange={handleUploads}
+                  />
+                  <SegmentedSelector
+                    label="Features Needed"
+                    options={featureOptions}
+                    value={features}
+                    onChange={handleFeatures}
+                  />
+                  <SegmentedSelector
+                    label="Team Size"
+                    options={teamOptions}
+                    value={teamSize}
+                    onChange={handleTeamSize}
+                  />
+                </div>
+
+                {/* Recommendation line */}
+                <div className="mt-6 pt-5 border-t border-obsidian-500/20">
+                  <AnimatePresence mode="wait">
+                    <motion.p
+                      key={recommendedTier}
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      transition={{ duration: 0.2, ease: 'easeOut' as const }}
+                      className="font-sans text-sm text-oatmeal-300"
+                    >
+                      Based on your needs, we recommend{' '}
+                      <span className="text-sage-400 font-semibold">{recommendedTier}</span>.
+                    </motion.p>
+                  </AnimatePresence>
+                </div>
+              </div>
+
+              {/* Right column: Seat Calculator */}
+              <div className="rounded-2xl border border-obsidian-500/30 bg-obsidian-800/40 p-6">
+                <h3 className="font-serif text-base text-oatmeal-200 mb-2">Seat Calculator</h3>
+                <p className="font-sans text-xs text-oatmeal-500 mb-6">
+                  Professional includes 7 seats (up to 20). Enterprise includes 20 seats (up to 100).
+                </p>
+                <SeatCalculator interval={billingInterval} />
+              </div>
             </div>
           </motion.div>
         </div>
