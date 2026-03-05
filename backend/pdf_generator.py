@@ -23,7 +23,7 @@ from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
-from reportlab.platypus import Flowable, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import Flowable, KeepTogether, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from security_utils import log_secure_operation
 
@@ -489,11 +489,10 @@ class PaciolusReportGenerator:
 
         # Build document sections
         story.extend(self._build_executive_summary())
-        story.extend(self._build_section_ornament())
+        story.extend(self._build_population_composition())
         story.extend(self._build_risk_summary())
         story.extend(self._build_section_ornament())
         story.extend(self._build_anomaly_details())
-        story.extend(self._build_section_ornament())
         story.extend(self._build_workpaper_signoff())  # Sprint 53
         story.extend(self._build_classical_footer())
 
@@ -541,9 +540,9 @@ class PaciolusReportGenerator:
     def _build_section_ornament(self) -> list:
         """Build a section break ornament (fleuron)."""
         return [
-            Spacer(1, 8),
+            Spacer(1, 4),
             Paragraph("❧", self.styles["SectionOrnament"]),
-            Spacer(1, 8),
+            Spacer(1, 4),
         ]
 
     def _build_executive_summary(self) -> list:
@@ -581,9 +580,9 @@ class PaciolusReportGenerator:
         )
         badge_table.hAlign = "CENTER"
 
-        elements.append(Spacer(1, 12))
+        elements.append(Spacer(1, 8))
         elements.append(badge_table)
-        elements.append(Spacer(1, 16))
+        elements.append(Spacer(1, 10))
 
         # Financial summary with leader dots
         total_debits = self.audit_result.get("total_debits", 0)
@@ -610,15 +609,189 @@ class PaciolusReportGenerator:
 
         elements.append(Spacer(1, 12))
 
+        # Change 2: Risk-Weighted Coverage metric
+        if total_debits > 0:
+            abnormal_balances = self.audit_result.get("abnormal_balances", [])
+            material_items = [ab for ab in abnormal_balances if ab.get("materiality") == "material"]
+            flagged_value = sum(abs(ab.get("amount", 0)) for ab in material_items)
+            coverage_pct = flagged_value / total_debits * 100 if total_debits else 0
+
+            coverage_lines = [
+                create_leader_dots("Flagged Value (Material)", f"${flagged_value:,.2f}"),
+                create_leader_dots("Total TB Population", f"${total_debits:,.2f}"),
+                create_leader_dots("Risk-Weighted Coverage", f"{coverage_pct:.1f}%"),
+            ]
+            for line in coverage_lines:
+                elements.append(Paragraph(line, self.styles["LeaderLine"]))
+
+            if flagged_value > 0:
+                note = (
+                    f"Material exceptions affect {coverage_pct:.1f}% of total trial balance value "
+                    f"by amount. Accounts above materiality threshold warrant corroborating "
+                    f"procedures before conclusions can be drawn."
+                )
+            else:
+                note = "Risk-Weighted Coverage: 0.0% — No material exceptions identified."
+            elements.append(Spacer(1, 2))
+            elements.append(Paragraph(note, self.styles["BodyText"]))
+            elements.append(Spacer(1, 6))
+
+        return elements
+
+    def _build_population_composition(self) -> list:
+        """Build the Population Composition section (Change 5).
+
+        Uses category_totals from audit_result if available, or falls back
+        to population_profile section_density data. Percentages are based
+        on total_debits to match the TB population value.
+        """
+        elements = []
+
+        category_totals = self.audit_result.get("category_totals", {})
+        if not category_totals:
+            return elements
+
+        row_count = self.audit_result.get("row_count", 0)
+
+        # Map category_totals keys to display names
+        type_mapping = [
+            ("Asset", category_totals.get("total_assets", 0)),
+            ("Liability", category_totals.get("total_liabilities", 0)),
+            ("Equity", category_totals.get("total_equity", 0)),
+            ("Revenue", category_totals.get("total_revenue", 0)),
+            ("Expense", category_totals.get("total_expenses", 0)),
+        ]
+
+        grand_balance = sum(abs(v) for _, v in type_mapping)
+        if grand_balance <= 0:
+            return elements
+
+        # Use population_profile section_density for account counts
+        pop_profile = self.audit_result.get("population_profile", {})
+        section_density = pop_profile.get("section_density", [])
+
+        density_counts: dict[str, int] = {}
+        for sd in section_density:
+            label = sd.get("section_label", "")
+            count = sd.get("account_count", 0)
+            if "Asset" in label:
+                density_counts["Asset"] = density_counts.get("Asset", 0) + count
+            elif "Liabilit" in label:
+                density_counts["Liability"] = density_counts.get("Liability", 0) + count
+            elif "Equity" in label:
+                density_counts["Equity"] = density_counts.get("Equity", 0) + count
+            elif "Revenue" in label:
+                density_counts["Revenue"] = density_counts.get("Revenue", 0) + count
+            elif "Cost" in label or "Expense" in label or "Other" in label:
+                density_counts["Expense"] = density_counts.get("Expense", 0) + count
+
+        # Build rows: percentages relative to sum of absolute category balances
+        type_rows: list[tuple[str, int, float, float]] = []
+        classified_count = sum(density_counts.values())
+        unclassified_count = max(0, row_count - classified_count) if density_counts else 0
+
+        for type_name, balance in type_mapping:
+            count = density_counts.get(type_name, 0)
+            abs_balance = abs(balance)
+            pct = abs_balance / grand_balance * 100
+            type_rows.append((type_name, count, abs_balance, pct))
+
+        if unclassified_count > 0:
+            type_rows.append(("Other / Unclassified", unclassified_count, 0.0, 0.0))
+
+        # Suppress if no real data
+        if not any(r[2] > 0 for r in type_rows):
+            return elements
+
+        elements.append(Paragraph("Population Composition", self.styles["SectionHeader"]))
+        elements.append(LedgerRule(color=ClassicalColors.OBSIDIAN_DEEP, thickness=1))
+        elements.append(Spacer(1, 4))
+
+        cell_style = self.styles["TableCell"]
+        header_style = self.styles["TableHeader"]
+
+        table_data = [
+            [
+                Paragraph("Account Type", header_style),
+                Paragraph("Count", header_style),
+                Paragraph("Total Balance", header_style),
+                Paragraph("% of Population", header_style),
+            ]
+        ]
+
+        total_count = 0
+        for type_name, count, balance, pct in type_rows:
+            total_count += count
+            table_data.append(
+                [
+                    Paragraph(type_name, cell_style),
+                    Paragraph(str(count) if count > 0 else "\u2014", cell_style),
+                    Paragraph(f"${balance:,.2f}", cell_style),
+                    Paragraph(f"{pct:.1f}%", cell_style),
+                ]
+            )
+
+        table_data.append(
+            [
+                Paragraph("Total", self.styles["TableHeader"]),
+                Paragraph(str(total_count) if total_count > 0 else str(row_count), self.styles["TableHeader"]),
+                Paragraph(f"${grand_balance:,.2f}", self.styles["TableHeader"]),
+                Paragraph("100.0%", self.styles["TableHeader"]),
+            ]
+        )
+
+        comp_table = Table(
+            table_data,
+            colWidths=[1.8 * inch, 0.8 * inch, 2.2 * inch, 1.2 * inch],
+            repeatRows=1,
+        )
+        comp_table.setStyle(
+            TableStyle(
+                [
+                    ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
+                    ("FONTSIZE", (0, 0), (-1, 0), 9),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
+                    ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
+                    ("LINEBELOW", (0, 1), (-1, -2), 0.25, ClassicalColors.LEDGER_RULE),
+                    ("LINEABOVE", (0, -1), (-1, -1), 1, ClassicalColors.OBSIDIAN_600),
+                    ("FONTNAME", (0, -1), (-1, -1), "Times-Bold"),
+                    ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
+                    ("TOPPADDING", (0, 0), (-1, -1), 4),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("ROWBACKGROUNDS", (0, 1), (-1, -2), [ClassicalColors.WHITE, ClassicalColors.OATMEAL_PAPER]),
+                ]
+            )
+        )
+
+        elements.append(comp_table)
+
+        # Classification confidence footnote
+        col_detection = self.audit_result.get("column_detection", {})
+        if col_detection:
+            acct_confidence = col_detection.get("account_confidence", 1.0)
+            if acct_confidence < 0.9:
+                footnote = (
+                    f"Account type classification based on {acct_confidence:.0%} column confidence. "
+                    f"Unclassified accounts are excluded from type-specific tests."
+                )
+                elements.append(Spacer(1, 2))
+                elements.append(Paragraph(f"<i>{footnote}</i>", self.styles["BodyText"]))
+
+        elements.append(Spacer(1, 6))
+
         return elements
 
     def _build_risk_summary(self) -> list:
-        """Build the risk summary section."""
+        """Build the risk summary section with composite risk score."""
+        from shared.memo_base import RISK_SCALE_LEGEND, RISK_TIER_DISPLAY
+        from shared.tb_diagnostic_constants import compute_tb_risk_score, get_risk_tier
+
         elements = []
 
         elements.append(Paragraph("Risk Assessment", self.styles["SectionHeader"]))
         elements.append(LedgerRule(color=ClassicalColors.OBSIDIAN_DEEP, thickness=1))
-        elements.append(Spacer(1, 12))
+        elements.append(Spacer(1, 6))
 
         risk_summary = self.audit_result.get("risk_summary", {})
         material_count = self.audit_result.get("material_count", 0)
@@ -626,6 +799,37 @@ class PaciolusReportGenerator:
         total_anomalies = risk_summary.get("total_anomalies", material_count + immaterial_count)
         high_severity = risk_summary.get("high_severity", material_count)
         low_severity = risk_summary.get("low_severity", immaterial_count)
+
+        # Change 3: Composite Risk Score
+        abnormal_balances = self.audit_result.get("abnormal_balances", [])
+        anomaly_types = risk_summary.get("anomaly_types", {})
+        has_suspense = anomaly_types.get("suspense_account", 0) > 0
+        has_credit_balance = any(
+            ab.get("anomaly_type") in ("abnormal_balance", "natural_balance_violation")
+            and ab.get("type", "").lower() == "asset"
+            for ab in abnormal_balances
+        )
+
+        total_debits = self.audit_result.get("total_debits", 0)
+        material_items = [ab for ab in abnormal_balances if ab.get("materiality") == "material"]
+        flagged_value = sum(abs(ab.get("amount", 0)) for ab in material_items)
+        coverage_pct = flagged_value / total_debits * 100 if total_debits > 0 else 0
+
+        risk_score = compute_tb_risk_score(
+            material_count, immaterial_count, coverage_pct, has_suspense, has_credit_balance
+        )
+        risk_tier = get_risk_tier(risk_score)
+        tier_label, _ = RISK_TIER_DISPLAY.get(risk_tier, ("UNKNOWN", ClassicalColors.OBSIDIAN_500))
+
+        # Render risk score block
+        score_lines = [
+            create_leader_dots("Composite Risk Score", f"{risk_score} / 100"),
+            create_leader_dots("Risk Tier", tier_label),
+        ]
+        for line in score_lines:
+            elements.append(Paragraph(line, self.styles["LeaderLine"]))
+        elements.append(Paragraph(RISK_SCALE_LEGEND, self.styles["BodyText"]))
+        elements.append(Spacer(1, 6))
 
         # Risk metrics table with classical styling
         risk_data = [
@@ -650,14 +854,14 @@ class PaciolusReportGenerator:
                     ("TEXTCOLOR", (2, 1), (2, 1), ClassicalColors.OBSIDIAN_500),
                     ("ALIGN", (0, 1), (-1, 1), "CENTER"),
                     ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                    ("TOPPADDING", (0, 0), (-1, -1), 12),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
+                    ("TOPPADDING", (0, 0), (-1, -1), 8),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
                 ]
             )
         )
 
         elements.append(risk_table)
-        elements.append(Spacer(1, 12))
+        elements.append(Spacer(1, 6))
 
         return elements
 
@@ -675,7 +879,7 @@ class PaciolusReportGenerator:
 
         elements.append(Paragraph("Exception Details", self.styles["SectionHeader"]))
         elements.append(LedgerRule(color=ClassicalColors.OBSIDIAN_DEEP, thickness=1))
-        elements.append(Spacer(1, 8))
+        elements.append(Spacer(1, 4))
 
         # Separate by materiality
         material = [ab for ab in abnormal_balances if ab.get("materiality") == "material"]
@@ -684,7 +888,7 @@ class PaciolusReportGenerator:
         if material:
             elements.append(Paragraph(f"Material Exceptions ({len(material)})", self.styles["SubsectionHeader"]))
             elements.append(self._create_ledger_table(material, is_material=True))
-            elements.append(Spacer(1, 16))
+            elements.append(Spacer(1, 10))
 
         if immaterial:
             elements.append(Paragraph(f"Minor Observations ({len(immaterial)})", self.styles["SubsectionHeader"]))
@@ -701,7 +905,10 @@ class PaciolusReportGenerator:
         - Horizontal hairlines between rows
         - Right-aligned amounts
         - Sprint 53: Added reference numbers for workpaper cross-referencing
+        - Changes 1/4/6: Suggested procedures, benchmarks, cross-references
         """
+        from shared.tb_diagnostic_constants import get_concentration_benchmark, get_tb_suggested_procedure
+
         cell_style = self.styles["TableCell"]
         header_style = self.styles["TableHeader"]
 
@@ -731,7 +938,31 @@ class PaciolusReportGenerator:
                 account = f"{account} ({ab['sheet_name']})"
 
             acc_type = ab.get("type", "Unknown")
-            issue = Paragraph(ab.get("issue", ""), cell_style)
+
+            # Build enriched Nature of Exception cell:
+            # 1. Issue text (normal)
+            # 2. Benchmark context (small, gray) — concentration only
+            # 3. Cross-reference note (small, italic) — Change 6
+            # 4. Suggested procedure (small, italic)
+            issue_text = ab.get("issue", "")
+            issue_parts = [f"<b>{issue_text}</b>"]
+
+            # Change 4: Concentration benchmark
+            benchmark = get_concentration_benchmark(ab)
+            if benchmark:
+                issue_parts.append(f'<br/><font size="7" color="#616161"><i>{benchmark}</i></font>')
+
+            # Change 6: Cross-reference for intercompany findings
+            cross_ref = ab.get("cross_reference_note")
+            if cross_ref:
+                issue_parts.append(f'<br/><font size="7" color="#4A7C59"><i>{cross_ref}</i></font>')
+
+            # Change 1: Suggested procedure
+            procedure = get_tb_suggested_procedure(ab)
+            issue_parts.append(f'<br/><font size="7"><i>Suggested Procedure: {procedure}</i></font>')
+
+            issue_cell = Paragraph("".join(issue_parts), cell_style)
+
             amount = ab.get("amount", 0)
             total_amount += abs(amount)
 
@@ -740,7 +971,7 @@ class PaciolusReportGenerator:
                     Paragraph(ref_num, cell_style),
                     Paragraph(account, cell_style),
                     Paragraph(acc_type, cell_style),
-                    issue,
+                    issue_cell,
                     Paragraph(f"${amount:,.2f}", cell_style),
                 ]
             )
@@ -862,34 +1093,34 @@ class PaciolusReportGenerator:
         return elements
 
     def _build_classical_footer(self) -> list:
-        """Build the classical document footer."""
-        elements = []
+        """Build the classical document footer, kept together to avoid page split."""
+        inner = []
 
-        elements.append(Spacer(1, 24))
-        elements.append(
+        inner.append(Spacer(1, 12))
+        inner.append(
             DoubleRule(width=6.5 * inch, color=ClassicalColors.LEDGER_RULE, thick=0.5, thin=0.25, spaceAfter=8)
         )
 
         # Pacioli motto (Italian)
-        elements.append(Paragraph('"Particularis de Computis et Scripturis"', self.styles["FooterMotto"]))
+        inner.append(Paragraph('"Particularis de Computis et Scripturis"', self.styles["FooterMotto"]))
 
-        elements.append(Spacer(1, 8))
+        inner.append(Spacer(1, 8))
 
         # Generator info
         timestamp = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
-        elements.append(
+        inner.append(
             Paragraph(f"Generated by Paciolus® Diagnostic Intelligence  ·  {timestamp}", self.styles["Footer"])
         )
 
         # Zero-Storage promise
-        elements.append(
+        inner.append(
             Paragraph(
                 "Zero-Storage Architecture: Your financial data was processed in-memory and never stored.",
                 self.styles["Footer"],
             )
         )
 
-        return elements
+        return [KeepTogether(inner)]
 
 
 def generate_financial_statements_pdf(

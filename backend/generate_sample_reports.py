@@ -163,8 +163,40 @@ def gen_tb_diagnostic():
                 "confidence": 0.85,
                 "anomaly_type": "concentration_risk",
                 "severity": "low",
+                # Change 6: Cross-reference to currency memo
+                "cross_reference_note": (
+                    "Note: Unconverted intercompany balances were also identified in the "
+                    "Multi-Currency Conversion memo (Ref: PAC-2026-0215-042). These findings "
+                    "may relate to the same counterparty. Cross-reference recommended."
+                ),
             },
         ],
+        # Change 5: Category totals for Population Composition table
+        "category_totals": {
+            "total_assets": 4_892_000.00,
+            "current_assets": 3_217_000.00,
+            "inventory": 456_000.00,
+            "total_liabilities": 3_180_392.50,
+            "current_liabilities": 1_890_000.00,
+            "total_equity": 2_524_000.00,
+            "total_revenue": 6_850_000.00,
+            "cost_of_goods_sold": 2_890_000.00,
+            "total_expenses": 5_401_000.00,
+        },
+        "population_profile": {
+            "account_count": 247,
+            "section_density": [
+                {"section_label": "Current Assets", "account_count": 42, "section_balance": 3_217_000.00},
+                {"section_label": "Non-Current Assets", "account_count": 18, "section_balance": 1_675_000.00},
+                {"section_label": "Current Liabilities", "account_count": 35, "section_balance": 1_890_000.00},
+                {"section_label": "Non-Current Liabilities", "account_count": 12, "section_balance": 1_290_392.50},
+                {"section_label": "Equity", "account_count": 8, "section_balance": 2_524_000.00},
+                {"section_label": "Revenue", "account_count": 22, "section_balance": 6_850_000.00},
+                {"section_label": "Cost of Sales", "account_count": 15, "section_balance": 2_890_000.00},
+                {"section_label": "Operating Expenses", "account_count": 85, "section_balance": 2_511_000.00},
+                {"section_label": "Other Income/Expense", "account_count": 10, "section_balance": 289_000.00},
+            ],
+        },
     }
 
     pdf = generate_audit_report(
