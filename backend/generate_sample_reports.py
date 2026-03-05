@@ -323,6 +323,8 @@ def gen_financial_statements():
         gross_profit=3_960_000.00,
         operating_income=1_460_000.00,
         net_income=1_037_250.00,
+        depreciation_amount=285_000.00,
+        interest_expense=92_000.00,
         cash_flow_statement=cf,
         entity_name=CLIENT,
         period_end="December 31, 2025",

@@ -111,6 +111,37 @@
 
 > Sprints 477–487 completed and archived to `tasks/archive/`. Next pending items below.
 
+### Sprint 488 — Financial Statements Report Improvements
+
+**Status:** COMPLETE
+**Goal:** Enhance Report 02 (Financial Statements) with 5 changes: 4 new ratios, prior year comparative columns, footnote placeholders, cross-reference legend, Quality of Earnings expansion.
+**Complexity Score:** Medium-High
+
+#### Changes
+- [x] CHANGE 1: Add Quick Ratio, EBITDA, EBITDA Margin, Interest Coverage to Key Financial Ratios (reorder to 12 ratios)
+- [x] CHANGE 2: Prior year comparative columns on BS/IS/ratios when prior_lead_sheet_grouping available
+- [x] CHANGE 3: Notes to Financial Statements section (5 placeholder notes)
+- [x] CHANGE 4: Cross-Reference Index legend after BS and IS
+- [x] CHANGE 5: Quality of Earnings — rename to Cash Conversion Ratio, add benchmark sentence
+
+#### Files Modified
+- `backend/financial_statement_builder.py` — Add depreciation_amount, interest_expense, prior period fields to FinancialStatements
+- `backend/pdf_generator.py` — All 5 rendering changes
+- `backend/generate_sample_reports.py` — Update Meridian sample data
+- `backend/tests/test_financial_statements.py` — New tests for added fields
+
+#### Verification
+- [x] `npm run build` passes
+- [x] `pytest tests/test_financial_statements.py -v` passes (46/46)
+- [x] Regenerate sample report 02 (50,183 bytes)
+
+#### Review
+- All 5 changes implemented, 11 new tests added (35 → 46)
+- Ratio computations verified: Quick=2.05x, EBITDA=$1,745,000, EBITDA Margin=25.5%, Interest Coverage=15.9x
+- Prior period comparative columns render as table format when prior data available, leader-dot format when not
+- Footnotes section renders 5 placeholder stubs with disclaimer
+- Cross-reference legends render dynamically based on non-zero lead sheet refs
+
 ---
 
 ### Sprint 478 — Deprecated Alias Migration

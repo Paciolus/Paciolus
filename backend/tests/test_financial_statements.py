@@ -15,6 +15,7 @@ from financial_statement_builder import (
 # FIXTURES
 # =============================================================================
 
+
 @pytest.fixture
 def sample_lead_sheet_grouping():
     """
@@ -214,6 +215,7 @@ def other_expense_grouping():
 # =============================================================================
 # TestFinancialStatementBuilder
 # =============================================================================
+
 
 class TestFinancialStatementBuilder:
     """Tests for the FinancialStatementBuilder class."""
@@ -456,6 +458,7 @@ class TestFinancialStatementBuilder:
 # TestFinancialStatementPDF
 # =============================================================================
 
+
 class TestFinancialStatementPDF:
     """Tests for financial statement PDF generation."""
 
@@ -497,6 +500,7 @@ class TestFinancialStatementPDF:
 # =============================================================================
 # TestFinancialStatementExcel
 # =============================================================================
+
 
 class TestFinancialStatementExcel:
     """Tests for financial statement Excel generation."""
@@ -542,6 +546,7 @@ class TestFinancialStatementExcel:
 # MAPPING TRACE FIXTURES
 # =============================================================================
 
+
 @pytest.fixture
 def grouping_with_accounts():
     """
@@ -565,8 +570,20 @@ def grouping_with_accounts():
                 "net_balance": 50000.0,
                 "account_count": 2,
                 "accounts": [
-                    {"account": "Cash at Bank", "debit": 30000.0, "credit": 0.0, "confidence": 0.95, "matched_keywords": ["cash", "bank"]},
-                    {"account": "Petty Cash", "debit": 20000.0, "credit": 0.0, "confidence": 0.90, "matched_keywords": ["cash"]},
+                    {
+                        "account": "Cash at Bank",
+                        "debit": 30000.0,
+                        "credit": 0.0,
+                        "confidence": 0.95,
+                        "matched_keywords": ["cash", "bank"],
+                    },
+                    {
+                        "account": "Petty Cash",
+                        "debit": 20000.0,
+                        "credit": 0.0,
+                        "confidence": 0.90,
+                        "matched_keywords": ["cash"],
+                    },
                 ],
             },
             {
@@ -578,8 +595,20 @@ def grouping_with_accounts():
                 "net_balance": 30000.0,
                 "account_count": 2,
                 "accounts": [
-                    {"account": "Trade Receivables", "debit": 20000.0, "credit": 0.0, "confidence": 0.85, "matched_keywords": ["receivable"]},
-                    {"account": "Other Receivables", "debit": 10000.0, "credit": 0.0, "confidence": 0.80, "matched_keywords": ["receivable"]},
+                    {
+                        "account": "Trade Receivables",
+                        "debit": 20000.0,
+                        "credit": 0.0,
+                        "confidence": 0.85,
+                        "matched_keywords": ["receivable"],
+                    },
+                    {
+                        "account": "Other Receivables",
+                        "debit": 10000.0,
+                        "credit": 0.0,
+                        "confidence": 0.80,
+                        "matched_keywords": ["receivable"],
+                    },
                 ],
             },
             {
@@ -591,8 +620,20 @@ def grouping_with_accounts():
                 "net_balance": -25000.0,
                 "account_count": 2,
                 "accounts": [
-                    {"account": "Trade Payables", "debit": 0.0, "credit": 15000.0, "confidence": 0.90, "matched_keywords": ["payable"]},
-                    {"account": "Accrued Expenses", "debit": 0.0, "credit": 10000.0, "confidence": 0.85, "matched_keywords": ["accrued"]},
+                    {
+                        "account": "Trade Payables",
+                        "debit": 0.0,
+                        "credit": 15000.0,
+                        "confidence": 0.90,
+                        "matched_keywords": ["payable"],
+                    },
+                    {
+                        "account": "Accrued Expenses",
+                        "debit": 0.0,
+                        "credit": 10000.0,
+                        "confidence": 0.85,
+                        "matched_keywords": ["accrued"],
+                    },
                 ],
             },
             {
@@ -604,8 +645,20 @@ def grouping_with_accounts():
                 "net_balance": -75000.0,
                 "account_count": 2,
                 "accounts": [
-                    {"account": "Common Stock", "debit": 0.0, "credit": 50000.0, "confidence": 1.0, "matched_keywords": ["stock"]},
-                    {"account": "Retained Earnings", "debit": 0.0, "credit": 25000.0, "confidence": 1.0, "matched_keywords": ["retained"]},
+                    {
+                        "account": "Common Stock",
+                        "debit": 0.0,
+                        "credit": 50000.0,
+                        "confidence": 1.0,
+                        "matched_keywords": ["stock"],
+                    },
+                    {
+                        "account": "Retained Earnings",
+                        "debit": 0.0,
+                        "credit": 25000.0,
+                        "confidence": 1.0,
+                        "matched_keywords": ["retained"],
+                    },
                 ],
             },
             {
@@ -617,8 +670,20 @@ def grouping_with_accounts():
                 "net_balance": -150000.0,
                 "account_count": 2,
                 "accounts": [
-                    {"account": "Product Revenue", "debit": 0.0, "credit": 100000.0, "confidence": 0.95, "matched_keywords": ["revenue"]},
-                    {"account": "Service Revenue", "debit": 0.0, "credit": 50000.0, "confidence": 0.90, "matched_keywords": ["revenue"]},
+                    {
+                        "account": "Product Revenue",
+                        "debit": 0.0,
+                        "credit": 100000.0,
+                        "confidence": 0.95,
+                        "matched_keywords": ["revenue"],
+                    },
+                    {
+                        "account": "Service Revenue",
+                        "debit": 0.0,
+                        "credit": 50000.0,
+                        "confidence": 0.90,
+                        "matched_keywords": ["revenue"],
+                    },
                 ],
             },
             {
@@ -630,9 +695,27 @@ def grouping_with_accounts():
                 "net_balance": 40000.0,
                 "account_count": 3,
                 "accounts": [
-                    {"account": "Salaries", "debit": 20000.0, "credit": 0.0, "confidence": 0.90, "matched_keywords": ["salary"]},
-                    {"account": "Rent Expense", "debit": 10000.0, "credit": 0.0, "confidence": 0.85, "matched_keywords": ["rent"]},
-                    {"name": "Depreciation Expense", "debit": 10000.0, "credit": 0.0, "confidence": 0.95, "matched_keywords": ["depreciation"]},
+                    {
+                        "account": "Salaries",
+                        "debit": 20000.0,
+                        "credit": 0.0,
+                        "confidence": 0.90,
+                        "matched_keywords": ["salary"],
+                    },
+                    {
+                        "account": "Rent Expense",
+                        "debit": 10000.0,
+                        "credit": 0.0,
+                        "confidence": 0.85,
+                        "matched_keywords": ["rent"],
+                    },
+                    {
+                        "name": "Depreciation Expense",
+                        "debit": 10000.0,
+                        "credit": 0.0,
+                        "confidence": 0.95,
+                        "matched_keywords": ["depreciation"],
+                    },
                 ],
             },
         ],
@@ -645,6 +728,7 @@ def grouping_with_accounts():
 # =============================================================================
 # TestMappingTrace
 # =============================================================================
+
 
 class TestMappingTrace:
     """Tests for Account-to-Statement Mapping Trace (Sprint 284)."""
@@ -739,6 +823,138 @@ class TestMappingTracePDF:
         statements = builder.build()
         assert len(statements.mapping_trace) > 0
 
+        pdf_bytes = generate_financial_statements_pdf(statements)
+        assert len(pdf_bytes) > 100
+        assert isinstance(pdf_bytes, bytes)
+
+
+# =============================================================================
+# TestSprint488Enhancements
+# =============================================================================
+
+
+class TestSprint488Ratios:
+    """Tests for Sprint 488: new ratio fields and prior period support."""
+
+    def test_depreciation_extraction(self, grouping_with_accounts):
+        """Depreciation detected from account names in lead sheet N."""
+        builder = FinancialStatementBuilder(grouping_with_accounts)
+        result = builder.build()
+        # grouping_with_accounts has "Depreciation Expense" in N with debit=10K
+        assert result.depreciation_amount == 10000.0
+
+    def test_depreciation_zero_when_absent(self, sample_lead_sheet_grouping):
+        """No depreciation accounts → 0.0."""
+        builder = FinancialStatementBuilder(sample_lead_sheet_grouping)
+        result = builder.build()
+        assert result.depreciation_amount == 0.0
+
+    def test_interest_expense_extraction(self):
+        """Interest expense detected from account names in lead sheet O."""
+        grouping = {
+            "summaries": [
+                {
+                    "lead_sheet": "O",
+                    "name": "Other Income & Expense",
+                    "net_balance": 3000.0,
+                    "account_count": 2,
+                    "accounts": [
+                        {"name": "Interest Expense", "debit": 5000.0, "credit": 0.0, "net_balance": 5000.0},
+                        {"name": "Other Income", "debit": 0.0, "credit": 2000.0, "net_balance": -2000.0},
+                    ],
+                },
+            ],
+        }
+        builder = FinancialStatementBuilder(grouping)
+        result = builder.build()
+        assert result.interest_expense == 5000.0
+
+    def test_interest_expense_zero_when_absent(self, sample_lead_sheet_grouping):
+        """No interest accounts → 0.0."""
+        builder = FinancialStatementBuilder(sample_lead_sheet_grouping)
+        result = builder.build()
+        assert result.interest_expense == 0.0
+
+    def test_has_prior_period_false_by_default(self, sample_lead_sheet_grouping):
+        """No prior grouping → has_prior_period=False."""
+        builder = FinancialStatementBuilder(sample_lead_sheet_grouping)
+        result = builder.build()
+        assert result.has_prior_period is False
+
+    def test_has_prior_period_true_with_prior(self, sample_lead_sheet_grouping):
+        """Prior grouping provided → has_prior_period=True."""
+        prior = {
+            "summaries": [
+                {"lead_sheet": "A", "name": "Cash", "net_balance": 40000.0, "accounts": []},
+            ],
+        }
+        builder = FinancialStatementBuilder(sample_lead_sheet_grouping, prior_lead_sheet_grouping=prior)
+        result = builder.build()
+        assert result.has_prior_period is True
+
+    def test_prior_amounts_on_balance_sheet(self, sample_lead_sheet_grouping):
+        """Balance sheet items have prior_amount when prior data provided."""
+        prior = {
+            "summaries": [
+                {"lead_sheet": "A", "name": "Cash", "net_balance": 40000.0, "accounts": []},
+                {"lead_sheet": "B", "name": "Receivables", "net_balance": 25000.0, "accounts": []},
+            ],
+        }
+        builder = FinancialStatementBuilder(sample_lead_sheet_grouping, prior_lead_sheet_grouping=prior)
+        result = builder.build()
+        bs_items = {item.lead_sheet_ref: item for item in result.balance_sheet if item.lead_sheet_ref}
+        assert bs_items["A"].prior_amount == 40000.0
+        assert bs_items["B"].prior_amount == 25000.0
+
+    def test_prior_amounts_none_without_prior(self, sample_lead_sheet_grouping):
+        """Balance sheet items have prior_amount=None without prior data."""
+        builder = FinancialStatementBuilder(sample_lead_sheet_grouping)
+        result = builder.build()
+        for item in result.balance_sheet:
+            assert item.prior_amount is None
+
+    def test_prior_income_statement_amounts(self, sample_lead_sheet_grouping):
+        """Income statement items have prior_amount when prior data provided."""
+        prior = {
+            "summaries": [
+                {"lead_sheet": "L", "name": "Revenue", "net_balance": -120000.0, "accounts": []},
+                {"lead_sheet": "M", "name": "COGS", "net_balance": 50000.0, "accounts": []},
+            ],
+        }
+        builder = FinancialStatementBuilder(sample_lead_sheet_grouping, prior_lead_sheet_grouping=prior)
+        result = builder.build()
+        is_items = {item.lead_sheet_ref: item for item in result.income_statement if item.lead_sheet_ref}
+        assert is_items["L"].prior_amount == 120000.0  # sign-flipped
+        assert is_items["M"].prior_amount == 50000.0
+
+    def test_to_dict_includes_new_fields(self, sample_lead_sheet_grouping):
+        """to_dict includes depreciation_amount, interest_expense, has_prior_period."""
+        builder = FinancialStatementBuilder(sample_lead_sheet_grouping)
+        result = builder.build()
+        d = result.to_dict()
+        assert "depreciation_amount" in d
+        assert "interest_expense" in d
+        assert "has_prior_period" in d
+        assert d["has_prior_period"] is False
+
+    def test_pdf_with_prior_period(self, sample_lead_sheet_grouping):
+        """PDF generates without error when prior data is provided."""
+        from pdf_generator import generate_financial_statements_pdf
+
+        prior = {
+            "summaries": [
+                {"lead_sheet": "A", "name": "Cash", "net_balance": 40000.0, "accounts": []},
+                {"lead_sheet": "B", "name": "Receivables", "net_balance": 25000.0, "accounts": []},
+                {"lead_sheet": "L", "name": "Revenue", "net_balance": -120000.0, "accounts": []},
+                {"lead_sheet": "M", "name": "COGS", "net_balance": 50000.0, "accounts": []},
+            ],
+        }
+        builder = FinancialStatementBuilder(
+            sample_lead_sheet_grouping,
+            entity_name="Prior Test Corp",
+            prior_lead_sheet_grouping=prior,
+        )
+        statements = builder.build()
         pdf_bytes = generate_financial_statements_pdf(statements)
         assert len(pdf_bytes) > 100
         assert isinstance(pdf_bytes, bytes)

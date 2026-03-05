@@ -677,3 +677,6 @@ Extract version to `backend/version.py` with `__version__`. Import everywhere. F
 - ExportShare's 48h derived-data retention is a controlled exception to zero-storage that must be formally documented in the security policy with compensating controls listed
 - framer-motion `as const` convention needs CI enforcement (grep-based gate), not just documentation — 11 violations accumulated despite CLAUDE.md mandate
 - APScheduler per-instance behavior under Gunicorn needs ops documentation, not just code comments — operators won't read source during incidents
+
+### Financial Statements Report Enhancements (Sprint 488)
+- `_extract_depreciation` relied solely on `net_balance` field from account dicts, but test fixtures (and possibly real data) sometimes only have `debit`/`credit` without a pre-computed `net_balance`. Added fallback: `debit - credit` when `net_balance` is 0.0. Same pattern applied to `_extract_interest_expense`. Always handle both dict shapes for TB account data.

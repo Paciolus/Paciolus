@@ -1232,30 +1232,79 @@ def generate_financial_statements_pdf(
     story.append(LedgerRule(color=ClassicalColors.OBSIDIAN_DEEP, thickness=1))
     story.append(Spacer(1, 8))
 
-    for item in statements.balance_sheet:
-        if item.is_total:
-            # Double rule before total
-            story.append(LedgerRule(thickness=0.5, spaceBefore=4, spaceAfter=2))
-            line = create_leader_dots(f"  {item.label}", f"${item.amount:,.2f}")
-            story.append(Paragraph(f"<b>{line}</b>", styles["LeaderLine"]))
-            story.append(
-                DoubleRule(
-                    width=6.5 * inch, color=ClassicalColors.OBSIDIAN_600, thick=1, thin=0.5, gap=1, spaceAfter=12
+    # Check if prior period data is available for comparative columns
+    _bs_has_prior = any(item.prior_amount is not None for item in statements.balance_sheet)
+
+    if _bs_has_prior:
+        # Build comparative table
+        period_label = statements.period_end or "Current"
+        bs_table_data = [["Account", period_label, "Prior Period", "Change"]]
+        bs_table_styles = [
+            ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
+            ("FONTSIZE", (0, 0), (-1, 0), 9),
+            ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
+            ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
+            ("FONTNAME", (1, 1), (-1, -1), "Courier"),
+            ("FONTSIZE", (0, 1), (-1, -1), 8),
+            ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
+            ("TOPPADDING", (0, 0), (-1, -1), 3),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+        ]
+        row_idx = 1
+        for item in statements.balance_sheet:
+            prior_str = f"${item.prior_amount:,.2f}" if item.prior_amount is not None else "—"
+            change_str = ""
+            if item.prior_amount is not None:
+                change = item.amount - item.prior_amount
+                change_str = f"${change:,.2f}"
+
+            if item.is_total:
+                ref = f" ({item.lead_sheet_ref})" if item.lead_sheet_ref else ""
+                bs_table_data.append([f"  {item.label}{ref}", f"${item.amount:,.2f}", prior_str, change_str])
+                bs_table_styles.append(("FONTNAME", (0, row_idx), (-1, row_idx), "Times-Bold"))
+                bs_table_styles.append(("LINEABOVE", (0, row_idx), (-1, row_idx), 0.5, ClassicalColors.OBSIDIAN_600))
+                bs_table_styles.append(("LINEBELOW", (0, row_idx), (-1, row_idx), 1, ClassicalColors.OBSIDIAN_600))
+            elif item.is_subtotal:
+                bs_table_data.append([f"    {item.label}", f"${item.amount:,.2f}", prior_str, change_str])
+                bs_table_styles.append(("FONTNAME", (0, row_idx), (-1, row_idx), "Times-Bold"))
+                bs_table_styles.append(("LINEBELOW", (0, row_idx), (-1, row_idx), 0.25, ClassicalColors.LEDGER_RULE))
+            elif item.indent_level == 0 and not item.lead_sheet_ref:
+                bs_table_data.append([item.label, "", "", ""])
+                bs_table_styles.append(("FONTNAME", (0, row_idx), (0, row_idx), "Times-Bold"))
+                bs_table_styles.append(("FONTSIZE", (0, row_idx), (0, row_idx), 9))
+                bs_table_styles.append(("TEXTCOLOR", (0, row_idx), (0, row_idx), ClassicalColors.OBSIDIAN_DEEP))
+            else:
+                ref = f" ({item.lead_sheet_ref})" if item.lead_sheet_ref else ""
+                bs_table_data.append([f"      {item.label}{ref}", f"${item.amount:,.2f}", prior_str, change_str])
+            row_idx += 1
+
+        bs_table = Table(bs_table_data, colWidths=[2.7 * inch, 1.3 * inch, 1.3 * inch, 1.2 * inch])
+        bs_table.setStyle(TableStyle(bs_table_styles))
+        story.append(bs_table)
+    else:
+        if statements.has_prior_period is False:
+            pass  # No note needed if prior data was never provided
+        for item in statements.balance_sheet:
+            if item.is_total:
+                story.append(LedgerRule(thickness=0.5, spaceBefore=4, spaceAfter=2))
+                line = create_leader_dots(f"  {item.label}", f"${item.amount:,.2f}")
+                story.append(Paragraph(f"<b>{line}</b>", styles["LeaderLine"]))
+                story.append(
+                    DoubleRule(
+                        width=6.5 * inch, color=ClassicalColors.OBSIDIAN_600, thick=1, thin=0.5, gap=1, spaceAfter=12
+                    )
                 )
-            )
-        elif item.is_subtotal:
-            line = create_leader_dots(f"    {item.label}", f"${item.amount:,.2f}")
-            story.append(Paragraph(f"<b>{line}</b>", styles["LeaderLine"]))
-            story.append(LedgerRule(thickness=0.25, spaceBefore=2, spaceAfter=4))
-        elif item.indent_level == 0 and not item.lead_sheet_ref:
-            # Section header
-            story.append(Spacer(1, 6))
-            story.append(Paragraph(item.label, styles["SubsectionHeader"]))
-        else:
-            # Regular line item with lead sheet ref
-            ref = f" ({item.lead_sheet_ref})" if item.lead_sheet_ref else ""
-            line = create_leader_dots(f"      {item.label}{ref}", f"${item.amount:,.2f}")
-            story.append(Paragraph(line, styles["LeaderLine"]))
+            elif item.is_subtotal:
+                line = create_leader_dots(f"    {item.label}", f"${item.amount:,.2f}")
+                story.append(Paragraph(f"<b>{line}</b>", styles["LeaderLine"]))
+                story.append(LedgerRule(thickness=0.25, spaceBefore=2, spaceAfter=4))
+            elif item.indent_level == 0 and not item.lead_sheet_ref:
+                story.append(Spacer(1, 6))
+                story.append(Paragraph(item.label, styles["SubsectionHeader"]))
+            else:
+                ref = f" ({item.lead_sheet_ref})" if item.lead_sheet_ref else ""
+                line = create_leader_dots(f"      {item.label}{ref}", f"${item.amount:,.2f}")
+                story.append(Paragraph(line, styles["LeaderLine"]))
 
     # ── BALANCE VERIFICATION ──
     story.append(Spacer(1, 12))
@@ -1284,6 +1333,36 @@ def generate_financial_statements_pdf(
     badge_table.hAlign = "CENTER"
     story.append(badge_table)
 
+    # ── CROSS-REFERENCE INDEX: Balance Sheet (Sprint 488) ──
+    _bs_legend_map = {
+        "A": ("Cash and Cash Equivalents", "Bank Reconciliation Memo"),
+        "B": ("Receivables", "AR Aging Analysis Memo"),
+        "C": ("Inventory", "Inventory Register Analysis Memo"),
+        "D": ("Prepaid Expenses", "Trial Balance Diagnostic"),
+        "E": ("Property, Plant & Equipment", "Fixed Asset Testing Memo"),
+        "F": ("Other Assets & Intangibles", "Trial Balance Diagnostic"),
+        "G": ("AP & Accrued Liabilities", "AP Payment Testing Memo"),
+        "H": ("Other Current Liabilities", "Accrual Completeness Estimator"),
+        "I": ("Long-term Debt", "Trial Balance Diagnostic"),
+        "J": ("Other Long-term Liabilities", "Trial Balance Diagnostic"),
+        "K": ("Stockholders' Equity", "Trial Balance Diagnostic"),
+    }
+    # Only show legend entries for lead sheets that have non-zero amounts
+    _bs_refs_used = {
+        item.lead_sheet_ref for item in statements.balance_sheet if item.lead_sheet_ref and item.amount != 0
+    }
+    _bs_legend_items = [(ref, *_bs_legend_map[ref]) for ref in sorted(_bs_refs_used) if ref in _bs_legend_map]
+
+    if _bs_legend_items:
+        story.append(Spacer(1, 8))
+        story.append(LedgerRule(thickness=0.5, spaceBefore=2, spaceAfter=4))
+        story.append(Paragraph("Cross-Reference Index", styles["SubsectionHeader"]))
+        story.append(Spacer(1, 2))
+        for ref, acct_name, report_name in _bs_legend_items:
+            legend_text = f"({ref}) {acct_name} — See {report_name}"
+            story.append(Paragraph(legend_text, styles["DocumentRef"]))
+        story.append(Spacer(1, 4))
+
     # Section ornament
     story.append(Spacer(1, 8))
     story.append(Paragraph("❧", styles["SectionOrnament"]))
@@ -1294,24 +1373,92 @@ def generate_financial_statements_pdf(
     story.append(LedgerRule(color=ClassicalColors.OBSIDIAN_DEEP, thickness=1))
     story.append(Spacer(1, 8))
 
-    for item in statements.income_statement:
-        if item.is_total:
-            story.append(LedgerRule(thickness=0.5, spaceBefore=4, spaceAfter=2))
-            line = create_leader_dots(f"  {item.label}", f"${item.amount:,.2f}")
-            story.append(Paragraph(f"<b>{line}</b>", styles["LeaderLine"]))
-            story.append(
-                DoubleRule(
-                    width=6.5 * inch, color=ClassicalColors.OBSIDIAN_600, thick=1, thin=0.5, gap=1, spaceAfter=12
-                )
-            )
-        elif item.is_subtotal:
-            line = create_leader_dots(f"    {item.label}", f"${item.amount:,.2f}")
-            story.append(Paragraph(f"<b>{line}</b>", styles["LeaderLine"]))
-            story.append(LedgerRule(thickness=0.25, spaceBefore=2, spaceAfter=4))
-        else:
+    _is_has_prior = any(item.prior_amount is not None for item in statements.income_statement)
+
+    if _is_has_prior:
+        is_table_data = [["Account", "Current", "Prior", "Change", "% Change"]]
+        is_table_styles = [
+            ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
+            ("FONTSIZE", (0, 0), (-1, 0), 9),
+            ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
+            ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
+            ("FONTNAME", (1, 1), (-1, -1), "Courier"),
+            ("FONTSIZE", (0, 1), (-1, -1), 8),
+            ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
+            ("TOPPADDING", (0, 0), (-1, -1), 3),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+        ]
+        is_row = 1
+        for item in statements.income_statement:
+            prior_str = f"${item.prior_amount:,.2f}" if item.prior_amount is not None else "—"
+            change_str = ""
+            pct_str = ""
+            if item.prior_amount is not None:
+                change = item.amount - item.prior_amount
+                change_str = f"${change:,.2f}"
+                # Suppress % Change on subtotals/totals per prompt
+                if not item.is_subtotal and not item.is_total and item.prior_amount != 0:
+                    pct_change = (change / abs(item.prior_amount)) * 100
+                    pct_str = f"{pct_change:+.1f}%"
+
             ref = f" ({item.lead_sheet_ref})" if item.lead_sheet_ref else ""
-            line = create_leader_dots(f"  {item.label}{ref}", f"${item.amount:,.2f}")
-            story.append(Paragraph(line, styles["LeaderLine"]))
+            if item.is_total:
+                is_table_data.append([f"  {item.label}{ref}", f"${item.amount:,.2f}", prior_str, change_str, pct_str])
+                is_table_styles.append(("FONTNAME", (0, is_row), (-1, is_row), "Times-Bold"))
+                is_table_styles.append(("LINEABOVE", (0, is_row), (-1, is_row), 0.5, ClassicalColors.OBSIDIAN_600))
+                is_table_styles.append(("LINEBELOW", (0, is_row), (-1, is_row), 1, ClassicalColors.OBSIDIAN_600))
+            elif item.is_subtotal:
+                is_table_data.append([f"  {item.label}", f"${item.amount:,.2f}", prior_str, change_str, ""])
+                is_table_styles.append(("FONTNAME", (0, is_row), (-1, is_row), "Times-Bold"))
+                is_table_styles.append(("LINEBELOW", (0, is_row), (-1, is_row), 0.25, ClassicalColors.LEDGER_RULE))
+            else:
+                is_table_data.append([f"  {item.label}{ref}", f"${item.amount:,.2f}", prior_str, change_str, pct_str])
+            is_row += 1
+
+        is_table = Table(is_table_data, colWidths=[2.2 * inch, 1.1 * inch, 1.1 * inch, 1.1 * inch, 1.0 * inch])
+        is_table.setStyle(TableStyle(is_table_styles))
+        story.append(is_table)
+    else:
+        for item in statements.income_statement:
+            if item.is_total:
+                story.append(LedgerRule(thickness=0.5, spaceBefore=4, spaceAfter=2))
+                line = create_leader_dots(f"  {item.label}", f"${item.amount:,.2f}")
+                story.append(Paragraph(f"<b>{line}</b>", styles["LeaderLine"]))
+                story.append(
+                    DoubleRule(
+                        width=6.5 * inch, color=ClassicalColors.OBSIDIAN_600, thick=1, thin=0.5, gap=1, spaceAfter=12
+                    )
+                )
+            elif item.is_subtotal:
+                line = create_leader_dots(f"    {item.label}", f"${item.amount:,.2f}")
+                story.append(Paragraph(f"<b>{line}</b>", styles["LeaderLine"]))
+                story.append(LedgerRule(thickness=0.25, spaceBefore=2, spaceAfter=4))
+            else:
+                ref = f" ({item.lead_sheet_ref})" if item.lead_sheet_ref else ""
+                line = create_leader_dots(f"  {item.label}{ref}", f"${item.amount:,.2f}")
+                story.append(Paragraph(line, styles["LeaderLine"]))
+
+    # ── CROSS-REFERENCE INDEX: Income Statement (Sprint 488) ──
+    _is_legend_map = {
+        "L": ("Revenue", "Revenue Recognition Testing Memo"),
+        "M": ("Cost of Goods Sold", "Trial Balance Diagnostic"),
+        "N": ("Operating Expenses", "Expense Category Analysis"),
+        "O": ("Other Income / (Expense), Net", "Trial Balance Diagnostic"),
+    }
+    _is_refs_used = {
+        item.lead_sheet_ref for item in statements.income_statement if item.lead_sheet_ref and item.amount != 0
+    }
+    _is_legend_items = [(ref, *_is_legend_map[ref]) for ref in sorted(_is_refs_used) if ref in _is_legend_map]
+
+    if _is_legend_items:
+        story.append(Spacer(1, 8))
+        story.append(LedgerRule(thickness=0.5, spaceBefore=2, spaceAfter=4))
+        story.append(Paragraph("Cross-Reference Index", styles["SubsectionHeader"]))
+        story.append(Spacer(1, 2))
+        for ref, acct_name, report_name in _is_legend_items:
+            legend_text = f"({ref}) {acct_name} — See {report_name}"
+            story.append(Paragraph(legend_text, styles["DocumentRef"]))
+        story.append(Spacer(1, 4))
 
     # ── CASH FLOW STATEMENT (Sprint 84) ──
     if statements.cash_flow_statement is not None:
@@ -1402,35 +1549,10 @@ def generate_financial_statements_pdf(
         story.append(LedgerRule(color=ClassicalColors.OBSIDIAN_DEEP, thickness=1))
         story.append(Spacer(1, 8))
 
-        ratio_lines: list[tuple[str, str]] = []
-
-        # Profitability Ratios
-        if statements.gross_profit is not None:
-            gp_margin = statements.gross_profit / statements.total_revenue
-            ratio_lines.append(("Gross Profit Margin", f"{gp_margin:.1%}"))
-
-        if statements.operating_income is not None:
-            op_margin = statements.operating_income / statements.total_revenue
-            ratio_lines.append(("Operating Margin", f"{op_margin:.1%}"))
-
-        if statements.net_income is not None:
-            net_margin = statements.net_income / statements.total_revenue
-            ratio_lines.append(("Net Margin", f"{net_margin:.1%}"))
-
-        # Leverage
-        if statements.total_equity and statements.total_equity != 0:
-            de_ratio = statements.total_liabilities / statements.total_equity
-            ratio_lines.append(("Debt-to-Equity Ratio", f"{de_ratio:.2f}x"))
-
-        # Efficiency
-        if statements.total_assets and statements.total_assets != 0:
-            asset_turnover = statements.total_revenue / statements.total_assets
-            ratio_lines.append(("Asset Turnover", f"{asset_turnover:.2f}x"))
-
-        # Current Ratio and Working Capital from lead sheet data (A-C = current assets, G-H = current liabilities)
-        # These are available from the FinancialStatements dataclass via balance_sheet items
+        # Extract balance sheet components for ratio computation
         _current_assets = 0.0
         _current_liabilities = 0.0
+        _total_cash = 0.0
         _total_ar = 0.0
         _found_ca = False
         _found_cl = False
@@ -1441,26 +1563,141 @@ def generate_financial_statements_pdf(
             elif item.label == "Total Current Liabilities" and item.is_subtotal:
                 _current_liabilities = item.amount
                 _found_cl = True
+            elif item.lead_sheet_ref == "A" and item.indent_level == 1:
+                _total_cash = item.amount
             elif item.lead_sheet_ref == "B" and item.indent_level == 1:
                 _total_ar = item.amount
 
+        # Build ratio list in specified order (12 ratios)
+        # Each entry: (label, current_value_str, prior_value_str_or_None)
+        ratio_lines: list[tuple[str, str, Optional[str]]] = []
+        _has_prior = statements.has_prior_period
+
+        # 1. Gross Profit Margin
+        if statements.gross_profit is not None:
+            gp_margin = statements.gross_profit / statements.total_revenue
+            prior_gp_margin_str = None
+            if _has_prior and statements.prior_total_revenue and statements.prior_total_revenue != 0:
+                prior_gp_margin_str = f"{statements.prior_gross_profit / statements.prior_total_revenue:.1%}"
+            ratio_lines.append(("Gross Profit Margin", f"{gp_margin:.1%}", prior_gp_margin_str))
+
+        # 2. Operating Margin
+        if statements.operating_income is not None:
+            op_margin = statements.operating_income / statements.total_revenue
+            prior_op_str = None
+            if _has_prior and statements.prior_total_revenue and statements.prior_total_revenue != 0:
+                prior_op_str = f"{statements.prior_operating_income / statements.prior_total_revenue:.1%}"
+            ratio_lines.append(("Operating Margin", f"{op_margin:.1%}", prior_op_str))
+
+        # 3. Net Margin
+        if statements.net_income is not None:
+            net_margin = statements.net_income / statements.total_revenue
+            prior_nm_str = None
+            if _has_prior and statements.prior_total_revenue and statements.prior_total_revenue != 0:
+                prior_nm_str = f"{statements.prior_net_income / statements.prior_total_revenue:.1%}"
+            ratio_lines.append(("Net Margin", f"{net_margin:.1%}", prior_nm_str))
+
+        # 4. EBITDA
+        _depreciation = statements.depreciation_amount
+        if statements.operating_income is not None:
+            ebitda = statements.operating_income + _depreciation
+            ratio_lines.append(("EBITDA", f"${ebitda:,.2f}", None))
+
+            # 5. EBITDA Margin
+            ebitda_margin = ebitda / statements.total_revenue
+            ratio_lines.append(("EBITDA Margin", f"{ebitda_margin:.1%}", None))
+
+        # 6. Debt-to-Equity Ratio
+        if statements.total_equity and statements.total_equity != 0:
+            de_ratio = statements.total_liabilities / statements.total_equity
+            prior_de_str = None
+            if _has_prior and statements.prior_total_equity and statements.prior_total_equity != 0:
+                prior_de_str = f"{statements.prior_total_liabilities / statements.prior_total_equity:.2f}x"
+            ratio_lines.append(("Debt-to-Equity Ratio", f"{de_ratio:.2f}x", prior_de_str))
+
+        # 7. Interest Coverage
+        _interest_exp = statements.interest_expense
+        if statements.operating_income is not None and _interest_exp and _interest_exp != 0:
+            interest_coverage = statements.operating_income / _interest_exp
+            ratio_lines.append(("Interest Coverage", f"{interest_coverage:.1f}x", None))
+
+        # 8. Asset Turnover
+        if statements.total_assets and statements.total_assets != 0:
+            asset_turnover = statements.total_revenue / statements.total_assets
+            prior_at_str = None
+            if _has_prior and statements.prior_total_assets and statements.prior_total_assets != 0:
+                prior_at_str = f"{statements.prior_total_revenue / statements.prior_total_assets:.2f}x"
+            ratio_lines.append(("Asset Turnover", f"{asset_turnover:.2f}x", prior_at_str))
+
+        # 9. Current Ratio
         if _found_ca and _found_cl:
             if _current_liabilities != 0:
                 current_ratio = _current_assets / _current_liabilities
-                ratio_lines.append(("Current Ratio", f"{current_ratio:.2f}x"))
-            working_capital = _current_assets - _current_liabilities
-            ratio_lines.append(("Working Capital", f"${working_capital:,.2f}"))
-        else:
-            ratio_lines.append(("Current Ratio", "Requires current/non-current classification"))
+                ratio_lines.append(("Current Ratio", f"{current_ratio:.2f}x", None))
 
-        # DSO
+            # 10. Quick Ratio
+            if _current_liabilities != 0:
+                quick_ratio = (_total_cash + _total_ar) / _current_liabilities
+                ratio_lines.append(("Quick Ratio", f"{quick_ratio:.2f}x", None))
+
+            # 11. Working Capital
+            working_capital = _current_assets - _current_liabilities
+            ratio_lines.append(("Working Capital", f"${working_capital:,.2f}", None))
+        else:
+            ratio_lines.append(("Current Ratio", "Requires current/non-current classification", None))
+
+        # 12. DSO
         if _total_ar and statements.total_revenue != 0:
             dso = (_total_ar / statements.total_revenue) * 365
-            ratio_lines.append(("Days Sales Outstanding (DSO)", f"{dso:.0f} days"))
+            ratio_lines.append(("Days Sales Outstanding (DSO)", f"{dso:.0f} days", None))
 
-        for label, value in ratio_lines:
-            line = create_leader_dots(f"      {label}", value)
-            story.append(Paragraph(line, styles["LeaderLine"]))
+        # Render ratio table — with prior year column if available
+        if _has_prior and any(r[2] is not None for r in ratio_lines):
+            # Table format with prior year and change indicator
+            ratio_data = [["Metric", "Current", "Prior", ""]]
+            for label, current_val, prior_val in ratio_lines:
+                change_indicator = ""
+                if prior_val is not None:
+                    # Parse numeric values to compute change direction
+                    try:
+                        c_num = float(
+                            current_val.replace("%", "").replace("x", "").replace("$", "").replace(",", "").strip()
+                        )
+                        p_num = float(
+                            prior_val.replace("%", "").replace("x", "").replace("$", "").replace(",", "").strip()
+                        )
+                        if p_num != 0:
+                            pct_change = abs((c_num - p_num) / p_num) * 100
+                            if pct_change > 10:
+                                change_indicator = "\u25b2" if c_num > p_num else "\u25bc"
+                    except (ValueError, ZeroDivisionError):
+                        pass
+                ratio_data.append([label, current_val, prior_val or "—", change_indicator])
+
+            ratio_table = Table(ratio_data, colWidths=[2.8 * inch, 1.4 * inch, 1.4 * inch, 0.4 * inch])
+            ratio_table.setStyle(
+                TableStyle(
+                    [
+                        ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
+                        ("FONTSIZE", (0, 0), (-1, 0), 9),
+                        ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
+                        ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
+                        ("FONTNAME", (0, 1), (0, -1), "Times-Roman"),
+                        ("FONTNAME", (1, 1), (-1, -1), "Courier"),
+                        ("FONTSIZE", (0, 1), (-1, -1), 9),
+                        ("TEXTCOLOR", (0, 1), (-1, -1), ClassicalColors.OBSIDIAN_600),
+                        ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
+                        ("TOPPADDING", (0, 0), (-1, -1), 4),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                        ("LINEBELOW", (0, -1), (-1, -1), 0.5, ClassicalColors.LEDGER_RULE),
+                    ]
+                )
+            )
+            story.append(ratio_table)
+        else:
+            for label, value, _ in ratio_lines:
+                line = create_leader_dots(f"      {label}", value)
+                story.append(Paragraph(line, styles["LeaderLine"]))
 
         story.append(Spacer(1, 4))
 
@@ -1501,10 +1738,82 @@ def generate_financial_statements_pdf(
                 f"non-cash revenue recognition, or working capital management practices."
             )
 
-        ocf_line = create_leader_dots("      Operating Cash Flow / Net Income", f"{ocf_ni_ratio:.2f}x")
+        ocf_line = create_leader_dots("      Cash Conversion Ratio (OCF / Net Income)", f"{ocf_ni_ratio:.2f}x")
         story.append(Paragraph(ocf_line, styles["LeaderLine"]))
         story.append(Spacer(1, 4))
         story.append(Paragraph(interpretation, styles["DocumentRef"]))
+        story.append(Spacer(1, 4))
+
+        # Benchmark context (Sprint 488)
+        benchmark_text = (
+            "A Cash Conversion Ratio consistently above 1.0x over multiple periods is generally considered "
+            "a positive indicator of earnings quality. Ratios below 0.8x may indicate aggressive accrual "
+            "accounting and warrant further analytical procedures."
+        )
+        story.append(Paragraph(f"<i>{benchmark_text}</i>", styles["DocumentRef"]))
+
+        # Prior period Cash Conversion Ratio if available
+        if statements.has_prior_period and statements.prior_net_income and statements.prior_net_income != 0:
+            if statements.cash_flow_statement.has_prior_period:
+                # Compute prior OCF from prior period data if available
+                # Prior OCF isn't directly available, so note that
+                pass
+        story.append(Spacer(1, 8))
+
+    # ── NOTES TO FINANCIAL STATEMENTS (Sprint 488) ──
+    story.append(Spacer(1, 8))
+    story.append(Paragraph("❧", styles["SectionOrnament"]))
+    story.append(Spacer(1, 8))
+
+    story.append(Paragraph("Notes to Financial Statements", styles["SectionHeader"]))
+    story.append(LedgerRule(color=ClassicalColors.OBSIDIAN_DEEP, thickness=1))
+    story.append(Spacer(1, 4))
+
+    # Disclaimer
+    notes_disclaimer = (
+        "<i>The following notes are structural placeholders generated by Paciolus. "
+        "Note content must be completed by management or the engagement team. "
+        "Paciolus does not populate note disclosures.</i>"
+    )
+    story.append(Paragraph(notes_disclaimer, styles["DocumentRef"]))
+    story.append(Spacer(1, 8))
+
+    _footnote_stubs = [
+        (
+            "Note 1 — Basis of Presentation",
+            "To be completed by management. Describe the basis of accounting, reporting period, "
+            "and any significant departures from the applicable financial reporting framework.",
+        ),
+        (
+            "Note 2 — Significant Accounting Policies",
+            "Revenue Recognition: [Describe policy per ASC 606]\n"
+            "Inventory Valuation: [Describe method — FIFO, LIFO, weighted average]\n"
+            "Depreciation Method: [Describe method and useful life ranges]\n"
+            "Income Taxes: [Describe tax status — LLC pass-through or corporate]",
+        ),
+        (
+            "Note 3 — Long-Term Debt",
+            "Describe terms, interest rate, maturity date, and collateral for outstanding "
+            "long-term debt balances and current portions.",
+        ),
+        (
+            "Note 4 — Related Party Transactions",
+            "Disclose any transactions with related parties during the period, including "
+            "intercompany receivable/payable balances identified in the trial balance.",
+        ),
+        (
+            "Note 5 — Subsequent Events",
+            "Disclose any material events occurring after the period end through the "
+            "date these statements were prepared.",
+        ),
+    ]
+
+    for note_title, note_body in _footnote_stubs:
+        story.append(Paragraph(f"<b>{note_title}</b>", styles["DocumentRef"]))
+        story.append(Spacer(1, 2))
+        # Render placeholder text in italics
+        for line in note_body.split("\n"):
+            story.append(Paragraph(f"<i>{line.strip()}</i>", styles["DocumentRef"]))
         story.append(Spacer(1, 8))
 
     # ── ACCOUNT MAPPING TRACE (Sprint 284) ──
