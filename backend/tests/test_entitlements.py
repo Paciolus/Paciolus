@@ -37,7 +37,7 @@ class TestEntitlementConfig:
             ent = TIER_ENTITLEMENTS[tier]
             assert isinstance(ent, TierEntitlements)
             with pytest.raises(AttributeError):
-                ent.diagnostics_per_month = 999  # type: ignore[misc]
+                ent.uploads_per_month = 999  # type: ignore[misc]
 
 
 class TestDiagnosticLimits:
@@ -45,19 +45,19 @@ class TestDiagnosticLimits:
 
     def test_free_has_limit(self):
         ent = get_entitlements(UserTier.FREE)
-        assert ent.diagnostics_per_month == 10
+        assert ent.uploads_per_month == 10
 
     def test_solo_has_limit(self):
         ent = get_entitlements(UserTier.SOLO)
-        assert ent.diagnostics_per_month == 100
+        assert ent.uploads_per_month == 100
 
     def test_professional_has_limit(self):
         ent = get_entitlements(UserTier.PROFESSIONAL)
-        assert ent.diagnostics_per_month == 500
+        assert ent.uploads_per_month == 500
 
     def test_enterprise_unlimited(self):
         ent = get_entitlements(UserTier.ENTERPRISE)
-        assert ent.diagnostics_per_month == 0
+        assert ent.uploads_per_month == 0
 
 
 class TestClientLimits:
@@ -130,9 +130,9 @@ class TestFeatureFlags:
     def test_free_no_workspace(self):
         assert not get_entitlements(UserTier.FREE).workspace
 
-    def test_free_pdf_only(self):
+    def test_free_no_exports(self):
         ent = get_entitlements(UserTier.FREE)
-        assert ent.pdf_export
+        assert not ent.pdf_export
         assert not ent.excel_export
         assert not ent.csv_export
 
@@ -217,4 +217,4 @@ class TestGetEntitlementsFallback:
     def test_returns_free_for_unknown_tier(self):
         # Simulate a tier value not in the dict
         result = get_entitlements(UserTier.FREE)
-        assert result.diagnostics_per_month == 10
+        assert result.uploads_per_month == 10

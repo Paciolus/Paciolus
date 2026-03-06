@@ -42,22 +42,22 @@ _PAYROLL_CONFIG = TestingMemoConfig(
     risk_assessments={
         "low": (
             "Based on the automated payroll testing procedures applied, "
-            "the payroll register exhibits a LOW risk profile. "
+            "the payroll register returned LOW flag density across the automated tests. "
             "No anomalies exceeding the configured thresholds were detected by the automated tests applied."
         ),
         "elevated": (
             "Based on the automated payroll testing procedures applied, "
-            "the payroll register exhibits an ELEVATED risk profile. "
+            "the payroll register returned ELEVATED flag density across the automated tests. "
             "Select flagged entries should be reviewed for proper authorization and documentation."
         ),
         "moderate": (
             "Based on the automated payroll testing procedures applied, "
-            "the payroll register exhibits a MODERATE risk profile. "
+            "the payroll register returned MODERATE flag density across the automated tests. "
             "Flagged entries warrant focused review, particularly ghost employee indicators."
         ),
         "high": (
             "Based on the automated payroll testing procedures applied, "
-            "the payroll register exhibits a HIGH risk profile. "
+            "the payroll register returned HIGH flag density across the automated tests. "
             "Significant anomalies were detected that require detailed investigation. "
             "The engagement team should evaluate whether additional payroll procedures are appropriate."
         ),

@@ -53,7 +53,7 @@ FOLLOW_UP_PROCEDURES: dict[str, str] = {
     "holiday_postings": (
         "For each holiday posting, obtain documentation supporting business necessity "
         "and confirm the entry received proper authorization and supervisory review per "
-        "the client's journal entry policy (ISA 240.A40)."
+        "the client's journal entry policy (ISA 240 journal entry fraud risk indicator)."
     ),
     # AP Testing
     "exact_duplicate_payments": (
@@ -70,7 +70,7 @@ FOLLOW_UP_PROCEDURES: dict[str, str] = {
         "Obtain management explanation for each prepayment. Confirm whether a prepayment "
         "arrangement was authorized per AP policy and supported by a contract or purchase "
         "order. The absence of authorization documentation may indicate a control gap "
-        "that the engagement team should evaluate under ISA 265."
+        "that the engagement team should consider as part of their professional assessment of the AP control environment."
     ),
     "just_below_threshold": (
         "Obtain approval documentation for each payment. Compare the approval threshold "
@@ -220,9 +220,9 @@ FOLLOW_UP_PROCEDURES: dict[str, str] = {
         "Evaluate the most deviated digits in gross pay amounts for patterns of manual "
         "entry or estimation; consider targeted sampling toward those digits."
     ),
-    "PR-T9": "Investigate ghost employee indicators by tracing to HR records and physical verification.",
+    "PR-T9": "Investigate ghost employee indicators by tracing to HR records. Physical verification of employee existence, if warranted, must be performed by the engagement team directly and not delegated to management.",
     "PR-T10": "Verify employees sharing bank accounts or addresses for proper documentation and business justification.",
-    "PR-T11": "Investigate shared tax IDs for data entry errors or potential identity fraud.",
+    "PR-T11": "Investigate shared tax IDs for data entry errors or potential identity fraud. If confirmed, assess implications for the entity's payroll tax reporting obligations.",
     # Bank Reconciliation
     "stale_deposits": "Investigate deposits outstanding more than 10 days for recording delays or potential misstatements.",
     "stale_checks": "Review checks outstanding more than 90 days for stale-dated items requiring write-off or investigation.",

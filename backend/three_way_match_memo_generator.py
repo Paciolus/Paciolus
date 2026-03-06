@@ -398,19 +398,19 @@ def generate_three_way_match_memo(
     if risk == "low":
         assessment = (
             "Based on the automated three-way matching procedures applied, "
-            "the procurement cycle exhibits a LOW risk profile. "
+            "the procurement cycle returned LOW flag density across the automated tests. "
             "Match rates are satisfactory and no variances exceeding the configured thresholds were detected."
         )
     elif risk == "medium":
         assessment = (
             "Based on the automated three-way matching procedures applied, "
-            "the procurement cycle exhibits a MEDIUM risk profile. "
+            "the procurement cycle returned MEDIUM flag density across the automated tests. "
             "Select variances and unmatched documents should be reviewed for proper authorization and documentation."
         )
     else:
         assessment = (
             "Based on the automated three-way matching procedures applied, "
-            "the procurement cycle exhibits a HIGH risk profile. "
+            "the procurement cycle returned HIGH flag density across the automated tests. "
             "Significant variances and/or unmatched documents were detected that require detailed investigation. "
             "The engagement team should evaluate whether additional procedures are appropriate per ISA 505 and PCAOB AS 1105."
         )

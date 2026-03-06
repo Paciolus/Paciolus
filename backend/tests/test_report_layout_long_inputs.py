@@ -361,7 +361,7 @@ class TestMemoBaseLongDescriptions:
             "Examine all recorded transactions to identify entries "
             "posted on weekends, statutory holidays, or outside normal "
             "business hours that may indicate unauthorized access or "
-            "management override of controls per ISA 240.A40 and "
+            "management override of controls per ISA 240 and "
             "PCAOB AS 2401 paragraph 66 regarding journal entry fraud risks — "
             "including but not limited to entries posted by personnel without "
             "proper authorization during off-cycle periods"

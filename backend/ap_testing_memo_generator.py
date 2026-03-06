@@ -54,22 +54,22 @@ _AP_CONFIG = TestingMemoConfig(
     risk_assessments={
         "low": (
             "Based on the automated AP payment testing procedures applied, "
-            "the AP payment register exhibits a LOW risk profile. "
+            "the AP payment register returned LOW flag density across the automated tests. "
             "No anomalies exceeding the configured thresholds were detected by the automated tests applied."
         ),
         "elevated": (
             "Based on the automated AP payment testing procedures applied, "
-            "the AP payment register exhibits an ELEVATED risk profile. "
+            "the AP payment register returned ELEVATED flag density across the automated tests. "
             "Select flagged payments should be reviewed for proper authorization and documentation."
         ),
         "moderate": (
             "Based on the automated AP payment testing procedures applied, "
-            "the AP payment register exhibits a MODERATE risk profile. "
+            "the AP payment register returned MODERATE flag density across the automated tests. "
             "Flagged payments warrant focused review, particularly high-severity findings."
         ),
         "high": (
             "Based on the automated AP payment testing procedures applied, "
-            "the AP payment register exhibits a HIGH risk profile. "
+            "the AP payment register returned HIGH flag density across the automated tests. "
             "Significant anomalies were detected that require detailed investigation. "
             "The engagement team should evaluate whether additional procedures are appropriate."
         ),

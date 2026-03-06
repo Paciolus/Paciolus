@@ -13,7 +13,7 @@ chi-squared only, no MAD/conformity, different precision).
 References:
 - Nigrini, M.J. (2012). Benford's Law: Applications for Forensic
   Accounting, Auditing, and Fraud Detection.
-- ISA 530: Audit Sampling (Benford's Law as analytical procedure)
+- ISA 520: Analytical Procedures (Benford's Law as analytical procedure)
 """
 
 import math
@@ -63,6 +63,7 @@ class BenfordAnalysis:
     Identical field names and to_dict() output to the former
     je_testing_engine.BenfordResult for backward compatibility.
     """
+
     passed_prechecks: bool
     precheck_message: Optional[str] = None
     eligible_count: int = 0
@@ -159,22 +160,17 @@ def analyze_benford(
         )
 
     # Actual distribution
-    actual_dist: dict[int, float] = {
-        d: digit_counts[d] / counted_total for d in range(1, 10)
-    }
+    actual_dist: dict[int, float] = {d: digit_counts[d] / counted_total for d in range(1, 10)}
 
     # Deviation by digit
-    deviation: dict[int, float] = {
-        d: actual_dist[d] - BENFORD_EXPECTED[d] for d in range(1, 10)
-    }
+    deviation: dict[int, float] = {d: actual_dist[d] - BENFORD_EXPECTED[d] for d in range(1, 10)}
 
     # MAD
     mad = math.fsum(abs(deviation[d]) for d in range(1, 10)) / 9
 
     # Chi-squared
     chi_sq = sum(
-        ((digit_counts[d] - BENFORD_EXPECTED[d] * counted_total) ** 2)
-        / (BENFORD_EXPECTED[d] * counted_total)
+        ((digit_counts[d] - BENFORD_EXPECTED[d] * counted_total) ** 2) / (BENFORD_EXPECTED[d] * counted_total)
         for d in range(1, 10)
     )
 
@@ -189,9 +185,7 @@ def analyze_benford(
         conformity = "nonconforming"
 
     # Most deviated digits (top 3 with deviation > MAD)
-    sorted_deviations = sorted(
-        range(1, 10), key=lambda d: abs(deviation[d]), reverse=True
-    )
+    sorted_deviations = sorted(range(1, 10), key=lambda d: abs(deviation[d]), reverse=True)
     most_deviated = [d for d in sorted_deviations[:3] if abs(deviation[d]) > mad]
 
     return BenfordAnalysis(

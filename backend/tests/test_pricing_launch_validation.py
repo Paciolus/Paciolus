@@ -87,24 +87,34 @@ class TestMarketingPricingCorrectness:
     def test_seat_professional_price_6500_monthly(self):
         from billing.price_config import get_seat_price_cents
 
-        assert get_seat_price_cents(2, "monthly") == 6500
-        assert get_seat_price_cents(7, "monthly") == 6500
+        # Seats 1-7 included in Professional base plan
+        assert get_seat_price_cents(7, "monthly") == 0
+        # Add-on seats 8+ at $65/mo
+        assert get_seat_price_cents(8, "monthly") == 6500
+        assert get_seat_price_cents(20, "monthly") == 6500
 
     def test_seat_enterprise_price_4500_monthly(self):
         from billing.price_config import get_seat_price_cents
 
-        assert get_seat_price_cents(21, "monthly") == 4500
+        # Seats 1-20 included in Enterprise base plan
+        assert get_seat_price_cents(20, "monthly", tier="enterprise") == 0
+        # Add-on seats 21+ at $45/mo
+        assert get_seat_price_cents(21, "monthly", tier="enterprise") == 4500
 
     def test_seat_professional_annual_65000(self):
         from billing.price_config import get_seat_price_cents
 
-        assert get_seat_price_cents(2, "annual") == 65000
-        assert get_seat_price_cents(7, "annual") == 65000
+        # Seats 1-7 included in Professional base plan
+        assert get_seat_price_cents(7, "annual") == 0
+        # Add-on seats 8+ at $650/yr
+        assert get_seat_price_cents(8, "annual") == 65000
+        assert get_seat_price_cents(20, "annual") == 65000
 
     def test_seat_enterprise_annual_45000(self):
         from billing.price_config import get_seat_price_cents
 
-        assert get_seat_price_cents(21, "annual") == 45000
+        # Add-on seats 21+ at $450/yr
+        assert get_seat_price_cents(21, "annual", tier="enterprise") == 45000
 
     def test_base_seat_included_free(self):
         from billing.price_config import get_seat_price_cents
@@ -1211,23 +1221,23 @@ class TestEntitlementEnforcement:
 
     # --- Diagnostic limits ---
 
-    def test_free_diagnostic_limit_10(self):
+    def test_free_upload_limit_10(self):
         from shared.entitlements import get_entitlements
 
         e = get_entitlements(UserTier.FREE)
-        assert e.diagnostics_per_month == 10
+        assert e.uploads_per_month == 10
 
-    def test_solo_diagnostic_limit_100(self):
+    def test_solo_upload_limit_100(self):
         from shared.entitlements import get_entitlements
 
         e = get_entitlements(UserTier.SOLO)
-        assert e.diagnostics_per_month == 100
+        assert e.uploads_per_month == 100
 
-    def test_professional_diagnostic_limit_500(self):
+    def test_professional_upload_limit_500(self):
         from shared.entitlements import get_entitlements
 
         e = get_entitlements(UserTier.PROFESSIONAL)
-        assert e.diagnostics_per_month == 500
+        assert e.uploads_per_month == 500
 
     # --- Client limits ---
 
@@ -1329,11 +1339,11 @@ class TestEntitlementEnforcement:
 
     # --- Export capabilities ---
 
-    def test_free_pdf_only(self):
+    def test_free_no_exports(self):
         from shared.entitlements import get_entitlements
 
         e = get_entitlements(UserTier.FREE)
-        assert e.pdf_export is True
+        assert e.pdf_export is False
         assert e.excel_export is False
         assert e.csv_export is False
 
@@ -1626,7 +1636,7 @@ class TestProfessionalTierValidation:
 
         pro = get_entitlements(UserTier.PROFESSIONAL)
         solo = get_entitlements(UserTier.SOLO)
-        assert pro.diagnostics_per_month > solo.diagnostics_per_month
+        assert pro.uploads_per_month > solo.uploads_per_month
         assert pro.seats_included > solo.seats_included
         assert pro.priority_support is True
         assert solo.priority_support is False

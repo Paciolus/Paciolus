@@ -4,6 +4,20 @@
 
 ---
 
+## Digital Excellence Council Remediation (Sprint 497)
+
+1. **Pricing model changes cascade across 10+ test files**: Renaming `diagnostics_per_month` → `uploads_per_month` and changing Solo from limited→all-access broke tests in entitlements, parity, audit API, billing routes, and pricing launch validation. When entitlement fields are renamed or tier capabilities change, grep all test files for the old field name — don't rely on import errors alone since tests often reference field names as strings in assertions.
+
+2. **Patching internal functions requires checking if they were refactored**: `_load_seat_price_ids` was split into `_load_pro_seat_price_ids` and `_load_ent_seat_price_ids` during Pricing v3, but 5 test patches still referenced the old function. When refactoring internal helpers, search for all `patch("module._function_name"` references in tests.
+
+3. **ISA sub-paragraph citations (e.g., ISA 240.A40) are risky**: Application material paragraphs like ".A40" are renumbered between ISA revisions, making them fragile citations. Prefer citing the standard number only (ISA 240) unless quoting a specific, stable paragraph in a known revision.
+
+4. **Audit terminology must stay neutral**: Replacing "exhibits a HIGH risk profile" with "returned HIGH flag density across the automated tests" is important — the platform flags data patterns, it doesn't assess audit risk (ISA 315 domain). Language that implies the tool performs risk assessment crosses the assurance boundary.
+
+5. **SQLite schema drift causes silent lockout**: When models add new columns (like `organization_id`), the file-based `paciolus.db` doesn't auto-migrate. This causes `OperationalError` on queries touching the new column. Adding explicit SQLite migration in `init_db()` catches this at startup.
+
+---
+
 ## Engineering Process Hardening (Sprint 496)
 
 1. **1,345 frontend tests were never gated in CI**: The test suite existed locally but `ci.yml` only ran `npm run build` and `eslint`. A developer could break tests and merge without CI catching it. Always add test execution as a blocking CI job the same sprint you establish the test suite.

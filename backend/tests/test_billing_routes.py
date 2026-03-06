@@ -184,37 +184,44 @@ class TestSeatPriceConfig:
         from billing.price_config import get_stripe_seat_price_id
 
         with patch(
-            "billing.price_config._load_seat_price_ids", return_value={"monthly": "price_seat_mo", "annual": ""}
+            "billing.price_config._load_pro_seat_price_ids", return_value={"monthly": "price_seat_mo", "annual": ""}
         ):
-            assert get_stripe_seat_price_id("monthly") == "price_seat_mo"
+            assert get_stripe_seat_price_id("monthly", "professional") == "price_seat_mo"
 
     def test_get_stripe_seat_price_id_annual(self):
         from billing.price_config import get_stripe_seat_price_id
 
         with patch(
-            "billing.price_config._load_seat_price_ids", return_value={"monthly": "", "annual": "price_seat_yr"}
+            "billing.price_config._load_pro_seat_price_ids", return_value={"monthly": "", "annual": "price_seat_yr"}
         ):
-            assert get_stripe_seat_price_id("annual") == "price_seat_yr"
+            assert get_stripe_seat_price_id("annual", "professional") == "price_seat_yr"
 
     def test_get_stripe_seat_price_id_unconfigured_returns_none(self):
         from billing.price_config import get_stripe_seat_price_id
 
-        with patch("billing.price_config._load_seat_price_ids", return_value={"monthly": "", "annual": ""}):
-            assert get_stripe_seat_price_id("monthly") is None
-            assert get_stripe_seat_price_id("annual") is None
+        with patch("billing.price_config._load_pro_seat_price_ids", return_value={"monthly": "", "annual": ""}):
+            assert get_stripe_seat_price_id("monthly", "professional") is None
+            assert get_stripe_seat_price_id("annual", "professional") is None
 
     def test_get_all_seat_price_ids_filters_empty(self):
         from billing.price_config import get_all_seat_price_ids
 
-        with patch("billing.price_config._load_seat_price_ids", return_value={"monthly": "price_mo", "annual": ""}):
+        with (
+            patch("billing.price_config._load_pro_seat_price_ids", return_value={"monthly": "price_mo", "annual": ""}),
+            patch("billing.price_config._load_ent_seat_price_ids", return_value={"monthly": "", "annual": ""}),
+        ):
             result = get_all_seat_price_ids()
             assert result == {"price_mo"}
 
     def test_get_all_seat_price_ids_both_configured(self):
         from billing.price_config import get_all_seat_price_ids
 
-        with patch(
-            "billing.price_config._load_seat_price_ids", return_value={"monthly": "price_mo", "annual": "price_yr"}
+        with (
+            patch(
+                "billing.price_config._load_pro_seat_price_ids",
+                return_value={"monthly": "price_mo", "annual": "price_yr"},
+            ),
+            patch("billing.price_config._load_ent_seat_price_ids", return_value={"monthly": "", "annual": ""}),
         ):
             result = get_all_seat_price_ids()
             assert result == {"price_mo", "price_yr"}
@@ -388,8 +395,8 @@ class TestCheckoutValidation:
         assert body.seat_count == 5
         assert body.tier == "professional"
 
-    def test_seat_count_capped_at_22_by_schema(self):
-        """Pydantic schema rejects seat_count > 22."""
+    def test_seat_count_capped_at_60_by_schema(self):
+        """Pydantic schema rejects seat_count > 60."""
         from pydantic import ValidationError
 
         from routes.billing import CheckoutRequest
@@ -398,7 +405,7 @@ class TestCheckoutValidation:
             CheckoutRequest(
                 tier="professional",
                 interval="monthly",
-                seat_count=23,
+                seat_count=61,
             )
 
     def test_negative_seats_rejected_by_schema(self):

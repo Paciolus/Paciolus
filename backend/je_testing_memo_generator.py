@@ -2,7 +2,7 @@
 JE Testing Memo PDF Generator (Sprint 67, refactored Sprint 90, simplified Sprint 157)
 
 Config-driven wrapper around shared memo template.
-Domain: PCAOB AS 2110 / ISA 240.
+Domain: PCAOB AS 2401 / ISA 240.
 
 Uses build_extra_sections callback for the JE-specific Benford's Law analysis table.
 """
@@ -44,7 +44,7 @@ TEST_DESCRIPTIONS = {
     "benford_law": "Tests first-digit distribution against Benford's Law expected frequencies.",
     "weekend_postings": "Flags entries posted on Saturdays or Sundays, weighted by amount.",
     "month_end_clustering": "Detects unusual concentration of entries in last 3 days of month.",
-    "holiday_postings": "Flags entries posted on US federal holidays (ISA 240.A40 fraud risk indicator).",
+    "holiday_postings": "Flags entries posted on US federal holidays (ISA 240 journal entry fraud risk indicator).",
 }
 
 _JE_CONFIG = TestingMemoConfig(
@@ -58,33 +58,33 @@ _JE_CONFIG = TestingMemoConfig(
     methodology_intro=(
         "The following automated tests were applied to the General Ledger extract "
         "in accordance with professional auditing standards "
-        "(PCAOB AS 2110: Identifying and Assessing Risks of Material Misstatement, "
+        "(PCAOB AS 2401: Consideration of Fraud in a Financial Statement Audit, "
         "ISA 240: The Auditor's Responsibilities Relating to Fraud):"
     ),
     risk_assessments={
         "low": (
             "Based on the automated journal entry testing procedures applied, "
-            "the General Ledger extract exhibits a LOW risk profile. "
+            "the General Ledger extract returned LOW flag density across the automated tests. "
             "No anomalies exceeding the configured thresholds were detected by the automated tests applied."
         ),
         "elevated": (
             "Based on the automated journal entry testing procedures applied, "
-            "the General Ledger extract exhibits an ELEVATED risk profile. "
+            "the General Ledger extract returned ELEVATED flag density across the automated tests. "
             "Select flagged entries should be reviewed for proper authorization and documentation."
         ),
         "moderate": (
             "Based on the automated journal entry testing procedures applied, "
-            "the General Ledger extract exhibits a MODERATE risk profile. "
+            "the General Ledger extract returned MODERATE flag density across the automated tests. "
             "Flagged entries warrant focused review, particularly high-severity findings."
         ),
         "high": (
             "Based on the automated journal entry testing procedures applied, "
-            "the General Ledger extract exhibits a HIGH risk profile. "
+            "the General Ledger extract returned HIGH flag density across the automated tests. "
             "Significant anomalies were detected that require detailed investigation. "
             "The engagement team should evaluate whether additional procedures are appropriate."
         ),
     },
-    isa_reference="PCAOB AS 2110 (Risk Assessment) and ISA 240 (Fraud)",
+    isa_reference="PCAOB AS 2401 (Fraud) and ISA 240 (Fraud)",
     tool_domain="journal_entry_testing",
 )
 

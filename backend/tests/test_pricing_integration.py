@@ -15,8 +15,6 @@ import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from models import UserTier
@@ -30,22 +28,13 @@ from subscription_model import BillingInterval, Subscription, SubscriptionStatus
 class TestFeatureFlagGating:
     """V2 pricing endpoints are gated behind PRICING_V2_ENABLED."""
 
-    def test_require_pricing_v2_blocks_when_disabled(self):
-        from fastapi import HTTPException
+    def test_pricing_always_enabled(self):
+        """Pricing V2 is permanently enabled (no feature flag gating)."""
+        from routes.billing import CheckoutRequest
 
-        from routes.billing import _require_pricing_v2
-
-        with patch("config.PRICING_V2_ENABLED", False):
-            with pytest.raises(HTTPException) as exc_info:
-                _require_pricing_v2()
-            assert exc_info.value.status_code == 503
-
-    def test_require_pricing_v2_allows_when_enabled(self):
-        from routes.billing import _require_pricing_v2
-
-        with patch("config.PRICING_V2_ENABLED", True):
-            result = _require_pricing_v2()
-            assert result is None
+        # Verify billing module is importable and CheckoutRequest schema works
+        req = CheckoutRequest(tier="solo", interval="monthly")
+        assert req.tier == "solo"
 
     def test_checkout_ignores_promo_when_v2_disabled(self):
         """When V2 is off, promo_code field is accepted but not processed."""

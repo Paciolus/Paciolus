@@ -166,7 +166,7 @@ class TestCheckoutSeatCount:
             CheckoutRequest(
                 tier="professional",
                 interval="monthly",
-                seat_count=23,  # max is 22
+                seat_count=61,  # max is 60 (le=60 in CheckoutRequest)
             )
 
 

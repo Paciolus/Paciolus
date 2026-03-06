@@ -3,7 +3,7 @@ Static Holiday Calendar — Sprint 356
 
 Generates US federal holiday dates for any year. Used by JE testing engine
 (JT-19: Holiday Posting Detection) to flag entries posted on public holidays
-as an ISA 240.A40 fraud risk indicator.
+as an ISA 240 journal entry fraud risk indicator.
 
 Pure computation — no external API calls, no persistent storage.
 """

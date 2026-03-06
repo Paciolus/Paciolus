@@ -27,7 +27,7 @@ Sprint 69 scope:
 - Preview strata + execute sampling with reproducible seeds
 
 Sprint 356 scope:
-- T19: Holiday Posting Detection (ISA 240.A40 — entries on public holidays)
+- T19: Holiday Posting Detection (ISA 240 — entries on public holidays)
 
 ZERO-STORAGE COMPLIANCE:
 - All GL files processed in-memory only
@@ -38,7 +38,7 @@ PCAOB / ISA References:
 - PCAOB AS 2315: Audit Sampling
 - ISA 330: Auditor's Responses to Assessed Risks
 - ISA 240: Auditor's Responsibilities Relating to Fraud
-- ISA 530: Audit Sampling (Benford's Law as analytical procedure)
+- ISA 520: Analytical Procedures (Benford's Law as analytical procedure)
 """
 
 import re
@@ -72,6 +72,7 @@ from shared.testing_enums import (  # noqa: E402
 # CONFIGURATION
 # =============================================================================
 
+
 @dataclass
 class JETestingConfig:
     """Configurable thresholds for all JE tests.
@@ -79,6 +80,7 @@ class JETestingConfig:
     Defaults are sensible for most GL datasets. UI for customization
     is planned for Sprint 68 (Practice Settings integration).
     """
+
     # T1: Unbalanced Entries
     balance_tolerance: float = 0.01  # Rounding tolerance for debit/credit match
 
@@ -133,9 +135,7 @@ class JETestingConfig:
     # T15: Just-Below-Threshold
     threshold_proximity_enabled: bool = True
     threshold_proximity_pct: float = 0.05  # 5% below threshold
-    approval_thresholds: list[float] = field(
-        default_factory=lambda: [5000.0, 10000.0, 25000.0, 50000.0, 100000.0]
-    )
+    approval_thresholds: list[float] = field(default_factory=lambda: [5000.0, 10000.0, 25000.0, 50000.0, 100000.0])
 
     # T16: Account Frequency Anomaly
     frequency_anomaly_enabled: bool = True
@@ -152,7 +152,7 @@ class JETestingConfig:
     unusual_combo_max_frequency: int = 2  # Flag combos seen <= this many times
     unusual_combo_min_total_entries: int = 20  # Min entries with entry_id for analysis
 
-    # T19: Holiday Postings (ISA 240.A40)
+    # T19: Holiday Postings (ISA 240)
     holiday_posting_enabled: bool = True
     holiday_large_amount_threshold: float = 10000.0  # Amount weighting threshold
 
@@ -313,8 +313,13 @@ GL_COLUMN_CONFIGS: list[ColumnFieldConfig] = [
     ColumnFieldConfig("date_column", GL_DATE_PATTERNS, priority=15),
     ColumnFieldConfig("entry_id_column", GL_ENTRY_ID_PATTERNS, priority=20),
     ColumnFieldConfig("reference_column", GL_REFERENCE_PATTERNS, priority=25),
-    ColumnFieldConfig("account_column", GL_ACCOUNT_PATTERNS, required=True,
-                      missing_note="Could not identify an Account column", priority=30),
+    ColumnFieldConfig(
+        "account_column",
+        GL_ACCOUNT_PATTERNS,
+        required=True,
+        missing_note="Could not identify an Account column",
+        priority=30,
+    ),
     ColumnFieldConfig("debit_column", GL_DEBIT_PATTERNS, priority=35),
     ColumnFieldConfig("credit_column", GL_CREDIT_PATTERNS, priority=40),
     ColumnFieldConfig("amount_column", GL_AMOUNT_PATTERNS, priority=45),
@@ -328,6 +333,7 @@ GL_COLUMN_CONFIGS: list[ColumnFieldConfig] = [
 @dataclass
 class GLColumnDetectionResult:
     """Result of GL column detection."""
+
     # Required columns
     date_column: Optional[str] = None
     account_column: Optional[str] = None
@@ -462,10 +468,12 @@ def detect_gl_columns(column_names: list[str]) -> GLColumnDetectionResult:
             notes.append("Could not identify an Account column")
 
     if result.has_separate_debit_credit:
-        required_confidences.append(min(
-            detection.get_confidence("debit_column"),
-            detection.get_confidence("credit_column"),
-        ))
+        required_confidences.append(
+            min(
+                detection.get_confidence("debit_column"),
+                detection.get_confidence("credit_column"),
+            )
+        )
     elif result.amount_column:
         required_confidences.append(detection.get_confidence("amount_column"))
     else:
@@ -480,9 +488,11 @@ def detect_gl_columns(column_names: list[str]) -> GLColumnDetectionResult:
 # DATA MODELS
 # =============================================================================
 
+
 @dataclass
 class JournalEntry:
     """A single journal entry line from the GL."""
+
     entry_id: Optional[str] = None
     entry_date: Optional[str] = None
     posting_date: Optional[str] = None
@@ -524,6 +534,7 @@ class JournalEntry:
 @dataclass
 class FlaggedEntry:
     """An entry flagged by one or more tests."""
+
     entry: JournalEntry
     test_name: str
     test_key: str
@@ -549,6 +560,7 @@ class FlaggedEntry:
 @dataclass
 class TestResult:
     """Result of a single test."""
+
     test_name: str
     test_key: str
     test_tier: TestTier
@@ -576,6 +588,7 @@ class TestResult:
 @dataclass
 class GLDataQuality:
     """Quality assessment of the GL data."""
+
     completeness_score: float  # 0-100
     field_fill_rates: dict[str, float] = field(default_factory=dict)
     detected_issues: list[str] = field(default_factory=list)
@@ -593,6 +606,7 @@ class GLDataQuality:
 @dataclass
 class MultiCurrencyWarning:
     """Warning when multiple currencies are detected in GL data."""
+
     currencies_found: list[str] = field(default_factory=list)
     primary_currency: Optional[str] = None
     entry_counts_by_currency: dict[str, int] = field(default_factory=dict)
@@ -610,6 +624,7 @@ class MultiCurrencyWarning:
 @dataclass
 class CompositeScore:
     """Overall JE testing composite score."""
+
     score: float  # 0-100
     risk_tier: RiskTier
     tests_run: int
@@ -641,6 +656,7 @@ BenfordResult = BenfordAnalysis
 @dataclass
 class SamplingStratum:
     """A single stratum in stratified sampling."""
+
     name: str
     criteria: str  # e.g., "account=Cash", "amount=$1K-$10K"
     population_size: int
@@ -660,6 +676,7 @@ class SamplingStratum:
 @dataclass
 class SamplingResult:
     """Result of stratified sampling."""
+
     total_population: int
     total_sampled: int
     strata: list[SamplingStratum] = field(default_factory=list)
@@ -681,6 +698,7 @@ class SamplingResult:
 @dataclass
 class JETestingResult:
     """Complete result of journal entry testing."""
+
     composite_score: CompositeScore
     test_results: list[TestResult] = field(default_factory=list)
     data_quality: Optional[GLDataQuality] = None
@@ -707,6 +725,7 @@ class JETestingResult:
 # =============================================================================
 # GL PARSER
 # =============================================================================
+
 
 def parse_gl_entries(
     rows: list[dict],
@@ -774,6 +793,7 @@ def parse_gl_entries(
 # DATA QUALITY SCORING
 # =============================================================================
 
+
 def assess_data_quality(
     entries: list[JournalEntry],
     detection: GLColumnDetectionResult,
@@ -787,27 +807,56 @@ def assess_data_quality(
     """
     # Build field configs based on detected columns
     configs: list[FieldQualityConfig] = [
-        FieldQualityConfig("date", lambda e: e.posting_date or e.entry_date, weight=0.30,
-                           issue_threshold=0.95, issue_template="Missing dates on {unfilled} entries"),
-        FieldQualityConfig("account", lambda e: e.account, weight=0.30,
-                           issue_threshold=0.95, issue_template="Missing account on {unfilled} entries"),
-        FieldQualityConfig("amount", lambda e: e.debit > 0 or e.credit > 0, weight=0.25,
-                           issue_threshold=0.90,
-                           issue_template="{unfilled} entries have zero amount (both debit and credit are 0)"),
+        FieldQualityConfig(
+            "date",
+            lambda e: e.posting_date or e.entry_date,
+            weight=0.30,
+            issue_threshold=0.95,
+            issue_template="Missing dates on {unfilled} entries",
+        ),
+        FieldQualityConfig(
+            "account",
+            lambda e: e.account,
+            weight=0.30,
+            issue_threshold=0.95,
+            issue_template="Missing account on {unfilled} entries",
+        ),
+        FieldQualityConfig(
+            "amount",
+            lambda e: e.debit > 0 or e.credit > 0,
+            weight=0.25,
+            issue_threshold=0.90,
+            issue_template="{unfilled} entries have zero amount (both debit and credit are 0)",
+        ),
     ]
 
     if detection.description_column:
-        configs.append(FieldQualityConfig("description", lambda e: e.description,
-                                          issue_threshold=0.80,
-                                          issue_template="Low description fill rate: {fill_pct} ({unfilled} blank)"))
+        configs.append(
+            FieldQualityConfig(
+                "description",
+                lambda e: e.description,
+                issue_threshold=0.80,
+                issue_template="Low description fill rate: {fill_pct} ({unfilled} blank)",
+            )
+        )
     if detection.reference_column:
-        configs.append(FieldQualityConfig("reference", lambda e: e.reference,
-                                          issue_threshold=0.80,
-                                          issue_template="Low reference fill rate: {fill_pct}"))
+        configs.append(
+            FieldQualityConfig(
+                "reference",
+                lambda e: e.reference,
+                issue_threshold=0.80,
+                issue_template="Low reference fill rate: {fill_pct}",
+            )
+        )
     if detection.posted_by_column:
-        configs.append(FieldQualityConfig("posted_by", lambda e: e.posted_by,
-                                          issue_threshold=0.50,
-                                          issue_template="Low posted_by fill rate: {fill_pct}"))
+        configs.append(
+            FieldQualityConfig(
+                "posted_by",
+                lambda e: e.posted_by,
+                issue_threshold=0.50,
+                issue_template="Low posted_by fill rate: {fill_pct}",
+            )
+        )
     if detection.entry_id_column:
         configs.append(FieldQualityConfig("entry_id", lambda e: e.entry_id))
     if detection.source_column:
@@ -826,6 +875,7 @@ def assess_data_quality(
 # =============================================================================
 # MULTI-CURRENCY DETECTION
 # =============================================================================
+
 
 def detect_multi_currency(entries: list[JournalEntry]) -> Optional[MultiCurrencyWarning]:
     """Detect if GL contains multiple currencies. Warn only — no conversion.
@@ -896,24 +946,24 @@ def test_unbalanced_entries(
         diff = abs(total_debit - total_credit)
 
         if diff > config.balance_tolerance:
-            severity = Severity.HIGH if diff > 1000 else (
-                Severity.MEDIUM if diff > 10 else Severity.LOW
-            )
+            severity = Severity.HIGH if diff > 1000 else (Severity.MEDIUM if diff > 10 else Severity.LOW)
             for e in group_entries:
-                flagged.append(FlaggedEntry(
-                    entry=e,
-                    test_name="Unbalanced Entries",
-                    test_key="unbalanced_entries",
-                    test_tier=TestTier.STRUCTURAL,
-                    severity=severity,
-                    issue=f"Entry {group_key}: debits ({total_debit:,.2f}) != credits ({total_credit:,.2f}), difference: {diff:,.2f}",
-                    details={
-                        "group_key": group_key,
-                        "total_debit": total_debit,
-                        "total_credit": total_credit,
-                        "difference": diff,
-                    },
-                ))
+                flagged.append(
+                    FlaggedEntry(
+                        entry=e,
+                        test_name="Unbalanced Entries",
+                        test_key="unbalanced_entries",
+                        test_tier=TestTier.STRUCTURAL,
+                        severity=severity,
+                        issue=f"Entry {group_key}: debits ({total_debit:,.2f}) != credits ({total_credit:,.2f}), difference: {diff:,.2f}",
+                        details={
+                            "group_key": group_key,
+                            "total_debit": total_debit,
+                            "total_credit": total_credit,
+                            "difference": diff,
+                        },
+                    )
+                )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return TestResult(
@@ -946,15 +996,17 @@ def test_missing_fields(
             missing.append("amount")
 
         if missing:
-            flagged.append(FlaggedEntry(
-                entry=e,
-                test_name="Missing Fields",
-                test_key="missing_fields",
-                test_tier=TestTier.STRUCTURAL,
-                severity=Severity.MEDIUM if "account" in missing or "date" in missing else Severity.LOW,
-                issue=f"Missing required fields: {', '.join(missing)}",
-                details={"missing_fields": missing},
-            ))
+            flagged.append(
+                FlaggedEntry(
+                    entry=e,
+                    test_name="Missing Fields",
+                    test_key="missing_fields",
+                    test_tier=TestTier.STRUCTURAL,
+                    severity=Severity.MEDIUM if "account" in missing or "date" in missing else Severity.LOW,
+                    issue=f"Missing required fields: {', '.join(missing)}",
+                    details={"missing_fields": missing},
+                )
+            )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return TestResult(
@@ -992,19 +1044,21 @@ def test_duplicate_entries(
         if len(indices) > 1:
             for idx in indices:
                 e = entries[idx]
-                flagged.append(FlaggedEntry(
-                    entry=e,
-                    test_name="Duplicate Entries",
-                    test_key="duplicate_entries",
-                    test_tier=TestTier.STRUCTURAL,
-                    severity=Severity.MEDIUM,
-                    issue=f"Duplicate entry: {len(indices)} identical entries found (date={key[0]}, account={key[1]}, amount={key[2] or key[3]:.2f})",
-                    confidence=0.90,
-                    details={
-                        "duplicate_count": len(indices),
-                        "row_numbers": [entries[i].row_number for i in indices],
-                    },
-                ))
+                flagged.append(
+                    FlaggedEntry(
+                        entry=e,
+                        test_name="Duplicate Entries",
+                        test_key="duplicate_entries",
+                        test_tier=TestTier.STRUCTURAL,
+                        severity=Severity.MEDIUM,
+                        issue=f"Duplicate entry: {len(indices)} identical entries found (date={key[0]}, account={key[1]}, amount={key[2] or key[3]:.2f})",
+                        confidence=0.90,
+                        details={
+                            "duplicate_count": len(indices),
+                            "row_numbers": [entries[i].row_number for i in indices],
+                        },
+                    )
+                )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return TestResult(
@@ -1037,16 +1091,18 @@ def test_round_amounts(
 
         for divisor, name, severity in ROUND_AMOUNT_PATTERNS:
             if amt >= divisor and amt % divisor == 0:
-                flagged.append(FlaggedEntry(
-                    entry=e,
-                    test_name="Round Dollar Amounts",
-                    test_key="round_amounts",
-                    test_tier=TestTier.STRUCTURAL,
-                    severity=severity,
-                    issue=f"Round amount: ${amt:,.0f} (divisible by ${divisor:,.0f})",
-                    confidence=0.70,
-                    details={"amount": amt, "pattern": name, "divisor": divisor},
-                ))
+                flagged.append(
+                    FlaggedEntry(
+                        entry=e,
+                        test_name="Round Dollar Amounts",
+                        test_key="round_amounts",
+                        test_tier=TestTier.STRUCTURAL,
+                        severity=severity,
+                        issue=f"Round amount: ${amt:,.0f} (divisible by ${divisor:,.0f})",
+                        confidence=0.70,
+                        details={"amount": amt, "pattern": name, "divisor": divisor},
+                    )
+                )
                 break  # Only flag the largest pattern match
 
         if len(flagged) >= config.round_amount_max_flags:
@@ -1111,22 +1167,24 @@ def test_unusual_amounts(
             amt = e.abs_amount
             if amt > threshold:
                 z_score = (amt - mean) / stdev
-                flagged.append(FlaggedEntry(
-                    entry=e,
-                    test_name="Unusual Amounts",
-                    test_key="unusual_amounts",
-                    test_tier=TestTier.STRUCTURAL,
-                    severity=zscore_to_severity(z_score),
-                    issue=f"Amount ${amt:,.2f} is {z_score:.1f} standard deviations from account mean (${mean:,.2f})",
-                    confidence=min(0.50 + (z_score - config.unusual_amount_stddev) * 0.10, 1.0),
-                    details={
-                        "amount": amt,
-                        "account_mean": round(mean, 2),
-                        "account_stdev": round(stdev, 2),
-                        "z_score": round(z_score, 2),
-                        "threshold": round(threshold, 2),
-                    },
-                ))
+                flagged.append(
+                    FlaggedEntry(
+                        entry=e,
+                        test_name="Unusual Amounts",
+                        test_key="unusual_amounts",
+                        test_tier=TestTier.STRUCTURAL,
+                        severity=zscore_to_severity(z_score),
+                        issue=f"Amount ${amt:,.2f} is {z_score:.1f} standard deviations from account mean (${mean:,.2f})",
+                        confidence=min(0.50 + (z_score - config.unusual_amount_stddev) * 0.10, 1.0),
+                        details={
+                            "amount": amt,
+                            "account_mean": round(mean, 2),
+                            "account_stdev": round(stdev, 2),
+                            "z_score": round(z_score, 2),
+                            "threshold": round(threshold, 2),
+                        },
+                    )
+                )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return TestResult(
@@ -1215,21 +1273,23 @@ def test_benford_law(
             dev_pct = benford.deviation_by_digit[digit]
             if dev_pct > 0:
                 for e in entry_by_first_digit[digit]:
-                    flagged.append(FlaggedEntry(
-                        entry=e,
-                        test_name="Benford's Law",
-                        test_key="benford_law",
-                        test_tier=TestTier.STATISTICAL,
-                        severity=Severity.MEDIUM if conformity == "nonconforming" else Severity.LOW,
-                        issue=f"First digit {digit} is overrepresented ({benford.actual_distribution[digit]:.1%} vs expected {benford.expected_distribution[digit]:.1%})",
-                        confidence=min(abs(dev_pct) / 0.05, 1.0),
-                        details={
-                            "first_digit": digit,
-                            "actual_pct": round(benford.actual_distribution[digit], 4),
-                            "expected_pct": round(benford.expected_distribution[digit], 4),
-                            "deviation": round(dev_pct, 4),
-                        },
-                    ))
+                    flagged.append(
+                        FlaggedEntry(
+                            entry=e,
+                            test_name="Benford's Law",
+                            test_key="benford_law",
+                            test_tier=TestTier.STATISTICAL,
+                            severity=Severity.MEDIUM if conformity == "nonconforming" else Severity.LOW,
+                            issue=f"First digit {digit} is overrepresented ({benford.actual_distribution[digit]:.1%} vs expected {benford.expected_distribution[digit]:.1%})",
+                            confidence=min(abs(dev_pct) / 0.05, 1.0),
+                            details={
+                                "first_digit": digit,
+                                "actual_pct": round(benford.actual_distribution[digit], 4),
+                                "expected_pct": round(benford.expected_distribution[digit], 4),
+                                "deviation": round(dev_pct, 4),
+                            },
+                        )
+                    )
 
     flag_rate = len(flagged) / max(total_count, 1)
 
@@ -1293,20 +1353,22 @@ def test_weekend_postings(
             else:
                 severity = Severity.LOW
 
-            flagged.append(FlaggedEntry(
-                entry=e,
-                test_name="Weekend Postings",
-                test_key="weekend_postings",
-                test_tier=TestTier.STATISTICAL,
-                severity=severity,
-                issue=f"Entry posted on {day_name} ({d.isoformat()}), amount: ${amt:,.2f}",
-                confidence=0.80,
-                details={
-                    "day_of_week": day_name,
-                    "date": d.isoformat(),
-                    "amount": amt,
-                },
-            ))
+            flagged.append(
+                FlaggedEntry(
+                    entry=e,
+                    test_name="Weekend Postings",
+                    test_key="weekend_postings",
+                    test_tier=TestTier.STATISTICAL,
+                    severity=severity,
+                    issue=f"Entry posted on {day_name} ({d.isoformat()}), amount: ${amt:,.2f}",
+                    confidence=0.80,
+                    details={
+                        "day_of_week": day_name,
+                        "date": d.isoformat(),
+                        "amount": amt,
+                    },
+                )
+            )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return TestResult(
@@ -1354,9 +1416,7 @@ def test_month_end_clustering(
 
         # Count entries in last N days
         cutoff_day = days_in_month - config.month_end_days + 1
-        month_end_entries = [
-            (d, e) for d, e in dated_entries if d.day >= cutoff_day
-        ]
+        month_end_entries = [(d, e) for d, e in dated_entries if d.day >= cutoff_day]
         month_end_count = len(month_end_entries)
         month_end_daily = month_end_count / config.month_end_days
 
@@ -1366,22 +1426,24 @@ def test_month_end_clustering(
             flagged_months.append(month_label)
 
             for d, e in month_end_entries:
-                flagged.append(FlaggedEntry(
-                    entry=e,
-                    test_name="Month-End Clustering",
-                    test_key="month_end_clustering",
-                    test_tier=TestTier.STATISTICAL,
-                    severity=Severity.MEDIUM if ratio > 4 else Severity.LOW,
-                    issue=f"Month-end entry ({d.isoformat()}): {month_end_count} entries in last {config.month_end_days} days of {month_label} ({ratio:.1f}x avg daily volume)",
-                    confidence=min(ratio / 5.0, 1.0),
-                    details={
-                        "month": month_label,
-                        "month_end_count": month_end_count,
-                        "avg_daily": round(avg_daily, 1),
-                        "month_end_daily": round(month_end_daily, 1),
-                        "ratio": round(ratio, 2),
-                    },
-                ))
+                flagged.append(
+                    FlaggedEntry(
+                        entry=e,
+                        test_name="Month-End Clustering",
+                        test_key="month_end_clustering",
+                        test_tier=TestTier.STATISTICAL,
+                        severity=Severity.MEDIUM if ratio > 4 else Severity.LOW,
+                        issue=f"Month-end entry ({d.isoformat()}): {month_end_count} entries in last {config.month_end_days} days of {month_label} ({ratio:.1f}x avg daily volume)",
+                        confidence=min(ratio / 5.0, 1.0),
+                        details={
+                            "month": month_label,
+                            "month_end_count": month_end_count,
+                            "avg_daily": round(avg_daily, 1),
+                            "month_end_daily": round(month_end_daily, 1),
+                            "ratio": round(ratio, 2),
+                        },
+                    )
+                )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return TestResult(
@@ -1438,9 +1500,14 @@ def _extract_hour(date_str: Optional[str]) -> Optional[int]:
     """Extract hour from a datetime string. Returns None if no time component."""
     if not date_str:
         return None
-    for fmt in ("%Y-%m-%d %H:%M:%S", "%m/%d/%Y %H:%M:%S",
-                "%Y-%m-%dT%H:%M:%S", "%d/%m/%Y %H:%M:%S",
-                "%Y-%m-%d %H:%M", "%m/%d/%Y %H:%M"):
+    for fmt in (
+        "%Y-%m-%d %H:%M:%S",
+        "%m/%d/%Y %H:%M:%S",
+        "%Y-%m-%dT%H:%M:%S",
+        "%d/%m/%Y %H:%M:%S",
+        "%Y-%m-%d %H:%M",
+        "%m/%d/%Y %H:%M",
+    ):
         try:
             return datetime.strptime(date_str.strip(), fmt).hour
         except (ValueError, AttributeError):
@@ -1453,9 +1520,9 @@ def _extract_number(entry_id: Optional[str]) -> Optional[int]:
     if not entry_id:
         return None
     # Strip common prefixes like JE-, JV-, GJ-, #
-    cleaned = re.sub(r'^[A-Za-z#\-]+', '', entry_id.strip())
+    cleaned = re.sub(r"^[A-Za-z#\-]+", "", entry_id.strip())
     # Extract leading digits
-    match = re.match(r'(\d+)', cleaned)
+    match = re.match(r"(\d+)", cleaned)
     if match:
         return int(match.group(1))
     return None
@@ -1507,17 +1574,19 @@ def test_single_user_high_volume(
             reverse=True,
         )
         severity = Severity.HIGH if pct > 0.50 else Severity.MEDIUM
-        for e in user_entries[:config.single_user_max_flags]:
-            flagged.append(FlaggedEntry(
-                entry=e,
-                test_name="Single-User High Volume",
-                test_key="single_user_high_volume",
-                test_tier=TestTier.STATISTICAL,
-                severity=severity,
-                issue=f"User '{user}' posted {pct:.0%} of entries ({count}/{total})",
-                confidence=min(pct / config.single_user_volume_pct, 1.0),
-                details={"user": user, "count": count, "total": total, "pct": round(pct, 4)},
-            ))
+        for e in user_entries[: config.single_user_max_flags]:
+            flagged.append(
+                FlaggedEntry(
+                    entry=e,
+                    test_name="Single-User High Volume",
+                    test_key="single_user_high_volume",
+                    test_tier=TestTier.STATISTICAL,
+                    severity=severity,
+                    issue=f"User '{user}' posted {pct:.0%} of entries ({count}/{total})",
+                    confidence=min(pct / config.single_user_volume_pct, 1.0),
+                    details={"user": user, "count": count, "total": total, "pct": round(pct, 4)},
+                )
+            )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return TestResult(
@@ -1576,16 +1645,18 @@ def test_after_hours_postings(
         else:
             severity = Severity.LOW
 
-        flagged.append(FlaggedEntry(
-            entry=e,
-            test_name="After-Hours Postings",
-            test_key="after_hours_postings",
-            test_tier=TestTier.STATISTICAL,
-            severity=severity,
-            issue=f"Entry posted at {hour:02d}:00 (outside {config.after_hours_end:02d}:00-{config.after_hours_start:02d}:00 business hours)",
-            confidence=0.8 if amt > config.after_hours_large_threshold else 0.6,
-            details={"hour": hour, "amount": amt},
-        ))
+        flagged.append(
+            FlaggedEntry(
+                entry=e,
+                test_name="After-Hours Postings",
+                test_key="after_hours_postings",
+                test_tier=TestTier.STATISTICAL,
+                severity=severity,
+                issue=f"Entry posted at {hour:02d}:00 (outside {config.after_hours_end:02d}:00-{config.after_hours_start:02d}:00 business hours)",
+                confidence=0.8 if amt > config.after_hours_large_threshold else 0.6,
+                details={"hour": hour, "amount": amt},
+            )
+        )
 
     if entries_with_time == 0:
         return TestResult(
@@ -1671,16 +1742,18 @@ def test_numbering_gaps(
             else:
                 severity = Severity.LOW
 
-            flagged.append(FlaggedEntry(
-                entry=curr_entry,
-                test_name="Sequential Numbering Gaps",
-                test_key="numbering_gaps",
-                test_tier=TestTier.STATISTICAL,
-                severity=severity,
-                issue=f"Gap of {gap - 1} missing entries before #{curr_num} (previous: #{prev_num})",
-                confidence=min(gap / 100.0, 1.0),
-                details={"gap_size": gap - 1, "prev_number": prev_num, "curr_number": curr_num},
-            ))
+            flagged.append(
+                FlaggedEntry(
+                    entry=curr_entry,
+                    test_name="Sequential Numbering Gaps",
+                    test_key="numbering_gaps",
+                    test_tier=TestTier.STATISTICAL,
+                    severity=severity,
+                    issue=f"Gap of {gap - 1} missing entries before #{curr_num} (previous: #{prev_num})",
+                    confidence=min(gap / 100.0, 1.0),
+                    details={"gap_size": gap - 1, "prev_number": prev_num, "curr_number": curr_num},
+                )
+            )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return TestResult(
@@ -1741,16 +1814,18 @@ def test_backdated_entries(
             else:
                 severity = Severity.LOW
 
-            flagged.append(FlaggedEntry(
-                entry=e,
-                test_name="Backdated Entries",
-                test_key="backdated_entries",
-                test_tier=TestTier.STATISTICAL,
-                severity=severity,
-                issue=f"Posting date differs from entry date by {days_diff} days (posting: {e.posting_date}, entered: {e.entry_date})",
-                confidence=min(days_diff / 90.0, 1.0),
-                details={"days_diff": days_diff, "posting_date": e.posting_date, "entry_date": e.entry_date},
-            ))
+            flagged.append(
+                FlaggedEntry(
+                    entry=e,
+                    test_name="Backdated Entries",
+                    test_key="backdated_entries",
+                    test_tier=TestTier.STATISTICAL,
+                    severity=severity,
+                    issue=f"Posting date differs from entry date by {days_diff} days (posting: {e.posting_date}, entered: {e.entry_date})",
+                    confidence=min(days_diff / 90.0, 1.0),
+                    details={"days_diff": days_diff, "posting_date": e.posting_date, "entry_date": e.entry_date},
+                )
+            )
 
     if dual_date_count == 0:
         return TestResult(
@@ -1836,16 +1911,18 @@ def test_suspicious_keywords(
             else:
                 severity = Severity.LOW
 
-            flagged.append(FlaggedEntry(
-                entry=e,
-                test_name="Suspicious Keywords",
-                test_key="suspicious_keywords",
-                test_tier=TestTier.STATISTICAL,
-                severity=severity,
-                issue=f"Description contains '{matched_keyword}' (confidence: {best_confidence:.0%})",
-                confidence=best_confidence,
-                details={"matched_keyword": matched_keyword, "amount": amt},
-            ))
+            flagged.append(
+                FlaggedEntry(
+                    entry=e,
+                    test_name="Suspicious Keywords",
+                    test_key="suspicious_keywords",
+                    test_tier=TestTier.STATISTICAL,
+                    severity=severity,
+                    issue=f"Description contains '{matched_keyword}' (confidence: {best_confidence:.0%})",
+                    confidence=best_confidence,
+                    details={"matched_keyword": matched_keyword, "amount": amt},
+                )
+            )
 
     if entries_with_desc == 0:
         return TestResult(
@@ -1875,8 +1952,9 @@ def test_suspicious_keywords(
 
 
 # =============================================================================
-# T19 — HOLIDAY POSTINGS (Sprint 356, ISA 240.A40)
+# T19 — HOLIDAY POSTINGS (Sprint 356, ISA 240)
 # =============================================================================
+
 
 def test_holiday_postings(
     entries: list[JournalEntry],
@@ -1884,7 +1962,7 @@ def test_holiday_postings(
 ) -> TestResult:
     """T19: Flag entries posted on public holidays.
 
-    Complements T7 (Weekend Postings). ISA 240.A40 identifies entries posted
+    Complements T7 (Weekend Postings). ISA 240 identifies entries posted
     on public holidays as a fraud risk indicator — transactions recorded when
     offices are closed warrant additional scrutiny.
 
@@ -1942,20 +2020,22 @@ def test_holiday_postings(
         else:
             severity = Severity.LOW
 
-        flagged.append(FlaggedEntry(
-            entry=e,
-            test_name="Holiday Postings",
-            test_key="holiday_postings",
-            test_tier=TestTier.STATISTICAL,
-            severity=severity,
-            issue=f"Entry posted on {holiday_name} ({d.isoformat()}), amount: ${amt:,.2f}",
-            confidence=0.85,
-            details={
-                "holiday": holiday_name,
-                "date": d.isoformat(),
-                "amount": amt,
-            },
-        ))
+        flagged.append(
+            FlaggedEntry(
+                entry=e,
+                test_name="Holiday Postings",
+                test_key="holiday_postings",
+                test_tier=TestTier.STATISTICAL,
+                severity=severity,
+                issue=f"Entry posted on {holiday_name} ({d.isoformat()}), amount: ${amt:,.2f}",
+                confidence=0.85,
+                details={
+                    "holiday": holiday_name,
+                    "date": d.isoformat(),
+                    "amount": amt,
+                },
+            )
+        )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return TestResult(
@@ -1966,7 +2046,7 @@ def test_holiday_postings(
         total_entries=len(entries),
         flag_rate=flag_rate,
         severity=Severity.LOW,
-        description="Flags entries posted on US federal holidays (ISA 240.A40 fraud risk indicator).",
+        description="Flags entries posted on US federal holidays (ISA 240 fraud risk indicator).",
         flagged_entries=flagged,
     )
 
@@ -1974,6 +2054,7 @@ def test_holiday_postings(
 # =============================================================================
 # TIER 3 — ADVANCED / FRAUD INDICATORS (T14-T18)
 # =============================================================================
+
 
 def test_reciprocal_entries(
     entries: list[JournalEntry],
@@ -1990,9 +2071,12 @@ def test_reciprocal_entries(
             test_name="Reciprocal Entries",
             test_key="reciprocal_entries",
             test_tier=TestTier.ADVANCED,
-            entries_flagged=0, total_entries=len(entries),
-            flag_rate=0.0, severity=Severity.LOW,
-            description="Test disabled.", flagged_entries=[],
+            entries_flagged=0,
+            total_entries=len(entries),
+            flag_rate=0.0,
+            severity=Severity.LOW,
+            description="Test disabled.",
+            flagged_entries=[],
         )
 
     # Index entries by absolute amount (rounded to 2 decimals) for matching
@@ -2021,8 +2105,7 @@ def test_reciprocal_entries(
             for c_entry in credits:
                 if d_entry.row_number == c_entry.row_number:
                     continue
-                pair_key = (min(d_entry.row_number, c_entry.row_number),
-                            max(d_entry.row_number, c_entry.row_number))
+                pair_key = (min(d_entry.row_number, c_entry.row_number), max(d_entry.row_number, c_entry.row_number))
                 if pair_key in seen_pairs:
                     continue
 
@@ -2038,22 +2121,24 @@ def test_reciprocal_entries(
                     severity = Severity.HIGH if cross_account else Severity.MEDIUM
 
                     for entry in (d_entry, c_entry):
-                        flagged.append(FlaggedEntry(
-                            entry=entry,
-                            test_name="Reciprocal Entries",
-                            test_key="reciprocal_entries",
-                            test_tier=TestTier.ADVANCED,
-                            severity=severity,
-                            issue=f"Matching {'cross-account ' if cross_account else ''}pair: ${amt:,.2f} within {days_apart} days",
-                            confidence=0.9 if cross_account else 0.7,
-                            details={
-                                "matched_amount": amt,
-                                "days_apart": days_apart,
-                                "cross_account": cross_account,
-                                "debit_account": d_entry.account,
-                                "credit_account": c_entry.account,
-                            },
-                        ))
+                        flagged.append(
+                            FlaggedEntry(
+                                entry=entry,
+                                test_name="Reciprocal Entries",
+                                test_key="reciprocal_entries",
+                                test_tier=TestTier.ADVANCED,
+                                severity=severity,
+                                issue=f"Matching {'cross-account ' if cross_account else ''}pair: ${amt:,.2f} within {days_apart} days",
+                                confidence=0.9 if cross_account else 0.7,
+                                details={
+                                    "matched_amount": amt,
+                                    "days_apart": days_apart,
+                                    "cross_account": cross_account,
+                                    "debit_account": d_entry.account,
+                                    "credit_account": c_entry.account,
+                                },
+                            )
+                        )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return TestResult(
@@ -2084,9 +2169,12 @@ def test_just_below_threshold(
             test_name="Just-Below-Threshold",
             test_key="just_below_threshold",
             test_tier=TestTier.ADVANCED,
-            entries_flagged=0, total_entries=len(entries),
-            flag_rate=0.0, severity=Severity.LOW,
-            description="Test disabled.", flagged_entries=[],
+            entries_flagged=0,
+            total_entries=len(entries),
+            flag_rate=0.0,
+            severity=Severity.LOW,
+            description="Test disabled.",
+            flagged_entries=[],
         )
 
     flagged: list[FlaggedEntry] = []
@@ -2101,16 +2189,22 @@ def test_just_below_threshold(
             lower_bound = threshold * (1 - margin)
             if lower_bound <= amt < threshold:
                 severity = Severity.HIGH if threshold >= 50000 else Severity.MEDIUM
-                flagged.append(FlaggedEntry(
-                    entry=e,
-                    test_name="Just-Below-Threshold",
-                    test_key="just_below_threshold",
-                    test_tier=TestTier.ADVANCED,
-                    severity=severity,
-                    issue=f"Amount ${amt:,.2f} is {((threshold - amt) / threshold):.1%} below ${threshold:,.0f} threshold",
-                    confidence=0.8,
-                    details={"amount": amt, "threshold": threshold, "gap_pct": round((threshold - amt) / threshold, 4)},
-                ))
+                flagged.append(
+                    FlaggedEntry(
+                        entry=e,
+                        test_name="Just-Below-Threshold",
+                        test_key="just_below_threshold",
+                        test_tier=TestTier.ADVANCED,
+                        severity=severity,
+                        issue=f"Amount ${amt:,.2f} is {((threshold - amt) / threshold):.1%} below ${threshold:,.0f} threshold",
+                        confidence=0.8,
+                        details={
+                            "amount": amt,
+                            "threshold": threshold,
+                            "gap_pct": round((threshold - amt) / threshold, 4),
+                        },
+                    )
+                )
                 break  # Only flag once per entry (closest threshold)
 
     # Enhanced: detect split transactions
@@ -2129,16 +2223,23 @@ def test_just_below_threshold(
             if total > threshold and all(e.abs_amount < threshold for e in day_entries):
                 # Split detected: individual entries below threshold, total above
                 for e in day_entries:
-                    flagged.append(FlaggedEntry(
-                        entry=e,
-                        test_name="Just-Below-Threshold",
-                        test_key="just_below_threshold",
-                        test_tier=TestTier.ADVANCED,
-                        severity=Severity.HIGH,
-                        issue=f"Potential split: {len(day_entries)} entries to '{acct}' on {day} total ${total:,.2f} (>${threshold:,.0f} threshold)",
-                        confidence=0.85,
-                        details={"split_total": total, "threshold": threshold, "entry_count": len(day_entries), "date": day},
-                    ))
+                    flagged.append(
+                        FlaggedEntry(
+                            entry=e,
+                            test_name="Just-Below-Threshold",
+                            test_key="just_below_threshold",
+                            test_tier=TestTier.ADVANCED,
+                            severity=Severity.HIGH,
+                            issue=f"Potential split: {len(day_entries)} entries to '{acct}' on {day} total ${total:,.2f} (>${threshold:,.0f} threshold)",
+                            confidence=0.85,
+                            details={
+                                "split_total": total,
+                                "threshold": threshold,
+                                "entry_count": len(day_entries),
+                                "date": day,
+                            },
+                        )
+                    )
                 break
 
     flag_rate = len(flagged) / max(len(entries), 1)
@@ -2169,9 +2270,12 @@ def test_account_frequency_anomaly(
             test_name="Account Frequency Anomaly",
             test_key="account_frequency_anomaly",
             test_tier=TestTier.ADVANCED,
-            entries_flagged=0, total_entries=len(entries),
-            flag_rate=0.0, severity=Severity.LOW,
-            description="Test disabled.", flagged_entries=[],
+            entries_flagged=0,
+            total_entries=len(entries),
+            flag_rate=0.0,
+            severity=Severity.LOW,
+            description="Test disabled.",
+            flagged_entries=[],
         )
 
     # Group entries by (account, month)
@@ -2211,16 +2315,24 @@ def test_account_frequency_anomaly(
                 severity = Severity.HIGH if z_score > 4 else Severity.MEDIUM
                 # Flag the largest entry in the anomalous month as representative
                 representative = max(month_entries, key=lambda e: e.abs_amount)
-                flagged.append(FlaggedEntry(
-                    entry=representative,
-                    test_name="Account Frequency Anomaly",
-                    test_key="account_frequency_anomaly",
-                    test_tier=TestTier.ADVANCED,
-                    severity=severity,
-                    issue=f"Account '{acct}' had {count} entries in {month_key} (avg: {mean_freq:.1f}, z-score: {z_score:.1f})",
-                    confidence=min(z_score / 5.0, 1.0),
-                    details={"account": acct, "month": month_key, "count": count, "mean": round(mean_freq, 1), "z_score": round(z_score, 2)},
-                ))
+                flagged.append(
+                    FlaggedEntry(
+                        entry=representative,
+                        test_name="Account Frequency Anomaly",
+                        test_key="account_frequency_anomaly",
+                        test_tier=TestTier.ADVANCED,
+                        severity=severity,
+                        issue=f"Account '{acct}' had {count} entries in {month_key} (avg: {mean_freq:.1f}, z-score: {z_score:.1f})",
+                        confidence=min(z_score / 5.0, 1.0),
+                        details={
+                            "account": acct,
+                            "month": month_key,
+                            "count": count,
+                            "mean": round(mean_freq, 1),
+                            "z_score": round(z_score, 2),
+                        },
+                    )
+                )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return TestResult(
@@ -2250,9 +2362,12 @@ def test_description_length_anomaly(
             test_name="Description Length Anomaly",
             test_key="description_length_anomaly",
             test_tier=TestTier.ADVANCED,
-            entries_flagged=0, total_entries=len(entries),
-            flag_rate=0.0, severity=Severity.LOW,
-            description="Test disabled.", flagged_entries=[],
+            entries_flagged=0,
+            total_entries=len(entries),
+            flag_rate=0.0,
+            severity=Severity.LOW,
+            description="Test disabled.",
+            flagged_entries=[],
         )
 
     # Group description lengths by account
@@ -2272,8 +2387,10 @@ def test_description_length_anomaly(
             test_name="Description Length Anomaly",
             test_key="description_length_anomaly",
             test_tier=TestTier.ADVANCED,
-            entries_flagged=0, total_entries=len(entries),
-            flag_rate=0.0, severity=Severity.LOW,
+            entries_flagged=0,
+            total_entries=len(entries),
+            flag_rate=0.0,
+            severity=Severity.LOW,
             description="No entries have description data.",
             flagged_entries=[],
         )
@@ -2297,29 +2414,38 @@ def test_description_length_anomaly(
         if mean_len > 5:
             for desc_len, e in desc_entries:
                 if desc_len == 0:
-                    flagged.append(FlaggedEntry(
-                        entry=e,
-                        test_name="Description Length Anomaly",
-                        test_key="description_length_anomaly",
-                        test_tier=TestTier.ADVANCED,
-                        severity=Severity.MEDIUM,
-                        issue=f"Blank description for account '{acct}' (avg length: {mean_len:.0f} chars)",
-                        confidence=0.8,
-                        details={"account": acct, "desc_length": 0, "mean_length": round(mean_len, 1)},
-                    ))
-                elif stdev_len > 0:
-                    z_score = (mean_len - desc_len) / stdev_len
-                    if z_score > config.desc_length_stddev and desc_len < mean_len * 0.3:
-                        flagged.append(FlaggedEntry(
+                    flagged.append(
+                        FlaggedEntry(
                             entry=e,
                             test_name="Description Length Anomaly",
                             test_key="description_length_anomaly",
                             test_tier=TestTier.ADVANCED,
-                            severity=Severity.LOW,
-                            issue=f"Short description ({desc_len} chars) for account '{acct}' (avg: {mean_len:.0f} chars)",
-                            confidence=min(z_score / 4.0, 1.0),
-                            details={"account": acct, "desc_length": desc_len, "mean_length": round(mean_len, 1), "z_score": round(z_score, 2)},
-                        ))
+                            severity=Severity.MEDIUM,
+                            issue=f"Blank description for account '{acct}' (avg length: {mean_len:.0f} chars)",
+                            confidence=0.8,
+                            details={"account": acct, "desc_length": 0, "mean_length": round(mean_len, 1)},
+                        )
+                    )
+                elif stdev_len > 0:
+                    z_score = (mean_len - desc_len) / stdev_len
+                    if z_score > config.desc_length_stddev and desc_len < mean_len * 0.3:
+                        flagged.append(
+                            FlaggedEntry(
+                                entry=e,
+                                test_name="Description Length Anomaly",
+                                test_key="description_length_anomaly",
+                                test_tier=TestTier.ADVANCED,
+                                severity=Severity.LOW,
+                                issue=f"Short description ({desc_len} chars) for account '{acct}' (avg: {mean_len:.0f} chars)",
+                                confidence=min(z_score / 4.0, 1.0),
+                                details={
+                                    "account": acct,
+                                    "desc_length": desc_len,
+                                    "mean_length": round(mean_len, 1),
+                                    "z_score": round(z_score, 2),
+                                },
+                            )
+                        )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return TestResult(
@@ -2349,9 +2475,12 @@ def test_unusual_account_combinations(
             test_name="Unusual Account Combinations",
             test_key="unusual_account_combinations",
             test_tier=TestTier.ADVANCED,
-            entries_flagged=0, total_entries=len(entries),
-            flag_rate=0.0, severity=Severity.LOW,
-            description="Test disabled.", flagged_entries=[],
+            entries_flagged=0,
+            total_entries=len(entries),
+            flag_rate=0.0,
+            severity=Severity.LOW,
+            description="Test disabled.",
+            flagged_entries=[],
         )
 
     # Group entries by entry_id
@@ -2365,8 +2494,10 @@ def test_unusual_account_combinations(
             test_name="Unusual Account Combinations",
             test_key="unusual_account_combinations",
             test_tier=TestTier.ADVANCED,
-            entries_flagged=0, total_entries=len(entries),
-            flag_rate=0.0, severity=Severity.LOW,
+            entries_flagged=0,
+            total_entries=len(entries),
+            flag_rate=0.0,
+            severity=Severity.LOW,
             description="Requires entry_id column with sufficient grouped entries.",
             flagged_entries=[],
         )
@@ -2395,16 +2526,18 @@ def test_unusual_account_combinations(
                     continue
                 flagged_rows.add(e.row_number)
                 severity = Severity.HIGH if e.abs_amount > 10000 else Severity.MEDIUM
-                flagged.append(FlaggedEntry(
-                    entry=e,
-                    test_name="Unusual Account Combinations",
-                    test_key="unusual_account_combinations",
-                    test_tier=TestTier.ADVANCED,
-                    severity=severity,
-                    issue=f"Rare account pairing: DR '{pair[0]}' / CR '{pair[1]}' (seen {count}x)",
-                    confidence=0.7 if count == 1 else 0.5,
-                    details={"debit_account": pair[0], "credit_account": pair[1], "pair_frequency": count},
-                ))
+                flagged.append(
+                    FlaggedEntry(
+                        entry=e,
+                        test_name="Unusual Account Combinations",
+                        test_key="unusual_account_combinations",
+                        test_tier=TestTier.ADVANCED,
+                        severity=severity,
+                        issue=f"Rare account pairing: DR '{pair[0]}' / CR '{pair[1]}' (seen {count}x)",
+                        confidence=0.7 if count == 1 else 0.5,
+                        details={"debit_account": pair[0], "credit_account": pair[1], "pair_frequency": count},
+                    )
+                )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return TestResult(
@@ -2423,6 +2556,7 @@ def test_unusual_account_combinations(
 # =============================================================================
 # STRATIFIED SAMPLING ENGINE
 # =============================================================================
+
 
 def _amount_range_label(amt: float) -> str:
     """Classify amount into a range bucket for stratification."""
@@ -2527,13 +2661,15 @@ def run_stratified_sampling(
         sampled = rng.sample(population, sample_size)
         sampled_rows = [e.row_number for e in sampled]
 
-        strata_results.append(SamplingStratum(
-            name=stratum_name,
-            criteria=" & ".join(stratify_by),
-            population_size=pop_size,
-            sample_size=sample_size,
-            sampled_rows=sampled_rows,
-        ))
+        strata_results.append(
+            SamplingStratum(
+                name=stratum_name,
+                criteria=" & ".join(stratify_by),
+                population_size=pop_size,
+                sample_size=sample_size,
+                sampled_rows=sampled_rows,
+            )
+        )
         all_sampled.extend(sampled)
 
     return SamplingResult(
@@ -2553,6 +2689,7 @@ def run_stratified_sampling(
 # =============================================================================
 # TEST BATTERY
 # =============================================================================
+
 
 def run_test_battery(
     entries: list[JournalEntry],
@@ -2588,7 +2725,7 @@ def run_test_battery(
     results.append(test_backdated_entries(entries, config))
     results.append(test_suspicious_keywords(entries, config))
 
-    # T19 — Holiday Postings (ISA 240.A40, Sprint 356)
+    # T19 — Holiday Postings (ISA 240, Sprint 356)
     results.append(test_holiday_postings(entries, config))
 
     # Tier 3 — Advanced / Fraud Indicators (T14-T18)
@@ -2626,6 +2763,7 @@ def calculate_composite_score(
 # =============================================================================
 # MAIN ENTRY POINT
 # =============================================================================
+
 
 def run_je_testing(
     rows: list[dict],

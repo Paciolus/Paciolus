@@ -437,21 +437,21 @@ def generate_bank_rec_memo(
     if abs(rec_diff) < 1.0 and match_rate >= 0.95:
         assessment = (
             "Based on the automated reconciliation procedures applied, "
-            "the bank reconciliation exhibits a LOW risk profile. "
+            "the bank reconciliation returned LOW flag density across the automated tests. "
             "The reconciling difference is immaterial and the match rate is satisfactory. "
             "No items requiring further investigation were identified."
         )
     elif abs(rec_diff) < 1000 and match_rate >= 0.80:
         assessment = (
             "Based on the automated reconciliation procedures applied, "
-            "the bank reconciliation exhibits a MODERATE risk profile. "
+            "the bank reconciliation returned MODERATE flag density across the automated tests. "
             "The reconciling difference and outstanding items should be reviewed "
             "to confirm they represent normal timing differences rather than errors or omissions."
         )
     else:
         assessment = (
             "Based on the automated reconciliation procedures applied, "
-            "the bank reconciliation exhibits an ELEVATED risk profile. "
+            "the bank reconciliation returned ELEVATED flag density across the automated tests. "
             "The reconciling difference and/or outstanding item volume may indicate "
             "recording errors, omissions, or unusual transactions requiring detailed investigation "
             "per ISA 500 and ISA 505."

@@ -22,7 +22,7 @@ from reportlab.platypus import PageBreak, Paragraph, Table
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from pdf_generator import DoubleRule, LedgerRule
+from pdf_generator import LedgerRule
 from shared.memo_base import (
     build_disclaimer,
     build_intelligence_stamp,
@@ -63,12 +63,14 @@ class TestCoverPageStructure:
         build_cover_page(story, styles, metadata, doc_width)
         assert isinstance(story[-1], PageBreak), "Cover must end with PageBreak"
 
-    def test_cover_page_contains_double_rule(self, styles, doc_width):
+    def test_cover_page_contains_gold_gradient_rules(self, styles, doc_width):
+        from shared.report_chrome import GoldGradientRule
+
         story = []
         metadata = ReportMetadata(title="Test Report")
         build_cover_page(story, styles, metadata, doc_width)
-        double_rules = [f for f in story if isinstance(f, DoubleRule)]
-        assert len(double_rules) == 1, "Cover must have exactly 1 DoubleRule"
+        gold_rules = [f for f in story if isinstance(f, GoldGradientRule)]
+        assert len(gold_rules) == 2, "Cover must have exactly 2 GoldGradientRules (above + below title)"
 
     def test_cover_page_contains_metadata_table(self, styles, doc_width):
         story = []

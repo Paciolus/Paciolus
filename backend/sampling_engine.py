@@ -49,12 +49,32 @@ CONFIDENCE_FACTORS: dict[float, float] = {
 # Index 0 = factor for 1st largest tainting, etc.
 # Source: AICPA Audit Sampling Guide, Table C-1 (95% confidence)
 INCREMENTAL_FACTORS_95: list[float] = [
-    1.58, 1.30, 1.15, 1.06, 1.00, 0.95, 0.92, 0.89, 0.87, 0.85, 0.83,
+    1.58,
+    1.30,
+    1.15,
+    1.06,
+    1.00,
+    0.95,
+    0.92,
+    0.89,
+    0.87,
+    0.85,
+    0.83,
 ]
 
 # Incremental factors for 90% confidence
 INCREMENTAL_FACTORS_90: list[float] = [
-    1.10, 0.92, 0.82, 0.76, 0.71, 0.68, 0.65, 0.63, 0.61, 0.60, 0.58,
+    1.10,
+    0.92,
+    0.82,
+    0.76,
+    0.71,
+    0.68,
+    0.65,
+    0.63,
+    0.61,
+    0.60,
+    0.58,
 ]
 
 
@@ -69,9 +89,11 @@ def _get_incremental_factors(confidence_level: float) -> list[float]:
 # Data Classes
 # ═══════════════════════════════════════════════════════════════
 
+
 @dataclass
 class SamplingConfig:
     """Configuration for sample design."""
+
     method: str = "mus"  # "mus" or "random"
     confidence_level: float = 0.95
     tolerable_misstatement: float = 0.0
@@ -83,6 +105,7 @@ class SamplingConfig:
 @dataclass
 class PopulationItem:
     """Single item from the uploaded population."""
+
     row_index: int
     item_id: str
     description: str
@@ -93,6 +116,7 @@ class PopulationItem:
 @dataclass
 class SelectedSample:
     """A selected sample item with selection metadata."""
+
     item: PopulationItem
     selection_method: str  # "high_value_100pct", "mus_interval", "random"
     interval_position: Optional[float] = None  # For MUS: cumulative dollar position
@@ -101,6 +125,7 @@ class SelectedSample:
 @dataclass
 class SampleError:
     """An error found during sample evaluation."""
+
     row_index: int
     item_id: str
     recorded_amount: float
@@ -112,6 +137,7 @@ class SampleError:
 @dataclass
 class SampleDesignResult:
     """Result of the sample design phase."""
+
     method: str
     confidence_level: float
     confidence_factor: float
@@ -134,6 +160,7 @@ class SampleDesignResult:
 @dataclass
 class SampleEvaluationResult:
     """Result of the sample evaluation phase."""
+
     method: str
     confidence_level: float
     tolerable_misstatement: float
@@ -208,6 +235,7 @@ POPULATION_COLUMN_CONFIGS: list[ColumnFieldConfig] = [
 # Core Algorithms
 # ═══════════════════════════════════════════════════════════════
 
+
 def get_confidence_factor(confidence_level: float) -> float:
     """Look up the Poisson confidence factor for the given confidence level.
 
@@ -240,9 +268,7 @@ def calculate_mus_sample_size(
     if expected_misstatement < 0:
         raise ValueError("Expected misstatement cannot be negative")
     if expected_misstatement >= tolerable_misstatement:
-        raise ValueError(
-            "Expected misstatement must be less than tolerable misstatement"
-        )
+        raise ValueError("Expected misstatement must be less than tolerable misstatement")
     if population_value <= 0:
         raise ValueError("Population value must be positive")
 
@@ -260,10 +286,9 @@ def calculate_mus_sample_size(
     if net_tolerable <= 0:
         raise ValueError("Net tolerable misstatement must be positive")
 
-    sampling_interval = net_tolerable / adjusted_factor * (
-        population_value / population_value  # Normalizing — interval = net / factor
-    )
-    # Standard formula: interval = (Tolerable - Expected) / Confidence Factor
+    # Standard MUS formula: interval = (Tolerable - Expected) / Confidence Factor
+    # Note: Expansion factor approximation used above is a simplification.
+    # For expected misstatement > 0, verify against AICPA Audit Sampling Guide Table A factors.
     sampling_interval = net_tolerable / adjusted_factor
 
     sample_size = math.ceil(population_value / sampling_interval)
@@ -313,11 +338,13 @@ def select_mus_sample(
         while next_selection_point <= cumulative:
             # Avoid duplicates — same item can contain multiple selection points
             if not selected or selected[-1].item.row_index != item.row_index:
-                selected.append(SelectedSample(
-                    item=item,
-                    selection_method="mus_interval",
-                    interval_position=next_selection_point,
-                ))
+                selected.append(
+                    SelectedSample(
+                        item=item,
+                        selection_method="mus_interval",
+                        interval_position=next_selection_point,
+                    )
+                )
             next_selection_point += sampling_interval
 
     return selected, random_start
@@ -337,10 +364,7 @@ def select_random_sample(
     n = len(items)
     if sample_size >= n:
         # Select entire population
-        return [
-            SelectedSample(item=item, selection_method="random")
-            for item in items
-        ]
+        return [SelectedSample(item=item, selection_method="random") for item in items]
 
     # Fisher-Yates partial shuffle using secrets for CSPRNG
     indices = list(range(n))
@@ -349,10 +373,7 @@ def select_random_sample(
         indices[i], indices[j] = indices[j], indices[i]
 
     selected_indices = set(indices[:sample_size])
-    return [
-        SelectedSample(item=items[idx], selection_method="random")
-        for idx in sorted(selected_indices)
-    ]
+    return [SelectedSample(item=items[idx], selection_method="random") for idx in sorted(selected_indices)]
 
 
 def apply_stratification(
@@ -412,9 +433,7 @@ def evaluate_mus_sample_stringer(
     taintings_ranked = sorted(taintings, reverse=True)
 
     # Projected misstatement
-    projected_misstatement = math.fsum(
-        t * sampling_interval for t in taintings_ranked
-    )
+    projected_misstatement = math.fsum(t * sampling_interval for t in taintings_ranked)
 
     # Incremental allowance
     incremental_allowance = 0.0
@@ -474,6 +493,7 @@ def evaluate_mus_sample_stringer(
 # High-Level Entry Points
 # ═══════════════════════════════════════════════════════════════
 
+
 def _parse_population(
     rows: list[dict],
     column_names: list[str],
@@ -512,23 +532,20 @@ def _parse_population(
         item_id = str(row.get(id_col, "")) if id_col else str(i + 1)
         description = str(row.get(desc_col, "")) if desc_col else ""
 
-        items.append(PopulationItem(
-            row_index=i + 1,
-            item_id=item_id or str(i + 1),
-            description=description[:200],
-            recorded_amount=amount,
-        ))
+        items.append(
+            PopulationItem(
+                row_index=i + 1,
+                item_id=item_id or str(i + 1),
+                description=description[:200],
+                recorded_amount=amount,
+            )
+        )
 
     if skipped > 0:
-        detection.detection_notes.append(
-            f"{skipped} rows skipped due to non-numeric amount values"
-        )
+        detection.detection_notes.append(f"{skipped} rows skipped due to non-numeric amount values")
 
     if not items:
-        raise ValueError(
-            "No valid items found in the population. "
-            "Ensure the file contains rows with numeric amounts."
-        )
+        raise ValueError("No valid items found in the population. Ensure the file contains rows with numeric amounts.")
 
     return items, detection
 
@@ -560,9 +577,7 @@ def design_sample(
     strata_summary: list[dict] = []
 
     if config.stratification_threshold and config.stratification_threshold > 0:
-        high_value_items, remainder_items = apply_stratification(
-            items, config.stratification_threshold
-        )
+        high_value_items, remainder_items = apply_stratification(items, config.stratification_threshold)
         hv_total = math.fsum(abs(i.recorded_amount) for i in high_value_items)
         rem_total = math.fsum(abs(i.recorded_amount) for i in remainder_items)
         strata_summary = [
@@ -583,10 +598,7 @@ def design_sample(
         ]
 
     # High-value items selected 100%
-    high_value_selected = [
-        SelectedSample(item=item, selection_method="high_value_100pct")
-        for item in high_value_items
-    ]
+    high_value_selected = [SelectedSample(item=item, selection_method="high_value_100pct") for item in high_value_items]
 
     # Calculate sample size and select remainder
     remainder_selected: list[SelectedSample] = []
@@ -596,23 +608,17 @@ def design_sample(
     random_start: Optional[float] = None
 
     if config.method == "mus":
-        remainder_value = math.fsum(
-            abs(item.recorded_amount) for item in remainder_items
-        )
+        remainder_value = math.fsum(abs(item.recorded_amount) for item in remainder_items)
 
         if remainder_value > 0 and config.tolerable_misstatement > 0:
-            calculated_sample_size, sampling_interval, confidence_factor = (
-                calculate_mus_sample_size(
-                    confidence_level=config.confidence_level,
-                    tolerable_misstatement=config.tolerable_misstatement,
-                    expected_misstatement=config.expected_misstatement,
-                    population_value=remainder_value,
-                )
+            calculated_sample_size, sampling_interval, confidence_factor = calculate_mus_sample_size(
+                confidence_level=config.confidence_level,
+                tolerable_misstatement=config.tolerable_misstatement,
+                expected_misstatement=config.expected_misstatement,
+                population_value=remainder_value,
             )
 
-            remainder_selected, random_start = select_mus_sample(
-                remainder_items, sampling_interval
-            )
+            remainder_selected, random_start = select_mus_sample(remainder_items, sampling_interval)
         elif remainder_value <= 0:
             logger.info("Remainder stratum has zero value — no MUS selection needed")
         else:
@@ -622,27 +628,19 @@ def design_sample(
         if config.sample_size_override and config.sample_size_override > 0:
             calculated_sample_size = config.sample_size_override
         elif config.tolerable_misstatement > 0:
-            remainder_value = math.fsum(
-                abs(item.recorded_amount) for item in remainder_items
-            )
+            remainder_value = math.fsum(abs(item.recorded_amount) for item in remainder_items)
             if remainder_value > 0:
-                calculated_sample_size, _, confidence_factor = (
-                    calculate_mus_sample_size(
-                        confidence_level=config.confidence_level,
-                        tolerable_misstatement=config.tolerable_misstatement,
-                        expected_misstatement=config.expected_misstatement,
-                        population_value=remainder_value,
-                    )
+                calculated_sample_size, _, confidence_factor = calculate_mus_sample_size(
+                    confidence_level=config.confidence_level,
+                    tolerable_misstatement=config.tolerable_misstatement,
+                    expected_misstatement=config.expected_misstatement,
+                    population_value=remainder_value,
                 )
         else:
-            raise ValueError(
-                "For random sampling, provide either sample_size_override or tolerable_misstatement"
-            )
+            raise ValueError("For random sampling, provide either sample_size_override or tolerable_misstatement")
 
         if calculated_sample_size > 0:
-            remainder_selected = select_random_sample(
-                remainder_items, calculated_sample_size
-            )
+            remainder_selected = select_random_sample(remainder_items, calculated_sample_size)
     else:
         raise ValueError(f"Unsupported sampling method: {config.method}")
 
@@ -664,9 +662,7 @@ def design_sample(
         calculated_sample_size=calculated_sample_size,
         actual_sample_size=len(all_selected),
         high_value_count=len(high_value_items),
-        high_value_total=round(
-            math.fsum(abs(i.recorded_amount) for i in high_value_items), 2
-        ),
+        high_value_total=round(math.fsum(abs(i.recorded_amount) for i in high_value_items), 2),
         remainder_count=len(remainder_items),
         remainder_sample_size=len(remainder_selected),
         selected_items=all_selected,
@@ -700,8 +696,7 @@ def _parse_evaluation_errors(
         raise ValueError("No recorded amount column found in evaluation file")
     if not audited_col:
         raise ValueError(
-            "No audited amount column found. The evaluation file must include "
-            "a column with audited/confirmed amounts."
+            "No audited amount column found. The evaluation file must include a column with audited/confirmed amounts."
         )
 
     errors: list[SampleError] = []
@@ -731,14 +726,16 @@ def _parse_evaluation_errors(
 
         item_id = str(row.get(id_col, "")) if id_col else str(i + 1)
 
-        errors.append(SampleError(
-            row_index=i + 1,
-            item_id=item_id or str(i + 1),
-            recorded_amount=recorded,
-            audited_amount=audited,
-            misstatement=misstatement,
-            tainting=tainting,
-        ))
+        errors.append(
+            SampleError(
+                row_index=i + 1,
+                item_id=item_id or str(i + 1),
+                recorded_amount=recorded,
+                audited_amount=audited,
+                misstatement=misstatement,
+                tainting=tainting,
+            )
+        )
 
     return errors
 
@@ -793,23 +790,17 @@ def evaluate_sample(
         confidence_factor = get_confidence_factor(config.confidence_level)
 
         total_misstatement = math.fsum(e.misstatement for e in errors)
-        sample_value = math.fsum(
-            abs(e.recorded_amount) for e in errors
-        ) if errors else 0.0
+        sample_value = math.fsum(abs(e.recorded_amount) for e in errors) if errors else 0.0
 
         # Ratio projection: projected = (total_misstatement / sample_value) * population_value
         if sample_value > 0:
-            projected_misstatement = (
-                abs(total_misstatement) / sample_value * population_value
-            )
+            projected_misstatement = abs(total_misstatement) / sample_value * population_value
         else:
             projected_misstatement = 0.0
 
         # Basic precision for random = projected * (confidence_factor / sqrt(n))
         if sample_size > 0:
-            basic_precision = projected_misstatement * (
-                confidence_factor / math.sqrt(sample_size)
-            )
+            basic_precision = projected_misstatement * (confidence_factor / math.sqrt(sample_size))
         else:
             basic_precision = 0.0
 
@@ -831,9 +822,7 @@ def evaluate_sample(
                 "Consider expanding the sample or performing alternative procedures."
             )
 
-        taintings = sorted(
-            [e.tainting for e in errors], reverse=True
-        )
+        taintings = sorted([e.tainting for e in errors], reverse=True)
 
         return SampleEvaluationResult(
             method="random",

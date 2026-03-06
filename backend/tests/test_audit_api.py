@@ -230,7 +230,7 @@ class TestDiagnosticLimitEnforcement:
             assert response.status_code == 403
             detail = response.json()["detail"]
             assert detail["code"] == "TIER_LIMIT_EXCEEDED"
-            assert detail["resource"] == "diagnostics"
+            assert detail["resource"] == "uploads"
         finally:
             app.dependency_overrides.clear()
 
@@ -252,8 +252,8 @@ class TestDiagnosticLimitEnforcement:
 
     @pytest.mark.asyncio
     async def test_solo_tier_at_limit_returns_403(self, db_session, valid_csv_bytes):
-        """SOLO tier user at monthly limit (20 runs) → 403 TIER_LIMIT_EXCEEDED."""
-        user = self._setup_user_with_logs(db_session, UserTier.SOLO, "solo_limit_20@example.com", 20)
+        """SOLO tier user at monthly limit (100 runs) → 403 TIER_LIMIT_EXCEEDED."""
+        user = self._setup_user_with_logs(db_session, UserTier.SOLO, "solo_limit_100@example.com", 100)
         self._override_deps(user, db_session)
         try:
             async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:

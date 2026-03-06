@@ -120,6 +120,21 @@ def init_db() -> None:
 
     # create_all() creates new tables but does NOT add columns to existing tables.
     # Patch missing columns that were added by migrations after the table was first created.
+    if dialect_name == "sqlite":
+        try:
+            with engine.connect() as conn:
+                result = conn.execute(text("PRAGMA table_info(users)"))
+                columns = {row[1] for row in result.fetchall()}
+                if "organization_id" not in columns:
+                    conn.execute(
+                        text("ALTER TABLE users ADD COLUMN organization_id INTEGER REFERENCES organizations(id)")
+                    )
+                    conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_organization_id ON users (organization_id)"))
+                    conn.commit()
+                    logger.info("Patched users table (SQLite): added organization_id column")
+        except Exception:
+            logger.warning("Could not patch users table for organization_id column (SQLite)", exc_info=True)
+
     if dialect_name == "postgresql":
         try:
             with engine.connect() as conn:

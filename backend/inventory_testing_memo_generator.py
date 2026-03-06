@@ -56,24 +56,24 @@ _INV_CONFIG = TestingMemoConfig(
     risk_assessments={
         "low": (
             "Based on the automated inventory register analysis procedures applied, "
-            "the inventory data exhibits a LOW risk profile. "
+            "the inventory data returned LOW flag density across the automated tests. "
             "No inventory anomalies exceeding the configured thresholds were detected by the automated tests applied."
         ),
         "elevated": (
             "Based on the automated inventory register analysis procedures applied, "
-            "the inventory data exhibits an ELEVATED risk profile. "
+            "the inventory data returned ELEVATED flag density across the automated tests. "
             "Select flagged items should be reviewed for proper valuation treatment "
             "and supporting documentation."
         ),
         "moderate": (
             "Based on the automated inventory register analysis procedures applied, "
-            "the inventory data exhibits a MODERATE risk profile. "
+            "the inventory data returned MODERATE flag density across the automated tests. "
             "Flagged items warrant focused review as inventory anomaly indicators, "
             "particularly slow-moving items and unit cost outliers."
         ),
         "high": (
             "Based on the automated inventory register analysis procedures applied, "
-            "the inventory data exhibits a HIGH risk profile. "
+            "the inventory data returned HIGH flag density across the automated tests. "
             "Significant inventory anomaly indicators were detected that require "
             "detailed investigation. The engagement team should evaluate whether additional "
             "inventory procedures are appropriate per ISA 501 and PCAOB AS 2501."

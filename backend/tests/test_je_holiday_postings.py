@@ -1,7 +1,7 @@
 """
 Tests for Journal Entry Testing Engine — Holiday Posting Detection (T19)
 
-Sprint 356: ISA 240.A40 — entries posted on public holidays as fraud risk indicator.
+Sprint 356: ISA 240 — entries posted on public holidays as fraud risk indicator.
 Complements T7 (Weekend Postings).
 
 Covers:
@@ -48,6 +48,7 @@ class TestHolidayCalendar:
     def test_new_years_day(self):
         """New Year's Day is Jan 1."""
         from datetime import date
+
         holidays = get_us_federal_holidays(2025)
         assert date(2025, 1, 1) in holidays
         assert "New Year" in holidays[date(2025, 1, 1)]
@@ -55,24 +56,28 @@ class TestHolidayCalendar:
     def test_christmas_day(self):
         """Christmas Day is Dec 25."""
         from datetime import date
+
         holidays = get_us_federal_holidays(2025)
         assert date(2025, 12, 25) in holidays
 
     def test_independence_day(self):
         """Independence Day is Jul 4."""
         from datetime import date
+
         holidays = get_us_federal_holidays(2025)
         assert date(2025, 7, 4) in holidays
 
     def test_juneteenth(self):
         """Juneteenth is Jun 19."""
         from datetime import date
+
         holidays = get_us_federal_holidays(2025)
         assert date(2025, 6, 19) in holidays
 
     def test_mlk_day_third_monday_jan(self):
         """MLK Day is the 3rd Monday of January."""
         from datetime import date
+
         holidays = get_us_federal_holidays(2025)
         mlk_2025 = date(2025, 1, 20)  # 3rd Monday of Jan 2025
         assert mlk_2025 in holidays
@@ -81,6 +86,7 @@ class TestHolidayCalendar:
     def test_thanksgiving_fourth_thursday_nov(self):
         """Thanksgiving is the 4th Thursday of November."""
         from datetime import date
+
         holidays = get_us_federal_holidays(2025)
         thanksgiving_2025 = date(2025, 11, 27)  # 4th Thursday of Nov 2025
         assert thanksgiving_2025 in holidays
@@ -89,6 +95,7 @@ class TestHolidayCalendar:
     def test_memorial_day_last_monday_may(self):
         """Memorial Day is the last Monday of May."""
         from datetime import date
+
         holidays = get_us_federal_holidays(2025)
         memorial_2025 = date(2025, 5, 26)  # Last Monday of May 2025
         assert memorial_2025 in holidays
@@ -97,6 +104,7 @@ class TestHolidayCalendar:
     def test_labor_day_first_monday_sep(self):
         """Labor Day is the 1st Monday of September."""
         from datetime import date
+
         holidays = get_us_federal_holidays(2025)
         labor_2025 = date(2025, 9, 1)  # 1st Monday of Sep 2025
         assert labor_2025 in holidays
@@ -105,6 +113,7 @@ class TestHolidayCalendar:
     def test_saturday_observed_on_friday(self):
         """When a fixed holiday falls on Saturday, observed date is Friday."""
         from datetime import date
+
         # Jul 4, 2026 is a Saturday
         holidays = get_us_federal_holidays(2026)
         assert date(2026, 7, 4) in holidays  # Actual date
@@ -114,6 +123,7 @@ class TestHolidayCalendar:
     def test_sunday_observed_on_monday(self):
         """When a fixed holiday falls on Sunday, observed date is Monday."""
         from datetime import date
+
         # Jan 1, 2023 is a Sunday
         holidays = get_us_federal_holidays(2023)
         assert date(2023, 1, 1) in holidays  # Actual date
@@ -123,6 +133,7 @@ class TestHolidayCalendar:
     def test_multi_year_generation(self):
         """get_holiday_dates() combines holidays across multiple years."""
         from datetime import date
+
         holidays = get_holiday_dates({2024, 2025})
         assert date(2024, 12, 25) in holidays
         assert date(2025, 12, 25) in holidays
@@ -338,12 +349,20 @@ class TestHolidayInBattery:
         """run_test_battery() should include holiday_postings in results."""
         entries = [
             JournalEntry(
-                entry_id="JE001", account="Cash", posting_date="2025-06-15",
-                debit=1000, description="Normal entry", row_number=1,
+                entry_id="JE001",
+                account="Cash",
+                posting_date="2025-06-15",
+                debit=1000,
+                description="Normal entry",
+                row_number=1,
             ),
             JournalEntry(
-                entry_id="JE001", account="Revenue", posting_date="2025-06-15",
-                credit=1000, description="Normal entry", row_number=2,
+                entry_id="JE001",
+                account="Revenue",
+                posting_date="2025-06-15",
+                credit=1000,
+                description="Normal entry",
+                row_number=2,
             ),
         ]
         results, _ = run_test_battery(entries)
@@ -354,12 +373,20 @@ class TestHolidayInBattery:
         """Full battery should now contain 19 tests."""
         entries = [
             JournalEntry(
-                entry_id="JE001", account="Cash", posting_date="2025-06-15",
-                debit=1000, description="Normal entry", row_number=1,
+                entry_id="JE001",
+                account="Cash",
+                posting_date="2025-06-15",
+                debit=1000,
+                description="Normal entry",
+                row_number=1,
             ),
             JournalEntry(
-                entry_id="JE001", account="Revenue", posting_date="2025-06-15",
-                credit=1000, description="Normal entry", row_number=2,
+                entry_id="JE001",
+                account="Revenue",
+                posting_date="2025-06-15",
+                credit=1000,
+                description="Normal entry",
+                row_number=2,
             ),
         ]
         results, _ = run_test_battery(entries)

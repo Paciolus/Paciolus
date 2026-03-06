@@ -492,7 +492,16 @@ class TestTierPolicies:
 
     def test_all_tiers_present(self):
         policies = get_tier_policies()
-        assert set(policies.keys()) == {"anonymous", "free", "solo", "starter", "professional", "enterprise"}
+        assert set(policies.keys()) == {
+            "anonymous",
+            "free",
+            "solo",
+            "starter",
+            "team",
+            "organization",
+            "professional",
+            "enterprise",
+        }
 
     def test_all_categories_present(self):
         policies = get_tier_policies()

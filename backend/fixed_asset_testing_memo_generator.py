@@ -43,24 +43,24 @@ _FA_CONFIG = TestingMemoConfig(
     risk_assessments={
         "low": (
             "Based on the automated fixed asset register analysis procedures applied, "
-            "the PP&E data exhibits a LOW risk profile. "
+            "the PP&E data returned LOW flag density across the automated tests. "
             "No fixed asset anomalies exceeding the configured thresholds were detected by the automated tests applied."
         ),
         "elevated": (
             "Based on the automated fixed asset register analysis procedures applied, "
-            "the PP&E data exhibits an ELEVATED risk profile. "
+            "the PP&E data returned ELEVATED flag density across the automated tests. "
             "Select flagged assets should be reviewed for proper capitalization treatment "
             "and supporting documentation."
         ),
         "moderate": (
             "Based on the automated fixed asset register analysis procedures applied, "
-            "the PP&E data exhibits a MODERATE risk profile. "
+            "the PP&E data returned MODERATE flag density across the automated tests. "
             "Flagged assets warrant focused review as PP&E anomaly indicators, "
             "particularly depreciation estimates and useful life assumptions."
         ),
         "high": (
             "Based on the automated fixed asset register analysis procedures applied, "
-            "the PP&E data exhibits a HIGH risk profile. "
+            "the PP&E data returned HIGH flag density across the automated tests. "
             "Significant fixed asset anomaly indicators were detected that require "
             "detailed investigation. The engagement team should evaluate whether additional "
             "PP&E procedures are appropriate per ISA 540 and PCAOB AS 2501."

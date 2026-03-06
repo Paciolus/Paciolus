@@ -91,6 +91,6 @@ class TestPricingPageConsistency:
         solo_tools = TIER_ENTITLEMENTS[UserTier.SOLO].tools_allowed
         assert len(solo_tools) == 0  # empty = all tools
 
-    def test_solo_diagnostics_limit_matches_pricing(self):
+    def test_solo_uploads_limit_matches_pricing(self):
         """Pricing page says '100 uploads per month'."""
-        assert TIER_ENTITLEMENTS[UserTier.SOLO].diagnostics_per_month == 100
+        assert TIER_ENTITLEMENTS[UserTier.SOLO].uploads_per_month == 100

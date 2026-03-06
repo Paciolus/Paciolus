@@ -111,6 +111,53 @@
 
 > Sprints 477–487 completed and archived to `tasks/archive/`. Next pending items below.
 
+### Sprint 497 — Digital Excellence Council Remediation (Paths A+B+C)
+
+**Status:** COMPLETE
+**Goal:** Fix methodology citations, test regressions, and infrastructure polish identified by Digital Excellence Council audit.
+**Complexity Score:** High
+
+#### Path A: Methodology Integrity (10 fixes across 17 files)
+- [x] A1: JE memo PCAOB AS 2110 → AS 2401 (3 locations)
+- [x] A2: ISA 240.A40 fabricated paragraph citation → ISA 240 (11 locations across 6 files)
+- [x] A3: Sampling "Population Not Accepted" → "UEL Exceeds TM — Further Evaluation Required"
+- [x] A4: ASC 450-20 → ASC 250-10 in statistical_sampling FASB YAML
+- [x] A5: MUS dead code removal + expansion factor methodology note
+- [x] A6: Risk assessment "exhibits X risk profile" → "returned X flag density" (33 instances across 9 memo generators)
+- [x] A7: ISA 265 reference removed from payment_before_invoice follow-up procedure
+- [x] A8: Benford ISA 530 → ISA 520 (2 files)
+- [x] A9: Ghost employee "physical verification" — added engagement team qualifier
+- [x] A10: Shared tax ID — added payroll tax reporting implication note
+
+#### Path B: Test Regression Triage (26 fixes across 10 test files)
+- [x] B1: `diagnostics_per_month` → `uploads_per_month` (test_entitlements.py, test_pricing_launch_validation.py)
+- [x] B2: FREE tier `pdf_export` now False (was True) — updated assertions
+- [x] B3: Seat pricing tests: test included seats (0) vs add-on seats (8+/21+)
+- [x] B4: Rate limit tiers: added 'team' and 'organization' to expected set
+- [x] B5: Seat management max: 22 → 60 (matches CheckoutRequest le=60)
+- [x] B6: Report cover page: DoubleRule → GoldGradientRule (2 expected)
+- [x] B7: Pricing integration: removed obsolete `_require_pricing_v2` tests
+- [x] B8: SQLite migration: added organization_id column patch in database.py init_db()
+- [x] B9: Entitlement checks unit: resource "diagnostics" → "uploads", Solo tier all-access fixes
+- [x] B10: Entitlement parity: `diagnostics_per_month` → `uploads_per_month`
+- [x] B11: Audit API: resource "diagnostics" → "uploads", Solo limit 20 → 100
+- [x] B12: Billing routes: `_load_seat_price_ids` → `_load_pro_seat_price_ids`/`_load_ent_seat_price_ids` (5 tests)
+- [x] B13: Billing routes: seat_count cap 22 → 60 in schema test
+
+#### Path C: Infrastructure Polish
+- [x] C1: Frontend package.json version 1.8.0 → 2.1.0
+- [x] C2: CONTACT_EMAIL documented in .env.example
+- [ ] C3: N+1 eager loading (deferred — requires profiling)
+
+#### Verification
+- [x] `pytest` passes — 5,776 passed, 0 failed, 1 skipped (1 pre-existing teardown error)
+- [x] `npm run build` passes — all routes dynamic
+- [x] Regression: 0 new failures introduced
+
+**Status:** COMPLETE
+
+---
+
 ### Sprint 496 — Engineering Process Hardening
 
 **Status:** IN PROGRESS

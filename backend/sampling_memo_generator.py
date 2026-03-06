@@ -443,10 +443,10 @@ def _generate_sampling_memo(
         detail = evaluation_result.get("conclusion_detail", "")
 
         if conclusion == "pass":
-            conclusion_label = "Pass — Population Accepted"
+            conclusion_label = "UEL Within Tolerable Misstatement"
             color = ClassicalColors.SAGE
         else:
-            conclusion_label = "Fail — Population Not Accepted"
+            conclusion_label = "UEL Exceeds Tolerable Misstatement — Further Evaluation Required"
             color = ClassicalColors.CLAY
 
         story.append(

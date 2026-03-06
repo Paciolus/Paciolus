@@ -96,7 +96,7 @@ class TestCheckDiagnosticLimit:
         assert exc_info.value.status_code == 403
         detail = exc_info.value.detail
         assert detail["code"] == "TIER_LIMIT_EXCEEDED"
-        assert detail["resource"] == "diagnostics"
+        assert detail["resource"] == "uploads"
         assert "/pricing" in detail["upgrade_url"]
 
     def test_free_tier_over_limit_raises_403(self, make_user, db_session):
@@ -203,29 +203,16 @@ class TestCheckClientLimit:
         assert exc_info.value.detail["code"] == "TIER_LIMIT_EXCEEDED"
         assert exc_info.value.detail["resource"] == "clients"
 
-    def test_solo_tier_at_nine_clients_passes(self, make_user, make_client, db_session):
-        """SOLO tier: max_clients=10; 9 clients should pass."""
+    def test_solo_tier_unlimited_clients_passes(self, make_user, make_client, db_session):
+        """SOLO tier: max_clients=0 (unlimited); many clients should pass."""
         from shared.entitlement_checks import check_client_limit
 
-        user = make_user(tier=UserTier.SOLO, email="solo_cl_9@example.com")
-        for i in range(9):
+        user = make_user(tier=UserTier.SOLO, email="solo_cl_many@example.com")
+        for i in range(10):
             make_client(user=user, name=f"Solo Client {i}")
 
         result = check_client_limit(user=user, db=db_session)
         assert result is user
-
-    def test_solo_tier_at_limit_raises_403(self, make_user, make_client, db_session):
-        """SOLO tier: 10 clients (at limit) raises 403."""
-        from shared.entitlement_checks import check_client_limit
-
-        user = make_user(tier=UserTier.SOLO, email="solo_cl_10@example.com")
-        for i in range(10):
-            make_client(user=user, name=f"Solo Client {i}")
-
-        with pytest.raises(HTTPException) as exc_info:
-            check_client_limit(user=user, db=db_session)
-
-        assert exc_info.value.status_code == 403
 
     def test_soft_mode_at_limit_does_not_raise(self, make_user, make_client, db_session):
         """Soft enforcement: client limit exceeded is logged, not raised."""
@@ -309,17 +296,14 @@ class TestCheckToolAccess:
         result = dep(user=user)
         assert result is user
 
-    def test_solo_tier_blocked_from_inventory_testing(self, make_user):
-        """SOLO tier cannot access inventory_testing (requires PROFESSIONAL+)."""
+    def test_solo_tier_can_access_inventory_testing(self, make_user):
+        """SOLO tier has all tools (empty tools_allowed) — inventory_testing passes."""
         from shared.entitlement_checks import check_tool_access
 
         user = make_user(tier=UserTier.SOLO)
         dep = check_tool_access("inventory_testing")
-
-        with pytest.raises(HTTPException) as exc_info:
-            dep(user=user)
-
-        assert exc_info.value.status_code == 403
+        result = dep(user=user)
+        assert result is user
 
     def test_soft_mode_blocked_tool_does_not_raise(self, make_user):
         """Soft enforcement: blocked tool access is logged but not raised."""
@@ -399,17 +383,14 @@ class TestCheckFormatAccess:
         result = dep(user=user)
         assert result is user
 
-    def test_solo_tier_blocked_from_ods(self, make_user):
-        """SOLO tier cannot access ods (not in _SOLO_FORMATS)."""
+    def test_solo_tier_can_access_ods(self, make_user):
+        """SOLO tier has all formats (empty formats_allowed) — ods passes."""
         from shared.entitlement_checks import check_format_access
 
         user = make_user(tier=UserTier.SOLO)
         dep = check_format_access("ods")
-
-        with pytest.raises(HTTPException) as exc_info:
-            dep(user=user)
-
-        assert exc_info.value.status_code == 403
+        result = dep(user=user)
+        assert result is user
 
     def test_soft_mode_blocked_format_does_not_raise(self, make_user):
         """Soft enforcement: blocked format access is logged but not raised."""
@@ -451,16 +432,13 @@ class TestCheckWorkspaceAccess:
         assert exc_info.value.detail["code"] == "TIER_LIMIT_EXCEEDED"
         assert exc_info.value.detail["resource"] == "workspace"
 
-    def test_solo_tier_blocked_from_workspace(self, make_user):
-        """SOLO tier has workspace=False — raises 403."""
+    def test_solo_tier_has_workspace(self, make_user):
+        """SOLO tier has workspace=True — passes."""
         from shared.entitlement_checks import check_workspace_access
 
         user = make_user(tier=UserTier.SOLO)
-
-        with pytest.raises(HTTPException) as exc_info:
-            check_workspace_access(user=user)
-
-        assert exc_info.value.status_code == 403
+        result = check_workspace_access(user=user)
+        assert result is user
 
     def test_soft_mode_workspace_block_does_not_raise(self, make_user):
         """Soft enforcement: workspace access denied is logged but not raised."""
@@ -546,27 +524,23 @@ class TestCheckSeatLimit:
 
         assert result is user
 
-    def test_professional_negative_additional_seats_hard_mode_raises_403(self, make_user, db_session):
-        """Professional with negative additional_seats in hard mode — raises 403."""
+    def test_professional_no_org_skips_seat_check(self, make_user, db_session):
+        """Professional without organization_id — seat check is skipped."""
         from shared.entitlement_checks import check_seat_limit
         from subscription_model import BillingInterval, Subscription, SubscriptionStatus
 
-        user = make_user(tier=UserTier.PROFESSIONAL, email="seat_prof_neg_hard@example.com")
+        user = make_user(tier=UserTier.PROFESSIONAL, email="seat_prof_noorg@example.com")
         sub = Subscription(
             user_id=user.id,
             tier="professional",
             status=SubscriptionStatus.ACTIVE,
             billing_interval=BillingInterval.MONTHLY,
             seat_count=4,
-            additional_seats=-1,
+            additional_seats=0,
         )
         db_session.add(sub)
         db_session.flush()
 
-        with patch("shared.entitlement_checks._get_seat_enforcement_mode", return_value="hard"):
-            with pytest.raises(HTTPException) as exc_info:
-                check_seat_limit(user=user, db=db_session)
-
-        assert exc_info.value.status_code == 403
-        assert exc_info.value.detail["code"] == "TIER_LIMIT_EXCEEDED"
-        assert exc_info.value.detail["resource"] == "seats"
+        # User has no organization_id, so seat check is skipped
+        result = check_seat_limit(user=user, db=db_session)
+        assert result is user

@@ -55,24 +55,24 @@ _AR_CONFIG = TestingMemoConfig(
     risk_assessments={
         "low": (
             "Based on the automated AR aging analysis procedures applied, "
-            "the accounts receivable data exhibits a LOW risk profile. "
+            "the accounts receivable data returned LOW flag density across the automated tests. "
             "No receivables anomalies exceeding the configured thresholds were detected by the automated tests applied."
         ),
         "elevated": (
             "Based on the automated AR aging analysis procedures applied, "
-            "the accounts receivable data exhibits an ELEVATED risk profile. "
+            "the accounts receivable data returned ELEVATED flag density across the automated tests. "
             "Select flagged items should be reviewed for proper receivables valuation treatment "
             "and supporting documentation."
         ),
         "moderate": (
             "Based on the automated AR aging analysis procedures applied, "
-            "the accounts receivable data exhibits a MODERATE risk profile. "
+            "the accounts receivable data returned MODERATE flag density across the automated tests. "
             "Flagged items warrant focused review as receivables anomaly indicators, "
             "particularly aging concentration and allowance adequacy metrics."
         ),
         "high": (
             "Based on the automated AR aging analysis procedures applied, "
-            "the accounts receivable data exhibits a HIGH risk profile. "
+            "the accounts receivable data returned HIGH flag density across the automated tests. "
             "Significant receivables anomaly indicators were detected that require "
             "detailed investigation. The engagement team should evaluate whether additional "
             "receivables procedures are appropriate per ISA 540 and PCAOB AS 2501."
