@@ -27,6 +27,7 @@ from prior_period_comparison import (
 # VARIANCE CALCULATION TESTS
 # =============================================================================
 
+
 class TestCalculateVariance:
     """Tests for calculate_variance function."""
 
@@ -147,6 +148,7 @@ class TestCalculateRatioVariance:
 # PERIOD COMPARISON TESTS
 # =============================================================================
 
+
 class TestComparePeriods:
     """Tests for compare_periods function."""
 
@@ -214,11 +216,7 @@ class TestComparePeriods:
 
     def test_comparison_labels(self, current_data, prior_data):
         """Comparison should have correct labels."""
-        result = compare_periods(
-            current_data, prior_data,
-            current_label="FY2025",
-            prior_id=1
-        )
+        result = compare_periods(current_data, prior_data, current_label="FY2025", prior_id=1)
         assert result.current_period_label == "FY2025"
         assert result.prior_period_label == "FY2024"
 
@@ -228,10 +226,7 @@ class TestComparePeriods:
         assert len(result.balance_sheet_variances) == 6
 
         # Check total assets variance
-        assets_var = next(
-            v for v in result.balance_sheet_variances
-            if v.category_key == "total_assets"
-        )
+        assets_var = next(v for v in result.balance_sheet_variances if v.category_key == "total_assets")
         assert assets_var.current_value == 500000
         assert assets_var.prior_value == 450000
         assert assets_var.dollar_variance == 50000
@@ -243,25 +238,19 @@ class TestComparePeriods:
         assert len(result.income_statement_variances) == 4
 
         # Check revenue variance
-        revenue_var = next(
-            v for v in result.income_statement_variances
-            if v.category_key == "total_revenue"
-        )
+        revenue_var = next(v for v in result.income_statement_variances if v.category_key == "total_revenue")
         assert revenue_var.current_value == 1000000
         assert revenue_var.prior_value == 900000
         assert revenue_var.dollar_variance == 100000
         assert revenue_var.direction == "increase"
 
     def test_ratio_variances(self, current_data, prior_data):
-        """Should calculate ratio variances."""
+        """Should calculate ratio variances (8 original + 4 cash-cycle)."""
         result = compare_periods(current_data, prior_data, prior_id=1)
-        assert len(result.ratio_variances) == 8
+        assert len(result.ratio_variances) == 12
 
         # Check current ratio variance
-        cr_var = next(
-            v for v in result.ratio_variances
-            if v.ratio_key == "current_ratio"
-        )
+        cr_var = next(v for v in result.ratio_variances if v.ratio_key == "current_ratio")
         assert cr_var.current_value == 2.5
         assert cr_var.prior_value == 2.4
         assert cr_var.point_change == pytest.approx(0.1)
@@ -272,10 +261,7 @@ class TestComparePeriods:
         assert len(result.diagnostic_variances) == 4
 
         # Check anomaly count variance (decreased from 8 to 5)
-        anomaly_var = next(
-            v for v in result.diagnostic_variances
-            if v.metric_key == "anomaly_count"
-        )
+        anomaly_var = next(v for v in result.diagnostic_variances if v.metric_key == "anomaly_count")
         assert anomaly_var.current_value == 5
         assert anomaly_var.prior_value == 8
         assert anomaly_var.variance == -3
@@ -303,6 +289,7 @@ class TestComparePeriods:
 # =============================================================================
 # PERIOD LABEL GENERATION TESTS
 # =============================================================================
+
 
 class TestGeneratePeriodLabel:
     """Tests for generate_period_label function."""
@@ -361,6 +348,7 @@ class TestGeneratePeriodLabel:
 # =============================================================================
 # DATA CLASS TESTS
 # =============================================================================
+
 
 class TestCategoryVariance:
     """Tests for CategoryVariance dataclass."""
@@ -430,6 +418,7 @@ class TestPeriodComparison:
 # EDGE CASE TESTS
 # =============================================================================
 
+
 class TestEdgeCases:
     """Tests for edge cases in comparison."""
 
@@ -468,10 +457,7 @@ class TestEdgeCases:
 
         result = compare_periods(current, prior, prior_id=1)
 
-        assets_var = next(
-            v for v in result.balance_sheet_variances
-            if v.category_key == "total_assets"
-        )
+        assets_var = next(v for v in result.balance_sheet_variances if v.category_key == "total_assets")
         assert assets_var.direction == "unchanged"
 
     def test_very_large_values(self):
@@ -481,9 +467,94 @@ class TestEdgeCases:
 
         result = compare_periods(current, prior, prior_id=1)
 
-        assets_var = next(
-            v for v in result.balance_sheet_variances
-            if v.category_key == "total_assets"
-        )
+        assets_var = next(v for v in result.balance_sheet_variances if v.category_key == "total_assets")
         assert assets_var.dollar_variance == 100_000_000_000
         assert assets_var.is_significant is True
+
+
+# =============================================================================
+# Sprint 492: Percentage Threshold & Cash-Cycle Ratio Tests
+# =============================================================================
+
+
+class TestPercentageRatioSignificance:
+    """Sprint 492: is_percentage flag controls absolute significance threshold."""
+
+    def test_small_percentage_change_not_significant(self):
+        """0.5pp change in a percentage ratio (0-100 scale) is NOT significant."""
+        # Gross margin: 40.0 → 40.5 = 0.5pp
+        change, is_sig, direction = calculate_ratio_variance(40.5, 40.0, is_percentage=True)
+        assert change == pytest.approx(0.5)
+        assert is_sig is False  # Below 1.0pp threshold for percentages
+
+    def test_large_percentage_change_is_significant(self):
+        """2.0pp change in a percentage ratio IS significant."""
+        change, is_sig, direction = calculate_ratio_variance(42.0, 40.0, is_percentage=True)
+        assert change == pytest.approx(2.0)
+        assert is_sig is True  # 2.0 >= 1.0pp threshold
+
+    def test_small_decimal_ratio_change_is_significant(self):
+        """0.15 change in a decimal ratio (e.g., current_ratio) IS significant."""
+        change, is_sig, direction = calculate_ratio_variance(2.15, 2.0, is_percentage=False)
+        assert change == pytest.approx(0.15)
+        assert is_sig is True  # 0.15 >= 0.1 threshold
+
+    def test_tiny_decimal_ratio_change_not_significant(self):
+        """0.05 change in a decimal ratio is NOT significant (below 0.1)."""
+        change, is_sig, direction = calculate_ratio_variance(2.05, 2.0, is_percentage=False)
+        assert change == pytest.approx(0.05)
+        assert is_sig is False
+
+    def test_percentage_relative_change_still_triggers(self):
+        """10% relative change in a percentage ratio IS significant even if abs < 1.0."""
+        # ROA: 3.0 → 3.35 = 0.35pp absolute, but 11.7% relative → significant
+        change, is_sig, direction = calculate_ratio_variance(3.35, 3.0, is_percentage=True)
+        assert change == pytest.approx(0.35)
+        assert is_sig is True  # 0.35/3.0 = 11.7% > 10%
+
+
+class TestCashCycleRatioComparison:
+    """Sprint 492: Cash-cycle ratios included in period comparison."""
+
+    def test_comparison_includes_cash_cycle_ratios(self):
+        """compare_periods should produce ratio variances for DSO/DPO/DIO/CCC."""
+        current = {"dso": 35.0, "dpo": 45.0, "dio": 55.0, "ccc": 45.0}
+        prior = {"dso": 40.0, "dpo": 40.0, "dio": 50.0, "ccc": 50.0}
+
+        result = compare_periods(current, prior, prior_id=1)
+        ratio_keys = {v.ratio_key for v in result.ratio_variances}
+        assert "dso" in ratio_keys
+        assert "dpo" in ratio_keys
+        assert "dio" in ratio_keys
+        assert "ccc" in ratio_keys
+
+    def test_cash_cycle_ratio_count(self):
+        """Should now have 12 ratio variances (8 original + 4 cash-cycle)."""
+        current = {
+            "current_ratio": 2.5,
+            "quick_ratio": 1.8,
+            "debt_to_equity": 0.5,
+            "gross_margin": 40.0,
+            "net_profit_margin": 15.0,
+            "operating_margin": 25.0,
+            "return_on_assets": 10.0,
+            "return_on_equity": 18.0,
+            "dso": 35.0,
+            "dpo": 45.0,
+            "dio": 55.0,
+            "ccc": 45.0,
+        }
+        prior = dict(current)  # Same values → all unchanged
+        result = compare_periods(current, prior, prior_id=1)
+        assert len(result.ratio_variances) == 12
+
+    def test_dso_variance_point_change(self):
+        """DSO variance should show point change in days."""
+        current = {"dso": 35.0}
+        prior = {"dso": 42.0}
+
+        result = compare_periods(current, prior, prior_id=1)
+        dso_var = next(v for v in result.ratio_variances if v.ratio_key == "dso")
+        assert dso_var.point_change == pytest.approx(-7.0)
+        assert dso_var.direction == "decrease"
+        assert dso_var.is_percentage is False

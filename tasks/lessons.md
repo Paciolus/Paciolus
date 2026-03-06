@@ -4,6 +4,18 @@
 
 ---
 
+## Formula Consistency & Efficiency Hardening (Sprint 492)
+
+1. **Operating margin fallback must guard negative derived opex**: When `total_expenses < COGS` and `operating_expenses == 0`, the derivation `total_expenses - COGS` produces negative operating expenses, yielding economically invalid 100% margins. Guard: return N/A when derived value < 0 or total_expenses == 0.
+
+2. **`calculate_all_ratios` computes CCC components twice**: DSO/DPO/DIO are computed individually and again inside `calculate_ccc()`. Fix: compute once and pass via keyword arguments. Same pattern applies to any composite metric built from sub-metrics.
+
+3. **Existing edge-case tests may assert buggy behavior**: The `test_operating_margin_negative_derived_opex` test asserted `is_calculable is True` for a clearly invalid input. When hardening edge cases, audit existing tests for assertions that enshrine incorrect behavior.
+
+4. **Test fixtures missing key fields affect edge-case tests**: `test_very_large_numbers` omitted `total_expenses`, which hit the new opex guard. Always include all expense-related fields in fixtures testing comprehensive ratio calculation.
+
+---
+
 ## Digital Excellence Council Remediation (Sprint 491)
 
 1. **Scout agent claims require independent verification**: The Scout flagged "16 untested engine modules" as CRITICAL. Actual count: 11 engine test files already existed. Always grep-verify quantitative claims before planning work based on them.

@@ -111,6 +111,32 @@
 
 > Sprints 477–487 completed and archived to `tasks/archive/`. Next pending items below.
 
+### Sprint 492 — Formula Consistency & Efficiency Hardening
+
+**Status:** IN PROGRESS
+**Goal:** Eliminate ratio formula inconsistencies, reduce redundant computation, harden edge-case behavior.
+**Complexity Score:** Medium-High
+
+#### Changes
+- [x] Fix CCC redundant computation in `calculate_all_ratios` (DSO/DPO/DIO computed twice)
+- [x] Harden operating margin fallback for malformed totals (negative derived opex)
+- [x] Use `is_percentage` in prior-period significance thresholds
+- [x] Add cash-cycle ratios (DSO/DPO/DIO/CCC) to prior-period comparison
+- [x] Add missing 10 ratios to frontend `RATIO_METRICS` metadata
+- [x] Document reciprocal metric zero-case semantics
+- [x] Tests: operating margin malformed input, CCC efficiency, prior-period percentage thresholds, reciprocal zero-cases, formula consistency
+
+#### Verification
+- [x] `pytest tests/test_ratio_core.py -q` passes (77 tests)
+- [x] `pytest tests/test_cash_conversion_cycle.py -q` passes (22 tests)
+- [x] `pytest tests/test_prior_period.py -q` passes (42 tests)
+- [x] `pytest tests/test_industry_ratios.py -q` passes (71 tests)
+- [x] `npm run build` passes (all dynamic routes)
+- [x] `npm test` passes (111 suites, 1329 tests)
+- [x] Full backend: 5,679 passed (38 pre-existing failures unrelated to sprint)
+
+---
+
 ### Sprint 491 — Digital Excellence Council Remediation (Paths A+B+C)
 
 **Status:** IN PROGRESS

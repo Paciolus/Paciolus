@@ -885,6 +885,7 @@ class TestEdgeCases:
             total_equity=600_000_000_000.0,
             total_revenue=200_000_000_000.0,
             cost_of_goods_sold=100_000_000_000.0,
+            total_expenses=180_000_000_000.0,
             inventory=50_000_000_000.0,
             accounts_receivable=30_000_000_000.0,
             accounts_payable=20_000_000_000.0,
@@ -988,11 +989,10 @@ class TestFinancialEdgeCases:
         assert result.value > 1_000_000
 
     def test_operating_margin_negative_derived_opex(self):
-        """COGS > total_expenses in malformed TB — derived opex is negative.
+        """COGS > total_expenses in malformed TB — should be not calculable.
 
-        operating_exp = total_expenses - COGS = 95000 - 200000 = -105000
-        operating_income = revenue - COGS - operating_exp = 500000 - 200000 - (-105000) = 405000
-        margin = 405000/500000 * 100 = 81%
+        Sprint 492: Negative derived opex (total_expenses < COGS) produces
+        economically invalid margins. Now returns N/A instead.
         """
         totals = CategoryTotals(
             total_revenue=500_000.0,
@@ -1003,10 +1003,10 @@ class TestFinancialEdgeCases:
         engine = RatioEngine(totals)
         result = engine.calculate_operating_margin()
 
-        assert result.is_calculable is True
-        # Should not crash — just returns whatever the math gives
-        assert result.value is not None
-        assert isinstance(result.value, float)
+        assert result.is_calculable is False
+        assert result.value is None
+        assert result.display_value == "N/A"
+        assert "Unable to derive" in result.interpretation
 
     def test_both_numerator_and_denominator_zero_current_ratio(self):
         """Both current_assets=0 and current_liabilities=0 — N/A, not 0/0."""
@@ -1031,3 +1031,178 @@ class TestFinancialEdgeCases:
         for name, result in ratios.items():
             assert result.is_calculable is False, f"{name} should not be calculable with all zeros"
             assert result.value is None, f"{name} should have None value"
+
+
+# =============================================================================
+# Sprint 492: Formula Consistency & Efficiency Tests
+# =============================================================================
+
+
+class TestOperatingMarginMalformedInputs:
+    """Sprint 492: Edge cases for operating margin derivation."""
+
+    def test_zero_total_expenses_with_revenue_and_cogs(self):
+        """total_expenses=0 with COGS > 0: can't derive opex → N/A."""
+        totals = CategoryTotals(
+            total_revenue=500_000.0,
+            cost_of_goods_sold=200_000.0,
+            total_expenses=0.0,
+            operating_expenses=0.0,
+        )
+        engine = RatioEngine(totals)
+        result = engine.calculate_operating_margin()
+        assert result.is_calculable is False
+        assert "Unable to derive" in result.interpretation
+
+    def test_zero_total_expenses_zero_cogs(self):
+        """total_expenses=0, COGS=0, no explicit opex: can't derive → N/A."""
+        totals = CategoryTotals(
+            total_revenue=500_000.0,
+            cost_of_goods_sold=0.0,
+            total_expenses=0.0,
+            operating_expenses=0.0,
+        )
+        engine = RatioEngine(totals)
+        result = engine.calculate_operating_margin()
+        assert result.is_calculable is False
+
+    def test_valid_derivation_still_works(self):
+        """Normal fallback derivation (total_expenses > COGS) still works."""
+        totals = CategoryTotals(
+            total_revenue=500_000.0,
+            cost_of_goods_sold=200_000.0,
+            total_expenses=350_000.0,  # 150k opex derived
+            operating_expenses=0.0,
+        )
+        engine = RatioEngine(totals)
+        result = engine.calculate_operating_margin()
+        assert result.is_calculable is True
+        # (500k - 200k - 150k) / 500k * 100 = 30%
+        assert result.value == pytest.approx(30.0, rel=0.1)
+
+    def test_explicit_opex_bypasses_derivation(self):
+        """When operating_expenses > 0, derivation path is not used."""
+        totals = CategoryTotals(
+            total_revenue=500_000.0,
+            cost_of_goods_sold=200_000.0,
+            total_expenses=50_000.0,  # Malformed, but irrelevant
+            operating_expenses=100_000.0,  # Explicit opex → used directly
+        )
+        engine = RatioEngine(totals)
+        result = engine.calculate_operating_margin()
+        assert result.is_calculable is True
+        # (500k - 200k - 100k) / 500k * 100 = 40%
+        assert result.value == pytest.approx(40.0, rel=0.1)
+
+
+class TestCCCNonRedundantComputation:
+    """Sprint 492: Verify calculate_all_ratios doesn't double-compute DSO/DPO/DIO."""
+
+    def test_ccc_uses_precomputed_components(self):
+        """CCC in calculate_all_ratios matches standalone CCC calculation."""
+        totals = CategoryTotals(
+            accounts_receivable=20_000,
+            inventory=15_000,
+            accounts_payable=10_000,
+            total_revenue=200_000,
+            cost_of_goods_sold=100_000,
+        )
+        engine = RatioEngine(totals)
+        all_ratios = engine.calculate_all_ratios()
+
+        # CCC from calculate_all_ratios should equal standalone calculation
+        standalone_ccc = engine.calculate_ccc()
+        assert all_ratios["ccc"].value == standalone_ccc.value
+
+        # Individual components should also match
+        assert all_ratios["dso"].value == engine.calculate_dso().value
+        assert all_ratios["dpo"].value == engine.calculate_dpo().value
+        assert all_ratios["dio"].value == engine.calculate_dio().value
+
+    def test_ccc_accepts_precomputed_results(self):
+        """calculate_ccc with precomputed components produces same result."""
+        totals = CategoryTotals(
+            accounts_receivable=20_000,
+            inventory=15_000,
+            accounts_payable=10_000,
+            total_revenue=200_000,
+            cost_of_goods_sold=100_000,
+        )
+        engine = RatioEngine(totals)
+        dso = engine.calculate_dso()
+        dpo = engine.calculate_dpo()
+        dio = engine.calculate_dio()
+
+        precomputed = engine.calculate_ccc(precomputed_dso=dso, precomputed_dpo=dpo, precomputed_dio=dio)
+        standalone = engine.calculate_ccc()
+
+        assert precomputed.value == standalone.value
+        assert precomputed.is_calculable == standalone.is_calculable
+
+
+class TestReciprocalMetricZeroCases:
+    """Sprint 492: Verify consistent zero-denominator semantics for reciprocal pairs."""
+
+    def test_dso_zero_ar_is_calculable(self):
+        """DSO with AR=0: calculable, value=0 (no receivables to collect)."""
+        totals = CategoryTotals(accounts_receivable=0, total_revenue=100_000)
+        engine = RatioEngine(totals)
+        result = engine.calculate_dso()
+        assert result.is_calculable is True
+        assert result.value == 0.0
+
+    def test_receivables_turnover_zero_ar_not_calculable(self):
+        """Receivables Turnover with AR=0: not calculable (division by zero)."""
+        totals = CategoryTotals(accounts_receivable=0, total_revenue=100_000)
+        engine = RatioEngine(totals)
+        result = engine.calculate_receivables_turnover()
+        assert result.is_calculable is False
+        assert result.value is None
+
+    def test_dio_zero_inventory_is_calculable(self):
+        """DIO with inventory=0: calculable, value=0 (no inventory to hold)."""
+        totals = CategoryTotals(inventory=0, cost_of_goods_sold=100_000)
+        engine = RatioEngine(totals)
+        result = engine.calculate_dio()
+        assert result.is_calculable is True
+        assert result.value == 0.0
+
+    def test_inventory_turnover_zero_inventory_not_calculable(self):
+        """Inventory Turnover with inventory=0: not calculable (division by zero)."""
+        totals = CategoryTotals(inventory=0, cost_of_goods_sold=100_000)
+        engine = RatioEngine(totals)
+        result = engine.calculate_inventory_turnover()
+        assert result.is_calculable is False
+        assert result.value is None
+
+    def test_dso_reciprocal_of_receivables_turnover(self):
+        """DSO × Receivables Turnover ≈ 365 when both calculable."""
+        totals = CategoryTotals(accounts_receivable=20_000, total_revenue=200_000)
+        engine = RatioEngine(totals)
+        dso = engine.calculate_dso()
+        rt = engine.calculate_receivables_turnover()
+        assert dso.is_calculable and rt.is_calculable
+        assert dso.value * rt.value == pytest.approx(365, rel=0.01)
+
+    def test_dio_reciprocal_of_inventory_turnover(self):
+        """DIO × Inventory Turnover ≈ 365 when both calculable."""
+        totals = CategoryTotals(inventory=15_000, cost_of_goods_sold=100_000)
+        engine = RatioEngine(totals)
+        dio = engine.calculate_dio()
+        it = engine.calculate_inventory_turnover()
+        assert dio.is_calculable and it.is_calculable
+        assert dio.value * it.value == pytest.approx(365, rel=0.01)
+
+    def test_zero_revenue_both_dso_and_rt_not_calculable(self):
+        """Zero revenue: both DSO and Receivables Turnover should be N/A."""
+        totals = CategoryTotals(accounts_receivable=20_000, total_revenue=0)
+        engine = RatioEngine(totals)
+        assert engine.calculate_dso().is_calculable is False
+        assert engine.calculate_receivables_turnover().is_calculable is False
+
+    def test_zero_cogs_both_dio_and_it_not_calculable(self):
+        """Zero COGS: both DIO and Inventory Turnover should be N/A."""
+        totals = CategoryTotals(inventory=15_000, cost_of_goods_sold=0)
+        engine = RatioEngine(totals)
+        assert engine.calculate_dio().is_calculable is False
+        assert engine.calculate_inventory_turnover().is_calculable is False

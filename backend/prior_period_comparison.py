@@ -55,6 +55,11 @@ RATIO_CATEGORIES = [
     ("operating_margin", "Operating Margin", True),
     ("return_on_assets", "Return on Assets", True),
     ("return_on_equity", "Return on Equity", True),
+    # Sprint 492: Cash-cycle ratios (days-based, not percentages)
+    ("dso", "Days Sales Outstanding", False),
+    ("dpo", "Days Payable Outstanding", False),
+    ("dio", "Days Inventory Outstanding", False),
+    ("ccc", "Cash Conversion Cycle", False),
 ]
 
 
@@ -228,7 +233,11 @@ def calculate_ratio_variance(
     Calculate variance between ratio values.
 
     For ratios, we use point change (e.g., 2.5 to 2.8 = +0.3 points).
-    For percentage ratios, multiply by 100 for display.
+    ``is_percentage`` controls the absolute significance threshold:
+    - Percentage ratios (0-100 scale): 1.0 percentage point
+    - Decimal ratios (e.g., 2.5x): 0.1 points
+
+    Sprint 492: is_percentage now actively used for threshold scaling.
 
     Returns:
         tuple of (point_change, is_significant, direction)
@@ -246,9 +255,13 @@ def calculate_ratio_variance(
     else:
         direction = "unchanged"
 
-    # Significance threshold for ratios (0.1 point change or 10% relative change)
+    # Absolute significance threshold scales by unit type:
+    # percentage ratios (0-100) need a larger absolute threshold
+    # than decimal ratios (typically 0-5 range).
+    abs_threshold = 1.0 if is_percentage else 0.1
+
     is_significant = False
-    if abs(point_change) >= 0.1:
+    if abs(point_change) >= abs_threshold:
         is_significant = True
     elif abs(prior) > NEAR_ZERO and abs(point_change / prior) >= 0.1:
         is_significant = True

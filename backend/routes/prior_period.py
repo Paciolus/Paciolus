@@ -1,6 +1,7 @@
 """
 Paciolus API — Prior Period Comparison Routes
 """
+
 import logging
 from datetime import date
 from typing import Optional
@@ -33,7 +34,10 @@ class PeriodSaveResponse(BaseModel):
 
 class PeriodSaveRequest(BaseModel):
     """Request to save current audit as a prior period."""
-    period_label: str = Field(..., min_length=1, max_length=100, description="Human-readable period label (e.g., 'FY2025', 'Q3 2025')")
+
+    period_label: str = Field(
+        ..., min_length=1, max_length=100, description="Human-readable period label (e.g., 'FY2025', 'Q3 2025')"
+    )
     period_date: Optional[date] = Field(None, description="Period end date (YYYY-MM-DD)")
     period_type: Optional[PeriodType] = Field(None, description="Period type: monthly, quarterly, annual")
     total_assets: float = 0.0
@@ -54,6 +58,11 @@ class PeriodSaveRequest(BaseModel):
     operating_margin: Optional[float] = None
     return_on_assets: Optional[float] = None
     return_on_equity: Optional[float] = None
+    # Sprint 492: Cash-cycle ratios for trend tracking
+    dso: Optional[float] = None
+    dpo: Optional[float] = None
+    dio: Optional[float] = None
+    ccc: Optional[float] = None
     total_debits: float = 0.0
     total_credits: float = 0.0
     was_balanced: bool = True
@@ -64,6 +73,7 @@ class PeriodSaveRequest(BaseModel):
 
 class PeriodListItemResponse(BaseModel):
     """Summary of a saved period for list display."""
+
     id: int
     period_label: str
     period_date: Optional[str]
@@ -75,6 +85,7 @@ class PeriodListItemResponse(BaseModel):
 
 class CompareRequest(BaseModel):
     """Request to compare current audit to a prior period."""
+
     prior_period_id: int = Field(..., description="ID of the prior period to compare against")
     current_label: str = Field("Current Period", min_length=1, max_length=100, description="Label for current period")
     total_assets: float = 0.0
@@ -95,6 +106,11 @@ class CompareRequest(BaseModel):
     operating_margin: Optional[float] = None
     return_on_assets: Optional[float] = None
     return_on_equity: Optional[float] = None
+    # Sprint 492: Cash-cycle ratios for comparison
+    dso: Optional[float] = None
+    dpo: Optional[float] = None
+    dio: Optional[float] = None
+    ccc: Optional[float] = None
     total_debits: float = 0.0
     total_credits: float = 0.0
     anomaly_count: int = 0
@@ -108,15 +124,12 @@ async def save_prior_period(
     client_id: int,
     period_data: PeriodSaveRequest,
     current_user: User = Depends(require_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Save current audit data as a prior period for future comparison."""
     log_secure_operation("save_period", f"User {current_user.id} saving period for client {client_id}")
 
-    client = db.query(Client).filter(
-        Client.id == client_id,
-        Client.user_id == current_user.id
-    ).first()
+    client = db.query(Client).filter(Client.id == client_id, Client.user_id == current_user.id).first()
 
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
@@ -145,6 +158,10 @@ async def save_prior_period(
         operating_margin=period_data.operating_margin,
         return_on_assets=period_data.return_on_assets,
         return_on_equity=period_data.return_on_equity,
+        dso=period_data.dso,
+        dpo=period_data.dpo,
+        dio=period_data.dio,
+        ccc=period_data.ccc,
         total_debits=period_data.total_debits,
         total_credits=period_data.total_credits,
         was_balanced=period_data.was_balanced,
@@ -175,28 +192,28 @@ async def list_prior_periods(
     client_id: int,
     limit: int = Query(default=20, ge=1, le=100),
     current_user: User = Depends(require_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """List saved prior periods for a client."""
     log_secure_operation("list_periods", f"User {current_user.id} listing periods for client {client_id}")
 
-    client = db.query(Client).filter(
-        Client.id == client_id,
-        Client.user_id == current_user.id
-    ).first()
+    client = db.query(Client).filter(Client.id == client_id, Client.user_id == current_user.id).first()
 
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
 
-    periods = db.query(DiagnosticSummary).filter(
-        DiagnosticSummary.client_id == client_id,
-        DiagnosticSummary.user_id == current_user.id,
-        DiagnosticSummary.period_label.isnot(None),
-        DiagnosticSummary.archived_at.is_(None),
-    ).order_by(
-        DiagnosticSummary.period_date.desc().nullslast(),
-        DiagnosticSummary.timestamp.desc()
-    ).limit(limit).all()
+    periods = (
+        db.query(DiagnosticSummary)
+        .filter(
+            DiagnosticSummary.client_id == client_id,
+            DiagnosticSummary.user_id == current_user.id,
+            DiagnosticSummary.period_label.isnot(None),
+            DiagnosticSummary.archived_at.is_(None),
+        )
+        .order_by(DiagnosticSummary.period_date.desc().nullslast(), DiagnosticSummary.timestamp.desc())
+        .limit(limit)
+        .all()
+    )
 
     return [
         PeriodListItemResponse(
@@ -218,16 +235,22 @@ async def compare_to_prior_period(
     request: Request,
     compare_data: CompareRequest,
     current_user: User = Depends(require_verified_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Compare current audit results to a saved prior period."""
-    log_secure_operation("compare_periods", f"User {current_user.id} comparing to period {compare_data.prior_period_id}")
+    log_secure_operation(
+        "compare_periods", f"User {current_user.id} comparing to period {compare_data.prior_period_id}"
+    )
 
-    prior_period = db.query(DiagnosticSummary).filter(
-        DiagnosticSummary.id == compare_data.prior_period_id,
-        DiagnosticSummary.user_id == current_user.id,
-        DiagnosticSummary.archived_at.is_(None),
-    ).first()
+    prior_period = (
+        db.query(DiagnosticSummary)
+        .filter(
+            DiagnosticSummary.id == compare_data.prior_period_id,
+            DiagnosticSummary.user_id == current_user.id,
+            DiagnosticSummary.archived_at.is_(None),
+        )
+        .first()
+    )
 
     if not prior_period:
         raise HTTPException(status_code=404, detail="Prior period not found")
@@ -251,6 +274,10 @@ async def compare_to_prior_period(
         "operating_margin": compare_data.operating_margin,
         "return_on_assets": compare_data.return_on_assets,
         "return_on_equity": compare_data.return_on_equity,
+        "dso": compare_data.dso,
+        "dpo": compare_data.dpo,
+        "dio": compare_data.dio,
+        "ccc": compare_data.ccc,
         "total_debits": compare_data.total_debits,
         "total_credits": compare_data.total_credits,
         "anomaly_count": compare_data.anomaly_count,

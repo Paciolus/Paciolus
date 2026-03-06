@@ -528,12 +528,28 @@ class RatioEngine:
                 threshold_status="neutral",
             )
 
-        # Use operating_expenses if available, otherwise derive from total_expenses - COGS
+        # Use operating_expenses if available, otherwise derive from total_expenses - COGS.
+        # Sprint 492: Guard against malformed totals where derivation produces
+        # economically invalid results (negative opex or no expense data).
         if self.totals.operating_expenses > 0:
             operating_exp = self.totals.operating_expenses
         else:
-            # Fallback: operating expenses = total expenses - COGS
-            operating_exp = self.totals.total_expenses - self.totals.cost_of_goods_sold
+            derived = self.totals.total_expenses - self.totals.cost_of_goods_sold
+            if derived < 0 or self.totals.total_expenses == 0:
+                # total_expenses < COGS (malformed) or no expense data at all:
+                # cannot reliably derive operating expenses.
+                return RatioResult(
+                    name="Operating Margin",
+                    value=None,
+                    display_value="N/A",
+                    is_calculable=False,
+                    interpretation=(
+                        "Cannot calculate: Unable to derive operating expenses "
+                        "(total expenses absent or less than COGS)"
+                    ),
+                    threshold_status="neutral",
+                )
+            operating_exp = derived
 
         operating_income = self.totals.total_revenue - self.totals.cost_of_goods_sold - operating_exp
         margin = (operating_income / self.totals.total_revenue) * 100
@@ -716,6 +732,10 @@ class RatioEngine:
                 threshold_status="neutral",
             )
 
+        # Sprint 492 note: AR=0 yields DSO=0 (numerator is zero → 0 days).
+        # The reciprocal metric receivables_turnover returns N/A when AR=0
+        # because AR is in the denominator there (Revenue/AR → division by zero).
+        # Both are mathematically correct for their respective formulas.
         if self.totals.accounts_receivable == 0:
             return RatioResult(
                 name="Days Sales Outstanding",
@@ -826,6 +846,10 @@ class RatioEngine:
                 threshold_status="neutral",
             )
 
+        # Sprint 492 note: Inventory=0 yields DIO=0 (numerator is zero → 0 days).
+        # The reciprocal metric inventory_turnover returns N/A when inventory=0
+        # because inventory is in the denominator there (COGS/Inv → division by zero).
+        # Both are mathematically correct for their respective formulas.
         if self.totals.inventory == 0:
             return RatioResult(
                 name="Days Inventory Outstanding",
@@ -860,7 +884,13 @@ class RatioEngine:
             threshold_status=health,
         )
 
-    def calculate_ccc(self) -> RatioResult:
+    def calculate_ccc(
+        self,
+        *,
+        precomputed_dso: RatioResult | None = None,
+        precomputed_dpo: RatioResult | None = None,
+        precomputed_dio: RatioResult | None = None,
+    ) -> RatioResult:
         """
         Cash Conversion Cycle (CCC) = DIO + DSO - DPO.
 
@@ -869,10 +899,11 @@ class RatioEngine:
         recovery. Negative CCC means the company collects before paying.
 
         Sprint 293 - Phase XL: Cash Conversion Cycle
+        Sprint 492: Accept precomputed components to avoid redundant calculation.
         """
-        dso_result = self.calculate_dso()
-        dpo_result = self.calculate_dpo()
-        dio_result = self.calculate_dio()
+        dso_result = precomputed_dso or self.calculate_dso()
+        dpo_result = precomputed_dpo or self.calculate_dpo()
+        dio_result = precomputed_dio or self.calculate_dio()
 
         # Need at least DSO and one of DPO/DIO to be calculable
         if not dso_result.is_calculable:
@@ -1201,7 +1232,15 @@ class RatioEngine:
         )
 
     def calculate_all_ratios(self) -> dict[str, RatioResult]:
-        """Calculate all available ratios and return as dictionary."""
+        """Calculate all available ratios and return as dictionary.
+
+        Sprint 492: DSO/DPO/DIO are computed once and passed to CCC
+        to avoid redundant calculation in the same flow.
+        """
+        dso = self.calculate_dso()
+        dpo = self.calculate_dpo()
+        dio = self.calculate_dio()
+
         return {
             "current_ratio": self.calculate_current_ratio(),
             "quick_ratio": self.calculate_quick_ratio(),
@@ -1211,15 +1250,19 @@ class RatioEngine:
             "operating_margin": self.calculate_operating_margin(),
             "return_on_assets": self.calculate_return_on_assets(),
             "return_on_equity": self.calculate_return_on_equity(),
-            "dso": self.calculate_dso(),  # Sprint 53: Days Sales Outstanding
-            "dpo": self.calculate_dpo(),  # Sprint 293: Days Payable Outstanding
-            "dio": self.calculate_dio(),  # Sprint 293: Days Inventory Outstanding
-            "ccc": self.calculate_ccc(),  # Sprint 293: Cash Conversion Cycle
-            "equity_ratio": self.calculate_equity_ratio(),  # R4: Extended Solvency
-            "long_term_debt_ratio": self.calculate_long_term_debt_ratio(),  # R4: Extended Solvency
-            "asset_turnover": self.calculate_asset_turnover(),  # R4: Extended Solvency
-            "inventory_turnover": self.calculate_inventory_turnover(),  # R5: Core Turnover
-            "receivables_turnover": self.calculate_receivables_turnover(),  # R5: Core Turnover
+            "dso": dso,
+            "dpo": dpo,
+            "dio": dio,
+            "ccc": self.calculate_ccc(
+                precomputed_dso=dso,
+                precomputed_dpo=dpo,
+                precomputed_dio=dio,
+            ),
+            "equity_ratio": self.calculate_equity_ratio(),
+            "long_term_debt_ratio": self.calculate_long_term_debt_ratio(),
+            "asset_turnover": self.calculate_asset_turnover(),
+            "inventory_turnover": self.calculate_inventory_turnover(),
+            "receivables_turnover": self.calculate_receivables_turnover(),
         }
 
     def to_dict(self) -> dict[str, Any]:
