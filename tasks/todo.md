@@ -156,6 +156,7 @@ All verification items confirmed in PDF output:
 - Department summary: 6 departments, no concentration >40%
 - Benford note: MAD=0.0042, positive conformity interpretation
 - EMP-4421 finding text includes $8,400 total amount
+- Commit: 0529356
 
 ---
 
