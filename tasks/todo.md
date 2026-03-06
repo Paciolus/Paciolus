@@ -124,11 +124,14 @@
 - [x] **SA-4 (L):** Bulk upload UploadFile use-after-close in asyncio.create_task → pre-read bytes
 - [x] **SA-5 (L):** Frontend missing X-Frame-Options and HSTS headers → added to next.config.js
 - [x] **SA-6 (I):** /metrics returns 404 (not 403) for stealth in production
+- [x] **SA-7 (L):** Org invite duplicate error leaked email enumeration → generic message
+- [x] **SA-8 (L):** Email comparisons in org invite/member queries were case-sensitive → `func.lower()` normalization
+- [x] **SA-9 (L):** JPEG magic byte check in branding.py too narrow (3 bytes) → SOI + 0xFF segment marker check
 
 #### Verification
 - [x] `pytest` passes (250 security/CSRF/upload tests; 2 pre-existing lockout failures)
 - [x] `npm run build` passes (all dynamic routes)
-- [x] All 5 files verified: security_middleware.py, routes/metrics.py, routes/health.py, routes/bulk_upload.py, frontend/next.config.js
+- [x] All 7 files verified: security_middleware.py, routes/metrics.py, routes/health.py, routes/bulk_upload.py, frontend/next.config.js, routes/organization.py, routes/branding.py
 
 ---
 

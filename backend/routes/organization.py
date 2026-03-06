@@ -13,6 +13,7 @@ from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, EmailStr, Field
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from auth import require_current_user
@@ -217,16 +218,16 @@ async def create_invite(
         db.query(OrganizationInvite)
         .filter(
             OrganizationInvite.organization_id == org.id,
-            OrganizationInvite.invitee_email == body.email,
+            func.lower(OrganizationInvite.invitee_email) == body.email.lower(),
             OrganizationInvite.status == InviteStatus.PENDING,
         )
         .first()
     )
     if existing_invite:
-        raise HTTPException(status_code=409, detail="A pending invite already exists for this email.")
+        raise HTTPException(status_code=409, detail="Unable to send invite. Please try again later.")
 
     # Check if user is already a member
-    existing_user = db.query(User).filter(User.email == body.email).first()
+    existing_user = db.query(User).filter(func.lower(User.email) == body.email.lower()).first()
     if existing_user:
         existing_member = db.query(OrganizationMember).filter(OrganizationMember.user_id == existing_user.id).first()
         if existing_member and existing_member.organization_id == org.id:

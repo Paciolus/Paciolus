@@ -113,9 +113,9 @@ async def upload_logo(
 
     # SECURITY: Validate magic bytes match declared content type (prevents disguised uploads)
     _PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
-    _JPEG_MAGIC = b"\xff\xd8\xff"
     is_png = contents.startswith(_PNG_MAGIC)
-    is_jpeg = contents.startswith(_JPEG_MAGIC)
+    # JPEG SOI marker (0xFFD8) followed by segment marker (JFIF, EXIF, or raw DCT)
+    is_jpeg = len(contents) >= 3 and contents[:2] == b"\xff\xd8" and contents[2] == 0xFF
     if not is_png and not is_jpeg:
         raise HTTPException(
             status_code=400,
