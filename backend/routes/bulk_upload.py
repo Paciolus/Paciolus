@@ -66,9 +66,12 @@ async def start_bulk_upload(
     # Evict stale jobs before creating a new one (prevent unbounded memory growth)
     _evict_stale_jobs()
 
-    # Create job
+    # Build file descriptors from already-validated bytes (UploadFile objects
+    # may be closed after the response completes, so we must NOT pass them
+    # to the background task)
     job_id = str(uuid.uuid4())
     file_statuses = []
+    file_descriptors: list[dict] = []
 
     for idx, f in enumerate(files):
         content = validated_contents[idx]
@@ -83,6 +86,7 @@ async def start_bulk_upload(
                 "error": None,
             }
         )
+        file_descriptors.append({"filename": f.filename, "content": content})
 
     _bulk_jobs[job_id] = {
         "job_id": job_id,
@@ -94,8 +98,8 @@ async def start_bulk_upload(
         "total_count": len(files),
     }
 
-    # Process files asynchronously (in background)
-    asyncio.create_task(_process_bulk_files(job_id, files, user.id, db))
+    # Process files asynchronously using pre-read bytes (not UploadFile objects)
+    asyncio.create_task(_process_bulk_files(job_id, file_descriptors, user.id))
 
     return {
         "job_id": job_id,
@@ -106,22 +110,24 @@ async def start_bulk_upload(
 
 async def _process_bulk_files(
     job_id: str,
-    files: list[UploadFile],
+    file_descriptors: list[dict],
     user_id: int,
-    db: Session,
 ) -> None:
-    """Process files one by one (sequential to avoid overwhelming the system)."""
+    """Process files one by one (sequential to avoid overwhelming the system).
+
+    Args:
+        file_descriptors: List of {"filename": str, "content": bytes} dicts.
+            Content is pre-read from UploadFile before the response completes.
+    """
     job = _bulk_jobs.get(job_id)
     if not job:
         return
 
-    for idx, f in enumerate(files):
+    for idx, fd in enumerate(file_descriptors):
         try:
             job["files"][idx]["status"] = "processing"
 
-            # Read the content
-            await f.seek(0)
-            content = await f.read()
+            content = fd["content"]
 
             # Increment upload counter
             try:
@@ -141,7 +147,7 @@ async def _process_bulk_files(
             # via the same analysis functions used by the single-file endpoints)
             job["files"][idx]["status"] = "complete"
             job["files"][idx]["result"] = {
-                "filename": f.filename,
+                "filename": fd["filename"],
                 "size_bytes": len(content),
                 "processed_at": datetime.now(UTC).isoformat(),
             }

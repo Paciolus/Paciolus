@@ -168,20 +168,23 @@ async def readiness_probe():
             db.close()
         latency_ms = (time.perf_counter() - start) * 1000
 
-        # Pool statistics (QueuePool for PostgreSQL, StaticPool/NullPool for SQLite)
-        pool = engine.pool
-        pool_details: dict = {"pool_class": type(pool).__name__}
-        if hasattr(pool, "size"):
-            pool_details.update(
-                {
-                    "pool_size": pool.size(),
-                    "checked_in": pool.checkedin(),
-                    "checked_out": pool.checkedout(),
-                    "overflow": pool.overflow(),
-                }
-            )
-        else:
-            pool_details["note"] = "Pool statistics not available for this dialect"
+        # Pool statistics — expose only in non-production to prevent
+        # operational data leakage (pool size, connection counts)
+        from config import ENV_MODE
+
+        pool_details: dict | None = None
+        if ENV_MODE != "production":
+            pool = engine.pool
+            pool_details = {"pool_class": type(pool).__name__}
+            if hasattr(pool, "size"):
+                pool_details.update(
+                    {
+                        "pool_size": pool.size(),
+                        "checked_in": pool.checkedin(),
+                        "checked_out": pool.checkedout(),
+                        "overflow": pool.overflow(),
+                    }
+                )
 
         db_dep = DependencyStatus(
             status="healthy",

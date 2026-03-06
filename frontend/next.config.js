@@ -26,6 +26,7 @@ const nextConfig = {
   // nonces are injected into inline scripts at request time. Remaining headers are
   // static and safe to keep here.
   async headers() {
+    const isProd = process.env.NODE_ENV === 'production'
     return [
       {
         source: '/(.*)',
@@ -42,6 +43,18 @@ const nextConfig = {
             key: 'Permissions-Policy',
             value: 'camera=(), microphone=(), geolocation=()',
           },
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY',
+          },
+          ...(isProd
+            ? [
+                {
+                  key: 'Strict-Transport-Security',
+                  value: 'max-age=31536000; includeSubDomains; preload',
+                },
+              ]
+            : []),
         ],
       },
     ]

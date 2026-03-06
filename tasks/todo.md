@@ -111,6 +111,27 @@
 
 > Sprints 477–487 completed and archived to `tasks/archive/`. Next pending items below.
 
+### Sprint 495 — Surface Area Hardening Security Audit
+
+**Status:** COMPLETE
+**Goal:** Full surface area hardening — API endpoints, input handling, injection risks, SSRF, XSS, CSRF, CORS, security headers, file parsing, third-party integrations, container exposure.
+**Complexity Score:** High
+
+#### Findings & Fixes
+- [x] **SA-1 (M):** MaxBodySizeMiddleware crash on malformed/negative Content-Length → try/except + negative check
+- [x] **SA-2 (M):** Prometheus /metrics publicly exposed in production → loopback-only restriction with 404 stealth
+- [x] **SA-3 (L):** /health/ready pool stats leaking operational data → stripped in production
+- [x] **SA-4 (L):** Bulk upload UploadFile use-after-close in asyncio.create_task → pre-read bytes
+- [x] **SA-5 (L):** Frontend missing X-Frame-Options and HSTS headers → added to next.config.js
+- [x] **SA-6 (I):** /metrics returns 404 (not 403) for stealth in production
+
+#### Verification
+- [x] `pytest` passes (250 security/CSRF/upload tests; 2 pre-existing lockout failures)
+- [x] `npm run build` passes (all dynamic routes)
+- [x] All 5 files verified: security_middleware.py, routes/metrics.py, routes/health.py, routes/bulk_upload.py, frontend/next.config.js
+
+---
+
 ### Sprint 494 — Data Hardening Security Audit
 
 **Status:** COMPLETE

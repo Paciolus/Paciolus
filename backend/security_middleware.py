@@ -132,17 +132,40 @@ class MaxBodySizeMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         content_length = request.headers.get("content-length")
-        if content_length and int(content_length) > self.max_bytes:
-            log_secure_operation(
-                "request_body_too_large",
-                f"Rejected {request.method} {request.url.path}: "
-                f"Content-Length {content_length} exceeds {self.max_bytes}",
-            )
-            return Response(
-                content='{"detail":"Request body too large"}',
-                status_code=413,
-                media_type="application/json",
-            )
+        if content_length:
+            try:
+                length = int(content_length)
+            except ValueError:
+                log_secure_operation(
+                    "malformed_content_length",
+                    f"Rejected {request.method} {request.url.path}: non-numeric Content-Length {content_length!r}",
+                )
+                return Response(
+                    content='{"detail":"Invalid Content-Length header"}',
+                    status_code=400,
+                    media_type="application/json",
+                )
+            if length < 0:
+                log_secure_operation(
+                    "negative_content_length",
+                    f"Rejected {request.method} {request.url.path}: negative Content-Length {length}",
+                )
+                return Response(
+                    content='{"detail":"Invalid Content-Length header"}',
+                    status_code=400,
+                    media_type="application/json",
+                )
+            if length > self.max_bytes:
+                log_secure_operation(
+                    "request_body_too_large",
+                    f"Rejected {request.method} {request.url.path}: "
+                    f"Content-Length {content_length} exceeds {self.max_bytes}",
+                )
+                return Response(
+                    content='{"detail":"Request body too large"}',
+                    status_code=413,
+                    media_type="application/json",
+                )
         return await call_next(request)
 
 
