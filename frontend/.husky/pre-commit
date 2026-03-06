@@ -1,4 +1,5 @@
 # Sprint 496: Secrets scanning gate + lint-staged
+# Sprint 498: Frontend test gate — auto-runs Jest when frontend/src/ files are staged
 # Reject commits containing high-entropy secrets or known secret patterns.
 
 # ── Secrets pattern check (no external dependency) ──────────────
@@ -33,6 +34,19 @@ fi
 
 if [ "$SECRETS_FOUND" -eq 1 ]; then
   exit 1
+fi
+
+# ── Frontend test gate (only when frontend/src/ files are staged) ─
+FRONTEND_SRC_CHANGED=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^frontend/src/' || true)
+if [ -n "$FRONTEND_SRC_CHANGED" ]; then
+  echo "Frontend source files changed — running Jest test gate..."
+  (cd frontend && npx jest --bail --ci --forceExit 2>&1)
+  if [ $? -ne 0 ]; then
+    echo ""
+    echo "ERROR: Frontend tests failed. Fix failures before committing."
+    exit 1
+  fi
+  echo "Frontend tests passed."
 fi
 
 # ── Lint-staged (existing) ───────────────────────────────────────

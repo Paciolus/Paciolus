@@ -741,6 +741,82 @@ This is the 24th audit. The project has returned to the Excellent band (4.5 >= 4
 - StaticFallback: P3, removal recommended — git blame as recovery mechanism
 
 ---
+## Audit -- 2026-03-06 (26th) | Good -- minor gaps | Overall: 4.3/5.0
+---
+
+### Scores at a Glance
+| Pillar                  | Score |
+|-------------------------|-------|
+| Workflow Orchestration  | 4.5   |
+| Task Management         | 4/5   |
+| Core Principles         | 4/5   |
+| **Overall**             | **4.3** |
+
+### A1. Plan Mode Default -- 5/5
+**Finding:** The cycle since the 25th audit spans 8 sprints (490-497), all of which have structured todo.md entries with objectives, line-item checklists, complexity scores, and verification sections written before implementation. Sprint 497 (Digital Excellence Council Remediation) decomposes into 3 explicit paths (A: Methodology Integrity -- 10 items, B: Test Regression Triage -- 13 items, C: Infrastructure Polish -- 3 items) with per-path tracking. Sprint 496 (Engineering Process Hardening) decomposes into 9 findings (EP-1 through EP-9) ordered by severity (H/M/L). Sprints 493-495 follow identical structured patterns with finding-and-fix checklists and explicit verification sections. Sprint 488 (Financial Statements) has a 5-change checklist with per-change files-modified documentation. No untracked sprint-numbered commits exist in the git log -- every commit from 09c85bd (Sprint 490) through bfb4ed6 (Sprint 497) has a corresponding todo.md entry. The Audit 24 persistent gap (named sprints without todo.md entries) is fully resolved across this entire cycle.
+**Recommendation:** Continue current practice.
+
+### A2. Subagent Strategy -- 5/5
+**Finding:** 9 agents in `.claude/agents/` (critic, executor, guardian, scout, designer, project-auditor, accounting-expert-auditor, future-state-consultant-agent, DIGITAL_EXCELLENCE_COUNCIL_PROMPT). All remain single-purpose with stable role boundaries. The Digital Excellence Council agent continues to produce actionable findings: Sprint 497 is a direct remediation of its output (10 methodology fixes, 26 test fixes). The project-auditor is actively invoked (this audit). Agent roster has been stable across ten consecutive audit cycles. No scope creep, no consolidation needed.
+**Recommendation:** Continue current practice.
+
+### A3. Self-Improvement Loop -- 5/5
+**Finding:** `tasks/lessons.md` was actively maintained during this cycle. Five new lesson sections were added: Sprint 497 (5 lessons including pricing cascade, ISA sub-paragraph citation fragility, audit terminology neutrality, SQLite schema drift), Sprint 496 (5 lessons including CI test gating, mypy enforcement, secrets scanning, GitHub Actions permissions, CODEOWNERS advisory-only), Sprint 494 (8 lessons including DATABASE_URL credential exposure, `detail=str(e)` as #1 leakage vector, Excel formula injection via openpyxl), Sprint 493 (5 lessons including FastAPI DI manual call signatures, account enumeration via registration messages), Sprint 492 (4 lessons including operating margin negative derived opex). The "Remediation Completeness" lesson (captured from Audit 25) states the grep-verification rule: "Before marking any pattern-based remediation finding as complete, run a codebase-wide grep for ALL remaining instances." The prior audit's self-improvement recommendations (pattern scanning lesson, mypy annotation behavioral changes lesson) both appear addressed. No lesson-covered mistake pattern recurred in committed code during this cycle.
+**Recommendation:** Continue current practice.
+
+### A4. Verification Before Done -- 4/5
+**Finding:** Seven of eight sprints (490-497) have explicit verification sections with `pytest` and `npm run build` results documented. Sprint 497 records "5,776 passed, 0 failed, 1 skipped" -- the highest test count in project history. Sprint 496 records targeted security test results (170 passed). Sprint 494 records full pytest (5,679 passed) plus targeted module runs (141 upload, 46 financial, 85 export, 29 memo). Sprint 491 records `npm test passes (111 suites, 1,329 tests)`.
+
+The gap: `npm test` (frontend Jest suite) was documented for only 2 of the 8 sprints in this cycle (Sprint 491 and Sprint 492). Sprints 493-497 all record `npm run build` but NOT `npm test`. Sprint 497 modified 17 backend files -- a backend-only sprint where `npm test` is arguably not required. However, Sprint 495 modified `frontend/next.config.js` (adding X-Frame-Options and HSTS headers) and Sprint 496 added a frontend-tests CI job -- both frontend-touching changes where the `npm test` gate should have been executed and documented. The Post-Sprint Checklist at line 80 explicitly lists `npm test passes (frontend Jest suite)` as item 2. The npm test gate has now been a finding across seven consecutive audits (20-26). The pattern has improved -- it is now a partial execution gap rather than complete omission -- but the recurrence is the longest-running open finding in the audit journal.
+**Recommendation:** Run `npm test` now and record the result. Consider adding a hard conditional rule to the Post-Sprint Checklist: "If ANY `.tsx`, `.ts`, `.js`, `next.config.*`, or frontend config file was modified, `npm test` is MANDATORY -- not optional." The current unconditional listing is being interpreted as optional when sprints are perceived as backend-only.
+
+### A5. Demand Elegance (Balanced) -- 5/5
+**Finding:** Zero `\bTODO\b`, `\bFIXME\b`, or `\bHACK\b` comments across all backend Python and frontend TypeScript source files (confirmed via word-boundary grep). The earlier grep hits for `TODO`/`FIXME`/`HACK`/`XXX` were all false positives: Roman numerals in sprint-name comments (e.g., "Phase XXXIX") and OFX date format patterns (`YYYYMMDD[HHmmss[.XXX]]`). Sprint 497's methodology fixes are surgically precise: PCAOB AS 2110 to AS 2401 is a 3-location change, ISA 240.A40 fabricated paragraph citation to ISA 240 is an 11-location grep-and-replace, "Population Not Accepted" to "UEL Exceeds TM -- Further Evaluation Required" is a single terminology correction. Sprint 496's 61 injection regression tests follow a clean parameterized pattern. Sprint 494's `sanitize_error()` safety net with `_contains_internal_details()` is the correct defense-in-depth approach -- blocking file paths, SQL fragments, and stack traces before passthrough rather than after. No over-engineering detected in any sprint.
+**Recommendation:** Continue current practice.
+
+### A6. Autonomous Bug Fixing -- 5/5
+**Finding:** Sprint 497 autonomously identified and fixed 26 test regressions across 10 test files caused by Pricing v3 restructure cascading into entitlement tests, billing route tests, and pricing validation tests. Each regression was diagnosed to root cause: `diagnostics_per_month` renamed to `uploads_per_month`, FREE tier `pdf_export` changed from True to False, `_load_seat_price_ids` refactored into `_load_pro_seat_price_ids`/`_load_ent_seat_price_ids`, seat cap changed from 22 to 60. All 26 fixes were self-contained in a single commit (bfb4ed6). Sprint 494 autonomously identified 10 security vulnerabilities (credential logging, error leakage, PII exposure) and 4 defense-in-depth improvements without user direction. Sprint 493 autonomously fixed 8 access control issues including a critical billing analytics endpoint lacking admin role check. No back-and-forth. No incomplete fixes.
+**Recommendation:** Continue current practice.
+
+### B. Task Management -- 4/5
+**Finding:** Five of six sub-practices are consistently applied across this cycle's 8 sprints. Plan First: all 8 sprints have structured pre-implementation checklists. Track Progress: all items individually checked with status markers. Explain Changes: commit messages are descriptive and follow the `Sprint X: Description` convention. Capture Lessons: 27 new lessons captured across 5 lesson sections. Document Results: review sections present for all sprints.
+
+Three gaps are present:
+
+1. **Sprint 496 status inconsistency.** Marked "IN PROGRESS" at line 163 of todo.md. All non-deferred items are checked (7 of 9; EP-6 deferred, EP-9 accepted risk). Verification section is fully checked (4 of 4 items). The commit 9004db1 exists and Sprint 497 was committed AFTER it (bfb4ed6). Sprint 496 is functionally complete. The status label was never updated to COMPLETE. The Post-Sprint Checklist explicitly requires "Sprint status -> COMPLETE, Review section added" as item 5.
+
+2. **Sprint 491 and 492 status inconsistency.** Both are marked "IN PROGRESS" at lines 294 and 268 respectively. Sprint 491 has all items checked with verification complete (5,651 passed, `npm run build` passes, `npm test` passes). Sprint 492 has all items checked with verification complete (full backend 5,679 passed, `npm run build` passes, `npm test` passes). Both have commits in git (e7f2763/3960e1f for Sprint 491, ac19e81 for Sprint 492). Both are functionally complete with stale status labels.
+
+3. **Commit SHAs not recorded in sprint review sections.** The Post-Sprint Checklist item 9 states "Record commit SHA in sprint Review section (e.g., `Commit: abc1234`)." Grep of todo.md for "Commit:" or "commit:" returns only the template example at line 87 -- zero sprint review sections contain a recorded SHA. This is a regression from the structural implementation celebrated in Audit 18. Sprints 488-497 each have a corresponding git commit (d934027, 73de472, 09c85bd, e7f2763, ac19e81, a5d92a9, b21bebe, 3874809/b197fc4, 9004db1, bfb4ed6) but none of these SHAs appear anywhere in the sprint review entries. The SHA field has been a finding or recommendation in audits 16-22, was structurally implemented in Audit 18, demonstrated in Audit 22, and has now silently regressed.
+**Recommendation:** (1) Update Sprint 496, 492, and 491 status labels to COMPLETE. (2) Add commit SHAs to all sprint review sections (488-497). (3) Consider archiving Sprints 488-497 to `tasks/archive/` per the Phase Lifecycle Protocol -- the Active Phase section contains ~400 lines of completed sprint checklists that should live in archive files. Total cost: under 20 minutes of documentation work.
+
+### C. Core Principles -- 4/5
+**Finding:** Simplicity First: Sprint 494's defense-in-depth improvements (magic byte guards, scheduled cleanup, traceback redaction) are appropriately scoped additions without over-engineering. Sprint 496's 61 injection tests follow parameterized patterns rather than 61 independent test functions. Sprint 497's methodology fixes are precise corrections without introducing new abstractions. No Laziness: Sprint 495 fixed 9 surface area issues across 7 files -- comprehensive, not selective. Sprint 497 fixed all 10 methodology citations and all 26 test regressions in a single sprint -- nothing deferred except the N+1 eager loading (correctly deferred as requiring profiling). Minimal Impact: each sprint's git diff is tightly scoped to its stated objective.
+
+The gap: the Active Phase section of todo.md has accumulated ~400 lines across 10 completed sprint entries (488-497) plus older pending items (447, 463, 464, 466, 467, 468, legal sign-off). The Phase Lifecycle Protocol (lines 9-27) explicitly states: "The `## Active Phase` section should ONLY contain the current in-progress phase. Once complete, it becomes empty until the next phase begins." The protocol requires completed sprint checklists to be moved to `tasks/archive/`. This archival has not occurred since the f41ad81 housekeeping commit that archived Sprints 477-487. The pre-archive note at line 112 ("Sprints 477-487 completed and archived to `tasks/archive/`. Next pending items below.") confirms the process was followed previously but not repeated for this cycle. This is a cleanliness and process compliance issue rather than a substantive quality gap, but the Phase Lifecycle Protocol is labeled MANDATORY and this audit must report adherence.
+**Recommendation:** Archive Sprints 488-497 to `tasks/archive/era-14-security-hardening-details.md` (or similar). Update the Active Phase section to contain only pending items (Sprint 447, SIEM/log, cross-region DB, secrets vault, pen test, bug bounty, legal sign-off). Add an Era 14 one-line summary to the Completed Phases section. This restores compliance with the Phase Lifecycle Protocol.
+
+### Top Priority for Next Cycle
+**Execute the Phase Lifecycle Protocol wrap sequence for Sprints 488-497.** Three actions in order: (1) Update status labels for Sprints 491, 492, and 496 from "IN PROGRESS" to "COMPLETE." (2) Add commit SHAs to all sprint review sections (488-497). (3) Archive all completed sprint checklists to `tasks/archive/`, add an Era 14 summary to Completed Phases, and clean the Active Phase to contain only pending/future items. Secondary: run `npm test` and record the result. These actions close all procedural gaps and restore the todo.md to its intended lean state.
+
+### Trend Note
+Regression from Audit 25 (4.6) to Audit 26 (4.3).
+- Workflow Orchestration: 4.7 -> 4.5 (regressed -- A4 remains at 4/5; npm test gate is now a 7-audit-long persistent finding; A1/A2/A3/A5/A6 all at 5/5)
+- Task Management: 4/5 -> 4/5 (flat -- strong planning and lesson capture but 3 stale status labels, 0 commit SHAs recorded across 10 sprints, representing a structural regression of the SHA discipline established in Audit 18)
+- Core Principles: 5/5 -> 4/5 (regressed -- Phase Lifecycle Protocol non-compliance: ~400 lines of completed sprint checklists accumulated in Active Phase without archival)
+- Overall: 4.6 -> 4.3 (regressed -- dropped from solid Excellent to the Excellent/Good boundary)
+
+This is the 26th audit. The regression is driven by housekeeping and documentation discipline, not code quality. The 8-sprint security hardening push (490-497) represents the most productive security-focused cycle in project history: 158 new backend tests, 14+ security vulnerabilities fixed, 61 injection regression tests added, CI hardened with secrets scanning and frontend test gating, and 10 methodology citations corrected. The code quality is excellent. The gap is purely procedural: three stale "IN PROGRESS" labels, zero commit SHAs recorded despite the structural requirement, and the Phase Lifecycle Protocol archival step not executed. The npm test gate finding persists for a 7th consecutive audit -- it is now the longest-running open finding in the journal's history. All remediations are recoverable in a single focused session (~30 minutes of documentation and archival work).
+
+Notable observations:
+- Test count: 5,776 backend (highest ever) + 1,345 frontend = 7,121 total
+- 8 consecutive security-focused sprints (490-497) -- unprecedented security hardening push
+- 27 new lessons captured across 5 lesson sections -- the most active lesson-capture period observed
+- Working tree is CLEAN -- all code changes are committed
+- Core Principles drops from 5/5 for the first time in 14 consecutive audit cycles (the streak ran from Audit 12 through Audit 25)
+- The C-pillar drop is attributable to a specific, recoverable process gap (archival), not to code quality degradation
+
+---
 ## Audit — 2026-03-04 (25th) | Excellent | Overall: 4.6/5.0
 ---
 

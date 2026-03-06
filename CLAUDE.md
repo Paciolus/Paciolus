@@ -36,6 +36,7 @@ Before ANY implementation begins:
 ### 3. Verification (BEFORE marking complete)
 Before declaring a directive complete:
 - [ ] Run `npm run build` in frontend (must pass with no errors)
+- [ ] Run `npm test` in frontend (must pass with no errors)
 - [ ] Run `pytest` in backend if tests were modified
 - [ ] Verify Zero-Storage compliance for any new data handling
 
@@ -51,6 +52,8 @@ After directive completion:
 
 ### 5. Git Commit (FINAL step)
 After ALL directive work is complete:
+- [ ] Update sprint status to COMPLETE in `tasks/todo.md`
+- [ ] Record commit SHA in sprint Review section
 - [ ] Stage relevant files (avoid `git add -A` to prevent accidental inclusions)
 - [ ] Create atomic commit with descriptive message: `Sprint X: [Brief Description]`
 - [ ] Commit message should reference the sprint number and key changes
@@ -66,7 +69,7 @@ After ALL directive work is complete:
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 2.1.0
-**Test Coverage:** 5,618 backend tests (1 skipped) + 1,345 frontend tests
+**Test Coverage:** 5,776 backend tests (1 skipped) + 1,345 frontend tests
 **Next Phase:** Sprint 447 (Stripe Production Cutover — non-automatable: CEO sign-off + `sk_live_` keys required)
 
 ### Completed Phases
@@ -90,6 +93,8 @@ After ALL directive work is complete:
 | 421–438 (LVIII) | File Formats | TSV/TXT/OFX/QBO/IIF/PDF/ODS parsers (10 supported types), Prometheus metrics, tier-gated format access |
 | 439–448 (LIX–LXIII) | Pricing & Coverage | Hybrid pricing overhaul, billing analytics, React 19, Python 3.12, pandas 3.0 eval, entitlement wiring, export test coverage (17%→90%) |
 | 449–476 (LXIV–LXIX) | Security, SOC 2, Pricing v3 | HttpOnly cookies, CSP nonce, CSRF upgrade, SOC 2 readiness (42 criteria), mypy annotations, Pricing Restructure v3 (Free/Solo/Professional/Enterprise — all paid = all tools), org entities, export sharing, admin dashboard, bulk upload, comprehensive security audit (14 fixes) |
+| 477–487 | Report Engine & UX Polish | Copy consistency, Digital Excellence Council audits, pricing page redesign, report engine content audit, TB Diagnostic enrichment |
+| 478, 488–497 | Security Hardening & Quality | Deprecated alias migration, report fixes, security audit quadrilogy (35 fixes), 61 injection tests, CI hardening, formula consistency, Digital Excellence Council remediation (42 findings) — **Tests: 5,776 + 1,345** |
 
 ### Compliance Documentation
 Located in `docs/04-compliance/`:
