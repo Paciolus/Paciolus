@@ -145,7 +145,19 @@
 - [x] Regenerate all 21 sample PDFs
 
 #### Review
-Commit:
+All verification items confirmed:
+- All 16 tests in methodology table have non-empty descriptions
+- 8 previously blank tests (Round Amounts, Z-Score, Trend Variance, Cut-Off, Recognition, Obligation Linkage, Modification, SSP) now show descriptions
+- All 4 findings have suggested procedures (cutoff: ASC 606-10-25-23; recognition: ASC 606-10-25; year-end: seasonal inquiry; concentration: ASC 275-10)
+- All 4 findings include aggregate dollar amounts
+- Section V present with 4 tables: Cut-Off Risk (7 rows, sorted date desc), Recognition Timing (4 rows), Sign Anomalies (2 rows), Concentration Risk (1 row)
+- Benford note with MAD=0.0038 present below results table
+- SSP Allocation pass note present below results table
+- Revenue Quality Indicators block in Section I with 5 metrics
+- Contra-revenue ratio: $89,050 / $6,850,000 = 1.3% (within normal range)
+- Risk tier MODERATE consistent between Results Summary and Conclusion
+- No other reports unintentionally modified (all 21 regenerated, timestamp-only changes on non-revenue reports)
+- Commit: 71a6821
 
 ---
 
