@@ -588,19 +588,226 @@ def gen_je_testing():
 def gen_ap_testing():
     from ap_testing_memo_generator import generate_ap_testing_memo
 
+    # Flagged entries for high-severity tests
+    dup_flagged = [
+        {
+            "entry": {
+                "vendor_name": "Apex Office Solutions",
+                "invoice_number": "INV-8834",
+                "payment_date": "2025-03-15",
+                "amount": 7100,
+                "check_number": "10234",
+            },
+            "details": {"payment_1_date": "2025-03-15", "payment_2_date": "2025-03-22"},
+        },
+        {
+            "entry": {
+                "vendor_name": "Apex Office Solutions",
+                "invoice_number": "INV-8834",
+                "payment_date": "2025-03-22",
+                "amount": 7100,
+                "check_number": "10291",
+            },
+            "details": {"payment_1_date": "2025-03-15", "payment_2_date": "2025-03-22"},
+        },
+    ]
+
+    prepay_flagged = [
+        {
+            "entry": {
+                "vendor_name": "Lakeside Catering",
+                "invoice_number": "LC-2201",
+                "invoice_date": "2025-06-10",
+                "payment_date": "2025-05-28",
+                "amount": 4500,
+            },
+            "details": {"days_early": 13},
+        },
+        {
+            "entry": {
+                "vendor_name": "QuickShip Logistics",
+                "invoice_number": "QS-0477",
+                "invoice_date": "2025-08-01",
+                "payment_date": "2025-07-15",
+                "amount": 12800,
+            },
+            "details": {"days_early": 17},
+        },
+        {
+            "entry": {
+                "vendor_name": "DataCore Systems",
+                "invoice_number": "DC-9910",
+                "invoice_date": "2025-11-05",
+                "payment_date": "2025-10-22",
+                "amount": 3200,
+            },
+            "details": {"days_early": 14},
+        },
+    ]
+
+    reuse_flagged = [
+        {
+            "entry": {"invoice_number": "INV-5500"},
+            "details": {
+                "vendor_1_name": "Metro Supplies",
+                "vendor_1_amount": 2340,
+                "vendor_1_date": "2025-04-12",
+                "vendor_2_name": "Metro Supply Co.",
+                "vendor_2_amount": 2340,
+                "vendor_2_date": "2025-07-19",
+            },
+        },
+    ]
+
+    threshold_flagged = [
+        {
+            "entry": {"vendor_name": "Apex Office Solutions", "payment_date": "2025-09-30", "amount": 9950},
+            "details": {"threshold_amount": 10000, "amount_below_threshold": 50},
+        },
+        {
+            "entry": {"vendor_name": "Apex Office Solutions", "payment_date": "2025-09-30", "amount": 9875},
+            "details": {"threshold_amount": 10000, "amount_below_threshold": 125},
+        },
+        {
+            "entry": {"vendor_name": "DataCore Systems", "payment_date": "2025-06-15", "amount": 9990},
+            "details": {"threshold_amount": 10000, "amount_below_threshold": 10},
+        },
+        {
+            "entry": {"vendor_name": "Lakeside Catering", "payment_date": "2025-12-20", "amount": 9800},
+            "details": {"threshold_amount": 10000, "amount_below_threshold": 200},
+        },
+        {
+            "entry": {"vendor_name": "QuickShip Logistics", "payment_date": "2025-12-20", "amount": 9925},
+            "details": {"threshold_amount": 10000, "amount_below_threshold": 75},
+        },
+    ]
+
+    vendor_var_flagged = [
+        {
+            "entry": {},
+            "details": {
+                "name_a": "Metro Supplies",
+                "name_b": "Metro Supply Co.",
+                "similarity": 0.91,
+                "total_paid_a": 48200,
+                "total_paid_b": 22100,
+            },
+        },
+        {
+            "entry": {},
+            "details": {
+                "name_a": "Metro Supply Co.",
+                "name_b": "Metro Supplies",
+                "similarity": 0.91,
+                "total_paid_a": 22100,
+                "total_paid_b": 48200,
+            },
+        },
+        {
+            "entry": {},
+            "details": {
+                "name_a": "Apex Office Solutions",
+                "name_b": "Apex Office Soln.",
+                "similarity": 0.87,
+                "total_paid_a": 61500,
+                "total_paid_b": 5400,
+            },
+        },
+        {
+            "entry": {},
+            "details": {
+                "name_a": "Apex Office Soln.",
+                "name_b": "Apex Office Solutions",
+                "similarity": 0.87,
+                "total_paid_a": 5400,
+                "total_paid_b": 61500,
+            },
+        },
+        {
+            "entry": {},
+            "details": {
+                "name_a": "DataCore Systems",
+                "name_b": "Data Core Sys",
+                "similarity": 0.82,
+                "total_paid_a": 34600,
+                "total_paid_b": 8900,
+            },
+        },
+        {
+            "entry": {},
+            "details": {
+                "name_a": "Data Core Sys",
+                "name_b": "DataCore Systems",
+                "similarity": 0.82,
+                "total_paid_a": 8900,
+                "total_paid_b": 34600,
+            },
+        },
+        {
+            "entry": {},
+            "details": {
+                "name_a": "QuickShip Logistics",
+                "name_b": "Quick Ship Log.",
+                "similarity": 0.79,
+                "total_paid_a": 29300,
+                "total_paid_b": 3100,
+            },
+        },
+    ]
+
     tests = [
-        _test("Exact Duplicate Payments", "exact_duplicate_payments", "structural", 2, 0.003, "high"),
+        _test(
+            "Exact Duplicate Payments",
+            "exact_duplicate_payments",
+            "structural",
+            2,
+            0.003,
+            "high",
+            flagged_entries=dup_flagged,
+        ),
         _test("Missing Critical Fields", "missing_critical_fields", "structural", 5, 0.007, "medium"),
         _test("Check Number Gaps", "check_number_gaps", "structural", 8, 0.011, "low"),
         _test("Round Dollar Amounts", "round_dollar_amounts", "statistical", 34, 0.048, "low"),
-        _test("Payment Before Invoice", "payment_before_invoice", "structural", 3, 0.004, "high"),
+        _test(
+            "Payment Before Invoice",
+            "payment_before_invoice",
+            "structural",
+            3,
+            0.004,
+            "high",
+            flagged_entries=prepay_flagged,
+        ),
         _test("Fuzzy Duplicate Payments", "fuzzy_duplicate_payments", "statistical", 6, 0.008, "medium"),
-        _test("Invoice Number Reuse", "invoice_number_reuse", "structural", 1, 0.001, "high"),
+        _test(
+            "Invoice Number Reuse",
+            "invoice_number_reuse",
+            "structural",
+            1,
+            0.001,
+            "high",
+            flagged_entries=reuse_flagged,
+        ),
         _test("Unusual Payment Amounts", "unusual_payment_amounts", "statistical", 4, 0.006, "medium"),
         _test("Weekend Payments", "weekend_payments", "structural", 11, 0.015, "low"),
         _test("High-Frequency Vendors", "high_frequency_vendors", "statistical", 2, 0.003, "medium"),
-        _test("Vendor Name Variations", "vendor_name_variations", "statistical", 7, 0.010, "medium"),
-        _test("Just-Below-Threshold", "just_below_threshold", "advanced", 5, 0.007, "high"),
+        _test(
+            "Vendor Name Variations",
+            "vendor_name_variations",
+            "statistical",
+            7,
+            0.010,
+            "medium",
+            flagged_entries=vendor_var_flagged,
+        ),
+        _test(
+            "Just-Below-Threshold",
+            "just_below_threshold",
+            "advanced",
+            5,
+            0.007,
+            "high",
+            flagged_entries=threshold_flagged,
+        ),
         _test("Suspicious Descriptions", "suspicious_descriptions", "advanced", 3, 0.004, "medium"),
     ]
 
@@ -616,6 +823,11 @@ def gen_ap_testing():
             "5 payments just below $10,000 approval threshold on same dates",
         ],
     )
+    result["dpo_data"] = {
+        "dpo": 80.1,
+        "ap_balance": 634000,
+        "cogs": 2890000,
+    }
 
     pdf = generate_ap_testing_memo(
         result,

@@ -56,18 +56,72 @@ FOLLOW_UP_PROCEDURES: dict[str, str] = {
         "the client's journal entry policy (ISA 240.A40)."
     ),
     # AP Testing
-    "exact_duplicate_payments": "Trace both payments to supporting invoices and confirm whether one should be reversed or recovered.",
-    "fuzzy_duplicate_payments": "Compare payment details to determine if similar payments represent distinct transactions or potential duplicates.",
-    "payment_before_invoice": "Obtain the invoice and verify the actual receipt date; investigate whether the payment was properly authorized.",
-    "just_below_threshold": "Review same-vendor same-day payments for potential split-payment circumvention of approval controls.",
-    "invoice_number_reuse": "Trace the invoice number across vendors to determine if invoices are legitimate or potentially fraudulent.",
-    "vendor_name_variations": "Verify vendor master data for similar names; investigate whether they represent the same or related entities.",
-    "suspicious_descriptions": "Review the flagged transaction descriptions and obtain supporting documentation.",
-    "high_frequency_vendors": "Analyze high-frequency vendor payments for proper authorization and business justification.",
-    "check_number_gaps": "Investigate missing check numbers for voided or cancelled checks; verify proper documentation exists.",
-    "round_dollar_amounts_ap": "Verify round-amount payments against supporting invoices to confirm they are not estimates.",
-    "unusual_payment_amounts": "Obtain supporting documentation for statistically unusual payment amounts.",
-    "weekend_payments": "Verify weekend-processed payments were authorized; review system access logs.",
+    "exact_duplicate_payments": (
+        "Pull original invoices and payment documentation for both duplicate payments. "
+        "Confirm whether the duplicate was identified and recovered. If not recovered, "
+        "request vendor credit or initiate recovery process. Document resolution."
+    ),
+    "fuzzy_duplicate_payments": (
+        "Inspect each fuzzy duplicate pair for business justification. Confirm whether "
+        "the same-vendor same-amount payments on different dates represent recurring "
+        "legitimate charges or potential duplicate disbursements."
+    ),
+    "payment_before_invoice": (
+        "Obtain management explanation for each prepayment. Confirm whether a prepayment "
+        "arrangement was authorized per AP policy and supported by a contract or purchase "
+        "order. Payments lacking authorization documentation represent a potential control "
+        "failure under ISA 240."
+    ),
+    "just_below_threshold": (
+        "Obtain approval documentation for each payment. Compare the approval threshold "
+        "in the current AP policy to the threshold applied in the payment system. "
+        "Determine whether the clustering of payments just below threshold on the same "
+        "dates represents intentional threshold avoidance."
+    ),
+    "invoice_number_reuse": (
+        "Obtain both invoices sharing the reused number. Confirm whether the vendors "
+        "are the same entity operating under different names, or distinct entities. "
+        "If distinct, investigate how the same invoice number was accepted by the AP "
+        "system for two different vendors."
+    ),
+    "vendor_name_variations": (
+        "Obtain vendor master records for each flagged pair. Confirm whether similar "
+        "vendor names represent the same entity, a legitimate subsidiary, or a potential "
+        "ghost vendor. Verify address, tax ID, and bank account details for each."
+    ),
+    "missing_critical_fields": (
+        "Request the complete AP register with all required fields populated for the "
+        "affected payments. Trace to source documents to confirm transactions are "
+        "complete and properly recorded."
+    ),
+    "suspicious_descriptions": (
+        "Inspect each payment flagged for suspicious description keywords. Obtain "
+        "supporting documentation and management explanation. Escalate any payments "
+        "lacking adequate support per ISA 240 fraud risk procedures."
+    ),
+    "high_frequency_vendors": (
+        "Obtain detail of all payments to the flagged vendor(s) on the high-frequency "
+        "date. Confirm each payment is supported by a distinct invoice and there is no "
+        "duplication or splitting of a single invoice across multiple payments."
+    ),
+    "check_number_gaps": (
+        "Investigate gaps in check sequence. Obtain voided check documentation for "
+        "missing numbers. Confirm proper authorization and recording of any voided "
+        "instruments."
+    ),
+    "round_dollar_amounts_ap": (
+        "Verify round-amount payments against supporting invoices to confirm they are not estimates or placeholders."
+    ),
+    "unusual_payment_amounts": (
+        "Obtain supporting documentation for statistically unusual payment amounts. "
+        "Confirm amounts reflect actual invoiced values and are supported by approved "
+        "purchase orders or contracts."
+    ),
+    "weekend_payments": (
+        "Verify weekend-processed payments were authorized and have valid business "
+        "justification. Review system access logs to confirm payments were processed "
+        "by an authorized user outside normal business hours."
+    ),
     # Revenue Testing
     "large_manual_entries": "Inspect supporting documentation (contracts, delivery evidence) for large manual revenue entries.",
     "year_end_concentration": "Evaluate whether year-end revenue concentrations reflect genuine business activity or potential acceleration.",

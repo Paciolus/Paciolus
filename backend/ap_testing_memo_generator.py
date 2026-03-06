@@ -8,14 +8,15 @@ Domain: ISA 240 / ISA 500 / PCAOB AS 2401.
 from typing import Any, Optional
 
 from reportlab.lib.units import inch
-from reportlab.platypus import Paragraph
+from reportlab.platypus import Paragraph, Spacer
 
-from pdf_generator import LedgerRule
+from pdf_generator import LedgerRule, create_leader_dots
 from shared.drill_down import (
     build_drill_down_table,
     format_currency,
     safe_str_value,
 )
+from shared.follow_up_procedures import get_follow_up_procedure
 from shared.memo_template import TestingMemoConfig, _roman, generate_testing_memo
 
 AP_TEST_DESCRIPTIONS = {
@@ -30,7 +31,11 @@ AP_TEST_DESCRIPTIONS = {
     "weekend_payments": "Flags payments processed on weekends, indicating unauthorized or unusual activity.",
     "high_frequency_vendors": "Flags vendors receiving an unusually high number of payments in a single day.",
     "vendor_name_variations": "Flags similar vendor names that may indicate ghost vendors or deliberate misspellings.",
-    "just_below_threshold": "Flags payments just below approval thresholds and same-vendor same-day splits.",
+    "just_below_threshold": (
+        "Flags payments just below approval thresholds and same-vendor same-day splits. "
+        "Default threshold applied — confirm against client AP authorization matrix "
+        "before drawing conclusions."
+    ),
     "suspicious_descriptions": "Flags payments with descriptions containing fraud indicator keywords.",
 }
 
@@ -114,32 +119,147 @@ def _build_ap_extra_sections(
             if not flagged:
                 continue
 
-            rows = []
-            for fe in flagged:
-                entry = fe.get("entry", {})
-                details = fe.get("details") or {}
-                rows.append(
-                    [
-                        safe_str_value(entry.get("vendor_name"), "")[:25],
-                        safe_str_value(entry.get("invoice_number")),
-                        safe_str_value(entry.get("invoice_date")),
-                        safe_str_value(entry.get("payment_date")),
-                        format_currency(entry.get("amount", 0)),
-                        safe_str_value(entry.get("check_number")),
-                    ]
+            if test_key == "exact_duplicate_payments":
+                rows = []
+                for fe in flagged:
+                    entry = fe.get("entry", {})
+                    details = fe.get("details") or {}
+                    rows.append(
+                        [
+                            safe_str_value(entry.get("vendor_name"), "")[:25],
+                            safe_str_value(entry.get("invoice_number")),
+                            safe_str_value(details.get("payment_1_date", entry.get("payment_date"))),
+                            safe_str_value(details.get("payment_2_date", "")),
+                            format_currency(entry.get("amount", 0)),
+                            safe_str_value(entry.get("check_number")),
+                        ]
+                    )
+                build_drill_down_table(
+                    story,
+                    styles,
+                    doc_width,
+                    title=f"Exact Duplicate Payments ({len(flagged)} flagged)",
+                    headers=["Vendor", "Invoice #", "Payment 1", "Payment 2", "Amount", "Check #"],
+                    rows=rows,
+                    total_flagged=len(flagged),
+                    col_widths=[1.5 * inch, 0.9 * inch, 0.8 * inch, 0.8 * inch, 0.9 * inch, 0.7 * inch],
+                    right_align_cols=[4],
+                )
+            elif test_key == "payment_before_invoice":
+                rows = []
+                for fe in flagged:
+                    entry = fe.get("entry", {})
+                    details = fe.get("details") or {}
+                    rows.append(
+                        [
+                            safe_str_value(entry.get("vendor_name"), "")[:25],
+                            safe_str_value(entry.get("invoice_number")),
+                            safe_str_value(entry.get("invoice_date")),
+                            safe_str_value(entry.get("payment_date")),
+                            str(details.get("days_early", "")),
+                            format_currency(entry.get("amount", 0)),
+                        ]
+                    )
+                build_drill_down_table(
+                    story,
+                    styles,
+                    doc_width,
+                    title=f"Payment Before Invoice ({len(flagged)} flagged)",
+                    headers=["Vendor", "Invoice #", "Invoice Date", "Payment Date", "Days Early", "Amount"],
+                    rows=rows,
+                    total_flagged=len(flagged),
+                    col_widths=[1.5 * inch, 0.8 * inch, 0.8 * inch, 0.8 * inch, 0.7 * inch, 1.0 * inch],
+                    right_align_cols=[4, 5],
+                )
+            elif test_key == "invoice_number_reuse":
+                rows = []
+                for fe in flagged:
+                    entry = fe.get("entry", {})
+                    details = fe.get("details") or {}
+                    rows.append(
+                        [
+                            safe_str_value(entry.get("invoice_number")),
+                            safe_str_value(details.get("vendor_1_name"), "")[:20],
+                            format_currency(details.get("vendor_1_amount", 0)),
+                            safe_str_value(details.get("vendor_1_date", "")),
+                            safe_str_value(details.get("vendor_2_name"), "")[:20],
+                            format_currency(details.get("vendor_2_amount", 0)),
+                            safe_str_value(details.get("vendor_2_date", "")),
+                        ]
+                    )
+                build_drill_down_table(
+                    story,
+                    styles,
+                    doc_width,
+                    title=f"Invoice Number Reuse ({len(flagged)} flagged)",
+                    headers=["Invoice #", "Vendor A", "Amount A", "Date A", "Vendor B", "Amount B", "Date B"],
+                    rows=rows,
+                    total_flagged=len(flagged),
+                    col_widths=[0.7 * inch, 1.2 * inch, 0.8 * inch, 0.7 * inch, 1.2 * inch, 0.8 * inch, 0.7 * inch],
+                    right_align_cols=[2, 5],
+                )
+            elif test_key == "just_below_threshold":
+                rows = []
+                for fe in flagged:
+                    entry = fe.get("entry", {})
+                    details = fe.get("details") or {}
+                    threshold = details.get("threshold_amount", 10000)
+                    amount = entry.get("amount", 0)
+                    below = details.get("amount_below_threshold", threshold - amount if threshold else 0)
+                    rows.append(
+                        [
+                            safe_str_value(entry.get("vendor_name"), "")[:25],
+                            safe_str_value(entry.get("payment_date")),
+                            format_currency(amount),
+                            format_currency(threshold),
+                            format_currency(below),
+                        ]
+                    )
+                build_drill_down_table(
+                    story,
+                    styles,
+                    doc_width,
+                    title=f"Just-Below-Threshold ({len(flagged)} flagged)",
+                    headers=["Vendor", "Payment Date", "Amount Paid", "Threshold", "Below By"],
+                    rows=rows,
+                    total_flagged=len(flagged),
+                    col_widths=[1.8 * inch, 0.9 * inch, 1.1 * inch, 1.1 * inch, 1.1 * inch],
+                    right_align_cols=[2, 3, 4],
+                )
+            else:
+                # Generic high-severity detail table
+                rows = []
+                for fe in flagged:
+                    entry = fe.get("entry", {})
+                    rows.append(
+                        [
+                            safe_str_value(entry.get("vendor_name"), "")[:25],
+                            safe_str_value(entry.get("invoice_number")),
+                            safe_str_value(entry.get("invoice_date")),
+                            safe_str_value(entry.get("payment_date")),
+                            format_currency(entry.get("amount", 0)),
+                            safe_str_value(entry.get("check_number")),
+                        ]
+                    )
+                build_drill_down_table(
+                    story,
+                    styles,
+                    doc_width,
+                    title=f"{tr.get('test_name', test_key)} ({len(flagged)} flagged)",
+                    headers=["Vendor", "Invoice #", "Invoice Date", "Payment Date", "Amount", "Check #"],
+                    rows=rows,
+                    total_flagged=len(flagged),
+                    col_widths=[1.5 * inch, 0.9 * inch, 0.8 * inch, 0.8 * inch, 0.9 * inch, 0.7 * inch],
+                    right_align_cols=[4],
                 )
 
-            build_drill_down_table(
-                story,
-                styles,
-                doc_width,
-                title=f"{tr.get('test_name', test_key)} ({len(flagged)} flagged)",
-                headers=["Vendor", "Invoice #", "Invoice Date", "Payment Date", "Amount", "Check #"],
-                rows=rows,
-                total_flagged=len(flagged),
-                col_widths=[1.5 * inch, 0.9 * inch, 0.8 * inch, 0.8 * inch, 0.9 * inch, 0.7 * inch],
-                right_align_cols=[4],
-            )
+            # Add suggested procedure below each table
+            procedure = get_follow_up_procedure(test_key)
+            if procedure:
+                from reportlab.platypus import Spacer
+
+                story.append(Paragraph(f"<i>{procedure}</i>", styles["MemoBodySmall"]))
+                story.append(Spacer(1, 6))
 
     # DRILL-03: Vendor name variation pairs
     vendor_var_tests = [
@@ -159,39 +279,112 @@ def _build_ap_extra_sections(
                 continue
             seen_pairs.add(pair_key)
             similarity = details.get("similarity", 0)
-            combined = details.get("combined_amount", 0)
+            total_a = details.get("total_paid_a", 0)
+            total_b = details.get("total_paid_b", 0)
             rows.append(
                 [
                     safe_str_value(name_a)[:25],
                     safe_str_value(name_b)[:25],
                     f"{similarity:.0%}" if isinstance(similarity, (int, float)) else safe_str_value(similarity),
-                    format_currency(combined),
+                    format_currency(total_a),
+                    format_currency(total_b),
                 ]
             )
 
-        if rows:
+        # Sort by combined payment total descending, show top 5
+        rows.sort(
+            key=lambda r: (
+                -(float(r[3].replace("$", "").replace(",", "")) + float(r[4].replace("$", "").replace(",", "")))
+            ),
+        )
+        total_pairs = len(rows)
+        display_rows = rows[:5]
+
+        if display_rows:
             if not has_detail:
                 section_label = _roman(section_counter)
                 story.append(Paragraph(f"{section_label}. Payment Detail Analysis", styles["MemoSection"]))
                 story.append(LedgerRule(doc_width))
                 has_detail = True
 
+            title_suffix = ", showing top 5 by total payment value" if total_pairs > 5 else ""
             build_drill_down_table(
                 story,
                 styles,
                 doc_width,
-                title=f"Vendor Name Variations ({len(rows)} pairs)",
-                headers=["Vendor A", "Vendor B", "Similarity", "Combined Payments"],
-                rows=rows,
-                total_flagged=len(rows),
-                col_widths=[2.0 * inch, 2.0 * inch, 0.9 * inch, 1.7 * inch],
-                right_align_cols=[2, 3],
+                title=f"Vendor Name Variations ({total_pairs} pairs{title_suffix})",
+                headers=["Vendor A", "Vendor B", "Similarity", "Total Paid A", "Total Paid B"],
+                rows=display_rows,
+                total_flagged=total_pairs,
+                col_widths=[1.6 * inch, 1.6 * inch, 0.8 * inch, 1.3 * inch, 1.3 * inch],
+                right_align_cols=[2, 3, 4],
             )
+            procedure = get_follow_up_procedure("vendor_name_variations")
+            if procedure:
+                from reportlab.platypus import Spacer
+
+                story.append(Paragraph(f"<i>{procedure}</i>", styles["MemoBodySmall"]))
+                story.append(Spacer(1, 6))
 
     if has_detail:
         section_counter += 1
 
     return section_counter
+
+
+def _build_ap_scope(
+    story: list,
+    styles: dict,
+    doc_width: float,
+    composite: dict[str, Any],
+    data_quality: dict[str, Any],
+    period_tested: Optional[str],
+    *,
+    source_document: Optional[str] = None,
+    source_document_title: Optional[str] = None,
+    dpo_data: Optional[dict[str, Any]] = None,
+) -> None:
+    """Build AP scope section with optional DPO metric."""
+    from shared.memo_base import build_scope_section
+
+    build_scope_section(
+        story,
+        styles,
+        doc_width,
+        composite,
+        data_quality,
+        entry_label="Total Payments Tested",
+        period_tested=period_tested,
+        source_document=source_document,
+        source_document_title=source_document_title,
+    )
+
+    # DPO metric (IMPROVEMENT-03)
+    if dpo_data and dpo_data.get("dpo") is not None:
+        dpo_val = dpo_data["dpo"]
+        story.append(
+            Paragraph(
+                create_leader_dots("Days Payable Outstanding (DPO)", f"{dpo_val:.1f} days"),
+                styles["MemoLeader"],
+            )
+        )
+        story.append(
+            Paragraph(
+                f"<i>A DPO of {dpo_val:.0f} days may indicate stretched payables relative "
+                f"to industry norms (typical range 30\u201360 days). Consider in the context "
+                f"of the vendor payment terms obtained during the engagement.</i>",
+                styles["MemoBodySmall"],
+            )
+        )
+        story.append(Spacer(1, 6))
+    elif dpo_data and dpo_data.get("unavailable"):
+        story.append(
+            Paragraph(
+                "<i>DPO calculation requires Trial Balance \u2014 upload TB to enable this metric.</i>",
+                styles["MemoBodySmall"],
+            )
+        )
+        story.append(Spacer(1, 6))
 
 
 def generate_ap_testing_memo(
@@ -207,6 +400,21 @@ def generate_ap_testing_memo(
     include_signoff: bool = False,
 ) -> bytes:
     """Generate a PDF testing memo for AP testing results."""
+    dpo_data = ap_result.get("dpo_data")
+
+    def _scope_builder(story, styles, doc_width, composite, data_quality, pt):
+        _build_ap_scope(
+            story,
+            styles,
+            doc_width,
+            composite,
+            data_quality,
+            pt,
+            source_document=filename,
+            source_document_title=source_document_title,
+            dpo_data=dpo_data,
+        )
+
     return generate_testing_memo(
         ap_result,
         _AP_CONFIG,
@@ -218,6 +426,7 @@ def generate_ap_testing_memo(
         workpaper_date=workpaper_date,
         source_document_title=source_document_title,
         source_context_note=source_context_note,
+        build_scope=_scope_builder if dpo_data else None,
         build_extra_sections=_build_ap_extra_sections,
         include_signoff=include_signoff,
     )

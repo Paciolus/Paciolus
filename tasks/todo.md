@@ -111,6 +111,28 @@
 
 > Sprints 477–487 completed and archived to `tasks/archive/`. Next pending items below.
 
+### Sprint 490 — AP Payment Testing Report Fixes
+
+**Status:** COMPLETE
+**Goal:** Fix 2 bugs and add 3 improvements to AP Payment Testing Memo (Report 04).
+**Complexity Score:** Medium
+
+#### Bugs
+- [x] BUG-01: Suggested procedures — all 13 AP procedure texts updated in `follow_up_procedures.py`
+- [x] BUG-02: Section V High Severity Payment Detail — 4 test-specific table layouts + generic fallback + procedure text
+
+#### Improvements
+- [x] IMP-01: Vendor Name Variation pairs with total_paid columns, sorted by combined total, top 5 shown
+- [x] IMP-02: Approval threshold source documentation added to just_below_threshold methodology description
+- [x] IMP-03: DPO metric in scope section via `_build_ap_scope()` callback
+
+#### Verification
+- [x] `pytest` passes (402/402 memo/AP tests)
+- [x] All 21 sample reports regenerated (0 failures)
+- [x] `npm run build` passes
+
+---
+
 ### Sprint 489 — Journal Entry Testing Report Fixes
 
 **Status:** COMPLETE
