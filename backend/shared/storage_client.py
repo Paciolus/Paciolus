@@ -39,7 +39,7 @@ def _get_client():
         logger.warning("boto3 not installed — S3 storage unavailable")
         return None
     except Exception as exc:
-        logger.warning("Failed to initialize S3 client: %s", exc)
+        logger.warning("Failed to initialize S3 client: %s", type(exc).__name__)
         return None
 
 

@@ -41,6 +41,7 @@ TOOL_NAME = "currency_rates"
 # DB-BACKED SESSION HELPERS (Sprint 262)
 # =============================================================================
 
+
 def get_user_rate_table(db: Session, user_id: int) -> Optional[CurrencyRateTable]:
     """Load rate table from DB, or return None if missing/expired."""
     data = load_tool_session(db, user_id, TOOL_NAME)
@@ -63,8 +64,10 @@ def clear_user_rate_table(db: Session, user_id: int) -> bool:
 # RESPONSE MODELS
 # =============================================================================
 
+
 class RateTableUploadResponse(BaseModel):
     """Response for rate table upload."""
+
     rate_count: int
     presentation_currency: str
     currency_pairs: list[str]
@@ -73,6 +76,7 @@ class RateTableUploadResponse(BaseModel):
 
 class SingleRateResponse(BaseModel):
     """Response for single rate entry."""
+
     from_currency: str
     to_currency: str
     rate: str
@@ -82,6 +86,7 @@ class SingleRateResponse(BaseModel):
 
 class RateTableStatusResponse(BaseModel):
     """Response for rate table status check."""
+
     has_rates: bool
     rate_count: int = 0
     presentation_currency: Optional[str] = None
@@ -90,6 +95,7 @@ class RateTableStatusResponse(BaseModel):
 
 class SingleRateRequest(BaseModel):
     """Request for manual single-rate entry."""
+
     from_currency: str = Field(..., min_length=3, max_length=3)
     to_currency: str = Field(..., min_length=3, max_length=3)
     rate: str = Field(..., min_length=1)
@@ -99,6 +105,7 @@ class SingleRateRequest(BaseModel):
 # =============================================================================
 # ENDPOINTS
 # =============================================================================
+
 
 @router.post(
     "/audit/currency-rates",
@@ -153,7 +160,9 @@ async def upload_rate_table(
 
             logger.info(
                 "Rate table uploaded: %d rates, presentation=%s, user=%d",
-                len(rates), pres_curr, current_user.id,
+                len(rates),
+                pres_curr,
+                current_user.id,
             )
 
             return RateTableUploadResponse(
@@ -164,10 +173,13 @@ async def upload_rate_table(
             )
 
         except RateValidationError as e:
-            raise HTTPException(status_code=400, detail=str(e))
+            raise HTTPException(
+                status_code=400,
+                detail=sanitize_error(e, "upload", "rate_validation", allow_passthrough=True),
+            )
         except (ValueError, KeyError, TypeError) as e:
             logger.exception("Rate table upload failed")
-            raise HTTPException(status_code=400, detail=sanitize_error(str(e)))
+            raise HTTPException(status_code=400, detail=sanitize_error(e, "upload", "rate_upload_error"))
 
 
 @router.post(
@@ -220,7 +232,10 @@ def add_single_rate(
         )
 
     except RateValidationError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(
+            status_code=400,
+            detail=sanitize_error(e, "upload", "rate_validation", allow_passthrough=True),
+        )
 
 
 @router.get(

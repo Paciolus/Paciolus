@@ -111,6 +111,38 @@
 
 > Sprints 477–487 completed and archived to `tasks/archive/`. Next pending items below.
 
+### Sprint 494 — Data Hardening Security Audit
+
+**Status:** COMPLETE
+**Goal:** Full data hardening review — secrets management, error leakage, logging sanitization, API exposure, encryption boundaries.
+**Complexity Score:** High
+
+#### Findings & Fixes
+- [x] **H-1:** DATABASE_URL with credentials logged in startup summary → Mask credentials via `_mask_database_url()`
+- [x] **H-2:** Raw `str(e)` leaked to API clients in 6 route endpoints → Route through `sanitize_error()` with passthrough safety net
+- [x] **H-3:** Raw exception in bulk upload job status returned to user → Generic error message
+- [x] **M-1:** FastAPI Swagger/OpenAPI docs exposed in production → Disable docs/redoc/openapi_url in production
+- [x] **M-2:** Raw exception logged with potential PII from email service → Log only exception class name
+- [x] **M-3:** Raw exception logged from Excel parse failure → Log only exception class name
+- [x] **M-4:** `sanitize_error()` passthrough mode lacked internal-detail blocking → Added `_contains_internal_details()` safety net
+- [x] **L-1:** Raw exception class+message in bulk upload warning logs → Log only exception class name
+- [x] **L-2:** Stripe exception details logged with raw `%s, e` in 7 billing endpoints → Log only exception class name
+- [x] **L-3:** S3 client init exception logged with raw details → Log only exception class name
+
+#### Defense-in-Depth Improvements
+- [x] **D-1:** Apply `sanitize_csv_value()` to all user-controlled Excel cell writes (entity name, item labels, account names, prepared_by, reviewed_by, filename) in `excel_generator.py`
+- [x] **D-2:** Add binary magic byte guard (XLSX/XLS/PDF) in UNKNOWN format fallback to prevent binary-as-CSV parsing in `shared/helpers.py`
+- [x] **D-3:** Add scheduled bulk upload job cleanup (30min interval) in `cleanup_scheduler.py` — supplements eviction-on-new-upload
+- [x] **D-4:** Add `TracebackRedactionFilter` in `logging_config.py` — opt-in via `REDACT_LOG_TRACEBACKS=true` env var to strip tracebacks from production logs
+
+#### Verification
+- [x] `pytest` passes: 5,679 passed (38 pre-existing failures unrelated to sprint)
+- [x] `npm run build` passes (all dynamic routes)
+- [x] Upload validation tests: 141 passed
+- [x] Financial statements tests: 46 passed
+- [x] Export route tests: 85 passed (1 pre-existing error)
+- [x] Memo template tests: 29 passed
+
 ### Sprint 493 — Access Hardening Security Audit
 
 **Status:** COMPLETE

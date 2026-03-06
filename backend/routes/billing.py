@@ -182,7 +182,7 @@ def create_checkout(
     try:
         customer_id = create_or_get_stripe_customer(user.id, user.email, stripe_customer_id)
     except Exception as e:
-        logger.error("Stripe customer creation failed: %s", e)
+        logger.error("Stripe customer creation failed: %s", type(e).__name__)
         raise HTTPException(
             status_code=502,
             detail="Payment provider error. Please try again or contact support.",
@@ -275,7 +275,7 @@ def create_checkout(
             dpa_version=dpa_version_str,
         )
     except Exception as e:
-        logger.error("Stripe checkout session creation failed: %s", e)
+        logger.error("Stripe checkout session creation failed: %s", type(e).__name__)
         raise HTTPException(
             status_code=502,
             detail="Payment provider error. Please try again or contact support.",
@@ -344,7 +344,7 @@ def cancel_subscription_endpoint(
     try:
         result = cancel_subscription(db, user.id)
     except Exception as e:
-        logger.error("Stripe cancellation failed for user %d: %s", user.id, e)
+        logger.error("Stripe cancellation failed for user %d: %s", user.id, type(e).__name__)
         raise HTTPException(
             status_code=502,
             detail="Payment provider error. Please try again or contact support.",
@@ -388,7 +388,7 @@ def reactivate_subscription_endpoint(
     try:
         result = reactivate_subscription(db, user.id)
     except Exception as e:
-        logger.error("Stripe reactivation failed for user %d: %s", user.id, e)
+        logger.error("Stripe reactivation failed for user %d: %s", user.id, type(e).__name__)
         raise HTTPException(
             status_code=502,
             detail="Payment provider error. Please try again or contact support.",
@@ -421,7 +421,7 @@ def add_seats_endpoint(
     try:
         result = add_seats(db, user.id, body.seats)
     except Exception as e:
-        logger.error("Stripe add-seats failed for user %d: %s", user.id, e)
+        logger.error("Stripe add-seats failed for user %d: %s", user.id, type(e).__name__)
         raise HTTPException(
             status_code=502,
             detail="Payment provider error. Please try again or contact support.",
@@ -462,7 +462,7 @@ def remove_seats_endpoint(
     try:
         result = remove_seats(db, user.id, body.seats)
     except Exception as e:
-        logger.error("Stripe remove-seats failed for user %d: %s", user.id, e)
+        logger.error("Stripe remove-seats failed for user %d: %s", user.id, type(e).__name__)
         raise HTTPException(
             status_code=502,
             detail="Payment provider error. Please try again or contact support.",
@@ -504,7 +504,7 @@ def get_portal_session(
     try:
         portal_url = create_portal_session(sub.stripe_customer_id, f"{FRONTEND_URL}/settings/billing")
     except Exception as e:
-        logger.error("Stripe portal session failed for user %d: %s", user.id, e)
+        logger.error("Stripe portal session failed for user %d: %s", user.id, type(e).__name__)
         raise HTTPException(
             status_code=502,
             detail="Payment provider error. Please try again or contact support.",

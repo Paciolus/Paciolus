@@ -39,6 +39,25 @@ class RequestIdFilter(logging.Filter):
         return True
 
 
+class TracebackRedactionFilter(logging.Filter):
+    """Strip full tracebacks from log records, keeping only exception type.
+
+    Prevents internal file paths, line numbers, and stack traces from
+    appearing in production log aggregation systems. The exception type
+    is appended to the log message for diagnostic value.
+
+    Enable via REDACT_LOG_TRACEBACKS=true environment variable.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if record.exc_info and record.exc_info[0] is not None:
+            exc_type = record.exc_info[0]
+            record.msg = f"{record.msg} [{exc_type.__name__}]"
+            record.exc_info = None
+            record.exc_text = None
+        return True
+
+
 class JSONFormatter(logging.Formatter):
     """Structured JSON log formatter for production environments."""
 
@@ -85,6 +104,12 @@ def setup_logging() -> None:
 
     if ENV_MODE == "production":
         handler.setFormatter(JSONFormatter())
+        # Optional: strip full tracebacks from production logs to prevent
+        # internal file paths leaking to log aggregation systems
+        import os
+
+        if os.environ.get("REDACT_LOG_TRACEBACKS", "").lower() == "true":
+            handler.addFilter(TracebackRedactionFilter())
     else:
         handler.setFormatter(DevFormatter())
 
@@ -99,5 +124,4 @@ def setup_logging() -> None:
 
     # Confirm logging is active
     logger = logging.getLogger("paciolus.startup")
-    logger.info("Logging initialized (env=%s, level=%s)",
-                ENV_MODE, "DEBUG" if DEBUG else "INFO")
+    logger.info("Logging initialized (env=%s, level=%s)", ENV_MODE, "DEBUG" if DEBUG else "INFO")

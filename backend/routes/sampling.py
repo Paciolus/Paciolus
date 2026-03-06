@@ -5,6 +5,7 @@ Two-phase workflow:
   POST /audit/sampling/design — Upload population, configure params, get selected sample
   POST /audit/sampling/evaluate — Upload completed sample, get projected misstatement + Pass/Fail
 """
+
 import asyncio
 import logging
 from typing import Optional
@@ -62,18 +63,17 @@ def _run_design(
     # Convert to dict for JSON serialization
     selected_items = []
     for sel in result.selected_items:
-        selected_items.append({
-            "row_index": sel.item.row_index,
-            "item_id": sel.item.item_id,
-            "description": sel.item.description[:200],
-            "recorded_amount": round(sel.item.recorded_amount, 2),
-            "stratum": sel.item.stratum,
-            "selection_method": sel.selection_method,
-            "interval_position": (
-                round(sel.interval_position, 2)
-                if sel.interval_position is not None else None
-            ),
-        })
+        selected_items.append(
+            {
+                "row_index": sel.item.row_index,
+                "item_id": sel.item.item_id,
+                "description": sel.item.description[:200],
+                "recorded_amount": round(sel.item.recorded_amount, 2),
+                "stratum": sel.item.stratum,
+                "selection_method": sel.selection_method,
+                "interval_position": (round(sel.interval_position, 2) if sel.interval_position is not None else None),
+            }
+        )
 
     return {
         "method": result.method,
@@ -128,14 +128,16 @@ def _run_evaluation(
 
     errors_list = []
     for err in result.errors:
-        errors_list.append({
-            "row_index": err.row_index,
-            "item_id": err.item_id,
-            "recorded_amount": round(err.recorded_amount, 2),
-            "audited_amount": round(err.audited_amount, 2),
-            "misstatement": round(err.misstatement, 2),
-            "tainting": round(err.tainting, 4),
-        })
+        errors_list.append(
+            {
+                "row_index": err.row_index,
+                "item_id": err.item_id,
+                "recorded_amount": round(err.recorded_amount, 2),
+                "audited_amount": round(err.audited_amount, 2),
+                "misstatement": round(err.misstatement, 2),
+                "tainting": round(err.tainting, 4),
+            }
+        )
 
     return {
         "method": result.method,
@@ -183,14 +185,13 @@ async def sampling_design(
     Returns selected sample items for the auditor to test.
     """
     from shared.testing_route import enforce_tool_access
+
     enforce_tool_access(current_user, "statistical_sampling")
 
     if method not in ("mus", "random"):
         raise HTTPException(status_code=422, detail="Method must be 'mus' or 'random'")
     if confidence_level < 0.50 or confidence_level > 0.99:
-        raise HTTPException(
-            status_code=422, detail="Confidence level must be between 0.50 and 0.99"
-        )
+        raise HTTPException(status_code=422, detail="Confidence level must be between 0.50 and 0.99")
 
     file_bytes = await validate_file_size(file)
     mapping = parse_json_mapping(column_mapping, "sampling_design_mapping")
@@ -199,23 +200,34 @@ async def sampling_design(
         with memory_cleanup():
             result = await asyncio.to_thread(
                 _run_design,
-                file_bytes, file.filename or "population.csv",
-                method, confidence_level,
-                tolerable_misstatement, expected_misstatement,
-                stratification_threshold, sample_size_override,
+                file_bytes,
+                file.filename or "population.csv",
+                method,
+                confidence_level,
+                tolerable_misstatement,
+                expected_misstatement,
+                stratification_threshold,
+                sample_size_override,
                 mapping,
             )
 
         background_tasks.add_task(
             maybe_record_tool_run,
-            db, engagement_id, current_user.id,
-            "statistical_sampling", True, None,
+            db,
+            engagement_id,
+            current_user.id,
+            "statistical_sampling",
+            True,
+            None,
         )
 
         return result
 
     except ValueError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+        raise HTTPException(
+            status_code=422,
+            detail=sanitize_error(e, "analysis", "sampling_design_validation", allow_passthrough=True),
+        )
     except HTTPException:
         raise
     except (TypeError, KeyError, OSError) as e:
@@ -255,13 +267,9 @@ async def sampling_evaluate(
     if method not in ("mus", "random"):
         raise HTTPException(status_code=422, detail="Method must be 'mus' or 'random'")
     if population_value <= 0:
-        raise HTTPException(
-            status_code=422, detail="Population value must be positive"
-        )
+        raise HTTPException(status_code=422, detail="Population value must be positive")
     if sample_size <= 0:
-        raise HTTPException(
-            status_code=422, detail="Sample size must be positive"
-        )
+        raise HTTPException(status_code=422, detail="Sample size must be positive")
 
     file_bytes = await validate_file_size(file)
     mapping = parse_json_mapping(column_mapping, "sampling_evaluate_mapping")
@@ -270,23 +278,35 @@ async def sampling_evaluate(
         with memory_cleanup():
             result = await asyncio.to_thread(
                 _run_evaluation,
-                file_bytes, file.filename or "sample.csv",
-                method, confidence_level,
-                tolerable_misstatement, expected_misstatement,
-                population_value, sample_size,
-                sampling_interval, mapping,
+                file_bytes,
+                file.filename or "sample.csv",
+                method,
+                confidence_level,
+                tolerable_misstatement,
+                expected_misstatement,
+                population_value,
+                sample_size,
+                sampling_interval,
+                mapping,
             )
 
         background_tasks.add_task(
             maybe_record_tool_run,
-            db, engagement_id, current_user.id,
-            "statistical_sampling", True, None,
+            db,
+            engagement_id,
+            current_user.id,
+            "statistical_sampling",
+            True,
+            None,
         )
 
         return result
 
     except ValueError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+        raise HTTPException(
+            status_code=422,
+            detail=sanitize_error(e, "analysis", "sampling_evaluate_validation", allow_passthrough=True),
+        )
     except HTTPException:
         raise
     except (TypeError, KeyError, OSError) as e:

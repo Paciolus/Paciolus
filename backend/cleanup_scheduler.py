@@ -218,6 +218,18 @@ def _job_expired_export_shares() -> None:
     _run_cleanup_job("expired_export_shares", _purge)
 
 
+def _job_bulk_upload_cleanup() -> None:
+    """Evict stale in-memory bulk upload jobs (2h TTL + hard cap)."""
+    try:
+        from routes.bulk_upload import _evict_stale_jobs
+
+        _evict_stale_jobs()
+    except Exception as exc:
+        from shared.log_sanitizer import sanitize_exception
+
+        logger.error("Bulk upload cleanup failed: %s", sanitize_exception(exc))
+
+
 def _job_team_activity_cleanup() -> None:
     """Purge team activity logs older than 90 days."""
 
@@ -323,6 +335,12 @@ def init_scheduler() -> None:
         "interval",
         hours=24,
         id="team_activity_cleanup",
+    )
+    _scheduler.add_job(
+        _job_bulk_upload_cleanup,
+        "interval",
+        minutes=30,
+        id="bulk_upload_cleanup",
     )
     _scheduler.add_job(
         _watchdog,

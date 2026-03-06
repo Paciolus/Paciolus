@@ -4,6 +4,26 @@
 
 ---
 
+## Data Hardening Security Audit (Sprint 494)
+
+1. **DATABASE_URL credential exposure in startup logs**: The `print_config_summary()` function truncated DATABASE_URL at 50 chars — but PostgreSQL URLs like `postgresql://user:password@host:5432/db` fit within 50 chars and expose plaintext credentials. Always mask credentials in connection strings before logging, regardless of truncation.
+
+2. **`detail=str(e)` is the #1 error leakage vector**: Six route endpoints passed raw exception messages directly to API clients. Even custom domain exceptions (InvalidTransitionError, RateValidationError) should route through `sanitize_error()` with `allow_passthrough=True` rather than raw `str(e)`, because upstream callers might catch broader exception types that include library internals.
+
+3. **`allow_passthrough` in `sanitize_error()` needs a safety net**: Business-logic passthrough still needs to block messages containing file paths, SQL fragments, or stack traces. The pattern check should happen *before* passthrough, not just on the "known dangerous" patterns.
+
+4. **FastAPI docs/OpenAPI must be disabled in production**: Swagger UI at `/docs` exposes all endpoints, parameter schemas, and internal model structures. Set `docs_url=None, redoc_url=None, openapi_url=None` in production.
+
+5. **`logger.error("...%s", e)` can leak Stripe/AWS credentials**: Even though Stripe SDK generally redacts keys, the full exception string can contain customer IDs, request IDs, or error metadata that aids attackers. Log `type(e).__name__` instead.
+
+6. **Excel formula injection applies to openpyxl too, not just CSV**: `sanitize_csv_value()` must wrap ALL user-controlled strings written to Excel cells via `ws.cell(value=...)` or `ws["A1"] = ...`. In openpyxl, a string starting with `=` becomes a formula. Cover: entity names, account names, prepared_by/reviewed_by, filenames, and financial statement labels. Indentation (spaces prepended) naturally prevents formula interpretation, but sanitize the raw value before indentation for defense-in-depth.
+
+7. **UNKNOWN format fallback should reject known binaries**: When `detect_format()` returns UNKNOWN and the filename doesn't match Excel extensions, the fallback parses as CSV. This produces garbage data if the file is actually a binary format (XLSX/XLS/PDF) that slipped through detection. Add magic byte checks before the CSV fallback.
+
+8. **In-memory stores need scheduled cleanup, not just eviction-on-insert**: `OrderedDict` job stores with TTL eviction only on new inserts can accumulate stale entries during quiet periods. Add a scheduled cleanup job to supplement insertion-time eviction.
+
+---
+
 ## Access Hardening Security Audit (Sprint 493)
 
 1. **FastAPI dependency functions cannot be called manually with positional args matching DI**: Functions like `check_seat_limit(user, db)` use `Annotated[User, Depends(require_current_user)]` which FastAPI resolves automatically. When calling manually, you must pass the actual User object and Session — the Depends metadata is ignored. Multiple entitlement checks were broken because they were called as `check_func(db, user.id)` instead of `check_func(user, db)`.

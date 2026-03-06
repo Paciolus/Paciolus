@@ -141,6 +141,10 @@ app = FastAPI(
     description="Trial Balance Diagnostic Intelligence for Financial Professionals",
     version=__version__,
     lifespan=lifespan,
+    # Disable interactive API docs in production to prevent endpoint/schema enumeration
+    docs_url=None if ENV_MODE == "production" else "/docs",
+    redoc_url=None if ENV_MODE == "production" else "/redoc",
+    openapi_url=None if ENV_MODE == "production" else "/openapi.json",
 )
 
 # CORS configuration from environment — explicit methods/headers (Sprint 200)

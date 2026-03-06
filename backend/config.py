@@ -384,6 +384,26 @@ CLEANUP_RETENTION_INTERVAL_HOURS = _load_optional_int("CLEANUP_RETENTION_INTERVA
 # =============================================================================
 
 
+def _mask_database_url(url: str) -> str:
+    """Mask credentials in DATABASE_URL for safe logging.
+
+    Replaces user:password with user:*** in PostgreSQL URLs.
+    SQLite URLs have no credentials and are returned as-is.
+    """
+    if url.startswith("sqlite"):
+        return url
+    from urllib.parse import urlparse as _urlparse_mask
+
+    try:
+        parsed = _urlparse_mask(url)
+        if parsed.password:
+            masked = url.replace(f":{parsed.password}@", ":***@", 1)
+            return masked
+    except Exception:
+        pass
+    return url[:20] + "..."
+
+
 def print_config_summary() -> None:
     """Print configuration summary for verification."""
     print(f"\n{'=' * 60}")
@@ -399,7 +419,7 @@ def print_config_summary() -> None:
     print(f"  JWT Expiration: {JWT_EXPIRATION_MINUTES} minutes")
     print(f"  Refresh Token Expiration: {REFRESH_TOKEN_EXPIRATION_DAYS} days")
     print(f"  CSRF Secret: {'[auto-generated]' if _using_generated_csrf else '[configured]'}")
-    print(f"  Database: {DATABASE_URL[:50]}..." if len(DATABASE_URL) > 50 else f"  Database: {DATABASE_URL}")
+    print(f"  Database: {_mask_database_url(DATABASE_URL)}")
     print(f"  Stripe Billing: {'enabled' if STRIPE_ENABLED else 'disabled'}")
     print(f"  Entitlement Mode: {ENTITLEMENT_ENFORCEMENT}")
     print("=" * 60 + "\n")

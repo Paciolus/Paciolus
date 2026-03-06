@@ -524,7 +524,7 @@ def _parse_excel(file_bytes: bytes, filename: str) -> pd.DataFrame:
     try:
         return pd.read_excel(io.BytesIO(file_bytes))
     except (ValueError, KeyError, OSError, UnicodeDecodeError) as e:
-        logger.warning("Excel parse failed: %s", e)
+        logger.warning("Excel parse failed: %s", type(e).__name__)
         raise HTTPException(
             status_code=400, detail="The Excel file could not be read. Please verify it is a valid .xlsx or .xls file."
         )
@@ -651,6 +651,14 @@ def parse_uploaded_file_by_format(
                 if filename_lower.endswith((".xlsx", ".xls")):
                     df = _parse_excel(file_bytes, filename)
                 else:
+                    # Guard: reject binary files that slipped through format detection
+                    # Prevents binary-as-CSV parsing which produces garbage data
+                    if file_bytes[:4] in (XLSX_MAGIC, XLS_MAGIC) or file_bytes.startswith(b"%PDF"):
+                        raise HTTPException(
+                            status_code=400,
+                            detail="File appears to be a binary format but could not be identified. "
+                            "Please save as CSV or a supported Excel format.",
+                        )
                     df = _parse_csv(file_bytes, filename)
             else:
                 raise HTTPException(
@@ -736,7 +744,7 @@ def safe_background_email(send_func: Callable[..., Any], *, label: str = "email"
             )
     except Exception as e:
         logger.exception("Background %s exception", label)
-        log_secure_operation(f"background_{label}_error", f"Background email exception: {str(e)[:200]}")
+        log_secure_operation(f"background_{label}_error", f"Background email exception: {type(e).__name__}")
 
 
 def maybe_record_tool_run(

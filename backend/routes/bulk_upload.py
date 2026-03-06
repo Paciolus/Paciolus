@@ -133,7 +133,9 @@ async def _process_bulk_files(
                 finally:
                     session.close()
             except Exception as exc:
-                logger.warning("Upload count increment failed for user %d in job %s: %s", user_id, job_id, exc)
+                logger.warning(
+                    "Upload count increment failed for user %d in job %s: %s", user_id, job_id, type(exc).__name__
+                )
 
             # Mark as complete (actual analysis would be triggered here
             # via the same analysis functions used by the single-file endpoints)
@@ -146,8 +148,8 @@ async def _process_bulk_files(
 
         except Exception as exc:
             job["files"][idx]["status"] = "error"
-            job["files"][idx]["error"] = str(exc)[:200]
-            logger.warning("Bulk upload file %d failed for job %s: %s", idx, job_id, exc)
+            job["files"][idx]["error"] = "File processing failed. Please verify the file format and try again."
+            logger.warning("Bulk upload file %d failed for job %s: %s", idx, job_id, type(exc).__name__)
 
         job["completed_count"] = sum(1 for fs in job["files"] if fs["status"] in ("complete", "error"))
 

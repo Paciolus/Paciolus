@@ -195,7 +195,7 @@ class PaciolusWorkpaperGenerator:
         ws.merge_cells("A1:D1")
 
         # Subtitle
-        ws["A2"] = f"Analysis Intelligence Report for {self.filename}"
+        ws["A2"] = f"Analysis Intelligence Report for {sanitize_csv_value(self.filename)}"
         ws["A2"].style = "subtitle_style"
         ws.merge_cells("A2:D2")
 
@@ -250,14 +250,14 @@ class PaciolusWorkpaperGenerator:
             if self.prepared_by:
                 ws[f"A{row}"] = "Prepared By:"
                 ws[f"A{row}"].font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
-                ws[f"B{row}"] = self.prepared_by
+                ws[f"B{row}"] = sanitize_csv_value(self.prepared_by)
                 ws[f"C{row}"] = self.workpaper_date
                 row += 1
 
             if self.reviewed_by:
                 ws[f"A{row}"] = "Reviewed By:"
                 ws[f"A{row}"].font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
-                ws[f"B{row}"] = self.reviewed_by
+                ws[f"B{row}"] = sanitize_csv_value(self.reviewed_by)
                 ws[f"C{row}"] = self.workpaper_date
                 row += 1
 
@@ -599,7 +599,7 @@ def generate_financial_statements_excel(
         ws.merge_cells("A1:C1")
 
         # Entity name
-        entity = statements.entity_name or ""
+        entity = sanitize_csv_value(statements.entity_name or "")
         if entity:
             ws["A2"] = entity
             ws["A2"].style = "subtitle_style"
@@ -616,9 +616,9 @@ def generate_financial_statements_excel(
 
         row = 6
         for item in line_items:
-            # Column A: label (with indentation)
+            # Column A: label (with indentation, sanitized for formula injection)
             indent = "    " * item.indent_level
-            label = f"{indent}{item.label}"
+            label = f"{indent}{sanitize_csv_value(item.label)}"
 
             ws.cell(row=row, column=1, value=label)
 
@@ -680,13 +680,13 @@ def generate_financial_statements_excel(
         if prepared_by:
             bs_ws.cell(row=end_row, column=1, value="Prepared By:")
             bs_ws.cell(row=end_row, column=1).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
-            bs_ws.cell(row=end_row, column=2, value=prepared_by)
+            bs_ws.cell(row=end_row, column=2, value=sanitize_csv_value(prepared_by))
             bs_ws.cell(row=end_row, column=3, value=wp_date)
             end_row += 1
         if reviewed_by:
             bs_ws.cell(row=end_row, column=1, value="Reviewed By:")
             bs_ws.cell(row=end_row, column=1).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
-            bs_ws.cell(row=end_row, column=2, value=reviewed_by)
+            bs_ws.cell(row=end_row, column=2, value=sanitize_csv_value(reviewed_by))
             bs_ws.cell(row=end_row, column=3, value=wp_date)
 
     bs_ws.column_dimensions["A"].width = 40
@@ -711,9 +711,9 @@ def generate_financial_statements_excel(
         cf_ws["A1"].style = "title_style"
         cf_ws.merge_cells("A1:C1")
 
-        entity = statements.entity_name or ""
-        if entity:
-            cf_ws["A2"] = entity
+        entity_cf = sanitize_csv_value(statements.entity_name or "")
+        if entity_cf:
+            cf_ws["A2"] = entity_cf
             cf_ws["A2"].style = "subtitle_style"
             cf_ws.merge_cells("A2:C2")
 
@@ -735,7 +735,7 @@ def generate_financial_statements_excel(
             # Line items
             for item in section.items:
                 indent = "    " * item.indent_level
-                cf_ws.cell(row=row, column=1, value=f"{indent}{item.label}")
+                cf_ws.cell(row=row, column=1, value=f"{indent}{sanitize_csv_value(item.label)}")
                 cf_ws.cell(row=row, column=1).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
                 cf_ws.cell(row=row, column=2, value=item.amount)
                 cf_ws.cell(row=row, column=2).number_format = '"$"#,##0.00'
@@ -807,7 +807,7 @@ def generate_financial_statements_excel(
         if cf.notes:
             row += 1
             for note in cf.notes:
-                cf_ws.cell(row=row, column=1, value=f"Note: {note}")
+                cf_ws.cell(row=row, column=1, value=f"Note: {sanitize_csv_value(note)}")
                 cf_ws.cell(row=row, column=1).font = Font(color=ExcelColors.OBSIDIAN_500, size=9, italic=True)
                 row += 1
 
@@ -824,9 +824,9 @@ def generate_financial_statements_excel(
         mt_ws["A1"].style = "title_style"
         mt_ws.merge_cells("A1:H1")
 
-        entity = statements.entity_name or ""
-        if entity:
-            mt_ws["A2"] = entity
+        entity_mt = sanitize_csv_value(statements.entity_name or "")
+        if entity_mt:
+            mt_ws["A2"] = entity_mt
             mt_ws["A2"].style = "subtitle_style"
             mt_ws.merge_cells("A2:H2")
 
@@ -861,7 +861,7 @@ def generate_financial_statements_excel(
                         mt_ws.cell(row=row, column=3).alignment = Alignment(horizontal="center")
                         first_row = False
 
-                    mt_ws.cell(row=row, column=4, value=acct.account_name)
+                    mt_ws.cell(row=row, column=4, value=sanitize_csv_value(acct.account_name))
                     mt_ws.cell(row=row, column=4).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
                     mt_ws.cell(row=row, column=5, value=acct.debit)
                     mt_ws.cell(row=row, column=5).number_format = '"$"#,##0.00'
