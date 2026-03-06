@@ -105,7 +105,7 @@ class TestRegister:
                 },
             )
             assert response.status_code == 400
-            assert "already exists" in response.json()["detail"]
+            assert "Unable to create account" in response.json()["detail"]
 
     @pytest.mark.asyncio
     async def test_register_disposable_email(self, override_db):

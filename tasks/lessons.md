@@ -4,6 +4,20 @@
 
 ---
 
+## Access Hardening Security Audit (Sprint 493)
+
+1. **FastAPI dependency functions cannot be called manually with positional args matching DI**: Functions like `check_seat_limit(user, db)` use `Annotated[User, Depends(require_current_user)]` which FastAPI resolves automatically. When calling manually, you must pass the actual User object and Session — the Depends metadata is ignored. Multiple entitlement checks were broken because they were called as `check_func(db, user.id)` instead of `check_func(user, db)`.
+
+2. **Registration duplicate-email messages enable account enumeration**: A distinct "email already exists" error lets attackers probe for valid accounts. Use a generic message ("Unable to create account") that doesn't reveal whether the email is registered.
+
+3. **Organization invite tokens should be bound to the invitee email**: Without email matching, any authenticated user who obtains a leaked invite URL can join the organization. Always verify `user.email == invite.invitee_email` on acceptance.
+
+4. **Billing analytics endpoints need explicit role checks**: `require_verified_user` alone is insufficient for sensitive business data endpoints — any verified free-tier user could access global billing metrics without an admin/owner role check.
+
+5. **Content-Disposition filenames from user input need sanitization**: User-controlled strings in `Content-Disposition` headers can inject control characters (`\r\n`). Sanitize with `re.sub(r'[^\w\-]', '_', name)` before embedding in headers.
+
+---
+
 ## Formula Consistency & Efficiency Hardening (Sprint 492)
 
 1. **Operating margin fallback must guard negative derived opex**: When `total_expenses < COGS` and `operating_expenses == 0`, the derivation `total_expenses - COGS` produces negative operating expenses, yielding economically invalid 100% margins. Guard: return N/A when derived value < 0 or total_expenses == 0.

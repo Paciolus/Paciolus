@@ -333,10 +333,25 @@ STRIPE_COUPON_ANNUAL_10 = _load_optional("STRIPE_COUPON_ANNUAL_10", "")
 # "soft" = log warnings only (useful during rollout)
 ENTITLEMENT_ENFORCEMENT = _load_optional("ENTITLEMENT_ENFORCEMENT", "hard")
 
+# Production guardrail: soft enforcement bypasses all tier restrictions
+if ENV_MODE == "production" and ENTITLEMENT_ENFORCEMENT == "soft":
+    print(
+        "\n[SECURITY WARNING] ENTITLEMENT_ENFORCEMENT=soft in production.\n"
+        "All tier restrictions are logged but NOT enforced.\n"
+        "Set ENTITLEMENT_ENFORCEMENT=hard for production deployments.\n"
+    )
+
 # Seat enforcement mode (Phase LIX Sprint B)
 # "hard" = block requests when team exceeds seat allocation (default)
 # "soft" = log seat limit violations but allow (only for rollout debugging)
 SEAT_ENFORCEMENT_MODE = _load_optional("SEAT_ENFORCEMENT_MODE", "hard")
+
+if ENV_MODE == "production" and SEAT_ENFORCEMENT_MODE == "soft":
+    print(
+        "\n[SECURITY WARNING] SEAT_ENFORCEMENT_MODE=soft in production.\n"
+        "Seat limits are logged but NOT enforced.\n"
+        "Set SEAT_ENFORCEMENT_MODE=hard for production deployments.\n"
+    )
 
 # PRICING_V2_ENABLED retired (Phase LXIX) — all V2 features merged into main path.
 PRICING_V2_ENABLED = True  # Always enabled; retained for backward compat during transition

@@ -111,6 +111,28 @@
 
 > Sprints 477–487 completed and archived to `tasks/archive/`. Next pending items below.
 
+### Sprint 493 — Access Hardening Security Audit
+
+**Status:** COMPLETE
+**Goal:** Full access control hardening — auth, authorization, session management, privilege escalation, tenant isolation.
+**Complexity Score:** High
+
+#### Findings & Fixes
+- [x] **H-1:** Billing analytics endpoint lacked admin role check → Added org owner/admin + subscription check
+- [x] **H-2:** Org invite token not bound to invitee email → Added email matching validation
+- [x] **H-3:** Entitlement checks called with wrong args (crashes) → Fixed call signatures in 4 locations
+- [x] **M-1:** No max password length (bcrypt DoS vector) → Added max_length=128 to all password fields
+- [x] **M-2:** Registration revealed email existence → Changed to generic error message
+- [x] **M-3:** Content-Disposition header injection in export sharing → Added filename sanitization
+- [x] **M-4:** Soft entitlement enforcement had no production guardrail → Added startup warning
+- [x] **L-1:** /metrics endpoint leaks operational data → Added security documentation note
+- [x] Test assertion updated for new registration message
+
+#### Verification
+- [x] `pytest tests/test_auth_routes_api.py` passes (26 tests)
+- [x] `pytest tests/test_csrf_middleware.py` passes (91 tests)
+- [x] `npm run build` passes
+
 ### Sprint 492 — Formula Consistency & Efficiency Hardening
 
 **Status:** IN PROGRESS

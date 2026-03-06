@@ -51,7 +51,7 @@ async def create_share(
     db: Session = Depends(get_db),
 ):
     """Create a shareable export link. Professional+ only."""
-    check_export_sharing_access(db, user.id)
+    check_export_sharing_access(user)
 
     import base64
     import binascii
@@ -129,7 +129,12 @@ async def download_share(
         "csv": "text/csv",
     }
     content_type = content_types.get(share.export_format, "application/octet-stream")
-    filename = f"paciolus-{share.tool_name}.{share.export_format}"
+
+    # Sanitize tool_name for Content-Disposition: strip control chars, quotes, path separators
+    import re
+
+    safe_name = re.sub(r"[^\w\-]", "_", share.tool_name or "export")[:80]
+    filename = f"paciolus-{safe_name}.{share.export_format}"
 
     return Response(
         content=share.export_data,

@@ -210,7 +210,7 @@ async def create_invite(
     _require_admin(db, user, org)
 
     # Check seat limit
-    check_seat_limit(db, user.id)
+    check_seat_limit(user, db)
 
     # Check for duplicate pending invite
     existing_invite = (
@@ -325,6 +325,14 @@ async def accept_invite(
     if not invite:
         raise HTTPException(status_code=404, detail="Invite not found or already used.")
 
+    # Security: Verify the accepting user's email matches the invite recipient.
+    # Prevents a leaked/intercepted token from being used by an unintended account.
+    if invite.invitee_email and user.email.lower() != invite.invitee_email.lower():
+        raise HTTPException(
+            status_code=403,
+            detail="This invite was sent to a different email address.",
+        )
+
     if invite.is_expired:
         invite.status = InviteStatus.EXPIRED
         db.commit()
@@ -335,7 +343,10 @@ async def accept_invite(
     if not org:
         raise HTTPException(status_code=404, detail="Organization not found.")
 
-    check_seat_limit(db, org.owner_user_id)
+    # Load org owner to check their seat entitlement
+    org_owner = db.query(User).filter(User.id == org.owner_user_id).first()
+    if org_owner:
+        check_seat_limit(org_owner, db)
 
     # Check user isn't already in an org
     existing = db.query(OrganizationMember).filter(OrganizationMember.user_id == user.id).first()

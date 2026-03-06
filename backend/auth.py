@@ -305,7 +305,7 @@ class UserCreate(BaseModel):
     )
 
     email: EmailStr
-    password: str = Field(..., min_length=8)
+    password: str = Field(..., min_length=8, max_length=128)
 
     @field_validator("password")
     @classmethod
@@ -317,7 +317,7 @@ class UserLogin(BaseModel):
     """Schema for user login."""
 
     email: EmailStr
-    password: str = Field(..., min_length=1)
+    password: str = Field(..., min_length=1, max_length=128)
     remember_me: bool = False
 
 
@@ -352,8 +352,8 @@ class PasswordChange(BaseModel):
         json_schema_extra={"example": {"current_password": "OldPassword123!", "new_password": "NewSecurePassword456!"}}  # nosec B106 — schema example, not a real password
     )
 
-    current_password: str = Field(..., min_length=1)
-    new_password: str = Field(..., min_length=8)
+    current_password: str = Field(..., min_length=1, max_length=128)
+    new_password: str = Field(..., min_length=8, max_length=128)
 
     @field_validator("new_password")
     @classmethod

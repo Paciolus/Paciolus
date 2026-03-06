@@ -131,7 +131,12 @@ def register(
 
     existing_user = get_user_by_email(db, user_data.email)
     if existing_user:
-        raise HTTPException(status_code=400, detail="An account with this email already exists")
+        # Generic message prevents account enumeration (attacker cannot distinguish
+        # "email taken" from other registration failures).
+        raise HTTPException(
+            status_code=400,
+            detail="Unable to create account. Please check your information or try logging in.",
+        )
 
     user = create_user(db, user_data)
 
