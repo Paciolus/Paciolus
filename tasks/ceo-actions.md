@@ -189,6 +189,13 @@ These are live in public-facing documents and need to be filled in before launch
 
 ## ⚪ One-Time Infrastructure Setup
 
+### GitHub Branch Protection — Sprint 496 (Engineering Process Hardening)
+> CODEOWNERS and new CI jobs are deployed but require GitHub settings to enforce.
+- [ ] Settings > Branches > `main` protection rule: Enable "Require review from Code Owners"
+- [ ] Settings > Branches > `main` protection rule: Add required status checks: `secrets-scan`, `frontend-tests`, `mypy-check` (in addition to existing gates)
+- [ ] Settings > Branches > `main` protection rule: Confirm all existing required checks still listed (backend-tests, frontend-build, backend-lint, lint-baseline-gate, pip-audit-blocking, npm-audit-blocking, bandit)
+- [x] Replace `@paciolus/security-leads` in `.github/CODEOWNERS` with `@Paciolus`
+
 These are referenced in policy/IRP documents but not yet configured.
 
 ### PagerDuty / On-Call Rotation

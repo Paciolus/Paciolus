@@ -1,0 +1,50 @@
+# Paciolus CODEOWNERS — Sprint 496
+# Enforces review requirements on security-critical files.
+# Requires GitHub Teams or individual accounts to be configured.
+#
+# Usage: Enable "Require review from Code Owners" in branch protection rules.
+# Replace @Paciolus with your actual team/user handle.
+
+# ── Security-critical backend files ─────────────────────────────
+backend/auth.py                        @Paciolus
+backend/security_middleware.py         @Paciolus
+backend/security_utils.py              @Paciolus
+backend/secrets_manager.py             @Paciolus
+backend/config.py                      @Paciolus
+backend/shared/rate_limits.py          @Paciolus
+backend/shared/entitlements.py         @Paciolus
+backend/shared/entitlement_checks.py   @Paciolus
+backend/shared/helpers.py              @Paciolus
+backend/shared/error_messages.py       @Paciolus
+backend/shared/log_sanitizer.py        @Paciolus
+backend/routes/auth_routes.py          @Paciolus
+backend/routes/billing.py              @Paciolus
+backend/routes/export_sharing.py       @Paciolus
+
+# ── Authentication & session models ──────────────────────────────
+backend/models.py                      @Paciolus
+
+# ── CI/CD pipeline ──────────────────────────────────────────────
+.github/workflows/                     @Paciolus
+.github/CODEOWNERS                     @Paciolus
+
+# ── Docker & deployment ─────────────────────────────────────────
+backend/Dockerfile                     @Paciolus
+frontend/Dockerfile                    @Paciolus
+docker-compose.yml                     @Paciolus
+
+# ── Environment & secrets templates ──────────────────────────────
+backend/.env.example                   @Paciolus
+
+# ── Security policy guards ───────────────────────────────────────
+backend/guards/                        @Paciolus
+
+# ── Frontend security boundary ───────────────────────────────────
+frontend/src/proxy.ts                  @Paciolus
+frontend/next.config.js                @Paciolus
+
+# ── Compliance documentation ─────────────────────────────────────
+docs/04-compliance/                    @Paciolus
+
+# ── Git security config ─────────────────────────────────────────
+.gitignore                             @Paciolus

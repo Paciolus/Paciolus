@@ -25,6 +25,8 @@
 - [ ] **Rate limiting added** — all new API endpoints have a rate limit decorator (or N/A: static asset / non-public route)
 - [ ] **Pydantic `response_model` present** — all new FastAPI routes declare `response_model=` (or N/A: route returns `Response` directly)
 - [ ] **Tests added or updated** — changed logic is covered by new or updated tests; `pytest` passes
+- [ ] **No secrets in diff** — CI secrets scan passes; no high-entropy strings or credential patterns (Sprint 496)
+- [ ] **Frontend tests pass** — `npm test` passes if frontend code was changed (Sprint 496)
 
 ## Testing
 

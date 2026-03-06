@@ -19,6 +19,11 @@ on:
     - cron: "0 6 1 * *"  # 1st of each month, 06:00 UTC
   workflow_dispatch:       # Manual trigger for first run and ad-hoc checks
 
+# Sprint 496: Least-privilege workflow permissions
+permissions:
+  contents: read
+  issues: write
+
 jobs:
   backup-integrity:
     name: Backup Integrity Check

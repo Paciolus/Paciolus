@@ -111,6 +111,33 @@
 
 > Sprints 477–487 completed and archived to `tasks/archive/`. Next pending items below.
 
+### Sprint 496 — Engineering Process Hardening
+
+**Status:** IN PROGRESS
+**Goal:** Full SDLC hardening — secrets scanning, CI/CD security controls, missing security tests, workflow permissions, frontend test CI gate, mypy CI gate, pre-commit secrets prevention.
+**Complexity Score:** High
+
+#### Findings & Fixes
+- [x] **EP-1 (H):** No secrets scanning in CI or pre-commit → Added trufflehog CI job (blocking) + pre-commit pattern scan
+- [x] **EP-2 (H):** CI workflow has no `permissions:` block → Added `permissions: contents: read` at top level (least-privilege)
+- [x] **EP-3 (H):** No frontend tests in CI → Added `frontend-tests` job running Jest with `--ci --forceExit`
+- [x] **EP-4 (M):** No mypy type checking in CI → Added `mypy-check` job enforcing 0 errors on non-test source
+- [x] **EP-5 (M):** No security regression tests → Added `test_injection_regression.py` (61 tests: SQLi, SSTI, path traversal, XSS, CWE-1236, header injection)
+- [ ] **EP-6 (M):** No pinned action versions — supply chain risk via tag-based references (deferred: requires SHA research)
+- [x] **EP-7 (L):** No CODEOWNERS file → Created `.github/CODEOWNERS` covering security-critical paths
+- [x] **EP-8 (L):** Pre-commit hook only runs lint-staged → Added secrets pattern scanning (Stripe, AWS, private keys, GitHub/Slack tokens)
+- [ ] **EP-9 (L):** Bandit excludes all test files — security bugs in test helpers go undetected (accepted risk: test code doesn't ship)
+
+#### Verification
+- [x] `pytest tests/test_injection_regression.py` passes (61 tests)
+- [x] `pytest tests/test_security.py tests/test_csrf_middleware.py tests/test_injection_regression.py` passes (170 passed, 2 pre-existing failures)
+- [x] `npm run build` passes (all dynamic routes)
+- [x] CI workflow validates: secrets-scan, frontend-tests, mypy-check added
+- [x] CODEOWNERS covers 20+ security-critical file paths
+- [x] Pre-commit hook scans for 7 secret pattern families
+
+---
+
 ### Sprint 495 — Surface Area Hardening Security Audit
 
 **Status:** COMPLETE

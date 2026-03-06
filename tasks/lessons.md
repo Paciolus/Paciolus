@@ -4,6 +4,20 @@
 
 ---
 
+## Engineering Process Hardening (Sprint 496)
+
+1. **1,345 frontend tests were never gated in CI**: The test suite existed locally but `ci.yml` only ran `npm run build` and `eslint`. A developer could break tests and merge without CI catching it. Always add test execution as a blocking CI job the same sprint you establish the test suite.
+
+2. **mypy achieved 0 errors but wasn't enforced**: Achieving zero errors is wasted effort if CI doesn't prevent regression. Type checking must be a blocking CI gate, not just a developer-run tool.
+
+3. **Secrets scanning is a CI primitive, not an afterthought**: Without automated secrets scanning, committed credentials (Stripe keys, JWT secrets) rely entirely on `.gitignore` and developer discipline. TruffleHog in CI + pattern matching in pre-commit provides two-layer defense.
+
+4. **GitHub Actions default permissions are `write-all`**: Without an explicit `permissions:` block, every workflow job gets write access to repository contents, packages, and more. Always declare least-privilege permissions at the workflow level.
+
+5. **CODEOWNERS without branch protection is advisory-only**: The file only enforces review requirements when "Require review from Code Owners" is enabled in branch protection settings. Document this CEO action.
+
+---
+
 ## Data Hardening Security Audit (Sprint 494)
 
 1. **DATABASE_URL credential exposure in startup logs**: The `print_config_summary()` function truncated DATABASE_URL at 50 chars — but PostgreSQL URLs like `postgresql://user:password@host:5432/db` fit within 50 chars and expose plaintext credentials. Always mask credentials in connection strings before logging, regardless of truncation.
