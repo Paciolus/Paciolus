@@ -123,15 +123,72 @@ FOLLOW_UP_PROCEDURES: dict[str, str] = {
         "by an authorized user outside normal business hours."
     ),
     # Revenue Testing
-    "large_manual_entries": "Inspect supporting documentation (contracts, delivery evidence) for large manual revenue entries.",
-    "year_end_concentration": "Evaluate whether year-end revenue concentrations reflect genuine business activity or potential acceleration.",
-    "cutoff_risk": "Inspect shipping/delivery documentation to confirm revenue was recognized in the correct period.",
-    "concentration_risk": "Evaluate customer/account concentration for credit risk and going concern implications.",
-    "sign_anomalies": "Investigate debit balances in revenue accounts for mispostings or contra-revenue issues.",
-    "trend_variance": "Obtain management explanations for significant period-over-period revenue changes.",
+    "large_manual_entries": (
+        "Obtain preparer identification and approval documentation for each large "
+        "manual revenue entry. Confirm entries were reviewed by a supervisor and "
+        "supported by a contract or binding commitment per ISA 240."
+    ),
+    "year_end_concentration": (
+        "Evaluate whether December revenue concentration reflects genuine business "
+        "activity (e.g., seasonal contracts, milestone completions) or potential "
+        "period-end earnings management. Obtain delivery or acceptance documentation "
+        "for material December entries."
+    ),
+    "cutoff_risk": (
+        "For each flagged entry, inspect the underlying contract or delivery "
+        "documentation. Confirm that the performance obligation under ASC 606-10-25-23 "
+        "was satisfied prior to the period end. Entries lacking supporting evidence "
+        "of satisfaction before period end should be assessed for potential deferral to "
+        "the subsequent period."
+    ),
+    "concentration_risk": (
+        "Assess single-customer concentration for both revenue recognition and "
+        "credit risk implications. Obtain the master contract with this customer. "
+        "Evaluate whether concentration represents a going concern or business "
+        "continuity risk requiring disclosure under ASC 275-10."
+    ),
+    "sign_anomalies": (
+        "Investigate debit balances in revenue accounts. Confirm whether each debit "
+        "represents a legitimate return, allowance, or contra-revenue entry, or a "
+        "misposting that requires correction. Obtain supporting documentation for each."
+    ),
+    "trend_variance": (
+        "Obtain management explanations for significant period-over-period revenue "
+        "changes. Corroborate explanations with supporting documentation and assess "
+        "whether variances indicate revenue recognition anomalies."
+    ),
     "benford_law_revenue": "Review most deviated digits in revenue amounts for manual estimation patterns.",
     "duplicate_entries_revenue": "Inspect potential duplicate revenue entries for proper posting.",
-    "contra_revenue_anomalies": "Analyze elevated returns/allowances for underlying causes; review customer complaint trends.",
+    "contra_revenue_anomalies": (
+        "Calculate the contra-revenue ratio (returns and allowances / gross revenue). "
+        "Compare to prior period. Obtain detail of returns and allowances and assess "
+        "whether elevated levels indicate channel stuffing reversal or aggressive "
+        "prior-period recognition."
+    ),
+    # Revenue Testing — Contract-Aware (ASC 606 / IFRS 15)
+    "recognition_before_satisfaction": (
+        "Obtain contract documentation for each flagged entry. Identify the "
+        "specific performance obligation(s) associated with each entry and confirm the "
+        "satisfaction date. Where the obligation was satisfied after the recognition "
+        "date, assess whether a correcting entry or disclosure is required under "
+        "ASC 606-10-25."
+    ),
+    "missing_obligation_linkage": (
+        "Obtain management explanation for revenue entries missing account "
+        "classification or performance obligation linkage. Confirm correct GL account "
+        "assignment and reclassify if necessary before relying on revenue totals for "
+        "analytical procedures."
+    ),
+    "modification_treatment_mismatch": (
+        "Obtain contract modification documentation for each flagged contract. "
+        "Confirm whether modifications were properly accounted for as separate contracts "
+        "or prospective/cumulative adjustments per ASC 606-10-25-13."
+    ),
+    "allocation_inconsistency": (
+        "Obtain standalone selling price documentation for each flagged contract. "
+        "Confirm that allocation bases are consistent across performance obligations "
+        "and reflect observable prices per ASC 606-10-32-33."
+    ),
     # AR Aging
     "ar_sign_anomalies": "Investigate credit balances in AR for overpayments, misclassifications, or needed reclassification.",
     "missing_allowance": "Evaluate the need for an allowance for doubtful accounts per IFRS 9 / ASC 326.",

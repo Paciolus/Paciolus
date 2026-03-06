@@ -4,6 +4,14 @@
 
 ---
 
+## Revenue Report Enrichment (Sprint 501)
+
+1. **Sample data test_keys must match engine canonical keys**: The revenue sample report used human-friendly test_keys (`round_amounts`, `cut_off_risk`, `recognition_timing`) that didn't match the engine's canonical keys (`round_revenue_amounts`, `cutoff_risk`, `recognition_before_satisfaction`). This caused blank methodology descriptions and missing follow-up procedures in sample PDFs. Always copy test_keys from the engine, not from the test names.
+
+2. **Follow-up procedures need ALL test_key variants**: The revenue engine added 4 contract-aware tests (ASC 606) in Sprint 352 but never added their test_keys to `follow_up_procedures.py`. Every new test added to any engine must have a corresponding entry in the shared follow-up procedures dict.
+
+---
+
 ## Payroll Report Enrichment (Sprint 500)
 
 1. **Sample report risk_tiers were systematically inverted**: All 7 standard testing reports had hardcoded `risk_tier` values that didn't match the `score_to_risk_tier()` function boundaries. Scores 15-25 were labeled "elevated" (should be "moderate") and 28.3 was labeled "moderate" (should be "elevated"). When using synthetic data in sample generators, always derive the risk_tier from the score using the same function the engine uses, rather than hardcoding.

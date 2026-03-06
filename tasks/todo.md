@@ -117,6 +117,38 @@
 > Sprints 478, 488–497 archived to `tasks/archive/sprints-478-497-details.md`. Pending items below.
 
 
+### Sprint 501 — Revenue Report Fixes & Improvements
+**Status:** COMPLETE
+**Goal:** Fix methodology table empty descriptions (BUG-01), missing suggested procedures (BUG-02), missing dollar amounts in findings (BUG-03), and 4 content improvements to the Revenue Recognition Testing memo.
+
+#### Bug Fixes
+- [x] BUG-01: Fix empty test descriptions — root cause was sample data test_keys not matching engine canonical keys (e.g., `round_amounts` → `round_revenue_amounts`, `cut_off_risk` → `cutoff_risk`). Fixed 8 test_keys + enhanced all 16 descriptions.
+- [x] BUG-02: Add suggested procedures for all key findings — added `recognition_before_satisfaction` + 3 contract-test entries to follow_up_procedures.py, enhanced 7 existing revenue entries
+- [x] BUG-03: Add aggregate dollar amounts inline in key finding text ($647,500 cutoff, $567,000 recognition, $2,192,000 December, $2,603,000 concentration)
+
+#### Improvements
+- [x] IMPROVEMENT-01: Section V High Severity Entry Detail with 4 per-test table builders (cutoff sorted by date desc, recognition timing, sign anomalies, concentration risk) + preparer concentration
+- [x] IMPROVEMENT-02: Benford pass note with MAD conformity + SSP Allocation pass note (post-results)
+- [x] IMPROVEMENT-03: Revenue Quality Indicators block in Scope (total revenue, high-risk %, December concentration, cut-off window, single-customer concentration)
+- [x] IMPROVEMENT-04: Contra-Revenue Ratio with 3-tier interpretation (<2% normal, 2-5% inquiry, >5% elevated)
+
+#### Files Modified
+- `shared/follow_up_procedures.py` — enhanced 7 revenue procedures, added 4 new contract test entries
+- `revenue_testing_memo_generator.py` — custom scope builder, 4 detail table builders, post-results notes, contra-revenue ratio
+- `generate_sample_reports.py` — fixed 8 test_keys, added flagged_entries for 4 HIGH tests, total_revenue/contra enrichment, dollar amounts in findings, Benford MAD description
+- `tests/test_revenue_testing_memo.py` — 12 new tests (40 total, up from 28)
+
+#### Verification
+- [x] `npm run build` passes
+- [x] `npm test` passes (1,329 tests, 111 suites)
+- [x] `pytest` passes (5,788 passed, 1 skipped, 1 pre-existing error)
+- [x] Regenerate all 21 sample PDFs
+
+#### Review
+Commit:
+
+---
+
 ### Sprint 500 — Payroll Report Fixes & Improvements
 **Status:** COMPLETE
 **Goal:** Fix risk tier mismatch (BUG-01), add high severity detail tables (BUG-02), and 5 content improvements to the Payroll & Employee Testing memo.

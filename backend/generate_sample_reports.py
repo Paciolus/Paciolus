@@ -1050,24 +1050,369 @@ def gen_payroll_testing():
 def gen_revenue_testing():
     from revenue_testing_memo_generator import generate_revenue_testing_memo
 
+    # Flagged entries for HIGH severity tests (IMPROVEMENT-01: detail tables)
+    cutoff_flagged = [
+        {
+            "entry": {
+                "date": "2025-12-31",
+                "amount": -185000.00,
+                "account_name": "Product Revenue",
+                "account_number": "4000",
+                "description": "Meridian Enterprise Q4 license",
+                "reference": "RV-2025-0812",
+                "posted_by": "admin",
+                "row_number": 801,
+            },
+            "severity": "high",
+            "issue": "Revenue $185,000.00 near period end (2025-12-31)",
+            "details": {
+                "boundary_type": "period end",
+                "entry_date": "2025-12-31",
+                "period_end": "2025-12-31",
+                "days_from_boundary": 0,
+            },
+        },
+        {
+            "entry": {
+                "date": "2025-12-30",
+                "amount": -142500.00,
+                "account_name": "Product Revenue",
+                "account_number": "4000",
+                "description": "Apex Corp annual renewal",
+                "reference": "RV-2025-0808",
+                "posted_by": "admin",
+                "row_number": 798,
+            },
+            "severity": "high",
+            "issue": "Revenue $142,500.00 near period end (2025-12-30)",
+            "details": {
+                "boundary_type": "period end",
+                "entry_date": "2025-12-30",
+                "period_end": "2025-12-31",
+                "days_from_boundary": 1,
+            },
+        },
+        {
+            "entry": {
+                "date": "2025-12-30",
+                "amount": -98000.00,
+                "account_name": "Service Revenue",
+                "account_number": "4100",
+                "description": "Year-end consulting engagement",
+                "reference": "RV-2025-0809",
+                "posted_by": "jsmith",
+                "row_number": 799,
+            },
+            "severity": "high",
+            "issue": "Revenue $98,000.00 near period end (2025-12-30)",
+            "details": {
+                "boundary_type": "period end",
+                "entry_date": "2025-12-30",
+                "period_end": "2025-12-31",
+                "days_from_boundary": 1,
+            },
+        },
+        {
+            "entry": {
+                "date": "2025-12-29",
+                "amount": -76500.00,
+                "account_name": "Product Revenue",
+                "account_number": "4000",
+                "description": "Summit Industries implementation",
+                "reference": "RV-2025-0805",
+                "posted_by": "admin",
+                "row_number": 795,
+            },
+            "severity": "high",
+            "issue": "Revenue $76,500.00 near period end (2025-12-29)",
+            "details": {
+                "boundary_type": "period end",
+                "entry_date": "2025-12-29",
+                "period_end": "2025-12-31",
+                "days_from_boundary": 2,
+            },
+        },
+        {
+            "entry": {
+                "date": "2025-12-29",
+                "amount": -62000.00,
+                "account_name": "Service Revenue",
+                "account_number": "4100",
+                "description": "Northwind Q4 support",
+                "reference": "RV-2025-0806",
+                "posted_by": "jsmith",
+                "row_number": 796,
+            },
+            "severity": "medium",
+            "issue": "Revenue $62,000.00 near period end (2025-12-29)",
+            "details": {
+                "boundary_type": "period end",
+                "entry_date": "2025-12-29",
+                "period_end": "2025-12-31",
+                "days_from_boundary": 2,
+            },
+        },
+        {
+            "entry": {
+                "date": "2025-12-29",
+                "amount": -45000.00,
+                "account_name": "Product Revenue",
+                "account_number": "4000",
+                "description": "BlueStar license upgrade",
+                "reference": "RV-2025-0807",
+                "posted_by": "admin",
+                "row_number": 797,
+            },
+            "severity": "medium",
+            "issue": "Revenue $45,000.00 near period end (2025-12-29)",
+            "details": {
+                "boundary_type": "period end",
+                "entry_date": "2025-12-29",
+                "period_end": "2025-12-31",
+                "days_from_boundary": 2,
+            },
+        },
+        {
+            "entry": {
+                "date": "2025-12-29",
+                "amount": -38500.00,
+                "account_name": "Product Revenue",
+                "account_number": "4000",
+                "description": "Cascade Partners onboarding",
+                "reference": "RV-2025-0804",
+                "posted_by": "admin",
+                "row_number": 794,
+            },
+            "severity": "medium",
+            "issue": "Revenue $38,500.00 near period end (2025-12-29)",
+            "details": {
+                "boundary_type": "period end",
+                "entry_date": "2025-12-29",
+                "period_end": "2025-12-31",
+                "days_from_boundary": 2,
+            },
+        },
+    ]
+    recognition_flagged = [
+        {
+            "entry": {
+                "date": "2025-11-15",
+                "amount": -225000.00,
+                "account_name": "Product Revenue",
+                "account_number": "4000",
+                "description": "Platform deployment — implementation in progress",
+                "reference": "RV-2025-0714",
+                "posted_by": "admin",
+                "row_number": 714,
+            },
+            "severity": "high",
+            "issue": "Revenue recognized 45 days before obligation satisfaction date (2025-12-30) — risk indicator for premature recognition (ASC 606-10-25-30)",
+            "details": {"delta_days": 45, "entry_date": "2025-11-15", "satisfaction_date": "2025-12-30"},
+        },
+        {
+            "entry": {
+                "date": "2025-10-01",
+                "amount": -180000.00,
+                "account_name": "Service Revenue",
+                "account_number": "4100",
+                "description": "Annual support contract — Q4 deliverables pending",
+                "reference": "RV-2025-0648",
+                "posted_by": "jsmith",
+                "row_number": 648,
+            },
+            "severity": "high",
+            "issue": "Revenue recognized 90 days before obligation satisfaction date (2025-12-31) — risk indicator for premature recognition (ASC 606-10-25-30)",
+            "details": {"delta_days": 90, "entry_date": "2025-10-01", "satisfaction_date": "2025-12-31"},
+        },
+        {
+            "entry": {
+                "date": "2025-09-15",
+                "amount": -95000.00,
+                "account_name": "Product Revenue",
+                "account_number": "4000",
+                "description": "Custom module — delivery Dec 2025",
+                "reference": "RV-2025-0589",
+                "posted_by": "admin",
+                "row_number": 589,
+            },
+            "severity": "high",
+            "issue": "Revenue recognized 107 days before obligation satisfaction date (2025-12-31) — risk indicator for premature recognition (ASC 606-10-25-30)",
+            "details": {"delta_days": 107, "entry_date": "2025-09-15", "satisfaction_date": "2025-12-31"},
+        },
+        {
+            "entry": {
+                "date": "2025-12-01",
+                "amount": -67000.00,
+                "account_name": "Service Revenue",
+                "account_number": "4100",
+                "description": "Training program — sessions scheduled Jan 2026",
+                "reference": "RV-2025-0762",
+                "posted_by": "jsmith",
+                "row_number": 762,
+            },
+            "severity": "high",
+            "issue": "Revenue recognized 31 days before obligation satisfaction date (2026-01-01) — risk indicator for premature recognition (ASC 606-10-25-30)",
+            "details": {"delta_days": 31, "entry_date": "2025-12-01", "satisfaction_date": "2026-01-01"},
+        },
+    ]
+    sign_anomalies_flagged = [
+        {
+            "entry": {
+                "date": "2025-06-30",
+                "amount": 87500.00,
+                "account_name": "Product Revenue",
+                "account_number": "4000",
+                "description": "Revenue adjustment — reclass",
+                "reference": "RV-2025-0392",
+                "posted_by": "admin",
+                "row_number": 392,
+            },
+            "severity": "high",
+            "issue": "Debit balance in revenue: $87,500.00 — Product Revenue",
+            "details": {"amount": 87500.00, "account": "Product Revenue"},
+        },
+        {
+            "entry": {
+                "date": "2025-09-15",
+                "amount": 23000.00,
+                "account_name": "Service Revenue",
+                "account_number": "4100",
+                "description": "Reversal — client credit",
+                "reference": "RV-2025-0594",
+                "posted_by": "jsmith",
+                "row_number": 594,
+            },
+            "severity": "medium",
+            "issue": "Debit balance in revenue: $23,000.00 — Service Revenue",
+            "details": {"amount": 23000.00, "account": "Service Revenue"},
+        },
+    ]
+    concentration_flagged = [
+        {
+            "entry": {
+                "date": "2025-12-15",
+                "amount": -2603000.00,
+                "account_name": "Product Revenue",
+                "account_number": "4000",
+                "description": "Meridian Enterprise — master agreement",
+                "reference": "RV-2025-0788",
+                "posted_by": "admin",
+                "row_number": 788,
+            },
+            "severity": "high",
+            "issue": "Account 'meridian enterprise' represents 38.0% of total revenue ($2,603,000.00/$6,850,000.00)",
+            "details": {
+                "account": "meridian enterprise",
+                "account_total": 2_603_000.00,
+                "total_revenue": 6_850_000.00,
+                "concentration_pct": 0.38,
+            },
+        },
+    ]
+
     tests = [
         _test("Large Manual Entries", "large_manual_entries", "structural", 4, 0.005, "medium"),
-        _test("Year-End Concentration", "year_end_concentration", "structural", 18, 0.022, "medium"),
-        _test("Round Amounts", "round_amounts", "structural", 28, 0.034, "low"),
-        _test("Sign Anomalies", "sign_anomalies", "structural", 2, 0.002, "high"),
+        _test(
+            "Year-End Concentration",
+            "year_end_concentration",
+            "structural",
+            18,
+            0.022,
+            "medium",
+            flagged_entries=[
+                {
+                    "entry": {
+                        "date": f"2025-12-{25 + i}",
+                        "amount": -(120000.0 + i * 15000),
+                        "account_name": "Product Revenue",
+                        "reference": f"RV-2025-08{i:02d}",
+                        "posted_by": "admin",
+                        "row_number": 780 + i,
+                    },
+                    "severity": "medium",
+                    "issue": f"Revenue entry in last 7 days: ${120000 + i * 15000:,.2f}",
+                    "details": {
+                        "concentration_pct": 0.32,
+                        "last_week_revenue": 2_192_000.00,
+                        "total_revenue": 6_850_000.00,
+                    },
+                }
+                for i in range(18)
+            ],
+        ),
+        _test("Round Amounts", "round_revenue_amounts", "structural", 28, 0.034, "low"),
+        _test(
+            "Sign Anomalies", "sign_anomalies", "structural", 2, 0.002, "high", flagged_entries=sign_anomalies_flagged
+        ),
         _test("Unclassified Entries", "unclassified_entries", "structural", 6, 0.007, "medium"),
-        _test("Z-Score Outliers", "z_score_outliers", "statistical", 5, 0.006, "medium"),
-        _test("Revenue Trend Variance", "revenue_trend_variance", "statistical", 3, 0.004, "medium"),
-        _test("Concentration Risk", "concentration_risk", "statistical", 1, 0.001, "high"),
-        _test("Cut-Off Risk", "cut_off_risk", "statistical", 7, 0.009, "high"),
+        _test("Z-Score Outliers", "zscore_outliers", "statistical", 5, 0.006, "medium"),
+        _test("Revenue Trend Variance", "trend_variance", "statistical", 3, 0.004, "medium"),
+        _test(
+            "Concentration Risk",
+            "concentration_risk",
+            "statistical",
+            1,
+            0.001,
+            "high",
+            flagged_entries=concentration_flagged,
+        ),
+        _test("Cut-Off Risk", "cutoff_risk", "statistical", 7, 0.009, "high", flagged_entries=cutoff_flagged),
         _test("Benford's Law", "benford_law", "statistical", 0, 0.000, "low"),
         _test("Duplicate Entries", "duplicate_entries", "advanced", 3, 0.004, "medium"),
-        _test("Contra-Revenue Anomalies", "contra_revenue_anomalies", "advanced", 2, 0.002, "medium"),
-        _test("Recognition Timing", "recognition_timing", "advanced", 4, 0.005, "high"),
-        _test("Contract Obligation Linkage", "contract_obligation_linkage", "advanced", 2, 0.002, "medium"),
-        _test("Modification Treatment", "modification_treatment", "advanced", 1, 0.001, "medium"),
-        _test("SSP Allocation", "ssp_allocation", "advanced", 0, 0.000, "low"),
+        _test(
+            "Contra-Revenue Anomalies",
+            "contra_revenue_anomalies",
+            "advanced",
+            2,
+            0.002,
+            "medium",
+            flagged_entries=[
+                {
+                    "entry": {
+                        "date": "2025-04-15",
+                        "amount": 42000.00,
+                        "account_name": "Sales Returns",
+                        "reference": "RV-2025-0221",
+                        "posted_by": "admin",
+                        "row_number": 221,
+                    },
+                    "severity": "medium",
+                    "issue": "Contra-revenue: $42,000.00",
+                    "details": {"contra_pct": 0.013, "contra_total": 89_050.00, "gross_revenue": 6_850_000.00},
+                },
+                {
+                    "entry": {
+                        "date": "2025-08-22",
+                        "amount": 47050.00,
+                        "account_name": "Allowances",
+                        "reference": "RV-2025-0498",
+                        "posted_by": "jsmith",
+                        "row_number": 498,
+                    },
+                    "severity": "medium",
+                    "issue": "Contra-revenue: $47,050.00",
+                    "details": {"contra_pct": 0.013, "contra_total": 89_050.00, "gross_revenue": 6_850_000.00},
+                },
+            ],
+        ),
+        _test(
+            "Recognition Timing",
+            "recognition_before_satisfaction",
+            "contract",
+            4,
+            0.005,
+            "high",
+            flagged_entries=recognition_flagged,
+        ),
+        _test("Contract Obligation Linkage", "missing_obligation_linkage", "contract", 2, 0.002, "medium"),
+        _test("Modification Treatment", "modification_treatment_mismatch", "contract", 1, 0.001, "medium"),
+        _test("SSP Allocation", "allocation_inconsistency", "contract", 0, 0.000, "low"),
     ]
+
+    # Override Benford description to include MAD score (IMPROVEMENT-02)
+    for t in tests:
+        if t["test_key"] == "benford_law":
+            t["description"] = "First-digit distribution analysis (MAD=0.0038, close_conformity, \u03c7\u00b2=5.12)"
 
     result = _make_testing_result(
         total_entries=820,
@@ -1075,12 +1420,16 @@ def gen_revenue_testing():
         score=22.1,
         risk_tier="moderate",
         top_findings=[
-            "7 entries with potential cut-off risk — revenue recorded within 3 days of period end",
-            "4 entries with recognition timing concerns (ASC 606 performance obligation not satisfied)",
-            "18 entries concentrated in December — year-end revenue clustering",
-            "Single customer represents 38% of total revenue — concentration risk",
+            "Cut-Off Risk: 7 entries flagged (0.9%) \u2014 revenue recorded within 3 days of period end (aggregate value: $647,500)",
+            "Recognition Before Satisfaction: 4 entries flagged (0.5%) \u2014 ASC 606 performance obligation not satisfied (aggregate value: $567,000)",
+            "Year-End Concentration: 18 entries flagged (2.2%) \u2014 December revenue clustering (aggregate value: $2,192,000)",
+            "Concentration Risk: 1 entry flagged (0.1%) \u2014 single customer represents 38% of total revenue (estimated revenue: $2,603,000 based on $6,850,000 total)",
         ],
     )
+
+    # Revenue enrichment data (IMPROVEMENT-03, IMPROVEMENT-04)
+    result["total_revenue"] = 6_850_000.00
+    result["contra_revenue_total"] = 89_050.00
 
     pdf = generate_revenue_testing_memo(
         result,
@@ -1090,7 +1439,7 @@ def gen_revenue_testing():
         prepared_by=PREPARED,
         reviewed_by=REVIEWED,
         workpaper_date=WP_DATE,
-        source_document_title="Revenue Transaction Detail — FY2025 Export",
+        source_document_title="Revenue Transaction Detail \u2014 FY2025 Export",
         source_context_note=ERP_NOTE,
     )
     save_pdf("06_revenue_testing.pdf", pdf)
