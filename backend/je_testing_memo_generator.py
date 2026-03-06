@@ -28,6 +28,7 @@ from shared.drill_down import (
     format_currency,
     safe_str_value,
 )
+from shared.follow_up_procedures import get_follow_up_procedure
 from shared.memo_template import (
     TestingMemoConfig,
     _roman,
@@ -126,6 +127,20 @@ def _build_benford_section(
     )
     story.append(Spacer(1, 6))
 
+    # Positive conformity interpretation (IMPROVEMENT-02)
+    mad_val = benford.get("mad", 0)
+    if mad_val < 0.006:
+        story.append(
+            Paragraph(
+                f"<i>First-digit distribution closely conforms to Benford's Law "
+                f"(MAD = {mad_val:.5f}, below the Close Conformity threshold of 0.006), "
+                f"providing analytical support for the completeness and non-fabrication "
+                f"of transaction amounts in the population tested.</i>",
+                styles["MemoBodySmall"],
+            )
+        )
+        story.append(Spacer(1, 4))
+
     expected = benford.get("expected_distribution", {})
     actual = benford.get("actual_distribution", {})
     deviation = benford.get("deviation_by_digit", {})
@@ -222,6 +237,10 @@ def _build_high_severity_detail(
                 col_widths=[0.7 * inch, 0.7 * inch, 1.2 * inch, 0.8 * inch, 0.8 * inch, 0.8 * inch, 1.6 * inch],
                 right_align_cols=[3, 4, 5],
             )
+            procedure = get_follow_up_procedure("unbalanced_entries")
+            if procedure:
+                story.append(Paragraph(f"<i>{procedure}</i>", styles["MemoBodySmall"]))
+                story.append(Spacer(1, 6))
         elif test_key == "holiday_postings":
             rows = []
             for fe in flagged:
@@ -250,6 +269,10 @@ def _build_high_severity_detail(
                 col_widths=[0.6 * inch, 0.7 * inch, 1.0 * inch, 0.8 * inch, 1.0 * inch, 1.2 * inch, 1.3 * inch],
                 right_align_cols=[3],
             )
+            procedure = get_follow_up_procedure("holiday_postings")
+            if procedure:
+                story.append(Paragraph(f"<i>{procedure}</i>", styles["MemoBodySmall"]))
+                story.append(Spacer(1, 6))
         else:
             # Generic high-severity detail table
             rows = []

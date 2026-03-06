@@ -385,8 +385,8 @@ def _make_testing_result(
     return result
 
 
-def _test(name, key, tier, flagged, rate, severity, status="warning"):
-    return {
+def _test(name, key, tier, flagged, rate, severity, status="warning", flagged_entries=None):
+    result = {
         "test_name": name,
         "test_key": key,
         "test_tier": tier,
@@ -396,6 +396,9 @@ def _test(name, key, tier, flagged, rate, severity, status="warning"):
         "severity": severity,
         "description": "",
     }
+    if flagged_entries is not None:
+        result["flagged_entries"] = flagged_entries
+    return result
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -404,8 +407,103 @@ def _test(name, key, tier, flagged, rate, severity, status="warning"):
 def gen_je_testing():
     from je_testing_memo_generator import generate_je_testing_memo
 
+    # Sample flagged entries for high-severity tests (BUG-02 fix)
+    unbalanced_flagged = [
+        {
+            "entry": {
+                "entry_id": "JE-2025-0847",
+                "entry_date": "2025-03-15",
+                "account": "4100 — Revenue",
+                "debit": 125000.00,
+                "credit": 124999.50,
+                "description": "Q1 revenue accrual adjustment",
+            },
+            "details": {"difference": 0.50},
+        },
+        {
+            "entry": {
+                "entry_id": "JE-2025-1203",
+                "entry_date": "2025-06-30",
+                "account": "5200 — COGS",
+                "debit": 87432.00,
+                "credit": 87430.00,
+                "description": "Inventory write-down reclassification",
+            },
+            "details": {"difference": 2.00},
+        },
+        {
+            "entry": {
+                "entry_id": "JE-2025-1891",
+                "entry_date": "2025-11-28",
+                "account": "6300 — Consulting",
+                "debit": 45000.00,
+                "credit": 44850.00,
+                "description": "Year-end consulting accrual",
+            },
+            "details": {"difference": 150.00},
+        },
+    ]
+    holiday_flagged = [
+        {
+            "entry": {
+                "entry_id": "JE-2025-1756",
+                "entry_date": "2025-11-27",
+                "account": "5100 — Salaries",
+                "debit": 34200.00,
+                "credit": 0,
+                "description": "Payroll correction",
+                "posted_by": "M. Chen",
+            },
+            "details": {"holiday": "Thanksgiving Day"},
+        },
+        {
+            "entry": {
+                "entry_id": "JE-2025-1757",
+                "entry_date": "2025-11-27",
+                "account": "2100 — AP",
+                "debit": 0,
+                "credit": 12500.00,
+                "description": "Vendor payment reversal",
+                "posted_by": "M. Chen",
+            },
+            "details": {"holiday": "Thanksgiving Day"},
+        },
+        {
+            "entry": {
+                "entry_id": "JE-2025-1923",
+                "entry_date": "2025-12-25",
+                "account": "4100 — Revenue",
+                "debit": 0,
+                "credit": 78900.00,
+                "description": "Revenue recognition adjustment",
+                "posted_by": "S. Patel",
+            },
+            "details": {"holiday": "Christmas Day"},
+        },
+        {
+            "entry": {
+                "entry_id": "JE-2025-1924",
+                "entry_date": "2025-12-25",
+                "account": "1200 — AR",
+                "debit": 78900.00,
+                "credit": 0,
+                "description": "AR reclassification",
+                "posted_by": "S. Patel",
+            },
+            "details": {"holiday": "Christmas Day"},
+        },
+    ]
+
     tests = [
-        _test("Unbalanced Entries", "unbalanced_entries", "structural", 3, 0.002, "high"),
+        _test(
+            "Unbalanced Entries",
+            "unbalanced_entries",
+            "structural",
+            3,
+            0.002,
+            "high",
+            flagged_entries=unbalanced_flagged,
+        ),
         _test("Missing Fields", "missing_fields", "structural", 12, 0.008, "medium"),
         _test("Duplicate Entries", "duplicate_entries", "structural", 7, 0.005, "medium"),
         _test("Round Dollar Amounts", "round_dollar_amounts", "statistical", 45, 0.030, "low"),
@@ -413,7 +511,7 @@ def gen_je_testing():
         _test("Benford's Law", "benford_law", "statistical", 0, 0.000, "low"),
         _test("Weekend Postings", "weekend_postings", "structural", 23, 0.015, "low"),
         _test("Month-End Clustering", "month_end_clustering", "statistical", 156, 0.104, "medium"),
-        _test("Holiday Postings", "holiday_postings", "advanced", 4, 0.003, "high"),
+        _test("Holiday Postings", "holiday_postings", "advanced", 4, 0.003, "high", flagged_entries=holiday_flagged),
     ]
 
     benford = {
@@ -422,7 +520,15 @@ def gen_je_testing():
         "mad": 0.00412,
         "conformity_level": "close_conformity",
         "expected_distribution": {
-            str(d): round(0.30103 / d if d == 1 else (0.30103 - 0.02 * (d - 2)), 4) for d in range(1, 10)
+            "1": 0.30103,
+            "2": 0.17609,
+            "3": 0.12494,
+            "4": 0.09691,
+            "5": 0.07918,
+            "6": 0.06695,
+            "7": 0.05799,
+            "8": 0.05115,
+            "9": 0.04576,
         },
         "actual_distribution": {
             "1": 0.2985,

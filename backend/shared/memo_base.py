@@ -515,9 +515,10 @@ def build_disclaimer(
 ) -> None:
     """Build the strengthened disclaimer footer (Sprint 101)."""
     story.append(Spacer(1, 12))
+    domain_clause = f"{domain} testing" if not domain.endswith("testing") else domain
     story.append(
         Paragraph(
-            f"This memo documents automated {domain} testing procedures per {isa_reference}. "
+            f"This memo documents automated {domain_clause} procedures per {isa_reference}. "
             "Results represent data anomalies identified through analytics and are not "
             "conclusions regarding internal control effectiveness, fraud, or material "
             "misstatement risk. The auditor must evaluate each flagged item in the context "

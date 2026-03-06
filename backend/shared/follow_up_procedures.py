@@ -11,15 +11,50 @@ ENHANCE-01: Suggested Follow-Up Procedures.
 
 FOLLOW_UP_PROCEDURES: dict[str, str] = {
     # JE Testing
-    "unbalanced_entries": "Obtain and inspect the original journal entry documentation for proper approval and investigate the source of the imbalance.",
-    "missing_fields": "Request the complete GL extract with all required fields populated; trace missing entries to source documents.",
-    "duplicate_entries": "Inspect the original entries to determine whether they represent valid transactions or require reversal.",
-    "round_dollar_amounts": "Verify round-dollar entries against supporting documentation (invoices, contracts) to confirm amounts are not estimates.",
-    "unusual_amounts": "Investigate unusual amounts by obtaining supporting documentation and comparing to prior period activity for the same account.",
-    "benford_law": "Evaluate the most deviated digits for patterns of manual entry or estimation; consider targeted sampling of entries starting with those digits.",
-    "weekend_postings": "Verify weekend-posted entries were authorized and have valid business justification; review system access logs.",
-    "month_end_clustering": "Evaluate whether month-end entries represent normal closing activity or potential earnings management.",
-    "holiday_postings": "Investigate entries posted on holidays for proper authorization; review system access logs for the posting date.",
+    "unbalanced_entries": (
+        "Obtain preparer explanation for each unbalanced entry. Confirm whether the "
+        "difference represents a rounding policy or requires a correcting journal entry. "
+        "Document resolution in the engagement file."
+    ),
+    "missing_fields": (
+        "Request the complete GL extract with all required fields populated. Trace "
+        "affected entries to source documents to confirm the transactions are complete "
+        "and properly recorded."
+    ),
+    "duplicate_entries": (
+        "Inspect each duplicate entry pair and confirm whether the duplication "
+        "represents a legitimate correction, a system posting error, or a potentially "
+        "fraudulent duplicate transaction."
+    ),
+    "round_dollar_amounts": (
+        "Verify round-dollar entries against supporting documentation (invoices, "
+        "contracts) to confirm amounts are not estimates or placeholders."
+    ),
+    "unusual_amounts": (
+        "Obtain supporting documentation for statistically unusual amounts. Confirm "
+        "that amounts reflect actual invoiced or contracted values and were not "
+        "manually estimated."
+    ),
+    "benford_law": (
+        "Evaluate the most deviated digits for patterns of manual entry or estimation; "
+        "consider targeted sampling of entries starting with those digits."
+    ),
+    "weekend_postings": (
+        "Verify weekend-posted entries were authorized and have valid business "
+        "justification. Review system access logs if available to confirm posting "
+        "was performed by an authorized user."
+    ),
+    "month_end_clustering": (
+        "Evaluate whether month-end entries represent normal closing activity or "
+        "potential earnings management. Inquire of management regarding the business "
+        "rationale for the concentration and perform corroborating procedures on "
+        "material month-end entries."
+    ),
+    "holiday_postings": (
+        "For each holiday posting, obtain documentation supporting business necessity "
+        "and confirm the entry received proper authorization and supervisory review per "
+        "the client's journal entry policy (ISA 240.A40)."
+    ),
     # AP Testing
     "exact_duplicate_payments": "Trace both payments to supporting invoices and confirm whether one should be reversed or recovered.",
     "fuzzy_duplicate_payments": "Compare payment details to determine if similar payments represent distinct transactions or potential duplicates.",
@@ -74,9 +109,26 @@ FOLLOW_UP_PROCEDURES: dict[str, str] = {
 }
 
 
+FINDING_BENCHMARKS: dict[str, str] = {
+    "month_end_clustering": (
+        "A clustering rate above 8% in the final 3 business days of the month "
+        "warrants inquiry into whether entries represent legitimate closing activity "
+        "or potential period-end earnings management (ISA 240)."
+    ),
+}
+
+
 def get_follow_up_procedure(test_key: str) -> str:
     """Get the suggested follow-up procedure for a test key.
 
     Returns empty string if no procedure is defined for the key.
     """
     return FOLLOW_UP_PROCEDURES.get(test_key, "")
+
+
+def get_finding_benchmark(test_key: str) -> str:
+    """Get benchmark context text for a finding, if available.
+
+    Returns empty string if no benchmark is defined for the key.
+    """
+    return FINDING_BENCHMARKS.get(test_key, "")

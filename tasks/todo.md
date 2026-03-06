@@ -111,6 +111,30 @@
 
 > Sprints 477–487 completed and archived to `tasks/archive/`. Next pending items below.
 
+### Sprint 489 — Journal Entry Testing Report Fixes
+
+**Status:** COMPLETE
+**Goal:** Fix 5 bugs and add 2 improvements to JE Testing Memo (Report 03).
+**Complexity Score:** Medium
+
+#### Bugs
+- [x] BUG-01: Benford Expected column — fixed formula in `generate_sample_reports.py`
+- [x] BUG-02: Section V High Severity Detail — added flagged_entries + procedure text below tables
+- [x] BUG-03: Suggested procedures — replaced index-based with `_resolve_test_key()` word-overlap matching
+- [x] BUG-04: Risk tier — conclusion now uses `composite.risk_tier` directly (not re-derived)
+- [x] BUG-05: Disclaimer "testing testing" — `domain_clause` logic in `build_disclaimer()`
+
+#### Improvements
+- [x] IMP-01: Month-end clustering benchmark context — `FINDING_BENCHMARKS` in `follow_up_procedures.py`
+- [x] IMP-02: Benford positive interpretation — added in `_build_benford_section()` when MAD < 0.006
+
+#### Verification
+- [x] `npm run build` passes
+- [x] `pytest` passes (226/226 memo/report tests)
+- [x] All 21 sample reports regenerated (0 failures)
+
+---
+
 ### Sprint 488 — Financial Statements Report Improvements
 
 **Status:** COMPLETE

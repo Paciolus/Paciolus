@@ -680,3 +680,8 @@ Extract version to `backend/version.py` with `__version__`. Import everywhere. F
 
 ### Financial Statements Report Enhancements (Sprint 488)
 - `_extract_depreciation` relied solely on `net_balance` field from account dicts, but test fixtures (and possibly real data) sometimes only have `debit`/`credit` without a pre-computed `net_balance`. Added fallback: `debit - credit` when `net_balance` is 0.0. Same pattern applied to `_extract_interest_expense`. Always handle both dict shapes for TB account data.
+
+### JE Testing Memo Fixes (Sprint 489)
+- **Index-based finding-to-procedure mapping breaks when `top_findings` and `flagged_tests` have different orderings.** The `top_findings` list may be sorted by severity/importance while `flagged_tests` is sorted by flag_rate. Fixed with `_resolve_test_key()`: a word-overlap scorer that weights words by cross-test distinctiveness (unique words score 2x, common words like "entries" score less). Generic words in test names (entries, amounts, postings) cause false matches with naive substring matching.
+- **Disclaimer template `f"automated {domain} testing procedures"` doubled "testing" when `domain` already ended with "testing"** (e.g., "journal entry testing testing procedures"). Four of seven testing memo domains hit this bug. Fix: conditional `domain_clause` that skips appending "testing" when domain already ends with it.
+- **Sample report data can diverge from real engine output.** The Benford `expected_distribution` used a wrong formula `(0.30103 - 0.02 * (d - 2))` instead of `log10(1 + 1/d)`. The real engine (`shared/benford.py`) was always correct — only the hardcoded sample data was wrong. Always derive sample data from the same constants/functions used by the engine.

@@ -27,7 +27,7 @@ from reportlab.platypus import (
 
 from pdf_generator import LedgerRule, generate_reference_number
 from security_utils import log_secure_operation
-from shared.follow_up_procedures import get_follow_up_procedure
+from shared.follow_up_procedures import get_finding_benchmark, get_follow_up_procedure
 from shared.framework_resolution import ResolvedFramework
 from shared.memo_base import (
     build_disclaimer,
@@ -84,6 +84,54 @@ FindingFormatter = Callable[[Any], str]
 def _default_format_finding(finding: Any) -> str:
     """Default finding formatter — just str()."""
     return str(finding)
+
+
+def _resolve_test_key(finding_text: str, test_results: list[dict]) -> str:
+    """Match a finding to its test_key using test name/keyword overlap.
+
+    Uses two strategies:
+    1. Engine format: "Test Name: N entries flagged (...)" — prefix match.
+    2. Distinctive-word scoring: words that appear in only one test get
+       higher weight, preventing generic words like "entries" from
+       causing false matches.
+    """
+    finding_lower = finding_text.lower()
+
+    # Collect all words per test
+    test_words: list[tuple[str, set[str]]] = []
+    for tr in test_results:
+        name = tr.get("test_name", "")
+        key = tr.get("test_key", "")
+
+        # Engine format: "Test Name: N entries flagged (...)"
+        if finding_lower.startswith(name.lower() + ":"):
+            return key
+
+        key_words = set(key.split("_"))
+        name_words = set(name.lower().split())
+        all_words = {w for w in (key_words | name_words) if len(w) > 2}
+        test_words.append((key, all_words))
+
+    # Build word frequency map across tests for distinctiveness scoring
+    word_freq: dict[str, int] = {}
+    for _, words in test_words:
+        for w in words:
+            word_freq[w] = word_freq.get(w, 0) + 1
+
+    best_key = ""
+    best_score = 0.0
+
+    for key, words in test_words:
+        score = 0.0
+        for w in words:
+            if w in finding_lower:
+                # Words unique to this test score 2.0; shared words score less
+                score += 2.0 / word_freq.get(w, 1)
+        if score > best_score:
+            best_score = score
+            best_key = key
+
+    return best_key if best_score > 0 else ""
 
 
 def generate_testing_memo(
@@ -234,17 +282,20 @@ def generate_testing_memo(
         story.append(Paragraph(f"{section_label}. Key Findings", styles["MemoSection"]))
         story.append(LedgerRule(doc.width))
 
-        # Map finding text to test_key for follow-up lookup
-        finding_test_keys: dict[int, str] = {}
-        flagged_tests = sorted(test_results, key=lambda t: t.get("flag_rate", 0), reverse=True)
-        for idx, tr in enumerate(flagged_tests):
-            if tr.get("entries_flagged", 0) > 0 and idx < 5:
-                finding_test_keys[idx] = tr.get("test_key", "")
-
         for i, finding in enumerate(top_findings[:5], 1):
             story.append(Paragraph(f"{i}. {fmt(finding)}", styles["MemoBody"]))
+            # Match finding to test_key for follow-up lookup (dict-based, not index-based)
+            test_key = _resolve_test_key(str(finding), test_results)
+            # Add benchmark context if available
+            benchmark = get_finding_benchmark(test_key)
+            if benchmark:
+                story.append(
+                    Paragraph(
+                        f"<i>{benchmark}</i>",
+                        styles["MemoBodySmall"],
+                    )
+                )
             # Add follow-up suggestion if available
-            test_key = finding_test_keys.get(i - 1, "")
             procedure = get_follow_up_procedure(test_key)
             if procedure:
                 story.append(
@@ -286,15 +337,8 @@ def generate_testing_memo(
     story.append(Paragraph(f"{section_label}. Conclusion", styles["MemoSection"]))
     story.append(LedgerRule(doc.width))
 
-    score_val = composite.get("score", 0)
-    if score_val <= 10:
-        assessment = config.risk_assessments["low"]
-    elif score_val <= 25:
-        assessment = config.risk_assessments["moderate"]
-    elif score_val <= 50:
-        assessment = config.risk_assessments["elevated"]
-    else:
-        assessment = config.risk_assessments["high"]
+    risk_tier = composite.get("risk_tier", "low")
+    assessment = config.risk_assessments.get(risk_tier, config.risk_assessments["low"])
 
     story.append(Paragraph(assessment, styles["MemoBody"]))
     story.append(Spacer(1, 12))
