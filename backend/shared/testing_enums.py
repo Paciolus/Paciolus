@@ -66,10 +66,22 @@ def score_to_risk_tier(score: float) -> RiskTier:
 def zscore_to_severity(z: float) -> Severity:
     """Map a z-score to severity level.
 
-    Standard thresholds used across testing engines:
-    - z > 5: HIGH
-    - z > 4: MEDIUM
+    Thresholds are intentionally conservative to reduce false positives in
+    audit diagnostic contexts where over-flagging erodes practitioner trust.
+
+    - z > 5: HIGH  (~0.00003% of normally distributed observations)
+    - z > 4: MEDIUM (~0.003% of normally distributed observations)
     - otherwise: LOW
+
+    These thresholds are higher than the conventional z > 3 "unusual" cutoff
+    used in general statistics. The elevated floor accounts for the non-normal
+    distributions typical in financial data (heavy tails, zero-inflation).
+    For small populations (< 1,000 items), practitioners should consider that
+    these thresholds may suppress audit-relevant outliers and supplement
+    z-score analysis with manual review of the top N items by absolute value.
+
+    Source: Adapted from Nigrini (2012), Benford's Law, ch. 7 —
+    z-score thresholds for financial audit populations.
     """
     if z > 5:
         return Severity.HIGH

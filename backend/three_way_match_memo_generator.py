@@ -399,7 +399,7 @@ def generate_three_way_match_memo(
         assessment = (
             "Based on the automated three-way matching procedures applied, "
             "the procurement cycle exhibits a LOW risk profile. "
-            "Match rates are satisfactory and no material variances requiring further investigation were identified."
+            "Match rates are satisfactory and no variances exceeding the configured thresholds were detected."
         )
     elif risk == "medium":
         assessment = (
@@ -411,8 +411,8 @@ def generate_three_way_match_memo(
         assessment = (
             "Based on the automated three-way matching procedures applied, "
             "the procurement cycle exhibits a HIGH risk profile. "
-            "Significant variances and/or unmatched documents were identified that require detailed investigation "
-            "and may warrant expanded audit procedures per ISA 505 and PCAOB AS 1105."
+            "Significant variances and/or unmatched documents were detected that require detailed investigation. "
+            "The engagement team should evaluate whether additional procedures are appropriate per ISA 505 and PCAOB AS 1105."
         )
 
     story.append(Paragraph(assessment, styles["MemoBody"]))

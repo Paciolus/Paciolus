@@ -44,7 +44,7 @@ _FA_CONFIG = TestingMemoConfig(
         "low": (
             "Based on the automated fixed asset register analysis procedures applied, "
             "the PP&E data exhibits a LOW risk profile. "
-            "No material fixed asset anomaly indicators requiring further investigation were identified."
+            "No fixed asset anomalies exceeding the configured thresholds were detected by the automated tests applied."
         ),
         "elevated": (
             "Based on the automated fixed asset register analysis procedures applied, "
@@ -61,9 +61,9 @@ _FA_CONFIG = TestingMemoConfig(
         "high": (
             "Based on the automated fixed asset register analysis procedures applied, "
             "the PP&E data exhibits a HIGH risk profile. "
-            "Significant fixed asset anomaly indicators were identified that require "
-            "detailed investigation and may warrant expanded PP&E audit procedures "
-            "per ISA 540 and PCAOB AS 2501."
+            "Significant fixed asset anomaly indicators were detected that require "
+            "detailed investigation. The engagement team should evaluate whether additional "
+            "PP&E procedures are appropriate per ISA 540 and PCAOB AS 2501."
         ),
     },
 )

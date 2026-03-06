@@ -43,7 +43,7 @@ _PAYROLL_CONFIG = TestingMemoConfig(
         "low": (
             "Based on the automated payroll testing procedures applied, "
             "the payroll register exhibits a LOW risk profile. "
-            "No material anomalies requiring further investigation were identified."
+            "No anomalies exceeding the configured thresholds were detected by the automated tests applied."
         ),
         "elevated": (
             "Based on the automated payroll testing procedures applied, "
@@ -58,8 +58,8 @@ _PAYROLL_CONFIG = TestingMemoConfig(
         "high": (
             "Based on the automated payroll testing procedures applied, "
             "the payroll register exhibits a HIGH risk profile. "
-            "Significant anomalies were identified that require detailed investigation "
-            "and may warrant expanded payroll audit procedures."
+            "Significant anomalies were detected that require detailed investigation. "
+            "The engagement team should evaluate whether additional payroll procedures are appropriate."
         ),
     },
     isa_reference="ISA 240 (Fraud), ISA 500 (Audit Evidence), and PCAOB AS 2401",

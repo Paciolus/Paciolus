@@ -18,9 +18,6 @@
 
 export type ThresholdStatus = 'above_threshold' | 'at_threshold' | 'below_threshold' | 'neutral';
 
-/** @deprecated Use ThresholdStatus instead */
-export type HealthStatus = ThresholdStatus;
-
 export interface ThresholdClasses {
   border: string;
   bg: string;
@@ -28,9 +25,6 @@ export interface ThresholdClasses {
   icon: string;
   borderAccent: string;
 }
-
-/** @deprecated Use ThresholdClasses instead */
-export type HealthClasses = ThresholdClasses;
 
 /**
  * Map of threshold status to Tailwind classes.
@@ -67,18 +61,12 @@ export const THRESHOLD_STATUS_CLASSES: Record<ThresholdStatus, ThresholdClasses>
   },
 };
 
-/** @deprecated Use THRESHOLD_STATUS_CLASSES instead */
-export const HEALTH_STATUS_CLASSES = THRESHOLD_STATUS_CLASSES;
-
 /**
  * Get threshold status classes for a component.
  */
 export function getThresholdClasses(status: ThresholdStatus): ThresholdClasses {
   return THRESHOLD_STATUS_CLASSES[status] || THRESHOLD_STATUS_CLASSES.neutral;
 }
-
-/** @deprecated Use getThresholdClasses instead */
-export const getHealthClasses = getThresholdClasses;
 
 /**
  * Get threshold status label for display.
@@ -92,9 +80,6 @@ export function getThresholdLabel(status: ThresholdStatus): string {
   };
   return labels[status] || 'N/A';
 }
-
-/** @deprecated Use getThresholdLabel instead */
-export const getHealthLabel = getThresholdLabel;
 
 // =============================================================================
 // VARIANCE/TREND CLASSES
@@ -239,78 +224,6 @@ export const SPRING = {
 // =============================================================================
 // ANIMATION VARIANTS (framer-motion)
 // =============================================================================
-
-/** @deprecated Use inline opacity fade for backdrop + fadeScale from '@/lib/motion' for modal content */
-export const MODAL_OVERLAY_VARIANTS = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1 },
-};
-
-/** @deprecated Use fadeScale from '@/lib/motion' instead */
-export const MODAL_CONTENT_VARIANTS = {
-  hidden: { opacity: 0, scale: 0.95, y: 20 },
-  visible: {
-    opacity: 1,
-    scale: 1,
-    y: 0,
-    transition: { type: 'spring' as const, stiffness: 300, damping: 25 },
-  },
-  exit: {
-    opacity: 0,
-    scale: 0.95,
-    y: 20,
-    transition: { duration: 0.15 },
-  },
-};
-
-/** @deprecated Use staggerContainer or staggerContainerTight from '@/lib/motion' instead */
-export function createContainerVariants(
-  staggerDelaySeconds: number = 0.05,
-  initialDelaySeconds: number = 0.1
-) {
-  return {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: staggerDelaySeconds,
-        delayChildren: initialDelaySeconds,
-      },
-    },
-  };
-}
-
-/** @deprecated Use staggerContainer or staggerContainerTight from '@/lib/motion' instead */
-export const CONTAINER_VARIANTS = {
-  /** Fast stagger (40ms) - for small card grids (4-6 items) */
-  fast: createContainerVariants(0.04, 0.1),
-  /** Standard stagger (50ms) - for medium card grids (6-12 items) */
-  standard: createContainerVariants(0.05, 0.1),
-  /** Slow stagger (60ms) - for larger grids or marketing sections */
-  slow: createContainerVariants(0.06, 0.1),
-};
-
-/** @deprecated Use variants={fadeUp} from '@/lib/motion' with parent stagger container */
-export function createCardStaggerVariants(index: number, delayMs: number = 40) {
-  return {
-    hidden: {
-      opacity: 0,
-      y: 20,
-      scale: 0.95,
-    },
-    visible: {
-      opacity: 1,
-      y: 0,
-      scale: 1,
-      transition: {
-        type: 'spring' as const,
-        stiffness: 300,
-        damping: 25,
-        delay: index * (delayMs / 1000),
-      },
-    },
-  };
-}
 
 /**
  * Create timeline entry animation variants.

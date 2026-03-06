@@ -132,8 +132,8 @@ async def _process_bulk_files(
                     increment_upload_count(session, user_id)
                 finally:
                     session.close()
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("Upload count increment failed for user %d in job %s: %s", user_id, job_id, exc)
 
             # Mark as complete (actual analysis would be triggered here
             # via the same analysis functions used by the single-file endpoints)

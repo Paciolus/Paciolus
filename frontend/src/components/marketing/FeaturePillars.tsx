@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import { BrandIcon, type BrandIconName } from '@/components/shared'
 import { Reveal } from '@/components/ui/Reveal'
 import { CHART_SHADOWS } from '@/utils/chartTheme'
-import { ENTER, HOVER, VIEWPORT } from '@/utils/marketingMotion'
+import { HOVER, VIEWPORT } from '@/utils/marketingMotion'
 import { staggerContainerTight, fadeUp } from '@/lib/motion'
 
 /**
@@ -82,6 +82,15 @@ const pillars: FeaturePillar[] = [
   },
 ]
 
+// Clip-path reveal — wipes in top-down (inlined from deprecated ENTER.clipReveal)
+const clipReveal = {
+  hidden: { clipPath: 'inset(0 0 100% 0)' },
+  visible: {
+    clipPath: 'inset(0 0 0% 0)',
+    transition: { duration: 0.6, ease: 'easeOut' as const },
+  },
+}
+
 // Card hover: keep inline because it uses CHART_SHADOWS import
 const cardHoverVariants = {
   rest: {
@@ -141,7 +150,7 @@ export function FeaturePillars() {
             >
               {/* Per-pillar gradient overlay — clip-path reveal */}
               <motion.div
-                variants={ENTER.clipReveal}
+                variants={clipReveal}
                 initial="hidden"
                 whileInView="visible"
                 viewport={VIEWPORT.default}

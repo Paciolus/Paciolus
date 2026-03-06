@@ -54,10 +54,11 @@ async def create_share(
     check_export_sharing_access(db, user.id)
 
     import base64
+    import binascii
 
     try:
         export_bytes = base64.b64decode(body.export_data_b64)
-    except Exception:
+    except (binascii.Error, ValueError):
         raise HTTPException(status_code=400, detail="Invalid base64 export data.")
 
     # 50MB limit for shared exports

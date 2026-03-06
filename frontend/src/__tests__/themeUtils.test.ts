@@ -2,45 +2,45 @@
  * Sprint 232: themeUtils.ts utility tests
  */
 import {
-  getHealthClasses,
-  getHealthLabel,
+  getThresholdClasses,
+  getThresholdLabel,
   getVarianceClasses,
   getInputClasses,
   getSelectClasses,
   getBadgeClasses,
   getRiskLevelClasses,
   cx,
-  HEALTH_STATUS_CLASSES,
+  THRESHOLD_STATUS_CLASSES,
   INPUT_BASE_CLASSES,
   INPUT_STATE_CLASSES,
   BADGE_CLASSES,
   RISK_LEVEL_CLASSES,
 } from '@/utils/themeUtils'
 
-describe('getHealthClasses', () => {
+describe('getThresholdClasses', () => {
   it('returns sage classes for above_threshold', () => {
-    const classes = getHealthClasses('above_threshold')
+    const classes = getThresholdClasses('above_threshold')
     expect(classes.border).toContain('sage')
     expect(classes.bg).toContain('sage')
   })
 
   it('returns oatmeal classes for at_threshold', () => {
-    const classes = getHealthClasses('at_threshold')
+    const classes = getThresholdClasses('at_threshold')
     expect(classes.border).toContain('oatmeal')
   })
 
   it('returns clay classes for below_threshold', () => {
-    const classes = getHealthClasses('below_threshold')
+    const classes = getThresholdClasses('below_threshold')
     expect(classes.border).toContain('clay')
   })
 
   it('returns neutral classes for neutral', () => {
-    const classes = getHealthClasses('neutral')
+    const classes = getThresholdClasses('neutral')
     expect(classes.border).toBe('border-theme')
   })
 
   it('returns all 4 class properties', () => {
-    const classes = getHealthClasses('above_threshold')
+    const classes = getThresholdClasses('above_threshold')
     expect(classes).toHaveProperty('border')
     expect(classes).toHaveProperty('bg')
     expect(classes).toHaveProperty('badge')
@@ -48,21 +48,21 @@ describe('getHealthClasses', () => {
   })
 })
 
-describe('getHealthLabel', () => {
+describe('getThresholdLabel', () => {
   it('returns Above for above_threshold', () => {
-    expect(getHealthLabel('above_threshold')).toBe('Above')
+    expect(getThresholdLabel('above_threshold')).toBe('Above')
   })
 
   it('returns Near for at_threshold', () => {
-    expect(getHealthLabel('at_threshold')).toBe('Near')
+    expect(getThresholdLabel('at_threshold')).toBe('Near')
   })
 
   it('returns Below for below_threshold', () => {
-    expect(getHealthLabel('below_threshold')).toBe('Below')
+    expect(getThresholdLabel('below_threshold')).toBe('Below')
   })
 
   it('returns N/A for neutral', () => {
-    expect(getHealthLabel('neutral')).toBe('N/A')
+    expect(getThresholdLabel('neutral')).toBe('N/A')
   })
 })
 
@@ -168,9 +168,9 @@ describe('cx', () => {
   })
 })
 
-describe('HEALTH_STATUS_CLASSES constant', () => {
+describe('THRESHOLD_STATUS_CLASSES constant', () => {
   it('has all 4 status keys', () => {
-    expect(Object.keys(HEALTH_STATUS_CLASSES)).toEqual(['above_threshold', 'at_threshold', 'below_threshold', 'neutral'])
+    expect(Object.keys(THRESHOLD_STATUS_CLASSES)).toEqual(['above_threshold', 'at_threshold', 'below_threshold', 'neutral'])
   })
 })
 

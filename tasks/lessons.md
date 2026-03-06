@@ -4,6 +4,18 @@
 
 ---
 
+## Digital Excellence Council Remediation (Sprint 491)
+
+1. **Scout agent claims require independent verification**: The Scout flagged "16 untested engine modules" as CRITICAL. Actual count: 11 engine test files already existed. Always grep-verify quantitative claims before planning work based on them.
+
+2. **Assurance-boundary language is a legal risk, not a security risk**: The Guardian agent gave a clean security audit while the Critic found 5 phrases that could expose the platform to auditor-judgment boundary challenges. Cross-domain risks (legal, regulatory, reputational) don't map cleanly to single-agent domains — the IntegratorLead must synthesize across agent perspectives.
+
+3. **Standard citations matter more than feature work**: The JE memo cited PCAOB AS 1215 (Audit Documentation) as the governing standard for journal entry fraud testing. The correct standard is PCAOB AS 2110 (Risk Assessment). A PCAOB-registered firm would immediately flag this. Two-line fix, but the credibility risk was the highest-impact finding in the entire council session.
+
+4. **Batch common patterns, then do tool-specific work**: The follow-up procedures gap affected 12+ tools. Batching all 52 new procedures in one sprint (37→89 total) is far more efficient than the one-report-at-a-time approach used in Sprints 488-490.
+
+---
+
 ## HeroProductFilm Redesign (Sprint 480)
 
 1. **Never hard-gate on `prefers-reduced-motion`**: The previous pattern (`if (prefersReducedMotion) return <StaticFallback />`) hid the entire scrubber UI from users whose OS disabled animations (Windows 11 default). The correct approach: always render the full UI, use `<MotionConfig reducedMotion="user">` to let framer-motion handle the preference gracefully (instant transitions instead of no UI).

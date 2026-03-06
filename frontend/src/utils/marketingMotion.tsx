@@ -8,7 +8,6 @@
  * and 3 duplicate CountUp implementations with semantic presets.
  *
  * All springs reference SPRING from themeUtils.ts.
- * All durations reference DURATION from animations.ts.
  *
  * Reduced-motion: handled globally by <MotionConfig reducedMotion="user">
  * in providers.tsx — no per-component checks needed.
@@ -17,23 +16,8 @@
 import { useRef, useState, useEffect } from 'react'
 import { motion, useInView, useScroll, useTransform } from 'framer-motion'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
-import { DURATION } from './animations'
 import { SPRING } from './themeUtils'
 import type { Variants, Transition } from 'framer-motion'
-
-// =============================================================================
-// SEMANTIC OFFSETS
-// =============================================================================
-
-/** @deprecated Entrance offsets now use lift from '@/lib/motion'. Tool-state offsets use DISTANCE in motionTokens.ts */
-export const OFFSET = {
-  /** Labels, badges, lightweight items */
-  subtle: 12,
-  /** Section headers, cards, default entrance */
-  standard: 24,
-  /** Hero features, timeline steps */
-  dramatic: 40,
-} as const
 
 // =============================================================================
 // VIEWPORT CONFIGS
@@ -46,92 +30,6 @@ export const VIEWPORT = {
   /** Small elements, pills */
   eager: { once: true, margin: '-40px' as const },
 } as const
-
-// =============================================================================
-// STAGGER CONTAINERS
-// =============================================================================
-
-/** @deprecated Use staggerContainer or staggerContainerTight from '@/lib/motion' instead */
-export const STAGGER = {
-  /** Badges, pills, small items */
-  fast: {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.06, delayChildren: 0.1 },
-    },
-  },
-  /** Cards, feature grids, steps */
-  standard: {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.1, delayChildren: 0.15 },
-    },
-  },
-} as const satisfies Record<string, Variants>
-
-// =============================================================================
-// ENTRANCE VARIANTS
-// =============================================================================
-
-/** @deprecated Use fadeUp from '@/lib/motion' for entrance animations. ENTER.clipReveal may still be used for non-entrance effects */
-export const ENTER = {
-  /** Standard fade-up — cards, headers, default entrance */
-  fadeUp: {
-    hidden: { opacity: 0, y: OFFSET.standard },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: SPRING.snappy,
-    },
-  },
-  /** Subtle fade-up — labels, badges, lightweight items */
-  fadeUpSubtle: {
-    hidden: { opacity: 0, y: OFFSET.subtle },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: SPRING.gentle,
-    },
-  },
-  /** Dramatic fade-up — hero features, timeline steps */
-  fadeUpDramatic: {
-    hidden: { opacity: 0, y: OFFSET.dramatic, scale: 0.93 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      scale: 1,
-      transition: SPRING.snappy,
-    },
-  },
-  /** Slide from left — directional section entrance */
-  slideFromLeft: {
-    hidden: { opacity: 0, x: -30 },
-    visible: {
-      opacity: 1,
-      x: 0,
-      transition: SPRING.snappy,
-    },
-  },
-  /** Slide from right — directional section entrance */
-  slideFromRight: {
-    hidden: { opacity: 0, x: 30 },
-    visible: {
-      opacity: 1,
-      x: 0,
-      transition: SPRING.snappy,
-    },
-  },
-  /** Clip-path reveal — wipes in top-down */
-  clipReveal: {
-    hidden: { clipPath: 'inset(0 0 100% 0)' },
-    visible: {
-      clipPath: 'inset(0 0 0% 0)',
-      transition: { duration: DURATION.hero, ease: 'easeOut' as const },
-    },
-  },
-} as const satisfies Record<string, Variants>
 
 // =============================================================================
 // DRAW VARIANTS (line animations)
@@ -258,36 +156,6 @@ export function CountUp({
   const display = pad ? String(count).padStart(pad, '0') : count.toLocaleString()
 
   return <span ref={ref}>{display}{suffix}</span>
-}
-
-/** @deprecated Use Reveal from '@/components/ui/Reveal' instead */
-export function SectionReveal({
-  children,
-  direction = 'up',
-  className,
-}: {
-  children: React.ReactNode
-  direction?: 'up' | 'left' | 'right'
-  className?: string
-}) {
-  const variants =
-    direction === 'left'
-      ? ENTER.slideFromLeft
-      : direction === 'right'
-        ? ENTER.slideFromRight
-        : ENTER.fadeUp
-
-  return (
-    <motion.div
-      variants={variants}
-      initial="hidden"
-      whileInView="visible"
-      viewport={VIEWPORT.default}
-      className={className}
-    >
-      {children}
-    </motion.div>
-  )
 }
 
 /**

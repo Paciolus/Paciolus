@@ -21,9 +21,9 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { EmptyStateCard, IndustryIcon } from '@/components/shared'
 import {
-  getHealthClasses,
-  getHealthLabel,
-  type HealthStatus,
+  getThresholdClasses,
+  getThresholdLabel,
+  type ThresholdStatus,
 } from '@/utils'
 import { fadeUp, staggerContainerTight } from '@/lib/motion'
 
@@ -92,8 +92,8 @@ function IndustryMetricCard({
 }) {
   const [showTooltip, setShowTooltip] = useState(false)
 
-  const healthClasses = getHealthClasses(ratio.threshold_status as HealthStatus)
-  const healthLabel = getHealthLabel(ratio.threshold_status as HealthStatus)
+  const healthClasses = getThresholdClasses(ratio.threshold_status as ThresholdStatus)
+  const healthLabel = getThresholdLabel(ratio.threshold_status as ThresholdStatus)
 
   // Determine if this is a placeholder (data required)
   const isPlaceholder = ratio.display_value === 'Data Required'

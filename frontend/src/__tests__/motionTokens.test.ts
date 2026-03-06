@@ -14,14 +14,12 @@ import {
 } from '@/utils/motionTokens'
 
 describe('TIMING', () => {
-  it('extends DURATION with intent-based durations', () => {
-    // Inherited from DURATION
+  it('has all semantic duration values', () => {
     expect(TIMING.instant).toBe(0.15)
     expect(TIMING.fast).toBe(0.2)
     expect(TIMING.normal).toBe(0.3)
     expect(TIMING.slow).toBe(0.5)
     expect(TIMING.hero).toBe(0.6)
-    // New intent-based
     expect(TIMING.crossfade).toBe(0.35)
     expect(TIMING.settle).toBe(0.5)
     expect(TIMING.resolve).toBe(0.6)
@@ -86,7 +84,7 @@ describe('EASE', () => {
 })
 
 describe('DISTANCE', () => {
-  it('extends OFFSET with state transition shift', () => {
+  it('has inlined distance values', () => {
     expect(DISTANCE.subtle).toBe(12)
     expect(DISTANCE.standard).toBe(24)
     expect(DISTANCE.dramatic).toBe(40)

@@ -10,16 +10,23 @@
  * the UI content layer.
  */
 
-import { DURATION } from './animations'
-import { OFFSET } from './marketingMotion'
 import type { Variants, Transition } from 'framer-motion'
 
 // =============================================================================
-// TIMING — extends DURATION with intent-based durations
+// TIMING — semantic durations for UI choreography
 // =============================================================================
 
 export const TIMING = {
-  ...DURATION,
+  /** Tooltips, micro-interactions */
+  instant: 0.15,
+  /** Collapsibles, toggles, interactive UI */
+  fast: 0.2,
+  /** Standard entrances, exits */
+  normal: 0.3,
+  /** Scroll-reveal, marketing sections */
+  slow: 0.5,
+  /** Page hero sections */
+  hero: 0.6,
   /** Upload→loading→results state crossfade */
   crossfade: 0.35,
   /** Risk emphasis settling */
@@ -51,7 +58,12 @@ export const EASE = {
 
 /** @deprecated Entrance distances now use lift from '@/lib/motion'. Internal tool-state usage within this file is expected */
 export const DISTANCE = {
-  ...OFFSET,
+  /** Labels, badges, lightweight items */
+  subtle: 12,
+  /** Section headers, cards, default entrance */
+  standard: 24,
+  /** Hero features, timeline steps */
+  dramatic: 40,
   /** Crossfade Y-offset between tool upload states */
   state: 8,
 } as const

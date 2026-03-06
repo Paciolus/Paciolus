@@ -56,7 +56,7 @@ _AR_CONFIG = TestingMemoConfig(
         "low": (
             "Based on the automated AR aging analysis procedures applied, "
             "the accounts receivable data exhibits a LOW risk profile. "
-            "No material receivables anomaly indicators requiring further investigation were identified."
+            "No receivables anomalies exceeding the configured thresholds were detected by the automated tests applied."
         ),
         "elevated": (
             "Based on the automated AR aging analysis procedures applied, "
@@ -73,9 +73,9 @@ _AR_CONFIG = TestingMemoConfig(
         "high": (
             "Based on the automated AR aging analysis procedures applied, "
             "the accounts receivable data exhibits a HIGH risk profile. "
-            "Significant receivables anomaly indicators were identified that require "
-            "detailed investigation and may warrant expanded receivables audit procedures "
-            "per ISA 540 and PCAOB AS 2501."
+            "Significant receivables anomaly indicators were detected that require "
+            "detailed investigation. The engagement team should evaluate whether additional "
+            "receivables procedures are appropriate per ISA 540 and PCAOB AS 2501."
         ),
     },
 )

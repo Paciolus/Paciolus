@@ -57,7 +57,7 @@ _INV_CONFIG = TestingMemoConfig(
         "low": (
             "Based on the automated inventory register analysis procedures applied, "
             "the inventory data exhibits a LOW risk profile. "
-            "No material inventory anomaly indicators requiring further investigation were identified."
+            "No inventory anomalies exceeding the configured thresholds were detected by the automated tests applied."
         ),
         "elevated": (
             "Based on the automated inventory register analysis procedures applied, "
@@ -74,9 +74,9 @@ _INV_CONFIG = TestingMemoConfig(
         "high": (
             "Based on the automated inventory register analysis procedures applied, "
             "the inventory data exhibits a HIGH risk profile. "
-            "Significant inventory anomaly indicators were identified that require "
-            "detailed investigation and may warrant expanded inventory audit procedures "
-            "per ISA 501 and PCAOB AS 2501."
+            "Significant inventory anomaly indicators were detected that require "
+            "detailed investigation. The engagement team should evaluate whether additional "
+            "inventory procedures are appropriate per ISA 501 and PCAOB AS 2501."
         ),
     },
 )

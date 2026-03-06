@@ -69,8 +69,8 @@ FOLLOW_UP_PROCEDURES: dict[str, str] = {
     "payment_before_invoice": (
         "Obtain management explanation for each prepayment. Confirm whether a prepayment "
         "arrangement was authorized per AP policy and supported by a contract or purchase "
-        "order. Payments lacking authorization documentation represent a potential control "
-        "failure under ISA 240."
+        "order. The absence of authorization documentation may indicate a control gap "
+        "that the engagement team should evaluate under ISA 265."
     ),
     "just_below_threshold": (
         "Obtain approval documentation for each payment. Compare the approval threshold "
@@ -142,16 +142,84 @@ FOLLOW_UP_PROCEDURES: dict[str, str] = {
     "allowance_adequacy": "Perform independent estimate of allowance adequacy using historical loss rates.",
     # Fixed Assets
     "fully_depreciated": "Evaluate whether fully depreciated assets still in use require revised useful life estimates.",
+    "fa_missing_fields": (
+        "Request the complete fixed asset register with all required fields populated. "
+        "Trace affected entries to source documents (purchase orders, invoices) to confirm completeness."
+    ),
+    "fa_negative_values": (
+        "Investigate assets with negative cost or accumulated depreciation for data entry errors, "
+        "improper adjustments, or reversals requiring reclassification."
+    ),
     "over_depreciation": "Investigate over-depreciation for calculation errors or improper adjustments.",
     "useful_life_outliers": "Review unusual useful life estimates against industry norms and management justification.",
+    "cost_zscore_outliers": (
+        "Obtain supporting documentation for statistically unusual asset costs. "
+        "Confirm amounts reflect actual purchase prices and proper capitalization treatment."
+    ),
+    "age_concentration": (
+        "Evaluate the business rationale for bulk acquisitions concentrated in a single year. "
+        "Verify capitalization thresholds were consistently applied."
+    ),
     "duplicate_assets": "Verify whether duplicate records represent distinct assets or data entry errors.",
+    "residual_value_anomalies": (
+        "Review residual value estimates exceeding 30% of cost against management's disposal "
+        "assumptions and industry resale data. Assess reasonableness per ISA 540."
+    ),
     # Inventory
+    "inv_missing_fields": (
+        "Request the complete inventory register with all required fields populated. "
+        "Trace affected items to source documents to confirm data completeness."
+    ),
     "slow_moving": "Evaluate slow-moving items for obsolescence indicators and potential NRV write-down.",
     "negative_values": "Investigate negative quantities/values for returns processing, data errors, or adjustments.",
     "value_mismatch": "Recalculate extended values and investigate discrepancies with source pricing data.",
+    "unit_cost_outliers": (
+        "Obtain supporting documentation for statistically unusual unit costs. "
+        "Verify pricing against purchase orders, supplier contracts, or standard cost records."
+    ),
+    "quantity_outliers": (
+        "Investigate statistically unusual quantities for potential count errors, "
+        "returns in transit, or obsolete stock requiring NRV evaluation."
+    ),
+    "category_concentration": (
+        "Evaluate whether disproportionate inventory value concentration in a single category "
+        "reflects the entity's business model or indicates potential valuation anomalies."
+    ),
+    "duplicate_items": (
+        "Verify whether items with identical description and unit cost represent "
+        "distinct inventory items or data entry duplicates requiring correction."
+    ),
     "zero_value_items": "Evaluate items with quantity but zero value for potential write-down or pricing gaps.",
     # Payroll
+    "PR-T1": (
+        "Verify HR records against the payroll system for each employee ID associated "
+        "with multiple names. Investigate data entry errors or potential identity substitution."
+    ),
+    "PR-T2": (
+        "Request the complete payroll register with all required fields populated. "
+        "Trace affected entries to HR authorization records to confirm completeness."
+    ),
+    "PR-T3": (
+        "Obtain payroll authorization documentation for round-dollar pay amounts. "
+        "Verify amounts reflect approved compensation rather than estimates or placeholders."
+    ),
     "PR-T4": "Verify post-termination payments for proper authorization; investigate for potential ghost employees.",
+    "PR-T5": (
+        "Obtain voided check documentation for missing sequence numbers. "
+        "Confirm proper authorization and recording of any voided instruments."
+    ),
+    "PR-T6": (
+        "Obtain supporting authorization for statistically unusual pay amounts. "
+        "Compare to approved salary schedules and investigate department-level outliers."
+    ),
+    "PR-T7": (
+        "Confirm pay cadence against employment contracts for employees with irregular "
+        "pay spacing. Investigate irregularities for potential ghost employee indicators."
+    ),
+    "PR-T8": (
+        "Evaluate the most deviated digits in gross pay amounts for patterns of manual "
+        "entry or estimation; consider targeted sampling toward those digits."
+    ),
     "PR-T9": "Investigate ghost employee indicators by tracing to HR records and physical verification.",
     "PR-T10": "Verify employees sharing bank accounts or addresses for proper documentation and business justification.",
     "PR-T11": "Investigate shared tax IDs for data entry errors or potential identity fraud.",
@@ -160,6 +228,88 @@ FOLLOW_UP_PROCEDURES: dict[str, str] = {
     "stale_checks": "Review checks outstanding more than 90 days for stale-dated items requiring write-off or investigation.",
     "nsf_items": "Trace NSF/returned items to subsequent collection or write-off; assess credit risk.",
     "high_value_transactions": "Obtain supporting documentation for transactions exceeding materiality threshold.",
+    # Three-Way Match
+    "twm_amount_variance": (
+        "Obtain supporting documentation for material variances between PO, invoice, and receiving "
+        "amounts. Determine whether variances reflect price adjustments, quantity discrepancies, "
+        "or unauthorized changes."
+    ),
+    "twm_unmatched_po": (
+        "Investigate unmatched purchase orders for goods/services not yet received, "
+        "cancelled orders not properly closed, or recording delays."
+    ),
+    "twm_unmatched_invoice": (
+        "Investigate unmatched invoices for potential unauthorized purchases, "
+        "duplicate invoices, or PO-bypass transactions requiring management explanation."
+    ),
+    "twm_date_variance": (
+        "Evaluate significant date gaps between PO, receipt, and invoice for "
+        "cut-off implications and delayed recording anomalies."
+    ),
+    # Multi-Period Comparison
+    "significant_movement": (
+        "Obtain management explanation for significant period-over-period balance changes. "
+        "Corroborate explanations with supporting documentation (contracts, invoices, board minutes)."
+    ),
+    "new_account": (
+        "Investigate accounts appearing for the first time. Confirm proper chart-of-accounts "
+        "authorization and verify the underlying transactions are properly classified."
+    ),
+    "eliminated_account": (
+        "Investigate accounts with prior-period balances that are now zero. Confirm whether "
+        "the elimination reflects legitimate business changes or potential reclassification errors."
+    ),
+    "ratio_trend_change": (
+        "Evaluate significant ratio trend changes for underlying drivers. "
+        "Corroborate with management inquiry and supporting documentation."
+    ),
+    # Statistical Sampling
+    "sampling_exception": (
+        "For each exception identified in the sample, obtain the source document and "
+        "management explanation. Evaluate whether the exception represents an isolated "
+        "error or a systematic control deviation."
+    ),
+    "projected_misstatement": (
+        "Evaluate the projected misstatement against tolerable misstatement. "
+        "If projected misstatement approaches or exceeds tolerable misstatement, "
+        "consider expanding the sample or performing alternative procedures."
+    ),
+    # Multi-Currency
+    "rate_deviation": (
+        "Investigate exchange rate deviations exceeding 1% from published rates. "
+        "Confirm rate source and date alignment per ASC 830 / IAS 21."
+    ),
+    "unrealized_gain_loss": (
+        "Evaluate significant unrealized foreign currency gains/losses for proper "
+        "classification and disclosure. Confirm remeasurement methodology."
+    ),
+    # Data Quality Preflight
+    "data_completeness": (
+        "Request a complete data file addressing identified gaps. "
+        "Verify that missing columns or incomplete records are resolved before proceeding."
+    ),
+    "balance_integrity": (
+        "Investigate balance integrity failures (debits not equal to credits) "
+        "for extraction errors, partial data, or posting anomalies."
+    ),
+    # TB Diagnostic Anomaly Types
+    "rounding_anomaly": (
+        "Evaluate round-dollar balances for estimates, accruals, or manual entries "
+        "that may indicate placeholder amounts rather than actual transactions."
+    ),
+    "natural_balance_violation": (
+        "Obtain management explanation for accounts with abnormal balance directions. "
+        "Confirm whether the balance represents a reclassification, offset, or posting error."
+    ),
+    "suspense_account": (
+        "Obtain the transaction detail supporting outstanding suspense balances. "
+        "Confirm whether items represent unresolved reconciling differences or "
+        "reclassifications in progress. Assess age of outstanding items."
+    ),
+    "concentration_risk_tb": (
+        "Evaluate whether disproportionate balance concentration in a single account "
+        "reflects the entity's business model or indicates potential classification anomalies."
+    ),
 }
 
 

@@ -54,10 +54,10 @@ export type { ApiResponse, ApiRequestOptions } from './apiClient';
 
 // Theme utilities (Oat & Obsidian)
 export {
-  // Health status
-  HEALTH_STATUS_CLASSES,
-  getHealthClasses,
-  getHealthLabel,
+  // Threshold status
+  THRESHOLD_STATUS_CLASSES,
+  getThresholdClasses,
+  getThresholdLabel,
   // Variance/trend
   getVarianceClasses,
   // Input state
@@ -83,8 +83,6 @@ export {
 export type {
   ThresholdStatus,
   ThresholdClasses,
-  HealthStatus,
-  HealthClasses,
   VarianceDirection,
   InputState,
   BadgeVariant,
@@ -104,7 +102,6 @@ export {
 export {
   TIMING,
   EASE,
-  DISTANCE,
   STATE_CROSSFADE,
   RESOLVE_ENTER,
   EMPHASIS_SETTLE,

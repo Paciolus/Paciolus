@@ -1172,6 +1172,3 @@ function ScrubberHero() {
     </section>
   )
 }
-
-/** @deprecated Use HeroScrollSection instead */
-export const HeroProductFilm = HeroScrollSection

@@ -2,7 +2,7 @@
 JE Testing Memo PDF Generator (Sprint 67, refactored Sprint 90, simplified Sprint 157)
 
 Config-driven wrapper around shared memo template.
-Domain: PCAOB AS 1215 / ISA 530.
+Domain: PCAOB AS 2110 / ISA 240.
 
 Uses build_extra_sections callback for the JE-specific Benford's Law analysis table.
 """
@@ -57,13 +57,15 @@ _JE_CONFIG = TestingMemoConfig(
     test_descriptions=TEST_DESCRIPTIONS,
     methodology_intro=(
         "The following automated tests were applied to the General Ledger extract "
-        "in accordance with professional auditing standards (PCAOB AS 1215, ISA 530):"
+        "in accordance with professional auditing standards "
+        "(PCAOB AS 2110: Identifying and Assessing Risks of Material Misstatement, "
+        "ISA 240: The Auditor's Responsibilities Relating to Fraud):"
     ),
     risk_assessments={
         "low": (
             "Based on the automated journal entry testing procedures applied, "
             "the General Ledger extract exhibits a LOW risk profile. "
-            "No material anomalies requiring further investigation were identified."
+            "No anomalies exceeding the configured thresholds were detected by the automated tests applied."
         ),
         "elevated": (
             "Based on the automated journal entry testing procedures applied, "
@@ -78,11 +80,11 @@ _JE_CONFIG = TestingMemoConfig(
         "high": (
             "Based on the automated journal entry testing procedures applied, "
             "the General Ledger extract exhibits a HIGH risk profile. "
-            "Significant anomalies were identified that require detailed investigation "
-            "and may warrant expanded audit procedures."
+            "Significant anomalies were detected that require detailed investigation. "
+            "The engagement team should evaluate whether additional procedures are appropriate."
         ),
     },
-    isa_reference="PCAOB AS 1215 (Audit Documentation) and ISA 530 (Audit Sampling)",
+    isa_reference="PCAOB AS 2110 (Risk Assessment) and ISA 240 (Fraud)",
     tool_domain="journal_entry_testing",
 )
 
@@ -133,9 +135,9 @@ def _build_benford_section(
         story.append(
             Paragraph(
                 f"<i>First-digit distribution closely conforms to Benford's Law "
-                f"(MAD = {mad_val:.5f}, below the Close Conformity threshold of 0.006), "
-                f"providing analytical support for the completeness and non-fabrication "
-                f"of transaction amounts in the population tested.</i>",
+                f"(MAD = {mad_val:.5f}, below the Close Conformity threshold of 0.006). "
+                f"This is one indicator the engagement team may consider alongside other "
+                f"procedures when evaluating the population.</i>",
                 styles["MemoBodySmall"],
             )
         )

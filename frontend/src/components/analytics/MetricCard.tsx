@@ -4,10 +4,10 @@ import { useState, memo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { RATIO_FORMULAS } from '@/types/metrics'
 import {
-  getHealthClasses,
-  getHealthLabel,
+  getThresholdClasses,
+  getThresholdLabel,
   getVarianceClasses,
-  type HealthStatus,
+  type ThresholdStatus,
   type VarianceDirection,
 } from '@/utils'
 import { fadeUp } from '@/lib/motion'
@@ -16,7 +16,7 @@ interface MetricCardProps {
   name: string
   value: string
   interpretation: string
-  healthStatus: HealthStatus
+  healthStatus: ThresholdStatus
   variance?: {
     direction: VarianceDirection
     displayText: string
@@ -60,7 +60,7 @@ export const MetricCard = memo(function MetricCard({
   const [showTooltip, setShowTooltip] = useState(false)
 
   // Get health classes from shared utilities
-  const healthClasses = getHealthClasses(healthStatus)
+  const healthClasses = getThresholdClasses(healthStatus)
 
   // Get formula info for tooltip
   const formulaInfo = RATIO_FORMULAS[name]
@@ -205,7 +205,7 @@ export const MetricCard = memo(function MetricCard({
           )}
           {isCalculable && (
             <span className={`text-xs font-sans px-2 py-0.5 rounded-full ${healthClasses.badge}`}>
-              {getHealthLabel(healthStatus)}
+              {getThresholdLabel(healthStatus)}
             </span>
           )}
         </div>

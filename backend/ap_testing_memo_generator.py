@@ -55,7 +55,7 @@ _AP_CONFIG = TestingMemoConfig(
         "low": (
             "Based on the automated AP payment testing procedures applied, "
             "the AP payment register exhibits a LOW risk profile. "
-            "No material anomalies requiring further investigation were identified."
+            "No anomalies exceeding the configured thresholds were detected by the automated tests applied."
         ),
         "elevated": (
             "Based on the automated AP payment testing procedures applied, "
@@ -70,8 +70,8 @@ _AP_CONFIG = TestingMemoConfig(
         "high": (
             "Based on the automated AP payment testing procedures applied, "
             "the AP payment register exhibits a HIGH risk profile. "
-            "Significant anomalies were identified that require detailed investigation "
-            "and may warrant expanded audit procedures."
+            "Significant anomalies were detected that require detailed investigation. "
+            "The engagement team should evaluate whether additional procedures are appropriate."
         ),
     },
     isa_reference="ISA 240 (Fraud), ISA 500 (Audit Evidence), and PCAOB AS 2401",
@@ -370,9 +370,9 @@ def _build_ap_scope(
         )
         story.append(
             Paragraph(
-                f"<i>A DPO of {dpo_val:.0f} days may indicate stretched payables relative "
-                f"to industry norms (typical range 30\u201360 days). Consider in the context "
-                f"of the vendor payment terms obtained during the engagement.</i>",
+                f"<i>A DPO of {dpo_val:.0f} days should be evaluated in the context of "
+                f"the entity's industry and vendor payment terms. DPO norms vary significantly "
+                f"by sector; confirm the appropriate benchmark for this client.</i>",
                 styles["MemoBodySmall"],
             )
         )

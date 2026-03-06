@@ -63,7 +63,7 @@ _REVENUE_CONFIG = TestingMemoConfig(
         "low": (
             "Based on the automated revenue testing procedures applied, "
             "the revenue GL extract exhibits a LOW risk profile. "
-            "No material revenue recognition anomalies requiring further investigation were identified."
+            "No revenue recognition anomalies exceeding the configured thresholds were detected by the automated tests applied."
         ),
         "elevated": (
             "Based on the automated revenue testing procedures applied, "
@@ -80,9 +80,9 @@ _REVENUE_CONFIG = TestingMemoConfig(
         "high": (
             "Based on the automated revenue testing procedures applied, "
             "the revenue GL extract exhibits a HIGH risk profile. "
-            "Significant revenue recognition anomaly indicators were identified that require "
-            "detailed investigation and may warrant expanded revenue audit procedures "
-            "per ISA 240 and PCAOB AS 2401."
+            "Significant revenue recognition anomaly indicators were detected that require "
+            "detailed investigation. The engagement team should evaluate whether additional "
+            "revenue procedures are appropriate per ISA 240 and PCAOB AS 2401."
         ),
     },
 )
