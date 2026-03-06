@@ -51,9 +51,11 @@ from shared.testing_enums import (  # noqa: E402
 # CONFIGURATION
 # =============================================================================
 
+
 @dataclass
 class PayrollTestingConfig:
     """Configurable thresholds for all payroll tests."""
+
     # PR-T1: Duplicate Employee IDs
     duplicate_name_similarity: float = 0.85
 
@@ -221,6 +223,16 @@ PAYROLL_TERM_DATE_PATTERNS = [
     (r"term.?date", 0.60, False),
 ]
 
+PAYROLL_HIRE_DATE_PATTERNS = [
+    (r"^hire\s*date$", 1.0, True),
+    (r"^date\s*hired$", 0.95, True),
+    (r"^start\s*date$", 0.90, True),
+    (r"^employment\s*date$", 0.90, True),
+    (r"^date\s*of\s*hire$", 0.95, True),
+    (r"^original\s*hire\s*date$", 0.90, True),
+    (r"hire.?date", 0.65, False),
+]
+
 PAYROLL_BANK_ACCOUNT_PATTERNS = [
     (r"^bank\s*account$", 1.0, True),
     (r"^account\s*number$", 0.85, True),
@@ -253,19 +265,29 @@ PAYROLL_TAX_ID_PATTERNS = [
 # Shared column detector configs (replaces PayrollColumnType enum + PAYROLL_COLUMN_PATTERNS)
 PAYROLL_COLUMN_CONFIGS: list[ColumnFieldConfig] = [
     ColumnFieldConfig("employee_id_column", PAYROLL_EMPLOYEE_ID_PATTERNS, priority=10),
-    ColumnFieldConfig("employee_name_column", PAYROLL_EMPLOYEE_NAME_PATTERNS, required=True,
-                      priority=15),
+    ColumnFieldConfig("employee_name_column", PAYROLL_EMPLOYEE_NAME_PATTERNS, required=True, priority=15),
     ColumnFieldConfig("department_column", PAYROLL_DEPARTMENT_PATTERNS, priority=20),
-    ColumnFieldConfig("pay_date_column", PAYROLL_PAY_DATE_PATTERNS, required=True,
-                      missing_note="No pay date column detected", priority=25),
-    ColumnFieldConfig("gross_pay_column", PAYROLL_GROSS_PAY_PATTERNS, required=True,
-                      missing_note="No gross pay / amount column detected", priority=30),
+    ColumnFieldConfig(
+        "pay_date_column",
+        PAYROLL_PAY_DATE_PATTERNS,
+        required=True,
+        missing_note="No pay date column detected",
+        priority=25,
+    ),
+    ColumnFieldConfig(
+        "gross_pay_column",
+        PAYROLL_GROSS_PAY_PATTERNS,
+        required=True,
+        missing_note="No gross pay / amount column detected",
+        priority=30,
+    ),
     ColumnFieldConfig("net_pay_column", PAYROLL_NET_PAY_PATTERNS, priority=35),
     ColumnFieldConfig("deductions_column", PAYROLL_DEDUCTIONS_PATTERNS, priority=40),
     ColumnFieldConfig("check_number_column", PAYROLL_CHECK_NUMBER_PATTERNS, priority=45),
     ColumnFieldConfig("pay_type_column", PAYROLL_PAY_TYPE_PATTERNS, priority=50),
     ColumnFieldConfig("hours_column", PAYROLL_HOURS_PATTERNS, priority=55),
     ColumnFieldConfig("rate_column", PAYROLL_RATE_PATTERNS, priority=60),
+    ColumnFieldConfig("hire_date_column", PAYROLL_HIRE_DATE_PATTERNS, priority=63),
     ColumnFieldConfig("term_date_column", PAYROLL_TERM_DATE_PATTERNS, priority=65),
     ColumnFieldConfig("bank_account_column", PAYROLL_BANK_ACCOUNT_PATTERNS, priority=70),
     ColumnFieldConfig("address_column", PAYROLL_ADDRESS_PATTERNS, priority=75),
@@ -276,9 +298,11 @@ PAYROLL_COLUMN_CONFIGS: list[ColumnFieldConfig] = [
 # PAYROLL COLUMN DETECTION RESULT
 # =============================================================================
 
+
 @dataclass
 class PayrollColumnDetectionResult:
     """Result of payroll column detection."""
+
     # Required columns
     employee_name_column: Optional[str] = None
     gross_pay_column: Optional[str] = None
@@ -293,6 +317,7 @@ class PayrollColumnDetectionResult:
     pay_type_column: Optional[str] = None
     hours_column: Optional[str] = None
     rate_column: Optional[str] = None
+    hire_date_column: Optional[str] = None
     term_date_column: Optional[str] = None
     bank_account_column: Optional[str] = None
     address_column: Optional[str] = None
@@ -300,6 +325,7 @@ class PayrollColumnDetectionResult:
 
     # Metadata
     has_check_numbers: bool = False
+    has_hire_dates: bool = False
     has_term_dates: bool = False
     has_bank_accounts: bool = False
     has_addresses: bool = False
@@ -325,11 +351,13 @@ class PayrollColumnDetectionResult:
             "pay_type_column": self.pay_type_column,
             "hours_column": self.hours_column,
             "rate_column": self.rate_column,
+            "hire_date_column": self.hire_date_column,
             "term_date_column": self.term_date_column,
             "bank_account_column": self.bank_account_column,
             "address_column": self.address_column,
             "tax_id_column": self.tax_id_column,
             "has_check_numbers": self.has_check_numbers,
+            "has_hire_dates": self.has_hire_dates,
             "has_term_dates": self.has_term_dates,
             "has_bank_accounts": self.has_bank_accounts,
             "has_addresses": self.has_addresses,
@@ -350,11 +378,22 @@ def detect_payroll_columns(column_names: list[str]) -> PayrollColumnDetectionRes
 
     # Map all fields from detection result
     field_names = [
-        "employee_id_column", "employee_name_column", "department_column",
-        "pay_date_column", "gross_pay_column", "net_pay_column",
-        "deductions_column", "check_number_column", "pay_type_column",
-        "hours_column", "rate_column", "term_date_column",
-        "bank_account_column", "address_column", "tax_id_column",
+        "employee_id_column",
+        "employee_name_column",
+        "department_column",
+        "pay_date_column",
+        "gross_pay_column",
+        "net_pay_column",
+        "deductions_column",
+        "check_number_column",
+        "pay_type_column",
+        "hours_column",
+        "rate_column",
+        "hire_date_column",
+        "term_date_column",
+        "bank_account_column",
+        "address_column",
+        "tax_id_column",
     ]
     for field_name in field_names:
         col = detection.get_column(field_name)
@@ -363,15 +402,22 @@ def detect_payroll_columns(column_names: list[str]) -> PayrollColumnDetectionRes
 
     # Set boolean flags
     result.has_check_numbers = result.check_number_column is not None
+    result.has_hire_dates = result.hire_date_column is not None
     result.has_term_dates = result.term_date_column is not None
     result.has_bank_accounts = result.bank_account_column is not None
     result.has_addresses = result.address_column is not None
     result.has_tax_ids = result.tax_id_column is not None
 
     # Calculate confidence: count of required found / 3.0
-    required_found = sum(1 for c in [
-        result.employee_name_column, result.gross_pay_column, result.pay_date_column,
-    ] if c is not None)
+    required_found = sum(
+        1
+        for c in [
+            result.employee_name_column,
+            result.gross_pay_column,
+            result.pay_date_column,
+        ]
+        if c is not None
+    )
     result.overall_confidence = required_found / 3.0
 
     # Supplement notes: if no employee name AND no employee id, add specific note
@@ -382,13 +428,16 @@ def detect_payroll_columns(column_names: list[str]) -> PayrollColumnDetectionRes
     result.detection_notes = notes
     return result
 
+
 # =============================================================================
 # DATA MODELS
 # =============================================================================
 
+
 @dataclass
 class PayrollEntry:
     """A single payroll entry."""
+
     employee_id: str = ""
     employee_name: str = ""
     department: str = ""
@@ -400,6 +449,7 @@ class PayrollEntry:
     pay_type: str = ""
     hours: float = 0.0
     rate: float = 0.0
+    hire_date: Optional[date] = None
     term_date: Optional[date] = None
     bank_account: str = ""
     address: str = ""
@@ -419,6 +469,7 @@ class PayrollEntry:
             "pay_type": self.pay_type,
             "hours": self.hours,
             "rate": self.rate,
+            "hire_date": self.hire_date.isoformat() if self.hire_date else None,
             "term_date": self.term_date.isoformat() if self.term_date else None,
             "bank_account": self.bank_account,
             "address": self.address,
@@ -430,6 +481,7 @@ class PayrollEntry:
 @dataclass
 class FlaggedEmployee:
     """A payroll entry flagged by a test."""
+
     entry: PayrollEntry
     test_name: str = ""
     test_key: str = ""
@@ -455,6 +507,7 @@ class FlaggedEmployee:
 @dataclass
 class PayrollTestResult:
     """Result of a single payroll test."""
+
     test_name: str
     test_key: str
     test_tier: str
@@ -482,6 +535,7 @@ class PayrollTestResult:
 @dataclass
 class PayrollDataQuality:
     """Data quality assessment for payroll data."""
+
     completeness_score: float = 0.0
     field_fill_rates: dict[str, float] = field(default_factory=dict)
     detected_issues: list[str] = field(default_factory=list)
@@ -499,6 +553,7 @@ class PayrollDataQuality:
 @dataclass
 class PayrollCompositeScore:
     """Composite risk score for payroll testing."""
+
     score: float = 0.0
     risk_tier: str = "low"
     tests_run: int = 0
@@ -524,27 +579,36 @@ class PayrollCompositeScore:
 @dataclass
 class PayrollTestingResult:
     """Complete payroll testing result."""
+
     composite_score: PayrollCompositeScore
     test_results: list[PayrollTestResult]
     data_quality: PayrollDataQuality
     column_detection: PayrollColumnDetectionResult
     filename: str = ""
+    payroll_register_total: float = 0.0
+    department_summary: list[dict] = field(default_factory=list)
+    headcount_rollforward: Optional[dict] = None
 
     def to_dict(self) -> dict:
-        return {
+        result = {
             "composite_score": self.composite_score.to_dict(),
             "test_results": [r.to_dict() for r in self.test_results],
             "data_quality": self.data_quality.to_dict(),
             "column_detection": self.column_detection.to_dict(),
             "filename": self.filename,
+            "payroll_register_total": round(self.payroll_register_total, 2),
         }
-
-
+        if self.department_summary:
+            result["department_summary"] = self.department_summary
+        if self.headcount_rollforward:
+            result["headcount_rollforward"] = self.headcount_rollforward
+        return result
 
 
 # =============================================================================
 # PAYROLL FILE PARSER
 # =============================================================================
+
 
 def parse_payroll_entries(
     rows: list[dict],
@@ -578,6 +642,8 @@ def parse_payroll_entries(
             entry.hours = safe_float(row.get(detection.hours_column))
         if detection.rate_column:
             entry.rate = safe_float(row.get(detection.rate_column))
+        if detection.hire_date_column:
+            entry.hire_date = parse_date(row.get(detection.hire_date_column))
         if detection.term_date_column:
             entry.term_date = parse_date(row.get(detection.term_date_column))
         if detection.bank_account_column:
@@ -596,6 +662,7 @@ def parse_payroll_entries(
 # DATA QUALITY ASSESSMENT
 # =============================================================================
 
+
 def assess_payroll_data_quality(
     entries: list[PayrollEntry],
     detection: PayrollColumnDetectionResult,
@@ -609,12 +676,27 @@ def assess_payroll_data_quality(
         return PayrollDataQuality(total_rows=0, completeness_score=0.0)
 
     configs: list[FieldQualityConfig] = [
-        FieldQualityConfig("employee_name", lambda e: e.employee_name, weight=0.30,
-                           issue_threshold=0.90, issue_template="Employee name fill rate low: {fill_pct}"),
-        FieldQualityConfig("gross_pay", lambda e: e.gross_pay != 0, weight=0.30,
-                           issue_threshold=0.90, issue_template="Gross pay fill rate low: {fill_pct}"),
-        FieldQualityConfig("pay_date", lambda e: e.pay_date is not None, weight=0.25,
-                           issue_threshold=0.90, issue_template="Pay date fill rate low: {fill_pct}"),
+        FieldQualityConfig(
+            "employee_name",
+            lambda e: e.employee_name,
+            weight=0.30,
+            issue_threshold=0.90,
+            issue_template="Employee name fill rate low: {fill_pct}",
+        ),
+        FieldQualityConfig(
+            "gross_pay",
+            lambda e: e.gross_pay != 0,
+            weight=0.30,
+            issue_threshold=0.90,
+            issue_template="Gross pay fill rate low: {fill_pct}",
+        ),
+        FieldQualityConfig(
+            "pay_date",
+            lambda e: e.pay_date is not None,
+            weight=0.25,
+            issue_threshold=0.90,
+            issue_template="Pay date fill rate low: {fill_pct}",
+        ),
     ]
 
     if detection.employee_id_column:
@@ -647,6 +729,7 @@ def assess_payroll_data_quality(
 # TIER 1 TESTS — STRUCTURAL
 # =============================================================================
 
+
 def _test_duplicate_employee_ids(
     entries: list[PayrollEntry],
     config: PayrollTestingConfig,
@@ -672,16 +755,18 @@ def _test_duplicate_employee_ids(
         if len(names) > 1:
             # Multiple different names for same ID — flag all entries
             for entry in group:
-                flagged.append(FlaggedEmployee(
-                    entry=entry,
-                    test_name="Duplicate Employee IDs",
-                    test_key="PR-T1",
-                    test_tier=TestTier.STRUCTURAL.value,
-                    severity=Severity.HIGH.value,
-                    issue=f"Employee ID '{entry.employee_id}' has {len(names)} different names",
-                    confidence=0.95,
-                    details={"names": sorted(names), "entry_count": len(group)},
-                ))
+                flagged.append(
+                    FlaggedEmployee(
+                        entry=entry,
+                        test_name="Duplicate Employee IDs",
+                        test_key="PR-T1",
+                        test_tier=TestTier.STRUCTURAL.value,
+                        severity=Severity.HIGH.value,
+                        issue=f"Employee ID '{entry.employee_id}' has {len(names)} different names",
+                        confidence=0.95,
+                        details={"names": sorted(names), "entry_count": len(group)},
+                    )
+                )
 
     total = len(entries)
     return PayrollTestResult(
@@ -720,16 +805,18 @@ def _test_missing_critical_fields(
             issues.append("Pay date is blank")
 
         if issues:
-            flagged.append(FlaggedEmployee(
-                entry=entry,
-                test_name="Missing Critical Fields",
-                test_key="PR-T2",
-                test_tier=TestTier.STRUCTURAL.value,
-                severity=severity.value,
-                issue="; ".join(issues),
-                confidence=0.90,
-                details={"missing_fields": issues},
-            ))
+            flagged.append(
+                FlaggedEmployee(
+                    entry=entry,
+                    test_name="Missing Critical Fields",
+                    test_key="PR-T2",
+                    test_tier=TestTier.STRUCTURAL.value,
+                    severity=severity.value,
+                    issue="; ".join(issues),
+                    confidence=0.90,
+                    details={"missing_fields": issues},
+                )
+            )
 
     total = len(entries)
     return PayrollTestResult(
@@ -778,16 +865,18 @@ def _test_round_salary_amounts(
         else:
             continue
 
-        flagged.append(FlaggedEmployee(
-            entry=entry,
-            test_name="Round Salary Amounts",
-            test_key="PR-T3",
-            test_tier=TestTier.STRUCTURAL.value,
-            severity=severity.value,
-            issue=issue,
-            confidence=0.70,
-            details={"amount": amount},
-        ))
+        flagged.append(
+            FlaggedEmployee(
+                entry=entry,
+                test_name="Round Salary Amounts",
+                test_key="PR-T3",
+                test_tier=TestTier.STRUCTURAL.value,
+                severity=severity.value,
+                issue=issue,
+                confidence=0.70,
+                details={"amount": amount},
+            )
+        )
 
     total = len(entries)
     return PayrollTestResult(
@@ -833,16 +922,18 @@ def _test_pay_after_termination(
             else:
                 severity = Severity.LOW
 
-            flagged.append(FlaggedEmployee(
-                entry=entry,
-                test_name="Pay After Termination",
-                test_key="PR-T4",
-                test_tier=TestTier.STRUCTURAL.value,
-                severity=severity.value,
-                issue=f"Payment {days_after} days after termination ({entry.term_date.isoformat()})",
-                confidence=0.90,
-                details={"days_after": days_after, "term_date": entry.term_date.isoformat()},
-            ))
+            flagged.append(
+                FlaggedEmployee(
+                    entry=entry,
+                    test_name="Pay After Termination",
+                    test_key="PR-T4",
+                    test_tier=TestTier.STRUCTURAL.value,
+                    severity=severity.value,
+                    issue=f"Payment {days_after} days after termination ({entry.term_date.isoformat()})",
+                    confidence=0.90,
+                    details={"days_after": days_after, "term_date": entry.term_date.isoformat()},
+                )
+            )
 
     total = len(entries)
     return PayrollTestResult(
@@ -909,16 +1000,18 @@ def _test_check_number_gaps(
             else:
                 severity = Severity.LOW
 
-            flagged.append(FlaggedEmployee(
-                entry=curr_entry,
-                test_name="Check Number Gaps",
-                test_key="PR-T5",
-                test_tier=TestTier.STRUCTURAL.value,
-                severity=severity.value,
-                issue=f"Gap of {gap} in check sequence ({prev_num} → {curr_num})",
-                confidence=0.75,
-                details={"gap_size": gap, "previous_check": prev_num, "current_check": curr_num},
-            ))
+            flagged.append(
+                FlaggedEmployee(
+                    entry=curr_entry,
+                    test_name="Check Number Gaps",
+                    test_key="PR-T5",
+                    test_tier=TestTier.STRUCTURAL.value,
+                    severity=severity.value,
+                    issue=f"Gap of {gap} in check sequence ({prev_num} → {curr_num})",
+                    confidence=0.75,
+                    details={"gap_size": gap, "previous_check": prev_num, "current_check": curr_num},
+                )
+            )
 
     total = len(entries)
     return PayrollTestResult(
@@ -937,6 +1030,7 @@ def _test_check_number_gaps(
 # =============================================================================
 # TIER 2 TESTS — STATISTICAL
 # =============================================================================
+
 
 def _test_unusual_pay_amounts(
     entries: list[PayrollEntry],
@@ -971,21 +1065,23 @@ def _test_unusual_pay_amounts(
 
             severity = zscore_to_severity(abs(z_score))
 
-            flagged.append(FlaggedEmployee(
-                entry=entry,
-                test_name="Unusual Pay Amounts",
-                test_key="PR-T6",
-                test_tier=TestTier.STATISTICAL.value,
-                severity=severity.value,
-                issue=f"Pay ${entry.gross_pay:,.2f} is {abs(z_score):.1f}σ from dept '{dept}' mean (${mean_amt:,.2f})",
-                confidence=min(abs(z_score) / 6.0, 1.0),
-                details={
-                    "z_score": round(z_score, 2),
-                    "department": dept,
-                    "dept_mean": round(mean_amt, 2),
-                    "dept_stdev": round(stdev_amt, 2),
-                },
-            ))
+            flagged.append(
+                FlaggedEmployee(
+                    entry=entry,
+                    test_name="Unusual Pay Amounts",
+                    test_key="PR-T6",
+                    test_tier=TestTier.STATISTICAL.value,
+                    severity=severity.value,
+                    issue=f"Pay ${entry.gross_pay:,.2f} is {abs(z_score):.1f}σ from dept '{dept}' mean (${mean_amt:,.2f})",
+                    confidence=min(abs(z_score) / 6.0, 1.0),
+                    details={
+                        "z_score": round(z_score, 2),
+                        "department": dept,
+                        "dept_mean": round(mean_amt, 2),
+                        "dept_stdev": round(stdev_amt, 2),
+                    },
+                )
+            )
 
     total = len(entries)
     return PayrollTestResult(
@@ -1020,8 +1116,7 @@ def _test_pay_frequency_anomalies(
     # Group by employee identifier (prefer ID, fallback to name)
     emp_groups: dict[str, list[PayrollEntry]] = {}
     for entry in entries:
-        key = (entry.employee_id.strip().lower() if entry.employee_id.strip()
-               else entry.employee_name.strip().lower())
+        key = entry.employee_id.strip().lower() if entry.employee_id.strip() else entry.employee_name.strip().lower()
         if key:
             emp_groups.setdefault(key, []).append(entry)
 
@@ -1073,20 +1168,22 @@ def _test_pay_frequency_anomalies(
                     severity = Severity.LOW
                     issue = f"Pay interval {delta}d is longer than expected {expected_cadence}d cadence"
 
-                flagged.append(FlaggedEmployee(
-                    entry=entry,
-                    test_name="Pay Frequency Anomalies",
-                    test_key="PR-T7",
-                    test_tier=TestTier.STATISTICAL.value,
-                    severity=severity.value,
-                    issue=issue,
-                    confidence=0.65,
-                    details={
-                        "interval_days": delta,
-                        "expected_cadence": expected_cadence,
-                        "employee_key": key,
-                    },
-                ))
+                flagged.append(
+                    FlaggedEmployee(
+                        entry=entry,
+                        test_name="Pay Frequency Anomalies",
+                        test_key="PR-T7",
+                        test_tier=TestTier.STATISTICAL.value,
+                        severity=severity.value,
+                        issue=issue,
+                        confidence=0.65,
+                        details={
+                            "interval_days": delta,
+                            "expected_cadence": expected_cadence,
+                            "employee_key": key,
+                        },
+                    )
+                )
 
     total = len(entries)
     return PayrollTestResult(
@@ -1167,21 +1264,23 @@ def _test_benford_gross_pay(
             dev_pct = benford.deviation_by_digit[digit]
             if dev_pct > 0:
                 for entry in entry_by_digit[digit]:
-                    flagged.append(FlaggedEmployee(
-                        entry=entry,
-                        test_name="Benford's Law — Gross Pay",
-                        test_key="PR-T8",
-                        test_tier=TestTier.STATISTICAL.value,
-                        severity=Severity.MEDIUM.value if conformity == "nonconforming" else Severity.LOW.value,
-                        issue=f"First digit {digit} overrepresented ({benford.actual_distribution[digit]:.1%} vs expected {BENFORD_EXPECTED[digit]:.1%})",
-                        confidence=min(abs(dev_pct) / 0.05, 1.0),
-                        details={
-                            "first_digit": digit,
-                            "actual_pct": round(benford.actual_distribution[digit], 4),
-                            "expected_pct": round(benford.expected_distribution[digit], 4),
-                            "deviation": round(dev_pct, 4),
-                        },
-                    ))
+                    flagged.append(
+                        FlaggedEmployee(
+                            entry=entry,
+                            test_name="Benford's Law — Gross Pay",
+                            test_key="PR-T8",
+                            test_tier=TestTier.STATISTICAL.value,
+                            severity=Severity.MEDIUM.value if conformity == "nonconforming" else Severity.LOW.value,
+                            issue=f"First digit {digit} overrepresented ({benford.actual_distribution[digit]:.1%} vs expected {BENFORD_EXPECTED[digit]:.1%})",
+                            confidence=min(abs(dev_pct) / 0.05, 1.0),
+                            details={
+                                "first_digit": digit,
+                                "actual_pct": round(benford.actual_distribution[digit], 4),
+                                "expected_pct": round(benford.expected_distribution[digit], 4),
+                                "deviation": round(dev_pct, 4),
+                            },
+                        )
+                    )
 
     # Overall severity
     if conformity == "nonconforming":
@@ -1250,8 +1349,7 @@ def _test_ghost_employee_indicators(
     # Group by employee identifier
     emp_groups: dict[str, list[PayrollEntry]] = {}
     for entry in entries:
-        key = (entry.employee_id.strip().lower() if entry.employee_id.strip()
-               else entry.employee_name.strip().lower())
+        key = entry.employee_id.strip().lower() if entry.employee_id.strip() else entry.employee_name.strip().lower()
         if key:
             emp_groups.setdefault(key, []).append(entry)
 
@@ -1306,21 +1404,23 @@ def _test_ghost_employee_indicators(
             if entry._row_index in flagged_rows:
                 continue
             flagged_rows.add(entry._row_index)
-            flagged.append(FlaggedEmployee(
-                entry=entry,
-                test_name="Ghost Employee Indicators",
-                test_key="PR-T9",
-                test_tier=TestTier.ADVANCED.value,
-                severity=severity.value,
-                issue=f"Ghost indicators: {'; '.join(indicators)}",
-                confidence=min(0.50 + len(indicators) * 0.15, 1.0),
-                details={
-                    "indicators": indicators,
-                    "indicator_count": len(indicators),
-                    "employee_key": emp_key,
-                    "entry_count": len(group),
-                },
-            ))
+            flagged.append(
+                FlaggedEmployee(
+                    entry=entry,
+                    test_name="Ghost Employee Indicators",
+                    test_key="PR-T9",
+                    test_tier=TestTier.ADVANCED.value,
+                    severity=severity.value,
+                    issue=f"Ghost indicators: {'; '.join(indicators)}",
+                    confidence=min(0.50 + len(indicators) * 0.15, 1.0),
+                    details={
+                        "indicators": indicators,
+                        "indicator_count": len(indicators),
+                        "employee_key": emp_key,
+                        "entry_count": len(group),
+                    },
+                )
+            )
 
     total = len(entries)
     return PayrollTestResult(
@@ -1375,20 +1475,22 @@ def _test_duplicate_bank_accounts(
                 for entry in group:
                     if entry._row_index not in flagged_rows:
                         flagged_rows.add(entry._row_index)
-                        flagged.append(FlaggedEmployee(
-                            entry=entry,
-                            test_name="Duplicate Bank Accounts / Addresses",
-                            test_key="PR-T10",
-                            test_tier=TestTier.ADVANCED.value,
-                            severity=Severity.HIGH.value,
-                            issue=f"Bank account shared by {len(emp_names)} employees",
-                            confidence=0.90,
-                            details={
-                                "match_type": "bank_account",
-                                "shared_employees": sorted(emp_names),
-                                "account_masked": acct[:4] + "****",
-                            },
-                        ))
+                        flagged.append(
+                            FlaggedEmployee(
+                                entry=entry,
+                                test_name="Duplicate Bank Accounts / Addresses",
+                                test_key="PR-T10",
+                                test_tier=TestTier.ADVANCED.value,
+                                severity=Severity.HIGH.value,
+                                issue=f"Bank account shared by {len(emp_names)} employees",
+                                confidence=0.90,
+                                details={
+                                    "match_type": "bank_account",
+                                    "shared_employees": sorted(emp_names),
+                                    "account_masked": acct[:4] + "****",
+                                },
+                            )
+                        )
 
     # Part B: Duplicate addresses (fuzzy match)
     if detection.has_addresses:
@@ -1417,21 +1519,23 @@ def _test_duplicate_bank_accounts(
                     for entry in emp_entries[name_a] + emp_entries[name_b]:
                         if entry._row_index not in flagged_rows:
                             flagged_rows.add(entry._row_index)
-                            flagged.append(FlaggedEmployee(
-                                entry=entry,
-                                test_name="Duplicate Bank Accounts / Addresses",
-                                test_key="PR-T10",
-                                test_tier=TestTier.ADVANCED.value,
-                                severity=Severity.MEDIUM.value,
-                                issue=f"Address similarity {ratio:.0%} between '{name_a}' and '{name_b}'",
-                                confidence=round(ratio, 2),
-                                details={
-                                    "match_type": "address",
-                                    "name_a": name_a,
-                                    "name_b": name_b,
-                                    "similarity": round(ratio, 2),
-                                },
-                            ))
+                            flagged.append(
+                                FlaggedEmployee(
+                                    entry=entry,
+                                    test_name="Duplicate Bank Accounts / Addresses",
+                                    test_key="PR-T10",
+                                    test_tier=TestTier.ADVANCED.value,
+                                    severity=Severity.MEDIUM.value,
+                                    issue=f"Address similarity {ratio:.0%} between '{name_a}' and '{name_b}'",
+                                    confidence=round(ratio, 2),
+                                    details={
+                                        "match_type": "address",
+                                        "name_a": name_a,
+                                        "name_b": name_b,
+                                        "similarity": round(ratio, 2),
+                                    },
+                                )
+                            )
 
     total = len(entries)
     return PayrollTestResult(
@@ -1493,20 +1597,22 @@ def _test_duplicate_tax_ids(
             for entry in group:
                 if entry._row_index not in flagged_rows:
                     flagged_rows.add(entry._row_index)
-                    flagged.append(FlaggedEmployee(
-                        entry=entry,
-                        test_name="Duplicate Tax IDs",
-                        test_key="PR-T11",
-                        test_tier=TestTier.ADVANCED.value,
-                        severity=Severity.HIGH.value,
-                        issue=f"Tax ID shared by {len(emp_names)} employees: {', '.join(sorted(emp_names))}",
-                        confidence=0.95,
-                        details={
-                            "shared_employees": sorted(emp_names),
-                            "tax_id_masked": tid[:3] + "****",
-                            "entry_count": len(group),
-                        },
-                    ))
+                    flagged.append(
+                        FlaggedEmployee(
+                            entry=entry,
+                            test_name="Duplicate Tax IDs",
+                            test_key="PR-T11",
+                            test_tier=TestTier.ADVANCED.value,
+                            severity=Severity.HIGH.value,
+                            issue=f"Tax ID shared by {len(emp_names)} employees: {', '.join(sorted(emp_names))}",
+                            confidence=0.95,
+                            details={
+                                "shared_employees": sorted(emp_names),
+                                "tax_id_masked": tid[:3] + "****",
+                                "entry_count": len(group),
+                            },
+                        )
+                    )
 
     total = len(entries)
     return PayrollTestResult(
@@ -1525,6 +1631,7 @@ def _test_duplicate_tax_ids(
 # =============================================================================
 # TEST BATTERY & SCORING
 # =============================================================================
+
 
 def run_payroll_test_battery(
     entries: list[PayrollEntry],
@@ -1621,6 +1728,7 @@ def calculate_payroll_composite_score(
 # MAIN ENTRY POINT
 # =============================================================================
 
+
 def run_payroll_testing(
     headers: list[str],
     rows: list[dict],
@@ -1658,6 +1766,7 @@ def run_payroll_testing(
             "pay_type": "pay_type_column",
             "hours": "hours_column",
             "rate": "rate_column",
+            "hire_date": "hire_date_column",
             "term_date": "term_date_column",
             "bank_account": "bank_account_column",
             "address": "address_column",
@@ -1667,6 +1776,7 @@ def run_payroll_testing(
             if key in column_mapping:
                 setattr(detection, attr, column_mapping[key])
         detection.has_check_numbers = detection.check_number_column is not None
+        detection.has_hire_dates = detection.hire_date_column is not None
         detection.has_term_dates = detection.term_date_column is not None
         detection.has_bank_accounts = detection.bank_account_column is not None
         detection.has_addresses = detection.address_column is not None
@@ -1687,6 +1797,76 @@ def run_payroll_testing(
     # Composite score
     composite = calculate_payroll_composite_score(test_results, len(entries))
 
+    # Enrichment: payroll register total
+    register_total = sum(e.gross_pay for e in entries)
+
+    # Enrichment: department summary (if department column detected with >60% fill)
+    dept_summary: list[dict] = []
+    if detection.department_column:
+        dept_fill = sum(1 for e in entries if e.department.strip()) / max(len(entries), 1)
+        if dept_fill > 0.60:
+            dept_groups: dict[str, list[PayrollEntry]] = {}
+            for e in entries:
+                dept = e.department.strip() or "No Department / Unassigned"
+                dept_groups.setdefault(dept, []).append(e)
+            for dept, group in sorted(dept_groups.items(), key=lambda x: sum(e.gross_pay for e in x[1]), reverse=True):
+                emp_ids = set()
+                total_pay = 0.0
+                for e in group:
+                    key = e.employee_id.strip().lower() or e.employee_name.strip().lower()
+                    emp_ids.add(key)
+                    total_pay += e.gross_pay
+                dept_summary.append(
+                    {
+                        "department": dept,
+                        "employee_count": len(emp_ids),
+                        "total_gross_pay": round(total_pay, 2),
+                        "pct_of_total": round(total_pay / register_total * 100, 1) if register_total else 0,
+                    }
+                )
+
+    # Enrichment: headcount roll-forward (if hire_date and term_date available)
+    headcount_rf: Optional[dict] = None
+    if detection.has_hire_dates and detection.has_term_dates and entries:
+        all_dates = [e.pay_date for e in entries if e.pay_date]
+        if all_dates:
+            period_start = date(min(all_dates).year, 1, 1)
+            period_end = date(max(all_dates).year, 12, 31)
+            # Deduplicate by employee
+            emp_map: dict[str, PayrollEntry] = {}
+            for e in entries:
+                key = e.employee_id.strip().lower() or e.employee_name.strip().lower()
+                if key and key not in emp_map:
+                    emp_map[key] = e
+            beginning = sum(
+                1
+                for e in emp_map.values()
+                if (e.hire_date is None or e.hire_date < period_start)
+                and (e.term_date is None or e.term_date >= period_start)
+            )
+            new_hires = sum(1 for e in emp_map.values() if e.hire_date and period_start <= e.hire_date <= period_end)
+            terminations = sum(1 for e in emp_map.values() if e.term_date and period_start <= e.term_date <= period_end)
+            computed_ending = beginning + new_hires - terminations
+            # Count employees in final pay period
+            max_date = max(all_dates)
+            final_month = (max_date.year, max_date.month)
+            final_emps = set()
+            for e in entries:
+                if e.pay_date and (e.pay_date.year, e.pay_date.month) == final_month:
+                    key = e.employee_id.strip().lower() or e.employee_name.strip().lower()
+                    if key:
+                        final_emps.add(key)
+            headcount_rf = {
+                "period_start": period_start.isoformat(),
+                "period_end": period_end.isoformat(),
+                "beginning_headcount": beginning,
+                "new_hires": new_hires,
+                "terminations": terminations,
+                "computed_ending": computed_ending,
+                "final_period_headcount": len(final_emps),
+                "variance": computed_ending - len(final_emps),
+            }
+
     # Clear memory (Zero-Storage)
     rows.clear()
 
@@ -1696,4 +1876,7 @@ def run_payroll_testing(
         data_quality=data_quality,
         column_detection=detection,
         filename=filename,
+        payroll_register_total=register_total,
+        department_summary=dept_summary,
+        headcount_rollforward=headcount_rf,
     )

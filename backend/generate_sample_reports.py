@@ -558,7 +558,7 @@ def gen_je_testing():
         total_entries=1_500,
         tests=tests,
         score=18.4,
-        risk_tier="elevated",
+        risk_tier="moderate",
         top_findings=[
             "3 unbalanced journal entries detected — debits do not equal credits",
             "4 journal entries posted on US federal holidays (Thanksgiving, Christmas)",
@@ -815,7 +815,7 @@ def gen_ap_testing():
         total_entries=710,
         tests=tests,
         score=24.7,
-        risk_tier="elevated",
+        risk_tier="moderate",
         top_findings=[
             "2 exact duplicate payments totaling $14,200 to vendor 'Apex Office Solutions'",
             "3 payments processed before invoice date — potential prepayment fraud",
@@ -849,29 +849,148 @@ def gen_ap_testing():
 def gen_payroll_testing():
     from payroll_testing_memo_generator import generate_payroll_testing_memo
 
+    # Flagged entries for HIGH severity tests (BUG-02: detail tables)
+    pr_t1_flagged = [
+        {
+            "entry": {
+                "employee_id": "EMP-1102",
+                "employee_name": "Sarah Blake",
+                "department": "Marketing",
+                "pay_date": "2025-10-15",
+                "gross_pay": 4850.00,
+                "term_date": None,
+                "bank_account": "",
+            },
+            "severity": "high",
+            "issue": "Employee ID 'EMP-1102' has 2 different names",
+            "details": {"names": ["michael torres", "sarah blake"], "entry_count": 24},
+        },
+    ]
+    pr_t4_flagged = [
+        {
+            "entry": {
+                "employee_id": "EMP-4421",
+                "employee_name": "Robert Nguyen",
+                "department": "Operations",
+                "pay_date": "2025-12-15",
+                "gross_pay": 4200.00,
+                "term_date": "2025-11-22",
+                "bank_account": "",
+            },
+            "severity": "high",
+            "issue": "Payment 23 days after termination (2025-11-22)",
+            "details": {"days_after": 23, "term_date": "2025-11-22"},
+        },
+        {
+            "entry": {
+                "employee_id": "EMP-4421",
+                "employee_name": "Robert Nguyen",
+                "department": "Operations",
+                "pay_date": "2025-12-31",
+                "gross_pay": 4200.00,
+                "term_date": "2025-11-22",
+                "bank_account": "",
+            },
+            "severity": "high",
+            "issue": "Payment 39 days after termination (2025-11-22)",
+            "details": {"days_after": 39, "term_date": "2025-11-22"},
+        },
+    ]
+    pr_t9_flagged = [
+        {
+            "entry": {
+                "employee_id": "EMP-3187",
+                "employee_name": "Vacant",
+                "department": "",
+                "pay_date": "2025-01-15",
+                "gross_pay": 3750.00,
+                "term_date": None,
+                "bank_account": "",
+            },
+            "severity": "high",
+            "issue": "Ghost indicators: No department assignment; Single pay entry in period; Pay entries only in first/last month of period",
+            "details": {
+                "indicators": [
+                    "No department assignment",
+                    "Single pay entry in period",
+                    "Pay entries only in first/last month of period",
+                ],
+                "indicator_count": 3,
+                "employee_key": "emp-3187",
+                "entry_count": 1,
+            },
+        },
+    ]
+    pr_t10_flagged = [
+        {
+            "entry": {
+                "employee_id": "EMP-2901",
+                "employee_name": "Lisa Chen",
+                "department": "Finance",
+                "pay_date": "2025-06-15",
+                "gross_pay": 5100.00,
+                "term_date": None,
+                "bank_account": "****7743",
+            },
+            "severity": "high",
+            "issue": "Bank account shared by 2 employees",
+            "details": {
+                "match_type": "bank_account",
+                "shared_employees": ["lisa chen", "david chen"],
+                "account_masked": "****7743",
+            },
+        },
+        {
+            "entry": {
+                "employee_id": "EMP-5512",
+                "employee_name": "David Chen",
+                "department": "Engineering",
+                "pay_date": "2025-06-15",
+                "gross_pay": 6300.00,
+                "term_date": None,
+                "bank_account": "****7743",
+            },
+            "severity": "high",
+            "issue": "Bank account shared by 2 employees",
+            "details": {
+                "match_type": "bank_account",
+                "shared_employees": ["lisa chen", "david chen"],
+                "account_masked": "****7743",
+            },
+        },
+    ]
+
     tests = [
-        _test("Duplicate Employee IDs", "PR-T1", "structural", 1, 0.002, "high"),
+        _test("Duplicate Employee IDs", "PR-T1", "structural", 1, 0.002, "high", flagged_entries=pr_t1_flagged),
         _test("Missing Critical Fields", "PR-T2", "structural", 8, 0.015, "medium"),
         _test("Round Salary Amounts", "PR-T3", "statistical", 22, 0.042, "low"),
-        _test("Pay After Termination", "PR-T4", "structural", 2, 0.004, "high"),
+        _test("Pay After Termination", "PR-T4", "structural", 2, 0.004, "high", flagged_entries=pr_t4_flagged),
         _test("Check Number Gaps", "PR-T5", "structural", 5, 0.010, "low"),
         _test("Unusual Pay Amounts", "PR-T6", "statistical", 6, 0.012, "medium"),
         _test("Pay Frequency Anomalies", "PR-T7", "statistical", 3, 0.006, "medium"),
         _test("Benford's Law — Gross Pay", "PR-T8", "statistical", 0, 0.000, "low"),
-        _test("Ghost Employee Indicators", "PR-T9", "advanced", 1, 0.002, "high"),
-        _test("Duplicate Bank Accounts", "PR-T10", "advanced", 2, 0.004, "high"),
+        _test("Ghost Employee Indicators", "PR-T9", "advanced", 1, 0.002, "high", flagged_entries=pr_t9_flagged),
+        _test("Duplicate Bank Accounts", "PR-T10", "advanced", 2, 0.004, "high", flagged_entries=pr_t10_flagged),
         _test("Duplicate Tax IDs", "PR-T11", "advanced", 0, 0.000, "low"),
     ]
+
+    # Override Benford description to include MAD score (IMPROVEMENT-03)
+    for t in tests:
+        if t["test_key"] == "PR-T8":
+            t["description"] = "First-digit distribution analysis (MAD=0.0042, close_conformity, \u03c7\u00b2=4.81)"
 
     result = _make_testing_result(
         total_entries=520,
         tests=tests,
         score=28.3,
-        risk_tier="moderate",
+        risk_tier="elevated",
         top_findings=[
-            {"employee": "EMP-4421 (Robert Nguyen)", "issue": "2 payments after termination date (Dec 2025)"},
             {
-                "employee": "EMP-3187 (Vacant — No Department)",
+                "employee": "EMP-4421 (Robert Nguyen)",
+                "issue": "2 payments totaling $8,400.00 after termination date (2025-11-22)",
+            },
+            {
+                "employee": "EMP-3187 (Vacant \u2014 No Department)",
                 "issue": "Ghost employee indicators: no department, single entry, boundary month",
             },
             {"employee": "EMP-2901 / EMP-5512", "issue": "Shared bank account ending in 7743"},
@@ -882,6 +1001,35 @@ def gen_payroll_testing():
         ],
     )
 
+    # Enrichment data (IMPROVEMENT-01, 02, 04)
+    result["payroll_register_total"] = 1_387_450.00
+    result["gl_salaries_wages"] = 1_420_000.00
+    result["department_summary"] = [
+        {"department": "Engineering", "employee_count": 42, "total_gross_pay": 498_200.00, "pct_of_total": 35.9},
+        {"department": "Operations", "employee_count": 35, "total_gross_pay": 374_400.00, "pct_of_total": 27.0},
+        {"department": "Finance", "employee_count": 18, "total_gross_pay": 221_100.00, "pct_of_total": 15.9},
+        {"department": "Marketing", "employee_count": 15, "total_gross_pay": 180_250.00, "pct_of_total": 13.0},
+        {"department": "HR", "employee_count": 8, "total_gross_pay": 96_000.00, "pct_of_total": 6.9},
+        {
+            "department": "No Department / Unassigned",
+            "employee_count": 2,
+            "total_gross_pay": 17_500.00,
+            "pct_of_total": 1.3,
+        },
+    ]
+    result["headcount_rollforward"] = {
+        "period_start": "2025-01-01",
+        "period_end": "2025-12-31",
+        "beginning_headcount": 112,
+        "new_hires": 14,
+        "terminations": 8,
+        "computed_ending": 118,
+        "final_period_headcount": 117,
+        "variance": 1,
+    }
+    result["column_detection"]["has_hire_dates"] = True
+    result["column_detection"]["has_term_dates"] = True
+
     pdf = generate_payroll_testing_memo(
         result,
         "meridian_payroll_fy2025.csv",
@@ -890,7 +1038,7 @@ def gen_payroll_testing():
         prepared_by=PREPARED,
         reviewed_by=REVIEWED,
         workpaper_date=WP_DATE,
-        source_document_title="Payroll Register — FY2025 Export",
+        source_document_title="Payroll Register \u2014 FY2025 Export",
         source_context_note=ERP_NOTE,
     )
     save_pdf("05_payroll_testing.pdf", pdf)
@@ -925,7 +1073,7 @@ def gen_revenue_testing():
         total_entries=820,
         tests=tests,
         score=22.1,
-        risk_tier="elevated",
+        risk_tier="moderate",
         top_findings=[
             "7 entries with potential cut-off risk — revenue recorded within 3 days of period end",
             "4 entries with recognition timing concerns (ASC 606 performance obligation not satisfied)",
@@ -972,7 +1120,7 @@ def gen_ar_aging():
         total_entries=375,
         tests=tests,
         score=19.8,
-        risk_tier="elevated",
+        risk_tier="moderate",
         top_findings=[
             "Allowance-to-receivable ratio of 2.1% — below industry benchmark of 3-5%",
             "3 customers exceeding credit limits (totaling $142,000 over-limit)",
@@ -1017,7 +1165,7 @@ def gen_fixed_asset_testing():
         total_entries=250,
         tests=tests,
         score=21.5,
-        risk_tier="elevated",
+        risk_tier="moderate",
         top_findings=[
             "2 assets with accumulated depreciation exceeding original cost",
             "12 fully depreciated assets still in use — potential impairment indicator",
@@ -1062,7 +1210,7 @@ def gen_inventory_testing():
         total_entries=768,
         tests=tests,
         score=15.2,
-        risk_tier="elevated",
+        risk_tier="moderate",
         top_findings=[
             "89 items with no movement in 180+ days — potential obsolescence ($234,500 value)",
             "5 potential duplicate items (identical description + unit cost)",

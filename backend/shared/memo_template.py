@@ -148,6 +148,7 @@ def generate_testing_memo(
     source_context_note: Optional[str] = None,
     build_scope: Optional[ScopeBuilder] = None,
     build_extra_sections: Optional[ExtraSectionBuilder] = None,
+    build_post_results: Optional[ExtraSectionBuilder] = None,
     format_finding: Optional[FindingFormatter] = None,
     resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
     include_signoff: bool = False,
@@ -169,6 +170,8 @@ def generate_testing_memo(
         build_extra_sections: Optional callback for extra sections (e.g., Benford)
             receives (story, styles, doc_width, result, section_counter)
             returns updated section_counter
+        build_post_results: Optional callback for content after results summary
+            (e.g., Benford interpretation note). Same signature as build_extra_sections.
         format_finding: Optional finding formatter (e.g., for Payroll dict findings)
 
     Returns:
@@ -270,6 +273,10 @@ def generate_testing_memo(
         test_results,
         flagged_label=config.flagged_label,
     )
+
+    # 4a. POST-RESULTS content (e.g., Benford interpretation note)
+    if build_post_results is not None:
+        build_post_results(story, styles, doc.width, result, 0)
 
     # Track section numbering (I=Scope, II=Methodology, III=Results)
     section_counter = 4  # next section is IV

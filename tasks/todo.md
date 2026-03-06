@@ -117,6 +117,48 @@
 > Sprints 478, 488–497 archived to `tasks/archive/sprints-478-497-details.md`. Pending items below.
 
 
+### Sprint 500 — Payroll Report Fixes & Improvements
+**Status:** COMPLETE
+**Goal:** Fix risk tier mismatch (BUG-01), add high severity detail tables (BUG-02), and 5 content improvements to the Payroll & Employee Testing memo.
+
+#### Bug Fixes
+- [x] BUG-01: Fix risk_tier across all 7 sample reports to match score_to_risk_tier scale
+- [x] BUG-02: Add Section V High Severity Employee Detail with per-test tables
+
+#### Improvements
+- [x] IMPROVEMENT-01: Payroll Register-to-GL Reconciliation in scope
+- [x] IMPROVEMENT-02: Headcount Roll-Forward (if hire/term dates available)
+- [x] IMPROVEMENT-03: Benford pass positive interpretation note
+- [x] IMPROVEMENT-04: Departmental Salary Summary table
+- [x] IMPROVEMENT-05: EMP-4421 overpayment quantification in finding text
+
+#### Files Modified
+- `generate_sample_reports.py` — risk_tiers, flagged_entries, enriched payroll data
+- `payroll_testing_memo_generator.py` — custom scope, extra sections, finding formatter
+- `shared/memo_template.py` — add build_post_results callback
+- `payroll_testing_engine.py` — hire_date detection, register total, department summary, headcount
+
+#### Verification
+- [x] `npm run build` passes
+- [x] `npm test` passes (1,329 tests, 111 suites)
+- [x] `pytest` passes (5,776 passed, 1 skipped, 1 pre-existing error)
+- [x] Regenerate all 21 sample PDFs
+
+#### Review
+All verification items confirmed in PDF output:
+- Risk Tier "ELEVATED" matches 28.3 score (scale: 26-50 = Elevated)
+- 6 other reports corrected from "elevated" to "moderate" (scores 15.2-24.7)
+- Section V with 4 detail tables: Duplicate IDs, Pay After Termination, Ghost Employee, Duplicate Bank
+- Pay After Termination table shows $8,400 total overpayment
+- Ghost Employee table shows ✓ for all 3 indicators on EMP-3187
+- GL reconciliation: $1,387,450 register vs $1,420,000 GL with $32,550 variance
+- Headcount roll-forward: 112 → 118 with 1 variance
+- Department summary: 6 departments, no concentration >40%
+- Benford note: MAD=0.0042, positive conformity interpretation
+- EMP-4421 finding text includes $8,400 total amount
+
+---
+
 ### Sprint 499 — Toolbar Refactor: Three-Zone Model
 **Status:** COMPLETE
 **Goal:** Refactor authenticated app top navbar to professional SaaS three-zone layout (Identity | Primary Nav | User/System).

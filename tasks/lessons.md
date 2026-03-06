@@ -4,6 +4,16 @@
 
 ---
 
+## Payroll Report Enrichment (Sprint 500)
+
+1. **Sample report risk_tiers were systematically inverted**: All 7 standard testing reports had hardcoded `risk_tier` values that didn't match the `score_to_risk_tier()` function boundaries. Scores 15-25 were labeled "elevated" (should be "moderate") and 28.3 was labeled "moderate" (should be "elevated"). When using synthetic data in sample generators, always derive the risk_tier from the score using the same function the engine uses, rather than hardcoding.
+
+2. **Finding formatter must not duplicate data already in issue text**: When `amount` is both embedded in the finding `issue` string and also provided as a separate `amount` field, the formatter will show the amount twice. Either put the amount in the issue text OR in the amount field, never both.
+
+3. **Scope builder closures enable payroll-specific enrichments without modifying the shared template**: Using closure-based `build_scope` callbacks that capture the full result dict allows tool-specific sections (GL reconciliation, headcount, department summary) to be added within the standard Scope section without changing the shared `memo_template.py` interface.
+
+---
+
 ## Digital Excellence Council Remediation (Sprint 497)
 
 1. **Pricing model changes cascade across 10+ test files**: Renaming `diagnostics_per_month` → `uploads_per_month` and changing Solo from limited→all-access broke tests in entitlements, parity, audit API, billing routes, and pricing launch validation. When entitlement fields are renamed or tier capabilities change, grep all test files for the old field name — don't rely on import errors alone since tests often reference field names as strings in assertions.
