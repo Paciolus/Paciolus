@@ -167,8 +167,8 @@ export function MegaDropdown({ isOpen, onClose }: MegaDropdownProps) {
           animate="visible"
           exit="exit"
           onKeyDown={handleKeyDown}
-          className="absolute left-0 right-0 top-full mt-1 mx-auto max-w-5xl bg-white/95 backdrop-blur-xl border border-oatmeal-200/80 rounded-2xl shadow-theme-elevated z-50 overflow-hidden"
-          style={{ transformOrigin: 'top center' }}
+          className="fixed left-1/2 -translate-x-1/2 w-[min(calc(100vw-2rem),64rem)] bg-white/95 backdrop-blur-xl border border-oatmeal-200/80 rounded-2xl shadow-theme-elevated z-50 overflow-hidden"
+          style={{ transformOrigin: 'top center', top: 'calc(var(--toolbar-height, 56px) + 4px)' }}
         >
           <div className="grid grid-cols-4 gap-0 p-5">
             {/* Tool columns */}

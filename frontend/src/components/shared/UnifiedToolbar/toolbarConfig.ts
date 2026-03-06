@@ -1,9 +1,11 @@
 /**
- * UnifiedToolbar configuration — Sprint 475
+ * UnifiedToolbar configuration — Sprint 499
  *
  * Defines tool categories, column layout, and tier badge mapping
- * for the mega-dropdown navigation.
+ * for the mega-dropdown navigation. Three-zone model: Identity | Primary Nav | User/System.
  */
+
+import type { BrandIconName } from '@/components/shared/BrandIcon/types'
 
 export type TierBadge = 'Solo' | 'Team' | 'Org'
 
@@ -19,6 +21,8 @@ export interface ToolItem {
 export interface NavItem {
   label: string
   href: string
+  /** BrandIcon name for icon+label nav items */
+  icon?: BrandIconName
   /** Whether this is a divider before this item */
   dividerAbove?: boolean
 }
@@ -84,11 +88,12 @@ export const ACCOUNT_NAV: NavItem[] = [
 /** All 3 tool columns for the mega-dropdown */
 export const TOOL_COLUMNS: ToolColumn[] = [CORE_ANALYSIS, TESTING_SUITE, ADVANCED]
 
-/** Direct nav links shown in the toolbar (not in dropdown) */
+/** Primary nav links shown in the toolbar center zone (ordered by frequency of use) */
 export const TOOLBAR_NAV: NavItem[] = [
-  { label: 'Dashboard', href: '/dashboard' },
-  { label: 'Portfolio', href: '/portfolio' },
-  { label: 'Workspaces', href: '/engagements' },
+  { label: 'Dashboard', href: '/dashboard', icon: 'bar-chart' },
+  { label: 'Workspaces', href: '/engagements', icon: 'clipboard-check' },
+  { label: 'Portfolio', href: '/portfolio', icon: 'building' },
+  { label: 'History', href: '/history', icon: 'clock' },
 ]
 
 /** All tool hrefs for active-page detection */

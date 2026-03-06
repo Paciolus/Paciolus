@@ -96,30 +96,23 @@ export function ProfileDropdown({ user, onLogout }: ProfileDropdownProps) {
 
   return (
     <div className="relative" ref={dropdownRef}>
-      {/* Trigger Button */}
+      {/* Trigger Button — icon-only avatar with tooltip */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all ${
+        title={user.email}
+        className={`w-9 h-9 flex items-center justify-center rounded-lg transition-colors ${
           isOpen
-            ? 'bg-obsidian-700 border border-sage-500/50'
-            : 'hover:bg-obsidian-700/50 border border-transparent'
+            ? 'bg-oatmeal-200/80'
+            : 'hover:bg-oatmeal-200/60'
         }`}
         aria-expanded={isOpen}
         aria-haspopup="true"
       >
-        <div className="w-8 h-8 rounded-full bg-sage-500/20 border border-sage-500/40 flex items-center justify-center">
-          <span className="text-sage-400 font-sans font-bold text-sm">
+        <div className="w-7 h-7 rounded-full bg-sage-500/20 border border-sage-500/40 flex items-center justify-center">
+          <span className="text-sage-700 font-sans font-bold text-xs">
             {user.email.charAt(0).toUpperCase()}
           </span>
         </div>
-        <svg
-          className={`w-4 h-4 text-oatmeal-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
       </button>
 
       {/* Dropdown Menu */}

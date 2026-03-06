@@ -117,6 +117,27 @@
 > Sprints 478, 488–497 archived to `tasks/archive/sprints-478-497-details.md`. Pending items below.
 
 
+### Sprint 499 — Toolbar Refactor: Three-Zone Model
+**Status:** COMPLETE
+**Goal:** Refactor authenticated app top navbar to professional SaaS three-zone layout (Identity | Primary Nav | User/System).
+
+#### Changes
+- [x] Zone 1 (Left): Logo only — removed "Paciolus" text label
+- [x] Zone 2 (Center): Horizontally centered nav with icon+label items (Dashboard, Tools, Workspaces, Portfolio, History) — 5 items, under max 7
+- [x] Zone 2 active state: bold label + bottom border indicator in sage accent
+- [x] Zone 3 (Right): Icon-only search, settings, and avatar with tooltips — no labels
+- [x] MegaDropdown repositioned to center under toolbar (fixed positioning)
+- [x] ProfileDropdown trigger: icon-only avatar circle, light-theme, tooltip
+- [x] Mobile drawer updated with Navigation section (icons + labels)
+- [x] Background preserved: toolbar-marble bg-oatmeal-100/95 backdrop-blur-lg unchanged
+- [x] No routing, auth, or functionality changes
+
+#### Verification
+- [x] `npm run build` — passes
+- [x] `npm test` — 1,329 tests pass (111 suites), including all 12 ProfileDropdown tests
+
+---
+
 ### Sprint 447 — Stripe Production Cutover
 
 **Status:** PENDING (CEO action required)
