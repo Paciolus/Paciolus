@@ -1498,17 +1498,162 @@ def gen_ar_aging():
 def gen_fixed_asset_testing():
     from fixed_asset_testing_memo_generator import generate_fixed_asset_testing_memo
 
+    # Flagged entries for high-severity tests (BUG-03: detail tables)
+    over_depr_flagged = [
+        {
+            "entry": {
+                "asset_id": "FA-0142",
+                "description": "HVAC System — Building A",
+                "cost": 185000.00,
+                "accumulated_depreciation": 212750.00,
+                "acquisition_date": "2015-03-22",
+                "useful_life": 15.0,
+                "category": "Building Improvements",
+                "net_book_value": -27750.00,
+                "row_number": 42,
+            },
+            "test_name": "Over-Depreciation",
+            "test_key": "over_depreciation",
+            "test_tier": "structural",
+            "severity": "high",
+            "issue": "Depreciation exceeds cost by 15.0%",
+            "confidence": 0.90,
+            "details": {
+                "cost": 185000.00,
+                "accumulated_depreciation": 212750.00,
+                "excess": 27750.00,
+                "excess_pct": 0.15,
+            },
+        },
+        {
+            "entry": {
+                "asset_id": "FA-0218",
+                "description": "Warehouse Shelving Units",
+                "cost": 42000.00,
+                "accumulated_depreciation": 46620.00,
+                "acquisition_date": "2017-08-10",
+                "useful_life": 7.0,
+                "category": "Equipment",
+                "net_book_value": -4620.00,
+                "row_number": 118,
+            },
+            "test_name": "Over-Depreciation",
+            "test_key": "over_depreciation",
+            "test_tier": "structural",
+            "severity": "high",
+            "issue": "Depreciation exceeds cost by 11.0%",
+            "confidence": 0.90,
+            "details": {"cost": 42000.00, "accumulated_depreciation": 46620.00, "excess": 4620.00, "excess_pct": 0.11},
+        },
+    ]
+
+    duplicate_flagged = [
+        {
+            "entry": {
+                "asset_id": "FA-0087",
+                "description": "Dell Latitude 5540",
+                "cost": 1250.00,
+                "accumulated_depreciation": 625.00,
+                "acquisition_date": "2023-06-15",
+                "useful_life": 3.0,
+                "category": "IT Equipment",
+                "net_book_value": 625.00,
+                "row_number": 87,
+            },
+            "test_name": "Duplicate Assets",
+            "test_key": "duplicate_assets",
+            "test_tier": "advanced",
+            "severity": "high",
+            "issue": "Potential duplicate: $1,250.00, 'dell latitude 5540', acquired 2023-06-15 (2 occurrences)",
+            "confidence": 0.85,
+            "details": {
+                "duplicate_count": 2,
+                "cost": 1250.00,
+                "description": "dell latitude 5540",
+                "acquisition_date": "2023-06-15",
+            },
+        },
+        {
+            "entry": {
+                "asset_id": "FA-0088",
+                "description": "Dell Latitude 5540",
+                "cost": 1250.00,
+                "accumulated_depreciation": 625.00,
+                "acquisition_date": "2023-06-15",
+                "useful_life": 3.0,
+                "category": "IT Equipment",
+                "net_book_value": 625.00,
+                "row_number": 88,
+            },
+            "test_name": "Duplicate Assets",
+            "test_key": "duplicate_assets",
+            "test_tier": "advanced",
+            "severity": "high",
+            "issue": "Potential duplicate: $1,250.00, 'dell latitude 5540', acquired 2023-06-15 (2 occurrences)",
+            "confidence": 0.85,
+            "details": {
+                "duplicate_count": 2,
+                "cost": 1250.00,
+                "description": "dell latitude 5540",
+                "acquisition_date": "2023-06-15",
+            },
+        },
+    ]
+
+    negative_flagged = [
+        {
+            "entry": {
+                "asset_id": "FA-0193",
+                "description": "Server Rack — Data Center",
+                "cost": -15400.00,
+                "accumulated_depreciation": 0.00,
+                "acquisition_date": "2024-01-18",
+                "useful_life": 5.0,
+                "category": "IT Equipment",
+                "net_book_value": -15400.00,
+                "row_number": 193,
+            },
+            "test_name": "Negative Values",
+            "test_key": "negative_values",
+            "test_tier": "structural",
+            "severity": "high",
+            "issue": "Negative cost: $-15,400.00",
+            "confidence": 0.95,
+            "details": {"cost": -15400.00, "accumulated_depreciation": 0.00},
+        },
+    ]
+
     tests = [
         _test("Fully Depreciated Still in Use", "fully_depreciated", "structural", 12, 0.048, "medium"),
         _test("Missing Required Fields", "missing_fields", "structural", 3, 0.012, "medium"),
-        _test("Negative Cost/Accum. Depr.", "negative_values", "structural", 1, 0.004, "high"),
-        _test("Depreciation Exceeds Cost", "over_depreciation", "structural", 2, 0.008, "high"),
+        _test(
+            "Negative Cost/Accum. Depr.",
+            "negative_values",
+            "structural",
+            1,
+            0.004,
+            "high",
+            flagged_entries=negative_flagged,
+        ),
+        _test(
+            "Depreciation Exceeds Cost",
+            "over_depreciation",
+            "structural",
+            2,
+            0.008,
+            "high",
+            flagged_entries=over_depr_flagged,
+        ),
         _test("Useful Life Outliers", "useful_life_outliers", "statistical", 5, 0.020, "medium"),
-        _test("Cost Z-Score Outliers", "cost_outliers", "statistical", 3, 0.012, "medium"),
+        _test("Cost Z-Score Outliers", "cost_zscore_outliers", "statistical", 3, 0.012, "medium"),
         _test("Asset Age Concentration", "age_concentration", "statistical", 0, 0.000, "low"),
-        _test("Duplicate Assets", "duplicate_assets", "advanced", 2, 0.008, "high"),
-        _test("Residual Value Anomalies", "residual_anomalies", "advanced", 4, 0.016, "medium"),
+        _test("Duplicate Assets", "duplicate_assets", "advanced", 2, 0.008, "high", flagged_entries=duplicate_flagged),
+        _test("Residual Value Anomalies", "residual_value_anomalies", "advanced", 4, 0.016, "medium"),
+        _test("Lease Asset Indicators", "lease_indicators", "advanced", 0, 0.000, "low"),
     ]
+
+    # IMP-03: Aggregate cost of fully depreciated assets
+    fully_depr_aggregate_cost = 187_500.00  # Sum of 12 fully depreciated assets' original costs
 
     result = _make_testing_result(
         total_entries=250,
@@ -1517,11 +1662,58 @@ def gen_fixed_asset_testing():
         risk_tier="moderate",
         top_findings=[
             "2 assets with accumulated depreciation exceeding original cost",
-            "12 fully depreciated assets still in use — potential impairment indicator",
+            f"12 fully depreciated assets still in use — aggregate original cost ${fully_depr_aggregate_cost:,.2f} "
+            "(net book value: $0) — potential impairment indicator",
             "2 potential duplicate assets ('Dell Latitude 5540' — same cost, same date)",
             "1 asset with negative cost value (data entry error suspected)",
         ],
     )
+
+    # IMP-01: Roll-forward data
+    result["register_total_cost"] = 3_420_000.00
+    result["register_total_accum_depr"] = 1_180_000.00
+    result["tb_ppe_gross"] = 3_420_000.00
+    result["tb_accum_depr"] = 1_180_000.00
+    result["additions"] = 420_000.00
+    result["disposals"] = 0
+    result["depreciation_expense"] = 285_000.00
+    result["period_label"] = "FY2025"
+
+    # IMP-04: Category summary
+    result["category_summary"] = [
+        {
+            "category": "Building Improvements",
+            "count": 28,
+            "gross_cost": 1_240_000.00,
+            "accum_depr": 412_000.00,
+            "avg_age_years": 8.2,
+        },
+        {
+            "category": "Equipment",
+            "count": 95,
+            "gross_cost": 980_000.00,
+            "accum_depr": 385_000.00,
+            "avg_age_years": 5.7,
+        },
+        {
+            "category": "IT Equipment",
+            "count": 72,
+            "gross_cost": 540_000.00,
+            "accum_depr": 298_000.00,
+            "avg_age_years": 3.1,
+        },
+        {"category": "Furniture", "count": 38, "gross_cost": 420_000.00, "accum_depr": 62_000.00, "avg_age_years": 2.4},
+        {"category": "Vehicles", "count": 17, "gross_cost": 240_000.00, "accum_depr": 23_000.00, "avg_age_years": 1.8},
+    ]
+
+    # Column detection with category
+    result["column_detection"] = {
+        "asset_id_column": "Asset ID",
+        "cost_column": "Cost",
+        "accumulated_depreciation_column": "Accum Depr",
+        "category_column": "Asset Category",
+        "overall_confidence": 0.95,
+    }
 
     pdf = generate_fixed_asset_testing_memo(
         result,

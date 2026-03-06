@@ -117,6 +117,56 @@
 > Sprints 478, 488–497 archived to `tasks/archive/sprints-478-497-details.md`. Pending items below.
 
 
+### Sprint 502 — Fixed Asset Report Fixes & Improvements
+**Status:** COMPLETE
+**Goal:** Fix PP&E ampersand rendering (BUG-01), blank methodology descriptions (BUG-02), missing high severity detail (BUG-03), orphaned ASC 842 reference (BUG-04), and 4 content improvements to the Fixed Asset Register Analysis memo.
+
+#### Bug Fixes
+- [x] BUG-01: Fix PP&E ampersand rendering — escaped `&` as `&amp;` in fixed_asset_testing_memo_generator.py (6 occurrences) and currency_memo_generator.py (2 occurrences: PP&E + "Methodology & Limitations")
+- [x] BUG-02: Fix blank methodology descriptions — root cause was sample data test_keys not matching engine canonical keys (`cost_outliers` → `cost_zscore_outliers`, `residual_anomalies` → `residual_value_anomalies`). Enhanced both descriptions.
+- [x] BUG-03: Add Section V High Severity Asset Detail with 3 per-test table builders (over_depreciation sorted by excess desc, duplicate_assets with pair grouping + capitalization total, negative_values with "Data entry error" likely cause)
+- [x] BUG-04: Add FA-10 lease indicator test (Option A) — keyword scan for lease/ROU/right-of-use/leasehold in asset descriptions; ASC 842 reference now justified
+
+#### Improvements
+- [x] IMPROVEMENT-01: Fixed Asset Roll-Forward with gross cost + accumulated depreciation sections, TB reconciliation, variance flagging
+- [x] IMPROVEMENT-02: Depreciation Rate Analysis — effective rate, implied average useful life, prior period comparison with pp change flag
+- [x] IMPROVEMENT-03: Fully depreciated finding enriched with aggregate original cost $187,500 and NBV $0
+- [x] IMPROVEMENT-04: Asset Register Composition table by category (5 categories in sample data) with count, gross cost, accum depr, NBV, avg age
+
+#### Files Modified
+- `fixed_asset_testing_memo_generator.py` — complete rewrite: custom scope builder, 3 detail table builders, roll-forward, depr rate, category summary, finding formatter, 10 test descriptions
+- `fixed_asset_testing_engine.py` — FA-10 lease indicator test (keyword regex), battery updated to 10 tests
+- `generate_sample_reports.py` — fixed 2 test_keys, added flagged_entries for 3 HIGH tests, roll-forward data, category summary, fully-depreciated aggregate cost
+- `currency_memo_generator.py` — PP&E ampersand + "Methodology & Limitations" ampersand fix
+- `shared/follow_up_procedures.py` — added lease_indicators procedure
+- `tests/test_fixed_asset_testing_memo.py` — 26 new tests (58 total, up from 32)
+- `tests/test_fixed_asset_testing.py` — updated 4 assertions from 9→10 tests
+
+#### Verification
+- [x] `npm run build` passes
+- [x] `npm test` passes (1,329 tests, 111 suites)
+- [x] `pytest` passes (5,808 passed, 1 skipped, 1 pre-existing error)
+- [x] Regenerate all 21 sample PDFs
+
+#### Review
+All verification items confirmed:
+- PP&E renders without semicolon (XML-escaped `&amp;` in all 6 risk_assessment occurrences + 2 currency memo occurrences)
+- Cost Z-Score Outliers has substantive methodology description (z-score + threshold + overstatement language)
+- Residual Value Anomalies has substantive methodology description (salvage value + ISA 540 + 30% threshold)
+- Section V present with 3 detail tables: Depreciation Exceeds Cost (2 items, sorted by excess desc), Duplicate Assets (2 items with pair grouping), Negative Cost (1 item)
+- Duplicate Assets table shows "Dell Latitude 5540" with $1,250.00 cost and capitalization total
+- Negative Cost table shows -$15,400.00 with "Data entry error" likely cause
+- ASC 842 justified by FA-10 lease indicator test (keyword scan, 0 flagged in sample = clean result)
+- Roll-forward present: $3,420,000 gross cost, $1,180,000 accum depr, $420,000 additions, $285,000 depr expense, ✓ reconciles
+- Depreciation rate: 8.3% effective, 12 year implied life
+- Finding 2 includes "$187,500.00 (net book value: $0)" aggregate cost
+- Category table: 5 categories (Building Improvements, Equipment, IT Equipment, Furniture, Vehicles)
+- Risk tier MODERATE consistent (21.5 score)
+- Lease indicator: 10th test, 0 flagged, "No lease indicator keywords detected"
+- Test count: 5,808 backend (up from 5,788 — 20 new) + 1,329 frontend
+
+---
+
 ### Sprint 501 — Revenue Report Fixes & Improvements
 **Status:** COMPLETE
 **Goal:** Fix methodology table empty descriptions (BUG-01), missing suggested procedures (BUG-02), missing dollar amounts in findings (BUG-03), and 4 content improvements to the Revenue Recognition Testing memo.

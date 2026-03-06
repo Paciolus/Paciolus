@@ -222,6 +222,11 @@ FOLLOW_UP_PROCEDURES: dict[str, str] = {
         "Review residual value estimates exceeding 30% of cost against management's disposal "
         "assumptions and industry resale data. Assess reasonableness per ISA 540."
     ),
+    "lease_indicators": (
+        "Confirm whether flagged assets represent right-of-use assets under ASC 842. "
+        "Verify lease classification (finance vs. operating), amortization schedule, "
+        "and that the asset is included in the entity's lease schedule."
+    ),
     # Inventory
     "inv_missing_fields": (
         "Request the complete inventory register with all required fields populated. "

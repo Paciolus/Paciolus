@@ -1057,10 +1057,10 @@ class TestResidualValueAnomalies:
 class TestBattery:
     """Tests for the full test battery."""
 
-    def test_runs_all_9_tests(self):
+    def test_runs_all_10_tests(self):
         entries = make_entries(sample_fa_rows())
         results = run_fa_test_battery(entries)
-        assert len(results) == 9
+        assert len(results) == 10
 
     def test_all_tiers_represented(self):
         entries = make_entries(sample_fa_rows())
@@ -1073,7 +1073,7 @@ class TestBattery:
     def test_default_config(self):
         entries = make_entries(sample_fa_rows())
         results = run_fa_test_battery(entries, config=None)
-        assert len(results) == 9
+        assert len(results) == 10
 
     def test_all_test_keys_unique(self):
         entries = make_entries(sample_fa_rows())
@@ -1160,7 +1160,7 @@ class TestFullPipeline:
         assert result.composite_score is not None
         assert result.data_quality is not None
         assert result.column_detection is not None
-        assert len(result.test_results) == 9
+        assert len(result.test_results) == 10
 
     def test_pipeline_with_column_mapping(self):
         rows = [{"col_a": "FA-001", "col_b": 50000, "col_c": "Machine"}]
@@ -1257,7 +1257,7 @@ class TestSerialization:
         assert "data_quality" in d
         assert "column_detection" in d
         assert isinstance(d["test_results"], list)
-        assert len(d["test_results"]) == 9
+        assert len(d["test_results"]) == 10
 
 
 # =============================================================================

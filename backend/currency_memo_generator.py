@@ -288,7 +288,7 @@ def generate_currency_conversion_memo(
     # 5. Conclusion
     story.append(LedgerRule())
     story.append(Spacer(1, 6))
-    story.append(Paragraph("Methodology & Limitations", styles["MemoSection"]))
+    story.append(Paragraph("Methodology &amp; Limitations", styles["MemoSection"]))
     story.append(Spacer(1, 8))
 
     pct_converted = (converted_count / total_accounts * 100) if total_accounts > 0 else 0
@@ -317,7 +317,7 @@ def generate_currency_conversion_memo(
         Paragraph(
             "<b>Monetary vs. Non-Monetary Note:</b> Under IAS 21, monetary items "
             "(cash, receivables, payables) should be translated at the closing rate, "
-            "while non-monetary items (inventory, PP&E, intangible assets) carried at "
+            "while non-monetary items (inventory, PP&amp;E, intangible assets) carried at "
             "historical cost should be translated at the historical rate. "
             "This conversion applies the closing rate uniformly to all accounts. "
             "Non-monetary accounts translated at the closing rate may produce "

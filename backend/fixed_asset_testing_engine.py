@@ -3,7 +3,7 @@ Fixed Asset Testing Engine — Sprint 114
 
 Automated fixed asset register testing addressing IAS 16/ASC 360 property,
 plant and equipment assertions. Parses fixed asset registers (CSV/Excel),
-detects columns, runs 9 tests across structural, statistical, and advanced tiers.
+detects columns, runs 10 tests across structural, statistical, and advanced tiers.
 
 ZERO-STORAGE COMPLIANCE:
 - All files processed in-memory only
@@ -42,9 +42,11 @@ from shared.testing_enums import (
 # CONFIGURATION
 # =============================================================================
 
+
 @dataclass
 class FixedAssetTestingConfig:
     """Configurable thresholds for all fixed asset tests."""
+
     # FA-01: Fully depreciated still in use
     fully_depreciated_enabled: bool = True
 
@@ -222,8 +224,9 @@ FA_COLUMN_CONFIGS: list[ColumnFieldConfig] = [
     ColumnFieldConfig("asset_id_column", FA_ASSET_ID_PATTERNS, priority=10),
     ColumnFieldConfig("accumulated_depreciation_column", FA_ACCUM_DEPR_PATTERNS, priority=15),
     ColumnFieldConfig("net_book_value_column", FA_NBV_PATTERNS, priority=20),
-    ColumnFieldConfig("cost_column", FA_COST_PATTERNS, required=True,
-                      missing_note="Could not identify a Cost column", priority=25),
+    ColumnFieldConfig(
+        "cost_column", FA_COST_PATTERNS, required=True, missing_note="Could not identify a Cost column", priority=25
+    ),
     ColumnFieldConfig("description_column", FA_DESCRIPTION_PATTERNS, priority=30),
     ColumnFieldConfig("acquisition_date_column", FA_ACQUISITION_DATE_PATTERNS, priority=35),
     ColumnFieldConfig("useful_life_column", FA_USEFUL_LIFE_PATTERNS, priority=40),
@@ -237,6 +240,7 @@ FA_COLUMN_CONFIGS: list[ColumnFieldConfig] = [
 @dataclass
 class FAColumnDetection:
     """Result of fixed asset column detection."""
+
     asset_id_column: Optional[str] = None
     description_column: Optional[str] = None
     cost_column: Optional[str] = None
@@ -284,10 +288,16 @@ def detect_fa_columns(column_names: list[str]) -> FAColumnDetection:
 
     # Map shared detection results to FA-specific fields
     field_names = [
-        "asset_id_column", "description_column", "cost_column",
-        "accumulated_depreciation_column", "acquisition_date_column",
-        "useful_life_column", "depreciation_method_column",
-        "residual_value_column", "location_column", "category_column",
+        "asset_id_column",
+        "description_column",
+        "cost_column",
+        "accumulated_depreciation_column",
+        "acquisition_date_column",
+        "useful_life_column",
+        "depreciation_method_column",
+        "residual_value_column",
+        "location_column",
+        "category_column",
         "net_book_value_column",
     ]
     for field_name in field_names:
@@ -318,9 +328,11 @@ def detect_fa_columns(column_names: list[str]) -> FAColumnDetection:
 # DATA MODELS
 # =============================================================================
 
+
 @dataclass
 class FixedAssetEntry:
     """A single line from the fixed asset register."""
+
     asset_id: Optional[str] = None
     description: Optional[str] = None
     cost: float = 0.0
@@ -354,6 +366,7 @@ class FixedAssetEntry:
 @dataclass
 class FlaggedFixedAsset:
     """A fixed asset entry flagged by a test."""
+
     entry: FixedAssetEntry
     test_name: str
     test_key: str
@@ -379,6 +392,7 @@ class FlaggedFixedAsset:
 @dataclass
 class FATestResult:
     """Result of a single fixed asset test."""
+
     test_name: str
     test_key: str
     test_tier: TestTier
@@ -406,6 +420,7 @@ class FATestResult:
 @dataclass
 class FADataQuality:
     """Quality assessment of the fixed asset data."""
+
     completeness_score: float
     field_fill_rates: dict[str, float] = field(default_factory=dict)
     detected_issues: list[str] = field(default_factory=list)
@@ -423,6 +438,7 @@ class FADataQuality:
 @dataclass
 class FACompositeScore:
     """Overall fixed asset testing composite score."""
+
     score: float
     risk_tier: RiskTier
     tests_run: int
@@ -448,6 +464,7 @@ class FACompositeScore:
 @dataclass
 class FATestingResult:
     """Complete result of fixed asset testing."""
+
     composite_score: FACompositeScore
     test_results: list[FATestResult] = field(default_factory=list)
     data_quality: Optional[FADataQuality] = None
@@ -500,6 +517,7 @@ def _asset_age_years(acquisition_date_str: Optional[str], reference_date: Option
 # PARSER
 # =============================================================================
 
+
 def parse_fa_entries(
     rows: list[dict],
     detection: FAColumnDetection,
@@ -538,6 +556,7 @@ def parse_fa_entries(
 # DATA QUALITY
 # =============================================================================
 
+
 def assess_fa_data_quality(
     entries: list[FixedAssetEntry],
     detection: FAColumnDetection,
@@ -547,18 +566,33 @@ def assess_fa_data_quality(
     Delegates to shared data quality engine (Sprint 152).
     """
     configs: list[FieldQualityConfig] = [
-        FieldQualityConfig("identifier", lambda e: e.asset_id or e.description, weight=0.25,
-                           issue_threshold=0.90, issue_template="Missing identifier on {unfilled} entries"),
-        FieldQualityConfig("cost", lambda e: e.cost != 0, weight=0.35,
-                           issue_threshold=0.90, issue_template="{unfilled} entries have zero cost"),
+        FieldQualityConfig(
+            "identifier",
+            lambda e: e.asset_id or e.description,
+            weight=0.25,
+            issue_threshold=0.90,
+            issue_template="Missing identifier on {unfilled} entries",
+        ),
+        FieldQualityConfig(
+            "cost",
+            lambda e: e.cost != 0,
+            weight=0.35,
+            issue_threshold=0.90,
+            issue_template="{unfilled} entries have zero cost",
+        ),
     ]
 
     if detection.accumulated_depreciation_column:
         configs.append(FieldQualityConfig("accumulated_depreciation", lambda e: e.accumulated_depreciation != 0))
     if detection.acquisition_date_column:
-        configs.append(FieldQualityConfig("acquisition_date", lambda e: e.acquisition_date,
-                                          issue_threshold=0.80,
-                                          issue_template="Low acquisition date fill rate: {fill_pct}"))
+        configs.append(
+            FieldQualityConfig(
+                "acquisition_date",
+                lambda e: e.acquisition_date,
+                issue_threshold=0.80,
+                issue_template="Low acquisition date fill rate: {fill_pct}",
+            )
+        )
     if detection.useful_life_column:
         configs.append(FieldQualityConfig("useful_life", lambda e: e.useful_life is not None))
     if detection.category_column:
@@ -580,6 +614,7 @@ def assess_fa_data_quality(
 # =============================================================================
 # TIER 1 — STRUCTURAL TESTS
 # =============================================================================
+
 
 def test_fully_depreciated_assets(
     entries: list[FixedAssetEntry],
@@ -616,17 +651,19 @@ def test_fully_depreciated_assets(
         nbv = cost - accum
         severity = Severity.HIGH if cost > 100000 else Severity.MEDIUM if cost > 10000 else Severity.LOW
 
-        flagged.append(FlaggedFixedAsset(
-            entry=e,
-            test_name="Fully Depreciated Assets",
-            test_key="fully_depreciated",
-            test_tier=TestTier.STRUCTURAL,
-            severity=severity,
-            issue=f"Fully depreciated: {e.asset_id or e.description or 'unknown'}"
-                  f" cost=${cost:,.2f}, accum depr=${accum:,.2f}, NBV=${nbv:,.2f}",
-            confidence=0.85,
-            details={"cost": cost, "accumulated_depreciation": accum, "nbv": nbv},
-        ))
+        flagged.append(
+            FlaggedFixedAsset(
+                entry=e,
+                test_name="Fully Depreciated Assets",
+                test_key="fully_depreciated",
+                test_tier=TestTier.STRUCTURAL,
+                severity=severity,
+                issue=f"Fully depreciated: {e.asset_id or e.description or 'unknown'}"
+                f" cost=${cost:,.2f}, accum depr=${accum:,.2f}, NBV=${nbv:,.2f}",
+                confidence=0.85,
+                details={"cost": cost, "accumulated_depreciation": accum, "nbv": nbv},
+            )
+        )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return FATestResult(
@@ -678,17 +715,18 @@ def test_missing_required_fields(
 
         severity = Severity.HIGH if len(missing) >= 2 else Severity.MEDIUM
 
-        flagged.append(FlaggedFixedAsset(
-            entry=e,
-            test_name="Missing Required Fields",
-            test_key="missing_fields",
-            test_tier=TestTier.STRUCTURAL,
-            severity=severity,
-            issue=f"Missing fields: {', '.join(missing)}"
-                  f" — {e.asset_id or e.description or f'row {e.row_number}'}",
-            confidence=0.90,
-            details={"missing_fields": missing, "missing_count": len(missing)},
-        ))
+        flagged.append(
+            FlaggedFixedAsset(
+                entry=e,
+                test_name="Missing Required Fields",
+                test_key="missing_fields",
+                test_tier=TestTier.STRUCTURAL,
+                severity=severity,
+                issue=f"Missing fields: {', '.join(missing)} — {e.asset_id or e.description or f'row {e.row_number}'}",
+                confidence=0.90,
+                details={"missing_fields": missing, "missing_count": len(missing)},
+            )
+        )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return FATestResult(
@@ -740,17 +778,19 @@ def test_negative_values(
         amt = max(abs(e.cost), abs(e.accumulated_depreciation))
         severity = Severity.HIGH if amt > 50000 else Severity.MEDIUM
 
-        flagged.append(FlaggedFixedAsset(
-            entry=e,
-            test_name="Negative Values",
-            test_key="negative_values",
-            test_tier=TestTier.STRUCTURAL,
-            severity=severity,
-            issue=f"Negative values: {'; '.join(issues_found)}"
-                  f" — {e.asset_id or e.description or f'row {e.row_number}'}",
-            confidence=0.95,
-            details={"cost": e.cost, "accumulated_depreciation": e.accumulated_depreciation},
-        ))
+        flagged.append(
+            FlaggedFixedAsset(
+                entry=e,
+                test_name="Negative Values",
+                test_key="negative_values",
+                test_tier=TestTier.STRUCTURAL,
+                severity=severity,
+                issue=f"Negative values: {'; '.join(issues_found)}"
+                f" — {e.asset_id or e.description or f'row {e.row_number}'}",
+                confidence=0.95,
+                details={"cost": e.cost, "accumulated_depreciation": e.accumulated_depreciation},
+            )
+        )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return FATestResult(
@@ -805,23 +845,25 @@ def test_over_depreciation(
         excess_pct = excess / cost
         severity = Severity.HIGH if excess_pct > 0.10 else Severity.MEDIUM
 
-        flagged.append(FlaggedFixedAsset(
-            entry=e,
-            test_name="Over-Depreciation",
-            test_key="over_depreciation",
-            test_tier=TestTier.STRUCTURAL,
-            severity=severity,
-            issue=f"Depreciation exceeds cost by {excess_pct:.1%}: "
-                  f"cost=${cost:,.2f}, accum=${accum:,.2f}, excess=${excess:,.2f}"
-                  f" — {e.asset_id or e.description or f'row {e.row_number}'}",
-            confidence=0.90,
-            details={
-                "cost": cost,
-                "accumulated_depreciation": accum,
-                "excess": round(excess, 2),
-                "excess_pct": round(excess_pct, 4),
-            },
-        ))
+        flagged.append(
+            FlaggedFixedAsset(
+                entry=e,
+                test_name="Over-Depreciation",
+                test_key="over_depreciation",
+                test_tier=TestTier.STRUCTURAL,
+                severity=severity,
+                issue=f"Depreciation exceeds cost by {excess_pct:.1%}: "
+                f"cost=${cost:,.2f}, accum=${accum:,.2f}, excess=${excess:,.2f}"
+                f" — {e.asset_id or e.description or f'row {e.row_number}'}",
+                confidence=0.90,
+                details={
+                    "cost": cost,
+                    "accumulated_depreciation": accum,
+                    "excess": round(excess, 2),
+                    "excess_pct": round(excess_pct, 4),
+                },
+            )
+        )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return FATestResult(
@@ -840,6 +882,7 @@ def test_over_depreciation(
 # =============================================================================
 # TIER 2 — STATISTICAL TESTS
 # =============================================================================
+
 
 def test_useful_life_outliers(
     entries: list[FixedAssetEntry],
@@ -881,18 +924,23 @@ def test_useful_life_outliers(
         else:
             continue
 
-        flagged.append(FlaggedFixedAsset(
-            entry=e,
-            test_name="Useful Life Outliers",
-            test_key="useful_life_outliers",
-            test_tier=TestTier.STATISTICAL,
-            severity=severity,
-            issue=f"Useful life {life:.1f} years {issue_type}"
-                  f" — {e.asset_id or e.description or f'row {e.row_number}'}",
-            confidence=0.80,
-            details={"useful_life": life, "min_threshold": config.useful_life_min_years,
-                     "max_threshold": config.useful_life_max_years},
-        ))
+        flagged.append(
+            FlaggedFixedAsset(
+                entry=e,
+                test_name="Useful Life Outliers",
+                test_key="useful_life_outliers",
+                test_tier=TestTier.STATISTICAL,
+                severity=severity,
+                issue=f"Useful life {life:.1f} years {issue_type}"
+                f" — {e.asset_id or e.description or f'row {e.row_number}'}",
+                confidence=0.80,
+                details={
+                    "useful_life": life,
+                    "min_threshold": config.useful_life_min_years,
+                    "max_threshold": config.useful_life_max_years,
+                },
+            )
+        )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return FATestResult(
@@ -956,17 +1004,19 @@ def test_cost_zscore_outliers(
 
         severity = zscore_to_severity(z)
 
-        flagged.append(FlaggedFixedAsset(
-            entry=e,
-            test_name="Cost Z-Score Outliers",
-            test_key="cost_zscore_outliers",
-            test_tier=TestTier.STATISTICAL,
-            severity=severity,
-            issue=f"Outlier cost: ${abs(e.cost):,.2f} (z-score: {z:.1f}, mean: ${mean:,.2f})"
-                  f" — {e.asset_id or e.description or f'row {e.row_number}'}",
-            confidence=min(0.60 + z * 0.05, 0.95),
-            details={"z_score": round(z, 2), "mean": round(mean, 2), "stdev": round(stdev, 2)},
-        ))
+        flagged.append(
+            FlaggedFixedAsset(
+                entry=e,
+                test_name="Cost Z-Score Outliers",
+                test_key="cost_zscore_outliers",
+                test_tier=TestTier.STATISTICAL,
+                severity=severity,
+                issue=f"Outlier cost: ${abs(e.cost):,.2f} (z-score: {z:.1f}, mean: ${mean:,.2f})"
+                f" — {e.asset_id or e.description or f'row {e.row_number}'}",
+                confidence=min(0.60 + z * 0.05, 0.95),
+                details={"z_score": round(z, 2), "mean": round(mean, 2), "stdev": round(stdev, 2)},
+            )
+        )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return FATestResult(
@@ -1038,23 +1088,25 @@ def test_age_concentration(
         severity = Severity.HIGH if pct > 0.70 else Severity.MEDIUM
 
         for e in year_entries[yr]:
-            flagged.append(FlaggedFixedAsset(
-                entry=e,
-                test_name="Asset Age Concentration",
-                test_key="age_concentration",
-                test_tier=TestTier.STATISTICAL,
-                severity=severity,
-                issue=f"Year {yr} represents {pct:.1%} of total asset cost "
-                      f"(${yr_cost:,.2f}/${total_cost:,.2f})"
-                      f" — {e.asset_id or e.description or f'row {e.row_number}'}",
-                confidence=0.75,
-                details={
-                    "year": yr,
-                    "year_cost": round(yr_cost, 2),
-                    "total_cost": round(total_cost, 2),
-                    "concentration_pct": round(pct, 4),
-                },
-            ))
+            flagged.append(
+                FlaggedFixedAsset(
+                    entry=e,
+                    test_name="Asset Age Concentration",
+                    test_key="age_concentration",
+                    test_tier=TestTier.STATISTICAL,
+                    severity=severity,
+                    issue=f"Year {yr} represents {pct:.1%} of total asset cost "
+                    f"(${yr_cost:,.2f}/${total_cost:,.2f})"
+                    f" — {e.asset_id or e.description or f'row {e.row_number}'}",
+                    confidence=0.75,
+                    details={
+                        "year": yr,
+                        "year_cost": round(yr_cost, 2),
+                        "total_cost": round(total_cost, 2),
+                        "concentration_pct": round(pct, 4),
+                    },
+                )
+            )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return FATestResult(
@@ -1073,6 +1125,7 @@ def test_age_concentration(
 # =============================================================================
 # TIER 3 — ADVANCED TESTS
 # =============================================================================
+
 
 def test_duplicate_assets(
     entries: list[FixedAssetEntry],
@@ -1112,23 +1165,25 @@ def test_duplicate_assets(
         severity = Severity.HIGH if abs(cost) > 50000 else Severity.MEDIUM
 
         for e in group:
-            flagged.append(FlaggedFixedAsset(
-                entry=e,
-                test_name="Duplicate Assets",
-                test_key="duplicate_assets",
-                test_tier=TestTier.ADVANCED,
-                severity=severity,
-                issue=f"Potential duplicate: ${abs(cost):,.2f}, '{desc}'"
-                      f"{f', acquired {acq_date}' if acq_date else ''}"
-                      f" ({len(group)} occurrences)",
-                confidence=0.85,
-                details={
-                    "duplicate_count": len(group),
-                    "cost": cost,
-                    "description": desc,
-                    "acquisition_date": acq_date,
-                },
-            ))
+            flagged.append(
+                FlaggedFixedAsset(
+                    entry=e,
+                    test_name="Duplicate Assets",
+                    test_key="duplicate_assets",
+                    test_tier=TestTier.ADVANCED,
+                    severity=severity,
+                    issue=f"Potential duplicate: ${abs(cost):,.2f}, '{desc}'"
+                    f"{f', acquired {acq_date}' if acq_date else ''}"
+                    f" ({len(group)} occurrences)",
+                    confidence=0.85,
+                    details={
+                        "duplicate_count": len(group),
+                        "cost": cost,
+                        "description": desc,
+                        "acquisition_date": acq_date,
+                    },
+                )
+            )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return FATestResult(
@@ -1175,17 +1230,19 @@ def test_residual_value_anomalies(
 
         # Check negative residual
         if e.residual_value < 0:
-            flagged.append(FlaggedFixedAsset(
-                entry=e,
-                test_name="Residual Value Anomalies",
-                test_key="residual_value_anomalies",
-                test_tier=TestTier.ADVANCED,
-                severity=Severity.HIGH,
-                issue=f"Negative residual value: ${e.residual_value:,.2f}"
-                      f" — {e.asset_id or e.description or f'row {e.row_number}'}",
-                confidence=0.95,
-                details={"residual_value": e.residual_value, "cost": cost},
-            ))
+            flagged.append(
+                FlaggedFixedAsset(
+                    entry=e,
+                    test_name="Residual Value Anomalies",
+                    test_key="residual_value_anomalies",
+                    test_tier=TestTier.ADVANCED,
+                    severity=Severity.HIGH,
+                    issue=f"Negative residual value: ${e.residual_value:,.2f}"
+                    f" — {e.asset_id or e.description or f'row {e.row_number}'}",
+                    confidence=0.95,
+                    details={"residual_value": e.residual_value, "cost": cost},
+                )
+            )
             continue
 
         if e.residual_value == 0:
@@ -1197,23 +1254,25 @@ def test_residual_value_anomalies(
 
         severity = Severity.HIGH if residual_pct > 0.50 else Severity.MEDIUM
 
-        flagged.append(FlaggedFixedAsset(
-            entry=e,
-            test_name="Residual Value Anomalies",
-            test_key="residual_value_anomalies",
-            test_tier=TestTier.ADVANCED,
-            severity=severity,
-            issue=f"Residual value {residual_pct:.1%} of cost: "
-                  f"residual=${e.residual_value:,.2f}, cost=${cost:,.2f}"
-                  f" — {e.asset_id or e.description or f'row {e.row_number}'}",
-            confidence=0.80,
-            details={
-                "residual_value": e.residual_value,
-                "cost": cost,
-                "residual_pct": round(residual_pct, 4),
-                "threshold_pct": config.residual_max_pct,
-            },
-        ))
+        flagged.append(
+            FlaggedFixedAsset(
+                entry=e,
+                test_name="Residual Value Anomalies",
+                test_key="residual_value_anomalies",
+                test_tier=TestTier.ADVANCED,
+                severity=severity,
+                issue=f"Residual value {residual_pct:.1%} of cost: "
+                f"residual=${e.residual_value:,.2f}, cost=${cost:,.2f}"
+                f" — {e.asset_id or e.description or f'row {e.row_number}'}",
+                confidence=0.80,
+                details={
+                    "residual_value": e.residual_value,
+                    "cost": cost,
+                    "residual_pct": round(residual_pct, 4),
+                    "threshold_pct": config.residual_max_pct,
+                },
+            )
+        )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return FATestResult(
@@ -1229,15 +1288,89 @@ def test_residual_value_anomalies(
     )
 
 
+# Lease indicator keywords for FA-10
+_LEASE_KEYWORDS = re.compile(
+    r"\b(lease|leased|leasehold|right[\s-]*of[\s-]*use|rou\b|"
+    r"finance\s+lease|operating\s+lease|capital\s+lease)",
+    re.IGNORECASE,
+)
+
+
+def test_lease_indicators(
+    entries: list[FixedAssetEntry],
+    config: FixedAssetTestingConfig,
+) -> FATestResult:
+    """FA-10: Lease Asset Indicators.
+
+    Scans asset descriptions for keywords suggesting operating or finance leases.
+    If found, flags for confirmation of ASC 842 treatment (right-of-use asset
+    recognition, lease classification, and amortization schedule).
+    """
+    flagged: list[FlaggedFixedAsset] = []
+    for e in entries:
+        desc = (e.description or "").strip()
+        if not desc:
+            continue
+
+        match = _LEASE_KEYWORDS.search(desc)
+        if not match:
+            continue
+
+        keyword = match.group(0)
+        severity = Severity.MEDIUM
+
+        flagged.append(
+            FlaggedFixedAsset(
+                entry=e,
+                test_name="Lease Asset Indicators",
+                test_key="lease_indicators",
+                test_tier=TestTier.ADVANCED,
+                severity=severity,
+                issue=f"Potential lease asset detected (keyword: '{keyword}')"
+                f" \u2014 {e.asset_id or e.description or f'row {e.row_number}'}"
+                f" \u2014 confirm ASC 842 treatment",
+                confidence=0.70,
+                details={"keyword": keyword, "description": desc},
+            )
+        )
+
+    flag_rate = len(flagged) / max(len(entries), 1)
+    if flagged:
+        description = (
+            "Flags assets with descriptions containing lease-related keywords "
+            "(lease, ROU, right-of-use, leasehold). Flagged items should be "
+            "confirmed for proper ASC 842 / IFRS 16 treatment."
+        )
+    else:
+        description = (
+            "No lease indicator keywords detected in asset descriptions. "
+            "If the entity has lease arrangements, confirm they are recorded "
+            "in a separate lease schedule per ASC 842."
+        )
+
+    return FATestResult(
+        test_name="Lease Asset Indicators",
+        test_key="lease_indicators",
+        test_tier=TestTier.ADVANCED,
+        entries_flagged=len(flagged),
+        total_entries=len(entries),
+        flag_rate=flag_rate,
+        severity=Severity.MEDIUM if flagged else Severity.LOW,
+        description=description,
+        flagged_entries=flagged,
+    )
+
+
 # =============================================================================
 # TEST BATTERY + SCORING
 # =============================================================================
+
 
 def run_fa_test_battery(
     entries: list[FixedAssetEntry],
     config: Optional[FixedAssetTestingConfig] = None,
 ) -> list[FATestResult]:
-    """Run all 9 fixed asset tests."""
+    """Run all 10 fixed asset tests."""
     if config is None:
         config = FixedAssetTestingConfig()
 
@@ -1254,6 +1387,7 @@ def run_fa_test_battery(
         # Tier 3 — Advanced
         test_duplicate_assets(entries, config),
         test_residual_value_anomalies(entries, config),
+        test_lease_indicators(entries, config),
     ]
 
 
@@ -1283,6 +1417,7 @@ def calculate_fa_composite_score(
 # MAIN ENTRY POINT
 # =============================================================================
 
+
 def run_fixed_asset_testing(
     rows: list[dict],
     column_names: list[str],
@@ -1308,11 +1443,19 @@ def run_fixed_asset_testing(
 
     # Apply manual overrides
     if column_mapping:
-        for attr in ("asset_id_column", "description_column", "cost_column",
-                     "accumulated_depreciation_column", "acquisition_date_column",
-                     "useful_life_column", "depreciation_method_column",
-                     "residual_value_column", "location_column", "category_column",
-                     "net_book_value_column"):
+        for attr in (
+            "asset_id_column",
+            "description_column",
+            "cost_column",
+            "accumulated_depreciation_column",
+            "acquisition_date_column",
+            "useful_life_column",
+            "depreciation_method_column",
+            "residual_value_column",
+            "location_column",
+            "category_column",
+            "net_book_value_column",
+        ):
             if attr in column_mapping:
                 setattr(detection, attr, column_mapping[attr])
         detection.overall_confidence = 1.0

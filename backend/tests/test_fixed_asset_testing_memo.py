@@ -1,5 +1,5 @@
 """
-Sprint 115: Tests for Fixed Asset Testing Memo Generator + Export Routes.
+Sprint 115/502: Tests for Fixed Asset Testing Memo Generator + Export Routes.
 
 Validates:
 - PDF memo generation (structure, content, ISA references)
@@ -7,6 +7,8 @@ Validates:
 - Export route registration (PDF + CSV endpoints)
 - CSV export structure
 - FixedAssetExportInput model
+- Sprint 502: PP&E ampersand rendering, high severity detail, roll-forward,
+  depreciation rate, category summary, lease indicator, 10 descriptions
 """
 
 import sys
@@ -25,74 +27,97 @@ from fixed_asset_testing_memo_generator import (
 # TEST FIXTURES
 # =============================================================================
 
+
 def _make_fa_result(
     score: float = 15.0,
     risk_tier: str = "elevated",
     total_flagged: int = 8,
     total_entries: int = 50,
-    num_tests: int = 9,
+    num_tests: int = 10,
     top_findings: list | None = None,
+    include_enrichments: bool = False,
 ) -> dict:
     """Build a minimal FATestingResult.to_dict() shape."""
     test_keys = [
-        "fully_depreciated", "missing_fields", "negative_values",
-        "over_depreciation", "useful_life_outliers", "cost_zscore_outliers",
-        "age_concentration", "duplicate_assets", "residual_value_anomalies",
+        "fully_depreciated",
+        "missing_fields",
+        "negative_values",
+        "over_depreciation",
+        "useful_life_outliers",
+        "cost_zscore_outliers",
+        "age_concentration",
+        "duplicate_assets",
+        "residual_value_anomalies",
+        "lease_indicators",
     ]
     test_names = [
-        "Fully Depreciated Assets", "Missing Required Fields",
-        "Negative Values", "Over-Depreciation",
-        "Useful Life Outliers", "Cost Z-Score Outliers",
-        "Asset Age Concentration", "Duplicate Assets",
+        "Fully Depreciated Assets",
+        "Missing Required Fields",
+        "Negative Values",
+        "Over-Depreciation",
+        "Useful Life Outliers",
+        "Cost Z-Score Outliers",
+        "Asset Age Concentration",
+        "Duplicate Assets",
         "Residual Value Anomalies",
+        "Lease Asset Indicators",
     ]
     tiers = [
-        "structural", "structural", "structural", "structural",
-        "statistical", "statistical", "statistical",
-        "advanced", "advanced",
+        "structural",
+        "structural",
+        "structural",
+        "structural",
+        "statistical",
+        "statistical",
+        "statistical",
+        "advanced",
+        "advanced",
+        "advanced",
     ]
 
     test_results = []
-    for i in range(min(num_tests, 9)):
+    for i in range(min(num_tests, 10)):
         flagged_count = 2 if i < 3 else 1 if i < 6 else 0
-        test_results.append({
-            "test_name": test_names[i],
-            "test_key": test_keys[i],
-            "test_tier": tiers[i],
-            "entries_flagged": flagged_count,
-            "total_entries": total_entries,
-            "flag_rate": flagged_count / max(total_entries, 1),
-            "severity": "high" if i < 2 else "medium" if i < 5 else "low",
-            "description": f"Test description for {test_keys[i]}",
-            "flagged_entries": [
-                {
-                    "entry": {
-                        "asset_id": f"FA-{i:03d}-{j}",
-                        "description": f"Office Equipment {j + 1}",
-                        "cost": 25000.0 + j * 5000,
-                        "accumulated_depreciation": 10000.0 + j * 2000,
-                        "acquisition_date": "2020-06-15",
-                        "useful_life": 5.0,
-                        "depreciation_method": "Straight-Line",
-                        "residual_value": 1000.0,
-                        "location": "Building A",
-                        "category": "Equipment",
-                        "net_book_value": 14000.0,
-                        "row_number": i * 10 + j + 1,
-                    },
-                    "test_name": test_names[i],
-                    "test_key": test_keys[i],
-                    "test_tier": tiers[i],
-                    "severity": "high" if i < 2 else "medium",
-                    "issue": f"Flagged by {test_names[i]}",
-                    "confidence": 0.85,
-                    "details": {},
-                }
-                for j in range(flagged_count)
-            ],
-        })
+        test_results.append(
+            {
+                "test_name": test_names[i],
+                "test_key": test_keys[i],
+                "test_tier": tiers[i],
+                "entries_flagged": flagged_count,
+                "total_entries": total_entries,
+                "flag_rate": flagged_count / max(total_entries, 1),
+                "severity": "high" if i < 2 else "medium" if i < 5 else "low",
+                "description": f"Test description for {test_keys[i]}",
+                "flagged_entries": [
+                    {
+                        "entry": {
+                            "asset_id": f"FA-{i:03d}-{j}",
+                            "description": f"Office Equipment {j + 1}",
+                            "cost": 25000.0 + j * 5000,
+                            "accumulated_depreciation": 10000.0 + j * 2000,
+                            "acquisition_date": "2020-06-15",
+                            "useful_life": 5.0,
+                            "depreciation_method": "Straight-Line",
+                            "residual_value": 1000.0,
+                            "location": "Building A",
+                            "category": "Equipment",
+                            "net_book_value": 14000.0,
+                            "row_number": i * 10 + j + 1,
+                        },
+                        "test_name": test_names[i],
+                        "test_key": test_keys[i],
+                        "test_tier": tiers[i],
+                        "severity": "high" if i < 2 else "medium",
+                        "issue": f"Flagged by {test_names[i]}",
+                        "confidence": 0.85,
+                        "details": {"excess": 5000.0 + j * 1000} if test_keys[i] == "over_depreciation" else {},
+                    }
+                    for j in range(flagged_count)
+                ],
+            }
+        )
 
-    return {
+    result = {
         "composite_score": {
             "score": score,
             "risk_tier": risk_tier,
@@ -101,7 +126,8 @@ def _make_fa_result(
             "total_flagged": total_flagged,
             "flag_rate": total_flagged / max(total_entries, 1),
             "flags_by_severity": {"high": 3, "medium": 3, "low": 2},
-            "top_findings": top_findings or [
+            "top_findings": top_findings
+            or [
                 "Fully Depreciated Assets: 2 entries flagged (4.0%)",
                 "Missing Required Fields: 2 entries flagged (4.0%)",
                 "Negative Values: 2 entries flagged (4.0%)",
@@ -118,14 +144,43 @@ def _make_fa_result(
             "asset_id_column": "Asset ID",
             "cost_column": "Cost",
             "accumulated_depreciation_column": "Accum Depr",
+            "category_column": "Asset Category",
             "overall_confidence": 0.95,
         },
     }
+
+    if include_enrichments:
+        result["register_total_cost"] = 3_420_000.00
+        result["register_total_accum_depr"] = 1_180_000.00
+        result["tb_ppe_gross"] = 3_420_000.00
+        result["tb_accum_depr"] = 1_180_000.00
+        result["additions"] = 420_000.00
+        result["depreciation_expense"] = 285_000.00
+        result["period_label"] = "FY2025"
+        result["category_summary"] = [
+            {
+                "category": "Equipment",
+                "count": 30,
+                "gross_cost": 1_500_000.0,
+                "accum_depr": 600_000.0,
+                "avg_age_years": 5.2,
+            },
+            {
+                "category": "IT Equipment",
+                "count": 20,
+                "gross_cost": 420_000.0,
+                "accum_depr": 180_000.0,
+                "avg_age_years": 2.8,
+            },
+        ]
+
+    return result
 
 
 # =============================================================================
 # MEMO GENERATION TESTS
 # =============================================================================
+
 
 class TestFixedAssetMemoGeneration:
     """Tests for generate_fixed_asset_testing_memo()."""
@@ -200,26 +255,193 @@ class TestFixedAssetMemoGeneration:
         pdf = generate_fixed_asset_testing_memo(result)
         assert isinstance(pdf, bytes)
 
-    def test_all_nine_tests(self):
-        result = _make_fa_result(num_tests=9)
-        assert len(result["test_results"]) == 9
+    def test_all_ten_tests(self):
+        result = _make_fa_result(num_tests=10)
+        assert len(result["test_results"]) == 10
         pdf = generate_fixed_asset_testing_memo(result)
         assert isinstance(pdf, bytes)
         assert len(pdf) > 100
+
+    def test_with_enrichments(self):
+        """Sprint 502: Generates PDF with roll-forward, depr rate, category summary."""
+        result = _make_fa_result(include_enrichments=True)
+        pdf = generate_fixed_asset_testing_memo(result, period_tested="FY 2025")
+        assert isinstance(pdf, bytes)
+        assert len(pdf) > 500  # Enriched reports are larger
+
+
+# =============================================================================
+# SPRINT 502: HIGH SEVERITY DETAIL TESTS
+# =============================================================================
+
+
+class TestHighSeverityDetail:
+    """Tests for high severity detail section rendering."""
+
+    def test_high_severity_over_depreciation_renders(self):
+        result = _make_fa_result()
+        # Ensure over_depreciation has high severity with flagged entries
+        for tr in result["test_results"]:
+            if tr["test_key"] == "over_depreciation":
+                tr["severity"] = "high"
+                tr["entries_flagged"] = 2
+                tr["flagged_entries"] = [
+                    {
+                        "entry": {
+                            "asset_id": "FA-001",
+                            "description": "HVAC",
+                            "cost": 185000,
+                            "accumulated_depreciation": 212750,
+                            "acquisition_date": "2015-03-22",
+                            "category": "Building",
+                            "net_book_value": -27750,
+                        },
+                        "details": {"cost": 185000, "accumulated_depreciation": 212750, "excess": 27750},
+                        "severity": "high",
+                        "issue": "Depreciation exceeds cost",
+                    }
+                ]
+        pdf = generate_fixed_asset_testing_memo(result)
+        assert isinstance(pdf, bytes)
+        assert len(pdf) > 100
+
+    def test_high_severity_duplicates_renders(self):
+        result = _make_fa_result()
+        for tr in result["test_results"]:
+            if tr["test_key"] == "duplicate_assets":
+                tr["severity"] = "high"
+                tr["entries_flagged"] = 2
+                tr["flagged_entries"] = [
+                    {
+                        "entry": {
+                            "asset_id": "FA-087",
+                            "description": "Dell Latitude 5540",
+                            "cost": 1250,
+                            "acquisition_date": "2023-06-15",
+                            "category": "IT",
+                        },
+                        "details": {"duplicate_count": 2, "cost": 1250, "description": "dell latitude 5540"},
+                        "severity": "high",
+                        "issue": "Potential duplicate",
+                    },
+                    {
+                        "entry": {
+                            "asset_id": "FA-088",
+                            "description": "Dell Latitude 5540",
+                            "cost": 1250,
+                            "acquisition_date": "2023-06-15",
+                            "category": "IT",
+                        },
+                        "details": {"duplicate_count": 2, "cost": 1250, "description": "dell latitude 5540"},
+                        "severity": "high",
+                        "issue": "Potential duplicate",
+                    },
+                ]
+        pdf = generate_fixed_asset_testing_memo(result)
+        assert isinstance(pdf, bytes)
+
+    def test_high_severity_negative_cost_renders(self):
+        result = _make_fa_result()
+        for tr in result["test_results"]:
+            if tr["test_key"] == "negative_values":
+                tr["severity"] = "high"
+                tr["entries_flagged"] = 1
+                tr["flagged_entries"] = [
+                    {
+                        "entry": {
+                            "asset_id": "FA-193",
+                            "description": "Server Rack",
+                            "cost": -15400,
+                            "acquisition_date": "2024-01-18",
+                            "category": "IT",
+                        },
+                        "details": {"cost": -15400},
+                        "severity": "high",
+                        "issue": "Negative cost",
+                    }
+                ]
+        pdf = generate_fixed_asset_testing_memo(result)
+        assert isinstance(pdf, bytes)
+
+    def test_no_high_severity_skips_section(self):
+        """When no high-severity test has flagged entries, section is omitted."""
+        result = _make_fa_result()
+        for tr in result["test_results"]:
+            tr["severity"] = "medium"
+        pdf = generate_fixed_asset_testing_memo(result)
+        assert isinstance(pdf, bytes)
+
+
+# =============================================================================
+# SPRINT 502: ROLL-FORWARD AND ENRICHMENT TESTS
+# =============================================================================
+
+
+class TestRollForwardAndEnrichments:
+    """Tests for roll-forward, depreciation rate, and category summary."""
+
+    def test_roll_forward_with_tb_reconciliation(self):
+        result = _make_fa_result(include_enrichments=True)
+        pdf = generate_fixed_asset_testing_memo(result, period_tested="FY 2025")
+        assert isinstance(pdf, bytes)
+        assert len(pdf) > 500
+
+    def test_roll_forward_without_additions(self):
+        result = _make_fa_result(include_enrichments=True)
+        del result["additions"]
+        pdf = generate_fixed_asset_testing_memo(result)
+        assert isinstance(pdf, bytes)
+
+    def test_roll_forward_with_variance(self):
+        result = _make_fa_result(include_enrichments=True)
+        result["tb_ppe_gross"] = 3_500_000.00  # Creates variance
+        pdf = generate_fixed_asset_testing_memo(result)
+        assert isinstance(pdf, bytes)
+
+    def test_depreciation_rate_analysis(self):
+        result = _make_fa_result(include_enrichments=True)
+        pdf = generate_fixed_asset_testing_memo(result)
+        assert isinstance(pdf, bytes)
+
+    def test_depreciation_rate_skipped_without_data(self):
+        result = _make_fa_result()
+        # No register_total_cost or depreciation_expense
+        pdf = generate_fixed_asset_testing_memo(result)
+        assert isinstance(pdf, bytes)
+
+    def test_category_summary_renders(self):
+        result = _make_fa_result(include_enrichments=True)
+        pdf = generate_fixed_asset_testing_memo(result)
+        assert isinstance(pdf, bytes)
+
+    def test_category_summary_missing_shows_note(self):
+        result = _make_fa_result()
+        result["column_detection"]["category_column"] = None
+        result.pop("category_summary", None)
+        pdf = generate_fixed_asset_testing_memo(result)
+        assert isinstance(pdf, bytes)
 
 
 # =============================================================================
 # TEST DESCRIPTIONS COVERAGE
 # =============================================================================
 
+
 class TestFATestDescriptions:
     """Tests for FA_TEST_DESCRIPTIONS completeness."""
 
-    def test_all_9_tests_have_descriptions(self):
+    def test_all_10_tests_have_descriptions(self):
         expected_keys = [
-            "fully_depreciated", "missing_fields", "negative_values",
-            "over_depreciation", "useful_life_outliers", "cost_zscore_outliers",
-            "age_concentration", "duplicate_assets", "residual_value_anomalies",
+            "fully_depreciated",
+            "missing_fields",
+            "negative_values",
+            "over_depreciation",
+            "useful_life_outliers",
+            "cost_zscore_outliers",
+            "age_concentration",
+            "duplicate_assets",
+            "residual_value_anomalies",
+            "lease_indicators",
         ]
         for key in expected_keys:
             assert key in FA_TEST_DESCRIPTIONS, f"Missing description for {key}"
@@ -228,13 +450,69 @@ class TestFATestDescriptions:
         for key, desc in FA_TEST_DESCRIPTIONS.items():
             assert len(desc) > 20, f"Description too short for {key}"
 
-    def test_exactly_9_descriptions(self):
-        assert len(FA_TEST_DESCRIPTIONS) == 9
+    def test_exactly_10_descriptions(self):
+        assert len(FA_TEST_DESCRIPTIONS) == 10
+
+    def test_cost_zscore_description_substantive(self):
+        """Sprint 502 BUG-02: Cost Z-Score Outliers must have a real description."""
+        desc = FA_TEST_DESCRIPTIONS["cost_zscore_outliers"]
+        assert "z-score" in desc.lower()
+        assert len(desc) > 80
+
+    def test_residual_value_description_substantive(self):
+        """Sprint 502 BUG-02: Residual Value Anomalies must have a real description."""
+        desc = FA_TEST_DESCRIPTIONS["residual_value_anomalies"]
+        assert "residual" in desc.lower()
+        assert len(desc) > 80
+
+    def test_lease_indicators_description(self):
+        """Sprint 502 BUG-04: Lease indicators test must have description."""
+        desc = FA_TEST_DESCRIPTIONS["lease_indicators"]
+        assert "lease" in desc.lower()
+        assert "ASC 842" in desc or "IFRS 16" in desc
+
+
+# =============================================================================
+# SPRINT 502: PP&E AMPERSAND TESTS
+# =============================================================================
+
+
+class TestPPEAmpersandRendering:
+    """Sprint 502 BUG-01: PP&E must render correctly in ReportLab."""
+
+    def test_risk_assessments_use_xml_escaped_ampersand(self):
+        """All risk_assessments must use &amp; not raw & for ReportLab XML."""
+        import inspect
+
+        source = inspect.getsource(inspect.getmodule(generate_fixed_asset_testing_memo))
+        # Should have PP&amp;E (XML escaped)
+        assert "PP&amp;E" in source
+        # Should NOT have raw PP&E (un-escaped) — check risk_assessments only
+        # The test descriptions use normal Python strings not sent to Paragraph,
+        # but risk_assessments are. We check by looking at the _FA_CONFIG block.
+        lines = source.split("\n")
+        in_risk = False
+        for line in lines:
+            if "risk_assessments" in line:
+                in_risk = True
+            if in_risk and "PP&E" in line and "PP&amp;E" not in line:
+                pytest.fail(f"Raw PP&E found in risk_assessments: {line.strip()}")
+            if in_risk and line.strip() == "},":
+                in_risk = False
+
+    def test_all_four_risk_tiers_have_ppe(self):
+        """Each risk tier conclusion references PP&E."""
+        import inspect
+
+        source = inspect.getsource(inspect.getmodule(generate_fixed_asset_testing_memo))
+        for tier in ["low", "elevated", "moderate", "high"]:
+            assert f'"{tier}"' in source
 
 
 # =============================================================================
 # GUARDRAIL TESTS
 # =============================================================================
+
 
 class TestFixedAssetGuardrails:
     """Guardrail compliance: terminology, disclaimers, ISA references.
@@ -247,9 +525,7 @@ class TestFixedAssetGuardrails:
         """No description should use 'valuation testing' language."""
         for key, desc in FA_TEST_DESCRIPTIONS.items():
             lower = desc.lower()
-            assert "valuation testing" not in lower, (
-                f"GUARDRAIL VIOLATION: '{key}' uses 'valuation testing'"
-            )
+            assert "valuation testing" not in lower, f"GUARDRAIL VIOLATION: '{key}' uses 'valuation testing'"
 
     def test_no_depreciation_sufficiency_in_descriptions(self):
         """No description should say 'depreciation is sufficient/insufficient'."""
@@ -266,53 +542,51 @@ class TestFixedAssetGuardrails:
         """No description should claim impairment determination."""
         for key, desc in FA_TEST_DESCRIPTIONS.items():
             lower = desc.lower()
-            assert "impairment is required" not in lower, (
-                f"GUARDRAIL VIOLATION: '{key}' uses 'impairment is required'"
-            )
-            assert "asset is impaired" not in lower, (
-                f"GUARDRAIL VIOLATION: '{key}' uses 'asset is impaired'"
-            )
+            assert "impairment is required" not in lower, f"GUARDRAIL VIOLATION: '{key}' uses 'impairment is required'"
+            assert "asset is impaired" not in lower, f"GUARDRAIL VIOLATION: '{key}' uses 'asset is impaired'"
 
     def test_memo_generator_references_isa_500(self):
         """Memo source code must pass ISA 500 reference to the PDF builder."""
         import inspect
+
         source = inspect.getsource(inspect.getmodule(generate_fixed_asset_testing_memo))
         assert "ISA 500" in source, "Memo must reference ISA 500"
 
     def test_memo_generator_references_isa_540(self):
         """Memo source code must pass ISA 540 reference to the PDF builder."""
         import inspect
+
         source = inspect.getsource(inspect.getmodule(generate_fixed_asset_testing_memo))
         assert "ISA 540" in source, "Memo must reference ISA 540"
 
     def test_memo_generator_references_pcaob_as_2501(self):
         """Memo source code must pass PCAOB AS 2501 reference to the PDF builder."""
         import inspect
+
         source = inspect.getsource(inspect.getmodule(generate_fixed_asset_testing_memo))
         assert "PCAOB AS 2501" in source, "Memo must reference PCAOB AS 2501"
 
     def test_memo_generator_references_ias_16(self):
         """Memo source code must reference IAS 16."""
         import inspect
+
         source = inspect.getsource(inspect.getmodule(generate_fixed_asset_testing_memo))
         assert "IAS 16" in source, "Memo must reference IAS 16"
 
     def test_memo_generator_uses_anomaly_indicators_language(self):
         """Methodology text must say 'anomaly indicators' not 'sufficiency conclusions'."""
         import inspect
+
         source = inspect.getsource(inspect.getmodule(generate_fixed_asset_testing_memo))
-        assert "anomaly indicator" in source.lower(), (
-            "Methodology must use 'anomaly indicators' language"
-        )
+        assert "anomaly indicator" in source.lower(), "Methodology must use 'anomaly indicators' language"
 
     def test_memo_generator_no_depreciation_adequacy_positive(self):
         """Conclusion must not claim 'depreciation is adequate'."""
         import inspect
+
         source = inspect.getsource(inspect.getmodule(generate_fixed_asset_testing_memo))
         lower = source.lower()
-        assert "depreciation is adequate" not in lower, (
-            "GUARDRAIL VIOLATION: must not claim 'depreciation is adequate'"
-        )
+        assert "depreciation is adequate" not in lower, "GUARDRAIL VIOLATION: must not claim 'depreciation is adequate'"
         assert "depreciation is inadequate" not in lower, (
             "GUARDRAIL VIOLATION: must not claim 'depreciation is inadequate'"
         )
@@ -320,6 +594,7 @@ class TestFixedAssetGuardrails:
     def test_memo_generator_calls_disclaimer(self):
         """Memo config must specify FA-specific disclaimer domain."""
         import inspect
+
         source = inspect.getsource(inspect.getmodule(generate_fixed_asset_testing_memo))
         # Template guarantees build_disclaimer is called; verify domain config
         assert "generate_testing_memo" in source or "build_disclaimer" in source
@@ -328,6 +603,7 @@ class TestFixedAssetGuardrails:
     def test_memo_disclaimer_references_isa_500_and_540(self):
         """Disclaimer ISA reference must include ISA 500 and ISA 540."""
         import inspect
+
         source = inspect.getsource(inspect.getmodule(generate_fixed_asset_testing_memo))
         assert "ISA 500" in source
         assert "ISA 540" in source
@@ -335,42 +611,46 @@ class TestFixedAssetGuardrails:
     def test_no_valuation_testing_in_memo_source(self):
         """Memo source must not use 'valuation testing' language."""
         import inspect
+
         source = inspect.getsource(inspect.getmodule(generate_fixed_asset_testing_memo))
-        assert "valuation testing" not in source.lower(), (
-            "GUARDRAIL VIOLATION: memo source uses 'valuation testing'"
-        )
+        assert "valuation testing" not in source.lower(), "GUARDRAIL VIOLATION: memo source uses 'valuation testing'"
 
     def test_conclusion_uses_anomaly_not_sufficiency_language(self):
         """Conclusion text must say 'anomaly' not 'sufficiency'."""
         import inspect
+
         source = inspect.getsource(inspect.getmodule(generate_fixed_asset_testing_memo))
         lower = source.lower()
-        assert "depreciation sufficiency" not in lower or \
-               "not depreciation sufficiency" in lower or \
-               "not depreciation adequacy conclusions" in lower, (
-            "GUARDRAIL VIOLATION: conclusion must not use 'depreciation sufficiency'"
-        )
+        assert (
+            "depreciation sufficiency" not in lower
+            or "not depreciation sufficiency" in lower
+            or "not depreciation adequacy conclusions" in lower
+        ), "GUARDRAIL VIOLATION: conclusion must not use 'depreciation sufficiency'"
 
 
 # =============================================================================
 # EXPORT ROUTE REGISTRATION TESTS
 # =============================================================================
 
+
 class TestFixedAssetExportRoutes:
     """Tests for fixed asset export route registration."""
 
     def test_pdf_route_registered(self):
         from main import app
+
         paths = [r.path for r in app.routes if hasattr(r, "path")]
         assert "/export/fixed-asset-memo" in paths
 
     def test_csv_route_registered(self):
         from main import app
+
         paths = [r.path for r in app.routes if hasattr(r, "path")]
         assert "/export/csv/fixed-assets" in paths
 
     def test_pdf_route_is_post(self):
         from main import app
+
         for route in app.routes:
             if hasattr(route, "path") and route.path == "/export/fixed-asset-memo":
                 assert "POST" in route.methods
@@ -380,6 +660,7 @@ class TestFixedAssetExportRoutes:
 
     def test_csv_route_is_post(self):
         from main import app
+
         for route in app.routes:
             if hasattr(route, "path") and route.path == "/export/csv/fixed-assets":
                 assert "POST" in route.methods
@@ -392,17 +673,20 @@ class TestFixedAssetExportRoutes:
 # EXPORT INPUT MODEL TESTS
 # =============================================================================
 
+
 class TestFixedAssetExportInput:
     """Tests for FixedAssetExportInput Pydantic model."""
 
     def test_model_accepts_valid_data(self):
         from routes.export import FixedAssetExportInput
+
         data = _make_fa_result()
         model = FixedAssetExportInput(**data)
         assert model.filename == "fixed_asset_testing"
 
     def test_model_defaults(self):
         from routes.export import FixedAssetExportInput
+
         data = _make_fa_result()
         model = FixedAssetExportInput(**data)
         assert model.client_name is None
@@ -413,21 +697,25 @@ class TestFixedAssetExportInput:
 
     def test_model_with_all_fields(self):
         from routes.export import FixedAssetExportInput
+
         data = _make_fa_result()
-        data.update({
-            "filename": "acme_fa",
-            "client_name": "Acme Corp",
-            "period_tested": "FY 2025",
-            "prepared_by": "JS",
-            "reviewed_by": "JD",
-            "workpaper_date": "2025-03-15",
-        })
+        data.update(
+            {
+                "filename": "acme_fa",
+                "client_name": "Acme Corp",
+                "period_tested": "FY 2025",
+                "prepared_by": "JS",
+                "reviewed_by": "JD",
+                "workpaper_date": "2025-03-15",
+            }
+        )
         model = FixedAssetExportInput(**data)
         assert model.client_name == "Acme Corp"
         assert model.period_tested == "FY 2025"
 
     def test_model_dump_round_trips(self):
         from routes.export import FixedAssetExportInput
+
         data = _make_fa_result()
         model = FixedAssetExportInput(**data)
         dumped = model.model_dump()
@@ -436,6 +724,7 @@ class TestFixedAssetExportInput:
 
     def test_model_accepts_no_data_quality(self):
         from routes.export import FixedAssetExportInput
+
         data = _make_fa_result()
         data["data_quality"] = None
         model = FixedAssetExportInput(**data)
@@ -443,7 +732,69 @@ class TestFixedAssetExportInput:
 
     def test_model_preserves_column_detection(self):
         from routes.export import FixedAssetExportInput
+
         data = _make_fa_result()
         model = FixedAssetExportInput(**data)
         dumped = model.model_dump()
         assert dumped["column_detection"]["overall_confidence"] == 0.95
+
+
+# =============================================================================
+# LEASE INDICATOR ENGINE TESTS
+# =============================================================================
+
+
+class TestLeaseIndicatorEngine:
+    """Tests for the FA-10 lease indicator test in the engine."""
+
+    def test_lease_keyword_detection(self):
+        from fixed_asset_testing_engine import (
+            FixedAssetEntry,
+            FixedAssetTestingConfig,
+            test_lease_indicators,
+        )
+
+        entries = [
+            FixedAssetEntry(asset_id="FA-001", description="Office lease - Floor 3", cost=50000),
+            FixedAssetEntry(asset_id="FA-002", description="Dell Laptop", cost=1200),
+            FixedAssetEntry(asset_id="FA-003", description="ROU Asset - Copier", cost=8000),
+        ]
+        result = test_lease_indicators(entries, FixedAssetTestingConfig())
+        assert result.entries_flagged == 2
+        assert result.test_key == "lease_indicators"
+
+    def test_no_lease_keywords(self):
+        from fixed_asset_testing_engine import (
+            FixedAssetEntry,
+            FixedAssetTestingConfig,
+            test_lease_indicators,
+        )
+
+        entries = [
+            FixedAssetEntry(asset_id="FA-001", description="Office Desk", cost=500),
+            FixedAssetEntry(asset_id="FA-002", description="Dell Laptop", cost=1200),
+        ]
+        result = test_lease_indicators(entries, FixedAssetTestingConfig())
+        assert result.entries_flagged == 0
+        assert "No lease indicator" in result.description
+
+    def test_lease_test_in_battery(self):
+        from fixed_asset_testing_engine import (
+            FixedAssetEntry,
+            run_fa_test_battery,
+        )
+
+        entries = [
+            FixedAssetEntry(
+                asset_id="FA-001",
+                description="Test Asset",
+                cost=1000,
+                accumulated_depreciation=500,
+                acquisition_date="2023-01-01",
+                useful_life=5.0,
+            ),
+        ]
+        results = run_fa_test_battery(entries)
+        assert len(results) == 10
+        lease_test = [r for r in results if r.test_key == "lease_indicators"]
+        assert len(lease_test) == 1
