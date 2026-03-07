@@ -4,6 +4,14 @@
 
 ---
 
+## Multi-Currency Conversion Report (Sprint 509)
+
+1. **Sample data counts must match list lengths**: The sample data had `unconverted_count: 12` with only 4 items in `unconverted_items`. The engine keeps these in sync, but hardcoded sample data didn't. The memo generator now defensively derives the displayed count from `len(truly_unconverted)` rather than trusting the separate count field. When a scope metric references a detail table, always derive the metric from the actual data, not a separate field.
+
+2. **Rate source attribution belongs to the caller, not the generator**: The memo generator cannot know whether rates came from Reuters, Bloomberg, or manual entry. The methodology text should describe what the system does ("converts using provided closing rates") not claim a specific data source. The `source_context_note` field is the caller's responsibility.
+
+---
+
 ## Statistical Sampling Evaluation Report (Sprint 508)
 
 1. **Sample report values must be computed from engine formulas, not hardcoded**: The sampling evaluation sample data had Basic Precision = $25,000 (1 × SI), but the engine computes BP = SI × CF = $25,000 × 3.0 = $75,000. With EM = 0, BP always equals TM, making any PASS conclusion with errors arithmetically impossible. When hardcoding sample data for report generators, verify self-consistency by computing values through the actual engine formulas (or at minimum, manual arithmetic that matches the engine).

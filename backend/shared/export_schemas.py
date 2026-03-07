@@ -250,6 +250,7 @@ class CurrencyConversionMemoInput(WorkpaperMetadata):
     balance_check_passed: bool = True
     balance_imbalance: float = 0.0
     conversion_summary: str = ""
+    currency_exposure: list = []
     filename: str = "currency_conversion"
 
 

@@ -172,6 +172,39 @@ All verification items confirmed:
 
 ---
 
+### Sprint 509 — Multi-Currency Conversion Report Fixes & Improvements
+**Status:** COMPLETE
+**Goal:** Fix 5 bugs and add 4 improvements to the Multi-Currency Conversion memo: unconverted count consistency, Roman numeral section headers, conclusion section, reference number collision, rate source contradiction, conversion output table, non-monetary account identification, CTA note, suggested rate sources.
+
+#### Bug Fixes
+- [x] BUG-01: Unconverted count in Scope derived from `len(truly_unconverted)` — separates stale_rate warnings from true failures. Sample data fixed: `unconverted_count` 12→4 to match 4 items.
+- [x] BUG-02: Roman numeral section headers I–VII: I. Scope, II. Exchange Rates Applied, III. Conversion Output, IV. Unconverted Items, V. Methodology & Limitations, VI. Authoritative References, VII. Conclusion
+- [x] BUG-03: Section VII Conclusion with conversion success rate, missing currency list, unconverted summary, and IAS 21/ASC 830-30 non-monetary reminder
+- [x] BUG-04: Reference prefix changed from PAC- to MCY- (unique, non-colliding). Cross-reference in sample reports updated. All 17 report prefixes verified unique.
+- [x] BUG-05: Rate source: methodology says "closing exchange rates provided by the practitioner" (accurate). Sample data `source_context_note` changed from "Reuters" to "provided by practitioner".
+
+#### Improvements
+- [x] IMP-01: Section III Conversion Output — `CurrencyExposure` dataclass in engine, per-currency aggregation (account count, foreign total, rate, USD equivalent, % of total), totals row. Fallback text when no exposure data.
+- [x] IMP-02: Non-monetary account identification in Section V — metadata-unavailable variant lists Inventory, PP&E, Intangible Assets, Goodwill, Prepaid Expenses as likely requiring historical rate treatment
+- [x] IMP-03: CTA note in Section V — manual-required variant: "CTA computation requires prior period closing rates... The practitioner should compute the CTA manually and record the adjusting entry to AOCI"
+- [x] IMP-04: Suggested Rate Source column (6th column) in unconverted items table: "Federal Reserve H.10 or Reuters for [CCY]/USD". HIGH severity intercompany note below table when applicable. Rate source note below table.
+
+#### Files Modified
+- `currency_memo_generator.py` — complete rewrite: 7 Roman-numeral sections, MCY- prefix, `_build_conversion_output_table()`, `_build_unconverted_items_table()` with 6 columns, `_roman()` helper, `_format_currency_amount()`, non-monetary note, CTA note, conclusion section, stale_rate separation, intercompany HIGH severity warning
+- `currency_engine.py` — `CurrencyExposure` dataclass, `_build_currency_exposure()` aggregation, `currency_exposure` field on `ConversionResult` + `to_dict()`
+- `shared/export_schemas.py` — `currency_exposure: list = []` field on `CurrencyConversionMemoInput`
+- `tests/test_currency_memo.py` — 25 tests (up from 8): section headers, unconverted count consistency (2), reference prefix, conversion output (2), non-monetary note, CTA note, suggested rate sources, intercompany HIGH severity (2), conclusion (2), export schema (4), engine dataclass (2)
+- `generate_sample_reports.py` — sample data: `unconverted_count` 12→4, added `currency_exposure` (5 currencies), `source_context_note` Reuters→practitioner, cross-reference prefix PAC-→MCY-
+
+#### Verification
+- [x] `npm run build` passes (all ƒ Dynamic)
+- [x] `npm test` passes (1,329 tests, 111 suites)
+- [x] `pytest` passes (6,057 passed, 0 skipped, 0 errors — up from 6,041)
+- [x] Regenerated sample PDF: 15_currency_conversion.pdf (44,901 bytes)
+- [x] All 17 report reference prefixes verified unique (no collisions)
+
+---
+
 ### Sprint 507 — Test Suite Fixes (Error + Skip)
 **Status:** COMPLETE
 **Goal:** Fix 1 error and 1 skipped test from Sprint 506 verification run.

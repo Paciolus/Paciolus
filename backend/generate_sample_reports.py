@@ -166,7 +166,7 @@ def gen_tb_diagnostic():
                 # Change 6: Cross-reference to currency memo
                 "cross_reference_note": (
                     "Note: Unconverted intercompany balances were also identified in the "
-                    "Multi-Currency Conversion memo (Ref: PAC-2026-0215-042). These findings "
+                    "Multi-Currency Conversion memo (Ref: MCY-2026-0215-042). These findings "
                     "may relate to the same counterparty. Cross-reference recommended."
                 ),
             },
@@ -2899,11 +2899,13 @@ def gen_sampling_evaluation():
 def gen_currency_conversion():
     from currency_memo_generator import generate_currency_conversion_memo
 
+    # Sprint 509: Fixed unconverted_count (was 12, only 4 items — now 4),
+    # added currency_exposure, fixed source_context_note (user-provided rates, not Reuters)
     conversion_result = {
         "presentation_currency": "USD",
         "total_accounts": 247,
         "converted_count": 235,
-        "unconverted_count": 12,
+        "unconverted_count": 4,
         "currencies_found": ["USD", "EUR", "GBP", "CAD", "JPY"],
         "rates_applied": {
             "EUR/USD": "1.0842",
@@ -2911,6 +2913,48 @@ def gen_currency_conversion():
             "CAD/USD": "0.7423",
             "JPY/USD": "0.006689",
         },
+        "currency_exposure": [
+            {
+                "currency": "USD",
+                "account_count": 140,
+                "foreign_total": 8_450_000.00,
+                "rate": "1.0000",
+                "usd_equivalent": 8_450_000.00,
+                "pct_of_total": 62.3,
+            },
+            {
+                "currency": "EUR",
+                "account_count": 45,
+                "foreign_total": 2_150_000.00,
+                "rate": "1.0842",
+                "usd_equivalent": 2_331_030.00,
+                "pct_of_total": 17.2,
+            },
+            {
+                "currency": "GBP",
+                "account_count": 28,
+                "foreign_total": 1_120_000.00,
+                "rate": "1.2715",
+                "usd_equivalent": 1_424_080.00,
+                "pct_of_total": 10.5,
+            },
+            {
+                "currency": "CAD",
+                "account_count": 15,
+                "foreign_total": 980_000.00,
+                "rate": "0.7423",
+                "usd_equivalent": 727_454.00,
+                "pct_of_total": 5.4,
+            },
+            {
+                "currency": "JPY",
+                "account_count": 7,
+                "foreign_total": 93_500_000.00,
+                "rate": "0.006689",
+                "usd_equivalent": 625_421.50,
+                "pct_of_total": 4.6,
+            },
+        ],
         "unconverted_items": [
             {
                 "account_number": "5100",
@@ -2952,7 +2996,7 @@ def gen_currency_conversion():
         reviewed_by=REVIEWED,
         workpaper_date=WP_DATE,
         source_document_title="Multi-Currency Trial Balance — FY2025",
-        source_context_note="Closing rates sourced from Reuters as of Dec 31, 2025",
+        source_context_note="Closing rates provided by practitioner as of Dec 31, 2025",
     )
     save_pdf("15_currency_conversion.pdf", pdf)
 

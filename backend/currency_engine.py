@@ -314,6 +314,28 @@ class ConversionFlag:
 
 
 @dataclass
+class CurrencyExposure:
+    """Per-currency aggregation for the conversion output table."""
+
+    currency: str
+    account_count: int
+    foreign_total: float
+    rate: str  # rate applied or "N/A"
+    usd_equivalent: float
+    pct_of_total: float
+
+    def to_dict(self) -> dict:
+        return {
+            "currency": self.currency,
+            "account_count": self.account_count,
+            "foreign_total": self.foreign_total,
+            "rate": self.rate,
+            "usd_equivalent": self.usd_equivalent,
+            "pct_of_total": self.pct_of_total,
+        }
+
+
+@dataclass
 class ConversionResult:
     """Result of a multi-currency TB conversion."""
 
@@ -329,6 +351,7 @@ class ConversionResult:
     balance_imbalance: float = 0.0
     conversion_summary: str = ""
     converted_rows: list[dict] = field(default_factory=list)
+    currency_exposure: list[CurrencyExposure] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return {
@@ -343,6 +366,7 @@ class ConversionResult:
             "balance_check_passed": self.balance_check_passed,
             "balance_imbalance": self.balance_imbalance,
             "conversion_summary": self.conversion_summary,
+            "currency_exposure": [e.to_dict() for e in self.currency_exposure],
         }
 
 
@@ -807,6 +831,11 @@ def convert_trial_balance(
     # Recalculate severity for missing_rate flags based on category totals
     _recalculate_flag_severity(flags, df, amount_column)
 
+    # Build currency exposure summary (per-currency aggregation)
+    currency_exposure = _build_currency_exposure(
+        df, amount_column, converted_col_name, presentation_currency, rates_applied
+    )
+
     # Clean up temp column
     df.drop(columns=["_currency_normalized"], inplace=True)
 
@@ -833,7 +862,66 @@ def convert_trial_balance(
         rates_applied=rates_applied,
         conversion_summary=summary,
         converted_rows=converted_rows,
+        currency_exposure=currency_exposure,
     )
+
+
+def _build_currency_exposure(
+    df: pd.DataFrame,
+    amount_column: str,
+    converted_col_name: str,
+    presentation_currency: str,
+    rates_applied: dict[str, str],
+) -> list[CurrencyExposure]:
+    """Aggregate conversion results by currency for the exposure summary table."""
+    if "_currency_normalized" not in df.columns or amount_column not in df.columns:
+        return []
+
+    exposure: list[CurrencyExposure] = []
+    total_usd = 0.0
+
+    for curr in sorted(df["_currency_normalized"].unique()):
+        if not curr or len(curr) != 3:
+            continue
+        mask = df["_currency_normalized"] == curr
+        acct_count = int(mask.sum())
+
+        # Foreign currency total (original amounts)
+        try:
+            foreign_total = float(df.loc[mask, amount_column].fillna(0).astype(float).sum())
+        except (ValueError, TypeError):
+            foreign_total = 0.0
+
+        # USD equivalent (converted amounts)
+        usd_equiv = 0.0
+        if converted_col_name in df.columns:
+            try:
+                usd_equiv = float(df.loc[mask, converted_col_name].fillna(0).astype(float).sum())
+            except (ValueError, TypeError):
+                usd_equiv = 0.0
+
+        # Rate applied
+        rate_key = f"{curr}/{presentation_currency}"
+        rate_str = rates_applied.get(rate_key, "1.0000" if curr == presentation_currency else "N/A")
+
+        total_usd += usd_equiv
+        exposure.append(
+            CurrencyExposure(
+                currency=curr,
+                account_count=acct_count,
+                foreign_total=round(foreign_total, 2),
+                rate=rate_str,
+                usd_equivalent=round(usd_equiv, 2),
+                pct_of_total=0.0,  # Calculated below
+            )
+        )
+
+    # Calculate percentages
+    if total_usd != 0:
+        for exp in exposure:
+            exp.pct_of_total = round(abs(exp.usd_equivalent) / abs(total_usd) * 100, 1) if total_usd else 0.0
+
+    return exposure
 
 
 def _recalculate_flag_severity(
