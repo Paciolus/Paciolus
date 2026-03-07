@@ -151,6 +151,7 @@
 - [x] `pytest` passes (6,094+44 new = 6,138 total)
 - [x] Regenerated all 21 sample PDFs — expense category: 45,939 bytes (up from ~30KB), 5 pages (up from 3)
 - [x] No other reports unintentionally modified
+- **Commit:** `5fa510b`
 
 #### Acceptance Criteria
 - [x] Doubled word "procedures procedures" removed from Section I narrative
