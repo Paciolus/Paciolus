@@ -137,6 +137,7 @@
 #### Review
 - Circular FK warning persists (SAWarning about organizations/subscriptions/users cycle) — harmless since FKs are OFF during drop
 - Test count: 6,001 backend + 1,345 frontend (net +1 from un-skipping)
+- **Commit:** `d7a699f`
 
 ---
 
