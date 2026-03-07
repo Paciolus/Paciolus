@@ -168,8 +168,19 @@ tools:
   data_quality_preflight:
     data_description: "trial balance data file"
     references:
-      - codification: "ASC 250-10"
-        topic: "Accounting Changes and Error Corrections — Overall"
+      - body: "IAASB"
+        codification: "ISA 500"
+        topic: "Audit Evidence — Data Reliability"
+        paragraph: "Various"
+        status: "Current"
+      - body: "IAASB"
+        codification: "ISA 330"
+        topic: "Auditor's Responses to Assessed Risks"
+        paragraph: "Various"
+        status: "Current"
+      - body: "IAASB"
+        codification: "ISA 315"
+        topic: "Identifying and Assessing Risks of Material Misstatement"
         paragraph: "Various"
         status: "Current"
 

@@ -1,11 +1,19 @@
 """
-Tests for the Pre-Flight Data Quality Engine — Sprint 283
+Tests for the Pre-Flight Data Quality Engine — Sprint 283, Sprint 510
 
-7 tests covering all 6 quality checks + route registration.
+Original 7 tests + Sprint 510 additions:
+- Balance check (3 tests)
+- Score breakdown (2 tests)
+- Affected items (2 tests)
+- Tests affected (1 test)
+- to_dict serialization (1 test)
 """
 
-
-from preflight_engine import PreFlightReport, run_preflight
+from preflight_engine import (
+    PreFlightReport,
+    ScoreComponent,
+    run_preflight,
+)
 
 
 class TestPreflightCleanFile:
@@ -15,9 +23,9 @@ class TestPreflightCleanFile:
         column_names = ["Account Name", "Debit", "Credit"]
         rows = [
             {"Account Name": "Cash", "Debit": 1000.0, "Credit": 0.0},
-            {"Account Name": "Revenue", "Debit": 0.0, "Credit": 2000.0},
+            {"Account Name": "Revenue", "Debit": 0.0, "Credit": 1500.0},
             {"Account Name": "Expenses", "Debit": 500.0, "Credit": 0.0},
-            {"Account Name": "Equity", "Debit": 0.0, "Credit": 1500.0},
+            {"Account Name": "Equity", "Debit": 0.0, "Credit": 0.0},
         ]
 
         report = run_preflight(column_names, rows, "clean.csv")
@@ -50,8 +58,8 @@ class TestPreflightMissingColumns:
         assert len(col_issues) >= 1
         assert col_issues[0].severity == "high"
 
-        # Readiness should be significantly reduced
-        assert report.readiness_score < 80
+        # Readiness should be significantly reduced (column_detection HIGH = -20)
+        assert report.readiness_score <= 80
 
 
 class TestPreflightNullValues:
@@ -190,6 +198,10 @@ class TestPreflightToDict:
         assert isinstance(d["columns"], list)
         assert isinstance(d["issues"], list)
 
+        # Sprint 510: new fields
+        assert "balance_check" in d
+        assert "score_breakdown" in d
+
 
 class TestPreflightRouteRegistration:
     """Verify the /audit/preflight endpoint is registered."""
@@ -211,3 +223,224 @@ class TestPreflightRouteRegistration:
 
         route_paths = [r.path for r in app.routes if hasattr(r, "path")]
         assert "/export/csv/preflight-issues" in route_paths
+
+
+# ═══════════════════════════════════════════════════════════════
+# Sprint 510: New tests
+# ═══════════════════════════════════════════════════════════════
+
+
+class TestPreflightBalanceCheck:
+    """Sprint 510: TB balance verification."""
+
+    def test_balanced_tb(self):
+        """Balanced TB → balance_check.balanced = True, no tb_balance issue."""
+        column_names = ["Account Name", "Debit", "Credit"]
+        rows = [
+            {"Account Name": "Cash", "Debit": 5000, "Credit": 0},
+            {"Account Name": "Revenue", "Debit": 0, "Credit": 3000},
+            {"Account Name": "Expenses", "Debit": 1000, "Credit": 0},
+            {"Account Name": "Equity", "Debit": 0, "Credit": 3000},
+        ]
+
+        report = run_preflight(column_names, rows, "balanced.csv")
+
+        assert report.balance_check is not None
+        assert report.balance_check.balanced is True
+        assert report.balance_check.total_debits == 6000.0
+        assert report.balance_check.total_credits == 6000.0
+        assert report.balance_check.difference == 0.0
+
+        tb_issues = [i for i in report.issues if i.category == "tb_balance"]
+        assert len(tb_issues) == 0
+
+    def test_unbalanced_tb(self):
+        """Unbalanced TB → balance_check.balanced = False, HIGH tb_balance issue."""
+        column_names = ["Account Name", "Debit", "Credit"]
+        rows = [
+            {"Account Name": "Cash", "Debit": 5000, "Credit": 0},
+            {"Account Name": "Revenue", "Debit": 0, "Credit": 3000},
+            {"Account Name": "Expenses", "Debit": 1000, "Credit": 0},
+            # Missing equity — debits > credits
+        ]
+
+        report = run_preflight(column_names, rows, "unbalanced.csv")
+
+        assert report.balance_check is not None
+        assert report.balance_check.balanced is False
+        assert report.balance_check.total_debits == 6000.0
+        assert report.balance_check.total_credits == 3000.0
+        assert report.balance_check.difference == 3000.0
+
+        tb_issues = [i for i in report.issues if i.category == "tb_balance"]
+        assert len(tb_issues) == 1
+        assert tb_issues[0].severity == "high"
+
+    def test_balanced_within_tolerance(self):
+        """Difference within tolerance → balanced."""
+        column_names = ["Account Name", "Debit", "Credit"]
+        rows = [
+            {"Account Name": "Cash", "Debit": 1000.005, "Credit": 0},
+            {"Account Name": "Equity", "Debit": 0, "Credit": 1000.0},
+        ]
+
+        report = run_preflight(column_names, rows, "rounding.csv")
+
+        assert report.balance_check is not None
+        assert report.balance_check.balanced is True
+
+
+class TestPreflightScoreBreakdown:
+    """Sprint 510: Score breakdown components."""
+
+    def test_clean_file_all_components_100(self):
+        """Clean file → all component scores should be 100."""
+        column_names = ["Account Name", "Debit", "Credit"]
+        rows = [
+            {"Account Name": "Cash", "Debit": 1000, "Credit": 0},
+            {"Account Name": "Revenue", "Debit": 0, "Credit": 1000},
+        ]
+
+        report = run_preflight(column_names, rows, "clean.csv")
+
+        assert len(report.score_breakdown) > 0
+        for sc in report.score_breakdown:
+            assert isinstance(sc, ScoreComponent)
+            assert sc.score == 100.0
+
+        # Total should be 100
+        total = sum(sc.contribution for sc in report.score_breakdown)
+        assert abs(total - 100.0) < 0.1
+
+    def test_issue_reduces_component_score(self):
+        """Issues should reduce the relevant component score."""
+        column_names = ["Account Name", "Debit", "Credit"]
+        rows = [
+            {"Account Name": "Cash", "Debit": 1000, "Credit": 0},
+            {"Account Name": "Cash", "Debit": -200, "Credit": 0},
+            {"Account Name": "Revenue", "Debit": 0, "Credit": 800},
+        ]
+
+        report = run_preflight(column_names, rows, "issues.csv")
+
+        # mixed_signs should have reduced score
+        mixed_sc = [sc for sc in report.score_breakdown if sc.component == "mixed_signs"]
+        assert len(mixed_sc) == 1
+        assert mixed_sc[0].score < 100.0
+
+        # tb_balance should still be 100 (balanced)
+        tb_sc = [sc for sc in report.score_breakdown if sc.component == "tb_balance"]
+        assert len(tb_sc) == 1
+        assert tb_sc[0].score == 100.0
+
+
+class TestPreflightAffectedItems:
+    """Sprint 510: Affected item identifiers."""
+
+    def test_encoding_affected_items(self):
+        """Encoding issues should list affected account names."""
+        column_names = ["Account Name", "Debit", "Credit"]
+        rows = [
+            {"Account Name": "Café Expenses", "Debit": 500, "Credit": 0},
+            {"Account Name": "Cash", "Debit": 200, "Credit": 0},
+            {"Account Name": "Revenue", "Debit": 0, "Credit": 700},
+        ]
+
+        report = run_preflight(column_names, rows, "encoding.csv")
+
+        enc_issues = [i for i in report.issues if i.category == "encoding"]
+        assert len(enc_issues) == 1
+        assert "Café Expenses" in enc_issues[0].affected_items
+
+    def test_mixed_signs_affected_items(self):
+        """Mixed sign issues should list affected account names."""
+        column_names = ["Account Name", "Debit", "Credit"]
+        rows = [
+            {"Account Name": "Cash", "Debit": 1000, "Credit": 0},
+            {"Account Name": "Cash", "Debit": -200, "Credit": 0},
+            {"Account Name": "Revenue", "Debit": 0, "Credit": 800},
+        ]
+
+        report = run_preflight(column_names, rows, "mixed.csv")
+
+        sign_issues = [i for i in report.issues if i.category == "mixed_signs"]
+        assert len(sign_issues) == 1
+        assert "Cash" in sign_issues[0].affected_items
+
+
+class TestPreflightTestsAffected:
+    """Sprint 510: Tests affected count."""
+
+    def test_issues_have_tests_affected(self):
+        """All issues should have a tests_affected count > 0."""
+        column_names = ["Account Name", "Debit", "Credit"]
+        rows = [
+            {"Account Name": "Cash", "Debit": 1000, "Credit": 0},
+            {"Account Name": "Cash", "Debit": -200, "Credit": 0},
+            {"Account Name": "Revenue", "Debit": 0, "Credit": 800},
+        ]
+
+        report = run_preflight(column_names, rows, "test.csv")
+
+        for issue in report.issues:
+            assert issue.tests_affected > 0, f"Issue {issue.category} has 0 tests_affected"
+
+
+class TestPreflightToDictSprint510:
+    """Sprint 510: Enhanced to_dict serialization."""
+
+    def test_to_dict_has_new_issue_fields(self):
+        """Issues in to_dict should have affected_items and tests_affected."""
+        column_names = ["Account Name", "Debit", "Credit"]
+        rows = [
+            {"Account Name": "Café", "Debit": 500, "Credit": 0},
+            {"Account Name": "Cash", "Debit": 200, "Credit": 0},
+            {"Account Name": "Revenue", "Debit": 0, "Credit": 700},
+        ]
+
+        report = run_preflight(column_names, rows, "test.csv")
+        d = report.to_dict()
+
+        for issue in d["issues"]:
+            assert "affected_items" in issue
+            assert "affected_items_truncated" in issue
+            assert "affected_items_total" in issue
+            assert "tests_affected" in issue
+            assert isinstance(issue["affected_items"], list)
+            assert isinstance(issue["tests_affected"], int)
+
+    def test_to_dict_balance_check(self):
+        """to_dict should include balance_check."""
+        column_names = ["Account Name", "Debit", "Credit"]
+        rows = [
+            {"Account Name": "Cash", "Debit": 1000, "Credit": 0},
+            {"Account Name": "Equity", "Debit": 0, "Credit": 1000},
+        ]
+
+        report = run_preflight(column_names, rows, "test.csv")
+        d = report.to_dict()
+
+        assert "balance_check" in d
+        bc = d["balance_check"]
+        assert bc["balanced"] is True
+        assert bc["total_debits"] == 1000.0
+        assert bc["total_credits"] == 1000.0
+
+    def test_to_dict_score_breakdown(self):
+        """to_dict should include score_breakdown."""
+        column_names = ["Account Name", "Debit", "Credit"]
+        rows = [
+            {"Account Name": "Cash", "Debit": 1000, "Credit": 0},
+            {"Account Name": "Equity", "Debit": 0, "Credit": 1000},
+        ]
+
+        report = run_preflight(column_names, rows, "test.csv")
+        d = report.to_dict()
+
+        assert "score_breakdown" in d
+        assert len(d["score_breakdown"]) > 0
+        for sc in d["score_breakdown"]:
+            assert "component" in sc
+            assert "weight" in sc
+            assert "score" in sc
+            assert "contribution" in sc

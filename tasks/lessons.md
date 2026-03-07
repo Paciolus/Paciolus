@@ -4,6 +4,16 @@
 
 ---
 
+## Data Quality Pre-Flight Report (Sprint 510)
+
+1. **Test data for balanced TB**: When adding a TB balance check, existing test data that was "clean" may no longer be clean if debits != credits. The original clean file test had debits=1500, credits=3500 — unbalanced. Always verify test fixture data satisfies ALL quality checks, not just the ones originally tested.
+
+2. **Weight redistribution requires test assertion updates**: When redistributing scoring weights (e.g., adding a new 25% component), existing tests that assert on score thresholds will break. A column_detection HIGH issue with weight 30 produces score 70, but with weight 20 produces score 80 — changing the pass/fail boundary. Update score threshold assertions whenever weights change.
+
+3. **`_calculate_readiness` should return breakdown alongside score**: Rather than computing score separately and then reconstructing the breakdown, having the function return both as a tuple ensures the displayed breakdown is always mathematically consistent with the displayed total. This prevents the "displayed score doesn't match displayed components" bug pattern.
+
+---
+
 ## Multi-Currency Conversion Report (Sprint 509)
 
 1. **Sample data counts must match list lengths**: The sample data had `unconverted_count: 12` with only 4 items in `unconverted_items`. The engine keeps these in sync, but hardcoded sample data didn't. The memo generator now defensively derives the displayed count from `len(truly_unconverted)` rather than trusting the separate count field. When a scope metric references a detail table, always derive the metric from the actual data, not a separate field.

@@ -172,6 +172,44 @@ All verification items confirmed:
 
 ---
 
+### Sprint 510 — Data Quality Pre-Flight Report Fixes & Improvements
+**Status:** COMPLETE
+**Goal:** Fix 4 bugs and add 4 improvements to the Data Quality Pre-Flight Report: severity column word-wrap, wrong authoritative reference, missing conclusion, missing TB balance check, score derivation, low-confidence remediation, named account lists, downstream impact ranking.
+
+#### Bug Fixes
+- [x] BUG-01: Widen severity column from 0.55 to 0.75 inch to prevent "MEDI UM" word-wrap. Added "Tests" column (0.4 inch). Redistributed column widths across 7 columns summing to 7.0 inch.
+- [x] BUG-02: Replace ASC 250-10 with ISA 500, ISA 330, ISA 315 in both FASB and GASB YAMLs for data_quality_preflight. Per-reference body overrides (IAASB). Disclaimer updated to reference ISA 500/330/315.
+- [x] BUG-03: Add dynamic Conclusion section with caveats built from issue list. Balanced TB → caveats from issues sorted by tests_affected. Unbalanced TB → blocker message (no caveats, just "obtain corrected TB").
+- [x] BUG-04: Add `_check_tb_balance()` as Check 0 (weight 25%). `BalanceCheck` dataclass with total_debits, total_credits, difference, balanced, tolerance. Renders as Section II "Trial Balance Integrity Check" with leader dots and status indicator. Unbalanced → HIGH severity issue (tests_affected=12).
+
+#### Improvements
+- [x] IMP-01: `ScoreComponent` dataclass. `_calculate_readiness()` now returns `(score, breakdown)` tuple. 7 weighted components: TB Balance (25%), Column Detection (20%), Data Completeness (15%), Duplicate Detection (10%), Encoding Quality (5%), Sign Convention (15%), Active Balances (10%). Renders as "Readiness Score Breakdown" table in Scope section with component names, weights, scores, contributions, and bold total row.
+- [x] IMP-02: Low-confidence column remediation notes. After Column Detection table, any column with confidence < 80% gets italic remediation note with role name, confidence, detected column name, and recommendation to use column override.
+- [x] IMP-03: `affected_items: list[str]` field on `PreFlightIssue`. Each check function now collects identifiers: account names for encoding/mixed_signs/duplicates/zero_balance, row identifiers for null_values. `to_dict()` caps at 10 items with `affected_items_truncated` flag and `affected_items_total` count. Renders as italic footnotes below issues table.
+- [x] IMP-04: `tests_affected: int` field on `PreFlightIssue`. `TESTS_AFFECTED_BY_CATEGORY` dict maps each issue category to downstream test count (e.g., column_detection=12, encoding=3). Issues table sorted by tests_affected descending. New "Tests" column in PDF table.
+
+#### Weight Redistribution
+Old weights: column_detection=30, null_values=20, duplicates=15, encoding=10, mixed_signs=15, zero_balance=10 (total=100)
+New weights: tb_balance=25, column_detection=20, null_values=15, duplicates=10, encoding=5, mixed_signs=15, zero_balance=10 (total=100)
+
+#### Files Modified
+- `shared/authoritative_language/fasb_scope_methodology.yml` — data_quality_preflight: ASC 250-10 → ISA 500 + ISA 330 + ISA 315 (IAASB body overrides)
+- `shared/authoritative_language/gasb_scope_methodology.yml` — data_quality_preflight: GASB 34 → ISA 500 + ISA 330 + ISA 315 (IAASB body overrides)
+- `shared/diagnostic_response_schemas.py` — `PreFlightIssueResponse`: +downstream_impact, +affected_items, +affected_items_truncated, +affected_items_total, +tests_affected. New `PreFlightBalanceCheckResponse` and `PreFlightScoreComponentResponse` models. `PreFlightReportResponse`: +balance_check, +score_breakdown
+- `preflight_engine.py` — `BalanceCheck`, `ScoreComponent` dataclasses. `_check_tb_balance()` function. `_calculate_readiness()` returns breakdown. `TESTS_AFFECTED_BY_CATEGORY` and `DOWNSTREAM_IMPACT` dicts updated. `affected_items` populated in all check functions. `LOW_CONFIDENCE_THRESHOLD` constant. Weight redistribution.
+- `preflight_memo_generator.py` — Complete restructure: Section numbering (I Scope w/ breakdown, II Balance Check, III Column Detection w/ low-conf notes, IV Issues w/ Tests column + affected items, V References, VI Conclusion). Severity column 0.55→0.75 inch. `_build_conclusion()` dynamic text builder. `_COMPONENT_DISPLAY_NAMES` dict.
+- `generate_sample_reports.py` — Enriched preflight data: balance_check, score_breakdown (7 components), 4 issues with downstream_impact/affected_items/tests_affected, updated categories and severity labels
+- `tests/test_preflight.py` — 22 tests (up from 14): +3 balance check, +2 score breakdown, +2 affected items, +1 tests_affected, +3 to_dict serialization. Fixed test data: balanced TB in clean file test, adjusted assertion for new weight distribution.
+
+#### Verification
+- [x] `npm run build` passes (all Dynamic)
+- [x] `npm test` passes (1,329 tests, 111 suites)
+- [x] `pytest` passes (6,068 passed, 0 failures — up from 6,041)
+- [x] Regenerated all 21 sample PDFs — preflight report 44,550 bytes (enriched)
+- [x] No other reports unintentionally modified (all 21 regenerated, timestamp-only on non-preflight)
+
+---
+
 ### Sprint 509 — Multi-Currency Conversion Report Fixes & Improvements
 **Status:** COMPLETE
 **Goal:** Fix 5 bugs and add 4 improvements to the Multi-Currency Conversion memo: unconverted count consistency, Roman numeral section headers, conclusion section, reference number collision, rate source contradiction, conversion output table, non-monetary account identification, CTA note, suggested rate sources.

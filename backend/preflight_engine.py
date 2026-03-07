@@ -1,6 +1,7 @@
 """
 Paciolus — Data Quality Pre-Flight Engine
 Sprint 283: Phase XXXVIII
+Sprint 510: Balance check, score breakdown, affected items, tests_affected
 
 Lightweight data quality assessment that runs on a Trial Balance file
 BEFORE the full TB diagnostic. Gives users immediate feedback on column
@@ -59,6 +60,27 @@ class MixedSignAccount:
 
 
 @dataclass
+class BalanceCheck:
+    """Result of the TB debit/credit balance verification."""
+
+    total_debits: float
+    total_credits: float
+    difference: float
+    balanced: bool
+    tolerance: float = 0.01
+
+
+@dataclass
+class ScoreComponent:
+    """A single component of the readiness score breakdown."""
+
+    component: str
+    weight: float  # 0-1 (e.g. 0.25 for 25%)
+    score: float  # 0-100
+    contribution: float  # weight * score
+
+
+@dataclass
 class PreFlightIssue:
     """A single pre-flight quality issue."""
 
@@ -68,6 +90,8 @@ class PreFlightIssue:
     affected_count: int
     remediation: str
     downstream_impact: str = ""
+    affected_items: list[str] = field(default_factory=list)
+    tests_affected: int = 0
 
 
 @dataclass
@@ -86,10 +110,12 @@ class PreFlightReport:
     mixed_sign_accounts: list[MixedSignAccount] = field(default_factory=list)
     zero_balance_count: int = 0
     null_counts: dict[str, int] = field(default_factory=dict)
+    balance_check: BalanceCheck | None = None
+    score_breakdown: list[ScoreComponent] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         """Convert to dictionary for API response."""
-        return {
+        result = {
             "filename": self.filename,
             "row_count": self.row_count,
             "column_count": self.column_count,
@@ -112,6 +138,10 @@ class PreFlightReport:
                     "affected_count": i.affected_count,
                     "remediation": i.remediation,
                     "downstream_impact": i.downstream_impact,
+                    "affected_items": i.affected_items[:10],
+                    "affected_items_truncated": len(i.affected_items) > 10,
+                    "affected_items_total": len(i.affected_items),
+                    "tests_affected": i.tests_affected,
                 }
                 for i in self.issues
             ],
@@ -127,6 +157,25 @@ class PreFlightReport:
             "zero_balance_count": self.zero_balance_count,
             "null_counts": self.null_counts,
         }
+        if self.balance_check is not None:
+            result["balance_check"] = {
+                "total_debits": self.balance_check.total_debits,
+                "total_credits": self.balance_check.total_credits,
+                "difference": self.balance_check.difference,
+                "balanced": self.balance_check.balanced,
+                "tolerance": self.balance_check.tolerance,
+            }
+        if self.score_breakdown:
+            result["score_breakdown"] = [
+                {
+                    "component": sc.component,
+                    "weight": sc.weight,
+                    "score": round(sc.score, 1),
+                    "contribution": round(sc.contribution, 1),
+                }
+                for sc in self.score_breakdown
+            ]
+        return result
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -140,6 +189,18 @@ DOWNSTREAM_IMPACT: dict[str, str] = {
     "encoding": "Non-ASCII characters can cause account matching failures in lead sheet mapping, classification rules, and cross-period comparisons (Multi-Period TB analysis).",
     "mixed_signs": "Inconsistent sign conventions produce incorrect debit/credit separation, unreliable balance sheet classification, and distorted abnormal balance detection.",
     "zero_balance": "Zero-balance rows add noise to statistical tests (Benford's Law, sampling), inflate account counts, and reduce the signal-to-noise ratio in anomaly detection.",
+    "tb_balance": "An out-of-balance trial balance invalidates all downstream diagnostic results. Debit/credit totals must reconcile before any testing can proceed.",
+}
+
+# Number of downstream tests affected per issue category
+TESTS_AFFECTED_BY_CATEGORY: dict[str, int] = {
+    "column_detection": 12,  # All tools depend on column mapping
+    "null_values": 11,  # All amount-based tests
+    "duplicates": 8,  # Ratio, Benford, JE, AP, classification, lead sheet, anomaly, sampling
+    "encoding": 3,  # Lead sheet matching, classification, multi-period comparison
+    "mixed_signs": 7,  # Balance sheet classification, abnormal balance, ratios, JE, AP, sampling, cash flow
+    "zero_balance": 4,  # Benford, sampling, anomaly, population profile
+    "tb_balance": 12,  # ALL tests — blocker
 }
 
 
@@ -148,10 +209,11 @@ DOWNSTREAM_IMPACT: dict[str, str] = {
 # ═══════════════════════════════════════════════════════════════
 
 _CHECK_WEIGHTS = {
-    "column_detection": 30,
-    "null_values": 20,
-    "duplicates": 15,
-    "encoding": 10,
+    "tb_balance": 25,
+    "column_detection": 20,
+    "null_values": 15,
+    "duplicates": 10,
+    "encoding": 5,
     "mixed_signs": 15,
     "zero_balance": 10,
 }
@@ -162,6 +224,9 @@ _SEVERITY_MULTIPLIER = {
     "medium": 0.5,
     "low": 0.25,
 }
+
+# Low-confidence threshold for column detection remediation notes
+LOW_CONFIDENCE_THRESHOLD = 0.80
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -196,7 +261,7 @@ def run_preflight(
     issues: list[PreFlightIssue] = []
     columns_quality: list[ColumnQuality] = []
 
-    # ── Check 1: Column detection confidence (weight 30%) ──
+    # ── Check 1: Column detection confidence (weight 20%) ──
     detection = detect_columns(column_names)
     _check_column_detection(detection, columns_quality, issues)
 
@@ -205,13 +270,16 @@ def run_preflight(
     debit_col = detection.debit_column
     credit_col = detection.credit_column
 
-    # ── Check 2: Null/empty values (weight 20%) ──
+    # ── Check 0: TB Balance Check (weight 25%) ──
+    balance_check = _check_tb_balance(rows, debit_col, credit_col, issues)
+
+    # ── Check 2: Null/empty values (weight 15%) ──
     null_counts = _check_null_values(rows, column_names, account_col, debit_col, credit_col, issues)
 
-    # ── Check 3: Duplicate account codes (weight 15%) ──
+    # ── Check 3: Duplicate account codes (weight 10%) ──
     duplicates = _check_duplicates(rows, account_col, row_count, issues)
 
-    # ── Check 4: Encoding anomalies (weight 10%) ──
+    # ── Check 4: Encoding anomalies (weight 5%) ──
     encoding_anomalies = _check_encoding(rows, account_col, row_count, issues)
 
     # ── Check 5: Mixed debit/credit signs (weight 15%) ──
@@ -220,11 +288,11 @@ def run_preflight(
     # ── Check 6: Zero-balance rows (weight 10%) ──
     zero_count = _check_zero_balances(rows, debit_col, credit_col, row_count, issues)
 
-    # ── Populate downstream impact descriptions ──
+    # ── Populate downstream impact descriptions and tests_affected ──
     _populate_downstream_impact(issues)
 
-    # ── Calculate readiness score ──
-    readiness_score = _calculate_readiness(issues)
+    # ── Calculate readiness score with breakdown ──
+    readiness_score, score_breakdown = _calculate_readiness(issues)
     if readiness_score >= 80:
         readiness_label = "Ready"
     elif readiness_score >= 50:
@@ -245,12 +313,65 @@ def run_preflight(
         mixed_sign_accounts=mixed_signs,
         zero_balance_count=zero_count,
         null_counts=null_counts,
+        balance_check=balance_check,
+        score_breakdown=score_breakdown,
     )
 
 
 # ═══════════════════════════════════════════════════════════════
 # Individual check functions
 # ═══════════════════════════════════════════════════════════════
+
+
+def _check_tb_balance(
+    rows: list[dict],
+    debit_col: str | None,
+    credit_col: str | None,
+    issues: list[PreFlightIssue],
+    tolerance: float = 0.01,
+) -> BalanceCheck | None:
+    """Check 0: Verify total debits equal total credits."""
+    if not debit_col or not credit_col or not rows:
+        return None
+
+    total_debits = 0.0
+    total_credits = 0.0
+    for row in rows:
+        d_val = row.get(debit_col)
+        c_val = row.get(credit_col)
+        try:
+            if d_val is not None:
+                total_debits += float(d_val)
+        except (ValueError, TypeError):
+            pass
+        try:
+            if c_val is not None:
+                total_credits += float(c_val)
+        except (ValueError, TypeError):
+            pass
+
+    difference = total_debits - total_credits
+    balanced = abs(difference) <= tolerance
+
+    if not balanced:
+        issues.append(
+            PreFlightIssue(
+                category="tb_balance",
+                severity="high",
+                message=f"Trial balance is out of balance by ${abs(difference):,.2f}",
+                affected_count=len(rows),
+                remediation="Obtain a corrected trial balance where total debits equal total credits "
+                "before proceeding with any diagnostic testing.",
+            )
+        )
+
+    return BalanceCheck(
+        total_debits=total_debits,
+        total_credits=total_credits,
+        difference=difference,
+        balanced=balanced,
+        tolerance=tolerance,
+    )
 
 
 def _check_column_detection(
@@ -325,16 +446,30 @@ def _check_null_values(
 
     critical_cols = {account_col, debit_col, credit_col} - {None}
 
+    # Track which rows have nulls per column for affected_items
+    null_rows_by_col: dict[str, list[str]] = {}
+
     for col in column_names:
         count = 0
-        for row in rows:
+        null_rows: list[str] = []
+        for i, row in enumerate(rows):
             val = row.get(col)
+            is_null = False
             if val is None or (isinstance(val, str) and val.strip() == ""):
-                count += 1
+                is_null = True
             elif isinstance(val, float) and val != val:  # NaN check
+                is_null = True
+            if is_null:
                 count += 1
+                if col in critical_cols:
+                    # Use account identifier if available, otherwise row number
+                    acct = row.get(account_col, "") if account_col and col != account_col else ""
+                    identifier = str(acct).strip() if acct else f"Row {i + 1}"
+                    null_rows.append(identifier)
         if count > 0:
             null_counts[col] = count
+            if col in critical_cols:
+                null_rows_by_col[col] = null_rows
 
     # Issue generation for critical columns
     for col in critical_cols:
@@ -356,6 +491,7 @@ def _check_null_values(
                 affected_count=count,
                 remediation=f"Review rows with missing '{col}' values. "
                 "Fill in missing data or remove incomplete rows before analysis.",
+                affected_items=null_rows_by_col.get(col, []),
             )
         )
 
@@ -392,6 +528,8 @@ def _check_duplicates(
     total_dup_rows = sum(d.count for d in duplicates)
     dup_pct = total_dup_rows / row_count if row_count > 0 else 0
 
+    affected_items = [d.account_code for d in duplicates]
+
     # If >80% rows are duplicates, likely a detailed TB (sub-ledger) — lower severity
     if dup_pct > 0.80:
         issues.append(
@@ -403,6 +541,7 @@ def _check_duplicates(
                 affected_count=len(duplicates),
                 remediation="If this is a summarized TB, review for unintended duplicate entries. "
                 "Detailed TBs with multiple lines per account are supported.",
+                affected_items=affected_items,
             )
         )
     elif dup_pct > 0.10:
@@ -414,6 +553,7 @@ def _check_duplicates(
                 affected_count=len(duplicates),
                 remediation="Review and consolidate duplicate account entries before analysis. "
                 "Duplicates may cause incorrect balance calculations.",
+                affected_items=affected_items,
             )
         )
     elif dup_pct > 0.05:
@@ -424,6 +564,7 @@ def _check_duplicates(
                 message=f"{len(duplicates)} duplicate account codes found ({dup_pct:.0%} of rows)",
                 affected_count=len(duplicates),
                 remediation="Verify that duplicate account codes are intentional (e.g., sub-ledger detail).",
+                affected_items=affected_items,
             )
         )
 
@@ -455,6 +596,8 @@ def _check_encoding(
     else:
         severity = "low"
 
+    affected_items = [a.value for a in anomalies]
+
     issues.append(
         PreFlightIssue(
             category="encoding",
@@ -463,6 +606,7 @@ def _check_encoding(
             affected_count=len(anomalies),
             remediation="Non-ASCII characters (accented letters, special symbols) may cause "
             "matching issues. Consider normalizing account names to ASCII.",
+            affected_items=affected_items,
         )
     )
 
@@ -518,6 +662,8 @@ def _check_mixed_signs(
     else:
         severity = "medium"
 
+    affected_items = [m.account for m in mixed]
+
     issues.append(
         PreFlightIssue(
             category="mixed_signs",
@@ -526,6 +672,7 @@ def _check_mixed_signs(
             affected_count=len(mixed),
             remediation="Mixed signs in the debit column may indicate sign convention inconsistency. "
             "Verify that debits are consistently positive (or consistently negative).",
+            affected_items=affected_items,
         )
     )
 
@@ -544,6 +691,11 @@ def _check_zero_balances(
         return 0
 
     zero_count = 0
+    zero_accounts: list[str] = []
+    account_col_candidates = [k for k in (rows[0].keys() if rows else []) if k != debit_col and k != credit_col]
+    # Use first non-debit/credit column as account identifier
+    acct_col = account_col_candidates[0] if account_col_candidates else None
+
     for row in rows:
         debit_val = row.get(debit_col)
         credit_val = row.get(credit_col)
@@ -554,6 +706,10 @@ def _check_zero_balances(
             continue
         if d == 0 and c == 0:
             zero_count += 1
+            if acct_col:
+                acct_val = row.get(acct_col, "")
+                if acct_val:
+                    zero_accounts.append(str(acct_val).strip())
 
     if zero_count == 0:
         return 0
@@ -576,6 +732,7 @@ def _check_zero_balances(
             affected_count=zero_count,
             remediation="Zero-balance rows add noise to the analysis. Consider filtering them "
             "out if they represent closed or inactive accounts.",
+            affected_items=zero_accounts,
         )
     )
 
@@ -588,20 +745,25 @@ def _check_zero_balances(
 
 
 def _populate_downstream_impact(issues: list[PreFlightIssue]) -> None:
-    """Populate downstream_impact field for all issues from the category mapping."""
+    """Populate downstream_impact and tests_affected fields for all issues."""
     for issue in issues:
         if not issue.downstream_impact:
             issue.downstream_impact = DOWNSTREAM_IMPACT.get(issue.category, "")
+        if issue.tests_affected == 0:
+            issue.tests_affected = TESTS_AFFECTED_BY_CATEGORY.get(issue.category, 0)
 
 
-def _calculate_readiness(issues: list[PreFlightIssue]) -> float:
-    """Calculate readiness score (0-100).
+def _calculate_readiness(issues: list[PreFlightIssue]) -> tuple[float, list[ScoreComponent]]:
+    """Calculate readiness score (0-100) with component breakdown.
 
     Start at 100, deduct per issue based on:
     - Category weight (from _CHECK_WEIGHTS)
     - Severity multiplier (high=full, medium=half, low=quarter)
 
     Multiple issues in the same category take the worst severity.
+
+    Returns:
+        Tuple of (score, list of ScoreComponent breakdowns)
     """
     # Track worst severity per category
     worst_by_category: dict[str, str] = {}
@@ -613,10 +775,30 @@ def _calculate_readiness(issues: list[PreFlightIssue]) -> float:
         if current_worst is None or severity_order.get(issue.severity, 0) > severity_order.get(current_worst, 0):
             worst_by_category[cat] = issue.severity
 
-    score = 100.0
-    for category, severity in worst_by_category.items():
-        weight = _CHECK_WEIGHTS.get(category, 10)
-        multiplier = _SEVERITY_MULTIPLIER.get(severity, 0.25)
-        score -= weight * multiplier
+    # Build breakdown
+    breakdown: list[ScoreComponent] = []
+    total_score = 100.0
 
-    return max(0.0, score)
+    for category, weight in _CHECK_WEIGHTS.items():
+        severity = worst_by_category.get(category)
+        if severity is None:
+            # No issues in this category — full score
+            component_score = 100.0
+        else:
+            multiplier = _SEVERITY_MULTIPLIER.get(severity, 0.25)
+            component_score = 100.0 * (1.0 - multiplier)
+
+        weight_fraction = weight / 100.0
+        contribution = weight_fraction * component_score
+        breakdown.append(
+            ScoreComponent(
+                component=category,
+                weight=weight_fraction,
+                score=component_score,
+                contribution=contribution,
+            )
+        )
+
+    total_score = sum(sc.contribution for sc in breakdown)
+
+    return max(0.0, total_score), breakdown

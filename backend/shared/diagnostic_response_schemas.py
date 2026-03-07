@@ -697,6 +697,11 @@ class PreFlightIssueResponse(BaseModel):
     message: str
     affected_count: int
     remediation: str
+    downstream_impact: str = ""
+    affected_items: list[str] = []
+    affected_items_truncated: bool = False
+    affected_items_total: int = 0
+    tests_affected: int = 0
 
 
 class PreFlightDuplicateResponse(BaseModel):
@@ -722,6 +727,25 @@ class PreFlightMixedSignResponse(BaseModel):
     negative_count: int
 
 
+class PreFlightBalanceCheckResponse(BaseModel):
+    """TB debit/credit balance verification result."""
+
+    total_debits: float
+    total_credits: float
+    difference: float
+    balanced: bool
+    tolerance: float = 0.01
+
+
+class PreFlightScoreComponentResponse(BaseModel):
+    """A single component of the readiness score breakdown."""
+
+    component: str
+    weight: float
+    score: float
+    contribution: float
+
+
 class PreFlightReportResponse(BaseModel):
     """Complete pre-flight quality assessment response."""
 
@@ -737,3 +761,5 @@ class PreFlightReportResponse(BaseModel):
     mixed_sign_accounts: list[PreFlightMixedSignResponse]
     zero_balance_count: int
     null_counts: dict[str, int]
+    balance_check: Optional[PreFlightBalanceCheckResponse] = None
+    score_breakdown: list[PreFlightScoreComponentResponse] = []
