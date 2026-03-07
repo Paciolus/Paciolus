@@ -168,6 +168,7 @@ All verification items confirmed:
 - Section numbering: I Scope, II Design Parameters, III Stratification, IV Evaluation Results, V Methodology, VI Conclusion, VII Next Steps
 - No other reports unintentionally modified (all 21 regenerated)
 - Test count: 6,041 backend (up from 6,001 — +40 new) + 1,329 frontend
+- **Commit:** `9fa1ed8`
 
 ---
 
