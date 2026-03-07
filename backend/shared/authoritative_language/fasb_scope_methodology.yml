@@ -228,8 +228,19 @@ tools:
   flux_analysis:
     data_description: "period-over-period flux analysis data"
     references:
-      - codification: "ASC 250-10"
-        topic: "Accounting Changes and Error Corrections — Overall"
+      - body: "AICPA"
+        codification: "AU-C § 520"
+        topic: "Analytical Procedures"
+        paragraph: "Various"
+        status: "Current"
+      - body: "AICPA"
+        codification: "AU-C § 330"
+        topic: "Performing Audit Procedures in Response to Assessed Risks"
+        paragraph: "Various"
+        status: "Current"
+      - body: "PCAOB"
+        codification: "AS 2305"
+        topic: "Substantive Analytical Procedures"
         paragraph: "Various"
         status: "Current"
 

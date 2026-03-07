@@ -173,6 +173,57 @@
 - [x] All narrative conclusions are dynamically generated from computed values
 - [x] Report renders to 6 pages (up from 3)
 
+### Sprint 514 — ISA 520 Flux Expectations Report Enrichment
+**Status:** COMPLETE
+**Goal:** Fix 4 bugs and add 8 enhancements to the ISA 520 Flux Expectations report (Report 20, WP-FE): ASC 250-10 orphaned reference, cover page title wrapping, missing reference number, duplicate sign-off section, undocumented item stubs, completion tracker, structured conclusions, scope enhancements, workpaper completion gating.
+
+#### Bug Fixes
+- [x] BUG-01: Remove ASC 250-10 from FASB YAML `flux_analysis` references; replace with AU-C § 520, AU-C § 330, AS 2305
+- [x] BUG-02: Shorten cover page title to "ISA 520 Flux & Expectation Documentation" (fits one line)
+- [x] BUG-03: Add WP-FE- reference number to cover page metadata (e.g., `WP-FE-2026-0307-526`)
+- [x] BUG-04: Remove duplicate Section III "Workpaper Sign-Off"; renumber sections (III=Sign-Off, IV=Disclaimer)
+
+#### New Sections / Enhancements
+- [x] ENH-01: Generate placeholder stubs for all undocumented flagged items (PENDING badge, ISA 520.5(a) placeholder text)
+- [x] ENH-02: Completion Status tracker at top of Section II (documented vs pending counts, progress bar text, INCOMPLETE warning)
+- [x] ENH-03: Structured multi-option conclusion block replacing simple checkbox on all items (4 options + Notes + Initials/Date)
+- [x] ENH-04: Scope block enhancements — documented/pending counts with warning badges, highest risk variance, total unexplained variance
+- [x] ENH-05: Workpaper completion gating — DRAFT watermark on sign-off when items pending; practitioner notice updated with completion requirement
+- [x] ENH-06: Revenue consulting services label clarification (account_note); Marketing & Advertising sub-account footnote (footnote field)
+- [x] ENH-07: Authoritative references relocated to before sign-off section
+- [x] ENH-08: Sort order: High Risk → Medium Risk → Low Risk, then by absolute variance descending (`_risk_sort_key`)
+
+#### Files Modified
+- `flux_expectations_memo.py` — Complete rewrite: WP-FE- reference, shortened title, `_risk_sort_key()`, `_render_badge()`, `_render_conclusion_block()`, completion metrics, tracker table, stub generation, structured conclusion block, CONCLUSION PENDING badges, DRAFT watermark, account_note/footnote rendering, relocated references, removed duplicate sign-off, renumbered sections
+- `shared/authoritative_language/fasb_scope_methodology.yml` — flux_analysis: ASC 250-10 → AU-C § 520 (AICPA) + AU-C § 330 (AICPA) + AS 2305 (PCAOB)
+- `shared/authoritative_language/gasb_scope_methodology.yml` — flux_analysis: Statement No. 34 only → AU-C § 520 + AU-C § 330 + AS 2305 + Statement No. 34
+- `generate_sample_reports.py` — gen_flux_expectations: 8 flagged items (was 3), account_note on Revenue, footnote on Marketing, 5 new medium-risk accounts (AR, Training, Technology, Rent, Accrued Liabilities)
+
+#### Verification
+- [x] `npm run build` passes
+- [x] `npm test` passes (1,329 tests, 111 suites)
+- [x] `pytest` passes (6,188 tests)
+- [x] Regenerated all 21 sample PDFs — flux expectations: 50,542 bytes (up from ~30KB)
+- [x] No other reports unintentionally modified
+
+#### Acceptance Criteria
+- [x] ASC 250-10 reference removed; AU-C § 520, AU-C § 330, AS 2305 substituted
+- [x] Cover page title fits on one line without wrapping
+- [x] Reference number added to cover page (WP-FE- prefix)
+- [x] Duplicate Section III removed; sign-off renumbered
+- [x] All 8 flagged items rendered in Section II (3 documented + 5 stubs in sample)
+- [x] Stub items display PENDING badge and structured placeholder text
+- [x] Completion status tracker present at top of Section II
+- [x] Conclusion field replaced with structured multi-option block on all items
+- [x] Items with no conclusion display CONCLUSION PENDING badge
+- [x] Sign-off block shows DRAFT watermark when items pending
+- [x] Revenue consulting services label includes total revenue clarification
+- [x] Marketing & Advertising includes sub-account footnote
+- [x] Scope block includes documented/pending counts with dynamic badges
+- [x] Practitioner Notice updated with completion requirement sentence
+- [x] Authoritative references relocated to before sign-off section
+- [x] Sort order: High Risk → Medium Risk → Low Risk, then by absolute variance descending
+
 ---
 
 ### Sprint 512 — Expense Category Report Enrichment
