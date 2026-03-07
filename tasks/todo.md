@@ -117,6 +117,56 @@
 > Sprints 478, 488–497 archived to `tasks/archive/sprints-478-497-details.md`. Pending items below.
 
 
+### Sprint 512 — Expense Category Report Enrichment
+**Status:** COMPLETE
+**Goal:** Fix 3 bugs and add 4 new sections to the Expense Category Analytical Procedures report (Report 18): doubled word fix, reference number addition, authoritative reference correction, % Change column, period-over-period build-out, expense ratio analysis, findings register, suggested audit procedures.
+
+#### Bug Fixes
+- [x] BUG-01: Fix doubled word "procedures procedures" in Scope narrative — changed domain_label from "expense category analytical procedures" to "expense category analytical" so template produces correct text
+- [x] BUG-02: Add reference number to cover page — ECA- prefix (e.g., `ECA-2026-0307-694`), passed to ReportMetadata and header
+- [x] BUG-03: Fix authoritative references — replaced single ASC 720-10 with AU-C § 520 (AICPA), AS 2305 (PCAOB), ASC 220-10, ASC 720-10. No ASC 250-10 present. Updated both FASB and GASB YAMLs.
+
+#### New Sections
+- [x] SEC-01: Section II enhancement — % Change column with directional indicators (↑/↓), ⚠ marker for >15% changes, prior period source footnote
+- [x] SEC-02: Section III — Period-Over-Period Comparison build-out: III-A Variance Summary table (6 columns with risk level assignment), III-B Per-Category Variance Commentary (dynamic text per category type), III-C Other Operating Expenses decomposition flag (triggers at >10% revenue + >15% YoY growth)
+- [x] SEC-03: Section IV — Expense Ratio Analysis with benchmark comparison (5 ratio types, benchmark ranges for professional services/capital management, Within/Below/Above Range flags, benchmark caveat footnote)
+- [x] SEC-04: Section V — Findings register consolidating variance and benchmark findings, sorted by priority (High → Moderate → Low)
+- [x] SEC-05: Section VI — Suggested Audit Procedures dynamically generated from findings, with specific dollar amounts and percentages, sorted by priority
+
+#### Enhancements
+- [x] ENH-01: Risk level assignment: High (≥20% + exceeds materiality), Moderate (≥10% or exceeds materiality), Low (otherwise)
+- [x] ENH-02: Benchmark ranges: COGS (30-55%), Payroll (15-35%), D&A (2-8%), Interest & Tax (3-10%), Other Operating (5-12%)
+- [x] ENH-03: Dynamic commentary generation per expense category type (COGS → gross margin, Payroll → headcount, D&A → capex, Interest/Tax → debt/rate, Other → sub-ledger)
+
+#### Files Modified
+- `shared/authoritative_language/fasb_scope_methodology.yml` — expense_category: ASC 720-10 → AU-C § 520 (AICPA) + AS 2305 (PCAOB) + ASC 220-10 + ASC 720-10
+- `shared/authoritative_language/gasb_scope_methodology.yml` — expense_category: Statement No. 62 → AU-C § 520 (AICPA) + AS 2305 (PCAOB) + Statement No. 62
+- `expense_category_memo.py` — Complete rewrite: ECA- reference prefix, fixed domain_label, 7-column category table with % Change, variance summary table, per-category commentary, decomposition flag, expense ratio table with benchmarks, findings register, suggested procedures, `_pct_change()`, `_pct_change_str()`, `_assign_risk()`, `_benchmark_flag()`, `_generate_variance_commentary()`, `_generate_procedures()`, `_standard_table_style()`
+- `generate_sample_reports.py` — gen_expense_category: added prior_pct_of_revenue for all 5 categories, added prior_revenue ($6,200,000) and prior_total_expenses ($4,880,000)
+- `tests/test_expense_category_memo.py` — 44 new tests: pct_change (5), pct_change_str (4), assign_risk (5), benchmark_flag (6), variance_commentary (6), generate_procedures (6), PDF generation (7), scope statement (1), authoritative references (4)
+
+#### Verification
+- [x] `npm run build` passes
+- [x] `npm test` passes (1,329 tests, 111 suites)
+- [x] `pytest` passes (6,094+44 new = 6,138 total)
+- [x] Regenerated all 21 sample PDFs — expense category: 45,939 bytes (up from ~30KB), 5 pages (up from 3)
+- [x] No other reports unintentionally modified
+
+#### Acceptance Criteria
+- [x] Doubled word "procedures procedures" removed from Section I narrative
+- [x] Reference number (ECA- prefix) added to cover page
+- [x] % Change column added to Category Breakdown table with directional indicators
+- [x] Prior period source footnote added to Category Breakdown table
+- [x] Section III fully built out: variance summary table, per-category commentary, Other Operating decomposition flag
+- [x] Section IV — Expense Ratio Analysis present with benchmark comparison
+- [x] Section V — Findings register present, sourced from Sections III and IV
+- [x] Section VI — Suggested Procedures present, dynamically generated from findings
+- [x] Authoritative references corrected: AU-C § 520, AS 2305, ASC 220-10, ASC 720-10
+- [x] No ASC 250-10 reference present
+- [x] All commentary and procedures reference actual computed values, not hardcoded text
+
+---
+
 ### Sprint 511 — TB Population Profile Report Enrichment
 **Status:** COMPLETE
 **Goal:** Fix 2 systemic bugs and add 6 new sections to the Population Profile Report (Report 17): authoritative reference correction, magnitude bucket math fix, account type stratification, Benford's Law analysis, exception flags, suggested procedures, concentration table enhancement, data quality score computation.

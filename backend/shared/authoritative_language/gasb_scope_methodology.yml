@@ -198,6 +198,16 @@ tools:
   expense_category:
     data_description: "expense account detail"
     references:
+      - body: "AICPA"
+        codification: "AU-C § 520"
+        topic: "Analytical Procedures"
+        paragraph: "Various"
+        status: "Current"
+      - body: "PCAOB"
+        codification: "AS 2305"
+        topic: "Substantive Analytical Procedures"
+        paragraph: "Various"
+        status: "Current"
       - statement: "Statement No. 62"
         topic: "Codification of Accounting and Financial Reporting Guidance"
         paragraph: "Various"

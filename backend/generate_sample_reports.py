@@ -3477,6 +3477,9 @@ def gen_population_profile():
 def gen_expense_category():
     from expense_category_memo import generate_expense_category_memo
 
+    # Prior revenue: $6,200,000 (FY2024)
+    # Current revenue: $6,850,000 (FY2025) → 10.5% growth
+    prior_revenue = 6_200_000.00
     report_result = {
         "categories": [
             {
@@ -3484,6 +3487,7 @@ def gen_expense_category():
                 "amount": 2_890_000.00,
                 "pct_of_revenue": 42.19,
                 "prior_amount": 2_400_000.00,
+                "prior_pct_of_revenue": 38.71,
                 "dollar_change": 490_000.00,
                 "exceeds_threshold": True,
             },
@@ -3492,6 +3496,7 @@ def gen_expense_category():
                 "amount": 1_420_000.00,
                 "pct_of_revenue": 20.73,
                 "prior_amount": 1_180_000.00,
+                "prior_pct_of_revenue": 19.03,
                 "dollar_change": 240_000.00,
                 "exceeds_threshold": True,
             },
@@ -3500,6 +3505,7 @@ def gen_expense_category():
                 "amount": 285_000.00,
                 "pct_of_revenue": 4.16,
                 "prior_amount": 260_000.00,
+                "prior_pct_of_revenue": 4.19,
                 "dollar_change": 25_000.00,
                 "exceeds_threshold": False,
             },
@@ -3508,6 +3514,7 @@ def gen_expense_category():
                 "amount": 437_750.00,
                 "pct_of_revenue": 6.39,
                 "prior_amount": 398_000.00,
+                "prior_pct_of_revenue": 6.42,
                 "dollar_change": 39_750.00,
                 "exceeds_threshold": False,
             },
@@ -3516,6 +3523,7 @@ def gen_expense_category():
                 "amount": 795_000.00,
                 "pct_of_revenue": 11.61,
                 "prior_amount": 642_000.00,
+                "prior_pct_of_revenue": 10.35,
                 "dollar_change": 153_000.00,
                 "exceeds_threshold": True,
             },
@@ -3526,6 +3534,8 @@ def gen_expense_category():
         "prior_available": True,
         "materiality_threshold": 50_000.00,
         "category_count": 5,
+        "prior_revenue": prior_revenue,
+        "prior_total_expenses": 4_880_000.00,
     }
 
     pdf = generate_expense_category_memo(
