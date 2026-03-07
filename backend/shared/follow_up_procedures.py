@@ -358,6 +358,39 @@ FOLLOW_UP_PROCEDURES: dict[str, str] = {
         "Evaluate significant date gaps between PO, receipt, and invoice for "
         "cut-off implications and delayed recording anomalies."
     ),
+    "twm_full_match_rate": (
+        "Investigate the root cause of the non-match rate. Assess whether the cause is "
+        "process-related (manual PO entry errors), system-related (ERP matching logic gaps), "
+        "or control-related (inadequate segregation of duties in procurement). Recommend "
+        "remediation steps to management to bring the match rate above 85%."
+    ),
+    "twm_unmatched_receipt": (
+        "Investigate unmatched receiving documents for goods received but not yet invoiced. "
+        "Confirm whether an accrual is required for goods received but not invoiced at period "
+        "end. Verify that the receiving log is complete and reconciles to warehouse records."
+    ),
+    "twm_date_gap": (
+        "Obtain the original PO, invoice, and GRN for this transaction. Confirm actual "
+        "delivery date and whether the invoice represents goods received. Investigate whether "
+        "the invoice date or PO date was altered after original entry. Date gaps exceeding "
+        "60 days are a backdating indicator per ISA 240."
+    ),
+    "twm_duplicate_invoice": (
+        "Obtain both invoices sharing the same number. Confirm whether they represent the "
+        "same transaction posted twice or distinct transactions with reused numbers. If "
+        "duplicate billing, initiate vendor credit memo process."
+    ),
+    "twm_quantity_variance": (
+        "Obtain the GRN and invoice for each flagged item. Confirm whether the quantity "
+        "discrepancy represents a partial shipment, a receiving error, or billing for "
+        "undelivered goods. Reconcile quantities to physical count records where available."
+    ),
+    "twm_net_overbilling": (
+        "Obtain PO amendment documentation for each HIGH severity variance. Confirm whether "
+        "price increases were authorized by an approved PO amendment prior to invoice "
+        "submission. For variances lacking authorization, contact the vendor to obtain a "
+        "credit memo or corrected invoice."
+    ),
     # Multi-Period Comparison
     "significant_movement": (
         "Obtain management explanation for significant period-over-period balance changes. "

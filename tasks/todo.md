@@ -117,6 +117,55 @@
 > Sprints 478, 488–497 archived to `tasks/archive/sprints-478-497-details.md`. Pending items below.
 
 
+### Sprint 504 — Three-Way Match Report Fixes & Improvements
+**Status:** COMPLETE
+**Goal:** Fix risk tier label (BUG-01), add results summary with risk score (BUG-02), add methodology section (BUG-03), add key findings with suggested procedures (BUG-04), plus 5 improvements (vendor columns, net variance direction, match rate benchmark, unmatched detail tables, source file extension).
+
+#### Bug Fixes
+- [x] BUG-01: Map engine "MEDIUM" risk tier to standard "MODERATE" — `_ENGINE_TIER_MAPPING` dict maps low→low, medium→moderate, high→elevated, critical→high. Conclusion text uses 4-tier scale (LOW/MODERATE/ELEVATED/HIGH). No "MEDIUM" in any rendered text.
+- [x] BUG-02: Add Results Summary (Section IV) with Composite Risk Score, Risk Tier, severity counts, Risk Scale legend — uses `RISK_TIER_DISPLAY` and `RISK_SCALE_LEGEND` from shared memo_base. New `compute_twm_risk_score()` function with 8 weighted components (max 89 practical, capped at 100).
+- [x] BUG-03: Add Section II Methodology table with all 6 tests — `_TEST_DESCRIPTIONS` dict with structural/statistical/advanced descriptions, no banned assertive language
+- [x] BUG-04: Add Key Findings (Section VI) — 4 findings with suggested procedures from `follow_up_procedures.py` (twm_net_overbilling, twm_full_match_rate, twm_unmatched_invoice, twm_date_gap)
+
+#### Improvements
+- [x] IMPROVEMENT-01: Variance table now 8 columns: Vendor, PO Number, Invoice Number, Field, PO Value, Invoice Value, Variance, Severity — sorted by variance desc (HIGH first)
+- [x] IMPROVEMENT-02: Net Variance Direction block — PO-Authorized Total, Invoice Total, Net Overbilling/Underbilling with direction label derived from signed value
+- [x] IMPROVEMENT-03: Match rate benchmark — "85–95% (best practice)" with 4-tier assessment (≥90% no concern, 85-90% monitor, 80-85% investigate, <80% systemic review)
+- [x] IMPROVEMENT-04: 3 unmatched document detail tables — Invoices (HIGHEST RISK, 5 items), POs (9 items), Receipts (3 items) with vendor/date/amount and advisory text per table
+- [x] IMPROVEMENT-05: Source file extension fixed — `meridian_procurement_fy2025.csv`
+
+#### Files Modified
+- `three_way_match_memo_generator.py` — complete rewrite: 9-section structure (Scope, Methodology, Match Results, Results Summary, Material Variances, Key Findings, Unmatched Documents, Authoritative References, Conclusion), `_ENGINE_TIER_MAPPING`, `_TEST_DESCRIPTIONS` (6 tests), `compute_twm_risk_score()`, `_MATCH_RATE_THRESHOLDS`, `_RISK_CONCLUSIONS` (4 tiers), 7 section builder functions
+- `generate_sample_reports.py` — enriched gen_three_way_match(): vendor/po_number/invoice_number on all 7 variances, 6 test_results, composite_score (66.0 HIGH), 4 top_findings, 9 enriched unmatched POs, 5 enriched unmatched invoices, 3 enriched unmatched receipts, source filename with .csv extension
+- `shared/follow_up_procedures.py` — added 6 new TWM procedures (twm_full_match_rate, twm_unmatched_receipt, twm_date_gap, twm_duplicate_invoice, twm_quantity_variance, twm_net_overbilling)
+- `tests/test_twm_memo.py` — 45 new tests: PDF generation (4), methodology (3), match results (2), results summary (2), risk tier mapping (5), risk scoring (6), key findings (5), material variances (4), unmatched documents (6), conclusion (5), guardrails (3)
+
+#### Verification
+- [x] `npm run build` passes
+- [x] `npm test` passes (1,329 tests, 111 suites)
+- [x] `pytest` passes (5,891 passed, 1 skipped, 1 pre-existing error)
+- [x] Regenerate all 21 sample PDFs — all OK, TWM 49,183 bytes (up from ~30KB)
+
+#### Review
+All verification items confirmed:
+- Risk tier shows MODERATE (not MEDIUM) — `_ENGINE_TIER_MAPPING["medium"] == "moderate"`
+- No "MEDIUM" in any conclusion text (guardrail test confirms)
+- Results Summary present: Score 66.0/100, Risk Tier HIGH RISK, 18 high/38 medium/6 low flags, Risk Scale legend
+- Section II Methodology with 6 tests (Three-Way Full Match, Amount Variance, Date Variance, Unmatched Documents, Duplicate Invoice Numbers, Quantity Variance)
+- Key Findings: 4 findings all with suggested procedures
+- Variance table: 8 columns with vendor names and document numbers, sorted by variance desc
+- Net overbilling: $1,842,000 PO vs $1,865,450 Invoice = $23,450 overbilling
+- Match rate benchmark: 75.6% flagged as "Below 80% threshold — systemic review"
+- Unmatched Invoices: 5 rows with vendor/date/amount
+- Unmatched POs: 9 rows with vendor/date/amount
+- Unmatched Receipts: 3 rows with vendor/date/amount
+- Source file: meridian_procurement_fy2025.csv (with extension)
+- No banned assertive language in descriptions
+- No other reports modified (all 21 regenerated, timestamp-only on non-TWM)
+- Test count: 5,891 backend (up from 5,846 — +45 new) + 1,329 frontend
+
+---
+
 ### Sprint 503 — Bank Reconciliation Report Fixes & Improvements
 **Status:** COMPLETE
 **Goal:** Fix missing methodology section (BUG-01), missing risk score/results summary (BUG-02), implement 5 additional tests in memo (BUG-03), add key findings section (BUG-04), plus 3 content improvements (aging tables, ending balance reconciliation, reconciling difference characterization).
