@@ -2341,7 +2341,196 @@ def gen_three_way_match():
 # 12. MULTI-PERIOD COMPARISON MEMO
 # ─────────────────────────────────────────────────────────────────────
 def gen_multi_period():
-    from multi_period_memo_generator import generate_multi_period_memo
+    from multi_period_memo_generator import compute_apc_risk_score, generate_multi_period_memo
+    from shared.testing_enums import score_to_risk_tier
+
+    # All movements — full TB population for ratio computation (BUG-01 fix)
+    # Only accounts relevant for ratio trends are listed; minor accounts omitted
+    all_movements = [
+        # Revenue accounts (total: $5,800,000 / $6,850,000)
+        {
+            "account_name": "Revenue — Consulting Services",
+            "account_type": "revenue",
+            "prior_balance": 3_600_000,
+            "current_balance": 4_250_000,
+            "change_amount": 650_000,
+            "change_percent": 18.1,
+            "movement_type": "increase",
+            "significance": "material",
+        },
+        {
+            "account_name": "Revenue — Software Licensing",
+            "account_type": "revenue",
+            "prior_balance": 1_450_000,
+            "current_balance": 1_720_000,
+            "change_amount": 270_000,
+            "change_percent": 18.6,
+            "movement_type": "increase",
+            "significance": "material",
+        },
+        {
+            "account_name": "Revenue — Support & Maintenance",
+            "account_type": "revenue",
+            "prior_balance": 750_000,
+            "current_balance": 880_000,
+            "change_amount": 130_000,
+            "change_percent": 17.3,
+            "movement_type": "increase",
+            "significance": "significant",
+        },
+        # COGS
+        {
+            "account_name": "Cost of Goods Sold",
+            "account_type": "cogs",
+            "prior_balance": 2_400_000,
+            "current_balance": 2_890_000,
+            "change_amount": 490_000,
+            "change_percent": 20.4,
+            "movement_type": "increase",
+            "significance": "material",
+        },
+        # Operating expenses
+        {
+            "account_name": "Salaries & Wages",
+            "account_type": "expense",
+            "prior_balance": 1_180_000,
+            "current_balance": 1_420_000,
+            "change_amount": 240_000,
+            "change_percent": 20.3,
+            "movement_type": "increase",
+            "significance": "material",
+        },
+        {
+            "account_name": "Marketing & Advertising",
+            "account_type": "expense",
+            "prior_balance": 120_000,
+            "current_balance": 195_000,
+            "change_amount": 75_000,
+            "change_percent": 62.5,
+            "movement_type": "increase",
+            "significance": "material",
+        },
+        # Assets
+        {
+            "account_name": "Cash and Cash Equivalents",
+            "account_type": "asset",
+            "prior_balance": 776_750,
+            "current_balance": 1_245_000,
+            "change_amount": 468_250,
+            "change_percent": 60.3,
+            "movement_type": "increase",
+            "significance": "material",
+        },
+        {
+            "account_name": "Accounts Receivable — Trade",
+            "account_type": "asset",
+            "prior_balance": 750_000,
+            "current_balance": 892_000,
+            "change_amount": 142_000,
+            "change_percent": 18.9,
+            "movement_type": "increase",
+            "significance": "material",
+        },
+        {
+            "account_name": "Inventory",
+            "account_type": "asset",
+            "prior_balance": 494_000,
+            "current_balance": 456_000,
+            "change_amount": -38_000,
+            "change_percent": -7.7,
+            "movement_type": "decrease",
+            "significance": "significant",
+        },
+        {
+            "account_name": "Property, Plant & Equipment",
+            "account_type": "asset",
+            "prior_balance": 2_100_000,
+            "current_balance": 2_240_000,
+            "change_amount": 140_000,
+            "change_percent": 6.7,
+            "movement_type": "increase",
+            "significance": "significant",
+        },
+        {
+            "account_name": "Prepaid Insurance",
+            "account_type": "asset",
+            "prior_balance": 45_000,
+            "current_balance": 52_000,
+            "change_amount": 7_000,
+            "change_percent": 15.6,
+            "movement_type": "increase",
+            "significance": "significant",
+        },
+        # Liabilities
+        {
+            "account_name": "Long-Term Debt",
+            "account_type": "liability",
+            "prior_balance": 1_620_000,
+            "current_balance": 1_500_000,
+            "change_amount": -120_000,
+            "change_percent": -7.4,
+            "movement_type": "decrease",
+            "significance": "significant",
+        },
+        {
+            "account_name": "Accounts Payable",
+            "account_type": "liability",
+            "prior_balance": 567_000,
+            "current_balance": 634_000,
+            "change_amount": 67_000,
+            "change_percent": 11.8,
+            "movement_type": "increase",
+            "significance": "significant",
+        },
+        # Sign change account (BUG-03)
+        {
+            "account_name": "Deferred Revenue — Project Alpha",
+            "account_type": "liability",
+            "prior_balance": -85_000,
+            "current_balance": 42_000,
+            "change_amount": 127_000,
+            "change_percent": -149.4,
+            "movement_type": "sign_change",
+            "significance": "significant",
+        },
+    ]
+
+    # Significant movements (material + significant, sorted by abs change)
+    significant_movements = [m for m in all_movements if m.get("significance") in ("material", "significant")]
+
+    # Risk score computation
+    risk_score = compute_apc_risk_score(
+        material_movement_count=8,
+        sign_change_count=1,
+        cash_increase_pct=0.603,
+        cogs_growth_vs_revenue=True,  # 20.4% vs 18.1%
+        single_account_revenue_pct=0.62,  # Consulting $4.25M / $6.85M total
+        high_growth_accounts=2,  # Marketing 62.5%, Cash 60.3%
+        dormant_count=3,
+        new_closed_count=6,
+    )
+    risk_tier = score_to_risk_tier(risk_score).value
+
+    # Dormant accounts with prior balances (BUG-04)
+    dormant_accounts = [
+        {"account_name": "Note Payable — Equipment Lease", "prior_balance": 28_500},
+        {"account_name": "Deferred Tax Liability — State", "prior_balance": 12_200},
+        {"account_name": "Accrued Interest — Line of Credit", "prior_balance": 3_850},
+    ]
+
+    # New accounts with current balances (IMP-05)
+    new_accounts_detail = [
+        {"account_name": "Cloud Infrastructure Services", "current_balance": 185_000, "account_type": "expense"},
+        {"account_name": "Revenue — API Subscriptions", "current_balance": 320_000, "account_type": "revenue"},
+        {"account_name": "Deferred Revenue — Annual Contracts", "current_balance": 95_000, "account_type": "liability"},
+        {"account_name": "Intangible Assets — Customer Lists", "current_balance": 450_000, "account_type": "asset"},
+    ]
+
+    # Closed accounts with prior balances (IMP-05)
+    closed_accounts_detail = [
+        {"account_name": "Legacy Software Licenses", "prior_balance": 67_000, "account_type": "asset"},
+        {"account_name": "Lease Obligation — Office Suite B", "prior_balance": 142_000, "account_type": "liability"},
+    ]
 
     comparison_result = {
         "prior_label": "FY 2024",
@@ -2362,72 +2551,15 @@ def gen_multi_period():
             "significant": 22,
             "minor": 217,
         },
-        "significant_movements": [
-            {
-                "account_name": "Revenue — Consulting Services",
-                "prior_balance": 3_600_000,
-                "current_balance": 4_250_000,
-                "change_amount": 650_000,
-                "change_percent": 18.1,
-                "movement_type": "increase",
-            },
-            {
-                "account_name": "Cost of Goods Sold",
-                "prior_balance": 2_400_000,
-                "current_balance": 2_890_000,
-                "change_amount": 490_000,
-                "change_percent": 20.4,
-                "movement_type": "increase",
-            },
-            {
-                "account_name": "Accounts Receivable — Trade",
-                "prior_balance": 750_000,
-                "current_balance": 892_000,
-                "change_amount": 142_000,
-                "change_percent": 18.9,
-                "movement_type": "increase",
-            },
-            {
-                "account_name": "Long-Term Debt",
-                "prior_balance": 1_620_000,
-                "current_balance": 1_500_000,
-                "change_amount": -120_000,
-                "change_percent": -7.4,
-                "movement_type": "decrease",
-            },
-            {
-                "account_name": "Marketing & Advertising",
-                "prior_balance": 120_000,
-                "current_balance": 195_000,
-                "change_amount": 75_000,
-                "change_percent": 62.5,
-                "movement_type": "increase",
-            },
-            {
-                "account_name": "Salaries & Wages",
-                "prior_balance": 1_180_000,
-                "current_balance": 1_420_000,
-                "change_amount": 240_000,
-                "change_percent": 20.3,
-                "movement_type": "increase",
-            },
-            {
-                "account_name": "Cash and Cash Equivalents",
-                "prior_balance": 776_750,
-                "current_balance": 1_245_000,
-                "change_amount": 468_250,
-                "change_percent": 60.3,
-                "movement_type": "increase",
-            },
-            {
-                "account_name": "Inventory",
-                "prior_balance": 494_000,
-                "current_balance": 456_000,
-                "change_amount": -38_000,
-                "change_percent": -7.7,
-                "movement_type": "decrease",
-            },
-        ],
+        "significant_movements": significant_movements,
+        "all_movements": all_movements,
+        "dormant_accounts": dormant_accounts,
+        "new_accounts": new_accounts_detail,
+        "closed_accounts": closed_accounts_detail,
+        "composite": {
+            "score": risk_score,
+            "risk_tier": risk_tier,
+        },
         "lead_sheet_summaries": [
             {
                 "lead_sheet": "A",

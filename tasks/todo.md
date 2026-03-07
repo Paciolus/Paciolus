@@ -117,6 +117,58 @@
 > Sprints 478, 488–497 archived to `tasks/archive/sprints-478-497-details.md`. Pending items below.
 
 
+### Sprint 505 — Analytical Procedures Report Fixes & Improvements
+**Status:** COMPLETE
+**Goal:** Fix gross profit margin calculation (BUG-01), add results summary with risk score (BUG-02), surface sign change account names (BUG-03), surface dormant account names with balances (BUG-04), plus 5 improvements (expanded ratios, suggested procedures, cash contextualization, lead sheet legend, new/closed account detail).
+
+#### Bug Fixes
+- [x] BUG-01: Fix GPM — use account_type + all_movements (full TB population) not significant_movements subset. Added `_REVENUE_EXCLUSIONS` to prevent "Deferred Revenue" from matching revenue. Revenue: $5.8M/$6.85M → GPM 58.6%/57.8% (was 33.3%/32.0%)
+- [x] BUG-02: Add Results Summary (Section III) with `compute_apc_risk_score()` (8 weighted components, max 100), `_RISK_CONCLUSIONS` (4 tiers), `RISK_TIER_DISPLAY` and `RISK_SCALE_LEGEND` from shared memo_base. Auto-computes from data when composite not pre-provided.
+- [x] BUG-03: Add Sign Change Detail subsection in Section IV with account names, prior/current balances, nature of change (Debit→Credit/Credit→Debit), suggested procedure from follow_up_procedures
+- [x] BUG-04: Add Dormant Account Detail subsection in Section IV with prior balances, $0 current balance, "Confirm: closed?" status, suggested procedure. Backward-compatible with legacy string-only dormant lists.
+
+#### Improvements
+- [x] IMP-01: Expand Ratio Trends to 6 ratios (GPM, COGS%, Salary%, Marketing%, Revenue Growth, Cash%Assets) with Flag column. COGS flagged "Margin compression", Marketing flagged "Material increase". Narrative paragraph covers margin compression, marketing intensity, and cash increase.
+- [x] IMP-02: Suggested procedures on material movements — `_MOVEMENT_PROCEDURES` dict keyed by (account_type, direction), maps to `FOLLOW_UP_PROCEDURES` entries. 9 new APC procedures added to follow_up_procedures.py.
+- [x] IMP-03: Cash increase contextualization — italic cross-reference to Cash Flow Statement for any cash movement >50%
+- [x] IMP-04: Lead Sheet legend text ("Letters correspond to the cross-reference index...") + % Change column (7 columns: Lead, Sheet Name, Accounts, Prior Total, Current Total, Net Change, % Change)
+- [x] IMP-05: New Account Detail (4 items with current balance + account type) and Closed Account Detail (2 items with prior balance + account type). Combined suggested procedure text.
+
+#### Files Modified
+- `multi_period_memo_generator.py` — complete rewrite: 8-section structure (Scope, Movement Summary, Results Summary, Significant Account Movements, Lead Sheet Summary, Methodology, Authoritative References, Conclusion), `compute_apc_risk_score()` (8 components), `_RISK_CONCLUSIONS` (4 tiers), `_REVENUE_EXCLUSIONS`, `_MARKETING_KEYWORDS`, `_CASH_KEYWORDS`, `_ASSET_KEYWORDS`, `_MOVEMENT_PROCEDURES`, `_ACCOUNT_TYPE_KEYWORDS`, 9 builder functions, account_type-aware ratio computation
+- `generate_sample_reports.py` — enriched gen_multi_period(): 14 all_movements (3 revenue, 1 COGS, 2 expenses, 5 assets, 2 liabilities, 1 sign_change), pre-computed risk score (68.0 HIGH), 3 dormant accounts with prior balances, 4 new accounts with current balances + types, 2 closed accounts with prior balances + types
+- `shared/follow_up_procedures.py` — added 9 new APC procedures (apc_revenue_increase, apc_cogs_increase, apc_asset_increase, apc_cash_increase, apc_liability_decrease, apc_expense_increase, apc_sign_change, apc_dormant_account, apc_closed_account)
+- `tests/test_multi_period_memo.py` — 51 new tests (75 total, up from 24): risk scoring (12), risk conclusions (5), results summary (3), ratio trends (6), sign change detail (3), dormant account detail (5), new/closed account detail (6), suggested procedures (6), lead sheet summary (2), conclusion tiers (5), guardrails (5)
+
+#### Verification
+- [x] `npm run build` passes
+- [x] `npm test` passes (1,329 tests, 111 suites)
+- [x] `pytest` passes (5,942 passed, 1 skipped, 1 pre-existing error)
+- [x] Regenerate all 21 sample PDFs — all OK, multi-period 47,618 bytes (up from ~30KB)
+
+#### Review
+All 52 verification checks confirmed in PDF output:
+- GPM: 58.6% (FY2024) / 57.8% (FY2025) — not 33.3%/32.0% (FIXED)
+- Proxy caveat note removed (ratios now from full TB population)
+- Results Summary: Score 68.0/100, Risk Tier HIGH RISK, Risk Scale legend
+- Sign Change Detail: "Deferred Revenue — Project Alpha", -$85,000 → $42,000, "Credit to Debit"
+- Dormant Account Detail: 3 accounts with prior balances ($28,500, $12,200, $3,850)
+- 6 ratios: GPM, COGS%, Salary%, Marketing%, Revenue Growth, Cash%Assets
+- COGS +0.8pp flagged "Margin compression"
+- Marketing +0.8pp flagged "Material increase"
+- Narrative: COGS outpaced revenue, marketing intensity, cash reference
+- 5 suggested procedures: revenue, COGS, cash, salary/expense, asset
+- Cash cross-reference: "Cross-reference to Cash Flow Statement"
+- Lead Sheet: 7-column table with % Change, cross-reference legend
+- New Accounts: 4 items (Cloud Infrastructure, API Subscriptions, Deferred Rev, Intangibles)
+- Closed Accounts: 2 items (Legacy Software, Lease Obligation)
+- Section numbering: I-VII (Scope, Movement Summary, Results Summary, Significant Movements, Lead Sheet, Auth References, Conclusion)
+- Risk tier HIGH consistent between Results Summary and Conclusion
+- No other reports modified (all 21 regenerated, timestamp-only on non-APC)
+- Test count: 5,942 backend (up from 5,891 — +51 new) + 1,329 frontend
+
+---
+
 ### Sprint 504 — Three-Way Match Report Fixes & Improvements
 **Status:** COMPLETE
 **Goal:** Fix risk tier label (BUG-01), add results summary with risk score (BUG-02), add methodology section (BUG-03), add key findings with suggested procedures (BUG-04), plus 5 improvements (vendor columns, net variance direction, match rate benchmark, unmatched detail tables, source file extension).

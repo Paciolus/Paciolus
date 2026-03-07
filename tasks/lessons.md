@@ -4,6 +4,14 @@
 
 ---
 
+## Analytical Procedures Report (Sprint 505)
+
+1. **Keyword matching for financial categories must exclude contra-items**: "Deferred Revenue" was matching the revenue keyword ("revenue" substring), inflating revenue totals and corrupting GPM ratios (59.2% instead of 58.6%). Add explicit exclusion lists (`_REVENUE_EXCLUSIONS = ["deferred revenue", "unearned revenue"]`) and prefer `account_type` field when available over keyword matching.
+
+2. **Ratio computations must use the full TB population, not just significant movements**: The significant_movements list is a filtered subset (~30 of 247 accounts). Computing ratios from this subset produces materially wrong results because it misses revenue lines that aren't individually significant but aggregate to the full balance. Always pass `all_movements` to ratio functions.
+
+---
+
 ## Revenue Report Enrichment (Sprint 501)
 
 1. **Sample data test_keys must match engine canonical keys**: The revenue sample report used human-friendly test_keys (`round_amounts`, `cut_off_risk`, `recognition_timing`) that didn't match the engine's canonical keys (`round_revenue_amounts`, `cutoff_risk`, `recognition_before_satisfaction`). This caused blank methodology descriptions and missing follow-up procedures in sample PDFs. Always copy test_keys from the engine, not from the test names.

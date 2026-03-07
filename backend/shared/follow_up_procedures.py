@@ -408,6 +408,51 @@ FOLLOW_UP_PROCEDURES: dict[str, str] = {
         "Evaluate significant ratio trend changes for underlying drivers. "
         "Corroborate with management inquiry and supporting documentation."
     ),
+    "apc_revenue_increase": (
+        "Obtain detail supporting the revenue increase. Assess whether growth reflects "
+        "new contracts, price increases, or volume changes. Cross-reference to revenue "
+        "recognition testing results."
+    ),
+    "apc_cogs_increase": (
+        "Assess whether COGS increase is proportional to revenue growth. COGS growth "
+        "exceeding revenue growth indicates margin compression — obtain management "
+        "explanation and assess whether cost increases are recurring or one-time."
+    ),
+    "apc_asset_increase": (
+        "Obtain supporting documentation for the asset increase. Confirm the asset is "
+        "properly classified and valued per applicable accounting standards."
+    ),
+    "apc_cash_increase": (
+        "Cash increases above 50% warrant inquiry. Cross-reference to the cash flow "
+        "statement to confirm the source of funds. Assess whether the increase reflects "
+        "operating performance, financing activity, or asset disposals."
+    ),
+    "apc_liability_decrease": (
+        "Confirm the liability reduction reflects actual payment or discharge. Obtain "
+        "supporting documentation (payoff letter, settlement agreement, or payment records)."
+    ),
+    "apc_expense_increase": (
+        "Obtain management explanation for the expense increase. Assess whether the "
+        "increase is consistent with the entity's growth rate and strategic plan. "
+        "Increases materially above the revenue growth rate warrant additional inquiry."
+    ),
+    "apc_sign_change": (
+        "Investigate the sign change. Confirm whether the change represents a legitimate "
+        "reclassification, a correcting entry, or an error. A sign change in a balance "
+        "sheet account may indicate that a debit balance became a credit balance (e.g., "
+        "an asset account became a liability through over-payment or negative inventory)."
+    ),
+    "apc_dormant_account": (
+        "For each dormant account, confirm whether the zero balance represents a "
+        "legitimate closure (debt paid off, asset disposed, account closed) or an "
+        "account that was zeroed out improperly. Obtain management confirmation that "
+        "each dormant account has been properly resolved and closed in the chart of "
+        "accounts if no longer needed."
+    ),
+    "apc_closed_account": (
+        "For closed accounts, confirm the balance was properly disposed of, transferred, "
+        "or written off prior to closure. Obtain documentation supporting the account closure."
+    ),
     # Statistical Sampling
     "sampling_exception": (
         "For each exception identified in the sample, obtain the source document and "
