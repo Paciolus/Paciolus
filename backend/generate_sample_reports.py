@@ -2635,6 +2635,19 @@ def gen_sampling_design():
         "sampling_interval": 25_000.00,
         "calculated_sample_size": 194,
         "actual_sample_size": 207,
+        "high_value_count": 42,
+        "high_value_total": 2_100_000.00,
+        "remainder_count": 1_198,
+        "remainder_sample_size": 165,
+        "population_type": "AR",
+        "population_value_note": (
+            "Population value of $4,850,000.00 represents aggregate invoice activity "
+            "for FY2025 per the AR sub-ledger (1,240 transactions). This differs from "
+            "the ending AR balance of $892,000 (per Trial Balance) which represents "
+            "the outstanding balance at December 31, 2025. The sampling population "
+            "is the full transaction population, appropriate for testing the "
+            "completeness and existence assertions over AR transactions."
+        ),
         "strata_summary": [
             {
                 "stratum": "High Value (100%)",
@@ -2649,6 +2662,92 @@ def gen_sampling_design():
                 "count": 1_198,
                 "total_value": 2_750_000.00,
                 "sample_size": 165,
+            },
+        ],
+        "selected_items": [
+            {
+                "item_id": "INV-0012",
+                "description": "Meridian Holdings — Q1 Retainer",
+                "recorded_amount": 85_000.00,
+                "stratum": "high_value",
+                "selection_method": "high_value_100pct",
+            },
+            {
+                "item_id": "INV-0047",
+                "description": "Apex Solutions — Cloud Infrastructure",
+                "recorded_amount": 62_500.00,
+                "stratum": "high_value",
+                "selection_method": "high_value_100pct",
+            },
+            {
+                "item_id": "INV-0103",
+                "description": "Pinnacle Partners — Annual License",
+                "recorded_amount": 48_200.00,
+                "stratum": "high_value",
+                "selection_method": "high_value_100pct",
+            },
+            {
+                "item_id": "INV-0218",
+                "description": "Sterling Corp — Project Milestone 3",
+                "recorded_amount": 37_800.00,
+                "stratum": "high_value",
+                "selection_method": "high_value_100pct",
+            },
+            {
+                "item_id": "INV-0344",
+                "description": "Vanguard Tech — Hardware Procurement",
+                "recorded_amount": 31_450.00,
+                "stratum": "high_value",
+                "selection_method": "high_value_100pct",
+            },
+            {
+                "item_id": "INV-0512",
+                "description": "Crestview Industries — Consulting Fee",
+                "recorded_amount": 18_750.00,
+                "stratum": "remainder",
+                "selection_method": "mus_interval",
+            },
+            {
+                "item_id": "INV-0687",
+                "description": "Atlas Logistics — Shipping Services",
+                "recorded_amount": 12_400.00,
+                "stratum": "remainder",
+                "selection_method": "mus_interval",
+            },
+            {
+                "item_id": "INV-0891",
+                "description": "Horizon Media — Advertising Campaign",
+                "recorded_amount": 9_800.00,
+                "stratum": "remainder",
+                "selection_method": "mus_interval",
+            },
+            {
+                "item_id": "INV-1024",
+                "description": "Summit Engineering — Design Review",
+                "recorded_amount": 7_250.00,
+                "stratum": "remainder",
+                "selection_method": "mus_interval",
+            },
+            {
+                "item_id": "INV-1156",
+                "description": "Pacific Trading — Component Supply",
+                "recorded_amount": 4_600.00,
+                "stratum": "remainder",
+                "selection_method": "mus_interval",
+            },
+            {
+                "item_id": "INV-1289",
+                "description": "Granite Construction — Site Assessment",
+                "recorded_amount": 3_200.00,
+                "stratum": "remainder",
+                "selection_method": "mus_interval",
+            },
+            {
+                "item_id": "INV-1403",
+                "description": "Beacon Analytics — Data Processing",
+                "recorded_amount": 2_100.00,
+                "stratum": "remainder",
+                "selection_method": "mus_interval",
             },
         ],
     }
@@ -2684,6 +2783,19 @@ def gen_sampling_evaluation():
         "sampling_interval": 25_000.00,
         "calculated_sample_size": 194,
         "actual_sample_size": 207,
+        "high_value_count": 42,
+        "high_value_total": 2_100_000.00,
+        "remainder_count": 1_198,
+        "remainder_sample_size": 165,
+        "population_type": "AR",
+        "population_value_note": (
+            "Population value of $4,850,000.00 represents aggregate invoice activity "
+            "for FY2025 per the AR sub-ledger (1,240 transactions). This differs from "
+            "the ending AR balance of $892,000 (per Trial Balance) which represents "
+            "the outstanding balance at December 31, 2025. The sampling population "
+            "is the full transaction population, appropriate for testing the "
+            "completeness and existence assertions over AR transactions."
+        ),
         "strata_summary": [
             {
                 "stratum": "High Value (100%)",

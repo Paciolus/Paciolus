@@ -117,6 +117,56 @@
 > Sprints 478, 488–497 archived to `tasks/archive/sprints-478-497-details.md`. Pending items below.
 
 
+### Sprint 506 — Statistical Sampling Memo Fixes & Improvements
+**Status:** COMPLETE
+**Goal:** Fix authoritative references (BUG-01), population value discrepancy (BUG-02), sample size gap (BUG-03), confidence factor explanation (BUG-04), plus 3 improvements (EM derivation, sample listing preview, AR-specific next steps).
+
+#### Bug Fixes
+- [x] BUG-01: Replace ASC 250-10 with ISA 530, PCAOB AS 2315, AU-C 530, ASC 450-20 in FASB/GASB YAMLs. Per-reference `body` override added to `scope_methodology.py` (line 158: `body=ref.get("body", body)`). Global orphaned reference check completed — remaining ASC 250-10 in 6 diagnostic tools is contextually valid; ASC 230-10 in bank rec is valid.
+- [x] BUG-02: Add `population_value_note` field to design result — renders italic clarifying note below Population Value. Sample data explains $4,850,000 = gross AR invoice activity vs $892,000 ending balance.
+- [x] BUG-03: Auto-generates sample size gap note from stratification arithmetic (42 HV + 165 remainder = 207 vs calculated 194). Custom `sample_size_note` override supported.
+- [x] BUG-04: `CONFIDENCE_FACTOR_NOTES` dict (6 levels: 80%–99%) with Poisson derivation (-ln(1-α)). Renders italic note below confidence factor in Design Parameters.
+
+#### Improvements
+- [x] IMP-01: Expected Misstatement Derivation block after TM derivation — shows EM as % of TM (e.g., "20.0% of tolerable misstatement"), ISA 530.A4 reference. Custom `expected_misstatement_note` override supported. Skipped when EM = 0.
+- [x] IMP-02: Section "Sample Selection Preview" — first 10 items table (Item Ref, Description, Amount, Stratum), full export note with ISA 530 defensible randomness language. `selected_items` field added to `SamplingDesignMemoInput` schema. 12 sample items in gen_sampling_design() (5 HV + 7 remainder).
+- [x] IMP-03: `NEXT_STEPS_BY_POPULATION_TYPE` dict with AR/AP/INVENTORY/REVENUE templates (5 steps each). AR steps: client request, ISA 505 confirmation, assertion testing (existence/valuation/cut-off), result recording, Paciolus UEL evaluation. `population_type` field added to design result + export schema. Generic fallback for unknown types.
+
+#### Files Modified
+- `shared/authoritative_language/fasb_scope_methodology.yml` — statistical_sampling: ASC 250-10 → ISA 530 + AS 2315 + AU-C 530 + ASC 450-20 (with per-ref body overrides)
+- `shared/authoritative_language/gasb_scope_methodology.yml` — statistical_sampling: GASB 62 → ISA 530 + AS 2315 + AU-C 530 + GASB 62 (with per-ref body overrides)
+- `shared/scope_methodology.py` — per-reference body override: `body=ref.get("body", body)`
+- `shared/export_schemas.py` — added `selected_items: list = []` and `population_type: str = ""` to SamplingDesignMemoInput
+- `sampling_memo_generator.py` — complete enrichment: CONFIDENCE_FACTOR_NOTES (6 levels), NEXT_STEPS_BY_POPULATION_TYPE (4 types + generic), population_value_note, sample_size_note, EM derivation, sample preview table, _format_stratum helper
+- `generate_sample_reports.py` — enriched gen_sampling_design(): population_type, population_value_note, high_value_count, remainder_sample_size, 12 selected_items. Enriched gen_sampling_evaluation(): same design context fields.
+- `tests/test_sampling_memo.py` (NEW) — 58 tests: PDF generation (5), authoritative references (10), population note (2), sample size gap (3), confidence factor (4), EM derivation (4), sample preview (5), next steps (13), section numbering (5), helpers (4), guardrails (5)
+
+#### Verification
+- [x] `npm run build` passes
+- [x] `npm test` passes (1,329 tests, 111 suites)
+- [x] `pytest` passes (6,000 passed, 1 skipped, 1 pre-existing error)
+- [x] Regenerate all 21 sample PDFs — all OK, sampling design 46,324 bytes (up from ~30KB), sampling evaluation 45,845 bytes
+
+#### Review
+All verification items confirmed:
+- Authoritative References: ISA 530, PCAOB AS 2315, AU-C 530, ASC 450-20 — ASC 250-10 removed
+- Per-reference body override: IAASB for ISA 530, PCAOB for AS 2315, AICPA for AU-C 530, FASB for ASC 450-20
+- GASB variant: ISA 530, AS 2315, AU-C 530, GASB Statement No. 62
+- Global orphaned reference check completed (6 remaining ASC 250-10 in diagnostic tools are contextually valid)
+- Population value note present: "$4,850,000.00 represents aggregate invoice activity for FY2025..."
+- Sample size gap note: "Actual sample size increased from calculated 194 to 207 (+13 items, +6.7%) due to stratification. All 42 items in the High Value stratum..."
+- Confidence factor note: "3.0000 corresponds to the 3.0000 (-ln(0.05), rounded) — 95% confidence level"
+- EM derivation: "$15,000.00...represents 20.0% of tolerable misstatement ($75,000.00)"
+- Sample Selection Preview: 10-item table with Item Ref, Description, Amount, Stratum
+- Full export note: "Full sample listing (207 items) should be exported..."
+- Next Steps: 5 AR-specific steps with ISA 505 confirmation, assertion testing (existence/valuation/cut-off), Paciolus evaluation module reference
+- Step 5 references TM of $75,000.00 and ISA 530.17
+- Section numbering: I Scope, II Design Parameters, III Stratification, IV Methodology, V Status, VI Sample Preview, VII Next Steps
+- No other reports unintentionally modified (all 21 regenerated, timestamp-only on non-sampling)
+- Test count: 6,000 backend (up from 5,942 — +58 new) + 1,329 frontend
+
+---
+
 ### Sprint 505 — Analytical Procedures Report Fixes & Improvements
 **Status:** COMPLETE
 **Goal:** Fix gross profit margin calculation (BUG-01), add results summary with risk score (BUG-02), surface sign change account names (BUG-03), surface dormant account names with balances (BUG-04), plus 5 improvements (expanded ratios, suggested procedures, cash contextualization, lead sheet legend, new/closed account detail).

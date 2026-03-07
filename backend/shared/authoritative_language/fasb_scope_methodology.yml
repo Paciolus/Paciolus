@@ -145,11 +145,25 @@ tools:
   statistical_sampling:
     data_description: "population data subject to sampling procedures"
     references:
-      - codification: "ASC 250-10"
-        topic: "Accounting Changes and Error Corrections — Overall"
+      - body: "IAASB"
+        codification: "ISA 530"
+        topic: "Audit Sampling"
         paragraph: "Various"
         status: "Current"
-        note: "The applicable accounting standard depends on the population being tested. ASC 250-10 governs error corrections that may arise from sampling evaluation."
+      - body: "PCAOB"
+        codification: "AS 2315"
+        topic: "Audit Sampling"
+        paragraph: "Various"
+        status: "Current"
+      - body: "AICPA"
+        codification: "AU-C Section 530"
+        topic: "Audit Sampling"
+        paragraph: "Various"
+        status: "Current"
+      - codification: "ASC 450-20"
+        topic: "Contingencies — Loss Contingencies"
+        paragraph: "Various"
+        status: "Current"
 
   data_quality_preflight:
     data_description: "trial balance data file"

@@ -156,7 +156,7 @@ def get_tool_content(
         ref_id = ref.get("codification") or ref.get("statement", "")
         refs.append(
             AuthoritativeReference(
-                body=body,
+                body=ref.get("body", body),
                 reference=ref_id,
                 topic=ref.get("topic", ""),
                 paragraph=ref.get("paragraph", ""),

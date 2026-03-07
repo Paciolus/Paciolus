@@ -274,6 +274,8 @@ class SamplingDesignMemoInput(WorkpaperMetadata):
     remainder_count: int = 0
     remainder_sample_size: int = 0
     strata_summary: list = []
+    selected_items: list = []
+    population_type: str = ""
     filename: str = "sampling_design"
 
 

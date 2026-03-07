@@ -1,5 +1,5 @@
 """
-Sampling Memo PDF Generator — Sprint 269
+Sampling Memo PDF Generator — Sprint 269, enriched Sprint 506
 Phase XXXVI: Statistical Sampling (Tool 12)
 
 Custom PDF structure (NOT using testing_memo_template — different workflow):
@@ -10,9 +10,11 @@ Custom PDF structure (NOT using testing_memo_template — different workflow):
   5. Evaluation Results (if Phase 2 completed)
   6. Error Details (if errors found)
   7. Methodology
-  8. Conclusion (color-coded Pass/Fail)
-  9. Workpaper Signoff
-  10. Disclaimer
+  8. Conclusion / Status
+  9. Sample Selection Preview (if design phase)
+  10. Next Steps
+  11. Workpaper Signoff
+  12. Disclaimer
 """
 
 import io
@@ -54,6 +56,244 @@ from shared.scope_methodology import (
     build_methodology_statement,
     build_scope_statement,
 )
+
+# ═══════════════════════════════════════════════════════════════
+# Constants
+# ═══════════════════════════════════════════════════════════════
+
+# Confidence factor derivation notes keyed by confidence level
+CONFIDENCE_FACTOR_NOTES: dict[float, str] = {
+    0.80: "1.6094 (-ln(0.20)) — 80% confidence level",
+    0.85: "1.8971 (-ln(0.15)) — 85% confidence level",
+    0.90: "2.3026 (-ln(0.10)) — 90% confidence level",
+    0.95: "3.0000 (-ln(0.05), rounded) — 95% confidence level",
+    0.97: "3.5066 (-ln(0.03)) — 97% confidence level",
+    0.99: "4.6052 (-ln(0.01)) — 99% confidence level",
+}
+
+# Next steps templates keyed by population type
+_NEXT_STEPS_AR: list[dict[str, str]] = [
+    {
+        "title": "Step 1 — Prepare Client Request",
+        "body": (
+            "Export the full sample listing and provide to the client as a formal "
+            "document request. For each selected invoice, request: (a) original "
+            "invoice copy, (b) customer purchase order or contract, (c) shipping "
+            "or delivery confirmation, and (d) any subsequent cash receipts or "
+            "credits applied to the balance."
+        ),
+    },
+    {
+        "title": "Step 2 — Perform Confirmation Procedures (ISA 505)",
+        "body": (
+            "Consider whether positive confirmation of selected balances is required. "
+            "For balances over the materiality threshold, direct positive confirmation "
+            "with the customer is the preferred procedure. For smaller balances, "
+            "alternative procedures (subsequent receipts, invoice examination) may "
+            "be substituted with documented rationale."
+        ),
+    },
+    {
+        "title": "Step 3 — Test Each Selected Item",
+        "body": (
+            "For each selected item, confirm: (a) the recorded amount agrees to the "
+            "supporting invoice; (b) the transaction date falls within the period under "
+            "examination; (c) goods or services were delivered prior to period end "
+            "(cut-off assertion); (d) the customer has been billed and the receivable "
+            "is valid (existence assertion); (e) the balance is collectible at the "
+            "recorded amount (valuation assertion)."
+        ),
+    },
+    {
+        "title": "Step 4 — Record Results",
+        "body": (
+            "Document the audited amount for each item. Record any difference between "
+            "the recorded amount and the audited amount as a misstatement. For each "
+            "misstatement, record: the direction (overstatement / understatement), "
+            "the nature (pricing error / cut-off / non-existent receivable / other), "
+            "and whether the client has agreed to correct the item."
+        ),
+    },
+    {
+        "title": "Step 5 — Upload Results for Evaluation",
+        "body": (
+            "When testing is complete, upload the error results to the Paciolus "
+            "Sampling Evaluation module (SSM Evaluation tab) to compute the Upper "
+            "Error Limit (UEL) using the Stringer bound method and obtain a "
+            "PASS / FAIL conclusion. If UEL exceeds Tolerable Misstatement, "
+            "expand the sample or perform alternative procedures per ISA 530.17."
+        ),
+    },
+]
+
+_NEXT_STEPS_AP: list[dict[str, str]] = [
+    {
+        "title": "Step 1 — Prepare Client Request",
+        "body": (
+            "Export the full sample listing and provide to the client. For each "
+            "selected payment, request: (a) original vendor invoice, (b) purchase "
+            "order or approval documentation, (c) receiving report or proof of "
+            "delivery, and (d) payment remittance or check copy."
+        ),
+    },
+    {
+        "title": "Step 2 — Perform Vendor Statement Reconciliation",
+        "body": (
+            "For significant vendor balances, obtain vendor statements and reconcile "
+            "to the AP sub-ledger. Investigate and document any reconciling items."
+        ),
+    },
+    {
+        "title": "Step 3 — Test Each Selected Item",
+        "body": (
+            "For each selected item, confirm: (a) the recorded amount agrees to the "
+            "vendor invoice; (b) the payment was properly authorized; (c) goods or "
+            "services were received (completeness assertion); (d) the liability is "
+            "valid (existence assertion); (e) the payment is recorded in the correct "
+            "period (cut-off assertion)."
+        ),
+    },
+    {
+        "title": "Step 4 — Record Results",
+        "body": (
+            "Document the audited amount for each item. Record any difference between "
+            "the recorded amount and the audited amount as a misstatement, including "
+            "direction, nature, and client agreement to correct."
+        ),
+    },
+    {
+        "title": "Step 5 — Upload Results for Evaluation",
+        "body": (
+            "When testing is complete, upload the error results to the Paciolus "
+            "Sampling Evaluation module to compute the Upper Error Limit (UEL) "
+            "and obtain a PASS / FAIL conclusion per ISA 530.17."
+        ),
+    },
+]
+
+_NEXT_STEPS_INVENTORY: list[dict[str, str]] = [
+    {
+        "title": "Step 1 — Prepare Count Sheet",
+        "body": (
+            "Export the full sample listing as the test count sheet. For each "
+            "selected item, the count team should physically verify: (a) quantity "
+            "on hand, (b) item condition (obsolescence / damage), (c) location "
+            "matches records, and (d) unit of measure consistency."
+        ),
+    },
+    {
+        "title": "Step 2 — Perform Physical Count or Observation",
+        "body": (
+            "Physically count each selected item or observe client count procedures "
+            "per ISA 501. Record the actual quantity and note any discrepancies "
+            "between the physical count and the perpetual inventory records."
+        ),
+    },
+    {
+        "title": "Step 3 — Test Valuation",
+        "body": (
+            "For each selected item, confirm: (a) cost is properly supported by "
+            "purchase invoices; (b) NRV does not fall below cost (ASC 330 / IAS 2); "
+            "(c) overhead allocation is reasonable; (d) obsolescence reserves are "
+            "adequate for slow-moving or damaged items."
+        ),
+    },
+    {
+        "title": "Step 4 — Record Results",
+        "body": (
+            "Document the audited quantity and value for each item. Record any "
+            "difference as a misstatement, including the nature (quantity error / "
+            "valuation error / obsolescence) and direction."
+        ),
+    },
+    {
+        "title": "Step 5 — Upload Results for Evaluation",
+        "body": (
+            "When testing is complete, upload the error results to the Paciolus "
+            "Sampling Evaluation module to compute the Upper Error Limit (UEL) "
+            "and obtain a PASS / FAIL conclusion per ISA 530.17."
+        ),
+    },
+]
+
+_NEXT_STEPS_REVENUE: list[dict[str, str]] = [
+    {
+        "title": "Step 1 — Prepare Client Request",
+        "body": (
+            "Export the full sample listing and provide to the client. For each "
+            "selected revenue transaction, request: (a) customer contract or "
+            "agreement, (b) evidence of performance obligation satisfaction "
+            "(delivery / acceptance), (c) invoice copy, and (d) proof of payment "
+            "or cash receipt."
+        ),
+    },
+    {
+        "title": "Step 2 — Perform Cut-Off Testing",
+        "body": (
+            "For transactions near period end, confirm revenue was recognized in "
+            "the correct period per ASC 606 / IFRS 15. Verify that performance "
+            "obligations were satisfied before the recognition date."
+        ),
+    },
+    {
+        "title": "Step 3 — Test Each Selected Item",
+        "body": (
+            "For each selected item, confirm: (a) the transaction is supported by "
+            "a valid contract (existence assertion); (b) the transaction price is "
+            "correctly determined (valuation assertion); (c) revenue is recognized "
+            "when performance obligations are satisfied (occurrence assertion); "
+            "(d) the amount is correctly classified and disclosed."
+        ),
+    },
+    {
+        "title": "Step 4 — Record Results",
+        "body": (
+            "Document the audited amount for each item. Record any difference as a "
+            "misstatement, including the nature (recognition timing / pricing / "
+            "fictitious revenue / classification) and direction."
+        ),
+    },
+    {
+        "title": "Step 5 — Upload Results for Evaluation",
+        "body": (
+            "When testing is complete, upload the error results to the Paciolus "
+            "Sampling Evaluation module to compute the Upper Error Limit (UEL) "
+            "and obtain a PASS / FAIL conclusion per ISA 530.17."
+        ),
+    },
+]
+
+_NEXT_STEPS_GENERIC: list[dict[str, str]] = [
+    {
+        "title": "Step 1 — Select Sample Items",
+        "body": "Select the sample items identified above from the source population.",
+    },
+    {
+        "title": "Step 2 — Perform Planned Procedures",
+        "body": "Perform the planned audit procedure on each selected item.",
+    },
+    {
+        "title": "Step 3 — Document Results",
+        "body": "Document the results and any deviations/misstatements found.",
+    },
+    {
+        "title": "Step 4 — Evaluate Results",
+        "body": "Evaluate the results using the sampling methodology (e.g., project misstatements).",
+    },
+    {
+        "title": "Step 5 — Form Conclusion",
+        "body": (
+            "Form a conclusion on whether the account balance or transaction class requires further investigation."
+        ),
+    },
+]
+
+NEXT_STEPS_BY_POPULATION_TYPE: dict[str, list[dict[str, str]]] = {
+    "AR": _NEXT_STEPS_AR,
+    "AP": _NEXT_STEPS_AP,
+    "INVENTORY": _NEXT_STEPS_INVENTORY,
+    "REVENUE": _NEXT_STEPS_REVENUE,
+}
 
 
 def generate_sampling_design_memo(
@@ -223,23 +463,99 @@ def _generate_sampling_memo(
         scope_lines = [
             create_leader_dots("Population Size", f"{design_result.get('population_size', 0):,}"),
             create_leader_dots("Population Value", f"${design_result.get('population_value', 0):,.2f}"),
-            create_leader_dots("Confidence Level", f"{design_result.get('confidence_level', 0):.0%}"),
-            create_leader_dots("Confidence Factor", f"{design_result.get('confidence_factor', 0):.4f}"),
-            create_leader_dots("Tolerable Misstatement", f"${design_result.get('tolerable_misstatement', 0):,.2f}"),
-            create_leader_dots("Expected Misstatement", f"${design_result.get('expected_misstatement', 0):,.2f}"),
         ]
-
-        interval = design_result.get("sampling_interval")
-        if interval is not None:
-            scope_lines.append(create_leader_dots("Sampling Interval", f"${interval:,.2f}"))
-
-        scope_lines.append(
-            create_leader_dots("Calculated Sample Size", str(design_result.get("calculated_sample_size", 0)))
-        )
-        scope_lines.append(create_leader_dots("Actual Sample Size", str(design_result.get("actual_sample_size", 0))))
 
         for line in scope_lines:
             story.append(Paragraph(line, styles["MemoLeader"]))
+
+        # ─── BUG-02: Population value clarifying note ──────────
+        pop_note = design_result.get("population_value_note")
+        if pop_note:
+            story.append(
+                Paragraph(
+                    f"<i>{pop_note}</i>",
+                    styles["MemoBodySmall"],
+                )
+            )
+            story.append(Spacer(1, 4))
+
+        confidence_lines = [
+            create_leader_dots("Confidence Level", f"{design_result.get('confidence_level', 0):.0%}"),
+            create_leader_dots("Confidence Factor", f"{design_result.get('confidence_factor', 0):.4f}"),
+        ]
+        for line in confidence_lines:
+            story.append(Paragraph(line, styles["MemoLeader"]))
+
+        # ─── BUG-04: Confidence factor derivation note ──────────
+        conf_level = design_result.get("confidence_level", 0)
+        conf_note = CONFIDENCE_FACTOR_NOTES.get(conf_level)
+        if conf_note:
+            conf_factor = design_result.get("confidence_factor", 0)
+            story.append(
+                Paragraph(
+                    f"<i>Confidence factor of {conf_factor:.4f} corresponds to the "
+                    f"{conf_note}. Per the Poisson distribution table used in MUS, "
+                    f"the factor is derived as -ln(1 - confidence level).</i>",
+                    styles["MemoBodySmall"],
+                )
+            )
+            story.append(Spacer(1, 4))
+
+        tm_em_lines = [
+            create_leader_dots("Tolerable Misstatement", f"${design_result.get('tolerable_misstatement', 0):,.2f}"),
+            create_leader_dots("Expected Misstatement", f"${design_result.get('expected_misstatement', 0):,.2f}"),
+        ]
+        for line in tm_em_lines:
+            story.append(Paragraph(line, styles["MemoLeader"]))
+
+        interval = design_result.get("sampling_interval")
+        if interval is not None:
+            story.append(Paragraph(create_leader_dots("Sampling Interval", f"${interval:,.2f}"), styles["MemoLeader"]))
+
+        story.append(
+            Paragraph(
+                create_leader_dots("Calculated Sample Size", str(design_result.get("calculated_sample_size", 0))),
+                styles["MemoLeader"],
+            )
+        )
+        story.append(
+            Paragraph(
+                create_leader_dots("Actual Sample Size", str(design_result.get("actual_sample_size", 0))),
+                styles["MemoLeader"],
+            )
+        )
+
+        # ─── BUG-03: Sample size gap explanation ───────────────
+        calc_size = design_result.get("calculated_sample_size", 0)
+        actual_size = design_result.get("actual_sample_size", 0)
+        if actual_size != calc_size and actual_size > 0 and calc_size > 0:
+            diff = actual_size - calc_size
+            hv_count = design_result.get("high_value_count", 0)
+            rem_sample = design_result.get("remainder_sample_size", 0)
+            strata = design_result.get("strata_summary", [])
+            hv_threshold = ""
+            if strata:
+                hv_threshold = strata[0].get("threshold", "")
+
+            sample_size_note = design_result.get("sample_size_note")
+            if sample_size_note:
+                note_text = sample_size_note
+            elif hv_count > 0:
+                note_text = (
+                    f"Actual sample size increased from calculated {calc_size} to {actual_size} "
+                    f"(+{diff} items, +{diff / calc_size:.1%}) due to stratification. "
+                    f"All {hv_count} items in the High Value stratum ({hv_threshold}) are tested "
+                    f"100%, plus {rem_sample} items selected from the Remainder stratum via "
+                    f"systematic interval selection ({hv_count} + {rem_sample} = {actual_size})."
+                )
+            else:
+                note_text = (
+                    f"Actual sample size ({actual_size}) differs from calculated size "
+                    f"({calc_size}) by {diff:+d} items due to interval rounding."
+                )
+            story.append(Paragraph(f"<i>{note_text}</i>", styles["MemoBodySmall"]))
+            story.append(Spacer(1, 4))
+
         story.append(Spacer(1, 8))
 
         # ─── TM Derivation Note (CONTENT-10) ──────────────────
@@ -258,6 +574,29 @@ def _generate_sampling_memo(
             )
         )
         story.append(Spacer(1, 8))
+
+        # ─── IMP-01: Expected Misstatement Derivation ──────────
+        em_value = design_result.get("expected_misstatement", 0)
+        if em_value > 0:
+            story.append(Paragraph("<b>Expected Misstatement Derivation</b>", styles["MemoBody"]))
+            em_note = design_result.get("expected_misstatement_note")
+            if em_note:
+                em_text = em_note
+            elif tm_value > 0:
+                em_pct = em_value / tm_value * 100
+                em_text = (
+                    f"The expected misstatement of ${em_value:,.2f} was entered by the practitioner. "
+                    f"This represents {em_pct:.1f}% of tolerable misstatement (${tm_value:,.2f}), "
+                    "which is a common planning estimate when no prior year misstatement history is "
+                    "available. Per ISA 530.A4, the expected misstatement should be based "
+                    "on the auditor's knowledge of the client, including misstatements "
+                    "identified in prior periods. If prior year misstatement data is "
+                    "available, it should be used to refine this estimate."
+                )
+            else:
+                em_text = f"The expected misstatement of ${em_value:,.2f} was entered by the practitioner."
+            story.append(Paragraph(em_text, styles["MemoBody"]))
+            story.append(Spacer(1, 8))
 
         # ─── Stratification Table ─────────────────────────────
         strata = design_result.get("strata_summary", [])
@@ -433,7 +772,7 @@ def _generate_sampling_memo(
         domain_label="statistical sampling",
     )
 
-    # ─── 6. Conclusion ────────────────────────────────────────
+    # ─── 6. Conclusion / Status ───────────────────────────────
     if evaluation_result:
         next_num2 = _roman_after(next_num)
         story.append(Paragraph(f"{next_num2}. Conclusion", styles["MemoSection"]))
@@ -471,27 +810,136 @@ def _generate_sampling_memo(
         )
         story.append(Spacer(1, 12))
 
-    # ─── Next Steps (CONTENT-10) ─────────────────────────────
-    # Determine section number for Next Steps: follows Conclusion/Status
-    if evaluation_result or design_result:
+    # ─── 7. Sample Selection Preview (IMP-02) ─────────────────
+    if design_result:
+        selected_items = design_result.get("selected_items", [])
+        if selected_items:
+            if evaluation_result or design_result:
+                preview_num = _roman_after(next_num2)
+            else:
+                preview_num = _roman_after(next_num)
+
+            actual_size = design_result.get("actual_sample_size", len(selected_items))
+            story.append(Paragraph(f"{preview_num}. Sample Selection Preview", styles["MemoSection"]))
+            story.append(LedgerRule(doc_width))
+
+            preview_count = min(len(selected_items), 10)
+            story.append(
+                Paragraph(
+                    f"The following table shows the first {preview_count} items selected for testing, "
+                    f"sorted by sampling order. The complete sample of {actual_size} items is available "
+                    "as a CSV export from this report.",
+                    styles["MemoBody"],
+                )
+            )
+            story.append(Spacer(1, 6))
+
+            preview_data = [["#", "Item Ref", "Description", "Amount", "Stratum"]]
+            for i, item in enumerate(selected_items[:10], 1):
+                desc = str(item.get("description", ""))[:40]
+                if len(str(item.get("description", ""))) > 40:
+                    desc += "..."
+                preview_data.append(
+                    [
+                        str(i),
+                        Paragraph(str(item.get("item_id", "")), styles["MemoTableCell"]),
+                        Paragraph(desc, styles["MemoTableCell"]),
+                        f"${item.get('recorded_amount', 0):,.2f}",
+                        _format_stratum(item.get("stratum", "")),
+                    ]
+                )
+
+            preview_table = Table(
+                preview_data,
+                colWidths=[0.3 * inch, 1.1 * inch, 2.2 * inch, 1.1 * inch, 1.1 * inch],
+                repeatRows=1,
+            )
+            preview_table.setStyle(
+                TableStyle(
+                    [
+                        ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
+                        ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
+                        ("FONTSIZE", (0, 0), (-1, -1), 9),
+                        ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
+                        ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
+                        ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
+                        ("ALIGN", (3, 0), (3, -1), "RIGHT"),
+                        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                        ("TOPPADDING", (0, 0), (-1, -1), 3),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                        ("LEFTPADDING", (0, 0), (0, -1), 0),
+                    ]
+                )
+            )
+            story.append(preview_table)
+            story.append(Spacer(1, 6))
+
+            story.append(
+                Paragraph(
+                    f"<i>Full sample listing ({actual_size} items) should be exported and "
+                    "provided to the client as a document request. Items are listed in "
+                    "systematic selection order — the random start was generated using a "
+                    "cryptographically secure method (Python secrets module) to ensure "
+                    "defensible randomness per ISA 530.</i>",
+                    styles["MemoBodySmall"],
+                )
+            )
+            story.append(Spacer(1, 12))
+
+    # ─── 8. Next Steps (IMP-03) ───────────────────────────────
+    # Determine section number for Next Steps
+    if design_result and design_result.get("selected_items"):
+        if evaluation_result or design_result:
+            next_steps_num = _roman_after(preview_num)
+        else:
+            next_steps_num = _roman_after(_roman_after(next_num))
+    elif evaluation_result or design_result:
         next_steps_num = _roman_after(next_num2)
     else:
         next_steps_num = _roman_after(next_num)
+
     story.append(Paragraph(f"{next_steps_num}. Next Steps", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
 
-    next_steps = [
-        "1. Select the sample items identified above from the source population.",
-        "2. Perform the planned audit procedure on each selected item.",
-        "3. Document the results and any deviations/misstatements found.",
-        "4. Evaluate the results using the sampling methodology (e.g., project misstatements).",
-        "5. Form a conclusion on whether the account balance or transaction class requires further investigation.",
-    ]
-    for step in next_steps:
-        story.append(Paragraph(step, styles["MemoBody"]))
-    story.append(Spacer(1, 12))
+    # Select population-type-specific steps
+    pop_type = ""
+    if design_result:
+        pop_type = design_result.get("population_type", "")
+    steps = NEXT_STEPS_BY_POPULATION_TYPE.get(pop_type.upper(), _NEXT_STEPS_GENERIC)
 
-    # ─── 7. Workpaper Signoff ─────────────────────────────────
+    # Add intro text for typed populations
+    actual_size = 0
+    tm_value = 0.0
+    if design_result:
+        actual_size = design_result.get("actual_sample_size", 0)
+        tm_value = design_result.get("tolerable_misstatement", 0)
+
+    if pop_type and actual_size > 0:
+        story.append(
+            Paragraph(
+                f"The following {actual_size} items have been selected for "
+                f"{pop_type.upper()} balance testing using "
+                f"{method}. To complete the sampling procedure:",
+                styles["MemoBody"],
+            )
+        )
+        story.append(Spacer(1, 6))
+
+    for step in steps:
+        story.append(Paragraph(f"<b>{step['title']}</b>", styles["MemoBody"]))
+        body = step["body"]
+        # Substitute TM value if referenced
+        if tm_value > 0 and "Tolerable Misstatement" in body:
+            body = body.replace(
+                "exceeds Tolerable Misstatement",
+                f"exceeds ${tm_value:,.2f} (Tolerable Misstatement)",
+            )
+        story.append(Paragraph(body, styles["MemoBody"]))
+        story.append(Spacer(1, 4))
+
+    story.append(Spacer(1, 8))
+
+    # ─── 9. Workpaper Signoff ─────────────────────────────────
     build_workpaper_signoff(
         story,
         styles,
@@ -505,7 +953,7 @@ def _generate_sampling_memo(
     # ─── Intelligence Stamp ────────────────────────────────────
     build_intelligence_stamp(story, styles, client_name=client_name, period_tested=period_tested)
 
-    # ─── 8. Disclaimer ────────────────────────────────────────
+    # ─── 10. Disclaimer ────────────────────────────────────────
     build_disclaimer(
         story,
         styles,
@@ -520,6 +968,15 @@ def _generate_sampling_memo(
 
     log_secure_operation("sampling_memo_complete", f"Sampling memo generated ({len(pdf_bytes)} bytes)")
     return pdf_bytes
+
+
+def _format_stratum(stratum: str) -> str:
+    """Format stratum value for display."""
+    if stratum == "high_value":
+        return "High Value"
+    elif stratum == "remainder":
+        return "Remainder"
+    return stratum.replace("_", " ").title() if stratum else ""
 
 
 def _next_section_number(
