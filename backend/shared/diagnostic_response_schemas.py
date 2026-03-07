@@ -453,6 +453,57 @@ class AccrualAccountResponse(BaseModel):
     account_name: str
     balance: float
     matched_keyword: str
+    classification: str = "Accrued Liability"
+
+
+class ReasonablenessResultResponse(BaseModel):
+    """Per-account reasonableness test result."""
+
+    account_name: str
+    recorded_balance: float
+    annual_driver: Optional[float] = None
+    driver_source: str = ""
+    months_to_accrue: int = 1
+    expected_balance: Optional[float] = None
+    variance: Optional[float] = None
+    variance_pct: Optional[float] = None
+    status: str = ""
+
+
+class DeferredRevenueAnalysisResponse(BaseModel):
+    """Deferred Revenue analysis metrics."""
+
+    deferred_balance: float = 0.0
+    total_revenue: Optional[float] = None
+    deferred_pct_of_revenue: Optional[float] = None
+
+
+class AccrualFindingResponse(BaseModel):
+    """One finding from the analysis."""
+
+    area: str
+    finding: str
+    risk: str
+    action_required: str
+
+
+class AccrualProcedureResponse(BaseModel):
+    """One suggested audit procedure."""
+
+    priority: str
+    area: str
+    procedure: str
+
+
+class ExpectedAccrualCheckResponse(BaseModel):
+    """One row in the expected accrual checklist."""
+
+    expected_name: str
+    detected: bool
+    balance: Optional[float] = None
+    risk_if_absent: str = ""
+    basis: str = ""
+    recommended_action: str = ""
 
 
 class AccrualCompletenessReportResponse(BaseModel):
@@ -461,13 +512,21 @@ class AccrualCompletenessReportResponse(BaseModel):
     accrual_accounts: list[AccrualAccountResponse]
     total_accrued_balance: float
     accrual_account_count: int
+    deferred_revenue_accounts: list[AccrualAccountResponse] = []
+    total_deferred_revenue: float = 0.0
     monthly_run_rate: Optional[float] = None
     accrual_to_run_rate_pct: Optional[float] = None
     threshold_pct: float
-    below_threshold: bool
+    meets_threshold: bool = False
+    below_threshold: bool = False
     prior_operating_expenses: Optional[float] = None
     prior_available: bool
     narrative: str
+    reasonableness_results: list[ReasonablenessResultResponse] = []
+    expected_accrual_checklist: list[ExpectedAccrualCheckResponse] = []
+    deferred_revenue_analysis: Optional[DeferredRevenueAnalysisResponse] = None
+    findings: list[AccrualFindingResponse] = []
+    suggested_procedures: list[AccrualProcedureResponse] = []
 
 
 # ═══════════════════════════════════════════════════════════════

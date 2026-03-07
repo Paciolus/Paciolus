@@ -224,6 +224,11 @@ tools:
   accrual_completeness:
     data_description: "accrual account balances and run-rate data"
     references:
+      - body: "AICPA"
+        statement: "AU-C § 520"
+        topic: "Analytical Procedures"
+        paragraph: "Various"
+        status: "Current"
       - statement: "Statement No. 62"
         topic: "Codification of Accounting and Financial Reporting Guidance"
         paragraph: "Various"

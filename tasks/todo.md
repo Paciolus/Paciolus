@@ -117,6 +117,63 @@
 > Sprints 478, 488–497 archived to `tasks/archive/sprints-478-497-details.md`. Pending items below.
 
 
+### Sprint 513 — Accrual Completeness Estimator Report Enrichment
+**Status:** COMPLETE
+**Goal:** Fix 3 bugs and add 4 new sections to the Accrual Completeness Estimator report (Report 19): Deferred Revenue misclassification, threshold label confusion, reference number addition, per-account reasonableness testing, missing accrual estimation, deferred revenue analysis, findings register, suggested procedures, authoritative reference update.
+
+#### Bug Fixes
+- [x] BUG-01: Deferred Revenue misclassification — `_classify_liability_type()` separates deferred revenue from accrual population; ratio recomputed using only Accrued Liability + Provision/Reserve (~47.0% for Meridian data, correctly below 50% threshold)
+- [x] BUG-02: Threshold label confusion — changed to "Meets Minimum Accrual Threshold (≥50%): Yes/No" in both Scope and Run-Rate Analysis sections; `meets_threshold` field replaces ambiguous `below_threshold` (backward compat alias retained)
+- [x] BUG-03: Add reference number to cover page — ACE- prefix (e.g., `ACE-2026-0307-xxx`), passed to ReportMetadata and page header
+
+#### New Sections
+- [x] SEC-01: Section II enhancement — Per-account reasonableness testing with 6-column table (Account, Annual Driver, Expected, Recorded, Variance, Status), driver mapping for payroll/utilities/rent, "Driver Unavailable" for interest/legal/warranty, footnote caveat
+- [x] SEC-02: Section IV-A — Missing Accrual Estimation with 4-column table (Expected Accrual, Basis, Status, Recommended Action), LLC pass-through tax footnote, 11 expected accrual types including Vacation/PTO
+- [x] SEC-03: Section IV-B — Deferred Revenue Analysis with ASC 606 framing, % of revenue metric, rollforward narrative
+- [x] SEC-04: Section V — Findings register with 5-column table, dynamically generated from ratio/reasonableness/missing/deferred/driver analysis, priority-sorted (High → Moderate → Low)
+- [x] SEC-05: Section VI — Suggested Audit Procedures with 3-column table, dynamically generated from findings, always includes "General Completeness" post-period-end procedure
+
+#### Enhancements
+- [x] ENH-01: Account classification buckets — `_classify_liability_type()` classifies into Accrued Liability, Provision/Reserve, Deferred Revenue, Deferred Liability (order: deferred revenue first for specificity)
+- [x] ENH-02: Driver-based reasonableness thresholds — ±20% Reasonable, ±50% Moderate Variance, >50% Significant Variance; payroll 25% opex, utilities 2% opex, rent 5% opex
+- [x] ENH-03: Authoritative references — FASB: AU-C § 520, ASC 420-10, 450-20, 606-10, 835-30; GASB: AU-C § 520, Statement No. 62. No ASC 250-10 present.
+
+#### Files Modified
+- `accrual_completeness_engine.py` — Complete rewrite: `_classify_liability_type()`, `_test_reasonableness()`, `_build_reasonableness_results()`, `_analyze_deferred_revenue()`, `_generate_findings()`, `_generate_procedures()`, enhanced `_build_expected_accrual_checklist()` with basis/recommended_action, new dataclasses (ReasonablenessResult, DeferredRevenueAnalysis, Finding, SuggestedProcedure), `AccrualCompletenessReport` with `meets_threshold`, deferred revenue separation, PROVISION_KEYWORDS, DEFERRED_REVENUE_KEYWORDS, Vacation/PTO in expected accruals
+- `accrual_completeness_memo.py` — Complete rewrite: ACE- reference prefix, `_standard_table_style()`, classification column in Section II, reasonableness sub-table, Section IV-A missing accruals, Section IV-B deferred revenue (ASC 606), Section V findings, Section VI procedures, dynamic run-rate conclusion, `draw_page_header` on later pages, threshold label fix
+- `shared/authoritative_language/fasb_scope_methodology.yml` — accrual_completeness: ASC 450-20 → AU-C § 520 + ASC 420-10 + ASC 450-20 + ASC 606-10 + ASC 835-30
+- `shared/authoritative_language/gasb_scope_methodology.yml` — accrual_completeness: Statement No. 62 → AU-C § 520 + Statement No. 62
+- `shared/diagnostic_response_schemas.py` — AccrualAccountResponse +classification, 5 new response models (ReasonablenessResultResponse, DeferredRevenueAnalysisResponse, AccrualFindingResponse, AccrualProcedureResponse, ExpectedAccrualCheckResponse), AccrualCompletenessReportResponse +14 new fields
+- `shared/export_schemas.py` — AccrualCompletenessMemoInput/CSVInput +10 new fields
+- `routes/audit.py` — accrual_completeness_check +total_revenue parameter
+- `generate_sample_reports.py` — gen_accrual_completeness: corrected data (DR excluded, ratio ~47%, 5 findings, 5 procedures, reasonableness results, deferred analysis)
+- `frontend/src/types/accrualCompleteness.ts` — 6 new interfaces (ReasonablenessResult, DeferredRevenueAnalysis, AccrualFinding, AccrualProcedure, ExpectedAccrualCheck), AccrualCompletenessReport +14 new fields
+
+#### Verification
+- [x] `npm run build` passes
+- [x] `npm test` passes (1,329 tests, 111 suites)
+- [x] `pytest` passes (6,188 total — 50 net new tests)
+- [x] Regenerated all 21 sample PDFs — accrual completeness: 49,905 bytes (up from ~30KB), 6 pages (up from 3)
+- [x] No other reports unintentionally modified
+
+#### Acceptance Criteria
+- [x] Deferred Revenue removed from accrual population and reclassified to Section IV-B
+- [x] Accrual-to-run-rate ratio recomputed using corrected population (~47.0% for Meridian data)
+- [x] Threshold label changed from "Below Threshold: No" to "Meets Minimum Accrual Threshold (≥50%): Yes/No"
+- [x] Corrected ratio below 50% triggers a High-priority finding (not a pass)
+- [x] Reference number added to cover page (ACE- prefix)
+- [x] Per-account reasonableness testing present in Section II with driver-based expected values
+- [x] Section IV-A — Missing Accrual Estimation present with checklist comparison
+- [x] Section IV-B — Deferred Revenue analysis present with ASC 606 framing
+- [x] Section V — Findings register present, dynamically generated
+- [x] Section VI — Suggested Procedures present, dynamically generated
+- [x] Authoritative references updated: ASC 420-10, 450-20, 606-10, 835-30, AU-C § 520
+- [x] No ASC 250-10 reference present
+- [x] All narrative conclusions are dynamically generated from computed values
+- [x] Report renders to 6 pages (up from 3)
+
+---
+
 ### Sprint 512 — Expense Category Report Enrichment
 **Status:** COMPLETE
 **Goal:** Fix 3 bugs and add 4 new sections to the Expense Category Analytical Procedures report (Report 18): doubled word fix, reference number addition, authoritative reference correction, % Change column, period-over-period build-out, expense ratio analysis, findings register, suggested audit procedures.

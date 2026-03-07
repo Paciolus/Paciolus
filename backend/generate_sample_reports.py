@@ -3558,29 +3558,285 @@ def gen_expense_category():
 def gen_accrual_completeness():
     from accrual_completeness_memo import generate_accrual_completeness_memo
 
+    # Corrected: Deferred Revenue excluded from accrual population
+    prior_opex = 5_827_750.00
+    monthly_rr = prior_opex / 12  # ~485,646
+    accrual_total = 228_450.00  # Accruals + Provisions only (no Deferred Revenue)
+    ratio = (accrual_total / monthly_rr) * 100  # ~47.0%
+    payroll_expected = prior_opex * 0.25 / 12
+    payroll_var_pct = (142_000 - payroll_expected) / payroll_expected
+
     report_result = {
         "accrual_accounts": [
-            {"account_name": "Accrued Payroll", "balance": 142_000.00, "matched_keyword": "accrued"},
-            {"account_name": "Accrued Interest Payable", "balance": 24_500.00, "matched_keyword": "accrued"},
-            {"account_name": "Accrued Utilities", "balance": 8_200.00, "matched_keyword": "accrued"},
-            {"account_name": "Accrued Legal Fees", "balance": 35_000.00, "matched_keyword": "accrued"},
-            {"account_name": "Warranty Reserve", "balance": 18_750.00, "matched_keyword": "reserve"},
-            {"account_name": "Deferred Revenue", "balance": 60_550.00, "matched_keyword": "deferred"},
+            {
+                "account_name": "Accrued Payroll",
+                "balance": 142_000.00,
+                "matched_keyword": "accrued payroll",
+                "classification": "Accrued Liability",
+            },
+            {
+                "account_name": "Accrued Legal Fees",
+                "balance": 35_000.00,
+                "matched_keyword": "accrued",
+                "classification": "Accrued Liability",
+            },
+            {
+                "account_name": "Accrued Interest Payable",
+                "balance": 24_500.00,
+                "matched_keyword": "accrued interest",
+                "classification": "Accrued Liability",
+            },
+            {
+                "account_name": "Warranty Reserve",
+                "balance": 18_750.00,
+                "matched_keyword": "reserve",
+                "classification": "Provision / Reserve",
+            },
+            {
+                "account_name": "Accrued Utilities",
+                "balance": 8_200.00,
+                "matched_keyword": "accrued",
+                "classification": "Accrued Liability",
+            },
         ],
-        "total_accrued_balance": 289_000.00,
-        "accrual_account_count": 6,
-        "monthly_run_rate": 485_646.00,
-        "accrual_to_run_rate_pct": 59.5,
+        "total_accrued_balance": accrual_total,
+        "accrual_account_count": 5,
+        "deferred_revenue_accounts": [
+            {
+                "account_name": "Deferred Revenue",
+                "balance": 60_550.00,
+                "matched_keyword": "deferred revenue",
+                "classification": "Deferred Revenue",
+            },
+        ],
+        "total_deferred_revenue": 60_550.00,
+        "monthly_run_rate": round(monthly_rr, 2),
+        "accrual_to_run_rate_pct": round(ratio, 2),
         "threshold_pct": 50.0,
-        "below_threshold": False,
+        "meets_threshold": ratio >= 50.0,
+        "below_threshold": ratio < 50.0,
         "prior_available": True,
-        "prior_operating_expenses": 5_827_750.00,
+        "prior_operating_expenses": prior_opex,
         "narrative": (
-            "The accrual-to-run-rate ratio of 59.5% exceeds the 50% threshold, suggesting "
-            "accrual balances are within a reasonable range relative to operating activity levels. "
-            "However, the practitioner should verify the completeness of the warranty reserve "
-            "and deferred revenue balances against supporting documentation."
+            f"Identified 5 accrued liability accounts with a combined balance of ${accrual_total:,.2f}. "
+            f"Deferred Revenue of $60,550.00 has been excluded from the accrual-to-run-rate "
+            f"calculation and is analyzed separately. "
+            f"The monthly expense run-rate based on prior-period operating expenses is ${monthly_rr:,.2f}. "
+            f"The accrual-to-run-rate ratio is {ratio:.1f}% (threshold: 50%). "
+            f"The accrued balance is below the 50% minimum threshold "
+            f"of the monthly expense run-rate ({ratio:.1f}% vs 50% threshold)."
         ),
+        "reasonableness_results": [
+            {
+                "account_name": "Accrued Payroll",
+                "recorded_balance": 142_000.00,
+                "annual_driver": prior_opex * 0.25,
+                "driver_source": "Estimated from operating expenses (25% allocation)",
+                "months_to_accrue": 1,
+                "expected_balance": round(payroll_expected, 2),
+                "variance": round(142_000 - payroll_expected, 2),
+                "variance_pct": round(payroll_var_pct, 4),
+                "status": "Moderate Variance \u2014 Inquire",
+            },
+            {
+                "account_name": "Accrued Interest Payable",
+                "recorded_balance": 24_500.00,
+                "annual_driver": None,
+                "driver_source": "Requires debt schedule \u2014 not derivable from TB",
+                "months_to_accrue": 1,
+                "expected_balance": None,
+                "variance": None,
+                "variance_pct": None,
+                "status": "Driver Unavailable \u2014 Auditor Judgment Required",
+            },
+            {
+                "account_name": "Accrued Utilities",
+                "recorded_balance": 8_200.00,
+                "annual_driver": round(prior_opex * 0.02, 2),
+                "driver_source": "Estimated from operating expenses (2% allocation)",
+                "months_to_accrue": 1,
+                "expected_balance": round(prior_opex * 0.02 / 12, 2),
+                "variance": round(8_200 - (prior_opex * 0.02 / 12), 2),
+                "variance_pct": round((8_200 - (prior_opex * 0.02 / 12)) / (prior_opex * 0.02 / 12), 4),
+                "status": "Reasonable",
+            },
+            {
+                "account_name": "Accrued Legal Fees",
+                "recorded_balance": 35_000.00,
+                "annual_driver": None,
+                "driver_source": "Requires legal counsel confirmation",
+                "months_to_accrue": 1,
+                "expected_balance": None,
+                "variance": None,
+                "variance_pct": None,
+                "status": "Driver Unavailable \u2014 Auditor Judgment Required",
+            },
+            {
+                "account_name": "Warranty Reserve",
+                "recorded_balance": 18_750.00,
+                "annual_driver": None,
+                "driver_source": "Requires warranty claims history",
+                "months_to_accrue": 1,
+                "expected_balance": None,
+                "variance": None,
+                "variance_pct": None,
+                "status": "Driver Unavailable \u2014 Auditor Judgment Required",
+            },
+        ],
+        "expected_accrual_checklist": [
+            {
+                "expected_name": "Payroll Accrual",
+                "detected": True,
+                "balance": 142_000.00,
+                "risk_if_absent": "Understated labor costs",
+                "basis": "Payroll expense \u00d7 stub period",
+                "recommended_action": "",
+            },
+            {
+                "expected_name": "Interest Accrual",
+                "detected": True,
+                "balance": 24_500.00,
+                "risk_if_absent": "Understated financing costs",
+                "basis": "Debt \u00d7 rate \u00d7 stub period",
+                "recommended_action": "",
+            },
+            {
+                "expected_name": "Tax Accrual",
+                "detected": False,
+                "balance": None,
+                "risk_if_absent": "Understated tax liabilities",
+                "basis": "Current period tax provision",
+                "recommended_action": "Verify entity tax status (LLC pass-through may explain absence)",
+            },
+            {
+                "expected_name": "Rent Accrual",
+                "detected": False,
+                "balance": None,
+                "risk_if_absent": "Understated occupancy costs",
+                "basis": "Lease obligations under ASC 842",
+                "recommended_action": "Confirm no lease obligations exist under ASC 842",
+            },
+            {
+                "expected_name": "Utilities Accrual",
+                "detected": True,
+                "balance": 8_200.00,
+                "risk_if_absent": "Understated operating costs",
+                "basis": "Utility expense stub period",
+                "recommended_action": "",
+            },
+            {
+                "expected_name": "Insurance Accrual",
+                "detected": False,
+                "balance": None,
+                "risk_if_absent": "Understated insurance obligations",
+                "basis": "Insurance premium obligations",
+                "recommended_action": "Confirm insurance premium payment timing",
+            },
+            {
+                "expected_name": "Warranty Accrual",
+                "detected": True,
+                "balance": 18_750.00,
+                "risk_if_absent": "Understated contingent liabilities",
+                "basis": "Historical warranty claim rate \u00d7 sales",
+                "recommended_action": "",
+            },
+            {
+                "expected_name": "Bonus Accrual",
+                "detected": False,
+                "balance": None,
+                "risk_if_absent": "Understated compensation",
+                "basis": "Performance-based compensation",
+                "recommended_action": "Confirm no bonus or incentive arrangements exist",
+            },
+            {
+                "expected_name": "Legal Accrual",
+                "detected": True,
+                "balance": 35_000.00,
+                "risk_if_absent": "Understated legal obligations",
+                "basis": "ASC 450-20 loss contingencies",
+                "recommended_action": "",
+            },
+            {
+                "expected_name": "Professional Fees",
+                "detected": False,
+                "balance": None,
+                "risk_if_absent": "Understated service obligations",
+                "basis": "Professional services",
+                "recommended_action": "Confirm no unpaid professional service obligations",
+            },
+            {
+                "expected_name": "Vacation / PTO",
+                "detected": False,
+                "balance": None,
+                "risk_if_absent": "Understated PTO liability",
+                "basis": "Estimated unused PTO liability",
+                "recommended_action": "Inquire whether entity accrues PTO liability",
+            },
+        ],
+        "deferred_revenue_analysis": {
+            "deferred_balance": 60_550.00,
+            "total_revenue": 6_850_000.00,
+            "deferred_pct_of_revenue": round((60_550 / 6_850_000) * 100, 4),
+        },
+        "findings": [
+            {
+                "area": "Accrual Completeness",
+                "finding": f"Accrual-to-run-rate ratio of {ratio:.1f}% is below the 50% minimum threshold after excluding Deferred Revenue",
+                "risk": "High",
+                "action_required": "Perform additional completeness procedures",
+            },
+            {
+                "area": "Accrued Payroll",
+                "finding": f"Balance of $142,000 exceeds expected estimate by {abs(payroll_var_pct):.0%}",
+                "risk": "Moderate",
+                "action_required": "Obtain accrued payroll accrual schedule",
+            },
+            {
+                "area": "Missing Accruals",
+                "finding": "6 expected accrual type(s) not identified in TB: Tax Accrual, Rent Accrual, Insurance Accrual, Bonus Accrual, Professional Fees and 1 more",
+                "risk": "High",
+                "action_required": "Inquire with management regarding completeness of accrued liabilities",
+            },
+            {
+                "area": "Deferred Revenue",
+                "finding": "Deferred Revenue balance of $60,550 requires ASC 606 completeness verification",
+                "risk": "Moderate",
+                "action_required": "Obtain deferred revenue rollforward schedule",
+            },
+            {
+                "area": "Reasonableness Testing",
+                "finding": "3 account(s) could not be tested against a run-rate driver",
+                "risk": "Low",
+                "action_required": "Obtain supporting documentation for accounts without determinable drivers",
+            },
+        ],
+        "suggested_procedures": [
+            {
+                "priority": "High",
+                "area": "Accrual Completeness",
+                "procedure": f"Accrual-to-run-rate ratio of {ratio:.1f}% is below the 50% minimum threshold. Request management's accrual schedule and supporting calculations for all identified accrual accounts. Perform cutoff testing around the period end date.",
+            },
+            {
+                "priority": "High",
+                "area": "Missing Accruals",
+                "procedure": "6 expected accrual type(s) not identified in the trial balance. Inquire with management regarding Tax Accrual, Rent Accrual, Insurance Accrual, Bonus Accrual, and 2 other categories. Obtain written representation regarding completeness of accrued liabilities.",
+            },
+            {
+                "priority": "Moderate",
+                "area": "Deferred Revenue",
+                "procedure": "Deferred Revenue balance of $60,550 requires ASC 606 completeness verification. Obtain the deferred revenue rollforward. Confirm all balances relate to unfulfilled performance obligations as of the balance sheet date.",
+            },
+            {
+                "priority": "Moderate",
+                "area": "Accrued Payroll",
+                "procedure": "Obtain accrued payroll accrual schedule. Compare to management's accrual methodology documentation.",
+            },
+            {
+                "priority": "Moderate",
+                "area": "General Completeness",
+                "procedure": "Review post-period-end disbursements for items that should have been accrued at period end. Scan unrecorded liability search results for omitted accruals.",
+            },
+        ],
     }
 
     pdf = generate_accrual_completeness_memo(
@@ -3591,7 +3847,7 @@ def gen_accrual_completeness():
         prepared_by=PREPARED,
         reviewed_by=REVIEWED,
         workpaper_date=WP_DATE,
-        source_document_title="Trial Balance — FY2025",
+        source_document_title="Trial Balance \u2014 FY2025",
         source_context_note=ERP_NOTE,
     )
     save_pdf("19_accrual_completeness.pdf", pdf)

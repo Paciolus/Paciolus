@@ -4,6 +4,16 @@
 
 ---
 
+## Accrual Completeness Estimator (Sprint 513)
+
+1. **Account classification ordering matters**: When classifying liability accounts into analytical buckets, check the most specific patterns first. "Deferred Revenue" must match before generic "deferred" to avoid misclassifying it as "Deferred Liability". The ordering (deferred revenue → accrued → provision → generic deferred) is critical.
+
+2. **MemoSubsection style doesn't exist**: The `create_memo_styles()` from `memo_base.py` does not include a "MemoSubsection" style. For subsection headings within a section, use `<b>Bold text</b>` within a "MemoBody" paragraph instead of referencing a nonexistent style key.
+
+3. **Analytical ratio integrity**: When a ratio calculation includes unrelated account types (e.g., Deferred Revenue in an accrual completeness ratio), the conclusion can flip from "fail" to "pass" — a material analytical error. Always validate that only accounts relevant to the metric feed into the calculation.
+
+---
+
 ## Population Profile Report (Sprint 511)
 
 1. **Sample data self-consistency**: When hardcoding sample report data, verify mathematical invariants (e.g., bucket sums = total, all accounts in a bucket meet the bucket's threshold). The original data had 7 accounts in the >$1M bucket summing to $4,250,000 — an impossibility since 7 accounts each >$1M must sum to at least $7M. Work backward from the total when designing bucket distributions.

@@ -421,13 +421,21 @@ class AccrualCompletenessMemoInput(WorkpaperMetadata):
     accrual_accounts: list = []
     total_accrued_balance: float = 0.0
     accrual_account_count: int = 0
+    deferred_revenue_accounts: list = []
+    total_deferred_revenue: float = 0.0
     monthly_run_rate: Optional[float] = None
     accrual_to_run_rate_pct: Optional[float] = None
     threshold_pct: float = 50.0
+    meets_threshold: bool = False
     below_threshold: bool = False
     prior_operating_expenses: Optional[float] = None
     prior_available: bool = False
     narrative: str = ""
+    reasonableness_results: list = []
+    expected_accrual_checklist: list = []
+    deferred_revenue_analysis: Optional[dict] = None
+    findings: list = []
+    suggested_procedures: list = []
     filename: str = "accrual_completeness"
 
 
@@ -437,11 +445,16 @@ class AccrualCompletenessCSVInput(BaseModel):
     accrual_accounts: list = []
     total_accrued_balance: float = 0.0
     accrual_account_count: int = 0
+    deferred_revenue_accounts: list = []
+    total_deferred_revenue: float = 0.0
     monthly_run_rate: Optional[float] = None
     accrual_to_run_rate_pct: Optional[float] = None
     threshold_pct: float = 50.0
+    meets_threshold: bool = False
     below_threshold: bool = False
     prior_operating_expenses: Optional[float] = None
     prior_available: bool = False
     narrative: str = ""
+    reasonableness_results: list = []
+    findings: list = []
     filename: str = "accrual_completeness"

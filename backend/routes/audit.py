@@ -368,6 +368,7 @@ async def accrual_completeness_check(
     file: UploadFile = File(...),
     prior_operating_expenses: Optional[float] = Form(default=None),
     threshold_pct: float = Form(default=50.0),
+    total_revenue: Optional[float] = Form(default=None),
     engagement_id: Optional[int] = Form(default=None),
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
@@ -390,6 +391,7 @@ async def accrual_completeness_check(
                     filename,
                     prior_operating_expenses=prior_operating_expenses,
                     threshold_pct=threshold_pct,
+                    total_revenue=total_revenue,
                 )
                 result = report.to_dict()
                 del column_names, rows
