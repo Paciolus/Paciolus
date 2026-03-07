@@ -165,6 +165,7 @@ All verification items confirmed:
 - Stale deposit per-item severity: HIGH >30 days, MEDIUM 11-30 days
 - No other reports unintentionally modified (all 21 regenerated, timestamp-only changes on non-bank-rec reports)
 - Test count: 5,846 backend (up from 5,808 — +38 net) + 1,329 frontend
+- **Commit:** `f74c771`
 
 ---
 
