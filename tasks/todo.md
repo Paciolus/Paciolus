@@ -163,6 +163,7 @@ All verification items confirmed:
 - No banned assertive language in descriptions
 - No other reports modified (all 21 regenerated, timestamp-only on non-TWM)
 - Test count: 5,891 backend (up from 5,846 — +45 new) + 1,329 frontend
+- **Commit:** `30a79de`
 
 ---
 
