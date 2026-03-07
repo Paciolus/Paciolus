@@ -4,6 +4,16 @@
 
 ---
 
+## Population Profile Report (Sprint 511)
+
+1. **Sample data self-consistency**: When hardcoding sample report data, verify mathematical invariants (e.g., bucket sums = total, all accounts in a bucket meet the bucket's threshold). The original data had 7 accounts in the >$1M bucket summing to $4,250,000 — an impossibility since 7 accounts each >$1M must sum to at least $7M. Work backward from the total when designing bucket distributions.
+
+2. **Gini threshold changes break Literal types**: Changing Gini interpretation labels (removing "Very High") requires updating Pydantic response schema Literal types, not just engine constants. Always search for the old labels in schema files.
+
+3. **Shared modules enable rapid feature development**: The existing `shared/benford.py` module let us add Benford's Law to the population profile in minutes. Worth investing in shared engine modules when a feature will appear in multiple reports.
+
+---
+
 ## Data Quality Pre-Flight Report (Sprint 510)
 
 1. **Test data for balanced TB**: When adding a TB balance check, existing test data that was "clean" may no longer be clean if debits != credits. The original clean file test had debits=1500, credits=3500 — unbalanced. Always verify test fixture data satisfies ALL quality checks, not just the ones originally tested.

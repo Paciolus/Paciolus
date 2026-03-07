@@ -179,8 +179,19 @@ tools:
   population_profile:
     data_description: "trial balance population"
     references:
-      - statement: "Statement No. 34"
-        topic: "Basic Financial Statements — and Management's Discussion and Analysis — for State and Local Governments"
+      - body: "AICPA"
+        codification: "AU-C Section 520"
+        topic: "Analytical Procedures"
+        paragraph: "Various"
+        status: "Current"
+      - body: "AICPA"
+        codification: "AU-C Section 530"
+        topic: "Audit Sampling"
+        paragraph: "Various"
+        status: "Current"
+      - body: "PCAOB"
+        codification: "AS 2305"
+        topic: "Substantive Analytical Procedures"
         paragraph: "Various"
         status: "Current"
 

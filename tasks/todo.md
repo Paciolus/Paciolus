@@ -117,6 +117,58 @@
 > Sprints 478, 488–497 archived to `tasks/archive/sprints-478-497-details.md`. Pending items below.
 
 
+### Sprint 511 — TB Population Profile Report Enrichment
+**Status:** COMPLETE
+**Goal:** Fix 2 systemic bugs and add 6 new sections to the Population Profile Report (Report 17): authoritative reference correction, magnitude bucket math fix, account type stratification, Benford's Law analysis, exception flags, suggested procedures, concentration table enhancement, data quality score computation.
+
+#### Bug Fixes
+- [x] BUG-01: Remove ASC 250-10 from FASB/GASB YAMLs; add AU-C § 520, AU-C § 530, AS 2305 (AICPA/PCAOB body overrides)
+- [x] BUG-02: Fix >$1M magnitude bucket sum in sample data — redesigned self-consistent sample data (bucket sums verified equal total: $12,847,392.50). Added totals verification row in memo PDF. Reduced >$1M count from 7 to 3 (minimum-sum consistency).
+
+#### New Sections
+- [x] SEC-01: Section IV-A — Account Type Stratification (5 types: Asset/Liability/Equity/Revenue/Expense + Unknown, with count, % of accounts, total balance, % of population, >40% disproportionate flag)
+- [x] SEC-02: Section IV-B — Benford's Law Analysis (reuses `shared/benford.py` with relaxed min_entries=10; digit table 1-9, expected/observed/variance; chi-square, MAD, conformity level; Nigrini threshold footnote)
+- [x] SEC-03: Section V — Exception Flags (V-A: Normal Balance Violations per NORMAL_BALANCE_SIGN map with introductory narrative, V-B: Zero ($0) and Near-Zero (≤$100) balances, V-C: Dominant Accounts >10% with risk notes)
+- [x] SEC-04: Section VI — Suggested Audit Procedures (dynamically generated: Benford deviation, normal balance violations, concentration risk, dominant accounts, zero/near-zero accounts; sorted by priority High→Low; references AS 2305)
+
+#### Enhancements
+- [x] ENH-01: Concentration table — account_number column added to TopAccount dataclass and concentration table (conditional rendering when data present)
+- [x] ENH-02: Gini thresholds — updated from (0.3/Low, 0.5/Moderate, 0.7/High, Very High) to (0.40/Low, 0.65/Moderate, High). "Very High" label removed. Threshold footnote rendered in Scope section.
+- [x] ENH-03: Data Quality Score — dynamically computed from 3 weighted components: Completeness 40%, Normal Balance Compliance 35%, Active Balances 25%. Score breakdown table in Section II. Score displayed in Scope leader dots.
+
+#### Files Modified
+- `shared/authoritative_language/fasb_scope_methodology.yml` — population_profile: ASC 250-10 → AU-C § 520 + AU-C § 530 + AS 2305
+- `shared/authoritative_language/gasb_scope_methodology.yml` — population_profile: GASB 34 → AU-C § 520 + AU-C § 530 + AS 2305
+- `population_profile_engine.py` — complete rewrite: 8 new dataclasses (AccountTypeStratum, NormalBalanceViolation, ZeroBalanceAccount, DominantAccountFlag, ExceptionFlags, SuggestedProcedure, DataQualityScore, BucketBreakdown updated), 5 new computation functions (_compute_account_type_stratification, _compute_exception_flags, _generate_suggested_procedures, _compute_data_quality, Benford integration), updated GINI_THRESHOLDS, TopAccount.account_number field
+- `population_profile_memo.py` — complete rewrite: 6 new sections (IV-A Stratification, IV-B Benford, V Exception Flags with 3 subsections, VI Procedures), data quality breakdown table, interpretive narrative after Descriptive Statistics/Magnitude/Concentration, Gini threshold footnote, bucket totals verification row, dynamic disclaimer references
+- `shared/diagnostic_response_schemas.py` — PopulationProfileResponse: gini_interpretation Literal updated (removed "Very High"), added account_type_stratification, benford_analysis, exception_flags, suggested_procedures, data_quality fields. TopAccountResponse: added account_number.
+- `shared/export_schemas.py` — PopulationProfileMemoInput: 5 new fields (account_type_stratification, benford_analysis, exception_flags, suggested_procedures, data_quality)
+- `generate_sample_reports.py` — gen_population_profile: complete rewrite with self-consistent sample data (10 top accounts, 6 magnitude buckets, 5 account type strata, Benford analysis, 3 normal balance violations, 4 zero-balance + 2 near-zero, 2 dominant accounts, 5 suggested procedures, data quality score)
+- `tests/test_population_profile_engine.py` — 54 tests (up from 22): +5 Gini threshold tests, +3 stratification tests, +8 exception flag tests, +4 suggested procedure tests, +4 data quality tests, +4 profile integration tests, +2 bucket verification tests, +2 account number tests
+
+#### Verification
+- [x] `npm run build` passes (all ƒ Dynamic)
+- [x] `npm test` passes (1,329 tests, 111 suites)
+- [x] `pytest` passes (6,094 passed, 0 failures — up from 6,068)
+- [x] Regenerated all 21 sample PDFs — population profile: 49,477 bytes (up from ~30KB), 6 pages (up from 3). Suite range: 3–8 pages.
+- [x] No other reports unintentionally modified
+
+#### Acceptance Criteria
+- [x] ASC 250-10 reference removed; AU-C § 520, AU-C § 530, AS 2305 substituted (FASB + GASB YAMLs)
+- [x] Magnitude bucket sums verified to aggregate correctly; >$1M bucket no longer shows single-account value
+- [x] All bucket sums equal total population value (totals row added in PDF)
+- [x] Account type stratification table present with per-type count, balance, and % of population
+- [x] Benford's Law table present: digits 1–9, observed %, expected %, variance; chi-square, MAD, and conformance conclusion
+- [x] Gini thresholds (Low/Moderate/High) defined explicitly in report (Scope section footnote)
+- [x] Normal balance violations flagged (3 in sample) with introductory narrative
+- [x] Zero-balance (4) and near-zero (2) accounts flagged
+- [x] Concentration table includes account numbers (conditional column)
+- [x] Section VI procedures dynamically generated from findings (5 procedures in sample), sorted by priority
+- [x] Data quality score computed dynamically (94.8% in sample), not hardcoded — breakdown table in Section II
+- [x] Report renders to 6 pages (vs. current 3) — consistent with suite range (3–8 pages)
+
+---
+
 ### Sprint 508 — Statistical Sampling Evaluation Report Fixes & Improvements
 **Status:** COMPLETE
 **Goal:** Fix 6 bugs and add 2 improvements to the Statistical Sampling Evaluation memo: phase-specific titles, evaluation next steps, UEL derivation, PASS/FAIL visual, error nature/direction columns, correction status conditional, error summary statistics, ASC 450-20 footnote.

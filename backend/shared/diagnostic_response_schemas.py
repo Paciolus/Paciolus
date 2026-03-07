@@ -373,6 +373,7 @@ class TopAccountResponse(BaseModel):
     net_balance: float
     abs_balance: float
     percent_of_total: float
+    account_number: Optional[str] = None
 
 
 class SectionDensityResponse(BaseModel):
@@ -399,10 +400,15 @@ class PopulationProfileResponse(BaseModel):
     p25: float
     p75: float
     gini_coefficient: float
-    gini_interpretation: Literal["Low", "Moderate", "High", "Very High"]
+    gini_interpretation: Literal["Low", "Moderate", "High"]
     buckets: list[BucketBreakdownResponse]
     top_accounts: list[TopAccountResponse]
     section_density: Optional[list[SectionDensityResponse]] = None
+    account_type_stratification: Optional[list[dict]] = None
+    benford_analysis: Optional[dict] = None
+    exception_flags: Optional[dict] = None
+    suggested_procedures: Optional[list[dict]] = None
+    data_quality: Optional[dict] = None
 
 
 # ═══════════════════════════════════════════════════════════════

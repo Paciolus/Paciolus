@@ -356,6 +356,11 @@ class PopulationProfileMemoInput(WorkpaperMetadata):
     gini_interpretation: str = "Low"
     buckets: list = []
     top_accounts: list = []
+    account_type_stratification: list = []
+    benford_analysis: Optional[dict] = None
+    exception_flags: Optional[dict] = None
+    suggested_procedures: list = []
+    data_quality: Optional[dict] = None
     filename: str = "population_profile"
 
 
