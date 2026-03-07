@@ -648,6 +648,7 @@ class RecFlaggedItem:
     amount: float = 0.0
     date: Optional[str] = None
     reference: Optional[str] = None
+    severity: str = "medium"
     details: Optional[dict] = None
 
     def to_dict(self) -> dict:
@@ -655,6 +656,7 @@ class RecFlaggedItem:
             "test_name": self.test_name,
             "description": self.description,
             "amount": round(self.amount, 2),
+            "severity": self.severity,
         }
         if self.date:
             result["date"] = self.date
@@ -730,6 +732,7 @@ def _test_stale_deposits(
             continue
         age = _compute_item_age_days(txn.date, reference_date)
         if age is not None and age > 10:
+            item_severity = "high" if age > 30 else "medium"
             flagged.append(
                 RecFlaggedItem(
                     test_name="Stale Deposits",
@@ -737,11 +740,14 @@ def _test_stale_deposits(
                     amount=txn.amount,
                     date=txn.date,
                     reference=txn.reference,
+                    severity=item_severity,
                     details={"age_days": age},
                 )
             )
 
-    severity = "high" if len(flagged) > 5 else ("medium" if len(flagged) > 0 else "low")
+    # Overall severity: highest individual item severity
+    has_high = any(f.severity == "high" for f in flagged)
+    severity = "high" if has_high else ("medium" if len(flagged) > 0 else "low")
     return RecTestResult(
         test_name="Stale Deposits (>10 days)",
         flagged_count=len(flagged),
@@ -769,11 +775,12 @@ def _test_stale_checks(
                     amount=txn.amount,
                     date=txn.date,
                     reference=txn.reference,
+                    severity="medium",
                     details={"age_days": age},
                 )
             )
 
-    severity = "high" if len(flagged) > 3 else ("medium" if len(flagged) > 0 else "low")
+    severity = "medium" if len(flagged) > 0 else "low"
     return RecTestResult(
         test_name="Stale Checks (>90 days)",
         flagged_count=len(flagged),
@@ -783,7 +790,7 @@ def _test_stale_checks(
 
 
 _NSF_KEYWORDS = re.compile(
-    r"\b(nsf|returned|bounced|chargeback|charge\s*back|dishono[u]?red)\b",
+    r"\b(nsf|return|returned|bounced|insufficient|r01|r02|chargeback|charge\s*back|reversed|dishono[u]?red)\b",
     re.IGNORECASE,
 )
 
@@ -805,11 +812,12 @@ def _test_nsf_items(
                         amount=txn.amount,
                         date=txn.date,
                         reference=txn.reference,
+                        severity="high",
                         details={"source": txn_source},
                     )
                 )
 
-    severity = "high" if len(flagged) > 3 else ("medium" if len(flagged) > 0 else "low")
+    severity = "high" if len(flagged) > 0 else "low"
     return RecTestResult(
         test_name="NSF / Returned Items",
         flagged_count=len(flagged),
@@ -838,13 +846,14 @@ def _test_interbank_transfers(
 
         for d_src, d_txn in debits:
             for c_src, c_txn in credits:
-                if abs(abs(d_txn.amount) - c_txn.amount) < 0.01:
+                if abs(abs(d_txn.amount) - c_txn.amount) <= 1.00:
                     flagged.append(
                         RecFlaggedItem(
                             test_name="Interbank Transfers",
                             description=(f"Same-day debit/credit pair on {txn_date}: ${abs(d_txn.amount):,.2f}"),
                             amount=abs(d_txn.amount),
                             date=txn_date,
+                            severity="high",
                             details={
                                 "debit_description": d_txn.description[:40],
                                 "credit_description": c_txn.description[:40],
@@ -852,7 +861,7 @@ def _test_interbank_transfers(
                         )
                     )
 
-    severity = "medium" if len(flagged) > 0 else "low"
+    severity = "high" if len(flagged) > 0 else "low"
     return RecTestResult(
         test_name="Interbank Transfers",
         flagged_count=len(flagged),
@@ -871,19 +880,20 @@ def _test_high_value_transactions(
         for source, txn in [("bank", m.bank_txn), ("ledger", m.ledger_txn)]:
             if not txn:
                 continue
-            if abs(txn.amount) > materiality:
+            if abs(txn.amount) >= materiality:
                 flagged.append(
                     RecFlaggedItem(
                         test_name="High Value Transactions",
-                        description=f"{source.title()} txn > materiality: {txn.description[:50]}",
+                        description=f"{source.title()} txn >= materiality: {txn.description[:50]}",
                         amount=txn.amount,
                         date=txn.date,
                         reference=txn.reference,
+                        severity="medium",
                         details={"source": source, "materiality": materiality},
                     )
                 )
 
-    severity = "high" if len(flagged) > 5 else ("medium" if len(flagged) > 0 else "low")
+    severity = "medium" if len(flagged) > 0 else "low"
     return RecTestResult(
         test_name="High Value (>Materiality)",
         flagged_count=len(flagged),
@@ -945,6 +955,112 @@ def compute_outstanding_items_aging(
         results.append(aging)
 
     return results
+
+
+# =============================================================================
+# RISK SCORING
+# =============================================================================
+
+
+def compute_bank_rec_risk_score(
+    rec_tests: list[RecTestResult],
+    summary: ReconciliationSummary,
+    performance_materiality: float = 50_000.0,
+) -> dict:
+    """Compute composite risk score for bank reconciliation.
+
+    Returns dict with score, risk_tier, total_flagged, flags_by_severity,
+    flag_rate, tests_run, and top_findings.
+    """
+    score = 0.0
+
+    has_diff = abs(summary.reconciling_difference) > 0.01
+    if has_diff:
+        score += 15
+        if abs(summary.reconciling_difference) > performance_materiality:
+            score += 10
+
+    total_outstanding = summary.bank_only_count + summary.ledger_only_count
+    if total_outstanding > 20:
+        score += 8
+    elif total_outstanding > 10:
+        score += 4
+
+    # Count stale items from test results
+    stale_deposit_count = 0
+    stale_check_count = 0
+    nsf_detected = False
+    kiting_detected = False
+    high_value_count = 0
+
+    for t in rec_tests:
+        if "Stale Deposits" in t.test_name:
+            stale_deposit_count = t.flagged_count
+        elif "Stale Checks" in t.test_name:
+            stale_check_count = t.flagged_count
+        elif "NSF" in t.test_name:
+            nsf_detected = t.flagged_count > 0
+        elif "Interbank" in t.test_name:
+            kiting_detected = t.flagged_count > 0
+        elif "High Value" in t.test_name:
+            high_value_count = t.flagged_count
+
+    if stale_deposit_count > 0:
+        score += 6
+    if stale_check_count > 0:
+        score += 4
+    if nsf_detected:
+        score += 10
+    if kiting_detected:
+        score += 15
+    if high_value_count > 0:
+        score += 5
+
+    score = min(score, 100)
+
+    # Risk tier (global scale)
+    if score <= 10:
+        tier = "low"
+    elif score <= 25:
+        tier = "moderate"
+    elif score <= 50:
+        tier = "elevated"
+    else:
+        tier = "high"
+
+    # Aggregate severity counts
+    high_sev = 0
+    med_sev = 0
+    low_sev = 0
+    total_flagged = 0
+    top_findings: list[str] = []
+
+    for t in rec_tests:
+        total_flagged += t.flagged_count
+        if t.flagged_count > 0:
+            top_findings.append(f"{t.test_name}: {t.flagged_count} items flagged")
+        for item in t.flagged_items:
+            sev = item.severity if hasattr(item, "severity") else "medium"
+            if sev == "high":
+                high_sev += 1
+            elif sev == "medium":
+                med_sev += 1
+            else:
+                low_sev += 1
+
+    total_txns = summary.matched_count + summary.bank_only_count + summary.ledger_only_count
+    flag_rate = total_flagged / total_txns if total_txns > 0 else 0.0
+
+    return {
+        "score": round(score, 1),
+        "risk_tier": tier,
+        "total_flagged": total_flagged,
+        "flag_rate": flag_rate,
+        "flags_by_severity": {"high": high_sev, "medium": med_sev, "low": low_sev},
+        "tests_run": 8,
+        "total_entries": total_txns,
+        "top_findings": top_findings,
+    }
 
 
 # =============================================================================

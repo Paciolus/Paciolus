@@ -1,16 +1,20 @@
 """
-Bank Reconciliation Testing Memo PDF Generator (Sprint 128)
+Bank Reconciliation Testing Memo PDF Generator (Sprint 128 / Sprint 503 rewrite)
 
 Auto-generated reconciliation memo per ISA 500 (Audit Evidence) /
 ISA 505 (External Confirmations) / PCAOB AS 2310.
 Renaissance Ledger aesthetic consistent with existing PDF exports.
 
 Sections:
-1. Header (client, period, preparer)
-2. Scope (bank transactions, ledger transactions, column detection)
-3. Reconciliation Results (matched, outstanding, reconciling difference)
-4. Outstanding Items (bank-only, ledger-only breakdown)
-5. Conclusion (professional assessment based on reconciling difference)
+1. Scope (bank transactions, ledger transactions, column detection, proof summary)
+2. Methodology (8 tests documented)
+3. Reconciliation Results (matched, outstanding, reconciling difference,
+   ending balance reconciliation, reconciling difference characterization)
+4. Outstanding Items (aging tables with per-item priority flags)
+5. Results Summary (composite risk score, tier, severity counts)
+6. Key Findings (reconciling difference, outstanding volume, dynamic test findings)
+7. Authoritative References
+8. Conclusion
 """
 
 import io
@@ -33,11 +37,13 @@ from pdf_generator import (
     generate_reference_number,
 )
 from security_utils import log_secure_operation
+from shared.follow_up_procedures import get_follow_up_procedure
 from shared.framework_resolution import ResolvedFramework
 from shared.memo_base import (
+    RISK_SCALE_LEGEND,
+    RISK_TIER_DISPLAY,
     build_disclaimer,
     build_intelligence_stamp,
-    build_memo_header,
     build_proof_summary_section,
     build_workpaper_signoff,
     create_memo_styles,
@@ -53,6 +59,661 @@ from shared.scope_methodology import (
     build_methodology_statement,
     build_scope_statement,
 )
+
+# =============================================================================
+# CONSTANTS
+# =============================================================================
+
+_MAX_AGING_ROWS = 20
+
+_ROMAN = {
+    1: "I",
+    2: "II",
+    3: "III",
+    4: "IV",
+    5: "V",
+    6: "VI",
+    7: "VII",
+    8: "VIII",
+    9: "IX",
+    10: "X",
+}
+
+# Methodology descriptions for all 8 tests
+_TEST_DESCRIPTIONS: dict[str, str] = {
+    "exact_match": (
+        "Reconciles bank statement transactions to general ledger entries using "
+        "exact amount matching with configurable date tolerance. Greedy algorithm "
+        "matches largest amounts first to minimize residual differences."
+    ),
+    "bank_only_items": (
+        "Identifies transactions present on the bank statement but absent from the "
+        "general ledger. These represent outstanding deposits in transit that have "
+        "not yet been recorded in the books."
+    ),
+    "ledger_only_items": (
+        "Identifies transactions recorded in the general ledger but not yet cleared "
+        "at the bank. These represent outstanding checks or disbursements pending "
+        "bank clearance."
+    ),
+    "stale_deposits": (
+        "Flags outstanding deposits older than 10 days before the statement date. "
+        "Deposits in transit older than 10 days may indicate fictitious deposits "
+        "recorded in the ledger but not yet cleared at the bank."
+    ),
+    "stale_checks": (
+        "Flags outstanding checks older than 90 days. Stale checks may require "
+        "escheatment review under applicable unclaimed property laws and may "
+        "indicate fictitious disbursements recorded in the ledger."
+    ),
+    "nsf_items": (
+        "Searches transaction description fields for keywords indicating returned "
+        "or dishonored items (NSF, RETURN, INSUFFICIENT, R01, R02, CHARGEBACK, "
+        "REVERSED, DISHONORED). NSF items may indicate customer financial distress "
+        "or payment fraud per ISA 240."
+    ),
+    "interbank_transfers": (
+        "Flags same-day matching debit/credit pairs above $10,000 as potential "
+        "check kiting indicators per ISA 240 (A40). Kiting involves exploiting "
+        "float between accounts to artificially inflate balances."
+    ),
+    "high_value_transactions": (
+        "Flags individual transactions exceeding performance materiality. High-value "
+        "items warrant individual verification per ISA 500 to confirm proper "
+        "authorization and recording."
+    ),
+}
+
+
+# Standard table style helper
+def _standard_table_style(
+    *,
+    header_font: str = "Times-Bold",
+    body_font: str = "Times-Roman",
+    font_size: int = 9,
+    right_align_from: int = 1,
+) -> TableStyle:
+    return TableStyle(
+        [
+            ("FONTNAME", (0, 0), (-1, 0), header_font),
+            ("FONTNAME", (0, 1), (-1, -1), body_font),
+            ("FONTSIZE", (0, 0), (-1, -1), font_size),
+            ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
+            ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
+            ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
+            ("ALIGN", (right_align_from, 0), (-1, -1), "RIGHT"),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("TOPPADDING", (0, 0), (-1, -1), 3),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+            ("LEFTPADDING", (0, 0), (0, -1), 0),
+        ]
+    )
+
+
+# =============================================================================
+# SECTION BUILDERS
+# =============================================================================
+
+
+def _build_methodology_table(
+    story: list,
+    styles: dict,
+    doc_width: float,
+    test_results: list[dict],
+) -> None:
+    """Build Section II: Methodology table with all 8 tests."""
+    story.append(Paragraph("II. Methodology", styles["MemoSection"]))
+    story.append(LedgerRule(doc_width))
+    story.append(
+        Paragraph(
+            "The following automated reconciliation tests were applied to the "
+            "bank statement and general ledger transaction data. Each test is "
+            "classified by tier (structural, statistical, or advanced) and "
+            "described below:",
+            styles["MemoBody"],
+        )
+    )
+    story.append(Spacer(1, 4))
+
+    method_data = [["Test", "Tier", "Description"]]
+    for tr in test_results:
+        test_key = tr.get("test_key", "")
+        desc = _TEST_DESCRIPTIONS.get(test_key, tr.get("description", ""))
+        method_data.append(
+            [
+                Paragraph(tr.get("test_name", ""), styles["MemoTableCell"]),
+                Paragraph(tr.get("test_tier", "structural").title(), styles["MemoTableCell"]),
+                Paragraph(desc, styles["MemoTableCell"]),
+            ]
+        )
+
+    method_table = Table(method_data, colWidths=[1.5 * inch, 0.8 * inch, 4.3 * inch], repeatRows=1)
+    method_table.setStyle(
+        TableStyle(
+            [
+                ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
+                ("FONTSIZE", (0, 0), (-1, -1), 9),
+                ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
+                ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
+                ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("TOPPADDING", (0, 0), (-1, -1), 4),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                ("LEFTPADDING", (0, 0), (0, -1), 0),
+            ]
+        )
+    )
+    story.append(method_table)
+    story.append(Spacer(1, 8))
+
+
+def _build_reconciliation_results(
+    story: list,
+    styles: dict,
+    doc_width: float,
+    summary: dict,
+    rec_result: dict,
+) -> None:
+    """Build Section III: Reconciliation Results with ending balance tie and characterization."""
+    story.append(Paragraph("III. Reconciliation Results", styles["MemoSection"]))
+    story.append(LedgerRule(doc_width))
+
+    matched = summary.get("matched_count", 0)
+    bank_only = summary.get("bank_only_count", 0)
+    ledger_only = summary.get("ledger_only_count", 0)
+    total_txns = matched + bank_only + ledger_only
+    matched_amount = summary.get("matched_amount", 0)
+    bank_only_amount = summary.get("bank_only_amount", 0)
+    ledger_only_amount = summary.get("ledger_only_amount", 0)
+    rec_diff = summary.get("reconciling_difference", 0)
+    total_bank = summary.get("total_bank", 0)
+    total_ledger = summary.get("total_ledger", 0)
+    match_rate = matched / total_txns if total_txns > 0 else 0
+
+    result_lines = [
+        create_leader_dots("Matched Transactions", f"{matched:,} ({match_rate:.1%})"),
+        create_leader_dots("Matched Amount", f"${abs(matched_amount):,.2f}"),
+        create_leader_dots("Bank-Only (Outstanding Deposits)", f"{bank_only:,}"),
+        create_leader_dots("Ledger-Only (Outstanding Checks)", f"{ledger_only:,}"),
+        create_leader_dots("Reconciling Difference", f"${abs(rec_diff):,.2f}"),
+    ]
+
+    for line in result_lines:
+        story.append(Paragraph(line, styles["MemoLeader"]))
+    story.append(Spacer(1, 6))
+
+    # Balance summary table
+    balance_data = [
+        ["Category", "Amount"],
+        ["Bank Statement Total", f"${total_bank:,.2f}"],
+        ["General Ledger Total", f"${total_ledger:,.2f}"],
+        ["Reconciling Difference", f"${rec_diff:,.2f}"],
+    ]
+    balance_table = Table(balance_data, colWidths=[3.0 * inch, 2.5 * inch])
+    balance_table.setStyle(_standard_table_style())
+    story.append(balance_table)
+    story.append(Spacer(1, 2))
+    story.append(
+        Paragraph(
+            "Note: Bank Statement and General Ledger totals above represent aggregate "
+            "transaction activity (sum of matched and unmatched items), not ending account balances.",
+            styles["MemoBodySmall"],
+        )
+    )
+    story.append(Spacer(1, 8))
+
+    # IMPROVEMENT-02: Ending Balance Reconciliation
+    ending_balance = rec_result.get("ending_balance_reconciliation")
+    if ending_balance:
+        story.append(Paragraph("Ending Balance Reconciliation", styles["MemoSection"]))
+        story.append(Spacer(1, 4))
+
+        bank_ending = ending_balance.get("bank_ending_balance")
+        gl_ending = ending_balance.get("gl_ending_balance")
+
+        if bank_ending is not None:
+            adjusted_bank = bank_ending - bank_only_amount + ledger_only_amount
+            story.append(
+                Paragraph(
+                    create_leader_dots("Bank Balance (per statement)", f"${bank_ending:,.2f}"),
+                    styles["MemoLeader"],
+                )
+            )
+            story.append(
+                Paragraph(
+                    create_leader_dots("Less: Outstanding Deposits (in transit)", f"${bank_only_amount:,.2f}"),
+                    styles["MemoLeader"],
+                )
+            )
+            story.append(
+                Paragraph(
+                    create_leader_dots("Plus: Outstanding Checks", f"+ ${ledger_only_amount:,.2f}"),
+                    styles["MemoLeader"],
+                )
+            )
+            story.append(
+                Paragraph(
+                    create_leader_dots("Adjusted Bank Balance", f"= ${adjusted_bank:,.2f}"),
+                    styles["MemoLeader"],
+                )
+            )
+            story.append(Spacer(1, 4))
+        else:
+            story.append(
+                Paragraph(
+                    "<i>Ending balance not determinable from transaction data — obtain from bank statement.</i>",
+                    styles["MemoBodySmall"],
+                )
+            )
+
+        if gl_ending is not None:
+            story.append(
+                Paragraph(
+                    create_leader_dots("Book Balance (per GL)", f"${gl_ending:,.2f}"),
+                    styles["MemoLeader"],
+                )
+            )
+            story.append(
+                Paragraph(
+                    create_leader_dots("Adjusted Book Balance", f"${gl_ending:,.2f}"),
+                    styles["MemoLeader"],
+                )
+            )
+            story.append(Spacer(1, 4))
+
+            if bank_ending is not None:
+                variance = adjusted_bank - gl_ending
+                if abs(variance) < 0.01:
+                    story.append(
+                        Paragraph(
+                            "&#x2713; Reconciled — adjusted bank balance agrees to book balance.",
+                            styles["MemoBody"],
+                        )
+                    )
+                else:
+                    story.append(
+                        Paragraph(
+                            f"&#x26A0; Adjusted balances do not reconcile — "
+                            f"investigate residual difference of ${abs(variance):,.2f}",
+                            styles["MemoBody"],
+                        )
+                    )
+        else:
+            story.append(
+                Paragraph(
+                    "<i>Upload trial balance to complete ending balance reconciliation.</i>",
+                    styles["MemoBodySmall"],
+                )
+            )
+
+        story.append(Spacer(1, 8))
+
+    # IMPROVEMENT-03: Reconciling Difference Characterization
+    if abs(rec_diff) > 0.01:
+        story.append(Paragraph("Reconciling Difference Analysis", styles["MemoSection"]))
+        story.append(Spacer(1, 4))
+
+        direction = (
+            "Bank > GL (bank shows more activity than ledger)"
+            if rec_diff > 0
+            else "GL > Bank (ledger shows more activity than bank)"
+        )
+        pct_of_activity = abs(rec_diff) / abs(total_bank) * 100 if abs(total_bank) > 0 else 0
+
+        char_lines = [
+            create_leader_dots("Amount", f"${abs(rec_diff):,.2f}"),
+            create_leader_dots("Direction", direction),
+            create_leader_dots("As % of Total Activity", f"{pct_of_activity:.2f}%"),
+        ]
+        for line in char_lines:
+            story.append(Paragraph(line, styles["MemoLeader"]))
+        story.append(Spacer(1, 4))
+
+        story.append(Paragraph("Potential Explanations:", styles["MemoBody"]))
+        explanations = [
+            "GL recording omission — transaction present in bank, not in GL",
+            "Bank error — transaction on bank statement not belonging to this account",
+            "Timing difference — transaction outside the matching window",
+            "Fraudulent transaction — unauthorized transaction cleared at bank",
+        ]
+        for exp in explanations:
+            story.append(Paragraph(f"&#x25A2;  {exp}", styles["MemoBody"]))
+
+        # Cross-reference to AR difference (conditional)
+        ar_cross_ref = rec_result.get("ar_cross_reference")
+        if ar_cross_ref and ar_cross_ref.get("ar_reconciling_difference", 0) > 0:
+            ar_diff = ar_cross_ref["ar_reconciling_difference"]
+            ar_ref = ar_cross_ref.get("ar_reference", "")
+            story.append(Spacer(1, 4))
+            story.append(
+                Paragraph(
+                    f"<i>Note: An unreconciled AR subledger difference of "
+                    f"${ar_diff:,.2f} was identified in the AR Aging Analysis memo "
+                    f"(Ref: {ar_ref}). The bank and AR differences should be "
+                    f"investigated concurrently to determine whether they are related.</i>",
+                    styles["MemoBodySmall"],
+                )
+            )
+
+        story.append(Spacer(1, 8))
+
+
+def _build_outstanding_aging_tables(
+    story: list,
+    styles: dict,
+    doc_width: float,
+    rec_result: dict,
+    summary: dict,
+) -> None:
+    """Build Section IV: Outstanding Items with full aging tables."""
+    bank_only = summary.get("bank_only_count", 0)
+    ledger_only = summary.get("ledger_only_count", 0)
+    bank_only_amount = summary.get("bank_only_amount", 0)
+    ledger_only_amount = summary.get("ledger_only_amount", 0)
+
+    if bank_only == 0 and ledger_only == 0:
+        return
+
+    story.append(Paragraph("IV. Outstanding Items", styles["MemoSection"]))
+    story.append(LedgerRule(doc_width))
+
+    # Outstanding Deposits aging table
+    deposits = rec_result.get("outstanding_deposits", [])
+    if deposits:
+        story.append(Paragraph("Outstanding Deposits (Bank-Only) — Aging Analysis", styles["MemoSection"]))
+        story.append(Spacer(1, 4))
+
+        # Sort by days outstanding descending
+        sorted_deposits = sorted(deposits, key=lambda d: d.get("days_outstanding", 0), reverse=True)
+        display_deposits = sorted_deposits[:_MAX_AGING_ROWS]
+
+        dep_data = [["Transaction Date", "Days Outstanding", "Description", "Amount", "Priority"]]
+        for dep in display_deposits:
+            days = dep.get("days_outstanding")
+            if days is not None and days > 30:
+                priority = "HIGH"
+            elif days is not None and days > 10:
+                priority = "MEDIUM"
+            else:
+                priority = "LOW"
+
+            dep_data.append(
+                [
+                    dep.get("date", "N/A"),
+                    str(days) if days is not None else "N/A",
+                    dep.get("description", "")[:40],
+                    f"${abs(dep.get('amount', 0)):,.2f}",
+                    priority,
+                ]
+            )
+
+        dep_data.append(["Total", "", "", f"${abs(bank_only_amount):,.2f}", ""])
+
+        dep_table = Table(
+            dep_data,
+            colWidths=[1.2 * inch, 1.0 * inch, 2.0 * inch, 1.2 * inch, 0.8 * inch],
+            repeatRows=1,
+        )
+        dep_table.setStyle(_standard_table_style(right_align_from=1))
+        # Bold total row
+        dep_table.setStyle(TableStyle([("FONTNAME", (0, -1), (-1, -1), "Times-Bold")]))
+        story.append(dep_table)
+
+        if len(sorted_deposits) > _MAX_AGING_ROWS:
+            story.append(Spacer(1, 2))
+            story.append(
+                Paragraph(
+                    f"Showing {_MAX_AGING_ROWS} of {len(sorted_deposits)} items. "
+                    "Full listing available in source data export.",
+                    styles["MemoBodySmall"],
+                )
+            )
+        story.append(Spacer(1, 8))
+    elif bank_only > 0:
+        # Fallback: summary only
+        story.append(
+            Paragraph(
+                f"Outstanding Deposits: {bank_only:,} items totaling ${abs(bank_only_amount):,.2f}",
+                styles["MemoBody"],
+            )
+        )
+        story.append(Spacer(1, 4))
+
+    # Outstanding Checks aging table
+    checks = rec_result.get("outstanding_checks", [])
+    if checks:
+        story.append(Paragraph("Outstanding Checks (Ledger-Only) — Aging Analysis", styles["MemoSection"]))
+        story.append(Spacer(1, 4))
+
+        sorted_checks = sorted(checks, key=lambda c: c.get("days_outstanding", 0), reverse=True)
+        display_checks = sorted_checks[:_MAX_AGING_ROWS]
+
+        chk_data = [["Transaction Date", "Days Outstanding", "Description", "Amount", "Priority"]]
+        for chk in display_checks:
+            days = chk.get("days_outstanding")
+            if days is not None and days > 90:
+                priority = "HIGH"
+            elif days is not None and days > 30:
+                priority = "MEDIUM"
+            else:
+                priority = "LOW"
+
+            chk_data.append(
+                [
+                    chk.get("date", "N/A"),
+                    str(days) if days is not None else "N/A",
+                    chk.get("description", "")[:40],
+                    f"${abs(chk.get('amount', 0)):,.2f}",
+                    priority,
+                ]
+            )
+
+        chk_data.append(["Total", "", "", f"${abs(ledger_only_amount):,.2f}", ""])
+
+        chk_table = Table(
+            chk_data,
+            colWidths=[1.2 * inch, 1.0 * inch, 2.0 * inch, 1.2 * inch, 0.8 * inch],
+            repeatRows=1,
+        )
+        chk_table.setStyle(_standard_table_style(right_align_from=1))
+        chk_table.setStyle(TableStyle([("FONTNAME", (0, -1), (-1, -1), "Times-Bold")]))
+        story.append(chk_table)
+
+        if len(sorted_checks) > _MAX_AGING_ROWS:
+            story.append(Spacer(1, 2))
+            story.append(
+                Paragraph(
+                    f"Showing {_MAX_AGING_ROWS} of {len(sorted_checks)} items. "
+                    "Full listing available in source data export.",
+                    styles["MemoBodySmall"],
+                )
+            )
+        story.append(Spacer(1, 8))
+    elif ledger_only > 0:
+        story.append(
+            Paragraph(
+                f"Outstanding Checks: {ledger_only:,} items totaling ${abs(ledger_only_amount):,.2f}",
+                styles["MemoBody"],
+            )
+        )
+        story.append(Spacer(1, 4))
+
+    # Outstanding Items Summary block
+    aging_summary = rec_result.get("aging_summary")
+    if aging_summary:
+        story.append(Paragraph("Outstanding Items Summary", styles["MemoSection"]))
+        story.append(Spacer(1, 4))
+
+        dep_over_10 = aging_summary.get("deposits_over_10_days", {})
+        dep_over_30 = aging_summary.get("deposits_over_30_days", {})
+        chk_over_30 = aging_summary.get("checks_over_30_days", {})
+        chk_over_90 = aging_summary.get("checks_over_90_days", {})
+
+        summary_lines = [
+            create_leader_dots(
+                "Deposits > 10 days old",
+                f"{dep_over_10.get('count', 0)}   ${dep_over_10.get('amount', 0):,.2f}"
+                f"   ({dep_over_10.get('pct', 0):.0f}% of total deposits)",
+            ),
+            create_leader_dots(
+                "Deposits > 30 days old",
+                f"{dep_over_30.get('count', 0)}   ${dep_over_30.get('amount', 0):,.2f}   Priority: HIGH",
+            ),
+            create_leader_dots(
+                "Checks > 90 days old",
+                f"{chk_over_90.get('count', 0)}   ${chk_over_90.get('amount', 0):,.2f}   Priority: HIGH (stale)",
+            ),
+            create_leader_dots(
+                "Checks > 30 days old",
+                f"{chk_over_30.get('count', 0)}   ${chk_over_30.get('amount', 0):,.2f}",
+            ),
+        ]
+        for line in summary_lines:
+            story.append(Paragraph(line, styles["MemoLeader"]))
+        story.append(Spacer(1, 8))
+
+    story.append(
+        Paragraph(
+            "Outstanding items represent transactions present in one source but not the other. "
+            "These may represent timing differences, recording errors, or items requiring investigation.",
+            styles["MemoBodySmall"],
+        )
+    )
+    story.append(Spacer(1, 8))
+
+
+def _build_key_findings(
+    story: list,
+    styles: dict,
+    doc_width: float,
+    rec_result: dict,
+    summary: dict,
+    composite: dict,
+) -> None:
+    """Build Section VI: Key Findings."""
+    story.append(Paragraph("VI. Key Findings", styles["MemoSection"]))
+    story.append(LedgerRule(doc_width))
+
+    finding_num = 0
+    rec_diff = summary.get("reconciling_difference", 0)
+    total_bank = summary.get("total_bank", 0)
+    total_ledger = summary.get("total_ledger", 0)
+    bank_only = summary.get("bank_only_count", 0)
+    ledger_only = summary.get("ledger_only_count", 0)
+    bank_only_amount = summary.get("bank_only_amount", 0)
+    ledger_only_amount = summary.get("ledger_only_amount", 0)
+
+    # Finding 1: Reconciling Difference (always present if nonzero)
+    if abs(rec_diff) > 0.01:
+        finding_num += 1
+        story.append(
+            Paragraph(
+                f"<b>{finding_num}. Reconciling Difference of ${abs(rec_diff):,.2f} (HIGH)</b>",
+                styles["MemoBody"],
+            )
+        )
+        story.append(
+            Paragraph(
+                f"A reconciling difference of ${abs(rec_diff):,.2f} exists between bank statement "
+                f"activity (${abs(total_bank):,.2f}) and general ledger activity "
+                f"(${abs(total_ledger):,.2f}). This difference has not been explained by the "
+                f"automated matching process.",
+                styles["MemoBody"],
+            )
+        )
+        procedure = get_follow_up_procedure("reconciling_difference")
+        if procedure:
+            story.append(Paragraph(f"<i>Suggested follow-up: {procedure}</i>", styles["MemoBodySmall"]))
+
+        # Cross-reference to AR difference
+        ar_cross_ref = rec_result.get("ar_cross_reference")
+        if ar_cross_ref and ar_cross_ref.get("ar_reconciling_difference", 0) > 0:
+            ar_diff = ar_cross_ref["ar_reconciling_difference"]
+            ar_ref = ar_cross_ref.get("ar_reference", "")
+            story.append(
+                Paragraph(
+                    f"<i>Note: An unreconciled AR subledger difference of ${ar_diff:,.2f} "
+                    f"was identified in the AR Aging Analysis (Ref: {ar_ref}). "
+                    f"These two differences may be related — investigate concurrently.</i>",
+                    styles["MemoBodySmall"],
+                )
+            )
+        story.append(Spacer(1, 4))
+
+    # Finding 2: Outstanding Items Volume (always present if outstanding > 0)
+    total_outstanding = bank_only + ledger_only
+    if total_outstanding > 0:
+        finding_num += 1
+        story.append(
+            Paragraph(
+                f"<b>{finding_num}. Outstanding Items Volume (MEDIUM)</b>",
+                styles["MemoBody"],
+            )
+        )
+        story.append(
+            Paragraph(
+                f"{total_outstanding} outstanding items remain unmatched "
+                f"({bank_only} deposits totaling ${abs(bank_only_amount):,.2f}; "
+                f"{ledger_only} checks totaling ${abs(ledger_only_amount):,.2f}). "
+                f"Aging analysis in Section IV identifies items requiring priority investigation.",
+                styles["MemoBody"],
+            )
+        )
+        procedure = get_follow_up_procedure("outstanding_volume")
+        if procedure:
+            story.append(Paragraph(f"<i>Suggested follow-up: {procedure}</i>", styles["MemoBodySmall"]))
+        story.append(Spacer(1, 4))
+
+    # Dynamic findings from rec_tests
+    rec_tests = rec_result.get("rec_tests", [])
+    test_key_map = {
+        "Stale Deposits (>10 days)": "stale_deposits",
+        "Stale Checks (>90 days)": "stale_checks",
+        "NSF / Returned Items": "nsf_items",
+        "Interbank Transfers": "interbank_transfers",
+        "High Value (>Materiality)": "high_value_transactions",
+    }
+
+    for rt in rec_tests:
+        flagged = rt.get("flagged_count", 0)
+        if flagged == 0:
+            continue
+
+        finding_num += 1
+        test_name = rt.get("test_name", "")
+        severity = rt.get("severity", "medium").upper()
+        story.append(
+            Paragraph(
+                f"<b>{finding_num}. {test_name} ({severity})</b>",
+                styles["MemoBody"],
+            )
+        )
+        story.append(
+            Paragraph(
+                f"{flagged} item(s) flagged by the {test_name} test.",
+                styles["MemoBody"],
+            )
+        )
+        test_key = test_key_map.get(test_name, "")
+        procedure = get_follow_up_procedure(test_key)
+        if procedure:
+            story.append(Paragraph(f"<i>Suggested follow-up: {procedure}</i>", styles["MemoBodySmall"]))
+        story.append(Spacer(1, 4))
+
+    if finding_num == 0:
+        story.append(
+            Paragraph(
+                "No items requiring further investigation were identified.",
+                styles["MemoBody"],
+            )
+        )
+
+    story.append(Spacer(1, 8))
+
+
+# =============================================================================
+# MAIN ENTRY POINT
+# =============================================================================
 
 
 def generate_bank_rec_memo(
@@ -71,13 +732,12 @@ def generate_bank_rec_memo(
     """Generate a PDF testing memo for bank reconciliation results.
 
     Args:
-        rec_result: BankRecResult.to_dict() output
+        rec_result: BankRecResult.to_dict() output, enriched with
+            test_results, composite_score, outstanding_deposits/checks,
+            ending_balance_reconciliation, aging_summary, ar_cross_reference
         filename: Base filename for the report
         client_name: Client/entity name
-        period_tested: Period description (e.g., "FY 2025")
-        prepared_by: Preparer name (deprecated — ignored unless include_signoff=True)
-        reviewed_by: Reviewer name (deprecated — ignored unless include_signoff=True)
-        workpaper_date: Date string (deprecated — ignored unless include_signoff=True)
+        period_tested: Period description (e.g., "December 2025")
 
     Returns:
         PDF bytes
@@ -101,8 +761,15 @@ def generate_bank_rec_memo(
     summary = rec_result.get("summary", {})
     bank_detection = rec_result.get("bank_column_detection", {})
     ledger_detection = rec_result.get("ledger_column_detection", {})
+    test_results = rec_result.get("test_results", [])
+    composite = rec_result.get("composite_score", {})
 
-    # 0. COVER PAGE (diagonal color bands)
+    matched = summary.get("matched_count", 0)
+    bank_only = summary.get("bank_only_count", 0)
+    ledger_only = summary.get("ledger_only_count", 0)
+    total_txns = matched + bank_only + ledger_only
+
+    # 0. COVER PAGE
     logo_path = find_logo()
     cover_metadata = ReportMetadata(
         title="Bank Reconciliation Memo",
@@ -115,20 +782,13 @@ def generate_bank_rec_memo(
     )
     build_cover_page(story, styles, cover_metadata, doc.width, logo_path)
 
-    # 1. HEADER
-    build_memo_header(story, styles, doc.width, "Bank Reconciliation Memo", reference, client_name)
-
-    # 2. SCOPE
+    # ──────────────────────────────────────────────────────────────
+    # I. SCOPE
+    # ──────────────────────────────────────────────────────────────
     story.append(Paragraph("I. Scope", styles["MemoSection"]))
     story.append(LedgerRule(doc.width))
 
-    matched = summary.get("matched_count", 0)
-    bank_only = summary.get("bank_only_count", 0)
-    ledger_only = summary.get("ledger_only_count", 0)
-    total_txns = matched + bank_only + ledger_only
-
     scope_lines = []
-    # Source document transparency (Sprint 6)
     if source_document_title and filename:
         scope_lines.append(create_leader_dots("Source", f"{source_document_title} ({filename})"))
     elif source_document_title:
@@ -160,7 +820,7 @@ def generate_bank_rec_memo(
         story.append(Paragraph(line, styles["MemoLeader"]))
     story.append(Spacer(1, 4))
 
-    # SCOPE STATEMENT (framework-aware)
+    # Scope statement (framework-aware)
     build_scope_statement(
         story,
         styles,
@@ -170,244 +830,28 @@ def generate_bank_rec_memo(
         domain_label="bank reconciliation analysis",
     )
 
-    # PROOF SUMMARY
-    # Build a synthetic result dict for the proof summary builder
-    _proof_result = {
-        "composite_score": {
-            "tests_run": 3,  # matched, bank-only, ledger-only
-            "total_flagged": bank_only + ledger_only,
-        },
-        "data_quality": {
-            "completeness_score": (matched / total_txns * 100) if total_txns > 0 else 0,
-        },
-        "column_detection": {
-            "overall_confidence": (bank_conf + ledger_conf) / 2 if (bank_conf or ledger_conf) else 0,
-        },
-        "test_results": [
-            {"test_name": "Exact Match", "entries_flagged": 0, "skipped": False},
-            {"test_name": "Bank-Only Items", "entries_flagged": bank_only, "skipped": False},
-            {"test_name": "Ledger-Only Items", "entries_flagged": ledger_only, "skipped": False},
-        ],
-    }
-    build_proof_summary_section(story, styles, doc.width, _proof_result)
+    # Proof Summary (uses test_results for accurate counts)
+    build_proof_summary_section(story, styles, doc.width, rec_result)
 
-    # 3. RECONCILIATION RESULTS
-    story.append(Paragraph("II. Reconciliation Results", styles["MemoSection"]))
-    story.append(LedgerRule(doc.width))
-
-    matched_amount = summary.get("matched_amount", 0)
-    bank_only_amount = summary.get("bank_only_amount", 0)
-    ledger_only_amount = summary.get("ledger_only_amount", 0)
-    rec_diff = summary.get("reconciling_difference", 0)
-    total_bank = summary.get("total_bank", 0)
-    total_ledger = summary.get("total_ledger", 0)
-    match_rate = matched / total_txns if total_txns > 0 else 0
-
-    result_lines = [
-        create_leader_dots("Matched Transactions", f"{matched:,} ({match_rate:.1%})"),
-        create_leader_dots("Matched Amount", f"${abs(matched_amount):,.2f}"),
-        create_leader_dots("Bank-Only (Outstanding Deposits)", f"{bank_only:,}"),
-        create_leader_dots("Ledger-Only (Outstanding Checks)", f"{ledger_only:,}"),
-        create_leader_dots("Reconciling Difference", f"${abs(rec_diff):,.2f}"),
-    ]
-
-    for line in result_lines:
-        story.append(Paragraph(line, styles["MemoLeader"]))
-    story.append(Spacer(1, 6))
-
-    # Balance summary table
-    balance_data = [
-        ["Category", "Amount"],
-        ["Bank Statement Total", f"${total_bank:,.2f}"],
-        ["General Ledger Total", f"${total_ledger:,.2f}"],
-        ["Reconciling Difference", f"${rec_diff:,.2f}"],
-    ]
-    balance_table = Table(balance_data, colWidths=[3.0 * inch, 2.5 * inch])
-    balance_table.setStyle(
-        TableStyle(
-            [
-                ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-                ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
-                ("FONTSIZE", (0, 0), (-1, -1), 9),
-                ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-                ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-                ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-                ("LINEBELOW", (0, -1), (-1, -1), 1, ClassicalColors.OBSIDIAN_DEEP),
-                ("ALIGN", (1, 0), (1, -1), "RIGHT"),
-                ("TOPPADDING", (0, 0), (-1, -1), 3),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-                ("LEFTPADDING", (0, 0), (0, -1), 0),
-            ]
-        )
-    )
-    story.append(balance_table)
-    story.append(Spacer(1, 2))
-    story.append(
-        Paragraph(
-            "Note: Bank Statement and General Ledger totals above represent aggregate "
-            "transaction activity (sum of matched and unmatched items), not ending account balances.",
-            styles["MemoBodySmall"],
-        )
-    )
-    story.append(Spacer(1, 8))
-
-    # 4. OUTSTANDING ITEMS
-    has_outstanding = bank_only > 0 or ledger_only > 0
-    if has_outstanding:
-        story.append(Paragraph("III. Outstanding Items", styles["MemoSection"]))
+    # ──────────────────────────────────────────────────────────────
+    # II. METHODOLOGY
+    # ──────────────────────────────────────────────────────────────
+    if test_results:
+        _build_methodology_table(story, styles, doc.width, test_results)
+    else:
+        # Fallback: build from rec_tests
+        story.append(Paragraph("II. Methodology", styles["MemoSection"]))
         story.append(LedgerRule(doc.width))
-
-        outstanding_data = [["Category", "Count", "Amount"]]
-        if bank_only > 0:
-            outstanding_data.append(
-                [
-                    "Bank-Only (Outstanding Deposits)",
-                    str(bank_only),
-                    f"${abs(bank_only_amount):,.2f}",
-                ]
-            )
-        if ledger_only > 0:
-            outstanding_data.append(
-                [
-                    "Ledger-Only (Outstanding Checks)",
-                    str(ledger_only),
-                    f"${abs(ledger_only_amount):,.2f}",
-                ]
-            )
-
-        outstanding_table = Table(outstanding_data, colWidths=[3.5 * inch, 1.0 * inch, 2.0 * inch])
-        outstanding_table.setStyle(
-            TableStyle(
-                [
-                    ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-                    ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
-                    ("FONTSIZE", (0, 0), (-1, -1), 9),
-                    ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-                    ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-                    ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-                    ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
-                    ("TOPPADDING", (0, 0), (-1, -1), 3),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-                    ("LEFTPADDING", (0, 0), (0, -1), 0),
-                ]
-            )
-        )
-        story.append(outstanding_table)
-
-        if bank_only + ledger_only > 0:
-            story.append(Spacer(1, 4))
-            story.append(
-                Paragraph(
-                    "Outstanding items represent transactions present in one source but not the other. "
-                    "These may represent timing differences, recording errors, or items requiring investigation.",
-                    styles["MemoBodySmall"],
-                )
-            )
-        story.append(Spacer(1, 8))
-
-    # Track section number dynamically (I=Scope, II=Results, III=Outstanding if present)
-    _next_section = 4 if has_outstanding else 3
-    _roman_numerals = {3: "III", 4: "IV", 5: "V", 6: "VI", 7: "VII", 8: "VIII"}
-
-    # ── RECONCILIATION TESTS (CONTENT-03) ──
-    rec_tests = rec_result.get("rec_tests", [])
-    if rec_tests:
-        _sec = _roman_numerals.get(_next_section, str(_next_section))
-        story.append(Paragraph(f"{_sec}. Reconciliation Tests", styles["MemoSection"]))
-        story.append(LedgerRule(doc.width))
-
         story.append(
             Paragraph(
-                "The following automated tests were applied to the reconciliation results "
-                "to identify items warranting additional investigation:",
+                "Automated reconciliation tests were applied to the bank statement "
+                "and general ledger transaction data.",
                 styles["MemoBody"],
             )
         )
-        story.append(Spacer(1, 4))
-
-        test_data = [["Test", "Flagged", "Severity"]]
-        for rt in rec_tests:
-            test_data.append(
-                [
-                    rt.get("test_name", ""),
-                    str(rt.get("flagged_count", 0)),
-                    rt.get("severity", "low").title(),
-                ]
-            )
-
-        test_table = Table(test_data, colWidths=[3.5 * inch, 1.0 * inch, 1.5 * inch])
-        test_table.setStyle(
-            TableStyle(
-                [
-                    ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-                    ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
-                    ("FONTSIZE", (0, 0), (-1, -1), 9),
-                    ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-                    ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-                    ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-                    ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
-                    ("TOPPADDING", (0, 0), (-1, -1), 3),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-                    ("LEFTPADDING", (0, 0), (0, -1), 0),
-                ]
-            )
-        )
-        story.append(test_table)
         story.append(Spacer(1, 8))
-        _next_section += 1
 
-    # ── OUTSTANDING ITEMS AGING (CONTENT-03) ──
-    outstanding_aging = rec_result.get("outstanding_aging", [])
-    aging_items_with_data = [a for a in outstanding_aging if a.get("total_count", 0) > 0]
-    if aging_items_with_data:
-        _sec = _roman_numerals.get(_next_section, str(_next_section))
-        story.append(Paragraph(f"{_sec}. Outstanding Items Aging", styles["MemoSection"]))
-        story.append(LedgerRule(doc.width))
-
-        story.append(
-            Paragraph(
-                "Aging analysis of unmatched items to identify items that may require follow-up or reclassification:",
-                styles["MemoBody"],
-            )
-        )
-        story.append(Spacer(1, 4))
-
-        aging_data = [["Category", "Total", ">10 Days", ">30 Days", "Oldest (Days)"]]
-        for a in aging_items_with_data:
-            cat_label = "Bank-Only" if a["category"] == "bank_only" else "Ledger-Only"
-            oldest = str(a.get("oldest_item_days", "")) if a.get("oldest_item_days") is not None else "N/A"
-            aging_data.append(
-                [
-                    cat_label,
-                    str(a.get("total_count", 0)),
-                    str(a.get("over_10_days", 0)),
-                    str(a.get("over_30_days", 0)),
-                    oldest,
-                ]
-            )
-
-        aging_table = Table(aging_data, colWidths=[2.0 * inch, 1.0 * inch, 1.0 * inch, 1.0 * inch, 1.5 * inch])
-        aging_table.setStyle(
-            TableStyle(
-                [
-                    ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-                    ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
-                    ("FONTSIZE", (0, 0), (-1, -1), 9),
-                    ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-                    ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-                    ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-                    ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
-                    ("TOPPADDING", (0, 0), (-1, -1), 3),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-                    ("LEFTPADDING", (0, 0), (0, -1), 0),
-                ]
-            )
-        )
-        story.append(aging_table)
-        story.append(Spacer(1, 8))
-        _next_section += 1
-
-    # METHODOLOGY STATEMENT + AUTHORITATIVE REFERENCES
+    # Methodology statement
     build_methodology_statement(
         story,
         styles,
@@ -416,7 +860,100 @@ def generate_bank_rec_memo(
         framework=resolved_framework,
         domain_label="bank reconciliation analysis",
     )
-    ref_num = _roman_numerals.get(_next_section, str(_next_section))
+
+    # ──────────────────────────────────────────────────────────────
+    # III. RECONCILIATION RESULTS
+    # ──────────────────────────────────────────────────────────────
+    _build_reconciliation_results(story, styles, doc.width, summary, rec_result)
+
+    # ──────────────────────────────────────────────────────────────
+    # IV. OUTSTANDING ITEMS
+    # ──────────────────────────────────────────────────────────────
+    _build_outstanding_aging_tables(story, styles, doc.width, rec_result, summary)
+
+    # ──────────────────────────────────────────────────────────────
+    # V. RESULTS SUMMARY
+    # ──────────────────────────────────────────────────────────────
+    if composite:
+        # Override section title to "V." (shared builder defaults to "III.")
+        story.append(Paragraph("V. Results Summary", styles["MemoSection"]))
+        story.append(LedgerRule(doc.width))
+
+        risk_tier = composite.get("risk_tier", "low")
+        tier_label, _ = RISK_TIER_DISPLAY.get(risk_tier, ("UNKNOWN", ClassicalColors.OBSIDIAN_500))
+
+        story.append(
+            Paragraph(
+                create_leader_dots("Composite Risk Score", f"{composite.get('score', 0):.1f} / 100"),
+                styles["MemoLeader"],
+            )
+        )
+        story.append(
+            Paragraph(
+                create_leader_dots("Risk Tier", tier_label),
+                styles["MemoLeader"],
+            )
+        )
+        story.append(Paragraph(RISK_SCALE_LEGEND, styles["MemoBodySmall"]))
+        story.append(Spacer(1, 2))
+        story.append(
+            Paragraph(
+                create_leader_dots("Total Items Flagged", f"{composite.get('total_flagged', 0):,}"),
+                styles["MemoLeader"],
+            )
+        )
+
+        sev = composite.get("flags_by_severity", {})
+        story.append(
+            Paragraph(
+                create_leader_dots("High Severity Flags", str(sev.get("high", 0))),
+                styles["MemoLeader"],
+            )
+        )
+        story.append(
+            Paragraph(
+                create_leader_dots("Medium Severity Flags", str(sev.get("medium", 0))),
+                styles["MemoLeader"],
+            )
+        )
+        story.append(
+            Paragraph(
+                create_leader_dots("Low Severity Flags", str(sev.get("low", 0))),
+                styles["MemoLeader"],
+            )
+        )
+        story.append(Spacer(1, 6))
+
+        # Results by test table (from rec_tests)
+        rec_tests = rec_result.get("rec_tests", [])
+        if rec_tests:
+            results_data = [["Test", "Flagged", "Severity"]]
+            for rt in rec_tests:
+                results_data.append(
+                    [
+                        rt.get("test_name", ""),
+                        str(rt.get("flagged_count", 0)),
+                        rt.get("severity", "low").upper(),
+                    ]
+                )
+
+            results_table = Table(
+                results_data,
+                colWidths=[3.5 * inch, 1.0 * inch, 1.5 * inch],
+            )
+            results_table.setStyle(_standard_table_style())
+            story.append(results_table)
+
+        story.append(Spacer(1, 8))
+
+    # ──────────────────────────────────────────────────────────────
+    # VI. KEY FINDINGS
+    # ──────────────────────────────────────────────────────────────
+    _build_key_findings(story, styles, doc.width, rec_result, summary, composite)
+
+    # ──────────────────────────────────────────────────────────────
+    # VII. AUTHORITATIVE REFERENCES
+    # ──────────────────────────────────────────────────────────────
     build_authoritative_reference_block(
         story,
         styles,
@@ -424,37 +961,49 @@ def generate_bank_rec_memo(
         tool_domain="bank_reconciliation",
         framework=resolved_framework,
         domain_label="bank reconciliation analysis",
-        section_label=f"{ref_num}.",
+        section_label="VII.",
     )
-    _next_section += 1
 
-    # CONCLUSION
-    conclusion_num = _roman_numerals.get(_next_section, str(_next_section))
-    story.append(Paragraph(f"{conclusion_num}. Conclusion", styles["MemoSection"]))
+    # ──────────────────────────────────────────────────────────────
+    # VIII. CONCLUSION
+    # ──────────────────────────────────────────────────────────────
+    story.append(Paragraph("VIII. Conclusion", styles["MemoSection"]))
     story.append(LedgerRule(doc.width))
 
-    # Risk assessment based on reconciling difference and match rate
-    if abs(rec_diff) < 1.0 and match_rate >= 0.95:
-        assessment = (
-            "Based on the automated reconciliation procedures applied, "
-            "the bank reconciliation returned LOW flag density across the automated tests. "
+    risk_tier = composite.get("risk_tier", "low") if composite else "low"
+    rec_diff = summary.get("reconciling_difference", 0)
+    match_rate = matched / total_txns if total_txns > 0 else 0
+
+    tier_label, _ = RISK_TIER_DISPLAY.get(risk_tier, ("LOW", ClassicalColors.SAGE))
+    score_val = composite.get("score", 0) if composite else 0
+
+    assessment = (
+        f"Based on the automated reconciliation procedures applied, "
+        f"the bank reconciliation returned {tier_label} flag density "
+        f"(Composite Risk Score: {score_val:.1f}/100) across the automated tests. "
+    )
+
+    if risk_tier == "low":
+        assessment += (
             "The reconciling difference is immaterial and the match rate is satisfactory. "
             "No items requiring further investigation were identified."
         )
-    elif abs(rec_diff) < 1000 and match_rate >= 0.80:
-        assessment = (
-            "Based on the automated reconciliation procedures applied, "
-            "the bank reconciliation returned MODERATE flag density across the automated tests. "
+    elif risk_tier == "moderate":
+        assessment += (
             "The reconciling difference and outstanding items should be reviewed "
             "to confirm they represent normal timing differences rather than errors or omissions."
         )
-    else:
-        assessment = (
-            "Based on the automated reconciliation procedures applied, "
-            "the bank reconciliation returned ELEVATED flag density across the automated tests. "
+    elif risk_tier == "elevated":
+        assessment += (
             "The reconciling difference and/or outstanding item volume may indicate "
-            "recording errors, omissions, or unusual transactions requiring detailed investigation "
-            "per ISA 500 and ISA 505."
+            "recording errors, omissions, or unusual transactions requiring detailed "
+            "investigation per ISA 500 and ISA 505."
+        )
+    else:
+        assessment += (
+            "Significant reconciliation exceptions were identified. The reconciling "
+            "difference and outstanding items require immediate investigation per "
+            "ISA 500, ISA 505, and ISA 240."
         )
 
     story.append(Paragraph(assessment, styles["MemoBody"]))
@@ -472,12 +1021,12 @@ def generate_bank_rec_memo(
     build_disclaimer(
         story,
         styles,
-        domain="bank reconciliation analysis",
+        domain="bank reconciliation analysis testing procedures",
         isa_reference="ISA 500 (Audit Evidence), ISA 505 (External Confirmations), and PCAOB AS 2310",
     )
 
-    # Build PDF (cover page gets footer; existing pages unchanged)
-    doc.build(story, onFirstPage=draw_page_footer)
+    # Build PDF
+    doc.build(story, onFirstPage=draw_page_footer, onLaterPages=draw_page_footer)
     pdf_bytes = buffer.getvalue()
     buffer.close()
 

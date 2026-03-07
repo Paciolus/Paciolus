@@ -1780,6 +1780,228 @@ def gen_inventory_testing():
 def gen_bank_rec():
     from bank_reconciliation_memo_generator import generate_bank_rec_memo
 
+    # Outstanding deposit items (bank-only) with dates for aging
+    outstanding_deposits = [
+        {"date": "2025-12-31", "days_outstanding": 0, "description": "Wire transfer - Atlas Corp", "amount": 12500.00},
+        {
+            "date": "2025-12-30",
+            "days_outstanding": 1,
+            "description": "ACH deposit - Quarterly rebate",
+            "amount": 3200.00,
+        },
+        {"date": "2025-12-29", "days_outstanding": 2, "description": "Check deposit #4521", "amount": 1850.00},
+        {"date": "2025-12-28", "days_outstanding": 3, "description": "Wire - Pinnacle Partners", "amount": 4100.00},
+        {
+            "date": "2025-12-27",
+            "days_outstanding": 4,
+            "description": "ACH deposit - Insurance refund",
+            "amount": 750.00,
+        },
+        {"date": "2025-12-24", "days_outstanding": 7, "description": "Check deposit #4519", "amount": 2300.00},
+        {"date": "2025-12-22", "days_outstanding": 9, "description": "Wire - Meridian Sub LLC", "amount": 1450.00},
+        {"date": "2025-12-20", "days_outstanding": 11, "description": "ACH deposit - Tenant rent", "amount": 3800.00},
+        {"date": "2025-12-18", "days_outstanding": 13, "description": "Check deposit #4515", "amount": 920.00},
+        {"date": "2025-12-15", "days_outstanding": 16, "description": "Wire - Consulting fee", "amount": 2700.00},
+        {"date": "2025-12-12", "days_outstanding": 19, "description": "ACH deposit - Royalty pmt", "amount": 1600.00},
+        {"date": "2025-12-10", "days_outstanding": 21, "description": "Check deposit #4510", "amount": 850.00},
+        {
+            "date": "2025-12-05",
+            "days_outstanding": 26,
+            "description": "Wire - Year-end bonus refund",
+            "amount": 3100.00,
+        },
+        {"date": "2025-12-01", "days_outstanding": 30, "description": "ACH deposit - Service fee", "amount": 1950.00},
+        {
+            "date": "2025-11-25",
+            "days_outstanding": 36,
+            "description": "Check deposit #4501 - Overdue",
+            "amount": 1200.00,
+        },
+        {"date": "2025-11-18", "days_outstanding": 43, "description": "Wire - Settlement proceeds", "amount": 2100.00},
+        {"date": "2025-11-01", "days_outstanding": 60, "description": "ACH - Disputed refund", "amount": 800.00},
+        {"date": "2025-10-15", "days_outstanding": 77, "description": "Check #4488 - Old deposit", "amount": 500.00},
+    ]
+
+    # Outstanding check items (ledger-only) with dates for aging
+    outstanding_checks = [
+        {
+            "date": "2025-12-30",
+            "days_outstanding": 1,
+            "description": "Check #8901 - Office supplies",
+            "amount": -1250.00,
+        },
+        {
+            "date": "2025-12-28",
+            "days_outstanding": 3,
+            "description": "Check #8899 - Contractor pmt",
+            "amount": -4500.00,
+        },
+        {"date": "2025-12-24", "days_outstanding": 7, "description": "Check #8895 - Utilities", "amount": -2100.00},
+        {"date": "2025-12-20", "days_outstanding": 11, "description": "ACH pmt - Vendor A", "amount": -3400.00},
+        {"date": "2025-12-15", "days_outstanding": 16, "description": "Check #8888 - Insurance", "amount": -5600.00},
+        {"date": "2025-12-10", "days_outstanding": 21, "description": "ACH pmt - Payroll tax", "amount": -8200.00},
+        {"date": "2025-12-01", "days_outstanding": 30, "description": "Check #8875 - Lease pmt", "amount": -3800.00},
+        {"date": "2025-11-15", "days_outstanding": 46, "description": "Check #8860 - Legal fees", "amount": -2400.00},
+        {"date": "2025-11-01", "days_outstanding": 60, "description": "Check #8845 - Equipment", "amount": -1900.00},
+        {"date": "2025-09-15", "days_outstanding": 107, "description": "Check #8790 - Old vendor", "amount": -3200.00},
+        {"date": "2025-08-20", "days_outstanding": 133, "description": "Check #8755 - Stale pmt", "amount": -1570.00},
+        {"date": "2025-07-01", "days_outstanding": 183, "description": "Check #8700 - Uncashed", "amount": -1000.00},
+    ]
+
+    # 8 test results for methodology table
+    test_results = [
+        {
+            "test_name": "Exact Match Reconciliation",
+            "test_key": "exact_match",
+            "test_tier": "structural",
+            "entries_flagged": 0,
+            "flag_rate": 0.0,
+            "severity": "low",
+        },
+        {
+            "test_name": "Bank-Only Items",
+            "test_key": "bank_only_items",
+            "test_tier": "structural",
+            "entries_flagged": 18,
+            "flag_rate": 0.048,
+            "severity": "medium",
+        },
+        {
+            "test_name": "Ledger-Only Items",
+            "test_key": "ledger_only_items",
+            "test_tier": "structural",
+            "entries_flagged": 12,
+            "flag_rate": 0.032,
+            "severity": "medium",
+        },
+        {
+            "test_name": "Stale Deposits (>10 days)",
+            "test_key": "stale_deposits",
+            "test_tier": "structural",
+            "entries_flagged": 11,
+            "flag_rate": 0.030,
+            "severity": "high",
+        },
+        {
+            "test_name": "Stale Checks (>90 days)",
+            "test_key": "stale_checks",
+            "test_tier": "structural",
+            "entries_flagged": 3,
+            "flag_rate": 0.008,
+            "severity": "medium",
+        },
+        {
+            "test_name": "NSF / Returned Items",
+            "test_key": "nsf_items",
+            "test_tier": "advanced",
+            "entries_flagged": 0,
+            "flag_rate": 0.0,
+            "severity": "low",
+        },
+        {
+            "test_name": "Interbank Transfers",
+            "test_key": "interbank_transfers",
+            "test_tier": "advanced",
+            "entries_flagged": 0,
+            "flag_rate": 0.0,
+            "severity": "low",
+        },
+        {
+            "test_name": "High Value (>Materiality)",
+            "test_key": "high_value_transactions",
+            "test_tier": "statistical",
+            "entries_flagged": 0,
+            "flag_rate": 0.0,
+            "severity": "low",
+        },
+    ]
+
+    # rec_tests (engine output format) — mirrors test_results for the 5 engine tests
+    rec_tests = [
+        {
+            "test_name": "Stale Deposits (>10 days)",
+            "flagged_count": 11,
+            "severity": "high",
+            "flagged_items": [
+                {
+                    "test_name": "Stale Deposits",
+                    "description": "Deposit outstanding 11 days",
+                    "amount": 3800.00,
+                    "date": "2025-12-20",
+                    "severity": "medium",
+                    "details": {"age_days": 11},
+                },
+                {
+                    "test_name": "Stale Deposits",
+                    "description": "Deposit outstanding 77 days",
+                    "amount": 500.00,
+                    "date": "2025-10-15",
+                    "severity": "high",
+                    "details": {"age_days": 77},
+                },
+            ],
+        },
+        {
+            "test_name": "Stale Checks (>90 days)",
+            "flagged_count": 3,
+            "severity": "medium",
+            "flagged_items": [
+                {
+                    "test_name": "Stale Checks",
+                    "description": "Check outstanding 107 days",
+                    "amount": -3200.00,
+                    "date": "2025-09-15",
+                    "severity": "medium",
+                    "details": {"age_days": 107},
+                },
+                {
+                    "test_name": "Stale Checks",
+                    "description": "Check outstanding 133 days",
+                    "amount": -1570.00,
+                    "date": "2025-08-20",
+                    "severity": "medium",
+                    "details": {"age_days": 133},
+                },
+                {
+                    "test_name": "Stale Checks",
+                    "description": "Check outstanding 183 days",
+                    "amount": -1000.00,
+                    "date": "2025-07-01",
+                    "severity": "medium",
+                    "details": {"age_days": 183},
+                },
+            ],
+        },
+        {"test_name": "NSF / Returned Items", "flagged_count": 0, "severity": "low", "flagged_items": []},
+        {"test_name": "Interbank Transfers", "flagged_count": 0, "severity": "low", "flagged_items": []},
+        {"test_name": "High Value (>Materiality)", "flagged_count": 0, "severity": "low", "flagged_items": []},
+    ]
+
+    # Composite risk score
+    # Reconciling difference present (+15), outstanding > 20 (+8), stale deposits (+6),
+    # stale checks (+4) = 33 => ELEVATED
+    composite_score = {
+        "score": 33.0,
+        "risk_tier": "elevated",
+        "total_flagged": 44,
+        "flag_rate": 0.118,
+        "flags_by_severity": {"high": 4, "medium": 37, "low": 3},
+        "tests_run": 8,
+        "total_entries": 372,
+        "top_findings": [
+            "Stale Deposits (>10 days): 11 items flagged",
+            "Stale Checks (>90 days): 3 items flagged",
+        ],
+    }
+
+    # Aging summary
+    aging_summary = {
+        "deposits_over_10_days": {"count": 11, "amount": 19520.00, "pct": 42.7},
+        "deposits_over_30_days": {"count": 4, "amount": 4600.00, "pct": 10.1},
+        "checks_over_30_days": {"count": 5, "amount": 10070.00, "pct": 25.9},
+        "checks_over_90_days": {"count": 3, "amount": 5770.00, "pct": 14.8},
+    }
+
     rec_result = {
         "summary": {
             "matched_count": 342,
@@ -1794,6 +2016,20 @@ def gen_bank_rec():
         },
         "bank_column_detection": {"overall_confidence": 0.95},
         "ledger_column_detection": {"overall_confidence": 0.91},
+        "test_results": test_results,
+        "composite_score": composite_score,
+        "rec_tests": rec_tests,
+        "outstanding_deposits": outstanding_deposits,
+        "outstanding_checks": outstanding_checks,
+        "aging_summary": aging_summary,
+        "ending_balance_reconciliation": {
+            "bank_ending_balance": 1_251_750.00,
+            "gl_ending_balance": 1_245_000.00,
+        },
+        "ar_cross_reference": {
+            "ar_reconciling_difference": 8_450.00,
+            "ar_reference": "ARA-2026-0306-494",
+        },
     }
 
     pdf = generate_bank_rec_memo(

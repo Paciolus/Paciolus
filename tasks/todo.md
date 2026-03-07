@@ -117,6 +117,57 @@
 > Sprints 478, 488–497 archived to `tasks/archive/sprints-478-497-details.md`. Pending items below.
 
 
+### Sprint 503 — Bank Reconciliation Report Fixes & Improvements
+**Status:** COMPLETE
+**Goal:** Fix missing methodology section (BUG-01), missing risk score/results summary (BUG-02), implement 5 additional tests in memo (BUG-03), add key findings section (BUG-04), plus 3 content improvements (aging tables, ending balance reconciliation, reconciling difference characterization).
+
+#### Bug Fixes
+- [x] BUG-01: Add Section II Methodology table with all 8 tests documented — 8 test descriptions in `_TEST_DESCRIPTIONS` dict, methodology table uses shared `build_methodology_section` pattern
+- [x] BUG-02: Add Results Summary (Section V) with Composite Risk Score, Risk Tier, severity counts, Risk Scale legend — uses `RISK_TIER_DISPLAY` and `RISK_SCALE_LEGEND` from shared memo_base
+- [x] BUG-03: Wire 5 engine tests into memo — engine already had tests, added `rec_tests` + `test_results` + `composite_score` to sample data, expanded NSF keywords (INSUFFICIENT, R01, R02, REVERSED), fixed interbank tolerance to $1.00, added per-item severity, added `compute_bank_rec_risk_score()`, fixed high-value to use `>=`
+- [x] BUG-04: Add Key Findings (Section VI) — Finding 1: reconciling difference with dollar amounts and AR cross-reference, Finding 2: outstanding items volume, dynamic findings for each test with flagged items > 0, all with suggested procedures from `follow_up_procedures.py`
+
+#### Improvements
+- [x] IMPROVEMENT-01: Outstanding Items Aging Tables (Section IV) — deposits and checks sorted by days outstanding desc, priority flags (HIGH/MEDIUM/LOW), max 20 rows with overflow message, aging summary block (deposits >10/>30 days, checks >30/>90 days with percentages)
+- [x] IMPROVEMENT-02: Ending Balance Reconciliation in Section III — bank balance adjusted for outstanding items, GL balance from engagement context, variance check with reconciled/not-reconciled indicator, graceful fallback when either balance is missing
+- [x] IMPROVEMENT-03: Reconciling Difference Characterization in Section III — amount, direction, % of activity, potential explanations checklist (GL omission, bank error, timing difference, fraud), conditional AR cross-reference note
+
+#### Files Modified
+- `bank_reconciliation.py` — severity field on RecFlaggedItem, expanded NSF regex (+5 keywords), interbank tolerance $0.01→$1.00, per-item severity for stale deposits (HIGH >30d, MEDIUM 11-30d), NSF always HIGH, interbank always HIGH, high-value uses `>=`, new `compute_bank_rec_risk_score()` function
+- `bank_reconciliation_memo_generator.py` — complete rewrite: 8-section structure (Scope, Methodology, Reconciliation Results, Outstanding Items, Results Summary, Key Findings, Authoritative References, Conclusion), `_TEST_DESCRIPTIONS` dict, `_build_methodology_table`, `_build_reconciliation_results` (with ending balance + characterization), `_build_outstanding_aging_tables`, `_build_key_findings`, 4 risk tier conclusion texts
+- `generate_sample_reports.py` — enriched gen_bank_rec() with 18 outstanding deposits, 12 outstanding checks (all with dates/amounts/descriptions), 8 test_results, 5 rec_tests with flagged_items, composite_score (33.0 ELEVATED), aging_summary, ending_balance_reconciliation ($1,251,750 bank / $1,245,000 GL), ar_cross_reference ($8,450)
+- `shared/follow_up_procedures.py` — expanded from 4 to 13 bank reconciliation procedures (exact_match, bank_only_items, ledger_only_items, stale_deposits, stale_checks, nsf_items, interbank_transfers, high_value_transactions, reconciling_difference, outstanding_volume + enhanced existing 4)
+- `tests/test_bank_rec_memo.py` — 58 tests (up from 22): enriched report, methodology (3), results summary (3), risk conclusions (4), key findings (5), aging tables (5), ending balance (5), characterization (3), guardrails (5), engine risk score (4), flagged item severity (5)
+
+#### Verification
+- [x] `npm run build` passes
+- [x] `npm test` passes (1,329 tests, 111 suites)
+- [x] `pytest` passes (5,846 passed, 1 skipped, 1 pre-existing error)
+- [x] Regenerate all 21 sample PDFs — all OK, bank rec 51,346 bytes (up from ~30KB)
+
+#### Review
+All verification items confirmed:
+- Section II Methodology present with all 8 tests documented (Exact Match, Bank-Only, Ledger-Only, Stale Deposits, Stale Checks, NSF, Interbank, High Value)
+- Section V Results Summary: Composite Risk Score 33.0/100, Risk Tier ELEVATED, Risk Scale legend present, severity counts (4 high, 37 medium, 3 low)
+- Section VI Key Findings: Finding 1 ($6,750 reconciling difference, HIGH), Finding 2 (30 outstanding items, MEDIUM), Finding 3 (Stale Deposits, HIGH), Finding 4 (Stale Checks, MEDIUM) — all with suggested procedures
+- AR cross-reference: $8,450 unreconciled AR subledger difference (Ref: ARA-2026-0306-494) rendered in both Key Findings and Characterization
+- Outstanding Deposits aging table: 18 items with dates, days outstanding, priority flags, sorted by age desc
+- Outstanding Checks aging table: 12 items with dates, days outstanding, priority flags (3 HIGH >90 days)
+- Aging summary block: deposits >10 days (11, $19,520, 42.7%), >30 days (4, $4,600); checks >90 days (3, $5,770, 14.8%)
+- Ending balance reconciliation: bank $1,251,750 - $45,670 deposits + $38,920 checks = adjusted, GL $1,245,000
+- Reconciling difference characterization: $6,750, Bank > GL, 0.14% of activity, 4 potential explanations checklist
+- Risk tier ELEVATED consistent between Results Summary (33.0) and Conclusion
+- Footer: "bank reconciliation analysis testing procedures"
+- 8 methodology descriptions all substantive (>20 chars each)
+- NSF keywords expanded: INSUFFICIENT, R01, R02, REVERSED now detected
+- High-value test uses >= (not >) for materiality threshold
+- Interbank tolerance: $1.00 (was $0.01)
+- Stale deposit per-item severity: HIGH >30 days, MEDIUM 11-30 days
+- No other reports unintentionally modified (all 21 regenerated, timestamp-only changes on non-bank-rec reports)
+- Test count: 5,846 backend (up from 5,808 — +38 net) + 1,329 frontend
+
+---
+
 ### Sprint 502 — Fixed Asset Report Fixes & Improvements
 **Status:** COMPLETE
 **Goal:** Fix PP&E ampersand rendering (BUG-01), blank methodology descriptions (BUG-02), missing high severity detail (BUG-03), orphaned ASC 842 reference (BUG-04), and 4 content improvements to the Fixed Asset Register Analysis memo.
@@ -164,6 +215,7 @@ All verification items confirmed:
 - Risk tier MODERATE consistent (21.5 score)
 - Lease indicator: 10th test, 0 flagged, "No lease indicator keywords detected"
 - Test count: 5,808 backend (up from 5,788 — 20 new) + 1,329 frontend
+- **Commit:** `b4b2984` — pushed to main
 
 ---
 

@@ -286,10 +286,60 @@ FOLLOW_UP_PROCEDURES: dict[str, str] = {
     "PR-T10": "Verify employees sharing bank accounts or addresses for proper documentation and business justification.",
     "PR-T11": "Investigate shared tax IDs for data entry errors or potential identity fraud. If confirmed, assess implications for the entity's payroll tax reporting obligations.",
     # Bank Reconciliation
-    "stale_deposits": "Investigate deposits outstanding more than 10 days for recording delays or potential misstatements.",
-    "stale_checks": "Review checks outstanding more than 90 days for stale-dated items requiring write-off or investigation.",
-    "nsf_items": "Trace NSF/returned items to subsequent collection or write-off; assess credit risk.",
-    "high_value_transactions": "Obtain supporting documentation for transactions exceeding materiality threshold.",
+    "exact_match": (
+        "Review matched transactions on a sample basis to confirm the automated matching "
+        "algorithm correctly paired bank and ledger items. Investigate any matched pairs "
+        "where dates differ by more than 3 business days."
+    ),
+    "bank_only_items": (
+        "Obtain supporting documentation for all outstanding deposits older than 10 days. "
+        "For outstanding checks older than 90 days, assess escheatment obligations and "
+        "confirm the disbursement was properly authorized."
+    ),
+    "ledger_only_items": (
+        "Investigate ledger-only items for recording errors, timing differences, or "
+        "transactions requiring reclassification. Confirm that outstanding checks represent "
+        "valid disbursements with proper authorization."
+    ),
+    "stale_deposits": (
+        "Obtain supporting documentation for all outstanding deposits older than 10 days. "
+        "Deposits in transit older than 10 days may indicate fictitious deposits recorded "
+        "in the ledger but not yet cleared at the bank. Verify deposit slips and bank "
+        "confirmation of receipt."
+    ),
+    "stale_checks": (
+        "Review checks outstanding more than 90 days for stale-dated items. Stale checks "
+        "may require escheatment review under applicable unclaimed property laws and may "
+        "indicate fictitious disbursements recorded in the ledger. Obtain void confirmations "
+        "or reissue documentation."
+    ),
+    "nsf_items": (
+        "Trace NSF/returned items to subsequent collection or write-off. Assess whether "
+        "returned items indicate customer financial distress or payment fraud per ISA 240. "
+        "Verify proper recording of the reversal and any subsequent re-presentment."
+    ),
+    "interbank_transfers": (
+        "Investigate same-day matching debit/credit pairs above $10,000 as potential check "
+        "kiting indicators per ISA 240 (A40). Obtain management explanation and verify "
+        "the business purpose of each transfer. Confirm that both sides of the transfer "
+        "are properly recorded in the correct period."
+    ),
+    "high_value_transactions": (
+        "Obtain supporting documentation for transactions exceeding performance materiality. "
+        "High-value items warrant individual verification per ISA 500 to confirm proper "
+        "authorization and recording. Inspect underlying contracts, approvals, and bank "
+        "confirmations."
+    ),
+    "reconciling_difference": (
+        "Investigate the reconciling difference. Determine whether the variance represents "
+        "a bank error, a GL recording omission, a timing item not captured in the matching "
+        "window, or a fraudulent transaction. Document the resolution with supporting evidence."
+    ),
+    "outstanding_volume": (
+        "Evaluate the volume of outstanding items relative to total transactions. A high "
+        "outstanding ratio may indicate systemic recording delays, cut-off issues, or "
+        "inadequate reconciliation procedures by the entity."
+    ),
     # Three-Way Match
     "twm_amount_variance": (
         "Obtain supporting documentation for material variances between PO, invoice, and receiving "
