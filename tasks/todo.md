@@ -155,6 +155,7 @@
 - [x] All 15 acceptance criteria met
 
 #### Review
+- Commit: `3dde8c8`
 - Tests: 52 (was 30) — added 22 new tests covering cover page, scope, register, practitioner assessment, risk scoring, sign-off, references, phantom page fix
 - Files modified: `anomaly_summary_generator.py`, `tests/test_anomaly_summary.py`, `fasb_scope_methodology.yml`, `gasb_scope_methodology.yml`
 
