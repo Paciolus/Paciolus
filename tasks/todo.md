@@ -155,6 +155,7 @@
 - [x] `pytest` passes (6,188 total — 50 net new tests)
 - [x] Regenerated all 21 sample PDFs — accrual completeness: 49,905 bytes (up from ~30KB), 6 pages (up from 3)
 - [x] No other reports unintentionally modified
+- **Commit:** `3f68e11`
 
 #### Acceptance Criteria
 - [x] Deferred Revenue removed from accrual population and reclassified to Section IV-B
