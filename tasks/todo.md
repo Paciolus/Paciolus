@@ -202,6 +202,7 @@ All verification items confirmed:
 - [x] `pytest` passes (6,057 passed, 0 skipped, 0 errors — up from 6,041)
 - [x] Regenerated sample PDF: 15_currency_conversion.pdf (44,901 bytes)
 - [x] All 17 report reference prefixes verified unique (no collisions)
+- **Commit:** `8a74690`
 
 ---
 
