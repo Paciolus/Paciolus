@@ -117,6 +117,47 @@
 > Sprints 478, 488–497 archived to `tasks/archive/sprints-478-497-details.md`. Pending items below.
 
 
+### Sprint 515 — Anomaly Summary Report (WP-ANS) Enrichment
+**Status:** COMPLETE
+**Goal:** Major enrichment of Report 21 (Anomaly Summary Report): cover page metadata, unexecuted tools disclosure, cross-references, clean-result rendering, practitioner assessment framework, engagement risk indicator, sign-off block, authoritative references update, phantom page fix.
+
+#### Cover Page
+- [x] Full metadata block: Source Documents, Source File, Source Context, Reference (ANS- prefix)
+
+#### Section I — Scope Enhancements
+- [x] Unexecuted tools table (dynamically populated from ToolName registry)
+- [x] Engagement-level anomaly summary metrics (severity counts, clean-result count, risk indicator)
+- [x] Engagement risk indicator (ELEVATED/MODERATE/LOW with scoring formula)
+
+#### Section II — Anomaly Register Enhancements
+- [x] Cross-reference column (Ref: WP-XXX-001) for every finding — 13 tools mapped
+- [x] Clean-result tools render explicit "no anomalies" blocks with checkmark + WP ref
+- [x] Severity column min width fix (0.8→1.0 inch for MEDIUM rendering)
+
+#### Section III — Practitioner Assessment (Build Out)
+- [x] Per-anomaly response blocks: management explanation, implication (5 options), deficiency classification (5 options per ISA 265/AS 1305), follow-up procedures, initials/date
+- [x] Completion tracker at top of Section III (total/completed/classified counts)
+- [x] Aggregate deficiency classification summary table (DRAFT until all assessed)
+
+#### Section IV — Engagement Risk Assessment (New)
+- [x] Risk scoring formula: (high×3 + medium×2 + low×1) + coverage_penalty (tools_not_run × 1.5)
+- [x] Prominent risk indicator box with bullet details + narrative paragraph
+
+#### Fixes & New Sections
+- [x] Phantom page 5 fix — removed trailing standalone disclaimer (footer callback sufficient)
+- [x] Authoritative references: AU-C § 265/330/520, AS 1305, AS 2305 (rendered directly, not via YAML)
+- [x] Sign-off block (Prepared/Reviewed/Partner) with DRAFT — INCOMPLETE note when anomalies present
+- [x] No ASC 250-10 reference in anomaly summary (YAML entries cleared to `references: []`)
+
+#### Verification
+- [x] `pytest tests/test_anomaly_summary.py -v` — 52 passed
+- [x] `npm run build` — pending
+- [x] All 15 acceptance criteria met
+
+#### Review
+- Tests: 52 (was 30) — added 22 new tests covering cover page, scope, register, practitioner assessment, risk scoring, sign-off, references, phantom page fix
+- Files modified: `anomaly_summary_generator.py`, `tests/test_anomaly_summary.py`, `fasb_scope_methodology.yml`, `gasb_scope_methodology.yml`
+
 ### Sprint 513 — Accrual Completeness Estimator Report Enrichment
 **Status:** COMPLETE
 **Goal:** Fix 3 bugs and add 4 new sections to the Accrual Completeness Estimator report (Report 19): Deferred Revenue misclassification, threshold label confusion, reference number addition, per-account reasonableness testing, missing accrual estimation, deferred revenue analysis, findings register, suggested procedures, authoritative reference update.

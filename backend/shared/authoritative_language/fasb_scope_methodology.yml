@@ -283,8 +283,4 @@ tools:
 
   anomaly_summary:
     data_description: "engagement-level diagnostic results"
-    references:
-      - codification: "ASC 250-10"
-        topic: "Accounting Changes and Error Corrections — Overall"
-        paragraph: "Various"
-        status: "Current"
+    references: []

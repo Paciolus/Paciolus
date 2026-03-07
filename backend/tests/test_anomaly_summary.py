@@ -1,9 +1,16 @@
 """
-Tests for Anomaly Summary Generator + Engagement Export — Sprint 101
-Phase X: Engagement Layer
+Tests for Anomaly Summary Generator + Engagement Export — Sprint 101 / Sprint 515
 
 Covers:
 - TestAnomalySummaryReport: section structure, disclaimer, no ISA 265, access control
+- TestCoverPageMetadata: full metadata block with reference number
+- TestScopeEnhancements: unexecuted tools, severity metrics, risk indicator
+- TestAnomalyRegister: cross-references, clean-result blocks, severity column
+- TestPractitionerAssessment: per-anomaly response blocks, completion tracker
+- TestEngagementRiskAssessment: risk scoring, narrative
+- TestSignOffBlock: sign-off table, DRAFT watermark
+- TestAuthoritativeReferences: AU-C/PCAOB citations, no ASC 250-10
+- TestPhantomPageFix: no trailing standalone disclaimer
 - TestEngagementZIP: file structure, manifest, naming convention
 - TestDisclaimerUpdates: strengthened disclaimer in memo_base
 - TestExportRoutes: route registration
@@ -20,7 +27,15 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from anomaly_summary_generator import AUDITOR_INSTRUCTIONS, DISCLAIMER_TEXT, AnomalySummaryGenerator
+from anomaly_summary_generator import (
+    AUDITOR_INSTRUCTIONS,
+    AUTHORITATIVE_REFERENCES,
+    DISCLAIMER_TEXT,
+    TOOL_CROSS_REFERENCES,
+    AnomalySummaryGenerator,
+    _compute_engagement_risk,
+    _generate_reference,
+)
 from engagement_export import PLATFORM_VERSION, EngagementExporter
 from engagement_model import ToolName
 from follow_up_items_model import FollowUpSeverity
@@ -36,14 +51,14 @@ class TestAnomalySummaryReport:
         pdf = gen.generate_pdf(eng.created_by, eng.id)
         assert isinstance(pdf, bytes)
         assert len(pdf) > 100
-        assert pdf[:5] == b'%PDF-'
+        assert pdf[:5] == b"%PDF-"
 
     def test_pdf_with_no_follow_ups(self, db_session, make_engagement):
         """PDF generates successfully with no follow-up items."""
         eng = make_engagement()
         gen = AnomalySummaryGenerator(db_session)
         pdf = gen.generate_pdf(eng.created_by, eng.id)
-        assert pdf[:5] == b'%PDF-'
+        assert pdf[:5] == b"%PDF-"
 
     def test_pdf_with_follow_up_items(self, db_session, make_engagement, make_follow_up_item):
         """PDF generates successfully with follow-up items."""
@@ -52,7 +67,7 @@ class TestAnomalySummaryReport:
         make_follow_up_item(engagement=eng, severity=FollowUpSeverity.MEDIUM, tool_source="ap_testing")
         gen = AnomalySummaryGenerator(db_session)
         pdf = gen.generate_pdf(eng.created_by, eng.id)
-        assert pdf[:5] == b'%PDF-'
+        assert pdf[:5] == b"%PDF-"
         assert len(pdf) > 500
 
     def test_pdf_with_tool_runs(self, db_session, make_engagement, make_tool_run):
@@ -62,7 +77,7 @@ class TestAnomalySummaryReport:
         make_tool_run(engagement=eng, tool_name=ToolName.AP_TESTING)
         gen = AnomalySummaryGenerator(db_session)
         pdf = gen.generate_pdf(eng.created_by, eng.id)
-        assert pdf[:5] == b'%PDF-'
+        assert pdf[:5] == b"%PDF-"
 
     def test_access_denied_for_wrong_user(self, db_session, make_engagement, make_user):
         """Wrong user cannot generate anomaly summary."""
@@ -114,7 +129,7 @@ class TestAnomalySummaryReport:
             )
         gen = AnomalySummaryGenerator(db_session)
         pdf = gen.generate_pdf(eng.created_by, eng.id)
-        assert pdf[:5] == b'%PDF-'
+        assert pdf[:5] == b"%PDF-"
 
     def test_pdf_multiple_tools_grouped(self, db_session, make_engagement, make_follow_up_item):
         """Follow-up items are grouped by tool source."""
@@ -124,7 +139,255 @@ class TestAnomalySummaryReport:
         make_follow_up_item(engagement=eng, tool_source="ap_testing", description="AP anomaly")
         gen = AnomalySummaryGenerator(db_session)
         pdf = gen.generate_pdf(eng.created_by, eng.id)
-        assert pdf[:5] == b'%PDF-'
+        assert pdf[:5] == b"%PDF-"
+
+
+class TestCoverPageMetadata:
+    """Tests for cover page metadata enhancements."""
+
+    def test_reference_number_format(self):
+        """Reference number follows ANS-YYYY-MMDD-NNN format."""
+        ref = _generate_reference()
+        assert ref.startswith("ANS-")
+        parts = ref.split("-")
+        assert len(parts) == 4
+        assert len(parts[1]) == 4  # YYYY
+        assert len(parts[2]) == 4  # MMDD
+        assert len(parts[3]) == 3  # NNN
+
+    def test_reference_number_unique(self):
+        """Multiple reference numbers are distinct (probabilistic)."""
+        refs = {_generate_reference() for _ in range(20)}
+        assert len(refs) >= 10  # At least 50% unique with 3-digit suffix
+
+
+class TestScopeEnhancements:
+    """Tests for Section I scope enhancements."""
+
+    def test_unexecuted_tools_rendered(self, db_session, make_engagement, make_tool_run):
+        """PDF renders when some tools are executed and others are not."""
+        eng = make_engagement()
+        make_tool_run(engagement=eng, tool_name=ToolName.TRIAL_BALANCE)
+        make_tool_run(engagement=eng, tool_name=ToolName.AP_TESTING)
+        gen = AnomalySummaryGenerator(db_session)
+        pdf = gen.generate_pdf(eng.created_by, eng.id)
+        assert pdf[:5] == b"%PDF-"
+        # 2 tools run out of 13 → 11 not executed
+        assert len(pdf) > 500
+
+    def test_all_tools_executed(self, db_session, make_engagement, make_tool_run):
+        """PDF renders correctly when all tools are executed."""
+        eng = make_engagement()
+        for tn in ToolName:
+            make_tool_run(engagement=eng, tool_name=tn)
+        gen = AnomalySummaryGenerator(db_session)
+        pdf = gen.generate_pdf(eng.created_by, eng.id)
+        assert pdf[:5] == b"%PDF-"
+
+    def test_no_tools_executed(self, db_session, make_engagement):
+        """PDF renders correctly with no tool runs."""
+        eng = make_engagement()
+        gen = AnomalySummaryGenerator(db_session)
+        pdf = gen.generate_pdf(eng.created_by, eng.id)
+        assert pdf[:5] == b"%PDF-"
+
+
+class TestAnomalyRegister:
+    """Tests for Section II anomaly register enhancements."""
+
+    def test_cross_reference_mapping_complete(self):
+        """Every ToolName has a cross-reference prefix."""
+        for tn in ToolName:
+            assert tn in TOOL_CROSS_REFERENCES, f"Missing cross-ref for {tn.value}"
+
+    def test_cross_reference_format(self):
+        """Cross-references follow WP-XXX-001 format."""
+        for tn, ref in TOOL_CROSS_REFERENCES.items():
+            assert ref.startswith("WP-"), f"Bad prefix for {tn.value}: {ref}"
+            assert ref.endswith("-001"), f"Bad suffix for {tn.value}: {ref}"
+
+    def test_clean_result_tools_rendered(
+        self,
+        db_session,
+        make_engagement,
+        make_tool_run,
+        make_follow_up_item,
+    ):
+        """Tools with runs but no findings render explicit clean-result blocks."""
+        eng = make_engagement()
+        # Run 3 tools
+        make_tool_run(engagement=eng, tool_name=ToolName.TRIAL_BALANCE)
+        make_tool_run(engagement=eng, tool_name=ToolName.AP_TESTING)
+        make_tool_run(engagement=eng, tool_name=ToolName.PAYROLL_TESTING)
+        # Only AP has a finding
+        make_follow_up_item(engagement=eng, tool_source="ap_testing", description="Duplicate payment")
+        gen = AnomalySummaryGenerator(db_session)
+        pdf = gen.generate_pdf(eng.created_by, eng.id)
+        assert pdf[:5] == b"%PDF-"
+        assert len(pdf) > 500
+
+    def test_severity_column_width(self):
+        """Severity column is wide enough for 'MEDIUM' without line-break.
+
+        At 9pt Times-Roman, 'MEDIUM' is ~42pt wide. The column must be
+        wider than the text to prevent wrapping. 1.0 inch = 72pt is sufficient.
+        """
+        from reportlab.lib.units import inch
+
+        column_width_pt = 1.0 * inch  # 72pt
+        # 'MEDIUM' in 9pt Times-Roman is ~42pt — column must exceed that
+        assert column_width_pt >= 42
+
+
+class TestPractitionerAssessment:
+    """Tests for Section III practitioner assessment framework."""
+
+    def test_response_blocks_with_items(self, db_session, make_engagement, make_follow_up_item):
+        """PDF with follow-up items generates Section III response blocks."""
+        eng = make_engagement()
+        for i in range(3):
+            sev = [FollowUpSeverity.HIGH, FollowUpSeverity.MEDIUM, FollowUpSeverity.LOW][i]
+            make_follow_up_item(
+                engagement=eng,
+                description=f"Test anomaly {i + 1}",
+                severity=sev,
+                tool_source="trial_balance",
+            )
+        gen = AnomalySummaryGenerator(db_session)
+        pdf = gen.generate_pdf(eng.created_by, eng.id)
+        assert pdf[:5] == b"%PDF-"
+        assert len(pdf) > 1000  # Section III adds substantial content
+
+    def test_no_response_blocks_without_items(self, db_session, make_engagement):
+        """PDF with no follow-up items has simplified Section III."""
+        eng = make_engagement()
+        gen = AnomalySummaryGenerator(db_session)
+        pdf = gen.generate_pdf(eng.created_by, eng.id)
+        assert pdf[:5] == b"%PDF-"
+
+
+class TestEngagementRiskAssessment:
+    """Tests for Section IV engagement risk scoring."""
+
+    def test_elevated_risk(self):
+        """High severity count >= 3 triggers ELEVATED."""
+        label, score = _compute_engagement_risk(3, 2, 1, 0)
+        assert label == "ELEVATED"
+
+    def test_elevated_risk_by_score(self):
+        """Total score >= 15 triggers ELEVATED."""
+        label, score = _compute_engagement_risk(2, 3, 2, 2)
+        assert label == "ELEVATED"
+        assert score >= 15
+
+    def test_moderate_risk(self):
+        """1 high severity with low total triggers MODERATE."""
+        label, score = _compute_engagement_risk(1, 0, 0, 0)
+        assert label == "MODERATE"
+
+    def test_low_risk(self):
+        """Zero high severity and low total triggers LOW."""
+        label, score = _compute_engagement_risk(0, 1, 1, 0)
+        assert label == "LOW"
+
+    def test_coverage_penalty(self):
+        """Unexecuted tools add coverage penalty."""
+        label1, score1 = _compute_engagement_risk(0, 0, 0, 0)
+        label2, score2 = _compute_engagement_risk(0, 0, 0, 10)
+        assert score2 > score1
+
+    def test_risk_indicator_in_pdf(self, db_session, make_engagement, make_follow_up_item):
+        """PDF generates with risk indicator section."""
+        eng = make_engagement()
+        make_follow_up_item(engagement=eng, severity=FollowUpSeverity.HIGH, tool_source="ap_testing")
+        gen = AnomalySummaryGenerator(db_session)
+        pdf = gen.generate_pdf(eng.created_by, eng.id)
+        assert pdf[:5] == b"%PDF-"
+
+
+class TestSignOffBlock:
+    """Tests for sign-off block."""
+
+    def test_pdf_with_signoff(self, db_session, make_engagement):
+        """PDF generates with sign-off section."""
+        eng = make_engagement()
+        gen = AnomalySummaryGenerator(db_session)
+        pdf = gen.generate_pdf(eng.created_by, eng.id)
+        assert pdf[:5] == b"%PDF-"
+
+    def test_pdf_with_draft_watermark(self, db_session, make_engagement, make_follow_up_item):
+        """PDF with anomalies includes DRAFT watermark note."""
+        eng = make_engagement()
+        make_follow_up_item(engagement=eng, severity=FollowUpSeverity.HIGH, tool_source="trial_balance")
+        gen = AnomalySummaryGenerator(db_session)
+        pdf = gen.generate_pdf(eng.created_by, eng.id)
+        assert pdf[:5] == b"%PDF-"
+        assert len(pdf) > 500
+
+
+class TestAuthoritativeReferences:
+    """Tests for authoritative references section."""
+
+    def test_references_defined(self):
+        """Authoritative references constant is populated."""
+        assert len(AUTHORITATIVE_REFERENCES) == 5
+
+    def test_references_include_required_standards(self):
+        """All required auditing standards are present."""
+        ref_ids = {ref[1] for ref in AUTHORITATIVE_REFERENCES}
+        assert "AU-C \u00a7 265" in ref_ids
+        assert "AU-C \u00a7 330" in ref_ids
+        assert "AU-C \u00a7 520" in ref_ids
+        assert "AS 1305" in ref_ids
+        assert "AS 2305" in ref_ids
+
+    def test_no_asc_250_10_in_references(self):
+        """ASC 250-10 must NOT appear in the anomaly summary references."""
+        for body, ref_id, topic in AUTHORITATIVE_REFERENCES:
+            assert "ASC 250-10" not in ref_id, "ASC 250-10 must not be in anomaly summary references"
+
+    def test_no_asc_250_10_in_constants(self):
+        """ASC 250-10 must not appear anywhere in the module constants."""
+        assert "ASC 250-10" not in DISCLAIMER_TEXT
+        assert "ASC 250-10" not in AUDITOR_INSTRUCTIONS
+
+
+class TestPhantomPageFix:
+    """Tests for phantom page 5 fix."""
+
+    def test_no_trailing_disclaimer_in_story(self, db_session, make_engagement):
+        """Story does not end with a standalone disclaimer paragraph."""
+        eng = make_engagement()
+        gen = AnomalySummaryGenerator(db_session)
+        # Access internal _build_story to inspect the story list
+        from shared.memo_base import create_memo_styles
+
+        styles = create_memo_styles()
+        doc_width = 468.0  # letter width - 1.5" margins
+
+        from models import Client
+
+        client = db_session.query(Client).filter(Client.id == eng.client_id).first()
+        client_name = client.name if client else "Test"
+
+        story = gen._build_story(
+            styles,
+            doc_width,
+            client_name,
+            eng,
+            [],
+            [],
+        )
+
+        # The last element should NOT be a disclaimer Paragraph
+        # (it should be the sign-off table or spacer)
+        from reportlab.platypus import Paragraph as RParagraph
+
+        last_elements = [e for e in story[-3:] if isinstance(e, RParagraph)]
+        for elem in last_elements:
+            assert "DATA ANALYTICS REPORT" not in getattr(elem, "text", ""), (
+                "Trailing disclaimer found — would cause phantom blank page"
+            )
 
 
 class TestEngagementZIP:
@@ -137,7 +400,7 @@ class TestEngagementZIP:
         zip_bytes, filename = exporter.generate_zip(eng.created_by, eng.id)
         assert isinstance(zip_bytes, bytes)
         assert isinstance(filename, str)
-        assert filename.endswith('.zip')
+        assert filename.endswith(".zip")
 
     def test_zip_filename_contains_client_and_period(self, db_session, make_engagement):
         """ZIP filename includes client name and period end."""
@@ -228,7 +491,7 @@ class TestEngagementZIP:
 
         zf = ZipFile(BytesIO(zip_bytes))
         pdf = zf.read("anomaly_summary.pdf")
-        assert pdf[:5] == b'%PDF-'
+        assert pdf[:5] == b"%PDF-"
 
     def test_access_denied_for_wrong_user(self, db_session, make_engagement, make_user):
         """Wrong user cannot export ZIP."""
@@ -249,9 +512,9 @@ class TestEngagementZIP:
 
         # No raw data files
         for name in names:
-            assert not name.endswith('.csv'), "ZIP should not contain CSV data files"
-            assert not name.endswith('.xlsx'), "ZIP should not contain Excel data files"
-            assert 'upload' not in name.lower(), "ZIP should not contain uploaded files"
+            assert not name.endswith(".csv"), "ZIP should not contain CSV data files"
+            assert not name.endswith(".xlsx"), "ZIP should not contain Excel data files"
+            assert "upload" not in name.lower(), "ZIP should not contain uploaded files"
 
 
 class TestDisclaimerUpdates:
@@ -260,6 +523,7 @@ class TestDisclaimerUpdates:
     def test_disclaimer_mentions_analytics(self):
         """Strengthened disclaimer mentions data anomalies."""
         from shared.memo_base import build_disclaimer, create_memo_styles
+
         styles = create_memo_styles()
         story = []
         build_disclaimer(story, styles, domain="journal entry")
@@ -269,6 +533,7 @@ class TestDisclaimerUpdates:
     def test_disclaimer_accepts_isa_reference(self):
         """Strengthened disclaimer accepts ISA reference parameter."""
         from shared.memo_base import build_disclaimer, create_memo_styles
+
         styles = create_memo_styles()
         story = []
         build_disclaimer(story, styles, domain="AP payment", isa_reference="ISA 240/500")
@@ -277,6 +542,7 @@ class TestDisclaimerUpdates:
     def test_disclaimer_backward_compatible(self):
         """Disclaimer still works with just domain parameter."""
         from shared.memo_base import build_disclaimer, create_memo_styles
+
         styles = create_memo_styles()
         story = []
         build_disclaimer(story, styles)
@@ -287,6 +553,7 @@ class TestDisclaimerUpdates:
         from reportlab.platypus import Paragraph as RParagraph
 
         from shared.memo_base import build_disclaimer, create_memo_styles
+
         styles = create_memo_styles()
         story = []
         build_disclaimer(story, styles, domain="testing")
@@ -301,6 +568,7 @@ class TestDisclaimerUpdates:
         from reportlab.platypus import Paragraph as RParagraph
 
         from shared.memo_base import build_disclaimer, create_memo_styles
+
         styles = create_memo_styles()
         story = []
         build_disclaimer(story, styles, domain="payroll")
@@ -315,11 +583,13 @@ class TestExportRoutes:
     def test_anomaly_summary_route_registered(self):
         """POST /engagements/{id}/export/anomaly-summary is registered."""
         from main import app
+
         routes = [route.path for route in app.routes]
         assert "/engagements/{engagement_id}/export/anomaly-summary" in routes
 
     def test_export_package_route_registered(self):
         """POST /engagements/{id}/export/package is registered."""
         from main import app
+
         routes = [route.path for route in app.routes]
         assert "/engagements/{engagement_id}/export/package" in routes

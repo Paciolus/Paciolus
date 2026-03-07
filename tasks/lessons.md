@@ -4,6 +4,16 @@
 
 ---
 
+## Anomaly Summary Report (Sprint 515)
+
+1. **Auditing standards vs. FASB codification**: The anomaly summary is an engagement-level aggregation report, not a tool-specific diagnostic. Its authoritative references should cite auditing procedure standards (AU-C § 265/330/520, PCAOB AS 1305/2305) rather than FASB ASC codification entries. Render these directly in the generator rather than through the YAML content library, since they don't follow the codification/statement schema.
+
+2. **Phantom trailing pages from standalone disclaimers**: When a report ends with a standalone `Paragraph(DISCLAIMER_TEXT, ...)`, the PDF renderer may place it on a new page — creating a phantom blank page with only a disclaimer. Since `draw_page_footer` already renders the disclaimer on every page footer, the trailing standalone disclaimer is redundant and should be removed.
+
+3. **Cross-reference mappings should be exhaustive**: When adding WP-XXX-001 cross-references for findings, map every ToolName enum value — not just the tools that happened to have findings in the sample data. This prevents KeyError when a new tool generates findings in production.
+
+---
+
 ## Accrual Completeness Estimator (Sprint 513)
 
 1. **Account classification ordering matters**: When classifying liability accounts into analytical buckets, check the most specific patterns first. "Deferred Revenue" must match before generic "deferred" to avoid misclassifying it as "Deferred Liability". The ordering (deferred revenue → accrued → provision → generic deferred) is critical.

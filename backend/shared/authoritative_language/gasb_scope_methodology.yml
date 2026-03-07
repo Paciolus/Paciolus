@@ -259,8 +259,4 @@ tools:
 
   anomaly_summary:
     data_description: "engagement-level diagnostic results"
-    references:
-      - statement: "Statement No. 34"
-        topic: "Basic Financial Statements — and Management's Discussion and Analysis — for State and Local Governments"
-        paragraph: "Various"
-        status: "Current"
+    references: []
