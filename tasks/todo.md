@@ -164,6 +164,7 @@ All verification items confirmed:
 - Section numbering: I Scope, II Design Parameters, III Stratification, IV Methodology, V Status, VI Sample Preview, VII Next Steps
 - No other reports unintentionally modified (all 21 regenerated, timestamp-only on non-sampling)
 - Test count: 6,000 backend (up from 5,942 — +58 new) + 1,329 frontend
+- **Commit:** `ceaf061`
 
 ---
 
