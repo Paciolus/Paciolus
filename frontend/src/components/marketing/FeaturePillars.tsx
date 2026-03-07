@@ -46,7 +46,7 @@ const pillars: FeaturePillar[] = [
     title: 'Zero-Storage Security',
     tagline: 'Never written to disk. Never retained.',
     description:
-      'Every file is processed in-memory and immediately discarded after analysis. Nothing is written to disk. Nothing is retained. Zero exposure, by design — not by policy.',
+      'Every file is processed in-memory and immediately discarded after analysis. Nothing is written to disk. No raw data is retained. Zero exposure, by design — not by policy.',
     accentGradient: 'from-sage-500/15 via-transparent to-transparent',
     accentBorder: 'border-sage-500/30 hover:border-sage-500/50',
     accentIconBg: 'bg-sage-500/20',

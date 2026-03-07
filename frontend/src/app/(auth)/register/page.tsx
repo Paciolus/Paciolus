@@ -187,7 +187,7 @@ export default function RegisterPage() {
             <p
               className="text-oatmeal-400 font-sans text-sm"
             >
-              Seven-day trial. All twelve tools. Your data is never stored.
+              Seven-day trial. All twelve tools. Raw financial files are never stored.
             </p>
           </div>
 
@@ -202,7 +202,7 @@ export default function RegisterPage() {
               </span>
             </div>
             <p className="text-oatmeal-500 text-xs font-sans text-center mt-2">
-              Your financial data is never stored. Only credentials are saved securely.
+              Your raw financial files are never stored. Only credentials are saved securely.
             </p>
           </div>
 

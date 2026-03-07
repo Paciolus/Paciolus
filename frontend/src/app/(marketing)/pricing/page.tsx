@@ -645,7 +645,7 @@ export default function PricingPage() {
               Straightforward Pricing for Serious Work
             </h1>
             <p className="type-body text-oatmeal-400 max-w-xl mx-auto mb-3">
-              Twelve tools. Zero financial data stored. One platform. Pick the plan that matches your practice.
+              Twelve tools. Zero file storage. One platform. Pick the plan that matches your practice.
             </p>
             <p className="font-sans text-sm text-sage-400">
               Every plan includes a 7-day free trial — no credit card required to start.

@@ -14,7 +14,7 @@ describe('ZeroStorageNotice', () => {
     render(<ZeroStorageNotice />)
     expect(
       screen.getByText(
-        'Zero-Storage: Your data is processed in-memory and never saved.'
+        'Zero-Storage: Raw files are processed in-memory and not stored at rest.'
       )
     ).toBeInTheDocument()
   })

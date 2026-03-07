@@ -182,7 +182,7 @@ export function DemoZone() {
             </Link>
           </div>
           <p className="text-oatmeal-500 text-xs font-sans mt-6">
-            Zero-Storage Architecture. Your data is processed in server memory only and immediately destroyed — never written to disk or database.
+            Zero-Storage Architecture. Raw financial files are processed in server memory only and immediately destroyed — never written to disk or database.
           </p>
         </motion.div>
       </motion.div>

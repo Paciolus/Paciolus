@@ -164,7 +164,7 @@ export default function DemoPage() {
           </h2>
           <p className="font-sans text-oatmeal-400 mb-8 max-w-lg mx-auto">
             Start your 7-day free trial. Upload a real trial balance and
-            run the full diagnostic suite — typically under three seconds.
+            run the full diagnostic suite — typically under three seconds for files up to 10,000 rows.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">

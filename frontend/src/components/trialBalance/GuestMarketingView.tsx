@@ -163,7 +163,7 @@ export function GuestMarketingView() {
               visible: { opacity: 1, transition: { duration: 0.5, delay: 0.2 } }
             }}
           >
-            Your data never leaves your browser&apos;s memory. Zero storage, zero risk.
+            Raw financial files are processed in-memory and not stored at rest.
           </motion.p>
         </motion.div>
       </section>
@@ -207,7 +207,7 @@ export function GuestMarketingView() {
               © 2025 Paciolus. Built for Financial Professionals.
             </div>
             <div className="text-content-tertiary text-sm font-sans">
-              Zero-Storage Architecture. Your data stays yours.
+              Zero-Storage Architecture. Your files stay yours.
             </div>
           </div>
 

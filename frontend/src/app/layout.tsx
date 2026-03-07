@@ -5,7 +5,7 @@ import { Providers } from './providers'
 
 export const metadata: Metadata = {
   title: 'Paciolus - Surgical Precision for Trial Balance Diagnostics',
-  description: 'Financial Professionals: Eliminate sign errors and misclassifications with automated Close Health Reports. Zero-Storage processing ensures your client data never leaves memory.',
+  description: 'Financial Professionals: Eliminate sign errors and misclassifications with automated Close Health Reports. Raw financial files are processed in-memory and not stored at rest.',
   icons: {
     icon: '/PaciolusLogo_LightBG.png',
     apple: '/PaciolusLogo_LightBG.png',

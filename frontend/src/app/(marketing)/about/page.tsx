@@ -288,7 +288,7 @@ export default function AboutPage() {
               },
               {
                 title: 'Immediate Results',
-                description: 'Upload to documented analysis — typically under three seconds. No batch queuing, no overnight processing.',
+                description: 'Upload to documented analysis — typically under three seconds for files up to 10,000 rows in a standard cloud environment. No batch queuing, no overnight processing.',
               },
             ].map((item) => (
               <motion.div
@@ -341,7 +341,7 @@ export default function AboutPage() {
             Start your first analysis.
           </h2>
           <p className="type-body text-oatmeal-400 mb-8">
-            Seven-day trial. All twelve tools. Your client&apos;s data is never stored.
+            Seven-day trial. All twelve tools. Your client&apos;s raw files are never stored.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link

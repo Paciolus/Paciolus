@@ -51,7 +51,7 @@ export const ANALYSIS_MAX_ROWS = 10_000
 export const ANALYSIS_LABEL_SHORT = `< ${ANALYSIS_TYPICAL_SECONDS}s`
 
 /** Standard marketing label (mid-length) */
-export const ANALYSIS_LABEL_STANDARD = 'under three seconds'
+export const ANALYSIS_LABEL_STANDARD = 'under three seconds for standard file sizes'
 
 /** Fully qualified, auditable claim for detailed copy */
-export const ANALYSIS_LABEL_QUALIFIED = `typically under three seconds for files up to ${ANALYSIS_MAX_ROWS.toLocaleString()} rows`
+export const ANALYSIS_LABEL_QUALIFIED = `typically under three seconds for files up to ${ANALYSIS_MAX_ROWS.toLocaleString()} rows in a standard cloud environment`
