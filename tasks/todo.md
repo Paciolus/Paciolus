@@ -117,6 +117,29 @@
 > Sprints 478, 488–497 archived to `tasks/archive/sprints-478-497-details.md`. Pending items below.
 
 
+### Sprint 507 — Test Suite Fixes (Error + Skip)
+**Status:** COMPLETE
+**Goal:** Fix 1 error and 1 skipped test from Sprint 506 verification run.
+
+#### Fixes
+- [x] FIX-01: `test_workpaper_index_route_registered` teardown error — `Base.metadata.drop_all()` failed with `OperationalError: no such table: main.follow_up_items` due to circular FK cycle (organizations ↔ subscriptions ↔ users) with SQLite `PRAGMA foreign_keys=ON`. Fix: disable FK constraints before `drop_all` by removing the pragma event listener and executing `PRAGMA foreign_keys=OFF` explicitly.
+- [x] FIX-02: `test_large_file_completes_in_time` unconditionally skipped — removed `@pytest.mark.skip` decorator and increased budget from 15s to 30s (actual runtime ~12-27s depending on machine load).
+
+#### Files Modified
+- `tests/conftest.py` — changed `@event.listens_for` to `event.listen()` for removable reference; added `event.remove()` + `PRAGMA foreign_keys=OFF` before `drop_all`; imported `text` from sqlalchemy
+- `tests/test_audit_core.py` — removed `@pytest.mark.skip` from `test_large_file_completes_in_time`, increased budget 15s → 30s
+
+#### Verification
+- [x] `pytest tests/test_workpaper_index.py` — 17 passed, 0 errors
+- [x] `pytest tests/test_audit_core.py -k large_file` — 2 passed (12-27s)
+- [x] Full suite: **6,001 passed, 0 skipped, 0 errors** (up from 6,000 passed, 1 skipped, 1 error)
+
+#### Review
+- Circular FK warning persists (SAWarning about organizations/subscriptions/users cycle) — harmless since FKs are OFF during drop
+- Test count: 6,001 backend + 1,345 frontend (net +1 from un-skipping)
+
+---
+
 ### Sprint 506 — Statistical Sampling Memo Fixes & Improvements
 **Status:** COMPLETE
 **Goal:** Fix authoritative references (BUG-01), population value discrepancy (BUG-02), sample size gap (BUG-03), confidence factor explanation (BUG-04), plus 3 improvements (EM derivation, sample listing preview, AR-specific next steps).

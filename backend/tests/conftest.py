@@ -18,7 +18,7 @@ import sys
 from pathlib import Path
 
 import pytest
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import Session, sessionmaker
 
 # Ensure backend is on the path
@@ -64,11 +64,12 @@ def db_engine():
             echo=False,
         )
 
-        @event.listens_for(engine, "connect")
-        def set_sqlite_pragma(dbapi_conn, connection_record):
+        def _set_sqlite_pragma(dbapi_conn, connection_record):
             cursor = dbapi_conn.cursor()
             cursor.execute("PRAGMA foreign_keys=ON")
             cursor.close()
+
+        event.listen(engine, "connect", _set_sqlite_pragma)
     else:
         engine = create_engine(
             _TEST_DATABASE_URL,
@@ -82,6 +83,16 @@ def db_engine():
     register_deletion_guard([ActivityLog, DiagnosticSummary, ToolRun, FollowUpItem, FollowUpItemComment])
 
     yield engine
+
+    # Disable FK constraints before drop_all to avoid circular dependency
+    # errors in SQLite (organizations ↔ users ↔ subscriptions cycle).
+    # SQLite doesn't support ALTER TABLE for FK constraints, so drop_all
+    # can't resolve the cycle with foreign_keys=ON.
+    if _is_test_sqlite:
+        event.remove(engine, "connect", _set_sqlite_pragma)
+        with engine.connect() as conn:
+            conn.execute(text("PRAGMA foreign_keys=OFF"))
+            conn.commit()
     Base.metadata.drop_all(bind=engine)
     engine.dispose()
 

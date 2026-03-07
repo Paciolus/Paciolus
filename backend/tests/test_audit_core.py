@@ -544,12 +544,12 @@ class TestZeroStorageLeak:
 class TestPerformance:
     """Performance and benchmark tests."""
 
-    @pytest.mark.skip(reason="Flaky under full-suite load; passes in isolation. Deferred to dedicated perf job.")
     def test_large_file_completes_in_time(self, large_csv_bytes):
         """Verify large file processing completes within acceptable time.
 
-        Threshold is 15s — generous enough for loaded CI machines,
-        tight enough to catch catastrophic O(n^2) regressions.
+        Threshold is 30s — generous enough for loaded CI machines and
+        slower dev environments, tight enough to catch catastrophic
+        O(n^2) regressions (1000 rows at O(n^2) would take minutes).
         """
         import time
 
@@ -559,8 +559,9 @@ class TestPerformance:
         )
         elapsed = time.time() - start
 
-        # 15s budget: 1000 rows should never take this long on any reasonable machine
-        assert elapsed < 15.0, f"Processing took {elapsed:.1f}s (budget: 15s)"
+        # 30s budget: 1000 rows with full audit (anomaly detection, ratios,
+        # benchmarks) should complete well under this on any machine.
+        assert elapsed < 30.0, f"Processing took {elapsed:.1f}s (budget: 30s)"
         assert result["status"] == "success"
 
     def test_memory_stays_bounded(self, large_csv_bytes):
