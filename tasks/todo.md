@@ -205,6 +205,7 @@
 - [x] `pytest` passes (6,188 tests)
 - [x] Regenerated all 21 sample PDFs — flux expectations: 50,542 bytes (up from ~30KB)
 - [x] No other reports unintentionally modified
+- **Commit:** `ee3a1a9`
 
 #### Acceptance Criteria
 - [x] ASC 250-10 reference removed; AU-C § 520, AU-C § 330, AS 2305 substituted
