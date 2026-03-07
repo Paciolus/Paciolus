@@ -166,6 +166,7 @@ All 52 verification checks confirmed in PDF output:
 - Risk tier HIGH consistent between Results Summary and Conclusion
 - No other reports modified (all 21 regenerated, timestamp-only on non-APC)
 - Test count: 5,942 backend (up from 5,891 — +51 new) + 1,329 frontend
+- **Commit:** `03e26c2`
 
 ---
 
