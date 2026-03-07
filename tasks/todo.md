@@ -207,6 +207,7 @@ New weights: tb_balance=25, column_detection=20, null_values=15, duplicates=10, 
 - [x] `pytest` passes (6,068 passed, 0 failures — up from 6,041)
 - [x] Regenerated all 21 sample PDFs — preflight report 44,550 bytes (enriched)
 - [x] No other reports unintentionally modified (all 21 regenerated, timestamp-only on non-preflight)
+- **Commit:** `b70f9b4`
 
 ---
 
