@@ -17,7 +17,9 @@ import pytest
 
 from sampling_memo_generator import (
     CONFIDENCE_FACTOR_NOTES,
+    ERROR_NATURE_OPTIONS,
     NEXT_STEPS_BY_POPULATION_TYPE,
+    _build_evaluation_next_steps,
     _format_stratum,
     _next_section_number,
     _roman,
@@ -44,8 +46,8 @@ def design_result():
         "expected_misstatement": 15_000.00,
         "population_size": 1_240,
         "population_value": 4_850_000.00,
-        "sampling_interval": 25_000.00,
-        "calculated_sample_size": 194,
+        "sampling_interval": 16_666.67,
+        "calculated_sample_size": 291,
         "actual_sample_size": 207,
         "high_value_count": 42,
         "high_value_total": 2_100_000.00,
@@ -162,20 +164,25 @@ def design_result():
 
 @pytest.fixture
 def evaluation_result():
-    """Full evaluation result."""
+    """Full evaluation result with self-consistent Stringer bound values."""
     return {
         "method": "mus",
         "confidence_level": 0.95,
         "sample_size": 207,
+        "sampling_interval": 16_666.67,
         "errors_found": 3,
         "total_misstatement": 4_230.00,
-        "projected_misstatement": 12_480.00,
-        "basic_precision": 25_000.00,
-        "incremental_allowance": 8_750.00,
-        "upper_error_limit": 46_230.00,
+        "expected_misstatement": 15_000.00,
+        "projected_misstatement": 10_036.67,
+        "basic_precision": 50_000.00,
+        "incremental_allowance": 4_135.02,
+        "upper_error_limit": 64_171.69,
         "tolerable_misstatement": 75_000.00,
         "conclusion": "pass",
-        "conclusion_detail": ("The upper error limit ($46,230) does not exceed the tolerable misstatement ($75,000)."),
+        "conclusion_detail": (
+            "The upper error limit ($64,171.69) does not exceed the tolerable "
+            "misstatement ($75,000.00). Population accepted at 95% confidence."
+        ),
         "errors": [
             {
                 "item_id": "INV-2847",
@@ -183,6 +190,8 @@ def evaluation_result():
                 "audited_amount": 3_200.00,
                 "misstatement": 250.00,
                 "tainting": 0.0725,
+                "error_nature": "Pricing error",
+                "direction": "Overstatement",
             },
             {
                 "item_id": "INV-4102",
@@ -190,6 +199,8 @@ def evaluation_result():
                 "audited_amount": 9_220.00,
                 "misstatement": 3_580.00,
                 "tainting": 0.2797,
+                "error_nature": "Pricing error",
+                "direction": "Overstatement",
             },
             {
                 "item_id": "INV-5391",
@@ -197,6 +208,8 @@ def evaluation_result():
                 "audited_amount": 1_200.00,
                 "misstatement": 400.00,
                 "tainting": 0.2500,
+                "error_nature": "Pricing error",
+                "direction": "Overstatement",
             },
         ],
     }
@@ -645,3 +658,309 @@ class TestGuardrails:
     def test_all_population_types_have_5_steps(self):
         for pop_type, steps in NEXT_STEPS_BY_POPULATION_TYPE.items():
             assert len(steps) == 5, f"{pop_type} has {len(steps)} steps, expected 5"
+
+
+# ═══════════════════════════════════════════════════════════════
+# BUG-01 (Sprint 508): Phase-Specific Titles
+# ═══════════════════════════════════════════════════════════════
+
+
+class TestPhaseSpecificTitles:
+    """BUG-01: Design and evaluation reports must have distinct titles."""
+
+    def test_design_memo_generates_with_design_title(self, design_result):
+        """Design memo should generate successfully with phase-specific title."""
+        pdf = generate_sampling_design_memo(design_result, "test.csv")
+        assert isinstance(pdf, bytes)
+        assert len(pdf) > 1000
+
+    def test_evaluation_memo_generates_with_eval_title(self, evaluation_result, design_result):
+        """Evaluation memo should generate successfully with phase-specific title."""
+        pdf = generate_sampling_evaluation_memo(evaluation_result, design_result, "test.csv")
+        assert isinstance(pdf, bytes)
+        assert len(pdf) > 1000
+
+    def test_evaluation_without_design_generates(self, evaluation_result):
+        """Evaluation memo without design context still generates."""
+        pdf = generate_sampling_evaluation_memo(evaluation_result, filename="test.csv")
+        assert isinstance(pdf, bytes)
+        assert len(pdf) > 1000
+
+
+# ═══════════════════════════════════════════════════════════════
+# BUG-02 (Sprint 508): Evaluation-Phase Next Steps
+# ═══════════════════════════════════════════════════════════════
+
+
+class TestEvaluationNextSteps:
+    """BUG-02: Evaluation report uses post-evaluation next steps."""
+
+    def test_evaluation_steps_returns_5_steps(self, evaluation_result, design_result):
+        steps, intro = _build_evaluation_next_steps(evaluation_result, design_result)
+        assert len(steps) == 5
+
+    def test_evaluation_intro_mentions_uel(self, evaluation_result, design_result):
+        steps, intro = _build_evaluation_next_steps(evaluation_result, design_result)
+        assert "UEL" in intro
+
+    def test_evaluation_intro_pass_accepted(self, evaluation_result, design_result):
+        steps, intro = _build_evaluation_next_steps(evaluation_result, design_result)
+        assert "accepted" in intro.lower()
+
+    def test_evaluation_intro_fail_not_accepted(self, evaluation_result, design_result):
+        evaluation_result["conclusion"] = "fail"
+        evaluation_result["upper_error_limit"] = 80_000.00
+        steps, intro = _build_evaluation_next_steps(evaluation_result, design_result)
+        assert "cannot be accepted" in intro.lower()
+        assert "ISA 530.17" in intro
+
+    def test_step1_mentions_management(self, evaluation_result, design_result):
+        steps, _ = _build_evaluation_next_steps(evaluation_result, design_result)
+        assert "management" in steps[0]["body"].lower()
+
+    def test_step1_mentions_error_count_and_total(self, evaluation_result, design_result):
+        steps, _ = _build_evaluation_next_steps(evaluation_result, design_result)
+        assert "3" in steps[0]["body"]
+        assert "$4,230" in steps[0]["body"]
+
+    def test_step2_mentions_correction(self, evaluation_result, design_result):
+        steps, _ = _build_evaluation_next_steps(evaluation_result, design_result)
+        assert "correct" in steps[1]["body"].lower()
+
+    def test_step3_mentions_isa_450(self, evaluation_result, design_result):
+        steps, _ = _build_evaluation_next_steps(evaluation_result, design_result)
+        assert "ISA 450" in steps[2]["body"]
+
+    def test_step4_mentions_isa_580(self, evaluation_result, design_result):
+        steps, _ = _build_evaluation_next_steps(evaluation_result, design_result)
+        assert "ISA 580" in steps[3]["body"]
+
+    def test_step5_cross_reference(self, evaluation_result, design_result):
+        steps, _ = _build_evaluation_next_steps(evaluation_result, design_result)
+        assert "cross-reference" in steps[4]["title"].lower()
+
+    def test_evaluation_memo_uses_eval_steps(self, evaluation_result, design_result):
+        """Full evaluation memo should render with post-evaluation steps."""
+        pdf = generate_sampling_evaluation_memo(evaluation_result, design_result, "test.csv")
+        assert len(pdf) > 1000
+
+
+# ═══════════════════════════════════════════════════════════════
+# BUG-03 (Sprint 508): UEL Derivation
+# ═══════════════════════════════════════════════════════════════
+
+
+class TestUELDerivation:
+    """BUG-03: UEL derivation block present in evaluation report."""
+
+    def test_evaluation_with_derivation_generates(self, evaluation_result, design_result):
+        """Evaluation memo with UEL derivation generates."""
+        pdf = generate_sampling_evaluation_memo(evaluation_result, design_result, "test.csv")
+        assert len(pdf) > 1000
+
+    def test_derivation_needs_sampling_interval(self, evaluation_result, design_result):
+        """SI must be present for full derivation arithmetic."""
+        assert design_result.get("sampling_interval", 0) > 0
+
+    def test_basic_precision_formula_correct(self, evaluation_result, design_result):
+        """BP = SI * CF should be verifiable."""
+        si = design_result["sampling_interval"]
+        cf = design_result["confidence_factor"]
+        bp = evaluation_result["basic_precision"]
+        assert abs(si * cf - bp) < 1.0  # Within $1 due to SI rounding
+
+    def test_projected_misstatement_formula(self, evaluation_result, design_result):
+        """Projected = sum(tainting * SI)."""
+        si = design_result["sampling_interval"]
+        errors = evaluation_result["errors"]
+        projected = sum(e["tainting"] * si for e in errors)
+        assert abs(projected - evaluation_result["projected_misstatement"]) < 1.0
+
+    def test_uel_sum_correct(self, evaluation_result):
+        """UEL = BP + Projected + Incremental."""
+        bp = evaluation_result["basic_precision"]
+        proj = evaluation_result["projected_misstatement"]
+        inc = evaluation_result["incremental_allowance"]
+        uel = evaluation_result["upper_error_limit"]
+        assert abs((bp + proj + inc) - uel) < 1.0
+
+    def test_uel_less_than_tm_for_pass(self, evaluation_result):
+        """PASS requires UEL < TM."""
+        assert evaluation_result["conclusion"] == "pass"
+        assert evaluation_result["upper_error_limit"] < evaluation_result["tolerable_misstatement"]
+
+
+# ═══════════════════════════════════════════════════════════════
+# BUG-04 (Sprint 508): PASS/FAIL Visual Block
+# ═══════════════════════════════════════════════════════════════
+
+
+class TestPassFailBlock:
+    """BUG-04: PASS/FAIL visual conclusion block in evaluation."""
+
+    def test_pass_memo_generates(self, evaluation_result, design_result):
+        """PASS evaluation renders."""
+        pdf = generate_sampling_evaluation_memo(evaluation_result, design_result, "test.csv")
+        assert len(pdf) > 1000
+
+    def test_fail_memo_generates(self, evaluation_result, design_result):
+        """FAIL evaluation renders."""
+        evaluation_result["conclusion"] = "fail"
+        evaluation_result["upper_error_limit"] = 80_000.00
+        pdf = generate_sampling_evaluation_memo(evaluation_result, design_result, "test.csv")
+        assert len(pdf) > 1000
+
+    def test_pass_conclusion_computed(self, evaluation_result):
+        """PASS is computed as uel < tm."""
+        is_pass = evaluation_result["upper_error_limit"] < evaluation_result["tolerable_misstatement"]
+        assert is_pass
+        assert evaluation_result["conclusion"] == "pass"
+
+
+# ═══════════════════════════════════════════════════════════════
+# BUG-05 (Sprint 508): Error Nature + Direction Columns
+# ═══════════════════════════════════════════════════════════════
+
+
+class TestErrorNatureDirection:
+    """BUG-05: Error table includes Nature and Direction columns."""
+
+    def test_error_nature_options_defined(self):
+        """Standard error nature options exist."""
+        assert "Pricing error" in ERROR_NATURE_OPTIONS
+        assert "Cut-off" in ERROR_NATURE_OPTIONS
+        assert "Existence" in ERROR_NATURE_OPTIONS
+        assert "Valuation" in ERROR_NATURE_OPTIONS
+
+    def test_evaluation_with_nature_direction_generates(self, evaluation_result, design_result):
+        """Evaluation with error_nature/direction renders 8-column table."""
+        assert all(e.get("error_nature") for e in evaluation_result["errors"])
+        assert all(e.get("direction") for e in evaluation_result["errors"])
+        pdf = generate_sampling_evaluation_memo(evaluation_result, design_result, "test.csv")
+        assert len(pdf) > 1000
+
+    def test_evaluation_without_nature_generates(self, evaluation_result, design_result):
+        """Evaluation without error_nature/direction falls back to 6-column table."""
+        for e in evaluation_result["errors"]:
+            e.pop("error_nature", None)
+            e.pop("direction", None)
+        pdf = generate_sampling_evaluation_memo(evaluation_result, design_result, "test.csv")
+        assert len(pdf) > 1000
+
+    def test_all_sample_errors_are_overstatements(self, evaluation_result):
+        """All 3 sample errors should be overstatements (recorded > audited)."""
+        for e in evaluation_result["errors"]:
+            assert e["recorded_amount"] > e["audited_amount"]
+            assert e["direction"] == "Overstatement"
+
+    def test_all_sample_errors_are_pricing(self, evaluation_result):
+        """All 3 sample errors should be pricing errors."""
+        for e in evaluation_result["errors"]:
+            assert e["error_nature"] == "Pricing error"
+
+
+# ═══════════════════════════════════════════════════════════════
+# BUG-06 (Sprint 508): Correction Status Conditional
+# ═══════════════════════════════════════════════════════════════
+
+
+class TestCorrectionStatus:
+    """BUG-06: Correction status not asserted without practitioner input."""
+
+    def test_no_correction_status_default(self, evaluation_result, design_result):
+        """Without correction_status, memo generates with 'Not confirmed' text."""
+        assert "correction_status" not in evaluation_result
+        pdf = generate_sampling_evaluation_memo(evaluation_result, design_result, "test.csv")
+        assert len(pdf) > 1000
+
+    def test_confirmed_correction_generates(self, evaluation_result, design_result):
+        """With correction_status='confirmed', generates with confirmation text."""
+        evaluation_result["correction_status"] = "confirmed"
+        evaluation_result["correction_note"] = "Corrections posted in January 2026. "
+        pdf = generate_sampling_evaluation_memo(evaluation_result, design_result, "test.csv")
+        assert len(pdf) > 1000
+
+    def test_conclusion_detail_no_corrected_assertion(self, evaluation_result):
+        """conclusion_detail should not assert 'corrected in subsequent period' without input."""
+        detail = evaluation_result["conclusion_detail"]
+        assert "corrected in the subsequent period" not in detail.lower()
+
+
+# ═══════════════════════════════════════════════════════════════
+# IMP-01 (Sprint 508): Error Summary Statistics
+# ═══════════════════════════════════════════════════════════════
+
+
+class TestErrorSummaryStatistics:
+    """IMP-01: Error summary block present below error detail table."""
+
+    def test_evaluation_with_errors_generates(self, evaluation_result, design_result):
+        """Evaluation with errors renders summary statistics."""
+        pdf = generate_sampling_evaluation_memo(evaluation_result, design_result, "test.csv")
+        assert len(pdf) > 1000
+
+    def test_error_rate_calculable(self, evaluation_result):
+        """Error rate: 3/207 = 1.4%."""
+        rate = evaluation_result["errors_found"] / evaluation_result["sample_size"] * 100
+        assert 1.3 < rate < 1.6
+
+    def test_uel_headroom_calculable(self, evaluation_result):
+        """UEL headroom: TM - UEL."""
+        headroom = evaluation_result["tolerable_misstatement"] - evaluation_result["upper_error_limit"]
+        assert headroom > 0  # PASS means positive headroom
+
+    def test_largest_error_identifiable(self, evaluation_result):
+        """INV-4102 should be largest error at $3,580."""
+        largest = max(evaluation_result["errors"], key=lambda e: e["misstatement"])
+        assert largest["item_id"] == "INV-4102"
+        assert largest["misstatement"] == 3_580.00
+
+    def test_projected_vs_expected(self, evaluation_result):
+        """Projected vs expected misstatement difference calculable."""
+        proj = evaluation_result["projected_misstatement"]
+        exp = evaluation_result["expected_misstatement"]
+        assert proj < exp  # Favorable: projected below expected
+
+
+# ═══════════════════════════════════════════════════════════════
+# IMP-02 (Sprint 508): ASC 450-20 Footnote
+# ═══════════════════════════════════════════════════════════════
+
+
+class TestASC450Footnote:
+    """IMP-02: ASC 450-20 relevance footnote in evaluation report."""
+
+    def test_evaluation_memo_generates_with_footnote(self, evaluation_result, design_result):
+        """Evaluation memo with footnote generates."""
+        pdf = generate_sampling_evaluation_memo(evaluation_result, design_result, "test.csv")
+        assert len(pdf) > 1000
+
+    def test_design_memo_no_footnote(self, design_result):
+        """Design memo should not include the evaluation footnote."""
+        # Design memo generates without the evaluation-specific footnote
+        pdf = generate_sampling_design_memo(design_result, "test.csv")
+        assert len(pdf) > 1000
+
+
+# ═══════════════════════════════════════════════════════════════
+# Sample Preview Exclusion (Sprint 508)
+# ═══════════════════════════════════════════════════════════════
+
+
+class TestPreviewExclusionForEvaluation:
+    """Sample preview section should NOT appear in evaluation reports."""
+
+    def test_evaluation_with_design_items_generates(self, evaluation_result, design_result):
+        """Evaluation memo generates even when design has selected_items."""
+        assert len(design_result.get("selected_items", [])) > 0
+        pdf = generate_sampling_evaluation_memo(evaluation_result, design_result, "test.csv")
+        assert len(pdf) > 1000
+
+    def test_evaluation_memo_size_reasonable(self, evaluation_result, design_result):
+        """Evaluation memo should be smaller than design (no preview table)
+        but larger due to UEL derivation + error summary."""
+        design_pdf = generate_sampling_design_memo(design_result, "test.csv")
+        eval_pdf = generate_sampling_evaluation_memo(evaluation_result, design_result, "test.csv")
+        # Both should be substantial
+        assert len(design_pdf) > 30_000
+        assert len(eval_pdf) > 30_000

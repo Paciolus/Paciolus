@@ -2632,8 +2632,8 @@ def gen_sampling_design():
         "expected_misstatement": 15_000.00,
         "population_size": 1_240,
         "population_value": 4_850_000.00,
-        "sampling_interval": 25_000.00,
-        "calculated_sample_size": 194,
+        "sampling_interval": 16_666.67,
+        "calculated_sample_size": 291,
         "actual_sample_size": 207,
         "high_value_count": 42,
         "high_value_total": 2_100_000.00,
@@ -2780,8 +2780,8 @@ def gen_sampling_evaluation():
         "expected_misstatement": 15_000.00,
         "population_size": 1_240,
         "population_value": 4_850_000.00,
-        "sampling_interval": 25_000.00,
-        "calculated_sample_size": 194,
+        "sampling_interval": 16_666.67,
+        "calculated_sample_size": 291,
         "actual_sample_size": 207,
         "high_value_count": 42,
         "high_value_total": 2_100_000.00,
@@ -2806,7 +2806,7 @@ def gen_sampling_evaluation():
             },
             {
                 "stratum": "Remainder (MUS)",
-                "threshold": "≤$25,000",
+                "threshold": "\u2264$25,000",
                 "count": 1_198,
                 "total_value": 2_750_000.00,
                 "sample_size": 165,
@@ -2814,23 +2814,38 @@ def gen_sampling_evaluation():
         ],
     }
 
+    # Stringer bound computation (self-consistent with engine formulas):
+    # SI = (TM - EM) / (CF * (1 + EM/TM)) = 60000 / 3.6 = $16,666.67
+    # BP = SI * CF = $16,666.67 * 3.0 = $50,000.00
+    # Taintings ranked desc: 0.2797, 0.2500, 0.0725
+    # Projected = sum(tainting * SI) = $10,036.67
+    # Incremental = sum(tainting * SI * (factor - 1.0)):
+    #   0.2797 * 16666.67 * 0.58 = $2,703.77
+    #   0.2500 * 16666.67 * 0.30 = $1,250.00
+    #   0.0725 * 16666.67 * 0.15 = $181.25
+    #   Total = $4,135.02
+    # UEL = 50000 + 10036.67 + 4135.02 = $64,171.69
+    # UEL ($64,171.69) < TM ($75,000) => PASS
+
     evaluation_result = {
         "method": "mus",
         "confidence_level": 0.95,
         "sample_size": 207,
+        "sampling_interval": 16_666.67,
         "errors_found": 3,
         "total_misstatement": 4_230.00,
-        "projected_misstatement": 12_480.00,
-        "basic_precision": 25_000.00,
-        "incremental_allowance": 8_750.00,
-        "upper_error_limit": 46_230.00,
+        "expected_misstatement": 15_000.00,
+        "projected_misstatement": 10_036.67,
+        "basic_precision": 50_000.00,
+        "incremental_allowance": 4_135.02,
+        "upper_error_limit": 64_171.69,
         "tolerable_misstatement": 75_000.00,
         "conclusion": "pass",
         "conclusion_detail": (
-            "The upper error limit ($46,230) does not exceed the tolerable misstatement ($75,000). "
-            "Based on this sample, the population is accepted at the 95% confidence level. "
-            "The 3 errors identified are individually immaterial and represent pricing differences "
-            "that have been corrected in the subsequent period."
+            "The upper error limit ($64,171.69) does not exceed the tolerable "
+            "misstatement ($75,000.00). Based on this sample, the population is "
+            "accepted at the 95% confidence level. The 3 errors identified are "
+            "individually immaterial and represent pricing differences."
         ),
         "errors": [
             {
@@ -2839,6 +2854,8 @@ def gen_sampling_evaluation():
                 "audited_amount": 3_200.00,
                 "misstatement": 250.00,
                 "tainting": 0.0725,
+                "error_nature": "Pricing error",
+                "direction": "Overstatement",
             },
             {
                 "item_id": "INV-4102",
@@ -2846,6 +2863,8 @@ def gen_sampling_evaluation():
                 "audited_amount": 9_220.00,
                 "misstatement": 3_580.00,
                 "tainting": 0.2797,
+                "error_nature": "Pricing error",
+                "direction": "Overstatement",
             },
             {
                 "item_id": "INV-5391",
@@ -2853,6 +2872,8 @@ def gen_sampling_evaluation():
                 "audited_amount": 1_200.00,
                 "misstatement": 400.00,
                 "tainting": 0.2500,
+                "error_nature": "Pricing error",
+                "direction": "Overstatement",
             },
         ],
     }

@@ -1,20 +1,18 @@
 """
-Sampling Memo PDF Generator — Sprint 269, enriched Sprint 506
+Sampling Memo PDF Generator — Sprint 269, enriched Sprint 506/508
 Phase XXXVI: Statistical Sampling (Tool 12)
 
 Custom PDF structure (NOT using testing_memo_template — different workflow):
-  1. Header (client, period, reference)
-  2. Scope (ISA 530 reference, parameters)
-  3. Design Parameters (method, confidence, thresholds)
-  4. Stratification Summary (if applicable)
-  5. Evaluation Results (if Phase 2 completed)
-  6. Error Details (if errors found)
-  7. Methodology
-  8. Conclusion / Status
-  9. Sample Selection Preview (if design phase)
-  10. Next Steps
-  11. Workpaper Signoff
-  12. Disclaimer
+  Design report ("STATISTICAL SAMPLING MEMO — DESIGN"):
+    I. Scope, II. Design Parameters, III. Stratification,
+    IV. Methodology, V. Status, VI. Sample Selection Preview,
+    VII. Next Steps (design-phase), Signoff, Disclaimer
+
+  Evaluation report ("STATISTICAL SAMPLING MEMO — EVALUATION"):
+    I. Scope, II. Design Parameters, III. Stratification,
+    IV. Evaluation Results (+ Error Details + Summary + UEL Derivation),
+    V. Methodology, VI. Conclusion (PASS/FAIL visual),
+    VII. Next Steps (evaluation-phase), Signoff, Disclaimer
 """
 
 import io
@@ -71,7 +69,33 @@ CONFIDENCE_FACTOR_NOTES: dict[float, str] = {
     0.99: "4.6052 (-ln(0.01)) — 99% confidence level",
 }
 
-# Next steps templates keyed by population type
+# Incremental change factors for Stringer bound (95% confidence)
+# Used in UEL derivation display — must match sampling_engine.py
+_INCREMENTAL_FACTORS_95: list[float] = [
+    1.58,
+    1.30,
+    1.15,
+    1.06,
+    1.00,
+    0.95,
+    0.92,
+    0.89,
+    0.87,
+    0.85,
+    0.83,
+]
+
+# Error nature options for practitioners
+ERROR_NATURE_OPTIONS: list[str] = [
+    "Pricing error",
+    "Cut-off",
+    "Existence",
+    "Valuation",
+    "Classification",
+    "Other",
+]
+
+# Next steps templates keyed by population type (DESIGN phase)
 _NEXT_STEPS_AR: list[dict[str, str]] = [
     {
         "title": "Step 1 — Prepare Client Request",
@@ -296,6 +320,108 @@ NEXT_STEPS_BY_POPULATION_TYPE: dict[str, list[dict[str, str]]] = {
 }
 
 
+def _build_evaluation_next_steps(
+    evaluation_result: dict[str, Any],
+    design_result: Optional[dict[str, Any]],
+) -> list[dict[str, str]]:
+    """Build evaluation-phase next steps dynamically from results."""
+    errors_found = evaluation_result.get("errors_found", 0)
+    total_misstatement = evaluation_result.get("total_misstatement", 0)
+    uel = evaluation_result.get("upper_error_limit", 0)
+    tm = evaluation_result.get("tolerable_misstatement", 0)
+    conclusion = evaluation_result.get("conclusion", "")
+    conf_level = evaluation_result.get("confidence_level", 0.95)
+    errors = evaluation_result.get("errors", [])
+
+    error_ids = [e.get("item_id", "") for e in errors[:10]]
+    error_id_text = ", ".join(error_ids) if error_ids else "the identified items"
+
+    # Determine all-same direction
+    directions = set()
+    for e in errors:
+        d = e.get("direction", "")
+        if not d:
+            if e.get("recorded_amount", 0) > e.get("audited_amount", 0):
+                d = "Overstatement"
+            elif e.get("recorded_amount", 0) < e.get("audited_amount", 0):
+                d = "Understatement"
+        directions.add(d)
+
+    # Intro text
+    if conclusion == "pass":
+        intro = (
+            f"Sampling evaluation is complete. UEL of ${uel:,.2f} does not exceed "
+            f"Tolerable Misstatement of ${tm:,.2f}. The population is accepted at the "
+            f"{conf_level:.0%} confidence level. The following actions are required to "
+            "close out the sampling workpaper:"
+        )
+    else:
+        intro = (
+            f"Sampling evaluation is complete. UEL of ${uel:,.2f} exceeds "
+            f"Tolerable Misstatement of ${tm:,.2f}. The population cannot be accepted "
+            f"at the {conf_level:.0%} confidence level. Expand the sample or perform "
+            "alternative procedures per ISA 530.17. If expanding, the following actions "
+            "apply to errors already identified:"
+        )
+
+    pop_type = ""
+    if design_result:
+        pop_type = design_result.get("population_type", "").upper()
+
+    # Build cross-reference step body based on population type
+    cross_ref_body = (
+        f"Cross-reference the {errors_found} identified errors to the related testing "
+        f"memo. Confirm whether any of the sampled items ({error_id_text}) "
+        "relate to findings in other workpapers."
+    )
+
+    steps = [
+        {
+            "title": "Step 1 — Communicate Identified Errors to Management",
+            "body": (
+                f"Present the {errors_found} identified errors "
+                f"(${total_misstatement:,.2f} total) to management for their response. "
+                "Request confirmation of whether management agrees the items are "
+                "misstated and whether correcting entries will be posted. Document "
+                "management's response in the engagement file."
+            ),
+        },
+        {
+            "title": "Step 2 — Obtain Evidence of Correction",
+            "body": (
+                "For any errors management agrees to correct, obtain the correcting "
+                "journal entry or amended invoice before the engagement is finalized. "
+                "If corrections relate to a subsequent period, confirm the adjustment "
+                "was recorded in the correct period per ASC 250-10."
+            ),
+        },
+        {
+            "title": "Step 3 — Assess Uncorrected Misstatements",
+            "body": (
+                "If management declines to correct any identified error, accumulate "
+                "the uncorrected amount in the summary of uncorrected misstatements "
+                "per ISA 450. Assess whether the aggregate of uncorrected misstatements "
+                "is material to the financial statements as a whole."
+            ),
+        },
+        {
+            "title": "Step 4 — Update Management Representation Letter",
+            "body": (
+                "Ensure the management representation letter (ISA 580) addresses the "
+                "completeness of the population, management's acknowledgment of the "
+                f"{errors_found} errors identified in sampling, and any related "
+                "valuation or collectibility assertions."
+            ),
+        },
+        {
+            "title": "Step 5 — Cross-Reference to Related Workpapers",
+            "body": cross_ref_body,
+        },
+    ]
+
+    return steps, intro
+
+
 def generate_sampling_design_memo(
     design_result: dict[str, Any],
     filename: str = "population",
@@ -374,6 +500,8 @@ def _generate_sampling_memo(
     """Internal: generate the combined sampling memo PDF."""
     log_secure_operation("sampling_memo_start", f"Generating sampling memo for {filename}")
 
+    is_evaluation = evaluation_result is not None
+
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
         buffer,
@@ -389,10 +517,16 @@ def _generate_sampling_memo(
     doc_width = letter[0] - 1.5 * inch
     ref_number = generate_reference_number().replace("PAC-", "SSM-")
 
+    # ─── BUG-01: Phase-specific title ─────────────────────────
+    if is_evaluation:
+        report_title = "STATISTICAL SAMPLING MEMO \u2014 EVALUATION"
+    else:
+        report_title = "STATISTICAL SAMPLING MEMO \u2014 DESIGN"
+
     # ─── 0. Cover Page ───────────────────────────────────────
     logo_path = find_logo()
     cover_metadata = ReportMetadata(
-        title="STATISTICAL SAMPLING MEMO",
+        title=report_title,
         client_name=client_name or "",
         engagement_period=period_tested or "",
         source_document=filename,
@@ -407,7 +541,7 @@ def _generate_sampling_memo(
         story,
         styles,
         doc_width,
-        title="STATISTICAL SAMPLING MEMO",
+        title=report_title,
         reference=ref_number,
         client_name=client_name,
     )
@@ -677,47 +811,150 @@ def _generate_sampling_memo(
             story.append(Paragraph(line, styles["MemoLeader"]))
         story.append(Spacer(1, 8))
 
-        # ─── Error Details Table ──────────────────────────────
+        # ─── BUG-05: Error Details Table (with Nature + Direction) ──
         errors = evaluation_result.get("errors", [])
         if errors:
             story.append(Paragraph("Error Details", styles["MemoSection"]))
             story.append(LedgerRule(doc_width))
 
-            error_data = [["#", "Item ID", "Recorded", "Audited", "Misstatement", "Tainting"]]
-            for i, err in enumerate(errors[:20], 1):
+            # Check if any error has nature/direction fields
+            has_nature = any(e.get("error_nature") for e in errors)
+            has_direction = any(e.get("direction") for e in errors)
+
+            if has_nature or has_direction:
+                # 8-column table with Nature + Direction
+                error_data = [
+                    ["#", "Item ID", "Recorded", "Audited", "Misstatement", "Tainting", "Nature", "Direction"]
+                ]
+                total_misstatement_sum = 0.0
+                all_directions = set()
+                for i, err in enumerate(errors[:20], 1):
+                    nature = err.get("error_nature", "Not specified")
+                    direction = err.get("direction", "")
+                    if not direction:
+                        if err.get("recorded_amount", 0) > err.get("audited_amount", 0):
+                            direction = "Overstatement"
+                        elif err.get("recorded_amount", 0) < err.get("audited_amount", 0):
+                            direction = "Understatement"
+                        else:
+                            direction = "N/A"
+                    all_directions.add(direction)
+                    total_misstatement_sum += err.get("misstatement", 0)
+                    error_data.append(
+                        [
+                            str(i),
+                            Paragraph(str(err.get("item_id", "")), styles["MemoTableCell"]),
+                            f"${err.get('recorded_amount', 0):,.2f}",
+                            f"${err.get('audited_amount', 0):,.2f}",
+                            f"${err.get('misstatement', 0):,.2f}",
+                            f"{err.get('tainting', 0):.1%}",
+                            Paragraph(str(nature), styles["MemoTableCell"]),
+                            Paragraph(str(direction), styles["MemoTableCell"]),
+                        ]
+                    )
+
+                # Totals row
+                dir_summary = (
+                    "All overstated"
+                    if all_directions == {"Overstatement"}
+                    else ("All understated" if all_directions == {"Understatement"} else "Mixed")
+                )
                 error_data.append(
                     [
-                        str(i),
-                        Paragraph(str(err.get("item_id", "")), styles["MemoTableCell"]),
-                        f"${err.get('recorded_amount', 0):,.2f}",
-                        f"${err.get('audited_amount', 0):,.2f}",
-                        f"${err.get('misstatement', 0):,.2f}",
-                        f"{err.get('tainting', 0):.1%}",
+                        "",
+                        Paragraph("<b>Total</b>", styles["MemoTableCell"]),
+                        "",
+                        "",
+                        f"${total_misstatement_sum:,.2f}",
+                        "",
+                        "",
+                        Paragraph(f"<b>{dir_summary}</b>", styles["MemoTableCell"]),
                     ]
                 )
 
-            error_table = Table(
-                error_data,
-                colWidths=[0.3 * inch, 1.2 * inch, 1.1 * inch, 1.1 * inch, 1.1 * inch, 0.8 * inch],
-                repeatRows=1,
-            )
-            error_table.setStyle(
-                TableStyle(
+                col_widths = [
+                    0.25 * inch,
+                    0.75 * inch,
+                    0.85 * inch,
+                    0.85 * inch,
+                    0.85 * inch,
+                    0.6 * inch,
+                    0.95 * inch,
+                    0.9 * inch,
+                ]
+                error_table = Table(error_data, colWidths=col_widths, repeatRows=1)
+                total_row_idx = len(error_data) - 1
+                error_table.setStyle(
+                    TableStyle(
+                        [
+                            ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
+                            ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
+                            ("FONTSIZE", (0, 0), (-1, -1), 8),
+                            ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
+                            ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
+                            ("LINEBELOW", (0, 1), (-1, -2), 0.25, ClassicalColors.LEDGER_RULE),
+                            ("LINEABOVE", (0, total_row_idx), (-1, total_row_idx), 1, ClassicalColors.OBSIDIAN_DEEP),
+                            ("FONTNAME", (0, total_row_idx), (-1, total_row_idx), "Times-Bold"),
+                            ("ALIGN", (2, 0), (5, -1), "RIGHT"),
+                            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                            ("TOPPADDING", (0, 0), (-1, -1), 3),
+                            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                            ("LEFTPADDING", (0, 0), (0, -1), 0),
+                        ]
+                    )
+                )
+            else:
+                # 6-column table (legacy — no nature/direction)
+                error_data = [["#", "Item ID", "Recorded", "Audited", "Misstatement", "Tainting"]]
+                total_misstatement_sum = 0.0
+                for i, err in enumerate(errors[:20], 1):
+                    total_misstatement_sum += err.get("misstatement", 0)
+                    error_data.append(
+                        [
+                            str(i),
+                            Paragraph(str(err.get("item_id", "")), styles["MemoTableCell"]),
+                            f"${err.get('recorded_amount', 0):,.2f}",
+                            f"${err.get('audited_amount', 0):,.2f}",
+                            f"${err.get('misstatement', 0):,.2f}",
+                            f"{err.get('tainting', 0):.1%}",
+                        ]
+                    )
+
+                # Totals row
+                error_data.append(
                     [
-                        ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-                        ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
-                        ("FONTSIZE", (0, 0), (-1, -1), 9),
-                        ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-                        ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-                        ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-                        ("ALIGN", (2, 0), (-1, -1), "RIGHT"),
-                        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                        ("TOPPADDING", (0, 0), (-1, -1), 3),
-                        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-                        ("LEFTPADDING", (0, 0), (0, -1), 0),
+                        "",
+                        Paragraph("<b>Total</b>", styles["MemoTableCell"]),
+                        "",
+                        "",
+                        f"${total_misstatement_sum:,.2f}",
+                        "",
                     ]
                 )
-            )
+
+                col_widths = [0.3 * inch, 1.2 * inch, 1.1 * inch, 1.1 * inch, 1.1 * inch, 0.8 * inch]
+                error_table = Table(error_data, colWidths=col_widths, repeatRows=1)
+                total_row_idx = len(error_data) - 1
+                error_table.setStyle(
+                    TableStyle(
+                        [
+                            ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
+                            ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
+                            ("FONTSIZE", (0, 0), (-1, -1), 9),
+                            ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
+                            ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
+                            ("LINEBELOW", (0, 1), (-1, -2), 0.25, ClassicalColors.LEDGER_RULE),
+                            ("LINEABOVE", (0, total_row_idx), (-1, total_row_idx), 1, ClassicalColors.OBSIDIAN_DEEP),
+                            ("FONTNAME", (0, total_row_idx), (-1, total_row_idx), "Times-Bold"),
+                            ("ALIGN", (2, 0), (-1, -1), "RIGHT"),
+                            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                            ("TOPPADDING", (0, 0), (-1, -1), 3),
+                            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                            ("LEFTPADDING", (0, 0), (0, -1), 0),
+                        ]
+                    )
+                )
+
             story.append(error_table)
 
             if len(errors) > 20:
@@ -728,6 +965,12 @@ def _generate_sampling_memo(
                     )
                 )
             story.append(Spacer(1, 8))
+
+            # ─── IMP-01: Error Summary Statistics ────────────────
+            _build_error_summary(story, styles, doc_width, evaluation_result)
+
+        # ─── BUG-03: UEL Derivation ─────────────────────────────
+        _build_uel_derivation(story, styles, doc_width, evaluation_result, design_result)
 
     # ─── 5. Methodology ──────────────────────────────────────
     next_num = _next_section_number(design_result, evaluation_result)
@@ -772,6 +1015,19 @@ def _generate_sampling_memo(
         domain_label="statistical sampling",
     )
 
+    # ─── IMP-02: ASC 450-20 relevance footnote ────────────────
+    if is_evaluation:
+        story.append(
+            Paragraph(
+                "<i>\u2020 ASC 450-20 applies when identified misstatements indicate a "
+                "probable loss contingency meeting recognition criteria under "
+                "ASC 450-20-25. Relevant if projected misstatements suggest a probable "
+                "loss contingency requiring accrual or disclosure.</i>",
+                styles["MemoBodySmall"],
+            )
+        )
+        story.append(Spacer(1, 8))
+
     # ─── 6. Conclusion / Status ───────────────────────────────
     if evaluation_result:
         next_num2 = _roman_after(next_num)
@@ -780,12 +1036,21 @@ def _generate_sampling_memo(
 
         conclusion = evaluation_result.get("conclusion", "")
         detail = evaluation_result.get("conclusion_detail", "")
+        uel = evaluation_result.get("upper_error_limit", 0)
+        tm = evaluation_result.get("tolerable_misstatement", 0)
+        conf_level = evaluation_result.get("confidence_level", 0.95)
+        errors_found = evaluation_result.get("errors_found", 0)
 
-        if conclusion == "pass":
+        # ─── BUG-04: PASS/FAIL Visual Conclusion Block ──────────
+        is_pass = conclusion == "pass"
+        _build_pass_fail_block(story, styles, doc_width, is_pass, uel, tm, conf_level, errors_found)
+        story.append(Spacer(1, 8))
+
+        if is_pass:
             conclusion_label = "UEL Within Tolerable Misstatement"
             color = ClassicalColors.SAGE
         else:
-            conclusion_label = "UEL Exceeds Tolerable Misstatement — Further Evaluation Required"
+            conclusion_label = "UEL Exceeds Tolerable Misstatement \u2014 Further Evaluation Required"
             color = ClassicalColors.CLAY
 
         story.append(
@@ -795,6 +1060,32 @@ def _generate_sampling_memo(
             )
         )
         story.append(Paragraph(detail, styles["MemoBody"]))
+        story.append(Spacer(1, 6))
+
+        # ─── BUG-06: Conditional correction status ───────────────
+        correction_status = evaluation_result.get("correction_status")
+        if correction_status == "confirmed":
+            correction_note = evaluation_result.get("correction_note", "")
+            story.append(
+                Paragraph(
+                    f"<i>Management has indicated the identified errors were corrected in "
+                    f"the subsequent period. {correction_note}"
+                    "Obtain written confirmation and the correcting journal entry reference "
+                    "before relying on this assertion. Document in the engagement file "
+                    "per ISA 450.</i>",
+                    styles["MemoBody"],
+                )
+            )
+        else:
+            story.append(
+                Paragraph(
+                    "<i>Correction status: Not confirmed. Obtain management's response to "
+                    "the identified errors and document whether correcting entries were "
+                    "posted. See Next Steps \u2014 Step 1.</i>",
+                    styles["MemoBody"],
+                )
+            )
+
         story.append(Spacer(1, 12))
     elif design_result:
         next_num2 = _roman_after(next_num)
@@ -803,21 +1094,18 @@ def _generate_sampling_memo(
         story.append(
             Paragraph(
                 f"Sample of {design_result.get('actual_sample_size', 0)} items has been selected. "
-                "Evaluation pending — auditor must complete testing of selected items and "
+                "Evaluation pending \u2014 auditor must complete testing of selected items and "
                 "upload results for evaluation.",
                 styles["MemoBody"],
             )
         )
         story.append(Spacer(1, 12))
 
-    # ─── 7. Sample Selection Preview (IMP-02) ─────────────────
-    if design_result:
+    # ─── 7. Sample Selection Preview (DESIGN ONLY) ────────────
+    if design_result and not is_evaluation:
         selected_items = design_result.get("selected_items", [])
         if selected_items:
-            if evaluation_result or design_result:
-                preview_num = _roman_after(next_num2)
-            else:
-                preview_num = _roman_after(next_num)
+            preview_num = _roman_after(next_num2)
 
             actual_size = design_result.get("actual_sample_size", len(selected_items))
             story.append(Paragraph(f"{preview_num}. Sample Selection Preview", styles["MemoSection"]))
@@ -878,7 +1166,7 @@ def _generate_sampling_memo(
                 Paragraph(
                     f"<i>Full sample listing ({actual_size} items) should be exported and "
                     "provided to the client as a document request. Items are listed in "
-                    "systematic selection order — the random start was generated using a "
+                    "systematic selection order \u2014 the random start was generated using a "
                     "cryptographically secure method (Python secrets module) to ensure "
                     "defensible randomness per ISA 530.</i>",
                     styles["MemoBodySmall"],
@@ -886,13 +1174,10 @@ def _generate_sampling_memo(
             )
             story.append(Spacer(1, 12))
 
-    # ─── 8. Next Steps (IMP-03) ───────────────────────────────
+    # ─── 8. Next Steps ─────────────────────────────────────────
     # Determine section number for Next Steps
-    if design_result and design_result.get("selected_items"):
-        if evaluation_result or design_result:
-            next_steps_num = _roman_after(preview_num)
-        else:
-            next_steps_num = _roman_after(_roman_after(next_num))
+    if not is_evaluation and design_result and design_result.get("selected_items"):
+        next_steps_num = _roman_after(preview_num)
     elif evaluation_result or design_result:
         next_steps_num = _roman_after(next_num2)
     else:
@@ -901,41 +1186,49 @@ def _generate_sampling_memo(
     story.append(Paragraph(f"{next_steps_num}. Next Steps", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
 
-    # Select population-type-specific steps
-    pop_type = ""
-    if design_result:
-        pop_type = design_result.get("population_type", "")
-    steps = NEXT_STEPS_BY_POPULATION_TYPE.get(pop_type.upper(), _NEXT_STEPS_GENERIC)
-
-    # Add intro text for typed populations
-    actual_size = 0
-    tm_value = 0.0
-    if design_result:
-        actual_size = design_result.get("actual_sample_size", 0)
-        tm_value = design_result.get("tolerable_misstatement", 0)
-
-    if pop_type and actual_size > 0:
-        story.append(
-            Paragraph(
-                f"The following {actual_size} items have been selected for "
-                f"{pop_type.upper()} balance testing using "
-                f"{method}. To complete the sampling procedure:",
-                styles["MemoBody"],
-            )
-        )
+    # ─── BUG-02: Evaluation-phase next steps ─────────────────
+    if is_evaluation:
+        eval_steps, intro_text = _build_evaluation_next_steps(evaluation_result, design_result)
+        story.append(Paragraph(intro_text, styles["MemoBody"]))
         story.append(Spacer(1, 6))
+        for step in eval_steps:
+            story.append(Paragraph(f"<b>{step['title']}</b>", styles["MemoBody"]))
+            story.append(Paragraph(step["body"], styles["MemoBody"]))
+            story.append(Spacer(1, 4))
+    else:
+        # Design-phase: population-type-specific steps
+        pop_type = ""
+        if design_result:
+            pop_type = design_result.get("population_type", "")
+        steps = NEXT_STEPS_BY_POPULATION_TYPE.get(pop_type.upper(), _NEXT_STEPS_GENERIC)
 
-    for step in steps:
-        story.append(Paragraph(f"<b>{step['title']}</b>", styles["MemoBody"]))
-        body = step["body"]
-        # Substitute TM value if referenced
-        if tm_value > 0 and "Tolerable Misstatement" in body:
-            body = body.replace(
-                "exceeds Tolerable Misstatement",
-                f"exceeds ${tm_value:,.2f} (Tolerable Misstatement)",
+        actual_size = 0
+        tm_value = 0.0
+        if design_result:
+            actual_size = design_result.get("actual_sample_size", 0)
+            tm_value = design_result.get("tolerable_misstatement", 0)
+
+        if pop_type and actual_size > 0:
+            story.append(
+                Paragraph(
+                    f"The following {actual_size} items have been selected for "
+                    f"{pop_type.upper()} balance testing using "
+                    f"{method}. To complete the sampling procedure:",
+                    styles["MemoBody"],
+                )
             )
-        story.append(Paragraph(body, styles["MemoBody"]))
-        story.append(Spacer(1, 4))
+            story.append(Spacer(1, 6))
+
+        for step in steps:
+            story.append(Paragraph(f"<b>{step['title']}</b>", styles["MemoBody"]))
+            body = step["body"]
+            if tm_value > 0 and "Tolerable Misstatement" in body:
+                body = body.replace(
+                    "exceeds Tolerable Misstatement",
+                    f"exceeds ${tm_value:,.2f} (Tolerable Misstatement)",
+                )
+            story.append(Paragraph(body, styles["MemoBody"]))
+            story.append(Spacer(1, 4))
 
     story.append(Spacer(1, 8))
 
@@ -968,6 +1261,352 @@ def _generate_sampling_memo(
 
     log_secure_operation("sampling_memo_complete", f"Sampling memo generated ({len(pdf_bytes)} bytes)")
     return pdf_bytes
+
+
+# ═══════════════════════════════════════════════════════════════
+# Section Builders
+# ═══════════════════════════════════════════════════════════════
+
+
+def _build_pass_fail_block(
+    story: list,
+    styles: dict,
+    doc_width: float,
+    is_pass: bool,
+    uel: float,
+    tm: float,
+    confidence_level: float,
+    errors_found: int,
+) -> None:
+    """BUG-04: Render a prominent PASS/FAIL visual conclusion block."""
+    if is_pass:
+        symbol = "\u2713"  # checkmark
+        label = "PASS"
+        comparison = f"UEL ${uel:,.2f}  <  TM ${tm:,.2f}"
+        border_color = ClassicalColors.SAGE
+        text_color = ClassicalColors.SAGE
+    else:
+        symbol = "\u2717"  # X mark
+        label = "FAIL"
+        comparison = f"UEL ${uel:,.2f}  \u2265  TM ${tm:,.2f}"
+        border_color = ClassicalColors.CLAY
+        text_color = ClassicalColors.CLAY
+
+    conclusion_line = f"SAMPLING CONCLUSION:  {symbol} {label}"
+    detail_line = f"Confidence: {confidence_level:.0%}   |   Errors: {errors_found}"
+
+    block_data = [
+        [
+            Paragraph(
+                f'<font color="{text_color.hexval()}" size="12"><b>{conclusion_line}</b></font>', styles["MemoBody"]
+            )
+        ],
+        [Paragraph(f'<font size="10">{comparison}</font>', styles["MemoBody"])],
+        [
+            Paragraph(
+                f'<font size="9" color="{ClassicalColors.OBSIDIAN_500.hexval()}">{detail_line}</font>',
+                styles["MemoBody"],
+            )
+        ],
+    ]
+
+    if not is_pass:
+        block_data.append(
+            [
+                Paragraph(
+                    '<font size="8" color="#616161">Expand sample or perform alternative procedures per ISA 530.17</font>',
+                    styles["MemoBody"],
+                )
+            ]
+        )
+
+    block_table = Table(block_data, colWidths=[doc_width - 0.4 * inch])
+    block_table.setStyle(
+        TableStyle(
+            [
+                ("BOX", (0, 0), (-1, -1), 1.5, border_color),
+                ("BACKGROUND", (0, 0), (-1, -1), ClassicalColors.OATMEAL_PAPER),
+                ("TOPPADDING", (0, 0), (-1, -1), 6),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                ("LEFTPADDING", (0, 0), (-1, -1), 12),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 12),
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+            ]
+        )
+    )
+    story.append(block_table)
+
+
+def _build_error_summary(
+    story: list,
+    styles: dict,
+    doc_width: float,
+    evaluation_result: dict[str, Any],
+) -> None:
+    """IMP-01: Error summary statistics block below error detail table."""
+    errors = evaluation_result.get("errors", [])
+    if not errors:
+        return
+
+    errors_found = evaluation_result.get("errors_found", len(errors))
+    sample_size = evaluation_result.get("sample_size", 0)
+    total_misstatement = evaluation_result.get("total_misstatement", 0)
+    projected = evaluation_result.get("projected_misstatement", 0)
+    expected = evaluation_result.get("expected_misstatement", 0)
+    uel = evaluation_result.get("upper_error_limit", 0)
+    tm = evaluation_result.get("tolerable_misstatement", 0)
+
+    # Determine direction summary
+    directions = set()
+    natures = []
+    largest_error = None
+    largest_amount = 0
+    for e in errors:
+        d = e.get("direction", "")
+        if not d:
+            if e.get("recorded_amount", 0) > e.get("audited_amount", 0):
+                d = "Overstatement"
+            elif e.get("recorded_amount", 0) < e.get("audited_amount", 0):
+                d = "Understatement"
+        directions.add(d)
+        if e.get("error_nature"):
+            natures.append(e["error_nature"])
+        m = abs(e.get("misstatement", 0))
+        if m > largest_amount:
+            largest_amount = m
+            largest_error = e
+
+    error_rate = errors_found / sample_size * 100 if sample_size > 0 else 0
+
+    dir_text = (
+        "Overstatements"
+        if directions == {"Overstatement"}
+        else ("Understatements" if directions == {"Understatement"} else "Mixed (over + under)")
+    )
+
+    story.append(Paragraph("<b>Error Summary</b>", styles["MemoBody"]))
+
+    summary_lines = [
+        create_leader_dots(
+            "Errors Found", f"{errors_found} of {sample_size} items tested   ({error_rate:.1f}% error rate)"
+        ),
+        create_leader_dots("Total Actual Misstatement", f"${total_misstatement:,.2f}"),
+        create_leader_dots("All errors", dir_text),
+    ]
+
+    # Nature summary
+    if natures:
+        from collections import Counter
+
+        nature_counts = Counter(natures)
+        nature_parts = [f"{n} ({c} of {len(natures)})" for n, c in nature_counts.most_common()]
+        summary_lines.append(create_leader_dots("Error nature", "; ".join(nature_parts)))
+
+    # Largest single error
+    if largest_error:
+        largest_pct = largest_amount / total_misstatement * 100 if total_misstatement > 0 else 0
+        summary_lines.append(
+            create_leader_dots(
+                "Largest single error",
+                f"{largest_error.get('item_id', '')}  ${largest_amount:,.2f}  ({largest_pct:.1f}% of total misstatement)",
+            )
+        )
+
+    # Projected vs expected
+    summary_lines.append(create_leader_dots("Projected misstatement", f"${projected:,.2f}"))
+    if expected > 0:
+        diff = projected - expected
+        direction_word = "above" if diff > 0 else "below"
+        favorability = "unfavorable" if diff > 0 else "favorable"
+        summary_lines.append(
+            create_leader_dots(
+                "Projection vs. expected",
+                f"${abs(diff):,.2f} {direction_word} expected \u2014 {favorability}",
+            )
+        )
+
+    # UEL headroom
+    if tm > 0:
+        headroom = tm - uel
+        headroom_pct = uel / tm * 100
+        remaining_pct = 100 - headroom_pct
+        summary_lines.append(
+            create_leader_dots(
+                "UEL headroom",
+                f"${tm:,.2f} - ${uel:,.2f} = ${headroom:,.2f}",
+            )
+        )
+        summary_lines.append(
+            create_leader_dots(
+                "As % of TM",
+                f"{headroom_pct:.1f}% of TM utilized   ({remaining_pct:.1f}% headroom)",
+            )
+        )
+
+    for line in summary_lines:
+        story.append(Paragraph(line, styles["MemoLeader"]))
+    story.append(Spacer(1, 12))
+
+
+def _build_uel_derivation(
+    story: list,
+    styles: dict,
+    doc_width: float,
+    evaluation_result: dict[str, Any],
+    design_result: Optional[dict[str, Any]],
+) -> None:
+    """BUG-03: UEL derivation block showing Stringer bound computation."""
+    errors = evaluation_result.get("errors", [])
+    bp = evaluation_result.get("basic_precision", 0)
+    projected = evaluation_result.get("projected_misstatement", 0)
+    incremental = evaluation_result.get("incremental_allowance", 0)
+    uel = evaluation_result.get("upper_error_limit", 0)
+    tm = evaluation_result.get("tolerable_misstatement", 0)
+
+    # Get sampling interval
+    si = 0.0
+    if design_result:
+        si = design_result.get("sampling_interval", 0) or 0
+    if si == 0:
+        si = evaluation_result.get("sampling_interval", 0) or 0
+
+    conf_factor = 3.0
+    if design_result:
+        conf_factor = design_result.get("confidence_factor", 3.0)
+
+    story.append(Paragraph("<b>UEL Derivation (Stringer Bound Method)</b>", styles["MemoBody"]))
+    story.append(Spacer(1, 4))
+
+    # 1. Basic Precision
+    story.append(Paragraph("<b>1. Basic Precision</b>", styles["MemoBody"]))
+    if si > 0:
+        bp_computed = si * conf_factor
+        story.append(
+            Paragraph(
+                "Formula: Sampling Interval \u00d7 Confidence Factor at 0 errors",
+                styles["MemoBody"],
+            )
+        )
+        story.append(
+            Paragraph(
+                f"Computation: ${si:,.2f} \u00d7 {conf_factor:.4f} = ${bp_computed:,.2f}",
+                styles["MemoBody"],
+            )
+        )
+        story.append(
+            Paragraph(
+                "<i>Basic Precision represents the minimum precision achievable with "
+                "this sample even if no errors are found. It equals the confidence "
+                "factor multiplied by one sampling interval.</i>",
+                styles["MemoBodySmall"],
+            )
+        )
+    else:
+        story.append(Paragraph(f"Basic Precision = ${bp:,.2f}", styles["MemoBody"]))
+    story.append(Spacer(1, 6))
+
+    # 2. Projected Misstatement
+    story.append(Paragraph("<b>2. Projected Misstatement</b>", styles["MemoBody"]))
+    if errors and si > 0:
+        # Sort by tainting desc (Stringer method)
+        sorted_errors = sorted(errors, key=lambda e: e.get("tainting", 0), reverse=True)
+        projected_sum = 0.0
+        for i, err in enumerate(sorted_errors, 1):
+            tainting = err.get("tainting", 0)
+            item_id = err.get("item_id", f"Error {i}")
+            proj_amount = tainting * si
+            projected_sum += proj_amount
+            story.append(
+                Paragraph(
+                    f"Error {i} ({item_id}, tainting {tainting:.1%}): "
+                    f"{tainting:.4f} \u00d7 ${si:,.2f} = ${proj_amount:,.2f}",
+                    styles["MemoBody"],
+                )
+            )
+        story.append(
+            Paragraph(
+                f"Total Projected Misstatement: ${projected_sum:,.2f}",
+                styles["MemoBody"],
+            )
+        )
+    else:
+        story.append(Paragraph(f"Projected Misstatement = ${projected:,.2f}", styles["MemoBody"]))
+    story.append(Spacer(1, 6))
+
+    # 3. Incremental Allowance
+    if incremental > 0:
+        story.append(Paragraph("<b>3. Incremental Allowance</b>", styles["MemoBody"]))
+        if errors and si > 0:
+            story.append(
+                Paragraph(
+                    "Formula: \u03a3 (tainting \u00d7 sampling interval \u00d7 (incremental factor \u2212 1.0))",
+                    styles["MemoBody"],
+                )
+            )
+            story.append(
+                Paragraph(
+                    "<i>Per Poisson table (95% confidence), incremental factors decrease "
+                    "with each successive error, reflecting the diminishing marginal impact "
+                    "on the upper error limit.</i>",
+                    styles["MemoBodySmall"],
+                )
+            )
+            sorted_errors = sorted(errors, key=lambda e: e.get("tainting", 0), reverse=True)
+            inc_sum = 0.0
+            factors = _INCREMENTAL_FACTORS_95
+            for i, err in enumerate(sorted_errors):
+                tainting = err.get("tainting", 0)
+                item_id = err.get("item_id", f"Error {i + 1}")
+                factor = factors[i] if i < len(factors) else factors[-1]
+                inc_amount = tainting * si * max(factor - 1.0, 0.0)
+                inc_sum += inc_amount
+                story.append(
+                    Paragraph(
+                        f"Error {i + 1} ({item_id}): factor {factor:.2f} \u2212 1.0 = {factor - 1.0:.2f}; "
+                        f"{tainting:.4f} \u00d7 ${si:,.2f} \u00d7 {factor - 1.0:.2f} = ${inc_amount:,.2f}",
+                        styles["MemoBody"],
+                    )
+                )
+            story.append(Paragraph(f"Total Incremental Allowance: ${inc_sum:,.2f}", styles["MemoBody"]))
+        else:
+            story.append(Paragraph(f"Incremental Allowance = ${incremental:,.2f}", styles["MemoBody"]))
+        story.append(Spacer(1, 6))
+
+    # 4. Upper Error Limit
+    step_num = "4" if incremental > 0 else "3"
+    story.append(Paragraph(f"<b>{step_num}. Upper Error Limit</b>", styles["MemoBody"]))
+    if incremental > 0:
+        formula = "UEL = Basic Precision + Projected Misstatement + Incremental Allowance"
+        computation = f"UEL = ${bp:,.2f} + ${projected:,.2f} + ${incremental:,.2f} = ${uel:,.2f}"
+    else:
+        formula = "UEL = Basic Precision + Projected Misstatement"
+        computation = f"UEL = ${bp:,.2f} + ${projected:,.2f} = ${uel:,.2f}"
+    story.append(Paragraph(formula, styles["MemoBody"]))
+    story.append(Paragraph(computation, styles["MemoBody"]))
+
+    # PASS/FAIL inline
+    if uel <= tm:
+        story.append(
+            Paragraph(
+                f'<font color="{ClassicalColors.SAGE.hexval()}">'
+                f"UEL (${uel:,.2f}) &lt; TM (${tm:,.2f}) \u2192 PASS</font>",
+                styles["MemoBody"],
+            )
+        )
+    else:
+        story.append(
+            Paragraph(
+                f'<font color="{ClassicalColors.CLAY.hexval()}">'
+                f"UEL (${uel:,.2f}) \u2265 TM (${tm:,.2f}) \u2192 FAIL</font>",
+                styles["MemoBody"],
+            )
+        )
+    story.append(Spacer(1, 12))
+
+
+# ═══════════════════════════════════════════════════════════════
+# Helpers
+# ═══════════════════════════════════════════════════════════════
 
 
 def _format_stratum(stratum: str) -> str:

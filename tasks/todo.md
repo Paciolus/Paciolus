@@ -117,6 +117,60 @@
 > Sprints 478, 488–497 archived to `tasks/archive/sprints-478-497-details.md`. Pending items below.
 
 
+### Sprint 508 — Statistical Sampling Evaluation Report Fixes & Improvements
+**Status:** COMPLETE
+**Goal:** Fix 6 bugs and add 2 improvements to the Statistical Sampling Evaluation memo: phase-specific titles, evaluation next steps, UEL derivation, PASS/FAIL visual, error nature/direction columns, correction status conditional, error summary statistics, ASC 450-20 footnote.
+
+#### Bug Fixes
+- [x] BUG-01: Phase-specific titles — "STATISTICAL SAMPLING MEMO — DESIGN" vs "— EVALUATION" on cover page and header
+- [x] BUG-02: Evaluation-phase next steps — 5 post-evaluation steps (communicate errors, obtain correction, assess uncorrected, update rep letter, cross-reference) replace design-phase testing instructions. Dynamic intro text with UEL/TM/confidence. PASS intro says "accepted", FAIL intro says "cannot be accepted" + ISA 530.17.
+- [x] BUG-03: UEL derivation block — full Stringer bound computation showing Basic Precision (SI × CF), Projected Misstatement (per-error tainting × SI), Incremental Allowance (per-error tainting × SI × (factor - 1.0) with Poisson factors), UEL sum, and PASS/FAIL inline. Self-consistent sample data: SI = $16,666.67 (corrected from $25,000), BP = $50,000, Projected = $10,036.67, Incremental = $4,135.02, UEL = $64,171.69 < TM $75,000.
+- [x] BUG-04: PASS/FAIL visual conclusion block — styled table with checkmark/X symbol, UEL vs TM comparison, confidence + error count. Sage border for PASS, clay for FAIL. Computed from `uel < tm`, never hardcoded.
+- [x] BUG-05: Error Nature + Direction columns — 8-column table (with Nature/Direction) when fields present, 6-column fallback for legacy data. Totals row with direction summary ("All overstated"/"Mixed"). ERROR_NATURE_OPTIONS constant: Pricing error, Cut-off, Existence, Valuation, Classification, Other.
+- [x] BUG-06: Correction status conditional — "Not confirmed" default when no practitioner input; "confirmed" path with ISA 450 documentation note. Removed auto-generated "corrected in subsequent period" from conclusion_detail.
+
+#### Improvements
+- [x] IMP-01: Error summary statistics block — error rate (3/207 = 1.4%), total actual misstatement, direction summary, nature summary, largest error (INV-4102 $3,580 = 84.6%), projected vs expected ($4,964.33 below expected — favorable), UEL headroom ($10,828.31 = 14.4% remaining).
+- [x] IMP-02: ASC 450-20 relevance footnote — evaluation-only footnote: "ASC 450-20 applies when identified misstatements indicate a probable loss contingency..."
+
+#### Arithmetic Resolution
+- [x] Investigated projected misstatement discrepancy: original sample data had SI = $25,000 (EM=0 case) but with CF=3.0, BP = SI×CF = $75,000 = TM, making PASS impossible with any errors. Root cause: hardcoded values not computed from Stringer bound formula.
+- [x] Fixed: SI recomputed via engine formula with EM = $15,000: SI = (TM-EM)/(CF×(1+EM/TM)) = 60000/3.6 = $16,666.67. All Stringer bound components now self-consistent. Verified: BP($50,000) + Projected($10,036.67) + Incremental($4,135.02) = UEL($64,171.69) < TM($75,000) = PASS.
+
+#### Files Modified
+- `sampling_memo_generator.py` — complete rewrite: phase-specific titles, PASS/FAIL visual block (`_build_pass_fail_block`), error summary (`_build_error_summary`), UEL derivation (`_build_uel_derivation`), evaluation next steps (`_build_evaluation_next_steps`), 8-column error table with Nature/Direction + totals row, correction status conditional, ASC 450-20 footnote, sample preview excluded from evaluation reports, `ERROR_NATURE_OPTIONS` constant, `_INCREMENTAL_FACTORS_95` for derivation display
+- `generate_sample_reports.py` — gen_sampling_design: SI $25,000→$16,666.67, calc_size 194→291. gen_sampling_evaluation: BP $25,000→$50,000, projected $12,480→$10,036.67, incremental $8,750→$4,135.02, UEL $46,230→$64,171.69, added error_nature/direction/sampling_interval/expected_misstatement, removed "corrected in subsequent period" from conclusion_detail, added Stringer bound computation comment block
+- `tests/test_sampling_memo.py` — 40 new tests (98 total, up from 58): phase titles (3), evaluation next steps (12), UEL derivation (6), PASS/FAIL block (3), error nature/direction (5), correction status (3), error summary (5), ASC 450-20 footnote (2), preview exclusion (2)
+
+#### Verification
+- [x] `npm run build` passes
+- [x] `npm test` passes (1,329 tests, 111 suites)
+- [x] `pytest` passes (6,041 passed, 0 skipped, 0 errors — up from 6,001)
+- [x] Regenerate all 21 sample PDFs — all OK, design 46,406 bytes, evaluation 48,278 bytes (up from 45,845)
+
+#### Review
+All verification items confirmed:
+- Report title: "STATISTICAL SAMPLING MEMO — EVALUATION" (design shows "— DESIGN")
+- Section VII: 5 evaluation-phase next steps (communicate errors, obtain correction, assess uncorrected, update rep letter, cross-reference)
+- Step 1 references "3 identified errors ($4,230.00 total)"
+- Step 3 references ISA 450
+- Step 4 references ISA 580
+- UEL Derivation block: Basic Precision ($50,000 = $16,666.67 × 3.0000), 3 projected errors, 3 incremental allowance lines with Poisson factors (1.58, 1.30, 1.15), UEL sum $64,171.69
+- Derivation reconciles: $50,000 + $10,036.67 + $4,135.02 = $64,171.69 ✓
+- Projected misstatement discrepancy resolved: original $12,480 was hardcoded with wrong SI ($25,000 for EM=0); corrected to $10,036.67 with SI=$16,666.67 (EM=$15,000)
+- PASS/FAIL visual block: sage border, checkmark, "UEL $64,171.69 < TM $75,000.00"
+- Error detail table: 8 columns (Nature + Direction), all "Pricing error" + "Overstatement"
+- Totals row: $4,230.00 total, "All overstated"
+- "Corrected in subsequent period" replaced: "Correction status: Not confirmed"
+- Error summary: 1.4% error rate, INV-4102 84.6% of total, $4,964.33 below expected (favorable), headroom $10,828.31 (14.4%)
+- ASC 450-20 footnote present (evaluation only, not design)
+- Sample Selection Preview excluded from evaluation report
+- Section numbering: I Scope, II Design Parameters, III Stratification, IV Evaluation Results, V Methodology, VI Conclusion, VII Next Steps
+- No other reports unintentionally modified (all 21 regenerated)
+- Test count: 6,041 backend (up from 6,001 — +40 new) + 1,329 frontend
+
+---
+
 ### Sprint 507 — Test Suite Fixes (Error + Skip)
 **Status:** COMPLETE
 **Goal:** Fix 1 error and 1 skipped test from Sprint 506 verification run.

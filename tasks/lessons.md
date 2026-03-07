@@ -4,6 +4,16 @@
 
 ---
 
+## Statistical Sampling Evaluation Report (Sprint 508)
+
+1. **Sample report values must be computed from engine formulas, not hardcoded**: The sampling evaluation sample data had Basic Precision = $25,000 (1 × SI), but the engine computes BP = SI × CF = $25,000 × 3.0 = $75,000. With EM = 0, BP always equals TM, making any PASS conclusion with errors arithmetically impossible. When hardcoding sample data for report generators, verify self-consistency by computing values through the actual engine formulas (or at minimum, manual arithmetic that matches the engine).
+
+2. **Sampling interval depends on expected misstatement**: With EM > 0, the engine computes SI = (TM - EM) / (CF × (1 + EM/TM)), which is smaller than the EM = 0 case (SI = TM/CF). This smaller interval produces BP < TM, allowing room for errors while maintaining a PASS conclusion. Sample data that sets both EM > 0 and SI = TM/CF is self-contradictory.
+
+3. **Phase-gated content prevents wrong-context sections**: The evaluation report was showing design-phase next steps ("select and test items") even though testing was already complete. Using an `is_evaluation` flag to swap entire section content (not just tweak wording) ensures each report phase is coherent end-to-end.
+
+---
+
 ## Analytical Procedures Report (Sprint 505)
 
 1. **Keyword matching for financial categories must exclude contra-items**: "Deferred Revenue" was matching the revenue keyword ("revenue" substring), inflating revenue totals and corrupting GPM ratios (59.2% instead of 58.6%). Add explicit exclusion lists (`_REVENUE_EXCLUSIONS = ["deferred revenue", "unearned revenue"]`) and prefer `account_type` field when available over keyword matching.
