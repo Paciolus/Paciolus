@@ -199,3 +199,33 @@ Scope: auth flows, CSRF/CSP, rate limiting, API authorization, file upload, JWT,
 - [x] `frontend/public/.well-known/security.txt` (RFC 9116)
 - [x] VDP doc updated (v1.0→v1.1)
 - [ ] CEO decision: public bounty (HackerOne/Bugcrowd) vs. private invite-only vs. enhanced VDP
+
+---
+
+### Sprint 517 — Memo Generator Test Coverage (DEC F-018)
+
+**Status:** READY
+**Goal:** Add dedicated test files for the 5 memo generators that lack deep coverage.
+**Context:** DEC 2026-03-08 finding F-018. 13 other memo generators have dedicated tests; these 5 were enriched in Sprints 489–500 but tests were not expanded. `engagement_dashboard_memo.py` has zero test coverage.
+
+- [ ] `tests/test_ap_testing_memo.py` — section headers, risk scoring, suggested procedures (5+ tests)
+- [ ] `tests/test_je_testing_memo.py` — section headers, Benford analysis rendering, risk scoring (5+ tests)
+- [ ] `tests/test_payroll_testing_memo.py` — section headers, enriched sections from Sprint 500 (5+ tests)
+- [ ] `tests/test_preflight_memo.py` — section headers, data quality rendering (5+ tests)
+- [ ] `tests/test_engagement_dashboard_memo.py` — PDF generation, cover page metadata, section headers (5+ tests)
+- [ ] `pytest` passes for all new test files
+- [ ] Pattern: follow `test_bank_rec_memo.py` or `test_sampling_memo.py` structure
+
+---
+
+### Sprint 518 — OpenAPI→TypeScript Drift Detection (DEC F-020)
+
+**Status:** READY
+**Goal:** Add a CI job that detects schema drift between backend OpenAPI spec and frontend TypeScript types.
+**Context:** DEC 2026-03-08 finding F-020 (P3, systemic). 34 commits changed backend schemas and frontend types independently with no automated sync verification.
+
+- [ ] Add CI job that generates OpenAPI spec from FastAPI (`/openapi.json`)
+- [ ] Compare key response schemas against frontend `types/` definitions
+- [ ] Fail CI on drift (or warn-only initially)
+- [ ] Document the sync workflow in CLAUDE.md or a README
+- [ ] Verify CI pipeline passes
