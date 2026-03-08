@@ -1,5 +1,15 @@
 # Paciolus Digital Excellence Council — Rolling Summary
 
+## 2026-03-08
+- **Total Findings**: 8 (P0: 0, P1: 0, P2: 1, P3: 7)
+- **Critical Status**: Zero-Storage: PASS | Auth/CSRF: PASS | Observability: PASS
+- **Top Themes**: Consistency & Pattern Drift (3 findings), Theme Compliance (2 findings), Observability Gaps (1 finding)
+- **Key Risk**: F-002 — Export sharing auth uses `require_current_user` instead of `require_verified_user`
+- **Remediation**: 13/17 prior findings fixed (76%), process guardrails strengthened
+- **Report**: [council-audit-2026-03-08.md](./council-audit-2026-03-08.md)
+
+---
+
 ## 2026-03-04
 - **Total Findings**: 17 (P0: 0, P1: 0, P2: 6, P3: 11)
 - **Critical Status**: Zero-Storage: PASS | Auth/CSRF: PASS | Observability: PASS
