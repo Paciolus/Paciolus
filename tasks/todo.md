@@ -104,6 +104,7 @@
 > Format: `- [date] commit-sha: description (files touched)`
 
 - [2026-03-07] fb8a1fa: accuracy remediation — test count, storage claims, performance copy (16 frontend files)
+- [2026-02-28] e3d6c88: Sprint 481 — undocumented (retroactive entry per DEC F-019)
 
 ---
 

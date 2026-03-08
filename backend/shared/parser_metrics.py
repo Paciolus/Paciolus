@@ -4,6 +4,7 @@ Paciolus — Observability Metrics (Prometheus)
 Sprint 435: Dedicated CollectorRegistry for parser metrics.
 Sprint F (Phase LIX): Billing checkout counter.
 Phase LX: Billing lifecycle counters for post-launch decision metrics.
+Sprint 516: HTTP RED metrics (Request rate, Error rate, Duration).
 Instrumentation helpers for parse_uploaded_file_by_format().
 
 Metrics:
@@ -15,6 +16,8 @@ Metrics:
 - paciolus_billing_events_total: Counter by event_type/tier
 - paciolus_active_trials: Gauge (current trial count)
 - paciolus_active_subscriptions: Gauge by tier
+- paciolus_http_requests_total: Counter by method/path/status_code
+- paciolus_http_request_duration_seconds: Histogram by method/path/status_code
 
 Uses a dedicated registry so /metrics only exposes app metrics,
 not the default process/GC collectors.
@@ -97,5 +100,24 @@ billing_redirect_injection_attempt_total = Counter(
     "paciolus_billing_redirect_injection_attempt_total",
     "Checkout requests that included a user-supplied redirect URL (blocked)",
     ["field"],
+    registry=PARSER_REGISTRY,
+)
+
+# ---------------------------------------------------------------------------
+# HTTP RED metrics (Sprint 516: F-008)
+# ---------------------------------------------------------------------------
+
+http_requests_total = Counter(
+    "paciolus_http_requests_total",
+    "Total HTTP requests",
+    ["method", "path", "status_code"],
+    registry=PARSER_REGISTRY,
+)
+
+http_request_duration_seconds = Histogram(
+    "paciolus_http_request_duration_seconds",
+    "HTTP request duration in seconds",
+    ["method", "path", "status_code"],
+    buckets=[0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0],
     registry=PARSER_REGISTRY,
 )

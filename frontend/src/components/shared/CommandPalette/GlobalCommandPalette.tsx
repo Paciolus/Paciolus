@@ -206,6 +206,12 @@ export function GlobalCommandPalette() {
             <input
               ref={inputRef}
               type="text"
+              role="combobox"
+              aria-label="Search commands"
+              aria-expanded={flatItems.length > 0}
+              aria-controls="palette-results"
+              aria-activedescendant={flatItems[selectedIndex] ? `palette-option-${selectedIndex}` : undefined}
+              aria-autocomplete="list"
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="Type a command or search..."
@@ -217,7 +223,7 @@ export function GlobalCommandPalette() {
           </div>
 
           {/* Results */}
-          <div ref={listRef} className="max-h-[50vh] overflow-y-auto">
+          <div ref={listRef} id="palette-results" role="listbox" aria-label="Search results" className="max-h-[50vh] overflow-y-auto">
             {flatItems.length === 0 ? (
               <EmptyState query={query} />
             ) : (

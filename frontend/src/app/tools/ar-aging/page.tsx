@@ -72,7 +72,7 @@ export default function ARAgingPage() {
   const skippedTests = result ? result.test_results.filter(t => t.skipped) : []
 
   return (
-    <main className="min-h-screen bg-surface-page">
+    <main id="main-content" className="min-h-screen bg-surface-page">
       <div className="page-container">
         {/* Hero Header */}
         <div className="text-center mb-10">

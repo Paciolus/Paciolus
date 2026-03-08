@@ -29,7 +29,7 @@ export function UsageMeter({ used, limit, label }: UsageMeterProps) {
           {isUnlimited ? (
             <>{used} / <span className="text-sage-600">Unlimited</span></>
           ) : (
-            <span className={isAtLimit ? 'text-clay-600' : isNearLimit ? 'text-amber-600' : ''}>
+            <span className={isAtLimit ? 'text-clay-600' : isNearLimit ? 'text-clay-400' : ''}>
               {used} / {limit}
             </span>
           )}
@@ -39,7 +39,7 @@ export function UsageMeter({ used, limit, label }: UsageMeterProps) {
         <div className="h-2 bg-oatmeal-200 rounded-full overflow-hidden">
           <div
             className={`h-full rounded-full transition-all duration-300 ${
-              isAtLimit ? 'bg-clay-500' : isNearLimit ? 'bg-amber-500' : 'bg-sage-500'
+              isAtLimit ? 'bg-clay-500' : isNearLimit ? 'bg-clay-400' : 'bg-sage-500'
             }`}
             style={{ width: `${percentage}%` }}
           />

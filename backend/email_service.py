@@ -208,7 +208,7 @@ def send_verification_email(to_email: str, token: str, user_name: Optional[str] 
 
     except (OSError, ValueError, RuntimeError) as e:
         logger.exception("Verification email send failed")
-        log_secure_operation("email_error", sanitize_exception(e))
+        log_secure_operation("email_error", sanitize_exception(e, context="email delivery"))
         return EmailResult(success=False, message="Email delivery failed. Please try again later.")
 
 
@@ -286,7 +286,7 @@ def send_contact_form_email(
 
     except (OSError, ValueError, RuntimeError) as e:
         logger.exception("Contact email send failed")
-        log_secure_operation("contact_email_error", sanitize_exception(e))
+        log_secure_operation("contact_email_error", sanitize_exception(e, context="contact email delivery"))
         return EmailResult(success=False, message="Email delivery failed. Please try again later.")
 
 
@@ -373,7 +373,9 @@ def send_email_change_notification(
 
     except (OSError, ValueError, RuntimeError) as e:
         logger.exception("Email change notification send failed")
-        log_secure_operation("email_change_notification_error", sanitize_exception(e))
+        log_secure_operation(
+            "email_change_notification_error", sanitize_exception(e, context="email change notification")
+        )
         return EmailResult(
             success=False,
             message="Email delivery failed. Please try again later.",

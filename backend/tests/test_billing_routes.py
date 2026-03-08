@@ -8,8 +8,9 @@ multi-item subscription sync.
 
 import sys
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import ANY, MagicMock, patch
 
+import httpx
 import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -795,3 +796,166 @@ class TestCheckoutRedirectIntegrity:
                     plan_price_id="price_solo_mo",
                     user_id=1,
                 )
+
+
+# ---------------------------------------------------------------------------
+# Stripe Webhook HTTP Integration Tests (F-006)
+# ---------------------------------------------------------------------------
+
+
+class TestWebhookHTTPIntegration:
+    """HTTP-layer integration tests for POST /billing/webhook.
+
+    These tests exercise the actual FastAPI route through httpx.AsyncClient,
+    verifying signature verification, CSRF exemption, and error handling.
+    """
+
+    @pytest.mark.asyncio
+    async def test_webhook_valid_signature(self):
+        """POST /billing/webhook with valid Stripe signature returns 200."""
+        from main import app
+
+        mock_stripe = MagicMock()
+        # construct_event returns a valid event dict
+        mock_stripe.Webhook.construct_event.return_value = {
+            "type": "checkout.session.completed",
+            "data": {
+                "object": {
+                    "id": "cs_test_valid",
+                    "customer": "cus_test",
+                    "subscription": "sub_test",
+                },
+            },
+        }
+
+        with (
+            patch("billing.stripe_client.is_stripe_enabled", return_value=True),
+            patch("billing.stripe_client.get_stripe", return_value=mock_stripe),
+            patch("config.STRIPE_WEBHOOK_SECRET", "FAKE_WEBHOOK_SECRET_FOR_TESTING"),
+            patch("billing.webhook_handler.process_webhook_event", return_value=True) as mock_process,
+        ):
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                response = await client.post(
+                    "/billing/webhook",
+                    content=b'{"type": "checkout.session.completed"}',
+                    headers={
+                        "stripe-signature": "t=1234567890,v1=fakesig",
+                        "content-type": "application/json",
+                    },
+                )
+
+            assert response.status_code == 200
+            # Verify construct_event was called with the raw payload, sig header, and secret
+            mock_stripe.Webhook.construct_event.assert_called_once()
+            call_args = mock_stripe.Webhook.construct_event.call_args
+            assert call_args[0][1] == "t=1234567890,v1=fakesig"
+            assert call_args[0][2] == "FAKE_WEBHOOK_SECRET_FOR_TESTING"
+            # Verify the webhook handler was invoked
+            mock_process.assert_called_once_with(
+                ANY,
+                "checkout.session.completed",
+                {
+                    "id": "cs_test_valid",
+                    "customer": "cus_test",
+                    "subscription": "sub_test",
+                },
+            )
+
+    @pytest.mark.asyncio
+    async def test_webhook_invalid_signature(self):
+        """POST /billing/webhook with invalid Stripe signature returns 400."""
+        from main import app
+
+        mock_stripe = MagicMock()
+        # Simulate SignatureVerificationError — Stripe SDK raises this
+        # The error class is accessed as stripe.error.SignatureVerificationError
+        mock_stripe.error.SignatureVerificationError = type("SignatureVerificationError", (Exception,), {})
+        mock_stripe.Webhook.construct_event.side_effect = mock_stripe.error.SignatureVerificationError(
+            "Invalid signature", "sig_header"
+        )
+
+        with (
+            patch("billing.stripe_client.is_stripe_enabled", return_value=True),
+            patch("billing.stripe_client.get_stripe", return_value=mock_stripe),
+            patch("config.STRIPE_WEBHOOK_SECRET", "FAKE_WEBHOOK_SECRET_FOR_TESTING"),
+        ):
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                response = await client.post(
+                    "/billing/webhook",
+                    content=b'{"type": "test.event"}',
+                    headers={
+                        "stripe-signature": "t=1234567890,v1=badsig",
+                        "content-type": "application/json",
+                    },
+                )
+
+            assert response.status_code == 400
+            assert "Invalid signature" in response.json()["detail"]
+
+    @pytest.mark.asyncio
+    async def test_webhook_missing_signature_header(self):
+        """POST /billing/webhook without stripe-signature header returns 400."""
+        from main import app
+
+        with (
+            patch("billing.stripe_client.is_stripe_enabled", return_value=True),
+            patch("config.STRIPE_WEBHOOK_SECRET", "FAKE_WEBHOOK_SECRET_FOR_TESTING"),
+        ):
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                response = await client.post(
+                    "/billing/webhook",
+                    content=b'{"type": "test.event"}',
+                    headers={"content-type": "application/json"},
+                )
+
+            assert response.status_code == 400
+            assert "stripe-signature" in response.json()["detail"].lower()
+
+    @pytest.mark.asyncio
+    async def test_webhook_csrf_exempt(self):
+        """Webhook endpoint is CSRF-exempt — POST succeeds without CSRF token.
+
+        This verifies /billing/webhook is in CSRF_EXEMPT_PATHS and the
+        CSRF middleware does not block requests to it.
+        """
+        from security_middleware import CSRF_EXEMPT_PATHS
+
+        assert "/billing/webhook" in CSRF_EXEMPT_PATHS
+
+        # Also verify via HTTP — a POST without any CSRF token should not
+        # get a 403 from the CSRF middleware (it may get 400 from missing
+        # stripe-signature, which proves CSRF was not the blocker).
+        from main import app
+
+        with (
+            patch("billing.stripe_client.is_stripe_enabled", return_value=True),
+            patch("config.STRIPE_WEBHOOK_SECRET", "FAKE_WEBHOOK_SECRET_FOR_TESTING"),
+        ):
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                response = await client.post(
+                    "/billing/webhook",
+                    content=b"{}",
+                    headers={"content-type": "application/json"},
+                )
+
+            # Should be 400 (missing stripe-signature), NOT 403 (CSRF)
+            assert response.status_code == 400
+            assert response.status_code != 403
+
+    @pytest.mark.asyncio
+    async def test_webhook_stripe_disabled_returns_200(self):
+        """When Stripe is disabled, webhook returns 200 (no-op)."""
+        from main import app
+
+        with patch("billing.stripe_client.is_stripe_enabled", return_value=False):
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                response = await client.post(
+                    "/billing/webhook",
+                    content=b"{}",
+                    headers={
+                        "content-type": "application/json",
+                        "stripe-signature": "t=123,v1=sig",
+                    },
+                )
+
+            assert response.status_code == 200

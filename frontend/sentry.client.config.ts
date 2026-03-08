@@ -33,5 +33,20 @@ if (dsn) {
       }
       return event;
     },
+
+    // Strip URL query params from breadcrumbs (engagement/client IDs)
+    beforeBreadcrumb(breadcrumb) {
+      if (
+        (breadcrumb.category === "xhr" || breadcrumb.category === "fetch") &&
+        breadcrumb.data?.url
+      ) {
+        const url = breadcrumb.data.url as string;
+        const qIdx = url.indexOf("?");
+        if (qIdx !== -1) {
+          breadcrumb.data.url = url.slice(0, qIdx);
+        }
+      }
+      return breadcrumb;
+    },
   });
 }

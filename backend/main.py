@@ -28,6 +28,7 @@ from config import (
     print_config_summary,
 )
 from database import init_db
+from http_metrics_middleware import HttpMetricsMiddleware
 from logging_config import request_id_var, setup_logging
 from routes import all_routers
 from security_middleware import (
@@ -55,12 +56,22 @@ if SENTRY_DSN:
             event["request"]["data"] = "[Stripped — Zero-Storage]"
         return event
 
+    def _before_send_transaction(event, hint):
+        """Strip query strings from transaction names."""
+        if "transaction" in event:
+            txn = event["transaction"]
+            qidx = txn.find("?")
+            if qidx != -1:
+                event["transaction"] = txn[:qidx]
+        return event
+
     sentry_sdk.init(
         dsn=SENTRY_DSN,
         environment=ENV_MODE,
         traces_sample_rate=SENTRY_TRACES_SAMPLE_RATE,
         send_default_pii=False,
         before_send=_before_send,
+        before_send_transaction=_before_send_transaction,
     )
     logger.info("Sentry APM initialized (env=%s, traces=%.0f%%)", ENV_MODE, SENTRY_TRACES_SAMPLE_RATE * 100)
 
@@ -170,6 +181,9 @@ app.add_middleware(MaxBodySizeMiddleware)
 
 # Request ID for log correlation (Sprint 211)
 app.add_middleware(RequestIdMiddleware)
+
+# HTTP RED metrics + per-request access log (Sprint 516: F-008 + F-017)
+app.add_middleware(HttpMetricsMiddleware)
 
 # Rate limit identity — resolves user tier from JWT before slowapi checks (Sprint 306)
 app.add_middleware(RateLimitIdentityMiddleware)

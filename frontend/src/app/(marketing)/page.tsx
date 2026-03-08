@@ -27,7 +27,7 @@ export default function HomePage() {
     }
   }, [isLoading, isAuthenticated, router])
   return (
-    <main className="relative min-h-screen bg-obsidian-800">
+    <main id="main-content" className="relative min-h-screen bg-obsidian-800">
       {/* Hero Section — Scroll-Linked Product Film */}
       <HeroScrollSection />
 

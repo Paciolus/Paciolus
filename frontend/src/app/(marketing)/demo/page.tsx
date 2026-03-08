@@ -47,7 +47,7 @@ const DEMO_TOOLS: DemoTool[] = [
 
 export default function DemoPage() {
   return (
-    <main className="relative min-h-screen bg-obsidian-800 pt-20">
+    <main id="main-content" className="relative min-h-screen bg-obsidian-800 pt-20">
 
       {/* ── Page Hero ─────────────────────────────────────────── */}
       <section className="py-16 px-6 text-center">

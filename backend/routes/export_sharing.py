@@ -16,7 +16,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from auth import require_current_user
+from auth import require_verified_user
 from database import get_db
 from export_share_model import ExportShare
 from models import User
@@ -47,7 +47,7 @@ class CreateShareRequest(BaseModel):
 async def create_share(
     body: CreateShareRequest,
     request=None,
-    user: User = Depends(require_current_user),
+    user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
 ):
     """Create a shareable export link. Professional+ only."""
@@ -148,7 +148,7 @@ async def download_share(
 async def revoke_share(
     token: str,
     request=None,
-    user: User = Depends(require_current_user),
+    user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
 ):
     """Revoke a share link. Creator only."""
@@ -172,7 +172,7 @@ async def revoke_share(
 
 @router.get("/")
 async def list_shares(
-    user: User = Depends(require_current_user),
+    user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
 ):
     """List current user's active share links."""

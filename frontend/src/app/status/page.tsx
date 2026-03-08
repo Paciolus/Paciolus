@@ -90,7 +90,7 @@ export default function StatusPage() {
   const categories = [...new Set(LAST_TEST_RUN.map(t => t.category))]
 
   return (
-    <main className="min-h-screen bg-surface-page py-12 px-6">
+    <main id="main-content" className="min-h-screen bg-surface-page py-12 px-6">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12">

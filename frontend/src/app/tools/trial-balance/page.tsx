@@ -53,7 +53,7 @@ function HomeContent() {
   useCanvasAccentSync(auditStatus)
 
   return (
-    <main className="min-h-screen bg-surface-page">
+    <main id="main-content" className="min-h-screen bg-surface-page">
       <div className="page-container">
         {/* Hero Header */}
         <div className="text-center mb-10">

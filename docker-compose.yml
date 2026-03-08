@@ -29,7 +29,7 @@ services:
       # JWT_SECRET_KEY is required — no default is intentional (fail-closed security).
       # Set it in .env or pass via environment: JWT_SECRET_KEY=<your-secret>
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
-      - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
+      # JWT_ALGORITHM is hardcoded to HS256 in config.py (prevents downgrade attacks)
       # 30-min access tokens (Phase XXV hardening) — override in .env for dev convenience
       - JWT_EXPIRATION_MINUTES=${JWT_EXPIRATION_MINUTES:-30}
       - REFRESH_TOKEN_EXPIRATION_DAYS=${REFRESH_TOKEN_EXPIRATION_DAYS:-7}

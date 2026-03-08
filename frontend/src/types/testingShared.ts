@@ -9,7 +9,7 @@ import type { Severity } from './shared'
 
 // ─── Shared Type Aliases ───────────────────────────────────────────────────────
 
-export type TestingRiskTier = 'low' | 'elevated' | 'moderate' | 'high' | 'critical'
+export type TestingRiskTier = 'low' | 'elevated' | 'moderate' | 'high'
 export type TestingTestTier = 'structural' | 'statistical' | 'advanced' | 'contract'
 /** Domain alias for the canonical Severity type (Sprint 225). */
 export type TestingSeverity = Severity
@@ -67,7 +67,6 @@ export const TESTING_RISK_TIER_COLORS: Record<TestingRiskTier, { bg: string; bor
   elevated: { bg: 'bg-oatmeal-100', border: 'border-oatmeal-300', text: 'text-oatmeal-700' },
   moderate: { bg: 'bg-clay-50', border: 'border-clay-200', text: 'text-clay-700' },
   high: { bg: 'bg-clay-100', border: 'border-clay-300', text: 'text-clay-700' },
-  critical: { bg: 'bg-clay-200', border: 'border-clay-400', text: 'text-clay-800' },
 }
 
 export const TESTING_RISK_TIER_LABELS: Record<TestingRiskTier, string> = {
@@ -75,7 +74,6 @@ export const TESTING_RISK_TIER_LABELS: Record<TestingRiskTier, string> = {
   elevated: 'Elevated',
   moderate: 'Moderate',
   high: 'High Risk',
-  critical: 'Critical',
 }
 
 export const TESTING_SEVERITY_COLORS: Record<TestingSeverity, string> = {

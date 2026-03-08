@@ -53,6 +53,7 @@ from shared.report_chrome import (
     draw_page_footer,
     find_logo,
 )
+from shared.report_styles import ledger_table_style
 from shared.scope_methodology import (
     build_authoritative_reference_block,
     build_methodology_statement,
@@ -62,19 +63,6 @@ from shared.scope_methodology import (
 # =============================================================================
 # CONSTANTS
 # =============================================================================
-
-_ROMAN = {
-    1: "I",
-    2: "II",
-    3: "III",
-    4: "IV",
-    5: "V",
-    6: "VI",
-    7: "VII",
-    8: "VIII",
-    9: "IX",
-    10: "X",
-}
 
 # Map engine risk levels (LOW/MEDIUM/HIGH) to the standard 4-tier scale
 _ENGINE_TIER_MAPPING = {
@@ -208,29 +196,6 @@ def compute_twm_risk_score(
 
 
 # =============================================================================
-# TABLE STYLE HELPER
-# =============================================================================
-
-
-def _standard_table_style(*, right_align_from: int = 1) -> TableStyle:
-    return TableStyle(
-        [
-            ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-            ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
-            ("FONTSIZE", (0, 0), (-1, -1), 9),
-            ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-            ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-            ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-            ("ALIGN", (right_align_from, 0), (-1, -1), "RIGHT"),
-            ("VALIGN", (0, 0), (-1, -1), "TOP"),
-            ("TOPPADDING", (0, 0), (-1, -1), 3),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-            ("LEFTPADDING", (0, 0), (0, -1), 0),
-        ]
-    )
-
-
-# =============================================================================
 # SECTION BUILDERS
 # =============================================================================
 
@@ -348,7 +313,7 @@ def _build_match_results(
         ["Receipts", f"${summary.get('total_receipt_amount', 0):,.2f}"],
     ]
     amount_table = Table(amount_data, colWidths=[3.0 * inch, 2.5 * inch])
-    amount_table.setStyle(_standard_table_style())
+    amount_table.setStyle(TableStyle(ledger_table_style() + [("ALIGN", (1, 0), (-1, -1), "RIGHT")]))
     story.append(amount_table)
     story.append(Spacer(1, 8))
 
@@ -434,7 +399,7 @@ def _build_results_summary(
             colWidths=[2.8 * inch, 0.8 * inch, 0.8 * inch, 0.8 * inch],
             repeatRows=1,
         )
-        results_table.setStyle(_standard_table_style())
+        results_table.setStyle(TableStyle(ledger_table_style() + [("ALIGN", (1, 0), (-1, -1), "RIGHT")]))
         story.append(results_table)
         story.append(Spacer(1, 8))
 
@@ -636,7 +601,7 @@ def _build_unmatched_documents(
                 ]
             )
         inv_table = Table(inv_data, colWidths=[1.3 * inch, 2.0 * inch, 1.2 * inch, 1.3 * inch], repeatRows=1)
-        inv_table.setStyle(_standard_table_style(right_align_from=3))
+        inv_table.setStyle(TableStyle(ledger_table_style() + [("ALIGN", (3, 0), (-1, -1), "RIGHT")]))
         story.append(inv_table)
         if len(unmatched_invoices) > _MAX_UNMATCHED_ROWS:
             story.append(
@@ -675,7 +640,7 @@ def _build_unmatched_documents(
                 ]
             )
         po_table = Table(po_data, colWidths=[1.3 * inch, 2.0 * inch, 1.2 * inch, 1.3 * inch], repeatRows=1)
-        po_table.setStyle(_standard_table_style(right_align_from=3))
+        po_table.setStyle(TableStyle(ledger_table_style() + [("ALIGN", (3, 0), (-1, -1), "RIGHT")]))
         story.append(po_table)
         if len(unmatched_pos) > _MAX_UNMATCHED_ROWS:
             story.append(
@@ -714,7 +679,7 @@ def _build_unmatched_documents(
                 ]
             )
         rec_table = Table(rec_data, colWidths=[1.3 * inch, 2.0 * inch, 1.2 * inch, 1.3 * inch], repeatRows=1)
-        rec_table.setStyle(_standard_table_style(right_align_from=3))
+        rec_table.setStyle(TableStyle(ledger_table_style() + [("ALIGN", (3, 0), (-1, -1), "RIGHT")]))
         story.append(rec_table)
         if len(unmatched_receipts) > _MAX_UNMATCHED_ROWS:
             story.append(

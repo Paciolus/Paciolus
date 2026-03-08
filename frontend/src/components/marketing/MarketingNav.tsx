@@ -62,6 +62,7 @@ export function MarketingNav() {
 
   return (
     <nav
+      aria-label="Marketing navigation"
       className={`fixed top-0 w-full z-50 transition-all duration-500 ${
         scrolled
           ? 'bg-obsidian-900/95 backdrop-blur-xl border-b border-obsidian-500/30 shadow-lg shadow-obsidian-900/60'

@@ -155,10 +155,12 @@ class TestCoverPageMetadata:
         assert len(parts[2]) == 4  # MMDD
         assert len(parts[3]) == 3  # NNN
 
-    def test_reference_number_unique(self):
-        """Multiple reference numbers are distinct (probabilistic)."""
-        refs = {_generate_reference() for _ in range(20)}
-        assert len(refs) >= 10  # At least 50% unique with 3-digit suffix
+    def test_reference_number_consistent_with_shared(self):
+        """Reference uses shared generate_reference_number() pattern (deterministic per-second)."""
+        ref = _generate_reference()
+        # Shared pattern is deterministic within the same second
+        assert ref.startswith("ANS-")
+        assert ref == _generate_reference()  # Same second → same reference
 
 
 class TestScopeEnhancements:

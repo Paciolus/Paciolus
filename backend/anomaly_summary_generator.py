@@ -22,8 +22,6 @@ GUARDRAIL 3: This template does NOT mimic ISA 265 structure.
 ZERO-STORAGE: Reads engagement metadata and follow-up item narratives only.
 """
 
-import random
-from datetime import UTC, datetime
 from io import BytesIO
 from typing import Optional
 
@@ -44,7 +42,7 @@ from sqlalchemy.orm import Session
 from engagement_model import Engagement, ToolName, ToolRun
 from follow_up_items_model import FollowUpItem
 from models import Client
-from pdf_generator import ClassicalColors, LedgerRule
+from pdf_generator import ClassicalColors, LedgerRule, generate_reference_number
 from shared.framework_resolution import ResolvedFramework
 from shared.memo_base import create_memo_styles
 from shared.report_chrome import ReportMetadata, build_cover_page, draw_page_footer, find_logo
@@ -101,9 +99,7 @@ AUTHORITATIVE_REFERENCES = [
 
 def _generate_reference() -> str:
     """Generate a unique ANS reference number."""
-    now = datetime.now(UTC)
-    suffix = f"{random.randint(100, 999)}"
-    return f"ANS-{now.strftime('%Y')}-{now.strftime('%m%d')}-{suffix}"
+    return generate_reference_number().replace("PAC-", "ANS-")
 
 
 def _compute_engagement_risk(

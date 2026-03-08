@@ -2,7 +2,7 @@
  * Paciolus Activity History Hook
  * Phase 2 Refactor: Extracted from history page
  *
- * Handles fetching diagnostic history from API with localStorage fallback.
+ * Handles fetching diagnostic history from API with sessionStorage fallback.
  *
  * ZERO-STORAGE: Only metadata is stored, never financial data.
  */
@@ -82,10 +82,10 @@ export function useActivityHistory(
   // Track if prefetch has been triggered to avoid duplicate prefetches
   const prefetchedPages = useRef<Set<number>>(new Set())
 
-  // Load from localStorage as fallback
+  // Load from sessionStorage as fallback
   const loadFromLocalStorage = useCallback(() => {
     try {
-      const stored = localStorage.getItem(HISTORY_STORAGE_KEY)
+      const stored = sessionStorage.getItem(HISTORY_STORAGE_KEY)
       if (stored) {
         const parsed = JSON.parse(stored)
         if (parsed.version === HISTORY_VERSION) {
@@ -95,7 +95,7 @@ export function useActivityHistory(
         }
       }
     } catch (err) {
-      console.error('Failed to load from localStorage:', err)
+      console.error('Failed to load from sessionStorage:', err)
     }
   }, [])
 
@@ -117,13 +117,13 @@ export function useActivityHistory(
           setActivities(mappedActivities)
           setTotalCount(data.total_count)
         } else if (isAuthError(status)) {
-          // Token expired or invalid, fall back to localStorage
+          // Token expired or invalid, fall back to sessionStorage
           loadFromLocalStorage()
         } else {
           throw new Error('Failed to fetch history')
         }
       } else {
-        // Not authenticated: Load from localStorage
+        // Not authenticated: Load from sessionStorage
         loadFromLocalStorage()
       }
     } catch (err) {

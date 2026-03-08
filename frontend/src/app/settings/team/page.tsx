@@ -166,7 +166,7 @@ export default function TeamPage() {
 
   return (
     <FeatureGate feature="admin_dashboard">
-      <main className="min-h-screen bg-surface-page pt-24 pb-16 px-6">
+      <main id="main-content" className="min-h-screen bg-surface-page pt-24 pb-16 px-6">
         <div className="max-w-3xl mx-auto">
           {/* Breadcrumb */}
           <div className="flex items-center gap-2 text-content-tertiary text-sm font-sans mb-4">

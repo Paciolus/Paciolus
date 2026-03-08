@@ -53,8 +53,8 @@ const mockApiResponse = {
   page_size: 50,
 }
 
-// localStorage mock
-const localStorageMock = (() => {
+// sessionStorage mock
+const sessionStorageMock = (() => {
   let store: Record<string, string> = {}
   return {
     getItem: jest.fn((key: string) => store[key] || null),
@@ -63,12 +63,12 @@ const localStorageMock = (() => {
     clear: jest.fn(() => { store = {} }),
   }
 })()
-Object.defineProperty(window, 'localStorage', { value: localStorageMock })
+Object.defineProperty(window, 'sessionStorage', { value: sessionStorageMock })
 
 describe('useActivityHistory', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    localStorageMock.clear()
+    sessionStorageMock.clear()
     mockUseAuth.mockReturnValue({
       token: 'test-token',
       isAuthenticated: true,
@@ -158,7 +158,7 @@ describe('useActivityHistory', () => {
     expect(result.current.page).toBe(1)
   })
 
-  it('falls back to localStorage when unauthenticated', async () => {
+  it('falls back to sessionStorage when unauthenticated', async () => {
     mockUseAuth.mockReturnValue({
       token: null,
       isAuthenticated: false,
@@ -169,7 +169,7 @@ describe('useActivityHistory', () => {
       version: '1.0.0',
       activities: [mockActivity],
     }
-    localStorageMock.getItem.mockReturnValue(JSON.stringify(storedData))
+    sessionStorageMock.getItem.mockReturnValue(JSON.stringify(storedData))
 
     const { result } = renderHook(() =>
       useActivityHistory({ autoFetch: false })
@@ -178,19 +178,19 @@ describe('useActivityHistory', () => {
     await act(async () => { await result.current.refetch() })
 
     expect(mockApiGet).not.toHaveBeenCalled()
-    expect(localStorageMock.getItem).toHaveBeenCalledWith('paciolus_audit_history')
+    expect(sessionStorageMock.getItem).toHaveBeenCalledWith('paciolus_audit_history')
     expect(result.current.activities).toEqual([mockActivity])
     expect(result.current.totalCount).toBe(1)
   })
 
-  it('falls back to localStorage on auth error (isAuthError returns true)', async () => {
+  it('falls back to sessionStorage on auth error (isAuthError returns true)', async () => {
     mockApiGet.mockResolvedValue({ ok: false, status: 401, data: null })
 
     const storedData = {
       version: '1.0.0',
       activities: [mockActivity],
     }
-    localStorageMock.getItem.mockReturnValue(JSON.stringify(storedData))
+    sessionStorageMock.getItem.mockReturnValue(JSON.stringify(storedData))
 
     const { result } = renderHook(() =>
       useActivityHistory({ autoFetch: false })
@@ -198,18 +198,18 @@ describe('useActivityHistory', () => {
 
     await act(async () => { await result.current.refetch() })
 
-    expect(localStorageMock.getItem).toHaveBeenCalledWith('paciolus_audit_history')
+    expect(sessionStorageMock.getItem).toHaveBeenCalledWith('paciolus_audit_history')
     expect(result.current.activities).toEqual([mockActivity])
   })
 
-  it('handles API error gracefully (sets error, falls back to localStorage)', async () => {
+  it('handles API error gracefully (sets error, falls back to sessionStorage)', async () => {
     mockApiGet.mockRejectedValue(new Error('Network error'))
 
     const storedData = {
       version: '1.0.0',
       activities: [mockActivity],
     }
-    localStorageMock.getItem.mockReturnValue(JSON.stringify(storedData))
+    sessionStorageMock.getItem.mockReturnValue(JSON.stringify(storedData))
 
     const { result } = renderHook(() =>
       useActivityHistory({ autoFetch: false })

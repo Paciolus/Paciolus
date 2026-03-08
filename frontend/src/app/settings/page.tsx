@@ -35,7 +35,7 @@ export default function SettingsHubPage() {
   }
 
   return (
-    <main className="min-h-screen bg-surface-page">
+    <main id="main-content" className="min-h-screen bg-surface-page">
       {/* Main Content */}
       <div className="pt-8 pb-16 px-6">
         <div className="max-w-2xl mx-auto">

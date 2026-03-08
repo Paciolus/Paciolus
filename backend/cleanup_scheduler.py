@@ -119,7 +119,7 @@ def _run_cleanup_job(
     except Exception as exc:
         from shared.log_sanitizer import sanitize_exception
 
-        error_msg = sanitize_exception(exc)
+        error_msg = sanitize_exception(exc, context="scheduled cleanup")
     finally:
         db.close()
 
@@ -227,7 +227,7 @@ def _job_bulk_upload_cleanup() -> None:
     except Exception as exc:
         from shared.log_sanitizer import sanitize_exception
 
-        logger.error("Bulk upload cleanup failed: %s", sanitize_exception(exc))
+        logger.error("Bulk upload cleanup failed: %s", sanitize_exception(exc, context="bulk upload cleanup"))
 
 
 def _job_team_activity_cleanup() -> None:

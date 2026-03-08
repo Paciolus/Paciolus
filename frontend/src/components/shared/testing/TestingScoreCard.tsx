@@ -12,7 +12,6 @@ const TIER_LEFT_BORDER: Record<TestingRiskTier, string> = {
   elevated: 'border-l-oatmeal-500',
   moderate: 'border-l-clay-400',
   high: 'border-l-clay-500',
-  critical: 'border-l-clay-600',
 }
 
 const TIER_DOT_COLOR: Record<TestingRiskTier, string> = {
@@ -20,7 +19,6 @@ const TIER_DOT_COLOR: Record<TestingRiskTier, string> = {
   elevated: 'bg-oatmeal-500',
   moderate: 'bg-clay-500',
   high: 'bg-clay-500',
-  critical: 'bg-clay-500',
 }
 
 export interface TestingScoreCardProps {
@@ -63,7 +61,7 @@ export function TestingScoreCard({
   const borderAccent = TIER_LEFT_BORDER[risk_tier]
   const dotColor = TIER_DOT_COLOR[risk_tier]
 
-  const isHighRisk = risk_tier === 'high' || risk_tier === 'critical'
+  const isHighRisk = risk_tier === 'high'
 
   return (
     <motion.div

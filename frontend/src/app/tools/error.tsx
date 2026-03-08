@@ -18,7 +18,7 @@ export default function ToolsError({
   reset: () => void
 }) {
   return (
-    <main className="min-h-screen bg-surface-page">
+    <main id="main-content" className="min-h-screen bg-surface-page">
       <div className="pt-24 pb-16 px-6 max-w-2xl mx-auto flex flex-col items-center justify-center min-h-[60vh]">
         {/* Error icon */}
         <div className="w-16 h-16 mb-6 rounded-full bg-clay-50 border border-clay-200 flex items-center justify-center">

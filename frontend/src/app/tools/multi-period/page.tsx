@@ -189,7 +189,7 @@ export default function MultiPeriodPage() {
   }, [clear])
 
   return (
-    <main className="min-h-screen bg-surface-page">
+    <main id="main-content" className="min-h-screen bg-surface-page">
       <div className="pt-24 pb-16 px-6 max-w-6xl mx-auto">
         {/* Hero */}
         <motion.div className="text-center mb-10" initial="hidden" animate="visible" variants={stagger}>

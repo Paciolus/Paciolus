@@ -54,6 +54,7 @@ from shared.report_chrome import (
     draw_page_footer,
     find_logo,
 )
+from shared.report_styles import ledger_table_style
 from shared.scope_methodology import (
     build_authoritative_reference_block,
     build_methodology_statement,
@@ -65,19 +66,6 @@ from shared.scope_methodology import (
 # =============================================================================
 
 _MAX_AGING_ROWS = 20
-
-_ROMAN = {
-    1: "I",
-    2: "II",
-    3: "III",
-    4: "IV",
-    5: "V",
-    6: "VI",
-    7: "VII",
-    8: "VIII",
-    9: "IX",
-    10: "X",
-}
 
 # Methodology descriptions for all 8 tests
 _TEST_DESCRIPTIONS: dict[str, str] = {
@@ -123,31 +111,6 @@ _TEST_DESCRIPTIONS: dict[str, str] = {
         "authorization and recording."
     ),
 }
-
-
-# Standard table style helper
-def _standard_table_style(
-    *,
-    header_font: str = "Times-Bold",
-    body_font: str = "Times-Roman",
-    font_size: int = 9,
-    right_align_from: int = 1,
-) -> TableStyle:
-    return TableStyle(
-        [
-            ("FONTNAME", (0, 0), (-1, 0), header_font),
-            ("FONTNAME", (0, 1), (-1, -1), body_font),
-            ("FONTSIZE", (0, 0), (-1, -1), font_size),
-            ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-            ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-            ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-            ("ALIGN", (right_align_from, 0), (-1, -1), "RIGHT"),
-            ("VALIGN", (0, 0), (-1, -1), "TOP"),
-            ("TOPPADDING", (0, 0), (-1, -1), 3),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-            ("LEFTPADDING", (0, 0), (0, -1), 0),
-        ]
-    )
 
 
 # =============================================================================
@@ -250,7 +213,7 @@ def _build_reconciliation_results(
         ["Reconciling Difference", f"${rec_diff:,.2f}"],
     ]
     balance_table = Table(balance_data, colWidths=[3.0 * inch, 2.5 * inch])
-    balance_table.setStyle(_standard_table_style())
+    balance_table.setStyle(TableStyle(ledger_table_style() + [("ALIGN", (1, 0), (-1, -1), "RIGHT")]))
     story.append(balance_table)
     story.append(Spacer(1, 2))
     story.append(
@@ -454,7 +417,7 @@ def _build_outstanding_aging_tables(
             colWidths=[1.2 * inch, 1.0 * inch, 2.0 * inch, 1.2 * inch, 0.8 * inch],
             repeatRows=1,
         )
-        dep_table.setStyle(_standard_table_style(right_align_from=1))
+        dep_table.setStyle(TableStyle(ledger_table_style() + [("ALIGN", (1, 0), (-1, -1), "RIGHT")]))
         # Bold total row
         dep_table.setStyle(TableStyle([("FONTNAME", (0, -1), (-1, -1), "Times-Bold")]))
         story.append(dep_table)
@@ -515,7 +478,7 @@ def _build_outstanding_aging_tables(
             colWidths=[1.2 * inch, 1.0 * inch, 2.0 * inch, 1.2 * inch, 0.8 * inch],
             repeatRows=1,
         )
-        chk_table.setStyle(_standard_table_style(right_align_from=1))
+        chk_table.setStyle(TableStyle(ledger_table_style() + [("ALIGN", (1, 0), (-1, -1), "RIGHT")]))
         chk_table.setStyle(TableStyle([("FONTNAME", (0, -1), (-1, -1), "Times-Bold")]))
         story.append(chk_table)
 
@@ -941,7 +904,7 @@ def generate_bank_rec_memo(
                 results_data,
                 colWidths=[3.5 * inch, 1.0 * inch, 1.5 * inch],
             )
-            results_table.setStyle(_standard_table_style())
+            results_table.setStyle(TableStyle(ledger_table_style() + [("ALIGN", (1, 0), (-1, -1), "RIGHT")]))
             story.append(results_table)
 
         story.append(Spacer(1, 8))

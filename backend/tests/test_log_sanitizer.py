@@ -16,6 +16,7 @@ from shared.log_sanitizer import mask_email, sanitize_exception, token_fingerpri
 # token_fingerprint()
 # =============================================================================
 
+
 class TestTokenFingerprint:
     """Unit tests for token_fingerprint()."""
 
@@ -65,6 +66,7 @@ class TestTokenFingerprint:
 # mask_email()
 # =============================================================================
 
+
 class TestMaskEmail:
     """Unit tests for mask_email()."""
 
@@ -104,6 +106,7 @@ class TestMaskEmail:
 # sanitize_exception()
 # =============================================================================
 
+
 class TestSanitizeException:
     """Unit tests for sanitize_exception()."""
 
@@ -128,10 +131,17 @@ class TestSanitizeException:
         assert "user@secret.com" not in result
 
     def test_generic_message(self):
-        """Should contain a generic safe message."""
+        """Should contain a generic safe message with default context."""
         e = OSError("anything")
         result = sanitize_exception(e)
+        assert "operation failed" in result
+
+    def test_custom_context(self):
+        """Should include custom context in safe message."""
+        e = OSError("anything")
+        result = sanitize_exception(e, context="email delivery")
         assert "email delivery failed" in result
+        assert "OSError" in result
 
     def test_exception_with_email_in_message(self):
         """Exception messages containing emails must not leak them."""
@@ -151,19 +161,20 @@ class TestSanitizeException:
 # INTEGRATION: email_service exception handlers don't leak PII
 # =============================================================================
 
+
 class TestEmailServiceExceptionSanitization:
     """Integration tests verifying exception handlers use sanitize_exception."""
 
-    @patch('email_service.SENDGRID_API_KEY', 'fake-key')
-    @patch('email_service.SENDGRID_AVAILABLE', True)
+    @patch("email_service.SENDGRID_API_KEY", "fake-key")
+    @patch("email_service.SENDGRID_AVAILABLE", True)
     def test_verification_email_exception_does_not_leak_in_log(self):
         """SendGrid exception in send_verification_email must not leak raw error."""
         from email_service import send_verification_email
 
         pii_message = "550 <secret@private.org> rejected"
-        with patch('email_service.SendGridAPIClient') as mock_sg:
+        with patch("email_service.SendGridAPIClient") as mock_sg:
             mock_sg.return_value.send.side_effect = OSError(pii_message)
-            with patch('email_service.log_secure_operation') as mock_log:
+            with patch("email_service.log_secure_operation") as mock_log:
                 result = send_verification_email(
                     to_email="test@example.com",
                     token="a" * 64,
@@ -178,16 +189,16 @@ class TestEmailServiceExceptionSanitization:
                     assert pii_message not in detail
                     assert "secret@private.org" not in detail
 
-    @patch('email_service.SENDGRID_API_KEY', 'fake-key')
-    @patch('email_service.SENDGRID_AVAILABLE', True)
+    @patch("email_service.SENDGRID_API_KEY", "fake-key")
+    @patch("email_service.SENDGRID_AVAILABLE", True)
     def test_contact_email_exception_does_not_leak_in_log(self):
         """SendGrid exception in send_contact_form_email must not leak raw error."""
         from email_service import send_contact_form_email
 
         pii_message = "Unauthorized: key=SG.leaked_api_key_here"
-        with patch('email_service.SendGridAPIClient') as mock_sg:
+        with patch("email_service.SendGridAPIClient") as mock_sg:
             mock_sg.return_value.send.side_effect = ValueError(pii_message)
-            with patch('email_service.log_secure_operation') as mock_log:
+            with patch("email_service.log_secure_operation") as mock_log:
                 result = send_contact_form_email(
                     name="Test",
                     email="test@example.com",
@@ -201,16 +212,16 @@ class TestEmailServiceExceptionSanitization:
                     detail = call[0][1] if len(call[0]) > 1 else ""
                     assert "SG.leaked_api_key_here" not in detail
 
-    @patch('email_service.SENDGRID_API_KEY', 'fake-key')
-    @patch('email_service.SENDGRID_AVAILABLE', True)
+    @patch("email_service.SENDGRID_API_KEY", "fake-key")
+    @patch("email_service.SENDGRID_AVAILABLE", True)
     def test_email_change_notification_exception_does_not_leak(self):
         """SendGrid exception in send_email_change_notification must not leak raw error."""
         from email_service import send_email_change_notification
 
         pii_message = "Rejected: admin@secret-corp.com not allowed"
-        with patch('email_service.SendGridAPIClient') as mock_sg:
+        with patch("email_service.SendGridAPIClient") as mock_sg:
             mock_sg.return_value.send.side_effect = RuntimeError(pii_message)
-            with patch('email_service.log_secure_operation') as mock_log:
+            with patch("email_service.log_secure_operation") as mock_log:
                 result = send_email_change_notification(
                     to_email="old@example.com",
                     new_email="new@example.com",
@@ -226,6 +237,7 @@ class TestEmailServiceExceptionSanitization:
 # INTEGRATION: auth.py token decode doesn't leak JWT details
 # =============================================================================
 
+
 class TestAuthTokenDecodeSanitization:
     """Verify decode_access_token doesn't leak JWT error details."""
 
@@ -233,14 +245,11 @@ class TestAuthTokenDecodeSanitization:
         """Invalid JWT should log class name, not raw error message."""
         from auth import decode_access_token
 
-        with patch('auth.log_secure_operation') as mock_log:
+        with patch("auth.log_secure_operation") as mock_log:
             result = decode_access_token("invalid.jwt.token")
             assert result is None
             # Find the token_decode_failed call
-            decode_calls = [
-                c for c in mock_log.call_args_list
-                if c[0][0] == "token_decode_failed"
-            ]
+            decode_calls = [c for c in mock_log.call_args_list if c[0][0] == "token_decode_failed"]
             assert len(decode_calls) == 1
             detail = decode_calls[0][0][1]
             # Should not contain raw PyJWT error message

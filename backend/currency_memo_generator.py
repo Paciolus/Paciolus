@@ -42,6 +42,7 @@ from shared.memo_base import (
     build_workpaper_signoff,
     create_memo_styles,
 )
+from shared.memo_template import _roman
 from shared.report_chrome import (
     ReportMetadata,
     build_cover_page,
@@ -77,23 +78,6 @@ _NON_MONETARY_KEYWORDS = [
     "land",
     "building",
 ]
-
-
-def _roman(n: int) -> str:
-    """Convert small integer to Roman numeral (I–X range)."""
-    numerals = {
-        1: "I",
-        2: "II",
-        3: "III",
-        4: "IV",
-        5: "V",
-        6: "VI",
-        7: "VII",
-        8: "VIII",
-        9: "IX",
-        10: "X",
-    }
-    return numerals.get(n, str(n))
 
 
 def _format_currency_amount(amount: float, currency: str = "USD") -> str:

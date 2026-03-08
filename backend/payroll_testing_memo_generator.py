@@ -17,8 +17,10 @@ from reportlab.lib.units import inch
 from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
 
 from pdf_generator import ClassicalColors, LedgerRule, create_leader_dots
+from shared.drill_down import format_currency
 from shared.memo_base import build_scope_section
-from shared.memo_template import TestingMemoConfig, generate_testing_memo
+from shared.memo_template import TestingMemoConfig, _roman, generate_testing_memo
+from shared.report_styles import ledger_table_style
 
 PAYROLL_TEST_DESCRIPTIONS = {
     "PR-T1": "Identifies employee IDs associated with multiple different names, indicating possible data integrity issues.",
@@ -93,35 +95,6 @@ def _format_payroll_finding(finding: Any) -> str:
     return str(finding)
 
 
-def _fmt_currency(val: Any) -> str:
-    """Format a value as currency string."""
-    try:
-        return f"${float(val):,.2f}"
-    except (TypeError, ValueError):
-        return str(val)
-
-
-def _roman(n: int) -> str:
-    """Convert small integer to Roman numeral."""
-    numerals = {1: "I", 2: "II", 3: "III", 4: "IV", 5: "V", 6: "VI", 7: "VII", 8: "VIII", 9: "IX", 10: "X"}
-    return numerals.get(n, str(n))
-
-
-def _standard_table_style() -> list:
-    """Return the standard table style commands used across detail tables."""
-    return [
-        ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-        ("FONTSIZE", (0, 0), (-1, -1), 9),
-        ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-        ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-        ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("TOPPADDING", (0, 0), (-1, -1), 3),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-        ("LEFTPADDING", (0, 0), (0, -1), 0),
-    ]
-
-
 # ─────────────────────────────────────────────────────────────────────
 # SCOPE ENRICHMENTS (IMPROVEMENT-01, 02, 04)
 # ─────────────────────────────────────────────────────────────────────
@@ -143,7 +116,7 @@ def _build_gl_reconciliation(
 
     story.append(
         Paragraph(
-            create_leader_dots("Payroll Register Total (computed)", _fmt_currency(register_total)),
+            create_leader_dots("Payroll Register Total (computed)", format_currency(register_total)),
             styles["MemoLeader"],
         )
     )
@@ -152,14 +125,14 @@ def _build_gl_reconciliation(
     if gl_balance is not None:
         story.append(
             Paragraph(
-                create_leader_dots("GL \u2014 Salaries &amp; Wages (Trial Balance)", _fmt_currency(gl_balance)),
+                create_leader_dots("GL \u2014 Salaries &amp; Wages (Trial Balance)", format_currency(gl_balance)),
                 styles["MemoLeader"],
             )
         )
         variance = register_total - gl_balance
         story.append(
             Paragraph(
-                create_leader_dots("Variance", _fmt_currency(variance)),
+                create_leader_dots("Variance", format_currency(variance)),
                 styles["MemoLeader"],
             )
         )
@@ -173,7 +146,7 @@ def _build_gl_reconciliation(
         else:
             story.append(
                 Paragraph(
-                    f"\u26a0 Unreconciled difference of {_fmt_currency(abs(variance))} requires investigation. "
+                    f"\u26a0 Unreconciled difference of {format_currency(abs(variance))} requires investigation. "
                     "Confirm whether the variance represents payroll accruals, timing differences, "
                     "or recording errors.",
                     styles["MemoBody"],
@@ -293,7 +266,7 @@ def _build_department_summary(
             [
                 Paragraph(dept["department"], styles["MemoTableCell"]),
                 Paragraph(str(count), styles["MemoTableCell"]),
-                Paragraph(_fmt_currency(pay), styles["MemoTableCell"]),
+                Paragraph(format_currency(pay), styles["MemoTableCell"]),
                 Paragraph(f"{pct:.1f}%", styles["MemoTableCell"]),
             ]
         )
@@ -302,7 +275,7 @@ def _build_department_summary(
         [
             Paragraph("<b>Total</b>", styles["MemoTableCell"]),
             Paragraph(f"<b>{total_count}</b>", styles["MemoTableCell"]),
-            Paragraph(f"<b>{_fmt_currency(total_pay)}</b>", styles["MemoTableCell"]),
+            Paragraph(f"<b>{format_currency(total_pay)}</b>", styles["MemoTableCell"]),
             Paragraph("<b>100%</b>", styles["MemoTableCell"]),
         ]
     )
@@ -312,7 +285,7 @@ def _build_department_summary(
         colWidths=[2.5 * inch, 1.2 * inch, 1.5 * inch, 1.4 * inch],
         repeatRows=1,
     )
-    style_cmds = _standard_table_style() + [
+    style_cmds = ledger_table_style() + [
         ("LINEABOVE", (0, -1), (-1, -1), 1, ClassicalColors.OBSIDIAN_DEEP),
         ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
     ]
@@ -422,12 +395,12 @@ def _build_pay_after_term_table(
                 Paragraph(entry.get("employee_name", ""), styles["MemoTableCell"]),
                 Paragraph(str(entry.get("term_date", "") or ""), styles["MemoTableCell"]),
                 Paragraph(str(entry.get("pay_date", "") or ""), styles["MemoTableCell"]),
-                Paragraph(_fmt_currency(entry.get("gross_pay", 0)), styles["MemoTableCell"]),
+                Paragraph(format_currency(entry.get("gross_pay", 0)), styles["MemoTableCell"]),
             ]
         )
         total_overpayment += float(entry.get("gross_pay", 0) or 0)
 
-    style_cmds = _standard_table_style() + [("ALIGN", (4, 0), (4, -1), "RIGHT")]
+    style_cmds = ledger_table_style() + [("ALIGN", (4, 0), (4, -1), "RIGHT")]
     table = Table(
         table_data,
         colWidths=[1.0 * inch, 1.5 * inch, 1.2 * inch, 1.2 * inch, 1.2 * inch],
@@ -439,7 +412,7 @@ def _build_pay_after_term_table(
     if total_overpayment > 0:
         story.append(
             Paragraph(
-                f"Total post-termination payments: {_fmt_currency(total_overpayment)}",
+                f"Total post-termination payments: {format_currency(total_overpayment)}",
                 styles["MemoBody"],
             )
         )
@@ -471,7 +444,7 @@ def _build_ghost_employee_table(
                 Paragraph(entry.get("employee_id", ""), styles["MemoTableCell"]),
                 Paragraph(entry.get("employee_name", ""), styles["MemoTableCell"]),
                 Paragraph(str(entry.get("pay_date", "") or ""), styles["MemoTableCell"]),
-                Paragraph(_fmt_currency(entry.get("gross_pay", 0)), styles["MemoTableCell"]),
+                Paragraph(format_currency(entry.get("gross_pay", 0)), styles["MemoTableCell"]),
                 Paragraph("\u2713" if "department" in ind_lower else "\u2014", styles["MemoTableCell"]),
                 Paragraph("\u2713" if "single" in ind_lower else "\u2014", styles["MemoTableCell"]),
                 Paragraph(
@@ -481,7 +454,7 @@ def _build_ghost_employee_table(
             ]
         )
 
-    style_cmds = _standard_table_style() + [
+    style_cmds = ledger_table_style() + [
         ("ALIGN", (3, 0), (3, -1), "RIGHT"),
         ("ALIGN", (4, 0), (-1, -1), "CENTER"),
     ]
@@ -532,7 +505,7 @@ def _build_duplicate_bank_table(
         colWidths=[1.2 * inch, 2.0 * inch, 1.5 * inch, 1.5 * inch],
         repeatRows=1,
     )
-    table.setStyle(TableStyle(_standard_table_style()))
+    table.setStyle(TableStyle(ledger_table_style()))
     story.append(table)
 
     if len(flagged_entries) > _MAX_DETAIL_ROWS:
@@ -574,7 +547,7 @@ def _build_duplicate_id_table(
             ]
         )
 
-    style_cmds = _standard_table_style() + [("ALIGN", (2, 0), (2, -1), "RIGHT")]
+    style_cmds = ledger_table_style() + [("ALIGN", (2, 0), (2, -1), "RIGHT")]
     table = Table(
         table_data,
         colWidths=[1.5 * inch, 3.5 * inch, 1.2 * inch],

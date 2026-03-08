@@ -136,20 +136,20 @@ describe('getRelativeTime', () => {
   })
 
   it('returns "Yesterday" for one day ago', () => {
-    const yesterday = new Date()
-    yesterday.setDate(yesterday.getDate() - 1)
+    const now = new Date()
+    const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 12)
     expect(getRelativeTime(yesterday.toISOString())).toBe('Yesterday')
   })
 
   it('returns "X days ago" for recent dates', () => {
-    const threeDaysAgo = new Date()
-    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3)
+    const now = new Date()
+    const threeDaysAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 3, 12)
     expect(getRelativeTime(threeDaysAgo.toISOString())).toBe('3 days ago')
   })
 
   it('returns "X weeks ago" for dates within a month', () => {
-    const twoWeeksAgo = new Date()
-    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14)
+    const now = new Date()
+    const twoWeeksAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 14, 12)
     expect(getRelativeTime(twoWeeksAgo.toISOString())).toBe('2 weeks ago')
   })
 

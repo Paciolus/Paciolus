@@ -93,7 +93,7 @@ jobs:
           EOF
 
       - name: Run pytest
-        run: pytest tests/ -v --tb=short -q
+        run: pytest tests/ -v --tb=short -q --cov=. --cov-report=term-missing
 
   # ── Backend Tests (PostgreSQL) ──────────────────────────────
   backend-tests-postgres:
@@ -145,7 +145,7 @@ jobs:
       - name: Run pytest
         env:
           TEST_DATABASE_URL: postgresql://paciolus:testpass@localhost:5432/paciolus_test
-        run: pytest tests/ -v --tb=short -q
+        run: pytest tests/ -v --tb=short -q --cov=. --cov-report=term-missing
 
   # ── Frontend Build ───────────────────────────────────────────
   frontend-build:
@@ -226,7 +226,7 @@ jobs:
         run: npm ci
 
       - name: Run Jest
-        run: npx jest --ci --forceExit --no-coverage
+        run: npx jest --ci --forceExit
 
   # ── Backend Lint ─────────────────────────────────────────────
   backend-lint:

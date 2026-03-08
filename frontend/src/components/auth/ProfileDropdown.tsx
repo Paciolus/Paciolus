@@ -38,6 +38,7 @@ function NavMenuItem({ item, onClick }: { item: NavItem; onClick: () => void }) 
     <Link
       href={item.href}
       onClick={onClick}
+      role="menuitem"
       className="w-full px-4 py-2 text-left hover:bg-obsidian-700/50 transition-colors block"
     >
       <div className="flex items-center gap-3 px-2">
@@ -119,6 +120,7 @@ export function ProfileDropdown({ user, onLogout }: ProfileDropdownProps) {
       <AnimatePresence>
         {isOpen && (
           <motion.div
+            role="menu"
             className="absolute right-0 mt-2 w-72 bg-obsidian-800 border border-obsidian-600 rounded-xl shadow-2xl overflow-hidden z-50"
             variants={dropdownVariants}
             initial="hidden"
@@ -183,6 +185,7 @@ export function ProfileDropdown({ user, onLogout }: ProfileDropdownProps) {
               {/* Logout */}
               <button
                 onClick={handleLogout}
+                role="menuitem"
                 className="w-full px-4 py-2 text-left hover:bg-obsidian-700/50 transition-colors"
               >
                 <div className="flex items-center gap-3 px-2">
@@ -199,7 +202,7 @@ export function ProfileDropdown({ user, onLogout }: ProfileDropdownProps) {
             {/* Footer */}
             <div className="px-4 py-3 border-t border-obsidian-700 bg-obsidian-700/30">
               <p className="text-oatmeal-500 text-xs font-sans text-center">
-                Paciolus v1.2.0 - Built for Financial Professionals
+                Paciolus v2.1.0 - Built for Financial Professionals
               </p>
             </div>
           </motion.div>

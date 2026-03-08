@@ -17,13 +17,15 @@ from typing import Any, Optional
 from reportlab.lib.units import inch
 from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
 
-from pdf_generator import ClassicalColors, LedgerRule, create_leader_dots
+from pdf_generator import LedgerRule, create_leader_dots
 from shared.drill_down import (
     build_drill_down_table,
+    format_currency,
     safe_str_value,
 )
 from shared.memo_base import build_scope_section
 from shared.memo_template import TestingMemoConfig, _roman, generate_testing_memo
+from shared.report_styles import ledger_table_style
 
 REVENUE_TEST_DESCRIPTIONS = {
     "large_manual_entries": (
@@ -172,29 +174,6 @@ _DETAIL_TABLE_TITLES = {
 }
 
 
-def _fmt_currency(val: Any) -> str:
-    """Format a value as currency string."""
-    try:
-        return f"${float(val):,.2f}"
-    except (TypeError, ValueError):
-        return str(val)
-
-
-def _standard_table_style() -> list:
-    """Return the standard table style commands used across detail tables."""
-    return [
-        ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-        ("FONTSIZE", (0, 0), (-1, -1), 9),
-        ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-        ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-        ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("TOPPADDING", (0, 0), (-1, -1), 3),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-        ("LEFTPADDING", (0, 0), (0, -1), 0),
-    ]
-
-
 def _sum_flagged_amounts(flagged_entries: list[dict]) -> float:
     """Sum absolute amounts from flagged entries."""
     total = 0.0
@@ -275,23 +254,23 @@ def _build_revenue_quality_indicators(
     story.append(LedgerRule(doc_width))
 
     lines = [
-        create_leader_dots("Total Revenue (Period)", _fmt_currency(total_revenue)),
+        create_leader_dots("Total Revenue (Period)", format_currency(total_revenue)),
     ]
     if high_risk_amount > 0:
         pct = high_risk_amount / total_revenue if total_revenue else 0
         lines.append(
             create_leader_dots(
                 "High-Risk Entries (HIGH severity)",
-                f"{_fmt_currency(high_risk_amount)} ({pct:.1%} of total)",
+                f"{format_currency(high_risk_amount)} ({pct:.1%} of total)",
             )
         )
     if december_amount > 0:
         lines.append(
             create_leader_dots(
                 "December Revenue Concentration",
-                f"{_fmt_currency(december_amount)} ({december_pct:.1%} of total)"
+                f"{format_currency(december_amount)} ({december_pct:.1%} of total)"
                 if december_pct
-                else _fmt_currency(december_amount),
+                else format_currency(december_amount),
             )
         )
     if cutoff_amount > 0:
@@ -299,14 +278,14 @@ def _build_revenue_quality_indicators(
         lines.append(
             create_leader_dots(
                 "Cut-Off Window Revenue",
-                f"{_fmt_currency(cutoff_amount)} ({pct:.1%} of total)",
+                f"{format_currency(cutoff_amount)} ({pct:.1%} of total)",
             )
         )
     if concentration_pct > 0:
         lines.append(
             create_leader_dots(
                 "Single-Customer Concentration",
-                f"{concentration_pct:.0%} (~{_fmt_currency(concentration_amount)})",
+                f"{concentration_pct:.0%} (~{format_currency(concentration_amount)})",
             )
         )
 
@@ -399,8 +378,8 @@ def _build_post_results_notes(
                     )
                 story.append(
                     Paragraph(
-                        f"<i>Contra-Revenue Ratio: {_fmt_currency(contra_total)} / "
-                        f"{_fmt_currency(gross_revenue)} gross revenue = {ratio:.1%}. "
+                        f"<i>Contra-Revenue Ratio: {format_currency(contra_total)} / "
+                        f"{format_currency(gross_revenue)} gross revenue = {ratio:.1%}. "
                         f"{interp}</i>",
                         styles["MemoBodySmall"],
                     )
@@ -455,13 +434,13 @@ def _build_cutoff_table(
                 Paragraph(safe_str_value(entry.get("reference")), styles["MemoTableCell"]),
                 Paragraph(safe_str_value(entry.get("date")), styles["MemoTableCell"]),
                 Paragraph(safe_str_value(entry.get("account_name"), "")[:20], styles["MemoTableCell"]),
-                Paragraph(_fmt_currency(entry.get("amount", 0)), styles["MemoTableCell"]),
+                Paragraph(format_currency(entry.get("amount", 0)), styles["MemoTableCell"]),
                 Paragraph(customer, styles["MemoTableCell"]),
                 Paragraph(str(days_from) if days_from is not None else "\u2014", styles["MemoTableCell"]),
             ]
         )
 
-    style_cmds = _standard_table_style() + [
+    style_cmds = ledger_table_style() + [
         ("ALIGN", (3, 0), (3, -1), "RIGHT"),
         ("ALIGN", (5, 0), (5, -1), "RIGHT"),
     ]
@@ -498,12 +477,12 @@ def _build_recognition_table(
                 Paragraph(safe_str_value(entry.get("reference")), styles["MemoTableCell"]),
                 Paragraph(safe_str_value(entry.get("date")), styles["MemoTableCell"]),
                 Paragraph(safe_str_value(entry.get("account_name"), "")[:20], styles["MemoTableCell"]),
-                Paragraph(_fmt_currency(entry.get("amount", 0)), styles["MemoTableCell"]),
+                Paragraph(format_currency(entry.get("amount", 0)), styles["MemoTableCell"]),
                 Paragraph(concern[:60] if concern else "\u2014", styles["MemoTableCell"]),
             ]
         )
 
-    style_cmds = _standard_table_style() + [("ALIGN", (3, 0), (3, -1), "RIGHT")]
+    style_cmds = ledger_table_style() + [("ALIGN", (3, 0), (3, -1), "RIGHT")]
     table = Table(
         table_data,
         colWidths=[0.9 * inch, 0.8 * inch, 1.0 * inch, 1.0 * inch, 2.5 * inch],
@@ -536,13 +515,13 @@ def _build_sign_anomalies_table(
                 Paragraph(safe_str_value(entry.get("reference")), styles["MemoTableCell"]),
                 Paragraph(safe_str_value(entry.get("date")), styles["MemoTableCell"]),
                 Paragraph(safe_str_value(entry.get("account_name"), "")[:18], styles["MemoTableCell"]),
-                Paragraph(_fmt_currency(entry.get("amount", 0)), styles["MemoTableCell"]),
+                Paragraph(format_currency(entry.get("amount", 0)), styles["MemoTableCell"]),
                 Paragraph("Credit", styles["MemoTableCell"]),
                 Paragraph(safe_str_value(entry.get("description"), "")[:25], styles["MemoTableCell"]),
             ]
         )
 
-    style_cmds = _standard_table_style() + [("ALIGN", (3, 0), (3, -1), "RIGHT")]
+    style_cmds = ledger_table_style() + [("ALIGN", (3, 0), (3, -1), "RIGHT")]
     table = Table(
         table_data,
         colWidths=[0.8 * inch, 0.7 * inch, 1.1 * inch, 1.0 * inch, 0.9 * inch, 1.7 * inch],
@@ -577,13 +556,13 @@ def _build_concentration_table(
         table_data.append(
             [
                 Paragraph(acct, styles["MemoTableCell"]),
-                Paragraph(_fmt_currency(info["total"]), styles["MemoTableCell"]),
+                Paragraph(format_currency(info["total"]), styles["MemoTableCell"]),
                 Paragraph(f"{info['pct']:.0%}" if info["pct"] else "\u2014", styles["MemoTableCell"]),
                 Paragraph(info["accounts"][:20] if info["accounts"] else "\u2014", styles["MemoTableCell"]),
             ]
         )
 
-    style_cmds = _standard_table_style() + [
+    style_cmds = ledger_table_style() + [
         ("ALIGN", (1, 0), (2, -1), "RIGHT"),
     ]
     table = Table(
@@ -652,7 +631,7 @@ def _build_high_severity_detail(
                     story.append(
                         Paragraph(
                             f"&bull; {safe_str_value(entry.get('reference'))} \u2014 "
-                            f"{_fmt_currency(entry.get('amount', 0))} \u2014 {fe.get('issue', '')}",
+                            f"{format_currency(entry.get('amount', 0))} \u2014 {fe.get('issue', '')}",
                             styles["MemoBody"],
                         )
                     )

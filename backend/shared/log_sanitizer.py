@@ -45,17 +45,18 @@ def mask_email(email: str) -> str:
     return "***@***"
 
 
-def sanitize_exception(e: Exception) -> str:
+def sanitize_exception(e: Exception, context: str = "operation") -> str:
     """Return a safe representation of an exception for logging/API responses.
 
-    Returns the exception class name with a generic message.
+    Returns the exception class name with a generic context message.
     Never exposes the raw ``str(e)`` which may contain emails,
     API keys, URLs, or other PII from third-party libraries.
 
     Args:
         e: The caught exception.
+        context: A short, safe description of the operation that failed.
 
     Returns:
         A safe string like ``"OSError: email delivery failed"``
     """
-    return f"{type(e).__name__}: email delivery failed"
+    return f"{type(e).__name__}: {context} failed"

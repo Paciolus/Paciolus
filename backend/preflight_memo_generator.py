@@ -21,6 +21,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, Tabl
 from pdf_generator import ClassicalColors, LedgerRule, create_leader_dots, generate_reference_number
 from shared.framework_resolution import ResolvedFramework
 from shared.memo_base import build_disclaimer, build_intelligence_stamp, build_workpaper_signoff, create_memo_styles
+from shared.memo_template import _roman
 from shared.report_chrome import ReportMetadata, build_cover_page, draw_page_footer, find_logo
 from shared.scope_methodology import (
     build_authoritative_reference_block,
@@ -486,9 +487,3 @@ def _build_conclusion(preflight_result: dict, filename: str) -> str:
         "These issues do not prevent diagnostic testing from proceeding but should be "
         "remediated before final workpaper sign-off."
     )
-
-
-def _roman(n: int) -> str:
-    """Convert small integer to Roman numeral (I-X range)."""
-    numerals = {1: "I", 2: "II", 3: "III", 4: "IV", 5: "V", 6: "VI", 7: "VII", 8: "VIII", 9: "IX", 10: "X"}
-    return numerals.get(n, str(n))

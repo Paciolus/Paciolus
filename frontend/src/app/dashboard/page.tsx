@@ -131,7 +131,7 @@ export default function DashboardPage() {
   const displayName = user?.name || user?.email?.split('@')[0] || 'there'
 
   return (
-    <main className="min-h-screen bg-surface-page">
+    <main id="main-content" className="min-h-screen bg-surface-page">
       <div className="max-w-5xl mx-auto px-6 pt-8 pb-16">
         {/* Welcome Header */}
         <Reveal>

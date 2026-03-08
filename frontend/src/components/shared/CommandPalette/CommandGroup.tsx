@@ -39,6 +39,7 @@ export function CommandGroup({
         return (
           <CommandRow
             key={sc.command.id}
+            id={`palette-option-${flatIndex}`}
             command={sc.command}
             guardStatus={sc.guardStatus}
             isSelected={flatIndex === selectedIndex}

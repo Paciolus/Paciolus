@@ -10,6 +10,7 @@
 import type { PaletteCommand, GuardStatus, CommandCategory } from '@/types/commandPalette'
 
 interface CommandRowProps {
+  id?: string
   command: PaletteCommand
   guardStatus: GuardStatus
   isSelected: boolean
@@ -33,11 +34,14 @@ const CATEGORY_COLORS: Record<CommandCategory, string> = {
   settings: 'bg-obsidian-700 text-oatmeal-400',
 }
 
-export function CommandRow({ command, guardStatus, isSelected, onSelect, onHover }: CommandRowProps) {
+export function CommandRow({ id, command, guardStatus, isSelected, onSelect, onHover }: CommandRowProps) {
   const isBlocked = guardStatus !== 'allowed'
 
   return (
     <button
+      id={id}
+      role="option"
+      aria-selected={isSelected}
       data-result-item
       onClick={onSelect}
       onMouseEnter={onHover}

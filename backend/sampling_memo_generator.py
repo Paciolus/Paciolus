@@ -43,6 +43,7 @@ from shared.memo_base import (
     build_workpaper_signoff,
     create_memo_styles,
 )
+from shared.memo_template import _roman
 from shared.report_chrome import (
     ReportMetadata,
     build_cover_page,
@@ -1633,11 +1634,6 @@ def _next_section_number(
         if evaluation_result.get("errors"):
             pass  # Error Details is a sub-section
     return _roman(n)
-
-
-def _roman(n: int) -> str:
-    numerals = {1: "I", 2: "II", 3: "III", 4: "IV", 5: "V", 6: "VI", 7: "VII", 8: "VIII", 9: "IX", 10: "X"}
-    return numerals.get(n, str(n))
 
 
 def _roman_after(current: str) -> str:

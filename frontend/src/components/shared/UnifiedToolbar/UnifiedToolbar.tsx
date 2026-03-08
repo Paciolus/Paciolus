@@ -71,9 +71,16 @@ export function UnifiedToolbar() {
 
   return (
     <nav
+      aria-label="Primary navigation"
       className="fixed top-0 w-full toolbar-marble bg-oatmeal-100/95 backdrop-blur-lg border-b border-oatmeal-300/60 z-50"
       style={{ height: 'var(--toolbar-height, 56px)' }}
     >
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[60] focus:px-4 focus:py-2 focus:bg-sage-600 focus:text-white focus:rounded-lg focus:text-sm focus:font-sans focus:font-medium"
+      >
+        Skip to main content
+      </a>
       <div className="max-w-7xl mx-auto px-6 h-full flex items-center">
         {/* ═══ Zone 1 — Left: Identity ═══ */}
         <div className="w-[120px] flex-shrink-0">
