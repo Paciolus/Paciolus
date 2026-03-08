@@ -24,9 +24,15 @@ When a task is initiated:
 ### 1. Plan Update (START of directive)
 Before ANY implementation begins:
 - [ ] Read `tasks/todo.md`
+- [ ] If `## Active Phase` has 4+ completed sprints, archive them before starting new work
 - [ ] Add/update checklist items for the current directive
 - [ ] Mark the directive as "In Progress"
 - [ ] Identify which agents are involved
+
+### 1b. Sprint vs. Hotfix Classification
+- **Sprint:** New features, architectural changes, report enrichments, bug fix batches, test additions
+- **Hotfix:** Copy corrections, test count updates, typo fixes, dependency bumps with no code changes
+- Hotfixes: add one-line entry to `## Hotfixes` in `tasks/todo.md`, commit with `fix:` prefix. No sprint number needed.
 
 ### 2. Implementation
 - Follow the Conflict Loop
@@ -69,7 +75,7 @@ After ALL directive work is complete:
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 2.1.0
-**Test Coverage:** 5,808 backend tests (1 skipped) + 1,345 frontend tests
+**Test Coverage:** 6,188 backend tests + 1,345 frontend tests
 **Next Phase:** Sprint 447 (Stripe Production Cutover — non-automatable: CEO sign-off + `sk_live_` keys required)
 
 ### Completed Phases
@@ -95,6 +101,7 @@ After ALL directive work is complete:
 | 449–476 (LXIV–LXIX) | Security, SOC 2, Pricing v3 | HttpOnly cookies, CSP nonce, CSRF upgrade, SOC 2 readiness (42 criteria), mypy annotations, Pricing Restructure v3 (Free/Solo/Professional/Enterprise — all paid = all tools), org entities, export sharing, admin dashboard, bulk upload, comprehensive security audit (14 fixes) |
 | 477–487 | Report Engine & UX Polish | Copy consistency, Digital Excellence Council audits, pricing page redesign, report engine content audit, TB Diagnostic enrichment |
 | 478, 488–502 | Security Hardening & Quality | Deprecated alias migration, report fixes, security audit quadrilogy (35 fixes), 61 injection tests, CI hardening, formula consistency, Digital Excellence Council remediation (42 findings), payroll report enrichment, toolbar refactor, revenue report enrichment (3 bug fixes, 4 improvements), fixed asset report enrichment (4 bug fixes, 4 improvements, FA-10 lease indicator) — **Tests: 5,808 + 1,345** |
+| 499–515 | Report Enrichment | Toolbar three-zone refactor, 16 report enrichments (Payroll through Anomaly Summary: bug fixes, new sections, risk scoring, suggested procedures, authoritative reference corrections), test suite fixes — **Tests: 6,188 + 1,345** |
 
 ### Compliance Documentation
 Located in `docs/04-compliance/`:

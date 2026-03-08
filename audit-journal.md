@@ -876,3 +876,90 @@ Marginal improvement from Audit 24 (4.5) to Audit 25 (4.6).
 - Overall: 4.5 → 4.6 (marginal improvement — remained in Excellent band)
 
 This is the 25th audit. The project remains in the Excellent band. Sprint 482 demonstrates strong remediation discipline — 17 council findings addressed in a single sprint with surgical precision. The Audit 24 top priority (Sprint 481 todo.md entry) was executed. The persistent gaps are procedural: (1) the npm test gate oscillation continues for a 6th consecutive audit, now with 5 acknowledged pre-existing failures rather than complete non-execution — an improvement in transparency but not resolution; (2) Sprint 482 work is complete but uncommitted, repeating the commit-step lag pattern; (3) incomplete remediation (fixing some instances of a pattern but not all) recurs without a captured lesson. Code quality remains at its peak. The Digital Excellence Council agent is proving its value as a complementary quality gate — it caught gaps that the project auditor methodology does not cover (ARIA semantics, type safety, remediation completeness).
+
+---
+## Audit — 2026-03-08 (28th) | Excellent | Overall: 4.7/5.0
+---
+
+### Scores at a Glance
+| Pillar                  | Score |
+|-------------------------|-------|
+| Workflow Orchestration  | 5.0   |
+| Task Management         | 4/5   |
+| Core Principles         | 5/5   |
+| **Overall**             | **4.7** |
+
+### A1. Plan Mode Default — 5/5
+**Finding:** All 17 sprints in the Active Phase (499-515) have structured pre-implementation plans with categorized objectives (Bug Fixes / Improvements), numbered checklists, and review sections. Sprint 515 has 6 plan sections (Cover Page, Section I Scope, Section II Register, Section III Practitioner Assessment, Section IV Risk Assessment, Fixes & New Sections). Sprint 506 decomposes into 4 bug fixes and 3 improvements with ISA reference changes. Sprint 505 lays out 4 bug fixes and 5 improvements with specific account-type-aware ratio computation objectives. The plan-then-execute pattern is consistent across all 17 sprints — no evidence of unplanned implementation. The report enrichment campaign (Sprints 499-515) demonstrates excellent decomposition: each of 21 reports gets its own sprint with tailored scope, avoiding monolithic "fix all reports" approaches.
+**Recommendation:** Continue current practice.
+
+### A2. Subagent Strategy — 5/5
+**Finding:** 10 agents in `.claude/agents/` (critic, executor, guardian, scout, designer, project-auditor, accounting-expert-auditor, future-state-consultant-agent, DIGITAL_EXCELLENCE_COUNCIL_PROMPT). All remain single-purpose with clear role boundaries. The project-auditor is actively invoked (this audit). The Digital Excellence Council agent continues to function as a complementary code quality gate — its outputs drove the Era 14 remediations. Agent roster has been stable across eleven consecutive audit cycles. No scope creep, no unused agents.
+**Recommendation:** Continue current practice.
+
+### A3. Self-Improvement Loop — 5/5
+**Finding:** `tasks/lessons.md` is 866 lines with 20+ sections organized by sprint. Eight new lesson sections were captured this cycle: Sprint 500 (payroll risk tier mismatch), Sprint 501 (revenue test_keys not matching engine canonical keys), Sprint 505 (GPM calculation using subset instead of full population, revenue exclusion patterns), Sprint 508 (sampling arithmetic correction, evaluation tolerance), Sprint 509 (sample data count-vs-list-length mismatch, defensive count derivation), Sprint 510 (test data for balanced TB, weight redistribution breaks assertions), Sprint 511 (sample data self-consistency, Gini threshold Literal types, shared modules enabling rapid development), Sprint 513 (account classification ordering, MemoSubsection style nonexistence, analytical ratio integrity), Sprint 515 (auditing standards vs FASB codification, phantom trailing pages, cross-reference exhaustiveness). Every lesson traces to a real correction discovered during implementation — not hypothetical rules. The Sprint 510 lesson ("weight redistribution requires test assertion updates") is particularly valuable as a prevention pattern for future scoring formula changes. The prior audit's recommendation about remediation completeness was already captured in Sprint 482/Audit 25 and remains on file.
+**Recommendation:** Continue current practice.
+
+### A4. Verification Before Done — 5/5
+**Finding:** Every sprint from 499-515 documents explicit verification with both `npm run build` and `npm test` results. Sixteen of seventeen sprints record clean passes with exact test counts (1,329 tests, 111 suites). Backend pytest is documented for all sprints that modified backend code, with test counts ranging from 5,776 to 6,041 as new tests were added each sprint. All 21 sample PDFs are regenerated and verified after each report enrichment sprint. Sprint 507 (backend-only test fix) appropriately includes backend verification without frontend tests.
+
+This definitively closes the longest-running open finding in the audit journal's history: the npm test gate was a finding across 7 consecutive audits (20-26). It is now consistently applied.
+
+Minor observation: Sprint 515 records `npm run build — pending` with a checked checkbox — the text says "pending" but the item is marked complete. This is a text inconsistency rather than a verification gap (the commit was successfully made and subsequent commits modified frontend files without build failures). The non-sprint commit `fb8a1fa` ("fix: accuracy remediation for test count, storage claims, and performance copy") modified ~20 frontend files without a formal verification section, but this is a content accuracy fix rather than a feature sprint.
+**Recommendation:** Fix the Sprint 515 "pending" text to match the checked status. For non-sprint fix commits that touch frontend files, consider noting build verification even outside the sprint structure.
+
+### A5. Demand Elegance (Balanced) — 5/5
+**Finding:** Zero `\bTODO\b`, `\bFIXME\b`, or `\bHACK\b` comments across all backend Python and frontend TypeScript source files (confirmed via word-boundary grep). Recent code demonstrates professional quality: `anomaly_summary_generator.py` has a comprehensive docstring documenting 8-section structure with guardrail rules (no ISA 265 mimicry, zero-storage compliance), clean imports, and constants separation. `flux_expectations_memo.py` has ISA 520 compliance guardrails documented at module level. Each report enrichment sprint follows a consistent pattern: engine fix → memo generator enhancement → sample data update → test expansion — no ad-hoc or hacky approaches. Sprint 505's GPM fix (using full TB population instead of significant_movements subset, adding `_REVENUE_EXCLUSIONS` to prevent "Deferred Revenue" from matching revenue) is a root-cause fix, not a workaround. Sprint 507's SQLite FK teardown fix addresses the actual `PRAGMA foreign_keys=ON` event listener issue rather than suppressing the error.
+**Recommendation:** Continue current practice.
+
+### A6. Autonomous Bug Fixing — 5/5
+**Finding:** Sprints 499-515 represent a 17-sprint autonomous report enrichment campaign. Each sprint independently identified bugs (Sprint 505: GPM calculation using subset data — 33.3% was actually 58.6%; Sprint 504: engine "MEDIUM" tier not mapping to standard "MODERATE"; Sprint 503: missing methodology section, missing risk score; Sprint 502: PP&E ampersand rendering, blank methodology descriptions from mismatched test_keys; Sprint 501: empty descriptions from canonical key mismatches) and resolved them with comprehensive fixes and test coverage. Sprint 507 autonomously fixed a SQLite FK teardown error in the test suite and converted a test skip to a pass. Each sprint adds 20-58 new tests alongside the fixes. All fixes are self-contained with root cause analysis documented in review sections. No back-and-forth patches, no incomplete fixes.
+**Recommendation:** Continue current practice.
+
+### B. Task Management — 4/5
+**Finding:** Five of six sub-practices are applied at a high level across this cycle's 17 sprints:
+1. **Plan First:** All 17 sprints have structured pre-implementation checklists with categorized objectives.
+2. **Verify Plan:** Implementation follows documented plan in every sprint.
+3. **Track Progress:** All items individually checked with status markers.
+4. **Explain Changes:** Commit messages follow `Sprint X: Description` convention. Review sections document files modified, test deltas, and verification results.
+5. **Capture Lessons:** 8 new lesson sections captured across Sprints 500-515.
+6. **Document Results:** All sprints have review sections with commit SHAs recorded.
+
+Two significant improvements from Audit 26:
+- **Commit SHAs now recorded in all sprint reviews.** Every sprint from 499-515 has a commit SHA in its review section (e.g., `Commit: 3dde8c8`, `Commit: ceaf061`). This closes the SHA recording gap that was flagged in Audits 16-26 and had regressed in Audit 26 (0 of 10 sprints had SHAs).
+- **All status labels are COMPLETE.** No stale "IN PROGRESS" labels. This closes the Audit 26 finding of 3 stale status labels.
+
+One gap remains:
+**Phase Lifecycle Protocol archival threshold exceeded.** The Active Phase contains 17 completed sprints (499-515) plus 6 pending items (447, 463, 464, 466, 467, 468). The archival threshold rule (line 27 of todo.md) states: "If the Active Phase accumulates 5+ completed sprints without a named phase wrap, archive them immediately as a standalone batch." With 17 completed sprints spanning ~830 lines, this threshold is exceeded by 12 sprints. The prior archival (sprints 478-497 → `tasks/archive/sprints-478-497-details.md`) was correctly executed per Audit 26's top priority, but the same accumulation pattern has recurred with the new sprint batch.
+**Recommendation:** Archive Sprints 499-515 to `tasks/archive/sprints-499-515-details.md`. Add an Era 15 summary to the Completed Phases section (e.g., "Era 15: Report Engine Enrichment — Sprints 499-515 — 17 report enrichment sprints, 21 reports enhanced, ~300 new backend tests. Tests: 6,041 + 1,345."). Clean the Active Phase to contain only pending items (447, 463, 464, 466, 467, 468, legal sign-off). Total cost: under 15 minutes of documentation work.
+
+### C. Core Principles — 5/5
+**Finding:**
+- **Simplicity First:** Each report enrichment sprint follows a minimal, repeatable pattern: identify bugs via PDF inspection → fix engine/generator → update sample data → add tests. No framework or abstraction was introduced for the 17-sprint campaign — each sprint is self-contained with direct fixes. The shared `memo_base.py`, `report_chrome.py`, and `scope_methodology.py` modules are reused without modification in most sprints — the shared infrastructure investment from earlier eras continues to pay dividends. Sprint 503's `compute_bank_rec_risk_score()` follows the same pattern as existing risk scoring functions — no new abstraction layer.
+- **No Laziness:** The 17-sprint campaign is thorough: every single one of the 21 sample reports was enriched with methodology sections, results summaries, risk scoring, key findings with suggested procedures, and detail tables. Test counts grew from 5,776 to 6,041 backend (+265 tests) across the campaign. No report was skipped or given superficial treatment. Sprint 505 rewrote the multi_period_memo_generator with 8-section structure, 8 weighted risk scoring components, and 9 new follow-up procedures.
+- **Minimal Impact:** Each sprint's diff is precisely scoped to its target report. Non-target reports are regenerated to verify no unintentional modifications (documented as "all 21 regenerated, timestamp-only on non-X reports" in review sections). Zero-Storage compliance maintained throughout. Oat & Obsidian design tokens consistent.
+
+This is the 15th consecutive cycle at 5/5 for Core Principles (the streak continues from Audit 12, recovering from the Audit 26 dip which was an archival process issue rather than a code quality issue).
+**Recommendation:** Continue current practice.
+
+### Top Priority for Next Cycle
+**Archive Sprints 499-515 to `tasks/archive/` and wrap the Report Engine Enrichment era.** The Active Phase has accumulated 17 completed sprint checklists spanning ~830 lines — well past the 5-sprint archival threshold. Execute the Phase Lifecycle Protocol: (1) archive completed sprints, (2) add Era 15 one-line summary to Completed Phases, (3) update CLAUDE.md with new test count (6,041 + 1,345) and current phase, (4) clean Active Phase to pending items only. Secondary: fix Sprint 515's `npm run build — pending` text to accurately reflect build status.
+
+### Trend Note
+Recovery from Audit 26 (4.3) to Audit 27 (4.7).
+- Workflow Orchestration: 4.5 → 5.0 (improved — A4 recovered from 4/5 to 5/5 as npm test gate is now consistently applied across all 17 sprints, closing the 7-audit-long persistent finding; A1/A2/A3/A5/A6 all maintained at 5/5)
+- Task Management: 4/5 → 4/5 (flat — commit SHAs now recorded and status labels all correct, closing two Audit 26 findings; but archival threshold exceeded again with 17 completed sprints in Active Phase)
+- Core Principles: 4/5 → 5/5 (recovered — code quality remains impeccable; the Audit 26 C-pillar dip was attributable to archival process non-compliance which is correctly a B-pillar concern, not a C-pillar concern; zero TODO/FIXME/HACK, surgical changes, comprehensive test coverage)
+- Overall: 4.3 → 4.7 (recovered — returned to solid Excellent band)
+
+This is the 28th audit. The project has executed a remarkable 17-sprint report enrichment campaign (Sprints 499-515) since the last audit, enhancing all 21 PDF reports with methodology sections, risk scoring, results summaries, key findings, suggested procedures, and detail tables. Key observations:
+- Test count: 6,041 backend + 1,345 frontend = 7,386 total (up from 7,121 at Audit 26)
+- 265 new backend tests added across the campaign
+- npm test gate: **CLOSED** after 7 consecutive audits as a finding (Audits 20-26) — now consistently applied
+- Commit SHA recording: **CLOSED** — all 17 sprints have SHAs in review sections (was 0/10 in Audit 26)
+- Status label discipline: **CLOSED** — all 17 sprints marked COMPLETE (was 3 stale IN PROGRESS in Audit 26)
+- 8 new lesson sections captured (Sprints 500, 501, 505, 508, 509, 510, 511, 513, 515)
+- Archival discipline remains the sole recurring gap — the 5-sprint threshold was exceeded for the second consecutive audit cycle
+- 52 commits since last audit (2026-03-04) — the most productive cycle in recent history
+- Working tree is CLEAN — all code changes committed

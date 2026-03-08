@@ -4,6 +4,16 @@
 
 ---
 
+## Task Management Archival Discipline (Audit 28 / Council Decision)
+
+1. **Passive thresholds fail during sustained campaigns**: The 5-sprint archival threshold rule existed but was silently violated 12 times across 12 consecutive directive cycles during the Report Enrichment campaign (Sprints 499-515). A passive rule with no active trigger point is insufficient when sprint velocity is high. Fix: a proactive self-check added to Directive Protocol step 1 — "If Active Phase has 4+ completed sprints, archive first."
+
+2. **The protocol assumed phased delivery; the project shifted to continuous delivery**: The Phase Lifecycle Protocol was designed for named phases with clear start/end boundaries. When work runs as a continuous campaign without phase declarations, the "wrap phase → archive" trigger never fires. The 5-sprint standalone threshold was designed as a patch for this gap but depends on agents counting sprints — which they don't do naturally. The self-check guardrail fires at step 1 of every directive, creating a reliable trigger.
+
+3. **Non-sprint commits need a lightweight tracking mechanism**: The Directive Protocol's binary model (everything is a sprint) creates overhead aversion for small fixes. Commit `fb8a1fa` (22 insertions across 16 files) was a content accuracy fix that didn't warrant a full sprint lifecycle. Fix: a `## Hotfixes` section in todo.md with one-line entries, and a classification rule (step 1b) distinguishing sprint-level work from hotfix-level work.
+
+---
+
 ## Anomaly Summary Report (Sprint 515)
 
 1. **Auditing standards vs. FASB codification**: The anomaly summary is an engagement-level aggregation report, not a tool-specific diagnostic. Its authoritative references should cite auditing procedure standards (AU-C § 265/330/520, PCAOB AS 1305/2305) rather than FASB ASC codification entries. Render these directly in the generator rather than through the YAML content library, since they don't follow the codification/statement schema.
