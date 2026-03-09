@@ -20,6 +20,7 @@ from shared.column_detector import detect_columns as _shared_detect
 
 class ColumnType(Enum):
     """Types of columns we need to identify in a trial balance."""
+
     ACCOUNT = "account"
     DEBIT = "debit"
     CREDIT = "credit"
@@ -29,6 +30,7 @@ class ColumnType(Enum):
 @dataclass
 class ColumnMatch:
     """Result of matching a column to a type."""
+
     column_name: str
     column_type: ColumnType
     confidence: float  # 0.0 to 1.0
@@ -38,6 +40,7 @@ class ColumnMatch:
 @dataclass
 class ColumnDetectionResult:
     """Complete result of column detection for a file."""
+
     account_column: Optional[str]
     debit_column: Optional[str]
     credit_column: Optional[str]
@@ -78,11 +81,27 @@ ACCOUNT_PATTERNS = [
     (r"^account\s*name$", 1.0, True),
     (r"^account$", 0.95, True),
     (r"^gl\s*account$", 0.95, True),
+    (r"^account\s*code$", 0.95, True),
+    (r"^account\s*number$", 0.95, True),
+    (r"^account\s*id$", 0.95, True),
+    (r"^acct$", 0.95, True),
+    (r"^acct\s*no\.?$", 0.95, True),
+    (r"^acct\s*number$", 0.95, True),
+    (r"^acct\s*name$", 0.95, True),
+    (r"^acct\s*code$", 0.95, True),
+    (r"^gl\s*code$", 0.95, True),
+    (r"^gl\s*account\s*number$", 0.95, True),
+    (r"^code$", 0.90, True),
     (r"^account\s*description$", 0.90, True),
     (r"^account\s*title$", 0.90, True),
     (r"^ledger\s*account$", 0.90, True),
+    # Common variations with separators (underscores, hyphens)
+    (r"^account[_\-\s]*(code|number|num|no|id|name|desc)$", 0.95, True),
+    (r"^acct[_\-\s]*(code|number|num|no|id|name|desc)$", 0.95, True),
+    (r"^gl[_\-\s]*(code|number|num|no|id|account)$", 0.95, True),
     # Partial matches (medium confidence)
     (r"account", 0.70, False),
+    (r"^acct", 0.65, False),
     (r"name", 0.50, False),
     (r"description", 0.45, False),
     (r"ledger", 0.40, False),
@@ -202,6 +221,7 @@ def detect_columns(column_names: list[str]) -> ColumnDetectionResult:
 @dataclass
 class ColumnMapping:
     """User-provided column mapping to override auto-detection."""
+
     account_column: str
     debit_column: str
     credit_column: str

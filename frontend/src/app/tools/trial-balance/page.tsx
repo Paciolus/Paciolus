@@ -1,8 +1,10 @@
 'use client'
 
+import { useState } from 'react'
 import { MappingProvider } from '@/contexts/MappingContext'
 import { CurrencyRatePanel } from '@/components/currencyRates/CurrencyRatePanel'
-import { MaterialityControl } from '@/components/diagnostic'
+import { EngagementDetailsPanel, MaterialityControl, DEFAULT_ENGAGEMENT_METADATA } from '@/components/diagnostic'
+import type { EngagementMetadata } from '@/components/diagnostic'
 import { ColumnMappingModal } from '@/components/mapping'
 import { PreFlightSummary } from '@/components/preflight/PreFlightSummary'
 import { GuestCTA, DisclaimerBox, Citation, CitationFooter } from '@/components/shared'
@@ -12,6 +14,16 @@ import { WorkbookInspector } from '@/components/workbook'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
 import { useTrialBalanceAudit } from '@/hooks/useTrialBalanceAudit'
 import { ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fileFormats'
+
+/** Extended preflight report type that includes balance_check (not in base PreFlightReport type) */
+interface PreFlightReportWithBalance {
+  balance_check?: {
+    total_debits: number
+    total_credits: number
+    difference: number
+    balanced: boolean
+  }
+}
 
 function HomeContent() {
   const {
@@ -50,7 +62,14 @@ function HomeContent() {
     resetAudit, handleRerunAudit,
   } = useTrialBalanceAudit()
 
+  const [engagementMetadata, setEngagementMetadata] = useState<EngagementMetadata>(DEFAULT_ENGAGEMENT_METADATA)
+
   useCanvasAccentSync(auditStatus)
+
+  // Derive total TB population for dynamic materiality range
+  const totalPopulation = auditResult?.total_debits
+    ?? (preflightReport as PreFlightReportWithBalance | null)?.balance_check?.total_debits
+    ?? undefined
 
   return (
     <main id="main-content" className="min-h-screen bg-surface-page">
@@ -86,9 +105,15 @@ function HomeContent() {
                   onChange={setMaterialityThreshold}
                   showLiveIndicator={!!selectedFile && auditStatus === 'success'}
                   filename={selectedFile?.name}
+                  totalPopulation={totalPopulation}
                 />
 
                 <CurrencyRatePanel />
+
+                <EngagementDetailsPanel
+                  value={engagementMetadata}
+                  onChange={setEngagementMetadata}
+                />
               </div>
 
               {/* Drop Zone */}
@@ -102,8 +127,8 @@ function HomeContent() {
                   type="file"
                   accept={ACCEPTED_FILE_EXTENSIONS_STRING}
                   onChange={handleFileSelect}
-                  className={`absolute inset-0 w-full h-full opacity-0 ${auditStatus === 'idle' ? 'cursor-pointer' : 'pointer-events-none'}`}
-                  tabIndex={auditStatus === 'idle' ? 0 : -1}
+                  className={`absolute inset-0 w-full h-full opacity-0 ${auditStatus === 'idle' && !showPreflight && preflightStatus !== 'loading' ? 'cursor-pointer' : 'pointer-events-none'}`}
+                  tabIndex={auditStatus === 'idle' && !showPreflight && preflightStatus !== 'loading' ? 0 : -1}
                 />
 
                 {auditStatus === 'idle' && !showPreflight && preflightStatus !== 'loading' && (

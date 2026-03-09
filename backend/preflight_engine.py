@@ -323,6 +323,21 @@ def run_preflight(
 # ═══════════════════════════════════════════════════════════════
 
 
+def _coerce_to_float(val: object) -> float:
+    """Coerce a cell value to float, treating None/empty/NaN as 0.0."""
+    if val is None:
+        return 0.0
+    if isinstance(val, str):
+        stripped = val.strip()
+        if stripped == "":
+            return 0.0
+        return float(stripped)
+    f = float(val)  # type: ignore[arg-type]
+    if f != f:  # NaN check
+        return 0.0
+    return f
+
+
 def _check_tb_balance(
     rows: list[dict],
     debit_col: str | None,
@@ -330,23 +345,24 @@ def _check_tb_balance(
     issues: list[PreFlightIssue],
     tolerance: float = 0.01,
 ) -> BalanceCheck | None:
-    """Check 0: Verify total debits equal total credits."""
+    """Check 0: Verify total debits equal total credits.
+
+    Coerces null/empty values to 0.0 before summing — standard for
+    one-sided trial balances where each row has a value in either
+    the debit or credit column, not both.
+    """
     if not debit_col or not credit_col or not rows:
         return None
 
     total_debits = 0.0
     total_credits = 0.0
     for row in rows:
-        d_val = row.get(debit_col)
-        c_val = row.get(credit_col)
         try:
-            if d_val is not None:
-                total_debits += float(d_val)
+            total_debits += _coerce_to_float(row.get(debit_col))
         except (ValueError, TypeError):
             pass
         try:
-            if c_val is not None:
-                total_credits += float(c_val)
+            total_credits += _coerce_to_float(row.get(credit_col))
         except (ValueError, TypeError):
             pass
 
@@ -379,18 +395,54 @@ def _check_column_detection(
     columns_quality: list[ColumnQuality],
     issues: list[PreFlightIssue],
 ) -> None:
-    """Check 1: Column detection confidence."""
-    for role, col_name, conf in [
-        ("account", detection.account_column, detection.account_confidence),
-        ("debit", detection.debit_column, detection.debit_confidence),
-        ("credit", detection.credit_column, detection.credit_confidence),
-    ]:
+    """Check 1: Column detection confidence.
+
+    Reports all columns from the file — not just the 3 core roles.
+    Unmapped columns are shown with role "unmapped" so users can verify
+    the engine saw them.
+    """
+    # Core role mappings
+    core_mappings: dict[str, tuple[str | None, float]] = {
+        "account": (detection.account_column, detection.account_confidence),
+        "debit": (detection.debit_column, detection.debit_confidence),
+        "credit": (detection.credit_column, detection.credit_confidence),
+    }
+
+    mapped_cols: set[str] = set()
+    for role, (col_name, conf) in core_mappings.items():
         if col_name is None:
             columns_quality.append(ColumnQuality(role, None, 0.0, "missing"))
         elif conf < 0.80:
             columns_quality.append(ColumnQuality(role, col_name, conf, "low_confidence"))
+            mapped_cols.add(col_name.lower().strip())
         else:
             columns_quality.append(ColumnQuality(role, col_name, conf, "found"))
+            mapped_cols.add(col_name.lower().strip())
+
+    # Add unmapped columns so the user can see the full file structure.
+    # Infer a descriptive role label from the column name where possible.
+    _AUXILIARY_ROLE_HINTS = {
+        "account_name": "Account Name",
+        "account_type": "Account Type",
+        "classification": "Classification",
+        "department": "Department",
+        "cost_center": "Cost Center",
+        "currency": "Currency",
+        "balance": "Balance",
+        "description": "Description",
+        "memo": "Memo",
+        "reference": "Reference",
+        "date": "Date",
+        "period": "Period",
+        "entity": "Entity",
+        "segment": "Segment",
+    }
+    for col in detection.all_columns:
+        if col.lower().strip() in mapped_cols:
+            continue
+        col_lower = col.lower().strip().replace(" ", "_").replace("-", "_")
+        inferred_role = _AUXILIARY_ROLE_HINTS.get(col_lower, "unmapped")
+        columns_quality.append(ColumnQuality(role=inferred_role, detected_name=col, confidence=1.0, status="found"))
 
     # Issue generation
     missing = [c for c in columns_quality if c.status == "missing"]
@@ -430,6 +482,17 @@ def _check_column_detection(
         )
 
 
+def _is_cell_empty(val: object) -> bool:
+    """Check if a cell value is null, empty, or NaN."""
+    if val is None:
+        return True
+    if isinstance(val, str) and val.strip() == "":
+        return True
+    if isinstance(val, float) and val != val:  # NaN check
+        return True
+    return False
+
+
 def _check_null_values(
     rows: list[dict],
     column_names: list[str],
@@ -438,31 +501,35 @@ def _check_null_values(
     credit_col: str | None,
     issues: list[PreFlightIssue],
 ) -> dict[str, int]:
-    """Check 2: Null/empty values per column."""
+    """Check 2: Null/empty values per column.
+
+    For debit/credit columns, distinguishes between:
+    - Structural nulls: one column empty because the other has a value
+      (expected in one-sided TB format — not a data quality issue)
+    - True nulls: both debit and credit are empty for the same row
+      (genuine missing data worth flagging)
+
+    Only true nulls generate issues for debit/credit columns.
+    """
     null_counts: dict[str, int] = {}
     row_count = len(rows)
     if row_count == 0:
         return null_counts
 
     critical_cols = {account_col, debit_col, credit_col} - {None}
+    monetary_cols = {debit_col, credit_col} - {None}
 
     # Track which rows have nulls per column for affected_items
     null_rows_by_col: dict[str, list[str]] = {}
 
+    # First pass: count raw nulls for all columns
     for col in column_names:
         count = 0
         null_rows: list[str] = []
         for i, row in enumerate(rows):
-            val = row.get(col)
-            is_null = False
-            if val is None or (isinstance(val, str) and val.strip() == ""):
-                is_null = True
-            elif isinstance(val, float) and val != val:  # NaN check
-                is_null = True
-            if is_null:
+            if _is_cell_empty(row.get(col)):
                 count += 1
                 if col in critical_cols:
-                    # Use account identifier if available, otherwise row number
                     acct = row.get(account_col, "") if account_col and col != account_col else ""
                     identifier = str(acct).strip() if acct else f"Row {i + 1}"
                     null_rows.append(identifier)
@@ -471,9 +538,38 @@ def _check_null_values(
             if col in critical_cols:
                 null_rows_by_col[col] = null_rows
 
+    # Second pass: for debit/credit columns, count only "true nulls"
+    # (rows where BOTH debit and credit are empty — not one-sided structural nulls)
+    true_null_counts: dict[str, int] = {}
+    true_null_rows: dict[str, list[str]] = {}
+    if debit_col and credit_col and debit_col in monetary_cols and credit_col in monetary_cols:
+        true_null_counts[debit_col] = 0
+        true_null_counts[credit_col] = 0
+        true_null_rows[debit_col] = []
+        true_null_rows[credit_col] = []
+        for i, row in enumerate(rows):
+            d_empty = _is_cell_empty(row.get(debit_col))
+            c_empty = _is_cell_empty(row.get(credit_col))
+            if d_empty and c_empty:
+                # Both empty — true null (genuine missing data)
+                acct = row.get(account_col, "") if account_col else ""
+                identifier = str(acct).strip() if acct else f"Row {i + 1}"
+                true_null_counts[debit_col] += 1
+                true_null_counts[credit_col] += 1
+                true_null_rows[debit_col].append(identifier)
+                true_null_rows[credit_col].append(identifier)
+
     # Issue generation for critical columns
     for col in critical_cols:
-        count = null_counts.get(col, 0)
+        if col in monetary_cols:
+            # Use true null count for debit/credit (excludes structural one-sided nulls)
+            count = true_null_counts.get(col, 0)
+            affected = true_null_rows.get(col, [])
+        else:
+            # Account column: all nulls are real issues
+            count = null_counts.get(col, 0)
+            affected = null_rows_by_col.get(col, [])
+
         if count == 0:
             continue
         pct = count / row_count
@@ -487,11 +583,11 @@ def _check_null_values(
             PreFlightIssue(
                 category="null_values",
                 severity=severity,
-                message=f"Column '{col}' has {count} null/empty values ({pct:.1%} of rows)",
+                message=f"Column '{col}' has {count} rows with missing data ({pct:.1%} of rows)",
                 affected_count=count,
                 remediation=f"Review rows with missing '{col}' values. "
                 "Fill in missing data or remove incomplete rows before analysis.",
-                affected_items=null_rows_by_col.get(col, []),
+                affected_items=affected,
             )
         )
 

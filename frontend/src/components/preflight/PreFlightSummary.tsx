@@ -102,26 +102,32 @@ export function PreFlightSummary({ report, onProceed, onExportPDF, onExportCSV }
       {report.columns.length > 0 && (
         <div className="theme-card p-5">
           <h4 className="font-serif text-sm text-content-primary mb-3">Column Detection</h4>
-          <div className="grid grid-cols-3 gap-3">
-            {report.columns.map((col: PreFlightColumnQuality) => (
-              <div
-                key={col.role}
-                className="flex items-center gap-2 p-2 rounded-lg bg-surface-card-secondary"
-              >
-                <span className={`font-mono text-base ${statusColor(col.status)}`}>
-                  {statusIcon(col.status)}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="font-sans text-xs text-content-secondary capitalize">{col.role}</p>
-                  <p className="font-mono text-xs text-content-primary truncate">
-                    {col.detected_name || 'Not found'}
-                  </p>
+          <div className={`grid gap-3 ${report.columns.length <= 3 ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-3'}`}>
+            {report.columns.map((col: PreFlightColumnQuality, idx: number) => {
+              const isCore = ['account', 'debit', 'credit'].includes(col.role)
+              const roleLabel = col.role === 'unmapped' ? 'Not Used' : col.role.replace(/_/g, ' ')
+              return (
+                <div
+                  key={`${col.role}-${idx}`}
+                  className={`flex items-center gap-2 p-2 rounded-lg ${isCore ? 'bg-surface-card-secondary' : 'bg-surface-card-secondary/50'}`}
+                >
+                  <span className={`font-mono text-base ${isCore ? statusColor(col.status) : 'text-content-tertiary'}`}>
+                    {isCore ? statusIcon(col.status) : '·'}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-sans text-xs text-content-secondary capitalize">{roleLabel}</p>
+                    <p className="font-mono text-xs text-content-primary truncate">
+                      {col.detected_name || 'Not found'}
+                    </p>
+                  </div>
+                  {isCore && (
+                    <span className="font-mono text-xs text-content-tertiary">
+                      {(col.confidence * 100).toFixed(0)}%
+                    </span>
+                  )}
                 </div>
-                <span className="font-mono text-xs text-content-tertiary">
-                  {(col.confidence * 100).toFixed(0)}%
-                </span>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       )}

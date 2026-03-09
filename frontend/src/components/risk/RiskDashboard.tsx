@@ -174,7 +174,7 @@ export function RiskDashboard({
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-content-tertiary" />
               <span className="text-content-secondary font-sans font-medium text-sm">
-                Indistinct Items ({lowSeverity.length})
+                Below Materiality ({lowSeverity.length})
               </span>
               <span className="text-content-tertiary text-xs font-sans">
                 &lt; ${materialityThreshold.toLocaleString()}

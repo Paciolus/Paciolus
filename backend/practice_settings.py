@@ -245,7 +245,7 @@ class PracticeSettings(BaseModel):
 
     # Show/hide immaterial items by default
     show_immaterial_by_default: bool = Field(
-        default=False, description="Whether to show immaterial (indistinct) items by default"
+        default=False, description="Whether to show immaterial (below materiality threshold) items by default"
     )
 
     # Default fiscal year end for new clients

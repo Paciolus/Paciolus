@@ -388,6 +388,47 @@ Extracted:
 
 ---
 
+### Sprint 525 — TB Diagnostics Page: Bug Fixes and Content Improvements
+
+**Status:** COMPLETE
+**Goal:** Resolve 1 interaction bug and 5 content/logic issues on the Trial Balance Diagnostics upload and data readiness page.
+
+#### Fix 1: Button Click Hijacking (CRITICAL)
+- [x] File input pointer-events disabled when preflight/results are showing
+- [x] Export PDF, Export CSV, and Proceed buttons all function correctly
+
+#### Fix 2: Null/Empty Cell Handling — One-Sided TB (CRITICAL)
+- [x] Coerce null/empty debit/credit to 0 before balance check (`_coerce_to_float` helper)
+- [x] Distinguish structural nulls (one-sided) from true nulls (both empty)
+- [x] Remove false HIGH severity flags for one-sided null patterns
+
+#### Fix 3: Materiality Slider — Dynamic Range
+- [x] Calculate recommended materiality from TB population (0.5% of total)
+- [x] Dynamic slider range (max = 2% of TB population, static $500K default before file load)
+- [x] Show recommended value indicator on slider
+
+#### Fix 4: Column Detection — Fuzzy Matching and Full Column Display
+- [x] Add 14 new account column synonyms (account_code, acct, gl_code, acct_no, etc.) → ≥95% confidence
+- [x] Display all file columns in detection panel with inferred role labels (not just 3 core)
+
+#### Fix 5: Engagement Metadata Entry Point
+- [x] Collapsible "Engagement Details (Optional)" section with 6 fields
+- [x] Fields: Entity Name, Fiscal Year End, Engagement Period, Practitioner, Reviewer, Report Status
+- [x] State persists through analysis flow (available at PDF generation time)
+
+#### Fix 6: "Indistinct" Terminology
+- [x] Replaced all 7 instances across 4 files (audit_engine.py, practice_settings.py, MaterialityControl.tsx, RiskDashboard.tsx)
+- [x] New language: "below materiality threshold" / "Below Materiality"
+
+#### Verification
+- [x] `npm run build` passes
+- [x] `npm test` passes (1,329 tests, 111 suites)
+- [x] `pytest` passes (115 tests: preflight, column detector, report chrome)
+
+**Review:** All 6 fixes implemented. Fix 1 root cause: file input's `pointer-events` condition only checked `auditStatus` but not `showPreflight`/`preflightStatus`, so the invisible input overlay intercepted clicks on preflight action buttons. Fix 2 root cause: preflight null detection counted one-sided empties as data quality issues; now uses two-pass approach (raw null count → true null count for debit/credit). Fix 3 changes static $10K slider to dynamic range based on TB population. Fix 4 adds 14 account column synonyms and displays all file columns. Fix 5 adds collapsible engagement metadata panel. Fix 6 eliminates all "Indistinct" terminology.
+
+---
+
 ### Sprint 517 — Memo Generator Test Coverage (DEC F-018)
 
 **Status:** READY

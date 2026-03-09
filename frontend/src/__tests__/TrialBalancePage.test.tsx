@@ -60,6 +60,11 @@ jest.mock('@/components/shared/PdfExtractionPreview', () => ({
 }))
 jest.mock('@/components/diagnostic', () => ({
   MaterialityControl: () => <div data-testid="materiality-control">Materiality</div>,
+  EngagementDetailsPanel: () => <div data-testid="engagement-details">Engagement</div>,
+  DEFAULT_ENGAGEMENT_METADATA: {
+    entityName: '', fiscalYearEnd: '', engagementPeriod: '',
+    preparedBy: '', reviewedBy: '', reportStatus: 'Draft',
+  },
 }))
 jest.mock('@/components/currencyRates/CurrencyRatePanel', () => ({
   CurrencyRatePanel: () => <div data-testid="currency-rate-panel">Rates</div>,

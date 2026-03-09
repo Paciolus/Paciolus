@@ -41,8 +41,8 @@ from shared.monetary import BALANCE_TOLERANCE, quantize_monetary
 
 # Legacy keyword mappings (kept for backward compatibility, will be removed)
 # New system uses weighted heuristics in account_classifier.py
-ASSET_KEYWORDS = ['cash', 'bank', 'receivable', 'inventory', 'prepaid', 'equipment', 'land', 'building', 'vehicle']
-LIABILITY_KEYWORDS = ['payable', 'loan', 'tax', 'accrued', 'unearned', 'deferred', 'debt', 'mortgage', 'note payable']
+ASSET_KEYWORDS = ["cash", "bank", "receivable", "inventory", "prepaid", "equipment", "land", "building", "vehicle"]
+LIABILITY_KEYWORDS = ["payable", "loan", "tax", "accrued", "unearned", "deferred", "debt", "mortgage", "note payable"]
 
 # Balance sheet imbalance severity thresholds
 BS_IMBALANCE_THRESHOLD_LOW = 1_000
@@ -125,8 +125,7 @@ def validate_balance_sheet_equation(category_totals: CategoryTotals) -> dict[str
 
     log_secure_operation(
         "balance_sheet_validation",
-        f"A={total_assets:,.2f}, L+E={liabilities_plus_equity:,.2f}, "
-        f"Diff={difference:,.2f}, Status={status}"
+        f"A={total_assets:,.2f}, L+E={liabilities_plus_equity:,.2f}, Diff={difference:,.2f}, Status={status}",
     )
 
     return {
@@ -157,9 +156,9 @@ def check_balance(df: pd.DataFrame) -> dict[str, Any]:
     credit_col = None
 
     for col_lower, col_original in column_map.items():
-        if 'debit' in col_lower:
+        if "debit" in col_lower:
             debit_col = col_original
-        if 'credit' in col_lower:
+        if "credit" in col_lower:
             credit_col = col_original
 
     if debit_col is None or credit_col is None:
@@ -167,12 +166,12 @@ def check_balance(df: pd.DataFrame) -> dict[str, Any]:
             "status": "error",
             "message": "Could not find 'Debit' and 'Credit' columns in the file",
             "timestamp": datetime.now(UTC).isoformat(),
-            "balanced": False
+            "balanced": False,
         }
 
     # Convert columns to numeric, coercing errors to NaN
-    debits = pd.to_numeric(df[debit_col], errors='coerce').fillna(0)
-    credits = pd.to_numeric(df[credit_col], errors='coerce').fillna(0)
+    debits = pd.to_numeric(df[debit_col], errors="coerce").fillna(0)
+    credits = pd.to_numeric(df[credit_col], errors="coerce").fillna(0)
 
     total_debits = math.fsum(debits.values)
     total_credits = math.fsum(credits.values)
@@ -189,13 +188,15 @@ def check_balance(df: pd.DataFrame) -> dict[str, Any]:
         "difference": float(quantize_monetary(difference)),
         "row_count": len(df),
         "timestamp": datetime.now(UTC).isoformat(),
-        "message": "Trial balance is balanced" if is_balanced else "Trial balance is OUT OF BALANCE"
+        "message": "Trial balance is balanced" if is_balanced else "Trial balance is OUT OF BALANCE",
     }
 
 
 def detect_abnormal_balances(df: pd.DataFrame, materiality_threshold: float = 0.0) -> list[dict[str, Any]]:
     """Detect accounts with abnormal balance directions (e.g., assets with credit balances)."""
-    log_secure_operation("detect_abnormal", f"Scanning for abnormal balances (threshold: ${materiality_threshold:,.2f})")
+    log_secure_operation(
+        "detect_abnormal", f"Scanning for abnormal balances (threshold: ${materiality_threshold:,.2f})"
+    )
 
     abnormal_balances = []
 
@@ -210,7 +211,7 @@ def detect_abnormal_balances(df: pd.DataFrame, materiality_threshold: float = 0.
 
     # Find account name column with expanded search terms
     account_col = None
-    account_search_terms = ['account', 'name', 'description', 'ledger', 'gl', 'item']
+    account_search_terms = ["account", "name", "description", "ledger", "gl", "item"]
     for col_lower, col_original in column_map.items():
         if any(term in col_lower for term in account_search_terms):
             account_col = col_original
@@ -225,9 +226,9 @@ def detect_abnormal_balances(df: pd.DataFrame, materiality_threshold: float = 0.
     debit_col = None
     credit_col = None
     for col_lower, col_original in column_map.items():
-        if 'debit' in col_lower:
+        if "debit" in col_lower:
             debit_col = col_original
-        if 'credit' in col_lower:
+        if "credit" in col_lower:
             credit_col = col_original
 
     log_secure_operation("detect_abnormal_mapping", f"Account: {account_col}, Debit: {debit_col}, Credit: {credit_col}")
@@ -237,8 +238,8 @@ def detect_abnormal_balances(df: pd.DataFrame, materiality_threshold: float = 0.
         return []
 
     # Convert to numeric (on the copy)
-    df[debit_col] = pd.to_numeric(df[debit_col], errors='coerce').fillna(0)
-    df[credit_col] = pd.to_numeric(df[credit_col], errors='coerce').fillna(0)
+    df[debit_col] = pd.to_numeric(df[debit_col], errors="coerce").fillna(0)
+    df[credit_col] = pd.to_numeric(df[credit_col], errors="coerce").fillna(0)
 
     # Performance optimization: Vectorized processing instead of iterrows()
     # Pre-compute all values using pandas vectorized operations
@@ -249,8 +250,8 @@ def detect_abnormal_balances(df: pd.DataFrame, materiality_threshold: float = 0.
     net_balances = debit_amounts - credit_amounts
 
     # Vectorized keyword matching for assets and liabilities
-    asset_pattern = '|'.join(re.escape(kw) for kw in ASSET_KEYWORDS)
-    liability_pattern = '|'.join(re.escape(kw) for kw in LIABILITY_KEYWORDS)
+    asset_pattern = "|".join(re.escape(kw) for kw in ASSET_KEYWORDS)
+    liability_pattern = "|".join(re.escape(kw) for kw in LIABILITY_KEYWORDS)
     is_asset_mask = account_lower.str.contains(asset_pattern, regex=True, na=False)
     is_liability_mask = account_lower.str.contains(liability_pattern, regex=True, na=False)
 
@@ -274,18 +275,23 @@ def detect_abnormal_balances(df: pd.DataFrame, materiality_threshold: float = 0.
         materiality_status = "material" if is_material else "immaterial"
 
         if not is_material:
-            log_secure_operation("indistinct_balance", f"Indistinct: {account_name} (${abs_amount:,.2f} < ${materiality_threshold:,.2f})")
+            log_secure_operation(
+                "below_materiality",
+                f"Below materiality: {account_name} (${abs_amount:,.2f} < ${materiality_threshold:,.2f})",
+            )
 
-        abnormal_balances.append({
-            "account": account_name,
-            "type": "Asset",
-            "issue": "Net Credit balance (should be Debit)",
-            "amount": round(abs_amount, 2),
-            "debit": round(debit_amount, 2),
-            "credit": round(credit_amount, 2),
-            "materiality": materiality_status,
-            "suggestions": [],  # Sprint 31: Legacy function, no suggestions
-        })
+        abnormal_balances.append(
+            {
+                "account": account_name,
+                "type": "Asset",
+                "issue": "Net Credit balance (should be Debit)",
+                "amount": round(abs_amount, 2),
+                "debit": round(debit_amount, 2),
+                "credit": round(credit_amount, 2),
+                "materiality": materiality_status,
+                "suggestions": [],  # Sprint 31: Legacy function, no suggestions
+            }
+        )
 
     for i in liability_abnormal[liability_abnormal].index:
         net_balance = net_balances[i]
@@ -297,24 +303,29 @@ def detect_abnormal_balances(df: pd.DataFrame, materiality_threshold: float = 0.
         materiality_status = "material" if is_material else "immaterial"
 
         if not is_material:
-            log_secure_operation("indistinct_balance", f"Indistinct: {account_name} (${abs_amount:,.2f} < ${materiality_threshold:,.2f})")
+            log_secure_operation(
+                "below_materiality",
+                f"Below materiality: {account_name} (${abs_amount:,.2f} < ${materiality_threshold:,.2f})",
+            )
 
-        abnormal_balances.append({
-            "account": account_name,
-            "type": "Liability",
-            "issue": "Net Debit balance (should be Credit)",
-            "amount": round(abs_amount, 2),
-            "debit": round(debit_amount, 2),
-            "credit": round(credit_amount, 2),
-            "materiality": materiality_status,
-            "suggestions": [],  # Sprint 31: Legacy function, no suggestions
-        })
+        abnormal_balances.append(
+            {
+                "account": account_name,
+                "type": "Liability",
+                "issue": "Net Debit balance (should be Credit)",
+                "amount": round(abs_amount, 2),
+                "debit": round(debit_amount, 2),
+                "credit": round(credit_amount, 2),
+                "materiality": materiality_status,
+                "suggestions": [],  # Sprint 31: Legacy function, no suggestions
+            }
+        )
 
     material_count = sum(1 for ab in abnormal_balances if ab.get("materiality") == "material")
     immaterial_count = len(abnormal_balances) - material_count
     log_secure_operation(
         "detect_abnormal_complete",
-        f"Found {len(abnormal_balances)} abnormal balances ({material_count} material, {immaterial_count} indistinct)"
+        f"Found {len(abnormal_balances)} abnormal balances ({material_count} material, {immaterial_count} below materiality)",
     )
 
     return abnormal_balances
@@ -329,7 +340,7 @@ class StreamingAuditor:
         chunk_size: int = DEFAULT_CHUNK_SIZE,
         progress_callback: Optional[Callable[[int, str], None]] = None,
         classifier: Optional[AccountClassifier] = None,
-        column_mapping: Optional[ColumnMapping] = None
+        column_mapping: Optional[ColumnMapping] = None,
     ):
         self.materiality_threshold = materiality_threshold
         self.chunk_size = chunk_size
@@ -402,7 +413,7 @@ class StreamingAuditor:
 
             log_secure_operation(
                 "streaming_columns_user",
-                f"User mapping - Account: {self.account_col}, Debit: {self.debit_col}, Credit: {self.credit_col}"
+                f"User mapping - Account: {self.account_col}, Debit: {self.debit_col}, Credit: {self.credit_col}",
             )
 
             return self.debit_col is not None and self.credit_col is not None
@@ -421,7 +432,7 @@ class StreamingAuditor:
             f"Auto-detected - Account: {self.account_col} ({self.column_detection.account_confidence:.0%}), "
             f"Debit: {self.debit_col} ({self.column_detection.debit_confidence:.0%}), "
             f"Credit: {self.credit_col} ({self.column_detection.credit_confidence:.0%}), "
-            f"Overall: {self.column_detection.overall_confidence:.0%}"
+            f"Overall: {self.column_detection.overall_confidence:.0%}",
         )
 
         if self.column_detection.detection_notes:
@@ -445,8 +456,8 @@ class StreamingAuditor:
             return
 
         # Convert to numeric
-        debits = pd.to_numeric(chunk[self.debit_col], errors='coerce').fillna(0)
-        credits = pd.to_numeric(chunk[self.credit_col], errors='coerce').fillna(0)
+        debits = pd.to_numeric(chunk[self.debit_col], errors="coerce").fillna(0)
+        credits = pd.to_numeric(chunk[self.credit_col], errors="coerce").fillna(0)
 
         # Collect per-chunk sums for compensated summation in get_balance_result()
         self._debit_chunks.append(math.fsum(debits.values))
@@ -458,22 +469,19 @@ class StreamingAuditor:
         # This reduces O(n) row-by-row iteration to O(unique_accounts) after groupby
         if self.account_col:
             # Create temporary DataFrame for vectorized aggregation
-            temp_df = pd.DataFrame({
-                'account': chunk[self.account_col].astype(str).str.strip(),
-                'debit': debits.values,
-                'credit': credits.values
-            })
+            temp_df = pd.DataFrame(
+                {
+                    "account": chunk[self.account_col].astype(str).str.strip(),
+                    "debit": debits.values,
+                    "credit": credits.values,
+                }
+            )
 
             # Vectorized groupby aggregation - O(n) but highly optimized in pandas
-            grouped = temp_df.groupby('account', as_index=False).agg({
-                'debit': 'sum',
-                'credit': 'sum'
-            })
+            grouped = temp_df.groupby("account", as_index=False).agg({"debit": "sum", "credit": "sum"})
 
             # Merge into running totals - only iterates unique accounts (typically <500)
-            for account_name, debit_sum, credit_sum in zip(
-                grouped['account'], grouped['debit'], grouped['credit']
-            ):
+            for account_name, debit_sum, credit_sum in zip(grouped["account"], grouped["debit"], grouped["credit"]):
                 if account_name not in self.account_balances:
                     self.account_balances[account_name] = {"debit": 0.0, "credit": 0.0}
                 self.account_balances[account_name]["debit"] += float(debit_sum)
@@ -505,14 +513,14 @@ class StreamingAuditor:
             "difference": float(quantize_monetary(difference)),
             "row_count": self.total_rows,
             "timestamp": datetime.now(UTC).isoformat(),
-            "message": "Trial balance is balanced" if is_balanced else "Trial balance is OUT OF BALANCE"
+            "message": "Trial balance is balanced" if is_balanced else "Trial balance is OUT OF BALANCE",
         }
 
     def get_abnormal_balances(self) -> list[dict[str, Any]]:
         """Detect abnormal balances using weighted heuristic classification."""
         log_secure_operation(
             "streaming_abnormal",
-            f"Analyzing {len(self.account_balances)} unique accounts (threshold: ${self.materiality_threshold:,.2f})"
+            f"Analyzing {len(self.account_balances)} unique accounts (threshold: ${self.materiality_threshold:,.2f})",
         )
 
         abnormal_balances = []
@@ -552,47 +560,51 @@ class StreamingAuditor:
 
                 if not is_material:
                     log_secure_operation(
-                        "indistinct_balance",
-                        f"Indistinct: {account_name} (${abs_amount:,.2f} < ${self.materiality_threshold:,.2f})"
+                        "below_materiality",
+                        f"Below materiality: {account_name} (${abs_amount:,.2f} < ${self.materiality_threshold:,.2f})",
                     )
 
-                abnormal_balances.append({
-                    # EXISTING FIELDS (backward compatible)
-                    "account": account_name,
-                    "type": CATEGORY_DISPLAY_NAMES.get(result.category, "Unknown"),
-                    "issue": f"Net {actual_balance} balance (should be {expected_balance})",
-                    "amount": round(abs_amount, 2),
-                    "debit": round(debit_amount, 2),
-                    "credit": round(credit_amount, 2),
-                    "materiality": materiality_status,
-                    # NEW FIELDS (Day 9 - additive)
-                    "category": result.category.value,
-                    "confidence": result.confidence,
-                    "matched_keywords": result.matched_keywords,
-                    "requires_review": result.requires_review,
-                    # Day 10: Anomaly categorization for Risk Dashboard
-                    "anomaly_type": "natural_balance_violation",
-                    "expected_balance": expected_balance.lower(),
-                    "actual_balance": actual_balance.lower(),
-                    "severity": "high" if is_material else "low",
-                    # Sprint 31: Classification suggestions for low-confidence accounts
-                    "suggestions": [
-                        {
-                            "category": s.category.value,
-                            "confidence": s.confidence,
-                            "reason": s.reason,
-                            "matched_keywords": s.matched_keywords,
-                        }
-                        for s in result.suggestions
-                    ] if result.suggestions else [],
-                })
+                abnormal_balances.append(
+                    {
+                        # EXISTING FIELDS (backward compatible)
+                        "account": account_name,
+                        "type": CATEGORY_DISPLAY_NAMES.get(result.category, "Unknown"),
+                        "issue": f"Net {actual_balance} balance (should be {expected_balance})",
+                        "amount": round(abs_amount, 2),
+                        "debit": round(debit_amount, 2),
+                        "credit": round(credit_amount, 2),
+                        "materiality": materiality_status,
+                        # NEW FIELDS (Day 9 - additive)
+                        "category": result.category.value,
+                        "confidence": result.confidence,
+                        "matched_keywords": result.matched_keywords,
+                        "requires_review": result.requires_review,
+                        # Day 10: Anomaly categorization for Risk Dashboard
+                        "anomaly_type": "natural_balance_violation",
+                        "expected_balance": expected_balance.lower(),
+                        "actual_balance": actual_balance.lower(),
+                        "severity": "high" if is_material else "low",
+                        # Sprint 31: Classification suggestions for low-confidence accounts
+                        "suggestions": [
+                            {
+                                "category": s.category.value,
+                                "confidence": s.confidence,
+                                "reason": s.reason,
+                                "matched_keywords": s.matched_keywords,
+                            }
+                            for s in result.suggestions
+                        ]
+                        if result.suggestions
+                        else [],
+                    }
+                )
 
         material_count = sum(1 for ab in abnormal_balances if ab.get("materiality") == "material")
         immaterial_count = len(abnormal_balances) - material_count
         log_secure_operation(
             "streaming_abnormal_complete",
-            f"Found {len(abnormal_balances)} abnormal balances ({material_count} material, {immaterial_count} indistinct). "
-            f"Classification: {classification_stats}"
+            f"Found {len(abnormal_balances)} abnormal balances ({material_count} material, {immaterial_count} below materiality). "
+            f"Classification: {classification_stats}",
         )
 
         # Store stats for response
@@ -602,7 +614,7 @@ class StreamingAuditor:
 
     def get_classification_summary(self) -> dict[str, int]:
         """Get classification confidence summary after get_abnormal_balances() is called."""
-        return getattr(self, '_classification_stats', {})
+        return getattr(self, "_classification_stats", {})
 
     def detect_suspense_accounts(self) -> list[dict[str, Any]]:
         """
@@ -620,8 +632,7 @@ class StreamingAuditor:
             List of suspense account anomalies with confidence scores
         """
         log_secure_operation(
-            "suspense_detection",
-            f"Scanning {len(self.account_balances)} accounts for suspense indicators"
+            "suspense_detection", f"Scanning {len(self.account_balances)} accounts for suspense indicators"
         )
 
         suspense_accounts: list[dict[str, Any]] = []
@@ -664,32 +675,33 @@ class StreamingAuditor:
                 # Get classification for context
                 result = self.classifier.classify(account_name, net_balance)
 
-                suspense_accounts.append({
-                    "account": account_name,
-                    "type": CATEGORY_DISPLAY_NAMES.get(result.category, "Unknown"),
-                    "issue": "Suspense/clearing account with outstanding balance",
-                    "amount": round(abs_amount, 2),
-                    "debit": round(debit_amount, 2),
-                    "credit": round(credit_amount, 2),
-                    "materiality": materiality_status,
-                    "category": result.category.value,
-                    "confidence": confidence,
-                    "matched_keywords": matched_keywords,
-                    "requires_review": True,  # Suspense accounts always need review
-                    "anomaly_type": "suspense_account",
-                    "expected_balance": "zero",
-                    "actual_balance": "debit" if net_balance > 0 else "credit",
-                    "severity": "high" if is_material else "medium",  # Suspense is at least medium
-                    "suggestions": [],
-                    "recommendation": (
-                        "Investigate and clear this suspense account. "
-                        "Determine proper classification for the outstanding balance."
-                    ),
-                })
+                suspense_accounts.append(
+                    {
+                        "account": account_name,
+                        "type": CATEGORY_DISPLAY_NAMES.get(result.category, "Unknown"),
+                        "issue": "Suspense/clearing account with outstanding balance",
+                        "amount": round(abs_amount, 2),
+                        "debit": round(debit_amount, 2),
+                        "credit": round(credit_amount, 2),
+                        "materiality": materiality_status,
+                        "category": result.category.value,
+                        "confidence": confidence,
+                        "matched_keywords": matched_keywords,
+                        "requires_review": True,  # Suspense accounts always need review
+                        "anomaly_type": "suspense_account",
+                        "expected_balance": "zero",
+                        "actual_balance": "debit" if net_balance > 0 else "credit",
+                        "severity": "high" if is_material else "medium",  # Suspense is at least medium
+                        "suggestions": [],
+                        "recommendation": (
+                            "Investigate and clear this suspense account. "
+                            "Determine proper classification for the outstanding balance."
+                        ),
+                    }
+                )
 
         log_secure_operation(
-            "suspense_detection_complete",
-            f"Found {len(suspense_accounts)} suspense accounts with balances"
+            "suspense_detection_complete", f"Found {len(suspense_accounts)} suspense accounts with balances"
         )
 
         return suspense_accounts
@@ -711,8 +723,7 @@ class StreamingAuditor:
             List of concentration risk anomalies with percentage and severity
         """
         log_secure_operation(
-            "concentration_detection",
-            f"Analyzing {len(self.account_balances)} accounts for concentration risk"
+            "concentration_detection", f"Analyzing {len(self.account_balances)} accounts for concentration risk"
         )
 
         concentration_risks: list[dict[str, Any]] = []
@@ -722,9 +733,7 @@ class StreamingAuditor:
         category_accounts: dict[AccountCategory, list[tuple[str, float, float, float]]] = {
             cat: [] for cat in CONCENTRATION_CATEGORIES
         }
-        category_totals_dec: dict[AccountCategory, Decimal] = {
-            cat: Decimal('0') for cat in CONCENTRATION_CATEGORIES
-        }
+        category_totals_dec: dict[AccountCategory, Decimal] = {cat: Decimal("0") for cat in CONCENTRATION_CATEGORIES}
 
         for account_name, balances in self.account_balances.items():
             debit_amount = balances["debit"]
@@ -740,9 +749,7 @@ class StreamingAuditor:
 
             if result.category in CONCENTRATION_CATEGORIES:
                 abs_balance = abs(net_balance)
-                category_accounts[result.category].append(
-                    (account_name, abs_balance, debit_amount, credit_amount)
-                )
+                category_accounts[result.category].append((account_name, abs_balance, debit_amount, credit_amount))
                 category_totals_dec[result.category] += Decimal(str(abs_balance))
 
         # Analyze concentration for each category
@@ -768,36 +775,37 @@ class StreamingAuditor:
                     is_material = abs_balance >= self.materiality_threshold
                     materiality_status = "material" if is_material else "immaterial"
 
-                    concentration_risks.append({
-                        "account": account_name,
-                        "type": CATEGORY_DISPLAY_NAMES.get(category, "Unknown"),
-                        "issue": f"Represents {concentration_pct:.1%} of total {category.value}s",
-                        "amount": round(abs_balance, 2),
-                        "debit": round(debit_amount, 2),
-                        "credit": round(credit_amount, 2),
-                        "materiality": materiality_status,
-                        "category": category.value,
-                        "confidence": concentration_pct,  # Use concentration % as confidence
-                        "matched_keywords": [],
-                        "requires_review": True,
-                        "anomaly_type": f"{category.value}_concentration",
-                        "concentration_percent": round(concentration_pct * 100, 1),
-                        "category_total": round(float(total_dec), 2),
-                        "severity": severity,
-                        "suggestions": [],
-                        "recommendation": (
-                            f"This account represents {concentration_pct:.1%} of total {category.value}s. "
-                            "Review for over-reliance on a single counterparty and consider "
-                            "the impact if this balance becomes uncollectible or disputed."
-                        ),
-                    })
+                    concentration_risks.append(
+                        {
+                            "account": account_name,
+                            "type": CATEGORY_DISPLAY_NAMES.get(category, "Unknown"),
+                            "issue": f"Represents {concentration_pct:.1%} of total {category.value}s",
+                            "amount": round(abs_balance, 2),
+                            "debit": round(debit_amount, 2),
+                            "credit": round(credit_amount, 2),
+                            "materiality": materiality_status,
+                            "category": category.value,
+                            "confidence": concentration_pct,  # Use concentration % as confidence
+                            "matched_keywords": [],
+                            "requires_review": True,
+                            "anomaly_type": f"{category.value}_concentration",
+                            "concentration_percent": round(concentration_pct * 100, 1),
+                            "category_total": round(float(total_dec), 2),
+                            "severity": severity,
+                            "suggestions": [],
+                            "recommendation": (
+                                f"This account represents {concentration_pct:.1%} of total {category.value}s. "
+                                "Review for over-reliance on a single counterparty and consider "
+                                "the impact if this balance becomes uncollectible or disputed."
+                            ),
+                        }
+                    )
 
         # Sort by concentration percentage (highest first)
         concentration_risks.sort(key=lambda x: x["concentration_percent"], reverse=True)
 
         log_secure_operation(
-            "concentration_detection_complete",
-            f"Found {len(concentration_risks)} concentration risk accounts"
+            "concentration_detection_complete", f"Found {len(concentration_risks)} concentration risk accounts"
         )
 
         return concentration_risks
@@ -821,8 +829,7 @@ class StreamingAuditor:
             List of rounding anomalies with pattern type and severity
         """
         log_secure_operation(
-            "rounding_detection",
-            f"Analyzing {len(self.account_balances)} accounts for rounding anomalies"
+            "rounding_detection", f"Analyzing {len(self.account_balances)} accounts for rounding anomalies"
         )
 
         rounding_anomalies: list[dict[str, Any]] = []
@@ -839,9 +846,7 @@ class StreamingAuditor:
 
             # Check if account should be excluded (legitimate round amounts)
             account_lower = account_name.lower()
-            is_excluded = any(
-                keyword in account_lower for keyword in ROUNDING_EXCLUDE_KEYWORDS
-            )
+            is_excluded = any(keyword in account_lower for keyword in ROUNDING_EXCLUDE_KEYWORDS)
             if is_excluded:
                 continue
 
@@ -865,29 +870,31 @@ class StreamingAuditor:
                     else:
                         round_desc = f"${abs_balance:,.0f}"
 
-                    rounding_anomalies.append({
-                        "account": account_name,
-                        "type": CATEGORY_DISPLAY_NAMES.get(result.category, "Unknown"),
-                        "issue": f"Exactly round amount: {round_desc}",
-                        "amount": round(abs_balance, 2),
-                        "debit": round(debit_amount, 2),
-                        "credit": round(credit_amount, 2),
-                        "materiality": materiality_status,
-                        "category": result.category.value,
-                        "confidence": 0.7 if pattern_severity == "high" else 0.5,
-                        "matched_keywords": [],
-                        "requires_review": True,
-                        "anomaly_type": "rounding_anomaly",
-                        "rounding_pattern": pattern_name,
-                        "rounding_divisor": divisor,
-                        "severity": pattern_severity if is_material else "low",
-                        "suggestions": [],
-                        "recommendation": (
-                            f"This balance is an exactly round number ({round_desc}). "
-                            "Verify this represents an actual transaction amount and not "
-                            "an estimate, placeholder, or potential journal entry manipulation."
-                        ),
-                    })
+                    rounding_anomalies.append(
+                        {
+                            "account": account_name,
+                            "type": CATEGORY_DISPLAY_NAMES.get(result.category, "Unknown"),
+                            "issue": f"Exactly round amount: {round_desc}",
+                            "amount": round(abs_balance, 2),
+                            "debit": round(debit_amount, 2),
+                            "credit": round(credit_amount, 2),
+                            "materiality": materiality_status,
+                            "category": result.category.value,
+                            "confidence": 0.7 if pattern_severity == "high" else 0.5,
+                            "matched_keywords": [],
+                            "requires_review": True,
+                            "anomaly_type": "rounding_anomaly",
+                            "rounding_pattern": pattern_name,
+                            "rounding_divisor": divisor,
+                            "severity": pattern_severity if is_material else "low",
+                            "suggestions": [],
+                            "recommendation": (
+                                f"This balance is an exactly round number ({round_desc}). "
+                                "Verify this represents an actual transaction amount and not "
+                                "an estimate, placeholder, or potential journal entry manipulation."
+                            ),
+                        }
+                    )
 
                     # Only flag the most significant pattern match
                     break
@@ -897,10 +904,7 @@ class StreamingAuditor:
         if len(rounding_anomalies) > ROUNDING_MAX_ANOMALIES:
             rounding_anomalies = rounding_anomalies[:ROUNDING_MAX_ANOMALIES]
 
-        log_secure_operation(
-            "rounding_detection_complete",
-            f"Found {len(rounding_anomalies)} rounding anomalies"
-        )
+        log_secure_operation("rounding_detection_complete", f"Found {len(rounding_anomalies)} rounding anomalies")
 
         return rounding_anomalies
 
@@ -1014,35 +1018,21 @@ def _build_risk_summary(abnormal_balances: list[dict[str, Any]]) -> dict[str, An
     medium_severity = sum(1 for ab in abnormal_balances if ab.get("severity") == "medium")
     low_severity = len(abnormal_balances) - high_severity - medium_severity
     suspense_count = sum(
-        1 for ab in abnormal_balances
-        if ab.get("anomaly_type") == "suspense_account" or ab.get("is_suspense_account")
+        1 for ab in abnormal_balances if ab.get("anomaly_type") == "suspense_account" or ab.get("is_suspense_account")
     )
     concentration_count = sum(
-        1 for ab in abnormal_balances
-        if (ab.get("anomaly_type", "").endswith("_concentration"))
-        or ab.get("has_concentration_risk")
+        1
+        for ab in abnormal_balances
+        if (ab.get("anomaly_type", "").endswith("_concentration")) or ab.get("has_concentration_risk")
     )
     rounding_count = sum(
-        1 for ab in abnormal_balances
-        if ab.get("anomaly_type") == "rounding_anomaly" or ab.get("has_rounding_anomaly")
+        1 for ab in abnormal_balances if ab.get("anomaly_type") == "rounding_anomaly" or ab.get("has_rounding_anomaly")
     )
     # Sub-type counts for concentration categories
-    revenue_concentration = sum(
-        1 for ab in abnormal_balances
-        if ab.get("anomaly_type") == "revenue_concentration"
-    )
-    asset_concentration = sum(
-        1 for ab in abnormal_balances
-        if ab.get("anomaly_type") == "asset_concentration"
-    )
-    liability_concentration = sum(
-        1 for ab in abnormal_balances
-        if ab.get("anomaly_type") == "liability_concentration"
-    )
-    expense_concentration = sum(
-        1 for ab in abnormal_balances
-        if ab.get("anomaly_type") == "expense_concentration"
-    )
+    revenue_concentration = sum(1 for ab in abnormal_balances if ab.get("anomaly_type") == "revenue_concentration")
+    asset_concentration = sum(1 for ab in abnormal_balances if ab.get("anomaly_type") == "asset_concentration")
+    liability_concentration = sum(1 for ab in abnormal_balances if ab.get("anomaly_type") == "liability_concentration")
+    expense_concentration = sum(1 for ab in abnormal_balances if ab.get("anomaly_type") == "expense_concentration")
     return {
         "total_anomalies": len(abnormal_balances),
         "high_severity": high_severity,
@@ -1050,8 +1040,7 @@ def _build_risk_summary(abnormal_balances: list[dict[str, Any]]) -> dict[str, An
         "low_severity": low_severity,
         "anomaly_types": {
             "natural_balance_violation": sum(
-                1 for ab in abnormal_balances
-                if ab.get("anomaly_type") == "natural_balance_violation"
+                1 for ab in abnormal_balances if ab.get("anomaly_type") == "natural_balance_violation"
             ),
             "suspense_account": suspense_count,
             "concentration_risk": concentration_count,
@@ -1060,7 +1049,7 @@ def _build_risk_summary(abnormal_balances: list[dict[str, Any]]) -> dict[str, An
             "liability_concentration": liability_concentration,
             "expense_concentration": expense_concentration,
             "rounding_anomaly": rounding_count,
-        }
+        },
     }
 
 
@@ -1071,7 +1060,7 @@ def audit_trial_balance_streaming(
     chunk_size: int = DEFAULT_CHUNK_SIZE,
     progress_callback: Optional[Callable[[int, str], None]] = None,
     account_type_overrides: Optional[dict[str, str]] = None,
-    column_mapping: Optional[dict[str, str]] = None
+    column_mapping: Optional[dict[str, str]] = None,
 ) -> dict[str, Any]:
     """Perform a complete streaming audit of a trial balance file."""
     log_secure_operation("streaming_audit_start", f"Starting streaming audit: {filename}")
@@ -1080,25 +1069,21 @@ def audit_trial_balance_streaming(
     classifier = create_classifier(account_type_overrides)
     if account_type_overrides:
         log_secure_operation(
-            "classifier_overrides",
-            f"Using {len(account_type_overrides)} user-provided account type overrides"
+            "classifier_overrides", f"Using {len(account_type_overrides)} user-provided account type overrides"
         )
 
     # Parse column mapping if provided (Day 9.2 - Zero-Storage: session-only)
     parsed_column_mapping: Optional[ColumnMapping] = None
     if column_mapping:
         parsed_column_mapping = ColumnMapping.from_dict(column_mapping)
-        log_secure_operation(
-            "column_mapping_override",
-            f"Using user-provided column mapping: {column_mapping}"
-        )
+        log_secure_operation("column_mapping_override", f"Using user-provided column mapping: {column_mapping}")
 
     auditor = StreamingAuditor(
         materiality_threshold=materiality_threshold,
         chunk_size=chunk_size,
         progress_callback=progress_callback,
         classifier=classifier,
-        column_mapping=parsed_column_mapping
+        column_mapping=parsed_column_mapping,
     )
 
     try:
@@ -1140,20 +1125,18 @@ def audit_trial_balance_streaming(
         for acct_name in auditor.account_balances:
             cls_result = auditor.classifier.classify(acct_name, 0)
             account_classifications[acct_name] = cls_result.category.value
-        cv_result = run_classification_validation(
-            auditor.account_balances, account_classifications
-        )
+        cv_result = run_classification_validation(auditor.account_balances, account_classifications)
         result["classification_quality"] = cv_result.to_dict()
 
         # Sprint 287: Population Profile
         from population_profile_engine import compute_population_profile
-        pop_profile = compute_population_profile(
-            auditor.account_balances, account_classifications
-        )
+
+        pop_profile = compute_population_profile(auditor.account_balances, account_classifications)
         result["population_profile"] = pop_profile.to_dict()
 
         # Sprint 289: Expense Category Analytical Procedures
         from expense_category_engine import compute_expense_categories
+
         category_totals_pre = auditor.get_category_totals()
         expense_analytics = compute_expense_categories(
             auditor.account_balances,
@@ -1165,6 +1148,7 @@ def audit_trial_balance_streaming(
 
         # Sprint 290: Accrual Completeness Estimator
         from accrual_completeness_engine import compute_accrual_completeness
+
         accrual_report = compute_accrual_completeness(
             auditor.account_balances,
             account_classifications,
@@ -1173,6 +1157,7 @@ def audit_trial_balance_streaming(
 
         # Sprint 357: Lease Account Diagnostic (IFRS 16 / ASC 842)
         from lease_diagnostic_engine import compute_lease_diagnostic
+
         lease_report = compute_lease_diagnostic(
             auditor.account_balances,
             account_classifications,
@@ -1182,6 +1167,7 @@ def audit_trial_balance_streaming(
 
         # Sprint 358: Cutoff Risk Indicator (ISA 501)
         from cutoff_risk_engine import compute_cutoff_risk
+
         cutoff_report = compute_cutoff_risk(
             auditor.account_balances,
             account_classifications,
@@ -1191,6 +1177,7 @@ def audit_trial_balance_streaming(
 
         # Sprint 360: Going Concern Indicator Profile (ISA 570)
         from going_concern_engine import compute_going_concern_profile
+
         gc_totals = category_totals_pre
         gc_report = compute_going_concern_profile(
             total_assets=gc_totals.total_assets,
@@ -1239,7 +1226,9 @@ def audit_trial_balance_streaming(
             f"Audit complete. Rows: {result['row_count']}, Balanced: {result['balanced']}, "
             f"Material risks: {result['material_count']}, "
             f"BS Equation: {'✓' if balance_sheet_validation['is_balanced'] else '✗'}, "
-            f"Column confidence: {col_detection.overall_confidence:.0%}" if col_detection else "N/A"
+            f"Column confidence: {col_detection.overall_confidence:.0%}"
+            if col_detection
+            else "N/A",
         )
 
         return result
@@ -1259,15 +1248,14 @@ def audit_trial_balance_multi_sheet(
     chunk_size: int = DEFAULT_CHUNK_SIZE,
     progress_callback: Optional[Callable[[int, str], None]] = None,
     account_type_overrides: Optional[dict[str, str]] = None,
-    column_mapping: Optional[dict[str, str]] = None
+    column_mapping: Optional[dict[str, str]] = None,
 ) -> dict[str, Any]:
     """Perform a multi-sheet consolidated audit, aggregating totals across selected sheets.
 
     Sprint 25 Fix: Column detection now runs independently for each sheet.
     """
     log_secure_operation(
-        "multi_sheet_audit_start",
-        f"Starting multi-sheet audit: {filename} ({len(selected_sheets)} sheets)"
+        "multi_sheet_audit_start", f"Starting multi-sheet audit: {filename} ({len(selected_sheets)} sheets)"
     )
 
     # Create classifier with any user overrides
@@ -1308,7 +1296,7 @@ def audit_trial_balance_multi_sheet(
                 chunk_size=chunk_size,
                 progress_callback=progress_callback,
                 classifier=classifier,
-                column_mapping=parsed_column_mapping  # User mapping overrides auto-detection
+                column_mapping=parsed_column_mapping,  # User mapping overrides auto-detection
             )
 
             # Process this sheet's chunks
@@ -1327,9 +1315,7 @@ def audit_trial_balance_multi_sheet(
             sheet_suspense = auditor.detect_suspense_accounts()
             sheet_concentration = auditor.detect_concentration_risk()
             sheet_rounding = auditor.detect_rounding_anomalies()
-            sheet_abnormals = _merge_anomalies(
-                sheet_abnormals, sheet_suspense, sheet_concentration, sheet_rounding
-            )
+            sheet_abnormals = _merge_anomalies(sheet_abnormals, sheet_suspense, sheet_concentration, sheet_rounding)
 
             # Add sheet identifier to each abnormal balance
             for entry in sheet_abnormals:
@@ -1344,7 +1330,7 @@ def audit_trial_balance_multi_sheet(
                 current_columns = (
                     sheet_col_detection.account_column,
                     sheet_col_detection.debit_column,
-                    sheet_col_detection.credit_column
+                    sheet_col_detection.credit_column,
                 )
 
                 if first_sheet_columns is None:
@@ -1420,25 +1406,22 @@ def audit_trial_balance_multi_sheet(
             "difference": round(consolidated_difference, 2),
             "row_count": consolidated_rows,
             "timestamp": datetime.now(UTC).isoformat(),
-            "message": "Consolidated trial balance is balanced" if is_consolidated_balanced
-                       else "Consolidated trial balance is OUT OF BALANCE",
-
+            "message": "Consolidated trial balance is balanced"
+            if is_consolidated_balanced
+            else "Consolidated trial balance is OUT OF BALANCE",
             # Multi-sheet specific fields
             "is_consolidated": True,
             "sheet_count": len(selected_sheets),
             "selected_sheets": selected_sheets,
             "sheet_results": sheet_results,
-
             # Anomaly data
             "abnormal_balances": all_abnormal_balances,
             "materiality_threshold": materiality_threshold,
             "material_count": material_count,
             "immaterial_count": immaterial_count,
             "has_risk_alerts": material_count > 0,
-
             # Risk summary
             "risk_summary": risk_summary,
-
             # Sprint 25: Column detection per sheet + primary for backward compat
             "column_detection": primary_col_detection,
             "sheet_column_detections": sheet_column_detections,
@@ -1470,13 +1453,16 @@ def audit_trial_balance_multi_sheet(
 
         # Sprint 287: Population Profile (consolidated across all sheets)
         from population_profile_engine import compute_population_profile
+
         pop_profile = compute_population_profile(consolidated_account_balances)
         result["population_profile"] = pop_profile.to_dict()
         # Also add classification_quality stub for multi-sheet (not computed per-sheet)
         if "classification_quality" not in result:
             result["classification_quality"] = {
-                "issues": [], "quality_score": 100.0,
-                "issue_counts": {}, "total_issues": 0,
+                "issues": [],
+                "quality_score": 100.0,
+                "issue_counts": {},
+                "total_issues": 0,
             }
 
         log_secure_operation(
@@ -1484,7 +1470,7 @@ def audit_trial_balance_multi_sheet(
             f"Consolidated audit complete. {len(selected_sheets)} sheets, "
             f"{consolidated_rows} total rows, Balanced: {is_consolidated_balanced}, "
             f"BS Equation: {'✓' if balance_sheet_validation['is_balanced'] else '✗'}, "
-            f"Column mismatches: {len(column_order_warnings)}"
+            f"Column mismatches: {len(column_order_warnings)}",
         )
 
         return result
