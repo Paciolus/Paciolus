@@ -259,4 +259,13 @@ tools:
 
   anomaly_summary:
     data_description: "engagement-level diagnostic results"
-    references: []
+    references:
+      - body: "AICPA"
+        statement: "AU-C § 520"
+        topic: "Analytical Procedures"
+        paragraph: "Various"
+        status: "Current"
+      - statement: "Statement No. 62"
+        topic: "Codification of Accounting and Financial Reporting Guidance"
+        paragraph: "Various"
+        status: "Current"

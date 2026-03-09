@@ -283,4 +283,21 @@ tools:
 
   anomaly_summary:
     data_description: "engagement-level diagnostic results"
-    references: []
+    references:
+      - body: "AICPA"
+        codification: "AU-C § 520"
+        topic: "Analytical Procedures"
+        paragraph: "Various"
+        status: "Current"
+      - codification: "ASC 275-10"
+        topic: "Risks and Uncertainties — Overall"
+        paragraph: "Various"
+        status: "Current"
+      - codification: "ASC 850-10"
+        topic: "Related Party Disclosures — Overall"
+        paragraph: "Various"
+        status: "Current"
+      - codification: "ASC 205-40"
+        topic: "Presentation of Financial Statements — Going Concern"
+        paragraph: "Various"
+        status: "Current"

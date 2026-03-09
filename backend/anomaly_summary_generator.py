@@ -853,35 +853,6 @@ class AnomalySummaryGenerator:
                 )
             )
 
-        signoff_data = [
-            ["Role", "Name", "Signature", "Date"],
-            ["Prepared by", "", "", ""],
-            ["Reviewed by", "", "", ""],
-            ["Partner", "", "", ""],
-        ]
-
-        signoff_table = Table(
-            signoff_data,
-            colWidths=[1.2 * inch, 2.0 * inch, 2.0 * inch, 1.2 * inch],
-        )
-        signoff_table.setStyle(
-            TableStyle(
-                [
-                    ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-                    ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
-                    ("FONTSIZE", (0, 0), (-1, -1), 9),
-                    ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-                    ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-                    ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                    ("TOPPADDING", (0, 0), (-1, -1), 6),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-                    ("LEFTPADDING", (0, 0), (0, -1), 0),
-                ]
-            )
-        )
-        story.append(signoff_table)
-
         # No trailing standalone disclaimer — prevents phantom blank page.
         # The disclaimer is already rendered via draw_page_footer on every page
         # and via the banner at the top of page 1.
