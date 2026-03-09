@@ -27,15 +27,27 @@ SUGGESTED_PROCEDURES: dict[str, str] = {
         "concentration reflects a single vendor or contract that warrants "
         "additional scrutiny."
     ),
+    "credit_balance_ar": (
+        "Investigate credit balance in the receivable account; determine whether "
+        "this represents unapplied customer payments, credit memos awaiting offset, "
+        "or a posting error. Obtain the customer subledger detail and confirm "
+        "resolution timing."
+    ),
     "credit_balance_asset": (
         "Investigate credit balance in an asset account; confirm whether this "
         "represents an overpayment, unapplied credit memo, or posting error. "
         "Obtain supporting documentation."
     ),
-    "round_dollar": (
-        "Inspect supporting documentation for round-dollar transactions; confirm "
-        "amounts reflect actual invoiced amounts and were not estimated or "
-        "manually entered without support."
+    "round_dollar_single": (
+        "Inspect supporting documentation for this round-dollar balance; confirm "
+        "the amount reflects an actual invoiced or contracted value and was not "
+        "estimated or manually entered as a placeholder."
+    ),
+    "round_dollar_repeated": (
+        "Investigate the repeated round-dollar transaction pattern; determine whether "
+        "the recurring amount reflects a standing order, automated entry, or estimation "
+        "practice. Obtain supporting documentation for a sample of individual transactions "
+        "to confirm amounts are transaction-based rather than estimated."
     ),
     "concentration_intercompany": (
         "Obtain intercompany agreement and confirm balance is supported; assess "
@@ -125,7 +137,14 @@ def get_tb_suggested_procedure(anomaly: dict, *, is_material: bool = False) -> s
         return procedures["suspense"]
 
     if anomaly_type == "rounding_anomaly":
-        return procedures["round_dollar"]
+        if is_material:
+            return procedures["round_dollar"]
+        # Differentiate single vs repeated round-dollar pattern
+        txn_count = anomaly.get("transaction_count", 0)
+        is_repeated = (txn_count and txn_count > 1) or "occurrences" in issue or "multiple" in issue
+        if is_repeated:
+            return procedures["round_dollar_repeated"]
+        return procedures["round_dollar_single"]
 
     if anomaly_type == "concentration_risk":
         if "intercompany" in account or "intercompany" in issue:
@@ -138,6 +157,9 @@ def get_tb_suggested_procedure(anomaly: dict, *, is_material: bool = False) -> s
         if "prepaid" in account:
             return procedures["prepaid_credit"]
         if acc_type == "asset" or "asset" in issue:
+            # Differentiate AR credit balance from general asset credit balance
+            if not is_material and ("receivable" in account or "a/r" in account):
+                return procedures["credit_balance_ar"]
             return procedures["credit_balance_asset"]
 
     if is_material:
@@ -193,34 +215,72 @@ def get_concentration_benchmark(anomaly: dict) -> str | None:
 # ─────────────────────────────────────────────────────────────────────
 
 
+def _describe_material_factor(ab: dict) -> str:
+    """Generate a plain-language factor label for a material finding."""
+    account = ab.get("account", "Unknown")
+    anomaly_type = ab.get("anomaly_type", "")
+    issue = ab.get("issue", "")
+
+    if anomaly_type == "suspense_account":
+        return f"{account}: uncleared suspense"
+    if anomaly_type == "concentration_risk":
+        acc_type = (ab.get("type", "") or "").lower()
+        acct_lower = account.lower()
+        if "intercompany" in acct_lower or "intercompany" in issue.lower():
+            return f"{account}: intercompany concentration"
+        if acc_type == "revenue" or "revenue" in issue.lower():
+            return f"{account}: revenue concentration"
+        return f"{account}: expense concentration"
+    if anomaly_type in ("abnormal_balance", "natural_balance_violation"):
+        if "prepaid" in account.lower():
+            return f"{account}: credit balance in prepaid"
+        return f"{account}: abnormal balance"
+    if anomaly_type == "rounding_anomaly":
+        return f"{account}: round-dollar pattern"
+    return f"{account}: material exception"
+
+
 def compute_tb_risk_score(
     material_count: int,
     minor_count: int,
     coverage_pct: float,
     has_suspense: bool,
     has_credit_balance_asset: bool,
+    *,
+    abnormal_balances: list[dict] | None = None,
 ) -> tuple[int, list[tuple[str, int]]]:
     """Compute composite risk score for the TB Diagnostic report.
+
     Returns (score, factors) where factors is a list of (name, contribution) tuples.
+    When abnormal_balances is provided, material findings appear as individually
+    named factor lines instead of an aggregate count.
     """
     factors: list[tuple[str, int]] = []
     score = 0
 
+    # Material findings: named lines when data available, aggregate fallback
     material_pts = material_count * 8
     if material_pts > 0:
-        factors.append((f"Material exceptions ({material_count} × 8)", material_pts))
+        material_items = [ab for ab in (abnormal_balances or []) if ab.get("materiality") == "material"]
+        if material_items:
+            for ab in material_items:
+                label = _describe_material_factor(ab)
+                factors.append((label, 8))
+        else:
+            factors.append((f"Material exceptions ({material_count} findings)", material_pts))
     score += material_pts
 
+    # Minor observations: aggregate (each contributes 2 pts, below named threshold)
     minor_pts = minor_count * 2
     if minor_pts > 0:
-        factors.append((f"Minor observations ({minor_count} × 2)", minor_pts))
+        factors.append((f"Minor observations ({minor_count} findings)", minor_pts))
     score += minor_pts
 
     if coverage_pct >= 50:
-        factors.append(("Risk-weighted coverage ≥ 50%", 10))
+        factors.append(("Risk-weighted coverage exceeds 50%", 10))
         score += 10
     elif coverage_pct >= 25:
-        factors.append(("Risk-weighted coverage ≥ 25%", 5))
+        factors.append(("Risk-weighted coverage exceeds 25%", 5))
         score += 5
 
     if has_suspense:

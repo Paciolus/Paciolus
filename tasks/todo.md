@@ -133,9 +133,42 @@
 > Sprints 499–515 archived to `tasks/archive/sprints-499-515-details.md`.
 > Pending items below.
 
+### Sprint 524 — PDF Report Quality: Remaining Fixes (A/B/C)
+
+**Status:** COMPLETE
+**Commit:** 051e2f4
+**Goal:** Complete three incomplete implementations from Sprint 522's institutional-grade PDF improvements.
+
+#### Fix A: Risk Score Decomposition — Plain-Language Named Factors
+- [x] Add `_describe_material_factor()` helper for plain-language labels from anomaly data
+- [x] Rewrite `compute_tb_risk_score()` to accept `abnormal_balances` kwarg
+- [x] Material findings listed individually by account name (not "3 × 8" aggregate)
+- [x] Minor observations use clean count ("5 findings"), no multiplier notation
+- [x] Coverage factors use "exceeds" instead of "≥" symbol
+- [x] Total line added below decomposition with ledger rule separator
+
+#### Fix B: Differentiated Minor Observation Procedures
+- [x] Split `round_dollar` into `round_dollar_single` (one-time) and `round_dollar_repeated` (pattern)
+- [x] Add `credit_balance_ar` for AR-specific credit balance language (unapplied payments, credit memos)
+- [x] Dispatch logic inspects `transaction_count`, issue text ("occurrences"/"multiple"), and account name
+- [x] Five sample findings (TB-I001 through TB-I005) each produce individually tailored procedures
+
+#### Fix C: Inline Amount Qualifier — Per-Transaction Breakdown
+- [x] Amount annotation shows "(8 transactions × $5,000.00)" instead of "(sum of 8 flagged txns)"
+- [x] Computes `per_transaction_amount` from `amount / transaction_count` when not explicitly provided
+- [x] Added `transaction_count` and `per_transaction_amount` fields to sample data
+- [x] Single-occurrence rounding anomalies show no qualifier (clean amount)
+
+#### Verification
+- [x] 152 report tests pass (0 regressions)
+- [x] Diagnostic sample PDF generated (49,968 bytes) — all three fixes verified in output
+
+---
+
 ### Sprint 523 — Cover Page Liability Framing
 
 **Status:** COMPLETE
+**Commit:** b59b89d
 **Goal:** Remove implied co-preparer liability from cover page CPA credential fields.
 
 - [x] Part 1: Rename "Prepared By" → "Engagement Practitioner", "Reviewed By" → "Engagement Reviewer", "Status" → "Report Status"

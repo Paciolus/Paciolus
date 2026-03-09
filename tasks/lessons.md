@@ -40,6 +40,14 @@ Sprint 520 fixed a CRITICAL cross-tenant data leakage vulnerability and 3 other 
 
 ---
 
+## Procedure text and score labels must be contextually differentiated, not template-driven (Sprint 524)
+
+Sprint 522 introduced suggested procedures and risk decomposition, but the initial implementation used generic templates. All round-dollar findings got the same procedure language regardless of whether it was a single $100K balance or an 8-occurrence pattern. Score decomposition showed "Material exceptions (3 × 8)" — a formula, not a finding. A CPA reviewer reads the procedure as guidance for their next step; if two findings with different risk profiles receive identical procedures, the output looks machine-generated rather than analytically informed.
+
+**Pattern:** When generating professional deliverable text (procedures, labels, descriptions), the function must inspect enough anomaly context (anomaly_type, account name, transaction_count, issue text) to produce differentiated output. If two findings produce identical text, that's a design defect. Split procedure keys by relevant sub-patterns (single vs. repeated, AR vs. general asset) and use data-driven dispatch.
+
+---
+
 ## Council deferral vs. CEO override — respect the decision hierarchy (Sprint 519)
 
 The council (Critic + Guardian) recommended deferring Phase 5 service extraction due to diminishing ROI. The CEO overrode: "I also want architectural purity." The council's analysis was sound — the extractions were incremental, not transformative — but the CEO's architectural preference is a legitimate priority that outweighs marginal ROI calculations. **Pattern: council advises, CEO decides. When the CEO overrides, execute fully without half-measures. Log the override in todo.md for future context.**

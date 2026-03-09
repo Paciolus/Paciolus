@@ -1012,7 +1012,12 @@ class PaciolusReportGenerator:
         coverage_pct = flagged_value / total_debits * 100 if total_debits > 0 else 0
 
         risk_score, risk_factors = compute_tb_risk_score(
-            material_count, immaterial_count, coverage_pct, has_suspense, has_credit_balance
+            material_count,
+            immaterial_count,
+            coverage_pct,
+            has_suspense,
+            has_credit_balance,
+            abnormal_balances=abnormal_balances,
         )
         risk_tier = get_risk_tier(risk_score)
         tier_label, _ = RISK_TIER_DISPLAY.get(risk_tier, ("UNKNOWN", ClassicalColors.OBSIDIAN_500))
@@ -1037,6 +1042,14 @@ class PaciolusReportGenerator:
                         self.styles["LeaderLine"],
                     )
                 )
+            # Total line
+            elements.append(LedgerRule(color=ClassicalColors.LEDGER_RULE, thickness=0.5))
+            elements.append(
+                Paragraph(
+                    create_leader_dots("  <b>Total (capped at 100)</b>", f"<b>{risk_score}</b>"),
+                    self.styles["LeaderLine"],
+                )
+            )
 
         elements.append(Spacer(1, 6))
 
@@ -1178,13 +1191,21 @@ class PaciolusReportGenerator:
             # Fix 1: Sum signed values (not absolute) so total matches manual sum of displayed amounts
             total_amount += amount
 
-            # Fix 11: Annotate pattern-based amounts
+            # Fix 11: Annotate pattern-based amounts with per-transaction breakdown
             anomaly_type = ab.get("anomaly_type", "")
             amount_display = f"${amount:,.2f}"
             if anomaly_type == "rounding_anomaly":
                 txn_count = ab.get("transaction_count")
-                if txn_count:
-                    amount_display += f'<br/><font size="6"><i>(sum of {txn_count} flagged txns)</i></font>'
+                if txn_count and txn_count > 1:
+                    per_txn = ab.get("per_transaction_amount")
+                    if per_txn is None and amount != 0:
+                        per_txn = abs(amount) / txn_count
+                    if per_txn is not None:
+                        amount_display += (
+                            f'<br/><font size="6"><i>({txn_count} transactions \u00d7 ${per_txn:,.2f})</i></font>'
+                        )
+                    else:
+                        amount_display += f'<br/><font size="6"><i>(sum of {txn_count} flagged transactions)</i></font>'
                     has_pattern_based = True
 
             # Fix 3: Priority rank badge

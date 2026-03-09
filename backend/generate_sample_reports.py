@@ -111,6 +111,8 @@ def gen_tb_diagnostic():
                 "confidence": 0.75,
                 "anomaly_type": "rounding_anomaly",
                 "severity": "low",
+                "transaction_count": 8,
+                "per_transaction_amount": 5_000.00,
             },
             {
                 "account": "Prepaid Insurance",
