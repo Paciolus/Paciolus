@@ -130,6 +130,37 @@ class BillingMessageResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Shared Stripe endpoint guard (Sprint 519 Phase 1C)
+# ---------------------------------------------------------------------------
+
+from collections.abc import Generator
+from contextlib import contextmanager
+
+
+@contextmanager
+def stripe_endpoint_guard(user_id: int, operation: str) -> Generator[None, None, None]:
+    """Context manager that wraps the common Stripe endpoint pattern:
+
+    1. Check is_stripe_enabled() → 503 if not
+    2. Yield for the provider call
+    3. Catch Exception → log + raise 502
+    """
+    from billing.stripe_client import is_stripe_enabled
+
+    if not is_stripe_enabled():
+        raise HTTPException(status_code=503, detail="Billing is not available.")
+
+    try:
+        yield
+    except Exception as e:
+        logger.error("Stripe %s failed for user %d: %s", operation, user_id, type(e).__name__)
+        raise HTTPException(
+            status_code=502,
+            detail="Payment provider error. Please try again or contact support.",
+        )
+
+
+# ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
 
@@ -331,24 +362,14 @@ def cancel_subscription_endpoint(
     body: CancelRequest | None = None,
 ) -> BillingMessageResponse:
     """Cancel the current subscription at the end of the billing period."""
-    from billing.stripe_client import is_stripe_enabled
     from billing.subscription_manager import cancel_subscription, get_subscription
-
-    if not is_stripe_enabled():
-        raise HTTPException(status_code=503, detail="Billing is not available.")
 
     # Capture tier before cancel for event recording
     sub = get_subscription(db, user.id)
     tier_at_cancel = sub.tier if sub else None
 
-    try:
+    with stripe_endpoint_guard(user.id, "cancellation"):
         result = cancel_subscription(db, user.id)
-    except Exception as e:
-        logger.error("Stripe cancellation failed for user %d: %s", user.id, type(e).__name__)
-        raise HTTPException(
-            status_code=502,
-            detail="Payment provider error. Please try again or contact support.",
-        )
     if result is None:
         raise HTTPException(status_code=404, detail="No active subscription found.")
 
@@ -379,20 +400,10 @@ def reactivate_subscription_endpoint(
     db: Session = Depends(get_db),
 ) -> BillingMessageResponse:
     """Reactivate a subscription that was scheduled for cancellation."""
-    from billing.stripe_client import is_stripe_enabled
     from billing.subscription_manager import reactivate_subscription
 
-    if not is_stripe_enabled():
-        raise HTTPException(status_code=503, detail="Billing is not available.")
-
-    try:
+    with stripe_endpoint_guard(user.id, "reactivation"):
         result = reactivate_subscription(db, user.id)
-    except Exception as e:
-        logger.error("Stripe reactivation failed for user %d: %s", user.id, type(e).__name__)
-        raise HTTPException(
-            status_code=502,
-            detail="Payment provider error. Please try again or contact support.",
-        )
     if result is None:
         raise HTTPException(status_code=404, detail="No subscription found to reactivate.")
 
@@ -412,20 +423,10 @@ def add_seats_endpoint(
     db: Session = Depends(get_db),
 ) -> SeatChangeResponse:
     """Add seats to the current subscription. Stripe prorates automatically."""
-    from billing.stripe_client import is_stripe_enabled
     from billing.subscription_manager import add_seats
 
-    if not is_stripe_enabled():
-        raise HTTPException(status_code=503, detail="Billing is not available.")
-
-    try:
+    with stripe_endpoint_guard(user.id, "add-seats"):
         result = add_seats(db, user.id, body.seats)
-    except Exception as e:
-        logger.error("Stripe add-seats failed for user %d: %s", user.id, type(e).__name__)
-        raise HTTPException(
-            status_code=502,
-            detail="Payment provider error. Please try again or contact support.",
-        )
     if result is None:
         raise HTTPException(
             status_code=400,
@@ -453,20 +454,10 @@ def remove_seats_endpoint(
     db: Session = Depends(get_db),
 ) -> SeatChangeResponse:
     """Remove seats from the current subscription. Cannot go below base seats."""
-    from billing.stripe_client import is_stripe_enabled
     from billing.subscription_manager import remove_seats
 
-    if not is_stripe_enabled():
-        raise HTTPException(status_code=503, detail="Billing is not available.")
-
-    try:
+    with stripe_endpoint_guard(user.id, "remove-seats"):
         result = remove_seats(db, user.id, body.seats)
-    except Exception as e:
-        logger.error("Stripe remove-seats failed for user %d: %s", user.id, type(e).__name__)
-        raise HTTPException(
-            status_code=502,
-            detail="Payment provider error. Please try again or contact support.",
-        )
     if result is None:
         raise HTTPException(
             status_code=400,
@@ -489,11 +480,7 @@ def get_portal_session(
     db: Session = Depends(get_db),
 ) -> PortalResponse:
     """Get a Stripe Billing Portal URL for self-service management."""
-    from billing.stripe_client import is_stripe_enabled
     from billing.subscription_manager import create_portal_session, get_subscription
-
-    if not is_stripe_enabled():
-        raise HTTPException(status_code=503, detail="Billing is not available.")
 
     sub = get_subscription(db, user.id)
     if sub is None or not sub.stripe_customer_id:
@@ -501,14 +488,8 @@ def get_portal_session(
 
     from config import FRONTEND_URL
 
-    try:
+    with stripe_endpoint_guard(user.id, "portal session"):
         portal_url = create_portal_session(sub.stripe_customer_id, f"{FRONTEND_URL}/settings/billing")
-    except Exception as e:
-        logger.error("Stripe portal session failed for user %d: %s", user.id, type(e).__name__)
-        raise HTTPException(
-            status_code=502,
-            detail="Payment provider error. Please try again or contact support.",
-        )
 
     return PortalResponse(portal_url=portal_url)
 

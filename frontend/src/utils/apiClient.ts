@@ -447,6 +447,19 @@ if (typeof window !== 'undefined') {
 }
 
 /**
+ * Invalidate cache entries related to a mutation endpoint.
+ * Clears both the exact path and the parent path (e.g., /clients when mutating /clients/1).
+ */
+function invalidateRelatedCaches(endpoint: string): void {
+  const basePath = endpoint.split('?')[0] ?? endpoint
+  invalidateCache(basePath)
+  const parentPath = basePath.split('/').slice(0, -1).join('/')
+  if (parentPath) {
+    invalidateCache(parentPath)
+  }
+}
+
+/**
  * Prefetch data for an endpoint in the background.
  * Useful for preloading next pages or related data.
  *
@@ -902,16 +915,8 @@ export async function apiPost<T>(
 ): Promise<ApiResponse<T>> {
   const result = await apiFetch<T>(endpoint, token, { ...options, method: 'POST', body });
 
-  // Invalidate related cache on successful mutation
   if (result.ok) {
-    // Extract base path for cache invalidation
-    const basePath = endpoint.split('?')[0] ?? endpoint;
-    invalidateCache(basePath);
-    // Also invalidate parent path (e.g., /clients when posting to /clients/1/notes)
-    const parentPath = basePath.split('/').slice(0, -1).join('/');
-    if (parentPath) {
-      invalidateCache(parentPath);
-    }
+    invalidateRelatedCaches(endpoint);
   }
 
   return result;
@@ -935,15 +940,8 @@ export async function apiPut<T>(
 ): Promise<ApiResponse<T>> {
   const result = await apiFetch<T>(endpoint, token, { ...options, method: 'PUT', body });
 
-  // Invalidate related cache on successful mutation
   if (result.ok) {
-    const basePath = endpoint.split('?')[0] ?? endpoint;
-    invalidateCache(basePath);
-    // Also invalidate parent path (e.g., /clients when updating /clients/1)
-    const parentPath = basePath.split('/').slice(0, -1).join('/');
-    if (parentPath) {
-      invalidateCache(parentPath);
-    }
+    invalidateRelatedCaches(endpoint);
   }
 
   return result;
@@ -964,12 +962,7 @@ export async function apiPatch<T>(
   const result = await apiFetch<T>(endpoint, token, { ...options, method: 'PATCH', body });
 
   if (result.ok) {
-    const basePath = endpoint.split('?')[0] ?? endpoint;
-    invalidateCache(basePath);
-    const parentPath = basePath.split('/').slice(0, -1).join('/');
-    if (parentPath) {
-      invalidateCache(parentPath);
-    }
+    invalidateRelatedCaches(endpoint);
   }
 
   return result;
@@ -990,15 +983,8 @@ export async function apiDelete<T = void>(
 ): Promise<ApiResponse<T>> {
   const result = await apiFetch<T>(endpoint, token, { ...options, method: 'DELETE' });
 
-  // Invalidate related cache on successful mutation
   if (result.ok) {
-    const basePath = endpoint.split('?')[0] ?? endpoint;
-    invalidateCache(basePath);
-    // Also invalidate parent path
-    const parentPath = basePath.split('/').slice(0, -1).join('/');
-    if (parentPath) {
-      invalidateCache(parentPath);
-    }
+    invalidateRelatedCaches(endpoint);
   }
 
   return result;

@@ -9,8 +9,7 @@ import { useState, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
 import type { UploadStatus } from '@/types/shared'
-import { getCsrfToken } from '@/utils/apiClient'
-import { API_URL } from '@/utils/constants'
+import { uploadFetch } from '@/utils/uploadTransport'
 
 /** Discriminated union on status — Sprint 226
  *  When `status === 'success'`, `result` is guaranteed non-null `T`.
@@ -60,53 +59,29 @@ export function useAuditUpload<T>(options: UseAuditUploadOptions<T>): UseAuditUp
       formData.append('engagement_id', engagementId.toString())
     }
 
-    try {
-      const csrfToken = getCsrfToken()
-      const response = await fetch(`${API_URL}${options.endpoint}`, {
-        method: 'POST',
-        headers: {
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-          ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
-        },
-        body: formData,
-      })
+    const result = await uploadFetch(options.endpoint, formData, token ?? null)
 
-      if (response.status === 401) {
-        setStatus('error')
-        setError(`Please sign in to run ${options.toolName}.`)
-        return
-      }
-      if (response.status === 403) {
-        const errData = await response.json().catch(() => ({}))
-        const detail = errData.detail
-        if (typeof detail === 'object' && detail?.code === 'EMAIL_NOT_VERIFIED') {
-          setStatus('error')
-          setError(`Please verify your email address before running ${options.toolName}.`)
-          return
-        }
-        setStatus('error')
-        setError('Access denied.')
-        return
-      }
-
-      const data = await response.json()
-
-      if (response.ok) {
-        setStatus('success')
-        setResult(options.parseResult(data))
-
-        // Sprint 103: Refresh tool runs + show toast when linked to workspace
-        if (engagement && engagementId) {
-          engagement.refreshToolRuns()
-          engagement.triggerLinkToast(options.toolName)
-        }
-      } else {
-        setStatus('error')
-        setError(data.detail || data.message || `Failed to run ${options.toolName}.`)
-      }
-    } catch {
+    if (!result.ok) {
       setStatus('error')
-      setError('Unable to connect to server. Please try again.')
+      if (result.status === 401) {
+        setError(`Please sign in to run ${options.toolName}.`)
+      } else if (result.errorCode === 'EMAIL_NOT_VERIFIED') {
+        setError(`Please verify your email address before running ${options.toolName}.`)
+      } else if (result.status === 403) {
+        setError('Access denied.')
+      } else {
+        setError(result.error || `Failed to run ${options.toolName}.`)
+      }
+      return
+    }
+
+    setStatus('success')
+    setResult(options.parseResult(result.data))
+
+    // Sprint 103: Refresh tool runs + show toast when linked to workspace
+    if (engagement && engagementId) {
+      engagement.refreshToolRuns()
+      engagement.triggerLinkToast(options.toolName)
     }
   }, [token, user, options, engagement, engagementId])
 

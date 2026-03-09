@@ -202,6 +202,62 @@ Scope: auth flows, CSRF/CSP, rate limiting, API authorization, file upload, JWT,
 
 ---
 
+### Sprint 519 — Structural Debt Remediation (Code Quality)
+
+**Status:** IN PROGRESS (Phases 1–4 COMPLETE, Phase 5 plan below)
+**Goal:** Reduce structural debt and consolidation drift across 5 phases without changing observable behavior.
+
+#### Phase 1 — Quick Wins ✓
+- [x] 1A: Frontend upload transport consolidation (`uploadTransport.ts`) — 4 files deduped
+- [x] 1B: API client mutation cache invalidation dedup (`invalidateRelatedCaches`)
+- [x] 1C: Backend billing endpoint boilerplate (`stripe_endpoint_guard`) — 5 endpoints
+- [x] 1D: Backend audit route execution scaffold (`execute_file_tool`) — 4 endpoints
+- [x] Tests pass after Phase 1
+
+#### Phase 2 — Hook Decomposition ✓
+- [x] Extract `useTrialBalanceUpload`, `useTrialBalancePreflight`, `useTrialBalanceExports`, `useTrialBalanceBenchmarks`
+- [x] `useTrialBalanceAudit` reduced from 680→110 LOC (thin composite)
+- [x] Tests pass after Phase 2
+
+#### Phase 3 — Backend Engine Unification ✓
+- [x] Create `engine_framework.py` with `AuditEngineBase` (10-step pipeline)
+- [x] `JETestingEngine`, `APTestingEngine`, `PayrollTestingEngine` extend base
+- [x] All 6,215 backend tests pass (3 pre-existing failures unrelated)
+
+#### Phase 4 — Settings Page Decomposition ✓
+- [x] Extract `MaterialitySection`, `ExportPreferencesSection`, `testingConfigFields`
+- [x] Page reduced from 635→415 LOC
+- [x] Build + tests pass after Phase 4
+
+#### Phase 5 — Route/Service Boundary (Plan Only)
+- [x] Plan output below — awaiting CEO approval before execution
+
+##### Phase 5 Plan: billing.py Service Extraction
+
+**Current state:** 651 LOC, 11 endpoints. Stripe API is already fully isolated in `billing/` submodule (0 direct Stripe calls in routes). `stripe_endpoint_guard` context manager reduces boilerplate. Service layer is well-organized.
+
+**Proposed extraction:**
+1. **CheckoutOrchestrator** (`billing/checkout_orchestrator.py`): Move 50+ lines of business logic from `create_checkout()` endpoint — trial eligibility, tier/seat validation, DPA acceptance, promo code resolution. Route keeps only HTTP concerns.
+2. **UsageService** (`billing/usage_service.py`): Move 20+ lines from `get_usage()` — entitlement calculation, period tracking, activity log counting. Currently buried in route layer.
+3. **SeatValidator** (add to `billing/subscription_manager.py`): Consolidate seat validation rules (solo plan can't have seats, max self-serve seats) from scattered endpoint logic.
+
+**Expected outcome:** billing.py drops to ~500 LOC. Business rules become unit-testable without FastAPI context.
+**Risk:** Low — Stripe calls already delegated, this is pure orchestration movement.
+
+##### Phase 5 Plan: audit.py Service Extraction
+
+**Current state:** 666 LOC, 8 endpoints. `execute_file_tool()` scaffold handles 4/8 endpoints. Two complex endpoints dominate: `audit_trial_balance` (128 lines) and `flux_analysis` (103 lines).
+
+**Proposed extraction:**
+1. **TrialBalancePostProcessor** (`shared/tb_post_processor.py`): Extract 50 lines of post-processing from `audit_trial_balance` — lead sheet grouping, section density computation, currency conversion. These are pure data transforms, not HTTP concerns.
+2. **FluxOrchestrator** (`flux_orchestrator.py` or extend `flux_engine.py`): Extract 50 lines of dual-file StreamingAuditor sequencing + engine composition from `flux_analysis`.
+3. **MaterialityResolver** (already exists as `_resolve_materiality` helper): Promote to shared utility — used by 3+ endpoints.
+
+**Expected outcome:** audit.py drops to ~480 LOC. Post-processing and orchestration become independently testable.
+**Risk:** Medium — `audit_trial_balance` has tight coupling between parsing, materiality resolution, and post-processing. Requires careful interface design.
+
+---
+
 ### Sprint 517 — Memo Generator Test Coverage (DEC F-018)
 
 **Status:** READY

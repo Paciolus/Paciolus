@@ -1,12 +1,13 @@
 'use client'
 
-// NOTE: Decomposition candidate (665 LOC) — extract MaterialitySection, ExportPreferencesSection
-
 /**
  * Practice Settings Page - Sprint 48
  *
  * Business configuration: materiality formulas, weighted thresholds, export preferences.
  * Separate from Profile Settings (personal account info).
+ *
+ * Sprint 519 Phase 4: Decomposed into MaterialitySection, ExportPreferencesSection,
+ * and testingConfigFields. Testing config sections were already extracted (TestingConfigSection).
  */
 
 import { useState, useEffect } from 'react'
@@ -14,9 +15,15 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
-import { WeightedMaterialityEditor } from '@/components/sensitivity'
+import { ExportPreferencesSection } from '@/components/settings/ExportPreferencesSection'
+import { MaterialitySection } from '@/components/settings/MaterialitySection'
+import {
+  JE_THRESHOLDS, JE_TOGGLES,
+  AP_THRESHOLDS, AP_TOGGLES,
+  PAYROLL_THRESHOLDS, PAYROLL_TOGGLES,
+  TWM_THRESHOLDS,
+} from '@/components/settings/testingConfigFields'
 import { TestingConfigSection } from '@/components/settings/TestingConfigSection'
-import { Reveal } from '@/components/ui/Reveal'
 import { useSettings } from '@/hooks/useSettings'
 import type {
   MaterialityFormula,
@@ -33,7 +40,6 @@ import type {
   ThreeWayMatchPreset,
 } from '@/types/settings'
 import {
-  FORMULA_TYPE_LABELS,
   DEFAULT_MATERIALITY_FORMULA,
   DEFAULT_WEIGHTED_MATERIALITY,
   DEFAULT_JE_TESTING_CONFIG,
@@ -53,66 +59,6 @@ import {
   TWM_PRESET_LABELS,
   TWM_PRESET_DESCRIPTIONS,
 } from '@/types/settings'
-
-// =============================================================================
-// TESTING CONFIG FIELD DEFINITIONS
-// =============================================================================
-
-const JE_THRESHOLDS = [
-  { key: 'round_amount_threshold', label: 'Round Amount Minimum', description: 'Only flag amounts above this', prefix: '$' },
-  { key: 'unusual_amount_stddev', label: 'Unusual Amount Sensitivity', description: 'Standard deviations from mean', step: 0.5, min: 1, max: 5 },
-  { key: 'single_user_volume_pct', label: 'User Volume Threshold', description: 'Flag users posting more than this % of entries', suffix: '%', displayScale: 100, fallback: 25, min: 5, max: 80 },
-  { key: 'backdate_days_threshold', label: 'Backdating Threshold', description: 'Days between posting and entry date', suffix: 'days', integer: true, fallback: 30, min: 7, max: 180 },
-  { key: 'suspicious_keyword_threshold', label: 'Keyword Sensitivity', description: 'Minimum confidence for suspicious keywords', suffix: '%', displayScale: 100, fallback: 60, min: 30, max: 95 },
-]
-
-const JE_TOGGLES = [
-  { key: 'weekend_posting_enabled', label: 'Weekend Postings' },
-  { key: 'after_hours_enabled', label: 'After-Hours Postings' },
-  { key: 'numbering_gap_enabled', label: 'Numbering Gaps' },
-  { key: 'backdate_enabled', label: 'Backdated Entries' },
-  { key: 'suspicious_keyword_enabled', label: 'Suspicious Keywords' },
-]
-
-const AP_THRESHOLDS = [
-  { key: 'round_amount_threshold', label: 'Round Amount Minimum', description: 'Only flag amounts above this', prefix: '$' },
-  { key: 'duplicate_days_window', label: 'Duplicate Date Window', description: 'Days to check for fuzzy duplicates', suffix: 'days', integer: true, fallback: 30, min: 7, max: 90 },
-  { key: 'unusual_amount_stddev', label: 'Unusual Amount Sensitivity', description: 'Standard deviations from vendor mean', step: 0.5, min: 1, max: 5 },
-  { key: 'suspicious_keyword_threshold', label: 'Keyword Sensitivity', description: 'Minimum confidence for suspicious keywords', suffix: '%', displayScale: 100, fallback: 60, min: 30, max: 95 },
-]
-
-const AP_TOGGLES = [
-  { key: 'check_number_gap_enabled', label: 'Check Number Gaps' },
-  { key: 'payment_before_invoice_enabled', label: 'Payment Before Invoice' },
-  { key: 'invoice_reuse_check', label: 'Invoice Reuse' },
-  { key: 'weekend_payment_enabled', label: 'Weekend Payments' },
-  { key: 'high_frequency_vendor_enabled', label: 'High-Frequency Vendors' },
-  { key: 'vendor_variation_enabled', label: 'Vendor Variations' },
-  { key: 'threshold_proximity_enabled', label: 'Just-Below-Threshold' },
-]
-
-const PAYROLL_THRESHOLDS = [
-  { key: 'round_amount_threshold', label: 'Round Amount Minimum', description: 'Only flag salary amounts above this', prefix: '$' },
-  { key: 'unusual_pay_stddev', label: 'Unusual Pay Sensitivity', description: 'Standard deviations from department mean', step: 0.5, min: 1, max: 5 },
-  { key: 'benford_min_entries', label: 'Benford Minimum Entries', description: 'Minimum entries for Benford analysis', integer: true, fallback: 500, min: 100, max: 5000, step: 100 },
-  { key: 'ghost_min_indicators', label: 'Ghost Employee Min Indicators', description: 'Indicators needed to flag as ghost', integer: true, fallback: 2, min: 1, max: 4 },
-]
-
-const PAYROLL_TOGGLES = [
-  { key: 'check_gap_enabled', label: 'Check Number Gaps' },
-  { key: 'frequency_enabled', label: 'Pay Frequency Anomalies' },
-  { key: 'benford_enabled', label: "Benford's Law Analysis" },
-  { key: 'ghost_enabled', label: 'Ghost Employee Indicators' },
-  { key: 'duplicate_bank_enabled', label: 'Duplicate Bank/Address' },
-  { key: 'duplicate_tax_enabled', label: 'Duplicate Tax IDs' },
-]
-
-const TWM_THRESHOLDS = [
-  { key: 'amount_tolerance', label: 'Amount Tolerance', description: 'Maximum difference before flagging a variance', prefix: '$', step: '0.01', min: 0 },
-  { key: 'price_variance_threshold', label: 'Price Variance Threshold', description: '% difference in unit price before flagging', suffix: '%', displayScale: 100, fallback: 5, step: 1, min: 1, max: 50 },
-  { key: 'date_window_days', label: 'Date Window', description: 'Days between PO and receipt before flagging', suffix: 'd', integer: true, fallback: 30, min: 7, max: 180 },
-  { key: 'fuzzy_vendor_threshold', label: 'Vendor Match Sensitivity', description: 'Minimum name similarity for fuzzy matching (0-100%)', suffix: '%', displayScale: 100, fallback: 85, step: 5, min: 50, max: 100 },
-]
 
 // =============================================================================
 // PAGE COMPONENT
@@ -281,6 +227,10 @@ export default function PracticeSettingsPage() {
     return `${baseClasses} border-theme focus:border-sage-500 focus:ring-2 focus:ring-sage-500/20`
   }
 
+  const handleTouched = (field: string) => {
+    setTouched({ ...touched, [field]: true })
+  }
+
   if (authLoading || isLoading) {
     return (
       <div className="min-h-screen bg-surface-page flex flex-col items-center justify-center gap-4">
@@ -317,134 +267,26 @@ export default function PracticeSettingsPage() {
             </div>
           )}
 
-          {/* Materiality Formula Section */}
-          <Reveal className="theme-card p-6 mb-6">
-            <h2 className="text-xl font-serif font-semibold text-content-primary mb-4">
-              Default Materiality Formula
-            </h2>
-            <p className="text-content-tertiary text-sm font-sans mb-6">
-              Define how materiality thresholds are calculated for diagnostics.
-            </p>
-
-            {/* Formula Type */}
-            <div className="mb-6">
-              <label htmlFor="formula-type" className="block text-content-secondary font-sans font-medium mb-2">
-                Calculation Method
-              </label>
-              <select
-                id="formula-type"
-                value={formulaType}
-                onChange={(e) => {
-                  setFormulaType(e.target.value as MaterialityFormulaType)
-                  setTouched({ ...touched, formulaType: true })
-                }}
-                className={getInputClasses('formulaType')}
-              >
-                {Object.entries(FORMULA_TYPE_LABELS).map(([value, label]) => (
-                  <option key={value} value={value} className="bg-surface-input">
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Formula Value */}
-            <div className="mb-6">
-              <label htmlFor="formula-value" className="block text-content-secondary font-sans font-medium mb-2">
-                {formulaType === 'fixed' ? 'Threshold Amount ($)' : 'Percentage (%)'}
-              </label>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-content-tertiary">
-                  {formulaType === 'fixed' ? '$' : ''}
-                </span>
-                <input
-                  id="formula-value"
-                  type="number"
-                  value={formulaValue}
-                  onChange={(e) => {
-                    setFormulaValue(parseFloat(e.target.value) || 0)
-                    setTouched({ ...touched, formulaValue: true })
-                  }}
-                  min="0"
-                  step={formulaType === 'fixed' ? '100' : '0.1'}
-                  className={`${getInputClasses('formulaValue')} ${formulaType === 'fixed' ? 'pl-8' : ''} font-mono`}
-                />
-                {formulaType !== 'fixed' && (
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-content-tertiary">
-                    %
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Min/Max Thresholds (for percentage-based) */}
-            {formulaType !== 'fixed' && (
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div>
-                  <label htmlFor="min-threshold" className="block text-content-secondary font-sans font-medium mb-2">
-                    Minimum Floor ($)
-                  </label>
-                  <input
-                    id="min-threshold"
-                    type="number"
-                    value={minThreshold}
-                    onChange={(e) => setMinThreshold(e.target.value)}
-                    placeholder="Optional"
-                    min="0"
-                    step="100"
-                    className={`${getInputClasses('minThreshold')} font-mono`}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="max-threshold" className="block text-content-secondary font-sans font-medium mb-2">
-                    Maximum Cap ($)
-                  </label>
-                  <input
-                    id="max-threshold"
-                    type="number"
-                    value={maxThreshold}
-                    onChange={(e) => setMaxThreshold(e.target.value)}
-                    placeholder="Optional"
-                    min="0"
-                    step="100"
-                    className={`${getInputClasses('maxThreshold')} font-mono`}
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Preview */}
-            {preview && (
-              <div className="p-4 bg-surface-card-secondary rounded-lg border border-theme">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-content-secondary text-sm font-sans">Calculated Threshold</span>
-                  <span className="text-sage-600 font-mono text-lg font-semibold">
-                    ${preview.threshold.toLocaleString()}
-                  </span>
-                </div>
-                <p className="text-content-tertiary text-xs font-sans">
-                  Based on sample: ${sampleRevenue.toLocaleString()} revenue, ${sampleAssets.toLocaleString()} assets, ${sampleEquity.toLocaleString()} equity
-                </p>
-              </div>
-            )}
-          </Reveal>
-
-          {/* Weighted Materiality Section */}
-          <Reveal delay={0.08} className="theme-card p-6 mb-6">
-            <h2 className="text-xl font-serif font-semibold text-content-primary mb-4">
-              Weighted Materiality by Account Type
-            </h2>
-            <p className="text-content-tertiary text-sm font-sans mb-6">
-              Apply different scrutiny levels to different account categories. Higher weights mean lower thresholds (more scrutiny).
-            </p>
-
-            <WeightedMaterialityEditor
-              config={weightedMateriality}
-              baseThreshold={formulaType === 'fixed' ? formulaValue : (preview?.threshold || 500)}
-              onChange={setWeightedMateriality}
-              disabled={false}
-            />
-          </Reveal>
+          {/* Materiality Formula + Weighted Materiality */}
+          <MaterialitySection
+            formulaType={formulaType}
+            formulaValue={formulaValue}
+            minThreshold={minThreshold}
+            maxThreshold={maxThreshold}
+            weightedMateriality={weightedMateriality}
+            preview={preview}
+            sampleRevenue={sampleRevenue}
+            sampleAssets={sampleAssets}
+            sampleEquity={sampleEquity}
+            touched={touched}
+            getInputClasses={getInputClasses}
+            onFormulaTypeChange={setFormulaType}
+            onFormulaValueChange={setFormulaValue}
+            onMinThresholdChange={setMinThreshold}
+            onMaxThresholdChange={setMaxThreshold}
+            onWeightedMaterialityChange={setWeightedMateriality}
+            onTouched={handleTouched}
+          />
 
           {/* JE Testing Thresholds */}
           <TestingConfigSection
@@ -533,79 +375,18 @@ export default function PracticeSettingsPage() {
             </div>
           </TestingConfigSection>
 
-          {/* Display Preferences */}
-          <Reveal delay={0.12} className="theme-card p-6 mb-6">
-            <h2 className="text-xl font-serif font-semibold text-content-primary mb-4">
-              Display Preferences
-            </h2>
-
-            <div className="space-y-4">
-              <label htmlFor="show-immaterial" className="flex items-center gap-3 cursor-pointer">
-                <input
-                  id="show-immaterial"
-                  type="checkbox"
-                  checked={showImmaterial}
-                  onChange={(e) => setShowImmaterial(e.target.checked)}
-                  className="w-5 h-5 rounded-sm border-theme bg-surface-input text-sage-500 focus:ring-sage-500/20"
-                />
-                <div>
-                  <span className="text-content-primary font-sans font-medium">Show immaterial items by default</span>
-                  <p className="text-content-tertiary text-xs">Display all anomalies, including those below materiality threshold</p>
-                </div>
-              </label>
-
-              <label htmlFor="auto-save-summaries" className="flex items-center gap-3 cursor-pointer">
-                <input
-                  id="auto-save-summaries"
-                  type="checkbox"
-                  checked={autoSaveSummaries}
-                  onChange={(e) => setAutoSaveSummaries(e.target.checked)}
-                  className="w-5 h-5 rounded-sm border-theme bg-surface-input text-sage-500 focus:ring-sage-500/20"
-                />
-                <div>
-                  <span className="text-content-primary font-sans font-medium">Auto-save diagnostic summaries</span>
-                  <p className="text-content-tertiary text-xs">Automatically store aggregate totals for trend analysis (Zero-Storage compliant)</p>
-                </div>
-              </label>
-            </div>
-          </Reveal>
-
-          {/* Export Settings */}
-          <Reveal delay={0.16} className="theme-card p-6 mb-6">
-            <h2 className="text-xl font-serif font-semibold text-content-primary mb-4">
-              Export Settings
-            </h2>
-
-            <div className="mb-4">
-              <label htmlFor="export-format" className="block text-content-secondary font-sans font-medium mb-2">
-                Default Export Format
-              </label>
-              <select
-                id="export-format"
-                value={defaultExportFormat}
-                onChange={(e) => setDefaultExportFormat(e.target.value)}
-                className={getInputClasses('exportFormat')}
-              >
-                <option value="pdf" className="bg-surface-input">PDF Report</option>
-                <option value="excel" className="bg-surface-input">Excel Workpaper</option>
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="fiscal-year-end" className="block text-content-secondary font-sans font-medium mb-2">
-                Default Fiscal Year End
-              </label>
-              <input
-                id="fiscal-year-end"
-                type="text"
-                value={defaultFYE}
-                onChange={(e) => setDefaultFYE(e.target.value)}
-                placeholder="MM-DD"
-                className={getInputClasses('fye')}
-              />
-              <p className="text-content-tertiary text-xs mt-1">Format: MM-DD (e.g., 12-31 for December 31)</p>
-            </div>
-          </Reveal>
+          {/* Display + Export Preferences */}
+          <ExportPreferencesSection
+            showImmaterial={showImmaterial}
+            autoSaveSummaries={autoSaveSummaries}
+            defaultExportFormat={defaultExportFormat}
+            defaultFYE={defaultFYE}
+            getInputClasses={getInputClasses}
+            onShowImmaterialChange={setShowImmaterial}
+            onAutoSaveSummariesChange={setAutoSaveSummaries}
+            onExportFormatChange={setDefaultExportFormat}
+            onFYEChange={setDefaultFYE}
+          />
 
           {/* Save Button */}
           <div className="flex items-center gap-4">

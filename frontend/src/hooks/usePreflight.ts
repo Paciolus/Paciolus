@@ -5,8 +5,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
 import type { PreFlightReport } from '@/types/preflight'
 import type { UploadStatus } from '@/types/shared'
-import { getCsrfToken } from '@/utils/apiClient'
-import { API_URL } from '@/utils/constants'
+import { uploadFetch } from '@/utils/uploadTransport'
 
 export interface UsePreflightReturn {
   status: UploadStatus
@@ -36,41 +35,22 @@ export function usePreflight(): UsePreflightReturn {
       formData.append('engagement_id', engagement.engagementId.toString())
     }
 
-    try {
-      const csrfToken = getCsrfToken()
-      const response = await fetch(`${API_URL}/audit/preflight`, {
-        method: 'POST',
-        headers: {
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-          ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
-        },
-        body: formData,
-      })
+    const result = await uploadFetch<PreFlightReport>('/audit/preflight', formData, token ?? null)
 
-      if (response.status === 401) {
-        setStatus('error')
-        setError('Please sign in to run pre-flight checks.')
-        return
-      }
-      if (response.status === 403) {
-        setStatus('error')
-        setError('Please verify your email address before running pre-flight checks.')
-        return
-      }
-
-      const data = await response.json()
-
-      if (response.ok) {
-        setStatus('success')
-        setReport(data as PreFlightReport)
-      } else {
-        setStatus('error')
-        setError(data.detail || 'Pre-flight check failed')
-      }
-    } catch {
+    if (!result.ok) {
       setStatus('error')
-      setError('Unable to connect to server. Please try again.')
+      if (result.status === 401) {
+        setError('Please sign in to run pre-flight checks.')
+      } else if (result.status === 403) {
+        setError('Please verify your email address before running pre-flight checks.')
+      } else {
+        setError(result.error || 'Pre-flight check failed')
+      }
+      return
     }
+
+    setStatus('success')
+    setReport(result.data as PreFlightReport)
   }, [token, engagement])
 
   const reset = useCallback(() => {

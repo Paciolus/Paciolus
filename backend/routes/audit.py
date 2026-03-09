@@ -52,6 +52,64 @@ from workbook_inspector import inspect_workbook, is_excel_file
 router = APIRouter(tags=["audit"])
 
 
+# ---------------------------------------------------------------------------
+# Shared file-tool execution scaffold (Sprint 519 Phase 1D)
+# ---------------------------------------------------------------------------
+
+from collections.abc import Callable
+
+
+async def execute_file_tool(
+    file: UploadFile,
+    tool_name: str,
+    analyze_fn: Callable[[bytes, str], dict[str, Any]],
+    background_tasks: BackgroundTasks,
+    db: Session,
+    engagement_id: Optional[int],
+    user_id: int,
+    error_context: str,
+    composite_score_key: Optional[str] = None,
+) -> dict[str, Any]:
+    """Shared scaffold for file-tool endpoints.
+
+    Handles: validate_file_size → asyncio.to_thread(analyze_fn) →
+    maybe_record_tool_run → error mapping.
+
+    The caller provides the tool-specific analysis function which receives
+    (file_bytes, filename) and returns a dict result.
+    """
+    with memory_cleanup():
+        try:
+            file_bytes = await validate_file_size(file)
+            filename = file.filename or ""
+
+            result = await asyncio.to_thread(analyze_fn, file_bytes, filename)
+
+            kwargs: dict[str, Any] = {}
+            if composite_score_key and composite_score_key in result:
+                kwargs["composite_score"] = result[composite_score_key]
+
+            background_tasks.add_task(
+                maybe_record_tool_run,
+                db,
+                engagement_id,
+                user_id,
+                tool_name,
+                True,
+                **kwargs,
+            )
+
+            return result
+
+        except (ValueError, KeyError, TypeError) as e:
+            logger.exception("%s failed", tool_name)
+            maybe_record_tool_run(db, engagement_id, user_id, tool_name, False)
+            raise HTTPException(
+                status_code=400,
+                detail=sanitize_error(e, "upload", error_context),
+            )
+
+
 class SheetInfo(BaseModel):
     name: str
     row_count: int
@@ -207,38 +265,26 @@ async def preflight_check(
     """Run a lightweight data quality pre-flight assessment on a trial balance file."""
     log_secure_operation("preflight_upload", f"Pre-flight check for file: {file.filename}")
 
-    with memory_cleanup():
-        try:
-            file_bytes = await validate_file_size(file)
-            filename = file.filename or ""
+    def _analyze(file_bytes: bytes, filename: str) -> dict[str, Any]:
+        from preflight_engine import run_preflight
 
-            def _analyze() -> dict[str, Any]:
-                from preflight_engine import run_preflight
+        column_names, rows = parse_uploaded_file(file_bytes, filename)
+        report = run_preflight(column_names, rows, filename)
+        result = report.to_dict()
+        del column_names, rows
+        return result
 
-                column_names, rows = parse_uploaded_file(file_bytes, filename)
-                report = run_preflight(column_names, rows, filename)
-                result = report.to_dict()
-                del column_names, rows
-                return result
-
-            result = await asyncio.to_thread(_analyze)
-
-            background_tasks.add_task(
-                maybe_record_tool_run,
-                db,
-                engagement_id,
-                current_user.id,
-                "preflight",
-                True,
-                composite_score=result.get("readiness_score"),
-            )
-
-            return result
-
-        except (ValueError, KeyError, TypeError) as e:
-            logger.exception("Pre-flight check failed")
-            maybe_record_tool_run(db, engagement_id, current_user.id, "preflight", False)
-            raise HTTPException(status_code=400, detail=sanitize_error(e, "upload", "preflight_error"))
+    return await execute_file_tool(
+        file,
+        "preflight",
+        _analyze,
+        background_tasks,
+        db,
+        engagement_id,
+        current_user.id,
+        "preflight_error",
+        composite_score_key="readiness_score",
+    )
 
 
 @router.post("/audit/population-profile", response_model=PopulationProfileResponse)
@@ -254,37 +300,25 @@ async def population_profile_check(
     """Compute population profile statistics for a trial balance file."""
     log_secure_operation("population_profile_upload", f"Population profile for file: {file.filename}")
 
-    with memory_cleanup():
-        try:
-            file_bytes = await validate_file_size(file)
-            filename = file.filename or ""
+    def _analyze(file_bytes: bytes, filename: str) -> dict[str, Any]:
+        from population_profile_engine import run_population_profile
 
-            def _analyze() -> dict[str, Any]:
-                from population_profile_engine import run_population_profile
+        column_names, rows = parse_uploaded_file(file_bytes, filename)
+        report = run_population_profile(column_names, rows, filename)
+        result = report.to_dict()
+        del column_names, rows
+        return result
 
-                column_names, rows = parse_uploaded_file(file_bytes, filename)
-                report = run_population_profile(column_names, rows, filename)
-                result = report.to_dict()
-                del column_names, rows
-                return result
-
-            result = await asyncio.to_thread(_analyze)
-
-            background_tasks.add_task(
-                maybe_record_tool_run,
-                db,
-                engagement_id,
-                current_user.id,
-                "population_profile",
-                True,
-            )
-
-            return result
-
-        except (ValueError, KeyError, TypeError) as e:
-            logger.exception("Population profile check failed")
-            maybe_record_tool_run(db, engagement_id, current_user.id, "population_profile", False)
-            raise HTTPException(status_code=400, detail=sanitize_error(e, "upload", "population_profile_error"))
+    return await execute_file_tool(
+        file,
+        "population_profile",
+        _analyze,
+        background_tasks,
+        db,
+        engagement_id,
+        current_user.id,
+        "population_profile_error",
+    )
 
 
 # --- Expense Category Analytical Procedures (Sprint 289) ---
@@ -315,46 +349,34 @@ async def expense_category_analytics(
     )
     log_secure_operation("expense_category_upload", f"Expense category analytics for file: {file.filename}")
 
-    with memory_cleanup():
-        try:
-            file_bytes = await validate_file_size(file)
-            filename = file.filename or ""
+    def _analyze(file_bytes: bytes, filename: str) -> dict[str, Any]:
+        from expense_category_engine import run_expense_category_analytics
 
-            def _analyze() -> dict[str, Any]:
-                from expense_category_engine import run_expense_category_analytics
+        column_names, rows = parse_uploaded_file(file_bytes, filename)
+        report = run_expense_category_analytics(
+            column_names,
+            rows,
+            filename,
+            materiality_threshold=materiality_threshold,
+            prior_cogs=prior_cogs,
+            prior_opex=prior_opex,
+            prior_total_expenses=prior_total_expenses,
+            prior_revenue=prior_revenue,
+        )
+        result = report.to_dict()
+        del column_names, rows
+        return result
 
-                column_names, rows = parse_uploaded_file(file_bytes, filename)
-                report = run_expense_category_analytics(
-                    column_names,
-                    rows,
-                    filename,
-                    materiality_threshold=materiality_threshold,
-                    prior_cogs=prior_cogs,
-                    prior_opex=prior_opex,
-                    prior_total_expenses=prior_total_expenses,
-                    prior_revenue=prior_revenue,
-                )
-                result = report.to_dict()
-                del column_names, rows
-                return result
-
-            result = await asyncio.to_thread(_analyze)
-
-            background_tasks.add_task(
-                maybe_record_tool_run,
-                db,
-                engagement_id,
-                current_user.id,
-                "expense_category",
-                True,
-            )
-
-            return result
-
-        except (ValueError, KeyError, TypeError) as e:
-            logger.exception("Expense category analytics failed")
-            maybe_record_tool_run(db, engagement_id, current_user.id, "expense_category", False)
-            raise HTTPException(status_code=400, detail=sanitize_error(e, "upload", "expense_category_error"))
+    return await execute_file_tool(
+        file,
+        "expense_category",
+        _analyze,
+        background_tasks,
+        db,
+        engagement_id,
+        current_user.id,
+        "expense_category_error",
+    )
 
 
 # --- Accrual Completeness Estimator (Sprint 290) ---
@@ -376,44 +398,32 @@ async def accrual_completeness_check(
     """Compute accrual completeness estimator for a trial balance file."""
     log_secure_operation("accrual_completeness_upload", f"Accrual completeness check for file: {file.filename}")
 
-    with memory_cleanup():
-        try:
-            file_bytes = await validate_file_size(file)
-            filename = file.filename or ""
+    def _analyze(file_bytes: bytes, filename: str) -> dict[str, Any]:
+        from accrual_completeness_engine import run_accrual_completeness
 
-            def _analyze() -> dict[str, Any]:
-                from accrual_completeness_engine import run_accrual_completeness
+        column_names, rows = parse_uploaded_file(file_bytes, filename)
+        report = run_accrual_completeness(
+            column_names,
+            rows,
+            filename,
+            prior_operating_expenses=prior_operating_expenses,
+            threshold_pct=threshold_pct,
+            total_revenue=total_revenue,
+        )
+        result = report.to_dict()
+        del column_names, rows
+        return result
 
-                column_names, rows = parse_uploaded_file(file_bytes, filename)
-                report = run_accrual_completeness(
-                    column_names,
-                    rows,
-                    filename,
-                    prior_operating_expenses=prior_operating_expenses,
-                    threshold_pct=threshold_pct,
-                    total_revenue=total_revenue,
-                )
-                result = report.to_dict()
-                del column_names, rows
-                return result
-
-            result = await asyncio.to_thread(_analyze)
-
-            background_tasks.add_task(
-                maybe_record_tool_run,
-                db,
-                engagement_id,
-                current_user.id,
-                "accrual_completeness",
-                True,
-            )
-
-            return result
-
-        except (ValueError, KeyError, TypeError) as e:
-            logger.exception("Accrual completeness check failed")
-            maybe_record_tool_run(db, engagement_id, current_user.id, "accrual_completeness", False)
-            raise HTTPException(status_code=400, detail=sanitize_error(e, "upload", "accrual_completeness_error"))
+    return await execute_file_tool(
+        file,
+        "accrual_completeness",
+        _analyze,
+        background_tasks,
+        db,
+        engagement_id,
+        current_user.id,
+        "accrual_completeness_error",
+    )
 
 
 # ---------------------------------------------------------------------------

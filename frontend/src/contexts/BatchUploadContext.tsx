@@ -36,8 +36,7 @@ import {
   calculateBatchProgress,
   determineBatchStatus,
 } from '@/types/batch';
-import { getCsrfToken } from '@/utils/apiClient';
-import { API_URL } from '@/utils/constants';
+import { uploadFetch } from '@/utils/uploadTransport';
 
 // =============================================================================
 // State and Actions
@@ -263,33 +262,26 @@ export function BatchUploadProvider({ children }: BatchUploadProviderProps): Rea
         formData.append('client_id', file.clientId.toString());
       }
 
-      // Make API request
-      const csrfToken = getCsrfToken();
-      const response = await fetch(`${API_URL}/audit/trial-balance`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
-        },
-        body: formData,
-      });
+      // Make API request via shared transport
+      const response = await uploadFetch('/audit/trial-balance', formData, token);
 
       updateFileProgress(fileId, 50);
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || `HTTP ${response.status}`);
+        throw new Error(response.error || `HTTP ${response.status}`);
       }
 
-      const result = await response.json();
+      const result = response.data as Record<string, unknown>;
       updateFileProgress(fileId, 90);
 
       // Update with result
+      const abnormalBalances = result.abnormal_balances as unknown[] | undefined;
+      const totalRows = (result.total_rows as number) || 0;
       const processingResult: FileProcessingResult = {
         success: true,
-        rowCount: result.total_rows || 0,
-        anomalyCount: result.abnormal_balances?.length || 0,
-        message: `Processed ${result.total_rows || 0} rows`,
+        rowCount: totalRows,
+        anomalyCount: abnormalBalances?.length || 0,
+        message: `Processed ${totalRows} rows`,
         auditData: result,
       };
 

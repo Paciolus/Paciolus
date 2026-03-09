@@ -26,8 +26,9 @@ import re
 import statistics
 from dataclasses import dataclass, field
 from difflib import SequenceMatcher
-from typing import Optional
+from typing import Any, Optional
 
+from engine_framework import AuditEngineBase
 from shared.column_detector import ColumnFieldConfig, detect_columns
 from shared.data_quality import FieldQualityConfig
 from shared.data_quality import assess_data_quality as _shared_assess_dq
@@ -49,14 +50,16 @@ from shared.testing_enums import (  # noqa: E402
 # CONFIGURATION
 # =============================================================================
 
+
 @dataclass
 class APTestingConfig:
     """Configurable thresholds for all AP tests.
 
     Defaults are sensible for most AP datasets.
     """
+
     # AP-T1: Exact Duplicate Payments
-    duplicate_tolerance: float = 0.01        # Amount match tolerance
+    duplicate_tolerance: float = 0.01  # Amount match tolerance
 
     # AP-T3: Check Number Gaps
     check_number_gap_enabled: bool = True
@@ -232,14 +235,15 @@ AP_PAYMENT_METHOD_PATTERNS = [
 ]
 
 
-
 # =============================================================================
 # AP COLUMN DETECTION RESULT
 # =============================================================================
 
+
 @dataclass
 class APColumnDetectionResult:
     """Result of AP column detection."""
+
     # Required columns
     vendor_name_column: Optional[str] = None
     amount_column: Optional[str] = None
@@ -293,10 +297,28 @@ class APColumnDetectionResult:
 AP_COLUMN_CONFIGS = [
     ColumnFieldConfig(field_name="invoice_number_column", patterns=AP_INVOICE_NUMBER_PATTERNS, priority=10),
     ColumnFieldConfig(field_name="invoice_date_column", patterns=AP_INVOICE_DATE_PATTERNS, priority=15),
-    ColumnFieldConfig(field_name="payment_date_column", patterns=AP_PAYMENT_DATE_PATTERNS, required=True, missing_note="Could not identify a Payment Date column", priority=20),
-    ColumnFieldConfig(field_name="vendor_name_column", patterns=AP_VENDOR_NAME_PATTERNS, required=True, missing_note="Could not identify a Vendor Name column", priority=30),
+    ColumnFieldConfig(
+        field_name="payment_date_column",
+        patterns=AP_PAYMENT_DATE_PATTERNS,
+        required=True,
+        missing_note="Could not identify a Payment Date column",
+        priority=20,
+    ),
+    ColumnFieldConfig(
+        field_name="vendor_name_column",
+        patterns=AP_VENDOR_NAME_PATTERNS,
+        required=True,
+        missing_note="Could not identify a Vendor Name column",
+        priority=30,
+    ),
     ColumnFieldConfig(field_name="vendor_id_column", patterns=AP_VENDOR_ID_PATTERNS, priority=35),
-    ColumnFieldConfig(field_name="amount_column", patterns=AP_AMOUNT_PATTERNS, required=True, missing_note="Could not identify an Amount column", priority=40),
+    ColumnFieldConfig(
+        field_name="amount_column",
+        patterns=AP_AMOUNT_PATTERNS,
+        required=True,
+        missing_note="Could not identify an Amount column",
+        priority=40,
+    ),
     ColumnFieldConfig(field_name="check_number_column", patterns=AP_CHECK_NUMBER_PATTERNS, priority=45),
     ColumnFieldConfig(field_name="description_column", patterns=AP_DESCRIPTION_PATTERNS, priority=50),
     ColumnFieldConfig(field_name="gl_account_column", patterns=AP_GL_ACCOUNT_PATTERNS, priority=55),
@@ -351,15 +373,17 @@ def detect_ap_columns(column_names: list[str]) -> APColumnDetectionResult:
 # DATA MODELS
 # =============================================================================
 
+
 @dataclass
 class APPayment:
     """A single payment line from the AP file."""
+
     invoice_number: Optional[str] = None
     invoice_date: Optional[str] = None
     payment_date: Optional[str] = None
     vendor_name: str = ""
     vendor_id: Optional[str] = None
-    amount: float = 0.0           # Single amount (not debit/credit)
+    amount: float = 0.0  # Single amount (not debit/credit)
     check_number: Optional[str] = None
     description: Optional[str] = None
     gl_account: Optional[str] = None
@@ -385,6 +409,7 @@ class APPayment:
 @dataclass
 class FlaggedPayment:
     """A payment flagged by one or more tests."""
+
     entry: APPayment
     test_name: str
     test_key: str
@@ -410,6 +435,7 @@ class FlaggedPayment:
 @dataclass
 class APTestResult:
     """Result of a single AP test."""
+
     test_name: str
     test_key: str
     test_tier: TestTier
@@ -437,6 +463,7 @@ class APTestResult:
 @dataclass
 class APDataQuality:
     """Quality assessment of the AP data."""
+
     completeness_score: float  # 0-100
     field_fill_rates: dict[str, float] = field(default_factory=dict)
     detected_issues: list[str] = field(default_factory=list)
@@ -454,6 +481,7 @@ class APDataQuality:
 @dataclass
 class APCompositeScore:
     """Overall AP testing composite score."""
+
     score: float  # 0-100
     risk_tier: RiskTier
     tests_run: int
@@ -479,6 +507,7 @@ class APCompositeScore:
 @dataclass
 class APTestingResult:
     """Complete result of AP payment testing."""
+
     composite_score: APCompositeScore
     test_results: list[APTestResult] = field(default_factory=list)
     data_quality: Optional[APDataQuality] = None
@@ -493,11 +522,10 @@ class APTestingResult:
         }
 
 
-
-
 # =============================================================================
 # AP PARSER
 # =============================================================================
+
 
 def parse_ap_payments(
     rows: list[dict],
@@ -550,6 +578,7 @@ def parse_ap_payments(
 # DATA QUALITY SCORING
 # =============================================================================
 
+
 def assess_ap_data_quality(
     payments: list[APPayment],
     detection: APColumnDetectionResult,
@@ -559,18 +588,38 @@ def assess_ap_data_quality(
     Delegates to shared data quality engine (Sprint 152).
     """
     configs: list[FieldQualityConfig] = [
-        FieldQualityConfig("vendor_name", lambda p: p.vendor_name, weight=0.30,
-                           issue_threshold=0.95, issue_template="Missing vendor name on {unfilled} payments"),
-        FieldQualityConfig("amount", lambda p: p.amount != 0, weight=0.30,
-                           issue_threshold=0.90, issue_template="{unfilled} payments have zero amount"),
-        FieldQualityConfig("payment_date", lambda p: p.payment_date, weight=0.25,
-                           issue_threshold=0.95, issue_template="Missing payment date on {unfilled} payments"),
+        FieldQualityConfig(
+            "vendor_name",
+            lambda p: p.vendor_name,
+            weight=0.30,
+            issue_threshold=0.95,
+            issue_template="Missing vendor name on {unfilled} payments",
+        ),
+        FieldQualityConfig(
+            "amount",
+            lambda p: p.amount != 0,
+            weight=0.30,
+            issue_threshold=0.90,
+            issue_template="{unfilled} payments have zero amount",
+        ),
+        FieldQualityConfig(
+            "payment_date",
+            lambda p: p.payment_date,
+            weight=0.25,
+            issue_threshold=0.95,
+            issue_template="Missing payment date on {unfilled} payments",
+        ),
     ]
 
     if detection.invoice_number_column:
-        configs.append(FieldQualityConfig("invoice_number", lambda p: p.invoice_number,
-                                          issue_threshold=0.80,
-                                          issue_template="Low invoice number fill rate: {fill_pct} ({unfilled} blank)"))
+        configs.append(
+            FieldQualityConfig(
+                "invoice_number",
+                lambda p: p.invoice_number,
+                issue_threshold=0.80,
+                issue_template="Low invoice number fill rate: {fill_pct} ({unfilled} blank)",
+            )
+        )
     if detection.invoice_date_column:
         configs.append(FieldQualityConfig("invoice_date", lambda p: p.invoice_date))
     if detection.vendor_id_column:
@@ -578,9 +627,14 @@ def assess_ap_data_quality(
     if detection.check_number_column:
         configs.append(FieldQualityConfig("check_number", lambda p: p.check_number))
     if detection.description_column:
-        configs.append(FieldQualityConfig("description", lambda p: p.description,
-                                          issue_threshold=0.80,
-                                          issue_template="Low description fill rate: {fill_pct} ({unfilled} blank)"))
+        configs.append(
+            FieldQualityConfig(
+                "description",
+                lambda p: p.description,
+                issue_threshold=0.80,
+                issue_template="Low description fill rate: {fill_pct} ({unfilled} blank)",
+            )
+        )
     if detection.gl_account_column:
         configs.append(FieldQualityConfig("gl_account", lambda p: p.gl_account))
     if detection.payment_method_column:
@@ -609,6 +663,7 @@ from shared.round_amounts import ROUND_AMOUNT_PATTERNS_4TIER as AP_ROUND_AMOUNT_
 # TIER 1 TESTS
 # =============================================================================
 
+
 def test_exact_duplicate_payments(
     payments: list[APPayment],
     config: APTestingConfig,
@@ -635,22 +690,24 @@ def test_exact_duplicate_payments(
         if len(group) > 1:
             vendor, inv, amt, pay_date = key
             for p in group:
-                flagged.append(FlaggedPayment(
-                    entry=p,
-                    test_name="Exact Duplicate Payments",
-                    test_key="exact_duplicate_payments",
-                    test_tier=TestTier.STRUCTURAL,
-                    severity=Severity.HIGH,
-                    issue=f"Exact duplicate: vendor={p.vendor_name}, invoice={p.invoice_number}, amount=${amt:,.2f}",
-                    confidence=0.95,
-                    details={
-                        "duplicate_count": len(group),
-                        "vendor": vendor,
-                        "invoice_number": inv,
-                        "amount": amt,
-                        "payment_date": pay_date,
-                    },
-                ))
+                flagged.append(
+                    FlaggedPayment(
+                        entry=p,
+                        test_name="Exact Duplicate Payments",
+                        test_key="exact_duplicate_payments",
+                        test_tier=TestTier.STRUCTURAL,
+                        severity=Severity.HIGH,
+                        issue=f"Exact duplicate: vendor={p.vendor_name}, invoice={p.invoice_number}, amount=${amt:,.2f}",
+                        confidence=0.95,
+                        details={
+                            "duplicate_count": len(group),
+                            "vendor": vendor,
+                            "invoice_number": inv,
+                            "amount": amt,
+                            "payment_date": pay_date,
+                        },
+                    )
+                )
 
     flag_rate = len(flagged) / max(len(payments), 1)
     return APTestResult(
@@ -692,16 +749,18 @@ def test_missing_critical_fields(
                 severity = Severity.MEDIUM
 
         if missing_fields:
-            flagged.append(FlaggedPayment(
-                entry=p,
-                test_name="Missing Critical Fields",
-                test_key="missing_critical_fields",
-                test_tier=TestTier.STRUCTURAL,
-                severity=severity,
-                issue=f"Missing: {', '.join(missing_fields)}",
-                confidence=0.90,
-                details={"missing_fields": missing_fields},
-            ))
+            flagged.append(
+                FlaggedPayment(
+                    entry=p,
+                    test_name="Missing Critical Fields",
+                    test_key="missing_critical_fields",
+                    test_tier=TestTier.STRUCTURAL,
+                    severity=severity,
+                    issue=f"Missing: {', '.join(missing_fields)}",
+                    confidence=0.90,
+                    details={"missing_fields": missing_fields},
+                )
+            )
 
     flag_rate = len(flagged) / max(len(payments), 1)
     return APTestResult(
@@ -722,9 +781,9 @@ def _extract_check_number(check_str: Optional[str]) -> Optional[int]:
     if not check_str:
         return None
     # Strip common prefixes like CHK-, CK-, #
-    cleaned = re.sub(r'^[A-Za-z#\-]+', '', check_str.strip())
+    cleaned = re.sub(r"^[A-Za-z#\-]+", "", check_str.strip())
     # Extract leading digits
-    match = re.match(r'(\d+)', cleaned)
+    match = re.match(r"(\d+)", cleaned)
     if match:
         return int(match.group(1))
     return None
@@ -787,16 +846,18 @@ def test_check_number_gaps(
             else:
                 severity = Severity.LOW
 
-            flagged.append(FlaggedPayment(
-                entry=curr_payment,
-                test_name="Check Number Gaps",
-                test_key="check_number_gaps",
-                test_tier=TestTier.STRUCTURAL,
-                severity=severity,
-                issue=f"Gap of {gap - 1} missing checks before #{curr_num} (previous: #{prev_num})",
-                confidence=0.70,
-                details={"gap_size": gap - 1, "prev_number": prev_num, "curr_number": curr_num},
-            ))
+            flagged.append(
+                FlaggedPayment(
+                    entry=curr_payment,
+                    test_name="Check Number Gaps",
+                    test_key="check_number_gaps",
+                    test_tier=TestTier.STRUCTURAL,
+                    severity=severity,
+                    issue=f"Gap of {gap - 1} missing checks before #{curr_num} (previous: #{prev_num})",
+                    confidence=0.70,
+                    details={"gap_size": gap - 1, "prev_number": prev_num, "curr_number": curr_num},
+                )
+            )
 
     flag_rate = len(flagged) / max(len(payments), 1)
     return APTestResult(
@@ -830,16 +891,18 @@ def test_round_dollar_amounts(
 
         for divisor, name, severity in AP_ROUND_AMOUNT_PATTERNS:
             if amt >= divisor and amt % divisor == 0:
-                flagged.append(FlaggedPayment(
-                    entry=p,
-                    test_name="Round Dollar Amounts",
-                    test_key="round_dollar_amounts",
-                    test_tier=TestTier.STRUCTURAL,
-                    severity=severity,
-                    issue=f"Round amount: ${amt:,.0f} (divisible by ${divisor:,.0f})",
-                    confidence=0.70,
-                    details={"amount": amt, "pattern": name, "divisor": divisor},
-                ))
+                flagged.append(
+                    FlaggedPayment(
+                        entry=p,
+                        test_name="Round Dollar Amounts",
+                        test_key="round_dollar_amounts",
+                        test_tier=TestTier.STRUCTURAL,
+                        severity=severity,
+                        issue=f"Round amount: ${amt:,.0f} (divisible by ${divisor:,.0f})",
+                        confidence=0.70,
+                        details={"amount": amt, "pattern": name, "divisor": divisor},
+                    )
+                )
                 break  # Only flag the largest pattern match
 
         if len(flagged) >= config.round_amount_max_flags:
@@ -907,20 +970,22 @@ def test_payment_before_invoice(
                 severity = Severity.LOW
                 confidence = 0.70
 
-            flagged.append(FlaggedPayment(
-                entry=p,
-                test_name="Payment Before Invoice",
-                test_key="payment_before_invoice",
-                test_tier=TestTier.STRUCTURAL,
-                severity=severity,
-                issue=f"Payment {days_early} days before invoice date ({p.payment_date} < {p.invoice_date})",
-                confidence=confidence,
-                details={
-                    "days_early": days_early,
-                    "payment_date": p.payment_date,
-                    "invoice_date": p.invoice_date,
-                },
-            ))
+            flagged.append(
+                FlaggedPayment(
+                    entry=p,
+                    test_name="Payment Before Invoice",
+                    test_key="payment_before_invoice",
+                    test_tier=TestTier.STRUCTURAL,
+                    severity=severity,
+                    issue=f"Payment {days_early} days before invoice date ({p.payment_date} < {p.invoice_date})",
+                    confidence=confidence,
+                    details={
+                        "days_early": days_early,
+                        "payment_date": p.payment_date,
+                        "invoice_date": p.invoice_date,
+                    },
+                )
+            )
 
     flag_rate = len(flagged) / max(len(payments), 1)
     return APTestResult(
@@ -939,6 +1004,7 @@ def test_payment_before_invoice(
 # =============================================================================
 # TIER 2 TESTS — Statistical
 # =============================================================================
+
 
 def test_fuzzy_duplicate_payments(
     payments: list[APPayment],
@@ -981,21 +1047,23 @@ def test_fuzzy_duplicate_payments(
 
                 severity = Severity.HIGH if abs(a.amount) > 10000 else Severity.MEDIUM
                 for p in (a, b):
-                    flagged.append(FlaggedPayment(
-                        entry=p,
-                        test_name="Fuzzy Duplicate Payments",
-                        test_key="fuzzy_duplicate_payments",
-                        test_tier=TestTier.STATISTICAL,
-                        severity=severity,
-                        issue=f"Near-duplicate: vendor={p.vendor_name}, amount=${abs(p.amount):,.2f}, {days_apart} days apart",
-                        confidence=0.85,
-                        details={
-                            "vendor": vendor,
-                            "amount": round(p.amount, 2),
-                            "days_apart": days_apart,
-                            "matched_row": b.row_number if p is a else a.row_number,
-                        },
-                    ))
+                    flagged.append(
+                        FlaggedPayment(
+                            entry=p,
+                            test_name="Fuzzy Duplicate Payments",
+                            test_key="fuzzy_duplicate_payments",
+                            test_tier=TestTier.STATISTICAL,
+                            severity=severity,
+                            issue=f"Near-duplicate: vendor={p.vendor_name}, amount=${abs(p.amount):,.2f}, {days_apart} days apart",
+                            confidence=0.85,
+                            details={
+                                "vendor": vendor,
+                                "amount": round(p.amount, 2),
+                                "days_apart": days_apart,
+                                "matched_row": b.row_number if p is a else a.row_number,
+                            },
+                        )
+                    )
 
     # Deduplicate (a payment may match multiple others)
     seen: set[int] = set()
@@ -1054,20 +1122,22 @@ def test_invoice_number_reuse(
         if len(vendors) < 2:
             continue
         for p in group:
-            flagged.append(FlaggedPayment(
-                entry=p,
-                test_name="Invoice Number Reuse",
-                test_key="invoice_number_reuse",
-                test_tier=TestTier.STATISTICAL,
-                severity=Severity.HIGH,
-                issue=f"Invoice #{p.invoice_number} used by {len(vendors)} different vendors",
-                confidence=0.90,
-                details={
-                    "invoice_number": inv_num,
-                    "vendor_count": len(vendors),
-                    "vendors": sorted(vendors),
-                },
-            ))
+            flagged.append(
+                FlaggedPayment(
+                    entry=p,
+                    test_name="Invoice Number Reuse",
+                    test_key="invoice_number_reuse",
+                    test_tier=TestTier.STATISTICAL,
+                    severity=Severity.HIGH,
+                    issue=f"Invoice #{p.invoice_number} used by {len(vendors)} different vendors",
+                    confidence=0.90,
+                    details={
+                        "invoice_number": inv_num,
+                        "vendor_count": len(vendors),
+                        "vendors": sorted(vendors),
+                    },
+                )
+            )
 
     flag_rate = len(flagged) / max(len(payments), 1)
     return APTestResult(
@@ -1121,21 +1191,23 @@ def test_unusual_payment_amounts(
 
             severity = zscore_to_severity(z)
 
-            flagged.append(FlaggedPayment(
-                entry=p,
-                test_name="Unusual Payment Amounts",
-                test_key="unusual_payment_amounts",
-                test_tier=TestTier.STATISTICAL,
-                severity=severity,
-                issue=f"Unusual amount ${abs(p.amount):,.2f} for {p.vendor_name} (z-score: {z:.1f}, mean: ${mean:,.2f})",
-                confidence=min(0.60 + z * 0.05, 0.95),
-                details={
-                    "z_score": round(z, 2),
-                    "vendor_mean": round(mean, 2),
-                    "vendor_stdev": round(stdev, 2),
-                    "vendor_payment_count": len(group),
-                },
-            ))
+            flagged.append(
+                FlaggedPayment(
+                    entry=p,
+                    test_name="Unusual Payment Amounts",
+                    test_key="unusual_payment_amounts",
+                    test_tier=TestTier.STATISTICAL,
+                    severity=severity,
+                    issue=f"Unusual amount ${abs(p.amount):,.2f} for {p.vendor_name} (z-score: {z:.1f}, mean: ${mean:,.2f})",
+                    confidence=min(0.60 + z * 0.05, 0.95),
+                    details={
+                        "z_score": round(z, 2),
+                        "vendor_mean": round(mean, 2),
+                        "vendor_stdev": round(stdev, 2),
+                        "vendor_payment_count": len(group),
+                    },
+                )
+            )
 
     flag_rate = len(flagged) / max(len(payments), 1)
     return APTestResult(
@@ -1185,20 +1257,22 @@ def test_weekend_payments(
         day_name = "Saturday" if pay_date.weekday() == 5 else "Sunday"
         severity = Severity.HIGH if abs(p.amount) >= config.weekend_large_amount_threshold else Severity.MEDIUM
 
-        flagged.append(FlaggedPayment(
-            entry=p,
-            test_name="Weekend Payments",
-            test_key="weekend_payments",
-            test_tier=TestTier.STATISTICAL,
-            severity=severity,
-            issue=f"Payment on {day_name} ({p.payment_date}): ${abs(p.amount):,.2f} to {p.vendor_name}",
-            confidence=0.75,
-            details={
-                "day_of_week": day_name,
-                "payment_date": p.payment_date,
-                "amount": round(p.amount, 2),
-            },
-        ))
+        flagged.append(
+            FlaggedPayment(
+                entry=p,
+                test_name="Weekend Payments",
+                test_key="weekend_payments",
+                test_tier=TestTier.STATISTICAL,
+                severity=severity,
+                issue=f"Payment on {day_name} ({p.payment_date}): ${abs(p.amount):,.2f} to {p.vendor_name}",
+                confidence=0.75,
+                details={
+                    "day_of_week": day_name,
+                    "payment_date": p.payment_date,
+                    "amount": round(p.amount, 2),
+                },
+            )
+        )
 
     flag_rate = len(flagged) / max(len(payments), 1)
     return APTestResult(
@@ -1253,20 +1327,22 @@ def test_high_frequency_vendors(
         severity = Severity.HIGH if count >= 10 else Severity.MEDIUM
 
         for p in group:
-            flagged.append(FlaggedPayment(
-                entry=p,
-                test_name="High-Frequency Vendors",
-                test_key="high_frequency_vendors",
-                test_tier=TestTier.STATISTICAL,
-                severity=severity,
-                issue=f"{p.vendor_name}: {count} payments on {pay_date}",
-                confidence=0.80,
-                details={
-                    "vendor": vendor,
-                    "date": pay_date,
-                    "daily_count": count,
-                },
-            ))
+            flagged.append(
+                FlaggedPayment(
+                    entry=p,
+                    test_name="High-Frequency Vendors",
+                    test_key="high_frequency_vendors",
+                    test_tier=TestTier.STATISTICAL,
+                    severity=severity,
+                    issue=f"{p.vendor_name}: {count} payments on {pay_date}",
+                    confidence=0.80,
+                    details={
+                        "vendor": vendor,
+                        "date": pay_date,
+                        "daily_count": count,
+                    },
+                )
+            )
 
     flag_rate = len(flagged) / max(len(payments), 1)
     return APTestResult(
@@ -1371,21 +1447,23 @@ def test_vendor_name_variations(
             for p in vendor_payments[name_a] + vendor_payments[name_b]:
                 if p.row_number not in flagged_rows:
                     flagged_rows.add(p.row_number)
-                    flagged.append(FlaggedPayment(
-                        entry=p,
-                        test_name="Vendor Name Variations",
-                        test_key="vendor_name_variations",
-                        test_tier=TestTier.ADVANCED,
-                        severity=severity,
-                        issue=f"Similar vendor names: '{name_a}' vs '{name_b}' (similarity: {ratio:.0%})",
-                        confidence=round(ratio, 2),
-                        details={
-                            "name_a": name_a,
-                            "name_b": name_b,
-                            "similarity": round(ratio, 2),
-                            "combined_amount": round(combined_amount, 2),
-                        },
-                    ))
+                    flagged.append(
+                        FlaggedPayment(
+                            entry=p,
+                            test_name="Vendor Name Variations",
+                            test_key="vendor_name_variations",
+                            test_tier=TestTier.ADVANCED,
+                            severity=severity,
+                            issue=f"Similar vendor names: '{name_a}' vs '{name_b}' (similarity: {ratio:.0%})",
+                            confidence=round(ratio, 2),
+                            details={
+                                "name_a": name_a,
+                                "name_b": name_b,
+                                "similarity": round(ratio, 2),
+                                "combined_amount": round(combined_amount, 2),
+                            },
+                        )
+                    )
 
     flag_rate = len(flagged) / max(len(payments), 1)
     return APTestResult(
@@ -1435,20 +1513,22 @@ def test_just_below_threshold(
                 severity = Severity.MEDIUM if threshold < 50000 else Severity.HIGH
                 if p.row_number not in flagged_rows:
                     flagged_rows.add(p.row_number)
-                    flagged.append(FlaggedPayment(
-                        entry=p,
-                        test_name="Just-Below-Threshold",
-                        test_key="just_below_threshold",
-                        test_tier=TestTier.ADVANCED,
-                        severity=severity,
-                        issue=f"${amt:,.2f} is {((threshold - amt) / threshold):.1%} below ${threshold:,.0f} threshold",
-                        confidence=0.75,
-                        details={
-                            "amount": round(amt, 2),
-                            "threshold": threshold,
-                            "pct_below": round((threshold - amt) / threshold, 4),
-                        },
-                    ))
+                    flagged.append(
+                        FlaggedPayment(
+                            entry=p,
+                            test_name="Just-Below-Threshold",
+                            test_key="just_below_threshold",
+                            test_tier=TestTier.ADVANCED,
+                            severity=severity,
+                            issue=f"${amt:,.2f} is {((threshold - amt) / threshold):.1%} below ${threshold:,.0f} threshold",
+                            confidence=0.75,
+                            details={
+                                "amount": round(amt, 2),
+                                "threshold": threshold,
+                                "pct_below": round((threshold - amt) / threshold, 4),
+                            },
+                        )
+                    )
                 break  # Only flag the closest threshold
 
     # Detect same-vendor same-day splits that aggregate above a threshold
@@ -1468,22 +1548,24 @@ def test_just_below_threshold(
                 for p in group:
                     if p.row_number not in flagged_rows:
                         flagged_rows.add(p.row_number)
-                        flagged.append(FlaggedPayment(
-                            entry=p,
-                            test_name="Just-Below-Threshold",
-                            test_key="just_below_threshold",
-                            test_tier=TestTier.ADVANCED,
-                            severity=Severity.HIGH,
-                            issue=f"Split payment: {len(group)} payments to {p.vendor_name} on {pay_date} totaling ${total:,.2f} (above ${threshold:,.0f})",
-                            confidence=0.85,
-                            details={
-                                "split_count": len(group),
-                                "split_total": round(total, 2),
-                                "threshold": threshold,
-                                "vendor": vendor,
-                                "date": pay_date,
-                            },
-                        ))
+                        flagged.append(
+                            FlaggedPayment(
+                                entry=p,
+                                test_name="Just-Below-Threshold",
+                                test_key="just_below_threshold",
+                                test_tier=TestTier.ADVANCED,
+                                severity=Severity.HIGH,
+                                issue=f"Split payment: {len(group)} payments to {p.vendor_name} on {pay_date} totaling ${total:,.2f} (above ${threshold:,.0f})",
+                                confidence=0.85,
+                                details={
+                                    "split_count": len(group),
+                                    "split_total": round(total, 2),
+                                    "threshold": threshold,
+                                    "vendor": vendor,
+                                    "date": pay_date,
+                                },
+                            )
+                        )
                 break  # Only flag the first threshold exceeded
 
     flag_rate = len(flagged) / max(len(payments), 1)
@@ -1539,7 +1621,7 @@ def test_suspicious_descriptions(
                         best_weight = weight
                     matched_keywords.append(keyword)
             else:
-                if re.search(r'\b' + re.escape(keyword) + r'\b', desc):
+                if re.search(r"\b" + re.escape(keyword) + r"\b", desc):
                     if weight > best_weight:
                         best_weight = weight
                     matched_keywords.append(keyword)
@@ -1554,20 +1636,22 @@ def test_suspicious_descriptions(
         else:
             severity = Severity.LOW
 
-        flagged.append(FlaggedPayment(
-            entry=p,
-            test_name="Suspicious Descriptions",
-            test_key="suspicious_descriptions",
-            test_tier=TestTier.ADVANCED,
-            severity=severity,
-            issue=f"Suspicious keywords: {', '.join(matched_keywords)} (confidence: {best_weight:.0%})",
-            confidence=round(best_weight, 2),
-            details={
-                "matched_keywords": matched_keywords,
-                "max_weight": round(best_weight, 2),
-                "description": p.description,
-            },
-        ))
+        flagged.append(
+            FlaggedPayment(
+                entry=p,
+                test_name="Suspicious Descriptions",
+                test_key="suspicious_descriptions",
+                test_tier=TestTier.ADVANCED,
+                severity=severity,
+                issue=f"Suspicious keywords: {', '.join(matched_keywords)} (confidence: {best_weight:.0%})",
+                confidence=round(best_weight, 2),
+                details={
+                    "matched_keywords": matched_keywords,
+                    "max_weight": round(best_weight, 2),
+                    "description": p.description,
+                },
+            )
+        )
 
     flag_rate = len(flagged) / max(len(payments), 1)
     return APTestResult(
@@ -1586,6 +1670,7 @@ def test_suspicious_descriptions(
 # =============================================================================
 # TEST BATTERY + SCORING
 # =============================================================================
+
 
 def run_ap_test_battery(
     payments: list[APPayment],
@@ -1641,34 +1726,20 @@ def calculate_ap_composite_score(
 
 
 # =============================================================================
-# MAIN ENTRY POINT
+# ENGINE CLASS (Sprint 519 Phase 3)
 # =============================================================================
 
-def run_ap_testing(
-    rows: list[dict],
-    column_names: list[str],
-    config: Optional[APTestingConfig] = None,
-    column_mapping: Optional[dict] = None,
-) -> APTestingResult:
-    """Run the complete AP testing pipeline.
 
-    Args:
-        rows: List of dicts (raw AP data rows)
-        column_names: List of column header names
-        config: Optional testing configuration
-        column_mapping: Optional manual column mapping override
+class APTestingEngine(AuditEngineBase):
+    """AP testing engine — extends AuditEngineBase."""
 
-    Returns:
-        APTestingResult with composite score, test results, data quality, etc.
-    """
-    if config is None:
-        config = APTestingConfig()
+    def __init__(self, config: Optional[APTestingConfig] = None):
+        super().__init__(config or APTestingConfig())
 
-    # 1. Detect columns
-    detection = detect_ap_columns(column_names)
+    def detect_columns(self, column_names: list[str]) -> Any:
+        return detect_ap_columns(column_names)
 
-    # Apply manual overrides if provided
-    if column_mapping:
+    def apply_column_overrides(self, detection: Any, column_mapping: dict) -> Any:
         if "vendor_name_column" in column_mapping:
             detection.vendor_name_column = column_mapping["vendor_name_column"]
         if "amount_column" in column_mapping:
@@ -1692,24 +1763,59 @@ def run_ap_testing(
             detection.gl_account_column = column_mapping["gl_account_column"]
         if "payment_method_column" in column_mapping:
             detection.payment_method_column = column_mapping["payment_method_column"]
-        # Recalculate overall confidence with overrides
         detection.overall_confidence = 1.0
+        return detection
 
-    # 2. Parse payments
-    payments = parse_ap_payments(rows, detection)
+    def parse_data(self, rows: list[dict], detection: Any) -> list:
+        return parse_ap_payments(rows, detection)
 
-    # 3. Assess data quality
-    data_quality = assess_ap_data_quality(payments, detection)
+    def run_quality_checks(self, entries: list, detection: Any) -> Any:
+        return assess_ap_data_quality(entries, detection)
 
-    # 4. Run test battery
-    test_results = run_ap_test_battery(payments, config)
+    def run_tests(self, entries: list) -> Any:
+        return run_ap_test_battery(entries, self.config)
 
-    # 5. Calculate composite score
-    composite = calculate_ap_composite_score(test_results, len(payments))
+    def compute_score(self, test_results: list, entry_count: int) -> Any:
+        return calculate_ap_composite_score(test_results, entry_count)
 
-    return APTestingResult(
-        composite_score=composite,
-        test_results=test_results,
-        data_quality=data_quality,
-        column_detection=detection,
-    )
+    def build_result(
+        self,
+        composite: Any,
+        test_output: Any,
+        data_quality: Any,
+        detection: Any,
+        entries: list,
+        enrichment: Any,
+    ) -> Any:
+        return APTestingResult(
+            composite_score=composite,
+            test_results=test_output,
+            data_quality=data_quality,
+            column_detection=detection,
+        )
+
+
+# =============================================================================
+# MAIN ENTRY POINT
+# =============================================================================
+
+
+def run_ap_testing(
+    rows: list[dict],
+    column_names: list[str],
+    config: Optional[APTestingConfig] = None,
+    column_mapping: Optional[dict] = None,
+) -> APTestingResult:
+    """Run the complete AP testing pipeline.
+
+    Args:
+        rows: List of dicts (raw AP data rows)
+        column_names: List of column header names
+        config: Optional testing configuration
+        column_mapping: Optional manual column mapping override
+
+    Returns:
+        APTestingResult with composite score, test results, data quality, etc.
+    """
+    engine = APTestingEngine(config)
+    return engine.run_pipeline(rows, column_names, column_mapping)

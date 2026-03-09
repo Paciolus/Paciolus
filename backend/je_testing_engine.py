@@ -47,8 +47,9 @@ import statistics
 from calendar import monthrange
 from dataclasses import dataclass, field
 from datetime import date, datetime
-from typing import Optional
+from typing import Any, Optional
 
+from engine_framework import AuditEngineBase
 from shared.benford import BenfordAnalysis, analyze_benford, get_first_digit  # noqa: E402
 from shared.column_detector import ColumnFieldConfig, detect_columns  # noqa: E402
 from shared.data_quality import FieldQualityConfig  # noqa: E402
@@ -2761,35 +2762,20 @@ def calculate_composite_score(
 
 
 # =============================================================================
-# MAIN ENTRY POINT
+# ENGINE CLASS (Sprint 519 Phase 3)
 # =============================================================================
 
 
-def run_je_testing(
-    rows: list[dict],
-    column_names: list[str],
-    config: Optional[JETestingConfig] = None,
-    column_mapping: Optional[dict] = None,
-) -> JETestingResult:
-    """Run the complete JE testing pipeline.
+class JETestingEngine(AuditEngineBase):
+    """Journal Entry testing engine — extends AuditEngineBase."""
 
-    Args:
-        rows: List of dicts (raw GL data rows)
-        column_names: List of column header names
-        config: Optional testing configuration
-        column_mapping: Optional manual column mapping override
+    def __init__(self, config: Optional[JETestingConfig] = None):
+        super().__init__(config or JETestingConfig())
 
-    Returns:
-        JETestingResult with composite score, test results, data quality, etc.
-    """
-    if config is None:
-        config = JETestingConfig()
+    def detect_columns(self, column_names: list[str]) -> Any:
+        return detect_gl_columns(column_names)
 
-    # 1. Detect columns
-    detection = detect_gl_columns(column_names)
-
-    # Apply manual overrides if provided
-    if column_mapping:
+    def apply_column_overrides(self, detection: Any, column_mapping: dict) -> Any:
         if "date_column" in column_mapping:
             detection.date_column = column_mapping["date_column"]
         if "account_column" in column_mapping:
@@ -2819,29 +2805,69 @@ def run_je_testing(
             detection.entry_date_column = column_mapping["entry_date_column"]
         if "posting_date_column" in column_mapping:
             detection.posting_date_column = column_mapping["posting_date_column"]
-        # Recalculate overall confidence with overrides
         detection.overall_confidence = 1.0
+        return detection
 
-    # 2. Parse entries
-    entries = parse_gl_entries(rows, detection)
+    def parse_data(self, rows: list[dict], detection: Any) -> list:
+        return parse_gl_entries(rows, detection)
 
-    # 3. Assess data quality
-    data_quality = assess_data_quality(entries, detection)
+    def run_quality_checks(self, entries: list, detection: Any) -> Any:
+        return assess_data_quality(entries, detection)
 
-    # 4. Detect multi-currency
-    multi_currency = detect_multi_currency(entries)
+    def enrich(self, entries: list) -> Any:
+        return detect_multi_currency(entries)
 
-    # 5. Run test battery
-    test_results, benford_data = run_test_battery(entries, config)
+    def run_tests(self, entries: list) -> Any:
+        return run_test_battery(entries, self.config)
 
-    # 6. Calculate composite score
-    composite = calculate_composite_score(test_results, len(entries))
+    def extract_test_results(self, test_output: Any) -> list:
+        # run_test_battery returns (test_results, benford_data)
+        return test_output[0]
 
-    return JETestingResult(
-        composite_score=composite,
-        test_results=test_results,
-        data_quality=data_quality,
-        multi_currency_warning=multi_currency,
-        column_detection=detection,
-        benford_result=benford_data,
-    )
+    def compute_score(self, test_results: list, entry_count: int) -> Any:
+        return calculate_composite_score(test_results, entry_count)
+
+    def build_result(
+        self,
+        composite: Any,
+        test_output: Any,
+        data_quality: Any,
+        detection: Any,
+        entries: list,
+        enrichment: Any,
+    ) -> Any:
+        test_results, benford_data = test_output
+        return JETestingResult(
+            composite_score=composite,
+            test_results=test_results,
+            data_quality=data_quality,
+            multi_currency_warning=enrichment,
+            column_detection=detection,
+            benford_result=benford_data,
+        )
+
+
+# =============================================================================
+# MAIN ENTRY POINT
+# =============================================================================
+
+
+def run_je_testing(
+    rows: list[dict],
+    column_names: list[str],
+    config: Optional[JETestingConfig] = None,
+    column_mapping: Optional[dict] = None,
+) -> JETestingResult:
+    """Run the complete JE testing pipeline.
+
+    Args:
+        rows: List of dicts (raw GL data rows)
+        column_names: List of column header names
+        config: Optional testing configuration
+        column_mapping: Optional manual column mapping override
+
+    Returns:
+        JETestingResult with composite score, test results, data quality, etc.
+    """
+    engine = JETestingEngine(config)
+    return engine.run_pipeline(rows, column_names, column_mapping)

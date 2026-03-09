@@ -27,8 +27,9 @@ from collections import Counter
 from dataclasses import dataclass, field
 from datetime import date
 from difflib import SequenceMatcher
-from typing import Optional
+from typing import Any, Optional
 
+from engine_framework import AuditEngineBase
 from shared.benford import BENFORD_EXPECTED, analyze_benford, get_first_digit  # noqa: E402
 from shared.column_detector import ColumnFieldConfig, detect_columns
 from shared.data_quality import FieldQualityConfig
@@ -1725,6 +1726,171 @@ def calculate_payroll_composite_score(
 
 
 # =============================================================================
+# ENGINE CLASS (Sprint 519 Phase 3)
+# =============================================================================
+
+
+class PayrollTestingEngine(AuditEngineBase):
+    """Payroll testing engine — extends AuditEngineBase."""
+
+    def __init__(self, config: Optional[PayrollTestingConfig] = None, filename: str = ""):
+        super().__init__(config or PayrollTestingConfig())
+        self.filename = filename
+
+    def detect_columns(self, column_names: list[str]) -> Any:
+        return detect_payroll_columns(column_names)
+
+    def apply_column_overrides(self, detection: Any, column_mapping: dict) -> Any:
+        # Payroll creates a fresh detection when manual mapping is provided
+        new_detection = PayrollColumnDetectionResult(all_columns=detection.all_columns)
+        mapping_fields = {
+            "employee_id": "employee_id_column",
+            "employee_name": "employee_name_column",
+            "department": "department_column",
+            "pay_date": "pay_date_column",
+            "gross_pay": "gross_pay_column",
+            "net_pay": "net_pay_column",
+            "deductions": "deductions_column",
+            "check_number": "check_number_column",
+            "pay_type": "pay_type_column",
+            "hours": "hours_column",
+            "rate": "rate_column",
+            "hire_date": "hire_date_column",
+            "term_date": "term_date_column",
+            "bank_account": "bank_account_column",
+            "address": "address_column",
+            "tax_id": "tax_id_column",
+        }
+        for key, attr in mapping_fields.items():
+            if key in column_mapping:
+                setattr(new_detection, attr, column_mapping[key])
+        new_detection.has_check_numbers = new_detection.check_number_column is not None
+        new_detection.has_hire_dates = new_detection.hire_date_column is not None
+        new_detection.has_term_dates = new_detection.term_date_column is not None
+        new_detection.has_bank_accounts = new_detection.bank_account_column is not None
+        new_detection.has_addresses = new_detection.address_column is not None
+        new_detection.has_tax_ids = new_detection.tax_id_column is not None
+        new_detection.overall_confidence = 1.0
+        return new_detection
+
+    def parse_data(self, rows: list[dict], detection: Any) -> list:
+        return parse_payroll_entries(rows, detection)
+
+    def run_quality_checks(self, entries: list, detection: Any) -> Any:
+        return assess_payroll_data_quality(entries, detection)
+
+    def enrich(self, entries: list) -> Any:
+        detection = self.detection
+        register_total = sum(e.gross_pay for e in entries)
+
+        # Department summary (if department column detected with >60% fill)
+        dept_summary: list[dict] = []
+        if detection.department_column:
+            dept_fill = sum(1 for e in entries if e.department.strip()) / max(len(entries), 1)
+            if dept_fill > 0.60:
+                dept_groups: dict[str, list[PayrollEntry]] = {}
+                for e in entries:
+                    dept = e.department.strip() or "No Department / Unassigned"
+                    dept_groups.setdefault(dept, []).append(e)
+                for dept, group in sorted(
+                    dept_groups.items(), key=lambda x: sum(e.gross_pay for e in x[1]), reverse=True
+                ):
+                    emp_ids: set[str] = set()
+                    total_pay = 0.0
+                    for e in group:
+                        key = e.employee_id.strip().lower() or e.employee_name.strip().lower()
+                        emp_ids.add(key)
+                        total_pay += e.gross_pay
+                    dept_summary.append(
+                        {
+                            "department": dept,
+                            "employee_count": len(emp_ids),
+                            "total_gross_pay": round(total_pay, 2),
+                            "pct_of_total": round(total_pay / register_total * 100, 1) if register_total else 0,
+                        }
+                    )
+
+        # Headcount roll-forward (if hire_date and term_date available)
+        headcount_rf: Optional[dict] = None
+        if detection.has_hire_dates and detection.has_term_dates and entries:
+            all_dates = [e.pay_date for e in entries if e.pay_date]
+            if all_dates:
+                period_start = date(min(all_dates).year, 1, 1)
+                period_end = date(max(all_dates).year, 12, 31)
+                emp_map: dict[str, PayrollEntry] = {}
+                for e in entries:
+                    key = e.employee_id.strip().lower() or e.employee_name.strip().lower()
+                    if key and key not in emp_map:
+                        emp_map[key] = e
+                beginning = sum(
+                    1
+                    for e in emp_map.values()
+                    if (e.hire_date is None or e.hire_date < period_start)
+                    and (e.term_date is None or e.term_date >= period_start)
+                )
+                new_hires = sum(
+                    1 for e in emp_map.values() if e.hire_date and period_start <= e.hire_date <= period_end
+                )
+                terminations = sum(
+                    1 for e in emp_map.values() if e.term_date and period_start <= e.term_date <= period_end
+                )
+                computed_ending = beginning + new_hires - terminations
+                max_date = max(all_dates)
+                final_month = (max_date.year, max_date.month)
+                final_emps: set[str] = set()
+                for e in entries:
+                    if e.pay_date and (e.pay_date.year, e.pay_date.month) == final_month:
+                        key = e.employee_id.strip().lower() or e.employee_name.strip().lower()
+                        if key:
+                            final_emps.add(key)
+                headcount_rf = {
+                    "period_start": period_start.isoformat(),
+                    "period_end": period_end.isoformat(),
+                    "beginning_headcount": beginning,
+                    "new_hires": new_hires,
+                    "terminations": terminations,
+                    "computed_ending": computed_ending,
+                    "final_period_headcount": len(final_emps),
+                    "variance": computed_ending - len(final_emps),
+                }
+
+        return {
+            "register_total": register_total,
+            "dept_summary": dept_summary,
+            "headcount_rf": headcount_rf,
+        }
+
+    def run_tests(self, entries: list) -> Any:
+        return run_payroll_test_battery(entries, self.config, self.detection)
+
+    def compute_score(self, test_results: list, entry_count: int) -> Any:
+        return calculate_payroll_composite_score(test_results, entry_count)
+
+    def build_result(
+        self,
+        composite: Any,
+        test_output: Any,
+        data_quality: Any,
+        detection: Any,
+        entries: list,
+        enrichment: Any,
+    ) -> Any:
+        return PayrollTestingResult(
+            composite_score=composite,
+            test_results=test_output,
+            data_quality=data_quality,
+            column_detection=detection,
+            filename=self.filename,
+            payroll_register_total=enrichment["register_total"],
+            department_summary=enrichment["dept_summary"],
+            headcount_rollforward=enrichment["headcount_rf"],
+        )
+
+    def cleanup(self, rows: list[dict]) -> None:
+        rows.clear()
+
+
+# =============================================================================
 # MAIN ENTRY POINT
 # =============================================================================
 
@@ -1748,135 +1914,5 @@ def run_payroll_testing(
     Returns:
         PayrollTestingResult with composite score, test results, data quality
     """
-    if config is None:
-        config = PayrollTestingConfig()
-
-    # Column detection (or manual mapping)
-    if column_mapping:
-        detection = PayrollColumnDetectionResult(all_columns=headers)
-        mapping_fields = {
-            "employee_id": "employee_id_column",
-            "employee_name": "employee_name_column",
-            "department": "department_column",
-            "pay_date": "pay_date_column",
-            "gross_pay": "gross_pay_column",
-            "net_pay": "net_pay_column",
-            "deductions": "deductions_column",
-            "check_number": "check_number_column",
-            "pay_type": "pay_type_column",
-            "hours": "hours_column",
-            "rate": "rate_column",
-            "hire_date": "hire_date_column",
-            "term_date": "term_date_column",
-            "bank_account": "bank_account_column",
-            "address": "address_column",
-            "tax_id": "tax_id_column",
-        }
-        for key, attr in mapping_fields.items():
-            if key in column_mapping:
-                setattr(detection, attr, column_mapping[key])
-        detection.has_check_numbers = detection.check_number_column is not None
-        detection.has_hire_dates = detection.hire_date_column is not None
-        detection.has_term_dates = detection.term_date_column is not None
-        detection.has_bank_accounts = detection.bank_account_column is not None
-        detection.has_addresses = detection.address_column is not None
-        detection.has_tax_ids = detection.tax_id_column is not None
-        detection.overall_confidence = 1.0
-    else:
-        detection = detect_payroll_columns(headers)
-
-    # Parse entries
-    entries = parse_payroll_entries(rows, detection)
-
-    # Data quality
-    data_quality = assess_payroll_data_quality(entries, detection)
-
-    # Run test battery
-    test_results = run_payroll_test_battery(entries, config, detection)
-
-    # Composite score
-    composite = calculate_payroll_composite_score(test_results, len(entries))
-
-    # Enrichment: payroll register total
-    register_total = sum(e.gross_pay for e in entries)
-
-    # Enrichment: department summary (if department column detected with >60% fill)
-    dept_summary: list[dict] = []
-    if detection.department_column:
-        dept_fill = sum(1 for e in entries if e.department.strip()) / max(len(entries), 1)
-        if dept_fill > 0.60:
-            dept_groups: dict[str, list[PayrollEntry]] = {}
-            for e in entries:
-                dept = e.department.strip() or "No Department / Unassigned"
-                dept_groups.setdefault(dept, []).append(e)
-            for dept, group in sorted(dept_groups.items(), key=lambda x: sum(e.gross_pay for e in x[1]), reverse=True):
-                emp_ids = set()
-                total_pay = 0.0
-                for e in group:
-                    key = e.employee_id.strip().lower() or e.employee_name.strip().lower()
-                    emp_ids.add(key)
-                    total_pay += e.gross_pay
-                dept_summary.append(
-                    {
-                        "department": dept,
-                        "employee_count": len(emp_ids),
-                        "total_gross_pay": round(total_pay, 2),
-                        "pct_of_total": round(total_pay / register_total * 100, 1) if register_total else 0,
-                    }
-                )
-
-    # Enrichment: headcount roll-forward (if hire_date and term_date available)
-    headcount_rf: Optional[dict] = None
-    if detection.has_hire_dates and detection.has_term_dates and entries:
-        all_dates = [e.pay_date for e in entries if e.pay_date]
-        if all_dates:
-            period_start = date(min(all_dates).year, 1, 1)
-            period_end = date(max(all_dates).year, 12, 31)
-            # Deduplicate by employee
-            emp_map: dict[str, PayrollEntry] = {}
-            for e in entries:
-                key = e.employee_id.strip().lower() or e.employee_name.strip().lower()
-                if key and key not in emp_map:
-                    emp_map[key] = e
-            beginning = sum(
-                1
-                for e in emp_map.values()
-                if (e.hire_date is None or e.hire_date < period_start)
-                and (e.term_date is None or e.term_date >= period_start)
-            )
-            new_hires = sum(1 for e in emp_map.values() if e.hire_date and period_start <= e.hire_date <= period_end)
-            terminations = sum(1 for e in emp_map.values() if e.term_date and period_start <= e.term_date <= period_end)
-            computed_ending = beginning + new_hires - terminations
-            # Count employees in final pay period
-            max_date = max(all_dates)
-            final_month = (max_date.year, max_date.month)
-            final_emps = set()
-            for e in entries:
-                if e.pay_date and (e.pay_date.year, e.pay_date.month) == final_month:
-                    key = e.employee_id.strip().lower() or e.employee_name.strip().lower()
-                    if key:
-                        final_emps.add(key)
-            headcount_rf = {
-                "period_start": period_start.isoformat(),
-                "period_end": period_end.isoformat(),
-                "beginning_headcount": beginning,
-                "new_hires": new_hires,
-                "terminations": terminations,
-                "computed_ending": computed_ending,
-                "final_period_headcount": len(final_emps),
-                "variance": computed_ending - len(final_emps),
-            }
-
-    # Clear memory (Zero-Storage)
-    rows.clear()
-
-    return PayrollTestingResult(
-        composite_score=composite,
-        test_results=test_results,
-        data_quality=data_quality,
-        column_detection=detection,
-        filename=filename,
-        payroll_register_total=register_total,
-        department_summary=dept_summary,
-        headcount_rollforward=headcount_rf,
-    )
+    engine = PayrollTestingEngine(config, filename)
+    return engine.run_pipeline(rows, headers, column_mapping)
