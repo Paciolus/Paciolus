@@ -702,6 +702,18 @@ class PaciolusReportGenerator:
         elements.append(Paragraph(limitation_text, self.styles["BodyText"]))
         elements.append(Spacer(1, 6))
 
+        # Part 3: Practitioner liability boundary
+        practitioner_text = (
+            "Practitioner information appearing on the cover of this report is provided by the "
+            "user and reflects the engagement team responsible for applying professional judgment "
+            "to this output. Paciolus does not review, endorse, certify, or assume responsibility "
+            "for conclusions drawn by the engagement practitioner. The presence of practitioner "
+            "credentials in this report does not constitute a representation by Paciolus regarding "
+            "the quality or completeness of any professional engagement."
+        )
+        elements.append(Paragraph(practitioner_text, self.styles["BodyText"]))
+        elements.append(Spacer(1, 6))
+
         zero_storage = (
             "Zero-Storage Architecture: All financial data was processed in-memory during this "
             "analysis session and was not persisted to any storage medium. No client financial "
