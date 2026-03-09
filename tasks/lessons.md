@@ -4,6 +4,12 @@
 
 ---
 
+## Extraction ROI diminishes after scaffolding (Sprint 519)
+
+When a multi-phase debt remediation captures the high-ROI wins first (shared primitives, hook decomposition, engine unification, component extraction), the remaining "service extraction" phase may have marginal value. Specifically: if the service layer already exists (billing/ has 6 modules, audit.py has execute_file_tool), extracting route-level orchestration into yet another layer adds indirection for single-use code. The council correctly deferred Phase 5 after recognizing that Phases 1–4 already addressed the structural debt. **Pattern: plan multi-phase remediations with an explicit "stop if diminishing returns" gate between phases.**
+
+---
+
 ## Task Management Archival Discipline (Audit 28 / Council Decision)
 
 1. **Passive thresholds fail during sustained campaigns**: The 5-sprint archival threshold rule existed but was silently violated 12 times across 12 consecutive directive cycles during the Report Enrichment campaign (Sprints 499-515). A passive rule with no active trigger point is insufficient when sprint velocity is high. Fix: a proactive self-check added to Directive Protocol step 1 — "If Active Phase has 4+ completed sprints, archive first."
