@@ -23,6 +23,7 @@ from audit_engine import (
 # Multi-Sheet Column Detection Tests (Sprint 25)
 # =============================================================================
 
+
 class TestMultiSheetColumnDetection:
     """Test per-sheet column detection for multi-sheet audits (Sprint 25 fix)."""
 
@@ -30,21 +31,13 @@ class TestMultiSheetColumnDetection:
     def multi_sheet_xlsx_same_columns(self):
         """Create Excel bytes with multiple sheets having same column order."""
         output = io.BytesIO()
-        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        with pd.ExcelWriter(output, engine="openpyxl") as writer:
             # Sheet 1
-            df1 = pd.DataFrame({
-                "Account Name": ["Cash", "Revenue"],
-                "Debit": [1000, 0],
-                "Credit": [0, 1000]
-            })
+            df1 = pd.DataFrame({"Account Name": ["Cash", "Revenue"], "Debit": [1000, 0], "Credit": [0, 1000]})
             df1.to_excel(writer, sheet_name="Sheet1", index=False)
 
             # Sheet 2 - same column order
-            df2 = pd.DataFrame({
-                "Account Name": ["Inventory", "Sales"],
-                "Debit": [500, 0],
-                "Credit": [0, 500]
-            })
+            df2 = pd.DataFrame({"Account Name": ["Inventory", "Sales"], "Debit": [500, 0], "Credit": [0, 500]})
             df2.to_excel(writer, sheet_name="Sheet2", index=False)
 
         return output.getvalue()
@@ -53,21 +46,15 @@ class TestMultiSheetColumnDetection:
     def multi_sheet_xlsx_different_columns(self):
         """Create Excel bytes with sheets having different column orders."""
         output = io.BytesIO()
-        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        with pd.ExcelWriter(output, engine="openpyxl") as writer:
             # Sheet 1: Account, Debit, Credit
-            df1 = pd.DataFrame({
-                "Account Name": ["Cash", "Revenue"],
-                "Debit": [1000, 0],
-                "Credit": [0, 1000]
-            })
+            df1 = pd.DataFrame({"Account Name": ["Cash", "Revenue"], "Debit": [1000, 0], "Credit": [0, 1000]})
             df1.to_excel(writer, sheet_name="Sheet1", index=False)
 
             # Sheet 2: Different column order - Credit before Debit
-            df2 = pd.DataFrame({
-                "GL Account": ["Inventory", "Sales"],
-                "Credit Amount": [0, 500],
-                "Debit Amount": [500, 0]
-            })
+            df2 = pd.DataFrame(
+                {"GL Account": ["Inventory", "Sales"], "Credit Amount": [0, 500], "Debit Amount": [500, 0]}
+            )
             df2.to_excel(writer, sheet_name="Sheet2", index=False)
 
         return output.getvalue()
@@ -80,7 +67,7 @@ class TestMultiSheetColumnDetection:
             file_bytes=multi_sheet_xlsx_same_columns,
             filename="test.xlsx",
             selected_sheets=["Sheet1", "Sheet2"],
-            materiality_threshold=0
+            materiality_threshold=0,
         )
 
         # Should have per-sheet column detections
@@ -96,7 +83,7 @@ class TestMultiSheetColumnDetection:
             file_bytes=multi_sheet_xlsx_different_columns,
             filename="test.xlsx",
             selected_sheets=["Sheet1", "Sheet2"],
-            materiality_threshold=0
+            materiality_threshold=0,
         )
 
         # Should have column order warnings
@@ -113,7 +100,7 @@ class TestMultiSheetColumnDetection:
             file_bytes=multi_sheet_xlsx_same_columns,
             filename="test.xlsx",
             selected_sheets=["Sheet1", "Sheet2"],
-            materiality_threshold=0
+            materiality_threshold=0,
         )
 
         assert result["has_column_order_mismatch"] is False
@@ -127,7 +114,7 @@ class TestMultiSheetColumnDetection:
             file_bytes=multi_sheet_xlsx_same_columns,
             filename="test.xlsx",
             selected_sheets=["Sheet1", "Sheet2"],
-            materiality_threshold=0
+            materiality_threshold=0,
         )
 
         # Each sheet result should include its column detection
@@ -142,7 +129,7 @@ class TestMultiSheetColumnDetection:
             file_bytes=multi_sheet_xlsx_same_columns,
             filename="test.xlsx",
             selected_sheets=["Sheet1", "Sheet2"],
-            materiality_threshold=0
+            materiality_threshold=0,
         )
 
         # Top-level column_detection should still exist (uses first sheet)
@@ -158,11 +145,7 @@ class TestMultiSheetColumnDetection:
             filename="test.xlsx",
             selected_sheets=["Sheet1"],
             materiality_threshold=0,
-            column_mapping={
-                "account_column": "Account Name",
-                "debit_column": "Debit",
-                "credit_column": "Credit"
-            }
+            column_mapping={"account_column": "Account Name", "debit_column": "Debit", "credit_column": "Credit"},
         )
 
         # With user mapping, detection should show 100% confidence
@@ -173,6 +156,7 @@ class TestMultiSheetColumnDetection:
 # =============================================================================
 # Suspense Account Detection Tests (Sprint 41)
 # =============================================================================
+
 
 class TestSuspenseAccountDetection:
     """Test suspense account detection feature (Sprint 41 - Phase III)."""
@@ -189,7 +173,7 @@ Accounts Payable,,8000
 Payroll Clearing,800,
 Revenue,,7300
 """
-        return data.encode('utf-8')
+        return data.encode("utf-8")
 
     @pytest.fixture
     def no_suspense_csv(self) -> bytes:
@@ -202,7 +186,7 @@ Revenue,,15000
 Accounts Payable,,2000
 Retained Earnings,,1000
 """
-        return data.encode('utf-8')
+        return data.encode("utf-8")
 
     @pytest.fixture
     def edge_case_suspense_csv(self) -> bytes:
@@ -214,7 +198,7 @@ Intercompany Clearing,500,
 Miscellaneous Expense,300,
 Other Income,,4300
 """
-        return data.encode('utf-8')
+        return data.encode("utf-8")
 
     @pytest.fixture
     def zero_balance_suspense_csv(self) -> bytes:
@@ -225,7 +209,7 @@ Suspense Account,1000,1000
 Bank Clearing,500,500
 Revenue,,10000
 """
-        return data.encode('utf-8')
+        return data.encode("utf-8")
 
     def test_detects_suspense_keyword(self, suspense_accounts_csv):
         """Verify 'Suspense Account' is detected."""
@@ -235,10 +219,7 @@ Revenue,,10000
 
         suspense = auditor.detect_suspense_accounts()
 
-        suspense_entry = next(
-            (s for s in suspense if "suspense" in s["account"].lower()),
-            None
-        )
+        suspense_entry = next((s for s in suspense if "suspense" in s["account"].lower()), None)
         assert suspense_entry is not None
         assert suspense_entry["anomaly_type"] == "suspense_account"
         assert suspense_entry["confidence"] >= 0.90
@@ -262,10 +243,7 @@ Revenue,,10000
 
         suspense = auditor.detect_suspense_accounts()
 
-        unallocated = next(
-            (s for s in suspense if "unallocated" in s["account"].lower()),
-            None
-        )
+        unallocated = next((s for s in suspense if "unallocated" in s["account"].lower()), None)
         assert unallocated is not None
         assert unallocated["confidence"] >= 0.60
 
@@ -348,10 +326,7 @@ Revenue,,10000
 
         suspense = auditor.detect_suspense_accounts()
 
-        pending = next(
-            (s for s in suspense if "pending" in s["account"].lower()),
-            None
-        )
+        pending = next((s for s in suspense if "pending" in s["account"].lower()), None)
         assert pending is not None
         assert pending["confidence"] >= 0.75
 
@@ -364,10 +339,7 @@ Revenue,,10000
         suspense = auditor.detect_suspense_accounts()
 
         # 'Miscellaneous Expense' should have confidence ~0.55, below threshold 0.60
-        misc = next(
-            (s for s in suspense if s["account"] == "Miscellaneous Expense"),
-            None
-        )
+        misc = next((s for s in suspense if s["account"] == "Miscellaneous Expense"), None)
         # May or may not be flagged depending on threshold
         if misc:
             assert misc["confidence"] >= 0.60
@@ -375,26 +347,19 @@ Revenue,,10000
     def test_suspense_merged_into_abnormal_balances(self, suspense_accounts_csv):
         """Verify suspense accounts are merged into audit result abnormal_balances."""
         result = audit_trial_balance_streaming(
-            file_bytes=suspense_accounts_csv,
-            filename="test.csv",
-            materiality_threshold=0
+            file_bytes=suspense_accounts_csv, filename="test.csv", materiality_threshold=0
         )
 
         abnormals = result["abnormal_balances"]
 
         # Find suspense entries in abnormal_balances
-        suspense_entries = [
-            ab for ab in abnormals
-            if ab.get("anomaly_type") == "suspense_account"
-        ]
+        suspense_entries = [ab for ab in abnormals if ab.get("anomaly_type") == "suspense_account"]
         assert len(suspense_entries) > 0
 
     def test_risk_summary_includes_suspense_count(self, suspense_accounts_csv):
         """Verify risk_summary includes suspense_account count."""
         result = audit_trial_balance_streaming(
-            file_bytes=suspense_accounts_csv,
-            filename="test.csv",
-            materiality_threshold=0
+            file_bytes=suspense_accounts_csv, filename="test.csv", materiality_threshold=0
         )
 
         risk_summary = result["risk_summary"]
@@ -408,7 +373,7 @@ Revenue,,10000
         result = audit_trial_balance_streaming(
             file_bytes=suspense_accounts_csv,
             filename="test.csv",
-            materiality_threshold=10000  # Make most immaterial
+            materiality_threshold=10000,  # Make most immaterial
         )
 
         risk_summary = result["risk_summary"]
@@ -424,26 +389,20 @@ Revenue,,5000
 Asset,10000,
 """
         result = audit_trial_balance_streaming(
-            file_bytes=data.encode('utf-8'),
-            filename="test.csv",
-            materiality_threshold=0
+            file_bytes=data.encode("utf-8"), filename="test.csv", materiality_threshold=0
         )
 
         abnormals = result["abnormal_balances"]
 
         # Should only appear once, but with suspense indicator
         suspense_cash = [
-            ab for ab in abnormals
-            if "suspense" in ab["account"].lower() and "cash" in ab["account"].lower()
+            ab for ab in abnormals if "suspense" in ab["account"].lower() and "cash" in ab["account"].lower()
         ]
         assert len(suspense_cash) == 1
 
         entry = suspense_cash[0]
         # Should have either anomaly_type=suspense_account or is_suspense_account=True
-        assert (
-            entry.get("anomaly_type") == "suspense_account" or
-            entry.get("is_suspense_account") is True
-        )
+        assert entry.get("anomaly_type") == "suspense_account" or entry.get("is_suspense_account") is True
 
     def test_matched_keywords_returned(self, suspense_accounts_csv):
         """Verify matched keywords are returned in results."""
@@ -462,36 +421,25 @@ Asset,10000,
         from audit_engine import audit_trial_balance_multi_sheet
 
         output = io.BytesIO()
-        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        with pd.ExcelWriter(output, engine="openpyxl") as writer:
             # Sheet 1 with suspense
-            df1 = pd.DataFrame({
-                "Account Name": ["Cash", "Suspense Account"],
-                "Debit": [1000, 500],
-                "Credit": [0, 0]
-            })
+            df1 = pd.DataFrame({"Account Name": ["Cash", "Suspense Account"], "Debit": [1000, 500], "Credit": [0, 0]})
             df1.to_excel(writer, sheet_name="Sheet1", index=False)
 
             # Sheet 2 with clearing
-            df2 = pd.DataFrame({
-                "Account Name": ["Revenue", "Bank Clearing"],
-                "Debit": [0, 300],
-                "Credit": [1800, 0]
-            })
+            df2 = pd.DataFrame({"Account Name": ["Revenue", "Bank Clearing"], "Debit": [0, 300], "Credit": [1800, 0]})
             df2.to_excel(writer, sheet_name="Sheet2", index=False)
 
         result = audit_trial_balance_multi_sheet(
             file_bytes=output.getvalue(),
             filename="test.xlsx",
             selected_sheets=["Sheet1", "Sheet2"],
-            materiality_threshold=0
+            materiality_threshold=0,
         )
 
         # Verify suspense accounts found across sheets
         abnormals = result["abnormal_balances"]
-        suspense_entries = [
-            ab for ab in abnormals
-            if ab.get("anomaly_type") == "suspense_account"
-        ]
+        suspense_entries = [ab for ab in abnormals if ab.get("anomaly_type") == "suspense_account"]
         assert len(suspense_entries) >= 2  # Suspense Account + Bank Clearing
 
         # Verify sheet_name is added
@@ -502,6 +450,7 @@ Asset,10000,
 # =============================================================================
 # Concentration Risk Detection Tests (Sprint 42)
 # =============================================================================
+
 
 class TestConcentrationRiskDetection:
     """Test concentration risk detection feature (Sprint 42 - Phase III)."""
@@ -516,7 +465,7 @@ Accounts Receivable - Customer C,10000,
 Revenue,,100000
 """
         # Customer A is 80% of total receivables - HIGH concentration
-        return data.encode('utf-8')
+        return data.encode("utf-8")
 
     @pytest.fixture
     def medium_concentration_csv(self) -> bytes:
@@ -528,7 +477,7 @@ Accounts Receivable - Customer C,30000,
 Revenue,,100000
 """
         # Customer A is 35% of total receivables - MEDIUM concentration
-        return data.encode('utf-8')
+        return data.encode("utf-8")
 
     @pytest.fixture
     def no_concentration_csv(self) -> bytes:
@@ -547,7 +496,7 @@ Rental Income,,20000
 """
         # Each customer is 20% - no concentration
         # Each revenue is 20% - no concentration
-        return data.encode('utf-8')
+        return data.encode("utf-8")
 
     @pytest.fixture
     def small_category_csv(self) -> bytes:
@@ -561,7 +510,7 @@ Sales Revenue,,400
 """
         # Total assets only $800 - below $1000 minimum threshold
         # Each revenue is 50% but total revenue is $800 - below threshold
-        return data.encode('utf-8')
+        return data.encode("utf-8")
 
     def test_detects_high_concentration(self, high_concentration_csv):
         """Verify high concentration (>50%) is detected with high severity."""
@@ -575,10 +524,7 @@ Sales Revenue,,400
         assert len(high_conc) >= 1
 
         # Customer A should be flagged
-        customer_a = next(
-            (c for c in concentration if "customer a" in c["account"].lower()),
-            None
-        )
+        customer_a = next((c for c in concentration if "customer a" in c["account"].lower()), None)
         assert customer_a is not None
         assert customer_a["concentration_percent"] >= 50
 
@@ -591,10 +537,7 @@ Sales Revenue,,400
         concentration = auditor.detect_concentration_risk()
 
         # Customer A at 35% should be flagged as medium
-        customer_a = next(
-            (c for c in concentration if "customer a" in c["account"].lower()),
-            None
-        )
+        customer_a = next((c for c in concentration if "customer a" in c["account"].lower()), None)
         assert customer_a is not None
         assert customer_a["severity"] == "medium"
         assert 25 <= customer_a["concentration_percent"] <= 50
@@ -648,24 +591,17 @@ Sales Revenue,,400
     def test_concentration_merged_into_abnormal_balances(self, high_concentration_csv):
         """Verify concentration risks are merged into audit result."""
         result = audit_trial_balance_streaming(
-            file_bytes=high_concentration_csv,
-            filename="test.csv",
-            materiality_threshold=0
+            file_bytes=high_concentration_csv, filename="test.csv", materiality_threshold=0
         )
 
         abnormals = result["abnormal_balances"]
-        concentration_entries = [
-            ab for ab in abnormals
-            if ab.get("anomaly_type", "").endswith("_concentration")
-        ]
+        concentration_entries = [ab for ab in abnormals if ab.get("anomaly_type", "").endswith("_concentration")]
         assert len(concentration_entries) > 0
 
     def test_risk_summary_includes_concentration_count(self, high_concentration_csv):
         """Verify risk_summary includes concentration_risk count."""
         result = audit_trial_balance_streaming(
-            file_bytes=high_concentration_csv,
-            filename="test.csv",
-            materiality_threshold=0
+            file_bytes=high_concentration_csv, filename="test.csv", materiality_threshold=0
         )
 
         risk_summary = result["risk_summary"]
@@ -689,6 +625,7 @@ Sales Revenue,,400
 # Rounding Anomaly Detection Tests (Sprint 42)
 # =============================================================================
 
+
 class TestRoundingAnomalyDetection:
     """Test rounding anomaly detection feature (Sprint 42 - Phase III)."""
 
@@ -702,7 +639,7 @@ Prepaid Expenses,20000,
 Revenue,,170000
 """
         # All amounts are suspiciously round
-        return data.encode('utf-8')
+        return data.encode("utf-8")
 
     @pytest.fixture
     def normal_numbers_csv(self) -> bytes:
@@ -713,7 +650,7 @@ Inventory,51234.89,
 Prepaid Expenses,19876.43,
 Revenue,,169458.84
 """
-        return data.encode('utf-8')
+        return data.encode("utf-8")
 
     @pytest.fixture
     def mixed_numbers_csv(self) -> bytes:
@@ -724,11 +661,16 @@ Inventory,51234.89,
 Equipment,50000,
 Revenue,,201234.89
 """
-        return data.encode('utf-8')
+        return data.encode("utf-8")
 
     @pytest.fixture
     def excluded_round_csv(self) -> bytes:
-        """Generate CSV with round numbers on excluded account types."""
+        """Generate CSV with round numbers on excluded account types.
+
+        Sprint 526 Fix 3: Equipment is now Tier 1 (suppressed) alongside
+        loans and capital accounts.  Use Miscellaneous Expense (Tier 3)
+        as the account that should still be flagged.
+        """
         data = """Account Name,Debit,Credit
 Cash,50000,
 Bank Loan,,100000
@@ -736,10 +678,11 @@ Mortgage Payable,,200000
 Common Stock,,50000
 Note Payable,,100000
 Equipment,400000,
+Miscellaneous Expense,300000,
 """
-        # Loan, Mortgage, Stock, Note Payable should be excluded
-        # Only Equipment should be flagged
-        return data.encode('utf-8')
+        # Loan, Mortgage, Stock, Note Payable, Equipment → suppressed / excluded
+        # Only Miscellaneous Expense should be flagged (Tier 3)
+        return data.encode("utf-8")
 
     @pytest.fixture
     def small_amounts_csv(self) -> bytes:
@@ -750,7 +693,7 @@ Office Expense,1000,
 Revenue,,6000
 """
         # Amounts below $10,000 minimum threshold
-        return data.encode('utf-8')
+        return data.encode("utf-8")
 
     def test_detects_hundred_thousand_rounding(self, round_numbers_csv):
         """Verify $100,000 round numbers are detected."""
@@ -761,10 +704,7 @@ Revenue,,6000
         rounding = auditor.detect_rounding_anomalies()
 
         # Accounts Receivable at $100,000 should be flagged
-        ar_entry = next(
-            (r for r in rounding if "receivable" in r["account"].lower()),
-            None
-        )
+        ar_entry = next((r for r in rounding if "receivable" in r["account"].lower()), None)
         assert ar_entry is not None
         assert ar_entry["rounding_pattern"] == "hundred_thousand"
         assert ar_entry["severity"] == "high"
@@ -778,10 +718,7 @@ Revenue,,6000
         rounding = auditor.detect_rounding_anomalies()
 
         # Inventory at $50,000 should be flagged
-        inv_entry = next(
-            (r for r in rounding if "inventory" in r["account"].lower()),
-            None
-        )
+        inv_entry = next((r for r in rounding if "inventory" in r["account"].lower()), None)
         assert inv_entry is not None
         assert inv_entry["rounding_pattern"] in ["hundred_thousand", "fifty_thousand"]
 
@@ -796,23 +733,27 @@ Revenue,,6000
         assert len(rounding) == 0
 
     def test_excludes_loan_and_capital_accounts(self, excluded_round_csv):
-        """Verify loan, mortgage, stock accounts are excluded."""
+        """Verify loan, mortgage, stock, and fixed asset accounts are excluded.
+
+        Sprint 526 Fix 3: Equipment is now Tier 1 (suppressed) alongside
+        loans and capital accounts.  Miscellaneous Expense (Tier 3) should
+        still be flagged.
+        """
         auditor = StreamingAuditor(materiality_threshold=0)
         df = pd.read_csv(io.BytesIO(excluded_round_csv))
         auditor.process_chunk(df, len(df))
 
         rounding = auditor.detect_rounding_anomalies()
 
-        # Loan, Mortgage, Stock, Note Payable should NOT be flagged
-        excluded_accounts = ["loan", "mortgage", "stock", "note payable"]
+        # Loan, Mortgage, Stock, Note Payable, Equipment should NOT be flagged
+        excluded_accounts = ["loan", "mortgage", "stock", "note payable", "equipment"]
         for entry in rounding:
             for excluded in excluded_accounts:
-                assert excluded not in entry["account"].lower(), \
-                    f"{entry['account']} should be excluded"
+                assert excluded not in entry["account"].lower(), f"{entry['account']} should be excluded"
 
-        # Only Equipment should potentially be flagged
-        equipment = [r for r in rounding if "equipment" in r["account"].lower()]
-        assert len(equipment) >= 1
+        # Only Miscellaneous Expense should be flagged (Tier 3 — suspicious)
+        misc = [r for r in rounding if "miscellaneous" in r["account"].lower()]
+        assert len(misc) >= 1
 
     def test_skips_small_amounts(self, small_amounts_csv):
         """Verify amounts below threshold are not flagged."""
@@ -853,24 +794,17 @@ Revenue,,6000
     def test_rounding_merged_into_abnormal_balances(self, round_numbers_csv):
         """Verify rounding anomalies are merged into audit result."""
         result = audit_trial_balance_streaming(
-            file_bytes=round_numbers_csv,
-            filename="test.csv",
-            materiality_threshold=0
+            file_bytes=round_numbers_csv, filename="test.csv", materiality_threshold=0
         )
 
         abnormals = result["abnormal_balances"]
-        rounding_entries = [
-            ab for ab in abnormals
-            if ab.get("anomaly_type") == "rounding_anomaly"
-        ]
+        rounding_entries = [ab for ab in abnormals if ab.get("anomaly_type") == "rounding_anomaly"]
         assert len(rounding_entries) > 0
 
     def test_risk_summary_includes_rounding_count(self, round_numbers_csv):
         """Verify risk_summary includes rounding_anomaly count."""
         result = audit_trial_balance_streaming(
-            file_bytes=round_numbers_csv,
-            filename="test.csv",
-            materiality_threshold=0
+            file_bytes=round_numbers_csv, filename="test.csv", materiality_threshold=0
         )
 
         risk_summary = result["risk_summary"]
@@ -887,7 +821,7 @@ Revenue,,6000
 
         data = "\n".join(rows)
         auditor = StreamingAuditor(materiality_threshold=0)
-        df = pd.read_csv(io.BytesIO(data.encode('utf-8')))
+        df = pd.read_csv(io.BytesIO(data.encode("utf-8")))
         auditor.process_chunk(df, len(df))
 
         rounding = auditor.detect_rounding_anomalies()
@@ -912,32 +846,27 @@ Revenue,,6000
         from audit_engine import audit_trial_balance_multi_sheet
 
         output = io.BytesIO()
-        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        with pd.ExcelWriter(output, engine="openpyxl") as writer:
             # Use account names that won't be excluded
-            df1 = pd.DataFrame({
-                "Account Name": ["Equipment", "Revenue"],
-                "Debit": [100000, 0],
-                "Credit": [0, 100000]
-            })
+            df1 = pd.DataFrame({"Account Name": ["Equipment", "Revenue"], "Debit": [100000, 0], "Credit": [0, 100000]})
             df1.to_excel(writer, sheet_name="Sheet1", index=False)
 
-            df2 = pd.DataFrame({
-                "Account Name": ["Prepaid Expenses", "Sales"],
-                "Debit": [50000, 0],
-                "Credit": [0, 50000]
-            })
+            df2 = pd.DataFrame(
+                {"Account Name": ["Prepaid Expenses", "Sales"], "Debit": [50000, 0], "Credit": [0, 50000]}
+            )
             df2.to_excel(writer, sheet_name="Sheet2", index=False)
 
         result = audit_trial_balance_multi_sheet(
             file_bytes=output.getvalue(),
             filename="test.xlsx",
             selected_sheets=["Sheet1", "Sheet2"],
-            materiality_threshold=0
+            materiality_threshold=0,
         )
 
         # Check both direct anomaly_type and has_rounding_anomaly flag
         rounding_entries = [
-            ab for ab in result["abnormal_balances"]
+            ab
+            for ab in result["abnormal_balances"]
             if ab.get("anomaly_type") == "rounding_anomaly" or ab.get("has_rounding_anomaly")
         ]
 

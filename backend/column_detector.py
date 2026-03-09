@@ -50,6 +50,11 @@ class ColumnDetectionResult:
     overall_confidence: float
     all_columns: list[str]
     detection_notes: list[str]
+    # Sprint 526: Additional column detection for classification pipeline
+    account_type_column: Optional[str] = None
+    account_type_confidence: float = 0.0
+    account_name_column: Optional[str] = None
+    account_name_confidence: float = 0.0
 
     @property
     def requires_mapping(self) -> bool:
@@ -58,7 +63,7 @@ class ColumnDetectionResult:
 
     def to_dict(self) -> dict:
         """Convert to dictionary for API response."""
-        return {
+        result = {
             "account_column": self.account_column,
             "debit_column": self.debit_column,
             "credit_column": self.credit_column,
@@ -70,6 +75,14 @@ class ColumnDetectionResult:
             "all_columns": self.all_columns,
             "detection_notes": self.detection_notes,
         }
+        # Sprint 526: Include supplementary column detection
+        if self.account_type_column:
+            result["account_type_column"] = self.account_type_column
+            result["account_type_confidence"] = round(self.account_type_confidence, 2)
+        if self.account_name_column:
+            result["account_name_column"] = self.account_name_column
+            result["account_name_confidence"] = round(self.account_name_confidence, 2)
+        return result
 
 
 # Weighted patterns for column detection
@@ -137,14 +150,51 @@ CREDIT_PATTERNS = [
     (r"cr.*amount", 0.65, False),
 ]
 
+# Sprint 526: Account Type column patterns (Fix 2 — classification pipeline)
+ACCOUNT_TYPE_PATTERNS = [
+    (r"^account[_\-\s]*type$", 1.0, True),
+    (r"^acct[_\-\s]*type$", 0.95, True),
+    (r"^account[_\-\s]*category$", 0.95, True),
+    (r"^acct[_\-\s]*category$", 0.90, True),
+    (r"^classification$", 0.85, True),
+    (r"^account[_\-\s]*class(ification)?$", 0.90, True),
+    (r"^type$", 0.70, True),
+    (r"^category$", 0.65, True),
+    (r"^class$", 0.55, True),
+]
+
+# Sprint 526: Account Name column patterns (Fix 2 — separate from account code)
+ACCOUNT_NAME_PATTERNS = [
+    (r"^account[_\-\s]*name$", 1.0, True),
+    (r"^acct[_\-\s]*name$", 0.95, True),
+    (r"^account[_\-\s]*desc(ription)?$", 0.95, True),
+    (r"^acct[_\-\s]*desc(ription)?$", 0.90, True),
+    (r"^description$", 0.75, True),
+    (r"^name$", 0.65, True),
+    (r"^account[_\-\s]*title$", 0.90, True),
+]
+
 
 # --- Shared detector configs wrapping the legacy patterns ---
 
+# Sprint 526: Detect account_type and account_name BEFORE account (lower priority number = first)
+TB_ACCOUNT_TYPE_CONFIG = ColumnFieldConfig(
+    field_name="account_type_column",
+    patterns=ACCOUNT_TYPE_PATTERNS,
+    required=False,
+    priority=5,
+)
 TB_ACCOUNT_CONFIG = ColumnFieldConfig(
     field_name="account_column",
     patterns=ACCOUNT_PATTERNS,
     required=False,
-    priority=10,
+    priority=8,
+)
+TB_ACCOUNT_NAME_CONFIG = ColumnFieldConfig(
+    field_name="account_name_column",
+    patterns=ACCOUNT_NAME_PATTERNS,
+    required=False,
+    priority=12,
 )
 TB_DEBIT_CONFIG = ColumnFieldConfig(
     field_name="debit_column",
@@ -160,7 +210,13 @@ TB_CREDIT_CONFIG = ColumnFieldConfig(
     missing_note="Could not identify Credit column",
     priority=30,
 )
-TB_COLUMN_CONFIGS = [TB_ACCOUNT_CONFIG, TB_DEBIT_CONFIG, TB_CREDIT_CONFIG]
+TB_COLUMN_CONFIGS = [
+    TB_ACCOUNT_TYPE_CONFIG,
+    TB_ACCOUNT_NAME_CONFIG,
+    TB_ACCOUNT_CONFIG,
+    TB_DEBIT_CONFIG,
+    TB_CREDIT_CONFIG,
+]
 
 
 def detect_columns(column_names: list[str]) -> ColumnDetectionResult:
@@ -169,6 +225,9 @@ def detect_columns(column_names: list[str]) -> ColumnDetectionResult:
     Delegates to shared.column_detector for detection, then maps the result
     back into the legacy ColumnDetectionResult shape with TB-specific logic
     (account fallback, low-confidence notes, overall confidence).
+
+    Sprint 526: Also detects account_type and account_name columns for
+    classification pipeline support.
     """
     shared_result = _shared_detect(column_names, TB_COLUMN_CONFIGS)
 
@@ -179,13 +238,24 @@ def detect_columns(column_names: list[str]) -> ColumnDetectionResult:
     credit_col = shared_result.get_column("credit_column")
     credit_conf = shared_result.get_confidence("credit_column")
 
+    # Sprint 526: Extract supplementary columns
+    account_type_col = shared_result.get_column("account_type_column")
+    account_type_conf = shared_result.get_confidence("account_type_column")
+    account_name_col = shared_result.get_column("account_name_column")
+    account_name_conf = shared_result.get_confidence("account_name_column")
+
     notes = list(shared_result.detection_notes)
 
     # Preserve legacy fallback: if no account found, use first column
     if account_col is None and shared_result.all_columns:
-        account_col = shared_result.all_columns[0]
-        account_conf = 0.30
-        notes.append(f"Using first column '{account_col}' as Account (fallback)")
+        # Sprint 526: Skip columns already assigned to type/name roles
+        assigned = {account_type_col, account_name_col, debit_col, credit_col}
+        for col in shared_result.all_columns:
+            if col not in assigned:
+                account_col = col
+                account_conf = 0.30
+                notes.append(f"Using first unassigned column '{account_col}' as Account (fallback)")
+                break
 
     # Preserve legacy low-confidence notes
     if account_col and account_conf < 0.80:
@@ -194,6 +264,12 @@ def detect_columns(column_names: list[str]) -> ColumnDetectionResult:
         notes.append(f"Debit column '{debit_col}' has low confidence ({debit_conf:.0%})")
     if credit_col and credit_conf < 0.80:
         notes.append(f"Credit column '{credit_col}' has low confidence ({credit_conf:.0%})")
+
+    # Sprint 526: Note detected supplementary columns
+    if account_type_col:
+        notes.append(f"Account type column detected: '{account_type_col}' ({account_type_conf:.0%})")
+    if account_name_col:
+        notes.append(f"Account name column detected: '{account_name_col}' ({account_name_conf:.0%})")
 
     # Overall = min of required (debit/credit) confidences
     required = []
@@ -215,6 +291,10 @@ def detect_columns(column_names: list[str]) -> ColumnDetectionResult:
         overall_confidence=overall,
         all_columns=shared_result.all_columns,
         detection_notes=notes,
+        account_type_column=account_type_col,
+        account_type_confidence=account_type_conf,
+        account_name_column=account_name_col,
+        account_name_confidence=account_name_conf,
     )
 
 

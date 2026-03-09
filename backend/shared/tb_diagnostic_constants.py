@@ -20,7 +20,7 @@ SUGGESTED_PROCEDURES: dict[str, str] = {
     "concentration_revenue": (
         "Apply revenue concentration procedures; obtain detail of transactions "
         "comprising this account and assess whether concentration represents a "
-        "business risk requiring disclosure."
+        "business risk requiring disclosure under ASC 275-10."
     ),
     "concentration_expense": (
         "Obtain breakdown of transactions comprising this account; assess whether "
@@ -37,6 +37,16 @@ SUGGESTED_PROCEDURES: dict[str, str] = {
         "Investigate credit balance in an asset account; confirm whether this "
         "represents an overpayment, unapplied credit memo, or posting error. "
         "Obtain supporting documentation."
+    ),
+    "debit_balance_liability": (
+        "Investigate debit balance in a liability account; determine whether this "
+        "represents an overpayment to a vendor, a reclassification issue, or a "
+        "posting error. Obtain the vendor subledger detail and supporting documentation."
+    ),
+    "debit_balance_revenue": (
+        "Investigate debit balance in a revenue account; assess whether this reflects "
+        "a returns and allowances contra-account, a revenue reversal, or a posting error. "
+        "Obtain detail of transactions and confirm proper presentation."
     ),
     "round_dollar_single": (
         "Inspect supporting documentation for this round-dollar balance; confirm "
@@ -56,6 +66,25 @@ SUGGESTED_PROCEDURES: dict[str, str] = {
     "prepaid_credit": (
         "Investigate credit balance in prepaid account; confirm whether the "
         "prepaid has been fully expensed, reversed, or represents a posting error."
+    ),
+    # Sprint 526: New detection category procedures (Fix 6)
+    "related_party": (
+        "Confirm related party balance is properly disclosed under ASC 850 "
+        "(Related Party Disclosures). Determine whether the transaction was conducted "
+        "at arm's length. Obtain the related party agreement and confirm terms are "
+        "consistent with those of unrelated third parties."
+    ),
+    "intercompany_imbalance": (
+        "Investigate the intercompany elimination gap; obtain the intercompany "
+        "reconciliation and confirm whether a corresponding offsetting entry exists "
+        "in the counterparty's records. Assess impact on consolidated financial "
+        "statement presentation."
+    ),
+    "equity_signal": (
+        "Evaluate the equity structure for going concern considerations. Confirm "
+        "board authorization for dividends declared against an accumulated deficit. "
+        "Assess solvency implications and consider whether additional disclosures "
+        "are required under ASC 205-40 (Going Concern)."
     ),
 }
 
@@ -111,6 +140,40 @@ MATERIAL_PROCEDURE_UPGRADES: dict[str, str] = {
         "or requires reclassification. Assess the impact on the period's expense "
         "recognition and consider whether an adjusting entry is warranted."
     ),
+    # Sprint 526: New detection category escalated procedures
+    "related_party": (
+        "Perform expanded related party procedures for this material balance. "
+        "Obtain the underlying agreement and confirm arm's-length pricing. "
+        "Verify proper disclosure under ASC 850 including nature, terms, and amounts. "
+        "Given the material amount, assess whether the transaction materially affects "
+        "financial statement presentation and expand confirmation procedures."
+    ),
+    "intercompany_imbalance": (
+        "Investigate the material intercompany elimination gap by obtaining the "
+        "full intercompany reconciliation for both counterparties. Confirm whether "
+        "elimination entries are correctly prepared for consolidation. Given the "
+        "material amount, escalate to engagement partner and assess impact on "
+        "consolidated financial statement integrity."
+    ),
+    "equity_signal": (
+        "Evaluate the material equity signals for going concern implications. "
+        "Obtain board minutes authorizing dividends declared against the accumulated "
+        "deficit. Assess solvency ratios and capital adequacy. Given the material "
+        "amount, consider whether substantial doubt exists about the entity's ability "
+        "to continue as a going concern under ASC 205-40."
+    ),
+    "debit_balance_liability": (
+        "Investigate the material debit balance in this liability account by obtaining "
+        "vendor detail and reconciliation. Given the material amount, determine whether "
+        "a reclassification to assets is required and assess the impact on financial "
+        "statement presentation. Escalate for evaluation of potential adjusting entry."
+    ),
+    "debit_balance_revenue": (
+        "Investigate the material debit balance in this revenue account. Determine whether "
+        "this is a properly classified contra-revenue account or represents a reversal error. "
+        "Given the material amount, obtain supporting documentation and assess the impact "
+        "on revenue recognition and financial statement presentation."
+    ),
 }
 
 
@@ -160,7 +223,21 @@ def get_tb_suggested_procedure(anomaly: dict, *, is_material: bool = False) -> s
             # Differentiate AR credit balance from general asset credit balance
             if not is_material and ("receivable" in account or "a/r" in account):
                 return procedures["credit_balance_ar"]
-            return procedures["credit_balance_asset"]
+            return procedures.get("credit_balance_asset", DEFAULT_PROCEDURE)
+        if acc_type == "liability" or "liability" in issue:
+            return procedures.get("debit_balance_liability", DEFAULT_PROCEDURE)
+        if acc_type == "revenue" or "revenue" in issue:
+            return procedures.get("debit_balance_revenue", DEFAULT_PROCEDURE)
+
+    # Sprint 526: New detection categories
+    if anomaly_type == "related_party":
+        return procedures.get("related_party", DEFAULT_PROCEDURE)
+
+    if anomaly_type == "intercompany_imbalance":
+        return procedures.get("intercompany_imbalance", DEFAULT_PROCEDURE)
+
+    if anomaly_type == "equity_signal":
+        return procedures.get("equity_signal", DEFAULT_PROCEDURE)
 
     if is_material:
         return "Review supporting documentation and obtain management explanation. Given the material amount, escalate to engagement partner for assessment of potential adjusting entry and expanded substantive procedures."
@@ -232,11 +309,25 @@ def _describe_material_factor(ab: dict) -> str:
             return f"{account}: revenue concentration"
         return f"{account}: expense concentration"
     if anomaly_type in ("abnormal_balance", "natural_balance_violation"):
+        acc_type = (ab.get("type", "") or "").lower()
         if "prepaid" in account.lower():
             return f"{account}: credit balance in prepaid"
+        if acc_type == "asset":
+            return f"{account}: credit balance in asset account"
+        if acc_type == "liability":
+            return f"{account}: debit balance in liability account"
+        if acc_type == "revenue":
+            return f"{account}: debit balance in revenue account"
         return f"{account}: abnormal balance"
     if anomaly_type == "rounding_anomaly":
         return f"{account}: round-dollar pattern"
+    # Sprint 526: New detection categories
+    if anomaly_type == "related_party":
+        return f"{account}: related party balance (ASC 850)"
+    if anomaly_type == "intercompany_imbalance":
+        return f"{account}: intercompany elimination gap"
+    if anomaly_type == "equity_signal":
+        return f"{account}: deficit with dividends declared"
     return f"{account}: material exception"
 
 
@@ -290,6 +381,22 @@ def compute_tb_risk_score(
     if has_credit_balance_asset:
         factors.append(("Credit balance in asset account", 3))
         score += 3
+
+    # Sprint 526: Score new anomaly types from abnormal_balances data
+    if abnormal_balances:
+        has_related_party = any(ab.get("anomaly_type") == "related_party" for ab in abnormal_balances)
+        has_intercompany_gap = any(ab.get("anomaly_type") == "intercompany_imbalance" for ab in abnormal_balances)
+        has_equity_signal = any(ab.get("anomaly_type") == "equity_signal" for ab in abnormal_balances)
+
+        if has_related_party:
+            factors.append(("Related party balances requiring disclosure", 5))
+            score += 5
+        if has_intercompany_gap:
+            factors.append(("Intercompany elimination gap", 5))
+            score += 5
+        if has_equity_signal:
+            factors.append(("Deficit with capital distributions", 5))
+            score += 5
 
     return min(score, 100), factors
 

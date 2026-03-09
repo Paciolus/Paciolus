@@ -18,6 +18,7 @@ from classification_rules import (
     # Sprint 42: Concentration Risk
     CONCENTRATION_THRESHOLD_HIGH,
     CONCENTRATION_THRESHOLD_MEDIUM,
+    NORMAL_BALANCE_MAP,
     ROUNDING_EXCLUDE_KEYWORDS,
     ROUNDING_MAX_ANOMALIES,
     # Sprint 42: Rounding Anomaly
@@ -26,6 +27,7 @@ from classification_rules import (
     SUSPENSE_CONFIDENCE_THRESHOLD,
     SUSPENSE_KEYWORDS,
     AccountCategory,
+    NormalBalance,
 )
 from classification_validator import run_classification_validation
 from column_detector import ColumnDetectionResult, ColumnMapping, detect_columns
@@ -367,6 +369,15 @@ class StreamingAuditor:
         self.account_col: Optional[str] = None
         self.columns_discovered = False
 
+        # Sprint 526: Supplementary column detection
+        self.account_type_col: Optional[str] = None
+        self.account_name_col: Optional[str] = None
+
+        # Sprint 526: Provided account types and names from CSV columns
+        # Key: account identifier (from account_col), Value: type string / name string
+        self.provided_account_types: dict[str, str] = {}
+        self.provided_account_names: dict[str, str] = {}
+
         # Column detection result (Day 9.2)
         self.column_detection: Optional[ColumnDetectionResult] = None
 
@@ -424,6 +435,10 @@ class StreamingAuditor:
         self.account_col = self.column_detection.account_column
         self.debit_col = self.column_detection.debit_column
         self.credit_col = self.column_detection.credit_column
+
+        # Sprint 526: Extract supplementary columns
+        self.account_type_col = self.column_detection.account_type_column
+        self.account_name_col = self.column_detection.account_name_column
 
         self.columns_discovered = True
 
@@ -487,6 +502,24 @@ class StreamingAuditor:
                 self.account_balances[account_name]["debit"] += float(debit_sum)
                 self.account_balances[account_name]["credit"] += float(credit_sum)
 
+            # Sprint 526: Extract account_type values from dedicated column
+            if self.account_type_col and self.account_type_col in chunk.columns:
+                for acct_key, acct_type in zip(
+                    chunk[self.account_col].astype(str).str.strip(),
+                    chunk[self.account_type_col].astype(str).str.strip(),
+                ):
+                    if acct_key and acct_type and acct_type.lower() not in ("", "nan", "none"):
+                        self.provided_account_types[acct_key] = acct_type
+
+            # Sprint 526: Extract account_name values from dedicated column
+            if self.account_name_col and self.account_name_col in chunk.columns:
+                for acct_key, acct_name in zip(
+                    chunk[self.account_col].astype(str).str.strip(),
+                    chunk[self.account_name_col].astype(str).str.strip(),
+                ):
+                    if acct_key and acct_name and acct_name.lower() not in ("", "nan", "none"):
+                        self.provided_account_names[acct_key] = acct_name
+
             # Cleanup temporary DataFrame
             del temp_df, grouped
 
@@ -517,16 +550,22 @@ class StreamingAuditor:
         }
 
     def get_abnormal_balances(self) -> list[dict[str, Any]]:
-        """Detect abnormal balances using weighted heuristic classification."""
+        """Detect abnormal balances using CSV-provided types or weighted heuristic classification.
+
+        Sprint 526: When an account_type column is detected, uses those values
+        instead of heuristic classification. Also produces display names in
+        "[code] — [name]" format when account_name column is available.
+        """
         log_secure_operation(
             "streaming_abnormal",
-            f"Analyzing {len(self.account_balances)} unique accounts (threshold: ${self.materiality_threshold:,.2f})",
+            f"Analyzing {len(self.account_balances)} unique accounts (threshold: ${self.materiality_threshold:,.2f}), "
+            f"provided types: {len(self.provided_account_types)}, provided names: {len(self.provided_account_names)}",
         )
 
         abnormal_balances = []
         classification_stats = {"high": 0, "medium": 0, "low": 0, "unknown": 0}
 
-        for account_name, balances in self.account_balances.items():
+        for account_key, balances in self.account_balances.items():
             debit_amount = balances["debit"]
             credit_amount = balances["credit"]
             net_balance = debit_amount - credit_amount
@@ -535,56 +574,69 @@ class StreamingAuditor:
             if abs(Decimal(str(net_balance))) < BALANCE_TOLERANCE:
                 continue
 
-            # Classify using weighted heuristics
-            result = self.classifier.classify(account_name, net_balance)
+            # Sprint 526: Resolve category from CSV or heuristic
+            category = self._resolve_category(account_key, net_balance)
+            display = self._display_name(account_key)
+
+            # Also run heuristic for confidence stats and suggestions
+            result = self.classifier.classify(display, net_balance)
+
+            # Use CSV-provided category if available, overriding heuristic
+            has_csv_type = account_key in self.provided_account_types
+            effective_category = category
+            confidence = 1.0 if has_csv_type else result.confidence
 
             # Track classification confidence stats
-            if result.category == AccountCategory.UNKNOWN:
+            if effective_category == AccountCategory.UNKNOWN:
                 classification_stats["unknown"] += 1
-            elif result.confidence >= CONFIDENCE_HIGH:
+            elif confidence >= CONFIDENCE_HIGH:
                 classification_stats["high"] += 1
-            elif result.confidence >= CONFIDENCE_MEDIUM:
+            elif confidence >= CONFIDENCE_MEDIUM:
                 classification_stats["medium"] += 1
             else:
                 classification_stats["low"] += 1
 
+            # Check if balance is abnormal for the effective category
+            is_abnormal = self._is_balance_abnormal(effective_category, net_balance)
+
             # Only flag if abnormal AND classified (not UNKNOWN)
-            if result.is_abnormal and result.category != AccountCategory.UNKNOWN:
+            if is_abnormal and effective_category != AccountCategory.UNKNOWN:
                 abs_amount = abs(net_balance)
                 is_material = abs_amount >= self.materiality_threshold
                 materiality_status = "material" if is_material else "immaterial"
 
                 # Determine human-readable issue description
-                expected_balance = "Debit" if result.normal_balance.value == "debit" else "Credit"
+                normal = NORMAL_BALANCE_MAP[effective_category]
+                expected_balance = "Debit" if normal == NormalBalance.DEBIT else "Credit"
                 actual_balance = "Credit" if net_balance < 0 else "Debit"
 
                 if not is_material:
                     log_secure_operation(
                         "below_materiality",
-                        f"Below materiality: {account_name} (${abs_amount:,.2f} < ${self.materiality_threshold:,.2f})",
+                        f"Below materiality: {display} (${abs_amount:,.2f} < ${self.materiality_threshold:,.2f})",
                     )
 
                 abnormal_balances.append(
                     {
                         # EXISTING FIELDS (backward compatible)
-                        "account": account_name,
-                        "type": CATEGORY_DISPLAY_NAMES.get(result.category, "Unknown"),
+                        "account": display,
+                        "type": CATEGORY_DISPLAY_NAMES.get(effective_category, "Unknown"),
                         "issue": f"Net {actual_balance} balance (should be {expected_balance})",
                         "amount": round(abs_amount, 2),
                         "debit": round(debit_amount, 2),
                         "credit": round(credit_amount, 2),
                         "materiality": materiality_status,
-                        # NEW FIELDS (Day 9 - additive)
-                        "category": result.category.value,
-                        "confidence": result.confidence,
-                        "matched_keywords": result.matched_keywords,
-                        "requires_review": result.requires_review,
-                        # Day 10: Anomaly categorization for Risk Dashboard
+                        # Classification fields
+                        "category": effective_category.value,
+                        "confidence": confidence,
+                        "matched_keywords": result.matched_keywords if not has_csv_type else ["CSV_ACCOUNT_TYPE"],
+                        "requires_review": not has_csv_type and result.requires_review,
+                        # Anomaly categorization for Risk Dashboard
                         "anomaly_type": "natural_balance_violation",
                         "expected_balance": expected_balance.lower(),
                         "actual_balance": actual_balance.lower(),
                         "severity": "high" if is_material else "low",
-                        # Sprint 31: Classification suggestions for low-confidence accounts
+                        # Classification suggestions for low-confidence accounts
                         "suggestions": [
                             {
                                 "category": s.category.value,
@@ -594,7 +646,7 @@ class StreamingAuditor:
                             }
                             for s in result.suggestions
                         ]
-                        if result.suggestions
+                        if result.suggestions and not has_csv_type
                         else [],
                     }
                 )
@@ -637,7 +689,7 @@ class StreamingAuditor:
 
         suspense_accounts: list[dict[str, Any]] = []
 
-        for account_name, balances in self.account_balances.items():
+        for account_key, balances in self.account_balances.items():
             debit_amount = balances["debit"]
             credit_amount = balances["credit"]
             net_balance = debit_amount - credit_amount
@@ -646,19 +698,18 @@ class StreamingAuditor:
             if abs(Decimal(str(net_balance))) < BALANCE_TOLERANCE:
                 continue
 
-            # Check against suspense keywords
-            account_lower = account_name.lower()
+            # Sprint 526: Use display name for keyword matching
+            display = self._display_name(account_key)
+            account_lower = display.lower()
             matched_keywords: list[str] = []
             total_weight = 0.0
 
             for keyword, weight, is_phrase in SUSPENSE_KEYWORDS:
                 if is_phrase:
-                    # Phrase must match exactly (word boundaries)
                     if keyword in account_lower:
                         matched_keywords.append(keyword)
                         total_weight += weight
                 else:
-                    # Single word can be part of compound
                     if keyword in account_lower:
                         matched_keywords.append(keyword)
                         total_weight += weight
@@ -672,26 +723,25 @@ class StreamingAuditor:
                 is_material = abs_amount >= self.materiality_threshold
                 materiality_status = "material" if is_material else "immaterial"
 
-                # Get classification for context
-                result = self.classifier.classify(account_name, net_balance)
+                category = self._resolve_category(account_key, net_balance)
 
                 suspense_accounts.append(
                     {
-                        "account": account_name,
-                        "type": CATEGORY_DISPLAY_NAMES.get(result.category, "Unknown"),
+                        "account": display,
+                        "type": CATEGORY_DISPLAY_NAMES.get(category, "Unknown"),
                         "issue": "Suspense/clearing account with outstanding balance",
                         "amount": round(abs_amount, 2),
                         "debit": round(debit_amount, 2),
                         "credit": round(credit_amount, 2),
                         "materiality": materiality_status,
-                        "category": result.category.value,
+                        "category": category.value,
                         "confidence": confidence,
                         "matched_keywords": matched_keywords,
-                        "requires_review": True,  # Suspense accounts always need review
+                        "requires_review": True,
                         "anomaly_type": "suspense_account",
                         "expected_balance": "zero",
                         "actual_balance": "debit" if net_balance > 0 else "credit",
-                        "severity": "high" if is_material else "medium",  # Suspense is at least medium
+                        "severity": "high" if is_material else "medium",
                         "suggestions": [],
                         "recommendation": (
                             "Investigate and clear this suspense account. "
@@ -735,7 +785,7 @@ class StreamingAuditor:
         }
         category_totals_dec: dict[AccountCategory, Decimal] = {cat: Decimal("0") for cat in CONCENTRATION_CATEGORIES}
 
-        for account_name, balances in self.account_balances.items():
+        for account_key, balances in self.account_balances.items():
             debit_amount = balances["debit"]
             credit_amount = balances["credit"]
             net_balance = debit_amount - credit_amount
@@ -744,13 +794,14 @@ class StreamingAuditor:
             if abs(Decimal(str(net_balance))) < BALANCE_TOLERANCE:
                 continue
 
-            # Classify the account
-            result = self.classifier.classify(account_name, net_balance)
+            # Sprint 526: Use resolved category
+            category = self._resolve_category(account_key, net_balance)
+            display = self._display_name(account_key)
 
-            if result.category in CONCENTRATION_CATEGORIES:
+            if category in CONCENTRATION_CATEGORIES:
                 abs_balance = abs(net_balance)
-                category_accounts[result.category].append((account_name, abs_balance, debit_amount, credit_amount))
-                category_totals_dec[result.category] += Decimal(str(abs_balance))
+                category_accounts[category].append((display, abs_balance, debit_amount, credit_amount))
+                category_totals_dec[category] += Decimal(str(abs_balance))
 
         # Analyze concentration for each category
         for category in CONCENTRATION_CATEGORIES:
@@ -760,7 +811,7 @@ class StreamingAuditor:
             if float(total_dec) < CONCENTRATION_MIN_CATEGORY_TOTAL:
                 continue
 
-            for account_name, abs_balance, debit_amount, credit_amount in category_accounts[category]:
+            for display, abs_balance, debit_amount, credit_amount in category_accounts[category]:
                 # Perform percentage division in Decimal for precision
                 concentration_pct = float(Decimal(str(abs_balance)) / total_dec)
 
@@ -777,7 +828,7 @@ class StreamingAuditor:
 
                     concentration_risks.append(
                         {
-                            "account": account_name,
+                            "account": display,
                             "type": CATEGORY_DISPLAY_NAMES.get(category, "Unknown"),
                             "issue": f"Represents {concentration_pct:.1%} of total {category.value}s",
                             "amount": round(abs_balance, 2),
@@ -785,7 +836,7 @@ class StreamingAuditor:
                             "credit": round(credit_amount, 2),
                             "materiality": materiality_status,
                             "category": category.value,
-                            "confidence": concentration_pct,  # Use concentration % as confidence
+                            "confidence": concentration_pct,
                             "matched_keywords": [],
                             "requires_review": True,
                             "anomaly_type": f"{category.value}_concentration",
@@ -834,7 +885,7 @@ class StreamingAuditor:
 
         rounding_anomalies: list[dict[str, Any]] = []
 
-        for account_name, balances in self.account_balances.items():
+        for account_key, balances in self.account_balances.items():
             debit_amount = balances["debit"]
             credit_amount = balances["credit"]
             net_balance = debit_amount - credit_amount
@@ -844,49 +895,69 @@ class StreamingAuditor:
             if abs_balance < ROUNDING_MIN_AMOUNT:
                 continue
 
-            # Check if account should be excluded (legitimate round amounts)
-            account_lower = account_name.lower()
+            display = self._display_name(account_key)
+            account_lower = display.lower()
+
+            # Sprint 526 Fix 3: Tiered round-number detection
+            # Tier 1 — Expected round numbers (suppress)
+            is_tier1 = any(kw in account_lower for kw in self._ROUNDING_TIER1_KEYWORDS)
+            if is_tier1:
+                continue
+
+            # Legacy exclude list (loans, capital, etc.)
             is_excluded = any(keyword in account_lower for keyword in ROUNDING_EXCLUDE_KEYWORDS)
             if is_excluded:
                 continue
 
+            # Tier 3 — Suspicious accounts (suspense, clearing, misc)
+            is_tier3 = any(kw in account_lower for kw in self._ROUNDING_TIER3_KEYWORDS)
+
             # Check against rounding patterns (most significant first)
             abs_balance_dec = Decimal(str(abs_balance))
             for divisor, pattern_name, pattern_severity in ROUNDING_PATTERNS:
-                # Use Decimal modulo to avoid float precision artifacts
                 divisor_dec = Decimal(str(divisor))
                 remainder_dec = abs_balance_dec % divisor_dec
                 is_round = remainder_dec < BALANCE_TOLERANCE or (divisor_dec - remainder_dec) < BALANCE_TOLERANCE
 
                 if is_round:
-                    # Classify the account for context
-                    result = self.classifier.classify(account_name, net_balance)
+                    category = self._resolve_category(account_key, net_balance)
                     is_material = abs_balance >= self.materiality_threshold
+
+                    # Tier 2 (default) — only flag if material and genuinely noteworthy
+                    if not is_tier3 and not is_material:
+                        break  # Tier 2 immaterial round numbers are not worth flagging
+
+                    # Tier 3 accounts always flagged; Tier 2 only if material
                     materiality_status = "material" if is_material else "immaterial"
 
-                    # Format the round amount description
                     if divisor >= 100000:
                         round_desc = f"${abs_balance / 1000:,.0f}K"
                     else:
                         round_desc = f"${abs_balance:,.0f}"
 
+                    # Tier 3 gets higher severity
+                    if is_tier3:
+                        effective_severity = "high" if is_material else "medium"
+                    else:
+                        effective_severity = pattern_severity if is_material else "low"
+
                     rounding_anomalies.append(
                         {
-                            "account": account_name,
-                            "type": CATEGORY_DISPLAY_NAMES.get(result.category, "Unknown"),
+                            "account": display,
+                            "type": CATEGORY_DISPLAY_NAMES.get(category, "Unknown"),
                             "issue": f"Exactly round amount: {round_desc}",
                             "amount": round(abs_balance, 2),
                             "debit": round(debit_amount, 2),
                             "credit": round(credit_amount, 2),
                             "materiality": materiality_status,
-                            "category": result.category.value,
-                            "confidence": 0.7 if pattern_severity == "high" else 0.5,
+                            "category": category.value,
+                            "confidence": 0.8 if is_tier3 else (0.6 if pattern_severity == "high" else 0.4),
                             "matched_keywords": [],
                             "requires_review": True,
                             "anomaly_type": "rounding_anomaly",
                             "rounding_pattern": pattern_name,
                             "rounding_divisor": divisor,
-                            "severity": pattern_severity if is_material else "low",
+                            "severity": effective_severity,
                             "suggestions": [],
                             "recommendation": (
                                 f"This balance is an exactly round number ({round_desc}). "
@@ -895,8 +966,6 @@ class StreamingAuditor:
                             ),
                         }
                     )
-
-                    # Only flag the most significant pattern match
                     break
 
         # Sort by amount (highest first) and limit results
@@ -908,14 +977,416 @@ class StreamingAuditor:
 
         return rounding_anomalies
 
+    # ─── Sprint 526: Helpers for classification pipeline ────────────────
+
+    _CSV_TYPE_MAP: dict[str, AccountCategory] = {
+        "asset": AccountCategory.ASSET,
+        "assets": AccountCategory.ASSET,
+        "liability": AccountCategory.LIABILITY,
+        "liabilities": AccountCategory.LIABILITY,
+        "equity": AccountCategory.EQUITY,
+        "revenue": AccountCategory.REVENUE,
+        "revenues": AccountCategory.REVENUE,
+        "income": AccountCategory.REVENUE,
+        "expense": AccountCategory.EXPENSE,
+        "expenses": AccountCategory.EXPENSE,
+    }
+
+    def _resolve_category(self, account_key: str, net_balance: float = 0.0) -> AccountCategory:
+        """Resolve the account category — CSV-provided type takes priority over heuristic."""
+        csv_type = self.provided_account_types.get(account_key, "").lower().strip()
+        if csv_type and csv_type in self._CSV_TYPE_MAP:
+            return self._CSV_TYPE_MAP[csv_type]
+        # Fallback: use the heuristic classifier with account name context
+        classify_name = self._display_name(account_key)
+        result = self.classifier.classify(classify_name, net_balance)
+        return result.category
+
+    def _display_name(self, account_key: str) -> str:
+        """Build display name: '[code] — [name]' when account_name column is available."""
+        name = self.provided_account_names.get(account_key)
+        if name and name != account_key:
+            return f"{account_key} — {name}"
+        return account_key
+
+    def _is_balance_abnormal(self, category: AccountCategory, net_balance: float) -> bool:
+        """Check if balance direction is abnormal for the given category."""
+        if abs(net_balance) < 0.01 or category == AccountCategory.UNKNOWN:
+            return False
+        normal = NORMAL_BALANCE_MAP[category]
+        if normal == NormalBalance.DEBIT:
+            return net_balance < 0
+        return net_balance > 0
+
+    # ─── Sprint 526 Fix 4d: Related Party Keywords ────────────────────
+
+    _RELATED_PARTY_KEYWORDS: list[tuple[str, float]] = [
+        ("related party", 0.95),
+        ("intercompany", 0.90),
+        ("affiliate", 0.85),
+        ("officer", 0.85),
+        ("director", 0.80),
+        ("shareholder", 0.80),
+        ("employee loan", 0.90),
+        ("due to related", 0.95),
+        ("due from related", 0.95),
+        ("ic receivable", 0.85),
+        ("ic payable", 0.85),
+    ]
+
+    # ─── Sprint 526 Fix 4e: Intercompany Keywords ────────────────────
+
+    _INTERCOMPANY_KEYWORDS: list[str] = [
+        "intercompany",
+        "ic receivable",
+        "ic payable",
+        "due to",
+        "due from",
+        "affiliate",
+    ]
+
+    # ─── Sprint 526 Fix 3: Rounding Tier Configuration ───────────────
+
+    # Tier 1: Account types where round numbers are expected (suppress)
+    _ROUNDING_TIER1_KEYWORDS: list[str] = [
+        "land",
+        "building",
+        "equipment",
+        "leasehold",
+        "improvement",
+        "long-term debt",
+        "long term debt",
+        "notes payable",
+        "note payable",
+        "bonds payable",
+        "mortgage",
+        "common stock",
+        "preferred stock",
+        "paid-in capital",
+        "apic",
+        "additional paid",
+        "treasury stock",
+        "salary",
+        "salaries",
+        "payroll",
+        "wages",
+        "depreciation",
+        "amortization",
+        "accumulated depreciation",
+    ]
+    _ROUNDING_TIER1_CATEGORIES: set[str] = set()  # Categories always suppressed (none by default)
+
+    # Tier 2: Mildly noteworthy — single round balance
+    # (Default for operating expenses, accrued liabilities, single revenue)
+
+    # Tier 3: Genuine anomaly signal
+    _ROUNDING_TIER3_KEYWORDS: list[str] = [
+        "suspense",
+        "clearing",
+        "miscellaneous",
+        "other",
+        "sundry",
+        "unallocated",
+        "unclassified",
+    ]
+
+    def detect_related_party_accounts(self) -> list[dict[str, Any]]:
+        """Sprint 526 Fix 4d: Detect accounts indicating related party activity."""
+        findings: list[dict[str, Any]] = []
+        for account_key, balances in self.account_balances.items():
+            net_balance = balances["debit"] - balances["credit"]
+            if abs(Decimal(str(net_balance))) < BALANCE_TOLERANCE:
+                continue
+
+            display = self._display_name(account_key)
+            search_text = display.lower()
+            matched = []
+            weight = 0.0
+            for keyword, kw_weight in self._RELATED_PARTY_KEYWORDS:
+                if keyword in search_text:
+                    matched.append(keyword)
+                    weight = max(weight, kw_weight)
+
+            if not matched:
+                continue
+
+            abs_amount = abs(net_balance)
+            category = self._resolve_category(account_key, net_balance)
+            is_material = abs_amount >= self.materiality_threshold
+
+            findings.append(
+                {
+                    "account": display,
+                    "type": CATEGORY_DISPLAY_NAMES.get(category, "Unknown"),
+                    "issue": "Related party balance — requires ASC 850 disclosure assessment",
+                    "amount": round(abs_amount, 2),
+                    "debit": round(balances["debit"], 2),
+                    "credit": round(balances["credit"], 2),
+                    "materiality": "material" if is_material else "immaterial",
+                    "category": category.value,
+                    "confidence": weight,
+                    "matched_keywords": matched,
+                    "requires_review": True,
+                    "anomaly_type": "related_party",
+                    "severity": "high" if is_material else "medium",
+                    "suggestions": [],
+                }
+            )
+
+        return findings
+
+    def detect_intercompany_imbalances(self) -> list[dict[str, Any]]:
+        """Sprint 526 Fix 4e: Detect intercompany accounts with elimination gaps."""
+        # Collect intercompany accounts and try to match counterparties
+        ic_accounts: list[tuple[str, str, float, dict]] = []  # (key, display, net, balances)
+        for account_key, balances in self.account_balances.items():
+            net_balance = balances["debit"] - balances["credit"]
+            if abs(Decimal(str(net_balance))) < BALANCE_TOLERANCE:
+                continue
+
+            display = self._display_name(account_key)
+            search_text = display.lower()
+            if any(kw in search_text for kw in self._INTERCOMPANY_KEYWORDS):
+                ic_accounts.append((account_key, display, net_balance, balances))
+
+        if not ic_accounts:
+            return []
+
+        # Extract counterparty names from account descriptions
+        # Pattern: "Intercompany Receivable — Meridian UK" → counterparty = "meridian uk"
+        def _extract_counterparty(name: str) -> str:
+            lower = name.lower()
+            for sep in [" — ", " - ", "–"]:
+                if sep in lower:
+                    parts = lower.split(sep)
+                    return parts[-1].strip()
+            return ""
+
+        # Group by counterparty
+        counterparty_groups: dict[str, list[tuple[str, str, float, dict]]] = {}
+        for key, display, net, bals in ic_accounts:
+            cp = _extract_counterparty(display)
+            if cp:
+                counterparty_groups.setdefault(cp, []).append((key, display, net, bals))
+
+        findings: list[dict[str, Any]] = []
+        for cp_name, accounts in counterparty_groups.items():
+            net_total = sum(net for _, _, net, _ in accounts)
+            # If counterparty nets to zero, no elimination gap
+            if abs(Decimal(str(net_total))) < BALANCE_TOLERANCE:
+                continue
+
+            # Check if there's only a receivable without payable (or vice versa)
+            has_debit = any(net > 0 for _, _, net, _ in accounts)
+            has_credit = any(net < 0 for _, _, net, _ in accounts)
+
+            if has_debit and has_credit:
+                # Both sides exist but don't net — partial gap
+                issue = f"Intercompany elimination gap of ${abs(net_total):,.2f} with {cp_name.title()}"
+            elif has_debit:
+                issue = f"Intercompany receivable from {cp_name.title()} — no offsetting payable found"
+            else:
+                issue = f"Intercompany payable to {cp_name.title()} — no offsetting receivable found"
+
+            # Flag the account(s) with the unmatched balance
+            for key, display, net, bals in accounts:
+                if abs(net) < 0.01:
+                    continue
+                abs_amount = abs(net)
+                category = self._resolve_category(key, net)
+                is_material = abs_amount >= self.materiality_threshold
+
+                findings.append(
+                    {
+                        "account": display,
+                        "type": CATEGORY_DISPLAY_NAMES.get(category, "Unknown"),
+                        "issue": issue,
+                        "amount": round(abs_amount, 2),
+                        "debit": round(bals["debit"], 2),
+                        "credit": round(bals["credit"], 2),
+                        "materiality": "material" if is_material else "immaterial",
+                        "category": category.value,
+                        "confidence": 0.85,
+                        "matched_keywords": ["intercompany"],
+                        "requires_review": True,
+                        "anomaly_type": "intercompany_imbalance",
+                        "severity": "high" if is_material else "medium",
+                        "suggestions": [],
+                        "cross_reference_note": f"Counterparty: {cp_name.title()} — net exposure: ${abs(net_total):,.2f}",
+                    }
+                )
+
+        return findings
+
+    def detect_equity_signals(self) -> list[dict[str, Any]]:
+        """Sprint 526 Fix 4f: Detect abnormal equity patterns."""
+        findings: list[dict[str, Any]] = []
+        equity_accounts: dict[str, tuple[str, float, dict]] = {}  # key → (display, net, bals)
+
+        for account_key, balances in self.account_balances.items():
+            net_balance = balances["debit"] - balances["credit"]
+            category = self._resolve_category(account_key, net_balance)
+            if category == AccountCategory.EQUITY:
+                display = self._display_name(account_key)
+                equity_accounts[account_key] = (display, net_balance, balances)
+
+        if not equity_accounts:
+            return findings
+
+        # Find specific equity components
+        retained_earnings_deficit = None
+        dividends_declared = None
+        treasury_stock = None
+        total_equity = Decimal("0")
+
+        for key, (display, net, bals) in equity_accounts.items():
+            lower = display.lower()
+            total_equity += Decimal(str(net))
+            if "retained earnings" in lower or "accumulated deficit" in lower:
+                retained_earnings_deficit = (key, display, net, bals)
+            if "dividend" in lower:
+                dividends_declared = (key, display, net, bals)
+            if "treasury" in lower:
+                treasury_stock = (key, display, net, bals)
+
+        # Signal: Deficit + Dividends Declared
+        if retained_earnings_deficit and dividends_declared:
+            re_key, re_display, re_net, re_bals = retained_earnings_deficit
+            div_key, div_display, div_net, div_bals = dividends_declared
+            # Retained earnings with debit balance = deficit
+            if re_net > 0:  # Debit balance (deficit)
+                combined_return = abs(div_net) + (abs(treasury_stock[2]) if treasury_stock else 0)
+                is_material = abs(re_net) >= self.materiality_threshold
+
+                findings.append(
+                    {
+                        "account": re_display,
+                        "type": "Equity",
+                        "issue": (
+                            f"Accumulated deficit of ${abs(re_net):,.2f} while dividends of "
+                            f"${abs(div_net):,.2f} have been declared — governance and solvency concern"
+                        ),
+                        "amount": round(abs(re_net), 2),
+                        "debit": round(re_bals["debit"], 2),
+                        "credit": round(re_bals["credit"], 2),
+                        "materiality": "material" if is_material else "immaterial",
+                        "category": "equity",
+                        "confidence": 0.90,
+                        "matched_keywords": ["retained earnings", "deficit", "dividend"],
+                        "requires_review": True,
+                        "anomaly_type": "equity_signal",
+                        "severity": "high" if is_material else "medium",
+                        "suggestions": [],
+                        "cross_reference_note": (
+                            f"Combined capital return: ${combined_return:,.2f} "
+                            f"(dividends: ${abs(div_net):,.2f}"
+                            + (f", treasury: ${abs(treasury_stock[2]):,.2f}" if treasury_stock else "")
+                            + ") declared against a deficit"
+                        ),
+                    }
+                )
+
+        return findings
+
+    def detect_revenue_concentration(self) -> list[dict[str, Any]]:
+        """Sprint 526 Fix 4g: Revenue concentration analysis (>30% threshold)."""
+        findings: list[dict[str, Any]] = []
+        revenue_accounts: list[tuple[str, str, float, dict]] = []
+        total_revenue = Decimal("0")
+
+        for account_key, balances in self.account_balances.items():
+            net_balance = balances["debit"] - balances["credit"]
+            category = self._resolve_category(account_key, net_balance)
+            if category == AccountCategory.REVENUE:
+                abs_bal = abs(net_balance)
+                display = self._display_name(account_key)
+                revenue_accounts.append((account_key, display, abs_bal, balances))
+                total_revenue += Decimal(str(abs_bal))
+
+        if float(total_revenue) < CONCENTRATION_MIN_CATEGORY_TOTAL:
+            return findings
+
+        for key, display, abs_bal, bals in revenue_accounts:
+            pct = float(Decimal(str(abs_bal)) / total_revenue)
+            if pct >= 0.30:
+                is_material = abs_bal >= self.materiality_threshold
+                findings.append(
+                    {
+                        "account": display,
+                        "type": "Revenue",
+                        "issue": f"Revenue concentration: {pct:.1%} of total revenue (${float(total_revenue):,.0f})",
+                        "amount": round(abs_bal, 2),
+                        "debit": round(bals["debit"], 2),
+                        "credit": round(bals["credit"], 2),
+                        "materiality": "material" if is_material else "immaterial",
+                        "category": "revenue",
+                        "confidence": pct,
+                        "matched_keywords": [],
+                        "requires_review": True,
+                        "anomaly_type": "concentration_risk",
+                        "concentration_percent": round(pct * 100, 1),
+                        "category_total": round(float(total_revenue), 2),
+                        "severity": "high" if is_material and pct >= 0.30 else "medium",
+                        "suggestions": [],
+                    }
+                )
+
+        return findings
+
+    def detect_expense_concentration(self) -> list[dict[str, Any]]:
+        """Sprint 526 Fix 4h: Expense concentration analysis (>40% threshold)."""
+        findings: list[dict[str, Any]] = []
+        expense_accounts: list[tuple[str, str, float, dict]] = []
+        total_expense = Decimal("0")
+
+        for account_key, balances in self.account_balances.items():
+            net_balance = balances["debit"] - balances["credit"]
+            category = self._resolve_category(account_key, net_balance)
+            if category == AccountCategory.EXPENSE:
+                abs_bal = abs(net_balance)
+                display = self._display_name(account_key)
+                expense_accounts.append((account_key, display, abs_bal, balances))
+                total_expense += Decimal(str(abs_bal))
+
+        if float(total_expense) < CONCENTRATION_MIN_CATEGORY_TOTAL:
+            return findings
+
+        for key, display, abs_bal, bals in expense_accounts:
+            pct = float(Decimal(str(abs_bal)) / total_expense)
+            if pct >= 0.40:
+                is_material = abs_bal >= self.materiality_threshold
+                findings.append(
+                    {
+                        "account": display,
+                        "type": "Expense",
+                        "issue": f"Expense concentration: {pct:.1%} of total expenses (${float(total_expense):,.0f})",
+                        "amount": round(abs_bal, 2),
+                        "debit": round(bals["debit"], 2),
+                        "credit": round(bals["credit"], 2),
+                        "materiality": "material" if is_material else "immaterial",
+                        "category": "expense",
+                        "confidence": pct,
+                        "matched_keywords": [],
+                        "requires_review": True,
+                        "anomaly_type": "concentration_risk",
+                        "concentration_percent": round(pct * 100, 1),
+                        "category_total": round(float(total_expense), 2),
+                        "severity": "high" if is_material else "medium",
+                        "suggestions": [],
+                    }
+                )
+
+        return findings
+
     def get_classified_accounts(self) -> dict[str, str]:
         """Get classification for all accounts. Call after process_chunk."""
         classified = {}
         for account_name in self.account_balances.keys():
             balances = self.account_balances[account_name]
             net_balance = balances["debit"] - balances["credit"]
-            result = self.classifier.classify(account_name, net_balance)
-            classified[account_name] = result.category.value
+            # Sprint 526: Use resolved category (CSV-provided or heuristic)
+            category = self._resolve_category(account_name, net_balance)
+            classified[account_name] = category.value
         return classified
 
     def get_category_totals(self) -> CategoryTotals:
@@ -957,8 +1428,14 @@ def _merge_anomalies(
     suspense_accounts: list[dict[str, Any]],
     concentration_risks: list[dict[str, Any]],
     rounding_anomalies: list[dict[str, Any]],
+    *,
+    related_party: list[dict[str, Any]] | None = None,
+    intercompany: list[dict[str, Any]] | None = None,
+    equity_signals: list[dict[str, Any]] | None = None,
+    revenue_concentration: list[dict[str, Any]] | None = None,
+    expense_concentration: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
-    """Merge suspense/concentration/rounding anomalies into abnormal balances.
+    """Merge all anomaly types into abnormal balances.
 
     Avoids duplicates: if an account already exists in abnormal_balances,
     adds flags to the existing entry instead of creating a new one.
@@ -966,45 +1443,54 @@ def _merge_anomalies(
     """
     existing_accounts = {ab["account"] for ab in abnormal_balances}
 
-    # Merge suspense accounts
-    for suspense in suspense_accounts:
-        if suspense["account"] not in existing_accounts:
-            abnormal_balances.append(suspense)
-            existing_accounts.add(suspense["account"])
-        else:
-            for entry in abnormal_balances:
-                if entry["account"] == suspense["account"]:
-                    entry["is_suspense_account"] = True
-                    entry["suspense_confidence"] = suspense["confidence"]
-                    entry["suspense_keywords"] = suspense["matched_keywords"]
-                    if entry.get("severity") == "low":
-                        entry["severity"] = "medium"
-                    break
+    def _merge_list(items: list[dict[str, Any]], flag_key: str, extra_fields: dict[str, str] | None = None) -> None:
+        for item in items:
+            if item["account"] not in existing_accounts:
+                abnormal_balances.append(item)
+                existing_accounts.add(item["account"])
+            else:
+                for entry in abnormal_balances:
+                    if entry["account"] == item["account"]:
+                        entry[flag_key] = True
+                        if extra_fields:
+                            for src, dst in extra_fields.items():
+                                if src in item:
+                                    entry[dst] = item[src]
+                        if entry.get("severity") == "low" and item.get("severity") in ("high", "medium"):
+                            entry["severity"] = item["severity"]
+                        break
 
-    # Merge concentration risks
-    for concentration in concentration_risks:
-        if concentration["account"] not in existing_accounts:
-            abnormal_balances.append(concentration)
-            existing_accounts.add(concentration["account"])
-        else:
-            for entry in abnormal_balances:
-                if entry["account"] == concentration["account"]:
-                    entry["has_concentration_risk"] = True
-                    entry["concentration_percent"] = concentration["concentration_percent"]
-                    entry["category_total"] = concentration["category_total"]
-                    break
+    _merge_list(
+        suspense_accounts,
+        "is_suspense_account",
+        {"confidence": "suspense_confidence", "matched_keywords": "suspense_keywords"},
+    )
+    _merge_list(
+        concentration_risks,
+        "has_concentration_risk",
+        {"concentration_percent": "concentration_percent", "category_total": "category_total"},
+    )
+    _merge_list(rounding_anomalies, "has_rounding_anomaly", {"rounding_pattern": "rounding_pattern"})
 
-    # Merge rounding anomalies
-    for rounding in rounding_anomalies:
-        if rounding["account"] not in existing_accounts:
-            abnormal_balances.append(rounding)
-            existing_accounts.add(rounding["account"])
-        else:
-            for entry in abnormal_balances:
-                if entry["account"] == rounding["account"]:
-                    entry["has_rounding_anomaly"] = True
-                    entry["rounding_pattern"] = rounding["rounding_pattern"]
-                    break
+    # Sprint 526: Merge new detection categories
+    if related_party:
+        _merge_list(related_party, "is_related_party")
+    if intercompany:
+        _merge_list(intercompany, "is_intercompany_imbalance", {"cross_reference_note": "cross_reference_note"})
+    if equity_signals:
+        _merge_list(equity_signals, "is_equity_signal", {"cross_reference_note": "cross_reference_note"})
+    if revenue_concentration:
+        _merge_list(
+            revenue_concentration,
+            "has_concentration_risk",
+            {"concentration_percent": "concentration_percent", "category_total": "category_total"},
+        )
+    if expense_concentration:
+        _merge_list(
+            expense_concentration,
+            "has_concentration_risk",
+            {"concentration_percent": "concentration_percent", "category_total": "category_total"},
+        )
 
     return abnormal_balances
 
@@ -1033,6 +1519,19 @@ def _build_risk_summary(abnormal_balances: list[dict[str, Any]]) -> dict[str, An
     asset_concentration = sum(1 for ab in abnormal_balances if ab.get("anomaly_type") == "asset_concentration")
     liability_concentration = sum(1 for ab in abnormal_balances if ab.get("anomaly_type") == "liability_concentration")
     expense_concentration = sum(1 for ab in abnormal_balances if ab.get("anomaly_type") == "expense_concentration")
+    # Sprint 526: Count new anomaly types
+    related_party_count = sum(
+        1 for ab in abnormal_balances if ab.get("anomaly_type") == "related_party" or ab.get("is_related_party")
+    )
+    intercompany_count = sum(
+        1
+        for ab in abnormal_balances
+        if ab.get("anomaly_type") == "intercompany_imbalance" or ab.get("is_intercompany_imbalance")
+    )
+    equity_signal_count = sum(
+        1 for ab in abnormal_balances if ab.get("anomaly_type") == "equity_signal" or ab.get("is_equity_signal")
+    )
+
     return {
         "total_anomalies": len(abnormal_balances),
         "high_severity": high_severity,
@@ -1049,6 +1548,9 @@ def _build_risk_summary(abnormal_balances: list[dict[str, Any]]) -> dict[str, An
             "liability_concentration": liability_concentration,
             "expense_concentration": expense_concentration,
             "rounding_anomaly": rounding_count,
+            "related_party": related_party_count,
+            "intercompany_imbalance": intercompany_count,
+            "equity_signal": equity_signal_count,
         },
     }
 
@@ -1103,8 +1605,24 @@ def audit_trial_balance_streaming(
         suspense_accounts = auditor.detect_suspense_accounts()
         concentration_risks = auditor.detect_concentration_risk()
         rounding_anomalies = auditor.detect_rounding_anomalies()
+
+        # Sprint 526: New detection categories (Fix 4d–4h)
+        related_party = auditor.detect_related_party_accounts()
+        intercompany = auditor.detect_intercompany_imbalances()
+        equity_signals = auditor.detect_equity_signals()
+        revenue_concentration = auditor.detect_revenue_concentration()
+        expense_concentration = auditor.detect_expense_concentration()
+
         abnormal_balances = _merge_anomalies(
-            abnormal_balances, suspense_accounts, concentration_risks, rounding_anomalies
+            abnormal_balances,
+            suspense_accounts,
+            concentration_risks,
+            rounding_anomalies,
+            related_party=related_party,
+            intercompany=intercompany,
+            equity_signals=equity_signals,
+            revenue_concentration=revenue_concentration,
+            expense_concentration=expense_concentration,
         )
 
         # Add abnormal balance data to result
@@ -1119,6 +1637,34 @@ def audit_trial_balance_streaming(
 
         # Day 10: Add risk summary for Risk Dashboard
         result["risk_summary"] = _build_risk_summary(abnormal_balances)
+
+        # Sprint 526 Fix 5: Compute risk score at analysis time so dashboard and PDF agree
+        from shared.tb_diagnostic_constants import compute_tb_risk_score, get_risk_tier
+
+        anomaly_types = result["risk_summary"].get("anomaly_types", {})
+        _has_suspense = anomaly_types.get("suspense_account", 0) > 0
+        _has_credit_balance = any(
+            ab.get("anomaly_type") in ("abnormal_balance", "natural_balance_violation")
+            and (ab.get("type", "").lower() == "asset")
+            for ab in abnormal_balances
+        )
+        _total_debits = result.get("total_debits", 0)
+        _material_items = [ab for ab in abnormal_balances if ab.get("materiality") == "material"]
+        _flagged_value = sum(abs(ab.get("amount", 0)) for ab in _material_items)
+        _coverage_pct = min(_flagged_value / _total_debits * 100, 100.0) if _total_debits > 0 else 0
+
+        risk_score, risk_factors = compute_tb_risk_score(
+            result["material_count"],
+            result["immaterial_count"],
+            _coverage_pct,
+            _has_suspense,
+            _has_credit_balance,
+            abnormal_balances=abnormal_balances,
+        )
+        result["risk_summary"]["risk_score"] = risk_score
+        result["risk_summary"]["risk_tier"] = get_risk_tier(risk_score)
+        result["risk_summary"]["risk_factors"] = [(name, pts) for name, pts in risk_factors]
+        result["risk_summary"]["coverage_pct"] = round(min(_coverage_pct, 100.0), 1)
 
         # Sprint 95: Classification Validator — structural COA checks
         account_classifications = {}
@@ -1315,7 +1861,25 @@ def audit_trial_balance_multi_sheet(
             sheet_suspense = auditor.detect_suspense_accounts()
             sheet_concentration = auditor.detect_concentration_risk()
             sheet_rounding = auditor.detect_rounding_anomalies()
-            sheet_abnormals = _merge_anomalies(sheet_abnormals, sheet_suspense, sheet_concentration, sheet_rounding)
+
+            # Sprint 526: New detection categories (Fix 4d–4h)
+            sheet_related_party = auditor.detect_related_party_accounts()
+            sheet_intercompany = auditor.detect_intercompany_imbalances()
+            sheet_equity_signals = auditor.detect_equity_signals()
+            sheet_revenue_conc = auditor.detect_revenue_concentration()
+            sheet_expense_conc = auditor.detect_expense_concentration()
+
+            sheet_abnormals = _merge_anomalies(
+                sheet_abnormals,
+                sheet_suspense,
+                sheet_concentration,
+                sheet_rounding,
+                related_party=sheet_related_party,
+                intercompany=sheet_intercompany,
+                equity_signals=sheet_equity_signals,
+                revenue_concentration=sheet_revenue_conc,
+                expense_concentration=sheet_expense_conc,
+            )
 
             # Add sheet identifier to each abnormal balance
             for entry in sheet_abnormals:
@@ -1393,6 +1957,33 @@ def audit_trial_balance_multi_sheet(
 
         # Risk summary (Sprint 41-42: include all anomaly type counts)
         risk_summary = _build_risk_summary(all_abnormal_balances)
+
+        # Sprint 526 Fix 5: Compute risk score at analysis time so dashboard and PDF agree
+        from shared.tb_diagnostic_constants import compute_tb_risk_score, get_risk_tier
+
+        ms_anomaly_types = risk_summary.get("anomaly_types", {})
+        ms_has_suspense = ms_anomaly_types.get("suspense_account", 0) > 0
+        ms_has_credit_balance = any(
+            ab.get("anomaly_type") in ("abnormal_balance", "natural_balance_violation")
+            and (ab.get("type", "").lower() == "asset")
+            for ab in all_abnormal_balances
+        )
+        ms_material_items = [ab for ab in all_abnormal_balances if ab.get("materiality") == "material"]
+        ms_flagged_value = sum(abs(ab.get("amount", 0)) for ab in ms_material_items)
+        ms_coverage_pct = min(ms_flagged_value / consolidated_debits * 100, 100.0) if consolidated_debits > 0 else 0
+
+        ms_risk_score, ms_risk_factors = compute_tb_risk_score(
+            material_count,
+            immaterial_count,
+            ms_coverage_pct,
+            ms_has_suspense,
+            ms_has_credit_balance,
+            abnormal_balances=all_abnormal_balances,
+        )
+        risk_summary["risk_score"] = ms_risk_score
+        risk_summary["risk_tier"] = get_risk_tier(ms_risk_score)
+        risk_summary["risk_factors"] = [(name, pts) for name, pts in ms_risk_factors]
+        risk_summary["coverage_pct"] = round(min(ms_coverage_pct, 100.0), 1)
 
         # Sprint 25: Use first sheet's detection as primary (for backward compatibility)
         first_sheet_name = selected_sheets[0] if selected_sheets else None

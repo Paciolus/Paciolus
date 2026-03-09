@@ -388,9 +388,71 @@ Extracted:
 
 ---
 
+### Sprint 526 — Diagnostic Engine Calibration and Critical Fixes
+
+**Status:** COMPLETE
+**Goal:** Resolve account classification pipeline failure, calibrate round-number detection, implement 8 missing anomaly categories, reconcile risk scoring, and fix PDF regressions.
+
+#### Fix 1: Restore Logo on Cover Page (Regression)
+- [x] Root cause: Dockerfile copies only `backend/` — logo files at project root and `frontend/public/` not available in container
+- [x] Fix: Copied `PaciolusLogo_DarkBG.png` and `PaciolusLogo_LightBG.png` to `backend/assets/` (third search path in `_find_logo_file`)
+
+#### Fix 2: Account Classification Pipeline (ROOT CAUSE)
+- [x] Added `ACCOUNT_TYPE_PATTERNS` and `ACCOUNT_NAME_PATTERNS` to `column_detector.py`
+- [x] Added `TB_ACCOUNT_TYPE_CONFIG` (priority=5) and `TB_ACCOUNT_NAME_CONFIG` (priority=12) — type first, name after account
+- [x] Extended `ColumnDetectionResult` with `account_type_column/confidence` and `account_name_column/confidence`
+- [x] `StreamingAuditor._discover_columns()` extracts `account_type_col` and `account_name_col`
+- [x] `process_chunk()` collects `provided_account_types` and `provided_account_names` dicts
+- [x] `_resolve_category()` prioritizes CSV type over heuristic classification (confidence=1.0)
+- [x] `_display_name()` produces "[code] — [name]" format when account_name column available
+- [x] Priority ordering fix: account_column (priority=8) runs BEFORE account_name_column (priority=12) to prevent "Account Name" header being stolen from account role
+
+#### Fix 3: Round-Number Detection — Tiered Calibration
+- [x] Tier 1 (suppress): Fixed assets, debt, equity, payroll, depreciation — `_ROUNDING_TIER1_KEYWORDS`
+- [x] Tier 2 (minor): Operating expenses, accrued liabilities (default — only flagged if material)
+- [x] Tier 3 (material): Suspense, clearing, miscellaneous — `_ROUNDING_TIER3_KEYWORDS`
+- [x] Updated test: Equipment moved from "should flag" to "should suppress" per Tier 1; Miscellaneous Expense added as Tier 3 test case
+
+#### Fix 4: Missing Anomaly Detection Categories (4a–4h)
+- [x] 4a: Credit balance in asset — handled by `_is_balance_abnormal()` in `get_abnormal_balances()`
+- [x] 4b: Debit balance in liability/revenue — same, with contra-account awareness via `_resolve_category()`
+- [x] 4c: Suspense/clearing — existing `detect_suspense_accounts()` enhanced with `_display_name()` and `_resolve_category()`
+- [x] 4d: `detect_related_party_accounts()` — keyword matching with `_RELATED_PARTY_KEYWORDS`
+- [x] 4e: `detect_intercompany_imbalances()` — counterparty extraction and net balance matching
+- [x] 4f: `detect_equity_signals()` — retained earnings deficit + dividends declared pattern
+- [x] 4g: `detect_revenue_concentration()` — >30% of total revenue threshold
+- [x] 4h: `detect_expense_concentration()` — >40% of total expenses threshold
+- [x] All 5 new detectors called in both `audit_trial_balance_streaming()` and `audit_trial_balance_multi_sheet()`
+- [x] `_merge_anomalies()` refactored with `_merge_list()` helper, accepts all new categories
+
+#### Fix 5: Risk Score Reconciliation
+- [x] `compute_tb_risk_score()` called at analysis time in both streaming and multi-sheet functions
+- [x] Result stored in `risk_summary["risk_score"]`, `risk_summary["risk_tier"]`, `risk_summary["risk_factors"]`
+- [x] PDF generator reads pre-computed score when available (no re-computation divergence)
+- [x] Coverage percentage capped at 100% with `min(coverage_pct, 100.0)`
+- [x] New anomaly types scored: related_party (+5), intercompany_imbalance (+5), equity_signal (+5)
+
+#### Fix 6: Differentiated Procedure Language
+- [x] Added `SUGGESTED_PROCEDURES` entries: `related_party`, `intercompany_imbalance`, `equity_signal`, `debit_balance_liability`, `debit_balance_revenue`
+- [x] Added corresponding `MATERIAL_PROCEDURE_UPGRADES` with escalated language
+- [x] `get_tb_suggested_procedure()` dispatches new anomaly_type values
+- [x] References: ASC 850 (Related Party), ASC 205-40 (Going Concern), ASC 275-10 (Concentration)
+
+#### Fix 7: Engagement Metadata Blanks
+- [x] `_append_metadata_table()` always shows Client, Fiscal Year End, Practitioner, Reviewer with em dash (—) fallback
+- [x] Report Status defaults to "Draft" when not set
+
+#### Verification
+- [x] `npm run build` passes
+- [x] `npm test` passes (1,329 tests, 111 suites)
+- [x] `pytest` passes (5,305 tests, 1 pre-existing failure in test_scope_methodology unrelated to sprint)
+
+---
+
 ### Sprint 525 — TB Diagnostics Page: Bug Fixes and Content Improvements
 
 **Status:** COMPLETE
+**Commit:** 914784b
 **Goal:** Resolve 1 interaction bug and 5 content/logic issues on the Trial Balance Diagnostics upload and data readiness page.
 
 #### Fix 1: Button Click Hijacking (CRITICAL)

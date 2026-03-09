@@ -801,6 +801,8 @@ class PaciolusReportGenerator:
             material_items = [ab for ab in abnormal_balances if ab.get("materiality") == "material"]
             flagged_value = sum(abs(ab.get("amount", 0)) for ab in material_items)
             coverage_pct = flagged_value / total_debits * 100 if total_debits else 0
+            # Sprint 526 Fix 5: Cap coverage at 100%
+            coverage_pct = min(coverage_pct, 100.0)
 
             coverage_lines = [
                 create_leader_dots("Flagged Value (Material)", f"${flagged_value:,.2f}"),
@@ -1011,14 +1013,22 @@ class PaciolusReportGenerator:
         flagged_value = sum(abs(ab.get("amount", 0)) for ab in material_items)
         coverage_pct = flagged_value / total_debits * 100 if total_debits > 0 else 0
 
-        risk_score, risk_factors = compute_tb_risk_score(
-            material_count,
-            immaterial_count,
-            coverage_pct,
-            has_suspense,
-            has_credit_balance,
-            abnormal_balances=abnormal_balances,
-        )
+        # Sprint 526 Fix 5: Use pre-computed score from API response when available
+        # This ensures dashboard and PDF display identical scores
+        pre_computed_score = risk_summary.get("risk_score")
+        pre_computed_factors = risk_summary.get("risk_factors")
+        if pre_computed_score is not None and pre_computed_factors is not None:
+            risk_score = pre_computed_score
+            risk_factors = [(name, pts) for name, pts in pre_computed_factors]
+        else:
+            risk_score, risk_factors = compute_tb_risk_score(
+                material_count,
+                immaterial_count,
+                coverage_pct,
+                has_suspense,
+                has_credit_balance,
+                abnormal_balances=abnormal_balances,
+            )
         risk_tier = get_risk_tier(risk_score)
         tier_label, _ = RISK_TIER_DISPLAY.get(risk_tier, ("UNKNOWN", ClassicalColors.OBSIDIAN_500))
 

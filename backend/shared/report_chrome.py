@@ -361,10 +361,9 @@ def _append_metadata_table(
     """Build the clean key-value metadata table on the cover page."""
     rows: list[list[str]] = []
 
-    if metadata.client_name:
-        rows.append(["Client", metadata.client_name])
-    if metadata.fiscal_year_end:
-        rows.append(["Fiscal Year End", metadata.fiscal_year_end])
+    # Sprint 526 Fix 7: Always show engagement fields, use em dash for blanks
+    rows.append(["Client", metadata.client_name or "\u2014"])
+    rows.append(["Fiscal Year End", metadata.fiscal_year_end or "\u2014"])
     if metadata.engagement_period:
         rows.append(["Period", metadata.engagement_period])
 
@@ -385,11 +384,9 @@ def _append_metadata_table(
 
     # Always include prepared timestamp
     rows.append(["Generated", format_classical_date()])
-    # Part 1: Engagement practitioner fields (not Paciolus personnel)
-    if metadata.prepared_by:
-        rows.append(["Engagement Practitioner", metadata.prepared_by])
-    if metadata.reviewed_by:
-        rows.append(["Engagement Reviewer", metadata.reviewed_by])
+    # Part 1: Engagement practitioner fields — always show, em dash for blanks
+    rows.append(["Engagement Practitioner", metadata.prepared_by or "\u2014"])
+    rows.append(["Engagement Reviewer", metadata.reviewed_by or "\u2014"])
     rows.append(["Report Status", metadata.report_status or "Draft"])
 
     if not rows:
