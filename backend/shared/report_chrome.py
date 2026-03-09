@@ -212,6 +212,11 @@ class ReportMetadata:
     source_document_title: str = ""
     source_context_note: str = ""
     reference: str = ""
+    # Fix 6: Engagement context fields
+    fiscal_year_end: str = ""
+    prepared_by: str = ""
+    reviewed_by: str = ""
+    report_status: str = "Draft"  # "Draft" or "Final"
 
 
 # =============================================================================
@@ -358,6 +363,8 @@ def _append_metadata_table(
 
     if metadata.client_name:
         rows.append(["Client", metadata.client_name])
+    if metadata.fiscal_year_end:
+        rows.append(["Fiscal Year End", metadata.fiscal_year_end])
     if metadata.engagement_period:
         rows.append(["Period", metadata.engagement_period])
 
@@ -378,6 +385,11 @@ def _append_metadata_table(
 
     # Always include prepared timestamp
     rows.append(["Prepared", format_classical_date()])
+    if metadata.prepared_by:
+        rows.append(["Prepared By", metadata.prepared_by])
+    if metadata.reviewed_by:
+        rows.append(["Reviewed By", metadata.reviewed_by])
+    rows.append(["Status", metadata.report_status or "Draft"])
 
     if not rows:
         return
@@ -468,7 +480,7 @@ def draw_page_header(canvas: Any, doc: Any, title: str = "", reference: str = ""
 # =============================================================================
 
 _DISCLAIMER_LINE = (
-    "This output supports professional judgment. It does not constitute an audit, review, or attestation engagement."
+    "Prepared using Paciolus Diagnostic Intelligence. Does not constitute an audit, review, or attestation engagement."
 )
 
 

@@ -210,6 +210,9 @@ def generate_testing_memo(
         source_document_title=source_document_title or "",
         source_context_note=source_context_note or "",
         reference=reference,
+        # Fix 6: Engagement context fields
+        prepared_by=prepared_by or "",
+        reviewed_by=reviewed_by or "",
     )
     build_cover_page(story, styles, metadata, doc.width, logo_path)
 
@@ -357,6 +360,11 @@ def generate_testing_memo(
 
     # INTELLIGENCE STAMP
     build_intelligence_stamp(story, styles, client_name=client_name, period_tested=period_tested)
+
+    # Fix 10: Formal Limitations section
+    from shared.memo_base import build_limitations_section
+
+    build_limitations_section(story, styles, doc.width)
 
     # DISCLAIMER
     build_disclaimer(story, styles, domain=config.domain, isa_reference=config.isa_reference)

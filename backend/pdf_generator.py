@@ -150,17 +150,17 @@ def create_classical_styles() -> dict:
     # SECTION HEADERS
     # ═══════════════════════════════════════════════════════════════
 
-    # Section header - Title case, bold serif
+    # Section header - Title case, bold serif, gold accent (Fix 7)
     _add_or_replace_style(
         styles,
         ParagraphStyle(
             name="SectionHeader",
             fontName="Times-Bold",
-            fontSize=12,
+            fontSize=13,
             textColor=ClassicalColors.OBSIDIAN_DEEP,
-            spaceBefore=24,
-            spaceAfter=8,
-            leading=14,
+            spaceBefore=28,
+            spaceAfter=10,
+            leading=16,
         ),
     )
 
@@ -484,16 +484,29 @@ class PaciolusReportGenerator:
             subtitle=f"Analysis Report for {self.filename}",
             source_document=self.filename,
             reference=self.reference_number,
+            prepared_by=self.prepared_by or "",
+            reviewed_by=self.reviewed_by or "",
         )
         build_cover_page(story, self.styles, metadata, doc.width, self.logo_path)
 
+        # Fix 5: Table of Contents
+        story.extend(self._build_table_of_contents())
+
+        # Fix 12: Data Intake Summary
+        story.extend(self._build_data_intake_summary())
+
         # Build document sections
         story.extend(self._build_executive_summary())
+        # Fix 7: Section dividers between major sections
+        story.append(LedgerRule(color=ClassicalColors.GOLD_INSTITUTIONAL, thickness=0.5, spaceBefore=12, spaceAfter=12))
         story.extend(self._build_population_composition())
+        story.append(LedgerRule(color=ClassicalColors.GOLD_INSTITUTIONAL, thickness=0.5, spaceBefore=12, spaceAfter=12))
         story.extend(self._build_risk_summary())
-        story.extend(self._build_section_ornament())
+        story.append(LedgerRule(color=ClassicalColors.GOLD_INSTITUTIONAL, thickness=0.5, spaceBefore=12, spaceAfter=12))
         story.extend(self._build_anomaly_details())
         story.extend(self._build_workpaper_signoff())  # Sprint 53
+        # Fix 10: Limitations section before footer
+        story.extend(self._build_limitations_section())
         story.extend(self._build_classical_footer())
 
         # Build with page decorations
@@ -545,6 +558,160 @@ class PaciolusReportGenerator:
             Spacer(1, 4),
         ]
 
+    def _build_table_of_contents(self) -> list:
+        """Fix 5: Build a compact Table of Contents on page 2."""
+        elements = []
+
+        elements.append(Paragraph("Table of Contents", self.styles["SectionHeader"]))
+        elements.append(LedgerRule(color=ClassicalColors.GOLD_INSTITUTIONAL, thickness=1))
+        elements.append(Spacer(1, 8))
+
+        # TOC entries — these are the major sections in order
+        toc_entries = [
+            "Data Intake Summary",
+            "Executive Summary",
+            "Population Composition",
+            "Risk Assessment",
+            "Exception Details",
+            "Limitations",
+        ]
+
+        for i, entry in enumerate(toc_entries, 1):
+            elements.append(
+                Paragraph(
+                    f"{i}. &nbsp;&nbsp;{entry}",
+                    self.styles["BodyText"],
+                )
+            )
+
+        elements.append(Spacer(1, 4))
+        elements.append(
+            Paragraph(
+                "<i>Page numbers are sequential from the cover page. "
+                "Section ordering reflects the standard diagnostic report structure.</i>",
+                self.styles["BodyText"],
+            )
+        )
+        elements.append(Spacer(1, 12))
+
+        return elements
+
+    def _build_data_intake_summary(self) -> list:
+        """Fix 12: Build the Data Intake Summary section.
+
+        Shows data quality characteristics of the input file so reviewers
+        know how much to trust the output.
+        """
+        elements = []
+
+        elements.append(Paragraph("Data Intake Summary", self.styles["SectionHeader"]))
+        elements.append(LedgerRule(color=ClassicalColors.OBSIDIAN_DEEP, thickness=1))
+        elements.append(Spacer(1, 4))
+
+        row_count = self.audit_result.get("row_count", 0)
+        col_detection = self.audit_result.get("column_detection", {})
+        data_quality = self.audit_result.get("data_quality", {})
+
+        # Extract data quality metrics
+        rows_accepted = row_count
+        rows_rejected = data_quality.get("rows_rejected", 0)
+        null_accounts = data_quality.get("null_account_codes", 0)
+        duplicates_detected = data_quality.get("duplicate_accounts", False)
+        unrecognized_types = data_quality.get("unrecognized_types", 0)
+        completeness = data_quality.get("completeness_score", 100)
+
+        cell_style = self.styles["TableCell"]
+        header_style = self.styles["TableHeader"]
+
+        intake_data = [
+            [Paragraph("Field", header_style), Paragraph("Value", header_style)],
+            [Paragraph("File Received", cell_style), Paragraph(self.filename or "—", cell_style)],
+            [Paragraph("Rows Submitted", cell_style), Paragraph(f"{row_count + rows_rejected:,}", cell_style)],
+            [Paragraph("Rows Accepted", cell_style), Paragraph(f"{rows_accepted:,}", cell_style)],
+            [Paragraph("Rows Rejected / Skipped", cell_style), Paragraph(str(rows_rejected), cell_style)],
+            [Paragraph("Null / Blank Account Codes", cell_style), Paragraph(str(null_accounts), cell_style)],
+            [
+                Paragraph("Duplicate Account Codes", cell_style),
+                Paragraph("Yes" if duplicates_detected else "No", cell_style),
+            ],
+            [Paragraph("Unrecognized Account Types", cell_style), Paragraph(str(unrecognized_types), cell_style)],
+            [Paragraph("Data Completeness", cell_style), Paragraph(f"{completeness:.0f}%", cell_style)],
+        ]
+
+        # Column detection info
+        if col_detection:
+            confidence = col_detection.get("overall_confidence", 0)
+            if isinstance(confidence, (int, float)):
+                intake_data.append(
+                    [
+                        Paragraph("Column Detection Confidence", cell_style),
+                        Paragraph(f"{confidence:.0%}", cell_style),
+                    ]
+                )
+
+        intake_table = Table(intake_data, colWidths=[3.0 * inch, 3.5 * inch], repeatRows=1)
+        intake_table.setStyle(
+            TableStyle(
+                [
+                    ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
+                    ("FONTSIZE", (0, 0), (-1, -1), 9),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
+                    ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
+                    ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
+                    ("TOPPADDING", (0, 0), (-1, -1), 3),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                    ("LEFTPADDING", (0, 0), (0, -1), 0),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    # Fix 7: Row banding
+                    ("ROWBACKGROUNDS", (0, 1), (-1, -1), [ClassicalColors.WHITE, ClassicalColors.OATMEAL_PAPER]),
+                ]
+            )
+        )
+        elements.append(intake_table)
+
+        # Summary note
+        if rows_rejected == 0 and null_accounts == 0 and not duplicates_detected:
+            elements.append(Spacer(1, 4))
+            elements.append(
+                Paragraph(
+                    "<i>No data quality issues were identified during intake processing.</i>",
+                    self.styles["BodyText"],
+                )
+            )
+
+        elements.append(Spacer(1, 12))
+        return elements
+
+    def _build_limitations_section(self) -> list:
+        """Fix 10: Build the formal Limitations section on the final page."""
+        elements = []
+
+        elements.append(Spacer(1, 16))
+        elements.append(Paragraph("Limitations", self.styles["SectionHeader"]))
+        elements.append(LedgerRule(color=ClassicalColors.OBSIDIAN_DEEP, thickness=1))
+        elements.append(Spacer(1, 4))
+
+        limitation_text = (
+            "This report was prepared using Paciolus Diagnostic Intelligence and is intended to "
+            "support the professional judgment of the engagement practitioner. The procedures "
+            "reflected herein are analytical and diagnostic in nature and do not constitute an "
+            "audit, review, compilation, or attestation engagement as defined under AICPA "
+            "professional standards or PCAOB auditing standards. Findings and observations "
+            "require independent corroboration before conclusions may be drawn."
+        )
+        elements.append(Paragraph(limitation_text, self.styles["BodyText"]))
+        elements.append(Spacer(1, 6))
+
+        zero_storage = (
+            "Zero-Storage Architecture: All financial data was processed in-memory during this "
+            "analysis session and was not persisted to any storage medium. No client financial "
+            "data is retained by Paciolus after the analysis session concludes."
+        )
+        elements.append(Paragraph(f"<i>{zero_storage}</i>", self.styles["BodyText"]))
+        elements.append(Spacer(1, 8))
+
+        return elements
+
     def _build_executive_summary(self) -> list:
         """Build the executive summary with leader dots and status badge."""
         elements = []
@@ -552,27 +719,34 @@ class PaciolusReportGenerator:
         elements.append(Paragraph("Executive Summary", self.styles["SectionHeader"]))
         elements.append(LedgerRule(color=ClassicalColors.OBSIDIAN_DEEP, thickness=1))
 
-        # Status Badge (classical seal style)
+        # Fix 8: Formal Trial Balance Status indicator
         is_balanced = self.audit_result.get("balanced", False)
+        difference = self.audit_result.get("difference", 0)
 
         if is_balanced:
-            status_text = "✓  Balanced"
+            status_label = "BALANCED"
+            status_detail = f"Debits equal Credits (${abs(difference):,.2f} variance)"
             badge_border = ClassicalColors.SAGE
             status_style = "BalancedStatus"
         else:
-            status_text = "⚠  Out of Balance"
+            status_label = "OUT OF BALANCE"
+            status_detail = f"Variance of ${abs(difference):,.2f} identified"
             badge_border = ClassicalColors.CLAY
             status_style = "UnbalancedStatus"
 
-        # Create status badge as a table for border effect
-        badge_data = [[Paragraph(status_text, self.styles[status_style])]]
-        badge_table = Table(badge_data, colWidths=[4 * inch])
+        # Formal status badge with label + detail
+        badge_data = [
+            [Paragraph(f"✓  {status_label}", self.styles[status_style])],
+            [Paragraph(status_detail, self.styles["BodyText"])],
+        ]
+        badge_table = Table(badge_data, colWidths=[5 * inch])
         badge_table.setStyle(
             TableStyle(
                 [
-                    ("BOX", (0, 0), (-1, -1), 2, badge_border),
-                    ("TOPPADDING", (0, 0), (-1, -1), 10),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+                    ("BOX", (0, 0), (-1, -1), 1.5, badge_border),
+                    ("TOPPADDING", (0, 0), (0, 0), 8),
+                    ("BOTTOMPADDING", (0, -1), (-1, -1), 8),
+                    ("TOPPADDING", (0, 1), (0, 1), 2),
                     ("ALIGN", (0, 0), (-1, -1), "CENTER"),
                     ("BACKGROUND", (0, 0), (-1, -1), ClassicalColors.OATMEAL_PAPER),
                 ]
@@ -710,12 +884,13 @@ class PaciolusReportGenerator:
         cell_style = self.styles["TableCell"]
         header_style = self.styles["TableHeader"]
 
+        # Fix 2: Renamed column and added footnote for clarity
         table_data = [
             [
                 Paragraph("Account Type", header_style),
                 Paragraph("Count", header_style),
-                Paragraph("Total Balance", header_style),
-                Paragraph("% of Population", header_style),
+                Paragraph("Gross Balance", header_style),
+                Paragraph("% of Gross Total", header_style),
             ]
         ]
 
@@ -766,6 +941,15 @@ class PaciolusReportGenerator:
 
         elements.append(comp_table)
 
+        # Fix 2: Gross balance footnote — clarify non-additive nature
+        gross_footnote = (
+            "Gross Balance represents the sum of absolute account-level balances within each type. "
+            "This column is not additive to a net trial balance total, as it includes both "
+            "debit and credit balances without netting."
+        )
+        elements.append(Spacer(1, 2))
+        elements.append(Paragraph(f"<i>{gross_footnote}</i>", self.styles["BodyText"]))
+
         # Classification confidence footnote
         col_detection = self.audit_result.get("column_detection", {})
         if col_detection:
@@ -815,7 +999,7 @@ class PaciolusReportGenerator:
         flagged_value = sum(abs(ab.get("amount", 0)) for ab in material_items)
         coverage_pct = flagged_value / total_debits * 100 if total_debits > 0 else 0
 
-        risk_score = compute_tb_risk_score(
+        risk_score, risk_factors = compute_tb_risk_score(
             material_count, immaterial_count, coverage_pct, has_suspense, has_credit_balance
         )
         risk_tier = get_risk_tier(risk_score)
@@ -829,6 +1013,19 @@ class PaciolusReportGenerator:
         for line in score_lines:
             elements.append(Paragraph(line, self.styles["LeaderLine"]))
         elements.append(Paragraph(RISK_SCALE_LEGEND, self.styles["BodyText"]))
+
+        # Risk score decomposition
+        if risk_factors:
+            elements.append(Spacer(1, 4))
+            elements.append(Paragraph("<b>Score Decomposition</b>", self.styles["BodyText"]))
+            for factor_name, contribution in risk_factors:
+                elements.append(
+                    Paragraph(
+                        create_leader_dots(f"  {factor_name}", f"+{contribution}"),
+                        self.styles["LeaderLine"],
+                    )
+                )
+
         elements.append(Spacer(1, 6))
 
         # Risk metrics table with classical styling
@@ -885,6 +1082,10 @@ class PaciolusReportGenerator:
         material = [ab for ab in abnormal_balances if ab.get("materiality") == "material"]
         immaterial = [ab for ab in abnormal_balances if ab.get("materiality") == "immaterial"]
 
+        # Fix 3: Sort findings by absolute amount descending within each tier
+        material.sort(key=lambda ab: abs(ab.get("amount", 0)), reverse=True)
+        immaterial.sort(key=lambda ab: abs(ab.get("amount", 0)), reverse=True)
+
         if material:
             elements.append(Paragraph(f"Material Exceptions ({len(material)})", self.styles["SubsectionHeader"]))
             elements.append(self._create_ledger_table(material, is_material=True))
@@ -896,7 +1097,7 @@ class PaciolusReportGenerator:
 
         return elements
 
-    def _create_ledger_table(self, anomalies: list, is_material: bool) -> Table:
+    def _create_ledger_table(self, anomalies: list, is_material: bool) -> KeepTogether:
         """
         Create a ledger-style table with horizontal rules only.
 
@@ -906,18 +1107,19 @@ class PaciolusReportGenerator:
         - Right-aligned amounts
         - Sprint 53: Added reference numbers for workpaper cross-referencing
         - Changes 1/4/6: Suggested procedures, benchmarks, cross-references
+        - Fix 1: Signed total, Fix 3: Priority ranking, Fix 11: Amount annotations
         """
         from shared.tb_diagnostic_constants import get_concentration_benchmark, get_tb_suggested_procedure
 
         cell_style = self.styles["TableCell"]
         header_style = self.styles["TableHeader"]
 
-        # Header row - Sprint 53: Added Ref column
+        # Fix 3: Header row with Rank column
         data = [
             [
+                Paragraph("Rank", header_style),
                 Paragraph("Ref", header_style),
                 Paragraph("Account", header_style),
-                Paragraph("Classification", header_style),
                 Paragraph("Nature of Exception", header_style),
                 Paragraph("Amount", header_style),
             ]
@@ -926,57 +1128,67 @@ class PaciolusReportGenerator:
         # Determine reference prefix based on materiality
         ref_prefix = "TB-M" if is_material else "TB-I"
 
-        # Data rows
+        # Data rows (anomalies already sorted by abs(amount) descending in caller)
         total_amount = 0
+        has_pattern_based = False
         for idx, ab in enumerate(anomalies, start=1):
-            # Sprint 53: Generate reference number
+            # Sprint 53: Generate reference number (stable identifier, not sort key)
             ref_num = f"{ref_prefix}{idx:03d}"
 
             account = ab.get("account", "Unknown")
-
             if ab.get("sheet_name"):
                 account = f"{account} ({ab['sheet_name']})"
 
             acc_type = ab.get("type", "Unknown")
 
             # Build enriched Nature of Exception cell:
-            # 1. Issue text (normal)
-            # 2. Benchmark context (small, gray) — concentration only
-            # 3. Cross-reference note (small, italic) — Change 6
-            # 4. Suggested procedure (small, italic)
             issue_text = ab.get("issue", "")
             issue_parts = [f"<b>{issue_text}</b>"]
+            issue_parts.append(f'<br/><font size="7" color="#616161"><i>{acc_type}</i></font>')
 
-            # Change 4: Concentration benchmark
+            # Concentration benchmark
             benchmark = get_concentration_benchmark(ab)
             if benchmark:
                 issue_parts.append(f'<br/><font size="7" color="#616161"><i>{benchmark}</i></font>')
 
-            # Change 6: Cross-reference for intercompany findings
+            # Cross-reference for intercompany findings
             cross_ref = ab.get("cross_reference_note")
             if cross_ref:
                 issue_parts.append(f'<br/><font size="7" color="#4A7C59"><i>{cross_ref}</i></font>')
 
-            # Change 1: Suggested procedure
-            procedure = get_tb_suggested_procedure(ab)
+            # Suggested procedure (Fix 9: escalated for material findings)
+            procedure = get_tb_suggested_procedure(ab, is_material=is_material)
             issue_parts.append(f'<br/><font size="7"><i>Suggested Procedure: {procedure}</i></font>')
 
             issue_cell = Paragraph("".join(issue_parts), cell_style)
 
             amount = ab.get("amount", 0)
-            total_amount += abs(amount)
+            # Fix 1: Sum signed values (not absolute) so total matches manual sum of displayed amounts
+            total_amount += amount
+
+            # Fix 11: Annotate pattern-based amounts
+            anomaly_type = ab.get("anomaly_type", "")
+            amount_display = f"${amount:,.2f}"
+            if anomaly_type == "rounding_anomaly":
+                txn_count = ab.get("transaction_count")
+                if txn_count:
+                    amount_display += f'<br/><font size="6"><i>(sum of {txn_count} flagged txns)</i></font>'
+                    has_pattern_based = True
+
+            # Fix 3: Priority rank badge
+            rank_label = f"P{idx}"
 
             data.append(
                 [
+                    Paragraph(f"<b>{rank_label}</b>", cell_style),
                     Paragraph(ref_num, cell_style),
                     Paragraph(account, cell_style),
-                    Paragraph(acc_type, cell_style),
                     issue_cell,
-                    Paragraph(f"${amount:,.2f}", cell_style),
+                    Paragraph(amount_display, cell_style),
                 ]
             )
 
-        # Total row
+        # Fix 1: Total row uses signed sum
         data.append(
             [
                 Paragraph("", cell_style),
@@ -987,8 +1199,11 @@ class PaciolusReportGenerator:
             ]
         )
 
-        # Sprint 53: Adjusted column widths to accommodate Ref column
-        table = Table(data, colWidths=[0.7 * inch, 1.5 * inch, 1.0 * inch, 2.3 * inch, 1 * inch], repeatRows=1)
+        # Adjusted column widths: Rank + Ref + Account + Nature + Amount
+        table = Table(data, colWidths=[0.5 * inch, 0.6 * inch, 1.3 * inch, 2.6 * inch, 1.0 * inch], repeatRows=1)
+
+        # Build elements list to wrap table + footnotes together
+        table_elements = []
 
         # Ledger styling
         accent_color = ClassicalColors.CLAY if is_material else ClassicalColors.OBSIDIAN_500
@@ -1019,7 +1234,31 @@ class PaciolusReportGenerator:
         ]
 
         table.setStyle(TableStyle(style_commands))
-        return table
+        table_elements.append(table)
+
+        # Fix 1: Signed-balance footnote
+        table_elements.append(Spacer(1, 2))
+        table_elements.append(
+            Paragraph(
+                '<i><font size="7">Amounts shown reflect signed balances. '
+                "Negative values indicate credit-balance findings. "
+                "Amount represents account balance unless otherwise noted.</font></i>",
+                self.styles["BodyText"],
+            )
+        )
+
+        # Fix 11: Pattern-based amount footnote (if any present)
+        if has_pattern_based:
+            table_elements.append(
+                Paragraph(
+                    '<i><font size="7">For pattern-based findings (e.g., round-number anomalies), '
+                    "the amount shown may represent the sum of flagged transactions rather than "
+                    "the account balance.</font></i>",
+                    self.styles["BodyText"],
+                )
+            )
+
+        return KeepTogether(table_elements)
 
     def _build_workpaper_signoff(self) -> list:
         """

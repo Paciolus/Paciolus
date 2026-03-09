@@ -49,9 +49,64 @@ SUGGESTED_PROCEDURES: dict[str, str] = {
 
 DEFAULT_PROCEDURE = "Review supporting documentation and obtain management explanation."
 
+# Escalated procedures for material-level findings
+MATERIAL_PROCEDURE_UPGRADES: dict[str, str] = {
+    "suspense": (
+        "Obtain transaction-level detail for the outstanding suspense balance and "
+        "confirm each item was cleared or reclassified prior to the report date. "
+        "Given the material amount, escalate to engagement partner and consider "
+        "whether the balance represents a potential adjusting entry. Document "
+        "resolution with supporting evidence in the engagement file."
+    ),
+    "concentration_revenue": (
+        "Perform disaggregated revenue analysis for this account, including "
+        "customer-level detail and contract terms. Assess whether the concentration "
+        "represents a going concern or business continuity risk requiring disclosure "
+        "under ASC 275-10. Given the material amount, expand substantive testing "
+        "to include confirmation procedures and cutoff testing for this revenue stream."
+    ),
+    "concentration_expense": (
+        "Obtain a complete transaction listing for this account and identify the "
+        "underlying vendors or contracts driving the concentration. Given the material "
+        "amount, perform targeted vouching of the largest transactions and assess "
+        "whether the concentration indicates related-party activity or inadequate "
+        "competitive bidding controls."
+    ),
+    "credit_balance_asset": (
+        "Investigate the credit balance in this asset account by obtaining the "
+        "transaction detail and tracing to source documents. Given the material amount, "
+        "determine whether a reclassification to liabilities is required and assess "
+        "the impact on financial statement presentation. Escalate to engagement "
+        "partner for evaluation of potential adjusting entry."
+    ),
+    "round_dollar": (
+        "Inspect supporting documentation for all round-dollar transactions comprising "
+        "this balance. Given the material amount, perform targeted vouching to confirm "
+        "amounts reflect actual invoiced or contracted values. Assess whether the "
+        "pattern indicates estimation rather than transaction-based recording, which "
+        "may affect the reliability of the balance for substantive testing purposes."
+    ),
+    "concentration_intercompany": (
+        "Obtain the intercompany agreement and reconciliation for this balance. "
+        "Given the material amount, confirm elimination entries are correctly prepared "
+        "and the balance is supported by corresponding entries in the counterparty's "
+        "records. Assess transfer pricing documentation and regulatory compliance."
+    ),
+    "prepaid_credit": (
+        "Investigate the credit balance in this prepaid account by obtaining the "
+        "amortization schedule and underlying contract. Given the material amount, "
+        "determine whether the prepaid has been fully consumed, improperly reversed, "
+        "or requires reclassification. Assess the impact on the period's expense "
+        "recognition and consider whether an adjusting entry is warranted."
+    ),
+}
 
-def get_tb_suggested_procedure(anomaly: dict) -> str:
+
+def get_tb_suggested_procedure(anomaly: dict, *, is_material: bool = False) -> str:
     """Resolve the suggested procedure for a TB diagnostic finding.
+
+    When is_material=True, returns escalated procedure language appropriate
+    for findings above the materiality threshold.
 
     Matching priority:
     1. Exact anomaly_type match (suspense_account → 'suspense')
@@ -63,27 +118,30 @@ def get_tb_suggested_procedure(anomaly: dict) -> str:
     account = (anomaly.get("account", "") or "").lower()
     acc_type = (anomaly.get("type", "") or "").lower()
 
+    procedures = MATERIAL_PROCEDURE_UPGRADES if is_material else SUGGESTED_PROCEDURES
+
     # Direct anomaly_type matches
     if anomaly_type == "suspense_account":
-        return SUGGESTED_PROCEDURES["suspense"]
+        return procedures["suspense"]
 
     if anomaly_type == "rounding_anomaly":
-        return SUGGESTED_PROCEDURES["round_dollar"]
+        return procedures["round_dollar"]
 
     if anomaly_type == "concentration_risk":
         if "intercompany" in account or "intercompany" in issue:
-            return SUGGESTED_PROCEDURES["concentration_intercompany"]
+            return procedures["concentration_intercompany"]
         if acc_type == "revenue" or "revenue" in issue:
-            return SUGGESTED_PROCEDURES["concentration_revenue"]
-        # Default concentration to expense
-        return SUGGESTED_PROCEDURES["concentration_expense"]
+            return procedures["concentration_revenue"]
+        return procedures["concentration_expense"]
 
     if anomaly_type in ("abnormal_balance", "natural_balance_violation"):
         if "prepaid" in account:
-            return SUGGESTED_PROCEDURES["prepaid_credit"]
+            return procedures["prepaid_credit"]
         if acc_type == "asset" or "asset" in issue:
-            return SUGGESTED_PROCEDURES["credit_balance_asset"]
+            return procedures["credit_balance_asset"]
 
+    if is_material:
+        return "Review supporting documentation and obtain management explanation. Given the material amount, escalate to engagement partner for assessment of potential adjusting entry and expanded substantive procedures."
     return DEFAULT_PROCEDURE
 
 
@@ -141,23 +199,39 @@ def compute_tb_risk_score(
     coverage_pct: float,
     has_suspense: bool,
     has_credit_balance_asset: bool,
-) -> int:
+) -> tuple[int, list[tuple[str, int]]]:
     """Compute composite risk score for the TB Diagnostic report.
-
-    Returns an integer 0–100.
+    Returns (score, factors) where factors is a list of (name, contribution) tuples.
     """
+    factors: list[tuple[str, int]] = []
     score = 0
-    score += material_count * 8
-    score += minor_count * 2
+
+    material_pts = material_count * 8
+    if material_pts > 0:
+        factors.append((f"Material exceptions ({material_count} × 8)", material_pts))
+    score += material_pts
+
+    minor_pts = minor_count * 2
+    if minor_pts > 0:
+        factors.append((f"Minor observations ({minor_count} × 2)", minor_pts))
+    score += minor_pts
+
     if coverage_pct >= 50:
+        factors.append(("Risk-weighted coverage ≥ 50%", 10))
         score += 10
     elif coverage_pct >= 25:
+        factors.append(("Risk-weighted coverage ≥ 25%", 5))
         score += 5
+
     if has_suspense:
+        factors.append(("Suspense balance at period end", 5))
         score += 5
+
     if has_credit_balance_asset:
+        factors.append(("Credit balance in asset account", 3))
         score += 3
-    return min(score, 100)
+
+    return min(score, 100), factors
 
 
 def get_risk_tier(score: int) -> str:

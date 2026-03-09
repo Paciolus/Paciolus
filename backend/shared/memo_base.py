@@ -529,3 +529,42 @@ def build_disclaimer(
             styles["MemoDisclaimer"],
         )
     )
+
+
+def build_limitations_section(
+    story: list,
+    styles: dict,
+    doc_width: float,
+) -> None:
+    """Build the formal Limitations section on the final page of the report.
+
+    This provides the full institutional-grade limitation statement, replacing
+    the abbreviated footer-only disclaimer. The footer retains a short version;
+    this section contains the complete statement.
+
+    Fix 10: Upgrade disclaimer language.
+    """
+    from pdf_generator import LedgerRule
+
+    story.append(Spacer(1, 16))
+    story.append(Paragraph("Limitations", styles.get("MemoSection", styles.get("SectionHeader", styles["MemoBody"]))))
+    story.append(LedgerRule(doc_width))
+
+    limitation_text = (
+        "This report was prepared using Paciolus Diagnostic Intelligence and is intended to "
+        "support the professional judgment of the engagement practitioner. The procedures "
+        "reflected herein are analytical and diagnostic in nature and do not constitute an "
+        "audit, review, compilation, or attestation engagement as defined under AICPA "
+        "professional standards or PCAOB auditing standards. Findings and observations "
+        "require independent corroboration before conclusions may be drawn."
+    )
+
+    story.append(Paragraph(limitation_text, styles.get("MemoBody", styles["MemoBody"])))
+    story.append(Spacer(1, 4))
+
+    zero_storage_text = (
+        "Zero-Storage Architecture: All financial data was processed in-memory during this "
+        "analysis session and was not persisted to any storage medium. No client financial "
+        "data is retained by Paciolus after the analysis session concludes."
+    )
+    story.append(Paragraph(zero_storage_text, styles.get("MemoBodySmall", styles.get("MemoBody"))))

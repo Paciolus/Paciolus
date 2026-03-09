@@ -133,6 +133,39 @@
 > Sprints 499–515 archived to `tasks/archive/sprints-499-515-details.md`.
 > Pending items below.
 
+### Sprint 522 — PDF Report Quality: Institutional Grade
+
+**Status:** COMPLETE
+**Goal:** Audit and improve PDF report generation to institutional-grade standard (12 fixes).
+
+#### Priority 1: Accuracy Fixes
+- [x] Fix 1: Minor Observations total — sum signed values, not absolute values; add signed-balance footnote
+- [x] Fix 2: Population Composition — rename "Total Balance" to "Gross Balance"; add footnote clarifying non-additive sum
+
+#### Priority 2: Intelligence & Analytical Depth
+- [x] Fix 3: Priority ranking — sort findings by amount descending; add P1/P2/P3 rank column
+- [x] Fix 4: Risk score decomposition — show factor-level score contributions beneath composite score
+- [x] Fix 9: Suggested procedures — differentiate language by amount magnitude, account type, and exception nature
+
+#### Priority 3: Presentation & Professional Format
+- [x] Fix 5: Table of Contents — add TOC page after cover with section names and page numbers
+- [x] Fix 6: Engagement context fields — add Fiscal Year End, Prepared By, Reviewed By, Report Status to cover metadata
+- [x] Fix 7: Interior page design — gold section dividers, row banding on data tables, increased section header spacing
+- [x] Fix 8: Trial Balance Status — formal status badge with label + detail replacing casual checkmark
+
+#### Priority 4: Disclosure & Integrity
+- [x] Fix 10: Upgrade disclaimer — full Limitations section on final page + upgraded footer language
+- [x] Fix 11: Amount column clarity — annotate pattern-based findings with what the amount represents
+- [x] Fix 12: Data Quality / Scope section — add Data Intake Summary between cover and Executive Summary
+
+#### Verification
+- [x] `npm run build` passes
+- [x] `npm test` passes (1,329 tests, 111 suites)
+- [x] `pytest` passes (515 memo tests + 123 report tests + 46 diagnostic tests — all green)
+- [x] Generate test report and verify all 12 fixes render correctly (48,808 byte PDF generated)
+
+---
+
 ### Sprint 447 — Stripe Production Cutover
 
 **Status:** PENDING (CEO action required)
