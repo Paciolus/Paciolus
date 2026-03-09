@@ -1,10 +1,10 @@
-fastapi==0.133.1
+fastapi==0.135.1
 uvicorn[standard]==0.41.0
 pydantic[email]==2.12.5
 pandas==3.0.1
 openpyxl==3.1.5
 python-multipart==0.0.22
-python-dotenv==1.2.1
+python-dotenv==1.2.2
 
 # PDF Generation (Day 12)
 reportlab==4.4.10
@@ -12,8 +12,8 @@ reportlab==4.4.10
 # Authentication (Day 13)
 PyJWT[crypto]==2.11.0
 bcrypt>=4.0.0
-sqlalchemy==2.0.47
-psycopg2-binary==2.9.10
+sqlalchemy==2.0.48
+psycopg2-binary==2.9.11
 alembic==1.18.4
 
 # Email Service (Sprint 57)
@@ -26,7 +26,7 @@ slowapi==0.1.9
 limits>=3.0.0
 
 # APM / Error Tracking (Sprint 275)
-sentry-sdk[fastapi]==2.53.0
+sentry-sdk[fastapi]==2.54.0
 
 # ODS (OpenDocument Spreadsheet) support (Sprint 432)
 odfpy>=1.4.1
