@@ -165,7 +165,7 @@ describe('LoginPage', () => {
     const completeButton = screen.getByText('Complete Transition')
     await user.click(completeButton)
 
-    expect(mockPush).toHaveBeenCalledWith('/')
+    expect(mockPush).toHaveBeenCalledWith('/dashboard')
   })
 
   it('uses stored redirect path after login', async () => {
@@ -197,7 +197,7 @@ describe('LoginPage', () => {
     expect(mockPush).toHaveBeenCalledWith('/tools/trial-balance')
   })
 
-  it('redirects already-authenticated user to home', () => {
+  it('redirects already-authenticated user to dashboard', () => {
     mockUseAuth.mockReturnValue({
       login: mockLogin,
       user: { name: 'Alice', email: 'alice@example.com' },
@@ -205,7 +205,7 @@ describe('LoginPage', () => {
       isLoading: false,
     })
     render(<LoginPage />)
-    expect(mockPush).toHaveBeenCalledWith('/')
+    expect(mockPush).toHaveBeenCalledWith('/dashboard')
   })
 
   it('shows submitting state while logging in', async () => {

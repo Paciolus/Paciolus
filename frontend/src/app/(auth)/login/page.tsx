@@ -77,7 +77,7 @@ export default function LoginPage() {
 
       if (result.success) {
         // Check for stored redirect path
-        const redirectPath = sessionStorage.getItem('paciolus_redirect') || '/'
+        const redirectPath = sessionStorage.getItem('paciolus_redirect') || '/dashboard'
         sessionStorage.removeItem('paciolus_redirect')
         // Trigger vault transition instead of immediate redirect
         setPendingRedirect(redirectPath)
@@ -91,7 +91,7 @@ export default function LoginPage() {
   // Redirect if already authenticated (no transition for auto-redirects)
   useEffect(() => {
     if (!authLoading && isAuthenticated && !showVaultTransition) {
-      const redirectPath = sessionStorage.getItem('paciolus_redirect') || '/'
+      const redirectPath = sessionStorage.getItem('paciolus_redirect') || '/dashboard'
       sessionStorage.removeItem('paciolus_redirect')
       router.push(redirectPath)
     }
