@@ -136,6 +136,7 @@
 ### Sprint 522 — PDF Report Quality: Institutional Grade
 
 **Status:** COMPLETE
+**Commit:** 158a0a1
 **Goal:** Audit and improve PDF report generation to institutional-grade standard (12 fixes).
 
 #### Priority 1: Accuracy Fixes

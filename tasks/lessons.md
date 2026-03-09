@@ -4,6 +4,18 @@
 
 ---
 
+## PDF report totals must match displayed detail rows (Sprint 522)
+
+The Minor Observations total was summing `abs(amount)` while detail rows displayed signed values. Any CPA would catch a total of $107,900 when the visible amounts sum to $58,900. **Pattern:** When a total row summarizes a visible column, the aggregation function must match the display function exactly — no silent transformations. If signed display is confusing in context, add a footnote rather than silently changing the math.
+
+---
+
+## Risk scores require transparency — unexplained numbers are arbitrary (Sprint 522)
+
+A composite risk score (52/100 — HIGH RISK) presented without decomposition invites skepticism. Returning factor-level contributions from `compute_tb_risk_score()` as a tuple `(score, factors)` was a minimal change (10 lines) that made the output auditable. **Pattern:** Any computed metric in a professional deliverable should expose its inputs. If the scoring function returns a single number, refactor it to return `(result, explanation)`.
+
+---
+
 ## Directive Protocol is non-negotiable — urgency does not waive documentation (Audit 29)
 
 Sprint 520 fixed a CRITICAL cross-tenant data leakage vulnerability and 3 other billing security findings — the most security-sensitive sprint in the project's history — with zero todo.md presence. Sprint 516 (DEC remediation, 17 findings) had the same gap. Both bypassed the Directive Protocol entirely: no plan, no checklist, no verification section, no commit SHA recorded, no lessons captured. Sprint 519 (architectural refactoring) in the same cycle got full lifecycle tracking.
