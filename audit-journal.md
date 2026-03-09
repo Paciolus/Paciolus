@@ -963,3 +963,116 @@ This is the 28th audit. The project has executed a remarkable 17-sprint report e
 - Archival discipline remains the sole recurring gap — the 5-sprint threshold was exceeded for the second consecutive audit cycle
 - 52 commits since last audit (2026-03-04) — the most productive cycle in recent history
 - Working tree is CLEAN — all code changes committed
+
+---
+## Audit — 2026-03-09 (29th) | 🟡 Good — minor gaps | Overall: 4.2/5.0
+---
+
+### Scores at a Glance
+| Pillar                  | Score |
+|-------------------------|-------|
+| Workflow Orchestration  | 4.5   |
+| Task Management         | 3/5   |
+| Core Principles         | 5/5   |
+| **Overall**             | **4.2** |
+
+### A1. Plan Mode Default — 4/5
+**Finding:** Sprint 519 (Structural Debt Remediation) exhibits exemplary planning discipline: a 5-phase plan documented in todo.md before implementation, with correct dependency ordering (Quick Wins → Hook Decomposition → Engine Unification → Settings Decomposition → Route/Service Boundary), council deliberation documented for Phase 5, and CEO override recorded. Sprints 517-518 have pre-implementation plans in READY status with specific objectives and acceptance criteria (DEC finding references, test count targets, pattern guidance).
+
+However, Sprint 520 (Billing Security — 4 audit findings including a CRITICAL cross-tenant data leakage fix) was committed (7391f56) with zero todo.md planning artifact. No plan entry, no checklist, no review section. The commit message is detailed, but the Directive Protocol mandates todo.md entries: "Every new directive MUST follow this protocol." Sprint 516 (DEC remediation — 17/21 findings fixed, commit 20396fd) has the same gap — committed without a todo.md sprint entry. Two of four sprints this cycle bypassed the planning protocol entirely.
+
+The selective application is concerning: the architectural refactoring sprint (519) gets full lifecycle tracking while the most security-critical sprint (520, fixing a CRITICAL cross-tenant vulnerability) gets none.
+**Recommendation:** Create retroactive todo.md entries for Sprints 516 and 520 with commit SHAs, verification results, and review sections. Going forward, security-critical sprints should receive MORE planning documentation, not less — the urgency of a CRITICAL finding does not waive the Directive Protocol. Consider adding a "Security Sprint" classification alongside Sprint/Hotfix that explicitly requires todo.md tracking.
+
+### A2. Subagent Strategy — 5/5
+**Finding:** 9 agents in `.claude/agents/` (critic, executor, guardian, scout, designer, project-auditor, accounting-expert-auditor, future-state-consultant-agent, DIGITAL_EXCELLENCE_COUNCIL_PROMPT). All remain single-purpose with clear role boundaries. The project-auditor is actively invoked (this audit). The council was actively consulted for Sprint 519 Phase 5 — Critic + Guardian recommended deferral, CEO overrode — demonstrating genuine multi-agent deliberation rather than rubber-stamping. The DEC agent's 2026-03-08 output directly drove Sprints 516-518. No scope creep, no unused agents.
+**Recommendation:** Continue current practice.
+
+### A3. Self-Improvement Loop — 4/5
+**Finding:** One new lesson was captured this cycle: "Council deferral vs. CEO override — respect the decision hierarchy" from Sprint 519. The lesson is well-structured with a clear pattern ("council advises, CEO decides") and a prevention rule ("execute fully without half-measures, log the override").
+
+However, Sprint 520 fixed a CRITICAL cross-tenant data leakage vulnerability in billing analytics — the most severe security finding in the project's history — and captured zero lessons. The Directive Protocol step 4 explicitly triggers lesson capture when "a mistake was made and fixed." A CRITICAL cross-tenant vulnerability being found and fixed qualifies unambiguously. The patterns discovered in Sprint 520 are high-value prevention rules: (1) billing analytics endpoints need user_id scoping by default, not as an afterthought; (2) Stripe line items must be matched by price ID, not assumed to be at index 0; (3) webhook handlers need event ID deduplication. These patterns would prevent recurrence across future billing features but are currently undocumented.
+**Recommendation:** Add Sprint 520 lessons to `tasks/lessons.md` immediately. At minimum, document: (1) the billing analytics tenant isolation pattern (always scope by user_id/org_id, never trust ambient context); (2) the Stripe line item targeting pattern (match by price ID, not by index); (3) the webhook idempotency pattern (event ID deduplication before dispatch). These are the kind of "discovered a better pattern" triggers that Step 4 was designed for.
+
+### A4. Verification Before Done — 4/5
+**Finding:** Sprint 519 documents explicit verification at each phase boundary: "Tests pass after Phase 1," "Tests pass after Phase 2," "All 6,215 backend tests pass" (Phase 3), "Build + tests pass after Phase 4," "All 5,299 backend tests pass" (Phase 5). This is thorough per-phase verification with exact test counts — the strongest evidence in any single sprint.
+
+Sprint 520's commit message states "Full suite: 6,223 passed, 0 regressions" — verification was clearly performed. But the Post-Sprint Checklist requires verification to be documented in todo.md with checkboxes, not implied by a commit message. Without a todo.md entry, Sprint 520 has no auditable verification trail per protocol. The commit message is evidence that tests passed; the absence of a todo.md section is evidence that the verification protocol was not followed.
+
+Sprint 516 has the same gap — committed without a todo.md verification section.
+**Recommendation:** When adding retroactive todo.md entries for Sprints 516 and 520, include the verification results from the commit messages. Going forward, the verification section should be written BEFORE the commit is made, not omitted because the commit message captures the same information. The commit message is a record; the todo.md section is a gate.
+
+### A5. Demand Elegance (Balanced) — 5/5
+**Finding:** Zero `\bTODO\b`, `\bFIXME\b`, or `\bHACK\b` comments across all backend Python and frontend TypeScript source files (confirmed via word-boundary grep). Sprint 519's new modules demonstrate professional quality:
+- `engine_framework.py` (156 lines): Clean ABC with Template Method pattern, proper docstrings, minimal `Any` usage constrained by the inherent polymorphism of the pipeline.
+- `checkout_orchestrator.py`: Domain exception hierarchy (Validation→400, Provider→502, Unavailable→503), `CheckoutParams` dataclass for validated state, clean separation of business logic from HTTP concerns.
+- `materiality_resolver.py` (36 lines): Exactly what's needed — three-priority cascade, tuple return, no over-engineering.
+- `tb_post_processor.py`: Defensive `.get()` throughout, lazy imports to avoid circular dependencies, logging on failure.
+- `uploadTransport.ts` (80 lines): Well-documented with JSDoc, TypeScript generics, structured error semantics.
+- `useTrialBalanceAudit.ts` (111 lines): Proper thin composite pattern — wires 4 focused hooks, re-exports their surface.
+- `usage_service.py` (65 lines): Dataclass for return type, subscription-first with ActivityLog fallback.
+
+Sprint 519 removed -770 lines net with zero behavioral changes — debt reduction without introducing new complexity. Sprint 520's `_find_seat_addon_item()` using price ID matching is the correct solution to the seat targeting bug — not a workaround.
+**Recommendation:** Continue current practice.
+
+### A6. Autonomous Bug Fixing — 5/5
+**Finding:** Sprint 520 autonomously identified and fixed 4 billing security findings with decreasing severity:
+1. CRITICAL: Cross-tenant data leakage in billing analytics — scoped all 5 metric queries + weekly review by user_id/org_id, added `_resolve_scoped_user_ids()` for org member resolution.
+2. HIGH: Seat mutation targeting wrong Stripe line item — `_find_seat_addon_item()` using price ID match with safe fallback.
+3. MEDIUM: Webhook replay gap — `ProcessedWebhookEvent` model with event ID deduplication.
+4. MEDIUM: Semantic event mismatch — `TRIAL_ENDING` enum variant separating trial warning from actual expiration.
+
+Each fix is accompanied by targeted tests (10 new: 3 tenant isolation, 2 dual-line-item targeting, 1 webhook dedup, 2 semantic event, 2 enum). All fixes are self-contained with no back-and-forth. Sprint 519 autonomously identified and executed a 5-phase structural debt remediation, reducing 770 lines while maintaining all 6,215 backend tests. No incomplete fixes or unresolved bugs in the repository.
+**Recommendation:** Continue current practice.
+
+### B. Task Management — 3/5
+**Finding:** The six sub-practices show a significant split this cycle:
+
+**Strong (Sprint 519):**
+1. **Plan First** — 5-phase plan with dependency ordering, council deliberation, CEO override documentation. ✓
+2. **Track Progress** — All items individually checked with phase markers (✓ suffixes). ✓
+3. **Explain Changes** — Commit SHAs recorded (39fdc30 for Phases 1-4, 6f9ffd9 for Phase 5). ✓
+4. **Document Results** — Review section with LOC reduction metrics, test counts, council deliberation context. ✓
+5. **Capture Lessons** — Council override lesson captured in lessons.md. ✓
+6. **Verify Plan** — Implementation follows documented plan exactly; Phase 5 escalated to CEO when council recommended deferral. ✓
+
+**Missing (Sprints 516, 520):**
+1. **Plan First** — Both sprints committed without ANY todo.md entry. ✗
+2. **Track Progress** — No items to track. ✗
+3. **Explain Changes** — Only commit messages; no todo.md review sections. ✗
+4. **Document Results** — No review sections, no SHA recorded in todo.md. ✗
+5. **Capture Lessons** — Sprint 520 (CRITICAL security fix) has zero lessons captured. ✗
+6. **Verify Plan** — No plan existed to verify. ✗
+
+**Positive:** The Audit 28 top priority (archive Sprints 499-515) was executed correctly: `tasks/archive/sprints-499-515-details.md` exists, Era 15 summary added to Completed Phases, CLAUDE.md updated with test counts (6,188 + 1,345), Active Phase cleaned to pending items plus Sprint 519. The archival discipline gap from Audits 27-28 is resolved.
+
+**Net assessment:** 50% of sprints this cycle (2 of 4) completely bypassed the Directive Protocol. Sprint 519 is a model entry. Sprints 516 and 520 have no todo.md presence whatsoever. The Post-Sprint Checklist lists 10 mandatory items — neither sprint completed any of them in todo.md. This is the most significant task management regression since Audit 15 (122 uncommitted files).
+**Recommendation:** (1) Create retroactive todo.md entries for Sprints 516 and 520 immediately, with commit SHAs, verification results (from commit messages), and brief review sections. (2) Add Sprint 520 lessons to lessons.md. (3) Consider whether the urgency of security findings is creating a "fast track" that bypasses documentation — if so, create an explicit "Security Sprint" lightweight template that preserves the minimum audit trail (plan, verification, SHA, lesson) without the full ceremonial overhead.
+
+### C. Core Principles — 5/5
+**Finding:**
+- **Simplicity First:** Sprint 519's new modules are appropriately scoped: `materiality_resolver.py` (36 lines), `usage_service.py` (65 lines), `uploadTransport.ts` (80 lines). The `AuditEngineBase` ABC uses Template Method — the correct GOF pattern for this use case. No factory-of-factories, no plugin system. Sprint 520's fixes are direct: scoped queries, price ID matching, event ID dedup, new enum variant. No over-engineering.
+- **No Laziness:** Sprint 519 was thorough: all 5 phases completed, -770 lines removed, 3 pre-existing test failures fixed along the way. Sprint 520 addressed all 4 severity levels (CRITICAL through MEDIUM) in a single sprint with 10 targeted tests. No findings were deferred or given partial treatment.
+- **Minimal Impact:** Sprint 519 explicitly states "zero behavioral changes" — the refactoring maintains identical observable behavior. Sprint 520's additions (ProcessedWebhookEvent model, TRIAL_ENDING enum) are surgical expansions. Zero-Storage compliance maintained. Oat & Obsidian tokens consistent. No dead code introduced.
+
+This is the 16th consecutive cycle at 5/5 for Core Principles.
+**Recommendation:** Continue current practice.
+
+### Top Priority for Next Cycle
+**Create retroactive todo.md entries for Sprints 516 and 520, and capture Sprint 520 security lessons.** Sprints 516 and 520 — including the most critical security fix in the project's history — have zero todo.md presence. This is the highest-leverage documentation remediation available: (1) add Sprint 516 entry with commit SHA 20396fd, DEC finding references, and brief review; (2) add Sprint 520 entry with commit SHA 7391f56, the 4 findings (CRITICAL/HIGH/MEDIUM/MEDIUM), test count (6,223), and verification results; (3) capture at minimum 3 lessons from Sprint 520 (tenant isolation scoping, Stripe line item targeting, webhook idempotency). This restores the audit trail for the most security-sensitive work in the project. Secondary: consider a "Security Sprint" lightweight template to prevent recurrence.
+
+### Trend Note
+Regression from Audit 28 (4.7) to Audit 29 (4.2).
+- Workflow Orchestration: 5.0 → 4.5 (regressed — A1, A3, A4 each dropped from 5/5 to 4/5 due to Sprints 516/520 bypassing the Directive Protocol; A2/A5/A6 maintained at 5/5)
+- Task Management: 4/5 → 3/5 (regressed — 50% of sprints this cycle have zero todo.md presence; archival gap from Audit 28 is closed but replaced by a protocol bypass gap)
+- Core Principles: 5/5 → 5/5 (maintained — 16th consecutive cycle at 5/5; code quality remains impeccable)
+- Overall: 4.7 → 4.2 (regressed — dropped from solid Excellent to Good band)
+
+This is the 29th audit. The project dropped from Excellent (4.7) to Good (4.2) band due to a task management protocol bypass affecting 2 of 4 sprints this cycle. Key observations:
+- Test count: 6,223 backend + 1,345 frontend = 7,568 total (up from 7,386 at Audit 28)
+- Sprint 519 is the strongest single sprint entry in todo.md history — 5 phases, council deliberation, CEO override, comprehensive verification
+- Sprint 520 fixed the most critical security finding in the project's history (cross-tenant data leakage) but has zero documentation trail in todo.md
+- Archival discipline: **RESOLVED** — Audit 28 top priority executed, Active Phase is clean
+- Code quality: unchanged at peak — zero TODO/FIXME/HACK, surgical changes, professional abstractions
+- Working tree: CLEAN
+- The regression is entirely procedural (documentation discipline), not substantive (code quality or architecture). Recovery requires ~15 minutes of retroactive documentation work

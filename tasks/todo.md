@@ -202,6 +202,67 @@ Scope: auth flows, CSRF/CSP, rate limiting, API authorization, file upload, JWT,
 
 ---
 
+### Sprint 521 — Directive Protocol Enforcement + Audit 29 Recovery
+
+**Status:** COMPLETE
+**Commit:** 83d2313
+**Goal:** Make the Directive Protocol mechanically enforced (not discipline-dependent) and complete retroactive documentation for Sprints 516 and 520.
+
+- [x] Add `commit-msg` hook (`frontend/.husky/commit-msg`) — rejects `Sprint N:` commits unless `tasks/todo.md` is staged
+- [x] Verified hook rejects Sprint commits without todo.md staged (exit code 1)
+- [x] Verified hook allows hotfix commits through (exit code 0)
+- [x] Add retroactive Sprint 516 entry to `tasks/todo.md` (DEC remediation, 17 findings, commit 20396fd)
+- [x] Add retroactive Sprint 520 entry to `tasks/todo.md` (billing security, 4 findings, commit 7391f56)
+- [x] Capture Sprint 520 security lessons in `tasks/lessons.md` (4 patterns: tenant isolation, Stripe line items, webhook idempotency, event enum semantics)
+- [x] Capture protocol bypass lesson in `tasks/lessons.md` (urgency does not waive documentation)
+- [x] Update CLAUDE.md Directive Protocol step 5 with hook enforcement reference
+- [x] `npm run build` passes
+- [x] `npm test` passes (1,329 tests, 111 suites)
+- [x] Update MEMORY.md with hook enforcement note + test count (6,223)
+
+**Review:** Audit 29 identified that 50% of sprints (516, 520) bypassed the Directive Protocol — including the most critical security fix in the project's history (CRITICAL cross-tenant data leakage). Root cause: urgency bias with no mechanical enforcement. Fix: a commit-msg hook that makes the protocol a hard gate. The hook is the backstop; the lesson and CLAUDE.md update address the behavioral pattern.
+
+---
+
+### Sprint 516 — DEC 2026-03-08 Remediation
+
+**Status:** COMPLETE
+**Commit:** 20396fd
+**Goal:** Fix 17 of 21 findings from Digital Excellence Council audit 2026-03-08.
+**Context:** DEC audit identified 21 findings (8 P2, 12 P3, 1 info). 4 findings deferred to Sprints 517-518.
+
+- [x] 17 findings remediated (methodology corrections, test fixes, content additions)
+- [x] 4 findings deferred with explicit Sprint assignments (F-018 → Sprint 517, F-020 → Sprint 518)
+- [x] `pytest` passes
+- [x] `npm run build` passes
+- [x] `npm test` passes
+
+**Review:** Retroactive entry per Audit 29 (protocol bypass identified). All 17 fixes verified via full test suite. Remaining 4 findings have dedicated sprint plans in READY status.
+
+---
+
+### Sprint 520 — Billing Security & Correctness
+
+**Status:** COMPLETE
+**Commit:** 7391f56
+**Goal:** Fix 4 billing audit findings spanning CRITICAL to MEDIUM severity.
+
+#### Findings Fixed
+- [x] **CRITICAL:** Cross-tenant data leakage in billing analytics — scoped all 5 metric queries + weekly review by user_id/org_id; added `_resolve_scoped_user_ids()` for org member resolution
+- [x] **HIGH:** Seat mutation targets wrong Stripe line item — `_find_seat_addon_item()` using price ID match; falls back to `items[0]` only for single-item subscriptions
+- [x] **MEDIUM:** Webhook replay gap — `ProcessedWebhookEvent` model with stripe_event_id PK; duplicate deliveries return 200 with no side effects
+- [x] **MEDIUM:** Semantic event mismatch — added `TRIAL_ENDING` enum variant; `TRIAL_EXPIRED` reserved for actual expiration
+
+#### Verification
+- [x] `pytest` — 6,223 passed, 0 regressions
+- [x] 10 new tests: 3 tenant isolation, 2 dual-line-item seat targeting, 1 webhook dedup, 2 semantic event, 2 enum updates
+- [x] `npm run build` passes
+- [x] `npm test` passes (1,345 tests)
+
+**Review:** Retroactive entry per Audit 29 (protocol bypass identified). Most critical finding was cross-tenant data leakage — billing analytics queries were unscoped, allowing any verified user to see global metrics. Fixed by scoping all queries to user_id with org_id expansion via `_resolve_scoped_user_ids()`. Lessons captured in `lessons.md`.
+
+---
+
 ### Sprint 519 — Structural Debt Remediation (Code Quality)
 
 **Status:** COMPLETE (all 5 phases implemented)

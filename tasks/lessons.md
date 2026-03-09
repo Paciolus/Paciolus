@@ -4,6 +4,30 @@
 
 ---
 
+## Directive Protocol is non-negotiable — urgency does not waive documentation (Audit 29)
+
+Sprint 520 fixed a CRITICAL cross-tenant data leakage vulnerability and 3 other billing security findings — the most security-sensitive sprint in the project's history — with zero todo.md presence. Sprint 516 (DEC remediation, 17 findings) had the same gap. Both bypassed the Directive Protocol entirely: no plan, no checklist, no verification section, no commit SHA recorded, no lessons captured. Sprint 519 (architectural refactoring) in the same cycle got full lifecycle tracking.
+
+**Root cause:** Urgency bias. Security-critical work feels time-sensitive, creating a "just commit it" impulse that skips documentation. But security sprints warrant MORE documentation discipline, not less — they are the sprints most likely to be audited, questioned, or referenced later.
+
+**Enforcement:** A `commit-msg` hook now rejects any commit matching `Sprint N:` unless `tasks/todo.md` is staged. This makes the protocol mechanically enforced, not discipline-dependent. Hotfix commits (`fix:` prefix) are exempt by design.
+
+**Pattern:** Never skip the Directive Protocol for any sprint-classified work. If the work is urgent, write a minimal todo.md entry (sprint number, goal, verification result, SHA) — 5 lines takes 2 minutes and creates an audit trail. The commit-msg hook is the backstop, not the primary discipline.
+
+---
+
+## Billing security patterns — tenant isolation, Stripe line items, webhook idempotency (Sprint 520)
+
+1. **Billing analytics endpoints must scope queries by user_id/org_id from the start.** The analytics module (`billing/analytics.py`) had 5 metric queries that returned global aggregates — any verified user could see all customers' billing data. The fix (`_resolve_scoped_user_ids()`) resolves org membership and scopes every query. **Rule:** When writing any new billing analytics query, always accept a `user_id` or `user_ids` parameter and filter by it. Never write an unscoped aggregate in billing code.
+
+2. **Stripe subscription line items must be matched by price ID, not by index.** `add_seats` and `remove_seats` assumed the seat add-on was always `subscription.items[0]`. For subscriptions with multiple line items (plan + seat add-on), this targeted the wrong item — mutating the plan price instead of the seat quantity. **Rule:** Use `_find_seat_addon_item()` with `get_all_seat_price_ids()` to find the correct line item. Only fall back to `items[0]` for single-item subscriptions. Raise `ValueError` for ambiguous multi-item subscriptions rather than guessing.
+
+3. **Webhook handlers must deduplicate by event ID before dispatch.** Stripe can replay webhook events (retries, manual resends). Without deduplication, the same event could be processed twice — creating duplicate billing events, double-counting revenue, or applying discounts twice. **Rule:** Record `stripe_event_id` in a `ProcessedWebhookEvent` table before dispatch. Return 200 immediately for duplicates. This is a Stripe best practice that should have been implemented from Sprint 362 (initial webhook handler).
+
+4. **Billing event enum variants must match Stripe event semantics precisely.** `handle_subscription_trial_will_end` was recording `TRIAL_EXPIRED` — but the trial hasn't expired yet, it's about to end. This mislabels the billing timeline and corrupts analytics. **Rule:** When mapping Stripe webhook event types to internal enums, the enum value must describe the state AT the time the event fires, not a future state.
+
+---
+
 ## Council deferral vs. CEO override — respect the decision hierarchy (Sprint 519)
 
 The council (Critic + Guardian) recommended deferring Phase 5 service extraction due to diminishing ROI. The CEO overrode: "I also want architectural purity." The council's analysis was sound — the extractions were incremental, not transformative — but the CEO's architectural preference is a legitimate priority that outweighs marginal ROI calculations. **Pattern: council advises, CEO decides. When the CEO overrides, execute fully without half-measures. Log the override in todo.md for future context.**

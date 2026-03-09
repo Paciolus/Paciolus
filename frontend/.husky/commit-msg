@@ -1,0 +1,30 @@
+# Sprint 521: Directive Protocol enforcement gate
+# Rejects "Sprint N:" commits unless tasks/todo.md is staged.
+# This prevents protocol bypass — every sprint MUST have a todo.md entry.
+# Hotfix commits (fix: prefix) are exempt by design.
+
+COMMIT_MSG_FILE="$1"
+COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
+
+# Check if this is a Sprint commit (matches "Sprint NNN:" pattern)
+if echo "$COMMIT_MSG" | grep -qE '^Sprint [0-9]+:'; then
+  # Verify tasks/todo.md is in the staged files
+  if ! git diff --cached --name-only | grep -q '^tasks/todo.md$'; then
+    echo ""
+    echo "ERROR: Sprint commit detected but tasks/todo.md is not staged."
+    echo ""
+    echo "The Directive Protocol requires every sprint to have a todo.md entry."
+    echo "Before committing, add a sprint section to tasks/todo.md with:"
+    echo "  - Sprint number, status, goal"
+    echo "  - Checklist items"
+    echo "  - Verification results"
+    echo "  - Commit SHA (update after commit)"
+    echo ""
+    echo "If this is a documentation-only follow-up commit for an existing sprint,"
+    echo "stage tasks/todo.md with: git add tasks/todo.md"
+    echo ""
+    echo "To bypass (emergencies only): git commit --no-verify"
+    echo ""
+    exit 1
+  fi
+fi

@@ -61,8 +61,11 @@ After ALL directive work is complete:
 - [ ] Update sprint status to COMPLETE in `tasks/todo.md`
 - [ ] Record commit SHA in sprint Review section
 - [ ] Stage relevant files (avoid `git add -A` to prevent accidental inclusions)
+- [ ] **Stage `tasks/todo.md`** — the commit-msg hook will reject `Sprint N:` commits without it
 - [ ] Create atomic commit with descriptive message: `Sprint X: [Brief Description]`
 - [ ] Commit message should reference the sprint number and key changes
+
+**ENFORCEMENT:** A `commit-msg` hook (`frontend/.husky/commit-msg`) rejects any commit matching `Sprint N:` unless `tasks/todo.md` is staged. This is mechanically enforced — not discipline-dependent. Hotfix commits (`fix:` prefix) are exempt.
 
 **FAILURE TO FOLLOW THIS PROTOCOL WILL RESULT IN AUDIT SCORE PENALTIES.**
 
