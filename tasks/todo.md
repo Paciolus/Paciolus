@@ -204,8 +204,8 @@ Scope: auth flows, CSRF/CSP, rate limiting, API authorization, file upload, JWT,
 
 ### Sprint 519 — Structural Debt Remediation (Code Quality)
 
-**Status:** COMPLETE (Phases 1–4 implemented, Phase 5 plan awaiting approval)
-**Commit:** 39fdc30
+**Status:** COMPLETE (all 5 phases implemented)
+**Commit:** 39fdc30 (Phases 1–4), 6f9ffd9 (Phase 5)
 **Goal:** Reduce structural debt and consolidation drift across 5 phases without changing observable behavior.
 
 #### Phase 1 — Quick Wins ✓
@@ -230,14 +230,19 @@ Scope: auth flows, CSRF/CSP, rate limiting, API authorization, file upload, JWT,
 - [x] Page reduced from 635→415 LOC
 - [x] Build + tests pass after Phase 4
 
-#### Phase 5 — Route/Service Boundary (Council Decision: DEFERRED)
+#### Phase 5 — Route/Service Boundary ✓ (CEO override)
 
-**Council deliberation (2026-03-09):** Executor proposed full extraction (CheckoutOrchestrator, UsageService, TrialBalancePostProcessor, FluxOrchestrator, MaterialityResolver). Critic + Guardian overruled:
-- **billing.py** (651 LOC): Already has 6-file service layer in `billing/` submodule with zero direct Stripe calls in routes. `create_checkout` logic is route-appropriate validation/parameter assembly. Extraction adds indirection for ~50 LOC without enabling new testing.
-- **audit.py** (690 LOC): `execute_file_tool` scaffold (Phase 1D) handles 4/8 endpoints. Remaining two complex endpoints (`audit_trial_balance`, `flux_analysis`) have inherent complexity — extraction creates artificial seams in single-use code. `_resolve_materiality` is 22 lines used by 2 endpoints in the same file.
-- **Risk/reward:** Both files are stable, well-tested, rarely modified. Churn risk (especially billing = money-touching) outweighs architectural purity gain.
+**Council deliberation (2026-03-09):** Critic + Guardian recommended deferral (low ROI on stable files). **CEO overrode** — "I also want architectural purity."
 
-**Trigger to revisit:** Either file grows past ~800 LOC, or a new feature requires modifying the extraction targets.
+Extracted:
+- [x] `billing/checkout_orchestrator.py` — checkout business logic with domain exceptions (Validation/Provider/Unavailable → 400/502/503)
+- [x] `billing/usage_service.py` — UsageStats dataclass + `get_usage_stats()` helper
+- [x] `shared/materiality_resolver.py` — `resolve_materiality()` from private `_resolve_materiality` in audit.py
+- [x] `shared/tb_post_processor.py` — `apply_lead_sheet_grouping()` + `apply_currency_conversion()`
+- [x] `routes/billing.py` updated — create_checkout + get_usage delegate to services (515 → 515 LOC, cleaner)
+- [x] `routes/audit.py` updated — removed `_resolve_materiality`, inline grouping/currency (691 → 623 LOC)
+- [x] `tests/test_materiality_cascade.py` updated — imports from shared module
+- [x] All 5,299 backend tests pass (1 pre-existing YAML coverage failure unrelated)
 
 ---
 

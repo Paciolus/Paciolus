@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 
 from auth import require_current_user, require_verified_user
 from database import get_db
-from models import User, UserTier
+from models import User
 from shared.rate_limits import RATE_LIMIT_DEFAULT, RATE_LIMIT_WRITE, limiter
 
 logger = logging.getLogger(__name__)
@@ -178,141 +178,31 @@ def create_checkout(
     db: Session = Depends(get_db),
 ) -> CheckoutResponse:
     """Create a Stripe Checkout Session for upgrading to a paid plan."""
-    from billing.price_config import (
-        TRIAL_ELIGIBLE_TIERS,
-        TRIAL_PERIOD_DAYS,
-        get_stripe_coupon_id,
-        get_stripe_price_id,
-        validate_promo_for_interval,
+    from billing.checkout_orchestrator import (
+        CheckoutProviderError,
+        CheckoutUnavailableError,
+        CheckoutValidationError,
+        orchestrate_checkout,
     )
-    from billing.stripe_client import is_stripe_enabled
-
-    if not is_stripe_enabled():
-        raise HTTPException(
-            status_code=503,
-            detail="Billing is not currently available. Please contact sales.",
-        )
-
-    price_id = get_stripe_price_id(body.tier, body.interval)
-    if not price_id:
-        raise HTTPException(
-            status_code=400,
-            detail=f"No price configured for {body.tier}/{body.interval}. Please contact support.",
-        )
-
-    stripe_coupon_id: str | None = None
-    trial_days = 0
-
-    from billing.checkout import create_checkout_session, create_or_get_stripe_customer
-    from billing.subscription_manager import get_subscription
-
-    # Get or create Stripe customer
-    existing_sub = get_subscription(db, user.id)
-    stripe_customer_id = existing_sub.stripe_customer_id if existing_sub else None
 
     try:
-        customer_id = create_or_get_stripe_customer(user.id, user.email, stripe_customer_id)
-    except Exception as e:
-        logger.error("Stripe customer creation failed: %s", type(e).__name__)
-        raise HTTPException(
-            status_code=502,
-            detail="Payment provider error. Please try again or contact support.",
-        )
-
-    # Save the customer ID if it's new
-    if existing_sub and not existing_sub.stripe_customer_id:
-        existing_sub.stripe_customer_id = customer_id
-        db.commit()
-
-    seat_price_id: str | None = None
-    additional_seats = 0
-
-    # Validate and resolve promo code
-    if body.promo_code:
-        promo_error = validate_promo_for_interval(body.promo_code, body.interval)
-        if promo_error:
-            raise HTTPException(status_code=400, detail=promo_error)
-
-        stripe_coupon_id = get_stripe_coupon_id(body.promo_code)
-        if not stripe_coupon_id:
-            raise HTTPException(
-                status_code=400,
-                detail="Promo code is not currently available. Please contact support.",
-            )
-
-    # Trial only for new subscriptions on eligible tiers
-    is_new_subscription = existing_sub is None or existing_sub.status.value == "canceled"
-    if is_new_subscription and body.tier in TRIAL_ELIGIBLE_TIERS:
-        trial_days = TRIAL_PERIOD_DAYS
-
-    # Seat validation: Solo plan has no additional seats
-    if body.seat_count > 0 and body.tier == "solo":
-        raise HTTPException(
-            status_code=400,
-            detail="Solo plan does not support additional seats.",
-        )
-
-    # Seat add-on: resolve price ID and validate total
-    from billing.price_config import get_max_self_serve_seats, get_stripe_seat_price_id
-    from shared.entitlements import get_entitlements
-
-    entitlements = get_entitlements(UserTier(body.tier))
-    seats_included = entitlements.seats_included
-    total_seats = seats_included + body.seat_count
-    max_seats = get_max_self_serve_seats(body.tier)
-    if total_seats > max_seats:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Maximum {max_seats} seats via self-serve. Contact sales for more.",
-        )
-
-    additional_seats = body.seat_count
-    if additional_seats > 0:
-        seat_price_id = get_stripe_seat_price_id(body.interval, body.tier)
-        if not seat_price_id:
-            raise HTTPException(
-                status_code=400,
-                detail="Seat pricing not configured. Contact support.",
-            )
-
-    # Sprint 459 — DPA acceptance (PI1.3 / C2.1)
-    # Stamp existing subscription immediately; carry acceptance into Stripe metadata
-    # so the webhook can stamp newly-created subscriptions after checkout completes.
-    from datetime import UTC, datetime
-
-    dpa_accepted_at_str: str | None = None
-    dpa_version_str: str | None = None
-
-    if body.dpa_accepted and body.tier in ("professional", "enterprise"):
-        now_utc = datetime.now(UTC)
-        dpa_accepted_at_str = now_utc.isoformat()
-        dpa_version_str = "1.0"
-        if existing_sub:
-            existing_sub.dpa_accepted_at = now_utc
-            existing_sub.dpa_version = dpa_version_str
-            db.commit()
-            logger.info("DPA v%s accepted by user %d (existing sub)", dpa_version_str, user.id)
-
-    try:
-        checkout_url = create_checkout_session(
-            customer_id=customer_id,
-            plan_price_id=price_id,
+        checkout_url = orchestrate_checkout(
+            tier=body.tier,
+            interval=body.interval,
+            seat_count=body.seat_count,
+            promo_code=body.promo_code,
+            dpa_accepted=body.dpa_accepted,
             user_id=user.id,
-            trial_period_days=trial_days,
-            stripe_coupon_id=stripe_coupon_id,
-            seat_price_id=seat_price_id,
-            additional_seats=additional_seats,
-            dpa_accepted_at=dpa_accepted_at_str,
-            dpa_version=dpa_version_str,
+            user_email=user.email,
+            db=db,
         )
-    except Exception as e:
-        logger.error("Stripe checkout session creation failed: %s", type(e).__name__)
-        raise HTTPException(
-            status_code=502,
-            detail="Payment provider error. Please try again or contact support.",
-        )
+    except CheckoutUnavailableError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except CheckoutValidationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except CheckoutProviderError as e:
+        raise HTTPException(status_code=502, detail=str(e))
 
-    # Increment Prometheus counter for checkout tracking
     from shared.parser_metrics import pricing_v2_checkouts_total
 
     pricing_v2_checkouts_total.labels(tier=body.tier, interval=body.interval).inc()
@@ -502,45 +392,18 @@ def get_usage(
     db: Session = Depends(get_db),
 ) -> UsageResponse:
     """Get current usage stats for entitlement display."""
-    from datetime import UTC, datetime
+    from billing.usage_service import get_usage_stats
 
-    from sqlalchemy import func
-
-    from models import ActivityLog, Client, UserTier
-    from shared.entitlements import get_entitlements
-
-    entitlements = get_entitlements(UserTier(user.tier.value))
-
-    # Count uploads this period (try subscription counter, fallback to ActivityLog)
-    from subscription_model import Subscription
-
-    sub = db.query(Subscription).filter(Subscription.user_id == user.id).first()
-    if sub and sub.uploads_used_current_period is not None:
-        uploads_used = sub.uploads_used_current_period
-    else:
-        now = datetime.now(UTC)
-        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        uploads_used = (
-            db.query(func.count(ActivityLog.id))
-            .filter(
-                ActivityLog.user_id == user.id,
-                ActivityLog.timestamp >= month_start,
-                ActivityLog.archived_at.is_(None),
-            )
-            .scalar()
-        ) or 0
-
-    # Count clients
-    clients_used = (db.query(func.count(Client.id)).filter(Client.user_id == user.id).scalar()) or 0
+    stats = get_usage_stats(db, user.id, user.tier.value if user.tier else "free")
 
     return UsageResponse(
-        uploads_used=uploads_used,
-        uploads_limit=entitlements.uploads_per_month,
-        diagnostics_used=uploads_used,  # Backward compat alias
-        diagnostics_limit=entitlements.uploads_per_month,  # Backward compat alias
-        clients_used=clients_used,
-        clients_limit=entitlements.max_clients,
-        tier=user.tier.value if user.tier else "free",
+        uploads_used=stats.uploads_used,
+        uploads_limit=stats.uploads_limit,
+        diagnostics_used=stats.uploads_used,  # Backward compat alias
+        diagnostics_limit=stats.uploads_limit,  # Backward compat alias
+        clients_used=stats.clients_used,
+        clients_limit=stats.clients_limit,
+        tier=stats.tier,
     )
 
 

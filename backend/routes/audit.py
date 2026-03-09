@@ -19,13 +19,10 @@ from audit_engine import (
     audit_trial_balance_streaming,
 )
 from auth import require_verified_user
-from currency_engine import convert_trial_balance
 from database import get_db
 from flux_engine import FluxEngine
-from lead_sheet_mapping import group_by_lead_sheet, lead_sheet_grouping_to_dict
 from models import User
 from recon_engine import ReconEngine
-from routes.currency import get_user_rate_table
 from security_utils import log_secure_operation
 from shared.account_extractors import extract_flux_accounts, extract_tb_accounts
 from shared.diagnostic_response_schemas import (
@@ -46,7 +43,9 @@ from shared.helpers import (
     parse_uploaded_file,
     validate_file_size,
 )
+from shared.materiality_resolver import resolve_materiality
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
+from shared.tb_post_processor import apply_currency_conversion, apply_lead_sheet_grouping
 from workbook_inspector import inspect_workbook, is_excel_file
 
 router = APIRouter(tags=["audit"])
@@ -341,7 +340,7 @@ async def expense_category_analytics(
 ) -> ExpenseCategoryReportResponse:
     """Compute expense category analytical procedures for a trial balance file."""
     # Sprint 310: Resolve materiality from engagement cascade if not explicitly set
-    materiality_threshold, _exp_mat_source = _resolve_materiality(
+    materiality_threshold, _exp_mat_source = resolve_materiality(
         materiality_threshold,
         engagement_id,
         current_user.id,
@@ -426,36 +425,6 @@ async def accrual_completeness_check(
     )
 
 
-# ---------------------------------------------------------------------------
-# Sprint 310: Materiality cascade resolution
-# ---------------------------------------------------------------------------
-
-
-def _resolve_materiality(
-    materiality_threshold: float,
-    engagement_id: Optional[int],
-    user_id: int,
-    db: Session,
-) -> tuple[float, str]:
-    """Resolve effective materiality. Priority: explicit > engagement > default.
-
-    Returns (threshold, source) where source is 'manual', 'engagement', or 'none'.
-    """
-    if materiality_threshold > 0.0:
-        return materiality_threshold, "manual"
-    if engagement_id is not None:
-        from engagement_manager import EngagementManager
-
-        mgr = EngagementManager(db)
-        eng = mgr.get_engagement(user_id, engagement_id)
-        if eng and eng.materiality_amount:
-            cascade = mgr.compute_materiality(eng)
-            pm = cascade.get("performance_materiality", 0.0)
-            if pm > 0:
-                return pm, "engagement"
-    return 0.0, "none"
-
-
 @router.post("/audit/trial-balance", response_model=TrialBalanceResponse)
 @limiter.limit(RATE_LIMIT_AUDIT)
 async def audit_trial_balance(
@@ -485,7 +454,7 @@ async def audit_trial_balance(
     selected_sheets_list = parse_json_list(selected_sheets, "audit_selected_sheets")
 
     # Sprint 310: Resolve materiality from engagement cascade if not explicitly set
-    materiality_threshold, materiality_source = _resolve_materiality(
+    materiality_threshold, materiality_source = resolve_materiality(
         materiality_threshold,
         engagement_id,
         current_user.id,
@@ -523,51 +492,14 @@ async def audit_trial_balance(
                         column_mapping=column_mapping_dict,
                     )
 
-                if "abnormal_balances" in result:
-                    accounts_for_grouping = []
-                    for ab in result.get("abnormal_balances", []):
-                        accounts_for_grouping.append(
-                            {
-                                "account": ab.get("account", ""),
-                                "debit": ab.get("amount", 0) if ab.get("amount", 0) > 0 else 0,
-                                "credit": abs(ab.get("amount", 0)) if ab.get("amount", 0) < 0 else 0,
-                                "type": ab.get("type", "unknown"),
-                                "issue": ab.get("issue", ""),
-                                "materiality": ab.get("materiality", ""),
-                                "severity": ab.get("severity", "low"),
-                                "anomaly_type": ab.get("anomaly_type", "unknown"),
-                            }
-                        )
-
-                    lead_sheet_grouping = group_by_lead_sheet(accounts_for_grouping)
-                    grouping_dict = lead_sheet_grouping_to_dict(lead_sheet_grouping)
-                    result["lead_sheet_grouping"] = grouping_dict
-
-                    # Sprint 296: Section density profile
-                    if result.get("population_profile") is not None:
-                        from population_profile_engine import compute_section_density
-
-                        density = compute_section_density(grouping_dict, materiality_threshold)
-                        result["population_profile"]["section_density"] = [s.to_dict() for s in density]
+                apply_lead_sheet_grouping(result, materiality_threshold)
 
                 return result
 
             result = await asyncio.to_thread(_analyze)
 
             # Sprint 258: Auto-convert if user has rate table in session
-            rate_table = get_user_rate_table(db, current_user.id)
-            if rate_table is not None and result.get("accounts"):
-                try:
-                    conversion = convert_trial_balance(
-                        tb_rows=result["accounts"],
-                        rate_table=rate_table,
-                        amount_column="net_balance"
-                        if "net_balance" in (result["accounts"][0] if result["accounts"] else {})
-                        else "amount",
-                    )
-                    result["currency_conversion"] = conversion.to_dict()
-                except (ValueError, KeyError, TypeError, AttributeError):
-                    logger.warning("Currency conversion failed — returning unconverted results", exc_info=True)
+            apply_currency_conversion(result, current_user.id, db)
 
             # Sprint 310: Include materiality source in response
             result["materiality_source"] = materiality_source
@@ -599,7 +531,7 @@ async def flux_analysis(
 ):
     """Perform a Flux (Period-over-Period) Analysis."""
     # Sprint 310: Resolve materiality from engagement cascade if not explicitly set
-    materiality, _flux_mat_source = _resolve_materiality(
+    materiality, _flux_mat_source = resolve_materiality(
         materiality,
         engagement_id,
         current_user.id,

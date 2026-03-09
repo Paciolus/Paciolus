@@ -12,7 +12,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from routes.audit import _resolve_materiality
+from shared.materiality_resolver import resolve_materiality as _resolve_materiality
 
 
 class TestResolveMateriality:
