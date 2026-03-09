@@ -205,6 +205,22 @@ def reactivate_subscription(db: Session, user_id: int) -> Subscription | None:
     return sub
 
 
+def _find_seat_addon_item(items: list[dict]) -> dict | None:
+    """Find the seat add-on line item from Stripe subscription items.
+
+    Returns the item whose price ID matches a known seat add-on price,
+    or None if no seat add-on item is found (single-item subscription).
+    """
+    from billing.price_config import get_all_seat_price_ids
+
+    seat_ids = get_all_seat_price_ids()
+    for item in items:
+        price_id = item.get("price", {}).get("id", "")
+        if price_id in seat_ids:
+            return item
+    return None
+
+
 def add_seats(db: Session, user_id: int, seats_to_add: int) -> Subscription | None:
     """Add seats to an existing subscription via Stripe.
 
@@ -212,7 +228,7 @@ def add_seats(db: Session, user_id: int, seats_to_add: int) -> Subscription | No
     Returns the updated Subscription or None if not found.
     Phase LIX Sprint E.
     """
-    from billing.price_config import get_max_self_serve_seats
+    from billing.price_config import get_all_seat_price_ids, get_max_self_serve_seats
 
     sub = get_subscription(db, user_id)
     if sub is None or not sub.stripe_subscription_id:
@@ -232,8 +248,22 @@ def add_seats(db: Session, user_id: int, seats_to_add: int) -> Subscription | No
     if not items:
         return None
 
-    item_id = items[0].get("id")
-    current_quantity = items[0].get("quantity", 1)
+    # Find the correct item to modify — seat add-on item by price ID, not position
+    seat_item = _find_seat_addon_item(items)
+    if seat_item:
+        item_id = seat_item.get("id")
+        current_quantity = seat_item.get("quantity", 0)
+    elif len(items) == 1:
+        # Single-item subscription (backward compat) — only item is the plan
+        item_id = items[0].get("id")
+        current_quantity = items[0].get("quantity", 1)
+    else:
+        raise ValueError(
+            f"Cannot identify seat add-on item in subscription {sub.stripe_subscription_id} "
+            f"with {len(items)} line items. No item matched known seat price IDs: "
+            f"{get_all_seat_price_ids()}"
+        )
+
     new_quantity = current_quantity + seats_to_add
 
     # Update Stripe subscription item quantity (proration handled by Stripe)
@@ -260,6 +290,8 @@ def remove_seats(db: Session, user_id: int, seats_to_remove: int) -> Subscriptio
     Returns the updated Subscription or None if not found or invalid.
     Phase LIX Sprint E.
     """
+    from billing.price_config import get_all_seat_price_ids
+
     sub = get_subscription(db, user_id)
     if sub is None or not sub.stripe_subscription_id:
         return None
@@ -277,8 +309,22 @@ def remove_seats(db: Session, user_id: int, seats_to_remove: int) -> Subscriptio
     if not items:
         return None
 
-    item_id = items[0].get("id")
-    current_quantity = items[0].get("quantity", 1)
+    # Find the correct item to modify — seat add-on item by price ID, not position
+    seat_item = _find_seat_addon_item(items)
+    if seat_item:
+        item_id = seat_item.get("id")
+        current_quantity = seat_item.get("quantity", 0)
+    elif len(items) == 1:
+        # Single-item subscription (backward compat) — only item is the plan
+        item_id = items[0].get("id")
+        current_quantity = items[0].get("quantity", 1)
+    else:
+        raise ValueError(
+            f"Cannot identify seat add-on item in subscription {sub.stripe_subscription_id} "
+            f"with {len(items)} line items. No item matched known seat price IDs: "
+            f"{get_all_seat_price_ids()}"
+        )
+
     new_quantity = max(1, current_quantity - seats_to_remove)
 
     # Update Stripe subscription item quantity

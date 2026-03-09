@@ -33,6 +33,26 @@ logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
+# Tenant scoping
+# ---------------------------------------------------------------------------
+
+
+def _resolve_scoped_user_ids(db: Session, user_id: int, org_id: int | None) -> list[int]:
+    """Resolve the set of user IDs to scope analytics queries to.
+
+    - If org_id is provided, returns all member user IDs in that org.
+    - If no org_id (solo user), returns [user_id].
+    """
+    if org_id:
+        from organization_model import OrganizationMember
+
+        rows = db.query(OrganizationMember.user_id).filter(OrganizationMember.organization_id == org_id).all()
+        member_ids = [r.user_id for r in rows]
+        return member_ids if member_ids else [user_id]
+    return [user_id]
+
+
+# ---------------------------------------------------------------------------
 # Event recording
 # ---------------------------------------------------------------------------
 
@@ -88,7 +108,9 @@ def record_billing_event(
 # ---------------------------------------------------------------------------
 
 
-def get_trial_starts(db: Session, since: datetime, until: datetime | None = None) -> int:
+def get_trial_starts(
+    db: Session, since: datetime, until: datetime | None = None, *, user_ids: list[int] | None = None
+) -> int:
     """Count trial starts in a period.
 
     Dashboard SQL:
@@ -102,10 +124,14 @@ def get_trial_starts(db: Session, since: datetime, until: datetime | None = None
     )
     if until:
         q = q.filter(BillingEvent.created_at < until)
+    if user_ids is not None:
+        q = q.filter(BillingEvent.user_id.in_(user_ids))
     return q.scalar() or 0
 
 
-def get_trial_to_paid_rate(db: Session, since: datetime, until: datetime | None = None) -> dict:
+def get_trial_to_paid_rate(
+    db: Session, since: datetime, until: datetime | None = None, *, user_ids: list[int] | None = None
+) -> dict:
     """Trial-to-paid conversion rate.
 
     Returns {starts, conversions, rate} where rate is 0.0–1.0.
@@ -127,6 +153,8 @@ def get_trial_to_paid_rate(db: Session, since: datetime, until: datetime | None 
     )
     if until:
         base = base.filter(BillingEvent.created_at < until)
+    if user_ids is not None:
+        base = base.filter(BillingEvent.user_id.in_(user_ids))
 
     row = base.one()
     starts = row.starts or 0
@@ -135,7 +163,9 @@ def get_trial_to_paid_rate(db: Session, since: datetime, until: datetime | None 
     return {"starts": starts, "conversions": conversions, "rate": round(rate, 4)}
 
 
-def get_paid_by_plan(db: Session, since: datetime, until: datetime | None = None) -> dict[str, int]:
+def get_paid_by_plan(
+    db: Session, since: datetime, until: datetime | None = None, *, user_ids: list[int] | None = None
+) -> dict[str, int]:
     """Active paid subscriptions by plan (point-in-time from Subscription table).
 
     Also includes new subscriptions created in the period from the event log.
@@ -152,16 +182,16 @@ def get_paid_by_plan(db: Session, since: datetime, until: datetime | None = None
         GROUP BY tier;
     """
     # Point-in-time active subscribers
-    rows = (
-        db.query(Subscription.tier, func.count(Subscription.id))
-        .filter(Subscription.status.in_([SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIALING]))
-        .group_by(Subscription.tier)
-        .all()
+    q = db.query(Subscription.tier, func.count(Subscription.id)).filter(
+        Subscription.status.in_([SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIALING])
     )
+    if user_ids is not None:
+        q = q.filter(Subscription.user_id.in_(user_ids))
+    rows = q.group_by(Subscription.tier).all()
     return {tier: count for tier, count in rows}
 
 
-def get_avg_seats_by_tier(db: Session) -> dict[str, float]:
+def get_avg_seats_by_tier(db: Session, *, user_ids: list[int] | None = None) -> dict[str, float]:
     """Average total seats for Professional and Enterprise plans.
 
     Dashboard SQL:
@@ -171,22 +201,22 @@ def get_avg_seats_by_tier(db: Session) -> dict[str, float]:
           AND tier IN ('professional', 'enterprise')
         GROUP BY tier;
     """
-    rows = (
-        db.query(
-            Subscription.tier,
-            func.avg(Subscription.seat_count + Subscription.additional_seats).label("avg_seats"),
-        )
-        .filter(
-            Subscription.status.in_([SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIALING]),
-            Subscription.tier.in_(["professional", "enterprise"]),
-        )
-        .group_by(Subscription.tier)
-        .all()
+    q = db.query(
+        Subscription.tier,
+        func.avg(Subscription.seat_count + Subscription.additional_seats).label("avg_seats"),
+    ).filter(
+        Subscription.status.in_([SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIALING]),
+        Subscription.tier.in_(["professional", "enterprise"]),
     )
+    if user_ids is not None:
+        q = q.filter(Subscription.user_id.in_(user_ids))
+    rows = q.group_by(Subscription.tier).all()
     return {tier: round(float(avg or 0), 1) for tier, avg in rows}
 
 
-def get_cancellations_by_reason(db: Session, since: datetime, until: datetime | None = None) -> dict[str, int]:
+def get_cancellations_by_reason(
+    db: Session, since: datetime, until: datetime | None = None, *, user_ids: list[int] | None = None
+) -> dict[str, int]:
     """Cancellations grouped by reason from metadata_json.
 
     Dashboard SQL:
@@ -205,6 +235,8 @@ def get_cancellations_by_reason(db: Session, since: datetime, until: datetime | 
     )
     if until:
         q = q.filter(BillingEvent.created_at < until)
+    if user_ids is not None:
+        q = q.filter(BillingEvent.user_id.in_(user_ids))
 
     reasons: dict[str, int] = {}
     for event in q.all():
@@ -224,13 +256,18 @@ def get_cancellations_by_reason(db: Session, since: datetime, until: datetime | 
 # ---------------------------------------------------------------------------
 
 
-def get_weekly_review(db: Session, week_of: datetime | None = None) -> dict:
+def get_weekly_review(
+    db: Session, week_of: datetime | None = None, *, user_id: int | None = None, org_id: int | None = None
+) -> dict:
     """Aggregate all 5 decision metrics for a given week.
 
     Returns current week metrics + previous week metrics + deltas.
 
     Args:
         week_of: Any datetime in the target week. Defaults to now (current week).
+        user_id: Scope results to this user (solo) or org members. Required for
+                 tenant-scoped queries. Pass None only from admin/internal paths.
+        org_id: If provided, scope to all users in this organization.
 
     Response format:
         {
@@ -254,13 +291,18 @@ def get_weekly_review(db: Session, week_of: datetime | None = None) -> dict:
     if week_of is None:
         week_of = datetime.now(UTC)
 
+    # Resolve tenant scope
+    scoped_user_ids: list[int] | None = None
+    if user_id is not None:
+        scoped_user_ids = _resolve_scoped_user_ids(db, user_id, org_id)
+
     # Week boundaries (Monday 00:00 → next Monday 00:00)
     week_start = (week_of - timedelta(days=week_of.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
     week_end = week_start + timedelta(days=7)
     prev_start = week_start - timedelta(days=7)
 
-    current = _build_period_metrics(db, week_start, week_end)
-    previous = _build_period_metrics(db, prev_start, week_start)
+    current = _build_period_metrics(db, week_start, week_end, user_ids=scoped_user_ids)
+    previous = _build_period_metrics(db, prev_start, week_start, user_ids=scoped_user_ids)
 
     # Deltas
     deltas = {
@@ -287,12 +329,12 @@ def get_weekly_review(db: Session, week_of: datetime | None = None) -> dict:
     }
 
 
-def _build_period_metrics(db: Session, since: datetime, until: datetime) -> dict:
+def _build_period_metrics(db: Session, since: datetime, until: datetime, *, user_ids: list[int] | None = None) -> dict:
     """Build all 5 decision metrics for a time period."""
     return {
-        "trial_starts": get_trial_starts(db, since, until),
-        "trial_conversion": get_trial_to_paid_rate(db, since, until),
-        "paid_by_plan": get_paid_by_plan(db, since, until),
-        "avg_seats": get_avg_seats_by_tier(db),
-        "cancellations_by_reason": get_cancellations_by_reason(db, since, until),
+        "trial_starts": get_trial_starts(db, since, until, user_ids=user_ids),
+        "trial_conversion": get_trial_to_paid_rate(db, since, until, user_ids=user_ids),
+        "paid_by_plan": get_paid_by_plan(db, since, until, user_ids=user_ids),
+        "avg_seats": get_avg_seats_by_tier(db, user_ids=user_ids),
+        "cancellations_by_reason": get_cancellations_by_reason(db, since, until, user_ids=user_ids),
     }

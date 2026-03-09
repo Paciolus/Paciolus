@@ -83,11 +83,12 @@ class TestBillingEventModel:
         assert "SUBSCRIPTION_CREATED" in repr(event)
 
     def test_all_event_types_valid(self):
-        """All 10 event types are accessible."""
-        assert len(BillingEventType) == 10
+        """All 11 event types are accessible."""
+        assert len(BillingEventType) == 11
         expected = {
             "trial_started",
             "trial_converted",
+            "trial_ending",
             "trial_expired",
             "subscription_created",
             "subscription_upgraded",
@@ -662,3 +663,209 @@ class TestWebhookEventRecording:
             .all()
         )
         assert len(events) == 1
+
+    def test_trial_will_end_records_trial_ending_not_expired(self, db_session, make_user):
+        """trial_will_end webhook must record TRIAL_ENDING, not TRIAL_EXPIRED."""
+        from billing.webhook_handler import handle_subscription_trial_will_end
+
+        user = make_user(email="trial_ending@example.com")
+        sub = Subscription(
+            user_id=user.id,
+            tier="solo",
+            status=SubscriptionStatus.TRIALING,
+            billing_interval=BillingInterval.MONTHLY,
+            stripe_customer_id="cus_trial_ending",
+        )
+        db_session.add(sub)
+        db_session.flush()
+
+        event_data = {
+            "customer": "cus_trial_ending",
+            "trial_end": 1700000000,
+        }
+        handle_subscription_trial_will_end(db_session, event_data)
+
+        # Must be TRIAL_ENDING (warning), not TRIAL_EXPIRED
+        ending_events = (
+            db_session.query(BillingEvent)
+            .filter(BillingEvent.user_id == user.id, BillingEvent.event_type == BillingEventType.TRIAL_ENDING)
+            .all()
+        )
+        assert len(ending_events) == 1
+
+        # TRIAL_EXPIRED must NOT be recorded by this handler
+        expired_events = (
+            db_session.query(BillingEvent)
+            .filter(BillingEvent.user_id == user.id, BillingEvent.event_type == BillingEventType.TRIAL_EXPIRED)
+            .all()
+        )
+        assert len(expired_events) == 0
+
+    def test_subscription_deleted_still_uses_trial_expired_not_ending(self, db_session, make_user):
+        """subscription.deleted (actual churn) must NOT use TRIAL_ENDING.
+
+        Confirms TRIAL_EXPIRED is reserved for actual expiration, and that
+        subscription deletion uses SUBSCRIPTION_CHURNED.
+        """
+        from billing.webhook_handler import handle_subscription_deleted
+
+        user = make_user(email="churn_not_ending@example.com")
+        sub = Subscription(
+            user_id=user.id,
+            tier="solo",
+            status=SubscriptionStatus.TRIALING,
+            billing_interval=BillingInterval.MONTHLY,
+            stripe_customer_id="cus_churn_check",
+        )
+        db_session.add(sub)
+        db_session.flush()
+
+        handle_subscription_deleted(db_session, {"customer": "cus_churn_check"})
+
+        # Should record SUBSCRIPTION_CHURNED, NOT TRIAL_ENDING
+        churn_events = (
+            db_session.query(BillingEvent)
+            .filter(BillingEvent.user_id == user.id, BillingEvent.event_type == BillingEventType.SUBSCRIPTION_CHURNED)
+            .all()
+        )
+        assert len(churn_events) == 1
+
+        ending_events = (
+            db_session.query(BillingEvent)
+            .filter(BillingEvent.user_id == user.id, BillingEvent.event_type == BillingEventType.TRIAL_ENDING)
+            .all()
+        )
+        assert len(ending_events) == 0
+
+
+# ---------------------------------------------------------------------------
+# Cross-tenant isolation (Issue 1 — security fix)
+# ---------------------------------------------------------------------------
+
+
+class TestWeeklyReviewTenantIsolation:
+    """Verify analytics are scoped to the current user/org — no cross-tenant leakage."""
+
+    def test_solo_user_sees_only_own_data(self, db_session, make_user):
+        """Solo user (no org) should only see their own billing events."""
+        from billing.analytics import get_weekly_review
+
+        user_a = make_user(email="solo_a@example.com")
+        user_b = make_user(email="solo_b@example.com")
+        now = datetime.now(UTC)
+
+        # User A: 2 trial starts
+        for _ in range(2):
+            db_session.add(
+                BillingEvent(
+                    user_id=user_a.id,
+                    event_type=BillingEventType.TRIAL_STARTED,
+                    tier="solo",
+                    created_at=now,
+                )
+            )
+        # User B: 3 trial starts (should NOT appear in A's review)
+        for _ in range(3):
+            db_session.add(
+                BillingEvent(
+                    user_id=user_b.id,
+                    event_type=BillingEventType.TRIAL_STARTED,
+                    tier="solo",
+                    created_at=now,
+                )
+            )
+        db_session.flush()
+
+        review_a = get_weekly_review(db_session, week_of=now, user_id=user_a.id, org_id=None)
+        review_b = get_weekly_review(db_session, week_of=now, user_id=user_b.id, org_id=None)
+
+        assert review_a["metrics"]["trial_starts"] == 2
+        assert review_b["metrics"]["trial_starts"] == 3
+
+    def test_org_admin_sees_only_org_data(self, db_session, make_user):
+        """Org admin should see data for all org members, not other orgs."""
+        from billing.analytics import get_weekly_review
+        from organization_model import Organization, OrganizationMember, OrgRole
+
+        # Org A with 2 members
+        owner_a = make_user(email="owner_a@example.com")
+        member_a = make_user(email="member_a@example.com")
+        org_a = Organization(name="Org A", slug="org-a", owner_user_id=owner_a.id)
+        db_session.add(org_a)
+        db_session.flush()
+        db_session.add(OrganizationMember(organization_id=org_a.id, user_id=owner_a.id, role=OrgRole.OWNER))
+        db_session.add(OrganizationMember(organization_id=org_a.id, user_id=member_a.id, role=OrgRole.MEMBER))
+        owner_a.organization_id = org_a.id
+        member_a.organization_id = org_a.id
+
+        # Org B with 1 member
+        owner_b = make_user(email="owner_b@example.com")
+        org_b = Organization(name="Org B", slug="org-b", owner_user_id=owner_b.id)
+        db_session.add(org_b)
+        db_session.flush()
+        db_session.add(OrganizationMember(organization_id=org_b.id, user_id=owner_b.id, role=OrgRole.OWNER))
+        owner_b.organization_id = org_b.id
+        db_session.flush()
+
+        now = datetime.now(UTC)
+
+        # Org A events: owner + member
+        db_session.add(
+            BillingEvent(
+                user_id=owner_a.id, event_type=BillingEventType.TRIAL_STARTED, tier="professional", created_at=now
+            )
+        )
+        db_session.add(
+            BillingEvent(
+                user_id=member_a.id, event_type=BillingEventType.TRIAL_STARTED, tier="professional", created_at=now
+            )
+        )
+        # Org B events
+        for _ in range(5):
+            db_session.add(
+                BillingEvent(
+                    user_id=owner_b.id, event_type=BillingEventType.TRIAL_STARTED, tier="enterprise", created_at=now
+                )
+            )
+        db_session.flush()
+
+        review_a = get_weekly_review(db_session, week_of=now, user_id=owner_a.id, org_id=org_a.id)
+        review_b = get_weekly_review(db_session, week_of=now, user_id=owner_b.id, org_id=org_b.id)
+
+        # Org A sees only its 2 events, Org B sees only its 5
+        assert review_a["metrics"]["trial_starts"] == 2
+        assert review_b["metrics"]["trial_starts"] == 5
+
+    def test_paid_by_plan_scoped_to_user(self, db_session, make_user):
+        """paid_by_plan should only count subscriptions belonging to scoped users."""
+        from billing.analytics import get_weekly_review
+
+        user_a = make_user(email="plan_a@example.com")
+        user_b = make_user(email="plan_b@example.com")
+
+        db_session.add(
+            Subscription(
+                user_id=user_a.id,
+                tier="solo",
+                status=SubscriptionStatus.ACTIVE,
+                billing_interval=BillingInterval.MONTHLY,
+            )
+        )
+        db_session.add(
+            Subscription(
+                user_id=user_b.id,
+                tier="professional",
+                status=SubscriptionStatus.ACTIVE,
+                billing_interval=BillingInterval.ANNUAL,
+            )
+        )
+        db_session.flush()
+
+        now = datetime.now(UTC)
+        review_a = get_weekly_review(db_session, week_of=now, user_id=user_a.id, org_id=None)
+        review_b = get_weekly_review(db_session, week_of=now, user_id=user_b.id, org_id=None)
+
+        assert review_a["metrics"]["paid_by_plan"].get("solo", 0) == 1
+        assert review_a["metrics"]["paid_by_plan"].get("professional", 0) == 0
+        assert review_b["metrics"]["paid_by_plan"].get("professional", 0) == 1
+        assert review_b["metrics"]["paid_by_plan"].get("solo", 0) == 0

@@ -411,13 +411,13 @@ def handle_subscription_trial_will_end(db: Session, event_data: dict) -> None:
         trial_end,
     )
 
-    # Phase LX: Record trial expiration warning (used for tracking non-converters)
+    # Phase LX: Record trial ending warning (3-day notice — NOT actual expiration)
     from billing.analytics import record_billing_event
 
     sub = get_subscription(db, user_id)
     record_billing_event(
         db,
-        BillingEventType.TRIAL_EXPIRED,
+        BillingEventType.TRIAL_ENDING,
         user_id=user_id,
         tier=sub.tier if sub else None,
     )

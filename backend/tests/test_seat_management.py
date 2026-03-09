@@ -304,6 +304,44 @@ class TestAddSeatsManager:
         assert result.additional_seats == 2
         mock_stripe.SubscriptionItem.modify.assert_called_once_with("si_test", quantity=5)
 
+    @patch("billing.subscription_manager.get_stripe")
+    @patch("billing.price_config.get_all_seat_price_ids", return_value={"price_seat_mo"})
+    def test_add_seats_dual_line_item_targets_seat_addon(self, _mock_ids, mock_get_stripe, db_session, make_user):
+        """In a dual-line-item subscription, add_seats must modify the seat add-on, not the base plan."""
+        from billing.subscription_manager import add_seats
+
+        mock_stripe = MagicMock()
+        mock_get_stripe.return_value = mock_stripe
+        # items[0] = base plan, items[1] = seat add-on
+        mock_stripe.Subscription.retrieve.return_value = {
+            "items": {
+                "data": [
+                    {"id": "si_base", "quantity": 1, "price": {"id": "price_pro_mo"}},
+                    {"id": "si_seat", "quantity": 3, "price": {"id": "price_seat_mo"}},
+                ]
+            }
+        }
+
+        user = make_user(email="dual_add@example.com")
+        sub = Subscription(
+            user_id=user.id,
+            tier=UserTier.PROFESSIONAL,
+            status=SubscriptionStatus.ACTIVE,
+            billing_interval=BillingInterval.MONTHLY,
+            stripe_customer_id="cus_dual_add",
+            stripe_subscription_id="sub_dual_add",
+            seat_count=1,
+            additional_seats=3,
+        )
+        db_session.add(sub)
+        db_session.flush()
+
+        result = add_seats(db_session, user.id, 2)
+        assert result is not None
+        assert result.additional_seats == 5
+        # Must modify the seat add-on item (si_seat), NOT the base plan (si_base)
+        mock_stripe.SubscriptionItem.modify.assert_called_once_with("si_seat", quantity=5)
+
 
 class TestRemoveSeatsManager:
     """Test remove_seats function in subscription_manager."""
@@ -388,6 +426,44 @@ class TestRemoveSeatsManager:
         assert result is not None
         assert result.additional_seats == 0
         mock_stripe.SubscriptionItem.modify.assert_called_once_with("si_test", quantity=3)
+
+    @patch("billing.subscription_manager.get_stripe")
+    @patch("billing.price_config.get_all_seat_price_ids", return_value={"price_seat_mo"})
+    def test_remove_seats_dual_line_item_targets_seat_addon(self, _mock_ids, mock_get_stripe, db_session, make_user):
+        """In a dual-line-item subscription, remove_seats must modify the seat add-on, not the base plan."""
+        from billing.subscription_manager import remove_seats
+
+        mock_stripe = MagicMock()
+        mock_get_stripe.return_value = mock_stripe
+        # items[0] = base plan, items[1] = seat add-on
+        mock_stripe.Subscription.retrieve.return_value = {
+            "items": {
+                "data": [
+                    {"id": "si_base", "quantity": 1, "price": {"id": "price_pro_mo"}},
+                    {"id": "si_seat", "quantity": 5, "price": {"id": "price_seat_mo"}},
+                ]
+            }
+        }
+
+        user = make_user(email="dual_rm@example.com")
+        sub = Subscription(
+            user_id=user.id,
+            tier=UserTier.PROFESSIONAL,
+            status=SubscriptionStatus.ACTIVE,
+            billing_interval=BillingInterval.MONTHLY,
+            stripe_customer_id="cus_dual_rm",
+            stripe_subscription_id="sub_dual_rm",
+            seat_count=1,
+            additional_seats=5,
+        )
+        db_session.add(sub)
+        db_session.flush()
+
+        result = remove_seats(db_session, user.id, 2)
+        assert result is not None
+        assert result.additional_seats == 3
+        # Must modify the seat add-on item (si_seat), NOT the base plan (si_base)
+        mock_stripe.SubscriptionItem.modify.assert_called_once_with("si_seat", quantity=3)
 
 
 # ---------------------------------------------------------------------------

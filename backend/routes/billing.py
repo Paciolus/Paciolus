@@ -463,7 +463,7 @@ def get_weekly_review_endpoint(
 
     from billing.analytics import get_weekly_review
 
-    review = get_weekly_review(db)
+    review = get_weekly_review(db, user_id=user.id, org_id=user.organization_id)
     return WeeklyReviewResponse(**review)
 
 
@@ -504,11 +504,28 @@ async def stripe_webhook(
     except stripe.error.SignatureVerificationError:
         raise HTTPException(status_code=400, detail="Invalid signature")
 
+    # Deduplicate: skip already-processed events (Stripe retries on timeout)
+    event_id = event.get("id")
+    if event_id:
+        from subscription_model import ProcessedWebhookEvent
+
+        existing = db.query(ProcessedWebhookEvent).filter(ProcessedWebhookEvent.stripe_event_id == event_id).first()
+        if existing:
+            logger.info("Duplicate webhook event %s — skipping", event_id)
+            return Response(status_code=200)
+
     from billing.webhook_handler import process_webhook_event
 
     event_type = event.get("type", "")
     event_data = event.get("data", {}).get("object", {})
 
     process_webhook_event(db, event_type, event_data)
+
+    # Record processed event for deduplication
+    if event_id:
+        from subscription_model import ProcessedWebhookEvent
+
+        db.add(ProcessedWebhookEvent(stripe_event_id=event_id))
+        db.commit()
 
     return Response(status_code=200)

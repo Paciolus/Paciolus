@@ -959,3 +959,48 @@ class TestWebhookHTTPIntegration:
                 )
 
             assert response.status_code == 200
+
+    @pytest.mark.asyncio
+    async def test_webhook_duplicate_event_idempotent(self, db_session):
+        """Replaying the same Stripe event ID must not invoke the handler twice."""
+        from database import get_db
+        from main import app
+
+        mock_stripe = MagicMock()
+        mock_stripe.Webhook.construct_event.return_value = {
+            "id": "evt_duplicate_test_123",
+            "type": "checkout.session.completed",
+            "data": {
+                "object": {
+                    "id": "cs_dup",
+                    "customer": "cus_dup",
+                    "subscription": "sub_dup",
+                },
+            },
+        }
+
+        app.dependency_overrides[get_db] = lambda: db_session
+
+        try:
+            with (
+                patch("billing.stripe_client.is_stripe_enabled", return_value=True),
+                patch("billing.stripe_client.get_stripe", return_value=mock_stripe),
+                patch("config.STRIPE_WEBHOOK_SECRET", "FAKE_WEBHOOK_SECRET_FOR_TESTING"),
+                patch("billing.webhook_handler.process_webhook_event", return_value=True) as mock_process,
+            ):
+                async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                    headers = {
+                        "stripe-signature": "t=1234567890,v1=fakesig",
+                        "content-type": "application/json",
+                    }
+                    # First delivery — should be processed
+                    resp1 = await client.post("/billing/webhook", content=b'{"type": "test"}', headers=headers)
+                    # Second delivery (replay) — should be skipped
+                    resp2 = await client.post("/billing/webhook", content=b'{"type": "test"}', headers=headers)
+
+                assert resp1.status_code == 200
+                assert resp2.status_code == 200
+                # Handler invoked only once
+                assert mock_process.call_count == 1
+        finally:
+            app.dependency_overrides.pop(get_db, None)

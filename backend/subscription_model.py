@@ -41,14 +41,15 @@ class BillingInterval(str, PyEnum):
 class BillingEventType(str, PyEnum):
     """Billing lifecycle event taxonomy.
 
-    10 event types covering the complete subscription lifecycle.
+    11 event types covering the complete subscription lifecycle.
     Used for post-launch decision metrics (Phase LX).
     """
 
     # Trial lifecycle
     TRIAL_STARTED = "trial_started"
     TRIAL_CONVERTED = "trial_converted"
-    TRIAL_EXPIRED = "trial_expired"
+    TRIAL_ENDING = "trial_ending"  # 3-day warning before trial end (trial_will_end)
+    TRIAL_EXPIRED = "trial_expired"  # Trial actually ended (subscription status change)
 
     # Subscription lifecycle
     SUBSCRIPTION_CREATED = "subscription_created"
@@ -152,6 +153,23 @@ class Subscription(Base):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
+
+
+class ProcessedWebhookEvent(Base):
+    """Deduplication table for Stripe webhook events.
+
+    Stores processed event IDs to prevent replay/duplicate processing.
+    Stripe retries on network timeout can deliver the same event multiple times;
+    this table ensures idempotent handling.
+    """
+
+    __tablename__ = "processed_webhook_events"
+
+    stripe_event_id = Column(String(255), primary_key=True)
+    processed_at = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
+
+    def __repr__(self) -> str:
+        return f"<ProcessedWebhookEvent(id={self.stripe_event_id})>"
 
 
 class BillingEvent(Base):
