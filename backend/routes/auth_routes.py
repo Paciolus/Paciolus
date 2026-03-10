@@ -60,13 +60,21 @@ from typing import Optional
 
 
 def _set_refresh_cookie(response: Response, token: str, remember_me: bool) -> None:
-    """Set the HttpOnly refresh token cookie."""
+    """Set the HttpOnly refresh token cookie.
+
+    SameSite policy:
+      - Production (cross-origin): "none" + Secure — required for cross-origin AJAX
+        POST requests (e.g., /auth/refresh from Vercel frontend → Render backend).
+        SameSite=Lax silently drops cookies on cross-origin POST, breaking refresh.
+      - Development (same-origin): "lax" — SameSite=None requires Secure (HTTPS),
+        which isn't available on localhost HTTP.
+    """
     response.set_cookie(
         key=REFRESH_COOKIE_NAME,
         value=token,
         httponly=True,
         secure=COOKIE_SECURE,
-        samesite="lax",
+        samesite="none" if COOKIE_SECURE else "lax",
         path="/auth",
         max_age=REFRESH_TOKEN_EXPIRATION_DAYS * 24 * 3600 if remember_me else None,
     )
@@ -74,7 +82,12 @@ def _set_refresh_cookie(response: Response, token: str, remember_me: bool) -> No
 
 def _clear_refresh_cookie(response: Response) -> None:
     """Clear the HttpOnly refresh token cookie."""
-    response.delete_cookie(key=REFRESH_COOKIE_NAME, path="/auth")
+    response.delete_cookie(
+        key=REFRESH_COOKIE_NAME,
+        path="/auth",
+        secure=COOKIE_SECURE,
+        samesite="none" if COOKIE_SECURE else "lax",
+    )
 
 
 class VerifyEmailRequest(BaseModel):
