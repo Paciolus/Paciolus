@@ -417,6 +417,14 @@ class StreamingAuditor:
 
             self.columns_discovered = True
 
+            # Sprint 528 Fix: Even with user mapping, auto-detect supplementary
+            # columns (account_type, account_name) so CSV-provided types flow
+            # through to _resolve_category(). Without this, process_chunk()
+            # skips type extraction because account_type_col stays None.
+            supplementary = detect_columns(all_columns)
+            self.account_type_col = supplementary.account_type_column
+            self.account_name_col = supplementary.account_name_column
+
             # Create detection result with 100% confidence for user mapping
             self.column_detection = ColumnDetectionResult(
                 account_column=self.account_col,
@@ -428,6 +436,10 @@ class StreamingAuditor:
                 overall_confidence=1.0,
                 all_columns=all_columns,
                 detection_notes=["Using user-provided column mapping"],
+                account_type_column=supplementary.account_type_column,
+                account_type_confidence=supplementary.account_type_confidence,
+                account_name_column=supplementary.account_name_column,
+                account_name_confidence=supplementary.account_name_confidence,
             )
 
             log_secure_operation(
@@ -1066,6 +1078,8 @@ class StreamingAuditor:
         ("expenses", AccountCategory.EXPENSE),
     ]
 
+    _csv_type_log_count: int = 0
+
     def _resolve_csv_type(self, raw_value: str) -> tuple[AccountCategory | None, float]:
         """Resolve a raw CSV account type value to a category and confidence.
 
@@ -1073,6 +1087,15 @@ class StreamingAuditor:
         Direct map hit = 1.0 confidence; suffix match = 0.90.
         """
         normalized = raw_value.lower().strip()
+
+        # Sprint 528 Step 4: Log first 5 CSV type values for deploy verification
+        if self._csv_type_log_count < 5 and raw_value:
+            self._csv_type_log_count += 1
+            log_secure_operation(
+                "csv_type_trace",
+                f"[{self._csv_type_log_count}/5] raw={raw_value!r} normalized={normalized!r}",
+            )
+
         if not normalized:
             return None, 0.0
         # Direct lookup
@@ -1735,10 +1758,10 @@ def audit_trial_balance_streaming(
         result["risk_summary"]["coverage_pct"] = round(min(_coverage_pct, 100.0), 1)
 
         # Sprint 95: Classification Validator — structural COA checks
-        account_classifications = {}
-        for acct_name in auditor.account_balances:
-            cls_result = auditor.classifier.classify(acct_name, 0)
-            account_classifications[acct_name] = cls_result.category.value
+        # Sprint 528 Fix: Use get_classified_accounts() which routes through
+        # _resolve_category() — CSV-provided types take priority over heuristic.
+        # Previously called classifier.classify() directly, bypassing CSV types.
+        account_classifications = auditor.get_classified_accounts()
         cv_result = run_classification_validation(auditor.account_balances, account_classifications)
         result["classification_quality"] = cv_result.to_dict()
 

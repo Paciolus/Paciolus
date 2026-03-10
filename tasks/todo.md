@@ -340,3 +340,28 @@ Scope: auth flows, CSRF/CSP, rate limiting, API authorization, file upload, JWT,
 - [x] `npm run build` passes
 
 **Review:** Expanded `_CSV_TYPE_MAP` from 10 bare-word entries to 56 compound-aware entries covering all 5 categories. Added `_CSV_TYPE_SUFFIXES` for suffix-based fallback at 0.90 confidence. Extracted `_resolve_csv_type()` helper to centralize CSV-to-category resolution with tiered confidence. Fixed a latent bug in `get_abnormal_balances()` where `has_csv_type` was True (key existed in `provided_account_types`) but the value didn't match the map — causing confidence=1.0 to be assigned even though the heuristic was used.
+
+---
+
+### Sprint 529 — CSV Account Type Data Flow Fix
+
+**Status:** COMPLETE
+**Goal:** Fix the data path disconnect where CSV-provided account types were detected at intake but never reached downstream classification consumers.
+
+#### Root Cause Analysis
+Two bugs on separate data paths:
+
+1. **Primary (line 1738-1741):** `audit_trial_balance_streaming()` built `account_classifications` by calling `auditor.classifier.classify()` directly — bypassing `_resolve_category()` and all CSV-provided types. This heuristic-only dict was then passed to every downstream consumer: classification validator, population profile, expense category, accrual completeness, lease diagnostic, cutoff risk. This is why every account displayed as Unknown despite the CSV having valid types.
+
+2. **Secondary (lines 406-438):** The user-provided column mapping path in `_discover_columns()` returned early without setting `self.account_type_col` or `self.account_name_col`. With user mappings, `process_chunk()` never extracted CSV type values because the column reference was None.
+
+#### Fixes Applied
+- [x] **Bug 1:** Replace manual `classifier.classify()` loop with `auditor.get_classified_accounts()` which routes through `_resolve_category()` — CSV types now flow to all 6 downstream consumers
+- [x] **Bug 2:** User-mapping path now calls `detect_columns()` for supplementary column detection (account_type, account_name) before returning
+- [x] **Step 4:** Added `csv_type_trace` log line in `_resolve_csv_type()` — logs first 5 raw values per analysis for deploy verification
+
+#### Verification
+- [x] `pytest` — 6,440 passed (full suite, 0 failures)
+- [x] `npm run build` passes
+- [x] Existing 77 CSV type resolution tests still pass
+- [x] All 566 downstream consumer tests pass (diagnostic + classification + lead_sheet + population + expense_category + accrual)
