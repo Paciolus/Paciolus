@@ -30,11 +30,15 @@ def apply_lead_sheet_grouping(result: dict[str, Any], materiality_threshold: flo
 
     accounts_for_grouping = []
     for ab in result.get("abnormal_balances", []):
+        # Sprint 530 Fix 6: Use the raw debit/credit columns from each finding,
+        # not the absolute-valued "amount" field.  The "amount" field is always
+        # positive (abs), so the old derivation always put everything in debit=amount
+        # and credit=0, zeroing out the Credits column on every lead sheet.
         accounts_for_grouping.append(
             {
                 "account": ab.get("account", ""),
-                "debit": ab.get("amount", 0) if ab.get("amount", 0) > 0 else 0,
-                "credit": abs(ab.get("amount", 0)) if ab.get("amount", 0) < 0 else 0,
+                "debit": ab.get("debit", 0),
+                "credit": ab.get("credit", 0),
                 "type": ab.get("type", "unknown"),
                 "issue": ab.get("issue", ""),
                 "materiality": ab.get("materiality", ""),

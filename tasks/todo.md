@@ -133,6 +133,70 @@
 > Sprints 499–515 archived to `tasks/archive/sprints-499-515-details.md`.
 > Sprints 516–526 archived to `tasks/archive/sprints-516-526-details.md`.
 
+### Sprint 530 — Contra Account Recognition, False Positive Reduction, and Remaining Fixes
+
+**Status:** COMPLETE
+**Goal:** Eliminate contra account false positives, tighten detection keywords, fix ratio calculations, and restructure score decomposition.
+
+#### Fix 1: Contra Account Recognition (Highest Priority)
+- [x] Added `CONTRA_ASSET_KEYWORDS`, `CONTRA_REVENUE_KEYWORDS`, `CONTRA_EQUITY_KEYWORDS` to `classification_rules.py`
+- [x] Implemented `is_contra_account(account_name, account_type)` function
+- [x] Integrated into `_is_balance_abnormal()` — inverts expected balance for contra accounts
+- [x] Integrated into `detect_rounding_anomalies()` — suppresses round-number findings for contra accounts
+- [x] Accumulated depreciation, amortization, allowance, reserve accounts no longer false-positive
+
+#### Fix 2: Related Party Keyword Tightening
+- [x] Replaced bare "officer", "director", "shareholder" keywords with explicit relationship language (e.g., "due to officer", "shareholder loan")
+- [x] Added `RELATED_PARTY_EXCLUSION_KEYWORDS` (insurance, board fees)
+- [x] Directors and Officers Insurance, Board of Directors Fees no longer trigger related party
+
+#### Fix 3: Suspense Detection — Mutual Exclusivity
+- [x] Removed vague keywords: "holding", "other", "general", "unidentified"
+- [x] Added specific terms: "hold account", "wash account", "to be allocated", "float"
+- [x] `_merge_anomalies()` now enforces priority: Related Party > Intercompany > Suspense > Round Number
+- [x] Related party accounts excluded from suspense; intercompany accounts suppress round-number
+
+#### Fix 4: Intercompany Imbalance — Em-Dash Handling
+- [x] `_extract_counterparty()` now handles: " — ", " – ", " - ", "—", "–", "-"
+- [x] Added guard: skips segment if it's a common account term (receivable, payable, loan)
+
+#### Fix 5: Current/Non-Current Stratification
+- [x] `extract_category_totals()` now accepts `account_subtypes` parameter
+- [x] CSV subtypes ("Current Asset", "Non-Current Liability") drive current/non-current classification
+- [x] Falls back to keyword matching when subtypes unavailable
+- [x] `get_category_totals()` passes `provided_account_types` as subtypes
+
+#### Fix 6: Lead Sheet Credits Column
+- [x] Fixed `tb_post_processor.py`: uses raw `debit`/`credit` fields instead of derived-from-`amount`
+- [x] `amount` field is always absolute — old code always put everything in debit, zeroing credit
+
+#### Fix 7: Gross Margin COGS Recognition
+- [x] `extract_category_totals()` recognizes COGS subtypes: "Cost of Revenue", "Cost of Goods Sold", "COGS", "Cost of Sales", "Direct Costs"
+- [x] Subtype-driven COGS takes priority over keyword matching
+
+#### Fix 8: Concentration Finding Pluralization
+- [x] Added `_CATEGORY_PLURAL` mapping: liability→liabilities, equity→equity accounts, etc.
+- [x] No more "liabilitys" in finding text
+
+#### Fix 9: Score Decomposition — Top 8 + Summary
+- [x] `compute_tb_risk_score()` now shows top 8 highest-amount material findings individually
+- [x] Remaining findings collapsed into single summary line with type descriptions
+- [x] Total still reconciles to composite score
+
+#### Fix 10: Population Composition PDF
+- [x] Section already rendered between Executive Summary and Risk Assessment (line 502 of pdf_generator.py)
+- [x] Data flow now correct: subtype-driven category_totals provide accurate balances
+- [x] Gross balance footnote already present
+
+#### Verification
+- [x] `pytest` — 6,508 passed (6,440 existing + 68 new, 0 failures)
+- [x] `npm run build` passes
+- [x] New test file: `tests/test_contra_and_detection_fixes.py` — 68 tests
+
+**Review:** 10 fixes across 6 backend files. Largest impact is Fix 1 (contra account recognition) which eliminates 9+ false positive findings that would appear in virtually every real-world TB. Fix 5/7 resolves the root cause of N/A ratios and 100% gross margin by wiring CSV subtypes through to `extract_category_totals()`. Fix 6 was a data mapping bug where the lead sheet post-processor derived debit/credit from the absolute-valued `amount` field instead of using the raw columns.
+
+---
+
 ### Sprint 527 — DEC 2026-03-10 P2 Remediation (6 findings)
 
 **Status:** COMPLETE

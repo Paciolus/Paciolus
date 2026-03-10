@@ -2198,10 +2198,37 @@ NON_OPERATING_KEYWORDS = [
 
 
 def extract_category_totals(
-    account_balances: dict[str, dict[str, float]], classified_accounts: dict[str, str]
+    account_balances: dict[str, dict[str, float]],
+    classified_accounts: dict[str, str],
+    account_subtypes: dict[str, str] | None = None,
 ) -> CategoryTotals:
-    """Extract aggregate category totals from account balances."""
+    """Extract aggregate category totals from account balances.
+
+    Sprint 530 Fix 5/7: When ``account_subtypes`` is provided (raw CSV type
+    values like "Current Asset", "Cost of Revenue"), uses them for
+    current/non-current stratification and COGS recognition *before* falling
+    back to keyword matching.
+    """
     totals = CategoryTotals()
+    subtypes = account_subtypes or {}
+
+    # Sprint 530: Subtype classification helpers
+    _CURRENT_ASSET_SUBTYPES = ("current asset", "current assets")
+    _NON_CURRENT_ASSET_SUBTYPES = (
+        "non-current asset", "non-current assets", "noncurrent asset",
+        "noncurrent assets", "long-term asset", "long-term assets",
+        "fixed asset", "fixed assets",
+    )
+    _CURRENT_LIABILITY_SUBTYPES = ("current liability", "current liabilities")
+    _NON_CURRENT_LIABILITY_SUBTYPES = (
+        "non-current liability", "non-current liabilities",
+        "noncurrent liability", "noncurrent liabilities",
+        "long-term liability", "long-term liabilities",
+    )
+    _COGS_SUBTYPES = (
+        "cost of revenue", "cost of goods sold", "cogs",
+        "cost of sales", "direct costs",
+    )
 
     for account_name, balances in account_balances.items():
         debit = balances.get("debit", 0.0)
@@ -2211,18 +2238,28 @@ def extract_category_totals(
         # Get classification for this account
         category = classified_accounts.get(account_name, "unknown")
         account_lower = account_name.lower()
+        subtype_raw = subtypes.get(account_name, "")
+        subtype_lower = subtype_raw.strip().lower() if subtype_raw else ""
 
         if category == "asset":
             # Assets have natural debit balance
             amount = abs(net_balance) if net_balance > 0 else -abs(net_balance)
             totals.total_assets += amount
 
-            # Check if current asset
-            if any(kw in account_lower for kw in CURRENT_ASSET_KEYWORDS):
+            # Sprint 530 Fix 5: Use subtype for current/non-current when available
+            if subtype_lower in _NON_CURRENT_ASSET_SUBTYPES:
+                pass  # Explicitly non-current — skip current_assets
+            elif subtype_lower in _CURRENT_ASSET_SUBTYPES:
                 totals.current_assets += amount
                 if "inventory" in account_lower:
                     totals.inventory += amount
-                # Sprint 53: Track accounts receivable for DSO calculation
+                if "receivable" in account_lower:
+                    totals.accounts_receivable += amount
+            elif any(kw in account_lower for kw in CURRENT_ASSET_KEYWORDS):
+                # Fallback: keyword matching
+                totals.current_assets += amount
+                if "inventory" in account_lower:
+                    totals.inventory += amount
                 if "receivable" in account_lower:
                     totals.accounts_receivable += amount
 
@@ -2231,10 +2268,15 @@ def extract_category_totals(
             amount = abs(net_balance) if net_balance < 0 else -abs(net_balance)
             totals.total_liabilities += amount
 
-            # Check if current liability
-            if any(kw in account_lower for kw in ["payable", "current", "short-term", "accrued"]):
+            # Sprint 530 Fix 5: Use subtype for current/non-current
+            if subtype_lower in _NON_CURRENT_LIABILITY_SUBTYPES:
+                pass  # Explicitly non-current
+            elif subtype_lower in _CURRENT_LIABILITY_SUBTYPES:
                 totals.current_liabilities += amount
-                # Sprint 293: Track accounts payable for DPO calculation
+                if any(kw in account_lower for kw in ACCOUNTS_PAYABLE_KEYWORDS):
+                    totals.accounts_payable += amount
+            elif any(kw in account_lower for kw in ["payable", "current", "short-term", "accrued"]):
+                totals.current_liabilities += amount
                 if any(kw in account_lower for kw in ACCOUNTS_PAYABLE_KEYWORDS):
                     totals.accounts_payable += amount
 
@@ -2253,8 +2295,10 @@ def extract_category_totals(
             amount = abs(net_balance) if net_balance > 0 else -abs(net_balance)
             totals.total_expenses += amount
 
-            # Check if COGS
-            if any(kw in account_lower for kw in COGS_KEYWORDS):
+            # Sprint 530 Fix 7: Use subtype for COGS recognition
+            if subtype_lower in _COGS_SUBTYPES:
+                totals.cost_of_goods_sold += amount
+            elif any(kw in account_lower for kw in COGS_KEYWORDS):
                 totals.cost_of_goods_sold += amount
             # Sprint 26: Check if Operating Expense (not COGS, not non-operating)
             elif any(kw in account_lower for kw in OPERATING_EXPENSE_KEYWORDS):
@@ -2266,6 +2310,9 @@ def extract_category_totals(
         "category_totals_extracted",
         f"Extracted totals - Assets: ${totals.total_assets:,.2f}, "
         f"Liabilities: ${totals.total_liabilities:,.2f}, "
+        f"Current Assets: ${totals.current_assets:,.2f}, "
+        f"Current Liabilities: ${totals.current_liabilities:,.2f}, "
+        f"COGS: ${totals.cost_of_goods_sold:,.2f}, "
         f"Revenue: ${totals.total_revenue:,.2f}",
     )
 

@@ -25,6 +25,7 @@ from classification_rules import (
     EXPENSE_CONCENTRATION_THRESHOLD,
     INTERCOMPANY_KEYWORDS,
     NORMAL_BALANCE_MAP,
+    RELATED_PARTY_EXCLUSION_KEYWORDS,
     RELATED_PARTY_KEYWORDS,
     REVENUE_CONCENTRATION_THRESHOLD,
     ROUNDING_EXCLUDE_KEYWORDS,
@@ -36,6 +37,8 @@ from classification_rules import (
     SUSPENSE_KEYWORDS,
     AccountCategory,
     NormalBalance,
+    # Sprint 530: Contra account recognition
+    is_contra_account,
 )
 from classification_validator import run_classification_validation
 from column_detector import ColumnDetectionResult, ColumnMapping, detect_columns
@@ -619,7 +622,8 @@ class StreamingAuditor:
                 classification_stats["low"] += 1
 
             # Check if balance is abnormal for the effective category
-            is_abnormal = self._is_balance_abnormal(effective_category, net_balance)
+            # Sprint 530 Fix 1: Pass display name for contra account detection
+            is_abnormal = self._is_balance_abnormal(effective_category, net_balance, display)
 
             # Only flag if abnormal AND classified (not UNKNOWN)
             if is_abnormal and effective_category != AccountCategory.UNKNOWN:
@@ -848,11 +852,21 @@ class StreamingAuditor:
                     is_material = abs_balance >= self.materiality_threshold
                     materiality_status = "material" if is_material else "immaterial"
 
+                    # Sprint 530 Fix 8: Correct pluralization
+                    _CATEGORY_PLURAL = {
+                        "asset": "assets",
+                        "liability": "liabilities",
+                        "equity": "equity accounts",
+                        "revenue": "revenues",
+                        "expense": "expenses",
+                    }
+                    cat_plural = _CATEGORY_PLURAL.get(category.value, f"{category.value}s")
+
                     concentration_risks.append(
                         {
                             "account": display,
                             "type": CATEGORY_DISPLAY_NAMES.get(category, "Unknown"),
-                            "issue": f"Represents {concentration_pct:.1%} of total {category.value}s",
+                            "issue": f"Represents {concentration_pct:.1%} of total {cat_plural}",
                             "amount": round(abs_balance, 2),
                             "debit": round(debit_amount, 2),
                             "credit": round(credit_amount, 2),
@@ -867,7 +881,7 @@ class StreamingAuditor:
                             "severity": severity,
                             "suggestions": [],
                             "recommendation": (
-                                f"This account represents {concentration_pct:.1%} of total {category.value}s. "
+                                f"This account represents {concentration_pct:.1%} of total {cat_plural}. "
                                 "Review for over-reliance on a single counterparty and consider "
                                 "the impact if this balance becomes uncollectible or disputed."
                             ),
@@ -926,6 +940,12 @@ class StreamingAuditor:
             if is_tier1:
                 continue
 
+            # Sprint 530 Fix 1: Contra accounts (accumulated depreciation, allowances,
+            # reserves) are expected to carry round numbers — suppress.
+            category = self._resolve_category(account_key, net_balance)
+            if is_contra_account(display, category):
+                continue
+
             # Legacy exclude list (loans, capital, etc.)
             is_excluded = any(keyword in account_lower for keyword in ROUNDING_EXCLUDE_KEYWORDS)
             if is_excluded:
@@ -942,7 +962,7 @@ class StreamingAuditor:
                 is_round = remainder_dec < BALANCE_TOLERANCE or (divisor_dec - remainder_dec) < BALANCE_TOLERANCE
 
                 if is_round:
-                    category = self._resolve_category(account_key, net_balance)
+                    # category already resolved above (Sprint 530)
                     is_material = abs_balance >= self.materiality_threshold
 
                     # Tier 2 (default) — only flag if material and genuinely noteworthy
@@ -1125,11 +1145,28 @@ class StreamingAuditor:
             return f"{account_key} — {name}"
         return account_key
 
-    def _is_balance_abnormal(self, category: AccountCategory, net_balance: float) -> bool:
-        """Check if balance direction is abnormal for the given category."""
+    def _is_balance_abnormal(
+        self, category: AccountCategory, net_balance: float, account_name: str = ""
+    ) -> bool:
+        """Check if balance direction is abnormal for the given category.
+
+        Sprint 530: Contra accounts (e.g. Accumulated Depreciation) carry the
+        opposite of their parent category's normal balance.  When a contra
+        account is detected, the expected direction is inverted so that the
+        *normal* contra balance is not flagged.
+        """
         if abs(net_balance) < 0.01 or category == AccountCategory.UNKNOWN:
             return False
         normal = NORMAL_BALANCE_MAP[category]
+
+        # Sprint 530 Fix 1: Invert expected balance for contra accounts
+        if account_name and is_contra_account(account_name, category):
+            if normal == NormalBalance.DEBIT:
+                # Contra-asset: expected credit — debit balance is abnormal
+                return net_balance > 0
+            # Contra-revenue/equity: expected debit — credit balance is abnormal
+            return net_balance < 0
+
         if normal == NormalBalance.DEBIT:
             return net_balance < 0
         return net_balance > 0
@@ -1182,7 +1219,12 @@ class StreamingAuditor:
     ]
 
     def detect_related_party_accounts(self) -> list[dict[str, Any]]:
-        """Sprint 526 Fix 4d: Detect accounts indicating related party activity."""
+        """Sprint 526 Fix 4d: Detect accounts indicating related party activity.
+
+        Sprint 530 Fix 2: Tightened keyword matching. Accounts matching
+        RELATED_PARTY_EXCLUSION_KEYWORDS (e.g. insurance, board fees) are
+        excluded even if they match a related party keyword.
+        """
         findings: list[dict[str, Any]] = []
         for account_key, balances in self.account_balances.items():
             net_balance = balances["debit"] - balances["credit"]
@@ -1191,6 +1233,12 @@ class StreamingAuditor:
 
             display = self._display_name(account_key)
             search_text = display.lower()
+
+            # Sprint 530 Fix 2: Exclude insurance/fee accounts that mention
+            # directors or officers in a non-counterparty context.
+            if any(excl in search_text for excl in RELATED_PARTY_EXCLUSION_KEYWORDS):
+                continue
+
             matched = []
             weight = 0.0
             for keyword, kw_weight, is_phrase in RELATED_PARTY_KEYWORDS:
@@ -1245,12 +1293,18 @@ class StreamingAuditor:
 
         # Extract counterparty names from account descriptions
         # Pattern: "Intercompany Receivable — Meridian UK" → counterparty = "meridian uk"
+        # Sprint 530 Fix 4: Handle all separator variants including bare em-dash
         def _extract_counterparty(name: str) -> str:
             lower = name.lower()
-            for sep in [" — ", " - ", "–"]:
+            # Try separators from most specific to least (spaces around dashes first)
+            for sep in [" — ", " – ", " - ", "—", "–", "-"]:
                 if sep in lower:
                     parts = lower.split(sep)
-                    return parts[-1].strip()
+                    # Take the last segment as the counterparty name
+                    cp = parts[-1].strip()
+                    # Skip if the last segment is a common account term, not a name
+                    if cp and cp not in ("receivable", "payable", "loan"):
+                        return cp
             return ""
 
         # Group by counterparty
@@ -1481,9 +1535,18 @@ class StreamingAuditor:
         return classified
 
     def get_category_totals(self) -> CategoryTotals:
-        """Extract aggregate category totals for ratio calculations."""
+        """Extract aggregate category totals for ratio calculations.
+
+        Sprint 530: Passes raw CSV subtype values so that
+        extract_category_totals() can use them for current/non-current
+        stratification and COGS recognition.
+        """
         classified_accounts = self.get_classified_accounts()
-        return extract_category_totals(self.account_balances, classified_accounts)
+        return extract_category_totals(
+            self.account_balances,
+            classified_accounts,
+            account_subtypes=self.provided_account_types,
+        )
 
     def validate_balance_sheet(self, category_totals: Optional[CategoryTotals] = None) -> dict[str, Any]:
         """
@@ -1551,23 +1614,44 @@ def _merge_anomalies(
                             entry["severity"] = item["severity"]
                         break
 
+    # Sprint 530 Fix 3: Finding type priority hierarchy
+    # Related Party > Intercompany > Suspense > Abnormal Balance > Concentration > Round Number
+    # Build sets of accounts claimed by higher-priority finding types so that
+    # lower-priority types do not duplicate-flag them.
+    related_party_accounts: set[str] = set()
+    intercompany_accounts: set[str] = set()
+
+    if related_party:
+        _merge_list(related_party, "is_related_party")
+        related_party_accounts = {rp["account"] for rp in related_party}
+    if intercompany:
+        _merge_list(intercompany, "is_intercompany_imbalance", {"cross_reference_note": "cross_reference_note"})
+        intercompany_accounts = {ic["account"] for ic in intercompany}
+
+    # Suspense: exclude accounts already claimed by related party or intercompany
+    filtered_suspense = [
+        s for s in suspense_accounts
+        if s["account"] not in related_party_accounts and s["account"] not in intercompany_accounts
+    ]
     _merge_list(
-        suspense_accounts,
+        filtered_suspense,
         "is_suspense_account",
         {"confidence": "suspense_confidence", "matched_keywords": "suspense_keywords"},
     )
+
     _merge_list(
         concentration_risks,
         "has_concentration_risk",
         {"concentration_percent": "concentration_percent", "category_total": "category_total"},
     )
-    _merge_list(rounding_anomalies, "has_rounding_anomaly", {"rounding_pattern": "rounding_pattern"})
 
-    # Sprint 526: Merge new detection categories
-    if related_party:
-        _merge_list(related_party, "is_related_party")
-    if intercompany:
-        _merge_list(intercompany, "is_intercompany_imbalance", {"cross_reference_note": "cross_reference_note"})
+    # Round-number: suppress for accounts already claimed by intercompany imbalance
+    filtered_rounding = [
+        r for r in rounding_anomalies
+        if r["account"] not in intercompany_accounts
+    ]
+    _merge_list(filtered_rounding, "has_rounding_anomaly", {"rounding_pattern": "rounding_pattern"})
+
     if equity_signals:
         _merge_list(equity_signals, "is_equity_signal", {"cross_reference_note": "cross_reference_note"})
     if revenue_concentration:

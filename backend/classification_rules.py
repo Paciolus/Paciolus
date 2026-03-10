@@ -299,33 +299,30 @@ CATEGORY_DISPLAY_NAMES: dict[AccountCategory, str] = {
 # Tuple format: (keyword, weight, is_phrase)
 # Weight indicates confidence that the account is truly a suspense account
 SUSPENSE_KEYWORDS: list[tuple[str, float, bool]] = [
-    # High confidence (0.90+) - definitive suspense terms
+    # Sprint 530 Fix 3: Tightened — removed vague terms that matched standard
+    # operating accounts (e.g. "holding" matched "Holding Company", "other"
+    # matched "Other Revenue", "general" matched "General Ledger").
+    # High confidence (0.90+) — definitive suspense terms
     ("suspense", 0.95, False),
     ("suspense account", 0.98, True),
     ("clearing account", 0.95, True),
     ("clearing", 0.85, False),
     ("unallocated", 0.90, False),
-    ("unidentified", 0.90, False),
-    ("unclassified", 0.90, False),
     ("pending classification", 0.95, True),
     ("awaiting classification", 0.95, True),
-
-    # Medium confidence (0.70-0.89) - likely suspense terms
+    # Medium confidence (0.70–0.89) — likely suspense terms
     ("temporary", 0.75, False),
-    ("holding account", 0.85, True),
-    ("holding", 0.60, False),
+    ("hold account", 0.85, True),
     ("in transit", 0.80, True),
     ("intercompany clearing", 0.90, True),
     ("bank clearing", 0.85, True),
     ("payroll clearing", 0.85, True),
     ("cash clearing", 0.85, True),
-
-    # Lower confidence (0.50-0.69) - contextual terms
-    # These need additional signals to confirm suspense status
-    ("miscellaneous", 0.55, False),
-    ("other", 0.40, False),  # Very common, low weight
+    ("to be allocated", 0.85, True),
+    ("wash account", 0.85, True),
+    # Lower confidence
+    ("float", 0.55, False),
     ("sundry", 0.60, False),
-    ("general", 0.35, False),  # Too common, very low weight
 ]
 
 # Minimum confidence to flag as suspense account
@@ -423,17 +420,44 @@ ROUNDING_EXCLUDE_KEYWORDS: list[str] = [
 # Tuple format: (keyword, weight, is_phrase)
 
 RELATED_PARTY_KEYWORDS: list[tuple[str, float, bool]] = [
+    # Sprint 530 Fix 2: Tightened — require explicit relationship language.
+    # Removed bare "officer", "director", "shareholder" (matched insurance/fees).
     ("related party", 0.95, True),
+    ("related-party", 0.95, True),
     ("intercompany", 0.90, False),
+    ("inter-company", 0.90, True),
     ("affiliate", 0.85, False),
-    ("officer", 0.85, False),
-    ("director", 0.80, False),
-    ("shareholder", 0.80, False),
+    ("affiliated", 0.85, False),
+    ("due to officer", 0.95, True),
+    ("due from officer", 0.95, True),
+    ("due to shareholder", 0.95, True),
+    ("due from shareholder", 0.95, True),
+    ("due to director", 0.95, True),
+    ("due from director", 0.95, True),
+    ("shareholder loan", 0.95, True),
+    ("officer loan", 0.95, True),
+    ("note receivable — officer", 0.95, True),
+    ("note receivable — shareholder", 0.95, True),
+    ("note receivable — director", 0.95, True),
+    ("note payable — officer", 0.95, True),
+    ("note payable — shareholder", 0.95, True),
+    ("note payable — director", 0.95, True),
+    ("due to parent", 0.90, True),
+    ("due from parent", 0.90, True),
+    ("due to subsidiary", 0.90, True),
+    ("due from subsidiary", 0.90, True),
     ("employee loan", 0.90, True),
-    ("due to related", 0.95, True),
-    ("due from related", 0.95, True),
     ("ic receivable", 0.85, True),
     ("ic payable", 0.85, True),
+]
+
+# Accounts matching these keywords are excluded from related party detection
+# even if they match a related party keyword (e.g. "Directors and Officers Insurance").
+RELATED_PARTY_EXCLUSION_KEYWORDS: list[str] = [
+    "insurance",
+    "d&o insurance",
+    "board of directors fees",
+    "board fees",
 ]
 
 
@@ -472,3 +496,70 @@ EQUITY_DIVIDEND_KEYWORDS: list[tuple[str, float, bool]] = [
 EQUITY_TREASURY_KEYWORDS: list[tuple[str, float, bool]] = [
     ("treasury", 0.85, False),
 ]
+
+
+# =============================================================================
+# CONTRA ACCOUNT RECOGNITION (Sprint 530)
+# =============================================================================
+# Contra accounts carry balances opposite their parent category's normal
+# balance direction.  A contra-asset (e.g. Accumulated Depreciation) is
+# expected to carry a credit balance; flagging it as "abnormal" is a false
+# positive.  These keyword lists are used by `is_contra_account()` to
+# invert the expected normal balance before the abnormal balance check.
+
+CONTRA_ASSET_KEYWORDS: list[str] = [
+    "accumulated depreciation",
+    "accumulated amortization",
+    "allowance for",
+    "allowance — ",
+    "allowance - ",
+    "reserve — ",
+    "reserve - ",
+    "obsolescence reserve",
+    "valuation allowance",
+    "contra asset",
+    "contra-asset",
+    "less accumulated",
+]
+
+CONTRA_REVENUE_KEYWORDS: list[str] = [
+    "sales discount",
+    "sales return",
+    "discounts and allowance",
+    "returns and allowance",
+    "contra revenue",
+    "contra-revenue",
+    "revenue discount",
+    "trade discount",
+]
+
+CONTRA_EQUITY_KEYWORDS: list[str] = [
+    "treasury stock",
+    "dividends declared",
+    "accumulated other comprehensive loss",
+    "accumulated other comprehensive income",
+    "contra equity",
+    "contra-equity",
+    "stock subscription receivable",
+    "drawing",
+]
+
+
+def is_contra_account(account_name: str, account_type: AccountCategory) -> bool:
+    """Return True if the account is a contra account for its parent category.
+
+    Contra accounts carry the opposite of their parent category's normal
+    balance.  Recognised patterns:
+    - Contra-asset  (credit balance expected): accumulated depreciation, allowances, reserves
+    - Contra-revenue (debit balance expected): sales discounts, returns
+    - Contra-equity  (debit balance expected): treasury stock, dividends declared, AOCI
+    """
+    lower = account_name.lower()
+
+    if account_type == AccountCategory.ASSET:
+        return any(kw in lower for kw in CONTRA_ASSET_KEYWORDS)
+    if account_type == AccountCategory.REVENUE:
+        return any(kw in lower for kw in CONTRA_REVENUE_KEYWORDS)
+    if account_type == AccountCategory.EQUITY:
+        return any(kw in lower for kw in CONTRA_EQUITY_KEYWORDS)
+    return False

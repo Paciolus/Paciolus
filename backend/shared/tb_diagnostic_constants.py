@@ -354,14 +354,45 @@ def compute_tb_risk_score(
     factors: list[tuple[str, int]] = []
     score = 0
 
-    # Material findings: named lines when data available, aggregate fallback
+    # Sprint 530 Fix 9: Top-N named factors + summary remainder.
+    # Show the 8 highest-amount material findings individually and collapse the
+    # rest into a single summary line.  This keeps the decomposition to ~one page.
+    _MAX_NAMED_MATERIAL = 8
+
     material_pts = material_count * 8
     if material_pts > 0:
         material_items = [ab for ab in (abnormal_balances or []) if ab.get("materiality") == "material"]
         if material_items:
-            for ab in material_items:
+            # Sort by amount descending so the most significant appear first
+            ranked = sorted(material_items, key=lambda ab: abs(ab.get("amount", 0)), reverse=True)
+            top_items = ranked[:_MAX_NAMED_MATERIAL]
+            remainder = ranked[_MAX_NAMED_MATERIAL:]
+
+            for ab in top_items:
                 label = _describe_material_factor(ab)
                 factors.append((label, 8))
+
+            if remainder:
+                # Summarise the remaining material findings in one line
+                remainder_pts = len(remainder) * 8
+                # Describe the mix of anomaly types in the remainder
+                remainder_types: set[str] = set()
+                for ab in remainder:
+                    at = ab.get("anomaly_type", "")
+                    if at == "rounding_anomaly":
+                        remainder_types.add("round-number patterns")
+                    elif at in ("abnormal_balance", "natural_balance_violation"):
+                        remainder_types.add("abnormal balances")
+                    elif at == "concentration_risk" or at.endswith("_concentration"):
+                        remainder_types.add("concentration risks")
+                    elif at == "related_party":
+                        remainder_types.add("related party balances")
+                    elif at == "intercompany_imbalance":
+                        remainder_types.add("intercompany gaps")
+                    else:
+                        remainder_types.add("minor findings")
+                type_desc = ", ".join(sorted(remainder_types)) if remainder_types else "additional findings"
+                factors.append((f"{len(remainder)} additional findings ({type_desc})", remainder_pts))
         else:
             factors.append((f"Material exceptions ({material_count} findings)", material_pts))
     score += material_pts
