@@ -9,10 +9,10 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
 import { useMappings } from '@/contexts/MappingContext'
-import type { ColumnMapping, ColumnDetectionInfo } from '@/components/mapping'
+import type { ColumnMapping } from '@/components/mapping'
 import type { DisplayMode } from '@/components/sensitivity'
 import { useSettings } from '@/hooks/useSettings'
-import type { AuditResult } from '@/types/diagnostic'
+import type { AuditResult, AuditResultResponse } from '@/types/diagnostic'
 import type { UploadStatus } from '@/types/shared'
 import { uploadFetch } from '@/utils/uploadTransport'
 import { apiPost } from '@/utils'
@@ -198,7 +198,7 @@ export function useTrialBalanceUpload(): UseTrialBalanceUploadReturn {
         return
       }
 
-      const data = result.data as AuditResult & { status?: string; column_detection?: ColumnDetectionInfo & { requires_mapping?: boolean } }
+      const data = result.data as AuditResultResponse
 
       if (data.status === 'success') {
         if (data.column_detection?.requires_mapping && !columnMapping) {

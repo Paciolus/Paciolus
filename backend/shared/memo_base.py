@@ -29,6 +29,39 @@ from pdf_generator import (
     create_leader_dots,
     format_classical_date,
 )
+from shared.report_styles import ledger_table_style
+
+# =============================================================================
+# Standard table style (Sprint 527 — consolidated from 3 diagnostic memos)
+# =============================================================================
+
+
+def standard_table_style(
+    *,
+    right_align_from: int = 1,
+    courier_cols: list[int] | None = None,
+) -> TableStyle:
+    """Build a standard TableStyle for report tables.
+
+    Consolidates the identical ``_standard_table_style()`` helpers that existed
+    in ``accrual_completeness_memo``, ``expense_category_memo``, and
+    ``population_profile_memo``.
+
+    Args:
+        right_align_from: Column index from which all columns are right-aligned.
+            Use 99 (or any value beyond the table width) to disable right-alignment.
+        courier_cols: Column indices rendered in Courier (monospace) for financial data.
+    """
+    commands: list = list(ledger_table_style())
+    # Right-align columns from specified index onward
+    if right_align_from < 99:
+        commands.append(("ALIGN", (right_align_from, 0), (-1, -1), "RIGHT"))
+    # Courier for financial columns
+    for col in courier_cols or []:
+        commands.append(("FONTNAME", (col, 1), (col, -1), "Courier"))
+        commands.append(("ALIGN", (col, 0), (col, -1), "RIGHT"))
+    return TableStyle(commands)
+
 
 # =============================================================================
 # Risk tier display mapping (identical across all 3 memo generators)

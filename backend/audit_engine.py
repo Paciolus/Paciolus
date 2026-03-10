@@ -18,7 +18,15 @@ from classification_rules import (
     # Sprint 42: Concentration Risk
     CONCENTRATION_THRESHOLD_HIGH,
     CONCENTRATION_THRESHOLD_MEDIUM,
+    # Sprint 527: Consolidated detection keywords
+    EQUITY_DIVIDEND_KEYWORDS,
+    EQUITY_RETAINED_EARNINGS_KEYWORDS,
+    EQUITY_TREASURY_KEYWORDS,
+    EXPENSE_CONCENTRATION_THRESHOLD,
+    INTERCOMPANY_KEYWORDS,
     NORMAL_BALANCE_MAP,
+    RELATED_PARTY_KEYWORDS,
+    REVENUE_CONCENTRATION_THRESHOLD,
     ROUNDING_EXCLUDE_KEYWORDS,
     ROUNDING_MAX_ANOMALIES,
     # Sprint 42: Rounding Anomaly
@@ -1018,32 +1026,7 @@ class StreamingAuditor:
             return net_balance < 0
         return net_balance > 0
 
-    # ─── Sprint 526 Fix 4d: Related Party Keywords ────────────────────
-
-    _RELATED_PARTY_KEYWORDS: list[tuple[str, float]] = [
-        ("related party", 0.95),
-        ("intercompany", 0.90),
-        ("affiliate", 0.85),
-        ("officer", 0.85),
-        ("director", 0.80),
-        ("shareholder", 0.80),
-        ("employee loan", 0.90),
-        ("due to related", 0.95),
-        ("due from related", 0.95),
-        ("ic receivable", 0.85),
-        ("ic payable", 0.85),
-    ]
-
-    # ─── Sprint 526 Fix 4e: Intercompany Keywords ────────────────────
-
-    _INTERCOMPANY_KEYWORDS: list[str] = [
-        "intercompany",
-        "ic receivable",
-        "ic payable",
-        "due to",
-        "due from",
-        "affiliate",
-    ]
+    # ─── Sprint 527: Keywords imported from classification_rules.py ──
 
     # ─── Sprint 526 Fix 3: Rounding Tier Configuration ───────────────
 
@@ -1102,7 +1085,7 @@ class StreamingAuditor:
             search_text = display.lower()
             matched = []
             weight = 0.0
-            for keyword, kw_weight in self._RELATED_PARTY_KEYWORDS:
+            for keyword, kw_weight, is_phrase in RELATED_PARTY_KEYWORDS:
                 if keyword in search_text:
                     matched.append(keyword)
                     weight = max(weight, kw_weight)
@@ -1146,7 +1129,7 @@ class StreamingAuditor:
 
             display = self._display_name(account_key)
             search_text = display.lower()
-            if any(kw in search_text for kw in self._INTERCOMPANY_KEYWORDS):
+            if any(kw in search_text for kw, _w, _p in INTERCOMPANY_KEYWORDS):
                 ic_accounts.append((account_key, display, net_balance, balances))
 
         if not ic_accounts:
@@ -1242,11 +1225,11 @@ class StreamingAuditor:
         for key, (display, net, bals) in equity_accounts.items():
             lower = display.lower()
             total_equity += Decimal(str(net))
-            if "retained earnings" in lower or "accumulated deficit" in lower:
+            if any(kw in lower for kw, _w, _p in EQUITY_RETAINED_EARNINGS_KEYWORDS):
                 retained_earnings_deficit = (key, display, net, bals)
-            if "dividend" in lower:
+            if any(kw in lower for kw, _w, _p in EQUITY_DIVIDEND_KEYWORDS):
                 dividends_declared = (key, display, net, bals)
-            if "treasury" in lower:
+            if any(kw in lower for kw, _w, _p in EQUITY_TREASURY_KEYWORDS):
                 treasury_stock = (key, display, net, bals)
 
         # Signal: Deficit + Dividends Declared
@@ -1289,7 +1272,7 @@ class StreamingAuditor:
         return findings
 
     def detect_revenue_concentration(self) -> list[dict[str, Any]]:
-        """Sprint 526 Fix 4g: Revenue concentration analysis (>30% threshold)."""
+        """Sprint 526 Fix 4g: Revenue concentration analysis (threshold from classification_rules)."""
         findings: list[dict[str, Any]] = []
         revenue_accounts: list[tuple[str, str, float, dict]] = []
         total_revenue = Decimal("0")
@@ -1308,7 +1291,7 @@ class StreamingAuditor:
 
         for key, display, abs_bal, bals in revenue_accounts:
             pct = float(Decimal(str(abs_bal)) / total_revenue)
-            if pct >= 0.30:
+            if pct >= REVENUE_CONCENTRATION_THRESHOLD:
                 is_material = abs_bal >= self.materiality_threshold
                 findings.append(
                     {
@@ -1326,7 +1309,7 @@ class StreamingAuditor:
                         "anomaly_type": "concentration_risk",
                         "concentration_percent": round(pct * 100, 1),
                         "category_total": round(float(total_revenue), 2),
-                        "severity": "high" if is_material and pct >= 0.30 else "medium",
+                        "severity": "high" if is_material and pct >= REVENUE_CONCENTRATION_THRESHOLD else "medium",
                         "suggestions": [],
                     }
                 )
@@ -1334,7 +1317,7 @@ class StreamingAuditor:
         return findings
 
     def detect_expense_concentration(self) -> list[dict[str, Any]]:
-        """Sprint 526 Fix 4h: Expense concentration analysis (>40% threshold)."""
+        """Sprint 526 Fix 4h: Expense concentration analysis (threshold from classification_rules)."""
         findings: list[dict[str, Any]] = []
         expense_accounts: list[tuple[str, str, float, dict]] = []
         total_expense = Decimal("0")
@@ -1353,7 +1336,7 @@ class StreamingAuditor:
 
         for key, display, abs_bal, bals in expense_accounts:
             pct = float(Decimal(str(abs_bal)) / total_expense)
-            if pct >= 0.40:
+            if pct >= EXPENSE_CONCENTRATION_THRESHOLD:
                 is_material = abs_bal >= self.materiality_threshold
                 findings.append(
                     {

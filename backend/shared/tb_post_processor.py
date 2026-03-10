@@ -23,6 +23,7 @@ def apply_lead_sheet_grouping(result: dict[str, Any], materiality_threshold: flo
     - result["population_profile"]["section_density"] = density per section
     """
     if "abnormal_balances" not in result:
+        logger.warning("Skipping lead sheet grouping: missing 'abnormal_balances' key")
         return
 
     from lead_sheet_mapping import group_by_lead_sheet, lead_sheet_grouping_to_dict
@@ -63,6 +64,10 @@ def apply_currency_conversion(
 
     Mutates `result` in place, adding result["currency_conversion"].
     """
+    if "accounts" not in result:
+        logger.warning("Skipping currency conversion: missing 'accounts' key")
+        return
+
     from currency_engine import convert_trial_balance
     from routes.currency import get_user_rate_table
 

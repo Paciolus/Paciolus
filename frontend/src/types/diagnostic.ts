@@ -161,3 +161,15 @@ export interface AuditResult {
   expense_category_analytics?: ExpenseCategoryReport
   accrual_completeness?: AccrualCompletenessReport
 }
+
+/**
+ * Extended AuditResult as returned by the upload API response.
+ * Sprint 527 F-004: Named type replacing inline cast in useTrialBalanceUpload.
+ *
+ * The API response includes `status` at the top level and may include
+ * `requires_mapping` within `column_detection`.
+ */
+export interface AuditResultResponse extends AuditResult {
+  status: string
+  column_detection?: ColumnDetectionInfo & { requires_mapping?: boolean }
+}

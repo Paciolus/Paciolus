@@ -356,6 +356,11 @@ CONCENTRATION_THRESHOLD_MEDIUM = 0.25  # 25% - medium severity
 # Avoids false positives on small categories
 CONCENTRATION_MIN_CATEGORY_TOTAL = 1000.0
 
+# Revenue/Expense-specific concentration thresholds
+# Used in detect_revenue_concentration() and detect_expense_concentration()
+REVENUE_CONCENTRATION_THRESHOLD = 0.30  # 30% - single account > 30% of total revenue
+EXPENSE_CONCENTRATION_THRESHOLD = 0.40  # 40% - single account > 40% of total expenses
+
 # Categories to analyze for concentration risk
 # (Revenue and Receivables are most common concerns)
 CONCENTRATION_CATEGORIES = [
@@ -408,4 +413,62 @@ ROUNDING_EXCLUDE_KEYWORDS: list[str] = [
     "paid-in capital",
     "credit line",
     "line of credit",
+]
+
+
+# =============================================================================
+# RELATED PARTY DETECTION (Sprint 526 / Sprint 527 consolidation)
+# =============================================================================
+# Keywords indicating related party activity requiring ASC 850 disclosure.
+# Tuple format: (keyword, weight, is_phrase)
+
+RELATED_PARTY_KEYWORDS: list[tuple[str, float, bool]] = [
+    ("related party", 0.95, True),
+    ("intercompany", 0.90, False),
+    ("affiliate", 0.85, False),
+    ("officer", 0.85, False),
+    ("director", 0.80, False),
+    ("shareholder", 0.80, False),
+    ("employee loan", 0.90, True),
+    ("due to related", 0.95, True),
+    ("due from related", 0.95, True),
+    ("ic receivable", 0.85, True),
+    ("ic payable", 0.85, True),
+]
+
+
+# =============================================================================
+# INTERCOMPANY DETECTION (Sprint 526 / Sprint 527 consolidation)
+# =============================================================================
+# Keywords indicating intercompany accounts for elimination gap analysis.
+# Tuple format: (keyword, weight, is_phrase)
+
+INTERCOMPANY_KEYWORDS: list[tuple[str, float, bool]] = [
+    ("intercompany", 0.90, False),
+    ("ic receivable", 0.85, True),
+    ("ic payable", 0.85, True),
+    ("due to", 0.80, True),
+    ("due from", 0.80, True),
+    ("affiliate", 0.85, False),
+]
+
+
+# =============================================================================
+# EQUITY SIGNAL DETECTION (Sprint 526 / Sprint 527 consolidation)
+# =============================================================================
+# Keywords for identifying equity components relevant to going concern
+# and solvency analysis (ASC 205-40).
+# Tuple format: (keyword, weight, is_phrase)
+
+EQUITY_RETAINED_EARNINGS_KEYWORDS: list[tuple[str, float, bool]] = [
+    ("retained earnings", 0.95, True),
+    ("accumulated deficit", 0.95, True),
+]
+
+EQUITY_DIVIDEND_KEYWORDS: list[tuple[str, float, bool]] = [
+    ("dividend", 0.90, False),
+]
+
+EQUITY_TREASURY_KEYWORDS: list[tuple[str, float, bool]] = [
+    ("treasury", 0.85, False),
 ]

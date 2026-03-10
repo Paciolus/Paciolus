@@ -7,6 +7,11 @@ Trial Balance Diagnostic Intelligence Summary report.
 Changes 1 & 4: Suggested procedures per finding, concentration benchmark language.
 """
 
+from classification_rules import (
+    EXPENSE_CONCENTRATION_THRESHOLD,
+    REVENUE_CONCENTRATION_THRESHOLD,
+)
+
 # ─────────────────────────────────────────────────────────────────────
 # Change 1: Suggested Follow-Up Procedures (keyed by anomaly_type)
 # ─────────────────────────────────────────────────────────────────────
@@ -250,12 +255,12 @@ def get_tb_suggested_procedure(anomaly: dict, *, is_material: bool = False) -> s
 
 CONCENTRATION_BENCHMARKS: dict[str, str] = {
     "revenue": (
-        "Single-account revenue concentration exceeding 30% is generally "
+        f"Single-account revenue concentration exceeding {REVENUE_CONCENTRATION_THRESHOLD:.0%} is generally "
         "considered elevated under analytical procedures guidance and may "
         "require disclosure assessment."
     ),
     "expense": (
-        "Single-account expense concentration exceeding 40% of total expenses "
+        f"Single-account expense concentration exceeding {EXPENSE_CONCENTRATION_THRESHOLD:.0%} of total expenses "
         "warrants inquiry into the nature and terms of the underlying "
         "transactions."
     ),

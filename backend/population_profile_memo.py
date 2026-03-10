@@ -23,7 +23,7 @@ from pdf_generator import (
     generate_reference_number,
 )
 from shared.framework_resolution import ResolvedFramework
-from shared.memo_base import build_disclaimer, build_intelligence_stamp, build_workpaper_signoff, create_memo_styles
+from shared.memo_base import build_disclaimer, build_intelligence_stamp, build_workpaper_signoff, create_memo_styles, standard_table_style
 from shared.report_chrome import (
     ReportMetadata,
     build_cover_page,
@@ -36,29 +36,8 @@ from shared.scope_methodology import (
     build_scope_statement,
 )
 
-# ═══════════════════════════════════════════════════════════════
-# Shared table style helpers
-# ═══════════════════════════════════════════════════════════════
-
-
-def _standard_table_style(*, right_align_from: int = 1, courier_cols: list[int] | None = None):
-    """Build a standard TableStyle for report tables."""
-    commands: list = [
-        ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-        ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
-        ("FONTSIZE", (0, 0), (-1, -1), 9),
-        ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-        ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-        ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-        ("ALIGN", (right_align_from, 0), (-1, -1), "RIGHT"),
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("TOPPADDING", (0, 0), (-1, -1), 3),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-        ("LEFTPADDING", (0, 0), (0, -1), 0),
-    ]
-    for col in courier_cols or []:
-        commands.append(("FONTNAME", (col, 1), (col, -1), "Courier"))
-    return TableStyle(commands)
+# _standard_table_style consolidated into shared.memo_base.standard_table_style (Sprint 527)
+_standard_table_style = standard_table_style
 
 
 def generate_population_profile_memo(
