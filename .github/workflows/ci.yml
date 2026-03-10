@@ -1,11 +1,11 @@
-# Paciolus CI Pipeline — Sprint 210 (updated Sprint 496)
+# Paciolus CI Pipeline — Sprint 210 (updated Sprint 518)
 # Runs on every push to main and every PR targeting main.
 #
 # Branch protection recommendation:
 #   Settings > Branches > Add rule for "main":
 #   - Require status checks: backend-tests, frontend-build, frontend-tests,
 #     backend-lint, lint-baseline-gate, pip-audit-blocking, npm-audit-blocking,
-#     bandit, secrets-scan, mypy-check
+#     bandit, secrets-scan, mypy-check, openapi-drift-check
 #   - Require branches to be up to date before merging
 #   (CEO decides whether to enforce — this CI just reports.)
 
@@ -94,6 +94,29 @@ jobs:
 
       - name: Run pytest
         run: pytest tests/ -v --tb=short -q --cov=. --cov-report=term-missing
+
+  # ── OpenAPI Schema Drift Check (Sprint 518: DEC F-020) ──────
+  # Detects when backend Pydantic models diverge from the committed
+  # OpenAPI snapshot. If drift is found, developers must run
+  # `python scripts/generate_openapi_snapshot.py` and commit the result.
+  openapi-drift-check:
+    name: OpenAPI Schema Drift Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r backend/requirements.txt
+
+      - name: Check for OpenAPI drift
+        run: python scripts/check_openapi_drift.py
 
   # ── Backend Tests (PostgreSQL) ──────────────────────────────
   backend-tests-postgres:
