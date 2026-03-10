@@ -590,9 +590,11 @@ class StreamingAuditor:
             result = self.classifier.classify(display, net_balance)
 
             # Use CSV-provided category if available, overriding heuristic
-            has_csv_type = account_key in self.provided_account_types
+            csv_raw = self.provided_account_types.get(account_key, "")
+            csv_cat, csv_conf = self._resolve_csv_type(csv_raw)
+            has_csv_type = csv_cat is not None
             effective_category = category
-            confidence = 1.0 if has_csv_type else result.confidence
+            confidence = csv_conf if has_csv_type else result.confidence
 
             # Track classification confidence stats
             if effective_category == AccountCategory.UNKNOWN:
@@ -988,23 +990,106 @@ class StreamingAuditor:
     # ─── Sprint 526: Helpers for classification pipeline ────────────────
 
     _CSV_TYPE_MAP: dict[str, AccountCategory] = {
+        # Asset variants
         "asset": AccountCategory.ASSET,
         "assets": AccountCategory.ASSET,
+        "current asset": AccountCategory.ASSET,
+        "current assets": AccountCategory.ASSET,
+        "non-current asset": AccountCategory.ASSET,
+        "non-current assets": AccountCategory.ASSET,
+        "noncurrent asset": AccountCategory.ASSET,
+        "noncurrent assets": AccountCategory.ASSET,
+        "long-term asset": AccountCategory.ASSET,
+        "long-term assets": AccountCategory.ASSET,
+        "fixed asset": AccountCategory.ASSET,
+        "fixed assets": AccountCategory.ASSET,
+        "other asset": AccountCategory.ASSET,
+        "other assets": AccountCategory.ASSET,
+        # Liability variants
         "liability": AccountCategory.LIABILITY,
         "liabilities": AccountCategory.LIABILITY,
+        "current liability": AccountCategory.LIABILITY,
+        "current liabilities": AccountCategory.LIABILITY,
+        "non-current liability": AccountCategory.LIABILITY,
+        "non-current liabilities": AccountCategory.LIABILITY,
+        "noncurrent liability": AccountCategory.LIABILITY,
+        "noncurrent liabilities": AccountCategory.LIABILITY,
+        "long-term liability": AccountCategory.LIABILITY,
+        "long-term liabilities": AccountCategory.LIABILITY,
+        "other liability": AccountCategory.LIABILITY,
+        "other liabilities": AccountCategory.LIABILITY,
+        # Equity variants
         "equity": AccountCategory.EQUITY,
+        "stockholders equity": AccountCategory.EQUITY,
+        "shareholders equity": AccountCategory.EQUITY,
+        "owners equity": AccountCategory.EQUITY,
+        "net assets": AccountCategory.EQUITY,
+        # Revenue variants
         "revenue": AccountCategory.REVENUE,
         "revenues": AccountCategory.REVENUE,
         "income": AccountCategory.REVENUE,
+        "sales": AccountCategory.REVENUE,
+        "non-operating revenue": AccountCategory.REVENUE,
+        "non-operating income": AccountCategory.REVENUE,
+        "nonoperating revenue": AccountCategory.REVENUE,
+        "other income": AccountCategory.REVENUE,
+        "other revenue": AccountCategory.REVENUE,
+        # Expense variants
         "expense": AccountCategory.EXPENSE,
         "expenses": AccountCategory.EXPENSE,
+        "cost of revenue": AccountCategory.EXPENSE,
+        "cost of goods sold": AccountCategory.EXPENSE,
+        "cogs": AccountCategory.EXPENSE,
+        "operating expense": AccountCategory.EXPENSE,
+        "operating expenses": AccountCategory.EXPENSE,
+        "non-operating expense": AccountCategory.EXPENSE,
+        "non-operating": AccountCategory.EXPENSE,
+        "nonoperating expense": AccountCategory.EXPENSE,
+        "nonoperating": AccountCategory.EXPENSE,
+        "other expense": AccountCategory.EXPENSE,
+        "other expenses": AccountCategory.EXPENSE,
+        "selling general and administrative": AccountCategory.EXPENSE,
+        "sg&a": AccountCategory.EXPENSE,
     }
+
+    # Suffix fallback for compound values not in the explicit map
+    _CSV_TYPE_SUFFIXES: list[tuple[str, AccountCategory]] = [
+        ("asset", AccountCategory.ASSET),
+        ("assets", AccountCategory.ASSET),
+        ("liability", AccountCategory.LIABILITY),
+        ("liabilities", AccountCategory.LIABILITY),
+        ("equity", AccountCategory.EQUITY),
+        ("revenue", AccountCategory.REVENUE),
+        ("revenues", AccountCategory.REVENUE),
+        ("income", AccountCategory.REVENUE),
+        ("expense", AccountCategory.EXPENSE),
+        ("expenses", AccountCategory.EXPENSE),
+    ]
+
+    def _resolve_csv_type(self, raw_value: str) -> tuple[AccountCategory | None, float]:
+        """Resolve a raw CSV account type value to a category and confidence.
+
+        Returns (category, confidence) or (None, 0.0) if no match.
+        Direct map hit = 1.0 confidence; suffix match = 0.90.
+        """
+        normalized = raw_value.lower().strip()
+        if not normalized:
+            return None, 0.0
+        # Direct lookup
+        if normalized in self._CSV_TYPE_MAP:
+            return self._CSV_TYPE_MAP[normalized], 1.0
+        # Suffix fallback — catches qualified variants not explicitly listed
+        for suffix, category in self._CSV_TYPE_SUFFIXES:
+            if normalized.endswith(suffix):
+                return category, 0.90
+        return None, 0.0
 
     def _resolve_category(self, account_key: str, net_balance: float = 0.0) -> AccountCategory:
         """Resolve the account category — CSV-provided type takes priority over heuristic."""
-        csv_type = self.provided_account_types.get(account_key, "").lower().strip()
-        if csv_type and csv_type in self._CSV_TYPE_MAP:
-            return self._CSV_TYPE_MAP[csv_type]
+        csv_raw = self.provided_account_types.get(account_key, "")
+        csv_category, _ = self._resolve_csv_type(csv_raw)
+        if csv_category is not None:
+            return csv_category
         # Fallback: use the heuristic classifier with account name context
         classify_name = self._display_name(account_key)
         result = self.classifier.classify(classify_name, net_balance)

@@ -322,3 +322,21 @@ Scope: auth flows, CSRF/CSP, rate limiting, API authorization, file upload, JWT,
 - [x] `uploadTransport` tests pass (10 tests)
 
 **Review:** All 6 P2 findings fixed. F-001 moved 21 keyword entries from 3 hardcoded locations to canonical `classification_rules.py` in standard 3-tuple format. F-002 unified 2 threshold sources. F-003 eliminated ~70 lines of duplication from 3 diagnostic memos. F-004 replaced an unsafe inline type cast with a named `AuditResultResponse` type. F-005 added 10 unit tests for the shared upload transport layer. F-006 added defensive guards preventing `KeyError` in post-processors.
+
+---
+
+### Sprint 528 — Expand CSV Account Type Synonym Map
+
+**Status:** COMPLETE
+**Goal:** Expand `_CSV_TYPE_MAP` to recognize compound/qualified account type values (e.g., "Current Asset", "Cost of Goods Sold", "Non-Operating Expense") and add suffix fallback for unlisted variants.
+
+- [x] Expand `_CSV_TYPE_MAP` from 10 entries to 56 entries (compound values for all 5 categories)
+- [x] Add `_CSV_TYPE_SUFFIXES` list for suffix-based fallback matching
+- [x] Add `_resolve_csv_type()` helper returning `(category, confidence)` — direct=1.0, suffix=0.90
+- [x] Update `_resolve_category()` to use `_resolve_csv_type()`
+- [x] Update `get_abnormal_balances()` confidence logic to use `_resolve_csv_type()` instead of bare `has_csv_type` check
+- [x] Tests pass — 44 anomaly tests + 77 CSV type resolution tests (121 total)
+- [x] Created `tests/test_csv_type_resolution.py` — 77 tests (48 direct, 13 suffix, 7 miss, 6 e2e category, 2 e2e confidence, 1 whitespace)
+- [x] `npm run build` passes
+
+**Review:** Expanded `_CSV_TYPE_MAP` from 10 bare-word entries to 56 compound-aware entries covering all 5 categories. Added `_CSV_TYPE_SUFFIXES` for suffix-based fallback at 0.90 confidence. Extracted `_resolve_csv_type()` helper to centralize CSV-to-category resolution with tiered confidence. Fixed a latent bug in `get_abnormal_balances()` where `has_csv_type` was True (key existed in `provided_account_types`) but the value didn't match the map — causing confidence=1.0 to be assigned even though the heuristic was used.
