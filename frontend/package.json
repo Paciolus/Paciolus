@@ -16,7 +16,8 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "generate:types": "bash scripts/generate-types.sh",
-    "prepare": "cd .. && husky frontend/.husky"
+    "prepare": "cd .. && husky frontend/.husky",
+    "sprint:verify": "sh ../scripts/sprint_verify.sh"
   },
   "lint-staged": {
     "../backend/**/*.py": [
