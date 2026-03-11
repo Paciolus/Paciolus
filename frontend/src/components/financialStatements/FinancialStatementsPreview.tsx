@@ -22,7 +22,7 @@ const spinnerVariants = {
     rotate: 360,
     transition: { duration: 1, repeat: Infinity, ease: 'linear' as const },
   },
-}
+} as const
 
 export function FinancialStatementsPreview({
   leadSheetGrouping,

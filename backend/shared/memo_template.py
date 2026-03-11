@@ -54,6 +54,7 @@ from shared.scope_methodology import (
 
 @dataclass
 class TestingMemoConfig:
+    __test__ = False  # Suppress PytestCollectionWarning (domain term, not a test class)
     """Configuration for a standard testing memo.
 
     Each testing tool defines one of these with its domain-specific text.

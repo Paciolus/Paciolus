@@ -539,7 +539,7 @@ const containerVariants = {
     opacity: 1,
     transition: { staggerChildren: 0.1 },
   },
-}
+} as const
 
 const cardVariants = {
   hidden: { opacity: 0, y: 30 },
@@ -548,7 +548,7 @@ const cardVariants = {
     y: 0,
     transition: { type: 'spring' as const, stiffness: 180, damping: 22 },
   },
-}
+} as const
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -557,7 +557,7 @@ const fadeUp = {
     y: 0,
     transition: { duration: 0.5, ease: 'easeOut' as const },
   },
-}
+} as const
 
 /* ────────────────────────────────────────────────
    Cell renderer for comparison table

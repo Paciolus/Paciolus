@@ -60,7 +60,7 @@ const dropdownVariants = {
     transition: { type: 'spring' as const, stiffness: 400, damping: 25 },
   },
   exit: { opacity: 0, y: -8, scale: 0.95, transition: { duration: 0.15 } },
-}
+} as const
 
 export function ProfileDropdown({ user, onLogout }: ProfileDropdownProps) {
   const [isOpen, setIsOpen] = useState(false)

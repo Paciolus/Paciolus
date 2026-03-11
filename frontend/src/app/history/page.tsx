@@ -49,7 +49,7 @@ export default function HistoryPage() {
         ease: 'easeOut' as const,
       },
     },
-  }
+  } as const
 
   return (
     <motion.main

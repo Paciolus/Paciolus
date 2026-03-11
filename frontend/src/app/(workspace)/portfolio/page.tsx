@@ -67,7 +67,7 @@ export default function PortfolioPage() {
     rest: { y: 0 },
     hover: { y: -2 },
     tap: { y: 0, scale: 0.98 },
-  };
+  } as const;
 
   return (
     <div className="pb-16 px-6">

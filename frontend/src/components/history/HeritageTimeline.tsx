@@ -38,7 +38,7 @@ export function HeritageTimeline({ activities, onReRun }: HeritageTimelineProps)
         delayChildren: 0.2,
       },
     },
-  }
+  } as const
 
 
   // Empty State Component

@@ -86,7 +86,7 @@ export function DownloadReportButton({
     idle: { scale: 1 },
     hover: { scale: 1.02 },
     tap: { scale: 0.98 },
-  }
+  } as const
 
   const spinnerVariants = {
     animate: {
@@ -97,13 +97,13 @@ export function DownloadReportButton({
         ease: 'linear' as const,
       },
     },
-  }
+  } as const
 
   const textVariants = {
     initial: { opacity: 0, y: 10 },
     animate: { opacity: 1, y: 0 },
     exit: { opacity: 0, y: -10 },
-  }
+  } as const
 
   return (
     <div className="flex flex-col items-center gap-2">

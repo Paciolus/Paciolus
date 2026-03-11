@@ -109,7 +109,7 @@ export function ClientCard({ client, index, lastAuditDate, onEdit, onDelete }: C
     rest: { y: 0 },
     hover: { y: -2 },
     tap: { y: 0, scale: 0.98 },
-  };
+  } as const;
 
   return (
     <motion.div

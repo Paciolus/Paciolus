@@ -216,7 +216,7 @@ const slideVariants = {
     opacity: 0,
     scale: 0.95,
   }),
-}
+} as const
 
 const slideTransition = {
   x: { type: 'spring' as const, stiffness: 300, damping: 30 },

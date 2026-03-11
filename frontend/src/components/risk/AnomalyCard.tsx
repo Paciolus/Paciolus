@@ -80,7 +80,7 @@ export const AnomalyCard = memo(function AnomalyCard({
         delay: index * 0.05,
       },
     },
-  }
+  } as const
 
   return (
     <motion.div

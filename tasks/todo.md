@@ -202,3 +202,53 @@ Scope: auth flows, CSRF/CSP, rate limiting, API authorization, file upload, JWT,
 
 ---
 
+### Sprint 532 — Framer-Motion Type Safety Sweep + CI Threshold Hardening
+
+**Status:** COMPLETE
+**Goal:** Fix all 6 actionable findings from DEC 2026-03-11 evening session.
+**Complexity Score:** 2/10
+
+#### F-001: Add `as const` to 31 framer-motion variant objects across 17 files
+- [x] ProfileDropdown.tsx — `dropdownVariants`
+- [x] DownloadReportButton.tsx — `buttonVariants`, `spinnerVariants`, `textVariants`
+- [x] FinancialStatementsPreview.tsx — `spinnerVariants`
+- [x] FeaturePillars.tsx — `cardHoverVariants`
+- [x] ProcessTimeline.tsx — `iconVariants`, `numberVariants`
+- [x] ToolSlideshow.tsx — `slideVariants`
+- [x] ClientCard.tsx — `buttonVariants`
+- [x] AnomalyCard.tsx — `cardVariants`
+- [x] RiskDashboard.tsx — `containerVariants`
+- [x] SensitivityToolbar.tsx — `containerVariants`, `editModeVariants`, `displayModeVariants`
+- [x] PdfExtractionPreview.tsx — `overlayVariants`, `modalVariants`
+- [x] WorkbookInspector.tsx — `overlayVariants`, `modalVariants`, `listItemVariants`
+- [x] pricing/page.tsx — `containerVariants`, `cardVariants`, `fadeUp`
+- [x] trust/page.tsx — `containerVariants`, `fadeUp`, `scaleIn`, `lineGrow`, `vertLineGrow`
+- [x] portfolio/page.tsx — `buttonVariants`
+- [x] history/page.tsx — `pageVariants`
+- [x] HeritageTimeline.tsx — `containerVariants`
+- [x] UnifiedToolbar.tsx — already compliant (verified)
+
+#### F-002: Update test counts in CLAUDE.md + MEMORY.md
+- [x] CLAUDE.md: 6,188 → 6,507 backend, 1,345 → 1,339 frontend
+- [x] MEMORY.md: 6,223 → 6,507 backend, 1,345 → 1,339 frontend
+
+#### F-003: Sync ceo-actions.md
+- [x] Update sync date from 2026-02-27 to 2026-03-11
+
+#### F-004: Raise CI coverage thresholds
+- [x] pytest: `--cov-fail-under=60` → `--cov-fail-under=80`
+- [x] Jest: `coverageThreshold` 25% → 35%
+
+#### F-006: Fix PytestCollectionWarning
+- [x] Add `__test__ = False` to `TestingMemoConfig` class
+
+#### Verification
+- [x] `npm run build` passes (42 routes, all dynamic)
+- [x] `npm test` — 1,339 passed
+- [x] `pytest` — 6,507 passed (0 failures)
+- [x] PytestCollectionWarning for TestingMemoConfig — suppressed
+
+**Review:** 31 `as const` additions across 17 frontend files, CI coverage gates raised (pytest 60→80%, Jest 25→35%), PytestCollectionWarning suppressed, test counts synchronized, CEO actions sync date updated. Zero regressions.
+
+---
+

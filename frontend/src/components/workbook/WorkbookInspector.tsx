@@ -78,7 +78,7 @@ export function WorkbookInspector({
   const overlayVariants = {
     hidden: { opacity: 0 },
     visible: { opacity: 1 },
-  }
+  } as const
 
   const modalVariants = {
     hidden: { opacity: 0, scale: 0.95, y: 20 },
@@ -89,7 +89,7 @@ export function WorkbookInspector({
       transition: { type: 'spring' as const, damping: 25, stiffness: 300 },
     },
     exit: { opacity: 0, scale: 0.95, y: 20 },
-  }
+  } as const
 
   const listItemVariants = {
     hidden: { opacity: 0, x: -10 },
@@ -98,7 +98,7 @@ export function WorkbookInspector({
       x: 0,
       transition: { delay: i * 0.03 },
     }),
-  }
+  } as const
 
   if (!isOpen) return null
 

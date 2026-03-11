@@ -15,7 +15,7 @@ const overlayVariants = {
   hidden: { opacity: 0 },
   visible: { opacity: 1, transition: { duration: 0.2 } },
   exit: { opacity: 0, transition: { duration: 0.15 } },
-}
+} as const
 
 const modalVariants = {
   hidden: { opacity: 0, scale: 0.95, y: 20 },
@@ -26,7 +26,7 @@ const modalVariants = {
     transition: { type: 'spring' as const, damping: 25, stiffness: 300 },
   },
   exit: { opacity: 0, scale: 0.95, y: 20, transition: { duration: 0.15 } },
-}
+} as const
 
 function getConfidenceColor(value: number): string {
   if (value >= 0.6) return 'bg-sage-500'

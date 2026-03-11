@@ -93,7 +93,7 @@ jobs:
           EOF
 
       - name: Run pytest
-        run: pytest tests/ -v --tb=short -q --cov=. --cov-report=term-missing --cov-fail-under=60
+        run: pytest tests/ -v --tb=short -q --cov=. --cov-report=term-missing --cov-fail-under=80
 
   # ── OpenAPI Schema Drift Check (Sprint 518: DEC F-020) ──────
   # Detects when backend Pydantic models diverge from the committed

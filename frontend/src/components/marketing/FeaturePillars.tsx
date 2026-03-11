@@ -106,7 +106,7 @@ const cardHoverVariants = {
       damping: 20,
     },
   },
-}
+} as const
 
 export function FeaturePillars() {
   return (

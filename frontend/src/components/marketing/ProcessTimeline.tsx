@@ -108,7 +108,7 @@ const iconVariants = {
       delay: 0.2,
     },
   },
-}
+} as const
 
 // Number badge — unique scale+rotate combo (kept inline)
 const numberVariants = {
@@ -118,7 +118,7 @@ const numberVariants = {
     rotate: 0,
     transition: SPRING.snappy,
   },
-}
+} as const
 
 export function ProcessTimeline() {
   const containerRef = useRef<HTMLDivElement>(null)

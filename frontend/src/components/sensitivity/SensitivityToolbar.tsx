@@ -156,7 +156,7 @@ export function SensitivityToolbar({
       y: 0,
       transition: { duration: 0.3, ease: 'easeOut' as const }
     },
-  };
+  } as const;
 
   const editModeVariants = {
     hidden: {
@@ -169,7 +169,7 @@ export function SensitivityToolbar({
       scale: 1,
       transition: { duration: 0.2, ease: 'easeOut' as const }
     },
-  };
+  } as const;
 
   const displayModeVariants = {
     hidden: {
@@ -180,7 +180,7 @@ export function SensitivityToolbar({
       opacity: 1,
       transition: { duration: 0.2, ease: 'easeOut' as const }
     },
-  };
+  } as const;
 
   return (
     <motion.div

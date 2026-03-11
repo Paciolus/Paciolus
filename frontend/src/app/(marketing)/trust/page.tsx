@@ -288,7 +288,7 @@ const containerVariants = {
     opacity: 1,
     transition: { staggerChildren: 0.08, delayChildren: 0.15 },
   },
-}
+} as const
 
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
@@ -297,7 +297,7 @@ const fadeUp = {
     y: 0,
     transition: { duration: 0.5, ease: 'easeOut' as const },
   },
-}
+} as const
 
 const scaleIn = {
   hidden: { opacity: 0, scale: 0.92 },
@@ -306,7 +306,7 @@ const scaleIn = {
     scale: 1,
     transition: { type: 'spring' as const, stiffness: 260, damping: 22 },
   },
-}
+} as const
 
 const lineGrow = {
   hidden: { scaleX: 0, originX: 0 },
@@ -314,7 +314,7 @@ const lineGrow = {
     scaleX: 1,
     transition: { duration: 1.0, ease: 'easeOut' as const, delay: 0.4 },
   },
-}
+} as const
 
 const vertLineGrow = {
   hidden: { scaleY: 0, originY: 0 },
@@ -322,7 +322,7 @@ const vertLineGrow = {
     scaleY: 1,
     transition: { duration: 1.2, ease: 'easeOut' as const, delay: 0.3 },
   },
-}
+} as const
 
 const listItem = {
   hidden: { opacity: 0, x: -8 },

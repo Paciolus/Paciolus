@@ -67,7 +67,7 @@ export function RiskDashboard({
         delayChildren: 0.1,
       },
     },
-  }
+  } as const
 
   if (anomalies.length === 0) {
     return null
