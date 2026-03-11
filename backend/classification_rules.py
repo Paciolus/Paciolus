@@ -40,8 +40,11 @@ PROVISIONS / CONTINGENT LIABILITIES:
 See docs/STANDARDS.md for detailed framework comparison.
 """
 
+import logging
 from dataclasses import dataclass, field
 from enum import Enum
+
+logger = logging.getLogger(__name__)
 
 
 class AccountCategory(str, Enum):
@@ -554,6 +557,7 @@ def is_contra_account(account_name: str, account_type: AccountCategory) -> bool:
     - Contra-revenue (debit balance expected): sales discounts, returns
     - Contra-equity  (debit balance expected): treasury stock, dividends declared, AOCI
     """
+    logger.info("[DEPLOY-VERIFY-530] is_contra_account called: account=%s type=%s", account_name, account_type)
     lower = account_name.lower()
 
     if account_type == AccountCategory.ASSET:
