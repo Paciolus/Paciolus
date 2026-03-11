@@ -1,5 +1,15 @@
 # Paciolus Digital Excellence Council — Rolling Summary
 
+## 2026-03-11
+- **Total Findings**: 15 (P0: 0, P1: 0, P2: 4, P3: 9, Info: 2)
+- **Critical Status**: Zero-Storage: PASS | Auth/CSRF: PASS | Observability: PASS
+- **Top Themes**: Accounting Methodology Gaps (4 findings: contra-liability, AOCI, bare non-operating, management fee), CI Coverage Enforcement (2 findings), Suspense Detection Calibration (2 findings)
+- **Key Risk**: F-001 — No contra-liability branch in `is_contra_account()` produces false positives on debt accounts
+- **Prior Remediation**: 18/21 findings from DEC 2026-03-08 fixed (86%, up from 76%)
+- **Report**: [council-audit-2026-03-11.md](./council-audit-2026-03-11.md)
+
+---
+
 ## 2026-03-08
 - **Total Findings**: 8 (P0: 0, P1: 0, P2: 1, P3: 7)
 - **Critical Status**: Zero-Storage: PASS | Auth/CSRF: PASS | Observability: PASS

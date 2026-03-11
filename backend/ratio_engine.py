@@ -2227,7 +2227,7 @@ def extract_category_totals(
     )
     _COGS_SUBTYPES = (
         "cost of revenue", "cost of goods sold", "cogs",
-        "cost of sales", "direct costs",
+        "cost of sales", "direct costs", "direct cost",
     )
 
     for account_name, balances in account_balances.items():

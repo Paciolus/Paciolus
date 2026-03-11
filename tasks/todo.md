@@ -196,6 +196,43 @@
 **Review:** 10 fixes across 6 backend files. Largest impact is Fix 1 (contra account recognition) which eliminates 9+ false positive findings that would appear in virtually every real-world TB. Fix 5/7 resolves the root cause of N/A ratios and 100% gross margin by wiring CSV subtypes through to `extract_category_totals()`. Fix 6 was a data mapping bug where the lead sheet post-processor derived debit/credit from the absolute-valued `amount` field instead of using the raw columns.
 **Commit:** 6f5c2a2
 
+### Sprint 531 — DEC 2026-03-11 Remediation (15 Findings)
+
+**Status:** COMPLETE
+**Goal:** Fix all 15 findings from Digital Excellence Council audit 2026-03-11.
+
+#### Accounting Methodology (F-001 through F-006)
+- [x] F-001: Added `CONTRA_LIABILITY_KEYWORDS` + LIABILITY branch in `is_contra_account()` — bond discounts, debt issuance costs now recognized
+- [x] F-002: Removed AOCI entries from `CONTRA_EQUITY_KEYWORDS` — AOCI is not consistently contra-equity
+- [x] F-003: Removed bare "non-operating"/"nonoperating" from `_CSV_TYPE_MAP` — prevents misclassifying non-operating income as expense
+- [x] F-004: Added `("management fee", 0.90, True)` to `RELATED_PARTY_KEYWORDS`
+- [x] F-005: Removed "sundry" (weight 0.60 = threshold) from `SUSPENSE_KEYWORDS` — false positives on Commonwealth accounts
+- [x] F-006: Removed "float" (weight 0.55 < threshold 0.60) from `SUSPENSE_KEYWORDS` — dead code
+
+#### CI Coverage Enforcement (F-008, F-009)
+- [x] F-008: Added `--cov-fail-under=60` to pytest CI step
+- [x] F-009: Added `--coverage` flag to Jest CI step
+
+#### Consistency & Patterns (F-007, F-010, F-013)
+- [x] F-007: Added `credentials: 'include'` to `uploadTransport.ts` fetch call
+- [x] F-010: Added `as const` to `mobileItemVariants` and `mobileContainerVariants` in MarketingNav
+- [x] F-013: Added "direct cost" (singular) to `_COGS_SUBTYPES` in ratio_engine
+
+#### Observability (F-012)
+- [x] F-012: Removed hot-path `[DEPLOY-VERIFY-530]` logger.info from `is_contra_account()` — fires on every call
+
+#### Documentation / Info (F-011, F-014, F-015)
+- [x] F-011: framer-motion `as const` pattern — addressed by F-010 fix
+- [x] F-014: Informational — no code change needed
+- [x] F-015: Informational — no code change needed
+
+#### Verification
+- [x] `pytest` — 6,507 passed (0 failures)
+- [x] `npm run build` passes
+- [x] `npm test` — 1,339 passed (0 failures)
+
+**Review:** 13 code fixes across 7 files. Key changes: contra-liability recognition (F-001), AOCI removal from contra-equity (F-002), bare non-operating CSV type removal (F-003), management fee related-party keyword (F-004), suspense keyword cleanup (F-005/F-006), upload transport credentials (F-007), CI coverage gates (F-008/F-009), framer-motion as const (F-010), deploy-verify log removal (F-012), COGS subtype singular form (F-013). Test updates: removed 2 AOCI contra-equity parametrize entries, added 3 contra-liability tests, removed 2 bare non-operating CSV type test entries.
+
 ---
 
 ### Sprint 527 — DEC 2026-03-10 P2 Remediation (6 findings)

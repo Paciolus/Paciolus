@@ -324,8 +324,6 @@ SUSPENSE_KEYWORDS: list[tuple[str, float, bool]] = [
     ("to be allocated", 0.85, True),
     ("wash account", 0.85, True),
     # Lower confidence
-    ("float", 0.55, False),
-    ("sundry", 0.60, False),
 ]
 
 # Minimum confidence to flag as suspense account
@@ -452,6 +450,7 @@ RELATED_PARTY_KEYWORDS: list[tuple[str, float, bool]] = [
     ("employee loan", 0.90, True),
     ("ic receivable", 0.85, True),
     ("ic payable", 0.85, True),
+    ("management fee", 0.90, True),
 ]
 
 # Accounts matching these keywords are excluded from related party detection
@@ -539,12 +538,22 @@ CONTRA_REVENUE_KEYWORDS: list[str] = [
 CONTRA_EQUITY_KEYWORDS: list[str] = [
     "treasury stock",
     "dividends declared",
-    "accumulated other comprehensive loss",
-    "accumulated other comprehensive income",
     "contra equity",
     "contra-equity",
     "stock subscription receivable",
     "drawing",
+]
+
+CONTRA_LIABILITY_KEYWORDS: list[str] = [
+    "discount on bonds payable",
+    "discount on notes payable",
+    "bond discount",
+    "debt issuance cost",
+    "debt issuance costs",
+    "loan origination cost",
+    "loan origination costs",
+    "contra liability",
+    "contra-liability",
 ]
 
 
@@ -553,15 +562,17 @@ def is_contra_account(account_name: str, account_type: AccountCategory) -> bool:
 
     Contra accounts carry the opposite of their parent category's normal
     balance.  Recognised patterns:
-    - Contra-asset  (credit balance expected): accumulated depreciation, allowances, reserves
-    - Contra-revenue (debit balance expected): sales discounts, returns
-    - Contra-equity  (debit balance expected): treasury stock, dividends declared, AOCI
+    - Contra-asset     (credit balance expected): accumulated depreciation, allowances, reserves
+    - Contra-liability (debit balance expected): bond discounts, debt issuance costs
+    - Contra-revenue   (debit balance expected): sales discounts, returns
+    - Contra-equity    (debit balance expected): treasury stock, dividends declared
     """
-    logger.info("[DEPLOY-VERIFY-530] is_contra_account called: account=%s type=%s", account_name, account_type)
     lower = account_name.lower()
 
     if account_type == AccountCategory.ASSET:
         return any(kw in lower for kw in CONTRA_ASSET_KEYWORDS)
+    if account_type == AccountCategory.LIABILITY:
+        return any(kw in lower for kw in CONTRA_LIABILITY_KEYWORDS)
     if account_type == AccountCategory.REVENUE:
         return any(kw in lower for kw in CONTRA_REVENUE_KEYWORDS)
     if account_type == AccountCategory.EQUITY:

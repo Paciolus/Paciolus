@@ -49,6 +49,7 @@ export async function uploadFetch<T = unknown>(
       method: 'POST',
       headers,
       body: formData,
+      credentials: 'include',
     })
 
     if (response.status === 401) {

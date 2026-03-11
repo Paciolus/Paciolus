@@ -76,12 +76,18 @@ class TestIsContraAccount:
     @pytest.mark.parametrize("name", [
         "Treasury Stock",
         "Dividends Declared",
-        "Accumulated Other Comprehensive Loss",
-        "Accumulated Other Comprehensive Income",
         "Drawing — Partner A",
     ])
     def test_contra_equity_detected(self, name: str):
         assert is_contra_account(name, AccountCategory.EQUITY) is True
+
+    @pytest.mark.parametrize("name", [
+        "Discount on Bonds Payable",
+        "Debt Issuance Costs",
+        "Bond Discount — Series A",
+    ])
+    def test_contra_liability_detected(self, name: str):
+        assert is_contra_account(name, AccountCategory.LIABILITY) is True
 
     @pytest.mark.parametrize("name", [
         "Common Stock",

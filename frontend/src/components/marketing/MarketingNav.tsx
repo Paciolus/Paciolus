@@ -39,13 +39,13 @@ const NAV_LINKS: NavLink[] = [
 const mobileItemVariants = {
   hidden: { opacity: 0, x: -12 },
   visible: { opacity: 1, x: 0 },
-}
+} as const
 
 const mobileContainerVariants = {
   hidden: { opacity: 0 },
   visible: { opacity: 1, transition: { staggerChildren: 0.04, delayChildren: 0.05 } },
   exit: { opacity: 0, transition: { duration: 0.15 } },
-}
+} as const
 
 export function MarketingNav() {
   const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth()
