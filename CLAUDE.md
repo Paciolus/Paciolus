@@ -65,7 +65,11 @@ After ALL directive work is complete:
 - [ ] Create atomic commit with descriptive message: `Sprint X: [Brief Description]`
 - [ ] Commit message should reference the sprint number and key changes
 
-**ENFORCEMENT:** A `commit-msg` hook (`frontend/.husky/commit-msg`) rejects any commit matching `Sprint N:` unless `tasks/todo.md` is staged. This is mechanically enforced — not discipline-dependent. Hotfix commits (`fix:` prefix) are exempt.
+**ENFORCEMENT:** A `commit-msg` hook (`frontend/.husky/commit-msg`) enforces two gates on `Sprint N:` commits:
+1. **Todo gate:** Rejects unless `tasks/todo.md` is staged.
+2. **Archival gate:** Rejects if Active Phase has 5+ completed sprints. Run `sh scripts/archive_sprints.sh` to clear.
+
+Both are mechanically enforced — not discipline-dependent. Hotfix commits (`fix:` prefix) are exempt.
 
 **FAILURE TO FOLLOW THIS PROTOCOL WILL RESULT IN AUDIT SCORE PENALTIES.**
 

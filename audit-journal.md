@@ -1198,3 +1198,109 @@ This is the 30th audit. The project recovered from Audit 29's protocol bypass re
 - Archival discipline: regressed again — same pattern as Audits 27-28 (high-velocity execution overriding passive rules)
 - Working tree: `M tasks/todo.md` only — clean
 - The recovery demonstrates that the project's self-correction mechanism works: Audit 29 flagged the gap → Sprint 521 fixed it structurally → Audits 30 confirms the fix. The remaining gap (archival) is organizational, not substantive
+
+---
+## Audit — 2026-03-11 (31st) | Excellent | Overall: 4.7/5.0
+---
+
+### Scores at a Glance
+| Pillar                  | Score |
+|-------------------------|-------|
+| Workflow Orchestration  | 5.0   |
+| Task Management         | 4/5   |
+| Core Principles         | 5/5   |
+| **Overall**             | **4.7** |
+
+### A1. Plan Mode Default — 5/5
+**Finding:** Sprint 531 follows the full Directive Protocol: plan entry in `tasks/todo.md` written before implementation, structured into 4 sections (Accounting Methodology, CI Coverage Enforcement, Consistency & Patterns, Observability), with individual checkboxes for all 15 findings. The sprint was preceded by a comprehensive Digital Excellence Council audit (`reports/council-audit-2026-03-11.md`) that served as the specification — 458 lines of structured findings with repair prompts, severity assignments, and agent coverage. The DEC report itself demonstrates plan-mode thinking: 5 specialist agents consulted in parallel, tensions adjudicated with documented rationale, prior findings independently verified (18/21 = 86%).
+
+Sprint 530 (prior cycle) has an equally detailed plan with 10 fix sections and root cause analysis. The `commit-msg` hook (Sprint 521) continues to mechanically enforce that `tasks/todo.md` is staged for all Sprint commits. Hotfix `c136eba` (push guard hook) correctly uses the lightweight `fix:` track.
+**Recommendation:** Continue current practice.
+
+### A2. Subagent Strategy — 5/5
+**Finding:** 9 agents in `.claude/agents/`, all single-purpose. The DEC prompt (`DIGITAL_EXCELLENCE_COUNCIL_PROMPT.md`) drove Sprint 531's 15-finding audit via 5 parallel specialist subagents (Methodology, Security, Type Safety/Patterns, Accessibility/Theme, Observability). The project-auditor agent produced this audit. No scope creep, no multi-purpose bloat. The DEC subagent strategy (parallel dispatch → tension resolution → unified report) is the most sophisticated subagent orchestration in the project.
+**Recommendation:** Continue current practice.
+
+### A3. Self-Improvement Loop — 5/5
+**Finding:** `tasks/lessons.md` is extensively populated with 30+ lessons across 10 categories. Recent additions include Sprint 526 lessons (Docker asset discovery, greedy column detection priority) and Sprint 502 lessons (sample data test_key divergence, ReportLab XML escaping). The Sprint 479 DEC lesson about `framer-motion as const` enforcement was directly applied in Sprint 531's F-010 fix (adding `as const` to MarketingNav variants). The Sprint 530 lesson about contra account false positives drove the entire DEC 2026-03-11 F-001 finding (contra-liability gap). Lessons are clearly being consumed and acted upon — not just written.
+
+No new lessons needed this cycle: Sprint 531 was a remediation sprint applying established patterns, not discovering new ones.
+**Recommendation:** Continue current practice.
+
+### A4. Verification Before Done — 5/5
+**Finding:** Sprint 531's verification is explicit and thorough:
+- `pytest` — 6,507 passed (0 failures), run twice: once after initial fixes (caught 2 test failures from intentional behavioral changes), once after test updates to confirm green
+- `npm run build` — passes (dynamic routes confirmed)
+- `npm test` (Jest) — 1,339 passed (0 failures)
+- Two test failures were caught and fixed correctly: `test_contra_equity_detected[Accumulated Other Comprehensive Loss]` (removed AOCI from contra-equity per F-002) and `test_direct_map_hit[Non-Operating-expense]` (removed bare non-operating per F-003). Both test updates match the intentional behavioral changes — not masking regressions.
+
+Sprint 530 documented verification with counts: 6,508 passed (6,440 existing + 68 new). The test-alongside-feature pattern is consistent.
+**Recommendation:** Continue current practice.
+
+### A5. Demand Elegance (Balanced) — 5/5
+**Finding:** Zero `TODO`, `FIXME`, or `HACK` comments in all modified files (`classification_rules.py`, `audit_engine.py`, `ratio_engine.py`, `uploadTransport.ts`, `MarketingNav.tsx`). Sprint 531's changes are clean and appropriate in scope:
+
+- F-001 (contra-liability): Follows the established keyword-list + branch pattern exactly (`CONTRA_LIABILITY_KEYWORDS` + `AccountCategory.LIABILITY` case). 9 keywords covering bond discounts, debt issuance costs, loan origination costs. Not over-engineered — matches the granularity of existing ASSET/REVENUE/EQUITY keyword lists.
+- F-002 (AOCI removal): Clean deletion — no compatibility shims, no commented-out code, no "// removed AOCI" markers.
+- F-003 (bare non-operating): Surgical removal of 2 lines from `_CSV_TYPE_MAP`. Qualified entries (`non-operating expense`, `non-operating revenue`) retained. Correct approach — remove the ambiguous entries rather than adding complex disambiguation logic.
+- F-005/F-006 (suspense cleanup): Removed dead code ("float" at 0.55 below 0.60 threshold) and a borderline entry ("sundry" at exactly 0.60). No over-engineering.
+
+No hacky workarounds, no duplicated logic.
+**Recommendation:** Continue current practice.
+
+### A6. Autonomous Bug Fixing — 5/5
+**Finding:** Sprint 531 fixed 13 code issues across 7 files autonomously with zero user intervention:
+- 6 accounting methodology fixes in `classification_rules.py` (contra-liability, AOCI, management fee, sundry, float, deploy-verify log)
+- 1 CSV type map fix in `audit_engine.py` (bare non-operating)
+- 1 ratio engine fix in `ratio_engine.py` (COGS subtype singular)
+- 1 upload transport fix in `uploadTransport.ts` (credentials: include)
+- 2 CI pipeline fixes in `ci.yml` (coverage gates)
+- 1 type safety fix in `MarketingNav.tsx` (as const)
+- 1 COGS subtype fix in `ratio_engine.py` (direct cost singular)
+
+Two cascading test failures were autonomously diagnosed and fixed: the AOCI test expected `is_contra_account()` to return True for AOCI accounts (now correctly False per F-002), and the CSV type test expected bare "Non-Operating" to map to expense (now correctly unmapped per F-003). Both were resolved in the same session without user input.
+
+Sprint 530 (prior) fixed 10 issues in a single sprint including a 4-module root cause trace for classification pipeline failures.
+**Recommendation:** Continue current practice.
+
+### B. Task Management — 4/5
+**Finding:** All 6 sub-practices are consistently applied for Sprint 531:
+
+1. **Plan First** — Sprint entry with 15-item checklist written before implementation. ✓
+2. **Verify Plan** — DEC audit report serves as the specification; each fix maps 1:1 to a finding. ✓
+3. **Track Progress** — All 15 items individually checked with `[x]` markers. ✓
+4. **Explain Changes** — Review section with comprehensive summary of all changes. ✓
+5. **Document Results** — Verification section with test counts and pass status. ✓
+6. **Capture Lessons** — No new lessons needed (remediation sprint applying established patterns). ✓
+
+**Persistent gap — Archival threshold exceeded:** The Active Phase section currently contains 8 completed sprints (517, 518, 527, 528, 529, 530, 531, plus the earlier 527 duplicate entry). The 5-sprint archival threshold has been exceeded since at least Audit 30, which flagged this as its top priority. The gap is now in its 3rd consecutive audit cycle. The same behavioral pattern identified in Audits 27–30 continues: high-velocity sprint execution overrides the passive archival rule.
+
+This is the only gap preventing a 5/5 score. The quality of individual sprint entries is exemplary — the gap is purely organizational.
+**Recommendation:** Archive completed sprints (517–531) to `tasks/archive/` immediately. This has been the top priority for 2 consecutive audits. Consider a pre-sprint check (analogous to the commit-msg hook) that warns if Active Phase has 5+ completed sprints.
+
+### C. Core Principles — 5/5
+**Finding:**
+- **Simplicity First:** Sprint 531's changes are minimal and targeted. Each fix touches exactly the code it needs to — no surrounding refactoring, no "while I'm here" improvements. F-001 adds 10 lines (keyword list + branch). F-002 removes 2 lines. F-003 removes 2 lines. F-005/F-006 remove 2 lines each. The largest single change is the `CONTRA_LIABILITY_KEYWORDS` list (9 entries), which is the minimum viable set for debt instrument recognition.
+- **No Laziness:** All 13 code findings addressed. The 2 informational findings (F-014, F-015) correctly identified as requiring no code changes. Test failures from intentional behavioral changes were fixed (not skipped or marked xfail). The DEC audit that drove this sprint was itself thorough: 15 findings with severity assignments, 18/21 prior finding verification, 5-agent consensus.
+- **Minimal Impact:** Changes touch only what's necessary. `classification_rules.py` diff is +27/-8 lines across 6 logically separate fixes. `audit_engine.py` is -2 lines. `ratio_engine.py` is +1 word. `uploadTransport.ts` is +1 line. `ci.yml` is +2 flags. `MarketingNav.tsx` is +2 words. Zero-Storage compliance maintained. No side effects introduced.
+
+This is the 18th consecutive cycle at 5/5 for Core Principles.
+**Recommendation:** Continue current practice.
+
+### Top Priority for Next Cycle
+**Archive completed sprints from Active Phase.** The Active Phase contains 8 completed sprints (517, 518, 527, 528, 529, 530, 531), exceeding the 5-sprint archival threshold. This has been the top priority for Audits 30 and now 31 — three consecutive cycles with the same gap. Archive them to `tasks/archive/sprints-517-531-details.md` with a one-line Era summary in Completed Phases. The archival itself is ~10 minutes of work. The systemic question — whether the archival threshold needs mechanical enforcement analogous to the commit-msg hook — remains open and increasingly warranted given the 3-audit persistence of this gap.
+
+### Trend Note
+Stable from Audit 30 (4.7) to Audit 31 (4.7).
+- Workflow Orchestration: 5.0 → 5.0 (maintained — all 6 sub-pillars at 5/5; commit-msg hook continues to enforce protocol; DEC audit demonstrates sophisticated plan-mode thinking)
+- Task Management: 4/5 → 4/5 (flat — all 6 sub-practices applied for Sprint 531; archival threshold gap persists for 3rd consecutive audit cycle; 8 completed sprints in Active Phase vs 5-sprint limit)
+- Core Principles: 5/5 → 5/5 (maintained — 18th consecutive cycle at 5/5)
+- Overall: 4.7 → 4.7 (maintained — solid Excellent band)
+
+This is the 31st audit. Key observations:
+- Test count: 6,507 backend + 1,339 frontend = 7,846 total (up from 7,533 at Audit 30; net +1 contra-liability test, -2 AOCI tests, -2 bare non-operating tests)
+- Sprint 531 is a "DEC remediation" sprint — the 3rd such sprint (after 516 and 527), showing the DEC→remediation pipeline is a reliable quality mechanism
+- Code quality: unchanged at peak — zero TODO/FIXME/HACK, surgical changes, domain-appropriate accounting methodology (contra-liability recognition for bond discounts, debt issuance costs)
+- Archival discipline: gap persists for 3rd consecutive audit — the longest-running open finding in the audit journal
+- Working tree: committed and pushed (eefbd69)
+- The project is in a stable "Excellent" band with one persistent organizational gap. All substantive quality measures (code, testing, verification, planning, autonomy) are at ceiling

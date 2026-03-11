@@ -51,6 +51,13 @@ A sprint is not done until every box is checked.
 
 ---
 
+## 6. Archival Check
+
+- [ ] Run `sh scripts/archive_sprints.sh --check` — if threshold exceeded, run without `--check` to archive
+- [ ] The commit-msg hook will block the next Sprint commit if 5+ completed sprints are unarchived
+
+---
+
 ## Sprint Sign-Off
 
 Sprint #:       ___

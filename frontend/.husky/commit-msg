@@ -1,6 +1,7 @@
 # Sprint 521: Directive Protocol enforcement gate
 # Rejects "Sprint N:" commits unless tasks/todo.md is staged.
-# This prevents protocol bypass — every sprint MUST have a todo.md entry.
+# Sprint 531: Archival threshold gate — blocks Sprint commits when 5+ completed
+# sprints are sitting in Active Phase unarchived.
 # Hotfix commits (fix: prefix) are exempt by design.
 
 COMMIT_MSG_FILE="$1"
@@ -8,7 +9,7 @@ COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
 
 # Check if this is a Sprint commit (matches "Sprint NNN:" pattern)
 if echo "$COMMIT_MSG" | grep -qE '^Sprint [0-9]+:'; then
-  # Verify tasks/todo.md is in the staged files
+  # Gate 1: Verify tasks/todo.md is in the staged files
   if ! git diff --cached --name-only | grep -q '^tasks/todo.md$'; then
     echo ""
     echo "ERROR: Sprint commit detected but tasks/todo.md is not staged."
@@ -26,5 +27,32 @@ if echo "$COMMIT_MSG" | grep -qE '^Sprint [0-9]+:'; then
     echo "To bypass (emergencies only): git commit --no-verify"
     echo ""
     exit 1
+  fi
+
+  # Gate 2: Check archival threshold (5+ completed sprints in Active Phase)
+  if [ -f "tasks/todo.md" ]; then
+    COMPLETED_COUNT=$(awk '
+      /^## Active Phase/  { in_active = 1; next }
+      /^## / && in_active  { exit }
+      in_active && /^\*\*Status:\*\* COMPLETE/ { count++ }
+      END { print count+0 }
+    ' tasks/todo.md)
+
+    if [ "$COMPLETED_COUNT" -ge 5 ]; then
+      echo ""
+      echo "ERROR: Archival threshold exceeded — $COMPLETED_COUNT completed sprints in Active Phase."
+      echo ""
+      echo "The Active Phase has accumulated $COMPLETED_COUNT completed sprints (limit: 5)."
+      echo "Archive them before starting new sprint work:"
+      echo ""
+      echo "  sh scripts/archive_sprints.sh"
+      echo "  git add tasks/todo.md tasks/archive/"
+      echo ""
+      echo "Then retry your commit."
+      echo ""
+      echo "To bypass (emergencies only): git commit --no-verify"
+      echo ""
+      exit 1
+    fi
   fi
 fi
