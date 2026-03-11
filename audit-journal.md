@@ -1076,3 +1076,125 @@ This is the 29th audit. The project dropped from Excellent (4.7) to Good (4.2) b
 - Code quality: unchanged at peak — zero TODO/FIXME/HACK, surgical changes, professional abstractions
 - Working tree: CLEAN
 - The regression is entirely procedural (documentation discipline), not substantive (code quality or architecture). Recovery requires ~15 minutes of retroactive documentation work
+
+---
+## Audit — 2026-03-10 (30th) | Excellent | Overall: 4.7/5.0
+---
+
+### Scores at a Glance
+| Pillar                  | Score |
+|-------------------------|-------|
+| Workflow Orchestration  | 5.0   |
+| Task Management         | 4/5   |
+| Core Principles         | 5/5   |
+| **Overall**             | **4.7** |
+
+### A1. Plan Mode Default — 5/5
+**Finding:** All 6 sprints this cycle (521–526) have full plan entries in `tasks/todo.md` with objectives, checklists, and review sections written before implementation. Sprint 526 (Diagnostic Engine Calibration) is the most detailed single-sprint plan in the project — 7 fix sections with root cause analysis tracing through `column_detector.py`, `audit_engine.py`, and `pdf_generator.py`. Sprint 522 organizes 12 PDF improvements into 4 priority tiers (Accuracy → Intelligence → Presentation → Disclosure). Sprint 524 decomposes 3 remaining fixes from Sprint 522 into separate sub-sections (A/B/C).
+
+Critically, Sprint 521 added a `commit-msg` hook (`frontend/.husky/commit-msg`) that mechanically rejects any `Sprint N:` commit unless `tasks/todo.md` is staged. This converts the Directive Protocol from discipline-dependent to mechanically enforced — directly addressing Audit 29's top finding. The hook was verified in both directions (rejects Sprint commits without todo.md; allows hotfix commits through). Hotfixes (`fix:` prefix) correctly use the lightweight track: ffe316f (FASB/GASB references) and 6fd4569 (vault redirect) are both one-line entries in the Hotfixes section.
+
+The planning regression identified in Audit 29 (Sprints 516/520 bypassing protocol) is now structurally prevented.
+**Recommendation:** Continue current practice. The commit-msg hook is the right enforcement mechanism.
+
+### A2. Subagent Strategy — 5/5
+**Finding:** 9 agents in `.claude/agents/` (critic, executor, guardian, scout, designer, project-auditor, accounting-expert-auditor, future-state-consultant-agent, DIGITAL_EXCELLENCE_COUNCIL_PROMPT). All remain single-purpose with clear boundaries. The project-auditor is actively invoked (this audit). The DEC agent drove Sprint 516 remediation. No unused agents, no scope creep, no multi-purpose bloat.
+**Recommendation:** Continue current practice.
+
+### A3. Self-Improvement Loop — 5/5
+**Finding:** Major recovery from Audit 29 (4/5 → 5/5). Six new lessons captured this cycle, directly addressing Audit 29's top priority:
+
+1. **Sprint 522** — "PDF report totals must match displayed detail rows" (aggregation function must match display function — no silent `abs()` transformations)
+2. **Sprint 522** — "Risk scores require transparency" (refactor scoring functions to return `(result, explanation)` tuples)
+3. **Audit 29** — "Directive Protocol is non-negotiable — urgency does not waive documentation" (root cause: urgency bias; fix: commit-msg hook + minimum 5-line todo.md entry for urgent work)
+4. **Sprint 520** — "Billing security patterns" (4 sub-lessons: tenant isolation scoping, Stripe line item targeting by price ID, webhook event ID deduplication, enum semantic precision)
+5. **Sprint 524** — "Procedure text must be contextually differentiated" (data-driven dispatch by anomaly_type, account name, transaction_count)
+6. **Sprint 519** — "Council deferral vs CEO override" (council advises, CEO decides; execute fully on override)
+
+The Sprint 520 billing security lessons — the gap flagged by Audit 29 — are now documented with actionable rules. The protocol bypass lesson includes both the behavioral pattern AND the mechanical enforcement (commit-msg hook). All lessons follow the established format: context → root cause → pattern → rule.
+**Recommendation:** Continue current practice.
+
+### A4. Verification Before Done — 5/5
+**Finding:** Every sprint has explicit verification documented in `tasks/todo.md`:
+- Sprint 521: `npm run build` + `npm test` (1,329 tests, 111 suites) + MEMORY.md updated
+- Sprint 522: `npm run build` + `npm test` + `pytest` (515 memo + 123 report + 46 diagnostic) + sample PDF generated (48,808 bytes)
+- Sprint 523: 142 report tests + 21 sample reports regenerated
+- Sprint 524: 152 report tests + sample PDF (49,968 bytes) — all 3 fixes verified in output
+- Sprint 525: `npm run build` + `npm test` + `pytest` (115 targeted tests)
+- Sprint 526: `npm run build` + `npm test` + `pytest` (5,305 tests, 1 pre-existing failure noted as unrelated)
+
+Sprint 522 is noteworthy for listing category-level test counts (515 memo + 123 report + 46 diagnostic) rather than just a total — this makes verification auditable at a granular level. The commit-msg hook adds an additional mechanical verification gate: todo.md must be staged for Sprint commits, ensuring the documentation trail exists before the commit is finalized.
+
+Git log confirms 6 clean Sprint commits (2b0c1a2, 158a0a1, b59b89d, 00f773f, 914784b, c256521) and 2 hotfix commits (6fd4569, ffe316f), all with descriptive messages.
+**Recommendation:** Continue current practice.
+
+### A5. Demand Elegance (Balanced) — 5/5
+**Finding:** Zero `TODO`, `FIXME`, or `HACK` comments across all backend Python and frontend TypeScript source files (confirmed via word-boundary grep — only false positives from Roman numeral phase references like "Phase XXXVIII").
+
+Recent code demonstrates professional quality:
+- `EngagementDetailsPanel.tsx` (164 lines): Clean component with proper TypeScript types (`EngagementMetadata` interface), accessible form fields (`htmlFor` attributes on all labels), Oat & Obsidian token compliance (`text-content-primary`, `bg-surface-card`, `ring-sage-500`), and a single-purpose `update()` helper.
+- `anomaly_summary_generator.py`: Clear module docstring with 4 explicit guardrails (no Material Weaknesses section, no Significant Deficiencies, no Control Environment Assessment, blank Section III), proper constants, and Zero-Storage compliance note.
+- Sprint 526's `_resolve_category()` prioritizes CSV-provided account types over heuristic classification (confidence=1.0) — the correct resolution for the classification pipeline failure. The tiered rounding calibration (3 tiers: suppress/minor/material by account type) avoids the false-positive problem without over-engineering.
+- Sprint 522's 4-tier priority system (Accuracy → Intelligence → Presentation → Disclosure) is a disciplined approach to a 12-item improvement batch.
+
+No hacky workarounds, no duplicated logic, no over-engineered solutions.
+**Recommendation:** Continue current practice.
+
+### A6. Autonomous Bug Fixing — 5/5
+**Finding:** This cycle produced 6 sprints fixing 28+ issues autonomously with zero back-and-forth:
+- Sprint 521: Identified and implemented commit-msg hook enforcement as the structural fix for protocol bypass
+- Sprint 522: 12 institutional-grade PDF improvements (accuracy fixes, intelligence additions, presentation upgrades, disclosure improvements)
+- Sprint 523: Cover page liability framing — renamed fields, added boundary paragraphs
+- Sprint 524: 3 remaining fixes from Sprint 522 (risk decomposition named factors, differentiated procedure language, per-transaction amount breakdowns)
+- Sprint 525: 6 bugs — critical button click hijacking (root cause: file input pointer-events), null cell handling for one-sided TBs, dynamic materiality slider, fuzzy column detection, engagement metadata entry, terminology correction
+- Sprint 526: 7 fixes — cover page logo regression (Dockerfile copy path), classification pipeline root cause (4-module trace), tiered rounding calibration, 5 new anomaly detection categories, risk score reconciliation, differentiated procedure language, engagement metadata blanks
+- Hotfix ffe316f: FASB/GASB reference corrections
+- Hotfix 6fd4569: vault transition redirect
+
+Sprint 525's button click hijacking diagnosis is exemplary: the root cause (file input's invisible overlay intercepting clicks on preflight action buttons due to incomplete `pointer-events` condition) required understanding the z-index stacking context and the dual state conditions (`auditStatus` AND `showPreflight`/`preflightStatus`). Sprint 526's classification pipeline fix traces through column detection priority ordering, chunk processing, and category resolution — a 4-module root cause analysis.
+**Recommendation:** Continue current practice.
+
+### B. Task Management — 4/5
+**Finding:** Strong recovery from Audit 29 (3/5 → 4/5). All 6 sub-practices are now consistently applied across all 6 sprints:
+
+1. **Plan First** — All sprints (521–526) have plan entries with checklists before implementation. Sprint 526 has 7 fix sections with detailed sub-items. ✓
+2. **Verify Plan** — Plans followed exactly. Sprint 524 references Sprint 522's incomplete items explicitly. ✓
+3. **Track Progress** — All items individually checked with `[x]` markers as work progresses. ✓
+4. **Explain Changes** — Commit SHAs recorded for all 6 sprints (83d2313, 158a0a1, b59b89d, 051e2f4, 914784b, c256521). ✓
+5. **Document Results** — Sprint 525 has a comprehensive review section with root cause analysis for each fix. Sprint 521 documents the protocol enforcement rationale. ✓
+6. **Capture Lessons** — 6 new lessons captured (Sprint 522 ×2, Audit 29 protocol, Sprint 520 security ×4, Sprint 524, Sprint 519). ✓
+
+**Audit 29 top priority addressed:** Sprint 521 created retroactive entries for Sprints 516 and 520 with commit SHAs, captured Sprint 520 security lessons (4 patterns), and added commit-msg hook enforcement. This is the exact remediation Audit 29 prescribed.
+
+**Remaining gap — Archival threshold exceeded:** The Active Phase section currently contains 9 completed sprints (516, 519, 520, 521, 522, 523, 524, 525, 526). The protocol states "If the Active Phase accumulates 5+ completed sprints without a named phase wrap, archive them immediately." The MEMORY.md self-check states "Before starting a new sprint, if Active Phase has 4+ completed sprints, archive first." This threshold has been exceeded since Sprint 525 (the 5th completion), yet Sprints 525 and 526 proceeded without archival. The lesson from Audit 28 ("Passive thresholds fail during sustained campaigns") appears to be repeating — the self-check rule exists but is not being triggered during rapid sprint execution.
+
+The gap is procedural (organization, not quality) — all sprint entries are well-structured and all verification is documented. But the rule is clear and is being violated.
+**Recommendation:** Archive completed Sprints 519–526 (plus retroactive 516, 520) to `tasks/archive/` immediately before starting any new sprint work. Consider whether the archival self-check needs a mechanical enforcement mechanism analogous to the commit-msg hook — the behavioral pattern (high-velocity work overriding passive rules) is the same one that caused the protocol bypass in Audit 29.
+
+### C. Core Principles — 5/5
+**Finding:**
+- **Simplicity First:** Sprint 525's `_coerce_to_float` helper is a focused single-purpose function for null/empty cell handling. Sprint 526's tiered rounding uses keyword lists (`_ROUNDING_TIER1_KEYWORDS`, `_ROUNDING_TIER3_KEYWORDS`) — appropriate complexity for a classification problem. `EngagementDetailsPanel.tsx` (164 lines) is a clean, single-responsibility component. Sprint 524's procedure dispatch inspects `transaction_count`, issue text, and account name — necessary complexity, not over-engineering.
+- **No Laziness:** Sprint 526 goes deep on root causes — the classification pipeline fix traces through `column_detector.py` (new pattern configs, priority ordering), `audit_engine.py` (column discovery, chunk processing, category resolution), and `pdf_generator.py` (pre-computed score reading). Sprint 525's button click hijacking fix addresses the actual root cause (pointer-events condition) rather than adding a click handler workaround. Sprint 522 implements all 12 PDF improvements in a single sprint with no deferrals.
+- **Minimal Impact:** Changes are surgical. Hotfix ffe316f touches only `anomaly_summary_generator.py` and 2 YAML reference files. Sprint 523 changes only PDF label text and disclaimer paragraphs. Sprint 526 adds new detection functions and constants without modifying existing function signatures. Zero-Storage compliance maintained. Oat & Obsidian tokens consistent across new UI components.
+
+This is the 17th consecutive cycle at 5/5 for Core Principles.
+**Recommendation:** Continue current practice.
+
+### Top Priority for Next Cycle
+**Archive completed sprints from Active Phase.** The Active Phase contains 9 completed sprints (516, 519, 520, 521, 522, 523, 524, 525, 526), exceeding the 5-sprint archival threshold by a wide margin. Archive them to `tasks/archive/` with a one-line Era summary in Completed Phases. This is the same class of procedural gap that has recurred across Audits 27–29 — high-velocity sprint execution overriding passive organizational rules. The archival itself is straightforward (~10 minutes); the systemic question is whether the archival threshold needs mechanical enforcement to match the commit-msg hook pattern.
+
+### Trend Note
+Recovery from Audit 29 (4.2) to Audit 30 (4.7).
+- Workflow Orchestration: 4.5 → 5.0 (improved — all 6 sub-pillars at 5/5; commit-msg hook structurally prevents the protocol bypass that caused Audit 29's regression; A1/A3/A4 each recovered from 4/5 to 5/5)
+- Task Management: 3/5 → 4/5 (improved — all 6 sub-practices consistently applied across all 6 sprints; Audit 29 top priority fully addressed with retroactive entries + lessons + mechanical enforcement; archival threshold exceeded prevents return to 5/5)
+- Core Principles: 5/5 → 5/5 (maintained — 17th consecutive cycle at 5/5)
+- Overall: 4.2 → 4.7 (improved — returned to Excellent band)
+
+This is the 30th audit. The project recovered from Audit 29's protocol bypass regression through Sprint 521's structural remediation (commit-msg hook + retroactive documentation + lesson capture). Key observations:
+- Test count: stable at 6,188+ backend + 1,345 frontend (Sprint 526 ran 5,305 of backend suite)
+- Sprints 522–526 represent a sustained PDF/diagnostic quality campaign (28+ fixes across 5 sprints)
+- Sprint 521 is a model "meta-sprint" — fixing a process gap rather than a feature gap, with mechanical enforcement
+- Code quality: unchanged at peak — zero TODO/FIXME/HACK, professional domain expertise in accounting standards (ASC 850, 205-40, 275-10, ISA 265/PCAOB AS 1305)
+- Archival discipline: regressed again — same pattern as Audits 27-28 (high-velocity execution overriding passive rules)
+- Working tree: `M tasks/todo.md` only — clean
+- The recovery demonstrates that the project's self-correction mechanism works: Audit 29 flagged the gap → Sprint 521 fixed it structurally → Audits 30 confirms the fix. The remaining gap (archival) is organizational, not substantive

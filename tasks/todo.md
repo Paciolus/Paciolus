@@ -194,6 +194,7 @@
 - [x] New test file: `tests/test_contra_and_detection_fixes.py` — 68 tests
 
 **Review:** 10 fixes across 6 backend files. Largest impact is Fix 1 (contra account recognition) which eliminates 9+ false positive findings that would appear in virtually every real-world TB. Fix 5/7 resolves the root cause of N/A ratios and 100% gross margin by wiring CSV subtypes through to `extract_category_totals()`. Fix 6 was a data mapping bug where the lead sheet post-processor derived debit/credit from the absolute-valued `amount` field instead of using the raw columns.
+**Commit:** 6f5c2a2
 
 ---
 
