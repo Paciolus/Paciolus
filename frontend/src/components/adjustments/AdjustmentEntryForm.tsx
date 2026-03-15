@@ -368,6 +368,7 @@ export function AdjustmentEntryForm({
                       disabled={lines.length <= 2}
                       className="p-1 text-content-tertiary hover:text-clay-400 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                       title="Remove line"
+                      aria-label="Remove line"
                     >
                       <svg
                         className="w-4 h-4"

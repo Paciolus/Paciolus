@@ -142,6 +142,7 @@ export function UnifiedToolbar() {
           <button
             onClick={() => openPalette('button')}
             title={`Search (${isMac ? '\u2318' : 'Ctrl'}+K)`}
+            aria-label="Open command palette"
             className="w-9 h-9 flex items-center justify-center rounded-lg text-obsidian-400 hover:text-obsidian-600 hover:bg-oatmeal-200/60 transition-colors"
           >
             <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -153,6 +154,7 @@ export function UnifiedToolbar() {
           <Link
             href="/settings"
             title="Settings"
+            aria-label="Settings"
             className="w-9 h-9 flex items-center justify-center rounded-lg text-obsidian-400 hover:text-obsidian-600 hover:bg-oatmeal-200/60 transition-colors"
           >
             <BrandIcon name="sliders" className="w-[18px] h-[18px]" />
@@ -165,6 +167,7 @@ export function UnifiedToolbar() {
             <Link
               href="/login"
               title="Sign In"
+              aria-label="Sign in"
               className="w-9 h-9 flex items-center justify-center rounded-lg text-obsidian-400 hover:text-obsidian-600 hover:bg-oatmeal-200/60 transition-colors"
             >
               <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">

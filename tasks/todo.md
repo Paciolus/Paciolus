@@ -249,6 +249,36 @@ Scope: auth flows, CSRF/CSP, rate limiting, API authorization, file upload, JWT,
 - [x] PytestCollectionWarning for TestingMemoConfig — suppressed
 
 **Review:** 31 `as const` additions across 17 frontend files, CI coverage gates raised (pytest 60→80%, Jest 25→35%), PytestCollectionWarning suppressed, test counts synchronized, CEO actions sync date updated. Zero regressions.
+**Commit:** f37a8c5
+
+---
+
+### Sprint 533 — CI Parity + Lint Baseline + Accessibility Polish
+
+**Status:** COMPLETE
+**Goal:** Fix all 3 actionable findings from DEC 2026-03-15.
+**Complexity Score:** 2/10
+
+#### F-001: Add `--cov-fail-under=80` to PostgreSQL CI job
+- [x] `.github/workflows/ci.yml` line 171 — append `--cov-fail-under=80` to pytest command
+
+#### F-002: Recapture lint baseline date
+- [x] `.github/lint-baseline.json` — update `"updated"` field from `2026-02-23` to `2026-03-15`
+
+#### F-003: Add `aria-label` to icon-only interactive elements (7 instances)
+- [x] `AdjustmentEntryForm.tsx` — remove line button: `aria-label="Remove line"`
+- [x] `FileQueueItem.tsx` — delete file button: `aria-label` matching title
+- [x] `ProfileDropdown.tsx` — avatar button: `aria-label="User menu"`
+- [x] `ToolLinkToast.tsx` — dismiss button: `aria-label="Dismiss notification"`
+- [x] `UnifiedToolbar.tsx` — search button: `aria-label="Open command palette"`
+- [x] `UnifiedToolbar.tsx` — settings link: `aria-label="Settings"`
+- [x] `UnifiedToolbar.tsx` — sign in link: `aria-label="Sign in"`
+
+#### Verification
+- [x] `npm run build` passes (all routes dynamic)
+- [x] `npm test` — 1,339 passed (112 suites)
+
+**Review:** PostgreSQL CI coverage threshold aligned with SQLite (80%), lint baseline date refreshed, 7 icon-only buttons/links now have `aria-label` for screen reader accessibility. Zero regressions.
 
 ---
 

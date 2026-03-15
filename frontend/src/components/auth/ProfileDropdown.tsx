@@ -108,6 +108,7 @@ export function ProfileDropdown({ user, onLogout }: ProfileDropdownProps) {
         }`}
         aria-expanded={isOpen}
         aria-haspopup="true"
+        aria-label="User menu"
       >
         <div className="w-7 h-7 rounded-full bg-sage-500/20 border border-sage-500/40 flex items-center justify-center">
           <span className="text-sage-700 font-sans font-bold text-xs">

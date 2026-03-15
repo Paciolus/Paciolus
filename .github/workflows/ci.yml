@@ -168,7 +168,7 @@ jobs:
       - name: Run pytest
         env:
           TEST_DATABASE_URL: postgresql://paciolus:testpass@localhost:5432/paciolus_test
-        run: pytest tests/ -v --tb=short -q --cov=. --cov-report=term-missing
+        run: pytest tests/ -v --tb=short -q --cov=. --cov-report=term-missing --cov-fail-under=80
 
   # ── Frontend Build ───────────────────────────────────────────
   frontend-build:
