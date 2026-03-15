@@ -413,19 +413,44 @@ FOLLOW_UP_PROCEDURES: dict[str, str] = {
         "new contracts, price increases, or volume changes. Cross-reference to revenue "
         "recognition testing results."
     ),
+    "apc_revenue_decrease": (
+        "Investigate the revenue decline. Determine whether the decrease reflects "
+        "lost contracts, price reductions, volume decreases, or changes in revenue "
+        "recognition policy. Assess going-concern implications if the decline is material."
+    ),
     "apc_cogs_increase": (
         "Assess whether COGS increase is proportional to revenue growth. COGS growth "
         "exceeding revenue growth indicates margin compression — obtain management "
         "explanation and assess whether cost increases are recurring or one-time."
     ),
+    "apc_cogs_decrease": (
+        "Assess whether the COGS decrease is consistent with revenue trends. A COGS "
+        "decrease alongside stable or increasing revenue may indicate improved efficiency, "
+        "but could also indicate incomplete cost recognition or period-end cutoff issues."
+    ),
     "apc_asset_increase": (
         "Obtain supporting documentation for the asset increase. Confirm the asset is "
         "properly classified and valued per applicable accounting standards."
+    ),
+    "apc_asset_decrease": (
+        "Investigate the asset decrease. Determine whether the reduction reflects "
+        "disposal, impairment, depreciation/amortization, or collection of receivables. "
+        "Obtain supporting documentation for any disposals or write-downs."
     ),
     "apc_cash_increase": (
         "Cash increases above 50% warrant inquiry. Cross-reference to the cash flow "
         "statement to confirm the source of funds. Assess whether the increase reflects "
         "operating performance, financing activity, or asset disposals."
+    ),
+    "apc_cash_decrease": (
+        "Investigate the significant cash decrease. Cross-reference to the cash flow "
+        "statement to identify the use of funds. Assess whether the decrease reflects "
+        "debt repayment, capital expenditures, distributions, or operating losses."
+    ),
+    "apc_liability_increase": (
+        "Investigate the liability increase. Determine whether the increase reflects "
+        "new borrowings, accruals, or deferred obligations. Obtain supporting documentation "
+        "for new debt instruments or material accrual changes."
     ),
     "apc_liability_decrease": (
         "Confirm the liability reduction reflects actual payment or discharge. Obtain "
@@ -435,6 +460,11 @@ FOLLOW_UP_PROCEDURES: dict[str, str] = {
         "Obtain management explanation for the expense increase. Assess whether the "
         "increase is consistent with the entity's growth rate and strategic plan. "
         "Increases materially above the revenue growth rate warrant additional inquiry."
+    ),
+    "apc_expense_decrease": (
+        "Investigate the expense decrease. Determine whether the reduction reflects "
+        "cost-cutting measures, reclassification, or incomplete accrual of period expenses. "
+        "Assess whether the decrease is sustainable or temporary."
     ),
     "apc_sign_change": (
         "Investigate the sign change. Confirm whether the change represents a legitimate "

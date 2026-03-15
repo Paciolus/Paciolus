@@ -210,12 +210,36 @@ def _build_significant_movements_table(
 # =============================================================================
 
 _MOVEMENT_PROCEDURES: dict[tuple[str, str], str] = {
+    # Revenue
     ("revenue", "increase"): "apc_revenue_increase",
+    ("revenue", "decrease"): "apc_revenue_decrease",
+    ("revenue", "new"): "apc_revenue_increase",
+    ("revenue", "closed"): "apc_revenue_decrease",
+    # COGS
     ("cogs", "increase"): "apc_cogs_increase",
+    ("cogs", "decrease"): "apc_cogs_decrease",
+    ("cogs", "new"): "apc_cogs_increase",
+    ("cogs", "closed"): "apc_cogs_decrease",
+    # Assets
     ("asset", "increase"): "apc_asset_increase",
+    ("asset", "decrease"): "apc_asset_decrease",
+    ("asset", "new"): "apc_asset_increase",
+    ("asset", "closed"): "apc_asset_decrease",
+    # Cash
     ("cash", "increase"): "apc_cash_increase",
+    ("cash", "decrease"): "apc_cash_decrease",
+    ("cash", "new"): "apc_cash_increase",
+    ("cash", "closed"): "apc_cash_decrease",
+    # Liabilities
+    ("liability", "increase"): "apc_liability_increase",
     ("liability", "decrease"): "apc_liability_decrease",
+    ("liability", "new"): "apc_liability_increase",
+    ("liability", "closed"): "apc_liability_decrease",
+    # Expenses
     ("expense", "increase"): "apc_expense_increase",
+    ("expense", "decrease"): "apc_expense_decrease",
+    ("expense", "new"): "apc_expense_increase",
+    ("expense", "closed"): "apc_expense_decrease",
 }
 
 _ACCOUNT_TYPE_KEYWORDS: dict[str, list[str]] = {
@@ -254,11 +278,26 @@ def _build_suggested_procedures(
     for m in sorted(material, key=lambda x: abs(x.get("change_amount", 0)), reverse=True):
         name = m.get("account_name", "")
         category = _classify_account_for_procedure(name)
-        direction = "increase" if m.get("change_amount", 0) > 0 else "decrease"
+        movement_type = m.get("movement_type", "")
+
+        # Determine economic direction based on movement type and account category
+        if movement_type == "new_account":
+            direction = "new"
+        elif movement_type == "closed_account":
+            direction = "closed"
+        elif movement_type == "sign_change":
+            direction = "increase"  # sign changes use increase-side procedure
+        else:
+            change = m.get("change_amount", 0)
+            # Credit-nature accounts (revenue, liability): negative change = economic increase
+            if category in ("revenue", "liability"):
+                direction = "increase" if change < 0 else "decrease"
+            else:
+                direction = "increase" if change > 0 else "decrease"
 
         procedure_key = _MOVEMENT_PROCEDURES.get((category, direction))
         if not procedure_key:
-            procedure_key = _MOVEMENT_PROCEDURES.get((category, "increase"), "significant_movement")
+            procedure_key = "significant_movement"
 
         if procedure_key in seen_procedures:
             continue
@@ -381,13 +420,12 @@ def _build_ratio_trends_table(
         prior_bal = abs(m.get("prior_balance", 0))
         current_bal = abs(m.get("current_balance", 0))
 
-        # Revenue: use account_type if available, else keyword match excluding deferred
-        is_revenue = (
-            acct_type == "revenue"
-            if acct_type
-            else (_match_keyword(name, _REVENUE_KEYWORDS) and not _match_keyword(name, _REVENUE_EXCLUSIONS))
+        # Revenue: check account_type OR keyword match (not exclusive fallback)
+        is_revenue = acct_type == "revenue" or (
+            _match_keyword(name, _REVENUE_KEYWORDS) and not _match_keyword(name, _REVENUE_EXCLUSIONS)
         )
-        is_cogs = acct_type == "cogs" if acct_type else _match_keyword(name, _COGS_KEYWORDS)
+        # COGS: accounts may be typed as "expense" in the TB but contain COGS keywords
+        is_cogs = acct_type == "cogs" or _match_keyword(name, _COGS_KEYWORDS)
 
         if is_revenue:
             prior_revenue += prior_bal

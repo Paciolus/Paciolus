@@ -481,6 +481,8 @@ def compare_trial_balances(
 
     for prior_acct, current_acct, display_name in matched:
         is_new = prior_acct is None
+        # Sprint 534: Only classify as CLOSED if the account is truly absent
+        # from the current period file, not if its parsed balance is zero.
         is_closed = current_acct is None
 
         prior_balance = _get_net_balance(prior_acct) if prior_acct else 0.0
@@ -612,6 +614,7 @@ class ThreeWayLeadSheetSummary:
     budget_variance: Optional[float]
     budget_variance_percent: Optional[float]
     account_count: int
+    movements: list[dict] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         d: dict = {
@@ -626,6 +629,7 @@ class ThreeWayLeadSheetSummary:
             "budget_variance": self.budget_variance,
             "budget_variance_percent": self.budget_variance_percent,
             "account_count": self.account_count,
+            "movements": self.movements,
         }
         return d
 
@@ -812,12 +816,22 @@ def compare_three_periods(
         norm = normalize_account_name(acct.get("account", ""))
         budget_totals_by_norm[norm] = _get_net_balance(acct)
 
+    # Build lookup from account name to enriched movement dict
+    enriched_by_name: dict[str, dict] = {}
+    for m_dict in enriched_movements:
+        enriched_by_name[m_dict.get("account_name", "")] = m_dict
+
     three_way_ls: list[ThreeWayLeadSheetSummary] = []
     for ls in two_way.lead_sheet_summaries:
         budget_total = 0.0
+        ls_enriched_movements: list[dict] = []
         for m in ls.movements:
             norm = normalize_account_name(m.account_name)
             budget_total += budget_totals_by_norm.get(norm, 0.0)
+            # Attach enriched movement (with budget_variance) for this account
+            enriched = enriched_by_name.get(m.account_name)
+            if enriched:
+                ls_enriched_movements.append(enriched)
 
         budget_variance = ls.current_total - budget_total
         if budget_total != 0:
@@ -838,6 +852,7 @@ def compare_three_periods(
                 budget_variance=budget_variance,
                 budget_variance_percent=budget_variance_pct,
                 account_count=ls.account_count,
+                movements=ls_enriched_movements,
             )
         )
 

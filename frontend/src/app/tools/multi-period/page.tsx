@@ -22,7 +22,7 @@ import { useMultiPeriodComparison, type MovementSummaryResponse } from '@/hooks'
 import { apiPost } from '@/utils/apiClient'
 import { apiDownload, downloadBlob } from '@/utils'
 
-type AuditResultCast = { lead_sheet_grouping?: { summaries: Array<{ accounts: Array<{ account: string; debit: number; credit: number; type: string }> }> } }
+type AuditResultCast = { all_accounts?: Array<{ account: string; debit: number; credit: number; type: string }>; lead_sheet_grouping?: { summaries: Array<{ accounts: Array<{ account: string; debit: number; credit: number; type: string }> }> } }
 
 export default function MultiPeriodPage() {
   const { user, isAuthenticated, isLoading: authLoading, token } = useAuth()
@@ -48,6 +48,12 @@ export default function MultiPeriodPage() {
   const [budgetLabel, setBudgetLabel] = useState('Budget')
   const [materialityThreshold, setMaterialityThreshold] = useState(500)
   const [showBudget, setShowBudget] = useState(false)
+
+  // Engagement metadata for PDF memo
+  const [clientName, setClientName] = useState('')
+  const [fiscalYearEnd, setFiscalYearEnd] = useState('')
+  const [practitioner, setPractitioner] = useState('')
+  const [reviewer, setReviewer] = useState('')
 
   const [prior, setPrior] = useState<PeriodState>({ file: null, status: 'idle', result: null, error: null })
   const [current, setCurrent] = useState<PeriodState>({ file: null, status: 'idle', result: null, error: null })
@@ -100,7 +106,8 @@ export default function MultiPeriodPage() {
 
   const canCompare = prior.status === 'success' && current.status === 'success' && prior.result && current.result
     && (!showBudget || (budget.status === 'success' && budget.result))
-  const isProcessing = prior.status === 'loading' || current.status === 'loading' || budget.status === 'loading' || isComparing
+  const anyZoneLoading = prior.status === 'loading' || current.status === 'loading' || budget.status === 'loading'
+  const isProcessing = anyZoneLoading || isComparing
 
   const hasBudgetData = !!comparison?.budget_label
 
@@ -165,6 +172,10 @@ export default function MultiPeriodPage() {
             significant_movements: comparison.significant_movements,
             lead_sheet_summaries: strippedSummaries,
             dormant_account_count: comparison.dormant_accounts.length,
+            client_name: clientName || 'Not specified',
+            period_tested: fiscalYearEnd || 'Not specified',
+            prepared_by: practitioner || 'Not specified',
+            reviewed_by: reviewer || 'Not specified',
           },
         },
       )
@@ -176,7 +187,7 @@ export default function MultiPeriodPage() {
     } finally {
       setExportingMemo(false)
     }
-  }, [comparison, token])
+  }, [comparison, token, clientName, fiscalYearEnd, practitioner, reviewer])
 
   const handleReset = useCallback(() => {
     setPrior({ file: null, status: 'idle', result: null, error: null })
@@ -271,12 +282,60 @@ export default function MultiPeriodPage() {
                 )}
               </div>
 
-              {/* File Upload */}
+              {/* Engagement Metadata */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                <div>
+                  <label htmlFor="client-name" className="block text-xs font-sans text-content-tertiary mb-1">Client Name</label>
+                  <input
+                    id="client-name"
+                    type="text"
+                    value={clientName}
+                    onChange={(e) => setClientName(e.target.value)}
+                    className="w-full px-3 py-2 bg-surface-input border border-theme rounded-lg text-sm font-sans text-content-primary placeholder-content-tertiary focus:outline-hidden focus:border-sage-500"
+                    placeholder="e.g. Meridian Capital Group"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="fiscal-year-end" className="block text-xs font-sans text-content-tertiary mb-1">Fiscal Year End</label>
+                  <input
+                    id="fiscal-year-end"
+                    type="text"
+                    value={fiscalYearEnd}
+                    onChange={(e) => setFiscalYearEnd(e.target.value)}
+                    className="w-full px-3 py-2 bg-surface-input border border-theme rounded-lg text-sm font-sans text-content-primary placeholder-content-tertiary focus:outline-hidden focus:border-sage-500"
+                    placeholder="e.g. December 31, 2025"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="practitioner" className="block text-xs font-sans text-content-tertiary mb-1">Engagement Practitioner</label>
+                  <input
+                    id="practitioner"
+                    type="text"
+                    value={practitioner}
+                    onChange={(e) => setPractitioner(e.target.value)}
+                    className="w-full px-3 py-2 bg-surface-input border border-theme rounded-lg text-sm font-sans text-content-primary placeholder-content-tertiary focus:outline-hidden focus:border-sage-500"
+                    placeholder="Preparer name"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="reviewer" className="block text-xs font-sans text-content-tertiary mb-1">Engagement Reviewer</label>
+                  <input
+                    id="reviewer"
+                    type="text"
+                    value={reviewer}
+                    onChange={(e) => setReviewer(e.target.value)}
+                    className="w-full px-3 py-2 bg-surface-input border border-theme rounded-lg text-sm font-sans text-content-primary placeholder-content-tertiary focus:outline-hidden focus:border-sage-500"
+                    placeholder="Reviewer name"
+                  />
+                </div>
+              </div>
+
+              {/* File Upload — each zone operates independently */}
               <div className={`grid gap-4 mb-4 ${showBudget ? 'grid-cols-3' : 'grid-cols-2'}`}>
-                <PeriodFileDropZone label="Prior Period" period={prior} onFileSelect={handlePriorFile} disabled={isProcessing} />
-                <PeriodFileDropZone label="Current Period" period={current} onFileSelect={handleCurrentFile} disabled={isProcessing} />
+                <PeriodFileDropZone label="Prior Period" period={prior} onFileSelect={handlePriorFile} disabled={isComparing || prior.status === 'loading'} />
+                <PeriodFileDropZone label="Current Period" period={current} onFileSelect={handleCurrentFile} disabled={isComparing || current.status === 'loading'} />
                 {showBudget && (
-                  <PeriodFileDropZone label="Budget / Forecast" period={budget} onFileSelect={handleBudgetFile} disabled={isProcessing} />
+                  <PeriodFileDropZone label="Budget / Forecast" period={budget} onFileSelect={handleBudgetFile} disabled={isComparing || budget.status === 'loading'} />
                 )}
               </div>
 
@@ -363,7 +422,7 @@ export default function MultiPeriodPage() {
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-xs font-sans text-content-tertiary">
-                        {comparison.movements_by_significance.material || 0} material \u00B7 {comparison.movements_by_significance.significant || 0} significant
+                        {comparison.movements_by_significance.material || 0} material · {comparison.movements_by_significance.significant || 0} significant
                       </span>
                       <button
                         onClick={handleExportMemo}

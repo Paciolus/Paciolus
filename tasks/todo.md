@@ -282,3 +282,62 @@ Scope: auth flows, CSRF/CSP, rate limiting, API authorization, file upload, JWT,
 
 ---
 
+### Sprint 534 — Multi-Period Comparison: 8-Bug Fix Batch
+
+**Status:** COMPLETE
+**Goal:** Fix 8 bugs identified in multi-period comparison test session.
+**Complexity Score:** 5/10
+
+#### Bug 1: Unicode escape rendering in summary header
+- [x] Replace literal `\u00B7` in JSX text content with actual `·` character (page.tsx line 366)
+
+#### Bug 2: CSV parsing incompleteness / hard account limit
+- [x] Root cause: `lead_sheet_grouping.summaries` only contains abnormal/flagged accounts, not all parsed accounts
+- [x] Add `all_accounts` field to single-sheet audit result (`audit_engine.py`)
+- [x] Add `all_accounts` field to multi-sheet audit result (`audit_engine.py`)
+- [x] Update `extractAccounts` in `useMultiPeriodComparison.ts` to prefer `all_accounts`
+- [x] Update `AuditResultForComparison` type to include `all_accounts`
+- [x] Remove hard 100-account display limit in `AccountMovementTable.tsx`
+
+#### Bug 3: "Closed Account" false positives
+- [x] Confirmed: downstream symptom of Bug 2 — now resolved. Accounts present with zero balance have `current_acct != None`, so they are not classified as CLOSED.
+- [x] Classification logic already correct: `is_closed = current_acct is None` (absent from file, not zero balance)
+
+#### Bug 4: Suggested procedures template mismatch (rotation bug)
+- [x] Expand `_MOVEMENT_PROCEDURES` dict from 6 to 24 entries covering all (category, direction) combos
+- [x] Add 6 new procedure texts to `FOLLOW_UP_PROCEDURES` (revenue_decrease, cogs_decrease, asset_decrease, cash_decrease, liability_increase, expense_decrease)
+- [x] Fix direction logic: credit-nature accounts (revenue, liability) — negative change = economic increase
+- [x] Handle new_account, closed_account, sign_change movement types explicitly
+
+#### Bug 5: Ratio calculations (GPM=100%, COGS%=0%)
+- [x] Root cause: `is_cogs = acct_type == "cogs" if acct_type else ...` short-circuits when acct_type is any non-empty string (e.g., "expense")
+- [x] Fix: use `acct_type == "cogs" or _match_keyword(name, _COGS_KEYWORDS)` (OR instead of exclusive fallback)
+- [x] Same fix for `is_revenue`: OR-based check
+
+#### Bug 6: Lead sheet accordion expand throws frontend error
+- [x] Root cause: `ThreeWayLeadSheetSummary` missing `movements` field — `.map()` on undefined
+- [x] Add `movements: list[dict]` to `ThreeWayLeadSheetSummary` dataclass + `to_dict()`
+- [x] Pass enriched movements through in `compare_three_periods` lead sheet loop
+- [x] Add `movements` to `ThreeWayLeadSheetSummaryResponse` schema
+- [x] Add null guard `(ls.movements ?? [])` in `CategoryMovementSection.tsx`
+
+#### Bug 7: Blank engagement metadata in downloaded PDF
+- [x] Add Client Name, Fiscal Year End, Engagement Practitioner, Engagement Reviewer inputs to config screen
+- [x] Pass metadata values to `/export/multi-period-memo` endpoint body
+- [x] Default to "Not specified" for blank fields
+
+#### Bug 8: Upload UX blocks concurrent zone interaction
+- [x] Replace shared `isProcessing` blocking with per-zone disabled logic
+- [x] Each zone disabled only during its own loading or during comparison — not blocked by other zones
+- [x] Compare button remains gated on all required zones being ready
+
+#### Verification
+- [x] `npm run build` passes (all routes dynamic)
+- [x] `npm test` — 1,339 passed (112 suites)
+- [x] `pytest tests/test_multi_period_comparison.py` — 65 passed
+- [x] `pytest tests/test_multi_period_memo.py` — 75 passed
+
+**Review:** 8 bugs fixed across 9 files (3 backend engine/route, 2 backend shared modules, 4 frontend components/hooks). Key root causes: (1) account extraction from audit result only included abnormal accounts, not full TB; (2) sign convention not respected in procedure/ratio logic; (3) 3-way comparison dropped movements from lead sheet summaries. Zero regressions.
+
+---
+

@@ -85,6 +85,12 @@ export interface MovementSummaryResponse {
 }
 
 export interface AuditResultForComparison {
+  all_accounts?: Array<{
+    account: string
+    debit: number
+    credit: number
+    type: string
+  }>
   lead_sheet_grouping?: {
     summaries: Array<{
       accounts: Array<{
@@ -137,7 +143,19 @@ export function useMultiPeriodComparison(engagementId?: number | null): UseMulti
 
   const extractAccounts = useCallback((result: AuditResultForComparison) => {
     const accounts: Array<{ account: string; debit: number; credit: number; type: string }> = []
-    if (result.lead_sheet_grouping?.summaries) {
+
+    // Prefer all_accounts (full parsed TB) over lead_sheet_grouping (abnormal only)
+    if (result.all_accounts && result.all_accounts.length > 0) {
+      for (const acct of result.all_accounts) {
+        accounts.push({
+          account: acct.account,
+          debit: acct.debit || 0,
+          credit: acct.credit || 0,
+          type: acct.type || 'unknown',
+        })
+      }
+    } else if (result.lead_sheet_grouping?.summaries) {
+      // Fallback for older audit results without all_accounts
       for (const summary of result.lead_sheet_grouping.summaries) {
         if (summary.accounts) {
           for (const acct of summary.accounts) {

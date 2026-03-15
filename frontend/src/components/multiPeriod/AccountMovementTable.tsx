@@ -74,7 +74,7 @@ export function AccountMovementTable({ movements, filter, hasBudget }: {
           </tr>
         </thead>
         <tbody>
-          {filtered.slice(0, 100).map((m, i) => (
+          {filtered.map((m, i) => (
             <tr key={`${m.account_name}-${i}`} className="border-b border-theme-divider hover:bg-surface-card-secondary transition-colors">
               <td className="px-3 py-2 font-sans text-content-primary max-w-[200px] truncate" title={m.account_name}>
                 {m.account_name}
@@ -112,11 +112,6 @@ export function AccountMovementTable({ movements, filter, hasBudget }: {
           ))}
         </tbody>
       </table>
-      {filtered.length > 100 && (
-        <p className="text-center text-xs text-content-tertiary font-sans mt-2">
-          Showing 100 of {filtered.length} accounts
-        </p>
-      )}
       {filtered.length === 0 && (
         <p className="text-center text-sm text-content-tertiary font-sans py-8">No accounts match filters</p>
       )}

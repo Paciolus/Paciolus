@@ -1940,6 +1940,19 @@ def audit_trial_balance_streaming(
                 result["risk_summary"]["low_severity"] += 1
             result["risk_summary"]["total_anomalies"] += 1
 
+        # Sprint 534: Expose full parsed account list for multi-period comparison.
+        # lead_sheet_grouping only contains abnormal/flagged accounts, but
+        # multi-period comparison needs ALL accounts from the uploaded TB.
+        all_accounts_list = []
+        for acct_name, balances in auditor.account_balances.items():
+            all_accounts_list.append({
+                "account": acct_name,
+                "debit": balances["debit"],
+                "credit": balances["credit"],
+                "type": account_classifications.get(acct_name, "unknown"),
+            })
+        result["all_accounts"] = all_accounts_list
+
         log_secure_operation(
             "streaming_audit_complete",
             f"Audit complete. Rows: {result['row_count']}, Balanced: {result['balanced']}, "
@@ -2228,6 +2241,23 @@ def audit_trial_balance_multi_sheet(
                 "issue_counts": {},
                 "total_issues": 0,
             }
+
+        # Sprint 534: Expose full parsed account list for multi-period comparison.
+        # Uses consolidated_account_balances (already aggregated across sheets).
+        ms_classifications = {}
+        for acct_name, bals in consolidated_account_balances.items():
+            net = bals["debit"] - bals["credit"]
+            classifier_instance = create_classifier(account_type_overrides)
+            ms_classifications[acct_name] = classifier_instance.classify(acct_name, net).value
+        all_accounts_list = []
+        for acct_name, bals in consolidated_account_balances.items():
+            all_accounts_list.append({
+                "account": acct_name,
+                "debit": bals["debit"],
+                "credit": bals["credit"],
+                "type": ms_classifications.get(acct_name, "unknown"),
+            })
+        result["all_accounts"] = all_accounts_list
 
         log_secure_operation(
             "multi_sheet_audit_complete",

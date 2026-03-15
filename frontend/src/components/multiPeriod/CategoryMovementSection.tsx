@@ -69,7 +69,7 @@ export function CategoryMovementSection({ comparison, hasBudget }: { comparison:
                       </tr>
                     </thead>
                     <tbody>
-                      {ls.movements.map((m, i) => (
+                      {(ls.movements ?? []).map((m, i) => (
                         <tr key={i} className="border-b border-theme-divider">
                           <td className="py-1 px-2 font-sans text-content-primary max-w-[180px] truncate">{m.account_name}</td>
                           <td className="py-1 px-2 text-right font-mono text-content-secondary">${Math.abs(m.prior_balance).toLocaleString()}</td>

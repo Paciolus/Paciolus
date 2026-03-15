@@ -234,6 +234,7 @@ class ThreeWayLeadSheetSummaryResponse(BaseModel):
     budget_variance: Optional[float] = None
     budget_variance_percent: Optional[float] = None
     account_count: int
+    movements: list[dict[str, Any]] = []
 
 
 class ThreeWayMovementSummaryResponse(BaseModel):
