@@ -162,6 +162,7 @@ LEAD_SHEET_RULES: list[LeadSheetRule] = [
     LeadSheetRule("savings", LeadSheet.A, 0.95),
     LeadSheetRule("money market", LeadSheet.A, 0.95, is_phrase=True),
     LeadSheetRule("cash equivalent", LeadSheet.A, 1.0, is_phrase=True),
+    LeadSheetRule("short-term investment", LeadSheet.A, 0.95, is_phrase=True),  # Sprint 535 P2-2: current asset, not F
     LeadSheetRule("treasury bill", LeadSheet.A, 0.85, is_phrase=True),
 
     # -------------------------------------------------------------------------
@@ -263,7 +264,9 @@ LEAD_SHEET_RULES: list[LeadSheetRule] = [
     LeadSheetRule("income tax payable", LeadSheet.H, 0.95, is_phrase=True),
     LeadSheetRule("tax payable", LeadSheet.H, 0.85, is_phrase=True),
     LeadSheetRule("payroll tax", LeadSheet.H, 0.90, is_phrase=True),
-    LeadSheetRule("current portion", LeadSheet.H, 0.85, is_phrase=True),
+    LeadSheetRule("current portion of long-term", LeadSheet.H, 1.05, is_phrase=True),  # Sprint 535 P2-2: beats "long-term debt" at 1.0
+    LeadSheetRule("current portion", LeadSheet.H, 1.05, is_phrase=True),  # Sprint 535 P2-2: raised from 0.85
+    LeadSheetRule("dividends payable", LeadSheet.H, 0.95, is_phrase=True),  # Sprint 535 P2-2
     LeadSheetRule("short-term", LeadSheet.H, 0.70, is_phrase=True),
     LeadSheetRule("lease liability current", LeadSheet.H, 0.95, is_phrase=True),
 
@@ -279,6 +282,12 @@ LEAD_SHEET_RULES: list[LeadSheetRule] = [
     LeadSheetRule("line of credit", LeadSheet.I, 0.85, is_phrase=True),
     LeadSheetRule("bank loan", LeadSheet.I, 0.90, is_phrase=True),
     LeadSheetRule("term loan", LeadSheet.I, 0.90, is_phrase=True),
+    # Sprint 535 P2-2: Additional long-term debt instruments
+    LeadSheetRule("subordinated debt", LeadSheet.I, 0.95, is_phrase=True),
+    LeadSheetRule("senior notes", LeadSheet.I, 0.95, is_phrase=True),
+    LeadSheetRule("revolver", LeadSheet.I, 0.85),
+    LeadSheetRule("capital lease", LeadSheet.I, 0.90, is_phrase=True),
+    LeadSheetRule("note payable", LeadSheet.I, 0.85, is_phrase=True),
 
     # -------------------------------------------------------------------------
     # J: Other Long-term Liabilities / Deferred Items
@@ -291,6 +300,11 @@ LEAD_SHEET_RULES: list[LeadSheetRule] = [
     LeadSheetRule("lease liability non-current", LeadSheet.J, 0.95, is_phrase=True),
     LeadSheetRule("contingent liability", LeadSheet.J, 0.90, is_phrase=True),
     LeadSheetRule("provision", LeadSheet.J, 0.75),
+    # Sprint 535 P2-2: Additional long-term liability types
+    LeadSheetRule("pension obligation", LeadSheet.J, 0.95, is_phrase=True),
+    LeadSheetRule("environmental remediation", LeadSheet.J, 0.95, is_phrase=True),
+    LeadSheetRule("asset retirement obligation", LeadSheet.J, 0.95, is_phrase=True),
+    LeadSheetRule("workers compensation reserve", LeadSheet.J, 0.90, is_phrase=True),
 
     # -------------------------------------------------------------------------
     # K: Equity / Stockholders' Equity
@@ -342,6 +356,12 @@ LEAD_SHEET_RULES: list[LeadSheetRule] = [
     LeadSheetRule("production cost", LeadSheet.M, 0.85, is_phrase=True),
     LeadSheetRule("purchase", LeadSheet.M, 0.70),
     LeadSheetRule("freight in", LeadSheet.M, 0.80, is_phrase=True),
+    # Sprint 535 P2-2: Additional COGS rules for manufacturing accounts
+    LeadSheetRule("manufacturing overhead", LeadSheet.M, 0.90, is_phrase=True),
+    LeadSheetRule("freight inbound", LeadSheet.M, 0.85, is_phrase=True),
+    LeadSheetRule("freight — inbound", LeadSheet.M, 0.85, is_phrase=True),
+    LeadSheetRule("packaging and shipping", LeadSheet.M, 0.85, is_phrase=True),
+    LeadSheetRule("packaging", LeadSheet.M, 0.75),
 
     # -------------------------------------------------------------------------
     # N: Operating Expenses
@@ -371,6 +391,9 @@ LEAD_SHEET_RULES: list[LeadSheetRule] = [
     LeadSheetRule("training", LeadSheet.N, 0.75),
     LeadSheetRule("subscription", LeadSheet.N, 0.75),
     LeadSheetRule("dues", LeadSheet.N, 0.70),
+    # Sprint 535 P2-2: Bank fees/charges → N (override "bank" → A)
+    LeadSheetRule("bank fee", LeadSheet.N, 0.95, is_phrase=True),
+    LeadSheetRule("bank charge", LeadSheet.N, 0.95, is_phrase=True),
     LeadSheetRule("bad debt expense", LeadSheet.N, 0.90, is_phrase=True),
     LeadSheetRule("operating expense", LeadSheet.N, 0.85, is_phrase=True),
     LeadSheetRule("general expense", LeadSheet.N, 0.80, is_phrase=True),

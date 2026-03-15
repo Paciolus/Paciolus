@@ -314,7 +314,10 @@ SUSPENSE_KEYWORDS: list[tuple[str, float, bool]] = [
     ("pending classification", 0.95, True),
     ("awaiting classification", 0.95, True),
     # Medium confidence (0.70–0.89) — likely suspense terms
-    ("temporary", 0.75, False),
+    # Sprint 535 P1-3: Changed "temporary" to phrase "temporary account" to
+    # avoid false positive on "Temporary Labor" / "Temporary Staff".
+    ("temporary account", 0.80, True),
+    ("temporary balance", 0.80, True),
     ("hold account", 0.85, True),
     ("in transit", 0.80, True),
     ("intercompany clearing", 0.90, True),
@@ -542,6 +545,12 @@ CONTRA_EQUITY_KEYWORDS: list[str] = [
     "contra-equity",
     "stock subscription receivable",
     "drawing",
+    # Sprint 535 P1-1: AOCI accounts carry debit balances (contra to equity)
+    "accumulated other comprehensive",
+    "other comprehensive income",
+    "other comprehensive loss",
+    "aoci",
+    "oci loss",
 ]
 
 CONTRA_LIABILITY_KEYWORDS: list[str] = [

@@ -388,6 +388,9 @@ class StreamingAuditor:
         # Key: account identifier (from account_col), Value: type string / name string
         self.provided_account_types: dict[str, str] = {}
         self.provided_account_names: dict[str, str] = {}
+        # Sprint 535: Provided account subtypes from CSV "subtype" column
+        # Key: account identifier, Value: subtype string (e.g., "Current Asset", "Cost of Goods Sold")
+        self.provided_account_subtypes: dict[str, str] = {}
 
         # Column detection result (Day 9.2)
         self.column_detection: Optional[ColumnDetectionResult] = None
@@ -542,6 +545,24 @@ class StreamingAuditor:
                 ):
                     if acct_key and acct_name and acct_name.lower() not in ("", "nan", "none"):
                         self.provided_account_names[acct_key] = acct_name
+
+            # Sprint 535: Extract subtype values from dedicated column
+            # Checks common column names: "subtype", "sub_type", "account_subtype"
+            if not hasattr(self, '_subtype_col_resolved'):
+                self._subtype_col_resolved = True
+                self._subtype_col: str | None = None
+                chunk_lower = {c.lower().strip(): c for c in chunk.columns}
+                for candidate in ("subtype", "sub_type", "account_subtype", "account sub type"):
+                    if candidate in chunk_lower:
+                        self._subtype_col = chunk_lower[candidate]
+                        break
+            if self._subtype_col and self._subtype_col in chunk.columns:
+                for acct_key, acct_sub in zip(
+                    chunk[self.account_col].astype(str).str.strip(),
+                    chunk[self._subtype_col].astype(str).str.strip(),
+                ):
+                    if acct_key and acct_sub and acct_sub.lower() not in ("", "nan", "none"):
+                        self.provided_account_subtypes[acct_key] = acct_sub
 
             # Cleanup temporary DataFrame
             del temp_df, grouped
@@ -1538,12 +1559,37 @@ class StreamingAuditor:
         Sprint 530: Passes raw CSV subtype values so that
         extract_category_totals() can use them for current/non-current
         stratification and COGS recognition.
+
+        Sprint 535: Uses display-name-keyed dicts so keyword fallback
+        works when subtype is absent.  Prefers provided_account_subtypes
+        (the dedicated subtype column) over provided_account_types
+        (the broad type column) for subcategory matching.
         """
+        log_secure_operation("DEPLOY-VERIFY-535", "get_category_totals invoked")
+
         classified_accounts = self.get_classified_accounts()
+
+        # Sprint 535: Build display-name-keyed versions so that
+        # extract_category_totals() can do keyword matching on account
+        # names (e.g., "inventory", "receivable") as a fallback when
+        # no subtype column is available.
+        display_balances: dict[str, dict[str, float]] = {}
+        display_classifications: dict[str, str] = {}
+        display_subtypes: dict[str, str] = {}
+
+        # Prefer dedicated subtype column; fall back to type column
+        subtype_source = self.provided_account_subtypes or self.provided_account_types
+
+        for acct_key in self.account_balances:
+            display = self._display_name(acct_key)
+            display_balances[display] = self.account_balances[acct_key]
+            display_classifications[display] = classified_accounts.get(acct_key, "unknown")
+            display_subtypes[display] = subtype_source.get(acct_key, "")
+
         return extract_category_totals(
-            self.account_balances,
-            classified_accounts,
-            account_subtypes=self.provided_account_types,
+            display_balances,
+            display_classifications,
+            account_subtypes=display_subtypes,
         )
 
     def validate_balance_sheet(self, category_totals: Optional[CategoryTotals] = None) -> dict[str, Any]:
@@ -1568,6 +1614,7 @@ class StreamingAuditor:
     def clear(self) -> None:
         """Clear all accumulated data and force garbage collection."""
         self.account_balances.clear()
+        self.provided_account_subtypes.clear()
         self._debit_chunks.clear()
         self._credit_chunks.clear()
         self.total_rows = 0
@@ -1612,21 +1659,42 @@ def _merge_anomalies(
                             entry["severity"] = item["severity"]
                         break
 
-    # Sprint 530 Fix 3: Finding type priority hierarchy
-    # Related Party > Intercompany > Suspense > Abnormal Balance > Concentration > Round Number
-    # Build sets of accounts claimed by higher-priority finding types so that
-    # lower-priority types do not duplicate-flag them.
-    related_party_accounts: set[str] = set()
+    # Sprint 535 P1-2: Finding type priority hierarchy (corrected)
+    # Intercompany Imbalance > Related Party > Suspense > Abnormal Balance > Concentration > Round Number
+    # Intercompany imbalance is more specific than related party; an account
+    # with no offsetting counterpart should surface as an elimination gap,
+    # not a generic ASC 850 disclosure item.
     intercompany_accounts: set[str] = set()
+    related_party_accounts: set[str] = set()
 
-    if related_party:
-        _merge_list(related_party, "is_related_party")
-        related_party_accounts = {rp["account"] for rp in related_party}
     if intercompany:
         _merge_list(intercompany, "is_intercompany_imbalance", {"cross_reference_note": "cross_reference_note"})
         intercompany_accounts = {ic["account"] for ic in intercompany}
 
-    # Suspense: exclude accounts already claimed by related party or intercompany
+    if related_party:
+        # Exclude accounts already claimed by intercompany imbalance
+        filtered_related = [
+            rp for rp in related_party
+            if rp["account"] not in intercompany_accounts
+        ]
+        _merge_list(filtered_related, "is_related_party")
+        related_party_accounts = {rp["account"] for rp in filtered_related}
+
+    # Promote intercompany accounts: if an account was first added as
+    # a different anomaly_type (e.g. natural_balance_violation) and then
+    # intercompany metadata was merged as a flag, make intercompany the
+    # primary anomaly_type.
+    for entry in abnormal_balances:
+        if entry.get("is_intercompany_imbalance") and entry.get("anomaly_type") != "intercompany_imbalance":
+            entry["anomaly_type"] = "intercompany_imbalance"
+            cross_note = entry.get("cross_reference_note", "")
+            if cross_note:
+                entry["issue"] = f"Intercompany receivable with no offsetting payable — potential consolidation elimination gap. {cross_note}"
+            else:
+                entry["issue"] = "Intercompany receivable with no offsetting payable — potential consolidation elimination gap"
+            entry["severity"] = "high"
+
+    # Suspense: exclude accounts already claimed by intercompany or related party
     filtered_suspense = [
         s for s in suspense_accounts
         if s["account"] not in related_party_accounts and s["account"] not in intercompany_accounts
@@ -1848,9 +1916,17 @@ def audit_trial_balance_streaming(
         result["classification_quality"] = cv_result.to_dict()
 
         # Sprint 287: Population Profile
+        # Sprint 535 P3-1: Use display-name-keyed dicts so top-account labels
+        # show "1010 — Cash and Cash Equivalents" instead of bare "1010".
         from population_profile_engine import compute_population_profile
 
-        pop_profile = compute_population_profile(auditor.account_balances, account_classifications)
+        pop_display_balances: dict[str, dict[str, float]] = {}
+        pop_display_classifications: dict[str, str] = {}
+        for _pk in auditor.account_balances:
+            _pd = auditor._display_name(_pk)
+            pop_display_balances[_pd] = auditor.account_balances[_pk]
+            pop_display_classifications[_pd] = account_classifications.get(_pk, "unknown")
+        pop_profile = compute_population_profile(pop_display_balances, pop_display_classifications)
         result["population_profile"] = pop_profile.to_dict()
 
         # Sprint 289: Expense Category Analytical Procedures
@@ -1943,15 +2019,39 @@ def audit_trial_balance_streaming(
         # Sprint 534: Expose full parsed account list for multi-period comparison.
         # lead_sheet_grouping only contains abnormal/flagged accounts, but
         # multi-period comparison needs ALL accounts from the uploaded TB.
+        # Sprint 535: Use display names and include subtype for downstream use.
         all_accounts_list = []
-        for acct_name, balances in auditor.account_balances.items():
+        for acct_key, balances in auditor.account_balances.items():
+            display = auditor._display_name(acct_key)
             all_accounts_list.append({
-                "account": acct_name,
+                "account": display,
                 "debit": balances["debit"],
                 "credit": balances["credit"],
-                "type": account_classifications.get(acct_name, "unknown"),
+                "type": account_classifications.get(acct_key, "unknown"),
             })
         result["all_accounts"] = all_accounts_list
+
+        # Sprint 535 P0-1: Expose account_balances and classified_accounts
+        # keyed by display name so consumers get keyword-matchable keys.
+        display_balances: dict[str, dict[str, float]] = {}
+        display_classifications: dict[str, str] = {}
+        display_subtypes: dict[str, str] = {}
+        subtype_source = auditor.provided_account_subtypes or auditor.provided_account_types
+        for acct_key in auditor.account_balances:
+            display = auditor._display_name(acct_key)
+            display_balances[display] = auditor.account_balances[acct_key]
+            display_classifications[display] = account_classifications.get(acct_key, "unknown")
+            display_subtypes[display] = subtype_source.get(acct_key, "")
+        result["account_balances"] = display_balances
+        result["classified_accounts"] = display_classifications
+        result["account_subtypes"] = display_subtypes
+
+        # Sprint 535 P0-2: Compute lead sheet grouping from all accounts.
+        # group_by_lead_sheet() takes the same dict format as all_accounts_list.
+        from lead_sheet_mapping import group_by_lead_sheet, lead_sheet_grouping_to_dict
+
+        lead_sheet_result = group_by_lead_sheet(all_accounts_list)
+        result["lead_sheet_grouping"] = lead_sheet_grouping_to_dict(lead_sheet_result)
 
         log_secure_operation(
             "streaming_audit_complete",
@@ -2248,7 +2348,7 @@ def audit_trial_balance_multi_sheet(
         for acct_name, bals in consolidated_account_balances.items():
             net = bals["debit"] - bals["credit"]
             classifier_instance = create_classifier(account_type_overrides)
-            ms_classifications[acct_name] = classifier_instance.classify(acct_name, net).value
+            ms_classifications[acct_name] = classifier_instance.classify(acct_name, net).category.value
         all_accounts_list = []
         for acct_name, bals in consolidated_account_balances.items():
             all_accounts_list.append({

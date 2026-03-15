@@ -22,7 +22,7 @@ GAAP/IFRS Notes:
 import re
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Optional
+from typing import Any, ClassVar, Optional
 
 from classification_rules import AccountCategory
 from lead_sheet_mapping import (
@@ -107,7 +107,28 @@ class AccountMovement:
     lead_sheet_category: str
     is_dormant: bool = False
 
+    # Sprint 535 P3-2: Credit-normal categories where an increase in
+    # the account (more credit) produces a negative raw change_percent.
+    # Display values flip the sign so "liability went up" shows positive.
+    _CREDIT_NORMAL_CATEGORIES: ClassVar[frozenset[str]] = frozenset({
+        "Current Liabilities",
+        "Non-Current Liabilities",
+        "Equity",
+        "Revenue",
+    })
+
+    @property
+    def _is_credit_normal(self) -> bool:
+        return self.lead_sheet_category in self._CREDIT_NORMAL_CATEGORIES
+
     def to_dict(self) -> dict[str, Any]:
+        # Sprint 535 P3-2: display_* fields flip sign for credit-normal accounts
+        if self._is_credit_normal:
+            display_change = -self.change_amount
+            display_pct = -self.change_percent if self.change_percent is not None else None
+        else:
+            display_change = self.change_amount
+            display_pct = self.change_percent
         return {
             "account_name": self.account_name,
             "account_type": self.account_type,
@@ -115,11 +136,14 @@ class AccountMovement:
             "current_balance": self.current_balance,
             "change_amount": self.change_amount,
             "change_percent": self.change_percent,
+            "display_change_amount": display_change,
+            "display_change_percent": display_pct,
             "movement_type": self.movement_type.value,
             "significance": self.significance.value,
             "lead_sheet": self.lead_sheet,
             "lead_sheet_name": self.lead_sheet_name,
             "lead_sheet_category": self.lead_sheet_category,
+            "is_credit_normal": self._is_credit_normal,
             "is_dormant": self.is_dormant,
         }
 
@@ -138,7 +162,18 @@ class LeadSheetMovementSummary:
     account_count: int
     movements: list[AccountMovement] = field(default_factory=list)
 
+    @property
+    def _is_credit_normal(self) -> bool:
+        return self.lead_sheet_category in AccountMovement._CREDIT_NORMAL_CATEGORIES
+
     def to_dict(self) -> dict[str, Any]:
+        # Sprint 535 P3-2: display_* fields flip sign for credit-normal lead sheets
+        if self._is_credit_normal:
+            display_change = -self.net_change
+            display_pct = -self.change_percent if self.change_percent is not None else None
+        else:
+            display_change = self.net_change
+            display_pct = self.change_percent
         return {
             "lead_sheet": self.lead_sheet,
             "lead_sheet_name": self.lead_sheet_name,
@@ -147,6 +182,9 @@ class LeadSheetMovementSummary:
             "current_total": self.current_total,
             "net_change": self.net_change,
             "change_percent": self.change_percent,
+            "display_net_change": display_change,
+            "display_change_percent": display_pct,
+            "is_credit_normal": self._is_credit_normal,
             "account_count": self.account_count,
             "movements": [m.to_dict() for m in self.movements],
         }

@@ -434,7 +434,35 @@ def compute_tb_risk_score(
             factors.append(("Deficit with capital distributions", 5))
             score += 5
 
-    return min(score, 100), factors
+    # Sprint 535 P2-1: Reconcile factors to the capped score so the
+    # decomposition visually sums to the displayed total.
+    capped = min(score, 100)
+    if score > 100 and factors:
+        raw_sum = sum(pts for _, pts in factors)
+        # Walk backwards (lowest-priority factors last) and trim.
+        excess = raw_sum - capped
+        reconciled: list[tuple[str, int]] = []
+        # Accumulate from the top; once we've consumed the cap, zero the rest.
+        running = 0
+        for name, pts in factors:
+            if running >= capped:
+                # Already at cap — this factor contributes 0
+                reconciled.append((name, 0))
+            elif running + pts > capped:
+                # Partially contributes
+                actual = capped - running
+                if "additional findings" in name:
+                    reconciled.append((f"{name} (to cap)", actual))
+                else:
+                    reconciled.append((name, actual))
+                running = capped
+            else:
+                reconciled.append((name, pts))
+                running += pts
+        # Remove 0-contribution lines for cleanliness
+        factors = [(n, p) for n, p in reconciled if p > 0]
+
+    return capped, factors
 
 
 def get_risk_tier(score: int) -> str:

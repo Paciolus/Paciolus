@@ -197,6 +197,9 @@ class FinancialStatements:
     prior_gross_profit: float = 0.0
     prior_operating_income: float = 0.0
     prior_net_income: float = 0.0
+    # Pre-closing TB note (Sprint 535 P2-3)
+    is_pre_closing: bool = False
+    pre_closing_note: str = ""
     # Metadata
     entity_name: str = ""
     period_end: str = ""
@@ -232,6 +235,8 @@ class FinancialStatements:
             "depreciation_amount": self.depreciation_amount,
             "interest_expense": self.interest_expense,
             "has_prior_period": self.has_prior_period,
+            "is_pre_closing": self.is_pre_closing,
+            "pre_closing_note": self.pre_closing_note,
             "entity_name": self.entity_name,
             "period_end": self.period_end,
         }
@@ -381,6 +386,21 @@ class FinancialStatementBuilder:
         # Cash Flow Statement (Sprint 83)
         cash_flow = self._build_cash_flow_statement(net_income)
 
+        # Sprint 535 P2-3: Detect pre-closing TB imbalance
+        # In a pre-closing TB, balance_difference ≈ net_income because
+        # revenue/expense accounts haven't been closed to retained earnings.
+        is_pre_closing = False
+        pre_closing_note = ""
+        if not is_balanced and abs(net_income) > 0.01:
+            if abs(balance_difference - net_income) < 0.01:
+                is_pre_closing = True
+                pre_closing_note = (
+                    "This trial balance appears to be pre-closing: the balance sheet "
+                    "difference equals net income. Revenue and expense accounts have "
+                    "not yet been closed to retained earnings. After closing entries, "
+                    "Total Assets should equal Total Liabilities & Equity."
+                )
+
         statements = FinancialStatements(
             balance_sheet=balance_sheet,
             income_statement=income_statement,
@@ -404,6 +424,8 @@ class FinancialStatementBuilder:
             prior_operating_income=prior_operating_income,
             prior_net_income=prior_net_income,
             cash_flow_statement=cash_flow,
+            is_pre_closing=is_pre_closing,
+            pre_closing_note=pre_closing_note,
             entity_name=self.entity_name,
             period_end=self.period_end,
         )

@@ -338,6 +338,77 @@ Scope: auth flows, CSRF/CSP, rate limiting, API authorization, file upload, JWT,
 - [x] `pytest tests/test_multi_period_memo.py` — 75 passed
 
 **Review:** 8 bugs fixed across 9 files (3 backend engine/route, 2 backend shared modules, 4 frontend components/hooks). Key root causes: (1) account extraction from audit result only included abnormal accounts, not full TB; (2) sign convention not respected in procedure/ratio logic; (3) 3-way comparison dropped movements from lead sheet summaries. Zero regressions.
+**Commit:** 3cb7d6e
+
+---
+
+### Sprint 535 — QA Sweep Fix Batch (11 fixes across 6 files)
+
+**Status:** COMPLETE
+**Goal:** Fix all FAIL/PARTIAL items from comprehensive QA sweep against Cascade FY2025 test TB (162 accounts).
+**Complexity Score:** 7/10
+
+#### P0-1: Account balances and classified_accounts keyed by display name
+- [x] Add `provided_account_subtypes` storage + subtype column detection in `process_chunk()`
+- [x] Rewrite `get_category_totals()` to build display-name-keyed dicts
+- [x] Expose `account_balances`, `classified_accounts`, `account_subtypes` in result dict
+
+#### P0-2: Compute lead_sheet_grouping in audit result
+- [x] Call `group_by_lead_sheet()` + `lead_sheet_grouping_to_dict()` in streaming audit
+- [x] Expose as `result["lead_sheet_grouping"]`
+
+#### P0-3: Display-name-keyed all_accounts_list
+- [x] Build `all_accounts_list` entries with display name instead of bare account number
+
+#### P1-1: AOCI accounts excluded from abnormal balance findings
+- [x] Add AOCI keywords to `CONTRA_EQUITY_KEYWORDS` in `classification_rules.py`
+
+#### P1-2: Intercompany imbalance priority over related party
+- [x] Reverse merge order in `_merge_anomalies()` — intercompany first, then related party
+- [x] Add promotion logic: `is_intercompany_imbalance=True` → override type + issue text
+
+#### P1-3: "Temporary" keyword false positive in suspense detection
+- [x] Replace bare `"temporary"` with phrase rules: `"temporary account"`, `"temporary balance"`
+
+#### P2-1: Risk score decomposition cap reconciliation
+- [x] Add cap logic to `compute_tb_risk_score()` — reconcile factor lines when raw sum > 100
+
+#### P2-2: Lead sheet misclassifications (13 new rules)
+- [x] "current portion of long-term" → H at 1.05 (beats "long-term debt" at 1.0)
+- [x] COGS: "manufacturing overhead", "freight inbound/—", "packaging" → M
+- [x] "bank fee"/"bank charge" → N at 0.95 (overrides "bank" → A at 0.9)
+- [x] "dividends payable" → H, "short-term investment" → A
+- [x] Long-term debt: "subordinated debt", "senior notes", "revolver", "capital lease", "note payable"
+- [x] Other LT liabilities: "pension obligation", "environmental remediation", "asset retirement obligation", "workers compensation reserve"
+
+#### P2-3: Balance sheet pre-closing TB imbalance note
+- [x] Add `is_pre_closing` + `pre_closing_note` fields to `FinancialStatements`
+- [x] Detect when `balance_difference ≈ net_income` and set explanatory note
+
+#### P3-1: Population profile display-name key alignment
+- [x] Pass display-name-keyed dicts to `compute_population_profile()` from audit engine
+
+#### P3-2: Credit-normal sign-flip for period-over-period display
+- [x] Add `display_change_amount`, `display_change_percent`, `is_credit_normal` to `AccountMovement.to_dict()`
+- [x] Add same fields to `LeadSheetMovementSummary.to_dict()`
+
+#### Bonus: Multi-sheet ClassificationResult.value fix
+- [x] Fix `classifier_instance.classify().value` → `.category.value` in multi-sheet path
+
+#### QA test data
+- [x] `tests/qa/paciolus_test_tb_cascade_fy2025.csv` — 162-account balanced TB
+- [x] `tests/qa/cascade_fy2024_prior.csv` — 159-account prior year
+- [x] `tests/qa/cascade_fy2025_budget.csv` — 159-account budget
+- [x] `tests/qa/run_qa_sweep.py` — comprehensive 5-tool QA sweep script
+
+#### Verification
+- [x] `npm run build` passes (all routes dynamic)
+- [x] `npm test` — 1,339 passed (112 suites)
+- [x] `pytest` — 315 passed on modified test files (0 failures)
+- [x] QA sweep: all 5 tools complete without crashes
+- [x] Pre-closing TB note: `is_pre_closing=True`, note generated correctly
+
+**Review:** 11 prioritized fixes (P0×3, P1×3, P2×3, P3×2) plus 1 bonus pre-existing bug fix across 6 backend files. Root causes: (1) account_balances keyed by number not display name, breaking keyword matching in ratio engine and population profile; (2) subtype column never captured from CSV; (3) lead_sheet_grouping never computed in audit result; (4) AOCI not in contra-equity list; (5) intercompany/related-party merge order; (6) "temporary" keyword too broad; (7) risk score factor lines not reconciled to 100 cap; (8) 13 missing/underweighted lead sheet rules; (9) no pre-closing TB indicator; (10) credit-normal sign convention not exposed for display.
 
 ---
 
