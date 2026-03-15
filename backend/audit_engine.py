@@ -33,6 +33,10 @@ from classification_rules import (
     # Sprint 42: Rounding Anomaly
     ROUNDING_MIN_AMOUNT,
     ROUNDING_PATTERNS,
+    # Sprint 536: Round-number tiering
+    ROUND_NUMBER_COGS_SUBTYPES,
+    ROUND_NUMBER_TIER1_SUPPRESS,
+    classify_round_number_tier,
     SUSPENSE_CONFIDENCE_THRESHOLD,
     SUSPENSE_KEYWORDS,
     AccountCategory,
@@ -923,24 +927,27 @@ class StreamingAuditor:
         Detect suspicious round numbers that may indicate estimation or manipulation.
 
         Sprint 42 - Phase III: Rounding Anomaly Detection
-
-        Round numbers in financial data may indicate:
-        - Estimates rather than actual transactions
-        - Journal entry manipulation or fraud
-        - Placeholder amounts awaiting final figures
-        - Accrual reversals or adjustments
-
-        Note: Not all round numbers are suspicious. Loans, capital transactions,
-        and certain contracts legitimately use round amounts.
+        Sprint 536: Three-tier framework (Suppress / Minor / Material)
 
         Returns:
-            List of rounding anomalies with pattern type and severity
+            List of rounding anomalies with tier-appropriate severity and text
         """
         log_secure_operation(
             "rounding_detection", f"Analyzing {len(self.account_balances)} accounts for rounding anomalies"
         )
+        log_secure_operation("DEPLOY-VERIFY-536", "tiered round-number detection active")
 
-        rounding_anomalies: list[dict[str, Any]] = []
+        # Compute TB total for 10% concentration threshold
+        tb_total = sum(
+            abs(b["debit"] - b["credit"]) for b in self.account_balances.values()
+        )
+
+        # Prefer dedicated subtype column; fall back to type column
+        subtype_source = self.provided_account_subtypes or self.provided_account_types
+
+        # ── First pass: identify round accounts and classify tier ──────
+        # Collect candidates as (finding_dict, tier, abs_balance, category, subtype)
+        candidates: list[tuple[dict[str, Any], str, float, str, str]] = []
 
         for account_key, balances in self.account_balances.items():
             debit_amount = balances["debit"]
@@ -953,83 +960,133 @@ class StreamingAuditor:
                 continue
 
             display = self._display_name(account_key)
-            account_lower = display.lower()
-
-            # Sprint 526 Fix 3: Tiered round-number detection
-            # Tier 1 — Expected round numbers (suppress)
-            is_tier1 = any(kw in account_lower for kw in self._ROUNDING_TIER1_KEYWORDS)
-            if is_tier1:
-                continue
-
-            # Sprint 530 Fix 1: Contra accounts (accumulated depreciation, allowances,
-            # reserves) are expected to carry round numbers — suppress.
             category = self._resolve_category(account_key, net_balance)
-            if is_contra_account(display, category):
-                continue
-
-            # Legacy exclude list (loans, capital, etc.)
-            is_excluded = any(keyword in account_lower for keyword in ROUNDING_EXCLUDE_KEYWORDS)
-            if is_excluded:
-                continue
-
-            # Tier 3 — Suspicious accounts (suspense, clearing, misc)
-            is_tier3 = any(kw in account_lower for kw in self._ROUNDING_TIER3_KEYWORDS)
+            subtype_raw = subtype_source.get(account_key, "")
 
             # Check against rounding patterns (most significant first)
             abs_balance_dec = Decimal(str(abs_balance))
+            matched_pattern = None
             for divisor, pattern_name, pattern_severity in ROUNDING_PATTERNS:
                 divisor_dec = Decimal(str(divisor))
                 remainder_dec = abs_balance_dec % divisor_dec
                 is_round = remainder_dec < BALANCE_TOLERANCE or (divisor_dec - remainder_dec) < BALANCE_TOLERANCE
-
                 if is_round:
-                    # category already resolved above (Sprint 530)
-                    is_material = abs_balance >= self.materiality_threshold
-
-                    # Tier 2 (default) — only flag if material and genuinely noteworthy
-                    if not is_tier3 and not is_material:
-                        break  # Tier 2 immaterial round numbers are not worth flagging
-
-                    # Tier 3 accounts always flagged; Tier 2 only if material
-                    materiality_status = "material" if is_material else "immaterial"
-
-                    if divisor >= 100000:
-                        round_desc = f"${abs_balance / 1000:,.0f}K"
-                    else:
-                        round_desc = f"${abs_balance:,.0f}"
-
-                    # Tier 3 gets higher severity
-                    if is_tier3:
-                        effective_severity = "high" if is_material else "medium"
-                    else:
-                        effective_severity = pattern_severity if is_material else "low"
-
-                    rounding_anomalies.append(
-                        {
-                            "account": display,
-                            "type": CATEGORY_DISPLAY_NAMES.get(category, "Unknown"),
-                            "issue": f"Exactly round amount: {round_desc}",
-                            "amount": round(abs_balance, 2),
-                            "debit": round(debit_amount, 2),
-                            "credit": round(credit_amount, 2),
-                            "materiality": materiality_status,
-                            "category": category.value,
-                            "confidence": 0.8 if is_tier3 else (0.6 if pattern_severity == "high" else 0.4),
-                            "matched_keywords": [],
-                            "requires_review": True,
-                            "anomaly_type": "rounding_anomaly",
-                            "rounding_pattern": pattern_name,
-                            "rounding_divisor": divisor,
-                            "severity": effective_severity,
-                            "suggestions": [],
-                            "recommendation": (
-                                f"This balance is an exactly round number ({round_desc}). "
-                                "Verify this represents an actual transaction amount and not "
-                                "an estimate, placeholder, or potential journal entry manipulation."
-                            ),
-                        }
-                    )
+                    matched_pattern = (divisor, pattern_name, pattern_severity)
                     break
+
+            if matched_pattern is None:
+                continue  # Not a round number
+
+            # Sprint 536: Classify into tier
+            tier = classify_round_number_tier(
+                display, category, subtype_raw, abs_balance, tb_total, self.materiality_threshold,
+            )
+            if tier is None:
+                continue  # Tier 1 — suppressed
+
+            divisor, pattern_name, pattern_severity = matched_pattern
+
+            if divisor >= 100000:
+                round_desc = f"${abs_balance / 1000:,.0f}K"
+            else:
+                round_desc = f"${abs_balance:,.0f}"
+
+            # Tier-appropriate severity and text
+            if tier == "minor":
+                effective_severity = "low"
+                materiality_status = "immaterial"
+                confidence = 0.3
+                issue_text = f"Round amount noted: {round_desc}"
+                recommendation = (
+                    f"Round amount noted: {round_desc}. For this account type, round balances "
+                    "are common and may reflect estimates or contractual amounts. No immediate "
+                    "action required — verify during substantive procedures if material to "
+                    "the engagement."
+                )
+            else:
+                # tier == "material"
+                effective_severity = pattern_severity if abs_balance >= self.materiality_threshold else "medium"
+                materiality_status = "material" if abs_balance >= self.materiality_threshold else "immaterial"
+                confidence = 0.6 if pattern_severity == "high" else 0.4
+                issue_text = f"Exactly round amount: {round_desc}"
+                recommendation = (
+                    f"Exactly round amount: {round_desc}. Inspect supporting documentation "
+                    "for all transactions comprising this balance. Perform targeted vouching "
+                    "to confirm amounts reflect actual invoiced or contracted values. Assess "
+                    "whether the pattern indicates estimation rather than transaction-based recording."
+                )
+
+            finding: dict[str, Any] = {
+                "account": display,
+                "type": CATEGORY_DISPLAY_NAMES.get(category, "Unknown"),
+                "issue": issue_text,
+                "amount": round(abs_balance, 2),
+                "debit": round(debit_amount, 2),
+                "credit": round(credit_amount, 2),
+                "materiality": materiality_status,
+                "category": category.value,
+                "confidence": confidence,
+                "matched_keywords": [],
+                "requires_review": True,
+                "anomaly_type": "rounding_anomaly",
+                "rounding_pattern": pattern_name,
+                "rounding_divisor": divisor,
+                "severity": effective_severity,
+                "suggestions": [],
+                "recommendation": recommendation,
+                "rounding_tier": tier,
+            }
+            candidates.append((finding, tier, abs_balance, category.value, subtype_raw.lower().strip()))
+
+        # ── Second pass: repeated identical amounts (3+) in same type/subtype ──
+        from collections import Counter
+
+        group_amounts: dict[tuple[str, str], list[float]] = {}
+        for _, tier, abs_bal, cat_val, sub_val in candidates:
+            key = (cat_val, sub_val)
+            group_amounts.setdefault(key, []).append(abs_bal)
+
+        repeated_sets: set[tuple[str, str, float]] = set()
+        for (cat_val, sub_val), amounts in group_amounts.items():
+            counts = Counter(amounts)
+            for amt, cnt in counts.items():
+                if cnt >= 3:
+                    repeated_sets.add((cat_val, sub_val, amt))
+
+        # Upgrade repeated-pattern accounts to Material
+        rounding_anomalies: list[dict[str, Any]] = []
+        for finding, tier, abs_bal, cat_val, sub_val in candidates:
+            if (cat_val, sub_val, abs_bal) in repeated_sets:
+                # Count how many accounts share this amount
+                n_matching = group_amounts[(cat_val, sub_val)].count(abs_bal)
+                matching_accounts = [
+                    f[0]["account"] for f in candidates
+                    if f[3] == cat_val and f[4] == sub_val and f[2] == abs_bal
+                ]
+                acct_list = ", ".join(matching_accounts)
+
+                if abs_bal >= 100000:
+                    amt_str = f"${abs_bal / 1000:,.0f}K"
+                else:
+                    amt_str = f"${abs_bal:,.0f}"
+
+                finding["severity"] = "high"
+                finding["materiality"] = "material"
+                finding["confidence"] = 0.8
+                finding["rounding_tier"] = "material"
+                finding["issue"] = (
+                    f"Identical round amount {amt_str} appears across "
+                    f"{n_matching} accounts"
+                )
+                finding["recommendation"] = (
+                    f"Identical round amount {amt_str} appears across "
+                    f"{n_matching} accounts ({acct_list}). This pattern may indicate "
+                    "allocation, estimation, or systematic rounding rather than "
+                    "transaction-based recording. Obtain documentation for the allocation "
+                    "methodology and verify each amount independently."
+                )
+
+            rounding_anomalies.append(finding)
 
         # Sort by amount (highest first) and limit results
         rounding_anomalies.sort(key=lambda x: x["amount"], reverse=True)
@@ -1192,46 +1249,16 @@ class StreamingAuditor:
 
     # ─── Sprint 527: Keywords imported from classification_rules.py ──
 
-    # ─── Sprint 526 Fix 3: Rounding Tier Configuration ───────────────
-
-    # Tier 1: Account types where round numbers are expected (suppress)
-    _ROUNDING_TIER1_KEYWORDS: list[str] = [
-        "land",
-        "building",
-        "equipment",
-        "leasehold",
-        "improvement",
-        "long-term debt",
-        "long term debt",
-        "notes payable",
-        "note payable",
-        "bonds payable",
-        "mortgage",
-        "common stock",
-        "preferred stock",
-        "paid-in capital",
-        "apic",
-        "additional paid",
-        "treasury stock",
-        "salary",
-        "salaries",
-        "payroll",
-        "wages",
-        "depreciation",
-        "amortization",
-        "accumulated depreciation",
-    ]
-    _ROUNDING_TIER1_CATEGORIES: set[str] = set()  # Categories always suppressed (none by default)
-
-    # Tier 2: Mildly noteworthy — single round balance
-    # (Default for operating expenses, accrued liabilities, single revenue)
-
-    # Tier 3: Genuine anomaly signal
+    # ─── Sprint 526 Fix 3 / Sprint 536: Rounding Tier Configuration ──
+    # Superseded by classify_round_number_tier() in classification_rules.py.
+    # Kept as class attributes for backward compatibility with any tests
+    # that reference them directly.
+    _ROUNDING_TIER1_KEYWORDS: list[str] = ROUND_NUMBER_TIER1_SUPPRESS
+    _ROUNDING_TIER1_CATEGORIES: set[str] = set()
     _ROUNDING_TIER3_KEYWORDS: list[str] = [
         "suspense",
         "clearing",
         "miscellaneous",
-        "other",
         "sundry",
         "unallocated",
         "unclassified",

@@ -403,6 +403,8 @@ ROUNDING_PATTERNS: list[tuple[float, str, str]] = [
 ROUNDING_MAX_ANOMALIES = 20
 
 # Accounts to exclude from rounding analysis (common legitimate round amounts)
+# NOTE: Largely superseded by Sprint 536 tiered constants below, but kept for
+# backward compatibility with any code that still references this list.
 ROUNDING_EXCLUDE_KEYWORDS: list[str] = [
     "loan",
     "mortgage",
@@ -415,6 +417,227 @@ ROUNDING_EXCLUDE_KEYWORDS: list[str] = [
     "credit line",
     "line of credit",
 ]
+
+
+# =============================================================================
+# ROUND-NUMBER DETECTION TIERING (Sprint 536)
+# =============================================================================
+# Three-tier framework replacing flat round-number flagging.
+#   Tier 1 — Suppress:  accounts where round balances are standard practice
+#   Tier 2 — Minor:     round balances worth noting but not escalating
+#   Tier 3 — Material:  round amounts in genuinely anomalous contexts
+
+# ── Tier 1: Suppress entirely ──────────────────────────────────────────
+ROUND_NUMBER_TIER1_SUPPRESS: list[str] = [
+    # Fixed assets
+    "land",
+    "building",
+    "machinery",
+    "equipment",
+    "vehicle",
+    "fleet",
+    "furniture",
+    "leasehold improvement",
+    "construction in progress",
+    "capital lease asset",
+    "right-of-use asset",
+    # Long-term debt (principal amounts are set contractually)
+    "long-term debt",
+    "term loan",
+    "loan",
+    "mortgage",
+    "bond payable",
+    "note payable",
+    "debenture",
+    "line of credit",
+    "revolving credit",
+    # Equity
+    "common stock",
+    "preferred stock",
+    "additional paid-in capital",
+    "paid-in capital",
+    "retained earnings",
+    "partners capital",
+    "members equity",
+    # Intangibles acquired at round amounts
+    "goodwill",
+    # Standard payroll round amounts
+    "salary",
+    "salaries",
+    "wages",
+    "payroll",
+    "base salary",
+    "annual salary",
+    # Depreciation — round amounts are calculation artifacts
+    "depreciation",
+    "amortization",
+    "accumulated depreciation",
+    # Subordinated / senior debt
+    "subordinated debt",
+    "senior notes",
+]
+
+ROUND_NUMBER_TIER1_SUBTYPE_SUPPRESS: set[str] = {
+    "non-current asset",
+    "equity",
+}
+
+# Carve-outs: do NOT suppress even if keyword matches Tier 1
+ROUND_NUMBER_TIER1_CARVEOUTS: list[str] = [
+    "note payable — shareholder",
+    "note payable — officer",
+    "note payable — director",
+    "note payable — related",
+    "note payable - shareholder",
+    "note payable - officer",
+    "note payable - director",
+    "note payable - related",
+]
+
+# ── Tier 2: Minor observation only ────────────────────────────────────
+ROUND_NUMBER_TIER2_MINOR: list[str] = [
+    # Accrued liabilities — often estimated in round amounts
+    "accrued",
+    "accrual",
+    # Reserves — management estimates
+    "reserve",
+    "allowance",
+    # Standard compensation and benefits
+    "bonus",
+    "commission",
+    "incentive compensation",
+    "profit sharing",
+    "health insurance",
+    "employee benefit",
+    "payroll tax",
+    # Rent — lease amounts are contractually round
+    "rent",
+    "lease expense",
+    # Standard recurring professional fees
+    "audit fee",
+    "accounting fee",
+    "legal retainer",
+    # Environmental and remediation — often management estimates
+    "environmental",
+    "remediation",
+    # Post-retirement and pension obligations
+    "pension",
+    "post-retirement",
+    "retirement benefit",
+    "defined benefit",
+    # Finance lease obligations — set contractually
+    "finance lease obligation",
+    "capital lease obligation",
+    # Warranty reserves
+    "warranty",
+    # Standard insurance premiums
+    "insurance",
+    # Restructuring charges — management estimates
+    "restructuring",
+    # Asset retirement — decommissioning estimates
+    "asset retirement",
+    # Workers compensation reserves
+    "workers compensation",
+]
+
+# ── Tier 3: Material finding triggers ─────────────────────────────────
+# Miscellaneous / catch-all account keywords
+ROUND_NUMBER_TIER3_MISC: list[str] = [
+    "miscellaneous",
+    "misc",
+    "catch-all",
+    "sundry",
+    "unclassified",
+    "other expense",
+    "other income",
+]
+
+# COGS subtype strings (lowercase) for Tier 3 COGS detection
+ROUND_NUMBER_COGS_SUBTYPES: set[str] = {
+    "cost of goods sold",
+    "cost of revenue",
+    "cogs",
+}
+
+# Contra-revenue keywords: round balances are Tier 2, not Tier 3
+ROUND_NUMBER_CONTRA_REVENUE: list[str] = [
+    "sales discount",
+    "sales return",
+    "discounts and allowance",
+    "returns and allowance",
+]
+
+
+def classify_round_number_tier(
+    account_name: str,
+    account_type: AccountCategory,
+    subtype: str | None,
+    balance: float,
+    tb_total: float,
+    materiality_threshold: float,
+) -> str | None:
+    """Classify a round-balance account into Tier 1/2/3.
+
+    Sprint 536: DEPLOY-VERIFY-536
+
+    Returns:
+        None      — Tier 1, suppress entirely (no finding generated)
+        "minor"   — Tier 2, generate Minor Observation
+        "material" — Tier 3, generate Material finding
+    """
+    lower = account_name.lower()
+    sub_lower = (subtype or "").lower().strip()
+
+    # ── Step 2: Tier 1 suppress (with carve-out override) ─────────────
+    # Checked before contra accounts so that Non-Current Assets
+    # (including accumulated depreciation) are fully suppressed.
+    has_carveout = any(kw in lower for kw in ROUND_NUMBER_TIER1_CARVEOUTS)
+
+    if not has_carveout:
+        # Suppress by subtype
+        if sub_lower in ROUND_NUMBER_TIER1_SUBTYPE_SUPPRESS:
+            return None
+        # Suppress by keyword
+        if any(kw in lower for kw in ROUND_NUMBER_TIER1_SUPPRESS):
+            return None
+
+    # ── Step 3: Contra accounts → at most "minor" ─────────────────────
+    if is_contra_account(account_name, account_type):
+        return "minor"
+
+    # ── Step 5: Tier 3 triggers ───────────────────────────────────────
+    # 5b. Miscellaneous / catch-all account names
+    if any(kw in lower for kw in ROUND_NUMBER_TIER3_MISC):
+        return "material"
+
+    # 5c. Revenue accounts (not contra-revenue)
+    if account_type == AccountCategory.REVENUE:
+        is_contra_rev = any(kw in lower for kw in ROUND_NUMBER_CONTRA_REVENUE)
+        if is_contra_rev:
+            return "minor"
+        return "material"
+
+    # 5d. COGS above materiality (not depreciation/amortization)
+    if sub_lower in ROUND_NUMBER_COGS_SUBTYPES:
+        is_depr_amort = "depreciation" in lower or "amortization" in lower
+        if is_depr_amort:
+            return None  # Tier 1 suppress
+        if materiality_threshold > 0 and balance >= materiality_threshold:
+            return "material"
+        if materiality_threshold == 0:
+            return "material"
+        return "minor"  # COGS below materiality → minor
+
+    # 5e. Balance > 10% of TB total
+    if tb_total > 0 and balance > 0.10 * tb_total:
+        return "material"
+
+    # ── Step 6: Tier 2 keyword list ───────────────────────────────────
+    if any(kw in lower for kw in ROUND_NUMBER_TIER2_MINOR):
+        return "minor"
+
+    # ── Step 7: Default → material (preserve current behavior) ────────
+    return "material"
 
 
 # =============================================================================

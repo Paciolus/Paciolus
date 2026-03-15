@@ -789,7 +789,10 @@ Revenue,,6000
 
         for entry in rounding:
             assert "recommendation" in entry
-            assert "verify" in entry["recommendation"].lower()
+            # Sprint 536: Tier-appropriate recommendation text uses
+            # "inspect"/"confirm" (Material) or "verify" (Minor)
+            rec_lower = entry["recommendation"].lower()
+            assert "inspect" in rec_lower or "verify" in rec_lower or "confirm" in rec_lower
 
     def test_rounding_merged_into_abnormal_balances(self, round_numbers_csv):
         """Verify rounding anomalies are merged into audit result."""
