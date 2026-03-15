@@ -774,6 +774,8 @@ CONTRA_EQUITY_KEYWORDS: list[str] = [
     "other comprehensive loss",
     "aoci",
     "oci loss",
+    # Sprint 536 cleanup: accumulated deficit is a debit-balance equity account
+    "accumulated deficit",
 ]
 
 CONTRA_LIABILITY_KEYWORDS: list[str] = [

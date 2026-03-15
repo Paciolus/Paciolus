@@ -1,0 +1,118 @@
+account_code,account_name,account_type,classification,debit,credit
+1010,Cash — Operating,Asset,Current Asset,842350.00,
+1020,Cash — Payroll,Asset,Current Asset,125000.00,
+1030,Cash — Restricted,Asset,Current Asset,50000.00,
+1040,Petty Cash,Asset,Current Asset,500.00,
+1110,Accounts Receivable — Trade,Asset,Current Asset,,18750.00
+1120,Accounts Receivable — Government,Asset,Current Asset,1250000.00,
+1130,Allowance for Doubtful Accounts,Asset,Current Asset,,45000.00
+1140,Accounts Receivable — Related Party,Asset,Current Asset,375000.00,
+1150,Accounts Receivable — Other,Asset,Current Asset,22000.00,
+1210,Inventory — Raw Materials,Asset,Current Asset,310000.00,
+1220,Inventory — Work in Progress,Asset,Current Asset,88000.00,
+1230,Inventory — Finished Goods,Asset,Current Asset,174000.00,
+1310,Prepaid Insurance,Asset,Current Asset,,3200.00
+1320,Prepaid Rent,Asset,Current Asset,24000.00,
+1330,Prepaid Software Licenses,Asset,Current Asset,36000.00,
+1340,Prepaid Other,Asset,Current Asset,5000.00,
+1410,Deferred Tax Asset,Asset,Non-Current Asset,128000.00,
+1510,Property — Land,Asset,Non-Current Asset,500000.00,
+1520,Property — Building,Asset,Non-Current Asset,2200000.00,
+1530,Accumulated Depreciation — Building,Asset,Non-Current Asset,,380000.00
+1540,Equipment,Asset,Non-Current Asset,875000.00,
+1550,Accumulated Depreciation — Equipment,Asset,Non-Current Asset,,312000.00
+1560,Leasehold Improvements,Asset,Non-Current Asset,145000.00,
+1570,Accumulated Depreciation — Leasehold,Asset,Non-Current Asset,,48000.00
+1610,Intangible Assets — Software,Asset,Non-Current Asset,200000.00,
+1620,Accumulated Amortization — Software,Asset,Non-Current Asset,,60000.00
+1710,Intercompany Receivable — Meridian UK,Asset,Current Asset,425000.00,
+1720,Intercompany Receivable — Meridian CA,Asset,Current Asset,425000.00,
+1730,Notes Receivable — Officer,Asset,Non-Current Asset,85000.00,
+1810,Suspense — Q3 Clearing,Asset,Other,93500.00,
+1820,Suspense — System Migration,Asset,Other,41200.00,
+1830,Other Assets,Asset,Other,15000.00,
+2010,Accounts Payable — Trade,Liability,Current Liability,,687500.00
+2020,Accounts Payable — Related Party,Liability,Current Liability,,312000.00
+2030,Accounts Payable — Other,Liability,Current Liability,,28400.00
+2110,Accrued Payroll,Liability,Current Liability,,195000.00
+2120,Accrued Bonuses,Liability,Current Liability,,500000.00
+2130,Accrued Benefits,Liability,Current Liability,,87500.00
+2140,Accrued Vacation,Liability,Current Liability,,62000.00
+2210,Accrued Rent,Liability,Current Liability,,25000.00
+2220,Accrued Professional Fees,Liability,Current Liability,,18000.00
+2310,Income Tax Payable,Liability,Current Liability,,145000.00
+2320,Sales Tax Payable,Liability,Current Liability,,32750.00
+2330,Payroll Tax Payable,Liability,Current Liability,,41000.00
+2410,Deferred Revenue — Annual Contracts,Liability,Current Liability,,875000.00
+2420,Deferred Revenue — Multi-Year,Liability,Non-Current Liability,,1250000.00
+2510,Line of Credit,Liability,Current Liability,,400000.00
+2520,Current Portion — Long Term Debt,Liability,Current Liability,,120000.00
+2610,Long-Term Debt — Term Loan,Liability,Non-Current Liability,,2800000.00
+2620,Long-Term Debt — SBA Loan,Liability,Non-Current Liability,,650000.00
+2710,Intercompany Payable — Meridian UK,Liability,Current Liability,,425000.00
+2810,Other Accrued Liabilities,Liability,Current Liability,,55000.00
+3010,Common Stock,Equity,Equity,,500000.00
+3020,Additional Paid-In Capital,Equity,Equity,,2100000.00
+3030,Retained Earnings — Accumulated Deficit,Equity,Equity,3421150.00,
+3040,Accumulated Other Comprehensive Income,Equity,Equity,,125000.00
+3050,Treasury Stock,Equity,Equity,400000.00,
+3060,Dividends Declared,Equity,Equity,200000.00,
+4010,Revenue — Software Licenses,Revenue,Revenue,,5250000.00
+4020,Revenue — Professional Services,Revenue,Revenue,,4875000.00
+4030,Revenue — Maintenance & Support,Revenue,Revenue,,1100000.00
+4040,Revenue — Government Contracts,Revenue,Revenue,,3200000.00
+4050,Revenue — Training,Revenue,Revenue,,185000.00
+4060,Revenue — Hardware Resale,Revenue,Revenue,,92000.00
+4070,Revenue — Other,Revenue,Revenue,,38000.00
+4080,Revenue — Related Party,Revenue,Revenue,,1450000.00
+4090,Sales Returns and Allowances,Revenue,Revenue,125000.00,
+4100,Revenue — Reimbursed Expenses,Revenue,Revenue,,100000.00
+5010,Cost of Revenue — Software,Expense,Cost of Revenue,1875000.00,
+5020,Cost of Revenue — Services,Expense,Cost of Revenue,2100000.00,
+5030,Cost of Revenue — Hardware,Expense,Cost of Revenue,78000.00,
+5040,Cost of Revenue — Third Party Licenses,Expense,Cost of Revenue,425000.00,
+6010,Salaries — Engineering,Expense,Operating Expense,2850000.00,
+6020,Salaries — Sales,Expense,Operating Expense,1200000.00,
+6030,Salaries — General & Administrative,Expense,Operating Expense,875000.00,
+6040,Salaries — Executive,Expense,Operating Expense,1500000.00,
+6050,Payroll Taxes,Expense,Operating Expense,485000.00,
+6060,Employee Benefits,Expense,Operating Expense,325000.00,
+6070,Stock-Based Compensation,Expense,Operating Expense,500000.00,
+6080,Contract Labor,Expense,Operating Expense,100000.00,
+6090,Recruiting,Expense,Operating Expense,75000.00,
+6110,Rent — Office,Expense,Operating Expense,300000.00,
+6120,Utilities,Expense,Operating Expense,45000.00,
+6130,Office Supplies,Expense,Operating Expense,5000.00,
+6140,Postage and Shipping,Expense,Operating Expense,8400.00,
+6210,Software Subscriptions,Expense,Operating Expense,185000.00,
+6220,Cloud Infrastructure,Expense,Operating Expense,425000.00,
+6230,IT Hardware,Expense,Operating Expense,100000.00,
+6240,Telecommunications,Expense,Operating Expense,28000.00,
+6310,Marketing — Digital,Expense,Operating Expense,200000.00,
+6320,Marketing — Events,Expense,Operating Expense,150000.00,
+6330,Marketing — Content,Expense,Operating Expense,75000.00,
+6340,Advertising,Expense,Operating Expense,100000.00,
+6350,Public Relations,Expense,Operating Expense,50000.00,
+6410,Travel — Domestic,Expense,Operating Expense,85000.00,
+6420,Travel — International,Expense,Operating Expense,120000.00,
+6430,Meals and Entertainment,Expense,Operating Expense,45000.00,
+6510,Professional Fees — Audit,Expense,Operating Expense,175000.00,
+6520,Professional Fees — Legal,Expense,Operating Expense,225000.00,
+6530,Professional Fees — Consulting,Expense,Operating Expense,300000.00,
+6540,Professional Fees — Tax,Expense,Operating Expense,85000.00,
+6610,Depreciation — Buildings,Expense,Operating Expense,55000.00,
+6620,Depreciation — Equipment,Expense,Operating Expense,78000.00,
+6630,Depreciation — Leasehold,Expense,Operating Expense,24000.00,
+6640,Amortization — Software,Expense,Operating Expense,40000.00,
+6710,Insurance — Property,Expense,Operating Expense,35000.00,
+6720,Insurance — Liability,Expense,Operating Expense,28000.00,
+6730,Insurance — D&O,Expense,Operating Expense,75000.00,
+6810,Interest Expense — Term Loan,Expense,Non-Operating,168000.00,
+6820,Interest Expense — Line of Credit,Expense,Non-Operating,24000.00,
+6830,Bank Fees,Expense,Non-Operating,12500.00,
+6910,Income Tax Expense,Expense,Non-Operating,385000.00,
+6920,Other Expense — Miscellaneous,Expense,Non-Operating,5000.00,
+6930,Loss on Disposal of Assets,Expense,Non-Operating,22000.00,
+7010,Interest Income,Revenue,Non-Operating,,18500.00
+7020,Gain on Foreign Exchange,Revenue,Non-Operating,,12000.00
+7030,Other Income,Revenue,Non-Operating,,5000.00

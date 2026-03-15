@@ -78,6 +78,9 @@ large_test.csv
 *_test.csv
 test_*.csv
 
+# QA regression test data (committed intentionally)
+!tests/qa/*.csv
+
 # =============================================================================
 # Logs and Cache
 # =============================================================================
