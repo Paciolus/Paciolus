@@ -24,6 +24,7 @@ class WorkpaperMetadata(BaseModel):
     prepared_by: Optional[str] = None
     reviewed_by: Optional[str] = None
     workpaper_date: Optional[str] = None
+    fiscal_year_end: Optional[str] = None
     include_signoff: bool = False
 
 

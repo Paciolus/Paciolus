@@ -671,6 +671,7 @@ def generate_fixed_asset_testing_memo(
     workpaper_date: Optional[str] = None,
     source_document_title: Optional[str] = None,
     source_context_note: Optional[str] = None,
+    fiscal_year_end: Optional[str] = None,
     include_signoff: bool = False,
 ) -> bytes:
     """Generate a PDF testing memo for fixed asset testing results."""
@@ -702,6 +703,7 @@ def generate_fixed_asset_testing_memo(
         workpaper_date=workpaper_date,
         source_document_title=source_document_title,
         source_context_note=source_context_note,
+        fiscal_year_end=fiscal_year_end,
         build_scope=_fa_scope,
         build_extra_sections=_build_high_severity_detail,
         format_finding=_format_fa_finding,

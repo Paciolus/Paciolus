@@ -293,6 +293,37 @@
 
 ---
 
+### Sprint 541 — Report QA Round 2: Fiscal Year End on Testing Memos
+
+**Status:** COMPLETE
+**Goal:** Fix fiscal_year_end rendering as "—" on all testing memo cover pages, and confirm proof summary metrics are dynamically computed.
+
+#### Fix 1 — Fiscal Year End on Testing Memo Cover Pages
+- [x] Add `fiscal_year_end: Optional[str] = None` to `WorkpaperMetadata` schema
+- [x] Add `fiscal_year_end` to `common_kwargs` in `_memo_export_handler`
+- [x] Add `fiscal_year_end` param to `generate_testing_memo()` and pass to `ReportMetadata`
+- [x] Update 7 standard testing generators (JE, AP, Payroll, Revenue, AR Aging, Fixed Asset, Inventory)
+- [x] Update 2 custom generators (Bank Rec, Three-Way Match) — signature + `ReportMetadata` wiring
+- [x] Update 8 remaining generators (Multi-Period, Currency, Sampling ×2, Preflight, PopProfile, Expense, Accrual, Flux) to prevent `**common_kwargs` crash
+
+#### Fix 2 — Proof Summary Metrics (Dynamic Computation)
+- [x] Confirmed: `completeness_score` computed dynamically per-file by `shared/data_quality.py`
+- [x] Confirmed: `overall_confidence` computed dynamically per-file by `column_detector.py`
+- [x] Confirmed: `build_proof_summary_section()` extracts from result dict — no hardcoded values
+- [x] No code change needed — metrics are already dynamic
+
+#### Verification
+- [x] All 18 generator function signatures verified via `inspect.signature()`
+- [x] `pytest -k memo` passes (867 tests, 0 failures)
+- [x] Proof summary tests pass (8/8)
+
+#### Review
+- 18 files modified across export schema, route handler, shared template, and all memo generators
+- Root cause: `generate_testing_memo()` never received `fiscal_year_end` — only financial statements builder did
+- Proof metrics (Fix 2) were already correct — dynamic computation via `data_quality.py` and `column_detector.py`
+
+---
+
 ### Sprint 447 — Stripe Production Cutover
 
 **Status:** PENDING (CEO action required)

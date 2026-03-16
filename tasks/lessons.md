@@ -4,6 +4,12 @@
 
 ---
 
+## Cover page metadata must propagate through ALL code paths, not just one (Sprint 541)
+
+When a fix is applied to a shared field (like `fiscal_year_end` on `ReportMetadata`), verify every code path that constructs that metadata — not just the one that triggered the bug report. Sprint 540 fixed `fiscal_year_end` for financial statements only (`pdf_generator.py`), missing the 17 testing/tool memo generators that construct `ReportMetadata` via a different path (`generate_testing_memo()` + custom generators). **Pattern:** When fixing a shared data structure, `grep` for ALL constructor call sites. If N call sites exist and only 1 was fixed, the remaining N-1 are still broken.
+
+---
+
 ## New severity tiers require three-layer propagation: engine → score → UI (Sprint 538)
 
 1. **Tier cascade ordering must respect keyword intent over general-purpose rules.** Sprint 537 added an "informational" tier for transactional accounts (Cash, AR, AP), but placed the keyword check AFTER the 10%-of-TB escalation. For entities with concentrated cash positions (>10% of TB), Cash would be escalated to "material" before the informational check could downgrade it — defeating the Sprint 537 design intent entirely. **Pattern:** When adding a new classification tier with explicit keyword lists, the keyword check must precede any general-purpose escalation rule. Keyword assignments are specific; escalation rules are general. Specific should override general.

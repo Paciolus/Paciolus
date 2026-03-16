@@ -714,6 +714,7 @@ def generate_three_way_match_memo(
     workpaper_date: Optional[str] = None,
     source_document_title: Optional[str] = None,
     source_context_note: Optional[str] = None,
+    fiscal_year_end: Optional[str] = None,
     resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
     include_signoff: bool = False,
 ) -> bytes:
@@ -764,6 +765,7 @@ def generate_three_way_match_memo(
         title="Three-Way Match Validator Memo",
         client_name=client_name or "",
         engagement_period=period_tested or "",
+        fiscal_year_end=fiscal_year_end or "",
         source_document=filename,
         source_document_title=source_document_title or "",
         source_context_note=source_context_note or "",

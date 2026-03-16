@@ -1047,6 +1047,7 @@ def generate_multi_period_memo(
     workpaper_date: Optional[str] = None,
     source_document_title: Optional[str] = None,
     source_context_note: Optional[str] = None,
+    fiscal_year_end: Optional[str] = None,
     resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
     include_signoff: bool = False,
 ) -> bytes:
@@ -1112,6 +1113,7 @@ def generate_multi_period_memo(
         source_document_title=source_document_title or "",
         source_context_note=source_context_note or "",
         reference=reference,
+        fiscal_year_end=fiscal_year_end or "",
     )
     build_cover_page(story, styles, metadata, doc.width, logo_path)
 

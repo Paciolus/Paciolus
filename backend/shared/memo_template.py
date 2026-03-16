@@ -147,6 +147,7 @@ def generate_testing_memo(
     workpaper_date: Optional[str] = None,
     source_document_title: Optional[str] = None,
     source_context_note: Optional[str] = None,
+    fiscal_year_end: Optional[str] = None,
     build_scope: Optional[ScopeBuilder] = None,
     build_extra_sections: Optional[ExtraSectionBuilder] = None,
     build_post_results: Optional[ExtraSectionBuilder] = None,
@@ -212,6 +213,7 @@ def generate_testing_memo(
         source_context_note=source_context_note or "",
         reference=reference,
         # Fix 6: Engagement context fields
+        fiscal_year_end=fiscal_year_end or "",
         prepared_by=prepared_by or "",
         reviewed_by=reviewed_by or "",
     )

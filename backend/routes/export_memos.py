@@ -132,6 +132,7 @@ def _memo_export_handler(
             "workpaper_date": payload.workpaper_date,  # type: ignore[attr-defined]
             "source_document_title": payload.source_document_title,  # type: ignore[attr-defined]
             "source_context_note": payload.source_context_note,  # type: ignore[attr-defined]
+            "fiscal_year_end": payload.fiscal_year_end,  # type: ignore[attr-defined]
             "include_signoff": payload.include_signoff,  # type: ignore[attr-defined]
         }
 
