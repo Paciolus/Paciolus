@@ -225,6 +225,7 @@ export function FlaggedEntriesTable<TEntry extends Record<string, unknown>>({
           <option value="high">High</option>
           <option value="medium">Medium</option>
           <option value="low">Low</option>
+          <option value="informational">Informational</option>
         </select>
         <select
           value={testFilter}

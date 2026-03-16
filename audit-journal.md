@@ -1304,3 +1304,93 @@ This is the 31st audit. Key observations:
 - Archival discipline: gap persists for 3rd consecutive audit — the longest-running open finding in the audit journal
 - Working tree: committed and pushed (eefbd69)
 - The project is in a stable "Excellent" band with one persistent organizational gap. All substantive quality measures (code, testing, verification, planning, autonomy) are at ceiling
+
+---
+## Audit — 2026-03-16 (32nd) | Excellent | Overall: 5.0/5.0
+---
+
+### Scores at a Glance
+| Pillar                  | Score |
+|-------------------------|-------|
+| Workflow Orchestration  | 5.0   |
+| Task Management         | 5/5   |
+| Core Principles         | 5/5   |
+| **Overall**             | **5.0** |
+
+### A1. Plan Mode Default — 5/5
+**Finding:** Sprint 537 (Informational Note Tier) has a detailed plan written before implementation: 9 backend tasks, 8 frontend tasks, organized into Backend/Frontend/Verification sections with logical dependency ordering. The plan describes the goal ("third severity level for low-signal findings that require no procedure") before listing implementation items. Sprints 532–536 (now archived to `tasks/archive/sprints-532-536-details.md`) all had structured plans with objectives, checklists, and reviews. The archival enforcement mechanism (commit 229d291) demonstrates the project addressing its own process gaps with mechanical prevention — the same plan-mode pattern used for the todo-staging gate in Sprint 521.
+**Recommendation:** Continue current practice.
+
+### A2. Subagent Strategy — 5/5
+**Finding:** 9 agents in `.claude/agents/` (critic, executor, guardian, scout, designer, project-auditor, accounting-expert-auditor, future-state-consultant-agent, plus DEC prompt). All remain single-purpose with stable role boundaries. Project-auditor is actively invoked (this audit). No scope creep, no bloat. Agent roster stable across multiple audit cycles.
+**Recommendation:** Continue current practice.
+
+### A3. Self-Improvement Loop — 5/5
+**Finding:** The archival gap that persisted for 3 consecutive audits (29, 30, 31) has been structurally resolved. Commit 229d291 added `scripts/archive_sprints.sh` (auto-archive script with `--check` dry-run mode) and extended the `commit-msg` hook to block Sprint commits when 5+ completed sprints are unarchived. This mirrors the exact enforcement pattern from Sprint 521 (todo-staging gate). The self-improvement loop completed a full cycle: audit repeatedly flagged gap → passive rule proved insufficient → mechanical enforcement implemented → gap closed. Sprint 537's Review section notes "Lessons captured in `tasks/lessons.md`" with specific findings (rent substring false positive, stale test from Sprint 536 behavioral change). The lessons.md file exceeds 1,000 lines with 30+ structured lessons actively consumed in subsequent sprints.
+**Recommendation:** Continue current practice.
+
+### A4. Verification Before Done — 5/5
+**Finding:** Sprint 537 verification is thorough and goes beyond the standard gates:
+- `npm run build` passes
+- `npm test` — 1,339 tests passing
+- `pytest` — 6,507 tests passing
+- QA regression testing with two separate real-world datasets: Cascade (3 informational, Accrued Bonuses stays Minor) and Meridian (1 informational, 2520 suppressed, CV-4 gaps informational)
+- QA regression files committed to `tests/qa/` (commit 1bcf5bd) for reproducibility
+
+The QA regression testing with named datasets and specific assertion results documented in the sprint checklist is verification beyond the minimum standard. Sprint 535 (QA sweep fix batch — 11 fixes across 6 backend files) also demonstrates systematic regression verification. Commit SHA recorded in Review section (c394549).
+**Recommendation:** Continue current practice.
+
+### A5. Demand Elegance (Balanced) — 5/5
+**Finding:** Zero TODO/FIXME/HACK comments across all backend Python and frontend TypeScript source files (confirmed via grep). Sprint 537's implementation follows the established tiered detection pattern — extending the existing TIER1_SUPPRESS/TIER1_MINOR system with TIER2_INFORMATIONAL rather than introducing a new abstraction. The TIER1_SUPPRESS fix for "current portion" and "long term debt" is a targeted substring exclusion — the correct approach for keyword-based classification without over-engineering a full NLP pipeline. The `informational` severity extension across 7 frontend files follows the existing `Record<Severity, ...>` pattern exactly. Source files read cleanly: `classification_rules.py` opens with a comprehensive docstring covering GAAP/IFRS compatibility, `AnomalyCard.tsx` uses proper memo wrapping with documented design rationale.
+**Recommendation:** Continue current practice.
+
+### A6. Autonomous Bug Fixing — 5/5
+**Finding:** Sprint 537 autonomously identified and fixed two issues during implementation:
+1. **False positive:** "rent" substring in account name matched "current" in "2520 — Current Portion — Long Term Debt" — added "current portion" and "long term debt" to TIER1_SUPPRESS. Root cause documented in Review section.
+2. **Stale test assertion:** `test_allowance_round_suppressed` in `test_contra_and_detection_fixes.py` was already failing pre-537 because Sprint 536 changed contra-asset behavior from suppress to minor. The test was updated to match the intentional behavioral change, not to mask a regression.
+
+Sprint 535 (QA sweep fix batch) fixed 11 issues across 6 backend files autonomously. Sprint 534 (Multi-Period Comparison) fixed 8 bugs in a single batch. All fixes are self-contained with root cause analysis, no back-and-forth patches.
+**Recommendation:** Continue current practice.
+
+### B. Task Management — 5/5
+**Finding:** All 6 sub-practices are consistently applied, and the persistent archival gap from Audits 29–31 is now structurally resolved:
+
+1. **Plan First** — Sprint 537 has 17-item checklist (9 backend + 8 frontend) written before implementation. ✓
+2. **Verify Plan** — Sprint scope maps directly to the Informational Note Tier goal. ✓
+3. **Track Progress** — All 17 items individually checked with `[x]` markers. ✓
+4. **Explain Changes** — Review section documents the false positive fix, stale test fix, and lesson capture. ✓
+5. **Document Results** — Verification section with specific test counts (6,507 + 1,339) and QA regression results. ✓
+6. **Capture Lessons** — Lessons noted in Review section. ✓
+
+**Archival gap resolved:** The Active Phase contains exactly 1 completed sprint (537). Five archival batches are documented (478–497, 499–515, 516–526, 517–531, 532–536). The archival enforcement mechanism (commit 229d291) adds a `commit-msg` hook gate that blocks Sprint commits when 5+ completed sprints remain unarchived, plus `scripts/archive_sprints.sh` with `--check` mode for dry-run validation. This is the same mechanical enforcement pattern that resolved the todo-staging gap in Sprint 521. The 3-audit persistence of this finding (the longest-running open finding in audit history) is now structurally prevented from recurring.
+
+Commit SHA recorded in Sprint 537 Review section (c394549). Post-Sprint Checklist SHA field established in prior cycles.
+**Recommendation:** Continue current practice. Monitor the archival enforcement mechanism over the next 2–3 sprint cycles to confirm it reliably fires.
+
+### C. Core Principles — 5/5
+**Finding:**
+- **Simplicity First:** Sprint 537 adds a third severity tier using the same pattern as the existing two tiers (keyword list + classification function branch + text template). The `ROUND_NUMBER_TIER2_INFORMATIONAL` list follows the exact structure of existing tier lists. Frontend extends `Severity` type and `Record<Severity, ...>` mappings — no new abstractions introduced. The `DisplayMode` extension to include `'all'` is a one-value enum addition, not a filter framework.
+- **No Laziness:** 17 implementation items all completed. QA regression testing performed with two real-world datasets, not just unit tests. False positive and stale test both addressed with root cause analysis. The archival enforcement isn't a workaround — it's a structural solution to a recurring organizational gap.
+- **Minimal Impact:** Sprint 537 touches exactly the rounding detection system (backend: `classification_rules.py`, `audit_engine.py`, `pdf_generator.py`, `classification_validator.py`, tests) and the corresponding frontend severity type expansion (7 files adding `informational` to existing `Record<Severity, ...>` types). No unrelated changes. Zero-Storage compliance maintained. Oat & Obsidian design tokens consistent.
+
+19th consecutive cycle at 5/5 for Core Principles.
+**Recommendation:** Continue current practice.
+
+### Top Priority for Next Cycle
+**No process gaps remain.** All three pillars are at ceiling. The archival enforcement mechanism should be validated over the next 2–3 sprint cycles to confirm it reliably prevents threshold violations. Sprint 447 (Stripe Production Cutover) remains the next substantive work item requiring CEO action (`sk_live_` keys + sign-off). The 5 PENDING CEO-decision sprints (447, 463, 464, 466, 467, 468) are correctly parked and gated on external dependencies.
+
+### Trend Note
+Recovered from 4.7 to 5.0 — first 5.0 since Audit 28 (2026-02-27, 4 audits ago).
+- Workflow Orchestration: 5.0 → 5.0 (maintained — all 6 sub-pillars at 5/5)
+- Task Management: 4/5 → 5/5 (recovered — archival gap resolved via mechanical enforcement after 3 consecutive audits at 4/5)
+- Core Principles: 5/5 → 5/5 (maintained — 19th consecutive cycle at 5/5)
+- Overall: 4.7 → 5.0 (recovered — returned to perfect score)
+
+This is the 32nd audit. Key observations:
+- Test count: 6,507 backend + 1,339 frontend = 7,846 total (unchanged from Audit 31)
+- Sprints 532–537 completed since last audit (6 sprints in 5 days) — high velocity maintained
+- Archival enforcement mechanism added (commit 229d291) — resolves the longest-running open finding in audit history (3 consecutive audits)
+- Working tree: 1 modified file (`tasks/todo.md` — Sprint 537 status updates)
+- QA regression testing with named datasets (Cascade, Meridian) represents a maturation of the verification practice
+- Code quality: unchanged at peak — zero TODO/FIXME/HACK, surgical changes, domain-appropriate accounting methodology
+- The project has returned to the "Excellent ceiling" with all structural process gaps closed and mechanically enforced

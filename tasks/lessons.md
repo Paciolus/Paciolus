@@ -4,6 +4,16 @@
 
 ---
 
+## New severity tiers require three-layer propagation: engine → score → UI (Sprint 538)
+
+1. **Tier cascade ordering must respect keyword intent over general-purpose rules.** Sprint 537 added an "informational" tier for transactional accounts (Cash, AR, AP), but placed the keyword check AFTER the 10%-of-TB escalation. For entities with concentrated cash positions (>10% of TB), Cash would be escalated to "material" before the informational check could downgrade it — defeating the Sprint 537 design intent entirely. **Pattern:** When adding a new classification tier with explicit keyword lists, the keyword check must precede any general-purpose escalation rule. Keyword assignments are specific; escalation rules are general. Specific should override general.
+
+2. **New severity tiers need score contribution caps.** Each informational finding contributed +1 risk point with no cap. For a bank with 30 transactional accounts, that's 30 points from informational findings alone — pushing the score into "elevated" (threshold: 26). Informational findings are definitionally low-signal; their aggregate should never independently change the risk tier. **Pattern:** When adding a new lowest-severity tier, always cap its score contribution (e.g., `min(count, 5)`) so the tier cannot overwhelm the scoring model.
+
+3. **Bare substring keywords need scope validation against other detection systems.** The bare keyword `"cash"` in the informational list matched "Cash Clearing" (a suspense concern) and "Cash — Intercompany" (a related-party concern). Similarly, `"loan"` in the suppress list matched "Shareholder Loan" (a related-party concern). **Pattern:** When adding keywords to any classification list, grep all other keyword lists (suspense, related-party, carve-outs) for conflicts. If the same account name triggers contradictory signals, narrow the keyword or add a carve-out.
+
+---
+
 ## PDF report totals must match displayed detail rows (Sprint 522)
 
 The Minor Observations total was summing `abs(amount)` while detail rows displayed signed values. Any CPA would catch a total of $107,900 when the visible amounts sum to $58,900. **Pattern:** When a total row summarizes a visible column, the aggregation function must match the display function exactly — no silent transformations. If signed display is confusing in context, add a footnote rather than silently changing the math.

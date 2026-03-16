@@ -190,6 +190,7 @@ export function FollowUpItemsTable({
           <option value="high">High</option>
           <option value="medium">Medium</option>
           <option value="low">Low</option>
+          <option value="informational">Informational</option>
         </select>
         <select
           value={filterDisposition}

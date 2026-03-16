@@ -134,6 +134,44 @@
 > Sprints 517–531 archived to `tasks/archive/sprints-517-531-details.md`.
 > Sprints 532–536 archived to `tasks/archive/sprints-532-536-details.md`.
 
+### Sprint 538 — DEC 2026-03-16 Remediation
+
+**Status:** COMPLETE
+**Goal:** Fix 2 P2 + 7 P3 findings from Digital Excellence Council audit.
+
+#### P2 Fixes
+- [x] F-001: Reorder `classify_round_number_tier()` — informational check before 10%-TB escalation
+- [x] F-002: Cap informational risk score contribution at 5 points
+
+#### P3 Fixes
+- [x] F-003: Narrow bare `"cash"` keyword in TIER2_INFORMATIONAL (5 specific variants)
+- [x] F-004: Add 'informational' to severity filter dropdowns (FlaggedEntriesTable, FollowUpItemsTable)
+- [x] F-005: Contra-equity detection in multi-period credit-normal sign flip
+- [x] F-006: Replace "potential adjusting entry" language with neutral wording (4 occurrences)
+- [x] F-007: Add related-party loan variants to ROUND_NUMBER_TIER1_CARVEOUTS (5 entries)
+- [x] F-009: Benford MAD digit filter `>` → `>=`
+- [x] F-014: Add `__test__ = False` to TestTier enum
+
+#### Verification
+- [x] `npm run build` passes
+- [x] `npm test` passes (1,339 tests)
+- [x] `pytest` passes (6,507 tests)
+- [x] QA: Cash at >10% TB total returns "informational" (not "material")
+- [x] QA: 20 informational findings produce max 5 risk score points
+
+#### Review
+- 9 findings fixed across 8 files (2 P2, 7 P3)
+- F-001: Moved informational keyword check to Step 5e, before 10%-TB escalation (Step 5f)
+- F-002: `min(informational_count, 5)` with "(capped)" label when cap applies
+- F-003: Replaced bare "cash" with 5 specific variants: cash and cash equivalents, operating cash, petty cash, cash on hand, cash in bank
+- F-005: Added `is_contra_account()` check in `_is_credit_normal` property — contra-equity excluded from sign flip
+- F-006: Removed "potential adjusting entry" from 4 procedure texts; replaced with "further investigation/evaluation"
+- F-007: Added 5 related-party loan keywords to carve-outs (shareholder/officer/employee/director/related party)
+- Lessons captured below
+- Commit:
+
+---
+
 ### Sprint 537 — Informational Note Tier
 
 **Status:** COMPLETE
@@ -171,6 +209,7 @@
 - Fixed false positive: "rent" substring matched "current" in "2520 — Current Portion — Long Term Debt". Added "current portion" and "long term debt" to TIER1_SUPPRESS.
 - Fixed stale test: `test_allowance_round_suppressed` was already failing pre-537 (Sprint 536 changed contra-asset from suppress to minor).
 - Lessons captured in `tasks/lessons.md`.
+- Commit: c394549
 
 ---
 

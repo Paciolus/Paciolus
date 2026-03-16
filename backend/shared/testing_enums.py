@@ -25,6 +25,7 @@ class RiskTier(str, Enum):
 
 class TestTier(str, Enum):
     """Test classification tier."""
+    __test__ = False  # Prevent pytest collection warning
 
     STRUCTURAL = "structural"  # Tier 1: Basic structural checks
     STATISTICAL = "statistical"  # Tier 2: Statistical analysis

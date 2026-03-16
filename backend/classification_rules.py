@@ -495,12 +495,24 @@ ROUND_NUMBER_TIER1_CARVEOUTS: list[str] = [
     "note payable - officer",
     "note payable - director",
     "note payable - related",
+    # Sprint 538 F-007: related-party loan variants (align with RELATED_PARTY_KEYWORDS)
+    "shareholder loan",
+    "officer loan",
+    "employee loan",
+    "director loan",
+    "related party loan",
 ]
 
 # ── Tier 2 Informational: transactional accounts where round balances
 # are expected in practice — surfaced for awareness only (Sprint 537)
 ROUND_NUMBER_TIER2_INFORMATIONAL: list[str] = [
-    "cash",
+    # Sprint 538 F-003: narrowed "cash" to specific variants to avoid
+    # matching cash clearing (suspense) or cash — intercompany (related party)
+    "cash and cash equivalents",
+    "operating cash",
+    "petty cash",
+    "cash on hand",
+    "cash in bank",
     "accounts receivable — trade",
     "accounts receivable - trade",
     "accounts payable — trade",
@@ -650,15 +662,16 @@ def classify_round_number_tier(
             return "material"
         return "minor"  # COGS below materiality → minor
 
-    # 5e. Balance > 10% of TB total
-    if tb_total > 0 and balance > 0.10 * tb_total:
-        return "material"
-
-    # ── Step 5f: Tier 2 Informational (Sprint 537) ────────────────────
+    # ── Step 5e: Tier 2 Informational (Sprint 537, reordered Sprint 538) ─
     # Transactional accounts where round balances are common in practice.
-    # Check BEFORE Tier 2 Minor so specific keywords take priority.
+    # Must fire BEFORE the 10%-of-TB escalation so explicitly listed
+    # informational accounts are not promoted to "material" by the general rule.
     if any(kw in lower for kw in ROUND_NUMBER_TIER2_INFORMATIONAL):
         return "informational"
+
+    # 5f. Balance > 10% of TB total (general-purpose escalation)
+    if tb_total > 0 and balance > 0.10 * tb_total:
+        return "material"
 
     # ── Step 6: Tier 2 keyword list ───────────────────────────────────
     if any(kw in lower for kw in ROUND_NUMBER_TIER2_MINOR):

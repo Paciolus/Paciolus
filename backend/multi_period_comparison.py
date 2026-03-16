@@ -24,7 +24,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, ClassVar, Optional
 
-from classification_rules import AccountCategory
+from classification_rules import AccountCategory, is_contra_account
 from lead_sheet_mapping import (
     LEAD_SHEET_CATEGORY,
     LEAD_SHEET_NAMES,
@@ -119,7 +119,23 @@ class AccountMovement:
 
     @property
     def _is_credit_normal(self) -> bool:
-        return self.lead_sheet_category in self._CREDIT_NORMAL_CATEGORIES
+        """Check if the account follows credit-normal conventions.
+
+        Sprint 538 F-005: contra-equity accounts (treasury stock, accumulated
+        deficit) carry debit-normal balances despite being classified under
+        Equity. Exclude them from the credit-normal sign flip.
+        """
+        if self.lead_sheet_category not in self._CREDIT_NORMAL_CATEGORIES:
+            return False
+        # Contra-equity accounts are debit-normal — do not flip
+        if self.lead_sheet_category == "Equity":
+            try:
+                acct_type = AccountCategory(self.account_type.lower())
+            except ValueError:
+                acct_type = AccountCategory.UNKNOWN
+            if is_contra_account(self.account_name, acct_type):
+                return False
+        return True
 
     def to_dict(self) -> dict[str, Any]:
         # Sprint 535 P3-2: display_* fields flip sign for credit-normal accounts

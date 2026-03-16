@@ -186,7 +186,7 @@ def analyze_benford(
 
     # Most deviated digits (top 3 with deviation > MAD)
     sorted_deviations = sorted(range(1, 10), key=lambda d: abs(deviation[d]), reverse=True)
-    most_deviated = [d for d in sorted_deviations[:3] if abs(deviation[d]) > mad]
+    most_deviated = [d for d in sorted_deviations[:3] if abs(deviation[d]) >= mad]
 
     return BenfordAnalysis(
         passed_prechecks=True,

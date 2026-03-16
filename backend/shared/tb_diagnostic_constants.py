@@ -100,9 +100,9 @@ MATERIAL_PROCEDURE_UPGRADES: dict[str, str] = {
     "suspense": (
         "Obtain transaction-level detail for the outstanding suspense balance and "
         "confirm each item was cleared or reclassified prior to the report date. "
-        "Given the material amount, escalate to engagement partner and consider "
-        "whether the balance represents a potential adjusting entry. Document "
-        "resolution with supporting evidence in the engagement file."
+        "Given the material amount, escalate to engagement partner for further "
+        "investigation and document resolution with supporting evidence in the "
+        "engagement file."
     ),
     "concentration_revenue": (
         "Perform disaggregated revenue analysis for this account, including "
@@ -123,7 +123,7 @@ MATERIAL_PROCEDURE_UPGRADES: dict[str, str] = {
         "transaction detail and tracing to source documents. Given the material amount, "
         "determine whether a reclassification to liabilities is required and assess "
         "the impact on financial statement presentation. Escalate to engagement "
-        "partner for evaluation of potential adjusting entry."
+        "partner for further evaluation."
     ),
     "round_dollar": (
         "Inspect supporting documentation for all round-dollar transactions comprising "
@@ -143,7 +143,8 @@ MATERIAL_PROCEDURE_UPGRADES: dict[str, str] = {
         "amortization schedule and underlying contract. Given the material amount, "
         "determine whether the prepaid has been fully consumed, improperly reversed, "
         "or requires reclassification. Assess the impact on the period's expense "
-        "recognition and consider whether an adjusting entry is warranted."
+        "recognition and escalate to engagement partner if further investigation "
+        "is warranted."
     ),
     # Sprint 526: New detection category escalated procedures
     "related_party": (
@@ -245,7 +246,7 @@ def get_tb_suggested_procedure(anomaly: dict, *, is_material: bool = False) -> s
         return procedures.get("equity_signal", DEFAULT_PROCEDURE)
 
     if is_material:
-        return "Review supporting documentation and obtain management explanation. Given the material amount, escalate to engagement partner for assessment of potential adjusting entry and expanded substantive procedures."
+        return "Review supporting documentation and obtain management explanation. Given the material amount, escalate to engagement partner for further investigation and expanded substantive procedures."
     return DEFAULT_PROCEDURE
 
 
@@ -407,10 +408,13 @@ def compute_tb_risk_score(
         factors.append((f"Minor observations ({minor_count} findings)", minor_pts))
     score += minor_pts
 
-    # Sprint 537: Informational notes — +1 each, grouped into single summary line
-    informational_pts = informational_count * 1
+    # Sprint 537: Informational notes — +1 each, capped at 5 (Sprint 538 F-002)
+    # Informational findings are definitionally low-signal; their aggregate
+    # should not push scores into "elevated" tier on their own.
+    informational_pts = min(informational_count, 5)
     if informational_pts > 0:
-        factors.append((f"{informational_count} informational notes (contextual observations)", informational_pts))
+        cap_note = " (capped)" if informational_count > 5 else ""
+        factors.append((f"{informational_count} informational notes{cap_note}", informational_pts))
     score += informational_pts
 
     if coverage_pct >= 50:
