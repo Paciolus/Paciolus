@@ -32,9 +32,24 @@ def _auto_create_organization(db: Session, user_id: int, tier: str) -> None:
     from organization_model import Organization, OrganizationMember, OrgRole
     from subscription_model import Subscription, SubscriptionStatus
 
-    # Check if user already has an org membership
+    # Check if user already has an org membership — if so, just ensure linkage
     existing = db.query(OrganizationMember).filter(OrganizationMember.user_id == user_id).first()
     if existing:
+        # Ensure the existing org has subscription linkage
+        existing_org = db.query(Organization).filter(Organization.id == existing.organization_id).first()
+        if existing_org and existing_org.subscription_id is None:
+            sub = (
+                db.query(Subscription)
+                .filter(
+                    Subscription.user_id == user_id,
+                    Subscription.status.in_([SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIALING]),
+                )
+                .first()
+            )
+            if sub:
+                existing_org.subscription_id = sub.id
+                db.commit()
+                logger.info("Linked subscription %d to existing org %d for user %d", sub.id, existing_org.id, user_id)
         return
 
     user = db.query(User).filter(User.id == user_id).first()
@@ -115,7 +130,12 @@ def _apply_dpa_from_metadata(db: Session, user_id: int, metadata: dict) -> None:
     # Don't overwrite a later acceptance (e.g., if the user re-checked during an upgrade)
     if sub.dpa_accepted_at is None:
         try:
-            sub.dpa_accepted_at = datetime.fromisoformat(dpa_accepted_at_str).replace(tzinfo=UTC)
+            parsed = datetime.fromisoformat(dpa_accepted_at_str)
+            # Correct normalization: convert offset-aware to UTC, assume naive is UTC
+            if parsed.tzinfo is not None:
+                sub.dpa_accepted_at = parsed.astimezone(UTC)
+            else:
+                sub.dpa_accepted_at = parsed.replace(tzinfo=UTC)
         except ValueError:
             sub.dpa_accepted_at = datetime.now(UTC)
         sub.dpa_version = dpa_version
@@ -216,6 +236,23 @@ def handle_checkout_completed(db: Session, event_data: dict) -> None:
     sync_subscription_from_stripe(db, user_id, stripe_sub, customer_id, tier)
     logger.info("checkout.session.completed: synced user %d to tier %s", user_id, tier)
 
+    # Backfill org subscription linkage: if user already has an org but it has no
+    # subscription_id, link it now (handles "org-first, purchase-afterward" lifecycle).
+    from organization_model import Organization, OrganizationMember
+
+    existing_membership = db.query(OrganizationMember).filter(OrganizationMember.user_id == user_id).first()
+    if existing_membership:
+        existing_org = db.query(Organization).filter(Organization.id == existing_membership.organization_id).first()
+        if existing_org and existing_org.subscription_id is None:
+            local_sub = get_subscription(db, user_id)
+            if local_sub:
+                existing_org.subscription_id = local_sub.id
+                db.commit()
+                logger.info(
+                    "Backfilled subscription_id=%d on org %d for user %d",
+                    local_sub.id, existing_org.id, user_id,
+                )
+
     # Phase LXIX: Auto-create organization for Professional/Enterprise tiers
     if tier in ("professional", "enterprise"):
         _auto_create_organization(db, user_id, tier)
@@ -249,10 +286,23 @@ def handle_checkout_completed(db: Session, event_data: dict) -> None:
 
 
 def handle_subscription_updated(db: Session, event_data: dict) -> None:
-    """Handle customer.subscription.updated — plan change, renewal, etc."""
+    """Handle customer.subscription.updated — plan change, renewal, etc.
+
+    Guards against re-activating a cancelled subscription from stale events.
+    """
     user_id = _resolve_user_id(db, event_data)
     if user_id is None:
         logger.warning("customer.subscription.updated: could not resolve user_id")
+        return
+
+    # Guard: if local subscription is already CANCELED, reject re-activation
+    existing_sub = get_subscription(db, user_id)
+    new_status = event_data.get("status", "")
+    if existing_sub and existing_sub.status == SubscriptionStatus.CANCELED and new_status == "active":
+        logger.warning(
+            "customer.subscription.updated: ignoring active status for user %d — subscription already canceled",
+            user_id,
+        )
         return
 
     customer_id = event_data.get("customer")
@@ -275,13 +325,20 @@ def handle_subscription_updated(db: Session, event_data: dict) -> None:
     # Phase LX: Detect trial→paid conversion or tier change before sync
     from billing.analytics import record_billing_event
 
-    existing_sub = get_subscription(db, user_id)
     old_status = existing_sub.status if existing_sub else None
     old_tier = existing_sub.tier if existing_sub else None
-    new_status = event_data.get("status", "")
 
     sync_subscription_from_stripe(db, user_id, event_data, customer_id, tier)
     logger.info("customer.subscription.updated: synced user %d to tier %s", user_id, tier)
+
+    # If subscription transitions to canceled/past_due, downgrade org members
+    if new_status in ("canceled", "unpaid"):
+        user = db.query(User).filter(User.id == user_id).first()
+        if user:
+            user.tier = UserTier.FREE
+        _downgrade_org_members_to_free(db, user_id)
+        db.commit()
+        logger.info("customer.subscription.updated: user %d and org members downgraded (status=%s)", user_id, new_status)
 
     # Trial → paid conversion
     if old_status == SubscriptionStatus.TRIALING and new_status == "active":
@@ -314,8 +371,45 @@ def handle_subscription_updated(db: Session, event_data: dict) -> None:
             )
 
 
+def _downgrade_org_members_to_free(db: Session, user_id: int) -> int:
+    """Downgrade all org members (including the owner) to FREE tier.
+
+    Returns the number of members downgraded.
+    """
+    from organization_model import Organization, OrganizationMember
+
+    # Find the org owned by this user (subscription owner)
+    org = db.query(Organization).filter(Organization.owner_user_id == user_id).first()
+    if not org:
+        return 0
+
+    members = (
+        db.query(OrganizationMember)
+        .filter(OrganizationMember.organization_id == org.id)
+        .all()
+    )
+
+    count = 0
+    for member in members:
+        member_user = db.query(User).filter(User.id == member.user_id).first()
+        if member_user and member_user.tier != UserTier.FREE:
+            member_user.tier = UserTier.FREE
+            count += 1
+
+    if count:
+        logger.info(
+            "Downgraded %d org member(s) to FREE for org %d (owner user %d)",
+            count, org.id, user_id,
+        )
+
+    return count
+
+
 def handle_subscription_deleted(db: Session, event_data: dict) -> None:
-    """Handle customer.subscription.deleted — subscription canceled."""
+    """Handle customer.subscription.deleted — subscription canceled.
+
+    Downgrades the owner AND all org members to FREE tier in a single transaction.
+    """
     user_id = _resolve_user_id(db, event_data)
     if user_id is None:
         logger.warning("customer.subscription.deleted: could not resolve user_id")
@@ -326,13 +420,17 @@ def handle_subscription_deleted(db: Session, event_data: dict) -> None:
         sub.status = SubscriptionStatus.CANCELED
         sub.cancel_at_period_end = False
 
-    # Downgrade user to free tier (single atomic commit with subscription status)
+    # Downgrade owner to free tier
     user = db.query(User).filter(User.id == user_id).first()
     if user:
         user.tier = UserTier.FREE
+
+    # Downgrade ALL org members to free tier (not just the owner)
+    _downgrade_org_members_to_free(db, user_id)
+
     db.commit()
 
-    logger.info("customer.subscription.deleted: user %d downgraded to free", user_id)
+    logger.info("customer.subscription.deleted: user %d and org members downgraded to free", user_id)
 
     # Phase LX: Record churn event (subscription actually ended)
     from billing.analytics import record_billing_event
@@ -434,8 +532,17 @@ WEBHOOK_HANDLERS: dict[str, callable] = {
 }
 
 
-def process_webhook_event(db: Session, event_type: str, event_data: dict) -> bool:
+def process_webhook_event(
+    db: Session,
+    event_type: str,
+    event_data: dict,
+    event_created: int | None = None,
+) -> bool:
     """Process a Stripe webhook event.
+
+    Args:
+        event_created: Unix timestamp from the Stripe event envelope (event.created).
+            Used for out-of-order event detection on subscription state changes.
 
     Returns True if the event was handled, False if ignored.
     """
@@ -443,6 +550,28 @@ def process_webhook_event(db: Session, event_type: str, event_data: dict) -> boo
     if handler is None:
         logger.debug("Ignoring unhandled webhook event: %s", event_type)
         return False
+
+    # For subscription events, check event ordering before processing
+    if event_type in (
+        "customer.subscription.updated",
+        "customer.subscription.deleted",
+    ) and event_created is not None:
+        user_id = _resolve_user_id(db, event_data)
+        if user_id is not None:
+            sub = get_subscription(db, user_id)
+            if sub and sub.updated_at:
+                from datetime import UTC, datetime
+
+                event_time = datetime.fromtimestamp(event_created, tz=UTC)
+                sub_updated = sub.updated_at
+                if sub_updated.tzinfo is None:
+                    sub_updated = sub_updated.replace(tzinfo=UTC)
+                if event_time < sub_updated:
+                    logger.warning(
+                        "Stale %s event (created=%s) arrived after local update (%s) for user %d — skipping",
+                        event_type, event_time.isoformat(), sub_updated.isoformat(), user_id,
+                    )
+                    return True  # Return 200 to Stripe but skip processing
 
     handler(db, event_data)
     return True

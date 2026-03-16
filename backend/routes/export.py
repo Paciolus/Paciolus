@@ -20,7 +20,9 @@ router.include_router(diagnostics_router)
 router.include_router(testing_router)
 router.include_router(memos_router)
 
-# Backward-compatible re-exports for test imports
+# TODO: remove after Sprint 545 — migrate all test imports to shared.export_schemas
+# These re-exports exist because ~30 test files import from routes.export.
+# Canonical source: shared/export_schemas.py
 from shared.export_schemas import (  # noqa: F401, E402
     APTestingExportInput,
     ARAgingExportInput,

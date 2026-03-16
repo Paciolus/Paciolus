@@ -1,12 +1,16 @@
 """
-Paciolus API — Memo PDF Export Routes (all 10 testing/tool memo endpoints).
+Paciolus API — Memo PDF Export Routes (all 18 testing/tool memo endpoints).
 Sprint 155: Extracted from routes/export.py.
+Sprint 539: Registry-based refactor — declarative dispatch eliminates per-route boilerplate.
 """
 
 import logging
+from dataclasses import dataclass
+from typing import Any, Callable
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 
 from auth import require_verified_user
 from models import User
@@ -57,406 +61,354 @@ from three_way_match_memo_generator import generate_three_way_match_memo
 router = APIRouter(tags=["export"])
 
 
-# --- JE Testing Memo PDF ---
+# ---------------------------------------------------------------------------
+# Registry infrastructure
+# ---------------------------------------------------------------------------
 
 
-@router.post("/export/je-testing-memo")
-@limiter.limit(RATE_LIMIT_EXPORT)
-def export_je_testing_memo(
-    request: Request,
-    je_input: JETestingExportInput,
-    current_user: User = Depends(require_verified_user),
+@dataclass(frozen=True, slots=True)
+class MemoRegistryEntry:
+    """Declarative descriptor for a standard memo export endpoint."""
+
+    route_path: str
+    generator: Callable[..., bytes]
+    result_kwarg: str
+    filename_template: str
+    log_label: str
+    error_code: str
+    docstring: str
+
+
+# Custom pre-processing hooks for non-standard memo types.  Each receives the
+# Pydantic input model and returns (result_dict, extra_kwargs) where
+# extra_kwargs are merged into the generator call alongside the common
+# workpaper fields.
+CustomPreprocessor = Callable[[BaseModel], tuple[dict[str, Any], dict[str, Any]]]
+
+
+def _standard_preprocessor(payload: BaseModel) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Default: model_dump() the entire payload; no extra kwargs."""
+    return payload.model_dump(), {}
+
+
+def _sampling_evaluation_preprocessor(payload: BaseModel) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Sampling evaluation pops design_result from the dump for a separate kwarg."""
+    result_dict = payload.model_dump()
+    design_ctx = result_dict.pop("design_result", None)
+    return result_dict, {"design_result": design_ctx}
+
+
+def _flux_expectations_preprocessor(payload: BaseModel) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Flux expectations has nested sub-model serialization."""
+    # payload.flux and payload.expectations are typed sub-models
+    flux_dict = payload.flux.model_dump()  # type: ignore[attr-defined]
+    expectations_dict = {
+        k: v.model_dump() for k, v in payload.expectations.items()  # type: ignore[attr-defined]
+    }
+    return flux_dict, {"expectations": expectations_dict}
+
+
+# ---------------------------------------------------------------------------
+# Shared handler
+# ---------------------------------------------------------------------------
+
+
+def _memo_export_handler(
+    entry: MemoRegistryEntry,
+    payload: BaseModel,
+    preprocessor: CustomPreprocessor = _standard_preprocessor,
 ) -> StreamingResponse:
-    """Generate and download a JE Testing Memo PDF."""
+    """Deserialize -> generate -> stream -> exception handling for any memo type."""
     try:
-        result_dict = je_input.model_dump()
-        pdf_bytes = generate_je_testing_memo(
-            je_result=result_dict,
-            filename=je_input.filename,
-            client_name=je_input.client_name,
-            period_tested=je_input.period_tested,
-            prepared_by=je_input.prepared_by,
-            reviewed_by=je_input.reviewed_by,
-            workpaper_date=je_input.workpaper_date,
-            source_document_title=je_input.source_document_title,
-            source_context_note=je_input.source_context_note,
-            include_signoff=je_input.include_signoff,
+        result_dict, extra_kwargs = preprocessor(payload)
+
+        # Common workpaper fields present on every input model
+        common_kwargs = {
+            "filename": payload.filename,  # type: ignore[attr-defined]
+            "client_name": payload.client_name,  # type: ignore[attr-defined]
+            "period_tested": payload.period_tested,  # type: ignore[attr-defined]
+            "prepared_by": payload.prepared_by,  # type: ignore[attr-defined]
+            "reviewed_by": payload.reviewed_by,  # type: ignore[attr-defined]
+            "workpaper_date": payload.workpaper_date,  # type: ignore[attr-defined]
+            "source_document_title": payload.source_document_title,  # type: ignore[attr-defined]
+            "source_context_note": payload.source_context_note,  # type: ignore[attr-defined]
+            "include_signoff": payload.include_signoff,  # type: ignore[attr-defined]
+        }
+
+        pdf_bytes: bytes = entry.generator(
+            **{entry.result_kwarg: result_dict},
+            **common_kwargs,
+            **extra_kwargs,
         )
 
-        download_filename = safe_download_filename(je_input.filename, "JETesting_Memo", "pdf")
+        download_filename = safe_download_filename(
+            payload.filename, entry.filename_template, "pdf"  # type: ignore[attr-defined]
+        )
         return streaming_pdf_response(pdf_bytes, download_filename)
     except (ValueError, KeyError, TypeError, OSError) as e:
-        logger.exception("JE Testing memo export failed")
-        raise HTTPException(status_code=500, detail=sanitize_error(e, "export", "je_memo_export_error"))
-
-
-# --- AP Testing Memo PDF ---
-
-
-@router.post("/export/ap-testing-memo")
-@limiter.limit(RATE_LIMIT_EXPORT)
-def export_ap_testing_memo(
-    request: Request,
-    ap_input: APTestingExportInput,
-    current_user: User = Depends(require_verified_user),
-) -> StreamingResponse:
-    """Generate and download an AP Testing Memo PDF."""
-    try:
-        result_dict = ap_input.model_dump()
-        pdf_bytes = generate_ap_testing_memo(
-            ap_result=result_dict,
-            filename=ap_input.filename,
-            client_name=ap_input.client_name,
-            period_tested=ap_input.period_tested,
-            prepared_by=ap_input.prepared_by,
-            reviewed_by=ap_input.reviewed_by,
-            workpaper_date=ap_input.workpaper_date,
-            source_document_title=ap_input.source_document_title,
-            source_context_note=ap_input.source_context_note,
-            include_signoff=ap_input.include_signoff,
+        logger.exception("%s export failed", entry.log_label)
+        raise HTTPException(
+            status_code=500,
+            detail=sanitize_error(e, "export", entry.error_code),
         )
 
-        download_filename = safe_download_filename(ap_input.filename, "APTesting_Memo", "pdf")
-        return streaming_pdf_response(pdf_bytes, download_filename)
-    except (ValueError, KeyError, TypeError, OSError) as e:
-        logger.exception("AP Testing memo export failed")
-        raise HTTPException(status_code=500, detail=sanitize_error(e, "export", "ap_memo_export_error"))
+
+# ---------------------------------------------------------------------------
+# Standard memo registry — 15 endpoints with identical structure
+# ---------------------------------------------------------------------------
+
+_STANDARD_REGISTRY: list[tuple[MemoRegistryEntry, type[BaseModel]]] = [
+    (
+        MemoRegistryEntry(
+            route_path="/export/je-testing-memo",
+            generator=generate_je_testing_memo,
+            result_kwarg="je_result",
+            filename_template="JETesting_Memo",
+            log_label="JE Testing memo",
+            error_code="je_memo_export_error",
+            docstring="Generate and download a JE Testing Memo PDF.",
+        ),
+        JETestingExportInput,
+    ),
+    (
+        MemoRegistryEntry(
+            route_path="/export/ap-testing-memo",
+            generator=generate_ap_testing_memo,
+            result_kwarg="ap_result",
+            filename_template="APTesting_Memo",
+            log_label="AP Testing memo",
+            error_code="ap_memo_export_error",
+            docstring="Generate and download an AP Testing Memo PDF.",
+        ),
+        APTestingExportInput,
+    ),
+    (
+        MemoRegistryEntry(
+            route_path="/export/payroll-testing-memo",
+            generator=generate_payroll_testing_memo,
+            result_kwarg="payroll_result",
+            filename_template="PayrollTesting_Memo",
+            log_label="Payroll Testing memo",
+            error_code="payroll_memo_export_error",
+            docstring="Generate and download a Payroll Testing Memo PDF.",
+        ),
+        PayrollTestingExportInput,
+    ),
+    (
+        MemoRegistryEntry(
+            route_path="/export/three-way-match-memo",
+            generator=generate_three_way_match_memo,
+            result_kwarg="twm_result",
+            filename_template="TWM_Memo",
+            log_label="TWM memo",
+            error_code="twm_memo_export_error",
+            docstring="Generate and download a Three-Way Match Memo PDF.",
+        ),
+        ThreeWayMatchExportInput,
+    ),
+    (
+        MemoRegistryEntry(
+            route_path="/export/revenue-testing-memo",
+            generator=generate_revenue_testing_memo,
+            result_kwarg="revenue_result",
+            filename_template="RevenueTesting_Memo",
+            log_label="Revenue Testing memo",
+            error_code="revenue_memo_export_error",
+            docstring="Generate and download a Revenue Testing Memo PDF.",
+        ),
+        RevenueTestingExportInput,
+    ),
+    (
+        MemoRegistryEntry(
+            route_path="/export/ar-aging-memo",
+            generator=generate_ar_aging_memo,
+            result_kwarg="ar_result",
+            filename_template="ARAging_Memo",
+            log_label="AR Aging memo",
+            error_code="ar_aging_memo_export_error",
+            docstring="Generate and download an AR Aging Analysis Memo PDF.",
+        ),
+        ARAgingExportInput,
+    ),
+    (
+        MemoRegistryEntry(
+            route_path="/export/fixed-asset-memo",
+            generator=generate_fixed_asset_testing_memo,
+            result_kwarg="fa_result",
+            filename_template="FixedAsset_Memo",
+            log_label="Fixed Asset memo",
+            error_code="fa_memo_export_error",
+            docstring="Generate and download a Fixed Asset Testing Memo PDF.",
+        ),
+        FixedAssetExportInput,
+    ),
+    (
+        MemoRegistryEntry(
+            route_path="/export/inventory-memo",
+            generator=generate_inventory_testing_memo,
+            result_kwarg="inv_result",
+            filename_template="Inventory_Memo",
+            log_label="Inventory memo",
+            error_code="inv_memo_export_error",
+            docstring="Generate and download an Inventory Testing Memo PDF.",
+        ),
+        InventoryExportInput,
+    ),
+    (
+        MemoRegistryEntry(
+            route_path="/export/bank-rec-memo",
+            generator=generate_bank_rec_memo,
+            result_kwarg="rec_result",
+            filename_template="BankRec_Memo",
+            log_label="Bank Rec memo",
+            error_code="bank_rec_memo_export_error",
+            docstring="Generate and download a Bank Reconciliation Memo PDF.",
+        ),
+        BankRecMemoInput,
+    ),
+    (
+        MemoRegistryEntry(
+            route_path="/export/multi-period-memo",
+            generator=generate_multi_period_memo,
+            result_kwarg="comparison_result",
+            filename_template="MultiPeriod_Memo",
+            log_label="Multi-Period memo",
+            error_code="multi_period_memo_export_error",
+            docstring="Generate and download a Multi-Period Comparison Memo PDF.",
+        ),
+        MultiPeriodMemoInput,
+    ),
+    (
+        MemoRegistryEntry(
+            route_path="/export/currency-conversion-memo",
+            generator=generate_currency_conversion_memo,
+            result_kwarg="conversion_result",
+            filename_template="Currency_Conversion_Memo",
+            log_label="Currency conversion memo",
+            error_code="currency_memo_export_error",
+            docstring="Generate and download a Currency Conversion Memo PDF.",
+        ),
+        CurrencyConversionMemoInput,
+    ),
+    (
+        MemoRegistryEntry(
+            route_path="/export/sampling-design-memo",
+            generator=generate_sampling_design_memo,
+            result_kwarg="design_result",
+            filename_template="Sampling_Design_Memo",
+            log_label="Sampling design memo",
+            error_code="sampling_design_memo_error",
+            docstring="Generate and download a Sampling Design Memo PDF.",
+        ),
+        SamplingDesignMemoInput,
+    ),
+    (
+        MemoRegistryEntry(
+            route_path="/export/preflight-memo",
+            generator=generate_preflight_memo,
+            result_kwarg="preflight_result",
+            filename_template="PreFlight_Memo",
+            log_label="Pre-flight memo",
+            error_code="preflight_memo_export_error",
+            docstring="Generate and download a Pre-Flight Report Memo PDF.",
+        ),
+        PreFlightMemoInput,
+    ),
+    (
+        MemoRegistryEntry(
+            route_path="/export/population-profile-memo",
+            generator=generate_population_profile_memo,
+            result_kwarg="profile_result",
+            filename_template="PopProfile_Memo",
+            log_label="Population profile memo",
+            error_code="population_profile_memo_error",
+            docstring="Generate and download a Population Profile Memo PDF.",
+        ),
+        PopulationProfileMemoInput,
+    ),
+    (
+        MemoRegistryEntry(
+            route_path="/export/expense-category-memo",
+            generator=generate_expense_category_memo,
+            result_kwarg="report_result",
+            filename_template="ExpenseCategory_Memo",
+            log_label="Expense category memo",
+            error_code="expense_category_memo_error",
+            docstring="Generate and download an Expense Category Analytical Procedures Memo PDF.",
+        ),
+        ExpenseCategoryMemoInput,
+    ),
+    (
+        MemoRegistryEntry(
+            route_path="/export/accrual-completeness-memo",
+            generator=generate_accrual_completeness_memo,
+            result_kwarg="report_result",
+            filename_template="AccrualCompleteness_Memo",
+            log_label="Accrual completeness memo",
+            error_code="accrual_completeness_memo_error",
+            docstring="Generate and download an Accrual Completeness Estimator Memo PDF.",
+        ),
+        AccrualCompletenessMemoInput,
+    ),
+]
 
 
-# --- Payroll Testing Memo ---
+def _register_standard_routes() -> None:
+    """Programmatically register all standard memo export routes.
+
+    Each route gets its own closure so that FastAPI can inspect the correct
+    Pydantic model for request-body validation via the type annotation on
+    the ``payload`` parameter.
+    """
+    for entry, schema_cls in _STANDARD_REGISTRY:
+
+        def _make_handler(
+            _entry: MemoRegistryEntry = entry,
+            _schema: type[BaseModel] = schema_cls,
+        ) -> Callable[..., StreamingResponse]:
+            """Factory that captures registry entry per-closure."""
+
+            # We need the concrete schema type in the signature for FastAPI's
+            # dependency-injection / OpenAPI generation.  Build a thin wrapper
+            # whose annotation FastAPI will introspect.
+            def _handler(
+                request: Request,
+                payload: _schema,  # type: ignore[valid-type]
+                current_user: User = Depends(require_verified_user),
+            ) -> StreamingResponse:
+                return _memo_export_handler(_entry, payload)
+
+            _handler.__doc__ = _entry.docstring
+            _handler.__name__ = f"export_{_entry.route_path.split('/')[-1].replace('-', '_')}"
+            return _handler
+
+        handler = _make_handler()
+        decorated = limiter.limit(RATE_LIMIT_EXPORT)(handler)
+        router.post(entry.route_path)(decorated)
 
 
-@router.post("/export/payroll-testing-memo")
-@limiter.limit(RATE_LIMIT_EXPORT)
-def export_payroll_testing_memo(
-    request: Request,
-    payroll_input: PayrollTestingExportInput,
-    current_user: User = Depends(require_verified_user),
-) -> StreamingResponse:
-    """Generate and download a Payroll Testing Memo PDF."""
-    try:
-        result_dict = payroll_input.model_dump()
-        pdf_bytes = generate_payroll_testing_memo(
-            payroll_result=result_dict,
-            filename=payroll_input.filename,
-            client_name=payroll_input.client_name,
-            period_tested=payroll_input.period_tested,
-            prepared_by=payroll_input.prepared_by,
-            reviewed_by=payroll_input.reviewed_by,
-            workpaper_date=payroll_input.workpaper_date,
-            source_document_title=payroll_input.source_document_title,
-            source_context_note=payroll_input.source_context_note,
-            include_signoff=payroll_input.include_signoff,
-        )
-
-        download_filename = safe_download_filename(payroll_input.filename, "PayrollTesting_Memo", "pdf")
-        return streaming_pdf_response(pdf_bytes, download_filename)
-    except (ValueError, KeyError, TypeError, OSError) as e:
-        logger.exception("Payroll Testing memo export failed")
-        raise HTTPException(status_code=500, detail=sanitize_error(e, "export", "payroll_memo_export_error"))
+_register_standard_routes()
 
 
-# --- Three-Way Match Memo PDF ---
-
-
-@router.post("/export/three-way-match-memo")
-@limiter.limit(RATE_LIMIT_EXPORT)
-def export_three_way_match_memo(
-    request: Request,
-    twm_input: ThreeWayMatchExportInput,
-    current_user: User = Depends(require_verified_user),
-) -> StreamingResponse:
-    """Generate and download a Three-Way Match Memo PDF."""
-    try:
-        result_dict = twm_input.model_dump()
-        pdf_bytes = generate_three_way_match_memo(
-            twm_result=result_dict,
-            filename=twm_input.filename,
-            client_name=twm_input.client_name,
-            period_tested=twm_input.period_tested,
-            prepared_by=twm_input.prepared_by,
-            reviewed_by=twm_input.reviewed_by,
-            workpaper_date=twm_input.workpaper_date,
-            source_document_title=twm_input.source_document_title,
-            source_context_note=twm_input.source_context_note,
-            include_signoff=twm_input.include_signoff,
-        )
-
-        download_filename = safe_download_filename(twm_input.filename, "TWM_Memo", "pdf")
-        return streaming_pdf_response(pdf_bytes, download_filename)
-    except (ValueError, KeyError, TypeError, OSError) as e:
-        logger.exception("TWM memo export failed")
-        raise HTTPException(status_code=500, detail=sanitize_error(e, "export", "twm_memo_export_error"))
-
-
-# --- Revenue Testing Memo PDF ---
-
-
-@router.post("/export/revenue-testing-memo")
-@limiter.limit(RATE_LIMIT_EXPORT)
-def export_revenue_testing_memo(
-    request: Request,
-    revenue_input: RevenueTestingExportInput,
-    current_user: User = Depends(require_verified_user),
-) -> StreamingResponse:
-    """Generate and download a Revenue Testing Memo PDF."""
-    try:
-        result_dict = revenue_input.model_dump()
-        pdf_bytes = generate_revenue_testing_memo(
-            revenue_result=result_dict,
-            filename=revenue_input.filename,
-            client_name=revenue_input.client_name,
-            period_tested=revenue_input.period_tested,
-            prepared_by=revenue_input.prepared_by,
-            reviewed_by=revenue_input.reviewed_by,
-            workpaper_date=revenue_input.workpaper_date,
-            source_document_title=revenue_input.source_document_title,
-            source_context_note=revenue_input.source_context_note,
-            include_signoff=revenue_input.include_signoff,
-        )
-
-        download_filename = safe_download_filename(revenue_input.filename, "RevenueTesting_Memo", "pdf")
-        return streaming_pdf_response(pdf_bytes, download_filename)
-    except (ValueError, KeyError, TypeError, OSError) as e:
-        logger.exception("Revenue Testing memo export failed")
-        raise HTTPException(status_code=500, detail=sanitize_error(e, "export", "revenue_memo_export_error"))
-
-
-# --- AR Aging Memo PDF ---
-
-
-@router.post("/export/ar-aging-memo")
-@limiter.limit(RATE_LIMIT_EXPORT)
-def export_ar_aging_memo(
-    request: Request,
-    ar_input: ARAgingExportInput,
-    current_user: User = Depends(require_verified_user),
-) -> StreamingResponse:
-    """Generate and download an AR Aging Analysis Memo PDF."""
-    try:
-        result_dict = ar_input.model_dump()
-        pdf_bytes = generate_ar_aging_memo(
-            ar_result=result_dict,
-            filename=ar_input.filename,
-            client_name=ar_input.client_name,
-            period_tested=ar_input.period_tested,
-            prepared_by=ar_input.prepared_by,
-            reviewed_by=ar_input.reviewed_by,
-            workpaper_date=ar_input.workpaper_date,
-            source_document_title=ar_input.source_document_title,
-            source_context_note=ar_input.source_context_note,
-            include_signoff=ar_input.include_signoff,
-        )
-
-        download_filename = safe_download_filename(ar_input.filename, "ARAging_Memo", "pdf")
-        return streaming_pdf_response(pdf_bytes, download_filename)
-    except (ValueError, KeyError, TypeError, OSError) as e:
-        logger.exception("AR Aging memo export failed")
-        raise HTTPException(status_code=500, detail=sanitize_error(e, "export", "ar_aging_memo_export_error"))
-
-
-# --- Fixed Asset Testing Memo PDF ---
-
-
-@router.post("/export/fixed-asset-memo")
-@limiter.limit(RATE_LIMIT_EXPORT)
-def export_fixed_asset_memo(
-    request: Request,
-    fa_input: FixedAssetExportInput,
-    current_user: User = Depends(require_verified_user),
-) -> StreamingResponse:
-    """Generate and download a Fixed Asset Testing Memo PDF."""
-    try:
-        result_dict = fa_input.model_dump()
-        pdf_bytes = generate_fixed_asset_testing_memo(
-            fa_result=result_dict,
-            filename=fa_input.filename,
-            client_name=fa_input.client_name,
-            period_tested=fa_input.period_tested,
-            prepared_by=fa_input.prepared_by,
-            reviewed_by=fa_input.reviewed_by,
-            workpaper_date=fa_input.workpaper_date,
-            source_document_title=fa_input.source_document_title,
-            source_context_note=fa_input.source_context_note,
-            include_signoff=fa_input.include_signoff,
-        )
-
-        download_filename = safe_download_filename(fa_input.filename, "FixedAsset_Memo", "pdf")
-        return streaming_pdf_response(pdf_bytes, download_filename)
-    except (ValueError, KeyError, TypeError, OSError) as e:
-        logger.exception("Fixed Asset memo export failed")
-        raise HTTPException(status_code=500, detail=sanitize_error(e, "export", "fa_memo_export_error"))
-
-
-# --- Inventory Testing Memo PDF ---
-
-
-@router.post("/export/inventory-memo")
-@limiter.limit(RATE_LIMIT_EXPORT)
-def export_inventory_memo(
-    request: Request,
-    inv_input: InventoryExportInput,
-    current_user: User = Depends(require_verified_user),
-) -> StreamingResponse:
-    """Generate and download an Inventory Testing Memo PDF."""
-    try:
-        result_dict = inv_input.model_dump()
-        pdf_bytes = generate_inventory_testing_memo(
-            inv_result=result_dict,
-            filename=inv_input.filename,
-            client_name=inv_input.client_name,
-            period_tested=inv_input.period_tested,
-            prepared_by=inv_input.prepared_by,
-            reviewed_by=inv_input.reviewed_by,
-            workpaper_date=inv_input.workpaper_date,
-            source_document_title=inv_input.source_document_title,
-            source_context_note=inv_input.source_context_note,
-            include_signoff=inv_input.include_signoff,
-        )
-
-        download_filename = safe_download_filename(inv_input.filename, "Inventory_Memo", "pdf")
-        return streaming_pdf_response(pdf_bytes, download_filename)
-    except (ValueError, KeyError, TypeError, OSError) as e:
-        logger.exception("Inventory memo export failed")
-        raise HTTPException(status_code=500, detail=sanitize_error(e, "export", "inv_memo_export_error"))
-
-
-# --- Bank Reconciliation Memo PDF ---
-
-
-@router.post("/export/bank-rec-memo")
-@limiter.limit(RATE_LIMIT_EXPORT)
-def export_bank_rec_memo(
-    request: Request,
-    rec_input: BankRecMemoInput,
-    current_user: User = Depends(require_verified_user),
-) -> StreamingResponse:
-    """Generate and download a Bank Reconciliation Memo PDF."""
-    try:
-        result_dict = rec_input.model_dump()
-        pdf_bytes = generate_bank_rec_memo(
-            rec_result=result_dict,
-            filename=rec_input.filename,
-            client_name=rec_input.client_name,
-            period_tested=rec_input.period_tested,
-            prepared_by=rec_input.prepared_by,
-            reviewed_by=rec_input.reviewed_by,
-            workpaper_date=rec_input.workpaper_date,
-            source_document_title=rec_input.source_document_title,
-            source_context_note=rec_input.source_context_note,
-            include_signoff=rec_input.include_signoff,
-        )
-
-        download_filename = safe_download_filename(rec_input.filename, "BankRec_Memo", "pdf")
-        return streaming_pdf_response(pdf_bytes, download_filename)
-    except (ValueError, KeyError, TypeError, OSError) as e:
-        logger.exception("Bank Rec memo export failed")
-        raise HTTPException(status_code=500, detail=sanitize_error(e, "export", "bank_rec_memo_export_error"))
-
-
-# --- Multi-Period Comparison Memo PDF ---
-
-
-@router.post("/export/multi-period-memo")
-@limiter.limit(RATE_LIMIT_EXPORT)
-def export_multi_period_memo(
-    request: Request,
-    mp_input: MultiPeriodMemoInput,
-    current_user: User = Depends(require_verified_user),
-) -> StreamingResponse:
-    """Generate and download a Multi-Period Comparison Memo PDF."""
-    try:
-        result_dict = mp_input.model_dump()
-        pdf_bytes = generate_multi_period_memo(
-            comparison_result=result_dict,
-            filename=mp_input.filename,
-            client_name=mp_input.client_name,
-            period_tested=mp_input.period_tested,
-            prepared_by=mp_input.prepared_by,
-            reviewed_by=mp_input.reviewed_by,
-            workpaper_date=mp_input.workpaper_date,
-            source_document_title=mp_input.source_document_title,
-            source_context_note=mp_input.source_context_note,
-            include_signoff=mp_input.include_signoff,
-        )
-
-        download_filename = safe_download_filename(mp_input.filename, "MultiPeriod_Memo", "pdf")
-        return streaming_pdf_response(pdf_bytes, download_filename)
-    except (ValueError, KeyError, TypeError, OSError) as e:
-        logger.exception("Multi-Period memo export failed")
-        raise HTTPException(status_code=500, detail=sanitize_error(e, "export", "multi_period_memo_export_error"))
-
-
-# --- Currency Conversion Memo PDF ---
-
-
-@router.post("/export/currency-conversion-memo")
-@limiter.limit(RATE_LIMIT_EXPORT)
-def export_currency_conversion_memo(
-    request: Request,
-    cc_input: CurrencyConversionMemoInput,
-    current_user: User = Depends(require_verified_user),
-) -> StreamingResponse:
-    """Generate and download a Currency Conversion Memo PDF."""
-    try:
-        result_dict = cc_input.model_dump()
-        pdf_bytes = generate_currency_conversion_memo(
-            conversion_result=result_dict,
-            filename=cc_input.filename,
-            client_name=cc_input.client_name,
-            period_tested=cc_input.period_tested,
-            prepared_by=cc_input.prepared_by,
-            reviewed_by=cc_input.reviewed_by,
-            workpaper_date=cc_input.workpaper_date,
-            source_document_title=cc_input.source_document_title,
-            source_context_note=cc_input.source_context_note,
-            include_signoff=cc_input.include_signoff,
-        )
-
-        download_filename = safe_download_filename(cc_input.filename, "Currency_Conversion_Memo", "pdf")
-        return streaming_pdf_response(pdf_bytes, download_filename)
-    except (ValueError, KeyError, TypeError, OSError) as e:
-        logger.exception("Currency conversion memo export failed")
-        raise HTTPException(status_code=500, detail=sanitize_error(e, "export", "currency_memo_export_error"))
-
-
-# --- Sampling Design Memo PDF ---
-
-
-@router.post("/export/sampling-design-memo")
-@limiter.limit(RATE_LIMIT_EXPORT)
-def export_sampling_design_memo(
-    request: Request,
-    design_input: SamplingDesignMemoInput,
-    current_user: User = Depends(require_verified_user),
-) -> StreamingResponse:
-    """Generate and download a Sampling Design Memo PDF."""
-    try:
-        result_dict = design_input.model_dump()
-        pdf_bytes = generate_sampling_design_memo(
-            design_result=result_dict,
-            filename=design_input.filename,
-            client_name=design_input.client_name,
-            period_tested=design_input.period_tested,
-            prepared_by=design_input.prepared_by,
-            reviewed_by=design_input.reviewed_by,
-            workpaper_date=design_input.workpaper_date,
-            source_document_title=design_input.source_document_title,
-            source_context_note=design_input.source_context_note,
-            include_signoff=design_input.include_signoff,
-        )
-
-        download_filename = safe_download_filename(design_input.filename, "Sampling_Design_Memo", "pdf")
-        return streaming_pdf_response(pdf_bytes, download_filename)
-    except (ValueError, KeyError, TypeError, OSError) as e:
-        logger.exception("Sampling design memo export failed")
-        raise HTTPException(status_code=500, detail=sanitize_error(e, "export", "sampling_design_memo_error"))
-
+# ---------------------------------------------------------------------------
+# Non-standard memo routes (custom preprocessing)
+# ---------------------------------------------------------------------------
 
 # --- Sampling Evaluation Memo PDF ---
+# Requires popping design_result from the dump before passing to the generator.
+
+_SAMPLING_EVAL_ENTRY = MemoRegistryEntry(
+    route_path="/export/sampling-evaluation-memo",
+    generator=generate_sampling_evaluation_memo,
+    result_kwarg="evaluation_result",
+    filename_template="Sampling_Evaluation_Memo",
+    log_label="Sampling evaluation memo",
+    error_code="sampling_eval_memo_error",
+    docstring="Generate and download a Sampling Evaluation Memo PDF.",
+)
 
 
-@router.post("/export/sampling-evaluation-memo")
+@router.post(_SAMPLING_EVAL_ENTRY.route_path)
 @limiter.limit(RATE_LIMIT_EXPORT)
 def export_sampling_evaluation_memo(
     request: Request,
@@ -464,166 +416,28 @@ def export_sampling_evaluation_memo(
     current_user: User = Depends(require_verified_user),
 ) -> StreamingResponse:
     """Generate and download a Sampling Evaluation Memo PDF."""
-    try:
-        result_dict = eval_input.model_dump()
-        design_ctx = result_dict.pop("design_result", None)
-        pdf_bytes = generate_sampling_evaluation_memo(
-            evaluation_result=result_dict,
-            design_result=design_ctx,
-            filename=eval_input.filename,
-            client_name=eval_input.client_name,
-            period_tested=eval_input.period_tested,
-            prepared_by=eval_input.prepared_by,
-            reviewed_by=eval_input.reviewed_by,
-            workpaper_date=eval_input.workpaper_date,
-            source_document_title=eval_input.source_document_title,
-            source_context_note=eval_input.source_context_note,
-            include_signoff=eval_input.include_signoff,
-        )
-
-        download_filename = safe_download_filename(eval_input.filename, "Sampling_Evaluation_Memo", "pdf")
-        return streaming_pdf_response(pdf_bytes, download_filename)
-    except (ValueError, KeyError, TypeError, OSError) as e:
-        logger.exception("Sampling evaluation memo export failed")
-        raise HTTPException(status_code=500, detail=sanitize_error(e, "export", "sampling_eval_memo_error"))
-
-
-# --- Pre-Flight Report Memo PDF (Sprint 283) ---
-
-
-@router.post("/export/preflight-memo")
-@limiter.limit(RATE_LIMIT_EXPORT)
-def export_preflight_memo(
-    request: Request,
-    pf_input: PreFlightMemoInput,
-    current_user: User = Depends(require_verified_user),
-) -> StreamingResponse:
-    """Generate and download a Pre-Flight Report Memo PDF."""
-    try:
-        result_dict = pf_input.model_dump()
-        pdf_bytes = generate_preflight_memo(
-            preflight_result=result_dict,
-            filename=pf_input.filename,
-            client_name=pf_input.client_name,
-            period_tested=pf_input.period_tested,
-            prepared_by=pf_input.prepared_by,
-            reviewed_by=pf_input.reviewed_by,
-            workpaper_date=pf_input.workpaper_date,
-            source_document_title=pf_input.source_document_title,
-            source_context_note=pf_input.source_context_note,
-            include_signoff=pf_input.include_signoff,
-        )
-
-        download_filename = safe_download_filename(pf_input.filename, "PreFlight_Memo", "pdf")
-        return streaming_pdf_response(pdf_bytes, download_filename)
-    except (ValueError, KeyError, TypeError, OSError) as e:
-        logger.exception("Pre-flight memo export failed")
-        raise HTTPException(status_code=500, detail=sanitize_error(e, "export", "preflight_memo_export_error"))
-
-
-# --- Population Profile Memo PDF (Sprint 287) ---
-
-
-@router.post("/export/population-profile-memo")
-@limiter.limit(RATE_LIMIT_EXPORT)
-def export_population_profile_memo(
-    request: Request,
-    pp_input: PopulationProfileMemoInput,
-    current_user: User = Depends(require_verified_user),
-) -> StreamingResponse:
-    """Generate and download a Population Profile Memo PDF."""
-    try:
-        result_dict = pp_input.model_dump()
-        pdf_bytes = generate_population_profile_memo(
-            profile_result=result_dict,
-            filename=pp_input.filename,
-            client_name=pp_input.client_name,
-            period_tested=pp_input.period_tested,
-            prepared_by=pp_input.prepared_by,
-            reviewed_by=pp_input.reviewed_by,
-            workpaper_date=pp_input.workpaper_date,
-            source_document_title=pp_input.source_document_title,
-            source_context_note=pp_input.source_context_note,
-            include_signoff=pp_input.include_signoff,
-        )
-
-        download_filename = safe_download_filename(pp_input.filename, "PopProfile_Memo", "pdf")
-        return streaming_pdf_response(pdf_bytes, download_filename)
-    except (ValueError, KeyError, TypeError, OSError) as e:
-        logger.exception("Population profile memo export failed")
-        raise HTTPException(status_code=500, detail=sanitize_error(e, "export", "population_profile_memo_error"))
-
-
-# --- Expense Category Memo PDF (Sprint 289) ---
-
-
-@router.post("/export/expense-category-memo")
-@limiter.limit(RATE_LIMIT_EXPORT)
-def export_expense_category_memo(
-    request: Request,
-    ec_input: ExpenseCategoryMemoInput,
-    current_user: User = Depends(require_verified_user),
-) -> StreamingResponse:
-    """Generate and download an Expense Category Analytical Procedures Memo PDF."""
-    try:
-        result_dict = ec_input.model_dump()
-        pdf_bytes = generate_expense_category_memo(
-            report_result=result_dict,
-            filename=ec_input.filename,
-            client_name=ec_input.client_name,
-            period_tested=ec_input.period_tested,
-            prepared_by=ec_input.prepared_by,
-            reviewed_by=ec_input.reviewed_by,
-            workpaper_date=ec_input.workpaper_date,
-            source_document_title=ec_input.source_document_title,
-            source_context_note=ec_input.source_context_note,
-            include_signoff=ec_input.include_signoff,
-        )
-
-        download_filename = safe_download_filename(ec_input.filename, "ExpenseCategory_Memo", "pdf")
-        return streaming_pdf_response(pdf_bytes, download_filename)
-    except (ValueError, KeyError, TypeError, OSError) as e:
-        logger.exception("Expense category memo export failed")
-        raise HTTPException(status_code=500, detail=sanitize_error(e, "export", "expense_category_memo_error"))
-
-
-# --- Accrual Completeness Memo PDF (Sprint 290) ---
-
-
-@router.post("/export/accrual-completeness-memo")
-@limiter.limit(RATE_LIMIT_EXPORT)
-def export_accrual_completeness_memo(
-    request: Request,
-    ac_input: AccrualCompletenessMemoInput,
-    current_user: User = Depends(require_verified_user),
-) -> StreamingResponse:
-    """Generate and download an Accrual Completeness Estimator Memo PDF."""
-    try:
-        result_dict = ac_input.model_dump()
-        pdf_bytes = generate_accrual_completeness_memo(
-            report_result=result_dict,
-            filename=ac_input.filename,
-            client_name=ac_input.client_name,
-            period_tested=ac_input.period_tested,
-            prepared_by=ac_input.prepared_by,
-            reviewed_by=ac_input.reviewed_by,
-            workpaper_date=ac_input.workpaper_date,
-            source_document_title=ac_input.source_document_title,
-            source_context_note=ac_input.source_context_note,
-            include_signoff=ac_input.include_signoff,
-        )
-
-        download_filename = safe_download_filename(ac_input.filename, "AccrualCompleteness_Memo", "pdf")
-        return streaming_pdf_response(pdf_bytes, download_filename)
-    except (ValueError, KeyError, TypeError, OSError) as e:
-        logger.exception("Accrual completeness memo export failed")
-        raise HTTPException(status_code=500, detail=sanitize_error(e, "export", "accrual_completeness_memo_error"))
+    return _memo_export_handler(
+        _SAMPLING_EVAL_ENTRY,
+        eval_input,
+        preprocessor=_sampling_evaluation_preprocessor,
+    )
 
 
 # --- Flux Expectations Memo PDF (Sprint 297) ---
+# Requires nested sub-model serialization (flux + expectations dict).
+
+_FLUX_ENTRY = MemoRegistryEntry(
+    route_path="/export/flux-expectations-memo",
+    generator=generate_flux_expectations_memo,
+    result_kwarg="flux_result",
+    filename_template="FluxExpectations_Memo",
+    log_label="Flux expectations memo",
+    error_code="flux_expectations_memo_error",
+    docstring="Generate and download ISA 520 Flux Expectations Memo PDF.",
+)
 
 
-@router.post("/export/flux-expectations-memo")
+@router.post(_FLUX_ENTRY.route_path)
 @limiter.limit(RATE_LIMIT_EXPORT)
 def export_flux_expectations_memo(
     request: Request,
@@ -631,25 +445,8 @@ def export_flux_expectations_memo(
     current_user: User = Depends(require_verified_user),
 ) -> StreamingResponse:
     """Generate and download ISA 520 Flux Expectations Memo PDF."""
-    try:
-        flux_dict = payload.flux.model_dump()
-        expectations_dict = {k: v.model_dump() for k, v in payload.expectations.items()}
-        pdf_bytes = generate_flux_expectations_memo(
-            flux_result=flux_dict,
-            expectations=expectations_dict,
-            filename=payload.filename,
-            client_name=payload.client_name,
-            period_tested=payload.period_tested,
-            prepared_by=payload.prepared_by,
-            reviewed_by=payload.reviewed_by,
-            workpaper_date=payload.workpaper_date,
-            source_document_title=payload.source_document_title,
-            source_context_note=payload.source_context_note,
-            include_signoff=payload.include_signoff,
-        )
-
-        download_filename = safe_download_filename(payload.filename, "FluxExpectations_Memo", "pdf")
-        return streaming_pdf_response(pdf_bytes, download_filename)
-    except (ValueError, KeyError, TypeError, OSError) as e:
-        logger.exception("Flux expectations memo export failed")
-        raise HTTPException(status_code=500, detail=sanitize_error(e, "export", "flux_expectations_memo_error"))
+    return _memo_export_handler(
+        _FLUX_ENTRY,
+        payload,
+        preprocessor=_flux_expectations_preprocessor,
+    )

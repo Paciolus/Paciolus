@@ -560,6 +560,9 @@ def rotate_refresh_token(db: Session, raw_token: str) -> tuple[str, str, User]:
     """
     Validate a refresh token, revoke it, and issue a new pair.
 
+    Uses a conditional UPDATE (compare-and-swap) to atomically claim the token,
+    preventing concurrent rotation from issuing duplicate successor tokens.
+
     Implements reuse detection: if a revoked token is presented,
     ALL of that user's tokens are revoked (indicates theft).
 
@@ -567,9 +570,11 @@ def rotate_refresh_token(db: Session, raw_token: str) -> tuple[str, str, User]:
         Tuple of (new_access_token, new_raw_refresh_token, user)
 
     Raises:
-        HTTPException 401 if token is invalid, expired, or user is inactive
+        HTTPException 401 if token is invalid, expired, revoked, or user is inactive
     """
     token_hash = hash_token(raw_token)
+
+    # First, look up the token to distinguish "not found" from "already revoked"
     db_token = db.query(RefreshToken).filter(RefreshToken.token_hash == token_hash).first()
 
     if db_token is None:
@@ -596,22 +601,52 @@ def rotate_refresh_token(db: Session, raw_token: str) -> tuple[str, str, User]:
             detail="Refresh token has expired",
         )
 
+    # Atomic compare-and-swap: only revoke if still unrevoked.
+    # This prevents two concurrent requests from both passing the is_revoked check
+    # and minting duplicate successor tokens.
+    now = datetime.now(UTC)
+    new_raw_token = secrets.token_urlsafe(48)
+    new_hash = hash_token(new_raw_token)
+
+    rows_updated = (
+        db.query(RefreshToken)
+        .filter(
+            RefreshToken.id == db_token.id,
+            RefreshToken.revoked_at.is_(None),  # CAS guard
+        )
+        .update(
+            {
+                RefreshToken.revoked_at: now,
+                RefreshToken.replaced_by_hash: new_hash,
+            },
+            synchronize_session="fetch",
+        )
+    )
+
+    if rows_updated == 0:
+        # Another concurrent request already revoked this token — treat as reuse
+        db.rollback()
+        count = _revoke_all_user_tokens(db, db_token.user_id)
+        log_secure_operation(
+            "refresh_token_race_detected",
+            f"Concurrent rotation detected for user_id={db_token.user_id}. All {count} active tokens revoked.",
+        )
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token has been revoked. All sessions terminated for security.",
+        )
+
     # Load user and verify active status
     user = db.query(User).filter(User.id == db_token.user_id).first()
     if user is None or not user.is_active:
+        db.rollback()
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User account is inactive",
         )
 
-    # Rotate: revoke old token, create new one atomically
-    new_raw_token = secrets.token_urlsafe(48)
-    new_hash = hash_token(new_raw_token)
+    # Create successor token
     new_expires = datetime.now(UTC) + timedelta(days=REFRESH_TOKEN_EXPIRATION_DAYS)
-
-    db_token.revoked_at = datetime.now(UTC)
-    db_token.replaced_by_hash = new_hash
-
     new_db_token = RefreshToken(
         user_id=user.id,
         token_hash=new_hash,

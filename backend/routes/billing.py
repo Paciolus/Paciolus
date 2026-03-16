@@ -504,13 +504,21 @@ async def stripe_webhook(
     except stripe.error.SignatureVerificationError:
         raise HTTPException(status_code=400, detail="Invalid signature")
 
-    # Deduplicate: skip already-processed events (Stripe retries on timeout)
+    # Atomic deduplication: insert the event marker BEFORE processing.
+    # Uses INSERT ... ON CONFLICT DO NOTHING (upsert) — only the winner proceeds.
+    # This prevents duplicate side effects under concurrent delivery (Stripe retries).
     event_id = event.get("id")
     if event_id:
+        from sqlalchemy import text
+
         from subscription_model import ProcessedWebhookEvent
 
-        existing = db.query(ProcessedWebhookEvent).filter(ProcessedWebhookEvent.stripe_event_id == event_id).first()
-        if existing:
+        # Attempt to claim this event atomically
+        try:
+            db.add(ProcessedWebhookEvent(stripe_event_id=event_id))
+            db.flush()  # Will raise IntegrityError if already exists
+        except Exception:
+            db.rollback()
             logger.info("Duplicate webhook event %s — skipping", event_id)
             return Response(status_code=200)
 
@@ -519,13 +527,12 @@ async def stripe_webhook(
     event_type = event.get("type", "")
     event_data = event.get("data", {}).get("object", {})
 
-    process_webhook_event(db, event_type, event_data)
+    # Store the Stripe event created timestamp for ordering guard
+    event_created = event.get("created")  # Unix timestamp from Stripe
 
-    # Record processed event for deduplication
-    if event_id:
-        from subscription_model import ProcessedWebhookEvent
+    process_webhook_event(db, event_type, event_data, event_created=event_created)
 
-        db.add(ProcessedWebhookEvent(stripe_event_id=event_id))
-        db.commit()
+    # Commit the dedup marker + any business logic changes together
+    db.commit()
 
     return Response(status_code=200)

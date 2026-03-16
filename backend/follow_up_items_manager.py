@@ -30,27 +30,44 @@ class FollowUpItemsManager:
     # Ownership helpers
     # ------------------------------------------------------------------
 
+    def _get_accessible_user_ids(self, user_id: int) -> list[int]:
+        """Get all user IDs whose clients should be visible to this user."""
+        user = self.db.query(User).filter(User.id == user_id).first()
+        if not user or not user.organization_id:
+            return [user_id]
+
+        from organization_model import OrganizationMember
+
+        member_ids = (
+            self.db.query(OrganizationMember.user_id)
+            .filter(OrganizationMember.organization_id == user.organization_id)
+            .all()
+        )
+        return [m[0] for m in member_ids] if member_ids else [user_id]
+
     def _verify_engagement_access(self, user_id: int, engagement_id: int) -> Optional[Engagement]:
-        """Verify engagement exists and user has access through client ownership."""
+        """Verify engagement exists and user has access (direct or org-based)."""
+        accessible_ids = self._get_accessible_user_ids(user_id)
         return (
             self.db.query(Engagement)
             .join(Client, Engagement.client_id == Client.id)
             .filter(
                 Engagement.id == engagement_id,
-                Client.user_id == user_id,
+                Client.user_id.in_(accessible_ids),
             )
             .first()
         )
 
     def _verify_item_access(self, user_id: int, item_id: int) -> Optional[FollowUpItem]:
-        """Verify follow-up item exists, is active, and user has access."""
+        """Verify follow-up item exists, is active, and user has access (direct or org-based)."""
+        accessible_ids = self._get_accessible_user_ids(user_id)
         return (
             self.db.query(FollowUpItem)
             .join(Engagement, FollowUpItem.engagement_id == Engagement.id)
             .join(Client, Engagement.client_id == Client.id)
             .filter(
                 FollowUpItem.id == item_id,
-                Client.user_id == user_id,
+                Client.user_id.in_(accessible_ids),
                 FollowUpItem.archived_at.is_(None),
             )
             .first()
@@ -387,7 +404,8 @@ class FollowUpItemsManager:
     # ------------------------------------------------------------------
 
     def _verify_comment_access(self, user_id: int, comment_id: int) -> Optional[FollowUpItemComment]:
-        """Verify comment exists, is active, and user has access through engagement ownership."""
+        """Verify comment exists, is active, and user has access (direct or org-based)."""
+        accessible_ids = self._get_accessible_user_ids(user_id)
         return (
             self.db.query(FollowUpItemComment)
             .join(FollowUpItem, FollowUpItemComment.follow_up_item_id == FollowUpItem.id)
@@ -395,7 +413,7 @@ class FollowUpItemsManager:
             .join(Client, Engagement.client_id == Client.id)
             .filter(
                 FollowUpItemComment.id == comment_id,
-                Client.user_id == user_id,
+                Client.user_id.in_(accessible_ids),
                 FollowUpItemComment.archived_at.is_(None),
             )
             .first()

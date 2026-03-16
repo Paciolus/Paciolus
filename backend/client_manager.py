@@ -67,29 +67,61 @@ class ClientManager:
 
     def get_client(self, user_id: int, client_id: int) -> Optional[Client]:
         """
-        Get a specific client by ID, scoped to the user.
+        Get a specific client by ID, with org-aware access check.
 
-        Args:
-            user_id: The ID of the user (for multi-tenant isolation)
-            client_id: The ID of the client to retrieve
-
-        Returns:
-            Client object if found and owned by user, None otherwise
+        Returns Client if the user is the direct owner or an org co-member
+        of the client owner.
         """
-        return (
-            self.db.query(Client)
-            .filter(
-                Client.id == client_id,
-                Client.user_id == user_id,  # Multi-tenant isolation
+        client = self.db.query(Client).filter(Client.id == client_id).first()
+        if not client:
+            return None
+
+        # Direct owner — fast path
+        if client.user_id == user_id:
+            return client
+
+        # Org-based access: user and client owner in same org
+        user = self.db.query(User).filter(User.id == user_id).first()
+        if user and user.organization_id:
+            from organization_model import OrganizationMember
+
+            owner_in_org = (
+                self.db.query(OrganizationMember)
+                .filter(
+                    OrganizationMember.user_id == client.user_id,
+                    OrganizationMember.organization_id == user.organization_id,
+                )
+                .first()
             )
-            .first()
+            if owner_in_org:
+                return client
+
+        return None
+
+    def _accessible_user_ids(self, user_id: int) -> list[int]:
+        """Get all user IDs whose clients should be visible to this user.
+
+        Returns [user_id] for solo users, or all org member user_ids for org members.
+        """
+        user = self.db.query(User).filter(User.id == user_id).first()
+        if not user or not user.organization_id:
+            return [user_id]
+
+        from organization_model import OrganizationMember
+
+        member_ids = (
+            self.db.query(OrganizationMember.user_id)
+            .filter(OrganizationMember.organization_id == user.organization_id)
+            .all()
         )
+        return [m[0] for m in member_ids] if member_ids else [user_id]
 
     def get_clients_for_user(self, user_id: int, limit: int = 100, offset: int = 0) -> list[Client]:
-        """Get all clients for a user with pagination."""
+        """Get all clients accessible to a user (own + org co-members') with pagination."""
+        accessible_ids = self._accessible_user_ids(user_id)
         return (
             self.db.query(Client)
-            .filter(Client.user_id == user_id)
+            .filter(Client.user_id.in_(accessible_ids))
             .order_by(Client.name.asc())
             .offset(offset)
             .limit(limit)
@@ -97,13 +129,15 @@ class ClientManager:
         )
 
     def get_client_count(self, user_id: int) -> int:
-        return self.db.query(Client).filter(Client.user_id == user_id).count()
+        accessible_ids = self._accessible_user_ids(user_id)
+        return self.db.query(Client).filter(Client.user_id.in_(accessible_ids)).count()
 
     def get_clients_with_count(self, user_id: int, limit: int = 100, offset: int = 0) -> tuple[list[Client], int]:
         """Get paginated clients with total count in single query using window function."""
+        accessible_ids = self._accessible_user_ids(user_id)
         subquery = (
             self.db.query(Client, func.count(Client.id).over().label("total_count"))
-            .filter(Client.user_id == user_id)
+            .filter(Client.user_id.in_(accessible_ids))
             .order_by(Client.name.asc())
             .offset(offset)
             .limit(limit)
@@ -196,10 +230,11 @@ class ClientManager:
         return True
 
     def search_clients(self, user_id: int, query: str, limit: int = 20) -> list[Client]:
-        """Search clients by name (case-insensitive)."""
+        """Search clients by name (case-insensitive), including org co-members' clients."""
+        accessible_ids = self._accessible_user_ids(user_id)
         return (
             self.db.query(Client)
-            .filter(Client.user_id == user_id, Client.name.ilike(f"%{query}%"))
+            .filter(Client.user_id.in_(accessible_ids), Client.name.ilike(f"%{query}%"))
             .order_by(Client.name.asc())
             .limit(limit)
             .all()

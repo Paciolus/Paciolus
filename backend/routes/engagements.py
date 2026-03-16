@@ -1,35 +1,57 @@
 """
 Paciolus API — Engagement Routes
 Phase X: Engagement Layer (metadata-only, Zero-Storage compliant)
+
+Sprint 539: Decomposed into focused sub-modules:
+  - engagements.py (this file) — CRUD operations + sub-router composition
+  - engagements_analytics.py — convergence, trends, workpaper index, materiality
+  - engagements_exports.py — anomaly summary PDF, package ZIP, convergence CSV
+  - config/tool_taxonomy.py — centralized tool classification lists
 """
 
-import io
-from collections.abc import Iterator
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from anomaly_summary_generator import AnomalySummaryGenerator
-from auth import require_current_user, require_verified_user
+from auth import require_current_user
 from database import get_db
-from engagement_export import EngagementExporter
 from engagement_manager import EngagementManager
 from engagement_model import EngagementStatus, InvalidEngagementTransitionError, MaterialityBasis
 from models import User
+from routes.engagements_analytics import router as analytics_router
+from routes.engagements_exports import router as exports_router
 from security_utils import log_secure_operation
 from shared.error_messages import sanitize_error
-from shared.rate_limits import RATE_LIMIT_EXPORT, RATE_LIMIT_WRITE, limiter
-from workpaper_index_generator import WorkpaperIndexGenerator
+from shared.rate_limits import RATE_LIMIT_WRITE, limiter
 
 router = APIRouter(tags=["engagements"])
 
+# Include sub-routers (all paths stay the same since sub-routers have no prefix)
+router.include_router(analytics_router)
+router.include_router(exports_router)
+
+# Backward-compatible re-exports for any code importing schemas from this module
+from routes.engagements_analytics import (  # noqa: F401, E402
+    ConvergenceItemResponse,
+    ConvergenceResponse,
+    MaterialityResponse,
+    ToolRunResponse,
+    ToolRunTrendResponse,
+    WorkpaperDocumentResponse,
+    WorkpaperFollowUpSummaryResponse,
+    WorkpaperIndexResponse,
+    WorkpaperSignOffResponse,
+)
+
+# Kept here: convergence tool lists re-exported from canonical config source
+from domain_config.tool_taxonomy import CONVERGENCE_EXCLUDED, CONVERGENCE_TOOLS  # noqa: F401, E402
+
 
 # ---------------------------------------------------------------------------
-# Pydantic schemas
+# Pydantic schemas (CRUD)
 # ---------------------------------------------------------------------------
 
 
@@ -80,106 +102,6 @@ class EngagementListResponse(BaseModel):
     page_size: int
 
 
-class MaterialityResponse(BaseModel):
-    overall_materiality: float
-    performance_materiality: float
-    trivial_threshold: float
-    materiality_basis: Optional[str] = None
-    materiality_percentage: Optional[float] = None
-    performance_materiality_factor: float
-    trivial_threshold_factor: float
-
-
-class ToolRunResponse(BaseModel):
-    id: int
-    engagement_id: int
-    tool_name: str
-    run_number: int
-    status: str
-    composite_score: Optional[float] = None
-    run_at: str
-
-
-class WorkpaperDocumentResponse(BaseModel):
-    tool_name: str
-    tool_label: str
-    run_count: int
-    last_run_date: Optional[str] = None
-    status: Literal["completed", "not_started"]
-    lead_sheet_refs: list[str]
-
-
-class WorkpaperFollowUpSummaryResponse(BaseModel):
-    total_count: int
-    by_severity: dict[str, int]
-    by_disposition: dict[str, int]
-    by_tool_source: dict[str, int]
-
-
-class WorkpaperSignOffResponse(BaseModel):
-    prepared_by: str
-    reviewed_by: str
-    date: str
-
-
-class WorkpaperIndexResponse(BaseModel):
-    engagement_id: int
-    client_name: str
-    period_start: str
-    period_end: str
-    generated_at: str
-    document_register: list[WorkpaperDocumentResponse]
-    follow_up_summary: WorkpaperFollowUpSummaryResponse
-    sign_off: WorkpaperSignOffResponse
-
-
-class ConvergenceItemResponse(BaseModel):
-    account: str
-    tools_flagging_it: list[str]
-    convergence_count: int
-
-
-# GL-account-level tools with convergence extractors
-CONVERGENCE_TOOLS = [
-    "trial_balance",
-    "multi_period",
-    "journal_entry_testing",
-    "ap_testing",
-    "revenue_testing",
-    "ar_aging",
-    "flux_analysis",
-]
-# Sub-ledger-level tools without GL account fields
-CONVERGENCE_EXCLUDED = [
-    "bank_reconciliation",
-    "payroll_testing",
-    "three_way_match",
-    "fixed_asset_testing",
-    "inventory_testing",
-    "statistical_sampling",
-]
-
-
-class ConvergenceResponse(BaseModel):
-    engagement_id: int
-    total_accounts: int
-    tools_covered: list[str]
-    tools_excluded: list[str]
-    items: list[ConvergenceItemResponse]
-    generated_at: str
-
-
-class ToolRunTrendResponse(BaseModel):
-    """Sprint 311: Per-tool score trend."""
-
-    tool_name: str
-    latest_score: float
-    previous_score: Optional[float] = None
-    score_delta: Optional[float] = None
-    direction: Optional[Literal["improving", "stable", "degrading"]] = None
-    run_count: int
-
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -207,7 +129,7 @@ def _engagement_to_response(eng: Any) -> EngagementResponse:
 
 
 # ---------------------------------------------------------------------------
-# Endpoints
+# CRUD Endpoints
 # ---------------------------------------------------------------------------
 
 
@@ -245,11 +167,7 @@ def create_engagement(
     except ValueError as e:
         raise HTTPException(
             status_code=400,
-            detail=sanitize_error(
-                e,
-                log_label="engagement_validation",
-                allow_passthrough=True,
-            ),
+            detail=sanitize_error(e, log_label="engagement_validation", allow_passthrough=True),
         )
 
 
@@ -346,11 +264,7 @@ def update_engagement(
     except ValueError as e:
         raise HTTPException(
             status_code=400,
-            detail=sanitize_error(
-                e,
-                log_label="engagement_validation",
-                allow_passthrough=True,
-            ),
+            detail=sanitize_error(e, log_label="engagement_validation", allow_passthrough=True),
         )
 
 
@@ -373,262 +287,3 @@ def archive_engagement(
 
     if not engagement:
         raise HTTPException(status_code=404, detail="Engagement not found")
-
-
-@router.get("/engagements/{engagement_id}/materiality", response_model=MaterialityResponse)
-def get_materiality(
-    engagement_id: int,
-    current_user: User = Depends(require_current_user),
-    db: Session = Depends(get_db),
-) -> MaterialityResponse:
-    """Compute materiality cascade for an engagement."""
-    manager = EngagementManager(db)
-    engagement = manager.get_engagement(current_user.id, engagement_id)
-
-    if not engagement:
-        raise HTTPException(status_code=404, detail="Engagement not found")
-
-    result = manager.compute_materiality(engagement)
-    return MaterialityResponse(**result)
-
-
-@router.get(
-    "/engagements/{engagement_id}/tool-runs",
-    response_model=list[ToolRunResponse],
-)
-def get_tool_runs(
-    engagement_id: int,
-    current_user: User = Depends(require_current_user),
-    db: Session = Depends(get_db),
-) -> list[ToolRunResponse]:
-    """List tool runs for an engagement."""
-    manager = EngagementManager(db)
-    engagement = manager.get_engagement(current_user.id, engagement_id)
-
-    if not engagement:
-        raise HTTPException(status_code=404, detail="Engagement not found")
-
-    runs = manager.get_tool_runs(engagement_id)
-
-    return [
-        ToolRunResponse(
-            id=r.id,
-            engagement_id=r.engagement_id,
-            tool_name=r.tool_name.value if r.tool_name else "",
-            run_number=r.run_number,
-            status=r.status.value if r.status else "",
-            composite_score=r.composite_score,
-            run_at=r.run_at.isoformat() if r.run_at else "",
-        )
-        for r in runs
-    ]
-
-
-@router.get("/engagements/{engagement_id}/workpaper-index", response_model=WorkpaperIndexResponse)
-def get_workpaper_index(
-    engagement_id: int,
-    current_user: User = Depends(require_current_user),
-    db: Session = Depends(get_db),
-) -> WorkpaperIndexResponse:
-    """Generate workpaper index for an engagement."""
-    generator = WorkpaperIndexGenerator(db)
-
-    try:
-        index = generator.generate(current_user.id, engagement_id)
-        return index
-    except ValueError as e:
-        raise HTTPException(
-            status_code=400,
-            detail=sanitize_error(
-                e,
-                log_label="engagement_validation",
-                allow_passthrough=True,
-            ),
-        )
-
-
-@router.post("/engagements/{engagement_id}/export/anomaly-summary")
-@limiter.limit(RATE_LIMIT_EXPORT)
-def export_anomaly_summary(
-    request: Request,
-    engagement_id: int,
-    current_user: User = Depends(require_verified_user),
-    db: Session = Depends(get_db),
-) -> StreamingResponse:
-    """Generate anomaly summary PDF for an engagement."""
-    log_secure_operation(
-        "anomaly_summary_export",
-        f"User {current_user.id} exporting anomaly summary for engagement {engagement_id}",
-    )
-
-    generator = AnomalySummaryGenerator(db)
-
-    try:
-        pdf_bytes = generator.generate_pdf(current_user.id, engagement_id)
-    except ValueError as e:
-        raise HTTPException(
-            status_code=400,
-            detail=sanitize_error(
-                e,
-                log_label="engagement_validation",
-                allow_passthrough=True,
-            ),
-        )
-
-    def iter_pdf() -> Iterator[bytes]:
-        chunk_size = 8192
-        for i in range(0, len(pdf_bytes), chunk_size):
-            yield pdf_bytes[i : i + chunk_size]
-
-    return StreamingResponse(
-        iter_pdf(),
-        media_type="application/pdf",
-        headers={
-            "Content-Disposition": 'attachment; filename="anomaly_summary.pdf"',
-            "Content-Length": str(len(pdf_bytes)),
-        },
-    )
-
-
-@router.post("/engagements/{engagement_id}/export/package")
-@limiter.limit(RATE_LIMIT_EXPORT)
-def export_engagement_package(
-    request: Request,
-    engagement_id: int,
-    current_user: User = Depends(require_verified_user),
-    db: Session = Depends(get_db),
-) -> StreamingResponse:
-    """Generate and stream diagnostic package ZIP for an engagement."""
-    log_secure_operation(
-        "engagement_package_export",
-        f"User {current_user.id} exporting diagnostic package for engagement {engagement_id}",
-    )
-
-    exporter = EngagementExporter(db)
-
-    try:
-        zip_bytes, filename = exporter.generate_zip(current_user.id, engagement_id)
-    except ValueError as e:
-        raise HTTPException(
-            status_code=400,
-            detail=sanitize_error(
-                e,
-                log_label="engagement_validation",
-                allow_passthrough=True,
-            ),
-        )
-
-    def iter_zip() -> Iterator[bytes]:
-        chunk_size = 8192
-        for i in range(0, len(zip_bytes), chunk_size):
-            yield zip_bytes[i : i + chunk_size]
-
-    return StreamingResponse(
-        iter_zip(),
-        media_type="application/zip",
-        headers={
-            "Content-Disposition": f'attachment; filename="{filename}"',
-            "Content-Length": str(len(zip_bytes)),
-        },
-    )
-
-
-@router.get(
-    "/engagements/{engagement_id}/convergence",
-    response_model=ConvergenceResponse,
-)
-def get_convergence_index(
-    engagement_id: int,
-    current_user: User = Depends(require_current_user),
-    db: Session = Depends(get_db),
-) -> ConvergenceResponse:
-    """Get cross-tool account convergence index for an engagement.
-
-    Aggregates flagged GL accounts across the latest completed run of each tool.
-    Returns convergence counts only — NO composite score, NO risk classification.
-    """
-    manager = EngagementManager(db)
-    engagement = manager.get_engagement(current_user.id, engagement_id)
-
-    if not engagement:
-        raise HTTPException(status_code=404, detail="Engagement not found")
-
-    items = manager.get_convergence_index(engagement_id)
-
-    return ConvergenceResponse(
-        engagement_id=engagement_id,
-        total_accounts=len(items),
-        tools_covered=CONVERGENCE_TOOLS,
-        tools_excluded=CONVERGENCE_EXCLUDED,
-        items=[ConvergenceItemResponse(**item) for item in items],
-        generated_at=datetime.now(UTC).isoformat(),
-    )
-
-
-@router.get(
-    "/engagements/{engagement_id}/tool-run-trends",
-    response_model=list[ToolRunTrendResponse],
-)
-def get_tool_run_trends(
-    engagement_id: int,
-    current_user: User = Depends(require_current_user),
-    db: Session = Depends(get_db),
-) -> list[ToolRunTrendResponse]:
-    """Get per-tool score trends for an engagement.
-
-    Returns latest vs previous composite_score with direction indicator.
-    Scores represent flag density — lower = fewer flags = improving.
-    """
-    manager = EngagementManager(db)
-    engagement = manager.get_engagement(current_user.id, engagement_id)
-
-    if not engagement:
-        raise HTTPException(status_code=404, detail="Engagement not found")
-
-    trends = manager.get_tool_run_trends(engagement_id)
-
-    return [ToolRunTrendResponse(**t) for t in trends]
-
-
-@router.post("/engagements/{engagement_id}/export/convergence-csv")
-@limiter.limit(RATE_LIMIT_EXPORT)
-def export_convergence_csv(
-    request: Request,
-    engagement_id: int,
-    current_user: User = Depends(require_current_user),
-    db: Session = Depends(get_db),
-) -> StreamingResponse:
-    """Export convergence index as CSV."""
-    from shared.helpers import sanitize_csv_value
-
-    log_secure_operation(
-        "convergence_csv_export",
-        f"User {current_user.id} exporting convergence CSV for engagement {engagement_id}",
-    )
-
-    manager = EngagementManager(db)
-    engagement = manager.get_engagement(current_user.id, engagement_id)
-
-    if not engagement:
-        raise HTTPException(status_code=404, detail="Engagement not found")
-
-    items = manager.get_convergence_index(engagement_id)
-
-    output = io.StringIO()
-    output.write("Account,Convergence Count,Tools Flagging It\n")
-    for item in items:
-        account = sanitize_csv_value(item["account"])
-        count = item["convergence_count"]
-        tools = sanitize_csv_value("; ".join(item["tools_flagging_it"]))
-        output.write(f"{account},{count},{tools}\n")
-
-    csv_bytes = output.getvalue().encode("utf-8")
-
-    return StreamingResponse(
-        iter([csv_bytes]),
-        media_type="text/csv",
-        headers={
-            "Content-Disposition": f'attachment; filename="convergence_index_{engagement_id}.csv"',
-            "Content-Length": str(len(csv_bytes)),
-        },
-    )

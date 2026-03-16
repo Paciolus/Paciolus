@@ -321,14 +321,60 @@ def memory_cleanup() -> Generator[None, None, None]:
         clear_memory()
 
 
+def is_authorized_for_client(user: User, client: Client, db: Session) -> bool:
+    """Check if a user has access to a client.
+
+    Returns True if the user is either:
+      (a) the direct owner (client.user_id == user.id), or
+      (b) an active member of the same organization as the client owner.
+
+    This enables org members to access shared resources while preserving
+    tenant isolation for users outside the org.
+    """
+    # Direct owner — fast path
+    if client.user_id == user.id:
+        return True
+
+    # Org-based access: both the client owner and the current user
+    # must be active members of the same organization
+    if user.organization_id:
+        from organization_model import OrganizationMember
+
+        # Check if client owner is in the same org
+        owner_membership = (
+            db.query(OrganizationMember)
+            .filter(
+                OrganizationMember.user_id == client.user_id,
+                OrganizationMember.organization_id == user.organization_id,
+            )
+            .first()
+        )
+        if owner_membership:
+            return True
+
+    return False
+
+
+def get_accessible_client(user: User, client_id: int, db: Session) -> Client | None:
+    """Get a client by ID if the user has access (direct or org-based).
+
+    Returns the Client if authorized, None otherwise.
+    """
+    client = db.query(Client).filter(Client.id == client_id).first()
+    if not client:
+        return None
+    if is_authorized_for_client(user, client, db):
+        return client
+    return None
+
+
 def require_client(
     client_id: int = PathParam(..., description="The ID of the client"),
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
 ) -> Client:
-    """Validate client ownership. Raises 404 if not found or not owned by user."""
-    manager = ClientManager(db)
-    client = manager.get_client(current_user.id, client_id)
+    """Validate client access (direct ownership or org membership). Raises 404 if not found or unauthorized."""
+    client = get_accessible_client(current_user, client_id, db)
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
     return client

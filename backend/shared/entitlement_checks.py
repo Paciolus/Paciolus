@@ -311,48 +311,94 @@ def _get_seat_enforcement_mode() -> str:
     return _load_optional("SEAT_ENFORCEMENT_MODE", "hard")
 
 
-def check_seat_limit(
-    user: Annotated[User, Depends(require_current_user)],
-    db: Session = Depends(get_db),
-) -> User:
-    """Check that the user's organization hasn't exceeded its seat allocation.
+# Default free-tier seat cap applied when no org subscription exists
+_FREE_TIER_SEAT_CAP = 1
 
-    Counts OrganizationMember records for the user's org.
-    Compares against subscription.total_seats.
+
+def _resolve_org_subscription(db: Session, org_id: int):
+    """Resolve the authoritative subscription for an organization.
+
+    Looks up via org.subscription_id first. Falls back to the org owner's
+    active subscription if subscription_id is null (org-first lifecycle).
+    Returns (Subscription | None, TierEntitlements).
     """
-    from subscription_model import Subscription
+    from organization_model import Organization
+    from subscription_model import Subscription, SubscriptionStatus
 
-    entitlements = get_entitlements(UserTier(user.tier.value))
+    org = db.query(Organization).filter(Organization.id == org_id).first()
+    if not org:
+        return None, get_entitlements(UserTier.FREE)
 
-    # Solo tiers (seats_included=1) don't have seat management
-    if entitlements.seats_included <= 1:
-        return user
+    sub = None
+    if org.subscription_id:
+        sub = db.query(Subscription).filter(Subscription.id == org.subscription_id).first()
 
-    # Check if user is in an org
-    if not user.organization_id:
-        return user
+    # Fallback: resolve from org owner's active subscription
+    if sub is None and org.owner_user_id:
+        sub = (
+            db.query(Subscription)
+            .filter(
+                Subscription.user_id == org.owner_user_id,
+                Subscription.status.in_([SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIALING]),
+            )
+            .first()
+        )
+        # Backfill the linkage if found
+        if sub is not None:
+            org.subscription_id = sub.id
+            db.flush()
 
-    sub = db.query(Subscription).filter(Subscription.user_id == user.id).first()
     if sub is None:
-        return user  # No subscription = no seat to check
+        return None, get_entitlements(UserTier.FREE)
 
-    total_seats = sub.total_seats
-    if total_seats <= 0:
-        return user
+    tier = UserTier(sub.tier) if sub.tier else UserTier.FREE
+    return sub, get_entitlements(tier)
 
-    # Count org members
+
+def check_seat_limit_for_org(db: Session, org_id: int) -> None:
+    """Check seat limit against the org's subscription (not the caller's).
+
+    Raises HTTPException 403 if the org has exceeded its seat allocation.
+    If no org subscription exists, enforces a default free-tier seat cap.
+    """
     from organization_model import OrganizationMember
+
+    sub, entitlements = _resolve_org_subscription(db, org_id)
+
+    if sub is not None:
+        total_seats = sub.total_seats
+    else:
+        # No subscription — enforce free-tier default cap
+        total_seats = _FREE_TIER_SEAT_CAP
+
+    if total_seats <= 0:
+        return
 
     member_count = (
         db.query(func.count(OrganizationMember.id))
-        .filter(OrganizationMember.organization_id == user.organization_id)
+        .filter(OrganizationMember.organization_id == org_id)
         .scalar()
     ) or 0
 
+    # Include pending invites in count to prevent over-invitation
+    from organization_model import InviteStatus, OrganizationInvite
+
+    pending_invites = (
+        db.query(func.count(OrganizationInvite.id))
+        .filter(
+            OrganizationInvite.organization_id == org_id,
+            OrganizationInvite.status == InviteStatus.PENDING,
+        )
+        .scalar()
+    ) or 0
+
+    effective_count = member_count + pending_invites
+
     mode = _get_seat_enforcement_mode()
-    if member_count > total_seats:
-        detail = f"Organization seat limit exceeded ({member_count}/{total_seats}). Add more seats or remove members."
-        msg = f"Seat limit ({user.tier.value}): {detail} [user_id={user.id}]"
+    if effective_count >= total_seats:
+        tier_label = sub.tier if sub else "free"
+        detail = f"Organization seat limit reached ({effective_count}/{total_seats}). Add more seats or remove members."
+        msg = f"Seat limit ({tier_label}): {detail} [org_id={org_id}]"
         if mode == "soft":
             logger.warning("SOFT seat enforcement: %s", msg)
         else:
@@ -362,9 +408,25 @@ def check_seat_limit(
                     "code": "TIER_LIMIT_EXCEEDED",
                     "message": detail,
                     "resource": "seats",
-                    "current_tier": user.tier.value,
+                    "current_tier": tier_label,
                     "upgrade_url": "/pricing",
                 },
             )
+
+
+def check_seat_limit(
+    user: Annotated[User, Depends(require_current_user)],
+    db: Session = Depends(get_db),
+) -> User:
+    """Check that the user's organization hasn't exceeded its seat allocation.
+
+    Delegates to check_seat_limit_for_org using the user's org context,
+    ensuring enforcement runs against the org subscription regardless of
+    who the caller is.
+    """
+    if not user.organization_id:
+        return user
+
+    check_seat_limit_for_org(db, user.organization_id)
 
     return user

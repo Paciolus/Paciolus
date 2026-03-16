@@ -134,6 +134,49 @@
 > Sprints 517–531 archived to `tasks/archive/sprints-517-531-details.md`.
 > Sprints 532–536 archived to `tasks/archive/sprints-532-536-details.md`.
 
+### Sprint 539 — Comprehensive Remediation (Security, Correctness, Architecture)
+
+**Status:** COMPLETE
+**Goal:** Fix critical security, billing correctness, auth concurrency, webhook idempotency, and architectural quality issues identified by 3 independent audits.
+
+#### Section 1 — Authorization & Billing Correctness
+- [x] 1.1: Refactor `check_seat_limit()` to accept org context, not caller identity
+- [x] 1.2: `handle_subscription_deleted()` downgrades ALL org members to FREE
+- [x] 1.3: Implement `is_authorized_for_client()` helper for org-aware access
+- [x] 1.4: Backfill `org.subscription_id` on checkout for org-first lifecycle
+
+#### Section 2 — Authentication
+- [x] 2.1: Replace read-then-write in `rotate_refresh_token()` with CAS guard
+
+#### Section 3 — Webhook Idempotency
+- [x] 3.1: Atomic deduplication — insert dedup marker before business logic
+- [x] 3.2: Stale event ordering guard — reject out-of-order subscription events
+
+#### Section 4 — Data Integrity
+- [x] 4.1: DPA timestamp normalization — `.astimezone(UTC)` for offset-aware inputs
+
+#### Section 5 — Architectural Refactoring
+- [x] 5.1: Split `apiClient.ts` into transport/authMiddleware/cachePlugin/downloadAdapter
+- [x] 5.8: Split `engagements.py` into CRUD/analytics/exports + tool_taxonomy config
+- [x] 5.10: Audit back-compat shims in `export.py` — added removal plan (Sprint 545)
+
+#### Section 6 — Test Coverage
+- [x] 15 new tests: seat enforcement, cancellation entitlement, refresh race, webhook dedup, event ordering, DPA timestamps, org-first lifecycle, shared access
+
+#### Verification
+- [x] `pytest` passes (6,522 tests — 15 new)
+- [x] `npm run build` passes
+- [x] `npm test` passes (1,339 tests)
+
+#### Review
+- 6 critical/high security bugs fixed across auth, billing, webhooks
+- Org member collaborative access implemented across 4 managers
+- apiClient.ts split from 1,141-line monolith into 5 composable modules
+- engagements.py decomposed into 3 focused route files + centralized tool taxonomy
+- Zero regressions in existing 6,507 + 1,339 test suites
+
+---
+
 ### Sprint 538 — DEC 2026-03-16 Remediation
 
 **Status:** COMPLETE
@@ -167,8 +210,8 @@
 - F-005: Added `is_contra_account()` check in `_is_credit_normal` property — contra-equity excluded from sign flip
 - F-006: Removed "potential adjusting entry" from 4 procedure texts; replaced with "further investigation/evaluation"
 - F-007: Added 5 related-party loan keywords to carve-outs (shareholder/officer/employee/director/related party)
-- Lessons captured below
-- Commit:
+- Lessons captured in `tasks/lessons.md`
+- Commit: c47cd28
 
 ---
 

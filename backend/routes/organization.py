@@ -27,7 +27,7 @@ from organization_model import (
     OrganizationMember,
     OrgRole,
 )
-from shared.entitlement_checks import check_seat_limit
+from shared.entitlement_checks import check_seat_limit_for_org
 from shared.rate_limits import RATE_LIMIT_WRITE, limiter
 
 router = APIRouter(prefix="/organization", tags=["organization"])
@@ -210,8 +210,8 @@ async def create_invite(
     org = _get_user_org(db, user)
     _require_admin(db, user, org)
 
-    # Check seat limit
-    check_seat_limit(user, db)
+    # Check seat limit against org subscription (not the inviter's personal subscription)
+    check_seat_limit_for_org(db, org.id)
 
     # Check for duplicate pending invite
     existing_invite = (
@@ -339,15 +339,12 @@ async def accept_invite(
         db.commit()
         raise HTTPException(status_code=410, detail="This invite has expired.")
 
-    # Check seat limit for the org
+    # Check seat limit for the org (uses org subscription, not inviter's)
     org = db.query(Organization).filter(Organization.id == invite.organization_id).first()
     if not org:
         raise HTTPException(status_code=404, detail="Organization not found.")
 
-    # Load org owner to check their seat entitlement
-    org_owner = db.query(User).filter(User.id == org.owner_user_id).first()
-    if org_owner:
-        check_seat_limit(org_owner, db)
+    check_seat_limit_for_org(db, org.id)
 
     # Check user isn't already in an org
     existing = db.query(OrganizationMember).filter(OrganizationMember.user_id == user.id).first()
@@ -368,14 +365,31 @@ async def accept_invite(
     # Inherit org's tier from subscription
     from subscription_model import Subscription, SubscriptionStatus
 
-    sub = (
-        db.query(Subscription)
-        .filter(
-            Subscription.id == org.subscription_id,
-            Subscription.status.in_([SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIALING]),
+    sub = None
+    if org.subscription_id:
+        sub = (
+            db.query(Subscription)
+            .filter(
+                Subscription.id == org.subscription_id,
+                Subscription.status.in_([SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIALING]),
+            )
+            .first()
         )
-        .first()
-    )
+
+    # Fallback: resolve subscription from org owner if org.subscription_id is null
+    if sub is None and org.owner_user_id:
+        sub = (
+            db.query(Subscription)
+            .filter(
+                Subscription.user_id == org.owner_user_id,
+                Subscription.status.in_([SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIALING]),
+            )
+            .first()
+        )
+        # Backfill linkage
+        if sub is not None:
+            org.subscription_id = sub.id
+
     if sub:
         user.tier = sub.tier
 

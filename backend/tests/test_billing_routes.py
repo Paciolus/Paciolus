@@ -859,6 +859,7 @@ class TestWebhookHTTPIntegration:
                     "customer": "cus_test",
                     "subscription": "sub_test",
                 },
+                event_created=None,
             )
 
     @pytest.mark.asyncio
