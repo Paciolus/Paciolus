@@ -77,6 +77,7 @@ export const DEMO_RISK_SUMMARY: RiskSummary = {
   high_severity: 2,
   medium_severity: 0,
   low_severity: 1,
+  informational_count: 0,
   anomaly_types: {
     natural_balance_violation: 3,
   },

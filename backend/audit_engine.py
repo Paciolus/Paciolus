@@ -936,6 +936,7 @@ class StreamingAuditor:
             "rounding_detection", f"Analyzing {len(self.account_balances)} accounts for rounding anomalies"
         )
         log_secure_operation("DEPLOY-VERIFY-536", "tiered round-number detection active")
+        log_secure_operation("DEPLOY-VERIFY-537", "informational severity tier active")
 
         # Compute TB total for 10% concentration threshold
         tb_total = sum(
@@ -992,7 +993,18 @@ class StreamingAuditor:
                 round_desc = f"${abs_balance:,.0f}"
 
             # Tier-appropriate severity and text
-            if tier == "minor":
+            if tier == "informational":
+                effective_severity = "informational"
+                materiality_status = "immaterial"
+                confidence = 0.2
+                issue_text = f"Informational Note: Round balance of {round_desc}"
+                recommendation = (
+                    f"Informational Note: Round balance of {round_desc} on {display}. "
+                    "For this account type, round balances are common in practice and do not "
+                    "indicate a recording concern in isolation. No procedure required unless "
+                    "other risk factors are present."
+                )
+            elif tier == "minor":
                 effective_severity = "low"
                 materiality_status = "immaterial"
                 confidence = 0.3
@@ -1770,7 +1782,8 @@ def _build_risk_summary(abnormal_balances: list[dict[str, Any]]) -> dict[str, An
     """
     high_severity = sum(1 for ab in abnormal_balances if ab.get("severity") == "high")
     medium_severity = sum(1 for ab in abnormal_balances if ab.get("severity") == "medium")
-    low_severity = len(abnormal_balances) - high_severity - medium_severity
+    informational_count = sum(1 for ab in abnormal_balances if ab.get("severity") == "informational")
+    low_severity = len(abnormal_balances) - high_severity - medium_severity - informational_count
     suspense_count = sum(
         1 for ab in abnormal_balances if ab.get("anomaly_type") == "suspense_account" or ab.get("is_suspense_account")
     )
@@ -1805,6 +1818,7 @@ def _build_risk_summary(abnormal_balances: list[dict[str, Any]]) -> dict[str, An
         "high_severity": high_severity,
         "medium_severity": medium_severity,
         "low_severity": low_severity,
+        "informational_count": informational_count,
         "anomaly_types": {
             "natural_balance_violation": sum(
                 1 for ab in abnormal_balances if ab.get("anomaly_type") == "natural_balance_violation"
@@ -1897,7 +1911,9 @@ def audit_trial_balance_streaming(
         result["abnormal_balances"] = abnormal_balances
         result["materiality_threshold"] = materiality_threshold
         result["material_count"] = sum(1 for ab in abnormal_balances if ab.get("materiality") == "material")
-        result["immaterial_count"] = len(abnormal_balances) - result["material_count"]
+        _informational_count = sum(1 for ab in abnormal_balances if ab.get("severity") == "informational")
+        result["immaterial_count"] = len(abnormal_balances) - result["material_count"] - _informational_count
+        result["informational_count"] = _informational_count
         result["has_risk_alerts"] = result["material_count"] > 0
 
         # Add classification summary (Day 9)
@@ -1928,6 +1944,7 @@ def audit_trial_balance_streaming(
             _has_suspense,
             _has_credit_balance,
             abnormal_balances=abnormal_balances,
+            informational_count=result["informational_count"],
         )
         result["risk_summary"]["risk_score"] = risk_score
         result["risk_summary"]["risk_tier"] = get_risk_tier(risk_score)
@@ -2264,9 +2281,10 @@ def audit_trial_balance_multi_sheet(
         consolidated_difference = consolidated_debits - consolidated_credits
         is_consolidated_balanced = abs(Decimal(str(consolidated_difference))) < BALANCE_TOLERANCE
 
-        # Count material/immaterial
+        # Count material/immaterial/informational
         material_count = sum(1 for ab in all_abnormal_balances if ab.get("materiality") == "material")
-        immaterial_count = len(all_abnormal_balances) - material_count
+        ms_informational_count = sum(1 for ab in all_abnormal_balances if ab.get("severity") == "informational")
+        immaterial_count = len(all_abnormal_balances) - material_count - ms_informational_count
 
         # Risk summary (Sprint 41-42: include all anomaly type counts)
         risk_summary = _build_risk_summary(all_abnormal_balances)
@@ -2292,6 +2310,7 @@ def audit_trial_balance_multi_sheet(
             ms_has_suspense,
             ms_has_credit_balance,
             abnormal_balances=all_abnormal_balances,
+            informational_count=ms_informational_count,
         )
         risk_summary["risk_score"] = ms_risk_score
         risk_summary["risk_tier"] = get_risk_tier(ms_risk_score)
@@ -2323,6 +2342,7 @@ def audit_trial_balance_multi_sheet(
             "materiality_threshold": materiality_threshold,
             "material_count": material_count,
             "immaterial_count": immaterial_count,
+            "informational_count": ms_informational_count,
             "has_risk_alerts": material_count > 0,
             # Risk summary
             "risk_summary": risk_summary,

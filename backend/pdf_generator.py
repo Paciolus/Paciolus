@@ -994,9 +994,11 @@ class PaciolusReportGenerator:
         risk_summary = self.audit_result.get("risk_summary", {})
         material_count = self.audit_result.get("material_count", 0)
         immaterial_count = self.audit_result.get("immaterial_count", 0)
-        total_anomalies = risk_summary.get("total_anomalies", material_count + immaterial_count)
+        informational_count = self.audit_result.get("informational_count", 0)
+        total_anomalies = risk_summary.get("total_anomalies", material_count + immaterial_count + informational_count)
         high_severity = risk_summary.get("high_severity", material_count)
         low_severity = risk_summary.get("low_severity", immaterial_count)
+        informational_severity = risk_summary.get("informational_count", informational_count)
 
         # Change 3: Composite Risk Score
         abnormal_balances = self.audit_result.get("abnormal_balances", [])
@@ -1028,6 +1030,7 @@ class PaciolusReportGenerator:
                 has_suspense,
                 has_credit_balance,
                 abnormal_balances=abnormal_balances,
+                informational_count=informational_count,
             )
         risk_tier = get_risk_tier(risk_score)
         tier_label, _ = RISK_TIER_DISPLAY.get(risk_tier, ("UNKNOWN", ClassicalColors.OBSIDIAN_500))
@@ -1063,27 +1066,28 @@ class PaciolusReportGenerator:
 
         elements.append(Spacer(1, 6))
 
-        # Risk metrics table with classical styling
+        # Risk metrics table with classical styling (Sprint 537: 4-column with informational)
         risk_data = [
-            ["Total Findings", "Material Exceptions", "Minor Observations"],
-            [str(total_anomalies), str(high_severity), str(low_severity)],
+            ["Total Findings", "Material Exceptions", "Minor Observations", "Informational Notes"],
+            [str(total_anomalies), str(high_severity), str(low_severity), str(informational_severity)],
         ]
 
-        risk_table = Table(risk_data, colWidths=[2 * inch, 2 * inch, 2 * inch])
+        risk_table = Table(risk_data, colWidths=[1.5 * inch, 1.5 * inch, 1.5 * inch, 1.5 * inch])
         risk_table.setStyle(
             TableStyle(
                 [
                     # Header labels
                     ("FONTNAME", (0, 0), (-1, 0), "Times-Roman"),
-                    ("FONTSIZE", (0, 0), (-1, 0), 9),
+                    ("FONTSIZE", (0, 0), (-1, 0), 8),
                     ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_500),
                     ("ALIGN", (0, 0), (-1, 0), "CENTER"),
                     # Values
                     ("FONTNAME", (0, 1), (-1, 1), "Times-Bold"),
-                    ("FONTSIZE", (0, 1), (-1, 1), 24),
+                    ("FONTSIZE", (0, 1), (-1, 1), 22),
                     ("TEXTCOLOR", (0, 1), (0, 1), ClassicalColors.OBSIDIAN_DEEP),
                     ("TEXTCOLOR", (1, 1), (1, 1), ClassicalColors.CLAY),
                     ("TEXTCOLOR", (2, 1), (2, 1), ClassicalColors.OBSIDIAN_500),
+                    ("TEXTCOLOR", (3, 1), (3, 1), ClassicalColors.LEDGER_RULE),
                     ("ALIGN", (0, 1), (-1, 1), "CENTER"),
                     ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
                     ("TOPPADDING", (0, 0), (-1, -1), 8),
@@ -1113,13 +1117,18 @@ class PaciolusReportGenerator:
         elements.append(LedgerRule(color=ClassicalColors.OBSIDIAN_DEEP, thickness=1))
         elements.append(Spacer(1, 4))
 
-        # Separate by materiality
+        # Separate by materiality / severity tier (Sprint 537: three tiers)
         material = [ab for ab in abnormal_balances if ab.get("materiality") == "material"]
-        immaterial = [ab for ab in abnormal_balances if ab.get("materiality") == "immaterial"]
+        informational = [ab for ab in abnormal_balances if ab.get("severity") == "informational"]
+        immaterial = [
+            ab for ab in abnormal_balances
+            if ab.get("materiality") == "immaterial" and ab.get("severity") != "informational"
+        ]
 
         # Fix 3: Sort findings by absolute amount descending within each tier
         material.sort(key=lambda ab: abs(ab.get("amount", 0)), reverse=True)
         immaterial.sort(key=lambda ab: abs(ab.get("amount", 0)), reverse=True)
+        informational.sort(key=lambda ab: abs(ab.get("amount", 0)), reverse=True)
 
         if material:
             elements.append(Paragraph(f"Material Exceptions ({len(material)})", self.styles["SubsectionHeader"]))
@@ -1129,6 +1138,22 @@ class PaciolusReportGenerator:
         if immaterial:
             elements.append(Paragraph(f"Minor Observations ({len(immaterial)})", self.styles["SubsectionHeader"]))
             elements.append(self._create_ledger_table(immaterial, is_material=False))
+            elements.append(Spacer(1, 10))
+
+        if informational:
+            elements.append(
+                Paragraph(f"Informational Notes ({len(informational)})", self.styles["SubsectionHeader"])
+            )
+            elements.append(
+                Paragraph(
+                    "<i>Informational Notes are surfaced for practitioner awareness and require no "
+                    "immediate procedure. They may be relevant in the context of expanded procedures "
+                    "or other findings.</i>",
+                    self.styles["BodyText"],
+                )
+            )
+            elements.append(Spacer(1, 4))
+            elements.append(self._create_informational_table(informational))
 
         return elements
 
@@ -1302,6 +1327,57 @@ class PaciolusReportGenerator:
             )
 
         return KeepTogether(table_elements)
+
+    def _create_informational_table(self, anomalies: list) -> KeepTogether:
+        """Sprint 537: Compact table for informational notes — no suggested procedures."""
+        cell_style = self.styles["TableCell"]
+        header_style = self.styles["TableHeader"]
+
+        data = [
+            [
+                Paragraph("Ref", header_style),
+                Paragraph("Account", header_style),
+                Paragraph("Nature of Note", header_style),
+                Paragraph("Amount", header_style),
+            ]
+        ]
+
+        for idx, ab in enumerate(anomalies, start=1):
+            ref_num = f"TB-N{idx:03d}"
+            account = ab.get("account", "Unknown")
+            issue_text = ab.get("issue", "")
+            acc_type = ab.get("type", "Unknown")
+            issue_cell = Paragraph(
+                f"{issue_text}"
+                f'<br/><font size="7" color="#616161"><i>{acc_type}</i></font>',
+                cell_style,
+            )
+            amount = ab.get("amount", 0)
+            data.append([
+                Paragraph(ref_num, cell_style),
+                Paragraph(account, cell_style),
+                issue_cell,
+                Paragraph(f"${amount:,.2f}", cell_style),
+            ])
+
+        table = Table(
+            data, colWidths=[0.6 * inch, 1.5 * inch, 3.0 * inch, 0.9 * inch], repeatRows=1
+        )
+        style_commands = [
+            ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
+            ("FONTSIZE", (0, 0), (-1, 0), 8),
+            ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
+            ("LINEBELOW", (0, 0), (-1, 0), 0.5, ClassicalColors.OBSIDIAN_500),
+            ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
+            ("LINEBEFORE", (0, 1), (0, -1), 1, ClassicalColors.LEDGER_RULE),
+            ("ALIGN", (-1, 0), (-1, -1), "RIGHT"),
+            ("TOPPADDING", (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [ClassicalColors.WHITE, ClassicalColors.OATMEAL_PAPER]),
+        ]
+        table.setStyle(TableStyle(style_commands))
+        return KeepTogether([table])
 
     def _build_workpaper_signoff(self) -> list:
         """

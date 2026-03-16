@@ -23,7 +23,7 @@ import { formatCurrencyWhole, parseCurrency } from '@/utils';
  * See: skills/theme-factory/themes/oat-and-obsidian.md
  */
 
-export type DisplayMode = 'strict' | 'lenient';
+export type DisplayMode = 'strict' | 'lenient' | 'all';
 
 interface SensitivityToolbarProps {
   threshold: number;
@@ -129,10 +129,15 @@ export function SensitivityToolbar({
     }
   };
 
-  // Toggle display mode
+  // Cycle display mode: strict → lenient → all → strict
   const handleDisplayModeToggle = () => {
     if (disabled) return;
-    onDisplayModeChange(displayMode === 'strict' ? 'lenient' : 'strict');
+    const nextMode: Record<DisplayMode, DisplayMode> = {
+      strict: 'lenient',
+      lenient: 'all',
+      all: 'strict',
+    };
+    onDisplayModeChange(nextMode[displayMode]);
   };
 
   // Get input classes (Tier 2: Form Focus & Validation)
@@ -373,7 +378,9 @@ export function SensitivityToolbar({
             ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}
             ${displayMode === 'strict'
               ? 'bg-sage-500/20 border-sage-500/40 text-sage-300'
-              : 'bg-oatmeal-500/10 border-oatmeal-500/30 text-content-primary'
+              : displayMode === 'all'
+                ? 'bg-oatmeal-500/20 border-oatmeal-500/40 text-oatmeal-300'
+                : 'bg-oatmeal-500/10 border-oatmeal-500/30 text-content-primary'
             }
           `}
           aria-pressed={displayMode === 'strict'}
@@ -383,7 +390,7 @@ export function SensitivityToolbar({
           <span
             className={`
               w-2 h-2 rounded-full transition-colors duration-200
-              ${displayMode === 'strict' ? 'bg-sage-400' : 'bg-content-secondary'}
+              ${displayMode === 'strict' ? 'bg-sage-400' : displayMode === 'all' ? 'bg-oatmeal-400' : 'bg-content-secondary'}
             `}
             aria-hidden="true"
           />

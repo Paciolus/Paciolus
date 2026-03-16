@@ -155,13 +155,14 @@ export function AuditResultsPanel({
           />
         </div>
 
-        {(result.material_count > 0 || result.immaterial_count > 0) && (
+        {(result.material_count > 0 || result.immaterial_count > 0 || (result.informational_count ?? 0) > 0) && (
           <div className="mt-4">
             <RiskDashboard
               anomalies={result.abnormal_balances}
               riskSummary={result.risk_summary}
               materialityThreshold={result.materiality_threshold}
               disabled={isRecalculating}
+              displayMode={displayMode}
               getMappingForAccount={(accountName) => {
                 const mapping = mappingContext.mappings.get(accountName)
                 const anomaly = result.abnormal_balances.find(a => a.account === accountName)

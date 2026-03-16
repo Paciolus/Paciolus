@@ -344,8 +344,12 @@ def compute_tb_risk_score(
     has_credit_balance_asset: bool,
     *,
     abnormal_balances: list[dict] | None = None,
+    informational_count: int = 0,
 ) -> tuple[int, list[tuple[str, int]]]:
     """Compute composite risk score for the TB Diagnostic report.
+
+    Sprint 537: Added informational_count — each contributes +1, grouped into
+    a single summary line (not individually listed).
 
     Returns (score, factors) where factors is a list of (name, contribution) tuples.
     When abnormal_balances is provided, material findings appear as individually
@@ -402,6 +406,12 @@ def compute_tb_risk_score(
     if minor_pts > 0:
         factors.append((f"Minor observations ({minor_count} findings)", minor_pts))
     score += minor_pts
+
+    # Sprint 537: Informational notes — +1 each, grouped into single summary line
+    informational_pts = informational_count * 1
+    if informational_pts > 0:
+        factors.append((f"{informational_count} informational notes (contextual observations)", informational_pts))
+    score += informational_pts
 
     if coverage_pct >= 50:
         factors.append(("Risk-weighted coverage exceeds 50%", 10))

@@ -134,6 +134,46 @@
 > Sprints 517–531 archived to `tasks/archive/sprints-517-531-details.md`.
 > Sprints 532–536 archived to `tasks/archive/sprints-532-536-details.md`.
 
+### Sprint 537 — Informational Note Tier
+
+**Status:** COMPLETE
+**Goal:** Add third severity level (Informational Note) for low-signal findings that require no procedure.
+
+#### Backend
+- [x] Add `ROUND_NUMBER_TIER2_INFORMATIONAL` list to `classification_rules.py`
+- [x] Update `classify_round_number_tier()` to return `"informational"` for matching accounts
+- [x] Handle `tier == "informational"` in `detect_rounding_anomalies()` (severity, text template)
+- [x] Add `informational_count` to `_build_risk_summary()` and risk_summary dict
+- [x] Update `compute_tb_risk_score()` for informational (+1 each, grouped summary line)
+- [x] Update PDF generator: four-column risk table, third section for informational notes
+- [x] Change classification_validator number_gap severity to `"informational"`
+- [x] Add DEPLOY-VERIFY-537 log line
+- [x] Fix stale test assertion in `test_contra_and_detection_fixes.py` (contra-asset → minor, not suppressed)
+
+#### Frontend
+- [x] Add `'informational'` to Severity type in `types/shared.ts`
+- [x] Add `informational_count` to RiskSummary in `types/mapping.ts`
+- [x] Update `DisplayMode` to include `'all'` in SensitivityToolbar
+- [x] Three-section split in RiskDashboard (High / Medium / Notes)
+- [x] Informational card variant in AnomalyCard (grey border, collapsed, no procedure)
+- [x] Pass displayMode to RiskDashboard for filtering
+- [x] Add informational severity color to ClassificationQualitySection
+- [x] Add `informational` to all `Record<Severity, ...>` across 7 files
+
+#### Verification
+- [x] `npm run build` passes
+- [x] `npm test` passes (1,339 tests)
+- [x] `pytest` passes (6,507 tests)
+- [x] Cascade QA: 3 informational (Cash, AR Trade, AP Trade), Accrued Bonuses stays Minor
+- [x] Meridian QA: 1 informational (Rent — Office), 2520 suppressed, CV-4 gaps informational
+
+#### Review
+- Fixed false positive: "rent" substring matched "current" in "2520 — Current Portion — Long Term Debt". Added "current portion" and "long term debt" to TIER1_SUPPRESS.
+- Fixed stale test: `test_allowance_round_suppressed` was already failing pre-537 (Sprint 536 changed contra-asset from suppress to minor).
+- Lessons captured in `tasks/lessons.md`.
+
+---
+
 ### Sprint 447 — Stripe Production Cutover
 
 **Status:** PENDING (CEO action required)

@@ -13,7 +13,7 @@
 //   - Follow-Up Items: item severity
 // Backend enforces: Literal["high", "medium", "low"] in all Pydantic response schemas.
 
-export type Severity = 'high' | 'medium' | 'low'
+export type Severity = 'high' | 'medium' | 'low' | 'informational'
 
 // ─── Upload Status ───────────────────────────────────────────────────────────
 // Shared upload/processing lifecycle status used by useAuditUpload, PeriodFileDropZone, etc.

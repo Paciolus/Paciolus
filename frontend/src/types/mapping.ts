@@ -90,11 +90,13 @@ export interface AbnormalBalanceExtended {
 }
 
 // Risk summary from API (Day 10, fixed Sprint 225: added medium_severity)
+// Sprint 537: added informational_count
 export interface RiskSummary {
   total_anomalies: number;
   high_severity: number;
   medium_severity: number;
   low_severity: number;
+  informational_count: number;
   anomaly_types: {
     natural_balance_violation: number;
   };

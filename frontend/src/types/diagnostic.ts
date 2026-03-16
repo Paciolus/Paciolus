@@ -128,6 +128,7 @@ export interface AuditResult {
   materiality_threshold: number
   material_count: number
   immaterial_count: number
+  informational_count?: number
   classification_summary?: {
     high: number
     medium: number

@@ -24,6 +24,7 @@ const SEVERITY_BORDER: Record<TestingSeverity, string> = {
   high: 'border-l-clay-500',
   medium: 'border-l-oatmeal-400',
   low: 'border-l-oatmeal-300',
+  informational: 'border-l-oatmeal-200',
 }
 
 // ─── Types ───────────────────────────────────────────────────────────────────

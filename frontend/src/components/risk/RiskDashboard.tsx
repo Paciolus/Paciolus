@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { AbnormalBalanceExtended, AccountType, RiskSummary } from '@/types/mapping'
+import type { DisplayMode } from '@/components/sensitivity'
 import { AnomalyCard } from './AnomalyCard'
 
 interface RiskDashboardProps {
@@ -10,6 +11,7 @@ interface RiskDashboardProps {
   riskSummary?: RiskSummary
   materialityThreshold: number
   disabled?: boolean
+  displayMode?: DisplayMode
   getMappingForAccount: (accountName: string) => {
     currentType: AccountType
     isManual: boolean
@@ -20,13 +22,9 @@ interface RiskDashboardProps {
 /**
  * RiskDashboard - Day 10 Component
  *
- * Displays anomalies detected during trial balance audit with animated
- * AnomalyCard components. Uses "premium restraint" design philosophy.
- *
- * Features:
- * - Staggered animations via framer-motion
- * - Collapsible low-severity (immaterial) section
- * - Risk summary header
+ * Sprint 537: Three-tier severity display (Material / Minor / Informational).
+ * Display mode filtering: strict (material only), lenient (material + minor),
+ * all (material + minor + informational).
  *
  * See: logs/dev-log.md for IP documentation
  */
@@ -35,26 +33,31 @@ export function RiskDashboard({
   riskSummary,
   materialityThreshold,
   disabled = false,
+  displayMode = 'lenient',
   getMappingForAccount,
   onTypeChange,
 }: RiskDashboardProps) {
-  const [showLowSeverity, setShowLowSeverity] = useState(false)
+  const [showMinor, setShowMinor] = useState(false)
+  const [showInformational, setShowInformational] = useState(false)
 
 
-  // Separate anomalies by severity
-  const { highSeverity, lowSeverity } = useMemo(() => {
+  // Separate anomalies into three tiers
+  const { highSeverity, minorSeverity, informational } = useMemo(() => {
     const high: AbnormalBalanceExtended[] = []
-    const low: AbnormalBalanceExtended[] = []
+    const minor: AbnormalBalanceExtended[] = []
+    const info: AbnormalBalanceExtended[] = []
 
     anomalies.forEach((a) => {
-      if (a.severity === 'high' || a.materiality === 'material') {
+      if (a.severity === 'informational') {
+        info.push(a)
+      } else if (a.severity === 'high' || a.materiality === 'material') {
         high.push(a)
       } else {
-        low.push(a)
+        minor.push(a)
       }
     })
 
-    return { highSeverity: high, lowSeverity: low }
+    return { highSeverity: high, minorSeverity: minor, informational: info }
   }, [anomalies])
 
   // Container animation
@@ -72,6 +75,10 @@ export function RiskDashboard({
   if (anomalies.length === 0) {
     return null
   }
+
+  // Compute badge counts
+  const mediumCount = (riskSummary?.medium_severity ?? 0) + (riskSummary?.low_severity ?? 0)
+  const notesCount = riskSummary?.informational_count ?? 0
 
   return (
     <div className="space-y-6 max-w-md mx-auto">
@@ -108,7 +115,7 @@ export function RiskDashboard({
             </div>
           </div>
 
-          {/* Summary Stats */}
+          {/* Summary Stats — Sprint 537: three badges */}
           <div className="flex items-center gap-4 text-xs font-mono">
             {riskSummary.high_severity > 0 && (
               <div className="text-clay-400">
@@ -116,10 +123,16 @@ export function RiskDashboard({
                 <span className="block text-content-tertiary font-sans">High</span>
               </div>
             )}
-            {riskSummary.low_severity > 0 && (
+            {mediumCount > 0 && (
               <div className="text-content-secondary">
-                <span className="text-lg font-bold">{riskSummary.low_severity}</span>
-                <span className="block text-content-tertiary font-sans">Low</span>
+                <span className="text-lg font-bold">{mediumCount}</span>
+                <span className="block text-content-tertiary font-sans">Medium</span>
+              </div>
+            )}
+            {notesCount > 0 && (
+              <div className="text-content-tertiary">
+                <span className="text-lg font-bold">{notesCount}</span>
+                <span className="block text-content-tertiary font-sans">Notes</span>
               </div>
             )}
           </div>
@@ -163,25 +176,25 @@ export function RiskDashboard({
         </div>
       )}
 
-      {/* Low Severity Section (Collapsible) */}
-      {lowSeverity.length > 0 && (
+      {/* Minor Severity Section (Collapsible) — hidden in strict mode */}
+      {displayMode !== 'strict' && minorSeverity.length > 0 && (
         <div className="border border-theme rounded-xl overflow-hidden">
           <button
-            onClick={() => setShowLowSeverity(!showLowSeverity)}
+            onClick={() => setShowMinor(!showMinor)}
             className="w-full flex items-center justify-between p-4 bg-surface-card-secondary hover:bg-surface-card transition-colors"
-            aria-expanded={showLowSeverity}
+            aria-expanded={showMinor}
           >
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-content-tertiary" />
               <span className="text-content-secondary font-sans font-medium text-sm">
-                Below Materiality ({lowSeverity.length})
+                Minor Observations ({minorSeverity.length})
               </span>
               <span className="text-content-tertiary text-xs font-sans">
                 &lt; ${materialityThreshold.toLocaleString()}
               </span>
             </div>
             <motion.svg
-              animate={{ rotate: showLowSeverity ? 180 : 0 }}
+              animate={{ rotate: showMinor ? 180 : 0 }}
               transition={{ duration: 0.2 }}
               className="w-5 h-5 text-content-tertiary"
               fill="none"
@@ -198,7 +211,7 @@ export function RiskDashboard({
           </button>
 
           <AnimatePresence>
-            {showLowSeverity && (
+            {showMinor && (
               <motion.div
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
@@ -212,7 +225,74 @@ export function RiskDashboard({
                   animate="visible"
                   className="p-4 space-y-3"
                 >
-                  {lowSeverity.map((anomaly, index) => {
+                  {minorSeverity.map((anomaly, index) => {
+                    const mapping = getMappingForAccount(anomaly.account)
+                    return (
+                      <AnomalyCard
+                        key={`${anomaly.account}-${index}`}
+                        anomaly={anomaly}
+                        index={index}
+                        currentType={mapping.currentType}
+                        isManual={mapping.isManual}
+                        disabled={disabled}
+                        onTypeChange={onTypeChange}
+                      />
+                    )
+                  })}
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
+
+      {/* Informational Notes Section (Collapsible, collapsed by default) — only in 'all' mode */}
+      {displayMode === 'all' && informational.length > 0 && (
+        <div className="border border-theme/60 rounded-xl overflow-hidden">
+          <button
+            onClick={() => setShowInformational(!showInformational)}
+            className="w-full flex items-center justify-between p-4 bg-surface-card-secondary/50 hover:bg-surface-card-secondary transition-colors"
+            aria-expanded={showInformational}
+          >
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-content-tertiary/50" />
+              <span className="text-content-tertiary font-sans font-medium text-sm">
+                Informational Notes ({informational.length})
+              </span>
+            </div>
+            <motion.svg
+              animate={{ rotate: showInformational ? 180 : 0 }}
+              transition={{ duration: 0.2 }}
+              className="w-5 h-5 text-content-tertiary/50"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 9l-7 7-7-7"
+              />
+            </motion.svg>
+          </button>
+
+          <AnimatePresence>
+            {showInformational && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.3, ease: 'easeInOut' }}
+                className="overflow-hidden"
+              >
+                <motion.div
+                  variants={containerVariants}
+                  initial="hidden"
+                  animate="visible"
+                  className="p-4 space-y-3"
+                >
+                  {informational.map((anomaly, index) => {
                     const mapping = getMappingForAccount(anomaly.account)
                     return (
                       <AnomalyCard

@@ -40,6 +40,7 @@ export const AnomalyCard = memo(function AnomalyCard({
 }: AnomalyCardProps) {
   const [showSuggestions, setShowSuggestions] = useState(false)
   const isHighSeverity = anomaly.severity === 'high' || anomaly.materiality === 'material'
+  const isInformational = anomaly.severity === 'informational'
 
   // Sprint 31: Check if we should show suggestions
   const hasSuggestions = anomaly.suggestions && anomaly.suggestions.length > 0
@@ -90,7 +91,7 @@ export const AnomalyCard = memo(function AnomalyCard({
       className={`
         relative rounded-lg overflow-hidden
         bg-surface-card
-        ${isHighSeverity ? 'border-l-4 border-l-clay-500' : 'border-l-4 border-l-oatmeal-400'}
+        ${isHighSeverity ? 'border-l-4 border-l-clay-500' : isInformational ? 'border-l-2 border-l-content-tertiary/30' : 'border-l-4 border-l-oatmeal-400'}
         border border-theme
       `}
     >
@@ -122,7 +123,7 @@ export const AnomalyCard = memo(function AnomalyCard({
             ) : (
               <div className="mt-0.5 flex-shrink-0">
                 <svg
-                  className="w-5 h-5 text-content-tertiary"
+                  className={`w-5 h-5 ${isInformational ? 'text-content-tertiary/50' : 'text-content-tertiary'}`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -164,12 +165,17 @@ export const AnomalyCard = memo(function AnomalyCard({
 
           {/* Amount */}
           <div className="text-right flex-shrink-0">
-            <span className={`font-mono text-sm ${isHighSeverity ? 'text-clay-400' : 'text-content-secondary'}`}>
+            <span className={`font-mono text-sm ${isHighSeverity ? 'text-clay-400' : isInformational ? 'text-content-tertiary' : 'text-content-secondary'}`}>
               ${anomaly.amount.toLocaleString()}
             </span>
             {isHighSeverity && (
               <span className="block text-xs text-clay-500 font-sans mt-0.5">
                 Material
+              </span>
+            )}
+            {isInformational && (
+              <span className="block text-xs text-content-tertiary/70 font-sans mt-0.5">
+                Informational Note
               </span>
             )}
           </div>

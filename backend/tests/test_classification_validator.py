@@ -252,7 +252,7 @@ class TestNumberGaps:
         issues = check_number_gaps(accounts, classifications, gap_threshold=100)
         assert len(issues) == 1
         assert issues[0].issue_type == ClassificationIssueType.NUMBER_GAP
-        assert issues[0].severity == "low"
+        assert issues[0].severity == "informational"
 
     def test_skip_unknown_category(self):
         accounts = {

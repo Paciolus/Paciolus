@@ -226,7 +226,7 @@ def check_number_gaps(
                     account_name=curr_name,
                     issue_type=ClassificationIssueType.NUMBER_GAP,
                     description=f"Gap of {gap} between account {prev_num} and {curr_num} in {cat} range",
-                    severity="low",
+                    severity="informational",
                     confidence=0.70,
                     category=cat,
                     suggested_action="Informational — verify gap is intentional",

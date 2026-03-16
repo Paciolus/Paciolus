@@ -443,8 +443,11 @@ ROUND_NUMBER_TIER1_SUPPRESS: list[str] = [
     "right-of-use asset",
     # Long-term debt (principal amounts are set contractually)
     "long-term debt",
+    "long term debt",
     "term loan",
     "loan",
+    # Current portion of long-term obligations (amortization schedule amounts)
+    "current portion",
     "mortgage",
     "bond payable",
     "note payable",
@@ -494,6 +497,24 @@ ROUND_NUMBER_TIER1_CARVEOUTS: list[str] = [
     "note payable - related",
 ]
 
+# ── Tier 2 Informational: transactional accounts where round balances
+# are expected in practice — surfaced for awareness only (Sprint 537)
+ROUND_NUMBER_TIER2_INFORMATIONAL: list[str] = [
+    "cash",
+    "accounts receivable — trade",
+    "accounts receivable - trade",
+    "accounts payable — trade",
+    "accounts payable - trade",
+    "rent",
+    "utilities",
+    "telephone",
+    "internet",
+    "bank charges",
+    "bank fees",
+    "standard insurance",     # but NOT D&O, NOT specialty coverage
+    "recurring fee",
+]
+
 # ── Tier 2: Minor observation only ────────────────────────────────────
 ROUND_NUMBER_TIER2_MINOR: list[str] = [
     # Accrued liabilities — often estimated in round amounts
@@ -510,8 +531,7 @@ ROUND_NUMBER_TIER2_MINOR: list[str] = [
     "health insurance",
     "employee benefit",
     "payroll tax",
-    # Rent — lease amounts are contractually round
-    "rent",
+    # Lease expense — contractually round (rent moved to informational tier)
     "lease expense",
     # Standard recurring professional fees
     "audit fee",
@@ -576,14 +596,16 @@ def classify_round_number_tier(
     tb_total: float,
     materiality_threshold: float,
 ) -> str | None:
-    """Classify a round-balance account into Tier 1/2/3.
+    """Classify a round-balance account into Tier 1/2/3 + Informational.
 
     Sprint 536: DEPLOY-VERIFY-536
+    Sprint 537: DEPLOY-VERIFY-537 — Informational tier for transactional accounts
 
     Returns:
-        None      — Tier 1, suppress entirely (no finding generated)
-        "minor"   — Tier 2, generate Minor Observation
-        "material" — Tier 3, generate Material finding
+        None            — Tier 1, suppress entirely (no finding generated)
+        "informational" — Tier 2 Informational, awareness only (+1 risk)
+        "minor"         — Tier 2, generate Minor Observation (+2 risk)
+        "material"      — Tier 3, generate Material finding (+8 risk)
     """
     lower = account_name.lower()
     sub_lower = (subtype or "").lower().strip()
@@ -631,6 +653,12 @@ def classify_round_number_tier(
     # 5e. Balance > 10% of TB total
     if tb_total > 0 and balance > 0.10 * tb_total:
         return "material"
+
+    # ── Step 5f: Tier 2 Informational (Sprint 537) ────────────────────
+    # Transactional accounts where round balances are common in practice.
+    # Check BEFORE Tier 2 Minor so specific keywords take priority.
+    if any(kw in lower for kw in ROUND_NUMBER_TIER2_INFORMATIONAL):
+        return "informational"
 
     # ── Step 6: Tier 2 keyword list ───────────────────────────────────
     if any(kw in lower for kw in ROUND_NUMBER_TIER2_MINOR):

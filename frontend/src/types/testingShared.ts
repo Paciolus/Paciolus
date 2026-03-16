@@ -80,4 +80,5 @@ export const TESTING_SEVERITY_COLORS: Record<TestingSeverity, string> = {
   high: 'text-clay-600',
   medium: 'text-content-primary',
   low: 'text-content-secondary',
+  informational: 'text-content-tertiary',
 }

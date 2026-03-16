@@ -8,7 +8,7 @@ import { TIMING, EASE } from '@/utils/motionTokens'
 
 const ITEMS_PER_PAGE = 25
 
-const SEVERITY_ORDER: Record<TestingSeverity, number> = { high: 3, medium: 2, low: 1 }
+const SEVERITY_ORDER: Record<TestingSeverity, number> = { high: 3, medium: 2, low: 1, informational: 0 }
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -59,12 +59,14 @@ const SEVERITY_BADGE_COLORS: Record<TestingSeverity, string> = {
   high: 'bg-clay-50 text-clay-700 border-clay-200',
   medium: 'bg-oatmeal-100 text-oatmeal-700 border-oatmeal-300',
   low: 'bg-oatmeal-50 text-content-secondary border-oatmeal-200',
+  informational: 'bg-oatmeal-50/50 text-content-tertiary border-oatmeal-200/50',
 }
 
 const SEVERITY_ROW_BORDER: Record<TestingSeverity, string> = {
   high: 'border-l-[3px] border-l-clay-500',
   medium: 'border-l-[2px] border-l-oatmeal-400',
   low: '',
+  informational: '',
 }
 
 function severityBadge(severity: TestingSeverity) {

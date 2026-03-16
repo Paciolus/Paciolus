@@ -120,7 +120,7 @@ export function useTrialBalanceUpload(): UseTrialBalanceUploadReturn {
 
   const handleDisplayModeChange = useCallback((mode: DisplayMode) => {
     setDisplayMode(mode)
-    setShowImmaterial(mode === 'lenient')
+    setShowImmaterial(mode === 'lenient' || mode === 'all')
   }, [])
 
   const startProgressIndicator = useCallback(() => {

@@ -197,13 +197,15 @@ class TestContraRoundingExclusion:
         rounding = auditor.detect_rounding_anomalies()
         assert len(rounding) == 0
 
-    def test_allowance_round_suppressed(self):
+    def test_allowance_round_minor(self):
+        """Sprint 536+: contra-asset round balances emit a minor observation (not suppressed)."""
         auditor = self._make_auditor(
             {"Allowance for Doubtful Accounts": {"debit": 0.0, "credit": 100000.0}},
             {"Allowance for Doubtful Accounts": "Asset"},
         )
         rounding = auditor.detect_rounding_anomalies()
-        assert len(rounding) == 0
+        assert len(rounding) == 1
+        assert rounding[0]["severity"] == "low"
 
 
 # =============================================================================
