@@ -266,6 +266,48 @@ class TestBenfordEdgeCases:
         # Digit 5 should have 100% of the distribution
         assert result.actual_distribution[5] == pytest.approx(1.0, abs=0.001)
 
+    def test_deviation_formula_digits_1_5_9(self):
+        """Verify deviation = actual - expected for digits 1, 5, and 9.
+
+        Regression test for QA bug: digit 9 deviation was off by 10x
+        due to hardcoded sample data. Validates the engine formula itself.
+        """
+        import random
+        random.seed(5678)
+
+        # Build a known distribution: 600 entries with controlled first digits
+        amounts = []
+        # Create amounts with specific first digits to produce known distribution
+        digit_counts = {1: 200, 2: 110, 3: 75, 4: 55, 5: 45, 6: 35, 7: 30, 8: 28, 9: 22}
+        total = sum(digit_counts.values())  # 600
+
+        for digit, count in digit_counts.items():
+            for i in range(count):
+                # Spread across magnitudes for magnitude range check
+                mag = 1 + (i % 4)
+                amounts.append(digit * (10 ** mag) + random.uniform(0, 10 ** mag * 0.5))
+
+        result = analyze_benford(amounts, total_count=total, min_entries=500)
+        assert result.passed_prechecks
+
+        # Verify deviation formula: deviation[d] = actual[d] - expected[d]
+        for digit in [1, 5, 9]:
+            actual = result.actual_distribution[digit]
+            expected = BENFORD_EXPECTED[digit]
+            computed_deviation = actual - expected
+            assert result.deviation_by_digit[digit] == pytest.approx(computed_deviation, abs=1e-10), (
+                f"Digit {digit}: deviation should be actual ({actual}) - expected ({expected}) "
+                f"= {computed_deviation}, got {result.deviation_by_digit[digit]}"
+            )
+
+        # Verify specific expected values for digit 9
+        expected_9 = BENFORD_EXPECTED[9]
+        assert expected_9 == pytest.approx(0.04576, abs=1e-5)
+        actual_9 = digit_counts[9] / total  # 22/600 = 0.03667
+        assert result.actual_distribution[9] == pytest.approx(actual_9, abs=0.005)
+        # Deviation should be negative (actual < expected)
+        assert result.deviation_by_digit[9] < 0
+
     def test_magnitude_range_just_below_threshold(self):
         """magnitude_range = 1.999 (just below 2.0 threshold) — should fail precheck."""
         # log10(100) - log10(1) = 2.0, so use range that gives < 2.0

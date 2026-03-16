@@ -232,6 +232,18 @@ def _build_headcount_rollforward(
             styles["MemoLeader"],
         )
     )
+
+    if variance != 0:
+        story.append(Spacer(1, 2))
+        story.append(
+            Paragraph(
+                f"<i>Note: {abs(variance)}-employee variance between computed ending headcount "
+                f"and final pay period register count under investigation \u2014 see Ghost "
+                "Employee Indicators finding.</i>",
+                styles["MemoBodySmall"],
+            )
+        )
+
     story.append(Spacer(1, 8))
 
 
@@ -291,6 +303,24 @@ def _build_department_summary(
     ]
     dept_table.setStyle(TableStyle(style_cmds))
     story.append(dept_table)
+
+    # Reconciliation note: compare department table total to headcount roll-forward
+    hc = result.get("headcount_rollforward")
+    if hc:
+        ending_headcount = hc.get("computed_ending", 0)
+        if total_count != ending_headcount:
+            diff = total_count - ending_headcount
+            direction = "exceeds" if diff > 0 else "is below"
+            story.append(
+                Paragraph(
+                    f"<i>Note: Department distribution total ({total_count}) {direction} "
+                    f"roll-forward ending headcount ({ending_headcount}) by {abs(diff)} employee(s). "
+                    "This variance may reflect terminated employees not yet removed from departmental "
+                    "assignments, contractors included in department rosters, or data timing differences "
+                    "between the payroll register and HR system.</i>",
+                    styles["MemoBodySmall"],
+                )
+            )
 
     if high_concentration:
         name, pct = high_concentration

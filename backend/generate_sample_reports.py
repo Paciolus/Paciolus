@@ -32,6 +32,11 @@ def save_pdf(name: str, pdf_bytes: bytes) -> None:
     print(f"  [OK] {name} ({len(pdf_bytes):,} bytes)")
 
 
+# Shared cross-reference numbers for inter-report consistency
+# Generated once and reused wherever reports cross-reference each other.
+_SHARED_REFS: dict[str, str] = {}
+
+
 # ─────────────────────────────────────────────────────────────────────
 # 1. TRIAL BALANCE DIAGNOSTIC REPORT
 # ─────────────────────────────────────────────────────────────────────
@@ -352,6 +357,9 @@ def _make_testing_result(
     top_findings: list = None,
     benford_result: dict = None,
     column_detection: dict = None,
+    completeness_score: float = 94.2,
+    null_fields: int = 12,
+    amount_parse_errors: int = 3,
 ):
     total_flagged = sum(t["entries_flagged"] for t in tests)
     high = sum(1 for t in tests if t["severity"] == "high" and t["entries_flagged"] > 0)
@@ -374,10 +382,10 @@ def _make_testing_result(
             "top_findings": top_findings or [],
         },
         "data_quality": {
-            "completeness_score": 94.2,
-            "null_fields": 12,
+            "completeness_score": completeness_score,
+            "null_fields": null_fields,
             "date_parse_errors": 0,
-            "amount_parse_errors": 3,
+            "amount_parse_errors": amount_parse_errors,
         },
         "test_results": tests,
         "column_detection": column_detection or {"overall_confidence": 0.92},
@@ -544,15 +552,15 @@ def gen_je_testing():
             "9": 0.0417,
         },
         "deviation_by_digit": {
-            "1": -0.0025,
-            "2": 0.0022,
-            "3": -0.0003,
-            "4": 0.0009,
-            "5": 0.0011,
-            "6": -0.0003,
-            "7": 0.0006,
-            "8": -0.0013,
-            "9": -0.0004,
+            "1": -0.00253,
+            "2": 0.00311,
+            "3": -0.00014,
+            "4": 0.00089,
+            "5": 0.00092,
+            "6": 0.00025,
+            "7": 0.00091,
+            "8": 0.00065,
+            "9": -0.00406,
         },
     }
 
@@ -568,6 +576,10 @@ def gen_je_testing():
             "12 entries with missing critical fields (account or date)",
         ],
         benford_result=benford,
+        completeness_score=96.8,
+        column_detection={"overall_confidence": 0.95},
+        null_fields=8,
+        amount_parse_errors=2,
     )
 
     pdf = generate_je_testing_memo(
@@ -824,6 +836,10 @@ def gen_ap_testing():
             "1 invoice number reused across vendors 'Metro Supplies' and 'Metro Supply Co.'",
             "5 payments just below $10,000 approval threshold on same dates",
         ],
+        completeness_score=91.5,
+        column_detection={"overall_confidence": 0.88},
+        null_fields=18,
+        amount_parse_errors=5,
     )
     result["dpo_data"] = {
         "dpo": 80.1,
@@ -1001,6 +1017,10 @@ def gen_payroll_testing():
                 "issue": "Duplicate employee ID mapped to different name in Q3 vs Q4",
             },
         ],
+        completeness_score=89.3,
+        column_detection={"overall_confidence": 0.86},
+        null_fields=24,
+        amount_parse_errors=1,
     )
 
     # Enrichment data (IMPROVEMENT-01, 02, 04)
@@ -1427,6 +1447,10 @@ def gen_revenue_testing():
             "Year-End Concentration: 18 entries flagged (2.2%) \u2014 December revenue clustering (aggregate value: $2,192,000)",
             "Concentration Risk: 1 entry flagged (0.1%) \u2014 single customer represents 38% of total revenue (estimated revenue: $2,603,000 based on $6,850,000 total)",
         ],
+        completeness_score=97.1,
+        column_detection={"overall_confidence": 0.94},
+        null_fields=6,
+        amount_parse_errors=0,
     )
 
     # Revenue enrichment data (IMPROVEMENT-03, IMPROVEMENT-04)
@@ -1452,6 +1476,10 @@ def gen_revenue_testing():
 # ─────────────────────────────────────────────────────────────────────
 def gen_ar_aging():
     from ar_aging_memo_generator import generate_ar_aging_memo
+    from pdf_generator import generate_reference_number
+
+    # Generate and store AR aging reference for cross-report consistency
+    _SHARED_REFS["ar_aging"] = generate_reference_number().replace("PAC-", "ARA-")
 
     tests = [
         _test("Sign Anomalies", "sign_anomalies", "structural", 3, 0.008, "medium"),
@@ -1478,6 +1506,10 @@ def gen_ar_aging():
             "TB-to-sub-ledger reconciling difference of $8,450",
             "4 past-due accounts representing 28% of receivables balance",
         ],
+        completeness_score=92.7,
+        column_detection={"overall_confidence": 0.90},
+        null_fields=14,
+        amount_parse_errors=2,
     )
 
     pdf = generate_ar_aging_memo(
@@ -1669,6 +1701,10 @@ def gen_fixed_asset_testing():
             "2 potential duplicate assets ('Dell Latitude 5540' — same cost, same date)",
             "1 asset with negative cost value (data entry error suspected)",
         ],
+        completeness_score=93.6,
+        column_detection={"overall_confidence": 0.91},
+        null_fields=10,
+        amount_parse_errors=1,
     )
 
     # IMP-01: Roll-forward data
@@ -1760,6 +1796,10 @@ def gen_inventory_testing():
             "4 items where extended value ≠ quantity × unit cost",
             "14 items with zero recorded value but positive quantity on hand",
         ],
+        completeness_score=88.4,
+        column_detection={"overall_confidence": 0.85},
+        null_fields=32,
+        amount_parse_errors=7,
     )
 
     pdf = generate_inventory_testing_memo(
@@ -2018,6 +2058,13 @@ def gen_bank_rec():
         },
         "bank_column_detection": {"overall_confidence": 0.95},
         "ledger_column_detection": {"overall_confidence": 0.91},
+        "data_quality": {
+            "completeness_score": 95.4,
+            "null_fields": 4,
+            "date_parse_errors": 0,
+            "amount_parse_errors": 1,
+        },
+        "column_detection": {"overall_confidence": 0.93},
         "test_results": test_results,
         "composite_score": composite_score,
         "rec_tests": rec_tests,
@@ -2030,7 +2077,7 @@ def gen_bank_rec():
         },
         "ar_cross_reference": {
             "ar_reconciling_difference": 8_450.00,
-            "ar_reference": "ARA-2026-0306-494",
+            "ar_reference": _SHARED_REFS.get("ar_aging", "ARA-2026-0316-789"),
         },
     }
 

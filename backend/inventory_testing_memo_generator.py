@@ -44,7 +44,7 @@ _INV_CONFIG = TestingMemoConfig(
     methodology_intro=(
         "The following automated tests were applied to the inventory register "
         "in accordance with professional auditing standards "
-        "(IAS 2: Inventories, "
+        "(ASC 330-10: Inventory, "
         "ISA 501: Audit Evidence \u2014 Specific Considerations for Selected Items, "
         "ISA 500: Audit Evidence, ISA 540: Auditing Accounting Estimates \u2014 "
         "NRV estimation and obsolescence indicators, "
@@ -203,6 +203,38 @@ def _build_inventory_extra_sections(
     return section_counter
 
 
+def _build_risk_score_note(
+    story: list,
+    styles: dict,
+    doc_width: float,
+    result: dict[str, Any],
+    _counter: int,
+) -> int:
+    """Add interpretive note when all tests flagged items but risk score is low."""
+    composite = result.get("composite_score", {})
+    test_results = result.get("test_results", [])
+
+    tests_clear = sum(
+        1 for tr in test_results if tr.get("entries_flagged", 0) == 0 and not tr.get("skipped", False)
+    )
+    score = composite.get("score", 0)
+
+    if tests_clear == 0 and score < 30 and len(test_results) > 0:
+        story.append(
+            Paragraph(
+                "<i>Although all tests flagged items, the majority of flagged findings are "
+                "low-to-medium severity slow-moving inventory indicators. The composite risk "
+                "score reflects weighted severity, not test pass rate. A low composite score "
+                "with zero clear tests indicates broad but low-severity data quality flags "
+                "rather than concentrated high-risk anomalies.</i>",
+                styles["MemoBodySmall"],
+            )
+        )
+        story.append(Spacer(1, 4))
+
+    return _counter
+
+
 def generate_inventory_testing_memo(
     inv_result: dict[str, Any],
     filename: str = "inventory_testing",
@@ -228,5 +260,6 @@ def generate_inventory_testing_memo(
         source_document_title=source_document_title,
         source_context_note=source_context_note,
         build_extra_sections=_build_inventory_extra_sections,
+        build_post_results=_build_risk_score_note,
         include_signoff=include_signoff,
     )

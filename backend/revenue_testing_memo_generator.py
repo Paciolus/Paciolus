@@ -429,12 +429,14 @@ def _build_cutoff_table(
                     days_from = None
 
         customer = safe_str_value(entry.get("description"), "")[:20]
+        # Display absolute amount — sign convention not meaningful in cut-off detail context
+        display_amount = abs(entry.get("amount", 0)) if isinstance(entry.get("amount"), (int, float)) else 0
         table_data.append(
             [
                 Paragraph(safe_str_value(entry.get("reference")), styles["MemoTableCell"]),
                 Paragraph(safe_str_value(entry.get("date")), styles["MemoTableCell"]),
                 Paragraph(safe_str_value(entry.get("account_name"), "")[:20], styles["MemoTableCell"]),
-                Paragraph(format_currency(entry.get("amount", 0)), styles["MemoTableCell"]),
+                Paragraph(format_currency(display_amount), styles["MemoTableCell"]),
                 Paragraph(customer, styles["MemoTableCell"]),
                 Paragraph(str(days_from) if days_from is not None else "\u2014", styles["MemoTableCell"]),
             ]

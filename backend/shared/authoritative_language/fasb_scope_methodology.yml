@@ -37,8 +37,8 @@ tools:
         topic: "Accounting Changes and Error Corrections — Overall"
         paragraph: "Various"
         status: "Current"
-      - codification: "ASC 240-10"
-        topic: "Related Party Disclosures — Journal Entry Fraud Risk"
+      - codification: "ASC 850-10"
+        topic: "Related Party Disclosures — Overall"
         paragraph: "Various"
         status: "Current"
 

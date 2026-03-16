@@ -22,15 +22,21 @@ from shared.memo_template import TestingMemoConfig, _roman, generate_testing_mem
 
 AR_AGING_TEST_DESCRIPTIONS = {
     "ar_sign_anomalies": "Flags AR accounts with credit balances, indicating potential overpayments, misclassifications, or contra-AR entries.",
+    "sign_anomalies": "Flags receivable entries with debit balances where a credit is expected, or credit balances in contra-receivable accounts where a debit is expected, indicating potential mispostings.",
     "missing_allowance": "Checks for the existence of an Allowance for Doubtful Accounts (contra-AR), required under IFRS 9 / ASC 326.",
     "negative_aging": "Flags sub-ledger entries with negative aging days, indicating date logic errors or future-dated invoices.",
+    "negative_aging_buckets": "Identifies aging buckets with negative balances, which may indicate unapplied credits, overpayments, or data entry errors in the subledger.",
     "unreconciled_detail": "Compares the AR sub-ledger total to the TB AR balance to identify unreconciled differences.",
     "bucket_concentration": "Flags disproportionate concentration in a single aging bucket (e.g., >60% in current or over-120).",
+    "aging_bucket_concentration": "Flags disproportionate concentration of total AR balance in a single aging bucket (e.g., >70% current), which may indicate manual aging overrides or inaccurate aging calculations.",
     "past_due_concentration": "Flags elevated past-due receivables as a proportion of total AR, an indicator of collection risk.",
     "allowance_adequacy": "Compares the allowance-to-AR ratio against expected ranges — an anomaly indicator, not a sufficiency determination.",
+    "allowance_adequacy_ratio": "Computes the allowance for doubtful accounts as a percentage of gross AR and compares to industry benchmarks, flagging ratios below the configured threshold as a potential understatement of credit loss expense per ASC 326.",
     "customer_concentration": "Flags single customers representing a disproportionate share of total receivables (credit concentration risk).",
     "dso_trend": "Compares current-period DSO to prior-period DSO to identify significant trend changes in collection efficiency.",
+    "dso_trend_variance": "Computes days sales outstanding from the AR balance and period revenue, then compares to prior period or industry benchmark; flags material deviations as a collection risk or revenue recognition indicator.",
     "rollforward_reconciliation": "Tests the AR roll-forward: beginning balance + revenue - collections should approximate ending AR balance.",
+    "roll_forward_reconciliation": "Tests the AR roll-forward: beginning balance + revenue - collections should approximate ending AR balance.",
     "credit_limit_breaches": "Flags customers whose outstanding balance exceeds their approved credit limit.",
 }
 

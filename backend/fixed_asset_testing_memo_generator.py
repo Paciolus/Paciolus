@@ -59,7 +59,7 @@ _FA_CONFIG = TestingMemoConfig(
     methodology_intro=(
         "The following automated tests were applied to the fixed asset register "
         "in accordance with professional auditing standards "
-        "(IAS 16: Property, Plant and Equipment, "
+        "(ASC 360-10: Property, Plant, and Equipment, "
         "ISA 500: Audit Evidence, ISA 540: Auditing Accounting Estimates \u2014 "
         "depreciation methods, useful life, and residual value estimation, "
         "PCAOB AS 2501: Auditing Accounting Estimates). "

@@ -215,6 +215,43 @@
 
 ---
 
+### Sprint 540 — Report QA Bug Fixes (Meridian FY2025)
+
+**Status:** COMPLETE
+**Goal:** Fix 12 confirmed bugs across 8 report generators identified during QA review of Meridian Capital Group FY2025 sample output.
+
+#### Priority 1 — Critical: Proof Summary Metrics
+- [x] 1a: Bank rec proof summary shows 0%/0% — add `data_quality` and `column_detection` keys to bank rec result dict
+- [x] 1b: Data Completeness/Column Confidence hardcoded 94%/92% — parameterize `_make_testing_result()`, pass distinct per-tool values
+
+#### Priority 2 — High: Calculation and Reference Errors
+- [x] 2a: Benford digit 9 deviation off by 10x — fix sample data from -0.0004 to -0.00406; add regression test
+- [x] 2b: Bank rec AR aging cross-ref mismatch — share reference via `_SHARED_REFS` between gen_ar_aging and gen_bank_rec
+- [x] 2c: ASC 240-10 incorrect in JE testing — replace with ASC 850-10 (Related Party Disclosures) in YAML
+
+#### Priority 3 — Medium: Data Consistency
+- [x] 3a: Financial statements cover page missing client/period — pass `entity_name` as `client_name` in `FSReportMetadata`
+- [x] 3b: Payroll headcount non-agreement — add variance footnote in roll-forward + reconciliation note in department summary
+- [x] 3c: AR aging missing test descriptions — add 5 alternate test_key aliases to `AR_AGING_TEST_DESCRIPTIONS`
+
+#### Priority 4 — Low: Presentation and UX
+- [x] 4a: Revenue cut-off negative amounts — apply `abs()` in `_build_cutoff_table`
+- [x] 4b: Inventory risk score vs test pass rate — add interpretive note via `_build_risk_score_note` post-results callback
+- [x] 4c: IFRS citations on US GAAP engagement — replace IAS 16 → ASC 360-10, IAS 2 → ASC 330-10 in methodology intros
+- [x] 4d: Financial statement notes placeholder — replace inline italic with bordered callout box
+
+#### Verification
+- [x] `pytest` (401 affected tests pass)
+- [x] `npm run build` passes
+- [x] Benford regression test (28 tests pass)
+- [x] All 21 sample reports regenerated successfully
+
+#### Review
+- 8 files modified: `generate_sample_reports.py`, `fasb_scope_methodology.yml`, `pdf_generator.py`, `payroll_testing_memo_generator.py`, `ar_aging_memo_generator.py`, `revenue_testing_memo_generator.py`, `inventory_testing_memo_generator.py`, `fixed_asset_testing_memo_generator.py`
+- 1 test file modified: `test_benford.py` (+1 regression test)
+
+---
+
 ### Sprint 537 — Informational Note Tier
 
 **Status:** COMPLETE
