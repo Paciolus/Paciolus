@@ -6,7 +6,7 @@
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
 import { useMappings } from '@/contexts/MappingContext'
 import type { ColumnMapping } from '@/components/mapping'
@@ -19,7 +19,7 @@ import { apiPost } from '@/utils'
 
 export interface UseTrialBalanceUploadReturn {
   // Auth (forwarded for consumer convenience)
-  user: ReturnType<typeof useAuth>['user']
+  user: ReturnType<typeof useAuthSession>['user']
   isAuthenticated: boolean
   token: string | null
   isVerified: boolean
@@ -59,7 +59,7 @@ export interface UseTrialBalanceUploadReturn {
 
 export function useTrialBalanceUpload(): UseTrialBalanceUploadReturn {
   const mappingContext = useMappings()
-  const { user, isAuthenticated, token } = useAuth()
+  const { user, isAuthenticated, token } = useAuthSession()
   const engagement = useOptionalEngagementContext()
   const { practiceSettings, isLoading: settingsLoading } = useSettings()
 

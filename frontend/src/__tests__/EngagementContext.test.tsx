@@ -13,8 +13,8 @@ const mockGetEngagement = jest.fn()
 const mockGetToolRuns = jest.fn()
 const mockGetMateriality = jest.fn()
 
-jest.mock('@/contexts/AuthContext', () => ({
-  useAuth: jest.fn(() => ({ token: 'test-token', isAuthenticated: true })),
+jest.mock('@/contexts/AuthSessionContext', () => ({
+  useAuthSession: jest.fn(() => ({ token: 'test-token', isAuthenticated: true })),
 }))
 
 jest.mock('next/navigation', () => ({

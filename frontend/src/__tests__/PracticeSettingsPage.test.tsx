@@ -6,7 +6,7 @@
  */
 import userEvent from '@testing-library/user-event'
 import PracticeSettingsPage from '@/app/settings/practice/page'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useSettings } from '@/hooks/useSettings'
 import { render, screen, waitFor } from '@/test-utils'
 
@@ -18,8 +18,8 @@ jest.mock('next/navigation', () => ({
 const mockUpdatePracticeSettings = jest.fn()
 const mockPreviewMateriality = jest.fn()
 
-jest.mock('@/contexts/AuthContext', () => ({
-  useAuth: jest.fn(() => ({
+jest.mock('@/contexts/AuthSessionContext', () => ({
+  useAuthSession: jest.fn(() => ({
     user: { name: 'Test User', email: 'test@example.com', is_verified: true },
     isAuthenticated: true,
     isLoading: false,
@@ -82,7 +82,7 @@ jest.mock('next/link', () => {
 })
 
 
-const mockUseAuth = useAuth as jest.Mock
+const mockUseAuthSession = useAuthSession as jest.Mock
 const mockUseSettings = useSettings as jest.Mock
 
 describe('PracticeSettingsPage', () => {
@@ -90,7 +90,7 @@ describe('PracticeSettingsPage', () => {
     jest.clearAllMocks()
     mockPreviewMateriality.mockResolvedValue({ threshold: 500 })
     mockUpdatePracticeSettings.mockResolvedValue(true)
-    mockUseAuth.mockReturnValue({
+    mockUseAuthSession.mockReturnValue({
       user: { name: 'Test User', email: 'test@example.com', is_verified: true },
       isAuthenticated: true,
       isLoading: false,
@@ -242,7 +242,7 @@ describe('PracticeSettingsPage', () => {
   })
 
   it('redirects to login when not authenticated', () => {
-    mockUseAuth.mockReturnValue({
+    mockUseAuthSession.mockReturnValue({
       user: null,
       isAuthenticated: false,
       isLoading: false,

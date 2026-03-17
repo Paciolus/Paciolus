@@ -6,7 +6,7 @@
  */
 import userEvent from '@testing-library/user-event'
 import RegisterPage from '@/app/(auth)/register/page'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { render, screen, waitFor } from '@/test-utils'
 
 const mockPush = jest.fn()
@@ -15,8 +15,8 @@ jest.mock('next/navigation', () => ({
 }))
 
 const mockRegister = jest.fn()
-jest.mock('@/contexts/AuthContext', () => ({
-  useAuth: jest.fn(() => ({
+jest.mock('@/contexts/AuthSessionContext', () => ({
+  useAuthSession: jest.fn(() => ({
     register: mockRegister,
     isAuthenticated: false,
     isLoading: false,
@@ -46,12 +46,12 @@ jest.mock('next/link', () => {
 })
 
 
-const mockUseAuth = useAuth as jest.Mock
+const mockUseAuthSession = useAuthSession as jest.Mock
 
 describe('RegisterPage', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockUseAuth.mockReturnValue({
+    mockUseAuthSession.mockReturnValue({
       register: mockRegister,
       isAuthenticated: false,
       isLoading: false,
@@ -205,7 +205,7 @@ describe('RegisterPage', () => {
   })
 
   it('redirects to home if already authenticated', () => {
-    mockUseAuth.mockReturnValue({
+    mockUseAuthSession.mockReturnValue({
       register: mockRegister,
       isAuthenticated: true,
       isLoading: false,

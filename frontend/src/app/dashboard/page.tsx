@@ -17,7 +17,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { Reveal } from '@/components/ui/Reveal'
 import { apiGet } from '@/utils/apiClient'
 import { fadeUp, staggerContainerTight } from '@/lib/motion'
@@ -87,7 +87,7 @@ const QUICK_ACTIONS = [
 
 export default function DashboardPage() {
   const router = useRouter()
-  const { user, token, isAuthenticated, isLoading: authLoading } = useAuth()
+  const { user, token, isAuthenticated, isLoading: authLoading } = useAuthSession()
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [history, setHistory] = useState<HistoryItem[]>([])
   const [statsLoading, setStatsLoading] = useState(true)

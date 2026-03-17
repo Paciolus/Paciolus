@@ -2,7 +2,7 @@
  * Sprint 236: useEngagement hook tests
  */
 import { renderHook, act } from '@testing-library/react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useEngagement } from '@/hooks/useEngagement'
 
 const mockApiGet = jest.fn()
@@ -10,8 +10,8 @@ const mockApiPost = jest.fn()
 const mockApiPut = jest.fn()
 const mockApiDelete = jest.fn()
 
-jest.mock('@/contexts/AuthContext', () => ({
-  useAuth: jest.fn(() => ({ token: 'test-token', isAuthenticated: true })),
+jest.mock('@/contexts/AuthSessionContext', () => ({
+  useAuthSession: jest.fn(() => ({ token: 'test-token', isAuthenticated: true })),
 }))
 
 jest.mock('@/utils', () => ({
@@ -23,7 +23,7 @@ jest.mock('@/utils', () => ({
 }))
 
 
-const mockUseAuth = useAuth as jest.Mock
+const mockUseAuthSession = useAuthSession as jest.Mock
 
 const mockEngagement = {
   id: 1, client_id: 1, client_name: 'Acme', period: 'FY2025',
@@ -33,7 +33,7 @@ const mockEngagement = {
 describe('useEngagement', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockUseAuth.mockReturnValue({ token: 'test-token', isAuthenticated: true })
+    mockUseAuthSession.mockReturnValue({ token: 'test-token', isAuthenticated: true })
     mockApiGet.mockResolvedValue({
       ok: true,
       data: { items: [mockEngagement], total_count: 1, page: 1 },
@@ -147,7 +147,7 @@ describe('useEngagement', () => {
   })
 
   it('does nothing when not authenticated', async () => {
-    mockUseAuth.mockReturnValue({ token: null, isAuthenticated: false })
+    mockUseAuthSession.mockReturnValue({ token: null, isAuthenticated: false })
 
     const { result } = renderHook(() => useEngagement({ autoFetch: false }))
 

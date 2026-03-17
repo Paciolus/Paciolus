@@ -7,7 +7,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import type { ExportShareInfo } from '@/types/exportSharing'
 import { apiGet, apiPost, apiDelete } from '@/utils/apiClient'
 
@@ -18,7 +18,7 @@ interface ExportSharingState {
 }
 
 export function useExportSharing() {
-  const { token } = useAuth()
+  const { token } = useAuthSession()
   const [state, setState] = useState<ExportSharingState>({
     shares: [],
     isLoading: false,

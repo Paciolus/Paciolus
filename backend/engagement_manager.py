@@ -151,7 +151,9 @@ class EngagementManager:
         """Get paginated engagements for a user with optional filters."""
         accessible_ids = self._get_accessible_user_ids(user_id)
         query = (
-            self.db.query(Engagement).join(Client, Engagement.client_id == Client.id).filter(Client.user_id.in_(accessible_ids))
+            self.db.query(Engagement)
+            .join(Client, Engagement.client_id == Client.id)
+            .filter(Client.user_id.in_(accessible_ids))
         )
 
         if client_id is not None:
@@ -299,37 +301,53 @@ class EngagementManager:
         status: ToolRunStatus,
         composite_score: Optional[float] = None,
         flagged_accounts: Optional[list[str]] = None,
+        _max_retries: int = 3,
     ) -> ToolRun:
-        """Record a tool run, auto-incrementing run_number per (engagement, tool)."""
-        max_run = (
-            self.db.query(func.max(ToolRun.run_number))
-            .filter(
-                ToolRun.engagement_id == engagement_id,
-                ToolRun.tool_name == tool_name,
+        """Record a tool run, auto-incrementing run_number per (engagement, tool).
+
+        Uses a retry loop with the DB unique constraint on
+        (engagement_id, tool_name, run_number) as the final arbiter,
+        preventing duplicate run_numbers under concurrent execution.
+        """
+        from sqlalchemy.exc import IntegrityError
+
+        for attempt in range(_max_retries):
+            max_run = (
+                self.db.query(func.max(ToolRun.run_number))
+                .filter(
+                    ToolRun.engagement_id == engagement_id,
+                    ToolRun.tool_name == tool_name,
+                )
+                .scalar()
             )
-            .scalar()
-        )
-        next_run = (max_run or 0) + 1
+            next_run = (max_run or 0) + 1
 
-        tool_run = ToolRun(
-            engagement_id=engagement_id,
-            tool_name=tool_name,
-            run_number=next_run,
-            status=status,
-            composite_score=composite_score,
-            flagged_accounts=json.dumps(flagged_accounts) if flagged_accounts else None,
-        )
+            tool_run = ToolRun(
+                engagement_id=engagement_id,
+                tool_name=tool_name,
+                run_number=next_run,
+                status=status,
+                composite_score=composite_score,
+                flagged_accounts=json.dumps(flagged_accounts) if flagged_accounts else None,
+            )
 
-        self.db.add(tool_run)
-        self.db.commit()
-        self.db.refresh(tool_run)
+            try:
+                self.db.add(tool_run)
+                self.db.commit()
+                self.db.refresh(tool_run)
 
-        log_secure_operation(
-            "tool_run_recorded",
-            f"Tool run {tool_name.value} #{next_run} for engagement {engagement_id}",
-        )
+                log_secure_operation(
+                    "tool_run_recorded",
+                    f"Tool run {tool_name.value} #{next_run} for engagement {engagement_id}",
+                )
 
-        return tool_run
+                return tool_run
+            except IntegrityError:
+                self.db.rollback()
+                if attempt == _max_retries - 1:
+                    raise
+
+        raise RuntimeError("Failed to record tool run after retries")
 
     def get_tool_runs(self, engagement_id: int) -> list[ToolRun]:
         """Get all active tool runs for an engagement, ordered by run_at."""

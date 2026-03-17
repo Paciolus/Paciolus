@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthSession } from '@/contexts/AuthSessionContext';
 import type { FollowUpSummary, ToolRunTrend, TrendDirection } from '@/types/engagement';
 import { apiGet } from '@/utils';
 
@@ -109,7 +109,7 @@ function deriveRiskSignals(
 }
 
 export function useWorkspaceInsights(engagementId: number | null): WorkspaceInsights {
-  const { token, isAuthenticated } = useAuth();
+  const { token, isAuthenticated } = useAuthSession();
 
   const [followUpSummary, setFollowUpSummary] = useState<FollowUpSummary | null>(null);
   const [toolRunTrends, setToolRunTrends] = useState<ToolRunTrend[]>([]);

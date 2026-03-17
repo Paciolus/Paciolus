@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthSession } from '@/contexts/AuthSessionContext';
 import { useWorkspaceContext, type WorkspaceView } from '@/contexts/WorkspaceContext';
 import { ProfileDropdown } from '@/components/auth';
 import { useCommandPalette } from '@/hooks/useCommandPalette';
@@ -24,7 +24,7 @@ const TABS: { key: WorkspaceView; label: string; href: string }[] = [
 ];
 
 export function CommandBar() {
-  const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading, logout } = useAuthSession();
   const { currentView, activeClient } = useWorkspaceContext();
   const { openPalette } = useCommandPalette();
 

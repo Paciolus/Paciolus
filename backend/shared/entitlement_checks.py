@@ -355,11 +355,16 @@ def _resolve_org_subscription(db: Session, org_id: int):
     return sub, get_entitlements(tier)
 
 
-def check_seat_limit_for_org(db: Session, org_id: int) -> None:
+def check_seat_limit_for_org(db: Session, org_id: int, exclude_invite_id: int | None = None) -> None:
     """Check seat limit against the org's subscription (not the caller's).
 
     Raises HTTPException 403 if the org has exceeded its seat allocation.
     If no org subscription exists, enforces a default free-tier seat cap.
+
+    Args:
+        exclude_invite_id: If provided, subtract 1 from the pending invite count.
+            Used during invite acceptance to avoid double-counting the invite being
+            consumed (it converts from pending to accepted, not adding a new seat).
     """
     from organization_model import OrganizationMember
 
@@ -375,9 +380,7 @@ def check_seat_limit_for_org(db: Session, org_id: int) -> None:
         return
 
     member_count = (
-        db.query(func.count(OrganizationMember.id))
-        .filter(OrganizationMember.organization_id == org_id)
-        .scalar()
+        db.query(func.count(OrganizationMember.id)).filter(OrganizationMember.organization_id == org_id).scalar()
     ) or 0
 
     # Include pending invites in count to prevent over-invitation
@@ -391,6 +394,11 @@ def check_seat_limit_for_org(db: Session, org_id: int) -> None:
         )
         .scalar()
     ) or 0
+
+    # When accepting an invite, exclude the invite being accepted from the
+    # pending count — it's being converted, not adding a new seat.
+    if exclude_invite_id is not None and pending_invites > 0:
+        pending_invites -= 1
 
     effective_count = member_count + pending_invites
 

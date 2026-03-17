@@ -133,25 +133,21 @@ class ClientManager:
         return self.db.query(Client).filter(Client.user_id.in_(accessible_ids)).count()
 
     def get_clients_with_count(self, user_id: int, limit: int = 100, offset: int = 0) -> tuple[list[Client], int]:
-        """Get paginated clients with total count in single query using window function."""
+        """Get paginated clients with total count using two queries (no cartesian join)."""
         accessible_ids = self._accessible_user_ids(user_id)
-        subquery = (
-            self.db.query(Client, func.count(Client.id).over().label("total_count"))
+
+        # Separate count query — avoids window function + subquery cartesian product
+        total_count = (self.db.query(func.count(Client.id)).filter(Client.user_id.in_(accessible_ids)).scalar()) or 0
+
+        clients = (
+            self.db.query(Client)
             .filter(Client.user_id.in_(accessible_ids))
             .order_by(Client.name.asc())
             .offset(offset)
             .limit(limit)
-            .subquery()
+            .all()
         )
 
-        # Execute and extract results
-        results = self.db.query(Client, subquery.c.total_count).select_from(subquery).all()
-
-        if not results:
-            return [], 0
-
-        clients = [row[0] for row in results]
-        total_count = results[0][1] if results else 0
         return clients, total_count
 
     def update_client(

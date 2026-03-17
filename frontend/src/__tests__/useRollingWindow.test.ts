@@ -13,8 +13,8 @@ let mockIsLoading = false
 let mockError: string | null = null
 let mockHasData = false
 
-jest.mock('@/contexts/AuthContext', () => ({
-  useAuth: jest.fn(() => ({ token: 'test-token', isAuthenticated: true })),
+jest.mock('@/contexts/AuthSessionContext', () => ({
+  useAuthSession: jest.fn(() => ({ token: 'test-token', isAuthenticated: true })),
 }))
 
 jest.mock('@/hooks/useFetchData', () => ({

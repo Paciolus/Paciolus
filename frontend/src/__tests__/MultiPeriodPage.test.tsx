@@ -5,7 +5,7 @@
  * The useMultiPeriodComparison hook handles comparison/export only.
  */
 import MultiPeriodPage from '@/app/tools/multi-period/page'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useMultiPeriodComparison } from '@/hooks'
 import { render, screen } from '@/test-utils'
 
@@ -13,8 +13,8 @@ const mockCompareResults = jest.fn()
 const mockExportCsv = jest.fn()
 const mockClear = jest.fn()
 
-jest.mock('@/contexts/AuthContext', () => ({
-  useAuth: jest.fn(() => ({
+jest.mock('@/contexts/AuthSessionContext', () => ({
+  useAuthSession: jest.fn(() => ({
     user: { is_verified: true }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token',
   })),
 }))
@@ -49,13 +49,13 @@ jest.mock('framer-motion', () => ({
 }))
 
 
-const mockUseAuth = useAuth as jest.Mock
+const mockUseAuthSession = useAuthSession as jest.Mock
 const mockUseMultiPeriod = useMultiPeriodComparison as jest.Mock
 
 describe('MultiPeriodPage', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockUseAuth.mockReturnValue({ user: { is_verified: true }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token' })
+    mockUseAuthSession.mockReturnValue({ user: { is_verified: true }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token' })
     mockUseMultiPeriod.mockReturnValue({
       comparison: null, isComparing: false, isExporting: false, error: null,
       compareResults: mockCompareResults, exportCsv: mockExportCsv, clear: mockClear,
@@ -74,7 +74,7 @@ describe('MultiPeriodPage', () => {
   })
 
   it('shows sign-in CTA for unauthenticated user', () => {
-    mockUseAuth.mockReturnValue({ user: null, isAuthenticated: false, isLoading: false, logout: jest.fn(), token: null })
+    mockUseAuthSession.mockReturnValue({ user: null, isAuthenticated: false, isLoading: false, logout: jest.fn(), token: null })
     render(<MultiPeriodPage />)
     expect(screen.getByText('Sign In')).toBeInTheDocument()
   })

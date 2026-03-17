@@ -151,7 +151,7 @@ def sync_subscription_from_stripe(
         except ValueError:
             logger.warning("Unknown tier value '%s' for user %d, keeping current", tier, user_id)
 
-    db.commit()
+    db.flush()
     logger.info(
         "Synced subscription for user %d: tier=%s, status=%s, seats=%d, add_seats=%d",
         user_id,
@@ -325,12 +325,16 @@ def remove_seats(db: Session, user_id: int, seats_to_remove: int) -> Subscriptio
             f"{get_all_seat_price_ids()}"
         )
 
-    new_quantity = max(1, current_quantity - seats_to_remove)
+    new_quantity = current_quantity - seats_to_remove
 
-    # Update Stripe subscription item quantity
-    stripe.SubscriptionItem.modify(item_id, quantity=new_quantity)
+    # If quantity reaches 0, delete the subscription item entirely
+    # (Stripe does not allow quantity=0 on most price types)
+    if new_quantity <= 0:
+        stripe.SubscriptionItem.delete(item_id)
+    else:
+        stripe.SubscriptionItem.modify(item_id, quantity=new_quantity)
 
-    # Sync locally
+    # Sync locally only after Stripe accepts the change
     sub.additional_seats = new_additional
     db.commit()
 

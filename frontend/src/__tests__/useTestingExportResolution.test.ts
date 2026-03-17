@@ -6,8 +6,8 @@
 import { renderHook, act } from '@testing-library/react'
 import { useTestingExport } from '@/hooks/useTestingExport'
 
-jest.mock('@/contexts/AuthContext', () => ({
-  useAuth: jest.fn(() => ({ token: 'test-token' })),
+jest.mock('@/contexts/AuthSessionContext', () => ({
+  useAuthSession: jest.fn(() => ({ token: 'test-token' })),
 }))
 
 const mockApiDownload = jest.fn()

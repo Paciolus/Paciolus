@@ -10,14 +10,14 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { FeatureGate } from '@/components/shared/FeatureGate'
 import { Reveal } from '@/components/ui/Reveal'
 import { useAdminDashboard } from '@/hooks/useAdminDashboard'
 
 export default function AdminDashboardPage() {
   const router = useRouter()
-  const { isAuthenticated, isLoading: authLoading } = useAuth()
+  const { isAuthenticated, isLoading: authLoading } = useAuthSession()
   const {
     overview,
     teamActivity,

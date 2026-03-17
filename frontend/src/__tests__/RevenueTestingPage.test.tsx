@@ -2,7 +2,7 @@
  * Sprint 129: Revenue Testing page tests (10 tests)
  */
 import RevenueTestingPage from '@/app/tools/revenue-testing/page'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useRevenueTesting } from '@/hooks/useRevenueTesting'
 import { render, screen } from '@/test-utils'
 
@@ -12,8 +12,8 @@ const mockHandleExportMemo = jest.fn()
 const mockHandleExportCSV = jest.fn()
 const mockFileInputRef = { current: null }
 
-jest.mock('@/contexts/AuthContext', () => ({
-  useAuth: jest.fn(() => ({
+jest.mock('@/contexts/AuthSessionContext', () => ({
+  useAuthSession: jest.fn(() => ({
     user: { is_verified: true, tier: 'professional' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token',
   })),
 }))
@@ -56,13 +56,13 @@ jest.mock('framer-motion', () => ({
 }))
 
 
-const mockUseAuth = useAuth as jest.Mock
+const mockUseAuthSession = useAuthSession as jest.Mock
 const mockUseRevenue = useRevenueTesting as jest.Mock
 
 describe('RevenueTestingPage', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockUseAuth.mockReturnValue({ user: { is_verified: true, tier: 'professional' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token' })
+    mockUseAuthSession.mockReturnValue({ user: { is_verified: true, tier: 'professional' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token' })
     mockUseRevenue.mockReturnValue({ status: 'idle', result: null, error: null, runTests: mockRunTests, reset: mockReset })
   })
 
@@ -77,7 +77,7 @@ describe('RevenueTestingPage', () => {
   })
 
   it('shows sign-in CTA for unauthenticated user', () => {
-    mockUseAuth.mockReturnValue({ user: null, isAuthenticated: false, isLoading: false, logout: jest.fn(), token: null })
+    mockUseAuthSession.mockReturnValue({ user: null, isAuthenticated: false, isLoading: false, logout: jest.fn(), token: null })
     render(<RevenueTestingPage />)
     expect(screen.getByText('Sign In')).toBeInTheDocument()
     expect(screen.getByText('Create Account')).toBeInTheDocument()

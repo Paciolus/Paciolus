@@ -2,7 +2,7 @@
  * Sprint 271: Statistical Sampling page tests
  */
 import StatisticalSamplingPage from '@/app/tools/statistical-sampling/page'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useStatisticalSampling } from '@/hooks/useStatisticalSampling'
 import { render, screen, fireEvent } from '@/test-utils'
 
@@ -13,8 +13,8 @@ const mockResetEvaluation = jest.fn()
 const mockHandleExportMemo = jest.fn()
 const mockHandleExportCSV = jest.fn()
 
-jest.mock('@/contexts/AuthContext', () => ({
-  useAuth: jest.fn(() => ({
+jest.mock('@/contexts/AuthSessionContext', () => ({
+  useAuthSession: jest.fn(() => ({
     user: { is_verified: true, tier: 'enterprise' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token',
   })),
 }))
@@ -51,8 +51,8 @@ jest.mock('@/components/shared', () => ({
   ZeroStorageNotice: () => <div data-testid="zero-storage-notice">Zero-Storage</div>,
   DisclaimerBox: ({ children }: any) => <div data-testid="disclaimer-box">{children}</div>,
   UpgradeGate: ({ children, toolName }: any) => {
-    const { useAuth } = jest.requireMock('@/contexts/AuthContext')
-    const { user } = useAuth()
+    const { useAuthSession } = jest.requireMock('@/contexts/AuthSessionContext')
+    const { user } = useAuthSession()
     const tier = user?.tier ?? 'free'
     const freeTierTools = new Set(['trial_balance', 'flux_analysis'])
     if (tier === 'free' && !freeTierTools.has(toolName)) {
@@ -83,13 +83,13 @@ jest.mock('framer-motion', () => ({
 }))
 
 
-const mockUseAuth = useAuth as jest.Mock
+const mockUseAuthSession = useAuthSession as jest.Mock
 const mockUseSampling = useStatisticalSampling as jest.Mock
 
 describe('StatisticalSamplingPage', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockUseAuth.mockReturnValue({
+    mockUseAuthSession.mockReturnValue({
       user: { is_verified: true, tier: 'enterprise' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token',
     })
     mockUseSampling.mockReturnValue({
@@ -119,7 +119,7 @@ describe('StatisticalSamplingPage', () => {
   })
 
   it('shows guest CTA for unauthenticated user', () => {
-    mockUseAuth.mockReturnValue({
+    mockUseAuthSession.mockReturnValue({
       user: null, isAuthenticated: false, isLoading: false, logout: jest.fn(), token: null,
     })
     render(<StatisticalSamplingPage />)
@@ -214,7 +214,7 @@ describe('StatisticalSamplingPage', () => {
   })
 
   it('shows upgrade gate for free tier user', () => {
-    mockUseAuth.mockReturnValue({
+    mockUseAuthSession.mockReturnValue({
       user: { is_verified: true, tier: 'free' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token',
     })
     render(<StatisticalSamplingPage />)

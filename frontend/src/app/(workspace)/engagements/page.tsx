@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthSession } from '@/contexts/AuthSessionContext';
 import { useWorkspaceContext } from '@/contexts/WorkspaceContext';
 import { EngagementList, CreateEngagementModal, ToolStatusGrid, FollowUpItemsTable, WorkpaperIndex, ConvergenceTable } from '@/components/engagement';
 import { useFollowUpItems } from '@/hooks/useFollowUpItems';
@@ -41,7 +41,7 @@ const DISCLAIMER_TEXT =
 function EngagementsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, token } = useAuth();
+  const { user, token } = useAuthSession();
   const {
     clients,
     engagements,

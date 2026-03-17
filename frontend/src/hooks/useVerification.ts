@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useVerificationContext } from '@/contexts/VerificationContext'
 
 /**
  * useVerification — Sprint 58
@@ -20,7 +20,7 @@ export interface UseVerificationReturn {
 }
 
 export function useVerification(): UseVerificationReturn {
-  const { resendVerification, checkVerificationStatus } = useAuth()
+  const { resendVerification, checkVerificationStatus } = useVerificationContext()
   const [cooldownSeconds, setCooldownSeconds] = useState(0)
   const [isResending, setIsResending] = useState(false)
   const [resendError, setResendError] = useState<string | null>(null)

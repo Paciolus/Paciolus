@@ -2,15 +2,15 @@
  * Sprint 276: useActivityHistory hook tests
  */
 import { renderHook, act } from '@testing-library/react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useActivityHistory } from '@/hooks/useActivityHistory'
 
 const mockApiGet = jest.fn()
 const mockPrefetch = jest.fn()
 const mockMapActivityLogToAuditActivity = jest.fn((x: unknown) => x)
 
-jest.mock('@/contexts/AuthContext', () => ({
-  useAuth: jest.fn(() => ({
+jest.mock('@/contexts/AuthSessionContext', () => ({
+  useAuthSession: jest.fn(() => ({
     token: 'test-token',
     isAuthenticated: true,
     isLoading: false,
@@ -30,7 +30,7 @@ jest.mock('@/types/history', () => ({
 }))
 
 
-const mockUseAuth = useAuth as jest.Mock
+const mockUseAuthSession = useAuthSession as jest.Mock
 
 const mockActivity = {
   id: 1,
@@ -69,7 +69,7 @@ describe('useActivityHistory', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     sessionStorageMock.clear()
-    mockUseAuth.mockReturnValue({
+    mockUseAuthSession.mockReturnValue({
       token: 'test-token',
       isAuthenticated: true,
       isLoading: false,
@@ -159,7 +159,7 @@ describe('useActivityHistory', () => {
   })
 
   it('falls back to sessionStorage when unauthenticated', async () => {
-    mockUseAuth.mockReturnValue({
+    mockUseAuthSession.mockReturnValue({
       token: null,
       isAuthenticated: false,
       isLoading: false,

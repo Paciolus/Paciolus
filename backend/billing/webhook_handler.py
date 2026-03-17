@@ -48,7 +48,7 @@ def _auto_create_organization(db: Session, user_id: int, tier: str) -> None:
             )
             if sub:
                 existing_org.subscription_id = sub.id
-                db.commit()
+                db.flush()
                 logger.info("Linked subscription %d to existing org %d for user %d", sub.id, existing_org.id, user_id)
         return
 
@@ -95,7 +95,7 @@ def _auto_create_organization(db: Session, user_id: int, tier: str) -> None:
     # Link user to org
     user.organization_id = org.id
 
-    db.commit()
+    db.flush()
     logger.info(
         "Auto-created organization '%s' (id=%d) for user %d on %s checkout",
         org.name,
@@ -139,17 +139,24 @@ def _apply_dpa_from_metadata(db: Session, user_id: int, metadata: dict) -> None:
         except ValueError:
             sub.dpa_accepted_at = datetime.now(UTC)
         sub.dpa_version = dpa_version
-        db.commit()
+        db.flush()
         logger.info("DPA v%s acceptance stamped on subscription for user %d via webhook", dpa_version, user_id)
 
 
 def _resolve_user_id(db: Session, event_data: dict) -> int | None:
     """Extract Paciolus user_id from webhook event metadata or customer lookup."""
     # Try metadata first
-    metadata = event_data.get("metadata", {})
-    user_id = metadata.get("paciolus_user_id")
-    if user_id:
-        return int(user_id)
+    metadata = event_data.get("metadata") or {}
+    raw_user_id = metadata.get("paciolus_user_id")
+    if raw_user_id is not None:
+        try:
+            return int(raw_user_id)
+        except (ValueError, TypeError):
+            logger.warning(
+                "Invalid paciolus_user_id in webhook metadata: %r",
+                raw_user_id,
+            )
+            # Fall through to customer ID lookup
 
     # Try customer ID lookup
     customer_id = event_data.get("customer")
@@ -247,10 +254,12 @@ def handle_checkout_completed(db: Session, event_data: dict) -> None:
             local_sub = get_subscription(db, user_id)
             if local_sub:
                 existing_org.subscription_id = local_sub.id
-                db.commit()
+                db.flush()
                 logger.info(
                     "Backfilled subscription_id=%d on org %d for user %d",
-                    local_sub.id, existing_org.id, user_id,
+                    local_sub.id,
+                    existing_org.id,
+                    user_id,
                 )
 
     # Phase LXIX: Auto-create organization for Professional/Enterprise tiers
@@ -337,8 +346,10 @@ def handle_subscription_updated(db: Session, event_data: dict) -> None:
         if user:
             user.tier = UserTier.FREE
         _downgrade_org_members_to_free(db, user_id)
-        db.commit()
-        logger.info("customer.subscription.updated: user %d and org members downgraded (status=%s)", user_id, new_status)
+        db.flush()
+        logger.info(
+            "customer.subscription.updated: user %d and org members downgraded (status=%s)", user_id, new_status
+        )
 
     # Trial → paid conversion
     if old_status == SubscriptionStatus.TRIALING and new_status == "active":
@@ -383,11 +394,7 @@ def _downgrade_org_members_to_free(db: Session, user_id: int) -> int:
     if not org:
         return 0
 
-    members = (
-        db.query(OrganizationMember)
-        .filter(OrganizationMember.organization_id == org.id)
-        .all()
-    )
+    members = db.query(OrganizationMember).filter(OrganizationMember.organization_id == org.id).all()
 
     count = 0
     for member in members:
@@ -399,7 +406,9 @@ def _downgrade_org_members_to_free(db: Session, user_id: int) -> int:
     if count:
         logger.info(
             "Downgraded %d org member(s) to FREE for org %d (owner user %d)",
-            count, org.id, user_id,
+            count,
+            org.id,
+            user_id,
         )
 
     return count
@@ -428,7 +437,7 @@ def handle_subscription_deleted(db: Session, event_data: dict) -> None:
     # Downgrade ALL org members to free tier (not just the owner)
     _downgrade_org_members_to_free(db, user_id)
 
-    db.commit()
+    db.flush()
 
     logger.info("customer.subscription.deleted: user %d and org members downgraded to free", user_id)
 
@@ -453,7 +462,7 @@ def handle_invoice_payment_failed(db: Session, event_data: dict) -> None:
     sub = db.query(Subscription).filter(Subscription.stripe_customer_id == customer_id).first()
     if sub:
         sub.status = SubscriptionStatus.PAST_DUE
-        db.commit()
+        db.flush()
         logger.warning("invoice.payment_failed: user %d is now past_due", sub.user_id)
 
         # Phase LX: Record payment failure event
@@ -476,7 +485,7 @@ def handle_invoice_paid(db: Session, event_data: dict) -> None:
     sub = db.query(Subscription).filter(Subscription.stripe_customer_id == customer_id).first()
     if sub and sub.status == SubscriptionStatus.PAST_DUE:
         sub.status = SubscriptionStatus.ACTIVE
-        db.commit()
+        db.flush()
         logger.info("invoice.paid: user %d recovered to active", sub.user_id)
 
         # Phase LX: Record payment recovery event
@@ -552,10 +561,14 @@ def process_webhook_event(
         return False
 
     # For subscription events, check event ordering before processing
-    if event_type in (
-        "customer.subscription.updated",
-        "customer.subscription.deleted",
-    ) and event_created is not None:
+    if (
+        event_type
+        in (
+            "customer.subscription.updated",
+            "customer.subscription.deleted",
+        )
+        and event_created is not None
+    ):
         user_id = _resolve_user_id(db, event_data)
         if user_id is not None:
             sub = get_subscription(db, user_id)
@@ -569,7 +582,10 @@ def process_webhook_event(
                 if event_time < sub_updated:
                     logger.warning(
                         "Stale %s event (created=%s) arrived after local update (%s) for user %d — skipping",
-                        event_type, event_time.isoformat(), sub_updated.isoformat(), user_id,
+                        event_type,
+                        event_time.isoformat(),
+                        sub_updated.isoformat(),
+                        user_id,
                     )
                     return True  # Return 200 to Stripe but skip processing
 

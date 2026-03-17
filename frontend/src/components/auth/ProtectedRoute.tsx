@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -17,7 +17,7 @@ interface ProtectedRouteProps {
  * ZERO-STORAGE: Auth state comes from sessionStorage (client-side only).
  */
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading } = useAuth()
+  const { isAuthenticated, isLoading } = useAuthSession()
   const router = useRouter()
   const pathname = usePathname()
 

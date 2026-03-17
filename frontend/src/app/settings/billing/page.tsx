@@ -10,7 +10,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { CancelModal } from '@/components/billing/CancelModal'
 import { PlanCard } from '@/components/billing/PlanCard'
 import { UpgradeModal } from '@/components/billing/UpgradeModal'
@@ -20,7 +20,7 @@ import { useBilling } from '@/hooks/useBilling'
 
 export default function BillingSettingsPage() {
   const router = useRouter()
-  const { user, isAuthenticated, isLoading: authLoading } = useAuth()
+  const { user, isAuthenticated, isLoading: authLoading } = useAuthSession()
   const {
     subscription,
     usage,

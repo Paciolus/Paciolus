@@ -10,7 +10,7 @@
  */
 
 import { useState, useCallback } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
 import type { UploadStatus } from '@/types/shared'
 import type {
@@ -44,7 +44,7 @@ export interface UseStatisticalSamplingReturn {
 }
 
 export function useStatisticalSampling(): UseStatisticalSamplingReturn {
-  const { token, user } = useAuth()
+  const { token, user } = useAuthSession()
   const engagement = useOptionalEngagementContext()
   const engagementId = engagement?.engagementId
 

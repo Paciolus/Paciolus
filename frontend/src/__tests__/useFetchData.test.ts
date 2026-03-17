@@ -2,13 +2,13 @@
  * Sprint 237: useFetchData hook tests
  */
 import { renderHook, act } from '@testing-library/react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useFetchData } from '@/hooks/useFetchData'
 
 const mockApiGet = jest.fn()
 
-jest.mock('@/contexts/AuthContext', () => ({
-  useAuth: jest.fn(() => ({ token: 'test-token', isAuthenticated: true })),
+jest.mock('@/contexts/AuthSessionContext', () => ({
+  useAuthSession: jest.fn(() => ({ token: 'test-token', isAuthenticated: true })),
 }))
 
 jest.mock('@/utils', () => ({
@@ -16,12 +16,12 @@ jest.mock('@/utils', () => ({
 }))
 
 
-const mockUseAuth = useAuth as jest.Mock
+const mockUseAuthSession = useAuthSession as jest.Mock
 
 describe('useFetchData', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockUseAuth.mockReturnValue({ token: 'test-token', isAuthenticated: true })
+    mockUseAuthSession.mockReturnValue({ token: 'test-token', isAuthenticated: true })
   })
 
   it('initializes with empty state', () => {
@@ -84,7 +84,7 @@ describe('useFetchData', () => {
   })
 
   it('requires authentication', async () => {
-    mockUseAuth.mockReturnValue({ token: null, isAuthenticated: false })
+    mockUseAuthSession.mockReturnValue({ token: null, isAuthenticated: false })
 
     const { result } = renderHook(() =>
       useFetchData({ buildUrl: (id) => `/api/${id}` })

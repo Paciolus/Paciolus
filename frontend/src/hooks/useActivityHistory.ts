@@ -8,7 +8,7 @@
  */
 
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import type { AuditActivity, ActivityHistoryResponse } from '@/types/history'
 import {
   HISTORY_STORAGE_KEY,
@@ -77,7 +77,7 @@ export function useActivityHistory(
   const [totalCount, setTotalCount] = useState(0)
   const [page, setPage] = useState(initialPage)
 
-  const { isAuthenticated, token, isLoading: authLoading } = useAuth()
+  const { isAuthenticated, token, isLoading: authLoading } = useAuthSession()
 
   // Track if prefetch has been triggered to avoid duplicate prefetches
   const prefetchedPages = useRef<Set<number>>(new Set())

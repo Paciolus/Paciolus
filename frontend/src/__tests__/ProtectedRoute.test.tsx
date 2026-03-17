@@ -9,10 +9,10 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { render, screen } from '@/test-utils'
 
 const mockPush = jest.fn()
-const mockUseAuth = jest.fn()
+const mockUseAuthSession = jest.fn()
 
-jest.mock('@/contexts/AuthContext', () => ({
-  useAuth: () => mockUseAuth(),
+jest.mock('@/contexts/AuthSessionContext', () => ({
+  useAuthSession: () => mockUseAuthSession(),
 }))
 
 jest.mock('next/navigation', () => ({
@@ -25,14 +25,14 @@ describe('ProtectedRoute', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     sessionStorage.clear()
-    mockUseAuth.mockReturnValue({
+    mockUseAuthSession.mockReturnValue({
       isAuthenticated: false,
       isLoading: false,
     })
   })
 
   it('renders children when authenticated', () => {
-    mockUseAuth.mockReturnValue({
+    mockUseAuthSession.mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
     })
@@ -48,7 +48,7 @@ describe('ProtectedRoute', () => {
   })
 
   it('redirects to /login when not authenticated', () => {
-    mockUseAuth.mockReturnValue({
+    mockUseAuthSession.mockReturnValue({
       isAuthenticated: false,
       isLoading: false,
     })
@@ -63,7 +63,7 @@ describe('ProtectedRoute', () => {
   })
 
   it('shows loading spinner when auth is loading', () => {
-    mockUseAuth.mockReturnValue({
+    mockUseAuthSession.mockReturnValue({
       isAuthenticated: false,
       isLoading: true,
     })
@@ -79,7 +79,7 @@ describe('ProtectedRoute', () => {
   })
 
   it('stores current path in sessionStorage before redirect', () => {
-    mockUseAuth.mockReturnValue({
+    mockUseAuthSession.mockReturnValue({
       isAuthenticated: false,
       isLoading: false,
     })
@@ -94,7 +94,7 @@ describe('ProtectedRoute', () => {
   })
 
   it('does not render children when not authenticated', () => {
-    mockUseAuth.mockReturnValue({
+    mockUseAuthSession.mockReturnValue({
       isAuthenticated: false,
       isLoading: false,
     })

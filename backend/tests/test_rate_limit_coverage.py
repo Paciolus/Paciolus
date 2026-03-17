@@ -27,7 +27,7 @@ MUTATING_METHODS = {"post", "put", "patch", "delete"}
 
 
 # Stripe webhook: signature-verified, rate limiting creates operational risk
-RATE_LIMIT_EXEMPT = {("billing.py", "POST", "/webhook")}
+RATE_LIMIT_EXEMPT = {("billing.py", "POST", "/webhook"), ("billing_webhooks.py", "POST", "/webhook")}
 
 
 def _audit_mutating_routes():

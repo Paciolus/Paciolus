@@ -2,7 +2,7 @@
  * Sprint 276: useCurrencyRates hook tests
  */
 import { renderHook, act } from '@testing-library/react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useCurrencyRates } from '@/hooks/useCurrencyRates'
 
 const mockApiFetch = jest.fn()
@@ -10,8 +10,8 @@ const mockApiPost = jest.fn()
 const mockApiDelete = jest.fn()
 const mockGetCsrfToken = jest.fn(() => 'csrf-token')
 
-jest.mock('@/contexts/AuthContext', () => ({
-  useAuth: jest.fn(() => ({ token: 'test-token' })),
+jest.mock('@/contexts/AuthSessionContext', () => ({
+  useAuthSession: jest.fn(() => ({ token: 'test-token' })),
 }))
 
 jest.mock('@/utils/apiClient', () => ({
@@ -22,7 +22,7 @@ jest.mock('@/utils/apiClient', () => ({
 }))
 
 
-const mockUseAuth = useAuth as jest.Mock
+const mockUseAuthSession = useAuthSession as jest.Mock
 
 const mockRateStatus = {
   has_rates: true,
@@ -49,7 +49,7 @@ const mockSingleRateResult = {
 describe('useCurrencyRates', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockUseAuth.mockReturnValue({ token: 'test-token' })
+    mockUseAuthSession.mockReturnValue({ token: 'test-token' })
   })
 
   it('initializes with null status and idle upload', () => {

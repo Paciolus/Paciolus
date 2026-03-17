@@ -13,7 +13,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthSession } from '@/contexts/AuthSessionContext';
 import { apiGet, type ApiRequestOptions } from '@/utils';
 
 /**
@@ -130,7 +130,7 @@ export function useFetchData<
     staleWhileRevalidate = false,
   } = options;
 
-  const { token, isAuthenticated } = useAuth();
+  const { token, isAuthenticated } = useAuthSession();
 
   const [data, setData] = useState<TData | null>(null);
   const [isLoading, setIsLoading] = useState(false);

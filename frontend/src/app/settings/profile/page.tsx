@@ -10,13 +10,15 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
+import { useUserProfile } from '@/contexts/UserProfileContext'
 import { Reveal } from '@/components/ui/Reveal'
 import type { ProfileUpdate } from '@/types/auth'
 
 export default function ProfileSettingsPage() {
   const router = useRouter()
-  const { user, isAuthenticated, isLoading: authLoading, updateProfile, changePassword } = useAuth()
+  const { user, isAuthenticated, isLoading: authLoading } = useAuthSession()
+  const { updateProfile, changePassword } = useUserProfile()
 
   // Profile form state
   const [profileName, setProfileName] = useState('')

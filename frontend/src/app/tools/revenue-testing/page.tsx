@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { RevenueScoreCard, RevenueTestResultGrid, RevenueDataQualityBadge, FlaggedRevenueTable } from '@/components/revenueTesting'
 import { GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, UpgradeGate, Citation, CitationFooter } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractRevenueProof } from '@/components/shared/proof'
@@ -56,7 +56,7 @@ function ContractEvidenceBadge({ evidence }: { evidence: ContractEvidenceLevel }
  * for revenue anomaly indicators across structural, statistical, advanced, and contract tiers.
  */
 export default function RevenueTestingPage() {
-  const { user, isAuthenticated, isLoading: authLoading } = useAuth()
+  const { user, isAuthenticated, isLoading: authLoading } = useAuthSession()
   const { status, result, error, runTests, reset } = useRevenueTesting()
   useCanvasAccentSync(status)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)

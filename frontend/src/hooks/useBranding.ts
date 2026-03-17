@@ -7,7 +7,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import type { BrandingConfig } from '@/types/branding'
 import { apiGet, apiPut, apiPost, apiDelete } from '@/utils/apiClient'
 
@@ -18,7 +18,7 @@ interface BrandingState {
 }
 
 export function useBranding() {
-  const { token } = useAuth()
+  const { token } = useAuthSession()
   const [state, setState] = useState<BrandingState>({
     branding: null,
     isLoading: false,

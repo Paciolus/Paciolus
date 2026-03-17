@@ -17,7 +17,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { ProfileDropdown } from '@/components/auth/ProfileDropdown'
 import { BrandIcon } from '@/components/shared/BrandIcon'
 import { useCommandPalette } from '@/hooks/useCommandPalette'
@@ -41,7 +41,7 @@ const drawerItemVariants = {
 } as const
 
 export function UnifiedToolbar() {
-  const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth()
+  const { user, isAuthenticated, isLoading: authLoading, logout } = useAuthSession()
   const { openPalette } = useCommandPalette()
   const pathname = usePathname()
   const [megaOpen, setMegaOpen] = useState(false)

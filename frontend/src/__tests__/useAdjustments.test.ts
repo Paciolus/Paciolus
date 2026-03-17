@@ -2,7 +2,7 @@
  * Sprint 236: useAdjustments hook tests
  */
 import { renderHook, act } from '@testing-library/react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useAdjustments } from '@/hooks/useAdjustments'
 
 const mockApiGet = jest.fn()
@@ -10,8 +10,8 @@ const mockApiPost = jest.fn()
 const mockApiPut = jest.fn()
 const mockApiDelete = jest.fn()
 
-jest.mock('@/contexts/AuthContext', () => ({
-  useAuth: jest.fn(() => ({ token: 'test-token' })),
+jest.mock('@/contexts/AuthSessionContext', () => ({
+  useAuthSession: jest.fn(() => ({ token: 'test-token' })),
 }))
 
 jest.mock('@/utils', () => ({
@@ -22,7 +22,7 @@ jest.mock('@/utils', () => ({
 }))
 
 
-const mockUseAuth = useAuth as jest.Mock
+const mockUseAuthSession = useAuthSession as jest.Mock
 
 const mockListResponse = {
   entries: [
@@ -39,7 +39,7 @@ const mockListResponse = {
 describe('useAdjustments', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockUseAuth.mockReturnValue({ token: 'test-token' })
+    mockUseAuthSession.mockReturnValue({ token: 'test-token' })
     mockApiGet.mockResolvedValue({ ok: true, data: mockListResponse })
   })
 

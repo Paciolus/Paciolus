@@ -8,7 +8,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import type { AdminOverview, TeamActivity, MemberUsage } from '@/types/adminDashboard'
 import { apiGet } from '@/utils/apiClient'
 import { apiDownload, downloadBlob } from '@/utils/downloadAdapter'
@@ -22,7 +22,7 @@ interface AdminDashboardState {
 }
 
 export function useAdminDashboard() {
-  const { token } = useAuth()
+  const { token } = useAuthSession()
   const [state, setState] = useState<AdminDashboardState>({
     overview: null,
     teamActivity: [],

@@ -8,7 +8,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthSession } from '@/contexts/AuthSessionContext';
 import type {
   FollowUpComment,
   FollowUpCommentCreateInput,
@@ -27,7 +27,7 @@ export interface UseFollowUpCommentsReturn {
 }
 
 export function useFollowUpComments(): UseFollowUpCommentsReturn {
-  const { token, isAuthenticated } = useAuth();
+  const { token, isAuthenticated } = useAuthSession();
 
   const [comments, setComments] = useState<FollowUpComment[]>([]);
   const [isLoading, setIsLoading] = useState(false);

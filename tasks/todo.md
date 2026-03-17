@@ -228,6 +228,35 @@
 
 ---
 
+### Sprint 546 — Comprehensive Audit Remediation (Phase 1: Bug Fixes + Phase 2: Architecture)
+
+**Status:** IN PROGRESS
+**Goal:** Fix 8 critical/high bugs from formal audit + 9 architectural decompositions.
+
+#### Phase 1 — Critical & High Bug Fixes (8 bugs)
+- [x] Bug 1: Webhook dedup — narrow catch from Exception → IntegrityError; operational errors return 500
+- [x] Bug 2: Webhook atomicity — replace all internal db.commit() with db.flush(); single outer commit
+- [x] Bug 3: Admin overview — fix ActivityLog.created_at → .timestamp; tool_usage uses TeamActivityLog
+- [x] Bug 4: Client cartesian join — rewrite get_clients_with_count to two-query approach
+- [x] Bug 5: Seat removal — remove max(1,...) clamp; delete Stripe item when quantity reaches 0
+- [x] Bug 6: Invite acceptance — add exclude_invite_id param to check_seat_limit_for_org
+- [x] Bug 7: Webhook metadata — add try/except ValueError,TypeError around int() cast
+- [x] Bug 8: Tool run numbering — add unique constraint + retry loop on IntegrityError
+- [x] 23 new tests in test_phase1_bug_fixes.py
+
+#### Phase 2 — Architectural Decomposition (9 refactors)
+- [x] Refactor 1: audit_engine.py → backend/audit/ pipeline (6 modules)
+- [x] Refactor 2: pdf_generator.py → backend/pdf/ package (styles, chrome, components, sections)
+- [x] Refactor 3: export_diagnostics.py → backend/export/ pipeline (validators, serializers, transport)
+- [x] Refactor 4: billing.py → billing_checkout/analytics/webhooks + billing/guards.py
+- [x] Refactor 5: organization.py → services/organization_service.py + thin routes
+- [x] Refactor 6: AuthContext.tsx → AuthSession/UserProfile/Verification contexts + hooks
+- [x] Refactor 7: Unified frontend transport — eliminated direct fetch()
+- [x] Refactor 8: HeroProductFilm.tsx → hero/ directory (animation, telemetry, frames)
+- [x] Refactor 9: Pricing page → domain/pricing.ts + PricingCard/Estimator/Comparison components
+
+---
+
 ### Sprint 447 — Stripe Production Cutover
 
 **Status:** PENDING (CEO action required)

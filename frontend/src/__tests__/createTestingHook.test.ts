@@ -4,8 +4,8 @@
 import { renderHook } from '@testing-library/react'
 import { createTestingHook } from '@/hooks/createTestingHook'
 
-jest.mock('@/contexts/AuthContext', () => ({
-  useAuth: jest.fn(() => ({ token: 'test-token', user: { is_verified: true } })),
+jest.mock('@/contexts/AuthSessionContext', () => ({
+  useAuthSession: jest.fn(() => ({ token: 'test-token', user: { is_verified: true } })),
 }))
 jest.mock('@/contexts/EngagementContext', () => ({
   useOptionalEngagementContext: jest.fn(() => null),

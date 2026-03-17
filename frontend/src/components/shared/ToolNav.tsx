@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback, type KeyboardEvent } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { ProfileDropdown } from '@/components/auth'
 import { BrandIcon } from '@/components/shared/BrandIcon'
 import { useCommandPalette } from '@/hooks/useCommandPalette'
@@ -41,7 +41,7 @@ interface ToolNavProps {
  * Sprint 111: Overflow dropdown for 9+ tools.
  */
 export function ToolNav({ currentTool, showBrandText }: ToolNavProps) {
-  const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth()
+  const { user, isAuthenticated, isLoading: authLoading, logout } = useAuthSession()
   const { openPalette } = useCommandPalette()
   const [moreOpen, setMoreOpen] = useState(false)
   const moreRef = useRef<HTMLDivElement>(null)

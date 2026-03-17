@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useVerification } from '@/hooks/useVerification'
 
 /**
@@ -14,7 +14,7 @@ import { useVerification } from '@/hooks/useVerification'
  */
 
 export function VerificationBanner() {
-  const { user, isAuthenticated } = useAuth()
+  const { user, isAuthenticated } = useAuthSession()
   const { cooldownSeconds, canResend, isResending, resendSuccess, resend } = useVerification()
   const [isDismissed, setIsDismissed] = useState(false)
 

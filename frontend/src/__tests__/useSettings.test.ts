@@ -2,15 +2,15 @@
  * Sprint 237: useSettings hook tests
  */
 import { renderHook, act } from '@testing-library/react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useSettings } from '@/hooks/useSettings'
 
 const mockApiGet = jest.fn()
 const mockApiPost = jest.fn()
 const mockApiPut = jest.fn()
 
-jest.mock('@/contexts/AuthContext', () => ({
-  useAuth: jest.fn(() => ({ token: 'test-token', isAuthenticated: true })),
+jest.mock('@/contexts/AuthSessionContext', () => ({
+  useAuthSession: jest.fn(() => ({ token: 'test-token', isAuthenticated: true })),
 }))
 
 jest.mock('@/utils', () => ({
@@ -21,7 +21,7 @@ jest.mock('@/utils', () => ({
 }))
 
 
-const mockUseAuth = useAuth as jest.Mock
+const mockUseAuthSession = useAuthSession as jest.Mock
 
 const mockPracticeSettings = {
   firm_name: 'Test Firm',
@@ -33,7 +33,7 @@ const mockPracticeSettings = {
 describe('useSettings', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockUseAuth.mockReturnValue({ token: 'test-token', isAuthenticated: true })
+    mockUseAuthSession.mockReturnValue({ token: 'test-token', isAuthenticated: true })
     // Auto-fetch on mount calls fetchPracticeSettings
     mockApiGet.mockResolvedValue({ ok: true, data: mockPracticeSettings })
   })
@@ -149,7 +149,7 @@ describe('useSettings', () => {
   })
 
   it('does nothing when not authenticated', async () => {
-    mockUseAuth.mockReturnValue({ token: null, isAuthenticated: false })
+    mockUseAuthSession.mockReturnValue({ token: null, isAuthenticated: false })
 
     const { result } = renderHook(() => useSettings())
     await act(async () => {})

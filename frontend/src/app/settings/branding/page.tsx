@@ -10,7 +10,7 @@
 import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { FeatureGate } from '@/components/shared/FeatureGate'
 import { Reveal } from '@/components/ui/Reveal'
 import { useBranding } from '@/hooks/useBranding'
@@ -20,7 +20,7 @@ const ACCEPTED_TYPES = ['image/png', 'image/jpeg']
 
 export default function BrandingSettingsPage() {
   const router = useRouter()
-  const { isAuthenticated, isLoading: authLoading } = useAuth()
+  const { isAuthenticated, isLoading: authLoading } = useAuthSession()
   const {
     branding,
     isLoading,

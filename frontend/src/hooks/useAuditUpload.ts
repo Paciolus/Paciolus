@@ -6,7 +6,7 @@
  */
 
 import { useState, useCallback } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
 import type { UploadStatus } from '@/types/shared'
 import { uploadFetch } from '@/utils/uploadTransport'
@@ -34,7 +34,7 @@ interface UseAuditUploadOptions<T> {
 }
 
 export function useAuditUpload<T>(options: UseAuditUploadOptions<T>): UseAuditUploadReturn<T> {
-  const { token, user } = useAuth()
+  const { token, user } = useAuthSession()
   const engagement = useOptionalEngagementContext()
   const engagementId = engagement?.engagementId
   const [status, setStatus] = useState<UploadStatus>('idle')

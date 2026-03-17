@@ -12,13 +12,13 @@ import { useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { FeatureGate } from '@/components/shared/FeatureGate'
 import { fadeUp, staggerContainerTight } from '@/lib/motion'
 
 export default function SettingsHubPage() {
   const router = useRouter()
-  const { isAuthenticated, isLoading: authLoading } = useAuth()
+  const { isAuthenticated, isLoading: authLoading } = useAuthSession()
 
   // Redirect if not authenticated
   useEffect(() => {

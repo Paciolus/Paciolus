@@ -12,7 +12,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthSession } from '@/contexts/AuthSessionContext';
 import type {
   Engagement,
   EngagementCreateInput,
@@ -53,7 +53,7 @@ export interface UseEngagementReturn {
 
 export function useEngagement(options: UseEngagementOptions = {}): UseEngagementReturn {
   const { autoFetch = true, pageSize = 50 } = options;
-  const { token, isAuthenticated } = useAuth();
+  const { token, isAuthenticated } = useAuthSession();
 
   const [engagements, setEngagements] = useState<Engagement[]>([]);
   const [totalCount, setTotalCount] = useState(0);

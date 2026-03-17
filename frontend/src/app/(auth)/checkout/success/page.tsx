@@ -8,10 +8,10 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 
 export default function CheckoutSuccessPage() {
-  const { refreshUser } = useAuth()
+  const { refreshUser } = useAuthSession()
   const [refreshed, setRefreshed] = useState(false)
 
   useEffect(() => {

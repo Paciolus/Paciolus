@@ -2,7 +2,7 @@
  * Sprint 276: useFollowUpItems hook tests
  */
 import { renderHook, act } from '@testing-library/react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useFollowUpItems } from '@/hooks/useFollowUpItems'
 
 const mockApiGet = jest.fn()
@@ -11,8 +11,8 @@ const mockApiPut = jest.fn()
 const mockApiDelete = jest.fn()
 const mockIsAuthError = jest.fn(() => false)
 
-jest.mock('@/contexts/AuthContext', () => ({
-  useAuth: jest.fn(() => ({ token: 'test-token', isAuthenticated: true })),
+jest.mock('@/contexts/AuthSessionContext', () => ({
+  useAuthSession: jest.fn(() => ({ token: 'test-token', isAuthenticated: true })),
 }))
 
 jest.mock('@/utils', () => ({
@@ -24,7 +24,7 @@ jest.mock('@/utils', () => ({
 }))
 
 
-const mockUseAuth = useAuth as jest.Mock
+const mockUseAuthSession = useAuthSession as jest.Mock
 
 const mockItem = {
   id: 1,
@@ -47,7 +47,7 @@ const mockSummary = {
 describe('useFollowUpItems', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockUseAuth.mockReturnValue({ token: 'test-token', isAuthenticated: true })
+    mockUseAuthSession.mockReturnValue({ token: 'test-token', isAuthenticated: true })
     mockApiGet.mockResolvedValue({
       ok: true,
       data: { items: [mockItem], total_count: 1 },
@@ -190,7 +190,7 @@ describe('useFollowUpItems', () => {
   })
 
   it('deleteItem returns false when not authenticated', async () => {
-    mockUseAuth.mockReturnValue({ token: null, isAuthenticated: false })
+    mockUseAuthSession.mockReturnValue({ token: null, isAuthenticated: false })
 
     const { result } = renderHook(() => useFollowUpItems())
 

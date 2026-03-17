@@ -79,14 +79,14 @@ async def get_overview(
     # Seat count
     total_members = len(member_ids)
 
-    # Uploads this month (from ActivityLog)
+    # Uploads this month (from ActivityLog — uses .timestamp, not .created_at)
     now = datetime.now(UTC)
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     uploads_this_month = (
         db.query(func.count(ActivityLog.id))
         .filter(
             ActivityLog.user_id.in_(member_ids),
-            ActivityLog.created_at >= month_start,
+            ActivityLog.timestamp >= month_start,
         )
         .scalar()
         or 0
@@ -104,14 +104,14 @@ async def get_overview(
         or 0
     )
 
-    # Tool usage distribution
+    # Tool usage distribution (TeamActivityLog has tool_name; ActivityLog does not)
     tool_usage = (
-        db.query(ActivityLog.tool_name, func.count(ActivityLog.id))
+        db.query(TeamActivityLog.tool_name, func.count(TeamActivityLog.id))
         .filter(
-            ActivityLog.user_id.in_(member_ids),
-            ActivityLog.created_at >= month_start,
+            TeamActivityLog.organization_id == org.id,
+            TeamActivityLog.created_at >= month_start,
         )
-        .group_by(ActivityLog.tool_name)
+        .group_by(TeamActivityLog.tool_name)
         .all()
     )
 
@@ -181,7 +181,7 @@ async def get_usage_by_member(
         db.query(ActivityLog.user_id, func.count(ActivityLog.id))
         .filter(
             ActivityLog.user_id.in_(member_ids),
-            ActivityLog.created_at >= month_start,
+            ActivityLog.timestamp >= month_start,
         )
         .group_by(ActivityLog.user_id)
         .all()

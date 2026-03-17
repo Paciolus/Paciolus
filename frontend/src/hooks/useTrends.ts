@@ -13,7 +13,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthSession } from '@/contexts/AuthSessionContext';
 import type { TrendDataPoint, TrendDirection } from '@/components/analytics/TrendSparkline';
 import { METRIC_DISPLAY_NAMES, PERCENTAGE_METRICS, CURRENCY_METRICS } from '@/types/metrics';
 import { apiGet, isAuthError } from '@/utils';
@@ -130,7 +130,7 @@ interface UseTrendsReturn {
  */
 export function useTrends(options: UseTrendsOptions = {}): UseTrendsReturn {
   const { clientId, periodType, limit = 12, autoFetch = false } = options;
-  const { token, isAuthenticated } = useAuth();
+  const { token, isAuthenticated } = useAuthSession();
 
   const [categoryTrends, setCategoryTrends] = useState<TrendMetric[]>([]);
   const [ratioTrends, setRatioTrends] = useState<TrendMetric[]>([]);

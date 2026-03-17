@@ -10,7 +10,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { FeatureGate } from '@/components/shared/FeatureGate'
 import { apiGet, apiPost, apiPut, apiDelete } from '@/utils/apiClient'
 
@@ -41,7 +41,7 @@ interface OrgInfo {
 
 export default function TeamPage() {
   const router = useRouter()
-  const { user, isAuthenticated, isLoading: authLoading, token } = useAuth()
+  const { user, isAuthenticated, isLoading: authLoading, token } = useAuthSession()
   const [org, setOrg] = useState<OrgInfo | null>(null)
   const [members, setMembers] = useState<OrgMember[]>([])
   const [invites, setInvites] = useState<OrgInvite[]>([])

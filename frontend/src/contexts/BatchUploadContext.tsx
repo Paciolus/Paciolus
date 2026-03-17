@@ -21,7 +21,7 @@ import {
   type ReactNode,
   type ReactElement,
 } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthSession } from '@/contexts/AuthSessionContext';
 import {
   type FileQueueItem,
   type FileStatus,
@@ -173,7 +173,7 @@ interface BatchUploadProviderProps {
 }
 
 export function BatchUploadProvider({ children }: BatchUploadProviderProps): ReactElement {
-  const { token } = useAuth();
+  const { token } = useAuthSession();
 
   const [state, dispatch] = useReducer(batchReducer, {
     files: [],

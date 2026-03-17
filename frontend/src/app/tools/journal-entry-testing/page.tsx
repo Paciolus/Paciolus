@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { JEScoreCard, TestResultGrid, GLDataQualityBadge, BenfordChart, FlaggedEntryTable, SamplingPanel } from '@/components/jeTesting'
 import { GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, ToolSettingsDrawer, Citation, CitationFooter } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractJEProof } from '@/components/shared/proof'
@@ -18,7 +18,7 @@ import { isAcceptedFileType, ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fil
  * Upload → Process → Results with Benford's Law visualization.
  */
 export default function JournalEntryTestingPage() {
-  const { user, isAuthenticated, isLoading: authLoading, token } = useAuth()
+  const { user, isAuthenticated, isLoading: authLoading, token } = useAuthSession()
   const { status, result, error, runTests, reset } = useJETesting()
   useCanvasAccentSync(status)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)

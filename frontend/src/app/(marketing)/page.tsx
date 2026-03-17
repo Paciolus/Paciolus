@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { FeaturePillars, ProcessTimeline, HeroScrollSection, ToolSlideshow, BottomProof, EvidenceBand } from '@/components/marketing'
 import { Reveal } from '@/components/ui/Reveal'
 import { ParallaxSection } from '@/utils/marketingMotion'
@@ -18,7 +18,7 @@ import { ParallaxSection } from '@/utils/marketingMotion'
  * Uniform vertical fadeUp entrances (Linear-style precision).
  */
 export default function HomePage() {
-  const { isAuthenticated, isLoading } = useAuth()
+  const { isAuthenticated, isLoading } = useAuthSession()
   const router = useRouter()
 
   useEffect(() => {

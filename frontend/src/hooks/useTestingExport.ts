@@ -7,7 +7,7 @@
  */
 
 import { useState, useCallback, useRef } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useSonification } from '@/hooks/useSonification'
 import { apiDownload, downloadBlob } from '@/utils'
 
@@ -30,7 +30,7 @@ export function useTestingExport(
   fallbackMemoFilename: string = 'testing_memo.pdf',
   fallbackCsvFilename: string = 'flagged_entries.csv',
 ): UseTestingExportReturn {
-  const { token } = useAuth()
+  const { token } = useAuthSession()
   const { playTone } = useSonification()
   const [exporting, setExporting] = useState<ExportType>(null)
   const [lastExportSuccess, setLastExportSuccess] = useState<ExportType>(null)

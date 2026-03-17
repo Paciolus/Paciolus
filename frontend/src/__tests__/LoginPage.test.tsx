@@ -6,7 +6,7 @@
  */
 import userEvent from '@testing-library/user-event'
 import LoginPage from '@/app/(auth)/login/page'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { render, screen, waitFor } from '@/test-utils'
 
 const mockPush = jest.fn()
@@ -15,8 +15,8 @@ jest.mock('next/navigation', () => ({
 }))
 
 const mockLogin = jest.fn()
-jest.mock('@/contexts/AuthContext', () => ({
-  useAuth: jest.fn(() => ({
+jest.mock('@/contexts/AuthSessionContext', () => ({
+  useAuthSession: jest.fn(() => ({
     login: mockLogin,
     user: null,
     isAuthenticated: false,
@@ -53,12 +53,12 @@ jest.mock('next/link', () => {
 })
 
 
-const mockUseAuth = useAuth as jest.Mock
+const mockUseAuthSession = useAuthSession as jest.Mock
 
 describe('LoginPage', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockUseAuth.mockReturnValue({
+    mockUseAuthSession.mockReturnValue({
       login: mockLogin,
       user: null,
       isAuthenticated: false,
@@ -118,7 +118,7 @@ describe('LoginPage', () => {
 
   it('shows VaultTransition on successful login', async () => {
     mockLogin.mockResolvedValue({ success: true })
-    mockUseAuth.mockReturnValue({
+    mockUseAuthSession.mockReturnValue({
       login: mockLogin,
       user: { name: 'Alice', email: 'alice@example.com' },
       isAuthenticated: false,
@@ -141,7 +141,7 @@ describe('LoginPage', () => {
 
   it('redirects after VaultTransition completes', async () => {
     mockLogin.mockResolvedValue({ success: true })
-    mockUseAuth.mockReturnValue({
+    mockUseAuthSession.mockReturnValue({
       login: mockLogin,
       user: { name: 'Alice', email: 'alice@example.com' },
       isAuthenticated: false,
@@ -171,7 +171,7 @@ describe('LoginPage', () => {
   it('uses stored redirect path after login', async () => {
     sessionStorage.setItem('paciolus_redirect', '/tools/trial-balance')
     mockLogin.mockResolvedValue({ success: true })
-    mockUseAuth.mockReturnValue({
+    mockUseAuthSession.mockReturnValue({
       login: mockLogin,
       user: { name: 'Alice', email: 'alice@example.com' },
       isAuthenticated: false,
@@ -198,7 +198,7 @@ describe('LoginPage', () => {
   })
 
   it('redirects already-authenticated user to dashboard', () => {
-    mockUseAuth.mockReturnValue({
+    mockUseAuthSession.mockReturnValue({
       login: mockLogin,
       user: { name: 'Alice', email: 'alice@example.com' },
       isAuthenticated: true,

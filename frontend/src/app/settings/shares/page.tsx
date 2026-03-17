@@ -10,7 +10,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { FeatureGate } from '@/components/shared/FeatureGate'
 import { Reveal } from '@/components/ui/Reveal'
 import { useExportSharing } from '@/hooks/useExportSharing'
@@ -26,7 +26,7 @@ function formatTimeRemaining(expiresAt: string): string {
 
 export default function ExportSharingPage() {
   const router = useRouter()
-  const { isAuthenticated, isLoading: authLoading } = useAuth()
+  const { isAuthenticated, isLoading: authLoading } = useAuthSession()
   const {
     shares,
     isLoading,

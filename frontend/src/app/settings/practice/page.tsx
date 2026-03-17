@@ -14,7 +14,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { ExportPreferencesSection } from '@/components/settings/ExportPreferencesSection'
 import { MaterialitySection } from '@/components/settings/MaterialitySection'
 import {
@@ -66,7 +66,7 @@ import {
 
 export default function PracticeSettingsPage() {
   const router = useRouter()
-  const { user, isAuthenticated, isLoading: authLoading } = useAuth()
+  const { user, isAuthenticated, isLoading: authLoading } = useAuthSession()
   const {
     practiceSettings,
     isLoading,

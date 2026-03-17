@@ -4,7 +4,8 @@ import { Suspense, useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
+import { useVerificationContext } from '@/contexts/VerificationContext'
 import { fadeUp } from '@/lib/motion'
 
 /**
@@ -20,7 +21,8 @@ type VerifyState = 'loading' | 'success' | 'error'
 function VerifyEmailContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const { verifyEmail, isAuthenticated, refreshUser } = useAuth()
+  const { isAuthenticated, refreshUser } = useAuthSession()
+  const { verifyEmail } = useVerificationContext()
   const [verifyState, setVerifyState] = useState<VerifyState>('loading')
   const [errorMessage, setErrorMessage] = useState('')
   const hasVerified = useRef(false)

@@ -12,7 +12,7 @@
 
 import { useEffect } from 'react'
 import Link from 'next/link'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { trackEvent } from '@/utils/telemetry'
 
 // Public display names for internal tier IDs
@@ -40,7 +40,7 @@ interface UpgradeGateProps {
 }
 
 export function UpgradeGate({ toolName, children, message }: UpgradeGateProps) {
-  const { user } = useAuth()
+  const { user } = useAuthSession()
   const tier = user?.tier ?? 'free'
 
   // Check if the tier has restricted tools

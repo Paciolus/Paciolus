@@ -2,15 +2,15 @@
  * Sprint 96.5: Bank Reconciliation page tests (10 tests)
  */
 import BankRecPage from '@/app/tools/bank-rec/page'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useBankReconciliation } from '@/hooks/useBankReconciliation'
 import { render, screen } from '@/test-utils'
 
 const mockRunReconciliation = jest.fn()
 const mockReset = jest.fn()
 
-jest.mock('@/contexts/AuthContext', () => ({
-  useAuth: jest.fn(() => ({
+jest.mock('@/contexts/AuthSessionContext', () => ({
+  useAuthSession: jest.fn(() => ({
     user: { is_verified: true, tier: 'professional' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token',
   })),
 }))
@@ -56,13 +56,13 @@ jest.mock('framer-motion', () => ({
 }))
 
 
-const mockUseAuth = useAuth as jest.Mock
+const mockUseAuthSession = useAuthSession as jest.Mock
 const mockUseBankRec = useBankReconciliation as jest.Mock
 
 describe('BankRecPage', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockUseAuth.mockReturnValue({ user: { is_verified: true, tier: 'professional' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token' })
+    mockUseAuthSession.mockReturnValue({ user: { is_verified: true, tier: 'professional' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token' })
     mockUseBankRec.mockReturnValue({ status: 'idle', result: null, error: null, reconcile: mockRunReconciliation, reset: mockReset })
   })
 
@@ -78,7 +78,7 @@ describe('BankRecPage', () => {
   })
 
   it('shows sign-in CTA for unauthenticated user', () => {
-    mockUseAuth.mockReturnValue({ user: null, isAuthenticated: false, isLoading: false, logout: jest.fn(), token: null })
+    mockUseAuthSession.mockReturnValue({ user: null, isAuthenticated: false, isLoading: false, logout: jest.fn(), token: null })
     render(<BankRecPage />)
     expect(screen.getByTestId('guest-cta')).toBeInTheDocument()
     expect(screen.getByText(/Bank Reconciliation requires a verified account/)).toBeInTheDocument()

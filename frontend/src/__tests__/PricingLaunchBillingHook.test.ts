@@ -11,8 +11,8 @@ import { useBilling } from '@/hooks/useBilling'
 
 const mockToken = 'test-jwt-token'
 
-jest.mock('@/contexts/AuthContext', () => ({
-  useAuth: () => ({ token: mockToken }),
+jest.mock('@/contexts/AuthSessionContext', () => ({
+  useAuthSession: () => ({ token: mockToken }),
 }))
 
 const mockApiGet = jest.fn()

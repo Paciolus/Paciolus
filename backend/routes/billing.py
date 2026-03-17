@@ -406,6 +406,8 @@ async def stripe_webhook(
     # Atomic deduplication: insert the event marker BEFORE processing.
     # Uses INSERT ... ON CONFLICT DO NOTHING (upsert) — only the winner proceeds.
     # This prevents duplicate side effects under concurrent delivery (Stripe retries).
+    from sqlalchemy.exc import IntegrityError
+
     event_id = event.get("id")
     if event_id:
         from subscription_model import ProcessedWebhookEvent
@@ -414,10 +416,16 @@ async def stripe_webhook(
         try:
             db.add(ProcessedWebhookEvent(stripe_event_id=event_id))
             db.flush()  # Will raise IntegrityError if already exists
-        except Exception:
+        except IntegrityError:
             db.rollback()
-            logger.info("Duplicate webhook event %s — skipping", event_id)
+            logger.debug("Duplicate webhook event %s — skipping", event_id)
             return Response(status_code=200)
+        except Exception:
+            # Operational DB error (connection failure, schema error, etc.)
+            # Must NOT return 200 — Stripe needs to retry.
+            db.rollback()
+            logger.error("DB error during webhook dedup for event %s", event_id, exc_info=True)
+            return Response(status_code=500)
 
     from billing.webhook_handler import process_webhook_event
 
@@ -427,9 +435,15 @@ async def stripe_webhook(
     # Store the Stripe event created timestamp for ordering guard
     event_created = event.get("created")  # Unix timestamp from Stripe
 
-    process_webhook_event(db, event_type, event_data, event_created=event_created)
-
-    # Commit the dedup marker + any business logic changes together
-    db.commit()
+    # All handler logic uses db.flush() internally — single commit at the end
+    # ensures atomicity between the dedup marker and business logic changes.
+    try:
+        process_webhook_event(db, event_type, event_data, event_created=event_created)
+        # Commit the dedup marker + any business logic changes together
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.error("Webhook processing failed for event %s (%s)", event_id, event_type, exc_info=True)
+        return Response(status_code=500)
 
     return Response(status_code=200)

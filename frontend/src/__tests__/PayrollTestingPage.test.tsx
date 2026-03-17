@@ -2,7 +2,7 @@
  * Sprint 96.5: Payroll Testing page tests (10 tests)
  */
 import PayrollTestingPage from '@/app/tools/payroll-testing/page'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { usePayrollTesting } from '@/hooks/usePayrollTesting'
 import { render, screen } from '@/test-utils'
 
@@ -12,8 +12,8 @@ const mockHandleExportMemo = jest.fn()
 const mockHandleExportCSV = jest.fn()
 const mockFileInputRef = { current: null }
 
-jest.mock('@/contexts/AuthContext', () => ({
-  useAuth: jest.fn(() => ({
+jest.mock('@/contexts/AuthSessionContext', () => ({
+  useAuthSession: jest.fn(() => ({
     user: { is_verified: true, tier: 'professional' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token',
   })),
 }))
@@ -58,13 +58,13 @@ jest.mock('framer-motion', () => ({
 }))
 
 
-const mockUseAuth = useAuth as jest.Mock
+const mockUseAuthSession = useAuthSession as jest.Mock
 const mockUsePayroll = usePayrollTesting as jest.Mock
 
 describe('PayrollTestingPage', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockUseAuth.mockReturnValue({ user: { is_verified: true, tier: 'professional' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token' })
+    mockUseAuthSession.mockReturnValue({ user: { is_verified: true, tier: 'professional' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token' })
     mockUsePayroll.mockReturnValue({ status: 'idle', result: null, error: null, runTests: mockRunTests, reset: mockReset })
   })
 
@@ -79,7 +79,7 @@ describe('PayrollTestingPage', () => {
   })
 
   it('shows sign-in CTA for unauthenticated user', () => {
-    mockUseAuth.mockReturnValue({ user: null, isAuthenticated: false, isLoading: false, logout: jest.fn(), token: null })
+    mockUseAuthSession.mockReturnValue({ user: null, isAuthenticated: false, isLoading: false, logout: jest.fn(), token: null })
     render(<PayrollTestingPage />)
     expect(screen.getByText('Sign In')).toBeInTheDocument()
     expect(screen.getByText('Create Account')).toBeInTheDocument()
@@ -129,7 +129,7 @@ describe('PayrollTestingPage', () => {
   })
 
   it('shows upgrade gate for free tier user', () => {
-    mockUseAuth.mockReturnValue({ user: { is_verified: true, tier: 'free' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token' })
+    mockUseAuthSession.mockReturnValue({ user: { is_verified: true, tier: 'free' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token' })
     render(<PayrollTestingPage />)
     expect(screen.getByText('Upgrade Required')).toBeInTheDocument()
     expect(screen.getByText('View Plans')).toBeInTheDocument()

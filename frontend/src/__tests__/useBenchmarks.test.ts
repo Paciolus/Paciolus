@@ -2,14 +2,14 @@
  * Sprint 236: useBenchmarks hook tests
  */
 import { renderHook, act } from '@testing-library/react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useBenchmarks } from '@/hooks/useBenchmarks'
 
 const mockApiGet = jest.fn()
 const mockApiPost = jest.fn()
 
-jest.mock('@/contexts/AuthContext', () => ({
-  useAuth: jest.fn(() => ({ token: 'test-token', isAuthenticated: true })),
+jest.mock('@/contexts/AuthSessionContext', () => ({
+  useAuthSession: jest.fn(() => ({ token: 'test-token', isAuthenticated: true })),
 }))
 
 jest.mock('@/utils', () => ({
@@ -19,7 +19,7 @@ jest.mock('@/utils', () => ({
 }))
 
 
-const mockUseAuth = useAuth as jest.Mock
+const mockUseAuthSession = useAuthSession as jest.Mock
 
 const mockBenchmarkSet = {
   industry: 'technology',
@@ -44,7 +44,7 @@ const mockComparison = {
 describe('useBenchmarks', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockUseAuth.mockReturnValue({ token: 'test-token', isAuthenticated: true })
+    mockUseAuthSession.mockReturnValue({ token: 'test-token', isAuthenticated: true })
   })
 
   it('initializes with empty state', () => {
@@ -105,7 +105,7 @@ describe('useBenchmarks', () => {
   })
 
   it('compareToBenchmarks requires auth', async () => {
-    mockUseAuth.mockReturnValue({ token: null, isAuthenticated: false })
+    mockUseAuthSession.mockReturnValue({ token: null, isAuthenticated: false })
 
     const { result } = renderHook(() => useBenchmarks())
 

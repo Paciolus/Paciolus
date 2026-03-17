@@ -21,7 +21,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useCommandPaletteContext } from '@/contexts/CommandPaletteContext'
 import { useFocusTrap } from '@/hooks/useFocusTrap'
 import type { ScoredCommand, CommandCategory } from '@/types/commandPalette'
@@ -41,7 +41,7 @@ const CATEGORY_ORDER: { key: CommandCategory; label: string }[] = [
 
 export function GlobalCommandPalette() {
   const router = useRouter()
-  const { user, isAuthenticated } = useAuth()
+  const { user, isAuthenticated } = useAuthSession()
   const {
     isOpen,
     closePalette,

@@ -8,7 +8,7 @@
  */
 
 import { useState, useCallback } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import type { UploadStatus } from '@/types/shared'
 import { apiPost, apiFetch, apiDelete } from '@/utils/apiClient'
 
@@ -60,7 +60,7 @@ interface UseCurrencyRatesReturn {
 }
 
 export function useCurrencyRates(): UseCurrencyRatesReturn {
-  const { token } = useAuth()
+  const { token } = useAuthSession()
   const [rateStatus, setRateStatus] = useState<RateTableStatus | null>(null)
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>('idle')
   const [error, setError] = useState('')

@@ -16,7 +16,7 @@
 
 import { useEffect } from 'react'
 import Link from 'next/link'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { trackEvent } from '@/utils/telemetry'
 
 type FeatureName =
@@ -63,7 +63,7 @@ interface FeatureGateProps {
 }
 
 export function FeatureGate({ feature, children, message, hidden }: FeatureGateProps) {
-  const { user } = useAuth()
+  const { user } = useAuthSession()
   const tier = user?.tier ?? 'free'
 
   const tierIdx = TIER_ORDER.indexOf(tier as typeof TIER_ORDER[number])

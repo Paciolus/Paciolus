@@ -2,13 +2,13 @@
  * Sprint 276: useTrends hook tests
  */
 import { renderHook, act } from '@testing-library/react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useTrends } from '@/hooks/useTrends'
 
 const mockApiGet = jest.fn()
 
-jest.mock('@/contexts/AuthContext', () => ({
-  useAuth: jest.fn(() => ({ token: 'test-token', isAuthenticated: true })),
+jest.mock('@/contexts/AuthSessionContext', () => ({
+  useAuthSession: jest.fn(() => ({ token: 'test-token', isAuthenticated: true })),
 }))
 
 jest.mock('@/utils', () => ({
@@ -27,7 +27,7 @@ jest.mock('@/components/analytics/TrendSparkline', () => ({
 }))
 
 
-const mockUseAuth = useAuth as jest.Mock
+const mockUseAuthSession = useAuthSession as jest.Mock
 
 const mockTrendSummary = {
   metric_name: 'total_assets',
@@ -60,7 +60,7 @@ const mockApiResponse = {
 describe('useTrends', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockUseAuth.mockReturnValue({ token: 'test-token', isAuthenticated: true })
+    mockUseAuthSession.mockReturnValue({ token: 'test-token', isAuthenticated: true })
   })
 
   it('initializes with empty trends', () => {
@@ -216,7 +216,7 @@ describe('useTrends', () => {
   })
 
   it('no fetch when token is null (sets Authentication required error)', async () => {
-    mockUseAuth.mockReturnValue({ token: null, isAuthenticated: false })
+    mockUseAuthSession.mockReturnValue({ token: null, isAuthenticated: false })
 
     const { result } = renderHook(() => useTrends())
 

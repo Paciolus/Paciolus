@@ -13,7 +13,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthSession } from '@/contexts/AuthSessionContext';
 import { apiGet, apiPost, isAuthError } from '@/utils';
 
 // =============================================================================
@@ -160,7 +160,7 @@ interface UseBenchmarksReturn {
  */
 export function useBenchmarks(options: UseBenchmarksOptions = {}): UseBenchmarksReturn {
   const { autoFetchIndustries = false } = options;
-  const { token, isAuthenticated } = useAuth();
+  const { token, isAuthenticated } = useAuthSession();
 
   // State
   const [availableIndustries, setAvailableIndustries] = useState<string[]>([]);

@@ -10,7 +10,7 @@ import {
   ReactElement,
 } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthSession } from '@/contexts/AuthSessionContext';
 import { useEngagement } from '@/hooks/useEngagement';
 import type { Engagement, ToolRun, MaterialityCascade } from '@/types/engagement';
 
@@ -40,7 +40,7 @@ interface EngagementContextType {
 const EngagementContext = createContext<EngagementContextType | undefined>(undefined);
 
 export function EngagementProvider({ children }: { children: ReactNode }): ReactElement {
-  const { isAuthenticated, token } = useAuth();
+  const { isAuthenticated, token } = useAuthSession();
   const { getEngagement, getToolRuns, getMateriality } = useEngagement({ autoFetch: false });
   const searchParams = useSearchParams();
   const router = useRouter();

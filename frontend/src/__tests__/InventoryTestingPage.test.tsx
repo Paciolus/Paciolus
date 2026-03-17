@@ -2,7 +2,7 @@
  * Sprint 129: Inventory Testing page tests (10 tests)
  */
 import InventoryTestingPage from '@/app/tools/inventory-testing/page'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useInventoryTesting } from '@/hooks/useInventoryTesting'
 import { render, screen } from '@/test-utils'
 
@@ -12,8 +12,8 @@ const mockHandleExportMemo = jest.fn()
 const mockHandleExportCSV = jest.fn()
 const mockFileInputRef = { current: null }
 
-jest.mock('@/contexts/AuthContext', () => ({
-  useAuth: jest.fn(() => ({
+jest.mock('@/contexts/AuthSessionContext', () => ({
+  useAuthSession: jest.fn(() => ({
     user: { is_verified: true, tier: 'enterprise' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token',
   })),
 }))
@@ -58,13 +58,13 @@ jest.mock('framer-motion', () => ({
 }))
 
 
-const mockUseAuth = useAuth as jest.Mock
+const mockUseAuthSession = useAuthSession as jest.Mock
 const mockUseInv = useInventoryTesting as jest.Mock
 
 describe('InventoryTestingPage', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockUseAuth.mockReturnValue({ user: { is_verified: true, tier: 'enterprise' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token' })
+    mockUseAuthSession.mockReturnValue({ user: { is_verified: true, tier: 'enterprise' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token' })
     mockUseInv.mockReturnValue({ status: 'idle', result: null, error: null, runTests: mockRunTests, reset: mockReset })
   })
 
@@ -79,7 +79,7 @@ describe('InventoryTestingPage', () => {
   })
 
   it('shows sign-in CTA for unauthenticated user', () => {
-    mockUseAuth.mockReturnValue({ user: null, isAuthenticated: false, isLoading: false, logout: jest.fn(), token: null })
+    mockUseAuthSession.mockReturnValue({ user: null, isAuthenticated: false, isLoading: false, logout: jest.fn(), token: null })
     render(<InventoryTestingPage />)
     expect(screen.getByText('Sign In')).toBeInTheDocument()
     expect(screen.getByText('Create Account')).toBeInTheDocument()
@@ -129,7 +129,7 @@ describe('InventoryTestingPage', () => {
   })
 
   it('shows upgrade gate for free tier user', () => {
-    mockUseAuth.mockReturnValue({ user: { is_verified: true, tier: 'free' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token' })
+    mockUseAuthSession.mockReturnValue({ user: { is_verified: true, tier: 'free' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token' })
     render(<InventoryTestingPage />)
     expect(screen.getByText('Upgrade Required')).toBeInTheDocument()
     expect(screen.getByText('View Plans')).toBeInTheDocument()

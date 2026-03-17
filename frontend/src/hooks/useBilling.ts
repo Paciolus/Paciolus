@@ -6,7 +6,7 @@
  */
 
 import { useState, useCallback } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { apiGet, apiPost } from '@/utils/apiClient'
 
 export interface SubscriptionInfo {
@@ -47,7 +47,7 @@ interface BillingState {
 }
 
 export function useBilling() {
-  const { token } = useAuth()
+  const { token } = useAuthSession()
   const [state, setState] = useState<BillingState>({
     subscription: null,
     usage: null,

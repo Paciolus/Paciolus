@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useRef } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { MatchSummaryCards, BankRecMatchTable, ReconciliationBridge } from '@/components/bankRec'
 import { FileDropZone, GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, UpgradeGate, Citation, CitationFooter } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractBankRecProof } from '@/components/shared/proof'
@@ -59,7 +59,7 @@ function ColumnDetectionWarning({ label, detection }: {
 // =============================================================================
 
 export default function BankRecPage() {
-  const { user, isAuthenticated, isLoading: authLoading, token } = useAuth()
+  const { user, isAuthenticated, isLoading: authLoading, token } = useAuthSession()
   const { status, result, error, reconcile, reset } = useBankReconciliation()
   useCanvasAccentSync(status)
   const [bankFile, setBankFile] = useState<File | null>(null)

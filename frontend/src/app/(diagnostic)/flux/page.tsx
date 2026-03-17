@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthSession } from '@/contexts/AuthSessionContext';
 import { useDiagnostic } from '@/contexts/DiagnosticContext';
 import type { FluxItem, FluxSummary, ReconScore, ReconStats } from '@/types/diagnostic';
 import { ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fileFormats';
@@ -28,7 +28,7 @@ interface FluxAnalysisResponse {
 }
 
 export default function FluxPage() {
-    const { token } = useAuth();
+    const { token } = useAuthSession();
     const { result, setResult, isLoading, setIsLoading } = useDiagnostic();
 
     // Local state for files

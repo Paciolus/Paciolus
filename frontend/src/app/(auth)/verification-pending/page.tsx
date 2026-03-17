@@ -4,7 +4,8 @@ import { Suspense, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
+import { useVerificationContext } from '@/contexts/VerificationContext'
 import { useVerification } from '@/hooks/useVerification'
 import { fadeUp } from '@/lib/motion'
 
@@ -19,7 +20,8 @@ import { fadeUp } from '@/lib/motion'
 function VerificationPendingContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const { isAuthenticated, user, checkVerificationStatus } = useAuth()
+  const { isAuthenticated, user } = useAuthSession()
+  const { checkVerificationStatus } = useVerificationContext()
   const { cooldownSeconds, canResend, isResending, resendError, resendSuccess, resend } = useVerification()
   const checkedRef = useRef(false)
 

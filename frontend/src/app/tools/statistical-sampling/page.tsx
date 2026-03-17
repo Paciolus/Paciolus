@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useCanvasAccent } from '@/contexts/CanvasAccentContext'
 import { GuestCTA, ZeroStorageNotice, DisclaimerBox, UpgradeGate, Citation, CitationFooter } from '@/components/shared'
 import {
@@ -25,7 +25,7 @@ import { useTestingExport } from '@/hooks/useTestingExport'
 type SamplingTab = 'design' | 'evaluate'
 
 export default function StatisticalSamplingPage() {
-  const { user, isAuthenticated, isLoading: authLoading } = useAuth()
+  const { user, isAuthenticated, isLoading: authLoading } = useAuthSession()
   const {
     designStatus, designResult, designError, runDesign, resetDesign,
     evalStatus, evalResult, evalError, runEvaluation, resetEvaluation,

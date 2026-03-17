@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import VaultTransition from '@/components/VaultTransition'
 import { useFormValidation, commonValidators } from '@/hooks'
 import { fadeUp } from '@/lib/motion'
@@ -34,7 +34,7 @@ const initialValues: LoginFormValues = {
 
 export default function LoginPage() {
   const router = useRouter()
-  const { login, user, isAuthenticated, isLoading: authLoading } = useAuth()
+  const { login, user, isAuthenticated, isLoading: authLoading } = useAuthSession()
 
   // Server-side error (from failed login attempt)
   const [serverError, setServerError] = useState('')

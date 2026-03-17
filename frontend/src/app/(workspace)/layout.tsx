@@ -13,7 +13,7 @@
 
 import { useEffect, useMemo, type ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthSession } from '@/contexts/AuthSessionContext';
 import { WorkspaceProvider, useWorkspaceContext, type WorkspaceView } from '@/contexts/WorkspaceContext';
 import { AuthenticatedShell } from '@/components/shell';
 import { WorkspaceShell, ContextPane, InsightRail } from '@/components/workspace';
@@ -24,7 +24,7 @@ import type { PaletteCommand } from '@/types/commandPalette';
 function WorkspaceLayoutInner({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuthSession();
   const {
     clients,
     engagements,

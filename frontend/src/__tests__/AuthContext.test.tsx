@@ -41,7 +41,7 @@ describe('useAuth', () => {
 
     expect(() => {
       renderHook(() => useAuth())
-    }).toThrow('useAuth must be used within an AuthProvider')
+    }).toThrow('useAuthSession must be used within an AuthSessionProvider')
 
     spy.mockRestore()
   })

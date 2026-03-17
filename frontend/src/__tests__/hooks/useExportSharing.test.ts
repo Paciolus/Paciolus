@@ -7,8 +7,8 @@ import { useExportSharing } from '@/hooks/useExportSharing'
 
 // Mock auth context
 const mockToken = 'test-token'
-jest.mock('@/contexts/AuthContext', () => ({
-  useAuth: () => ({ token: mockToken, isAuthenticated: true }),
+jest.mock('@/contexts/AuthSessionContext', () => ({
+  useAuthSession: () => ({ token: mockToken, isAuthenticated: true }),
 }))
 
 // Mock API client

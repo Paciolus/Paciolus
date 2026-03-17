@@ -2,11 +2,11 @@
  * Sprint 235: useTestingExport hook tests
  */
 import { renderHook, act } from '@testing-library/react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useTestingExport } from '@/hooks/useTestingExport'
 
-jest.mock('@/contexts/AuthContext', () => ({
-  useAuth: jest.fn(() => ({ token: 'test-token' })),
+jest.mock('@/contexts/AuthSessionContext', () => ({
+  useAuthSession: jest.fn(() => ({ token: 'test-token' })),
 }))
 
 const mockApiDownload = jest.fn()
@@ -18,12 +18,12 @@ jest.mock('@/utils', () => ({
 }))
 
 
-const mockUseAuth = useAuth as jest.Mock
+const mockUseAuthSession = useAuthSession as jest.Mock
 
 describe('useTestingExport', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockUseAuth.mockReturnValue({ token: 'test-token' })
+    mockUseAuthSession.mockReturnValue({ token: 'test-token' })
     mockApiDownload.mockResolvedValue({
       ok: true,
       blob: new Blob(['test']),
@@ -98,7 +98,7 @@ describe('useTestingExport', () => {
   })
 
   it('does nothing when no auth token', async () => {
-    mockUseAuth.mockReturnValue({ token: null })
+    mockUseAuthSession.mockReturnValue({ token: null })
 
     const { result } = renderHook(() =>
       useTestingExport('/export/memo', '/export/csv')

@@ -2,7 +2,7 @@
  * Sprint 96.5: Three-Way Match page tests (10 tests)
  */
 import ThreeWayMatchPage from '@/app/tools/three-way-match/page'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useThreeWayMatch } from '@/hooks/useThreeWayMatch'
 import { render, screen } from '@/test-utils'
 
@@ -11,8 +11,8 @@ const mockReset = jest.fn()
 const mockHandleExportMemo = jest.fn()
 const mockHandleExportCSV = jest.fn()
 
-jest.mock('@/contexts/AuthContext', () => ({
-  useAuth: jest.fn(() => ({
+jest.mock('@/contexts/AuthSessionContext', () => ({
+  useAuthSession: jest.fn(() => ({
     user: { is_verified: true, tier: 'professional' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token',
   })),
 }))
@@ -58,13 +58,13 @@ jest.mock('framer-motion', () => ({
 }))
 
 
-const mockUseAuth = useAuth as jest.Mock
+const mockUseAuthSession = useAuthSession as jest.Mock
 const mockUseTWM = useThreeWayMatch as jest.Mock
 
 describe('ThreeWayMatchPage', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockUseAuth.mockReturnValue({ user: { is_verified: true, tier: 'professional' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token' })
+    mockUseAuthSession.mockReturnValue({ user: { is_verified: true, tier: 'professional' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token' })
     mockUseTWM.mockReturnValue({ status: 'idle', result: null, error: null, runMatch: mockRunMatch, reset: mockReset })
   })
 
@@ -81,7 +81,7 @@ describe('ThreeWayMatchPage', () => {
   })
 
   it('shows sign-in CTA for unauthenticated user', () => {
-    mockUseAuth.mockReturnValue({ user: null, isAuthenticated: false, isLoading: false, logout: jest.fn(), token: null })
+    mockUseAuthSession.mockReturnValue({ user: null, isAuthenticated: false, isLoading: false, logout: jest.fn(), token: null })
     render(<ThreeWayMatchPage />)
     expect(screen.getByTestId('guest-cta')).toBeInTheDocument()
     expect(screen.getByText(/Three-Way Match Validation requires a verified account/)).toBeInTheDocument()
@@ -130,7 +130,7 @@ describe('ThreeWayMatchPage', () => {
   })
 
   it('shows upgrade gate for free tier user', () => {
-    mockUseAuth.mockReturnValue({ user: { is_verified: true, tier: 'free' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token' })
+    mockUseAuthSession.mockReturnValue({ user: { is_verified: true, tier: 'free' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token' })
     render(<ThreeWayMatchPage />)
     // UpgradeGate is a passthrough mock — tool content still renders (mock bypasses gate logic)
     expect(screen.getByText('Purchase Orders')).toBeInTheDocument()

@@ -2,14 +2,14 @@
  * Sprint 276: useAuditUpload hook tests
  */
 import { renderHook, act } from '@testing-library/react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
 import { useAuditUpload } from '@/hooks/useAuditUpload'
 
 const mockGetCsrfToken = jest.fn(() => 'csrf-token-123')
 
-jest.mock('@/contexts/AuthContext', () => ({
-  useAuth: jest.fn(() => ({
+jest.mock('@/contexts/AuthSessionContext', () => ({
+  useAuthSession: jest.fn(() => ({
     token: 'test-token',
     user: { email: 'user@test.com', is_verified: true },
   })),
@@ -28,7 +28,7 @@ jest.mock('@/utils/apiClient', () => ({
 }))
 
 
-const mockUseAuth = useAuth as jest.Mock
+const mockUseAuthSession = useAuthSession as jest.Mock
 const mockUseOptionalEngagement = useOptionalEngagementContext as jest.Mock
 
 const mockFetch = jest.fn()
@@ -48,7 +48,7 @@ const defaultOptions = {
 describe('useAuditUpload', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockUseAuth.mockReturnValue({
+    mockUseAuthSession.mockReturnValue({
       token: 'test-token',
       user: { email: 'user@test.com', is_verified: true },
     })
@@ -132,7 +132,7 @@ describe('useAuditUpload', () => {
   })
 
   it('run checks user email verification before upload', async () => {
-    mockUseAuth.mockReturnValue({
+    mockUseAuthSession.mockReturnValue({
       token: 'test-token',
       user: { email: 'user@test.com', is_verified: false },
     })

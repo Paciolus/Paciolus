@@ -2,14 +2,14 @@
  * Sprint 271: useStatisticalSampling hook tests
  */
 import { renderHook, act } from '@testing-library/react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useStatisticalSampling } from '@/hooks/useStatisticalSampling'
 
 const mockFetch = jest.fn()
 global.fetch = mockFetch
 
-jest.mock('@/contexts/AuthContext', () => ({
-  useAuth: jest.fn(() => ({ token: 'test-token', user: { is_verified: true } })),
+jest.mock('@/contexts/AuthSessionContext', () => ({
+  useAuthSession: jest.fn(() => ({ token: 'test-token', user: { is_verified: true } })),
 }))
 
 jest.mock('@/contexts/EngagementContext', () => ({
@@ -25,12 +25,12 @@ jest.mock('@/utils/constants', () => ({
 }))
 
 
-const mockUseAuth = useAuth as jest.Mock
+const mockUseAuthSession = useAuthSession as jest.Mock
 
 describe('useStatisticalSampling', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockUseAuth.mockReturnValue({ token: 'test-token', user: { is_verified: true } })
+    mockUseAuthSession.mockReturnValue({ token: 'test-token', user: { is_verified: true } })
     mockFetch.mockResolvedValue({
       ok: true,
       status: 200,
@@ -154,7 +154,7 @@ describe('useStatisticalSampling', () => {
   })
 
   it('runDesign blocks unverified users', async () => {
-    mockUseAuth.mockReturnValue({ token: 'test-token', user: { is_verified: false } })
+    mockUseAuthSession.mockReturnValue({ token: 'test-token', user: { is_verified: false } })
 
     const { result } = renderHook(() => useStatisticalSampling())
 

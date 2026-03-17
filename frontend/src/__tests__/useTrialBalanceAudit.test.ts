@@ -7,7 +7,7 @@
  * reset behavior, and display mode toggling.
  */
 import { renderHook, act, waitFor } from '@testing-library/react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
 import { useSettings } from '@/hooks/useSettings'
 import { useTrialBalanceAudit } from '@/hooks/useTrialBalanceAudit'
@@ -33,8 +33,8 @@ jest.mock('@/contexts/MappingContext', () => ({
   })),
 }))
 
-jest.mock('@/contexts/AuthContext', () => ({
-  useAuth: jest.fn(() => ({
+jest.mock('@/contexts/AuthSessionContext', () => ({
+  useAuthSession: jest.fn(() => ({
     user: { id: 1, name: 'Test User', email: 'test@example.com', is_verified: true },
     token: 'test-token',
     isAuthenticated: true,
@@ -101,7 +101,7 @@ jest.mock('@/utils/apiClient', () => ({
 
 // Import modules after mocks
 
-const mockUseAuth = useAuth as jest.Mock
+const mockUseAuthSession = useAuthSession as jest.Mock
 const mockUseOptionalEngagement = useOptionalEngagementContext as jest.Mock
 const mockUseSettings = useSettings as jest.Mock
 const mockUseBenchmarks = useBenchmarks as jest.Mock
@@ -115,7 +115,7 @@ describe('useTrialBalanceAudit', () => {
     jest.clearAllMocks()
     jest.useFakeTimers()
 
-    mockUseAuth.mockReturnValue({
+    mockUseAuthSession.mockReturnValue({
       user: { id: 1, name: 'Test User', email: 'test@example.com', is_verified: true },
       token: 'test-token',
       isAuthenticated: true,
@@ -319,7 +319,7 @@ describe('useTrialBalanceAudit', () => {
   })
 
   it('isVerified is false when user.is_verified is false', () => {
-    mockUseAuth.mockReturnValue({
+    mockUseAuthSession.mockReturnValue({
       user: { id: 1, name: 'Test', email: 't@t.com', is_verified: false },
       token: 'test-token',
       isAuthenticated: true,
@@ -330,7 +330,7 @@ describe('useTrialBalanceAudit', () => {
   })
 
   it('isVerified is true when is_verified is undefined (not explicitly false)', () => {
-    mockUseAuth.mockReturnValue({
+    mockUseAuthSession.mockReturnValue({
       user: { id: 1, name: 'Test', email: 't@t.com' },
       token: 'test-token',
       isAuthenticated: true,

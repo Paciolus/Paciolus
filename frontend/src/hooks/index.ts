@@ -111,3 +111,5 @@ export {
   type UseFollowUpItemsReturn,
 } from './useFollowUpItems';
 export { useFocusTrap } from './useFocusTrap';
+export { useAuthSession, type AuthSessionContextType } from './useAuthSession';
+export { useUserProfile, type UserProfileContextType } from './useUserProfile';

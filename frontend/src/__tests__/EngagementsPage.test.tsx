@@ -33,8 +33,8 @@ const mockGetMateriality = jest.fn()
 const mockGetConvergence = jest.fn()
 const mockDownloadConvergenceCsv = jest.fn()
 
-jest.mock('@/contexts/AuthContext', () => ({
-  useAuth: jest.fn(() => ({
+jest.mock('@/contexts/AuthSessionContext', () => ({
+  useAuthSession: jest.fn(() => ({
     user: { id: 1, name: 'Test User', email: 'test@example.com', is_verified: true },
     token: 'test-token',
     isAuthenticated: true,

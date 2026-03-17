@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { Reveal } from '@/components/ui/Reveal'
 import { VIEWPORT, CountUp } from '@/utils/marketingMotion'
 import { staggerContainerTight, fadeUp } from '@/lib/motion'
@@ -57,7 +57,7 @@ const CREDENTIAL_BADGES = [
 ]
 
 export function BottomProof() {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated } = useAuthSession()
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
 

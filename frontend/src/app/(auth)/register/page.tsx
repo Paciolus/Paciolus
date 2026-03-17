@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useFormValidation, commonValidators } from '@/hooks'
 import { fadeUp } from '@/lib/motion'
 
@@ -70,7 +70,7 @@ const initialValues: RegisterFormValues = {
 
 export default function RegisterPage() {
   const router = useRouter()
-  const { register, isAuthenticated, isLoading: authLoading } = useAuth()
+  const { register, isAuthenticated, isLoading: authLoading } = useAuthSession()
 
   // Server-side error (from failed registration attempt)
   const [serverError, setServerError] = useState('')

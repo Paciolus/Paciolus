@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
 import type { PreFlightReport } from '@/types/preflight'
 import type { UploadStatus } from '@/types/shared'
@@ -16,7 +16,7 @@ export interface UsePreflightReturn {
 }
 
 export function usePreflight(): UsePreflightReturn {
-  const { token } = useAuth()
+  const { token } = useAuthSession()
   const engagement = useOptionalEngagementContext()
 
   const [status, setStatus] = useState<UploadStatus>('idle')

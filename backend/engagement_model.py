@@ -22,6 +22,7 @@ from shared.soft_delete import SoftDeleteMixin
 
 class EngagementStatus(str, PyEnum):
     """Engagement lifecycle status."""
+
     ACTIVE = "active"
     COMPLETED = "completed"
     ARCHIVED = "archived"
@@ -40,7 +41,8 @@ class InvalidEngagementTransitionError(ValueError):
 
 
 def validate_engagement_transition(
-    current: EngagementStatus, target: EngagementStatus,
+    current: EngagementStatus,
+    target: EngagementStatus,
 ) -> None:
     """Validate that an engagement status transition is allowed.
 
@@ -49,18 +51,16 @@ def validate_engagement_transition(
     allowed = VALID_ENGAGEMENT_TRANSITIONS.get(current, set())
     if target not in allowed:
         if not allowed:
-            raise InvalidEngagementTransitionError(
-                f"Cannot transition from '{current.value}': status is terminal"
-            )
+            raise InvalidEngagementTransitionError(f"Cannot transition from '{current.value}': status is terminal")
         allowed_names = ", ".join(sorted(s.value for s in allowed))
         raise InvalidEngagementTransitionError(
-            f"Cannot transition from '{current.value}' to '{target.value}'. "
-            f"Allowed transitions: {allowed_names}"
+            f"Cannot transition from '{current.value}' to '{target.value}'. Allowed transitions: {allowed_names}"
         )
 
 
 class MaterialityBasis(str, PyEnum):
     """Basis for materiality calculation."""
+
     REVENUE = "revenue"
     ASSETS = "assets"
     MANUAL = "manual"
@@ -68,6 +68,7 @@ class MaterialityBasis(str, PyEnum):
 
 class ToolName(str, PyEnum):
     """Tool identifiers matching the tool suite."""
+
     TRIAL_BALANCE = "trial_balance"
     MULTI_PERIOD = "multi_period"
     JOURNAL_ENTRY_TESTING = "journal_entry_testing"
@@ -85,6 +86,7 @@ class ToolName(str, PyEnum):
 
 class ToolRunStatus(str, PyEnum):
     """Outcome of a tool run."""
+
     COMPLETED = "completed"
     FAILED = "failed"
 
@@ -97,6 +99,7 @@ class Engagement(Base):
     - risk_level, audit_opinion, control_effectiveness
     - Any field storing financial data (amounts, account numbers, PII)
     """
+
     __tablename__ = "engagements"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -137,7 +140,9 @@ class Engagement(Base):
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     creator = relationship("User", back_populates="engagements", foreign_keys=[created_by])
     created_at = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
-    updated_at = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC), server_default=func.now())
+    updated_at = Column(
+        DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC), server_default=func.now()
+    )
 
     # Tool runs (CASCADE: deleting engagement removes its tool runs)
     tool_runs = relationship("ToolRun", back_populates="engagement", cascade="all, delete-orphan")
@@ -174,6 +179,7 @@ class ToolRun(SoftDeleteMixin, Base):
     Record of a single tool execution within an engagement.
     Stores only metadata — never financial results.
     """
+
     __tablename__ = "tool_runs"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -202,13 +208,22 @@ class ToolRun(SoftDeleteMixin, Base):
     # Timestamp
     run_at = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now(), nullable=False, index=True)
 
-    # Composite index for efficient run_number queries
+    # Composite index for efficient run_number queries + uniqueness enforcement
     __table_args__ = (
         Index("ix_tool_runs_engagement_tool", "engagement_id", "tool_name"),
+        Index(
+            "uq_tool_runs_engagement_tool_run",
+            "engagement_id",
+            "tool_name",
+            "run_number",
+            unique=True,
+        ),
     )
 
     def __repr__(self) -> str:
-        return f"<ToolRun(id={self.id}, engagement_id={self.engagement_id}, tool={self.tool_name}, run={self.run_number})>"
+        return (
+            f"<ToolRun(id={self.id}, engagement_id={self.engagement_id}, tool={self.tool_name}, run={self.run_number})>"
+        )
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for API response."""

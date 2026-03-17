@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useCanvasAccent } from '@/contexts/CanvasAccentContext'
 import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
 import {
@@ -25,7 +25,7 @@ import { apiDownload, downloadBlob } from '@/utils'
 type AuditResultCast = { all_accounts?: Array<{ account: string; debit: number; credit: number; type: string }>; lead_sheet_grouping?: { summaries: Array<{ accounts: Array<{ account: string; debit: number; credit: number; type: string }> }> } }
 
 export default function MultiPeriodPage() {
-  const { user, isAuthenticated, isLoading: authLoading, token } = useAuth()
+  const { user, isAuthenticated, isLoading: authLoading, token } = useAuthSession()
   const engagement = useOptionalEngagementContext()
   const engagementId = engagement?.engagementId ?? null
   const { comparison, isComparing, isExporting, error: compareError, compareResults, exportCsv, clear } = useMultiPeriodComparison(engagementId)

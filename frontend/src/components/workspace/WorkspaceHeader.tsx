@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import type { User } from '@/contexts/AuthContext'
+import type { User } from '@/types/auth'
 import { apiGet } from '@/utils'
 
 /**

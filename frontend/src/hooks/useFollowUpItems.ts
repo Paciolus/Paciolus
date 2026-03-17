@@ -12,7 +12,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthSession } from '@/contexts/AuthSessionContext';
 import type {
   FollowUpItem,
   FollowUpItemListResponse,
@@ -36,7 +36,7 @@ export interface UseFollowUpItemsReturn {
 }
 
 export function useFollowUpItems(): UseFollowUpItemsReturn {
-  const { token, isAuthenticated } = useAuth();
+  const { token, isAuthenticated } = useAuthSession();
 
   const [items, setItems] = useState<FollowUpItem[]>([]);
   const [totalCount, setTotalCount] = useState(0);

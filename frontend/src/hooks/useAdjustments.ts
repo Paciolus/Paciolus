@@ -7,7 +7,7 @@
  */
 
 import { useState, useCallback } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
 import type {
   AdjustingEntry,
   AdjustingEntryRequest,
@@ -61,7 +61,7 @@ export interface UseAdjustmentsReturn {
 }
 
 export function useAdjustments(): UseAdjustmentsReturn {
-  const { token } = useAuth()
+  const { token } = useAuthSession()
   const [entries, setEntries] = useState<AdjustingEntry[]>([])
   const [selectedEntry, setSelectedEntry] = useState<AdjustingEntry | null>(null)
   const [adjustedTB, setAdjustedTB] = useState<AdjustedTrialBalance | null>(null)

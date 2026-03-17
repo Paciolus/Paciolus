@@ -144,7 +144,8 @@ class TestDiagnosticPdfRegression:
 
     def test_diagnostic_disclaimer_present(self):
         """Diagnostic PDF source uses draw_page_footer which includes disclaimer."""
-        source = Path(__file__).parent.parent / "pdf_generator.py"
+        # After the pdf_generator decomposition, the orchestrator holds the logic
+        source = Path(__file__).parent.parent / "pdf" / "orchestrator.py"
         content = source.read_text(encoding="utf-8")
         # Diagnostic PDF uses draw_page_footer from report_chrome which has disclaimer
         assert "draw_page_footer" in content or "report_chrome" in content, (
