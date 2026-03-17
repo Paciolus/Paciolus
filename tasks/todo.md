@@ -181,6 +181,7 @@
 - FeatureGate with `hidden` prop hides cards for lower-tier users on settings hub
 - Grid expanded to 3-col on large screens to accommodate 6 cards
 - **Tests:** 1,357 frontend (was 1,339 — +18 new hook tests)
+- Commit: f5e76b7
 
 ---
 
