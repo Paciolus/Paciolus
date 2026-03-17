@@ -1,12 +1,14 @@
 """
-Billing route tests — Sprint 376 + Self-Serve Checkout.
+Billing route tests — Sprint 376 + Self-Serve Checkout + comprehensive HTTP integration.
 
 Tests billing API endpoints with mocked Stripe client.
 Self-Serve Checkout: seat validation, promo validation, webhook tier resolution,
 multi-item subscription sync.
+HTTP integration: authenticated endpoint testing via httpx.AsyncClient.
 """
 
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from unittest.mock import ANY, MagicMock, patch
 
@@ -1005,3 +1007,866 @@ class TestWebhookHTTPIntegration:
                 assert mock_process.call_count == 1
         finally:
             app.dependency_overrides.pop(get_db, None)
+
+
+# ---------------------------------------------------------------------------
+# Authenticated Endpoint HTTP Integration Tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.usefixtures("bypass_csrf")
+class TestCheckoutHTTPIntegration:
+    """HTTP-layer integration tests for POST /billing/create-checkout-session."""
+
+    @pytest.mark.asyncio
+    async def test_create_checkout_session_happy_path(self, db_session, make_user):
+        """POST /billing/create-checkout-session with valid body returns 201 + checkout_url."""
+        from auth import require_verified_user
+        from database import get_db
+        from main import app
+
+        user = make_user(email="checkout_http@example.com", tier=UserTier.SOLO)
+        app.dependency_overrides[require_verified_user] = lambda: user
+        app.dependency_overrides[get_db] = lambda: db_session
+
+        try:
+            with patch(
+                "billing.checkout_orchestrator.orchestrate_checkout",
+                return_value="https://checkout.stripe.com/test_session",
+            ):
+                async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                    response = await client.post(
+                        "/billing/create-checkout-session",
+                        json={"tier": "solo", "interval": "monthly"},
+                    )
+
+                assert response.status_code == 201
+                data = response.json()
+                assert data["checkout_url"] == "https://checkout.stripe.com/test_session"
+        finally:
+            app.dependency_overrides.clear()
+
+    @pytest.mark.asyncio
+    async def test_create_checkout_validation_error_returns_400(self, db_session, make_user):
+        """Checkout orchestrator validation error maps to 400."""
+        from auth import require_verified_user
+        from billing.checkout_orchestrator import CheckoutValidationError
+        from database import get_db
+        from main import app
+
+        user = make_user(email="checkout_400@example.com", tier=UserTier.SOLO)
+        app.dependency_overrides[require_verified_user] = lambda: user
+        app.dependency_overrides[get_db] = lambda: db_session
+
+        try:
+            with patch(
+                "billing.checkout_orchestrator.orchestrate_checkout",
+                side_effect=CheckoutValidationError("Solo plan does not support seats"),
+            ):
+                async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                    response = await client.post(
+                        "/billing/create-checkout-session",
+                        json={"tier": "solo", "interval": "monthly", "seat_count": 5},
+                    )
+
+                assert response.status_code == 400
+                assert "Solo plan does not support seats" in response.json()["detail"]
+        finally:
+            app.dependency_overrides.clear()
+
+    @pytest.mark.asyncio
+    async def test_create_checkout_unavailable_returns_503(self, db_session, make_user):
+        """Checkout unavailable (Stripe disabled) maps to 503."""
+        from auth import require_verified_user
+        from billing.checkout_orchestrator import CheckoutUnavailableError
+        from database import get_db
+        from main import app
+
+        user = make_user(email="checkout_503@example.com", tier=UserTier.SOLO)
+        app.dependency_overrides[require_verified_user] = lambda: user
+        app.dependency_overrides[get_db] = lambda: db_session
+
+        try:
+            with patch(
+                "billing.checkout_orchestrator.orchestrate_checkout",
+                side_effect=CheckoutUnavailableError("Billing is not available"),
+            ):
+                async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                    response = await client.post(
+                        "/billing/create-checkout-session",
+                        json={"tier": "solo", "interval": "monthly"},
+                    )
+
+                assert response.status_code == 503
+        finally:
+            app.dependency_overrides.clear()
+
+    @pytest.mark.asyncio
+    async def test_create_checkout_provider_error_returns_502(self, db_session, make_user):
+        """Stripe provider error maps to 502."""
+        from auth import require_verified_user
+        from billing.checkout_orchestrator import CheckoutProviderError
+        from database import get_db
+        from main import app
+
+        user = make_user(email="checkout_502@example.com", tier=UserTier.SOLO)
+        app.dependency_overrides[require_verified_user] = lambda: user
+        app.dependency_overrides[get_db] = lambda: db_session
+
+        try:
+            with patch(
+                "billing.checkout_orchestrator.orchestrate_checkout",
+                side_effect=CheckoutProviderError("Stripe API error"),
+            ):
+                async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                    response = await client.post(
+                        "/billing/create-checkout-session",
+                        json={"tier": "solo", "interval": "monthly"},
+                    )
+
+                assert response.status_code == 502
+        finally:
+            app.dependency_overrides.clear()
+
+    @pytest.mark.asyncio
+    async def test_create_checkout_invalid_tier_rejected(self, db_session, make_user):
+        """Invalid tier value rejected by Pydantic schema (422)."""
+        from auth import require_verified_user
+        from database import get_db
+        from main import app
+
+        user = make_user(email="checkout_tier@example.com", tier=UserTier.SOLO)
+        app.dependency_overrides[require_verified_user] = lambda: user
+        app.dependency_overrides[get_db] = lambda: db_session
+
+        try:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                response = await client.post(
+                    "/billing/create-checkout-session",
+                    json={"tier": "platinum", "interval": "monthly"},
+                )
+
+            assert response.status_code == 422
+        finally:
+            app.dependency_overrides.clear()
+
+
+class TestSubscriptionStatusHTTP:
+    """HTTP-layer integration tests for GET /billing/subscription."""
+
+    @pytest.mark.asyncio
+    async def test_subscription_status_no_subscription(self, db_session, make_user):
+        """User with no subscription returns fallback shape (tier from user, status=active)."""
+        from auth import require_current_user
+        from database import get_db
+        from main import app
+
+        user = make_user(email="sub_none@example.com", tier=UserTier.FREE)
+        app.dependency_overrides[require_current_user] = lambda: user
+        app.dependency_overrides[get_db] = lambda: db_session
+
+        try:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                response = await client.get("/billing/subscription")
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["tier"] == "free"
+            assert data["status"] == "active"
+            assert data["id"] is None
+            assert data["seat_count"] == 1
+            assert data["total_seats"] == 1
+        finally:
+            app.dependency_overrides.clear()
+
+    @pytest.mark.asyncio
+    async def test_subscription_status_with_active_subscription(self, db_session, make_user):
+        """User with active subscription returns full subscription details."""
+        from auth import require_current_user
+        from database import get_db
+        from main import app
+
+        user = make_user(email="sub_active@example.com", tier=UserTier.PROFESSIONAL)
+        sub = Subscription(
+            user_id=user.id,
+            tier="professional",
+            status=SubscriptionStatus.ACTIVE,
+            billing_interval=BillingInterval.MONTHLY,
+            stripe_customer_id="cus_sub_test",
+            stripe_subscription_id="sub_sub_test",
+            seat_count=7,
+            additional_seats=3,
+            cancel_at_period_end=False,
+        )
+        db_session.add(sub)
+        db_session.flush()
+
+        app.dependency_overrides[require_current_user] = lambda: user
+        app.dependency_overrides[get_db] = lambda: db_session
+
+        try:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                response = await client.get("/billing/subscription")
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["tier"] == "professional"
+            assert data["status"] == "active"
+            assert data["billing_interval"] == "monthly"
+            assert data["seat_count"] == 7
+            assert data["additional_seats"] == 3
+            assert data["total_seats"] == 10
+            assert data["cancel_at_period_end"] is False
+            assert data["id"] is not None
+        finally:
+            app.dependency_overrides.clear()
+
+
+@pytest.mark.usefixtures("bypass_csrf")
+class TestCancelHTTP:
+    """HTTP-layer integration tests for POST /billing/cancel."""
+
+    @pytest.mark.asyncio
+    async def test_cancel_happy_path(self, db_session, make_user):
+        """Cancellation with active subscription returns confirmation message."""
+        from auth import require_current_user
+        from database import get_db
+        from main import app
+
+        user = make_user(email="cancel_ok@example.com", tier=UserTier.SOLO)
+        sub = Subscription(
+            user_id=user.id,
+            tier="solo",
+            status=SubscriptionStatus.ACTIVE,
+            billing_interval=BillingInterval.MONTHLY,
+            stripe_customer_id="cus_cancel",
+            stripe_subscription_id="sub_cancel",
+        )
+        db_session.add(sub)
+        db_session.flush()
+
+        app.dependency_overrides[require_current_user] = lambda: user
+        app.dependency_overrides[get_db] = lambda: db_session
+
+        try:
+            with (
+                patch("billing.stripe_client.is_stripe_enabled", return_value=True),
+                patch("billing.subscription_manager.cancel_subscription", return_value=sub),
+                patch("billing.analytics.record_billing_event"),
+            ):
+                async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                    response = await client.post("/billing/cancel", json={})
+
+                assert response.status_code == 200
+                data = response.json()
+                assert "canceled" in data["message"].lower()
+        finally:
+            app.dependency_overrides.clear()
+
+    @pytest.mark.asyncio
+    async def test_cancel_no_subscription_returns_404(self, db_session, make_user):
+        """Cancellation with no subscription returns 404."""
+        from auth import require_current_user
+        from database import get_db
+        from main import app
+
+        user = make_user(email="cancel_none@example.com", tier=UserTier.FREE)
+        app.dependency_overrides[require_current_user] = lambda: user
+        app.dependency_overrides[get_db] = lambda: db_session
+
+        try:
+            with (
+                patch("billing.stripe_client.is_stripe_enabled", return_value=True),
+                patch("billing.subscription_manager.cancel_subscription", return_value=None),
+                patch("billing.subscription_manager.get_subscription", return_value=None),
+            ):
+                async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                    response = await client.post("/billing/cancel", json={})
+
+                assert response.status_code == 404
+        finally:
+            app.dependency_overrides.clear()
+
+    @pytest.mark.asyncio
+    async def test_cancel_with_reason(self, db_session, make_user):
+        """Cancellation reason is accepted and passed to analytics."""
+        from auth import require_current_user
+        from database import get_db
+        from main import app
+
+        user = make_user(email="cancel_reason@example.com", tier=UserTier.SOLO)
+        sub = Subscription(
+            user_id=user.id,
+            tier="solo",
+            status=SubscriptionStatus.ACTIVE,
+            billing_interval=BillingInterval.MONTHLY,
+            stripe_customer_id="cus_cancel_r",
+            stripe_subscription_id="sub_cancel_r",
+        )
+        db_session.add(sub)
+        db_session.flush()
+
+        app.dependency_overrides[require_current_user] = lambda: user
+        app.dependency_overrides[get_db] = lambda: db_session
+
+        try:
+            with (
+                patch("billing.stripe_client.is_stripe_enabled", return_value=True),
+                patch("billing.subscription_manager.cancel_subscription", return_value=sub),
+                patch("billing.analytics.record_billing_event") as mock_record,
+            ):
+                async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                    response = await client.post(
+                        "/billing/cancel",
+                        json={"reason": "too_expensive"},
+                    )
+
+                assert response.status_code == 200
+                # Verify the billing event was recorded with the reason
+                mock_record.assert_called_once()
+                call_kwargs = mock_record.call_args
+                assert call_kwargs[1]["metadata"] == {"reason": "too_expensive"}
+        finally:
+            app.dependency_overrides.clear()
+
+
+@pytest.mark.usefixtures("bypass_csrf")
+class TestReactivateHTTP:
+    """HTTP-layer integration tests for POST /billing/reactivate."""
+
+    @pytest.mark.asyncio
+    async def test_reactivate_happy_path(self, db_session, make_user):
+        """Reactivation with pending-cancel subscription returns confirmation."""
+        from auth import require_current_user
+        from database import get_db
+        from main import app
+
+        user = make_user(email="reactivate_ok@example.com", tier=UserTier.SOLO)
+        sub = Subscription(
+            user_id=user.id,
+            tier="solo",
+            status=SubscriptionStatus.ACTIVE,
+            billing_interval=BillingInterval.MONTHLY,
+            stripe_customer_id="cus_react",
+            stripe_subscription_id="sub_react",
+            cancel_at_period_end=True,
+        )
+        db_session.add(sub)
+        db_session.flush()
+
+        app.dependency_overrides[require_current_user] = lambda: user
+        app.dependency_overrides[get_db] = lambda: db_session
+
+        try:
+            with (
+                patch("billing.stripe_client.is_stripe_enabled", return_value=True),
+                patch("billing.subscription_manager.reactivate_subscription", return_value=sub),
+            ):
+                async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                    response = await client.post("/billing/reactivate")
+
+                assert response.status_code == 200
+                data = response.json()
+                assert "reactivated" in data["message"].lower()
+        finally:
+            app.dependency_overrides.clear()
+
+    @pytest.mark.asyncio
+    async def test_reactivate_no_subscription_returns_404(self, db_session, make_user):
+        """Reactivation with no subscription returns 404."""
+        from auth import require_current_user
+        from database import get_db
+        from main import app
+
+        user = make_user(email="reactivate_none@example.com", tier=UserTier.FREE)
+        app.dependency_overrides[require_current_user] = lambda: user
+        app.dependency_overrides[get_db] = lambda: db_session
+
+        try:
+            with (
+                patch("billing.stripe_client.is_stripe_enabled", return_value=True),
+                patch("billing.subscription_manager.reactivate_subscription", return_value=None),
+            ):
+                async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                    response = await client.post("/billing/reactivate")
+
+                assert response.status_code == 404
+        finally:
+            app.dependency_overrides.clear()
+
+    @pytest.mark.asyncio
+    async def test_reactivate_stripe_disabled_returns_503(self, db_session, make_user):
+        """Reactivation when Stripe is disabled returns 503."""
+        from auth import require_current_user
+        from database import get_db
+        from main import app
+
+        user = make_user(email="reactivate_503@example.com", tier=UserTier.SOLO)
+        app.dependency_overrides[require_current_user] = lambda: user
+        app.dependency_overrides[get_db] = lambda: db_session
+
+        try:
+            with patch("billing.stripe_client.is_stripe_enabled", return_value=False):
+                async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                    response = await client.post("/billing/reactivate")
+
+                assert response.status_code == 503
+        finally:
+            app.dependency_overrides.clear()
+
+
+class TestUsageHTTP:
+    """HTTP-layer integration tests for GET /billing/usage."""
+
+    @pytest.mark.asyncio
+    async def test_usage_returns_correct_shape(self, db_session, make_user):
+        """Usage endpoint returns all expected fields."""
+        from auth import require_current_user
+        from database import get_db
+        from main import app
+
+        user = make_user(email="usage_ok@example.com", tier=UserTier.SOLO)
+        app.dependency_overrides[require_current_user] = lambda: user
+        app.dependency_overrides[get_db] = lambda: db_session
+
+        @dataclass
+        class MockUsageStats:
+            uploads_used: int = 5
+            uploads_limit: int = 100
+            clients_used: int = 2
+            clients_limit: int = 0
+            tier: str = "solo"
+
+        try:
+            with patch("billing.usage_service.get_usage_stats", return_value=MockUsageStats()):
+                async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                    response = await client.get("/billing/usage")
+
+                assert response.status_code == 200
+                data = response.json()
+                assert data["uploads_used"] == 5
+                assert data["uploads_limit"] == 100
+                assert data["clients_used"] == 2
+                assert data["clients_limit"] == 0
+                assert data["tier"] == "solo"
+                # Backward compat aliases
+                assert data["diagnostics_used"] == 5
+                assert data["diagnostics_limit"] == 100
+        finally:
+            app.dependency_overrides.clear()
+
+
+class TestWeeklyReviewHTTP:
+    """HTTP-layer integration tests for GET /billing/analytics/weekly-review."""
+
+    @pytest.mark.asyncio
+    async def test_weekly_review_org_admin_allowed(self, db_session, make_user):
+        """Org admin can access weekly review."""
+        from auth import require_verified_user
+        from database import get_db
+        from main import app
+        from organization_model import Organization, OrganizationMember, OrgRole
+
+        owner = make_user(email="weekly_owner@example.com", tier=UserTier.PROFESSIONAL)
+        org = Organization(name="Test Org", slug="test-org-weekly", owner_user_id=owner.id)
+        db_session.add(org)
+        db_session.flush()
+
+        member = OrganizationMember(
+            organization_id=org.id,
+            user_id=owner.id,
+            role=OrgRole.ADMIN,
+        )
+        db_session.add(member)
+        db_session.flush()
+
+        # Set organization_id on user
+        owner.organization_id = org.id
+        db_session.flush()
+
+        app.dependency_overrides[require_verified_user] = lambda: owner
+        app.dependency_overrides[get_db] = lambda: db_session
+
+        mock_review = {
+            "period": {"start": "2026-03-10", "end": "2026-03-17"},
+            "metrics": {"trial_starts": 5},
+            "previous_period": {"start": "2026-03-03", "end": "2026-03-10"},
+            "deltas": {"trial_starts": 2},
+        }
+
+        try:
+            with patch("billing.analytics.get_weekly_review", return_value=mock_review):
+                async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                    response = await client.get("/billing/analytics/weekly-review")
+
+                assert response.status_code == 200
+                data = response.json()
+                assert "period" in data
+                assert "metrics" in data
+                assert "previous_period" in data
+                assert "deltas" in data
+        finally:
+            app.dependency_overrides.clear()
+
+    @pytest.mark.asyncio
+    async def test_weekly_review_non_admin_returns_403(self, db_session, make_user):
+        """Non-admin org member gets 403 on weekly review."""
+        from auth import require_verified_user
+        from database import get_db
+        from main import app
+        from organization_model import Organization, OrganizationMember, OrgRole
+
+        owner = make_user(email="weekly_review_owner2@example.com", tier=UserTier.PROFESSIONAL)
+        member_user = make_user(email="weekly_member@example.com", tier=UserTier.PROFESSIONAL)
+
+        org = Organization(name="Test Org 2", slug="test-org-weekly2", owner_user_id=owner.id)
+        db_session.add(org)
+        db_session.flush()
+
+        # Add the member_user as a regular MEMBER (not admin/owner)
+        member = OrganizationMember(
+            organization_id=org.id,
+            user_id=member_user.id,
+            role=OrgRole.MEMBER,
+        )
+        db_session.add(member)
+        db_session.flush()
+
+        member_user.organization_id = org.id
+        db_session.flush()
+
+        app.dependency_overrides[require_verified_user] = lambda: member_user
+        app.dependency_overrides[get_db] = lambda: db_session
+
+        try:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                response = await client.get("/billing/analytics/weekly-review")
+
+            assert response.status_code == 403
+            assert "admin or owner" in response.json()["detail"].lower()
+        finally:
+            app.dependency_overrides.clear()
+
+    @pytest.mark.asyncio
+    async def test_weekly_review_solo_no_subscription_returns_403(self, db_session, make_user):
+        """Solo user (no org) without subscription gets 403."""
+        from auth import require_verified_user
+        from database import get_db
+        from main import app
+
+        user = make_user(email="weekly_solo_nosub@example.com", tier=UserTier.SOLO)
+        app.dependency_overrides[require_verified_user] = lambda: user
+        app.dependency_overrides[get_db] = lambda: db_session
+
+        try:
+            with patch("billing.subscription_manager.get_subscription", return_value=None):
+                async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                    response = await client.get("/billing/analytics/weekly-review")
+
+                assert response.status_code == 403
+                assert "subscription" in response.json()["detail"].lower()
+        finally:
+            app.dependency_overrides.clear()
+
+    @pytest.mark.asyncio
+    async def test_weekly_review_solo_with_subscription_allowed(self, db_session, make_user):
+        """Solo user with active subscription can view their own data."""
+        from auth import require_verified_user
+        from database import get_db
+        from main import app
+
+        user = make_user(email="weekly_solo_sub@example.com", tier=UserTier.SOLO)
+        sub = Subscription(
+            user_id=user.id,
+            tier="solo",
+            status=SubscriptionStatus.ACTIVE,
+            billing_interval=BillingInterval.MONTHLY,
+        )
+        db_session.add(sub)
+        db_session.flush()
+
+        app.dependency_overrides[require_verified_user] = lambda: user
+        app.dependency_overrides[get_db] = lambda: db_session
+
+        mock_review = {
+            "period": {"start": "2026-03-10", "end": "2026-03-17"},
+            "metrics": {},
+            "previous_period": {"start": "2026-03-03", "end": "2026-03-10"},
+            "deltas": {},
+        }
+
+        try:
+            with patch("billing.analytics.get_weekly_review", return_value=mock_review):
+                async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                    response = await client.get("/billing/analytics/weekly-review")
+
+                assert response.status_code == 200
+        finally:
+            app.dependency_overrides.clear()
+
+
+@pytest.mark.usefixtures("bypass_csrf")
+class TestSeatManagementHTTP:
+    """HTTP-layer integration tests for seat add/remove endpoints."""
+
+    @pytest.mark.asyncio
+    async def test_add_seats_happy_path(self, db_session, make_user):
+        """POST /billing/add-seats returns updated seat counts."""
+        from auth import require_current_user
+        from database import get_db
+        from main import app
+
+        user = make_user(email="add_seats@example.com", tier=UserTier.PROFESSIONAL)
+        sub = Subscription(
+            user_id=user.id,
+            tier="professional",
+            status=SubscriptionStatus.ACTIVE,
+            billing_interval=BillingInterval.MONTHLY,
+            stripe_customer_id="cus_seats",
+            stripe_subscription_id="sub_seats",
+            seat_count=7,
+            additional_seats=3,
+        )
+        db_session.add(sub)
+        db_session.flush()
+
+        # Mock the result after adding 2 seats
+        mock_result = MagicMock()
+        mock_result.seat_count = 7
+        mock_result.additional_seats = 5
+        mock_result.total_seats = 12
+
+        app.dependency_overrides[require_current_user] = lambda: user
+        app.dependency_overrides[get_db] = lambda: db_session
+
+        try:
+            with (
+                patch("billing.stripe_client.is_stripe_enabled", return_value=True),
+                patch("billing.subscription_manager.add_seats", return_value=mock_result),
+            ):
+                async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                    response = await client.post(
+                        "/billing/add-seats",
+                        json={"seats": 2},
+                    )
+
+                assert response.status_code == 200
+                data = response.json()
+                assert data["seat_count"] == 7
+                assert data["additional_seats"] == 5
+                assert data["total_seats"] == 12
+                assert "added" in data["message"].lower()
+        finally:
+            app.dependency_overrides.clear()
+
+    @pytest.mark.asyncio
+    async def test_add_seats_failure_returns_400(self, db_session, make_user):
+        """add_seats returning None results in 400."""
+        from auth import require_current_user
+        from database import get_db
+        from main import app
+
+        user = make_user(email="add_seats_fail@example.com", tier=UserTier.PROFESSIONAL)
+        app.dependency_overrides[require_current_user] = lambda: user
+        app.dependency_overrides[get_db] = lambda: db_session
+
+        try:
+            with (
+                patch("billing.stripe_client.is_stripe_enabled", return_value=True),
+                patch("billing.subscription_manager.add_seats", return_value=None),
+            ):
+                async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                    response = await client.post(
+                        "/billing/add-seats",
+                        json={"seats": 2},
+                    )
+
+                assert response.status_code == 400
+        finally:
+            app.dependency_overrides.clear()
+
+    @pytest.mark.asyncio
+    async def test_remove_seats_happy_path(self, db_session, make_user):
+        """POST /billing/remove-seats returns updated seat counts."""
+        from auth import require_current_user
+        from database import get_db
+        from main import app
+
+        user = make_user(email="remove_seats@example.com", tier=UserTier.PROFESSIONAL)
+
+        mock_result = MagicMock()
+        mock_result.seat_count = 7
+        mock_result.additional_seats = 1
+        mock_result.total_seats = 8
+
+        app.dependency_overrides[require_current_user] = lambda: user
+        app.dependency_overrides[get_db] = lambda: db_session
+
+        try:
+            with (
+                patch("billing.stripe_client.is_stripe_enabled", return_value=True),
+                patch("billing.subscription_manager.remove_seats", return_value=mock_result),
+            ):
+                async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                    response = await client.post(
+                        "/billing/remove-seats",
+                        json={"seats": 2},
+                    )
+
+                assert response.status_code == 200
+                data = response.json()
+                assert data["total_seats"] == 8
+                assert "removed" in data["message"].lower()
+        finally:
+            app.dependency_overrides.clear()
+
+    @pytest.mark.asyncio
+    async def test_remove_seats_below_base_returns_400(self, db_session, make_user):
+        """Removing more seats than additional_seats returns 400."""
+        from auth import require_current_user
+        from database import get_db
+        from main import app
+
+        user = make_user(email="remove_seats_fail@example.com", tier=UserTier.PROFESSIONAL)
+        app.dependency_overrides[require_current_user] = lambda: user
+        app.dependency_overrides[get_db] = lambda: db_session
+
+        try:
+            with (
+                patch("billing.stripe_client.is_stripe_enabled", return_value=True),
+                patch("billing.subscription_manager.remove_seats", return_value=None),
+            ):
+                async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                    response = await client.post(
+                        "/billing/remove-seats",
+                        json={"seats": 10},
+                    )
+
+                assert response.status_code == 400
+        finally:
+            app.dependency_overrides.clear()
+
+    @pytest.mark.asyncio
+    async def test_add_seats_stripe_disabled_returns_503(self, db_session, make_user):
+        """add-seats when Stripe is disabled returns 503."""
+        from auth import require_current_user
+        from database import get_db
+        from main import app
+
+        user = make_user(email="add_seats_503@example.com", tier=UserTier.PROFESSIONAL)
+        app.dependency_overrides[require_current_user] = lambda: user
+        app.dependency_overrides[get_db] = lambda: db_session
+
+        try:
+            with patch("billing.stripe_client.is_stripe_enabled", return_value=False):
+                async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                    response = await client.post(
+                        "/billing/add-seats",
+                        json={"seats": 1},
+                    )
+
+                assert response.status_code == 503
+        finally:
+            app.dependency_overrides.clear()
+
+
+class TestPortalSessionHTTP:
+    """HTTP-layer integration tests for GET /billing/portal-session."""
+
+    @pytest.mark.asyncio
+    async def test_portal_session_happy_path(self, db_session, make_user):
+        """Portal session returns portal URL."""
+        from auth import require_current_user
+        from database import get_db
+        from main import app
+
+        user = make_user(email="portal_ok@example.com", tier=UserTier.PROFESSIONAL)
+        sub = Subscription(
+            user_id=user.id,
+            tier="professional",
+            status=SubscriptionStatus.ACTIVE,
+            billing_interval=BillingInterval.MONTHLY,
+            stripe_customer_id="cus_portal",
+            stripe_subscription_id="sub_portal",
+        )
+        db_session.add(sub)
+        db_session.flush()
+
+        app.dependency_overrides[require_current_user] = lambda: user
+        app.dependency_overrides[get_db] = lambda: db_session
+
+        try:
+            with (
+                patch("billing.stripe_client.is_stripe_enabled", return_value=True),
+                patch(
+                    "billing.subscription_manager.create_portal_session",
+                    return_value="https://billing.stripe.com/portal/test",
+                ),
+            ):
+                async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                    response = await client.get("/billing/portal-session")
+
+                assert response.status_code == 200
+                data = response.json()
+                assert data["portal_url"] == "https://billing.stripe.com/portal/test"
+        finally:
+            app.dependency_overrides.clear()
+
+    @pytest.mark.asyncio
+    async def test_portal_session_no_billing_account_returns_404(self, db_session, make_user):
+        """User without Stripe customer returns 404."""
+        from auth import require_current_user
+        from database import get_db
+        from main import app
+
+        user = make_user(email="portal_none@example.com", tier=UserTier.FREE)
+        app.dependency_overrides[require_current_user] = lambda: user
+        app.dependency_overrides[get_db] = lambda: db_session
+
+        try:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                response = await client.get("/billing/portal-session")
+
+            assert response.status_code == 404
+        finally:
+            app.dependency_overrides.clear()
+
+
+class TestStripeEndpointGuard:
+    """Unit tests for the stripe_endpoint_guard context manager."""
+
+    def test_guard_raises_503_when_stripe_disabled(self):
+        """Guard raises 503 HTTPException when Stripe is not enabled."""
+        from fastapi import HTTPException
+
+        from routes.billing import stripe_endpoint_guard
+
+        with patch("billing.stripe_client.is_stripe_enabled", return_value=False):
+            with pytest.raises(HTTPException) as exc_info:
+                with stripe_endpoint_guard(1, "test"):
+                    pass  # pragma: no cover
+
+            assert exc_info.value.status_code == 503
+
+    def test_guard_catches_exception_raises_502(self):
+        """Guard catches generic exceptions and raises 502."""
+        from fastapi import HTTPException
+
+        from routes.billing import stripe_endpoint_guard
+
+        with patch("billing.stripe_client.is_stripe_enabled", return_value=True):
+            with pytest.raises(HTTPException) as exc_info:
+                with stripe_endpoint_guard(1, "test"):
+                    raise RuntimeError("Stripe API timeout")
+
+            assert exc_info.value.status_code == 502
+
+    def test_guard_passes_through_on_success(self):
+        """Guard yields cleanly when Stripe is enabled and no exception occurs."""
+        from routes.billing import stripe_endpoint_guard
+
+        with patch("billing.stripe_client.is_stripe_enabled", return_value=True):
+            with stripe_endpoint_guard(1, "test"):
+                result = 42
+
+            assert result == 42

@@ -1,16 +1,10 @@
 /**
- * Sprint 129: Inventory Testing page tests (10 tests)
+ * Sprint 129 / Sprint 548: Inventory Testing page tests
+ * Refactored to use shared toolPageScenarios harness.
  */
 import InventoryTestingPage from '@/app/tools/inventory-testing/page'
-import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useInventoryTesting } from '@/hooks/useInventoryTesting'
-import { render, screen } from '@/test-utils'
-
-const mockRunTests = jest.fn()
-const mockReset = jest.fn()
-const mockHandleExportMemo = jest.fn()
-const mockHandleExportCSV = jest.fn()
-const mockFileInputRef = { current: null }
+import { runStandardToolPageScenarios } from './helpers/toolPageScenarios'
 
 jest.mock('@/contexts/AuthSessionContext', () => ({
   useAuthSession: jest.fn(() => ({
@@ -18,23 +12,21 @@ jest.mock('@/contexts/AuthSessionContext', () => ({
   })),
 }))
 
-jest.mock('@/utils/telemetry', () => ({
-  trackEvent: jest.fn(),
-}))
+jest.mock('@/utils/telemetry', () => ({ trackEvent: jest.fn() }))
 
 jest.mock('@/hooks/useInventoryTesting', () => ({
-  useInventoryTesting: jest.fn(() => ({ status: 'idle', result: null, error: null, runTests: mockRunTests, reset: mockReset })),
+  useInventoryTesting: jest.fn(() => ({ status: 'idle', result: null, error: null, runTests: jest.fn(), reset: jest.fn() })),
 }))
 
 jest.mock('@/hooks/useFileUpload', () => ({
   useFileUpload: jest.fn(() => ({
-    isDragging: false, fileInputRef: mockFileInputRef,
+    isDragging: false, fileInputRef: { current: null },
     handleDrop: jest.fn(), handleDragOver: jest.fn(), handleDragLeave: jest.fn(), handleFileSelect: jest.fn(),
   })),
 }))
 
 jest.mock('@/hooks/useTestingExport', () => ({
-  useTestingExport: jest.fn(() => ({ exporting: null, handleExportMemo: mockHandleExportMemo, handleExportCSV: mockHandleExportCSV })),
+  useTestingExport: jest.fn(() => ({ exporting: null, handleExportMemo: jest.fn(), handleExportCSV: jest.fn() })),
 }))
 
 jest.mock('@/components/inventoryTesting', () => ({
@@ -44,9 +36,7 @@ jest.mock('@/components/inventoryTesting', () => ({
   FlaggedInventoryTable: () => <div data-testid="inv-flagged-table">Flagged</div>,
 }))
 
-jest.mock('@/hooks/useCanvasAccentSync', () => ({
-  useCanvasAccentSync: jest.fn(),
-}))
+jest.mock('@/hooks/useCanvasAccentSync', () => ({ useCanvasAccentSync: jest.fn() }))
 jest.mock('@/components/shared/proof', () => ({
   ProofSummaryBar: () => <div data-testid="proof-summary-bar">Proof</div>,
   ProofPanel: () => null,
@@ -57,88 +47,15 @@ jest.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: any) => <>{children}</>,
 }))
 
-
-const mockUseAuthSession = useAuthSession as jest.Mock
-const mockUseInv = useInventoryTesting as jest.Mock
-
-describe('InventoryTestingPage', () => {
-  beforeEach(() => {
-    jest.clearAllMocks()
-    mockUseAuthSession.mockReturnValue({ user: { is_verified: true, tier: 'enterprise' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token' })
-    mockUseInv.mockReturnValue({ status: 'idle', result: null, error: null, runTests: mockRunTests, reset: mockReset })
-  })
-
-  it('renders hero header', () => {
-    render(<InventoryTestingPage />)
-    expect(screen.getByText('Inventory Testing')).toBeInTheDocument()
-  })
-
-  it('shows upload zone for authenticated verified user', () => {
-    render(<InventoryTestingPage />)
-    expect(screen.getByText(/Upload Inventory Register/)).toBeInTheDocument()
-  })
-
-  it('shows sign-in CTA for unauthenticated user', () => {
-    mockUseAuthSession.mockReturnValue({ user: null, isAuthenticated: false, isLoading: false, logout: jest.fn(), token: null })
-    render(<InventoryTestingPage />)
-    expect(screen.getByText('Sign In')).toBeInTheDocument()
-    expect(screen.getByText('Create Account')).toBeInTheDocument()
-  })
-
-  it('shows loading state', () => {
-    mockUseInv.mockReturnValue({ status: 'loading', result: null, error: null, runTests: mockRunTests, reset: mockReset })
-    render(<InventoryTestingPage />)
-    expect(screen.getByText(/Running 9-test inventory battery/)).toBeInTheDocument()
-  })
-
-  it('shows error state with retry button', () => {
-    mockUseInv.mockReturnValue({ status: 'error', result: null, error: 'Column detection failed', runTests: mockRunTests, reset: mockReset })
-    render(<InventoryTestingPage />)
-    expect(screen.getByText('Analysis Failed')).toBeInTheDocument()
-    expect(screen.getByText('Column detection failed')).toBeInTheDocument()
-    expect(screen.getByText('Try Again')).toBeInTheDocument()
-  })
-
-  it('shows result components on success', () => {
-    mockUseInv.mockReturnValue({
-      status: 'success', error: null, runTests: mockRunTests, reset: mockReset,
-      result: { composite_score: {}, test_results: [], data_quality: {}, column_detection: {} },
-    })
-    render(<InventoryTestingPage />)
-    expect(screen.getByTestId('inv-score-card')).toBeInTheDocument()
-    expect(screen.getByTestId('inv-test-grid')).toBeInTheDocument()
-    expect(screen.getByTestId('inv-flagged-table')).toBeInTheDocument()
-  })
-
-  it('shows export buttons on success', () => {
-    mockUseInv.mockReturnValue({
-      status: 'success', error: null, runTests: mockRunTests, reset: mockReset,
-      result: { composite_score: {}, test_results: [], data_quality: {}, column_detection: {} },
-    })
-    render(<InventoryTestingPage />)
-    expect(screen.getByText('Download Testing Memo')).toBeInTheDocument()
-    expect(screen.getByText('Export Flagged CSV')).toBeInTheDocument()
-    expect(screen.getByText('New Test')).toBeInTheDocument()
-  })
-
-  it('shows info cards in idle state', () => {
-    render(<InventoryTestingPage />)
-    expect(screen.getByText('Structural Tests')).toBeInTheDocument()
-    expect(screen.getByText('Statistical Tests')).toBeInTheDocument()
-    expect(screen.getByText('Advanced Tests')).toBeInTheDocument()
-  })
-
-  it('shows upgrade gate for free tier user', () => {
-    mockUseAuthSession.mockReturnValue({ user: { is_verified: true, tier: 'free' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token' })
-    render(<InventoryTestingPage />)
-    expect(screen.getByText('Upgrade Required')).toBeInTheDocument()
-    expect(screen.getByText('View Plans')).toBeInTheDocument()
-    expect(screen.queryByText(/Upload Inventory Register/)).not.toBeInTheDocument()
-  })
-
-  it('shows tool content for paid tier user', () => {
-    render(<InventoryTestingPage />)
-    expect(screen.queryByText('Upgrade Required')).not.toBeInTheDocument()
-    expect(screen.getByText(/Upload Inventory Register/)).toBeInTheDocument()
-  })
+runStandardToolPageScenarios({
+  name: 'InventoryTestingPage',
+  Component: InventoryTestingPage,
+  getToolHookMock: () => useInventoryTesting as jest.Mock,
+  heroText: 'Inventory Testing',
+  uploadPromptPattern: /Upload Inventory Register/,
+  loadingTextPattern: /Running 9-test inventory battery/,
+  successTestIds: ['inv-score-card', 'inv-test-grid', 'inv-flagged-table'],
+  infoCardLabels: ['Structural Tests', 'Statistical Tests', 'Advanced Tests'],
+  mockSuccessResult: { composite_score: {}, test_results: [], data_quality: {}, column_detection: {} },
+  hasTierGating: true,
 })

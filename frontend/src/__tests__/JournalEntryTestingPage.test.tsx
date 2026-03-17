@@ -1,17 +1,10 @@
 /**
- * Sprint 96.5: Journal Entry Testing page tests (10 tests)
+ * Sprint 96.5 / Sprint 548: Journal Entry Testing page tests
+ * Refactored to use shared toolPageScenarios harness.
  */
 import JournalEntryTestingPage from '@/app/tools/journal-entry-testing/page'
-import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useJETesting } from '@/hooks/useJETesting'
-import { render, screen } from '@/test-utils'
-
-// Mock hooks
-const mockRunTests = jest.fn()
-const mockReset = jest.fn()
-const mockHandleExportMemo = jest.fn()
-const mockHandleExportCSV = jest.fn()
-const mockFileInputRef = { current: null }
+import { runStandardToolPageScenarios } from './helpers/toolPageScenarios'
 
 jest.mock('@/contexts/AuthSessionContext', () => ({
   useAuthSession: jest.fn(() => ({
@@ -20,18 +13,18 @@ jest.mock('@/contexts/AuthSessionContext', () => ({
 }))
 
 jest.mock('@/hooks/useJETesting', () => ({
-  useJETesting: jest.fn(() => ({ status: 'idle', result: null, error: null, runTests: mockRunTests, reset: mockReset })),
+  useJETesting: jest.fn(() => ({ status: 'idle', result: null, error: null, runTests: jest.fn(), reset: jest.fn() })),
 }))
 
 jest.mock('@/hooks/useFileUpload', () => ({
   useFileUpload: jest.fn(() => ({
-    isDragging: false, fileInputRef: mockFileInputRef,
+    isDragging: false, fileInputRef: { current: null },
     handleDrop: jest.fn(), handleDragOver: jest.fn(), handleDragLeave: jest.fn(), handleFileSelect: jest.fn(),
   })),
 }))
 
 jest.mock('@/hooks/useTestingExport', () => ({
-  useTestingExport: jest.fn(() => ({ exporting: null, handleExportMemo: mockHandleExportMemo, handleExportCSV: mockHandleExportCSV })),
+  useTestingExport: jest.fn(() => ({ exporting: null, handleExportMemo: jest.fn(), handleExportCSV: jest.fn() })),
 }))
 
 jest.mock('@/components/jeTesting', () => ({
@@ -43,9 +36,7 @@ jest.mock('@/components/jeTesting', () => ({
   SamplingPanel: () => <div data-testid="sampling-panel">Sampling</div>,
 }))
 
-jest.mock('@/hooks/useCanvasAccentSync', () => ({
-  useCanvasAccentSync: jest.fn(),
-}))
+jest.mock('@/hooks/useCanvasAccentSync', () => ({ useCanvasAccentSync: jest.fn() }))
 jest.mock('@/components/shared/proof', () => ({
   ProofSummaryBar: () => <div data-testid="proof-summary-bar">Proof</div>,
   ProofPanel: () => null,
@@ -56,75 +47,14 @@ jest.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: any) => <>{children}</>,
 }))
 
-
-const mockUseAuthSession = useAuthSession as jest.Mock
-const mockUseJE = useJETesting as jest.Mock
-
-describe('JournalEntryTestingPage', () => {
-  beforeEach(() => {
-    jest.clearAllMocks()
-    mockUseAuthSession.mockReturnValue({ user: { is_verified: true }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token' })
-    mockUseJE.mockReturnValue({ status: 'idle', result: null, error: null, runTests: mockRunTests, reset: mockReset })
-  })
-
-  it('renders hero header', () => {
-    render(<JournalEntryTestingPage />)
-    expect(screen.getByText('Journal Entry Testing')).toBeInTheDocument()
-  })
-
-  it('shows upload zone for authenticated verified user in idle state', () => {
-    render(<JournalEntryTestingPage />)
-    expect(screen.getByText(/Upload General Ledger Extract/)).toBeInTheDocument()
-    expect(screen.getByText(/CSV, TSV, TXT, or Excel/)).toBeInTheDocument()
-  })
-
-  it('shows sign-in CTA for unauthenticated user', () => {
-    mockUseAuthSession.mockReturnValue({ user: null, isAuthenticated: false, isLoading: false, logout: jest.fn(), token: null })
-    render(<JournalEntryTestingPage />)
-    expect(screen.getByText('Sign In')).toBeInTheDocument()
-    expect(screen.getByText('Create Account')).toBeInTheDocument()
-  })
-
-  it('shows loading state with spinner text', () => {
-    mockUseJE.mockReturnValue({ status: 'loading', result: null, error: null, runTests: mockRunTests, reset: mockReset })
-    render(<JournalEntryTestingPage />)
-    expect(screen.getByText(/Running 19-test battery/)).toBeInTheDocument()
-  })
-
-  it('shows error state with retry button', () => {
-    mockUseJE.mockReturnValue({ status: 'error', result: null, error: 'Parse failed', runTests: mockRunTests, reset: mockReset })
-    render(<JournalEntryTestingPage />)
-    expect(screen.getByText('Analysis Failed')).toBeInTheDocument()
-    expect(screen.getByText('Parse failed')).toBeInTheDocument()
-    expect(screen.getByText('Try Again')).toBeInTheDocument()
-  })
-
-  it('shows result components on success', () => {
-    mockUseJE.mockReturnValue({
-      status: 'success', error: null, runTests: mockRunTests, reset: mockReset,
-      result: { composite_score: {}, test_results: [], data_quality: {}, benford_result: { digits: [] }, multi_currency_warning: null },
-    })
-    render(<JournalEntryTestingPage />)
-    expect(screen.getByTestId('je-score-card')).toBeInTheDocument()
-    expect(screen.getByTestId('test-result-grid')).toBeInTheDocument()
-    expect(screen.getByTestId('flagged-table')).toBeInTheDocument()
-  })
-
-  it('shows export buttons on success', () => {
-    mockUseJE.mockReturnValue({
-      status: 'success', error: null, runTests: mockRunTests, reset: mockReset,
-      result: { composite_score: {}, test_results: [], data_quality: {}, benford_result: null, multi_currency_warning: null },
-    })
-    render(<JournalEntryTestingPage />)
-    expect(screen.getByText('Download Testing Memo')).toBeInTheDocument()
-    expect(screen.getByText('Export Flagged CSV')).toBeInTheDocument()
-    expect(screen.getByText('New Test')).toBeInTheDocument()
-  })
-
-  it('shows info cards in idle state', () => {
-    render(<JournalEntryTestingPage />)
-    expect(screen.getByText('Structural Tests')).toBeInTheDocument()
-    expect(screen.getByText('Statistical Tests')).toBeInTheDocument()
-    expect(screen.getByText('Advanced Tests')).toBeInTheDocument()
-  })
+runStandardToolPageScenarios({
+  name: 'JournalEntryTestingPage',
+  Component: JournalEntryTestingPage,
+  getToolHookMock: () => useJETesting as jest.Mock,
+  heroText: 'Journal Entry Testing',
+  uploadPromptPattern: /Upload General Ledger Extract/,
+  loadingTextPattern: /Running 19-test battery/,
+  successTestIds: ['je-score-card', 'test-result-grid', 'flagged-table'],
+  infoCardLabels: ['Structural Tests', 'Statistical Tests', 'Advanced Tests'],
+  mockSuccessResult: { composite_score: {}, test_results: [], data_quality: {}, benford_result: { digits: [] }, multi_currency_warning: null },
 })

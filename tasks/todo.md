@@ -182,6 +182,43 @@
 
 ---
 
+### Sprint 548 — Test Suite Remediation
+
+**Status:** COMPLETE
+**Goal:** 4-phase test efficiency overhaul: CI optimization, structural dedup, coverage gaps, E2E smoke layer.
+
+#### Phase 1 — Quick Wins
+- [x] Register `slow` pytest marker in `backend/pyproject.toml`
+- [x] Add `-m "not slow"` to PR CI runs, nightly job for slow tests
+- [x] Deduplicate `TestRateLimitTiers` from `test_rate_limit_coverage.py` (6 tests → covered by `test_rate_limit_tiered.py`)
+- [x] Raise frontend coverage thresholds with per-directory minimums (`src/hooks/`, `src/app/`)
+
+#### Phase 2 — Structural Improvements
+- [x] Extract AP fixtures to `backend/tests/helpers/ap_fixtures.py` (3 files deduped)
+- [x] Create `toolPageScenarios.tsx` shared harness for frontend tool page tests
+- [x] Refactor 7 tool page tests (AP, AR, JE, Payroll, Revenue, FixedAsset, Inventory) to use harness
+
+#### Phase 3 — Coverage Gaps
+- [x] `test_billing_routes.py` — 91 tests (checkout, subscription, cancel, webhook, dedup, seats, portal, usage, analytics)
+- [x] `test_entitlement_checks.py` — 52 tests (all 16 check functions, soft/hard mode, seat limits)
+- [x] `test_export_routes.py` — 50 tests (PDF/Excel/CSV, auth, validation, financial statements)
+- [x] `useStatementBuilder.test.ts` — 56 tests (balance sheet, income statement, cash flow, mapping trace)
+- [x] `BillingPage.test.tsx` — 6 tests (plan details, upgrade CTA, usage, error, loading)
+- [x] `WorkspaceContext.test.tsx` — 7 tests (providers, selection state, toggles, error boundary)
+
+#### Phase 4 — E2E Smoke Layer
+- [x] Install Playwright, configure `playwright.config.ts`
+- [x] Create `e2e/smoke.spec.ts` (auth, upload, export flows)
+- [x] Add `e2e-smoke` job to CI (depends on backend-tests + frontend-tests, main-only)
+
+#### Review
+- Commit: 966000e
+- Backend: 6,714 passed (3 pre-existing failures in pagination tests), 5 deselected (slow)
+- Frontend: 1,426 passed across 118 suites, coverage thresholds met
+- Build: passes
+
+---
+
 ### Sprint 447 — Stripe Production Cutover
 
 **Status:** PENDING (CEO action required)

@@ -14,14 +14,6 @@ import pytest
 
 sys.path.insert(0, str(os.path.join(os.path.dirname(__file__), "..")))
 
-from shared.rate_limits import (
-    RATE_LIMIT_AUDIT,
-    RATE_LIMIT_AUTH,
-    RATE_LIMIT_DEFAULT,
-    RATE_LIMIT_EXPORT,
-    RATE_LIMIT_WRITE,
-)
-
 ROUTES_DIR = os.path.join(os.path.dirname(__file__), "..", "routes")
 MUTATING_METHODS = {"post", "put", "patch", "delete"}
 
@@ -80,40 +72,8 @@ def _audit_mutating_routes():
     return covered, missing
 
 
-# =============================================================================
-# RATE LIMIT TIER TESTS
-# =============================================================================
-
-
-class TestRateLimitTiers:
-    """Verify rate limit tier constants are defined with expected values."""
-
-    def test_auth_tier(self):
-        assert RATE_LIMIT_AUTH == "5/minute"
-
-    def test_audit_tier(self):
-        assert RATE_LIMIT_AUDIT == "10/minute"
-
-    def test_export_tier(self):
-        assert RATE_LIMIT_EXPORT == "20/minute"
-
-    def test_write_tier(self):
-        assert RATE_LIMIT_WRITE == "30/minute"
-
-    def test_default_tier(self):
-        assert RATE_LIMIT_DEFAULT == "60/minute"
-
-    def test_tier_ordering(self):
-        """Tiers should be ordered from most to least restrictive."""
-        tiers = [
-            int(RATE_LIMIT_AUTH.split("/")[0]),
-            int(RATE_LIMIT_AUDIT.split("/")[0]),
-            int(RATE_LIMIT_EXPORT.split("/")[0]),
-            int(RATE_LIMIT_WRITE.split("/")[0]),
-            int(RATE_LIMIT_DEFAULT.split("/")[0]),
-        ]
-        assert tiers == sorted(tiers), f"Tiers not in ascending order: {tiers}"
-
+# Tier constant assertions removed — covered by test_rate_limit_tiered.py
+# (TestTieredLimitBackwardCompat and TestTierPolicies)
 
 # =============================================================================
 # COVERAGE AUDIT TESTS
