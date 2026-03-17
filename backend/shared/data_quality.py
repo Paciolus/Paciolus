@@ -26,6 +26,7 @@ class FieldQualityConfig:
         issue_threshold: Fill rate below this triggers an issue. None = no issue checking.
         issue_template: Format string for issue message. Supports {fill_pct} and {unfilled}.
     """
+
     field_name: str
     accessor: Callable[[Any], Any]
     weight: Optional[float] = None
@@ -36,6 +37,7 @@ class FieldQualityConfig:
 @dataclass
 class DataQualityResult:
     """Result of data quality assessment."""
+
     completeness_score: float  # 0-100
     field_fill_rates: dict[str, float] = field(default_factory=dict)
     detected_issues: list[str] = field(default_factory=list)
@@ -90,11 +92,13 @@ def assess_data_quality(
         # Check issue threshold
         if cfg.issue_threshold is not None and rate < cfg.issue_threshold and cfg.issue_template:
             unfilled = total - filled
-            issues.append(cfg.issue_template.format(
-                fill_pct=f"{rate:.0%}",
-                unfilled=unfilled,
-                total=total,
-            ))
+            issues.append(
+                cfg.issue_template.format(
+                    fill_pct=f"{rate:.0%}",
+                    unfilled=unfilled,
+                    total=total,
+                )
+            )
 
     # Build weights: required fields use explicit weight, optional split pool
     weights: dict[str, float] = {}
@@ -111,18 +115,16 @@ def assess_data_quality(
         for name in optional_fields:
             weights[name] = per_optional
     else:
-        # No optional fields detected — give full credit for optional pool
-        # This is achieved by not adding any optional weight (required weights
-        # already sum to less than 1.0, so the score naturally accounts for this).
-        # To match existing engine behavior: add optional pool as bonus.
-        pass
+        # No optional fields — redistribute the optional pool proportionally
+        # among required fields so weights sum to ~1.0.  This avoids a flat
+        # bonus that compresses score variance across different datasets.
+        required_sum = sum(weights.values())
+        if required_sum > 0:
+            scale = (required_sum + optional_weight_pool) / required_sum
+            weights = {k: v * scale for k, v in weights.items()}
 
     # Calculate weighted score
     score = sum(fill_rates.get(k, 0) * w for k, w in weights.items()) * 100
-
-    # If no optional fields, add full optional pool credit (existing engine behavior)
-    if not optional_fields:
-        score += optional_weight_pool * 100
 
     return DataQualityResult(
         completeness_score=min(score, 100.0),

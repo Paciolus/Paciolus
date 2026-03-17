@@ -308,8 +308,8 @@ def generate_testing_memo(
                         styles["MemoBodySmall"],
                     )
                 )
-            # Add follow-up suggestion if available
-            procedure = get_follow_up_procedure(test_key)
+            # Add follow-up suggestion if available (rotate across findings)
+            procedure = get_follow_up_procedure(test_key, rotation_index=i)
             if procedure:
                 story.append(
                     Paragraph(

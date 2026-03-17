@@ -272,25 +272,25 @@ class TestEngagementRiskAssessment:
     """Tests for Section IV engagement risk scoring."""
 
     def test_elevated_risk(self):
-        """High severity count >= 3 triggers ELEVATED."""
+        """High severity count >= 3 triggers elevated tier."""
         label, score = _compute_engagement_risk(3, 2, 1, 0)
-        assert label == "ELEVATED"
+        assert label == "elevated"
 
     def test_elevated_risk_by_score(self):
-        """Total score >= 15 triggers ELEVATED."""
+        """Total score >= 15 triggers elevated tier."""
         label, score = _compute_engagement_risk(2, 3, 2, 2)
-        assert label == "ELEVATED"
+        assert label == "elevated"
         assert score >= 15
 
     def test_moderate_risk(self):
-        """1 high severity with low total triggers MODERATE."""
+        """1 high severity with low total triggers moderate tier."""
         label, score = _compute_engagement_risk(1, 0, 0, 0)
-        assert label == "MODERATE"
+        assert label == "moderate"
 
     def test_low_risk(self):
-        """Zero high severity and low total triggers LOW."""
+        """Zero high severity and low total triggers low tier."""
         label, score = _compute_engagement_risk(0, 1, 1, 0)
-        assert label == "LOW"
+        assert label == "low"
 
     def test_coverage_penalty(self):
         """Unexecuted tools add coverage penalty."""

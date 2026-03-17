@@ -44,7 +44,7 @@ from follow_up_items_model import FollowUpItem
 from models import Client
 from pdf_generator import ClassicalColors, LedgerRule, generate_reference_number
 from shared.framework_resolution import ResolvedFramework
-from shared.memo_base import create_memo_styles
+from shared.memo_base import RISK_TIER_DISPLAY, create_memo_styles
 from shared.report_chrome import ReportMetadata, build_cover_page, draw_page_footer, find_logo
 from shared.scope_methodology import (
     build_methodology_statement,
@@ -117,11 +117,11 @@ def _compute_engagement_risk(
     total_score = score + coverage_penalty
 
     if total_score >= 15 or high_count >= 3:
-        return "ELEVATED", total_score
+        return "elevated", total_score
     elif total_score >= 8 or high_count >= 1:
-        return "MODERATE", total_score
+        return "moderate", total_score
     else:
-        return "LOW", total_score
+        return "low", total_score
 
 
 def _resolve_tool_name_from_source(tool_source: str) -> Optional[ToolName]:
@@ -288,12 +288,13 @@ class AnomalySummaryGenerator:
         tools_with_findings = {s for s in items_by_tool}
         clean_result_tools = [t for t in executed_tools if t.value not in tools_with_findings]
 
-        risk_label, risk_score = _compute_engagement_risk(
+        risk_tier_key, risk_score = _compute_engagement_risk(
             severity_counts["high"],
             severity_counts["medium"],
             severity_counts["low"],
             len(not_executed_tools),
         )
+        risk_label, _risk_color = RISK_TIER_DISPLAY.get(risk_tier_key, ("LOW", ClassicalColors.SAGE))
 
         # --- Section I: Scope ---
         story.append(Paragraph("I. Scope", styles["MemoSection"]))
@@ -705,11 +706,11 @@ class AnomalySummaryGenerator:
 
             classification_data = [
                 ["Classification", "Count", "Anomaly IDs"],
-                ["Material Weakness", "\u2014", "\u2014"],
-                ["Significant Deficiency", "\u2014", "\u2014"],
-                ["Control Deficiency", "\u2014", "\u2014"],
-                ["Not a Deficiency", "\u2014", "\u2014"],
-                ["Inconclusive", "\u2014", "\u2014"],
+                [Paragraph("Material Weakness", styles["MemoTableCell"]), "\u2014", "\u2014"],
+                [Paragraph("Significant Deficiency", styles["MemoTableCell"]), "\u2014", "\u2014"],
+                [Paragraph("Control Deficiency", styles["MemoTableCell"]), "\u2014", "\u2014"],
+                [Paragraph("Not a Deficiency", styles["MemoTableCell"]), "\u2014", "\u2014"],
+                [Paragraph("Inconclusive", styles["MemoTableCell"]), "\u2014", "\u2014"],
             ]
 
             classification_table = Table(

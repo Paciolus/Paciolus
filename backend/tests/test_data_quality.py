@@ -92,8 +92,8 @@ class TestAssessDataQuality:
         entries = _make_entries(10, name="Alice", amount=100.0, date="2024-01-01")
         result = assess_data_quality(entries, REQUIRED_CONFIGS)
 
-        # Required weights sum to 0.85, optional pool = 0.15 bonus
-        # Score = (1.0*0.30 + 1.0*0.30 + 1.0*0.25) * 100 + 0.15*100 = 85 + 15 = 100
+        # Required weights sum to 0.85, optional pool = 0.15 redistributed
+        # Scale factor = 1.0 / 0.85 ≈ 1.1765; all fill rates = 1.0 → score = 100.0
         assert result.completeness_score == 100.0
         assert result.total_rows == 10
         assert result.field_fill_rates["name"] == 1.0
@@ -104,8 +104,12 @@ class TestAssessDataQuality:
     def test_perfect_fill_with_optionals(self):
         """All fields filled including optionals."""
         entries = _make_entries(
-            10, name="Alice", amount=100.0, date="2024-01-01",
-            description="Payment", category="Expense",
+            10,
+            name="Alice",
+            amount=100.0,
+            date="2024-01-01",
+            description="Payment",
+            category="Expense",
         )
         configs = REQUIRED_CONFIGS + OPTIONAL_CONFIGS
         result = assess_data_quality(entries, configs)
@@ -122,8 +126,9 @@ class TestAssessDataQuality:
         result = assess_data_quality(entries, REQUIRED_CONFIGS)
 
         # name fill = 0.5, amount = 1.0, date = 1.0
-        # Score = (0.5*0.30 + 1.0*0.30 + 1.0*0.25) * 100 + 15 = (0.15+0.30+0.25)*100+15 = 70+15 = 85
-        assert result.completeness_score == 85.0
+        # Weighted sum = 0.5*0.30 + 1.0*0.30 + 1.0*0.25 = 0.70
+        # Scale = 1.0 / 0.85 → Score = 0.70 / 0.85 * 100 ≈ 82.4
+        assert 82.3 < result.completeness_score < 82.4
         assert result.field_fill_rates["name"] == 0.5
         # name at 0.5 < 0.95 threshold, so issue generated
         assert any("Missing name" in issue for issue in result.detected_issues)
@@ -131,7 +136,10 @@ class TestAssessDataQuality:
     def test_issue_detection(self):
         """Fields below threshold generate issues with correct message."""
         entries = _make_entries(
-            10, name="Alice", amount=100.0, date="2024-01-01",
+            10,
+            name="Alice",
+            amount=100.0,
+            date="2024-01-01",
             description=lambda i: "desc" if i < 7 else "",
         )
         configs = REQUIRED_CONFIGS + OPTIONAL_CONFIGS
@@ -144,7 +152,10 @@ class TestAssessDataQuality:
     def test_no_issue_when_above_threshold(self):
         """Fields at or above threshold don't generate issues."""
         entries = _make_entries(
-            10, name="Alice", amount=100.0, date="2024-01-01",
+            10,
+            name="Alice",
+            amount=100.0,
+            date="2024-01-01",
             description="Payment",
         )
         configs = REQUIRED_CONFIGS + [OPTIONAL_CONFIGS[0]]  # description only
@@ -155,8 +166,12 @@ class TestAssessDataQuality:
     def test_optional_weight_distribution(self):
         """Optional fields share the optional weight pool equally."""
         entries = _make_entries(
-            10, name="Alice", amount=100.0, date="2024-01-01",
-            description="Payment", category="Expense",
+            10,
+            name="Alice",
+            amount=100.0,
+            date="2024-01-01",
+            description="Payment",
+            category="Expense",
         )
         configs = REQUIRED_CONFIGS + OPTIONAL_CONFIGS
         result = assess_data_quality(entries, configs)
@@ -165,8 +180,12 @@ class TestAssessDataQuality:
 
         # Now make one optional empty
         entries2 = _make_entries(
-            10, name="Alice", amount=100.0, date="2024-01-01",
-            description="", category="Expense",
+            10,
+            name="Alice",
+            amount=100.0,
+            date="2024-01-01",
+            description="",
+            category="Expense",
         )
         result2 = assess_data_quality(entries2, configs)
         # description=0, category=1.0. Optional pool = 0.15/2 = 0.075 each
@@ -176,7 +195,10 @@ class TestAssessDataQuality:
     def test_custom_optional_weight_pool(self):
         """Custom optional weight pool is respected."""
         entries = _make_entries(
-            10, name="Alice", amount=100.0, date="2024-01-01",
+            10,
+            name="Alice",
+            amount=100.0,
+            date="2024-01-01",
             description="Payment",
         )
         configs = REQUIRED_CONFIGS + [OPTIONAL_CONFIGS[0]]

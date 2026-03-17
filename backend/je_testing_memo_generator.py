@@ -198,7 +198,11 @@ def _build_high_severity_detail(
     other high-severity tests where drill-down aids investigation.
     """
     test_results = result.get("test_results", [])
-    high_sev_tests = [tr for tr in test_results if tr.get("severity") == "high" and tr.get("entries_flagged", 0) > 0]
+    high_sev_tests = [
+        tr
+        for tr in test_results
+        if tr.get("severity") == "high" and tr.get("entries_flagged", 0) > 0 and tr.get("flagged_entries")
+    ]
     if not high_sev_tests:
         return section_counter
 
@@ -239,7 +243,7 @@ def _build_high_severity_detail(
                 col_widths=[0.7 * inch, 0.7 * inch, 1.2 * inch, 0.8 * inch, 0.8 * inch, 0.8 * inch, 1.6 * inch],
                 right_align_cols=[3, 4, 5],
             )
-            procedure = get_follow_up_procedure("unbalanced_entries")
+            procedure = get_follow_up_procedure("unbalanced_entries", rotation_index=1)
             if procedure:
                 story.append(Paragraph(f"<i>{procedure}</i>", styles["MemoBodySmall"]))
                 story.append(Spacer(1, 6))
@@ -271,7 +275,7 @@ def _build_high_severity_detail(
                 col_widths=[0.6 * inch, 0.7 * inch, 1.0 * inch, 0.8 * inch, 1.0 * inch, 1.2 * inch, 1.3 * inch],
                 right_align_cols=[3],
             )
-            procedure = get_follow_up_procedure("holiday_postings")
+            procedure = get_follow_up_procedure("holiday_postings", rotation_index=1)
             if procedure:
                 story.append(Paragraph(f"<i>{procedure}</i>", styles["MemoBodySmall"]))
                 story.append(Spacer(1, 6))

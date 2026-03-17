@@ -555,9 +555,10 @@ def _build_conversion_output_table(
         total_accounts += acct_count
 
     # Totals row
+    cell_style = styles["MemoTableCell"]
     data.append(
         [
-            "Total",
+            Paragraph("Total", cell_style),
             str(total_accounts),
             "",
             "",
@@ -608,11 +609,11 @@ def _build_unconverted_items_table(
 
         data.append(
             [
-                str(item.get("account_number", "")),
+                Paragraph(str(item.get("account_number", "")), cell_style),
                 Paragraph(str(item.get("account_name", "")), cell_style),
-                currency,
-                issue_text,
-                severity_text,
+                Paragraph(currency, cell_style),
+                Paragraph(issue_text, cell_style),
+                Paragraph(severity_text, cell_style),
                 Paragraph(rate_source, cell_style),
             ]
         )

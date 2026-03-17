@@ -542,12 +542,117 @@ FINDING_BENCHMARKS: dict[str, str] = {
 }
 
 
-def get_follow_up_procedure(test_key: str) -> str:
+FOLLOW_UP_PROCEDURES_ALT: dict[str, list[str]] = {
+    # JE Testing alternates
+    "unbalanced_entries": [
+        "Recalculate debit/credit totals from source documents for each unbalanced entry. "
+        "If differences persist, examine whether the entry was part of an automated posting "
+        "split across periods or cost centers. Document the recalculation and resolution.",
+    ],
+    "duplicate_entries": [
+        "Trace each duplicate entry to the originating system or preparer. Compare timestamps, "
+        "user IDs, and posting channels to determine whether the duplication is systemic "
+        "(e.g., interface re-run) or manual. Quantify the net impact on affected accounts.",
+    ],
+    "round_dollar_amounts": [
+        "Compare round-dollar entries to the entity's accrual schedule and standard journal "
+        "entry templates. Determine whether round amounts correlate with recurring accruals "
+        "or represent ad-hoc estimates requiring further support.",
+    ],
+    "unusual_amounts": [
+        "Perform a stratified analysis of flagged amounts by account and preparer. Identify "
+        "whether unusual amounts cluster around specific accounts or users, which may indicate "
+        "a pattern of estimation or override requiring management inquiry.",
+    ],
+    "holiday_postings": [
+        "Cross-reference holiday entries to system access logs and the entity's authorized "
+        "user list. Assess whether the posting time and user credentials are consistent with "
+        "expected business operations. Escalate entries without valid business justification.",
+    ],
+    "weekend_postings": [
+        "Review the entity's IT general controls for automated batch postings that may "
+        "coincide with weekends. Distinguish between automated system postings (lower risk) "
+        "and manual weekend entries (higher risk requiring individual authorization review).",
+    ],
+    "month_end_clustering": [
+        "Compare month-end entry volume to prior-period closing patterns. If the current "
+        "period shows a statistically significant increase in month-end activity, perform "
+        "targeted testing on the incremental entries with particular focus on revenue "
+        "recognition and expense accrual timing.",
+    ],
+    "benford_law": [
+        "Select a judgmental sample of entries with the most deviated leading digits. "
+        "Compare each sampled entry to source documents and assess whether the deviation "
+        "pattern suggests systematic rounding, threshold-splitting, or estimation.",
+    ],
+    "missing_fields": [
+        "Evaluate the impact of missing field data on the completeness of audit evidence. "
+        "If the GL extract cannot be remediated, assess whether alternative procedures "
+        "(e.g., vouching to source documents) can compensate for the data gap.",
+    ],
+    # AP Testing alternates
+    "exact_duplicate_payments": [
+        "Confirm whether the entity's AP system has duplicate payment detection controls. "
+        "For confirmed duplicates, verify the recovery process: credit memo issued, offset "
+        "applied, or refund received. If no controls exist, document as a control finding.",
+    ],
+    "payment_before_invoice": [
+        "Evaluate whether pre-payment patterns correlate with specific vendors, buyers, "
+        "or contract types. A concentration of pre-payments with a single vendor may "
+        "indicate non-arms-length transactions requiring expanded procedures.",
+    ],
+    "just_below_threshold": [
+        "Request the entity's approval authority matrix and compare the AP system's "
+        "configured threshold to the documented policy threshold. Analyze the distribution "
+        "of payment amounts near the threshold to assess statistical likelihood of deliberate splitting.",
+    ],
+    "vendor_name_variations": [
+        "Run the flagged vendor pairs against the entity's 1099 vendor master to identify "
+        "shared tax IDs, bank accounts, or addresses. Vendors sharing these attributes but "
+        "listed under different names represent a master data integrity risk.",
+    ],
+    # Revenue Testing alternates
+    "cutoff_risk": [
+        "Select entries within 5 business days of period end and trace to delivery/acceptance "
+        "documentation. For service revenue, confirm that the service period falls within the "
+        "reporting period. Quantify any entries where evidence of satisfaction is absent.",
+    ],
+    "concentration_risk": [
+        "Perform a trend analysis of the top customer's revenue share over the past 3 periods. "
+        "If concentration is increasing, inquire of management about customer diversification "
+        "strategy and assess going-concern implications per ASC 205-40.",
+    ],
+    # Payroll alternates
+    "PR-T4": [
+        "Cross-reference the termination date per HR records to the last paycheck date. "
+        "For payments after termination, obtain documentation of final pay obligations "
+        "(accrued PTO, severance) that justify the payment.",
+    ],
+    "PR-T9": [
+        "Request a headcount reconciliation between HR and payroll systems. For any "
+        "discrepancies, physically verify employee existence through direct observation "
+        "or independent third-party confirmation.",
+    ],
+}
+
+
+def get_follow_up_procedure(test_key: str, rotation_index: int = 0) -> str:
     """Get the suggested follow-up procedure for a test key.
+
+    Supports rotation: when multiple procedures exist for a test_key,
+    rotation_index selects which alternate to return.  This prevents
+    identical procedure text across multiple reports (BUG-001).
 
     Returns empty string if no procedure is defined for the key.
     """
-    return FOLLOW_UP_PROCEDURES.get(test_key, "")
+    primary = FOLLOW_UP_PROCEDURES.get(test_key, "")
+    if not primary:
+        return ""
+    alts = FOLLOW_UP_PROCEDURES_ALT.get(test_key, [])
+    if not alts:
+        return primary
+    all_procedures = [primary] + alts
+    return all_procedures[rotation_index % len(all_procedures)]
 
 
 def get_finding_benchmark(test_key: str) -> str:

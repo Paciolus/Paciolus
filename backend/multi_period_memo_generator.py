@@ -37,7 +37,7 @@ from pdf_generator import (
     generate_reference_number,
 )
 from security_utils import log_secure_operation
-from shared.follow_up_procedures import FOLLOW_UP_PROCEDURES
+from shared.follow_up_procedures import get_follow_up_procedure
 from shared.framework_resolution import ResolvedFramework
 from shared.memo_base import (
     RISK_SCALE_LEGEND,
@@ -303,7 +303,9 @@ def _build_suggested_procedures(
             continue
         seen_procedures.add(procedure_key)
 
-        procedure_text = FOLLOW_UP_PROCEDURES.get(procedure_key, FOLLOW_UP_PROCEDURES.get("significant_movement", ""))
+        procedure_text = get_follow_up_procedure(procedure_key, rotation_index=len(seen_procedures))
+        if not procedure_text:
+            procedure_text = get_follow_up_procedure("significant_movement")
         pct = m.get("change_percent")
         pct_str = f" ({pct:+.1f}%)" if pct is not None else ""
 
@@ -686,7 +688,7 @@ def _build_sign_change_detail(
         )
 
     # Suggested procedure
-    procedure = FOLLOW_UP_PROCEDURES.get("apc_sign_change", "")
+    procedure = get_follow_up_procedure("apc_sign_change", rotation_index=1)
     if procedure:
         story.append(Spacer(1, 4))
         story.append(Paragraph(f"<i>{procedure}</i>", styles["MemoBodySmall"]))
@@ -769,7 +771,7 @@ def _build_dormant_accounts_detail(
         )
 
     # Suggested procedure
-    procedure = FOLLOW_UP_PROCEDURES.get("apc_dormant_account", "")
+    procedure = get_follow_up_procedure("apc_dormant_account", rotation_index=1)
     if procedure:
         story.append(Spacer(1, 4))
         story.append(Paragraph(f"<i>{procedure}</i>", styles["MemoBodySmall"]))
@@ -904,8 +906,8 @@ def _build_new_closed_account_detail(
         story.append(Spacer(1, 4))
 
     # Suggested procedure
-    procedure = FOLLOW_UP_PROCEDURES.get("new_account", "")
-    closed_procedure = FOLLOW_UP_PROCEDURES.get("apc_closed_account", "")
+    procedure = get_follow_up_procedure("new_account", rotation_index=1)
+    closed_procedure = get_follow_up_procedure("apc_closed_account", rotation_index=1)
     combined = []
     if new_accounts and procedure:
         combined.append(procedure)

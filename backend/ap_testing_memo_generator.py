@@ -105,7 +105,7 @@ def _build_ap_extra_sections(
         "just_below_threshold",
         "invoice_number_reuse",
     }
-    detail_tests = [tr for tr in high_sev_tests if tr.get("test_key") in detail_test_keys]
+    detail_tests = [tr for tr in high_sev_tests if tr.get("test_key") in detail_test_keys and tr.get("flagged_entries")]
 
     if detail_tests:
         section_label = _roman(section_counter)
@@ -253,8 +253,8 @@ def _build_ap_extra_sections(
                     right_align_cols=[4],
                 )
 
-            # Add suggested procedure below each table
-            procedure = get_follow_up_procedure(test_key)
+            # Add suggested procedure below each table (rotate across detail tests)
+            procedure = get_follow_up_procedure(test_key, rotation_index=1)
             if procedure:
                 from reportlab.platypus import Spacer
 

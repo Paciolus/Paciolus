@@ -404,13 +404,13 @@ def _build_outstanding_aging_tables(
                 [
                     dep.get("date", "N/A"),
                     str(days) if days is not None else "N/A",
-                    dep.get("description", "")[:40],
+                    Paragraph(dep.get("description", "")[:40], styles["MemoTableCell"]),
                     f"${abs(dep.get('amount', 0)):,.2f}",
                     priority,
                 ]
             )
 
-        dep_data.append(["Total", "", "", f"${abs(bank_only_amount):,.2f}", ""])
+        dep_data.append(["Total", "", Paragraph("", styles["MemoTableCell"]), f"${abs(bank_only_amount):,.2f}", ""])
 
         dep_table = Table(
             dep_data,
@@ -465,13 +465,13 @@ def _build_outstanding_aging_tables(
                 [
                     chk.get("date", "N/A"),
                     str(days) if days is not None else "N/A",
-                    chk.get("description", "")[:40],
+                    Paragraph(chk.get("description", "")[:40], styles["MemoTableCell"]),
                     f"${abs(chk.get('amount', 0)):,.2f}",
                     priority,
                 ]
             )
 
-        chk_data.append(["Total", "", "", f"${abs(ledger_only_amount):,.2f}", ""])
+        chk_data.append(["Total", "", Paragraph("", styles["MemoTableCell"]), f"${abs(ledger_only_amount):,.2f}", ""])
 
         chk_table = Table(
             chk_data,
@@ -584,7 +584,7 @@ def _build_key_findings(
                 styles["MemoBody"],
             )
         )
-        procedure = get_follow_up_procedure("reconciling_difference")
+        procedure = get_follow_up_procedure("reconciling_difference", rotation_index=finding_num)
         if procedure:
             story.append(Paragraph(f"<i>Suggested follow-up: {procedure}</i>", styles["MemoBodySmall"]))
 
@@ -622,7 +622,7 @@ def _build_key_findings(
                 styles["MemoBody"],
             )
         )
-        procedure = get_follow_up_procedure("outstanding_volume")
+        procedure = get_follow_up_procedure("outstanding_volume", rotation_index=finding_num)
         if procedure:
             story.append(Paragraph(f"<i>Suggested follow-up: {procedure}</i>", styles["MemoBodySmall"]))
         story.append(Spacer(1, 4))
@@ -658,7 +658,7 @@ def _build_key_findings(
             )
         )
         test_key = test_key_map.get(test_name, "")
-        procedure = get_follow_up_procedure(test_key)
+        procedure = get_follow_up_procedure(test_key, rotation_index=finding_num)
         if procedure:
             story.append(Paragraph(f"<i>Suggested follow-up: {procedure}</i>", styles["MemoBodySmall"]))
         story.append(Spacer(1, 4))

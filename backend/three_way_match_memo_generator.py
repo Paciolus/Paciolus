@@ -540,7 +540,7 @@ def _build_key_findings(
 
         # Look up procedure by index mapping or keyword match
         proc_key = _FINDING_PROCEDURE_KEYS[i - 1] if i - 1 < len(_FINDING_PROCEDURE_KEYS) else ""
-        procedure = get_follow_up_procedure(proc_key)
+        procedure = get_follow_up_procedure(proc_key, rotation_index=i)
         if procedure:
             story.append(
                 Paragraph(
