@@ -238,7 +238,7 @@
 - [x] Removed stale Phase/Test Coverage/Next Phase lines, replaced with pointer to tasks/todo.md
 
 #### Task 5 — Document Authority Hierarchy
-- [ ] Add precedence declaration section to CLAUDE.md
+- [x] Added "Document Authority Hierarchy" section at top of CLAUDE.md with 4-tier precedence
 
 #### Task 6 — Stale path references in retry-policy.md
 - [ ] Audit and fix `src/...` paths to `frontend/src/...`

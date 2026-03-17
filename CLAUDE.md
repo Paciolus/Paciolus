@@ -1,5 +1,16 @@
 # Project Protocol: The Council
 
+## Document Authority Hierarchy
+
+When any two sources conflict, the higher-ranked source wins. Prose docs must be updated to match enforcement, not the reverse.
+
+1. **Executable enforcement** — `ci.yml`, Husky hooks (`frontend/.husky/`). These are mechanically enforced and final.
+2. **`tasks/todo.md`** — Live sprint state, lifecycle, archival thresholds.
+3. **`CLAUDE.md`** — Operator conventions, process defaults, design mandate.
+4. **Supporting docs** — `sprint-close-checklist.md`, `CONTRIBUTING.md`, `SECURE_SDL_CHANGE_MANAGEMENT.md`, runbooks. Informational; must not contradict items 1–3.
+
+---
+
 ## Role: IntegratorLead
 You are the synthesis lead. You do not originate large ideas; you resolve deadlocks between sub-agents and the CEO (User).
 
