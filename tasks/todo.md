@@ -93,7 +93,7 @@
 - [ ] **If sprint produced CEO actions:** add them to [`tasks/ceo-actions.md`](ceo-actions.md)
 - [ ] `git add <files> && git commit -m "Sprint X: Description"`
 - [ ] Record commit SHA in sprint Review section (e.g., `Commit: abc1234`)
-- [ ] Verify Active Phase has fewer than 5 completed sprints (archive if threshold exceeded)
+- [ ] Verify Active Phase has fewer than 5 completed sprints (the commit-msg hook blocks at 5+; run `sh scripts/archive_sprints.sh` if threshold exceeded)
 
 ---
 
@@ -216,6 +216,41 @@
 - Backend: 6,714 passed (3 pre-existing failures in pagination tests), 5 deselected (slow)
 - Frontend: 1,426 passed across 118 suites, coverage thresholds met
 - Build: passes
+
+---
+
+### Sprint 549 — Governance Remediation (Codex Review)
+
+**Status:** IN PROGRESS
+**Goal:** Resolve 8 governance documentation inconsistencies identified by control-plane audit.
+
+#### Task 1 — Archival threshold normalization
+- [x] CLAUDE.md: "4+" → "5+" to match commit-msg hook
+- [x] todo.md post-sprint checklist: clarify hook enforcement language
+
+#### Task 2 — PR checklist count mismatch
+- [ ] CONTRIBUTING.md: "eight" → "ten" to match PR template
+
+#### Task 3 — CI check count in Secure SDL
+- [ ] SECURE_SDL: update executive summary and §4.1 table to match ci.yml
+
+#### Task 4 — Stale sprint state in CLAUDE.md
+- [ ] Remove hardcoded sprint number, point to tasks/todo.md as live authority
+
+#### Task 5 — Document Authority Hierarchy
+- [ ] Add precedence declaration section to CLAUDE.md
+
+#### Task 6 — Stale path references in retry-policy.md
+- [ ] Audit and fix `src/...` paths to `frontend/src/...`
+
+#### Task 7 — Audit ecosystem ownership boundary
+- [ ] Create AUDIT_OWNERSHIP.md in .claude/agents/
+
+#### Task 8 — Design instruction tie-break
+- [ ] Add brand authority header to designer.md and SKILL.md
+
+#### Review
+- Commit: (pending — one commit per task)
 
 ---
 

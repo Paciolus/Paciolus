@@ -24,7 +24,7 @@ When a task is initiated:
 ### 1. Plan Update (START of directive)
 Before ANY implementation begins:
 - [ ] Read `tasks/todo.md`
-- [ ] If `## Active Phase` has 4+ completed sprints, archive them before starting new work
+- [ ] If `## Active Phase` has 5+ completed sprints, archive them before starting new work
 - [ ] Add/update checklist items for the current directive
 - [ ] Mark the directive as "In Progress"
 - [ ] Identify which agents are involved
