@@ -229,7 +229,7 @@
 - [x] todo.md post-sprint checklist: clarify hook enforcement language
 
 #### Task 2 — PR checklist count mismatch
-- [ ] CONTRIBUTING.md: "eight" → "ten" to match PR template
+- [x] CONTRIBUTING.md: "eight" → "ten" to match PR template
 
 #### Task 3 — CI check count in Secure SDL
 - [ ] SECURE_SDL: update executive summary and §4.1 table to match ci.yml
