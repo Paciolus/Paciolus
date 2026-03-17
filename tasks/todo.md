@@ -221,7 +221,7 @@
 
 ### Sprint 549 — Governance Remediation (Codex Review)
 
-**Status:** IN PROGRESS
+**Status:** COMPLETE
 **Goal:** Resolve 8 governance documentation inconsistencies identified by control-plane audit.
 
 #### Task 1 — Archival threshold normalization
@@ -250,7 +250,9 @@
 - [x] Added brand authority header to `.claude/agents/designer.md` and `.claude/skills/frontend-design/SKILL.md`
 
 #### Review
-- Commit: (pending — one commit per task)
+- Commits: 467dc89, 6b4c81d, 8b628ab, 6ce4596, 04ac2b1, d16955f, 40f9b8b, 0f93e1f
+- All 8 tasks completed as separate commits
+- No test files, CI logic, or hook scripts modified — governance docs only
 
 ---
 
