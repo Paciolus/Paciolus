@@ -149,7 +149,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(
     title="Paciolus API",
-    description="Trial Balance Diagnostic Intelligence for Financial Professionals",
+    description="12-Tool Audit Intelligence Suite for Financial Professionals",
     version=__version__,
     lifespan=lifespan,
     # Disable interactive API docs in production to prevent endpoint/schema enumeration

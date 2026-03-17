@@ -1,5 +1,10 @@
 # Feature Roadmap
 
+> 📁 **HISTORICAL ARTIFACT**
+> This document reflects a prior product state (v0.70.0, 5-tool suite) and is retained for reference only.
+> It has not been updated to reflect current architecture, pricing, or product scope.
+> See `CLAUDE.md` and `tasks/todo.md` for current truth.
+
 **Document Classification:** Internal (Product, Engineering)
 **Version:** 2.0
 **Last Updated:** February 6, 2026

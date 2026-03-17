@@ -86,7 +86,8 @@ _DEFAULT_POLICIES: dict[str, dict[str, str]] = {
         "write": "180/minute",
         "default": "300/minute",
     },
-    # Backward-compat aliases for old tier names during migration window
+    # LEGACY ALIAS: "team" maps to Professional tier. Requires DB migration before rename.
+    # Tracked in COHESION_REMEDIATION.md — do not rename without migration.
     "team": {
         "auth": "20/minute",
         "audit": "60/minute",
@@ -94,6 +95,8 @@ _DEFAULT_POLICIES: dict[str, dict[str, str]] = {
         "write": "180/minute",
         "default": "300/minute",
     },
+    # LEGACY ALIAS: "organization" maps to Enterprise tier. Requires DB migration before rename.
+    # Tracked in COHESION_REMEDIATION.md — do not rename without migration.
     "organization": {
         "auth": "20/minute",
         "audit": "60/minute",

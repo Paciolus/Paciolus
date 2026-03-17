@@ -88,7 +88,7 @@ Press **Cmd+K** (Mac) or **Ctrl+K** (Windows) anywhere to open the command palet
 
 Additional shortcuts:
 - **Cmd+1** — Client Portfolio
-- **Cmd+2** — Diagnostic Workspace
+- **Cmd+2** — Workspace
 - **Cmd+[** / **Cmd+]** — Collapse/expand sidebars (workspace view)
 - **Escape** — Close modals and menus
 
@@ -606,45 +606,50 @@ Upload an inventory listing. Key columns: Item Description, Quantity, Unit Cost.
 
 Paciolus offers three purchasable plans plus a Free tier for evaluation.
 
-| Feature | Free | Solo | Team | Organization |
-|---------|------|------|------|-------------|
-| **Price (monthly)** | $0 | $50/mo | $130/mo | $400/mo |
-| **Price (annual)** | $0 | $500/yr | $1,300/yr | $4,000/yr |
-| **Seats** | 1 | 1 | 3 included | 3 included |
-| **Diagnostics/month** | 10 | 20 | Unlimited | Unlimited |
-| **Clients** | 3 | 10 | Unlimited | Unlimited |
-| **Tools** | 2 | 9 | All 12 | All 12 |
-| **File formats** | 5 basic | 9 formats | All 10 | All 10 |
-| **PDF export** | Yes | Yes | Yes | Yes |
+| Feature | Free | Solo | Professional | Enterprise |
+|---------|------|------|-------------|------------|
+| **Price (monthly)** | $0 | $100/mo | $500/mo | $1,000/mo |
+| **Price (annual)** | $0 | $1,000/yr | $5,000/yr | $10,000/yr |
+| **Seats** | 1 | 1 | 7 included (up to 20) | 20 included (up to 100) |
+| **Uploads/month** | 10 | 100 | 500 | Unlimited |
+| **Clients** | 3 | Unlimited | Unlimited | Unlimited |
+| **Tools** | 2 (TB + Flux) | All 12 | All 12 | All 12 |
+| **File formats** | 5 basic | All 10 | All 10 | All 10 |
+| **PDF export** | — | Yes | Yes | Yes |
 | **Excel export** | — | Yes | Yes | Yes |
 | **CSV export** | — | Yes | Yes | Yes |
-| **Engagement Workspace** | — | — | Yes | Yes |
+| **Engagement Workspace** | — | Yes | Yes | Yes |
+| **Export sharing** | — | — | Yes | Yes |
+| **Admin dashboard** | — | — | Yes | Yes |
+| **Custom PDF branding** | — | — | — | Yes |
+| **Bulk upload** | — | — | — | Yes |
 | **Priority support** | — | — | Yes | Yes |
 
 ### 15.2 Tool Access by Plan
 
-| Tool | Free | Solo | Team | Organization |
-|------|------|------|------|-------------|
+All paid tiers (Solo, Professional, Enterprise) have access to all 12 tools.
+
+| Tool | Free | Solo | Professional | Enterprise |
+|------|------|------|-------------|------------|
 | TB Diagnostics | Yes | Yes | Yes | Yes |
 | Multi-Period Comparison | — | Yes | Yes | Yes |
 | Journal Entry Testing | — | Yes | Yes | Yes |
 | AP Payment Testing | — | Yes | Yes | Yes |
 | Bank Reconciliation | — | Yes | Yes | Yes |
 | Revenue Testing | — | Yes | Yes | Yes |
-| Payroll Testing | — | — | Yes | Yes |
-| Three-Way Match | — | — | Yes | Yes |
-| AR Aging Analysis | — | — | Yes | Yes |
-| Fixed Asset Testing | — | — | Yes | Yes |
-| Inventory Testing | — | — | Yes | Yes |
-| Statistical Sampling | — | — | Yes | Yes |
+| Payroll Testing | — | Yes | Yes | Yes |
+| Three-Way Match | — | Yes | Yes | Yes |
+| AR Aging Analysis | — | Yes | Yes | Yes |
+| Fixed Asset Testing | — | Yes | Yes | Yes |
+| Inventory Testing | — | Yes | Yes | Yes |
+| Statistical Sampling | — | Yes | Yes | Yes |
 
 ### 15.3 Seat-Based Pricing
 
-Team and Organization plans include a base number of seats. Additional seats can be added:
+Professional and Enterprise plans include a base number of seats. Additional seats can be added:
 
-- **Seats 4–10:** $80/month ($800/year) per seat
-- **Seats 11–25:** $70/month ($700/year) per seat
-- **26+ seats:** Contact sales for a custom quote
+- **Seats 8–22:** $80/month ($800/year) per seat (graduated: Tier 1 qty 1–7 = $80, Tier 2 qty 8–22 = $70)
+- **23+ seats:** Contact sales for a custom quote
 
 Manage seats from **Settings > Billing > Manage Seats**.
 
@@ -665,11 +670,15 @@ To manage payment methods, view invoices, or cancel, click **"Manage Billing"** 
 
 ### 16.1 Zero-Storage Architecture
 
+Your uploaded financial data is never stored.
+
+Raw uploaded financial data is never persisted to disk or retained between sessions. Paciolus retains only aggregate, non-attributable usage metadata in accordance with our retention policy. No line-level financial data is ever written to storage.
+
 Paciolus operates under a Zero-Storage security model:
 
 - **Your uploaded files are never stored.** Files are processed entirely in-memory and discarded immediately after analysis
 - **No line-level data is persisted.** Individual account names, balances, and transaction details are never written to disk or database
-- **Only aggregate metadata is retained.** Category totals, financial ratios, row counts, and diagnostic metadata are stored for your activity history
+- **Only aggregate metadata is retained.** Category totals, financial ratios, row counts, and diagnostic metadata are stored for your activity history and workspace continuity
 - **Server breach exposure is minimal.** Even in the event of a server compromise, no client financial data exists to be stolen
 
 ### 16.2 What Is Stored vs. What Is Not
@@ -685,8 +694,10 @@ Paciolus operates under a Zero-Storage security model:
 
 ### 16.3 Implications for You
 
-- **Always export before closing.** Results exist only during your session. Download PDF/Excel/CSV reports before navigating away
-- **No historical data retrieval.** Paciolus cannot recover analysis results from a prior session. Your activity history shows metadata only (dates, row counts, ratios)
+"Ephemeral" refers specifically to your uploaded financial data. Workspace metadata — including analysis results, findings summaries, and report history — is retained so you can return to your work.
+
+- **Always export detailed results before closing.** Line-level analysis detail (flagged entries, individual transactions) exists only during your session. Download PDF/Excel/CSV reports before navigating away. Aggregate summaries and workspace metadata persist across sessions.
+- **No raw data retrieval.** Paciolus cannot recover your uploaded financial files or line-level detail from a prior session. Your activity history shows aggregate metadata only (dates, row counts, ratios)
 - **Simplified compliance.** Because Paciolus never stores client financial data, the platform has a minimal data footprint under GDPR, CCPA, and SOC 2 frameworks
 
 For the complete technical specification, see the [Zero-Storage Architecture](https://paciolus.com/trust) document on our Trust page.
@@ -695,13 +706,13 @@ For the complete technical specification, see the [Zero-Storage Architecture](ht
 
 ## 17. Engagement Workspaces
 
-**Available on Team and Organization plans.**
+**Available on Solo, Professional, and Enterprise plans.**
 
 Engagement Workspaces let you organize diagnostic work by client engagement, track follow-up items, and export a complete diagnostic package.
 
 ### 17.1 Creating a Workspace
 
-1. Go to **Diagnostic Workspace** (Cmd+K > "Workspace" or navigate via sidebar)
+1. Go to **Workspace** (Cmd+K > "Workspace" or navigate via sidebar)
 2. Click "New Workspace"
 3. Select a client and reporting period
 4. Set the materiality threshold (or inherit from client/practice defaults)
@@ -756,12 +767,12 @@ Each client can have custom settings:
 
 | Format | Description | Availability |
 |--------|-------------|--------------|
-| **PDF Memos** | Professional workpaper memoranda with ISA/PCAOB/IFRS/GAAP references, signoff fields, and legal disclaimers | All plans |
+| **PDF Memos** | Professional workpaper memoranda with ISA/PCAOB/IFRS/GAAP references, signoff fields, and legal disclaimers | Solo and above |
 | **Excel Workpapers** | Multi-tab spreadsheets with structured data, summaries, and analysis tabs | Solo and above |
 | **CSV** | Raw data exports (flagged entries, sample selections, anomalies) | Solo and above |
 | **Lead Sheets (Excel)** | A–Z categorized workpaper | Solo and above |
 | **Financial Statements** | Balance Sheet + Income Statement + Cash Flow Statement | Solo and above |
-| **Diagnostic Package (ZIP)** | Complete engagement export with all memos | Team and above |
+| **Diagnostic Package (ZIP)** | Complete engagement export with all memos | Professional and above |
 
 ### 19.2 Available PDF Memos
 
@@ -885,7 +896,7 @@ You've attempted to access a tool or feature outside your current plan. Visit Se
 
 ### "Diagnostic Limit Reached"
 
-Free plans allow 10 diagnostics per month; Solo allows 20. Team and Organization plans have unlimited diagnostics.
+Free plans allow 10 uploads per month; Solo allows 100. Professional and Enterprise plans have unlimited uploads.
 
 ---
 
@@ -895,7 +906,7 @@ Free plans allow 10 diagnostics per month; Solo allows 20. Team and Organization
 A: Yes. Zero-Storage architecture means your financial data is processed in-memory and never stored. See Section 16 and our [Trust page](https://paciolus.com/trust) for details.
 
 **Q: Can I recover results from last week?**
-A: No. Zero-Storage means results are ephemeral. Always export to PDF/Excel/CSV before closing the browser.
+A: "Ephemeral" refers specifically to your uploaded financial data. Workspace metadata — including analysis results, findings summaries, and report history — is retained so you can return to your work. However, line-level detail (individual flagged entries, transaction lists) exists only during your active session. Always export detailed reports to PDF/Excel/CSV before closing the browser.
 
 **Q: Which tool should I use?**
 
@@ -924,7 +935,7 @@ A: Ten formats: CSV, Excel (.xlsx/.xls), TSV, TXT, OFX, QBO, IIF, PDF, and ODS. 
 A: 50 MB per upload across all formats.
 
 **Q: How do I add team members?**
-A: Team and Organization plans support multiple seats. Go to Settings > Billing > Manage Seats to add users.
+A: Professional and Enterprise plans support multiple seats. Go to Settings > Billing > Manage Seats to add users.
 
 **Q: Can I change my plan?**
 A: Yes. Upgrade or downgrade at any time from Settings > Billing. Plan changes take effect immediately for upgrades and at the end of the billing period for downgrades/cancellations.

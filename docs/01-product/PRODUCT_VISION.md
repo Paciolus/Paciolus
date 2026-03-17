@@ -10,7 +10,8 @@
 
 ## Executive Summary
 
-Paciolus is building the **most trusted audit intelligence platform** for financial professionals. Our vision is to become the industry-standard tool suite for fractional CFOs, accountants, and financial professionals who need surgical precision in their diagnostic work—without compromising client data privacy.
+Paciolus is a **12-tool AI-powered audit intelligence suite** for financial professionals, built on a Zero-Storage architecture. Our vision is to become the industry-standard diagnostic platform for fractional CFOs, accountants, and financial professionals who need surgical precision in their work—without compromising client data privacy.
+<!-- Updated: product now described as 12-tool suite per 2025 cohesion remediation -->
 
 **Mission Statement:**
 > "Empower financial professionals with intelligent diagnostics that respect privacy, accelerate insight, and maintain the highest standards of data security."
@@ -104,17 +105,25 @@ By 2029, Paciolus will be the go-to diagnostic platform for 50,000+ financial pr
 2. **Surgical Intelligence** — Automated classification, anomaly detection, statistical analysis
 3. **Professional Output** — Client-ready PDF/Excel reports with Oat & Obsidian branding
 
-### 3.2 Key Features (Current — v0.70.0)
+### 3.2 Key Features (Current — v2.1.0)
+<!-- Updated: product now described as 12-tool suite per 2025 cohesion remediation -->
 
-**5-Tool Audit Intelligence Suite:**
+**12-Tool Audit Intelligence Suite:**
 
 | Tool | Description |
 |------|-------------|
 | **TB Diagnostics** | Trial balance upload, anomaly detection, ratio analysis, lead sheets, financial statements |
 | **Multi-Period Comparison** | 2-way and 3-way period comparison with budget variance analysis |
-| **Journal Entry Testing** | 18-test battery with Benford's Law, stratified sampling (PCAOB AS 2315) |
+| **Journal Entry Testing** | 19-test battery with Benford's Law, stratified sampling (PCAOB AS 2315) |
 | **AP Payment Testing** | 13-test duplicate detection battery with fraud indicators |
 | **Bank Reconciliation** | Automated bank-to-GL matching with reconciliation bridge |
+| **Payroll Testing** | 11-test payroll register integrity verification (ISA 500) |
+| **Three-Way Match** | PO → Invoice → Receipt reconciliation |
+| **Revenue Testing** | 16-test ASC 606/IFRS 15 revenue recognition battery |
+| **AR Aging Analysis** | 11-test receivables valuation and aging analysis (ISA 540) |
+| **Fixed Asset Testing** | 9-test PP&E depreciation and impairment testing (IAS 16/ASC 360) |
+| **Inventory Testing** | 9-test inventory valuation and obsolescence testing (IAS 2/ASC 330) |
+| **Statistical Sampling** | ISA 530 / PCAOB AS 2315 sample design and evaluation |
 
 **Platform Capabilities:**
 
@@ -210,9 +219,10 @@ Competitors can't easily replicate this because their entire infrastructure is b
 ### 2026: Foundation & PMF (Product-Market Fit)
 
 **Q1 (Complete):**
-- Launched 5-tool audit intelligence suite (v0.70.0)
-- 80 sprints delivered across 7 phases
-- 1,270 backend tests, 22 frontend routes
+- Launched 12-tool audit intelligence suite (v2.1.0)
+<!-- Updated: product now described as 12-tool suite per 2025 cohesion remediation -->
+- 546+ sprints delivered across 69 phases
+- 6,531 backend tests + 1,357 frontend tests
 - Zero-Storage architecture validated across all tools
 
 **Q2-Q4 (Planned):**
@@ -340,9 +350,10 @@ Paciolus is not just another SaaS tool—it's a **trust platform** for financial
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 3.0 | 2026-03-17 | CEO/Product | Updated for 12-tool suite (cohesion remediation) |
 | 2.0 | 2026-02-06 | CEO/Product | Updated for Phase VII completion, 5-tool suite |
 | 1.0 | 2026-02-04 | CEO/Product | Initial publication |
 
 ---
 
-*Paciolus v0.70.0 — Professional Audit Intelligence Suite*
+*Paciolus v2.1.0 — 12-Tool Professional Audit Intelligence Suite*

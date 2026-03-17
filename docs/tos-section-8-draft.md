@@ -12,16 +12,16 @@
 
 Paciolus is a **data analytics and diagnostic tool** designed to assist financial professionals with structured data analysis workflows. Paciolus is **not** audit software, and its outputs do **not** constitute audit evidence, audit opinions, or assurance communications under any professional standards framework.
 
-### 8.2 Diagnostic Workspace
+### 8.2 Workspace
 
-The Engagement Workspace feature ("Diagnostic Workspace") provides workflow organization capabilities including:
+The Engagement Workspace feature provides workflow organization capabilities including:
 
 - Engagement metadata tracking (client, period, materiality thresholds)
 - Follow-up item tracking (narrative descriptions only)
 - Workpaper index generation (document register and cross-references)
 - Diagnostic package export (anomaly summary PDF, workpaper index, manifest)
 
-The Diagnostic Workspace is a **workflow management tool only**. It does not:
+The Workspace is a **workflow management tool only**. It does not:
 
 - Generate, evaluate, or classify audit findings
 - Produce management letters or audit communications
@@ -47,7 +47,7 @@ Platform outputs do not constitute sufficient appropriate audit evidence under I
 
 ### 8.5 Materiality Thresholds
 
-Materiality thresholds set within the Diagnostic Workspace are user-configured inputs for data filtering purposes only. The platform does not determine, recommend, or validate materiality levels. The determination of appropriate materiality thresholds remains the responsibility of the practitioner in accordance with ISA 320/PCAOB AS 2105.
+Materiality thresholds set within the Workspace are user-configured inputs for data filtering purposes only. The platform does not determine, recommend, or validate materiality levels. The determination of appropriate materiality thresholds remains the responsibility of the practitioner in accordance with ISA 320/PCAOB AS 2105.
 
 ### 8.6 Zero-Storage Architecture
 

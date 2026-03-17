@@ -233,10 +233,10 @@ Customer feature access is gated by subscription tier:
 
 | Tier | Diagnostic Limit | Client Limit | Tool Access | File Formats |
 |------|-------------------|--------------|-------------|-------------|
-| **Free** | 10/month | 3 | All 12 tools | 5 basic formats |
-| **Solo** | 20/month | 10 | All 12 tools | 9 formats |
-| **Team** | Unlimited | Unlimited | All 12 tools | All 10 formats |
-| **Organization** | Unlimited | Unlimited | All 12 tools | All 10 formats |
+| **Free** | 10/month | 3 | 2 tools (TB + Flux) | 5 basic formats |
+| **Solo** | 100/month | Unlimited | All 12 tools | All 10 formats |
+| **Professional** | 500/month | Unlimited | All 12 tools | All 10 formats |
+| **Enterprise** | Unlimited | Unlimited | All 12 tools | All 10 formats |
 
 Enforcement is implemented in `backend/shared/entitlements.py` and checked at the route level.
 

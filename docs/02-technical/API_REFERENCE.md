@@ -1,3 +1,10 @@
+> ⚠️ **DOCUMENTATION STATUS — HISTORICAL SNAPSHOT**
+> This reference reflects API v0.70.0 and is significantly outdated. Router count,
+> endpoint signatures, and tool listings do not reflect the current API surface.
+> **Canonical source of truth: `backend/main.py` router registration.**
+> A regenerated hybrid reference is in progress. Do not rely on this document for
+> integration work without cross-referencing the live codebase.
+
 # API Reference
 
 **Document Classification:** Public (Developer Documentation)

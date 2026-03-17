@@ -1,5 +1,10 @@
 # Security Hardening: Executive Summary
 
+> 📁 **HISTORICAL ARTIFACT**
+> This document reflects a prior product state (v1.3.0, 11-tool suite) and is retained for reference only.
+> It has not been updated to reflect current architecture, pricing, or product scope.
+> See the relevant canonical doc for current truth.
+
 **Date:** February 16, 2026
 **Audience:** Leadership and non-technical stakeholders
 
@@ -11,13 +16,13 @@
 
 - **Verified log safety.** Internal application logs were verified through 9 automated behavioral tests to never contain user passwords, email tokens, personal email addresses, names, company names, or financial message content. Even in development mode, only safe operational labels are recorded.
 
-- **Honest product language.** All public-facing descriptions of how Paciolus handles data have been reviewed and corrected to accurately reflect what the system does. Technical architecture documentation was refreshed to match the current 11-tool, 3,840-test state. Customers can trust that what the website and documentation say matches reality.
+- **Honest product language.** All public-facing descriptions of how Paciolus handles data have been reviewed and corrected to accurately reflect what the system does. Technical architecture documentation was refreshed to match the current 12-tool, 7,888-test state. Customers can trust that what the website and documentation say matches reality.
 
 - **Safer file uploads.** Protections were added against a class of attacks where a specially crafted file could overwhelm the system. Uploaded files are now checked for hidden dangers before processing begins.
 
 - **Better access controls.** Every action a user can take through the platform now has an explicit speed limit to prevent abuse. Authentication secrets are separated so that compromising one does not compromise another.
 
-- **Automatic data cleanup.** Old diagnostic records are now automatically purged after one year, reducing the amount of data the system holds over time and supporting data minimization principles.
+- **Automatic data cleanup.** Old diagnostic records are now automatically archived (soft-deleted) after one year, reducing the active data footprint and supporting data minimization principles. <!-- Implementation: soft-delete via archived_at column, not hard-delete -->
 
 ---
 

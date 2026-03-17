@@ -265,6 +265,7 @@ def login(request: Request, credentials: UserLogin, response: Response, db: Sess
 
 @router.get("/auth/me", response_model=UserResponse)
 def get_current_user_info(current_user: User = Depends(require_current_user)):
+    """Return the authenticated user's profile information."""
     return UserResponse.model_validate(current_user)
 
 

@@ -612,18 +612,18 @@ export default function TermsPage() {
                 </tr>
                 <tr className="border-b border-obsidian-700">
                   <td className="font-sans text-oatmeal-300 p-3">Solo</td>
-                  <td className="font-mono text-oatmeal-300 p-3">$50/mo or $500/yr</td>
-                  <td className="font-sans text-oatmeal-400 p-3">Individual analysis (7 tools), PDF export, 20 uploads/mo, 10 clients</td>
+                  <td className="font-mono text-oatmeal-300 p-3">$100/mo or $1,000/yr</td>
+                  <td className="font-sans text-oatmeal-400 p-3">All 12 tools, PDF/Excel/CSV export, 100 uploads/mo, unlimited clients</td>
                 </tr>
                 <tr className="border-b border-obsidian-700">
-                  <td className="font-sans text-oatmeal-300 p-3">Team</td>
-                  <td className="font-mono text-oatmeal-300 p-3">$150/mo or $1,500/yr</td>
-                  <td className="font-sans text-oatmeal-400 p-3">Firm-wide testing (11 tools), PDF/Excel/CSV export, 100 uploads/mo, 50 clients, 4 seats included</td>
+                  <td className="font-sans text-oatmeal-300 p-3">Professional</td>
+                  <td className="font-mono text-oatmeal-300 p-3">$500/mo or $5,000/yr</td>
+                  <td className="font-sans text-oatmeal-400 p-3">All 12 tools, all exports, 500 uploads/mo, unlimited clients, 7 seats included (up to 20), admin dashboard</td>
                 </tr>
                 <tr>
-                  <td className="font-sans text-oatmeal-300 p-3">Organization</td>
-                  <td className="font-mono text-oatmeal-300 p-3">$450/mo or $4,500/yr</td>
-                  <td className="font-sans text-oatmeal-400 p-3">Enterprise compliance (all 12+ tools), all exports, unlimited uploads/clients, 15 seats included (up to 75)</td>
+                  <td className="font-sans text-oatmeal-300 p-3">Enterprise</td>
+                  <td className="font-mono text-oatmeal-300 p-3">$1,000/mo or $10,000/yr</td>
+                  <td className="font-sans text-oatmeal-400 p-3">All 12 tools, all exports, unlimited uploads/clients, 20 seats included (up to 100), custom PDF branding, bulk upload</td>
                 </tr>
               </tbody>
             </table>

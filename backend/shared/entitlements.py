@@ -11,6 +11,11 @@ Defines per-tier limits for uploads, clients, tools, exports, and features.
 Used by entitlement_checks.py dependency functions to gate access.
 """
 
+# CANONICAL TOOL COUNT: 12
+# This is the single source of truth for Paciolus tool count across all docs, copy,
+# and marketing surfaces. If tools are added or removed, update this comment and all
+# references identified in COHESION_REMEDIATION.md before merging.
+
 from dataclasses import dataclass
 
 from models import UserTier

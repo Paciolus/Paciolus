@@ -10,9 +10,9 @@
 
 ## Executive Summary
 
-Paciolus is a modern, cloud-native audit intelligence platform built on a **Zero-Storage architecture** with an 11-tool diagnostic suite. This document provides a comprehensive technical overview of the system design, technology stack, and architectural patterns.
+Paciolus is a modern, cloud-native audit intelligence platform built on a **Zero-Storage architecture** with a 12-tool diagnostic suite. This document provides a comprehensive technical overview of the system design, technology stack, and architectural patterns.
 
-**Current Version:** 1.3.0 (Phase XXXIV Complete)
+**Current Version:** 2.1.0 (Phase LXIX Complete)
 
 **Key Architectural Decisions:**
 - ✅ **Zero-Storage Backend** — Raw financial data processed in-memory, never persisted; aggregate metadata retained
@@ -22,6 +22,20 @@ Paciolus is a modern, cloud-native audit intelligence platform built on a **Zero
 - ✅ **Streaming Processing** — Handles large files (50K+ rows) via chunked processing
 
 **Target Audience:** Engineering teams, technical leadership, DevOps, security auditors
+
+---
+
+## Navigation Model
+
+Paciolus uses a Workspace-centric navigation model.
+
+**Workspaces** are the primary organizational unit. Each Workspace represents a discrete
+client engagement and is the container within which all 12 diagnostic tools are executed.
+
+**Dashboard** is a summary view only. It surfaces active Workspace status, recent activity,
+and account-level metrics. It does not represent a separate product area.
+
+The term "Diagnostic Workspace" is retired. Use "Workspace" throughout.
 
 ---
 
@@ -107,11 +121,11 @@ Paciolus is a modern, cloud-native audit intelligence platform built on a **Zero
 
 | Technology | Version | Purpose | License |
 |------------|---------|---------|---------|
-| **Next.js** | 16.1.6 (Turbopack) | React framework, SSG/SSR | MIT |
-| **React** | 18.x | UI library | MIT |
-| **TypeScript** | 5.x | Type safety | Apache 2.0 |
-| **Tailwind CSS** | 3.x | Utility-first CSS | MIT |
-| **framer-motion** | 11.x | Animations | MIT |
+| **Next.js** | 16.1.7 (Turbopack) | React framework, SSG/SSR | MIT |
+| **React** | 19.x | UI library | MIT |
+| **TypeScript** | 5.9.x | Type safety | Apache 2.0 |
+| **Tailwind CSS** | 4.2.x | Utility-first CSS | MIT |
+| **framer-motion** | 12.x | Animations | MIT |
 | **Lucide React** | (icons) | Icon library | ISC |
 
 **Build tools:**
@@ -123,13 +137,13 @@ Paciolus is a modern, cloud-native audit intelligence platform built on a **Zero
 
 | Technology | Version | Purpose | License |
 |------------|---------|---------|---------|
-| **FastAPI** | 0.104+ | Web framework | MIT |
+| **FastAPI** | 0.135+ | Web framework | MIT |
 | **Python** | 3.12 | Language | PSF |
 | **pandas** | 2.x | Data processing | BSD |
 | **NumPy** | 1.x | Numerical computing | BSD |
 | **SQLAlchemy** | 2.x | ORM | MIT |
 | **PyJWT** | 2.x | JWT handling | MIT |
-| **passlib** | 1.7+ | Password hashing (bcrypt) | BSD |
+| **bcrypt** | 5.0+ | Password hashing | Apache 2.0 |
 | **Gunicorn** | 21.x | WSGI server | MIT |
 | **Uvicorn** | 0.27+ | ASGI server | BSD |
 | **ReportLab** | 4.x | PDF generation | BSD |
@@ -161,7 +175,7 @@ Paciolus is a modern, cloud-native audit intelligence platform built on a **Zero
 frontend/
 ├── src/
 │   ├── app/                    # Next.js App Router (22 routes)
-│   │   ├── page.tsx            # Platform homepage (11-tool showcase)
+│   │   ├── page.tsx            # Platform homepage (12-tool showcase)
 │   │   ├── login/page.tsx      # Login page
 │   │   ├── register/page.tsx   # Registration
 │   │   ├── portfolio/page.tsx  # Client portfolio
@@ -258,7 +272,7 @@ const MappingContext = createContext<MappingContextType>({
 
 | Route | Component | Auth Required | Description |
 |-------|-----------|---------------|-------------|
-| `/` | `page.tsx` | No | Platform homepage (11-tool showcase) |
+| `/` | `page.tsx` | No | Platform homepage (12-tool showcase) |
 | `/login` | `login/page.tsx` | No | Login page |
 | `/register` | `register/page.tsx` | No | Registration |
 | `/verify-email` | `verify-email/page.tsx` | No | Email verification |
@@ -912,7 +926,7 @@ jobs:
 
 ### 10.2 Architectural Evolution
 
-**Phase 1 (Current):** Monolithic backend, 11-tool suite, CI pipeline, structured logging
+**Phase 1 (Current):** Monolithic backend, 12-tool suite, CI pipeline, structured logging
 **Phase 2 (Q3 2026):** Multi-region, Redis caching
 **Phase 3 (2027):** Microservices (audit engine, user service, client service)
 
@@ -947,10 +961,11 @@ jobs:
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 4.0 | 2026-03-17 | CTO | Updated for v2.1.0 (12-tool suite, 35 routers, cohesion remediation, tech stack versions corrected) |
 | 3.0 | 2026-02-16 | CTO | Updated for Phase XXXIV (11-tool suite, 30 routers, v1.3.0, 3,100+ tests, PyJWT, CSRF separation, CI pipeline, retention cleanup) |
 | 2.0 | 2026-02-06 | CTO | Updated for Phase VII (5-tool suite, 17 routers, v0.70.0) |
 | 1.0 | 2026-02-04 | CTO | Initial publication |
 
 ---
 
-*Paciolus v1.3.0 — Professional Audit Intelligence Suite*
+*Paciolus v2.1.0 — 12-Tool Professional Audit Intelligence Suite*

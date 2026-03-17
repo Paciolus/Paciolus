@@ -1,17 +1,18 @@
 # Paciolus
 
-**Trial Balance Diagnostic Intelligence Platform for Financial Professionals**
+**12-Tool AI-Powered Audit Intelligence Suite for Financial Professionals**
 
-Paciolus turns hours of manual diagnostic work into seconds — without ever storing a client's financial data. Upload a trial balance, general ledger, payment register, or bank statement. Get structured, standards-referenced diagnostics and report-ready exports that hold up under professional review.
+Paciolus is a 12-tool AI-powered audit intelligence suite for financial professionals, built on a Zero-Storage architecture. Upload a trial balance, general ledger, payment register, or bank statement. Get structured, standards-referenced diagnostics and report-ready exports that hold up under professional review — your uploaded financial data is never stored.
 
 ## Key Features
 
-- **Zero-Storage Architecture** — Financial data is processed in-memory and never persisted. Only aggregate metadata is stored for variance analysis.
+- **12 Diagnostic Tools** — TB Diagnostics, Multi-Period Comparison, Journal Entry Testing, AP Payment Testing, Bank Reconciliation, Payroll Testing, Three-Way Match, Revenue Testing, AR Aging, Fixed Asset Testing, Inventory Testing, and Statistical Sampling
+- **Zero-Storage Architecture** — Your uploaded financial data is never stored. Only aggregate, non-attributable usage metadata is retained
 - **Intelligent Classification** — 80+ keyword rules automatically categorize accounts (Assets, Liabilities, Equity, Revenue, Expenses)
 - **Anomaly Detection** — Identifies sign errors, unusual balances, and classification mismatches
-- **Ratio Intelligence** — 17 financial ratios (liquidity, solvency, profitability, efficiency, cash cycle) with trend analysis and DuPont decomposition
-- **Multi-Sheet Excel Support** — Process complex workbooks with automatic sheet consolidation
-- **Professional Exports** — PDF diagnostic summaries and Excel workpapers with Oat & Obsidian branding
+- **Ratio Intelligence** — 17 core ratios + 8 industry ratios with DuPont decomposition and trend analysis
+- **10 File Formats** — CSV, Excel (.xlsx/.xls), TSV, TXT, OFX, QBO, IIF, PDF, and ODS
+- **Professional Exports** — PDF diagnostic memos, Excel workpapers, and CSV exports with Oat & Obsidian branding
 
 ## Quick Start
 
