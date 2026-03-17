@@ -232,7 +232,7 @@
 - [x] CONTRIBUTING.md: "eight" → "ten" to match PR template
 
 #### Task 3 — CI check count in Secure SDL
-- [ ] SECURE_SDL: update executive summary and §4.1 table to match ci.yml
+- [x] SECURE_SDL: executive summary 8 → 14, §4.1 table expanded to 14 checks, ci.yml noted as authoritative
 
 #### Task 4 — Stale sprint state in CLAUDE.md
 - [ ] Remove hardcoded sprint number, point to tasks/todo.md as live authority

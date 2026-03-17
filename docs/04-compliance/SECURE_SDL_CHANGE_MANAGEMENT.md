@@ -1,6 +1,6 @@
 # Secure Software Development Lifecycle and Change Management Policy
 
-**Version:** 1.1
+**Version:** 1.2
 **Document Classification:** Internal
 **Effective Date:** February 26, 2026
 **Last Updated:** February 27, 2026
@@ -16,7 +16,7 @@ This document defines Paciolus's secure software development lifecycle (SDLC), c
 
 **Key Controls:**
 - ✅ All production changes require pull request with at least one approval
-- ✅ 8 mandatory CI checks must pass before merge (pytest, build, lint, security scans)
+- ✅ 14 mandatory CI checks must pass before merge (see §4.1; `.github/workflows/ci.yml` is the authoritative source)
 - ✅ 5 AST-based accounting invariant checks enforced in CI
 - ✅ Pre-commit hooks (Husky + lint-staged) catch issues before push
 - ✅ Documented rollback procedure with <15-minute execution target
@@ -156,20 +156,26 @@ The following changes require **two** reviewers, one of whom must be a Senior De
 
 ### 4.1 Required CI Checks
 
-All checks must pass before merge to `main`:
+<!-- Authoritative source: .github/workflows/ci.yml — update this table when ci.yml changes. -->
 
-| Check | Tool | Blocking | Scope |
-|-------|------|----------|-------|
-| **Backend tests** | pytest | ✅ Yes | All backend tests (~4,650 tests) |
-| **Frontend build** | `npm run build` | ✅ Yes | TypeScript compilation + Next.js build |
-| **Frontend tests** | Jest + RTL | ✅ Yes | All frontend tests (~1,190 tests) |
-| **Backend lint** | ruff | ✅ Yes | Python linting (0 errors baseline) |
-| **Frontend lint** | ESLint | ✅ Yes | TypeScript/React linting (0 errors baseline) |
-| **Python SAST** | Bandit | ✅ Yes | HIGH severity + HIGH/MEDIUM confidence |
-| **Python SCA** | pip-audit | ✅ Yes | Any known vulnerability fails |
-| **Node SCA** | npm audit | ✅ Yes | `--audit-level=high`, production deps |
-| **Accounting invariants** | Accounting Policy Guard | ✅ Yes | 5 AST-based control checks |
-| **Lint baseline gate** | Custom | ✅ Yes | No increase from baseline (0 errors) |
+All checks must pass before merge to `main` (14 blocking checks):
+
+| Check | CI Job Name | Tool | Blocking | Scope |
+|-------|-------------|------|----------|-------|
+| **Secrets scan** | `secrets-scan` | trufflehog | ✅ Yes | Prevents committed secrets from reaching main |
+| **Backend tests** | `backend-tests` | pytest | ✅ Yes | All backend tests (Python 3.11 + 3.12 matrix) |
+| **Backend tests (PostgreSQL)** | `backend-tests-postgres` | pytest + PostgreSQL 15 | ✅ Yes | Backend tests against real PostgreSQL |
+| **OpenAPI drift check** | `openapi-drift-check` | Custom script | ✅ Yes | Detects Pydantic ↔ OpenAPI snapshot divergence |
+| **Frontend build + lint** | `frontend-build` | `npm run build` + ESLint | ✅ Yes | TypeScript compilation + Next.js build + ESLint counts |
+| **Frontend tests** | `frontend-tests` | Jest + RTL | ✅ Yes | All frontend tests |
+| **Backend lint** | `backend-lint` | ruff | ✅ Yes | Python linting (0 errors baseline) |
+| **Backend type check** | `mypy-check` | mypy | ✅ Yes | Non-test source type checking (0 errors) |
+| **Lint baseline gate** | `lint-baseline-gate` | Custom | ✅ Yes | No increase from ruff/ESLint baseline |
+| **Python SAST** | `bandit` | Bandit | ✅ Yes | HIGH severity + HIGH/MEDIUM confidence |
+| **Accounting invariants** | `accounting-policy` | Accounting Policy Guard | ✅ Yes | 5 AST-based control checks |
+| **Report standards** | `report-standards` | Custom validator | ✅ Yes | Report standards compliance |
+| **Python SCA** | `pip-audit-blocking` | pip-audit | ✅ Yes | Any known vulnerability fails |
+| **Node SCA** | `npm-audit-blocking` | npm audit | ✅ Yes | `--audit-level=high`, production deps |
 
 ### 4.2 Accounting Policy Guard Invariants
 
@@ -484,6 +490,7 @@ git verify-commit <sha>              # Verify a specific commit
 |---------|------|--------|---------|
 | 1.0 | 2026-02-26 | CTO | Initial publication: SDLC phases, branch protection, 10 CI checks, security review checklist, release process, rollback procedure (<15 min target), hotfix workflow, migration management |
 | 1.1 | 2026-02-27 | Engineering | Sprint 458 (CC8.6): branch protection table updated; §10.3 GPG commit signing added (procedure + key registry + activation sequence) |
+| 1.2 | 2026-03-17 | Engineering | Sprint 549: CI check count corrected (8 → 14), §4.1 table expanded to match ci.yml, authoritative-source comment added |
 
 ---
 
