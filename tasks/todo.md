@@ -244,7 +244,7 @@
 - [x] Fixed 3 occurrences: `src/utils/apiClient.ts` → `frontend/src/utils/apiClient.ts`, `src/utils/constants.ts` → `frontend/src/utils/constants.ts`
 
 #### Task 7 — Audit ecosystem ownership boundary
-- [ ] Create AUDIT_OWNERSHIP.md in .claude/agents/
+- [x] Created `.claude/agents/AUDIT_OWNERSHIP.md` — scope/exclusion table + conflict resolution
 
 #### Task 8 — Design instruction tie-break
 - [ ] Add brand authority header to designer.md and SKILL.md
