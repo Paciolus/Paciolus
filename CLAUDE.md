@@ -78,12 +78,10 @@ Both are mechanically enforced — not discipline-dependent. Hotfix commits (`fi
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Phases LXVI–LXIX COMPLETE (SOC 2 Readiness, Visual Polish, Code Review Fixes, Pricing v3)
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 2.1.0
-**Test Coverage:** 6,531 backend tests + 1,357 frontend tests
-**Next Phase:** Sprint 447 (Stripe Production Cutover — non-automatable: CEO sign-off + `sk_live_` keys required)
+**Live Sprint State:** See `tasks/todo.md` `## Active Phase` (authoritative — do not hardcode sprint numbers here)
 
 ### Completed Phases
 

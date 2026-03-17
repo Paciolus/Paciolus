@@ -235,7 +235,7 @@
 - [x] SECURE_SDL: executive summary 8 → 14, §4.1 table expanded to 14 checks, ci.yml noted as authoritative
 
 #### Task 4 — Stale sprint state in CLAUDE.md
-- [ ] Remove hardcoded sprint number, point to tasks/todo.md as live authority
+- [x] Removed stale Phase/Test Coverage/Next Phase lines, replaced with pointer to tasks/todo.md
 
 #### Task 5 — Document Authority Hierarchy
 - [ ] Add precedence declaration section to CLAUDE.md
