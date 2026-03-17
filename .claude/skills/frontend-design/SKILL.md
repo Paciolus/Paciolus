@@ -1,3 +1,4 @@
+# Brand tokens in frontend/tailwind.config.js and the Oat & Obsidian palette spec (skills/theme-factory/themes/oat-and-obsidian.md) are the final authority on color, typography, and spacing. This file governs layout and interaction patterns only.
 ---
 name: frontend-design
 description: Create distinctive, production-grade frontend interfaces with high design quality. Use this skill when the user asks to build web components, pages, or applications. Generates creative, polished code that avoids generic AI aesthetics.

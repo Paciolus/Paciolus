@@ -247,7 +247,7 @@
 - [x] Created `.claude/agents/AUDIT_OWNERSHIP.md` — scope/exclusion table + conflict resolution
 
 #### Task 8 — Design instruction tie-break
-- [ ] Add brand authority header to designer.md and SKILL.md
+- [x] Added brand authority header to `.claude/agents/designer.md` and `.claude/skills/frontend-design/SKILL.md`
 
 #### Review
 - Commit: (pending — one commit per task)

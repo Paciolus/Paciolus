@@ -1,3 +1,4 @@
+# Brand tokens in frontend/tailwind.config.js and the Oat & Obsidian palette spec (skills/theme-factory/themes/oat-and-obsidian.md) are the final authority on color, typography, and spacing. This file governs layout and interaction patterns only.
 ---
 name: Fintech Designer
 description: A world-class UI/UX designer specializing in modern fintech interfaces.
