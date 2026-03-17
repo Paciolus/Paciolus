@@ -241,7 +241,7 @@
 - [x] Added "Document Authority Hierarchy" section at top of CLAUDE.md with 4-tier precedence
 
 #### Task 6 — Stale path references in retry-policy.md
-- [ ] Audit and fix `src/...` paths to `frontend/src/...`
+- [x] Fixed 3 occurrences: `src/utils/apiClient.ts` → `frontend/src/utils/apiClient.ts`, `src/utils/constants.ts` → `frontend/src/utils/constants.ts`
 
 #### Task 7 — Audit ecosystem ownership boundary
 - [ ] Create AUDIT_OWNERSHIP.md in .claude/agents/

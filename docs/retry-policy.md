@@ -1,7 +1,7 @@
 # API Retry Policy
 
 > Contributor reference for the Paciolus API client retry and caching behavior.
-> Implementation: `src/utils/apiClient.ts` and `src/utils/constants.ts`.
+> Implementation: `frontend/src/utils/apiClient.ts` and `frontend/src/utils/constants.ts`.
 
 ---
 
@@ -23,7 +23,7 @@
 
 ## Constants
 
-Defined in `src/utils/constants.ts`:
+Defined in `frontend/src/utils/constants.ts`:
 
 | Constant | Value | Purpose |
 |----------|-------|---------|
