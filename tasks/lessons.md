@@ -4,6 +4,18 @@
 
 ---
 
+## Breaking API shape changes require simultaneous backend + frontend + test updates (Sprint 544)
+
+When changing a response shape (e.g., `clients` → `items` in PaginatedResponse), ALL consumers must be updated atomically: backend routes, frontend types, frontend hooks, AND test mocks. In Sprint 544, changing the list key from domain-specific (`clients`, `engagements`, `activities`) to generic (`items`) required updating 4 routes, 4 hooks, 3 type files, and 4 test files. Missing any one creates silent data loss (hook reads `data.items` but API returns `data.clients` → empty list). **Pattern:** Before making a breaking shape change, `grep` for ALL consumers of the old key across both backend and frontend.
+
+---
+
+## Mypy error counts can explode silently with test file growth (Sprint 543)
+
+A deferred item from Sprint 475 said "68 errors across 2 files." By Sprint 543, the same `mypy tests/` command showed 804 errors across 135 files because 133 test files had been added since the original estimate. **Pattern:** Deferred items with numeric estimates should include a "last measured" date. Re-measure before committing to a sprint scope.
+
+---
+
 ## Cover page metadata must propagate through ALL code paths, not just one (Sprint 541)
 
 When a fix is applied to a shared field (like `fiscal_year_end` on `ReportMetadata`), verify every code path that constructs that metadata — not just the one that triggered the bug report. Sprint 540 fixed `fiscal_year_end` for financial statements only (`pdf_generator.py`), missing the 17 testing/tool memo generators that construct `ReportMetadata` via a different path (`generate_testing_memo()` + custom generators). **Pattern:** When fixing a shared data structure, `grep` for ALL constructor call sites. If N call sites exist and only 1 was fixed, the remaining N-1 are still broken.

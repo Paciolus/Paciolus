@@ -1,11 +1,11 @@
 """
 Paciolus API — Practice & Client Settings Routes
 """
+
 import logging
-from typing import Any, Literal, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from pydantic import BaseModel, Field
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -25,82 +25,26 @@ from practice_settings import (
     PracticeSettings,
     resolve_materiality_config,
 )
+from schemas.settings_schemas import (  # noqa: F401 — backward compat re-exports
+    ClientSettingsInput,
+    ClientSettingsResponse,
+    MaterialityFormulaInput,
+    MaterialityPreviewInput,
+    MaterialityPreviewResponse,
+    MaterialityResolveResponse,
+    PracticeSettingsInput,
+    PracticeSettingsResponse,
+)
 from shared.helpers import require_client
 from shared.rate_limits import RATE_LIMIT_WRITE, limiter
 
 router = APIRouter(tags=["settings"])
 
 
-class MaterialityFormulaInput(BaseModel):
-    type: MaterialityFormulaType = MaterialityFormulaType.FIXED
-    value: float = Field(500.0, ge=0)
-    min_threshold: Optional[float] = Field(None, ge=0)
-    max_threshold: Optional[float] = Field(None, ge=0)
-
-
-class PracticeSettingsInput(BaseModel):
-    default_materiality: Optional[MaterialityFormulaInput] = None
-    show_immaterial_by_default: Optional[bool] = None
-    default_fiscal_year_end: Optional[str] = None
-    theme_preference: Optional[str] = None
-    default_export_format: Optional[Literal["pdf", "excel", "csv"]] = None
-    auto_save_summaries: Optional[bool] = None
-
-
-class PracticeSettingsResponse(BaseModel):
-    default_materiality: dict
-    show_immaterial_by_default: bool
-    default_fiscal_year_end: str
-    theme_preference: str
-    default_export_format: str
-    auto_save_summaries: bool
-
-
-class ClientSettingsInput(BaseModel):
-    materiality_override: Optional[MaterialityFormulaInput] = None
-    notes: Optional[str] = None
-    industry_multiplier: Optional[float] = Field(None, ge=0.1, le=10.0)
-    diagnostic_frequency: Optional[Literal["weekly", "monthly", "quarterly", "annually"]] = None
-
-
-class ClientSettingsResponse(BaseModel):
-    materiality_override: Optional[dict]
-    notes: str
-    industry_multiplier: float
-    diagnostic_frequency: str
-
-
-class MaterialityPreviewInput(BaseModel):
-    formula: MaterialityFormulaInput
-    total_revenue: float = 0.0
-    total_assets: float = 0.0
-    total_equity: float = 0.0
-
-
-class MaterialityPreviewResponse(BaseModel):
-    threshold: float
-    formula_display: str
-    explanation: str
-    formula: dict[str, Any]
-
-
-class MaterialityResolveResponse(BaseModel):
-    formula: dict
-    formula_display: str
-    session_override: Optional[float] = None
-    source: str
-
-
 @router.get("/settings/practice", response_model=PracticeSettingsResponse)
-def get_practice_settings(
-    current_user: User = Depends(require_current_user),
-    db: Session = Depends(get_db)
-):
+def get_practice_settings(current_user: User = Depends(require_current_user), db: Session = Depends(get_db)):
     """Get the current user's practice settings."""
-    log_secure_operation(
-        "get_practice_settings",
-        f"User {current_user.id} fetching practice settings"
-    )
+    log_secure_operation("get_practice_settings", f"User {current_user.id} fetching practice settings")
 
     settings = PracticeSettings.from_json(current_user.settings or "{}")
 
@@ -120,13 +64,10 @@ def update_practice_settings(
     request: Request,
     settings_input: PracticeSettingsInput,
     current_user: User = Depends(require_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Update the current user's practice settings."""
-    log_secure_operation(
-        "update_practice_settings",
-        f"User {current_user.id} updating practice settings"
-    )
+    log_secure_operation("update_practice_settings", f"User {current_user.id} updating practice settings")
 
     current_settings = PracticeSettings.from_json(current_user.settings or "{}")
 
@@ -162,10 +103,7 @@ def update_practice_settings(
         logger.exception("Database error saving practice settings")
         raise HTTPException(status_code=500, detail=sanitize_error(e, log_label="db_practice_settings"))
 
-    log_secure_operation(
-        "practice_settings_updated",
-        f"User {current_user.id} practice settings saved"
-    )
+    log_secure_operation("practice_settings_updated", f"User {current_user.id} practice settings saved")
 
     return PracticeSettingsResponse(
         default_materiality=current_settings.default_materiality.to_dict(),
@@ -178,9 +116,7 @@ def update_practice_settings(
 
 
 @router.get("/clients/{client_id}/settings", response_model=ClientSettingsResponse)
-def get_client_settings(
-    client: Client = Depends(require_client)
-):
+def get_client_settings(client: Client = Depends(require_client)):
     """Get settings for a specific client."""
     settings = ClientSettings.from_json(client.settings or "{}")
 
@@ -198,13 +134,10 @@ def update_client_settings(
     request: Request,
     settings_input: ClientSettingsInput,
     client: Client = Depends(require_client),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Update settings for a specific client."""
-    log_secure_operation(
-        "update_client_settings",
-        f"User {client.user_id} updating settings for client {client.id}"
-    )
+    log_secure_operation("update_client_settings", f"User {client.user_id} updating settings for client {client.id}")
 
     current_settings = ClientSettings.from_json(client.settings or "{}")
 
@@ -216,7 +149,9 @@ def update_client_settings(
             min_threshold=formula_input.min_threshold,
             max_threshold=formula_input.max_threshold,
         )
-    elif settings_input.materiality_override is None and 'materiality_override' in (settings_input.model_dump(exclude_unset=True) or {}):
+    elif settings_input.materiality_override is None and "materiality_override" in (
+        settings_input.model_dump(exclude_unset=True) or {}
+    ):
         current_settings.materiality_override = None
 
     if settings_input.notes is not None:
@@ -236,13 +171,12 @@ def update_client_settings(
         logger.exception("Database error saving client settings")
         raise HTTPException(status_code=500, detail=sanitize_error(e, log_label="db_client_settings"))
 
-    log_secure_operation(
-        "client_settings_updated",
-        f"Client {client.id} settings saved for user {client.user_id}"
-    )
+    log_secure_operation("client_settings_updated", f"Client {client.id} settings saved for user {client.user_id}")
 
     return ClientSettingsResponse(
-        materiality_override=current_settings.materiality_override.to_dict() if current_settings.materiality_override else None,
+        materiality_override=current_settings.materiality_override.to_dict()
+        if current_settings.materiality_override
+        else None,
         notes=current_settings.notes,
         industry_multiplier=current_settings.industry_multiplier,
         diagnostic_frequency=current_settings.diagnostic_frequency,
@@ -252,9 +186,7 @@ def update_client_settings(
 @router.post("/settings/materiality/preview", response_model=MaterialityPreviewResponse)
 @limiter.limit(RATE_LIMIT_WRITE)
 def preview_materiality(
-    request: Request,
-    preview_input: MaterialityPreviewInput,
-    current_user: User = Depends(require_current_user)
+    request: Request, preview_input: MaterialityPreviewInput, current_user: User = Depends(require_current_user)
 ):
     """Preview a materiality calculation."""
     formula = MaterialityFormula(
@@ -279,7 +211,7 @@ def resolve_materiality(
     client_id: Optional[int] = Query(default=None),
     session_threshold: Optional[float] = Query(default=None),
     current_user: User = Depends(require_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Resolve the effective materiality configuration."""
     practice_settings = PracticeSettings.from_json(current_user.settings or "{}")
@@ -292,16 +224,14 @@ def resolve_materiality(
             client_settings = ClientSettings.from_json(client.settings or "{}")
 
     config = resolve_materiality_config(
-        practice_settings=practice_settings,
-        client_settings=client_settings,
-        session_threshold=session_threshold
+        practice_settings=practice_settings, client_settings=client_settings, session_threshold=session_threshold
     )
 
     return {
         "formula": config.formula.to_dict(),
         "formula_display": config.formula.get_display_string(),
         "session_override": config.session_override,
-        "source": "session" if config.session_override else (
-            "client" if client_settings and client_settings.materiality_override else "practice"
-        ),
+        "source": "session"
+        if config.session_override
+        else ("client" if client_settings and client_settings.materiality_override else "practice"),
     }

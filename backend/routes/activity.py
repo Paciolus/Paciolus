@@ -59,11 +59,10 @@ class ActivityLogResponse(BaseModel):
     chain_hash: Optional[str] = None
 
 
-class ActivityHistoryResponse(BaseModel):
-    activities: list[ActivityLogResponse]
-    total_count: int
-    page: int
-    page_size: int
+from shared.pagination import PaginatedResponse, PaginationParams
+
+# Backward compat alias
+ActivityHistoryResponse = PaginatedResponse[ActivityLogResponse]
 
 
 class ChainVerifyResponse(BaseModel):
@@ -153,17 +152,17 @@ def log_activity(
     )
 
 
-@router.get("/activity/history", response_model=ActivityHistoryResponse)
+@router.get("/activity/history", response_model=PaginatedResponse[ActivityLogResponse])
 def get_activity_history(
-    page: int = Query(default=1, ge=1),
-    page_size: int = Query(default=20, ge=1, le=100),
+    pagination: PaginationParams = Depends(),
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
 ):
     """Get the authenticated user's audit activity history."""
-    log_secure_operation("activity_history_fetch", f"User {current_user.id} fetching activity history (page {page})")
+    log_secure_operation(
+        "activity_history_fetch", f"User {current_user.id} fetching activity history (page {pagination.page})"
+    )
 
-    offset = (page - 1) * page_size
     results = (
         db.query(ActivityLog, func.count(ActivityLog.id).over().label("total_count"))
         .filter(
@@ -171,24 +170,24 @@ def get_activity_history(
             ActivityLog.archived_at.is_(None),
         )
         .order_by(ActivityLog.timestamp.desc())
-        .offset(offset)
-        .limit(page_size)
+        .offset(pagination.offset)
+        .limit(pagination.page_size)
         .all()
     )
 
     if not results:
-        return ActivityHistoryResponse(
-            activities=[],
+        return PaginatedResponse[ActivityLogResponse](
+            items=[],
             total_count=0,
-            page=page,
-            page_size=page_size,
+            page=pagination.page,
+            page_size=pagination.page_size,
         )
 
     total_count = results[0][1]
     activities = [row[0] for row in results]
 
-    return ActivityHistoryResponse(
-        activities=[
+    return PaginatedResponse[ActivityLogResponse](
+        items=[
             ActivityLogResponse(
                 id=a.id,
                 filename_hash=a.filename_hash,
@@ -209,8 +208,8 @@ def get_activity_history(
             for a in activities
         ],
         total_count=total_count,
-        page=page,
-        page_size=page_size,
+        page=pagination.page,
+        page_size=pagination.page_size,
     )
 
 

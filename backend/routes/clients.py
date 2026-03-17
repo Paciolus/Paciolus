@@ -5,7 +5,6 @@ Paciolus API — Client Management Routes
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
-from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from auth import require_current_user
@@ -13,68 +12,24 @@ from client_manager import ClientManager, get_industry_options
 from database import get_db
 from lead_sheet_mapping import get_lead_sheet_options
 from models import Client, EntityType, Industry, ReportingFramework, User
+from schemas.client_schemas import (  # noqa: F401 — backward compat re-exports
+    ClientCreate,
+    ClientResponse,
+    ClientUpdate,
+    IndustryOption,
+    ResolvedFrameworkResponse,
+)
 from security_utils import log_secure_operation
 from shared.error_messages import sanitize_error
 from shared.framework_resolution import resolve_reporting_framework
 from shared.helpers import require_client
+from shared.pagination import PaginatedResponse, PaginationParams
 from shared.rate_limits import RATE_LIMIT_WRITE, limiter
 
 router = APIRouter(tags=["clients"])
 
-
-class ClientCreate(BaseModel):
-    name: str = Field(..., min_length=1, max_length=200)
-    industry: Optional[str] = "other"
-    fiscal_year_end: Optional[str] = "12-31"
-    reporting_framework: Optional[str] = "auto"
-    entity_type: Optional[str] = "other"
-    jurisdiction_country: Optional[str] = Field("US", min_length=2, max_length=2)
-    jurisdiction_state: Optional[str] = Field(None, max_length=50)
-    settings: Optional[str] = "{}"
-
-
-class ClientUpdate(BaseModel):
-    name: Optional[str] = Field(None, min_length=1, max_length=200)
-    industry: Optional[str] = None
-    fiscal_year_end: Optional[str] = None
-    reporting_framework: Optional[str] = None
-    entity_type: Optional[str] = None
-    jurisdiction_country: Optional[str] = Field(None, min_length=2, max_length=2)
-    jurisdiction_state: Optional[str] = Field(None, max_length=50)
-    settings: Optional[str] = None
-
-
-class ClientResponse(BaseModel):
-    id: int
-    user_id: int
-    name: str
-    industry: str
-    fiscal_year_end: str
-    reporting_framework: str
-    entity_type: str
-    jurisdiction_country: str
-    jurisdiction_state: Optional[str]
-    created_at: str
-    updated_at: str
-    settings: str
-
-
-class ResolvedFrameworkResponse(BaseModel):
-    framework: str
-    resolution_reason: str
-    warnings: list[str]
-
-
-class ClientListResponse(BaseModel):
-    clients: list[ClientResponse]
-    total_count: int
-    page: int
-    page_size: int
-
-
-class IndustryOption(BaseModel):
-    value: str
-    label: str
+# Backward compat alias — existing code may reference ClientListResponse
+ClientListResponse = PaginatedResponse[ClientResponse]
 
 
 def _client_to_response(c: Client) -> ClientResponse:
@@ -109,28 +64,31 @@ def get_lead_sheet_options_endpoint(response: Response):
     return get_lead_sheet_options()
 
 
-@router.get("/clients", response_model=ClientListResponse)
+@router.get("/clients", response_model=PaginatedResponse[ClientResponse])
 def get_clients(
-    page: int = Query(default=1, ge=1),
-    page_size: int = Query(default=50, ge=1, le=100),
     search: Optional[str] = Query(default=None),
+    pagination: PaginationParams = Depends(),
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
 ):
     """Get paginated list of clients for the user."""
-    log_secure_operation("clients_list", f"User {current_user.id} fetching client list (page {page})")
+    log_secure_operation("clients_list", f"User {current_user.id} fetching client list (page {pagination.page})")
 
     manager = ClientManager(db)
 
     if search:
-        clients = manager.search_clients(current_user.id, search, limit=page_size)
+        clients = manager.search_clients(current_user.id, search, limit=pagination.page_size)
         total_count = len(clients)
     else:
-        offset = (page - 1) * page_size
-        clients, total_count = manager.get_clients_with_count(current_user.id, limit=page_size, offset=offset)
+        clients, total_count = manager.get_clients_with_count(
+            current_user.id, limit=pagination.page_size, offset=pagination.offset
+        )
 
-    return ClientListResponse(
-        clients=[_client_to_response(c) for c in clients], total_count=total_count, page=page, page_size=page_size
+    return PaginatedResponse[ClientResponse](
+        items=[_client_to_response(c) for c in clients],
+        total_count=total_count,
+        page=pagination.page,
+        page_size=pagination.page_size,
     )
 
 

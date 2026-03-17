@@ -154,7 +154,7 @@ export function useClients(options: UseClientsOptions = {}): UseClientsReturn {
     }
 
     if (data) {
-      setClients(data.clients);
+      setClients(data.items);
       setTotalCount(data.total_count);
       setPage(data.page);
     }

@@ -105,7 +105,7 @@ export function useEngagement(options: UseEngagementOptions = {}): UseEngagement
     }
 
     if (data) {
-      setEngagements(data.engagements);
+      setEngagements(data.items);
       setTotalCount(data.total_count);
       setPage(data.page);
     }

@@ -3,10 +3,9 @@ Paciolus API — Follow-Up Items Routes
 Phase X: Engagement Layer (narrative-only, Zero-Storage compliant)
 """
 
-from typing import Literal, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from auth import require_current_user
@@ -14,90 +13,30 @@ from database import get_db
 from follow_up_items_manager import FollowUpItemsManager
 from follow_up_items_model import FollowUpDisposition, FollowUpSeverity
 from models import User
+from schemas.follow_up_schemas import (  # noqa: F401 — backward compat re-exports
+    CommentCreate,
+    CommentResponse,
+    CommentUpdate,
+    FollowUpItemCreate,
+    FollowUpItemResponse,
+    FollowUpItemUpdate,
+    FollowUpSummaryResponse,
+)
 from security_utils import log_secure_operation
 from shared.error_messages import sanitize_error
+from shared.pagination import PaginatedResponse, PaginationParams
 from shared.rate_limits import RATE_LIMIT_WRITE, limiter
 
 router = APIRouter(tags=["follow_up_items"])
 
-
-# ---------------------------------------------------------------------------
-# Pydantic schemas
-# ---------------------------------------------------------------------------
-
-class FollowUpItemCreate(BaseModel):
-    description: str = Field(..., min_length=1, max_length=2000)
-    tool_source: str = Field(..., min_length=1, max_length=100)
-    severity: FollowUpSeverity = FollowUpSeverity.MEDIUM
-    tool_run_id: Optional[int] = None
-    auditor_notes: Optional[str] = None
-
-
-class FollowUpItemUpdate(BaseModel):
-    disposition: Optional[FollowUpDisposition] = None
-    auditor_notes: Optional[str] = None
-    severity: Optional[FollowUpSeverity] = None
-    assigned_to: Optional[int] = -1  # -1 = unchanged, None = unassign, int = assign
-
-
-class FollowUpItemResponse(BaseModel):
-    id: int
-    engagement_id: int
-    tool_run_id: Optional[int] = None
-    description: str
-    tool_source: str
-    severity: Literal["high", "medium", "low"]
-    disposition: Literal[
-        "not_reviewed",
-        "investigated_no_issue",
-        "investigated_adjustment_posted",
-        "investigated_further_review",
-        "immaterial",
-    ]
-    auditor_notes: Optional[str] = None
-    assigned_to: Optional[int] = None
-    created_at: str
-    updated_at: str
-
-
-class FollowUpItemListResponse(BaseModel):
-    items: list[FollowUpItemResponse]
-    total_count: int
-    page: int
-    page_size: int
-
-
-class FollowUpSummaryResponse(BaseModel):
-    total_count: int
-    by_severity: dict
-    by_disposition: dict
-    by_tool_source: dict
-
-
-# Sprint 112: Comment schemas
-class CommentCreate(BaseModel):
-    comment_text: str = Field(..., min_length=1, max_length=5000)
-    parent_comment_id: Optional[int] = None
-
-
-class CommentUpdate(BaseModel):
-    comment_text: str = Field(..., min_length=1, max_length=5000)
-
-
-class CommentResponse(BaseModel):
-    id: int
-    follow_up_item_id: int
-    user_id: int
-    author_name: Optional[str] = None
-    comment_text: str
-    parent_comment_id: Optional[int] = None
-    created_at: str
-    updated_at: str
+# Backward compat alias
+FollowUpItemListResponse = PaginatedResponse[FollowUpItemResponse]
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _item_to_response(item) -> FollowUpItemResponse:
     d = item.to_dict()
@@ -119,6 +58,7 @@ def _item_to_response(item) -> FollowUpItemResponse:
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
+
 
 @router.post(
     "/engagements/{engagement_id}/follow-up-items",
@@ -155,22 +95,26 @@ def create_follow_up_item(
         return _item_to_response(item)
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=sanitize_error(
-            e, log_label="follow_up_validation", allow_passthrough=True,
-        ))
+        raise HTTPException(
+            status_code=400,
+            detail=sanitize_error(
+                e,
+                log_label="follow_up_validation",
+                allow_passthrough=True,
+            ),
+        )
 
 
 @router.get(
     "/engagements/{engagement_id}/follow-up-items",
-    response_model=FollowUpItemListResponse,
+    response_model=PaginatedResponse[FollowUpItemResponse],
 )
 def list_follow_up_items(
     engagement_id: int,
-    page: int = Query(default=1, ge=1),
-    page_size: int = Query(default=50, ge=1, le=100),
     severity: Optional[str] = Query(default=None),
     disposition: Optional[str] = Query(default=None),
     tool_source: Optional[str] = Query(default=None),
+    pagination: PaginationParams = Depends(),
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
 ):
@@ -181,28 +125,32 @@ def list_follow_up_items(
         severity_enum = FollowUpSeverity(severity) if severity else None
         disposition_enum = FollowUpDisposition(disposition) if disposition else None
 
-        offset = (page - 1) * page_size
         items, total = manager.get_items(
             user_id=current_user.id,
             engagement_id=engagement_id,
             severity=severity_enum,
             disposition=disposition_enum,
             tool_source=tool_source,
-            limit=page_size,
-            offset=offset,
+            limit=pagination.page_size,
+            offset=pagination.offset,
         )
 
-        return FollowUpItemListResponse(
+        return PaginatedResponse[FollowUpItemResponse](
             items=[_item_to_response(item) for item in items],
             total_count=total,
-            page=page,
-            page_size=page_size,
+            page=pagination.page,
+            page_size=pagination.page_size,
         )
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=sanitize_error(
-            e, log_label="follow_up_validation", allow_passthrough=True,
-        ))
+        raise HTTPException(
+            status_code=400,
+            detail=sanitize_error(
+                e,
+                log_label="follow_up_validation",
+                allow_passthrough=True,
+            ),
+        )
 
 
 @router.get(
@@ -225,9 +173,14 @@ def get_follow_up_summary(
         return FollowUpSummaryResponse(**summary)
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=sanitize_error(
-            e, log_label="follow_up_validation", allow_passthrough=True,
-        ))
+        raise HTTPException(
+            status_code=400,
+            detail=sanitize_error(
+                e,
+                log_label="follow_up_validation",
+                allow_passthrough=True,
+            ),
+        )
 
 
 @router.put(
@@ -266,9 +219,14 @@ def update_follow_up_item(
         return _item_to_response(item)
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=sanitize_error(
-            e, log_label="follow_up_validation", allow_passthrough=True,
-        ))
+        raise HTTPException(
+            status_code=400,
+            detail=sanitize_error(
+                e,
+                log_label="follow_up_validation",
+                allow_passthrough=True,
+            ),
+        )
 
 
 @router.delete("/follow-up-items/{item_id}", status_code=204)
@@ -296,6 +254,7 @@ def delete_follow_up_item(
 # Assignment endpoints (Sprint 113)
 # ---------------------------------------------------------------------------
 
+
 @router.get(
     "/engagements/{engagement_id}/follow-up-items/my-items",
     response_model=list[FollowUpItemResponse],
@@ -316,9 +275,14 @@ def get_my_items(
         return [_item_to_response(item) for item in items]
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=sanitize_error(
-            e, log_label="follow_up_validation", allow_passthrough=True,
-        ))
+        raise HTTPException(
+            status_code=400,
+            detail=sanitize_error(
+                e,
+                log_label="follow_up_validation",
+                allow_passthrough=True,
+            ),
+        )
 
 
 @router.get(
@@ -341,14 +305,20 @@ def get_unassigned_items(
         return [_item_to_response(item) for item in items]
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=sanitize_error(
-            e, log_label="follow_up_validation", allow_passthrough=True,
-        ))
+        raise HTTPException(
+            status_code=400,
+            detail=sanitize_error(
+                e,
+                log_label="follow_up_validation",
+                allow_passthrough=True,
+            ),
+        )
 
 
 # ---------------------------------------------------------------------------
 # Comment endpoints (Sprint 112)
 # ---------------------------------------------------------------------------
+
 
 def _comment_to_response(comment) -> CommentResponse:
     d = comment.to_dict()
@@ -395,9 +365,14 @@ def create_comment(
         return _comment_to_response(comment)
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=sanitize_error(
-            e, log_label="follow_up_validation", allow_passthrough=True,
-        ))
+        raise HTTPException(
+            status_code=400,
+            detail=sanitize_error(
+                e,
+                log_label="follow_up_validation",
+                allow_passthrough=True,
+            ),
+        )
 
 
 @router.get(
@@ -420,9 +395,14 @@ def list_comments(
         return [_comment_to_response(c) for c in comments]
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=sanitize_error(
-            e, log_label="follow_up_validation", allow_passthrough=True,
-        ))
+        raise HTTPException(
+            status_code=400,
+            detail=sanitize_error(
+                e,
+                log_label="follow_up_validation",
+                allow_passthrough=True,
+            ),
+        )
 
 
 @router.patch(
@@ -457,9 +437,14 @@ def update_comment(
         return _comment_to_response(comment)
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=sanitize_error(
-            e, log_label="follow_up_validation", allow_passthrough=True,
-        ))
+        raise HTTPException(
+            status_code=400,
+            detail=sanitize_error(
+                e,
+                log_label="follow_up_validation",
+                allow_passthrough=True,
+            ),
+        )
 
 
 @router.delete("/comments/{comment_id}", status_code=204)
@@ -484,6 +469,11 @@ def delete_comment(
             raise HTTPException(status_code=404, detail="Comment not found")
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=sanitize_error(
-            e, log_label="follow_up_validation", allow_passthrough=True,
-        ))
+        raise HTTPException(
+            status_code=400,
+            detail=sanitize_error(
+                e,
+                log_label="follow_up_validation",
+                allow_passthrough=True,
+            ),
+        )

@@ -33,8 +33,9 @@ export interface AuditActivity {
 }
 
 // Backend API response for activity history
+// Sprint 544: Unified to PaginatedResponse shape (items key).
 export interface ActivityHistoryResponse {
-  activities: ActivityLogResponse[];
+  items: ActivityLogResponse[];
   total_count: number;
   page: number;
   page_size: number;

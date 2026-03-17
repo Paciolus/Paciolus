@@ -47,7 +47,7 @@ const mockActivity = {
 }
 
 const mockApiResponse = {
-  activities: [mockActivity],
+  items: [mockActivity],
   total_count: 55,
   page: 1,
   page_size: 50,

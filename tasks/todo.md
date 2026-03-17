@@ -117,13 +117,8 @@
 | Expense Allocation Testing | 2/5 market demand | Phase XII |
 | Templates system | Needs user feedback | Phase XII |
 | Related Party detection | Needs external APIs | Phase XII |
-| Wire Alembic into startup | Latency + multi-worker race risk; revisit for PostgreSQL | Phase XXI |
-| `PaginatedResponse[T]` generic | Complicates OpenAPI schema generation | Phase XXII |
-| Dedicated `backend/schemas/` dir | Model count doesn't justify yet | Phase XXII |
-| Marketing pages SSG | HttpOnly cookie prereq met. SSG deferred — requires Next.js SSR wiring | Phase XXVII |
-| Phase LXIX frontend pages | Admin dashboard, branding settings, share UI components | Phase LXIX |
-| Test file mypy annotations | 68 errors across 2 files — zero runtime risk | Sprint 475 |
-| Deprecated alias migration | **RESOLVED** — Completed in Sprint 478/491 (commit 6a2f66b) | Sprint 477 |
+| Marketing pages SSG | **Not feasible** — CSP nonce (`await headers()` in root layout) forces dynamic rendering; Vercel edge caching provides near-static perf | Phase XXVII |
+| Test file mypy — full cleanup | 804 errors across 135 files (expanded from 68); `python_version` updated to 3.12 in Sprint 543 | Sprint 475/543 |
 
 ---
 
@@ -134,6 +129,60 @@
 > Sprints 517–531 archived to `tasks/archive/sprints-517-531-details.md`.
 > Sprints 532–536 archived to `tasks/archive/sprints-532-536-details.md`.
 > Sprints 537–541 archived to `tasks/archive/sprints-537-541-details.md`.
+
+### Sprint 543 — Dependency Bumps + Mypy Annotations
+
+**Status:** COMPLETE
+**Goal:** bcrypt 5.0 bump, test file mypy annotations, marketing SSG dropped.
+
+- [x] 543a: Bump bcrypt>=5.0.0, add transitive-only comment for numpy/chardet
+- [x] 543b: Update mypy.ini python_version 3.11→3.12 (804 errors found — full cleanup deferred)
+- [x] 543c: Deferred items cleaned: Marketing SSG dropped, resolved items removed
+
+#### Review
+- bcrypt 5.0 uses stable `hashpw/checkpw/gensalt` API — zero code changes needed
+- mypy test errors expanded from expected 68 to 804 across 135 files; config updated, full cleanup deferred
+- Deferred items table cleaned: 5 items removed (3 being implemented, 1 resolved, 1 dropped)
+
+---
+
+### Sprint 544 — Backend Refactors
+
+**Status:** COMPLETE
+**Goal:** PaginatedResponse[T] generic, dedicated schemas/ directory, Alembic in Dockerfile.
+
+- [x] 544a: Create `shared/pagination.py`, migrate 4 routes (clients, activity, engagements, follow_up_items) + 4 frontend hooks + 3 frontend types
+- [x] 544b: Create `backend/schemas/` with 5 schema files extracted from routes; backward-compat re-exports preserved
+- [x] 544c: Wire Alembic into Dockerfile CMD (`alembic upgrade head &&` before gunicorn)
+
+#### Review
+- **Breaking change:** List endpoint responses use `items` key instead of `clients`/`engagements`/`activities`. Frontend hooks + types + tests all updated simultaneously.
+- 5 schema files: client_schemas, billing_schemas, adjustment_schemas, settings_schemas, follow_up_schemas
+- All backward-compat re-exports verified: `from routes.billing import CheckoutRequest` still works
+- 1 API contract test updated (`engagements` → `items`)
+- Dockerfile now runs `alembic upgrade head` exactly once before workers spawn
+
+---
+
+### Sprint 545 — Phase LXIX Frontend Pages
+
+**Status:** COMPLETE
+**Goal:** Admin Dashboard, PDF Branding, Export Sharing pages + settings hub update.
+
+- [x] 545a: Admin Dashboard — types/hook/page with 4 metric cards, 2 tables, CSV export, filters
+- [x] 545b: Branding Settings — types/hook/page with header/footer form, logo upload/delete
+- [x] 545c: Export Sharing — types/hook/modal/page with share list, revoke, expiry countdown
+- [x] 545d: Settings Hub — 3 new FeatureGate-wrapped cards (Team Dashboard, PDF Branding, Export Sharing)
+
+#### Review
+- 3 new types files, 3 new hooks, 1 new modal component, 3 new pages
+- 18 new hook tests (6 per hook), all passing
+- All pages use Oat & Obsidian tokens, font-serif headers, Reveal wrapper
+- FeatureGate with `hidden` prop hides cards for lower-tier users on settings hub
+- Grid expanded to 3-col on large screens to accommodate 6 cards
+- **Tests:** 1,357 frontend (was 1,339 — +18 new hook tests)
+
+---
 
 ### Sprint 542 — Nightly Report Bug Fixes + Dependency Updates
 

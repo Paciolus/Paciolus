@@ -105,8 +105,11 @@ export interface Engagement {
   updated_at: string;
 }
 
+/**
+ * Sprint 544: Unified to PaginatedResponse shape (items key).
+ */
 export interface EngagementListResponse {
-  engagements: Engagement[];
+  items: Engagement[];
   total_count: number;
   page: number;
   page_size: number;

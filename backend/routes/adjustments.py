@@ -2,11 +2,11 @@
 Paciolus API — Adjusting Entry Routes
 Sprint 262: Migrated from in-memory dicts to DB-backed ToolSession.
 """
+
 from datetime import UTC, datetime
-from typing import Literal, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
-from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from adjusting_entries import (
@@ -22,6 +22,19 @@ from adjusting_entries import (
 from auth import require_verified_user
 from database import get_db
 from models import User
+from schemas.adjustment_schemas import (  # noqa: F401 — backward compat re-exports
+    AdjustingEntryRequest,
+    AdjustmentCreateResponse,
+    AdjustmentLineRequest,
+    AdjustmentSetResponse,
+    AdjustmentStatusesResponse,
+    AdjustmentStatusUpdate,
+    AdjustmentStatusUpdateResponse,
+    AdjustmentTypesResponse,
+    ApplyAdjustmentsRequest,
+    EnumOptionResponse,
+    NextReferenceResponse,
+)
 from security_utils import log_secure_operation
 from shared.diagnostic_response_schemas import (
     AdjustedTrialBalanceResponse,
@@ -36,81 +49,8 @@ router = APIRouter(tags=["adjustments"])
 TOOL_NAME = "adjustments"
 
 
-# --- Pydantic Models ---
-
-class AdjustmentLineRequest(BaseModel):
-    account_name: str = Field(..., min_length=1, max_length=500, description="Account name to debit/credit")
-    debit: float = Field(0.0, ge=0, description="Debit amount")
-    credit: float = Field(0.0, ge=0, description="Credit amount")
-    description: Optional[str] = Field(None, description="Line description")
-
-
-class AdjustingEntryRequest(BaseModel):
-    reference: str = Field(..., min_length=1, max_length=50, description="Entry reference (e.g., AJE-001)")
-    description: str = Field(..., min_length=1, max_length=1000, description="Entry description")
-    adjustment_type: AdjustmentType = Field(AdjustmentType.OTHER, description="Type: accrual, deferral, estimate, error_correction, reclassification, other")
-    lines: list[AdjustmentLineRequest] = Field(..., min_length=2, description="Entry lines (min 2)")
-    notes: Optional[str] = Field(None, description="Additional notes")
-    is_reversing: bool = Field(False, description="Whether entry auto-reverses")
-
-
-class AdjustmentStatusUpdate(BaseModel):
-    status: AdjustmentStatus = Field(..., description="New status: proposed, approved, rejected, posted")
-    reviewed_by: Optional[str] = Field(None, description="Reviewer name/ID")
-
-
-class ApplyAdjustmentsRequest(BaseModel):
-    trial_balance: list[dict] = Field(..., min_length=1, description="Trial balance accounts with 'account', 'debit', 'credit'")
-    adjustment_ids: list[str] = Field(..., min_length=1, description="IDs of adjustments to apply")
-    mode: Literal["official", "simulation"] = Field("official", description="official excludes proposed entries; simulation includes them")
-
-
-class AdjustmentSetResponse(BaseModel):
-    entries: list[dict]
-    total_adjustments: int
-    proposed_count: int
-    approved_count: int
-    rejected_count: int
-    posted_count: int
-    total_adjustment_amount: float
-
-
-class AdjustmentCreateResponse(BaseModel):
-    success: bool
-    entry_id: str
-    reference: str
-    is_balanced: bool
-    total_amount: float
-    status: str
-
-
-class NextReferenceResponse(BaseModel):
-    next_reference: str
-
-
-class EnumOptionResponse(BaseModel):
-    value: str
-    label: str
-
-
-class AdjustmentTypesResponse(BaseModel):
-    types: list[EnumOptionResponse]
-
-
-class AdjustmentStatusesResponse(BaseModel):
-    statuses: list[EnumOptionResponse]
-
-
-class AdjustmentStatusUpdateResponse(BaseModel):
-    success: bool
-    entry_id: str
-    status: str
-    reviewed_by: Optional[str] = None
-    approved_by: Optional[str] = None
-    approved_at: Optional[str] = None
-
-
 # --- DB-Backed Session Helpers (Sprint 262) ---
+
 
 def get_user_adjustments(db: Session, user_id: int) -> AdjustmentSet:
     """Load adjustment set from DB, or return empty set."""
@@ -126,6 +66,7 @@ def save_user_adjustments(db: Session, user_id: int, adj_set: AdjustmentSet) -> 
 
 
 # --- Route Handlers ---
+
 
 @router.post("/audit/adjustments", response_model=AdjustmentCreateResponse, status_code=201)
 @limiter.limit("30/minute")
@@ -175,9 +116,14 @@ def create_adjusting_entry(
         }
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=sanitize_error(
-            e, log_label="adjustments_validation", allow_passthrough=True,
-        ))
+        raise HTTPException(
+            status_code=400,
+            detail=sanitize_error(
+                e,
+                log_label="adjustments_validation",
+                allow_passthrough=True,
+            ),
+        )
 
 
 @router.get("/audit/adjustments", response_model=AdjustmentSetResponse)
@@ -238,12 +184,7 @@ def get_next_reference(
 def get_adjustment_types(request: Request, response: Response):
     """Get available adjustment types for UI dropdowns."""
     response.headers["Cache-Control"] = "public, max-age=3600"
-    return {
-        "types": [
-            {"value": t.value, "label": t.value.replace("_", " ").title()}
-            for t in AdjustmentType
-        ]
-    }
+    return {"types": [{"value": t.value, "label": t.value.replace("_", " ").title()} for t in AdjustmentType]}
 
 
 @router.get("/audit/adjustments/statuses", response_model=AdjustmentStatusesResponse)
@@ -251,12 +192,7 @@ def get_adjustment_types(request: Request, response: Response):
 def get_adjustment_statuses(request: Request, response: Response):
     """Get available adjustment statuses for UI dropdowns."""
     response.headers["Cache-Control"] = "public, max-age=3600"
-    return {
-        "statuses": [
-            {"value": s.value, "label": s.value.title()}
-            for s in AdjustmentStatus
-        ]
-    }
+    return {"statuses": [{"value": s.value, "label": s.value.title()} for s in AdjustmentStatus]}
 
 
 @router.get("/audit/adjustments/{entry_id}", response_model=AdjustingEntryResponse)
@@ -328,8 +264,7 @@ def update_adjustment_status(
     save_user_adjustments(db, current_user.id, adj_set)
 
     log_secure_operation(
-        "update_adjustment_status",
-        f"User {current_user.id} updated entry {entry_id} to {new_status.value}"
+        "update_adjustment_status", f"User {current_user.id} updated entry {entry_id} to {new_status.value}"
     )
 
     return {
@@ -386,8 +321,7 @@ def apply_adjustments_to_tb(
     if all(len(e.lines) == 0 for e in entries_to_apply.entries):
         raise HTTPException(
             status_code=400,
-            detail="Adjustment entries have no line data. "
-                   "Please re-create entries before applying.",
+            detail="Adjustment entries have no line data. Please re-create entries before applying.",
         )
 
     adjusted_tb = apply_adjustments(
@@ -397,8 +331,7 @@ def apply_adjustments_to_tb(
     )
 
     log_secure_operation(
-        "apply_adjustments",
-        f"User {current_user.id} applied {adjusted_tb.adjustment_count} adjustments"
+        "apply_adjustments", f"User {current_user.id} applied {adjusted_tb.adjustment_count} adjustments"
     )
 
     return adjusted_tb.to_dict()

@@ -113,7 +113,7 @@ export function useActivityHistory(
         )
 
         if (ok && data) {
-          const mappedActivities = data.activities.map(mapActivityLogToAuditActivity)
+          const mappedActivities = data.items.map(mapActivityLogToAuditActivity)
           setActivities(mappedActivities)
           setTotalCount(data.total_count)
         } else if (isAuthError(status)) {

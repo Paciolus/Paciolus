@@ -36,7 +36,7 @@ describe('useEngagement', () => {
     mockUseAuth.mockReturnValue({ token: 'test-token', isAuthenticated: true })
     mockApiGet.mockResolvedValue({
       ok: true,
-      data: { engagements: [mockEngagement], total_count: 1, page: 1 },
+      data: { items: [mockEngagement], total_count: 1, page: 1 },
     })
   })
 

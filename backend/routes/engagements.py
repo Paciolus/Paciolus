@@ -34,6 +34,8 @@ router.include_router(analytics_router)
 router.include_router(exports_router)
 
 # Backward-compatible re-exports for any code importing schemas from this module
+# Kept here: convergence tool lists re-exported from canonical config source
+from domain_config.tool_taxonomy import CONVERGENCE_EXCLUDED, CONVERGENCE_TOOLS  # noqa: F401, E402
 from routes.engagements_analytics import (  # noqa: F401, E402
     ConvergenceItemResponse,
     ConvergenceResponse,
@@ -45,10 +47,6 @@ from routes.engagements_analytics import (  # noqa: F401, E402
     WorkpaperIndexResponse,
     WorkpaperSignOffResponse,
 )
-
-# Kept here: convergence tool lists re-exported from canonical config source
-from domain_config.tool_taxonomy import CONVERGENCE_EXCLUDED, CONVERGENCE_TOOLS  # noqa: F401, E402
-
 
 # ---------------------------------------------------------------------------
 # Pydantic schemas (CRUD)
@@ -95,11 +93,10 @@ class EngagementResponse(BaseModel):
     updated_at: str
 
 
-class EngagementListResponse(BaseModel):
-    engagements: list[EngagementResponse]
-    total_count: int
-    page: int
-    page_size: int
+from shared.pagination import PaginatedResponse, PaginationParams
+
+# Backward compat alias
+EngagementListResponse = PaginatedResponse[EngagementResponse]
 
 
 # ---------------------------------------------------------------------------
@@ -171,15 +168,14 @@ def create_engagement(
         )
 
 
-@router.get("/engagements", response_model=EngagementListResponse)
+@router.get("/engagements", response_model=PaginatedResponse[EngagementResponse])
 def list_engagements(
-    page: int = Query(default=1, ge=1),
-    page_size: int = Query(default=50, ge=1, le=100),
     client_id: Optional[int] = Query(default=None),
     status: Optional[str] = Query(default=None),
+    pagination: PaginationParams = Depends(),
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-) -> EngagementListResponse:
+) -> PaginatedResponse[EngagementResponse]:
     """List engagements with optional filters."""
     log_secure_operation(
         "engagements_list",
@@ -189,21 +185,20 @@ def list_engagements(
     manager = EngagementManager(db)
 
     status_enum = EngagementStatus(status) if status else None
-    offset = (page - 1) * page_size
 
     engagements, total = manager.get_engagements_for_user(
         user_id=current_user.id,
         client_id=client_id,
         status=status_enum,
-        limit=page_size,
-        offset=offset,
+        limit=pagination.page_size,
+        offset=pagination.offset,
     )
 
-    return EngagementListResponse(
-        engagements=[_engagement_to_response(e) for e in engagements],
+    return PaginatedResponse[EngagementResponse](
+        items=[_engagement_to_response(e) for e in engagements],
         total_count=total,
-        page=page,
-        page_size=page_size,
+        page=pagination.page,
+        page_size=pagination.page_size,
     )
 
 

@@ -108,9 +108,10 @@ export interface ClientUpdateInput {
 
 /**
  * Paginated client list response.
+ * Sprint 544: Unified to PaginatedResponse shape (items key).
  */
 export interface ClientListResponse {
-  clients: Client[];
+  items: Client[];
   total_count: number;
   page: number;
   page_size: number;

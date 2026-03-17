@@ -368,7 +368,7 @@ class TestEngagementContracts:
 
     def test_engagement_list_response_fields(self):
         fields = get_field_names(EngagementListResponse)
-        assert "engagements" in fields
+        assert "items" in fields  # Sprint 544: PaginatedResponse[T] uses `items`
         assert "total_count" in fields
         assert "page" in fields
         assert "page_size" in fields

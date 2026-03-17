@@ -33,7 +33,7 @@ describe('useClients', () => {
     mockUseAuth.mockReturnValue({ token: 'test-token', isAuthenticated: true })
     mockApiGet.mockResolvedValue({
       ok: true,
-      data: { clients: [mockClient], total_count: 1, page: 1 },
+      data: { items: [mockClient], total_count: 1, page: 1 },
     })
   })
 
@@ -131,7 +131,7 @@ describe('useClients', () => {
     mockApiGet
       .mockResolvedValueOnce({
         ok: true,
-        data: { clients: [], total_count: 0, page: 1 },
+        data: { items: [], total_count: 0, page: 1 },
       })
       .mockResolvedValueOnce({
         ok: true,

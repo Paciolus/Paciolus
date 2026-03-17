@@ -24,7 +24,8 @@ WORKDIR /app
 COPY requirements.txt .
 
 # Install to isolated prefix — avoids copying pip/setuptools/wheel to production (~20MB savings)
-RUN pip install --no-cache-dir --prefix=/install -r requirements.txt gunicorn==21.2.0
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt gunicorn==21.2.0 \
+    && cp /install/bin/alembic /install/bin/alembic 2>/dev/null || true
 
 # -----------------------------------------------------------------------------
 # Stage 2: Production — clean image, no compiler toolchain
@@ -41,6 +42,7 @@ WORKDIR /app
 COPY --from=builder /install/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
 COPY --from=builder /install/bin/gunicorn /usr/local/bin/gunicorn
 COPY --from=builder /install/bin/uvicorn /usr/local/bin/uvicorn
+COPY --from=builder /install/bin/alembic /usr/local/bin/alembic
 
 # Install curl for lightweight health checks (avoids spawning full Python interpreter)
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -64,7 +66,8 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health/live || exit 1
 
-# Production command using Gunicorn + Uvicorn workers
+# Production command: run Alembic migrations (once, before workers) then start Gunicorn.
+# Alembic runs exactly once per deploy — eliminates multi-worker migration races.
 # Tuning parameters (all configurable via environment variables):
 #   WEB_CONCURRENCY:          Worker count. Default 4. Formula: (2 * CPU cores) + 1
 #   GUNICORN_TIMEOUT:         Worker timeout for large file processing. Default 120s
@@ -72,7 +75,8 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 #   GUNICORN_KEEP_ALIVE:      Keep-alive for reverse proxy compatibility. Default 5s
 #   GUNICORN_MAX_REQUESTS:    Worker recycling to prevent memory leaks (Pandas). Default 1000
 CMD ["sh", "-c", \
-    "gunicorn main:app \
+    "alembic upgrade head && \
+     gunicorn main:app \
      --bind 0.0.0.0:8000 \
      --workers ${WEB_CONCURRENCY:-4} \
      --worker-class uvicorn.workers.UvicornWorker \
