@@ -52,6 +52,10 @@ RUN groupadd --gid 1000 paciolus \
 # Copy application code
 COPY --chown=paciolus:paciolus . .
 
+# Ensure /app/data exists with correct ownership before USER switch.
+# Docker named-volume initialization inherits ownership from the image layer.
+RUN mkdir -p /app/data && chown paciolus:paciolus /app/data
+
 # Switch to non-root user
 USER paciolus
 
