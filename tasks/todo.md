@@ -46,7 +46,7 @@
 > Sprints 547–551 archived to `tasks/archive/sprints-547-551-details.md`.
 
 ### Sprint 553 — AUDIT-02 Authentication Lifecycle Remediation
-**Status:** IN PROGRESS
+**Status:** COMPLETE
 **Scope:** 2 fixes from AUDIT-02 Authentication Lifecycle review
 
 - [x] **FIX 1 (MEDIUM):** CSRF Logout Binding — bind logout CSRF validation to refresh-cookie owner via DB lookup, preventing cross-user CSRF token reuse on logout
