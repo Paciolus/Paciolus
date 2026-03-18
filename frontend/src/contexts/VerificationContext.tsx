@@ -18,13 +18,10 @@ import {
   ReactNode,
   ReactElement,
 } from 'react'
-import type { User, AuthResult } from '@/types/auth'
+import type { AuthResult } from '@/types/auth'
 import type { VerificationStatus } from '@/types/verification'
 import { apiPost, apiGet } from '@/utils'
 import { useAuthSession } from './AuthSessionContext'
-
-// Non-sensitive user metadata cache key (must match AuthSessionContext)
-const USER_KEY = 'paciolus_user'
 
 /**
  * Shape of the Verification context value.
@@ -52,14 +49,9 @@ export function VerificationProvider({ children }: { children: ReactNode }): Rea
     )
 
     if (ok) {
-      // If user is logged in, refresh their data to update is_verified
+      // If user is logged in, refresh their data to update is_verified (in-memory only)
       if (authToken) {
-        const { data: userData } = await apiGet<User>('/auth/me', authToken)
-        if (userData) {
-          sessionStorage.setItem(USER_KEY, JSON.stringify(userData))
-          // Sync back to session provider
-          await refreshUser()
-        }
+        await refreshUser()
       }
       return { success: true }
     }

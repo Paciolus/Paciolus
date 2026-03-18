@@ -22,9 +22,6 @@ import type { ProfileUpdate, PasswordChange, AuthResult, User } from '@/types/au
 import { apiPut } from '@/utils'
 import { useAuthSession } from './AuthSessionContext'
 
-// Non-sensitive user metadata cache key (must match AuthSessionContext)
-const USER_KEY = 'paciolus_user'
-
 /**
  * Shape of the UserProfile context value.
  */
@@ -55,9 +52,7 @@ export function UserProfileProvider({ children }: { children: ReactNode }): Reac
     )
 
     if (ok && data) {
-      // Update stored user data — refresh via session provider
-      sessionStorage.setItem(USER_KEY, JSON.stringify(data))
-      // Trigger a refreshUser to sync state back to AuthSessionContext
+      // Sync updated user data back to AuthSessionContext (in-memory only)
       await refreshUser()
       return { success: true }
     }

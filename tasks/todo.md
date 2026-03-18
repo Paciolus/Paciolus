@@ -50,7 +50,7 @@
 **Scope:** 6 fixes from AUDIT-03 Runtime Browser Storage review
 
 - [x] **FIX 1 (CRITICAL):** MappingContext sessionStorage — remove all sessionStorage persistence of account mapping data
-- [ ] **FIX 2 (HIGH):** User Object sessionStorage — remove PII (User object) from sessionStorage across 3 auth contexts
+- [x] **FIX 2 (HIGH):** User Object sessionStorage — remove PII (User object) from sessionStorage across 3 auth contexts
 - [ ] **FIX 3 (HIGH):** Email in Registration URL — strip email from redirect query parameter
 - [ ] **FIX 4 (HIGH):** Verification Token in URL — strip token from URL after consumption
 - [ ] **FIX 5 (MEDIUM):** Materiality Threshold sessionStorage — remove threshold from sessionStorage

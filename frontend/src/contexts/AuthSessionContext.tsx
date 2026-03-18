@@ -11,7 +11,7 @@
  * ZERO-STORAGE COMPLIANCE:
  * - JWT access tokens stored in-memory only (React ref — not storage)
  * - Refresh tokens stored as HttpOnly Secure SameSite=Lax server-set cookies
- * - User metadata cached in sessionStorage for fast UI hydration (non-sensitive)
+ * - User metadata in-memory only (React state) — rehydrated via /auth/refresh on reload
  * - No financial/trial balance data ever touches storage
  */
 
@@ -37,17 +37,13 @@ import type {
 import { API_URL } from '@/utils/constants'
 import { apiPost, apiGet, isAuthError, setTokenRefreshCallback, setCsrfToken, getCsrfToken } from '@/utils'
 
-// Non-sensitive user metadata cache key (for fast UI hydration on reload)
-const USER_KEY = 'paciolus_user'
-
 /**
- * Clear non-sensitive session data on logout/auth failure.
- * SECURITY: Also wipes financial mapping data to prevent cross-session leakage.
+ * Clear session data on logout/auth failure.
+ * User state is in-memory only — no browser storage to clear.
  */
 function clearAuthSessionData(): void {
-  if (typeof window !== 'undefined') {
-    sessionStorage.removeItem(USER_KEY)
-  }
+  // Reserved for future session-scoped cleanup if needed.
+  // User PII is never persisted to browser storage.
 }
 
 /**
@@ -118,7 +114,6 @@ export function AuthSessionProvider({ children }: { children: ReactNode }): Reac
 
         // Store access token in-memory only
         tokenRef.current = data.access_token
-        sessionStorage.setItem(USER_KEY, JSON.stringify(data.user))
 
         // Security Sprint: Read user-bound CSRF token from auth response
         if (data.csrf_token) setCsrfToken(data.csrf_token)
@@ -186,7 +181,6 @@ export function AuthSessionProvider({ children }: { children: ReactNode }): Reac
     if (ok && data?.access_token) {
       // Store access token in-memory only; refresh token is set as HttpOnly cookie by server
       tokenRef.current = data.access_token
-      sessionStorage.setItem(USER_KEY, JSON.stringify(data.user))
 
       // Security Sprint: Read user-bound CSRF token from login response
       if (data.csrf_token) setCsrfToken(data.csrf_token)
@@ -215,7 +209,6 @@ export function AuthSessionProvider({ children }: { children: ReactNode }): Reac
     if (ok && data?.access_token) {
       // Store access token in-memory only; refresh token is set as HttpOnly cookie by server
       tokenRef.current = data.access_token
-      sessionStorage.setItem(USER_KEY, JSON.stringify(data.user))
 
       // Security Sprint: Read user-bound CSRF token from register response
       if (data.csrf_token) setCsrfToken(data.csrf_token)
@@ -275,7 +268,6 @@ export function AuthSessionProvider({ children }: { children: ReactNode }): Reac
     const { data, status, ok } = await apiGet<User>('/auth/me', state.token)
 
     if (ok && data) {
-      sessionStorage.setItem(USER_KEY, JSON.stringify(data))
       setState(prev => ({ ...prev, user: data }))
     } else if (isAuthError(status)) {
       // Try silent refresh before logging out
