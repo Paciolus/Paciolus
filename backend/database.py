@@ -108,9 +108,11 @@ def init_db() -> None:
     import follow_up_items_model  # noqa: F401
     import models  # noqa: F401
     import organization_model  # noqa: F401
+    import scheduler_lock_model  # noqa: F401
     import subscription_model  # noqa: F401
     import team_activity_model  # noqa: F401
     import tool_session_model  # noqa: F401
+    import upload_dedup_model  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
 

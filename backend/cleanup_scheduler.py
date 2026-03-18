@@ -10,6 +10,7 @@ Architecture:
 - coalesce=True + max_instances=1: missed triggers coalesce, no overlap
 - All cleanup functions are idempotent (DELETE WHERE ts < cutoff)
 - Each job creates its own SessionLocal() — not request-scoped
+- AUDIT-06 FIX 3: DB-backed execution lock prevents multi-worker duplication
 
 Telemetry:
 - Structured logging only (aggregate counts, durations) — Zero-Storage compliant
@@ -22,7 +23,9 @@ Watchdog:
 from __future__ import annotations
 
 import logging
+import os
 import time
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 
@@ -84,6 +87,65 @@ class CleanupTelemetry:
 
 
 # ---------------------------------------------------------------------------
+# AUDIT-06 FIX 3: DB-backed execution lock
+# ---------------------------------------------------------------------------
+
+_WORKER_ID = f"worker-{os.getpid()}"
+
+
+@contextmanager
+def with_scheduler_lock(job_name: str, db, ttl_seconds: int = 300):
+    """Acquire a DB-backed lock for a scheduled job.
+
+    Uses INSERT ... ON CONFLICT to atomically acquire the lock.
+    If the lock is held and not expired, skips execution.
+    On completion, deletes the lock row.
+
+    Yields True if lock was acquired, False if skipped.
+    """
+    from sqlalchemy import text
+
+    now = datetime.now(UTC)
+    expires_at = now + timedelta(seconds=ttl_seconds)
+
+    # Attempt upsert: acquire lock if not held or expired
+    # Works on both PostgreSQL (ON CONFLICT) and SQLite (ON CONFLICT)
+    result = db.execute(
+        text(
+            "INSERT INTO scheduler_locks (job_name, locked_at, locked_by, expires_at) "
+            "VALUES (:job_name, :locked_at, :locked_by, :expires_at) "
+            "ON CONFLICT (job_name) DO UPDATE "
+            "SET locked_at = :locked_at, locked_by = :locked_by, expires_at = :expires_at "
+            "WHERE scheduler_locks.expires_at < :now"
+        ),
+        {
+            "job_name": job_name,
+            "locked_at": now,
+            "locked_by": _WORKER_ID,
+            "expires_at": expires_at,
+            "now": now,
+        },
+    )
+    db.commit()
+
+    if result.rowcount == 0:
+        # Lock is held by another worker and not expired — skip
+        logger.debug("Scheduler lock held for '%s', skipping", job_name)
+        yield False
+        return
+
+    try:
+        yield True
+    finally:
+        # Release lock on completion
+        db.execute(
+            text("DELETE FROM scheduler_locks WHERE job_name = :job_name AND locked_by = :locked_by"),
+            {"job_name": job_name, "locked_by": _WORKER_ID},
+        )
+        db.commit()
+
+
+# ---------------------------------------------------------------------------
 # Generic job wrapper
 # ---------------------------------------------------------------------------
 
@@ -94,7 +156,10 @@ def _run_cleanup_job(
     *,
     is_retention: bool = False,
 ) -> None:
-    """Execute a cleanup function with telemetry and its own DB session.
+    """Execute a cleanup function with telemetry, DB-backed lock, and its own DB session.
+
+    AUDIT-06 FIX 3: Acquires a DB lock before executing to prevent
+    multi-worker duplication under Gunicorn WEB_CONCURRENCY > 1.
 
     Args:
         job_name: Human-readable name for logging.
@@ -111,11 +176,15 @@ def _run_cleanup_job(
     db = SessionLocal()
 
     try:
-        result = cleanup_func(db)
-        if is_retention and isinstance(result, dict):
-            records_processed = sum(result.values())
-        else:
-            records_processed = int(result)
+        with with_scheduler_lock(job_name, db) as acquired:
+            if not acquired:
+                return  # Another worker holds the lock
+
+            result = cleanup_func(db)
+            if is_retention and isinstance(result, dict):
+                records_processed = sum(result.values())
+            else:
+                records_processed = int(result)
     except Exception as exc:
         from shared.log_sanitizer import sanitize_exception
 
@@ -172,27 +241,29 @@ def _job_retention_cleanup() -> None:
 
 
 def _job_reset_upload_quotas() -> None:
-    """Reset upload counters for subscriptions past their billing period end."""
+    """Reset upload counters for subscriptions past their billing period end.
+
+    AUDIT-06 FIX 3: Uses atomic UPDATE instead of read-then-write to prevent
+    race conditions with concurrent upload increments.
+    """
 
     def _reset(db):
-        from subscription_model import Subscription, SubscriptionStatus
+        from sqlalchemy import text
 
         now = datetime.now(UTC)
-        # Find active subscriptions whose billing period has ended
-        subs = (
-            db.query(Subscription)
-            .filter(
-                Subscription.status == SubscriptionStatus.ACTIVE,
-                Subscription.current_period_end.isnot(None),
-                Subscription.current_period_end <= now,
-                Subscription.uploads_used_current_period > 0,
-            )
-            .all()
+        # Atomic UPDATE — no read→write race with concurrent upload increments
+        result = db.execute(
+            text(
+                "UPDATE subscriptions "
+                "SET uploads_used_current_period = 0 "
+                "WHERE status = 'active' "
+                "AND current_period_end IS NOT NULL "
+                "AND current_period_end <= :now "
+                "AND uploads_used_current_period > 0"
+            ),
+            {"now": now},
         )
-        count = 0
-        for sub in subs:
-            sub.uploads_used_current_period = 0
-            count += 1
+        count = result.rowcount
         if count > 0:
             db.commit()
         return count
@@ -219,15 +290,27 @@ def _job_expired_export_shares() -> None:
 
 
 def _job_bulk_upload_cleanup() -> None:
-    """Evict stale in-memory bulk upload jobs (2h TTL + hard cap)."""
-    try:
-        from routes.bulk_upload import _evict_stale_jobs
+    """Evict stale in-memory bulk upload jobs (2h TTL + hard cap).
 
-        _evict_stale_jobs()
+    AUDIT-06 FIX 3: DB-locked to prevent multi-worker duplication.
+    """
+    from database import SessionLocal
+
+    db = SessionLocal()
+    try:
+        with with_scheduler_lock("bulk_upload_cleanup", db) as acquired:
+            if not acquired:
+                return
+
+            from routes.bulk_upload import _evict_stale_jobs
+
+            _evict_stale_jobs()
     except Exception as exc:
         from shared.log_sanitizer import sanitize_exception
 
         logger.error("Bulk upload cleanup failed: %s", sanitize_exception(exc, context="bulk upload cleanup"))
+    finally:
+        db.close()
 
 
 def _job_team_activity_cleanup() -> None:
@@ -245,28 +328,63 @@ def _job_team_activity_cleanup() -> None:
     _run_cleanup_job("team_activity_cleanup", _purge)
 
 
+def _job_expired_upload_dedup() -> None:
+    """Purge expired upload dedup rows (5-minute TTL).
+
+    AUDIT-06 FIX 4: Piggybacks on the scheduler to keep the dedup table lean.
+    """
+
+    def _purge(db):
+        from sqlalchemy import text
+
+        now = datetime.now(UTC)
+        result = db.execute(
+            text("DELETE FROM upload_dedup WHERE expires_at <= :now"),
+            {"now": now},
+        )
+        count = result.rowcount
+        if count > 0:
+            db.commit()
+        return count
+
+    _run_cleanup_job("expired_upload_dedup", _purge)
+
+
 # ---------------------------------------------------------------------------
 # Watchdog
 # ---------------------------------------------------------------------------
 
 
 def _watchdog() -> None:
-    """Check if any cleanup job is overdue by more than 2x its expected interval."""
-    now = datetime.now(UTC)
-    for job_name, expected_interval in _EXPECTED_INTERVALS.items():
-        last_run = _last_run_times.get(job_name)
-        if last_run is None:
-            # Job hasn't run yet — skip (startup grace period)
-            continue
-        overdue_threshold = expected_interval * 2
-        elapsed = now - last_run
-        if elapsed > overdue_threshold:
-            logger.warning(
-                "Cleanup job '%s' is overdue: last ran %s ago (expected every %s)",
-                job_name,
-                elapsed,
-                expected_interval,
-            )
+    """Check if any cleanup job is overdue by more than 2x its expected interval.
+
+    AUDIT-06 FIX 3: DB-locked to prevent multi-worker duplication.
+    """
+    from database import SessionLocal
+
+    db = SessionLocal()
+    try:
+        with with_scheduler_lock("cleanup_watchdog", db, ttl_seconds=60) as acquired:
+            if not acquired:
+                return
+
+            now = datetime.now(UTC)
+            for job_name, expected_interval in _EXPECTED_INTERVALS.items():
+                last_run = _last_run_times.get(job_name)
+                if last_run is None:
+                    # Job hasn't run yet — skip (startup grace period)
+                    continue
+                overdue_threshold = expected_interval * 2
+                elapsed = now - last_run
+                if elapsed > overdue_threshold:
+                    logger.warning(
+                        "Cleanup job '%s' is overdue: last ran %s ago (expected every %s)",
+                        job_name,
+                        elapsed,
+                        expected_interval,
+                    )
+    finally:
+        db.close()
 
 
 # ---------------------------------------------------------------------------
@@ -341,6 +459,12 @@ def init_scheduler() -> None:
         "interval",
         minutes=30,
         id="bulk_upload_cleanup",
+    )
+    _scheduler.add_job(
+        _job_expired_upload_dedup,
+        "interval",
+        hours=1,
+        id="expired_upload_dedup",
     )
     _scheduler.add_job(
         _watchdog,

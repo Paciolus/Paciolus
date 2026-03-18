@@ -20,9 +20,11 @@ from follow_up_items_model import FollowUpItem, FollowUpItemComment  # noqa: F40
 # Import all models so Base.metadata knows about them
 from models import ActivityLog, Client, DiagnosticSummary, EmailVerificationToken, RefreshToken, User  # noqa: F401
 from organization_model import Organization, OrganizationInvite, OrganizationMember  # noqa: F401  # Phase LXIX
+from scheduler_lock_model import SchedulerLock  # noqa: F401  # AUDIT-06 FIX 3
 from subscription_model import BillingEvent, Subscription  # noqa: F401  # Sprint 363 + Sprint 439
 from team_activity_model import TeamActivityLog  # noqa: F401  # Phase LXIX (Phase 7)
 from tool_session_model import ToolSession  # noqa: F401  # Sprint 262
+from upload_dedup_model import UploadDedup  # noqa: F401  # AUDIT-06 FIX 4
 
 # Alembic Config object
 config = context.config

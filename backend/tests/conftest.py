@@ -30,12 +30,14 @@ from export_share_model import ExportShare  # noqa: F401 — needed for FK resol
 from follow_up_items_model import FollowUpDisposition, FollowUpItem, FollowUpItemComment, FollowUpSeverity
 from models import ActivityLog, Client, DiagnosticSummary, Industry, RefreshToken, User, UserTier
 from organization_model import Organization  # noqa: F401 — needed for FK resolution in create_all
+from scheduler_lock_model import SchedulerLock  # noqa: F401 — AUDIT-06 FIX 3
 from shared.soft_delete import register_deletion_guard
 from subscription_model import (  # noqa: F401 — needed for FK resolution in create_all
     ProcessedWebhookEvent,
     Subscription,
 )
 from tool_session_model import ToolSession  # noqa: F401 — needed for FK resolution in create_all
+from upload_dedup_model import UploadDedup  # noqa: F401 — AUDIT-06 FIX 4
 
 # ---------------------------------------------------------------------------
 # Dialect detection — used by fixtures and test skip conditions
