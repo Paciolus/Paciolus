@@ -7,37 +7,57 @@ _Updated at the end of every Claude Code session. Overwrite the previous state �
 **Date:** 2026-03-18
 **Branch:** main
 **What was completed:**
-- Created `AGENTS.md` — primary agent entry point with startup sequence, documentation map, and key constraints
-- Created `SESSION_STATE.md` — lightweight session memory for cold-start orientation
-- Created `features/status.json` — 76-entry machine-readable feature inventory (12 tools, 20 reports, auth, billing, UI, infrastructure)
-- Created `scripts/init.sh` — one-command dev environment bootstrap with --check-only flag
-- Created `docs/README.md` — top-level documentation index with current compliance versions
-- Archived `docs/phase-iii/` and `docs/01-product/FEATURE_ROADMAP.md` to `docs/archive/`
-- Fixed 5 contradictions: React 18→19 in ARCHITECTURE.md diagram, 7 compliance version mismatches, retired tier names (Team/Org → Professional/Enterprise), staleness notices on DEPLOYMENT_ARCHITECTURE.md and API_REFERENCE.md
-- Split `tasks/todo.md` into 4 files: todo.md (active work), PROTOCOL.md, EXECUTIVE_BLOCKERS.md, COMPLETED_ERAS.md
-- Updated CLAUDE.md with redirect to AGENTS.md and created MEMORY.md stub
+Sprint 551 — Multi-Audit Remediation (Pre-Launch), synthesized from 5 independent audits:
+
+**Phase 1 — Critical Bug Fixes:**
+- BUG-01: `accept_invite()` seat double-count — pass `exclude_invite_id` to `check_seat_limit_for_org`
+- BUG-02: `remove_member()` tier wipe — check personal `Subscription` before defaulting to FREE
+- BUG-03: `create_share()` arbitrary bytes — add magic-byte validation + abuse logging
+- 20 new tests (7 org routes + 13 export sharing)
+- CONTRIBUTING.md CI section aligned with actual ci.yml (14 blocking + 4 advisory jobs)
+
+**Phase 3b — Doc Archival:**
+- Archived legacy DEPLOYMENT.md (v0.16) and API_REFERENCE.md (v0.70) to `docs/archive/`
+
+**Phase 4 — Testing Infrastructure:**
+- Frontend coverage thresholds raised (26/25/33/32 → 27/29/37/36)
+- Playwright smoke spec hardened (unconditional assertions)
+- E2E smoke job now runs on PRs (graceful secret skip)
+- BUG-04 concurrency test for seat enforcement
+
+**Phase 5 — Architectural Refactors:**
+- Split `anomaly_rules.py` (1,017 lines) into 7 per-family modules under `audit/rules/`
+- Unified `useStatisticalSampling.ts` upload flow (eliminated runDesign/runEvaluation duplication)
+- billing.py confirmed already clean facade (no action needed)
+- AuthContext confirmed intentional facade (no action needed)
+
+**Deferred to future sprints:**
+- Pipeline.py decomposition (already well-structured)
+- Organization route → service wiring (service exists, wiring is low-risk)
+- Export format extraction (CSV trivial, PDF/Excel already delegated)
+- Pricing page business rule extraction (995 lines, high effort)
 
 **What was left in progress:** None
 
 ## Current Environment State
 
 **App status:** Working
-**Last passing smoke test:** 2026-03-18 (Sprint 548 regression: backend 6,714 passed, frontend 1,426 passed)
+**Last passing smoke test:** 2026-03-18 (backend tests pass, frontend 1,426 pass, build OK)
 **Open blockers:**
 - Sprint 447 (Stripe production cutover) — waiting on CEO production Stripe keys
 - Pending legal sign-off on Terms of Service v2.0 and Privacy Policy v2.0
-- Pre-existing frontend lint errors (11 import-order issues, not introduced by this session)
+- Pre-existing frontend lint errors (import-order issues in apiClient.ts, not introduced by this session)
 
 ## Next Priority
 
-No immediate priority — harness infrastructure upgrade complete. Resume normal sprint work per tasks/todo.md.
+Deferred Phase 5 items from Sprint 551: pipeline decomposition, org service wiring, pricing page extraction. Or resume normal sprint work per tasks/todo.md.
 
 ## Recent Git Context
 
 ```
-effbbaf Sprint 549: Mark governance remediation complete — 8/8 tasks done
-0f93e1f Sprint 549: Add brand authority tie-break to designer agent and skill
-40f9b8b Sprint 549: Add audit ecosystem ownership boundaries
-d16955f Sprint 549: Fix stale path references in retry-policy.md
-04ac2b1 Sprint 549: Add Document Authority Hierarchy to CLAUDE.md
+f3bf1dd Sprint 551: Unify statistical sampling upload flow
+431640d Sprint 551: Split anomaly_rules.py into 7 per-family modules under audit/rules/
+1a39f52 Sprint 551: CI hardening, coverage thresholds, doc archival, smoke spec hardening
+551944b Sprint 551: Fix 3 high-confidence bugs — invite seat double-count, member removal tier wipe, export sharing provenance
+6ef8de6 fix: record Sprint 550 commit SHA in todo.md
 ```
