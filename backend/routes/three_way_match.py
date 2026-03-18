@@ -1,6 +1,7 @@
 """
 Paciolus API — Three-Way Match Routes
 """
+
 import asyncio
 import logging
 from typing import Optional
@@ -56,7 +57,8 @@ async def audit_three_way_match(
 ):
     """Run three-way match validation across PO, Invoice, and Receipt files."""
     from shared.testing_route import enforce_tool_access
-    enforce_tool_access(current_user, "three_way_match")
+
+    enforce_tool_access(current_user, "three_way_match", db)
 
     po_mapping = parse_json_mapping(po_column_mapping, "twm_po")
     inv_mapping = parse_json_mapping(invoice_column_mapping, "twm_invoice")
@@ -64,7 +66,7 @@ async def audit_three_way_match(
 
     log_secure_operation(
         "three_way_match_upload",
-        f"Processing 3-way match: po={po_file.filename}, inv={invoice_file.filename}, rec={receipt_file.filename}"
+        f"Processing 3-way match: po={po_file.filename}, inv={invoice_file.filename}, rec={receipt_file.filename}",
     )
 
     with memory_cleanup():
@@ -106,14 +108,13 @@ async def audit_three_way_match(
 
             result = await asyncio.to_thread(_analyze)
 
-            background_tasks.add_task(maybe_record_tool_run, db, engagement_id, current_user.id, "three_way_match", True)
+            background_tasks.add_task(
+                maybe_record_tool_run, db, engagement_id, current_user.id, "three_way_match", True
+            )
 
             return result.to_dict()
 
         except (ValueError, KeyError, TypeError) as e:
             logger.exception("Three-way match analysis failed")
             maybe_record_tool_run(db, engagement_id, current_user.id, "three_way_match", False)
-            raise HTTPException(
-                status_code=400,
-                detail=sanitize_error(e, "analysis", "three_way_match_error")
-            )
+            raise HTTPException(status_code=400, detail=sanitize_error(e, "analysis", "three_way_match_error"))

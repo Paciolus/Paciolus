@@ -101,13 +101,12 @@ def create_client(
     db: Session = Depends(get_db),
 ):
     """Create a new client for the authenticated user."""
-    # Sprint 367: Client limit check
+    # Sprint 367: Client limit check (AUDIT-06 FIX 2: subscription-status-aware)
     from sqlalchemy import func as sa_func
 
-    from models import UserTier
-    from shared.entitlements import get_entitlements
+    from shared.entitlement_checks import get_effective_entitlements
 
-    entitlements = get_entitlements(UserTier(current_user.tier.value))
+    entitlements = get_effective_entitlements(current_user, db)
     if entitlements.max_clients > 0:
         client_count = (db.query(sa_func.count(Client.id)).filter(Client.user_id == current_user.id).scalar()) or 0
         if client_count >= entitlements.max_clients:

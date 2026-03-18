@@ -186,7 +186,7 @@ async def sampling_design(
     """
     from shared.testing_route import enforce_tool_access
 
-    enforce_tool_access(current_user, "statistical_sampling")
+    enforce_tool_access(current_user, "statistical_sampling", db)
 
     if method not in ("mus", "random"):
         raise HTTPException(status_code=422, detail="Method must be 'mus' or 'random'")

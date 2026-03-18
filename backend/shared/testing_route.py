@@ -8,6 +8,7 @@ Encapsulates the boilerplate shared by 6 single-file testing endpoints:
 Used by: AP, Payroll, JE (main), Revenue, Fixed Asset, Inventory routes.
 NOT used by: Three-Way Match (3-file), AR Aging (dual-file + config).
 """
+
 import asyncio
 import logging
 from collections.abc import Callable
@@ -20,7 +21,7 @@ from sqlalchemy.orm import Session
 
 from models import User, UserTier
 from security_utils import log_secure_operation
-from shared.entitlements import get_entitlements
+from shared.entitlement_checks import get_effective_entitlements
 from shared.error_messages import sanitize_error
 from shared.helpers import (
     maybe_record_tool_run,
@@ -31,14 +32,21 @@ from shared.helpers import (
 )
 
 
-def enforce_tool_access(current_user: User, tool_name: str) -> None:
+def enforce_tool_access(current_user: User, tool_name: str, db=None) -> None:
     """Check entitlement for tool access. Raises HTTPException(403) in hard mode.
 
     Shared by the factory function and individual non-factory routes.
+    AUDIT-06 FIX 2: subscription-status-aware when db is provided.
     """
-    entitlements = get_entitlements(UserTier(current_user.tier.value))
+    if db is not None:
+        entitlements = get_effective_entitlements(current_user, db)
+    else:
+        from shared.entitlements import get_entitlements
+
+        entitlements = get_entitlements(UserTier(current_user.tier.value))
     if entitlements.tools_allowed and tool_name not in entitlements.tools_allowed:
         from config import ENTITLEMENT_ENFORCEMENT
+
         if ENTITLEMENT_ENFORCEMENT == "hard":
             raise HTTPException(
                 status_code=403,
@@ -51,7 +59,9 @@ def enforce_tool_access(current_user: User, tool_name: str) -> None:
                 },
             )
         else:
-            logger.warning("SOFT entitlement block: tool=%s, user=%d, tier=%s", tool_name, current_user.id, current_user.tier.value)
+            logger.warning(
+                "SOFT entitlement block: tool=%s, user=%d, tier=%s", tool_name, current_user.id, current_user.tier.value
+            )
 
 
 async def run_single_file_testing(
@@ -86,14 +96,11 @@ async def run_single_file_testing(
         extract_accounts: Optional callback to extract flagged account names from result dict.
     """
     # Sprint 367: Entitlement check — verify tool access before processing
-    enforce_tool_access(current_user, tool_name)
+    enforce_tool_access(current_user, tool_name, db)
 
     column_mapping_dict = parse_json_mapping(column_mapping, mapping_key)
 
-    log_secure_operation(
-        f"{mapping_key}_upload",
-        f"Processing {log_label} file: {file.filename}"
-    )
+    log_secure_operation(f"{mapping_key}_upload", f"Processing {log_label} file: {file.filename}")
 
     with memory_cleanup():
         try:
@@ -108,16 +115,17 @@ async def run_single_file_testing(
             result = await asyncio.to_thread(_process)
 
             result_dict = result.to_dict()
-            score = result.composite_score.score if hasattr(result, 'composite_score') and result.composite_score else None
+            score = (
+                result.composite_score.score if hasattr(result, "composite_score") and result.composite_score else None
+            )
             flagged = extract_accounts(result_dict) if extract_accounts else None
-            background_tasks.add_task(maybe_record_tool_run, db, engagement_id, current_user.id, tool_name, True, score, flagged)
+            background_tasks.add_task(
+                maybe_record_tool_run, db, engagement_id, current_user.id, tool_name, True, score, flagged
+            )
 
             return result_dict
 
         except (ValueError, KeyError, TypeError) as e:
             logger.exception("%s analysis failed", tool_name)
             maybe_record_tool_run(db, engagement_id, current_user.id, tool_name, False)
-            raise HTTPException(
-                status_code=400,
-                detail=sanitize_error(e, "analysis", error_key)
-            )
+            raise HTTPException(status_code=400, detail=sanitize_error(e, "analysis", error_key))

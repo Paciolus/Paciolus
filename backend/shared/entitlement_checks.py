@@ -22,9 +22,44 @@ from sqlalchemy.orm import Session
 from auth import require_current_user
 from database import get_db
 from models import ActivityLog, Client, User, UserTier
-from shared.entitlements import get_entitlements
+from shared.entitlements import TierEntitlements, get_entitlements
 
 logger = logging.getLogger(__name__)
+
+
+def get_effective_entitlements(user: User, db) -> TierEntitlements:
+    """Derive entitlements from BOTH User.tier AND Subscription.status.
+
+    AUDIT-06 FIX 2: Subscription-status-aware entitlement resolution.
+
+    Rules:
+    - If user.tier is FREE -> free-tier entitlements (no subscription check needed)
+    - If user has an active or trialing subscription -> tier-based entitlements
+    - If user's subscription is PAST_DUE, CANCELED, or UNPAID -> free-tier entitlements
+    - If user.tier is paid but no subscription row exists -> tier-based entitlements
+      (in production, paid-tier users always have subscriptions via checkout flow)
+    - If db is not a valid Session (e.g., unresolved Depends in direct calls) -> tier-based
+    """
+    if user.tier == UserTier.FREE:
+        return get_entitlements(UserTier.FREE)
+
+    # Gracefully handle non-Session db (e.g., unresolved Depends from unit tests)
+    if not isinstance(db, Session):
+        return get_entitlements(UserTier(user.tier.value))
+
+    from subscription_model import Subscription, SubscriptionStatus
+
+    sub = db.query(Subscription).filter(Subscription.user_id == user.id).first()
+
+    if sub is None:
+        # No subscription row — trust the tier (checkout flow always creates one in production)
+        return get_entitlements(UserTier(user.tier.value))
+
+    if sub.status in (SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIALING):
+        return get_entitlements(UserTier(user.tier.value))
+
+    # PAST_DUE, CANCELED, or any other non-active status -> free tier
+    return get_entitlements(UserTier.FREE)
 
 
 def _get_enforcement_mode() -> str:
@@ -65,7 +100,7 @@ def check_upload_limit(
     falls back to ActivityLog counting for free tier.
     Returns the user if allowed, raises 403 if limit exceeded.
     """
-    entitlements = get_entitlements(UserTier(user.tier.value))
+    entitlements = get_effective_entitlements(user, db)
 
     if entitlements.uploads_per_month == 0:
         return user  # unlimited
@@ -124,7 +159,7 @@ def check_client_limit(
     db: Session = Depends(get_db),
 ) -> User:
     """Check that the user hasn't exceeded their client limit."""
-    entitlements = get_entitlements(UserTier(user.tier.value))
+    entitlements = get_effective_entitlements(user, db)
 
     if entitlements.max_clients == 0:
         return user  # unlimited
@@ -146,8 +181,9 @@ def check_tool_access(tool_name: str):
 
     def _dependency(
         user: Annotated[User, Depends(require_current_user)],
+        db: Session = Depends(get_db),
     ) -> User:
-        entitlements = get_entitlements(UserTier(user.tier.value))
+        entitlements = get_effective_entitlements(user, db)
 
         # Empty set = all tools allowed
         if not entitlements.tools_allowed:
@@ -170,8 +206,9 @@ def check_format_access(format_name: str):
 
     def _dependency(
         user: Annotated[User, Depends(require_current_user)],
+        db: Session = Depends(get_db),
     ) -> User:
-        entitlements = get_entitlements(UserTier(user.tier.value))
+        entitlements = get_effective_entitlements(user, db)
 
         # Empty set = all formats allowed
         if not entitlements.formats_allowed:
@@ -191,9 +228,10 @@ def check_format_access(format_name: str):
 
 def check_workspace_access(
     user: Annotated[User, Depends(require_current_user)],
+    db: Session = Depends(get_db),
 ) -> User:
     """Check that the user's tier includes engagement workspace access."""
-    entitlements = get_entitlements(UserTier(user.tier.value))
+    entitlements = get_effective_entitlements(user, db)
 
     if not entitlements.workspace:
         _raise_or_log(
@@ -207,12 +245,13 @@ def check_workspace_access(
 
 def check_export_access(
     user: Annotated[User, Depends(require_current_user)],
+    db: Session = Depends(get_db),
 ) -> User:
     """Check that the user's tier allows any export (PDF/Excel/CSV).
 
     Free tier has no export capability (view-only).
     """
-    entitlements = get_entitlements(UserTier(user.tier.value))
+    entitlements = get_effective_entitlements(user, db)
 
     if not entitlements.pdf_export and not entitlements.excel_export and not entitlements.csv_export:
         _raise_or_log(
@@ -226,9 +265,10 @@ def check_export_access(
 
 def check_export_sharing_access(
     user: Annotated[User, Depends(require_current_user)],
+    db: Session = Depends(get_db),
 ) -> User:
     """Check that the user's tier includes export sharing (Professional+)."""
-    entitlements = get_entitlements(UserTier(user.tier.value))
+    entitlements = get_effective_entitlements(user, db)
 
     if not entitlements.export_sharing:
         _raise_or_log(
@@ -242,9 +282,10 @@ def check_export_sharing_access(
 
 def check_admin_dashboard_access(
     user: Annotated[User, Depends(require_current_user)],
+    db: Session = Depends(get_db),
 ) -> User:
     """Check that the user's tier includes admin dashboard access (Professional+)."""
-    entitlements = get_entitlements(UserTier(user.tier.value))
+    entitlements = get_effective_entitlements(user, db)
 
     if not entitlements.admin_dashboard:
         _raise_or_log(
@@ -258,9 +299,10 @@ def check_admin_dashboard_access(
 
 def check_activity_log_access(
     user: Annotated[User, Depends(require_current_user)],
+    db: Session = Depends(get_db),
 ) -> User:
     """Check that the user's tier includes team activity log access (Professional+)."""
-    entitlements = get_entitlements(UserTier(user.tier.value))
+    entitlements = get_effective_entitlements(user, db)
 
     if not entitlements.activity_logs:
         _raise_or_log(
@@ -274,9 +316,10 @@ def check_activity_log_access(
 
 def check_bulk_upload_access(
     user: Annotated[User, Depends(require_current_user)],
+    db: Session = Depends(get_db),
 ) -> User:
     """Check that the user's tier includes bulk upload (Enterprise only)."""
-    entitlements = get_entitlements(UserTier(user.tier.value))
+    entitlements = get_effective_entitlements(user, db)
 
     if not entitlements.bulk_upload:
         _raise_or_log(
@@ -290,9 +333,10 @@ def check_bulk_upload_access(
 
 def check_custom_branding_access(
     user: Annotated[User, Depends(require_current_user)],
+    db: Session = Depends(get_db),
 ) -> User:
     """Check that the user's tier includes custom branding (Enterprise only)."""
-    entitlements = get_entitlements(UserTier(user.tier.value))
+    entitlements = get_effective_entitlements(user, db)
 
     if not entitlements.custom_branding:
         _raise_or_log(
@@ -350,6 +394,10 @@ def _resolve_org_subscription(db: Session, org_id: int):
 
     if sub is None:
         return None, get_entitlements(UserTier.FREE)
+
+    # AUDIT-06 FIX 2: Check subscription status — PAST_DUE/CANCELED -> free tier
+    if sub.status not in (SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIALING):
+        return sub, get_entitlements(UserTier.FREE)
 
     tier = UserTier(sub.tier) if sub.tier else UserTier.FREE
     return sub, get_entitlements(tier)

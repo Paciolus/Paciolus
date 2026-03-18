@@ -60,7 +60,7 @@ async def audit_bank_reconciliation(
     """Reconcile bank statement against general ledger."""
     from shared.testing_route import enforce_tool_access
 
-    enforce_tool_access(current_user, "bank_reconciliation")
+    enforce_tool_access(current_user, "bank_reconciliation", db)
 
     bank_mapping_dict = parse_json_mapping(bank_column_mapping, "bank_rec_bank")
     ledger_mapping_dict = parse_json_mapping(ledger_column_mapping, "bank_rec_ledger")

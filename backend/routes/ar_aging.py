@@ -59,7 +59,7 @@ async def audit_ar_aging(
     """
     from shared.testing_route import enforce_tool_access
 
-    enforce_tool_access(current_user, "ar_aging")
+    enforce_tool_access(current_user, "ar_aging", db)
 
     tb_mapping_dict = parse_json_mapping(tb_column_mapping, "ar_aging_tb")
     sl_mapping_dict = parse_json_mapping(sl_column_mapping, "ar_aging_sl")
