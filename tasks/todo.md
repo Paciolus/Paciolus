@@ -45,6 +45,25 @@
 > Sprints 542–546 archived to `tasks/archive/sprints-542-546-details.md`.
 > Sprints 547–551 archived to `tasks/archive/sprints-547-551-details.md`.
 
+### Sprint 556 — AUDIT-05 Error Handling and Information Leakage Remediation
+**Status:** COMPLETE
+**Scope:** 5 fixes from AUDIT-05 Error Handling and Information Leakage review
+
+- [x] **FIX 1 (HIGH):** Make traceback redaction the production default — invert opt-in to opt-out, add Dockerfile env
+- [x] **FIX 2 (MEDIUM):** Add custom RequestValidationError handler — opaque 422 responses, no Pydantic loc/msg leakage
+- [x] **FIX 3 (MEDIUM):** Replace role-disclosing 403 messages with generic "Access denied." in organization and admin routes
+- [x] **FIX 4 (MEDIUM):** Centralize API error normalization — safe passthrough allowlist in transport layer, dev-only error details in batch UI
+- [x] **FIX 5 (MEDIUM):** Remove raw error objects from production console output — strip all console methods in prod, sanitize dev-mode calls
+
+**Review:**
+- FIX 1: `TracebackRedactionFilter` now activates by default when `ENV_MODE=production`; opt-out via `REDACT_LOG_TRACEBACKS=false`. Dockerfile declares `REDACT_LOG_TRACEBACKS=true` as belt-and-suspenders.
+- FIX 2: `RequestValidationError` handler returns `{error_code, message, request_id}` — no `loc`, `msg`, or field names. Full validation errors logged at DEBUG level.
+- FIX 3: All 3 role-disclosing 403 raises (`organization.py` ×2, `admin_dashboard.py` ×1) replaced with `"Access denied."`. Original role specificity retained in WARNING-level log entries.
+- FIX 4: `normalizeApiError()` in `transport.ts` is the single point for backend→UI error string mapping. 422 responses mapped to static message. `BatchUploadContext` uses static error messages; `FileQueueItem` gates `error.details` on `NODE_ENV === 'development'`.
+- FIX 5: `removeConsole` in `next.config.js` now strips ALL console methods (including `error`/`warn`) in production. `AuthSessionContext` and `useTrialBalancePreflight` sanitize logged errors to `error.name` only.
+- Verification: `npm run build` passes, 1,426 frontend tests pass (118 suites), 1,995 backend tests pass (1 pre-existing failure unrelated: `test_email_verification` SQLite schema mismatch from Sprint 553)
+- Files: `logging_config.py`, `Dockerfile`, `main.py`, `transport.ts`, `organization.py`, `admin_dashboard.py`, `BatchUploadContext.tsx`, `FileQueueItem.tsx`, `apiClient.test.ts`, `next.config.js`, `AuthSessionContext.tsx`, `useTrialBalancePreflight.ts`
+
 ### Sprint 555 — AUDIT-04 CI/CD Pipeline Security Remediation
 **Status:** COMPLETE
 **Scope:** 5 fixes from AUDIT-04 CI/CD Pipeline Security review
