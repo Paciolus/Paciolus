@@ -688,7 +688,7 @@ def _build_sign_change_detail(
         )
 
     # Suggested procedure
-    procedure = get_follow_up_procedure("apc_sign_change", rotation_index=1)
+    procedure = get_follow_up_procedure("apc_sign_change")
     if procedure:
         story.append(Spacer(1, 4))
         story.append(Paragraph(f"<i>{procedure}</i>", styles["MemoBodySmall"]))
@@ -771,7 +771,7 @@ def _build_dormant_accounts_detail(
         )
 
     # Suggested procedure
-    procedure = get_follow_up_procedure("apc_dormant_account", rotation_index=1)
+    procedure = get_follow_up_procedure("apc_dormant_account")
     if procedure:
         story.append(Spacer(1, 4))
         story.append(Paragraph(f"<i>{procedure}</i>", styles["MemoBodySmall"]))
@@ -906,8 +906,8 @@ def _build_new_closed_account_detail(
         story.append(Spacer(1, 4))
 
     # Suggested procedure
-    procedure = get_follow_up_procedure("new_account", rotation_index=1)
-    closed_procedure = get_follow_up_procedure("apc_closed_account", rotation_index=1)
+    procedure = get_follow_up_procedure("new_account")
+    closed_procedure = get_follow_up_procedure("apc_closed_account", rotation_index=1 if new_accounts else 0)
     combined = []
     if new_accounts and procedure:
         combined.append(procedure)
@@ -1268,7 +1268,7 @@ def generate_multi_period_memo(
         )
         risk_tier = score_to_risk_tier(risk_score).value
 
-    tier_label, _ = RISK_TIER_DISPLAY.get(risk_tier, ("UNKNOWN", ClassicalColors.OBSIDIAN_DEEP))
+    tier_label, _ = RISK_TIER_DISPLAY.get(str(risk_tier).lower(), ("UNKNOWN", ClassicalColors.OBSIDIAN_DEEP))
 
     story.append(Paragraph(create_leader_dots("Composite Risk Score", f"{risk_score:.1f} / 100"), styles["MemoLeader"]))
     story.append(Paragraph(create_leader_dots("Risk Tier", tier_label), styles["MemoLeader"]))

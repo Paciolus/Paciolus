@@ -844,7 +844,7 @@ def generate_bank_rec_memo(
         story.append(Paragraph("V. Results Summary", styles["MemoSection"]))
         story.append(LedgerRule(doc.width))
 
-        risk_tier = composite.get("risk_tier", "low")
+        risk_tier = str(composite.get("risk_tier", "low")).lower()
         tier_label, _ = RISK_TIER_DISPLAY.get(risk_tier, ("UNKNOWN", ClassicalColors.OBSIDIAN_500))
 
         story.append(
@@ -935,7 +935,7 @@ def generate_bank_rec_memo(
     story.append(Paragraph("VIII. Conclusion", styles["MemoSection"]))
     story.append(LedgerRule(doc.width))
 
-    risk_tier = composite.get("risk_tier", "low") if composite else "low"
+    risk_tier = str(composite.get("risk_tier", "low")).lower() if composite else "low"
     rec_diff = summary.get("reconciling_difference", 0)
     match_rate = matched / total_txns if total_txns > 0 else 0
 

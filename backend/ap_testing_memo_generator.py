@@ -113,7 +113,7 @@ def _build_ap_extra_sections(
         story.append(LedgerRule(doc_width))
         has_detail = True
 
-        for tr in detail_tests:
+        for detail_idx, tr in enumerate(detail_tests):
             test_key = tr.get("test_key", "")
             flagged = tr.get("flagged_entries", [])
             if not flagged:
@@ -254,7 +254,7 @@ def _build_ap_extra_sections(
                 )
 
             # Add suggested procedure below each table (rotate across detail tests)
-            procedure = get_follow_up_procedure(test_key, rotation_index=1)
+            procedure = get_follow_up_procedure(test_key, rotation_index=detail_idx)
             if procedure:
                 from reportlab.platypus import Spacer
 

@@ -134,12 +134,12 @@ class TestActivityHistory:
             response = await client.get("/activity/history", params={"page": 1, "page_size": 10})
             assert response.status_code == 200
             data = response.json()
-            assert "activities" in data
+            assert "items" in data
             assert "total_count" in data
             assert "page" in data
             assert data["page"] == 1
             assert data["total_count"] >= 1
-            assert len(data["activities"]) >= 1
+            assert len(data["items"]) >= 1
 
     @pytest.mark.asyncio
     async def test_empty_history(self, override_auth):
@@ -148,7 +148,7 @@ class TestActivityHistory:
             response = await client.get("/activity/history")
             assert response.status_code == 200
             data = response.json()
-            assert data["activities"] == []
+            assert data["items"] == []
             assert data["total_count"] == 0
 
 

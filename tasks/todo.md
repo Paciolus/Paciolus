@@ -132,6 +132,43 @@
 
 ---
 
+### Sprint 550 — Nightly Report Bug Remediation (DEC 2026-03-18)
+
+**Status:** COMPLETE
+**Goal:** Fix bugs identified by 2026-03-18 nightly report and DEC council review: 3 broken pagination tests, procedure rotation, risk tier label normalization.
+
+#### F-001 (P1) — PaginatedResponse Schema Drift
+- [x] `test_activity_api.py`: `"activities"` → `"items"` (lines 137, 142, 151)
+- [x] `test_clients_api.py`: `"clients"` → `"items"` (line 115)
+- [x] Grep audit: no other pre-migration field names found in test suite
+
+#### F-002 (P2) — Suggested Procedures Rotation (BUG-001)
+- [x] `ap_testing_memo_generator.py`: hardcoded `rotation_index=1` → `enumerate(detail_tests)` with `detail_idx`
+- [x] `je_testing_memo_generator.py`: hardcoded `rotation_index=1` → `enumerate(high_sev_tests)` with `finding_idx`
+- [x] `multi_period_memo_generator.py`: 4 hardcoded calls → removed `rotation_index=1` (use default primary + contextual index)
+
+#### F-003 (P2) — Risk Tier Label Normalization (BUG-002)
+- [x] `shared/memo_base.py`: `str(...).lower()` normalization on `RISK_TIER_DISPLAY` lookup
+- [x] `bank_reconciliation_memo_generator.py`: 2 lookup sites normalized
+- [x] `engagement_dashboard_memo.py`: 2 lookup sites normalized
+- [x] `multi_period_memo_generator.py`: 1 lookup site normalized
+- [x] `three_way_match_memo_generator.py`: 2 lookup sites normalized
+- [x] `pdf/sections/diagnostic.py`: 1 lookup site normalized
+
+#### F-005/F-006 — BUG-006 (Data Quality) / BUG-007 (Drill-Down Stubs)
+- [x] Investigated: `assess_data_quality()` is correct; scoring converges for well-formatted data (design, not bug)
+- [x] Investigated: `build_drill_down_table()` has `if not rows: return` guard; all callers pre-filter with `if not flagged: continue`
+- [ ] BUG-006: Requires scoring calibration review (deferred — design decision, not code fix)
+- [ ] BUG-007: Cannot reproduce from code analysis; may require PDF output inspection
+
+#### Review
+- Commit: (pending)
+- Backend: 6,665 passed, 0 failed, 5 deselected (slow)
+- Frontend: build passes
+- Memo generators: 281/281 pass
+
+---
+
 ### Sprint 549 — Governance Remediation (Codex Review)
 
 **Status:** COMPLETE

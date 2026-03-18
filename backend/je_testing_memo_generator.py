@@ -210,7 +210,7 @@ def _build_high_severity_detail(
     story.append(Paragraph(f"{section_label}. High Severity Entry Detail", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
 
-    for tr in high_sev_tests:
+    for finding_idx, tr in enumerate(high_sev_tests):
         test_key = tr.get("test_key", "")
         flagged = tr.get("flagged_entries", [])
         if not flagged:
@@ -243,7 +243,7 @@ def _build_high_severity_detail(
                 col_widths=[0.7 * inch, 0.7 * inch, 1.2 * inch, 0.8 * inch, 0.8 * inch, 0.8 * inch, 1.6 * inch],
                 right_align_cols=[3, 4, 5],
             )
-            procedure = get_follow_up_procedure("unbalanced_entries", rotation_index=1)
+            procedure = get_follow_up_procedure("unbalanced_entries", rotation_index=finding_idx)
             if procedure:
                 story.append(Paragraph(f"<i>{procedure}</i>", styles["MemoBodySmall"]))
                 story.append(Spacer(1, 6))
@@ -275,7 +275,7 @@ def _build_high_severity_detail(
                 col_widths=[0.6 * inch, 0.7 * inch, 1.0 * inch, 0.8 * inch, 1.0 * inch, 1.2 * inch, 1.3 * inch],
                 right_align_cols=[3],
             )
-            procedure = get_follow_up_procedure("holiday_postings", rotation_index=1)
+            procedure = get_follow_up_procedure("holiday_postings", rotation_index=finding_idx)
             if procedure:
                 story.append(Paragraph(f"<i>{procedure}</i>", styles["MemoBodySmall"]))
                 story.append(Spacer(1, 6))

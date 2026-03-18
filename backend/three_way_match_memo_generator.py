@@ -268,7 +268,7 @@ def _build_match_results(
     full_rate = summary.get("full_match_rate", 0)
     partial_rate = summary.get("partial_match_rate", 0)
 
-    tier_label, _ = RISK_TIER_DISPLAY.get(risk_tier, ("UNKNOWN", ClassicalColors.OBSIDIAN_500))
+    tier_label, _ = RISK_TIER_DISPLAY.get(str(risk_tier).lower(), ("UNKNOWN", ClassicalColors.OBSIDIAN_500))
 
     result_lines = [
         create_leader_dots("Full Matches (3-way)", f"{full_count:,} ({full_rate:.1%})"),
@@ -329,7 +329,7 @@ def _build_results_summary(
     story.append(Paragraph("IV. Results Summary", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
 
-    risk_tier = composite.get("risk_tier", "low")
+    risk_tier = str(composite.get("risk_tier", "low")).lower()
     tier_label, _ = RISK_TIER_DISPLAY.get(risk_tier, ("UNKNOWN", ClassicalColors.OBSIDIAN_500))
 
     story.append(

@@ -436,7 +436,7 @@ def render_risk_summary(story: list, styles: dict, audit_result: dict) -> None:
             informational_count=informational_count,
         )
     risk_tier = get_risk_tier(risk_score)
-    tier_label, _ = RISK_TIER_DISPLAY.get(risk_tier, ("UNKNOWN", ClassicalColors.OBSIDIAN_500))
+    tier_label, _ = RISK_TIER_DISPLAY.get(str(risk_tier).lower(), ("UNKNOWN", ClassicalColors.OBSIDIAN_500))
 
     score_lines = [
         create_leader_dots("Composite Risk Score", f"{risk_score} / 100"),

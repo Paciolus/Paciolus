@@ -311,7 +311,7 @@ def build_results_summary_section(
     story.append(Paragraph("III. Results Summary", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
 
-    risk_tier = composite.get("risk_tier", "low")
+    risk_tier = str(composite.get("risk_tier", "low")).lower()
     tier_label, _ = RISK_TIER_DISPLAY.get(risk_tier, ("UNKNOWN", ClassicalColors.OBSIDIAN_500))
 
     story.append(

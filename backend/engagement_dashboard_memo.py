@@ -112,7 +112,7 @@ def generate_engagement_dashboard_memo(
     overall_score = dashboard_result.get("overall_risk_score", 0)
     overall_tier = dashboard_result.get("overall_risk_tier", "low")
 
-    tier_label, _ = RISK_TIER_DISPLAY.get(overall_tier, ("UNKNOWN", ClassicalColors.OBSIDIAN_500))
+    tier_label, _ = RISK_TIER_DISPLAY.get(str(overall_tier).lower(), ("UNKNOWN", ClassicalColors.OBSIDIAN_500))
 
     summary_lines = [
         create_leader_dots("Reports Analyzed", str(report_count)),
@@ -141,7 +141,7 @@ def generate_engagement_dashboard_memo(
     if summaries:
         rpt_data = [["Report", "Risk Score", "Tier", "Flagged", "High", "Tests"]]
         for s in summaries:
-            t_label, _ = RISK_TIER_DISPLAY.get(s.get("risk_tier", "low"), ("—", None))
+            t_label, _ = RISK_TIER_DISPLAY.get(str(s.get("risk_tier", "low")).lower(), ("—", None))
             rpt_data.append(
                 [
                     Paragraph(s.get("report_title", ""), styles["MemoTableCell"]),

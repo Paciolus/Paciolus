@@ -112,7 +112,7 @@ class TestGetClients:
             response = await client.get("/clients")
             assert response.status_code == 200
             data = response.json()
-            assert "clients" in data
+            assert "items" in data
             assert "total_count" in data
             assert data["total_count"] >= 1
             assert data["page"] == 1
