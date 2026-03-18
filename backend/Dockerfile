@@ -45,11 +45,6 @@ COPY --from=builder /install/bin/gunicorn /usr/local/bin/gunicorn
 COPY --from=builder /install/bin/uvicorn /usr/local/bin/uvicorn
 COPY --from=builder /install/bin/alembic /usr/local/bin/alembic
 
-# Install curl for lightweight health checks (avoids spawning full Python interpreter)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
-
 # Create non-root user for security
 RUN groupadd --gid 1000 paciolus \
     && useradd --uid 1000 --gid paciolus --shell /bin/bash --create-home paciolus
@@ -63,9 +58,9 @@ USER paciolus
 # Expose port
 EXPOSE 8000
 
-# Health check — curl is ~100x lighter than spawning a Python interpreter every 30s
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/health/live || exit 1
+# Health check — Python-native probe (no external tool dependency)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
 
 # Production command: run Alembic migrations (once, before workers) then start Gunicorn.
 # Alembic runs exactly once per deploy — eliminates multi-worker migration races.
