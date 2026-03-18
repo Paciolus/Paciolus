@@ -46,7 +46,7 @@
 > Sprints 547–551 archived to `tasks/archive/sprints-547-551-details.md`.
 
 ### Sprint 554 — AUDIT-03 Runtime Browser Storage Remediation
-**Status:** IN PROGRESS
+**Status:** COMPLETE
 **Scope:** 6 fixes from AUDIT-03 Runtime Browser Storage review
 
 - [x] **FIX 1 (CRITICAL):** MappingContext sessionStorage — remove all sessionStorage persistence of account mapping data
@@ -57,7 +57,10 @@
 - [x] **FIX 6 (MEDIUM):** Sentry URL Scrubbing — scrub page URL query strings in beforeSend
 
 **Review:**
-- (to be filled on completion)
+- All 6 fixes verified: `sessionStorage.setItem` across `src/` shows only 3 allowed entries (mute flag, redirect path, command palette recency)
+- Build passes with zero type errors
+- All 1,426 frontend tests pass across 118 suites
+- Files: `MappingContext.tsx`, `AuthSessionContext.tsx`, `UserProfileContext.tsx`, `VerificationContext.tsx`, `register/page.tsx`, `verification-pending/page.tsx`, `verify-email/page.tsx`, `history/page.tsx`, `sentry.client.config.ts`, `authFlowState.ts`
 
 ### Sprint 553 — AUDIT-02 Authentication Lifecycle Remediation
 **Status:** COMPLETE
