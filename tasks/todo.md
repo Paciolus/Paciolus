@@ -45,6 +45,16 @@
 > Sprints 542–546 archived to `tasks/archive/sprints-542-546-details.md`.
 > Sprints 547–551 archived to `tasks/archive/sprints-547-551-details.md`.
 
+### Sprint 553 — AUDIT-02 Authentication Lifecycle Remediation
+**Status:** IN PROGRESS
+**Scope:** 2 fixes from AUDIT-02 Authentication Lifecycle review
+
+- [x] **FIX 1 (MEDIUM):** CSRF Logout Binding — bind logout CSRF validation to refresh-cookie owner via DB lookup, preventing cross-user CSRF token reuse on logout
+- [ ] **FIX 2 (LOW):** Session Inventory & Revocation — add session metadata columns (last_used_at, user_agent, ip_address) + 3 new API endpoints (GET/DELETE /auth/sessions)
+
+**Review:**
+- Pending
+
 ### Sprint 552 — AUDIT-01 Calculation Correctness Fixes
 **Status:** COMPLETE
 **Scope:** 5 confirmed defects from AUDIT-01 Financial Calculation Correctness review

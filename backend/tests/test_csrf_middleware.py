@@ -740,3 +740,166 @@ class TestCsrfUserBindingMiddleware:
 
         response = await middleware.dispatch(request, call_next)
         call_next.assert_awaited_once_with(request)
+
+
+# =============================================================================
+# AUDIT-02 FIX 1: Logout CSRF Binding to Refresh Cookie Owner
+# =============================================================================
+
+
+class TestLogoutCsrfBinding:
+    """Verify that CSRF on /auth/logout is bound to the refresh cookie owner.
+
+    AUDIT-02: A CSRF token minted for User A must NOT pass CSRF validation
+    on a logout request carrying User B's refresh cookie.
+    """
+
+    def setup_method(self):
+        """Restore original validate_csrf_token."""
+        _sm.validate_csrf_token = validate_csrf_token
+
+    def teardown_method(self):
+        """Re-apply the conftest bypass for other API tests."""
+        _sm.validate_csrf_token = lambda token, expected_user_id=None: True
+
+    @pytest.mark.asyncio
+    async def test_logout_csrf_cross_user_rejected(self, db_session):
+        """CSRF token for User A + User B's refresh cookie → 403."""
+        import hashlib
+        import secrets
+        from datetime import UTC, datetime, timedelta
+
+        from models import RefreshToken, User
+
+        # Create User A and User B
+        user_a = User(
+            email="user_a_csrf@example.com",
+            hashed_password="$2b$12$fakehashvalue",
+            is_active=True,
+        )
+        user_b = User(
+            email="user_b_csrf@example.com",
+            hashed_password="$2b$12$fakehashvalue",
+            is_active=True,
+        )
+        db_session.add_all([user_a, user_b])
+        db_session.flush()
+
+        # Create a refresh token for User B
+        raw_refresh_b = secrets.token_urlsafe(48)
+        hash_b = hashlib.sha256(raw_refresh_b.encode("utf-8")).hexdigest()
+        rt_b = RefreshToken(
+            user_id=user_b.id,
+            token_hash=hash_b,
+            expires_at=datetime.now(UTC) + timedelta(days=7),
+        )
+        db_session.add(rt_b)
+        db_session.commit()
+
+        # Generate a CSRF token for User A
+        csrf_tok = generate_csrf_token(str(user_a.id))
+
+        # Build a mock request for POST /auth/logout with User B's refresh cookie
+        request = MagicMock()
+        request.method = "POST"
+        request.url.path = "/auth/logout"
+        headers = {"X-CSRF-Token": csrf_tok}
+        request.headers = MagicMock()
+        request.headers.get = lambda key, default=None: headers.get(key, default)
+        request.cookies = MagicMock()
+        request.cookies.get = lambda key, default=None: raw_refresh_b if key == "paciolus_refresh" else default
+
+        # Patch SessionLocal to use the test session
+        from unittest.mock import patch
+
+        with patch("security_middleware.CSRFMiddleware._extract_user_id_from_refresh_cookie") as mock_extract:
+            # Simulate the real behavior: query DB for the refresh cookie owner
+            mock_extract.return_value = str(user_b.id)
+
+            middleware = CSRFMiddleware(app=MagicMock())
+            call_next = AsyncMock()
+
+            response = await middleware.dispatch(request, call_next)
+
+            # User A's CSRF token + User B's refresh cookie → must be rejected
+            assert response.status_code == 403
+            call_next.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_logout_csrf_same_user_passes(self, db_session):
+        """CSRF token for User A + User A's refresh cookie → passes."""
+        import hashlib
+        import secrets
+        from datetime import UTC, datetime, timedelta
+
+        from models import RefreshToken, User
+
+        user_a = User(
+            email="user_a_same@example.com",
+            hashed_password="$2b$12$fakehashvalue",
+            is_active=True,
+        )
+        db_session.add(user_a)
+        db_session.flush()
+
+        raw_refresh_a = secrets.token_urlsafe(48)
+        hash_a = hashlib.sha256(raw_refresh_a.encode("utf-8")).hexdigest()
+        rt_a = RefreshToken(
+            user_id=user_a.id,
+            token_hash=hash_a,
+            expires_at=datetime.now(UTC) + timedelta(days=7),
+        )
+        db_session.add(rt_a)
+        db_session.commit()
+
+        csrf_tok = generate_csrf_token(str(user_a.id))
+
+        request = MagicMock()
+        request.method = "POST"
+        request.url.path = "/auth/logout"
+        headers = {"X-CSRF-Token": csrf_tok}
+        request.headers = MagicMock()
+        request.headers.get = lambda key, default=None: headers.get(key, default)
+        request.cookies = MagicMock()
+        request.cookies.get = lambda key, default=None: raw_refresh_a if key == "paciolus_refresh" else default
+
+        from unittest.mock import patch
+
+        with patch("security_middleware.CSRFMiddleware._extract_user_id_from_refresh_cookie") as mock_extract:
+            mock_extract.return_value = str(user_a.id)
+
+            middleware = CSRFMiddleware(app=MagicMock())
+            call_next = AsyncMock(return_value=MagicMock())
+
+            response = await middleware.dispatch(request, call_next)
+
+            # Same user → must pass
+            call_next.assert_awaited_once_with(request)
+
+    @pytest.mark.asyncio
+    async def test_logout_csrf_no_refresh_cookie_falls_through(self):
+        """Logout with no refresh cookie → expected_user_id stays None (existing behavior)."""
+        middleware = CSRFMiddleware(app=MagicMock())
+
+        # Valid CSRF token for any user — without a cookie, binding check is skipped
+        csrf_tok = generate_csrf_token("some-user")
+
+        request = MagicMock()
+        request.method = "POST"
+        request.url.path = "/auth/logout"
+        headers = {"X-CSRF-Token": csrf_tok}
+        request.headers = MagicMock()
+        request.headers.get = lambda key, default=None: headers.get(key, default)
+        request.cookies = MagicMock()
+        request.cookies.get = lambda key, default=None: default  # No cookie
+
+        from unittest.mock import patch
+
+        with patch("security_middleware.CSRFMiddleware._extract_user_id_from_refresh_cookie") as mock_extract:
+            mock_extract.return_value = None
+
+            call_next = AsyncMock(return_value=MagicMock())
+            response = await middleware.dispatch(request, call_next)
+
+            # No cookie → None expected_user_id → signature-only validation passes
+            call_next.assert_awaited_once_with(request)

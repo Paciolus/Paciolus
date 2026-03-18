@@ -401,6 +401,41 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         except Exception:
             return None
 
+    def _extract_user_id_from_refresh_cookie(self, request: Request) -> Optional[str]:
+        """Recover the owning user_id from the refresh cookie for CSRF binding on logout.
+
+        Reads the raw refresh token from the cookie, hashes it (SHA-256),
+        and queries the DB for a non-revoked row to pull the user_id.
+        Returns None if no valid refresh token is found (downstream
+        revocation logic will handle the invalid token).
+        """
+        from config import REFRESH_COOKIE_NAME
+        from database import SessionLocal
+
+        raw_token = request.cookies.get(REFRESH_COOKIE_NAME)
+        if not raw_token:
+            return None
+
+        token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+
+        db = SessionLocal()
+        try:
+            from models import RefreshToken
+
+            db_token = (
+                db.query(RefreshToken)
+                .filter(
+                    RefreshToken.token_hash == token_hash,
+                    RefreshToken.revoked_at.is_(None),
+                )
+                .first()
+            )
+            if db_token is not None:
+                return str(db_token.user_id)
+            return None
+        finally:
+            db.close()
+
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         path = request.url.path
         method = request.method
@@ -426,6 +461,12 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         csrf_token = request.headers.get("X-CSRF-Token")
         # Extract user from Authorization header for binding check
         expected_user_id = self._extract_user_id_from_auth(request)
+
+        # FIX 1 (AUDIT-02): On logout, no Bearer token is present so
+        # expected_user_id is None, degrading CSRF to signature-only.
+        # Recover the owning user from the refresh cookie instead.
+        if expected_user_id is None and path == "/auth/logout":
+            expected_user_id = self._extract_user_id_from_refresh_cookie(request)
 
         if not validate_csrf_token(csrf_token, expected_user_id=expected_user_id):
             log_secure_operation("csrf_blocked", f"Blocked {method} to {path} - invalid/missing CSRF token")
