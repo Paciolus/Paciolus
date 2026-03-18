@@ -63,17 +63,22 @@
 - [x] tasks/todo.md split (PROTOCOL.md, COMPLETED_ERAS.md, EXECUTIVE_BLOCKERS.md) (Sprint 548)
 - [x] Archive stale docs (phase-iii, FEATURE_ROADMAP.md) (Sprint 547)
 
+#### Phase 3b — Doc Archival
+- [x] Archive legacy DEPLOYMENT.md (v0.16) to `docs/archive/`
+- [x] Archive legacy API_REFERENCE.md (v0.70) to `docs/archive/`
+- [x] Update docs index and AGENTS.md references
+
 #### Phase 4 — Testing Infrastructure
-- [ ] Raise frontend coverage thresholds
-- [ ] Harden Playwright smoke spec assertions
-- [ ] Add PR-triggered E2E smoke job to CI
-- [ ] Add concurrency tests for seat enforcement (BUG-04)
+- [x] Raise frontend coverage thresholds (26/25/33/32 → 27/29/37/36)
+- [x] Harden Playwright smoke spec assertions (unconditional file input check)
+- [x] Add PR-triggered E2E smoke job to CI (graceful secret skip)
+- [x] Add concurrency tests for seat enforcement (BUG-04)
 
 #### Phase 5 — Architectural Refactors
 - [ ] Split anomaly_rules.py by anomaly family
 - [ ] Decompose pipeline.py post-processing stages
-- [ ] Extract organization service layer
-- [ ] Split billing.py into sub-domain modules
+- [ ] Wire organization routes to existing service layer
+- [x] ~~Split billing.py into sub-domain modules~~ — already a clean facade
 - [ ] Move format serialization out of export_diagnostics.py
 - [ ] Unify upload flow in useStatisticalSampling.ts
 - [ ] Prevent apiClient.ts god-module drift

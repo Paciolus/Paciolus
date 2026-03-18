@@ -69,24 +69,21 @@ const customJestConfig = {
     '!src/**/index.{js,ts}',
   ],
 
-  // Coverage thresholds (Sprint 548: raised from 35%; target 60% global)
-  // TODO: Raise global to 60% as coverage improves — current actual ~33%
+  // Coverage thresholds (Sprint 551: raised from 26/25/33/32 to lock actual floor)
   coverageThreshold: {
     global: {
-      branches: 26,
-      functions: 25,
-      lines: 33,
-      statements: 32,
+      branches: 27,
+      functions: 29,
+      lines: 37,
+      statements: 36,
     },
     './src/hooks/': {
-      // TODO: Raise to 70/60/70/70 — current actual ~69/49/70/70
       statements: 68,
       branches: 48,
       functions: 68,
       lines: 68,
     },
     './src/app/': {
-      // TODO: Raise to 50/40/50/50 as tool page coverage improves
       statements: 20,
       branches: 10,
       functions: 18,

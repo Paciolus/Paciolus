@@ -10,19 +10,28 @@ The checklist enforces **CC8.4** of the SOC 2 Trust Services Criteria and mirror
 
 ## CI Gates
 
-All PRs must pass the following CI checks before merging:
+All PRs must pass the following CI checks before merging. The authoritative source is `.github/workflows/ci.yml`.
 
 | Job | Requirement |
 |-----|-------------|
-| `backend-tests` | All pytest tests pass (Python 3.11 + 3.12) |
-| `frontend-build` | `npm run build` succeeds with no errors |
-| `backend-lint` | Ruff error count ≤ baseline |
-| `lint-baseline-gate` | ESLint errors + warnings ≤ baseline |
-| `bandit` | No HIGH-severity security findings |
+| `backend-tests` | All pytest tests pass (Python 3.11 + 3.12 matrix, `-m "not slow"`) |
+| `backend-tests-postgres` | All pytest tests pass against PostgreSQL 15 |
+| `frontend-build` | `npm run build` succeeds, ESLint error/warning counts extracted |
+| `frontend-tests` | All Jest tests pass with coverage |
+| `backend-lint` | Ruff error count extracted for baseline gate |
+| `lint-baseline-gate` | Ruff + ESLint errors/warnings ≤ `.github/lint-baseline.json` |
+| `mypy-check` | mypy passes on non-test backend source (zero errors) |
+| `bandit` | No HIGH-severity security findings (medium+ scanned) |
+| `secrets-scan` | trufflehog finds no committed secrets (PR diff or push) |
+| `openapi-drift-check` | OpenAPI snapshot matches current Pydantic models |
 | `accounting-policy` | Accounting invariant checkers pass |
 | `report-standards` | Report standards validator passes |
 | `pip-audit-blocking` | No HIGH/CRITICAL Python CVEs |
 | `npm-audit-blocking` | No HIGH/CRITICAL Node CVEs |
+
+**Advisory (non-blocking):** `pip-audit-advisory`, `npm-audit-advisory`, `merge-revert-guard`, `backend-tests-slow` (main-only).
+
+**E2E smoke tests:** Run on push to main and PRs targeting main. Requires `SMOKE_USER` and `SMOKE_PASS` repository secrets. When secrets are unavailable (external PRs), the job skips gracefully with a notice.
 
 ## Commit Messages
 

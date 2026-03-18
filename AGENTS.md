@@ -18,7 +18,7 @@ Paciolus is a 12-tool zero-storage AI audit intelligence SaaS for financial prof
 |------|-------|
 | Architecture & system design | `docs/02-technical/ARCHITECTURE.md` |
 | API reference (generated) | `docs/02-technical/API_REFERENCE_GENERATED.md` |
-| API reference (legacy, outdated) | `docs/02-technical/API_REFERENCE.md` |
+| API reference (legacy, archived) | `docs/archive/API_REFERENCE-legacy-v0.70.md` |
 | Deployment & infrastructure | `docs/02-technical/DEPLOYMENT_ARCHITECTURE.md` |
 | Feature inventory & status | `features/status.json` |
 | Active sprint / work queue | `tasks/todo.md` |

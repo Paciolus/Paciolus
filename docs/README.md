@@ -8,7 +8,6 @@
 ### Technical
 - `docs/02-technical/ARCHITECTURE.md` — system architecture, stack, data flow
 - `docs/02-technical/API_REFERENCE_GENERATED.md` — auto-generated API reference from router registry
-- `docs/02-technical/API_REFERENCE.md` — legacy API reference _(outdated, v0.70.0 snapshot)_
 - `docs/02-technical/DEPLOYMENT_ARCHITECTURE.md` — deployment and infrastructure _(outdated, needs update)_
 - `docs/02-technical/rfc-multi-currency.md` — multi-currency RFC
 
@@ -23,6 +22,8 @@
 _(These files document past states and decisions. Do not use as current references.)_
 
 - `docs/archive/` — archived planning docs, phase packs, and superseded references
+  - `API_REFERENCE-legacy-v0.70.md` — legacy 5-tool API reference
+  - `DEPLOYMENT-legacy-v0.16.md` — legacy Sprint 24 deployment guide
 
 ## Current Version Reference
 
