@@ -433,6 +433,9 @@ class CSRFMiddleware(BaseHTTPMiddleware):
             if db_token is not None:
                 return str(db_token.user_id)
             return None
+        except Exception:
+            # DB unavailable or schema mismatch — fall through to None
+            return None
         finally:
             db.close()
 

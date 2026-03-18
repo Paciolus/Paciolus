@@ -488,6 +488,11 @@ class RefreshToken(Base):
     # Rotation chain — hash of the replacement token (for reuse detection)
     replaced_by_hash = Column(String(64), nullable=True)
 
+    # AUDIT-02 FIX 2: Session metadata for inventory & revocation
+    last_used_at = Column(DateTime, nullable=True)
+    user_agent = Column(String(512), nullable=True)
+    ip_address = Column(String(45), nullable=True)
+
     def __repr__(self) -> str:
         return f"<RefreshToken(id={self.id}, user_id={self.user_id})>"
 

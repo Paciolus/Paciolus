@@ -50,10 +50,13 @@
 **Scope:** 2 fixes from AUDIT-02 Authentication Lifecycle review
 
 - [x] **FIX 1 (MEDIUM):** CSRF Logout Binding — bind logout CSRF validation to refresh-cookie owner via DB lookup, preventing cross-user CSRF token reuse on logout
-- [ ] **FIX 2 (LOW):** Session Inventory & Revocation — add session metadata columns (last_used_at, user_agent, ip_address) + 3 new API endpoints (GET/DELETE /auth/sessions)
+- [x] **FIX 2 (LOW):** Session Inventory & Revocation — add session metadata columns (last_used_at, user_agent, ip_address) + 3 new API endpoints (GET/DELETE /auth/sessions)
 
 **Review:**
-- Pending
+- FIX 1: 3 new tests (cross-user rejected, same-user passes, no-cookie fallback) + 65 existing CSRF tests pass
+- FIX 2: 12 new tests (list sessions, ownership enforcement, single/bulk revocation, route registration) + 26 existing auth route tests pass
+- All 106 auth tests pass with zero regressions
+- Files: `security_middleware.py`, `auth.py`, `models.py`, `routes/auth_routes.py`, migration `b6c7d8e9f0a1`
 
 ### Sprint 552 — AUDIT-01 Calculation Correctness Fixes
 **Status:** COMPLETE

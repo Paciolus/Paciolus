@@ -19,6 +19,7 @@ from auth import (
     UserCreate,
     UserLogin,
     UserResponse,
+    _revoke_all_user_tokens,
     authenticate_user,
     create_access_token,
     create_refresh_token,
@@ -39,7 +40,7 @@ from email_service import (
     is_email_service_configured,
     send_verification_email,
 )
-from models import EmailVerificationToken, User
+from models import EmailVerificationToken, RefreshToken, User
 from security_middleware import (
     check_lockout_status,
     generate_csrf_token,
@@ -195,7 +196,12 @@ def register(
     jwt_token, expires = create_access_token(user.id, user.email, user.password_changed_at, tier=user.tier.value)
     expires_in = int((expires - datetime.now(UTC)).total_seconds())
 
-    raw_refresh_token, _ = create_refresh_token(db, user.id)
+    raw_refresh_token, _ = create_refresh_token(
+        db,
+        user.id,
+        user_agent=request.headers.get("User-Agent"),
+        ip_address=request.client.host if request.client else None,
+    )
     # Registration is always session-only (no "Remember Me" option)
     _set_refresh_cookie(response, raw_refresh_token, remember_me=False)
 
@@ -250,7 +256,12 @@ def login(request: Request, credentials: UserLogin, response: Response, db: Sess
     token, expires = create_access_token(user.id, user.email, user.password_changed_at, tier=user.tier.value)
     expires_in = int((expires - datetime.now(UTC)).total_seconds())
 
-    raw_refresh_token, _ = create_refresh_token(db, user.id)
+    raw_refresh_token, _ = create_refresh_token(
+        db,
+        user.id,
+        user_agent=request.headers.get("User-Agent"),
+        ip_address=request.client.host if request.client else None,
+    )
     _set_refresh_cookie(response, raw_refresh_token, credentials.remember_me)
 
     csrf_token_value = generate_csrf_token(user_id=str(user.id))
@@ -433,3 +444,115 @@ def logout(request: Request, response: Response, db: Session = Depends(get_db)):
         revoke_refresh_token(db, raw_token)
     _clear_refresh_cookie(response)
     return SuccessResponse(success=True, message="Logged out successfully")
+
+
+# =============================================================================
+# AUDIT-02 FIX 2: Session Inventory & Revocation
+# =============================================================================
+
+
+class SessionInfo(BaseModel):
+    """Response model for a single session entry."""
+
+    session_id: int
+    last_used_at: Optional[str] = None
+    user_agent: Optional[str] = None
+    ip_address: Optional[str] = None
+    created_at: Optional[str] = None
+
+
+class SessionListResponse(BaseModel):
+    """Response model for GET /auth/sessions."""
+
+    sessions: list[SessionInfo]
+
+
+@router.get("/auth/sessions", response_model=SessionListResponse)
+def list_sessions(
+    current_user: User = Depends(require_current_user),
+    db: Session = Depends(get_db),
+):
+    """List all active (non-revoked) sessions for the calling user.
+
+    AUDIT-02 FIX 2: Provides session inventory visibility.
+    Never returns the token hash.
+    """
+    tokens = (
+        db.query(RefreshToken)
+        .filter(
+            RefreshToken.user_id == current_user.id,
+            RefreshToken.revoked_at.is_(None),
+        )
+        .order_by(RefreshToken.created_at.desc())
+        .all()
+    )
+
+    sessions = [
+        SessionInfo(
+            session_id=t.id,
+            last_used_at=t.last_used_at.isoformat() if t.last_used_at else None,
+            user_agent=t.user_agent,
+            ip_address=t.ip_address,
+            created_at=t.created_at.isoformat() if t.created_at else None,
+        )
+        for t in tokens
+    ]
+
+    return SessionListResponse(sessions=sessions)
+
+
+@router.delete("/auth/sessions/{session_id}", status_code=204)
+def revoke_session(
+    session_id: int,
+    current_user: User = Depends(require_current_user),
+    db: Session = Depends(get_db),
+):
+    """Revoke a single session by ID. Only the owning user can revoke.
+
+    AUDIT-02 FIX 2: Per-session revocation endpoint.
+    Returns 204 on success, 404 if not found or not owned by caller.
+    """
+    token = (
+        db.query(RefreshToken)
+        .filter(
+            RefreshToken.id == session_id,
+            RefreshToken.user_id == current_user.id,
+            RefreshToken.revoked_at.is_(None),
+        )
+        .first()
+    )
+
+    if token is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    from datetime import UTC, datetime
+
+    token.revoked_at = datetime.now(UTC)
+    db.commit()
+
+    log_secure_operation(
+        "session_revoked",
+        f"Session {session_id} revoked by user {current_user.id}",
+    )
+
+    return Response(status_code=204)
+
+
+@router.delete("/auth/sessions", status_code=204)
+def revoke_all_sessions(
+    current_user: User = Depends(require_current_user),
+    db: Session = Depends(get_db),
+):
+    """Revoke all active sessions for the calling user.
+
+    AUDIT-02 FIX 2: Bulk session revocation endpoint.
+    Returns 204 on success.
+    """
+    count = _revoke_all_user_tokens(db, current_user.id)
+
+    log_secure_operation(
+        "all_sessions_revoked",
+        f"User {current_user.id} revoked all {count} sessions",
+    )
+
+    return Response(status_code=204)

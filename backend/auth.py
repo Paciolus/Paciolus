@@ -531,9 +531,20 @@ def hash_token(raw_token: str) -> str:
     return hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
 
 
-def create_refresh_token(db: Session, user_id: int) -> tuple[str, RefreshToken]:
+def create_refresh_token(
+    db: Session,
+    user_id: int,
+    user_agent: Optional[str] = None,
+    ip_address: Optional[str] = None,
+) -> tuple[str, RefreshToken]:
     """
     Generate a new refresh token and store its hash in the database.
+
+    Args:
+        db: Database session
+        user_id: ID of the owning user
+        user_agent: Optional User-Agent string from the request
+        ip_address: Optional client IP address
 
     Returns:
         Tuple of (raw_token_string, RefreshToken_db_record)
@@ -546,6 +557,8 @@ def create_refresh_token(db: Session, user_id: int) -> tuple[str, RefreshToken]:
         user_id=user_id,
         token_hash=token_hash,
         expires_at=expires_at,
+        user_agent=user_agent[:512] if user_agent else None,
+        ip_address=ip_address[:45] if ip_address else None,
     )
     db.add(db_token)
     db.commit()
@@ -645,12 +658,15 @@ def rotate_refresh_token(db: Session, raw_token: str) -> tuple[str, str, User]:
             detail="User account is inactive",
         )
 
-    # Create successor token
+    # Create successor token — carry session metadata forward from predecessor
     new_expires = datetime.now(UTC) + timedelta(days=REFRESH_TOKEN_EXPIRATION_DAYS)
     new_db_token = RefreshToken(
         user_id=user.id,
         token_hash=new_hash,
         expires_at=new_expires,
+        user_agent=db_token.user_agent,
+        ip_address=db_token.ip_address,
+        last_used_at=now,
     )
     db.add(new_db_token)
 
