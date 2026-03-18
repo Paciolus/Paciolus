@@ -11,7 +11,7 @@ import { fadeUp } from '@/lib/motion'
 /**
  * Email Verification Page — Sprint 58
  *
- * URL: /verify-email?token=abc123...
+ * URL: /verify-email?token=abc123... (token stripped from URL on load)
  * Auto-verifies on mount, shows success/error states.
  * Obsidian Vault aesthetic matching login/register pages.
  */
@@ -27,13 +27,21 @@ function VerifyEmailContent() {
   const [errorMessage, setErrorMessage] = useState('')
   const hasVerified = useRef(false)
 
-  const token = searchParams.get('token')
+  // Capture token on first render, then strip it from the URL immediately
+  const tokenRef = useRef<string | null>(null)
+  if (!hasVerified.current && tokenRef.current === null) {
+    tokenRef.current = searchParams.get('token')
+  }
 
   // Auto-verify on mount
   useEffect(() => {
     if (hasVerified.current) return
     hasVerified.current = true
 
+    // Strip token from URL immediately (replace history entry)
+    router.replace('/verify-email')
+
+    const token = tokenRef.current
     if (!token) {
       setVerifyState('error')
       setErrorMessage('No verification token found. Please check your email for the verification link.')
@@ -60,7 +68,7 @@ function VerifyEmailContent() {
     }
 
     verify()
-  }, [token, verifyEmail, isAuthenticated, refreshUser, router])
+  }, [verifyEmail, isAuthenticated, refreshUser, router])
 
   return (
     <motion.div
