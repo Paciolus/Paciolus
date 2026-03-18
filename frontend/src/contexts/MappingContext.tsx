@@ -5,19 +5,18 @@
  * Provides state management for account type mappings
  *
  * Zero-Storage Compliance:
- * - Uses sessionStorage (ephemeral, cleared on tab close)
+ * - Mappings live in React state only (no browser storage)
  * - Export to user's local machine as JSON file
  * - Never persisted on server
  *
  * See: logs/dev-log.md for IP documentation
  */
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 import {
   AccountType,
   AccountMapping,
   MappingConfig,
-  MAPPING_STORAGE_KEY
 } from '@/types/mapping';
 
 interface MappingContextValue {
@@ -54,31 +53,6 @@ interface MappingProviderProps {
 
 export function MappingProvider({ children }: MappingProviderProps): React.ReactElement {
   const [mappings, setMappings] = useState<Map<string, AccountMapping>>(new Map());
-
-  // Load from sessionStorage on mount
-  useEffect(() => {
-    try {
-      const stored = sessionStorage.getItem(MAPPING_STORAGE_KEY);
-      if (stored) {
-        const parsed: unknown = JSON.parse(stored);
-        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-          setMappings(new Map(Object.entries(parsed as Record<string, AccountMapping>)));
-        }
-      }
-    } catch {
-      // Silently ignore invalid stored data
-    }
-  }, []);
-
-  // Persist to sessionStorage when mappings change
-  useEffect(() => {
-    if (mappings.size > 0) {
-      const obj = Object.fromEntries(mappings);
-      sessionStorage.setItem(MAPPING_STORAGE_KEY, JSON.stringify(obj));
-    } else {
-      sessionStorage.removeItem(MAPPING_STORAGE_KEY);
-    }
-  }, [mappings]);
 
   // Count manual mappings
   const manualMappingCount = Array.from(mappings.values()).filter(m => m.isManual).length;

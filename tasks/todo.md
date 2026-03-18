@@ -45,6 +45,20 @@
 > Sprints 542–546 archived to `tasks/archive/sprints-542-546-details.md`.
 > Sprints 547–551 archived to `tasks/archive/sprints-547-551-details.md`.
 
+### Sprint 554 — AUDIT-03 Runtime Browser Storage Remediation
+**Status:** IN PROGRESS
+**Scope:** 6 fixes from AUDIT-03 Runtime Browser Storage review
+
+- [x] **FIX 1 (CRITICAL):** MappingContext sessionStorage — remove all sessionStorage persistence of account mapping data
+- [ ] **FIX 2 (HIGH):** User Object sessionStorage — remove PII (User object) from sessionStorage across 3 auth contexts
+- [ ] **FIX 3 (HIGH):** Email in Registration URL — strip email from redirect query parameter
+- [ ] **FIX 4 (HIGH):** Verification Token in URL — strip token from URL after consumption
+- [ ] **FIX 5 (MEDIUM):** Materiality Threshold sessionStorage — remove threshold from sessionStorage
+- [ ] **FIX 6 (MEDIUM):** Sentry URL Scrubbing — scrub page URL query strings in beforeSend
+
+**Review:**
+- (to be filled on completion)
+
 ### Sprint 553 — AUDIT-02 Authentication Lifecycle Remediation
 **Status:** COMPLETE
 **Scope:** 2 fixes from AUDIT-02 Authentication Lifecycle review

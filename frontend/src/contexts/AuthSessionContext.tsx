@@ -47,8 +47,6 @@ const USER_KEY = 'paciolus_user'
 function clearAuthSessionData(): void {
   if (typeof window !== 'undefined') {
     sessionStorage.removeItem(USER_KEY)
-    sessionStorage.removeItem('paciolus_account_mappings')
-    sessionStorage.removeItem('paciolus_last_threshold')
   }
 }
 
