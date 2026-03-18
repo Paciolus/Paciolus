@@ -9,6 +9,7 @@ Route group prefix: /admin
 
 import csv
 import io
+import logging
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -25,6 +26,7 @@ from shared.helpers import sanitize_csv_value
 from shared.rate_limits import RATE_LIMIT_DEFAULT, RATE_LIMIT_EXPORT, limiter
 from team_activity_model import TeamActivityLog
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 
@@ -49,7 +51,8 @@ def _get_admin_org(db: Session, user: User) -> Organization:
     from organization_model import OrgRole
 
     if member.role not in (OrgRole.OWNER, OrgRole.ADMIN):
-        raise HTTPException(status_code=403, detail="Admin access required.")
+        logger.warning("403 access denied: user_id=%s, required_role=admin_or_owner", user.id)
+        raise HTTPException(status_code=403, detail="Access denied.")
 
     return org
 

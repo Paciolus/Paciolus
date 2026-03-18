@@ -8,6 +8,7 @@ Auth: require_current_user (all endpoints)
 """
 
 import hashlib
+import logging
 import secrets
 from datetime import UTC, datetime, timedelta
 
@@ -30,6 +31,7 @@ from organization_model import (
 from shared.entitlement_checks import check_seat_limit_for_org
 from shared.rate_limits import RATE_LIMIT_WRITE, limiter
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/organization", tags=["organization"])
 
 
@@ -104,7 +106,8 @@ def _require_admin(db: Session, user: User, org: Organization) -> OrganizationMe
         .first()
     )
     if not member or member.role not in (OrgRole.OWNER, OrgRole.ADMIN):
-        raise HTTPException(status_code=403, detail="Owner or admin role required.")
+        logger.warning("403 access denied: user_id=%s, required_role=admin_or_owner", user.id)
+        raise HTTPException(status_code=403, detail="Access denied.")
     return member
 
 
@@ -119,7 +122,8 @@ def _require_owner(db: Session, user: User, org: Organization) -> OrganizationMe
         .first()
     )
     if not member or member.role != OrgRole.OWNER:
-        raise HTTPException(status_code=403, detail="Owner role required.")
+        logger.warning("403 access denied: user_id=%s, required_role=owner", user.id)
+        raise HTTPException(status_code=403, detail="Access denied.")
     return member
 
 
