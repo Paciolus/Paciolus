@@ -3,8 +3,10 @@ Paciolus API — Audit Pipeline Routes (Trial Balance Analysis)
 """
 
 import asyncio
+import hashlib
 import json
 import logging
+from datetime import UTC, datetime, timedelta
 from typing import Any, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Request, UploadFile
@@ -55,6 +57,37 @@ async def audit_trial_balance(
     db: Session = Depends(get_db),
 ) -> TrialBalanceResponse:
     """Analyze a trial balance file for balance validation using streaming processing."""
+
+    # AUDIT-06 FIX 4: Dedup check — prevent rapid double-submissions
+    from sqlalchemy import text
+
+    # Read file bytes early for both dedup hash and analysis
+    raw_bytes = await file.read()
+    await file.seek(0)  # Reset for downstream validate_file_size
+
+    file_hash = hashlib.sha256(raw_bytes).hexdigest()[:16]
+    dedup_key = f"{current_user.id}:{engagement_id or 0}:{file_hash}:trial_balance"
+    now = datetime.now(UTC)
+    expires_at = now + timedelta(minutes=5)
+
+    # Attempt insert; on conflict check expiry
+    result = db.execute(
+        text(
+            "INSERT INTO upload_dedup (dedup_key, created_at, expires_at) "
+            "VALUES (:key, :now, :expires_at) "
+            "ON CONFLICT (dedup_key) DO UPDATE "
+            "SET created_at = :now, expires_at = :expires_at "
+            "WHERE upload_dedup.expires_at < :now"
+        ),
+        {"key": dedup_key, "now": now, "expires_at": expires_at},
+    )
+    db.commit()
+
+    if result.rowcount == 0:
+        raise HTTPException(
+            status_code=409,
+            detail="Duplicate submission detected. Please wait for the current analysis to complete.",
+        )
 
     overrides_dict: Optional[dict[str, str]] = None
     if account_type_overrides:
