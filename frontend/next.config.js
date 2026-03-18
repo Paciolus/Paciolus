@@ -12,12 +12,9 @@ const nextConfig = {
   // Disable x-powered-by header for security
   poweredByHeader: false,
 
-  // Sprint 25: Remove console.log statements in production builds
-  // Keeps console.error and console.warn for debugging production issues
+  // Sprint 25: Remove all console methods in production builds
   compiler: {
-    removeConsole: process.env.NODE_ENV === 'production' ? {
-      exclude: ['error', 'warn'],
-    } : false,
+    removeConsole: process.env.NODE_ENV === 'production',
   },
 
   // Phase LXV: CSP is now set per-request with a unique nonce in src/proxy.ts.

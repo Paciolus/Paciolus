@@ -165,7 +165,7 @@ export function useTrialBalancePreflight(upload: UploadControls): UseTrialBalanc
         upload.stopProgressIndicator()
         await upload.runAudit(selectedFile, upload.materialityThreshold, false, effectiveMapping, null)
       } catch (error) {
-        console.error('PDF preview failed:', error)
+        console.error('PDF preview failed:', error instanceof Error ? error.name : 'unknown error')
         upload.stopProgressIndicator()
         await upload.runAudit(selectedFile, upload.materialityThreshold, false, effectiveMapping, null)
       }
@@ -194,7 +194,7 @@ export function useTrialBalancePreflight(upload: UploadControls): UseTrialBalanc
         upload.stopProgressIndicator()
         await upload.runAudit(selectedFile, upload.materialityThreshold, false, effectiveMapping, null)
       } catch (error) {
-        console.error('Workbook inspection failed:', error)
+        console.error('Workbook inspection failed:', error instanceof Error ? error.name : 'unknown error')
         upload.stopProgressIndicator()
         await upload.runAudit(selectedFile, upload.materialityThreshold, false, effectiveMapping, null)
       }

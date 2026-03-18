@@ -161,7 +161,7 @@ export function AuthSessionProvider({ children }: { children: ReactNode }): Reac
         // refreshAccessToken sets isLoading: false on both success and failure paths.
         await refreshAccessToken()
       } catch (error) {
-        console.error('Error initializing auth:', error)
+        console.error('Error initializing auth:', error instanceof Error ? error.name : 'unknown error')
         clearAuthSessionData()
         setState(prev => ({ ...prev, isLoading: false }))
       }
