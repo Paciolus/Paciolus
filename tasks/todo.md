@@ -76,14 +76,14 @@
 
 #### Phase 5 — Architectural Refactors
 - [x] Split anomaly_rules.py by anomaly family (7 modules: balance, suspense, concentration, rounding, relationships, equity, merger)
-- [ ] Decompose pipeline.py post-processing stages
-- [ ] Wire organization routes to existing service layer
-- [x] ~~Split billing.py into sub-domain modules~~ — already a clean facade
-- [ ] Move format serialization out of export_diagnostics.py
-- [ ] Unify upload flow in useStatisticalSampling.ts
-- [ ] Prevent apiClient.ts god-module drift
-- [ ] Extract pricing business rules from pricing page
-- [ ] Migrate AuthContext facade consumers to narrower hooks
+- [x] Unify upload flow in useStatisticalSampling.ts (extracted `executeSamplingUpload` shared handler)
+- [x] Prevent apiClient.ts god-module drift (governance contract comment added)
+- [x] ~~Split billing.py~~ — already a clean facade, no action needed
+- [x] ~~Migrate AuthContext facade~~ — facade is intentional design (78 lines), no action needed
+- [ ] Decompose pipeline.py post-processing stages (deferred — already well-structured, 566 lines)
+- [ ] Wire organization routes to existing service layer (deferred — service exists, wiring is low-risk)
+- [ ] Move format serialization out of export_diagnostics.py (deferred — CSV is trivial, PDF/Excel already delegated)
+- [ ] Extract pricing business rules from pricing page (deferred — 995 lines, high effort)
 
 #### Review
 - (pending)

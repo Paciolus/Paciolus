@@ -7,6 +7,7 @@
  *   2. runEvaluation(file, config) → SamplingEvaluationResult
  *
  * Each phase has independent status/result/error state.
+ * Sprint 551: Unified upload handler to eliminate duplication.
  */
 
 import { useState, useCallback } from 'react'
@@ -28,6 +29,8 @@ interface PhaseState<T> {
   error: string
 }
 
+const INITIAL_STATE = { status: 'idle' as UploadStatus, result: null, error: '' }
+
 export interface UseStatisticalSamplingReturn {
   // Design phase
   designStatus: UploadStatus
@@ -43,137 +46,115 @@ export interface UseStatisticalSamplingReturn {
   resetEvaluation: () => void
 }
 
+/**
+ * Shared upload handler for both sampling phases.
+ * Handles verification check, FormData construction, auth headers, and error handling.
+ */
+async function executeSamplingUpload<T>(
+  endpoint: string,
+  file: File,
+  fields: Record<string, string | number | null | undefined>,
+  token: string | null,
+  user: { is_verified?: boolean } | null,
+  setState: (s: PhaseState<T>) => void,
+  errorPrefix: string,
+): Promise<void> {
+  if (user && user.is_verified === false) {
+    setState({ status: 'error', result: null, error: `Please verify your email address before running ${errorPrefix}.` })
+    return
+  }
+
+  setState({ status: 'loading', result: null, error: '' })
+
+  const formData = new FormData()
+  formData.append('file', file)
+  for (const [key, value] of Object.entries(fields)) {
+    if (value !== null && value !== undefined) {
+      formData.append(key, value.toString())
+    }
+  }
+
+  try {
+    const csrfToken = getCsrfToken()
+    const response = await fetch(`${API_URL}${endpoint}`, {
+      method: 'POST',
+      headers: {
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+      },
+      body: formData,
+    })
+
+    if (response.status === 401) {
+      setState({ status: 'error', result: null, error: `Please sign in to run ${errorPrefix}.` })
+      return
+    }
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      const detail = data?.detail || `${errorPrefix} failed. Please check your parameters.`
+      setState({ status: 'error', result: null, error: detail })
+      return
+    }
+
+    setState({ status: 'success', result: data as T, error: '' })
+  } catch {
+    setState({ status: 'error', result: null, error: 'Network error. Please try again.' })
+  }
+}
+
 export function useStatisticalSampling(): UseStatisticalSamplingReturn {
   const { token, user } = useAuthSession()
   const engagement = useOptionalEngagementContext()
   const engagementId = engagement?.engagementId
 
-  const [design, setDesign] = useState<PhaseState<SamplingDesignResult>>({
-    status: 'idle',
-    result: null,
-    error: '',
-  })
-
-  const [evaluation, setEvaluation] = useState<PhaseState<SamplingEvaluationResult>>({
-    status: 'idle',
-    result: null,
-    error: '',
-  })
+  const [design, setDesign] = useState<PhaseState<SamplingDesignResult>>(INITIAL_STATE)
+  const [evaluation, setEvaluation] = useState<PhaseState<SamplingEvaluationResult>>(INITIAL_STATE)
 
   const runDesign = useCallback(async (file: File, config: SamplingDesignConfig) => {
-    if (user && user.is_verified === false) {
-      setDesign({ status: 'error', result: null, error: 'Please verify your email address before running sampling.' })
-      return
-    }
-
-    setDesign({ status: 'loading', result: null, error: '' })
-
-    const formData = new FormData()
-    formData.append('file', file)
-    formData.append('method', config.method)
-    formData.append('confidence_level', config.confidence_level.toString())
-    formData.append('tolerable_misstatement', config.tolerable_misstatement.toString())
-    formData.append('expected_misstatement', config.expected_misstatement.toString())
-    if (config.stratification_threshold !== null) {
-      formData.append('stratification_threshold', config.stratification_threshold.toString())
-    }
-    if (config.sample_size_override !== null) {
-      formData.append('sample_size_override', config.sample_size_override.toString())
-    }
-    if (engagementId) {
-      formData.append('engagement_id', engagementId.toString())
-    }
-
-    try {
-      const csrfToken = getCsrfToken()
-      const response = await fetch(`${API_URL}/audit/sampling/design`, {
-        method: 'POST',
-        headers: {
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-          ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
-        },
-        body: formData,
-      })
-
-      if (response.status === 401) {
-        setDesign({ status: 'error', result: null, error: 'Please sign in to run statistical sampling.' })
-        return
-      }
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        const detail = data?.detail || 'Sample design failed. Please check your parameters.'
-        setDesign({ status: 'error', result: null, error: detail })
-        return
-      }
-
-      setDesign({ status: 'success', result: data as SamplingDesignResult, error: '' })
-    } catch {
-      setDesign({ status: 'error', result: null, error: 'Network error. Please try again.' })
-    }
+    await executeSamplingUpload<SamplingDesignResult>(
+      '/audit/sampling/design',
+      file,
+      {
+        method: config.method,
+        confidence_level: config.confidence_level,
+        tolerable_misstatement: config.tolerable_misstatement,
+        expected_misstatement: config.expected_misstatement,
+        stratification_threshold: config.stratification_threshold,
+        sample_size_override: config.sample_size_override,
+        engagement_id: engagementId,
+      },
+      token,
+      user,
+      setDesign,
+      'sampling',
+    )
   }, [token, user, engagementId])
 
   const runEvaluation = useCallback(async (file: File, config: SamplingEvaluationConfig) => {
-    if (user && user.is_verified === false) {
-      setEvaluation({ status: 'error', result: null, error: 'Please verify your email address before running evaluation.' })
-      return
-    }
-
-    setEvaluation({ status: 'loading', result: null, error: '' })
-
-    const formData = new FormData()
-    formData.append('file', file)
-    formData.append('method', config.method)
-    formData.append('confidence_level', config.confidence_level.toString())
-    formData.append('tolerable_misstatement', config.tolerable_misstatement.toString())
-    formData.append('expected_misstatement', config.expected_misstatement.toString())
-    formData.append('population_value', config.population_value.toString())
-    formData.append('sample_size', config.sample_size.toString())
-    if (config.sampling_interval !== null) {
-      formData.append('sampling_interval', config.sampling_interval.toString())
-    }
-    if (engagementId) {
-      formData.append('engagement_id', engagementId.toString())
-    }
-
-    try {
-      const csrfToken = getCsrfToken()
-      const response = await fetch(`${API_URL}/audit/sampling/evaluate`, {
-        method: 'POST',
-        headers: {
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-          ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
-        },
-        body: formData,
-      })
-
-      if (response.status === 401) {
-        setEvaluation({ status: 'error', result: null, error: 'Please sign in to run evaluation.' })
-        return
-      }
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        const detail = data?.detail || 'Sample evaluation failed. Please check your parameters.'
-        setEvaluation({ status: 'error', result: null, error: detail })
-        return
-      }
-
-      setEvaluation({ status: 'success', result: data as SamplingEvaluationResult, error: '' })
-    } catch {
-      setEvaluation({ status: 'error', result: null, error: 'Network error. Please try again.' })
-    }
+    await executeSamplingUpload<SamplingEvaluationResult>(
+      '/audit/sampling/evaluate',
+      file,
+      {
+        method: config.method,
+        confidence_level: config.confidence_level,
+        tolerable_misstatement: config.tolerable_misstatement,
+        expected_misstatement: config.expected_misstatement,
+        population_value: config.population_value,
+        sample_size: config.sample_size,
+        sampling_interval: config.sampling_interval,
+        engagement_id: engagementId,
+      },
+      token,
+      user,
+      setEvaluation,
+      'evaluation',
+    )
   }, [token, user, engagementId])
 
-  const resetDesign = useCallback(() => {
-    setDesign({ status: 'idle', result: null, error: '' })
-  }, [])
-
-  const resetEvaluation = useCallback(() => {
-    setEvaluation({ status: 'idle', result: null, error: '' })
-  }, [])
+  const resetDesign = useCallback(() => setDesign(INITIAL_STATE), [])
+  const resetEvaluation = useCallback(() => setEvaluation(INITIAL_STATE), [])
 
   return {
     designStatus: design.status,
