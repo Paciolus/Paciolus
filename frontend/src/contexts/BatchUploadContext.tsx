@@ -290,12 +290,10 @@ export function BatchUploadProvider({ children }: BatchUploadProviderProps): Rea
       updateFileProgress(fileId, 100);
       dispatch({ type: 'SET_FILE_COMPLETED', payload: { fileId } });
 
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Processing failed';
+    } catch {
       updateFileStatus(fileId, 'error', {
         code: FILE_ERROR_CODES.PROCESSING_FAILED,
-        message: 'Processing failed',
-        details: errorMessage,
+        message: 'File processing failed.',
       });
       updateFileProgress(fileId, 0);
     }

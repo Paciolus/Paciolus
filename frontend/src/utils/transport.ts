@@ -97,6 +97,46 @@ export function isValidationError(status: number): boolean {
   return status === 422;
 }
 
+// =============================================================================
+// ERROR NORMALIZATION
+// =============================================================================
+
+const SAFE_ERROR_FALLBACK = 'Something went wrong. Please try again.';
+
+/**
+ * Allowlist of backend error messages safe to surface in the UI.
+ * Everything else is replaced with a generic fallback to prevent
+ * internal details (field paths, schema names, stack fragments)
+ * from reaching the user.
+ */
+const SAFE_PASSTHROUGH = [
+  // Auth
+  'Invalid email or password',
+  'Email already in use',
+  'Account locked. Please try again later.',
+  'Email not verified. Please check your inbox.',
+  'Verification email sent',
+  // Organization
+  'You already belong to an organization.',
+  'User is already a member of this organization.',
+  'Unable to send invite. Please try again later.',
+  'This invite has expired.',
+  'You are not part of an organization.',
+  'Cannot change the owner\'s role.',
+  'Cannot remove the organization owner.',
+  // General
+  'Access denied.',
+];
+
+/**
+ * Normalize a backend error string through the safe allowlist.
+ * This is the single point where backend-derived strings become
+ * UI-visible — no callers should bypass it.
+ */
+export function normalizeApiError(raw: string): string {
+  return SAFE_PASSTHROUGH.includes(raw) ? raw : SAFE_ERROR_FALLBACK;
+}
+
 export function isRetryableError(status: number): boolean {
   return status === 0 || status === 429 || (status >= 500 && status < 600);
 }
@@ -149,15 +189,15 @@ export async function performFetch<T>(
 
       try {
         const errorData = await response.json();
-        const detail = errorData.detail;
-        if (Array.isArray(detail) && detail.length > 0) {
-          const first = detail[0];
-          const field = first.loc?.slice(1).join('.') || '';
-          errorMessage = field ? `${field}: ${first.msg}` : first.msg || getStatusMessage(response.status);
-        } else if (typeof detail === 'object' && detail !== null) {
-          errorMessage = detail.message || detail.code || getStatusMessage(response.status);
+        if (response.status === 422) {
+          // Custom validation handler — never expose field paths
+          errorMessage = 'Please check your input and try again.';
         } else {
-          errorMessage = detail || errorData.message || getStatusMessage(response.status);
+          const detail = errorData.detail;
+          const raw = typeof detail === 'string'
+            ? detail
+            : errorData.message || '';
+          errorMessage = raw ? normalizeApiError(raw) : getStatusMessage(response.status);
         }
       } catch {
         errorMessage = getStatusMessage(response.status);

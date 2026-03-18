@@ -349,7 +349,7 @@ describe('apiFetch error handling', () => {
 
     expect(result.ok).toBe(false)
     expect(result.status).toBe(422)
-    expect(result.error).toBe('email: invalid email format')
+    expect(result.error).toBe('Please check your input and try again.')
   })
 
   it('handles structured error detail object', async () => {
@@ -364,7 +364,7 @@ describe('apiFetch error handling', () => {
     const result = await apiFetch('/protected', 'token', { retries: 0 })
 
     expect(result.ok).toBe(false)
-    expect(result.error).toBe('Email not verified')
+    expect(result.error).toBe('Access denied')
   })
 
   it('handles plain string detail', async () => {
@@ -376,7 +376,7 @@ describe('apiFetch error handling', () => {
 
     const result = await apiFetch('/bad', 'token', { retries: 0 })
 
-    expect(result.error).toBe('Bad request data')
+    expect(result.error).toBe('Something went wrong. Please try again.')
   })
 
   it('handles non-JSON error responses', async () => {
