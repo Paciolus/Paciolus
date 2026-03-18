@@ -11,7 +11,7 @@ Covers:
 
 import sys
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import ANY, MagicMock, patch
 
 import pytest
 
@@ -302,7 +302,7 @@ class TestAddSeatsManager:
         result = add_seats(db_session, user.id, 2)
         assert result is not None
         assert result.additional_seats == 2
-        mock_stripe.SubscriptionItem.modify.assert_called_once_with("si_test", quantity=5)
+        mock_stripe.SubscriptionItem.modify.assert_called_once_with("si_test", quantity=5, idempotency_key=ANY)
 
     @patch("billing.subscription_manager.get_stripe")
     @patch("billing.price_config.get_all_seat_price_ids", return_value={"price_seat_mo"})
@@ -340,7 +340,7 @@ class TestAddSeatsManager:
         assert result is not None
         assert result.additional_seats == 5
         # Must modify the seat add-on item (si_seat), NOT the base plan (si_base)
-        mock_stripe.SubscriptionItem.modify.assert_called_once_with("si_seat", quantity=5)
+        mock_stripe.SubscriptionItem.modify.assert_called_once_with("si_seat", quantity=5, idempotency_key=ANY)
 
 
 class TestRemoveSeatsManager:
@@ -398,7 +398,7 @@ class TestRemoveSeatsManager:
         result = remove_seats(db_session, user.id, 1)
         assert result is not None
         assert result.additional_seats == 1
-        mock_stripe.SubscriptionItem.modify.assert_called_once_with("si_test", quantity=4)
+        mock_stripe.SubscriptionItem.modify.assert_called_once_with("si_test", quantity=4, idempotency_key=ANY)
 
     @patch("billing.subscription_manager.get_stripe")
     def test_remove_all_additional_seats(self, mock_get_stripe, db_session, make_user):
@@ -425,7 +425,7 @@ class TestRemoveSeatsManager:
         result = remove_seats(db_session, user.id, 2)
         assert result is not None
         assert result.additional_seats == 0
-        mock_stripe.SubscriptionItem.modify.assert_called_once_with("si_test", quantity=3)
+        mock_stripe.SubscriptionItem.modify.assert_called_once_with("si_test", quantity=3, idempotency_key=ANY)
 
     @patch("billing.subscription_manager.get_stripe")
     @patch("billing.price_config.get_all_seat_price_ids", return_value={"price_seat_mo"})
@@ -463,7 +463,7 @@ class TestRemoveSeatsManager:
         assert result is not None
         assert result.additional_seats == 3
         # Must modify the seat add-on item (si_seat), NOT the base plan (si_base)
-        mock_stripe.SubscriptionItem.modify.assert_called_once_with("si_seat", quantity=3)
+        mock_stripe.SubscriptionItem.modify.assert_called_once_with("si_seat", quantity=3, idempotency_key=ANY)
 
 
 # ---------------------------------------------------------------------------

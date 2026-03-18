@@ -224,13 +224,15 @@ def _find_seat_addon_item(items: list[dict]) -> dict | None:
 def add_seats(db: Session, user_id: int, seats_to_add: int) -> Subscription | None:
     """Add seats to an existing subscription via Stripe.
 
-    Updates the Stripe subscription item quantity and syncs locally.
+    Uses SELECT ... FOR UPDATE to serialize concurrent callers at the DB level.
+    Generates a Stripe idempotency key from seat_version to prevent duplicate mutations.
     Returns the updated Subscription or None if not found.
-    Phase LIX Sprint E.
+    Phase LIX Sprint E. AUDIT-06 FIX 1: concurrency-safe.
     """
     from billing.price_config import get_all_seat_price_ids, get_max_self_serve_seats
 
-    sub = get_subscription(db, user_id)
+    # Acquire row lock to serialize concurrent seat mutations
+    sub = db.query(Subscription).filter(Subscription.user_id == user_id).with_for_update().first()
     if sub is None or not sub.stripe_subscription_id:
         return None
 
@@ -266,19 +268,29 @@ def add_seats(db: Session, user_id: int, seats_to_add: int) -> Subscription | No
 
     new_quantity = current_quantity + seats_to_add
 
-    # Update Stripe subscription item quantity (proration handled by Stripe)
-    stripe.SubscriptionItem.modify(item_id, quantity=new_quantity)
+    # Increment version and generate idempotency key
+    new_version = (sub.seat_version or 0) + 1
+    idempotency_key = f"seat-mutation-{sub.id}-v{new_version}"
 
-    # Sync locally
+    # Update Stripe with idempotency key (proration handled by Stripe)
+    try:
+        stripe.SubscriptionItem.modify(item_id, quantity=new_quantity, idempotency_key=idempotency_key)
+    except Exception:
+        db.rollback()
+        raise
+
+    # Sync locally — commit only after Stripe succeeds
     sub.additional_seats = new_additional
+    sub.seat_version = new_version
     db.commit()
 
     logger.info(
-        "Added %d seats for user %d: additional_seats=%d, total=%d",
+        "Added %d seats for user %d: additional_seats=%d, total=%d, seat_version=%d",
         seats_to_add,
         user_id,
         new_additional,
         sub.total_seats,
+        new_version,
     )
     return sub
 
@@ -286,13 +298,16 @@ def add_seats(db: Session, user_id: int, seats_to_add: int) -> Subscription | No
 def remove_seats(db: Session, user_id: int, seats_to_remove: int) -> Subscription | None:
     """Remove seats from an existing subscription via Stripe.
 
+    Uses SELECT ... FOR UPDATE to serialize concurrent callers at the DB level.
+    Generates a Stripe idempotency key from seat_version to prevent duplicate mutations.
     Cannot go below the plan's base seats (additional_seats cannot go below 0).
     Returns the updated Subscription or None if not found or invalid.
-    Phase LIX Sprint E.
+    Phase LIX Sprint E. AUDIT-06 FIX 1: concurrency-safe.
     """
     from billing.price_config import get_all_seat_price_ids
 
-    sub = get_subscription(db, user_id)
+    # Acquire row lock to serialize concurrent seat mutations
+    sub = db.query(Subscription).filter(Subscription.user_id == user_id).with_for_update().first()
     if sub is None or not sub.stripe_subscription_id:
         return None
 
@@ -327,23 +342,33 @@ def remove_seats(db: Session, user_id: int, seats_to_remove: int) -> Subscriptio
 
     new_quantity = current_quantity - seats_to_remove
 
+    # Increment version and generate idempotency key
+    new_version = (sub.seat_version or 0) + 1
+    idempotency_key = f"seat-mutation-{sub.id}-v{new_version}"
+
     # If quantity reaches 0, delete the subscription item entirely
     # (Stripe does not allow quantity=0 on most price types)
-    if new_quantity <= 0:
-        stripe.SubscriptionItem.delete(item_id)
-    else:
-        stripe.SubscriptionItem.modify(item_id, quantity=new_quantity)
+    try:
+        if new_quantity <= 0:
+            stripe.SubscriptionItem.delete(item_id, idempotency_key=idempotency_key)
+        else:
+            stripe.SubscriptionItem.modify(item_id, quantity=new_quantity, idempotency_key=idempotency_key)
+    except Exception:
+        db.rollback()
+        raise
 
-    # Sync locally only after Stripe accepts the change
+    # Sync locally — commit only after Stripe succeeds
     sub.additional_seats = new_additional
+    sub.seat_version = new_version
     db.commit()
 
     logger.info(
-        "Removed %d seats for user %d: additional_seats=%d, total=%d",
+        "Removed %d seats for user %d: additional_seats=%d, total=%d, seat_version=%d",
         seats_to_remove,
         user_id,
         new_additional,
         sub.total_seats,
+        new_version,
     )
     return sub
 

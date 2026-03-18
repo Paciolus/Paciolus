@@ -373,7 +373,9 @@ class TestBug5SeatRemovalToZero:
         assert result.additional_seats == 0
 
         # Stripe item must be DELETED (not modified with quantity=1)
-        mock_stripe.SubscriptionItem.delete.assert_called_once_with("si_seat")
+        from unittest.mock import ANY
+
+        mock_stripe.SubscriptionItem.delete.assert_called_once_with("si_seat", idempotency_key=ANY)
         mock_stripe.SubscriptionItem.modify.assert_not_called()
 
     def test_partial_removal_modifies_stripe_item(self, db_session, make_user):
@@ -413,7 +415,9 @@ class TestBug5SeatRemovalToZero:
 
         assert result is not None
         assert result.additional_seats == 3
-        mock_stripe.SubscriptionItem.modify.assert_called_once_with("si_seat", quantity=3)
+        from unittest.mock import ANY
+
+        mock_stripe.SubscriptionItem.modify.assert_called_once_with("si_seat", quantity=3, idempotency_key=ANY)
         mock_stripe.SubscriptionItem.delete.assert_not_called()
 
 

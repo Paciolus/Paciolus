@@ -283,7 +283,9 @@ class TestSeatManagementFlow:
         assert result is not None
         assert result.additional_seats == 3
         assert result.total_seats == 6
-        mock_stripe.SubscriptionItem.modify.assert_called_with("si_flow", quantity=6)
+        from unittest.mock import ANY
+
+        mock_stripe.SubscriptionItem.modify.assert_called_with("si_flow", quantity=6, idempotency_key=ANY)
 
         # Remove 1 seat
         mock_stripe.Subscription.retrieve.return_value = {
@@ -293,7 +295,7 @@ class TestSeatManagementFlow:
         assert result is not None
         assert result.additional_seats == 2
         assert result.total_seats == 5
-        mock_stripe.SubscriptionItem.modify.assert_called_with("si_flow", quantity=5)
+        mock_stripe.SubscriptionItem.modify.assert_called_with("si_flow", quantity=5, idempotency_key=ANY)
 
 
 # ---------------------------------------------------------------------------

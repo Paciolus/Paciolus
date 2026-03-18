@@ -110,6 +110,9 @@ class Subscription(Base):
     # Upload quota tracking (Phase LXIX — billing-cycle-aligned)
     uploads_used_current_period = Column(Integer, default=0, nullable=False)
 
+    # Seat mutation versioning (AUDIT-06 FIX 1 — optimistic concurrency + idempotency)
+    seat_version = Column(Integer, default=0, nullable=False)
+
     # Cancellation
     cancel_at_period_end = Column(Boolean, default=False, nullable=False)
 
