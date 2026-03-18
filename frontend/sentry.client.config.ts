@@ -26,10 +26,25 @@ if (dsn) {
     // No PII collection
     sendDefaultPii: false,
 
-    // Strip request bodies before sending
+    // Strip request bodies and scrub URLs before sending
     beforeSend(event) {
       if (event.request?.data) {
         event.request.data = "[Stripped — Zero-Storage]";
+      }
+      // Scrub query strings from page URL (prevents token/email leakage)
+      if (event.request?.url) {
+        const qIdx = event.request.url.indexOf("?");
+        if (qIdx !== -1) {
+          event.request.url = event.request.url.slice(0, qIdx);
+        }
+      }
+      // Scrub query strings from Referer header
+      const headers = event.request?.headers;
+      if (headers?.Referer) {
+        const qIdx = headers.Referer.indexOf("?");
+        if (qIdx !== -1) {
+          headers.Referer = headers.Referer.slice(0, qIdx);
+        }
       }
       return event;
     },

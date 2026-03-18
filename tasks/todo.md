@@ -54,7 +54,7 @@
 - [x] **FIX 3 (HIGH):** Email in Registration URL — strip email from redirect query parameter
 - [x] **FIX 4 (HIGH):** Verification Token in URL — strip token from URL after consumption
 - [x] **FIX 5 (MEDIUM):** Materiality Threshold sessionStorage — remove threshold from sessionStorage
-- [ ] **FIX 6 (MEDIUM):** Sentry URL Scrubbing — scrub page URL query strings in beforeSend
+- [x] **FIX 6 (MEDIUM):** Sentry URL Scrubbing — scrub page URL query strings in beforeSend
 
 **Review:**
 - (to be filled on completion)
