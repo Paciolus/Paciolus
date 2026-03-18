@@ -1,9 +1,6 @@
-> ⚠️ **DOCUMENTATION STATUS — HISTORICAL SNAPSHOT**
-> This reference reflects API v0.70.0 and is significantly outdated. Router count,
-> endpoint signatures, and tool listings do not reflect the current API surface.
-> **Canonical source of truth: `backend/main.py` router registration.**
-> A regenerated hybrid reference is in progress. Do not rely on this document for
-> integration work without cross-referencing the live codebase.
+> ⚠️ **This API reference is outdated.** It describes the legacy 5-tool v0.70.0 API surface. The current API has expanded significantly. This file is retained for historical reference only.
+>
+> **Canonical source of truth:** `backend/main.py` router registration and `docs/02-technical/API_REFERENCE_GENERATED.md`.
 
 # API Reference
 

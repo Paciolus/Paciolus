@@ -10,17 +10,17 @@
 | Document | Version | Effective Date | Owner | Classification | Next Review |
 |----------|---------|----------------|-------|----------------|-------------|
 | [Terms of Service](TERMS_OF_SERVICE.md) | 2.0 | 2026-02-26 | legal@paciolus.com | Legal Agreement | 2026-08-26 |
-| [Privacy Policy](PRIVACY_POLICY.md) | 2.0 | 2026-02-26 | privacy@paciolus.com | Public | 2026-08-26 |
-| [Security Policy](SECURITY_POLICY.md) | 2.1 | 2026-02-26 | Chief Information Security Officer | Public | 2026-05-26 |
+| [Privacy Policy](PRIVACY_POLICY.md) | 2.1 | 2026-02-26 | privacy@paciolus.com | Public | 2026-08-26 |
+| [Security Policy](SECURITY_POLICY.md) | 2.6 | 2026-02-26 | Chief Information Security Officer | Public | 2026-05-26 |
 | [Zero-Storage Architecture](ZERO_STORAGE_ARCHITECTURE.md) | 2.1 | 2026-02-26 | Chief Technology Officer | Public | 2026-05-26 |
 | [Data Processing Addendum](DATA_PROCESSING_ADDENDUM.md) | 1.0 | 2026-02-26 | legal@paciolus.com | Legal Agreement | 2026-08-26 |
 | [Subprocessor List](SUBPROCESSOR_LIST.md) | 1.0 | 2026-02-26 | privacy@paciolus.com | Public | 2026-05-26 |
 | [Incident Response Plan](INCIDENT_RESPONSE_PLAN.md) | 1.0 | 2026-02-26 | Chief Information Security Officer | Internal | 2026-05-26 |
-| [Business Continuity / Disaster Recovery](BUSINESS_CONTINUITY_DISASTER_RECOVERY.md) | 1.0 | 2026-02-26 | Chief Technology Officer | Internal | 2026-08-26 |
-| [Access Control Policy](ACCESS_CONTROL_POLICY.md) | 1.0 | 2026-02-26 | Chief Information Security Officer | Internal | 2026-05-26 |
-| [Secure SDLC / Change Management](SECURE_SDL_CHANGE_MANAGEMENT.md) | 1.0 | 2026-02-26 | Chief Technology Officer | Internal | 2026-05-26 |
-| [Vulnerability Disclosure Policy](VULNERABILITY_DISCLOSURE_POLICY.md) | 1.0 | 2026-02-26 | Chief Information Security Officer | Public | 2026-08-26 |
-| [Audit Logging and Evidence Retention](AUDIT_LOGGING_AND_EVIDENCE_RETENTION.md) | 1.0 | 2026-02-26 | Chief Information Security Officer | Internal | 2026-05-26 |
+| [Business Continuity / Disaster Recovery](BUSINESS_CONTINUITY_DISASTER_RECOVERY.md) | 1.2 | 2026-02-26 | Chief Technology Officer | Internal | 2026-08-26 |
+| [Access Control Policy](ACCESS_CONTROL_POLICY.md) | 1.2 | 2026-02-26 | Chief Information Security Officer | Internal | 2026-05-26 |
+| [Secure SDLC / Change Management](SECURE_SDL_CHANGE_MANAGEMENT.md) | 1.1 | 2026-02-26 | Chief Technology Officer | Internal | 2026-05-26 |
+| [Vulnerability Disclosure Policy](VULNERABILITY_DISCLOSURE_POLICY.md) | 1.1 | 2026-02-26 | Chief Information Security Officer | Public | 2026-08-26 |
+| [Audit Logging and Evidence Retention](AUDIT_LOGGING_AND_EVIDENCE_RETENTION.md) | 1.1 | 2026-02-26 | Chief Information Security Officer | Internal | 2026-05-26 |
 
 Each `.md` document has a corresponding `.docx` generated via `pandoc`.
 
@@ -95,7 +95,7 @@ Examples:
 Use this checklist before any compliance document release:
 
 - [ ] **Retention values** match across all 4 documents (currently: 365 days for activity logs/diagnostic summaries)
-- [ ] **Tier names** match current billing model (Free / Solo / Team / Organization)
+- [ ] **Tier names** match current billing model (Free / Solo / Professional / Enterprise)
 - [ ] **File format count** matches implementation (currently: 10 supported formats)
 - [ ] **Security controls** described in ToS/Privacy align with Security Policy specifics
 - [ ] **Zero-storage claims** in ToS/Privacy align with Zero-Storage Architecture definitions

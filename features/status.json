@@ -1,0 +1,1018 @@
+[
+  {
+    "id": "user-registration",
+    "category": "auth",
+    "description": "A user can register a new account with email and password (min 8 chars, complexity enforced)",
+    "verification_steps": [
+      "POST /auth/register with valid email and password",
+      "Verify JWT token returned in response",
+      "Verify user record created in database"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "user-login",
+    "category": "auth",
+    "description": "A user can log in with email and password and receive a JWT access token",
+    "verification_steps": [
+      "POST /auth/login with valid credentials",
+      "Verify access token and refresh token returned",
+      "Verify account lockout after failed attempts"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "jwt-auth-with-refresh",
+    "category": "auth",
+    "description": "A user's session is maintained via 30-min access tokens with 7-day refresh token rotation (HttpOnly cookies)",
+    "verification_steps": [
+      "Verify access token expires after 30 minutes",
+      "Verify refresh token silently renews the access token",
+      "Verify refresh token stored as HttpOnly cookie"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "email-verification",
+    "category": "auth",
+    "description": "A user must verify their email before accessing diagnostic tools",
+    "verification_steps": [
+      "Register new user and verify email verification token sent",
+      "POST /auth/verify-email with valid token",
+      "Verify unverified users are blocked from /audit/* endpoints"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": "SendGrid integration for email delivery"
+  },
+  {
+    "id": "password-management",
+    "category": "auth",
+    "description": "A user can change their password from the profile settings page",
+    "verification_steps": [
+      "PUT /users/me/password with current and new password",
+      "Verify old password required for change",
+      "Verify bcrypt hash updated in database"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "csrf-protection",
+    "category": "auth",
+    "description": "A user's session is protected against CSRF attacks via stateless HMAC tokens with a separate CSRF_SECRET_KEY",
+    "verification_steps": [
+      "GET /auth/csrf returns a CSRF token",
+      "Verify state-changing requests require valid CSRF token",
+      "Verify bearer-auth paths are exempt from CSRF"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "account-lockout",
+    "category": "auth",
+    "description": "A user's account is locked after repeated failed login attempts",
+    "verification_steps": [
+      "Attempt multiple failed logins",
+      "Verify account is locked after threshold",
+      "Verify lockout duration and recovery"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "file-upload-10-formats",
+    "category": "upload",
+    "description": "A user can upload files in 10 formats: XLSX, XLS, CSV, TSV, TXT, OFX, QBO, IIF, PDF, ODS",
+    "verification_steps": [
+      "Upload a file in each of the 10 supported formats",
+      "Verify each format is parsed correctly into a DataFrame",
+      "Verify tier-gated format access for non-standard formats"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": "Tier-gated: Free gets CSV/XLSX/XLS; paid tiers get all 10"
+  },
+  {
+    "id": "workbook-inspection",
+    "category": "upload",
+    "description": "A user can inspect multi-sheet Excel workbooks before analysis to select sheets and preview columns",
+    "verification_steps": [
+      "POST /audit/inspect-workbook with multi-sheet Excel file",
+      "Verify sheet names, row counts, and column headers returned",
+      "Verify user can select specific sheets for analysis"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "tb-diagnostics",
+    "category": "audit-report",
+    "description": "A user can upload a trial balance and receive comprehensive diagnostics including classification, anomaly detection, ratios, and lead sheets (Tool 1)",
+    "verification_steps": [
+      "POST /audit/trial-balance with a CSV trial balance",
+      "Verify account classification, anomaly detection, and ratio calculations",
+      "Verify lead sheet groupings (A-Z) are generated",
+      "Verify zero-storage: data not persisted after response"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "multi-period-comparison",
+    "category": "audit-report",
+    "description": "A user can compare current, prior, and budget period trial balances with movement classification (Tool 2)",
+    "verification_steps": [
+      "POST /audit/compare-periods with two-period data",
+      "POST /audit/compare-three-way with three-period data",
+      "Verify movement categories: NEW, CLOSED, SIGN_CHANGE, INCREASE, DECREASE, UNCHANGED"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "journal-entry-testing",
+    "category": "audit-report",
+    "description": "A user can run a 19-test JE testing battery across structural, statistical, and advanced tiers (Tool 3)",
+    "verification_steps": [
+      "POST /audit/journal-entries with GL export",
+      "Verify 19 test results returned with flagged entries",
+      "Verify composite risk score and tier classification"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": "19 tests per CLAUDE.md (structural + statistical + advanced)"
+  },
+  {
+    "id": "ap-payment-testing",
+    "category": "audit-report",
+    "description": "A user can run a 13-test AP payment testing battery for duplicate detection, fraud indicators, and vendor analysis (Tool 4)",
+    "verification_steps": [
+      "POST /audit/ap-payments with AP payment register",
+      "Verify 13 test results with flagged payments",
+      "Verify composite risk score"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "bank-reconciliation",
+    "category": "audit-report",
+    "description": "A user can upload bank statement and GL cash detail for automated transaction matching and reconciliation (Tool 5)",
+    "verification_steps": [
+      "POST /audit/bank-reconciliation with bank_file and ledger_file",
+      "Verify matched, bank-only, and ledger-only transactions identified",
+      "Verify reconciling difference calculated"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "payroll-testing",
+    "category": "audit-report",
+    "description": "A user can run an 11-test payroll testing battery for employee and compensation analysis (Tool 6)",
+    "verification_steps": [
+      "POST /audit/payroll with payroll register",
+      "Verify 11 test results returned",
+      "Verify composite risk score"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "three-way-match",
+    "category": "audit-report",
+    "description": "A user can validate purchase orders, receiving reports, and invoices with three-way match testing (Tool 7)",
+    "verification_steps": [
+      "POST /audit/three-way-match with PO, receipt, and invoice data",
+      "Verify match results and discrepancies identified",
+      "Verify tolerance-based matching"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "revenue-testing",
+    "category": "audit-report",
+    "description": "A user can run a 16-test revenue testing battery with ASC 606/IFRS 15 contract analysis (Tool 8)",
+    "verification_steps": [
+      "POST /audit/revenue with revenue data",
+      "Verify 16 test results returned",
+      "Verify ASC 606/IFRS 15 compliance checks"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "ar-aging",
+    "category": "audit-report",
+    "description": "A user can run an 11-test AR aging analysis for receivables risk assessment (Tool 9)",
+    "verification_steps": [
+      "POST /audit/ar-aging with AR data",
+      "Verify 11 test results and aging buckets",
+      "Verify risk assessment"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "fixed-asset-testing",
+    "category": "audit-report",
+    "description": "A user can run a 9-test fixed asset testing battery with lease indicator (FA-10) (Tool 10)",
+    "verification_steps": [
+      "POST /audit/fixed-assets with asset register",
+      "Verify 9 test results returned",
+      "Verify FA-10 lease indicator"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "inventory-testing",
+    "category": "audit-report",
+    "description": "A user can run a 9-test inventory testing battery for valuation and obsolescence analysis (Tool 11)",
+    "verification_steps": [
+      "POST /audit/inventory with inventory data",
+      "Verify 9 test results returned",
+      "Verify valuation and obsolescence checks"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "statistical-sampling",
+    "category": "audit-report",
+    "description": "A user can design and evaluate statistical samples per ISA 530 with CSPRNG-based selection (Tool 12)",
+    "verification_steps": [
+      "POST /audit/journal-entries/sample/preview for sample stratification preview",
+      "POST /audit/journal-entries/sample for CSPRNG-based sample selection",
+      "Verify sample design parameters and evaluation results"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "multi-currency-conversion",
+    "category": "audit-report",
+    "description": "A user can convert trial balance amounts between currencies for multi-currency engagements",
+    "verification_steps": [
+      "Upload trial balance with currency conversion parameters",
+      "Verify amounts converted at specified exchange rates",
+      "Verify currency conversion memo generated"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "account-classification",
+    "category": "audit-report",
+    "description": "A user's trial balance accounts are automatically classified into Assets, Liabilities, Equity, Revenue, Expenses using 80+ keyword rules",
+    "verification_steps": [
+      "Upload trial balance and verify classification results",
+      "Verify weighted heuristic scoring across categories",
+      "Verify classification validator identifies mismatches"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": "classification_rules.py: (keyword, weight, is_phrase) tuples"
+  },
+  {
+    "id": "anomaly-detection",
+    "category": "audit-report",
+    "description": "A user receives automated detection of sign errors, unusual balances, suspense accounts, concentration risk, and rounding anomalies",
+    "verification_steps": [
+      "Upload trial balance with known anomalies",
+      "Verify anomalies detected with type, severity, and confidence",
+      "Verify materiality-based filtering"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "lead-sheet-mapping",
+    "category": "audit-report",
+    "description": "A user's trial balance accounts are grouped into A-Z lead sheet categories for workpaper organization",
+    "verification_steps": [
+      "Upload trial balance and verify lead sheet groupings",
+      "Verify all accounts mapped to appropriate categories",
+      "Verify lead sheet Excel export"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "adjusting-entries",
+    "category": "audit-report",
+    "description": "A user can create, approve, and apply multi-line adjusting journal entries with approval gating",
+    "verification_steps": [
+      "POST /audit/adjustments to create entry",
+      "Verify multi-line validation (debits = credits)",
+      "Verify approval workflow and status transitions",
+      "POST /audit/adjustments/apply to apply entries to TB"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": "Approval-gated: entries require approval before application"
+  },
+  {
+    "id": "financial-ratios",
+    "category": "audit-report",
+    "description": "A user receives 17 core financial ratios + 8 industry-specific ratios with DuPont decomposition and trend analysis",
+    "verification_steps": [
+      "Upload trial balance and verify 17 core ratios calculated",
+      "Verify industry-specific ratios for selected industry",
+      "Verify DuPont decomposition breakdown"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "industry-benchmarks",
+    "category": "audit-report",
+    "description": "A user can compare their ratios against 6 industry benchmarks (manufacturing, retail, technology, healthcare, professional services, construction)",
+    "verification_steps": [
+      "GET /benchmarks/industries returns 6 industries",
+      "POST /benchmarks/compare with ratios and industry",
+      "Verify percentile-band health indicators"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": "Public endpoints — no auth required"
+  },
+  {
+    "id": "balance-sheet",
+    "category": "audit-report",
+    "description": "A user can generate a Balance Sheet from lead sheet groupings with prior year columns and footnotes",
+    "verification_steps": [
+      "POST /export/financial-statements?format=pdf with TB data",
+      "Verify Balance Sheet structure (assets, liabilities, equity)",
+      "Verify prior year columns if available"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "income-statement",
+    "category": "audit-report",
+    "description": "A user can generate an Income Statement from lead sheet groupings",
+    "verification_steps": [
+      "POST /export/financial-statements?format=pdf with TB data",
+      "Verify Income Statement structure (revenue, expenses, net income)",
+      "Verify ratio calculations included"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "cash-flow-statement",
+    "category": "audit-report",
+    "description": "A user can generate a Cash Flow Statement using the indirect method per ASC 230/IAS 7",
+    "verification_steps": [
+      "Verify indirect method cash flow generation",
+      "Verify operating, investing, financing sections",
+      "Verify ASC 230/IAS 7 compliance"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "report-tb-diagnostic-pdf",
+    "category": "audit-report",
+    "description": "A user can export a TB Diagnostic PDF report with Oat & Obsidian branding",
+    "verification_steps": [
+      "POST /export/pdf with TB analysis data",
+      "Verify PDF generated with correct sections",
+      "Verify Oat & Obsidian branding applied"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "report-financial-statements-pdf",
+    "category": "audit-report",
+    "description": "A user can export Financial Statements as PDF or Excel",
+    "verification_steps": [
+      "POST /export/financial-statements?format=pdf",
+      "POST /export/financial-statements?format=excel",
+      "Verify both formats contain BS + IS"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "report-je-testing-memo",
+    "category": "audit-report",
+    "description": "A user can export a JE Testing Memo PDF (PCAOB AS 1215)",
+    "verification_steps": [
+      "POST /export/je-testing-memo with JE test results",
+      "Verify PDF contains all test results and standards references",
+      "Verify PCAOB AS 1215 citation"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "report-ap-testing-memo",
+    "category": "audit-report",
+    "description": "A user can export an AP Testing Memo PDF (ISA 240 / PCAOB AS 2401)",
+    "verification_steps": [
+      "POST /export/ap-testing-memo with AP test results",
+      "Verify PDF generated with standards references"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "report-payroll-testing-memo",
+    "category": "audit-report",
+    "description": "A user can export a Payroll Testing Memo PDF",
+    "verification_steps": [
+      "POST /export/payroll-testing-memo with payroll test results",
+      "Verify PDF generated with all test sections"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "report-three-way-match-memo",
+    "category": "audit-report",
+    "description": "A user can export a Three-Way Match Memo PDF",
+    "verification_steps": [
+      "POST /export/three-way-match-memo with match results",
+      "Verify PDF generated"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "report-revenue-testing-memo",
+    "category": "audit-report",
+    "description": "A user can export a Revenue Testing Memo PDF",
+    "verification_steps": [
+      "POST /export/revenue-testing-memo with revenue test results",
+      "Verify PDF generated with ASC 606/IFRS 15 references"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "report-ar-aging-memo",
+    "category": "audit-report",
+    "description": "A user can export an AR Aging Memo PDF",
+    "verification_steps": [
+      "POST /export/ar-aging-memo with AR aging results",
+      "Verify PDF generated"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "report-fixed-asset-memo",
+    "category": "audit-report",
+    "description": "A user can export a Fixed Asset Testing Memo PDF",
+    "verification_steps": [
+      "POST /export/fixed-asset-memo with fixed asset test results",
+      "Verify PDF generated with FA-10 lease indicator"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "report-inventory-memo",
+    "category": "audit-report",
+    "description": "A user can export an Inventory Testing Memo PDF",
+    "verification_steps": [
+      "POST /export/inventory-memo with inventory test results",
+      "Verify PDF generated"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "report-bank-rec-memo",
+    "category": "audit-report",
+    "description": "A user can export a Bank Reconciliation Memo PDF",
+    "verification_steps": [
+      "POST /export/bank-rec-memo with reconciliation results",
+      "Verify PDF generated"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "report-multi-period-memo",
+    "category": "audit-report",
+    "description": "A user can export a Multi-Period Comparison Memo PDF",
+    "verification_steps": [
+      "POST /export/multi-period-memo with comparison results",
+      "Verify PDF generated"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "report-currency-conversion-memo",
+    "category": "audit-report",
+    "description": "A user can export a Currency Conversion Memo PDF",
+    "verification_steps": [
+      "POST /export/currency-conversion-memo with conversion results",
+      "Verify PDF generated"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "report-sampling-design-memo",
+    "category": "audit-report",
+    "description": "A user can export a Sampling Design Memo PDF (ISA 530)",
+    "verification_steps": [
+      "POST /export/sampling-design-memo with sampling parameters",
+      "Verify PDF generated with ISA 530 references"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "report-sampling-evaluation-memo",
+    "category": "audit-report",
+    "description": "A user can export a Sampling Evaluation Memo PDF",
+    "verification_steps": [
+      "POST /export/sampling-evaluation-memo with evaluation results",
+      "Verify PDF generated"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "report-preflight-memo",
+    "category": "audit-report",
+    "description": "A user can export a Data Quality Pre-Flight Memo PDF",
+    "verification_steps": [
+      "POST /export/preflight-memo with data quality results",
+      "Verify PDF generated"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "report-population-profile-memo",
+    "category": "audit-report",
+    "description": "A user can export a Population Profile Memo PDF",
+    "verification_steps": [
+      "POST /export/population-profile-memo with profile data",
+      "Verify PDF generated"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "report-expense-category-memo",
+    "category": "audit-report",
+    "description": "A user can export an Expense Category Memo PDF",
+    "verification_steps": [
+      "POST /export/expense-category-memo with expense analysis results",
+      "Verify PDF generated"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "report-accrual-completeness-memo",
+    "category": "audit-report",
+    "description": "A user can export an Accrual Completeness Memo PDF",
+    "verification_steps": [
+      "POST /export/accrual-completeness-memo with accrual analysis results",
+      "Verify PDF generated"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "report-flux-expectations-memo",
+    "category": "audit-report",
+    "description": "A user can export a Flux Expectations Memo PDF",
+    "verification_steps": [
+      "POST /export/flux-expectations-memo with flux analysis results",
+      "Verify PDF generated"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "excel-workpaper-export",
+    "category": "audit-report",
+    "description": "A user can export TB diagnostics as a 4-tab Excel workpaper",
+    "verification_steps": [
+      "POST /export/excel with TB analysis data",
+      "Verify Excel file has 4 tabs",
+      "Verify data formatting and branding"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "csv-export",
+    "category": "audit-report",
+    "description": "A user can export trial balance, anomalies, JE flagged entries, AP flagged payments, bank rec, and movements as CSV",
+    "verification_steps": [
+      "POST /export/csv/trial-balance",
+      "POST /export/csv/anomalies",
+      "POST /export/csv/je-testing",
+      "POST /export/csv/ap-testing",
+      "POST /export/csv/bank-rec",
+      "POST /export/csv/movements"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "lead-sheet-excel-export",
+    "category": "audit-report",
+    "description": "A user can export A-Z lead sheet workbook as Excel",
+    "verification_steps": [
+      "POST /export/leadsheets with TB data",
+      "Verify Excel workbook with A-Z tab structure"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "stripe-billing-integration",
+    "category": "billing",
+    "description": "A user can subscribe to paid tiers via Stripe checkout with monthly or annual billing",
+    "verification_steps": [
+      "Verify Stripe checkout session creation",
+      "Verify webhook handling for subscription events",
+      "Verify subscription status reflected in user tier"
+    ],
+    "status": "partial",
+    "last_verified": null,
+    "notes": "Code complete but waiting on production Stripe keys (Sprint 447 — CEO action required)"
+  },
+  {
+    "id": "pricing-tiers",
+    "category": "billing",
+    "description": "A user sees Free/Solo($100)/Professional($500)/Enterprise($1000) pricing tiers — all paid tiers get all 12 tools",
+    "verification_steps": [
+      "Verify pricing page shows correct tier names and prices",
+      "Verify all paid tiers have access to all 12 tools",
+      "Verify Free tier limitations"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "subscription-management",
+    "category": "billing",
+    "description": "A user can manage their subscription (upgrade, cancel, view invoices) via Stripe Customer Portal",
+    "verification_steps": [
+      "Verify Manage Billing button opens Stripe portal",
+      "Verify cancel at period end",
+      "Verify invoice viewing"
+    ],
+    "status": "partial",
+    "last_verified": null,
+    "notes": "Blocked on Sprint 447 — Stripe production cutover"
+  },
+  {
+    "id": "seat-management",
+    "category": "billing",
+    "description": "A user on Professional/Enterprise tier can add seats for team members with per-seat pricing",
+    "verification_steps": [
+      "Verify seat add-on pricing (Professional: $65/seat, Enterprise: $45/seat)",
+      "Verify seat limit enforcement",
+      "Verify seat count reflected in Stripe subscription"
+    ],
+    "status": "partial",
+    "last_verified": null,
+    "notes": "Blocked on Sprint 447 — Stripe production cutover"
+  },
+  {
+    "id": "entitlement-enforcement",
+    "category": "billing",
+    "description": "A user is gated to their tier's entitlements — Free tier has limited access, paid tiers get all tools",
+    "verification_steps": [
+      "Verify Free tier blocked from premium endpoints",
+      "Verify paid tier has access to all 12 tools",
+      "Verify hard/soft enforcement modes"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": "52 entitlement tests added in Sprint 548"
+  },
+  {
+    "id": "client-portfolio-management",
+    "category": "ui",
+    "description": "A user can create, view, update, and delete client records with industry classification",
+    "verification_steps": [
+      "GET/POST/PUT/DELETE /clients endpoints",
+      "Verify multi-tenant isolation (users only see their clients)",
+      "Verify industry classification options"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "activity-history",
+    "category": "ui",
+    "description": "A user can view paginated activity history of their diagnostic analyses (metadata only, GDPR-compliant)",
+    "verification_steps": [
+      "GET /activity/history returns paginated results",
+      "Verify only aggregate metadata stored (no financial data)",
+      "DELETE /activity/clear for GDPR right to erasure"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "practice-settings",
+    "category": "ui",
+    "description": "A user can configure practice-wide settings including materiality formulas and testing thresholds",
+    "verification_steps": [
+      "GET/PUT /settings/practice",
+      "Verify materiality formula options (fixed, % of revenue/assets/equity)",
+      "Verify JE and AP threshold configuration"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "user-settings",
+    "category": "ui",
+    "description": "A user can configure personal preferences and profile information",
+    "verification_steps": [
+      "GET/PUT /settings endpoints",
+      "PUT /users/me for profile updates",
+      "Verify settings persist across sessions"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "oat-obsidian-design-system",
+    "category": "ui",
+    "description": "A user experiences the Oat & Obsidian premium fintech design system across all pages",
+    "verification_steps": [
+      "Verify obsidian/oatmeal/clay/sage token usage across components",
+      "Verify Merriweather headers, Lato body, JetBrains Mono financial data",
+      "Verify no generic Tailwind colors (slate-*, blue-*, etc.)"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "command-palette",
+    "category": "ui",
+    "description": "A user can access a universal command palette (Cmd+K) for quick navigation across the application",
+    "verification_steps": [
+      "Verify Cmd+K / Ctrl+K opens command palette",
+      "Verify search and navigation functionality",
+      "Verify palette accessible from all authenticated pages"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "workspace-shell",
+    "category": "ui",
+    "description": "A user works within the Workspace Shell ('Audit OS') that provides workspace-centric navigation across all 12 tools",
+    "verification_steps": [
+      "Verify workspace-centric navigation model",
+      "Verify all 12 tools accessible from workspace context",
+      "Verify workspace state persistence"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "engagement-layer",
+    "category": "ui",
+    "description": "A user can manage engagements with materiality cascade, follow-up tracker, workpaper index, and completion gate",
+    "verification_steps": [
+      "Verify engagement workspace creation",
+      "Verify materiality cascade from engagement to tool level",
+      "Verify follow-up items tracked without audit terminology",
+      "Verify diagnostic package ZIP export"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": "Engagement guardrails: no audit terminology, no financial data storage"
+  },
+  {
+    "id": "health-check-endpoints",
+    "category": "infrastructure",
+    "description": "The backend exposes /health/live (liveness) and /health/ready (readiness) probes for orchestrator health checks",
+    "verification_steps": [
+      "GET /health/live returns 200",
+      "GET /health/ready returns 200 with DB pool stats",
+      "Verify Docker HEALTHCHECK uses these endpoints"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "rate-limiting",
+    "category": "infrastructure",
+    "description": "The API enforces 5-tier rate limiting (AUTH/AUDIT/EXPORT/WRITE/DEFAULT) with per-user and per-IP throttling",
+    "verification_steps": [
+      "Verify rate limit headers in API responses",
+      "Verify tier-specific limits enforced",
+      "Verify 429 response when limits exceeded"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "structured-logging",
+    "category": "infrastructure",
+    "description": "The backend produces structured JSON logs suitable for log aggregation with configurable log level",
+    "verification_steps": [
+      "Verify LOG_FORMAT=json produces structured output",
+      "Verify LOG_LEVEL configuration",
+      "Verify no PII in logs (Zero-Storage compliance)"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "sentry-apm",
+    "category": "infrastructure",
+    "description": "The application sends errors and performance traces to Sentry for monitoring (both backend and frontend)",
+    "verification_steps": [
+      "Verify SENTRY_DSN configuration enables Sentry",
+      "Verify error capture in both backend and frontend",
+      "Verify traces sample rate configuration"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": "Zero-Storage: no PII, no request bodies, no replays"
+  },
+  {
+    "id": "prometheus-metrics",
+    "category": "infrastructure",
+    "description": "The backend exposes Prometheus metrics for file format processing and system monitoring",
+    "verification_steps": [
+      "Verify /metrics endpoint exposes Prometheus format",
+      "Verify file format processing counters",
+      "Verify tier-gated format access metrics"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "ci-cd-pipeline",
+    "category": "infrastructure",
+    "description": "GitHub Actions CI pipeline runs backend tests, frontend build, frontend tests, mypy, secrets scanning, and E2E smoke tests",
+    "verification_steps": [
+      "Verify .github/workflows/ci.yml runs all checks",
+      "Verify PR checks pass before merge",
+      "Verify E2E smoke tests run on main-only"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": "14 CI checks per Secure SDL v1.1"
+  },
+  {
+    "id": "docker-deployment",
+    "category": "infrastructure",
+    "description": "The application can be deployed via docker-compose with backend, frontend, and optional PostgreSQL services",
+    "verification_steps": [
+      "docker-compose up --build succeeds",
+      "Verify backend accessible on port 8000",
+      "Verify frontend accessible on port 3000",
+      "Verify health checks pass"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": null
+  },
+  {
+    "id": "data-retention-cleanup",
+    "category": "infrastructure",
+    "description": "The backend automatically cleans up expired tokens, sessions, and old metadata records based on configurable retention windows",
+    "verification_steps": [
+      "Verify refresh token cleanup runs on schedule",
+      "Verify verification token cleanup",
+      "Verify tool session cleanup",
+      "Verify retention-based activity log cleanup"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": "Default: 365 days for activity_logs/diagnostic_summaries"
+  },
+  {
+    "id": "harness-agents-md",
+    "category": "infrastructure",
+    "description": "AGENTS.md provides the primary agent entry point with startup sequence, documentation map, and key constraints",
+    "verification_steps": [
+      "Verify AGENTS.md exists at repo root",
+      "Verify documentation map links are valid",
+      "Verify startup sequence references correct files"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": "Created during harness infrastructure upgrade"
+  },
+  {
+    "id": "harness-session-state",
+    "category": "infrastructure",
+    "description": "SESSION_STATE.md provides lightweight cold-start session memory for agent orientation",
+    "verification_steps": [
+      "Verify SESSION_STATE.md exists at repo root",
+      "Verify it contains last session, environment state, next priority, and git context"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": "Created during harness infrastructure upgrade"
+  },
+  {
+    "id": "harness-feature-inventory",
+    "category": "infrastructure",
+    "description": "features/status.json provides machine-readable ground truth for all built and unbuilt features",
+    "verification_steps": [
+      "Verify features/status.json exists and is valid JSON",
+      "Verify all 12 tools have entries",
+      "Verify all 20 memo reports have entries"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": "Created during harness infrastructure upgrade"
+  },
+  {
+    "id": "harness-init-script",
+    "category": "infrastructure",
+    "description": "scripts/init.sh bootstraps the full local development environment with dependency installation, service startup, and smoke checks",
+    "verification_steps": [
+      "Verify scripts/init.sh is executable",
+      "Verify --check-only flag validates without starting services",
+      "Verify prerequisite checks for Python, Node, npm, .env files"
+    ],
+    "status": "complete",
+    "last_verified": "2026-03-18",
+    "notes": "Created during harness infrastructure upgrade"
+  }
+]

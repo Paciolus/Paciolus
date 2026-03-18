@@ -1,3 +1,5 @@
+> ⚠️ **This document is outdated.** It reflects an earlier version of the deployment configuration. Use with caution and verify against the current `docker-compose.yml` and CI configuration before relying on any instructions here. A full update is pending.
+
 # Deployment & Operations Architecture
 
 **Document Classification:** Internal (DevOps, SRE)  

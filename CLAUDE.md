@@ -1,3 +1,5 @@
+> **New sessions:** Start with `AGENTS.md`, not this file. This file contains the full operator protocol and is reference material, not startup orientation.
+
 # Project Protocol: The Council
 
 ## Document Authority Hierarchy

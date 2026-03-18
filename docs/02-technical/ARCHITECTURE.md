@@ -63,7 +63,7 @@ The term "Diagnostic Workspace" is retired. Use "Workspace" throughout.
 │                         USER'S BROWSER                         │
 │                                                                │
 │  ┌──────────────────────────────────────────────────────────┐ │
-│  │ Next.js Frontend (React 18, TypeScript)                  │ │
+│  │ Next.js Frontend (React 19, TypeScript)                  │ │
 │  │ - Static pages (marketing, login, register)              │ │
 │  │ - Client-side state (React Context, hooks)               │ │
 │  │ - Session storage (JWT token, ephemeral)                 │ │
