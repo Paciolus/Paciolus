@@ -53,7 +53,7 @@
 - [x] **FIX 2 (HIGH):** User Object sessionStorage — remove PII (User object) from sessionStorage across 3 auth contexts
 - [x] **FIX 3 (HIGH):** Email in Registration URL — strip email from redirect query parameter
 - [x] **FIX 4 (HIGH):** Verification Token in URL — strip token from URL after consumption
-- [ ] **FIX 5 (MEDIUM):** Materiality Threshold sessionStorage — remove threshold from sessionStorage
+- [x] **FIX 5 (MEDIUM):** Materiality Threshold sessionStorage — remove threshold from sessionStorage
 - [ ] **FIX 6 (MEDIUM):** Sentry URL Scrubbing — scrub page URL query strings in beforeSend
 
 **Review:**

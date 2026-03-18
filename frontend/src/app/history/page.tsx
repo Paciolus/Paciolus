@@ -32,11 +32,9 @@ export default function HistoryPage() {
 
   // Handle Re-Run action
   const handleReRun = useCallback((activity: AuditActivity) => {
-    // Store the threshold from this audit for convenience
-    sessionStorage.setItem('paciolus_last_threshold', String(activity.materialityThreshold))
-
-    // Navigate to home page with a message
-    router.push('/?rerun=true')
+    // Pass threshold as URL param (numeric, non-PII — no browser storage needed)
+    const threshold = activity.materialityThreshold
+    router.push(`/?rerun=true${threshold != null ? `&threshold=${threshold}` : ''}`)
   }, [router])
 
   // Page fade-in animation
