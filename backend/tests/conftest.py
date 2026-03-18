@@ -26,6 +26,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from database import Base
 from engagement_model import Engagement, EngagementStatus, MaterialityBasis, ToolName, ToolRun, ToolRunStatus
+from export_share_model import ExportShare  # noqa: F401 — needed for FK resolution in create_all
 from follow_up_items_model import FollowUpDisposition, FollowUpItem, FollowUpItemComment, FollowUpSeverity
 from models import ActivityLog, Client, DiagnosticSummary, Industry, RefreshToken, User, UserTier
 from organization_model import Organization  # noqa: F401 — needed for FK resolution in create_all

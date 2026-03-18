@@ -44,6 +44,47 @@
 > Sprints 537–541 archived to `tasks/archive/sprints-537-541-details.md`.
 > Sprints 542–546 archived to `tasks/archive/sprints-542-546-details.md`.
 
+### Sprint 551 — Multi-Audit Remediation (Pre-Launch)
+
+**Status:** IN PROGRESS
+**Goal:** Comprehensive remediation from 5 independent audits: 3 high-confidence bug fixes, governance alignment, CI hardening, architectural refactors.
+
+#### Phase 1 — Critical Fixes
+- [x] BUG-01: `accept_invite()` double-counts pending invite against seat cap — pass `exclude_invite_id`
+- [x] BUG-02: `remove_member()` blindly wipes paid subscription tier — check personal `Subscription` first
+- [x] BUG-03: `create_share()` accepts arbitrary client bytes — add magic-byte validation + logging
+- [x] Tests: 19 new tests (6 org routes, 13 export sharing)
+- [x] CONTRIBUTING.md CI section — align with actual ci.yml (14 jobs)
+- [x] conftest.py: ExportShare model import for FK resolution
+
+#### Phase 2–3 — Governance & Docs (prior sessions)
+- [x] AGENTS.md, SESSION_STATE.md, features/status.json, init.sh, docs/README.md (Sprint 547–549)
+- [x] Compliance version fixes, tier name retirement, React version fix (Sprint 547)
+- [x] tasks/todo.md split (PROTOCOL.md, COMPLETED_ERAS.md, EXECUTIVE_BLOCKERS.md) (Sprint 548)
+- [x] Archive stale docs (phase-iii, FEATURE_ROADMAP.md) (Sprint 547)
+
+#### Phase 4 — Testing Infrastructure
+- [ ] Raise frontend coverage thresholds
+- [ ] Harden Playwright smoke spec assertions
+- [ ] Add PR-triggered E2E smoke job to CI
+- [ ] Add concurrency tests for seat enforcement (BUG-04)
+
+#### Phase 5 — Architectural Refactors
+- [ ] Split anomaly_rules.py by anomaly family
+- [ ] Decompose pipeline.py post-processing stages
+- [ ] Extract organization service layer
+- [ ] Split billing.py into sub-domain modules
+- [ ] Move format serialization out of export_diagnostics.py
+- [ ] Unify upload flow in useStatisticalSampling.ts
+- [ ] Prevent apiClient.ts god-module drift
+- [ ] Extract pricing business rules from pricing page
+- [ ] Migrate AuthContext facade consumers to narrower hooks
+
+#### Review
+- (pending)
+
+---
+
 ### Sprint 547 — Cross-Repository Cohesion Remediation
 
 **Status:** COMPLETE

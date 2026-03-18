@@ -8,6 +8,7 @@ Route group prefix: /export-sharing
 """
 
 import hashlib
+import logging
 import secrets
 from datetime import UTC, datetime
 
@@ -22,6 +23,15 @@ from export_share_model import ExportShare
 from models import User
 from shared.entitlement_checks import check_export_sharing_access
 from shared.rate_limits import RATE_LIMIT_EXPORT, RATE_LIMIT_WRITE, limiter
+
+logger = logging.getLogger(__name__)
+
+# Magic bytes for allowed export formats
+_MAGIC_BYTES: dict[str, list[bytes]] = {
+    "pdf": [b"%PDF"],
+    "xlsx": [b"PK\x03\x04"],  # ZIP-based Office format
+    "csv": [],  # CSV has no magic bytes — validated by content inspection
+}
 
 router = APIRouter(prefix="/export-sharing", tags=["export-sharing"])
 
@@ -40,6 +50,37 @@ class CreateShareRequest(BaseModel):
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
+
+
+def _validate_export_magic_bytes(export_bytes: bytes, export_format: str) -> None:
+    """Validate that export bytes match expected magic bytes for the format.
+
+    Raises HTTPException 400 if the content does not match the declared format.
+    CSV has no magic bytes, so only basic printability checks are applied.
+    """
+    magic_list = _MAGIC_BYTES.get(export_format)
+    if magic_list is None:
+        raise HTTPException(status_code=400, detail=f"Unsupported export format: {export_format}")
+
+    if not magic_list:
+        # CSV: verify content is predominantly printable text (not binary)
+        if export_format == "csv":
+            sample = export_bytes[:4096]
+            try:
+                sample.decode("utf-8")
+            except UnicodeDecodeError:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Export content does not match declared CSV format (binary data detected).",
+                )
+        return
+
+    # Check magic bytes
+    if not any(export_bytes[: len(magic)] == magic for magic in magic_list):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Export content does not match declared {export_format.upper()} format.",
+        )
 
 
 @router.post("/create")
@@ -65,6 +106,9 @@ async def create_share(
     if len(export_bytes) > 50 * 1024 * 1024:
         raise HTTPException(status_code=413, detail="Export data exceeds 50MB limit.")
 
+    # Validate content matches declared format (provenance check)
+    _validate_export_magic_bytes(export_bytes, body.export_format)
+
     raw_token = secrets.token_urlsafe(32)
     token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
 
@@ -80,6 +124,16 @@ async def create_share(
     db.add(share)
     db.commit()
     db.refresh(share)
+
+    # Log share creation for abuse monitoring
+    logger.info(
+        "Export share created: user_id=%s, tool=%s, format=%s, size=%d, share_id=%s",
+        user.id,
+        body.tool_name,
+        body.export_format,
+        len(export_bytes),
+        share.id,
+    )
 
     result = share.to_dict()
     result["share_token"] = raw_token

@@ -344,7 +344,7 @@ async def accept_invite(
     if not org:
         raise HTTPException(status_code=404, detail="Organization not found.")
 
-    check_seat_limit_for_org(db, org.id)
+    check_seat_limit_for_org(db, org.id, exclude_invite_id=invite.id)
 
     # Check user isn't already in an org
     existing = db.query(OrganizationMember).filter(OrganizationMember.user_id == user.id).first()
@@ -491,15 +491,30 @@ async def remove_member(
     if member.role == OrgRole.OWNER:
         raise HTTPException(status_code=400, detail="Cannot remove the organization owner.")
 
-    # Revert user to free tier
+    # Revert user tier: restore from personal subscription if one exists,
+    # otherwise default to FREE.
     removed_user = db.query(User).filter(User.id == member.user_id).first()
     if removed_user:
         from models import UserTier
+        from subscription_model import Subscription, SubscriptionStatus
 
-        removed_user.tier = UserTier.FREE
         removed_user.organization_id = None
+
+        # Check if the user has their own active personal subscription
+        personal_sub = (
+            db.query(Subscription)
+            .filter(
+                Subscription.user_id == removed_user.id,
+                Subscription.status.in_([SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIALING]),
+            )
+            .first()
+        )
+        if personal_sub and personal_sub.tier:
+            removed_user.tier = UserTier(personal_sub.tier)
+        else:
+            removed_user.tier = UserTier.FREE
 
     db.delete(member)
     db.commit()
 
-    return {"detail": "Member removed and reverted to free tier."}
+    return {"detail": "Member removed from organization."}
