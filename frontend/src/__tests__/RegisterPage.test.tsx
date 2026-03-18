@@ -200,7 +200,7 @@ describe('RegisterPage', () => {
     await user.click(button)
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith('/verification-pending?email=new%40example.com')
+      expect(mockPush).toHaveBeenCalledWith('/verification-pending')
     })
   })
 

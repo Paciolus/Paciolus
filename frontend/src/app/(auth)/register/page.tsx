@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useFormValidation, commonValidators } from '@/hooks'
+import { setPendingEmail } from '@/lib/authFlowState'
 import { fadeUp } from '@/lib/motion'
 
 /**
@@ -121,7 +122,8 @@ export default function RegisterPage() {
       })
 
       if (result.success) {
-        router.push('/verification-pending?email=' + encodeURIComponent(formValues.email))
+        setPendingEmail(formValues.email)
+        router.push('/verification-pending')
       } else {
         setServerError(result.error || 'Registration failed. Please try again.')
       }

@@ -1,31 +1,32 @@
 'use client'
 
-import { Suspense, useEffect, useRef } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useVerificationContext } from '@/contexts/VerificationContext'
 import { useVerification } from '@/hooks/useVerification'
+import { consumePendingEmail } from '@/lib/authFlowState'
 import { fadeUp } from '@/lib/motion'
 
 /**
  * Verification Pending Page — Sprint 58
  *
- * URL: /verification-pending?email=user@example.com
+ * URL: /verification-pending (no query string — email passed via in-memory handoff)
  * Shown after registration. "Check your email" with resend button.
  * Obsidian Vault aesthetic.
  */
 
 function VerificationPendingContent() {
-  const searchParams = useSearchParams()
   const router = useRouter()
   const { isAuthenticated, user } = useAuthSession()
   const { checkVerificationStatus } = useVerificationContext()
   const { cooldownSeconds, canResend, isResending, resendError, resendSuccess, resend } = useVerification()
   const checkedRef = useRef(false)
 
-  const email = searchParams.get('email') || user?.email || ''
+  // Read email from in-memory handoff (set during registration) or fall back to auth user
+  const [email] = useState(() => consumePendingEmail() || user?.email || '')
 
   // If already verified, redirect to home
   useEffect(() => {
