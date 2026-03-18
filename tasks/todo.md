@@ -75,7 +75,7 @@
 - [x] Add concurrency tests for seat enforcement (BUG-04)
 
 #### Phase 5 — Architectural Refactors
-- [ ] Split anomaly_rules.py by anomaly family
+- [x] Split anomaly_rules.py by anomaly family (7 modules: balance, suspense, concentration, rounding, relationships, equity, merger)
 - [ ] Decompose pipeline.py post-processing stages
 - [ ] Wire organization routes to existing service layer
 - [x] ~~Split billing.py into sub-domain modules~~ — already a clean facade

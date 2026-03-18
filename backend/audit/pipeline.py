@@ -17,13 +17,11 @@ from decimal import Decimal
 from typing import Any, Optional
 
 from account_classifier import create_classifier
-from audit.anomaly_rules import (
-    _merge_anomalies,
-)
 from audit.classification import (
     validate_balance_sheet_equation,
 )
 from audit.risk_summary import build_risk_summary
+from audit.rules.merger import _merge_anomalies
 from audit.streaming_auditor import StreamingAuditor
 from classification_validator import run_classification_validation
 from column_detector import ColumnMapping
