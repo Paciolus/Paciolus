@@ -46,7 +46,8 @@ class TracebackRedactionFilter(logging.Filter):
     appearing in production log aggregation systems. The exception type
     is appended to the log message for diagnostic value.
 
-    Enable via REDACT_LOG_TRACEBACKS=true environment variable.
+    Active by default in production (ENV_MODE=production).
+    Opt out via REDACT_LOG_TRACEBACKS=false.
     """
 
     def filter(self, record: logging.LogRecord) -> bool:
@@ -104,11 +105,12 @@ def setup_logging() -> None:
 
     if ENV_MODE == "production":
         handler.setFormatter(JSONFormatter())
-        # Optional: strip full tracebacks from production logs to prevent
-        # internal file paths leaking to log aggregation systems
+        # Strip full tracebacks from production logs to prevent internal file
+        # paths leaking to log aggregation systems.  Enabled by default in
+        # production; opt-out via REDACT_LOG_TRACEBACKS=false.
         import os
 
-        if os.environ.get("REDACT_LOG_TRACEBACKS", "").lower() == "true":
+        if os.environ.get("REDACT_LOG_TRACEBACKS", "true").lower() != "false":
             handler.addFilter(TracebackRedactionFilter())
     else:
         handler.setFormatter(DevFormatter())
