@@ -91,6 +91,9 @@ class ARAgingConfig:
     credit_limit_enabled: bool = True
     credit_limit_high_pct: float = 1.50
 
+    # Reference date for aging bucket computation (prevents date.today() fallback)
+    as_of_date: Optional[str] = None
+
 
 # =============================================================================
 # TB ACCOUNT CLASSIFICATION PATTERNS
@@ -833,6 +836,7 @@ def _compute_aging_days(due_date_str: Optional[str], reference_date_str: Optiona
         else:
             return None
 
+        ref = None
         if reference_date_str:
             for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y"):
                 try:
@@ -840,9 +844,7 @@ def _compute_aging_days(due_date_str: Optional[str], reference_date_str: Optiona
                     break
                 except ValueError:
                     continue
-            else:
-                ref = date.today()
-        else:
+        if ref is None:
             ref = date.today()
 
         return (ref - due).days
@@ -875,6 +877,7 @@ def _parse_aging_bucket_to_days(bucket_str: Optional[str]) -> Optional[int]:
 def parse_sl_entries(
     rows: list[dict],
     detection: SLColumnDetection,
+    reference_date_str: Optional[str] = None,
 ) -> list[ARSubledgerEntry]:
     """Parse sub-ledger rows into entry objects."""
     entries: list[ARSubledgerEntry] = []
@@ -924,7 +927,7 @@ def parse_sl_entries(
 
         # Compute aging_days if not provided
         if aging_days is None and due_date:
-            aging_days = _compute_aging_days(due_date)
+            aging_days = _compute_aging_days(due_date, reference_date_str)
         if aging_days is None and aging_bucket:
             aging_days = _parse_aging_bucket_to_days(aging_bucket)
 
@@ -1989,7 +1992,7 @@ def run_ar_aging(
                     setattr(sl_detection, attr, sl_column_mapping[attr])
             sl_detection.overall_confidence = 1.0
 
-        sl_entries = parse_sl_entries(sl_rows, sl_detection)
+        sl_entries = parse_sl_entries(sl_rows, sl_detection, config.as_of_date)
 
     # 4. Assess data quality
     data_quality = assess_data_quality(accounts, sl_entries, has_subledger)

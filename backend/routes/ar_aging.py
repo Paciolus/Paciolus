@@ -4,6 +4,7 @@ Paciolus API — AR Aging Routes (Sprint 107)
 Dual-file upload: TB (required) + optional AR sub-ledger.
 TB-only: 4 tests. TB + sub-ledger: all 11 tests.
 """
+
 import asyncio
 import logging
 from typing import Optional
@@ -43,6 +44,7 @@ async def audit_ar_aging(
     tb_column_mapping: Optional[str] = Form(default=None),
     sl_column_mapping: Optional[str] = Form(default=None),
     engagement_id: Optional[int] = Form(default=None),
+    as_of_date: Optional[str] = Form(default=None),
     prior_period_dso: Optional[float] = Form(default=None),
     days_in_period: Optional[int] = Form(default=None),
     beginning_ar_balance: Optional[float] = Form(default=None),
@@ -56,14 +58,14 @@ async def audit_ar_aging(
     ISA 500: Audit Evidence.
     """
     from shared.testing_route import enforce_tool_access
+
     enforce_tool_access(current_user, "ar_aging")
 
     tb_mapping_dict = parse_json_mapping(tb_column_mapping, "ar_aging_tb")
     sl_mapping_dict = parse_json_mapping(sl_column_mapping, "ar_aging_sl")
 
     log_secure_operation(
-        "ar_aging_upload",
-        f"Processing AR aging: tb={tb_file.filename}, subledger={'yes' if subledger_file else 'no'}"
+        "ar_aging_upload", f"Processing AR aging: tb={tb_file.filename}, subledger={'yes' if subledger_file else 'no'}"
     )
 
     with memory_cleanup():
@@ -84,6 +86,7 @@ async def audit_ar_aging(
                 days_in_period=days_in_period or 365,
                 beginning_ar_balance=beginning_ar_balance,
                 collections_total=collections_total,
+                as_of_date=as_of_date,
             )
 
             def _analyze():
@@ -107,16 +110,17 @@ async def audit_ar_aging(
             result = await asyncio.to_thread(_analyze)
 
             result_dict = result.to_dict()
-            score = result.composite_score.score if hasattr(result, 'composite_score') and result.composite_score else None
+            score = (
+                result.composite_score.score if hasattr(result, "composite_score") and result.composite_score else None
+            )
             flagged = extract_ar_aging_accounts(result_dict)
-            background_tasks.add_task(maybe_record_tool_run, db, engagement_id, current_user.id, "ar_aging", True, score, flagged)
+            background_tasks.add_task(
+                maybe_record_tool_run, db, engagement_id, current_user.id, "ar_aging", True, score, flagged
+            )
 
             return result_dict
 
         except (ValueError, KeyError, TypeError) as e:
             logger.exception("AR aging analysis failed")
             maybe_record_tool_run(db, engagement_id, current_user.id, "ar_aging", False)
-            raise HTTPException(
-                status_code=400,
-                detail=sanitize_error(e, "analysis", "ar_aging_error")
-            )
+            raise HTTPException(status_code=400, detail=sanitize_error(e, "analysis", "ar_aging_error"))

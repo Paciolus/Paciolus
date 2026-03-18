@@ -110,12 +110,14 @@ class AccountMovement:
     # Sprint 535 P3-2: Credit-normal categories where an increase in
     # the account (more credit) produces a negative raw change_percent.
     # Display values flip the sign so "liability went up" shows positive.
-    _CREDIT_NORMAL_CATEGORIES: ClassVar[frozenset[str]] = frozenset({
-        "Current Liabilities",
-        "Non-Current Liabilities",
-        "Equity",
-        "Revenue",
-    })
+    _CREDIT_NORMAL_CATEGORIES: ClassVar[frozenset[str]] = frozenset(
+        {
+            "Current Liabilities",
+            "Non-Current Liabilities",
+            "Equity",
+            "Revenue",
+        }
+    )
 
     @property
     def _is_credit_normal(self) -> bool:
@@ -293,18 +295,30 @@ def match_accounts(
     Returns list of (prior_account, current_account, display_name) tuples.
     Unmatched accounts have None for the missing side.
     """
-    # Build normalized name → account mapping for both periods
+    # Build normalized name → account mapping for both periods.
+    # Aggregate duplicates: if multiple rows share the same normalized name,
+    # sum their debits/credits to avoid silently dropping balances.
     prior_by_norm: dict[str, dict] = {}
     for acct in prior_accounts:
         name = acct.get("account", "")
         norm = normalize_account_name(name)
-        prior_by_norm[norm] = acct
+        if norm in prior_by_norm:
+            existing = prior_by_norm[norm]
+            existing["debit"] = float(existing.get("debit", 0) or 0) + float(acct.get("debit", 0) or 0)
+            existing["credit"] = float(existing.get("credit", 0) or 0) + float(acct.get("credit", 0) or 0)
+        else:
+            prior_by_norm[norm] = {**acct}
 
     current_by_norm: dict[str, dict] = {}
     for acct in current_accounts:
         name = acct.get("account", "")
         norm = normalize_account_name(name)
-        current_by_norm[norm] = acct
+        if norm in current_by_norm:
+            existing = current_by_norm[norm]
+            existing["debit"] = float(existing.get("debit", 0) or 0) + float(acct.get("debit", 0) or 0)
+            existing["credit"] = float(existing.get("credit", 0) or 0) + float(acct.get("credit", 0) or 0)
+        else:
+            current_by_norm[norm] = {**acct}
 
     matched: list[tuple[Optional[dict], Optional[dict], str]] = []
     matched_current_norms: set[str] = set()

@@ -325,6 +325,9 @@ class BankRecResponse(BaseModel):
     summary: ReconciliationSummaryResponse
     bank_column_detection: BankColumnDetectionResponse
     ledger_column_detection: BankColumnDetectionResponse
+    rec_tests: Optional[list[dict]] = None
+    outstanding_aging: Optional[list[dict]] = None
+    composite_score: Optional[dict] = None
 
 
 # ═══════════════════════════════════════════════════════════════

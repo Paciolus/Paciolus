@@ -46,6 +46,8 @@ class BankRecConfig:
 
     amount_tolerance: float = 0.01  # Match tolerance in dollars
     date_tolerance_days: int = 0  # Days of date tolerance for matching
+    materiality: float = 50_000.0  # Materiality for high-value transaction testing
+    performance_materiality: float = 50_000.0  # Performance materiality for risk scoring
 
 
 # =============================================================================
@@ -308,6 +310,7 @@ class BankRecResult:
     ledger_column_detection: BankColumnDetectionResult
     rec_tests: list["RecTestResult"] = field(default_factory=list)
     outstanding_aging: list["OutstandingItemsAging"] = field(default_factory=list)
+    composite_score: Optional[dict] = None
 
     def to_dict(self) -> dict:
         result = {
@@ -319,6 +322,8 @@ class BankRecResult:
             result["rec_tests"] = [t.to_dict() for t in self.rec_tests]
         if self.outstanding_aging:
             result["outstanding_aging"] = [a.to_dict() for a in self.outstanding_aging]
+        if self.composite_score is not None:
+            result["composite_score"] = self.composite_score
         return result
 
 
@@ -1136,10 +1141,15 @@ def reconcile_bank_statement(
     summary = calculate_summary(matches)
 
     # 5. Run reconciliation tests
-    rec_tests = run_reconciliation_tests(matches)
+    rec_tests = run_reconciliation_tests(matches, materiality=config.materiality)
 
     # 6. Compute outstanding items aging
     outstanding_aging = compute_outstanding_items_aging(matches)
+
+    # 7. Compute composite risk score
+    composite_score = compute_bank_rec_risk_score(
+        rec_tests, summary, performance_materiality=config.performance_materiality
+    )
 
     return BankRecResult(
         summary=summary,
@@ -1147,4 +1157,5 @@ def reconcile_bank_statement(
         ledger_column_detection=ledger_detection,
         rec_tests=rec_tests,
         outstanding_aging=outstanding_aging,
+        composite_score=composite_score,
     )

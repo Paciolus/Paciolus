@@ -132,19 +132,38 @@ def _extract_report_summary(report: dict[str, Any]) -> Optional[ReportSummary]:
     """Extract a ReportSummary from a tool result dict."""
     composite = report.get("composite_score", {})
     if not composite:
-        # Try bank rec / three-way match format
+        # Fallback for reports that lack composite_score (legacy bank rec, three-way match)
         summary = report.get("summary", {})
         if not summary:
             return None
         report_type = report.get("report_type", "unknown")
+
+        # Derive score from rec_tests if available, rather than hardcoding 0
+        risk_score = 0.0
+        total_flagged = summary.get("total_unmatched", 0)
+        high_sev = 0
+        tests_run = 0
+        rec_tests = report.get("rec_tests", [])
+        if rec_tests:
+            tests_run = len(rec_tests)
+            for t in rec_tests:
+                flagged = t.get("flagged_count", 0)
+                total_flagged += flagged
+                for item in t.get("flagged_items", []):
+                    if item.get("severity") == "high":
+                        high_sev += 1
+            # Estimate risk: 3*high + 2*medium flagged items, capped at 100
+            med_count = total_flagged - high_sev
+            risk_score = min(high_sev * 3 + med_count * 2, 100)
+
         return ReportSummary(
             report_type=report_type,
             report_title=report.get("report_title", report_type.replace("_", " ").title()),
-            risk_score=0,
+            risk_score=risk_score,
             risk_tier=summary.get("risk_assessment", "low"),
-            total_flagged=summary.get("total_unmatched", 0),
-            high_severity_count=0,
-            tests_run=0,
+            total_flagged=total_flagged,
+            high_severity_count=high_sev,
+            tests_run=tests_run,
         )
 
     flags_by_severity = composite.get("flags_by_severity", {})

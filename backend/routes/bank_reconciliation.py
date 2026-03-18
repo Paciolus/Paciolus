@@ -1,6 +1,7 @@
 """
 Paciolus API — Bank Reconciliation Routes
 """
+
 import asyncio
 import logging
 from typing import Optional
@@ -14,6 +15,7 @@ from sqlalchemy.orm import Session
 
 from auth import require_verified_user
 from bank_reconciliation import (
+    BankRecConfig,
     BankTransaction,
     LedgerTransaction,
     MatchType,
@@ -49,20 +51,22 @@ async def audit_bank_reconciliation(
     ledger_file: UploadFile = File(...),
     bank_column_mapping: Optional[str] = Form(default=None),
     ledger_column_mapping: Optional[str] = Form(default=None),
+    materiality: Optional[float] = Form(default=None),
+    performance_materiality: Optional[float] = Form(default=None),
     engagement_id: Optional[int] = Form(default=None),
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
 ):
     """Reconcile bank statement against general ledger."""
     from shared.testing_route import enforce_tool_access
+
     enforce_tool_access(current_user, "bank_reconciliation")
 
     bank_mapping_dict = parse_json_mapping(bank_column_mapping, "bank_rec_bank")
     ledger_mapping_dict = parse_json_mapping(ledger_column_mapping, "bank_rec_ledger")
 
     log_secure_operation(
-        "bank_rec_upload",
-        f"Processing bank rec: bank={bank_file.filename}, ledger={ledger_file.filename}"
+        "bank_rec_upload", f"Processing bank rec: bank={bank_file.filename}, ledger={ledger_file.filename}"
     )
 
     with memory_cleanup():
@@ -73,6 +77,13 @@ async def audit_bank_reconciliation(
             bank_filename = bank_file.filename or ""
             ledger_filename = ledger_file.filename or ""
 
+            config_kwargs = {}
+            if materiality is not None:
+                config_kwargs["materiality"] = materiality
+            if performance_materiality is not None:
+                config_kwargs["performance_materiality"] = performance_materiality
+            rec_config = BankRecConfig(**config_kwargs) if config_kwargs else None
+
             def _analyze():
                 bank_columns, bank_rows = parse_uploaded_file(bank_bytes, bank_filename)
                 ledger_columns, ledger_rows = parse_uploaded_file(ledger_bytes, ledger_filename)
@@ -81,28 +92,28 @@ async def audit_bank_reconciliation(
                     ledger_rows=ledger_rows,
                     bank_columns=bank_columns,
                     ledger_columns=ledger_columns,
-                    config=None,
+                    config=rec_config,
                     bank_mapping=bank_mapping_dict,
                     ledger_mapping=ledger_mapping_dict,
                 )
 
             result = await asyncio.to_thread(_analyze)
 
-            background_tasks.add_task(maybe_record_tool_run, db, engagement_id, current_user.id, "bank_reconciliation", True)
+            background_tasks.add_task(
+                maybe_record_tool_run, db, engagement_id, current_user.id, "bank_reconciliation", True
+            )
 
             return result.to_dict()
 
         except (ValueError, KeyError, TypeError) as e:
             logger.exception("Bank reconciliation failed")
             maybe_record_tool_run(db, engagement_id, current_user.id, "bank_reconciliation", False)
-            raise HTTPException(
-                status_code=400,
-                detail=sanitize_error(e, "analysis", "bank_rec_error")
-            )
+            raise HTTPException(status_code=400, detail=sanitize_error(e, "analysis", "bank_rec_error"))
 
 
 class BankRecExportInput(BaseModel):
     """Input model for bank reconciliation CSV export."""
+
     summary: dict
     matches: list
     filename: str = "bank_reconciliation"
@@ -140,12 +151,14 @@ async def export_csv_bank_rec(
                     reference=lt.get("reference"),
                     row_number=lt.get("row_number", 0),
                 )
-            match_objects.append(ReconciliationMatch(
-                bank_txn=bank_txn,
-                ledger_txn=ledger_txn,
-                match_type=MatchType(m.get("match_type", "matched")),
-                match_confidence=m.get("match_confidence", 0.0),
-            ))
+            match_objects.append(
+                ReconciliationMatch(
+                    bank_txn=bank_txn,
+                    ledger_txn=ledger_txn,
+                    match_type=MatchType(m.get("match_type", "matched")),
+                    match_confidence=m.get("match_confidence", 0.0),
+                )
+            )
 
         summary_data = export_input.summary
         summary = ReconciliationSummary(
@@ -162,7 +175,7 @@ async def export_csv_bank_rec(
         )
 
         csv_content = export_reconciliation_csv(summary)
-        csv_bytes = csv_content.encode('utf-8-sig')
+        csv_bytes = csv_content.encode("utf-8-sig")
 
         download_filename = safe_download_filename(export_input.filename, "BankRec", "csv")
 
@@ -172,7 +185,7 @@ async def export_csv_bank_rec(
             headers={
                 "Content-Disposition": f'attachment; filename="{download_filename}"',
                 "Content-Length": str(len(csv_bytes)),
-            }
+            },
         )
     except (ValueError, KeyError, TypeError, UnicodeEncodeError) as e:
         logger.exception("Bank rec CSV export failed")
