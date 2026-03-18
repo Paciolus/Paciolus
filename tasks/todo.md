@@ -64,3 +64,16 @@
 - Verification: 6,700 backend tests pass. 5 pre-existing failures (Sprint 553 SQLite schema + rate limit coverage).
 - Files: `subscription_model.py`, `subscription_manager.py`, `entitlement_checks.py`, `entitlements.py`, `testing_route.py`, `cleanup_scheduler.py`, `audit_pipeline.py`, `clients.py`, `ar_aging.py`, `bank_reconciliation.py`, `sampling.py`, `three_way_match.py`, `database.py`, `env.py`, `scheduler_lock_model.py`, `upload_dedup_model.py`, 3 migrations, `conftest.py`
 
+### Sprint 558 — Pre-existing Test Failures Remediation (Sprint 553 Debt)
+**Status:** PENDING
+**Scope:** Fix 5 pre-existing test failures introduced by Sprint 553 (AUDIT-02) on SQLite
+
+- [ ] **SQLite schema mismatch:** `refresh_tokens` table missing `last_used_at`, `user_agent`, `ip_address` columns — `create_all()` doesn't add columns to existing tables; need SQLite column patching in `init_db()` or test conftest
+  - `test_email_verification.py::TestRegistrationWithDisposableEmail::test_allows_legitimate_email_registration`
+  - `test_security.py::TestAccountLockoutIntegration::test_failed_login_returns_lockout_info`
+  - `test_pdf_upload_integration.py::TestPdfParseDispatch::test_pdf_magic_byte_guard`
+  - `test_transport_hardening.py::TestRequestIdMiddleware::test_no_header_generates_id`
+- [ ] **Rate limit coverage gap:** AUDIT-02 session endpoints missing `@limiter.limit()` decorator
+  - `test_rate_limit_coverage.py::TestMutatingEndpointCoverage::test_no_unprotected_mutating_endpoints`
+  - Endpoints: `DELETE /auth/sessions/{session_id}`, `DELETE /auth/sessions`
+
