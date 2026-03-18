@@ -45,6 +45,26 @@
 > Sprints 542–546 archived to `tasks/archive/sprints-542-546-details.md`.
 > Sprints 547–551 archived to `tasks/archive/sprints-547-551-details.md`.
 
+### Sprint 555 — AUDIT-04 CI/CD Pipeline Security Remediation
+**Status:** COMPLETE
+**Scope:** 5 fixes from AUDIT-04 CI/CD Pipeline Security review
+
+- [x] **FIX 1 (HIGH):** Pin all GitHub Actions to full commit SHAs (3 workflow files)
+- [x] **FIX 2 (HIGH):** Replace TruffleHog curl|sh with pinned checksum-verified binary
+- [x] **FIX 3 (MEDIUM):** Pin Docker base images to immutable digests (2 Dockerfiles)
+- [x] **FIX 4 (MEDIUM):** Harden .dockerignore against key/cert material
+- [x] **FIX 5 (MEDIUM):** Document deployment governance and enforce branch protection status checks
+
+**Review:**
+- All `uses:` entries across 3 workflows pinned to 40-char commit SHAs (7 unique actions)
+- TruffleHog installer replaced with pinned v3.93.8 binary + sha256sum verification
+- Docker FROM statements pinned: `python:3.12-slim-bookworm@sha256:31c0...` and `node:22-alpine@sha256:8094...`
+- Both .dockerignore files hardened with 15 key/cert exclusion patterns
+- `DEPLOYMENT_GOVERNANCE.md` created documenting branch protection, deployment pipeline, override policy
+- `actions-pin-registry.md` created documenting all pinned SHAs, digests, and rotation procedure
+- Verification: `grep -rE "uses:.*@v[0-9]"` = 0 results, `grep -rE "curl.*\|.*sh"` = 0 results
+- Files: `ci.yml`, `backup-integrity-check.yml`, `dr-test-monthly.yml`, `backend/Dockerfile`, `frontend/Dockerfile`, `backend/.dockerignore`, `frontend/.dockerignore`, `DEPLOYMENT_GOVERNANCE.md`, `actions-pin-registry.md`
+
 ### Sprint 554 — AUDIT-03 Runtime Browser Storage Remediation
 **Status:** COMPLETE
 **Scope:** 6 fixes from AUDIT-03 Runtime Browser Storage review

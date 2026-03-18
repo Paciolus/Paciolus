@@ -12,3 +12,19 @@ requirements-dev.txt
 *.md
 .pytest_cache/
 .mypy_cache/
+
+# Private keys and certificates — never include in build context
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+*.der
+id_rsa
+id_rsa*
+id_ed25519
+id_ed25519*
+*.jks
+*.keystore
+*.truststore

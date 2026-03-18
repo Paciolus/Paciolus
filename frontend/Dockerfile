@@ -9,7 +9,7 @@
 # -----------------------------------------------------------------------------
 # Stage 1: Dependencies
 # -----------------------------------------------------------------------------
-FROM node:22-alpine AS deps
+FROM node:22-alpine@sha256:8094c002d08262dba12645a3b4a15cd6cd627d30bc782f53229a2ec13ee22a00 AS deps  # pinned 2026-03-18
 
 WORKDIR /app
 
@@ -21,7 +21,7 @@ RUN npm ci
 # -----------------------------------------------------------------------------
 # Stage 2: Builder
 # -----------------------------------------------------------------------------
-FROM node:22-alpine AS builder
+FROM node:22-alpine@sha256:8094c002d08262dba12645a3b4a15cd6cd627d30bc782f53229a2ec13ee22a00 AS builder  # pinned 2026-03-18
 
 WORKDIR /app
 
@@ -45,7 +45,7 @@ RUN npm run build
 # -----------------------------------------------------------------------------
 # Stage 3: Production Runner
 # -----------------------------------------------------------------------------
-FROM node:22-alpine AS runner
+FROM node:22-alpine@sha256:8094c002d08262dba12645a3b4a15cd6cd627d30bc782f53229a2ec13ee22a00 AS runner  # pinned 2026-03-18
 
 WORKDIR /app
 
