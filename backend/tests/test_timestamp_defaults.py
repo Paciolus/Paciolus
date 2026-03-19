@@ -148,8 +148,10 @@ class TestDBGeneratedTimestamps:
         db_session.execute(
             text(
                 "INSERT INTO clients (user_id, name, industry, fiscal_year_end, reporting_framework, entity_type, jurisdiction_country, settings) "
-                "VALUES (:uid, 'EngCorp', 'other', '12-31', 'auto', 'other', 'US', '{}')"
-            ).bindparams(uid=user_id)
+                "VALUES (:uid, 'EngCorp', :industry, '12-31', :framework, :etype, 'US', '{}')"
+            ).bindparams(
+                uid=user_id, industry=_enum_val("OTHER"), framework=_enum_val("AUTO"), etype=_enum_val("OTHER")
+            )
         )
         db_session.flush()
         client_id = db_session.execute(text("SELECT id FROM clients LIMIT 1")).scalar()
@@ -179,8 +181,10 @@ class TestDBGeneratedTimestamps:
         db_session.execute(
             text(
                 "INSERT INTO clients (user_id, name, industry, fiscal_year_end, reporting_framework, entity_type, jurisdiction_country, settings) "
-                "VALUES (:uid, 'TRCorp', 'other', '12-31', 'auto', 'other', 'US', '{}')"
-            ).bindparams(uid=user_id)
+                "VALUES (:uid, 'TRCorp', :industry, '12-31', :framework, :etype, 'US', '{}')"
+            ).bindparams(
+                uid=user_id, industry=_enum_val("OTHER"), framework=_enum_val("AUTO"), etype=_enum_val("OTHER")
+            )
         )
         db_session.flush()
         client_id = db_session.execute(
