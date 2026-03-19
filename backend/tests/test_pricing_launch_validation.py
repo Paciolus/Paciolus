@@ -928,20 +928,21 @@ class TestBillingLifecycle:
 
     # --- sync handles unknown Stripe status → default ACTIVE ---
 
-    def test_sync_unknown_stripe_status_defaults_active(self, db_session, make_user):
+    def test_sync_unknown_stripe_status_fails_closed_to_paused(self, db_session, make_user):
+        """AUDIT-08-F1: Unknown Stripe status fails closed to PAUSED, not ACTIVE."""
         from billing.subscription_manager import sync_subscription_from_stripe
 
         user = make_user(email="unknown_status@example.com", tier=UserTier.FREE)
         stripe_sub = {
             "id": "sub_unk",
-            "status": "paused",  # Not in _STATUS_MAP
+            "status": "some_future_status",  # Unknown — should fail closed to PAUSED
             "cancel_at_period_end": False,
             "current_period_start": 1700000000,
             "current_period_end": 1702600000,
             "items": {"data": [{"plan": {"interval": "month"}, "quantity": 1}]},
         }
         sub = sync_subscription_from_stripe(db_session, user.id, stripe_sub, "cus_unk", "solo")
-        assert sub.status == SubscriptionStatus.ACTIVE
+        assert sub.status == SubscriptionStatus.PAUSED
 
     # --- sync handles missing period timestamps ---
 
@@ -1003,7 +1004,7 @@ class TestBillingLifecycle:
         assert sub.seat_count == 1
         assert sub.additional_seats == 0
 
-    # --- Status mapping: 7 Stripe statuses → our 4 statuses ---
+    # --- Status mapping: 8 Stripe statuses → 1:1 (AUDIT-08-F1) ---
 
     @pytest.mark.parametrize(
         "stripe_status,expected",
@@ -1012,9 +1013,10 @@ class TestBillingLifecycle:
             ("past_due", SubscriptionStatus.PAST_DUE),
             ("canceled", SubscriptionStatus.CANCELED),
             ("trialing", SubscriptionStatus.TRIALING),
-            ("incomplete", SubscriptionStatus.PAST_DUE),
-            ("incomplete_expired", SubscriptionStatus.CANCELED),
-            ("unpaid", SubscriptionStatus.PAST_DUE),
+            ("incomplete", SubscriptionStatus.INCOMPLETE),
+            ("incomplete_expired", SubscriptionStatus.INCOMPLETE_EXPIRED),
+            ("unpaid", SubscriptionStatus.UNPAID),
+            ("paused", SubscriptionStatus.PAUSED),
         ],
     )
     def test_status_mapping(self, stripe_status, expected):

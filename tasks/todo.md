@@ -67,6 +67,29 @@
 - Verification: 6,700 backend tests pass. 5 pre-existing failures (Sprint 553 SQLite schema + rate limit coverage).
 - Files: `subscription_model.py`, `subscription_manager.py`, `entitlement_checks.py`, `entitlements.py`, `testing_route.py`, `cleanup_scheduler.py`, `audit_pipeline.py`, `clients.py`, `ar_aging.py`, `bank_reconciliation.py`, `sampling.py`, `three_way_match.py`, `database.py`, `env.py`, `scheduler_lock_model.py`, `upload_dedup_model.py`, 3 migrations, `conftest.py`
 
+### Sprint 559 — AUDIT-08 Stripe Event Coverage Completeness Remediation
+**Status:** COMPLETE
+**Scope:** 6 fixes from AUDIT-08 Stripe Event Coverage Completeness review
+
+- [x] **FIX 1 (HIGH):** Extend SubscriptionStatus enum (4→8 values, 1:1 mapping), fail closed to PAUSED on unknown status, gate tier writes to entitled statuses only
+- [x] **FIX 2 (CRITICAL):** Revoke paid access on invoice.payment_failed (tier→FREE + org downgrade), fix handle_subscription_updated downgrade condition to include all non-entitled statuses
+- [x] **FIX 3 (HIGH):** Add customer.subscription.created handler for non-checkout subscription flows
+- [x] **FIX 4 (HIGH):** Add invoice.payment_succeeded handler to restore access from non-entitled states
+- [x] **FIX 5 (HIGH+MEDIUM):** Add charge.dispute.created/closed handlers with access suspension/restoration policy
+- [x] **FIX 6 (MEDIUM):** Add invoice.created handler for lifecycle observability (analytics only)
+
+**Review:**
+- FIX 1: `SubscriptionStatus` extended to 8 values (active, past_due, canceled, trialing, incomplete, incomplete_expired, unpaid, paused). `_STATUS_MAP` now 1:1 (no collapsing). Unknown status → PAUSED with error log. `_ENTITLED_STATUSES = {ACTIVE, TRIALING}` gates `user.tier` writes in `sync_subscription_from_stripe`. Alembic migration f0a1b2c3d4e5 extends both `subscriptionstatus` and `billingeventtype` PostgreSQL enum types.
+- FIX 2: `handle_invoice_payment_failed` now sets `user.tier = FREE` + calls `_downgrade_org_members_to_free`. `handle_subscription_updated` downgrade condition expanded from `("canceled", "unpaid")` to include `past_due`, `incomplete`, `incomplete_expired`, `paused`.
+- FIX 3: `handle_subscription_created` resolves user, calls `sync_subscription_from_stripe`, records analytics only if first to create local row (prevents duplicate events with checkout.session.completed).
+- FIX 4: `handle_invoice_payment_succeeded` restores from PAST_DUE/INCOMPLETE/UNPAID → ACTIVE with plan-appropriate tier. Idempotent: no-op if already ACTIVE.
+- FIX 5: `handle_dispute_created` suspends access (PAUSED + FREE + org downgrade). `handle_dispute_closed` restores on `won`, cancels on `lost`, leaves suspended for other statuses. Policy documented in handler docstrings.
+- FIX 6: `handle_invoice_created` records analytics event with invoice_id, amount_due, billing_reason. No status/tier changes.
+- `BillingEventType` extended with 6 new values: payment_succeeded, invoice_created, dispute_created, dispute_resolved_won, dispute_resolved_lost, dispute_closed_other.
+- `WEBHOOK_HANDLERS` now has 11 entries (6 existing + 5 new).
+- Verification: 6,701 backend tests pass. 5 pre-existing failures (Sprint 558 backlog).
+- Files: `subscription_model.py`, `billing/subscription_manager.py`, `billing/webhook_handler.py`, 1 Alembic migration, test assertion updates in 4 test files.
+
 ### Sprint 558 — Pre-existing Test Failures Remediation (Sprint 553 Debt)
 **Status:** PENDING
 **Scope:** Fix 5 pre-existing test failures introduced by Sprint 553 (AUDIT-02) on SQLite

@@ -23,12 +23,20 @@ from database import Base
 
 
 class SubscriptionStatus(str, PyEnum):
-    """Stripe-aligned subscription lifecycle status."""
+    """Stripe-aligned subscription lifecycle status.
+
+    All 8 Stripe-documented subscription statuses mapped 1:1.
+    AUDIT-08-F1: extended from 4 to 8 statuses; unknown defaults to PAUSED (fail closed).
+    """
 
     ACTIVE = "active"
     PAST_DUE = "past_due"
     CANCELED = "canceled"
     TRIALING = "trialing"
+    INCOMPLETE = "incomplete"
+    INCOMPLETE_EXPIRED = "incomplete_expired"
+    UNPAID = "unpaid"
+    PAUSED = "paused"
 
 
 class BillingInterval(str, PyEnum):
@@ -61,6 +69,16 @@ class BillingEventType(str, PyEnum):
     # Payment lifecycle
     PAYMENT_FAILED = "payment_failed"
     PAYMENT_RECOVERED = "payment_recovered"
+    PAYMENT_SUCCEEDED = "payment_succeeded"
+
+    # Invoice lifecycle (AUDIT-08-F6)
+    INVOICE_CREATED = "invoice_created"
+
+    # Dispute lifecycle (AUDIT-08-F5)
+    DISPUTE_CREATED = "dispute_created"
+    DISPUTE_RESOLVED_WON = "dispute_resolved_won"
+    DISPUTE_RESOLVED_LOST = "dispute_resolved_lost"
+    DISPUTE_CLOSED_OTHER = "dispute_closed_other"
 
 
 class Subscription(Base):

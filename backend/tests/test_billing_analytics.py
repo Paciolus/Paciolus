@@ -83,8 +83,8 @@ class TestBillingEventModel:
         assert "SUBSCRIPTION_CREATED" in repr(event)
 
     def test_all_event_types_valid(self):
-        """All 11 event types are accessible."""
-        assert len(BillingEventType) == 11
+        """All 17 event types are accessible (AUDIT-08: +6 new types)."""
+        assert len(BillingEventType) == 17
         expected = {
             "trial_started",
             "trial_converted",
@@ -97,6 +97,13 @@ class TestBillingEventModel:
             "subscription_churned",
             "payment_failed",
             "payment_recovered",
+            # AUDIT-08 additions
+            "payment_succeeded",
+            "invoice_created",
+            "dispute_created",
+            "dispute_resolved_won",
+            "dispute_resolved_lost",
+            "dispute_closed_other",
         }
         actual = {e.value for e in BillingEventType}
         assert actual == expected

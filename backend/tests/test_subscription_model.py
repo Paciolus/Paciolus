@@ -25,6 +25,10 @@ class TestSubscriptionStatus:
             "past_due",
             "canceled",
             "trialing",
+            "incomplete",
+            "incomplete_expired",
+            "unpaid",
+            "paused",
         }
 
     def test_str_subclass(self):

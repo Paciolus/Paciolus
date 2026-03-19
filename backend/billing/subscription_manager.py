@@ -18,16 +18,20 @@ from subscription_model import BillingInterval, Subscription, SubscriptionStatus
 
 logger = logging.getLogger(__name__)
 
-# Map Stripe subscription status to our enum
+# Map Stripe subscription status to our enum — 1:1, no collapsing (AUDIT-08-F1)
 _STATUS_MAP: dict[str, SubscriptionStatus] = {
     "active": SubscriptionStatus.ACTIVE,
     "past_due": SubscriptionStatus.PAST_DUE,
     "canceled": SubscriptionStatus.CANCELED,
     "trialing": SubscriptionStatus.TRIALING,
-    "incomplete": SubscriptionStatus.PAST_DUE,  # treat incomplete as past_due
-    "incomplete_expired": SubscriptionStatus.CANCELED,
-    "unpaid": SubscriptionStatus.PAST_DUE,
+    "incomplete": SubscriptionStatus.INCOMPLETE,
+    "incomplete_expired": SubscriptionStatus.INCOMPLETE_EXPIRED,
+    "unpaid": SubscriptionStatus.UNPAID,
+    "paused": SubscriptionStatus.PAUSED,
 }
+
+# Only these statuses grant paid-tier access (AUDIT-08-F1)
+_ENTITLED_STATUSES = {SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIALING}
 
 # Map Stripe interval to our enum
 _INTERVAL_MAP: dict[str, BillingInterval] = {
@@ -95,7 +99,14 @@ def sync_subscription_from_stripe(
     sub = get_subscription(db, user_id)
 
     stripe_status = stripe_subscription.get("status", "active")
-    status = _STATUS_MAP.get(stripe_status, SubscriptionStatus.ACTIVE)
+    status = _STATUS_MAP.get(stripe_status)
+    if status is None:
+        logger.error(
+            "Unknown Stripe subscription status '%s' for subscription %s. Failing closed to PAUSED.",
+            stripe_status,
+            stripe_subscription.get("id", "unknown"),
+        )
+        status = SubscriptionStatus.PAUSED
 
     # Extract billing interval from the first item
     items = stripe_subscription.get("items", {}).get("data", [])
@@ -143,13 +154,16 @@ def sync_subscription_from_stripe(
         sub.seat_count = seat_quantity
         sub.additional_seats = additional_seats
 
-    # Also update the User.tier column
+    # Also update the User.tier column — only grant plan tier if status is entitled (AUDIT-08-F1)
     user = db.query(User).filter(User.id == user_id).first()
     if user:
-        try:
-            user.tier = UserTier(tier)
-        except ValueError:
-            logger.warning("Unknown tier value '%s' for user %d, keeping current", tier, user_id)
+        if status in _ENTITLED_STATUSES:
+            try:
+                user.tier = UserTier(tier)
+            except ValueError:
+                logger.warning("Unknown tier value '%s' for user %d, keeping current", tier, user_id)
+        else:
+            user.tier = UserTier.FREE
 
     db.flush()
     logger.info(
