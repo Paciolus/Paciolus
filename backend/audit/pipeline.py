@@ -168,7 +168,7 @@ def audit_trial_balance_streaming(
         # Expense Category Analytical Procedures
         from expense_category_engine import compute_expense_categories
 
-        category_totals_pre = auditor.get_category_totals()
+        category_totals_pre = auditor.get_category_totals(account_classifications)
         expense_analytics = compute_expense_categories(
             auditor.account_balances,
             account_classifications,
@@ -228,8 +228,8 @@ def audit_trial_balance_streaming(
         else:
             result["column_detection"] = None
 
-        # Category totals and analytics
-        category_totals = auditor.get_category_totals()
+        # Category totals and analytics (reuse cached totals from earlier)
+        category_totals = category_totals_pre
         analytics = calculate_analytics(category_totals, previous_totals=None)
         result["analytics"] = analytics
         result["category_totals"] = category_totals.to_dict()
@@ -398,7 +398,8 @@ def audit_trial_balance_multi_sheet(
             consolidated_rows += sheet_balance["row_count"]
             all_abnormal_balances.extend(sheet_abnormals)
 
-            sheet_category_totals = auditor.get_category_totals()
+            sheet_classifications = auditor.get_classified_accounts()
+            sheet_category_totals = auditor.get_category_totals(sheet_classifications)
             consolidated_category_totals.total_assets += sheet_category_totals.total_assets
             consolidated_category_totals.current_assets += sheet_category_totals.current_assets
             consolidated_category_totals.inventory += sheet_category_totals.inventory

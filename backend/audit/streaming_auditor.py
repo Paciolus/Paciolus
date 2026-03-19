@@ -437,11 +437,18 @@ class StreamingAuditor:
             classified[account_name] = category.value
         return classified
 
-    def get_category_totals(self) -> CategoryTotals:
-        """Extract aggregate category totals for ratio calculations."""
+    def get_category_totals(self, classified_accounts: dict[str, str] | None = None) -> CategoryTotals:
+        """Extract aggregate category totals for ratio calculations.
+
+        Args:
+            classified_accounts: Pre-computed account classifications. When
+                provided the internal ``get_classified_accounts()`` call is
+                skipped, avoiding a redundant O(n) pass over all accounts.
+        """
         log_secure_operation("DEPLOY-VERIFY-535", "get_category_totals invoked")
 
-        classified_accounts = self.get_classified_accounts()
+        if classified_accounts is None:
+            classified_accounts = self.get_classified_accounts()
 
         display_balances: dict[str, dict[str, float]] = {}
         display_classifications: dict[str, str] = {}
