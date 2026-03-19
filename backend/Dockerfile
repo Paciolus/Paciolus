@@ -9,7 +9,8 @@
 # -----------------------------------------------------------------------------
 # Stage 1: Builder — install compiled dependencies (gcc required)
 # -----------------------------------------------------------------------------
-FROM python:3.12-slim-bookworm@sha256:31c0807da611e2e377a2e9b566ad4eb038ac5a5838cbbbe6f2262259b5dc77a0 AS builder  # pinned 2026-03-18
+# pinned 2026-03-18
+FROM python:3.12-slim-bookworm@sha256:31c0807da611e2e377a2e9b566ad4eb038ac5a5838cbbbe6f2262259b5dc77a0 AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
@@ -30,7 +31,8 @@ RUN pip install --no-cache-dir --prefix=/install -r requirements.txt gunicorn==2
 # -----------------------------------------------------------------------------
 # Stage 2: Production — clean image, no compiler toolchain
 # -----------------------------------------------------------------------------
-FROM python:3.12-slim-bookworm@sha256:31c0807da611e2e377a2e9b566ad4eb038ac5a5838cbbbe6f2262259b5dc77a0 AS production  # pinned 2026-03-18
+# pinned 2026-03-18
+FROM python:3.12-slim-bookworm@sha256:31c0807da611e2e377a2e9b566ad4eb038ac5a5838cbbbe6f2262259b5dc77a0 AS production
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
