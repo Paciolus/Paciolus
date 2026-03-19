@@ -17,4 +17,5 @@ export interface PdfPreviewResult {
   sample_rows: Record<string, string>[]
   remediation_hints: string[]
   passes_quality_gate: boolean
+  preflight_token?: string
 }

@@ -33,6 +33,7 @@ class PdfPreviewResponse(BaseModel):
     sample_rows: list[dict[str, str]]
     remediation_hints: list[str]
     passes_quality_gate: bool
+    preflight_token: str | None = None
 
 
 @router.post("/audit/preview-pdf", response_model=PdfPreviewResponse)
@@ -68,6 +69,11 @@ async def preview_pdf_endpoint(
                     row_dict[col] = row[i] if i < len(row) else ""
                 sample_rows.append(row_dict)
 
+            # Cache file bytes so the audit endpoint can reuse them
+            from shared.preflight_cache import preflight_cache
+
+            token = preflight_cache.put(file_bytes, filename)
+
             return {
                 "filename": filename,
                 "page_count": result.metadata.page_count,
@@ -80,6 +86,7 @@ async def preview_pdf_endpoint(
                 "sample_rows": sample_rows,
                 "remediation_hints": result.metadata.remediation_hints,
                 "passes_quality_gate": result.metadata.extraction_confidence >= CONFIDENCE_THRESHOLD,
+                "preflight_token": token,
             }
 
         except (ValueError, OSError) as e:

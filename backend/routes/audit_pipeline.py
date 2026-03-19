@@ -52,18 +52,29 @@ async def audit_trial_balance(
     column_mapping: Optional[str] = Form(default=None),
     selected_sheets: Optional[str] = Form(default=None),
     engagement_id: Optional[int] = Form(default=None),
+    preflight_token: Optional[str] = Form(default=None),
     current_user: User = Depends(check_diagnostic_limit),
     _verified: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
 ) -> TrialBalanceResponse:
     """Analyze a trial balance file for balance validation using streaming processing."""
 
+    # Check preflight cache — reuse file bytes from a prior preview/inspect call
+    from shared.preflight_cache import preflight_cache
+
+    cached_entry = preflight_cache.get(preflight_token) if preflight_token else None
+    if cached_entry:
+        preflight_cache.remove(preflight_token)  # one-time consumption
+
     # AUDIT-06 FIX 4: Dedup check — prevent rapid double-submissions
     from sqlalchemy import text
 
     # Read file bytes early for both dedup hash and analysis
-    raw_bytes = await file.read()
-    await file.seek(0)  # Reset for downstream validate_file_size
+    if cached_entry:
+        raw_bytes = cached_entry.file_bytes
+    else:
+        raw_bytes = await file.read()
+        await file.seek(0)  # Reset for downstream validate_file_size
 
     file_hash = hashlib.sha256(raw_bytes).hexdigest()[:16]
     dedup_key = f"{current_user.id}:{engagement_id or 0}:{file_hash}:trial_balance"
@@ -115,8 +126,13 @@ async def audit_trial_balance(
 
     with memory_cleanup():
         try:
-            file_bytes = await validate_file_size(file)
-            filename = file.filename or ""
+            if cached_entry:
+                # File bytes already validated during preview/inspect
+                file_bytes = cached_entry.file_bytes
+                filename = cached_entry.filename
+            else:
+                file_bytes = await validate_file_size(file)
+                filename = file.filename or ""
 
             def _analyze() -> dict[str, Any]:
                 if selected_sheets_list and len(selected_sheets_list) > 0:

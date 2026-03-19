@@ -123,6 +123,7 @@ export interface WorkbookInfo {
   is_multi_sheet: boolean;
   format: 'xlsx' | 'xls' | 'csv';
   requires_sheet_selection: boolean;
+  preflight_token?: string;
 }
 
 // Consolidated audit result with per-sheet breakdown

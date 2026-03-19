@@ -58,4 +58,5 @@
 - [x] **Mypy test cleanup** — 124→0 errors across 22 test files; factory fixtures typed, missing annotations added, unused `# type: ignore` removed
 - [x] **Frontend component tests** — 45 new test files (batch, adjustment, engagement, shared, marketing, skeleton, testing, UI components); 1,357→1,725 tests; coverage 26.6%→42.8%
 - **Status:** COMPLETE
+- **Commit:** c9b51db
 

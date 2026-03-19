@@ -45,6 +45,7 @@ export interface UseTrialBalanceUploadReturn {
     isRecalc?: boolean,
     columnMapping?: ColumnMapping | null,
     sheets?: string[] | null,
+    preflightToken?: string | null,
   ) => Promise<void>
   setSelectedFile: (file: File | null) => void
   setAuditStatus: (status: UploadStatus) => void
@@ -146,7 +147,8 @@ export function useTrialBalanceUpload(): UseTrialBalanceUploadReturn {
     threshold: number,
     isRecalc: boolean = false,
     columnMapping?: ColumnMapping | null,
-    sheets?: string[] | null
+    sheets?: string[] | null,
+    preflightToken?: string | null,
   ) => {
     if (isRecalc) {
       setIsRecalculating(true)
@@ -177,6 +179,10 @@ export function useTrialBalanceUpload(): UseTrialBalanceUploadReturn {
 
     if (engagement?.engagementId) {
       formData.append('engagement_id', engagement.engagementId.toString())
+    }
+
+    if (preflightToken) {
+      formData.append('preflight_token', preflightToken)
     }
 
     try {

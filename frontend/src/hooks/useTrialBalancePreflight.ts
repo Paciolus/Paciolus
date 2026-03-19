@@ -83,6 +83,9 @@ export function useTrialBalancePreflight(upload: UploadControls): UseTrialBalanc
   const [showPdfPreview, setShowPdfPreview] = useState(false)
   const [pendingPdfPreview, setPendingPdfPreview] = useState<PdfPreviewResult | null>(null)
 
+  // Preflight token from preview/inspect (used to skip re-upload on audit)
+  const [preflightToken, setPreflightToken] = useState<string | null>(null)
+
   const handleFileUpload = useCallback(async (file: File) => {
     if (upload.user && upload.user.is_verified === false) {
       upload.setAuditStatus('error')
@@ -156,6 +159,7 @@ export function useTrialBalancePreflight(upload: UploadControls): UseTrialBalanc
 
         if (previewOk && pdfPreview) {
           setPendingPdfPreview(pdfPreview)
+          setPreflightToken(pdfPreview.preflight_token ?? null)
           setShowPdfPreview(true)
           upload.setAuditStatus('idle')
           upload.stopProgressIndicator()
@@ -185,14 +189,17 @@ export function useTrialBalancePreflight(upload: UploadControls): UseTrialBalanc
 
         if (inspectOk && workbookInfo?.requires_sheet_selection) {
           setPendingWorkbookInfo(workbookInfo)
+          setPreflightToken(workbookInfo.preflight_token ?? null)
           setShowWorkbookInspector(true)
           upload.setAuditStatus('idle')
           upload.stopProgressIndicator()
           return
         }
 
+        // Single-sheet Excel — pass token if available
+        const excelToken = workbookInfo?.preflight_token ?? null
         upload.stopProgressIndicator()
-        await upload.runAudit(selectedFile, upload.materialityThreshold, false, effectiveMapping, null)
+        await upload.runAudit(selectedFile, upload.materialityThreshold, false, effectiveMapping, null, excelToken)
       } catch (error) {
         console.error('Workbook inspection failed:', error instanceof Error ? error.name : 'unknown error')
         upload.stopProgressIndicator()
@@ -207,14 +214,17 @@ export function useTrialBalancePreflight(upload: UploadControls): UseTrialBalanc
     upload.setSelectedSheets(sheets)
     setShowWorkbookInspector(false)
     setPendingWorkbookInfo(null)
+    const token = preflightToken
+    setPreflightToken(null)
     if (upload.selectedFile) {
-      upload.runAudit(upload.selectedFile, upload.materialityThreshold, false, upload.userColumnMapping, sheets)
+      upload.runAudit(upload.selectedFile, upload.materialityThreshold, false, upload.userColumnMapping, sheets, token)
     }
-  }, [upload])
+  }, [upload, preflightToken])
 
   const handleWorkbookInspectorClose = useCallback(() => {
     setShowWorkbookInspector(false)
     setPendingWorkbookInfo(null)
+    setPreflightToken(null)
     upload.setAuditStatus('idle')
     upload.setSelectedFile(null)
   }, [upload])
@@ -222,14 +232,17 @@ export function useTrialBalancePreflight(upload: UploadControls): UseTrialBalanc
   const handlePdfPreviewConfirm = useCallback(() => {
     setShowPdfPreview(false)
     setPendingPdfPreview(null)
+    const token = preflightToken
+    setPreflightToken(null)
     if (upload.selectedFile) {
-      upload.runAudit(upload.selectedFile, upload.materialityThreshold, false, upload.userColumnMapping, null)
+      upload.runAudit(upload.selectedFile, upload.materialityThreshold, false, upload.userColumnMapping, null, token)
     }
-  }, [upload])
+  }, [upload, preflightToken])
 
   const handlePdfPreviewClose = useCallback(() => {
     setShowPdfPreview(false)
     setPendingPdfPreview(null)
+    setPreflightToken(null)
     upload.setAuditStatus('idle')
     upload.setSelectedFile(null)
   }, [upload])
@@ -262,6 +275,7 @@ export function useTrialBalancePreflight(upload: UploadControls): UseTrialBalanc
     setShowPdfPreview(false)
     setPendingPdfPreview(null)
     setColumnMappingSource(null)
+    setPreflightToken(null)
     preflight.reset()
     upload.resetAudit()
   }, [preflight, upload])

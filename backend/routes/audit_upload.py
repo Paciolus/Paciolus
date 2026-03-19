@@ -38,6 +38,7 @@ class WorkbookInspectResponse(BaseModel):
     is_multi_sheet: bool
     format: str
     requires_sheet_selection: bool
+    preflight_token: str | None = None
 
 
 @router.post("/audit/inspect-workbook", response_model=WorkbookInspectResponse)
@@ -75,6 +76,11 @@ async def inspect_workbook_endpoint(
                 return result
 
             result = await asyncio.to_thread(_inspect)
+
+            # Cache file bytes so the audit endpoint can reuse them
+            from shared.preflight_cache import preflight_cache
+
+            result["preflight_token"] = preflight_cache.put(file_bytes, filename)
 
             return result
 
