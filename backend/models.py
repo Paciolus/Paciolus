@@ -89,7 +89,8 @@ class User(Base):
     tier = Column(Enum(UserTier), default=UserTier.FREE, nullable=False)
 
     # Phase LXIX: Organization membership (user belongs to at most one org)
-    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, index=True)
+    # use_alter=True breaks the users↔organizations FK cycle for create_all()/drop_all()
+    organization_id = Column(Integer, ForeignKey("organizations.id", use_alter=True), nullable=True, index=True)
 
     # Sprint 57: Email verification fields
     email_verification_sent_at = Column(DateTime, nullable=True)
