@@ -340,8 +340,8 @@ def handle_subscription_updated(db: Session, event_data: dict) -> None:
     sync_subscription_from_stripe(db, user_id, event_data, customer_id, tier)
     logger.info("customer.subscription.updated: synced user %d to tier %s", user_id, tier)
 
-    # If subscription transitions to canceled/past_due, downgrade org members
-    if new_status in ("canceled", "unpaid"):
+    # If subscription transitions to any non-entitled state, downgrade (AUDIT-08-F2)
+    if new_status in ("canceled", "unpaid", "past_due", "incomplete", "incomplete_expired", "paused"):
         user = db.query(User).filter(User.id == user_id).first()
         if user:
             user.tier = UserTier.FREE
@@ -454,7 +454,11 @@ def handle_subscription_deleted(db: Session, event_data: dict) -> None:
 
 
 def handle_invoice_payment_failed(db: Session, event_data: dict) -> None:
-    """Handle invoice.payment_failed — payment issue."""
+    """Handle invoice.payment_failed — payment issue.
+
+    AUDIT-08-F2: Now also revokes paid access (user.tier → FREE) and
+    downgrades org members, not just sub.status.
+    """
     customer_id = event_data.get("customer")
     if not customer_id:
         return
@@ -462,8 +466,15 @@ def handle_invoice_payment_failed(db: Session, event_data: dict) -> None:
     sub = db.query(Subscription).filter(Subscription.stripe_customer_id == customer_id).first()
     if sub:
         sub.status = SubscriptionStatus.PAST_DUE
+
+        # AUDIT-08-F2: Revoke paid access on payment failure
+        user = db.query(User).filter(User.id == sub.user_id).first()
+        if user and user.tier != UserTier.FREE:
+            user.tier = UserTier.FREE
+            _downgrade_org_members_to_free(db, sub.user_id)
+
         db.flush()
-        logger.warning("invoice.payment_failed: user %d is now past_due", sub.user_id)
+        logger.warning("invoice.payment_failed: user %d is now past_due, tier downgraded", sub.user_id)
 
         # Phase LX: Record payment failure event
         from billing.analytics import record_billing_event
@@ -530,14 +541,302 @@ def handle_subscription_trial_will_end(db: Session, event_data: dict) -> None:
     )
 
 
+def handle_subscription_created(db: Session, event_data: dict) -> None:
+    """Handle customer.subscription.created — subscription created outside Checkout.
+
+    AUDIT-08-F3: Catches subscriptions created via API, Stripe dashboard, or future
+    integrations that bypass checkout.session.completed. Calls sync_subscription_from_stripe
+    to ensure local state is consistent. If checkout.session.completed already handled
+    this subscription, this is a no-op reconciliation.
+    """
+    user_id = _resolve_user_id(db, event_data)
+    if user_id is None:
+        logger.warning("customer.subscription.created: could not resolve user_id")
+        return
+
+    customer_id = event_data.get("customer")
+    stripe_subscription_id = event_data.get("id")
+    if not customer_id or not stripe_subscription_id:
+        logger.warning("customer.subscription.created: missing customer or subscription ID")
+        return
+
+    # Check if a local subscription already exists (checkout.session.completed arrived first)
+    existing_sub = get_subscription(db, user_id)
+    is_new = existing_sub is None or existing_sub.stripe_subscription_id != stripe_subscription_id
+
+    # Resolve tier from the base plan item
+    items = event_data.get("items", {}).get("data", [])
+    base_item = _find_base_plan_item(items)
+    tier: str | None = None
+    if base_item:
+        price_id = base_item.get("price", {}).get("id", "")
+        tier = _resolve_tier_from_price(price_id)
+
+    if tier is None:
+        logger.error(
+            "customer.subscription.created: could not resolve tier for user %d (subscription %s)",
+            user_id,
+            stripe_subscription_id,
+        )
+        return
+
+    sync_subscription_from_stripe(db, user_id, event_data, customer_id, tier)
+    logger.info("customer.subscription.created: synced user %d to tier %s", user_id, tier)
+
+    # Record analytics only if this handler is the first to create the local row
+    if is_new:
+        from billing.analytics import record_billing_event
+
+        stripe_status = event_data.get("status", "")
+        if stripe_status == "trialing":
+            record_billing_event(
+                db,
+                BillingEventType.TRIAL_STARTED,
+                user_id=user_id,
+                tier=tier,
+            )
+        else:
+            record_billing_event(
+                db,
+                BillingEventType.SUBSCRIPTION_CREATED,
+                user_id=user_id,
+                tier=tier,
+            )
+
+
+def handle_invoice_payment_succeeded(db: Session, event_data: dict) -> None:
+    """Handle invoice.payment_succeeded — successful payment confirmation.
+
+    AUDIT-08-F4: Complements invoice.paid. Restores access from non-entitled states
+    (PAST_DUE, INCOMPLETE, UNPAID) back to ACTIVE with the plan-appropriate tier.
+    No-op if subscription is already ACTIVE (idempotent).
+    """
+    customer_id = event_data.get("customer")
+    if not customer_id:
+        return
+
+    sub = db.query(Subscription).filter(Subscription.stripe_customer_id == customer_id).first()
+    if not sub:
+        return
+
+    # Idempotent: if already active, nothing to do
+    if sub.status == SubscriptionStatus.ACTIVE:
+        return
+
+    # Restore from non-entitled states
+    if sub.status in (SubscriptionStatus.PAST_DUE, SubscriptionStatus.INCOMPLETE, SubscriptionStatus.UNPAID):
+        sub.status = SubscriptionStatus.ACTIVE
+
+        # Restore user tier to plan-appropriate tier
+        user = db.query(User).filter(User.id == sub.user_id).first()
+        if user and sub.tier:
+            try:
+                user.tier = UserTier(sub.tier)
+            except ValueError:
+                logger.warning(
+                    "invoice.payment_succeeded: unknown tier '%s' for user %d",
+                    sub.tier,
+                    sub.user_id,
+                )
+
+        db.flush()
+        logger.info("invoice.payment_succeeded: user %d restored to active (tier=%s)", sub.user_id, sub.tier)
+
+        from billing.analytics import record_billing_event
+
+        record_billing_event(
+            db,
+            BillingEventType.PAYMENT_SUCCEEDED,
+            user_id=sub.user_id,
+            tier=sub.tier,
+        )
+
+
+def handle_dispute_created(db: Session, event_data: dict) -> None:
+    """Handle charge.dispute.created — payment dispute opened.
+
+    AUDIT-08-F5 dispute access policy: On dispute, immediately suspend access
+    (status → PAUSED, tier → FREE) pending resolution. This protects against
+    fraud and forced payment reversals on a financial SaaS platform.
+    """
+    customer_id = event_data.get("customer")
+    if not customer_id:
+        # Try to derive from charge if customer not directly on dispute
+        charge = event_data.get("charge")
+        if isinstance(charge, dict):
+            customer_id = charge.get("customer")
+        if not customer_id:
+            logger.warning("charge.dispute.created: could not resolve customer_id")
+            return
+
+    sub = db.query(Subscription).filter(Subscription.stripe_customer_id == customer_id).first()
+    if not sub:
+        logger.warning("charge.dispute.created: no subscription for customer %s", customer_id)
+        return
+
+    # Suspend access
+    sub.status = SubscriptionStatus.PAUSED
+
+    user = db.query(User).filter(User.id == sub.user_id).first()
+    if user:
+        user.tier = UserTier.FREE
+
+    _downgrade_org_members_to_free(db, sub.user_id)
+    db.flush()
+
+    dispute_id = event_data.get("id", "unknown")
+    dispute_reason = event_data.get("reason", "unknown")
+    logger.warning(
+        "charge.dispute.created: user %d suspended — dispute %s reason=%s",
+        sub.user_id,
+        dispute_id,
+        dispute_reason,
+    )
+
+    from billing.analytics import record_billing_event
+
+    record_billing_event(
+        db,
+        BillingEventType.DISPUTE_CREATED,
+        user_id=sub.user_id,
+        tier=sub.tier,
+        metadata={"dispute_id": dispute_id, "reason": dispute_reason},
+    )
+
+
+def handle_dispute_closed(db: Session, event_data: dict) -> None:
+    """Handle charge.dispute.closed — dispute resolved.
+
+    AUDIT-08-F5 dispute resolution policy:
+    - Won (merchant prevails): restore access to plan tier.
+    - Lost (customer prevails): cancel subscription, downgrade permanently.
+    - Other statuses: leave suspended, log for operator review.
+    """
+    customer_id = event_data.get("customer")
+    if not customer_id:
+        charge = event_data.get("charge")
+        if isinstance(charge, dict):
+            customer_id = charge.get("customer")
+        if not customer_id:
+            logger.warning("charge.dispute.closed: could not resolve customer_id")
+            return
+
+    sub = db.query(Subscription).filter(Subscription.stripe_customer_id == customer_id).first()
+    if not sub:
+        logger.warning("charge.dispute.closed: no subscription for customer %s", customer_id)
+        return
+
+    dispute_status = event_data.get("status", "")
+    dispute_id = event_data.get("id", "unknown")
+    user = db.query(User).filter(User.id == sub.user_id).first()
+
+    from billing.analytics import record_billing_event
+
+    if dispute_status == "won":
+        # Merchant won — restore access
+        sub.status = SubscriptionStatus.ACTIVE
+        if user and sub.tier:
+            try:
+                user.tier = UserTier(sub.tier)
+            except ValueError:
+                pass
+        db.flush()
+        logger.info("charge.dispute.closed: user %d restored — dispute %s won", sub.user_id, dispute_id)
+        record_billing_event(
+            db,
+            BillingEventType.DISPUTE_RESOLVED_WON,
+            user_id=sub.user_id,
+            tier=sub.tier,
+            metadata={"dispute_id": dispute_id},
+        )
+    elif dispute_status == "lost":
+        # Customer won — cancel subscription
+        sub.status = SubscriptionStatus.CANCELED
+        if user:
+            user.tier = UserTier.FREE
+        _downgrade_org_members_to_free(db, sub.user_id)
+        db.flush()
+        logger.warning("charge.dispute.closed: user %d canceled — dispute %s lost", sub.user_id, dispute_id)
+        record_billing_event(
+            db,
+            BillingEventType.DISPUTE_RESOLVED_LOST,
+            user_id=sub.user_id,
+            tier=sub.tier,
+            metadata={"dispute_id": dispute_id},
+        )
+    else:
+        # Other status — leave suspended, log for review
+        db.flush()
+        logger.info(
+            "charge.dispute.closed: user %d dispute %s status=%s — leaving suspended",
+            sub.user_id,
+            dispute_id,
+            dispute_status,
+        )
+        record_billing_event(
+            db,
+            BillingEventType.DISPUTE_CLOSED_OTHER,
+            user_id=sub.user_id,
+            tier=sub.tier,
+            metadata={"dispute_id": dispute_id, "status": dispute_status},
+        )
+
+
+def handle_invoice_created(db: Session, event_data: dict) -> None:
+    """Handle invoice.created — invoice lifecycle visibility.
+
+    AUDIT-08-F6: Observability only — records analytics event for invoice creation
+    (including proration invoices). No status/tier changes.
+    """
+    customer_id = event_data.get("customer")
+    if not customer_id:
+        return
+
+    sub = db.query(Subscription).filter(Subscription.stripe_customer_id == customer_id).first()
+    user_id = sub.user_id if sub else None
+
+    invoice_id = event_data.get("id", "unknown")
+    amount_due = event_data.get("amount_due")
+    billing_reason = event_data.get("billing_reason")
+
+    logger.info(
+        "invoice.created: invoice=%s amount_due=%s reason=%s user=%s",
+        invoice_id,
+        amount_due,
+        billing_reason,
+        user_id,
+    )
+
+    from billing.analytics import record_billing_event
+
+    record_billing_event(
+        db,
+        BillingEventType.INVOICE_CREATED,
+        user_id=user_id,
+        tier=sub.tier if sub else None,
+        metadata={
+            "invoice_id": invoice_id,
+            "amount_due": amount_due,
+            "billing_reason": billing_reason,
+        },
+    )
+
+
 # Event type → handler mapping
 WEBHOOK_HANDLERS: dict[str, callable] = {
+    # Existing
     "checkout.session.completed": handle_checkout_completed,
     "customer.subscription.updated": handle_subscription_updated,
     "customer.subscription.deleted": handle_subscription_deleted,
     "customer.subscription.trial_will_end": handle_subscription_trial_will_end,
     "invoice.payment_failed": handle_invoice_payment_failed,
     "invoice.paid": handle_invoice_paid,
+    # AUDIT-08: New handlers
+    "customer.subscription.created": handle_subscription_created,
+    "invoice.payment_succeeded": handle_invoice_payment_succeeded,
+    "charge.dispute.created": handle_dispute_created,
+    "charge.dispute.closed": handle_dispute_closed,
+    "invoice.created": handle_invoice_created,
 }
 
 
