@@ -62,13 +62,13 @@ class TestTimestampServerDefaults:
 # ---------------------------------------------------------------------------
 
 
-def _tier_val() -> str:
-    """Return the correct tier literal for the test dialect.
+def _enum_val(member_name: str) -> str:
+    """Return the correct enum literal for the test dialect.
 
-    PostgreSQL Enum stores member NAMES (uppercase 'FREE'),
-    SQLite stores member VALUES (lowercase 'free').
+    PostgreSQL Enum stores member NAMES (uppercase: 'FREE', 'OTHER'),
+    SQLite stores member VALUES (lowercase: 'free', 'other').
     """
-    return "free" if _is_test_sqlite else "FREE"
+    return member_name.lower() if _is_test_sqlite else member_name
 
 
 class TestDBGeneratedTimestamps:
@@ -80,7 +80,7 @@ class TestDBGeneratedTimestamps:
             text(
                 "INSERT INTO users (email, hashed_password, is_active, is_verified, tier, failed_login_attempts, settings) "
                 "VALUES ('dbtest@example.com', 'hash123', TRUE, FALSE, :tier, 0, '{}')"
-            ).bindparams(tier=_tier_val())
+            ).bindparams(tier=_enum_val("FREE"))
         )
         db_session.flush()
         row = db_session.execute(
@@ -96,7 +96,7 @@ class TestDBGeneratedTimestamps:
             text(
                 "INSERT INTO users (email, hashed_password, is_active, is_verified, tier, failed_login_attempts, settings) "
                 "VALUES ('log@example.com', 'hash', TRUE, FALSE, :tier, 0, '{}')"
-            ).bindparams(tier=_tier_val())
+            ).bindparams(tier=_enum_val("FREE"))
         )
         db_session.flush()
         user_id = db_session.execute(text("SELECT id FROM users WHERE email = 'log@example.com'")).scalar()
@@ -117,15 +117,17 @@ class TestDBGeneratedTimestamps:
             text(
                 "INSERT INTO users (email, hashed_password, is_active, is_verified, tier, failed_login_attempts, settings) "
                 "VALUES ('client@example.com', 'hash', TRUE, FALSE, :tier, 0, '{}')"
-            ).bindparams(tier=_tier_val())
+            ).bindparams(tier=_enum_val("FREE"))
         )
         db_session.flush()
         user_id = db_session.execute(text("SELECT id FROM users WHERE email = 'client@example.com'")).scalar()
         db_session.execute(
             text(
                 "INSERT INTO clients (user_id, name, industry, fiscal_year_end, reporting_framework, entity_type, jurisdiction_country, settings) "
-                "VALUES (:uid, 'Test Corp', 'other', '12-31', 'auto', 'other', 'US', '{}')"
-            ).bindparams(uid=user_id)
+                "VALUES (:uid, 'Test Corp', :industry, '12-31', :framework, :etype, 'US', '{}')"
+            ).bindparams(
+                uid=user_id, industry=_enum_val("OTHER"), framework=_enum_val("AUTO"), etype=_enum_val("OTHER")
+            )
         )
         db_session.flush()
         row = db_session.execute(text("SELECT created_at, updated_at FROM clients LIMIT 1")).fetchone()
@@ -139,7 +141,7 @@ class TestDBGeneratedTimestamps:
             text(
                 "INSERT INTO users (email, hashed_password, is_active, is_verified, tier, failed_login_attempts, settings) "
                 "VALUES ('eng@example.com', 'hash', TRUE, FALSE, :tier, 0, '{}')"
-            ).bindparams(tier=_tier_val())
+            ).bindparams(tier=_enum_val("FREE"))
         )
         db_session.flush()
         user_id = db_session.execute(text("SELECT id FROM users WHERE email = 'eng@example.com'")).scalar()
@@ -155,8 +157,8 @@ class TestDBGeneratedTimestamps:
             text(
                 "INSERT INTO engagements (client_id, period_start, period_end, status, "
                 "performance_materiality_factor, trivial_threshold_factor, created_by) "
-                "VALUES (:cid, '2025-01-01', '2025-12-31', 'active', 0.75, 0.05, :uid)"
-            ).bindparams(cid=client_id, uid=user_id)
+                "VALUES (:cid, '2025-01-01', '2025-12-31', :status, 0.75, 0.05, :uid)"
+            ).bindparams(cid=client_id, uid=user_id, status=_enum_val("ACTIVE"))
         )
         db_session.flush()
         row = db_session.execute(text("SELECT created_at, updated_at FROM engagements LIMIT 1")).fetchone()
@@ -170,7 +172,7 @@ class TestDBGeneratedTimestamps:
             text(
                 "INSERT INTO users (email, hashed_password, is_active, is_verified, tier, failed_login_attempts, settings) "
                 "VALUES ('tr@example.com', 'hash', TRUE, FALSE, :tier, 0, '{}')"
-            ).bindparams(tier=_tier_val())
+            ).bindparams(tier=_enum_val("FREE"))
         )
         db_session.flush()
         user_id = db_session.execute(text("SELECT id FROM users WHERE email = 'tr@example.com'")).scalar()
@@ -188,8 +190,8 @@ class TestDBGeneratedTimestamps:
             text(
                 "INSERT INTO engagements (client_id, period_start, period_end, status, "
                 "performance_materiality_factor, trivial_threshold_factor, created_by) "
-                "VALUES (:cid, '2025-01-01', '2025-12-31', 'active', 0.75, 0.05, :uid)"
-            ).bindparams(cid=client_id, uid=user_id)
+                "VALUES (:cid, '2025-01-01', '2025-12-31', :status, 0.75, 0.05, :uid)"
+            ).bindparams(cid=client_id, uid=user_id, status=_enum_val("ACTIVE"))
         )
         db_session.flush()
         eng_id = db_session.execute(
@@ -197,9 +199,8 @@ class TestDBGeneratedTimestamps:
         ).scalar()
         db_session.execute(
             text(
-                "INSERT INTO tool_runs (engagement_id, tool_name, run_number, status) "
-                "VALUES (:eid, 'trial_balance', 1, 'completed')"
-            ).bindparams(eid=eng_id)
+                "INSERT INTO tool_runs (engagement_id, tool_name, run_number, status) VALUES (:eid, :tool, 1, :status)"
+            ).bindparams(eid=eng_id, tool=_enum_val("TRIAL_BALANCE"), status=_enum_val("COMPLETED"))
         )
         db_session.flush()
         ts = db_session.execute(text("SELECT run_at FROM tool_runs LIMIT 1")).scalar()
@@ -241,7 +242,7 @@ class TestSQLiteCurrentTimestampIsUTC:
             text(
                 "INSERT INTO users (email, hashed_password, is_active, is_verified, tier, failed_login_attempts, settings) "
                 "VALUES ('utctest@example.com', 'hash', TRUE, FALSE, :tier, 0, '{}')"
-            ).bindparams(tier=_tier_val())
+            ).bindparams(tier=_enum_val("FREE"))
         )
         db_session.flush()
         utc_after = datetime.now(UTC).replace(tzinfo=None)
