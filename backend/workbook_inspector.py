@@ -159,25 +159,26 @@ def _inspect_xlsx(buffer: io.BytesIO, filename: str) -> list[SheetInfo]:
 
 
 def _inspect_xls(buffer: io.BytesIO, filename: str) -> list[SheetInfo]:
-    """Inspect an .xls file using pandas with xlrd."""
+    """Inspect an .xls file using xlrd sheet metadata (no DataFrame materialization)."""
     sheets: list[SheetInfo] = []
 
-    # Read just the sheet names first
     excel_file = pd.ExcelFile(buffer, engine="xlrd")
 
     try:
+        book = excel_file.book
         for sheet_name in excel_file.sheet_names:
-            # Read only the header row to get column names
-            df_header = pd.read_excel(excel_file, sheet_name=sheet_name, nrows=0)
-            columns = list(df_header.columns.astype(str))
+            sheet = book.sheet_by_name(sheet_name)
+            total_rows = sheet.nrows
+            col_count = sheet.ncols
 
-            # Read a small sample to get row count
-            # For .xls, we need to read the full sheet to get accurate count
-            # but we'll use a reasonable limit for inspection
-            df_sample = pd.read_excel(excel_file, sheet_name=sheet_name)
-            row_count = len(df_sample)
-            col_count = len(columns)
+            # First row is the header; data rows exclude it
+            columns: list[str] = []
+            if total_rows > 0:
+                columns = [
+                    str(v) if v not in (None, "") else f"Column {i + 1}" for i, v in enumerate(sheet.row_values(0))
+                ]
 
+            row_count = max(0, total_rows - 1) if total_rows > 0 else 0
             has_data = row_count > 0
 
             sheets.append(
@@ -192,34 +193,73 @@ def _inspect_xls(buffer: io.BytesIO, filename: str) -> list[SheetInfo]:
 
             log_secure_operation("inspect_sheet", f"Sheet '{sheet_name}': {row_count} rows, {col_count} cols")
 
-            # Clean up sample data
-            del df_sample
-            del df_header
-            gc.collect()
-
     finally:
         excel_file.close()
-        del excel_file
-        gc.collect()
 
     return sheets
 
 
 def _inspect_ods(buffer: io.BytesIO, filename: str) -> list[SheetInfo]:
-    """Inspect an .ods file using pandas with odf engine."""
+    """Inspect an .ods file using odfpy DOM (no DataFrame materialization)."""
+    from odf.namespaces import TABLENS
+    from odf.opendocument import load as load_ods
+    from odf.table import Table, TableCell, TableRow
+    from odf.text import P
+
     sheets: list[SheetInfo] = []
 
-    excel_file = pd.ExcelFile(buffer, engine="odf")
-
+    doc = load_ods(buffer)
     try:
-        for sheet_name in excel_file.sheet_names:
-            df_header = pd.read_excel(excel_file, sheet_name=sheet_name, nrows=0, engine="odf")
-            columns = list(df_header.columns.astype(str))
+        for tbl in doc.spreadsheet.getElementsByType(Table):
+            sheet_name = tbl.getAttribute("name") or tbl.getAttrNS(TABLENS, "name") or "Sheet"
 
-            df_sample = pd.read_excel(excel_file, sheet_name=sheet_name, engine="odf")
-            row_count = len(df_sample)
-            col_count = len(columns)
+            rows = tbl.getElementsByType(TableRow)
 
+            # Count data rows, respecting table:number-rows-repeated but
+            # skipping trailing empty rows (ODS pads sheets to 2^20 rows).
+            def _row_has_content(row) -> bool:
+                for cell in row.getElementsByType(TableCell):
+                    if cell.getElementsByType(P):
+                        return True
+                return False
+
+            total_rows = 0
+            last_content_row = 0
+            for idx, row in enumerate(rows):
+                repeated = row.getAttrNS(TABLENS, "number-rows-repeated")
+                n = int(repeated) if repeated else 1
+                total_rows += n
+                if _row_has_content(row):
+                    last_content_row = total_rows
+
+            # Trim to last row with content
+            total_rows = last_content_row
+
+            # Extract header columns from first row
+            columns: list[str] = []
+            is_placeholder: list[bool] = []
+            col_count = 0
+            if rows and total_rows > 0:
+                first_row = rows[0]
+                for cell in first_row.getElementsByType(TableCell):
+                    repeated = cell.getAttrNS(TABLENS, "number-columns-repeated")
+                    n = int(repeated) if repeated else 1
+                    paragraphs = cell.getElementsByType(P)
+                    text = "".join(str(p) for p in paragraphs).strip() if paragraphs else ""
+                    for _ in range(n):
+                        if text:
+                            columns.append(text)
+                            is_placeholder.append(False)
+                        else:
+                            columns.append(f"Column {len(columns) + 1}")
+                            is_placeholder.append(True)
+                # Trim trailing placeholder columns
+                while is_placeholder and is_placeholder[-1]:
+                    columns.pop()
+                    is_placeholder.pop()
+                col_count = len(columns)
+
+            row_count = max(0, total_rows - 1) if total_rows > 0 else 0
             has_data = row_count > 0
 
             sheets.append(
@@ -234,14 +274,8 @@ def _inspect_ods(buffer: io.BytesIO, filename: str) -> list[SheetInfo]:
 
             log_secure_operation("inspect_sheet", f"Sheet '{sheet_name}': {row_count} rows, {col_count} cols")
 
-            del df_sample
-            del df_header
-            gc.collect()
-
     finally:
-        excel_file.close()
-        del excel_file
-        gc.collect()
+        del doc
 
     return sheets
 

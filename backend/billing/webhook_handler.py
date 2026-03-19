@@ -396,9 +396,16 @@ def _downgrade_org_members_to_free(db: Session, user_id: int) -> int:
 
     members = db.query(OrganizationMember).filter(OrganizationMember.organization_id == org.id).all()
 
+    member_user_ids = [m.user_id for m in members]
+    if not member_user_ids:
+        return 0
+
+    member_users = db.query(User).filter(User.id.in_(member_user_ids)).all()
+    users_by_id = {u.id: u for u in member_users}
+
     count = 0
     for member in members:
-        member_user = db.query(User).filter(User.id == member.user_id).first()
+        member_user = users_by_id.get(member.user_id)
         if member_user and member_user.tier != UserTier.FREE:
             member_user.tier = UserTier.FREE
             count += 1

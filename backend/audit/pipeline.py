@@ -10,7 +10,6 @@ complete audit result dict consumed by the API layer.
 
 from __future__ import annotations
 
-import gc
 from collections.abc import Callable
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -74,7 +73,6 @@ def audit_trial_balance_streaming(
         for chunk, rows_processed in process_tb_chunked(file_bytes, filename, chunk_size):
             auditor.process_chunk(chunk, rows_processed)
             del chunk
-            gc.collect()
 
         # ── Stage 2: Classification + Balance Check ──────────────────
         result = auditor.get_balance_result()
@@ -346,7 +344,6 @@ def audit_trial_balance_multi_sheet(
             ):
                 auditor.process_chunk(chunk, rows_processed)
                 del chunk
-                gc.collect()
 
             sheet_balance = auditor.get_balance_result()
             sheet_abnormals = auditor.get_abnormal_balances()
@@ -532,9 +529,9 @@ def audit_trial_balance_multi_sheet(
 
         # Full parsed account list
         ms_classifications = {}
+        classifier_instance = create_classifier(account_type_overrides)
         for acct_name, bals in consolidated_account_balances.items():
             net = bals["debit"] - bals["credit"]
-            classifier_instance = create_classifier(account_type_overrides)
             ms_classifications[acct_name] = classifier_instance.classify(acct_name, net).category.value
         all_accounts_list = []
         for acct_name, bals in consolidated_account_balances.items():
