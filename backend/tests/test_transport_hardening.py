@@ -12,6 +12,8 @@ import os
 import sys
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from security_middleware import get_client_ip, is_trusted_proxy
@@ -318,24 +320,18 @@ class TestRequestIdMiddleware:
 
         assert _REQUEST_ID_RE.match("valid\ninjected-log-line") is None
 
-    def test_no_header_generates_id(self):
+    @pytest.mark.asyncio
+    async def test_no_header_generates_id(self):
         """When no X-Request-ID header is present, middleware generates one."""
         import httpx
-        import pytest
 
         from main import app
 
-        @pytest.mark.asyncio
-        async def _check():
-            async with httpx.AsyncClient(
-                transport=httpx.ASGITransport(app=app),
-                base_url="http://test",
-            ) as client:
-                resp = await client.get("/health")
-                rid = resp.headers.get("X-Request-ID")
-                assert rid is not None
-                assert len(rid) == 12  # uuid.uuid4().hex[:12]
-
-        import asyncio
-
-        asyncio.get_event_loop().run_until_complete(_check())
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app),
+            base_url="http://test",
+        ) as client:
+            resp = await client.get("/health")
+            rid = resp.headers.get("X-Request-ID")
+            assert rid is not None
+            assert len(rid) == 12  # uuid.uuid4().hex[:12]

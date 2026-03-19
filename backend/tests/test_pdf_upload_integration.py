@@ -127,9 +127,12 @@ class TestPdfParseDispatch:
             else:
                 raise
 
-    def test_pdf_magic_byte_guard(self):
+    @pytest.mark.asyncio
+    async def test_pdf_magic_byte_guard(self):
         """Verify .pdf extension with non-PDF content is rejected in validate_file_size."""
         from unittest.mock import AsyncMock, MagicMock
+
+        from fastapi import HTTPException
 
         from shared.helpers import validate_file_size
 
@@ -138,12 +141,8 @@ class TestPdfParseDispatch:
         fake_file.content_type = "application/pdf"
         fake_file.read = AsyncMock(side_effect=[b"PK\x03\x04not-a-pdf-content", b""])
 
-        import asyncio
-
-        from fastapi import HTTPException
-
         with pytest.raises(HTTPException) as exc_info:
-            asyncio.get_event_loop().run_until_complete(validate_file_size(fake_file))
+            await validate_file_size(fake_file)
         assert exc_info.value.status_code == 400
         assert "PDF" in str(exc_info.value.detail)
 

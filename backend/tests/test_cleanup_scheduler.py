@@ -135,19 +135,26 @@ class TestWatchdog:
 
     def test_on_schedule_no_warning(self, caplog):
         """Jobs that ran recently produce no warnings."""
+        from unittest.mock import patch
+
         from cleanup_scheduler import _EXPECTED_INTERVALS, _last_run_times, _watchdog
 
         now = datetime.now(UTC)
         for job_name in _EXPECTED_INTERVALS:
             _last_run_times[job_name] = now - timedelta(minutes=1)
 
-        with caplog.at_level(logging.WARNING, logger="cleanup_scheduler"):
-            _watchdog()
+        with patch("cleanup_scheduler.with_scheduler_lock") as mock_lock:
+            mock_lock.return_value.__enter__ = lambda s: True
+            mock_lock.return_value.__exit__ = lambda s, *a: None
+            with caplog.at_level(logging.WARNING, logger="cleanup_scheduler"):
+                _watchdog()
 
         assert "overdue" not in caplog.text
 
     def test_overdue_warning(self, caplog):
         """Jobs that haven't run in >2x interval produce a warning."""
+        from unittest.mock import patch
+
         from cleanup_scheduler import _last_run_times, _watchdog
 
         # Set refresh_tokens as very old
@@ -158,20 +165,28 @@ class TestWatchdog:
         _last_run_times["tool_sessions"] = now
         _last_run_times["retention_cleanup"] = now
 
-        with caplog.at_level(logging.WARNING, logger="cleanup_scheduler"):
-            _watchdog()
+        with patch("cleanup_scheduler.with_scheduler_lock") as mock_lock:
+            mock_lock.return_value.__enter__ = lambda s: True
+            mock_lock.return_value.__exit__ = lambda s, *a: None
+            with caplog.at_level(logging.WARNING, logger="cleanup_scheduler"):
+                _watchdog()
 
         assert "refresh_tokens" in caplog.text
         assert "overdue" in caplog.text
 
     def test_never_run_skip(self, caplog):
         """Jobs that have never run (no entry in _last_run_times) are skipped."""
+        from unittest.mock import patch
+
         from cleanup_scheduler import _last_run_times, _watchdog
 
         _last_run_times.clear()
 
-        with caplog.at_level(logging.WARNING, logger="cleanup_scheduler"):
-            _watchdog()
+        with patch("cleanup_scheduler.with_scheduler_lock") as mock_lock:
+            mock_lock.return_value.__enter__ = lambda s: True
+            mock_lock.return_value.__exit__ = lambda s, *a: None
+            with caplog.at_level(logging.WARNING, logger="cleanup_scheduler"):
+                _watchdog()
 
         assert "overdue" not in caplog.text
 
@@ -242,22 +257,27 @@ class TestCleanupConfig:
 
     def test_scheduler_enabled_default(self):
         from config import CLEANUP_SCHEDULER_ENABLED
+
         assert CLEANUP_SCHEDULER_ENABLED is True
 
     def test_refresh_token_interval_default(self):
         from config import CLEANUP_REFRESH_TOKEN_INTERVAL_MINUTES
+
         assert CLEANUP_REFRESH_TOKEN_INTERVAL_MINUTES == 60
 
     def test_verification_token_interval_default(self):
         from config import CLEANUP_VERIFICATION_TOKEN_INTERVAL_MINUTES
+
         assert CLEANUP_VERIFICATION_TOKEN_INTERVAL_MINUTES == 60
 
     def test_tool_session_interval_default(self):
         from config import CLEANUP_TOOL_SESSION_INTERVAL_MINUTES
+
         assert CLEANUP_TOOL_SESSION_INTERVAL_MINUTES == 30
 
     def test_retention_interval_default(self):
         from config import CLEANUP_RETENTION_INTERVAL_HOURS
+
         assert CLEANUP_RETENTION_INTERVAL_HOURS == 24
 
 
@@ -340,4 +360,5 @@ class TestConftest:
     def test_scheduler_disabled_in_tests(self):
         """The conftest autouse fixture sets CLEANUP_SCHEDULER_ENABLED=False."""
         import cleanup_scheduler as cs
+
         assert cs.CLEANUP_SCHEDULER_ENABLED is False

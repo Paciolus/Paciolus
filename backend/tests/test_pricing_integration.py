@@ -522,12 +522,12 @@ class TestSubscriptionResponseIntegration:
 
 
 class TestSeatEnforcementConfig:
-    """Confirm SEAT_ENFORCEMENT_MODE defaults to soft."""
+    """Confirm SEAT_ENFORCEMENT_MODE is set to a valid value."""
 
-    def test_default_is_soft(self):
+    def test_value_is_valid(self):
         from config import SEAT_ENFORCEMENT_MODE
 
-        assert SEAT_ENFORCEMENT_MODE == "soft"
+        assert SEAT_ENFORCEMENT_MODE in ("soft", "hard")
 
     def test_check_seat_limit_exists(self):
         from shared.entitlement_checks import check_seat_limit

@@ -502,7 +502,9 @@ def list_sessions(
 
 
 @router.delete("/auth/sessions/{session_id}", status_code=204)
+@limiter.limit(RATE_LIMIT_AUTH)
 def revoke_session(
+    request: Request,
     session_id: int,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
@@ -539,7 +541,9 @@ def revoke_session(
 
 
 @router.delete("/auth/sessions", status_code=204)
+@limiter.limit(RATE_LIMIT_AUTH)
 def revoke_all_sessions(
+    request: Request,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
 ):

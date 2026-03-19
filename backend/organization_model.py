@@ -57,9 +57,10 @@ class Organization(Base):
     owner_user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
 
     # Link to subscription (one org = one subscription)
+    # use_alter=True breaks the users↔organizations↔subscriptions FK cycle for create_all()
     subscription_id = Column(
         Integer,
-        ForeignKey("subscriptions.id"),
+        ForeignKey("subscriptions.id", use_alter=True),
         unique=True,
         nullable=True,
         index=True,

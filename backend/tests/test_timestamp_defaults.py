@@ -70,7 +70,7 @@ class TestDBGeneratedTimestamps:
         db_session.execute(
             text(
                 "INSERT INTO users (email, hashed_password, is_active, is_verified, tier, failed_login_attempts, settings) "
-                "VALUES ('dbtest@example.com', 'hash123', 1, 0, 'free', 0, '{}')"
+                "VALUES ('dbtest@example.com', 'hash123', TRUE, FALSE, 'free', 0, '{}')"
             )
         )
         db_session.flush()
@@ -86,7 +86,7 @@ class TestDBGeneratedTimestamps:
         db_session.execute(
             text(
                 "INSERT INTO users (email, hashed_password, is_active, is_verified, tier, failed_login_attempts, settings) "
-                "VALUES ('log@example.com', 'hash', 1, 0, 'free', 0, '{}')"
+                "VALUES ('log@example.com', 'hash', TRUE, FALSE, 'free', 0, '{}')"
             )
         )
         db_session.flush()
@@ -95,7 +95,7 @@ class TestDBGeneratedTimestamps:
             text(
                 "INSERT INTO activity_logs (user_id, filename_hash, record_count, total_debits, total_credits, "
                 "materiality_threshold, was_balanced) "
-                "VALUES (:uid, 'abc123', 100, 1000.0, 1000.0, 50.0, 1)"
+                "VALUES (:uid, 'abc123', 100, 1000.0, 1000.0, 50.0, TRUE)"
             ).bindparams(uid=user_id)
         )
         db_session.flush()
@@ -107,7 +107,7 @@ class TestDBGeneratedTimestamps:
         db_session.execute(
             text(
                 "INSERT INTO users (email, hashed_password, is_active, is_verified, tier, failed_login_attempts, settings) "
-                "VALUES ('client@example.com', 'hash', 1, 0, 'free', 0, '{}')"
+                "VALUES ('client@example.com', 'hash', TRUE, FALSE, 'free', 0, '{}')"
             )
         )
         db_session.flush()
@@ -129,7 +129,7 @@ class TestDBGeneratedTimestamps:
         db_session.execute(
             text(
                 "INSERT INTO users (email, hashed_password, is_active, is_verified, tier, failed_login_attempts, settings) "
-                "VALUES ('eng@example.com', 'hash', 1, 0, 'free', 0, '{}')"
+                "VALUES ('eng@example.com', 'hash', TRUE, FALSE, 'free', 0, '{}')"
             )
         )
         db_session.flush()
@@ -160,7 +160,7 @@ class TestDBGeneratedTimestamps:
         db_session.execute(
             text(
                 "INSERT INTO users (email, hashed_password, is_active, is_verified, tier, failed_login_attempts, settings) "
-                "VALUES ('tr@example.com', 'hash', 1, 0, 'free', 0, '{}')"
+                "VALUES ('tr@example.com', 'hash', TRUE, FALSE, 'free', 0, '{}')"
             )
         )
         db_session.flush()
@@ -231,7 +231,7 @@ class TestSQLiteCurrentTimestampIsUTC:
         db_session.execute(
             text(
                 "INSERT INTO users (email, hashed_password, is_active, is_verified, tier, failed_login_attempts, settings) "
-                "VALUES ('utctest@example.com', 'hash', 1, 0, 'free', 0, '{}')"
+                "VALUES ('utctest@example.com', 'hash', TRUE, FALSE, 'free', 0, '{}')"
             )
         )
         db_session.flush()
