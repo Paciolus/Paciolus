@@ -77,7 +77,17 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
 #   GUNICORN_KEEP_ALIVE:      Keep-alive for reverse proxy compatibility. Default 5s
 #   GUNICORN_MAX_REQUESTS:    Worker recycling to prevent memory leaks (Pandas). Default 1000
 CMD ["sh", "-c", \
-    "alembic upgrade head && \
+    "python -c \"\
+from config import DATABASE_URL; \
+from sqlalchemy import create_engine, inspect; \
+e = create_engine(DATABASE_URL); \
+has_version = 'alembic_version' in inspect(e).get_table_names(); \
+e.dispose(); \
+print('alembic_version exists:', has_version); \
+import subprocess, sys; \
+cmd = ['alembic', 'upgrade', 'head'] if has_version else ['alembic', 'stamp', 'head']; \
+print('Running:', ' '.join(cmd)); \
+sys.exit(subprocess.call(cmd))\" && \
      gunicorn main:app \
      --bind 0.0.0.0:8000 \
      --workers ${WEB_CONCURRENCY:-4} \
