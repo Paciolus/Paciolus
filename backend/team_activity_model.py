@@ -11,7 +11,7 @@ File identifiers are SHA-256 hashed.
 from datetime import UTC, datetime
 from enum import Enum as PyEnum
 
-from sqlalchemy import Column, DateTime, Enum, Integer, String, func
+from sqlalchemy import Column, DateTime, Enum, Index, Integer, String, func
 from sqlalchemy.schema import ForeignKey
 
 from database import Base
@@ -41,6 +41,9 @@ class TeamActivityLog(Base):
     file_identifier_hash = Column(String(64), nullable=True)  # SHA-256 of filename
 
     created_at = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
+
+    # Composite index for admin dashboard date-range queries
+    __table_args__ = (Index("ix_team_activity_org_created", "organization_id", "created_at"),)
 
     def to_dict(self) -> dict:
         return {
