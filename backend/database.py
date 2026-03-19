@@ -137,6 +137,27 @@ def init_db() -> None:
         except Exception:
             logger.warning("Could not patch users table for organization_id column (SQLite)", exc_info=True)
 
+        # AUDIT-02 FIX 2: Patch refresh_tokens with session metadata columns
+        # (last_used_at, user_agent, ip_address added by migration b6c7d8e9f0a1)
+        try:
+            with engine.connect() as conn:
+                result = conn.execute(text("PRAGMA table_info(refresh_tokens)"))
+                columns = {row[1] for row in result.fetchall()}
+                added = []
+                for col_name, col_type in [
+                    ("last_used_at", "DATETIME"),
+                    ("user_agent", "VARCHAR(512)"),
+                    ("ip_address", "VARCHAR(45)"),
+                ]:
+                    if col_name not in columns:
+                        conn.execute(text(f"ALTER TABLE refresh_tokens ADD COLUMN {col_name} {col_type}"))
+                        added.append(col_name)
+                if added:
+                    conn.commit()
+                    logger.info("Patched refresh_tokens table (SQLite): added %s", ", ".join(added))
+        except Exception:
+            logger.warning("Could not patch refresh_tokens table for session metadata columns (SQLite)", exc_info=True)
+
     if dialect_name == "postgresql":
         try:
             with engine.connect() as conn:
@@ -155,6 +176,30 @@ def init_db() -> None:
                     logger.info("Patched users table: added organization_id column")
         except Exception:
             logger.warning("Could not patch users table for organization_id column", exc_info=True)
+
+        # AUDIT-02 FIX 2: Patch refresh_tokens with session metadata columns
+        try:
+            with engine.connect() as conn:
+                added = []
+                for col_name, col_type in [
+                    ("last_used_at", "TIMESTAMP"),
+                    ("user_agent", "VARCHAR(512)"),
+                    ("ip_address", "VARCHAR(45)"),
+                ]:
+                    result = conn.execute(
+                        text(
+                            "SELECT column_name FROM information_schema.columns "
+                            f"WHERE table_name = 'refresh_tokens' AND column_name = '{col_name}'"
+                        )
+                    )
+                    if not result.fetchone():
+                        conn.execute(text(f"ALTER TABLE refresh_tokens ADD COLUMN {col_name} {col_type}"))
+                        added.append(col_name)
+                if added:
+                    conn.commit()
+                    logger.info("Patched refresh_tokens table: added %s", ", ".join(added))
+        except Exception:
+            logger.warning("Could not patch refresh_tokens table for session metadata columns", exc_info=True)
 
     # Ensure ENTERPRISE value exists in the usertier PG enum (added in Phase LXIX).
     # ALTER TYPE ... ADD VALUE cannot run inside a transaction block, so use autocommit.

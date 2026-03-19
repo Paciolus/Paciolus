@@ -182,6 +182,21 @@ def _disable_cleanup_scheduler():
 # ---------------------------------------------------------------------------
 
 
+@pytest.fixture(scope="session", autouse=True)
+def _init_app_db():
+    """Ensure the app's own database schema is up-to-date.
+
+    Integration tests that hit the real FastAPI app via httpx.AsyncClient
+    use the app's database (database.py engine), NOT the test in-memory DB.
+    The app lifespan (which calls init_db) does NOT run under ASGITransport,
+    so we call init_db() here to patch any missing columns in an existing
+    file-based SQLite database (e.g., paciolus.db).
+    """
+    from database import init_db
+
+    init_db()
+
+
 @pytest.fixture(scope="session")
 def bypass_csrf():
     """Bypass CSRF middleware validation in API integration tests.

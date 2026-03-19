@@ -183,11 +183,89 @@ MATERIAL_PROCEDURE_UPGRADES: dict[str, str] = {
 }
 
 
-def get_tb_suggested_procedure(anomaly: dict, *, is_material: bool = False) -> str:
+# BUG-001 fix: Alternate procedures for rotation across reports
+SUGGESTED_PROCEDURES_ALT: dict[str, list[str]] = {
+    "suspense": [
+        "Obtain the suspense account subledger detail and age each outstanding item. "
+        "Items older than 30 days require individual investigation and management "
+        "explanation for continued suspense classification.",
+    ],
+    "concentration_revenue": [
+        "Perform disaggregated revenue analysis for this account, including "
+        "customer-level detail and period-over-period trend comparison. Assess "
+        "whether revenue concentration is consistent with prior periods.",
+    ],
+    "concentration_expense": [
+        "Review vendor master file for this account and confirm the concentrated "
+        "balance relates to an authorized contract or purchase order. Assess whether "
+        "competitive bidding requirements were followed.",
+    ],
+    "credit_balance_ar": [
+        "Obtain customer statement reconciliation for this receivable account. "
+        "Trace the credit balance to specific cash receipts, credit memos, or "
+        "billing adjustments and confirm proper offsetting.",
+    ],
+    "credit_balance_asset": [
+        "Trace the credit balance to source transactions and confirm whether "
+        "reclassification to a liability is required for proper financial "
+        "statement presentation.",
+    ],
+    "debit_balance_liability": [
+        "Confirm whether the debit balance represents an advance payment or "
+        "overpayment requiring reclassification to assets. Obtain vendor "
+        "correspondence and reconciliation.",
+    ],
+    "debit_balance_revenue": [
+        "Obtain detail of the debits posted to this revenue account. Confirm "
+        "whether a separate contra-revenue account should be established and "
+        "assess impact on gross-to-net revenue presentation.",
+    ],
+    "round_dollar_single": [
+        "Compare the round-dollar balance to approved accrual schedules and "
+        "standard journal entry templates to determine whether the amount "
+        "reflects a recurring accrual or an ad-hoc estimate requiring "
+        "supporting documentation.",
+    ],
+    "round_dollar_repeated": [
+        "Select a sample of the recurring round-dollar entries and trace to "
+        "underlying contracts or invoices. Assess whether the pattern indicates "
+        "an automated accrual that may mask estimation bias.",
+    ],
+    "concentration_intercompany": [
+        "Obtain the intercompany reconciliation and confirm corresponding "
+        "entries exist in the counterparty's records. Verify elimination "
+        "entries are prepared for consolidation.",
+    ],
+    "prepaid_credit": [
+        "Obtain the amortization schedule for this prepaid account and compare "
+        "to the contract term. Confirm whether the credit indicates full "
+        "consumption or an improper reversal.",
+    ],
+    "related_party": [
+        "Inspect the related party transaction register and confirm all "
+        "balances are properly disclosed. Assess whether pricing terms are "
+        "consistent with arm's-length standards.",
+    ],
+    "intercompany_imbalance": [
+        "Request the intercompany reconciliation from both counterparties "
+        "and trace the difference to specific unrecorded or timing entries.",
+    ],
+    "equity_signal": [
+        "Obtain board minutes for the period and confirm authorization for "
+        "equity transactions. Assess capital adequacy ratios and going "
+        "concern indicators under ASC 205-40.",
+    ],
+}
+
+
+def get_tb_suggested_procedure(anomaly: dict, *, is_material: bool = False, rotation_index: int = 0) -> str:
     """Resolve the suggested procedure for a TB diagnostic finding.
 
     When is_material=True, returns escalated procedure language appropriate
     for findings above the materiality threshold.
+
+    BUG-001 fix: rotation_index selects among alternate procedure texts
+    so that procedures rotate across reports rather than repeating.
 
     Matching priority:
     1. Exact anomaly_type match (suspense_account → 'suspense')
@@ -201,53 +279,64 @@ def get_tb_suggested_procedure(anomaly: dict, *, is_material: bool = False) -> s
 
     procedures = MATERIAL_PROCEDURE_UPGRADES if is_material else SUGGESTED_PROCEDURES
 
-    # Direct anomaly_type matches
+    # Resolve procedure key based on anomaly classification
+    proc_key: str | None = None
+
     if anomaly_type == "suspense_account":
-        return procedures["suspense"]
-
-    if anomaly_type == "rounding_anomaly":
+        proc_key = "suspense"
+    elif anomaly_type == "rounding_anomaly":
         if is_material:
-            return procedures["round_dollar"]
-        # Differentiate single vs repeated round-dollar pattern
-        txn_count = anomaly.get("transaction_count", 0)
-        is_repeated = (txn_count and txn_count > 1) or "occurrences" in issue or "multiple" in issue
-        if is_repeated:
-            return procedures["round_dollar_repeated"]
-        return procedures["round_dollar_single"]
-
-    if anomaly_type == "concentration_risk":
+            proc_key = "round_dollar"
+        else:
+            txn_count = anomaly.get("transaction_count", 0)
+            is_repeated = (txn_count and txn_count > 1) or "occurrences" in issue or "multiple" in issue
+            proc_key = "round_dollar_repeated" if is_repeated else "round_dollar_single"
+    elif anomaly_type == "concentration_risk":
         if "intercompany" in account or "intercompany" in issue:
-            return procedures["concentration_intercompany"]
-        if acc_type == "revenue" or "revenue" in issue:
-            return procedures["concentration_revenue"]
-        return procedures["concentration_expense"]
-
-    if anomaly_type in ("abnormal_balance", "natural_balance_violation"):
+            proc_key = "concentration_intercompany"
+        elif acc_type == "revenue" or "revenue" in issue:
+            proc_key = "concentration_revenue"
+        else:
+            proc_key = "concentration_expense"
+    elif anomaly_type in ("abnormal_balance", "natural_balance_violation"):
         if "prepaid" in account:
-            return procedures["prepaid_credit"]
-        if acc_type == "asset" or "asset" in issue:
-            # Differentiate AR credit balance from general asset credit balance
+            proc_key = "prepaid_credit"
+        elif acc_type == "asset" or "asset" in issue:
             if not is_material and ("receivable" in account or "a/r" in account):
-                return procedures["credit_balance_ar"]
-            return procedures.get("credit_balance_asset", DEFAULT_PROCEDURE)
-        if acc_type == "liability" or "liability" in issue:
-            return procedures.get("debit_balance_liability", DEFAULT_PROCEDURE)
-        if acc_type == "revenue" or "revenue" in issue:
-            return procedures.get("debit_balance_revenue", DEFAULT_PROCEDURE)
+                proc_key = "credit_balance_ar"
+            else:
+                proc_key = "credit_balance_asset"
+        elif acc_type == "liability" or "liability" in issue:
+            proc_key = "debit_balance_liability"
+        elif acc_type == "revenue" or "revenue" in issue:
+            proc_key = "debit_balance_revenue"
+    elif anomaly_type == "related_party":
+        proc_key = "related_party"
+    elif anomaly_type == "intercompany_imbalance":
+        proc_key = "intercompany_imbalance"
+    elif anomaly_type == "equity_signal":
+        proc_key = "equity_signal"
 
-    # Sprint 526: New detection categories
-    if anomaly_type == "related_party":
-        return procedures.get("related_party", DEFAULT_PROCEDURE)
+    if proc_key is None:
+        if is_material:
+            return (
+                "Review supporting documentation and obtain management explanation. "
+                "Given the material amount, escalate to engagement partner for further "
+                "investigation and expanded substantive procedures."
+            )
+        return DEFAULT_PROCEDURE
 
-    if anomaly_type == "intercompany_imbalance":
-        return procedures.get("intercompany_imbalance", DEFAULT_PROCEDURE)
+    primary = procedures.get(proc_key, DEFAULT_PROCEDURE)
 
-    if anomaly_type == "equity_signal":
-        return procedures.get("equity_signal", DEFAULT_PROCEDURE)
-
-    if is_material:
-        return "Review supporting documentation and obtain management explanation. Given the material amount, escalate to engagement partner for further investigation and expanded substantive procedures."
-    return DEFAULT_PROCEDURE
+    # BUG-001: Apply rotation using alternate procedures (material procedures
+    # don't rotate — they are already escalated language)
+    if rotation_index == 0 or is_material:
+        return primary
+    alts = SUGGESTED_PROCEDURES_ALT.get(proc_key, [])
+    if not alts:
+        return primary
+    all_procedures = [primary, *alts]
+    return all_procedures[rotation_index % len(all_procedures)]
 
 
 # ─────────────────────────────────────────────────────────────────────

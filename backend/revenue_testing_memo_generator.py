@@ -628,15 +628,32 @@ def _build_high_severity_detail(
             if builder:
                 builder(story, styles, flagged)
             else:
+                # BUG-007 fix: generic detail table for tests without a dedicated builder
+                gen_data = [
+                    [
+                        Paragraph("Reference", styles["MemoTableHeader"]),
+                        Paragraph("Date", styles["MemoTableHeader"]),
+                        Paragraph("Issue", styles["MemoTableHeader"]),
+                        Paragraph("Amount", styles["MemoTableHeader"]),
+                    ]
+                ]
                 for fe in flagged[:_MAX_DETAIL_ROWS]:
                     entry = fe.get("entry", {})
-                    story.append(
-                        Paragraph(
-                            f"&bull; {safe_str_value(entry.get('reference'))} \u2014 "
-                            f"{format_currency(entry.get('amount', 0))} \u2014 {fe.get('issue', '')}",
-                            styles["MemoBody"],
-                        )
+                    gen_data.append(
+                        [
+                            Paragraph(safe_str_value(entry.get("reference")), styles["MemoTableCell"]),
+                            Paragraph(safe_str_value(entry.get("date")), styles["MemoTableCell"]),
+                            Paragraph(str(fe.get("issue", "")), styles["MemoTableCell"]),
+                            Paragraph(format_currency(entry.get("amount", 0)), styles["MemoTableCell"]),
+                        ]
                     )
+                gen_table = Table(
+                    gen_data,
+                    colWidths=[1.3 * inch, 1.0 * inch, 2.5 * inch, 1.2 * inch],
+                    repeatRows=1,
+                )
+                gen_table.setStyle(TableStyle(ledger_table_style() + [("ALIGN", (3, 0), (3, -1), "RIGHT")]))
+                story.append(gen_table)
 
             procedure = _DETAIL_PROCEDURES.get(test_key, "")
             if procedure:

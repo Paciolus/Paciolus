@@ -1268,7 +1268,8 @@ def generate_multi_period_memo(
         )
         risk_tier = score_to_risk_tier(risk_score).value
 
-    tier_label, _ = RISK_TIER_DISPLAY.get(str(risk_tier).lower(), ("UNKNOWN", ClassicalColors.OBSIDIAN_DEEP))
+    base_tier_label, _ = RISK_TIER_DISPLAY.get(str(risk_tier).lower(), ("UNKNOWN", ClassicalColors.OBSIDIAN_DEEP))
+    tier_label = f"{base_tier_label} ({risk_score:.0f}/100)"
 
     story.append(Paragraph(create_leader_dots("Composite Risk Score", f"{risk_score:.1f} / 100"), styles["MemoLeader"]))
     story.append(Paragraph(create_leader_dots("Risk Tier", tier_label), styles["MemoLeader"]))

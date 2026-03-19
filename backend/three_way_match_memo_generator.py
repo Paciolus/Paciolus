@@ -258,6 +258,7 @@ def _build_match_results(
     doc_width: float,
     summary: dict,
     risk_tier: str,
+    risk_score: float = 0,
 ) -> None:
     """Build Section III: Match Results with benchmark context."""
     story.append(Paragraph("III. Match Results", styles["MemoSection"]))
@@ -268,7 +269,8 @@ def _build_match_results(
     full_rate = summary.get("full_match_rate", 0)
     partial_rate = summary.get("partial_match_rate", 0)
 
-    tier_label, _ = RISK_TIER_DISPLAY.get(str(risk_tier).lower(), ("UNKNOWN", ClassicalColors.OBSIDIAN_500))
+    base_tier_label, _ = RISK_TIER_DISPLAY.get(str(risk_tier).lower(), ("UNKNOWN", ClassicalColors.OBSIDIAN_500))
+    tier_label = f"{base_tier_label} ({risk_score:.0f}/100)"
 
     result_lines = [
         create_leader_dots("Full Matches (3-way)", f"{full_count:,} ({full_rate:.1%})"),
@@ -330,7 +332,8 @@ def _build_results_summary(
     story.append(LedgerRule(doc_width))
 
     risk_tier = str(composite.get("risk_tier", "low")).lower()
-    tier_label, _ = RISK_TIER_DISPLAY.get(risk_tier, ("UNKNOWN", ClassicalColors.OBSIDIAN_500))
+    base_tier_label, _ = RISK_TIER_DISPLAY.get(risk_tier, ("UNKNOWN", ClassicalColors.OBSIDIAN_500))
+    tier_label = f"{base_tier_label} ({composite.get('score', 0):.0f}/100)"
 
     story.append(
         Paragraph(
@@ -894,7 +897,7 @@ def generate_three_way_match_memo(
     )
 
     # ---- III. MATCH RESULTS ----
-    _build_match_results(story, styles, doc.width, summary, risk_tier)
+    _build_match_results(story, styles, doc.width, summary, risk_tier, composite.get("score", 0))
 
     # ---- IV. RESULTS SUMMARY ----
     if composite:

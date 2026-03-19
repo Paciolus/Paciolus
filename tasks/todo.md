@@ -92,15 +92,29 @@
 - Files: `subscription_model.py`, `billing/subscription_manager.py`, `billing/webhook_handler.py`, 1 Alembic migration, test assertion updates in 4 test files.
 
 ### Sprint 558 — Pre-existing Test Failures Remediation (Sprint 553 Debt)
-**Status:** PENDING
+**Status:** COMPLETE
 **Scope:** Fix 5 pre-existing test failures introduced by Sprint 553 (AUDIT-02) on SQLite
 
-- [ ] **SQLite schema mismatch:** `refresh_tokens` table missing `last_used_at`, `user_agent`, `ip_address` columns — `create_all()` doesn't add columns to existing tables; need SQLite column patching in `init_db()` or test conftest
+- [x] **SQLite schema mismatch:** `refresh_tokens` table missing `last_used_at`, `user_agent`, `ip_address` columns — fixed by column patching in `init_db()` + `_init_app_db()` conftest fixture
   - `test_email_verification.py::TestRegistrationWithDisposableEmail::test_allows_legitimate_email_registration`
   - `test_security.py::TestAccountLockoutIntegration::test_failed_login_returns_lockout_info`
   - `test_pdf_upload_integration.py::TestPdfParseDispatch::test_pdf_magic_byte_guard`
   - `test_transport_hardening.py::TestRequestIdMiddleware::test_no_header_generates_id`
-- [ ] **Rate limit coverage gap:** AUDIT-02 session endpoints missing `@limiter.limit()` decorator
+- [x] **Rate limit coverage gap:** `@limiter.limit(RATE_LIMIT_AUTH)` already present on both session endpoints
   - `test_rate_limit_coverage.py::TestMutatingEndpointCoverage::test_no_unprotected_mutating_endpoints`
-  - Endpoints: `DELETE /auth/sessions/{session_id}`, `DELETE /auth/sessions`
+
+### Sprint 560 — Nightly Report 2026-03-19 Remediation
+**Status:** COMPLETE
+**Scope:** 5 report bugs + 1 security update from overnight brief
+
+- [x] **BUG-001 (Procedure Rotation):** Added `SUGGESTED_PROCEDURES_ALT` alternate pool + `rotation_index` param to `get_tb_suggested_procedure()`. Caller in `diagnostic.py` passes `idx`.
+- [x] **BUG-002 (Hardcoded Risk Labels):** All 9 consumers of `RISK_TIER_DISPLAY` now append numeric score: `"MODERATE (18/100)"`. Added `format_risk_tier_label()` helper in `memo_base.py`.
+- [x] **BUG-003 (PDF Cell Overflow):** Results table in `build_results_summary_section()` now wraps all cell data in `Paragraph` objects for word-wrapping.
+- [x] **BUG-006 (Identical Data Quality):** `data_quality_score` in `get_benchmark_set()` now computed from ratio coverage (50%) + percentile completeness (50%) instead of hardcoded 0.85.
+- [x] **BUG-007 (Empty Drill-Down):** Generic detail table fallback in `fixed_asset`, `payroll`, and `revenue` memo generators — renders proper 4-column table (ID, Name/Desc, Issue, Amount) instead of empty bullet points.
+- [x] **Security:** Next.js 16.1.7 → 16.2.0 (security-flagged minor update)
+
+**Review:**
+- All 68 benchmark tests pass. All 134 diagnostic tests pass. All 867 memo tests pass. All 83 report regression tests pass. All 206 anomaly/engagement/bank-rec tests pass. 1,426 frontend tests pass. Frontend build succeeds.
+- Files: `benchmark_engine.py`, `shared/memo_base.py`, `shared/tb_diagnostic_constants.py`, `pdf/sections/diagnostic.py`, `anomaly_summary_generator.py`, `bank_reconciliation_memo_generator.py`, `engagement_dashboard_memo.py`, `multi_period_memo_generator.py`, `three_way_match_memo_generator.py`, `fixed_asset_testing_memo_generator.py`, `payroll_testing_memo_generator.py`, `revenue_testing_memo_generator.py`, `frontend/package.json`, `frontend/package-lock.json`
 

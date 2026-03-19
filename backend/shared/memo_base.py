@@ -79,6 +79,20 @@ RISK_SCALE_LEGEND = (
 )
 
 
+def format_risk_tier_label(composite: dict) -> tuple[str, Any]:
+    """Return (label_with_score, color) from a composite score dict.
+
+    BUG-002 fix: labels now include the numeric score so readers can
+    distinguish positions within a tier (e.g. "MODERATE (12/100)" vs
+    "MODERATE (24/100)").
+    """
+    risk_tier = str(composite.get("risk_tier", "low")).lower()
+    score = composite.get("score", 0)
+    base_label, color = RISK_TIER_DISPLAY.get(risk_tier, ("UNKNOWN", ClassicalColors.OBSIDIAN_500))
+    tier_label = f"{base_label} ({score:.0f}/100)"
+    return tier_label, color
+
+
 # =============================================================================
 # Style creation (identical across all 3 memo generators)
 # =============================================================================
@@ -311,8 +325,7 @@ def build_results_summary_section(
     story.append(Paragraph("III. Results Summary", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
 
-    risk_tier = str(composite.get("risk_tier", "low")).lower()
-    tier_label, _ = RISK_TIER_DISPLAY.get(risk_tier, ("UNKNOWN", ClassicalColors.OBSIDIAN_500))
+    tier_label, _ = format_risk_tier_label(composite)
 
     story.append(
         Paragraph(
@@ -367,15 +380,23 @@ def build_results_summary_section(
     )
     story.append(Spacer(1, 6))
 
-    # Results by test table
-    results_data = [["Test", "Flagged", "Rate", "Severity"]]
+    # Results by test table — wrap cells in Paragraph for word-wrapping (BUG-003)
+    results_data = [
+        [
+            Paragraph("Test", styles.get("MemoTableHeader", styles.get("MemoBody"))),
+            Paragraph("Flagged", styles.get("MemoTableHeader", styles.get("MemoBody"))),
+            Paragraph("Rate", styles.get("MemoTableHeader", styles.get("MemoBody"))),
+            Paragraph("Severity", styles.get("MemoTableHeader", styles.get("MemoBody"))),
+        ]
+    ]
+    cell_style = styles.get("MemoTableCell", styles.get("MemoBody"))
     for tr in sorted(test_results, key=lambda t: t.get("flag_rate", 0), reverse=True):
         results_data.append(
             [
-                tr["test_name"],
-                str(tr["entries_flagged"]),
-                f"{tr['flag_rate']:.1%}",
-                tr["severity"].upper(),
+                Paragraph(tr["test_name"], cell_style),
+                Paragraph(str(tr["entries_flagged"]), cell_style),
+                Paragraph(f"{tr['flag_rate']:.1%}", cell_style),
+                Paragraph(tr["severity"].upper(), cell_style),
             ]
         )
 

@@ -845,7 +845,8 @@ def generate_bank_rec_memo(
         story.append(LedgerRule(doc.width))
 
         risk_tier = str(composite.get("risk_tier", "low")).lower()
-        tier_label, _ = RISK_TIER_DISPLAY.get(risk_tier, ("UNKNOWN", ClassicalColors.OBSIDIAN_500))
+        base_tier_label, _ = RISK_TIER_DISPLAY.get(risk_tier, ("UNKNOWN", ClassicalColors.OBSIDIAN_500))
+        tier_label = f"{base_tier_label} ({composite.get('score', 0):.0f}/100)"
 
         story.append(
             Paragraph(
@@ -939,8 +940,9 @@ def generate_bank_rec_memo(
     rec_diff = summary.get("reconciling_difference", 0)
     match_rate = matched / total_txns if total_txns > 0 else 0
 
-    tier_label, _ = RISK_TIER_DISPLAY.get(risk_tier, ("LOW", ClassicalColors.SAGE))
+    base_tier_label, _ = RISK_TIER_DISPLAY.get(risk_tier, ("LOW", ClassicalColors.SAGE))
     score_val = composite.get("score", 0) if composite else 0
+    tier_label = f"{base_tier_label} ({score_val:.0f}/100)"
 
     assessment = (
         f"Based on the automated reconciliation procedures applied, "

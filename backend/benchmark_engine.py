@@ -1128,12 +1128,22 @@ def get_benchmark_set(industry: Industry, fiscal_year: int = 2025) -> Optional[B
     if benchmarks is None:
         return None
 
+    # Compute data quality from benchmark coverage and completeness
+    total_possible_ratios = len(RATIO_DIRECTION)
+    available_count = len(benchmarks)
+    complete_count = sum(
+        1 for b in benchmarks.values() if b.p25 is not None and b.p50 is not None and b.p75 is not None
+    )
+    coverage_score = available_count / total_possible_ratios if total_possible_ratios > 0 else 0
+    completeness_score = complete_count / available_count if available_count > 0 else 0
+    data_quality = coverage_score * 0.5 + completeness_score * 0.5
+
     return BenchmarkSet(
         industry=industry,
         fiscal_year=fiscal_year,
         benchmarks=benchmarks,
         source_attribution="Aggregated from SEC EDGAR filings and industry surveys",
-        data_quality_score=0.85,
+        data_quality_score=round(data_quality, 2),
     )
 
 

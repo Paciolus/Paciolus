@@ -436,7 +436,8 @@ def render_risk_summary(story: list, styles: dict, audit_result: dict) -> None:
             informational_count=informational_count,
         )
     risk_tier = get_risk_tier(risk_score)
-    tier_label, _ = RISK_TIER_DISPLAY.get(str(risk_tier).lower(), ("UNKNOWN", ClassicalColors.OBSIDIAN_500))
+    base_tier_label, _ = RISK_TIER_DISPLAY.get(str(risk_tier).lower(), ("UNKNOWN", ClassicalColors.OBSIDIAN_500))
+    tier_label = f"{base_tier_label} ({risk_score:.0f}/100)"
 
     score_lines = [
         create_leader_dots("Composite Risk Score", f"{risk_score} / 100"),
@@ -595,7 +596,7 @@ def _create_ledger_table(styles: dict, anomalies: list, is_material: bool) -> Ke
         if cross_ref:
             issue_parts.append(f'<br/><font size="7" color="#4A7C59"><i>{cross_ref}</i></font>')
 
-        procedure = get_tb_suggested_procedure(ab, is_material=is_material)
+        procedure = get_tb_suggested_procedure(ab, is_material=is_material, rotation_index=idx)
         issue_parts.append(f'<br/><font size="7"><i>Suggested Procedure: {procedure}</i></font>')
 
         issue_cell = Paragraph("".join(issue_parts), cell_style)
