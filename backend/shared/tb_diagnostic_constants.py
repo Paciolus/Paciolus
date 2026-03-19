@@ -383,7 +383,7 @@ def get_concentration_benchmark(anomaly: dict) -> str | None:
 
 
 # ─────────────────────────────────────────────────────────────────────
-# Change 3: Composite Risk Score for TB Diagnostic
+# Change 3: Composite Diagnostic Score for TB Diagnostic
 # ─────────────────────────────────────────────────────────────────────
 
 
@@ -426,7 +426,7 @@ def _describe_material_factor(ab: dict) -> str:
     return f"{account}: material exception"
 
 
-def compute_tb_risk_score(
+def compute_tb_diagnostic_score(
     material_count: int,
     minor_count: int,
     coverage_pct: float,
@@ -436,7 +436,11 @@ def compute_tb_risk_score(
     abnormal_balances: list[dict] | None = None,
     informational_count: int = 0,
 ) -> tuple[int, list[tuple[str, int]]]:
-    """Compute composite risk score for the TB Diagnostic report.
+    """Compute composite diagnostic score for the TB Diagnostic report.
+
+    This score is an anomaly density index — a weighted sum of anomaly
+    counts, concentration ratios, and classification quality.  It is NOT
+    a risk assessment under ISA 315 and must not be presented as such.
 
     Sprint 537: Added informational_count — each contributes +1, grouped into
     a single summary line (not individually listed).
@@ -507,10 +511,10 @@ def compute_tb_risk_score(
     score += informational_pts
 
     if coverage_pct >= 50:
-        factors.append(("Risk-weighted coverage exceeds 50%", 10))
+        factors.append(("Anomaly-weighted coverage exceeds 50%", 10))
         score += 10
     elif coverage_pct >= 25:
-        factors.append(("Risk-weighted coverage exceeds 25%", 5))
+        factors.append(("Anomaly-weighted coverage exceeds 25%", 5))
         score += 5
 
     if has_suspense:
@@ -568,8 +572,8 @@ def compute_tb_risk_score(
     return capped, factors
 
 
-def get_risk_tier(score: int) -> str:
-    """Map a 0–100 score to a risk tier label."""
+def get_diagnostic_tier(score: int) -> str:
+    """Map a 0–100 diagnostic score to a tier label."""
     if score <= 10:
         return "low"
     if score <= 25:
@@ -577,3 +581,8 @@ def get_risk_tier(score: int) -> str:
     if score <= 50:
         return "elevated"
     return "high"
+
+
+# Backward-compatible aliases (internal callers may still use old names)
+compute_tb_risk_score = compute_tb_diagnostic_score
+get_risk_tier = get_diagnostic_tier

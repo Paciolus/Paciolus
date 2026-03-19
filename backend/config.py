@@ -18,15 +18,19 @@ from secrets_manager import get_secrets_manager
 ENV_FILE = Path(__file__).parent / ".env"
 
 
+import logging as _logging
+
+_config_logger = _logging.getLogger("paciolus.config")
+
+
 def _hard_fail(message: str) -> None:
-    """Print error message and exit with failure code."""
-    print(f"\n{'=' * 60}")
-    print("CONFIGURATION ERROR - Paciolus cannot start")
-    print("=" * 60)
-    print(f"\n{message}\n")
-    print("Please create a .env file based on .env.example")
-    print(f"Expected location: {ENV_FILE}")
-    print("=" * 60 + "\n")
+    """Log error message and exit with failure code."""
+    _config_logger.critical(
+        "CONFIGURATION ERROR - Paciolus cannot start: %s | "
+        "Please create a .env file based on .env.example. Expected location: %s",
+        message,
+        ENV_FILE,
+    )
     sys.exit(1)
 
 
@@ -83,8 +87,7 @@ if ENV_MODE == "production":
     # Validate HTTPS in production
     for origin in CORS_ORIGINS:
         if not origin.startswith("https://"):
-            print(f"[WARNING] Non-HTTPS origin in production: {origin}")
-            print("           Consider using HTTPS for all production origins.")
+            _config_logger.warning("Non-HTTPS origin in production: %s — consider using HTTPS", origin)
 
 # =============================================================================
 # OPTIONAL CONFIGURATION
@@ -114,24 +117,17 @@ if _jwt_secret is None or _jwt_secret.strip() == "":
 
         _jwt_secret = secrets.token_hex(32)
         _using_generated_jwt = True
-        print("[WARNING] JWT_SECRET_KEY not set. Using auto-generated key for development.")
+        _config_logger.warning("JWT_SECRET_KEY not set. Using auto-generated key for development.")
 
 # Sprint 25: Additional security validation
 # Warn if using auto-generated key while bound to public interfaces
 if _using_generated_jwt and API_HOST in ("0.0.0.0", "::"):  # nosec B104 — comparison check, not a bind
-    print("\n" + "!" * 60)
-    print("SECURITY WARNING: Auto-generated JWT key with public binding!")
-    print("!" * 60)
-    print("You are using an auto-generated JWT_SECRET_KEY while binding")
-    print(f"to '{API_HOST}', which makes the server publicly accessible.")
-    print("")
-    print("This is INSECURE because:")
-    print("  - JWT tokens can be forged if the key is predictable")
-    print("  - Session tokens will be invalidated on every restart")
-    print("")
-    print("To fix: Set JWT_SECRET_KEY in your .env file:")
-    print(f"  JWT_SECRET_KEY={secrets.token_hex(32)}")
-    print("!" * 60 + "\n")
+    _config_logger.warning(
+        "SECURITY: Auto-generated JWT key with public binding to '%s'. "
+        "JWT tokens can be forged and sessions will be invalidated on restart. "
+        "Set JWT_SECRET_KEY in your .env file.",
+        API_HOST,
+    )
 
 JWT_SECRET_KEY = _jwt_secret
 
@@ -144,9 +140,9 @@ if not _using_generated_jwt and len(JWT_SECRET_KEY) < 32:
             f'Generate a secure key with: python -c "import secrets; print(secrets.token_hex(32))"'
         )
     else:
-        print(
-            f"[WARNING] JWT_SECRET_KEY is short ({len(JWT_SECRET_KEY)} chars). "
-            "Use at least 32 characters for production."
+        _config_logger.warning(
+            "JWT_SECRET_KEY is short (%d chars). Use at least 32 characters for production.",
+            len(JWT_SECRET_KEY),
         )
 
 # Hardcoded — only HS256 is supported. Operator-configurable algorithms
@@ -175,7 +171,7 @@ if _csrf_secret is None or _csrf_secret.strip() == "":
 
         _csrf_secret = _csrf_secrets_mod.token_hex(32)
         _using_generated_csrf = True
-        print("[WARNING] CSRF_SECRET_KEY not set. Using auto-generated key for development.")
+        _config_logger.warning("CSRF_SECRET_KEY not set. Using auto-generated key for development.")
 
 CSRF_SECRET_KEY = _csrf_secret
 
@@ -188,9 +184,9 @@ if not _using_generated_csrf and len(CSRF_SECRET_KEY) < 32:
             f'Generate a secure key with: python -c "import secrets; print(secrets.token_hex(32))"'
         )
     else:
-        print(
-            f"[WARNING] CSRF_SECRET_KEY is short ({len(CSRF_SECRET_KEY)} chars). "
-            "Use at least 32 characters for production."
+        _config_logger.warning(
+            "CSRF_SECRET_KEY is short (%d chars). Use at least 32 characters for production.",
+            len(CSRF_SECRET_KEY),
         )
 
 # Production guardrail: CSRF and JWT secrets must differ
@@ -272,7 +268,7 @@ def _load_optional_int(var_name: str, default: int) -> int:
     try:
         return int(raw.strip())
     except ValueError:
-        print(f"[WARNING] {var_name}={raw!r} is not a valid integer, using default {default}")
+        _config_logger.warning("%s=%r is not a valid integer, using default %d", var_name, raw, default)
         return default
 
 
@@ -295,7 +291,7 @@ def _load_optional_float(var_name: str, default: float) -> float:
     try:
         return float(raw.strip())
     except ValueError:
-        print(f"[WARNING] {var_name}={raw!r} is not a valid float, using default {default}")
+        _config_logger.warning("%s=%r is not a valid float, using default %s", var_name, raw, default)
         return default
 
 
@@ -316,7 +312,7 @@ STRIPE_ENABLED = bool(STRIPE_SECRET_KEY)
 
 # Production guardrail: Stripe keys required in production if billing is expected
 if ENV_MODE == "production" and not STRIPE_SECRET_KEY:
-    print("[WARNING] STRIPE_SECRET_KEY not set in production. Billing features disabled.")
+    _config_logger.warning("STRIPE_SECRET_KEY not set in production. Billing features disabled.")
 
 # Stripe Coupon IDs for promotional pricing (Phase LIX Sprint C)
 # Create these in Stripe Dashboard, then set the IDs here.
@@ -335,10 +331,10 @@ ENTITLEMENT_ENFORCEMENT = _load_optional("ENTITLEMENT_ENFORCEMENT", "hard")
 
 # Production guardrail: soft enforcement bypasses all tier restrictions
 if ENV_MODE == "production" and ENTITLEMENT_ENFORCEMENT == "soft":
-    print(
-        "\n[SECURITY WARNING] ENTITLEMENT_ENFORCEMENT=soft in production.\n"
-        "All tier restrictions are logged but NOT enforced.\n"
-        "Set ENTITLEMENT_ENFORCEMENT=hard for production deployments.\n"
+    _config_logger.warning(
+        "ENTITLEMENT_ENFORCEMENT=soft in production. "
+        "All tier restrictions are logged but NOT enforced. "
+        "Set ENTITLEMENT_ENFORCEMENT=hard for production deployments."
     )
 
 # Seat enforcement mode (Phase LIX Sprint B)
@@ -347,10 +343,10 @@ if ENV_MODE == "production" and ENTITLEMENT_ENFORCEMENT == "soft":
 SEAT_ENFORCEMENT_MODE = _load_optional("SEAT_ENFORCEMENT_MODE", "hard")
 
 if ENV_MODE == "production" and SEAT_ENFORCEMENT_MODE == "soft":
-    print(
-        "\n[SECURITY WARNING] SEAT_ENFORCEMENT_MODE=soft in production.\n"
-        "Seat limits are logged but NOT enforced.\n"
-        "Set SEAT_ENFORCEMENT_MODE=hard for production deployments.\n"
+    _config_logger.warning(
+        "SEAT_ENFORCEMENT_MODE=soft in production. "
+        "Seat limits are logged but NOT enforced. "
+        "Set SEAT_ENFORCEMENT_MODE=hard for production deployments."
     )
 
 # PRICING_V2_ENABLED retired (Phase LXIX) — all V2 features merged into main path.
@@ -405,21 +401,22 @@ def _mask_database_url(url: str) -> str:
 
 
 def print_config_summary() -> None:
-    """Print configuration summary for verification."""
-    print(f"\n{'=' * 60}")
-    print("Paciolus Configuration Loaded")
-    print("=" * 60)
-    print(f"  Environment: {ENV_MODE}")
-    print(f"  Secrets Provider: {get_secrets_manager().get_provider()}")
-    print(f"  API Host:    {API_HOST}")
-    print(f"  API Port:    {API_PORT}")
-    print(f"  CORS Origins: {CORS_ORIGINS}")
-    print(f"  Debug Mode:  {DEBUG}")
-    print(f"  JWT Algorithm: {JWT_ALGORITHM}")
-    print(f"  JWT Expiration: {JWT_EXPIRATION_MINUTES} minutes")
-    print(f"  Refresh Token Expiration: {REFRESH_TOKEN_EXPIRATION_DAYS} days")
-    print(f"  CSRF Secret: {'[auto-generated]' if _using_generated_csrf else '[configured]'}")
-    print(f"  Database: {_mask_database_url(DATABASE_URL)}")
-    print(f"  Stripe Billing: {'enabled' if STRIPE_ENABLED else 'disabled'}")
-    print(f"  Entitlement Mode: {ENTITLEMENT_ENFORCEMENT}")
-    print("=" * 60 + "\n")
+    """Log configuration summary for verification."""
+    _config_logger.info(
+        "Paciolus Configuration Loaded: env=%s, secrets=%s, host=%s:%s, "
+        "cors=%s, debug=%s, jwt_algo=%s, jwt_exp=%dm, refresh_exp=%dd, "
+        "csrf=%s, db=%s, stripe=%s, entitlement=%s",
+        ENV_MODE,
+        get_secrets_manager().get_provider(),
+        API_HOST,
+        API_PORT,
+        CORS_ORIGINS,
+        DEBUG,
+        JWT_ALGORITHM,
+        JWT_EXPIRATION_MINUTES,
+        REFRESH_TOKEN_EXPIRATION_DAYS,
+        "[auto-generated]" if _using_generated_csrf else "[configured]",
+        _mask_database_url(DATABASE_URL),
+        "enabled" if STRIPE_ENABLED else "disabled",
+        ENTITLEMENT_ENFORCEMENT,
+    )

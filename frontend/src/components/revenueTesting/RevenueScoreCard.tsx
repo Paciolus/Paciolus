@@ -19,7 +19,7 @@ export function RevenueScoreCard({ score }: RevenueScoreCardProps) {
       flags_by_severity={score.flags_by_severity}
       top_findings={score.top_findings}
       entity_label="revenue entries"
-      title="Revenue Risk Score"
+      title="Revenue Diagnostic Score"
     />
   )
 }

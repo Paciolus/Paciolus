@@ -404,7 +404,7 @@ def render_risk_summary(story: list, styles: dict, audit_result: dict) -> None:
     low_severity = risk_summary.get("low_severity", immaterial_count)
     informational_severity = risk_summary.get("informational_count", informational_count)
 
-    # Change 3: Composite Risk Score
+    # Change 3: Composite Diagnostic Score
     abnormal_balances = audit_result.get("abnormal_balances", [])
     anomaly_types = risk_summary.get("anomaly_types", {})
     has_suspense = anomaly_types.get("suspense_account", 0) > 0
@@ -440,8 +440,8 @@ def render_risk_summary(story: list, styles: dict, audit_result: dict) -> None:
     tier_label = f"{base_tier_label} ({risk_score:.0f}/100)"
 
     score_lines = [
-        create_leader_dots("Composite Risk Score", f"{risk_score} / 100"),
-        create_leader_dots("Risk Tier", tier_label),
+        create_leader_dots("Composite Diagnostic Score", f"{risk_score} / 100"),
+        create_leader_dots("Diagnostic Tier", tier_label),
     ]
     for line in score_lines:
         story.append(Paragraph(line, styles["LeaderLine"]))

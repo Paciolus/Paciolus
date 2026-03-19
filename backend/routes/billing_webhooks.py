@@ -53,6 +53,9 @@ async def stripe_webhook(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid payload")
     except stripe.error.SignatureVerificationError:
+        logger.warning(
+            "Webhook signature verification failed (sig prefix: %s)", sig_header[:20] if sig_header else "none"
+        )
         raise HTTPException(status_code=400, detail="Invalid signature")
 
     # Atomic deduplication: insert the event marker BEFORE processing.
@@ -93,7 +96,15 @@ async def stripe_webhook(
         process_webhook_event(db, event_type, event_data, event_created=event_created)
         # Commit the dedup marker + any business logic changes together
         db.commit()
+    except (ValueError, KeyError) as exc:
+        # Data errors: malformed event payload or unknown enum value.
+        # Return 400 so Stripe does NOT retry (retrying won't fix bad data).
+        db.rollback()
+        logger.warning("Webhook data error for event %s (%s): %s", event_id, event_type, str(exc))
+        return Response(status_code=400)
     except Exception:
+        # Operational errors: DB failure, network issue, etc.
+        # Return 500 so Stripe retries with exponential backoff.
         db.rollback()
         logger.error("Webhook processing failed for event %s (%s)", event_id, event_type, exc_info=True)
         return Response(status_code=500)

@@ -1271,8 +1271,10 @@ def generate_multi_period_memo(
     base_tier_label, _ = RISK_TIER_DISPLAY.get(str(risk_tier).lower(), ("UNKNOWN", ClassicalColors.OBSIDIAN_DEEP))
     tier_label = f"{base_tier_label} ({risk_score:.0f}/100)"
 
-    story.append(Paragraph(create_leader_dots("Composite Risk Score", f"{risk_score:.1f} / 100"), styles["MemoLeader"]))
-    story.append(Paragraph(create_leader_dots("Risk Tier", tier_label), styles["MemoLeader"]))
+    story.append(
+        Paragraph(create_leader_dots("Composite Diagnostic Score", f"{risk_score:.1f} / 100"), styles["MemoLeader"])
+    )
+    story.append(Paragraph(create_leader_dots("Diagnostic Tier", tier_label), styles["MemoLeader"]))
     story.append(Paragraph(RISK_SCALE_LEGEND, styles["MemoBodySmall"]))
     story.append(Spacer(1, 4))
     story.append(Paragraph(create_leader_dots("Material Movements", str(material_count)), styles["MemoLeader"]))

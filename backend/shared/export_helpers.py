@@ -67,7 +67,7 @@ def write_testing_csv_summary(writer: Any, composite_score: dict[str, Any], entr
     writer.writerow([])
     writer.writerow(["SUMMARY"])
     writer.writerow(["Composite Score", f"{composite_score.get('score', 0):.1f}"])
-    writer.writerow(["Risk Tier", composite_score.get("risk_tier", "")])
+    writer.writerow(["Diagnostic Tier", composite_score.get("risk_tier", "")])
     writer.writerow([f"Total {entry_label}", composite_score.get("total_entries", 0)])
     writer.writerow(["Total Flagged", composite_score.get("total_flagged", 0)])
     writer.writerow(["Flag Rate", f"{composite_score.get('flag_rate', 0):.1%}"])

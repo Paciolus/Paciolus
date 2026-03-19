@@ -19,7 +19,7 @@ export function InventoryScoreCard({ score }: InventoryScoreCardProps) {
       flags_by_severity={score.flags_by_severity}
       top_findings={score.top_findings}
       entity_label="inventory items"
-      title="Inventory Risk Score"
+      title="Inventory Diagnostic Score"
     />
   )
 }

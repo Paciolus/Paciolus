@@ -337,13 +337,13 @@ def _build_results_summary(
 
     story.append(
         Paragraph(
-            create_leader_dots("Composite Risk Score", f"{composite.get('score', 0):.1f} / 100"),
+            create_leader_dots("Composite Diagnostic Score", f"{composite.get('score', 0):.1f} / 100"),
             styles["MemoLeader"],
         )
     )
     story.append(
         Paragraph(
-            create_leader_dots("Risk Tier", tier_label),
+            create_leader_dots("Diagnostic Tier", tier_label),
             styles["MemoLeader"],
         )
     )

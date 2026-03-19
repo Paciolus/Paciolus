@@ -352,16 +352,17 @@ def _build_evaluation_next_steps(
     if conclusion == "pass":
         intro = (
             f"Sampling evaluation is complete. UEL of ${uel:,.2f} does not exceed "
-            f"Tolerable Misstatement of ${tm:,.2f}. The population is accepted at the "
-            f"{conf_level:.0%} confidence level. The following actions are required to "
+            f"Tolerable Misstatement of ${tm:,.2f} at the {conf_level:.0%} confidence level. "
+            "The auditor should evaluate this result in the context of other audit evidence "
+            "and the overall engagement risk assessment. The following actions are required to "
             "close out the sampling workpaper:"
         )
     else:
         intro = (
             f"Sampling evaluation is complete. UEL of ${uel:,.2f} exceeds "
-            f"Tolerable Misstatement of ${tm:,.2f}. The population cannot be accepted "
-            f"at the {conf_level:.0%} confidence level. Expand the sample or perform "
-            "alternative procedures per ISA 530.17. If expanding, the following actions "
+            f"Tolerable Misstatement of ${tm:,.2f} at the {conf_level:.0%} confidence level. "
+            "The auditor should consider expanding the sample or performing alternative "
+            "procedures per ISA 530.17. If expanding, the following actions "
             "apply to errors already identified:"
         )
 

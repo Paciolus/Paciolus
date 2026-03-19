@@ -52,7 +52,7 @@ function renderElements(definition: IconDefinition, strokeWidth: number): React.
       strokeWidth: attrs.strokeWidth ?? strokeWidth,
       key: i,
     }
-    return <Tag {...(props as any)} />
+    return <Tag {...(props as React.SVGAttributes<SVGElement>)} />
   })
 }
 

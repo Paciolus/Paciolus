@@ -168,11 +168,10 @@ class SamplingResultResponse(BaseModel):
 class JETestingResponse(BaseModel):
     """Complete journal entry testing response.
 
-    Uses extra='allow' as a safety net during migration — any fields
-    not yet modeled still pass through to the frontend.
+    Uses extra='ignore' — unknown fields silently dropped (Sprint 561 hardening).
     """
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="ignore")
 
     composite_score: CompositeScoreResponse
     test_results: list[JETestResultResponse]
@@ -255,10 +254,10 @@ class APColumnDetectionResponse(BaseModel):
 class APTestingResponse(BaseModel):
     """Complete AP payment testing response.
 
-    Uses extra='allow' as a safety net during migration.
+    Uses extra='ignore' — unknown fields silently dropped (Sprint 561 hardening).
     """
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="ignore")
 
     composite_score: CompositeScoreResponse
     test_results: list[APTestResultResponse]
@@ -528,10 +527,10 @@ class TWMColumnDetectionResponse(BaseModel):
 class ThreeWayMatchResponse(BaseModel):
     """Complete three-way match response.
 
-    Uses extra='allow' as a safety net during migration.
+    Uses extra='ignore' — unknown fields silently dropped (Sprint 561 hardening).
     """
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="ignore")
 
     full_matches: list[ThreeWayMatchItemResponse]
     partial_matches: list[ThreeWayMatchItemResponse]
@@ -669,10 +668,10 @@ class ARSummaryResponse(BaseModel):
 class ARAgingResponse(BaseModel):
     """Complete AR aging analysis response.
 
-    Uses extra='allow' as a safety net during migration.
+    Uses extra='ignore' — unknown fields silently dropped (Sprint 561 hardening).
     """
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="ignore")
 
     composite_score: ARCompositeScoreResponse
     test_results: list[ARTestResultResponse]
@@ -780,10 +779,10 @@ class PayrollCompositeScoreResponse(BaseModel):
 class PayrollTestingResponse(BaseModel):
     """Complete payroll testing response.
 
-    Uses extra='allow' as a safety net during migration.
+    Uses extra='ignore' — unknown fields silently dropped (Sprint 561 hardening).
     """
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="ignore")
 
     composite_score: PayrollCompositeScoreResponse
     test_results: list[PayrollTestResultResponse]
@@ -884,10 +883,10 @@ class ContractEvidenceLevelResponse(BaseModel):
 class RevenueTestingResponse(BaseModel):
     """Complete revenue testing response.
 
-    Uses extra='allow' as a safety net during migration.
+    Uses extra='ignore' — unknown fields silently dropped (Sprint 561 hardening).
     """
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="ignore")
 
     composite_score: CompositeScoreResponse
     test_results: list[RevenueTestResultResponse]
@@ -968,10 +967,10 @@ class FAColumnDetectionResponse(BaseModel):
 class FATestingResponse(BaseModel):
     """Complete fixed asset testing response.
 
-    Uses extra='allow' as a safety net during migration.
+    Uses extra='ignore' — unknown fields silently dropped (Sprint 561 hardening).
     """
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="ignore")
 
     composite_score: CompositeScoreResponse
     test_results: list[FATestResultResponse]
@@ -1045,10 +1044,10 @@ class InvColumnDetectionResponse(BaseModel):
 class InvTestingResponse(BaseModel):
     """Complete inventory testing response.
 
-    Uses extra='allow' as a safety net during migration.
+    Uses extra='ignore' — unknown fields silently dropped (Sprint 561 hardening).
     """
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="ignore")
 
     composite_score: CompositeScoreResponse
     test_results: list[InvTestResultResponse]

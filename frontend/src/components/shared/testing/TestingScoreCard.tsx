@@ -51,7 +51,7 @@ export function TestingScoreCard({
   flags_by_severity,
   top_findings,
   entity_label,
-  title = 'Composite Risk Score',
+  title = 'Composite Diagnostic Score',
   extra_content,
   subtitle_override,
   stats_override,

@@ -95,10 +95,9 @@ def orchestrate_checkout(
     except Exception:
         raise CheckoutProviderError("Payment provider error. Please try again or contact support.")
 
-    # Save customer ID if new
+    # Save customer ID if new (deferred commit — atomic with session creation)
     if existing_sub and not existing_sub.stripe_customer_id:
         existing_sub.stripe_customer_id = customer_id
-        db.commit()
 
     # 4. Validate and resolve promo code
     stripe_coupon_id: str | None = None
@@ -134,7 +133,7 @@ def orchestrate_checkout(
         if not seat_price_id:
             raise CheckoutValidationError("Seat pricing not configured. Contact support.")
 
-    # 7. DPA acceptance
+    # 7. DPA acceptance (deferred commit — atomic with session creation)
     from datetime import UTC, datetime
 
     dpa_accepted_at_str: str | None = None
@@ -147,10 +146,12 @@ def orchestrate_checkout(
         if existing_sub:
             existing_sub.dpa_accepted_at = now_utc
             existing_sub.dpa_version = dpa_version_str
-            db.commit()
             logger.info("DPA v%s accepted by user %d (existing sub)", dpa_version_str, user_id)
 
-    # 8. Create checkout session
+    # 8. Create checkout session with idempotency key
+    import time as _time
+
+    idempotency_key = f"checkout-{user_id}-{price_id}-{int(_time.time() // 60)}"
     try:
         checkout_url = create_checkout_session(
             customer_id=customer_id,
@@ -162,8 +163,13 @@ def orchestrate_checkout(
             additional_seats=additional_seats,
             dpa_accepted_at=dpa_accepted_at_str,
             dpa_version=dpa_version_str,
+            idempotency_key=idempotency_key,
         )
     except Exception:
+        db.rollback()
         raise CheckoutProviderError("Payment provider error. Please try again or contact support.")
+
+    # Single atomic commit: customer_id + DPA + checkout all succeed together
+    db.commit()
 
     return checkout_url

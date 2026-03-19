@@ -19,7 +19,7 @@ export function FixedAssetScoreCard({ score }: FixedAssetScoreCardProps) {
       flags_by_severity={score.flags_by_severity}
       top_findings={score.top_findings}
       entity_label="fixed asset entries"
-      title="Fixed Asset Risk Score"
+      title="Fixed Asset Diagnostic Score"
     />
   )
 }

@@ -456,16 +456,19 @@ def evaluate_mus_sample_stringer(
         conclusion = "pass"
         conclusion_detail = (
             f"The upper error limit (${upper_error_limit:,.2f}) does not exceed "
-            f"tolerable misstatement (${tolerable_misstatement:,.2f}). "
-            f"The population is accepted at the {confidence_level:.0%} confidence level."
+            f"tolerable misstatement (${tolerable_misstatement:,.2f}) at the "
+            f"{confidence_level:.0%} confidence level. The auditor should evaluate "
+            "this result in the context of other audit evidence obtained and the "
+            "overall engagement risk assessment before concluding on the population."
         )
     else:
         conclusion = "fail"
         conclusion_detail = (
             f"The upper error limit (${upper_error_limit:,.2f}) exceeds "
-            f"tolerable misstatement (${tolerable_misstatement:,.2f}). "
-            f"The population cannot be accepted at the {confidence_level:.0%} confidence level. "
-            "Consider expanding the sample or performing alternative procedures."
+            f"tolerable misstatement (${tolerable_misstatement:,.2f}) at the "
+            f"{confidence_level:.0%} confidence level. The auditor should consider "
+            "expanding the sample, performing alternative procedures, or evaluating "
+            "the implications for the overall audit approach."
         )
 
     return SampleEvaluationResult(
@@ -811,7 +814,10 @@ def evaluate_sample(
             conclusion_detail = (
                 f"The projected misstatement plus precision "
                 f"(${upper_error_limit:,.2f}) does not exceed "
-                f"tolerable misstatement (${config.tolerable_misstatement:,.2f})."
+                f"tolerable misstatement (${config.tolerable_misstatement:,.2f}). "
+                "The auditor should evaluate this result in the context of other "
+                "audit evidence obtained and the overall engagement risk assessment "
+                "before concluding on the population."
             )
         else:
             conclusion = "fail"
@@ -819,7 +825,9 @@ def evaluate_sample(
                 f"The projected misstatement plus precision "
                 f"(${upper_error_limit:,.2f}) exceeds "
                 f"tolerable misstatement (${config.tolerable_misstatement:,.2f}). "
-                "Consider expanding the sample or performing alternative procedures."
+                "The auditor should consider expanding the sample, performing "
+                "alternative procedures, or evaluating the implications for the "
+                "overall audit approach."
             )
 
         taintings = sorted([e.tainting for e in errors], reverse=True)

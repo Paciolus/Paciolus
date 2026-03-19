@@ -3,6 +3,7 @@ Paciolus API — Testing CSV Export Routes (JE, AP, Payroll, TWM, Revenue, AR, F
 Sprint 155: Extracted from routes/export.py.
 Sprint 539: Schema-driven CSV serializer refactor — shared csv_export_handler.
 """
+
 import csv
 import logging
 from io import StringIO
@@ -55,15 +56,15 @@ ColumnSpec = tuple[str, Any]  # (header_label, extractor_callable)
 
 # -- Shared prefix columns (every flagged-entry tool starts with these) ------
 _FLAG_PREFIX: list[ColumnSpec] = [
-    ("Test",     lambda fe, _e: fe.get("test_name", "")),
+    ("Test", lambda fe, _e: fe.get("test_name", "")),
     ("Test Key", lambda fe, _e: fe.get("test_key", "")),
-    ("Tier",     lambda fe, _e: fe.get("test_tier", "")),
+    ("Tier", lambda fe, _e: fe.get("test_tier", "")),
     ("Severity", lambda fe, _e: fe.get("severity", "")),
 ]
 
 # -- Shared suffix columns (every flagged-entry tool ends with these) --------
 _FLAG_SUFFIX: list[ColumnSpec] = [
-    ("Issue",      lambda fe, _e: sanitize_csv_value(fe.get("issue", ""))),
+    ("Issue", lambda fe, _e: sanitize_csv_value(fe.get("issue", ""))),
     ("Confidence", lambda fe, _e: f"{fe.get('confidence', 0):.2f}"),
 ]
 
@@ -80,71 +81,107 @@ def _build_schema(*groups: list[ColumnSpec]) -> list[ColumnSpec]:
 # Per-tool column schemas
 # ---------------------------------------------------------------------------
 
-JE_COLUMNS: list[ColumnSpec] = _build_schema(_FLAG_PREFIX, [
-    ("Entry ID",    lambda _fe, e: sanitize_csv_value(e.get("entry_id", ""))),
-    ("Date",        lambda _fe, e: e.get("posting_date", "") or e.get("entry_date", "")),
-    ("Account",     lambda _fe, e: sanitize_csv_value(e.get("account", ""))),
-    ("Description", lambda _fe, e: sanitize_csv_value((e.get("description", "") or "")[:80])),
-    ("Debit",       lambda _fe, e: f"{e.get('debit', 0):.2f}" if e.get('debit') else ""),
-    ("Credit",      lambda _fe, e: f"{e.get('credit', 0):.2f}" if e.get('credit') else ""),
-], _FLAG_SUFFIX)
+JE_COLUMNS: list[ColumnSpec] = _build_schema(
+    _FLAG_PREFIX,
+    [
+        ("Entry ID", lambda _fe, e: sanitize_csv_value(e.get("entry_id", ""))),
+        ("Date", lambda _fe, e: e.get("posting_date", "") or e.get("entry_date", "")),
+        ("Account", lambda _fe, e: sanitize_csv_value(e.get("account", ""))),
+        ("Description", lambda _fe, e: sanitize_csv_value((e.get("description", "") or "")[:80])),
+        ("Debit", lambda _fe, e: f"{e.get('debit', 0):.2f}" if e.get("debit") else ""),
+        ("Credit", lambda _fe, e: f"{e.get('credit', 0):.2f}" if e.get("credit") else ""),
+    ],
+    _FLAG_SUFFIX,
+)
 
-AP_COLUMNS: list[ColumnSpec] = _build_schema(_FLAG_PREFIX, [
-    ("Vendor",       lambda _fe, e: sanitize_csv_value(e.get("vendor_name", ""))),
-    ("Invoice #",    lambda _fe, e: sanitize_csv_value(e.get("invoice_number", ""))),
-    ("Payment Date", lambda _fe, e: e.get("payment_date", "")),
-    ("Amount",       lambda _fe, e: f"{e.get('amount', 0):.2f}" if e.get('amount') else ""),
-    ("Check #",      lambda _fe, e: sanitize_csv_value(e.get("check_number", ""))),
-    ("Description",  lambda _fe, e: sanitize_csv_value((e.get("description", "") or "")[:80])),
-], _FLAG_SUFFIX)
+AP_COLUMNS: list[ColumnSpec] = _build_schema(
+    _FLAG_PREFIX,
+    [
+        ("Vendor", lambda _fe, e: sanitize_csv_value(e.get("vendor_name", ""))),
+        ("Invoice #", lambda _fe, e: sanitize_csv_value(e.get("invoice_number", ""))),
+        ("Payment Date", lambda _fe, e: e.get("payment_date", "")),
+        ("Amount", lambda _fe, e: f"{e.get('amount', 0):.2f}" if e.get("amount") else ""),
+        ("Check #", lambda _fe, e: sanitize_csv_value(e.get("check_number", ""))),
+        ("Description", lambda _fe, e: sanitize_csv_value((e.get("description", "") or "")[:80])),
+    ],
+    _FLAG_SUFFIX,
+)
 
-PAYROLL_COLUMNS: list[ColumnSpec] = _build_schema(_FLAG_PREFIX, [
-    ("Employee",    lambda _fe, e: sanitize_csv_value(e.get("employee_name", ""))),
-    ("Employee ID", lambda _fe, e: sanitize_csv_value(e.get("employee_id", ""))),
-    ("Department",  lambda _fe, e: sanitize_csv_value(e.get("department", ""))),
-    ("Pay Date",    lambda _fe, e: e.get("pay_date", "")),
-    ("Gross Pay",   lambda _fe, e: f"{e.get('gross_pay', 0):.2f}" if e.get('gross_pay') else ""),
-], _FLAG_SUFFIX)
+PAYROLL_COLUMNS: list[ColumnSpec] = _build_schema(
+    _FLAG_PREFIX,
+    [
+        ("Employee", lambda _fe, e: sanitize_csv_value(e.get("employee_name", ""))),
+        ("Employee ID", lambda _fe, e: sanitize_csv_value(e.get("employee_id", ""))),
+        ("Department", lambda _fe, e: sanitize_csv_value(e.get("department", ""))),
+        ("Pay Date", lambda _fe, e: e.get("pay_date", "")),
+        ("Gross Pay", lambda _fe, e: f"{e.get('gross_pay', 0):.2f}" if e.get("gross_pay") else ""),
+    ],
+    _FLAG_SUFFIX,
+)
 
-REVENUE_COLUMNS: list[ColumnSpec] = _build_schema(_FLAG_PREFIX, [
-    ("Account Name",   lambda _fe, e: sanitize_csv_value(e.get("account_name", ""))),
-    ("Account Number", lambda _fe, e: sanitize_csv_value(e.get("account_number", ""))),
-    ("Date",           lambda _fe, e: e.get("date", "")),
-    ("Amount",         lambda _fe, e: f"{e.get('amount', 0):.2f}" if e.get('amount') is not None else ""),
-    ("Description",    lambda _fe, e: sanitize_csv_value((e.get("description", "") or "")[:80])),
-    ("Entry Type",     lambda _fe, e: sanitize_csv_value(e.get("entry_type", ""))),
-    ("Reference",      lambda _fe, e: sanitize_csv_value(e.get("reference", ""))),
-], _FLAG_SUFFIX)
+REVENUE_COLUMNS: list[ColumnSpec] = _build_schema(
+    _FLAG_PREFIX,
+    [
+        ("Account Name", lambda _fe, e: sanitize_csv_value(e.get("account_name", ""))),
+        ("Account Number", lambda _fe, e: sanitize_csv_value(e.get("account_number", ""))),
+        ("Date", lambda _fe, e: e.get("date", "")),
+        ("Amount", lambda _fe, e: f"{e.get('amount', 0):.2f}" if e.get("amount") is not None else ""),
+        ("Description", lambda _fe, e: sanitize_csv_value((e.get("description", "") or "")[:80])),
+        ("Entry Type", lambda _fe, e: sanitize_csv_value(e.get("entry_type", ""))),
+        ("Reference", lambda _fe, e: sanitize_csv_value(e.get("reference", ""))),
+    ],
+    _FLAG_SUFFIX,
+)
 
-AR_COLUMNS: list[ColumnSpec] = _build_schema(_FLAG_PREFIX, [
-    ("Account Name",   lambda _fe, e: sanitize_csv_value(e.get("account_name", ""))),
-    ("Customer Name",  lambda _fe, e: sanitize_csv_value(e.get("customer_name", ""))),
-    ("Invoice #",      lambda _fe, e: sanitize_csv_value(e.get("invoice_number", ""))),
-    ("Date",           lambda _fe, e: e.get("date", "")),
-    ("Amount",         lambda _fe, e: f"{e.get('amount', 0):.2f}" if e.get('amount') is not None else ""),
-    ("Aging Days",     lambda _fe, e: str(e.get("aging_days", "")) if e.get("aging_days") is not None else ""),
-], _FLAG_SUFFIX)
+AR_COLUMNS: list[ColumnSpec] = _build_schema(
+    _FLAG_PREFIX,
+    [
+        ("Account Name", lambda _fe, e: sanitize_csv_value(e.get("account_name", ""))),
+        ("Customer Name", lambda _fe, e: sanitize_csv_value(e.get("customer_name", ""))),
+        ("Invoice #", lambda _fe, e: sanitize_csv_value(e.get("invoice_number", ""))),
+        ("Date", lambda _fe, e: e.get("date", "")),
+        ("Amount", lambda _fe, e: f"{e.get('amount', 0):.2f}" if e.get("amount") is not None else ""),
+        ("Aging Days", lambda _fe, e: str(e.get("aging_days", "")) if e.get("aging_days") is not None else ""),
+    ],
+    _FLAG_SUFFIX,
+)
 
-FA_COLUMNS: list[ColumnSpec] = _build_schema(_FLAG_PREFIX, [
-    ("Asset ID",            lambda _fe, e: sanitize_csv_value(e.get("asset_id", ""))),
-    ("Description",         lambda _fe, e: sanitize_csv_value((e.get("description", "") or "")[:80])),
-    ("Category",            lambda _fe, e: sanitize_csv_value(e.get("category", ""))),
-    ("Cost",                lambda _fe, e: f"{e.get('cost', 0):.2f}" if e.get('cost') is not None else ""),
-    ("Accum Depreciation",  lambda _fe, e: f"{e.get('accumulated_depreciation', 0):.2f}" if e.get('accumulated_depreciation') is not None else ""),
-    ("Useful Life",         lambda _fe, e: str(e.get("useful_life", "")) if e.get("useful_life") is not None else ""),
-    ("Acquisition Date",    lambda _fe, e: e.get("acquisition_date", "")),
-], _FLAG_SUFFIX)
+FA_COLUMNS: list[ColumnSpec] = _build_schema(
+    _FLAG_PREFIX,
+    [
+        ("Asset ID", lambda _fe, e: sanitize_csv_value(e.get("asset_id", ""))),
+        ("Description", lambda _fe, e: sanitize_csv_value((e.get("description", "") or "")[:80])),
+        ("Category", lambda _fe, e: sanitize_csv_value(e.get("category", ""))),
+        ("Cost", lambda _fe, e: f"{e.get('cost', 0):.2f}" if e.get("cost") is not None else ""),
+        (
+            "Accum Depreciation",
+            lambda _fe, e: (
+                f"{e.get('accumulated_depreciation', 0):.2f}" if e.get("accumulated_depreciation") is not None else ""
+            ),
+        ),
+        ("Useful Life", lambda _fe, e: str(e.get("useful_life", "")) if e.get("useful_life") is not None else ""),
+        ("Acquisition Date", lambda _fe, e: e.get("acquisition_date", "")),
+    ],
+    _FLAG_SUFFIX,
+)
 
-INVENTORY_COLUMNS: list[ColumnSpec] = _build_schema(_FLAG_PREFIX, [
-    ("Item ID",            lambda _fe, e: sanitize_csv_value(e.get("item_id", ""))),
-    ("Description",        lambda _fe, e: sanitize_csv_value((e.get("description", "") or "")[:80])),
-    ("Category",           lambda _fe, e: sanitize_csv_value(e.get("category", ""))),
-    ("Quantity",           lambda _fe, e: f"{e.get('quantity', 0):.2f}" if e.get('quantity') is not None else ""),
-    ("Unit Cost",          lambda _fe, e: f"{e.get('unit_cost', 0):.2f}" if e.get('unit_cost') is not None else ""),
-    ("Extended Value",     lambda _fe, e: f"{e.get('extended_value', 0):.2f}" if e.get('extended_value') is not None else ""),
-    ("Location",           lambda _fe, e: sanitize_csv_value(e.get("location", ""))),
-    ("Last Movement Date", lambda _fe, e: e.get("last_movement_date", "")),
-], _FLAG_SUFFIX)
+INVENTORY_COLUMNS: list[ColumnSpec] = _build_schema(
+    _FLAG_PREFIX,
+    [
+        ("Item ID", lambda _fe, e: sanitize_csv_value(e.get("item_id", ""))),
+        ("Description", lambda _fe, e: sanitize_csv_value((e.get("description", "") or "")[:80])),
+        ("Category", lambda _fe, e: sanitize_csv_value(e.get("category", ""))),
+        ("Quantity", lambda _fe, e: f"{e.get('quantity', 0):.2f}" if e.get("quantity") is not None else ""),
+        ("Unit Cost", lambda _fe, e: f"{e.get('unit_cost', 0):.2f}" if e.get("unit_cost") is not None else ""),
+        (
+            "Extended Value",
+            lambda _fe, e: f"{e.get('extended_value', 0):.2f}" if e.get("extended_value") is not None else "",
+        ),
+        ("Location", lambda _fe, e: sanitize_csv_value(e.get("location", ""))),
+        ("Last Movement Date", lambda _fe, e: e.get("last_movement_date", "")),
+    ],
+    _FLAG_SUFFIX,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -205,29 +242,27 @@ def csv_export_handler(
             write_testing_csv_summary(writer, composite_score, entry_label)
 
         csv_content = output.getvalue()
-        csv_bytes = csv_content.encode('utf-8-sig')
+        csv_bytes = csv_content.encode("utf-8-sig")
 
         download_filename = safe_download_filename(filename_raw, filename_suffix, "csv")
 
         return streaming_csv_response(csv_bytes, download_filename)
     except (ValueError, KeyError, TypeError, UnicodeEncodeError) as e:
         logger.exception("%s CSV export failed", error_log_prefix)
-        raise HTTPException(
-            status_code=500,
-            detail=sanitize_error(e, "export", error_code)
-        )
+        raise HTTPException(status_code=500, detail=sanitize_error(e, "export", error_code))
 
 
 # ---------------------------------------------------------------------------
 # Custom summary writers for tools that diverge from the standard pattern
 # ---------------------------------------------------------------------------
 
+
 def _ar_aging_summary_writer(writer: Any, composite_score: dict[str, Any]) -> None:
     """AR Aging has a custom summary layout including has_subledger."""
     writer.writerow([])
     writer.writerow(["SUMMARY"])
     writer.writerow(["Composite Score", f"{composite_score.get('score', 0):.1f}"])
-    writer.writerow(["Risk Tier", composite_score.get("risk_tier", "")])
+    writer.writerow(["Diagnostic Tier", composite_score.get("risk_tier", "")])
     writer.writerow(["Total Flagged", composite_score.get("total_flagged", 0)])
     writer.writerow(["Tests Run", composite_score.get("tests_run", 0)])
     writer.writerow(["Tests Skipped", composite_score.get("tests_skipped", 0)])
@@ -397,11 +432,21 @@ def export_csv_three_way_match(
         output = StringIO()
         writer = csv.writer(output)
 
-        writer.writerow([
-            "Match Type", "PO #", "Invoice #", "Receipt #", "Vendor",
-            "PO Amount", "Invoice Amount", "Receipt Amount",
-            "Variance", "Variance %", "Confidence",
-        ])
+        writer.writerow(
+            [
+                "Match Type",
+                "PO #",
+                "Invoice #",
+                "Receipt #",
+                "Vendor",
+                "PO Amount",
+                "Invoice Amount",
+                "Receipt Amount",
+                "Variance",
+                "Variance %",
+                "Confidence",
+            ]
+        )
 
         all_matches = twm_input.full_matches + twm_input.partial_matches
         for m in all_matches:
@@ -412,19 +457,21 @@ def export_csv_three_way_match(
             total_variance = sum(v.get("variance_amount", 0) for v in m.get("variances", []))
             max_pct = max((v.get("variance_pct", 0) for v in m.get("variances", [])), default=0)
 
-            writer.writerow([
-                m.get("match_type", ""),
-                sanitize_csv_value(po.get("po_number", "")),
-                sanitize_csv_value(inv.get("invoice_number", "")),
-                sanitize_csv_value(rec.get("receipt_number", "")),
-                sanitize_csv_value(po.get("vendor", "") or inv.get("vendor", "")),
-                f"{po.get('total_amount', 0):.2f}" if po else "",
-                f"{inv.get('total_amount', 0):.2f}" if inv else "",
-                f"{rec.get('total_amount', 0):.2f}" if rec else "",
-                f"{total_variance:.2f}" if total_variance else "",
-                f"{max_pct:.1%}" if max_pct else "",
-                f"{m.get('match_confidence', 0):.2f}",
-            ])
+            writer.writerow(
+                [
+                    m.get("match_type", ""),
+                    sanitize_csv_value(po.get("po_number", "")),
+                    sanitize_csv_value(inv.get("invoice_number", "")),
+                    sanitize_csv_value(rec.get("receipt_number", "")),
+                    sanitize_csv_value(po.get("vendor", "") or inv.get("vendor", "")),
+                    f"{po.get('total_amount', 0):.2f}" if po else "",
+                    f"{inv.get('total_amount', 0):.2f}" if inv else "",
+                    f"{rec.get('total_amount', 0):.2f}" if rec else "",
+                    f"{total_variance:.2f}" if total_variance else "",
+                    f"{max_pct:.1%}" if max_pct else "",
+                    f"{m.get('match_confidence', 0):.2f}",
+                ]
+            )
 
         # Custom summary for TWM
         s = twm_input.summary
@@ -440,17 +487,14 @@ def export_csv_three_way_match(
         writer.writerow(["Risk Assessment", sanitize_csv_value(s.get("risk_assessment", ""))])
 
         csv_content = output.getvalue()
-        csv_bytes = csv_content.encode('utf-8-sig')
+        csv_bytes = csv_content.encode("utf-8-sig")
 
         download_filename = safe_download_filename(twm_input.filename, "TWM_Results", "csv")
 
         return streaming_csv_response(csv_bytes, download_filename)
     except (ValueError, KeyError, TypeError, UnicodeEncodeError) as e:
         logger.exception("TWM CSV export failed")
-        raise HTTPException(
-            status_code=500,
-            detail=sanitize_error(e, "export", "twm_csv_export_error")
-        )
+        raise HTTPException(status_code=500, detail=sanitize_error(e, "export", "twm_csv_export_error"))
 
 
 @router.post("/export/csv/sampling-selection")
@@ -465,21 +509,30 @@ def export_csv_sampling_selection(
         output = StringIO()
         writer = csv.writer(output)
 
-        writer.writerow([
-            "Row #", "Item ID", "Description", "Recorded Amount",
-            "Audited Amount", "Stratum", "Selection Method",
-        ])
+        writer.writerow(
+            [
+                "Row #",
+                "Item ID",
+                "Description",
+                "Recorded Amount",
+                "Audited Amount",
+                "Stratum",
+                "Selection Method",
+            ]
+        )
 
         for item in sampling_input.selected_items:
-            writer.writerow([
-                item.get("row_index", ""),
-                sanitize_csv_value(item.get("item_id", "")),
-                sanitize_csv_value((item.get("description", "") or "")[:80]),
-                f"{item.get('recorded_amount', 0):.2f}" if item.get('recorded_amount') is not None else "",
-                "",  # Blank audited amount for auditor to fill in
-                item.get("stratum", ""),
-                item.get("selection_method", ""),
-            ])
+            writer.writerow(
+                [
+                    item.get("row_index", ""),
+                    sanitize_csv_value(item.get("item_id", "")),
+                    sanitize_csv_value((item.get("description", "") or "")[:80]),
+                    f"{item.get('recorded_amount', 0):.2f}" if item.get("recorded_amount") is not None else "",
+                    "",  # Blank audited amount for auditor to fill in
+                    item.get("stratum", ""),
+                    item.get("selection_method", ""),
+                ]
+            )
 
         # Summary
         writer.writerow([])
@@ -490,14 +543,11 @@ def export_csv_sampling_selection(
         writer.writerow(["Items Selected", len(sampling_input.selected_items)])
 
         csv_content = output.getvalue()
-        csv_bytes = csv_content.encode('utf-8-sig')
+        csv_bytes = csv_content.encode("utf-8-sig")
 
         download_filename = safe_download_filename(sampling_input.filename, "SamplingSelection", "csv")
 
         return streaming_csv_response(csv_bytes, download_filename)
     except (ValueError, KeyError, TypeError, UnicodeEncodeError) as e:
         logger.exception("Sampling selection CSV export failed")
-        raise HTTPException(
-            status_code=500,
-            detail=sanitize_error(e, "export", "sampling_csv_export_error")
-        )
+        raise HTTPException(status_code=500, detail=sanitize_error(e, "export", "sampling_csv_export_error"))

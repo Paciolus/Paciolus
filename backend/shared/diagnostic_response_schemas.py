@@ -547,11 +547,12 @@ class AbnormalBalanceSuggestionResponse(BaseModel):
 class AbnormalBalanceResponse(BaseModel):
     """Individual anomaly detected in trial balance.
 
-    Uses extra='allow' because anomaly entries carry variable flags
-    depending on anomaly type (suspense, concentration, rounding).
+    Uses extra='ignore' — unknown fields silently dropped (Sprint 561 hardening).
+    Anomaly entries carry variable flags depending on anomaly type
+    (suspense, concentration, rounding).
     """
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="ignore")
 
     # Core fields (always present)
     account: str
@@ -684,11 +685,10 @@ class SheetResultResponse(BaseModel):
 class TrialBalanceResponse(BaseModel):
     """Complete trial balance audit response.
 
-    Uses extra='allow' as a safety net during migration — any fields
-    not yet modeled still pass through to the frontend.
+    Uses extra='ignore' — unknown fields silently dropped (Sprint 561 hardening).
     """
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="ignore")
 
     # Core balance data
     status: str

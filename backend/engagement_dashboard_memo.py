@@ -117,8 +117,8 @@ def generate_engagement_dashboard_memo(
 
     summary_lines = [
         create_leader_dots("Reports Analyzed", str(report_count)),
-        create_leader_dots("Overall Risk Score", f"{overall_score:.1f} / 100"),
-        create_leader_dots("Overall Risk Tier", tier_label),
+        create_leader_dots("Overall Diagnostic Score", f"{overall_score:.1f} / 100"),
+        create_leader_dots("Overall Diagnostic Tier", tier_label),
         create_leader_dots("Total High-Severity Findings", str(total_high)),
     ]
     if client_name:
@@ -140,7 +140,7 @@ def generate_engagement_dashboard_memo(
 
     summaries = dashboard_result.get("report_summaries", [])
     if summaries:
-        rpt_data = [["Report", "Risk Score", "Tier", "Flagged", "High", "Tests"]]
+        rpt_data = [["Report", "Diagnostic Score", "Tier", "Flagged", "High", "Tests"]]
         for s in summaries:
             t_base, _ = RISK_TIER_DISPLAY.get(str(s.get("risk_tier", "low")).lower(), ("—", None))
             t_label = f"{t_base} ({s.get('risk_score', 0):.0f})" if t_base != "—" else "—"

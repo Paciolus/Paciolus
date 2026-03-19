@@ -19,7 +19,7 @@ export function ARScoreCard({ score }: ARScoreCardProps) {
       flags_by_severity={score.flags_by_severity}
       top_findings={score.top_findings}
       entity_label="items"
-      title="AR Aging Risk Score"
+      title="AR Aging Diagnostic Score"
       subtitle_override={
         <p className="font-sans text-content-secondary text-sm mb-4">
           {score.tests_run} tests run{score.tests_skipped > 0 && `, ${score.tests_skipped} skipped`}

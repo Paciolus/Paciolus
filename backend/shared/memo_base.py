@@ -71,11 +71,11 @@ RISK_TIER_DISPLAY = {
     "low": ("LOW", ClassicalColors.SAGE),
     "moderate": ("MODERATE", ClassicalColors.GOLD_INSTITUTIONAL),
     "elevated": ("ELEVATED", ClassicalColors.GOLD_INSTITUTIONAL),
-    "high": ("HIGH RISK", ClassicalColors.CLAY),
+    "high": ("HIGH", ClassicalColors.CLAY),
 }
 
 RISK_SCALE_LEGEND = (
-    "Risk Score Scale: 0\u201310 = Low  |  11\u201325 = Moderate  |  26\u201350 = Elevated  |  51\u2013100 = High Risk"
+    "Diagnostic Score Scale: 0\u201310 = Low  |  11\u201325 = Moderate  |  26\u201350 = Elevated  |  51\u2013100 = High"
 )
 
 
@@ -329,13 +329,13 @@ def build_results_summary_section(
 
     story.append(
         Paragraph(
-            create_leader_dots("Composite Risk Score", f"{composite.get('score', 0):.1f} / 100"),
+            create_leader_dots("Composite Diagnostic Score", f"{composite.get('score', 0):.1f} / 100"),
             styles["MemoLeader"],
         )
     )
     story.append(
         Paragraph(
-            create_leader_dots("Risk Tier", tier_label),
+            create_leader_dots("Diagnostic Tier", tier_label),
             styles["MemoLeader"],
         )
     )
@@ -572,7 +572,7 @@ def build_disclaimer(
     domain_clause = f"{domain} testing" if not domain.endswith("testing") else domain
     story.append(
         Paragraph(
-            f"This memo documents automated {domain_clause} procedures per {isa_reference}. "
+            f"This memo documents automated {domain_clause} procedures with reference to {isa_reference}. "
             "Results represent data anomalies identified through analytics and are not "
             "conclusions regarding internal control effectiveness, fraud, or material "
             "misstatement risk. The auditor must evaluate each flagged item in the context "

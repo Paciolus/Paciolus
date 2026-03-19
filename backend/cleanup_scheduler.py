@@ -94,7 +94,7 @@ _WORKER_ID = f"worker-{os.getpid()}"
 
 
 @contextmanager
-def with_scheduler_lock(job_name: str, db, ttl_seconds: int = 300):
+def with_scheduler_lock(job_name: str, db, ttl_seconds: int = 600):
     """Acquire a DB-backed lock for a scheduled job.
 
     Uses INSERT ... ON CONFLICT to atomically acquire the lock.
@@ -417,54 +417,63 @@ def init_scheduler() -> None:
         "interval",
         minutes=CLEANUP_REFRESH_TOKEN_INTERVAL_MINUTES,
         id="cleanup_refresh_tokens",
+        jitter=30,
     )
     _scheduler.add_job(
         _job_verification_tokens,
         "interval",
         minutes=CLEANUP_VERIFICATION_TOKEN_INTERVAL_MINUTES,
         id="cleanup_verification_tokens",
+        jitter=30,
     )
     _scheduler.add_job(
         _job_tool_sessions,
         "interval",
         minutes=CLEANUP_TOOL_SESSION_INTERVAL_MINUTES,
         id="cleanup_tool_sessions",
+        jitter=30,
     )
     _scheduler.add_job(
         _job_retention_cleanup,
         "interval",
         hours=CLEANUP_RETENTION_INTERVAL_HOURS,
         id="cleanup_retention",
+        jitter=60,
     )
     _scheduler.add_job(
         _job_reset_upload_quotas,
         "interval",
         hours=1,
         id="reset_upload_quotas",
+        jitter=30,
     )
     _scheduler.add_job(
         _job_expired_export_shares,
         "interval",
         hours=1,
         id="expired_export_shares",
+        jitter=30,
     )
     _scheduler.add_job(
         _job_team_activity_cleanup,
         "interval",
         hours=24,
         id="team_activity_cleanup",
+        jitter=120,
     )
     _scheduler.add_job(
         _job_bulk_upload_cleanup,
         "interval",
         minutes=30,
         id="bulk_upload_cleanup",
+        jitter=30,
     )
     _scheduler.add_job(
         _job_expired_upload_dedup,
         "interval",
         hours=1,
         id="expired_upload_dedup",
+        jitter=30,
     )
     _scheduler.add_job(
         _watchdog,

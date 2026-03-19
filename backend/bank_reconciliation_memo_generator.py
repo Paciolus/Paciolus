@@ -850,13 +850,13 @@ def generate_bank_rec_memo(
 
         story.append(
             Paragraph(
-                create_leader_dots("Composite Risk Score", f"{composite.get('score', 0):.1f} / 100"),
+                create_leader_dots("Composite Diagnostic Score", f"{composite.get('score', 0):.1f} / 100"),
                 styles["MemoLeader"],
             )
         )
         story.append(
             Paragraph(
-                create_leader_dots("Risk Tier", tier_label),
+                create_leader_dots("Diagnostic Tier", tier_label),
                 styles["MemoLeader"],
             )
         )
@@ -947,7 +947,7 @@ def generate_bank_rec_memo(
     assessment = (
         f"Based on the automated reconciliation procedures applied, "
         f"the bank reconciliation returned {tier_label} flag density "
-        f"(Composite Risk Score: {score_val:.1f}/100) across the automated tests. "
+        f"(Composite Diagnostic Score: {score_val:.1f}/100) across the automated tests. "
     )
 
     if risk_tier == "low":

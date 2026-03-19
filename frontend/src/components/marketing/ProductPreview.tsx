@@ -111,7 +111,7 @@ function TestingPreview() {
           </div>
         </div>
         <div>
-          <p className="text-oatmeal-200 text-sm font-serif font-semibold">Composite Risk Score</p>
+          <p className="text-oatmeal-200 text-sm font-serif font-semibold">Composite Diagnostic Score</p>
           <p className="text-sage-400 text-xs font-sans">Low Risk — 19 tests passed</p>
         </div>
       </div>
