@@ -307,19 +307,39 @@ export function BatchUploadProvider({ children }: BatchUploadProviderProps): Rea
     dispatch({ type: 'START_PROCESSING', payload: { abortController } });
 
     try {
-      // Process files sequentially to avoid overwhelming the server
-      for (const file of readyFiles) {
-        if (abortController.signal.aborted) {
-          // Mark remaining files as cancelled
-          updateFileStatus(file.id, 'cancelled', {
-            code: FILE_ERROR_CODES.CANCELLED,
-            message: 'Cancelled by user',
-          });
-          continue;
-        }
+      // Bounded parallelism: up to 3 concurrent uploads via shared queue.
+      // The backend bulk endpoint (/upload/bulk) does not return audit results
+      // (abnormal_balances, total_rows, etc.) needed by FileProcessingResult,
+      // so we use concurrent single-file requests as a fallback.
+      const CONCURRENT_LIMIT = 3;
+      const queue = [...readyFiles];
 
-        await processFile(file.id);
+      const processNext = async (): Promise<void> => {
+        while (queue.length > 0) {
+          if (abortController.signal.aborted) {
+            // Drain remaining queue and mark as cancelled
+            let next: FileQueueItem | undefined;
+            while ((next = queue.shift())) {
+              updateFileStatus(next.id, 'cancelled', {
+                code: FILE_ERROR_CODES.CANCELLED,
+                message: 'Cancelled by user',
+              });
+            }
+            return;
+          }
+          const file = queue.shift();
+          if (file) {
+            await processFile(file.id);
+          }
+        }
+      };
+
+      const workerCount = Math.min(CONCURRENT_LIMIT, readyFiles.length);
+      const workers: Promise<void>[] = [];
+      for (let i = 0; i < workerCount; i++) {
+        workers.push(processNext());
       }
+      await Promise.all(workers);
     } finally {
       dispatch({ type: 'STOP_PROCESSING' });
     }
