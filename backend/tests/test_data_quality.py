@@ -7,6 +7,8 @@ JE, AP, Revenue, FA, Inventory, and Payroll engines.
 
 from dataclasses import dataclass
 
+import pytest
+
 from shared.data_quality import (
     FieldQualityConfig,
     assess_data_quality,
@@ -115,8 +117,8 @@ class TestAssessDataQuality:
         result = assess_data_quality(entries, configs)
 
         # Required: 0.30+0.30+0.25 = 0.85. Optional pool: 0.15 / 2 = 0.075 each
-        # Score = (0.30+0.30+0.25+0.075+0.075) * 100 = 100.0
-        assert result.completeness_score == 100.0
+        # Score = (0.30+0.30+0.25+0.075+0.075) * 100 ≈ 100.0
+        assert result.completeness_score == pytest.approx(100.0)
         assert result.total_rows == 10
         assert len(result.detected_issues) == 0
 
@@ -176,7 +178,7 @@ class TestAssessDataQuality:
         configs = REQUIRED_CONFIGS + OPTIONAL_CONFIGS
         result = assess_data_quality(entries, configs)
 
-        assert result.completeness_score == 100.0
+        assert result.completeness_score == pytest.approx(100.0)
 
         # Now make one optional empty
         entries2 = _make_entries(

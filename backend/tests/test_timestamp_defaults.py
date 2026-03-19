@@ -62,6 +62,15 @@ class TestTimestampServerDefaults:
 # ---------------------------------------------------------------------------
 
 
+def _tier_val() -> str:
+    """Return the correct tier literal for the test dialect.
+
+    PostgreSQL Enum stores member NAMES (uppercase 'FREE'),
+    SQLite stores member VALUES (lowercase 'free').
+    """
+    return "free" if _is_test_sqlite else "FREE"
+
+
 class TestDBGeneratedTimestamps:
     """Insert rows via raw SQL (bypassing Python defaults) and verify timestamps are populated."""
 
@@ -70,8 +79,8 @@ class TestDBGeneratedTimestamps:
         db_session.execute(
             text(
                 "INSERT INTO users (email, hashed_password, is_active, is_verified, tier, failed_login_attempts, settings) "
-                "VALUES ('dbtest@example.com', 'hash123', TRUE, FALSE, 'free', 0, '{}')"
-            )
+                "VALUES ('dbtest@example.com', 'hash123', TRUE, FALSE, :tier, 0, '{}')"
+            ).bindparams(tier=_tier_val())
         )
         db_session.flush()
         row = db_session.execute(
@@ -86,8 +95,8 @@ class TestDBGeneratedTimestamps:
         db_session.execute(
             text(
                 "INSERT INTO users (email, hashed_password, is_active, is_verified, tier, failed_login_attempts, settings) "
-                "VALUES ('log@example.com', 'hash', TRUE, FALSE, 'free', 0, '{}')"
-            )
+                "VALUES ('log@example.com', 'hash', TRUE, FALSE, :tier, 0, '{}')"
+            ).bindparams(tier=_tier_val())
         )
         db_session.flush()
         user_id = db_session.execute(text("SELECT id FROM users WHERE email = 'log@example.com'")).scalar()
@@ -107,8 +116,8 @@ class TestDBGeneratedTimestamps:
         db_session.execute(
             text(
                 "INSERT INTO users (email, hashed_password, is_active, is_verified, tier, failed_login_attempts, settings) "
-                "VALUES ('client@example.com', 'hash', TRUE, FALSE, 'free', 0, '{}')"
-            )
+                "VALUES ('client@example.com', 'hash', TRUE, FALSE, :tier, 0, '{}')"
+            ).bindparams(tier=_tier_val())
         )
         db_session.flush()
         user_id = db_session.execute(text("SELECT id FROM users WHERE email = 'client@example.com'")).scalar()
@@ -129,8 +138,8 @@ class TestDBGeneratedTimestamps:
         db_session.execute(
             text(
                 "INSERT INTO users (email, hashed_password, is_active, is_verified, tier, failed_login_attempts, settings) "
-                "VALUES ('eng@example.com', 'hash', TRUE, FALSE, 'free', 0, '{}')"
-            )
+                "VALUES ('eng@example.com', 'hash', TRUE, FALSE, :tier, 0, '{}')"
+            ).bindparams(tier=_tier_val())
         )
         db_session.flush()
         user_id = db_session.execute(text("SELECT id FROM users WHERE email = 'eng@example.com'")).scalar()
@@ -160,8 +169,8 @@ class TestDBGeneratedTimestamps:
         db_session.execute(
             text(
                 "INSERT INTO users (email, hashed_password, is_active, is_verified, tier, failed_login_attempts, settings) "
-                "VALUES ('tr@example.com', 'hash', TRUE, FALSE, 'free', 0, '{}')"
-            )
+                "VALUES ('tr@example.com', 'hash', TRUE, FALSE, :tier, 0, '{}')"
+            ).bindparams(tier=_tier_val())
         )
         db_session.flush()
         user_id = db_session.execute(text("SELECT id FROM users WHERE email = 'tr@example.com'")).scalar()
@@ -231,8 +240,8 @@ class TestSQLiteCurrentTimestampIsUTC:
         db_session.execute(
             text(
                 "INSERT INTO users (email, hashed_password, is_active, is_verified, tier, failed_login_attempts, settings) "
-                "VALUES ('utctest@example.com', 'hash', TRUE, FALSE, 'free', 0, '{}')"
-            )
+                "VALUES ('utctest@example.com', 'hash', TRUE, FALSE, :tier, 0, '{}')"
+            ).bindparams(tier=_tier_val())
         )
         db_session.flush()
         utc_after = datetime.now(UTC).replace(tzinfo=None)
