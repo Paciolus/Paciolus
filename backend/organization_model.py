@@ -60,7 +60,7 @@ class Organization(Base):
     # use_alter=True breaks the users↔organizations↔subscriptions FK cycle for create_all()
     subscription_id = Column(
         Integer,
-        ForeignKey("subscriptions.id", use_alter=True),
+        ForeignKey("subscriptions.id", use_alter=True, name="fk_organizations_subscription_id"),
         unique=True,
         nullable=True,
         index=True,
