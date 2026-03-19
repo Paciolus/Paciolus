@@ -117,6 +117,12 @@ class TestWebhookHandler:
             "customer.subscription.trial_will_end",
             "invoice.payment_failed",
             "invoice.paid",
+            # AUDIT-08: New handlers
+            "customer.subscription.created",
+            "invoice.payment_succeeded",
+            "charge.dispute.created",
+            "charge.dispute.closed",
+            "invoice.created",
         }
         assert set(WEBHOOK_HANDLERS.keys()) == expected_events
 
