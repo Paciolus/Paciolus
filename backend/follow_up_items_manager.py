@@ -6,7 +6,7 @@ Stores only narrative descriptions, never financial data.
 from datetime import UTC, datetime
 from typing import Optional
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from engagement_model import Engagement, ToolRun
 from follow_up_items_model import (
@@ -558,6 +558,7 @@ class FollowUpItemsManager:
         return (
             self.db.query(FollowUpItemComment)
             .join(FollowUpItem, FollowUpItemComment.follow_up_item_id == FollowUpItem.id)
+            .options(joinedload(FollowUpItemComment.author))
             .filter(
                 FollowUpItem.engagement_id == engagement_id,
                 FollowUpItemComment.archived_at.is_(None),

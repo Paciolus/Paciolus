@@ -16,6 +16,7 @@ Audit Standards References:
 """
 
 import csv
+import math
 import re
 from dataclasses import dataclass, field
 from datetime import date
@@ -405,41 +406,64 @@ def match_transactions(
 
     matches: list[ReconciliationMatch] = []
     matched_ledger_indices: set[int] = set()
+    matched_bank_indices: set[int] = set()
 
-    # Sort by absolute amount descending for greedy matching
-    sorted_bank = sorted(
-        enumerate(bank_txns),
-        key=lambda x: abs(x[1].amount),
-        reverse=True,
-    )
+    # Pre-parse all dates once to avoid repeated parsing in the matching loop
+    bank_dates: list[Optional[date]] = [parse_date(txn.date) for txn in bank_txns]
+    ledger_dates: list[Optional[date]] = [parse_date(txn.date) for txn in ledger_txns]
+
+    # Build amount-bucketed index of ledger transactions (cent-level keys).
+    # Each bucket contains ledger entries in descending abs(amount) order
+    # to preserve the greedy largest-first matching behavior.
+    tolerance_cents = int(math.ceil(config.amount_tolerance * 100))
+    ledger_buckets: dict[int, list[tuple[int, LedgerTransaction]]] = {}
     sorted_ledger = sorted(
         enumerate(ledger_txns),
         key=lambda x: abs(x[1].amount),
         reverse=True,
     )
+    for ledger_idx, ledger_txn in sorted_ledger:
+        bucket_key = round(ledger_txn.amount * 100)
+        ledger_buckets.setdefault(bucket_key, []).append((ledger_idx, ledger_txn))
 
-    matched_bank_indices: set[int] = set()
+    # Sort bank transactions by absolute amount descending (greedy — largest first)
+    sorted_bank = sorted(
+        enumerate(bank_txns),
+        key=lambda x: abs(x[1].amount),
+        reverse=True,
+    )
 
     for bank_idx, bank_txn in sorted_bank:
-        for ledger_idx, ledger_txn in sorted_ledger:
+        bank_date = bank_dates[bank_idx]
+        target_cents = round(bank_txn.amount * 100)
+
+        # Collect candidates from buckets within amount tolerance
+        candidates: list[tuple[int, LedgerTransaction]] = []
+        for probe_key in range(target_cents - tolerance_cents, target_cents + tolerance_cents + 1):
+            bucket = ledger_buckets.get(probe_key)
+            if bucket:
+                candidates.extend(bucket)
+
+        # Sort candidates by descending abs(amount) to preserve greedy behavior
+        if len(candidates) > 1:
+            candidates.sort(key=lambda x: abs(x[1].amount), reverse=True)
+
+        for ledger_idx, ledger_txn in candidates:
             if ledger_idx in matched_ledger_indices:
                 continue
 
-            # Amount match within tolerance
+            # Amount match within tolerance (exact check — bucket is approximate)
             if abs(bank_txn.amount - ledger_txn.amount) > config.amount_tolerance:
                 continue
 
             # Date match within tolerance
+            ledger_date = ledger_dates[ledger_idx]
             if config.date_tolerance_days == 0:
                 # Exact date match required
-                bank_date = parse_date(bank_txn.date)
-                ledger_date = parse_date(ledger_txn.date)
                 if bank_date and ledger_date and bank_date != ledger_date:
                     continue
                 # If either date is None, allow match (date not required)
             else:
-                bank_date = parse_date(bank_txn.date)
-                ledger_date = parse_date(ledger_txn.date)
                 if bank_date and ledger_date:
                     days_diff = abs((bank_date - ledger_date).days)
                     if days_diff > config.date_tolerance_days:
@@ -847,24 +871,34 @@ def _test_interbank_transfers(
 
     for txn_date, day_txns in txns_by_date.items():
         debits = [(s, t) for s, t in day_txns if t.amount < 0 and abs(t.amount) >= threshold]
-        credits = [(s, t) for s, t in day_txns if t.amount > 0 and t.amount >= threshold]
+
+        # Build dollar-bucketed index of credits for this date
+        credit_buckets: dict[int, list[tuple[str, BankTransaction | LedgerTransaction]]] = {}
+        for s, t in day_txns:
+            if t.amount > 0 and t.amount >= threshold:
+                credit_buckets.setdefault(int(t.amount), []).append((s, t))
 
         for d_src, d_txn in debits:
-            for c_src, c_txn in credits:
-                if abs(abs(d_txn.amount) - c_txn.amount) <= 1.00:
-                    flagged.append(
-                        RecFlaggedItem(
-                            test_name="Interbank Transfers",
-                            description=(f"Same-day debit/credit pair on {txn_date}: ${abs(d_txn.amount):,.2f}"),
-                            amount=abs(d_txn.amount),
-                            date=txn_date,
-                            severity="high",
-                            details={
-                                "debit_description": d_txn.description[:40],
-                                "credit_description": c_txn.description[:40],
-                            },
+            abs_amount = abs(d_txn.amount)
+            # Probe buckets covering the $1.00 tolerance window
+            lo = int(abs_amount - 1.0)
+            hi = int(abs_amount + 1.0)
+            for bucket_key in range(lo, hi + 1):
+                for c_src, c_txn in credit_buckets.get(bucket_key, []):
+                    if abs(abs_amount - c_txn.amount) <= 1.00:
+                        flagged.append(
+                            RecFlaggedItem(
+                                test_name="Interbank Transfers",
+                                description=(f"Same-day debit/credit pair on {txn_date}: ${abs_amount:,.2f}"),
+                                amount=abs_amount,
+                                date=txn_date,
+                                severity="high",
+                                details={
+                                    "debit_description": d_txn.description[:40],
+                                    "credit_description": c_txn.description[:40],
+                                },
+                            )
                         )
-                    )
 
     severity = "high" if len(flagged) > 0 else "low"
     return RecTestResult(

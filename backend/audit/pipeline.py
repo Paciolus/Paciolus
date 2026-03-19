@@ -147,16 +147,22 @@ def audit_trial_balance_streaming(
         cv_result = run_classification_validation(auditor.account_balances, account_classifications)
         result["classification_quality"] = cv_result.to_dict()
 
+        # Build canonical display-name-keyed structures (single pass over accounts).
+        # Reused by population profile, all_accounts, result exports, and lead sheets.
+        display_balances: dict[str, dict[str, float]] = {}
+        display_classifications: dict[str, str] = {}
+        display_subtypes: dict[str, str] = {}
+        subtype_source = auditor.provided_account_subtypes or auditor.provided_account_types
+        for acct_key in auditor.account_balances:
+            display = auditor._display_name(acct_key)
+            display_balances[display] = auditor.account_balances[acct_key]
+            display_classifications[display] = account_classifications.get(acct_key, "unknown")
+            display_subtypes[display] = subtype_source.get(acct_key, "")
+
         # Population Profile
         from population_profile_engine import compute_population_profile
 
-        pop_display_balances: dict[str, dict[str, float]] = {}
-        pop_display_classifications: dict[str, str] = {}
-        for _pk in auditor.account_balances:
-            _pd = auditor._display_name(_pk)
-            pop_display_balances[_pd] = auditor.account_balances[_pk]
-            pop_display_classifications[_pd] = account_classifications.get(_pk, "unknown")
-        pop_profile = compute_population_profile(pop_display_balances, pop_display_classifications)
+        pop_profile = compute_population_profile(display_balances, display_classifications)
         result["population_profile"] = pop_profile.to_dict()
 
         # Expense Category Analytical Procedures
@@ -243,30 +249,17 @@ def audit_trial_balance_streaming(
                 result["risk_summary"]["low_severity"] += 1
             result["risk_summary"]["total_anomalies"] += 1
 
-        # Full parsed account list
-        all_accounts_list = []
-        for acct_key, balances in auditor.account_balances.items():
-            display = auditor._display_name(acct_key)
-            all_accounts_list.append(
-                {
-                    "account": display,
-                    "debit": balances["debit"],
-                    "credit": balances["credit"],
-                    "type": account_classifications.get(acct_key, "unknown"),
-                }
-            )
+        # Full parsed account list (derived from canonical display structures)
+        all_accounts_list = [
+            {
+                "account": acct,
+                "debit": bals["debit"],
+                "credit": bals["credit"],
+                "type": display_classifications.get(acct, "unknown"),
+            }
+            for acct, bals in display_balances.items()
+        ]
         result["all_accounts"] = all_accounts_list
-
-        # Display-name-keyed exports
-        display_balances: dict[str, dict[str, float]] = {}
-        display_classifications: dict[str, str] = {}
-        display_subtypes: dict[str, str] = {}
-        subtype_source = auditor.provided_account_subtypes or auditor.provided_account_types
-        for acct_key in auditor.account_balances:
-            display = auditor._display_name(acct_key)
-            display_balances[display] = auditor.account_balances[acct_key]
-            display_classifications[display] = account_classifications.get(acct_key, "unknown")
-            display_subtypes[display] = subtype_source.get(acct_key, "")
         result["account_balances"] = display_balances
         result["classified_accounts"] = display_classifications
         result["account_subtypes"] = display_subtypes
@@ -527,20 +520,17 @@ def audit_trial_balance_multi_sheet(
                 "total_issues": 0,
             }
 
-        # Full parsed account list
-        ms_classifications = {}
+        # Full parsed account list (classify and build in a single pass)
         classifier_instance = create_classifier(account_type_overrides)
-        for acct_name, bals in consolidated_account_balances.items():
-            net = bals["debit"] - bals["credit"]
-            ms_classifications[acct_name] = classifier_instance.classify(acct_name, net).category.value
         all_accounts_list = []
         for acct_name, bals in consolidated_account_balances.items():
+            net = bals["debit"] - bals["credit"]
             all_accounts_list.append(
                 {
                     "account": acct_name,
                     "debit": bals["debit"],
                     "credit": bals["credit"],
-                    "type": ms_classifications.get(acct_name, "unknown"),
+                    "type": classifier_instance.classify(acct_name, net).category.value,
                 }
             )
         result["all_accounts"] = all_accounts_list

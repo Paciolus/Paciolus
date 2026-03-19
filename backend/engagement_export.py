@@ -37,9 +37,7 @@ class EngagementExporter:
     def __init__(self, db: Session):
         self.db = db
 
-    def _verify_engagement_access(
-        self, user_id: int, engagement_id: int
-    ) -> Optional[Engagement]:
+    def _verify_engagement_access(self, user_id: int, engagement_id: int) -> Optional[Engagement]:
         return (
             self.db.query(Engagement)
             .join(Client, Engagement.client_id == Client.id)
@@ -50,9 +48,7 @@ class EngagementExporter:
             .first()
         )
 
-    def _generate_comments_markdown(
-        self, user_id: int, engagement_id: int
-    ) -> Optional[bytes]:
+    def _generate_comments_markdown(self, user_id: int, engagement_id: int) -> Optional[bytes]:
         """Generate a markdown file of all follow-up item comment threads."""
         manager = FollowUpItemsManager(self.db)
 
@@ -72,12 +68,12 @@ class EngagementExporter:
                 items_map[item_id] = []
             items_map[item_id].append(comment)
 
-        # Fetch item descriptions for context
-        item_descriptions: dict[int, str] = {}
-        for item_id in items_map:
-            item = self.db.query(FollowUpItem).filter(FollowUpItem.id == item_id, FollowUpItem.archived_at.is_(None)).first()
-            if item:
-                item_descriptions[item_id] = item.description
+        # Batch-fetch item descriptions (single query instead of per-ID loop)
+        item_ids = list(items_map.keys())
+        items = (
+            self.db.query(FollowUpItem).filter(FollowUpItem.id.in_(item_ids), FollowUpItem.archived_at.is_(None)).all()
+        )
+        item_descriptions: dict[int, str] = {item.id: item.description for item in items}
 
         lines = [
             "# Follow-Up Item Comments",
@@ -137,7 +133,7 @@ class EngagementExporter:
 
         index_gen = WorkpaperIndexGenerator(self.db)
         index_data = index_gen.generate(user_id, engagement_id)
-        index_json = json.dumps(index_data, indent=2, default=str).encode('utf-8')
+        index_json = json.dumps(index_data, indent=2, default=str).encode("utf-8")
 
         # Generate comment threads markdown
         comments_md = self._generate_comments_markdown(user_id, engagement_id)
@@ -165,17 +161,19 @@ class EngagementExporter:
 
         for filename, content in files.items():
             sha256 = hashlib.sha256(content).hexdigest()
-            manifest["files"].append({
-                "filename": filename,
-                "size_bytes": len(content),
-                "sha256": sha256,
-            })
+            manifest["files"].append(
+                {
+                    "filename": filename,
+                    "size_bytes": len(content),
+                    "sha256": sha256,
+                }
+            )
 
-        manifest_json = json.dumps(manifest, indent=2).encode('utf-8')
+        manifest_json = json.dumps(manifest, indent=2).encode("utf-8")
 
         # Build ZIP
         zip_buffer = BytesIO()
-        with ZipFile(zip_buffer, 'w', ZIP_DEFLATED) as zf:
+        with ZipFile(zip_buffer, "w", ZIP_DEFLATED) as zf:
             for filename, content in files.items():
                 zf.writestr(filename, content)
             zf.writestr("manifest.json", manifest_json)
@@ -183,8 +181,8 @@ class EngagementExporter:
         zip_bytes = zip_buffer.getvalue()
 
         # Build download filename
-        safe_client = "".join(c if c.isalnum() or c in (' ', '-', '_') else '_' for c in client_name)
-        safe_client = safe_client.strip().replace(' ', '_')
+        safe_client = "".join(c if c.isalnum() or c in (" ", "-", "_") else "_" for c in client_name)
+        safe_client = safe_client.strip().replace(" ", "_")
         period_end_str = engagement.period_end.strftime("%Y%m%d") if engagement.period_end else "unknown"
         download_filename = f"{safe_client}_{period_end_str}_diagnostic_package.zip"
 

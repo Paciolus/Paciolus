@@ -238,28 +238,44 @@ def _find_seat_addon_item(items: list[dict]) -> dict | None:
 def add_seats(db: Session, user_id: int, seats_to_add: int) -> Subscription | None:
     """Add seats to an existing subscription via Stripe.
 
-    Uses SELECT ... FOR UPDATE to serialize concurrent callers at the DB level.
-    Generates a Stripe idempotency key from seat_version to prevent duplicate mutations.
+    Uses optimistic concurrency to minimize DB lock duration:
+    1. Read local state WITHOUT lock (snapshot)
+    2. Perform Stripe API calls (no lock held — network latency doesn't block DB)
+    3. Re-acquire row with FOR UPDATE (short lock window)
+    4. Verify seat_version unchanged (detects concurrent mutations)
+    5. Update local state and commit (releases lock)
+
+    The Stripe idempotency key (derived from seat_version) prevents duplicate
+    billing if two callers snapshot the same version — Stripe deduplicates,
+    and the version check ensures only one caller commits locally.
+
     Returns the updated Subscription or None if not found.
     Phase LIX Sprint E. AUDIT-06 FIX 1: concurrency-safe.
     """
     from billing.price_config import get_all_seat_price_ids, get_max_self_serve_seats
 
-    # Acquire row lock to serialize concurrent seat mutations
-    sub = db.query(Subscription).filter(Subscription.user_id == user_id).with_for_update().first()
+    # ── Step 1: Read local state WITHOUT lock ────────────────────────
+    sub = db.query(Subscription).filter(Subscription.user_id == user_id).first()
     if sub is None or not sub.stripe_subscription_id:
         return None
 
+    # Snapshot values for validation and post-Stripe staleness check
+    snap_additional = sub.additional_seats or 0
+    snap_version = sub.seat_version or 0
+    snap_stripe_sub_id = sub.stripe_subscription_id
+    snap_sub_id = sub.id
+
     max_seats = get_max_self_serve_seats(sub.tier)
-    new_additional = (sub.additional_seats or 0) + seats_to_add
+    new_additional = snap_additional + seats_to_add
     new_total = (sub.seat_count or 1) + new_additional
     if new_total > max_seats:
         return None  # Exceeds self-serve limit
 
+    # ── Step 2: Stripe API calls (no DB lock held) ───────────────────
     stripe = get_stripe()
 
     # Get current subscription items from Stripe
-    stripe_sub = stripe.Subscription.retrieve(sub.stripe_subscription_id)
+    stripe_sub = stripe.Subscription.retrieve(snap_stripe_sub_id)
     items = stripe_sub.get("items", {}).get("data", [])
     if not items:
         return None
@@ -275,7 +291,7 @@ def add_seats(db: Session, user_id: int, seats_to_add: int) -> Subscription | No
         current_quantity = items[0].get("quantity", 1)
     else:
         raise ValueError(
-            f"Cannot identify seat add-on item in subscription {sub.stripe_subscription_id} "
+            f"Cannot identify seat add-on item in subscription {snap_stripe_sub_id} "
             f"with {len(items)} line items. No item matched known seat price IDs: "
             f"{get_all_seat_price_ids()}"
         )
@@ -283,8 +299,8 @@ def add_seats(db: Session, user_id: int, seats_to_add: int) -> Subscription | No
     new_quantity = current_quantity + seats_to_add
 
     # Increment version and generate idempotency key
-    new_version = (sub.seat_version or 0) + 1
-    idempotency_key = f"seat-mutation-{sub.id}-v{new_version}"
+    new_version = snap_version + 1
+    idempotency_key = f"seat-mutation-{snap_sub_id}-v{new_version}"
 
     # Update Stripe with idempotency key (proration handled by Stripe)
     try:
@@ -293,7 +309,21 @@ def add_seats(db: Session, user_id: int, seats_to_add: int) -> Subscription | No
         db.rollback()
         raise
 
-    # Sync locally — commit only after Stripe succeeds
+    # ── Step 3: Re-acquire with FOR UPDATE (short lock window) ───────
+    sub = db.query(Subscription).filter(Subscription.user_id == user_id).with_for_update().populate_existing().first()
+    if sub is None:
+        db.rollback()
+        raise RuntimeError(f"Subscription for user {user_id} disappeared during seat mutation")
+
+    # ── Step 4: Verify no concurrent modification ────────────────────
+    if (sub.seat_version or 0) != snap_version:
+        db.rollback()
+        raise RuntimeError(
+            f"Concurrent seat modification detected for user {user_id} "
+            f"(expected version {snap_version}, found {sub.seat_version})"
+        )
+
+    # ── Step 5: Sync locally and commit ──────────────────────────────
     sub.additional_seats = new_additional
     sub.seat_version = new_version
     db.commit()
@@ -312,28 +342,35 @@ def add_seats(db: Session, user_id: int, seats_to_add: int) -> Subscription | No
 def remove_seats(db: Session, user_id: int, seats_to_remove: int) -> Subscription | None:
     """Remove seats from an existing subscription via Stripe.
 
-    Uses SELECT ... FOR UPDATE to serialize concurrent callers at the DB level.
-    Generates a Stripe idempotency key from seat_version to prevent duplicate mutations.
+    Uses optimistic concurrency to minimize DB lock duration (same pattern
+    as add_seats — see its docstring for the full protocol description).
+
     Cannot go below the plan's base seats (additional_seats cannot go below 0).
     Returns the updated Subscription or None if not found or invalid.
     Phase LIX Sprint E. AUDIT-06 FIX 1: concurrency-safe.
     """
     from billing.price_config import get_all_seat_price_ids
 
-    # Acquire row lock to serialize concurrent seat mutations
-    sub = db.query(Subscription).filter(Subscription.user_id == user_id).with_for_update().first()
+    # ── Step 1: Read local state WITHOUT lock ────────────────────────
+    sub = db.query(Subscription).filter(Subscription.user_id == user_id).first()
     if sub is None or not sub.stripe_subscription_id:
         return None
 
-    current_additional = sub.additional_seats or 0
-    new_additional = current_additional - seats_to_remove
+    # Snapshot values for validation and post-Stripe staleness check
+    snap_additional = sub.additional_seats or 0
+    snap_version = sub.seat_version or 0
+    snap_stripe_sub_id = sub.stripe_subscription_id
+    snap_sub_id = sub.id
+
+    new_additional = snap_additional - seats_to_remove
     if new_additional < 0:
         return None  # Can't go below base seats
 
+    # ── Step 2: Stripe API calls (no DB lock held) ───────────────────
     stripe = get_stripe()
 
     # Get current subscription items from Stripe
-    stripe_sub = stripe.Subscription.retrieve(sub.stripe_subscription_id)
+    stripe_sub = stripe.Subscription.retrieve(snap_stripe_sub_id)
     items = stripe_sub.get("items", {}).get("data", [])
     if not items:
         return None
@@ -349,7 +386,7 @@ def remove_seats(db: Session, user_id: int, seats_to_remove: int) -> Subscriptio
         current_quantity = items[0].get("quantity", 1)
     else:
         raise ValueError(
-            f"Cannot identify seat add-on item in subscription {sub.stripe_subscription_id} "
+            f"Cannot identify seat add-on item in subscription {snap_stripe_sub_id} "
             f"with {len(items)} line items. No item matched known seat price IDs: "
             f"{get_all_seat_price_ids()}"
         )
@@ -357,8 +394,8 @@ def remove_seats(db: Session, user_id: int, seats_to_remove: int) -> Subscriptio
     new_quantity = current_quantity - seats_to_remove
 
     # Increment version and generate idempotency key
-    new_version = (sub.seat_version or 0) + 1
-    idempotency_key = f"seat-mutation-{sub.id}-v{new_version}"
+    new_version = snap_version + 1
+    idempotency_key = f"seat-mutation-{snap_sub_id}-v{new_version}"
 
     # If quantity reaches 0, delete the subscription item entirely
     # (Stripe does not allow quantity=0 on most price types)
@@ -371,7 +408,21 @@ def remove_seats(db: Session, user_id: int, seats_to_remove: int) -> Subscriptio
         db.rollback()
         raise
 
-    # Sync locally — commit only after Stripe succeeds
+    # ── Step 3: Re-acquire with FOR UPDATE (short lock window) ───────
+    sub = db.query(Subscription).filter(Subscription.user_id == user_id).with_for_update().populate_existing().first()
+    if sub is None:
+        db.rollback()
+        raise RuntimeError(f"Subscription for user {user_id} disappeared during seat mutation")
+
+    # ── Step 4: Verify no concurrent modification ────────────────────
+    if (sub.seat_version or 0) != snap_version:
+        db.rollback()
+        raise RuntimeError(
+            f"Concurrent seat modification detected for user {user_id} "
+            f"(expected version {snap_version}, found {sub.seat_version})"
+        )
+
+    # ── Step 5: Sync locally and commit ──────────────────────────────
     sub.additional_seats = new_additional
     sub.seat_version = new_version
     db.commit()
