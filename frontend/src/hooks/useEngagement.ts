@@ -256,7 +256,6 @@ export function useEngagement(options: UseEngagementOptions = {}): UseEngagement
     const { data, ok } = await apiGet<ConvergenceResponse>(
       `/engagements/${id}/convergence`,
       token,
-      { skipCache: true },
     );
 
     if (!ok || !data) {
@@ -274,7 +273,6 @@ export function useEngagement(options: UseEngagementOptions = {}): UseEngagement
     const { data, ok } = await apiGet<ToolRunTrend[]>(
       `/engagements/${id}/tool-run-trends`,
       token,
-      { skipCache: true },
     );
 
     if (!ok || !data) {

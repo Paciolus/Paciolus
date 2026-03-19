@@ -179,6 +179,18 @@ def _disable_cleanup_scheduler():
     cs.CLEANUP_SCHEDULER_ENABLED = saved
 
 
+@pytest.fixture(autouse=True)
+def _clear_analytics_caches():
+    """Clear engagement analytics caches between tests to prevent cross-test pollution."""
+    from engagement_manager import _convergence_cache, _trend_cache
+
+    _convergence_cache.clear()
+    _trend_cache.clear()
+    yield
+    _convergence_cache.clear()
+    _trend_cache.clear()
+
+
 # ---------------------------------------------------------------------------
 # CSRF token fixture (Sprint 200, refactored Sprint 245)
 # ---------------------------------------------------------------------------

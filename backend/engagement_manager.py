@@ -4,9 +4,12 @@ Stores only engagement metadata, never financial data.
 """
 
 import json
+import threading
+import time
 from collections import defaultdict
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Optional
+from typing import Any, Optional
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -24,6 +27,66 @@ from follow_up_items_model import FollowUpDisposition, FollowUpItem
 from models import Client
 from security_utils import log_secure_operation
 from shared.monetary import quantize_monetary
+
+# ---------------------------------------------------------------------------
+# In-memory TTL cache for convergence index and tool-run trend analytics.
+# Keyed by (engagement_id, max_tool_run_id) so entries auto-invalidate when
+# a new tool run is recorded.  LRU eviction at 256 entries, 5-minute TTL.
+#
+# NOTE: In-memory only — suitable for single-process deployments.
+# Could move to Redis or DB-backed cache later.
+# ---------------------------------------------------------------------------
+
+_ANALYTICS_CACHE_MAX = 256
+_ANALYTICS_CACHE_TTL = 300  # 5 minutes
+
+
+@dataclass
+class _AnalyticsCacheEntry:
+    data: Any
+    created_at: float = field(default_factory=time.monotonic)
+
+
+class _AnalyticsCache:
+    """Thread-safe TTL + LRU cache for engagement analytics."""
+
+    def __init__(self, max_entries: int = _ANALYTICS_CACHE_MAX, ttl: int = _ANALYTICS_CACHE_TTL):
+        self._store: dict[tuple, _AnalyticsCacheEntry] = {}
+        self._lock = threading.Lock()
+        self._max = max_entries
+        self._ttl = ttl
+
+    def get(self, key: tuple) -> Any | None:
+        with self._lock:
+            entry = self._store.get(key)
+            if entry is None:
+                return None
+            if time.monotonic() - entry.created_at > self._ttl:
+                del self._store[key]
+                return None
+            return entry.data
+
+    def put(self, key: tuple, data: Any) -> None:
+        with self._lock:
+            self._evict_expired()
+            while len(self._store) >= self._max:
+                oldest = min(self._store, key=lambda k: self._store[k].created_at)
+                del self._store[oldest]
+            self._store[key] = _AnalyticsCacheEntry(data=data)
+
+    def clear(self) -> None:
+        with self._lock:
+            self._store.clear()
+
+    def _evict_expired(self) -> None:
+        now = time.monotonic()
+        expired = [k for k, v in self._store.items() if now - v.created_at > self._ttl]
+        for k in expired:
+            del self._store[k]
+
+
+_convergence_cache = _AnalyticsCache()
+_trend_cache = _AnalyticsCache()
 
 
 class EngagementManager:
@@ -361,6 +424,10 @@ class EngagementManager:
             .all()
         )
 
+    def _latest_tool_run_id(self, engagement_id: int) -> int | None:
+        """Return the highest ToolRun.id for an engagement (staleness key)."""
+        return self.db.query(func.max(ToolRun.id)).filter(ToolRun.engagement_id == engagement_id).scalar()
+
     def get_tool_run_trends(self, engagement_id: int) -> list[dict]:
         """Per-tool score trend from completed runs with non-null composite_score.
 
@@ -375,6 +442,12 @@ class EngagementManager:
 
         Returns list sorted by tool_name.
         """
+        latest_run_id = self._latest_tool_run_id(engagement_id)
+        cache_key = ("trends", engagement_id, latest_run_id)
+        cached = _trend_cache.get(cache_key)
+        if cached is not None:
+            return cached
+
         runs = (
             self.db.query(ToolRun)
             .filter(
@@ -420,6 +493,7 @@ class EngagementManager:
 
             result.append(entry)
 
+        _trend_cache.put(cache_key, result)
         return result
 
     def get_convergence_index(self, engagement_id: int) -> list[dict]:
@@ -430,6 +504,12 @@ class EngagementManager:
 
         NO composite score, NO risk classification — raw convergence counts only.
         """
+        latest_run_id = self._latest_tool_run_id(engagement_id)
+        cache_key = ("convergence", engagement_id, latest_run_id)
+        cached = _convergence_cache.get(cache_key)
+        if cached is not None:
+            return cached
+
         # Get all active completed runs with flagged_accounts for this engagement
         runs = (
             self.db.query(ToolRun)
@@ -470,4 +550,6 @@ class EngagementManager:
         ]
 
         result.sort(key=lambda x: (-int(x["convergence_count"]), x["account"]))
+
+        _convergence_cache.put(cache_key, result)
         return result
