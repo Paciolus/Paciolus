@@ -802,15 +802,19 @@ def compare_three_periods(
         materiality_threshold,
     )
 
-    # Step 2: Build budget lookup by normalized account name
+    # Step 2: Build budget lookup and pre-compute balances (single pass)
     budget_by_norm: dict[str, dict] = {}
+    budget_balance_by_norm: dict[str, float] = {}
     for acct in budget_accounts:
         name = acct.get("account", "")
         norm = normalize_account_name(name)
         budget_by_norm[norm] = acct
+        budget_balance_by_norm[norm] = _get_net_balance(acct)
 
-    # Step 3: Enrich each movement with budget variance
+    # Step 3: Enrich all movements with budget variance and build lookups
     enriched_movements: list[dict] = []
+    enriched_by_name: dict[str, dict] = {}
+    norm_cache: dict[str, str] = {}
     budget_sig_counts: dict[str, int] = {st.value: 0 for st in SignificanceTier}
     over_budget = 0
     under_budget = 0
@@ -819,10 +823,11 @@ def compare_three_periods(
     for movement in two_way.all_movements:
         m_dict = movement.to_dict()
         norm = normalize_account_name(movement.account_name)
+        norm_cache[movement.account_name] = norm
         budget_acct = budget_by_norm.get(norm)
 
         if budget_acct is not None:
-            budget_balance = _get_net_balance(budget_acct)
+            budget_balance = budget_balance_by_norm[norm]
             variance_amount = movement.current_balance - budget_balance
 
             if budget_balance != 0:
@@ -851,52 +856,22 @@ def compare_three_periods(
             m_dict["budget_variance"] = None
 
         enriched_movements.append(m_dict)
+        enriched_by_name[movement.account_name] = m_dict
 
-    # Step 4: Enrich significant movements
-    enriched_significant: list[dict] = []
-    for movement in two_way.significant_movements:
-        m_dict = movement.to_dict()
-        norm = normalize_account_name(movement.account_name)
-        budget_acct = budget_by_norm.get(norm)
-
-        if budget_acct is not None:
-            budget_balance = _get_net_balance(budget_acct)
-            variance_amount = movement.current_balance - budget_balance
-            if budget_balance != 0:
-                variance_percent = (variance_amount / abs(budget_balance)) * 100
-            else:
-                variance_percent = None
-            variance_sig = classify_significance(variance_amount, variance_percent, materiality_threshold)
-            m_dict["budget_variance"] = BudgetVariance(
-                budget_balance=budget_balance,
-                variance_amount=variance_amount,
-                variance_percent=variance_percent,
-                variance_significance=variance_sig,
-            ).to_dict()
-        else:
-            m_dict["budget_variance"] = None
-
-        enriched_significant.append(m_dict)
+    # Step 4: Derive significant movements from enriched lookup (no recomputation)
+    enriched_significant: list[dict] = [
+        enriched_by_name[movement.account_name]
+        for movement in two_way.significant_movements
+        if movement.account_name in enriched_by_name
+    ]
 
     # Step 5: Build three-way lead sheet summaries
-    budget_totals_by_norm: dict[str, float] = {}
-    for acct in budget_accounts:
-        norm = normalize_account_name(acct.get("account", ""))
-        budget_totals_by_norm[norm] = _get_net_balance(acct)
-
-    # Build lookup from account name to enriched movement dict
-    enriched_by_name: dict[str, dict] = {}
-    for m_dict in enriched_movements:
-        enriched_by_name[m_dict.get("account_name", "")] = m_dict
-
     three_way_ls: list[ThreeWayLeadSheetSummary] = []
     for ls in two_way.lead_sheet_summaries:
         budget_total = 0.0
         ls_enriched_movements: list[dict] = []
         for m in ls.movements:
-            norm = normalize_account_name(m.account_name)
-            budget_total += budget_totals_by_norm.get(norm, 0.0)
-            # Attach enriched movement (with budget_variance) for this account
+            budget_total += budget_balance_by_norm.get(norm_cache.get(m.account_name, ""), 0.0)
             enriched = enriched_by_name.get(m.account_name)
             if enriched:
                 ls_enriched_movements.append(enriched)
