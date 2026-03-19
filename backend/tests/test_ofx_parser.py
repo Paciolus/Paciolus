@@ -331,7 +331,7 @@ class TestOfxDateParsing:
 class TestTransactionExtraction:
     """Transaction extraction from parsed ElementTree."""
 
-    def _parse_xml(self, text: str):
+    def _parse_xml(self, text: str) -> object:
         """Helper to parse XML text into ElementTree root."""
         import defusedxml.ElementTree as ET
 
@@ -560,7 +560,7 @@ class TestMetadataExtraction:
             transaction_count=5,
         )
         with pytest.raises(AttributeError):
-            metadata.currency = "EUR"  # type: ignore[misc]
+            metadata.currency = "EUR"
 
 
 # =============================================================================

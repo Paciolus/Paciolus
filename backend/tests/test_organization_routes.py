@@ -15,6 +15,7 @@ from unittest.mock import patch
 
 import httpx
 import pytest
+from sqlalchemy.orm import Session
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -33,7 +34,7 @@ from subscription_model import BillingInterval, Subscription, SubscriptionStatus
 # ---------------------------------------------------------------------------
 
 
-def _make_org(db, owner: User, name: str = "Test Org") -> Organization:
+def _make_org(db: Session, owner: User, name: str = "Test Org") -> Organization:
     """Create an org with the owner as its first member."""
     import re
 
@@ -53,7 +54,7 @@ def _make_org(db, owner: User, name: str = "Test Org") -> Organization:
 
 
 def _make_invite(
-    db,
+    db: Session,
     org: Organization,
     invitee_email: str,
     invited_by: User,
@@ -76,7 +77,7 @@ def _make_invite(
 
 
 def _make_subscription(
-    db,
+    db: Session,
     user: User,
     tier: str = "professional",
     status: SubscriptionStatus = SubscriptionStatus.ACTIVE,

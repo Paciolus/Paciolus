@@ -6,6 +6,7 @@ JE, AP, Revenue, FA, Inventory, and Payroll engines.
 """
 
 from dataclasses import dataclass
+from typing import Any
 
 import pytest
 
@@ -25,7 +26,7 @@ class MockEntry:
     category: str = ""
 
 
-def _make_entries(n: int, **overrides) -> list[MockEntry]:
+def _make_entries(n: int, **overrides: Any) -> list[MockEntry]:
     """Create n MockEntry objects with optional field overrides."""
     entries = []
     for i in range(n):

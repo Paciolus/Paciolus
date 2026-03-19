@@ -195,7 +195,7 @@ class TestSharedTemplateMemoRegression:
     """Regression suite for shared-template memos via JE Testing."""
 
     @staticmethod
-    def _make_je_result(risk_tier: str = "low", with_findings: bool = False):
+    def _make_je_result(risk_tier: str = "low", with_findings: bool = False) -> dict[str, object]:
         findings = []
         if with_findings:
             findings = [
@@ -476,7 +476,7 @@ class TestAllGeneratorsStandardsCompliance:
     )
 
     @pytest.mark.parametrize("filename", GENERATOR_NAMES)
-    def test_no_banned_language_in_generator(self, filename: str):
+    def test_no_banned_language_in_generator(self, filename: str) -> None:
         """Generator source code should not contain banned assertive phrases."""
         source_path = self.GENERATOR_DIR / filename
         content = source_path.read_text(encoding="utf-8")
@@ -484,7 +484,7 @@ class TestAllGeneratorsStandardsCompliance:
         _assert_no_banned_language_in_source(content)
 
     @pytest.mark.parametrize("filename", GENERATOR_NAMES)
-    def test_generator_uses_shared_chrome(self, filename: str):
+    def test_generator_uses_shared_chrome(self, filename: str) -> None:
         """Every generator should import from shared report_chrome or memo_base."""
         source_path = self.GENERATOR_DIR / filename
         content = source_path.read_text(encoding="utf-8")

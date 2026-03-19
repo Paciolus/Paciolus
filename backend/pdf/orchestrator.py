@@ -27,6 +27,7 @@ from pdf.sections.diagnostic import (
     render_classical_footer,
     render_data_intake_summary,
     render_executive_summary,
+    render_going_concern_indicators,
     render_limitations,
     render_population_composition,
     render_risk_summary,
@@ -104,6 +105,9 @@ def generate_audit_report(
 
     story.append(LedgerRule(color=ClassicalColors.GOLD_INSTITUTIONAL, thickness=0.5, spaceBefore=12, spaceAfter=12))
     render_anomaly_details(story, styles, audit_result)
+
+    story.append(LedgerRule(color=ClassicalColors.GOLD_INSTITUTIONAL, thickness=0.5, spaceBefore=12, spaceAfter=12))
+    render_going_concern_indicators(story, styles, audit_result)
 
     render_workpaper_signoff(
         story,

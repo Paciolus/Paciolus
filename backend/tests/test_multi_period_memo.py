@@ -68,7 +68,7 @@ def _make_comparison_result(
             }
         )
 
-    lead_sheet_summaries = []
+    lead_sheet_summaries: list[dict[str, object]] = []
     for j in range(num_lead_sheets):
         lead_sheet_summaries.append(
             {

@@ -20,6 +20,7 @@ from unittest.mock import MagicMock, patch
 import httpx
 import jwt as pyjwt
 import pytest
+from freezegun import freeze_time
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -266,6 +267,7 @@ class TestRateLimitKeyFunction:
 class TestRateLimitIdentityMiddleware:
     """Middleware extracts user_id and tier from JWT, sets ContextVar."""
 
+    @freeze_time("2026-03-19T10:00:00")
     @pytest.mark.asyncio
     async def test_valid_jwt_sets_user_id_and_tier(self):
         """Middleware extracts user_id and tier from a valid Bearer token."""
@@ -366,6 +368,7 @@ class TestRateLimitIdentityMiddleware:
         assert captured_state["user_id"] is None
         assert captured_state["tier"] == "anonymous"
 
+    @freeze_time("2026-03-19T10:00:00")
     @pytest.mark.asyncio
     async def test_expired_jwt_falls_through(self):
         """Expired JWT → anonymous (no 401 — auth enforcement is route-level)."""
@@ -405,6 +408,7 @@ class TestRateLimitIdentityMiddleware:
         assert captured_state["user_id"] is None
         assert captured_state["tier"] == "anonymous"
 
+    @freeze_time("2026-03-19T10:00:00")
     @pytest.mark.asyncio
     async def test_jwt_without_tier_claim_defaults_to_free(self):
         """Existing tokens without 'tier' claim default to 'free'."""

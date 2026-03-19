@@ -74,7 +74,7 @@ class TestFormatProfile:
     def test_profile_is_frozen(self):
         profile = FORMAT_PROFILES[FileFormat.CSV]
         with pytest.raises(AttributeError):
-            profile.label = "Modified"  # type: ignore[misc]
+            profile.label = "Modified"
 
     def test_ods_is_parse_supported(self):
         """ODS should have parse_supported=True (Sprint 432)."""

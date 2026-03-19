@@ -9,7 +9,7 @@ models and frontend expectations WITHOUT making HTTP requests.
 Strategy: Test model schemas directly via model_fields and model_json_schema.
 """
 
-from typing import get_args, get_origin
+from typing import Any, get_args, get_origin
 
 import pytest
 
@@ -68,12 +68,12 @@ from shared.testing_response_schemas import (
 # ═══════════════════════════════════════════════════════════════
 
 
-def get_field_names(model_cls) -> set:
+def get_field_names(model_cls: Any) -> set[str]:
     """Get all field names from a Pydantic model."""
     return set(model_cls.model_fields.keys())
 
 
-def get_literal_values(model_cls, field_name: str) -> tuple:
+def get_literal_values(model_cls: Any, field_name: str) -> tuple[object, ...]:
     """Extract Literal values from a model field annotation."""
     annotation = model_cls.model_fields[field_name].annotation
     # Unwrap Optional[Literal[...]]

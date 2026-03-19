@@ -65,7 +65,7 @@ class TestNoSpacedCapsHeadings:
     """Ensure no letter-spaced all-caps headings remain anywhere."""
 
     @pytest.mark.parametrize("filepath", GENERATOR_FILES, ids=lambda f: f.name)
-    def test_no_spaced_caps_in_generator(self, filepath: Path):
+    def test_no_spaced_caps_in_generator(self, filepath: Path) -> None:
         """No letter-spaced headings like 'E X E C U T I V E  S U M M A R Y'."""
         content = filepath.read_text(encoding="utf-8")
         matches = SPACED_CAPS_PATTERN.findall(content)
@@ -76,7 +76,7 @@ class TestMemoSectionTitleCase:
     """Ensure MemoSection headings use title case, not ALL CAPS."""
 
     @pytest.mark.parametrize("filepath", GENERATOR_FILES, ids=lambda f: f.name)
-    def test_memo_section_not_all_caps(self, filepath: Path):
+    def test_memo_section_not_all_caps(self, filepath: Path) -> None:
         """MemoSection headings should be title case (e.g. 'I. Scope' not 'I. SCOPE')."""
         content = filepath.read_text(encoding="utf-8")
         matches = ALL_CAPS_MEMO_HEADING.findall(content)

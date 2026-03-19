@@ -15,6 +15,7 @@ from routes.billing import router as billing_router
 from routes.branding import router as branding_router
 from routes.bulk_upload import router as bulk_upload_router
 from routes.clients import router as clients_router
+from routes.composite_risk import router as composite_risk_router
 from routes.contact import router as contact_router
 from routes.currency import router as currency_router
 from routes.diagnostics import router as diagnostics_router
@@ -74,4 +75,5 @@ all_routers = [
     admin_dashboard_router,
     branding_router,
     bulk_upload_router,
+    composite_risk_router,
 ]

@@ -23,6 +23,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from freezegun import freeze_time
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -67,6 +68,7 @@ class TestCsrfTokenGeneration:
         token = generate_csrf_token("test-user-id")
         assert validate_csrf_token(token) is True
 
+    @freeze_time("2026-03-19T10:00:00")
     def test_token_has_recent_timestamp(self):
         """Token timestamp should be close to current time."""
         token = generate_csrf_token("test-user-id")
@@ -94,6 +96,7 @@ class TestCsrfTokenValidation:
         """A random token not matching HMAC should fail."""
         assert validate_csrf_token("not-a-real-token") is False
 
+    @freeze_time("2026-03-19T10:00:00")
     def test_expired_token_returns_false(self):
         """A token past its expiry should fail validation."""
         import hashlib
@@ -153,6 +156,7 @@ class TestCsrfTokenEdgeCases:
         # 4-part token with non-integer timestamp position
         assert validate_csrf_token("abc:notanumber:uid:def") is False
 
+    @freeze_time("2026-03-19T10:00:00")
     def test_future_timestamp_rejected(self):
         """Token with future timestamp should fail."""
         import hashlib
@@ -259,7 +263,7 @@ class TestCsrfMiddleware:
         """Re-apply the conftest bypass for other API tests."""
         _sm.validate_csrf_token = lambda token, expected_user_id=None: True
 
-    def _make_request(self, method: str, path: str, csrf_token: str = None):
+    def _make_request(self, method: str, path: str, csrf_token: str | None = None) -> MagicMock:
         """Create a mock Starlette Request."""
         request = MagicMock()
         request.method = method
@@ -382,6 +386,7 @@ class TestCsrfMiddleware:
             response = await middleware.dispatch(request, call_next)
             call_next.assert_awaited_once_with(request), f"Failed for {path}"
 
+    @freeze_time("2026-03-19T10:00:00")
     @pytest.mark.asyncio
     async def test_expired_csrf_token_blocked(self):
         """POST with an expired CSRF token should raise 403."""
@@ -479,6 +484,7 @@ class TestCsrfSecretSeparation:
 
         assert _get_csrf_secret() == CSRF_SECRET_KEY
 
+    @freeze_time("2026-03-19T10:00:00")
     def test_token_signed_with_csrf_secret(self):
         """A hand-crafted 4-part token signed with CSRF_SECRET_KEY must validate."""
         import hashlib
@@ -493,6 +499,7 @@ class TestCsrfSecretSeparation:
         token = f"{nonce}:{ts}:test-uid:{sig}"
         assert validate_csrf_token(token) is True
 
+    @freeze_time("2026-03-19T10:00:00")
     def test_token_signed_with_wrong_secret_rejected(self):
         """A 4-part token signed with a different secret must fail validation."""
         import hashlib
@@ -621,7 +628,7 @@ class TestCsrfOriginRefererEnforcement:
     def _make_middleware(self):
         return CSRFMiddleware(app=MagicMock())
 
-    def _make_request_with_headers(self, headers: dict):
+    def _make_request_with_headers(self, headers: dict[str, str]) -> MagicMock:
         """Create a mock Request with the given headers dict."""
         request = MagicMock()
         request.headers = MagicMock()
@@ -690,7 +697,9 @@ class TestCsrfUserBindingMiddleware:
         """Re-apply the conftest bypass for other API tests."""
         _sm.validate_csrf_token = lambda token, expected_user_id=None: True
 
-    def _make_request(self, method: str, path: str, csrf_token: str = None, auth_header: str = None):
+    def _make_request(
+        self, method: str, path: str, csrf_token: str | None = None, auth_header: str | None = None
+    ) -> MagicMock:
         """Create a mock Starlette Request with optional auth header."""
         request = MagicMock()
         request.method = method

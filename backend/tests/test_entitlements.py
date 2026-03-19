@@ -37,7 +37,7 @@ class TestEntitlementConfig:
             ent = TIER_ENTITLEMENTS[tier]
             assert isinstance(ent, TierEntitlements)
             with pytest.raises(AttributeError):
-                ent.uploads_per_month = 999  # type: ignore[misc]
+                ent.uploads_per_month = 999
 
 
 class TestDiagnosticLimits:

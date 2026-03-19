@@ -32,6 +32,7 @@ def render_table_of_contents(story: list, styles: dict) -> None:
         "Population Composition",
         "Risk Assessment",
         "Exception Details",
+        "Going Concern Indicators",
         "Limitations",
     ]
 
@@ -740,6 +741,119 @@ def _create_informational_table(styles: dict, anomalies: list) -> KeepTogether:
     ]
     table.setStyle(TableStyle(style_commands))
     return KeepTogether([table])
+
+
+# ---------------------------------------------------------------------------
+# Going Concern Indicators (ISA 570)
+# ---------------------------------------------------------------------------
+
+
+def render_going_concern_indicators(story: list, styles: dict, audit_result: dict) -> None:
+    """Render the Going Concern Indicator Profile section.
+
+    Data source: audit_result["going_concern"] — produced by going_concern_engine.py.
+    ISA 570 (Going Concern), IAS 1.25-26.
+    """
+    gc_data = audit_result.get("going_concern", {})
+    if not gc_data:
+        return
+
+    indicators = gc_data.get("indicators", [])
+    if not indicators:
+        return
+
+    story.append(Paragraph("Going Concern Indicators", styles["SectionHeader"]))
+    story.append(LedgerRule(color=ClassicalColors.OBSIDIAN_DEEP, thickness=1))
+    story.append(Spacer(1, 4))
+
+    # Summary line
+    triggered = gc_data.get("indicators_triggered", 0)
+    checked = gc_data.get("indicators_checked", 0)
+    prior_available = gc_data.get("prior_period_available", False)
+
+    summary_lines = [
+        create_leader_dots("Indicators Evaluated", str(checked)),
+        create_leader_dots("Indicators Triggered", str(triggered)),
+        create_leader_dots("Prior Period Data", "Available" if prior_available else "Not Available"),
+    ]
+    for line in summary_lines:
+        story.append(Paragraph(line, styles["LeaderLine"]))
+    story.append(Spacer(1, 6))
+
+    # Indicators table
+    cell_style = styles["TableCell"]
+    header_style = styles["TableHeader"]
+
+    table_data = [
+        [
+            Paragraph("Indicator", header_style),
+            Paragraph("Status", header_style),
+            Paragraph("Description", header_style),
+        ]
+    ]
+
+    for ind in indicators:
+        ind_triggered = ind.get("triggered", False)
+        status_text = "TRIGGERED" if ind_triggered else "Not Triggered"
+        status_color = "#BC4749" if ind_triggered else "#4A7C59"
+
+        metric = ind.get("metric_value")
+        threshold = ind.get("threshold")
+        desc_parts = [ind.get("description", "")]
+        if metric is not None and threshold is not None:
+            desc_parts.append(
+                f'<br/><font size="7" color="#616161"><i>Metric: {metric:,.2f} | Threshold: {threshold:,.2f}</i></font>'
+            )
+
+        table_data.append(
+            [
+                Paragraph(ind.get("indicator_name", ""), cell_style),
+                Paragraph(f'<font color="{status_color}"><b>{status_text}</b></font>', cell_style),
+                Paragraph("".join(desc_parts), cell_style),
+            ]
+        )
+
+    gc_table = Table(
+        table_data,
+        colWidths=[1.4 * inch, 1.0 * inch, 3.6 * inch],
+        repeatRows=1,
+    )
+    gc_table.setStyle(
+        TableStyle(
+            [
+                ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
+                ("FONTSIZE", (0, 0), (-1, 0), 9),
+                ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
+                ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
+                ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
+                ("TOPPADDING", (0, 0), (-1, -1), 5),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+                ("LEFTPADDING", (0, 0), (0, -1), 0),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [ClassicalColors.WHITE, ClassicalColors.OATMEAL_PAPER]),
+            ]
+        )
+    )
+    story.append(gc_table)
+
+    # Narrative
+    narrative = gc_data.get("narrative", "")
+    if narrative:
+        story.append(Spacer(1, 4))
+        story.append(Paragraph(f"<i>{narrative}</i>", styles["BodyText"]))
+
+    # ISA 570 disclaimer
+    disclaimer = gc_data.get("disclaimer", "")
+    if disclaimer:
+        story.append(Spacer(1, 4))
+        story.append(
+            Paragraph(
+                f'<font size="7"><i>{disclaimer}</i></font>',
+                styles["BodyText"],
+            )
+        )
+
+    story.append(Spacer(1, 12))
 
 
 # ---------------------------------------------------------------------------

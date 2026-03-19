@@ -19,13 +19,15 @@ from shared.export_helpers import (
 )
 
 
-def _collect_body(resp) -> bytes:
+def _collect_body(resp: object) -> bytes:
     """Synchronously collect all bytes from a StreamingResponse body_iterator."""
-    async def _read():
+
+    async def _read() -> bytes:
         chunks = []
-        async for chunk in resp.body_iterator:
+        async for chunk in resp.body_iterator:  # type: ignore[attr-defined]
             chunks.append(chunk if isinstance(chunk, bytes) else chunk.encode())
         return b"".join(chunks)
+
     loop = asyncio.new_event_loop()
     try:
         return loop.run_until_complete(_read())

@@ -284,7 +284,7 @@ class TestAllGeneratorsHaveIncludeSignoff:
     _SKIP_FUNCTIONS = {"generate_reference_number"}
 
     @pytest.mark.parametrize("module_name", GENERATOR_MODULES)
-    def test_generator_has_include_signoff_param(self, module_name: str):
+    def test_generator_has_include_signoff_param(self, module_name: str) -> None:
         """Every public generate_*_memo() function should accept include_signoff."""
         mod = __import__(module_name)
         # Find the public generate_* function(s) that are memo generators

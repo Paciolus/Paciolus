@@ -117,7 +117,7 @@ def _make_fa_result(
             }
         )
 
-    result = {
+    result: dict[str, object] = {
         "composite_score": {
             "score": score,
             "risk_tier": risk_tier,

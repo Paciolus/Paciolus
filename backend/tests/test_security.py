@@ -14,6 +14,7 @@ from datetime import UTC, datetime, timedelta
 
 import httpx
 import pytest
+from freezegun import freeze_time
 
 # Import security middleware functions
 from security_middleware import (
@@ -66,6 +67,7 @@ class TestCSRFTokenGeneration:
         assert len(signature) == 64
         int(signature, 16)  # Should not raise
 
+    @freeze_time("2026-03-19T10:00:00")
     def test_csrf_token_has_recent_timestamp(self):
         """Token timestamp should be within 1 second of now."""
         token = generate_csrf_token("test-uid")
@@ -93,6 +95,7 @@ class TestCSRFTokenValidation:
         """Empty string token should fail validation."""
         assert validate_csrf_token("") is False
 
+    @freeze_time("2026-03-19T10:00:00")
     def test_validate_expired_token(self):
         """Expired token should fail validation."""
         # Create a 4-part token with an old timestamp and valid CSRF_SECRET_KEY HMAC
@@ -122,6 +125,7 @@ class TestCSRFTokenValidation:
         tampered = f"{'b' * 32}:{timestamp}:{uid}:{signature}"
         assert validate_csrf_token(tampered) is False
 
+    @freeze_time("2026-03-19T10:00:00")
     def test_validate_future_timestamp(self):
         """Token with future timestamp should fail."""
         import hashlib
@@ -207,6 +211,7 @@ class TestAccountLockout:
         now_naive = datetime.now(UTC).replace(tzinfo=None)
         assert locked_naive > now_naive
 
+    @freeze_time("2026-03-19T10:00:00")
     def test_lockout_duration(self, db_session):
         """Lockout should last for the configured duration."""
         user = _create_test_user(db_session)
@@ -215,10 +220,10 @@ class TestAccountLockout:
             failed_count, locked_until = record_failed_login(db_session, user.id)
 
         expected_lockout = datetime.now(UTC)
-        # Allow 2 second tolerance (locked_until is tz-aware, compare carefully)
+        # With frozen time, tolerance can be tight (< 1 second)
         locked_naive = locked_until.replace(tzinfo=None) if locked_until.tzinfo else locked_until
         expected_naive = expected_lockout.replace(tzinfo=None) + timedelta(minutes=LOCKOUT_DURATION_MINUTES)
-        assert abs((locked_naive - expected_naive).total_seconds()) < 2
+        assert abs((locked_naive - expected_naive).total_seconds()) < 1
 
 
 class TestCheckLockoutStatus:
@@ -254,6 +259,7 @@ class TestCheckLockoutStatus:
         assert locked_until is not None
         assert remaining == 0
 
+    @freeze_time("2026-03-19T10:00:00")
     def test_lockout_expires(self, db_session):
         """Lockout should expire after duration."""
         user = _create_test_user(db_session)

@@ -290,7 +290,7 @@ class TestEdgeCases:
             jurisdiction_country="US",
         )
         with pytest.raises(AttributeError):
-            result.framework = ResolvedFramework.GASB  # type: ignore[misc]
+            result.framework = ResolvedFramework.GASB
 
     def test_is_fasb_property(self):
         result = resolve_reporting_framework(

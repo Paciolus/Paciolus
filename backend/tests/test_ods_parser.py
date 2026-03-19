@@ -195,7 +195,7 @@ class TestParseOds:
         df = parse_ods(ods_bytes, "test.ods")
         metadata = df.attrs["ods_metadata"]
         with pytest.raises(AttributeError):
-            metadata.sheet_name = "Modified"  # type: ignore[misc]
+            metadata.sheet_name = "Modified"
 
     def test_returns_dataframe(self):
         ods_bytes = _build_ods_zip()

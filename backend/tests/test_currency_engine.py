@@ -33,6 +33,7 @@ from currency_engine import (
 # Currency Code Validation
 # =============================================================================
 
+
 class TestValidateCurrencyCode:
     def test_valid_code(self):
         assert validate_currency_code("USD") == "USD"
@@ -59,6 +60,7 @@ class TestValidateCurrencyCode:
 # =============================================================================
 # Rate Table Parsing
 # =============================================================================
+
 
 class TestParseRateTable:
     def test_valid_table(self):
@@ -127,7 +129,12 @@ class TestParseRateTable:
 
     def test_max_rows_exceeded(self):
         rows = [
-            {"effective_date": f"2026-01-{str(i % 28 + 1).zfill(2)}", "from_currency": "EUR", "to_currency": "USD", "rate": "1.05"}
+            {
+                "effective_date": f"2026-01-{str(i % 28 + 1).zfill(2)}",
+                "from_currency": "EUR",
+                "to_currency": "USD",
+                "rate": "1.05",
+            }
             for i in range(MAX_RATE_TABLE_ROWS + 1)
         ]
         with pytest.raises(RateValidationError, match="exceeds maximum"):
@@ -151,6 +158,7 @@ class TestParseRateTable:
 # =============================================================================
 # Single Rate Parsing
 # =============================================================================
+
 
 class TestParseSingleRate:
     def test_valid_single_rate(self):
@@ -177,8 +185,9 @@ class TestParseSingleRate:
 # Rate Lookup
 # =============================================================================
 
+
 class TestFindRate:
-    def _make_lookup(self, rates: list[ExchangeRate]):
+    def _make_lookup(self, rates: list[ExchangeRate]) -> dict[tuple[str, str], list[ExchangeRate]]:
         return _build_rate_lookup(rates)
 
     def test_exact_match(self):
@@ -240,6 +249,7 @@ class TestFindRate:
 # Currency Column Detection
 # =============================================================================
 
+
 class TestDetectCurrencyColumn:
     def test_detects_currency_column(self):
         cols = ["Account Number", "Account Name", "Currency", "Amount"]
@@ -278,6 +288,7 @@ class TestDetectCurrenciesInTb:
 # TB Conversion
 # =============================================================================
 
+
 class TestConvertTrialBalance:
     def _make_rate_table(self, rates=None, currency="USD"):
         return CurrencyRateTable(
@@ -310,7 +321,9 @@ class TestConvertTrialBalance:
             {"Account": "2000", "Name": "AR", "Currency": "USD", "Amount": 2000},
         ]
         result = convert_trial_balance(
-            rows, rate_table, "Amount",
+            rows,
+            rate_table,
+            "Amount",
             currency_column="Currency",
             account_number_column="Account",
             account_name_column="Name",
@@ -327,7 +340,9 @@ class TestConvertTrialBalance:
             {"Account": "1100", "Name": "AR EUR", "Currency": "EUR", "Amount": 500},
         ]
         result = convert_trial_balance(
-            rows, rate_table, "Amount",
+            rows,
+            rate_table,
+            "Amount",
             currency_column="Currency",
             account_number_column="Account",
             account_name_column="Name",
@@ -349,7 +364,9 @@ class TestConvertTrialBalance:
             {"Account": "1000", "Name": "Cash JPY", "Currency": "JPY", "Amount": 100000},
         ]
         result = convert_trial_balance(
-            rows, rate_table, "Amount",
+            rows,
+            rate_table,
+            "Amount",
             currency_column="Currency",
             account_number_column="Account",
             account_name_column="Name",
@@ -364,7 +381,9 @@ class TestConvertTrialBalance:
             {"Account": "1000", "Name": "Cash", "Currency": "", "Amount": 500},
         ]
         result = convert_trial_balance(
-            rows, rate_table, "Amount",
+            rows,
+            rate_table,
+            "Amount",
             currency_column="Currency",
             account_number_column="Account",
             account_name_column="Name",
@@ -384,7 +403,9 @@ class TestConvertTrialBalance:
             {"Account": "1200", "Currency": "GBP", "Amount": 300},
         ]
         result = convert_trial_balance(
-            rows, rate_table, "Amount",
+            rows,
+            rate_table,
+            "Amount",
             currency_column="Currency",
         )
         assert sorted(result.currencies_found) == ["EUR", "GBP", "USD"]
@@ -408,7 +429,9 @@ class TestConvertTrialBalance:
             {"Account": "1000", "Name": "Closed", "Currency": "", "Amount": 0},
         ]
         result = convert_trial_balance(
-            rows, rate_table, "Amount",
+            rows,
+            rate_table,
+            "Amount",
             currency_column="Currency",
             account_number_column="Account",
             account_name_column="Name",
@@ -432,6 +455,7 @@ class TestConvertTrialBalance:
 # Edge Cases
 # =============================================================================
 
+
 class TestEdgeCases:
     def _make_rate_table(self, rates=None, currency="USD"):
         return CurrencyRateTable(
@@ -448,7 +472,9 @@ class TestEdgeCases:
             {"Account": "1000", "Currency": "EUR", "Amount": 9999999.99},
         ]
         result = convert_trial_balance(
-            rows, rate_table, "Amount",
+            rows,
+            rate_table,
+            "Amount",
             currency_column="Currency",
         )
         assert result.converted_count == 1
@@ -464,7 +490,9 @@ class TestEdgeCases:
             {"Account": "1000", "Currency": "EUR", "Amount": None},
         ]
         result = convert_trial_balance(
-            rows, rate_table, "Amount",
+            rows,
+            rate_table,
+            "Amount",
             currency_column="Currency",
         )
         assert result.converted_count == 1
@@ -478,7 +506,9 @@ class TestEdgeCases:
             {"Account": "3000", "Currency": "EUR", "Amount": -1000},
         ]
         result = convert_trial_balance(
-            rows, rate_table, "Amount",
+            rows,
+            rate_table,
+            "Amount",
             currency_column="Currency",
         )
         assert result.converted_count == 1
@@ -517,7 +547,9 @@ class TestEdgeCases:
             {"Account": "2000", "Currency": "JPY", "Amount": 200},
         ]
         result = convert_trial_balance(
-            rows, rate_table, "Amount",
+            rows,
+            rate_table,
+            "Amount",
             currency_column="Currency",
         )
         assert result.converted_count == 1
@@ -528,6 +560,7 @@ class TestEdgeCases:
 # =============================================================================
 # Severity Recalculation
 # =============================================================================
+
 
 class TestSeverityRecalculation:
     def test_high_severity_for_large_amount(self):

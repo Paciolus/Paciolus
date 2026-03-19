@@ -46,7 +46,7 @@ from shared.helpers import (
 # =============================================================================
 
 
-def make_upload_file(content: bytes, filename: str = "test.csv", content_type: str = "text/csv"):
+def make_upload_file(content: bytes, filename: str = "test.csv", content_type: str = "text/csv") -> AsyncMock:
     """Create a mock UploadFile for testing."""
     mock = AsyncMock()
     mock.filename = filename

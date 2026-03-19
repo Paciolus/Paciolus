@@ -154,9 +154,9 @@ class TestMetricsEndpoint:
 # =============================================================================
 
 
-def _get_counter_value(counter, labels: dict) -> float:
+def _get_counter_value(counter: object, labels: dict[str, str]) -> float:
     """Get the current value of a Prometheus counter with given labels."""
     try:
-        return counter.labels(**labels)._value.get()
+        return float(counter.labels(**labels)._value.get())  # type: ignore[attr-defined]
     except KeyError:
         return 0.0

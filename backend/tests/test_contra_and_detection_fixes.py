@@ -13,88 +13,108 @@ Covers:
 """
 
 import pytest
-from decimal import Decimal
 
+from audit_engine import StreamingAuditor, _merge_anomalies
 from classification_rules import (
-    AccountCategory,
     RELATED_PARTY_KEYWORDS,
     SUSPENSE_KEYWORDS,
+    AccountCategory,
     is_contra_account,
 )
-from audit_engine import StreamingAuditor, _merge_anomalies
 from ratio_engine import CategoryTotals, extract_category_totals
 from shared.tb_diagnostic_constants import compute_tb_risk_score
-
 
 # =============================================================================
 # Fix 1: Contra Account Recognition
 # =============================================================================
 
+
 class TestIsContraAccount:
     """Unit tests for is_contra_account()."""
 
-    @pytest.mark.parametrize("name", [
-        "Accumulated Depreciation — Buildings",
-        "accumulated depreciation — equipment",
-        "Accumulated Amortization — Patents",
-        "Allowance for Doubtful Accounts",
-        "Allowance — Bad Debts",
-        "Obsolescence Reserve",
-        "Valuation Allowance — DTA",
-        "Less Accumulated Depreciation",
-    ])
-    def test_contra_asset_detected(self, name: str):
+    @pytest.mark.parametrize(
+        "name",
+        [
+            "Accumulated Depreciation — Buildings",
+            "accumulated depreciation — equipment",
+            "Accumulated Amortization — Patents",
+            "Allowance for Doubtful Accounts",
+            "Allowance — Bad Debts",
+            "Obsolescence Reserve",
+            "Valuation Allowance — DTA",
+            "Less Accumulated Depreciation",
+        ],
+    )
+    def test_contra_asset_detected(self, name: str) -> None:
         assert is_contra_account(name, AccountCategory.ASSET) is True
 
-    @pytest.mark.parametrize("name", [
-        "Cash and Equivalents",
-        "Accounts Receivable",
-        "Prepaid Insurance",
-        "Inventory — Raw Materials",
-        "Property, Plant and Equipment",
-    ])
-    def test_non_contra_asset_not_detected(self, name: str):
+    @pytest.mark.parametrize(
+        "name",
+        [
+            "Cash and Equivalents",
+            "Accounts Receivable",
+            "Prepaid Insurance",
+            "Inventory — Raw Materials",
+            "Property, Plant and Equipment",
+        ],
+    )
+    def test_non_contra_asset_not_detected(self, name: str) -> None:
         assert is_contra_account(name, AccountCategory.ASSET) is False
 
-    @pytest.mark.parametrize("name", [
-        "Sales Discounts",
-        "Sales Returns and Allowances",
-        "Contra Revenue — Adjustments",
-        "Trade Discounts Given",
-    ])
-    def test_contra_revenue_detected(self, name: str):
+    @pytest.mark.parametrize(
+        "name",
+        [
+            "Sales Discounts",
+            "Sales Returns and Allowances",
+            "Contra Revenue — Adjustments",
+            "Trade Discounts Given",
+        ],
+    )
+    def test_contra_revenue_detected(self, name: str) -> None:
         assert is_contra_account(name, AccountCategory.REVENUE) is True
 
-    @pytest.mark.parametrize("name", [
-        "Product Revenue",
-        "Service Revenue",
-        "Interest Income",
-    ])
-    def test_non_contra_revenue_not_detected(self, name: str):
+    @pytest.mark.parametrize(
+        "name",
+        [
+            "Product Revenue",
+            "Service Revenue",
+            "Interest Income",
+        ],
+    )
+    def test_non_contra_revenue_not_detected(self, name: str) -> None:
         assert is_contra_account(name, AccountCategory.REVENUE) is False
 
-    @pytest.mark.parametrize("name", [
-        "Treasury Stock",
-        "Dividends Declared",
-        "Drawing — Partner A",
-    ])
-    def test_contra_equity_detected(self, name: str):
+    @pytest.mark.parametrize(
+        "name",
+        [
+            "Treasury Stock",
+            "Dividends Declared",
+            "Drawing — Partner A",
+        ],
+    )
+    def test_contra_equity_detected(self, name: str) -> None:
         assert is_contra_account(name, AccountCategory.EQUITY) is True
 
-    @pytest.mark.parametrize("name", [
-        "Discount on Bonds Payable",
-        "Debt Issuance Costs",
-        "Bond Discount — Series A",
-    ])
-    def test_contra_liability_detected(self, name: str):
+    @pytest.mark.parametrize(
+        "name",
+        [
+            "Discount on Bonds Payable",
+            "Debt Issuance Costs",
+            "Bond Discount — Series A",
+        ],
+    )
+    def test_contra_liability_detected(self, name: str) -> None:
         assert is_contra_account(name, AccountCategory.LIABILITY) is True
 
-    @pytest.mark.parametrize("name", [
-        "Common Stock",
-        "Retained Earnings",
-        "Additional Paid-In Capital",
-    ])
-    def test_non_contra_equity_not_detected(self, name: str):
+    @pytest.mark.parametrize(
+        "name",
+        [
+            "Common Stock",
+            "Retained Earnings",
+            "Additional Paid-In Capital",
+        ],
+    )
+    def test_non_contra_equity_not_detected(self, name: str) -> None:
         assert is_contra_account(name, AccountCategory.EQUITY) is False
 
     def test_liability_never_contra(self):
@@ -212,6 +232,7 @@ class TestContraRoundingExclusion:
 # Fix 2: Related Party Keyword Tightening
 # =============================================================================
 
+
 class TestRelatedPartyKeywordTightening:
     """Verify that insurance and fee accounts don't trigger related party findings."""
 
@@ -261,6 +282,7 @@ class TestRelatedPartyKeywordTightening:
 # Fix 3: Suspense/Related Party Mutual Exclusivity
 # =============================================================================
 
+
 class TestSuspenseRelatedPartyExclusivity:
     """Verify that accounts classified as related party are not also classified as suspense."""
 
@@ -268,17 +290,23 @@ class TestSuspenseRelatedPartyExclusivity:
         """An account in the related_party list should be excluded from suspense merge."""
         abnormal = []
         suspense = [
-            {"account": "1150 — AR — Related Party", "severity": "medium",
-             "anomaly_type": "suspense_account", "confidence": 0.80,
-             "matched_keywords": ["clearing"]},
+            {
+                "account": "1150 — AR — Related Party",
+                "severity": "medium",
+                "anomaly_type": "suspense_account",
+                "confidence": 0.80,
+                "matched_keywords": ["clearing"],
+            },
         ]
         related_party = [
-            {"account": "1150 — AR — Related Party", "severity": "high",
-             "anomaly_type": "related_party"},
+            {"account": "1150 — AR — Related Party", "severity": "high", "anomaly_type": "related_party"},
         ]
 
         merged = _merge_anomalies(
-            abnormal, suspense, [], [],
+            abnormal,
+            suspense,
+            [],
+            [],
             related_party=related_party,
             intercompany=None,
         )
@@ -296,17 +324,27 @@ class TestSuspenseRelatedPartyExclusivity:
         """An intercompany imbalance finding should suppress round-number for the same account."""
         abnormal = []
         rounding = [
-            {"account": "1810 — IC Receivable — Mexico", "severity": "low",
-             "anomaly_type": "rounding_anomaly", "rounding_pattern": "hundred_thousand"},
+            {
+                "account": "1810 — IC Receivable — Mexico",
+                "severity": "low",
+                "anomaly_type": "rounding_anomaly",
+                "rounding_pattern": "hundred_thousand",
+            },
         ]
         intercompany = [
-            {"account": "1810 — IC Receivable — Mexico", "severity": "high",
-             "anomaly_type": "intercompany_imbalance",
-             "cross_reference_note": "Net exposure: $1,150,000"},
+            {
+                "account": "1810 — IC Receivable — Mexico",
+                "severity": "high",
+                "anomaly_type": "intercompany_imbalance",
+                "cross_reference_note": "Net exposure: $1,150,000",
+            },
         ]
 
         merged = _merge_anomalies(
-            abnormal, [], [], rounding,
+            abnormal,
+            [],
+            [],
+            rounding,
             intercompany=intercompany,
         )
 
@@ -321,6 +359,7 @@ class TestSuspenseRelatedPartyExclusivity:
 # Fix 4: Intercompany Counterparty Extraction
 # =============================================================================
 
+
 class TestIntercompanyCounterpartyExtraction:
     """Test that counterparty names are extracted with various separators."""
 
@@ -331,20 +370,22 @@ class TestIntercompanyCounterpartyExtraction:
 
     def test_em_dash_with_spaces(self):
         """Standard format: 'Intercompany Receivable — Cascade Mexico S.A.'"""
-        auditor = self._make_auditor({
-            "1810 — Intercompany Receivable — Cascade Mexico S.A.": {"debit": 1150000.0, "credit": 0.0},
-        })
-        auditor.provided_account_names = {
-            "1810": "Intercompany Receivable — Cascade Mexico S.A."
-        }
+        auditor = self._make_auditor(
+            {
+                "1810 — Intercompany Receivable — Cascade Mexico S.A.": {"debit": 1150000.0, "credit": 0.0},
+            }
+        )
+        auditor.provided_account_names = {"1810": "Intercompany Receivable — Cascade Mexico S.A."}
         findings = auditor.detect_intercompany_imbalances()
         # Should detect imbalance — no matching payable
         assert len(findings) >= 1
 
     def test_hyphen_separator(self):
-        auditor = self._make_auditor({
-            "IC Receivable - SomeCo Ltd": {"debit": 500000.0, "credit": 0.0},
-        })
+        auditor = self._make_auditor(
+            {
+                "IC Receivable - SomeCo Ltd": {"debit": 500000.0, "credit": 0.0},
+            }
+        )
         findings = auditor.detect_intercompany_imbalances()
         assert len(findings) >= 1
 
@@ -352,6 +393,7 @@ class TestIntercompanyCounterpartyExtraction:
 # =============================================================================
 # Fix 5 & 7: Subtype-driven stratification and COGS
 # =============================================================================
+
 
 class TestSubtypeDrivenCategoryTotals:
     """Test that CSV subtypes drive current/non-current and COGS classification."""
@@ -410,6 +452,7 @@ class TestSubtypeDrivenCategoryTotals:
     def test_gross_margin_with_cogs_subtype(self):
         """Verify that gross margin calculates correctly when COGS uses subtype."""
         from ratio_engine import RatioEngine
+
         totals = CategoryTotals(
             total_revenue=27600000.0,
             cost_of_goods_sold=20800000.0,
@@ -429,6 +472,7 @@ class TestSubtypeDrivenCategoryTotals:
             current_liabilities=1000000.0,
         )
         from ratio_engine import RatioEngine
+
         engine = RatioEngine(totals)
         result = engine.calculate_current_ratio()
         assert result.is_calculable
@@ -438,6 +482,7 @@ class TestSubtypeDrivenCategoryTotals:
 # =============================================================================
 # Fix 6: Lead Sheet Credits
 # =============================================================================
+
 
 class TestLeadSheetCredits:
     """Test that the post-processor passes raw debit/credit to lead sheet grouping."""
@@ -471,6 +516,7 @@ class TestLeadSheetCredits:
 # =============================================================================
 # Fix 8: Concentration Pluralization
 # =============================================================================
+
 
 class TestConcentrationPluralization:
     def _make_auditor(self, accounts: dict, types: dict | None = None) -> StreamingAuditor:
@@ -513,6 +559,7 @@ class TestConcentrationPluralization:
 # Fix 9: Score Decomposition Top-N
 # =============================================================================
 
+
 class TestScoreDecompositionTopN:
     """Test that score decomposition limits named factors to 8 + summary."""
 
@@ -520,14 +567,16 @@ class TestScoreDecompositionTopN:
         """With 15 material findings, should get 8 named + 1 summary line."""
         findings = []
         for i in range(15):
-            findings.append({
-                "account": f"Account {i}",
-                "anomaly_type": "rounding_anomaly",
-                "materiality": "material",
-                "amount": (15 - i) * 100000,
-                "type": "Asset",
-                "issue": f"Round number #{i}",
-            })
+            findings.append(
+                {
+                    "account": f"Account {i}",
+                    "anomaly_type": "rounding_anomaly",
+                    "materiality": "material",
+                    "amount": (15 - i) * 100000,
+                    "type": "Asset",
+                    "issue": f"Round number #{i}",
+                }
+            )
         score, factors = compute_tb_risk_score(
             material_count=15,
             minor_count=0,
@@ -548,13 +597,22 @@ class TestScoreDecompositionTopN:
     def test_few_findings_no_summary(self):
         """With <= 8 material findings, all should be named (no summary line)."""
         findings = [
-            {"account": f"Account {i}", "anomaly_type": "rounding_anomaly",
-             "materiality": "material", "amount": 100000, "type": "Asset", "issue": "Round"}
+            {
+                "account": f"Account {i}",
+                "anomaly_type": "rounding_anomaly",
+                "materiality": "material",
+                "amount": 100000,
+                "type": "Asset",
+                "issue": "Round",
+            }
             for i in range(5)
         ]
         score, factors = compute_tb_risk_score(
-            material_count=5, minor_count=0, coverage_pct=10.0,
-            has_suspense=False, has_credit_balance_asset=False,
+            material_count=5,
+            minor_count=0,
+            coverage_pct=10.0,
+            has_suspense=False,
+            has_credit_balance_asset=False,
             abnormal_balances=findings,
         )
         material_factors = [f for f in factors if f[1] == 8]
@@ -564,13 +622,22 @@ class TestScoreDecompositionTopN:
     def test_total_reconciles(self):
         """Total score must reconcile regardless of decomposition structure."""
         findings = [
-            {"account": f"A{i}", "anomaly_type": "natural_balance_violation",
-             "materiality": "material", "amount": 50000 * (i + 1), "type": "Asset", "issue": "Test"}
+            {
+                "account": f"A{i}",
+                "anomaly_type": "natural_balance_violation",
+                "materiality": "material",
+                "amount": 50000 * (i + 1),
+                "type": "Asset",
+                "issue": "Test",
+            }
             for i in range(12)
         ]
         score, factors = compute_tb_risk_score(
-            material_count=12, minor_count=3, coverage_pct=55.0,
-            has_suspense=True, has_credit_balance_asset=True,
+            material_count=12,
+            minor_count=3,
+            coverage_pct=55.0,
+            has_suspense=True,
+            has_credit_balance_asset=True,
             abnormal_balances=findings,
         )
         factor_total = sum(pts for _, pts in factors)
@@ -581,6 +648,7 @@ class TestScoreDecompositionTopN:
 # =============================================================================
 # Suspense keyword removal verification
 # =============================================================================
+
 
 class TestSuspenseKeywordCleanup:
     """Verify vague terms were removed from suspense keywords."""

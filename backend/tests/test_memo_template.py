@@ -14,6 +14,7 @@ Validates:
 
 import sys
 from pathlib import Path
+from typing import Any
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -27,7 +28,8 @@ from shared.memo_template import (
 # FIXTURES
 # =============================================================================
 
-def _make_config(**overrides) -> TestingMemoConfig:
+
+def _make_config(**overrides: Any) -> TestingMemoConfig:
     """Create a minimal TestingMemoConfig for testing."""
     defaults = dict(
         title="Test Memo",
@@ -50,7 +52,7 @@ def _make_config(**overrides) -> TestingMemoConfig:
         isa_reference="ISA 999",
     )
     defaults.update(overrides)
-    return TestingMemoConfig(**defaults)
+    return TestingMemoConfig(**defaults)  # type: ignore[arg-type]
 
 
 def _make_result(
@@ -99,12 +101,12 @@ def _make_result(
 # ROMAN NUMERAL HELPER
 # =============================================================================
 
+
 class TestRomanHelper:
     """Tests for the _roman() helper."""
 
     def test_roman_1_through_10(self):
-        expected = {1: "I", 2: "II", 3: "III", 4: "IV", 5: "V",
-                    6: "VI", 7: "VII", 8: "VIII", 9: "IX", 10: "X"}
+        expected = {1: "I", 2: "II", 3: "III", 4: "IV", 5: "V", 6: "VI", 7: "VII", 8: "VIII", 9: "IX", 10: "X"}
         for n, roman in expected.items():
             assert _roman(n) == roman
 
@@ -117,6 +119,7 @@ class TestRomanHelper:
 # CONFIG CONSTRUCTION
 # =============================================================================
 
+
 class TestTestingMemoConfig:
     """Tests for TestingMemoConfig dataclass."""
 
@@ -128,9 +131,14 @@ class TestTestingMemoConfig:
 
     def test_config_default_isa_reference(self):
         config = TestingMemoConfig(
-            title="T", ref_prefix="T", entry_label="E",
-            flagged_label="F", log_prefix="t", domain="d",
-            test_descriptions={}, methodology_intro="M",
+            title="T",
+            ref_prefix="T",
+            entry_label="E",
+            flagged_label="F",
+            log_prefix="t",
+            domain="d",
+            test_descriptions={},
+            methodology_intro="M",
             risk_assessments={"low": "", "elevated": "", "moderate": "", "high": ""},
         )
         assert config.isa_reference == "applicable professional standards"
@@ -143,6 +151,7 @@ class TestTestingMemoConfig:
 # =============================================================================
 # PDF GENERATION — STANDARD
 # =============================================================================
+
 
 class TestGenerateTestingMemo:
     """Tests for generate_testing_memo() output."""
@@ -176,7 +185,8 @@ class TestGenerateTestingMemo:
         config = _make_config()
         result = _make_result()
         pdf = generate_testing_memo(
-            result, config,
+            result,
+            config,
             prepared_by="Auditor A",
             reviewed_by="Reviewer B",
             workpaper_date="2025-01-01",
@@ -193,6 +203,7 @@ class TestGenerateTestingMemo:
 # =============================================================================
 # RISK TIER BRANCHES
 # =============================================================================
+
 
 class TestRiskTierBranches:
     """Ensure all 4 risk tier conclusion branches are reachable."""
@@ -226,6 +237,7 @@ class TestRiskTierBranches:
 # CUSTOM SCOPE BUILDER
 # =============================================================================
 
+
 class TestCustomScopeBuilder:
     """Tests for the build_scope callback."""
 
@@ -250,7 +262,8 @@ class TestCustomScopeBuilder:
         config = _make_config()
         result = _make_result()
         generate_testing_memo(
-            result, config,
+            result,
+            config,
             period_tested="Q4 2025",
             build_scope=custom_scope,
         )
@@ -260,6 +273,7 @@ class TestCustomScopeBuilder:
 # =============================================================================
 # CUSTOM EXTRA SECTIONS
 # =============================================================================
+
 
 class TestCustomExtraSections:
     """Tests for the build_extra_sections callback."""
@@ -297,6 +311,7 @@ class TestCustomExtraSections:
 # CUSTOM FINDING FORMATTER
 # =============================================================================
 
+
 class TestCustomFindingFormatter:
     """Tests for the format_finding callback."""
 
@@ -307,10 +322,12 @@ class TestCustomFindingFormatter:
             return str(finding)
 
         config = _make_config()
-        result = _make_result(top_findings=[
-            {"name": "John", "issue": "Duplicate"},
-            "Simple string finding",
-        ])
+        result = _make_result(
+            top_findings=[
+                {"name": "John", "issue": "Duplicate"},
+                "Simple string finding",
+            ]
+        )
         pdf = generate_testing_memo(result, config, format_finding=fmt)
         assert isinstance(pdf, bytes)
 
@@ -325,49 +342,59 @@ class TestCustomFindingFormatter:
 # INTEGRATION — REAL CONFIGS
 # =============================================================================
 
+
 class TestRealConfigIntegration:
     """Verify actual tool configs generate valid PDFs via the template."""
 
     def test_ap_testing_memo(self):
         from ap_testing_memo_generator import generate_ap_testing_memo
+
         result = _make_result(top_findings=["Duplicate payment detected"])
         pdf = generate_ap_testing_memo(result)
         assert pdf[:5] == b"%PDF-"
 
     def test_payroll_testing_memo(self):
         from payroll_testing_memo_generator import generate_payroll_testing_memo
-        result = _make_result(top_findings=[
-            {"employee": "John Doe", "issue": "Ghost employee indicator"},
-        ])
+
+        result = _make_result(
+            top_findings=[
+                {"employee": "John Doe", "issue": "Ghost employee indicator"},
+            ]
+        )
         pdf = generate_payroll_testing_memo(result)
         assert pdf[:5] == b"%PDF-"
 
     def test_revenue_testing_memo(self):
         from revenue_testing_memo_generator import generate_revenue_testing_memo
+
         result = _make_result()
         pdf = generate_revenue_testing_memo(result)
         assert pdf[:5] == b"%PDF-"
 
     def test_fixed_asset_testing_memo(self):
         from fixed_asset_testing_memo_generator import generate_fixed_asset_testing_memo
+
         result = _make_result()
         pdf = generate_fixed_asset_testing_memo(result)
         assert pdf[:5] == b"%PDF-"
 
     def test_inventory_testing_memo(self):
         from inventory_testing_memo_generator import generate_inventory_testing_memo
+
         result = _make_result()
         pdf = generate_inventory_testing_memo(result)
         assert pdf[:5] == b"%PDF-"
 
     def test_je_testing_memo_without_benford(self):
         from je_testing_memo_generator import generate_je_testing_memo
+
         result = _make_result()
         pdf = generate_je_testing_memo(result)
         assert pdf[:5] == b"%PDF-"
 
     def test_je_testing_memo_with_benford(self):
         from je_testing_memo_generator import generate_je_testing_memo
+
         result = _make_result(top_findings=["Unusual amount"])
         result["benford_result"] = {
             "passed_prechecks": True,
@@ -383,6 +410,7 @@ class TestRealConfigIntegration:
 
     def test_ar_aging_memo(self):
         from ar_aging_memo_generator import generate_ar_aging_memo
+
         result = _make_result()
         result["data_quality"]["total_tb_accounts"] = 50
         result["data_quality"]["total_subledger_entries"] = 200

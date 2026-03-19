@@ -11,6 +11,7 @@ Covers:
 """
 
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -40,12 +41,12 @@ ALT2_PASSWORD = "Password3#"
 class TestPasswordChangedAtColumn:
     """Tests for the password_changed_at column on User model."""
 
-    def test_password_changed_at_defaults_to_none(self, make_user):
+    def test_password_changed_at_defaults_to_none(self, make_user: Any) -> None:
         """New users should have password_changed_at as None."""
         user = make_user()
         assert user.password_changed_at is None
 
-    def test_password_changed_at_can_be_set(self, db_session: Session, make_user):
+    def test_password_changed_at_can_be_set(self, db_session: Session, make_user: Any) -> None:
         """password_changed_at can be set to a datetime."""
         user = make_user()
         now = datetime.now(UTC)
@@ -54,7 +55,7 @@ class TestPasswordChangedAtColumn:
         db_session.refresh(user)
         assert user.password_changed_at is not None
 
-    def test_password_changed_at_persists_after_refresh(self, db_session: Session, make_user):
+    def test_password_changed_at_persists_after_refresh(self, db_session: Session, make_user: Any) -> None:
         """password_changed_at value survives a DB round-trip."""
         user = make_user()
         now = datetime.now(UTC)
@@ -62,6 +63,7 @@ class TestPasswordChangedAtColumn:
         db_session.commit()
 
         loaded = db_session.query(User).filter(User.id == user.id).first()
+        assert loaded is not None
         assert loaded.password_changed_at is not None
         # SQLite drops timezone — compare without tz
         assert loaded.password_changed_at.replace(tzinfo=None) == now.replace(tzinfo=None)
@@ -154,7 +156,7 @@ class TestDecodeAccessTokenPwdAt:
 class TestRequireCurrentUserPwdAt:
     """Tests for pwd_at claim validation in require_current_user."""
 
-    def test_accepts_token_when_no_password_change(self, db_session: Session, make_user):
+    def test_accepts_token_when_no_password_change(self, db_session: Session, make_user: Any) -> None:
         """Token without pwd_at should be accepted when user has no password_changed_at."""
         user = make_user()
         assert user.password_changed_at is None
@@ -164,7 +166,7 @@ class TestRequireCurrentUserPwdAt:
         assert td.user_id == user.id
         # User has no password_changed_at — no validation needed
 
-    def test_accepts_token_with_matching_pwd_at(self, db_session: Session, make_user):
+    def test_accepts_token_with_matching_pwd_at(self, db_session: Session, make_user: Any) -> None:
         """Token with pwd_at matching DB should be accepted."""
         user = make_user()
         pwd_time = datetime.now(UTC)
@@ -176,7 +178,7 @@ class TestRequireCurrentUserPwdAt:
         assert td is not None
         assert td.password_changed_at is not None
 
-    def test_rejects_token_without_pwd_at_when_password_changed(self, db_session: Session, make_user):
+    def test_rejects_token_without_pwd_at_when_password_changed(self, db_session: Session, make_user: Any) -> None:
         """Token without pwd_at should be REJECTED when user has password_changed_at set."""
         user = make_user()
         # Simulate a password change
@@ -187,6 +189,7 @@ class TestRequireCurrentUserPwdAt:
         # Old token (no pwd_at)
         token, _ = create_access_token(user.id, user.email, password_changed_at=None)
         td = decode_access_token(token)
+        assert td is not None
         assert td.password_changed_at is None
 
         # The require_current_user check should reject this
@@ -195,7 +198,7 @@ class TestRequireCurrentUserPwdAt:
         assert td.password_changed_at is None
         # This condition triggers rejection in require_current_user
 
-    def test_rejects_token_with_stale_pwd_at(self, db_session: Session, make_user):
+    def test_rejects_token_with_stale_pwd_at(self, db_session: Session, make_user: Any) -> None:
         """Token with old pwd_at should be REJECTED when password was changed again."""
         user = make_user()
 
@@ -215,17 +218,19 @@ class TestRequireCurrentUserPwdAt:
 
         # Decode the old token
         td = decode_access_token(token)
+        assert td is not None
         assert td.password_changed_at is not None
 
         # Verify the stale check logic
         db_pwd_at = user.password_changed_at
+        assert db_pwd_at is not None
         if db_pwd_at.tzinfo is None:
             from datetime import timezone
 
             db_pwd_at = db_pwd_at.replace(tzinfo=timezone.utc)
         assert int(td.password_changed_at.timestamp()) < int(db_pwd_at.timestamp())
 
-    def test_accepts_token_with_current_pwd_at(self, db_session: Session, make_user):
+    def test_accepts_token_with_current_pwd_at(self, db_session: Session, make_user: Any) -> None:
         """Token with current pwd_at should be accepted."""
         user = make_user()
         pwd_time = datetime.now(UTC)
@@ -235,14 +240,17 @@ class TestRequireCurrentUserPwdAt:
 
         token, _ = create_access_token(user.id, user.email, password_changed_at=pwd_time)
         td = decode_access_token(token)
+        assert td is not None
 
         db_pwd_at = user.password_changed_at
+        assert db_pwd_at is not None
         if db_pwd_at.tzinfo is None:
             from datetime import timezone
 
             db_pwd_at = db_pwd_at.replace(tzinfo=timezone.utc)
 
         # Same epoch — should be accepted (not less than)
+        assert td.password_changed_at is not None
         assert int(td.password_changed_at.timestamp()) >= int(db_pwd_at.timestamp())
 
 
@@ -254,7 +262,7 @@ class TestRequireCurrentUserPwdAt:
 class TestChangeUserPasswordRevocation:
     """Tests for token revocation when password changes."""
 
-    def test_password_change_sets_password_changed_at(self, db_session: Session, make_user):
+    def test_password_change_sets_password_changed_at(self, db_session: Session, make_user: Any) -> None:
         """Changing password should set password_changed_at."""
         user = make_user(hashed_password=KNOWN_HASH)
         assert user.password_changed_at is None
@@ -263,7 +271,7 @@ class TestChangeUserPasswordRevocation:
         assert result is True
         assert user.password_changed_at is not None
 
-    def test_password_change_revokes_all_refresh_tokens(self, db_session: Session, make_user):
+    def test_password_change_revokes_all_refresh_tokens(self, db_session: Session, make_user: Any) -> None:
         """Changing password should revoke ALL of the user's refresh tokens."""
         user = make_user(hashed_password=KNOWN_HASH)
 
@@ -288,7 +296,7 @@ class TestChangeUserPasswordRevocation:
         assert rt2.is_revoked
         assert rt3.is_revoked
 
-    def test_password_change_does_not_revoke_other_users_tokens(self, db_session: Session, make_user):
+    def test_password_change_does_not_revoke_other_users_tokens(self, db_session: Session, make_user: Any) -> None:
         """Changing password should NOT revoke other users' tokens."""
         user1 = make_user(email="user1@example.com", hashed_password=KNOWN_HASH)
         user2 = make_user(email="user2@example.com", hashed_password=hash_password(ALT_PASSWORD))
@@ -305,7 +313,7 @@ class TestChangeUserPasswordRevocation:
         assert rt1.is_revoked
         assert rt2.is_active
 
-    def test_failed_password_change_does_not_revoke(self, db_session: Session, make_user):
+    def test_failed_password_change_does_not_revoke(self, db_session: Session, make_user: Any) -> None:
         """Failed password change (wrong current password) should NOT revoke tokens."""
         user = make_user(hashed_password=KNOWN_HASH)
         raw, rt = create_refresh_token(db_session, user.id)
@@ -317,7 +325,7 @@ class TestChangeUserPasswordRevocation:
         assert rt.is_active
         assert user.password_changed_at is None
 
-    def test_password_change_timestamps_are_consistent(self, db_session: Session, make_user):
+    def test_password_change_timestamps_are_consistent(self, db_session: Session, make_user: Any) -> None:
         """password_changed_at should be set close to when the password was actually changed."""
         user = make_user(hashed_password=KNOWN_HASH)
         before = datetime.now(UTC)
@@ -332,13 +340,13 @@ class TestChangeUserPasswordRevocation:
 
         assert before <= pwd_at <= after
 
-    def test_already_revoked_tokens_stay_revoked(self, db_session: Session, make_user):
+    def test_already_revoked_tokens_stay_revoked(self, db_session: Session, make_user: Any) -> None:
         """Already-revoked tokens should remain revoked (no double-revocation issues)."""
         user = make_user(hashed_password=KNOWN_HASH)
         raw, rt = create_refresh_token(db_session, user.id)
 
         # Manually revoke
-        rt.revoked_at = datetime.now(UTC)
+        rt.revoked_at = datetime.now(UTC)  # type: ignore[assignment]
         db_session.commit()
         assert rt.is_revoked
 
@@ -358,7 +366,7 @@ class TestChangeUserPasswordRevocation:
 class TestAccountDeactivationRevocation:
     """Tests for token revocation when account is deactivated."""
 
-    def test_deactivation_scenario_revokes_tokens(self, db_session: Session, make_user):
+    def test_deactivation_scenario_revokes_tokens(self, db_session: Session, make_user: Any) -> None:
         """When a user is deactivated, all their refresh tokens should be revoked."""
         user = make_user()
         raw1, rt1 = create_refresh_token(db_session, user.id)
@@ -378,7 +386,9 @@ class TestAccountDeactivationRevocation:
         assert rt2.is_revoked
         assert not user.is_active
 
-    def test_deactivated_user_tokens_are_blocked_by_require_current_user(self, db_session: Session, make_user):
+    def test_deactivated_user_tokens_are_blocked_by_require_current_user(
+        self, db_session: Session, make_user: Any
+    ) -> None:
         """Deactivated user's access tokens should be rejected by require_current_user.
         (Existing behavior — is_active check was already in place.)
         """
@@ -387,6 +397,7 @@ class TestAccountDeactivationRevocation:
 
         token, _ = create_access_token(user.id, user.email)
         td = decode_access_token(token)
+        assert td is not None
         assert td.user_id == user.id
 
         user.is_active = False
@@ -405,13 +416,14 @@ class TestAccountDeactivationRevocation:
 class TestPasswordChangeInvalidatesTokens:
     """End-to-end tests for the password change → token invalidation flow."""
 
-    def test_old_access_token_becomes_stale_after_password_change(self, db_session: Session, make_user):
+    def test_old_access_token_becomes_stale_after_password_change(self, db_session: Session, make_user: Any) -> None:
         """An access token issued before a password change should be detectable as stale."""
         user = make_user(hashed_password=KNOWN_HASH)
 
         # Issue token before password change (no pwd_at since password_changed_at is None)
         old_token, _ = create_access_token(user.id, user.email, user.password_changed_at)
         old_td = decode_access_token(old_token)
+        assert old_td is not None
         assert old_td.password_changed_at is None
 
         # Change password
@@ -425,7 +437,7 @@ class TestPasswordChangeInvalidatesTokens:
         assert old_td.password_changed_at is None
         assert user.password_changed_at is not None
 
-    def test_new_access_token_is_valid_after_password_change(self, db_session: Session, make_user):
+    def test_new_access_token_is_valid_after_password_change(self, db_session: Session, make_user: Any) -> None:
         """A new token issued after password change should pass validation."""
         user = make_user(hashed_password=KNOWN_HASH)
         change_user_password(db_session, user, KNOWN_PASSWORD, NEW_PASSWORD)
@@ -434,17 +446,19 @@ class TestPasswordChangeInvalidatesTokens:
         # Issue new token with current password_changed_at
         new_token, _ = create_access_token(user.id, user.email, user.password_changed_at)
         new_td = decode_access_token(new_token)
+        assert new_td is not None
         assert new_td.password_changed_at is not None
 
         # Token's pwd_at should match DB
         db_pwd_at = user.password_changed_at
+        assert db_pwd_at is not None
         if db_pwd_at.tzinfo is None:
             from datetime import timezone
 
             db_pwd_at = db_pwd_at.replace(tzinfo=timezone.utc)
         assert int(new_td.password_changed_at.timestamp()) == int(db_pwd_at.timestamp())
 
-    def test_sequential_password_changes_invalidate_older_tokens(self, db_session: Session, make_user):
+    def test_sequential_password_changes_invalidate_older_tokens(self, db_session: Session, make_user: Any) -> None:
         """Each password change should invalidate all previously-issued tokens."""
         user = make_user(hashed_password=hash_password("Password1!"))
 
@@ -466,14 +480,17 @@ class TestPasswordChangeInvalidatesTokens:
 
         # token1 should be stale now
         td1 = decode_access_token(token1)
+        assert td1 is not None
         db_pwd_at = second_change
+        assert db_pwd_at is not None
         if db_pwd_at.tzinfo is None:
             from datetime import timezone
 
             db_pwd_at = db_pwd_at.replace(tzinfo=timezone.utc)
+        assert td1.password_changed_at is not None
         assert int(td1.password_changed_at.timestamp()) < int(db_pwd_at.timestamp())
 
-    def test_refresh_tokens_all_revoked_on_password_change(self, db_session: Session, make_user):
+    def test_refresh_tokens_all_revoked_on_password_change(self, db_session: Session, make_user: Any) -> None:
         """All refresh tokens should be revoked when password changes."""
         user = make_user(hashed_password=KNOWN_HASH)
 

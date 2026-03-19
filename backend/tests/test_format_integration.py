@@ -240,6 +240,6 @@ class TestMetricsOutput:
 
 def _get_counter(fmt: str, stage: str) -> float:
     try:
-        return parse_total.labels(format=fmt, stage=stage)._value.get()
+        return float(parse_total.labels(format=fmt, stage=stage)._value.get())
     except KeyError:
         return 0.0

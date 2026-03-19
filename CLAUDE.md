@@ -131,7 +131,8 @@ Located in `docs/04-compliance/`:
 ### Key Capabilities
 - 17 core ratios + 8 industry ratios across 6 benchmark industries + DuPont decomposition
 - 12 testing tools: JE (19 tests), AP (13), Payroll (11), Revenue (16, ASC 606/IFRS 15), AR Aging (11), Fixed Assets (9), Inventory (9), Bank Rec, Three-Way Match, Multi-Period TB, Statistical Sampling (ISA 530), Multi-Currency
-- TB Diagnostics: classification validator, lead sheets (A-Z), adjusting entries (approval-gated), lease/cutoff/going concern indicators
+- TB Diagnostics: classification validator, lead sheets (A-Z), adjusting entries (approval-gated), lease/cutoff/going concern indicators, going concern PDF section
+- Composite Risk Scoring: ISA 315 auditor-input workflow — inherent/control/fraud risk per account/assertion, combined with automated TB/testing data
 - Financial Statements: Balance Sheet + Income Statement + Cash Flow (indirect, ASC 230/IAS 7)
 - 21 PDF memos (PCAOB AS 1215/2401/2501, ISA 240/500/501/505/520/530/540) + Excel/CSV export
 - JWT auth (HttpOnly cookie refresh, in-memory access tokens), CSRF, account lockout
@@ -143,7 +144,7 @@ Located in `docs/04-compliance/`:
 ### Unresolved Tensions
 | Tension | Resolution | Status |
 |---------|------------|--------|
-| Composite Risk Scoring | Rejected by AccountingExpertAuditor (requires ISA 315 inputs) | DEFERRED |
+| Composite Risk Scoring | Implemented Sprint 562 — auditor-input workflow + ISA 315 composite engine | RESOLVED |
 | Management Letter Generator | Rejected permanently (ISA 265 boundary — deficiency classification is auditor judgment) | REJECTED |
 
 ---

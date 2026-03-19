@@ -351,7 +351,7 @@ ENDTRNS
     def test_metadata_is_frozen(self):
         metadata = IifMetadata()
         with pytest.raises(AttributeError):
-            metadata.encoding = "ascii"  # type: ignore[misc]
+            metadata.encoding = "ascii"
 
 
 # =============================================================================

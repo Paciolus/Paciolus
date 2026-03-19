@@ -15,7 +15,9 @@ CI runs both:
 
 import os
 import sys
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import pytest
 from sqlalchemy import create_engine, event, text
@@ -257,7 +259,7 @@ def override_auth_verified(db_session):
 
 
 @pytest.fixture()
-def make_user(db_session: Session):
+def make_user(db_session: Session) -> Callable[..., User]:
     """Factory fixture that creates User records in the test DB."""
 
     def _make_user(
@@ -284,7 +286,7 @@ def make_user(db_session: Session):
 
 
 @pytest.fixture()
-def make_client(db_session: Session, make_user):
+def make_client(db_session: Session, make_user: Any) -> Callable[..., Client]:
     """Factory fixture that creates Client records in the test DB."""
 
     def _make_client(
@@ -309,7 +311,7 @@ def make_client(db_session: Session, make_user):
 
 
 @pytest.fixture()
-def make_engagement(db_session: Session, make_client):
+def make_engagement(db_session: Session, make_client: Any) -> Callable[..., Engagement]:
     """Factory fixture that creates Engagement records in the test DB."""
     from datetime import UTC, datetime
 
@@ -356,7 +358,7 @@ def make_engagement(db_session: Session, make_client):
 
 
 @pytest.fixture()
-def make_tool_run(db_session: Session, make_engagement):
+def make_tool_run(db_session: Session, make_engagement: Any) -> Callable[..., ToolRun]:
     """Factory fixture that creates ToolRun records in the test DB."""
 
     def _make_tool_run(
@@ -383,7 +385,7 @@ def make_tool_run(db_session: Session, make_engagement):
 
 
 @pytest.fixture()
-def make_follow_up_item(db_session: Session, make_engagement):
+def make_follow_up_item(db_session: Session, make_engagement: Any) -> Callable[..., FollowUpItem]:
     """Factory fixture that creates FollowUpItem records in the test DB."""
 
     def _make_follow_up_item(
@@ -414,7 +416,7 @@ def make_follow_up_item(db_session: Session, make_engagement):
 
 
 @pytest.fixture()
-def make_comment(db_session: Session, make_follow_up_item, make_user):
+def make_comment(db_session: Session, make_follow_up_item: Any, make_user: Any) -> Callable[..., FollowUpItemComment]:
     """Factory fixture that creates FollowUpItemComment records in the test DB."""
 
     def _make_comment(
@@ -441,7 +443,7 @@ def make_comment(db_session: Session, make_follow_up_item, make_user):
 
 
 @pytest.fixture()
-def make_refresh_token(db_session: Session, make_user):
+def make_refresh_token(db_session: Session, make_user: Any) -> Callable[..., tuple[str, RefreshToken]]:
     """Factory fixture that creates RefreshToken records in the test DB."""
     import hashlib
     import secrets
@@ -476,12 +478,12 @@ def make_refresh_token(db_session: Session, make_user):
 
 
 @pytest.fixture()
-def sample_user(make_user) -> User:
+def sample_user(make_user: Any) -> User:
     """Convenience fixture: a single pre-made user."""
-    return make_user()
+    return make_user()  # type: ignore[no-any-return]
 
 
 @pytest.fixture()
-def sample_client(make_client) -> Client:
+def sample_client(make_client: Any) -> Client:
     """Convenience fixture: a single pre-made client."""
-    return make_client()
+    return make_client()  # type: ignore[no-any-return]

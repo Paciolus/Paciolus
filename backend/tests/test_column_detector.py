@@ -55,8 +55,11 @@ BALANCE_PATTERNS: list[ColumnPattern] = [
 
 
 def make_bank_configs(
-    date_priority=30, amount_priority=40, desc_priority=50,
-    ref_priority=10, bal_priority=20,
+    date_priority: int = 30,
+    amount_priority: int = 40,
+    desc_priority: int = 50,
+    ref_priority: int = 10,
+    bal_priority: int = 20,
 ) -> list[ColumnFieldConfig]:
     """Create bank-like column configs with customizable priorities."""
     return [
@@ -98,6 +101,7 @@ def make_bank_configs(
 # =============================================================================
 # match_column TESTS
 # =============================================================================
+
 
 class TestMatchColumn:
     """Tests for the match_column function."""
@@ -151,6 +155,7 @@ class TestMatchColumn:
 # =============================================================================
 # detect_columns TESTS
 # =============================================================================
+
 
 class TestDetectColumns:
     """Tests for the detect_columns function."""
@@ -292,10 +297,14 @@ class TestDetectColumns:
         columns = ["Date", "Amount", "Date"]
         configs = [
             ColumnFieldConfig(
-                field_name="date1", patterns=DATE_PATTERNS, priority=10,
+                field_name="date1",
+                patterns=DATE_PATTERNS,
+                priority=10,
             ),
             ColumnFieldConfig(
-                field_name="date2", patterns=DATE_PATTERNS, priority=20,
+                field_name="date2",
+                patterns=DATE_PATTERNS,
+                priority=20,
             ),
         ]
         result = detect_columns(columns, configs)
@@ -320,12 +329,16 @@ class TestDetectColumns:
         columns = ["foo", "bar", "baz"]
         configs = [
             ColumnFieldConfig(
-                field_name="date", patterns=DATE_PATTERNS,
-                required=True, missing_note="Missing date",
+                field_name="date",
+                patterns=DATE_PATTERNS,
+                required=True,
+                missing_note="Missing date",
             ),
             ColumnFieldConfig(
-                field_name="amount", patterns=AMOUNT_PATTERNS,
-                required=True, missing_note="Missing amount",
+                field_name="amount",
+                patterns=AMOUNT_PATTERNS,
+                required=True,
+                missing_note="Missing amount",
             ),
         ]
         result = detect_columns(columns, configs)
@@ -336,6 +349,7 @@ class TestDetectColumns:
 # =============================================================================
 # EDGE CASES
 # =============================================================================
+
 
 class TestEdgeCases:
     """Edge case tests for robustness."""
@@ -382,8 +396,10 @@ class TestEdgeCases:
         columns = ["foo"]
         configs = [
             ColumnFieldConfig(
-                field_name="date", patterns=DATE_PATTERNS,
-                required=True, missing_note="",
+                field_name="date",
+                patterns=DATE_PATTERNS,
+                required=True,
+                missing_note="",
             ),
         ]
         result = detect_columns(columns, configs)
