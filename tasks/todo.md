@@ -50,55 +50,13 @@
 > Sprints 547–551 archived to `tasks/archive/sprints-547-551-details.md`.
 > Sprints 552–556 archived to `tasks/archive/sprints-552-556-details.md`.
 > Sprints 553–561 archived to `tasks/archive/sprints-553-561-details.md`.
+> FIX-1A/1B, Sprint 562, FIX-2A/2B archived to `tasks/archive/fix-1-2-sprint562-details.md`.
 
-### FIX-1A: Decimal Precision — Parse and Compute Pipeline
-- [x] Step 1: Introduce `safe_decimal()` in `parsing_helpers.py`
-- [x] Step 2: Replace `safe_float` with `safe_decimal` in 13 engine files + downstream arithmetic
-- [x] Step 3: Fix float arithmetic chains in `multi_period_comparison.py`
-- [x] Step 4: Fix float conversion in `sampling_engine.py`
-- [x] Step 5: Fix materiality cascade in `engagement_manager.py`
-- [x] Step 6: Fix float accumulation in `streaming_auditor.py`
-- [x] Step 7: Fix float ingestion arrays in `ingestion.py`
-- [x] Step 8: Fix float coercion in `preflight_engine.py`
-- **Status:** COMPLETE
-- **Tests:** 6,896 passed (3 pre-existing failures, 0 regressions)
-
-### FIX-1B: Decimal Precision — JSON Serialization Boundaries
-- [x] Step 1: Add Decimal-aware JSON encoder to FastAPI
-- [x] Step 2: Remove float casts from models.py to_dict()
-- [x] Step 3: Remove float casts from adjusting_entries.py to_dict()
-- [x] Step 4: Remove post-quantization float casts in auditor/ingestion/ratios
-- [x] Step 5: Remove float cast from engagement materiality serialization
-- [x] Step 6: Remove float reparsing in revenue/payroll/AP memo generators
-- [x] Step 7: Accept Decimal in drill_down format_currency helper
-- [x] Fix downstream consumers and tests for str-serialized monetary values
-- **Status:** COMPLETE
-- **Tests:** 6,897 passed (2 pre-existing failures, 0 regressions)
-
-### Sprint 562: Complete All Deferred Items
-- [x] **Going concern PDF section** — `render_going_concern_indicators()` in `pdf/sections/diagnostic.py`, wired into orchestrator, ToC updated
-- [x] **Freezegun migration** — 14 test methods decorated across 3 files (`test_csrf_middleware.py`, `test_security.py`, `test_rate_limit_tiered.py`); `freezegun>=1.5.0` added to requirements-dev.txt; 150 tests pass
-- [x] **Composite Risk Scoring** — `composite_risk_engine.py` (ISA 315 auditor-input workflow), `routes/composite_risk.py` (POST `/composite-risk/profile`), 58 engine tests
-- [x] **Route integration tests** — 12 new test files covering admin_dashboard, adjustments, bulk_upload, branding, billing_analytics, billing_checkout, follow_up_items, engagements_analytics, engagements_exports, prior_period, metrics, multi_period (135 tests)
-- [x] **Mypy test cleanup** — 124→0 errors across 22 test files; factory fixtures typed, missing annotations added, unused `# type: ignore` removed
-- [x] **Frontend component tests** — 45 new test files (batch, adjustment, engagement, shared, marketing, skeleton, testing, UI components); 1,357→1,725 tests; coverage 26.6%→42.8%
-- **Status:** COMPLETE
-- **Commit:** c9b51db
-
-### FIX-2A: Edge Case Hard FAILs (AUDIT-06 Phase 2)
-- [x] FIX 1 — RPT-02: Emit duplicate-account warnings before coalescing in `multi_period_comparison.py`
-- [x] FIX 2 — RPT-12: Return insufficient-population result when non-zero rows < minimum in `sampling_engine.py`
-- [x] FIX 3 — RPT-12: Track and surface missing audited amounts separately from clean results in `sampling_engine.py`
-- [x] FIX 4 — Exports: Replace user_id ownership check with org-aware helper; 400 → 404
-- [x] FIX 5 — RPT-13: Preserve Decimal precision in currency conversion at large values in `currency_engine.py`
-- **Status:** COMPLETE
-
-### FIX-2B: Edge Case FLAG Regression Tests (AUDIT-06 Phase 2)
-- [x] FLAG Group 1 — Single-Account Populations (14 tests: RPT-01/03/04/05/06/07/08/09/10/11/16/17/18/20)
-- [x] FLAG Group 2 — Negative Balances in Unexpected Accounts (15 tests: RPT-02/03/04/05/06/07/10/11/13/16/17/18/19/20, DASH-01)
-- [x] FLAG Group 3 — Extremely Large Values >$1T (21 tests: RPT-01/02/03/04/05/06/07/08/09/10/11/12/14/15/16/17/18/19/20/21, DASH-01)
-- [x] FLAG Group 4 — Missing Expected Account Types (14 tests: RPT-01/02/03/04/06/08/10/11/15/16/17/18/20, DASH-01)
-- [x] FLAG Group 5 — Duplicate Account Codes (19 tests: RPT-01/03/04/05/06/07/09/10/11/12/13/14/15/16/17/18/19/20, DASH-01)
-- **Result:** 83 tests, 83 PASS, 0 FAIL — all FLAG scenarios confirmed handled correctly
+### FIX-3: Anomaly Coverage Mapping (AUDIT-06 Phase 3)
+- [x] Step 1: Create authoritative coverage map (`backend/tests/anomaly_framework/COVERAGE_MAP.md`)
+- [x] Step 2: Expose `min_detectable_threshold` in anomaly registry via `ANOMALY_REGISTRY_META`
+- [x] Step 3: Document duplicate_entry per-tool detection contract (`DUPLICATE_ENTRY_CONTRACT.md`)
+- [x] Step 4: Add coverage map validation test (`test_coverage_map.py` — 2 tests)
+- **Tests:** 10 passed (2 new + 8 existing), 0 regressions
 - **Status:** COMPLETE
 
