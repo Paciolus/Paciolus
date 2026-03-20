@@ -50,6 +50,7 @@ This document provides comprehensive deployment and operational procedures for P
 15. [Cost Optimization](#15-cost-optimization)
 16. [Post-Deployment Checklist](#16-post-deployment-checklist)
 17. [Troubleshooting](#17-troubleshooting)
+18. [Dependency Compliance Gate](#18-dependency-compliance-gate)
 
 ---
 
@@ -1063,10 +1064,76 @@ docker system prune -a  # Remove unused images
 
 ---
 
+## 18. Dependency Compliance Gate
+
+### 18.1 Overview
+
+The `dependency-compliance` workflow (`.github/workflows/dependency-compliance.yml`) enforces two automated gates on every PR, push to `main`, and on a weekly schedule (Monday 07:00 UTC):
+
+1. **CVE Audit** — `pip-audit` (Python) and `npm audit` (Node) fail the build if any HIGH or CRITICAL vulnerability is found in production dependencies.
+2. **License Policy Check** — `scripts/check_license_policy.py` compares the full license inventory of both ecosystems against the policy file and fails if any prohibited license is detected.
+
+### 18.2 What It Enforces
+
+| Check | Tool | Threshold |
+|-------|------|-----------|
+| Python CVEs | `pip-audit --severity high` | HIGH or CRITICAL → fail |
+| Node CVEs | `npm audit --omit=dev --audit-level=high` | HIGH or CRITICAL → fail |
+| Python licenses | `pip-licenses` → policy check | Prohibited license → fail |
+| Node licenses | `license-checker` → policy check | Prohibited license → fail |
+
+### 18.3 Policy File
+
+**Location:** `docs/compliance/LICENSE_POLICY.json`
+
+The policy file defines:
+- **`prohibited`** — Licenses that automatically fail the build (AGPL, GPL variants).
+- **`manual_review_required`** — Licenses that should be reviewed but do not block CI (LGPL, MPL, EUPL, CC-BY-SA).
+- **`allowlist`** — Dependencies that have been flagged by automated checks but manually reviewed and approved. Each entry requires a justification, reviewer name, and review date.
+
+### 18.4 Allowlist Process
+
+When a dependency is flagged by the license policy check:
+
+1. Investigate the flagged license — confirm it is accurate (some packages report dual licenses or incorrect SPDX identifiers).
+2. If the dependency can be upgraded or replaced with a permissively-licensed alternative, do so.
+3. If the dependency must be kept, add a reviewed entry to the `allowlist` array in `LICENSE_POLICY.json`:
+   ```json
+   {
+     "package": "package-name",
+     "license": "LICENSE-SPDX",
+     "justification": "Reason this is acceptable — e.g., commercial exception, linking exception",
+     "reviewed_by": "Reviewer Name",
+     "reviewed_date": "YYYY-MM-DD"
+   }
+   ```
+4. The allowlist entry and its justification are committed to version control and visible in PR review.
+
+### 18.5 Weekly Advisory Scan
+
+The scheduled weekly run (`cron: '0 7 * * 1'`) catches newly published CVEs between PRs. If a new advisory is published for a dependency already in `main`, the weekly run will fail and surface the issue without waiting for a new PR.
+
+### 18.6 License Inventory Artifacts
+
+Each CI run uploads two artifacts (retained 30 days):
+- `python-licenses` — Full JSON inventory from `pip-licenses`
+- `node-licenses` — Full JSON inventory from `license-checker`
+
+These serve as point-in-time license audit records.
+
+### 18.7 Required Status Check (Manual Post-Deployment Step)
+
+> **Action required:** After merging the `dependency-compliance` workflow, enable it as a **required status check** on the `main` branch in GitHub repository settings (Settings → Branches → Branch protection rules → Require status checks → add `Python CVE & License Audit`, `Node CVE & License Audit`, and `License Policy Check`).
+
+This is a GitHub repository settings change and cannot be automated via CI configuration.
+
+---
+
 **Document Version History:**
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 1.1 | 2026-03-20 | Engineering | Added §18 Dependency Compliance Gate (AUDIT-09) |
 | 1.0 | 2026-02-04 | CTO | Initial publication, migrated from DEPLOYMENT.md |
 
 ---

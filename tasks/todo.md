@@ -94,6 +94,17 @@
 - **Risk:** HIGH — subscription-status bypass / entitlement not enforced
 - **Status:** COMPLETE
 
+### AUDIT-09: Dependency Compliance CI Gate
+- [x] Step 1: Create `dependency-compliance.yml` workflow (CVE + license audit, SHA-pinned actions)
+- [x] Step 2: Create `scripts/check_license_policy.py` (SPDX-aware license enforcement)
+- [x] Step 3: Create `docs/compliance/LICENSE_POLICY.json` (prohibited/allowlist policy)
+- [x] Step 4: Assess slowapi — accepted risk, documented in `docs/compliance/DEPENDENCY_DECISIONS.md`
+- [x] Step 5: Document dependency compliance gate in `DEPLOYMENT_ARCHITECTURE.md` §18
+- [x] Pin `actions/download-artifact` v6 SHA in `.github/actions-pin-registry.md`
+- [x] CVE findings documented in `reports/AUDIT-09-cve-findings.md` (3 CVEs in pyasn1/pypdf — follow-up needed)
+- **Verification:** pip-audit found 3 CVEs (documented, not patched per scope), npm audit clean, license policy 0 violations
+- **Status:** COMPLETE
+
 ### FIX-8B: Org-Aware Export Access & Multi-Tenant Roadmap (AUDIT-08 Phase 1/3)
 - [x] FIX 1: Verified — both generators already use `EngagementManager.get_engagement()` (org-aware via `_get_accessible_user_ids()`); no `Client.user_id ==` pattern exists
 - [x] FIX 2: Verified — `engagements_exports.py` already returns 404 (not 400) on access failures
