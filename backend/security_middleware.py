@@ -20,6 +20,7 @@ from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from typing import Any, Optional
 
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -119,54 +120,105 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
 MAX_REQUEST_BODY_BYTES = 110 * 1024 * 1024
 
 
-class MaxBodySizeMiddleware(BaseHTTPMiddleware):
-    """Reject requests whose Content-Length exceeds a global threshold.
+class MaxBodySizeMiddleware:
+    """Reject requests whose body exceeds a global threshold.
 
-    This catches oversized payloads *before* the framework reads the full body,
-    acting as a coarse safety net alongside the per-route validate_file_size().
+    Two-layer enforcement:
+    1. Content-Length fast-reject — catches oversized requests before any
+       body bytes are read.
+    2. Streaming byte counter — wraps the ASGI ``receive`` callable to count
+       bytes as they arrive, enforcing the limit even when Content-Length is
+       absent (e.g., chunked transfer encoding).
     """
 
     def __init__(self, app: Any, max_bytes: int = MAX_REQUEST_BODY_BYTES) -> None:
-        super().__init__(app)
+        self.app = app
         self.max_bytes = max_bytes
 
-    async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        content_length = request.headers.get("content-length")
+    async def __call__(self, scope: dict, receive: Any, send: Any) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        # --- Layer 1: Content-Length fast-reject (unchanged) ---
+        headers = dict(
+            (k.lower(), v) for k, v in ((k.decode("latin-1"), v.decode("latin-1")) for k, v in scope.get("headers", []))
+        )
+        content_length = headers.get("content-length")
+        path = scope.get("path", "")
+        method = scope.get("method", "")
+
         if content_length:
             try:
                 length = int(content_length)
             except ValueError:
                 log_secure_operation(
                     "malformed_content_length",
-                    f"Rejected {request.method} {request.url.path}: non-numeric Content-Length {content_length!r}",
+                    f"Rejected {method} {path}: non-numeric Content-Length {content_length!r}",
                 )
-                return Response(
-                    content='{"detail":"Invalid Content-Length header"}',
-                    status_code=400,
-                    media_type="application/json",
-                )
+                await self._send_json(send, 400, '{"detail":"Invalid Content-Length header"}')
+                return
             if length < 0:
                 log_secure_operation(
                     "negative_content_length",
-                    f"Rejected {request.method} {request.url.path}: negative Content-Length {length}",
+                    f"Rejected {method} {path}: negative Content-Length {length}",
                 )
-                return Response(
-                    content='{"detail":"Invalid Content-Length header"}',
-                    status_code=400,
-                    media_type="application/json",
-                )
+                await self._send_json(send, 400, '{"detail":"Invalid Content-Length header"}')
+                return
             if length > self.max_bytes:
                 log_secure_operation(
                     "request_body_too_large",
-                    f"Rejected {request.method} {request.url.path}: "
-                    f"Content-Length {content_length} exceeds {self.max_bytes}",
+                    f"Rejected {method} {path}: Content-Length {content_length} exceeds {self.max_bytes}",
                 )
-                return Response(
-                    content='{"detail":"Request body too large"}',
-                    status_code=413,
-                    media_type="application/json",
-                )
-        return await call_next(request)
+                await self._send_json(send, 413, '{"detail":"Request body too large"}')
+                return
+
+        # --- Layer 2: Streaming byte counter ---
+        bytes_received = 0
+        max_bytes = self.max_bytes
+        exceeded = False
+
+        async def checked_receive() -> dict:
+            nonlocal bytes_received, exceeded
+            message = await receive()
+            if message.get("type") == "http.request":
+                chunk = message.get("body", b"")
+                bytes_received += len(chunk)
+                if bytes_received > max_bytes:
+                    exceeded = True
+                    log_secure_operation(
+                        "streaming_body_too_large",
+                        f"Rejected {method} {path}: streamed body ({bytes_received} bytes) exceeds {max_bytes}",
+                    )
+                    raise HTTPException(
+                        status_code=413,
+                        detail=f"Request body exceeds maximum allowed size of {max_bytes // (1024 * 1024)} MB.",
+                    )
+            return message
+
+        try:
+            await self.app(scope, checked_receive, send)
+        except HTTPException as exc:
+            if exc.status_code == 413 and exceeded:
+                await self._send_json(send, 413, '{"detail":"Request body too large"}')
+            else:
+                raise
+
+    @staticmethod
+    async def _send_json(send: Any, status: int, body: str) -> None:
+        """Send a complete JSON error response via raw ASGI."""
+        body_bytes = body.encode("utf-8")
+        await send(
+            {
+                "type": "http.response.start",
+                "status": status,
+                "headers": [
+                    [b"content-type", b"application/json"],
+                    [b"content-length", str(len(body_bytes)).encode()],
+                ],
+            }
+        )
+        await send({"type": "http.response.body", "body": body_bytes})
 
 
 # =============================================================================
