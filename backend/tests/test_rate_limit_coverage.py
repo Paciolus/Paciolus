@@ -18,8 +18,8 @@ ROUTES_DIR = os.path.join(os.path.dirname(__file__), "..", "routes")
 MUTATING_METHODS = {"post", "put", "patch", "delete"}
 
 
-# Stripe webhook: signature-verified, rate limiting creates operational risk
-RATE_LIMIT_EXEMPT = {("billing.py", "POST", "/webhook"), ("billing_webhooks.py", "POST", "/webhook")}
+# AUDIT-07: Stripe webhook now rate-limited (10/min). No remaining exemptions.
+RATE_LIMIT_EXEMPT: set[tuple[str, str, str]] = set()
 
 
 def _audit_mutating_routes():

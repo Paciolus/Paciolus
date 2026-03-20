@@ -30,7 +30,7 @@ from schemas.billing_schemas import (  # noqa: F401 — backward compat re-expor
     UsageResponse,
     WeeklyReviewResponse,
 )
-from shared.rate_limits import RATE_LIMIT_DEFAULT, RATE_LIMIT_WRITE, limiter
+from shared.rate_limits import RATE_LIMIT_DEFAULT, RATE_LIMIT_WEBHOOK, RATE_LIMIT_WRITE, limiter
 
 logger = logging.getLogger(__name__)
 
@@ -367,6 +367,7 @@ def get_weekly_review_endpoint(
 
 
 @router.post("/webhook", status_code=status.HTTP_200_OK)
+@limiter.limit(RATE_LIMIT_WEBHOOK)
 async def stripe_webhook(
     request: Request,
     db: Session = Depends(get_db),

@@ -25,7 +25,7 @@ from database import get_db
 from models import WaitlistSignup
 from security_utils import log_secure_operation
 from shared.log_sanitizer import mask_email
-from shared.rate_limits import limiter
+from shared.rate_limits import RATE_LIMIT_HEALTH, limiter
 from version import __version__
 
 router = APIRouter(tags=["health"])
@@ -77,8 +77,9 @@ class ReadinessResponse(BaseModel):
 
 
 @router.get("/health", response_model=HealthResponse)
+@limiter.limit(RATE_LIMIT_HEALTH)
 async def health_check(
-    response: Response, deep: bool = Query(False, description="Include database connectivity check")
+    request: Request, response: Response, deep: bool = Query(False, description="Include database connectivity check")
 ):
     """Legacy health probe. Prefer /health/live (liveness) and /health/ready (readiness)."""
     if not deep:
@@ -128,7 +129,8 @@ async def health_check(
 
 
 @router.get("/health/live", response_model=LivenessResponse)
-async def liveness_probe():
+@limiter.limit(RATE_LIMIT_HEALTH)
+async def liveness_probe(request: Request):
     """Liveness probe — orchestrator should use this for restart decisions.
 
     Pure static response with zero I/O. If the process can serve this,
@@ -147,7 +149,8 @@ async def liveness_probe():
 
 
 @router.get("/health/ready", response_model=ReadinessResponse)
-async def readiness_probe():
+@limiter.limit(RATE_LIMIT_HEALTH)
+async def readiness_probe(request: Request):
     """Readiness probe — load balancer should use this for traffic routing.
 
     Checks database connectivity with SELECT 1, measures latency, and

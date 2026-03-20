@@ -16,6 +16,7 @@ from fastapi.responses import PlainTextResponse
 from prometheus_client import generate_latest
 
 from shared.parser_metrics import PARSER_REGISTRY
+from shared.rate_limits import RATE_LIMIT_METRICS, limiter
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +31,7 @@ _METRICS_ALLOWED_PEERS = frozenset({"127.0.0.1", "::1", "localhost"})
     response_class=PlainTextResponse,
     include_in_schema=False,
 )
+@limiter.limit(RATE_LIMIT_METRICS)
 def get_metrics(request: Request):
     """Prometheus metrics endpoint. Returns text/plain with parser metrics.
 

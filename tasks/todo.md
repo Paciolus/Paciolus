@@ -16,6 +16,7 @@
 > new features or architectural changes. Each entry is one line.
 > Format: `- [date] commit-sha: description (files touched)`
 
+- [2026-03-20] AUDIT-07-F5: rate-limit 5 unprotected endpoints — webhook (10/min), health (60/min), metrics (30/min); remove webhook exemption from coverage test
 - [2026-03-19] CI fix: 8 test failures — CircularDependencyError (use_alter), scheduler_locks mock, async event loop, rate limit decorators, seat enforcement assertion, perf budget, PG boolean literals
 - [2026-03-18] 7fa8a21: AUDIT-07-F1 bind Docker ports to loopback only (docker-compose.yml)
 - [2026-03-18] 52ddfe0: AUDIT-07-F2 replace curl healthcheck with python-native probe (backend/Dockerfile)
@@ -36,6 +37,7 @@
 | ~~Going concern section in TB Diagnostic PDF~~ | ~~Missing from PDF export~~ — **RESOLVED Sprint 562** (section renderer + orchestrator wiring) | DEC 2026-03-19 F-010 |
 | ~~Time-dependent test patterns → `freezegun`~~ | ~~Wall-clock assertions~~ — **RESOLVED Sprint 562** (14 methods across 3 files) | DEC 2026-03-19 F-013 |
 | ~~Pre-existing test failures (3)~~ | ~~flux_analysis fixed by FIX-1B flux_engine.py Decimal handling; sampling_memo fixed by adding ISA 530 "accepted"/"cannot be accepted" language~~ — **RESOLVED** | FIX-1A audit 2026-03-20 |
+| Rate limiter → Redis storage backend | In-memory counters reset on worker restart and are not shared across workers; requires Redis infrastructure | AUDIT-07 Phase 5 |
 
 ---
 

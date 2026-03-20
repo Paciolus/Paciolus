@@ -206,3 +206,8 @@ RATE_LIMIT_AUTH = TieredLimit("auth", "5/minute")
 RATE_LIMIT_EXPORT = TieredLimit("export", "20/minute")
 RATE_LIMIT_WRITE = TieredLimit("write", "30/minute")
 RATE_LIMIT_DEFAULT = TieredLimit("default", "60/minute")
+
+# Fixed-rate limits for infrastructure endpoints (no tiered escalation)
+RATE_LIMIT_WEBHOOK = "10/minute"  # AUDIT-07: unauthenticated, signature-verified
+RATE_LIMIT_HEALTH = "60/minute"  # AUDIT-07: health probes
+RATE_LIMIT_METRICS = "30/minute"  # AUDIT-07: Prometheus scrape endpoint

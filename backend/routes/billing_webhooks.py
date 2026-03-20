@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 
 from database import get_db
-from shared.rate_limits import limiter  # noqa: F401 — router may need limiter in future
+from shared.rate_limits import RATE_LIMIT_WEBHOOK, limiter
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +19,7 @@ router = APIRouter(prefix="/billing", tags=["billing"])
 
 
 @router.post("/webhook", status_code=status.HTTP_200_OK)
+@limiter.limit(RATE_LIMIT_WEBHOOK)
 async def stripe_webhook(
     request: Request,
     db: Session = Depends(get_db),
