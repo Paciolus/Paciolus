@@ -348,11 +348,12 @@ def _build_evaluation_next_steps(
                 d = "Understatement"
         directions.add(d)
 
-    # Intro text
+    # Intro text (ISA 530 terminology: "accepted" / "cannot be accepted")
     if conclusion == "pass":
         intro = (
             f"Sampling evaluation is complete. UEL of ${uel:,.2f} does not exceed "
-            f"Tolerable Misstatement of ${tm:,.2f} at the {conf_level:.0%} confidence level. "
+            f"Tolerable Misstatement of ${tm:,.2f} — the population is accepted at the "
+            f"{conf_level:.0%} confidence level. "
             "The auditor should evaluate this result in the context of other audit evidence "
             "and the overall engagement risk assessment. The following actions are required to "
             "close out the sampling workpaper:"
@@ -360,7 +361,8 @@ def _build_evaluation_next_steps(
     else:
         intro = (
             f"Sampling evaluation is complete. UEL of ${uel:,.2f} exceeds "
-            f"Tolerable Misstatement of ${tm:,.2f} at the {conf_level:.0%} confidence level. "
+            f"Tolerable Misstatement of ${tm:,.2f} — the population cannot be accepted at the "
+            f"{conf_level:.0%} confidence level. "
             "The auditor should consider expanding the sample or performing alternative "
             "procedures per ISA 530.17. If expanding, the following actions "
             "apply to errors already identified:"

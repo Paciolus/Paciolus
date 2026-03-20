@@ -35,7 +35,7 @@
 | ~~Frontend component test coverage (25% → 60%+)~~ | ~~147/195 untested~~ — **RESOLVED Sprint 562** (45 new test files, 26.6%→42.8%) | DEC 2026-03-19 F-004 |
 | ~~Going concern section in TB Diagnostic PDF~~ | ~~Missing from PDF export~~ — **RESOLVED Sprint 562** (section renderer + orchestrator wiring) | DEC 2026-03-19 F-010 |
 | ~~Time-dependent test patterns → `freezegun`~~ | ~~Wall-clock assertions~~ — **RESOLVED Sprint 562** (14 methods across 3 files) | DEC 2026-03-19 F-013 |
-| Pre-existing test failures (3) | `test_audit_api::TestAuditFlux::test_flux_analysis` (500 error), `test_sampling_memo::TestEvaluationNextSteps::test_evaluation_intro_pass_accepted` (missing "accepted" in intro text), `test_sampling_memo::TestEvaluationNextSteps::test_evaluation_intro_fail_not_accepted` (missing "cannot be accepted") | FIX-1A audit 2026-03-20 |
+| ~~Pre-existing test failures (3)~~ | ~~flux_analysis fixed by FIX-1B flux_engine.py Decimal handling; sampling_memo fixed by adding ISA 530 "accepted"/"cannot be accepted" language~~ — **RESOLVED** | FIX-1A audit 2026-03-20 |
 
 ---
 
