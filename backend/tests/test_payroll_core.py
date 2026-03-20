@@ -48,10 +48,19 @@ from shared.parsing_helpers import parse_date, safe_float, safe_str
 # FIXTURES
 # =============================================================================
 
+
 @pytest.fixture
 def standard_columns():
-    return ["Employee ID", "Employee Name", "Department", "Pay Date", "Gross Pay",
-            "Net Pay", "Check Number", "Termination Date"]
+    return [
+        "Employee ID",
+        "Employee Name",
+        "Department",
+        "Pay Date",
+        "Gross Pay",
+        "Net Pay",
+        "Check Number",
+        "Termination Date",
+    ]
 
 
 @pytest.fixture
@@ -63,16 +72,46 @@ def minimal_columns():
 def sample_entries():
     """Sample payroll entries for testing."""
     return [
-        PayrollEntry(employee_id="E001", employee_name="John Smith", department="Sales",
-                     pay_date=date(2025, 1, 15), gross_pay=5000.0, _row_index=1),
-        PayrollEntry(employee_id="E002", employee_name="Jane Doe", department="HR",
-                     pay_date=date(2025, 1, 15), gross_pay=4500.0, _row_index=2),
-        PayrollEntry(employee_id="E003", employee_name="Bob Wilson", department="IT",
-                     pay_date=date(2025, 1, 15), gross_pay=6000.0, _row_index=3),
-        PayrollEntry(employee_id="E001", employee_name="John Smith", department="Sales",
-                     pay_date=date(2025, 1, 31), gross_pay=5000.0, _row_index=4),
-        PayrollEntry(employee_id="E002", employee_name="Jane Doe", department="HR",
-                     pay_date=date(2025, 1, 31), gross_pay=4500.0, _row_index=5),
+        PayrollEntry(
+            employee_id="E001",
+            employee_name="John Smith",
+            department="Sales",
+            pay_date=date(2025, 1, 15),
+            gross_pay=5000.0,
+            _row_index=1,
+        ),
+        PayrollEntry(
+            employee_id="E002",
+            employee_name="Jane Doe",
+            department="HR",
+            pay_date=date(2025, 1, 15),
+            gross_pay=4500.0,
+            _row_index=2,
+        ),
+        PayrollEntry(
+            employee_id="E003",
+            employee_name="Bob Wilson",
+            department="IT",
+            pay_date=date(2025, 1, 15),
+            gross_pay=6000.0,
+            _row_index=3,
+        ),
+        PayrollEntry(
+            employee_id="E001",
+            employee_name="John Smith",
+            department="Sales",
+            pay_date=date(2025, 1, 31),
+            gross_pay=5000.0,
+            _row_index=4,
+        ),
+        PayrollEntry(
+            employee_id="E002",
+            employee_name="Jane Doe",
+            department="HR",
+            pay_date=date(2025, 1, 31),
+            gross_pay=4500.0,
+            _row_index=5,
+        ),
     ]
 
 
@@ -100,6 +139,7 @@ def standard_detection():
 # =============================================================================
 # TestPayrollColumnDetection
 # =============================================================================
+
 
 class TestPayrollColumnDetection:
     """Tests for payroll column detection."""
@@ -181,14 +221,20 @@ class TestPayrollColumnDetection:
 # TestPayrollParsing
 # =============================================================================
 
+
 class TestPayrollParsing:
     """Tests for payroll entry parsing."""
 
     def test_valid_rows(self, standard_detection):
         rows = [
-            {"Employee ID": "E001", "Employee Name": "John Smith",
-             "Department": "Sales", "Pay Date": "2025-01-15",
-             "Gross Pay": "5000.00", "Net Pay": "3500.00"},
+            {
+                "Employee ID": "E001",
+                "Employee Name": "John Smith",
+                "Department": "Sales",
+                "Pay Date": "2025-01-15",
+                "Gross Pay": "5000.00",
+                "Net Pay": "3500.00",
+            },
         ]
         entries = parse_payroll_entries(rows, standard_detection)
         assert len(entries) == 1
@@ -238,8 +284,8 @@ class TestPayrollParsing:
 # TestSafeHelpers
 # =============================================================================
 
-class TestSafeHelpers:
 
+class TestSafeHelpers:
     def testsafe_str_none(self):
         assert safe_str(None) is None
 
@@ -267,8 +313,8 @@ class TestSafeHelpers:
 # TestDataQuality
 # =============================================================================
 
-class TestDataQuality:
 
+class TestDataQuality:
     def test_full_quality(self, sample_entries, standard_detection):
         dq = assess_payroll_data_quality(sample_entries, standard_detection)
         assert dq.completeness_score > 0.80
@@ -303,8 +349,8 @@ class TestDataQuality:
 # TestDuplicateEmployees (PR-T1)
 # =============================================================================
 
-class TestDuplicateEmployees:
 
+class TestDuplicateEmployees:
     def test_no_duplicates(self, sample_entries, default_config):
         result = _test_duplicate_employee_ids(sample_entries, default_config)
         assert result.entries_flagged == 0
@@ -385,8 +431,8 @@ class TestDuplicateEmployees:
 # TestMissingFields (PR-T2)
 # =============================================================================
 
-class TestMissingFields:
 
+class TestMissingFields:
     def test_no_missing(self, sample_entries, default_config):
         result = _test_missing_critical_fields(sample_entries, default_config)
         assert result.entries_flagged == 0
@@ -435,8 +481,8 @@ class TestMissingFields:
 # TestRoundAmounts (PR-T3)
 # =============================================================================
 
-class TestRoundAmounts:
 
+class TestRoundAmounts:
     def test_100k_multiple(self, default_config):
         entries = [PayrollEntry(gross_pay=100000.0, _row_index=1)]
         result = _test_round_salary_amounts(entries, default_config)
@@ -486,62 +532,88 @@ class TestRoundAmounts:
 # TestPayAfterTermination (PR-T4)
 # =============================================================================
 
-class TestPayAfterTermination:
 
+class TestPayAfterTermination:
     def test_no_term_dates(self, sample_entries, default_config):
         result = _test_pay_after_termination(sample_entries, default_config)
         assert result.entries_flagged == 0
 
     def test_payment_after_30_days(self, default_config):
-        entries = [PayrollEntry(
-            employee_name="John", pay_date=date(2025, 3, 15),
-            term_date=date(2025, 1, 1), gross_pay=5000.0, _row_index=1
-        )]
+        entries = [
+            PayrollEntry(
+                employee_name="John",
+                pay_date=date(2025, 3, 15),
+                term_date=date(2025, 1, 1),
+                gross_pay=5000.0,
+                _row_index=1,
+            )
+        ]
         result = _test_pay_after_termination(entries, default_config)
         assert result.entries_flagged == 1
         assert result.flagged_entries[0].severity == Severity.HIGH.value
 
     def test_payment_after_7_days(self, default_config):
-        entries = [PayrollEntry(
-            employee_name="John", pay_date=date(2025, 1, 20),
-            term_date=date(2025, 1, 10), gross_pay=5000.0, _row_index=1
-        )]
+        entries = [
+            PayrollEntry(
+                employee_name="John",
+                pay_date=date(2025, 1, 20),
+                term_date=date(2025, 1, 10),
+                gross_pay=5000.0,
+                _row_index=1,
+            )
+        ]
         result = _test_pay_after_termination(entries, default_config)
         assert result.entries_flagged == 1
         assert result.flagged_entries[0].severity == Severity.MEDIUM.value
 
     def test_payment_within_7_days(self, default_config):
-        entries = [PayrollEntry(
-            employee_name="John", pay_date=date(2025, 1, 5),
-            term_date=date(2025, 1, 1), gross_pay=5000.0, _row_index=1
-        )]
+        entries = [
+            PayrollEntry(
+                employee_name="John",
+                pay_date=date(2025, 1, 5),
+                term_date=date(2025, 1, 1),
+                gross_pay=5000.0,
+                _row_index=1,
+            )
+        ]
         result = _test_pay_after_termination(entries, default_config)
         assert result.entries_flagged == 1
         assert result.flagged_entries[0].severity == Severity.LOW.value
 
     def test_payment_before_termination(self, default_config):
-        entries = [PayrollEntry(
-            employee_name="John", pay_date=date(2025, 1, 1),
-            term_date=date(2025, 6, 30), gross_pay=5000.0, _row_index=1
-        )]
+        entries = [
+            PayrollEntry(
+                employee_name="John",
+                pay_date=date(2025, 1, 1),
+                term_date=date(2025, 6, 30),
+                gross_pay=5000.0,
+                _row_index=1,
+            )
+        ]
         result = _test_pay_after_termination(entries, default_config)
         assert result.entries_flagged == 0
 
     def test_no_term_column(self, default_config):
         """No term_date -> no flags."""
-        entries = [PayrollEntry(
-            employee_name="John", pay_date=date(2025, 1, 15),
-            term_date=None, gross_pay=5000.0, _row_index=1
-        )]
+        entries = [
+            PayrollEntry(
+                employee_name="John", pay_date=date(2025, 1, 15), term_date=None, gross_pay=5000.0, _row_index=1
+            )
+        ]
         result = _test_pay_after_termination(entries, default_config)
         assert result.entries_flagged == 0
 
     def test_disabled_by_config(self, default_config):
         config = PayrollTestingConfig(pay_after_term_enabled=False)
-        entries = [PayrollEntry(
-            employee_name="John", pay_date=date(2025, 3, 15),
-            term_date=date(2025, 1, 1), gross_pay=5000.0, _row_index=1
-        )]
+        entries = [
+            PayrollEntry(
+                employee_name="John",
+                pay_date=date(2025, 3, 15),
+                term_date=date(2025, 1, 1),
+                gross_pay=5000.0,
+                _row_index=1,
+            )
+        ]
         result = _test_pay_after_termination(entries, config)
         assert result.entries_flagged == 0
 
@@ -554,8 +626,8 @@ class TestPayAfterTermination:
 # TestCheckNumberGaps (PR-T5)
 # =============================================================================
 
-class TestCheckNumberGaps:
 
+class TestCheckNumberGaps:
     def test_sequential_no_gaps(self, default_config):
         entries = [
             PayrollEntry(check_number="1001", _row_index=1),
@@ -620,23 +692,59 @@ class TestCheckNumberGaps:
 # TestCompositeScoring
 # =============================================================================
 
-class TestCompositeScoring:
 
+class TestCompositeScoring:
     def test_clean_low_score(self, default_config, standard_detection):
         """Truly clean data with multiple entries per employee = low score."""
         clean = [
-            PayrollEntry(employee_id="E001", employee_name="John Smith", department="Sales",
-                         pay_date=date(2025, 1, 15), gross_pay=5000.0, _row_index=1),
-            PayrollEntry(employee_id="E001", employee_name="John Smith", department="Sales",
-                         pay_date=date(2025, 2, 15), gross_pay=5000.0, _row_index=2),
-            PayrollEntry(employee_id="E001", employee_name="John Smith", department="Sales",
-                         pay_date=date(2025, 3, 15), gross_pay=5000.0, _row_index=3),
-            PayrollEntry(employee_id="E002", employee_name="Jane Doe", department="HR",
-                         pay_date=date(2025, 1, 15), gross_pay=4500.0, _row_index=4),
-            PayrollEntry(employee_id="E002", employee_name="Jane Doe", department="HR",
-                         pay_date=date(2025, 2, 15), gross_pay=4500.0, _row_index=5),
-            PayrollEntry(employee_id="E002", employee_name="Jane Doe", department="HR",
-                         pay_date=date(2025, 3, 15), gross_pay=4500.0, _row_index=6),
+            PayrollEntry(
+                employee_id="E001",
+                employee_name="John Smith",
+                department="Sales",
+                pay_date=date(2025, 1, 15),
+                gross_pay=5000.0,
+                _row_index=1,
+            ),
+            PayrollEntry(
+                employee_id="E001",
+                employee_name="John Smith",
+                department="Sales",
+                pay_date=date(2025, 2, 15),
+                gross_pay=5000.0,
+                _row_index=2,
+            ),
+            PayrollEntry(
+                employee_id="E001",
+                employee_name="John Smith",
+                department="Sales",
+                pay_date=date(2025, 3, 15),
+                gross_pay=5000.0,
+                _row_index=3,
+            ),
+            PayrollEntry(
+                employee_id="E002",
+                employee_name="Jane Doe",
+                department="HR",
+                pay_date=date(2025, 1, 15),
+                gross_pay=4500.0,
+                _row_index=4,
+            ),
+            PayrollEntry(
+                employee_id="E002",
+                employee_name="Jane Doe",
+                department="HR",
+                pay_date=date(2025, 2, 15),
+                gross_pay=4500.0,
+                _row_index=5,
+            ),
+            PayrollEntry(
+                employee_id="E002",
+                employee_name="Jane Doe",
+                department="HR",
+                pay_date=date(2025, 3, 15),
+                gross_pay=4500.0,
+                _row_index=6,
+            ),
         ]
         results = run_payroll_test_battery(clean, default_config, standard_detection)
         score = calculate_payroll_composite_score(results, len(clean))
@@ -645,10 +753,7 @@ class TestCompositeScoring:
 
     def test_dirty_high_score(self, default_config):
         # All missing fields
-        entries = [
-            PayrollEntry(employee_name="", gross_pay=0.0, pay_date=None, _row_index=i)
-            for i in range(10)
-        ]
+        entries = [PayrollEntry(employee_name="", gross_pay=0.0, pay_date=None, _row_index=i) for i in range(10)]
         detection = PayrollColumnDetectionResult(
             employee_name_column="Name",
             gross_pay_column="Pay",
@@ -661,14 +766,17 @@ class TestCompositeScoring:
     def test_comparative_ordering(self, default_config):
         """Clean score < moderate score < dirty score."""
         clean = [
-            PayrollEntry(employee_id="E001", employee_name="John", department="Sales",
-                         pay_date=date(2025, 1, 15), gross_pay=5000.0, _row_index=i)
+            PayrollEntry(
+                employee_id="E001",
+                employee_name="John",
+                department="Sales",
+                pay_date=date(2025, 1, 15),
+                gross_pay=5000.0,
+                _row_index=i,
+            )
             for i in range(10)
         ]
-        dirty = [
-            PayrollEntry(employee_name="", gross_pay=0.0, pay_date=None, _row_index=i)
-            for i in range(10)
-        ]
+        dirty = [PayrollEntry(employee_name="", gross_pay=0.0, pay_date=None, _row_index=i) for i in range(10)]
         detection = PayrollColumnDetectionResult(
             employee_name_column="Name",
             gross_pay_column="Pay",
@@ -700,7 +808,9 @@ class TestCompositeScoring:
     def test_top_findings(self, default_config):
         entries = [PayrollEntry(employee_name="", gross_pay=0.0, _row_index=1)]
         detection = PayrollColumnDetectionResult(
-            employee_name_column="Name", gross_pay_column="Pay", pay_date_column="Date",
+            employee_name_column="Name",
+            gross_pay_column="Pay",
+            pay_date_column="Date",
         )
         results = run_payroll_test_battery(entries, default_config, detection)
         score = calculate_payroll_composite_score(results, len(entries))
@@ -719,8 +829,8 @@ class TestCompositeScoring:
 # TestBattery
 # =============================================================================
 
-class TestBattery:
 
+class TestBattery:
     def test_full_battery(self, sample_entries, default_config, standard_detection):
         results = run_payroll_test_battery(sample_entries, default_config, standard_detection)
         # T1, T2, T3 always; T4 and T5 if columns exist
@@ -751,15 +861,13 @@ class TestBattery:
 # TestFullPipeline
 # =============================================================================
 
-class TestFullPipeline:
 
+class TestFullPipeline:
     def test_run_payroll_testing(self):
         headers = ["Employee ID", "Employee Name", "Pay Date", "Gross Pay"]
         rows = [
-            {"Employee ID": "E001", "Employee Name": "John Smith",
-             "Pay Date": "2025-01-15", "Gross Pay": "5000.00"},
-            {"Employee ID": "E002", "Employee Name": "Jane Doe",
-             "Pay Date": "2025-01-15", "Gross Pay": "4500.00"},
+            {"Employee ID": "E001", "Employee Name": "John Smith", "Pay Date": "2025-01-15", "Gross Pay": "5000.00"},
+            {"Employee ID": "E002", "Employee Name": "Jane Doe", "Pay Date": "2025-01-15", "Gross Pay": "4500.00"},
         ]
         result = run_payroll_testing(headers, rows)
         assert isinstance(result, PayrollTestingResult)
@@ -805,12 +913,11 @@ class TestFullPipeline:
 # TestSerialization
 # =============================================================================
 
-class TestSerialization:
 
+class TestSerialization:
     def test_payroll_entry_to_dict(self):
         entry = PayrollEntry(
-            employee_id="E001", employee_name="John Smith",
-            pay_date=date(2025, 1, 15), gross_pay=5000.0, _row_index=1
+            employee_id="E001", employee_name="John Smith", pay_date=date(2025, 1, 15), gross_pay=5000.0, _row_index=1
         )
         d = entry.to_dict()
         assert d["employee_name"] == "John Smith"
@@ -820,8 +927,7 @@ class TestSerialization:
     def test_flagged_employee_to_dict(self):
         entry = PayrollEntry(employee_name="Test", _row_index=1)
         flagged = FlaggedEmployee(
-            entry=entry, test_name="Test", test_key="PR-T1",
-            severity="high", issue="Test issue", confidence=0.95
+            entry=entry, test_name="Test", test_key="PR-T1", severity="high", issue="Test issue", confidence=0.95
         )
         d = flagged.to_dict()
         assert d["test_key"] == "PR-T1"
@@ -829,8 +935,7 @@ class TestSerialization:
 
     def test_test_result_to_dict(self):
         result = PayrollTestResult(
-            test_name="Test", test_key="PR-T1",
-            test_tier="structural", entries_flagged=0, total_entries=10
+            test_name="Test", test_key="PR-T1", test_tier="structural", entries_flagged=0, total_entries=10
         )
         d = result.to_dict()
         assert d["test_key"] == "PR-T1"
@@ -842,5 +947,5 @@ class TestSerialization:
         result = run_payroll_testing(headers, rows)
         d = result.to_dict()
         # Ensure all values are JSON-serializable
-        json_str = json.dumps(d)
+        json_str = json.dumps(d, default=str)
         assert len(json_str) > 0

@@ -60,6 +60,7 @@ from three_way_match_engine import (
 # HELPERS
 # =============================================================================
 
+
 class TestHelpers:
     """Tests for helper functions."""
 
@@ -93,6 +94,7 @@ class TestHelpers:
 
     def test_parse_date_formats(self):
         from datetime import date
+
         assert _parse_date("2025-01-15") == date(2025, 1, 15)
         assert _parse_date("01/15/2025") == date(2025, 1, 15)
         assert _parse_date("2025-01-15 10:30:00") == date(2025, 1, 15)
@@ -114,6 +116,7 @@ class TestHelpers:
 # =============================================================================
 # PO COLUMN DETECTION
 # =============================================================================
+
 
 class TestPOColumnDetection:
     """Tests for PO column detection."""
@@ -180,11 +183,22 @@ class TestPOColumnDetection:
 # INVOICE COLUMN DETECTION
 # =============================================================================
 
+
 class TestInvoiceColumnDetection:
     """Tests for invoice column detection."""
 
     def test_standard_columns(self):
-        cols = ["Invoice Number", "PO Reference", "Vendor", "Description", "Quantity", "Unit Price", "Total Amount", "Invoice Date", "Due Date"]
+        cols = [
+            "Invoice Number",
+            "PO Reference",
+            "Vendor",
+            "Description",
+            "Quantity",
+            "Unit Price",
+            "Total Amount",
+            "Invoice Date",
+            "Due Date",
+        ]
         result = detect_invoice_columns(cols)
         assert result.invoice_number_column == "Invoice Number"
         assert result.po_reference_column == "PO Reference"
@@ -238,11 +252,22 @@ class TestInvoiceColumnDetection:
 # RECEIPT COLUMN DETECTION
 # =============================================================================
 
+
 class TestReceiptColumnDetection:
     """Tests for receipt column detection."""
 
     def test_standard_columns(self):
-        cols = ["Receipt Number", "PO Reference", "Invoice Ref", "Vendor", "Description", "Quantity Received", "Receipt Date", "Received By", "Condition"]
+        cols = [
+            "Receipt Number",
+            "PO Reference",
+            "Invoice Ref",
+            "Vendor",
+            "Description",
+            "Quantity Received",
+            "Receipt Date",
+            "Received By",
+            "Condition",
+        ]
         result = detect_receipt_columns(cols)
         assert result.receipt_number_column == "Receipt Number"
         assert result.po_reference_column == "PO Reference"
@@ -295,13 +320,16 @@ class TestReceiptColumnDetection:
 # PO PARSING
 # =============================================================================
 
+
 class TestPOParsing:
     """Tests for PO parsing."""
 
     def test_valid_parsing(self):
         detection = POColumnDetectionResult(
-            po_number_column="PO#", vendor_column="Vendor",
-            total_amount_column="Amount", quantity_column="Qty",
+            po_number_column="PO#",
+            vendor_column="Vendor",
+            total_amount_column="Amount",
+            quantity_column="Qty",
         )
         rows = [
             {"PO#": "PO-001", "Vendor": "Acme Corp", "Amount": "1000.00", "Qty": "10"},
@@ -331,7 +359,8 @@ class TestPOParsing:
 
     def test_currency_amounts(self):
         detection = POColumnDetectionResult(
-            po_number_column="PO#", total_amount_column="Total",
+            po_number_column="PO#",
+            total_amount_column="Total",
         )
         rows = [{"PO#": "PO-001", "Total": "$1,500.00"}]
         orders = parse_purchase_orders(rows, detection)
@@ -339,7 +368,10 @@ class TestPOParsing:
 
     def test_to_dict(self):
         po = PurchaseOrder(
-            po_number="PO-001", vendor="Test", total_amount=100.0, row_number=1,
+            po_number="PO-001",
+            vendor="Test",
+            total_amount=100.0,
+            row_number=1,
         )
         d = po.to_dict()
         assert d["po_number"] == "PO-001"
@@ -358,13 +390,16 @@ class TestPOParsing:
 # INVOICE PARSING
 # =============================================================================
 
+
 class TestInvoiceParsing:
     """Tests for invoice parsing."""
 
     def test_valid_parsing(self):
         detection = InvoiceColumnDetectionResult(
-            invoice_number_column="Inv#", po_reference_column="PO Ref",
-            vendor_column="Vendor", total_amount_column="Amount",
+            invoice_number_column="Inv#",
+            po_reference_column="PO Ref",
+            vendor_column="Vendor",
+            total_amount_column="Amount",
         )
         rows = [
             {"Inv#": "INV-001", "PO Ref": "PO-001", "Vendor": "Acme Corp", "Amount": "1000.00"},
@@ -378,7 +413,8 @@ class TestInvoiceParsing:
 
     def test_missing_po_reference(self):
         detection = InvoiceColumnDetectionResult(
-            invoice_number_column="Inv#", vendor_column="Vendor",
+            invoice_number_column="Inv#",
+            vendor_column="Vendor",
             total_amount_column="Amount",
         )
         rows = [{"Inv#": "INV-001", "Vendor": "Test", "Amount": "500"}]
@@ -392,7 +428,8 @@ class TestInvoiceParsing:
 
     def test_date_fields(self):
         detection = InvoiceColumnDetectionResult(
-            invoice_number_column="Inv#", invoice_date_column="Date",
+            invoice_number_column="Inv#",
+            invoice_date_column="Date",
             due_date_column="Due",
         )
         rows = [{"Inv#": "INV-001", "Date": "2025-01-15", "Due": "2025-02-15"}]
@@ -402,8 +439,11 @@ class TestInvoiceParsing:
 
     def test_to_dict(self):
         inv = Invoice(
-            invoice_number="INV-001", po_reference="PO-001",
-            vendor="Test", total_amount=500.0, row_number=1,
+            invoice_number="INV-001",
+            po_reference="PO-001",
+            vendor="Test",
+            total_amount=500.0,
+            row_number=1,
         )
         d = inv.to_dict()
         assert d["invoice_number"] == "INV-001"
@@ -420,18 +460,26 @@ class TestInvoiceParsing:
 # RECEIPT PARSING
 # =============================================================================
 
+
 class TestReceiptParsing:
     """Tests for receipt parsing."""
 
     def test_valid_parsing(self):
         detection = ReceiptColumnDetectionResult(
-            receipt_number_column="Receipt#", po_reference_column="PO Ref",
-            vendor_column="Vendor", quantity_received_column="Qty Received",
+            receipt_number_column="Receipt#",
+            po_reference_column="PO Ref",
+            vendor_column="Vendor",
+            quantity_received_column="Qty Received",
             receipt_date_column="Date",
         )
         rows = [
-            {"Receipt#": "REC-001", "PO Ref": "PO-001", "Vendor": "Acme Corp",
-             "Qty Received": "10", "Date": "2025-01-20"},
+            {
+                "Receipt#": "REC-001",
+                "PO Ref": "PO-001",
+                "Vendor": "Acme Corp",
+                "Qty Received": "10",
+                "Date": "2025-01-20",
+            },
         ]
         receipts = parse_receipts(rows, detection)
         assert len(receipts) == 1
@@ -442,8 +490,10 @@ class TestReceiptParsing:
 
     def test_with_invoice_reference(self):
         detection = ReceiptColumnDetectionResult(
-            receipt_number_column="Receipt#", invoice_reference_column="Inv Ref",
-            vendor_column="Vendor", quantity_received_column="Qty",
+            receipt_number_column="Receipt#",
+            invoice_reference_column="Inv Ref",
+            vendor_column="Vendor",
+            quantity_received_column="Qty",
         )
         rows = [{"Receipt#": "REC-001", "Inv Ref": "INV-001", "Vendor": "Test", "Qty": "5"}]
         receipts = parse_receipts(rows, detection)
@@ -456,8 +506,10 @@ class TestReceiptParsing:
 
     def test_condition_field(self):
         detection = ReceiptColumnDetectionResult(
-            receipt_number_column="Receipt#", condition_column="Condition",
-            vendor_column="Vendor", quantity_received_column="Qty",
+            receipt_number_column="Receipt#",
+            condition_column="Condition",
+            vendor_column="Vendor",
+            quantity_received_column="Qty",
         )
         rows = [{"Receipt#": "REC-001", "Condition": "Good", "Vendor": "X", "Qty": "5"}]
         receipts = parse_receipts(rows, detection)
@@ -465,8 +517,11 @@ class TestReceiptParsing:
 
     def test_to_dict(self):
         rec = Receipt(
-            receipt_number="REC-001", po_reference="PO-001",
-            vendor="Test", quantity_received=10.0, row_number=1,
+            receipt_number="REC-001",
+            po_reference="PO-001",
+            vendor="Test",
+            quantity_received=10.0,
+            row_number=1,
         )
         d = rec.to_dict()
         assert d["receipt_number"] == "REC-001"
@@ -483,6 +538,7 @@ class TestReceiptParsing:
 # =============================================================================
 # DATA QUALITY
 # =============================================================================
+
 
 class TestDataQuality:
     """Tests for data quality assessment."""
@@ -507,9 +563,7 @@ class TestDataQuality:
         assert dq.overall_quality_score == 0.0
 
     def test_low_po_ref_issues(self):
-        invoices = [
-            Invoice(invoice_number=f"INV-{i}", vendor="V", total_amount=100) for i in range(10)
-        ]
+        invoices = [Invoice(invoice_number=f"INV-{i}", vendor="V", total_amount=100) for i in range(10)]
         pos = [PurchaseOrder(po_number=f"PO-{i}", vendor="V", total_amount=100) for i in range(10)]
         receipts = [Receipt(vendor="V", quantity_received=10) for _ in range(10)]
         dq = assess_three_way_data_quality(pos, invoices, receipts)
@@ -537,6 +591,7 @@ class TestDataQuality:
 # =============================================================================
 # CONFIG
 # =============================================================================
+
 
 class TestConfig:
     """Tests for ThreeWayMatchConfig."""
@@ -574,6 +629,7 @@ class TestConfig:
 # ENUMS
 # =============================================================================
 
+
 class TestEnums:
     """Tests for enum values."""
 
@@ -597,14 +653,28 @@ class TestEnums:
 # SPRINT 92: MATCHING ALGORITHM TESTS
 # =============================================================================
 
+
 class TestExactPOMatching:
     """Tests for Phase 1: Exact PO number linkage."""
 
     def test_full_three_way_match(self):
         """PO, Invoice, and Receipt all link via PO number."""
         pos = [PurchaseOrder(po_number="PO-001", vendor="Acme Corp", total_amount=1000.0, quantity=10, row_number=1)]
-        invoices = [Invoice(invoice_number="INV-001", po_reference="PO-001", vendor="Acme Corp", total_amount=1000.0, quantity=10, row_number=1)]
-        receipts = [Receipt(receipt_number="REC-001", po_reference="PO-001", vendor="Acme Corp", quantity_received=10, row_number=1)]
+        invoices = [
+            Invoice(
+                invoice_number="INV-001",
+                po_reference="PO-001",
+                vendor="Acme Corp",
+                total_amount=1000.0,
+                quantity=10,
+                row_number=1,
+            )
+        ]
+        receipts = [
+            Receipt(
+                receipt_number="REC-001", po_reference="PO-001", vendor="Acme Corp", quantity_received=10, row_number=1
+            )
+        ]
         result = run_three_way_match(pos, invoices, receipts)
         assert len(result.full_matches) == 1
         assert len(result.partial_matches) == 0
@@ -675,7 +745,16 @@ class TestExactPOMatching:
     def test_receipt_linked_via_invoice_reference(self):
         """Receipt links via invoice reference when no PO ref on receipt."""
         pos = [PurchaseOrder(po_number="PO-001", vendor="Acme", total_amount=1000, quantity=10, row_number=1)]
-        invoices = [Invoice(invoice_number="INV-100", po_reference="PO-001", vendor="Acme", total_amount=1000, quantity=10, row_number=1)]
+        invoices = [
+            Invoice(
+                invoice_number="INV-100",
+                po_reference="PO-001",
+                vendor="Acme",
+                total_amount=1000,
+                quantity=10,
+                row_number=1,
+            )
+        ]
         receipts = [Receipt(invoice_reference="INV-100", vendor="Acme", quantity_received=10, row_number=1)]
         result = run_three_way_match(pos, invoices, receipts)
         assert len(result.full_matches) == 1
@@ -891,8 +970,12 @@ class TestVarianceAnalysis:
     def test_variance_to_dict(self):
         """MatchVariance.to_dict() serializes correctly."""
         v = MatchVariance(
-            field="amount", po_value=1000, invoice_value=1100,
-            variance_amount=100, variance_pct=0.10, severity="medium",
+            field="amount",
+            po_value=1000,
+            invoice_value=1100,
+            variance_amount=100,
+            variance_pct=0.10,
+            severity="medium",
         )
         d = v.to_dict()
         assert d["field"] == "amount"
@@ -968,8 +1051,13 @@ class TestSummary:
 
     def test_summary_counts(self):
         """Summary counts match actual results."""
-        pos = [PurchaseOrder(po_number=f"PO-{i}", vendor="A", total_amount=100, quantity=5, row_number=i) for i in range(1, 6)]
-        invoices = [Invoice(po_reference=f"PO-{i}", vendor="A", total_amount=100, quantity=5, row_number=i) for i in range(1, 4)]
+        pos = [
+            PurchaseOrder(po_number=f"PO-{i}", vendor="A", total_amount=100, quantity=5, row_number=i)
+            for i in range(1, 6)
+        ]
+        invoices = [
+            Invoice(po_reference=f"PO-{i}", vendor="A", total_amount=100, quantity=5, row_number=i) for i in range(1, 4)
+        ]
         receipts = [Receipt(po_reference=f"PO-{i}", vendor="A", quantity_received=5, row_number=i) for i in range(1, 4)]
         config = ThreeWayMatchConfig(enable_fuzzy_matching=False)
         result = run_three_way_match(pos, invoices, receipts, config)
@@ -991,9 +1079,17 @@ class TestSummary:
 
     def test_risk_assessment_low(self):
         """Low risk when all match with no material variances."""
-        pos = [PurchaseOrder(po_number=f"PO-{i}", vendor="A", total_amount=100, quantity=5, row_number=i) for i in range(1, 11)]
-        invoices = [Invoice(po_reference=f"PO-{i}", vendor="A", total_amount=100, quantity=5, row_number=i) for i in range(1, 11)]
-        receipts = [Receipt(po_reference=f"PO-{i}", vendor="A", quantity_received=5, row_number=i) for i in range(1, 11)]
+        pos = [
+            PurchaseOrder(po_number=f"PO-{i}", vendor="A", total_amount=100, quantity=5, row_number=i)
+            for i in range(1, 11)
+        ]
+        invoices = [
+            Invoice(po_reference=f"PO-{i}", vendor="A", total_amount=100, quantity=5, row_number=i)
+            for i in range(1, 11)
+        ]
+        receipts = [
+            Receipt(po_reference=f"PO-{i}", vendor="A", quantity_received=5, row_number=i) for i in range(1, 11)
+        ]
         result = run_three_way_match(pos, invoices, receipts)
         assert result.summary.risk_assessment == "low"
 
@@ -1007,8 +1103,11 @@ class TestSummary:
     def test_summary_to_dict(self):
         """Summary serializes correctly."""
         s = ThreeWayMatchSummary(
-            total_pos=10, total_invoices=8, total_receipts=9,
-            full_match_count=7, partial_match_count=1,
+            total_pos=10,
+            total_invoices=8,
+            total_receipts=9,
+            full_match_count=7,
+            partial_match_count=1,
         )
         d = s.to_dict()
         assert d["total_pos"] == 10
@@ -1047,9 +1146,18 @@ class TestEdgeCases:
 
     def test_large_dataset(self):
         """Performance sanity check with 100 rows each."""
-        pos = [PurchaseOrder(po_number=f"PO-{i:03d}", vendor=f"Vendor-{i}", total_amount=i * 100, quantity=i, row_number=i) for i in range(1, 101)]
-        invoices = [Invoice(po_reference=f"PO-{i:03d}", vendor=f"Vendor-{i}", total_amount=i * 100, quantity=i, row_number=i) for i in range(1, 101)]
-        receipts = [Receipt(po_reference=f"PO-{i:03d}", vendor=f"Vendor-{i}", quantity_received=i, row_number=i) for i in range(1, 101)]
+        pos = [
+            PurchaseOrder(po_number=f"PO-{i:03d}", vendor=f"Vendor-{i}", total_amount=i * 100, quantity=i, row_number=i)
+            for i in range(1, 101)
+        ]
+        invoices = [
+            Invoice(po_reference=f"PO-{i:03d}", vendor=f"Vendor-{i}", total_amount=i * 100, quantity=i, row_number=i)
+            for i in range(1, 101)
+        ]
+        receipts = [
+            Receipt(po_reference=f"PO-{i:03d}", vendor=f"Vendor-{i}", quantity_received=i, row_number=i)
+            for i in range(1, 101)
+        ]
         result = run_three_way_match(pos, invoices, receipts)
         assert result.summary.full_match_count == 100
         assert len(result.unmatched_pos) == 0
@@ -1098,11 +1206,12 @@ class TestSerialization:
     def test_result_json_safe(self):
         """Result can be serialized to JSON."""
         import json
+
         pos = [PurchaseOrder(po_number="PO-001", vendor="Test", total_amount=100, row_number=1)]
         invoices = [Invoice(po_reference="PO-001", vendor="Test", total_amount=105, row_number=1)]
         receipts = []
         result = run_three_way_match(pos, invoices, receipts)
-        json_str = json.dumps(result.to_dict())
+        json_str = json.dumps(result.to_dict(), default=str)
         assert len(json_str) > 0
 
     def test_variance_in_result(self):
@@ -1121,28 +1230,33 @@ class TestAPIRouteRegistration:
 
     def test_route_registered(self):
         from main import app
+
         routes = [r.path for r in app.routes]
         assert "/audit/three-way-match" in routes
 
     def test_post_method(self):
         from main import app
+
         for route in app.routes:
             if hasattr(route, "path") and route.path == "/audit/three-way-match":
                 assert "POST" in route.methods
 
     def test_router_tag(self):
         from routes.three_way_match import router
+
         assert "three_way_match" in router.tags
 
     def test_router_in_all_routers(self):
         from routes import all_routers
         from routes.three_way_match import router
+
         assert router in all_routers
 
 
 # =============================================================================
 # SPRINT 192: NEAR-ZERO VARIANCE TESTS
 # =============================================================================
+
 
 class TestVarianceNearZero:
     """Test that near-zero PO amounts cap variance percentage at 100%."""

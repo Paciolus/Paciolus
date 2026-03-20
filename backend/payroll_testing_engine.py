@@ -26,6 +26,7 @@ import statistics
 from collections import Counter
 from dataclasses import dataclass, field
 from datetime import date
+from decimal import Decimal
 from difflib import SequenceMatcher
 from typing import Any, Optional
 
@@ -34,7 +35,7 @@ from shared.benford import BENFORD_EXPECTED, analyze_benford, get_first_digit  #
 from shared.column_detector import ColumnFieldConfig, detect_columns
 from shared.data_quality import FieldQualityConfig
 from shared.data_quality import assess_data_quality as _shared_assess_dq
-from shared.parsing_helpers import parse_date, safe_float, safe_str
+from shared.parsing_helpers import parse_date, safe_decimal, safe_float, safe_str
 from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
 
 # =============================================================================
@@ -443,13 +444,13 @@ class PayrollEntry:
     employee_name: str = ""
     department: str = ""
     pay_date: Optional[date] = None
-    gross_pay: float = 0.0
-    net_pay: float = 0.0
-    deductions: float = 0.0
+    gross_pay: Decimal = Decimal("0")
+    net_pay: Decimal = Decimal("0")
+    deductions: Decimal = Decimal("0")
     check_number: str = ""
     pay_type: str = ""
-    hours: float = 0.0
-    rate: float = 0.0
+    hours: float = 0.0  # Non-monetary: hours worked
+    rate: Decimal = Decimal("0")
     hire_date: Optional[date] = None
     term_date: Optional[date] = None
     bank_account: str = ""
@@ -457,19 +458,25 @@ class PayrollEntry:
     tax_id: str = ""
     _row_index: int = 0
 
+    def __post_init__(self):
+        for attr in ("gross_pay", "net_pay", "deductions", "rate"):
+            val = getattr(self, attr)
+            if isinstance(val, (int, float)):
+                setattr(self, attr, Decimal(str(val)))
+
     def to_dict(self) -> dict:
         return {
             "employee_id": self.employee_id,
             "employee_name": self.employee_name,
             "department": self.department,
             "pay_date": self.pay_date.isoformat() if self.pay_date else None,
-            "gross_pay": self.gross_pay,
-            "net_pay": self.net_pay,
-            "deductions": self.deductions,
+            "gross_pay": float(self.gross_pay),
+            "net_pay": float(self.net_pay),
+            "deductions": float(self.deductions),
             "check_number": self.check_number,
             "pay_type": self.pay_type,
             "hours": self.hours,
-            "rate": self.rate,
+            "rate": float(self.rate),
             "hire_date": self.hire_date.isoformat() if self.hire_date else None,
             "term_date": self.term_date.isoformat() if self.term_date else None,
             "bank_account": self.bank_account,
@@ -630,11 +637,11 @@ def parse_payroll_entries(
         if detection.pay_date_column:
             entry.pay_date = parse_date(row.get(detection.pay_date_column))
         if detection.gross_pay_column:
-            entry.gross_pay = safe_float(row.get(detection.gross_pay_column))
+            entry.gross_pay = safe_decimal(row.get(detection.gross_pay_column))
         if detection.net_pay_column:
-            entry.net_pay = safe_float(row.get(detection.net_pay_column))
+            entry.net_pay = safe_decimal(row.get(detection.net_pay_column))
         if detection.deductions_column:
-            entry.deductions = safe_float(row.get(detection.deductions_column))
+            entry.deductions = safe_decimal(row.get(detection.deductions_column))
         if detection.check_number_column:
             entry.check_number = safe_str(row.get(detection.check_number_column, "")) or ""
         if detection.pay_type_column:
@@ -642,7 +649,7 @@ def parse_payroll_entries(
         if detection.hours_column:
             entry.hours = safe_float(row.get(detection.hours_column))
         if detection.rate_column:
-            entry.rate = safe_float(row.get(detection.rate_column))
+            entry.rate = safe_decimal(row.get(detection.rate_column))
         if detection.hire_date_column:
             entry.hire_date = parse_date(row.get(detection.hire_date_column))
         if detection.term_date_column:
@@ -875,7 +882,7 @@ def _test_round_salary_amounts(
                 severity=severity.value,
                 issue=issue,
                 confidence=0.70,
-                details={"amount": amount},
+                details={"amount": float(amount)},
             )
         )
 
@@ -1076,10 +1083,10 @@ def _test_unusual_pay_amounts(
                     issue=f"Pay ${entry.gross_pay:,.2f} is {abs(z_score):.1f}σ from dept '{dept}' mean (${mean_amt:,.2f})",
                     confidence=min(abs(z_score) / 6.0, 1.0),
                     details={
-                        "z_score": round(z_score, 2),
+                        "z_score": float(round(z_score, 2)),
                         "department": dept,
-                        "dept_mean": round(mean_amt, 2),
-                        "dept_stdev": round(stdev_amt, 2),
+                        "dept_mean": float(round(mean_amt, 2)),
+                        "dept_stdev": float(round(stdev_amt, 2)),
                     },
                 )
             )
@@ -1708,7 +1715,7 @@ def calculate_payroll_composite_score(
             "test": f.test_name,
             "issue": f.issue,
             "severity": f.severity,
-            "amount": f.entry.gross_pay,
+            "amount": float(f.entry.gross_pay),
         }
         for f in all_flagged[:10]
     ]

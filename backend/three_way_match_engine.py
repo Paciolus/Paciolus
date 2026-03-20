@@ -21,19 +21,22 @@ Audit Standards References:
 """
 
 from dataclasses import dataclass, field
+from decimal import Decimal
 from difflib import SequenceMatcher
 from enum import Enum
 from typing import Optional
 
 from shared.column_detector import ColumnFieldConfig, detect_columns
-from shared.parsing_helpers import parse_date, safe_float, safe_str
+from shared.parsing_helpers import parse_date, safe_decimal, safe_float, safe_str
 
 # =============================================================================
 # ENUMS
 # =============================================================================
 
+
 class MatchDocumentType(str, Enum):
     """Type of procurement document."""
+
     PURCHASE_ORDER = "purchase_order"
     INVOICE = "invoice"
     RECEIPT = "receipt"
@@ -41,13 +44,15 @@ class MatchDocumentType(str, Enum):
 
 class MatchType(str, Enum):
     """How documents were matched."""
-    EXACT_PO = "exact_po"      # Matched via PO number linkage
-    FUZZY = "fuzzy"            # Matched via vendor+amount+date similarity
-    PARTIAL = "partial"        # Only 2 of 3 documents matched
+
+    EXACT_PO = "exact_po"  # Matched via PO number linkage
+    FUZZY = "fuzzy"  # Matched via vendor+amount+date similarity
+    PARTIAL = "partial"  # Only 2 of 3 documents matched
 
 
 class MatchRiskLevel(str, Enum):
     """Overall risk assessment based on match rates and variances."""
+
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
@@ -294,12 +299,27 @@ REC_CONDITION_PATTERNS = [
 # =============================================================================
 
 PO_COLUMN_CONFIGS: list[ColumnFieldConfig] = [
-    ColumnFieldConfig("po_number_column", PO_NUMBER_PATTERNS, required=True,
-                      missing_note="Required column not detected: po_number", priority=10),
-    ColumnFieldConfig("vendor_column", PO_VENDOR_PATTERNS, required=True,
-                      missing_note="Required column not detected: vendor", priority=15),
-    ColumnFieldConfig("total_amount_column", PO_TOTAL_AMOUNT_PATTERNS, required=True,
-                      missing_note="Required column not detected: total_amount", priority=20),
+    ColumnFieldConfig(
+        "po_number_column",
+        PO_NUMBER_PATTERNS,
+        required=True,
+        missing_note="Required column not detected: po_number",
+        priority=10,
+    ),
+    ColumnFieldConfig(
+        "vendor_column",
+        PO_VENDOR_PATTERNS,
+        required=True,
+        missing_note="Required column not detected: vendor",
+        priority=15,
+    ),
+    ColumnFieldConfig(
+        "total_amount_column",
+        PO_TOTAL_AMOUNT_PATTERNS,
+        required=True,
+        missing_note="Required column not detected: total_amount",
+        priority=20,
+    ),
     ColumnFieldConfig("quantity_column", PO_QUANTITY_PATTERNS, priority=25),
     ColumnFieldConfig("unit_price_column", PO_UNIT_PRICE_PATTERNS, priority=30),
     ColumnFieldConfig("order_date_column", PO_ORDER_DATE_PATTERNS, priority=35),
@@ -310,13 +330,28 @@ PO_COLUMN_CONFIGS: list[ColumnFieldConfig] = [
 ]
 
 INV_COLUMN_CONFIGS: list[ColumnFieldConfig] = [
-    ColumnFieldConfig("invoice_number_column", INV_NUMBER_PATTERNS, required=True,
-                      missing_note="Required column not detected: invoice_number", priority=10),
+    ColumnFieldConfig(
+        "invoice_number_column",
+        INV_NUMBER_PATTERNS,
+        required=True,
+        missing_note="Required column not detected: invoice_number",
+        priority=10,
+    ),
     ColumnFieldConfig("po_reference_column", INV_PO_REFERENCE_PATTERNS, priority=15),
-    ColumnFieldConfig("vendor_column", INV_VENDOR_PATTERNS, required=True,
-                      missing_note="Required column not detected: vendor", priority=20),
-    ColumnFieldConfig("total_amount_column", INV_TOTAL_AMOUNT_PATTERNS, required=True,
-                      missing_note="Required column not detected: total_amount", priority=25),
+    ColumnFieldConfig(
+        "vendor_column",
+        INV_VENDOR_PATTERNS,
+        required=True,
+        missing_note="Required column not detected: vendor",
+        priority=20,
+    ),
+    ColumnFieldConfig(
+        "total_amount_column",
+        INV_TOTAL_AMOUNT_PATTERNS,
+        required=True,
+        missing_note="Required column not detected: total_amount",
+        priority=25,
+    ),
     ColumnFieldConfig("quantity_column", INV_QUANTITY_PATTERNS, priority=30),
     ColumnFieldConfig("unit_price_column", INV_UNIT_PRICE_PATTERNS, priority=35),
     ColumnFieldConfig("invoice_date_column", INV_DATE_PATTERNS, priority=40),
@@ -328,10 +363,20 @@ REC_COLUMN_CONFIGS: list[ColumnFieldConfig] = [
     ColumnFieldConfig("receipt_number_column", REC_NUMBER_PATTERNS, priority=10),
     ColumnFieldConfig("po_reference_column", REC_PO_REFERENCE_PATTERNS, priority=15),
     ColumnFieldConfig("invoice_reference_column", REC_INVOICE_REFERENCE_PATTERNS, priority=20),
-    ColumnFieldConfig("vendor_column", REC_VENDOR_PATTERNS, required=True,
-                      missing_note="Required column not detected: vendor", priority=25),
-    ColumnFieldConfig("quantity_received_column", REC_QUANTITY_RECEIVED_PATTERNS, required=True,
-                      missing_note="Required column not detected: quantity_received", priority=30),
+    ColumnFieldConfig(
+        "vendor_column",
+        REC_VENDOR_PATTERNS,
+        required=True,
+        missing_note="Required column not detected: vendor",
+        priority=25,
+    ),
+    ColumnFieldConfig(
+        "quantity_received_column",
+        REC_QUANTITY_RECEIVED_PATTERNS,
+        required=True,
+        missing_note="Required column not detected: quantity_received",
+        priority=30,
+    ),
     ColumnFieldConfig("receipt_date_column", REC_DATE_PATTERNS, priority=35),
     ColumnFieldConfig("received_by_column", REC_RECEIVED_BY_PATTERNS, priority=40),
     ColumnFieldConfig("condition_column", REC_CONDITION_PATTERNS, priority=45),
@@ -343,15 +388,17 @@ REC_COLUMN_CONFIGS: list[ColumnFieldConfig] = [
 # CONFIGURATION
 # =============================================================================
 
+
 @dataclass
 class ThreeWayMatchConfig:
     """Configurable thresholds for three-way matching."""
-    amount_tolerance: float = 0.01          # Dollar tolerance for amount matching
-    quantity_tolerance: float = 0.0          # Quantity tolerance (0 = exact match)
-    date_window_days: int = 30              # Receipt within N days of PO delivery date
-    fuzzy_vendor_threshold: float = 0.85    # SequenceMatcher ratio for vendor names
-    enable_fuzzy_matching: bool = True       # Enable vendor+amount+date fallback
-    price_variance_threshold: float = 0.05   # 5% price variance tolerance
+
+    amount_tolerance: float = 0.01  # Dollar tolerance for amount matching
+    quantity_tolerance: float = 0.0  # Quantity tolerance (0 = exact match)
+    date_window_days: int = 30  # Receipt within N days of PO delivery date
+    fuzzy_vendor_threshold: float = 0.85  # SequenceMatcher ratio for vendor names
+    enable_fuzzy_matching: bool = True  # Enable vendor+amount+date fallback
+    price_variance_threshold: float = 0.05  # 5% price variance tolerance
     fuzzy_composite_threshold: float = 0.70  # Min composite score for fuzzy match
 
     def to_dict(self) -> dict:
@@ -370,20 +417,28 @@ class ThreeWayMatchConfig:
 # DATA MODELS
 # =============================================================================
 
+
 @dataclass
 class PurchaseOrder:
     """A single purchase order line."""
+
     po_number: Optional[str] = None
     vendor: str = ""
     description: str = ""
     quantity: float = 0.0
-    unit_price: float = 0.0
-    total_amount: float = 0.0
+    unit_price: Decimal = Decimal("0")
+    total_amount: Decimal = Decimal("0")
     order_date: Optional[str] = None
     expected_delivery: Optional[str] = None
     approver: Optional[str] = None
     department: Optional[str] = None
     row_number: int = 0
+
+    def __post_init__(self):
+        if isinstance(self.unit_price, (int, float)):
+            self.unit_price = Decimal(str(self.unit_price))
+        if isinstance(self.total_amount, (int, float)):
+            self.total_amount = Decimal(str(self.total_amount))
 
     def to_dict(self) -> dict:
         return {
@@ -391,8 +446,8 @@ class PurchaseOrder:
             "vendor": self.vendor,
             "description": self.description,
             "quantity": self.quantity,
-            "unit_price": self.unit_price,
-            "total_amount": self.total_amount,
+            "unit_price": float(self.unit_price),
+            "total_amount": float(self.total_amount),
             "order_date": self.order_date,
             "expected_delivery": self.expected_delivery,
             "approver": self.approver,
@@ -404,16 +459,23 @@ class PurchaseOrder:
 @dataclass
 class Invoice:
     """A single invoice line."""
+
     invoice_number: Optional[str] = None
     po_reference: Optional[str] = None
     vendor: str = ""
     description: str = ""
     quantity: float = 0.0
-    unit_price: float = 0.0
-    total_amount: float = 0.0
+    unit_price: Decimal = Decimal("0")
+    total_amount: Decimal = Decimal("0")
     invoice_date: Optional[str] = None
     due_date: Optional[str] = None
     row_number: int = 0
+
+    def __post_init__(self):
+        if isinstance(self.unit_price, (int, float)):
+            self.unit_price = Decimal(str(self.unit_price))
+        if isinstance(self.total_amount, (int, float)):
+            self.total_amount = Decimal(str(self.total_amount))
 
     def to_dict(self) -> dict:
         return {
@@ -422,8 +484,8 @@ class Invoice:
             "vendor": self.vendor,
             "description": self.description,
             "quantity": self.quantity,
-            "unit_price": self.unit_price,
-            "total_amount": self.total_amount,
+            "unit_price": float(self.unit_price),
+            "total_amount": float(self.total_amount),
             "invoice_date": self.invoice_date,
             "due_date": self.due_date,
             "row_number": self.row_number,
@@ -433,6 +495,7 @@ class Invoice:
 @dataclass
 class Receipt:
     """A single receipt/goods received note line."""
+
     receipt_number: Optional[str] = None
     po_reference: Optional[str] = None
     invoice_reference: Optional[str] = None
@@ -463,9 +526,11 @@ class Receipt:
 # COLUMN DETECTION RESULTS
 # =============================================================================
 
+
 @dataclass
 class POColumnDetectionResult:
     """Column detection result for purchase order files."""
+
     po_number_column: Optional[str] = None
     vendor_column: Optional[str] = None
     description_column: Optional[str] = None
@@ -506,6 +571,7 @@ class POColumnDetectionResult:
 @dataclass
 class InvoiceColumnDetectionResult:
     """Column detection result for invoice files."""
+
     invoice_number_column: Optional[str] = None
     po_reference_column: Optional[str] = None
     vendor_column: Optional[str] = None
@@ -544,6 +610,7 @@ class InvoiceColumnDetectionResult:
 @dataclass
 class ReceiptColumnDetectionResult:
     """Column detection result for receipt/GRN files."""
+
     receipt_number_column: Optional[str] = None
     po_reference_column: Optional[str] = None
     invoice_reference_column: Optional[str] = None
@@ -583,6 +650,7 @@ class ReceiptColumnDetectionResult:
 # COLUMN DETECTION FUNCTIONS
 # =============================================================================
 
+
 def detect_po_columns(column_names: list[str]) -> POColumnDetectionResult:
     """Detect PO column types using shared column detector."""
     result = POColumnDetectionResult(all_columns=list(column_names))
@@ -599,10 +667,7 @@ def detect_po_columns(column_names: list[str]) -> POColumnDetectionResult:
 
     # Confidence: min of required columns (po_number, vendor, total_amount)
     required_fields = ["po_number_column", "vendor_column", "total_amount_column"]
-    confidences = [
-        det.get_confidence(f) if det.get_column(f) else 0.0
-        for f in required_fields
-    ]
+    confidences = [det.get_confidence(f) if det.get_column(f) else 0.0 for f in required_fields]
     result.overall_confidence = min(confidences) if confidences else 0.0
     result.detection_notes = list(det.detection_notes)
     return result
@@ -624,10 +689,7 @@ def detect_invoice_columns(column_names: list[str]) -> InvoiceColumnDetectionRes
 
     # Confidence: min of required columns (invoice_number, vendor, total_amount)
     required_fields = ["invoice_number_column", "vendor_column", "total_amount_column"]
-    confidences = [
-        det.get_confidence(f) if det.get_column(f) else 0.0
-        for f in required_fields
-    ]
+    confidences = [det.get_confidence(f) if det.get_column(f) else 0.0 for f in required_fields]
     result.overall_confidence = min(confidences) if confidences else 0.0
     result.detection_notes = list(det.detection_notes)
     return result
@@ -649,10 +711,7 @@ def detect_receipt_columns(column_names: list[str]) -> ReceiptColumnDetectionRes
 
     # Confidence: min of required columns (vendor, quantity_received)
     required_fields = ["vendor_column", "quantity_received_column"]
-    confidences = [
-        det.get_confidence(f) if det.get_column(f) else 0.0
-        for f in required_fields
-    ]
+    confidences = [det.get_confidence(f) if det.get_column(f) else 0.0 for f in required_fields]
     result.overall_confidence = min(confidences) if confidences else 0.0
     result.detection_notes = list(det.detection_notes)
     return result
@@ -661,6 +720,7 @@ def detect_receipt_columns(column_names: list[str]) -> ReceiptColumnDetectionRes
 # =============================================================================
 # PARSING
 # =============================================================================
+
 
 def parse_purchase_orders(
     rows: list[dict],
@@ -679,9 +739,9 @@ def parse_purchase_orders(
         if detection.quantity_column:
             po.quantity = safe_float(row.get(detection.quantity_column))
         if detection.unit_price_column:
-            po.unit_price = safe_float(row.get(detection.unit_price_column))
+            po.unit_price = safe_decimal(row.get(detection.unit_price_column))
         if detection.total_amount_column:
-            po.total_amount = safe_float(row.get(detection.total_amount_column))
+            po.total_amount = safe_decimal(row.get(detection.total_amount_column))
         if detection.order_date_column:
             po.order_date = safe_str(row.get(detection.order_date_column))
         if detection.expected_delivery_column:
@@ -713,9 +773,9 @@ def parse_invoices(
         if detection.quantity_column:
             inv.quantity = safe_float(row.get(detection.quantity_column))
         if detection.unit_price_column:
-            inv.unit_price = safe_float(row.get(detection.unit_price_column))
+            inv.unit_price = safe_decimal(row.get(detection.unit_price_column))
         if detection.total_amount_column:
-            inv.total_amount = safe_float(row.get(detection.total_amount_column))
+            inv.total_amount = safe_decimal(row.get(detection.total_amount_column))
         if detection.invoice_date_column:
             inv.invoice_date = safe_str(row.get(detection.invoice_date_column))
         if detection.due_date_column:
@@ -758,9 +818,11 @@ def parse_receipts(
 # DATA QUALITY
 # =============================================================================
 
+
 @dataclass
 class ThreeWayMatchDataQuality:
     """Per-file and aggregate data quality assessment."""
+
     po_count: int = 0
     invoice_count: int = 0
     receipt_count: int = 0
@@ -863,16 +925,18 @@ def assess_three_way_data_quality(
 # MATCHING ALGORITHM (Sprint 92)
 # =============================================================================
 
+
 @dataclass
 class MatchVariance:
     """A variance detected between matched documents."""
-    field: str              # quantity, amount, price, date
+
+    field: str  # quantity, amount, price, date
     po_value: Optional[float] = None
     invoice_value: Optional[float] = None
     receipt_value: Optional[float] = None
     variance_amount: float = 0.0
     variance_pct: float = 0.0
-    severity: str = "low"   # high, medium, low
+    severity: str = "low"  # high, medium, low
 
     def to_dict(self) -> dict:
         return {
@@ -889,10 +953,11 @@ class MatchVariance:
 @dataclass
 class ThreeWayMatch:
     """A matched set of documents (any can be None for partial matches)."""
+
     po: Optional[PurchaseOrder] = None
     invoice: Optional[Invoice] = None
     receipt: Optional[Receipt] = None
-    match_type: str = "exact_po"    # exact_po, fuzzy, partial
+    match_type: str = "exact_po"  # exact_po, fuzzy, partial
     match_confidence: float = 0.0
     variances: list[MatchVariance] = field(default_factory=list)
 
@@ -910,8 +975,9 @@ class ThreeWayMatch:
 @dataclass
 class UnmatchedDocument:
     """A document that could not be matched."""
+
     document: dict = field(default_factory=dict)
-    document_type: str = ""     # purchase_order, invoice, receipt
+    document_type: str = ""  # purchase_order, invoice, receipt
     reason: str = ""
 
     def to_dict(self) -> dict:
@@ -925,6 +991,7 @@ class UnmatchedDocument:
 @dataclass
 class ThreeWayMatchSummary:
     """Summary statistics for the matching results."""
+
     total_pos: int = 0
     total_invoices: int = 0
     total_receipts: int = 0
@@ -937,7 +1004,7 @@ class ThreeWayMatchSummary:
     total_receipt_amount: float = 0.0
     net_variance: float = 0.0
     material_variances_count: int = 0
-    risk_assessment: str = "low"    # low, medium, high
+    risk_assessment: str = "low"  # low, medium, high
 
     def to_dict(self) -> dict:
         return {
@@ -960,6 +1027,7 @@ class ThreeWayMatchSummary:
 @dataclass
 class ThreeWayMatchResult:
     """Complete three-way match results."""
+
     full_matches: list[ThreeWayMatch] = field(default_factory=list)
     partial_matches: list[ThreeWayMatch] = field(default_factory=list)
     unmatched_pos: list[UnmatchedDocument] = field(default_factory=list)
@@ -990,6 +1058,7 @@ class ThreeWayMatchResult:
 # VARIANCE ANALYSIS
 # =============================================================================
 
+
 def _compute_variances(
     po: Optional[PurchaseOrder],
     invoice: Optional[Invoice],
@@ -1011,14 +1080,16 @@ def _compute_variances(
                 pct = 1.0  # 100% — near-zero base, cap variance percentage
             if diff > config.amount_tolerance:
                 sev = "high" if pct > 0.10 else ("medium" if pct > 0.05 else "low")
-                variances.append(MatchVariance(
-                    field="amount",
-                    po_value=po_amt,
-                    invoice_value=inv_amt,
-                    variance_amount=diff,
-                    variance_pct=pct,
-                    severity=sev,
-                ))
+                variances.append(
+                    MatchVariance(
+                        field="amount",
+                        po_value=po_amt,
+                        invoice_value=inv_amt,
+                        variance_amount=diff,
+                        variance_pct=pct,
+                        severity=sev,
+                    )
+                )
 
     # Quantity variance: PO qty vs Receipt qty
     if po and receipt:
@@ -1032,14 +1103,16 @@ def _compute_variances(
                 pct = 1.0  # 100% — near-zero base, cap variance percentage
             if diff > config.quantity_tolerance:
                 sev = "high" if pct > 0.10 else ("medium" if pct > 0.05 else "low")
-                variances.append(MatchVariance(
-                    field="quantity",
-                    po_value=po_qty,
-                    receipt_value=rec_qty,
-                    variance_amount=diff,
-                    variance_pct=pct,
-                    severity=sev,
-                ))
+                variances.append(
+                    MatchVariance(
+                        field="quantity",
+                        po_value=po_qty,
+                        receipt_value=rec_qty,
+                        variance_amount=diff,
+                        variance_pct=pct,
+                        severity=sev,
+                    )
+                )
 
     # Price variance: PO unit_price vs Invoice unit_price
     if po and invoice and po.unit_price > 0 and invoice.unit_price > 0:
@@ -1050,14 +1123,16 @@ def _compute_variances(
             pct = 1.0  # 100% — near-zero base, cap variance percentage
         if pct > config.price_variance_threshold:
             sev = "high" if pct > 0.10 else ("medium" if pct > 0.05 else "low")
-            variances.append(MatchVariance(
-                field="price",
-                po_value=po.unit_price,
-                invoice_value=invoice.unit_price,
-                variance_amount=diff,
-                variance_pct=pct,
-                severity=sev,
-            ))
+            variances.append(
+                MatchVariance(
+                    field="price",
+                    po_value=po.unit_price,
+                    invoice_value=invoice.unit_price,
+                    variance_amount=diff,
+                    variance_pct=pct,
+                    severity=sev,
+                )
+            )
 
     # Date variance: receipt_date vs PO expected_delivery
     if po and receipt and po.expected_delivery and receipt.receipt_date:
@@ -1067,13 +1142,15 @@ def _compute_variances(
             days_diff = abs((rec_date - po_date).days)
             if days_diff > config.date_window_days:
                 sev = "high" if days_diff > 60 else ("medium" if days_diff > 30 else "low")
-                variances.append(MatchVariance(
-                    field="date",
-                    po_value=float(days_diff),
-                    variance_amount=float(days_diff),
-                    variance_pct=0.0,
-                    severity=sev,
-                ))
+                variances.append(
+                    MatchVariance(
+                        field="date",
+                        po_value=float(days_diff),
+                        variance_amount=float(days_diff),
+                        variance_pct=0.0,
+                        severity=sev,
+                    )
+                )
 
     return variances
 
@@ -1081,6 +1158,7 @@ def _compute_variances(
 # =============================================================================
 # MATCHING CORE
 # =============================================================================
+
 
 def _vendor_similarity(a: str, b: str) -> float:
     """Compute vendor name similarity using SequenceMatcher."""
@@ -1108,7 +1186,7 @@ def run_three_way_match(
     result = ThreeWayMatchResult(config=config)
 
     # Track which documents have been matched
-    matched_po_ids: set[int] = set()     # row_number indices
+    matched_po_ids: set[int] = set()  # row_number indices
     matched_inv_ids: set[int] = set()
     matched_rec_ids: set[int] = set()
 
@@ -1203,8 +1281,13 @@ def run_three_way_match(
                     continue
                 # Compute composite score: vendor 40% + amount 30% + date 30%
                 vendor_score = _vendor_similarity(po.vendor, inv.vendor)
-                amount_score = 1.0 if abs(po.total_amount - inv.total_amount) <= config.amount_tolerance else (
-                    max(0.0, 1.0 - abs(po.total_amount - inv.total_amount) / max(abs(po.total_amount), 0.01))
+                amt_diff = abs(po.total_amount - inv.total_amount)
+                amount_score = (
+                    1.0
+                    if amt_diff <= Decimal(str(config.amount_tolerance))
+                    else (
+                        float(max(Decimal("0"), Decimal("1") - amt_diff / max(abs(po.total_amount), Decimal("0.01"))))
+                    )
                 )
                 # Date score: order_date vs invoice_date proximity
                 date_score = 0.5  # default if no dates
@@ -1227,8 +1310,10 @@ def run_three_way_match(
                 vendor_score = _vendor_similarity(po.vendor, rec.vendor)
                 if vendor_score < config.fuzzy_vendor_threshold:
                     continue
-                qty_score = 1.0 if abs(po.quantity - rec.quantity_received) <= config.quantity_tolerance else (
-                    max(0.0, 1.0 - abs(po.quantity - rec.quantity_received) / max(abs(po.quantity), 0.01))
+                qty_score = (
+                    1.0
+                    if abs(po.quantity - rec.quantity_received) <= config.quantity_tolerance
+                    else (max(0.0, 1.0 - abs(po.quantity - rec.quantity_received) / max(abs(po.quantity), 0.01)))
                 )
                 composite = vendor_score * 0.50 + qty_score * 0.50
                 if composite > best_rec_score:
@@ -1237,8 +1322,15 @@ def run_three_way_match(
 
             # Apply composite threshold
             if best_inv and best_inv_score >= config.fuzzy_composite_threshold:
-                variances = _compute_variances(po, best_inv, best_rec if best_rec and best_rec_score >= config.fuzzy_composite_threshold else None, config)
-                is_full = best_inv is not None and best_rec is not None and best_rec_score >= config.fuzzy_composite_threshold
+                variances = _compute_variances(
+                    po,
+                    best_inv,
+                    best_rec if best_rec and best_rec_score >= config.fuzzy_composite_threshold else None,
+                    config,
+                )
+                is_full = (
+                    best_inv is not None and best_rec is not None and best_rec_score >= config.fuzzy_composite_threshold
+                )
                 match = ThreeWayMatch(
                     po=po,
                     invoice=best_inv,
@@ -1262,27 +1354,33 @@ def run_three_way_match(
     # ---- Collect unmatched documents ----
     for po in pos:
         if po.row_number not in matched_po_ids:
-            result.unmatched_pos.append(UnmatchedDocument(
-                document=po.to_dict(),
-                document_type=MatchDocumentType.PURCHASE_ORDER.value,
-                reason="No matching invoice or receipt found",
-            ))
+            result.unmatched_pos.append(
+                UnmatchedDocument(
+                    document=po.to_dict(),
+                    document_type=MatchDocumentType.PURCHASE_ORDER.value,
+                    reason="No matching invoice or receipt found",
+                )
+            )
 
     for inv in invoices:
         if inv.row_number not in matched_inv_ids:
-            result.unmatched_invoices.append(UnmatchedDocument(
-                document=inv.to_dict(),
-                document_type=MatchDocumentType.INVOICE.value,
-                reason="No matching purchase order found",
-            ))
+            result.unmatched_invoices.append(
+                UnmatchedDocument(
+                    document=inv.to_dict(),
+                    document_type=MatchDocumentType.INVOICE.value,
+                    reason="No matching purchase order found",
+                )
+            )
 
     for rec in receipts:
         if rec.row_number not in matched_rec_ids:
-            result.unmatched_receipts.append(UnmatchedDocument(
-                document=rec.to_dict(),
-                document_type=MatchDocumentType.RECEIPT.value,
-                reason="No matching purchase order or invoice found",
-            ))
+            result.unmatched_receipts.append(
+                UnmatchedDocument(
+                    document=rec.to_dict(),
+                    document_type=MatchDocumentType.RECEIPT.value,
+                    reason="No matching purchase order or invoice found",
+                )
+            )
 
     # ---- Summary ----
     total_docs = max(len(pos), len(invoices), 1)

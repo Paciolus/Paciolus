@@ -23,12 +23,13 @@ import re
 import statistics
 from dataclasses import dataclass, field
 from datetime import date
+from decimal import Decimal
 from typing import Optional
 
 from shared.column_detector import ColumnFieldConfig, detect_columns
 from shared.data_quality import FieldQualityConfig
 from shared.data_quality import assess_data_quality as _shared_assess_dq
-from shared.parsing_helpers import parse_date, safe_float, safe_str
+from shared.parsing_helpers import parse_date, safe_decimal, safe_str
 from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
 from shared.testing_enums import (
     RiskTier,
@@ -335,30 +336,40 @@ class FixedAssetEntry:
 
     asset_id: Optional[str] = None
     description: Optional[str] = None
-    cost: float = 0.0
-    accumulated_depreciation: float = 0.0
+    cost: Decimal = Decimal("0")
+    accumulated_depreciation: Decimal = Decimal("0")
     acquisition_date: Optional[str] = None
-    useful_life: Optional[float] = None
+    useful_life: Optional[float] = None  # Non-monetary: years
     depreciation_method: Optional[str] = None
-    residual_value: float = 0.0
+    residual_value: Decimal = Decimal("0")
     location: Optional[str] = None
     category: Optional[str] = None
-    net_book_value: Optional[float] = None
+    net_book_value: Optional[Decimal] = None
     row_number: int = 0
+
+    def __post_init__(self):
+        if isinstance(self.cost, (int, float)):
+            self.cost = Decimal(str(self.cost))
+        if isinstance(self.accumulated_depreciation, (int, float)):
+            self.accumulated_depreciation = Decimal(str(self.accumulated_depreciation))
+        if isinstance(self.residual_value, (int, float)):
+            self.residual_value = Decimal(str(self.residual_value))
+        if isinstance(self.net_book_value, (int, float)):
+            self.net_book_value = Decimal(str(self.net_book_value))
 
     def to_dict(self) -> dict:
         return {
             "asset_id": self.asset_id,
             "description": self.description,
-            "cost": self.cost,
-            "accumulated_depreciation": self.accumulated_depreciation,
+            "cost": float(self.cost),
+            "accumulated_depreciation": float(self.accumulated_depreciation),
             "acquisition_date": self.acquisition_date,
             "useful_life": self.useful_life,
             "depreciation_method": self.depreciation_method,
-            "residual_value": self.residual_value,
+            "residual_value": float(self.residual_value),
             "location": self.location,
             "category": self.category,
-            "net_book_value": self.net_book_value,
+            "net_book_value": float(self.net_book_value) if self.net_book_value is not None else None,
             "row_number": self.row_number,
         }
 
@@ -531,9 +542,9 @@ def parse_fa_entries(
         if detection.description_column:
             entry.description = safe_str(row.get(detection.description_column))
         if detection.cost_column:
-            entry.cost = safe_float(row.get(detection.cost_column))
+            entry.cost = safe_decimal(row.get(detection.cost_column))
         if detection.accumulated_depreciation_column:
-            entry.accumulated_depreciation = safe_float(row.get(detection.accumulated_depreciation_column))
+            entry.accumulated_depreciation = safe_decimal(row.get(detection.accumulated_depreciation_column))
         if detection.acquisition_date_column:
             entry.acquisition_date = safe_str(row.get(detection.acquisition_date_column))
         if detection.useful_life_column:
@@ -541,7 +552,7 @@ def parse_fa_entries(
         if detection.depreciation_method_column:
             entry.depreciation_method = safe_str(row.get(detection.depreciation_method_column))
         if detection.residual_value_column:
-            entry.residual_value = safe_float(row.get(detection.residual_value_column))
+            entry.residual_value = safe_decimal(row.get(detection.residual_value_column))
         if detection.location_column:
             entry.location = safe_str(row.get(detection.location_column))
         if detection.category_column:
@@ -661,7 +672,7 @@ def test_fully_depreciated_assets(
                 issue=f"Fully depreciated: {e.asset_id or e.description or 'unknown'}"
                 f" cost=${cost:,.2f}, accum depr=${accum:,.2f}, NBV=${nbv:,.2f}",
                 confidence=0.85,
-                details={"cost": cost, "accumulated_depreciation": accum, "nbv": nbv},
+                details={"cost": float(cost), "accumulated_depreciation": float(accum), "nbv": float(nbv)},
             )
         )
 
@@ -788,7 +799,7 @@ def test_negative_values(
                 issue=f"Negative values: {'; '.join(issues_found)}"
                 f" — {e.asset_id or e.description or f'row {e.row_number}'}",
                 confidence=0.95,
-                details={"cost": e.cost, "accumulated_depreciation": e.accumulated_depreciation},
+                details={"cost": float(e.cost), "accumulated_depreciation": float(e.accumulated_depreciation)},
             )
         )
 
@@ -839,7 +850,7 @@ def test_over_depreciation(
 
         excess = accum - cost
         # Only flag if excess is > 1% of cost (beyond rounding)
-        if excess <= cost * 0.01:
+        if excess <= cost * Decimal("0.01"):
             continue
 
         excess_pct = excess / cost
@@ -1013,7 +1024,7 @@ def test_cost_zscore_outliers(
                 severity=severity,
                 issue=f"Outlier cost: ${abs(e.cost):,.2f} (z-score: {z:.1f}, mean: ${mean:,.2f})"
                 f" — {e.asset_id or e.description or f'row {e.row_number}'}",
-                confidence=min(0.60 + z * 0.05, 0.95),
+                confidence=float(min(Decimal("0.60") + z * Decimal("0.05"), Decimal("0.95"))),
                 details={"z_score": round(z, 2), "mean": round(mean, 2), "stdev": round(stdev, 2)},
             )
         )
@@ -1057,7 +1068,7 @@ def test_age_concentration(
             flagged_entries=[],
         )
 
-    total_cost = math.fsum(abs(e.cost) for e, _ in dated_entries)
+    total_cost = sum((abs(e.cost) for e, _ in dated_entries), Decimal("0"))
     if total_cost == 0:
         return FATestResult(
             test_name="Asset Age Concentration",
@@ -1072,11 +1083,11 @@ def test_age_concentration(
         )
 
     # Group by acquisition year
-    year_costs: dict[int, float] = {}
+    year_costs: dict[int, Decimal] = {}
     year_entries: dict[int, list[FixedAssetEntry]] = {}
     for e, d in dated_entries:
         yr = d.year
-        year_costs[yr] = year_costs.get(yr, 0) + abs(e.cost)
+        year_costs[yr] = year_costs.get(yr, Decimal("0")) + abs(e.cost)
         year_entries.setdefault(yr, []).append(e)
 
     flagged: list[FlaggedFixedAsset] = []

@@ -21,16 +21,16 @@ This engine documents automated inventory anomaly indicators — it does NOT
 constitute an NRV adequacy opinion or obsolescence determination.
 """
 
-import math
 import statistics
 from dataclasses import dataclass, field
 from datetime import date
+from decimal import Decimal
 from typing import Optional
 
 from shared.column_detector import ColumnFieldConfig, detect_columns
 from shared.data_quality import FieldQualityConfig
 from shared.data_quality import assess_data_quality as _shared_assess_dq
-from shared.parsing_helpers import parse_date, safe_float, safe_str
+from shared.parsing_helpers import parse_date, safe_decimal, safe_float, safe_str
 from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
 from shared.testing_enums import (
     RiskTier,
@@ -44,9 +44,11 @@ from shared.testing_enums import (
 # CONFIGURATION
 # =============================================================================
 
+
 @dataclass
 class InventoryTestingConfig:
     """Configurable thresholds for all inventory tests."""
+
     # IN-01: Missing required fields
     missing_fields_enabled: bool = True
 
@@ -205,8 +207,13 @@ INV_CATEGORY_PATTERNS = [
 
 # Shared column detector configs (replaces InvColumnType + _INV_COLUMN_PATTERNS)
 INV_COLUMN_CONFIGS: list[ColumnFieldConfig] = [
-    ColumnFieldConfig("quantity_column", INV_QUANTITY_PATTERNS, required=True,
-                      missing_note="Could not identify a Quantity column", priority=10),
+    ColumnFieldConfig(
+        "quantity_column",
+        INV_QUANTITY_PATTERNS,
+        required=True,
+        missing_note="Could not identify a Quantity column",
+        priority=10,
+    ),
     ColumnFieldConfig("unit_cost_column", INV_UNIT_COST_PATTERNS, priority=15),
     ColumnFieldConfig("extended_value_column", INV_EXTENDED_VALUE_PATTERNS, priority=20),
     ColumnFieldConfig("item_id_column", INV_ITEM_ID_PATTERNS, priority=25),
@@ -220,6 +227,7 @@ INV_COLUMN_CONFIGS: list[ColumnFieldConfig] = [
 @dataclass
 class InvColumnDetection:
     """Result of inventory column detection."""
+
     item_id_column: Optional[str] = None
     description_column: Optional[str] = None
     quantity_column: Optional[str] = None
@@ -261,9 +269,14 @@ def detect_inv_columns(column_names: list[str]) -> InvColumnDetection:
 
     # Map shared detection results to inventory-specific fields
     field_names = [
-        "item_id_column", "description_column", "quantity_column",
-        "unit_cost_column", "extended_value_column", "location_column",
-        "last_movement_date_column", "category_column",
+        "item_id_column",
+        "description_column",
+        "quantity_column",
+        "unit_cost_column",
+        "extended_value_column",
+        "location_column",
+        "last_movement_date_column",
+        "category_column",
     ]
     for field_name in field_names:
         col = detection.get_column(field_name)
@@ -306,26 +319,34 @@ def detect_inv_columns(column_names: list[str]) -> InvColumnDetection:
 # DATA MODELS
 # =============================================================================
 
+
 @dataclass
 class InventoryEntry:
     """A single line from the inventory register."""
+
     item_id: Optional[str] = None
     description: Optional[str] = None
-    quantity: float = 0.0
-    unit_cost: float = 0.0
-    extended_value: float = 0.0
+    quantity: float = 0.0  # Non-monetary: unit count
+    unit_cost: Decimal = Decimal("0")
+    extended_value: Decimal = Decimal("0")
     location: Optional[str] = None
     last_movement_date: Optional[str] = None
     category: Optional[str] = None
     row_number: int = 0
+
+    def __post_init__(self):
+        if isinstance(self.unit_cost, (int, float)):
+            self.unit_cost = Decimal(str(self.unit_cost))
+        if isinstance(self.extended_value, (int, float)):
+            self.extended_value = Decimal(str(self.extended_value))
 
     def to_dict(self) -> dict:
         return {
             "item_id": self.item_id,
             "description": self.description,
             "quantity": self.quantity,
-            "unit_cost": self.unit_cost,
-            "extended_value": self.extended_value,
+            "unit_cost": float(self.unit_cost),
+            "extended_value": float(self.extended_value),
             "location": self.location,
             "last_movement_date": self.last_movement_date,
             "category": self.category,
@@ -336,6 +357,7 @@ class InventoryEntry:
 @dataclass
 class FlaggedInventoryItem:
     """An inventory entry flagged by a test."""
+
     entry: InventoryEntry
     test_name: str
     test_key: str
@@ -361,6 +383,7 @@ class FlaggedInventoryItem:
 @dataclass
 class InvTestResult:
     """Result of a single inventory test."""
+
     test_name: str
     test_key: str
     test_tier: TestTier
@@ -388,6 +411,7 @@ class InvTestResult:
 @dataclass
 class InvDataQuality:
     """Quality assessment of the inventory data."""
+
     completeness_score: float
     field_fill_rates: dict[str, float] = field(default_factory=dict)
     detected_issues: list[str] = field(default_factory=list)
@@ -405,6 +429,7 @@ class InvDataQuality:
 @dataclass
 class InvCompositeScore:
     """Overall inventory testing composite score."""
+
     score: float
     risk_tier: RiskTier
     tests_run: int
@@ -430,6 +455,7 @@ class InvCompositeScore:
 @dataclass
 class InvTestingResult:
     """Complete result of inventory testing."""
+
     composite_score: InvCompositeScore
     test_results: list[InvTestResult] = field(default_factory=list)
     data_quality: Optional[InvDataQuality] = None
@@ -458,6 +484,7 @@ def _days_since(date_str: Optional[str], reference_date: Optional[date] = None) 
 # PARSER
 # =============================================================================
 
+
 def parse_inv_entries(
     rows: list[dict],
     detection: InvColumnDetection,
@@ -473,9 +500,9 @@ def parse_inv_entries(
         if detection.quantity_column:
             entry.quantity = safe_float(row.get(detection.quantity_column))
         if detection.unit_cost_column:
-            entry.unit_cost = safe_float(row.get(detection.unit_cost_column))
+            entry.unit_cost = safe_decimal(row.get(detection.unit_cost_column))
         if detection.extended_value_column:
-            entry.extended_value = safe_float(row.get(detection.extended_value_column))
+            entry.extended_value = safe_decimal(row.get(detection.extended_value_column))
         if detection.location_column:
             entry.location = safe_str(row.get(detection.location_column))
         if detection.last_movement_date_column:
@@ -490,6 +517,7 @@ def parse_inv_entries(
 # DATA QUALITY
 # =============================================================================
 
+
 def assess_inv_data_quality(
     entries: list[InventoryEntry],
     detection: InvColumnDetection,
@@ -499,10 +527,20 @@ def assess_inv_data_quality(
     Delegates to shared data quality engine (Sprint 152).
     """
     configs: list[FieldQualityConfig] = [
-        FieldQualityConfig("identifier", lambda e: e.item_id or e.description, weight=0.25,
-                           issue_threshold=0.90, issue_template="Missing identifier on {unfilled} entries"),
-        FieldQualityConfig("quantity", lambda e: e.quantity != 0, weight=0.30,
-                           issue_threshold=0.90, issue_template="{unfilled} entries have zero quantity"),
+        FieldQualityConfig(
+            "identifier",
+            lambda e: e.item_id or e.description,
+            weight=0.25,
+            issue_threshold=0.90,
+            issue_template="Missing identifier on {unfilled} entries",
+        ),
+        FieldQualityConfig(
+            "quantity",
+            lambda e: e.quantity != 0,
+            weight=0.30,
+            issue_threshold=0.90,
+            issue_template="{unfilled} entries have zero quantity",
+        ),
     ]
 
     if detection.unit_cost_column:
@@ -512,9 +550,14 @@ def assess_inv_data_quality(
     if detection.location_column:
         configs.append(FieldQualityConfig("location", lambda e: e.location))
     if detection.last_movement_date_column:
-        configs.append(FieldQualityConfig("last_movement_date", lambda e: e.last_movement_date,
-                                          issue_threshold=0.80,
-                                          issue_template="Low movement date fill rate: {fill_pct}"))
+        configs.append(
+            FieldQualityConfig(
+                "last_movement_date",
+                lambda e: e.last_movement_date,
+                issue_threshold=0.80,
+                issue_template="Low movement date fill rate: {fill_pct}",
+            )
+        )
     if detection.category_column:
         configs.append(FieldQualityConfig("category", lambda e: e.category))
 
@@ -534,6 +577,7 @@ def assess_inv_data_quality(
 # =============================================================================
 # TIER 1 — STRUCTURAL TESTS
 # =============================================================================
+
 
 def test_missing_required_fields(
     entries: list[InventoryEntry],
@@ -571,17 +615,18 @@ def test_missing_required_fields(
 
         severity = Severity.HIGH if len(missing) >= 2 else Severity.MEDIUM
 
-        flagged.append(FlaggedInventoryItem(
-            entry=e,
-            test_name="Missing Required Fields",
-            test_key="missing_fields",
-            test_tier=TestTier.STRUCTURAL,
-            severity=severity,
-            issue=f"Missing fields: {', '.join(missing)}"
-                  f" — {e.item_id or e.description or f'row {e.row_number}'}",
-            confidence=0.90,
-            details={"missing_fields": missing, "missing_count": len(missing)},
-        ))
+        flagged.append(
+            FlaggedInventoryItem(
+                entry=e,
+                test_name="Missing Required Fields",
+                test_key="missing_fields",
+                test_tier=TestTier.STRUCTURAL,
+                severity=severity,
+                issue=f"Missing fields: {', '.join(missing)} — {e.item_id or e.description or f'row {e.row_number}'}",
+                confidence=0.90,
+                details={"missing_fields": missing, "missing_count": len(missing)},
+            )
+        )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return InvTestResult(
@@ -632,20 +677,22 @@ def test_negative_values(
         if not issues_found:
             continue
 
-        amt = max(abs(e.extended_value), abs(e.unit_cost * e.quantity))
+        amt = max(abs(e.extended_value), abs(e.unit_cost * Decimal(str(e.quantity))))
         severity = Severity.HIGH if amt > 50000 else Severity.MEDIUM
 
-        flagged.append(FlaggedInventoryItem(
-            entry=e,
-            test_name="Negative Values",
-            test_key="negative_values",
-            test_tier=TestTier.STRUCTURAL,
-            severity=severity,
-            issue=f"Negative values: {'; '.join(issues_found)}"
-                  f" — {e.item_id or e.description or f'row {e.row_number}'}",
-            confidence=0.95,
-            details={"quantity": e.quantity, "unit_cost": e.unit_cost, "extended_value": e.extended_value},
-        ))
+        flagged.append(
+            FlaggedInventoryItem(
+                entry=e,
+                test_name="Negative Values",
+                test_key="negative_values",
+                test_tier=TestTier.STRUCTURAL,
+                severity=severity,
+                issue=f"Negative values: {'; '.join(issues_found)}"
+                f" — {e.item_id or e.description or f'row {e.row_number}'}",
+                confidence=0.95,
+                details={"quantity": e.quantity, "unit_cost": e.unit_cost, "extended_value": e.extended_value},
+            )
+        )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return InvTestResult(
@@ -688,7 +735,7 @@ def test_extended_value_mismatch(
         if e.unit_cost == 0 or e.quantity == 0 or e.extended_value == 0:
             continue
 
-        expected = e.quantity * e.unit_cost
+        expected = Decimal(str(e.quantity)) * e.unit_cost
         if expected == 0:
             continue
 
@@ -700,24 +747,26 @@ def test_extended_value_mismatch(
 
         severity = Severity.HIGH if diff > 10000 else Severity.MEDIUM if diff > 1000 else Severity.LOW
 
-        flagged.append(FlaggedInventoryItem(
-            entry=e,
-            test_name="Extended Value Mismatch",
-            test_key="value_mismatch",
-            test_tier=TestTier.STRUCTURAL,
-            severity=severity,
-            issue=f"Value mismatch: qty({e.quantity:,.2f}) × cost(${e.unit_cost:,.2f})"
-                  f" = ${expected:,.2f}, but extended=${e.extended_value:,.2f}"
-                  f" (diff ${diff:,.2f}, {diff_pct:.1%})"
-                  f" — {e.item_id or e.description or f'row {e.row_number}'}",
-            confidence=0.90,
-            details={
-                "expected_value": round(expected, 2),
-                "actual_value": round(e.extended_value, 2),
-                "difference": round(diff, 2),
-                "difference_pct": round(diff_pct, 4),
-            },
-        ))
+        flagged.append(
+            FlaggedInventoryItem(
+                entry=e,
+                test_name="Extended Value Mismatch",
+                test_key="value_mismatch",
+                test_tier=TestTier.STRUCTURAL,
+                severity=severity,
+                issue=f"Value mismatch: qty({e.quantity:,.2f}) × cost(${e.unit_cost:,.2f})"
+                f" = ${expected:,.2f}, but extended=${e.extended_value:,.2f}"
+                f" (diff ${diff:,.2f}, {diff_pct:.1%})"
+                f" — {e.item_id or e.description or f'row {e.row_number}'}",
+                confidence=0.90,
+                details={
+                    "expected_value": round(expected, 2),
+                    "actual_value": round(e.extended_value, 2),
+                    "difference": round(diff, 2),
+                    "difference_pct": round(diff_pct, 4),
+                },
+            )
+        )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return InvTestResult(
@@ -736,6 +785,7 @@ def test_extended_value_mismatch(
 # =============================================================================
 # TIER 2 — STATISTICAL TESTS
 # =============================================================================
+
 
 def test_unit_cost_outliers(
     entries: list[InventoryEntry],
@@ -785,17 +835,19 @@ def test_unit_cost_outliers(
 
         severity = zscore_to_severity(z)
 
-        flagged.append(FlaggedInventoryItem(
-            entry=e,
-            test_name="Unit Cost Outliers",
-            test_key="unit_cost_outliers",
-            test_tier=TestTier.STATISTICAL,
-            severity=severity,
-            issue=f"Outlier unit cost: ${abs(e.unit_cost):,.2f} (z-score: {z:.1f}, mean: ${mean:,.2f})"
-                  f" — {e.item_id or e.description or f'row {e.row_number}'}",
-            confidence=min(0.60 + z * 0.05, 0.95),
-            details={"z_score": round(z, 2), "mean": round(mean, 2), "stdev": round(stdev, 2)},
-        ))
+        flagged.append(
+            FlaggedInventoryItem(
+                entry=e,
+                test_name="Unit Cost Outliers",
+                test_key="unit_cost_outliers",
+                test_tier=TestTier.STATISTICAL,
+                severity=severity,
+                issue=f"Outlier unit cost: ${abs(e.unit_cost):,.2f} (z-score: {z:.1f}, mean: ${mean:,.2f})"
+                f" — {e.item_id or e.description or f'row {e.row_number}'}",
+                confidence=float(min(Decimal("0.60") + z * Decimal("0.05"), Decimal("0.95"))),
+                details={"z_score": round(z, 2), "mean": round(mean, 2), "stdev": round(stdev, 2)},
+            )
+        )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return InvTestResult(
@@ -859,17 +911,19 @@ def test_quantity_outliers(
 
         severity = zscore_to_severity(z)
 
-        flagged.append(FlaggedInventoryItem(
-            entry=e,
-            test_name="Quantity Outliers",
-            test_key="quantity_outliers",
-            test_tier=TestTier.STATISTICAL,
-            severity=severity,
-            issue=f"Outlier quantity: {abs(e.quantity):,.2f} (z-score: {z:.1f}, mean: {mean:,.2f})"
-                  f" — {e.item_id or e.description or f'row {e.row_number}'}",
-            confidence=min(0.60 + z * 0.05, 0.95),
-            details={"z_score": round(z, 2), "mean": round(mean, 2), "stdev": round(stdev, 2)},
-        ))
+        flagged.append(
+            FlaggedInventoryItem(
+                entry=e,
+                test_name="Quantity Outliers",
+                test_key="quantity_outliers",
+                test_tier=TestTier.STATISTICAL,
+                severity=severity,
+                issue=f"Outlier quantity: {abs(e.quantity):,.2f} (z-score: {z:.1f}, mean: {mean:,.2f})"
+                f" — {e.item_id or e.description or f'row {e.row_number}'}",
+                confidence=min(0.60 + z * 0.05, 0.95),
+                details={"z_score": round(z, 2), "mean": round(mean, 2), "stdev": round(stdev, 2)},
+            )
+        )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return InvTestResult(
@@ -915,7 +969,7 @@ def test_slow_moving_inventory(
         if days is None or days <= config.slow_moving_days:
             continue
 
-        value = abs(e.extended_value) if e.extended_value != 0 else abs(e.quantity * e.unit_cost)
+        value = abs(e.extended_value) if e.extended_value != 0 else abs(Decimal(str(e.quantity)) * e.unit_cost)
         if days > 365:
             severity = Severity.HIGH
         elif days > 270:
@@ -923,18 +977,24 @@ def test_slow_moving_inventory(
         else:
             severity = Severity.LOW
 
-        flagged.append(FlaggedInventoryItem(
-            entry=e,
-            test_name="Slow-Moving Inventory",
-            test_key="slow_moving",
-            test_tier=TestTier.STATISTICAL,
-            severity=severity,
-            issue=f"No movement for {days} days (threshold: {config.slow_moving_days})"
-                  f", value=${value:,.2f}"
-                  f" — {e.item_id or e.description or f'row {e.row_number}'}",
-            confidence=0.80,
-            details={"days_since_movement": days, "threshold_days": config.slow_moving_days, "value": round(value, 2)},
-        ))
+        flagged.append(
+            FlaggedInventoryItem(
+                entry=e,
+                test_name="Slow-Moving Inventory",
+                test_key="slow_moving",
+                test_tier=TestTier.STATISTICAL,
+                severity=severity,
+                issue=f"No movement for {days} days (threshold: {config.slow_moving_days})"
+                f", value=${value:,.2f}"
+                f" — {e.item_id or e.description or f'row {e.row_number}'}",
+                confidence=0.80,
+                details={
+                    "days_since_movement": days,
+                    "threshold_days": config.slow_moving_days,
+                    "value": round(value, 2),
+                },
+            )
+        )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return InvTestResult(
@@ -974,7 +1034,7 @@ def test_category_concentration(
         )
 
     total_value = sum(
-        abs(e.extended_value) if e.extended_value != 0 else abs(e.quantity * e.unit_cost)
+        abs(e.extended_value) if e.extended_value != 0 else abs(Decimal(str(e.quantity)) * e.unit_cost)
         for e, _ in categorized
     )
     if total_value == 0:
@@ -993,7 +1053,7 @@ def test_category_concentration(
     cat_values: dict[str, float] = {}
     cat_entries: dict[str, list[InventoryEntry]] = {}
     for e, cat in categorized:
-        val = abs(e.extended_value) if e.extended_value != 0 else abs(e.quantity * e.unit_cost)
+        val = abs(e.extended_value) if e.extended_value != 0 else abs(Decimal(str(e.quantity)) * e.unit_cost)
         cat_values[cat] = cat_values.get(cat, 0) + val
         cat_entries.setdefault(cat, []).append(e)
 
@@ -1006,23 +1066,25 @@ def test_category_concentration(
         severity = Severity.HIGH if pct > 0.70 else Severity.MEDIUM
 
         for e in cat_entries[cat]:
-            flagged.append(FlaggedInventoryItem(
-                entry=e,
-                test_name="Category Concentration",
-                test_key="category_concentration",
-                test_tier=TestTier.STATISTICAL,
-                severity=severity,
-                issue=f"Category '{cat}' represents {pct:.1%} of total inventory value"
-                      f" (${cat_val:,.2f}/${total_value:,.2f})"
-                      f" — {e.item_id or e.description or f'row {e.row_number}'}",
-                confidence=0.75,
-                details={
-                    "category": cat,
-                    "category_value": round(cat_val, 2),
-                    "total_value": round(total_value, 2),
-                    "concentration_pct": round(pct, 4),
-                },
-            ))
+            flagged.append(
+                FlaggedInventoryItem(
+                    entry=e,
+                    test_name="Category Concentration",
+                    test_key="category_concentration",
+                    test_tier=TestTier.STATISTICAL,
+                    severity=severity,
+                    issue=f"Category '{cat}' represents {pct:.1%} of total inventory value"
+                    f" (${cat_val:,.2f}/${total_value:,.2f})"
+                    f" — {e.item_id or e.description or f'row {e.row_number}'}",
+                    confidence=0.75,
+                    details={
+                        "category": cat,
+                        "category_value": round(cat_val, 2),
+                        "total_value": round(total_value, 2),
+                        "concentration_pct": round(pct, 4),
+                    },
+                )
+            )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return InvTestResult(
@@ -1041,6 +1103,7 @@ def test_category_concentration(
 # =============================================================================
 # TIER 3 — ADVANCED TESTS
 # =============================================================================
+
 
 def test_duplicate_items(
     entries: list[InventoryEntry],
@@ -1077,26 +1140,34 @@ def test_duplicate_items(
         if len(group) < 2:
             continue
         cost, desc = key
-        value = math.fsum(abs(e.extended_value) if e.extended_value != 0 else abs(e.quantity * e.unit_cost) for e in group)
+        value = sum(
+            (
+                abs(e.extended_value) if e.extended_value != 0 else abs(Decimal(str(e.quantity)) * e.unit_cost)
+                for e in group
+            ),
+            Decimal("0"),
+        )
         severity = Severity.HIGH if value > 50000 else Severity.MEDIUM
 
         for e in group:
-            flagged.append(FlaggedInventoryItem(
-                entry=e,
-                test_name="Duplicate Items",
-                test_key="duplicate_items",
-                test_tier=TestTier.ADVANCED,
-                severity=severity,
-                issue=f"Potential duplicate: '{desc}' @ ${abs(cost):,.2f}"
-                      f" ({len(group)} occurrences, total value=${value:,.2f})",
-                confidence=0.85,
-                details={
-                    "duplicate_count": len(group),
-                    "unit_cost": cost,
-                    "description": desc,
-                    "group_total_value": round(value, 2),
-                },
-            ))
+            flagged.append(
+                FlaggedInventoryItem(
+                    entry=e,
+                    test_name="Duplicate Items",
+                    test_key="duplicate_items",
+                    test_tier=TestTier.ADVANCED,
+                    severity=severity,
+                    issue=f"Potential duplicate: '{desc}' @ ${abs(cost):,.2f}"
+                    f" ({len(group)} occurrences, total value=${value:,.2f})",
+                    confidence=0.85,
+                    details={
+                        "duplicate_count": len(group),
+                        "unit_cost": cost,
+                        "description": desc,
+                        "group_total_value": round(value, 2),
+                    },
+                )
+            )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return InvTestResult(
@@ -1146,17 +1217,19 @@ def test_zero_value_items(
 
         severity = Severity.MEDIUM if abs(e.quantity) > 100 else Severity.LOW
 
-        flagged.append(FlaggedInventoryItem(
-            entry=e,
-            test_name="Zero-Value Items",
-            test_key="zero_value_items",
-            test_tier=TestTier.ADVANCED,
-            severity=severity,
-            issue=f"Quantity={e.quantity:,.2f} but zero value"
-                  f" — {e.item_id or e.description or f'row {e.row_number}'}",
-            confidence=0.80,
-            details={"quantity": e.quantity, "unit_cost": e.unit_cost, "extended_value": e.extended_value},
-        ))
+        flagged.append(
+            FlaggedInventoryItem(
+                entry=e,
+                test_name="Zero-Value Items",
+                test_key="zero_value_items",
+                test_tier=TestTier.ADVANCED,
+                severity=severity,
+                issue=f"Quantity={e.quantity:,.2f} but zero value"
+                f" — {e.item_id or e.description or f'row {e.row_number}'}",
+                confidence=0.80,
+                details={"quantity": e.quantity, "unit_cost": e.unit_cost, "extended_value": e.extended_value},
+            )
+        )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return InvTestResult(
@@ -1175,6 +1248,7 @@ def test_zero_value_items(
 # =============================================================================
 # TEST BATTERY + SCORING
 # =============================================================================
+
 
 def run_inv_test_battery(
     entries: list[InventoryEntry],
@@ -1226,6 +1300,7 @@ def calculate_inv_composite_score(
 # MAIN ENTRY POINT
 # =============================================================================
 
+
 def run_inventory_testing(
     rows: list[dict],
     column_names: list[str],
@@ -1251,9 +1326,16 @@ def run_inventory_testing(
 
     # Apply manual overrides
     if column_mapping:
-        for attr in ("item_id_column", "description_column", "quantity_column",
-                     "unit_cost_column", "extended_value_column",
-                     "location_column", "last_movement_date_column", "category_column"):
+        for attr in (
+            "item_id_column",
+            "description_column",
+            "quantity_column",
+            "unit_cost_column",
+            "extended_value_column",
+            "location_column",
+            "last_movement_date_column",
+            "category_column",
+        ):
             if attr in column_mapping:
                 setattr(detection, attr, column_mapping[attr])
         detection.overall_confidence = 1.0
