@@ -9,6 +9,7 @@ import time
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from decimal import Decimal
 from typing import Any, Optional
 
 from sqlalchemy import func
@@ -27,6 +28,7 @@ from follow_up_items_model import FollowUpDisposition, FollowUpItem
 from models import Client
 from security_utils import log_secure_operation
 from shared.monetary import quantize_monetary
+from shared.parsing_helpers import safe_decimal
 
 # ---------------------------------------------------------------------------
 # In-memory TTL cache for convergence index and tool-run trend analytics.
@@ -338,15 +340,15 @@ class EngagementManager:
           - trivial_threshold: overall * trivial factor
           - basis, percentage, factors
         """
-        overall = float(engagement.materiality_amount or 0)
+        overall = safe_decimal(engagement.materiality_amount or 0)
 
-        pm = float(quantize_monetary(overall * engagement.performance_materiality_factor))
-        trivial = float(quantize_monetary(overall * engagement.trivial_threshold_factor))
+        pm = quantize_monetary(overall * Decimal(str(engagement.performance_materiality_factor)))
+        trivial = quantize_monetary(overall * Decimal(str(engagement.trivial_threshold_factor)))
 
         return {
-            "overall_materiality": overall,
-            "performance_materiality": pm,
-            "trivial_threshold": trivial,
+            "overall_materiality": float(overall),
+            "performance_materiality": float(pm),
+            "trivial_threshold": float(trivial),
             "materiality_basis": (engagement.materiality_basis.value if engagement.materiality_basis else None),
             "materiality_percentage": engagement.materiality_percentage,
             "performance_materiality_factor": engagement.performance_materiality_factor,

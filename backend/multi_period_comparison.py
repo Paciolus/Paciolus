@@ -21,6 +21,7 @@ GAAP/IFRS Notes:
 
 import re
 from dataclasses import dataclass, field
+from decimal import Decimal
 from enum import Enum
 from typing import Any, ClassVar, Optional
 
@@ -31,6 +32,7 @@ from lead_sheet_mapping import (
     assign_lead_sheet,
 )
 from shared.helpers import sanitize_csv_value
+from shared.parsing_helpers import safe_decimal
 
 # =============================================================================
 # CONSTANTS
@@ -304,8 +306,8 @@ def match_accounts(
         norm = normalize_account_name(name)
         if norm in prior_by_norm:
             existing = prior_by_norm[norm]
-            existing["debit"] = float(existing.get("debit", 0) or 0) + float(acct.get("debit", 0) or 0)
-            existing["credit"] = float(existing.get("credit", 0) or 0) + float(acct.get("credit", 0) or 0)
+            existing["debit"] = safe_decimal(existing.get("debit", 0)) + safe_decimal(acct.get("debit", 0))
+            existing["credit"] = safe_decimal(existing.get("credit", 0)) + safe_decimal(acct.get("credit", 0))
         else:
             prior_by_norm[norm] = {**acct}
 
@@ -315,8 +317,8 @@ def match_accounts(
         norm = normalize_account_name(name)
         if norm in current_by_norm:
             existing = current_by_norm[norm]
-            existing["debit"] = float(existing.get("debit", 0) or 0) + float(acct.get("debit", 0) or 0)
-            existing["credit"] = float(existing.get("credit", 0) or 0) + float(acct.get("credit", 0) or 0)
+            existing["debit"] = safe_decimal(existing.get("debit", 0)) + safe_decimal(acct.get("debit", 0))
+            existing["credit"] = safe_decimal(existing.get("credit", 0)) + safe_decimal(acct.get("credit", 0))
         else:
             current_by_norm[norm] = {**acct}
 
@@ -349,10 +351,10 @@ def match_accounts(
 # =============================================================================
 
 
-def _get_net_balance(account: dict) -> float:
+def _get_net_balance(account: dict) -> Decimal:
     """Calculate net balance from an account dict."""
-    debit = float(account.get("debit", 0) or 0)
-    credit = float(account.get("credit", 0) or 0)
+    debit = safe_decimal(account.get("debit", 0))
+    credit = safe_decimal(account.get("credit", 0))
     return debit - credit
 
 
@@ -368,6 +370,8 @@ def calculate_movement(
     Returns:
         (movement_type, change_amount, change_percent)
     """
+    current_balance = safe_decimal(current_balance)
+    prior_balance = safe_decimal(prior_balance)
     change_amount = current_balance - prior_balance
 
     # Calculate percent change
@@ -583,10 +587,10 @@ def compare_trial_balances(
         movement = AccountMovement(
             account_name=display_name,
             account_type=account_type,
-            prior_balance=prior_balance,
-            current_balance=current_balance,
-            change_amount=change_amount,
-            change_percent=change_percent,
+            prior_balance=float(prior_balance),
+            current_balance=float(current_balance),
+            change_amount=float(change_amount),
+            change_percent=float(change_percent) if change_percent is not None else None,
             movement_type=movement_type,
             significance=significance,
             lead_sheet=ls_letter,
@@ -610,10 +614,10 @@ def compare_trial_balances(
             dormant_accounts.append(display_name)
 
     # Calculate totals
-    prior_total_debits = sum(float(a.get("debit", 0) or 0) for a in prior_accounts)
-    prior_total_credits = sum(float(a.get("credit", 0) or 0) for a in prior_accounts)
-    current_total_debits = sum(float(a.get("debit", 0) or 0) for a in current_accounts)
-    current_total_credits = sum(float(a.get("credit", 0) or 0) for a in current_accounts)
+    prior_total_debits = sum((safe_decimal(a.get("debit", 0)) for a in prior_accounts), Decimal("0"))
+    prior_total_credits = sum((safe_decimal(a.get("credit", 0)) for a in prior_accounts), Decimal("0"))
+    current_total_debits = sum((safe_decimal(a.get("debit", 0)) for a in current_accounts), Decimal("0"))
+    current_total_credits = sum((safe_decimal(a.get("credit", 0)) for a in current_accounts), Decimal("0"))
 
     # Group by lead sheet
     lead_sheet_summaries = _group_movements_by_lead_sheet(all_movements)
@@ -900,8 +904,8 @@ def compare_three_periods(
         )
 
     # Step 6: Calculate budget totals
-    budget_total_debits = sum(float(a.get("debit", 0) or 0) for a in budget_accounts)
-    budget_total_credits = sum(float(a.get("credit", 0) or 0) for a in budget_accounts)
+    budget_total_debits = sum((safe_decimal(a.get("debit", 0)) for a in budget_accounts), Decimal("0"))
+    budget_total_credits = sum((safe_decimal(a.get("credit", 0)) for a in budget_accounts), Decimal("0"))
 
     return ThreeWayMovementSummary(
         prior_label=two_way.prior_label,

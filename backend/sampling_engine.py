@@ -17,6 +17,7 @@ import logging
 import math
 import secrets
 from dataclasses import dataclass, field
+from decimal import Decimal
 from typing import Optional
 
 from shared.column_detector import (
@@ -25,6 +26,7 @@ from shared.column_detector import (
     detect_columns,
 )
 from shared.helpers import parse_uploaded_file
+from shared.parsing_helpers import safe_decimal
 
 logger = logging.getLogger(__name__)
 
@@ -321,8 +323,8 @@ def select_mus_sample(
             random_start = 0.01  # Avoid zero start
 
     selected: list[SelectedSample] = []
-    cumulative = 0.0
-    next_selection_point = random_start
+    cumulative = Decimal("0")
+    next_selection_point = Decimal(str(random_start))
 
     # Sort by absolute amount descending for consistent selection
     sorted_items = sorted(items, key=lambda x: abs(x.recorded_amount), reverse=True)
@@ -345,7 +347,7 @@ def select_mus_sample(
                         interval_position=next_selection_point,
                     )
                 )
-            next_selection_point += sampling_interval
+            next_selection_point += Decimal(str(sampling_interval))
 
     return selected, random_start
 
@@ -523,8 +525,11 @@ def _parse_population(
 
     for i, row in enumerate(rows):
         raw_amount = row.get(amount_col)
+        if raw_amount is None:
+            skipped += 1
+            continue
         try:
-            amount = float(raw_amount) if raw_amount is not None else 0.0
+            amount = safe_decimal(raw_amount)
         except (ValueError, TypeError):
             skipped += 1
             continue
@@ -706,14 +711,18 @@ def _parse_evaluation_errors(
 
     for i, row in enumerate(rows):
         try:
-            recorded = float(row.get(recorded_col, 0))
+            raw_recorded = row.get(recorded_col)
             raw_audited = row.get(audited_col)
-            if raw_audited is None or str(raw_audited).strip() == "":
-                continue  # Skip rows without audited amount
-            audited = float(raw_audited)
-            # Pandas reads blank cells as NaN
-            if math.isnan(audited) or math.isnan(recorded):
+            if raw_recorded is None or str(raw_recorded).strip() == "":
                 continue
+            if isinstance(raw_recorded, float) and math.isnan(raw_recorded):
+                continue
+            if raw_audited is None or str(raw_audited).strip() == "":
+                continue
+            if isinstance(raw_audited, float) and math.isnan(raw_audited):
+                continue
+            recorded = safe_decimal(raw_recorded)
+            audited = safe_decimal(raw_audited)
         except (ValueError, TypeError):
             continue
 
@@ -733,10 +742,10 @@ def _parse_evaluation_errors(
             SampleError(
                 row_index=i + 1,
                 item_id=item_id or str(i + 1),
-                recorded_amount=recorded,
-                audited_amount=audited,
-                misstatement=misstatement,
-                tainting=tainting,
+                recorded_amount=float(recorded),
+                audited_amount=float(audited),
+                misstatement=float(misstatement),
+                tainting=float(tainting),
             )
         )
 

@@ -12,11 +12,13 @@ Pure-Python engine (no Pandas). Takes parsed data from parse_uploaded_file().
 
 import re
 from dataclasses import dataclass, field
+from decimal import Decimal
 
 from column_detector import (
     ColumnDetectionResult,
     detect_columns,
 )
+from shared.parsing_helpers import safe_decimal
 
 # ═══════════════════════════════════════════════════════════════
 # Dataclasses
@@ -323,19 +325,24 @@ def run_preflight(
 # ═══════════════════════════════════════════════════════════════
 
 
-def _coerce_to_float(val: object) -> float:
-    """Coerce a cell value to float, treating None/empty/NaN as 0.0."""
+def _coerce_to_decimal(val: object) -> Decimal:
+    """Coerce a cell value to Decimal, treating None/empty/NaN as 0."""
     if val is None:
-        return 0.0
+        return Decimal("0")
     if isinstance(val, str):
         stripped = val.strip()
         if stripped == "":
-            return 0.0
-        return float(stripped)
-    f = float(val)  # type: ignore[arg-type]
-    if f != f:  # NaN check
-        return 0.0
-    return f
+            return Decimal("0")
+        return Decimal(stripped)
+    if isinstance(val, Decimal):
+        return val
+    if isinstance(val, (int, float)):
+        import math
+
+        if isinstance(val, float) and (math.isnan(val) or math.isinf(val)):
+            return Decimal("0")
+        return Decimal(str(val))
+    return Decimal(str(val))
 
 
 def _check_tb_balance(
@@ -354,15 +361,15 @@ def _check_tb_balance(
     if not debit_col or not credit_col or not rows:
         return None
 
-    total_debits = 0.0
-    total_credits = 0.0
+    total_debits = Decimal("0")
+    total_credits = Decimal("0")
     for row in rows:
         try:
-            total_debits += _coerce_to_float(row.get(debit_col))
+            total_debits += _coerce_to_decimal(row.get(debit_col))
         except (ValueError, TypeError):
             pass
         try:
-            total_credits += _coerce_to_float(row.get(credit_col))
+            total_credits += _coerce_to_decimal(row.get(credit_col))
         except (ValueError, TypeError):
             pass
 
@@ -727,7 +734,7 @@ def _check_mixed_signs(
         if acct is None or val is None:
             continue
         try:
-            num = float(val)
+            num = safe_decimal(val)
         except (ValueError, TypeError):
             continue
         if num == 0:
@@ -796,8 +803,8 @@ def _check_zero_balances(
         debit_val = row.get(debit_col)
         credit_val = row.get(credit_col)
         try:
-            d = float(debit_val) if debit_val is not None else 0.0
-            c = float(credit_val) if credit_val is not None else 0.0
+            d = safe_decimal(debit_val)
+            c = safe_decimal(credit_val)
         except (ValueError, TypeError):
             continue
         if d == 0 and c == 0:

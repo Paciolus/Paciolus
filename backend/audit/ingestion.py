@@ -166,7 +166,7 @@ def detect_abnormal_balances(df: pd.DataFrame, materiality_threshold: float = 0.
     # Pre-compute vectorized conditions for abnormal balances
     net_balance_series = pd.Series(net_balances)
     abs_balances = net_balance_series.abs()
-    significant = abs_balances >= float(BALANCE_TOLERANCE)
+    significant = abs_balances >= BALANCE_TOLERANCE
 
     # Asset accounts with net credit balance (abnormal)
     asset_abnormal = is_asset_mask & (net_balance_series < 0) & significant
@@ -177,8 +177,8 @@ def detect_abnormal_balances(df: pd.DataFrame, materiality_threshold: float = 0.
         net_balance = net_balances[i]
         abs_amount = abs(net_balance)
         account_name = account_names.iloc[i]
-        debit_amount = float(debit_amounts[i])
-        credit_amount = float(credit_amounts[i])
+        debit_amount = debit_amounts[i]
+        credit_amount = credit_amounts[i]
         is_material = abs_amount >= materiality_threshold
         materiality_status = "material" if is_material else "immaterial"
 
@@ -205,8 +205,8 @@ def detect_abnormal_balances(df: pd.DataFrame, materiality_threshold: float = 0.
         net_balance = net_balances[i]
         abs_amount = abs(net_balance)
         account_name = account_names.iloc[i]
-        debit_amount = float(debit_amounts[i])
-        credit_amount = float(credit_amounts[i])
+        debit_amount = debit_amounts[i]
+        credit_amount = credit_amounts[i]
         is_material = abs_amount >= materiality_threshold
         materiality_status = "material" if is_material else "immaterial"
 
