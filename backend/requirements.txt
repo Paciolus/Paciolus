@@ -52,3 +52,5 @@ APScheduler==3.11.2
 cryptography>=46.0.5  # CVE-2026-26007
 pillow>=12.1.1  # CVE-2026-25990
 werkzeug>=3.1.6  # CVE-2026-27199
+pyasn1>=0.6.3  # CVE-2026-30922 (DoS via recursive ASN.1 decoding)
+pypdf>=6.9.1  # CVE-2026-31826, CVE-2026-33123 (memory exhaustion via crafted PDF)
