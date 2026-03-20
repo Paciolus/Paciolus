@@ -47,6 +47,7 @@ import statistics
 from calendar import monthrange
 from dataclasses import dataclass, field
 from datetime import date, datetime
+from decimal import Decimal
 from typing import Any, Optional
 
 from engine_framework import AuditEngineBase
@@ -55,7 +56,7 @@ from shared.column_detector import ColumnFieldConfig, detect_columns  # noqa: E4
 from shared.data_quality import FieldQualityConfig  # noqa: E402
 from shared.data_quality import assess_data_quality as _shared_assess_dq
 from shared.holiday_calendar import get_holiday_dates  # noqa: E402
-from shared.parsing_helpers import parse_date, safe_float, safe_str  # noqa: E402
+from shared.parsing_helpers import parse_date, safe_decimal, safe_str  # noqa: E402
 from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
 
 # =============================================================================
@@ -499,16 +500,22 @@ class JournalEntry:
     posting_date: Optional[str] = None
     account: str = ""
     description: Optional[str] = None
-    debit: float = 0.0
-    credit: float = 0.0
+    debit: Decimal = Decimal("0")
+    credit: Decimal = Decimal("0")
     posted_by: Optional[str] = None
     source: Optional[str] = None
     reference: Optional[str] = None
     currency: Optional[str] = None
     row_number: int = 0
 
+    def __post_init__(self):
+        if isinstance(self.debit, (int, float)):
+            self.debit = Decimal(str(self.debit))
+        if isinstance(self.credit, (int, float)):
+            self.credit = Decimal(str(self.credit))
+
     @property
-    def net_amount(self) -> float:
+    def net_amount(self) -> Decimal:
         return self.debit - self.credit
 
     @property
@@ -762,10 +769,10 @@ def parse_gl_entries(
 
         # Amounts
         if detection.has_separate_debit_credit:
-            entry.debit = safe_float(row.get(detection.debit_column))
-            entry.credit = safe_float(row.get(detection.credit_column))
+            entry.debit = safe_decimal(row.get(detection.debit_column))
+            entry.credit = safe_decimal(row.get(detection.credit_column))
         elif detection.amount_column:
-            amt = safe_float(row.get(detection.amount_column))
+            amt = safe_decimal(row.get(detection.amount_column))
             if amt >= 0:
                 entry.debit = amt
             else:

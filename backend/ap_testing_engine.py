@@ -21,10 +21,10 @@ Audit Standards References:
 - PCAOB AS 2401: Consideration of Fraud
 """
 
-import math
 import re
 import statistics
 from dataclasses import dataclass, field
+from decimal import Decimal
 from difflib import SequenceMatcher
 from typing import Any, Optional
 
@@ -32,7 +32,7 @@ from engine_framework import AuditEngineBase
 from shared.column_detector import ColumnFieldConfig, detect_columns
 from shared.data_quality import FieldQualityConfig
 from shared.data_quality import assess_data_quality as _shared_assess_dq
-from shared.parsing_helpers import parse_date, safe_float, safe_str
+from shared.parsing_helpers import parse_date, safe_decimal, safe_str
 from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
 
 # =============================================================================
@@ -383,12 +383,16 @@ class APPayment:
     payment_date: Optional[str] = None
     vendor_name: str = ""
     vendor_id: Optional[str] = None
-    amount: float = 0.0  # Single amount (not debit/credit)
+    amount: Decimal = Decimal("0")  # Single amount (not debit/credit)
     check_number: Optional[str] = None
     description: Optional[str] = None
     gl_account: Optional[str] = None
     payment_method: Optional[str] = None
     row_number: int = 0
+
+    def __post_init__(self):
+        if isinstance(self.amount, (int, float)):
+            self.amount = Decimal(str(self.amount))
 
     def to_dict(self) -> dict:
         return {
@@ -549,7 +553,7 @@ def parse_ap_payments(
         if detection.vendor_name_column:
             payment.vendor_name = safe_str(row.get(detection.vendor_name_column)) or ""
         if detection.amount_column:
-            payment.amount = safe_float(row.get(detection.amount_column))
+            payment.amount = safe_decimal(row.get(detection.amount_column))
         if detection.payment_date_column:
             payment.payment_date = safe_str(row.get(detection.payment_date_column))
 
@@ -890,7 +894,8 @@ def test_round_dollar_amounts(
             continue
 
         for divisor, name, severity in AP_ROUND_AMOUNT_PATTERNS:
-            if amt >= divisor and amt % divisor == 0:
+            d = Decimal(str(divisor))
+            if amt >= d and amt % d == 0:
                 flagged.append(
                     FlaggedPayment(
                         entry=p,
@@ -1032,7 +1037,7 @@ def test_fuzzy_duplicate_payments(
             for j in range(i + 1, len(group)):
                 a, b = group[i], group[j]
                 # Amount match within tolerance
-                if abs(a.amount - b.amount) > config.duplicate_tolerance:
+                if abs(a.amount - b.amount) > Decimal(str(config.duplicate_tolerance)):
                     continue
                 # Must be different dates
                 date_a = parse_date(a.payment_date)
@@ -1199,7 +1204,7 @@ def test_unusual_payment_amounts(
                     test_tier=TestTier.STATISTICAL,
                     severity=severity,
                     issue=f"Unusual amount ${abs(p.amount):,.2f} for {p.vendor_name} (z-score: {z:.1f}, mean: ${mean:,.2f})",
-                    confidence=min(0.60 + z * 0.05, 0.95),
+                    confidence=float(min(Decimal("0.60") + z * Decimal("0.05"), Decimal("0.95"))),
                     details={
                         "z_score": round(z, 2),
                         "vendor_mean": round(mean, 2),
@@ -1405,13 +1410,13 @@ def test_vendor_name_variations(
         )
 
     # Collect unique vendor names and their total amounts
-    vendor_totals: dict[str, float] = {}
+    vendor_totals: dict[str, Decimal] = {}
     vendor_payments: dict[str, list[APPayment]] = {}
     for p in payments:
         name = p.vendor_name.strip()
         if name:
             lower = name.lower()
-            vendor_totals[lower] = vendor_totals.get(lower, 0) + abs(p.amount)
+            vendor_totals[lower] = vendor_totals.get(lower, Decimal("0")) + abs(p.amount)
             vendor_payments.setdefault(lower, []).append(p)
 
     unique_vendors = sorted(vendor_totals.keys())
@@ -1508,8 +1513,9 @@ def test_just_below_threshold(
     for p in payments:
         amt = abs(p.amount)
         for threshold in config.approval_thresholds:
-            lower_bound = threshold * (1 - config.threshold_proximity_pct)
-            if lower_bound <= amt < threshold:
+            t = Decimal(str(threshold))
+            lower_bound = t * (1 - Decimal(str(config.threshold_proximity_pct)))
+            if lower_bound <= amt < t:
                 severity = Severity.MEDIUM if threshold < 50000 else Severity.HIGH
                 if p.row_number not in flagged_rows:
                     flagged_rows.add(p.row_number)
@@ -1520,12 +1526,12 @@ def test_just_below_threshold(
                             test_key="just_below_threshold",
                             test_tier=TestTier.ADVANCED,
                             severity=severity,
-                            issue=f"${amt:,.2f} is {((threshold - amt) / threshold):.1%} below ${threshold:,.0f} threshold",
+                            issue=f"${amt:,.2f} is {((t - amt) / t):.1%} below ${t:,.0f} threshold",
                             confidence=0.75,
                             details={
                                 "amount": round(amt, 2),
-                                "threshold": threshold,
-                                "pct_below": round((threshold - amt) / threshold, 4),
+                                "threshold": t,
+                                "pct_below": round((t - amt) / t, 4),
                             },
                         )
                     )
@@ -1542,7 +1548,7 @@ def test_just_below_threshold(
     for (vendor, pay_date), group in vendor_date_groups.items():
         if len(group) < 2:
             continue
-        total = math.fsum(abs(p.amount) for p in group)
+        total = sum((abs(p.amount) for p in group), Decimal("0"))
         for threshold in config.approval_thresholds:
             if total > threshold and all(abs(p.amount) < threshold for p in group):
                 for p in group:

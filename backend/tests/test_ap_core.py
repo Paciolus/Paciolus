@@ -9,6 +9,7 @@ full pipeline, and serialization.
 """
 
 from datetime import date
+from decimal import Decimal
 
 from ap_testing_engine import (
     APCompositeScore,
@@ -162,7 +163,7 @@ class TestAPParsing:
         rows = [{"Vendor Name": "Test", "Amount": "$1,234.56", "Payment Date": "2025-01-01"}]
         detection = detect_ap_columns(["Vendor Name", "Amount", "Payment Date"])
         payments = parse_ap_payments(rows, detection)
-        assert payments[0].amount == 1234.56
+        assert payments[0].amount == Decimal("1234.56")
 
     def test_empty_rows(self):
         detection = detect_ap_columns(sample_ap_columns())

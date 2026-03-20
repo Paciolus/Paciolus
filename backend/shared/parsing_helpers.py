@@ -43,7 +43,7 @@ def safe_decimal(value: object, default: Decimal = Decimal("0")) -> Decimal:
         return Decimal(value)
     try:
         cleaned = str(value).strip()
-        if not cleaned:
+        if not cleaned or cleaned.lower() in ("nan", "none", "inf", "-inf"):
             return default
         # Detect accounting-style parenthetical negatives: (1,234.56)
         is_negative = cleaned.startswith("(") and cleaned.endswith(")")

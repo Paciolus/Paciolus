@@ -25,10 +25,11 @@ DUAL-INPUT ARCHITECTURE:
 
 import re
 from dataclasses import dataclass, field
+from decimal import Decimal
 from typing import Optional
 
 from shared.column_detector import ColumnFieldConfig, detect_columns, match_column
-from shared.parsing_helpers import safe_float, safe_int
+from shared.parsing_helpers import safe_decimal, safe_int
 from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
 from shared.testing_enums import (
     SEVERITY_WEIGHTS,
@@ -299,9 +300,13 @@ class TBAccount:
 
     account_name: Optional[str] = None
     account_number: Optional[str] = None
-    balance: float = 0.0
+    balance: Decimal = Decimal("0")
     classification: str = "other"  # "ar", "allowance", "revenue", "other"
     row_number: int = 0
+
+    def __post_init__(self):
+        if isinstance(self.balance, (int, float)):
+            self.balance = Decimal(str(self.balance))
 
     def to_dict(self) -> dict:
         return {
@@ -322,11 +327,17 @@ class ARSubledgerEntry:
     invoice_number: Optional[str] = None
     invoice_date: Optional[str] = None
     due_date: Optional[str] = None
-    amount: float = 0.0
+    amount: Decimal = Decimal("0")
     aging_days: Optional[int] = None
     aging_bucket: Optional[str] = None
-    credit_limit: Optional[float] = None
+    credit_limit: Optional[Decimal] = None
     row_number: int = 0
+
+    def __post_init__(self):
+        if isinstance(self.amount, (int, float)):
+            self.amount = Decimal(str(self.amount))
+        if isinstance(self.credit_limit, (int, float)):
+            self.credit_limit = Decimal(str(self.credit_limit))
 
     def to_dict(self) -> dict:
         return {
@@ -352,10 +363,14 @@ class AREntry:
     customer_name: Optional[str] = None
     invoice_number: Optional[str] = None
     date: Optional[str] = None
-    amount: float = 0.0
+    amount: Decimal = Decimal("0")
     aging_days: Optional[int] = None
     row_number: int = 0
     entry_source: str = "tb"  # "tb" or "subledger"
+
+    def __post_init__(self):
+        if isinstance(self.amount, (int, float)):
+            self.amount = Decimal(str(self.amount))
 
     def to_dict(self) -> dict:
         return {
@@ -561,9 +576,9 @@ def compute_aging_schedule(sl_entries: list["ARSubledgerEntry"]) -> list[dict]:
     # Initialize accumulators
     buckets: list[dict] = []
     for label, low, high in bucket_labels:
-        buckets.append({"bucket": label, "low": low, "high": high, "count": 0, "amount": 0.0})
+        buckets.append({"bucket": label, "low": low, "high": high, "count": 0, "amount": Decimal("0")})
 
-    total_amount = 0.0
+    total_amount = Decimal("0")
     for entry in sl_entries:
         days = entry.aging_days if entry.aging_days is not None else 0
         total_amount += entry.amount
@@ -770,7 +785,7 @@ def parse_tb_accounts(
     for i, row in enumerate(rows):
         acct_name = None
         acct_number = None
-        balance = 0.0
+        balance = Decimal("0")
 
         if detection.account_name_column:
             raw = row.get(detection.account_name_column)
@@ -781,10 +796,10 @@ def parse_tb_accounts(
             acct_number = str(raw).strip() if raw is not None else None
 
         if detection.balance_column:
-            balance = safe_float(row.get(detection.balance_column))
+            balance = safe_decimal(row.get(detection.balance_column))
         elif detection.has_debit_credit:
-            debit = safe_float(row.get(detection.debit_column))
-            credit = safe_float(row.get(detection.credit_column))
+            debit = safe_decimal(row.get(detection.debit_column))
+            credit = safe_decimal(row.get(detection.credit_column))
             balance = debit - credit
 
         # Skip rows with no identifying info
@@ -888,7 +903,7 @@ def parse_sl_entries(
         invoice_number = None
         invoice_date = None
         due_date = None
-        amount = 0.0
+        amount = Decimal("0")
         aging_days = None
         aging_bucket = None
         credit_limit = None
@@ -912,7 +927,7 @@ def parse_sl_entries(
             due_date = _parse_date_to_str(row.get(detection.due_date_column))
 
         if detection.amount_column:
-            amount = safe_float(row.get(detection.amount_column))
+            amount = safe_decimal(row.get(detection.amount_column))
 
         if detection.aging_days_column:
             aging_days = safe_int(row.get(detection.aging_days_column))
@@ -922,7 +937,7 @@ def parse_sl_entries(
             aging_bucket = str(raw).strip() if raw is not None else None
 
         if detection.credit_limit_column:
-            raw_limit = safe_float(row.get(detection.credit_limit_column))
+            raw_limit = safe_decimal(row.get(detection.credit_limit_column))
             credit_limit = raw_limit if raw_limit > 0 else None
 
         # Compute aging_days if not provided
@@ -1168,12 +1183,12 @@ def test_unreconciled_detail(
 
     difference = abs(tb_ar_total - sl_total)
     threshold = max(
-        abs(tb_ar_total) * config.reconciliation_threshold_pct,
-        config.reconciliation_threshold_abs,
+        abs(tb_ar_total) * Decimal(str(config.reconciliation_threshold_pct)),
+        Decimal(str(config.reconciliation_threshold_abs)),
     )
 
     if difference > threshold and tb_ar_total != 0:
-        severity = Severity.HIGH if difference > abs(tb_ar_total) * 0.05 else Severity.MEDIUM
+        severity = Severity.HIGH if difference > abs(tb_ar_total) * Decimal("0.05") else Severity.MEDIUM
         # Flag the difference as a conceptual entry
         flagged.append(
             FlaggedAR(
@@ -1233,11 +1248,11 @@ def test_bucket_concentration(
         )
 
     # Group by bucket
-    bucket_totals: dict[str, float] = {}
+    bucket_totals: dict[str, Decimal] = {}
     bucket_entries: dict[str, list[ARSubledgerEntry]] = {}
     for e in sl_entries:
         bucket = e.aging_bucket or "unknown"
-        bucket_totals[bucket] = bucket_totals.get(bucket, 0.0) + e.amount
+        bucket_totals[bucket] = bucket_totals.get(bucket, Decimal("0")) + e.amount
         bucket_entries.setdefault(bucket, []).append(e)
 
     for bucket, amount in bucket_totals.items():
@@ -1416,11 +1431,11 @@ def test_customer_concentration(
         )
 
     # Group by customer
-    customer_totals: dict[str, float] = {}
+    customer_totals: dict[str, Decimal] = {}
     customer_entries: dict[str, list[ARSubledgerEntry]] = {}
     for e in sl_entries:
         key = e.customer_name or e.customer_id or "Unknown"
-        customer_totals[key] = customer_totals.get(key, 0.0) + e.amount
+        customer_totals[key] = customer_totals.get(key, Decimal("0")) + e.amount
         customer_entries.setdefault(key, []).append(e)
 
     for customer, amount in customer_totals.items():
@@ -1475,10 +1490,10 @@ def test_dso_trend(
         current_dso = (total_ar / total_revenue) * config.days_in_period
 
     if current_dso is not None and config.prior_period_dso is not None and config.prior_period_dso > 0:
-        change = (current_dso - config.prior_period_dso) / config.prior_period_dso
+        change = (current_dso - Decimal(str(config.prior_period_dso))) / Decimal(str(config.prior_period_dso))
 
-        if abs(change) > config.dso_variance_threshold:
-            severity = Severity.HIGH if abs(change) > config.dso_high_threshold else Severity.MEDIUM
+        if abs(change) > Decimal(str(config.dso_variance_threshold)):
+            severity = Severity.HIGH if abs(change) > Decimal(str(config.dso_high_threshold)) else Severity.MEDIUM
             direction = "increased" if change > 0 else "decreased"
 
             flagged.append(
@@ -1540,10 +1555,10 @@ def test_rollforward_reconciliation(
     if config.beginning_ar_balance is not None and config.collections_total is not None:
         expected_ending = config.beginning_ar_balance + total_revenue - config.collections_total
         difference = abs(ending_ar - expected_ending)
-        threshold = max(abs(ending_ar) * config.rollforward_threshold_pct, 100.0)
+        threshold = max(abs(ending_ar) * Decimal(str(config.rollforward_threshold_pct)), Decimal("100"))
 
         if difference > threshold:
-            severity = Severity.HIGH if difference > abs(ending_ar) * 0.10 else Severity.MEDIUM
+            severity = Severity.HIGH if difference > abs(ending_ar) * Decimal("0.10") else Severity.MEDIUM
             flagged.append(
                 FlaggedAR(
                     entry=AREntry(
@@ -1611,13 +1626,13 @@ def test_credit_limit_breaches(
         )
 
     # Group by customer and check limits
-    customer_totals: dict[str, float] = {}
-    customer_limits: dict[str, float] = {}
+    customer_totals: dict[str, Decimal] = {}
+    customer_limits: dict[str, Decimal] = {}
     customer_entries: dict[str, list[ARSubledgerEntry]] = {}
 
     for e in sl_entries:
         key = e.customer_name or e.customer_id or "Unknown"
-        customer_totals[key] = customer_totals.get(key, 0.0) + e.amount
+        customer_totals[key] = customer_totals.get(key, Decimal("0")) + e.amount
         customer_entries.setdefault(key, []).append(e)
         if e.credit_limit is not None:
             customer_limits[key] = e.credit_limit
@@ -1852,10 +1867,10 @@ def build_ar_summary(
         summary["subledger_total"] = round(sum(e.amount for e in sl_entries), 2)
 
         # Aging distribution
-        bucket_dist: dict[str, float] = {}
+        bucket_dist: dict[str, Decimal] = {}
         for e in sl_entries:
             bucket = e.aging_bucket or "unknown"
-            bucket_dist[bucket] = bucket_dist.get(bucket, 0.0) + e.amount
+            bucket_dist[bucket] = bucket_dist.get(bucket, Decimal("0")) + e.amount
         summary["aging_distribution"] = {k: round(v, 2) for k, v in sorted(bucket_dist.items())}
 
         # Customer count

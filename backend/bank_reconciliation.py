@@ -20,13 +20,14 @@ import math
 import re
 from dataclasses import dataclass, field
 from datetime import date
+from decimal import Decimal
 from enum import Enum
 from io import StringIO
 from typing import Optional
 
 from shared.column_detector import ColumnFieldConfig, detect_columns
 from shared.helpers import sanitize_csv_value
-from shared.parsing_helpers import parse_date, safe_float, safe_str
+from shared.parsing_helpers import parse_date, safe_decimal, safe_str
 
 # =============================================================================
 # ENUMS & CONFIG
@@ -220,9 +221,13 @@ class BankTransaction:
 
     date: Optional[str] = None
     description: str = ""
-    amount: float = 0.0
+    amount: Decimal = Decimal("0")
     reference: Optional[str] = None
     row_number: int = 0
+
+    def __post_init__(self):
+        if isinstance(self.amount, (int, float)):
+            self.amount = Decimal(str(self.amount))
 
     def to_dict(self) -> dict:
         return {
@@ -240,9 +245,13 @@ class LedgerTransaction:
 
     date: Optional[str] = None
     description: str = ""
-    amount: float = 0.0
+    amount: Decimal = Decimal("0")
     reference: Optional[str] = None
     row_number: int = 0
+
+    def __post_init__(self):
+        if isinstance(self.amount, (int, float)):
+            self.amount = Decimal(str(self.amount))
 
     def to_dict(self) -> dict:
         return {
@@ -347,7 +356,7 @@ def parse_bank_transactions(
         if detection.date_column:
             txn.date = safe_str(row.get(detection.date_column))
         if detection.amount_column:
-            txn.amount = safe_float(row.get(detection.amount_column))
+            txn.amount = safe_decimal(row.get(detection.amount_column))
         if detection.description_column:
             txn.description = safe_str(row.get(detection.description_column)) or ""
         if detection.reference_column:
@@ -371,7 +380,7 @@ def parse_ledger_transactions(
         if detection.date_column:
             txn.date = safe_str(row.get(detection.date_column))
         if detection.amount_column:
-            txn.amount = safe_float(row.get(detection.amount_column))
+            txn.amount = safe_decimal(row.get(detection.amount_column))
         if detection.description_column:
             txn.description = safe_str(row.get(detection.description_column)) or ""
         if detection.reference_column:
@@ -453,7 +462,7 @@ def match_transactions(
                 continue
 
             # Amount match within tolerance (exact check — bucket is approximate)
-            if abs(bank_txn.amount - ledger_txn.amount) > config.amount_tolerance:
+            if abs(bank_txn.amount - ledger_txn.amount) > Decimal(str(config.amount_tolerance)):
                 continue
 
             # Date match within tolerance
@@ -517,13 +526,13 @@ def match_transactions(
 def calculate_summary(matches: list[ReconciliationMatch]) -> ReconciliationSummary:
     """Calculate reconciliation summary from matches."""
     matched_count = 0
-    matched_amount = 0.0
+    matched_amount = Decimal("0")
     bank_only_count = 0
-    bank_only_amount = 0.0
+    bank_only_amount = Decimal("0")
     ledger_only_count = 0
-    ledger_only_amount = 0.0
-    total_bank = 0.0
-    total_ledger = 0.0
+    ledger_only_amount = Decimal("0")
+    total_bank = Decimal("0")
+    total_ledger = Decimal("0")
 
     for m in matches:
         if m.match_type == MatchType.MATCHED:
@@ -881,8 +890,8 @@ def _test_interbank_transfers(
         for d_src, d_txn in debits:
             abs_amount = abs(d_txn.amount)
             # Probe buckets covering the $1.00 tolerance window
-            lo = int(abs_amount - 1.0)
-            hi = int(abs_amount + 1.0)
+            lo = int(abs_amount - 1)
+            hi = int(abs_amount + 1)
             for bucket_key in range(lo, hi + 1):
                 for c_src, c_txn in credit_buckets.get(bucket_key, []):
                     if abs(abs_amount - c_txn.amount) <= 1.00:
