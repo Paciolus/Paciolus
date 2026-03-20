@@ -12,6 +12,7 @@ ratio (IMPROVEMENT-04), dollar amounts in findings (BUG-03).
 
 import re
 from collections import Counter
+from decimal import Decimal
 from typing import Any, Optional
 
 from reportlab.lib.units import inch
@@ -25,6 +26,7 @@ from shared.drill_down import (
 )
 from shared.memo_base import build_scope_section
 from shared.memo_template import TestingMemoConfig, _roman, generate_testing_memo
+from shared.parsing_helpers import safe_decimal
 from shared.report_styles import ledger_table_style
 
 REVENUE_TEST_DESCRIPTIONS = {
@@ -174,14 +176,14 @@ _DETAIL_TABLE_TITLES = {
 }
 
 
-def _sum_flagged_amounts(flagged_entries: list[dict]) -> float:
+def _sum_flagged_amounts(flagged_entries: list[dict]) -> Decimal:
     """Sum absolute amounts from flagged entries."""
-    total = 0.0
+    total = Decimal("0")
     for fe in flagged_entries:
         entry = fe.get("entry", {})
         amt = entry.get("amount", 0)
         try:
-            total += abs(float(amt))
+            total += abs(safe_decimal(amt))
         except (TypeError, ValueError):
             pass
     return total

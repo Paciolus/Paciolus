@@ -18,6 +18,7 @@ from shared.drill_down import (
 )
 from shared.follow_up_procedures import get_follow_up_procedure
 from shared.memo_template import TestingMemoConfig, _roman, generate_testing_memo
+from shared.parsing_helpers import safe_decimal
 
 AP_TEST_DESCRIPTIONS = {
     "exact_duplicate_payments": "Identifies payments with identical vendor, invoice number, amount, and payment date.",
@@ -293,9 +294,7 @@ def _build_ap_extra_sections(
 
         # Sort by combined payment total descending, show top 5
         rows.sort(
-            key=lambda r: (
-                -(float(r[3].replace("$", "").replace(",", "")) + float(r[4].replace("$", "").replace(",", "")))
-            ),
+            key=lambda r: -(safe_decimal(r[3]) + safe_decimal(r[4])),
         )
         total_pairs = len(rows)
         display_rows = rows[:5]

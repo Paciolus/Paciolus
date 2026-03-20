@@ -11,6 +11,7 @@ headcount roll-forward (IMP-02), Benford interpretation (IMP-03), department sum
 """
 
 import re
+from decimal import Decimal
 from typing import Any, Optional
 
 from reportlab.lib.units import inch
@@ -20,6 +21,7 @@ from pdf_generator import ClassicalColors, LedgerRule, create_leader_dots
 from shared.drill_down import format_currency
 from shared.memo_base import build_scope_section
 from shared.memo_template import TestingMemoConfig, _roman, generate_testing_memo
+from shared.parsing_helpers import safe_decimal
 from shared.report_styles import ledger_table_style
 
 PAYROLL_TEST_DESCRIPTIONS = {
@@ -414,8 +416,8 @@ def _build_pay_after_term_table(
     flagged_entries: list[dict],
 ) -> None:
     """Render Pay After Termination detail table."""
+    total_overpayment = Decimal("0")
     table_data = [["Employee ID", "Employee Name", "Termination Date", "Payment Date", "Gross Pay"]]
-    total_overpayment = 0.0
 
     for fe in flagged_entries[:_MAX_DETAIL_ROWS]:
         entry = fe.get("entry", {})
@@ -428,7 +430,7 @@ def _build_pay_after_term_table(
                 Paragraph(format_currency(entry.get("gross_pay", 0)), styles["MemoTableCell"]),
             ]
         )
-        total_overpayment += float(entry.get("gross_pay", 0) or 0)
+        total_overpayment += safe_decimal(entry.get("gross_pay", 0))
 
     style_cmds = ledger_table_style() + [("ALIGN", (4, 0), (4, -1), "RIGHT")]
     table = Table(

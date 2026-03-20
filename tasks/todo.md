@@ -69,7 +69,7 @@
 - [x] Step 3: Remove float casts from adjusting_entries.py to_dict()
 - [x] Step 4: Remove post-quantization float casts in auditor/ingestion/ratios
 - [x] Step 5: Remove float cast from engagement materiality serialization
-- [ ] Step 6: Remove float reparsing in revenue/payroll/AP memo generators
+- [x] Step 6: Remove float reparsing in revenue/payroll/AP memo generators
 - [ ] Step 7: Accept Decimal in drill_down format_currency helper
 - **Status:** IN PROGRESS
 
