@@ -1,0 +1,82 @@
+name: dependency-compliance
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    # Run weekly on Monday at 07:00 UTC to catch new advisories between PRs
+    - cron: '0 7 * * 1'
+
+jobs:
+  python-audit:
+    name: Python CVE & License Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: '3.12'
+      - name: Install dependencies and audit tools
+        run: |
+          pip install -r backend/requirements.txt
+          pip install pip-audit pip-licenses
+      - name: CVE audit (fail on any known vulnerability)
+        run: pip-audit --desc
+      - name: Export license inventory
+        run: |
+          pip-licenses --format=json --output-file=python-licenses.json
+      - name: Upload license artifact
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: python-licenses
+          path: python-licenses.json
+          retention-days: 30
+
+  node-audit:
+    name: Node CVE & License Audit
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: CVE audit (fail on HIGH or CRITICAL)
+        run: npm audit --omit=dev --audit-level=high
+      - name: Export license inventory
+        run: npx license-checker --production --json --out node-licenses.json
+      - name: Upload license artifact
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: node-licenses
+          path: frontend/node-licenses.json
+          retention-days: 30
+
+  license-policy:
+    name: License Policy Check
+    runs-on: ubuntu-latest
+    needs: [python-audit, node-audit]
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+        with:
+          name: python-licenses
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+        with:
+          name: node-licenses
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: '3.12'
+      - name: Run license policy check
+        run: |
+          python scripts/check_license_policy.py \
+            --python-licenses python-licenses.json \
+            --node-licenses node-licenses.json \
+            --policy docs/compliance/LICENSE_POLICY.json
