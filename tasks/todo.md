@@ -65,7 +65,7 @@
 
 ### FIX-1B: Decimal Precision — JSON Serialization Boundaries
 - [x] Step 1: Add Decimal-aware JSON encoder to FastAPI
-- [ ] Step 2: Remove float casts from models.py to_dict()
+- [x] Step 2: Remove float casts from models.py to_dict()
 - [ ] Step 3: Remove float casts from adjusting_entries.py to_dict()
 - [ ] Step 4: Remove post-quantization float casts in auditor/ingestion/ratios
 - [ ] Step 5: Remove float cast from engagement materiality serialization
