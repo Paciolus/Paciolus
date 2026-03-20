@@ -7,13 +7,59 @@ all variants (standard + ar_aging isinstance fast-path +
 three_way_match/bank_rec parenthetical-negative handling).
 """
 
+import decimal
 import math
 import re
 from datetime import date, datetime
+from decimal import Decimal, InvalidOperation
 from typing import Optional
+
+# Set sufficient precision for monetary arithmetic
+decimal.getcontext().prec = 28
+
+
+def safe_decimal(value: object, default: Decimal = Decimal("0")) -> Decimal:
+    """Parse a monetary value from user-uploaded data as Decimal.
+
+    Never accepts float as intermediate; always parses from string or int.
+    Returns ``default`` for None, empty string, or unparseable input.
+
+    Handles:
+    - ``None`` → default
+    - ``int`` / ``Decimal`` pass-through
+    - ``float`` → stringified first to avoid binary imprecision
+    - Currency strings: ``$1,234.56``, ``(1,234.56)`` (parenthetical negatives)
+    - Trailing-negative: ``1234-``
+    """
+    if value is None:
+        return default
+    if isinstance(value, Decimal):
+        return value
+    if isinstance(value, float):
+        if math.isnan(value) or math.isinf(value):
+            return default
+        return Decimal(str(value))
+    if isinstance(value, int):
+        return Decimal(value)
+    try:
+        cleaned = str(value).strip()
+        if not cleaned:
+            return default
+        # Detect accounting-style parenthetical negatives: (1,234.56)
+        is_negative = cleaned.startswith("(") and cleaned.endswith(")")
+        cleaned = re.sub(r"[,$\s()%]", "", cleaned)
+        if cleaned.startswith("-") or cleaned.endswith("-"):
+            cleaned = "-" + cleaned.strip("-")
+            is_negative = True
+        elif is_negative and not cleaned.startswith("-"):
+            cleaned = "-" + cleaned
+        return Decimal(cleaned)
+    except (InvalidOperation, ValueError, TypeError):
+        return default
 
 
 def safe_float(value: object) -> float:
+    # Deprecated: Use safe_decimal() for monetary fields.
     """Convert *value* to float, returning ``0.0`` for non-numeric.
 
     Handles:
