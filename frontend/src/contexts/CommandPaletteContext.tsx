@@ -1,10 +1,12 @@
 'use client'
 
 /**
- * CommandPaletteContext
+ * CommandPaletteContext — Split into state + actions contexts
  *
- * Global context for the universal command palette.
- * Manages open/close state, scoped command registration, and recency tracking.
+ * CommandPaletteStateContext   — isOpen, recentIds (volatile, changes on open/close)
+ * CommandPaletteActionsContext — stable callbacks + memoized command list
+ *
+ * Backward-compatible useCommandPaletteContext() merges both.
  *
  * Recency persisted to sessionStorage (command IDs only — Zero-Storage compliant).
  * Global Cmd+K listener via direct document.addEventListener (NOT useKeyboardShortcuts,
@@ -18,6 +20,7 @@ import {
   useCallback,
   useEffect,
   useRef,
+  useMemo,
   type ReactNode,
 } from 'react'
 import type { PaletteCommand } from '@/types/commandPalette'
@@ -27,18 +30,39 @@ import { BASE_COMMANDS } from '@/lib/commandRegistry'
 const RECENCY_KEY = 'paciolus_recent_commands'
 const MAX_RECENT = 10
 
-interface CommandPaletteContextType {
+// =============================================================================
+// Sub-context types
+// =============================================================================
+
+interface CommandPaletteStateContextType {
   isOpen: boolean
+  recentIds: string[]
+}
+
+interface CommandPaletteActionsContextType {
   openPalette: (source?: string) => void
   closePalette: () => void
   registerCommands: (scopeId: string, commands: PaletteCommand[]) => void
   unregisterCommands: (scopeId: string) => void
   recordRecentCommand: (id: string) => void
   getAllCommands: () => PaletteCommand[]
-  recentIds: string[]
 }
 
-const CommandPaletteContext = createContext<CommandPaletteContextType | null>(null)
+// Combined type (backward compatibility)
+interface CommandPaletteContextType
+  extends CommandPaletteStateContextType,
+    CommandPaletteActionsContextType {}
+
+// =============================================================================
+// Contexts
+// =============================================================================
+
+const CommandPaletteStateContext = createContext<CommandPaletteStateContextType | null>(null)
+const CommandPaletteActionsContext = createContext<CommandPaletteActionsContextType | null>(null)
+
+// =============================================================================
+// Helpers
+// =============================================================================
 
 function loadRecentIds(): string[] {
   if (typeof window === 'undefined') return []
@@ -64,10 +88,15 @@ function saveRecentIds(ids: string[]): void {
   }
 }
 
+// =============================================================================
+// Provider
+// =============================================================================
+
 export function CommandPaletteProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false)
   const [recentIds, setRecentIds] = useState<string[]>(loadRecentIds)
   const scopedCommandsRef = useRef<Map<string, PaletteCommand[]>>(new Map())
+  const [scopedCommandsVersion, setScopedCommandsVersion] = useState(0)
 
   // Global Cmd+K listener — must fire even from input fields
   useEffect(() => {
@@ -102,10 +131,12 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
 
   const registerCommands = useCallback((scopeId: string, commands: PaletteCommand[]) => {
     scopedCommandsRef.current.set(scopeId, commands)
+    setScopedCommandsVersion(v => v + 1)
   }, [])
 
   const unregisterCommands = useCallback((scopeId: string) => {
     scopedCommandsRef.current.delete(scopeId)
+    setScopedCommandsVersion(v => v + 1)
   }, [])
 
   const recordRecentCommand = useCallback((id: string) => {
@@ -116,36 +147,71 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
     })
   }, [])
 
-  const getAllCommands = useCallback((): PaletteCommand[] => {
+  // Memoized command list — recomputed only when scoped commands change
+  const allCommands = useMemo((): PaletteCommand[] => {
     const scoped: PaletteCommand[] = []
     for (const commands of scopedCommandsRef.current.values()) {
       scoped.push(...commands)
     }
     return [...BASE_COMMANDS, ...scoped]
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scopedCommandsVersion])
+
+  const getAllCommands = useCallback((): PaletteCommand[] => allCommands, [allCommands])
+
+  // --- Memoized context values ---
+  const stateValue = useMemo<CommandPaletteStateContextType>(() => ({
+    isOpen,
+    recentIds,
+  }), [isOpen, recentIds])
+
+  const actionsValue = useMemo<CommandPaletteActionsContextType>(() => ({
+    openPalette,
+    closePalette,
+    registerCommands,
+    unregisterCommands,
+    recordRecentCommand,
+    getAllCommands,
+  }), [openPalette, closePalette, registerCommands, unregisterCommands, recordRecentCommand, getAllCommands])
 
   return (
-    <CommandPaletteContext.Provider
-      value={{
-        isOpen,
-        openPalette,
-        closePalette,
-        registerCommands,
-        unregisterCommands,
-        recordRecentCommand,
-        getAllCommands,
-        recentIds,
-      }}
-    >
-      {children}
-    </CommandPaletteContext.Provider>
+    <CommandPaletteActionsContext.Provider value={actionsValue}>
+      <CommandPaletteStateContext.Provider value={stateValue}>
+        {children}
+      </CommandPaletteStateContext.Provider>
+    </CommandPaletteActionsContext.Provider>
   )
 }
 
-export function useCommandPaletteContext(): CommandPaletteContextType {
-  const ctx = useContext(CommandPaletteContext)
+// =============================================================================
+// Granular hooks
+// =============================================================================
+
+export function useCommandPaletteState(): CommandPaletteStateContextType {
+  const ctx = useContext(CommandPaletteStateContext)
   if (!ctx) {
-    throw new Error('useCommandPaletteContext must be used within CommandPaletteProvider')
+    throw new Error('useCommandPaletteState must be used within CommandPaletteProvider')
   }
   return ctx
+}
+
+export function useCommandPaletteActions(): CommandPaletteActionsContextType {
+  const ctx = useContext(CommandPaletteActionsContext)
+  if (!ctx) {
+    throw new Error('useCommandPaletteActions must be used within CommandPaletteProvider')
+  }
+  return ctx
+}
+
+// =============================================================================
+// Backward-compatible combined hook
+// =============================================================================
+
+export function useCommandPaletteContext(): CommandPaletteContextType {
+  const state = useContext(CommandPaletteStateContext)
+  const actions = useContext(CommandPaletteActionsContext)
+  if (!state || !actions) {
+    throw new Error('useCommandPaletteContext must be used within CommandPaletteProvider')
+  }
+  return { ...state, ...actions }
 }

@@ -5,6 +5,7 @@ import {
   useContext,
   useState,
   useCallback,
+  useMemo,
   type ReactNode,
 } from 'react';
 import { useClients } from '@/hooks/useClients';
@@ -13,19 +14,25 @@ import type { Client, ClientCreateInput, ClientUpdateInput, IndustryOption } fro
 import type { Engagement, EngagementCreateInput, ToolRun, MaterialityCascade, ConvergenceResponse, ToolRunTrend } from '@/types/engagement';
 
 /**
- * WorkspaceContext
+ * WorkspaceContext — Split into three granular contexts
  *
- * Shared state provider for the Workspace Shell. Lifts useClients() and
- * useEngagement() to a single provider so both /portfolio and /engagements
- * pages share one data source without duplicate fetches.
+ * WorkspaceDataContext      — client/engagement data, loading, errors, mutations
+ * WorkspaceSelectionContext — active client/engagement selection
+ * WorkspaceLayoutContext    — view mode, pane collapse, quick switcher
+ *
+ * Nested: Data (outermost) → Selection → Layout (innermost).
+ * Backward-compatible useWorkspaceContext() merges all three.
  *
  * ZERO-STORAGE: All state is React context + API. No new persistence.
  */
 
 export type WorkspaceView = 'portfolio' | 'engagements';
 
-interface WorkspaceContextType {
-  // Client data (from useClients)
+// =============================================================================
+// Sub-context types
+// =============================================================================
+
+export interface WorkspaceDataContextType {
   clients: Client[];
   clientsLoading: boolean;
   clientsTotalCount: number;
@@ -36,7 +43,6 @@ interface WorkspaceContextType {
   deleteClient: (id: number) => Promise<boolean>;
   refreshClients: () => Promise<void>;
 
-  // Engagement data (from useEngagement)
   engagements: Engagement[];
   engagementsLoading: boolean;
   engagementsError: string | null;
@@ -49,14 +55,16 @@ interface WorkspaceContextType {
   getConvergence: (id: number) => Promise<ConvergenceResponse | null>;
   getToolRunTrends: (id: number) => Promise<ToolRunTrend[]>;
   downloadConvergenceCsv: (id: number) => Promise<void>;
+}
 
-  // Cross-page persistent selection
+export interface WorkspaceSelectionContextType {
   activeClient: Client | null;
   setActiveClient: (client: Client | null) => void;
   activeEngagement: Engagement | null;
   setActiveEngagement: (engagement: Engagement | null) => void;
+}
 
-  // Layout state
+export interface WorkspaceLayoutContextType {
   currentView: WorkspaceView;
   setCurrentView: (view: WorkspaceView) => void;
   contextPaneCollapsed: boolean;
@@ -67,7 +75,23 @@ interface WorkspaceContextType {
   setQuickSwitcherOpen: (open: boolean) => void;
 }
 
-const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
+// Combined type (backward compatibility)
+interface WorkspaceContextType
+  extends WorkspaceDataContextType,
+    WorkspaceSelectionContextType,
+    WorkspaceLayoutContextType {}
+
+// =============================================================================
+// Contexts
+// =============================================================================
+
+const WorkspaceDataContext = createContext<WorkspaceDataContextType | undefined>(undefined);
+const WorkspaceSelectionContext = createContext<WorkspaceSelectionContextType | undefined>(undefined);
+const WorkspaceLayoutContext = createContext<WorkspaceLayoutContextType | undefined>(undefined);
+
+// =============================================================================
+// Provider
+// =============================================================================
 
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
   // --- Data hooks (called once, shared across pages) ---
@@ -116,56 +140,82 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setInsightRailCollapsed(prev => !prev);
   }, []);
 
-  const value: WorkspaceContextType = {
-    clients,
-    clientsLoading,
-    clientsTotalCount,
-    clientsError,
-    industries,
-    createClient,
-    updateClient,
-    deleteClient,
-    refreshClients,
+  // --- Memoized context values ---
+  const dataValue = useMemo<WorkspaceDataContextType>(() => ({
+    clients, clientsLoading, clientsTotalCount, clientsError, industries,
+    createClient, updateClient, deleteClient, refreshClients,
+    engagements, engagementsLoading, engagementsError,
+    fetchEngagements, createEngagement, archiveEngagement, refreshEngagements,
+    getToolRuns, getMateriality, getConvergence, getToolRunTrends, downloadConvergenceCsv,
+  }), [
+    clients, clientsLoading, clientsTotalCount, clientsError, industries,
+    createClient, updateClient, deleteClient, refreshClients,
+    engagements, engagementsLoading, engagementsError,
+    fetchEngagements, createEngagement, archiveEngagement, refreshEngagements,
+    getToolRuns, getMateriality, getConvergence, getToolRunTrends, downloadConvergenceCsv,
+  ]);
 
-    engagements,
-    engagementsLoading,
-    engagementsError,
-    fetchEngagements,
-    createEngagement,
-    archiveEngagement,
-    refreshEngagements,
-    getToolRuns,
-    getMateriality,
-    getConvergence,
-    getToolRunTrends,
-    downloadConvergenceCsv,
+  const selectionValue = useMemo<WorkspaceSelectionContextType>(() => ({
+    activeClient, setActiveClient, activeEngagement, setActiveEngagement,
+  }), [activeClient, activeEngagement]);
 
-    activeClient,
-    setActiveClient,
-    activeEngagement,
-    setActiveEngagement,
-
-    currentView,
-    setCurrentView,
-    contextPaneCollapsed,
-    toggleContextPane,
-    insightRailCollapsed,
-    toggleInsightRail,
-    quickSwitcherOpen,
-    setQuickSwitcherOpen,
-  };
+  const layoutValue = useMemo<WorkspaceLayoutContextType>(() => ({
+    currentView, setCurrentView,
+    contextPaneCollapsed, toggleContextPane,
+    insightRailCollapsed, toggleInsightRail,
+    quickSwitcherOpen, setQuickSwitcherOpen,
+  }), [currentView, contextPaneCollapsed, insightRailCollapsed, quickSwitcherOpen,
+    toggleContextPane, toggleInsightRail]);
 
   return (
-    <WorkspaceContext.Provider value={value}>
-      {children}
-    </WorkspaceContext.Provider>
+    <WorkspaceDataContext.Provider value={dataValue}>
+      <WorkspaceSelectionContext.Provider value={selectionValue}>
+        <WorkspaceLayoutContext.Provider value={layoutValue}>
+          {children}
+        </WorkspaceLayoutContext.Provider>
+      </WorkspaceSelectionContext.Provider>
+    </WorkspaceDataContext.Provider>
   );
 }
 
-export function useWorkspaceContext(): WorkspaceContextType {
-  const context = useContext(WorkspaceContext);
+// =============================================================================
+// Granular hooks
+// =============================================================================
+
+export function useWorkspaceData(): WorkspaceDataContextType {
+  const context = useContext(WorkspaceDataContext);
   if (context === undefined) {
-    throw new Error('useWorkspaceContext must be used within a WorkspaceProvider');
+    throw new Error('useWorkspaceData must be used within a WorkspaceProvider');
   }
   return context;
+}
+
+export function useWorkspaceSelection(): WorkspaceSelectionContextType {
+  const context = useContext(WorkspaceSelectionContext);
+  if (context === undefined) {
+    throw new Error('useWorkspaceSelection must be used within a WorkspaceProvider');
+  }
+  return context;
+}
+
+export function useWorkspaceLayout(): WorkspaceLayoutContextType {
+  const context = useContext(WorkspaceLayoutContext);
+  if (context === undefined) {
+    throw new Error('useWorkspaceLayout must be used within a WorkspaceProvider');
+  }
+  return context;
+}
+
+// =============================================================================
+// Backward-compatible combined hook
+// =============================================================================
+
+export function useWorkspaceContext(): WorkspaceContextType {
+  const data = useContext(WorkspaceDataContext);
+  const selection = useContext(WorkspaceSelectionContext);
+  const layout = useContext(WorkspaceLayoutContext);
+  if (data === undefined || selection === undefined || layout === undefined) {
+    throw new Error('useWorkspaceContext must be used within a WorkspaceProvider');
+  }
+  return { ...data, ...selection, ...layout };
 }

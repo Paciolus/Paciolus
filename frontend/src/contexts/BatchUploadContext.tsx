@@ -18,6 +18,7 @@ import {
   useContext,
   useReducer,
   useCallback,
+  useMemo,
   type ReactNode,
   type ReactElement,
 } from 'react';
@@ -181,12 +182,14 @@ export function BatchUploadProvider({ children }: BatchUploadProviderProps): Rea
     abortController: null,
   });
 
-  // Calculate derived state
-  const status: BatchStatus = determineBatchStatus(state.files);
-  const totalFiles = state.files.length;
-  const completedFiles = state.files.filter(f => f.status === 'completed').length;
-  const failedFiles = state.files.filter(f => f.status === 'error').length;
-  const overallProgress = calculateBatchProgress(state.files);
+  // Calculate derived state (memoized on file array identity)
+  const derived = useMemo(() => ({
+    status: determineBatchStatus(state.files),
+    totalFiles: state.files.length,
+    completedFiles: state.files.filter(f => f.status === 'completed').length,
+    failedFiles: state.files.filter(f => f.status === 'error').length,
+    overallProgress: calculateBatchProgress(state.files),
+  }), [state.files]);
 
   // =============================================================================
   // Actions
@@ -385,15 +388,15 @@ export function BatchUploadProvider({ children }: BatchUploadProviderProps): Rea
   // Context Value
   // =============================================================================
 
-  const contextValue: BatchUploadContextType = {
+  const contextValue = useMemo<BatchUploadContextType>(() => ({
     // State
     files: state.files,
-    status,
-    totalFiles,
-    completedFiles,
-    failedFiles,
+    status: derived.status,
+    totalFiles: derived.totalFiles,
+    completedFiles: derived.completedFiles,
+    failedFiles: derived.failedFiles,
     isProcessing: state.isProcessing,
-    overallProgress,
+    overallProgress: derived.overallProgress,
     // Actions
     addFiles,
     removeFile,
@@ -404,7 +407,11 @@ export function BatchUploadProvider({ children }: BatchUploadProviderProps): Rea
     retryFailed,
     updateFileStatus,
     updateFileProgress,
-  };
+  }), [
+    state.files, state.isProcessing, derived,
+    addFiles, removeFile, clearQueue, processAll, processFile,
+    cancelProcessing, retryFailed, updateFileStatus, updateFileProgress,
+  ]);
 
   return (
     <BatchUploadContext.Provider value={contextValue}>
