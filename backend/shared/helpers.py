@@ -651,13 +651,63 @@ def _parse_ods(file_bytes: bytes, filename: str) -> pd.DataFrame:
 
 
 def _parse_excel(file_bytes: bytes, filename: str) -> pd.DataFrame:
-    """Parse Excel (.xlsx/.xls) bytes into a DataFrame."""
+    """Parse Excel (.xlsx/.xls) bytes into a DataFrame.
+
+    SECURITY NOTE: XLSX ingestion explicitly disables formula evaluation,
+    macro execution, and external link resolution via openpyxl's read_only
+    and data_only modes. Do not replace this block with a bare
+    pd.read_excel() without a security review — pd.read_excel() engine
+    behavior varies and does not guarantee formula suppression across all
+    supported file formats.
+
+    For .xls (legacy binary), xlrd 2.x is used via pandas. xlrd 2.x dropped
+    formula support entirely, so formulas are not evaluated.
+    """
+    ext = os.path.splitext(filename or "")[1].lower()
+
+    if ext == ".xls":
+        # xlrd 2.x does not evaluate formulas — safe for legacy binary format
+        try:
+            return pd.read_excel(io.BytesIO(file_bytes), engine="xlrd")
+        except (ValueError, KeyError, OSError, UnicodeDecodeError) as e:
+            logger.warning("XLS parse failed: %s", type(e).__name__)
+            raise HTTPException(
+                status_code=400,
+                detail="The Excel file could not be read. Please verify it is a valid .xls file.",
+            )
+
+    # XLSX path: explicit openpyxl load with security flags
+    import openpyxl
+
     try:
-        return pd.read_excel(io.BytesIO(file_bytes))
-    except (ValueError, KeyError, OSError, UnicodeDecodeError) as e:
-        logger.warning("Excel parse failed: %s", type(e).__name__)
+        buf = io.BytesIO(file_bytes)
+        wb = openpyxl.load_workbook(
+            buf,
+            read_only=True,
+            data_only=True,  # returns cached formula results, never re-evaluates
+            keep_vba=False,  # explicitly discard VBA content
+            keep_links=False,  # do not follow external links
+        )
+        try:
+            ws = wb.active
+            data = ws.values
+            headers = next(data, None)
+            if headers is None:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Uploaded workbook contains no header row.",
+                )
+            df = pd.DataFrame(data, columns=headers)
+        finally:
+            wb.close()
+        return df
+    except HTTPException:
+        raise
+    except (ValueError, KeyError, OSError, UnicodeDecodeError, Exception) as e:
+        logger.warning("XLSX parse failed: %s", type(e).__name__)
         raise HTTPException(
-            status_code=400, detail="The Excel file could not be read. Please verify it is a valid .xlsx or .xls file."
+            status_code=400,
+            detail="The Excel file could not be read. Please verify it is a valid .xlsx file.",
         )
 
 
