@@ -42,7 +42,8 @@ class UpdateBrandingRequest(BaseModel):
 
 def _get_branding(db: Session, user: User) -> tuple[FirmBranding, int]:
     """Get or create branding for user's org. Returns (branding, org_id)."""
-    check_custom_branding_access(db, user.id)
+    # AUDIT-08: correct arg order — signature is (user: User, db: Session)
+    check_custom_branding_access(user, db)
 
     member = db.query(OrganizationMember).filter(OrganizationMember.user_id == user.id).first()
     if not member:

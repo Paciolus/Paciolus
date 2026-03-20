@@ -9,9 +9,8 @@ Tests cover:
 - Entitlement enforcement (403 for non-Enterprise)
 - Auth enforcement (401)
 
-NOTE: The branding routes call check_custom_branding_access(db, user.id)
-which is a positional-args mismatch with the function signature (user, db).
-Tests mock the entitlement check to work around this pre-existing issue.
+NOTE: AUDIT-08 fixed the arg-order mismatch — route now calls
+check_custom_branding_access(user, db) matching the function signature.
 """
 
 import sys
