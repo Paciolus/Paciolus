@@ -641,10 +641,10 @@ def compare_trial_balances(
         new_accounts=new_accounts,
         closed_accounts=closed_accounts,
         dormant_accounts=dormant_accounts,
-        prior_total_debits=prior_total_debits,
-        prior_total_credits=prior_total_credits,
-        current_total_debits=current_total_debits,
-        current_total_credits=current_total_credits,
+        prior_total_debits=float(prior_total_debits),
+        prior_total_credits=float(prior_total_credits),
+        current_total_debits=float(current_total_debits),
+        current_total_credits=float(current_total_credits),
     )
 
 
@@ -808,7 +808,7 @@ def compare_three_periods(
 
     # Step 2: Build budget lookup and pre-compute balances (single pass)
     budget_by_norm: dict[str, dict] = {}
-    budget_balance_by_norm: dict[str, float] = {}
+    budget_balance_by_norm: dict[str, Decimal] = {}
     for acct in budget_accounts:
         name = acct.get("account", "")
         norm = normalize_account_name(name)
@@ -831,7 +831,7 @@ def compare_three_periods(
         budget_acct = budget_by_norm.get(norm)
 
         if budget_acct is not None:
-            budget_balance = budget_balance_by_norm[norm]
+            budget_balance = float(budget_balance_by_norm[norm])
             variance_amount = movement.current_balance - budget_balance
 
             if budget_balance != 0:
@@ -872,17 +872,18 @@ def compare_three_periods(
     # Step 5: Build three-way lead sheet summaries
     three_way_ls: list[ThreeWayLeadSheetSummary] = []
     for ls in two_way.lead_sheet_summaries:
-        budget_total = 0.0
+        budget_total = Decimal("0")
         ls_enriched_movements: list[dict] = []
         for m in ls.movements:
-            budget_total += budget_balance_by_norm.get(norm_cache.get(m.account_name, ""), 0.0)
+            budget_total += budget_balance_by_norm.get(norm_cache.get(m.account_name, ""), Decimal("0"))
             enriched = enriched_by_name.get(m.account_name)
             if enriched:
                 ls_enriched_movements.append(enriched)
 
-        budget_variance = ls.current_total - budget_total
-        if budget_total != 0:
-            budget_variance_pct = (budget_variance / abs(budget_total)) * 100
+        budget_total_f = float(budget_total)
+        budget_variance = ls.current_total - budget_total_f
+        if budget_total_f != 0:
+            budget_variance_pct = (budget_variance / abs(budget_total_f)) * 100
         else:
             budget_variance_pct = None
 
@@ -895,7 +896,7 @@ def compare_three_periods(
                 current_total=ls.current_total,
                 net_change=ls.net_change,
                 change_percent=ls.change_percent,
-                budget_total=budget_total,
+                budget_total=budget_total_f,
                 budget_variance=budget_variance,
                 budget_variance_percent=budget_variance_pct,
                 account_count=ls.account_count,
@@ -924,8 +925,8 @@ def compare_three_periods(
         prior_total_credits=two_way.prior_total_credits,
         current_total_debits=two_way.current_total_debits,
         current_total_credits=two_way.current_total_credits,
-        budget_total_debits=budget_total_debits,
-        budget_total_credits=budget_total_credits,
+        budget_total_debits=float(budget_total_debits),
+        budget_total_credits=float(budget_total_credits),
         budget_variances_by_significance=budget_sig_counts,
         accounts_over_budget=over_budget,
         accounts_under_budget=under_budget,
