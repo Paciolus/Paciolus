@@ -183,6 +183,10 @@ class SampleEvaluationResult:
     conclusion_detail: str
     errors: list[SampleError]
     taintings_ranked: list[float]  # Sorted desc for Stringer bound
+    # Missing audited amount tracking (FIX-2A)
+    skipped_missing_audited: int = 0
+    evaluated_count: int = 0
+    missing_audited_warning: Optional[str] = None
 
 
 @dataclass
@@ -736,6 +740,8 @@ def _parse_evaluation_errors(
         )
 
     errors: list[SampleError] = []
+    evaluated_count = 0
+    skipped_missing_audited = 0
 
     for i, row in enumerate(rows):
         try:
@@ -745,14 +751,21 @@ def _parse_evaluation_errors(
                 continue
             if isinstance(raw_recorded, float) and math.isnan(raw_recorded):
                 continue
+
+            # Row has a valid recorded amount — check if audited is missing
             if raw_audited is None or str(raw_audited).strip() == "":
+                skipped_missing_audited += 1
                 continue
             if isinstance(raw_audited, float) and math.isnan(raw_audited):
+                skipped_missing_audited += 1
                 continue
+
             recorded = safe_decimal(raw_recorded)
             audited = safe_decimal(raw_audited)
         except (ValueError, TypeError):
             continue
+
+        evaluated_count += 1
 
         misstatement = recorded - audited
         if abs(misstatement) < 0.005:  # Tolerance for rounding
@@ -777,7 +790,7 @@ def _parse_evaluation_errors(
             )
         )
 
-    return errors
+    return errors, evaluated_count, skipped_missing_audited
 
 
 def evaluate_sample(
@@ -797,7 +810,17 @@ def evaluate_sample(
     4. Determine Pass/Fail vs tolerable misstatement
     """
     column_names, rows = parse_uploaded_file(file_bytes, filename)
-    errors = _parse_evaluation_errors(rows, column_names, column_mapping)
+    errors, evaluated_count, skipped_missing_audited = _parse_evaluation_errors(rows, column_names, column_mapping)
+
+    # Build missing audited amount warning if threshold exceeded
+    MISSING_AUDITED_THRESHOLD = 0.10  # 10% of evaluated population
+    missing_audited_warning: Optional[str] = None
+    total_assessable = evaluated_count + skipped_missing_audited
+    if total_assessable > 0 and skipped_missing_audited / total_assessable > MISSING_AUDITED_THRESHOLD:
+        missing_audited_warning = (
+            f"{skipped_missing_audited} of {total_assessable} evaluated items were missing "
+            f"audited amounts and could not be assessed."
+        )
 
     if config.method == "mus":
         # For MUS, need sampling interval
@@ -816,7 +839,7 @@ def evaluate_sample(
                     "Provide tolerable_misstatement and population_value."
                 )
 
-        return evaluate_mus_sample_stringer(
+        result = evaluate_mus_sample_stringer(
             errors=errors,
             sampling_interval=sampling_interval,
             confidence_level=config.confidence_level,
@@ -824,6 +847,10 @@ def evaluate_sample(
             population_value=population_value,
             sample_size=sample_size,
         )
+        result.skipped_missing_audited = skipped_missing_audited
+        result.evaluated_count = evaluated_count
+        result.missing_audited_warning = missing_audited_warning
+        return result
 
     elif config.method == "random":
         # Simple ratio projection for random sampling
@@ -887,6 +914,9 @@ def evaluate_sample(
             conclusion_detail=conclusion_detail,
             errors=errors,
             taintings_ranked=taintings,
+            skipped_missing_audited=skipped_missing_audited,
+            evaluated_count=evaluated_count,
+            missing_audited_warning=missing_audited_warning,
         )
 
     else:

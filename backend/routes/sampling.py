@@ -167,6 +167,9 @@ def _run_evaluation(
         "conclusion_detail": result.conclusion_detail,
         "errors": errors_list,
         "taintings_ranked": [round(t, 4) for t in result.taintings_ranked],
+        "skipped_missing_audited": result.skipped_missing_audited,
+        "evaluated_count": result.evaluated_count,
+        "missing_audited_warning": result.missing_audited_warning,
     }
 
 
