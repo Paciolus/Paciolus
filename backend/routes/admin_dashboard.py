@@ -37,7 +37,8 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 
 def _get_admin_org(db: Session, user: User) -> Organization:
     """Get the user's org and verify admin_dashboard access."""
-    check_admin_dashboard_access(user)
+    # AUDIT-08: pass db so subscription status is checked (not sessionless fallback)
+    check_admin_dashboard_access(user, db)
 
     member = db.query(OrganizationMember).filter(OrganizationMember.user_id == user.id).first()
     if not member:
