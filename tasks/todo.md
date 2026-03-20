@@ -51,15 +51,16 @@
 > Sprints 553–561 archived to `tasks/archive/sprints-553-561-details.md`.
 
 ### FIX-1A: Decimal Precision — Parse and Compute Pipeline
-- [ ] Step 1: Introduce `safe_decimal()` in `parsing_helpers.py`
-- [ ] Step 2: Replace `safe_float` with `safe_decimal` in JE/AP/AR/bank/revenue/expense/accrual/profile/lead-sheet/three-way/fixed-asset/payroll/inventory engines
-- [ ] Step 3: Fix float arithmetic chains in `multi_period_comparison.py`
-- [ ] Step 4: Fix float conversion in `sampling_engine.py`
-- [ ] Step 5: Fix materiality cascade in `engagement_manager.py`
-- [ ] Step 6: Fix float accumulation in `streaming_auditor.py`
-- [ ] Step 7: Fix float ingestion arrays in `ingestion.py`
-- [ ] Step 8: Fix float coercion in `preflight_engine.py`
-- **Status:** In Progress
+- [x] Step 1: Introduce `safe_decimal()` in `parsing_helpers.py`
+- [x] Step 2: Replace `safe_float` with `safe_decimal` in 13 engine files + downstream arithmetic
+- [x] Step 3: Fix float arithmetic chains in `multi_period_comparison.py`
+- [x] Step 4: Fix float conversion in `sampling_engine.py`
+- [x] Step 5: Fix materiality cascade in `engagement_manager.py`
+- [x] Step 6: Fix float accumulation in `streaming_auditor.py`
+- [x] Step 7: Fix float ingestion arrays in `ingestion.py`
+- [x] Step 8: Fix float coercion in `preflight_engine.py`
+- **Status:** COMPLETE
+- **Tests:** 6,896 passed (3 pre-existing failures, 0 regressions)
 
 ### Sprint 562: Complete All Deferred Items
 - [x] **Going concern PDF section** — `render_going_concern_indicators()` in `pdf/sections/diagnostic.py`, wired into orchestrator, ToC updated
