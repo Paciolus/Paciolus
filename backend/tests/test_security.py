@@ -19,15 +19,21 @@ from freezegun import freeze_time
 # Import security middleware functions
 from security_middleware import (
     CSRF_TOKEN_EXPIRY_MINUTES,
+    IP_FAILURE_THRESHOLD,
+    IP_FAILURE_WINDOW_SECONDS,
     LOCKOUT_DURATION_MINUTES,
     MAX_FAILED_ATTEMPTS,
+    _ip_failure_tracker,
+    check_ip_blocked,
     check_lockout_status,
     generate_csrf_token,
     get_fake_lockout_info,
     get_lockout_info,
     hash_ip_address,
     record_failed_login,
+    record_ip_failure,
     reset_failed_attempts,
+    reset_ip_failures,
     validate_csrf_token,
 )
 
@@ -538,8 +544,8 @@ class TestAccountLockoutIntegration:
     """Integration tests for account lockout in login endpoint."""
 
     @pytest.mark.asyncio
-    async def test_failed_login_returns_lockout_info(self):
-        """Failed login should return lockout info for existing user."""
+    async def test_failed_login_returns_generic_401(self):
+        """Failed login should return generic 401 with no lockout details (AUDIT-07 F4)."""
         import uuid
 
         from main import app
@@ -548,42 +554,30 @@ class TestAccountLockoutIntegration:
         password = "SecureTestPass123!"
 
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
-            # Register a user so they exist in the database
             reg_response = await client.post(
                 "/auth/register",
-                json={
-                    "email": unique_email,
-                    "password": password,
-                },
+                json={"email": unique_email, "password": password},
             )
             assert reg_response.status_code == 201
 
             # Attempt login with wrong password
             response = await client.post(
                 "/auth/login",
-                json={
-                    "email": unique_email,
-                    "password": "WrongPassword999!",
-                },
+                json={"email": unique_email, "password": "WrongPassword999!"},
             )
 
             assert response.status_code == 401
             data = response.json()
-            # Response detail should be a dict with lockout info
             assert isinstance(data["detail"], dict)
-            assert "lockout" in data["detail"]
-
-            lockout = data["detail"]["lockout"]
-            assert lockout["is_locked"] is False
-            assert lockout["remaining_attempts"] == MAX_FAILED_ATTEMPTS - 1
-            assert lockout["max_attempts"] == MAX_FAILED_ATTEMPTS
-            assert lockout["lockout_duration_minutes"] == LOCKOUT_DURATION_MINUTES
+            assert data["detail"]["message"] == "Invalid email or password"
+            # AUDIT-07 F4: No lockout info in response (prevents account enumeration)
+            assert "lockout" not in data["detail"]
 
     @pytest.mark.asyncio
-    async def test_nonexistent_user_returns_same_shape(self):
-        """Failed login for nonexistent user should return same response shape.
+    async def test_nonexistent_user_returns_identical_shape(self):
+        """Failed login for nonexistent user must be indistinguishable from existing user.
 
-        Sprint 261: Prevents account enumeration through response structure.
+        AUDIT-07 F4: Same status, same message, no lockout details.
         """
         from main import app
 
@@ -594,13 +588,98 @@ class TestAccountLockoutIntegration:
 
             assert response.status_code == 401
             data = response.json()
-            # Sprint 261: Should have the SAME structure as existing user
             assert isinstance(data["detail"], dict)
-            assert "lockout" in data["detail"]
-            lockout = data["detail"]["lockout"]
-            assert lockout["is_locked"] is False
-            assert lockout["remaining_attempts"] == MAX_FAILED_ATTEMPTS - 1
-            assert lockout["max_attempts"] == MAX_FAILED_ATTEMPTS
+            assert data["detail"]["message"] == "Invalid email or password"
+            assert "lockout" not in data["detail"]
+
+    @pytest.mark.asyncio
+    async def test_locked_user_returns_401_not_429(self):
+        """Locked account must return 401, not 429 (AUDIT-07 F4).
+
+        Prevents account existence leakage through HTTP status code.
+        """
+        import uuid
+
+        from main import app
+
+        unique_email = f"lockout_enum_{uuid.uuid4().hex[:8]}@test.com"
+        password = "SecureTestPass123!"
+
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            reg_response = await client.post(
+                "/auth/register",
+                json={"email": unique_email, "password": password},
+            )
+            assert reg_response.status_code == 201
+
+            # Trigger lockout with MAX_FAILED_ATTEMPTS wrong passwords
+            for _ in range(MAX_FAILED_ATTEMPTS + 1):
+                response = await client.post(
+                    "/auth/login",
+                    json={"email": unique_email, "password": "WrongPassword999!"},
+                )
+
+            # The locked attempt must still return 401 (not 429)
+            assert response.status_code == 401
+            data = response.json()
+            assert data["detail"]["message"] == "Invalid email or password"
+            assert "lockout" not in data["detail"]
+
+
+# =============================================================================
+# PER-IP FAILURE TRACKING TESTS (AUDIT-07 Phase 4, Finding #2)
+# =============================================================================
+
+
+class TestPerIpFailureTracking:
+    """Tests for per-IP brute-force tracking."""
+
+    def setup_method(self):
+        """Clear IP tracker state between tests."""
+        _ip_failure_tracker.clear()
+
+    def test_ip_not_blocked_initially(self):
+        """Fresh IP should not be blocked."""
+        assert check_ip_blocked("192.168.1.1") is False
+
+    def test_ip_blocked_after_threshold(self):
+        """IP should be blocked after exceeding threshold."""
+        ip = "10.0.0.1"
+        for _ in range(IP_FAILURE_THRESHOLD):
+            record_ip_failure(ip)
+        assert check_ip_blocked(ip) is True
+
+    def test_ip_not_blocked_below_threshold(self):
+        """IP should not be blocked below threshold."""
+        ip = "10.0.0.2"
+        for _ in range(IP_FAILURE_THRESHOLD - 1):
+            record_ip_failure(ip)
+        assert check_ip_blocked(ip) is False
+
+    def test_reset_clears_ip(self):
+        """Reset should clear failure history for an IP."""
+        ip = "10.0.0.3"
+        for _ in range(IP_FAILURE_THRESHOLD):
+            record_ip_failure(ip)
+        assert check_ip_blocked(ip) is True
+        reset_ip_failures(ip)
+        assert check_ip_blocked(ip) is False
+
+    def test_expired_entries_pruned(self):
+        """Entries older than the window should be pruned."""
+        ip = "10.0.0.4"
+        # Insert entries that appear to be old
+        old_time = time.time() - IP_FAILURE_WINDOW_SECONDS - 1
+        _ip_failure_tracker[ip] = [old_time] * IP_FAILURE_THRESHOLD
+        # Should not be blocked (all entries expired)
+        assert check_ip_blocked(ip) is False
+
+    def test_independent_ip_tracking(self):
+        """Different IPs should be tracked independently."""
+        for _ in range(IP_FAILURE_THRESHOLD):
+            record_ip_failure("10.0.0.5")
+        assert check_ip_blocked("10.0.0.5") is True
+        assert check_ip_blocked("10.0.0.6") is False
 
 
 # =============================================================================

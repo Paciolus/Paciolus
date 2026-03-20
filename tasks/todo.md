@@ -68,3 +68,10 @@
 - **Tests:** 15 new tests (9 + 2 + 4), 0 regressions
 - **Status:** COMPLETE
 
+### FIX-5: Brute Force Protection Hardening (AUDIT-07 Phase 4)
+- [x] F4 (HIGH): Unified auth failure response — locked/invalid/nonexistent all return 401 with identical body; no lockout info in response
+- [x] F3 (MEDIUM): Configurable lockout thresholds via `LOCKOUT_MAX_FAILED_ATTEMPTS` and `LOCKOUT_DURATION_MINUTES` env vars
+- [x] F2 (MEDIUM): Per-IP sliding-window failure tracker — blocks IPs after 20 failures/15 min; configurable via `IP_FAILURE_THRESHOLD`/`IP_FAILURE_WINDOW_SECONDS`
+- **Tests:** 128 passed (7 new: 3 integration + 6 per-IP unit − 2 removed lockout-response tests), 0 regressions
+- **Status:** COMPLETE
+

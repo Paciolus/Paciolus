@@ -486,10 +486,70 @@ class CSRFMiddleware(BaseHTTPMiddleware):
 
 # =============================================================================
 # ACCOUNT LOCKOUT (Sprint 261: DB-backed via User model columns)
+# Sprint AUDIT-07: Configurable thresholds via environment
 # =============================================================================
 
-MAX_FAILED_ATTEMPTS = 5
-LOCKOUT_DURATION_MINUTES = 15
+from config import _load_optional_int
+
+MAX_FAILED_ATTEMPTS = _load_optional_int("LOCKOUT_MAX_FAILED_ATTEMPTS", 5)
+LOCKOUT_DURATION_MINUTES = _load_optional_int("LOCKOUT_DURATION_MINUTES", 15)
+
+# =============================================================================
+# PER-IP FAILURE TRACKING (AUDIT-07 Phase 4: Finding #2)
+# In-memory sliding-window counter. Complements per-account DB lockout.
+# Does not survive restarts; route-level rate limiting (slowapi) is the
+# restart-proof layer.  This catches distributed credential-stuffing across
+# many accounts from a single IP.
+# =============================================================================
+
+IP_FAILURE_WINDOW_SECONDS = _load_optional_int("IP_FAILURE_WINDOW_SECONDS", 900)  # 15 min
+IP_FAILURE_THRESHOLD = _load_optional_int("IP_FAILURE_THRESHOLD", 20)
+_IP_TRACKER_MAX_IPS = 10_000  # Cap dict size to bound memory
+
+_ip_failure_tracker: dict[str, list[float]] = {}
+
+
+def record_ip_failure(ip: str) -> None:
+    """Record a failed auth attempt from an IP address."""
+    now = time.time()
+    cutoff = now - IP_FAILURE_WINDOW_SECONDS
+
+    if ip not in _ip_failure_tracker:
+        # Evict oldest IPs if at capacity
+        if len(_ip_failure_tracker) >= _IP_TRACKER_MAX_IPS:
+            _evict_stale_ips(cutoff)
+        _ip_failure_tracker[ip] = []
+
+    entries = _ip_failure_tracker[ip]
+    # Prune expired entries
+    _ip_failure_tracker[ip] = [t for t in entries if t > cutoff]
+    _ip_failure_tracker[ip].append(now)
+
+
+def check_ip_blocked(ip: str) -> bool:
+    """Return True if the IP has exceeded the failure threshold within the window."""
+    now = time.time()
+    cutoff = now - IP_FAILURE_WINDOW_SECONDS
+
+    entries = _ip_failure_tracker.get(ip)
+    if not entries:
+        return False
+
+    recent = [t for t in entries if t > cutoff]
+    _ip_failure_tracker[ip] = recent  # Prune while checking
+    return len(recent) >= IP_FAILURE_THRESHOLD
+
+
+def reset_ip_failures(ip: str) -> None:
+    """Clear failure history for an IP (e.g. after successful login)."""
+    _ip_failure_tracker.pop(ip, None)
+
+
+def _evict_stale_ips(cutoff: float) -> None:
+    """Remove IPs whose entries have all expired."""
+    stale = [ip for ip, ts in _ip_failure_tracker.items() if not any(t > cutoff for t in ts)]
+    for ip in stale:
+        del _ip_failure_tracker[ip]
 
 
 def record_failed_login(db: Session, user_id: int) -> tuple[int, Optional[datetime]]:

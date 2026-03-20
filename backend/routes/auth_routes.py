@@ -42,12 +42,15 @@ from email_service import (
 )
 from models import EmailVerificationToken, RefreshToken, User
 from security_middleware import (
+    check_ip_blocked,
     check_lockout_status,
     generate_csrf_token,
-    get_fake_lockout_info,
-    get_lockout_info,
+    get_client_ip,
+    hash_ip_address,
     record_failed_login,
+    record_ip_failure,
     reset_failed_attempts,
+    reset_ip_failures,
 )
 from shared.error_messages import sanitize_error
 from shared.helpers import safe_background_email
@@ -223,35 +226,43 @@ def login(request: Request, credentials: UserLogin, response: Response, db: Sess
     logger.info("Login attempt: %s", masked)
     log_secure_operation("auth_login_attempt", f"Login attempt: {masked}")
 
+    # AUDIT-07 F2: Per-IP brute-force gate
+    client_ip = get_client_ip(request)
+    if check_ip_blocked(client_ip):
+        log_secure_operation("ip_blocked", f"IP {hash_ip_address(client_ip)} blocked: threshold exceeded")
+        raise HTTPException(
+            status_code=401,
+            detail={"message": "Invalid email or password"},
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     existing_user = get_user_by_email(db, credentials.email)
+
+    # AUDIT-07 F4: Locked accounts return same 401 as any other failure
     if existing_user:
-        is_locked, locked_until, remaining = check_lockout_status(db, existing_user.id)
+        is_locked, _locked_until, _remaining = check_lockout_status(db, existing_user.id)
         if is_locked:
-            lockout_info = get_lockout_info(db, existing_user.id)
+            record_ip_failure(client_ip)
             raise HTTPException(
-                status_code=429,
-                detail={
-                    "message": "Account temporarily locked due to too many failed login attempts",
-                    "lockout": lockout_info,
-                },
+                status_code=401,
+                detail={"message": "Invalid email or password"},
+                headers={"WWW-Authenticate": "Bearer"},
             )
 
     user = authenticate_user(db, credentials.email, credentials.password)
     if user is None:
-        # Sprint 261: Uniform response shape prevents account enumeration.
-        # Both existing and non-existing users get the same response structure.
+        # AUDIT-07 F4: Identical response for existing-wrong-password and non-existent
         if existing_user:
             record_failed_login(db, existing_user.id)
-            lockout_info = get_lockout_info(db, existing_user.id)
-        else:
-            lockout_info = get_fake_lockout_info()
+        record_ip_failure(client_ip)
         raise HTTPException(
             status_code=401,
-            detail={"message": "Invalid email or password", "lockout": lockout_info},
+            detail={"message": "Invalid email or password"},
             headers={"WWW-Authenticate": "Bearer"},
         )
 
     reset_failed_attempts(db, user.id)
+    reset_ip_failures(client_ip)
 
     token, expires = create_access_token(user.id, user.email, user.password_changed_at, tier=user.tier.value)
     expires_in = int((expires - datetime.now(UTC)).total_seconds())
