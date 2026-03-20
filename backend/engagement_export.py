@@ -38,15 +38,9 @@ class EngagementExporter:
         self.db = db
 
     def _verify_engagement_access(self, user_id: int, engagement_id: int) -> Optional[Engagement]:
-        return (
-            self.db.query(Engagement)
-            .join(Client, Engagement.client_id == Client.id)
-            .filter(
-                Engagement.id == engagement_id,
-                Client.user_id == user_id,
-            )
-            .first()
-        )
+        from engagement_manager import EngagementManager
+
+        return EngagementManager(self.db).get_engagement(user_id, engagement_id)
 
     def _generate_comments_markdown(self, user_id: int, engagement_id: int) -> Optional[bytes]:
         """Generate a markdown file of all follow-up item comment threads."""

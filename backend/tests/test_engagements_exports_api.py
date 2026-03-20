@@ -153,10 +153,10 @@ class TestAnomalySummaryExport:
 
     @pytest.mark.asyncio
     async def test_anomaly_summary_invalid_engagement(self, override_verified):
-        """Non-existent engagement returns 400 (ValueError from generator)."""
+        """Non-existent engagement returns 404 (not found or access denied)."""
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.post("/engagements/999999/export/anomaly-summary")
-            assert response.status_code == 400
+            assert response.status_code == 404
 
 
 # =============================================================================
@@ -178,7 +178,7 @@ class TestPackageExport:
 
     @pytest.mark.asyncio
     async def test_package_invalid_engagement(self, override_verified):
-        """Non-existent engagement returns 400 (ValueError from exporter)."""
+        """Non-existent engagement returns 404 (not found or access denied)."""
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.post("/engagements/999999/export/package")
-            assert response.status_code == 400
+            assert response.status_code == 404

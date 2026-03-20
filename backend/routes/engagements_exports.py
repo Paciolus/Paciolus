@@ -18,7 +18,6 @@ from engagement_export import EngagementExporter
 from engagement_manager import EngagementManager
 from models import User
 from security_utils import log_secure_operation
-from shared.error_messages import sanitize_error
 from shared.rate_limits import RATE_LIMIT_EXPORT, limiter
 
 router = APIRouter(tags=["engagements"])
@@ -42,11 +41,8 @@ def export_anomaly_summary(
 
     try:
         pdf_bytes = generator.generate_pdf(current_user.id, engagement_id)
-    except ValueError as e:
-        raise HTTPException(
-            status_code=400,
-            detail=sanitize_error(e, log_label="engagement_validation", allow_passthrough=True),
-        )
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Engagement not found")
 
     def iter_pdf() -> Iterator[bytes]:
         chunk_size = 8192
@@ -81,11 +77,8 @@ def export_engagement_package(
 
     try:
         zip_bytes, filename = exporter.generate_zip(current_user.id, engagement_id)
-    except ValueError as e:
-        raise HTTPException(
-            status_code=400,
-            detail=sanitize_error(e, log_label="engagement_validation", allow_passthrough=True),
-        )
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Engagement not found")
 
     def iter_zip() -> Iterator[bytes]:
         chunk_size = 8192
