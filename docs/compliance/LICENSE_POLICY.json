@@ -1,0 +1,24 @@
+{
+  "_comment": "License policy for Paciolus. Reviewed and updated as dependencies change.",
+  "_last_reviewed": "2026-03-20",
+  "prohibited": [
+    "AGPL-3.0",
+    "AGPL-3.0-only",
+    "AGPL-3.0-or-later",
+    "GPL-2.0",
+    "GPL-2.0-only",
+    "GPL-2.0-or-later",
+    "GPL-3.0",
+    "GPL-3.0-only",
+    "GPL-3.0-or-later"
+  ],
+  "manual_review_required": [
+    "LGPL-2.0",
+    "LGPL-2.1",
+    "LGPL-3.0",
+    "MPL-2.0",
+    "EUPL-1.2",
+    "CC-BY-SA-4.0"
+  ],
+  "allowlist": []
+}
