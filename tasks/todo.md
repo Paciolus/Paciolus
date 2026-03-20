@@ -77,3 +77,11 @@
 - **Tests:** 128 passed (7 new: 3 integration + 6 per-IP unit − 2 removed lockout-response tests), 0 regressions
 - **Status:** COMPLETE
 
+### FIX-6: File Ingestion Abuse Surface (AUDIT-07 Phase 3)
+- [ ] Step 1 (HIGH): Move row-count gate before full parse — CSV streaming estimator + XLSX metadata check
+- [ ] Step 2 (MEDIUM): Server-side content sniffing for text-based upload formats
+- [ ] Step 3 (MEDIUM): Streaming body size limit regardless of Content-Length header
+- [ ] Step 4 (MEDIUM): Explicit data_only/keep_vba Excel load on main ingestion path
+- **Tests:** TBD
+- **Status:** IN PROGRESS
+

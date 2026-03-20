@@ -44,7 +44,6 @@ from security_utils import clear_memory, log_secure_operation
 
 logger = logging.getLogger(__name__)
 from auth import require_current_user
-from client_manager import ClientManager
 from database import get_db
 from flux_engine import FluxRisk
 from models import Client, User
@@ -193,6 +192,42 @@ def _validate_xlsx_archive(file_bytes: bytes, filename: str) -> None:
             status_code=400,
             detail="The .xlsx file is not a valid ZIP archive. Please verify the file is a valid Excel workbook.",
         )
+
+
+def _estimate_csv_row_count(file_bytes: bytes, sample_bytes: int = 65536) -> int:
+    """Estimate total row count from average line length in a byte sample.
+
+    Intentionally conservative — may overestimate. Used to reject obviously
+    oversized files before committing to a full pandas parse.
+    """
+    sample = file_bytes[:sample_bytes]
+    if not sample:
+        return 0
+    newlines = sample.count(b"\n")
+    if newlines == 0:
+        return 1
+    avg_line_bytes = len(sample) / newlines
+    estimated = int(len(file_bytes) / avg_line_bytes)
+    return estimated
+
+
+def _estimate_xlsx_row_count(file_bytes: bytes) -> int:
+    """Read sheet dimensions from XLSX metadata without loading cell values.
+
+    Uses openpyxl read-only mode to inspect the active worksheet's max_row.
+    Returns 0 on any failure (falls through to the full parse, which has its
+    own row-count gate).
+    """
+    import openpyxl
+
+    try:
+        wb = openpyxl.load_workbook(io.BytesIO(file_bytes), read_only=True, data_only=True)
+        ws = wb.active
+        max_row = ws.max_row or 0
+        wb.close()
+        return max_row
+    except Exception:
+        return 0
 
 
 async def validate_file_size(file: UploadFile) -> bytes:
@@ -672,6 +707,37 @@ def parse_uploaded_file_by_format(
         )
 
     parse_total.labels(format=fmt_label, stage="detect").inc()
+
+    # Pre-parse row-count gate: reject obviously oversized files before full parse.
+    # Uses a 20% buffer (1.2×) to account for estimation inaccuracy.
+    _TEXT_FORMATS = {FileFormat.CSV, FileFormat.TSV, FileFormat.TXT}
+    _XLSX_FORMATS = {FileFormat.XLSX, FileFormat.XLS}
+    row_estimate_limit = int(max_rows * 1.2)
+
+    if detected.format in _TEXT_FORMATS:
+        estimated_rows = _estimate_csv_row_count(file_bytes)
+        if estimated_rows > row_estimate_limit:
+            log_secure_operation(
+                "pre_parse_row_limit",
+                f"File '{filename}' estimated at {estimated_rows:,} rows (limit {max_rows:,})",
+            )
+            raise HTTPException(
+                status_code=400,
+                detail=f"File appears to exceed the maximum row limit of {max_rows:,} rows "
+                f"(estimated {estimated_rows:,} rows). Please reduce the file size.",
+            )
+    elif detected.format in _XLSX_FORMATS:
+        estimated_rows = _estimate_xlsx_row_count(file_bytes)
+        if estimated_rows > max_rows:
+            log_secure_operation(
+                "pre_parse_row_limit",
+                f"File '{filename}' has {estimated_rows:,} rows in metadata (limit {max_rows:,})",
+            )
+            raise HTTPException(
+                status_code=400,
+                detail=f"File appears to exceed the maximum row limit of {max_rows:,} rows "
+                f"(estimated {estimated_rows:,} rows). Please reduce the file size.",
+            )
 
     active_parses.labels(format=fmt_label).inc()
     try:
