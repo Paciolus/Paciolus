@@ -191,20 +191,20 @@ class CategoryTotals:
     total_expenses: float = 0.0
     operating_expenses: float = 0.0  # Sprint 26: For Operating Profit Margin
 
-    def to_dict(self) -> dict[str, float]:
+    def to_dict(self) -> dict[str, str]:
         return {
-            "total_assets": float(quantize_monetary(self.total_assets)),
-            "current_assets": float(quantize_monetary(self.current_assets)),
-            "inventory": float(quantize_monetary(self.inventory)),
-            "accounts_receivable": float(quantize_monetary(self.accounts_receivable)),
-            "accounts_payable": float(quantize_monetary(self.accounts_payable)),
-            "total_liabilities": float(quantize_monetary(self.total_liabilities)),
-            "current_liabilities": float(quantize_monetary(self.current_liabilities)),
-            "total_equity": float(quantize_monetary(self.total_equity)),
-            "total_revenue": float(quantize_monetary(self.total_revenue)),
-            "cost_of_goods_sold": float(quantize_monetary(self.cost_of_goods_sold)),
-            "total_expenses": float(quantize_monetary(self.total_expenses)),
-            "operating_expenses": float(quantize_monetary(self.operating_expenses)),
+            "total_assets": str(quantize_monetary(self.total_assets)),
+            "current_assets": str(quantize_monetary(self.current_assets)),
+            "inventory": str(quantize_monetary(self.inventory)),
+            "accounts_receivable": str(quantize_monetary(self.accounts_receivable)),
+            "accounts_payable": str(quantize_monetary(self.accounts_payable)),
+            "total_liabilities": str(quantize_monetary(self.total_liabilities)),
+            "current_liabilities": str(quantize_monetary(self.current_liabilities)),
+            "total_equity": str(quantize_monetary(self.total_equity)),
+            "total_revenue": str(quantize_monetary(self.total_revenue)),
+            "cost_of_goods_sold": str(quantize_monetary(self.cost_of_goods_sold)),
+            "total_expenses": str(quantize_monetary(self.total_expenses)),
+            "operating_expenses": str(quantize_monetary(self.operating_expenses)),
         }
 
     @classmethod
@@ -2215,19 +2215,31 @@ def extract_category_totals(
     # Sprint 530: Subtype classification helpers
     _CURRENT_ASSET_SUBTYPES = ("current asset", "current assets")
     _NON_CURRENT_ASSET_SUBTYPES = (
-        "non-current asset", "non-current assets", "noncurrent asset",
-        "noncurrent assets", "long-term asset", "long-term assets",
-        "fixed asset", "fixed assets",
+        "non-current asset",
+        "non-current assets",
+        "noncurrent asset",
+        "noncurrent assets",
+        "long-term asset",
+        "long-term assets",
+        "fixed asset",
+        "fixed assets",
     )
     _CURRENT_LIABILITY_SUBTYPES = ("current liability", "current liabilities")
     _NON_CURRENT_LIABILITY_SUBTYPES = (
-        "non-current liability", "non-current liabilities",
-        "noncurrent liability", "noncurrent liabilities",
-        "long-term liability", "long-term liabilities",
+        "non-current liability",
+        "non-current liabilities",
+        "noncurrent liability",
+        "noncurrent liabilities",
+        "long-term liability",
+        "long-term liabilities",
     )
     _COGS_SUBTYPES = (
-        "cost of revenue", "cost of goods sold", "cogs",
-        "cost of sales", "direct costs", "direct cost",
+        "cost of revenue",
+        "cost of goods sold",
+        "cogs",
+        "cost of sales",
+        "direct costs",
+        "direct cost",
     )
 
     for account_name, balances in account_balances.items():

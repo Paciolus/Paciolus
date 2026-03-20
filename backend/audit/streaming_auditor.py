@@ -303,9 +303,9 @@ class StreamingAuditor:
         return {
             "status": "success",
             "balanced": is_balanced,
-            "total_debits": float(quantize_monetary(total_debits)),
-            "total_credits": float(quantize_monetary(total_credits)),
-            "difference": float(quantize_monetary(difference)),
+            "total_debits": str(quantize_monetary(total_debits)),
+            "total_credits": str(quantize_monetary(total_credits)),
+            "difference": str(quantize_monetary(difference)),
             "row_count": self.total_rows,
             "timestamp": datetime.now(UTC).isoformat(),
             "message": "Trial balance is balanced" if is_balanced else "Trial balance is OUT OF BALANCE",
