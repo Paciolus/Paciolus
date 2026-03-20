@@ -15,13 +15,14 @@ Pure-Python engine (stdlib stats + math). Takes pre-aggregated account_balances
 dict or raw parsed data from parse_uploaded_file().
 """
 
-import math
 import statistics
 from dataclasses import dataclass, field
+from decimal import Decimal
 from typing import Optional
 
 from column_detector import detect_columns
 from shared.benford import analyze_benford
+from shared.parsing_helpers import safe_decimal
 
 # ═══════════════════════════════════════════════════════════════
 # Constants
@@ -366,12 +367,13 @@ def _compute_gini(sorted_values: list[float]) -> float:
     if n < 2:
         return 0.0
 
-    total = math.fsum(sorted_values)
+    dec_values = [Decimal(str(v)) if isinstance(v, float) else v for v in sorted_values]
+    total = sum(dec_values, Decimal("0"))
     if total == 0:
         return 0.0
 
-    weighted_sum = math.fsum((i + 1) * v for i, v in enumerate(sorted_values))
-    return (2.0 * weighted_sum) / (n * total) - (n + 1) / n
+    weighted_sum = sum(((i + 1) * v for i, v in enumerate(dec_values)), Decimal("0"))
+    return float(Decimal(2) * weighted_sum / (n * total) - Decimal(n + 1) / n)
 
 
 def _interpret_gini(gini: float) -> str:
@@ -402,6 +404,7 @@ def _compute_account_type_stratification(
     """
     type_data: dict[str, dict] = {}
     n_total = len(entries)
+    total_abs = safe_decimal(total_abs)
 
     for _acct, _net, abs_bal, category, _acct_num in entries:
         cat_lower = category.lower() if category else "unknown"
@@ -412,9 +415,9 @@ def _compute_account_type_stratification(
                 break
 
         if cat_lower not in type_data:
-            type_data[cat_lower] = {"count": 0, "total_balance": 0.0}
+            type_data[cat_lower] = {"count": 0, "total_balance": Decimal("0")}
         type_data[cat_lower]["count"] += 1
-        type_data[cat_lower]["total_balance"] += abs_bal
+        type_data[cat_lower]["total_balance"] += safe_decimal(abs_bal)
 
     strata: list[AccountTypeStratum] = []
     for acct_type in ACCOUNT_TYPE_ORDER:
@@ -742,9 +745,9 @@ def compute_population_profile(
         )
 
     # Build list of (account, net_balance, abs_balance, category, account_number)
-    entries: list[tuple[str, float, float, str, str]] = []
+    entries: list[tuple[str, Decimal, Decimal, str, str]] = []
     for acct, bals in account_balances.items():
-        net = bals["debit"] - bals["credit"]
+        net = safe_decimal(bals["debit"]) - safe_decimal(bals["credit"])
         abs_bal = abs(net)
         category = (classified_accounts or {}).get(acct, "Unknown")
         acct_num = (account_numbers or {}).get(acct, "")
@@ -754,7 +757,7 @@ def compute_population_profile(
     n = len(abs_values)
 
     # Descriptive statistics
-    total_abs = math.fsum(abs_values)
+    total_abs = sum(abs_values, Decimal("0"))
     mean_abs = total_abs / n if n > 0 else 0.0
     median_abs = statistics.median(abs_values)
 
@@ -785,7 +788,7 @@ def compute_population_profile(
     for label, lower, upper in MAGNITUDE_BUCKETS:
         bucket_items = [v for v in abs_values if lower <= v < upper]
         count = len(bucket_items)
-        sum_abs = math.fsum(bucket_items)
+        sum_abs = sum(bucket_items, Decimal("0"))
         pct = (count / n * 100) if n > 0 else 0.0
         buckets.append(
             BucketBreakdown(
@@ -896,11 +899,11 @@ def compute_section_density(
             if summary is None:
                 continue
             total_count += summary.get("account_count", 0)
-            net_bal = summary.get("net_balance", 0.0)
-            balance_values.append(abs(net_bal))
+            net_bal = summary.get("net_balance", Decimal("0"))
+            balance_values.append(abs(Decimal(str(net_bal)) if isinstance(net_bal, float) else net_bal))
 
-        section_balance = math.fsum(balance_values)
-        balance_per_acct = section_balance / total_count if total_count > 0 else 0.0
+        section_balance = sum(balance_values, Decimal("0"))
+        balance_per_acct = section_balance / total_count if total_count > 0 else Decimal("0")
         is_sparse = (
             total_count < SPARSE_ACCOUNT_THRESHOLD
             and section_balance > materiality_threshold
@@ -980,17 +983,11 @@ def run_population_profile(
         if not acct_str:
             continue
 
-        try:
-            debit = float(row.get(debit_col) or 0)
-        except (ValueError, TypeError):
-            debit = 0.0
-        try:
-            credit = float(row.get(credit_col) or 0)
-        except (ValueError, TypeError):
-            credit = 0.0
+        debit = safe_decimal(row.get(debit_col))
+        credit = safe_decimal(row.get(credit_col))
 
         if acct_str not in account_balances:
-            account_balances[acct_str] = {"debit": 0.0, "credit": 0.0}
+            account_balances[acct_str] = {"debit": Decimal("0"), "credit": Decimal("0")}
         account_balances[acct_str]["debit"] += debit
         account_balances[acct_str]["credit"] += credit
 
@@ -1038,7 +1035,7 @@ def compute_category_gini(
         if category not in VALID_CATEGORIES:
             continue
 
-        net = bals.get("debit", 0.0) - bals.get("credit", 0.0)
+        net = bals.get("debit", Decimal("0")) - bals.get("credit", Decimal("0"))
         abs_bal = abs(net)
 
         if category not in category_groups:
@@ -1053,7 +1050,7 @@ def compute_category_gini(
 
         abs_values = [e[1] for e in entries]
         n = len(abs_values)
-        total_abs = math.fsum(abs_values)
+        total_abs = sum(abs_values, Decimal("0"))
         mean_bal = total_abs / n
         std_dev = statistics.stdev(abs_values)
 

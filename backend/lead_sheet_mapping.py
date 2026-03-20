@@ -29,11 +29,13 @@ IFRS/GAAP Note:
 """
 
 from dataclasses import dataclass, field
+from decimal import Decimal
 from enum import Enum
 from typing import Optional
 
 from classification_rules import AccountCategory
 from security_utils import log_secure_operation
+from shared.parsing_helpers import safe_decimal
 
 
 class LeadSheet(str, Enum):
@@ -43,6 +45,7 @@ class LeadSheet(str, Enum):
     These letters follow common audit practice and map to major
     account groupings in a trial balance.
     """
+
     A = "A"  # Cash and Cash Equivalents
     B = "B"  # Receivables
     C = "C"  # Inventory
@@ -106,6 +109,7 @@ LEAD_SHEET_CATEGORY: dict[LeadSheet, str] = {
 @dataclass
 class LeadSheetRule:
     """A keyword rule for lead sheet assignment."""
+
     keyword: str
     lead_sheet: LeadSheet
     weight: float = 1.0  # Higher weight takes precedence
@@ -115,6 +119,7 @@ class LeadSheetRule:
 @dataclass
 class LeadSheetAssignment:
     """Result of lead sheet assignment for an account."""
+
     account_name: str
     lead_sheet: LeadSheet
     lead_sheet_name: str
@@ -126,12 +131,13 @@ class LeadSheetAssignment:
 @dataclass
 class LeadSheetSummary:
     """Summary of a single lead sheet."""
+
     lead_sheet: LeadSheet
     name: str
     category: str
-    total_debit: float
-    total_credit: float
-    net_balance: float
+    total_debit: Decimal
+    total_credit: Decimal
+    net_balance: Decimal
     account_count: int
     accounts: list[dict] = field(default_factory=list)
 
@@ -139,9 +145,10 @@ class LeadSheetSummary:
 @dataclass
 class LeadSheetGrouping:
     """Complete lead sheet grouping for a trial balance."""
+
     summaries: list[LeadSheetSummary]
-    total_debits: float
-    total_credits: float
+    total_debits: Decimal
+    total_credits: Decimal
     unclassified_count: int
 
 
@@ -164,7 +171,6 @@ LEAD_SHEET_RULES: list[LeadSheetRule] = [
     LeadSheetRule("cash equivalent", LeadSheet.A, 1.0, is_phrase=True),
     LeadSheetRule("short-term investment", LeadSheet.A, 0.95, is_phrase=True),  # Sprint 535 P2-2: current asset, not F
     LeadSheetRule("treasury bill", LeadSheet.A, 0.85, is_phrase=True),
-
     # -------------------------------------------------------------------------
     # B: Receivables
     # -------------------------------------------------------------------------
@@ -176,7 +182,6 @@ LEAD_SHEET_RULES: list[LeadSheetRule] = [
     LeadSheetRule("allowance for doubtful", LeadSheet.B, 0.95, is_phrase=True),
     LeadSheetRule("bad debt", LeadSheet.B, 0.80, is_phrase=True),
     LeadSheetRule("due from", LeadSheet.B, 0.80, is_phrase=True),
-
     # -------------------------------------------------------------------------
     # C: Inventory
     # -------------------------------------------------------------------------
@@ -189,7 +194,6 @@ LEAD_SHEET_RULES: list[LeadSheetRule] = [
     LeadSheetRule("merchandise", LeadSheet.C, 0.90),
     LeadSheetRule("supplies", LeadSheet.C, 0.70),  # Could be prepaid
     LeadSheetRule("inventory reserve", LeadSheet.C, 0.95, is_phrase=True),
-
     # -------------------------------------------------------------------------
     # D: Prepaid Expenses and Other Current Assets
     # -------------------------------------------------------------------------
@@ -201,7 +205,6 @@ LEAD_SHEET_RULES: list[LeadSheetRule] = [
     LeadSheetRule("security deposit", LeadSheet.D, 0.85, is_phrase=True),
     LeadSheetRule("advance", LeadSheet.D, 0.70),
     LeadSheetRule("other current asset", LeadSheet.D, 0.90, is_phrase=True),
-
     # -------------------------------------------------------------------------
     # E: Property, Plant & Equipment
     # -------------------------------------------------------------------------
@@ -220,7 +223,6 @@ LEAD_SHEET_RULES: list[LeadSheetRule] = [
     LeadSheetRule("accumulated depreciation", LeadSheet.E, 1.0, is_phrase=True),
     LeadSheetRule("right-of-use", LeadSheet.E, 0.90, is_phrase=True),
     LeadSheetRule("rou asset", LeadSheet.E, 0.90, is_phrase=True),
-
     # -------------------------------------------------------------------------
     # F: Other Assets / Intangibles
     # -------------------------------------------------------------------------
@@ -237,7 +239,6 @@ LEAD_SHEET_RULES: list[LeadSheetRule] = [
     LeadSheetRule("other asset", LeadSheet.F, 0.85, is_phrase=True),
     LeadSheetRule("deferred tax asset", LeadSheet.F, 0.95, is_phrase=True),
     LeadSheetRule("amortization", LeadSheet.F, 0.85),
-
     # -------------------------------------------------------------------------
     # G: Accounts Payable and Accrued Liabilities
     # -------------------------------------------------------------------------
@@ -252,7 +253,6 @@ LEAD_SHEET_RULES: list[LeadSheetRule] = [
     LeadSheetRule("wages payable", LeadSheet.G, 0.95, is_phrase=True),
     LeadSheetRule("salaries payable", LeadSheet.G, 0.95, is_phrase=True),
     LeadSheetRule("due to", LeadSheet.G, 0.80, is_phrase=True),
-
     # -------------------------------------------------------------------------
     # H: Other Current Liabilities
     # -------------------------------------------------------------------------
@@ -264,12 +264,13 @@ LEAD_SHEET_RULES: list[LeadSheetRule] = [
     LeadSheetRule("income tax payable", LeadSheet.H, 0.95, is_phrase=True),
     LeadSheetRule("tax payable", LeadSheet.H, 0.85, is_phrase=True),
     LeadSheetRule("payroll tax", LeadSheet.H, 0.90, is_phrase=True),
-    LeadSheetRule("current portion of long-term", LeadSheet.H, 1.05, is_phrase=True),  # Sprint 535 P2-2: beats "long-term debt" at 1.0
+    LeadSheetRule(
+        "current portion of long-term", LeadSheet.H, 1.05, is_phrase=True
+    ),  # Sprint 535 P2-2: beats "long-term debt" at 1.0
     LeadSheetRule("current portion", LeadSheet.H, 1.05, is_phrase=True),  # Sprint 535 P2-2: raised from 0.85
     LeadSheetRule("dividends payable", LeadSheet.H, 0.95, is_phrase=True),  # Sprint 535 P2-2
     LeadSheetRule("short-term", LeadSheet.H, 0.70, is_phrase=True),
     LeadSheetRule("lease liability current", LeadSheet.H, 0.95, is_phrase=True),
-
     # -------------------------------------------------------------------------
     # I: Long-term Debt
     # -------------------------------------------------------------------------
@@ -288,7 +289,6 @@ LEAD_SHEET_RULES: list[LeadSheetRule] = [
     LeadSheetRule("revolver", LeadSheet.I, 0.85),
     LeadSheetRule("capital lease", LeadSheet.I, 0.90, is_phrase=True),
     LeadSheetRule("note payable", LeadSheet.I, 0.85, is_phrase=True),
-
     # -------------------------------------------------------------------------
     # J: Other Long-term Liabilities / Deferred Items
     # -------------------------------------------------------------------------
@@ -305,7 +305,6 @@ LEAD_SHEET_RULES: list[LeadSheetRule] = [
     LeadSheetRule("environmental remediation", LeadSheet.J, 0.95, is_phrase=True),
     LeadSheetRule("asset retirement obligation", LeadSheet.J, 0.95, is_phrase=True),
     LeadSheetRule("workers compensation reserve", LeadSheet.J, 0.90, is_phrase=True),
-
     # -------------------------------------------------------------------------
     # K: Equity / Stockholders' Equity
     # -------------------------------------------------------------------------
@@ -327,7 +326,6 @@ LEAD_SHEET_RULES: list[LeadSheetRule] = [
     LeadSheetRule("dividend", LeadSheet.K, 0.85),
     LeadSheetRule("accumulated other comprehensive", LeadSheet.K, 0.95, is_phrase=True),
     LeadSheetRule("aoci", LeadSheet.K, 0.90),
-
     # -------------------------------------------------------------------------
     # L: Revenue / Sales
     # -------------------------------------------------------------------------
@@ -340,7 +338,6 @@ LEAD_SHEET_RULES: list[LeadSheetRule] = [
     LeadSheetRule("sales discount", LeadSheet.L, 0.85, is_phrase=True),
     LeadSheetRule("sales return", LeadSheet.L, 0.85, is_phrase=True),
     LeadSheetRule("sales allowance", LeadSheet.L, 0.85, is_phrase=True),
-
     # -------------------------------------------------------------------------
     # M: Cost of Goods Sold
     # -------------------------------------------------------------------------
@@ -362,7 +359,6 @@ LEAD_SHEET_RULES: list[LeadSheetRule] = [
     LeadSheetRule("freight — inbound", LeadSheet.M, 0.85, is_phrase=True),
     LeadSheetRule("packaging and shipping", LeadSheet.M, 0.85, is_phrase=True),
     LeadSheetRule("packaging", LeadSheet.M, 0.75),
-
     # -------------------------------------------------------------------------
     # N: Operating Expenses
     # -------------------------------------------------------------------------
@@ -400,7 +396,6 @@ LEAD_SHEET_RULES: list[LeadSheetRule] = [
     LeadSheetRule("administrative expense", LeadSheet.N, 0.85, is_phrase=True),
     LeadSheetRule("selling expense", LeadSheet.N, 0.85, is_phrase=True),
     LeadSheetRule("sg&a", LeadSheet.N, 0.90),
-
     # -------------------------------------------------------------------------
     # O: Other Income / Expense
     # -------------------------------------------------------------------------
@@ -430,12 +425,12 @@ LEAD_SHEET_RULES: list[LeadSheetRule] = [
 
 # When keyword matching fails, use account category as fallback
 CATEGORY_FALLBACK_MAP: dict[AccountCategory, LeadSheet] = {
-    AccountCategory.ASSET: LeadSheet.F,       # Other Assets (catch-all)
-    AccountCategory.LIABILITY: LeadSheet.J,   # Other Long-term Liabilities
-    AccountCategory.EQUITY: LeadSheet.K,      # Equity
-    AccountCategory.REVENUE: LeadSheet.L,     # Revenue
-    AccountCategory.EXPENSE: LeadSheet.N,     # Operating Expenses
-    AccountCategory.UNKNOWN: LeadSheet.Z,     # Unclassified
+    AccountCategory.ASSET: LeadSheet.F,  # Other Assets (catch-all)
+    AccountCategory.LIABILITY: LeadSheet.J,  # Other Long-term Liabilities
+    AccountCategory.EQUITY: LeadSheet.K,  # Equity
+    AccountCategory.REVENUE: LeadSheet.L,  # Revenue
+    AccountCategory.EXPENSE: LeadSheet.N,  # Operating Expenses
+    AccountCategory.UNKNOWN: LeadSheet.Z,  # Unclassified
 }
 
 
@@ -443,10 +438,9 @@ CATEGORY_FALLBACK_MAP: dict[AccountCategory, LeadSheet] = {
 # LEAD SHEET ASSIGNMENT FUNCTIONS
 # =============================================================================
 
+
 def assign_lead_sheet(
-    account_name: str,
-    account_category: Optional[AccountCategory] = None,
-    override: Optional[LeadSheet] = None
+    account_name: str, account_category: Optional[AccountCategory] = None, override: Optional[LeadSheet] = None
 ) -> LeadSheetAssignment:
     """
     Assign a lead sheet to an account based on keywords and category.
@@ -467,7 +461,7 @@ def assign_lead_sheet(
             lead_sheet_name=LEAD_SHEET_NAMES[override],
             confidence=1.0,
             matched_keywords=[],
-            is_override=True
+            is_override=True,
         )
 
     account_lower = account_name.lower().strip()
@@ -503,7 +497,7 @@ def assign_lead_sheet(
             lead_sheet_name=LEAD_SHEET_NAMES[best_match.lead_sheet],
             confidence=best_weight,
             matched_keywords=matched_keywords,
-            is_override=False
+            is_override=False,
         )
 
     # Fallback to category-based assignment
@@ -515,7 +509,7 @@ def assign_lead_sheet(
             lead_sheet_name=LEAD_SHEET_NAMES[fallback_sheet],
             confidence=0.5,  # Lower confidence for fallback
             matched_keywords=[],
-            is_override=False
+            is_override=False,
         )
 
     # No match found - unclassified
@@ -525,14 +519,11 @@ def assign_lead_sheet(
         lead_sheet_name=LEAD_SHEET_NAMES[LeadSheet.Z],
         confidence=0.0,
         matched_keywords=[],
-        is_override=False
+        is_override=False,
     )
 
 
-def group_by_lead_sheet(
-    accounts: list[dict],
-    overrides: Optional[dict[str, LeadSheet]] = None
-) -> LeadSheetGrouping:
+def group_by_lead_sheet(accounts: list[dict], overrides: Optional[dict[str, LeadSheet]] = None) -> LeadSheetGrouping:
     """
     Group a list of accounts by their lead sheet assignment.
 
@@ -553,22 +544,22 @@ def group_by_lead_sheet(
             lead_sheet=ls,
             name=LEAD_SHEET_NAMES[ls],
             category=LEAD_SHEET_CATEGORY[ls],
-            total_debit=0.0,
-            total_credit=0.0,
-            net_balance=0.0,
+            total_debit=Decimal("0"),
+            total_credit=Decimal("0"),
+            net_balance=Decimal("0"),
             account_count=0,
-            accounts=[]
+            accounts=[],
         )
 
-    total_debits = 0.0
-    total_credits = 0.0
+    total_debits = Decimal("0")
+    total_credits = Decimal("0")
 
     # Assign each account to a lead sheet
     for account in accounts:
-        account_name = account.get('account', '')
-        debit = float(account.get('debit', 0) or 0)
-        credit = float(account.get('credit', 0) or 0)
-        account_type = account.get('type', 'unknown')
+        account_name = account.get("account", "")
+        debit = safe_decimal(account.get("debit", 0))
+        credit = safe_decimal(account.get("credit", 0))
+        account_type = account.get("type", "unknown")
 
         # Get category from account type
         try:
@@ -587,13 +578,15 @@ def group_by_lead_sheet(
         summary.total_debit += debit
         summary.total_credit += credit
         summary.account_count += 1
-        summary.accounts.append({
-            **account,
-            'lead_sheet': assignment.lead_sheet.value,
-            'lead_sheet_confidence': assignment.confidence,
-            'lead_sheet_keywords': assignment.matched_keywords,
-            'is_override': assignment.is_override
-        })
+        summary.accounts.append(
+            {
+                **account,
+                "lead_sheet": assignment.lead_sheet.value,
+                "lead_sheet_confidence": assignment.confidence,
+                "lead_sheet_keywords": assignment.matched_keywords,
+                "is_override": assignment.is_override,
+            }
+        )
 
         total_debits += debit
         total_credits += credit
@@ -614,16 +607,13 @@ def group_by_lead_sheet(
     # Sort by lead sheet letter
     summaries.sort(key=lambda s: s.lead_sheet.value)
 
-    log_secure_operation(
-        "lead_sheet_grouping",
-        f"Grouped {len(accounts)} accounts into {len(summaries)} lead sheets"
-    )
+    log_secure_operation("lead_sheet_grouping", f"Grouped {len(accounts)} accounts into {len(summaries)} lead sheets")
 
     return LeadSheetGrouping(
         summaries=summaries,
         total_debits=total_debits,
         total_credits=total_credits,
-        unclassified_count=unclassified_count
+        unclassified_count=unclassified_count,
     )
 
 
@@ -635,11 +625,7 @@ def get_lead_sheet_options() -> list[dict]:
         List of dicts with 'value', 'label', 'category' keys
     """
     return [
-        {
-            'value': ls.value,
-            'label': f"{ls.value}: {LEAD_SHEET_NAMES[ls]}",
-            'category': LEAD_SHEET_CATEGORY[ls]
-        }
+        {"value": ls.value, "label": f"{ls.value}: {LEAD_SHEET_NAMES[ls]}", "category": LEAD_SHEET_CATEGORY[ls]}
         for ls in LeadSheet
     ]
 
@@ -647,20 +633,20 @@ def get_lead_sheet_options() -> list[dict]:
 def lead_sheet_grouping_to_dict(grouping: LeadSheetGrouping) -> dict:
     """Convert LeadSheetGrouping to JSON-serializable dict."""
     return {
-        'summaries': [
+        "summaries": [
             {
-                'lead_sheet': s.lead_sheet.value,
-                'name': s.name,
-                'category': s.category,
-                'total_debit': s.total_debit,
-                'total_credit': s.total_credit,
-                'net_balance': s.net_balance,
-                'account_count': s.account_count,
-                'accounts': s.accounts
+                "lead_sheet": s.lead_sheet.value,
+                "name": s.name,
+                "category": s.category,
+                "total_debit": s.total_debit,
+                "total_credit": s.total_credit,
+                "net_balance": s.net_balance,
+                "account_count": s.account_count,
+                "accounts": s.accounts,
             }
             for s in grouping.summaries
         ],
-        'total_debits': grouping.total_debits,
-        'total_credits': grouping.total_credits,
-        'unclassified_count': grouping.unclassified_count
+        "total_debits": grouping.total_debits,
+        "total_credits": grouping.total_credits,
+        "unclassified_count": grouping.unclassified_count,
     }

@@ -2,7 +2,7 @@
 Tests for Expense Category Analytical Procedures — Sprint 289
 """
 
-import math
+from decimal import Decimal
 
 import pytest
 
@@ -110,9 +110,9 @@ class TestComputeExpenseCategories:
         }
         classified = {k: "Expense" for k in balances}
         result = compute_expense_categories(balances, classified, 2000.0)
-        cat_sum = math.fsum(c.amount for c in result.categories)
-        assert abs(result.total_expenses - cat_sum) < 0.01
-        assert abs(result.total_expenses - 1150.0) < 0.01
+        cat_sum = sum((c.amount for c in result.categories), Decimal("0"))
+        assert abs(result.total_expenses - cat_sum) < Decimal("0.01")
+        assert abs(result.total_expenses - Decimal("1150")) < Decimal("0.01")
 
     def test_pct_of_revenue_calculation(self):
         """Percentage of revenue should be computed correctly."""
@@ -121,7 +121,7 @@ class TestComputeExpenseCategories:
         result = compute_expense_categories(balances, classified, 1000.0)
         cogs_cat = next(c for c in result.categories if c.key == CAT_COGS)
         assert cogs_cat.pct_of_revenue is not None
-        assert abs(cogs_cat.pct_of_revenue - 50.0) < 0.01
+        assert abs(cogs_cat.pct_of_revenue - Decimal("50")) < Decimal("0.01")
 
     def test_prior_comparison(self):
         """When prior data is provided, dollar_change and exceeds_threshold are set."""
@@ -138,7 +138,7 @@ class TestComputeExpenseCategories:
         )
         cogs_cat = next(c for c in result.categories if c.key == CAT_COGS)
         assert cogs_cat.prior_amount == 400.0
-        assert cogs_cat.dollar_change == 200.0
+        assert cogs_cat.dollar_change == Decimal("200")
         assert cogs_cat.exceeds_threshold is True
         assert result.prior_available is True
 
@@ -170,7 +170,7 @@ class TestComputeExpenseCategories:
             "Salaries Expense": "Expense",
         }
         result = compute_expense_categories(balances, classified, 3000.0)
-        assert abs(result.total_expenses - 200.0) < 0.01
+        assert abs(result.total_expenses - Decimal("200")) < Decimal("0.01")
 
     def test_to_dict_structure(self):
         """to_dict() should return the expected shape."""

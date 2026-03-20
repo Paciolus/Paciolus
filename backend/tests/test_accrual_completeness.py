@@ -2,6 +2,8 @@
 Tests for Accrual Completeness Estimator — Sprint 290 / Sprint 513
 """
 
+from decimal import Decimal
+
 import pytest
 
 from accrual_completeness_engine import (
@@ -131,7 +133,7 @@ class TestReasonableness:
     def test_reasonable_variance(self):
         result = _test_reasonableness("Accrued Payroll", 10_000, 120_000, "TB", 1)
         assert result.status == "Reasonable"
-        assert result.expected_balance == pytest.approx(10_000, abs=1)
+        assert abs(result.expected_balance - 10_000) <= 1
 
     def test_moderate_variance(self):
         # Expected: 120000/12 = 10000; recorded: 14000 => 40% variance
@@ -185,15 +187,15 @@ class TestDeferredRevenueAnalysis:
         accounts = [AccrualAccount("Deferred Revenue", 60_550, "deferred revenue", "Deferred Revenue")]
         result = _analyze_deferred_revenue(accounts, total_revenue=6_850_000)
         assert result is not None
-        assert result.deferred_balance == pytest.approx(60_550)
+        assert result.deferred_balance == Decimal("60550")
         assert result.deferred_pct_of_revenue is not None
-        assert result.deferred_pct_of_revenue == pytest.approx((60_550 / 6_850_000) * 100, abs=0.01)
+        assert abs(result.deferred_pct_of_revenue - (60_550 / 6_850_000) * 100) < 0.01
 
     def test_without_revenue(self):
         accounts = [AccrualAccount("Deferred Revenue", 60_550, "deferred revenue", "Deferred Revenue")]
         result = _analyze_deferred_revenue(accounts, total_revenue=None)
         assert result is not None
-        assert result.deferred_balance == pytest.approx(60_550)
+        assert result.deferred_balance == Decimal("60550")
         assert result.deferred_pct_of_revenue is None
 
     def test_empty_accounts(self):
@@ -371,7 +373,7 @@ class TestComputeAccrualCompleteness:
         result = compute_accrual_completeness({}, {})
         assert isinstance(result, AccrualCompletenessReport)
         assert result.accrual_account_count == 0
-        assert result.total_accrued_balance == 0.0
+        assert result.total_accrued_balance == Decimal("0")
 
     def test_identifies_accrual_liabilities(self):
         """Only liability-classified accounts with accrual keywords are identified."""
@@ -387,7 +389,7 @@ class TestComputeAccrualCompleteness:
         }
         result = compute_accrual_completeness(balances, classified)
         assert result.accrual_account_count == 2
-        assert abs(result.total_accrued_balance - 6000.0) < 0.01
+        assert abs(result.total_accrued_balance - Decimal("6000")) < Decimal("0.01")
 
     def test_excludes_non_liability(self):
         """Accrual keywords on non-liability accounts are excluded."""
@@ -401,7 +403,7 @@ class TestComputeAccrualCompleteness:
         }
         result = compute_accrual_completeness(balances, classified)
         assert result.accrual_account_count == 1
-        assert abs(result.total_accrued_balance - 5000.0) < 0.01
+        assert abs(result.total_accrued_balance - Decimal("5000")) < Decimal("0.01")
 
     def test_deferred_revenue_excluded_from_ratio(self):
         """Deferred Revenue must NOT be included in accrual-to-run-rate calculation."""
@@ -416,8 +418,8 @@ class TestComputeAccrualCompleteness:
         result = compute_accrual_completeness(balances, classified, prior_operating_expenses=120000.0)
         # Only Accrued Wages (5000) should be in the ratio, not Deferred Revenue
         assert result.accrual_account_count == 1
-        assert abs(result.total_accrued_balance - 5000.0) < 0.01
-        assert result.total_deferred_revenue == pytest.approx(3000.0)
+        assert abs(result.total_accrued_balance - Decimal("5000")) < Decimal("0.01")
+        assert result.total_deferred_revenue == Decimal("3000")
         assert len(result.deferred_revenue_accounts) == 1
         assert result.deferred_revenue_accounts[0].classification == "Deferred Revenue"
 
@@ -434,7 +436,7 @@ class TestComputeAccrualCompleteness:
         classified = {k: "liability" for k in balances}
         result = compute_accrual_completeness(balances, classified, prior_operating_expenses=5_827_750.0)
         # Accrual total = 228,450 (without deferred revenue)
-        assert abs(result.total_accrued_balance - 228_450.0) < 1.0
+        assert abs(result.total_accrued_balance - Decimal("228450")) < 1
         # Ratio should be ~47.0%, NOT 59.5%
         assert result.accrual_to_run_rate_pct is not None
         assert result.accrual_to_run_rate_pct < 50.0
@@ -640,7 +642,7 @@ class TestComputeAccrualCompleteness:
             total_revenue=500000.0,
         )
         assert result.deferred_revenue_analysis is not None
-        assert result.deferred_revenue_analysis.deferred_balance == pytest.approx(3000.0)
+        assert result.deferred_revenue_analysis.deferred_balance == Decimal("3000")
         assert result.deferred_revenue_analysis.deferred_pct_of_revenue is not None
 
     def test_reasonableness_results_populated(self):

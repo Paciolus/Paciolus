@@ -16,11 +16,12 @@ Guardrail: Descriptive metrics only — NEVER "appears low", NEVER
 "liabilities may be understated". Pure numeric comparisons only.
 """
 
-import math
 from dataclasses import dataclass, field
+from decimal import Decimal
 from typing import Optional
 
 from column_detector import detect_columns
+from shared.parsing_helpers import safe_decimal
 
 # ═══════════════════════════════════════════════════════════════
 # Constants
@@ -140,9 +141,13 @@ class AccrualAccount:
     """One identified accrual-related account."""
 
     account_name: str
-    balance: float
+    balance: Decimal
     matched_keyword: str
     classification: str = "Accrued Liability"
+
+    def __post_init__(self):
+        if isinstance(self.balance, (int, float)):
+            self.balance = Decimal(str(self.balance))
 
     def to_dict(self) -> dict:
         return {
@@ -418,7 +423,7 @@ def _test_reasonableness(
             status="Driver Unavailable — Auditor Judgment Required",
         )
 
-    expected = (annual_driver / MONTHS_PER_YEAR) * months_to_accrue
+    expected = Decimal(str(annual_driver)) / MONTHS_PER_YEAR * months_to_accrue
     variance = balance - expected
 
     if abs(expected) < NEAR_ZERO:
@@ -537,7 +542,7 @@ def _build_expected_accrual_checklist(
 
         # Search detected accounts for a keyword match
         detected = False
-        total_balance: float = 0.0
+        total_balance: Decimal = Decimal("0")
 
         for acct in accrual_accounts:
             acct_name_lower = acct.account_name.lower()
@@ -594,11 +599,11 @@ def _analyze_deferred_revenue(
     if not deferred_accounts:
         return None
 
-    total_deferred = math.fsum(a.balance for a in deferred_accounts)
+    total_deferred = sum((a.balance for a in deferred_accounts), Decimal("0"))
 
     pct_of_revenue: Optional[float] = None
     if total_revenue is not None and abs(total_revenue) > NEAR_ZERO:
-        pct_of_revenue = (total_deferred / total_revenue) * 100
+        pct_of_revenue = float(total_deferred / Decimal(str(total_revenue)) * 100)
 
     return DeferredRevenueAnalysis(
         deferred_balance=total_deferred,
@@ -683,7 +688,7 @@ def _generate_findings(
 
     # 4. Deferred Revenue requires ASC 606 verification
     if deferred_revenue_accounts:
-        total_deferred = math.fsum(a.balance for a in deferred_revenue_accounts)
+        total_deferred = sum((a.balance for a in deferred_revenue_accounts), Decimal("0"))
         findings.append(
             Finding(
                 area="Deferred Revenue",
@@ -758,7 +763,7 @@ def _generate_procedures(
 
     # 3. Deferred Revenue
     if deferred_revenue_accounts:
-        total_deferred = math.fsum(a.balance for a in deferred_revenue_accounts)
+        total_deferred = sum((a.balance for a in deferred_revenue_accounts), Decimal("0"))
         procedures.append(
             SuggestedProcedure(
                 priority="Moderate",
@@ -871,9 +876,9 @@ def compute_accrual_completeness(
     deferred_revenue_accounts.sort(key=lambda a: abs(a.balance), reverse=True)
 
     # Sum only accrual + provision accounts for ratio (NOT deferred revenue)
-    total_accrued = math.fsum(a.balance for a in accrual_accounts)
+    total_accrued = sum((a.balance for a in accrual_accounts), Decimal("0"))
     accrual_count = len(accrual_accounts)
-    total_deferred = math.fsum(a.balance for a in deferred_revenue_accounts)
+    total_deferred = sum((a.balance for a in deferred_revenue_accounts), Decimal("0"))
 
     # Compute run-rate if prior data available
     prior_available = prior_operating_expenses is not None and abs(prior_operating_expenses) > NEAR_ZERO
@@ -885,7 +890,7 @@ def compute_accrual_completeness(
         assert prior_operating_expenses is not None
         monthly_run_rate = prior_operating_expenses / MONTHS_PER_YEAR
         if abs(monthly_run_rate) > NEAR_ZERO:
-            accrual_to_run_rate = (total_accrued / monthly_run_rate) * 100
+            accrual_to_run_rate = float(total_accrued / Decimal(str(monthly_run_rate)) * 100)
             meets_threshold = accrual_to_run_rate >= threshold_pct
 
     # Per-account reasonableness testing
@@ -1042,17 +1047,11 @@ def run_accrual_completeness(
         if not acct_str:
             continue
 
-        try:
-            debit = float(row.get(debit_col) or 0)
-        except (ValueError, TypeError):
-            debit = 0.0
-        try:
-            credit = float(row.get(credit_col) or 0)
-        except (ValueError, TypeError):
-            credit = 0.0
+        debit = safe_decimal(row.get(debit_col))
+        credit = safe_decimal(row.get(credit_col))
 
         if acct_str not in account_balances:
-            account_balances[acct_str] = {"debit": 0.0, "credit": 0.0}
+            account_balances[acct_str] = {"debit": Decimal("0"), "credit": Decimal("0")}
         account_balances[acct_str]["debit"] += debit
         account_balances[acct_str]["credit"] += credit
 

@@ -17,17 +17,17 @@ Audit Standards References:
 - PCAOB AS 2401: Consideration of Fraud
 """
 
-import math
 import statistics
 from collections import Counter
 from dataclasses import dataclass, field
 from datetime import date
+from decimal import Decimal
 from typing import Optional
 
 from shared.column_detector import ColumnFieldConfig, detect_columns
 from shared.data_quality import FieldQualityConfig
 from shared.data_quality import assess_data_quality as _shared_assess_dq
-from shared.parsing_helpers import parse_date, safe_float, safe_str
+from shared.parsing_helpers import parse_date, safe_decimal, safe_str
 from shared.round_amounts import ROUND_AMOUNT_PATTERNS_4TIER
 from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
 from shared.testing_enums import (
@@ -42,9 +42,11 @@ from shared.testing_enums import (
 # CONFIGURATION
 # =============================================================================
 
+
 @dataclass
 class RevenueTestingConfig:
     """Configurable thresholds for all revenue tests."""
+
     # RT-01: Large manual entries
     large_entry_threshold: float = 50000.0
 
@@ -87,11 +89,22 @@ class RevenueTestingConfig:
 
     # RT-12: Contra-revenue anomalies
     contra_threshold_pct: float = 0.15
-    contra_keywords: list[str] = field(default_factory=lambda: [
-        "return", "refund", "allowance", "discount", "rebate",
-        "credit memo", "credit note", "reversal", "write-off",
-        "write off", "contra", "adjustment",
-    ])
+    contra_keywords: list[str] = field(
+        default_factory=lambda: [
+            "return",
+            "refund",
+            "allowance",
+            "discount",
+            "rebate",
+            "credit memo",
+            "credit note",
+            "reversal",
+            "write-off",
+            "write off",
+            "contra",
+            "adjustment",
+        ]
+    )
 
     # RT-13: Recognition before satisfaction (ASC 606 — Sprint 350)
     recognition_lead_days_high: int = 7
@@ -270,10 +283,20 @@ REVENUE_OBLIGATION_SATISFACTION_PATTERNS = [
 REVENUE_COLUMN_CONFIGS: list[ColumnFieldConfig] = [
     ColumnFieldConfig("account_number_column", REVENUE_ACCOUNT_NUMBER_PATTERNS, priority=10),
     ColumnFieldConfig("account_name_column", REVENUE_ACCOUNT_NAME_PATTERNS, priority=15),
-    ColumnFieldConfig("date_column", REVENUE_DATE_PATTERNS, required=True,
-                      missing_note="Could not identify a Date column", priority=20),
-    ColumnFieldConfig("amount_column", REVENUE_AMOUNT_PATTERNS, required=True,
-                      missing_note="Could not identify an Amount column", priority=30),
+    ColumnFieldConfig(
+        "date_column",
+        REVENUE_DATE_PATTERNS,
+        required=True,
+        missing_note="Could not identify a Date column",
+        priority=20,
+    ),
+    ColumnFieldConfig(
+        "amount_column",
+        REVENUE_AMOUNT_PATTERNS,
+        required=True,
+        missing_note="Could not identify an Amount column",
+        priority=30,
+    ),
     ColumnFieldConfig("description_column", REVENUE_DESCRIPTION_PATTERNS, priority=40),
     ColumnFieldConfig("entry_type_column", REVENUE_ENTRY_TYPE_PATTERNS, priority=50),
     ColumnFieldConfig("reference_column", REVENUE_REFERENCE_PATTERNS, priority=55),
@@ -291,6 +314,7 @@ REVENUE_COLUMN_CONFIGS: list[ColumnFieldConfig] = [
 @dataclass
 class RevenueColumnDetection:
     """Result of revenue column detection."""
+
     date_column: Optional[str] = None
     amount_column: Optional[str] = None
     account_name_column: Optional[str] = None
@@ -384,11 +408,13 @@ def detect_revenue_columns(column_names: list[str]) -> RevenueColumnDetection:
 # DATA MODELS
 # =============================================================================
 
+
 @dataclass
 class RevenueEntry:
     """A single line from the revenue GL extract."""
+
     date: Optional[str] = None
-    amount: float = 0.0
+    amount: Decimal = Decimal("0")
     account_name: Optional[str] = None
     account_number: Optional[str] = None
     description: Optional[str] = None
@@ -403,6 +429,10 @@ class RevenueEntry:
     contract_modification: Optional[str] = None
     allocation_basis: Optional[str] = None
     obligation_satisfaction_date: Optional[str] = None
+
+    def __post_init__(self):
+        if isinstance(self.amount, (int, float)):
+            self.amount = Decimal(str(self.amount))
 
     def to_dict(self) -> dict:
         return {
@@ -427,6 +457,7 @@ class RevenueEntry:
 @dataclass
 class FlaggedRevenue:
     """A revenue entry flagged by a test."""
+
     entry: RevenueEntry
     test_name: str
     test_key: str
@@ -452,6 +483,7 @@ class FlaggedRevenue:
 @dataclass
 class RevenueTestResult:
     """Result of a single revenue test."""
+
     test_name: str
     test_key: str
     test_tier: TestTier
@@ -483,6 +515,7 @@ class RevenueTestResult:
 @dataclass
 class RevenueDataQuality:
     """Quality assessment of the revenue data."""
+
     completeness_score: float
     field_fill_rates: dict[str, float] = field(default_factory=dict)
     detected_issues: list[str] = field(default_factory=list)
@@ -500,6 +533,7 @@ class RevenueDataQuality:
 @dataclass
 class RevenueCompositeScore:
     """Overall revenue testing composite score."""
+
     score: float
     risk_tier: RiskTier
     tests_run: int
@@ -528,6 +562,7 @@ class ContractEvidenceLevel:
 
     Determines which contract-aware tests can run and confidence modifiers.
     """
+
     level: str  # "full", "partial", "minimal", "none"
     confidence_modifier: float
     detected_fields: list[str] = field(default_factory=list)
@@ -567,25 +602,34 @@ def assess_contract_evidence(detection: RevenueColumnDetection) -> ContractEvide
 
     if count == 6:
         return ContractEvidenceLevel(
-            level="full", confidence_modifier=1.0, detected_fields=contract_fields,
+            level="full",
+            confidence_modifier=1.0,
+            detected_fields=contract_fields,
         )
     elif count >= 2 and "contract_id" in contract_fields:
         return ContractEvidenceLevel(
-            level="partial", confidence_modifier=0.70, detected_fields=contract_fields,
+            level="partial",
+            confidence_modifier=0.70,
+            detected_fields=contract_fields,
         )
     elif count >= 1:
         return ContractEvidenceLevel(
-            level="minimal", confidence_modifier=0.50, detected_fields=contract_fields,
+            level="minimal",
+            confidence_modifier=0.50,
+            detected_fields=contract_fields,
         )
     else:
         return ContractEvidenceLevel(
-            level="none", confidence_modifier=0.0, detected_fields=contract_fields,
+            level="none",
+            confidence_modifier=0.0,
+            detected_fields=contract_fields,
         )
 
 
 @dataclass
 class RevenueTestingResult:
     """Complete result of revenue testing."""
+
     composite_score: RevenueCompositeScore
     test_results: list[RevenueTestResult] = field(default_factory=list)
     data_quality: Optional[RevenueDataQuality] = None
@@ -600,8 +644,6 @@ class RevenueTestingResult:
             "column_detection": self.column_detection.to_dict() if self.column_detection else None,
             "contract_evidence": self.contract_evidence.to_dict() if self.contract_evidence else None,
         }
-
-
 
 
 def _is_manual_entry(entry_type: Optional[str]) -> bool:
@@ -622,6 +664,7 @@ def _is_contra_revenue(desc: Optional[str], account_name: Optional[str], keyword
 # PARSER
 # =============================================================================
 
+
 def parse_revenue_entries(
     rows: list[dict],
     detection: RevenueColumnDetection,
@@ -633,7 +676,7 @@ def parse_revenue_entries(
         if detection.date_column:
             entry.date = safe_str(row.get(detection.date_column))
         if detection.amount_column:
-            entry.amount = safe_float(row.get(detection.amount_column))
+            entry.amount = safe_decimal(row.get(detection.amount_column))
         if detection.account_name_column:
             entry.account_name = safe_str(row.get(detection.account_name_column))
         if detection.account_number_column:
@@ -667,6 +710,7 @@ def parse_revenue_entries(
 # DATA QUALITY
 # =============================================================================
 
+
 def assess_revenue_data_quality(
     entries: list[RevenueEntry],
     detection: RevenueColumnDetection,
@@ -676,18 +720,38 @@ def assess_revenue_data_quality(
     Delegates to shared data quality engine (Sprint 152).
     """
     configs: list[FieldQualityConfig] = [
-        FieldQualityConfig("date", lambda e: e.date, weight=0.30,
-                           issue_threshold=0.95, issue_template="Missing date on {unfilled} entries"),
-        FieldQualityConfig("amount", lambda e: e.amount != 0, weight=0.35,
-                           issue_threshold=0.90, issue_template="{unfilled} entries have zero amount"),
-        FieldQualityConfig("account", lambda e: e.account_name or e.account_number, weight=0.25,
-                           issue_threshold=0.90, issue_template="Missing account on {unfilled} entries"),
+        FieldQualityConfig(
+            "date",
+            lambda e: e.date,
+            weight=0.30,
+            issue_threshold=0.95,
+            issue_template="Missing date on {unfilled} entries",
+        ),
+        FieldQualityConfig(
+            "amount",
+            lambda e: e.amount != 0,
+            weight=0.35,
+            issue_threshold=0.90,
+            issue_template="{unfilled} entries have zero amount",
+        ),
+        FieldQualityConfig(
+            "account",
+            lambda e: e.account_name or e.account_number,
+            weight=0.25,
+            issue_threshold=0.90,
+            issue_template="Missing account on {unfilled} entries",
+        ),
     ]
 
     if detection.description_column:
-        configs.append(FieldQualityConfig("description", lambda e: e.description,
-                                          issue_threshold=0.80,
-                                          issue_template="Low description fill rate: {fill_pct}"))
+        configs.append(
+            FieldQualityConfig(
+                "description",
+                lambda e: e.description,
+                issue_threshold=0.80,
+                issue_template="Low description fill rate: {fill_pct}",
+            )
+        )
     if detection.entry_type_column:
         configs.append(FieldQualityConfig("entry_type", lambda e: e.entry_type))
     if detection.contract_id_column:
@@ -711,6 +775,7 @@ def assess_revenue_data_quality(
 # =============================================================================
 # TIER 1 — STRUCTURAL TESTS
 # =============================================================================
+
 
 def test_large_manual_entries(
     entries: list[RevenueEntry],
@@ -738,17 +803,19 @@ def test_large_manual_entries(
         else:
             continue
 
-        flagged.append(FlaggedRevenue(
-            entry=e,
-            test_name="Large Manual Revenue Entries",
-            test_key="large_manual_entries",
-            test_tier=TestTier.STRUCTURAL,
-            severity=severity,
-            issue=f"{'Manual' if is_manual else 'Unknown source'} revenue entry: ${amt:,.2f}"
-                  + (f" by {e.posted_by}" if e.posted_by else ""),
-            confidence=confidence,
-            details={"amount": amt, "is_manual": is_manual, "entry_type": e.entry_type},
-        ))
+        flagged.append(
+            FlaggedRevenue(
+                entry=e,
+                test_name="Large Manual Revenue Entries",
+                test_key="large_manual_entries",
+                test_tier=TestTier.STRUCTURAL,
+                severity=severity,
+                issue=f"{'Manual' if is_manual else 'Unknown source'} revenue entry: ${amt:,.2f}"
+                + (f" by {e.posted_by}" if e.posted_by else ""),
+                confidence=confidence,
+                details={"amount": amt, "is_manual": is_manual, "entry_type": e.entry_type},
+            )
+        )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return RevenueTestResult(
@@ -793,9 +860,10 @@ def test_year_end_concentration(
     cutoff_date = date(max_date.year, max_date.month, max_date.day)
 
     from datetime import timedelta
+
     boundary = cutoff_date - timedelta(days=config.year_end_days)
 
-    total_revenue = math.fsum(abs(e.amount) for e, d in dated)
+    total_revenue = sum((abs(e.amount) for e, d in dated), Decimal("0"))
     if total_revenue == 0:
         return RevenueTestResult(
             test_name="Year-End Revenue Concentration",
@@ -810,29 +878,31 @@ def test_year_end_concentration(
         )
 
     last_week_entries = [(e, d) for e, d in dated if d > boundary]
-    last_week_revenue = math.fsum(abs(e.amount) for e, d in last_week_entries)
+    last_week_revenue = sum((abs(e.amount) for e, d in last_week_entries), Decimal("0"))
     concentration_pct = last_week_revenue / total_revenue
 
     flagged: list[FlaggedRevenue] = []
     if concentration_pct > config.year_end_concentration_pct:
         severity = Severity.HIGH if concentration_pct > 0.40 else Severity.MEDIUM
         for e, d in last_week_entries:
-            flagged.append(FlaggedRevenue(
-                entry=e,
-                test_name="Year-End Revenue Concentration",
-                test_key="year_end_concentration",
-                test_tier=TestTier.STRUCTURAL,
-                severity=severity,
-                issue=f"Revenue entry in last {config.year_end_days} days: ${abs(e.amount):,.2f} on {e.date}"
-                      f" ({concentration_pct:.1%} of period total in last week)",
-                confidence=0.80,
-                details={
-                    "concentration_pct": round(concentration_pct, 4),
-                    "last_week_revenue": round(last_week_revenue, 2),
-                    "total_revenue": round(total_revenue, 2),
-                    "boundary_date": str(boundary),
-                },
-            ))
+            flagged.append(
+                FlaggedRevenue(
+                    entry=e,
+                    test_name="Year-End Revenue Concentration",
+                    test_key="year_end_concentration",
+                    test_tier=TestTier.STRUCTURAL,
+                    severity=severity,
+                    issue=f"Revenue entry in last {config.year_end_days} days: ${abs(e.amount):,.2f} on {e.date}"
+                    f" ({concentration_pct:.1%} of period total in last week)",
+                    confidence=0.80,
+                    details={
+                        "concentration_pct": round(concentration_pct, 4),
+                        "last_week_revenue": round(last_week_revenue, 2),
+                        "total_revenue": round(total_revenue, 2),
+                        "boundary_date": str(boundary),
+                    },
+                )
+            )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return RevenueTestResult(
@@ -861,17 +931,20 @@ def test_round_revenue_amounts(
             continue
 
         for divisor, name, severity in ROUND_AMOUNT_PATTERNS_4TIER:
-            if amt >= divisor and amt % divisor == 0:
-                flagged.append(FlaggedRevenue(
-                    entry=e,
-                    test_name="Round Revenue Amounts",
-                    test_key="round_revenue_amounts",
-                    test_tier=TestTier.STRUCTURAL,
-                    severity=severity,
-                    issue=f"Round amount: ${amt:,.0f} (divisible by ${divisor:,.0f})",
-                    confidence=0.70,
-                    details={"amount": amt, "pattern": name, "divisor": divisor},
-                ))
+            d = Decimal(str(divisor))
+            if amt >= d and amt % d == 0:
+                flagged.append(
+                    FlaggedRevenue(
+                        entry=e,
+                        test_name="Round Revenue Amounts",
+                        test_key="round_revenue_amounts",
+                        test_tier=TestTier.STRUCTURAL,
+                        severity=severity,
+                        issue=f"Round amount: ${amt:,.0f} (divisible by ${divisor:,.0f})",
+                        confidence=0.70,
+                        details={"amount": amt, "pattern": name, "divisor": divisor},
+                    )
+                )
                 break
 
         if len(flagged) >= config.round_amount_max_flags:
@@ -928,16 +1001,18 @@ def test_sign_anomalies(
         amt = abs(e.amount)
         severity = Severity.HIGH if amt > 50000 else Severity.MEDIUM if amt > 10000 else Severity.LOW
 
-        flagged.append(FlaggedRevenue(
-            entry=e,
-            test_name="Revenue Sign Anomalies",
-            test_key="sign_anomalies",
-            test_tier=TestTier.STRUCTURAL,
-            severity=severity,
-            issue=f"Debit balance in revenue: ${amt:,.2f} — {e.account_name or e.account_number or 'unknown account'}",
-            confidence=0.85,
-            details={"amount": e.amount, "account": e.account_name or e.account_number},
-        ))
+        flagged.append(
+            FlaggedRevenue(
+                entry=e,
+                test_name="Revenue Sign Anomalies",
+                test_key="sign_anomalies",
+                test_tier=TestTier.STRUCTURAL,
+                severity=severity,
+                issue=f"Debit balance in revenue: ${amt:,.2f} — {e.account_name or e.account_number or 'unknown account'}",
+                confidence=0.85,
+                details={"amount": e.amount, "account": e.account_name or e.account_number},
+            )
+        )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return RevenueTestResult(
@@ -978,16 +1053,18 @@ def test_unclassified_entries(
     for e in entries:
         if e.account_name or e.account_number:
             continue
-        flagged.append(FlaggedRevenue(
-            entry=e,
-            test_name="Unclassified Revenue Entries",
-            test_key="unclassified_entries",
-            test_tier=TestTier.STRUCTURAL,
-            severity=Severity.MEDIUM,
-            issue=f"Revenue entry ${abs(e.amount):,.2f} has no account classification",
-            confidence=0.90,
-            details={"amount": e.amount},
-        ))
+        flagged.append(
+            FlaggedRevenue(
+                entry=e,
+                test_name="Unclassified Revenue Entries",
+                test_key="unclassified_entries",
+                test_tier=TestTier.STRUCTURAL,
+                severity=Severity.MEDIUM,
+                issue=f"Revenue entry ${abs(e.amount):,.2f} has no account classification",
+                confidence=0.90,
+                details={"amount": e.amount},
+            )
+        )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return RevenueTestResult(
@@ -1006,6 +1083,7 @@ def test_unclassified_entries(
 # =============================================================================
 # TIER 2 — STATISTICAL TESTS
 # =============================================================================
+
 
 def test_zscore_outliers(
     entries: list[RevenueEntry],
@@ -1055,16 +1133,18 @@ def test_zscore_outliers(
 
         severity = zscore_to_severity(z)
 
-        flagged.append(FlaggedRevenue(
-            entry=e,
-            test_name="Z-Score Outliers",
-            test_key="zscore_outliers",
-            test_tier=TestTier.STATISTICAL,
-            severity=severity,
-            issue=f"Outlier: ${abs(e.amount):,.2f} (z-score: {z:.1f}, mean: ${mean:,.2f})",
-            confidence=min(0.60 + z * 0.05, 0.95),
-            details={"z_score": round(z, 2), "mean": round(mean, 2), "stdev": round(stdev, 2)},
-        ))
+        flagged.append(
+            FlaggedRevenue(
+                entry=e,
+                test_name="Z-Score Outliers",
+                test_key="zscore_outliers",
+                test_tier=TestTier.STATISTICAL,
+                severity=severity,
+                issue=f"Outlier: ${abs(e.amount):,.2f} (z-score: {z:.1f}, mean: ${mean:,.2f})",
+                confidence=float(min(Decimal("0.60") + z * Decimal("0.05"), Decimal("0.95"))),
+                details={"z_score": round(z, 2), "mean": round(mean, 2), "stdev": round(stdev, 2)},
+            )
+        )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return RevenueTestResult(
@@ -1101,7 +1181,7 @@ def test_revenue_trend_variance(
             flagged_entries=[],
         )
 
-    current_total = math.fsum(abs(e.amount) for e in entries)
+    current_total = sum((abs(e.amount) for e in entries), Decimal("0"))
     variance_pct = (current_total - config.prior_period_total) / abs(config.prior_period_total)
 
     flagged: list[FlaggedRevenue] = []
@@ -1110,26 +1190,28 @@ def test_revenue_trend_variance(
         direction = "increase" if variance_pct > 0 else "decrease"
 
         # Flag summary entry (not individual entries — this is an aggregate test)
-        flagged.append(FlaggedRevenue(
-            entry=RevenueEntry(
-                amount=current_total,
-                account_name="[Aggregate Revenue]",
-                row_number=0,
-            ),
-            test_name="Revenue Trend Variance",
-            test_key="trend_variance",
-            test_tier=TestTier.STATISTICAL,
-            severity=severity,
-            issue=f"Revenue {direction} of {abs(variance_pct):.1%}: "
-                  f"${current_total:,.2f} vs prior ${config.prior_period_total:,.2f}",
-            confidence=0.85,
-            details={
-                "current_total": round(current_total, 2),
-                "prior_total": round(config.prior_period_total, 2),
-                "variance_pct": round(variance_pct, 4),
-                "direction": direction,
-            },
-        ))
+        flagged.append(
+            FlaggedRevenue(
+                entry=RevenueEntry(
+                    amount=current_total,
+                    account_name="[Aggregate Revenue]",
+                    row_number=0,
+                ),
+                test_name="Revenue Trend Variance",
+                test_key="trend_variance",
+                test_tier=TestTier.STATISTICAL,
+                severity=severity,
+                issue=f"Revenue {direction} of {abs(variance_pct):.1%}: "
+                f"${current_total:,.2f} vs prior ${config.prior_period_total:,.2f}",
+                confidence=0.85,
+                details={
+                    "current_total": round(current_total, 2),
+                    "prior_total": round(config.prior_period_total, 2),
+                    "variance_pct": round(variance_pct, 4),
+                    "direction": direction,
+                },
+            )
+        )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return RevenueTestResult(
@@ -1153,7 +1235,7 @@ def test_concentration_risk(
 
     Flags if a single account represents >50% of total revenue.
     """
-    total_revenue = math.fsum(abs(e.amount) for e in entries)
+    total_revenue = sum((abs(e.amount) for e in entries), Decimal("0"))
     if total_revenue == 0:
         return RevenueTestResult(
             test_name="Revenue Concentration Risk",
@@ -1168,11 +1250,11 @@ def test_concentration_risk(
         )
 
     # Group by account
-    account_totals: dict[str, float] = {}
+    account_totals: dict[str, Decimal] = {}
     account_entries: dict[str, list[RevenueEntry]] = {}
     for e in entries:
         key = (e.account_name or e.account_number or "unknown").lower().strip()
-        account_totals[key] = account_totals.get(key, 0) + abs(e.amount)
+        account_totals[key] = account_totals.get(key, Decimal("0")) + abs(e.amount)
         account_entries.setdefault(key, []).append(e)
 
     flagged: list[FlaggedRevenue] = []
@@ -1183,21 +1265,23 @@ def test_concentration_risk(
 
         severity = Severity.HIGH if pct > 0.70 else Severity.MEDIUM
         for e in account_entries[acct]:
-            flagged.append(FlaggedRevenue(
-                entry=e,
-                test_name="Revenue Concentration Risk",
-                test_key="concentration_risk",
-                test_tier=TestTier.STATISTICAL,
-                severity=severity,
-                issue=f"Account '{acct}' represents {pct:.1%} of total revenue (${acct_total:,.2f}/${total_revenue:,.2f})",
-                confidence=0.80,
-                details={
-                    "account": acct,
-                    "account_total": round(acct_total, 2),
-                    "total_revenue": round(total_revenue, 2),
-                    "concentration_pct": round(pct, 4),
-                },
-            ))
+            flagged.append(
+                FlaggedRevenue(
+                    entry=e,
+                    test_name="Revenue Concentration Risk",
+                    test_key="concentration_risk",
+                    test_tier=TestTier.STATISTICAL,
+                    severity=severity,
+                    issue=f"Account '{acct}' represents {pct:.1%} of total revenue (${acct_total:,.2f}/${total_revenue:,.2f})",
+                    confidence=0.80,
+                    details={
+                        "account": acct,
+                        "account_total": round(acct_total, 2),
+                        "total_revenue": round(total_revenue, 2),
+                        "concentration_pct": round(pct, 4),
+                    },
+                )
+            )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return RevenueTestResult(
@@ -1278,21 +1362,23 @@ def test_cutoff_risk(
         amt = abs(e.amount)
         severity = Severity.HIGH if amt > 50000 else Severity.MEDIUM if amt > 10000 else Severity.LOW
 
-        flagged.append(FlaggedRevenue(
-            entry=e,
-            test_name="Cut-Off Risk",
-            test_key="cutoff_risk",
-            test_tier=TestTier.STATISTICAL,
-            severity=severity,
-            issue=f"Revenue ${amt:,.2f} near {boundary_type} ({e.date})",
-            confidence=0.70,
-            details={
-                "boundary_type": boundary_type,
-                "entry_date": str(d),
-                "period_start": str(p_start),
-                "period_end": str(p_end),
-            },
-        ))
+        flagged.append(
+            FlaggedRevenue(
+                entry=e,
+                test_name="Cut-Off Risk",
+                test_key="cutoff_risk",
+                test_tier=TestTier.STATISTICAL,
+                severity=severity,
+                issue=f"Revenue ${amt:,.2f} near {boundary_type} ({e.date})",
+                confidence=0.70,
+                details={
+                    "boundary_type": boundary_type,
+                    "entry_date": str(d),
+                    "period_start": str(p_start),
+                    "period_end": str(p_end),
+                },
+            )
+        )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return RevenueTestResult(
@@ -1314,8 +1400,15 @@ def test_cutoff_risk(
 
 # Expected Benford's Law first digit distribution
 BENFORD_EXPECTED = {
-    1: 0.301, 2: 0.176, 3: 0.125, 4: 0.097,
-    5: 0.079, 6: 0.067, 7: 0.058, 8: 0.051, 9: 0.046,
+    1: 0.301,
+    2: 0.176,
+    3: 0.125,
+    4: 0.097,
+    5: 0.079,
+    6: 0.067,
+    7: 0.058,
+    8: 0.051,
+    9: 0.046,
 }
 
 
@@ -1382,25 +1475,27 @@ def test_benford_law(
     if chi_sq > config.benford_chi_sq_threshold:
         severity = Severity.HIGH if chi_sq > config.benford_chi_sq_threshold * 2 else Severity.MEDIUM
 
-        flagged.append(FlaggedRevenue(
-            entry=RevenueEntry(
-                amount=0,
-                account_name="[Benford's Law Analysis]",
-                row_number=0,
-            ),
-            test_name="Benford's Law Analysis",
-            test_key="benford_law",
-            test_tier=TestTier.ADVANCED,
-            severity=severity,
-            issue=f"Revenue data deviates from Benford's Law (chi-squared: {chi_sq:.2f}, threshold: {config.benford_chi_sq_threshold:.2f})",
-            confidence=min(0.70 + (chi_sq / config.benford_chi_sq_threshold - 1) * 0.1, 0.95),
-            details={
-                "chi_squared": round(chi_sq, 2),
-                "threshold": config.benford_chi_sq_threshold,
-                "sample_size": n,
-                "digit_analysis": digit_details,
-            },
-        ))
+        flagged.append(
+            FlaggedRevenue(
+                entry=RevenueEntry(
+                    amount=0,
+                    account_name="[Benford's Law Analysis]",
+                    row_number=0,
+                ),
+                test_name="Benford's Law Analysis",
+                test_key="benford_law",
+                test_tier=TestTier.ADVANCED,
+                severity=severity,
+                issue=f"Revenue data deviates from Benford's Law (chi-squared: {chi_sq:.2f}, threshold: {config.benford_chi_sq_threshold:.2f})",
+                confidence=min(0.70 + (chi_sq / config.benford_chi_sq_threshold - 1) * 0.1, 0.95),
+                details={
+                    "chi_squared": round(chi_sq, 2),
+                    "threshold": config.benford_chi_sq_threshold,
+                    "sample_size": n,
+                    "digit_analysis": digit_details,
+                },
+            )
+        )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return RevenueTestResult(
@@ -1451,21 +1546,23 @@ def test_duplicate_entries(
         severity = Severity.HIGH if abs(amt) > 10000 else Severity.MEDIUM
 
         for e in group:
-            flagged.append(FlaggedRevenue(
-                entry=e,
-                test_name="Duplicate Revenue Entries",
-                test_key="duplicate_entries",
-                test_tier=TestTier.ADVANCED,
-                severity=severity,
-                issue=f"Duplicate: ${abs(amt):,.2f} on {entry_date} in {acct or 'unknown account'} ({len(group)} occurrences)",
-                confidence=0.90,
-                details={
-                    "duplicate_count": len(group),
-                    "amount": amt,
-                    "date": entry_date,
-                    "account": acct,
-                },
-            ))
+            flagged.append(
+                FlaggedRevenue(
+                    entry=e,
+                    test_name="Duplicate Revenue Entries",
+                    test_key="duplicate_entries",
+                    test_tier=TestTier.ADVANCED,
+                    severity=severity,
+                    issue=f"Duplicate: ${abs(amt):,.2f} on {entry_date} in {acct or 'unknown account'} ({len(group)} occurrences)",
+                    confidence=0.90,
+                    details={
+                        "duplicate_count": len(group),
+                        "amount": amt,
+                        "date": entry_date,
+                        "account": acct,
+                    },
+                )
+            )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return RevenueTestResult(
@@ -1489,8 +1586,8 @@ def test_contra_revenue_anomalies(
 
     Flags if returns/allowances exceed 15% of gross revenue.
     """
-    gross_revenue = 0.0
-    contra_revenue = 0.0
+    gross_revenue = Decimal("0")
+    contra_revenue = Decimal("0")
     contra_entries: list[RevenueEntry] = []
 
     for e in entries:
@@ -1521,20 +1618,22 @@ def test_contra_revenue_anomalies(
         severity = Severity.HIGH if contra_pct > 0.25 else Severity.MEDIUM
 
         for e in contra_entries:
-            flagged.append(FlaggedRevenue(
-                entry=e,
-                test_name="Contra-Revenue Anomalies",
-                test_key="contra_revenue_anomalies",
-                test_tier=TestTier.ADVANCED,
-                severity=severity,
-                issue=f"Contra-revenue: ${abs(e.amount):,.2f} — total contra is {contra_pct:.1%} of gross revenue",
-                confidence=0.80,
-                details={
-                    "contra_pct": round(contra_pct, 4),
-                    "contra_total": round(contra_revenue, 2),
-                    "gross_revenue": round(gross_revenue, 2),
-                },
-            ))
+            flagged.append(
+                FlaggedRevenue(
+                    entry=e,
+                    test_name="Contra-Revenue Anomalies",
+                    test_key="contra_revenue_anomalies",
+                    test_tier=TestTier.ADVANCED,
+                    severity=severity,
+                    issue=f"Contra-revenue: ${abs(e.amount):,.2f} — total contra is {contra_pct:.1%} of gross revenue",
+                    confidence=0.80,
+                    details={
+                        "contra_pct": round(contra_pct, 4),
+                        "contra_total": round(contra_revenue, 2),
+                        "gross_revenue": round(gross_revenue, 2),
+                    },
+                )
+            )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return RevenueTestResult(
@@ -1553,6 +1652,7 @@ def test_contra_revenue_anomalies(
 # =============================================================================
 # TIER 4 — CONTRACT-AWARE TESTS (ASC 606 / IFRS 15 — Sprint 350/351)
 # =============================================================================
+
 
 def _skipped_contract_result(
     test_name: str,
@@ -1588,22 +1688,26 @@ def _run_contract_tests(
     if evidence is None or evidence.level == "none":
         return [
             _skipped_contract_result(
-                "Recognition Before Satisfaction", "recognition_before_satisfaction",
+                "Recognition Before Satisfaction",
+                "recognition_before_satisfaction",
                 "Flags revenue recognized before obligation satisfaction date (ASC 606-10-25-30)",
                 "No contract data columns detected",
             ),
             _skipped_contract_result(
-                "Missing Obligation Linkage", "missing_obligation_linkage",
+                "Missing Obligation Linkage",
+                "missing_obligation_linkage",
                 "Flags entries missing performance obligation linkage (ASC 606 Step 2)",
                 "No contract data columns detected",
             ),
             _skipped_contract_result(
-                "Modification Treatment Mismatch", "modification_treatment_mismatch",
+                "Modification Treatment Mismatch",
+                "modification_treatment_mismatch",
                 "Flags inconsistent contract modification treatment (ASC 606-10-25-13)",
                 "No contract data columns detected",
             ),
             _skipped_contract_result(
-                "Allocation Inconsistency", "allocation_inconsistency",
+                "Allocation Inconsistency",
+                "allocation_inconsistency",
                 "Flags inconsistent SSP allocation bases within a contract (ASC 606-10-32-33)",
                 "No contract data columns detected",
             ),
@@ -1631,7 +1735,8 @@ def test_recognition_before_satisfaction(
     has_satisfaction_date = "obligation_satisfaction_date" in evidence.detected_fields
     if not has_satisfaction_date:
         return _skipped_contract_result(
-            "Recognition Before Satisfaction", "recognition_before_satisfaction",
+            "Recognition Before Satisfaction",
+            "recognition_before_satisfaction",
             "Flags revenue recognized before obligation satisfaction date (ASC 606-10-25-30)",
             "Obligation satisfaction date column not detected",
         )
@@ -1645,8 +1750,12 @@ def test_recognition_before_satisfaction(
 
         # Auto-exempt over-time recognition
         if e.recognition_method and e.recognition_method.lower().strip() in (
-            "over-time", "over time", "overtime", "percentage of completion",
-            "input method", "output method",
+            "over-time",
+            "over time",
+            "overtime",
+            "percentage of completion",
+            "input method",
+            "output method",
         ):
             continue
 
@@ -1672,26 +1781,25 @@ def test_recognition_before_satisfaction(
             )
         else:
             severity = Severity.MEDIUM
-            issue = (
-                f"Revenue recognized {delta_days} days before obligation satisfaction — "
-                f"potential timing difference"
-            )
+            issue = f"Revenue recognized {delta_days} days before obligation satisfaction — potential timing difference"
 
-        flagged.append(FlaggedRevenue(
-            entry=e,
-            test_name="Recognition Before Satisfaction",
-            test_key="recognition_before_satisfaction",
-            test_tier=TestTier.CONTRACT,
-            severity=severity,
-            issue=issue,
-            confidence=round(min(base_confidence, 1.0), 2),
-            details={
-                "delta_days": delta_days,
-                "entry_date": e.date,
-                "satisfaction_date": e.obligation_satisfaction_date,
-                "recognition_method": e.recognition_method,
-            },
-        ))
+        flagged.append(
+            FlaggedRevenue(
+                entry=e,
+                test_name="Recognition Before Satisfaction",
+                test_key="recognition_before_satisfaction",
+                test_tier=TestTier.CONTRACT,
+                severity=severity,
+                issue=issue,
+                confidence=round(min(base_confidence, 1.0), 2),
+                details={
+                    "delta_days": delta_days,
+                    "entry_date": e.date,
+                    "satisfaction_date": e.obligation_satisfaction_date,
+                    "recognition_method": e.recognition_method,
+                },
+            )
+        )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return RevenueTestResult(
@@ -1722,7 +1830,8 @@ def test_missing_obligation_linkage(
 
     if not has_contract and not has_po:
         return _skipped_contract_result(
-            "Missing Obligation Linkage", "missing_obligation_linkage",
+            "Missing Obligation Linkage",
+            "missing_obligation_linkage",
             "Flags entries missing performance obligation linkage (ASC 606 Step 2)",
             "Neither contract_id nor performance_obligation_id column detected",
         )
@@ -1730,30 +1839,34 @@ def test_missing_obligation_linkage(
     flagged: list[FlaggedRevenue] = []
     for e in entries:
         if has_contract and e.contract_id and (not has_po or not e.performance_obligation_id):
-            flagged.append(FlaggedRevenue(
-                entry=e,
-                test_name="Missing Obligation Linkage",
-                test_key="missing_obligation_linkage",
-                test_tier=TestTier.CONTRACT,
-                severity=Severity.MEDIUM,
-                issue=(
-                    f"Contract {e.contract_id} entry missing performance obligation linkage — "
-                    f"risk indicator for incomplete ASC 606 Step 2 disaggregation"
-                ),
-                confidence=round(evidence.confidence_modifier, 2),
-                details={"contract_id": e.contract_id, "performance_obligation_id": e.performance_obligation_id},
-            ))
+            flagged.append(
+                FlaggedRevenue(
+                    entry=e,
+                    test_name="Missing Obligation Linkage",
+                    test_key="missing_obligation_linkage",
+                    test_tier=TestTier.CONTRACT,
+                    severity=Severity.MEDIUM,
+                    issue=(
+                        f"Contract {e.contract_id} entry missing performance obligation linkage — "
+                        f"risk indicator for incomplete ASC 606 Step 2 disaggregation"
+                    ),
+                    confidence=round(evidence.confidence_modifier, 2),
+                    details={"contract_id": e.contract_id, "performance_obligation_id": e.performance_obligation_id},
+                )
+            )
         elif has_po and e.performance_obligation_id and (not has_contract or not e.contract_id):
-            flagged.append(FlaggedRevenue(
-                entry=e,
-                test_name="Missing Obligation Linkage",
-                test_key="missing_obligation_linkage",
-                test_tier=TestTier.CONTRACT,
-                severity=Severity.LOW,
-                issue=f"Performance obligation {e.performance_obligation_id} entry without parent contract reference",
-                confidence=round(evidence.confidence_modifier, 2),
-                details={"contract_id": e.contract_id, "performance_obligation_id": e.performance_obligation_id},
-            ))
+            flagged.append(
+                FlaggedRevenue(
+                    entry=e,
+                    test_name="Missing Obligation Linkage",
+                    test_key="missing_obligation_linkage",
+                    test_tier=TestTier.CONTRACT,
+                    severity=Severity.LOW,
+                    issue=f"Performance obligation {e.performance_obligation_id} entry without parent contract reference",
+                    confidence=round(evidence.confidence_modifier, 2),
+                    details={"contract_id": e.contract_id, "performance_obligation_id": e.performance_obligation_id},
+                )
+            )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return RevenueTestResult(
@@ -1784,7 +1897,8 @@ def test_modification_treatment_mismatch(
 
     if not has_contract or not has_mod:
         return _skipped_contract_result(
-            "Modification Treatment Mismatch", "modification_treatment_mismatch",
+            "Modification Treatment Mismatch",
+            "modification_treatment_mismatch",
             "Flags inconsistent contract modification treatment (ASC 606-10-25-13)",
             "Requires both contract_id and contract_modification columns",
         )
@@ -1819,45 +1933,49 @@ def test_modification_treatment_mismatch(
         if len(mod_types) > 1:
             # Mixed modification treatments — HIGH
             for e in c_entries:
-                flagged.append(FlaggedRevenue(
-                    entry=e,
-                    test_name="Modification Treatment Mismatch",
-                    test_key="modification_treatment_mismatch",
-                    test_tier=TestTier.CONTRACT,
-                    severity=Severity.HIGH,
-                    issue=(
-                        f"Contract {contract_id} has inconsistent modification treatment: "
-                        f"{', '.join(sorted(mod_types))} — risk indicator for ASC 606-10-25-13 non-compliance"
-                    ),
-                    confidence=round(min(base_confidence, 1.0), 2),
-                    details={
-                        "contract_id": contract_id,
-                        "modification_types": sorted(mod_types),
-                        "modified_count": modified_count,
-                        "unmodified_count": unmodified_count,
-                    },
-                ))
+                flagged.append(
+                    FlaggedRevenue(
+                        entry=e,
+                        test_name="Modification Treatment Mismatch",
+                        test_key="modification_treatment_mismatch",
+                        test_tier=TestTier.CONTRACT,
+                        severity=Severity.HIGH,
+                        issue=(
+                            f"Contract {contract_id} has inconsistent modification treatment: "
+                            f"{', '.join(sorted(mod_types))} — risk indicator for ASC 606-10-25-13 non-compliance"
+                        ),
+                        confidence=round(min(base_confidence, 1.0), 2),
+                        details={
+                            "contract_id": contract_id,
+                            "modification_types": sorted(mod_types),
+                            "modified_count": modified_count,
+                            "unmodified_count": unmodified_count,
+                        },
+                    )
+                )
         elif modified_count > 0 and unmodified_count > 0:
             # Partial modification tracking — MEDIUM
             for e in c_entries:
-                flagged.append(FlaggedRevenue(
-                    entry=e,
-                    test_name="Modification Treatment Mismatch",
-                    test_key="modification_treatment_mismatch",
-                    test_tier=TestTier.CONTRACT,
-                    severity=Severity.MEDIUM,
-                    issue=(
-                        f"Contract {contract_id} has {modified_count} modified and "
-                        f"{unmodified_count} unmodified entries — partial modification tracking"
-                    ),
-                    confidence=round(min(base_confidence * 0.9, 1.0), 2),
-                    details={
-                        "contract_id": contract_id,
-                        "modification_types": sorted(mod_types),
-                        "modified_count": modified_count,
-                        "unmodified_count": unmodified_count,
-                    },
-                ))
+                flagged.append(
+                    FlaggedRevenue(
+                        entry=e,
+                        test_name="Modification Treatment Mismatch",
+                        test_key="modification_treatment_mismatch",
+                        test_tier=TestTier.CONTRACT,
+                        severity=Severity.MEDIUM,
+                        issue=(
+                            f"Contract {contract_id} has {modified_count} modified and "
+                            f"{unmodified_count} unmodified entries — partial modification tracking"
+                        ),
+                        confidence=round(min(base_confidence * 0.9, 1.0), 2),
+                        details={
+                            "contract_id": contract_id,
+                            "modification_types": sorted(mod_types),
+                            "modified_count": modified_count,
+                            "unmodified_count": unmodified_count,
+                        },
+                    )
+                )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return RevenueTestResult(
@@ -1888,7 +2006,8 @@ def test_allocation_inconsistency(
 
     if not has_contract or not has_allocation:
         return _skipped_contract_result(
-            "Allocation Inconsistency", "allocation_inconsistency",
+            "Allocation Inconsistency",
+            "allocation_inconsistency",
             "Flags inconsistent SSP allocation bases within a contract (ASC 606-10-32-33)",
             "Requires both contract_id and allocation_basis columns",
         )
@@ -1921,46 +2040,50 @@ def test_allocation_inconsistency(
         if len(allocation_bases) > 1:
             # Multiple allocation bases — HIGH
             for e in c_entries:
-                flagged.append(FlaggedRevenue(
-                    entry=e,
-                    test_name="Allocation Inconsistency",
-                    test_key="allocation_inconsistency",
-                    test_tier=TestTier.CONTRACT,
-                    severity=Severity.HIGH,
-                    issue=(
-                        f"Contract {contract_id} uses {len(allocation_bases)} allocation bases "
-                        f"({', '.join(sorted(allocation_bases))}) — risk indicator for inconsistent "
-                        f"SSP allocation (ASC 606-10-32-33)"
-                    ),
-                    confidence=round(min(base_confidence, 1.0), 2),
-                    details={
-                        "contract_id": contract_id,
-                        "allocation_bases": sorted(allocation_bases),
-                        "filled_count": filled_count,
-                        "total_count": total_count,
-                    },
-                ))
+                flagged.append(
+                    FlaggedRevenue(
+                        entry=e,
+                        test_name="Allocation Inconsistency",
+                        test_key="allocation_inconsistency",
+                        test_tier=TestTier.CONTRACT,
+                        severity=Severity.HIGH,
+                        issue=(
+                            f"Contract {contract_id} uses {len(allocation_bases)} allocation bases "
+                            f"({', '.join(sorted(allocation_bases))}) — risk indicator for inconsistent "
+                            f"SSP allocation (ASC 606-10-32-33)"
+                        ),
+                        confidence=round(min(base_confidence, 1.0), 2),
+                        details={
+                            "contract_id": contract_id,
+                            "allocation_bases": sorted(allocation_bases),
+                            "filled_count": filled_count,
+                            "total_count": total_count,
+                        },
+                    )
+                )
         elif filled_count > 0 and filled_count < total_count:
             # Sparse allocation basis — LOW
             for e in c_entries:
-                flagged.append(FlaggedRevenue(
-                    entry=e,
-                    test_name="Allocation Inconsistency",
-                    test_key="allocation_inconsistency",
-                    test_tier=TestTier.CONTRACT,
-                    severity=Severity.LOW,
-                    issue=(
-                        f"Contract {contract_id} has {filled_count}/{total_count} entries with "
-                        f"allocation basis — incomplete allocation documentation"
-                    ),
-                    confidence=round(min(base_confidence, 1.0), 2),
-                    details={
-                        "contract_id": contract_id,
-                        "allocation_bases": sorted(allocation_bases),
-                        "filled_count": filled_count,
-                        "total_count": total_count,
-                    },
-                ))
+                flagged.append(
+                    FlaggedRevenue(
+                        entry=e,
+                        test_name="Allocation Inconsistency",
+                        test_key="allocation_inconsistency",
+                        test_tier=TestTier.CONTRACT,
+                        severity=Severity.LOW,
+                        issue=(
+                            f"Contract {contract_id} has {filled_count}/{total_count} entries with "
+                            f"allocation basis — incomplete allocation documentation"
+                        ),
+                        confidence=round(min(base_confidence, 1.0), 2),
+                        details={
+                            "contract_id": contract_id,
+                            "allocation_bases": sorted(allocation_bases),
+                            "filled_count": filled_count,
+                            "total_count": total_count,
+                        },
+                    )
+                )
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return RevenueTestResult(
@@ -1979,6 +2102,7 @@ def test_allocation_inconsistency(
 # =============================================================================
 # TEST BATTERY + SCORING
 # =============================================================================
+
 
 def run_revenue_test_battery(
     entries: list[RevenueEntry],
@@ -2045,6 +2169,7 @@ def calculate_revenue_composite_score(
 # MAIN ENTRY POINT
 # =============================================================================
 
+
 def run_revenue_testing(
     rows: list[dict],
     column_names: list[str],
@@ -2070,12 +2195,22 @@ def run_revenue_testing(
 
     # Apply manual overrides
     if column_mapping:
-        for attr in ("date_column", "amount_column", "account_name_column",
-                     "account_number_column", "description_column",
-                     "entry_type_column", "reference_column", "posted_by_column",
-                     "contract_id_column", "performance_obligation_id_column",
-                     "recognition_method_column", "contract_modification_column",
-                     "allocation_basis_column", "obligation_satisfaction_date_column"):
+        for attr in (
+            "date_column",
+            "amount_column",
+            "account_name_column",
+            "account_number_column",
+            "description_column",
+            "entry_type_column",
+            "reference_column",
+            "posted_by_column",
+            "contract_id_column",
+            "performance_obligation_id_column",
+            "recognition_method_column",
+            "contract_modification_column",
+            "allocation_basis_column",
+            "obligation_satisfaction_date_column",
+        ):
             if attr in column_mapping:
                 setattr(detection, attr, column_mapping[attr])
         detection.overall_confidence = 1.0

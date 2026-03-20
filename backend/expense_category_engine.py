@@ -13,12 +13,13 @@ Prior comparison is aggregate-only (COGS, OpEx, Total from DiagnosticSummary).
 Guardrail: raw metrics only — no evaluative language.
 """
 
-import math
 from dataclasses import dataclass, field
+from decimal import Decimal
 from typing import Optional
 
 from column_detector import detect_columns
 from ratio_engine import COGS_KEYWORDS
+from shared.parsing_helpers import safe_decimal
 
 # ═══════════════════════════════════════════════════════════════
 # Sub-category keyword lists
@@ -210,8 +211,12 @@ def compute_expense_categories(
     if not account_balances:
         return ExpenseCategoryReport()
 
+    # Convert float parameters to Decimal for consistent arithmetic
+    total_revenue = safe_decimal(total_revenue) if total_revenue is not None else Decimal("0")
+    materiality_threshold = safe_decimal(materiality_threshold)
+
     # Accumulate amounts by sub-category
-    category_amounts: dict[str, float] = {k: 0.0 for k in CATEGORY_ORDER}
+    category_amounts: dict[str, Decimal] = {k: Decimal("0") for k in CATEGORY_ORDER}
     expense_types = {"expense"}
 
     for acct_name, bals in account_balances.items():
@@ -220,7 +225,7 @@ def compute_expense_categories(
             continue
 
         # Net balance (expenses are typically debit-heavy)
-        net = bals["debit"] - bals["credit"]
+        net = safe_decimal(bals["debit"]) - safe_decimal(bals["credit"])
         if abs(net) < NEAR_ZERO:
             continue
 
@@ -230,7 +235,7 @@ def compute_expense_categories(
 
         category_amounts[subcategory] += net
 
-    total_expenses = math.fsum(category_amounts.values())
+    total_expenses = sum(category_amounts.values(), Decimal("0"))
     revenue_available = abs(total_revenue) > NEAR_ZERO
     prior_available = prior_total_expenses is not None
 
@@ -256,11 +261,12 @@ def compute_expense_categories(
                 prior_total_expenses,
             )
             if prior_amt is not None:
+                prior_dec = safe_decimal(prior_amt)
                 cat.prior_amount = prior_amt
                 if prior_revenue is not None and abs(prior_revenue) > NEAR_ZERO:
                     cat.prior_pct_of_revenue = prior_amt / prior_revenue * 100
-                cat.dollar_change = amount - prior_amt
-                cat.exceeds_threshold = abs(amount - prior_amt) > materiality_threshold
+                cat.dollar_change = amount - prior_dec
+                cat.exceeds_threshold = abs(amount - prior_dec) > materiality_threshold
 
         categories.append(cat)
 
@@ -333,24 +339,18 @@ def run_expense_category_analytics(
         if not acct_str:
             continue
 
-        try:
-            debit = float(row.get(debit_col) or 0)
-        except (ValueError, TypeError):
-            debit = 0.0
-        try:
-            credit = float(row.get(credit_col) or 0)
-        except (ValueError, TypeError):
-            credit = 0.0
+        debit = safe_decimal(row.get(debit_col))
+        credit = safe_decimal(row.get(credit_col))
 
         if acct_str not in account_balances:
-            account_balances[acct_str] = {"debit": 0.0, "credit": 0.0}
+            account_balances[acct_str] = {"debit": Decimal("0"), "credit": Decimal("0")}
         account_balances[acct_str]["debit"] += debit
         account_balances[acct_str]["credit"] += credit
 
     # Classify accounts
     classifier = create_classifier()
     classified_accounts: dict[str, str] = {}
-    total_revenue = 0.0
+    total_revenue = Decimal("0")
     for acct_name, bals in account_balances.items():
         net = bals["debit"] - bals["credit"]
         cls_result = classifier.classify(acct_name, net)
