@@ -230,6 +230,43 @@ def _estimate_xlsx_row_count(file_bytes: bytes) -> int:
         return 0
 
 
+def _sniff_text_format(file_bytes: bytes, declared_extension: str) -> bool:
+    """Perform lightweight content validation for text-based upload formats.
+
+    Returns True if the content is consistent with the declared extension.
+    Does not validate binary formats (those use magic-byte checks).
+    """
+    header = file_bytes[:512]
+    if not header:
+        return True
+
+    try:
+        header_text = header.decode("utf-8", errors="replace")
+    except Exception:
+        header_text = ""
+
+    ext = declared_extension.lower()
+
+    if ext in (".csv", ".tsv", ".txt"):
+        # Reject if binary null bytes are present (binary file masquerading as text)
+        return b"\x00" not in header
+
+    if ext == ".qbo":
+        # QBO is OFX-flavored XML; must contain OFXHEADER or <OFX
+        upper = header_text.upper()
+        return "OFXHEADER" in upper or "<OFX" in upper
+
+    if ext == ".ofx":
+        upper = header_text.upper()
+        return "OFXHEADER" in upper or "<OFX>" in upper
+
+    if ext == ".iif":
+        # QuickBooks IIF files begin with a tab-delimited header starting with !
+        return header_text.lstrip("\ufeff").startswith("!")
+
+    return True  # Unknown text extension — pass through to parser
+
+
 async def validate_file_size(file: UploadFile) -> bytes:
     """Read uploaded file with size, content-type, and extension validation."""
     # Validate file extension
@@ -331,6 +368,19 @@ async def validate_file_size(file: UploadFile) -> bytes:
                 detail="File appears to be a binary spreadsheet. "
                 "Please use the correct .xlsx or .xls extension, "
                 "or provide a valid text-based file.",
+            )
+
+    # Server-side content sniff for text-based formats
+    if ext in (".csv", ".tsv", ".txt", ".qbo", ".ofx", ".iif"):
+        if not _sniff_text_format(file_bytes, ext):
+            log_secure_operation(
+                "content_sniff_rejected",
+                f"File '{file.filename}' content inconsistent with declared extension {ext}",
+            )
+            raise HTTPException(
+                status_code=400,
+                detail="The uploaded file content does not match the expected format for "
+                f"'{ext}' files. Please verify the file and try again.",
             )
 
     # Archive bomb inspection for ZIP containers (XLSX is ZIP-based)
