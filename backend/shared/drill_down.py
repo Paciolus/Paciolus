@@ -6,6 +6,7 @@ Used by JET, APT, RVT, ARA, and other testing memo generators to surface
 rich detail data that already exists in engine result dataclasses.
 """
 
+from decimal import Decimal, InvalidOperation
 from typing import Any, Optional
 
 from reportlab.platypus import (
@@ -112,13 +113,28 @@ def build_drill_down_table(
 
 
 def format_currency(value: Any) -> str:
-    """Format a numeric value as currency string."""
+    """Format a numeric value as currency string.
+
+    Accepts Decimal, int, float, or string representations.
+    Uses Decimal internally to avoid float precision loss.
+    """
     try:
-        v = float(value)
-        if v < 0:
-            return f"-${abs(v):,.2f}"
-        return f"${v:,.2f}"
-    except (TypeError, ValueError):
+        if isinstance(value, Decimal):
+            d = value
+        elif isinstance(value, (int, float)):
+            d = Decimal(str(value))
+        elif isinstance(value, str):
+            # Strip currency formatting before parsing
+            cleaned = value.replace("$", "").replace(",", "").strip()
+            if cleaned.startswith("(") and cleaned.endswith(")"):
+                cleaned = "-" + cleaned[1:-1]
+            d = Decimal(cleaned)
+        else:
+            d = Decimal(str(value))
+        if d < 0:
+            return f"-${abs(d):,.2f}"
+        return f"${d:,.2f}"
+    except (TypeError, ValueError, InvalidOperation):
         return str(value) if value is not None else "—"
 
 

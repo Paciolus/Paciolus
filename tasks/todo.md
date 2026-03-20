@@ -70,7 +70,7 @@
 - [x] Step 4: Remove post-quantization float casts in auditor/ingestion/ratios
 - [x] Step 5: Remove float cast from engagement materiality serialization
 - [x] Step 6: Remove float reparsing in revenue/payroll/AP memo generators
-- [ ] Step 7: Accept Decimal in drill_down format_currency helper
+- [x] Step 7: Accept Decimal in drill_down format_currency helper
 - **Status:** IN PROGRESS
 
 ### Sprint 562: Complete All Deferred Items
