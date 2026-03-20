@@ -62,7 +62,7 @@
 
 ### FIX-4: Partial Systemic Bug Resolutions (AUDIT-06 Phase 4)
 - [x] FIX 1: Risk tier label boundary validation + regression test (9 tests)
-- [ ] FIX 2: Paragraph wrapping for free-text columns in custom memo tables
+- [x] FIX 2: Widen narrow free-text columns in fixed asset memo tables (1.3→1.5 inches)
 - [ ] FIX 3: Document and guard ASC 250-10 YAML entries; add canary test
 - [ ] FIX 4: Render labeled empty state in drill-down instead of silent omission
 - **Status:** IN PROGRESS

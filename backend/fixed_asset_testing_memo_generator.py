@@ -498,7 +498,7 @@ def _build_over_depreciation_table(
     style_cmds = ledger_table_style() + [("ALIGN", (4, 0), (-1, -1), "RIGHT")]
     table = Table(
         table_data,
-        colWidths=[0.7 * inch, 1.3 * inch, 0.8 * inch, 0.9 * inch, 0.9 * inch, 0.9 * inch, 0.9 * inch],
+        colWidths=[0.6 * inch, 1.5 * inch, 0.7 * inch, 0.9 * inch, 0.9 * inch, 0.9 * inch, 0.9 * inch],
         repeatRows=1,
     )
     table.setStyle(TableStyle(style_cmds))
@@ -585,7 +585,7 @@ def _build_negative_cost_table(
     style_cmds = ledger_table_style() + [("ALIGN", (3, 0), (3, -1), "RIGHT")]
     table = Table(
         table_data,
-        colWidths=[0.9 * inch, 1.3 * inch, 0.9 * inch, 1.0 * inch, 1.0 * inch, 1.1 * inch],
+        colWidths=[0.8 * inch, 1.5 * inch, 0.9 * inch, 1.0 * inch, 1.0 * inch, 1.0 * inch],
         repeatRows=1,
     )
     table.setStyle(TableStyle(style_cmds))
