@@ -11,7 +11,6 @@ Key design decisions:
 - Zero-Storage: rate tables session-scoped, never persisted
 """
 
-import math
 import re
 from dataclasses import dataclass, field
 from datetime import date, datetime
@@ -297,7 +296,7 @@ class ConversionFlag:
 
     account_number: str
     account_name: str
-    original_amount: float
+    original_amount: Decimal
     original_currency: str
     issue: str  # "missing_rate" | "missing_currency_code" | "invalid_currency" | "stale_rate"
     severity: str  # "high" | "medium" | "low"
@@ -319,10 +318,10 @@ class CurrencyExposure:
 
     currency: str
     account_count: int
-    foreign_total: float
+    foreign_total: Decimal
     rate: str  # rate applied or "N/A"
-    usd_equivalent: float
-    pct_of_total: float
+    usd_equivalent: Decimal
+    pct_of_total: Decimal
 
     def to_dict(self) -> dict:
         return {
@@ -713,7 +712,7 @@ def convert_trial_balance(
     rate_lookup = _build_rate_lookup(rate_table.rates)
 
     # Vectorized conversion: build rate and issue columns
-    converted_amounts: list[Optional[float]] = []
+    converted_amounts: list[Optional[Decimal]] = []
     flags: list[ConversionFlag] = []
     rates_applied: dict[str, str] = {}
 
@@ -759,14 +758,14 @@ def convert_trial_balance(
                     ConversionFlag(
                         account_number=acct_num,
                         account_name=acct_name,
-                        original_amount=float(amount),
+                        original_amount=amount,
                         original_currency=row_currency or "(none)",
                         issue="missing_currency_code",
                         severity="medium",
                     )
                 )
                 unconverted_count += 1
-            converted_amounts.append(float(amount))  # Pass through as-is
+            converted_amounts.append(amount)  # Pass through as-is
             continue
 
         rate_info = currency_rates.get(row_currency)
@@ -786,7 +785,7 @@ def convert_trial_balance(
                 ConversionFlag(
                     account_number=acct_num,
                     account_name=acct_name,
-                    original_amount=float(amount),
+                    original_amount=amount,
                     original_currency=row_currency,
                     issue="missing_rate",
                     severity="medium",  # Recalculated below
@@ -799,7 +798,7 @@ def convert_trial_balance(
         rate, issue = rate_info
         assert rate is not None  # guarded by rate_info[0] is None check above
         converted = (amount * rate).quantize(INTERNAL_PRECISION, rounding=ROUND_HALF_EVEN)
-        converted_amounts.append(float(converted))
+        converted_amounts.append(converted)
         converted_count += 1
 
         if issue == "stale_rate":
@@ -817,7 +816,7 @@ def convert_trial_balance(
                 ConversionFlag(
                     account_number=acct_num,
                     account_name=acct_name,
-                    original_amount=float(amount),
+                    original_amount=amount,
                     original_currency=row_currency,
                     issue="stale_rate",
                     severity="low",
@@ -878,7 +877,7 @@ def _build_currency_exposure(
         return []
 
     exposure: list[CurrencyExposure] = []
-    total_usd = 0.0
+    total_usd = Decimal("0")
 
     for curr in sorted(df["_currency_normalized"].unique()):
         if not curr or len(curr) != 3:
@@ -886,19 +885,22 @@ def _build_currency_exposure(
         mask = df["_currency_normalized"] == curr
         acct_count = int(mask.sum())
 
-        # Foreign currency total (original amounts)
-        try:
-            foreign_total = float(df.loc[mask, amount_column].fillna(0).astype(float).sum())
-        except (ValueError, TypeError):
-            foreign_total = 0.0
-
-        # USD equivalent (converted amounts)
-        usd_equiv = 0.0
-        if converted_col_name in df.columns:
+        # Foreign currency total (original amounts) — aggregate as Decimal
+        foreign_total = Decimal("0")
+        for v in df.loc[mask, amount_column].dropna():
             try:
-                usd_equiv = float(df.loc[mask, converted_col_name].fillna(0).astype(float).sum())
-            except (ValueError, TypeError):
-                usd_equiv = 0.0
+                foreign_total += Decimal(str(v))
+            except (InvalidOperation, ValueError):
+                pass
+
+        # USD equivalent (converted amounts) — aggregate as Decimal
+        usd_equiv = Decimal("0")
+        if converted_col_name in df.columns:
+            for v in df.loc[mask, converted_col_name].dropna():
+                try:
+                    usd_equiv += Decimal(str(v))
+                except (InvalidOperation, ValueError):
+                    pass
 
         # Rate applied
         rate_key = f"{curr}/{presentation_currency}"
@@ -909,17 +911,21 @@ def _build_currency_exposure(
             CurrencyExposure(
                 currency=curr,
                 account_count=acct_count,
-                foreign_total=round(foreign_total, 2),
+                foreign_total=foreign_total.quantize(DISPLAY_PRECISION, rounding=ROUND_HALF_EVEN),
                 rate=rate_str,
-                usd_equivalent=round(usd_equiv, 2),
-                pct_of_total=0.0,  # Calculated below
+                usd_equivalent=usd_equiv.quantize(DISPLAY_PRECISION, rounding=ROUND_HALF_EVEN),
+                pct_of_total=Decimal("0"),  # Calculated below
             )
         )
 
     # Calculate percentages
     if total_usd != 0:
         for exp in exposure:
-            exp.pct_of_total = round(abs(exp.usd_equivalent) / abs(total_usd) * 100, 1) if total_usd else 0.0
+            exp.pct_of_total = (
+                (abs(exp.usd_equivalent) / abs(total_usd) * 100).quantize(Decimal("0.1"), rounding=ROUND_HALF_EVEN)
+                if total_usd
+                else Decimal("0")
+            )
 
     return exposure
 
@@ -933,9 +939,13 @@ def _recalculate_flag_severity(
     if not flags or amount_column not in df.columns:
         return
 
-    # Calculate total absolute amount
+    # Calculate total absolute amount using Decimal aggregation
+    total = Decimal("0")
     try:
-        total = Decimal(str(math.fsum(abs(float(v)) for v in df[amount_column].dropna() if str(v).strip())))
+        for v in df[amount_column].dropna():
+            s = str(v).strip()
+            if s:
+                total += abs(Decimal(s))
     except (ValueError, InvalidOperation):
         return
 
@@ -944,7 +954,7 @@ def _recalculate_flag_severity(
 
     for flag in flags:
         if flag.issue in ("missing_rate", "missing_currency_code"):
-            ratio = Decimal(str(abs(flag.original_amount))) / total
+            ratio = abs(Decimal(str(flag.original_amount))) / total
             if ratio > SEVERITY_HIGH_THRESHOLD:
                 flag.severity = "high"
             elif ratio > SEVERITY_MEDIUM_THRESHOLD:

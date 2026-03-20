@@ -481,7 +481,7 @@ class TestEdgeCases:
         converted = result.converted_rows[0]["converted_amount_usd"]
         assert converted is not None
         # 9999999.99 * 1.05234 ≈ 10523399.9895
-        assert abs(converted - 10523399.9895) < 0.01
+        assert abs(converted - Decimal("10523399.9895")) < Decimal("0.01")
 
     def test_none_amount_treated_as_zero(self):
         rates = [ExchangeRate(date(2026, 1, 31), "EUR", "USD", Decimal("1.05"))]
