@@ -92,7 +92,8 @@ async def create_share(
     db: Session = Depends(get_db),
 ):
     """Create a shareable export link. Professional+ only."""
-    check_export_sharing_access(user)
+    # AUDIT-08: pass db so subscription status is checked (not sessionless fallback)
+    check_export_sharing_access(user, db)
 
     import base64
     import binascii
