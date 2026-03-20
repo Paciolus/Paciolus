@@ -234,7 +234,7 @@ class TestAPExtraction:
         totals = CategoryTotals(accounts_payable=25000)
         d = totals.to_dict()
         assert "accounts_payable" in d
-        assert d["accounts_payable"] == 25000
+        assert d["accounts_payable"] == "25000.00"
 
     def test_ap_from_dict_round_trip(self):
         """accounts_payable survives to_dict → from_dict round trip."""

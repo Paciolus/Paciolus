@@ -19,6 +19,7 @@ from ratio_engine import (
 # Test Fixtures
 # =============================================================================
 
+
 @pytest.fixture
 def healthy_company_totals():
     """A company with healthy financial ratios."""
@@ -77,6 +78,7 @@ def empty_totals():
 # CommonSizeAnalyzer Tests
 # =============================================================================
 
+
 class TestCommonSizeAnalyzer:
     """Test cases for Common-Size analysis."""
 
@@ -120,6 +122,7 @@ class TestCommonSizeAnalyzer:
 # =============================================================================
 # VarianceAnalyzer Tests
 # =============================================================================
+
 
 class TestVarianceAnalyzer:
     """Test cases for Variance analysis."""
@@ -203,6 +206,7 @@ class TestVarianceAnalyzer:
 # CategoryTotals Tests
 # =============================================================================
 
+
 class TestCategoryTotals:
     """Test cases for CategoryTotals dataclass."""
 
@@ -222,7 +226,7 @@ class TestCategoryTotals:
         assert totals.operating_expenses == 0.0  # Sprint 26
 
     def test_to_dict_rounding(self):
-        """Test that to_dict rounds values to 2 decimal places."""
+        """Test that to_dict rounds values to 2 decimal places (returns strings)."""
         totals = CategoryTotals(
             total_assets=100000.1234,
             current_assets=50000.5678,
@@ -230,9 +234,9 @@ class TestCategoryTotals:
         )
         result = totals.to_dict()
 
-        assert result["total_assets"] == 100000.12
-        assert result["current_assets"] == 50000.57
-        assert result["operating_expenses"] == 25001.0  # Sprint 26
+        assert result["total_assets"] == "100000.12"
+        assert result["current_assets"] == "50000.57"
+        assert result["operating_expenses"] == "25001.00"  # Sprint 26
 
     def test_from_dict_creation(self):
         """Test creating CategoryTotals from a dictionary."""
@@ -263,6 +267,7 @@ class TestCategoryTotals:
 # =============================================================================
 # extract_category_totals Tests
 # =============================================================================
+
 
 class TestExtractCategoryTotals:
     """Test cases for extracting category totals from account balances."""
@@ -375,6 +380,7 @@ class TestExtractCategoryTotals:
 # =============================================================================
 # calculate_analytics Integration Tests
 # =============================================================================
+
 
 class TestCalculateAnalytics:
     """Integration tests for the calculate_analytics function."""

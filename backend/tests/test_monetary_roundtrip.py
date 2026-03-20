@@ -125,16 +125,16 @@ class TestDBRoundtrip:
         fetched = db_session.query(DiagnosticSummary).filter_by(id=summary.id).one()
         d = fetched.to_dict()
 
-        # to_dict() wraps in float() — verify 2dp preserved
-        assert d["total_assets"] == 999999999999.99
-        assert d["total_liabilities"] == 500000000000.50
-        assert d["total_equity"] == 499999999999.49
-        assert d["total_debits"] == 1500000000000.49
-        assert d["total_credits"] == 1500000000000.49
-        assert d["materiality_threshold"] == 10000.00
+        # to_dict() wraps in str() — verify 2dp preserved
+        assert d["total_assets"] == "999999999999.99"
+        assert d["total_liabilities"] == "500000000000.50"
+        assert d["total_equity"] == "499999999999.49"
+        assert d["total_debits"] == "1500000000000.49"
+        assert d["total_credits"] == "1500000000000.49"
+        assert d["materiality_threshold"] == "10000.00"
 
     def test_engagement_materiality_roundtrip(self, db_session):
-        """Write Decimal materiality_amount, verify to_dict() float output."""
+        """Write Decimal materiality_amount, verify to_dict() string output."""
         from datetime import UTC, datetime
 
         from engagement_model import Engagement, EngagementStatus
@@ -161,10 +161,12 @@ class TestDBRoundtrip:
 
         fetched = db_session.query(Engagement).filter_by(id=eng.id).one()
         d = fetched.to_dict()
-        assert d["materiality_amount"] == 75000.50
+        # to_dict() now returns str(materiality_amount); SQLite Numeric stores as float
+        # so str(Decimal) may be "75000.5" or str(float) "75000.5"
+        assert Decimal(d["materiality_amount"]) == Decimal("75000.50")
 
     def test_activity_log_to_dict_json_types(self, db_session):
-        """ActivityLog.to_dict() monetary fields should be plain float for JSON."""
+        """ActivityLog.to_dict() monetary fields should be plain str for JSON."""
         from models import ActivityLog
 
         log = ActivityLog(
@@ -180,9 +182,9 @@ class TestDBRoundtrip:
 
         fetched = db_session.query(ActivityLog).filter_by(id=log.id).one()
         d = fetched.to_dict()
-        assert isinstance(d["total_debits"], float)
-        assert isinstance(d["total_credits"], float)
-        assert isinstance(d["materiality_threshold"], float)
+        assert isinstance(d["total_debits"], str)
+        assert isinstance(d["total_credits"], str)
+        assert isinstance(d["materiality_threshold"], str)
 
 
 # =============================================================================
@@ -263,12 +265,12 @@ class TestCategoryTotalsQuantization:
         totals = CategoryTotals(total_assets=2.225, total_liabilities=2.235)
         d = totals.to_dict()
         # ROUND_HALF_UP: 2.225 → 2.23, 2.235 → 2.24
-        assert d["total_assets"] == 2.23
-        assert d["total_liabilities"] == 2.24
+        assert d["total_assets"] == "2.23"
+        assert d["total_liabilities"] == "2.24"
 
     def test_to_dict_classic_float_error(self):
         from ratio_engine import CategoryTotals
 
         totals = CategoryTotals(total_revenue=0.1 + 0.2)
         d = totals.to_dict()
-        assert d["total_revenue"] == 0.3
+        assert d["total_revenue"] == "0.30"

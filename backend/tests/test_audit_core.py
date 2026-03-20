@@ -9,6 +9,7 @@ import io
 import os
 import sys
 import tempfile
+from decimal import Decimal
 from pathlib import Path
 
 import pandas as pd
@@ -145,8 +146,8 @@ class TestStreamingAuditor:
         auditor.process_chunk(df, len(df))
 
         result = auditor.get_balance_result()
-        assert result["total_debits"] == 18000.0  # 10000 + 5000 + 3000
-        assert result["total_credits"] == 18000.0  # 15000 + 2000 + 1000
+        assert result["total_debits"] == "18000.00"  # 10000 + 5000 + 3000
+        assert result["total_credits"] == "18000.00"  # 15000 + 2000 + 1000
         assert auditor.total_rows == len(df)
 
     def test_running_totals_multiple_chunks(self, large_csv_bytes):
@@ -164,7 +165,7 @@ class TestStreamingAuditor:
         # Totals should match
         result = auditor.get_balance_result()
         assert result["balanced"] is True
-        assert abs(result["difference"]) < 0.01
+        assert abs(Decimal(result["difference"])) < Decimal("0.01")
 
     def test_account_aggregation(self):
         """Verify same account in multiple chunks is aggregated."""
@@ -193,7 +194,7 @@ class TestStreamingAuditor:
 
         assert result["status"] == "success"
         assert result["balanced"] is True
-        assert abs(result["difference"]) < 0.01
+        assert abs(Decimal(result["difference"])) < Decimal("0.01")
         assert "balanced" in result["message"].lower()
 
     def test_balance_check_unbalanced(self, small_unbalanced_csv):
@@ -206,7 +207,7 @@ class TestStreamingAuditor:
 
         assert result["status"] == "success"
         assert result["balanced"] is False
-        assert result["difference"] == 5000.0  # 10000 - 5000
+        assert result["difference"] == "5000.00"  # 10000 - 5000
         assert "out of balance" in result["message"].lower()
 
     def test_abnormal_asset_credit(self, abnormal_balances_csv):
@@ -389,8 +390,8 @@ class TestEdgeCases:
         assert result["status"] == "success"
         assert result["row_count"] == 0
         assert result["balanced"] is True  # 0 = 0
-        assert result["total_debits"] == 0
-        assert result["total_credits"] == 0
+        assert result["total_debits"] == "0.00"
+        assert result["total_credits"] == "0.00"
 
     def test_non_numeric_values(self, non_numeric_csv):
         """Verify non-numeric values are coerced to 0."""
@@ -401,8 +402,8 @@ class TestEdgeCases:
         assert result["status"] == "success"
         # "abc" and "xyz" should be coerced to 0
         # Only 1000 debit and 500 credit remain
-        assert result["total_debits"] == 1000
-        assert result["total_credits"] == 500
+        assert result["total_debits"] == "1000.00"
+        assert result["total_credits"] == "500.00"
 
     def test_unicode_account_names(self, unicode_csv):
         """Verify Unicode characters in account names handled correctly."""
@@ -424,7 +425,7 @@ Revenue,,999999999999.99
 
         assert result["status"] == "success"
         assert result["balanced"] is True
-        assert result["total_debits"] == 999999999999.99
+        assert result["total_debits"] == "999999999999.99"
 
     def test_negative_values(self):
         """Verify negative values in Debit/Credit columns handled."""
@@ -440,8 +441,8 @@ Asset,1000,
 
         assert result["status"] == "success"
         # -1000 + 1000 = 0 debits, -500 + 500 = 0 credits
-        assert result["total_debits"] == 0
-        assert result["total_credits"] == 0
+        assert result["total_debits"] == "0.00"
+        assert result["total_credits"] == "0.00"
 
 
 # =============================================================================

@@ -221,9 +221,9 @@ def _build_revenue_quality_indicators(
 
     # Compute HIGH-risk aggregate
     test_results = result.get("test_results", [])
-    high_risk_amount = 0.0
-    cutoff_amount = 0.0
-    december_amount = 0.0
+    high_risk_amount = Decimal("0")
+    cutoff_amount = Decimal("0")
+    december_amount = Decimal("0")
     december_pct = 0.0
     concentration_pct = 0.0
     concentration_amount = 0.0
@@ -259,7 +259,7 @@ def _build_revenue_quality_indicators(
         create_leader_dots("Total Revenue (Period)", format_currency(total_revenue)),
     ]
     if high_risk_amount > 0:
-        pct = high_risk_amount / total_revenue if total_revenue else 0
+        pct = float(high_risk_amount) / total_revenue if total_revenue else 0
         lines.append(
             create_leader_dots(
                 "High-Risk Entries (HIGH severity)",
@@ -276,7 +276,7 @@ def _build_revenue_quality_indicators(
             )
         )
     if cutoff_amount > 0:
-        pct = cutoff_amount / total_revenue if total_revenue else 0
+        pct = float(cutoff_amount) / total_revenue if total_revenue else 0
         lines.append(
             create_leader_dots(
                 "Cut-Off Window Revenue",

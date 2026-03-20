@@ -123,7 +123,7 @@ def audit_trial_balance_streaming(
             and (ab.get("type", "").lower() == "asset")
             for ab in abnormal_balances
         )
-        _total_debits = result.get("total_debits", 0)
+        _total_debits = float(result.get("total_debits", 0))
         _material_items = [ab for ab in abnormal_balances if ab.get("materiality") == "material"]
         _flagged_value = sum(abs(ab.get("amount", 0)) for ab in _material_items)
         _coverage_pct = min(_flagged_value / _total_debits * 100, 100.0) if _total_debits > 0 else 0
@@ -393,8 +393,8 @@ def audit_trial_balance_multi_sheet(
                 "column_detection": sheet_column_detections.get(sheet_name),
             }
 
-            consolidated_debits += sheet_balance["total_debits"]
-            consolidated_credits += sheet_balance["total_credits"]
+            consolidated_debits += float(sheet_balance["total_debits"])
+            consolidated_credits += float(sheet_balance["total_credits"])
             consolidated_rows += sheet_balance["row_count"]
             all_abnormal_balances.extend(sheet_abnormals)
 

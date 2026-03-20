@@ -17,7 +17,7 @@ GAAP/IFRS Notes:
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Any, Optional
 
 # =============================================================================
 # CONSTANTS
@@ -303,10 +303,16 @@ def compare_periods(
     significant_count = 0
     total_count = 0
 
+    def _to_float(v: Any) -> float:
+        """Coerce str/Decimal/int/float to float (handles to_dict str output)."""
+        if v is None:
+            return 0.0
+        return float(v)
+
     # Compare balance sheet categories
     for key, name in BALANCE_SHEET_CATEGORIES:
-        current_val = current_data.get(key, 0.0) or 0.0
-        prior_val = prior_data.get(key, 0.0) or 0.0
+        current_val = _to_float(current_data.get(key, 0.0))
+        prior_val = _to_float(prior_data.get(key, 0.0))
 
         dollar_var, percent_var, is_sig, direction = calculate_variance(current_val, prior_val)
 
@@ -328,8 +334,8 @@ def compare_periods(
 
     # Compare income statement categories
     for key, name in INCOME_STATEMENT_CATEGORIES:
-        current_val = current_data.get(key, 0.0) or 0.0
-        prior_val = prior_data.get(key, 0.0) or 0.0
+        current_val = _to_float(current_data.get(key, 0.0))
+        prior_val = _to_float(prior_data.get(key, 0.0))
 
         dollar_var, percent_var, is_sig, direction = calculate_variance(current_val, prior_val)
 
@@ -381,8 +387,8 @@ def compare_periods(
     ]
 
     for key, name in diagnostic_metrics:
-        current_val = current_data.get(key, 0) or 0
-        prior_val = prior_data.get(key, 0) or 0
+        current_val = _to_float(current_data.get(key, 0))
+        prior_val = _to_float(prior_data.get(key, 0))
 
         variance_val = current_val - prior_val
         if variance_val > 0:

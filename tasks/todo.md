@@ -71,7 +71,9 @@
 - [x] Step 5: Remove float cast from engagement materiality serialization
 - [x] Step 6: Remove float reparsing in revenue/payroll/AP memo generators
 - [x] Step 7: Accept Decimal in drill_down format_currency helper
-- **Status:** IN PROGRESS
+- [x] Fix downstream consumers and tests for str-serialized monetary values
+- **Status:** COMPLETE
+- **Tests:** 6,897 passed (2 pre-existing failures, 0 regressions)
 
 ### Sprint 562: Complete All Deferred Items
 - [x] **Going concern PDF section** — `render_going_concern_indicators()` in `pdf/sections/diagnostic.py`, wired into orchestrator, ToC updated

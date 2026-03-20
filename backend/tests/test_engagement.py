@@ -7,6 +7,7 @@ Sprint 97: Engagement Model + Materiality Cascade
 
 import sys
 from datetime import UTC, datetime
+from decimal import Decimal
 from pathlib import Path
 
 import pytest
@@ -44,10 +45,18 @@ class TestEngagementSchema:
 
     def test_tool_name_has_all_tools(self):
         expected = {
-            "trial_balance", "multi_period", "journal_entry_testing",
-            "ap_testing", "bank_reconciliation", "payroll_testing",
-            "three_way_match", "revenue_testing", "ar_aging",
-            "fixed_asset_testing", "inventory_testing", "statistical_sampling",
+            "trial_balance",
+            "multi_period",
+            "journal_entry_testing",
+            "ap_testing",
+            "bank_reconciliation",
+            "payroll_testing",
+            "three_way_match",
+            "revenue_testing",
+            "ar_aging",
+            "fixed_asset_testing",
+            "inventory_testing",
+            "statistical_sampling",
             "flux_analysis",
         }
         actual = {t.value for t in ToolName}
@@ -63,7 +72,9 @@ class TestEngagementSchema:
         assert d["id"] == eng.id
         assert d["client_id"] == eng.client_id
         assert d["status"] == "active"
-        assert d["materiality_amount"] == 50000.0
+        # to_dict() now returns str(materiality_amount)
+        # Numeric(19,2) in SQLite may store as float 50000.0 → str gives "50000.0"
+        assert Decimal(d["materiality_amount"]) == Decimal("50000.0")
         assert d["materiality_basis"] == "revenue"
         assert d["performance_materiality_factor"] == 0.75
         assert d["trivial_threshold_factor"] == 0.05
@@ -185,7 +196,9 @@ class TestEngagementCRUD:
         client = make_client(user=user)
         mgr = EngagementManager(db_session)
         mgr.create_engagement(user.id, client.id, datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC))
-        eng2 = mgr.create_engagement(user.id, client.id, datetime(2024, 1, 1, tzinfo=UTC), datetime(2024, 12, 31, tzinfo=UTC))
+        eng2 = mgr.create_engagement(
+            user.id, client.id, datetime(2024, 1, 1, tzinfo=UTC), datetime(2024, 12, 31, tzinfo=UTC)
+        )
         mgr.archive_engagement(user.id, eng2.id)
         engs, total = mgr.get_engagements_for_user(user.id, status=EngagementStatus.ACTIVE)
         assert total == 1
@@ -195,7 +208,9 @@ class TestEngagementCRUD:
         client = make_client(user=user)
         mgr = EngagementManager(db_session)
         for i in range(5):
-            mgr.create_engagement(user.id, client.id, datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC))
+            mgr.create_engagement(
+                user.id, client.id, datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC)
+            )
         engs, total = mgr.get_engagements_for_user(user.id, limit=2, offset=0)
         assert total == 5
         assert len(engs) == 2
@@ -204,7 +219,9 @@ class TestEngagementCRUD:
         user = make_user()
         client = make_client(user=user)
         mgr = EngagementManager(db_session)
-        eng = mgr.create_engagement(user.id, client.id, datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC))
+        eng = mgr.create_engagement(
+            user.id, client.id, datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC)
+        )
         updated = mgr.update_engagement(user.id, eng.id, materiality_amount=100000.0)
         assert updated.materiality_amount == 100000.0
 
@@ -218,7 +235,9 @@ class TestEngagementCRUD:
         user = make_user()
         client = make_client(user=user)
         mgr = EngagementManager(db_session)
-        eng = mgr.create_engagement(user.id, client.id, datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC))
+        eng = mgr.create_engagement(
+            user.id, client.id, datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC)
+        )
         archived = mgr.archive_engagement(user.id, eng.id)
         assert archived.status == EngagementStatus.ARCHIVED
 
@@ -312,20 +331,28 @@ class TestEngagementCascade:
         """Multiple tool runs for same engagement are independent."""
         eng = make_engagement()
         for tool in [ToolName.TRIAL_BALANCE, ToolName.AP_TESTING, ToolName.PAYROLL_TESTING]:
-            db_session.add(ToolRun(
-                engagement_id=eng.id, tool_name=tool, run_number=1,
-                status=ToolRunStatus.COMPLETED,
-            ))
+            db_session.add(
+                ToolRun(
+                    engagement_id=eng.id,
+                    tool_name=tool,
+                    run_number=1,
+                    status=ToolRunStatus.COMPLETED,
+                )
+            )
         db_session.flush()
         runs = db_session.query(ToolRun).filter(ToolRun.engagement_id == eng.id).all()
         assert len(runs) == 3
 
     def test_engagement_relationship_to_tool_runs(self, db_session, make_engagement):
         eng = make_engagement()
-        db_session.add(ToolRun(
-            engagement_id=eng.id, tool_name=ToolName.AP_TESTING,
-            run_number=1, status=ToolRunStatus.COMPLETED,
-        ))
+        db_session.add(
+            ToolRun(
+                engagement_id=eng.id,
+                tool_name=ToolName.AP_TESTING,
+                run_number=1,
+                status=ToolRunStatus.COMPLETED,
+            )
+        )
         db_session.flush()
         db_session.refresh(eng)
         assert len(eng.tool_runs) == 1
@@ -343,10 +370,14 @@ class TestEngagementCascade:
 
         eng = make_engagement()
         for i in range(5):
-            db_session.add(ToolRun(
-                engagement_id=eng.id, tool_name=ToolName.JOURNAL_ENTRY_TESTING,
-                run_number=i + 1, status=ToolRunStatus.COMPLETED,
-            ))
+            db_session.add(
+                ToolRun(
+                    engagement_id=eng.id,
+                    tool_name=ToolName.JOURNAL_ENTRY_TESTING,
+                    run_number=i + 1,
+                    status=ToolRunStatus.COMPLETED,
+                )
+            )
         db_session.flush()
 
         db_session.delete(eng)
@@ -369,7 +400,8 @@ class TestEngagementValidation:
         mgr = EngagementManager(db_session)
         with pytest.raises(ValueError, match="period_end must be after period_start"):
             mgr.create_engagement(
-                user.id, client.id,
+                user.id,
+                client.id,
                 period_start=datetime(2025, 12, 31, tzinfo=UTC),
                 period_end=datetime(2025, 1, 1, tzinfo=UTC),
             )
@@ -388,8 +420,10 @@ class TestEngagementValidation:
         mgr = EngagementManager(db_session)
         with pytest.raises(ValueError, match="materiality_percentage cannot be negative"):
             mgr.create_engagement(
-                user.id, client.id,
-                datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC),
+                user.id,
+                client.id,
+                datetime(2025, 1, 1, tzinfo=UTC),
+                datetime(2025, 12, 31, tzinfo=UTC),
                 materiality_percentage=-1.0,
             )
 
@@ -399,8 +433,10 @@ class TestEngagementValidation:
         mgr = EngagementManager(db_session)
         with pytest.raises(ValueError, match="materiality_amount cannot be negative"):
             mgr.create_engagement(
-                user.id, client.id,
-                datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC),
+                user.id,
+                client.id,
+                datetime(2025, 1, 1, tzinfo=UTC),
+                datetime(2025, 12, 31, tzinfo=UTC),
                 materiality_amount=-500.0,
             )
 
@@ -410,8 +446,10 @@ class TestEngagementValidation:
         mgr = EngagementManager(db_session)
         with pytest.raises(ValueError, match="performance_materiality_factor"):
             mgr.create_engagement(
-                user.id, client.id,
-                datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC),
+                user.id,
+                client.id,
+                datetime(2025, 1, 1, tzinfo=UTC),
+                datetime(2025, 12, 31, tzinfo=UTC),
                 performance_materiality_factor=0.0,
             )
 
@@ -421,8 +459,10 @@ class TestEngagementValidation:
         mgr = EngagementManager(db_session)
         with pytest.raises(ValueError, match="trivial_threshold_factor"):
             mgr.create_engagement(
-                user.id, client.id,
-                datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC),
+                user.id,
+                client.id,
+                datetime(2025, 1, 1, tzinfo=UTC),
+                datetime(2025, 12, 31, tzinfo=UTC),
                 trivial_threshold_factor=1.5,
             )
 
@@ -431,8 +471,10 @@ class TestEngagementValidation:
         client = make_client(user=user)
         mgr = EngagementManager(db_session)
         eng = mgr.create_engagement(
-            user.id, client.id,
-            datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC),
+            user.id,
+            client.id,
+            datetime(2025, 1, 1, tzinfo=UTC),
+            datetime(2025, 12, 31, tzinfo=UTC),
         )
         with pytest.raises(ValueError, match="period_end must be after period_start"):
             mgr.update_engagement(user.id, eng.id, period_end=datetime(2024, 1, 1, tzinfo=UTC))
@@ -451,8 +493,10 @@ class TestMaterialityCascade:
         client = make_client(user=user)
         mgr = EngagementManager(db_session)
         eng = mgr.create_engagement(
-            user.id, client.id,
-            datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC),
+            user.id,
+            client.id,
+            datetime(2025, 1, 1, tzinfo=UTC),
+            datetime(2025, 12, 31, tzinfo=UTC),
             materiality_amount=100000.0,
         )
         result = mgr.compute_materiality(eng)
@@ -465,8 +509,10 @@ class TestMaterialityCascade:
         client = make_client(user=user)
         mgr = EngagementManager(db_session)
         eng = mgr.create_engagement(
-            user.id, client.id,
-            datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC),
+            user.id,
+            client.id,
+            datetime(2025, 1, 1, tzinfo=UTC),
+            datetime(2025, 12, 31, tzinfo=UTC),
             materiality_amount=200000.0,
             performance_materiality_factor=0.50,
         )
@@ -478,8 +524,10 @@ class TestMaterialityCascade:
         client = make_client(user=user)
         mgr = EngagementManager(db_session)
         eng = mgr.create_engagement(
-            user.id, client.id,
-            datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC),
+            user.id,
+            client.id,
+            datetime(2025, 1, 1, tzinfo=UTC),
+            datetime(2025, 12, 31, tzinfo=UTC),
             materiality_amount=200000.0,
             trivial_threshold_factor=0.10,
         )
@@ -491,8 +539,10 @@ class TestMaterialityCascade:
         client = make_client(user=user)
         mgr = EngagementManager(db_session)
         eng = mgr.create_engagement(
-            user.id, client.id,
-            datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC),
+            user.id,
+            client.id,
+            datetime(2025, 1, 1, tzinfo=UTC),
+            datetime(2025, 12, 31, tzinfo=UTC),
         )
         result = mgr.compute_materiality(eng)
         assert result["overall_materiality"] == 0.0
@@ -504,8 +554,10 @@ class TestMaterialityCascade:
         client = make_client(user=user)
         mgr = EngagementManager(db_session)
         eng = mgr.create_engagement(
-            user.id, client.id,
-            datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC),
+            user.id,
+            client.id,
+            datetime(2025, 1, 1, tzinfo=UTC),
+            datetime(2025, 12, 31, tzinfo=UTC),
             materiality_basis=MaterialityBasis.REVENUE,
             materiality_percentage=1.5,
             materiality_amount=150000.0,
@@ -519,8 +571,10 @@ class TestMaterialityCascade:
         client = make_client(user=user)
         mgr = EngagementManager(db_session)
         eng = mgr.create_engagement(
-            user.id, client.id,
-            datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC),
+            user.id,
+            client.id,
+            datetime(2025, 1, 1, tzinfo=UTC),
+            datetime(2025, 12, 31, tzinfo=UTC),
             materiality_basis=MaterialityBasis.ASSETS,
             materiality_amount=500000.0,
         )
@@ -532,8 +586,10 @@ class TestMaterialityCascade:
         client = make_client(user=user)
         mgr = EngagementManager(db_session)
         eng = mgr.create_engagement(
-            user.id, client.id,
-            datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC),
+            user.id,
+            client.id,
+            datetime(2025, 1, 1, tzinfo=UTC),
+            datetime(2025, 12, 31, tzinfo=UTC),
             materiality_basis=MaterialityBasis.MANUAL,
             materiality_amount=75000.0,
         )
@@ -545,8 +601,10 @@ class TestMaterialityCascade:
         client = make_client(user=user)
         mgr = EngagementManager(db_session)
         eng = mgr.create_engagement(
-            user.id, client.id,
-            datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC),
+            user.id,
+            client.id,
+            datetime(2025, 1, 1, tzinfo=UTC),
+            datetime(2025, 12, 31, tzinfo=UTC),
             materiality_amount=333333.33,
         )
         result = mgr.compute_materiality(eng)
@@ -558,8 +616,10 @@ class TestMaterialityCascade:
         client = make_client(user=user)
         mgr = EngagementManager(db_session)
         eng = mgr.create_engagement(
-            user.id, client.id,
-            datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC),
+            user.id,
+            client.id,
+            datetime(2025, 1, 1, tzinfo=UTC),
+            datetime(2025, 12, 31, tzinfo=UTC),
             materiality_amount=100000.0,
             performance_materiality_factor=0.60,
             trivial_threshold_factor=0.03,
@@ -573,8 +633,10 @@ class TestMaterialityCascade:
         client = make_client(user=user)
         mgr = EngagementManager(db_session)
         eng = mgr.create_engagement(
-            user.id, client.id,
-            datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC),
+            user.id,
+            client.id,
+            datetime(2025, 1, 1, tzinfo=UTC),
+            datetime(2025, 12, 31, tzinfo=UTC),
             materiality_amount=100000.0,
         )
         mgr.update_engagement(user.id, eng.id, materiality_amount=200000.0)

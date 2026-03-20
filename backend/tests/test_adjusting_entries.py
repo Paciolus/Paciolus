@@ -102,8 +102,8 @@ class TestAdjustmentLine:
         )
         result = line.to_dict()
         assert result["account_name"] == "Cash"
-        assert result["debit"] == 1000.00
-        assert result["credit"] == 0.00
+        assert result["debit"] == "1000.00"
+        assert result["credit"] == "0.00"
         assert result["description"] == "Opening balance adjustment"
 
 
@@ -217,8 +217,8 @@ class TestAdjustingEntry:
         )
         result = entry.to_dict()
         assert result["reference"] == "AJE-005"
-        assert result["total_debits"] == 100.00
-        assert result["total_credits"] == 100.00
+        assert result["total_debits"] == "100.00"
+        assert result["total_credits"] == "100.00"
         assert result["is_balanced"] is True
         assert result["prepared_by"] == "Auditor"
         assert len(result["lines"]) == 2
@@ -465,8 +465,8 @@ class TestAdjustedAccountBalance:
         result = account.to_dict()
 
         assert result["account_name"] == "Cash"
-        assert result["unadjusted_debit"] == 5000.00
-        assert result["adjusted_debit"] == 5500.00
+        assert result["unadjusted_debit"] == "5000.00"
+        assert result["adjusted_debit"] == "5500.00"
         assert result["has_adjustment"] is True
 
 
@@ -489,24 +489,28 @@ class TestApplyAdjustments:
     def sample_adjustments(self):
         """Sample adjustment set."""
         adj_set = AdjustmentSet()
-        adj_set.add_entry(AdjustingEntry(
-            reference="AJE-001",
-            description="Accrue revenue",
-            status=AdjustmentStatus.APPROVED,
-            lines=[
-                AdjustmentLine(account_name="Accounts Receivable", debit=Decimal("2000.00")),
-                AdjustmentLine(account_name="Revenue", credit=Decimal("2000.00")),
-            ],
-        ))
-        adj_set.add_entry(AdjustingEntry(
-            reference="AJE-002",
-            description="Accrue expense",
-            status=AdjustmentStatus.PROPOSED,  # Should be excluded by default
-            lines=[
-                AdjustmentLine(account_name="Expenses", debit=Decimal("1000.00")),
-                AdjustmentLine(account_name="Accounts Payable", credit=Decimal("1000.00")),
-            ],
-        ))
+        adj_set.add_entry(
+            AdjustingEntry(
+                reference="AJE-001",
+                description="Accrue revenue",
+                status=AdjustmentStatus.APPROVED,
+                lines=[
+                    AdjustmentLine(account_name="Accounts Receivable", debit=Decimal("2000.00")),
+                    AdjustmentLine(account_name="Revenue", credit=Decimal("2000.00")),
+                ],
+            )
+        )
+        adj_set.add_entry(
+            AdjustingEntry(
+                reference="AJE-002",
+                description="Accrue expense",
+                status=AdjustmentStatus.PROPOSED,  # Should be excluded by default
+                lines=[
+                    AdjustmentLine(account_name="Expenses", debit=Decimal("1000.00")),
+                    AdjustmentLine(account_name="Accounts Payable", credit=Decimal("1000.00")),
+                ],
+            )
+        )
         return adj_set
 
     def test_apply_approved_only(self, sample_trial_balance, sample_adjustments):
@@ -556,15 +560,17 @@ class TestApplyAdjustments:
     def test_new_account_from_adjustment(self, sample_trial_balance):
         """Adjustment can create new account not in original TB."""
         adj_set = AdjustmentSet()
-        adj_set.add_entry(AdjustingEntry(
-            reference="AJE-NEW",
-            description="Create prepaid",
-            status=AdjustmentStatus.APPROVED,
-            lines=[
-                AdjustmentLine(account_name="Prepaid Insurance", debit=Decimal("3000.00")),
-                AdjustmentLine(account_name="Cash", credit=Decimal("3000.00")),
-            ],
-        ))
+        adj_set.add_entry(
+            AdjustingEntry(
+                reference="AJE-NEW",
+                description="Create prepaid",
+                status=AdjustmentStatus.APPROVED,
+                lines=[
+                    AdjustmentLine(account_name="Prepaid Insurance", debit=Decimal("3000.00")),
+                    AdjustmentLine(account_name="Cash", credit=Decimal("3000.00")),
+                ],
+            )
+        )
 
         result = apply_adjustments(sample_trial_balance, adj_set)
 
@@ -878,33 +884,39 @@ class TestApplyMode:
     @pytest.fixture
     def mixed_adjustments(self):
         adj_set = AdjustmentSet()
-        adj_set.add_entry(AdjustingEntry(
-            reference="AJE-001",
-            description="Approved entry",
-            status=AdjustmentStatus.APPROVED,
-            lines=[
-                AdjustmentLine(account_name="Cash", debit=Decimal("500.00")),
-                AdjustmentLine(account_name="Revenue", credit=Decimal("500.00")),
-            ],
-        ))
-        adj_set.add_entry(AdjustingEntry(
-            reference="AJE-002",
-            description="Posted entry",
-            status=AdjustmentStatus.POSTED,
-            lines=[
-                AdjustmentLine(account_name="Cash", debit=Decimal("300.00")),
-                AdjustmentLine(account_name="Revenue", credit=Decimal("300.00")),
-            ],
-        ))
-        adj_set.add_entry(AdjustingEntry(
-            reference="AJE-003",
-            description="Proposed entry",
-            status=AdjustmentStatus.PROPOSED,
-            lines=[
-                AdjustmentLine(account_name="Cash", debit=Decimal("200.00")),
-                AdjustmentLine(account_name="Revenue", credit=Decimal("200.00")),
-            ],
-        ))
+        adj_set.add_entry(
+            AdjustingEntry(
+                reference="AJE-001",
+                description="Approved entry",
+                status=AdjustmentStatus.APPROVED,
+                lines=[
+                    AdjustmentLine(account_name="Cash", debit=Decimal("500.00")),
+                    AdjustmentLine(account_name="Revenue", credit=Decimal("500.00")),
+                ],
+            )
+        )
+        adj_set.add_entry(
+            AdjustingEntry(
+                reference="AJE-002",
+                description="Posted entry",
+                status=AdjustmentStatus.POSTED,
+                lines=[
+                    AdjustmentLine(account_name="Cash", debit=Decimal("300.00")),
+                    AdjustmentLine(account_name="Revenue", credit=Decimal("300.00")),
+                ],
+            )
+        )
+        adj_set.add_entry(
+            AdjustingEntry(
+                reference="AJE-003",
+                description="Proposed entry",
+                status=AdjustmentStatus.PROPOSED,
+                lines=[
+                    AdjustmentLine(account_name="Cash", debit=Decimal("200.00")),
+                    AdjustmentLine(account_name="Revenue", credit=Decimal("200.00")),
+                ],
+            )
+        )
         return adj_set
 
     def test_official_mode_excludes_proposed(self, tb, mixed_adjustments):

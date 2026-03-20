@@ -158,20 +158,20 @@ class FluxEngine:
         reclass_count = 0
 
         for account in all_accounts:
-            # Extract current data
+            # Extract current data (float() handles Decimal/str from audit engine)
             curr_data = current_balances.get(account)
-            curr_bal = curr_data.get("net", 0.0) if curr_data else 0.0
+            curr_bal = float(curr_data.get("net", 0.0)) if curr_data else 0.0
             # Fallback to dictionary lookups if "net" isn't pre-calculated
             if curr_data and "net" not in curr_data:
-                curr_bal = curr_data.get("debit", 0.0) - curr_data.get("credit", 0.0)
+                curr_bal = float(curr_data.get("debit", 0.0)) - float(curr_data.get("credit", 0.0))
 
             curr_type = curr_data.get("type", "Unknown") if curr_data else "Unknown"
 
             # Extract prior data
             prior_data = prior_balances.get(account)
-            prior_bal = prior_data.get("net", 0.0) if prior_data else 0.0
+            prior_bal = float(prior_data.get("net", 0.0)) if prior_data else 0.0
             if prior_data and "net" not in prior_data:
-                prior_bal = prior_data.get("debit", 0.0) - prior_data.get("credit", 0.0)
+                prior_bal = float(prior_data.get("debit", 0.0)) - float(prior_data.get("credit", 0.0))
 
             # Sprint 294: Capture prior type for reclassification detection
             prior_type_str = prior_data.get("type", "Unknown") if prior_data else "Unknown"

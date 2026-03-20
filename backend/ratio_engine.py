@@ -208,20 +208,26 @@ class CategoryTotals:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, float]) -> "CategoryTotals":
+    def from_dict(cls, data: dict[str, Any]) -> "CategoryTotals":
+        def _to_float(v: Any) -> float:
+            """Convert string or numeric value to float (handles to_dict str output)."""
+            if v is None:
+                return 0.0
+            return float(v)
+
         return cls(
-            total_assets=data.get("total_assets", 0.0),
-            current_assets=data.get("current_assets", 0.0),
-            inventory=data.get("inventory", 0.0),
-            accounts_receivable=data.get("accounts_receivable", 0.0),
-            accounts_payable=data.get("accounts_payable", 0.0),
-            total_liabilities=data.get("total_liabilities", 0.0),
-            current_liabilities=data.get("current_liabilities", 0.0),
-            total_equity=data.get("total_equity", 0.0),
-            total_revenue=data.get("total_revenue", 0.0),
-            cost_of_goods_sold=data.get("cost_of_goods_sold", 0.0),
-            total_expenses=data.get("total_expenses", 0.0),
-            operating_expenses=data.get("operating_expenses", 0.0),
+            total_assets=_to_float(data.get("total_assets", 0.0)),
+            current_assets=_to_float(data.get("current_assets", 0.0)),
+            inventory=_to_float(data.get("inventory", 0.0)),
+            accounts_receivable=_to_float(data.get("accounts_receivable", 0.0)),
+            accounts_payable=_to_float(data.get("accounts_payable", 0.0)),
+            total_liabilities=_to_float(data.get("total_liabilities", 0.0)),
+            current_liabilities=_to_float(data.get("current_liabilities", 0.0)),
+            total_equity=_to_float(data.get("total_equity", 0.0)),
+            total_revenue=_to_float(data.get("total_revenue", 0.0)),
+            cost_of_goods_sold=_to_float(data.get("cost_of_goods_sold", 0.0)),
+            total_expenses=_to_float(data.get("total_expenses", 0.0)),
+            operating_expenses=_to_float(data.get("operating_expenses", 0.0)),
         )
 
 
