@@ -86,10 +86,19 @@
 - **Commit:** c9b51db
 
 ### FIX-2A: Edge Case Hard FAILs (AUDIT-06 Phase 2)
-- [ ] FIX 1 — RPT-02: Emit duplicate-account warnings before coalescing in `multi_period_comparison.py`
-- [ ] FIX 2 — RPT-12: Return insufficient-population result when non-zero rows < minimum in `sampling_engine.py`
-- [ ] FIX 3 — RPT-12: Track and surface missing audited amounts separately from clean results in `sampling_engine.py`
-- [ ] FIX 4 — Exports: Replace user_id ownership check with org-aware helper; 400 → 404
-- [ ] FIX 5 — RPT-13: Preserve Decimal precision in currency conversion at large values in `currency_engine.py`
-- **Status:** IN PROGRESS
+- [x] FIX 1 — RPT-02: Emit duplicate-account warnings before coalescing in `multi_period_comparison.py`
+- [x] FIX 2 — RPT-12: Return insufficient-population result when non-zero rows < minimum in `sampling_engine.py`
+- [x] FIX 3 — RPT-12: Track and surface missing audited amounts separately from clean results in `sampling_engine.py`
+- [x] FIX 4 — Exports: Replace user_id ownership check with org-aware helper; 400 → 404
+- [x] FIX 5 — RPT-13: Preserve Decimal precision in currency conversion at large values in `currency_engine.py`
+- **Status:** COMPLETE
+
+### FIX-2B: Edge Case FLAG Regression Tests (AUDIT-06 Phase 2)
+- [x] FLAG Group 1 — Single-Account Populations (14 tests: RPT-01/03/04/05/06/07/08/09/10/11/16/17/18/20)
+- [x] FLAG Group 2 — Negative Balances in Unexpected Accounts (15 tests: RPT-02/03/04/05/06/07/10/11/13/16/17/18/19/20, DASH-01)
+- [x] FLAG Group 3 — Extremely Large Values >$1T (21 tests: RPT-01/02/03/04/05/06/07/08/09/10/11/12/14/15/16/17/18/19/20/21, DASH-01)
+- [x] FLAG Group 4 — Missing Expected Account Types (14 tests: RPT-01/02/03/04/06/08/10/11/15/16/17/18/20, DASH-01)
+- [x] FLAG Group 5 — Duplicate Account Codes (19 tests: RPT-01/03/04/05/06/07/09/10/11/12/13/14/15/16/17/18/19/20, DASH-01)
+- **Result:** 83 tests, 83 PASS, 0 FAIL — all FLAG scenarios confirmed handled correctly
+- **Status:** COMPLETE
 
