@@ -42,6 +42,7 @@ See docs/STANDARDS.md for detailed framework comparison.
 
 import logging
 from dataclasses import dataclass, field
+from decimal import Decimal
 from enum import Enum
 
 logger = logging.getLogger(__name__)
@@ -49,6 +50,7 @@ logger = logging.getLogger(__name__)
 
 class AccountCategory(str, Enum):
     """Primary account categories following standard chart of accounts."""
+
     ASSET = "asset"
     LIABILITY = "liability"
     EQUITY = "equity"
@@ -59,17 +61,19 @@ class AccountCategory(str, Enum):
 
 class NormalBalance(str, Enum):
     """Expected normal balance direction per accounting fundamentals."""
-    DEBIT = "debit"    # Assets, Expenses increase with debits
+
+    DEBIT = "debit"  # Assets, Expenses increase with debits
     CREDIT = "credit"  # Liabilities, Equity, Revenue increase with credits
 
 
 @dataclass
 class ClassificationRule:
     """A single weighted keyword rule for account classification."""
-    keyword: str                   # Keyword to match (case-insensitive)
-    category: AccountCategory      # Target category
-    weight: float                  # Confidence contribution (0.0 to 1.0)
-    is_phrase: bool = False        # True if multi-word phrase (stricter match)
+
+    keyword: str  # Keyword to match (case-insensitive)
+    category: AccountCategory  # Target category
+    weight: float  # Confidence contribution (0.0 to 1.0)
+    is_phrase: bool = False  # True if multi-word phrase (stricter match)
 
 
 @dataclass
@@ -79,28 +83,30 @@ class ClassificationSuggestion:
 
     Sprint 31: Classification Intelligence feature.
     """
+
     category: AccountCategory
-    confidence: float              # Estimated confidence if this category were applied
-    reason: str                    # Why this suggestion is offered
-    matched_keywords: list[str]    # Keywords that support this suggestion
+    confidence: float  # Estimated confidence if this category were applied
+    reason: str  # Why this suggestion is offered
+    matched_keywords: list[str]  # Keywords that support this suggestion
 
 
 @dataclass
 class ClassificationResult:
     """Result of account classification."""
+
     account_name: str
     category: AccountCategory
-    confidence: float              # 0.0 to 1.0
+    confidence: float  # 0.0 to 1.0
     normal_balance: NormalBalance
     matched_keywords: list[str]
-    is_abnormal: bool              # Balance direction opposite of normal
-    requires_review: bool          # True if confidence below threshold
+    is_abnormal: bool  # Balance direction opposite of normal
+    requires_review: bool  # True if confidence below threshold
     suggestions: list[ClassificationSuggestion] = field(default_factory=list)  # Sprint 31: Alternative classifications
 
 
 # Confidence thresholds
-CONFIDENCE_HIGH = 0.7     # Confident classification
-CONFIDENCE_MEDIUM = 0.4   # Probable classification (flag for review)
+CONFIDENCE_HIGH = 0.7  # Confident classification
+CONFIDENCE_MEDIUM = 0.4  # Probable classification (flag for review)
 
 
 # =============================================================================
@@ -158,7 +164,6 @@ DEFAULT_RULES: list[ClassificationRule] = [
     ClassificationRule("deposit", AccountCategory.ASSET, 0.70),
     ClassificationRule("due from", AccountCategory.ASSET, 0.80, is_phrase=True),
     ClassificationRule("accumulated depreciation", AccountCategory.ASSET, 0.90, is_phrase=True),
-
     # -------------------------------------------------------------------------
     # LIABILITIES (20 keywords)
     # Source: GAAP standard terminology, Investopedia, Odoo schema
@@ -189,7 +194,6 @@ DEFAULT_RULES: list[ClassificationRule] = [
     ClassificationRule("debt", AccountCategory.LIABILITY, 0.75),
     ClassificationRule("credit card", AccountCategory.LIABILITY, 0.80, is_phrase=True),
     ClassificationRule("due to", AccountCategory.LIABILITY, 0.80, is_phrase=True),
-
     # -------------------------------------------------------------------------
     # EQUITY (12 keywords)
     # Source: GAAP standard terminology, ERPNext schema
@@ -206,7 +210,6 @@ DEFAULT_RULES: list[ClassificationRule] = [
     ClassificationRule("drawing", AccountCategory.EQUITY, 0.80),
     ClassificationRule("distribution", AccountCategory.EQUITY, 0.70),
     ClassificationRule("dividend", AccountCategory.EQUITY, 0.75),
-
     # -------------------------------------------------------------------------
     # REVENUE (12 keywords)
     # Source: GAAP standard terminology, Investopedia
@@ -223,7 +226,6 @@ DEFAULT_RULES: list[ClassificationRule] = [
     ClassificationRule("gain on sale", AccountCategory.REVENUE, 0.80, is_phrase=True),
     ClassificationRule("other income", AccountCategory.REVENUE, 0.75, is_phrase=True),
     ClassificationRule("income", AccountCategory.REVENUE, 0.55),
-
     # -------------------------------------------------------------------------
     # EXPENSES (20 keywords)
     # Source: GAAP standard terminology, AccountingCoach.com
@@ -394,9 +396,9 @@ ROUNDING_MIN_AMOUNT = 10000.0
 # Format: (divisor, name, severity)
 # An amount divisible by the divisor with no remainder is flagged
 ROUNDING_PATTERNS: list[tuple[float, str, str]] = [
-    (100000.0, "hundred_thousand", "high"),    # $100,000, $200,000, etc.
-    (50000.0, "fifty_thousand", "medium"),     # $50,000, $150,000, etc.
-    (10000.0, "ten_thousand", "low"),          # $10,000, $20,000, etc.
+    (100000.0, "hundred_thousand", "high"),  # $100,000, $200,000, etc.
+    (50000.0, "fifty_thousand", "medium"),  # $50,000, $150,000, etc.
+    (10000.0, "ten_thousand", "low"),  # $10,000, $20,000, etc.
 ]
 
 # Maximum number of rounding anomalies to report (prevent noise)
@@ -523,7 +525,7 @@ ROUND_NUMBER_TIER2_INFORMATIONAL: list[str] = [
     "internet",
     "bank charges",
     "bank fees",
-    "standard insurance",     # but NOT D&O, NOT specialty coverage
+    "standard insurance",  # but NOT D&O, NOT specialty coverage
     "recurring fee",
 ]
 
@@ -670,7 +672,7 @@ def classify_round_number_tier(
         return "informational"
 
     # 5f. Balance > 10% of TB total (general-purpose escalation)
-    if tb_total > 0 and balance > 0.10 * tb_total:
+    if tb_total > 0 and balance > Decimal(str(tb_total)) * Decimal("0.10"):
         return "material"
 
     # ── Step 6: Tier 2 keyword list ───────────────────────────────────

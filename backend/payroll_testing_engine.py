@@ -1081,7 +1081,7 @@ def _test_unusual_pay_amounts(
                     test_tier=TestTier.STATISTICAL.value,
                     severity=severity.value,
                     issue=f"Pay ${entry.gross_pay:,.2f} is {abs(z_score):.1f}σ from dept '{dept}' mean (${mean_amt:,.2f})",
-                    confidence=min(abs(z_score) / 6.0, 1.0),
+                    confidence=float(min(abs(z_score) / Decimal("6"), Decimal("1"))),
                     details={
                         "z_score": float(round(z_score, 2)),
                         "department": dept,
@@ -1803,7 +1803,7 @@ class PayrollTestingEngine(AuditEngineBase):
                     dept_groups.items(), key=lambda x: sum(e.gross_pay for e in x[1]), reverse=True
                 ):
                     emp_ids: set[str] = set()
-                    total_pay = 0.0
+                    total_pay = Decimal("0")
                     for e in group:
                         key = e.employee_id.strip().lower() or e.employee_name.strip().lower()
                         emp_ids.add(key)

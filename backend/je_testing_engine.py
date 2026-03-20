@@ -1098,7 +1098,8 @@ def test_round_amounts(
             continue
 
         for divisor, name, severity in ROUND_AMOUNT_PATTERNS:
-            if amt >= divisor and amt % divisor == 0:
+            d = Decimal(str(divisor))
+            if amt >= d and amt % d == 0:
                 flagged.append(
                     FlaggedEntry(
                         entry=e,
@@ -1169,7 +1170,7 @@ def test_unusual_amounts(
         if stdev == 0:
             continue
 
-        threshold = mean + (config.unusual_amount_stddev * stdev)
+        threshold = mean + (Decimal(str(config.unusual_amount_stddev)) * stdev)
 
         for e in account_entries[acct]:
             amt = e.abs_amount
@@ -1183,7 +1184,13 @@ def test_unusual_amounts(
                         test_tier=TestTier.STRUCTURAL,
                         severity=zscore_to_severity(z_score),
                         issue=f"Amount ${amt:,.2f} is {z_score:.1f} standard deviations from account mean (${mean:,.2f})",
-                        confidence=min(0.50 + (z_score - config.unusual_amount_stddev) * 0.10, 1.0),
+                        confidence=float(
+                            min(
+                                Decimal("0.50")
+                                + (z_score - Decimal(str(config.unusual_amount_stddev))) * Decimal("0.10"),
+                                Decimal("1"),
+                            )
+                        ),
                         details={
                             "amount": amt,
                             "account_mean": round(mean, 2),
@@ -2194,8 +2201,9 @@ def test_just_below_threshold(
             continue
 
         for threshold in config.approval_thresholds:
-            lower_bound = threshold * (1 - margin)
-            if lower_bound <= amt < threshold:
+            t = Decimal(str(threshold))
+            lower_bound = t * (1 - Decimal(str(margin)))
+            if lower_bound <= amt < t:
                 severity = Severity.HIGH if threshold >= 50000 else Severity.MEDIUM
                 flagged.append(
                     FlaggedEntry(
@@ -2204,12 +2212,12 @@ def test_just_below_threshold(
                         test_key="just_below_threshold",
                         test_tier=TestTier.ADVANCED,
                         severity=severity,
-                        issue=f"Amount ${amt:,.2f} is {((threshold - amt) / threshold):.1%} below ${threshold:,.0f} threshold",
+                        issue=f"Amount ${amt:,.2f} is {((t - amt) / t):.1%} below ${t:,.0f} threshold",
                         confidence=0.8,
                         details={
-                            "amount": amt,
-                            "threshold": threshold,
-                            "gap_pct": round((threshold - amt) / threshold, 4),
+                            "amount": float(amt),
+                            "threshold": float(t),
+                            "gap_pct": float(round((t - amt) / t, 4)),
                         },
                     )
                 )
