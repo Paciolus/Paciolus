@@ -44,7 +44,8 @@ async def start_bulk_upload(
     db: Session = Depends(get_db),
 ):
     """Accept up to 5 files for bulk processing. Enterprise only."""
-    check_bulk_upload_access(db, user.id)
+    # AUDIT-08: correct arg order — signature is (user: User, db: Session)
+    check_bulk_upload_access(user, db)
 
     if len(files) > MAX_FILES:
         raise HTTPException(status_code=400, detail=f"Maximum {MAX_FILES} files per bulk upload.")
@@ -59,9 +60,9 @@ async def start_bulk_upload(
         file_bytes = await validate_file_size(f)
         validated_contents.append(file_bytes)
 
-    # Check upload quota for all files
+    # Check upload quota for all files — signature is (user: User, db: Session)
     for _ in files:
-        check_upload_limit(db, user.id)
+        check_upload_limit(user, db)
 
     # Evict stale jobs before creating a new one (prevent unbounded memory growth)
     _evict_stale_jobs()

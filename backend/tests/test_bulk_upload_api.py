@@ -7,9 +7,8 @@ Tests cover:
 - Entitlement enforcement (403 for non-Enterprise)
 - Auth enforcement (401)
 
-NOTE: The bulk_upload route calls check_bulk_upload_access(db, user.id)
-which is a positional-args mismatch with the function signature (user, db).
-Tests mock the entitlement check to work around this pre-existing issue.
+NOTE: AUDIT-08 fixed the arg-order mismatch — route now calls
+check_bulk_upload_access(user, db) matching the function signature.
 """
 
 import sys
