@@ -78,10 +78,26 @@
 - **Status:** COMPLETE
 
 ### FIX-6: File Ingestion Abuse Surface (AUDIT-07 Phase 3)
-- [ ] Step 1 (HIGH): Move row-count gate before full parse — CSV streaming estimator + XLSX metadata check
-- [ ] Step 2 (MEDIUM): Server-side content sniffing for text-based upload formats
-- [ ] Step 3 (MEDIUM): Streaming body size limit regardless of Content-Length header
-- [ ] Step 4 (MEDIUM): Explicit data_only/keep_vba Excel load on main ingestion path
-- **Tests:** TBD
-- **Status:** IN PROGRESS
+- [x] Step 1 (HIGH): Move row-count gate before full parse — CSV streaming estimator + XLSX metadata check
+- [x] Step 2 (MEDIUM): Server-side content sniffing for text-based upload formats
+- [x] Step 3 (MEDIUM): Streaming body size limit regardless of Content-Length header
+- [x] Step 4 (MEDIUM): Explicit data_only/keep_vba Excel load on main ingestion path
+- **Tests:** 7,007 passed, 0 regressions (4 commits)
+- **Status:** COMPLETE
+
+### FIX-8A: Entitlement Enforcement — Incorrect Helper Invocation (AUDIT-08 Phase 2)
+- [x] Step 1: Fix `/upload/bulk` entitlement check — corrected `(db, user.id)` → `(user, db)`; also fixed `check_upload_limit`
+- [x] Step 2: Fix `/branding/*` entitlement check — corrected `(db, user.id)` → `(user, db)` in `_get_branding()`
+- [x] Step 3: Fix `/export-sharing/create` — added `db` session to `check_export_sharing_access(user, db)`
+- [x] Step 4: Fix `/admin/*` — added `db` session to `check_admin_dashboard_access(user, db)` in `_get_admin_org()`
+- **Tests:** 7,007 passed, 0 regressions
+- **Risk:** HIGH — subscription-status bypass / entitlement not enforced
+- **Status:** COMPLETE
+
+### FIX-8B: Org-Aware Export Access & Multi-Tenant Roadmap (AUDIT-08 Phase 1/3)
+- [x] FIX 1: Verified — both generators already use `EngagementManager.get_engagement()` (org-aware via `_get_accessible_user_ids()`); no `Client.user_id ==` pattern exists
+- [x] FIX 2: Verified — `engagements_exports.py` already returns 404 (not 400) on access failures
+- [x] FIX 3: Created `docs/architecture/MULTI_TENANT_ROADMAP.md` — 5 sections covering current state, user-centric tables, migration path, regression tests, key invariants
+- **Risk:** MEDIUM/LOW + documentation
+- **Status:** COMPLETE
 
