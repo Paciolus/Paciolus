@@ -22,6 +22,9 @@ from pdf_generator import ClassicalColors
 MAX_DRILL_ROWS = 20
 
 
+_EMPTY_STATE_TEXT = "No supporting detail available for this finding."
+
+
 def build_drill_down_table(
     story: list,
     styles: dict,
@@ -34,6 +37,7 @@ def build_drill_down_table(
     total_flagged: Optional[int] = None,
     col_widths: Optional[list[float]] = None,
     right_align_cols: Optional[list[int]] = None,
+    suppress_empty: bool = True,
 ) -> None:
     """Build a drill-down detail table in the PDF story.
 
@@ -48,8 +52,22 @@ def build_drill_down_table(
         total_flagged: Total flagged count (for truncation message)
         col_widths: Optional explicit column widths; auto-computed if None
         right_align_cols: Column indices (0-based) to right-align (typically monetary)
+        suppress_empty: If True (default), render nothing when rows is empty.
+            If False, render a labeled placeholder indicating no detail is available.
     """
     if not rows:
+        if suppress_empty:
+            return
+        # Render labeled empty state so absence is distinguishable from silent failure
+        story.append(Paragraph(title, styles["MemoBody"]))
+        story.append(Spacer(1, 4))
+        story.append(
+            Paragraph(
+                f"<i>{_EMPTY_STATE_TEXT}</i>",
+                styles["MemoBodySmall"],
+            )
+        )
+        story.append(Spacer(1, 6))
         return
 
     story.append(Paragraph(title, styles["MemoBody"]))

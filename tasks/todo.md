@@ -64,6 +64,7 @@
 - [x] FIX 1: Risk tier label boundary validation + regression test (9 tests)
 - [x] FIX 2: Widen narrow free-text columns in fixed asset memo tables (1.3→1.5 inches)
 - [x] FIX 3: Document and guard ASC 250-10 YAML entries; add canary test (2 tests)
-- [ ] FIX 4: Render labeled empty state in drill-down instead of silent omission
-- **Status:** IN PROGRESS
+- [x] FIX 4: Render labeled empty state in drill-down instead of silent omission (4 tests)
+- **Tests:** 15 new tests (9 + 2 + 4), 0 regressions
+- **Status:** COMPLETE
 
