@@ -163,7 +163,7 @@ class Engagement(Base):
             "status": self.status.value if self.status else None,
             "materiality_basis": self.materiality_basis.value if self.materiality_basis else None,
             "materiality_percentage": self.materiality_percentage,
-            "materiality_amount": float(self.materiality_amount) if self.materiality_amount is not None else None,
+            "materiality_amount": str(self.materiality_amount) if self.materiality_amount is not None else None,
             "performance_materiality_factor": self.performance_materiality_factor,
             "trivial_threshold_factor": self.trivial_threshold_factor,
             "completed_at": self.completed_at.isoformat() if self.completed_at else None,
