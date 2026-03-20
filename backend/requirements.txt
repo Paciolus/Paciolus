@@ -23,8 +23,7 @@ stripe==14.4.1
 sendgrid==6.12.5
 
 # Rate Limiting (Sprint 25)
-# slowapi is unmaintained but wraps the actively-maintained `limits` package.
-# Pinned: see docs/runbooks/rate-limiter-modernization.md for migration plan.
+# See docs/compliance/DEPENDENCY_DECISIONS.md for maintenance status
 slowapi==0.1.9
 limits>=3.0.0
 
