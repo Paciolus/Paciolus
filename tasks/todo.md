@@ -60,3 +60,10 @@
 - **Tests:** 10 passed (2 new + 8 existing), 0 regressions
 - **Status:** COMPLETE
 
+### FIX-4: Partial Systemic Bug Resolutions (AUDIT-06 Phase 4)
+- [x] FIX 1: Risk tier label boundary validation + regression test (9 tests)
+- [ ] FIX 2: Paragraph wrapping for free-text columns in custom memo tables
+- [ ] FIX 3: Document and guard ASC 250-10 YAML entries; add canary test
+- [ ] FIX 4: Render labeled empty state in drill-down instead of silent omission
+- **Status:** IN PROGRESS
+

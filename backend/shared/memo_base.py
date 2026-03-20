@@ -79,6 +79,18 @@ RISK_SCALE_LEGEND = (
 )
 
 
+def validate_risk_tier_coverage(known_tiers: set[str]) -> list[str]:
+    """Validate that RISK_TIER_DISPLAY contains a label for every known tier key.
+
+    Args:
+        known_tiers: Set of risk tier keys that scoring logic can produce.
+
+    Returns:
+        List of tier keys missing from RISK_TIER_DISPLAY.  Empty means complete.
+    """
+    return [tier for tier in sorted(known_tiers) if tier not in RISK_TIER_DISPLAY]
+
+
 def format_risk_tier_label(composite: dict) -> tuple[str, Any]:
     """Return (label_with_score, color) from a composite score dict.
 
