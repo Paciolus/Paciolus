@@ -29,6 +29,7 @@ from multi_period_comparison import (
 # FIXTURES
 # =============================================================================
 
+
 def _make_account(name: str, debit: float = 0, credit: float = 0, acct_type: str = "asset") -> dict:
     """Helper to create account dicts for testing."""
     return {"account": name, "debit": debit, "credit": credit, "type": acct_type}
@@ -63,6 +64,7 @@ def simple_current():
 # =============================================================================
 # ACCOUNT NAME NORMALIZATION TESTS
 # =============================================================================
+
 
 class TestNormalizeAccountName:
     """Tests for account name normalization."""
@@ -103,13 +105,14 @@ class TestNormalizeAccountName:
 # ACCOUNT MATCHING TESTS
 # =============================================================================
 
+
 class TestMatchAccounts:
     """Tests for account matching between periods."""
 
     def test_exact_match(self):
         prior = [_make_account("Cash", debit=100)]
         current = [_make_account("Cash", debit=200)]
-        matched = match_accounts(prior, current)
+        matched, warnings = match_accounts(prior, current)
         assert len(matched) == 1
         assert matched[0][0] is not None  # prior
         assert matched[0][1] is not None  # current
@@ -117,7 +120,7 @@ class TestMatchAccounts:
     def test_case_insensitive_match(self):
         prior = [_make_account("CASH", debit=100)]
         current = [_make_account("cash", debit=200)]
-        matched = match_accounts(prior, current)
+        matched, warnings = match_accounts(prior, current)
         assert len(matched) == 1
         assert matched[0][0] is not None
         assert matched[0][1] is not None
@@ -128,7 +131,7 @@ class TestMatchAccounts:
             _make_account("Cash", debit=100),
             _make_account("Inventory", debit=50),
         ]
-        matched = match_accounts(prior, current)
+        matched, warnings = match_accounts(prior, current)
         assert len(matched) == 2
         # Find the new account
         new = [m for m in matched if m[0] is None]
@@ -141,7 +144,7 @@ class TestMatchAccounts:
             _make_account("Inventory", debit=50),
         ]
         current = [_make_account("Cash", debit=100)]
-        matched = match_accounts(prior, current)
+        matched, warnings = match_accounts(prior, current)
         assert len(matched) == 2
         closed = [m for m in matched if m[1] is None]
         assert len(closed) == 1
@@ -151,7 +154,7 @@ class TestMatchAccounts:
         """A/R should match Accounts Receivable."""
         prior = [_make_account("A/R", debit=100)]
         current = [_make_account("Accounts Receivable", debit=200)]
-        matched = match_accounts(prior, current)
+        matched, warnings = match_accounts(prior, current)
         assert len(matched) == 1
         assert matched[0][0] is not None
         assert matched[0][1] is not None
@@ -159,7 +162,7 @@ class TestMatchAccounts:
     def test_empty_prior(self):
         prior = []
         current = [_make_account("Cash", debit=100)]
-        matched = match_accounts(prior, current)
+        matched, warnings = match_accounts(prior, current)
         assert len(matched) == 1
         assert matched[0][0] is None  # No prior
         assert matched[0][1] is not None
@@ -167,19 +170,38 @@ class TestMatchAccounts:
     def test_empty_current(self):
         prior = [_make_account("Cash", debit=100)]
         current = []
-        matched = match_accounts(prior, current)
+        matched, warnings = match_accounts(prior, current)
         assert len(matched) == 1
         assert matched[0][0] is not None
         assert matched[0][1] is None  # No current
 
     def test_both_empty(self):
-        matched = match_accounts([], [])
+        matched, warnings = match_accounts([], [])
         assert len(matched) == 0
+
+    def test_duplicate_account_warning(self):
+        """Accounts with different names but same normalized name emit a warning."""
+        prior = [
+            _make_account("Accounts Receivable", debit=100),
+            _make_account("ACCOUNTS RECEIVABLE", debit=200),
+        ]
+        current = [_make_account("Accounts Receivable", debit=300)]
+        matched, warnings = match_accounts(prior, current)
+        assert len(matched) == 1
+        # Combined balance should be correct
+        from shared.parsing_helpers import safe_decimal
+
+        assert safe_decimal(matched[0][0]["debit"]) == 300
+        # Should have a warning for the prior period duplicate
+        assert len(warnings) == 1
+        assert warnings[0]["period"] == "prior"
+        assert len(warnings[0]["original_accounts"]) == 2
 
 
 # =============================================================================
 # MOVEMENT TYPE CLASSIFICATION TESTS
 # =============================================================================
+
 
 class TestCalculateMovement:
     """Tests for movement type classification."""
@@ -259,6 +281,7 @@ class TestCalculateMovement:
 # SIGNIFICANCE TIER TESTS
 # =============================================================================
 
+
 class TestClassifySignificance:
     """Tests for significance tier classification."""
 
@@ -296,7 +319,8 @@ class TestClassifySignificance:
     def test_new_account_material_when_large(self):
         """Large new account should be material if exceeds threshold."""
         sig = classify_significance(
-            100000, None,
+            100000,
+            None,
             materiality_threshold=50000,
             movement_type=MovementType.NEW_ACCOUNT,
         )
@@ -316,6 +340,7 @@ class TestClassifySignificance:
 # FULL COMPARISON INTEGRATION TESTS
 # =============================================================================
 
+
 class TestCompareTrialBalances:
     """Integration tests for compare_trial_balances."""
 
@@ -334,8 +359,10 @@ class TestCompareTrialBalances:
 
     def test_labels_preserved(self, simple_prior, simple_current):
         result = compare_trial_balances(
-            simple_prior, simple_current,
-            prior_label="FY2024", current_label="FY2025",
+            simple_prior,
+            simple_current,
+            prior_label="FY2024",
+            current_label="FY2025",
         )
         assert result.prior_label == "FY2024"
         assert result.current_label == "FY2025"
@@ -359,8 +386,9 @@ class TestCompareTrialBalances:
         result = compare_trial_balances(simple_prior, simple_current)
         if len(result.significant_movements) >= 2:
             for i in range(len(result.significant_movements) - 1):
-                assert abs(result.significant_movements[i].change_amount) >= \
-                       abs(result.significant_movements[i + 1].change_amount)
+                assert abs(result.significant_movements[i].change_amount) >= abs(
+                    result.significant_movements[i + 1].change_amount
+                )
 
     def test_to_dict_serializable(self, simple_prior, simple_current):
         result = compare_trial_balances(simple_prior, simple_current)
@@ -386,7 +414,8 @@ class TestCompareTrialBalances:
 
     def test_with_materiality_threshold(self, simple_prior, simple_current):
         result = compare_trial_balances(
-            simple_prior, simple_current,
+            simple_prior,
+            simple_current,
             materiality_threshold=25000,
         )
         material_count = result.movements_by_significance.get("material", 0)
@@ -403,6 +432,7 @@ class TestCompareTrialBalances:
 # =============================================================================
 # EDGE CASE TESTS
 # =============================================================================
+
 
 class TestEdgeCases:
     """Edge cases and boundary conditions."""
@@ -489,6 +519,7 @@ class TestEdgeCases:
 # =============================================================================
 # LEAD SHEET GROUPING TESTS
 # =============================================================================
+
 
 class TestLeadSheetGrouping:
     """Tests for lead sheet grouping in comparison results."""

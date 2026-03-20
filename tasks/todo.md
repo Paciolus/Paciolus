@@ -85,3 +85,11 @@
 - **Status:** COMPLETE
 - **Commit:** c9b51db
 
+### FIX-2A: Edge Case Hard FAILs (AUDIT-06 Phase 2)
+- [ ] FIX 1 — RPT-02: Emit duplicate-account warnings before coalescing in `multi_period_comparison.py`
+- [ ] FIX 2 — RPT-12: Return insufficient-population result when non-zero rows < minimum in `sampling_engine.py`
+- [ ] FIX 3 — RPT-12: Track and surface missing audited amounts separately from clean results in `sampling_engine.py`
+- [ ] FIX 4 — Exports: Replace user_id ownership check with org-aware helper; 400 → 404
+- [ ] FIX 5 — RPT-13: Preserve Decimal precision in currency conversion at large values in `currency_engine.py`
+- **Status:** IN PROGRESS
+

@@ -233,6 +233,9 @@ class MovementSummary:
     # Framework comparability metadata (Sprint 378)
     framework_note: Optional[str] = None
 
+    # Duplicate account coalescing warnings (FIX-2A)
+    duplicate_account_warnings: list[dict] = field(default_factory=list)
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "prior_label": self.prior_label,
@@ -251,6 +254,7 @@ class MovementSummary:
             "current_total_debits": self.current_total_debits,
             "current_total_credits": self.current_total_credits,
             "framework_note": self.framework_note,
+            "duplicate_account_warnings": self.duplicate_account_warnings,
         }
 
 
@@ -290,13 +294,22 @@ def normalize_account_name(name: str) -> str:
 def match_accounts(
     prior_accounts: list[dict],
     current_accounts: list[dict],
-) -> list[tuple[Optional[dict], Optional[dict], str]]:
+) -> tuple[list[tuple[Optional[dict], Optional[dict], str]], list[dict]]:
     """
     Match accounts between prior and current trial balances.
 
-    Returns list of (prior_account, current_account, display_name) tuples.
-    Unmatched accounts have None for the missing side.
+    Returns:
+        (matched, duplicate_account_warnings) where matched is a list of
+        (prior_account, current_account, display_name) tuples and
+        duplicate_account_warnings surfaces cases where distinct original
+        account names were coalesced under the same normalized name.
     """
+    duplicate_account_warnings: list[dict] = []
+
+    # Collect original account names per normalized name for duplicate detection
+    prior_names_by_norm: dict[str, list[str]] = {}
+    current_names_by_norm: dict[str, list[str]] = {}
+
     # Build normalized name → account mapping for both periods.
     # Aggregate duplicates: if multiple rows share the same normalized name,
     # sum their debits/credits to avoid silently dropping balances.
@@ -304,6 +317,7 @@ def match_accounts(
     for acct in prior_accounts:
         name = acct.get("account", "")
         norm = normalize_account_name(name)
+        prior_names_by_norm.setdefault(norm, []).append(name)
         if norm in prior_by_norm:
             existing = prior_by_norm[norm]
             existing["debit"] = safe_decimal(existing.get("debit", 0)) + safe_decimal(acct.get("debit", 0))
@@ -315,12 +329,43 @@ def match_accounts(
     for acct in current_accounts:
         name = acct.get("account", "")
         norm = normalize_account_name(name)
+        current_names_by_norm.setdefault(norm, []).append(name)
         if norm in current_by_norm:
             existing = current_by_norm[norm]
             existing["debit"] = safe_decimal(existing.get("debit", 0)) + safe_decimal(acct.get("debit", 0))
             existing["credit"] = safe_decimal(existing.get("credit", 0)) + safe_decimal(acct.get("credit", 0))
         else:
             current_by_norm[norm] = {**acct}
+
+    # Detect duplicate account coalescing across both periods
+    for norm, names in prior_names_by_norm.items():
+        unique_names = sorted(set(names))
+        if len(unique_names) > 1:
+            duplicate_account_warnings.append(
+                {
+                    "normalized_name": norm,
+                    "original_accounts": unique_names,
+                    "period": "prior",
+                    "description": (
+                        f"Accounts {', '.join(repr(n) for n in unique_names)} share the "
+                        f"normalized name '{norm}' and were combined for comparison purposes"
+                    ),
+                }
+            )
+    for norm, names in current_names_by_norm.items():
+        unique_names = sorted(set(names))
+        if len(unique_names) > 1:
+            duplicate_account_warnings.append(
+                {
+                    "normalized_name": norm,
+                    "original_accounts": unique_names,
+                    "period": "current",
+                    "description": (
+                        f"Accounts {', '.join(repr(n) for n in unique_names)} share the "
+                        f"normalized name '{norm}' and were combined for comparison purposes"
+                    ),
+                }
+            )
 
     matched: list[tuple[Optional[dict], Optional[dict], str]] = []
     matched_current_norms: set[str] = set()
@@ -343,7 +388,7 @@ def match_accounts(
             display_name = current_acct.get("account", "")
             matched.append((None, current_acct, display_name))
 
-    return matched
+    return matched, duplicate_account_warnings
 
 
 # =============================================================================
@@ -542,7 +587,7 @@ def compare_trial_balances(
     Returns:
         MovementSummary with all movements classified and grouped by lead sheet.
     """
-    matched = match_accounts(prior_accounts, current_accounts)
+    matched, duplicate_account_warnings = match_accounts(prior_accounts, current_accounts)
 
     all_movements: list[AccountMovement] = []
     type_counts: dict[str, int] = {mt.value: 0 for mt in MovementType}
@@ -645,6 +690,7 @@ def compare_trial_balances(
         prior_total_credits=float(prior_total_credits),
         current_total_debits=float(current_total_debits),
         current_total_credits=float(current_total_credits),
+        duplicate_account_warnings=duplicate_account_warnings,
     )
 
 
@@ -742,6 +788,9 @@ class ThreeWayMovementSummary:
     # Framework comparability metadata (Sprint 378)
     framework_note: Optional[str] = None
 
+    # Duplicate account coalescing warnings (FIX-2A)
+    duplicate_account_warnings: list[dict] = field(default_factory=list)
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "prior_label": self.prior_label,
@@ -767,6 +816,7 @@ class ThreeWayMovementSummary:
             "accounts_under_budget": self.accounts_under_budget,
             "accounts_on_budget": self.accounts_on_budget,
             "framework_note": self.framework_note,
+            "duplicate_account_warnings": self.duplicate_account_warnings,
         }
 
 
@@ -931,6 +981,7 @@ def compare_three_periods(
         accounts_over_budget=over_budget,
         accounts_under_budget=under_budget,
         accounts_on_budget=on_budget,
+        duplicate_account_warnings=two_way.duplicate_account_warnings,
     )
 
 
