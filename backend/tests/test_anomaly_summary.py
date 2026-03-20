@@ -436,6 +436,56 @@ class TestAuthoritativeReferences:
         assert "ASC 250-10" not in AUDITOR_INSTRUCTIONS
 
 
+class TestASC250CanaryGuard:
+    """FIX-4 FIX 3: Canary test — ASC 250-10 must not appear in any tool's
+    YAML-sourced references unless it belongs to an allowlisted domain.
+
+    journal_entry_testing and multi_period_comparison legitimately cite
+    ASC 250-10 (Accounting Changes and Error Corrections).  All other
+    tool domains must not.
+    """
+
+    _ALLOWLISTED_DOMAINS = {"journal_entry_testing", "multi_period_comparison"}
+
+    def test_asc_250_10_absent_from_non_allowlisted_tools(self):
+        """Every tool domain's references must not contain ASC 250-10
+        unless that domain is explicitly allowlisted."""
+        from shared.framework_resolution import ResolvedFramework
+        from shared.scope_methodology import _load_yaml
+
+        data = _load_yaml(ResolvedFramework.FASB)
+        tools = data.get("tools", {})
+
+        violations: list[str] = []
+        for domain, tool_data in tools.items():
+            if domain in self._ALLOWLISTED_DOMAINS:
+                continue
+            for ref in tool_data.get("references", []):
+                codification = ref.get("codification", "")
+                if "ASC 250-10" in codification:
+                    violations.append(domain)
+
+        assert violations == [], (
+            f"ASC 250-10 found in non-allowlisted tool domains: {violations}. "
+            "Either remove the reference or add the domain to the allowlist with justification."
+        )
+
+    def test_asc_250_10_present_in_allowlisted_tools(self):
+        """Allowlisted domains must actually contain ASC 250-10 (guard against stale allowlist)."""
+        from shared.framework_resolution import ResolvedFramework
+        from shared.scope_methodology import _load_yaml
+
+        data = _load_yaml(ResolvedFramework.FASB)
+        tools = data.get("tools", {})
+
+        for domain in self._ALLOWLISTED_DOMAINS:
+            tool_data = tools.get(domain, {})
+            refs = [r.get("codification", "") for r in tool_data.get("references", [])]
+            assert any("ASC 250-10" in r for r in refs), (
+                f"Domain '{domain}' is allowlisted for ASC 250-10 but no such reference found — remove from allowlist."
+            )
+
+
 class TestPhantomPageFix:
     """Tests for phantom page 5 fix."""
 

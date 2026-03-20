@@ -33,6 +33,9 @@ tools:
   journal_entry_testing:
     data_description: "General Ledger extract"
     references:
+      # ASC 250-10: Intentionally retained — consumed by je_testing_memo_generator.py
+      # via build_authoritative_reference_block(tool_domain="journal_entry_testing").
+      # Relevant because journal entry corrections are governed by ASC 250-10.
       - codification: "ASC 250-10"
         topic: "Accounting Changes and Error Corrections — Overall"
         paragraph: "Various"
@@ -133,6 +136,9 @@ tools:
   multi_period_comparison:
     data_description: "trial balance data across reporting periods"
     references:
+      # ASC 250-10: Intentionally retained — consumed by multi_period_memo_generator.py
+      # via build_authoritative_reference_block(tool_domain="multi_period_comparison").
+      # Relevant because period-over-period changes may involve accounting-change restatements.
       - codification: "ASC 250-10"
         topic: "Accounting Changes and Error Corrections — Overall"
         paragraph: "Various"
