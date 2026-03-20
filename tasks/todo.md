@@ -63,6 +63,16 @@
 - **Status:** COMPLETE
 - **Tests:** 6,896 passed (3 pre-existing failures, 0 regressions)
 
+### FIX-1B: Decimal Precision — JSON Serialization Boundaries
+- [x] Step 1: Add Decimal-aware JSON encoder to FastAPI
+- [ ] Step 2: Remove float casts from models.py to_dict()
+- [ ] Step 3: Remove float casts from adjusting_entries.py to_dict()
+- [ ] Step 4: Remove post-quantization float casts in auditor/ingestion/ratios
+- [ ] Step 5: Remove float cast from engagement materiality serialization
+- [ ] Step 6: Remove float reparsing in revenue/payroll/AP memo generators
+- [ ] Step 7: Accept Decimal in drill_down format_currency helper
+- **Status:** IN PROGRESS
+
 ### Sprint 562: Complete All Deferred Items
 - [x] **Going concern PDF section** — `render_going_concern_indicators()` in `pdf/sections/diagnostic.py`, wired into orchestrator, ToC updated
 - [x] **Freezegun migration** — 14 test methods decorated across 3 files (`test_csrf_middleware.py`, `test_security.py`, `test_rate_limit_tiered.py`); `freezegun>=1.5.0` added to requirements-dev.txt; 150 tests pass

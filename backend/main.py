@@ -5,9 +5,12 @@ Application entry point — creates the FastAPI app, registers middleware,
 and includes all route modules.
 """
 
+import json
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from decimal import Decimal
+from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -46,6 +49,31 @@ from version import __version__
 # Initialize logging before anything else
 setup_logging()
 logger = logging.getLogger(__name__)
+
+
+# FIX-1B: Decimal-aware JSON serialization — preserves monetary precision
+class _DecimalEncoder(json.JSONEncoder):
+    """JSON encoder that serializes Decimal as string to preserve precision."""
+
+    def default(self, obj: Any) -> Any:
+        if isinstance(obj, Decimal):
+            return str(obj)
+        return super().default(obj)
+
+
+class DecimalJSONResponse(JSONResponse):
+    """JSONResponse that serializes Decimal values as strings, not floats."""
+
+    def render(self, content: Any) -> bytes:
+        return json.dumps(
+            content,
+            cls=_DecimalEncoder,
+            ensure_ascii=False,
+            allow_nan=False,
+            indent=None,
+            separators=(",", ":"),
+        ).encode("utf-8")
+
 
 # Sprint 275: Sentry APM — init before app creation, only if DSN configured
 if SENTRY_DSN:
@@ -153,6 +181,7 @@ app = FastAPI(
     description="12-Tool Audit Intelligence Suite for Financial Professionals",
     version=__version__,
     lifespan=lifespan,
+    default_response_class=DecimalJSONResponse,
     # Disable interactive API docs in production to prevent endpoint/schema enumeration
     docs_url=None if ENV_MODE == "production" else "/docs",
     redoc_url=None if ENV_MODE == "production" else "/redoc",
