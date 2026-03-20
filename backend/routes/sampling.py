@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 from auth import require_verified_user
 from database import get_db
 from models import User
-from sampling_engine import SamplingConfig, design_sample, evaluate_sample
+from sampling_engine import InsufficientPopulationResult, SamplingConfig, design_sample, evaluate_sample
 from shared.error_messages import sanitize_error
 from shared.helpers import (
     maybe_record_tool_run,
@@ -59,6 +59,16 @@ def _run_design(
         config=config,
         column_mapping=column_mapping,
     )
+
+    # Handle insufficient population
+    if isinstance(result, InsufficientPopulationResult):
+        return {
+            "status": result.status,
+            "non_zero_count": result.non_zero_count,
+            "minimum_required": result.minimum_required,
+            "total_row_count": result.total_row_count,
+            "message": result.message,
+        }
 
     # Convert to dict for JSON serialization
     selected_items = []

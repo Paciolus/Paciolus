@@ -65,6 +65,9 @@ INCREMENTAL_FACTORS_95: list[float] = [
 ]
 
 # Incremental factors for 90% confidence
+# Minimum non-zero population size for a statistically meaningful sample
+MIN_POPULATION_SIZE = 5
+
 INCREMENTAL_FACTORS_90: list[float] = [
     1.10,
     0.92,
@@ -180,6 +183,17 @@ class SampleEvaluationResult:
     conclusion_detail: str
     errors: list[SampleError]
     taintings_ranked: list[float]  # Sorted desc for Stringer bound
+
+
+@dataclass
+class InsufficientPopulationResult:
+    """Returned when the non-zero population is too small for meaningful sampling."""
+
+    status: str = "insufficient_population"
+    non_zero_count: int = 0
+    minimum_required: int = MIN_POPULATION_SIZE
+    total_row_count: int = 0
+    message: str = ""
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -563,7 +577,7 @@ def design_sample(
     filename: str,
     config: SamplingConfig,
     column_mapping: Optional[dict[str, str]] = None,
-) -> SampleDesignResult:
+) -> SampleDesignResult | InsufficientPopulationResult:
     """Main entry point for Phase 1 — Design and select a sample.
 
     1. Parse uploaded population file
@@ -575,6 +589,20 @@ def design_sample(
     """
     column_names, rows = parse_uploaded_file(file_bytes, filename)
     items, detection = _parse_population(rows, column_names, column_mapping)
+
+    # Check minimum viable population size after zero-amount filtering
+    if len(items) < MIN_POPULATION_SIZE:
+        return InsufficientPopulationResult(
+            non_zero_count=len(items),
+            minimum_required=MIN_POPULATION_SIZE,
+            total_row_count=len(rows),
+            message=(
+                f"Insufficient non-zero population for statistical sampling: "
+                f"{len(items)} non-zero items found (minimum required: {MIN_POPULATION_SIZE}, "
+                f"total rows before filtering: {len(rows)}). "
+                f"Consider expanding the population or using alternative audit procedures."
+            ),
+        )
 
     population_value = math.fsum(abs(item.recorded_amount) for item in items)
     population_size = len(items)
