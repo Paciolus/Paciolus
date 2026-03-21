@@ -721,18 +721,18 @@ class TestBankRecMemoInput:
 
 
 # =============================================================================
-# ENGINE RISK SCORE TESTS
+# ENGINE DIAGNOSTIC SCORE TESTS
 # =============================================================================
 
 
-class TestBankRecRiskScore:
-    """Test the compute_bank_rec_risk_score function."""
+class TestBankRecDiagnosticScore:
+    """Test the compute_bank_rec_diagnostic_score function."""
 
-    def test_basic_risk_score(self):
+    def test_basic_diagnostic_score(self):
         from bank_reconciliation import (
             ReconciliationSummary,
             RecTestResult,
-            compute_bank_rec_risk_score,
+            compute_bank_rec_diagnostic_score,
         )
 
         summary = ReconciliationSummary(
@@ -749,16 +749,16 @@ class TestBankRecRiskScore:
             RecTestResult(test_name="High Value (>Materiality)", flagged_count=0, severity="low"),
         ]
 
-        result = compute_bank_rec_risk_score(rec_tests, summary)
+        result = compute_bank_rec_diagnostic_score(rec_tests, summary)
         assert result["score"] == 33.0  # 15 (diff) + 8 (>20 outstanding) + 6 (stale dep) + 4 (stale chk)
         assert result["risk_tier"] == "elevated"
         assert result["tests_run"] == 8
 
-    def test_low_risk_score(self):
+    def test_low_diagnostic_score(self):
         from bank_reconciliation import (
             ReconciliationSummary,
             RecTestResult,
-            compute_bank_rec_risk_score,
+            compute_bank_rec_diagnostic_score,
         )
 
         summary = ReconciliationSummary(
@@ -775,15 +775,15 @@ class TestBankRecRiskScore:
             RecTestResult(test_name="High Value (>Materiality)", flagged_count=0, severity="low"),
         ]
 
-        result = compute_bank_rec_risk_score(rec_tests, summary)
+        result = compute_bank_rec_diagnostic_score(rec_tests, summary)
         assert result["score"] == 0.0
         assert result["risk_tier"] == "low"
 
-    def test_high_risk_score_kiting(self):
+    def test_high_diagnostic_score_kiting(self):
         from bank_reconciliation import (
             ReconciliationSummary,
             RecTestResult,
-            compute_bank_rec_risk_score,
+            compute_bank_rec_diagnostic_score,
         )
 
         summary = ReconciliationSummary(
@@ -800,7 +800,7 @@ class TestBankRecRiskScore:
             RecTestResult(test_name="High Value (>Materiality)", flagged_count=3, severity="medium"),
         ]
 
-        result = compute_bank_rec_risk_score(rec_tests, summary)
+        result = compute_bank_rec_diagnostic_score(rec_tests, summary)
         # 15 (diff) + 10 (>materiality) + 8 (>20 outstanding) + 6 (stale dep) + 4 (stale chk)
         # + 10 (nsf) + 15 (kiting) + 5 (high value) = 73
         assert result["score"] == 73.0
@@ -810,7 +810,7 @@ class TestBankRecRiskScore:
         from bank_reconciliation import (
             ReconciliationSummary,
             RecTestResult,
-            compute_bank_rec_risk_score,
+            compute_bank_rec_diagnostic_score,
         )
 
         summary = ReconciliationSummary(
@@ -827,7 +827,7 @@ class TestBankRecRiskScore:
             RecTestResult(test_name="High Value (>Materiality)", flagged_count=10, severity="medium"),
         ]
 
-        result = compute_bank_rec_risk_score(rec_tests, summary)
+        result = compute_bank_rec_diagnostic_score(rec_tests, summary)
         assert result["score"] <= 100
 
 

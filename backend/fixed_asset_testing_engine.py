@@ -1407,7 +1407,7 @@ def calculate_fa_composite_score(
     test_results: list[FATestResult],
     total_entries: int,
 ) -> FACompositeScore:
-    """Calculate composite risk score from fixed asset test results.
+    """Calculate composite diagnostic score from fixed asset test results.
 
     Delegates to shared test aggregator (Sprint 152).
     """

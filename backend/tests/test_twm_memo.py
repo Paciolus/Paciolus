@@ -10,7 +10,7 @@ Tests:
 - Section VI Key Findings with suggested procedures
 - Section VII Unmatched Documents detail tables
 - Risk tier mapping (engine MEDIUM → standard MODERATE)
-- Risk scoring function
+- Diagnostic scoring function
 - Conclusion text per tier
 - Guardrails (terminology, ISA references)
 """
@@ -19,7 +19,7 @@ from three_way_match_memo_generator import (
     _ENGINE_TIER_MAPPING,
     _RISK_CONCLUSIONS,
     _TEST_DESCRIPTIONS,
-    compute_twm_risk_score,
+    compute_twm_diagnostic_score,
     generate_three_way_match_memo,
 )
 
@@ -334,15 +334,15 @@ class TestRiskTierMapping:
 
 
 # =============================================================================
-# RISK SCORING TESTS
+# DIAGNOSTIC SCORING TESTS
 # =============================================================================
 
 
-class TestRiskScoring:
-    """Risk score computation function."""
+class TestDiagnosticScoring:
+    """Diagnostic score computation function."""
 
     def test_low_risk_scenario(self):
-        score = compute_twm_risk_score(
+        score = compute_twm_diagnostic_score(
             full_match_rate=0.95,
             material_variance_count=0,
             high_variance_count=0,
@@ -355,7 +355,7 @@ class TestRiskScoring:
         assert score <= 10
 
     def test_moderate_risk_scenario(self):
-        score = compute_twm_risk_score(
+        score = compute_twm_diagnostic_score(
             full_match_rate=0.88,
             material_variance_count=2,
             high_variance_count=0,
@@ -368,7 +368,7 @@ class TestRiskScoring:
         assert 11 <= score <= 25
 
     def test_elevated_risk_scenario(self):
-        score = compute_twm_risk_score(
+        score = compute_twm_diagnostic_score(
             full_match_rate=0.82,
             material_variance_count=4,
             high_variance_count=1,
@@ -381,7 +381,7 @@ class TestRiskScoring:
         assert 26 <= score <= 50
 
     def test_high_risk_scenario(self):
-        score = compute_twm_risk_score(
+        score = compute_twm_diagnostic_score(
             full_match_rate=0.65,
             material_variance_count=10,
             high_variance_count=5,
@@ -395,7 +395,7 @@ class TestRiskScoring:
 
     def test_score_capped_at_100(self):
         """Maximum possible score is sum of all caps: 20+15+15+10+10+5+6+8=89."""
-        score = compute_twm_risk_score(
+        score = compute_twm_diagnostic_score(
             full_match_rate=0.50,
             material_variance_count=20,
             high_variance_count=20,
@@ -410,7 +410,7 @@ class TestRiskScoring:
 
     def test_meridian_sample_approximation(self):
         """Meridian sample: ~66 expected."""
-        score = compute_twm_risk_score(
+        score = compute_twm_diagnostic_score(
             full_match_rate=0.756,
             material_variance_count=7,
             high_variance_count=2,

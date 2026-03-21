@@ -22,7 +22,7 @@ from classification_rules import (
     is_contra_account,
 )
 from ratio_engine import CategoryTotals, extract_category_totals
-from shared.tb_diagnostic_constants import compute_tb_risk_score
+from shared.tb_diagnostic_constants import compute_tb_diagnostic_score
 
 # =============================================================================
 # Fix 1: Contra Account Recognition
@@ -577,7 +577,7 @@ class TestScoreDecompositionTopN:
                     "issue": f"Round number #{i}",
                 }
             )
-        score, factors = compute_tb_risk_score(
+        score, factors = compute_tb_diagnostic_score(
             material_count=15,
             minor_count=0,
             coverage_pct=30.0,
@@ -607,7 +607,7 @@ class TestScoreDecompositionTopN:
             }
             for i in range(5)
         ]
-        score, factors = compute_tb_risk_score(
+        score, factors = compute_tb_diagnostic_score(
             material_count=5,
             minor_count=0,
             coverage_pct=10.0,
@@ -632,7 +632,7 @@ class TestScoreDecompositionTopN:
             }
             for i in range(12)
         ]
-        score, factors = compute_tb_risk_score(
+        score, factors = compute_tb_diagnostic_score(
             material_count=12,
             minor_count=3,
             coverage_pct=55.0,

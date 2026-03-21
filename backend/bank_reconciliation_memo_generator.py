@@ -11,7 +11,7 @@ Sections:
 3. Reconciliation Results (matched, outstanding, reconciling difference,
    ending balance reconciliation, reconciling difference characterization)
 4. Outstanding Items (aging tables with per-item priority flags)
-5. Results Summary (composite risk score, tier, severity counts)
+5. Results Summary (composite diagnostic score, tier, severity counts)
 6. Key Findings (reconciling difference, outstanding volume, dynamic test findings)
 7. Authoritative References
 8. Conclusion

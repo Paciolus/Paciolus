@@ -113,8 +113,8 @@ def audit_trial_balance_streaming(
         result["classification_summary"] = auditor.get_classification_summary()
         result["risk_summary"] = build_risk_summary(abnormal_balances)
 
-        # Sprint 526 Fix 5: Compute risk score at analysis time
-        from shared.tb_diagnostic_constants import compute_tb_risk_score, get_risk_tier
+        # Sprint 526 Fix 5: Compute diagnostic score at analysis time
+        from shared.tb_diagnostic_constants import compute_tb_diagnostic_score, get_diagnostic_tier
 
         anomaly_types = result["risk_summary"].get("anomaly_types", {})
         _has_suspense = anomaly_types.get("suspense_account", 0) > 0
@@ -128,7 +128,7 @@ def audit_trial_balance_streaming(
         _flagged_value = sum(abs(ab.get("amount", 0)) for ab in _material_items)
         _coverage_pct = min(_flagged_value / _total_debits * 100, 100.0) if _total_debits > 0 else 0
 
-        risk_score, risk_factors = compute_tb_risk_score(
+        risk_score, risk_factors = compute_tb_diagnostic_score(
             result["material_count"],
             result["immaterial_count"],
             _coverage_pct,
@@ -138,7 +138,7 @@ def audit_trial_balance_streaming(
             informational_count=result["informational_count"],
         )
         result["risk_summary"]["risk_score"] = risk_score
-        result["risk_summary"]["risk_tier"] = get_risk_tier(risk_score)
+        result["risk_summary"]["risk_tier"] = get_diagnostic_tier(risk_score)
         result["risk_summary"]["risk_factors"] = [(name, pts) for name, pts in risk_factors]
         result["risk_summary"]["coverage_pct"] = round(min(_coverage_pct, 100.0), 1)
 
@@ -432,8 +432,8 @@ def audit_trial_balance_multi_sheet(
 
         risk_summary = build_risk_summary(all_abnormal_balances)
 
-        # Risk score
-        from shared.tb_diagnostic_constants import compute_tb_risk_score, get_risk_tier
+        # Diagnostic score
+        from shared.tb_diagnostic_constants import compute_tb_diagnostic_score, get_diagnostic_tier
 
         ms_anomaly_types = risk_summary.get("anomaly_types", {})
         ms_has_suspense = ms_anomaly_types.get("suspense_account", 0) > 0
@@ -446,7 +446,7 @@ def audit_trial_balance_multi_sheet(
         ms_flagged_value = sum(abs(ab.get("amount", 0)) for ab in ms_material_items)
         ms_coverage_pct = min(ms_flagged_value / consolidated_debits * 100, 100.0) if consolidated_debits > 0 else 0
 
-        ms_risk_score, ms_risk_factors = compute_tb_risk_score(
+        ms_risk_score, ms_risk_factors = compute_tb_diagnostic_score(
             material_count,
             immaterial_count,
             ms_coverage_pct,
@@ -456,7 +456,7 @@ def audit_trial_balance_multi_sheet(
             informational_count=ms_informational_count,
         )
         risk_summary["risk_score"] = ms_risk_score
-        risk_summary["risk_tier"] = get_risk_tier(ms_risk_score)
+        risk_summary["risk_tier"] = get_diagnostic_tier(ms_risk_score)
         risk_summary["risk_factors"] = [(name, pts) for name, pts in ms_risk_factors]
         risk_summary["coverage_pct"] = round(min(ms_coverage_pct, 100.0), 1)
 

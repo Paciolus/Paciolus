@@ -234,7 +234,7 @@ def _evaluate_risk_threads(
 
 
 def _compute_overall_tier(score: float) -> str:
-    """Map overall risk score to tier (matching 4-tier scale)."""
+    """Map overall diagnostic score to tier (matching 4-tier scale)."""
     if score <= 10:
         return "low"
     elif score <= 25:
@@ -257,7 +257,7 @@ def _generate_priority_actions(
     for report in sorted(high_reports, key=lambda r: r.risk_score, reverse=True):
         actions.append(
             f"Investigate {report.report_title} — {report.high_severity_count} high-severity findings "
-            f"(risk score: {report.risk_score:.1f})"
+            f"(diagnostic score: {report.risk_score:.1f})"
         )
 
     # Actions from risk threads

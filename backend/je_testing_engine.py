@@ -2755,7 +2755,7 @@ def calculate_composite_score(
     test_results: list[TestResult],
     total_entries: int,
 ) -> CompositeScore:
-    """Calculate the composite risk score from test results.
+    """Calculate the composite diagnostic score from test results.
 
     Delegates to shared test aggregator (Sprint 152).
     """

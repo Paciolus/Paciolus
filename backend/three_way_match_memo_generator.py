@@ -8,7 +8,7 @@ Sections:
 1. Scope (documents matched, file counts, config)
 2. Methodology (6 tests documented)
 3. Match Results (match rates, risk assessment, benchmark, amount totals)
-4. Results Summary (composite risk score, tier, severity counts)
+4. Results Summary (composite diagnostic score, tier, severity counts)
 5. Material Variances (vendor, PO, invoice, amounts, net direction)
 6. Key Findings (4+ findings with suggested procedures)
 7. Unmatched Documents (detail tables per document type)
@@ -145,11 +145,11 @@ _RISK_CONCLUSIONS: dict[str, str] = {
 
 
 # =============================================================================
-# RISK SCORING
+# DIAGNOSTIC SCORING
 # =============================================================================
 
 
-def compute_twm_risk_score(
+def compute_twm_diagnostic_score(
     full_match_rate: float,
     material_variance_count: int,
     high_variance_count: int,
@@ -160,7 +160,7 @@ def compute_twm_risk_score(
     has_date_variance_high: bool,
     performance_materiality: float = 50_000,
 ) -> float:
-    """Compute a composite risk score (0-100) for three-way match results."""
+    """Compute a composite diagnostic score (0-100) for three-way match results."""
     score = 0.0
 
     # Match rate component (max 20)
@@ -193,6 +193,10 @@ def compute_twm_risk_score(
         score += 8
 
     return min(score, 100)
+
+
+# Backward-compatible alias
+compute_twm_risk_score = compute_twm_diagnostic_score
 
 
 # =============================================================================
@@ -327,7 +331,7 @@ def _build_results_summary(
     composite: dict,
     test_results: list[dict],
 ) -> None:
-    """Build Section IV: Results Summary with risk score and severity counts."""
+    """Build Section IV: Results Summary with diagnostic score and severity counts."""
     story.append(Paragraph("IV. Results Summary", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
 

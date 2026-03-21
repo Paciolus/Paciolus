@@ -560,7 +560,7 @@ class PayrollDataQuality:
 
 @dataclass
 class PayrollCompositeScore:
-    """Composite risk score for payroll testing."""
+    """Composite diagnostic score for payroll testing."""
 
     score: float = 0.0
     risk_tier: str = "low"
@@ -1692,7 +1692,7 @@ def calculate_payroll_composite_score(
     test_results: list[PayrollTestResult],
     total_entries: int,
 ) -> PayrollCompositeScore:
-    """Calculate composite risk score from test results.
+    """Calculate composite diagnostic score from test results.
 
     Delegates core scoring to shared test aggregator (Sprint 152).
     Payroll-specific: total_entries normalization, _row_index accessor,

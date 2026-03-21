@@ -7,7 +7,7 @@ per request, not retrieved from database.
 
 Sections:
 I. Engagement Summary (client, period, report count, HIGH findings, overall tier)
-II. Report-by-Report Summary Table (sorted by risk score desc)
+II. Report-by-Report Summary Table (sorted by diagnostic score desc)
 III. Cross-Report Risk Threads (configurable rules engine)
 IV. Recommended Audit Response Priority
 """

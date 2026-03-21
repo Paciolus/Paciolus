@@ -1006,16 +1006,16 @@ def compute_outstanding_items_aging(
 
 
 # =============================================================================
-# RISK SCORING
+# DIAGNOSTIC SCORING
 # =============================================================================
 
 
-def compute_bank_rec_risk_score(
+def compute_bank_rec_diagnostic_score(
     rec_tests: list[RecTestResult],
     summary: ReconciliationSummary,
     performance_materiality: float = 50_000.0,
 ) -> dict:
-    """Compute composite risk score for bank reconciliation.
+    """Compute composite diagnostic score for bank reconciliation.
 
     Returns dict with score, risk_tier, total_flagged, flags_by_severity,
     flag_rate, tests_run, and top_findings.
@@ -1111,6 +1111,10 @@ def compute_bank_rec_risk_score(
     }
 
 
+# Backward-compatible alias
+compute_bank_rec_risk_score = compute_bank_rec_diagnostic_score
+
+
 # =============================================================================
 # MAIN ENTRY POINT
 # =============================================================================
@@ -1189,8 +1193,8 @@ def reconcile_bank_statement(
     # 6. Compute outstanding items aging
     outstanding_aging = compute_outstanding_items_aging(matches)
 
-    # 7. Compute composite risk score
-    composite_score = compute_bank_rec_risk_score(
+    # 7. Compute composite diagnostic score
+    composite_score = compute_bank_rec_diagnostic_score(
         rec_tests, summary, performance_materiality=config.performance_materiality
     )
 

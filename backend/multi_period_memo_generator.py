@@ -9,7 +9,7 @@ Sections:
 1. Header (client, periods, preparer)
 2. Scope (periods compared, total accounts, materiality, significance breakdown)
 3. Movement Summary (counts by movement type)
-4. Results Summary (composite risk score, risk tier, severity counts)
+4. Results Summary (composite diagnostic score, diagnostic tier, severity counts)
 5. Significant Account Movements (material/significant items table, sign changes,
    dormant accounts, new/closed accounts, ratio trends, suggested procedures)
 6. Lead Sheet Summary (net changes by lead sheet category with % change)
@@ -69,11 +69,11 @@ def _format_currency(value: float) -> str:
 
 
 # =============================================================================
-# RISK SCORING
+# DIAGNOSTIC SCORING
 # =============================================================================
 
 
-def compute_apc_risk_score(
+def compute_apc_diagnostic_score(
     material_movement_count: int,
     sign_change_count: int,
     cash_increase_pct: float,
@@ -83,7 +83,7 @@ def compute_apc_risk_score(
     dormant_count: int,
     new_closed_count: int,
 ) -> float:
-    """Compute a composite risk score (0-100) for analytical procedures.
+    """Compute a composite diagnostic score (0-100) for analytical procedures.
 
     Args:
         material_movement_count: Number of material-tier movements.
@@ -111,6 +111,10 @@ def compute_apc_risk_score(
     score += dormant_count * 3
     score += min(new_closed_count * 2, 8)
     return min(score, 100)
+
+
+# Backward-compatible alias
+compute_apc_risk_score = compute_apc_diagnostic_score
 
 
 _RISK_CONCLUSIONS: dict[str, str] = {
@@ -1200,7 +1204,7 @@ def generate_multi_period_memo(
     story.append(Paragraph("III. Results Summary", styles["MemoSection"]))
     story.append(LedgerRule(doc.width))
 
-    # Compute risk score if not pre-computed
+    # Compute diagnostic score if not pre-computed
     if composite_data:
         risk_score = composite_data.get("score", 0)
         risk_tier = composite_data.get("risk_tier", "low")
@@ -1256,7 +1260,7 @@ def generate_multi_period_memo(
             if rev_accounts:
                 single_account_revenue_pct = max(rev_accounts) / curr_rev
 
-        risk_score = compute_apc_risk_score(
+        risk_score = compute_apc_diagnostic_score(
             material_movement_count=material_count,
             sign_change_count=sign_change_count,
             cash_increase_pct=cash_increase_pct,
