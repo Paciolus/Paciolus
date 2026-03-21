@@ -2,7 +2,7 @@
 Paciolus API — Trend Analysis & Industry Ratios Routes
 """
 from datetime import date as date_type
-from typing import Optional
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
@@ -50,7 +50,7 @@ class RollingAnalysisResponse(BaseModel):
     period_type_filter: Optional[str] = None
 
 
-def _summaries_to_snapshots(summaries) -> list[PeriodSnapshot]:
+def _summaries_to_snapshots(summaries: list[Any]) -> list[PeriodSnapshot]:
     """Convert DiagnosticSummary list to PeriodSnapshot list."""
     snapshots = []
     for summary in summaries:
@@ -133,7 +133,7 @@ def get_client_trends(
     limit: int = Query(default=12, ge=2, le=36, description="Number of periods to analyze"),
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db)
-):
+) -> dict[str, Any]:
     """Get trend analysis for a client's historical diagnostic data."""
     log_secure_operation(
         "trend_analysis_request",
@@ -179,7 +179,7 @@ def get_client_industry_ratios(
     client_id: int,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db)
-):
+) -> dict[str, Any]:
     """Get industry-specific ratios for a client."""
     from industry_ratios import calculate_industry_ratios, get_available_industries
 
@@ -211,16 +211,16 @@ def get_client_industry_ratios(
         )
 
     totals_dict = {
-        "total_assets": latest_summary.total_assets or 0.0,
-        "current_assets": latest_summary.current_assets or 0.0,
-        "inventory": latest_summary.inventory or 0.0,
-        "total_liabilities": latest_summary.total_liabilities or 0.0,
-        "current_liabilities": latest_summary.current_liabilities or 0.0,
-        "total_equity": latest_summary.total_equity or 0.0,
-        "total_revenue": latest_summary.total_revenue or 0.0,
-        "cost_of_goods_sold": latest_summary.cost_of_goods_sold or 0.0,
-        "total_expenses": latest_summary.total_expenses or 0.0,
-        "operating_expenses": latest_summary.operating_expenses or 0.0,
+        "total_assets": float(latest_summary.total_assets or 0.0),
+        "current_assets": float(latest_summary.current_assets or 0.0),
+        "inventory": float(latest_summary.inventory or 0.0),
+        "total_liabilities": float(latest_summary.total_liabilities or 0.0),
+        "current_liabilities": float(latest_summary.current_liabilities or 0.0),
+        "total_equity": float(latest_summary.total_equity or 0.0),
+        "total_revenue": float(latest_summary.total_revenue or 0.0),
+        "cost_of_goods_sold": float(latest_summary.cost_of_goods_sold or 0.0),
+        "total_expenses": float(latest_summary.total_expenses or 0.0),
+        "operating_expenses": float(latest_summary.operating_expenses or 0.0),
     }
 
     industry = client.industry.value if client.industry else "other"
@@ -250,7 +250,7 @@ def get_client_rolling_analysis(
     period_type: Optional[str] = Query(default=None, description="Filter by period type: monthly, quarterly, annual"),
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db)
-):
+) -> dict[str, Any]:
     """Get rolling window analysis for a client's historical data."""
     log_secure_operation(
         "rolling_analysis_request",

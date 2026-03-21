@@ -87,7 +87,7 @@ def _validate_pdf_magic(file_bytes: bytes, filename: str) -> None:
 
 def _validate_page_count(pdf: object, filename: str) -> None:
     """Reject PDFs exceeding MAX_PDF_PAGES."""
-    page_count = len(pdf.pages)
+    page_count = len(pdf.pages)  # type: ignore[attr-defined]
     if page_count > MAX_PDF_PAGES:
         raise HTTPException(
             status_code=400,
@@ -110,7 +110,7 @@ def _extract_tables_from_pages(
     Returns (raw_tables, pages_scanned, dropped_pages).
     Each raw_table is a list of rows, where each row is a list of cell strings.
     """
-    pages_to_scan = pdf.pages
+    pages_to_scan = pdf.pages  # type: ignore[attr-defined]
     if max_pages is not None:
         pages_to_scan = pages_to_scan[:max_pages]
 

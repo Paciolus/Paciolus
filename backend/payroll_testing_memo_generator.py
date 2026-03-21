@@ -694,7 +694,7 @@ def generate_payroll_testing_memo(
 ) -> bytes:
     """Generate a PDF testing memo for payroll testing results."""
 
-    def _payroll_scope(story, styles, doc_width, composite, data_quality, period_tested_arg):
+    def _payroll_scope(story: Any, styles: Any, doc_width: Any, composite: Any, data_quality: Any, period_tested_arg: Any) -> None:
         build_scope_section(
             story,
             styles,

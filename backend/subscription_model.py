@@ -15,11 +15,15 @@ No financial data, no account numbers, no PII beyond what Stripe requires.
 
 from datetime import UTC, datetime
 from enum import Enum as PyEnum
+from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Integer, String, Text, func
-from sqlalchemy.orm import relationship
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String, Text, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database import Base
+
+if TYPE_CHECKING:
+    from models import User
 
 
 class SubscriptionStatus(str, PyEnum):
@@ -92,56 +96,56 @@ class Subscription(Base):
 
     __tablename__ = "subscriptions"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
 
     # One subscription per user
-    user_id = Column(
+    user_id: Mapped[int] = mapped_column(
         Integer,
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
         unique=True,
         index=True,
     )
-    user = relationship("User", backref="subscription")
+    user: Mapped["User"] = relationship("User", backref="subscription")
 
     # Plan details
-    tier = Column(
+    tier: Mapped[str] = mapped_column(
         Enum("free", "solo", "professional", "enterprise", name="subscription_tier"),
         nullable=False,
         default="free",
     )
-    status = Column(Enum(SubscriptionStatus), nullable=False, default=SubscriptionStatus.ACTIVE)
-    billing_interval = Column(Enum(BillingInterval), nullable=True)
+    status: Mapped[SubscriptionStatus] = mapped_column(Enum(SubscriptionStatus), nullable=False, default=SubscriptionStatus.ACTIVE)
+    billing_interval: Mapped[BillingInterval | None] = mapped_column(Enum(BillingInterval), nullable=True)
 
     # Stripe references
-    stripe_customer_id = Column(String(255), nullable=True, unique=True, index=True)
-    stripe_subscription_id = Column(String(255), nullable=True, unique=True, index=True)
+    stripe_customer_id: Mapped[str | None] = mapped_column(String(255), nullable=True, unique=True, index=True)
+    stripe_subscription_id: Mapped[str | None] = mapped_column(String(255), nullable=True, unique=True, index=True)
 
     # Billing period (synced from Stripe)
-    current_period_start = Column(DateTime, nullable=True)
-    current_period_end = Column(DateTime, nullable=True)
+    current_period_start: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    current_period_end: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     # Seat management (Phase LIX Sprint B)
-    seat_count = Column(Integer, default=1, nullable=False)  # Base seats from plan
-    additional_seats = Column(Integer, default=0, nullable=False)  # Add-on seats purchased
+    seat_count: Mapped[int] = mapped_column(Integer, default=1, nullable=False)  # Base seats from plan
+    additional_seats: Mapped[int] = mapped_column(Integer, default=0, nullable=False)  # Add-on seats purchased
 
     # Upload quota tracking (Phase LXIX — billing-cycle-aligned)
-    uploads_used_current_period = Column(Integer, default=0, nullable=False)
+    uploads_used_current_period: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     # Seat mutation versioning (AUDIT-06 FIX 1 — optimistic concurrency + idempotency)
-    seat_version = Column(Integer, default=0, nullable=False)
+    seat_version: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     # Cancellation
-    cancel_at_period_end = Column(Boolean, default=False, nullable=False)
+    cancel_at_period_end: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     # DPA acceptance (Sprint 459 — PI1.3 / C2.1)
     # Timestamps when the customer accepted the Data Processing Addendum, and which version.
-    dpa_accepted_at = Column(DateTime, nullable=True)
-    dpa_version = Column(String(20), nullable=True)
+    dpa_accepted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    dpa_version: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
     # Timestamps
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
-    updated_at = Column(
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC), server_default=func.now()
     )
 
@@ -186,8 +190,8 @@ class ProcessedWebhookEvent(Base):
 
     __tablename__ = "processed_webhook_events"
 
-    stripe_event_id = Column(String(255), primary_key=True)
-    processed_at = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
+    stripe_event_id: Mapped[str] = mapped_column(String(255), primary_key=True)
+    processed_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
 
     def __repr__(self) -> str:
         return f"<ProcessedWebhookEvent(id={self.stripe_event_id})>"
@@ -208,29 +212,29 @@ class BillingEvent(Base):
 
     __tablename__ = "billing_events"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
 
     # Who (nullable — webhook events may lack user context)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    user_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("users.id"), nullable=True, index=True)
 
     # What happened
-    event_type = Column(
+    event_type: Mapped[BillingEventType] = mapped_column(
         Enum(BillingEventType),
         nullable=False,
         index=True,
     )
 
     # Context at time of event
-    tier = Column(String(20), nullable=True, index=True)  # solo, team
-    interval = Column(String(10), nullable=True)  # monthly, annual
-    seat_count = Column(Integer, nullable=True)  # total seats at event time
+    tier: Mapped[str | None] = mapped_column(String(20), nullable=True, index=True)  # solo, team
+    interval: Mapped[str | None] = mapped_column(String(10), nullable=True)  # monthly, annual
+    seat_count: Mapped[int | None] = mapped_column(Integer, nullable=True)  # total seats at event time
 
     # Flexible metadata (JSON string) — cancellation reason, promo code used, etc.
     # Example: {"reason": "too_expensive"}, {"promo_code": "MONTHLY20"}
-    metadata_json = Column(Text, nullable=True)
+    metadata_json: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # When
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now(), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now(), index=True)
 
     def __repr__(self) -> str:
         return f"<BillingEvent(id={self.id}, type={self.event_type}, tier={self.tier})>"

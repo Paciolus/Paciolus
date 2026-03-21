@@ -926,7 +926,7 @@ def parse_json_mapping(raw_json: Optional[str], log_label: str) -> Optional[dict
     try:
         mapping = json.loads(raw_json)
         log_secure_operation(f"{log_label}_mapping", f"Received mapping: {list(mapping.keys())}")
-        return mapping
+        return dict(mapping)
     except json.JSONDecodeError:
         log_secure_operation(f"{log_label}_mapping_error", "Invalid JSON in mapping")
         return None

@@ -3,6 +3,7 @@
 import gc
 import io
 from dataclasses import asdict, dataclass
+from typing import Any
 
 import pandas as pd
 from openpyxl import load_workbook
@@ -217,7 +218,7 @@ def _inspect_ods(buffer: io.BytesIO, filename: str) -> list[SheetInfo]:
 
             # Count data rows, respecting table:number-rows-repeated but
             # skipping trailing empty rows (ODS pads sheets to 2^20 rows).
-            def _row_has_content(row) -> bool:
+            def _row_has_content(row: Any) -> bool:
                 for cell in row.getElementsByType(TableCell):
                     if cell.getElementsByType(P):
                         return True

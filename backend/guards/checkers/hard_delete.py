@@ -23,7 +23,7 @@ def check_hard_delete_source(
     protected_models: list[str],
 ) -> list[Violation]:
     """Check a single source string for hard-delete of protected models."""
-    violations = []
+    violations: list[Violation] = []
     lines = source.splitlines()
 
     # First pass: detect which protected models are imported

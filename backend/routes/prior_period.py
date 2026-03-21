@@ -125,7 +125,7 @@ async def save_prior_period(
     period_data: PeriodSaveRequest,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, object]:
     """Save current audit data as a prior period for future comparison."""
     log_secure_operation("save_period", f"User {current_user.id} saving period for client {client_id}")
 
@@ -193,7 +193,7 @@ async def list_prior_periods(
     limit: int = Query(default=20, ge=1, le=100),
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> list[PeriodListItemResponse]:
     """List saved prior periods for a client."""
     log_secure_operation("list_periods", f"User {current_user.id} listing periods for client {client_id}")
 
@@ -222,8 +222,8 @@ async def list_prior_periods(
             period_date=p.period_date.isoformat() if p.period_date else None,
             period_type=p.period_type.value if p.period_type else None,
             timestamp=p.timestamp.isoformat() if p.timestamp else "",
-            total_assets=p.total_assets or 0.0,
-            total_revenue=p.total_revenue or 0.0,
+            total_assets=float(p.total_assets or 0.0),
+            total_revenue=float(p.total_revenue or 0.0),
         )
         for p in periods
     ]
@@ -236,7 +236,7 @@ async def compare_to_prior_period(
     compare_data: CompareRequest,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, object]:
     """Compare current audit results to a saved prior period."""
     log_secure_operation(
         "compare_periods", f"User {current_user.id} comparing to period {compare_data.prior_period_id}"

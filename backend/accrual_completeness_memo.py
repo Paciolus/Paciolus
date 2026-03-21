@@ -586,7 +586,7 @@ def generate_accrual_completeness_memo(
         isa_reference="ISA 520 (Analytical Procedures)",
     )
 
-    def _on_later_pages(canvas, doc):
+    def _on_later_pages(canvas: object, doc: object) -> None:
         draw_page_header(canvas, doc, title="Accrual Completeness Estimator", reference=reference)
         draw_page_footer(canvas, doc)
 

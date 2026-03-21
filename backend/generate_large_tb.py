@@ -90,12 +90,12 @@ EXPENSE_ACCOUNTS = [
 ]
 
 
-def generate_account_number():
+def generate_account_number() -> str:
     """Generate a random account number."""
     return f"{random.randint(1000, 9999)}-{random.randint(100, 999)}"
 
 
-def generate_trial_balance(num_rows: int, output_file: str):
+def generate_trial_balance(num_rows: int, output_file: str) -> None:
     """
     Generate a trial balance CSV with the specified number of rows.
     Ensures debits = credits for a balanced trial balance.

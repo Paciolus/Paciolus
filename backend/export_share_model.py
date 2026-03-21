@@ -11,7 +11,8 @@ NOT source financial data. All records auto-expire within 48 hours.
 
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import Column, DateTime, Integer, LargeBinary, String, func
+from sqlalchemy import DateTime, Integer, LargeBinary, String, func
+from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.schema import ForeignKey
 
 from database import Base
@@ -24,34 +25,34 @@ class ExportShare(Base):
 
     __tablename__ = "export_shares"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
 
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, index=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    organization_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("organizations.id"), nullable=True, index=True)
 
     # Token stored as SHA-256 hash
-    share_token_hash = Column(String(64), unique=True, index=True, nullable=False)
+    share_token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
 
     # Export metadata
-    tool_name = Column(String(100), nullable=False)
-    export_format = Column(String(20), nullable=False)  # pdf, xlsx, csv
+    tool_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    export_format: Mapped[str] = mapped_column(String(20), nullable=False)  # pdf, xlsx, csv
 
     # Cached export bytes (auto-purged after 48h)
-    export_data = Column(LargeBinary, nullable=False)
+    export_data: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
 
     # Metadata
-    shared_by_name = Column(String(255), nullable=True)
+    shared_by_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     # Timestamps & lifecycle
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
-    expires_at = Column(
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
+    expires_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=lambda: datetime.now(UTC) + timedelta(hours=SHARE_EXPIRY_HOURS),
         nullable=False,
     )
-    revoked_at = Column(DateTime, nullable=True)
-    access_count = Column(Integer, default=0, nullable=False)
-    last_accessed_at = Column(DateTime, nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    access_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    last_accessed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     def to_dict(self) -> dict:
         """Convert to dictionary for API response (excludes export_data bytes)."""

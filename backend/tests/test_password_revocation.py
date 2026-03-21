@@ -346,7 +346,7 @@ class TestChangeUserPasswordRevocation:
         raw, rt = create_refresh_token(db_session, user.id)
 
         # Manually revoke
-        rt.revoked_at = datetime.now(UTC)  # type: ignore[assignment]
+        rt.revoked_at = datetime.now(UTC)
         db_session.commit()
         assert rt.is_revoked
 

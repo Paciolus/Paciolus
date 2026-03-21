@@ -796,7 +796,7 @@ class FinancialStatementBuilder:
             for acct in raw_accounts:
                 if not isinstance(acct, dict):
                     continue
-                acct_name = acct.get("account", acct.get("name", "Unknown"))
+                acct_name = str(acct.get("account", acct.get("name", "Unknown")))
                 debit = acct.get("debit", 0.0)
                 credit = acct.get("credit", 0.0)
                 net = debit - credit
@@ -870,13 +870,13 @@ class FinancialStatementBuilder:
                             balance = acct.get("net_balance", 0.0)
                             if balance == 0.0:
                                 balance = acct.get("debit", 0.0) - acct.get("credit", 0.0)
-                            return abs(balance)
+                            return float(abs(balance))
                     else:
                         if keyword in name.split() or keyword in name:
                             balance = acct.get("net_balance", 0.0)
                             if balance == 0.0:
                                 balance = acct.get("debit", 0.0) - acct.get("credit", 0.0)
-                            return abs(balance)
+                            return float(abs(balance))
         return 0.0
 
     def _extract_interest_expense(self) -> float:
@@ -901,7 +901,7 @@ class FinancialStatementBuilder:
                         balance = acct.get("net_balance", 0.0)
                         if balance == 0.0:
                             balance = acct.get("debit", 0.0) - acct.get("credit", 0.0)
-                        return abs(balance)
+                        return float(abs(balance))
         return 0.0
 
     def _compute_balance_change(self, letter: str) -> float:

@@ -27,7 +27,7 @@ async def audit_fixed_assets(
     engagement_id: Optional[int] = Form(default=None),
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, object]:
     """Run automated fixed asset register testing.
 
     IAS 16/ASC 360: Property, Plant and Equipment assertions.

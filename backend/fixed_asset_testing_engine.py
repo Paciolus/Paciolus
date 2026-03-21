@@ -347,7 +347,7 @@ class FixedAssetEntry:
     net_book_value: Optional[Decimal] = None
     row_number: int = 0
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if isinstance(self.cost, (int, float)):
             self.cost = Decimal(str(self.cost))
         if isinstance(self.accumulated_depreciation, (int, float)):
@@ -490,7 +490,7 @@ class FATestingResult:
         }
 
 
-def _safe_float_optional(value) -> Optional[float]:
+def _safe_float_optional(value: object) -> Optional[float]:
     """Like safe_float but returns None for missing/invalid values."""
     if value is None:
         return None
@@ -498,7 +498,7 @@ def _safe_float_optional(value) -> Optional[float]:
     if s == "" or s.lower() == "nan" or s.lower() == "none":
         return None
     try:
-        f = float(value)
+        f = float(str(value))
         if math.isnan(f) or math.isinf(f):
             return None
         return f
@@ -558,7 +558,8 @@ def parse_fa_entries(
         if detection.category_column:
             entry.category = safe_str(row.get(detection.category_column))
         if detection.net_book_value_column:
-            entry.net_book_value = _safe_float_optional(row.get(detection.net_book_value_column))
+            nbv_val = _safe_float_optional(row.get(detection.net_book_value_column))
+            entry.net_book_value = Decimal(str(nbv_val)) if nbv_val is not None else None
         entries.append(entry)
     return entries
 
@@ -1013,7 +1014,7 @@ def test_cost_zscore_outliers(
         if z < config.zscore_threshold:
             continue
 
-        severity = zscore_to_severity(z)
+        severity = zscore_to_severity(float(z))
 
         flagged.append(
             FlaggedFixedAsset(
@@ -1024,7 +1025,7 @@ def test_cost_zscore_outliers(
                 severity=severity,
                 issue=f"Outlier cost: ${abs(e.cost):,.2f} (z-score: {z:.1f}, mean: ${mean:,.2f})"
                 f" — {e.asset_id or e.description or f'row {e.row_number}'}",
-                confidence=float(min(Decimal("0.60") + z * Decimal("0.05"), Decimal("0.95"))),
+                confidence=min(0.60 + float(z) * 0.05, 0.95),
                 details={"z_score": round(z, 2), "mean": round(mean, 2), "stdev": round(stdev, 2)},
             )
         )
@@ -1164,7 +1165,7 @@ def test_duplicate_assets(
     for e in entries:
         desc = (e.description or "").lower().strip()
         key = (round(e.cost, 2), desc, (e.acquisition_date or "").strip())
-        if key == (0.0, "", ""):
+        if key == (Decimal("0"), "", ""):
             continue  # Skip blank entries
         groups.setdefault(key, []).append(e)
 

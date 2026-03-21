@@ -36,7 +36,7 @@ def submit_contact_form(
     request: Request,
     form: ContactFormRequest,
     background_tasks: BackgroundTasks,
-):
+) -> ContactFormResponse:
     """
     Submit a contact form inquiry.
     Public endpoint — no auth required.

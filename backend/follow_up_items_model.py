@@ -15,13 +15,17 @@ PROHIBITED (AccountingExpertAuditor Guardrail 2):
 
 from datetime import UTC, datetime
 from enum import Enum as PyEnum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import Column, DateTime, Enum, ForeignKey, Index, Integer, String, Text, func
-from sqlalchemy.orm import relationship
+from sqlalchemy import DateTime, Enum, ForeignKey, Index, Integer, String, Text, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database import Base
 from shared.soft_delete import SoftDeleteMixin
+
+if TYPE_CHECKING:
+    from engagement_model import Engagement, ToolRun
+    from models import User
 
 
 class FollowUpSeverity(str, PyEnum):
@@ -51,34 +55,34 @@ class FollowUpItem(SoftDeleteMixin, Base):
     """
     __tablename__ = "follow_up_items"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
 
     # Engagement link (CASCADE: removed with engagement)
-    engagement_id = Column(
+    engagement_id: Mapped[int] = mapped_column(
         Integer,
         ForeignKey("engagements.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
-    engagement = relationship("Engagement", back_populates="follow_up_items")
+    engagement: Mapped["Engagement"] = relationship("Engagement", back_populates="follow_up_items")
 
     # Optional link to the specific tool run that generated this item
-    tool_run_id = Column(
+    tool_run_id: Mapped[int | None] = mapped_column(
         Integer,
         ForeignKey("tool_runs.id", ondelete="SET NULL"),
         nullable=True,
         index=True,
     )
-    tool_run = relationship("ToolRun", back_populates="follow_up_items")
+    tool_run: Mapped["ToolRun | None"] = relationship("ToolRun", back_populates="follow_up_items")
 
     # Narrative description — NEVER embed account numbers or dollar amounts
-    description = Column(Text, nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
 
     # Source tool that generated this item
-    tool_source = Column(String(50), nullable=False, index=True)
+    tool_source: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
 
     # Severity classification
-    severity = Column(
+    severity: Mapped[FollowUpSeverity] = mapped_column(
         Enum(FollowUpSeverity),
         nullable=False,
         default=FollowUpSeverity.MEDIUM,
@@ -86,7 +90,7 @@ class FollowUpItem(SoftDeleteMixin, Base):
     )
 
     # Auditor disposition
-    disposition = Column(
+    disposition: Mapped[FollowUpDisposition] = mapped_column(
         Enum(FollowUpDisposition),
         nullable=False,
         default=FollowUpDisposition.NOT_REVIEWED,
@@ -94,10 +98,10 @@ class FollowUpItem(SoftDeleteMixin, Base):
     )
 
     # Auditor free-text notes
-    auditor_notes = Column(Text, nullable=True)
+    auditor_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Assignment — nullable FK to user (Sprint 113)
-    assigned_to = Column(
+    assigned_to: Mapped[int | None] = mapped_column(
         Integer,
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
@@ -105,11 +109,11 @@ class FollowUpItem(SoftDeleteMixin, Base):
     )
 
     # Timestamps
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
-    updated_at = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC), server_default=func.now())
 
     # Reverse relationship (Sprint 280: backref → back_populates)
-    comments = relationship("FollowUpItemComment", back_populates="follow_up_item", passive_deletes=True, cascade="all, delete-orphan")
+    comments: Mapped[list["FollowUpItemComment"]] = relationship("FollowUpItemComment", back_populates="follow_up_item", passive_deletes=True, cascade="all, delete-orphan")
 
     # Composite index for efficient filtering
     __table_args__ = (
@@ -151,50 +155,50 @@ class FollowUpItemComment(SoftDeleteMixin, Base):
     """
     __tablename__ = "follow_up_item_comments"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
 
     # Follow-up item link (CASCADE: removed with item)
-    follow_up_item_id = Column(
+    follow_up_item_id: Mapped[int] = mapped_column(
         Integer,
         ForeignKey("follow_up_items.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
-    follow_up_item = relationship("FollowUpItem", back_populates="comments")
+    follow_up_item: Mapped["FollowUpItem"] = relationship("FollowUpItem", back_populates="comments")
 
     # Author
-    user_id = Column(
+    user_id: Mapped[int] = mapped_column(
         Integer,
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
-    author = relationship("User", foreign_keys=[user_id])
+    author: Mapped["User"] = relationship("User", foreign_keys=[user_id])
 
     # Comment text — NEVER embed account numbers, amounts, or PII
-    comment_text = Column(Text, nullable=False)
+    comment_text: Mapped[str] = mapped_column(Text, nullable=False)
 
     # Threading — nullable self-FK for nested replies
-    parent_comment_id = Column(
+    parent_comment_id: Mapped[int | None] = mapped_column(
         Integer,
         ForeignKey("follow_up_item_comments.id", ondelete="CASCADE"),
         nullable=True,
         index=True,
     )
-    replies = relationship(
+    replies: Mapped[list["FollowUpItemComment"]] = relationship(
         "FollowUpItemComment",
         back_populates="parent",
         cascade="all, delete-orphan",
     )
-    parent = relationship(
+    parent: Mapped["FollowUpItemComment | None"] = relationship(
         "FollowUpItemComment",
         back_populates="replies",
         remote_side="FollowUpItemComment.id",
     )
 
     # Timestamps
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
-    updated_at = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC), server_default=func.now())
 
     # Composite index for efficient thread queries
     __table_args__ = (

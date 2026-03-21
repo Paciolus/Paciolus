@@ -7,7 +7,7 @@ TB-only: 4 tests. TB + sub-ledger: all 11 tests.
 
 import asyncio
 import logging
-from typing import Optional
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +51,7 @@ async def audit_ar_aging(
     collections_total: Optional[float] = Form(default=None),
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, Any]:
     """Run AR aging analysis on trial balance + optional sub-ledger.
 
     ISA 540: Auditing Accounting Estimates (allowance for doubtful accounts).
@@ -89,7 +89,7 @@ async def audit_ar_aging(
                 as_of_date=as_of_date,
             )
 
-            def _analyze():
+            def _analyze() -> Any:
                 tb_columns, tb_rows = parse_uploaded_file(tb_bytes, tb_filename)
 
                 sl_columns_local: Optional[list[str]] = None
@@ -118,7 +118,7 @@ async def audit_ar_aging(
                 maybe_record_tool_run, db, engagement_id, current_user.id, "ar_aging", True, score, flagged
             )
 
-            return result_dict
+            return result_dict  # type: ignore[no-any-return]
 
         except (ValueError, KeyError, TypeError) as e:
             logger.exception("AR aging analysis failed")

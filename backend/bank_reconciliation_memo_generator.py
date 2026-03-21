@@ -721,7 +721,7 @@ def generate_bank_rec_memo(
         bottomMargin=0.8 * inch,
     )
 
-    story = []
+    story: list[Any] = []
     summary = rec_result.get("summary", {})
     bank_detection = rec_result.get("bank_column_detection", {})
     ledger_detection = rec_result.get("ledger_column_detection", {})

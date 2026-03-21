@@ -508,7 +508,7 @@ class JournalEntry:
     currency: Optional[str] = None
     row_number: int = 0
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if isinstance(self.debit, (int, float)):
             self.debit = Decimal(str(self.debit))
         if isinstance(self.credit, (int, float)):
@@ -519,7 +519,7 @@ class JournalEntry:
         return self.debit - self.credit
 
     @property
-    def abs_amount(self) -> float:
+    def abs_amount(self) -> Decimal:
         return max(self.debit, self.credit)
 
     def to_dict(self) -> dict:
@@ -949,8 +949,8 @@ def test_unbalanced_entries(
     total_groups = len(groups)
 
     for group_key, group_entries in groups.items():
-        total_debit = sum(e.debit for e in group_entries)
-        total_credit = sum(e.credit for e in group_entries)
+        total_debit = sum((e.debit for e in group_entries), Decimal("0"))
+        total_credit = sum((e.credit for e in group_entries), Decimal("0"))
         diff = abs(total_debit - total_credit)
 
         if diff > config.balance_tolerance:
@@ -1094,7 +1094,7 @@ def test_round_amounts(
 
     for e in entries:
         amt = e.abs_amount
-        if amt < config.round_amount_threshold:
+        if float(amt) < config.round_amount_threshold:
             continue
 
         for divisor, name, severity in ROUND_AMOUNT_PATTERNS:
@@ -1144,7 +1144,7 @@ def test_unusual_amounts(
     then flags entries that are statistical outliers.
     """
     # Group amounts by account
-    account_amounts: dict[str, list[float]] = {}
+    account_amounts: dict[str, list[Decimal]] = {}
     account_entries: dict[str, list[JournalEntry]] = {}
 
     for e in entries:
@@ -1170,12 +1170,12 @@ def test_unusual_amounts(
         if stdev == 0:
             continue
 
-        threshold = mean + (Decimal(str(config.unusual_amount_stddev)) * stdev)
+        threshold = float(mean) + config.unusual_amount_stddev * float(stdev)
 
         for e in account_entries[acct]:
             amt = e.abs_amount
-            if amt > threshold:
-                z_score = (amt - mean) / stdev
+            if float(amt) > threshold:
+                z_score = float(amt - mean) / float(stdev)
                 flagged.append(
                     FlaggedEntry(
                         entry=e,
@@ -1184,12 +1184,9 @@ def test_unusual_amounts(
                         test_tier=TestTier.STRUCTURAL,
                         severity=zscore_to_severity(z_score),
                         issue=f"Amount ${amt:,.2f} is {z_score:.1f} standard deviations from account mean (${mean:,.2f})",
-                        confidence=float(
-                            min(
-                                Decimal("0.50")
-                                + (z_score - Decimal(str(config.unusual_amount_stddev))) * Decimal("0.10"),
-                                Decimal("1"),
-                            )
+                        confidence=min(
+                            0.50 + (z_score - config.unusual_amount_stddev) * 0.10,
+                            1.0,
                         ),
                         details={
                             "amount": amt,
@@ -1247,8 +1244,8 @@ def test_benford_law(
     amount_entries: list[JournalEntry] = []
     for e in entries:
         amt = e.abs_amount
-        if amt >= config.benford_min_amount:
-            amounts.append(amt)
+        if float(amt) >= config.benford_min_amount:
+            amounts.append(float(amt))
             amount_entries.append(e)
 
     # Run shared Benford analysis
@@ -1275,8 +1272,8 @@ def test_benford_law(
 
     # Build entry-to-digit map for flagging
     entry_by_first_digit: dict[int, list[JournalEntry]] = {d: [] for d in range(1, 10)}
-    for amt, entry in zip(amounts, amount_entries):
-        digit = get_first_digit(amt)
+    for benford_amt, entry in zip(amounts, amount_entries):
+        digit = get_first_digit(benford_amt)
         if digit and 1 <= digit <= 9:
             entry_by_first_digit[digit].append(entry)
 
@@ -2095,10 +2092,10 @@ def test_reciprocal_entries(
         )
 
     # Index entries by absolute amount (rounded to 2 decimals) for matching
-    amount_buckets: dict[float, list[JournalEntry]] = {}
+    amount_buckets: dict[Decimal, list[JournalEntry]] = {}
     for e in entries:
         amt = round(e.abs_amount, 2)
-        if amt < config.reciprocal_min_amount:
+        if float(amt) < config.reciprocal_min_amount:
             continue
         amount_buckets.setdefault(amt, []).append(e)
 
@@ -2608,7 +2605,7 @@ def preview_sampling_strata(
             if criterion == "account":
                 keys.append(e.account or "Unknown")
             elif criterion == "amount_range":
-                keys.append(_amount_range_label(e.abs_amount))
+                keys.append(_amount_range_label(float(e.abs_amount)))
             elif criterion == "period":
                 d = parse_date(e.posting_date or e.entry_date)
                 keys.append(f"{d.year}-{d.month:02d}" if d else "Unknown")
@@ -2652,7 +2649,7 @@ def run_stratified_sampling(
             if criterion == "account":
                 keys.append(e.account or "Unknown")
             elif criterion == "amount_range":
-                keys.append(_amount_range_label(e.abs_amount))
+                keys.append(_amount_range_label(float(e.abs_amount)))
             elif criterion == "period":
                 d = parse_date(e.posting_date or e.entry_date)
                 keys.append(f"{d.year}-{d.month:02d}" if d else "Unknown")
@@ -2837,7 +2834,7 @@ class JETestingEngine(AuditEngineBase):
 
     def extract_test_results(self, test_output: Any) -> list:
         # run_test_battery returns (test_results, benford_data)
-        return test_output[0]
+        return list(test_output[0])
 
     def compute_score(self, test_results: list, entry_count: int) -> Any:
         return calculate_composite_score(test_results, entry_count)
@@ -2885,4 +2882,5 @@ def run_je_testing(
         JETestingResult with composite score, test results, data quality, etc.
     """
     engine = JETestingEngine(config)
-    return engine.run_pipeline(rows, column_names, column_mapping)
+    result: JETestingResult = engine.run_pipeline(rows, column_names, column_mapping)
+    return result

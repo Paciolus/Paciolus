@@ -422,7 +422,7 @@ def compute_going_concern_profile(
 
     # Test 5: Revenue decline (requires prior period)
     if prior_available:
-        indicators.append(_test_revenue_decline(total_revenue, prior_revenue))
+        indicators.append(_test_revenue_decline(total_revenue, prior_revenue or 0.0))
 
     # Test 6: High leverage
     indicators.append(_test_high_leverage(total_liabilities, total_equity))

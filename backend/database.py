@@ -15,6 +15,7 @@ Trial balance data is NEVER persisted - it remains in-memory only.
 """
 
 from collections.abc import Generator
+from typing import Any
 
 from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
@@ -47,7 +48,7 @@ else:
 if _is_sqlite:
 
     @event.listens_for(engine, "connect")
-    def _set_sqlite_pragmas(dbapi_conn, connection_record) -> None:
+    def _set_sqlite_pragmas(dbapi_conn: Any, connection_record: Any) -> None:
         cursor = dbapi_conn.cursor()
         cursor.execute("PRAGMA journal_mode=WAL")
         cursor.execute("PRAGMA foreign_keys=ON")
@@ -207,7 +208,7 @@ def init_db() -> None:
         try:
             raw_conn = engine.raw_connection()
             try:
-                raw_conn.autocommit = True
+                raw_conn.autocommit = True  # type: ignore[attr-defined]
                 cur = raw_conn.cursor()
                 cur.execute(
                     "SELECT 1 FROM pg_enum JOIN pg_type ON pg_enum.enumtypid = pg_type.oid "

@@ -390,7 +390,7 @@ class APPayment:
     payment_method: Optional[str] = None
     row_number: int = 0
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if isinstance(self.amount, (int, float)):
             self.amount = Decimal(str(self.amount))
 
@@ -1194,7 +1194,7 @@ def test_unusual_payment_amounts(
             if z < config.unusual_amount_stddev:
                 continue
 
-            severity = zscore_to_severity(z)
+            severity = zscore_to_severity(float(z))
 
             flagged.append(
                 FlaggedPayment(
@@ -1824,4 +1824,5 @@ def run_ap_testing(
         APTestingResult with composite score, test results, data quality, etc.
     """
     engine = APTestingEngine(config)
-    return engine.run_pipeline(rows, column_names, column_mapping)
+    result: APTestingResult = engine.run_pipeline(rows, column_names, column_mapping)
+    return result

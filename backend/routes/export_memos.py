@@ -145,9 +145,9 @@ def _memo_export_handler(
         )
 
         download_filename = safe_download_filename(
-            payload.filename,
+            payload.filename,  # type: ignore[attr-defined]
             entry.filename_template,
-            "pdf",  # type: ignore[attr-defined]
+            "pdf",
         )
         return streaming_pdf_response(pdf_bytes, download_filename)
     except (ValueError, KeyError, TypeError, OSError) as e:

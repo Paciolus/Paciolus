@@ -225,7 +225,7 @@ class BankTransaction:
     reference: Optional[str] = None
     row_number: int = 0
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if isinstance(self.amount, (int, float)):
             self.amount = Decimal(str(self.amount))
 
@@ -249,7 +249,7 @@ class LedgerTransaction:
     reference: Optional[str] = None
     row_number: int = 0
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if isinstance(self.amount, (int, float)):
             self.amount = Decimal(str(self.amount))
 
@@ -323,7 +323,7 @@ class BankRecResult:
     composite_score: Optional[dict] = None
 
     def to_dict(self) -> dict:
-        result = {
+        result: dict = {
             "summary": self.summary.to_dict(),
             "bank_column_detection": self.bank_column_detection.to_dict(),
             "ledger_column_detection": self.ledger_column_detection.to_dict(),
@@ -557,14 +557,14 @@ def calculate_summary(matches: list[ReconciliationMatch]) -> ReconciliationSumma
 
     return ReconciliationSummary(
         matched_count=matched_count,
-        matched_amount=round(matched_amount, 2),
+        matched_amount=float(round(matched_amount, 2)),
         bank_only_count=bank_only_count,
-        bank_only_amount=round(bank_only_amount, 2),
+        bank_only_amount=float(round(bank_only_amount, 2)),
         ledger_only_count=ledger_only_count,
-        ledger_only_amount=round(ledger_only_amount, 2),
-        reconciling_difference=round(reconciling_difference, 2),
-        total_bank=round(total_bank, 2),
-        total_ledger=round(total_ledger, 2),
+        ledger_only_amount=float(round(ledger_only_amount, 2)),
+        reconciling_difference=float(round(reconciling_difference, 2)),
+        total_bank=float(round(total_bank, 2)),
+        total_ledger=float(round(total_ledger, 2)),
         matches=matches,
     )
 
@@ -775,7 +775,7 @@ def _test_stale_deposits(
                 RecFlaggedItem(
                     test_name="Stale Deposits",
                     description=f"Deposit outstanding {age} days: {txn.description[:50]}",
-                    amount=txn.amount,
+                    amount=float(txn.amount),
                     date=txn.date,
                     reference=txn.reference,
                     severity=item_severity,
@@ -810,7 +810,7 @@ def _test_stale_checks(
                 RecFlaggedItem(
                     test_name="Stale Checks",
                     description=f"Check outstanding {age} days: {txn.description[:50]}",
-                    amount=txn.amount,
+                    amount=float(txn.amount),
                     date=txn.date,
                     reference=txn.reference,
                     severity="medium",
@@ -847,7 +847,7 @@ def _test_nsf_items(
                     RecFlaggedItem(
                         test_name="NSF/Returned Items",
                         description=f"NSF keyword in {txn_source}: {txn.description[:60]}",
-                        amount=txn.amount,
+                        amount=float(txn.amount),
                         date=txn.date,
                         reference=txn.reference,
                         severity="high",
@@ -899,7 +899,7 @@ def _test_interbank_transfers(
                             RecFlaggedItem(
                                 test_name="Interbank Transfers",
                                 description=(f"Same-day debit/credit pair on {txn_date}: ${abs_amount:,.2f}"),
-                                amount=abs_amount,
+                                amount=float(abs_amount),
                                 date=txn_date,
                                 severity="high",
                                 details={
@@ -933,7 +933,7 @@ def _test_high_value_transactions(
                     RecFlaggedItem(
                         test_name="High Value Transactions",
                         description=f"{source.title()} txn >= materiality: {txn.description[:50]}",
-                        amount=txn.amount,
+                        amount=float(txn.amount),
                         date=txn.date,
                         reference=txn.reference,
                         severity="medium",
@@ -998,7 +998,7 @@ def compute_outstanding_items_aging(
                 oldest_days = age
                 aging.oldest_item_days = age
                 aging.oldest_item_date = txn.date
-                aging.oldest_item_amount = txn.amount
+                aging.oldest_item_amount = float(txn.amount)
 
         results.append(aging)
 

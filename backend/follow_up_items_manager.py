@@ -184,11 +184,11 @@ class FollowUpItemsManager:
             return None
 
         if disposition is not None:
-            item.disposition = disposition  # type: ignore[assignment]
+            item.disposition = disposition
         if auditor_notes is not None:
-            item.auditor_notes = auditor_notes  # type: ignore[assignment]
+            item.auditor_notes = auditor_notes
         if severity is not None:
-            item.severity = severity  # type: ignore[assignment]
+            item.severity = severity
         if assigned_to != -1:
             # Validate assignee exists and belongs to same org/user context
             if assigned_to is not None:
@@ -214,9 +214,9 @@ class FollowUpItemsManager:
                     }
                     if not owner_org_ids & assignee_org_ids:
                         raise ValueError("Assigned user not found")
-            item.assigned_to = assigned_to  # type: ignore[assignment]
+            item.assigned_to = assigned_to
 
-        item.updated_at = datetime.now(UTC)  # type: ignore[assignment]
+        item.updated_at = datetime.now(UTC)
 
         self.db.commit()
         self.db.refresh(item)

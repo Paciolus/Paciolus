@@ -125,7 +125,7 @@ def create_access_token(
             password_changed_at = password_changed_at.replace(tzinfo=timezone.utc)
         payload["pwd_at"] = int(password_changed_at.timestamp())
 
-    token = jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
+    token = jwt.encode(payload, JWT_SECRET_KEY or "", algorithm=JWT_ALGORITHM)
 
     log_secure_operation("token_created", f"JWT issued for user_id={user_id}")
 
@@ -139,7 +139,7 @@ def decode_access_token(token: str) -> Optional[TokenData]:
     Returns TokenData if valid, None if invalid or expired.
     """
     try:
-        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+        payload = jwt.decode(token, JWT_SECRET_KEY or "", algorithms=[JWT_ALGORITHM])
         user_id = payload.get("sub")
         email = payload.get("email")
 

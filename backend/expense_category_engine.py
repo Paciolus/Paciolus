@@ -212,8 +212,8 @@ def compute_expense_categories(
         return ExpenseCategoryReport()
 
     # Convert float parameters to Decimal for consistent arithmetic
-    total_revenue = safe_decimal(total_revenue) if total_revenue is not None else Decimal("0")
-    materiality_threshold = safe_decimal(materiality_threshold)
+    total_revenue_dec = safe_decimal(total_revenue) if total_revenue is not None else Decimal("0")
+    materiality_threshold_dec = safe_decimal(materiality_threshold)
 
     # Accumulate amounts by sub-category
     category_amounts: dict[str, Decimal] = {k: Decimal("0") for k in CATEGORY_ORDER}
@@ -236,19 +236,19 @@ def compute_expense_categories(
         category_amounts[subcategory] += net
 
     total_expenses = sum(category_amounts.values(), Decimal("0"))
-    revenue_available = abs(total_revenue) > NEAR_ZERO
+    revenue_available = abs(total_revenue_dec) > NEAR_ZERO
     prior_available = prior_total_expenses is not None
 
     # Build category objects
     categories: list[ExpenseCategory] = []
     for key in CATEGORY_ORDER:
         amount = category_amounts[key]
-        pct_of_revenue = (amount / total_revenue * 100) if revenue_available else None
+        pct_of_revenue = float(amount / total_revenue_dec * 100) if revenue_available else None
 
         cat = ExpenseCategory(
             label=CATEGORY_LABELS[key],
             key=key,
-            amount=amount,
+            amount=float(amount),
             pct_of_revenue=pct_of_revenue,
         )
 
@@ -265,14 +265,14 @@ def compute_expense_categories(
                 cat.prior_amount = prior_amt
                 if prior_revenue is not None and abs(prior_revenue) > NEAR_ZERO:
                     cat.prior_pct_of_revenue = prior_amt / prior_revenue * 100
-                cat.dollar_change = amount - prior_dec
-                cat.exceeds_threshold = abs(amount - prior_dec) > materiality_threshold
+                cat.dollar_change = float(amount - prior_dec)
+                cat.exceeds_threshold = abs(amount - prior_dec) > materiality_threshold_dec
 
         categories.append(cat)
 
     return ExpenseCategoryReport(
         categories=categories,
-        total_expenses=total_expenses,
+        total_expenses=float(total_expenses),
         total_revenue=total_revenue,
         revenue_available=revenue_available,
         prior_available=prior_available,
@@ -343,25 +343,25 @@ def run_expense_category_analytics(
         credit = safe_decimal(row.get(credit_col))
 
         if acct_str not in account_balances:
-            account_balances[acct_str] = {"debit": Decimal("0"), "credit": Decimal("0")}
-        account_balances[acct_str]["debit"] += debit
-        account_balances[acct_str]["credit"] += credit
+            account_balances[acct_str] = {"debit": 0.0, "credit": 0.0}
+        account_balances[acct_str]["debit"] += float(debit)
+        account_balances[acct_str]["credit"] += float(credit)
 
     # Classify accounts
     classifier = create_classifier()
     classified_accounts: dict[str, str] = {}
-    total_revenue = Decimal("0")
+    total_revenue_acc = 0.0
     for acct_name, bals in account_balances.items():
         net = bals["debit"] - bals["credit"]
         cls_result = classifier.classify(acct_name, net)
         classified_accounts[acct_name] = cls_result.category.value
         if cls_result.category.value.lower() == "revenue":
-            total_revenue += abs(net)
+            total_revenue_acc += abs(net)
 
     return compute_expense_categories(
         account_balances,
         classified_accounts,
-        total_revenue,
+        total_revenue_acc,
         materiality_threshold,
         prior_cogs=prior_cogs,
         prior_opex=prior_opex,

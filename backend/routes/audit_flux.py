@@ -4,7 +4,7 @@ Paciolus API — Audit Flux Routes (Period-over-Period Analysis)
 
 import asyncio
 import logging
-from typing import Optional
+from typing import Any, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Request, UploadFile
 from sqlalchemy.orm import Session
@@ -37,7 +37,7 @@ async def flux_analysis(
     engagement_id: Optional[int] = Form(default=None),
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, Any]:
     """Perform a Flux (Period-over-Period) Analysis."""
     # Sprint 310: Resolve materiality from engagement cascade if not explicitly set
     materiality, _flux_mat_source = resolve_materiality(
@@ -52,8 +52,8 @@ async def flux_analysis(
         try:
             content_curr = await validate_file_size(current_file)
             content_prior = await validate_file_size(prior_file)
-            curr_filename = current_file.filename
-            prior_filename = prior_file.filename
+            curr_filename = current_file.filename or ""
+            prior_filename = prior_file.filename or ""
 
             flux_result, recon_result = await asyncio.to_thread(
                 run_flux_analysis,

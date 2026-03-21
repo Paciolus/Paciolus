@@ -3,7 +3,7 @@ Paciolus API — Follow-Up Items Routes
 Phase X: Engagement Layer (narrative-only, Zero-Storage compliant)
 """
 
-from typing import Optional
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
@@ -38,7 +38,7 @@ FollowUpItemListResponse = PaginatedResponse[FollowUpItemResponse]
 # ---------------------------------------------------------------------------
 
 
-def _item_to_response(item) -> FollowUpItemResponse:
+def _item_to_response(item: Any) -> FollowUpItemResponse:
     d = item.to_dict()
     return FollowUpItemResponse(
         id=d["id"],
@@ -46,8 +46,8 @@ def _item_to_response(item) -> FollowUpItemResponse:
         tool_run_id=d["tool_run_id"],
         description=d["description"],
         tool_source=d["tool_source"],
-        severity=d["severity"] or "",
-        disposition=d["disposition"] or "",
+        severity=d["severity"] or "",  # type: ignore[arg-type]
+        disposition=d["disposition"] or "",  # type: ignore[arg-type]
         auditor_notes=d["auditor_notes"],
         assigned_to=d.get("assigned_to"),
         created_at=d["created_at"] or "",
@@ -72,7 +72,7 @@ def create_follow_up_item(
     data: FollowUpItemCreate,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> FollowUpItemResponse:
     """Create a follow-up item for an engagement."""
     log_secure_operation(
         "follow_up_item_create",
@@ -117,7 +117,7 @@ def list_follow_up_items(
     pagination: PaginationParams = Depends(),
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> PaginatedResponse[FollowUpItemResponse]:
     """List follow-up items for an engagement with optional filters."""
     manager = FollowUpItemsManager(db)
 
@@ -161,7 +161,7 @@ def get_follow_up_summary(
     engagement_id: int,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> FollowUpSummaryResponse:
     """Get follow-up item counts grouped by severity, disposition, and tool source."""
     manager = FollowUpItemsManager(db)
 
@@ -194,7 +194,7 @@ def update_follow_up_item(
     data: FollowUpItemUpdate,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> FollowUpItemResponse:
     """Update a follow-up item's disposition, notes, or severity."""
     log_secure_operation(
         "follow_up_item_update",
@@ -236,7 +236,7 @@ def delete_follow_up_item(
     item_id: int,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> None:
     """Delete a follow-up item."""
     log_secure_operation(
         "follow_up_item_delete",
@@ -263,7 +263,7 @@ def get_my_items(
     engagement_id: int,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> list[FollowUpItemResponse]:
     """Get follow-up items assigned to the current user."""
     manager = FollowUpItemsManager(db)
 
@@ -293,7 +293,7 @@ def get_unassigned_items(
     engagement_id: int,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> list[FollowUpItemResponse]:
     """Get follow-up items with no assignee."""
     manager = FollowUpItemsManager(db)
 
@@ -320,7 +320,7 @@ def get_unassigned_items(
 # ---------------------------------------------------------------------------
 
 
-def _comment_to_response(comment) -> CommentResponse:
+def _comment_to_response(comment: Any) -> CommentResponse:
     d = comment.to_dict()
     return CommentResponse(
         id=d["id"],
@@ -346,7 +346,7 @@ def create_comment(
     data: CommentCreate,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> CommentResponse:
     """Create a comment on a follow-up item."""
     log_secure_operation(
         "comment_create",
@@ -383,7 +383,7 @@ def list_comments(
     item_id: int,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> list[CommentResponse]:
     """List all comments for a follow-up item."""
     manager = FollowUpItemsManager(db)
 
@@ -416,7 +416,7 @@ def update_comment(
     data: CommentUpdate,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> CommentResponse:
     """Update a comment's text. Only the author can edit."""
     log_secure_operation(
         "comment_update",
@@ -454,7 +454,7 @@ def delete_comment(
     comment_id: int,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> None:
     """Delete a comment. Only the author can delete."""
     log_secure_operation(
         "comment_delete",

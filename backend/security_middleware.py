@@ -56,7 +56,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         self.production_mode = production_mode
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        response = await call_next(request)
+        response: Response = await call_next(request)
 
         # Always add these headers
         response.headers["X-Frame-Options"] = "DENY"
@@ -107,7 +107,7 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
         client_rid = request.headers.get("X-Request-ID")
         rid = client_rid if client_rid and _REQUEST_ID_RE.match(client_rid) else uuid.uuid4().hex[:12]
         request_id_var.set(rid)
-        response = await call_next(request)
+        response: Response = await call_next(request)
         response.headers["X-Request-ID"] = rid
         return response
 
@@ -180,7 +180,7 @@ class MaxBodySizeMiddleware:
 
         async def checked_receive() -> dict:
             nonlocal bytes_received, exceeded
-            message = await receive()
+            message: dict = dict(await receive())
             if message.get("type") == "http.request":
                 chunk = message.get("body", b"")
                 bytes_received += len(chunk)
@@ -254,7 +254,7 @@ class RateLimitIdentityMiddleware(BaseHTTPMiddleware):
 
                 from config import JWT_ALGORITHM, JWT_SECRET_KEY
 
-                payload = _pyjwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+                payload = _pyjwt.decode(token, JWT_SECRET_KEY or "", algorithms=[JWT_ALGORITHM])
                 sub = payload.get("sub")
                 if sub is not None:
                     user_id = int(sub)
@@ -267,7 +267,8 @@ class RateLimitIdentityMiddleware(BaseHTTPMiddleware):
         request.state.rate_limit_user_tier = tier
         _current_tier.set(tier)
 
-        return await call_next(request)
+        response: Response = await call_next(request)
+        return response
 
 
 # =============================================================================
@@ -316,7 +317,7 @@ def _get_csrf_secret() -> str:
     """Get the HMAC signing secret for CSRF tokens (separate from JWT)."""
     from config import CSRF_SECRET_KEY
 
-    return CSRF_SECRET_KEY
+    return CSRF_SECRET_KEY or ""
 
 
 def generate_csrf_token(user_id: str) -> str:
@@ -444,7 +445,7 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         try:
             payload = _jwt.decode(
                 auth[7:],
-                JWT_SECRET_KEY,
+                JWT_SECRET_KEY or "",
                 algorithms=[JWT_ALGORITHM],
                 options={"verify_exp": False},  # auth dependency handles expiry
             )
@@ -497,11 +498,13 @@ class CSRFMiddleware(BaseHTTPMiddleware):
 
         # Skip validation for exempt paths
         if path in CSRF_EXEMPT_PATHS:
-            return await call_next(request)
+            response: Response = await call_next(request)
+            return response
 
         # Skip validation for safe methods
         if method not in CSRF_REQUIRED_METHODS:
-            return await call_next(request)
+            response = await call_next(request)
+            return response
 
         # Origin/Referer enforcement — blocks cross-origin mutation requests
         if not self._validate_request_origin(request):
@@ -533,7 +536,8 @@ class CSRFMiddleware(BaseHTTPMiddleware):
                 media_type="application/json",
             )
 
-        return await call_next(request)
+        final_response: Response = await call_next(request)
+        return final_response
 
 
 # =============================================================================

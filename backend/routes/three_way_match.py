@@ -4,7 +4,7 @@ Paciolus API — Three-Way Match Routes
 
 import asyncio
 import logging
-from typing import Optional
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +54,7 @@ async def audit_three_way_match(
     engagement_id: Optional[int] = Form(default=None),
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, Any]:
     """Run three-way match validation across PO, Invoice, and Receipt files."""
     from shared.testing_route import enforce_tool_access
 
@@ -79,7 +79,7 @@ async def audit_three_way_match(
             inv_filename = invoice_file.filename or ""
             rec_filename = receipt_file.filename or ""
 
-            def _analyze():
+            def _analyze() -> Any:
                 po_columns, po_rows = parse_uploaded_file(po_bytes, po_filename)
                 inv_columns, inv_rows = parse_uploaded_file(inv_bytes, inv_filename)
                 rec_columns, rec_rows = parse_uploaded_file(rec_bytes, rec_filename)
@@ -112,7 +112,7 @@ async def audit_three_way_match(
                 maybe_record_tool_run, db, engagement_id, current_user.id, "three_way_match", True
             )
 
-            return result.to_dict()
+            return result.to_dict()  # type: ignore[no-any-return]
 
         except (ValueError, KeyError, TypeError) as e:
             logger.exception("Three-way match analysis failed")

@@ -32,7 +32,7 @@ _METRICS_ALLOWED_PEERS = frozenset({"127.0.0.1", "::1", "localhost"})
     include_in_schema=False,
 )
 @limiter.limit(RATE_LIMIT_METRICS)
-def get_metrics(request: Request):
+def get_metrics(request: Request) -> PlainTextResponse:
     """Prometheus metrics endpoint. Returns text/plain with parser metrics.
 
     Production: restricted to loopback/internal IPs to prevent operational

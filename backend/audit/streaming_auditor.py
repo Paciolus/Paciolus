@@ -237,9 +237,9 @@ class StreamingAuditor:
 
             for account_name, debit_sum, credit_sum in zip(grouped["account"], grouped["debit"], grouped["credit"]):
                 if account_name not in self.account_balances:
-                    self.account_balances[account_name] = {"debit": Decimal("0"), "credit": Decimal("0")}
-                self.account_balances[account_name]["debit"] += Decimal(str(debit_sum))
-                self.account_balances[account_name]["credit"] += Decimal(str(credit_sum))
+                    self.account_balances[account_name] = {"debit": 0.0, "credit": 0.0}
+                self.account_balances[account_name]["debit"] += float(Decimal(str(debit_sum)))
+                self.account_balances[account_name]["credit"] += float(Decimal(str(credit_sum)))
 
             # Sprint 526: Extract account_type values
             if self.account_type_col and self.account_type_col in chunk.columns:

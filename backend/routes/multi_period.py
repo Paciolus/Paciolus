@@ -16,6 +16,7 @@ from auth import require_verified_user
 from database import get_db
 from models import User
 from multi_period_comparison import (
+    MovementSummary,
     compare_three_periods,
     compare_trial_balances,
     export_movements_csv,
@@ -82,7 +83,7 @@ def compare_period_trial_balances(
     background_tasks: BackgroundTasks,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, object]:
     """Compare two trial balance datasets at the account level."""
     log_secure_operation(
         "compare_period_trial_balances",
@@ -112,7 +113,7 @@ def compare_three_way_trial_balances(
     background_tasks: BackgroundTasks,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, object]:
     """Compare three trial balance datasets: Prior vs Current vs Budget/Forecast."""
     log_secure_operation(
         "compare_three_way_trial_balances",
@@ -141,9 +142,9 @@ def compare_three_way_trial_balances(
 @limiter.limit(RATE_LIMIT_EXPORT)
 def export_csv_movements(
     request: Request,
-    payload: MovementExportRequest = ...,
+    payload: MovementExportRequest = ...,  # type: ignore[assignment]
     current_user: User = Depends(require_verified_user),
-):
+) -> StreamingResponse:
     """Export movement comparison data as CSV."""
     log_secure_operation(
         "csv_movements_export_start",
@@ -157,16 +158,16 @@ def export_csv_movements(
             three_way = compare_three_periods(
                 prior_accounts=payload.prior_accounts,
                 current_accounts=payload.current_accounts,
-                budget_accounts=payload.budget_accounts,
+                budget_accounts=payload.budget_accounts or [],
                 prior_label=payload.prior_label,
                 current_label=payload.current_label,
                 budget_label=payload.budget_label,
                 materiality_threshold=payload.materiality_threshold,
             )
             csv_content = export_movements_csv(
-                three_way,
+                three_way,  # type: ignore[arg-type]
                 include_budget=True,
-                budget_data=True,
+                budget_data=True,  # type: ignore[arg-type]
             )
         else:
             two_way = compare_trial_balances(

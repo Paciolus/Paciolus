@@ -57,7 +57,7 @@ async def inspect_workbook_endpoint(
             filename = file.filename or ""
 
             if not is_excel_file(filename):
-                return {
+                return {  # type: ignore[return-value]
                     "filename": file.filename,
                     "sheet_count": 1,
                     "sheets": [
@@ -82,7 +82,7 @@ async def inspect_workbook_endpoint(
 
             result["preflight_token"] = preflight_cache.put(file_bytes, filename)
 
-            return result
+            return result  # type: ignore[return-value]
 
         except ValueError as e:
             raise HTTPException(

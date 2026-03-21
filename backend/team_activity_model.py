@@ -11,7 +11,8 @@ File identifiers are SHA-256 hashed.
 from datetime import UTC, datetime
 from enum import Enum as PyEnum
 
-from sqlalchemy import Column, DateTime, Enum, Index, Integer, String, func
+from sqlalchemy import DateTime, Enum, Index, Integer, String, func
+from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.schema import ForeignKey
 
 from database import Base
@@ -31,16 +32,16 @@ class TeamActivityLog(Base):
 
     __tablename__ = "team_activity_logs"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
 
-    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False, index=True)
 
-    action_type = Column(Enum(TeamActionType), nullable=False)
-    tool_name = Column(String(100), nullable=True)
-    file_identifier_hash = Column(String(64), nullable=True)  # SHA-256 of filename
+    action_type: Mapped[TeamActionType] = mapped_column(Enum(TeamActionType), nullable=False)
+    tool_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    file_identifier_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)  # SHA-256 of filename
 
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
 
     # Composite index for admin dashboard date-range queries
     __table_args__ = (Index("ix_team_activity_org_created", "organization_id", "created_at"),)

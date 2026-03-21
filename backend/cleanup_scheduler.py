@@ -25,7 +25,9 @@ from __future__ import annotations
 import logging
 import os
 import time
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
+from typing import Any
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 
@@ -94,7 +96,7 @@ _WORKER_ID = f"worker-{os.getpid()}"
 
 
 @contextmanager
-def with_scheduler_lock(job_name: str, db, ttl_seconds: int = 600):
+def with_scheduler_lock(job_name: str, db: Any, ttl_seconds: int = 600) -> Generator[bool, None, None]:
     """Acquire a DB-backed lock for a scheduled job.
 
     Uses INSERT ... ON CONFLICT to atomically acquire the lock.
@@ -152,7 +154,7 @@ def with_scheduler_lock(job_name: str, db, ttl_seconds: int = 600):
 
 def _run_cleanup_job(
     job_name: str,
-    cleanup_func,
+    cleanup_func: Callable[..., object],
     *,
     is_retention: bool = False,
 ) -> None:
@@ -184,7 +186,7 @@ def _run_cleanup_job(
             if is_retention and isinstance(result, dict):
                 records_processed = sum(result.values())
             else:
-                records_processed = int(result)
+                records_processed = int(str(result))
     except Exception as exc:
         from shared.log_sanitizer import sanitize_exception
 
@@ -247,7 +249,7 @@ def _job_reset_upload_quotas() -> None:
     race conditions with concurrent upload increments.
     """
 
-    def _reset(db):
+    def _reset(db: Any) -> int:
         from sqlalchemy import text
 
         now = datetime.now(UTC)
@@ -263,7 +265,7 @@ def _job_reset_upload_quotas() -> None:
             ),
             {"now": now},
         )
-        count = result.rowcount
+        count = int(result.rowcount)
         if count > 0:
             db.commit()
         return count
@@ -274,7 +276,7 @@ def _job_reset_upload_quotas() -> None:
 def _job_expired_export_shares() -> None:
     """Purge expired or revoked export share records (48h TTL)."""
 
-    def _purge(db):
+    def _purge(db: Any) -> int:
         from export_share_model import ExportShare
 
         now = datetime.now(UTC)
@@ -316,11 +318,11 @@ def _job_bulk_upload_cleanup() -> None:
 def _job_team_activity_cleanup() -> None:
     """Purge team activity logs older than 90 days."""
 
-    def _purge(db):
+    def _purge(db: Any) -> int:
         from team_activity_model import TeamActivityLog
 
         cutoff = datetime.now(UTC) - timedelta(days=90)
-        count = db.query(TeamActivityLog).filter(TeamActivityLog.created_at < cutoff).delete(synchronize_session=False)
+        count = int(db.query(TeamActivityLog).filter(TeamActivityLog.created_at < cutoff).delete(synchronize_session=False))
         if count:
             db.commit()
         return count
@@ -334,7 +336,7 @@ def _job_expired_upload_dedup() -> None:
     AUDIT-06 FIX 4: Piggybacks on the scheduler to keep the dedup table lean.
     """
 
-    def _purge(db):
+    def _purge(db: Any) -> int:
         from sqlalchemy import text
 
         now = datetime.now(UTC)
@@ -342,7 +344,7 @@ def _job_expired_upload_dedup() -> None:
             text("DELETE FROM upload_dedup WHERE expires_at <= :now"),
             {"now": now},
         )
-        count = result.rowcount
+        count = int(result.rowcount)
         if count > 0:
             db.commit()
         return count

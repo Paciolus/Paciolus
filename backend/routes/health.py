@@ -80,7 +80,7 @@ class ReadinessResponse(BaseModel):
 @limiter.limit(RATE_LIMIT_HEALTH)
 async def health_check(
     request: Request, response: Response, deep: bool = Query(False, description="Include database connectivity check")
-):
+) -> HealthResponse:
     """Legacy health probe. Prefer /health/live (liveness) and /health/ready (readiness)."""
     if not deep:
         return HealthResponse(
@@ -130,7 +130,7 @@ async def health_check(
 
 @router.get("/health/live", response_model=LivenessResponse)
 @limiter.limit(RATE_LIMIT_HEALTH)
-async def liveness_probe(request: Request):
+async def liveness_probe(request: Request) -> LivenessResponse:
     """Liveness probe — orchestrator should use this for restart decisions.
 
     Pure static response with zero I/O. If the process can serve this,
@@ -150,7 +150,7 @@ async def liveness_probe(request: Request):
 
 @router.get("/health/ready", response_model=ReadinessResponse)
 @limiter.limit(RATE_LIMIT_HEALTH)
-async def readiness_probe(request: Request):
+async def readiness_probe(request: Request) -> ReadinessResponse:
     """Readiness probe — load balancer should use this for traffic routing.
 
     Checks database connectivity with SELECT 1, measures latency, and
@@ -183,9 +183,9 @@ async def readiness_probe(request: Request):
                 pool_details.update(
                     {
                         "pool_size": pool.size(),
-                        "checked_in": pool.checkedin(),
-                        "checked_out": pool.checkedout(),
-                        "overflow": pool.overflow(),
+                        "checked_in": pool.checkedin(),  # type: ignore[attr-defined]
+                        "checked_out": pool.checkedout(),  # type: ignore[attr-defined]
+                        "overflow": pool.overflow(),  # type: ignore[attr-defined]
                     }
                 )
 
@@ -221,7 +221,7 @@ async def readiness_probe(request: Request):
 
 @router.post("/waitlist", response_model=WaitlistResponse, status_code=201)
 @limiter.limit("3/minute")
-async def join_waitlist(request: Request, entry: WaitlistRequest, db: Session = Depends(get_db)):
+async def join_waitlist(request: Request, entry: WaitlistRequest, db: Session = Depends(get_db)) -> WaitlistResponse:
     """Add email to waitlist (database-backed with dedup)."""
     try:
         signup = WaitlistSignup(email=entry.email)

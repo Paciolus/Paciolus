@@ -347,7 +347,7 @@ def accept_invite(db: Session, user: User, token: str) -> dict:
             org.subscription_id = sub.id
 
     if sub:
-        user.tier = sub.tier
+        user.tier = sub.tier  # type: ignore[assignment]
 
     # Mark invite accepted
     invite.status = InviteStatus.ACCEPTED

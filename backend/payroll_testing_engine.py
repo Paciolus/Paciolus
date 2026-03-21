@@ -458,7 +458,7 @@ class PayrollEntry:
     tax_id: str = ""
     _row_index: int = 0
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         for attr in ("gross_pay", "net_pay", "deductions", "rate"):
             val = getattr(self, attr)
             if isinstance(val, (int, float)):
@@ -1066,7 +1066,7 @@ def _test_unusual_pay_amounts(
         for entry in group:
             if entry.gross_pay <= 0:
                 continue
-            z_score = (entry.gross_pay - mean_amt) / stdev_amt
+            z_score = float(entry.gross_pay - mean_amt) / float(stdev_amt)
 
             if abs(z_score) < config.unusual_pay_stddev:
                 continue
@@ -1081,12 +1081,12 @@ def _test_unusual_pay_amounts(
                     test_tier=TestTier.STATISTICAL.value,
                     severity=severity.value,
                     issue=f"Pay ${entry.gross_pay:,.2f} is {abs(z_score):.1f}σ from dept '{dept}' mean (${mean_amt:,.2f})",
-                    confidence=float(min(abs(z_score) / Decimal("6"), Decimal("1"))),
+                    confidence=min(abs(z_score) / 6.0, 1.0),
                     details={
-                        "z_score": float(round(z_score, 2)),
+                        "z_score": round(z_score, 2),
                         "department": dept,
-                        "dept_mean": float(round(mean_amt, 2)),
-                        "dept_stdev": float(round(stdev_amt, 2)),
+                        "dept_mean": round(float(mean_amt), 2),
+                        "dept_stdev": round(float(stdev_amt), 2),
                     },
                 )
             )
@@ -1131,11 +1131,14 @@ def _test_pay_frequency_anomalies(
     # Detect population cadence: find most common pay interval
     all_intervals: list[int] = []
     for key, group in emp_groups.items():
-        dated = sorted([e for e in group if e.pay_date], key=lambda e: e.pay_date)
+        dated = sorted([e for e in group if e.pay_date], key=lambda e: e.pay_date or date.min)
         for i in range(1, len(dated)):
-            delta = (dated[i].pay_date - dated[i - 1].pay_date).days
-            if 1 <= delta <= 60:
-                all_intervals.append(delta)
+            d_cur = dated[i].pay_date
+            d_prev = dated[i - 1].pay_date
+            if d_cur and d_prev:
+                delta = (d_cur - d_prev).days
+                if 1 <= delta <= 60:
+                    all_intervals.append(delta)
 
     if not all_intervals:
         return PayrollTestResult(
@@ -1157,12 +1160,16 @@ def _test_pay_frequency_anomalies(
     flagged_rows: set[int] = set()
 
     for key, group in emp_groups.items():
-        dated = sorted([e for e in group if e.pay_date], key=lambda e: e.pay_date)
+        dated = sorted([e for e in group if e.pay_date], key=lambda e: e.pay_date or date.min)
         if len(dated) < 3:
             continue
 
         for i in range(1, len(dated)):
-            delta = (dated[i].pay_date - dated[i - 1].pay_date).days
+            d_cur = dated[i].pay_date
+            d_prev = dated[i - 1].pay_date
+            if not d_cur or not d_prev:
+                continue
+            delta = (d_cur - d_prev).days
             if delta < min_interval or delta > max_interval:
                 entry = dated[i]
                 if entry._row_index in flagged_rows:
@@ -1232,7 +1239,7 @@ def _test_benford_gross_pay(
     amounts: list[float] = []
     amount_entries: list[PayrollEntry] = []
     for e in entries:
-        amt = abs(e.gross_pay)
+        amt = float(abs(e.gross_pay))
         if amt >= 1.0:
             amounts.append(amt)
             amount_entries.append(e)
@@ -1395,7 +1402,7 @@ def _test_ghost_employee_indicators(
         # Indicator 3: Payments only in first/last month
         dated_entries = [e for e in group if e.pay_date]
         if dated_entries and len(dated_entries) > 1 and first_month != last_month:
-            entry_months = set((e.pay_date.year, e.pay_date.month) for e in dated_entries)
+            entry_months = set((e.pay_date.year, e.pay_date.month) for e in dated_entries if e.pay_date)
             if entry_months <= {first_month, last_month}:
                 indicators.append("Pay entries only in first/last month of period")
 
@@ -1922,4 +1929,5 @@ def run_payroll_testing(
         PayrollTestingResult with composite score, test results, data quality
     """
     engine = PayrollTestingEngine(config, filename)
-    return engine.run_pipeline(rows, headers, column_mapping)
+    result: PayrollTestingResult = engine.run_pipeline(rows, headers, column_mapping)
+    return result

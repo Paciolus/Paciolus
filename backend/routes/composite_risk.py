@@ -139,7 +139,7 @@ async def build_risk_profile(
     body: CompositeRiskProfileRequest,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-):
+) -> dict:
     """Build a composite risk profile from auditor-provided risk assessments.
 
     ISA 315 (Revised 2019): Combines auditor-assessed inherent risk and

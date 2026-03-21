@@ -169,7 +169,7 @@ def get_workpaper_index(
 
     try:
         index = generator.generate(current_user.id, engagement_id)
-        return index
+        return index  # type: ignore[return-value]
     except ValueError as e:
         raise HTTPException(
             status_code=400,

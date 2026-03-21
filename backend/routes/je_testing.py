@@ -3,7 +3,7 @@ Paciolus API — Journal Entry Testing Routes
 """
 import asyncio
 import logging
-from typing import Optional
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +48,7 @@ async def audit_journal_entries(
     engagement_id: Optional[int] = Form(default=None),
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, Any]:
     """Run automated journal entry testing on a General Ledger extract."""
     return await run_single_file_testing(
         file=file, column_mapping=column_mapping,
@@ -73,7 +73,7 @@ async def sample_journal_entries(
     fixed_per_stratum: Optional[int] = Form(default=None),
     column_mapping: Optional[str] = Form(default=None),
     current_user: User = Depends(require_verified_user),
-):
+) -> dict[str, Any]:
     """Run stratified random sampling on a General Ledger extract."""
     stratify_list = parse_json_list(stratify_by, "je_stratify")
     if stratify_list is None:
@@ -95,7 +95,7 @@ async def sample_journal_entries(
             file_bytes = await validate_file_size(file)
             filename = file.filename or ""
 
-            def _sample():
+            def _sample() -> Any:
                 column_names, rows = parse_uploaded_file(file_bytes, filename)
 
                 col_detection = detect_gl_columns(column_names)
@@ -114,7 +114,7 @@ async def sample_journal_entries(
 
             sampling_result = await asyncio.to_thread(_sample)
 
-            return sampling_result.to_dict()
+            return sampling_result.to_dict()  # type: ignore[no-any-return]
 
         except (ValueError, KeyError, TypeError) as e:
             logger.exception("JE sampling failed")
@@ -132,7 +132,7 @@ async def preview_sampling(
     stratify_by: str = Form(default='["account","amount_range"]'),
     column_mapping: Optional[str] = Form(default=None),
     current_user: User = Depends(require_verified_user),
-):
+) -> dict[str, Any]:
     """Preview stratum counts without running sampling."""
     stratify_list = parse_json_list(stratify_by, "je_preview_stratify")
     if stratify_list is None:
@@ -145,7 +145,7 @@ async def preview_sampling(
             file_bytes = await validate_file_size(file)
             filename = file.filename or ""
 
-            def _preview():
+            def _preview() -> dict[str, Any]:
                 column_names, rows = parse_uploaded_file(file_bytes, filename)
 
                 col_detection = detect_gl_columns(column_names)

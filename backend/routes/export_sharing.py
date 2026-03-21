@@ -12,6 +12,8 @@ import logging
 import secrets
 from datetime import UTC, datetime
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
@@ -87,10 +89,10 @@ def _validate_export_magic_bytes(export_bytes: bytes, export_format: str) -> Non
 @limiter.limit(RATE_LIMIT_WRITE)
 async def create_share(
     body: CreateShareRequest,
-    request=None,
+    request: Any = None,
     user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, Any]:
     """Create a shareable export link. Professional+ only."""
     # AUDIT-08: pass db so subscription status is checked (not sessionless fallback)
     check_export_sharing_access(user, db)
@@ -145,9 +147,9 @@ async def create_share(
 @limiter.limit(RATE_LIMIT_EXPORT)
 async def download_share(
     token: str,
-    request=None,
+    request: Any = None,
     db: Session = Depends(get_db),
-):
+) -> Response:
     """Download a shared export. Public endpoint (no auth required)."""
     token_hash = hashlib.sha256(token.encode()).hexdigest()
 
@@ -202,10 +204,10 @@ async def download_share(
 @limiter.limit(RATE_LIMIT_WRITE)
 async def revoke_share(
     token: str,
-    request=None,
+    request: Any = None,
     user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, str]:
     """Revoke a share link. Creator only."""
     token_hash = hashlib.sha256(token.encode()).hexdigest()
 
@@ -229,7 +231,7 @@ async def revoke_share(
 async def list_shares(
     user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-):
+) -> list[dict[str, Any]]:
     """List current user's active share links."""
     now = datetime.now(UTC)
     shares = (

@@ -324,7 +324,7 @@ NEXT_STEPS_BY_POPULATION_TYPE: dict[str, list[dict[str, str]]] = {
 def _build_evaluation_next_steps(
     evaluation_result: dict[str, Any],
     design_result: Optional[dict[str, Any]],
-) -> list[dict[str, str]]:
+) -> tuple[list[dict[str, str]], str]:
     """Build evaluation-phase next steps dynamically from results."""
     errors_found = evaluation_result.get("errors_found", 0)
     total_misstatement = evaluation_result.get("total_misstatement", 0)
@@ -1197,13 +1197,13 @@ def _generate_sampling_memo(
     story.append(LedgerRule(doc_width))
 
     # ─── BUG-02: Evaluation-phase next steps ─────────────────
-    if is_evaluation:
+    if is_evaluation and evaluation_result is not None:
         eval_steps, intro_text = _build_evaluation_next_steps(evaluation_result, design_result)
         story.append(Paragraph(intro_text, styles["MemoBody"]))
         story.append(Spacer(1, 6))
-        for step in eval_steps:
-            story.append(Paragraph(f"<b>{step['title']}</b>", styles["MemoBody"]))
-            story.append(Paragraph(step["body"], styles["MemoBody"]))
+        for eval_step in eval_steps:
+            story.append(Paragraph(f"<b>{eval_step['title']}</b>", styles["MemoBody"]))
+            story.append(Paragraph(eval_step["body"], styles["MemoBody"]))
             story.append(Spacer(1, 4))
     else:
         # Design-phase: population-type-specific steps
@@ -1229,9 +1229,9 @@ def _generate_sampling_memo(
             )
             story.append(Spacer(1, 6))
 
-        for step in steps:
-            story.append(Paragraph(f"<b>{step['title']}</b>", styles["MemoBody"]))
-            body = step["body"]
+        for design_step in steps:
+            story.append(Paragraph(f"<b>{design_step['title']}</b>", styles["MemoBody"]))
+            body = design_step["body"]
             if tm_value > 0 and "Tolerable Misstatement" in body:
                 body = body.replace(
                     "exceeds Tolerable Misstatement",

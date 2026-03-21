@@ -404,7 +404,7 @@ def _compute_account_type_stratification(
     """
     type_data: dict[str, dict] = {}
     n_total = len(entries)
-    total_abs = safe_decimal(total_abs)
+    total_abs_dec = safe_decimal(total_abs)
 
     for _acct, _net, abs_bal, category, _acct_num in entries:
         cat_lower = category.lower() if category else "unknown"
@@ -429,8 +429,8 @@ def _compute_account_type_stratification(
                 account_type=acct_type.capitalize(),
                 count=data["count"],
                 pct_of_accounts=round(data["count"] / n_total * 100, 2) if n_total > 0 else 0.0,
-                total_balance=data["total_balance"],
-                pct_of_population=round(data["total_balance"] / total_abs * 100, 2) if total_abs > 0 else 0.0,
+                total_balance=float(data["total_balance"]),
+                pct_of_population=float(round(data["total_balance"] / total_abs_dec * 100, 2)) if total_abs_dec > 0 else 0.0,
             )
         )
 
@@ -442,8 +442,8 @@ def _compute_account_type_stratification(
                 account_type="Unknown",
                 count=unknown["count"],
                 pct_of_accounts=round(unknown["count"] / n_total * 100, 2) if n_total > 0 else 0.0,
-                total_balance=unknown["total_balance"],
-                pct_of_population=round(unknown["total_balance"] / total_abs * 100, 2) if total_abs > 0 else 0.0,
+                total_balance=float(unknown["total_balance"]),
+                pct_of_population=float(round(unknown["total_balance"] / total_abs_dec * 100, 2)) if total_abs_dec > 0 else 0.0,
             )
         )
 
@@ -745,19 +745,19 @@ def compute_population_profile(
         )
 
     # Build list of (account, net_balance, abs_balance, category, account_number)
-    entries: list[tuple[str, Decimal, Decimal, str, str]] = []
+    entries: list[tuple[str, float, float, str, str]] = []
     for acct, bals in account_balances.items():
         net = safe_decimal(bals["debit"]) - safe_decimal(bals["credit"])
         abs_bal = abs(net)
         category = (classified_accounts or {}).get(acct, "Unknown")
         acct_num = (account_numbers or {}).get(acct, "")
-        entries.append((acct, net, abs_bal, category, acct_num))
+        entries.append((acct, float(net), float(abs_bal), category, acct_num))
 
     abs_values = [e[2] for e in entries]
     n = len(abs_values)
 
     # Descriptive statistics
-    total_abs = sum(abs_values, Decimal("0"))
+    total_abs = sum(abs_values)
     mean_abs = total_abs / n if n > 0 else 0.0
     median_abs = statistics.median(abs_values)
 
@@ -788,7 +788,7 @@ def compute_population_profile(
     for label, lower, upper in MAGNITUDE_BUCKETS:
         bucket_items = [v for v in abs_values if lower <= v < upper]
         count = len(bucket_items)
-        sum_abs = sum(bucket_items, Decimal("0"))
+        sum_abs_bucket = sum(bucket_items)
         pct = (count / n * 100) if n > 0 else 0.0
         buckets.append(
             BucketBreakdown(
@@ -796,7 +796,7 @@ def compute_population_profile(
                 lower=lower,
                 upper=upper,
                 count=count,
-                sum_abs=sum_abs,
+                sum_abs=sum_abs_bucket,
                 percent_count=pct,
             )
         )
@@ -804,16 +804,16 @@ def compute_population_profile(
     # Top-N accounts by absolute balance
     sorted_entries = sorted(entries, key=lambda e: e[2], reverse=True)
     top_accounts: list[TopAccount] = []
-    for rank_idx, (acct, net, abs_bal, cat, acct_num) in enumerate(sorted_entries[:top_n]):
-        pct_of_total = (abs_bal / total_abs * 100) if total_abs > 0 else 0.0
+    for rank_idx, (acct_name, net_bal, abs_bal_f, cat, acct_num) in enumerate(sorted_entries[:top_n]):
+        pct_of_total = (abs_bal_f / total_abs * 100) if total_abs > 0 else 0.0
         top_accounts.append(
             TopAccount(
                 rank=rank_idx + 1,
-                account=acct,
+                account=acct_name,
                 category=cat,
-                net_balance=net,
-                abs_balance=abs_bal,
-                percent_of_total=pct_of_total,
+                net_balance=net_bal,
+                abs_balance=abs_bal_f,
+                percent_of_total=float(pct_of_total),
                 account_number=acct_num,
             )
         )
@@ -915,8 +915,8 @@ def compute_section_density(
                 section_label=label,
                 section_letters=letters,
                 account_count=total_count,
-                section_balance=section_balance,
-                balance_per_account=balance_per_acct,
+                section_balance=float(section_balance),
+                balance_per_account=float(balance_per_acct),
                 is_sparse=is_sparse,
             )
         )
@@ -987,9 +987,9 @@ def run_population_profile(
         credit = safe_decimal(row.get(credit_col))
 
         if acct_str not in account_balances:
-            account_balances[acct_str] = {"debit": Decimal("0"), "credit": Decimal("0")}
-        account_balances[acct_str]["debit"] += debit
-        account_balances[acct_str]["credit"] += credit
+            account_balances[acct_str] = {"debit": 0.0, "credit": 0.0}
+        account_balances[acct_str]["debit"] += float(debit)
+        account_balances[acct_str]["credit"] += float(credit)
 
     profile = compute_population_profile(account_balances, classified_accounts)
 
@@ -1035,7 +1035,7 @@ def compute_category_gini(
         if category not in VALID_CATEGORIES:
             continue
 
-        net = bals.get("debit", Decimal("0")) - bals.get("credit", Decimal("0"))
+        net = bals.get("debit", 0.0) - bals.get("credit", 0.0)
         abs_bal = abs(net)
 
         if category not in category_groups:
@@ -1050,7 +1050,7 @@ def compute_category_gini(
 
         abs_values = [e[1] for e in entries]
         n = len(abs_values)
-        total_abs = sum(abs_values, Decimal("0"))
+        total_abs = sum(abs_values)
         mean_bal = total_abs / n
         std_dev = statistics.stdev(abs_values)
 

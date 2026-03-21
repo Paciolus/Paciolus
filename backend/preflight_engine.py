@@ -389,9 +389,9 @@ def _check_tb_balance(
         )
 
     return BalanceCheck(
-        total_debits=total_debits,
-        total_credits=total_credits,
-        difference=difference,
+        total_debits=float(total_debits),
+        total_credits=float(total_credits),
+        difference=float(difference),
         balanced=balanced,
         tolerance=tolerance,
     )
@@ -523,8 +523,8 @@ def _check_null_values(
     if row_count == 0:
         return null_counts
 
-    critical_cols = {account_col, debit_col, credit_col} - {None}
-    monetary_cols = {debit_col, credit_col} - {None}
+    critical_cols: set[str] = {c for c in (account_col, debit_col, credit_col) if c is not None}
+    monetary_cols: set[str] = {c for c in (debit_col, credit_col) if c is not None}
 
     # Track which rows have nulls per column for affected_items
     null_rows_by_col: dict[str, list[str]] = {}

@@ -402,7 +402,7 @@ def generate_ap_testing_memo(
     """Generate a PDF testing memo for AP testing results."""
     dpo_data = ap_result.get("dpo_data")
 
-    def _scope_builder(story, styles, doc_width, composite, data_quality, pt):
+    def _scope_builder(story: Any, styles: Any, doc_width: Any, composite: Any, data_quality: Any, pt: Any) -> None:
         _build_ap_scope(
             story,
             styles,

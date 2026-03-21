@@ -8,7 +8,7 @@ Verification traverses the chain and recomputes each hash to detect tampering.
 import hashlib
 import hmac
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Optional
 
 from config import JWT_SECRET_KEY
 
@@ -16,7 +16,7 @@ from config import JWT_SECRET_KEY
 GENESIS_HASH = "0" * 128
 
 
-def _serialize_record(record) -> str:
+def _serialize_record(record: Any) -> str:
     """Serialize ActivityLog record fields into a deterministic string for hashing.
 
     Uses pipe-delimited fields in a fixed order. All fields are converted to
@@ -42,7 +42,7 @@ def _serialize_record(record) -> str:
     return "|".join(fields)
 
 
-def compute_chain_hash(previous_hash: str, record) -> str:
+def compute_chain_hash(previous_hash: str, record: Any) -> str:
     """Compute HMAC-SHA512 chain hash: HMAC(key, previous_hash | serialized_record).
 
     Uses SHA-512 for 128-char hex output.
@@ -50,7 +50,7 @@ def compute_chain_hash(previous_hash: str, record) -> str:
     """
     content = previous_hash + "|" + _serialize_record(record)
     return hmac.new(
-        JWT_SECRET_KEY.encode("utf-8"),
+        (JWT_SECRET_KEY or "").encode("utf-8"),
         content.encode("utf-8"),
         hashlib.sha512,
     ).hexdigest()
@@ -66,7 +66,7 @@ class ChainVerificationResult:
     error_message: Optional[str] = None
 
 
-def verify_audit_chain(db, start_id: int, end_id: int, user_id: int) -> ChainVerificationResult:
+def verify_audit_chain(db: Any, start_id: int, end_id: int, user_id: int) -> ChainVerificationResult:
     """Verify the integrity of the audit log chain between two record IDs.
 
     SECURITY: Scoped to user_id to prevent cross-tenant information leakage.

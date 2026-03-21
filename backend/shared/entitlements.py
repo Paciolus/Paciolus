@@ -52,12 +52,12 @@ _FREE_TOOLS = frozenset(
     }
 )
 
-_ALL_TOOLS = frozenset()  # Empty = all tools allowed
+_ALL_TOOLS: frozenset[str] = frozenset()  # Empty = all tools allowed
 
 # Per-tier format access
 _FREE_FORMATS = frozenset({"csv", "xlsx", "xls", "tsv", "txt"})
 
-_ALL_FORMATS = frozenset()  # Empty = all formats allowed
+_ALL_FORMATS: frozenset[str] = frozenset()  # Empty = all formats allowed
 
 
 TIER_ENTITLEMENTS: dict[UserTier, TierEntitlements] = {

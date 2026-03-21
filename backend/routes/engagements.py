@@ -111,7 +111,7 @@ def _engagement_to_response(eng: Any) -> EngagementResponse:
         client_id=d["client_id"],
         period_start=d["period_start"] or "",
         period_end=d["period_end"] or "",
-        status=d["status"] or "",
+        status=d["status"] or "",  # type: ignore[arg-type]
         materiality_basis=d["materiality_basis"],
         materiality_percentage=d["materiality_percentage"],
         materiality_amount=d["materiality_amount"],

@@ -334,7 +334,7 @@ class InventoryEntry:
     category: Optional[str] = None
     row_number: int = 0
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if isinstance(self.unit_cost, (int, float)):
             self.unit_cost = Decimal(str(self.unit_cost))
         if isinstance(self.extended_value, (int, float)):
@@ -833,7 +833,7 @@ def test_unit_cost_outliers(
         if z < config.cost_zscore_threshold:
             continue
 
-        severity = zscore_to_severity(z)
+        severity = zscore_to_severity(float(z))
 
         flagged.append(
             FlaggedInventoryItem(
@@ -844,7 +844,7 @@ def test_unit_cost_outliers(
                 severity=severity,
                 issue=f"Outlier unit cost: ${abs(e.unit_cost):,.2f} (z-score: {z:.1f}, mean: ${mean:,.2f})"
                 f" — {e.item_id or e.description or f'row {e.row_number}'}",
-                confidence=float(min(Decimal("0.60") + z * Decimal("0.05"), Decimal("0.95"))),
+                confidence=min(0.60 + float(z) * 0.05, 0.95),
                 details={"z_score": round(z, 2), "mean": round(mean, 2), "stdev": round(stdev, 2)},
             )
         )
@@ -1050,16 +1050,16 @@ def test_category_concentration(
             flagged_entries=[],
         )
 
-    cat_values: dict[str, float] = {}
+    cat_values: dict[str, Decimal] = {}
     cat_entries: dict[str, list[InventoryEntry]] = {}
     for e, cat in categorized:
         val = abs(e.extended_value) if e.extended_value != 0 else abs(Decimal(str(e.quantity)) * e.unit_cost)
-        cat_values[cat] = cat_values.get(cat, 0) + val
+        cat_values[cat] = cat_values.get(cat, Decimal("0")) + val
         cat_entries.setdefault(cat, []).append(e)
 
     flagged: list[FlaggedInventoryItem] = []
     for cat, cat_val in cat_values.items():
-        pct = cat_val / total_value
+        pct = float(cat_val / total_value)
         if pct <= config.category_concentration_threshold_pct:
             continue
 
@@ -1131,7 +1131,7 @@ def test_duplicate_items(
     for e in entries:
         desc = (e.description or "").lower().strip()
         key = (round(e.unit_cost, 2), desc)
-        if key == (0.0, ""):
+        if key == (Decimal("0"), ""):
             continue
         groups.setdefault(key, []).append(e)
 

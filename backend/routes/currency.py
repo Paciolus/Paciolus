@@ -130,7 +130,7 @@ async def upload_rate_table(
             filename = (file.filename or "").lower()
 
             # Parse CSV
-            def _parse():
+            def _parse() -> list:
                 if filename.endswith(".xlsx") or filename.endswith(".xls"):
                     df = pd.read_excel(io.BytesIO(file_bytes))
                 else:

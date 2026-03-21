@@ -8,6 +8,8 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
+from typing import Any
+
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -56,7 +58,7 @@ async def audit_bank_reconciliation(
     engagement_id: Optional[int] = Form(default=None),
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, Any]:
     """Reconcile bank statement against general ledger."""
     from shared.testing_route import enforce_tool_access
 
@@ -82,9 +84,9 @@ async def audit_bank_reconciliation(
                 config_kwargs["materiality"] = materiality
             if performance_materiality is not None:
                 config_kwargs["performance_materiality"] = performance_materiality
-            rec_config = BankRecConfig(**config_kwargs) if config_kwargs else None
+            rec_config = BankRecConfig(**config_kwargs) if config_kwargs else None  # type: ignore[arg-type]
 
-            def _analyze():
+            def _analyze() -> Any:
                 bank_columns, bank_rows = parse_uploaded_file(bank_bytes, bank_filename)
                 ledger_columns, ledger_rows = parse_uploaded_file(ledger_bytes, ledger_filename)
                 return reconcile_bank_statement(
@@ -103,7 +105,7 @@ async def audit_bank_reconciliation(
                 maybe_record_tool_run, db, engagement_id, current_user.id, "bank_reconciliation", True
             )
 
-            return result.to_dict()
+            return result.to_dict()  # type: ignore[no-any-return]
 
         except (ValueError, KeyError, TypeError) as e:
             logger.exception("Bank reconciliation failed")
@@ -125,7 +127,7 @@ async def export_csv_bank_rec(
     request: Request,
     export_input: BankRecExportInput,
     current_user: User = Depends(require_verified_user),
-):
+) -> StreamingResponse:
     """Export bank reconciliation results as CSV."""
     try:
         # Rebuild ReconciliationSummary from dict input

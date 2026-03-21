@@ -21,6 +21,8 @@ from models import User
 from pdf_generator import generate_audit_report, generate_financial_statements_pdf
 from recon_engine import ReconResult, ReconScore
 from shared.error_messages import sanitize_error
+from fastapi.responses import StreamingResponse
+
 from shared.export_helpers import streaming_csv_response, streaming_excel_response, streaming_pdf_response
 from shared.export_schemas import (
     AccrualCompletenessCSVInput,
@@ -44,7 +46,7 @@ router = APIRouter(tags=["export"])
 @limiter.limit(RATE_LIMIT_EXPORT)
 def export_pdf_report(
     request: Request, audit_result: AuditResultInput, current_user: User = Depends(require_verified_user)
-):
+) -> StreamingResponse:
     """Generate and stream a PDF audit report."""
     log_secure_operation("pdf_export_start", f"Generating PDF report for: {audit_result.filename}")
 
@@ -80,7 +82,7 @@ def export_pdf_report(
 @limiter.limit(RATE_LIMIT_EXPORT)
 def export_excel_workpaper(
     request: Request, audit_result: AuditResultInput, current_user: User = Depends(require_verified_user)
-):
+) -> StreamingResponse:
     """Generate and stream an Excel workpaper."""
     log_secure_operation("excel_export_start", f"Generating Excel workpaper for: {audit_result.filename}")
 
@@ -116,7 +118,7 @@ def export_excel_workpaper(
 @limiter.limit(RATE_LIMIT_EXPORT)
 def export_csv_trial_balance(
     request: Request, audit_result: AuditResultInput, current_user: User = Depends(require_verified_user)
-):
+) -> StreamingResponse:
     """Export trial balance data as CSV."""
     log_secure_operation("csv_tb_export_start", f"Generating CSV trial balance for: {audit_result.filename}")
 
@@ -199,7 +201,7 @@ def export_csv_trial_balance(
 @limiter.limit(RATE_LIMIT_EXPORT)
 def export_csv_anomalies(
     request: Request, audit_result: AuditResultInput, current_user: User = Depends(require_verified_user)
-):
+) -> StreamingResponse:
     """Export anomaly list as CSV."""
     log_secure_operation("csv_anomaly_export_start", f"Generating CSV anomalies for: {audit_result.filename}")
 
@@ -281,7 +283,7 @@ def export_csv_anomalies(
 
 @router.post("/export/leadsheets")
 @limiter.limit(RATE_LIMIT_EXPORT)
-def export_leadsheets(request: Request, payload: LeadSheetInput, current_user: User = Depends(require_verified_user)):
+def export_leadsheets(request: Request, payload: LeadSheetInput, current_user: User = Depends(require_verified_user)) -> StreamingResponse:
     """Generate Excel Lead Sheets from analysis result."""
     log_secure_operation("leadsheet_export", f"Exporting lead sheets for {len(payload.flux.items)} items")
 
@@ -356,7 +358,7 @@ def export_financial_statements(
     payload: FinancialStatementsInput,
     format: str = Query(default="pdf", pattern="^(pdf|excel)$"),
     current_user: User = Depends(require_verified_user),
-):
+) -> StreamingResponse:
     """Generate and download financial statements as PDF or Excel."""
     log_secure_operation(
         "financial_statements_export_start", f"Generating {format} financial statements for: {payload.filename}"
@@ -416,7 +418,7 @@ def export_csv_preflight_issues(
     request: Request,
     pf_input: PreFlightCSVInput,
     current_user: User = Depends(require_verified_user),
-):
+) -> StreamingResponse:
     """Export pre-flight quality issues as CSV."""
     try:
         output = StringIO()
@@ -456,7 +458,7 @@ def export_csv_population_profile(
     request: Request,
     pp_input: PopulationProfileCSVInput,
     current_user: User = Depends(require_verified_user),
-):
+) -> StreamingResponse:
     """Export population profile data as CSV."""
     try:
         output = StringIO()
@@ -530,7 +532,7 @@ def export_csv_expense_category(
     request: Request,
     ec_input: ExpenseCategoryCSVInput,
     current_user: User = Depends(require_verified_user),
-):
+) -> StreamingResponse:
     """Export expense category analytics data as CSV."""
     try:
         output = StringIO()
@@ -611,7 +613,7 @@ def export_csv_accrual_completeness(
     request: Request,
     ac_input: AccrualCompletenessCSVInput,
     current_user: User = Depends(require_verified_user),
-):
+) -> StreamingResponse:
     """Export accrual completeness data as CSV."""
     try:
         output = StringIO()

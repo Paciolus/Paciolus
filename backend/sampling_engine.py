@@ -352,7 +352,7 @@ def select_mus_sample(
         if abs_amount <= 0:
             continue
 
-        cumulative += abs_amount
+        cumulative += Decimal(str(abs_amount))
 
         # Select if this item spans one or more selection points
         while next_selection_point <= cumulative:
@@ -362,7 +362,7 @@ def select_mus_sample(
                     SelectedSample(
                         item=item,
                         selection_method="mus_interval",
-                        interval_position=next_selection_point,
+                        interval_position=float(next_selection_point),
                     )
                 )
             next_selection_point += Decimal(str(sampling_interval))
@@ -563,7 +563,7 @@ def _parse_population(
                 row_index=i + 1,
                 item_id=item_id or str(i + 1),
                 description=description[:200],
-                recorded_amount=amount,
+                recorded_amount=float(amount),
             )
         )
 
@@ -715,7 +715,7 @@ def _parse_evaluation_errors(
     rows: list[dict],
     column_names: list[str],
     column_mapping: Optional[dict[str, str]] = None,
-) -> list[SampleError]:
+) -> tuple[list[SampleError], int, int]:
     """Parse completed sample file into SampleError list.
 
     Expects columns: item_id, recorded_amount, audited_amount.
@@ -773,7 +773,7 @@ def _parse_evaluation_errors(
 
         # Tainting = misstatement / recorded (capped at 1.0 for 100% overstatement)
         if abs(recorded) > 0:
-            tainting = min(abs(misstatement) / abs(recorded), 1.0)
+            tainting = float(min(abs(misstatement) / abs(recorded), Decimal("1")))
         else:
             tainting = 1.0
 

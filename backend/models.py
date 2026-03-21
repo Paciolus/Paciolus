@@ -1,14 +1,18 @@
 """SQLAlchemy models for users, activity logs, clients, and diagnostic summaries."""
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
+from decimal import Decimal
 from enum import Enum as PyEnum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import Boolean, Column, Date, DateTime, Enum, Float, ForeignKey, Integer, Numeric, String, func
-from sqlalchemy.orm import relationship
+from sqlalchemy import Boolean, Date, DateTime, Enum, Float, ForeignKey, Integer, Numeric, String, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database import Base
 from shared.soft_delete import SoftDeleteMixin
+
+if TYPE_CHECKING:
+    from engagement_model import Engagement
 
 
 class PeriodType(str, PyEnum):
@@ -74,23 +78,23 @@ class User(Base):
 
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True, index=True)
-    email = Column(String(255), unique=True, index=True, nullable=False)
-    hashed_password = Column(String(255), nullable=False)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
+    hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
 
     # User profile
-    name = Column(String(100), nullable=True)  # Display name (optional)
+    name: Mapped[str | None] = mapped_column(String(100), nullable=True)  # Display name (optional)
 
     # User metadata
-    is_active = Column(Boolean, default=True)
-    is_verified = Column(Boolean, default=False)  # Email verification status
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_verified: Mapped[bool] = mapped_column(Boolean, default=False)  # Email verification status
 
     # Sprint 57: User tier for feature access and usage limits
-    tier = Column(Enum(UserTier), default=UserTier.FREE, nullable=False)
+    tier: Mapped[UserTier] = mapped_column(Enum(UserTier), default=UserTier.FREE, nullable=False)
 
     # Phase LXIX: Organization membership (user belongs to at most one org)
     # use_alter=True breaks the users↔organizations FK cycle for create_all()/drop_all()
-    organization_id = Column(
+    organization_id: Mapped[int | None] = mapped_column(
         Integer,
         ForeignKey("organizations.id", use_alter=True, name="fk_users_organization_id"),
         nullable=True,
@@ -98,40 +102,40 @@ class User(Base):
     )
 
     # Sprint 57: Email verification fields
-    email_verification_sent_at = Column(DateTime, nullable=True)
-    email_verified_at = Column(DateTime, nullable=True)
+    email_verification_sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    email_verified_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     # Sprint 203: Pending email for re-verification on email change
-    pending_email = Column(String(255), nullable=True)
+    pending_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     # Timestamps
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
-    updated_at = Column(
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC), server_default=func.now()
     )
-    last_login = Column(DateTime, nullable=True)
+    last_login: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     # Sprint 199: Password change tracking for token invalidation
-    password_changed_at = Column(DateTime, nullable=True)
+    password_changed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     # Sprint 261: DB-backed account lockout (replaces in-memory _lockout_tracker)
-    failed_login_attempts = Column(Integer, default=0, nullable=False)
-    locked_until = Column(DateTime, nullable=True)
+    failed_login_attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    locked_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     # User settings (JSON string) - for future preferences
     # IMPORTANT: This is for UI preferences only, NOT financial data
-    settings = Column(String(2000), default="{}")
+    settings: Mapped[str] = mapped_column(String(2000), default="{}")
 
     # Reverse relationships (Sprint 280: backref → back_populates)
     # Sprint 345: foreign_keys needed to disambiguate from SoftDeleteMixin.archived_by FK
-    activity_logs = relationship("ActivityLog", back_populates="user", foreign_keys="[ActivityLog.user_id]")
-    clients = relationship("Client", back_populates="user")
-    diagnostic_summaries = relationship(
+    activity_logs: Mapped[list["ActivityLog"]] = relationship("ActivityLog", back_populates="user", foreign_keys="[ActivityLog.user_id]")
+    clients: Mapped[list["Client"]] = relationship("Client", back_populates="user")
+    diagnostic_summaries: Mapped[list["DiagnosticSummary"]] = relationship(
         "DiagnosticSummary", back_populates="user", foreign_keys="[DiagnosticSummary.user_id]"
     )
-    verification_tokens = relationship("EmailVerificationToken", back_populates="user")
-    refresh_tokens = relationship("RefreshToken", back_populates="user")
-    engagements = relationship("Engagement", back_populates="creator", foreign_keys="[Engagement.created_by]")
+    verification_tokens: Mapped[list["EmailVerificationToken"]] = relationship("EmailVerificationToken", back_populates="user")
+    refresh_tokens: Mapped[list["RefreshToken"]] = relationship("RefreshToken", back_populates="user")
+    engagements: Mapped[list["Engagement"]] = relationship("Engagement", back_populates="creator", foreign_keys="[Engagement.created_by]")
 
     def __repr__(self) -> str:
         return f"<User(id={self.id}, email={self.email[:10]}...)>"
@@ -142,37 +146,37 @@ class ActivityLog(SoftDeleteMixin, Base):
 
     __tablename__ = "activity_logs"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
 
     # User association (nullable for anonymous audits)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
-    user = relationship("User", back_populates="activity_logs", foreign_keys=[user_id])
+    user_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    user: Mapped["User"] = relationship("User", back_populates="activity_logs", foreign_keys=[user_id])
 
     # Audit identification (privacy-preserving)
-    filename_hash = Column(String(64), nullable=False)  # SHA-256 hash of filename
-    filename_display = Column(String(20), nullable=True)  # First 8 chars + "..." for UI
+    filename_hash: Mapped[str] = mapped_column(String(64), nullable=False)  # SHA-256 hash of filename
+    filename_display: Mapped[str | None] = mapped_column(String(20), nullable=True)  # First 8 chars + "..." for UI
 
     # Timestamp
-    timestamp = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now(), index=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now(), index=True)
 
     # Audit summary metadata (aggregate only - no specific account details)
-    record_count = Column(Integer, nullable=False)  # Number of rows processed
-    total_debits = Column(Numeric(19, 2), nullable=False)  # Sum of all debits
-    total_credits = Column(Numeric(19, 2), nullable=False)  # Sum of all credits
-    materiality_threshold = Column(Numeric(19, 2), nullable=False)  # Threshold used
+    record_count: Mapped[int] = mapped_column(Integer, nullable=False)  # Number of rows processed
+    total_debits: Mapped[Decimal] = mapped_column(Numeric(19, 2), nullable=False)  # Sum of all debits
+    total_credits: Mapped[Decimal] = mapped_column(Numeric(19, 2), nullable=False)  # Sum of all credits
+    materiality_threshold: Mapped[Decimal] = mapped_column(Numeric(19, 2), nullable=False)  # Threshold used
 
     # Results (aggregate only)
-    was_balanced = Column(Boolean, nullable=False)  # Did debits equal credits?
-    anomaly_count = Column(Integer, default=0)  # Total anomalies found (no details)
-    material_count = Column(Integer, default=0)  # Material anomalies only
-    immaterial_count = Column(Integer, default=0)  # Immaterial anomalies only
+    was_balanced: Mapped[bool] = mapped_column(Boolean, nullable=False)  # Did debits equal credits?
+    anomaly_count: Mapped[int] = mapped_column(Integer, default=0)  # Total anomalies found (no details)
+    material_count: Mapped[int] = mapped_column(Integer, default=0)  # Material anomalies only
+    immaterial_count: Mapped[int] = mapped_column(Integer, default=0)  # Immaterial anomalies only
 
     # Multi-sheet info (optional)
-    is_consolidated = Column(Boolean, default=False)
-    sheet_count = Column(Integer, nullable=True)
+    is_consolidated: Mapped[bool] = mapped_column(Boolean, default=False)
+    sheet_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     # Sprint 461: Cryptographic audit chain (SOC 2 CC7.4)
-    chain_hash = Column(String(128), nullable=True, index=True)
+    chain_hash: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
 
     def __repr__(self) -> str:
         return f"<ActivityLog(id={self.id}, user_id={self.user_id}, balanced={self.was_balanced})>"
@@ -207,41 +211,41 @@ class Client(Base):
 
     __tablename__ = "clients"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
 
     # Multi-tenant: Client belongs to a specific user
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    user = relationship("User", back_populates="clients")
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    user: Mapped["User"] = relationship("User", back_populates="clients")
 
     # Reverse relationships (Sprint 280: backref → back_populates)
-    diagnostic_summaries = relationship("DiagnosticSummary", back_populates="client")
-    engagements = relationship("Engagement", back_populates="client")
+    diagnostic_summaries: Mapped[list["DiagnosticSummary"]] = relationship("DiagnosticSummary", back_populates="client")
+    engagements: Mapped[list["Engagement"]] = relationship("Engagement", back_populates="client")
 
     # Client identification
-    name = Column(String(255), nullable=False)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
 
     # Industry classification (standardized enum)
-    industry = Column(Enum(Industry), default=Industry.OTHER, nullable=False)
+    industry: Mapped[Industry] = mapped_column(Enum(Industry), default=Industry.OTHER, nullable=False)
 
     # Fiscal year end (e.g., "12-31" for calendar year, "06-30" for June)
     # Format: MM-DD string for flexibility
-    fiscal_year_end = Column(String(5), default="12-31", nullable=False)
+    fiscal_year_end: Mapped[str] = mapped_column(String(5), default="12-31", nullable=False)
 
     # Sprint 1: Reporting framework metadata
-    reporting_framework = Column(Enum(ReportingFramework), default=ReportingFramework.AUTO, nullable=False)
-    entity_type = Column(Enum(EntityType), default=EntityType.OTHER, nullable=False)
-    jurisdiction_country = Column(String(2), default="US", nullable=False)  # ISO 3166-1 alpha-2
-    jurisdiction_state = Column(String(50), nullable=True)  # US state or sub-national region
+    reporting_framework: Mapped[ReportingFramework] = mapped_column(Enum(ReportingFramework), default=ReportingFramework.AUTO, nullable=False)
+    entity_type: Mapped[EntityType] = mapped_column(Enum(EntityType), default=EntityType.OTHER, nullable=False)
+    jurisdiction_country: Mapped[str] = mapped_column(String(2), default="US", nullable=False)  # ISO 3166-1 alpha-2
+    jurisdiction_state: Mapped[str | None] = mapped_column(String(50), nullable=True)  # US state or sub-national region
 
     # Timestamps
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
-    updated_at = Column(
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC), server_default=func.now()
     )
 
     # Optional: Client-specific settings (JSON string)
     # For future features like default materiality threshold per client
-    settings = Column(String(2000), default="{}")
+    settings: Mapped[str] = mapped_column(String(2000), default="{}")
 
     def __repr__(self) -> str:
         return f"<Client(id={self.id}, name={self.name[:20]}..., user_id={self.user_id})>"
@@ -269,68 +273,68 @@ class DiagnosticSummary(SoftDeleteMixin, Base):
 
     __tablename__ = "diagnostic_summaries"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
 
     # Link to client for variance comparison
-    client_id = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
-    client = relationship("Client", back_populates="diagnostic_summaries")
+    client_id: Mapped[int] = mapped_column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
+    client: Mapped["Client"] = relationship("Client", back_populates="diagnostic_summaries")
 
     # Link to user (for multi-tenant security)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    user = relationship("User", back_populates="diagnostic_summaries", foreign_keys=[user_id])
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    user: Mapped["User"] = relationship("User", back_populates="diagnostic_summaries", foreign_keys=[user_id])
 
     # Timestamp for ordering and trend analysis
-    timestamp = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now(), index=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now(), index=True)
 
     # Sprint 33: Period identification for trend analysis
-    period_date = Column(Date, nullable=True, index=True)  # End date of the period
-    period_type = Column(Enum(PeriodType), nullable=True)  # monthly/quarterly/annual
+    period_date: Mapped[date | None] = mapped_column(Date, nullable=True, index=True)  # End date of the period
+    period_type: Mapped[PeriodType | None] = mapped_column(Enum(PeriodType), nullable=True)  # monthly/quarterly/annual
     # Sprint 51: Human-readable period label (e.g., "FY2025", "Q3 2025")
-    period_label = Column(String(50), nullable=True)
+    period_label: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     # Filename hash for identification (same as ActivityLog)
-    filename_hash = Column(String(64), nullable=True)
-    filename_display = Column(String(20), nullable=True)
+    filename_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    filename_display: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
     # === AGGREGATE CATEGORY TOTALS (Zero-Storage compliant) ===
     # Balance Sheet totals (Sprint 341: Float → Numeric for monetary precision)
-    total_assets = Column(Numeric(19, 2), default=0.0)
-    current_assets = Column(Numeric(19, 2), default=0.0)
-    inventory = Column(Numeric(19, 2), default=0.0)
-    total_liabilities = Column(Numeric(19, 2), default=0.0)
-    current_liabilities = Column(Numeric(19, 2), default=0.0)
-    total_equity = Column(Numeric(19, 2), default=0.0)
+    total_assets: Mapped[Decimal] = mapped_column(Numeric(19, 2), default=0.0)
+    current_assets: Mapped[Decimal] = mapped_column(Numeric(19, 2), default=0.0)
+    inventory: Mapped[Decimal] = mapped_column(Numeric(19, 2), default=0.0)
+    total_liabilities: Mapped[Decimal] = mapped_column(Numeric(19, 2), default=0.0)
+    current_liabilities: Mapped[Decimal] = mapped_column(Numeric(19, 2), default=0.0)
+    total_equity: Mapped[Decimal] = mapped_column(Numeric(19, 2), default=0.0)
 
     # Income Statement totals (Sprint 341: Float → Numeric for monetary precision)
-    total_revenue = Column(Numeric(19, 2), default=0.0)
-    cost_of_goods_sold = Column(Numeric(19, 2), default=0.0)
-    total_expenses = Column(Numeric(19, 2), default=0.0)
-    operating_expenses = Column(Numeric(19, 2), default=0.0)  # Sprint 33: For operating margin
+    total_revenue: Mapped[Decimal] = mapped_column(Numeric(19, 2), default=0.0)
+    cost_of_goods_sold: Mapped[Decimal] = mapped_column(Numeric(19, 2), default=0.0)
+    total_expenses: Mapped[Decimal] = mapped_column(Numeric(19, 2), default=0.0)
+    operating_expenses: Mapped[Decimal] = mapped_column(Numeric(19, 2), default=0.0)  # Sprint 33: For operating margin
 
     # === CALCULATED RATIOS (for trend tracking) ===
-    current_ratio = Column(Float, nullable=True)
-    quick_ratio = Column(Float, nullable=True)
-    debt_to_equity = Column(Float, nullable=True)
-    gross_margin = Column(Float, nullable=True)
+    current_ratio: Mapped[float | None] = mapped_column(Float, nullable=True)
+    quick_ratio: Mapped[float | None] = mapped_column(Float, nullable=True)
+    debt_to_equity: Mapped[float | None] = mapped_column(Float, nullable=True)
+    gross_margin: Mapped[float | None] = mapped_column(Float, nullable=True)
     # Sprint 33: Extended ratios for trend analysis
-    net_profit_margin = Column(Float, nullable=True)
-    operating_margin = Column(Float, nullable=True)
-    return_on_assets = Column(Float, nullable=True)
-    return_on_equity = Column(Float, nullable=True)
+    net_profit_margin: Mapped[float | None] = mapped_column(Float, nullable=True)
+    operating_margin: Mapped[float | None] = mapped_column(Float, nullable=True)
+    return_on_assets: Mapped[float | None] = mapped_column(Float, nullable=True)
+    return_on_equity: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     # Sprint 449: Cash cycle ratios for trend tracking
-    dso = Column(Float, nullable=True)  # Days Sales Outstanding
-    dpo = Column(Float, nullable=True)  # Days Payable Outstanding
-    dio = Column(Float, nullable=True)  # Days Inventory Outstanding
-    ccc = Column(Float, nullable=True)  # Cash Conversion Cycle
+    dso: Mapped[float | None] = mapped_column(Float, nullable=True)  # Days Sales Outstanding
+    dpo: Mapped[float | None] = mapped_column(Float, nullable=True)  # Days Payable Outstanding
+    dio: Mapped[float | None] = mapped_column(Float, nullable=True)  # Days Inventory Outstanding
+    ccc: Mapped[float | None] = mapped_column(Float, nullable=True)  # Cash Conversion Cycle
 
     # === DIAGNOSTIC METADATA === (Sprint 341: monetary Float → Numeric)
-    total_debits = Column(Numeric(19, 2), default=0.0)
-    total_credits = Column(Numeric(19, 2), default=0.0)
-    was_balanced = Column(Boolean, default=True)
-    anomaly_count = Column(Integer, default=0)
-    materiality_threshold = Column(Numeric(19, 2), default=0.0)
-    row_count = Column(Integer, default=0)
+    total_debits: Mapped[Decimal] = mapped_column(Numeric(19, 2), default=0.0)
+    total_credits: Mapped[Decimal] = mapped_column(Numeric(19, 2), default=0.0)
+    was_balanced: Mapped[bool] = mapped_column(Boolean, default=True)
+    anomaly_count: Mapped[int] = mapped_column(Integer, default=0)
+    materiality_threshold: Mapped[Decimal] = mapped_column(Numeric(19, 2), default=0.0)
+    row_count: Mapped[int] = mapped_column(Integer, default=0)
 
     def __repr__(self) -> str:
         return f"<DiagnosticSummary(id={self.id}, client_id={self.client_id}, timestamp={self.timestamp})>"
@@ -430,19 +434,19 @@ class EmailVerificationToken(Base):
 
     __tablename__ = "email_verification_tokens"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
 
     # Link to user
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    user = relationship("User", back_populates="verification_tokens")
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    user: Mapped["User"] = relationship("User", back_populates="verification_tokens")
 
     # Token data (hashed — SHA-256 hex digest of raw token; never stored plaintext)
-    token_hash = Column(String(64), unique=True, index=True, nullable=False)
-    expires_at = Column(DateTime, nullable=False)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
 
     # Usage tracking
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
-    used_at = Column(DateTime, nullable=True)  # Set when token is verified
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
+    used_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)  # Set when token is verified
 
     def __repr__(self) -> str:
         return f"<EmailVerificationToken(id={self.id}, user_id={self.user_id})>"
@@ -477,27 +481,27 @@ class RefreshToken(Base):
 
     __tablename__ = "refresh_tokens"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
 
     # Link to user
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    user = relationship("User", back_populates="refresh_tokens")
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    user: Mapped["User"] = relationship("User", back_populates="refresh_tokens")
 
     # Token data — stores SHA-256 hash, NOT plaintext
-    token_hash = Column(String(64), unique=True, index=True, nullable=False)
-    expires_at = Column(DateTime, nullable=False)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
 
     # Lifecycle tracking
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
-    revoked_at = Column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     # Rotation chain — hash of the replacement token (for reuse detection)
-    replaced_by_hash = Column(String(64), nullable=True)
+    replaced_by_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     # AUDIT-02 FIX 2: Session metadata for inventory & revocation
-    last_used_at = Column(DateTime, nullable=True)
-    user_agent = Column(String(512), nullable=True)
-    ip_address = Column(String(45), nullable=True)
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    user_agent: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    ip_address: Mapped[str | None] = mapped_column(String(45), nullable=True)
 
     def __repr__(self) -> str:
         return f"<RefreshToken(id={self.id}, user_id={self.user_id})>"
@@ -531,6 +535,6 @@ class WaitlistSignup(Base):
 
     __tablename__ = "waitlist_signups"
 
-    id = Column(Integer, primary_key=True, index=True)
-    email = Column(String(255), unique=True, nullable=False, index=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())

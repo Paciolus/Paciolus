@@ -189,7 +189,7 @@ async def sampling_design(
     engagement_id: Optional[int] = Form(default=None),
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, object]:
     """Design and select a statistical sample from an uploaded population.
 
     ISA 530 / PCAOB AS 2315: Statistical sampling for substantive tests.
@@ -268,7 +268,7 @@ async def sampling_evaluate(
     engagement_id: Optional[int] = Form(default=None),
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, object]:
     """Evaluate a completed sample and determine Pass/Fail.
 
     ISA 530 / PCAOB AS 2315: Sample evaluation using Stringer bound (MUS)

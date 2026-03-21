@@ -431,7 +431,7 @@ class TestFlagG1SingleAccountPopulation:
 class TestFlagG2NegativeBalances:
     """Tests for unexpected negative balances (wrong-sign accounts)."""
 
-    def _assert_flags_or_handles(self, result_dict: dict, rpt: str):
+    def _assert_flags_or_handles(self, result_dict: dict, rpt: str) -> None:
         """Common assertion: result should contain some flag/warning for unexpected sign."""
         serialized = json.dumps(result_dict, default=str).lower()
         has_sign_handling = any(
@@ -634,7 +634,7 @@ class TestFlagG3LargeValues:
 
     T = TRILLION  # 1_000_000_000_001.23
 
-    def _assert_precision(self, result_obj: Any, rpt: str):
+    def _assert_precision(self, result_obj: Any, rpt: str) -> None:
         """Assert no scientific notation in serialized result."""
         if hasattr(result_obj, "to_dict"):
             d = result_obj.to_dict()

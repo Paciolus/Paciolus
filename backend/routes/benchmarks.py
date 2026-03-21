@@ -97,14 +97,14 @@ class BenchmarkSourcesResponse(BaseModel):
 
 
 @router.get("/benchmarks/industries", response_model=list[str])
-async def get_benchmark_industries():
+async def get_benchmark_industries() -> list[str]:
     """Get list of industries with available benchmark data."""
     industries = get_available_industries()
     return [ind.value for ind in industries]
 
 
 @router.get("/benchmarks/sources", response_model=BenchmarkSourcesResponse)
-async def get_benchmarks_sources():
+async def get_benchmarks_sources() -> BenchmarkSourcesResponse:
     """Get benchmark data source attribution information."""
     sources = get_benchmark_sources()
 
@@ -125,7 +125,7 @@ async def get_benchmarks_sources():
 async def get_industry_benchmarks(
     industry: str = PathParam(..., description="Industry type (e.g., 'retail', 'manufacturing')"),
     fiscal_year: int = Query(2025, description="Fiscal year for benchmarks"),
-):
+) -> BenchmarkSetResponse:
     """Get benchmark data for a specific industry."""
     try:
         industry_enum = Industry(industry.lower())
@@ -173,7 +173,7 @@ async def get_industry_benchmarks(
 @limiter.limit(RATE_LIMIT_DEFAULT)
 async def compare_to_benchmarks(
     request: Request, payload: BenchmarkComparisonRequest, current_user: User = Depends(require_verified_user)
-):
+) -> BenchmarkComparisonResponse:
     """Compare client ratios to industry benchmarks."""
     log_secure_operation(
         "benchmark_compare", f"User {current_user.id} comparing {len(payload.ratios)} ratios to {payload.industry}"

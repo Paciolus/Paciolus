@@ -50,7 +50,7 @@ async def preflight_check(
         del column_names, rows
         return result
 
-    return await execute_file_tool(
+    return await execute_file_tool(  # type: ignore[return-value]
         file,
         "preflight",
         _analyze,
@@ -85,7 +85,7 @@ async def population_profile_check(
         del column_names, rows
         return result
 
-    return await execute_file_tool(
+    return await execute_file_tool(  # type: ignore[return-value]
         file,
         "population_profile",
         _analyze,
@@ -143,7 +143,7 @@ async def expense_category_analytics(
         del column_names, rows
         return result
 
-    return await execute_file_tool(
+    return await execute_file_tool(  # type: ignore[return-value]
         file,
         "expense_category",
         _analyze,
@@ -190,7 +190,7 @@ async def accrual_completeness_check(
         del column_names, rows
         return result
 
-    return await execute_file_tool(
+    return await execute_file_tool(  # type: ignore[return-value]
         file,
         "accrual_completeness",
         _analyze,

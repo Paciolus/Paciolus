@@ -79,13 +79,13 @@ class DecimalJSONResponse(JSONResponse):
 if SENTRY_DSN:
     import sentry_sdk
 
-    def _before_send(event, hint):
+    def _before_send(event: dict, hint: dict) -> dict:
         """Strip request bodies to comply with Zero-Storage policy."""
         if "request" in event and "data" in event["request"]:
             event["request"]["data"] = "[Stripped — Zero-Storage]"
         return event
 
-    def _before_send_transaction(event, hint):
+    def _before_send_transaction(event: dict, hint: dict) -> dict:
         """Strip query strings from transaction names."""
         if "transaction" in event:
             txn = event["transaction"]
@@ -99,8 +99,8 @@ if SENTRY_DSN:
         environment=ENV_MODE,
         traces_sample_rate=SENTRY_TRACES_SAMPLE_RATE,
         send_default_pii=False,
-        before_send=_before_send,
-        before_send_transaction=_before_send_transaction,
+        before_send=_before_send,  # type: ignore[arg-type]
+        before_send_transaction=_before_send_transaction,  # type: ignore[arg-type]
     )
     logger.info("Sentry APM initialized (env=%s, traces=%.0f%%)", ENV_MODE, SENTRY_TRACES_SAMPLE_RATE * 100)
 
@@ -220,7 +220,7 @@ app.add_middleware(RateLimitIdentityMiddleware)
 
 # Rate limiting
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
 
 
 # Global catch-all for unhandled exceptions — prevents stack trace leakage

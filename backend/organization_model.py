@@ -17,8 +17,8 @@ No financial data, no account numbers, no PII beyond email for invites.
 from datetime import UTC, datetime, timedelta
 from enum import Enum as PyEnum
 
-from sqlalchemy import Column, DateTime, Enum, ForeignKey, Integer, String, func
-from sqlalchemy.orm import relationship
+from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database import Base
 
@@ -49,16 +49,16 @@ class Organization(Base):
 
     __tablename__ = "organizations"
 
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(255), nullable=False)
-    slug = Column(String(100), unique=True, index=True, nullable=False)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    slug: Mapped[str] = mapped_column(String(100), unique=True, index=True, nullable=False)
 
     # Owner (the user who created the org / subscribed)
-    owner_user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    owner_user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False, index=True)
 
     # Link to subscription (one org = one subscription)
     # use_alter=True breaks the users↔organizations↔subscriptions FK cycle for create_all()
-    subscription_id = Column(
+    subscription_id: Mapped[int | None] = mapped_column(
         Integer,
         ForeignKey("subscriptions.id", use_alter=True, name="fk_organizations_subscription_id"),
         unique=True,
@@ -67,14 +67,14 @@ class Organization(Base):
     )
 
     # Timestamps
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
-    updated_at = Column(
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC), server_default=func.now()
     )
 
     # Relationships
-    members = relationship("OrganizationMember", back_populates="organization", cascade="all, delete-orphan")
-    invites = relationship("OrganizationInvite", back_populates="organization", cascade="all, delete-orphan")
+    members: Mapped[list["OrganizationMember"]] = relationship("OrganizationMember", back_populates="organization", cascade="all, delete-orphan")
+    invites: Mapped[list["OrganizationInvite"]] = relationship("OrganizationInvite", back_populates="organization", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
         return f"<Organization(id={self.id}, name={self.name}, slug={self.slug})>"
@@ -100,18 +100,18 @@ class OrganizationMember(Base):
 
     __tablename__ = "organization_members"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
 
-    organization_id = Column(Integer, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
-    organization = relationship("Organization", back_populates="members")
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
+    organization: Mapped["Organization"] = relationship("Organization", back_populates="members")
 
-    user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False, index=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), unique=True, nullable=False, index=True)
 
-    role = Column(Enum(OrgRole), default=OrgRole.MEMBER, nullable=False)
-    joined_at = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
+    role: Mapped[OrgRole] = mapped_column(Enum(OrgRole), default=OrgRole.MEMBER, nullable=False)
+    joined_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
 
     # Who invited this member (nullable for owner — self-created)
-    invited_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    invited_by_user_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
 
     def __repr__(self) -> str:
         return f"<OrganizationMember(id={self.id}, org_id={self.organization_id}, user_id={self.user_id}, role={self.role})>"
@@ -141,33 +141,33 @@ class OrganizationInvite(Base):
 
     __tablename__ = "organization_invites"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
 
-    organization_id = Column(Integer, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
-    organization = relationship("Organization", back_populates="invites")
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
+    organization: Mapped["Organization"] = relationship("Organization", back_populates="invites")
 
     # Token stored as SHA-256 hash
-    invite_token_hash = Column(String(64), unique=True, index=True, nullable=False)
+    invite_token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
 
     # Invitee info
-    invitee_email = Column(String(255), nullable=False, index=True)
-    role = Column(Enum(OrgRole), default=OrgRole.MEMBER, nullable=False)
+    invitee_email: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    role: Mapped[OrgRole] = mapped_column(Enum(OrgRole), default=OrgRole.MEMBER, nullable=False)
 
     # Status lifecycle
-    status = Column(Enum(InviteStatus), default=InviteStatus.PENDING, nullable=False)
+    status: Mapped[InviteStatus] = mapped_column(Enum(InviteStatus), default=InviteStatus.PENDING, nullable=False)
 
     # Timestamps
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
-    expires_at = Column(
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
+    expires_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=lambda: datetime.now(UTC) + timedelta(hours=INVITE_EXPIRY_HOURS),
         nullable=False,
     )
-    accepted_at = Column(DateTime, nullable=True)
-    accepted_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    accepted_by_user_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
 
     # Who sent the invite
-    invited_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    invited_by_user_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
 
     def __repr__(self) -> str:
         return f"<OrganizationInvite(id={self.id}, org_id={self.organization_id}, email={self.invitee_email[:10]}...)>"

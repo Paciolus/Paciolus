@@ -17,7 +17,8 @@ def _find_function(tree: ast.Module, name: str) -> ast.FunctionDef | None:
     """Find a top-level function definition by name."""
     for node in ast.walk(tree):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == name:
-            return node
+            if isinstance(node, ast.FunctionDef):
+                return node
     return None
 
 
@@ -30,13 +31,13 @@ def _find_assignment(tree: ast.Module, name: str) -> ast.Assign | None:
                     return node
         elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
             if node.target.id == name:
-                return node
+                return node  # type: ignore[return-value]
     return None
 
 
 def _check_posted_terminal(assign_node: ast.Assign | ast.AnnAssign, file_path: str) -> list[Violation]:
     """Verify POSTED maps to empty set in VALID_TRANSITIONS."""
-    violations = []
+    violations: list[Violation] = []
     value = assign_node.value if isinstance(assign_node, ast.Assign) else assign_node.value
     if value is None or not isinstance(value, ast.Dict):
         return violations

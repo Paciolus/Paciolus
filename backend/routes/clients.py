@@ -51,14 +51,14 @@ def _client_to_response(c: Client) -> ClientResponse:
 
 
 @router.get("/clients/industries", response_model=list[IndustryOption])
-def get_industries(response: Response):
+def get_industries(response: Response) -> list[dict]:
     """Get available industry options. Static data, cached aggressively."""
     response.headers["Cache-Control"] = "public, max-age=3600, s-maxage=86400"
     return get_industry_options()
 
 
 @router.get("/audit/lead-sheets/options", response_model=list, tags=["reference"])
-def get_lead_sheet_options_endpoint(response: Response):
+def get_lead_sheet_options_endpoint(response: Response) -> list[dict[str, object]]:
     """Get available lead sheet options for UI dropdowns."""
     response.headers["Cache-Control"] = "public, max-age=3600, s-maxage=86400"
     return get_lead_sheet_options()
@@ -70,7 +70,7 @@ def get_clients(
     pagination: PaginationParams = Depends(),
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> PaginatedResponse[ClientResponse]:
     """Get paginated list of clients for the user."""
     log_secure_operation("clients_list", f"User {current_user.id} fetching client list (page {pagination.page})")
 
@@ -99,7 +99,7 @@ def create_client(
     client_data: ClientCreate,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> ClientResponse:
     """Create a new client for the authenticated user."""
     # Sprint 367: Client limit check (AUDIT-06 FIX 2: subscription-status-aware)
     from sqlalchemy import func as sa_func
@@ -163,7 +163,7 @@ def create_client(
 
 
 @router.get("/clients/{client_id}", response_model=ClientResponse)
-def get_client(client: Client = Depends(require_client)):
+def get_client(client: Client = Depends(require_client)) -> ClientResponse:
     """Get a specific client by ID."""
     return _client_to_response(client)
 
@@ -176,7 +176,7 @@ def update_client(
     client_data: ClientUpdate,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> ClientResponse:
     """Update a client's information."""
     log_secure_operation("client_update", f"User {current_user.id} updating client {client_id}")
 
@@ -228,7 +228,7 @@ def update_client(
 @limiter.limit(RATE_LIMIT_WRITE)
 def delete_client(
     request: Request, client_id: int, current_user: User = Depends(require_current_user), db: Session = Depends(get_db)
-):
+) -> None:
     """Delete a client."""
     log_secure_operation("client_delete", f"User {current_user.id} deleting client {client_id}")
 
@@ -242,7 +242,7 @@ def delete_client(
 @router.get("/clients/{client_id}/resolved-framework", response_model=ResolvedFrameworkResponse)
 def get_resolved_framework(
     client: Client = Depends(require_client),
-):
+) -> ResolvedFrameworkResponse:
     """Resolve the reporting framework for a client based on its metadata."""
     result = resolve_reporting_framework(
         reporting_framework=client.reporting_framework.value if client.reporting_framework else "auto",

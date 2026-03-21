@@ -31,7 +31,7 @@ def serialize_audit_excel(audit_result: AuditResultInput) -> bytes:
     )
 
 
-def serialize_financial_statements_excel(payload: FinancialStatementsInput, statements: dict) -> bytes:
+def serialize_financial_statements_excel(payload: FinancialStatementsInput, statements: object) -> bytes:
     """Render financial statements as an Excel workbook.
 
     Args:

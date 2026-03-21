@@ -8,8 +8,10 @@ HTTP response construction directly.
 """
 
 import logging
+from typing import NoReturn
 
 from fastapi import HTTPException
+from fastapi.responses import StreamingResponse
 
 from shared.error_messages import sanitize_error
 from shared.export_helpers import streaming_csv_response, streaming_excel_response, streaming_pdf_response
@@ -24,7 +26,7 @@ def build_streaming_response(
     source_filename: str,
     filename_suffix: str,
     fmt: str,
-):
+) -> StreamingResponse:
     """Build an appropriate StreamingResponse based on the output format.
 
     Args:
@@ -49,7 +51,7 @@ def build_streaming_response(
         raise ValueError(f"Unsupported export format: {fmt}")
 
 
-def handle_export_error(exc: Exception, *, log_prefix: str, error_code: str):
+def handle_export_error(exc: Exception, *, log_prefix: str, error_code: str) -> NoReturn:
     """Standardized error handling for export operations.
 
     Logs the exception and raises an HTTPException with a sanitized message.

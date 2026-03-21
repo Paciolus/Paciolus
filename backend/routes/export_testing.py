@@ -280,7 +280,7 @@ def export_csv_je_testing(
     request: Request,
     je_input: JETestingExportInput,
     current_user: User = Depends(require_verified_user),
-):
+) -> StreamingResponse:
     """Export flagged journal entries as CSV."""
     return csv_export_handler(
         test_results=je_input.test_results,
@@ -300,7 +300,7 @@ def export_csv_ap_testing(
     request: Request,
     ap_input: APTestingExportInput,
     current_user: User = Depends(require_verified_user),
-):
+) -> StreamingResponse:
     """Export flagged AP payments as CSV."""
     return csv_export_handler(
         test_results=ap_input.test_results,
@@ -320,7 +320,7 @@ def export_csv_payroll_testing(
     request: Request,
     payroll_input: PayrollTestingExportInput,
     current_user: User = Depends(require_verified_user),
-):
+) -> StreamingResponse:
     """Export flagged payroll entries as CSV."""
     return csv_export_handler(
         test_results=payroll_input.test_results,
@@ -340,7 +340,7 @@ def export_csv_revenue_testing(
     request: Request,
     revenue_input: RevenueTestingExportInput,
     current_user: User = Depends(require_verified_user),
-):
+) -> StreamingResponse:
     """Export flagged revenue entries as CSV."""
     return csv_export_handler(
         test_results=revenue_input.test_results,
@@ -360,7 +360,7 @@ def export_csv_ar_aging(
     request: Request,
     ar_input: ARAgingExportInput,
     current_user: User = Depends(require_verified_user),
-):
+) -> StreamingResponse:
     """Export flagged AR aging items as CSV."""
     return csv_export_handler(
         test_results=ar_input.test_results,
@@ -381,7 +381,7 @@ def export_csv_fixed_assets(
     request: Request,
     fa_input: FixedAssetExportInput,
     current_user: User = Depends(require_verified_user),
-):
+) -> StreamingResponse:
     """Export flagged fixed assets as CSV."""
     return csv_export_handler(
         test_results=fa_input.test_results,
@@ -401,7 +401,7 @@ def export_csv_inventory(
     request: Request,
     inv_input: InventoryExportInput,
     current_user: User = Depends(require_verified_user),
-):
+) -> StreamingResponse:
     """Export flagged inventory items as CSV."""
     return csv_export_handler(
         test_results=inv_input.test_results,
@@ -426,7 +426,7 @@ def export_csv_three_way_match(
     request: Request,
     twm_input: ThreeWayMatchExportInput,
     current_user: User = Depends(require_verified_user),
-):
+) -> StreamingResponse:
     """Export three-way match results as CSV."""
     try:
         output = StringIO()
@@ -503,7 +503,7 @@ def export_csv_sampling_selection(
     request: Request,
     sampling_input: SamplingSelectionCSVInput,
     current_user: User = Depends(require_verified_user),
-):
+) -> StreamingResponse:
     """Export selected sample items as CSV with blank 'Audited Amount' column."""
     try:
         output = StringIO()

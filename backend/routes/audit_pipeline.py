@@ -64,7 +64,7 @@ async def audit_trial_balance(
 
     cached_entry = preflight_cache.get(preflight_token) if preflight_token else None
     if cached_entry:
-        preflight_cache.remove(preflight_token)  # one-time consumption
+        preflight_cache.remove(preflight_token)  # type: ignore[arg-type]  # one-time consumption
 
     # AUDIT-06 FIX 4: Dedup check — prevent rapid double-submissions
     from sqlalchemy import text
@@ -94,7 +94,7 @@ async def audit_trial_balance(
     )
     db.commit()
 
-    if result.rowcount == 0:
+    if result.rowcount == 0:  # type: ignore[attr-defined]
         raise HTTPException(
             status_code=409,
             detail="Duplicate submission detected. Please wait for the current analysis to complete.",
@@ -159,20 +159,20 @@ async def audit_trial_balance(
 
                 return result
 
-            result = await asyncio.to_thread(_analyze)
+            analysis_result: dict[str, Any] = await asyncio.to_thread(_analyze)
 
             # Sprint 258: Auto-convert if user has rate table in session
-            apply_currency_conversion(result, current_user.id, db)
+            apply_currency_conversion(analysis_result, current_user.id, db)
 
             # Sprint 310: Include materiality source in response
-            result["materiality_source"] = materiality_source
+            analysis_result["materiality_source"] = materiality_source
 
-            flagged = extract_tb_accounts(result)
+            flagged = extract_tb_accounts(analysis_result)
             background_tasks.add_task(
                 maybe_record_tool_run, db, engagement_id, current_user.id, "trial_balance", True, None, flagged
             )
 
-            return result
+            return analysis_result  # type: ignore[return-value]
 
         except (ValueError, KeyError, TypeError) as e:
             logger.exception("Trial balance analysis failed")

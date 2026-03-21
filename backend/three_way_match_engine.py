@@ -24,7 +24,7 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from difflib import SequenceMatcher
 from enum import Enum
-from typing import Optional
+from typing import Any, Optional
 
 from shared.column_detector import ColumnFieldConfig, detect_columns
 from shared.parsing_helpers import parse_date, safe_decimal, safe_float, safe_str
@@ -434,7 +434,7 @@ class PurchaseOrder:
     department: Optional[str] = None
     row_number: int = 0
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if isinstance(self.unit_price, (int, float)):
             self.unit_price = Decimal(str(self.unit_price))
         if isinstance(self.total_amount, (int, float)):
@@ -471,7 +471,7 @@ class Invoice:
     due_date: Optional[str] = None
     row_number: int = 0
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if isinstance(self.unit_price, (int, float)):
             self.unit_price = Decimal(str(self.unit_price))
         if isinstance(self.total_amount, (int, float)):
@@ -859,7 +859,7 @@ class ThreeWayMatchDataQuality:
         }
 
 
-def _fill_rate(items: list, accessor) -> float:
+def _fill_rate(items: list, accessor: Any) -> float:
     """Calculate fill rate for a field across items."""
     if not items:
         return 0.0
@@ -1074,18 +1074,18 @@ def _compute_variances(
         inv_amt = invoice.total_amount
         if po_amt != 0 or inv_amt != 0:
             diff = abs(po_amt - inv_amt)
-            if abs(po_amt) > config.amount_tolerance:
-                pct = diff / abs(po_amt)
+            if float(abs(po_amt)) > config.amount_tolerance:
+                pct = float(diff / abs(po_amt))
             else:
                 pct = 1.0  # 100% — near-zero base, cap variance percentage
-            if diff > config.amount_tolerance:
+            if float(diff) > config.amount_tolerance:
                 sev = "high" if pct > 0.10 else ("medium" if pct > 0.05 else "low")
                 variances.append(
                     MatchVariance(
                         field="amount",
-                        po_value=po_amt,
-                        invoice_value=inv_amt,
-                        variance_amount=diff,
+                        po_value=float(po_amt),
+                        invoice_value=float(inv_amt),
+                        variance_amount=float(diff),
                         variance_pct=pct,
                         severity=sev,
                     )
@@ -1096,19 +1096,19 @@ def _compute_variances(
         po_qty = po.quantity
         rec_qty = receipt.quantity_received
         if po_qty != 0 or rec_qty != 0:
-            diff = abs(po_qty - rec_qty)
+            diff_qty = abs(po_qty - rec_qty)
             if abs(po_qty) > config.quantity_tolerance:
-                pct = diff / abs(po_qty)
+                pct = diff_qty / abs(po_qty)
             else:
                 pct = 1.0  # 100% — near-zero base, cap variance percentage
-            if diff > config.quantity_tolerance:
+            if diff_qty > config.quantity_tolerance:
                 sev = "high" if pct > 0.10 else ("medium" if pct > 0.05 else "low")
                 variances.append(
                     MatchVariance(
                         field="quantity",
                         po_value=po_qty,
                         receipt_value=rec_qty,
-                        variance_amount=diff,
+                        variance_amount=diff_qty,
                         variance_pct=pct,
                         severity=sev,
                     )
@@ -1116,9 +1116,9 @@ def _compute_variances(
 
     # Price variance: PO unit_price vs Invoice unit_price
     if po and invoice and po.unit_price > 0 and invoice.unit_price > 0:
-        diff = abs(po.unit_price - invoice.unit_price)
-        if abs(po.unit_price) > config.price_variance_threshold:
-            pct = diff / abs(po.unit_price)
+        price_diff = abs(po.unit_price - invoice.unit_price)
+        if float(abs(po.unit_price)) > config.price_variance_threshold:
+            pct = float(price_diff / abs(po.unit_price))
         else:
             pct = 1.0  # 100% — near-zero base, cap variance percentage
         if pct > config.price_variance_threshold:
@@ -1126,9 +1126,9 @@ def _compute_variances(
             variances.append(
                 MatchVariance(
                     field="price",
-                    po_value=po.unit_price,
-                    invoice_value=invoice.unit_price,
-                    variance_amount=diff,
+                    po_value=float(po.unit_price),
+                    invoice_value=float(invoice.unit_price),
+                    variance_amount=float(price_diff),
                     variance_pct=pct,
                     severity=sev,
                 )
@@ -1392,10 +1392,10 @@ def run_three_way_match(
         partial_match_count=len(result.partial_matches),
         full_match_rate=len(result.full_matches) / total_docs,
         partial_match_rate=len(result.partial_matches) / total_docs,
-        total_po_amount=sum(po.total_amount for po in pos),
-        total_invoice_amount=sum(inv.total_amount for inv in invoices),
+        total_po_amount=float(sum(po.total_amount for po in pos)),
+        total_invoice_amount=float(sum(inv.total_amount for inv in invoices)),
         total_receipt_amount=0.0,  # Receipts don't always have amounts
-        net_variance=abs(sum(po.total_amount for po in pos) - sum(inv.total_amount for inv in invoices)),
+        net_variance=float(abs(sum((po.total_amount for po in pos), Decimal("0")) - sum((inv.total_amount for inv in invoices), Decimal("0")))),
         material_variances_count=sum(1 for v in result.variances if v.severity in ("high", "medium")),
     )
 

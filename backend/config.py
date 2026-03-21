@@ -39,6 +39,7 @@ def _load_required(var_name: str) -> str:
     value = _resolve_secret(var_name)
     if value is None or value.strip() == "":
         _hard_fail(f"Required configuration '{var_name}' is not set in any secrets backend.")
+        raise SystemExit(1)  # unreachable, but satisfies mypy
     return value.strip()
 
 
@@ -132,7 +133,7 @@ if _using_generated_jwt and API_HOST in ("0.0.0.0", "::"):  # nosec B104 — com
 JWT_SECRET_KEY = _jwt_secret
 
 # Validate JWT secret strength (minimum 32 characters for HS256)
-if not _using_generated_jwt and len(JWT_SECRET_KEY) < 32:
+if not _using_generated_jwt and JWT_SECRET_KEY is not None and len(JWT_SECRET_KEY) < 32:
     if ENV_MODE == "production":
         _hard_fail(
             f"JWT_SECRET_KEY is too short ({len(JWT_SECRET_KEY)} chars).\n"
@@ -176,7 +177,7 @@ if _csrf_secret is None or _csrf_secret.strip() == "":
 CSRF_SECRET_KEY = _csrf_secret
 
 # Validate CSRF secret strength (minimum 32 characters)
-if not _using_generated_csrf and len(CSRF_SECRET_KEY) < 32:
+if not _using_generated_csrf and CSRF_SECRET_KEY is not None and len(CSRF_SECRET_KEY) < 32:
     if ENV_MODE == "production":
         _hard_fail(
             f"CSRF_SECRET_KEY is too short ({len(CSRF_SECRET_KEY)} chars).\n"
