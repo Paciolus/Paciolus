@@ -13,10 +13,34 @@
  */
 
 import {
+  getTokenRefreshCallback,
+  getCsrfToken as _getCsrfToken,
+  fetchCsrfToken as _fetchCsrfToken,
+  CSRF_METHODS as _CSRF_METHODS,
+  injectAuthHeaders,
+} from '@/utils/authMiddleware'
+import {
+  getCacheKey,
+  getEndpointTtl,
+  getCached,
+  getCachedWithStale,
+  setCached,
+  invalidateRelatedCaches,
+  inflightRequests,
+  performBackgroundRevalidation,
+} from '@/utils/cachePlugin'
+import {
   DEFAULT_REQUEST_TIMEOUT,
   BASE_RETRY_DELAY,
   MAX_RETRIES,
 } from '@/utils/constants'
+import type { ApiResponse, ApiRequestOptions } from '@/utils/transport'
+import {
+  performFetch,
+  buildUrl,
+  serializeBody,
+  isRetryableError,
+} from '@/utils/transport'
 
 // --- Re-exports (preserve all existing import paths) ---
 export type { ApiResponse, ApiRequestOptions } from '@/utils/transport'
@@ -31,7 +55,6 @@ export {
   buildUrl,
   isRetryableError,
 } from '@/utils/transport'
-
 export {
   setTokenRefreshCallback,
   setCsrfToken,
@@ -40,7 +63,6 @@ export {
   CSRF_METHODS,
   injectAuthHeaders,
 } from '@/utils/authMiddleware'
-
 export {
   invalidateCache,
   getCacheStats,
@@ -56,36 +78,7 @@ export {
   invalidateRelatedCaches,
   inflightRequests,
 } from '@/utils/cachePlugin'
-
 export { apiDownload, downloadBlob } from '@/utils/downloadAdapter'
-
-// --- Internal imports for orchestration ---
-import type { ApiResponse, ApiRequestOptions } from '@/utils/transport'
-import {
-  performFetch,
-  buildUrl,
-  serializeBody,
-  isRetryableError,
-} from '@/utils/transport'
-
-import {
-  getTokenRefreshCallback,
-  getCsrfToken as _getCsrfToken,
-  fetchCsrfToken as _fetchCsrfToken,
-  CSRF_METHODS as _CSRF_METHODS,
-  injectAuthHeaders,
-} from '@/utils/authMiddleware'
-
-import {
-  getCacheKey,
-  getEndpointTtl,
-  getCached,
-  getCachedWithStale,
-  setCached,
-  invalidateRelatedCaches,
-  inflightRequests,
-  performBackgroundRevalidation,
-} from '@/utils/cachePlugin'
 
 const IDEMPOTENT = new Set(['GET', 'PUT', 'HEAD', 'OPTIONS']);
 

@@ -5,8 +5,8 @@
  * Uses auth middleware for header injection, transport for error helpers.
  */
 
+import { injectAuthHeaders, CSRF_METHODS } from '@/utils/authMiddleware'
 import { DOWNLOAD_TIMEOUT } from '@/utils/constants'
-
 import type { ApiRequestOptions } from '@/utils/transport'
 import {
   isRetryableError,
@@ -17,7 +17,6 @@ import {
   IDEMPOTENT_METHODS,
   MAX_RETRIES,
 } from '@/utils/transport'
-import { injectAuthHeaders, CSRF_METHODS } from '@/utils/authMiddleware'
 
 /**
  * Download a file from an API endpoint.

@@ -31,12 +31,14 @@ GENERATOR_FILES = sorted(
     set(
         list(BACKEND_DIR.glob("*_memo*.py"))
         + list(BACKEND_DIR.glob("*_summary_generator.py"))
-        + [BACKEND_DIR / "pdf_generator.py"]
         + list((BACKEND_DIR / "shared").glob("memo_*.py"))
         + list((BACKEND_DIR / "shared").glob("scope_*.py"))
         + list((BACKEND_DIR / "shared").glob("report_*.py"))
     )
 )
+
+# pdf_generator.py is a backward-compat re-export shim, not a generator
+GENERATOR_FILES = [f for f in GENERATOR_FILES if f.name != "pdf_generator.py"]
 
 # ---------------------------------------------------------------------------
 # 2. Banned patterns (from scope_methodology.py)

@@ -30,94 +30,21 @@
 
 | Item | Reason | Source |
 |------|--------|--------|
-| ~~Composite Risk Scoring~~ | ~~Requires ISA 315 inputs~~ — **RESOLVED Sprint 562** | Phase XI |
-| ~~Test file mypy — full cleanup~~ | ~~804 errors across 135 files~~ — **RESOLVED Sprint 562** (124→0 errors, 22 files fixed) | Sprint 475/543 |
-| ~~Route-level integration tests (10+ routes)~~ | ~~Requires dedicated multi-sprint effort~~ — **RESOLVED Sprint 562** (12 routes, 135 tests) | DEC 2026-03-19 F-003 |
-| ~~Frontend component test coverage (25% → 60%+)~~ | ~~147/195 untested~~ — **RESOLVED Sprint 562** (45 new test files, 26.6%→42.8%) | DEC 2026-03-19 F-004 |
-| ~~Going concern section in TB Diagnostic PDF~~ | ~~Missing from PDF export~~ — **RESOLVED Sprint 562** (section renderer + orchestrator wiring) | DEC 2026-03-19 F-010 |
-| ~~Time-dependent test patterns → `freezegun`~~ | ~~Wall-clock assertions~~ — **RESOLVED Sprint 562** (14 methods across 3 files) | DEC 2026-03-19 F-013 |
-| ~~Pre-existing test failures (3)~~ | ~~flux_analysis fixed by FIX-1B flux_engine.py Decimal handling; sampling_memo fixed by adding ISA 530 "accepted"/"cannot be accepted" language~~ — **RESOLVED** | FIX-1A audit 2026-03-20 |
 | Rate limiter → Redis storage backend | In-memory counters reset on worker restart and are not shared across workers; requires Redis infrastructure | AUDIT-07 Phase 5 |
 
 ---
 
 ## Active Phase
-> Sprints 478–497 archived to `tasks/archive/sprints-478-497-details.md`.
-> Sprints 499–515 archived to `tasks/archive/sprints-499-515-details.md`.
-> Sprints 516–526 archived to `tasks/archive/sprints-516-526-details.md`.
-> Sprints 517–531 archived to `tasks/archive/sprints-517-531-details.md`.
-> Sprints 532–536 archived to `tasks/archive/sprints-532-536-details.md`.
-> Sprints 537–541 archived to `tasks/archive/sprints-537-541-details.md`.
-> Sprints 542–546 archived to `tasks/archive/sprints-542-546-details.md`.
-> Sprints 547–551 archived to `tasks/archive/sprints-547-551-details.md`.
-> Sprints 552–556 archived to `tasks/archive/sprints-552-556-details.md`.
-> Sprints 553–561 archived to `tasks/archive/sprints-553-561-details.md`.
+> Sprints 478–531 archived to `tasks/archive/sprints-478-531-details.md` (consolidated).
+> Sprints 532–561 archived to `tasks/archive/sprints-532-561-details.md` (consolidated).
 > FIX-1A/1B, Sprint 562, FIX-2A/2B archived to `tasks/archive/fix-1-2-sprint562-details.md`.
+> FIX-3–8B, AUDIT-09–10 archived to `tasks/archive/fix-3-8b-audit-09-10-details.md`.
 
-### FIX-3: Anomaly Coverage Mapping (AUDIT-06 Phase 3)
-- [x] Step 1: Create authoritative coverage map (`backend/tests/anomaly_framework/COVERAGE_MAP.md`)
-- [x] Step 2: Expose `min_detectable_threshold` in anomaly registry via `ANOMALY_REGISTRY_META`
-- [x] Step 3: Document duplicate_entry per-tool detection contract (`DUPLICATE_ENTRY_CONTRACT.md`)
-- [x] Step 4: Add coverage map validation test (`test_coverage_map.py` — 2 tests)
-- **Tests:** 10 passed (2 new + 8 existing), 0 regressions
-- **Status:** COMPLETE
-
-### FIX-4: Partial Systemic Bug Resolutions (AUDIT-06 Phase 4)
-- [x] FIX 1: Risk tier label boundary validation + regression test (9 tests)
-- [x] FIX 2: Widen narrow free-text columns in fixed asset memo tables (1.3→1.5 inches)
-- [x] FIX 3: Document and guard ASC 250-10 YAML entries; add canary test (2 tests)
-- [x] FIX 4: Render labeled empty state in drill-down instead of silent omission (4 tests)
-- **Tests:** 15 new tests (9 + 2 + 4), 0 regressions
-- **Status:** COMPLETE
-
-### FIX-5: Brute Force Protection Hardening (AUDIT-07 Phase 4)
-- [x] F4 (HIGH): Unified auth failure response — locked/invalid/nonexistent all return 401 with identical body; no lockout info in response
-- [x] F3 (MEDIUM): Configurable lockout thresholds via `LOCKOUT_MAX_FAILED_ATTEMPTS` and `LOCKOUT_DURATION_MINUTES` env vars
-- [x] F2 (MEDIUM): Per-IP sliding-window failure tracker — blocks IPs after 20 failures/15 min; configurable via `IP_FAILURE_THRESHOLD`/`IP_FAILURE_WINDOW_SECONDS`
-- **Tests:** 128 passed (7 new: 3 integration + 6 per-IP unit − 2 removed lockout-response tests), 0 regressions
-- **Status:** COMPLETE
-
-### FIX-6: File Ingestion Abuse Surface (AUDIT-07 Phase 3)
-- [x] Step 1 (HIGH): Move row-count gate before full parse — CSV streaming estimator + XLSX metadata check
-- [x] Step 2 (MEDIUM): Server-side content sniffing for text-based upload formats
-- [x] Step 3 (MEDIUM): Streaming body size limit regardless of Content-Length header
-- [x] Step 4 (MEDIUM): Explicit data_only/keep_vba Excel load on main ingestion path
-- **Tests:** 7,007 passed, 0 regressions (4 commits)
-- **Status:** COMPLETE
-
-### FIX-8A: Entitlement Enforcement — Incorrect Helper Invocation (AUDIT-08 Phase 2)
-- [x] Step 1: Fix `/upload/bulk` entitlement check — corrected `(db, user.id)` → `(user, db)`; also fixed `check_upload_limit`
-- [x] Step 2: Fix `/branding/*` entitlement check — corrected `(db, user.id)` → `(user, db)` in `_get_branding()`
-- [x] Step 3: Fix `/export-sharing/create` — added `db` session to `check_export_sharing_access(user, db)`
-- [x] Step 4: Fix `/admin/*` — added `db` session to `check_admin_dashboard_access(user, db)` in `_get_admin_org()`
-- **Tests:** 7,007 passed, 0 regressions
-- **Risk:** HIGH — subscription-status bypass / entitlement not enforced
-- **Status:** COMPLETE
-
-### AUDIT-09: Dependency Compliance CI Gate
-- [x] Step 1: Create `dependency-compliance.yml` workflow (CVE + license audit, SHA-pinned actions)
-- [x] Step 2: Create `scripts/check_license_policy.py` (SPDX-aware license enforcement)
-- [x] Step 3: Create `docs/compliance/LICENSE_POLICY.json` (prohibited/allowlist policy)
-- [x] Step 4: Assess slowapi — accepted risk, documented in `docs/compliance/DEPENDENCY_DECISIONS.md`
-- [x] Step 5: Document dependency compliance gate in `DEPLOYMENT_ARCHITECTURE.md` §18
-- [x] Pin `actions/download-artifact` v6 SHA in `.github/actions-pin-registry.md`
-- [x] CVE findings documented in `reports/AUDIT-09-cve-findings.md` (3 CVEs in pyasn1/pypdf — follow-up needed)
-- **Verification:** pip-audit found 3 CVEs (documented, not patched per scope), npm audit clean, license policy 0 violations
-- **Status:** COMPLETE
-
-### AUDIT-10: Disaster Recovery Validation
-- [x] Step 1: Complete DR runbook with executable recovery steps (8-step procedure, external access deps, RPO caveat)
-- [x] Step 2: Create `docs/ops/ENVIRONMENT_VARIABLES.md` (secret + config classification, break-glass section)
-- [x] Step 3: Operationalize semi-annual DR test template (runbook references, target values)
-- [x] Step 4: Add manual restore-validation job to `dr-test-monthly.yml` (workflow_dispatch only)
-- [x] Step 5: Update deployment architecture with DR governance section (§18)
-- **Scope:** Documentation and CI only — no application source code modified
-- **Status:** COMPLETE
-
-### FIX-8B: Org-Aware Export Access & Multi-Tenant Roadmap (AUDIT-08 Phase 1/3)
-- [x] FIX 1: Verified — both generators already use `EngagementManager.get_engagement()` (org-aware via `_get_accessible_user_ids()`); no `Client.user_id ==` pattern exists
-- [x] FIX 2: Verified — `engagements_exports.py` already returns 404 (not 400) on access failures
-- [x] FIX 3: Created `docs/architecture/MULTI_TENANT_ROADMAP.md` — 5 sections covering current state, user-centric tables, migration path, regression tests, key invariants
-- **Risk:** MEDIUM/LOW + documentation
-- **Status:** COMPLETE
+### CI-FIX: Pre-Existing CI Failures
+- [x] **Backend Tests**: commit untracked `anomaly_framework/` generators, fixtures, `__init__.py`, and test files
+- [x] **Frontend Build + Lint**: fix 11 `import/order` ESLint errors across 5 files
+- [x] **OpenAPI Schema Drift Check**: regenerate snapshot (162 paths, 315 schemas)
+- [x] **Report Standards Gate**: exclude `pdf_generator.py` backward-compat shim from validator
+- [ ] **Backend Type Check (mypy)**: 1,011 errors across 132 files (systemic — `Column[int]`/`Decimal`/`float` mismatches, missing annotations); multi-sprint scope, deferred
+- **Status:** 4/5 COMPLETE (mypy deferred)
 
