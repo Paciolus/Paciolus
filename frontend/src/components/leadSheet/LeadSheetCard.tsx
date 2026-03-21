@@ -33,13 +33,14 @@ interface LeadSheetCardProps {
  * Format currency for display
  */
 function formatCurrency(value: number): string {
-  const absValue = Math.abs(value)
+  const num = typeof value === 'number' ? value : Number(value) || 0
+  const absValue = Math.abs(num)
   if (absValue >= 1_000_000) {
-    return `$${(value / 1_000_000).toFixed(1)}M`
+    return `$${(num / 1_000_000).toFixed(1)}M`
   } else if (absValue >= 1_000) {
-    return `$${(value / 1_000).toFixed(1)}K`
+    return `$${(num / 1_000).toFixed(1)}K`
   }
-  return `$${value.toFixed(0)}`
+  return `$${num.toFixed(0)}`
 }
 
 /**
