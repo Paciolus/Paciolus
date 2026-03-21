@@ -10,14 +10,19 @@ Financial data (account numbers, amounts, transactions) is NEVER persisted.
 
 import json
 from datetime import UTC, datetime
+from decimal import Decimal
 from enum import Enum as PyEnum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import Column, DateTime, Enum, Float, ForeignKey, Index, Integer, Numeric, Text, func
-from sqlalchemy.orm import relationship
+from sqlalchemy import DateTime, Enum, Float, ForeignKey, Index, Integer, Numeric, Text, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database import Base
 from shared.soft_delete import SoftDeleteMixin
+
+if TYPE_CHECKING:
+    from follow_up_items_model import FollowUpItem
+    from models import Client, User
 
 
 class EngagementStatus(str, PyEnum):
@@ -102,23 +107,23 @@ class Engagement(Base):
 
     __tablename__ = "engagements"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
 
     # Client link (RESTRICT: cannot delete client with active engagements)
-    client_id = Column(
+    client_id: Mapped[int] = mapped_column(
         Integer,
         ForeignKey("clients.id", ondelete="RESTRICT"),
         nullable=False,
         index=True,
     )
-    client = relationship("Client", back_populates="engagements")
+    client: Mapped["Client"] = relationship("Client", back_populates="engagements")
 
     # Period
-    period_start = Column(DateTime, nullable=False)
-    period_end = Column(DateTime, nullable=False)
+    period_start: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    period_end: Mapped[datetime] = mapped_column(DateTime, nullable=False)
 
     # Status
-    status = Column(
+    status: Mapped[EngagementStatus] = mapped_column(
         Enum(EngagementStatus),
         default=EngagementStatus.ACTIVE,
         nullable=False,
@@ -126,29 +131,29 @@ class Engagement(Base):
     )
 
     # Materiality parameters
-    materiality_basis = Column(Enum(MaterialityBasis), nullable=True)
-    materiality_percentage = Column(Float, nullable=True)
-    materiality_amount = Column(Numeric(19, 2), nullable=True)  # Sprint 341: monetary precision
-    performance_materiality_factor = Column(Float, default=0.75, nullable=False)
-    trivial_threshold_factor = Column(Float, default=0.05, nullable=False)
+    materiality_basis: Mapped[MaterialityBasis | None] = mapped_column(Enum(MaterialityBasis), nullable=True)
+    materiality_percentage: Mapped[float | None] = mapped_column(Float, nullable=True)
+    materiality_amount: Mapped[Decimal | None] = mapped_column(Numeric(19, 2), nullable=True)  # Sprint 341: monetary precision
+    performance_materiality_factor: Mapped[float] = mapped_column(Float, default=0.75, nullable=False)
+    trivial_threshold_factor: Mapped[float] = mapped_column(Float, default=0.05, nullable=False)
 
     # Completion metadata (Sprint 359)
-    completed_at = Column(DateTime, nullable=True)
-    completed_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    completed_by: Mapped[int | None] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
 
     # Audit trail
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
-    creator = relationship("User", back_populates="engagements", foreign_keys=[created_by])
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
-    updated_at = Column(
+    created_by: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
+    creator: Mapped["User"] = relationship("User", back_populates="engagements", foreign_keys=[created_by])
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC), server_default=func.now()
     )
 
     # Tool runs (CASCADE: deleting engagement removes its tool runs)
-    tool_runs = relationship("ToolRun", back_populates="engagement", cascade="all, delete-orphan")
+    tool_runs: Mapped[list["ToolRun"]] = relationship("ToolRun", back_populates="engagement", cascade="all, delete-orphan")
 
     # Follow-up items (Sprint 280: backref → back_populates)
-    follow_up_items = relationship("FollowUpItem", back_populates="engagement", passive_deletes=True)
+    follow_up_items: Mapped[list["FollowUpItem"]] = relationship("FollowUpItem", back_populates="engagement", passive_deletes=True)
 
     def __repr__(self) -> str:
         return f"<Engagement(id={self.id}, client_id={self.client_id}, status={self.status})>"
@@ -182,31 +187,31 @@ class ToolRun(SoftDeleteMixin, Base):
 
     __tablename__ = "tool_runs"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
 
     # Engagement link (CASCADE: removed with engagement)
-    engagement_id = Column(
+    engagement_id: Mapped[int] = mapped_column(
         Integer,
         ForeignKey("engagements.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
-    engagement = relationship("Engagement", back_populates="tool_runs")
+    engagement: Mapped["Engagement"] = relationship("Engagement", back_populates="tool_runs")
 
     # Follow-up items (Sprint 280: backref → back_populates)
-    follow_up_items = relationship("FollowUpItem", back_populates="tool_run")
+    follow_up_items: Mapped[list["FollowUpItem"]] = relationship("FollowUpItem", back_populates="tool_run")
 
     # Tool identification
-    tool_name = Column(Enum(ToolName), nullable=False, index=True)
-    run_number = Column(Integer, nullable=False)  # Auto-incremented per engagement+tool
+    tool_name: Mapped[ToolName] = mapped_column(Enum(ToolName), nullable=False, index=True)
+    run_number: Mapped[int] = mapped_column(Integer, nullable=False)  # Auto-incremented per engagement+tool
 
     # Outcome
-    status = Column(Enum(ToolRunStatus), nullable=False)
-    composite_score = Column(Float, nullable=True)  # 0-100 for testing tools, None for others
-    flagged_accounts = Column(Text, nullable=True)  # JSON-encoded list of account name strings
+    status: Mapped[ToolRunStatus] = mapped_column(Enum(ToolRunStatus), nullable=False)
+    composite_score: Mapped[float | None] = mapped_column(Float, nullable=True)  # 0-100 for testing tools, None for others
+    flagged_accounts: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON-encoded list of account name strings
 
     # Timestamp
-    run_at = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now(), nullable=False, index=True)
+    run_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now(), nullable=False, index=True)
 
     # Composite index for efficient run_number queries + uniqueness enforcement
     __table_args__ = (

@@ -40,7 +40,7 @@ _SHARED_REFS: dict[str, str] = {}
 # ─────────────────────────────────────────────────────────────────────
 # 1. TRIAL BALANCE DIAGNOSTIC REPORT
 # ─────────────────────────────────────────────────────────────────────
-def gen_tb_diagnostic():
+def gen_tb_diagnostic() -> None:
     from pdf_generator import generate_audit_report
 
     audit_result = {
@@ -219,7 +219,7 @@ def gen_tb_diagnostic():
 # ─────────────────────────────────────────────────────────────────────
 # 2. FINANCIAL STATEMENTS
 # ─────────────────────────────────────────────────────────────────────
-def gen_financial_statements():
+def gen_financial_statements() -> None:
     from financial_statement_builder import (
         CashFlowLineItem,
         CashFlowSection,
@@ -354,13 +354,13 @@ def _make_testing_result(
     tests: list[dict],
     score: float,
     risk_tier: str,
-    top_findings: list = None,
-    benford_result: dict = None,
-    column_detection: dict = None,
+    top_findings: list | None = None,
+    benford_result: dict | None = None,
+    column_detection: dict | None = None,
     completeness_score: float = 94.2,
     null_fields: int = 12,
     amount_parse_errors: int = 3,
-):
+) -> dict:
     total_flagged = sum(t["entries_flagged"] for t in tests)
     high = sum(1 for t in tests if t["severity"] == "high" and t["entries_flagged"] > 0)
     medium = sum(1 for t in tests if t["severity"] == "medium" and t["entries_flagged"] > 0)
@@ -395,7 +395,7 @@ def _make_testing_result(
     return result
 
 
-def _test(name, key, tier, flagged, rate, severity, status="warning", flagged_entries=None):
+def _test(name: str, key: str, tier: str, flagged: int, rate: float, severity: str, status: str = "warning", flagged_entries: list | None = None) -> dict:
     result = {
         "test_name": name,
         "test_key": key,
@@ -414,7 +414,7 @@ def _test(name, key, tier, flagged, rate, severity, status="warning", flagged_en
 # ─────────────────────────────────────────────────────────────────────
 # 3. JOURNAL ENTRY TESTING MEMO
 # ─────────────────────────────────────────────────────────────────────
-def gen_je_testing():
+def gen_je_testing() -> None:
     from je_testing_memo_generator import generate_je_testing_memo
 
     # Sample flagged entries for high-severity tests (BUG-02 fix)
@@ -599,7 +599,7 @@ def gen_je_testing():
 # ─────────────────────────────────────────────────────────────────────
 # 4. AP PAYMENT TESTING MEMO
 # ─────────────────────────────────────────────────────────────────────
-def gen_ap_testing():
+def gen_ap_testing() -> None:
     from ap_testing_memo_generator import generate_ap_testing_memo
 
     # Flagged entries for high-severity tests
@@ -864,7 +864,7 @@ def gen_ap_testing():
 # ─────────────────────────────────────────────────────────────────────
 # 5. PAYROLL TESTING MEMO
 # ─────────────────────────────────────────────────────────────────────
-def gen_payroll_testing():
+def gen_payroll_testing() -> None:
     from payroll_testing_memo_generator import generate_payroll_testing_memo
 
     # Flagged entries for HIGH severity tests (BUG-02: detail tables)
@@ -1069,7 +1069,7 @@ def gen_payroll_testing():
 # ─────────────────────────────────────────────────────────────────────
 # 6. REVENUE TESTING MEMO
 # ─────────────────────────────────────────────────────────────────────
-def gen_revenue_testing():
+def gen_revenue_testing() -> None:
     from revenue_testing_memo_generator import generate_revenue_testing_memo
 
     # Flagged entries for HIGH severity tests (IMPROVEMENT-01: detail tables)
@@ -1474,7 +1474,7 @@ def gen_revenue_testing():
 # ─────────────────────────────────────────────────────────────────────
 # 7. AR AGING MEMO
 # ─────────────────────────────────────────────────────────────────────
-def gen_ar_aging():
+def gen_ar_aging() -> None:
     from ar_aging_memo_generator import generate_ar_aging_memo
     from pdf_generator import generate_reference_number
 
@@ -1529,7 +1529,7 @@ def gen_ar_aging():
 # ─────────────────────────────────────────────────────────────────────
 # 8. FIXED ASSET TESTING MEMO
 # ─────────────────────────────────────────────────────────────────────
-def gen_fixed_asset_testing():
+def gen_fixed_asset_testing() -> None:
     from fixed_asset_testing_memo_generator import generate_fixed_asset_testing_memo
 
     # Flagged entries for high-severity tests (BUG-03: detail tables)
@@ -1770,7 +1770,7 @@ def gen_fixed_asset_testing():
 # ─────────────────────────────────────────────────────────────────────
 # 9. INVENTORY TESTING MEMO
 # ─────────────────────────────────────────────────────────────────────
-def gen_inventory_testing():
+def gen_inventory_testing() -> None:
     from inventory_testing_memo_generator import generate_inventory_testing_memo
 
     tests = [
@@ -1819,7 +1819,7 @@ def gen_inventory_testing():
 # ─────────────────────────────────────────────────────────────────────
 # 10. BANK RECONCILIATION MEMO
 # ─────────────────────────────────────────────────────────────────────
-def gen_bank_rec():
+def gen_bank_rec() -> None:
     from bank_reconciliation_memo_generator import generate_bank_rec_memo
 
     # Outstanding deposit items (bank-only) with dates for aging
@@ -2098,7 +2098,7 @@ def gen_bank_rec():
 # ─────────────────────────────────────────────────────────────────────
 # 11. THREE-WAY MATCH MEMO
 # ─────────────────────────────────────────────────────────────────────
-def gen_three_way_match():
+def gen_three_way_match() -> None:
     from three_way_match_memo_generator import generate_three_way_match_memo
 
     twm_result = {
@@ -2389,7 +2389,7 @@ def gen_three_way_match():
 # ─────────────────────────────────────────────────────────────────────
 # 12. MULTI-PERIOD COMPARISON MEMO
 # ─────────────────────────────────────────────────────────────────────
-def gen_multi_period():
+def gen_multi_period() -> None:
     from multi_period_memo_generator import compute_apc_risk_score, generate_multi_period_memo
     from shared.testing_enums import score_to_risk_tier
 
@@ -2670,7 +2670,7 @@ def gen_multi_period():
 # ─────────────────────────────────────────────────────────────────────
 # 13. SAMPLING DESIGN MEMO
 # ─────────────────────────────────────────────────────────────────────
-def gen_sampling_design():
+def gen_sampling_design() -> None:
     from sampling_memo_generator import generate_sampling_design_memo
 
     design_result = {
@@ -2818,7 +2818,7 @@ def gen_sampling_design():
 # ─────────────────────────────────────────────────────────────────────
 # 14. SAMPLING EVALUATION MEMO
 # ─────────────────────────────────────────────────────────────────────
-def gen_sampling_evaluation():
+def gen_sampling_evaluation() -> None:
     from sampling_memo_generator import generate_sampling_evaluation_memo
 
     design_result = {
@@ -2945,7 +2945,7 @@ def gen_sampling_evaluation():
 # ─────────────────────────────────────────────────────────────────────
 # 15. CURRENCY CONVERSION MEMO
 # ─────────────────────────────────────────────────────────────────────
-def gen_currency_conversion():
+def gen_currency_conversion() -> None:
     from currency_memo_generator import generate_currency_conversion_memo
 
     # Sprint 509: Fixed unconverted_count (was 12, only 4 items — now 4),
@@ -3053,7 +3053,7 @@ def gen_currency_conversion():
 # ─────────────────────────────────────────────────────────────────────
 # 16. PRE-FLIGHT MEMO
 # ─────────────────────────────────────────────────────────────────────
-def gen_preflight():
+def gen_preflight() -> None:
     from preflight_memo_generator import generate_preflight_memo
 
     preflight_result = {
@@ -3176,7 +3176,7 @@ def gen_preflight():
 # ─────────────────────────────────────────────────────────────────────
 # 17. POPULATION PROFILE MEMO
 # ─────────────────────────────────────────────────────────────────────
-def gen_population_profile():
+def gen_population_profile() -> None:
     from population_profile_memo import generate_population_profile_memo
 
     # Sprint 511: Self-consistent sample data.
@@ -3523,7 +3523,7 @@ def gen_population_profile():
 # ─────────────────────────────────────────────────────────────────────
 # 18. EXPENSE CATEGORY MEMO
 # ─────────────────────────────────────────────────────────────────────
-def gen_expense_category():
+def gen_expense_category() -> None:
     from expense_category_memo import generate_expense_category_memo
 
     # Prior revenue: $6,200,000 (FY2024)
@@ -3604,7 +3604,7 @@ def gen_expense_category():
 # ─────────────────────────────────────────────────────────────────────
 # 19. ACCRUAL COMPLETENESS MEMO
 # ─────────────────────────────────────────────────────────────────────
-def gen_accrual_completeness():
+def gen_accrual_completeness() -> None:
     from accrual_completeness_memo import generate_accrual_completeness_memo
 
     # Corrected: Deferred Revenue excluded from accrual population
@@ -3905,7 +3905,7 @@ def gen_accrual_completeness():
 # ─────────────────────────────────────────────────────────────────────
 # 20. FLUX EXPECTATIONS MEMO
 # ─────────────────────────────────────────────────────────────────────
-def gen_flux_expectations():
+def gen_flux_expectations() -> None:
     from flux_expectations_memo import generate_flux_expectations_memo
 
     flux_result = {
@@ -4063,7 +4063,7 @@ def gen_flux_expectations():
 # ─────────────────────────────────────────────────────────────────────
 # 21. ANOMALY SUMMARY REPORT
 # ─────────────────────────────────────────────────────────────────────
-def gen_anomaly_summary():
+def gen_anomaly_summary() -> None:
     """Build anomaly summary PDF from scratch using shared report primitives.
 
     The real AnomalySummaryGenerator requires a DB session + ORM objects,

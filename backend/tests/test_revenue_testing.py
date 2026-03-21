@@ -9,6 +9,7 @@ scoring, battery, full pipeline, serialization, API.
 """
 
 from datetime import date
+from decimal import Decimal
 
 from revenue_testing_engine import (
     BENFORD_EXPECTED,
@@ -141,7 +142,7 @@ def make_many_entries(n: int = 100, base_amount: float = 1000.0) -> list[Revenue
         entries.append(
             RevenueEntry(
                 date=f"2025-{((i % 12) + 1):02d}-{((i % 28) + 1):02d}",
-                amount=-(base_amount + random.gauss(0, base_amount * 0.3)),
+                amount=Decimal(str(-(base_amount + random.gauss(0, base_amount * 0.3)))),
                 account_name=f"Revenue Account {i % 5}",
                 account_number=f"4{i % 5}00",
                 description=f"Transaction {i}",

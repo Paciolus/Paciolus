@@ -357,16 +357,16 @@ def compare_periods(
 
     # Compare ratios
     for key, name, is_pct in RATIO_CATEGORIES:
-        current_val = current_data.get(key)
-        prior_val = prior_data.get(key)
+        current_ratio_val = current_data.get(key)
+        prior_ratio_val = prior_data.get(key)
 
-        point_change, is_sig, direction = calculate_ratio_variance(current_val, prior_val, is_pct)
+        point_change, is_sig, direction = calculate_ratio_variance(current_ratio_val, prior_ratio_val, is_pct)
 
         ratio_var = RatioVariance(
             ratio_key=key,
             ratio_name=name,
-            current_value=current_val,
-            prior_value=prior_val,
+            current_value=current_ratio_val,
+            prior_value=prior_ratio_val,
             point_change=point_change,
             is_significant=is_sig,
             direction=direction,
@@ -414,7 +414,7 @@ def compare_periods(
     return comparison
 
 
-def generate_period_label(period_date, period_type: Optional[str] = None) -> str:
+def generate_period_label(period_date: Any, period_type: Optional[str] = None) -> str:
     """
     Generate a human-readable period label from date and type.
 
@@ -439,4 +439,4 @@ def generate_period_label(period_date, period_type: Optional[str] = None) -> str
         return f"{month_names[month - 1]} {year}"
     else:
         # Default format
-        return period_date.strftime("%Y-%m-%d")
+        return str(period_date.strftime("%Y-%m-%d"))

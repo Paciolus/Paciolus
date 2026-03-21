@@ -74,7 +74,7 @@ async def preview_pdf_endpoint(
 
             token = preflight_cache.put(file_bytes, filename)
 
-            return {
+            return {  # type: ignore[return-value]
                 "filename": filename,
                 "page_count": result.metadata.page_count,
                 "tables_found": result.metadata.tables_found,

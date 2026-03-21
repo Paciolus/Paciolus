@@ -10,7 +10,8 @@ ZERO-STORAGE NOTE: Only stores branding CONFIG metadata
 
 from datetime import UTC, datetime
 
-from sqlalchemy import Column, DateTime, Integer, String, func
+from sqlalchemy import DateTime, Integer, String, func
+from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.schema import ForeignKey
 
 from database import Base
@@ -21,9 +22,9 @@ class FirmBranding(Base):
 
     __tablename__ = "firm_branding"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
 
-    organization_id = Column(
+    organization_id: Mapped[int] = mapped_column(
         Integer,
         ForeignKey("organizations.id"),
         unique=True,
@@ -32,17 +33,17 @@ class FirmBranding(Base):
     )
 
     # Logo stored in S3
-    logo_s3_key = Column(String(500), nullable=True)
-    logo_content_type = Column(String(50), nullable=True)
-    logo_size_bytes = Column(Integer, nullable=True)
+    logo_s3_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    logo_content_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    logo_size_bytes: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     # Text branding
-    header_text = Column(String(200), nullable=True)
-    footer_text = Column(String(300), nullable=True)
+    header_text: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    footer_text: Mapped[str | None] = mapped_column(String(300), nullable=True)
 
     # Timestamps
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
-    updated_at = Column(
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=lambda: datetime.now(UTC),
         onupdate=lambda: datetime.now(UTC),

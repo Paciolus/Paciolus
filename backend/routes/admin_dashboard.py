@@ -12,6 +12,8 @@ import io
 import logging
 from datetime import UTC, datetime, timedelta
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy import func
@@ -72,10 +74,10 @@ def _org_member_ids(db: Session, org_id: int) -> list[int]:
 @router.get("/overview")
 @limiter.limit(RATE_LIMIT_DEFAULT)
 async def get_overview(
-    request=None,
+    request: Any = None,
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, Any]:
     """Overview: seats, uploads this month, active members."""
     org = _get_admin_org(db, user)
     member_ids = _org_member_ids(db, org.id)
@@ -131,13 +133,13 @@ async def get_overview(
 @router.get("/team-activity")
 @limiter.limit(RATE_LIMIT_DEFAULT)
 async def get_team_activity(
-    request=None,
+    request: Any = None,
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
     days: int = Query(default=30, ge=1, le=90),
     tool_name: str | None = Query(default=None),
     member_id: int | None = Query(default=None),
-):
+) -> list[dict[str, Any]]:
     """Filterable team activity log."""
     org = _get_admin_org(db, user)
 
@@ -170,10 +172,10 @@ async def get_team_activity(
 @router.get("/usage-by-member")
 @limiter.limit(RATE_LIMIT_DEFAULT)
 async def get_usage_by_member(
-    request=None,
+    request: Any = None,
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> list[dict[str, Any]]:
     """Per-member upload counts for the current month."""
     org = _get_admin_org(db, user)
     member_ids = _org_member_ids(db, org.id)
@@ -206,11 +208,11 @@ async def get_usage_by_member(
 @router.get("/export-activity-csv")
 @limiter.limit(RATE_LIMIT_EXPORT)
 async def export_activity_csv(
-    request=None,
+    request: Any = None,
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
     days: int = Query(default=90, ge=1, le=90),
-):
+) -> StreamingResponse:
     """Export team activity as CSV."""
     org = _get_admin_org(db, user)
 

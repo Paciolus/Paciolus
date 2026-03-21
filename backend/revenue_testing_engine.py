@@ -430,7 +430,7 @@ class RevenueEntry:
     allocation_basis: Optional[str] = None
     obligation_satisfaction_date: Optional[str] = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if isinstance(self.amount, (int, float)):
             self.amount = Decimal(str(self.amount))
 
@@ -1131,7 +1131,7 @@ def test_zscore_outliers(
         if z < config.zscore_threshold:
             continue
 
-        severity = zscore_to_severity(z)
+        severity = zscore_to_severity(float(z))
 
         flagged.append(
             FlaggedRevenue(
@@ -1141,7 +1141,7 @@ def test_zscore_outliers(
                 test_tier=TestTier.STATISTICAL,
                 severity=severity,
                 issue=f"Outlier: ${abs(e.amount):,.2f} (z-score: {z:.1f}, mean: ${mean:,.2f})",
-                confidence=float(min(Decimal("0.60") + z * Decimal("0.05"), Decimal("0.95"))),
+                confidence=min(0.60 + float(z) * 0.05, 0.95),
                 details={"z_score": round(z, 2), "mean": round(mean, 2), "stdev": round(stdev, 2)},
             )
         )
@@ -1182,7 +1182,7 @@ def test_revenue_trend_variance(
         )
 
     current_total = sum((abs(e.amount) for e in entries), Decimal("0"))
-    variance_pct = (current_total - config.prior_period_total) / abs(config.prior_period_total)
+    variance_pct = float(current_total - Decimal(str(config.prior_period_total))) / abs(config.prior_period_total)
 
     flagged: list[FlaggedRevenue] = []
     if abs(variance_pct) > config.trend_variance_pct:
@@ -1478,7 +1478,7 @@ def test_benford_law(
         flagged.append(
             FlaggedRevenue(
                 entry=RevenueEntry(
-                    amount=0,
+                    amount=Decimal(0),
                     account_name="[Benford's Law Analysis]",
                     row_number=0,
                 ),

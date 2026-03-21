@@ -42,7 +42,7 @@ router = APIRouter(tags=["settings"])
 
 
 @router.get("/settings/practice", response_model=PracticeSettingsResponse)
-def get_practice_settings(current_user: User = Depends(require_current_user), db: Session = Depends(get_db)):
+def get_practice_settings(current_user: User = Depends(require_current_user), db: Session = Depends(get_db)) -> PracticeSettingsResponse:
     """Get the current user's practice settings."""
     log_secure_operation("get_practice_settings", f"User {current_user.id} fetching practice settings")
 
@@ -65,7 +65,7 @@ def update_practice_settings(
     settings_input: PracticeSettingsInput,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> PracticeSettingsResponse:
     """Update the current user's practice settings."""
     log_secure_operation("update_practice_settings", f"User {current_user.id} updating practice settings")
 
@@ -116,7 +116,7 @@ def update_practice_settings(
 
 
 @router.get("/clients/{client_id}/settings", response_model=ClientSettingsResponse)
-def get_client_settings(client: Client = Depends(require_client)):
+def get_client_settings(client: Client = Depends(require_client)) -> ClientSettingsResponse:
     """Get settings for a specific client."""
     settings = ClientSettings.from_json(client.settings or "{}")
 
@@ -135,7 +135,7 @@ def update_client_settings(
     settings_input: ClientSettingsInput,
     client: Client = Depends(require_client),
     db: Session = Depends(get_db),
-):
+) -> ClientSettingsResponse:
     """Update settings for a specific client."""
     log_secure_operation("update_client_settings", f"User {client.user_id} updating settings for client {client.id}")
 
@@ -187,7 +187,7 @@ def update_client_settings(
 @limiter.limit(RATE_LIMIT_WRITE)
 def preview_materiality(
     request: Request, preview_input: MaterialityPreviewInput, current_user: User = Depends(require_current_user)
-):
+) -> dict:  # noqa: return type - FastAPI serializes via response_model
     """Preview a materiality calculation."""
     formula = MaterialityFormula(
         type=MaterialityFormulaType(preview_input.formula.type),
@@ -212,7 +212,7 @@ def resolve_materiality(
     session_threshold: Optional[float] = Query(default=None),
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, object]:
     """Resolve the effective materiality configuration."""
     practice_settings = PracticeSettings.from_json(current_user.settings or "{}")
 

@@ -13,6 +13,8 @@ import uuid
 from collections import OrderedDict
 from datetime import UTC, datetime
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
@@ -38,11 +40,11 @@ _bulk_jobs: OrderedDict[str, dict] = OrderedDict()
 @router.post("")
 @limiter.limit(RATE_LIMIT_WRITE)
 async def start_bulk_upload(
-    request=None,
+    request: Any = None,
     files: list[UploadFile] = File(...),
     user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, Any]:
     """Accept up to 5 files for bulk processing. Enterprise only."""
     # AUDIT-08: correct arg order — signature is (user: User, db: Session)
     check_bulk_upload_access(user, db)
@@ -167,7 +169,7 @@ async def _process_bulk_files(
 async def get_bulk_status(
     job_id: str,
     user: User = Depends(require_verified_user),
-):
+) -> dict[str, Any]:
     """Poll bulk upload job progress."""
     job = _bulk_jobs.get(job_id)
     if not job:

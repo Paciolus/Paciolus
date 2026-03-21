@@ -7,6 +7,8 @@ Logo upload (S3), header/footer text.
 Route group prefix: /branding
 """
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -67,7 +69,7 @@ def _get_branding(db: Session, user: User) -> tuple[FirmBranding, int]:
 async def get_branding(
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, Any]:
     """Get current branding configuration."""
     branding, _ = _get_branding(db, user)
     return branding.to_dict()
@@ -77,10 +79,10 @@ async def get_branding(
 @limiter.limit(RATE_LIMIT_WRITE)
 async def update_branding(
     body: UpdateBrandingRequest,
-    request=None,
+    request: Any = None,
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, Any]:
     """Update header/footer text."""
     branding, _ = _get_branding(db, user)
 
@@ -97,11 +99,11 @@ async def update_branding(
 @router.post("/logo")
 @limiter.limit(RATE_LIMIT_WRITE)
 async def upload_logo(
-    request=None,
+    request: Any = None,
     file: UploadFile = File(...),
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, Any]:
     """Upload a logo image. Enterprise only. Max 500KB, PNG/JPG."""
     branding, org_id = _get_branding(db, user)
 
@@ -145,10 +147,10 @@ async def upload_logo(
 @router.delete("/logo")
 @limiter.limit(RATE_LIMIT_WRITE)
 async def delete_logo(
-    request=None,
+    request: Any = None,
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, str]:
     """Remove the logo."""
     branding, _ = _get_branding(db, user)
 

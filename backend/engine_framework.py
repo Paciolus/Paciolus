@@ -84,7 +84,7 @@ class AuditEngineBase(ABC):
         Override if run_tests() returns more than a plain list
         (e.g., JE returns (test_results, benford_data) tuple).
         """
-        return test_output
+        return list(test_output)
 
     def enrich(self, entries: list) -> Any:
         """Optional post-parse enrichment hook.

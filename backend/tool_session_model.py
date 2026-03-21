@@ -14,8 +14,8 @@ import logging
 from datetime import UTC, datetime, timedelta, timezone
 from typing import Any, Optional
 
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
-from sqlalchemy.orm import Session
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy.orm import Mapped, Session, mapped_column
 
 from database import Base
 
@@ -175,17 +175,17 @@ class ToolSession(Base):
 
     __tablename__ = "tool_sessions"
 
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(
         Integer,
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
-    tool_name = Column(String(50), nullable=False)
-    session_data = Column(Text, nullable=False)
-    created_at = Column(DateTime, nullable=False, server_default=func.now())
-    updated_at = Column(DateTime, nullable=False, server_default=func.now())
+    tool_name: Mapped[str] = mapped_column(String(50), nullable=False)
+    session_data: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
 
     __table_args__ = (UniqueConstraint("user_id", "tool_name", name="uq_tool_session_user_tool"),)
 
@@ -236,12 +236,12 @@ def load_tool_session(
     if row is None:
         return None
 
-    if _is_expired(row.updated_at, tool_name):  # type: ignore[arg-type]
+    if _is_expired(row.updated_at, tool_name):
         db.delete(row)
         db.commit()
         return None
 
-    loaded: dict[str, Any] = json.loads(row.session_data)  # type: ignore[arg-type]
+    loaded: dict[str, Any] = json.loads(row.session_data)
     return loaded
 
 
@@ -262,8 +262,8 @@ def _save_fallback(
         .first()
     )
     if existing:
-        existing.session_data = serialized  # type: ignore[assignment]
-        existing.updated_at = now  # type: ignore[assignment]
+        existing.session_data = serialized
+        existing.updated_at = now
     else:
         db.add(
             ToolSession(
@@ -393,11 +393,11 @@ def sanitize_existing_sessions(db: Session) -> int:
     count = 0
     rows = db.query(ToolSession).all()
     for row in rows:
-        original = json.loads(row.session_data)  # type: ignore[arg-type]
-        sanitized = _sanitize_session_data(row.tool_name, original)  # type: ignore[arg-type]
+        original = json.loads(row.session_data)
+        sanitized = _sanitize_session_data(row.tool_name, original)
         new_json = json.dumps(sanitized)
         if new_json != row.session_data:
-            row.session_data = new_json  # type: ignore[assignment]
+            row.session_data = new_json
             count += 1
     if count > 0:
         db.commit()

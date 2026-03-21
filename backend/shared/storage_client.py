@@ -6,6 +6,7 @@ No-ops gracefully when S3 is not configured (development mode).
 """
 
 import logging
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +14,7 @@ _s3_client = None
 _bucket_name: str | None = None
 
 
-def _get_client():
+def _get_client() -> Any:
     """Lazy-load the S3 client."""
     global _s3_client, _bucket_name
 
@@ -67,7 +68,7 @@ def download_bytes(key: str) -> bytes | None:
 
     try:
         response = client.get_object(Bucket=_bucket_name, Key=key)
-        return response["Body"].read()
+        return bytes(response["Body"].read())
     except Exception:
         return None
 

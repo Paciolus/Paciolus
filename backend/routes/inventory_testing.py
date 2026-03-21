@@ -27,7 +27,7 @@ async def audit_inventory(
     engagement_id: Optional[int] = Form(default=None),
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, object]:
     """Run automated inventory register testing.
 
     IAS 2/ASC 330: Inventory assertions.

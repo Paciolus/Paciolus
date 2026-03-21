@@ -27,7 +27,7 @@ from shared.entitlements import TierEntitlements, get_entitlements
 logger = logging.getLogger(__name__)
 
 
-def get_effective_entitlements(user: User, db) -> TierEntitlements:
+def get_effective_entitlements(user: User, db: object) -> TierEntitlements:
     """Derive entitlements from BOTH User.tier AND Subscription.status.
 
     AUDIT-06 FIX 2: Subscription-status-aware entitlement resolution.
@@ -176,7 +176,7 @@ def check_client_limit(
     return user
 
 
-def check_tool_access(tool_name: str):
+def check_tool_access(tool_name: str) -> object:
     """Factory that returns a dependency checking tool access for the given tool."""
 
     def _dependency(
@@ -201,7 +201,7 @@ def check_tool_access(tool_name: str):
     return _dependency
 
 
-def check_format_access(format_name: str):
+def check_format_access(format_name: str) -> object:
     """Factory that returns a dependency checking format access for the given format."""
 
     def _dependency(
@@ -359,7 +359,7 @@ def _get_seat_enforcement_mode() -> str:
 _FREE_TIER_SEAT_CAP = 1
 
 
-def _resolve_org_subscription(db: Session, org_id: int):
+def _resolve_org_subscription(db: Session, org_id: int) -> tuple:
     """Resolve the authoritative subscription for an organization.
 
     Looks up via org.subscription_id first. Falls back to the org owner's

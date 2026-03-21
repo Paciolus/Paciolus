@@ -20,8 +20,8 @@ unaffected — physical cleanup is correct for those.
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, event
-from sqlalchemy.orm import Session
+from sqlalchemy import DateTime, ForeignKey, Integer, String, event
+from sqlalchemy.orm import Mapped, Session, mapped_column
 
 # ---------------------------------------------------------------------------
 # Mixin
@@ -37,9 +37,9 @@ class SoftDeleteMixin:
       archive_reason — machine-readable tag (e.g. "user_deletion", "retention_policy")
     """
 
-    archived_at = Column(DateTime, nullable=True, index=True)
-    archived_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    archive_reason = Column(String(255), nullable=True)
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
+    archived_by: Mapped[int | None] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
+    archive_reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
 
 # ---------------------------------------------------------------------------
@@ -54,9 +54,9 @@ def soft_delete(
     reason: str,
 ) -> None:
     """Archive a single record (set archived_at/by/reason) and commit."""
-    record.archived_at = datetime.now(UTC)  # type: ignore[assignment]
-    record.archived_by = user_id  # type: ignore[assignment]
-    record.archive_reason = reason  # type: ignore[assignment]
+    record.archived_at = datetime.now(UTC)
+    record.archived_by = user_id
+    record.archive_reason = reason
     db.commit()
 
 

@@ -145,7 +145,7 @@ class AccrualAccount:
     matched_keyword: str
     classification: str = "Accrued Liability"
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if isinstance(self.balance, (int, float)):
             self.balance = Decimal(str(self.balance))
 
@@ -423,7 +423,7 @@ def _test_reasonableness(
             status="Driver Unavailable — Auditor Judgment Required",
         )
 
-    expected = Decimal(str(annual_driver)) / MONTHS_PER_YEAR * months_to_accrue
+    expected = float(Decimal(str(annual_driver)) / MONTHS_PER_YEAR * months_to_accrue)
     variance = balance - expected
 
     if abs(expected) < NEAR_ZERO:
@@ -508,7 +508,7 @@ def _build_reasonableness_results(
         results.append(
             _test_reasonableness(
                 account_name=acct.account_name,
-                balance=acct.balance,
+                balance=float(acct.balance),
                 annual_driver=driver,
                 driver_source=source,
             )
@@ -576,7 +576,7 @@ def _build_expected_accrual_checklist(
             ExpectedAccrualCheck(
                 expected_name=expected_name,
                 detected=detected,
-                balance=round(total_balance, 2) if detected else None,
+                balance=float(round(total_balance, 2)) if detected else None,
                 risk_if_absent=risk,
                 basis=basis,
                 recommended_action=recommended_action,
@@ -606,7 +606,7 @@ def _analyze_deferred_revenue(
         pct_of_revenue = float(total_deferred / Decimal(str(total_revenue)) * 100)
 
     return DeferredRevenueAnalysis(
-        deferred_balance=total_deferred,
+        deferred_balance=float(total_deferred),
         total_revenue=total_revenue,
         deferred_pct_of_revenue=pct_of_revenue,
     )
@@ -860,7 +860,7 @@ def compute_accrual_completeness(
 
         acct = AccrualAccount(
             account_name=acct_name,
-            balance=balance,
+            balance=Decimal(str(balance)),
             matched_keyword=matched_kw or "",
             classification=bucket,
         )
@@ -905,13 +905,13 @@ def compute_accrual_completeness(
     # Build narrative (guardrail: descriptive only)
     narrative = _build_narrative(
         accrual_count,
-        total_accrued,
+        float(total_accrued),
         monthly_run_rate,
         accrual_to_run_rate,
         threshold_pct,
         meets_threshold,
         prior_available,
-        total_deferred,
+        float(total_deferred),
     )
 
     # Generate findings
@@ -936,10 +936,10 @@ def compute_accrual_completeness(
 
     return AccrualCompletenessReport(
         accrual_accounts=accrual_accounts,
-        total_accrued_balance=total_accrued,
+        total_accrued_balance=float(total_accrued),
         accrual_account_count=accrual_count,
         deferred_revenue_accounts=deferred_revenue_accounts,
-        total_deferred_revenue=total_deferred,
+        total_deferred_revenue=float(total_deferred),
         monthly_run_rate=monthly_run_rate,
         accrual_to_run_rate_pct=accrual_to_run_rate,
         threshold_pct=threshold_pct,
@@ -1051,9 +1051,9 @@ def run_accrual_completeness(
         credit = safe_decimal(row.get(credit_col))
 
         if acct_str not in account_balances:
-            account_balances[acct_str] = {"debit": Decimal("0"), "credit": Decimal("0")}
-        account_balances[acct_str]["debit"] += debit
-        account_balances[acct_str]["credit"] += credit
+            account_balances[acct_str] = {"debit": 0.0, "credit": 0.0}
+        account_balances[acct_str]["debit"] += float(debit)
+        account_balances[acct_str]["credit"] += float(credit)
 
     # Classify accounts
     classifier = create_classifier()

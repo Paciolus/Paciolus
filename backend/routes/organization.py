@@ -12,6 +12,8 @@ import logging
 import secrets
 from datetime import UTC, datetime, timedelta
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import func
@@ -136,10 +138,10 @@ def _require_owner(db: Session, user: User, org: Organization) -> OrganizationMe
 @limiter.limit(RATE_LIMIT_WRITE)
 async def create_organization(
     body: CreateOrgRequest,
-    request=None,
+    request: Any = None,
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, Any]:
     """Create an organization. User becomes the owner."""
     # Check if user already belongs to an org
     existing = db.query(OrganizationMember).filter(OrganizationMember.user_id == user.id).first()
@@ -171,7 +173,7 @@ async def create_organization(
 async def get_organization(
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, Any]:
     """Get the current user's organization."""
     org = _get_user_org(db, user)
     member_count = db.query(OrganizationMember).filter(OrganizationMember.organization_id == org.id).count()
@@ -184,10 +186,10 @@ async def get_organization(
 @limiter.limit(RATE_LIMIT_WRITE)
 async def update_organization(
     body: UpdateOrgRequest,
-    request=None,
+    request: Any = None,
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, Any]:
     """Update organization name. Owner or admin only."""
     org = _get_user_org(db, user)
     _require_admin(db, user, org)
@@ -206,10 +208,10 @@ async def update_organization(
 @limiter.limit(RATE_LIMIT_WRITE)
 async def create_invite(
     body: InviteRequest,
-    request=None,
+    request: Any = None,
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, Any]:
     """Send an organization invite. Owner/admin only. Checks seat limit."""
     org = _get_user_org(db, user)
     _require_admin(db, user, org)
@@ -262,7 +264,7 @@ async def create_invite(
 async def list_invites(
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> list[dict[str, Any]]:
     """List pending invites. Owner/admin only."""
     org = _get_user_org(db, user)
     _require_admin(db, user, org)
@@ -283,10 +285,10 @@ async def list_invites(
 @limiter.limit(RATE_LIMIT_WRITE)
 async def revoke_invite(
     invite_id: int,
-    request=None,
+    request: Any = None,
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, str]:
     """Revoke a pending invite. Owner/admin only."""
     org = _get_user_org(db, user)
     _require_admin(db, user, org)
@@ -312,10 +314,10 @@ async def revoke_invite(
 @limiter.limit(RATE_LIMIT_WRITE)
 async def accept_invite(
     token: str,
-    request=None,
+    request: Any = None,
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, str]:
     """Accept an organization invite. Links the current user to the org."""
     token_hash = hashlib.sha256(token.encode()).hexdigest()
 
@@ -395,7 +397,7 @@ async def accept_invite(
             org.subscription_id = sub.id
 
     if sub:
-        user.tier = sub.tier
+        user.tier = sub.tier  # type: ignore[assignment]
 
     # Mark invite accepted
     invite.status = InviteStatus.ACCEPTED
@@ -415,7 +417,7 @@ async def accept_invite(
 async def list_members(
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> list[dict[str, Any]]:
     """List organization members."""
     org = _get_user_org(db, user)
 
@@ -442,10 +444,10 @@ async def list_members(
 async def update_member_role(
     member_id: int,
     body: UpdateMemberRoleRequest,
-    request=None,
+    request: Any = None,
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, Any]:
     """Change a member's role. Owner only."""
     org = _get_user_org(db, user)
     _require_owner(db, user, org)
@@ -473,10 +475,10 @@ async def update_member_role(
 @limiter.limit(RATE_LIMIT_WRITE)
 async def remove_member(
     member_id: int,
-    request=None,
+    request: Any = None,
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, str]:
     """Remove a member from the organization. Reverts their tier to free."""
     org = _get_user_org(db, user)
     _require_admin(db, user, org)

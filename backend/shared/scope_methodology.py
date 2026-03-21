@@ -18,7 +18,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-import yaml
+import yaml  # type: ignore[import-untyped]
 from reportlab.lib.units import inch
 from reportlab.platypus import (
     Paragraph,

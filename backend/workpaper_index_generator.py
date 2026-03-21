@@ -109,7 +109,7 @@ class WorkpaperIndexGenerator:
         # Group by tool
         runs_by_tool: dict[ToolName, list[ToolRun]] = {}
         for run in tool_runs:
-            tool_key: ToolName = run.tool_name  # type: ignore[assignment]
+            tool_key: ToolName = run.tool_name
             runs_by_tool.setdefault(tool_key, []).append(run)
 
         document_register = []
@@ -149,7 +149,7 @@ class WorkpaperIndexGenerator:
             disp = item.disposition.value if item.disposition else "unknown"
             by_disposition[disp] = by_disposition.get(disp, 0) + 1
 
-            src: str = item.tool_source or "unknown"  # type: ignore[assignment]
+            src: str = item.tool_source or "unknown"
             by_tool_source[src] = by_tool_source.get(src, 0) + 1
 
         follow_up_summary = {

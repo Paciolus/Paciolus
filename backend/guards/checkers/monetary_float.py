@@ -24,7 +24,7 @@ def _is_float_column(node: ast.Assign | ast.AnnAssign) -> tuple[str | None, bool
         target = node.target
     else:
         value = node.value
-        target = node.targets[0] if node.targets else None
+        target = node.targets[0] if node.targets else None  # type: ignore[assignment]
 
     if value is None or target is None:
         return None, False

@@ -436,7 +436,7 @@ def _build_conclusion(preflight_result: dict, filename: str) -> str:
         )
 
     # Build caveats from issues
-    caveats = []
+    caveats: list[str] = []
     for issue in sorted(issues, key=lambda i: i.get("tests_affected", 0), reverse=True):
         category = issue.get("category", "")
         message = issue.get("message", "")

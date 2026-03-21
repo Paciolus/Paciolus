@@ -142,7 +142,8 @@ class EngagementExporter:
         if comments_md:
             files["follow_up_comments.md"] = comments_md
 
-        manifest = {
+        file_entries: list[dict[str, object]] = []
+        manifest: dict[str, object] = {
             "platform": "Paciolus",
             "version": PLATFORM_VERSION,
             "generated_at": generated_at,
@@ -150,12 +151,12 @@ class EngagementExporter:
             "client_name": client_name,
             "period_start": engagement.period_start.isoformat() if engagement.period_start else "",
             "period_end": engagement.period_end.isoformat() if engagement.period_end else "",
-            "files": [],
+            "files": file_entries,
         }
 
         for filename, content in files.items():
             sha256 = hashlib.sha256(content).hexdigest()
-            manifest["files"].append(
+            file_entries.append(
                 {
                     "filename": filename,
                     "size_bytes": len(content),

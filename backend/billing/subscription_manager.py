@@ -58,10 +58,10 @@ def _extract_seat_quantity(stripe_subscription: dict) -> int:
     for item in items:
         price_id = item.get("price", {}).get("id", "")
         if price_id not in seat_ids:
-            return item.get("quantity", 1)
+            return int(item.get("quantity", 1))
     # Fallback for single-item subscriptions (backward compat)
     if items:
-        return items[0].get("quantity", 1)
+        return int(items[0].get("quantity", 1))
     return 1
 
 
@@ -79,7 +79,7 @@ def _extract_additional_seats(stripe_subscription: dict) -> int:
     for item in items:
         price_id = item.get("price", {}).get("id", "")
         if price_id in seat_ids:
-            return item.get("quantity", 0)
+            return int(item.get("quantity", 0))
     return 0
 
 
@@ -448,4 +448,4 @@ def create_portal_session(stripe_customer_id: str, return_url: str) -> str:
         customer=stripe_customer_id,
         return_url=return_url,
     )
-    return session.url
+    return str(session.url)

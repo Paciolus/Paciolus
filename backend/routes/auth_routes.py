@@ -132,7 +132,7 @@ def register(
     response: Response,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-):
+) -> AuthResponse:
     """Register a new user account."""
     masked = mask_email(user_data.email)
     logger.info("Registration attempt: %s", masked)
@@ -220,7 +220,7 @@ def register(
 
 @router.post("/auth/login", response_model=AuthResponse)
 @limiter.limit(RATE_LIMIT_AUTH)
-def login(request: Request, credentials: UserLogin, response: Response, db: Session = Depends(get_db)):
+def login(request: Request, credentials: UserLogin, response: Response, db: Session = Depends(get_db)) -> AuthResponse:
     """Authenticate user and return JWT token."""
     masked = mask_email(credentials.email)
     logger.info("Login attempt: %s", masked)
@@ -286,13 +286,13 @@ def login(request: Request, credentials: UserLogin, response: Response, db: Sess
 
 
 @router.get("/auth/me", response_model=UserResponse)
-def get_current_user_info(current_user: User = Depends(require_current_user)):
+def get_current_user_info(current_user: User = Depends(require_current_user)) -> UserResponse:
     """Return the authenticated user's profile information."""
     return UserResponse.model_validate(current_user)
 
 
 @router.get("/auth/csrf", response_model=CsrfTokenResponse)
-def get_csrf_token(current_user: User = Depends(require_current_user)):
+def get_csrf_token(current_user: User = Depends(require_current_user)) -> dict[str, object]:
     """Generate and return a user-bound CSRF token (requires authentication)."""
     token = generate_csrf_token(user_id=str(current_user.id))
     return {"csrf_token": token, "expires_in_minutes": 30}
@@ -300,7 +300,7 @@ def get_csrf_token(current_user: User = Depends(require_current_user)):
 
 @router.post("/auth/verify-email", response_model=EmailVerifyResponse)
 @limiter.limit(RATE_LIMIT_AUTH)
-def verify_email(request: Request, request_data: VerifyEmailRequest, db: Session = Depends(get_db)):
+def verify_email(request: Request, request_data: VerifyEmailRequest, db: Session = Depends(get_db)) -> dict[str, object]:
     """Verify email address with token."""
     token = request_data.token
 
@@ -349,7 +349,7 @@ def resend_verification(
     background_tasks: BackgroundTasks,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, object]:
     """Resend verification email."""
     # Sprint 203: Allow resend if verified user has a pending email change
     if current_user.is_verified and not current_user.pending_email:
@@ -402,7 +402,7 @@ def resend_verification(
 
 
 @router.get("/auth/verification-status", response_model=VerificationStatusResponse)
-def get_verification_status(current_user: User = Depends(require_current_user)):
+def get_verification_status(current_user: User = Depends(require_current_user)) -> dict[str, object]:
     """Get current user's email verification status."""
     can_resend, seconds_remaining = can_resend_verification(current_user.email_verification_sent_at)
 
@@ -418,7 +418,7 @@ def get_verification_status(current_user: User = Depends(require_current_user)):
 
 @router.post("/auth/refresh", response_model=AuthResponse)
 @limiter.limit(RATE_LIMIT_AUTH)
-def refresh(request: Request, response: Response, db: Session = Depends(get_db)):
+def refresh(request: Request, response: Response, db: Session = Depends(get_db)) -> AuthResponse:
     """Exchange the HttpOnly refresh cookie for a new access + refresh token pair."""
     # Defense-in-depth: require X-Requested-With header to mitigate cross-origin
     # form POSTs. Browsers never auto-attach custom headers on simple requests.
@@ -448,7 +448,7 @@ def refresh(request: Request, response: Response, db: Session = Depends(get_db))
 
 @router.post("/auth/logout", response_model=SuccessResponse)
 @limiter.limit(RATE_LIMIT_AUTH)
-def logout(request: Request, response: Response, db: Session = Depends(get_db)):
+def logout(request: Request, response: Response, db: Session = Depends(get_db)) -> SuccessResponse:
     """Revoke the HttpOnly refresh cookie (logout)."""
     raw_token = request.cookies.get(REFRESH_COOKIE_NAME)
     if raw_token:
@@ -482,7 +482,7 @@ class SessionListResponse(BaseModel):
 def list_sessions(
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> SessionListResponse:
     """List all active (non-revoked) sessions for the calling user.
 
     AUDIT-02 FIX 2: Provides session inventory visibility.
@@ -519,7 +519,7 @@ def revoke_session(
     session_id: int,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> Response:
     """Revoke a single session by ID. Only the owning user can revoke.
 
     AUDIT-02 FIX 2: Per-session revocation endpoint.
@@ -557,7 +557,7 @@ def revoke_all_sessions(
     request: Request,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> Response:
     """Revoke all active sessions for the calling user.
 
     AUDIT-02 FIX 2: Bulk session revocation endpoint.

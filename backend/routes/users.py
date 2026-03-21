@@ -31,7 +31,7 @@ def update_profile(
     background_tasks: BackgroundTasks,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> UserResponse:
     """Update current user's profile (name and/or email)."""
     try:
         updated_user, verification_token = update_user_profile(db, current_user, profile_data)
@@ -70,7 +70,7 @@ def change_password(
     password_data: PasswordChange,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db)
-):
+) -> dict[str, object]:
     """Change current user's password."""
     try:
         success = change_user_password(

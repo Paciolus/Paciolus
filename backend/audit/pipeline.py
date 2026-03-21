@@ -367,13 +367,13 @@ def audit_trial_balance_multi_sheet(
             sheet_col_detection = auditor.get_column_detection()
             if sheet_col_detection:
                 sheet_column_detections[sheet_name] = sheet_col_detection.to_dict()
-                current_columns = (
+                current_columns: tuple[str | None, str | None, str | None] = (
                     sheet_col_detection.account_column,
                     sheet_col_detection.debit_column,
                     sheet_col_detection.credit_column,
                 )
                 if first_sheet_columns is None:
-                    first_sheet_columns = current_columns
+                    first_sheet_columns = current_columns  # type: ignore[assignment]
                 elif current_columns != first_sheet_columns:
                     warning = (
                         f"Sheet '{sheet_name}' has different column order: "
@@ -497,15 +497,16 @@ def audit_trial_balance_multi_sheet(
         result["balance_sheet_validation"] = balance_sheet_validation
 
         if not balance_sheet_validation["is_balanced"]:
-            result["risk_summary"]["anomaly_types"]["balance_sheet_imbalance"] = 1
+            bs_risk: dict = result["risk_summary"]  # type: ignore[assignment]
+            bs_risk["anomaly_types"]["balance_sheet_imbalance"] = 1
             bs_severity = balance_sheet_validation["severity"]
             if bs_severity == "high":
-                result["risk_summary"]["high_severity"] += 1
+                bs_risk["high_severity"] += 1
             elif bs_severity == "medium":
-                result["risk_summary"]["medium_severity"] += 1
+                bs_risk["medium_severity"] += 1
             elif bs_severity == "low":
-                result["risk_summary"]["low_severity"] += 1
-            result["risk_summary"]["total_anomalies"] += 1
+                bs_risk["low_severity"] += 1
+            bs_risk["total_anomalies"] += 1
 
         # Population Profile
         from population_profile_engine import compute_population_profile

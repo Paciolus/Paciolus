@@ -31,7 +31,7 @@ async def audit_revenue(
     period_end: Optional[str] = Form(default=None),
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, object]:
     """Run automated revenue recognition testing on a revenue GL extract.
 
     ISA 240: Presumed fraud risk in revenue recognition.

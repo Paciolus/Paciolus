@@ -74,12 +74,13 @@ class HttpMetricsMiddleware(BaseHTTPMiddleware):
 
         # Skip excluded paths to avoid noise
         if path in _EXCLUDED_PATHS:
-            return await call_next(request)
+            resp: Response = await call_next(request)
+            return resp
 
         method = request.method
         start = time.perf_counter()
 
-        response = await call_next(request)
+        response: Response = await call_next(request)
 
         duration = time.perf_counter() - start
         status_code = str(response.status_code)

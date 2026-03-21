@@ -700,7 +700,7 @@ def generate_fixed_asset_testing_memo(
 ) -> bytes:
     """Generate a PDF testing memo for fixed asset testing results."""
 
-    def _fa_scope(story, styles, doc_width, composite, data_quality, period_tested_arg):
+    def _fa_scope(story: Any, styles: Any, doc_width: Any, composite: Any, data_quality: Any, period_tested_arg: Any) -> None:
         build_scope_section(
             story,
             styles,

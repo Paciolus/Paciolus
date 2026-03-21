@@ -428,7 +428,8 @@ class EngagementManager:
 
     def _latest_tool_run_id(self, engagement_id: int) -> int | None:
         """Return the highest ToolRun.id for an engagement (staleness key)."""
-        return self.db.query(func.max(ToolRun.id)).filter(ToolRun.engagement_id == engagement_id).scalar()
+        result = self.db.query(func.max(ToolRun.id)).filter(ToolRun.engagement_id == engagement_id).scalar()
+        return int(result) if result is not None else None
 
     def get_tool_run_trends(self, engagement_id: int) -> list[dict]:
         """Per-tool score trend from completed runs with non-null composite_score.
@@ -448,7 +449,7 @@ class EngagementManager:
         cache_key = ("trends", engagement_id, latest_run_id)
         cached = _trend_cache.get(cache_key)
         if cached is not None:
-            return cached
+            return list(cached)
 
         runs = (
             self.db.query(ToolRun)
@@ -510,7 +511,7 @@ class EngagementManager:
         cache_key = ("convergence", engagement_id, latest_run_id)
         cached = _convergence_cache.get(cache_key)
         if cached is not None:
-            return cached
+            return list(cached)
 
         # Get all active completed runs with flagged_accounts for this engagement
         runs = (
@@ -551,7 +552,7 @@ class EngagementManager:
             if account  # skip empty
         ]
 
-        result.sort(key=lambda x: (-int(x["convergence_count"]), x["account"]))
+        result.sort(key=lambda x: (-int(str(x["convergence_count"])), x["account"]))
 
         _convergence_cache.put(cache_key, result)
         return result

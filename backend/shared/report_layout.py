@@ -27,7 +27,7 @@ TABLE_CELL_BOTTOM_PAD = 3  # pt — standard compact padding
 # =============================================================================
 
 
-def wrap_cell(text: str, style) -> Paragraph:
+def wrap_cell(text: str, style: object) -> Paragraph:
     """Wrap text in a Paragraph for safe table-cell rendering.
 
     Always use this instead of slicing strings (e.g., name[:30] + "...").

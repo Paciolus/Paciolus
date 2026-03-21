@@ -27,7 +27,7 @@ async def audit_payroll_testing(
     engagement_id: Optional[int] = Form(default=None),
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, object]:
     """Run automated payroll & employee testing on a payroll register."""
     return await run_single_file_testing(
         file=file, column_mapping=column_mapping,

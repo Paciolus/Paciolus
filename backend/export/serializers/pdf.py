@@ -27,7 +27,7 @@ def serialize_audit_pdf(audit_result: AuditResultInput) -> bytes:
     )
 
 
-def serialize_financial_statements_pdf(payload: FinancialStatementsInput, statements: dict) -> bytes:
+def serialize_financial_statements_pdf(payload: FinancialStatementsInput, statements: object) -> bytes:
     """Render financial statements as a PDF report.
 
     Args:

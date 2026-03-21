@@ -81,7 +81,7 @@ def safe_float(value: object) -> float:
 
     # Try direct conversion first
     try:
-        f = float(value)
+        f = float(str(value))
         if math.isnan(f) or math.isinf(f):
             return 0.0
         return f

@@ -10,6 +10,7 @@ Phase LX: Each handler records a BillingEvent for decision metrics.
 """
 
 import logging
+from collections.abc import Callable
 
 from sqlalchemy.orm import Session
 
@@ -337,7 +338,7 @@ def handle_subscription_updated(db: Session, event_data: dict) -> None:
     old_status = existing_sub.status if existing_sub else None
     old_tier = existing_sub.tier if existing_sub else None
 
-    sync_subscription_from_stripe(db, user_id, event_data, customer_id, tier)
+    sync_subscription_from_stripe(db, user_id, event_data, customer_id or "", tier)
     logger.info("customer.subscription.updated: synced user %d to tier %s", user_id, tier)
 
     # If subscription transitions to any non-entitled state, downgrade (AUDIT-08-F2)
@@ -830,7 +831,7 @@ def handle_invoice_created(db: Session, event_data: dict) -> None:
 
 
 # Event type → handler mapping
-WEBHOOK_HANDLERS: dict[str, callable] = {
+WEBHOOK_HANDLERS: dict[str, Callable] = {
     # Existing
     "checkout.session.completed": handle_checkout_completed,
     "customer.subscription.updated": handle_subscription_updated,

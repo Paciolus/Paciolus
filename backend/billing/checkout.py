@@ -29,7 +29,7 @@ def create_or_get_stripe_customer(user_id: int, email: str, stripe_customer_id: 
         metadata={"paciolus_user_id": str(user_id)},
     )
     logger.info("Created Stripe customer %s for user %d", customer.id, user_id)
-    return customer.id
+    return str(customer.id)
 
 
 def create_checkout_session(
@@ -42,6 +42,7 @@ def create_checkout_session(
     additional_seats: int = 0,
     dpa_accepted_at: str | None = None,
     dpa_version: str | None = None,
+    idempotency_key: str | None = None,
 ) -> str:
     """Create a Stripe Checkout Session and return the URL.
 
@@ -121,4 +122,4 @@ def create_checkout_session(
         stripe_coupon_id or "none",
         additional_seats,
     )
-    return session.url
+    return str(session.url)

@@ -435,7 +435,7 @@ def compute_lease_diagnostic(
             account_name=acct_name,
             classification=classification,
             balance=balance,
-            matched_keyword=matched_kw,
+            matched_keyword=matched_kw or "",
         )
 
         if classification == "rou_asset":

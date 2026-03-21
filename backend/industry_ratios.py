@@ -891,7 +891,7 @@ def calculate_industry_ratios(industry: str, totals_dict: dict[str, float]) -> d
     return calculator.to_dict()
 
 
-def get_available_industries() -> list[dict[str, str]]:
+def get_available_industries() -> list[dict[str, str | int]]:
     """
     Get list of industries with specific ratio implementations.
 

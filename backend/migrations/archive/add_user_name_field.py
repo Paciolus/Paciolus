@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import DATABASE_URL
 
 
-def run_migration():
+def run_migration() -> None:
     """Add name column to users table if it doesn't exist."""
     db_path = DATABASE_URL.replace("sqlite:///", "")
 

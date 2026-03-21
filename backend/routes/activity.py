@@ -86,7 +86,7 @@ def log_activity(
     activity: ActivityLogCreate,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> ActivityLogResponse:
     """Log audit activity. Stores only aggregate metadata, filename is hashed."""
     log_secure_operation("activity_log_create", f"User {current_user.id} logging audit activity")
 
@@ -122,7 +122,7 @@ def log_activity(
             .first()
         )
         previous_hash = previous_record.chain_hash if previous_record else GENESIS_HASH
-        db_activity.chain_hash = compute_chain_hash(previous_hash, db_activity)
+        db_activity.chain_hash = compute_chain_hash(previous_hash or GENESIS_HASH, db_activity)
 
         db.commit()
         db.refresh(db_activity)
@@ -139,9 +139,9 @@ def log_activity(
         filename_display=db_activity.filename_display,
         timestamp=db_activity.timestamp.isoformat(),
         record_count=db_activity.record_count,
-        total_debits=db_activity.total_debits,
-        total_credits=db_activity.total_credits,
-        materiality_threshold=db_activity.materiality_threshold,
+        total_debits=float(db_activity.total_debits),
+        total_credits=float(db_activity.total_credits),
+        materiality_threshold=float(db_activity.materiality_threshold),
         was_balanced=db_activity.was_balanced,
         anomaly_count=db_activity.anomaly_count,
         material_count=db_activity.material_count,
@@ -157,7 +157,7 @@ def get_activity_history(
     pagination: PaginationParams = Depends(),
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> PaginatedResponse[ActivityLogResponse]:
     """Get the authenticated user's audit activity history."""
     log_secure_operation(
         "activity_history_fetch", f"User {current_user.id} fetching activity history (page {pagination.page})"
@@ -217,7 +217,7 @@ def get_activity_history(
 @limiter.limit(RATE_LIMIT_WRITE)
 def clear_activity_history(
     request: Request, current_user: User = Depends(require_current_user), db: Session = Depends(get_db)
-):
+) -> None:
     """Clear all activity history for the user (soft-delete: sets archived_at)."""
     log_secure_operation("activity_clear_request", f"User {current_user.id} requesting activity history archival")
 
@@ -242,7 +242,7 @@ def clear_activity_history(
 
 
 @router.get("/dashboard/stats", response_model=DashboardStatsResponse)
-def get_dashboard_stats(current_user: User = Depends(require_current_user), db: Session = Depends(get_db)):
+def get_dashboard_stats(current_user: User = Depends(require_current_user), db: Session = Depends(get_db)) -> DashboardStatsResponse:
     """Get dashboard statistics for workspace header."""
     log_secure_operation("dashboard_stats_fetch", f"User {current_user.id} fetching dashboard stats")
 
@@ -288,7 +288,7 @@ def verify_chain(
     end_id: int = Query(..., ge=1),
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-):
+) -> ChainVerifyResponse:
     """Verify the integrity of the audit log hash chain between two record IDs.
 
     Traverses the chain from start_id to end_id and recomputes each HMAC-SHA512

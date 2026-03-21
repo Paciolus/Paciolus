@@ -92,7 +92,7 @@ class LedgerRule(Flowable):
 # ---------------------------------------------------------------------------
 
 
-def format_classical_date(dt: datetime = None) -> str:
+def format_classical_date(dt: datetime | None = None) -> str:
     """
     Format date in classical style: '4th February 2026'
     """

@@ -138,7 +138,7 @@ def check_all_caps_headings(filepath: Path, content: str) -> list[str]:
 
 def check_shared_chrome_usage(filepath: Path, content: str) -> list[str]:
     """Check that generators use shared report chrome."""
-    violations = []
+    violations: list[str] = []
     # Skip shared modules themselves
     if filepath.parent.name == "shared":
         return violations
@@ -157,7 +157,7 @@ def check_shared_chrome_usage(filepath: Path, content: str) -> list[str]:
 
 def check_citation_metadata(filepath: Path, content: str) -> list[str]:
     """Generators with tool_domain should reference authoritative citations."""
-    violations = []
+    violations: list[str] = []
     # Only check generators that define tool_domain
     if "tool_domain" not in content:
         return violations

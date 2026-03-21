@@ -556,7 +556,7 @@ class PaciolusWorkpaperGenerator:
 
 
 def generate_financial_statements_excel(
-    statements,
+    statements: Any,
     prepared_by: Optional[str] = None,
     reviewed_by: Optional[str] = None,
     workpaper_date: Optional[str] = None,
@@ -591,7 +591,7 @@ def generate_financial_statements_excel(
         except ValueError:
             pass
 
-    def _write_statement_sheet(ws: Worksheet, title: str, line_items, sheet_index: int) -> int:
+    def _write_statement_sheet(ws: Worksheet, title: str, line_items: Any, sheet_index: int) -> int:
         """Write a financial statement to a worksheet."""
         # Title
         ws["A1"] = title

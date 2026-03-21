@@ -106,7 +106,7 @@ def _resolve_test_key(finding_text: str, test_results: list[dict]) -> str:
 
         # Engine format: "Test Name: N entries flagged (...)"
         if finding_lower.startswith(name.lower() + ":"):
-            return key
+            return str(key)
 
         key_words = set(key.split("_"))
         name_words = set(name.lower().split())

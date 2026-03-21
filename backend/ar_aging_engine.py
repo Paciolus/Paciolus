@@ -304,7 +304,7 @@ class TBAccount:
     classification: str = "other"  # "ar", "allowance", "revenue", "other"
     row_number: int = 0
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if isinstance(self.balance, (int, float)):
             self.balance = Decimal(str(self.balance))
 
@@ -333,7 +333,7 @@ class ARSubledgerEntry:
     credit_limit: Optional[Decimal] = None
     row_number: int = 0
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if isinstance(self.amount, (int, float)):
             self.amount = Decimal(str(self.amount))
         if isinstance(self.credit_limit, (int, float)):
@@ -368,7 +368,7 @@ class AREntry:
     row_number: int = 0
     entry_source: str = "tb"  # "tb" or "subledger"
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if isinstance(self.amount, (int, float)):
             self.amount = Decimal(str(self.amount))
 
@@ -826,7 +826,7 @@ def parse_tb_accounts(
 # =============================================================================
 
 
-def _parse_date_to_str(val) -> Optional[str]:
+def _parse_date_to_str(val: object) -> Optional[str]:
     """Normalize a date value to string."""
     if val is None:
         return None
@@ -1177,8 +1177,8 @@ def test_unreconciled_detail(
 ) -> ARTestResult:
     """T1-AR04: Check if sub-ledger total matches TB AR balance."""
     ar_accounts = [a for a in accounts if a.classification == "ar"]
-    tb_ar_total = sum(a.balance for a in ar_accounts)
-    sl_total = sum(e.amount for e in sl_entries)
+    tb_ar_total = sum((a.balance for a in ar_accounts), Decimal("0"))
+    sl_total = sum((e.amount for e in sl_entries), Decimal("0"))
     flagged: list[FlaggedAR] = []
 
     difference = abs(tb_ar_total - sl_total)
@@ -1194,7 +1194,7 @@ def test_unreconciled_detail(
             FlaggedAR(
                 entry=AREntry(
                     account_name="Reconciliation Difference",
-                    amount=tb_ar_total - sl_total,
+                    amount=Decimal(tb_ar_total - sl_total),
                     entry_source="reconciliation",
                 ),
                 test_name="Unreconciled AR Detail",
@@ -1356,9 +1356,9 @@ def test_allowance_adequacy(
     allowance_accounts = [a for a in accounts if a.classification == "allowance"]
     flagged: list[FlaggedAR] = []
 
-    total_ar = sum(a.balance for a in ar_accounts)
+    total_ar = sum((a.balance for a in ar_accounts), Decimal("0"))
     # Allowance is typically a credit (negative) balance in TB
-    total_allowance = abs(sum(a.balance for a in allowance_accounts))
+    total_allowance = abs(sum((a.balance for a in allowance_accounts), Decimal("0")))
 
     if total_ar > 0 and allowance_accounts:
         ratio = total_allowance / total_ar
@@ -1368,7 +1368,7 @@ def test_allowance_adequacy(
                 FlaggedAR(
                     entry=AREntry(
                         account_name="Allowance Adequacy",
-                        amount=total_allowance,
+                        amount=Decimal(total_allowance),
                         entry_source="analysis",
                     ),
                     test_name="Allowance Adequacy Ratio",
@@ -1384,7 +1384,7 @@ def test_allowance_adequacy(
                 FlaggedAR(
                     entry=AREntry(
                         account_name="Allowance Adequacy",
-                        amount=total_allowance,
+                        amount=Decimal(total_allowance),
                         entry_source="analysis",
                     ),
                     test_name="Allowance Adequacy Ratio",
@@ -1481,11 +1481,11 @@ def test_dso_trend(
     revenue_accounts = [a for a in accounts if a.classification == "revenue"]
     flagged: list[FlaggedAR] = []
 
-    total_ar = sum(a.balance for a in ar_accounts)
+    total_ar = sum((a.balance for a in ar_accounts), Decimal("0"))
     # Revenue is typically credit (negative) in TB
-    total_revenue = abs(sum(a.balance for a in revenue_accounts))
+    total_revenue = abs(sum((a.balance for a in revenue_accounts), Decimal("0")))
 
-    current_dso = None
+    current_dso: Decimal | None = None
     if total_revenue > 0:
         current_dso = (total_ar / total_revenue) * config.days_in_period
 
@@ -1500,7 +1500,7 @@ def test_dso_trend(
                 FlaggedAR(
                     entry=AREntry(
                         account_name="DSO Trend Analysis",
-                        amount=total_ar,
+                        amount=Decimal(total_ar),
                         entry_source="analysis",
                     ),
                     test_name="DSO Trend Variance",
@@ -1549,11 +1549,11 @@ def test_rollforward_reconciliation(
     revenue_accounts = [a for a in accounts if a.classification == "revenue"]
     flagged: list[FlaggedAR] = []
 
-    ending_ar = sum(a.balance for a in ar_accounts)
-    total_revenue = abs(sum(a.balance for a in revenue_accounts))
+    ending_ar = sum((a.balance for a in ar_accounts), Decimal("0"))
+    total_revenue = abs(sum((a.balance for a in revenue_accounts), Decimal("0")))
 
     if config.beginning_ar_balance is not None and config.collections_total is not None:
-        expected_ending = config.beginning_ar_balance + total_revenue - config.collections_total
+        expected_ending = Decimal(str(config.beginning_ar_balance)) + total_revenue - Decimal(str(config.collections_total))
         difference = abs(ending_ar - expected_ending)
         threshold = max(abs(ending_ar) * Decimal(str(config.rollforward_threshold_pct)), Decimal("100"))
 
@@ -1563,7 +1563,7 @@ def test_rollforward_reconciliation(
                 FlaggedAR(
                     entry=AREntry(
                         account_name="Roll-Forward Reconciliation",
-                        amount=difference,
+                        amount=Decimal(difference),
                         entry_source="analysis",
                     ),
                     test_name="Roll-Forward Reconciliation",
@@ -1678,14 +1678,14 @@ def test_credit_limit_breaches(
                     )
                 )
 
-    total = len(sl_entries)
+    total_sl = len(sl_entries)
     return ARTestResult(
         test_name="Credit Limit Breaches",
         test_key="credit_limit_breaches",
         test_tier=TestTier.ADVANCED,
         entries_flagged=len(flagged),
-        total_entries=total,
-        flag_rate=len(flagged) / total if total > 0 else 0.0,
+        total_entries=total_sl,
+        flag_rate=len(flagged) / total_sl if total_sl > 0 else 0.0,
         severity=max((f.severity for f in flagged), default=Severity.LOW, key=lambda s: SEVERITY_WEIGHTS[s]),
         description="Customer AR balances exceeding approved credit limits",
         flagged_entries=flagged,
@@ -1843,9 +1843,9 @@ def build_ar_summary(
     allowance_accounts = [a for a in accounts if a.classification == "allowance"]
     revenue_accounts = [a for a in accounts if a.classification == "revenue"]
 
-    total_ar = sum(a.balance for a in ar_accounts)
-    total_allowance = abs(sum(a.balance for a in allowance_accounts))
-    total_revenue = abs(sum(a.balance for a in revenue_accounts))
+    total_ar = sum((a.balance for a in ar_accounts), Decimal("0"))
+    total_allowance = abs(sum((a.balance for a in allowance_accounts), Decimal("0")))
+    total_revenue = abs(sum((a.balance for a in revenue_accounts), Decimal("0")))
 
     summary: dict = {
         "total_ar_balance": round(total_ar, 2),
@@ -2007,7 +2007,7 @@ def run_ar_aging(
                     setattr(sl_detection, attr, sl_column_mapping[attr])
             sl_detection.overall_confidence = 1.0
 
-        sl_entries = parse_sl_entries(sl_rows, sl_detection, config.as_of_date)
+        sl_entries = parse_sl_entries(sl_rows or [], sl_detection, config.as_of_date)
 
     # 4. Assess data quality
     data_quality = assess_data_quality(accounts, sl_entries, has_subledger)

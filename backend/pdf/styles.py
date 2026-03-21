@@ -306,4 +306,4 @@ def create_classical_styles() -> dict:
         ),
     )
 
-    return styles
+    return dict(styles)

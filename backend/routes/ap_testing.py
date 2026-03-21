@@ -28,7 +28,7 @@ async def audit_ap_payments(
     engagement_id: Optional[int] = Form(default=None),
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, object]:
     """Run automated AP payment testing on an accounts payable extract."""
     return await run_single_file_testing(
         file=file, column_mapping=column_mapping,

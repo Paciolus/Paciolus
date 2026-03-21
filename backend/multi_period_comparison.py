@@ -415,8 +415,8 @@ def calculate_movement(
     Returns:
         (movement_type, change_amount, change_percent)
     """
-    current_balance = safe_decimal(current_balance)
-    prior_balance = safe_decimal(prior_balance)
+    current_balance = float(safe_decimal(current_balance))
+    prior_balance = float(safe_decimal(prior_balance))
     change_amount = current_balance - prior_balance
 
     # Calculate percent change
@@ -602,8 +602,8 @@ def compare_trial_balances(
         # from the current period file, not if its parsed balance is zero.
         is_closed = current_acct is None
 
-        prior_balance = _get_net_balance(prior_acct) if prior_acct else 0.0
-        current_balance = _get_net_balance(current_acct) if current_acct else 0.0
+        prior_balance = float(_get_net_balance(prior_acct)) if prior_acct else 0.0
+        current_balance = float(_get_net_balance(current_acct)) if current_acct else 0.0
 
         # Get account type from whichever side is available
         if current_acct:
@@ -1078,7 +1078,7 @@ def export_movements_csv(
 
     summaries = summary.lead_sheet_summaries
     for ls in summaries:
-        ls_d: dict[str, Any] = ls.to_dict() if hasattr(ls, "to_dict") else ls
+        ls_d: dict[str, Any] = ls.to_dict() if hasattr(ls, "to_dict") else ls  # type: ignore[assignment]
         row = [
             sanitize_csv_value(f"{ls_d['lead_sheet']}: {ls_d['lead_sheet_name']}"),
             sanitize_csv_value(ls_d["lead_sheet_category"]),

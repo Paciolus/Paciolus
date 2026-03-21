@@ -6,6 +6,8 @@ Sprint 262: Migrated from in-memory dicts to DB-backed ToolSession.
 from datetime import UTC, datetime
 from typing import Optional
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from sqlalchemy.orm import Session
 
@@ -75,7 +77,7 @@ def create_adjusting_entry(
     entry_data: AdjustingEntryRequest,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, Any]:
     """Create a new adjusting journal entry."""
     from decimal import Decimal
 
@@ -134,7 +136,7 @@ def list_adjusting_entries(
     db: Session = Depends(get_db),
     status: Optional[str] = Query(None, description="Filter by status"),
     adj_type: Optional[str] = Query(None, alias="type", description="Filter by adjustment type"),
-):
+) -> dict[str, Any]:
     """List all adjusting entries in the current session."""
     adj_set = get_user_adjustments(db, current_user.id)
 
@@ -172,7 +174,7 @@ def get_next_reference(
     prefix: str = Query("AJE", description="Reference prefix"),
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, str]:
     """Get the next sequential reference number for adjusting entries."""
     adj_set = get_user_adjustments(db, current_user.id)
     next_ref = adj_set.generate_next_reference(prefix)
@@ -181,7 +183,7 @@ def get_next_reference(
 
 @router.get("/audit/adjustments/types", response_model=AdjustmentTypesResponse)
 @limiter.limit(RATE_LIMIT_DEFAULT)
-def get_adjustment_types(request: Request, response: Response):
+def get_adjustment_types(request: Request, response: Response) -> dict[str, Any]:
     """Get available adjustment types for UI dropdowns."""
     response.headers["Cache-Control"] = "public, max-age=3600"
     return {"types": [{"value": t.value, "label": t.value.replace("_", " ").title()} for t in AdjustmentType]}
@@ -189,7 +191,7 @@ def get_adjustment_types(request: Request, response: Response):
 
 @router.get("/audit/adjustments/statuses", response_model=AdjustmentStatusesResponse)
 @limiter.limit(RATE_LIMIT_DEFAULT)
-def get_adjustment_statuses(request: Request, response: Response):
+def get_adjustment_statuses(request: Request, response: Response) -> dict[str, Any]:
     """Get available adjustment statuses for UI dropdowns."""
     response.headers["Cache-Control"] = "public, max-age=3600"
     return {"statuses": [{"value": s.value, "label": s.value.title()} for s in AdjustmentStatus]}
@@ -202,7 +204,7 @@ def get_adjusting_entry(
     entry_id: str,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, Any]:
     """Get a specific adjusting entry by ID."""
     adj_set = get_user_adjustments(db, current_user.id)
     entry = adj_set.get_entry(entry_id)
@@ -221,7 +223,7 @@ def update_adjustment_status(
     status_update: AdjustmentStatusUpdate,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, Any]:
     """Update the status of an adjusting entry."""
     adj_set = get_user_adjustments(db, current_user.id)
     entry = adj_set.get_entry(entry_id)
@@ -284,7 +286,7 @@ def delete_adjusting_entry(
     entry_id: str,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-):
+) -> None:
     """Delete an adjusting entry from the session."""
     adj_set = get_user_adjustments(db, current_user.id)
     removed = adj_set.remove_entry(entry_id)
@@ -304,7 +306,7 @@ def apply_adjustments_to_tb(
     apply_data: ApplyAdjustmentsRequest,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, Any]:
     """Apply adjusting entries to a trial balance."""
     adj_set = get_user_adjustments(db, current_user.id)
 
@@ -343,7 +345,7 @@ def clear_all_adjustments(
     request: Request,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-):
+) -> None:
     """Clear all adjusting entries from the session."""
     delete_tool_session(db, current_user.id, TOOL_NAME)
 

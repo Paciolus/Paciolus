@@ -1082,7 +1082,7 @@ def generate_multi_period_memo(
         bottomMargin=0.8 * inch,
     )
 
-    story = []
+    story: list[object] = []
     prior_label = comparison_result.get("prior_label", "Prior")
     current_label = comparison_result.get("current_label", "Current")
     budget_label = comparison_result.get("budget_label")

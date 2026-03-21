@@ -734,7 +734,7 @@ def generate_revenue_testing_memo(
 ) -> bytes:
     """Generate a PDF testing memo for revenue testing results."""
 
-    def _revenue_scope(story, styles, doc_width, composite, data_quality, period_tested_arg):
+    def _revenue_scope(story: list, styles: dict, doc_width: float, composite: dict, data_quality: dict, period_tested_arg: str | None) -> None:
         build_scope_section(
             story,
             styles,

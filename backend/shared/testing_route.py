@@ -12,7 +12,7 @@ NOT used by: Three-Way Match (3-file), AR Aging (dual-file + config).
 import asyncio
 import logging
 from collections.abc import Callable
-from typing import Optional
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ from shared.helpers import (
 )
 
 
-def enforce_tool_access(current_user: User, tool_name: str, db=None) -> None:
+def enforce_tool_access(current_user: User, tool_name: str, db: object = None) -> None:
     """Check entitlement for tool access. Raises HTTPException(403) in hard mode.
 
     Shared by the factory function and individual non-factory routes.
@@ -107,7 +107,7 @@ async def run_single_file_testing(
             file_bytes = await validate_file_size(file)
             filename = file.filename or ""
 
-            def _process():
+            def _process() -> Any:
                 column_names, rows = parse_uploaded_file(file_bytes, filename)
                 result = run_engine(rows, column_names, column_mapping_dict, filename)
                 return result
@@ -123,7 +123,7 @@ async def run_single_file_testing(
                 maybe_record_tool_run, db, engagement_id, current_user.id, tool_name, True, score, flagged
             )
 
-            return result_dict
+            return dict(result_dict)
 
         except (ValueError, KeyError, TypeError) as e:
             logger.exception("%s analysis failed", tool_name)
