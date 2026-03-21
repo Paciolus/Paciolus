@@ -105,6 +105,15 @@
 - **Verification:** pip-audit found 3 CVEs (documented, not patched per scope), npm audit clean, license policy 0 violations
 - **Status:** COMPLETE
 
+### AUDIT-10: Disaster Recovery Validation
+- [x] Step 1: Complete DR runbook with executable recovery steps (8-step procedure, external access deps, RPO caveat)
+- [x] Step 2: Create `docs/ops/ENVIRONMENT_VARIABLES.md` (secret + config classification, break-glass section)
+- [x] Step 3: Operationalize semi-annual DR test template (runbook references, target values)
+- [x] Step 4: Add manual restore-validation job to `dr-test-monthly.yml` (workflow_dispatch only)
+- [x] Step 5: Update deployment architecture with DR governance section (§18)
+- **Scope:** Documentation and CI only — no application source code modified
+- **Status:** COMPLETE
+
 ### FIX-8B: Org-Aware Export Access & Multi-Tenant Roadmap (AUDIT-08 Phase 1/3)
 - [x] FIX 1: Verified — both generators already use `EngagementManager.get_engagement()` (org-aware via `_get_accessible_user_ids()`); no `Client.user_id ==` pattern exists
 - [x] FIX 2: Verified — `engagements_exports.py` already returns 404 (not 400) on access failures
