@@ -140,18 +140,19 @@ def generate_engagement_dashboard_memo(
 
     summaries = dashboard_result.get("report_summaries", [])
     if summaries:
+        cell_style = styles["MemoTableCell"]
         rpt_data = [["Report", "Diagnostic Score", "Tier", "Flagged", "High", "Tests"]]
         for s in summaries:
             t_base, _ = RISK_TIER_DISPLAY.get(str(s.get("risk_tier", "low")).lower(), ("—", None))
             t_label = f"{t_base} ({s.get('risk_score', 0):.0f})" if t_base != "—" else "—"
             rpt_data.append(
                 [
-                    Paragraph(s.get("report_title", ""), styles["MemoTableCell"]),
-                    f"{s.get('risk_score', 0):.1f}",
-                    t_label,
-                    str(s.get("total_flagged", 0)),
-                    str(s.get("high_severity_count", 0)),
-                    str(s.get("tests_run", 0)),
+                    Paragraph(s.get("report_title", ""), cell_style),
+                    Paragraph(f"{s.get('risk_score', 0):.1f}", cell_style),
+                    Paragraph(t_label, cell_style),
+                    Paragraph(str(s.get("total_flagged", 0)), cell_style),
+                    Paragraph(str(s.get("high_severity_count", 0)), cell_style),
+                    Paragraph(str(s.get("tests_run", 0)), cell_style),
                 ]
             )
 

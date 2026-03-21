@@ -27,9 +27,9 @@ import os
 import time
 from collections.abc import Callable, Generator
 from contextlib import contextmanager
-from typing import Any
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from config import (
     CLEANUP_REFRESH_TOKEN_INTERVAL_MINUTES,
@@ -322,7 +322,9 @@ def _job_team_activity_cleanup() -> None:
         from team_activity_model import TeamActivityLog
 
         cutoff = datetime.now(UTC) - timedelta(days=90)
-        count = int(db.query(TeamActivityLog).filter(TeamActivityLog.created_at < cutoff).delete(synchronize_session=False))
+        count = int(
+            db.query(TeamActivityLog).filter(TeamActivityLog.created_at < cutoff).delete(synchronize_session=False)
+        )
         if count:
             db.commit()
         return count

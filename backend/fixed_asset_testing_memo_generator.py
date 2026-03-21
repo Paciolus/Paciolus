@@ -609,11 +609,7 @@ def _build_high_severity_detail(
     """BUG-03: Build High Severity Asset Detail section."""
     test_results = result.get("test_results", [])
 
-    high_tests = [
-        tr
-        for tr in test_results
-        if tr.get("severity") == "high" and tr.get("entries_flagged", 0) > 0 and tr.get("flagged_entries")
-    ]
+    high_tests = [tr for tr in test_results if tr.get("severity") == "high" and tr.get("entries_flagged", 0) > 0]
 
     if not high_tests:
         return section_counter
@@ -634,42 +630,51 @@ def _build_high_severity_detail(
         story.append(Paragraph(f"<b>{title} ({count} items)</b>", styles["MemoBody"]))
         story.append(Spacer(1, 4))
 
-        builder = _DETAIL_TABLE_BUILDERS.get(test_key)
-        if builder:
-            builder(story, styles, flagged)
-        else:
-            # BUG-007 fix: generic detail table for tests without a dedicated builder
-            gen_data = [
-                [
-                    Paragraph("Asset ID", styles["MemoTableHeader"]),
-                    Paragraph("Description", styles["MemoTableHeader"]),
-                    Paragraph("Issue", styles["MemoTableHeader"]),
-                    Paragraph("Amount", styles["MemoTableHeader"]),
-                ]
-            ]
-            for fe in flagged[:_MAX_DETAIL_ROWS]:
-                entry = fe.get("entry", {})
-                details = fe.get("details", {})
-                amt = entry.get("cost") or entry.get("amount") or details.get("amount", "")
-                amt_str = format_currency(amt) if isinstance(amt, (int, float)) else str(amt)
-                gen_data.append(
-                    [
-                        Paragraph(str(entry.get("asset_id", "") or ""), styles["MemoTableCell"]),
-                        Paragraph(
-                            str(entry.get("description", "") or entry.get("category", "") or ""),
-                            styles["MemoTableCell"],
-                        ),
-                        Paragraph(str(fe.get("issue", "")), styles["MemoTableCell"]),
-                        Paragraph(amt_str, styles["MemoTableCell"]),
-                    ]
+        if not flagged:
+            # BUG-007: entries_flagged > 0 but flagged_entries not populated
+            story.append(
+                Paragraph(
+                    f"<i>No entry-level detail available for: {title}</i>",
+                    styles["MemoBodySmall"],
                 )
-            gen_table = Table(
-                gen_data,
-                colWidths=[1.0 * inch, 1.8 * inch, 2.2 * inch, 1.0 * inch],
-                repeatRows=1,
             )
-            gen_table.setStyle(TableStyle(ledger_table_style() + [("ALIGN", (3, 0), (3, -1), "RIGHT")]))
-            story.append(gen_table)
+        else:
+            builder = _DETAIL_TABLE_BUILDERS.get(test_key)
+            if builder:
+                builder(story, styles, flagged)
+            else:
+                # BUG-007 fix: generic detail table for tests without a dedicated builder
+                gen_data = [
+                    [
+                        Paragraph("Asset ID", styles["MemoTableHeader"]),
+                        Paragraph("Description", styles["MemoTableHeader"]),
+                        Paragraph("Issue", styles["MemoTableHeader"]),
+                        Paragraph("Amount", styles["MemoTableHeader"]),
+                    ]
+                ]
+                for fe in flagged[:_MAX_DETAIL_ROWS]:
+                    entry = fe.get("entry", {})
+                    details = fe.get("details", {})
+                    amt = entry.get("cost") or entry.get("amount") or details.get("amount", "")
+                    amt_str = format_currency(amt) if isinstance(amt, (int, float)) else str(amt)
+                    gen_data.append(
+                        [
+                            Paragraph(str(entry.get("asset_id", "") or ""), styles["MemoTableCell"]),
+                            Paragraph(
+                                str(entry.get("description", "") or entry.get("category", "") or ""),
+                                styles["MemoTableCell"],
+                            ),
+                            Paragraph(str(fe.get("issue", "")), styles["MemoTableCell"]),
+                            Paragraph(amt_str, styles["MemoTableCell"]),
+                        ]
+                    )
+                gen_table = Table(
+                    gen_data,
+                    colWidths=[1.0 * inch, 1.8 * inch, 2.2 * inch, 1.0 * inch],
+                    repeatRows=1,
+                )
+                gen_table.setStyle(TableStyle(ledger_table_style() + [("ALIGN", (3, 0), (3, -1), "RIGHT")]))
+                story.append(gen_table)
 
         procedure = _DETAIL_PROCEDURES.get(test_key, "")
         if procedure:
@@ -700,7 +705,9 @@ def generate_fixed_asset_testing_memo(
 ) -> bytes:
     """Generate a PDF testing memo for fixed asset testing results."""
 
-    def _fa_scope(story: Any, styles: Any, doc_width: Any, composite: Any, data_quality: Any, period_tested_arg: Any) -> None:
+    def _fa_scope(
+        story: Any, styles: Any, doc_width: Any, composite: Any, data_quality: Any, period_tested_arg: Any
+    ) -> None:
         build_scope_section(
             story,
             styles,

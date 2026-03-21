@@ -165,6 +165,10 @@ def audit_trial_balance_streaming(
         pop_profile = compute_population_profile(display_balances, display_classifications)
         result["population_profile"] = pop_profile.to_dict()
 
+        # Surface population profile data quality to top-level (BUG-006)
+        if "data_quality" in result["population_profile"]:
+            result["data_quality"] = result["population_profile"]["data_quality"]
+
         # Expense Category Analytical Procedures
         from expense_category_engine import compute_expense_categories
 
@@ -513,6 +517,10 @@ def audit_trial_balance_multi_sheet(
 
         pop_profile = compute_population_profile(consolidated_account_balances)
         result["population_profile"] = pop_profile.to_dict()
+
+        # Surface population profile data quality to top-level (BUG-006)
+        if "data_quality" in result["population_profile"]:
+            result["data_quality"] = result["population_profile"]["data_quality"]
 
         if "classification_quality" not in result:
             result["classification_quality"] = {

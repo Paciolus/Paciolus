@@ -128,14 +128,20 @@ class User(Base):
 
     # Reverse relationships (Sprint 280: backref → back_populates)
     # Sprint 345: foreign_keys needed to disambiguate from SoftDeleteMixin.archived_by FK
-    activity_logs: Mapped[list["ActivityLog"]] = relationship("ActivityLog", back_populates="user", foreign_keys="[ActivityLog.user_id]")
+    activity_logs: Mapped[list["ActivityLog"]] = relationship(
+        "ActivityLog", back_populates="user", foreign_keys="[ActivityLog.user_id]"
+    )
     clients: Mapped[list["Client"]] = relationship("Client", back_populates="user")
     diagnostic_summaries: Mapped[list["DiagnosticSummary"]] = relationship(
         "DiagnosticSummary", back_populates="user", foreign_keys="[DiagnosticSummary.user_id]"
     )
-    verification_tokens: Mapped[list["EmailVerificationToken"]] = relationship("EmailVerificationToken", back_populates="user")
+    verification_tokens: Mapped[list["EmailVerificationToken"]] = relationship(
+        "EmailVerificationToken", back_populates="user"
+    )
     refresh_tokens: Mapped[list["RefreshToken"]] = relationship("RefreshToken", back_populates="user")
-    engagements: Mapped[list["Engagement"]] = relationship("Engagement", back_populates="creator", foreign_keys="[Engagement.created_by]")
+    engagements: Mapped[list["Engagement"]] = relationship(
+        "Engagement", back_populates="creator", foreign_keys="[Engagement.created_by]"
+    )
 
     def __repr__(self) -> str:
         return f"<User(id={self.id}, email={self.email[:10]}...)>"
@@ -157,7 +163,9 @@ class ActivityLog(SoftDeleteMixin, Base):
     filename_display: Mapped[str | None] = mapped_column(String(20), nullable=True)  # First 8 chars + "..." for UI
 
     # Timestamp
-    timestamp: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now(), index=True)
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(UTC), server_default=func.now(), index=True
+    )
 
     # Audit summary metadata (aggregate only - no specific account details)
     record_count: Mapped[int] = mapped_column(Integer, nullable=False)  # Number of rows processed
@@ -167,12 +175,14 @@ class ActivityLog(SoftDeleteMixin, Base):
 
     # Results (aggregate only)
     was_balanced: Mapped[bool] = mapped_column(Boolean, nullable=False)  # Did debits equal credits?
-    anomaly_count: Mapped[int] = mapped_column(Integer, default=0)  # Total anomalies found (no details)
-    material_count: Mapped[int] = mapped_column(Integer, default=0)  # Material anomalies only
-    immaterial_count: Mapped[int] = mapped_column(Integer, default=0)  # Immaterial anomalies only
+    anomaly_count: Mapped[int] = mapped_column(
+        Integer, default=0, server_default="0"
+    )  # Total anomalies found (no details)
+    material_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")  # Material anomalies only
+    immaterial_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")  # Immaterial anomalies only
 
     # Multi-sheet info (optional)
-    is_consolidated: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_consolidated: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
     sheet_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     # Sprint 461: Cryptographic audit chain (SOC 2 CC7.4)
@@ -232,7 +242,9 @@ class Client(Base):
     fiscal_year_end: Mapped[str] = mapped_column(String(5), default="12-31", nullable=False)
 
     # Sprint 1: Reporting framework metadata
-    reporting_framework: Mapped[ReportingFramework] = mapped_column(Enum(ReportingFramework), default=ReportingFramework.AUTO, nullable=False)
+    reporting_framework: Mapped[ReportingFramework] = mapped_column(
+        Enum(ReportingFramework), default=ReportingFramework.AUTO, nullable=False
+    )
     entity_type: Mapped[EntityType] = mapped_column(Enum(EntityType), default=EntityType.OTHER, nullable=False)
     jurisdiction_country: Mapped[str] = mapped_column(String(2), default="US", nullable=False)  # ISO 3166-1 alpha-2
     jurisdiction_state: Mapped[str | None] = mapped_column(String(50), nullable=True)  # US state or sub-national region
@@ -284,7 +296,9 @@ class DiagnosticSummary(SoftDeleteMixin, Base):
     user: Mapped["User"] = relationship("User", back_populates="diagnostic_summaries", foreign_keys=[user_id])
 
     # Timestamp for ordering and trend analysis
-    timestamp: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now(), index=True)
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(UTC), server_default=func.now(), index=True
+    )
 
     # Sprint 33: Period identification for trend analysis
     period_date: Mapped[date | None] = mapped_column(Date, nullable=True, index=True)  # End date of the period

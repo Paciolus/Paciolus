@@ -306,4 +306,4 @@ def create_classical_styles() -> dict:
         ),
     )
 
-    return dict(styles)
+    return {name: styles[name] for name in styles.byName}

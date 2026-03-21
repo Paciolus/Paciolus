@@ -60,8 +60,9 @@ class TestDrillDownTable:
         # Find the placeholder paragraph
         paragraphs = [e for e in story if isinstance(e, RParagraph)]
         placeholder_texts = [p.text for p in paragraphs]
-        assert any(_EMPTY_STATE_TEXT in t for t in placeholder_texts), (
-            f"Expected placeholder text not found in: {placeholder_texts}"
+        expected_text = _EMPTY_STATE_TEXT.format(title="Empty Detail")
+        assert any(expected_text in t for t in placeholder_texts), (
+            f"Expected placeholder text '{expected_text}' not found in: {placeholder_texts}"
         )
 
     def test_empty_rows_suppress_empty_true_renders_nothing(self, styles):

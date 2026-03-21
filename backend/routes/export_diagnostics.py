@@ -12,6 +12,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from security_utils import log_secure_operation
 
 logger = logging.getLogger(__name__)
+from fastapi.responses import StreamingResponse
+
 from auth import require_verified_user
 from excel_generator import generate_financial_statements_excel, generate_workpaper
 from financial_statement_builder import FinancialStatementBuilder
@@ -21,8 +23,6 @@ from models import User
 from pdf_generator import generate_audit_report, generate_financial_statements_pdf
 from recon_engine import ReconResult, ReconScore
 from shared.error_messages import sanitize_error
-from fastapi.responses import StreamingResponse
-
 from shared.export_helpers import streaming_csv_response, streaming_excel_response, streaming_pdf_response
 from shared.export_schemas import (
     AccrualCompletenessCSVInput,
@@ -283,7 +283,9 @@ def export_csv_anomalies(
 
 @router.post("/export/leadsheets")
 @limiter.limit(RATE_LIMIT_EXPORT)
-def export_leadsheets(request: Request, payload: LeadSheetInput, current_user: User = Depends(require_verified_user)) -> StreamingResponse:
+def export_leadsheets(
+    request: Request, payload: LeadSheetInput, current_user: User = Depends(require_verified_user)
+) -> StreamingResponse:
     """Generate Excel Lead Sheets from analysis result."""
     log_secure_operation("leadsheet_export", f"Exporting lead sheets for {len(payload.flux.items)} items")
 

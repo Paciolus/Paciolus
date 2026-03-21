@@ -390,27 +390,38 @@ def _build_outstanding_aging_tables(
         sorted_deposits = sorted(deposits, key=lambda d: d.get("days_outstanding", 0), reverse=True)
         display_deposits = sorted_deposits[:_MAX_AGING_ROWS]
 
+        cell_style = styles["MemoTableCell"]
         dep_data = [["Transaction Date", "Days Outstanding", "Description", "Amount", "Priority"]]
         for dep in display_deposits:
             days = dep.get("days_outstanding")
             if days is not None and days > 30:
-                priority = "HIGH"
+                tier_key = "high"
             elif days is not None and days > 10:
-                priority = "MEDIUM"
+                tier_key = "moderate"
             else:
-                priority = "LOW"
+                tier_key = "low"
+            tier_label = RISK_TIER_DISPLAY[tier_key][0]
+            priority = f"{tier_label} ({days}d)" if days is not None else tier_label
 
             dep_data.append(
                 [
-                    dep.get("date", "N/A"),
-                    str(days) if days is not None else "N/A",
-                    Paragraph(dep.get("description", "")[:40], styles["MemoTableCell"]),
-                    f"${abs(dep.get('amount', 0)):,.2f}",
-                    priority,
+                    Paragraph(str(dep.get("date", "N/A")), cell_style),
+                    Paragraph(str(days) if days is not None else "N/A", cell_style),
+                    Paragraph(dep.get("description", "")[:40], cell_style),
+                    Paragraph(f"${abs(dep.get('amount', 0)):,.2f}", cell_style),
+                    Paragraph(priority, cell_style),
                 ]
             )
 
-        dep_data.append(["Total", "", Paragraph("", styles["MemoTableCell"]), f"${abs(bank_only_amount):,.2f}", ""])
+        dep_data.append(
+            [
+                Paragraph("Total", cell_style),
+                Paragraph("", cell_style),
+                Paragraph("", cell_style),
+                Paragraph(f"${abs(bank_only_amount):,.2f}", cell_style),
+                Paragraph("", cell_style),
+            ]
+        )
 
         dep_table = Table(
             dep_data,
@@ -451,27 +462,38 @@ def _build_outstanding_aging_tables(
         sorted_checks = sorted(checks, key=lambda c: c.get("days_outstanding", 0), reverse=True)
         display_checks = sorted_checks[:_MAX_AGING_ROWS]
 
+        cell_style_chk = styles["MemoTableCell"]
         chk_data = [["Transaction Date", "Days Outstanding", "Description", "Amount", "Priority"]]
         for chk in display_checks:
             days = chk.get("days_outstanding")
             if days is not None and days > 90:
-                priority = "HIGH"
+                tier_key = "high"
             elif days is not None and days > 30:
-                priority = "MEDIUM"
+                tier_key = "moderate"
             else:
-                priority = "LOW"
+                tier_key = "low"
+            tier_label = RISK_TIER_DISPLAY[tier_key][0]
+            priority = f"{tier_label} ({days}d)" if days is not None else tier_label
 
             chk_data.append(
                 [
-                    chk.get("date", "N/A"),
-                    str(days) if days is not None else "N/A",
-                    Paragraph(chk.get("description", "")[:40], styles["MemoTableCell"]),
-                    f"${abs(chk.get('amount', 0)):,.2f}",
-                    priority,
+                    Paragraph(str(chk.get("date", "N/A")), cell_style_chk),
+                    Paragraph(str(days) if days is not None else "N/A", cell_style_chk),
+                    Paragraph(chk.get("description", "")[:40], cell_style_chk),
+                    Paragraph(f"${abs(chk.get('amount', 0)):,.2f}", cell_style_chk),
+                    Paragraph(priority, cell_style_chk),
                 ]
             )
 
-        chk_data.append(["Total", "", Paragraph("", styles["MemoTableCell"]), f"${abs(ledger_only_amount):,.2f}", ""])
+        chk_data.append(
+            [
+                Paragraph("Total", cell_style_chk),
+                Paragraph("", cell_style_chk),
+                Paragraph("", cell_style_chk),
+                Paragraph(f"${abs(ledger_only_amount):,.2f}", cell_style_chk),
+                Paragraph("", cell_style_chk),
+            ]
+        )
 
         chk_table = Table(
             chk_data,
@@ -893,13 +915,14 @@ def generate_bank_rec_memo(
         # Results by test table (from rec_tests)
         rec_tests = rec_result.get("rec_tests", [])
         if rec_tests:
+            cell_style_rt = styles["MemoTableCell"]
             results_data = [["Test", "Flagged", "Severity"]]
             for rt in rec_tests:
                 results_data.append(
                     [
-                        rt.get("test_name", ""),
-                        str(rt.get("flagged_count", 0)),
-                        rt.get("severity", "low").upper(),
+                        Paragraph(str(rt.get("test_name", "")), cell_style_rt),
+                        Paragraph(str(rt.get("flagged_count", 0)), cell_style_rt),
+                        Paragraph(rt.get("severity", "low").upper(), cell_style_rt),
                     ]
                 )
 

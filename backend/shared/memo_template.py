@@ -295,6 +295,10 @@ def generate_testing_memo(
         story.append(Paragraph(f"{section_label}. Key Findings", styles["MemoSection"]))
         story.append(LedgerRule(doc.width))
 
+        # BUG-001 fix: incorporate entity/filename into rotation seed so
+        # different reports for different entities rotate through alternates
+        rotation_seed = hash(client_name) if client_name else (hash(filename) if filename else 0)
+
         for i, finding in enumerate(top_findings[:5], 1):
             story.append(Paragraph(f"{i}. {fmt(finding)}", styles["MemoBody"]))
             # Match finding to test_key for follow-up lookup (dict-based, not index-based)
@@ -309,7 +313,7 @@ def generate_testing_memo(
                     )
                 )
             # Add follow-up suggestion if available (rotate across findings)
-            procedure = get_follow_up_procedure(test_key, rotation_index=i)
+            procedure = get_follow_up_procedure(test_key, rotation_index=rotation_seed + i)
             if procedure:
                 story.append(
                     Paragraph(

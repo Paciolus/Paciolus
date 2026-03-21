@@ -590,17 +590,21 @@ def _build_unmatched_documents(
                 styles["MemoBody"],
             )
         )
+        cell_style = styles["MemoTableCell"]
         inv_data = [["Invoice Number", "Vendor", "Invoice Date", "Amount"]]
         for inv in unmatched_invoices[:_MAX_UNMATCHED_ROWS]:
             doc_dict = inv.get("document", inv)
             inv_data.append(
                 [
-                    doc_dict.get("invoice_number", "\u2014"),
-                    doc_dict.get("vendor", "\u2014"),
-                    doc_dict.get("invoice_date", "\u2014"),
-                    f"${doc_dict.get('amount', doc_dict.get('total_amount', 0)):,.2f}"
-                    if doc_dict.get("amount") or doc_dict.get("total_amount")
-                    else "\u2014",
+                    Paragraph(str(doc_dict.get("invoice_number", "\u2014")), cell_style),
+                    Paragraph(str(doc_dict.get("vendor", "\u2014")), cell_style),
+                    Paragraph(str(doc_dict.get("invoice_date", "\u2014")), cell_style),
+                    Paragraph(
+                        f"${doc_dict.get('amount', doc_dict.get('total_amount', 0)):,.2f}"
+                        if doc_dict.get("amount") or doc_dict.get("total_amount")
+                        else "\u2014",
+                        cell_style,
+                    ),
                 ]
             )
         inv_table = Table(inv_data, colWidths=[1.3 * inch, 2.0 * inch, 1.2 * inch, 1.3 * inch], repeatRows=1)
@@ -629,17 +633,21 @@ def _build_unmatched_documents(
                 styles["MemoBody"],
             )
         )
+        cell_style_po = styles["MemoTableCell"]
         po_data = [["PO Number", "Vendor", "PO Date", "PO Amount"]]
         for po in unmatched_pos[:_MAX_UNMATCHED_ROWS]:
             doc_dict = po.get("document", po)
             po_data.append(
                 [
-                    doc_dict.get("po_number", "\u2014"),
-                    doc_dict.get("vendor", "\u2014"),
-                    doc_dict.get("po_date", doc_dict.get("order_date", "\u2014")),
-                    f"${doc_dict.get('po_amount', doc_dict.get('total_amount', 0)):,.2f}"
-                    if doc_dict.get("po_amount") or doc_dict.get("total_amount")
-                    else "\u2014",
+                    Paragraph(str(doc_dict.get("po_number", "\u2014")), cell_style_po),
+                    Paragraph(str(doc_dict.get("vendor", "\u2014")), cell_style_po),
+                    Paragraph(str(doc_dict.get("po_date", doc_dict.get("order_date", "\u2014"))), cell_style_po),
+                    Paragraph(
+                        f"${doc_dict.get('po_amount', doc_dict.get('total_amount', 0)):,.2f}"
+                        if doc_dict.get("po_amount") or doc_dict.get("total_amount")
+                        else "\u2014",
+                        cell_style_po,
+                    ),
                 ]
             )
         po_table = Table(po_data, colWidths=[1.3 * inch, 2.0 * inch, 1.2 * inch, 1.3 * inch], repeatRows=1)
@@ -668,17 +676,23 @@ def _build_unmatched_documents(
                 styles["MemoBody"],
             )
         )
+        cell_style_rec = styles["MemoTableCell"]
         rec_data = [["GRN Number", "Vendor", "Receipt Date", "Amount"]]
         for rec in unmatched_receipts[:_MAX_UNMATCHED_ROWS]:
             doc_dict = rec.get("document", rec)
             rec_data.append(
                 [
-                    doc_dict.get("receipt_number", doc_dict.get("grn_number", "\u2014")),
-                    doc_dict.get("vendor", "\u2014"),
-                    doc_dict.get("receipt_date", "\u2014"),
-                    f"${doc_dict.get('amount', doc_dict.get('total_amount', 0)):,.2f}"
-                    if doc_dict.get("amount") or doc_dict.get("total_amount")
-                    else "\u2014",
+                    Paragraph(
+                        str(doc_dict.get("receipt_number", doc_dict.get("grn_number", "\u2014"))), cell_style_rec
+                    ),
+                    Paragraph(str(doc_dict.get("vendor", "\u2014")), cell_style_rec),
+                    Paragraph(str(doc_dict.get("receipt_date", "\u2014")), cell_style_rec),
+                    Paragraph(
+                        f"${doc_dict.get('amount', doc_dict.get('total_amount', 0)):,.2f}"
+                        if doc_dict.get("amount") or doc_dict.get("total_amount")
+                        else "\u2014",
+                        cell_style_rec,
+                    ),
                 ]
             )
         rec_table = Table(rec_data, colWidths=[1.3 * inch, 2.0 * inch, 1.2 * inch, 1.3 * inch], repeatRows=1)
