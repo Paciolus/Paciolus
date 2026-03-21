@@ -4,9 +4,7 @@ Sprint 262: Migrated from in-memory dicts to DB-backed ToolSession.
 """
 
 from datetime import UTC, datetime
-from typing import Optional
-
-from typing import Any
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from sqlalchemy.orm import Session

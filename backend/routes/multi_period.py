@@ -1,6 +1,7 @@
 """
 Paciolus API — Multi-Period TB Comparison Routes
 """
+
 import logging
 from datetime import UTC, datetime
 from typing import Optional
@@ -16,7 +17,6 @@ from auth import require_verified_user
 from database import get_db
 from models import User
 from multi_period_comparison import (
-    MovementSummary,
     compare_three_periods,
     compare_trial_balances,
     export_movements_csv,
@@ -36,6 +36,7 @@ router = APIRouter(tags=["multi_period"])
 
 class AccountEntry(BaseModel):
     """Single account entry in a trial balance."""
+
     account: str = Field(..., min_length=1, max_length=500)
     debit: float = Field(0.0, ge=0)
     credit: float = Field(0.0, ge=0)
@@ -44,6 +45,7 @@ class AccountEntry(BaseModel):
 
 class ComparePeriodAccountsRequest(BaseModel):
     """Request to compare two trial balance datasets at the account level."""
+
     prior_accounts: list[dict] = Field(..., description="Prior period account list")
     current_accounts: list[dict] = Field(..., description="Current period account list")
     prior_label: str = Field("Prior Period", min_length=1, max_length=100, description="Label for prior period")
@@ -54,6 +56,7 @@ class ComparePeriodAccountsRequest(BaseModel):
 
 class ThreeWayComparisonRequest(BaseModel):
     """Request to compare three trial balance datasets (prior + current + budget)."""
+
     prior_accounts: list[dict] = Field(..., description="Prior period account list")
     current_accounts: list[dict] = Field(..., description="Current period account list")
     budget_accounts: list[dict] = Field(..., description="Budget/forecast account list")
@@ -66,6 +69,7 @@ class ThreeWayComparisonRequest(BaseModel):
 
 class MovementExportRequest(BaseModel):
     """Request to export movement comparison as CSV."""
+
     prior_accounts: list[dict] = Field(..., description="Prior period account list")
     current_accounts: list[dict] = Field(..., description="Current period account list")
     budget_accounts: Optional[list[dict]] = Field(None, description="Optional budget account list")
@@ -87,7 +91,7 @@ def compare_period_trial_balances(
     """Compare two trial balance datasets at the account level."""
     log_secure_operation(
         "compare_period_trial_balances",
-        f"User {current_user.id} comparing {len(payload.prior_accounts)} vs {len(payload.current_accounts)} accounts"
+        f"User {current_user.id} comparing {len(payload.prior_accounts)} vs {len(payload.current_accounts)} accounts",
     )
 
     result = compare_trial_balances(
@@ -100,7 +104,9 @@ def compare_period_trial_balances(
 
     result_dict = result.to_dict()
     flagged = extract_multi_period_accounts(result_dict)
-    background_tasks.add_task(maybe_record_tool_run, db, payload.engagement_id, current_user.id, "multi_period", True, None, flagged)
+    background_tasks.add_task(
+        maybe_record_tool_run, db, payload.engagement_id, current_user.id, "multi_period", True, None, flagged
+    )
 
     return result_dict
 
@@ -118,7 +124,7 @@ def compare_three_way_trial_balances(
     log_secure_operation(
         "compare_three_way_trial_balances",
         f"User {current_user.id} three-way: {len(payload.prior_accounts)} vs "
-        f"{len(payload.current_accounts)} vs {len(payload.budget_accounts)} accounts"
+        f"{len(payload.current_accounts)} vs {len(payload.budget_accounts)} accounts",
     )
 
     result = compare_three_periods(
@@ -133,7 +139,9 @@ def compare_three_way_trial_balances(
 
     result_dict = result.to_dict()
     flagged = extract_multi_period_accounts(result_dict)
-    background_tasks.add_task(maybe_record_tool_run, db, payload.engagement_id, current_user.id, "multi_period", True, None, flagged)
+    background_tasks.add_task(
+        maybe_record_tool_run, db, payload.engagement_id, current_user.id, "multi_period", True, None, flagged
+    )
 
     return result_dict
 
@@ -146,10 +154,7 @@ def export_csv_movements(
     current_user: User = Depends(require_verified_user),
 ) -> StreamingResponse:
     """Export movement comparison data as CSV."""
-    log_secure_operation(
-        "csv_movements_export_start",
-        f"User {current_user.id} exporting movements CSV"
-    )
+    log_secure_operation("csv_movements_export_start", f"User {current_user.id} exporting movements CSV")
 
     try:
         has_budget = payload.budget_accounts is not None and len(payload.budget_accounts) > 0
@@ -184,10 +189,7 @@ def export_csv_movements(
         timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
         download_filename = f"Movement_Comparison_{timestamp}.csv"
 
-        log_secure_operation(
-            "csv_movements_export_complete",
-            f"CSV movements generated: {len(csv_bytes)} bytes"
-        )
+        log_secure_operation("csv_movements_export_complete", f"CSV movements generated: {len(csv_bytes)} bytes")
 
         return StreamingResponse(
             iter([csv_bytes]),
@@ -200,7 +202,4 @@ def export_csv_movements(
 
     except (ValueError, KeyError, TypeError, UnicodeEncodeError) as e:
         logger.exception("Multi-period CSV movements export failed")
-        raise HTTPException(
-            status_code=500,
-            detail=sanitize_error(e, "export", "csv_movements_export_error")
-        )
+        raise HTTPException(status_code=500, detail=sanitize_error(e, "export", "csv_movements_export_error"))

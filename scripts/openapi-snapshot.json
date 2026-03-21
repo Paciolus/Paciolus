@@ -20589,7 +20589,11 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Overview Admin Overview Get",
+                  "type": "object"
+                }
               }
             },
             "description": "Successful Response"
@@ -20678,7 +20682,14 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Get Team Activity Admin Team Activity Get",
+                  "type": "array"
+                }
               }
             },
             "description": "Successful Response"
@@ -20723,7 +20734,14 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Get Usage By Member Admin Usage By Member Get",
+                  "type": "array"
+                }
               }
             },
             "description": "Successful Response"
@@ -23406,7 +23424,11 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Branding Branding  Get",
+                  "type": "object"
+                }
               }
             },
             "description": "Successful Response"
@@ -23449,7 +23471,11 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Update Branding Branding  Put",
+                  "type": "object"
+                }
               }
             },
             "description": "Successful Response"
@@ -23494,7 +23520,13 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Delete Logo Branding Logo Delete",
+                  "type": "object"
+                }
               }
             },
             "description": "Successful Response"
@@ -23547,7 +23579,11 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Upload Logo Branding Logo Post",
+                  "type": "object"
+                }
               }
             },
             "description": "Successful Response"
@@ -25757,7 +25793,14 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Shares Export Sharing  Get",
+                  "type": "array"
+                }
               }
             },
             "description": "Successful Response"
@@ -25802,7 +25845,11 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Share Export Sharing Create Post",
+                  "type": "object"
+                }
               }
             },
             "description": "Successful Response"
@@ -25856,7 +25903,13 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Revoke Share Export Sharing  Token  Delete",
+                  "type": "object"
+                }
               }
             },
             "description": "Successful Response"
@@ -28038,7 +28091,11 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Organization Organization Get",
+                  "type": "object"
+                }
               }
             },
             "description": "Successful Response"
@@ -28081,7 +28138,11 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Organization Organization Post",
+                  "type": "object"
+                }
               }
             },
             "description": "Successful Response"
@@ -28134,7 +28195,11 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Update Organization Organization Put",
+                  "type": "object"
+                }
               }
             },
             "description": "Successful Response"
@@ -28189,7 +28254,11 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Invite Organization Invite Post",
+                  "type": "object"
+                }
               }
             },
             "description": "Successful Response"
@@ -28243,7 +28312,13 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Accept Invite Organization Invite Accept  Token  Post",
+                  "type": "object"
+                }
               }
             },
             "description": "Successful Response"
@@ -28278,7 +28353,14 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Invites Organization Invites Get",
+                  "type": "array"
+                }
               }
             },
             "description": "Successful Response"
@@ -28322,7 +28404,13 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Revoke Invite Organization Invites  Invite Id  Delete",
+                  "type": "object"
+                }
               }
             },
             "description": "Successful Response"
@@ -28357,7 +28445,14 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Members Organization Members Get",
+                  "type": "array"
+                }
               }
             },
             "description": "Successful Response"
@@ -28401,7 +28496,13 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Remove Member Organization Members  Member Id  Delete",
+                  "type": "object"
+                }
               }
             },
             "description": "Successful Response"
@@ -28465,7 +28566,11 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Update Member Role Organization Members  Member Id  Role Put",
+                  "type": "object"
+                }
               }
             },
             "description": "Successful Response"
@@ -28710,7 +28815,11 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Start Bulk Upload Upload Bulk Post",
+                  "type": "object"
+                }
               }
             },
             "description": "Successful Response"
@@ -28756,7 +28865,11 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Bulk Status Upload Bulk  Job Id  Status Get",
+                  "type": "object"
+                }
               }
             },
             "description": "Successful Response"
