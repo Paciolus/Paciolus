@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import type { AbnormalBalanceExtended, AccountType, RiskSummary } from '@/types/mapping'
 import type { DisplayMode } from '@/components/sensitivity'
+import type { AbnormalBalanceExtended, AccountType, RiskSummary } from '@/types/mapping'
 import { AnomalyCard } from './AnomalyCard'
 
 interface RiskDashboardProps {

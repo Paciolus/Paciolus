@@ -5,8 +5,9 @@ Sprint 539: Registry-based refactor — declarative dispatch eliminates per-rout
 """
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
@@ -103,7 +104,8 @@ def _flux_expectations_preprocessor(payload: BaseModel) -> tuple[dict[str, Any],
     # payload.flux and payload.expectations are typed sub-models
     flux_dict = payload.flux.model_dump()  # type: ignore[attr-defined]
     expectations_dict = {
-        k: v.model_dump() for k, v in payload.expectations.items()  # type: ignore[attr-defined]
+        k: v.model_dump()
+        for k, v in payload.expectations.items()  # type: ignore[attr-defined]
     }
     return flux_dict, {"expectations": expectations_dict}
 
@@ -143,7 +145,9 @@ def _memo_export_handler(
         )
 
         download_filename = safe_download_filename(
-            payload.filename, entry.filename_template, "pdf"  # type: ignore[attr-defined]
+            payload.filename,
+            entry.filename_template,
+            "pdf",  # type: ignore[attr-defined]
         )
         return streaming_pdf_response(pdf_bytes, download_filename)
     except (ValueError, KeyError, TypeError, OSError) as e:

@@ -441,6 +441,17 @@
             "title": "Filename",
             "type": "string"
           },
+          "fiscal_year_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Year End"
+          },
           "include_signoff": {
             "default": false,
             "title": "Include Signoff",
@@ -527,8 +538,7 @@
         "type": "object"
       },
       "APTestingResponse": {
-        "additionalProperties": true,
-        "description": "Complete AP payment testing response.\n\nUses extra='allow' as a safety net during migration.",
+        "description": "Complete AP payment testing response.\n\nUses extra='ignore' — unknown fields silently dropped (Sprint 561 hardening).",
         "properties": {
           "column_detection": {
             "anyOf": [
@@ -608,6 +618,17 @@
             "default": "ar_aging",
             "title": "Filename",
             "type": "string"
+          },
+          "fiscal_year_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Year End"
           },
           "include_signoff": {
             "default": false,
@@ -719,8 +740,7 @@
         "type": "object"
       },
       "ARAgingResponse": {
-        "additionalProperties": true,
-        "description": "Complete AR aging analysis response.\n\nUses extra='allow' as a safety net during migration.",
+        "description": "Complete AR aging analysis response.\n\nUses extra='ignore' — unknown fields silently dropped (Sprint 561 hardening).",
         "properties": {
           "ar_summary": {
             "anyOf": [
@@ -1458,8 +1478,7 @@
         "type": "object"
       },
       "AbnormalBalanceResponse": {
-        "additionalProperties": true,
-        "description": "Individual anomaly detected in trial balance.\n\nUses extra='allow' because anomaly entries carry variable flags\ndepending on anomaly type (suspense, concentration, rounding).",
+        "description": "Individual anomaly detected in trial balance.\n\nUses extra='ignore' — unknown fields silently dropped (Sprint 561 hardening).\nAnomaly entries carry variable flags depending on anomaly type\n(suspense, concentration, rounding).",
         "properties": {
           "account": {
             "title": "Account",
@@ -1818,6 +1837,103 @@
         "title": "AccountMovementResponse",
         "type": "object"
       },
+      "AccountRiskAssessmentInput": {
+        "description": "Single auditor-provided risk assessment for an account/assertion pair.",
+        "properties": {
+          "account_name": {
+            "description": "Account name",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Account Name",
+            "type": "string"
+          },
+          "assertion": {
+            "description": "Financial statement assertion: existence, completeness, valuation, rights, presentation",
+            "title": "Assertion",
+            "type": "string"
+          },
+          "auditor_notes": {
+            "default": "",
+            "description": "Optional auditor notes",
+            "maxLength": 1000,
+            "title": "Auditor Notes",
+            "type": "string"
+          },
+          "control_risk": {
+            "description": "Auditor-assessed control risk: low, moderate, elevated, high",
+            "title": "Control Risk",
+            "type": "string"
+          },
+          "fraud_risk_factor": {
+            "default": false,
+            "description": "Whether fraud risk factors are present",
+            "title": "Fraud Risk Factor",
+            "type": "boolean"
+          },
+          "inherent_risk": {
+            "description": "Auditor-assessed inherent risk: low, moderate, elevated, high",
+            "title": "Inherent Risk",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_name",
+          "assertion",
+          "inherent_risk",
+          "control_risk"
+        ],
+        "title": "AccountRiskAssessmentInput",
+        "type": "object"
+      },
+      "AccountRiskAssessmentResponse": {
+        "properties": {
+          "account_name": {
+            "title": "Account Name",
+            "type": "string"
+          },
+          "assertion": {
+            "title": "Assertion",
+            "type": "string"
+          },
+          "auditor_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Auditor Notes"
+          },
+          "combined_risk": {
+            "title": "Combined Risk",
+            "type": "string"
+          },
+          "control_risk": {
+            "title": "Control Risk",
+            "type": "string"
+          },
+          "fraud_risk_factor": {
+            "title": "Fraud Risk Factor",
+            "type": "boolean"
+          },
+          "inherent_risk": {
+            "title": "Inherent Risk",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_name",
+          "assertion",
+          "inherent_risk",
+          "control_risk",
+          "combined_risk",
+          "fraud_risk_factor"
+        ],
+        "title": "AccountRiskAssessmentResponse",
+        "type": "object"
+      },
       "AccrualAccountResponse": {
         "description": "One identified accrual account.",
         "properties": {
@@ -2031,6 +2147,17 @@
             "items": {},
             "title": "Findings",
             "type": "array"
+          },
+          "fiscal_year_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Year End"
           },
           "include_signoff": {
             "default": false,
@@ -2362,37 +2489,6 @@
           "procedure"
         ],
         "title": "AccrualProcedureResponse",
-        "type": "object"
-      },
-      "ActivityHistoryResponse": {
-        "properties": {
-          "activities": {
-            "items": {
-              "$ref": "#/components/schemas/ActivityLogResponse"
-            },
-            "title": "Activities",
-            "type": "array"
-          },
-          "page": {
-            "title": "Page",
-            "type": "integer"
-          },
-          "page_size": {
-            "title": "Page Size",
-            "type": "integer"
-          },
-          "total_count": {
-            "title": "Total Count",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "activities",
-          "total_count",
-          "page",
-          "page_size"
-        ],
-        "title": "ActivityHistoryResponse",
         "type": "object"
       },
       "ActivityLogCreate": {
@@ -3788,6 +3884,17 @@
             "title": "Filename",
             "type": "string"
           },
+          "fiscal_year_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Year End"
+          },
           "include_signoff": {
             "default": false,
             "title": "Include Signoff",
@@ -3889,8 +3996,50 @@
           "bank_column_detection": {
             "$ref": "#/components/schemas/BankColumnDetectionResponse"
           },
+          "composite_score": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Composite Score"
+          },
           "ledger_column_detection": {
             "$ref": "#/components/schemas/BankColumnDetectionResponse"
+          },
+          "outstanding_aging": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outstanding Aging"
+          },
+          "rec_tests": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rec Tests"
           },
           "summary": {
             "$ref": "#/components/schemas/ReconciliationSummaryResponse"
@@ -4453,6 +4602,17 @@
       },
       "Body_audit_ar_aging_audit_ar_aging_post": {
         "properties": {
+          "as_of_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of Date"
+          },
           "beginning_ar_balance": {
             "anyOf": [
               {
@@ -4598,6 +4758,28 @@
             "contentMediaType": "application/octet-stream",
             "title": "Ledger File",
             "type": "string"
+          },
+          "materiality": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Materiality"
+          },
+          "performance_materiality": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Performance Materiality"
           }
         },
         "required": [
@@ -4935,6 +5117,17 @@
             "minimum": 0.0,
             "title": "Materiality Threshold",
             "type": "number"
+          },
+          "preflight_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preflight Token"
           },
           "selected_sheets": {
             "anyOf": [
@@ -5838,37 +6031,6 @@
         "title": "ClientCreate",
         "type": "object"
       },
-      "ClientListResponse": {
-        "properties": {
-          "clients": {
-            "items": {
-              "$ref": "#/components/schemas/ClientResponse"
-            },
-            "title": "Clients",
-            "type": "array"
-          },
-          "page": {
-            "title": "Page",
-            "type": "integer"
-          },
-          "page_size": {
-            "title": "Page Size",
-            "type": "integer"
-          },
-          "total_count": {
-            "title": "Total Count",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "clients",
-          "total_count",
-          "page",
-          "page_size"
-        ],
-        "title": "ClientListResponse",
-        "type": "object"
-      },
       "ClientResponse": {
         "properties": {
           "created_at": {
@@ -6649,6 +6811,166 @@
         "title": "CompareRequest",
         "type": "object"
       },
+      "CompositeRiskProfileRequest": {
+        "description": "Request body for building a composite risk profile.",
+        "properties": {
+          "account_assessments": {
+            "description": "Auditor-provided risk assessments (at least one required)",
+            "items": {
+              "$ref": "#/components/schemas/AccountRiskAssessmentInput"
+            },
+            "maxItems": 500,
+            "minItems": 1,
+            "title": "Account Assessments",
+            "type": "array"
+          },
+          "going_concern_indicators_triggered": {
+            "default": 0,
+            "description": "Count of triggered going concern indicators",
+            "maximum": 20.0,
+            "minimum": 0.0,
+            "title": "Going Concern Indicators Triggered",
+            "type": "integer"
+          },
+          "tb_diagnostic_score": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "TB diagnostic anomaly density score (0-100)",
+            "title": "Tb Diagnostic Score"
+          },
+          "tb_diagnostic_tier": {
+            "anyOf": [
+              {
+                "maxLength": 50,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "TB diagnostic tier label",
+            "title": "Tb Diagnostic Tier"
+          },
+          "testing_scores": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Tool composite scores keyed by tool name",
+            "title": "Testing Scores"
+          }
+        },
+        "required": [
+          "account_assessments"
+        ],
+        "title": "CompositeRiskProfileRequest",
+        "type": "object"
+      },
+      "CompositeRiskProfileResponse": {
+        "properties": {
+          "account_assessments": {
+            "items": {
+              "$ref": "#/components/schemas/AccountRiskAssessmentResponse"
+            },
+            "title": "Account Assessments",
+            "type": "array"
+          },
+          "disclaimer": {
+            "title": "Disclaimer",
+            "type": "string"
+          },
+          "fraud_risk_accounts": {
+            "title": "Fraud Risk Accounts",
+            "type": "integer"
+          },
+          "going_concern_indicators_triggered": {
+            "title": "Going Concern Indicators Triggered",
+            "type": "integer"
+          },
+          "high_risk_accounts": {
+            "title": "High Risk Accounts",
+            "type": "integer"
+          },
+          "overall_risk_tier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Overall Risk Tier"
+          },
+          "risk_distribution": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Risk Distribution",
+            "type": "object"
+          },
+          "tb_diagnostic_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tb Diagnostic Score"
+          },
+          "tb_diagnostic_tier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tb Diagnostic Tier"
+          },
+          "testing_scores": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Testing Scores",
+            "type": "object"
+          },
+          "total_assessments": {
+            "title": "Total Assessments",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "account_assessments",
+          "testing_scores",
+          "going_concern_indicators_triggered",
+          "high_risk_accounts",
+          "fraud_risk_accounts",
+          "total_assessments",
+          "risk_distribution",
+          "disclaimer"
+        ],
+        "title": "CompositeRiskProfileResponse",
+        "type": "object"
+      },
       "CompositeScoreResponse": {
         "description": "Testing composite score — shared by JE and AP.",
         "properties": {
@@ -7008,6 +7330,17 @@
             "default": "currency_conversion",
             "title": "Filename",
             "type": "string"
+          },
+          "fiscal_year_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Year End"
           },
           "include_signoff": {
             "default": false,
@@ -7802,37 +8135,6 @@
         "title": "EngagementCreate",
         "type": "object"
       },
-      "EngagementListResponse": {
-        "properties": {
-          "engagements": {
-            "items": {
-              "$ref": "#/components/schemas/EngagementResponse"
-            },
-            "title": "Engagements",
-            "type": "array"
-          },
-          "page": {
-            "title": "Page",
-            "type": "integer"
-          },
-          "page_size": {
-            "title": "Page Size",
-            "type": "integer"
-          },
-          "total_count": {
-            "title": "Total Count",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "engagements",
-          "total_count",
-          "page",
-          "page_size"
-        ],
-        "title": "EngagementListResponse",
-        "type": "object"
-      },
       "EngagementResponse": {
         "properties": {
           "client_id": {
@@ -8309,6 +8611,17 @@
             "title": "Filename",
             "type": "string"
           },
+          "fiscal_year_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Year End"
+          },
           "include_signoff": {
             "default": false,
             "title": "Include Signoff",
@@ -8745,8 +9058,7 @@
         "type": "object"
       },
       "FATestingResponse": {
-        "additionalProperties": true,
-        "description": "Complete fixed asset testing response.\n\nUses extra='allow' as a safety net during migration.",
+        "description": "Complete fixed asset testing response.\n\nUses extra='ignore' — unknown fields silently dropped (Sprint 561 hardening).",
         "properties": {
           "column_detection": {
             "anyOf": [
@@ -9181,6 +9493,17 @@
             "title": "Filename",
             "type": "string"
           },
+          "fiscal_year_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Year End"
+          },
           "include_signoff": {
             "default": false,
             "title": "Include Signoff",
@@ -9329,6 +9652,17 @@
             "default": "export",
             "title": "Filename",
             "type": "string"
+          },
+          "fiscal_year_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Year End"
           },
           "flux": {
             "$ref": "#/components/schemas/FluxResultInput"
@@ -9748,37 +10082,6 @@
           "tool_source"
         ],
         "title": "FollowUpItemCreate",
-        "type": "object"
-      },
-      "FollowUpItemListResponse": {
-        "properties": {
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/FollowUpItemResponse"
-            },
-            "title": "Items",
-            "type": "array"
-          },
-          "page": {
-            "title": "Page",
-            "type": "integer"
-          },
-          "page_size": {
-            "title": "Page Size",
-            "type": "integer"
-          },
-          "total_count": {
-            "title": "Total Count",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "items",
-          "total_count",
-          "page",
-          "page_size"
-        ],
-        "title": "FollowUpItemListResponse",
         "type": "object"
       },
       "FollowUpItemResponse": {
@@ -10555,8 +10858,7 @@
         "type": "object"
       },
       "InvTestingResponse": {
-        "additionalProperties": true,
-        "description": "Complete inventory testing response.\n\nUses extra='allow' as a safety net during migration.",
+        "description": "Complete inventory testing response.\n\nUses extra='ignore' — unknown fields silently dropped (Sprint 561 hardening).",
         "properties": {
           "column_detection": {
             "anyOf": [
@@ -10727,6 +11029,17 @@
             "default": "inventory_testing",
             "title": "Filename",
             "type": "string"
+          },
+          "fiscal_year_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Year End"
           },
           "include_signoff": {
             "default": false,
@@ -11234,6 +11547,17 @@
             "title": "Filename",
             "type": "string"
           },
+          "fiscal_year_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Year End"
+          },
           "include_signoff": {
             "default": false,
             "title": "Include Signoff",
@@ -11332,8 +11656,7 @@
         "type": "object"
       },
       "JETestingResponse": {
-        "additionalProperties": true,
-        "description": "Complete journal entry testing response.\n\nUses extra='allow' as a safety net during migration — any fields\nnot yet modeled still pass through to the frontend.",
+        "description": "Complete journal entry testing response.\n\nUses extra='ignore' — unknown fields silently dropped (Sprint 561 hardening).",
         "properties": {
           "benford_result": {
             "anyOf": [
@@ -12200,6 +12523,17 @@
             "title": "Filename",
             "type": "string"
           },
+          "fiscal_year_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Year End"
+          },
           "include_signoff": {
             "default": false,
             "title": "Include Signoff",
@@ -12465,6 +12799,130 @@
           "requires_mapping"
         ],
         "title": "POColumnDetectionResponse",
+        "type": "object"
+      },
+      "PaginatedResponse_ActivityLogResponse_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ActivityLogResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "total_count": {
+            "title": "Total Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total_count",
+          "page",
+          "page_size"
+        ],
+        "title": "PaginatedResponse[ActivityLogResponse]",
+        "type": "object"
+      },
+      "PaginatedResponse_ClientResponse_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ClientResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "total_count": {
+            "title": "Total Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total_count",
+          "page",
+          "page_size"
+        ],
+        "title": "PaginatedResponse[ClientResponse]",
+        "type": "object"
+      },
+      "PaginatedResponse_EngagementResponse_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/EngagementResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "total_count": {
+            "title": "Total Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total_count",
+          "page",
+          "page_size"
+        ],
+        "title": "PaginatedResponse[EngagementResponse]",
+        "type": "object"
+      },
+      "PaginatedResponse_FollowUpItemResponse_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/FollowUpItemResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "total_count": {
+            "title": "Total Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total_count",
+          "page",
+          "page_size"
+        ],
+        "title": "PaginatedResponse[FollowUpItemResponse]",
         "type": "object"
       },
       "PasswordChange": {
@@ -13091,6 +13549,17 @@
             "title": "Filename",
             "type": "string"
           },
+          "fiscal_year_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Year End"
+          },
           "include_signoff": {
             "default": false,
             "title": "Include Signoff",
@@ -13177,8 +13646,7 @@
         "type": "object"
       },
       "PayrollTestingResponse": {
-        "additionalProperties": true,
-        "description": "Complete payroll testing response.\n\nUses extra='allow' as a safety net during migration.",
+        "description": "Complete payroll testing response.\n\nUses extra='ignore' — unknown fields silently dropped (Sprint 561 hardening).",
         "properties": {
           "column_detection": {
             "anyOf": [
@@ -13255,6 +13723,17 @@
           "passes_quality_gate": {
             "title": "Passes Quality Gate",
             "type": "boolean"
+          },
+          "preflight_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preflight Token"
           },
           "remediation_hints": {
             "items": {
@@ -13879,6 +14358,17 @@
             "default": "population_profile",
             "title": "Filename",
             "type": "string"
+          },
+          "fiscal_year_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Year End"
           },
           "gini_coefficient": {
             "default": 0.0,
@@ -14542,6 +15032,17 @@
             "default": "preflight_report",
             "title": "Filename",
             "type": "string"
+          },
+          "fiscal_year_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Year End"
           },
           "include_signoff": {
             "default": false,
@@ -16238,6 +16739,17 @@
             "title": "Filename",
             "type": "string"
           },
+          "fiscal_year_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Year End"
+          },
           "include_signoff": {
             "default": false,
             "title": "Include Signoff",
@@ -16324,8 +16836,7 @@
         "type": "object"
       },
       "RevenueTestingResponse": {
-        "additionalProperties": true,
-        "description": "Complete revenue testing response.\n\nUses extra='allow' as a safety net during migration.",
+        "description": "Complete revenue testing response.\n\nUses extra='ignore' — unknown fields silently dropped (Sprint 561 hardening).",
         "properties": {
           "column_detection": {
             "anyOf": [
@@ -16554,6 +17065,17 @@
             "default": "sampling_design",
             "title": "Filename",
             "type": "string"
+          },
+          "fiscal_year_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Year End"
           },
           "high_value_count": {
             "default": 0,
@@ -16919,6 +17441,17 @@
             "default": "sampling_evaluation",
             "title": "Filename",
             "type": "string"
+          },
+          "fiscal_year_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Year End"
           },
           "include_signoff": {
             "default": false,
@@ -17482,6 +18015,81 @@
         "title": "SectionDensityResponse",
         "type": "object"
       },
+      "SessionInfo": {
+        "description": "Response model for a single session entry.",
+        "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "ip_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ip Address"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "integer"
+          },
+          "user_agent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Agent"
+          }
+        },
+        "required": [
+          "session_id"
+        ],
+        "title": "SessionInfo",
+        "type": "object"
+      },
+      "SessionListResponse": {
+        "description": "Response model for GET /auth/sessions.",
+        "properties": {
+          "sessions": {
+            "items": {
+              "$ref": "#/components/schemas/SessionInfo"
+            },
+            "title": "Sessions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "sessions"
+        ],
+        "title": "SessionListResponse",
+        "type": "object"
+      },
       "SheetInfo": {
         "properties": {
           "column_count": {
@@ -17935,6 +18543,15 @@
             "title": "Lead Sheet Name",
             "type": "string"
           },
+          "movements": {
+            "default": [],
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Movements",
+            "type": "array"
+          },
           "net_change": {
             "title": "Net Change",
             "type": "number"
@@ -18118,6 +18735,17 @@
             "title": "Filename",
             "type": "string"
           },
+          "fiscal_year_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Year End"
+          },
           "full_matches": {
             "items": {},
             "title": "Full Matches",
@@ -18300,8 +18928,7 @@
         "type": "object"
       },
       "ThreeWayMatchResponse": {
-        "additionalProperties": true,
-        "description": "Complete three-way match response.\n\nUses extra='allow' as a safety net during migration.",
+        "description": "Complete three-way match response.\n\nUses extra='ignore' — unknown fields silently dropped (Sprint 561 hardening).",
         "properties": {
           "column_detection": {
             "$ref": "#/components/schemas/TWMColumnDetectionResponse"
@@ -18650,7 +19277,6 @@
         "type": "object"
       },
       "ToolRunTrendResponse": {
-        "description": "Sprint 311: Per-tool score trend.",
         "properties": {
           "direction": {
             "anyOf": [
@@ -18808,8 +19434,7 @@
         "type": "object"
       },
       "TrialBalanceResponse": {
-        "additionalProperties": true,
-        "description": "Complete trial balance audit response.\n\nUses extra='allow' as a safety net during migration — any fields\nnot yet modeled still pass through to the frontend.",
+        "description": "Complete trial balance audit response.\n\nUses extra='ignore' — unknown fields silently dropped (Sprint 561 hardening).",
         "properties": {
           "abnormal_balances": {
             "items": {
@@ -19533,6 +20158,17 @@
             "title": "Is Multi Sheet",
             "type": "boolean"
           },
+          "preflight_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preflight Token"
+          },
           "requires_sheet_selection": {
             "title": "Requires Sheet Selection",
             "type": "boolean"
@@ -19739,7 +20375,7 @@
     }
   },
   "info": {
-    "description": "Trial Balance Diagnostic Intelligence for Financial Professionals",
+    "description": "12-Tool Audit Intelligence Suite for Financial Professionals",
     "title": "Paciolus API",
     "version": "1.9.3"
   },
@@ -19771,22 +20407,26 @@
         "operationId": "get_activity_history_activity_history_get",
         "parameters": [
           {
+            "description": "Page number (1-indexed)",
             "in": "query",
             "name": "page",
             "required": false,
             "schema": {
               "default": 1,
+              "description": "Page number (1-indexed)",
               "minimum": 1,
               "title": "Page",
               "type": "integer"
             }
           },
           {
+            "description": "Items per page",
             "in": "query",
             "name": "page_size",
             "required": false,
             "schema": {
-              "default": 20,
+              "default": 50,
+              "description": "Items per page",
               "maximum": 100,
               "minimum": 1,
               "title": "Page Size",
@@ -19799,7 +20439,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ActivityHistoryResponse"
+                  "$ref": "#/components/schemas/PaginatedResponse_ActivityLogResponse_"
                 }
               }
             },
@@ -20153,6 +20793,7 @@
         ],
         "summary": "Accrual Completeness Check",
         "tags": [
+          "audit",
           "audit"
         ]
       }
@@ -21103,6 +21744,7 @@
         ],
         "summary": "Expense Category Analytics",
         "tags": [
+          "audit",
           "audit"
         ]
       }
@@ -21197,6 +21839,7 @@
         ],
         "summary": "Flux Analysis",
         "tags": [
+          "audit",
           "audit"
         ]
       }
@@ -21244,6 +21887,7 @@
         ],
         "summary": "Inspect Workbook Endpoint",
         "tags": [
+          "audit",
           "audit"
         ]
       }
@@ -21551,6 +22195,7 @@
         ],
         "summary": "Population Profile Check",
         "tags": [
+          "audit",
           "audit"
         ]
       }
@@ -21598,6 +22243,7 @@
         ],
         "summary": "Preflight Check",
         "tags": [
+          "audit",
           "audit"
         ]
       }
@@ -21645,6 +22291,7 @@
         ],
         "summary": "Preview Pdf Endpoint",
         "tags": [
+          "audit",
           "audit"
         ]
       }
@@ -21880,6 +22527,7 @@
         ],
         "summary": "Audit Trial Balance",
         "tags": [
+          "audit",
           "audit"
         ]
       }
@@ -21977,6 +22625,7 @@
     },
     "/auth/me": {
       "get": {
+        "description": "Return the authenticated user's profile information.",
         "operationId": "get_current_user_info_auth_me_get",
         "responses": {
           "200": {
@@ -22087,6 +22736,92 @@
           }
         ],
         "summary": "Resend Verification",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/sessions": {
+      "delete": {
+        "description": "Revoke all active sessions for the calling user.\n\nAUDIT-02 FIX 2: Bulk session revocation endpoint.\nReturns 204 on success.",
+        "operationId": "revoke_all_sessions_auth_sessions_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Revoke All Sessions",
+        "tags": [
+          "auth"
+        ]
+      },
+      "get": {
+        "description": "List all active (non-revoked) sessions for the calling user.\n\nAUDIT-02 FIX 2: Provides session inventory visibility.\nNever returns the token hash.",
+        "operationId": "list_sessions_auth_sessions_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List Sessions",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/sessions/{session_id}": {
+      "delete": {
+        "description": "Revoke a single session by ID. Only the owning user can revoke.\n\nAUDIT-02 FIX 2: Per-session revocation endpoint.\nReturns 204 on success, 404 if not found or not owned by caller.",
+        "operationId": "revoke_session_auth_sessions__session_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Revoke Session",
         "tags": [
           "auth"
         ]
@@ -22846,29 +23581,6 @@
         "parameters": [
           {
             "in": "query",
-            "name": "page",
-            "required": false,
-            "schema": {
-              "default": 1,
-              "minimum": 1,
-              "title": "Page",
-              "type": "integer"
-            }
-          },
-          {
-            "in": "query",
-            "name": "page_size",
-            "required": false,
-            "schema": {
-              "default": 50,
-              "maximum": 100,
-              "minimum": 1,
-              "title": "Page Size",
-              "type": "integer"
-            }
-          },
-          {
-            "in": "query",
             "name": "search",
             "required": false,
             "schema": {
@@ -22882,6 +23594,33 @@
               ],
               "title": "Search"
             }
+          },
+          {
+            "description": "Page number (1-indexed)",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "description": "Page number (1-indexed)",
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Items per page",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "description": "Items per page",
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
           }
         ],
         "responses": {
@@ -22889,7 +23628,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ClientListResponse"
+                  "$ref": "#/components/schemas/PaginatedResponse_ClientResponse_"
                 }
               }
             },
@@ -23720,6 +24459,53 @@
         ]
       }
     },
+    "/composite-risk/profile": {
+      "post": {
+        "description": "Build a composite risk profile from auditor-provided risk assessments.\n\nISA 315 (Revised 2019): Combines auditor-assessed inherent risk and\ncontrol risk per account/assertion with optional automated diagnostic\ndata. The composite profile STRUCTURES auditor inputs — it does not\nalgorithmically determine risk classifications.\n\nReturns a structured risk matrix with distribution summary, overall\nrisk tier (derived from auditor inputs), and mandatory disclaimer.",
+        "operationId": "build_risk_profile_composite_risk_profile_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompositeRiskProfileRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompositeRiskProfileResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Build Risk Profile",
+        "tags": [
+          "composite-risk"
+        ]
+      }
+    },
     "/contact/submit": {
       "post": {
         "description": "Submit a contact form inquiry.\nPublic endpoint — no auth required.",
@@ -23959,29 +24745,6 @@
         "parameters": [
           {
             "in": "query",
-            "name": "page",
-            "required": false,
-            "schema": {
-              "default": 1,
-              "minimum": 1,
-              "title": "Page",
-              "type": "integer"
-            }
-          },
-          {
-            "in": "query",
-            "name": "page_size",
-            "required": false,
-            "schema": {
-              "default": 50,
-              "maximum": 100,
-              "minimum": 1,
-              "title": "Page Size",
-              "type": "integer"
-            }
-          },
-          {
-            "in": "query",
             "name": "client_id",
             "required": false,
             "schema": {
@@ -24011,6 +24774,33 @@
               ],
               "title": "Status"
             }
+          },
+          {
+            "description": "Page number (1-indexed)",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "description": "Page number (1-indexed)",
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Items per page",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "description": "Items per page",
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
           }
         ],
         "responses": {
@@ -24018,7 +24808,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/EngagementListResponse"
+                  "$ref": "#/components/schemas/PaginatedResponse_EngagementResponse_"
                 }
               }
             },
@@ -24236,7 +25026,7 @@
     },
     "/engagements/{engagement_id}/convergence": {
       "get": {
-        "description": "Get cross-tool account convergence index for an engagement.\n\nAggregates flagged GL accounts across the latest completed run of each tool.\nReturns convergence counts only — NO composite score, NO risk classification.",
+        "description": "Get cross-tool account convergence index for an engagement.",
         "operationId": "get_convergence_index_engagements__engagement_id__convergence_get",
         "parameters": [
           {
@@ -24278,6 +25068,7 @@
         ],
         "summary": "Get Convergence Index",
         "tags": [
+          "engagements",
           "engagements"
         ]
       }
@@ -24324,6 +25115,7 @@
         ],
         "summary": "Export Anomaly Summary",
         "tags": [
+          "engagements",
           "engagements"
         ]
       }
@@ -24370,6 +25162,7 @@
         ],
         "summary": "Export Convergence Csv",
         "tags": [
+          "engagements",
           "engagements"
         ]
       }
@@ -24416,6 +25209,7 @@
         ],
         "summary": "Export Engagement Package",
         "tags": [
+          "engagements",
           "engagements"
         ]
       }
@@ -24431,29 +25225,6 @@
             "required": true,
             "schema": {
               "title": "Engagement Id",
-              "type": "integer"
-            }
-          },
-          {
-            "in": "query",
-            "name": "page",
-            "required": false,
-            "schema": {
-              "default": 1,
-              "minimum": 1,
-              "title": "Page",
-              "type": "integer"
-            }
-          },
-          {
-            "in": "query",
-            "name": "page_size",
-            "required": false,
-            "schema": {
-              "default": 50,
-              "maximum": 100,
-              "minimum": 1,
-              "title": "Page Size",
               "type": "integer"
             }
           },
@@ -24504,6 +25275,33 @@
               ],
               "title": "Tool Source"
             }
+          },
+          {
+            "description": "Page number (1-indexed)",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "description": "Page number (1-indexed)",
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Items per page",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "description": "Items per page",
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
           }
         ],
         "responses": {
@@ -24511,7 +25309,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FollowUpItemListResponse"
+                  "$ref": "#/components/schemas/PaginatedResponse_FollowUpItemResponse_"
                 }
               }
             },
@@ -24791,13 +25589,14 @@
         ],
         "summary": "Get Materiality",
         "tags": [
+          "engagements",
           "engagements"
         ]
       }
     },
     "/engagements/{engagement_id}/tool-run-trends": {
       "get": {
-        "description": "Get per-tool score trends for an engagement.\n\nReturns latest vs previous composite_score with direction indicator.\nScores represent flag density — lower = fewer flags = improving.",
+        "description": "Get per-tool score trends for an engagement.",
         "operationId": "get_tool_run_trends_engagements__engagement_id__tool_run_trends_get",
         "parameters": [
           {
@@ -24843,6 +25642,7 @@
         ],
         "summary": "Get Tool Run Trends",
         "tags": [
+          "engagements",
           "engagements"
         ]
       }
@@ -24895,6 +25695,7 @@
         ],
         "summary": "Get Tool Runs",
         "tags": [
+          "engagements",
           "engagements"
         ]
       }
@@ -24943,6 +25744,7 @@
         ],
         "summary": "Get Workpaper Index",
         "tags": [
+          "engagements",
           "engagements"
         ]
       }

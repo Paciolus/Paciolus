@@ -5,18 +5,15 @@ Tests for _resolve_csv_type: direct map lookup, suffix fallback, and miss cases.
 Also tests end-to-end classification via _resolve_category with CSV-provided types.
 """
 
-import io
 import sys
 from pathlib import Path
 
-import pandas as pd
 import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from account_classifier import AccountCategory
 from audit_engine import StreamingAuditor
-
 
 # =============================================================================
 # Helpers

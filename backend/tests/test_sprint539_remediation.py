@@ -6,22 +6,19 @@ webhook idempotency, event ordering, DPA timestamp, org-first lifecycle,
 org member shared access, subscription linkage backfill.
 """
 
-import hashlib
 import secrets
 import sys
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from models import Client, RefreshToken, User, UserTier
+from models import Client, UserTier
 from organization_model import (
-    InviteStatus,
     Organization,
-    OrganizationInvite,
     OrganizationMember,
     OrgRole,
 )
@@ -30,7 +27,6 @@ from subscription_model import (
     Subscription,
     SubscriptionStatus,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -201,8 +197,9 @@ class TestRefreshTokenRace:
 
     def test_rotate_refresh_token_cas_guard(self, db_session, make_user, make_refresh_token):
         """Two rotations with the same token — only one succeeds."""
-        from auth import hash_token, rotate_refresh_token
         from fastapi import HTTPException
+
+        from auth import rotate_refresh_token
 
         user = make_user(email="race_user@example.com")
         raw_token, rt = make_refresh_token(user=user)

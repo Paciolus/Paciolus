@@ -5,8 +5,6 @@
  * and header injection (Authorization + X-CSRF-Token).
  */
 
-import { uploadFetch } from '@/utils/uploadTransport'
-
 // Mock getCsrfToken
 jest.mock('@/utils/apiClient', () => ({
   getCsrfToken: jest.fn(() => 'test-csrf-token'),
@@ -18,6 +16,7 @@ jest.mock('@/utils/constants', () => ({
 }))
 
 import { getCsrfToken } from '@/utils/apiClient'
+import { uploadFetch } from '@/utils/uploadTransport'
 
 const mockGetCsrfToken = getCsrfToken as jest.Mock
 
