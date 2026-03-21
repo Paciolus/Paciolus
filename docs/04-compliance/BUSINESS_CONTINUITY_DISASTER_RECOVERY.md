@@ -3,7 +3,7 @@
 **Version:** 1.2
 **Document Classification:** Internal
 **Effective Date:** February 26, 2026
-**Last Updated:** February 27, 2026
+**Last Updated:** March 20, 2026
 **Owner:** Chief Technology Officer
 **Review Cycle:** Semi-annual
 **Next Review:** August 26, 2026
@@ -93,7 +93,16 @@ Paciolus's [Zero-Storage Architecture](./ZERO_STORAGE_ARCHITECTURE.md) fundament
 - **RTO:** Maximum acceptable time from incident declaration to service restoration.
 - **RPO:** Maximum acceptable data loss measured in time. An RPO of 1 hour means we accept losing up to 1 hour of data changes.
 
-### 2.3 Availability Target
+### 2.3 RPO Validation Status
+
+> **Important:** The claimed RPO of near-continuous (via WAL archiving) is not
+> independently validated by the monthly automated workflow. The monthly workflow
+> verifies provider API availability but does not confirm the most recent backup
+> timestamp or execute a restore. RPO is considered claimed-but-unproven until
+> the monthly restore-validation job (see `.github/workflows/dr-test-monthly.yml`)
+> is enhanced per AUDIT-10 recommendations.
+
+### 2.4 Availability Target
 
 | Metric | Target | Measurement |
 |--------|--------|-------------|
@@ -276,6 +285,153 @@ Paciolus's [Zero-Storage Architecture](./ZERO_STORAGE_ARCHITECTURE.md) fundament
 | 7 | Verify all services operational | IC | 30 minutes |
 | **Total estimated recovery time** | | | **4–6 hours** |
 
+### 5.6 Recovery Execution Steps
+
+The following numbered procedure is designed so that a technically capable person
+with no prior Paciolus context can execute a full recovery. Each step includes a
+verification criterion. Steps must be performed in order.
+
+> **Precondition:** The responder must have access to all systems listed in
+> Section 5.7 (External Access Dependencies) before beginning.
+
+**Step 1 — Recreate backend and frontend infrastructure in an isolated environment**
+
+Provision new Render Web Service and Vercel deployment (or equivalent) from the
+`main` branch of the GitHub repository. Do **not** point the restored environment
+at production webhooks, DNS, or Stripe endpoints until validation is complete
+(Step 6).
+
+- Render: Dashboard → New → Web Service → connect GitHub repo → set root
+  directory to `backend`, start command per Section 5.2, region matching
+  production.
+- Vercel: Dashboard → Add New → Project → import repo → set root directory to
+  `frontend`, framework preset Next.js.
+
+*Verification:* Both services deploy successfully. Render service shows
+"Available" status. Vercel deployment shows "Ready".
+
+**Step 2 — Restore PostgreSQL from the latest managed backup**
+
+Navigate to Render Dashboard → PostgreSQL → select the production instance →
+Backups tab → select the most recent daily snapshot or use point-in-time recovery
+(PITR) to target a specific timestamp.
+
+- **Dashboard path:** render.com → Dashboard → PostgreSQL → [instance name] →
+  Backups → Restore → select target (new instance, not production).
+- **CLI equivalent (if available):** Render CLI does not currently support backup
+  restore; use the dashboard.
+
+*Verification:* The restored instance accepts connections and the following query
+returns a non-zero result:
+
+```sql
+SELECT COUNT(*) FROM users;
+```
+
+**Step 3 — Run Alembic migrations against the restored instance**
+
+If the restored backup's schema level differs from the latest codebase (e.g., the
+backup predates a recent migration), apply pending migrations.
+
+```bash
+cd backend
+DATABASE_URL=<restored-instance-url> alembic upgrade head
+```
+
+*Verification:* `alembic current` reports the head revision matching the latest
+migration file in `backend/alembic/versions/`.
+
+**Step 4 — Rehydrate all required secrets**
+
+Populate all Secret-class environment variables listed in
+`docs/ops/ENVIRONMENT_VARIABLES.md` on the restored backend service. Source values
+from the durable secret manager (not GitHub Actions secrets — those are CI-only).
+
+Set each variable in Render Dashboard → Web Service → Environment → Add
+Environment Variable.
+
+*Verification:* `GET /health/ready` (or `GET /health`) returns HTTP 200 with
+`{"status": "healthy"}`.
+
+**Step 5 — Validate login flow end-to-end**
+
+Before any DNS cutover, verify the full authentication cycle against the restored
+environment:
+
+1. Register a new test user (or use an existing account from the restored DB).
+2. Log in — confirm JWT access token is issued.
+3. Access a protected endpoint (e.g., `GET /clients`) — confirm 200 response.
+4. Refresh the access token — confirm new token is issued.
+
+*Verification:* All four operations succeed without errors.
+
+**Step 6 — Re-register Stripe webhook (if endpoint URL changed)**
+
+If the restored backend has a different public URL than production:
+
+1. Navigate to Stripe Dashboard → Developers → Webhooks.
+2. Add the new endpoint URL (e.g., `https://<new-backend>.onrender.com/billing/webhook`).
+3. Copy the new webhook signing secret.
+4. Update `STRIPE_WEBHOOK_SECRET` in the restored backend's environment variables.
+5. In Stripe Dashboard, send a test event (e.g., `invoice.payment_succeeded`).
+
+*Verification:* The test event is received and processed by the restored backend
+without a signature verification failure. Check application logs for successful
+webhook processing.
+
+**Step 7 — Re-point DNS and TLS**
+
+Only after Steps 1–6 are validated:
+
+1. Update DNS records at the DNS provider to point to the restored services:
+   - Frontend: Update A/CNAME record for `paciolus.com` to point to the new
+     Vercel deployment.
+   - Backend: Update A/CNAME record for `api.paciolus.com` to point to the new
+     Render service.
+2. TTL considerations: If the current TTL is long (e.g., 3600s), consider
+   lowering it to 60s before cutover, then raising it after propagation.
+3. TLS certificates are automatically provisioned by Vercel and Render upon DNS
+   validation.
+
+*Verification:* `curl -I https://paciolus.com` and `curl -I https://api.paciolus.com`
+return HTTP 200 with valid TLS certificates.
+
+**Step 8 — Verify zero-storage constraint post-restore**
+
+Confirm that no financial data rows exist in the restored database. The following
+tables must not exist or must be empty:
+
+```sql
+-- These tables should NOT exist in the restored database
+SELECT table_name FROM information_schema.tables
+WHERE table_schema = 'public'
+AND table_name IN ('trial_balances', 'financial_data', 'uploaded_files', 'tb_entries');
+-- Expected: 0 rows
+
+-- Verify no session/upload staging data persisted
+-- (Add any session or upload staging tables specific to the deployment)
+```
+
+*Verification:* Query returns 0 rows, confirming Zero-Storage compliance.
+
+### 5.7 External Access Dependencies
+
+The following external systems are required for a complete recovery. Each must be
+accessible before beginning the recovery procedure in Section 5.6.
+
+| System | Purpose | Access path | Owner |
+|---|---|---|---|
+| Render dashboard | PostgreSQL restore, backend service restart, env var configuration | render.com — account login | [ASSIGN OWNER] |
+| Durable secret manager | Rehydrate all Secret-class env vars | See `docs/ops/ENVIRONMENT_VARIABLES.md` | [ASSIGN OWNER] |
+| Stripe dashboard | Webhook re-registration, API key retrieval | dashboard.stripe.com | [ASSIGN OWNER] |
+| DNS / TLS provider | Endpoint failover, DNS record updates | [DOCUMENT PROVIDER] | [ASSIGN OWNER] |
+| GitHub | CI secrets re-entry, repository access, codebase | github.com | [ASSIGN OWNER] |
+| Vercel | Frontend deployment, environment variables | vercel.com | [ASSIGN OWNER] |
+
+> **Single-owner risk:** If a single person owns all external access listed above,
+> that is itself a continuity risk. Document a secondary access holder or
+> break-glass procedure for each system.
+
 ---
 
 ## 6. Business Continuity Procedures
@@ -420,6 +576,7 @@ Reports are stored in `docs/08-internal/` following the naming convention `dr-te
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-02-26 | CTO | Initial publication: RTO/RPO targets, dependency map, backup strategy, 5 recovery procedures, degraded operation modes, testing schedule |
+| 1.2 | 2026-03-20 | Engineering | AUDIT-10: Added §2.3 RPO validation status caveat, §5.6 executable recovery steps (8-step procedure with verification criteria), §5.7 external access dependencies table |
 | 1.1 | 2026-02-27 | Engineering | §7.3 updated: test artifact naming convention clarified (`dr-test-YYYY-QN.md`), test artifact history table added, Q1 2026 first test entry recorded, evidence cross-filed to `soc2-evidence/s3/` |
 
 ---

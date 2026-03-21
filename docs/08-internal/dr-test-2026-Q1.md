@@ -57,7 +57,8 @@
 ### 4.1 Pre-Restore Setup
 
 - [ ] **Step 1:** Provision isolated PostgreSQL test instance (Render dashboard or local Docker)
-  - Command/action: _[CEO ACTION: document the command or console action]_
+  - Procedure: See `BUSINESS_CONTINUITY_DISASTER_RECOVERY.md` — §5.6 Step 1 (Recreate Infrastructure) and §5.6 Step 2 (Restore PostgreSQL). For a local Docker alternative: `docker run -d --name dr-test -e POSTGRES_PASSWORD=drtest -p 54329:5432 postgres:17`
+  - Command/action: _[CEO ACTION: document the command or console action taken]_
   - Result: _[CEO ACTION: e.g., "Instance `paciolus-dr-test-2026q1` running at `postgres://...`"]_
 
 - [ ] **Step 2:** Note production row counts for comparison (run against production before restore)
@@ -81,6 +82,7 @@
 ### 4.2 Restore Execution
 
 - [ ] **Step 3:** Select backup snapshot in Render dashboard
+  - Procedure: See `BUSINESS_CONTINUITY_DISASTER_RECOVERY.md` — §5.6 Step 2 for the exact dashboard navigation path (Dashboard → PostgreSQL → [instance] → Backups → Restore).
   - Backup ID selected: _[CEO ACTION]_
   - Action taken: _[CEO ACTION: e.g., "Clicked 'Restore' on backup `backup_abc123` in Render dashboard → selected test instance as target"]_
   - Restore initiated at: _[CEO ACTION: time]_
@@ -140,9 +142,11 @@
 ### 4.5 Application Smoke Test (Optional but Recommended)
 
 - [ ] **Step 10:** Point a local backend instance at the test DB and verify health endpoint
-  - Command: `DATABASE_URL=$TEST_DATABASE_URL uvicorn main:app --port 8001`
-  - `GET /health` response: _[CEO ACTION: e.g., `{"status": "healthy", "db": "connected"}`]_
-  - Auth smoke test (login + token refresh): _[CEO ACTION: Pass / Fail / Skipped]_
+  - Procedure: See `BUSINESS_CONTINUITY_DISASTER_RECOVERY.md` — §5.6 Steps 4–5 for secrets rehydration and login flow validation. All Secret-class variables are listed in `docs/ops/ENVIRONMENT_VARIABLES.md` §1.
+  - Required secrets: At minimum, set `JWT_SECRET_KEY`, `CSRF_SECRET_KEY`, and `DATABASE_URL` (pointing to test instance). See `docs/ops/ENVIRONMENT_VARIABLES.md` for the full list.
+  - Command: `DATABASE_URL=$TEST_DATABASE_URL JWT_SECRET_KEY=test-key CSRF_SECRET_KEY=test-csrf uvicorn main:app --port 8001`
+  - `GET /health` response: _[CEO ACTION: e.g., `{"status": "healthy", "db": "connected"}`]_ — **Target:** HTTP 200
+  - Auth smoke test (login + token refresh): _[CEO ACTION: Pass / Fail / Skipped]_ — **Target:** Pass
 
 ### 4.6 Teardown
 
@@ -182,12 +186,12 @@ _[CEO ACTION: List any issues encountered during the test, or write "None"]_
 
 | Criterion | Target | Result | Pass/Fail |
 |-----------|--------|--------|-----------|
-| Restore completed without errors | No errors | _[CEO ACTION]_ | _[CEO ACTION]_ |
-| RTO met | ≤ 2 hours | _[CEO ACTION]_ | _[CEO ACTION]_ |
-| Row counts within RPO window | Delta ≤ 1 hour of data | _[CEO ACTION]_ | _[CEO ACTION]_ |
-| Alembic version correct | Matches production | _[CEO ACTION]_ | _[CEO ACTION]_ |
-| Zero-Storage compliance | No financial data tables | _[CEO ACTION]_ | _[CEO ACTION]_ |
-| Test instance fully torn down | No residual access | _[CEO ACTION]_ | _[CEO ACTION]_ |
+| Restore completed without errors | No errors | _[CEO ACTION]_ | _[CEO ACTION: PASS if no errors]_ |
+| RTO met | ≤ 2 hours (per §2.1 of DR plan) | _[CEO ACTION]_ | _[CEO ACTION: PASS if ≤ 120 min]_ |
+| Row counts within RPO window | Delta ≤ 1 hour of data (per §2.1 RPO target) | _[CEO ACTION]_ | _[CEO ACTION: PASS if delta ≤ 1 hr]_ |
+| Alembic version correct | Matches production head revision | _[CEO ACTION]_ | _[CEO ACTION: PASS if match]_ |
+| Zero-Storage compliance | 0 rows from financial data table query | _[CEO ACTION]_ | _[CEO ACTION: PASS if 0 rows]_ |
+| Test instance fully torn down | No residual access | _[CEO ACTION]_ | _[CEO ACTION: PASS if deleted]_ |
 
 **Overall result:** _[CEO ACTION: PASS / FAIL]_
 

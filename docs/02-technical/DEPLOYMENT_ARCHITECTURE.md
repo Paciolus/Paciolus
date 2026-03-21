@@ -50,7 +50,8 @@ This document provides comprehensive deployment and operational procedures for P
 15. [Cost Optimization](#15-cost-optimization)
 16. [Post-Deployment Checklist](#16-post-deployment-checklist)
 17. [Troubleshooting](#17-troubleshooting)
-18. [Dependency Compliance Gate](#18-dependency-compliance-gate)
+18. [Disaster Recovery](#18-disaster-recovery)
+19. [Dependency Compliance Gate](#19-dependency-compliance-gate)
 
 ---
 
@@ -1064,16 +1065,88 @@ docker system prune -a  # Remove unused images
 
 ---
 
-## 18. Dependency Compliance Gate
+## 18. Disaster Recovery
 
-### 18.1 Overview
+### 18.1 Documentation Locations
+
+| Document | Location | Purpose |
+|----------|----------|---------|
+| DR Runbook | `docs/04-compliance/BUSINESS_CONTINUITY_DISASTER_RECOVERY.md` | Full recovery procedures, RTO/RPO targets, dependency map |
+| Environment Variable Inventory | `docs/ops/ENVIRONMENT_VARIABLES.md` | All env vars with classification, storage, and rotation owners |
+| Semi-Annual DR Test Template | `docs/08-internal/dr-test-2026-Q1.md` | Structured test report for manual restore tests |
+
+### 18.2 Automated DR Validation
+
+The monthly DR workflow (`.github/workflows/dr-test-monthly.yml`) runs on two triggers:
+
+| Trigger | Scope | Jobs Executed |
+|---------|-------|---------------|
+| **Scheduled** (1st of each month, 06:00 UTC) | Provider health + row counts | `dr-test` only |
+| **Manual** (`workflow_dispatch`) | Provider health + row counts + **full restore validation** | `dr-test` + `restore-validation` |
+
+**`dr-test` job (automated, monthly):**
+- Validates Render PostgreSQL instance status (`available`)
+- Checks backup metadata availability via Render API
+- Runs DB liveness probe with table row counts (if `DATABASE_URL_READONLY` secret is set)
+- Creates a GitHub issue labeled `dr-failure` on any check failure
+
+**`restore-validation` job (manual trigger only, minimum quarterly):**
+- Provisions an isolated PostgreSQL 17 container
+- Downloads a backup artifact from `RESTORE_TEST_BACKUP_URL`
+- Executes `pg_restore` into the isolated target
+- Validates schema integrity (key tables present)
+- Validates row counts (users, clients, subscriptions)
+- Runs Alembic migration check against the restored DB
+- Executes a backend smoke check (DB connectivity)
+- Tears down the isolated instance on completion
+
+### 18.3 RPO Validation Status
+
+The claimed RPO of near-continuous (via WAL archiving) is **claimed-but-unproven**
+until a `workflow_dispatch` restore-validation run has been completed and its
+result archived. The monthly automated workflow verifies provider API availability
+but does not confirm the most recent backup timestamp or execute a restore.
+
+RPO is considered **validated** only after:
+1. A manual `workflow_dispatch` run of `dr-test-monthly.yml` completes successfully.
+2. The restore-validation job confirms schema integrity and row counts in the
+   restored database.
+3. The result is archived as a GitHub Actions artifact and referenced in the
+   semi-annual DR test report.
+
+### 18.4 Stripe Webhook Re-Registration
+
+Any recovery that changes the public backend endpoint URL requires:
+
+1. Webhook re-registration in Stripe Dashboard (Developers → Webhooks → Add endpoint).
+2. Rotation of `STRIPE_WEBHOOK_SECRET` with the new signing secret from Stripe.
+3. Verification via Stripe test event before DNS cutover.
+
+Failure to re-register the webhook will cause all Stripe-initiated events
+(subscription changes, payment confirmations, invoice updates) to fail silently.
+See `BUSINESS_CONTINUITY_DISASTER_RECOVERY.md` §5.6 Step 6 for the full procedure.
+
+### 18.5 Required GitHub Actions Secrets for DR
+
+| Secret | Required By | Description |
+|--------|-------------|-------------|
+| `RENDER_API_KEY` | `dr-test` job | Render API token for instance status check |
+| `RENDER_POSTGRES_ID` | `dr-test` job | PostgreSQL service ID |
+| `DATABASE_URL_READONLY` | `dr-test` job (optional) | Read-only DB connection for liveness probe |
+| `RESTORE_TEST_BACKUP_URL` | `restore-validation` job | URL to downloadable `pg_dump` backup artifact |
+
+---
+
+## 19. Dependency Compliance Gate
+
+### 19.1 Overview
 
 The `dependency-compliance` workflow (`.github/workflows/dependency-compliance.yml`) enforces two automated gates on every PR, push to `main`, and on a weekly schedule (Monday 07:00 UTC):
 
 1. **CVE Audit** — `pip-audit` (Python) and `npm audit` (Node) fail the build if any HIGH or CRITICAL vulnerability is found in production dependencies.
 2. **License Policy Check** — `scripts/check_license_policy.py` compares the full license inventory of both ecosystems against the policy file and fails if any prohibited license is detected.
 
-### 18.2 What It Enforces
+### 19.2 What It Enforces
 
 | Check | Tool | Threshold |
 |-------|------|-----------|
@@ -1082,7 +1155,7 @@ The `dependency-compliance` workflow (`.github/workflows/dependency-compliance.y
 | Python licenses | `pip-licenses` → policy check | Prohibited license → fail |
 | Node licenses | `license-checker` → policy check | Prohibited license → fail |
 
-### 18.3 Policy File
+### 19.3 Policy File
 
 **Location:** `docs/compliance/LICENSE_POLICY.json`
 
@@ -1091,7 +1164,7 @@ The policy file defines:
 - **`manual_review_required`** — Licenses that should be reviewed but do not block CI (LGPL, MPL, EUPL, CC-BY-SA).
 - **`allowlist`** — Dependencies that have been flagged by automated checks but manually reviewed and approved. Each entry requires a justification, reviewer name, and review date.
 
-### 18.4 Allowlist Process
+### 19.4 Allowlist Process
 
 When a dependency is flagged by the license policy check:
 
@@ -1109,11 +1182,11 @@ When a dependency is flagged by the license policy check:
    ```
 4. The allowlist entry and its justification are committed to version control and visible in PR review.
 
-### 18.5 Weekly Advisory Scan
+### 19.5 Weekly Advisory Scan
 
 The scheduled weekly run (`cron: '0 7 * * 1'`) catches newly published CVEs between PRs. If a new advisory is published for a dependency already in `main`, the weekly run will fail and surface the issue without waiting for a new PR.
 
-### 18.6 License Inventory Artifacts
+### 19.6 License Inventory Artifacts
 
 Each CI run uploads two artifacts (retained 30 days):
 - `python-licenses` — Full JSON inventory from `pip-licenses`
@@ -1121,7 +1194,7 @@ Each CI run uploads two artifacts (retained 30 days):
 
 These serve as point-in-time license audit records.
 
-### 18.7 Required Status Check (Manual Post-Deployment Step)
+### 19.7 Required Status Check (Manual Post-Deployment Step)
 
 > **Action required:** After merging the `dependency-compliance` workflow, enable it as a **required status check** on the `main` branch in GitHub repository settings (Settings → Branches → Branch protection rules → Require status checks → add `Python CVE & License Audit`, `Node CVE & License Audit`, and `License Policy Check`).
 
@@ -1133,7 +1206,8 @@ This is a GitHub repository settings change and cannot be automated via CI confi
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
-| 1.1 | 2026-03-20 | Engineering | Added §18 Dependency Compliance Gate (AUDIT-09) |
+| 1.2 | 2026-03-20 | Engineering | Added §18 Disaster Recovery governance section (AUDIT-10); renumbered §18→§19 Dependency Compliance Gate |
+| 1.1 | 2026-03-20 | Engineering | Added §19 Dependency Compliance Gate (AUDIT-09) |
 | 1.0 | 2026-02-04 | CTO | Initial publication, migrated from DEPLOYMENT.md |
 
 ---
