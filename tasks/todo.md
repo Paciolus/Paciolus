@@ -65,3 +65,14 @@
 - **PR:** [#48](https://github.com/Paciolus/Paciolus/pull/48) — merged
 - **Status:** COMPLETE
 
+### Sprint 564: DEC P1/P2 Remediation (6 Findings)
+- [x] **F-001 (P1):** Rename "Composite Risk Score" → "Composite Diagnostic Score" across 20 backend + 4 frontend files. Function renames: `compute_bank_rec_risk_score` → `compute_bank_rec_diagnostic_score`, `compute_twm_risk_score` → `compute_twm_diagnostic_score`, `compute_apc_risk_score` → `compute_apc_diagnostic_score`. Backward-compat aliases added. All user-facing PDF labels already said "Composite Diagnostic Score"; cleaned up remaining docstrings, comments, and f-strings.
+- [x] **F-002 (P1):** Fix ISA 530 "population accepted" language in `sampling_memo_generator.py`. Pass case: "upper error limit does not exceed tolerable misstatement" + ISA 530.14 auditor evaluation reminder. Fail case: "exceeds" + ISA 530.17 alternative procedures guidance. 3 test updates (negative assertions against old language).
+- [x] **F-003 (P2):** Integration tests for 2 highest-risk untested routes: `test_billing_webhooks_routes.py` (5 tests: 400/500 error classification) and `test_audit_pipeline_routes.py` (7 tests: auth gates, validation, dedup, rate limiting).
+- [x] **F-004 (P2):** Webhook error classification in `billing.py` + `billing_webhooks.py`: ValueError/KeyError → 400 (data error, not retryable); generic Exception → 500 (operational, retryable). Structured logging with event ID, type, and exception class.
+- [x] **F-005 (P2):** Atomic billing checkout with saga rollback in `checkout_orchestrator.py`. `_rollback_stripe_customer()` helper deletes orphaned customers on failure. Tracks `created_new_customer` flag; only rolls back new customers. DB commit failure logs CRITICAL with resource IDs for manual reconciliation. 9 new tests.
+- [x] **F-006 (P2):** Going concern indicators section added to TB Diagnostic PDF in `pdf/sections/diagnostic.py`. Renders triggered indicators as bullet points (name, value, assessment). ISA 570/AU-C 570 disclaimer always present. "No indicators identified" shown when empty.
+- **Tests:** 21 new tests (5 webhook + 7 pipeline + 9 saga) + 345 existing pass on modified files
+- **Verification:** pytest full suite PASS (exit 0), npm run build PASS, npm test PASS (1,725/1,725)
+- **Status:** COMPLETE
+

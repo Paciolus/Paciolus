@@ -56,7 +56,7 @@ describe('ConvergenceTable', () => {
   it('renders disclaimer banner', () => {
     render(<ConvergenceTable data={mockData} onExportCsv={mockExport} />)
     expect(screen.getByText(/Convergence counts indicate how many diagnostic tools flagged an account/)).toBeInTheDocument()
-    expect(screen.getByText(/This is NOT a risk score/)).toBeInTheDocument()
+    expect(screen.getByText(/This is NOT an audit risk assessment/)).toBeInTheDocument()
   })
 
   it('renders empty state when no items', () => {

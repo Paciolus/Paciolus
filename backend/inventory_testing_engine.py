@@ -1278,7 +1278,7 @@ def calculate_inv_composite_score(
     test_results: list[InvTestResult],
     total_entries: int,
 ) -> InvCompositeScore:
-    """Calculate composite risk score from inventory test results.
+    """Calculate composite diagnostic score from inventory test results.
 
     Delegates to shared test aggregator (Sprint 152).
     """

@@ -140,7 +140,7 @@ function ConvergenceDisclaimer() {
       <p className="text-xs font-sans text-oatmeal-700 leading-relaxed">
         <span className="font-semibold">Cross-Tool Convergence Index &mdash; Informational Only.</span>{' '}
         Convergence counts indicate how many diagnostic tools flagged an account.
-        This is NOT a risk score or risk classification. The practitioner is solely
+        This is NOT an audit risk assessment or risk classification. The practitioner is solely
         responsible for evaluating significance and determining appropriate procedures.
       </p>
     </div>

@@ -31,6 +31,7 @@ def _get_weight(severity_str: str) -> float:
 @dataclass
 class CompositeScoreResult:
     """Result of composite score calculation."""
+
     score: float  # 0-100
     risk_tier: RiskTier
     tests_run: int
@@ -65,7 +66,7 @@ def calculate_composite_score(
     top_n: int = 5,
     entity_label: str = "entries",
 ) -> CompositeScoreResult:
-    """Calculate composite risk score from test results.
+    """Calculate composite diagnostic score from test results.
 
     Algorithm (canonical — used identically by 7 engines):
     1. Collect flagged entries, count by severity
@@ -150,9 +151,7 @@ def calculate_composite_score(
     top_findings: list[str] = []
     for tr in sorted(test_results, key=lambda t: t.flag_rate, reverse=True):
         if tr.entries_flagged > 0:
-            top_findings.append(
-                f"{tr.test_name}: {tr.entries_flagged} {entity_label} flagged ({tr.flag_rate:.1%})"
-            )
+            top_findings.append(f"{tr.test_name}: {tr.entries_flagged} {entity_label} flagged ({tr.flag_rate:.1%})")
 
     total_flagged = len(all_flagged_rows)
     flag_rate = total_flagged / max(total_entries, 1)

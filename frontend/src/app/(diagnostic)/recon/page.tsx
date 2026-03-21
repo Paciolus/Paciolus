@@ -99,7 +99,7 @@ export default function ReconPage() {
                 </div>
 
                 <DisclaimerBox>
-                    Reconciliation risk scores are analytical indicators to assist professional auditors in
+                    Reconciliation diagnostic scores are analytical indicators to assist professional auditors in
                     prioritizing account reconciliations. Scores are not audit conclusions and should be
                     interpreted in the context of the specific engagement. They are not a substitute for
                     professional judgment or sufficient audit evidence.

@@ -1713,7 +1713,7 @@ def calculate_ap_composite_score(
     test_results: list[APTestResult],
     total_entries: int,
 ) -> APCompositeScore:
-    """Calculate the composite risk score from AP test results.
+    """Calculate the composite diagnostic score from AP test results.
 
     Delegates to shared test aggregator (Sprint 152).
     """

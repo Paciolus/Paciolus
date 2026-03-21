@@ -214,16 +214,14 @@ def _build_risk_score_note(
     composite = result.get("composite_score", {})
     test_results = result.get("test_results", [])
 
-    tests_clear = sum(
-        1 for tr in test_results if tr.get("entries_flagged", 0) == 0 and not tr.get("skipped", False)
-    )
+    tests_clear = sum(1 for tr in test_results if tr.get("entries_flagged", 0) == 0 and not tr.get("skipped", False))
     score = composite.get("score", 0)
 
     if tests_clear == 0 and score < 30 and len(test_results) > 0:
         story.append(
             Paragraph(
                 "<i>Although all tests flagged items, the majority of flagged findings are "
-                "low-to-medium severity slow-moving inventory indicators. The composite risk "
+                "low-to-medium severity slow-moving inventory indicators. The composite diagnostic "
                 "score reflects weighted severity, not test pass rate. A low composite score "
                 "with zero clear tests indicates broad but low-severity data quality flags "
                 "rather than concentrated high-risk anomalies.</i>",

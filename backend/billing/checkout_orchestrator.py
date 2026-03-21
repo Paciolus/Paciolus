@@ -3,6 +3,11 @@ Checkout orchestration — Sprint 519 Phase 5
 
 Extracts checkout business logic from the billing route layer.
 The route keeps HTTP concerns (request parsing, error→HTTPException mapping).
+
+Saga pattern: Each Stripe step has a compensating action.
+- Customer creation → delete customer on later failure
+- Checkout session creation → no compensation needed (sessions expire automatically)
+- DB commit failure → log Stripe resource IDs for manual reconciliation
 """
 
 import logging
@@ -12,6 +17,31 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
+
+
+def _rollback_stripe_customer(customer_id: str, user_id: int) -> None:
+    """Compensating action: delete an orphaned Stripe customer.
+
+    Best-effort — if this also fails, we log for manual reconciliation.
+    """
+    from billing.stripe_client import get_stripe
+
+    try:
+        stripe = get_stripe()
+        stripe.Customer.delete(customer_id)
+        logger.info(
+            "Saga rollback: deleted orphaned Stripe customer %s (user %d)",
+            customer_id,
+            user_id,
+        )
+    except Exception:
+        logger.critical(
+            "MANUAL RECONCILIATION REQUIRED: Failed to delete orphaned Stripe "
+            "customer %s for user %d. Delete manually in the Stripe dashboard.",
+            customer_id,
+            user_id,
+            exc_info=True,
+        )
 
 
 class CheckoutValidationError(Exception):
@@ -86,12 +116,14 @@ def orchestrate_checkout(
     if not price_id:
         raise CheckoutValidationError(f"No price configured for {tier}/{interval}. Please contact support.")
 
-    # 3. Get or create Stripe customer
+    # 3. Get or create Stripe customer (saga step 1)
     existing_sub = get_subscription(db, user_id)
     stripe_customer_id = existing_sub.stripe_customer_id if existing_sub else None
+    created_new_customer = False
 
     try:
         customer_id = create_or_get_stripe_customer(user_id, user_email, stripe_customer_id)
+        created_new_customer = customer_id != stripe_customer_id
     except Exception:
         raise CheckoutProviderError("Payment provider error. Please try again or contact support.")
 
@@ -104,9 +136,13 @@ def orchestrate_checkout(
     if promo_code:
         promo_error = validate_promo_for_interval(promo_code, interval)
         if promo_error:
+            if created_new_customer:
+                _rollback_stripe_customer(customer_id, user_id)
             raise CheckoutValidationError(promo_error)
         stripe_coupon_id = get_stripe_coupon_id(promo_code)
         if not stripe_coupon_id:
+            if created_new_customer:
+                _rollback_stripe_customer(customer_id, user_id)
             raise CheckoutValidationError("Promo code is not currently available. Please contact support.")
 
     # 5. Trial eligibility
@@ -117,6 +153,8 @@ def orchestrate_checkout(
 
     # 6. Seat validation
     if seat_count > 0 and tier == "solo":
+        if created_new_customer:
+            _rollback_stripe_customer(customer_id, user_id)
         raise CheckoutValidationError("Solo plan does not support additional seats.")
 
     entitlements = get_entitlements(UserTier(tier))
@@ -124,6 +162,8 @@ def orchestrate_checkout(
     total_seats = seats_included + seat_count
     max_seats = get_max_self_serve_seats(tier)
     if total_seats > max_seats:
+        if created_new_customer:
+            _rollback_stripe_customer(customer_id, user_id)
         raise CheckoutValidationError(f"Maximum {max_seats} seats via self-serve. Contact sales for more.")
 
     additional_seats = seat_count
@@ -131,6 +171,8 @@ def orchestrate_checkout(
     if additional_seats > 0:
         seat_price_id = get_stripe_seat_price_id(interval, tier)
         if not seat_price_id:
+            if created_new_customer:
+                _rollback_stripe_customer(customer_id, user_id)
             raise CheckoutValidationError("Seat pricing not configured. Contact support.")
 
     # 7. DPA acceptance (deferred commit — atomic with session creation)
@@ -148,7 +190,7 @@ def orchestrate_checkout(
             existing_sub.dpa_version = dpa_version_str
             logger.info("DPA v%s accepted by user %d (existing sub)", dpa_version_str, user_id)
 
-    # 8. Create checkout session with idempotency key
+    # 8. Create checkout session with idempotency key (saga step 2)
     import time as _time
 
     idempotency_key = f"checkout-{user_id}-{price_id}-{int(_time.time() // 60)}"
@@ -167,9 +209,28 @@ def orchestrate_checkout(
         )
     except Exception:
         db.rollback()
+        # Saga compensation: clean up the Stripe customer we just created
+        if created_new_customer:
+            _rollback_stripe_customer(customer_id, user_id)
         raise CheckoutProviderError("Payment provider error. Please try again or contact support.")
 
-    # Single atomic commit: customer_id + DPA + checkout all succeed together
-    db.commit()
+    # 9. Atomic DB commit: customer_id + DPA persisted together
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        # Stripe resources (customer + checkout session) already exist.
+        # Do NOT auto-delete in production — the checkout session may still be
+        # completed by the user. Log for manual reconciliation instead.
+        logger.critical(
+            "MANUAL RECONCILIATION REQUIRED: DB commit failed after Stripe "
+            "resources were created. stripe_customer_id=%s, user_id=%d, "
+            "tier=%s. Verify in Stripe dashboard whether the customer "
+            "completed checkout; clean up if not.",
+            customer_id,
+            user_id,
+            tier,
+        )
+        raise CheckoutProviderError("Payment provider error. Please try again or contact support.")
 
     return checkout_url

@@ -41,7 +41,7 @@ export interface BaseTestResult<TFlagged> {
   flagged_entries: TFlagged[]
 }
 
-/** Shared shape for composite risk scores (core fields only). */
+/** Shared shape for composite diagnostic scores (core fields only). */
 export interface BaseCompositeScore<TFinding = string> {
   score: number
   risk_tier: TestingRiskTier

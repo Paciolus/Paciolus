@@ -388,9 +388,9 @@ def render_population_composition(story: list, styles: dict, audit_result: dict)
 
 
 def render_risk_summary(story: list, styles: dict, audit_result: dict) -> None:
-    """Build the risk summary section with composite risk score."""
+    """Build the risk summary section with composite diagnostic score."""
     from shared.memo_base import RISK_SCALE_LEGEND, RISK_TIER_DISPLAY
-    from shared.tb_diagnostic_constants import compute_tb_risk_score, get_risk_tier
+    from shared.tb_diagnostic_constants import compute_tb_diagnostic_score, get_diagnostic_tier
 
     story.append(Paragraph("Risk Assessment", styles["SectionHeader"]))
     story.append(LedgerRule(color=ClassicalColors.OBSIDIAN_DEEP, thickness=1))
@@ -427,7 +427,7 @@ def render_risk_summary(story: list, styles: dict, audit_result: dict) -> None:
         risk_score = pre_computed_score
         risk_factors = [(name, pts) for name, pts in pre_computed_factors]
     else:
-        risk_score, risk_factors = compute_tb_risk_score(
+        risk_score, risk_factors = compute_tb_diagnostic_score(
             material_count,
             immaterial_count,
             coverage_pct,
@@ -436,7 +436,7 @@ def render_risk_summary(story: list, styles: dict, audit_result: dict) -> None:
             abnormal_balances=abnormal_balances,
             informational_count=informational_count,
         )
-    risk_tier = get_risk_tier(risk_score)
+    risk_tier = get_diagnostic_tier(risk_score)
     base_tier_label, _ = RISK_TIER_DISPLAY.get(str(risk_tier).lower(), ("UNKNOWN", ClassicalColors.OBSIDIAN_500))
     tier_label = f"{base_tier_label} ({risk_score:.0f}/100)"
 
@@ -749,111 +749,113 @@ def _create_informational_table(styles: dict, anomalies: list) -> KeepTogether:
 
 
 def render_going_concern_indicators(story: list, styles: dict, audit_result: dict) -> None:
-    """Render the Going Concern Indicator Profile section.
+    """Render the Going Concern Indicators section.
 
     Data source: audit_result["going_concern"] — produced by going_concern_engine.py.
     ISA 570 (Going Concern), IAS 1.25-26.
+
+    Each triggered indicator is rendered as a bullet point showing the indicator
+    name, current value, and assessment.  When no indicators are triggered the
+    section still appears with an explicit "no indicators identified" message.
     """
     gc_data = audit_result.get("going_concern", {})
-    if not gc_data:
-        return
-
-    indicators = gc_data.get("indicators", [])
-    if not indicators:
-        return
+    indicators = gc_data.get("indicators", []) if gc_data else []
 
     story.append(Paragraph("Going Concern Indicators", styles["SectionHeader"]))
     story.append(LedgerRule(color=ClassicalColors.OBSIDIAN_DEEP, thickness=1))
     story.append(Spacer(1, 4))
 
-    # Summary line
-    triggered = gc_data.get("indicators_triggered", 0)
+    # ── No indicators triggered (or no data) ─────────────────────
+    triggered_indicators = [ind for ind in indicators if ind.get("triggered", False)]
+
+    if not triggered_indicators:
+        story.append(
+            Paragraph(
+                "No going concern indicators identified in the trial balance data.",
+                styles["BodyText"],
+            )
+        )
+        story.append(Spacer(1, 6))
+        # Still show the disclaimer even when nothing is triggered
+        _render_gc_disclaimer(story, styles, gc_data)
+        story.append(Spacer(1, 12))
+        return
+
+    # ── Summary leader-dot lines ──────────────────────────────────
     checked = gc_data.get("indicators_checked", 0)
+    triggered_count = gc_data.get("indicators_triggered", 0)
     prior_available = gc_data.get("prior_period_available", False)
 
     summary_lines = [
         create_leader_dots("Indicators Evaluated", str(checked)),
-        create_leader_dots("Indicators Triggered", str(triggered)),
+        create_leader_dots("Indicators Triggered", str(triggered_count)),
         create_leader_dots("Prior Period Data", "Available" if prior_available else "Not Available"),
     ]
     for line in summary_lines:
         story.append(Paragraph(line, styles["LeaderLine"]))
     story.append(Spacer(1, 6))
 
-    # Indicators table
-    cell_style = styles["TableCell"]
-    header_style = styles["TableHeader"]
-
-    table_data = [
-        [
-            Paragraph("Indicator", header_style),
-            Paragraph("Status", header_style),
-            Paragraph("Description", header_style),
-        ]
-    ]
-
-    for ind in indicators:
-        ind_triggered = ind.get("triggered", False)
-        status_text = "TRIGGERED" if ind_triggered else "Not Triggered"
-        status_color = "#BC4749" if ind_triggered else "#4A7C59"
-
+    # ── Triggered indicator bullet points ─────────────────────────
+    for ind in triggered_indicators:
+        indicator_name = ind.get("indicator_name", "Unknown Indicator")
+        description = ind.get("description", "")
         metric = ind.get("metric_value")
         threshold = ind.get("threshold")
-        desc_parts = [ind.get("description", "")]
-        if metric is not None and threshold is not None:
-            desc_parts.append(
-                f'<br/><font size="7" color="#616161"><i>Metric: {metric:,.2f} | Threshold: {threshold:,.2f}</i></font>'
-            )
 
-        table_data.append(
-            [
-                Paragraph(ind.get("indicator_name", ""), cell_style),
-                Paragraph(f'<font color="{status_color}"><b>{status_text}</b></font>', cell_style),
-                Paragraph("".join(desc_parts), cell_style),
-            ]
-        )
+        # Build the value line (e.g. "Working Capital: -$150,000")
+        value_text = ""
+        if metric is not None:
+            if threshold is not None:
+                value_text = f"{indicator_name}: {metric:,.2f} (threshold: {threshold:,.2f})"
+            else:
+                value_text = f"{indicator_name}: {metric:,.2f}"
 
-    gc_table = Table(
-        table_data,
-        colWidths=[1.4 * inch, 1.0 * inch, 3.6 * inch],
-        repeatRows=1,
-    )
-    gc_table.setStyle(
-        TableStyle(
-            [
-                ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-                ("FONTSIZE", (0, 0), (-1, 0), 9),
-                ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-                ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-                ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-                ("TOPPADDING", (0, 0), (-1, -1), 5),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-                ("LEFTPADDING", (0, 0), (0, -1), 0),
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [ClassicalColors.WHITE, ClassicalColors.OATMEAL_PAPER]),
-            ]
-        )
-    )
-    story.append(gc_table)
+        # Compose bullet: name (bold), value, assessment
+        bullet_parts = [f"<b>{indicator_name}</b>"]
+        if value_text:
+            bullet_parts.append(f'<br/><font size="8">{value_text}</font>')
+        if description:
+            bullet_parts.append(f'<br/><font size="8" color="#616161"><i>{description}</i></font>')
 
-    # Narrative
-    narrative = gc_data.get("narrative", "")
-    if narrative:
-        story.append(Spacer(1, 4))
-        story.append(Paragraph(f"<i>{narrative}</i>", styles["BodyText"]))
-
-    # ISA 570 disclaimer
-    disclaimer = gc_data.get("disclaimer", "")
-    if disclaimer:
-        story.append(Spacer(1, 4))
         story.append(
             Paragraph(
-                f'<font size="7"><i>{disclaimer}</i></font>',
+                f"\u2022 &nbsp;{''.join(bullet_parts)}",
                 styles["BodyText"],
             )
         )
+        story.append(Spacer(1, 4))
 
+    # ── Narrative ─────────────────────────────────────────────────
+    narrative = gc_data.get("narrative", "")
+    if narrative:
+        story.append(Spacer(1, 2))
+        story.append(Paragraph(f"<i>{narrative}</i>", styles["BodyText"]))
+
+    # ── ISA 570 disclaimer ────────────────────────────────────────
+    _render_gc_disclaimer(story, styles, gc_data)
     story.append(Spacer(1, 12))
+
+
+def _render_gc_disclaimer(story: list, styles: dict, gc_data: dict) -> None:
+    """Render the ISA 570 / AU-C 570 going concern disclaimer.
+
+    Factored out so both the triggered and empty paths share the same text.
+    """
+    disclaimer = gc_data.get("disclaimer", "") if gc_data else ""
+    if not disclaimer:
+        # Fallback disclaimer when the engine did not supply one
+        disclaimer = (
+            "These indicators are analytical observations only. The assessment of "
+            "an entity\u2019s ability to continue as a going concern is the responsibility "
+            "of the auditor under ISA 570 / AU-C 570."
+        )
+    story.append(Spacer(1, 4))
+    story.append(
+        Paragraph(
+            f'<font size="7"><i>{disclaimer}</i></font>',
+            styles["BodyText"],
+        )
+    )
 
 
 # ---------------------------------------------------------------------------

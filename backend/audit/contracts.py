@@ -102,7 +102,7 @@ class AnomalyResult:
 
 @dataclass
 class RiskSummary:
-    """Aggregate risk scoring and tier assignment.
+    """Aggregate diagnostic scoring and tier assignment.
 
     Attributes:
         total_anomalies: Total number of anomaly findings.
@@ -111,8 +111,8 @@ class RiskSummary:
         low_severity: Count of low-severity findings.
         informational_count: Count of informational findings.
         anomaly_types: Breakdown by anomaly type string.
-        risk_score: Computed numeric risk score (0-100).
-        risk_tier: Human label derived from risk_score.
+        risk_score: Computed numeric diagnostic score (0-100).
+        risk_tier: Human label derived from diagnostic score.
         risk_factors: List of (factor_name, points) tuples.
         coverage_pct: Percentage of TB value covered by material findings.
     """

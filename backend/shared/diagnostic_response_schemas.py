@@ -58,7 +58,7 @@ class FluxDataResponse(BaseModel):
 
 
 class ReconScoreResponse(BaseModel):
-    """Per-account reconciliation risk score."""
+    """Per-account reconciliation diagnostic score."""
 
     account: str
     score: int

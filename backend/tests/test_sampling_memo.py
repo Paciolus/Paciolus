@@ -701,18 +701,23 @@ class TestEvaluationNextSteps:
 
     def test_evaluation_intro_mentions_uel(self, evaluation_result, design_result):
         steps, intro = _build_evaluation_next_steps(evaluation_result, design_result)
-        assert "UEL" in intro
+        assert "upper error limit" in intro.lower()
 
-    def test_evaluation_intro_pass_accepted(self, evaluation_result, design_result):
+    def test_evaluation_intro_pass_isa530_compliant(self, evaluation_result, design_result):
+        """ISA 530.14: pass conclusion must not say 'population is accepted'."""
         steps, intro = _build_evaluation_next_steps(evaluation_result, design_result)
-        assert "accepted" in intro.lower()
+        assert "does not exceed" in intro.lower()
+        assert "before concluding on the population" in intro.lower()
+        assert "population is accepted" not in intro.lower()
 
-    def test_evaluation_intro_fail_not_accepted(self, evaluation_result, design_result):
+    def test_evaluation_intro_fail_isa530_compliant(self, evaluation_result, design_result):
+        """ISA 530.17: fail conclusion must not say 'population cannot be accepted'."""
         evaluation_result["conclusion"] = "fail"
         evaluation_result["upper_error_limit"] = 80_000.00
         steps, intro = _build_evaluation_next_steps(evaluation_result, design_result)
-        assert "cannot be accepted" in intro.lower()
+        assert "exceeds" in intro.lower()
         assert "ISA 530.17" in intro
+        assert "population cannot be accepted" not in intro.lower()
 
     def test_step1_mentions_management(self, evaluation_result, design_result):
         steps, _ = _build_evaluation_next_steps(evaluation_result, design_result)

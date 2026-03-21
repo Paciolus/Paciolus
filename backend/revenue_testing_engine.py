@@ -2145,7 +2145,7 @@ def calculate_revenue_composite_score(
     test_results: list[RevenueTestResult],
     total_entries: int,
 ) -> RevenueCompositeScore:
-    """Calculate composite risk score from revenue test results.
+    """Calculate composite diagnostic score from revenue test results.
 
     Filters out skipped tests before scoring (same pattern as AR aging).
     Delegates to shared test aggregator (Sprint 152).

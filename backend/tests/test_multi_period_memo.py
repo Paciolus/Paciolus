@@ -10,7 +10,7 @@ Tests:
 - Export route registration
 - Pydantic input model validation
 - Results Summary with risk score (BUG-02)
-- Risk scoring function (BUG-02)
+- Diagnostic scoring function (BUG-02)
 - Sign Change Detail rendering (BUG-03)
 - Dormant Account Detail rendering (BUG-04)
 - Ratio Trends expanded (IMP-01)
@@ -28,7 +28,7 @@ from multi_period_memo_generator import (
     _REVENUE_KEYWORDS,
     _RISK_CONCLUSIONS,
     _match_keyword,
-    compute_apc_risk_score,
+    compute_apc_diagnostic_score,
     generate_multi_period_memo,
 )
 
@@ -424,60 +424,60 @@ class TestMultiPeriodMemoGeneration:
 
 
 # =============================================================================
-# RISK SCORING TESTS (BUG-02)
+# DIAGNOSTIC SCORING TESTS (BUG-02)
 # =============================================================================
 
 
 class TestAPCRiskScoring:
-    """Test compute_apc_risk_score function."""
+    """Test compute_apc_diagnostic_score function."""
 
     def test_zero_inputs_score_zero(self):
-        score = compute_apc_risk_score(0, 0, 0.0, False, 0.0, 0, 0, 0)
+        score = compute_apc_diagnostic_score(0, 0, 0.0, False, 0.0, 0, 0, 0)
         assert score == 0.0
 
     def test_material_movements_capped_at_20(self):
-        score = compute_apc_risk_score(10, 0, 0.0, False, 0.0, 0, 0, 0)
+        score = compute_apc_diagnostic_score(10, 0, 0.0, False, 0.0, 0, 0, 0)
         assert score == 20.0  # 10 * 3 = 30, capped at 20
 
     def test_sign_change_adds_8(self):
-        score = compute_apc_risk_score(0, 1, 0.0, False, 0.0, 0, 0, 0)
+        score = compute_apc_diagnostic_score(0, 1, 0.0, False, 0.0, 0, 0, 0)
         assert score == 8.0
 
     def test_cash_increase_above_50_pct(self):
-        score = compute_apc_risk_score(0, 0, 0.603, False, 0.0, 0, 0, 0)
+        score = compute_apc_diagnostic_score(0, 0, 0.603, False, 0.0, 0, 0, 0)
         assert score == 6.0
 
     def test_cash_increase_below_50_pct_no_addition(self):
-        score = compute_apc_risk_score(0, 0, 0.40, False, 0.0, 0, 0, 0)
+        score = compute_apc_diagnostic_score(0, 0, 0.40, False, 0.0, 0, 0, 0)
         assert score == 0.0
 
     def test_cogs_growth_vs_revenue(self):
-        score = compute_apc_risk_score(0, 0, 0.0, True, 0.0, 0, 0, 0)
+        score = compute_apc_diagnostic_score(0, 0, 0.0, True, 0.0, 0, 0, 0)
         assert score == 5.0
 
     def test_revenue_concentration(self):
-        score = compute_apc_risk_score(0, 0, 0.0, False, 0.62, 0, 0, 0)
+        score = compute_apc_diagnostic_score(0, 0, 0.0, False, 0.62, 0, 0, 0)
         assert score == 8.0
 
     def test_high_growth_accounts_capped_at_10(self):
-        score = compute_apc_risk_score(0, 0, 0.0, False, 0.0, 8, 0, 0)
+        score = compute_apc_diagnostic_score(0, 0, 0.0, False, 0.0, 8, 0, 0)
         assert score == 10.0  # 8 * 2 = 16, capped at 10
 
     def test_dormant_accounts(self):
-        score = compute_apc_risk_score(0, 0, 0.0, False, 0.0, 0, 3, 0)
+        score = compute_apc_diagnostic_score(0, 0, 0.0, False, 0.0, 0, 3, 0)
         assert score == 9.0  # 3 * 3
 
     def test_new_closed_capped_at_8(self):
-        score = compute_apc_risk_score(0, 0, 0.0, False, 0.0, 0, 0, 6)
+        score = compute_apc_diagnostic_score(0, 0, 0.0, False, 0.0, 0, 0, 6)
         assert score == 8.0  # 6 * 2 = 12, capped at 8
 
     def test_overall_cap_at_100(self):
-        score = compute_apc_risk_score(20, 5, 0.99, True, 0.99, 20, 10, 10)
+        score = compute_apc_diagnostic_score(20, 5, 0.99, True, 0.99, 20, 10, 10)
         assert score == 100.0
 
     def test_meridian_sample_score(self):
         """Verify the Meridian sample dataset produces expected score."""
-        score = compute_apc_risk_score(
+        score = compute_apc_diagnostic_score(
             material_movement_count=8,
             sign_change_count=1,
             cash_increase_pct=0.603,

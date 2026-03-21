@@ -1,10 +1,10 @@
-"""Risk tier assignment, scoring, and summary assembly.
+"""Diagnostic tier assignment, scoring, and summary assembly.
 
 This module takes the merged list of anomaly findings and produces an
-aggregate risk summary: severity counts, anomaly-type breakdown, a numeric
-risk score (0-100), a human-readable risk tier label, and the contributing
-risk factors.  It is the final analytic stage before results are returned
-to the API layer.
+aggregate diagnostic summary: severity counts, anomaly-type breakdown, a numeric
+diagnostic score (0-100), a human-readable diagnostic tier label, and the
+contributing risk factors.  It is the final analytic stage before results are
+returned to the API layer.
 """
 
 from __future__ import annotations
