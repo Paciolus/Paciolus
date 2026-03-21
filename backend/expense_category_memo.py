@@ -15,7 +15,7 @@ Guardrail: descriptive metrics only.
 from typing import Optional
 
 from reportlab.lib.units import inch
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table
 
 from pdf_generator import (
     ClassicalColors,
@@ -26,7 +26,13 @@ from pdf_generator import (
     generate_reference_number,
 )
 from shared.framework_resolution import ResolvedFramework
-from shared.memo_base import build_disclaimer, build_intelligence_stamp, build_workpaper_signoff, create_memo_styles, standard_table_style
+from shared.memo_base import (
+    build_disclaimer,
+    build_intelligence_stamp,
+    build_workpaper_signoff,
+    create_memo_styles,
+    standard_table_style,
+)
 from shared.report_chrome import (
     ReportMetadata,
     build_cover_page,

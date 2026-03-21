@@ -5,15 +5,15 @@ Split from engagements.py (Sprint 539).
 """
 
 from datetime import UTC, datetime
-from typing import Any, Literal, Optional
+from typing import Literal, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from auth import require_current_user
-from domain_config.tool_taxonomy import CONVERGENCE_EXCLUDED, CONVERGENCE_TOOLS
 from database import get_db
+from domain_config.tool_taxonomy import CONVERGENCE_EXCLUDED, CONVERGENCE_TOOLS
 from engagement_manager import EngagementManager
 from models import User
 from shared.error_messages import sanitize_error

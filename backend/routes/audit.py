@@ -16,12 +16,12 @@ from fastapi import APIRouter
 from routes.audit_diagnostics import router as diagnostics_router
 from routes.audit_flux import router as flux_router
 from routes.audit_pipeline import router as pipeline_router
-from routes.audit_preview import router as preview_router
-from routes.audit_upload import router as upload_router
 
 # Re-export models for backward compatibility (used by tests)
 from routes.audit_preview import PdfPreviewResponse  # noqa: F401
+from routes.audit_preview import router as preview_router
 from routes.audit_upload import SheetInfo, WorkbookInspectResponse  # noqa: F401
+from routes.audit_upload import router as upload_router
 from services.audit.file_tool_scaffold import execute_file_tool  # noqa: F401
 
 router = APIRouter(tags=["audit"])

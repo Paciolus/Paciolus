@@ -29,7 +29,6 @@ from preflight_memo_generator import (
 )
 from shared.framework_resolution import ResolvedFramework
 
-
 # =============================================================================
 # FIXTURES
 # =============================================================================

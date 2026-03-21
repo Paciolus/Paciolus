@@ -1,6 +1,6 @@
 {
   "captured": "2026-02-22",
-  "updated": "2026-03-15",
+  "updated": "2026-03-20",
   "ruff": {
     "total_errors": 0,
     "fixable": 0,
@@ -11,5 +11,9 @@
     "total_warnings": 0,
     "errors_by_rule": {},
     "warnings_by_rule": {}
+  },
+  "mypy": {
+    "total_errors": 1011,
+    "note": "Systemic: Column[int] type leakage, Decimal/float boundary, missing annotations across 131 files"
   }
 }
