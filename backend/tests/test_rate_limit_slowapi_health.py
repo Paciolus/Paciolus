@@ -29,6 +29,12 @@ class TestSlowApiHealth:
 
         assert parse is not None
 
+    def test_limits_redis_storage_importable(self):
+        """RedisStorage class exists in limits.storage for Redis backend."""
+        from limits.storage import RedisStorage
+
+        assert RedisStorage is not None
+
     def test_limiter_construction(self):
         """Limiter can be constructed with a key_func."""
         from slowapi import Limiter

@@ -215,6 +215,14 @@ _trusted_raw = _load_optional("TRUSTED_PROXY_IPS", "")
 TRUSTED_PROXY_IPS: frozenset[str] = frozenset(ip.strip() for ip in _trusted_raw.split(",") if ip.strip())
 
 # =============================================================================
+# REDIS (Optional — shared rate-limit storage)
+# =============================================================================
+# When set, rate-limit counters are stored in Redis and shared across all
+# Gunicorn workers and server instances.  When empty, in-memory counters
+# are used (reset on restart, not shared across workers).
+REDIS_URL = _load_optional("REDIS_URL", "")
+
+# =============================================================================
 # RATE LIMIT TIER OVERRIDES (Sprint 306 — tiered rate limiting)
 # =============================================================================
 
@@ -406,7 +414,7 @@ def print_config_summary() -> None:
     _config_logger.info(
         "Paciolus Configuration Loaded: env=%s, secrets=%s, host=%s:%s, "
         "cors=%s, debug=%s, jwt_algo=%s, jwt_exp=%dm, refresh_exp=%dd, "
-        "csrf=%s, db=%s, stripe=%s, entitlement=%s",
+        "csrf=%s, db=%s, redis=%s, stripe=%s, entitlement=%s",
         ENV_MODE,
         get_secrets_manager().get_provider(),
         API_HOST,
@@ -418,6 +426,7 @@ def print_config_summary() -> None:
         REFRESH_TOKEN_EXPIRATION_DAYS,
         "[auto-generated]" if _using_generated_csrf else "[configured]",
         _mask_database_url(DATABASE_URL),
+        REDIS_URL.split("@")[-1] if REDIS_URL else "disabled",
         "enabled" if STRIPE_ENABLED else "disabled",
         ENTITLEMENT_ENFORCEMENT,
     )

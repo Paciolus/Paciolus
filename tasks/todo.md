@@ -16,6 +16,8 @@
 > new features or architectural changes. Each entry is one line.
 > Format: `- [date] commit-sha: description (files touched)`
 
+- [2026-03-21] 8b3f76d: resolve 25 test failures (4 root causes: StyleSheet1 iteration, Decimal returns, IIF int IDs, ActivityLog defaults), 5 report bugs (procedure rotation, risk tier labels, PDF overflow, population profile, empty drill-downs), dependency updates (Next.js 16.2.1, Sentry, Tailwind, psycopg2, ruff)
+- [2026-03-21] 8372073: resolve all 1,013 mypy type errors — Mapped annotations, Decimal/float casts, return types, stale ignores (#49)
 - [2026-03-20] AUDIT-07-F5: rate-limit 5 unprotected endpoints — webhook (10/min), health (60/min), metrics (30/min); remove webhook exemption from coverage test
 - [2026-03-19] CI fix: 8 test failures — CircularDependencyError (use_alter), scheduler_locks mock, async event loop, rate limit decorators, seat enforcement assertion, perf budget, PG boolean literals
 - [2026-03-18] 7fa8a21: AUDIT-07-F1 bind Docker ports to loopback only (docker-compose.yml)
@@ -30,7 +32,7 @@
 
 | Item | Reason | Source |
 |------|--------|--------|
-| Rate limiter → Redis storage backend | In-memory counters reset on worker restart and are not shared across workers; requires Redis infrastructure | AUDIT-07 Phase 5 |
+| ~~Rate limiter → Redis storage backend~~ | RESOLVED — Sprint 563 | AUDIT-07 Phase 5 |
 
 ---
 
@@ -39,6 +41,20 @@
 > Sprints 532–561 archived to `tasks/archive/sprints-532-561-details.md` (consolidated).
 > FIX-1A/1B, Sprint 562, FIX-2A/2B archived to `tasks/archive/fix-1-2-sprint562-details.md`.
 > FIX-3–8B, AUDIT-09–10 archived to `tasks/archive/fix-3-8b-audit-09-10-details.md`.
+
+### Sprint 563: Redis Rate-Limit Storage Backend
+- [x] Add `redis>=5.0.0` dependency to `requirements.txt`
+- [x] Add `REDIS_URL` optional config to `config.py` with startup summary log
+- [x] Implement `_resolve_storage_uri()` in `shared/rate_limits.py` — Redis when reachable, graceful memory fallback
+- [x] Pass `storage_uri` to `Limiter()` constructor
+- [x] Add `get_storage_backend()` accessor for health checks and logging
+- [x] Add Redis startup log in `main.py` lifespan
+- [x] Add Redis service to `docker-compose.yml` (commented, opt-in)
+- [x] Add `REDIS_URL` documentation to `.env.example`
+- [x] Write 10 tests: storage resolution (3), backend accessor (3), limiter config (2), canary imports (2)
+- [x] Verify all 50 existing rate-limit tests still pass (0 regressions)
+- **Tests:** 60 passed (10 new + 50 existing), 0 regressions
+- **Status:** COMPLETE
 
 ### CI-FIX: Pre-Existing CI Failures
 - [x] **Backend Tests**: commit untracked `anomaly_framework/` generators, fixtures, `__init__.py`, and test files; add `hypothesis` to requirements-dev.txt
