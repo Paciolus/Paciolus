@@ -147,6 +147,7 @@ class TestCancelSubscription:
     async def test_cancel_no_subscription_returns_404(self, override_current):
         """Cancel with no subscription returns 404."""
         with (
+            patch("billing.stripe_client.is_stripe_enabled", return_value=True),
             patch("billing.subscription_manager.cancel_subscription", return_value=None),
             patch("billing.subscription_manager.get_subscription", return_value=None),
         ):
@@ -175,7 +176,10 @@ class TestReactivateSubscription:
     @pytest.mark.asyncio
     async def test_reactivate_no_subscription_returns_404(self, override_current):
         """Reactivate with no subscription returns 404."""
-        with patch("billing.subscription_manager.reactivate_subscription", return_value=None):
+        with (
+            patch("billing.stripe_client.is_stripe_enabled", return_value=True),
+            patch("billing.subscription_manager.reactivate_subscription", return_value=None),
+        ):
             async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 response = await client.post("/billing/reactivate")
                 assert response.status_code == 404

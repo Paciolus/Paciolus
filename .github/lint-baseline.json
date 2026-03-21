@@ -13,7 +13,7 @@
     "warnings_by_rule": {}
   },
   "mypy": {
-    "total_errors": 1009,
+    "total_errors": 1011,
     "note": "Systemic: Column[int] type leakage, Decimal/float boundary, missing annotations across 131 files"
   }
 }
