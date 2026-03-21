@@ -22,7 +22,7 @@ from pdf_generator import ClassicalColors
 MAX_DRILL_ROWS = 20
 
 
-_EMPTY_STATE_TEXT = "No supporting detail available for this finding."
+_EMPTY_STATE_TEXT = "No entry-level detail available for: {title}"
 
 
 def build_drill_down_table(
@@ -63,7 +63,7 @@ def build_drill_down_table(
         story.append(Spacer(1, 4))
         story.append(
             Paragraph(
-                f"<i>{_EMPTY_STATE_TEXT}</i>",
+                f"<i>{_EMPTY_STATE_TEXT.format(title=title)}</i>",
                 styles["MemoBodySmall"],
             )
         )

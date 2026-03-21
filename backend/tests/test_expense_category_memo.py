@@ -131,25 +131,25 @@ class TestPctChangeStr:
 
 class TestAssignRisk:
     def test_high_risk(self):
-        """>=20% and exceeds materiality → High."""
-        assert _assign_risk(25.0, True) == "High"
-        assert _assign_risk(-20.0, True) == "High"
+        """>=20% and exceeds materiality → high (RISK_TIER_DISPLAY key)."""
+        assert _assign_risk(25.0, True) == "high"
+        assert _assign_risk(-20.0, True) == "high"
 
     def test_moderate_pct_only(self):
-        """>=10% but not exceeds materiality → Moderate."""
-        assert _assign_risk(15.0, False) == "Moderate"
+        """>=10% but not exceeds materiality → moderate."""
+        assert _assign_risk(15.0, False) == "moderate"
 
     def test_moderate_materiality_only(self):
-        """<10% but exceeds materiality → Moderate."""
-        assert _assign_risk(5.0, True) == "Moderate"
+        """<10% but exceeds materiality → moderate."""
+        assert _assign_risk(5.0, True) == "moderate"
 
     def test_low_risk(self):
-        """<10% and not exceeds materiality → Low."""
-        assert _assign_risk(5.0, False) == "Low"
+        """<10% and not exceeds materiality → low."""
+        assert _assign_risk(5.0, False) == "low"
 
     def test_none_pct(self):
-        """None pct_change → Low."""
-        assert _assign_risk(None, True) == "Low"
+        """None pct_change → low."""
+        assert _assign_risk(None, True) == "low"
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -217,23 +217,23 @@ class TestGenerateVarianceCommentary:
 
 class TestGenerateProcedures:
     def test_cogs_procedure(self):
-        findings = [{"category": "Cost of Goods Sold", "risk": "High"}]
+        findings = [{"category": "Cost of Goods Sold", "risk": "high"}]
         cats = [{"label": "Cost of Goods Sold", "dollar_change": 490_000, "_pct_change": 20.4, "pct_of_revenue": 42.19}]
         procs = _generate_procedures(findings, cats)
         assert len(procs) >= 1
         cogs_proc = next(p for p in procs if p["area"] == "COGS Variance")
         assert "vendor invoices" in cogs_proc["procedure"]
-        assert cogs_proc["priority"] == "High"
+        assert cogs_proc["priority"] == "high"
 
     def test_payroll_procedure(self):
-        findings = [{"category": "Payroll & Benefits", "risk": "Moderate"}]
+        findings = [{"category": "Payroll & Benefits", "risk": "moderate"}]
         cats = [{"label": "Payroll & Benefits", "dollar_change": 240_000, "_pct_change": 20.3, "pct_of_revenue": 20.73}]
         procs = _generate_procedures(findings, cats)
         payroll_proc = next(p for p in procs if p["area"] == "Payroll Variance")
         assert "Report 05" in payroll_proc["procedure"]
 
     def test_other_operating_procedure(self):
-        findings = [{"category": "Other Operating Expenses", "risk": "Moderate"}]
+        findings = [{"category": "Other Operating Expenses", "risk": "moderate"}]
         cats = [
             {
                 "label": "Other Operating Expenses",
@@ -254,17 +254,17 @@ class TestGenerateProcedures:
         assert any("benchmark" in p["area"].lower() for p in procs)
 
     def test_priority_sorting(self):
-        """Procedures should be sorted High → Moderate."""
+        """Procedures should be sorted high → moderate."""
         findings = [
-            {"category": "Payroll & Benefits", "risk": "Moderate"},
-            {"category": "Cost of Goods Sold", "risk": "High"},
+            {"category": "Payroll & Benefits", "risk": "moderate"},
+            {"category": "Cost of Goods Sold", "risk": "high"},
         ]
         cats = [
             {"label": "Cost of Goods Sold", "dollar_change": 490_000, "_pct_change": 20.4, "pct_of_revenue": 42.19},
             {"label": "Payroll & Benefits", "dollar_change": 240_000, "_pct_change": 20.3, "pct_of_revenue": 20.73},
         ]
         procs = _generate_procedures(findings, cats)
-        assert procs[0]["priority"] == "High"
+        assert procs[0]["priority"] == "high"
 
     def test_empty_findings(self):
         """No findings, no benchmark issues → no procedures."""

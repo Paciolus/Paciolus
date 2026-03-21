@@ -27,6 +27,7 @@ from pdf_generator import (
 )
 from shared.framework_resolution import ResolvedFramework
 from shared.memo_base import (
+    RISK_TIER_DISPLAY,
     build_disclaimer,
     build_intelligence_stamp,
     build_workpaper_signoff,
@@ -202,21 +203,29 @@ def generate_accrual_completeness_memo(
         story.append(LedgerRule(doc_width))
 
         # Build enriched table with classification column
+        cell_style = styles["MemoTableCell"]
         acct_headers = ["Account", "Classification", "Balance", "Matched Keyword"]
         acct_data = [acct_headers]
         for a in accrual_accounts:
             if isinstance(a, dict):
                 acct_data.append(
                     [
-                        Paragraph(str(a.get("account_name", "")), styles["MemoTableCell"]),
-                        a.get("classification", "Accrued Liability"),
-                        f"${a.get('balance', 0):,.2f}",
-                        a.get("matched_keyword", ""),
+                        Paragraph(str(a.get("account_name", "")), cell_style),
+                        Paragraph(str(a.get("classification", "Accrued Liability")), cell_style),
+                        Paragraph(f"${a.get('balance', 0):,.2f}", cell_style),
+                        Paragraph(str(a.get("matched_keyword", "")), cell_style),
                     ]
                 )
 
         # Total row
-        acct_data.append(["TOTAL", "", f"${total_accrued:,.2f}", ""])
+        acct_data.append(
+            [
+                Paragraph("TOTAL", cell_style),
+                Paragraph("", cell_style),
+                Paragraph(f"${total_accrued:,.2f}", cell_style),
+                Paragraph("", cell_style),
+            ]
+        )
 
         acct_table = Table(
             acct_data,
@@ -489,11 +498,11 @@ def generate_accrual_completeness_memo(
         )
         story.append(Spacer(1, 6))
 
-        # Sort by priority: High → Moderate → Low
-        priority_order = {"High": 0, "Moderate": 1, "Low": 2}
+        # Sort by priority: high → elevated → moderate → low (shared tier constants)
+        _tier_severity = {"high": 0, "elevated": 1, "moderate": 2, "low": 3}
         sorted_findings = sorted(
             findings if isinstance(findings, list) else [],
-            key=lambda f: priority_order.get(f.get("risk", "Low") if isinstance(f, dict) else "Low", 2),
+            key=lambda f: _tier_severity.get((f.get("risk", "low") if isinstance(f, dict) else "low").lower(), 3),
         )
 
         finding_headers = ["#", "Area", "Finding", "Risk", "Action Required"]
@@ -502,12 +511,14 @@ def generate_accrual_completeness_memo(
 
         for i, f in enumerate(sorted_findings, 1):
             if isinstance(f, dict):
+                risk_key = str(f.get("risk", "low")).lower()
+                risk_display = RISK_TIER_DISPLAY.get(risk_key, (risk_key.upper(),))[0]
                 finding_data.append(
                     [
                         str(i),
                         Paragraph(f.get("area", ""), styles["MemoTableCell"]),
                         Paragraph(f.get("finding", ""), styles["MemoTableCell"]),
-                        f.get("risk", ""),
+                        risk_display,
                         Paragraph(f.get("action_required", ""), styles["MemoTableCell"]),
                     ]
                 )
@@ -537,9 +548,11 @@ def generate_accrual_completeness_memo(
 
         for p in procedures:
             if isinstance(p, dict):
+                prio_key = str(p.get("priority", "low")).lower()
+                prio_display = RISK_TIER_DISPLAY.get(prio_key, (prio_key.upper(),))[0]
                 proc_data.append(
                     [
-                        p.get("priority", ""),
+                        prio_display,
                         p.get("area", ""),
                         Paragraph(p.get("procedure", ""), styles["MemoTableCell"]),
                     ]

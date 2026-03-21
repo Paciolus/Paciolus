@@ -97,11 +97,11 @@ class ExpenseCategory:
 
     label: str
     key: str
-    amount: float
-    pct_of_revenue: Optional[float]
+    amount: Decimal
+    pct_of_revenue: Optional[Decimal]
     prior_amount: Optional[float] = None
     prior_pct_of_revenue: Optional[float] = None
-    dollar_change: Optional[float] = None
+    dollar_change: Optional[Decimal] = None
     exceeds_threshold: bool = False
     benchmark_pct: Optional[float] = None
 
@@ -126,7 +126,7 @@ class ExpenseCategoryReport:
     """Complete expense category analytical result."""
 
     categories: list[ExpenseCategory] = field(default_factory=list)
-    total_expenses: float = 0.0
+    total_expenses: Decimal = field(default_factory=lambda: Decimal("0"))
     total_revenue: float = 0.0
     revenue_available: bool = False
     prior_available: bool = False
@@ -243,12 +243,12 @@ def compute_expense_categories(
     categories: list[ExpenseCategory] = []
     for key in CATEGORY_ORDER:
         amount = category_amounts[key]
-        pct_of_revenue = float(amount / total_revenue_dec * 100) if revenue_available else None
+        pct_of_revenue = amount / total_revenue_dec * 100 if revenue_available else None
 
         cat = ExpenseCategory(
             label=CATEGORY_LABELS[key],
             key=key,
-            amount=float(amount),
+            amount=amount,
             pct_of_revenue=pct_of_revenue,
         )
 
@@ -265,14 +265,14 @@ def compute_expense_categories(
                 cat.prior_amount = prior_amt
                 if prior_revenue is not None and abs(prior_revenue) > NEAR_ZERO:
                     cat.prior_pct_of_revenue = prior_amt / prior_revenue * 100
-                cat.dollar_change = float(amount - prior_dec)
+                cat.dollar_change = amount - prior_dec
                 cat.exceeds_threshold = abs(amount - prior_dec) > materiality_threshold_dec
 
         categories.append(cat)
 
     return ExpenseCategoryReport(
         categories=categories,
-        total_expenses=float(total_expenses),
+        total_expenses=total_expenses,
         total_revenue=total_revenue,
         revenue_available=revenue_available,
         prior_available=prior_available,

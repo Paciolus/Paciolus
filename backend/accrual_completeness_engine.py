@@ -190,7 +190,7 @@ class ReasonablenessResult:
 class DeferredRevenueAnalysis:
     """Deferred Revenue analysis metrics (ASC 606)."""
 
-    deferred_balance: float
+    deferred_balance: Decimal
     total_revenue: Optional[float]
     deferred_pct_of_revenue: Optional[float]
 
@@ -266,12 +266,12 @@ class AccrualCompletenessReport:
 
     # Core accrual accounts (Accrued Liability + Provision/Reserve only)
     accrual_accounts: list[AccrualAccount] = field(default_factory=list)
-    total_accrued_balance: float = 0.0
+    total_accrued_balance: Decimal = field(default_factory=lambda: Decimal("0"))
     accrual_account_count: int = 0
 
     # Deferred Revenue accounts (excluded from ratio)
     deferred_revenue_accounts: list[AccrualAccount] = field(default_factory=list)
-    total_deferred_revenue: float = 0.0
+    total_deferred_revenue: Decimal = field(default_factory=lambda: Decimal("0"))
 
     # Run-rate analysis
     monthly_run_rate: Optional[float] = None
@@ -606,7 +606,7 @@ def _analyze_deferred_revenue(
         pct_of_revenue = float(total_deferred / Decimal(str(total_revenue)) * 100)
 
     return DeferredRevenueAnalysis(
-        deferred_balance=float(total_deferred),
+        deferred_balance=total_deferred,
         total_revenue=total_revenue,
         deferred_pct_of_revenue=pct_of_revenue,
     )
@@ -936,10 +936,10 @@ def compute_accrual_completeness(
 
     return AccrualCompletenessReport(
         accrual_accounts=accrual_accounts,
-        total_accrued_balance=float(total_accrued),
+        total_accrued_balance=total_accrued,
         accrual_account_count=accrual_count,
         deferred_revenue_accounts=deferred_revenue_accounts,
-        total_deferred_revenue=float(total_deferred),
+        total_deferred_revenue=total_deferred,
         monthly_run_rate=monthly_run_rate,
         accrual_to_run_rate_pct=accrual_to_run_rate,
         threshold_pct=threshold_pct,

@@ -27,6 +27,7 @@ from pdf_generator import (
 )
 from shared.framework_resolution import ResolvedFramework
 from shared.memo_base import (
+    RISK_TIER_DISPLAY,
     build_disclaimer,
     build_intelligence_stamp,
     build_workpaper_signoff,
@@ -90,14 +91,19 @@ def _pct_change_str(pct: Optional[float]) -> str:
 
 
 def _assign_risk(pct_change_val: Optional[float], exceeds_materiality: bool) -> str:
-    """Assign risk level based on percentage change and materiality."""
+    """Assign risk level based on percentage change and materiality.
+
+    Returns a key from RISK_TIER_DISPLAY ("high", "moderate", "low") so
+    that display labels and colors are derived from the shared mapping
+    rather than hardcoded strings (BUG-002).
+    """
     if pct_change_val is None:
-        return "Low"
+        return "low"
     if abs(pct_change_val) >= 20 and exceeds_materiality:
-        return "High"
+        return "high"
     if abs(pct_change_val) >= 10 or exceeds_materiality:
-        return "Moderate"
-    return "Low"
+        return "moderate"
+    return "low"
 
 
 def _benchmark_flag(ratio_name: str, value: float) -> str:
@@ -166,7 +172,7 @@ def _generate_procedures(findings: list[dict], categories: list[dict]) -> list[d
 
     for finding in findings:
         label = finding.get("category", "")
-        risk = finding.get("risk", "Low")
+        risk = finding.get("risk", "low")
         cat = cat_map.get(label, {})
         change = cat.get("dollar_change", 0)
         pct = cat.get("_pct_change")
@@ -178,7 +184,7 @@ def _generate_procedures(findings: list[dict], categories: list[dict]) -> list[d
         if "cost of goods" in label_lower or "cogs" in label_lower:
             procedures.append(
                 {
-                    "priority": "High" if risk == "High" else "Moderate",
+                    "priority": "high" if risk == "high" else "moderate",
                     "area": "COGS Variance",
                     "procedure": (
                         f"COGS changed ${abs_change:,.0f} ({pct_str}) year-over-year. "
@@ -191,7 +197,7 @@ def _generate_procedures(findings: list[dict], categories: list[dict]) -> list[d
         elif "payroll" in label_lower or "employee" in label_lower:
             procedures.append(
                 {
-                    "priority": "High" if risk == "High" else "Moderate",
+                    "priority": "high" if risk == "high" else "moderate",
                     "area": "Payroll Variance",
                     "procedure": (
                         f"Payroll & Benefits changed ${abs_change:,.0f} ({pct_str}). "
@@ -203,7 +209,7 @@ def _generate_procedures(findings: list[dict], categories: list[dict]) -> list[d
         elif "depreciation" in label_lower or "amortization" in label_lower:
             procedures.append(
                 {
-                    "priority": "Moderate",
+                    "priority": "moderate",
                     "area": "D&A Variance",
                     "procedure": (
                         f"Depreciation & Amortization changed ${abs_change:,.0f} ({pct_str}). "
@@ -215,7 +221,7 @@ def _generate_procedures(findings: list[dict], categories: list[dict]) -> list[d
         elif "interest" in label_lower or "tax" in label_lower:
             procedures.append(
                 {
-                    "priority": "Moderate",
+                    "priority": "moderate",
                     "area": "Interest & Tax Variance",
                     "procedure": (
                         f"Interest & Tax changed ${abs_change:,.0f} ({pct_str}). "
@@ -227,7 +233,7 @@ def _generate_procedures(findings: list[dict], categories: list[dict]) -> list[d
         elif "other operating" in label_lower:
             procedures.append(
                 {
-                    "priority": "Moderate",
+                    "priority": "moderate",
                     "area": "Other Operating Expenses",
                     "procedure": (
                         f"Other Operating Expenses changed ${abs_change:,.0f} ({pct_str}). "
@@ -239,7 +245,7 @@ def _generate_procedures(findings: list[dict], categories: list[dict]) -> list[d
         else:
             procedures.append(
                 {
-                    "priority": "Moderate",
+                    "priority": "moderate",
                     "area": f"{label} Variance",
                     "procedure": (
                         f"{label} changed ${abs_change:,.0f} ({pct_str}). "
@@ -269,7 +275,7 @@ def _generate_procedures(findings: list[dict], categories: list[dict]) -> list[d
             if area_name not in existing_areas:
                 procedures.append(
                     {
-                        "priority": "Moderate",
+                        "priority": "moderate",
                         "area": area_name,
                         "procedure": (
                             f"{label} at {pct_rev:.1f}% of revenue exceeds the benchmark range "
@@ -279,9 +285,9 @@ def _generate_procedures(findings: list[dict], categories: list[dict]) -> list[d
                     }
                 )
 
-    # Sort: High first, then Moderate, then Low
-    priority_order = {"High": 0, "Moderate": 1, "Low": 2}
-    procedures.sort(key=lambda p: priority_order.get(p.get("priority", "Low"), 2))
+    # Sort: high → elevated → moderate → low (keys from shared RISK_TIER_DISPLAY)
+    _tier_severity = {"high": 0, "elevated": 1, "moderate": 2, "low": 3}
+    procedures.sort(key=lambda p: _tier_severity.get(p.get("priority", "low"), 3))
     return procedures
 
 
@@ -550,7 +556,8 @@ def generate_expense_category_memo(
 
             direction = "Increase" if dollar_change > 0 else ("Decrease" if dollar_change < 0 else "No Change")
             risk = _assign_risk(pct_chg, exceeds)
-            explanation_req = "Yes" if risk in ("High", "Moderate") else "No"
+            risk_display = RISK_TIER_DISPLAY.get(risk, (risk.upper(),))[0]
+            explanation_req = "Yes" if risk in ("high", "moderate") else "No"
 
             variance_data.append(
                 [
@@ -558,13 +565,13 @@ def generate_expense_category_memo(
                     f"${dollar_change:,.2f}",
                     _pct_change_str(pct_chg),
                     direction,
-                    risk,
+                    risk_display,
                     explanation_req,
                 ]
             )
 
             # Collect findings for Section V
-            if risk in ("High", "Moderate"):
+            if risk in ("high", "moderate"):
                 finding_num += 1
                 finding_source = "III-A"
                 findings.append(
@@ -592,7 +599,7 @@ def generate_expense_category_memo(
             for c in categories
             if isinstance(c, dict)
             and c.get("_pct_change") is not None
-            and _assign_risk(c["_pct_change"], c.get("exceeds_threshold", False)) in ("High", "Moderate")
+            and _assign_risk(c["_pct_change"], c.get("exceeds_threshold", False)) in ("high", "moderate")
         ]
 
         if high_mod_cats:
@@ -717,8 +724,8 @@ def generate_expense_category_memo(
                         "finding": (
                             f"{ratio_name} at {pct_rev:.1f}% exceeds benchmark range ({bounds[0]}%\u2013{bounds[1]}%)"
                         ),
-                        "risk": "Moderate",
-                        "priority": "Moderate",
+                        "risk": "moderate",
+                        "priority": "moderate",
                         "source": section_iv,
                     }
                 )
@@ -754,22 +761,24 @@ def generate_expense_category_memo(
         )
         story.append(Spacer(1, 6))
 
-        # Sort by priority: High → Moderate → Low
-        priority_order = {"High": 0, "Moderate": 1, "Low": 2}
-        findings.sort(key=lambda f: priority_order.get(f.get("priority", "Low"), 2))
+        # Sort by priority: high → elevated → moderate → low (shared tier keys)
+        _tier_severity = {"high": 0, "elevated": 1, "moderate": 2, "low": 3}
+        findings.sort(key=lambda f: _tier_severity.get(f.get("priority", "low"), 3))
 
         finding_headers = ["#", "Category", "Finding", "Risk", "Priority"]
         finding_widths = [0.3 * inch, 1.4 * inch, 3.3 * inch, 0.7 * inch, 0.7 * inch]
         finding_data = [finding_headers]
 
         for i, f in enumerate(findings, 1):
+            risk_key = f.get("risk", "low")
+            priority_key = f.get("priority", "low")
             finding_data.append(
                 [
                     str(i),
                     f.get("category", ""),
                     Paragraph(f.get("finding", ""), styles["MemoTableCell"]),
-                    f.get("risk", ""),
-                    f.get("priority", ""),
+                    RISK_TIER_DISPLAY.get(risk_key, (risk_key.upper(),))[0],
+                    RISK_TIER_DISPLAY.get(priority_key, (priority_key.upper(),))[0],
                 ]
             )
 
@@ -800,9 +809,10 @@ def generate_expense_category_memo(
         proc_data = [proc_headers]
 
         for p in procedures:
+            prio_key = p.get("priority", "low")
             proc_data.append(
                 [
-                    p.get("priority", ""),
+                    RISK_TIER_DISPLAY.get(prio_key, (prio_key.upper(),))[0],
                     p.get("area", ""),
                     Paragraph(p.get("procedure", ""), styles["MemoTableCell"]),
                 ]
