@@ -49,6 +49,28 @@ services:
       - paciolus-network
 
   # ---------------------------------------------------------------------------
+  # Redis (Optional — shared rate-limit storage across workers)
+  # ---------------------------------------------------------------------------
+  # Uncomment to enable persistent, cross-worker rate limiting.
+  # Set backend env: REDIS_URL=redis://redis:6379/0
+  #
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: paciolus-redis
+  #   ports:
+  #     - "127.0.0.1:6379:6379"
+  #   volumes:
+  #     - paciolus-redis:/data
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "ping"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #   restart: unless-stopped
+  #   networks:
+  #     - paciolus-network
+
+  # ---------------------------------------------------------------------------
   # PostgreSQL Database (Optional — for local PostgreSQL development)
   # ---------------------------------------------------------------------------
   # Uncomment to use PostgreSQL instead of SQLite.
@@ -103,6 +125,9 @@ volumes:
     driver: local
     # Note: This volume stores ONLY user metadata, settings, and activity logs.
     # Financial data is NEVER persisted (Zero-Storage Architecture).
+  # paciolus-redis:
+  #   driver: local
+  #   # Uncomment when using the optional Redis service above.
   # paciolus-pgdata:
   #   driver: local
   #   # Uncomment when using the optional PostgreSQL db service above.

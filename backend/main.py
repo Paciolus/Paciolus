@@ -43,7 +43,7 @@ from security_middleware import (
     SecurityHeadersMiddleware,
 )
 from security_utils import log_secure_operation
-from shared.rate_limits import limiter
+from shared.rate_limits import get_storage_backend, limiter
 from version import __version__
 
 # Initialize logging before anything else
@@ -167,6 +167,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             for issue in billing_issues:
                 logger.warning("Billing config: %s", issue)
 
+    logger.info("Rate-limit storage backend: %s", get_storage_backend())
     logger.info("Paciolus API v%s started (debug=%s)", __version__, DEBUG)
     log_secure_operation("app_startup", "Paciolus API started")
 

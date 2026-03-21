@@ -23,14 +23,24 @@ Maintenance Status (Sprint 444):
     Starlette middleware wrapping `limits` directly is documented in
     docs/runbooks/rate-limiter-modernization.md but deferred until slowapi
     becomes incompatible with a future Starlette version.
+
+Storage Backend:
+    When REDIS_URL is configured, rate-limit counters are persisted in Redis
+    and shared across all Gunicorn workers and server instances. This prevents
+    counter reset on worker restart and ensures consistent enforcement under
+    horizontal scaling.  When REDIS_URL is empty (default), in-memory counters
+    are used — suitable for single-instance development.
 """
 
+import logging
 from contextvars import ContextVar
 
 from slowapi import Limiter
 from starlette.requests import Request
 
 from security_middleware import get_client_ip as _canonical_get_client_ip
+
+_logger = logging.getLogger(__name__)
 
 # ContextVar set by RateLimitIdentityMiddleware before slowapi runs
 _current_tier: ContextVar[str] = ContextVar("rate_limit_tier", default="anonymous")
@@ -190,16 +200,61 @@ def _get_client_ip(request: Request) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Storage backend resolution
+# ---------------------------------------------------------------------------
+
+
+def _resolve_storage_uri() -> str:
+    """Return the storage URI for the rate limiter.
+
+    When REDIS_URL is configured, returns a ``redis://`` URI so that
+    counters are shared across all workers and survive restarts.
+    Falls back to ``memory://`` (per-process, ephemeral).
+    """
+    from config import REDIS_URL
+
+    if not REDIS_URL:
+        return "memory://"
+
+    # Validate connectivity eagerly so misconfigurations surface at startup
+    try:
+        from limits.storage import RedisStorage
+
+        storage = RedisStorage(REDIS_URL)
+        storage.check()
+        _logger.info("Rate-limit storage: Redis (%s)", REDIS_URL.split("@")[-1])
+        return REDIS_URL
+    except Exception as exc:  # noqa: BLE001
+        _logger.warning(
+            "Redis configured but unreachable (%s) — falling back to in-memory storage. "
+            "Rate limits will NOT be shared across workers.",
+            exc,
+        )
+        return "memory://"
+
+
+_storage_uri = _resolve_storage_uri()
+
+# ---------------------------------------------------------------------------
 # Limiter instance + category constants
 # ---------------------------------------------------------------------------
 
 limiter = Limiter(
     key_func=_get_rate_limit_key,
     default_limits=["60/minute"],
+    storage_uri=_storage_uri,
     # Note: headers_enabled=True requires every rate-limited endpoint to
     # accept a Response parameter. Enabling it would require updating all
     # ~100 endpoint signatures. Left as False for now.
 )
+
+
+def get_storage_backend() -> str:
+    """Return the active storage backend identifier ('redis' or 'memory')."""
+    if _storage_uri.startswith("redis"):
+        return "redis"
+    return "memory"
+
 
 RATE_LIMIT_AUDIT = TieredLimit("audit", "10/minute")
 RATE_LIMIT_AUTH = TieredLimit("auth", "5/minute")
