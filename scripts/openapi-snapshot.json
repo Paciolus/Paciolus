@@ -15959,7 +15959,7 @@
         "type": "object"
       },
       "ReconScoreResponse": {
-        "description": "Per-account reconciliation risk score.",
+        "description": "Per-account reconciliation diagnostic score.",
         "properties": {
           "account": {
             "title": "Account",
