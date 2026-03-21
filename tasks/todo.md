@@ -100,3 +100,42 @@
 
 - **Status:** PENDING
 
+### Sprint 566: Frontend Design Enrichment (14 Findings)
+> Source: Chrome QA visual design assessment — Dashboard, Tools, Workspaces, Portfolio
+
+#### Quick Fixes
+- [x] **X1:** Standardize `max-w-5xl` → `max-w-6xl` on Dashboard page
+- [x] **P2:** Rename "Open Audit" → "Open Diagnostics" in ClientCard (terminology guardrail)
+- [x] **D3:** Enlarge dashboard welcome header to `text-3xl md:text-4xl` + contextual summary line
+- [x] **T3:** Reduce trial-balance drop zone padding from `p-12` to `p-8` in globals.css
+- [x] **W3:** Shorten workspace detail tab labels (Status/Follow-Up/Workpapers/Convergence)
+
+#### Empty State Consistency
+- [x] **X3:** Create shared `PageEmptyState` component (`components/shared/PageEmptyState.tsx`)
+- [x] **W2:** Add CTA button + Zero-Storage badge to Workspaces empty state via `onCreateNew` prop
+- [x] Dashboard + Portfolio empty states enriched with icons, descriptions, and consistent CTAs
+
+#### Dashboard Enrichments
+- [x] **D1:** Stat cards — sage icon circles, `font-mono` numbers, contextual dim for zero values
+- [x] **D2:** Hero Upload TB card (full-width, `sage-50/50` bg, arrow affordance) + 2-col secondary row
+- [x] **D4:** `2px` gradient accent strip below toolbar on all pages
+- [x] **D5:** Enhanced empty Recent Activity — icon, description, larger CTA
+
+#### Portfolio Enhancements
+- [x] **P1+P3:** Spine `w-1.5` → `w-2` with hover color shift (oatmeal→sage), card shadow lift + border transition
+- [x] **P4:** Search bar with magnifying glass icon, client-side name/industry filter
+- [x] **P5:** Empty state icon changed to open-book/ledger (reinforces bound-ledger theme)
+
+#### Workspaces Enhancements
+- [x] **W1:** `AnimatePresence mode="wait"` with slide-in/slide-out crossfade on list↔detail
+- [x] **W4:** Left accent border on EngagementCard (sage-500 active, oatmeal-300 archived)
+- [x] **W5:** `{n}/12 tools` progress indicator in detail header next to status badge
+
+#### Cross-Page Polish
+- [x] **X2:** Subtle sage gradient accent strip below toolbar on Dashboard, Workspaces, Portfolio
+- [x] **X4:** Page mount `opacity` fade-in on Workspaces and Portfolio (`motion.div`)
+- [ ] ~~**X6:** Button style class refactor~~ — Deferred: existing inline styles already match `btn-primary` definition; cosmetic-only rename
+
+- **Verification:** `npm run build` PASS, `npm test` 1,725/1,725 PASS
+- **Status:** COMPLETE
+

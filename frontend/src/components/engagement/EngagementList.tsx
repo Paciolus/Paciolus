@@ -17,6 +17,7 @@ interface EngagementListProps {
   onSelect: (engagement: Engagement) => void;
   onFilterClient: (clientId?: number) => void;
   onFilterStatus: (status?: string) => void;
+  onCreateNew?: () => void;
 }
 
 type StatusTab = 'all' | 'active' | 'archived';
@@ -31,6 +32,7 @@ export function EngagementList({
   onSelect,
   onFilterClient,
   onFilterStatus,
+  onCreateNew,
 }: EngagementListProps) {
   const [activeTab, setActiveTab] = useState<StatusTab>('all');
   const [selectedClientId, setSelectedClientId] = useState<string>('');
@@ -122,9 +124,33 @@ export function EngagementList({
           <h2 className="text-2xl font-serif font-semibold text-content-primary mb-2">
             No Workspaces Yet
           </h2>
-          <p className="text-content-secondary font-sans mb-4 max-w-md mx-auto">
+          <p className="text-content-secondary font-sans mb-8 max-w-md mx-auto">
             Create your first diagnostic workspace to organize tool runs and track materiality thresholds.
           </p>
+
+          {/* W2: CTA button in empty state */}
+          {onCreateNew && (
+            <motion.button
+              initial={{ y: 0 }}
+              whileHover={{ y: -2 }}
+              whileTap={{ y: 0, scale: 0.98 }}
+              onClick={onCreateNew}
+              className="inline-flex items-center gap-2 px-6 py-3.5 bg-sage-600 hover:bg-sage-700 text-white font-sans font-bold rounded-xl transition-colors shadow-theme-card"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              Create Your First Workspace
+            </motion.button>
+          )}
+
+          {/* Trust badge */}
+          <div className="mt-8 inline-flex items-center gap-2 bg-sage-50 border border-sage-200 rounded-full px-4 py-2">
+            <svg className="w-4 h-4 text-sage-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+            <span className="text-sage-700 text-sm font-sans">Zero-Storage: Only workspace metadata is saved</span>
+          </div>
         </motion.div>
       )}
 

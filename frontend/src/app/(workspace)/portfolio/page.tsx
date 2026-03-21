@@ -33,11 +33,22 @@ export default function PortfolioPage() {
     refreshClients,
   } = useWorkspaceContext();
 
+  // Search state — P4: search/filter controls
+  const [searchQuery, setSearchQuery] = useState('');
+
   // Modal state
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editClient, setEditClient] = useState<Client | null>(null);
   const [deleteConfirmClient, setDeleteConfirmClient] = useState<Client | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Filtered clients based on search
+  const filteredClients = searchQuery.trim()
+    ? clients.filter(c =>
+        c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (c.industry && c.industry.toLowerCase().includes(searchQuery.toLowerCase()))
+      )
+    : clients;
 
   // Handle client creation
   const handleCreateClient = async (data: ClientCreateInput): Promise<boolean> => {
@@ -70,7 +81,14 @@ export default function PortfolioPage() {
   } as const;
 
   return (
-    <div className="pb-16 px-6">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.25 }}
+      className="pb-16 px-6"
+    >
+      {/* X2: Accent strip */}
+      <div className="h-[2px] bg-gradient-to-r from-transparent via-sage-500/20 to-transparent -mx-6 mb-0" />
       <div className="max-w-6xl mx-auto pt-8">
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
@@ -100,6 +118,24 @@ export default function PortfolioPage() {
             New Client
           </motion.button>
         </div>
+
+        {/* Search Bar — P4 */}
+        {clients.length > 0 && (
+          <div className="mb-6">
+            <div className="relative max-w-sm">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-tertiary pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search clients..."
+                className="w-full pl-10 pr-4 py-2 bg-surface-input border border-theme rounded-lg text-sm font-sans text-content-primary placeholder:text-content-tertiary outline-hidden focus:border-sage-500/50 transition-colors"
+              />
+            </div>
+          </div>
+        )}
 
         {/* Error State */}
         {clientsError && (
@@ -145,9 +181,10 @@ export default function PortfolioPage() {
             animate="visible"
             className="text-center py-16"
           >
+            {/* P5: Ledger-themed empty state icon */}
             <div className="w-24 h-24 mx-auto mb-6 rounded-2xl bg-surface-card-secondary border border-theme flex items-center justify-center">
               <svg className="w-12 h-12 text-content-tertiary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
               </svg>
             </div>
 
@@ -185,14 +222,14 @@ export default function PortfolioPage() {
         )}
 
         {/* Client Grid */}
-        {clients.length > 0 && (
+        {filteredClients.length > 0 && (
           <motion.div
             variants={staggerContainerTight}
             initial="hidden"
             animate="visible"
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
           >
-            {clients.map((client, index) => (
+            {filteredClients.map((client, index) => (
               <ClientCard
                 key={client.id}
                 client={client}
@@ -203,6 +240,15 @@ export default function PortfolioPage() {
               />
             ))}
           </motion.div>
+        )}
+
+        {/* No search results */}
+        {searchQuery.trim() && filteredClients.length === 0 && clients.length > 0 && (
+          <div className="text-center py-12">
+            <p className="text-content-secondary font-sans text-sm">
+              No clients matching &ldquo;{searchQuery}&rdquo;
+            </p>
+          </div>
         )}
       </div>
 
@@ -291,6 +337,6 @@ export default function PortfolioPage() {
           </motion.div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthSession } from '@/contexts/AuthSessionContext';
 import { useWorkspaceContext } from '@/contexts/WorkspaceContext';
 import { EngagementList, CreateEngagementModal, ToolStatusGrid, FollowUpItemsTable, WorkpaperIndex, ConvergenceTable } from '@/components/engagement';
@@ -214,7 +214,14 @@ function EngagementsPageContent() {
   const clientNameMap = new Map(clients.map(c => [c.id, c.name]));
 
   return (
-    <div className="pb-16 px-6">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.25 }}
+      className="pb-16 px-6"
+    >
+      {/* X2: Accent strip */}
+      <div className="h-[2px] bg-gradient-to-r from-transparent via-sage-500/20 to-transparent -mx-6 mb-0" />
       {/* Non-dismissible disclaimer strip (Guardrail 5) — Sprint 475: subtle full-width */}
       <div className="bg-oatmeal-50 border-b border-oatmeal-200">
         <p className="text-[11px] font-sans text-content-secondary text-center py-1.5 px-4 leading-relaxed">
@@ -263,9 +270,17 @@ function EngagementsPageContent() {
           </div>
         )}
 
-        {/* Two-panel layout when engagement selected */}
+        {/* Two-panel layout — W1: AnimatePresence crossfade */}
+        <AnimatePresence mode="wait">
         {selectedEngagement ? (
-          <div className="space-y-8">
+          <motion.div
+            key="detail"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.2 }}
+            className="space-y-8"
+          >
             {/* Back button */}
             <button
               onClick={handleDeselectEngagement}
@@ -303,6 +318,13 @@ function EngagementsPageContent() {
                       }
                     `}>
                       {selectedEngagement.status === 'active' ? 'Active' : 'Archived'}
+                    </span>
+                    {/* W5: Tool run progress indicator */}
+                    <span className="inline-flex items-center gap-1.5 text-xs font-mono text-content-secondary">
+                      <svg className="w-3.5 h-3.5 text-sage-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                      </svg>
+                      {selectedToolRuns.length}/12 tools
                     </span>
                   </div>
                 </div>
@@ -348,7 +370,7 @@ function EngagementsPageContent() {
             {/* Tab navigation */}
             <div className="flex gap-1 border-b border-theme">
               {(['tools', 'follow-up', 'workpaper', 'convergence'] as const).map((tab) => {
-                const labels = { tools: 'Diagnostic Status', 'follow-up': 'Follow-Up Items', workpaper: 'Workpaper Index', convergence: 'Convergence Index' };
+                const labels = { tools: 'Status', 'follow-up': 'Follow-Up', workpaper: 'Workpapers', convergence: 'Convergence' };
                 const isActive = activeTab === tab;
                 return (
                   <button
@@ -433,9 +455,16 @@ function EngagementsPageContent() {
                 )}
               </>
             )}
-          </div>
+          </motion.div>
         ) : (
-          /* Engagement list */
+          /* Engagement list — W1: keyed for AnimatePresence */
+          <motion.div
+            key="list"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            transition={{ duration: 0.2 }}
+          >
           <EngagementList
             engagements={engagements}
             clients={clients}
@@ -446,8 +475,11 @@ function EngagementsPageContent() {
             onSelect={handleSelectEngagement}
             onFilterClient={handleFilterClient}
             onFilterStatus={handleFilterStatus}
+            onCreateNew={() => setShowCreateModal(true)}
           />
+          </motion.div>
         )}
+        </AnimatePresence>
       </div>
 
       {/* Create Modal */}
@@ -458,7 +490,7 @@ function EngagementsPageContent() {
         clients={clients}
         isLoading={engagementsLoading}
       />
-    </div>
+    </motion.div>
   );
 }
 
