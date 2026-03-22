@@ -152,6 +152,52 @@ def log_activity(
     )
 
 
+class RecentActivityResponse(BaseModel):
+    """Lightweight activity entry for dashboard recent-history widget."""
+
+    id: int
+    filename: Optional[str]
+    created_at: str
+    was_balanced: bool
+    record_count: int
+    anomaly_count: int
+
+
+@router.get("/activity/recent", response_model=list[RecentActivityResponse])
+def get_recent_activity(
+    limit: int = Query(default=5, ge=1, le=50),
+    current_user: User = Depends(require_current_user),
+    db: Session = Depends(get_db),
+) -> list[RecentActivityResponse]:
+    """Get the most recent activity entries for the dashboard.
+
+    Returns a flat JSON array (not paginated) of the N most recent
+    activity log entries for the authenticated user.
+    """
+    activities = (
+        db.query(ActivityLog)
+        .filter(
+            ActivityLog.user_id == current_user.id,
+            ActivityLog.archived_at.is_(None),
+        )
+        .order_by(ActivityLog.timestamp.desc(), ActivityLog.id.desc())
+        .limit(limit)
+        .all()
+    )
+
+    return [
+        RecentActivityResponse(
+            id=a.id,
+            filename=a.filename_display,
+            created_at=a.timestamp.isoformat(),
+            was_balanced=a.was_balanced,
+            record_count=a.record_count,
+            anomaly_count=a.anomaly_count,
+        )
+        for a in activities
+    ]
+
+
 @router.get("/activity/history", response_model=PaginatedResponse[ActivityLogResponse])
 def get_activity_history(
     pagination: PaginationParams = Depends(),
@@ -242,7 +288,9 @@ def clear_activity_history(
 
 
 @router.get("/dashboard/stats", response_model=DashboardStatsResponse)
-def get_dashboard_stats(current_user: User = Depends(require_current_user), db: Session = Depends(get_db)) -> DashboardStatsResponse:
+def get_dashboard_stats(
+    current_user: User = Depends(require_current_user), db: Session = Depends(get_db)
+) -> DashboardStatsResponse:
     """Get dashboard statistics for workspace header."""
     log_secure_operation("dashboard_stats_fetch", f"User {current_user.id} fetching dashboard stats")
 
