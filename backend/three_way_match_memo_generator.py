@@ -113,35 +113,35 @@ _MATCH_RATE_THRESHOLDS = [
     (0.00, "Below 80% threshold \u2014 systemic review of procure-to-pay controls recommended"),
 ]
 
-# Conclusion text by risk tier (4-tier scale)
-_RISK_CONCLUSIONS: dict[str, str] = {
-    "low": (
-        "Based on the automated three-way matching procedures applied, "
-        "the procurement cycle returned LOW flag density across the automated tests. "
-        "Match rates are satisfactory and no variances exceeding the configured "
-        "thresholds were detected."
-    ),
+# Conclusion text by risk tier (4-tier scale) — BUG-002: score-aware
+_RISK_CONCLUSION_SUFFIXES: dict[str, str] = {
+    "low": ("Match rates are satisfactory and no variances exceeding the configured thresholds were detected."),
     "moderate": (
-        "Based on the automated three-way matching procedures applied, "
-        "the procurement cycle returned MODERATE flag density across the automated tests. "
-        "Select variances and unmatched documents should be reviewed for proper "
-        "authorization and documentation."
+        "Select variances and unmatched documents should be reviewed for proper authorization and documentation."
     ),
     "elevated": (
-        "Based on the automated three-way matching procedures applied, "
-        "the procurement cycle returned ELEVATED flag density across the automated tests. "
         "Material variances and unmatched documents were detected that require "
         "focused investigation. The engagement team should evaluate whether additional "
         "procedures are appropriate per ISA 505 and PCAOB AS 1105."
     ),
     "high": (
-        "Based on the automated three-way matching procedures applied, "
-        "the procurement cycle returned HIGH flag density across the automated tests. "
         "Significant variances and/or unmatched documents were detected that require "
         "detailed investigation. The engagement team should evaluate whether additional "
         "substantive procedures are appropriate per ISA 505 and PCAOB AS 1105."
     ),
 }
+
+
+def _build_risk_conclusion(risk_tier: str, score: float) -> str:
+    """Build score-aware risk conclusion text (BUG-002)."""
+    tier_upper = risk_tier.upper() if risk_tier else "LOW"
+    suffix = _RISK_CONCLUSION_SUFFIXES.get(risk_tier, _RISK_CONCLUSION_SUFFIXES["low"])
+    return (
+        f"Based on the automated three-way matching procedures applied, "
+        f"the procurement cycle returned {tier_upper} flag density "
+        f"(Composite Diagnostic Score: {score:.1f}/100) across the automated tests. "
+        f"{suffix}"
+    )
 
 
 # =============================================================================
@@ -945,7 +945,7 @@ def generate_three_way_match_memo(
     story.append(Paragraph("IX. Conclusion", styles["MemoSection"]))
     story.append(LedgerRule(doc.width))
 
-    assessment = _RISK_CONCLUSIONS.get(risk_tier, _RISK_CONCLUSIONS["low"])
+    assessment = _build_risk_conclusion(risk_tier, composite.get("score", 0))
     story.append(Paragraph(assessment, styles["MemoBody"]))
     story.append(Spacer(1, 12))
 

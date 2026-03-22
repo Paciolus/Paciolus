@@ -967,34 +967,35 @@ def generate_bank_rec_memo(
     score_val = composite.get("score", 0) if composite else 0
     tier_label = f"{base_tier_label} ({score_val:.0f}/100)"
 
+    # BUG-002: dict-based conclusion lookup (replaces if/elif chain)
+    _bank_rec_suffixes = {
+        "low": (
+            "The reconciling difference is immaterial and the match rate is satisfactory. "
+            "No items requiring further investigation were identified."
+        ),
+        "moderate": (
+            "The reconciling difference and outstanding items should be reviewed "
+            "to confirm they represent normal timing differences rather than errors or omissions."
+        ),
+        "elevated": (
+            "The reconciling difference and/or outstanding item volume may indicate "
+            "recording errors, omissions, or unusual transactions requiring detailed "
+            "investigation per ISA 500 and ISA 505."
+        ),
+        "high": (
+            "Significant reconciliation exceptions were identified. The reconciling "
+            "difference and outstanding items require immediate investigation per "
+            "ISA 500, ISA 505, and ISA 240."
+        ),
+    }
+
+    suffix = _bank_rec_suffixes.get(risk_tier, _bank_rec_suffixes["low"])
     assessment = (
         f"Based on the automated reconciliation procedures applied, "
         f"the bank reconciliation returned {tier_label} flag density "
         f"(Composite Diagnostic Score: {score_val:.1f}/100) across the automated tests. "
+        f"{suffix}"
     )
-
-    if risk_tier == "low":
-        assessment += (
-            "The reconciling difference is immaterial and the match rate is satisfactory. "
-            "No items requiring further investigation were identified."
-        )
-    elif risk_tier == "moderate":
-        assessment += (
-            "The reconciling difference and outstanding items should be reviewed "
-            "to confirm they represent normal timing differences rather than errors or omissions."
-        )
-    elif risk_tier == "elevated":
-        assessment += (
-            "The reconciling difference and/or outstanding item volume may indicate "
-            "recording errors, omissions, or unusual transactions requiring detailed "
-            "investigation per ISA 500 and ISA 505."
-        )
-    else:
-        assessment += (
-            "Significant reconciliation exceptions were identified. The reconciling "
-            "difference and outstanding items require immediate investigation per "
-            "ISA 500, ISA 505, and ISA 240."
-        )
 
     story.append(Paragraph(assessment, styles["MemoBody"]))
     story.append(Spacer(1, 12))

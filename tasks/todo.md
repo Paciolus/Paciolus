@@ -139,3 +139,20 @@
 - **Verification:** `npm run build` PASS, `npm test` 1,725/1,725 PASS
 - **Status:** COMPLETE
 
+### Sprint 567: Overnight Report Bug Fixes + Dependency Updates
+> Source: `reports/nightly/2026-03-22.md` — 5 confirmed open bugs, 16 outdated packages
+
+#### Bug Fixes
+- [x] **BUG-001:** Add 25 alternate follow-up procedures to `FOLLOW_UP_PROCEDURES_ALT` for high-frequency test keys (AP, Revenue, AR, Fixed Asset, Inventory) to enable rotation across reports
+- [x] **BUG-002:** Make risk tier conclusion labels score-aware in 3 memo generators (three_way_match, multi_period, bank_reconciliation). Conclusion text now includes Composite Diagnostic Score (e.g., "MODERATE (20.0/100)"). Bank rec if/elif chain converted to dict lookup.
+- [x] **BUG-003:** Wrap raw string table cells in `Paragraph` objects in `anomaly_summary_generator.py` (scope table, not-executed table, anomaly table) to prevent PDF text overflow
+- [x] **BUG-006:** Track `missing_names` and `missing_balances` from raw rows in `run_population_profile()` and pass to `_compute_data_quality()` so completeness scores vary by input quality
+- [x] **BUG-007:** Add BUG-007 guard in `revenue_testing_memo_generator.py` for data-inconsistency case (entries_flagged > 0 but flagged_entries empty). Renders placeholder text instead of orphaned section header.
+
+#### Dependency Updates
+- [x] Upgraded 14 of 16 outdated backend packages: bandit, certifi, charset-normalizer, coverage, cyclonedx-python-lib, filelock, greenlet, platformdirs, pypdfium2, pytest-cov, pytz, rich, stevedore, wrapt
+- [x] 2 packages blocked by upstream pins: pdfminer.six (pdfplumber==0.11.9 requires ==20251230), pydantic_core (pydantic==2.12.5 requires ==2.41.5)
+
+- **Tests:** 7,041 backend passed, 0 failed (no regressions)
+- **Status:** COMPLETE
+

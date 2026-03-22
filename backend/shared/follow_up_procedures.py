@@ -611,6 +611,53 @@ FOLLOW_UP_PROCEDURES_ALT: dict[str, list[str]] = {
         "shared tax IDs, bank accounts, or addresses. Vendors sharing these attributes but "
         "listed under different names represent a master data integrity risk.",
     ],
+    # AP Testing alternates (continued — BUG-001)
+    "missing_critical_fields": [
+        "Evaluate whether the missing field data impacts the completeness of the AP "
+        "population tested. If the register extract cannot be remediated, assess whether "
+        "alternative procedures (e.g., vouching a sample to source invoices) can compensate "
+        "for the data gap.",
+    ],
+    "suspicious_descriptions": [
+        "Stratify flagged payments by vendor and preparer. Determine whether suspicious "
+        "descriptions cluster around specific preparers or vendors, which may indicate a "
+        "pattern warranting expanded fraud-risk procedures per ISA 240.",
+    ],
+    "high_frequency_vendors": [
+        "Obtain the entity's vendor payment terms and compare to the observed payment "
+        "frequency. Determine whether high-frequency payments represent legitimate "
+        "recurring charges or potential payment splitting to circumvent approval controls.",
+    ],
+    "check_number_gaps": [
+        "Request the void register for the period and reconcile to the identified gaps. "
+        "For any unaccounted gaps, expand the inquiry to include bank-cleared check images "
+        "to confirm whether the instruments were negotiated.",
+    ],
+    "round_dollar_amounts_ap": [
+        "Stratify round-dollar payments by account code and preparer. Determine whether "
+        "round amounts correlate with recurring accruals or represent ad-hoc estimates "
+        "requiring supporting documentation.",
+    ],
+    "unusual_payment_amounts": [
+        "Perform a stratified analysis of flagged payments by vendor category. Identify "
+        "whether unusual amounts cluster around specific vendors or periods, which may "
+        "indicate estimation or pricing anomalies requiring vendor confirmation.",
+    ],
+    "weekend_payments": [
+        "Review the entity's IT general controls for automated payment processing that "
+        "may coincide with weekends. Distinguish between automated ACH runs (lower risk) "
+        "and manual weekend disbursements (higher risk requiring authorization review).",
+    ],
+    "fuzzy_duplicate_payments": [
+        "Compare fuzzy duplicate pairs to the vendor's standard pricing schedule. "
+        "Confirm whether recurring same-amount payments reflect contracted service fees "
+        "or indicate potential duplicate processing requiring recovery.",
+    ],
+    "invoice_number_reuse": [
+        "Examine the AP system's duplicate invoice detection controls. Determine whether "
+        "the reused number was accepted due to a control gap or represents a legitimate "
+        "multi-line invoice split across vendors.",
+    ],
     # Revenue Testing alternates
     "cutoff_risk": [
         "Select entries within 5 business days of period end and trace to delivery/acceptance "
@@ -621,6 +668,76 @@ FOLLOW_UP_PROCEDURES_ALT: dict[str, list[str]] = {
         "Perform a trend analysis of the top customer's revenue share over the past 3 periods. "
         "If concentration is increasing, inquire of management about customer diversification "
         "strategy and assess going-concern implications per ASC 205-40.",
+    ],
+    # Revenue Testing alternates (continued — BUG-001)
+    "large_manual_entries": [
+        "Compare flagged manual entries to the entity's standard revenue posting workflow. "
+        "Identify whether manual entries bypass automated controls (e.g., billing system "
+        "interface) and assess the compensating controls in place for manual overrides.",
+    ],
+    "year_end_concentration": [
+        "Perform a period-over-period comparison of December revenue as a percentage of "
+        "annual revenue. If the current-year percentage is significantly higher than the "
+        "prior period, inquire of management and corroborate with shipping or delivery "
+        "records.",
+    ],
+    "sign_anomalies": [
+        "Obtain a detailed listing of debit-balance revenue accounts. Stratify by customer "
+        "and product line to determine whether the pattern reflects a specific return/refund "
+        "trend or a systematic misposting requiring reclassification.",
+    ],
+    "trend_variance": [
+        "Compare revenue variances to changes in the entity's key business drivers (volume, "
+        "pricing, customer mix). Assess whether unexplained variances warrant expanded "
+        "substantive testing of revenue transactions near period end.",
+    ],
+    "contra_revenue_anomalies": [
+        "Stratify returns and allowances by customer and product line. Determine whether "
+        "elevated contra-revenue is concentrated in specific channels that may indicate "
+        "channel-stuffing reversal or aggressive prior-period recognition.",
+    ],
+    # AR Aging alternates (BUG-001)
+    "past_due_concentration": [
+        "Obtain the entity's collection activity log for past-due balances. Assess whether "
+        "management's collection efforts are commensurate with the risk, and evaluate the "
+        "need to adjust the allowance for doubtful accounts.",
+    ],
+    "customer_concentration": [
+        "Perform a trend analysis of the top customer's AR share over the past 3 periods. "
+        "If concentration is increasing, assess credit risk implications and evaluate "
+        "whether expanded confirmation procedures are warranted.",
+    ],
+    "credit_limit_breaches": [
+        "Obtain management's credit review documentation for customers exceeding limits. "
+        "Assess whether continued shipments reflect approved credit limit increases or "
+        "represent an override of the credit control policy.",
+    ],
+    # Fixed Asset alternates (BUG-001)
+    "fully_depreciated": [
+        "Obtain a listing of fully depreciated assets still in productive use. Assess "
+        "whether useful life estimates require revision per ISA 540 and whether the "
+        "carrying amount understates the entity's asset base.",
+    ],
+    "fa_missing_fields": [
+        "Evaluate the impact of incomplete fixed asset records on the population tested. "
+        "If the register cannot be remediated, assess whether alternative procedures "
+        "(e.g., physical inspection) can compensate for the data gap.",
+    ],
+    "cost_zscore_outliers": [
+        "Compare flagged asset costs to market data or comparable acquisitions. Determine "
+        "whether outlier costs reflect legitimate premium purchases, capitalized "
+        "installation costs, or potential data entry errors.",
+    ],
+    # Inventory alternates (BUG-001)
+    "slow_moving": [
+        "Obtain management's obsolescence reserve methodology and compare to the identified "
+        "slow-moving items. Assess whether the current reserve adequately addresses the "
+        "risk of NRV decline for these items per ASC 330.",
+    ],
+    "unit_cost_outliers": [
+        "Compare flagged unit costs to the most recent purchase orders and supplier "
+        "contracts. Determine whether cost increases reflect legitimate market changes "
+        "or require adjustment to the standard cost records.",
     ],
     # Payroll alternates
     "PR-T4": [

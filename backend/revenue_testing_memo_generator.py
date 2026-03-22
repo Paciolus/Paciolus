@@ -626,6 +626,16 @@ def _build_high_severity_detail(
             story.append(Paragraph(f"<b>{title} ({count} items)</b>", styles["MemoBody"]))
             story.append(Spacer(1, 4))
 
+            if not flagged:
+                # BUG-007: entries_flagged > 0 but flagged_entries not populated
+                story.append(
+                    Paragraph(
+                        f"<i>No entry-level detail available for: {title}</i>",
+                        styles["MemoBodySmall"],
+                    )
+                )
+                continue
+
             builder = _DETAIL_TABLE_BUILDERS.get(test_key)
             if builder:
                 builder(story, styles, flagged)
@@ -734,7 +744,9 @@ def generate_revenue_testing_memo(
 ) -> bytes:
     """Generate a PDF testing memo for revenue testing results."""
 
-    def _revenue_scope(story: list, styles: dict, doc_width: float, composite: dict, data_quality: dict, period_tested_arg: str | None) -> None:
+    def _revenue_scope(
+        story: list, styles: dict, doc_width: float, composite: dict, data_quality: dict, period_tested_arg: str | None
+    ) -> None:
         build_scope_section(
             story,
             styles,

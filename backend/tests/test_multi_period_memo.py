@@ -26,7 +26,8 @@ import pytest
 from multi_period_memo_generator import (
     _COGS_KEYWORDS,
     _REVENUE_KEYWORDS,
-    _RISK_CONCLUSIONS,
+    _RISK_CONCLUSION_SUFFIXES,
+    _build_risk_conclusion,
     _match_keyword,
     compute_apc_diagnostic_score,
     generate_multi_period_memo,
@@ -496,24 +497,30 @@ class TestAPCRiskScoring:
 
 
 class TestRiskConclusions:
-    """Test risk tier conclusion text."""
+    """Test risk tier conclusion text (BUG-002: score-aware)."""
 
     def test_four_tiers_defined(self):
-        assert set(_RISK_CONCLUSIONS.keys()) == {"low", "moderate", "elevated", "high"}
+        assert set(_RISK_CONCLUSION_SUFFIXES.keys()) == {"low", "moderate", "elevated", "high"}
 
     def test_low_conclusion_no_additional_procedures(self):
-        assert "No additional substantive procedures" in _RISK_CONCLUSIONS["low"]
+        assert "No additional substantive procedures" in _build_risk_conclusion("low", 5.0)
 
     def test_moderate_conclusion_isa_520(self):
-        assert "ISA 520" in _RISK_CONCLUSIONS["moderate"]
+        assert "ISA 520" in _build_risk_conclusion("moderate", 20.0)
 
     def test_elevated_conclusion_expanded(self):
-        assert "ELEVATED" in _RISK_CONCLUSIONS["elevated"]
-        assert "ISA 520" in _RISK_CONCLUSIONS["elevated"]
+        text = _build_risk_conclusion("elevated", 35.0)
+        assert "ELEVATED" in text
+        assert "ISA 520" in text
 
     def test_high_conclusion_misstatement_risk(self):
-        assert "HIGH" in _RISK_CONCLUSIONS["high"]
-        assert "misstatement risk" in _RISK_CONCLUSIONS["high"]
+        text = _build_risk_conclusion("high", 60.0)
+        assert "HIGH" in text
+        assert "misstatement risk" in text
+
+    def test_score_included_in_conclusion(self):
+        """BUG-002: Conclusion must include numeric score."""
+        assert "20.0/100" in _build_risk_conclusion("moderate", 20.0)
 
 
 # =============================================================================
@@ -880,7 +887,8 @@ class TestMultiPeriodMemoGuardrails:
     def test_risk_conclusions_no_assertive_language(self):
         """Risk conclusions should not use banned assertive terms."""
         banned = ["we conclude", "we believe", "we are satisfied", "the statements are"]
-        for tier, text in _RISK_CONCLUSIONS.items():
+        for tier in _RISK_CONCLUSION_SUFFIXES:
+            text = _build_risk_conclusion(tier, 50.0)
             for phrase in banned:
                 assert phrase.lower() not in text.lower(), f"Banned phrase '{phrase}' in {tier}"
 

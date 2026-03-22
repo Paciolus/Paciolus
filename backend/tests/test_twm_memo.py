@@ -17,8 +17,9 @@ Tests:
 
 from three_way_match_memo_generator import (
     _ENGINE_TIER_MAPPING,
-    _RISK_CONCLUSIONS,
+    _RISK_CONCLUSION_SUFFIXES,
     _TEST_DESCRIPTIONS,
+    _build_risk_conclusion,
     compute_twm_diagnostic_score,
     generate_three_way_match_memo,
 )
@@ -526,23 +527,28 @@ class TestUnmatchedDocuments:
 
 
 class TestConclusion:
-    """Section IX: Conclusion text per risk tier."""
+    """Section IX: Conclusion text per risk tier (BUG-002: score-aware)."""
 
     def test_low_conclusion_exists(self):
-        assert "LOW" in _RISK_CONCLUSIONS["low"]
+        assert "LOW" in _build_risk_conclusion("low", 5.0)
 
     def test_moderate_conclusion_exists(self):
-        assert "MODERATE" in _RISK_CONCLUSIONS["moderate"]
+        assert "MODERATE" in _build_risk_conclusion("moderate", 20.0)
 
     def test_elevated_conclusion_exists(self):
-        assert "ELEVATED" in _RISK_CONCLUSIONS["elevated"]
+        assert "ELEVATED" in _build_risk_conclusion("elevated", 35.0)
 
     def test_high_conclusion_exists(self):
-        assert "HIGH" in _RISK_CONCLUSIONS["high"]
+        assert "HIGH" in _build_risk_conclusion("high", 60.0)
+
+    def test_score_included_in_conclusion(self):
+        """BUG-002: Conclusion must include numeric score."""
+        assert "20.0/100" in _build_risk_conclusion("moderate", 20.0)
 
     def test_no_medium_in_conclusions(self):
         """BUG-01: No 'MEDIUM' tier in any conclusion text."""
-        for tier, text in _RISK_CONCLUSIONS.items():
+        for tier in _RISK_CONCLUSION_SUFFIXES:
+            text = _build_risk_conclusion(tier, 50.0)
             assert "MEDIUM" not in text, f"MEDIUM found in {tier} conclusion"
 
 
@@ -555,7 +561,8 @@ class TestGuardrails:
     """Guardrail compliance tests."""
 
     def test_no_medium_tier_in_conclusions(self):
-        for text in _RISK_CONCLUSIONS.values():
+        for tier in _RISK_CONCLUSION_SUFFIXES:
+            text = _build_risk_conclusion(tier, 50.0)
             assert "MEDIUM" not in text
 
     def test_all_test_descriptions_reference_audit_concept(self):
