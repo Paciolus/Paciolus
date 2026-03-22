@@ -1645,7 +1645,8 @@
             "enum": [
               "high",
               "medium",
-              "low"
+              "low",
+              "informational"
             ],
             "title": "Severity",
             "type": "string"
@@ -5872,7 +5873,8 @@
             "enum": [
               "high",
               "medium",
-              "low"
+              "low",
+              "informational"
             ],
             "title": "Severity",
             "type": "string"

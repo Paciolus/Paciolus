@@ -148,7 +148,7 @@ class TestAuditPipelineErrorHandling:
             async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 response = await client.post(
                     "/audit/trial-balance",
-                    files={"file": ("test.txt", b"not a spreadsheet", "text/plain")},
+                    files={"file": ("test.jpg", b"not a spreadsheet", "image/jpeg")},
                     headers=_auth_headers(),
                 )
 

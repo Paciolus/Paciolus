@@ -76,3 +76,66 @@
 - **Verification:** pytest full suite PASS (exit 0), npm run build PASS, npm test PASS (1,725/1,725)
 - **Status:** COMPLETE
 
+### Sprint 565: Chrome QA Remediation (11 Findings)
+> Source: `reports/qa/2026-03-21-chrome-qa.md`
+
+#### P0 — Blocking
+- [ ] **NEW-001:** Alembic migration to clean stale `ORGANIZATION` tier values in `users.tier` column → `FREE`. Add a data migration that updates any row where `tier NOT IN ('free','solo','professional','enterprise')` to `'free'`. Prevents 500 on login for any unmigrated DB.
+- [ ] **NEW-002:** Alembic migration to add `uploads_used_current_period INTEGER NOT NULL DEFAULT 0` to `subscriptions` table. Column is defined in `subscription_model.py` but no migration exists. Causes 500 on TB upload.
+- [ ] **NEW-003:** Add `"informational"` to `severity` Literal in `shared/diagnostic_response_schemas.py` (lines 572 and 622). Backend engine (`classification_rules.py:672`, `classification_validator.py:229`) returns `"informational"` severity but the Pydantic response schema rejects it with `ResponseValidationError`. **Hotfix applied during QA — needs commit.**
+
+#### P1 — High
+- [ ] **NEW-004:** Backend returns `net_balance`, `total_debit`, `total_credit` as strings in lead sheet grouping response (Decimal→str JSON serialization). Frontend `LeadSheetCard.formatCurrency()` calls `.toFixed()` on raw value → `TypeError` crash. Fix: either serialize as float in backend, or coerce in all frontend consumers. **Hotfix applied to `LeadSheetCard.tsx` during QA — needs commit + backend root cause fix.**
+- [ ] **NEW-005:** Add `GET /activity/recent` endpoint to backend routes. Dashboard calls `/activity/recent?limit=5` on load but endpoint returns 404. Activity log writes (`POST /activity/log` → 201) work, but reads are missing. Need route in `routes/` that queries `activity_logs` table.
+- [ ] **NEW-006:** Lead sheet grouping shows "1 Account" per sheet for a 102-account TB. Expected A–Z grouping with multiple accounts aggregated per lead sheet letter. Investigate serialization/aggregation logic in `audit_engine.py` → `lead_sheet_grouping` response builder.
+
+#### P2 — Medium
+- [ ] **NEW-007:** Hydration mismatch on sonification button in `ToolLinkToast` component. SSR renders button but client differs. Wrap in `useEffect`-guarded render or add `suppressHydrationWarning`.
+- [ ] **NEW-008:** Hydration mismatch on `ParallaxSection` `translateY` in `HeroScrollSection`. Scroll-dependent motion values differ server/client. Add `suppressHydrationWarning` on motion container divs.
+- [ ] **NEW-009:** Classification quality flags normal contra accounts (Allowance for Doubtful Accounts, Accumulated Depreciation, Inventory Reserve, Treasury Stock, Sales Returns/Discounts) as "sign_anomaly". These are standard contra accounts — add exclusion list to `classification_rules.py` sign-anomaly checker.
+
+#### P3 — Low
+- [ ] **NEW-010:** Backend startup warns about missing `STRIPE_PRICE_PROFESSIONAL_MONTHLY` and `STRIPE_PRICE_PROFESSIONAL_ANNUAL` env vars. Professional/Enterprise monthly/annual checkout will fail. Document required env vars or suppress warning when not in production.
+- [ ] **NEW-011:** Next.js dev overlay shows "2 Issues" badge (hydration warnings). Not visible in production build. No action needed unless suppression is desired in dev.
+
+- **Status:** PENDING
+
+### Sprint 566: Frontend Design Enrichment (14 Findings)
+> Source: Chrome QA visual design assessment — Dashboard, Tools, Workspaces, Portfolio
+
+#### Quick Fixes
+- [x] **X1:** Standardize `max-w-5xl` → `max-w-6xl` on Dashboard page
+- [x] **P2:** Rename "Open Audit" → "Open Diagnostics" in ClientCard (terminology guardrail)
+- [x] **D3:** Enlarge dashboard welcome header to `text-3xl md:text-4xl` + contextual summary line
+- [x] **T3:** Reduce trial-balance drop zone padding from `p-12` to `p-8` in globals.css
+- [x] **W3:** Shorten workspace detail tab labels (Status/Follow-Up/Workpapers/Convergence)
+
+#### Empty State Consistency
+- [x] **X3:** Create shared `PageEmptyState` component (`components/shared/PageEmptyState.tsx`)
+- [x] **W2:** Add CTA button + Zero-Storage badge to Workspaces empty state via `onCreateNew` prop
+- [x] Dashboard + Portfolio empty states enriched with icons, descriptions, and consistent CTAs
+
+#### Dashboard Enrichments
+- [x] **D1:** Stat cards — sage icon circles, `font-mono` numbers, contextual dim for zero values
+- [x] **D2:** Hero Upload TB card (full-width, `sage-50/50` bg, arrow affordance) + 2-col secondary row
+- [x] **D4:** `2px` gradient accent strip below toolbar on all pages
+- [x] **D5:** Enhanced empty Recent Activity — icon, description, larger CTA
+
+#### Portfolio Enhancements
+- [x] **P1+P3:** Spine `w-1.5` → `w-2` with hover color shift (oatmeal→sage), card shadow lift + border transition
+- [x] **P4:** Search bar with magnifying glass icon, client-side name/industry filter
+- [x] **P5:** Empty state icon changed to open-book/ledger (reinforces bound-ledger theme)
+
+#### Workspaces Enhancements
+- [x] **W1:** `AnimatePresence mode="wait"` with slide-in/slide-out crossfade on list↔detail
+- [x] **W4:** Left accent border on EngagementCard (sage-500 active, oatmeal-300 archived)
+- [x] **W5:** `{n}/12 tools` progress indicator in detail header next to status badge
+
+#### Cross-Page Polish
+- [x] **X2:** Subtle sage gradient accent strip below toolbar on Dashboard, Workspaces, Portfolio
+- [x] **X4:** Page mount `opacity` fade-in on Workspaces and Portfolio (`motion.div`)
+- [ ] ~~**X6:** Button style class refactor~~ — Deferred: existing inline styles already match `btn-primary` definition; cosmetic-only rename
+
+- **Verification:** `npm run build` PASS, `npm test` 1,725/1,725 PASS
+- **Status:** COMPLETE
+

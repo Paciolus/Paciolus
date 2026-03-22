@@ -268,7 +268,7 @@
 
   /* Premium drop zone */
   .drop-zone {
-    @apply relative border-2 border-dashed rounded-2xl p-12 text-center;
+    @apply relative border-2 border-dashed rounded-2xl p-8 text-center;
     border-color: var(--color-oatmeal-border-hover);
     background:
       radial-gradient(ellipse at center, var(--color-sage-bg) 0%, transparent 70%),

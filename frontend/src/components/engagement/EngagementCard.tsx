@@ -42,14 +42,18 @@ export function EngagementCard({
       whileHover={{ y: -2 }}
       onClick={() => onClick(engagement)}
       className={`
-        bg-surface-card rounded-xl border cursor-pointer transition-all duration-200 shadow-theme-card hover:shadow-theme-card-hover
+        relative overflow-hidden bg-surface-card rounded-xl border cursor-pointer transition-all duration-200 shadow-theme-card hover:shadow-theme-card-hover
         ${isSelected
           ? 'border-sage-500/50 ring-2 ring-sage-500/20'
           : 'border-theme hover:border-oatmeal-300'
         }
       `}
     >
-      <div className="p-5">
+      {/* W4: Left accent border for status differentiation */}
+      <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${
+        engagement.status === 'active' ? 'bg-sage-500' : 'bg-oatmeal-300'
+      }`} />
+      <div className="p-5 pl-6">
         {/* Header: Client + Status */}
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="flex-1 min-w-0">

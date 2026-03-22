@@ -119,9 +119,9 @@ export function ClientCard({ client, index, lastAuditDate, onEdit, onDelete }: C
       className="group relative"
     >
       {/* Premium Bound Ledger Card */}
-      <div className="relative bg-surface-card rounded-xl overflow-hidden border border-theme hover:border-theme transition-colors">
-        {/* Left Spine (Book Binding Effect) */}
-        <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-oatmeal-400 via-oatmeal-500 to-oatmeal-600" />
+      <div className="relative bg-surface-card rounded-xl overflow-hidden border border-theme hover:border-oatmeal-300 hover:shadow-theme-card-hover transition-all duration-200 group-hover:-translate-y-0.5">
+        {/* Left Spine (Book Binding Effect) — P1: wider + hover color shift */}
+        <div className="absolute left-0 top-0 bottom-0 w-2 bg-gradient-to-b from-oatmeal-400 via-oatmeal-500 to-oatmeal-600 group-hover:from-sage-400 group-hover:via-sage-500 group-hover:to-sage-600 transition-all duration-300" />
 
         {/* Subtle texture overlay */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-surface-card-secondary/30 via-transparent to-transparent pointer-events-none" />
@@ -181,7 +181,7 @@ export function ClientCard({ client, index, lastAuditDate, onEdit, onDelete }: C
                 whileTap="tap"
                 className="w-full px-4 py-2.5 bg-sage-500/10 border border-sage-500/30 rounded-lg text-sage-400 text-sm font-sans font-medium hover:bg-sage-500/20 hover:border-sage-500/50 transition-colors"
               >
-                Open Audit
+                Open Diagnostics
               </motion.button>
             </Link>
 

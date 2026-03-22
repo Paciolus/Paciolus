@@ -569,7 +569,7 @@ class AbnormalBalanceResponse(BaseModel):
     anomaly_type: str
     expected_balance: Optional[str] = None
     actual_balance: Optional[str] = None
-    severity: Literal["high", "medium", "low"]
+    severity: Literal["high", "medium", "low", "informational"]
     suggestions: list[AbnormalBalanceSuggestionResponse]
 
     # Optional: anomaly-type-specific flags added by _merge_anomalies()
@@ -619,7 +619,7 @@ class ClassificationIssueResponse(BaseModel):
     account_name: str
     issue_type: str
     description: str
-    severity: Literal["high", "medium", "low"]
+    severity: Literal["high", "medium", "low", "informational"]
     confidence: float
     category: str
     suggested_action: str
