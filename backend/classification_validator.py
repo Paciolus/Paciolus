@@ -83,7 +83,7 @@ class ClassificationResult:
 # Account number extraction helpers
 # =============================================================================
 
-_ACCOUNT_NUMBER_PATTERN = re.compile(r'^(\d[\d\-\.]*\d|\d+)')
+_ACCOUNT_NUMBER_PATTERN = re.compile(r"^(\d[\d\-\.]*\d|\d+)")
 
 
 def extract_account_number(account_name: str) -> Optional[str]:
@@ -112,10 +112,49 @@ def extract_numeric_prefix(account_name: str) -> Optional[int]:
 NATURAL_DEBIT_CATEGORIES = {"asset", "expense"}
 NATURAL_CREDIT_CATEGORIES = {"liability", "equity", "revenue"}
 
+# Standard contra accounts that legitimately carry opposite-sign balances.
+# Matched case-insensitively via substring against account names.
+CONTRA_ACCOUNT_PATTERNS: tuple[str, ...] = (
+    "allowance for doubtful",
+    "allowance for uncollectible",
+    "allow. for doubtful",
+    "accumulated depreciation",
+    "accumulated amortization",
+    "accum depr",
+    "accum. depr",
+    "accum depreciation",
+    "accum amortization",
+    "inventory reserve",
+    "inventory allowance",
+    "inventory obsolescence",
+    "treasury stock",
+    "treasury shares",
+    "sales returns",
+    "sales discounts",
+    "sales allowances",
+    "returns and allowances",
+    "purchase returns",
+    "purchase discounts",
+    "bond discount",
+    "bond premium",
+    "discount on bonds",
+    "premium on bonds",
+    "contra revenue",
+    "contra asset",
+    "contra equity",
+)
+
+
+def _is_contra_account(account_name: str) -> bool:
+    """Check if an account name matches a known contra account pattern."""
+    name_lower = account_name.lower()
+    return any(pattern in name_lower for pattern in CONTRA_ACCOUNT_PATTERNS)
+
 
 # =============================================================================
 # Individual checks
 # =============================================================================
+
 
 def check_duplicate_numbers(
     accounts: dict[str, dict[str, float]],
@@ -134,16 +173,18 @@ def check_duplicate_numbers(
             unique_names = set(n.strip().lower() for n in names)
             if len(unique_names) > 1:
                 for name in names:
-                    issues.append(ClassificationIssue(
-                        account_number=num,
-                        account_name=name,
-                        issue_type=ClassificationIssueType.DUPLICATE_NUMBER,
-                        description=f"Account number {num} appears {len(names)} times with different names",
-                        severity="high",
-                        confidence=0.95,
-                        category="",
-                        suggested_action="Review for data entry error or chart-of-accounts consolidation",
-                    ))
+                    issues.append(
+                        ClassificationIssue(
+                            account_number=num,
+                            account_name=name,
+                            issue_type=ClassificationIssueType.DUPLICATE_NUMBER,
+                            description=f"Account number {num} appears {len(names)} times with different names",
+                            severity="high",
+                            confidence=0.95,
+                            category="",
+                            suggested_action="Review for data entry error or chart-of-accounts consolidation",
+                        )
+                    )
     return issues
 
 
@@ -157,16 +198,18 @@ def check_orphan_accounts(
         credit = balances.get("credit", 0.0)
         # Zero balance AND zero activity
         if abs(debit) < 0.01 and abs(credit) < 0.01:
-            issues.append(ClassificationIssue(
-                account_number=extract_account_number(name) or "",
-                account_name=name,
-                issue_type=ClassificationIssueType.ORPHAN_ACCOUNT,
-                description="Account has zero balance and zero activity",
-                severity="medium",
-                confidence=0.90,
-                category="",
-                suggested_action="Review if account is still active; consider removing from chart of accounts",
-            ))
+            issues.append(
+                ClassificationIssue(
+                    account_number=extract_account_number(name) or "",
+                    account_name=name,
+                    issue_type=ClassificationIssueType.ORPHAN_ACCOUNT,
+                    description="Account has zero balance and zero activity",
+                    severity="medium",
+                    confidence=0.90,
+                    category="",
+                    suggested_action="Review if account is still active; consider removing from chart of accounts",
+                )
+            )
     return issues
 
 
@@ -184,16 +227,18 @@ def check_unclassified_accounts(
             net_balance = abs(debit - credit)
             is_material = net_balance >= UNCLASSIFIED_MATERIAL_THRESHOLD
 
-            issues.append(ClassificationIssue(
-                account_number=extract_account_number(name) or "",
-                account_name=name,
-                issue_type=ClassificationIssueType.UNCLASSIFIED,
-                description=f"Account could not be classified (balance: ${net_balance:,.2f})",
-                severity="high" if is_material else "medium",
-                confidence=0.85,
-                category="unknown",
-                suggested_action="Manually classify account in chart of accounts",
-            ))
+            issues.append(
+                ClassificationIssue(
+                    account_number=extract_account_number(name) or "",
+                    account_name=name,
+                    issue_type=ClassificationIssueType.UNCLASSIFIED,
+                    description=f"Account could not be classified (balance: ${net_balance:,.2f})",
+                    severity="high" if is_material else "medium",
+                    confidence=0.85,
+                    category="unknown",
+                    suggested_action="Manually classify account in chart of accounts",
+                )
+            )
     return issues
 
 
@@ -221,16 +266,18 @@ def check_number_gaps(
             curr_num, curr_name = sorted_entries[i]
             gap = curr_num - prev_num
             if gap >= gap_threshold:
-                issues.append(ClassificationIssue(
-                    account_number=str(curr_num),
-                    account_name=curr_name,
-                    issue_type=ClassificationIssueType.NUMBER_GAP,
-                    description=f"Gap of {gap} between account {prev_num} and {curr_num} in {cat} range",
-                    severity="informational",
-                    confidence=0.70,
-                    category=cat,
-                    suggested_action="Informational — verify gap is intentional",
-                ))
+                issues.append(
+                    ClassificationIssue(
+                        account_number=str(curr_num),
+                        account_name=curr_name,
+                        issue_type=ClassificationIssueType.NUMBER_GAP,
+                        description=f"Gap of {gap} between account {prev_num} and {curr_num} in {cat} range",
+                        severity="informational",
+                        confidence=0.70,
+                        category=cat,
+                        suggested_action="Informational — verify gap is intentional",
+                    )
+                )
     return issues
 
 
@@ -257,7 +304,7 @@ def check_inconsistent_naming(
         prefixes = []
         for n in names:
             # Strip account number prefix if present
-            clean = re.sub(r'^\d[\d\-\.]*\s*[-–—]?\s*', '', n.strip())
+            clean = re.sub(r"^\d[\d\-\.]*\s*[-–—]?\s*", "", n.strip())
             first_word = clean.split()[0] if clean.split() else ""
             if first_word:
                 prefixes.append(first_word.lower())
@@ -277,16 +324,18 @@ def check_inconsistent_naming(
                 # Verify it's not similar (avoid false positives)
                 sim = SequenceMatcher(None, prefixes[i], most_common_prefix).ratio()
                 if sim < similarity_threshold:
-                    issues.append(ClassificationIssue(
-                        account_number=extract_account_number(name) or "",
-                        account_name=name,
-                        issue_type=ClassificationIssueType.INCONSISTENT_NAMING,
-                        description=f"Naming pattern differs from group norm ('{most_common_prefix}' prefix expected)",
-                        severity="low",
-                        confidence=0.65,
-                        category=cat,
-                        suggested_action="Verify naming convention consistency in chart of accounts",
-                    ))
+                    issues.append(
+                        ClassificationIssue(
+                            account_number=extract_account_number(name) or "",
+                            account_name=name,
+                            issue_type=ClassificationIssueType.INCONSISTENT_NAMING,
+                            description=f"Naming pattern differs from group norm ('{most_common_prefix}' prefix expected)",
+                            severity="low",
+                            confidence=0.65,
+                            category=cat,
+                            suggested_action="Verify naming convention consistency in chart of accounts",
+                        )
+                    )
     return issues
 
 
@@ -308,6 +357,10 @@ def check_sign_anomalies(
         if category == "unknown":
             continue
 
+        # Skip recognized contra accounts — they legitimately carry opposite balances
+        if _is_contra_account(name):
+            continue
+
         # Check for reversed signs
         has_anomaly = False
         expected = ""
@@ -323,22 +376,25 @@ def check_sign_anomalies(
             actual = "debit"
 
         if has_anomaly:
-            issues.append(ClassificationIssue(
-                account_number=extract_account_number(name) or "",
-                account_name=name,
-                issue_type=ClassificationIssueType.SIGN_ANOMALY,
-                description=f"{category.title()} account has {actual} balance (expected {expected})",
-                severity="medium",
-                confidence=0.80,
-                category=category,
-                suggested_action="Verify account balance direction is correct for its classification",
-            ))
+            issues.append(
+                ClassificationIssue(
+                    account_number=extract_account_number(name) or "",
+                    account_name=name,
+                    issue_type=ClassificationIssueType.SIGN_ANOMALY,
+                    description=f"{category.title()} account has {actual} balance (expected {expected})",
+                    severity="medium",
+                    confidence=0.80,
+                    category=category,
+                    suggested_action="Verify account balance direction is correct for its classification",
+                )
+            )
     return issues
 
 
 # =============================================================================
 # Main entry point
 # =============================================================================
+
 
 def run_classification_validation(
     accounts: dict[str, dict[str, float]],
