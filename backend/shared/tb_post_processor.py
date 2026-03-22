@@ -21,31 +21,35 @@ def apply_lead_sheet_grouping(result: dict[str, Any], materiality_threshold: flo
     Mutates `result` in place:
     - result["lead_sheet_grouping"] = grouped accounts by lead sheet letter
     - result["population_profile"]["section_density"] = density per section
-    """
-    if "abnormal_balances" not in result:
-        logger.warning("Skipping lead sheet grouping: missing 'abnormal_balances' key")
-        return
 
+    Uses all_accounts (full account list) when available for correct A–Z
+    aggregation. Falls back to abnormal_balances for backward compatibility.
+    """
     from lead_sheet_mapping import group_by_lead_sheet, lead_sheet_grouping_to_dict
 
-    accounts_for_grouping = []
-    for ab in result.get("abnormal_balances", []):
-        # Sprint 530 Fix 6: Use the raw debit/credit columns from each finding,
-        # not the absolute-valued "amount" field.  The "amount" field is always
-        # positive (abs), so the old derivation always put everything in debit=amount
-        # and credit=0, zeroing out the Credits column on every lead sheet.
-        accounts_for_grouping.append(
-            {
-                "account": ab.get("account", ""),
-                "debit": ab.get("debit", 0),
-                "credit": ab.get("credit", 0),
-                "type": ab.get("type", "unknown"),
-                "issue": ab.get("issue", ""),
-                "materiality": ab.get("materiality", ""),
-                "severity": ab.get("severity", "low"),
-                "anomaly_type": ab.get("anomaly_type", "unknown"),
-            }
-        )
+    # Prefer the full account list for correct grouping (NEW-006).
+    # The streaming pipeline populates "all_accounts" with every account;
+    # using only "abnormal_balances" produced one-account-per-sheet artifacts.
+    if "all_accounts" in result and result["all_accounts"]:
+        accounts_for_grouping = result["all_accounts"]
+    elif "abnormal_balances" in result:
+        accounts_for_grouping = []
+        for ab in result.get("abnormal_balances", []):
+            accounts_for_grouping.append(
+                {
+                    "account": ab.get("account", ""),
+                    "debit": ab.get("debit", 0),
+                    "credit": ab.get("credit", 0),
+                    "type": ab.get("type", "unknown"),
+                    "issue": ab.get("issue", ""),
+                    "materiality": ab.get("materiality", ""),
+                    "severity": ab.get("severity", "low"),
+                    "anomaly_type": ab.get("anomaly_type", "unknown"),
+                }
+            )
+    else:
+        logger.warning("Skipping lead sheet grouping: missing 'all_accounts' and 'abnormal_balances'")
+        return
 
     lead_sheet_grouping = group_by_lead_sheet(accounts_for_grouping)
     grouping_dict = lead_sheet_grouping_to_dict(lead_sheet_grouping)
