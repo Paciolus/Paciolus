@@ -27,7 +27,7 @@ jobs:
         run: |
           pip-licenses --format=json --output-file=python-licenses.json
       - name: Upload license artifact
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: python-licenses
           path: python-licenses.json
@@ -53,7 +53,7 @@ jobs:
       - name: Export license inventory
         run: npx license-checker --production --json --out node-licenses.json
       - name: Upload license artifact
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: node-licenses
           path: frontend/node-licenses.json
