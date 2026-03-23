@@ -43,7 +43,7 @@ fi
 # A completed sprint is a "### Sprint NNN" heading followed (within a few lines)
 # by "**Status:** COMPLETE"
 COMPLETED_SPRINTS=$(sed -n "${ACTIVE_START},${ACTIVE_END}p" "$TODO" \
-  | grep -c '^\*\*Status:\*\* COMPLETE' 2>/dev/null || true)
+  | grep -c '\*\*Status:\*\* COMPLETE' 2>/dev/null || true)
 COMPLETED_SPRINTS=$(echo "$COMPLETED_SPRINTS" | tr -d '[:space:]')
 COMPLETED_SPRINTS=${COMPLETED_SPRINTS:-0}
 

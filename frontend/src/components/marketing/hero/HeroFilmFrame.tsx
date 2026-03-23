@@ -68,7 +68,7 @@ export function UploadLayer({ opacity, isActive }: { opacity: MotionValue<number
                 : { duration: 0.4, ease: 'easeOut' as const }
             }
           >
-            <div className={`flex items-center gap-2 px-3 py-2 rounded-lg bg-white border shadow-sm whitespace-nowrap transition-shadow duration-200 ${
+            <div className={`flex items-center gap-2 px-3 py-2 rounded-lg bg-oatmeal-50 border shadow-sm whitespace-nowrap transition-shadow duration-200 ${
               phase >= 2 ? 'border-sage-400/40 shadow-md' : 'border-obsidian-200'
             }`}>
               <BrandIcon name="file-plus" className="w-4 h-4 text-sage-500 flex-shrink-0" />
@@ -123,7 +123,7 @@ export function UploadLayer({ opacity, isActive }: { opacity: MotionValue<number
           {/* Settled file card (after drop) */}
           {phase >= 4 && (
             <motion.div
-              className="flex items-center gap-3 px-4 py-3 rounded-lg bg-white border border-sage-400/40 shadow-sm w-full"
+              className="flex items-center gap-3 px-4 py-3 rounded-lg bg-oatmeal-50 border border-sage-400/40 shadow-sm w-full"
               initial={{ scale: 1.1, opacity: 0, y: -8 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               transition={SPRING.bouncy}
@@ -168,7 +168,7 @@ export function UploadLayer({ opacity, isActive }: { opacity: MotionValue<number
             {/* File card attaches to cursor during drag */}
             {phase >= 3 && (
               <motion.div
-                className="absolute top-3 left-4 flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-obsidian-200 shadow-lg whitespace-nowrap"
+                className="absolute top-3 left-4 flex items-center gap-2 px-3 py-2 rounded-lg bg-oatmeal-50 border border-obsidian-200 shadow-lg whitespace-nowrap"
                 initial={{ rotate: -6 }}
                 animate={{ rotate: 0 }}
                 transition={{ duration: 0.3, ease: 'easeOut' as const }}
@@ -268,7 +268,7 @@ export function AnalyzeLayer({ opacity, isActive }: { opacity: MotionValue<numbe
               return (
                 <motion.div
                   key={tile.name}
-                  className="relative rounded-lg border bg-white px-1.5 py-2 flex flex-col items-center justify-center gap-1 overflow-hidden"
+                  className="relative rounded-lg border bg-oatmeal-50 px-1.5 py-2 flex flex-col items-center justify-center gap-1 overflow-hidden"
                   animate={
                     isComplete
                       ? { borderColor: 'rgba(74,124,89,0.5)', opacity: 1 }
@@ -380,7 +380,7 @@ export function ExportLayer({ opacity, isActive }: { opacity: MotionValue<number
       <div className="w-full max-w-[320px] flex flex-col gap-2.5">
         {/* Workpapers row — slides in from right */}
         <motion.div
-          className="flex items-center gap-3 px-4 py-3 rounded-lg bg-white border border-obsidian-200/40 shadow-sm"
+          className="flex items-center gap-3 px-4 py-3 rounded-lg bg-oatmeal-50 border border-obsidian-200/40 shadow-sm"
           animate={
             phase >= 1
               ? { x: 0, opacity: 1 }
@@ -397,7 +397,7 @@ export function ExportLayer({ opacity, isActive }: { opacity: MotionValue<number
 
         {/* PDF memos row — slides in from right (staggered) */}
         <motion.div
-          className="flex items-center gap-3 px-4 py-3 rounded-lg bg-white border border-obsidian-200/40 shadow-sm"
+          className="flex items-center gap-3 px-4 py-3 rounded-lg bg-oatmeal-50 border border-obsidian-200/40 shadow-sm"
           animate={
             phase >= 2
               ? { x: 0, opacity: 1 }

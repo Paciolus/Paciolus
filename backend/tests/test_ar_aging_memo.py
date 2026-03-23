@@ -25,6 +25,7 @@ from ar_aging_memo_generator import (
 # TEST FIXTURES
 # =============================================================================
 
+
 def _make_ar_result(
     score: float = 18.0,
     risk_tier: str = "elevated",
@@ -36,64 +37,86 @@ def _make_ar_result(
 ) -> dict:
     """Build a minimal ARAgingResult.to_dict() shape."""
     test_keys = [
-        "ar_sign_anomalies", "missing_allowance", "negative_aging",
-        "unreconciled_detail", "bucket_concentration", "past_due_concentration",
-        "allowance_adequacy", "customer_concentration", "dso_trend",
-        "rollforward_reconciliation", "credit_limit_breaches",
+        "ar_sign_anomalies",
+        "missing_allowance",
+        "negative_aging",
+        "unreconciled_detail",
+        "bucket_concentration",
+        "past_due_concentration",
+        "allowance_adequacy",
+        "customer_concentration",
+        "dso_trend",
+        "rollforward_reconciliation",
+        "credit_limit_breaches",
     ]
     test_names = [
-        "AR Balance Sign Anomalies", "Missing Contra-Account",
-        "Negative Aging Buckets", "Unreconciled AR Detail",
-        "Aging Bucket Concentration", "Past-Due Concentration",
-        "Allowance Adequacy Ratio", "Customer Concentration",
-        "DSO Trend Variance", "Roll-Forward Reconciliation",
+        "AR Balance Sign Anomalies",
+        "Missing Contra-Account",
+        "Negative Aging Buckets",
+        "Unreconciled AR Detail",
+        "Aging Bucket Concentration",
+        "Past-Due Concentration",
+        "Allowance Adequacy Ratio",
+        "Customer Concentration",
+        "DSO Trend Variance",
+        "Roll-Forward Reconciliation",
         "Credit Limit Breaches",
     ]
     tiers = [
-        "structural", "structural", "structural", "structural",
-        "statistical", "statistical", "statistical", "statistical", "statistical",
-        "advanced", "advanced",
+        "structural",
+        "structural",
+        "structural",
+        "structural",
+        "statistical",
+        "statistical",
+        "statistical",
+        "statistical",
+        "statistical",
+        "advanced",
+        "advanced",
     ]
 
     test_results = []
     for i in range(min(num_tests, 11)):
         flagged_count = 1 if i < 3 else 0
         skipped = i >= (num_tests - tests_skipped)
-        test_results.append({
-            "test_name": test_names[i],
-            "test_key": test_keys[i],
-            "test_tier": tiers[i],
-            "entries_flagged": 0 if skipped else flagged_count,
-            "total_entries": 20,
-            "flag_rate": 0 if skipped else flagged_count / 20,
-            "severity": "high" if i == 0 else "medium" if i < 5 else "low",
-            "description": f"Test description for {test_keys[i]}",
-            "skipped": skipped,
-            "skip_reason": "Requires AR sub-ledger" if skipped else None,
-            "flagged_entries": [
-                {
-                    "entry": {
-                        "account_name": "Accounts Receivable",
-                        "account_number": "1200",
-                        "customer_name": f"Customer {j + 1}",
-                        "invoice_number": f"INV-{i:03d}-{j}",
-                        "date": "2025-12-15",
-                        "amount": 50000.0 + j * 1000,
-                        "aging_days": 45 + j * 10,
-                        "row_number": i * 10 + j + 1,
-                        "entry_source": "tb" if i < 4 else "subledger",
-                    },
-                    "test_name": test_names[i],
-                    "test_key": test_keys[i],
-                    "test_tier": tiers[i],
-                    "severity": "high" if i == 0 else "medium",
-                    "issue": f"Flagged by {test_names[i]}",
-                    "confidence": 0.85,
-                    "details": {},
-                }
-                for j in range(0 if skipped else flagged_count)
-            ],
-        })
+        test_results.append(
+            {
+                "test_name": test_names[i],
+                "test_key": test_keys[i],
+                "test_tier": tiers[i],
+                "entries_flagged": 0 if skipped else flagged_count,
+                "total_entries": 20,
+                "flag_rate": 0 if skipped else flagged_count / 20,
+                "severity": "high" if i == 0 else "medium" if i < 5 else "low",
+                "description": f"Test description for {test_keys[i]}",
+                "skipped": skipped,
+                "skip_reason": "Requires AR sub-ledger" if skipped else None,
+                "flagged_entries": [
+                    {
+                        "entry": {
+                            "account_name": "Accounts Receivable",
+                            "account_number": "1200",
+                            "customer_name": f"Customer {j + 1}",
+                            "invoice_number": f"INV-{i:03d}-{j}",
+                            "date": "2025-12-15",
+                            "amount": 50000.0 + j * 1000,
+                            "aging_days": 45 + j * 10,
+                            "row_number": i * 10 + j + 1,
+                            "entry_source": "tb" if i < 4 else "subledger",
+                        },
+                        "test_name": test_names[i],
+                        "test_key": test_keys[i],
+                        "test_tier": tiers[i],
+                        "severity": "high" if i == 0 else "medium",
+                        "issue": f"Flagged by {test_names[i]}",
+                        "confidence": 0.85,
+                        "details": {},
+                    }
+                    for j in range(0 if skipped else flagged_count)
+                ],
+            }
+        )
 
     return {
         "composite_score": {
@@ -103,7 +126,8 @@ def _make_ar_result(
             "tests_skipped": tests_skipped,
             "total_flagged": total_flagged,
             "flags_by_severity": {"high": 1, "medium": 2, "low": 2},
-            "top_findings": top_findings or [
+            "top_findings": top_findings
+            or [
                 "AR Balance Sign Anomalies: 1 flagged",
                 "Missing Contra-Account: 1 flagged",
                 "Negative Aging Buckets: 1 flagged",
@@ -129,7 +153,9 @@ def _make_ar_result(
             "amount_column": "Amount",
             "aging_days_column": "Days",
             "overall_confidence": 0.90,
-        } if has_subledger else None,
+        }
+        if has_subledger
+        else None,
         "ar_summary": {
             "total_ar_balance": 500000.0,
             "total_allowance": 15000.0,
@@ -142,6 +168,7 @@ def _make_ar_result(
 # =============================================================================
 # MEMO GENERATION TESTS
 # =============================================================================
+
 
 class TestARAgingMemoGeneration:
     """Tests for generate_ar_aging_memo()."""
@@ -241,15 +268,23 @@ class TestARAgingMemoGeneration:
 # TEST DESCRIPTIONS COVERAGE
 # =============================================================================
 
+
 class TestARAgingTestDescriptions:
     """Tests for AR_AGING_TEST_DESCRIPTIONS completeness."""
 
     def test_all_11_tests_have_descriptions(self):
         expected_keys = [
-            "ar_sign_anomalies", "missing_allowance", "negative_aging",
-            "unreconciled_detail", "bucket_concentration", "past_due_concentration",
-            "allowance_adequacy", "customer_concentration", "dso_trend",
-            "rollforward_reconciliation", "credit_limit_breaches",
+            "ar_sign_anomalies",
+            "missing_allowance",
+            "negative_aging",
+            "unreconciled_detail",
+            "bucket_concentration",
+            "past_due_concentration",
+            "allowance_adequacy",
+            "customer_concentration",
+            "dso_trend",
+            "rollforward_reconciliation",
+            "credit_limit_breaches",
         ]
         for key in expected_keys:
             assert key in AR_AGING_TEST_DESCRIPTIONS, f"Missing description for {key}"
@@ -262,6 +297,7 @@ class TestARAgingTestDescriptions:
 # =============================================================================
 # GUARDRAIL TESTS
 # =============================================================================
+
 
 class TestARAgingGuardrails:
     """Guardrail compliance: terminology, disclaimers, ISA references.
@@ -291,36 +327,39 @@ class TestARAgingGuardrails:
     def test_memo_generator_references_isa_500(self):
         """Memo source code must pass ISA 500 reference to the PDF builder."""
         import inspect
+
         source = inspect.getsource(inspect.getmodule(generate_ar_aging_memo))
         assert "ISA 500" in source, "Memo must reference ISA 500"
 
     def test_memo_generator_references_isa_540(self):
         """Memo source code must pass ISA 540 reference to the PDF builder."""
         import inspect
+
         source = inspect.getsource(inspect.getmodule(generate_ar_aging_memo))
         assert "ISA 540" in source, "Memo must reference ISA 540"
 
     def test_memo_generator_references_pcaob_as_2501(self):
         """Memo source code must pass PCAOB AS 2501 reference to the PDF builder."""
         import inspect
+
         source = inspect.getsource(inspect.getmodule(generate_ar_aging_memo))
         assert "PCAOB AS 2501" in source, "Memo must reference PCAOB AS 2501"
 
     def test_memo_generator_uses_anomaly_indicators_language(self):
         """Methodology text must say 'anomaly indicators' not 'sufficiency conclusions'."""
         import inspect
+
         source = inspect.getsource(inspect.getmodule(generate_ar_aging_memo))
-        assert "anomaly indicator" in source.lower(), (
-            "Methodology must use 'anomaly indicators' language"
-        )
-        assert "allowance sufficiency conclusions" not in source.lower() or \
-               "not allowance sufficiency conclusions" in source.lower(), (
-            "Must not positively assert 'allowance sufficiency conclusions'"
-        )
+        assert "anomaly indicator" in source.lower(), "Methodology must use 'anomaly indicators' language"
+        assert (
+            "allowance sufficiency conclusions" not in source.lower()
+            or "not allowance sufficiency conclusions" in source.lower()
+        ), "Must not positively assert 'allowance sufficiency conclusions'"
 
     def test_memo_generator_calls_disclaimer(self):
         """Memo config must specify AR-specific disclaimer domain."""
         import inspect
+
         source = inspect.getsource(inspect.getmodule(generate_ar_aging_memo))
         # Template guarantees build_disclaimer is called; verify domain config
         assert "generate_testing_memo" in source or "build_disclaimer" in source
@@ -329,6 +368,7 @@ class TestARAgingGuardrails:
     def test_memo_disclaimer_references_isa_500_and_540(self):
         """Disclaimer ISA reference must include ISA 500 and ISA 540."""
         import inspect
+
         source = inspect.getsource(inspect.getmodule(generate_ar_aging_memo))
         assert "ISA 500" in source
         assert "ISA 540" in source
@@ -336,16 +376,18 @@ class TestARAgingGuardrails:
     def test_conclusion_uses_anomaly_not_sufficiency_language(self):
         """Conclusion text must say 'anomaly' not 'sufficiency'."""
         import inspect
+
         source = inspect.getsource(inspect.getmodule(generate_ar_aging_memo))
-        assert "allowance sufficiency" not in source.lower() or \
-               "not allowance sufficiency" in source.lower() or \
-               "not an allowance sufficiency" in source.lower(), (
-            "GUARDRAIL VIOLATION: conclusion must not use 'allowance sufficiency'"
-        )
+        assert (
+            "allowance sufficiency" not in source.lower()
+            or "not allowance sufficiency" in source.lower()
+            or "not an allowance sufficiency" in source.lower()
+        ), "GUARDRAIL VIOLATION: conclusion must not use 'allowance sufficiency'"
 
     def test_no_nrv_determination_in_source(self):
         """Memo source must not claim net realizable value determination."""
         import inspect
+
         source = inspect.getsource(inspect.getmodule(generate_ar_aging_memo))
         assert "net realizable value determination" not in source.lower(), (
             "GUARDRAIL VIOLATION: must not claim NRV determination"
@@ -356,21 +398,25 @@ class TestARAgingGuardrails:
 # EXPORT ROUTE REGISTRATION TESTS
 # =============================================================================
 
+
 class TestARAgingExportRoutes:
     """Tests for AR aging export route registration."""
 
     def test_pdf_route_registered(self):
         from main import app
+
         paths = [r.path for r in app.routes if hasattr(r, "path")]
         assert "/export/ar-aging-memo" in paths
 
     def test_csv_route_registered(self):
         from main import app
+
         paths = [r.path for r in app.routes if hasattr(r, "path")]
         assert "/export/csv/ar-aging" in paths
 
     def test_pdf_route_is_post(self):
         from main import app
+
         for route in app.routes:
             if hasattr(route, "path") and route.path == "/export/ar-aging-memo":
                 assert "POST" in route.methods
@@ -380,6 +426,7 @@ class TestARAgingExportRoutes:
 
     def test_csv_route_is_post(self):
         from main import app
+
         for route in app.routes:
             if hasattr(route, "path") and route.path == "/export/csv/ar-aging":
                 assert "POST" in route.methods
@@ -392,17 +439,20 @@ class TestARAgingExportRoutes:
 # EXPORT INPUT MODEL TESTS
 # =============================================================================
 
+
 class TestARAgingExportInput:
     """Tests for ARAgingExportInput Pydantic model."""
 
     def test_model_accepts_valid_data(self):
-        from routes.export import ARAgingExportInput
+        from shared.export_schemas import ARAgingExportInput
+
         data = _make_ar_result()
         model = ARAgingExportInput(**data)
         assert model.filename == "ar_aging"
 
     def test_model_defaults(self):
-        from routes.export import ARAgingExportInput
+        from shared.export_schemas import ARAgingExportInput
+
         data = _make_ar_result()
         model = ARAgingExportInput(**data)
         assert model.client_name is None
@@ -412,22 +462,26 @@ class TestARAgingExportInput:
         assert model.workpaper_date is None
 
     def test_model_with_all_fields(self):
-        from routes.export import ARAgingExportInput
+        from shared.export_schemas import ARAgingExportInput
+
         data = _make_ar_result()
-        data.update({
-            "filename": "acme_ar",
-            "client_name": "Acme Corp",
-            "period_tested": "FY 2025",
-            "prepared_by": "JS",
-            "reviewed_by": "JD",
-            "workpaper_date": "2025-03-15",
-        })
+        data.update(
+            {
+                "filename": "acme_ar",
+                "client_name": "Acme Corp",
+                "period_tested": "FY 2025",
+                "prepared_by": "JS",
+                "reviewed_by": "JD",
+                "workpaper_date": "2025-03-15",
+            }
+        )
         model = ARAgingExportInput(**data)
         assert model.client_name == "Acme Corp"
         assert model.period_tested == "FY 2025"
 
     def test_model_dump_round_trips(self):
-        from routes.export import ARAgingExportInput
+        from shared.export_schemas import ARAgingExportInput
+
         data = _make_ar_result()
         model = ARAgingExportInput(**data)
         dumped = model.model_dump()
@@ -435,14 +489,16 @@ class TestARAgingExportInput:
         assert len(dumped["test_results"]) > 0
 
     def test_model_accepts_tb_only(self):
-        from routes.export import ARAgingExportInput
+        from shared.export_schemas import ARAgingExportInput
+
         data = _make_ar_result(has_subledger=False)
         data["sl_column_detection"] = None
         model = ARAgingExportInput(**data)
         assert model.sl_column_detection is None
 
     def test_model_preserves_ar_summary(self):
-        from routes.export import ARAgingExportInput
+        from shared.export_schemas import ARAgingExportInput
+
         data = _make_ar_result()
         model = ARAgingExportInput(**data)
         dumped = model.model_dump()

@@ -349,7 +349,7 @@ function FilmStage({
 }) {
   return (
     <div className="w-full max-w-md mx-auto lg:max-w-none">
-      <div className="rounded-2xl border border-obsidian-200/30 bg-white/90 backdrop-blur-xl overflow-hidden shadow-xl shadow-obsidian-200/20">
+      <div className="rounded-2xl border border-obsidian-200/30 bg-oatmeal-50/90 backdrop-blur-xl overflow-hidden shadow-xl shadow-obsidian-200/20">
         {/* Panel header */}
         <div className="flex items-center justify-between px-4 py-2.5 border-b border-obsidian-200/20">
           <div className="flex items-center gap-1.5">

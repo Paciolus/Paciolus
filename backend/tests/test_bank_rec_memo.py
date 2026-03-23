@@ -675,14 +675,14 @@ class TestBankRecMemoInput:
     """Verify the Pydantic input model."""
 
     def test_valid_data(self):
-        from routes.export import BankRecMemoInput
+        from shared.export_schemas import BankRecMemoInput
 
         data = _make_rec_result()
         model = BankRecMemoInput(**data)
         assert model.summary["matched_count"] == 50
 
     def test_defaults(self):
-        from routes.export import BankRecMemoInput
+        from shared.export_schemas import BankRecMemoInput
 
         model = BankRecMemoInput(summary={"matched_count": 10})
         assert model.filename == "bank_reconciliation"
@@ -693,7 +693,7 @@ class TestBankRecMemoInput:
         assert model.workpaper_date is None
 
     def test_with_all_fields(self):
-        from routes.export import BankRecMemoInput
+        from shared.export_schemas import BankRecMemoInput
 
         data = _make_rec_result()
         data.update(
@@ -711,7 +711,7 @@ class TestBankRecMemoInput:
         assert model.filename == "my_bank_rec"
 
     def test_model_dump_roundtrip(self):
-        from routes.export import BankRecMemoInput
+        from shared.export_schemas import BankRecMemoInput
 
         data = _make_rec_result()
         model = BankRecMemoInput(**data)

@@ -554,7 +554,7 @@ class TestCurrencyMemoExportRegistration:
 
     def test_backward_compat_reexport(self):
         """CurrencyConversionMemoInput is re-exported from routes.export."""
-        from routes.export import CurrencyConversionMemoInput
+        from shared.export_schemas import CurrencyConversionMemoInput
 
         assert CurrencyConversionMemoInput is not None
 

@@ -695,14 +695,14 @@ class TestRevenueTestingExportInput:
     """Tests for RevenueTestingExportInput Pydantic model."""
 
     def test_model_accepts_valid_data(self):
-        from routes.export import RevenueTestingExportInput
+        from shared.export_schemas import RevenueTestingExportInput
 
         data = _make_revenue_result()
         model = RevenueTestingExportInput(**data)
         assert model.filename == "revenue_testing"
 
     def test_model_defaults(self):
-        from routes.export import RevenueTestingExportInput
+        from shared.export_schemas import RevenueTestingExportInput
 
         data = _make_revenue_result()
         model = RevenueTestingExportInput(**data)
@@ -713,7 +713,7 @@ class TestRevenueTestingExportInput:
         assert model.workpaper_date is None
 
     def test_model_with_all_fields(self):
-        from routes.export import RevenueTestingExportInput
+        from shared.export_schemas import RevenueTestingExportInput
 
         data = _make_revenue_result()
         data.update(
@@ -731,7 +731,7 @@ class TestRevenueTestingExportInput:
         assert model.period_tested == "FY 2025"
 
     def test_model_dump_round_trips(self):
-        from routes.export import RevenueTestingExportInput
+        from shared.export_schemas import RevenueTestingExportInput
 
         data = _make_revenue_result()
         model = RevenueTestingExportInput(**data)

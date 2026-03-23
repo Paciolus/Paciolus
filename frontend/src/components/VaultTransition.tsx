@@ -166,7 +166,7 @@ export default function VaultTransition({ onComplete }: VaultTransitionProps) {
       {/* The Seam — hairline crack of pure white light */}
       {seamVisible && (
         <div
-          className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-px bg-white"
+          className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-px bg-oatmeal-50"
           style={{
             animation: `vault-seam-glow 1500ms ${vaultEasing} forwards`,
             willChange: 'opacity, box-shadow',

@@ -930,14 +930,14 @@ class TestMultiPeriodMemoInput:
     """Verify the Pydantic input model."""
 
     def test_valid_data(self):
-        from routes.export import MultiPeriodMemoInput
+        from shared.export_schemas import MultiPeriodMemoInput
 
         data = _make_comparison_result()
         model = MultiPeriodMemoInput(**data)
         assert model.total_accounts == 80
 
     def test_defaults(self):
-        from routes.export import MultiPeriodMemoInput
+        from shared.export_schemas import MultiPeriodMemoInput
 
         model = MultiPeriodMemoInput()
         assert model.prior_label == "Prior"
@@ -949,7 +949,7 @@ class TestMultiPeriodMemoInput:
         assert model.prepared_by is None
 
     def test_with_all_fields(self):
-        from routes.export import MultiPeriodMemoInput
+        from shared.export_schemas import MultiPeriodMemoInput
 
         data = _make_comparison_result(budget_label="Budget 2025")
         data.update(
@@ -968,7 +968,7 @@ class TestMultiPeriodMemoInput:
         assert model.filename == "my_comparison"
 
     def test_model_dump_roundtrip(self):
-        from routes.export import MultiPeriodMemoInput
+        from shared.export_schemas import MultiPeriodMemoInput
 
         data = _make_comparison_result()
         model = MultiPeriodMemoInput(**data)
@@ -979,7 +979,7 @@ class TestMultiPeriodMemoInput:
         assert len(dumped["lead_sheet_summaries"]) == 5
 
     def test_movements_preserved(self):
-        from routes.export import MultiPeriodMemoInput
+        from shared.export_schemas import MultiPeriodMemoInput
 
         data = _make_comparison_result()
         model = MultiPeriodMemoInput(**data)

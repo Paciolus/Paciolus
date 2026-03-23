@@ -678,14 +678,14 @@ class TestFixedAssetExportInput:
     """Tests for FixedAssetExportInput Pydantic model."""
 
     def test_model_accepts_valid_data(self):
-        from routes.export import FixedAssetExportInput
+        from shared.export_schemas import FixedAssetExportInput
 
         data = _make_fa_result()
         model = FixedAssetExportInput(**data)
         assert model.filename == "fixed_asset_testing"
 
     def test_model_defaults(self):
-        from routes.export import FixedAssetExportInput
+        from shared.export_schemas import FixedAssetExportInput
 
         data = _make_fa_result()
         model = FixedAssetExportInput(**data)
@@ -696,7 +696,7 @@ class TestFixedAssetExportInput:
         assert model.workpaper_date is None
 
     def test_model_with_all_fields(self):
-        from routes.export import FixedAssetExportInput
+        from shared.export_schemas import FixedAssetExportInput
 
         data = _make_fa_result()
         data.update(
@@ -714,7 +714,7 @@ class TestFixedAssetExportInput:
         assert model.period_tested == "FY 2025"
 
     def test_model_dump_round_trips(self):
-        from routes.export import FixedAssetExportInput
+        from shared.export_schemas import FixedAssetExportInput
 
         data = _make_fa_result()
         model = FixedAssetExportInput(**data)
@@ -723,7 +723,7 @@ class TestFixedAssetExportInput:
         assert len(dumped["test_results"]) > 0
 
     def test_model_accepts_no_data_quality(self):
-        from routes.export import FixedAssetExportInput
+        from shared.export_schemas import FixedAssetExportInput
 
         data = _make_fa_result()
         data["data_quality"] = None
@@ -731,7 +731,7 @@ class TestFixedAssetExportInput:
         assert model.data_quality is None
 
     def test_model_preserves_column_detection(self):
-        from routes.export import FixedAssetExportInput
+        from shared.export_schemas import FixedAssetExportInput
 
         data = _make_fa_result()
         model = FixedAssetExportInput(**data)
