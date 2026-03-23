@@ -134,3 +134,65 @@
 - **Verification:** npm run build PASS, npm test PASS, pytest PASS
 - **Status:** COMPLETE
 
+### Sprint 575: Account Identifier Preservation (AUDIT-06-F004)
+> Source: AUDIT-06 F004 (leading-zero account codes corrupted by pandas dtype inference)
+
+#### security_utils.py
+- [x] `process_tb_in_memory()`: pass `dtype=str` to CSV and Excel readers
+- [x] `process_tb_chunked()`: pass `dtype=str` to chunked CSV and Excel readers
+- [x] Type hints updated: `read_csv_secure`, `read_excel_secure`, `read_csv_chunked`, `read_excel_chunked`, `read_excel_multi_sheet_chunked` accept `type` (e.g. `str`) in dtype parameter
+
+#### Downstream compatibility
+- [x] `StreamingAuditor.process_chunk()` already uses `pd.to_numeric(errors='coerce')` for debit/credit — no changes needed
+- [x] All columns ingested as `str`; numeric conversion deferred to downstream consumers
+
+#### Tests (test_account_identifier.py — 9 new tests)
+- [x] CSV leading-zero preservation: `process_tb_in_memory`, `process_tb_chunked`, `read_csv_secure`
+- [x] CSV mixed formats (alphanumeric + numeric): in-memory and chunked paths
+- [x] Excel leading-zero preservation: in-memory and chunked paths
+- [x] End-to-end StreamingAuditor: leading-zero and mixed-format account keys
+
+- **Tests:** 7,073 backend (9 new) — 0 failures
+- **Verification:** pytest PASS (7,073/7,073)
+- **Status:** COMPLETE
+
+### Sprint 577: Unified Error Schema & Frontend Error Handling (AUDIT-11-F004)
+> Source: AUDIT-11 F004 (inconsistent error shapes, duplicated frontend error parsing)
+
+#### Backend (main.py, shared/schemas.py)
+- [ ] `ErrorResponse` Pydantic model: code, message, request_id, detail
+- [ ] 500 handler → `ErrorResponse` envelope (code="INTERNAL_ERROR")
+- [ ] HTTPException handler → `ErrorResponse` envelope + backward-compat `detail` key
+- [ ] 422 handler → `ErrorResponse` envelope + legacy `error_code` alias
+
+#### Frontend (transport.ts, uploadTransport.ts)
+- [ ] `ParsedApiError` interface + `parseErrorResponse()` shared parser in transport.ts
+- [ ] `performFetch` error path uses `parseErrorResponse()`
+- [ ] `uploadFetch` imports and uses `parseErrorResponse()` from transport.ts
+
+- **Tests:** TBD
+- **Verification:** TBD
+- **Status:** IN PROGRESS
+
+### Sprint 576: Organization & Untyped Endpoint Response Models (AUDIT-11-F002, AUDIT-11-F003)
+> Source: AUDIT-11 F002 (organization endpoints return raw dicts), F003 (admin/branding/bulk/export routes lack response_model)
+
+#### Backend (shared/organization_schemas.py — new file)
+- [x] `OrganizationResponse`, `OrganizationWithMemberCountResponse` — org CRUD
+- [x] `OrganizationMemberResponse` — list-members, update-role (with enriched user_name/user_email)
+- [x] `OrganizationInviteResponse`, `OrganizationInviteCreateResponse` — invite CRUD
+- [x] `AdminOverviewResponse`, `TeamActivityEntryResponse`, `UsageByMemberResponse` — admin dashboard
+- [x] `BrandingResponse` — branding GET/PUT/POST-logo
+- [x] `BulkUploadStartResponse`, `BulkUploadStatusResponse` — bulk upload
+- [x] `ExportShareResponse`, `ExportShareCreateResponse` — export sharing
+- [x] `DetailResponse` — generic detail message (revoke invite, accept invite, remove member, delete logo, revoke share)
+
+#### Route Decorators Updated
+- [x] `organization.py` — 10 routes: response_model added
+- [x] `admin_dashboard.py` — 3 JSON routes: response_model added (CSV export skipped — StreamingResponse)
+- [x] `branding.py` — 4 routes: response_model added
+- [x] `bulk_upload.py` — 2 routes: response_model added
+- [x] `export_sharing.py` — 3 JSON routes: response_model added (download skipped — Response)
+
+- **Status:** COMPLETE
+
