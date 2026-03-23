@@ -32,7 +32,7 @@
 
 | Item | Reason | Source |
 |------|--------|--------|
-| Password reset flow (NEW-015) | Requires dedicated backend sprint (token generation, email dispatch, reset endpoint) | Sprint 569 |
+| ~~Password reset flow (NEW-015)~~ | RESOLVED — Sprint 572 | Sprint 569 |
 
 ---
 
@@ -43,4 +43,29 @@
 > FIX-3–8B, AUDIT-09–10 archived to `tasks/archive/fix-3-8b-audit-09-10-details.md`.
 > Sprints 563–569, CI-FIX archived to `tasks/archive/sprints-563-569-details.md`.
 > Sprints 570–571 archived to `tasks/archive/sprints-570-571-details.md`.
+
+### Sprint 572: Password Reset Flow
+> Source: Launch Readiness Review item B-15 / Deferred NEW-015
+
+#### Backend
+- [x] `PasswordResetToken` model (SHA-256 hashed, 1-hour expiry, single-use)
+- [x] `POST /auth/forgot-password` — rate-limited, always returns 200 (prevents enumeration)
+- [x] `POST /auth/reset-password` — validates token, sets new password, revokes all sessions, clears lockout
+- [x] Password reset email template (HTML + plaintext, Oat & Obsidian branding)
+- [x] `generate_password_reset_token()` + `send_password_reset_email()` in email_service.py
+- [x] CSRF exemption for both endpoints (pre-auth, no CSRF token available)
+
+#### Frontend
+- [x] `/forgot-password` page — email form, success screen (always shown to prevent enumeration)
+- [x] `/reset-password` page — new password form with complexity validation, token capture + URL stripping
+- [x] Login page "Forgot password?" link → `/forgot-password`
+
+#### Tests
+- [x] 12 backend tests: forgot-password (4), reset-password (5), CSRF exemption (2), lockout reset (1)
+- [x] 10 frontend tests: ForgotPasswordPage (5), ResetPasswordPage (5)
+- [x] Updated CSRF exemption snapshot test with 2 new paths
+
+- **Tests:** 7,108 backend (12 new), 1,735 frontend (10 new) — 0 failures
+- **Verification:** npm run build PASS, npm test PASS (1,735/1,735), backend tests PASS (106/106 auth+csrf+reset)
+- **Status:** COMPLETE
 

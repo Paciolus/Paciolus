@@ -93,10 +93,10 @@ describe('LoginPage', () => {
     expect(screen.getByRole('checkbox')).toBeInTheDocument()
   })
 
-  it('shows forgot password link with mailto', () => {
+  it('shows forgot password link to reset page', () => {
     render(<LoginPage />)
     const forgotLink = screen.getByText('Forgot password?')
-    expect(forgotLink).toHaveAttribute('href', 'mailto:support@paciolus.com?subject=Password%20Reset%20Request')
+    expect(forgotLink).toHaveAttribute('href', '/forgot-password')
   })
 
   it('shows server error on failed login', async () => {

@@ -301,12 +301,12 @@ export default function LoginPage() {
                 <span className="text-sm text-oatmeal-400 font-sans">Remember me</span>
               </label>
 
-              <a
-                href="mailto:support@paciolus.com?subject=Password%20Reset%20Request"
+              <Link
+                href="/forgot-password"
                 className="text-sm text-oatmeal-500 hover:text-oatmeal-400 font-sans transition-colors"
               >
                 Forgot password?
-              </a>
+              </Link>
             </div>
 
             {/* Submit Button */}

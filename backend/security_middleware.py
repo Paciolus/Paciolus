@@ -300,6 +300,8 @@ CSRF_EXEMPT_PATHS = {
     "/auth/register",
     "/auth/refresh",  # Bootstrap-exempt: CORS prevents cross-origin response reads
     "/auth/verify-email",
+    "/auth/forgot-password",  # Sprint 572: Pre-auth, no CSRF token available
+    "/auth/reset-password",  # Sprint 572: Pre-auth, token-authenticated via email link
     "/auth/csrf",
     "/billing/webhook",  # Sprint 366: Stripe signature verification, not cookie-authenticated
     "/contact/submit",

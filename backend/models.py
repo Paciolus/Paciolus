@@ -138,6 +138,9 @@ class User(Base):
     verification_tokens: Mapped[list["EmailVerificationToken"]] = relationship(
         "EmailVerificationToken", back_populates="user"
     )
+    password_reset_tokens: Mapped[list["PasswordResetToken"]] = relationship(
+        "PasswordResetToken", back_populates="user"
+    )
     refresh_tokens: Mapped[list["RefreshToken"]] = relationship("RefreshToken", back_populates="user")
     engagements: Mapped[list["Engagement"]] = relationship(
         "Engagement", back_populates="creator", foreign_keys="[Engagement.created_by]"
@@ -470,6 +473,52 @@ class EmailVerificationToken(Base):
         """Check if token has expired."""
         now = datetime.now(UTC)
         # Handle timezone-naive datetimes from SQLite
+        if self.expires_at.tzinfo is None:
+            from datetime import timezone
+
+            expires = self.expires_at.replace(tzinfo=timezone.utc)
+        else:
+            expires = self.expires_at
+        return now > expires
+
+    @property
+    def is_used(self) -> bool:
+        """Check if token has been used."""
+        return self.used_at is not None
+
+
+class PasswordResetToken(Base):
+    """
+    Password reset tokens for account recovery.
+    Sprint 572: Password Reset Flow
+
+    Tokens are single-use and expire after 1 hour.
+    SHA-256 hash stored — raw token sent via email, never persisted.
+    """
+
+    __tablename__ = "password_reset_tokens"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+
+    # Link to user
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    user: Mapped["User"] = relationship("User", back_populates="password_reset_tokens")
+
+    # Token data (hashed — SHA-256 hex digest of raw token; never stored plaintext)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+
+    # Usage tracking
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
+    used_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    def __repr__(self) -> str:
+        return f"<PasswordResetToken(id={self.id}, user_id={self.user_id})>"
+
+    @property
+    def is_expired(self) -> bool:
+        """Check if token has expired."""
+        now = datetime.now(UTC)
         if self.expires_at.tzinfo is None:
             from datetime import timezone
 

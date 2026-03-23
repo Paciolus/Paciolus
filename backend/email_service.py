@@ -46,6 +46,7 @@ SENDGRID_FROM_NAME = os.getenv("SENDGRID_FROM_NAME", "Paciolus")
 VERIFICATION_TOKEN_LENGTH = 64  # Characters (32 bytes hex encoded)
 VERIFICATION_TOKEN_EXPIRY_HOURS = 24
 RESEND_COOLDOWN_MINUTES = 5
+PASSWORD_RESET_TOKEN_EXPIRY_HOURS = 1
 
 
 # =============================================================================
@@ -209,6 +210,81 @@ def send_verification_email(to_email: str, token: str, user_name: Optional[str] 
     except (OSError, ValueError, RuntimeError) as e:
         logger.exception("Verification email send failed")
         log_secure_operation("email_error", sanitize_exception(e, context="email delivery"))
+        return EmailResult(success=False, message="Email delivery failed. Please try again later.")
+
+
+# =============================================================================
+# PASSWORD RESET
+# =============================================================================
+
+
+def generate_password_reset_token() -> VerificationTokenResult:
+    """Generate a secure password reset token (1-hour expiry)."""
+    token = secrets.token_hex(VERIFICATION_TOKEN_LENGTH // 2)
+    expires_at = datetime.now(UTC) + timedelta(hours=PASSWORD_RESET_TOKEN_EXPIRY_HOURS)
+    return VerificationTokenResult(token=token, expires_at=expires_at)
+
+
+def _get_password_reset_email_html(reset_url: str, user_name: Optional[str] = None) -> str:
+    """Generate HTML content for password reset email (Oat & Obsidian branding)."""
+    import html as html_mod
+
+    safe_name = html_mod.escape(user_name) if user_name else None
+    greeting = f"Hello {safe_name}," if safe_name else "Hello,"
+    template = _load_template("password_reset_email.html")
+    return template.format(greeting=greeting, reset_url=reset_url)
+
+
+def _get_password_reset_email_text(reset_url: str, user_name: Optional[str] = None) -> str:
+    """Generate plain text version of password reset email."""
+    greeting = f"Hello {user_name}," if user_name else "Hello,"
+    template = _load_template("password_reset_email.txt")
+    return template.format(greeting=greeting, reset_url=reset_url)
+
+
+def send_password_reset_email(to_email: str, token: str, user_name: Optional[str] = None) -> EmailResult:
+    """Send a password reset email with a one-time reset link."""
+    if not SENDGRID_AVAILABLE:
+        log_secure_operation("email_skipped", "SendGrid library not installed")
+        log_secure_operation(
+            "password_reset_token", f"DEV MODE: token={token_fingerprint(token)} for {mask_email(to_email)}"
+        )
+        return EmailResult(success=True, message="Email sending skipped (SendGrid not installed).")
+
+    if not SENDGRID_API_KEY:
+        log_secure_operation("email_skipped", "SendGrid API key not configured")
+        log_secure_operation(
+            "password_reset_token", f"DEV MODE: token={token_fingerprint(token)} for {mask_email(to_email)}"
+        )
+        return EmailResult(success=True, message="Email sending skipped (no API key).")
+
+    try:
+        reset_url = f"{FRONTEND_URL}/reset-password?token={token}"
+
+        message = Mail(
+            from_email=Email(SENDGRID_FROM_EMAIL, SENDGRID_FROM_NAME),
+            to_emails=To(to_email),
+            subject="Reset Your Paciolus Password",
+        )
+
+        message.add_content(Content("text/plain", _get_password_reset_email_text(reset_url, user_name)))
+        message.add_content(HtmlContent(_get_password_reset_email_html(reset_url, user_name)))
+
+        sg = SendGridAPIClient(SENDGRID_API_KEY)
+        response = sg.send(message)
+
+        if response.status_code in (200, 201, 202):
+            log_secure_operation("email_sent", f"Password reset email sent to {mask_email(to_email)}")
+            return EmailResult(
+                success=True, message="Password reset email sent", message_id=response.headers.get("X-Message-Id")
+            )
+        else:
+            log_secure_operation("email_failed", f"SendGrid returned {response.status_code}")
+            return EmailResult(success=False, message=f"Failed to send email (status {response.status_code})")
+
+    except (OSError, ValueError, RuntimeError) as e:
+        logger.exception("Password reset email send failed")
+        log_secure_operation("email_error", sanitize_exception(e, context="password reset email"))
         return EmailResult(success=False, message="Email delivery failed. Please try again later.")
 
 

@@ -578,6 +578,8 @@ class TestCsrfExemptionPolicy:
             "/auth/register",
             "/auth/refresh",
             "/auth/verify-email",
+            "/auth/forgot-password",
+            "/auth/reset-password",
             "/auth/csrf",
             "/billing/webhook",
             "/contact/submit",
