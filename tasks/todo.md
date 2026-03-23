@@ -160,19 +160,19 @@
 > Source: AUDIT-11 F004 (inconsistent error shapes, duplicated frontend error parsing)
 
 #### Backend (main.py, shared/schemas.py)
-- [ ] `ErrorResponse` Pydantic model: code, message, request_id, detail
-- [ ] 500 handler → `ErrorResponse` envelope (code="INTERNAL_ERROR")
-- [ ] HTTPException handler → `ErrorResponse` envelope + backward-compat `detail` key
-- [ ] 422 handler → `ErrorResponse` envelope + legacy `error_code` alias
+- [x] `ErrorResponse` Pydantic model: code, message, request_id, detail
+- [x] 500 handler → `ErrorResponse` envelope (code="INTERNAL_ERROR")
+- [x] HTTPException handler → `ErrorResponse` envelope + backward-compat `detail` key
+- [x] 422 handler → `ErrorResponse` envelope + legacy `error_code` alias
 
 #### Frontend (transport.ts, uploadTransport.ts)
-- [ ] `ParsedApiError` interface + `parseErrorResponse()` shared parser in transport.ts
-- [ ] `performFetch` error path uses `parseErrorResponse()`
-- [ ] `uploadFetch` imports and uses `parseErrorResponse()` from transport.ts
+- [x] `ParsedApiError` interface + `parseErrorResponse()` shared parser in transport.ts
+- [x] `performFetch` error path uses `parseErrorResponse()`
+- [x] `uploadFetch` imports and uses `parseErrorResponse()` from transport.ts
 
-- **Tests:** TBD
-- **Verification:** TBD
-- **Status:** IN PROGRESS
+- **Tests:** 7,073 backend, 1,735 frontend — 0 failures
+- **Verification:** npm run build PASS, npx jest PASS (1,735/1,735), pytest PASS (7,073/7,073)
+- **Status:** COMPLETE
 
 ### Sprint 576: Organization & Untyped Endpoint Response Models (AUDIT-11-F002, AUDIT-11-F003)
 > Source: AUDIT-11 F002 (organization endpoints return raw dicts), F003 (admin/branding/bulk/export routes lack response_model)

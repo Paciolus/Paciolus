@@ -12,13 +12,15 @@ from contextlib import asynccontextmanager
 from decimal import Decimal
 from typing import Any
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+
+from shared.schemas import ErrorResponse
 
 from config import (
     API_HOST,
@@ -230,10 +232,47 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # ty
 async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     rid = request_id_var.get("-")
     logger.exception("Unhandled exception on %s %s [request_id=%s]", request.method, request.url.path, rid)
-    return JSONResponse(
-        status_code=500,
-        content={"detail": "Internal server error", "request_id": rid},
+    body = ErrorResponse(
+        code="INTERNAL_ERROR",
+        message="Internal server error",
+        request_id=rid,
+        detail="Internal server error",
     )
+    return JSONResponse(status_code=500, content=body.model_dump())
+
+
+# HTTPException handler — wraps FastAPI's default with the unified error envelope
+# while preserving the `detail` field that many callers and tests rely on.
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+    rid = request_id_var.get("-")
+    # Derive a machine-readable code from the status
+    code_map: dict[int, str] = {
+        400: "BAD_REQUEST",
+        401: "UNAUTHORIZED",
+        403: "FORBIDDEN",
+        404: "NOT_FOUND",
+        409: "CONFLICT",
+        429: "RATE_LIMITED",
+    }
+    code = code_map.get(exc.status_code, f"HTTP_{exc.status_code}")
+    # Extract a string message from detail (detail can be str or dict)
+    if isinstance(exc.detail, str):
+        message = exc.detail
+    elif isinstance(exc.detail, dict):
+        message = exc.detail.get("message", str(exc.detail))
+    else:
+        message = str(exc.detail)
+    body = ErrorResponse(
+        code=code,
+        message=message,
+        request_id=rid,
+        detail=exc.detail if isinstance(exc.detail, str) else None,
+    )
+    # Build content dict — keep `detail` at top level for backward compatibility
+    content = body.model_dump()
+    content["detail"] = exc.detail
+    return JSONResponse(status_code=exc.status_code, content=content, headers=getattr(exc, "headers", None))
 
 
 # Custom 422 handler — prevents Pydantic loc paths and field names from leaking
@@ -241,14 +280,15 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
 async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
     rid = request_id_var.get("-")
     logger.debug("Validation error on %s %s: %s", request.method, request.url.path, exc.errors())
-    return JSONResponse(
-        status_code=422,
-        content={
-            "error_code": "VALIDATION_ERROR",
-            "message": "The request could not be processed. Please check your input.",
-            "request_id": rid,
-        },
+    body = ErrorResponse(
+        code="VALIDATION_ERROR",
+        message="The request could not be processed. Please check your input.",
+        request_id=rid,
     )
+    # Keep legacy `error_code` alias for any clients still reading it
+    content = body.model_dump()
+    content["error_code"] = "VALIDATION_ERROR"
+    return JSONResponse(status_code=422, content=content)
 
 
 # Register all route modules
