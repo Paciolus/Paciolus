@@ -19,6 +19,7 @@ See docs/STANDARDS.md for detailed framework comparison.
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date
+from decimal import Decimal
 from enum import Enum
 from typing import Any, Optional
 
@@ -139,6 +140,11 @@ class RatioResult:
     interpretation: str
     threshold_status: str  # "above_threshold", "at_threshold", "below_threshold", "neutral"
 
+    def __post_init__(self) -> None:
+        """Coerce Decimal ratio values to float (ratios are dimensionless statistics)."""
+        if self.value is not None and not isinstance(self.value, float):
+            object.__setattr__(self, "value", float(self.value))
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "name": self.name,
@@ -162,6 +168,13 @@ class VarianceResult:
     direction: TrendDirection
     display_text: str
 
+    def __post_init__(self) -> None:
+        """Coerce any Decimal values to float (variances are display-only statistics)."""
+        for f in ("current_value", "previous_value", "change_amount", "change_percent"):
+            val = getattr(self, f)
+            if not isinstance(val, float):
+                object.__setattr__(self, f, float(val))
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "metric_name": self.metric_name,
@@ -176,20 +189,40 @@ class VarianceResult:
 
 @dataclass
 class CategoryTotals:
-    """Aggregate totals by account category."""
+    """Aggregate totals by account category — Decimal for monetary precision."""
 
-    total_assets: float = 0.0
-    current_assets: float = 0.0
-    inventory: float = 0.0
-    accounts_receivable: float = 0.0  # Sprint 53: For DSO calculation
-    accounts_payable: float = 0.0  # Sprint 293: For DPO calculation
-    total_liabilities: float = 0.0
-    current_liabilities: float = 0.0
-    total_equity: float = 0.0
-    total_revenue: float = 0.0
-    cost_of_goods_sold: float = 0.0
-    total_expenses: float = 0.0
-    operating_expenses: float = 0.0  # Sprint 26: For Operating Profit Margin
+    total_assets: Decimal = Decimal("0")
+    current_assets: Decimal = Decimal("0")
+    inventory: Decimal = Decimal("0")
+    accounts_receivable: Decimal = Decimal("0")  # Sprint 53: For DSO calculation
+    accounts_payable: Decimal = Decimal("0")  # Sprint 293: For DPO calculation
+    total_liabilities: Decimal = Decimal("0")
+    current_liabilities: Decimal = Decimal("0")
+    total_equity: Decimal = Decimal("0")
+    total_revenue: Decimal = Decimal("0")
+    cost_of_goods_sold: Decimal = Decimal("0")
+    total_expenses: Decimal = Decimal("0")
+    operating_expenses: Decimal = Decimal("0")  # Sprint 26: For Operating Profit Margin
+
+    def __post_init__(self) -> None:
+        """Coerce any float/int/str inputs to Decimal for monetary precision."""
+        for f in (
+            "total_assets",
+            "current_assets",
+            "inventory",
+            "accounts_receivable",
+            "accounts_payable",
+            "total_liabilities",
+            "current_liabilities",
+            "total_equity",
+            "total_revenue",
+            "cost_of_goods_sold",
+            "total_expenses",
+            "operating_expenses",
+        ):
+            val = getattr(self, f)
+            if not isinstance(val, Decimal):
+                object.__setattr__(self, f, Decimal(str(val)))
 
     def to_dict(self) -> dict[str, str]:
         return {
@@ -209,25 +242,25 @@ class CategoryTotals:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "CategoryTotals":
-        def _to_float(v: Any) -> float:
-            """Convert string or numeric value to float (handles to_dict str output)."""
+        def _to_decimal(v: Any) -> Decimal:
+            """Convert string or numeric value to Decimal (handles to_dict str output)."""
             if v is None:
-                return 0.0
-            return float(v)
+                return Decimal("0")
+            return Decimal(str(v))
 
         return cls(
-            total_assets=_to_float(data.get("total_assets", 0.0)),
-            current_assets=_to_float(data.get("current_assets", 0.0)),
-            inventory=_to_float(data.get("inventory", 0.0)),
-            accounts_receivable=_to_float(data.get("accounts_receivable", 0.0)),
-            accounts_payable=_to_float(data.get("accounts_payable", 0.0)),
-            total_liabilities=_to_float(data.get("total_liabilities", 0.0)),
-            current_liabilities=_to_float(data.get("current_liabilities", 0.0)),
-            total_equity=_to_float(data.get("total_equity", 0.0)),
-            total_revenue=_to_float(data.get("total_revenue", 0.0)),
-            cost_of_goods_sold=_to_float(data.get("cost_of_goods_sold", 0.0)),
-            total_expenses=_to_float(data.get("total_expenses", 0.0)),
-            operating_expenses=_to_float(data.get("operating_expenses", 0.0)),
+            total_assets=_to_decimal(data.get("total_assets", 0)),
+            current_assets=_to_decimal(data.get("current_assets", 0)),
+            inventory=_to_decimal(data.get("inventory", 0)),
+            accounts_receivable=_to_decimal(data.get("accounts_receivable", 0)),
+            accounts_payable=_to_decimal(data.get("accounts_payable", 0)),
+            total_liabilities=_to_decimal(data.get("total_liabilities", 0)),
+            current_liabilities=_to_decimal(data.get("current_liabilities", 0)),
+            total_equity=_to_decimal(data.get("total_equity", 0)),
+            total_revenue=_to_decimal(data.get("total_revenue", 0)),
+            cost_of_goods_sold=_to_decimal(data.get("cost_of_goods_sold", 0)),
+            total_expenses=_to_decimal(data.get("total_expenses", 0)),
+            operating_expenses=_to_decimal(data.get("operating_expenses", 0)),
         )
 
 
@@ -1909,7 +1942,7 @@ class RollingWindowAnalyzer:
             # Standard deviation as measure of consistency
             mean_change = avg_change
             variance = sum((c - mean_change) ** 2 for c in changes) / len(changes)
-            std_dev = variance**0.5
+            std_dev = float(variance) ** 0.5
 
             # Lower std_dev = higher confidence (more consistent)
             if std_dev < STDDEV_HIGH_CONFIDENCE:
@@ -1941,7 +1974,7 @@ class RollingWindowAnalyzer:
         last_value = values[-1][1]
         change = last_value - first_value
 
-        if abs(change) < abs(first_value) * 0.01:  # Less than 1% change
+        if abs(change) < abs(first_value) / 100:  # Less than 1% change
             return TrendDirection.NEUTRAL
 
         if change > 0:
@@ -2204,7 +2237,7 @@ NON_OPERATING_KEYWORDS = [
 
 
 def extract_category_totals(
-    account_balances: dict[str, dict[str, float]],
+    account_balances: dict[str, dict[str, Any]],
     classified_accounts: dict[str, str],
     account_subtypes: dict[str, str] | None = None,
 ) -> CategoryTotals:
@@ -2249,8 +2282,8 @@ def extract_category_totals(
     )
 
     for account_name, balances in account_balances.items():
-        debit = balances.get("debit", 0.0)
-        credit = balances.get("credit", 0.0)
+        debit = Decimal(str(balances.get("debit", 0)))
+        credit = Decimal(str(balances.get("credit", 0)))
         net_balance = debit - credit
 
         # Get classification for this account

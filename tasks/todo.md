@@ -69,3 +69,48 @@
 - **Verification:** npm run build PASS, npm test PASS (1,735/1,735), backend tests PASS (106/106 auth+csrf+reset)
 - **Status:** COMPLETE
 
+### Sprint 573: Decimal Pipeline Refactor (AUDIT-06-F001, AUDIT-06-F003)
+> Source: AUDIT-06 Findings F001 (float arithmetic in ingestion) and F003 (cross-engine float down-casts)
+
+#### streaming_auditor.py
+- [x] `_debit_chunks` / `_credit_chunks` → `list[Decimal]`
+- [x] `account_balances` dict values → `Decimal` (was float)
+- [x] `process_chunk()`: `Decimal(str(math.fsum(...)))` replaces `math.fsum()` float
+- [x] Per-account accumulation: `Decimal(str(debit_sum))` replaces `float(Decimal(str(...)))`
+- [x] `_finalize_balances()`: ensures Decimal (no longer converts to float)
+- [x] `get_balance_result()`: `sum(Decimal)` replaces `math.fsum(float)`
+
+#### pipeline.py
+- [x] `_total_debits` / `_coverage_pct` / scoring inputs → Decimal arithmetic
+- [x] Multi-sheet path: consolidated debits/credits/balances → Decimal
+- [x] Coverage percentage: `Decimal.quantize()` replaces `round(float)`
+
+#### ratio_engine.py
+- [x] `CategoryTotals` fields → `Decimal` with `__post_init__` coercion
+- [x] `from_dict()`: `_to_decimal()` replaces `_to_float()`
+- [x] `extract_category_totals()`: `Decimal(str(...))` for balance values
+- [x] `RatioResult.__post_init__`: coerce Decimal→float (ratios are dimensionless)
+- [x] `VarianceResult.__post_init__`: coerce Decimal→float (display-only)
+- [x] `_calculate_momentum()`: `float(variance)**0.5` fix
+- [x] `_determine_trend_direction()`: `/ 100` replaces `* 0.01`
+
+#### flux_engine.py
+- [x] `NEAR_ZERO` → `Decimal("0.005")`
+- [x] Balance extraction: `Decimal(str(...))` replaces `float(...)`
+- [x] Percentage deltas remain float (display-only)
+- [x] `FluxItem` construction: `float()` at boundary (dataclass stores float)
+
+#### population_profile_engine.py
+- [x] `compute_population_profile_from_rows()`: Decimal accumulation, no `float()` wrapper
+- [x] Type annotations updated to `dict[str, dict[str, Any]]`
+
+#### going_concern_engine.py
+- [x] `/ 2` replaces `* 0.5` (Decimal-safe)
+
+#### parsing_helpers.py
+- [x] `safe_float()`: deprecation docstring for monetary use
+
+- **Tests:** 7,107 backend — 0 failures (7,064 + 43 QA)
+- **Verification:** Full backend test suite PASS
+- **Status:** COMPLETE
+

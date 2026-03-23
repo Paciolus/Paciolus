@@ -32,7 +32,7 @@ from security_utils import (
     process_tb_chunked,
     read_excel_multi_sheet_chunked,
 )
-from shared.monetary import BALANCE_TOLERANCE
+from shared.monetary import BALANCE_TOLERANCE, quantize_monetary
 
 
 def audit_trial_balance_streaming(
@@ -123,10 +123,10 @@ def audit_trial_balance_streaming(
             and (ab.get("type", "").lower() == "asset")
             for ab in abnormal_balances
         )
-        _total_debits = float(result.get("total_debits", 0))
+        _total_debits = Decimal(str(result.get("total_debits", 0)))
         _material_items = [ab for ab in abnormal_balances if ab.get("materiality") == "material"]
-        _flagged_value = sum(abs(ab.get("amount", 0)) for ab in _material_items)
-        _coverage_pct = min(_flagged_value / _total_debits * 100, 100.0) if _total_debits > 0 else 0
+        _flagged_value = sum(abs(Decimal(str(ab.get("amount", 0)))) for ab in _material_items)
+        _coverage_pct = min(_flagged_value / _total_debits * 100, Decimal("100")) if _total_debits > 0 else Decimal("0")
 
         risk_score, risk_factors = compute_tb_diagnostic_score(
             result["material_count"],
@@ -140,7 +140,7 @@ def audit_trial_balance_streaming(
         result["risk_summary"]["risk_score"] = risk_score
         result["risk_summary"]["risk_tier"] = get_diagnostic_tier(risk_score)
         result["risk_summary"]["risk_factors"] = [(name, pts) for name, pts in risk_factors]
-        result["risk_summary"]["coverage_pct"] = round(min(_coverage_pct, 100.0), 1)
+        result["risk_summary"]["coverage_pct"] = float(Decimal(str(_coverage_pct)).quantize(Decimal("0.1")))
 
         # ── Supplementary analytics ──────────────────────────────────
         # Classification Validator
@@ -149,7 +149,7 @@ def audit_trial_balance_streaming(
 
         # Build canonical display-name-keyed structures (single pass over accounts).
         # Reused by population profile, all_accounts, result exports, and lead sheets.
-        display_balances: dict[str, dict[str, float]] = {}
+        display_balances: dict[str, dict[str, Any]] = {}
         display_classifications: dict[str, str] = {}
         display_subtypes: dict[str, str] = {}
         subtype_source = auditor.provided_account_subtypes or auditor.provided_account_types
@@ -314,15 +314,15 @@ def audit_trial_balance_multi_sheet(
         parsed_column_mapping = ColumnMapping.from_dict(column_mapping)
 
     sheet_results: dict[str, dict[str, Any]] = {}
-    consolidated_debits = 0.0
-    consolidated_credits = 0.0
+    consolidated_debits = Decimal("0")
+    consolidated_credits = Decimal("0")
     consolidated_rows = 0
     all_abnormal_balances: list[dict[str, Any]] = []
     sheet_column_detections: dict[str, dict[str, Any]] = {}
     column_order_warnings: list[str] = []
     first_sheet_columns: Optional[tuple[str, str, str]] = None
     consolidated_category_totals = CategoryTotals()
-    consolidated_account_balances: dict[str, dict[str, float]] = {}
+    consolidated_account_balances: dict[str, dict[str, Any]] = {}
 
     try:
         for sheet_name in selected_sheets:
@@ -397,8 +397,8 @@ def audit_trial_balance_multi_sheet(
                 "column_detection": sheet_column_detections.get(sheet_name),
             }
 
-            consolidated_debits += float(sheet_balance["total_debits"])
-            consolidated_credits += float(sheet_balance["total_credits"])
+            consolidated_debits += Decimal(str(sheet_balance["total_debits"]))
+            consolidated_credits += Decimal(str(sheet_balance["total_credits"]))
             consolidated_rows += sheet_balance["row_count"]
             all_abnormal_balances.extend(sheet_abnormals)
 
@@ -416,7 +416,7 @@ def audit_trial_balance_multi_sheet(
 
             for acct, bals in auditor.account_balances.items():
                 if acct not in consolidated_account_balances:
-                    consolidated_account_balances[acct] = {"debit": 0.0, "credit": 0.0}
+                    consolidated_account_balances[acct] = {"debit": Decimal("0"), "credit": Decimal("0")}
                 consolidated_account_balances[acct]["debit"] += bals["debit"]
                 consolidated_account_balances[acct]["credit"] += bals["credit"]
 
@@ -424,7 +424,7 @@ def audit_trial_balance_multi_sheet(
 
         # Consolidated balance check
         consolidated_difference = consolidated_debits - consolidated_credits
-        is_consolidated_balanced = abs(Decimal(str(consolidated_difference))) < BALANCE_TOLERANCE
+        is_consolidated_balanced = abs(consolidated_difference) < BALANCE_TOLERANCE
 
         material_count = sum(1 for ab in all_abnormal_balances if ab.get("materiality") == "material")
         ms_informational_count = sum(1 for ab in all_abnormal_balances if ab.get("severity") == "informational")
@@ -443,8 +443,12 @@ def audit_trial_balance_multi_sheet(
             for ab in all_abnormal_balances
         )
         ms_material_items = [ab for ab in all_abnormal_balances if ab.get("materiality") == "material"]
-        ms_flagged_value = sum(abs(ab.get("amount", 0)) for ab in ms_material_items)
-        ms_coverage_pct = min(ms_flagged_value / consolidated_debits * 100, 100.0) if consolidated_debits > 0 else 0
+        ms_flagged_value = sum(abs(Decimal(str(ab.get("amount", 0)))) for ab in ms_material_items)
+        ms_coverage_pct = (
+            min(ms_flagged_value / consolidated_debits * 100, Decimal("100"))
+            if consolidated_debits > 0
+            else Decimal("0")
+        )
 
         ms_risk_score, ms_risk_factors = compute_tb_diagnostic_score(
             material_count,
@@ -458,7 +462,7 @@ def audit_trial_balance_multi_sheet(
         risk_summary["risk_score"] = ms_risk_score
         risk_summary["risk_tier"] = get_diagnostic_tier(ms_risk_score)
         risk_summary["risk_factors"] = [(name, pts) for name, pts in ms_risk_factors]
-        risk_summary["coverage_pct"] = round(min(ms_coverage_pct, 100.0), 1)
+        risk_summary["coverage_pct"] = float(Decimal(str(ms_coverage_pct)).quantize(Decimal("0.1")))
 
         first_sheet_name = selected_sheets[0] if selected_sheets else None
         primary_col_detection = sheet_column_detections.get(first_sheet_name) if first_sheet_name else None
@@ -466,9 +470,9 @@ def audit_trial_balance_multi_sheet(
         result = {
             "status": "success",
             "balanced": is_consolidated_balanced,
-            "total_debits": round(consolidated_debits, 2),
-            "total_credits": round(consolidated_credits, 2),
-            "difference": round(consolidated_difference, 2),
+            "total_debits": str(quantize_monetary(consolidated_debits)),
+            "total_credits": str(quantize_monetary(consolidated_credits)),
+            "difference": str(quantize_monetary(consolidated_difference)),
             "row_count": consolidated_rows,
             "timestamp": datetime.now(UTC).isoformat(),
             "message": "Consolidated trial balance is balanced"

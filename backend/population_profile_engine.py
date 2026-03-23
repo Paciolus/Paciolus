@@ -18,7 +18,7 @@ dict or raw parsed data from parse_uploaded_file().
 import statistics
 from dataclasses import dataclass, field
 from decimal import Decimal
-from typing import Optional
+from typing import Any, Optional
 
 from column_detector import detect_columns
 from shared.benford import analyze_benford
@@ -717,7 +717,7 @@ def _compute_data_quality(
 
 
 def compute_population_profile(
-    account_balances: dict[str, dict[str, float]],
+    account_balances: dict[str, dict[str, Any]],
     classified_accounts: Optional[dict[str, str]] = None,
     account_numbers: Optional[dict[str, str]] = None,
     top_n: int = 10,
@@ -727,7 +727,7 @@ def compute_population_profile(
     """Compute population profile from pre-aggregated account balances.
 
     Args:
-        account_balances: {account_name: {"debit": float, "credit": float}}
+        account_balances: {account_name: {"debit": Decimal|float, "credit": Decimal|float}}
         classified_accounts: Optional {account_name: category_string}
         account_numbers: Optional {account_name: account_number_string}
         top_n: Number of top accounts to include (default 10)
@@ -982,7 +982,7 @@ def run_population_profile(
         return empty_report
 
     # Accumulate per-account balances, tracking missing fields (BUG-006)
-    account_balances: dict[str, dict[str, float]] = {}
+    account_balances: dict[str, dict[str, Decimal]] = {}
     missing_names = 0
     missing_balances = 0
     for row in rows:
@@ -995,13 +995,13 @@ def run_population_profile(
         debit = safe_decimal(row.get(debit_col))
         credit = safe_decimal(row.get(credit_col))
 
-        if float(debit) == 0.0 and float(credit) == 0.0:
+        if debit == 0 and credit == 0:
             missing_balances += 1
 
         if acct_str not in account_balances:
-            account_balances[acct_str] = {"debit": 0.0, "credit": 0.0}
-        account_balances[acct_str]["debit"] += float(debit)
-        account_balances[acct_str]["credit"] += float(credit)
+            account_balances[acct_str] = {"debit": Decimal("0"), "credit": Decimal("0")}
+        account_balances[acct_str]["debit"] += debit
+        account_balances[acct_str]["credit"] += credit
 
     profile = compute_population_profile(
         account_balances,
@@ -1027,7 +1027,7 @@ VALID_CATEGORIES = {"asset", "liability", "equity", "revenue", "expense"}
 
 
 def compute_category_gini(
-    account_balances: dict[str, dict[str, float]],
+    account_balances: dict[str, dict[str, Any]],
     classified_accounts: dict[str, str],
 ) -> list[dict]:
     """Compute Gini coefficient and descriptive statistics per classification category.

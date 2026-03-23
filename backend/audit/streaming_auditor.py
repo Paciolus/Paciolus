@@ -83,13 +83,13 @@ class StreamingAuditor:
         # User-provided column mapping (Day 9.2 - Zero-Storage: session-only)
         self.user_column_mapping = column_mapping
 
-        # Per-chunk sums for compensated summation at result time
-        self._debit_chunks: list[float] = []
-        self._credit_chunks: list[float] = []
+        # Per-chunk sums — Decimal for monetary precision
+        self._debit_chunks: list[Decimal] = []
+        self._credit_chunks: list[Decimal] = []
         self.total_rows = 0
 
         # Per-account aggregation for abnormal balance detection
-        self.account_balances: dict[str, dict[str, float]] = {}
+        self.account_balances: dict[str, dict[str, Decimal]] = {}
 
         # Column mapping (discovered from first chunk or user-provided)
         self.debit_col: Optional[str] = None
@@ -220,8 +220,8 @@ class StreamingAuditor:
         debits = pd.to_numeric(chunk[self.debit_col], errors="coerce").fillna(0)
         credits = pd.to_numeric(chunk[self.credit_col], errors="coerce").fillna(0)
 
-        self._debit_chunks.append(math.fsum(debits.values))
-        self._credit_chunks.append(math.fsum(credits.values))
+        self._debit_chunks.append(Decimal(str(math.fsum(debits.values))))
+        self._credit_chunks.append(Decimal(str(math.fsum(credits.values))))
         self.total_rows = rows_so_far
 
         if self.account_col:
@@ -237,9 +237,9 @@ class StreamingAuditor:
 
             for account_name, debit_sum, credit_sum in zip(grouped["account"], grouped["debit"], grouped["credit"]):
                 if account_name not in self.account_balances:
-                    self.account_balances[account_name] = {"debit": 0.0, "credit": 0.0}
-                self.account_balances[account_name]["debit"] += float(Decimal(str(debit_sum)))
-                self.account_balances[account_name]["credit"] += float(Decimal(str(credit_sum)))
+                    self.account_balances[account_name] = {"debit": Decimal("0"), "credit": Decimal("0")}
+                self.account_balances[account_name]["debit"] += Decimal(str(debit_sum))
+                self.account_balances[account_name]["credit"] += Decimal(str(credit_sum))
 
             # Sprint 526: Extract account_type values
             if self.account_type_col and self.account_type_col in chunk.columns:
@@ -285,20 +285,23 @@ class StreamingAuditor:
         gc.collect()
 
     def _finalize_balances(self) -> None:
-        """Convert accumulated Decimal balances to float for downstream rule compatibility."""
-        for acct, bals in self.account_balances.items():
-            if isinstance(bals["debit"], Decimal):
-                bals["debit"] = float(bals["debit"])
-            if isinstance(bals["credit"], Decimal):
-                bals["credit"] = float(bals["credit"])
+        """Ensure all accumulated balances are Decimal (monetary precision).
+
+        Previously converted Decimal→float; now keeps Decimal throughout.
+        """
+        for _acct, bals in self.account_balances.items():
+            if not isinstance(bals["debit"], Decimal):
+                bals["debit"] = Decimal(str(bals["debit"]))
+            if not isinstance(bals["credit"], Decimal):
+                bals["credit"] = Decimal(str(bals["credit"]))
 
     def get_balance_result(self) -> dict[str, Any]:
         """Get the balance check result after all chunks processed."""
         self._finalize_balances()
-        total_debits = math.fsum(self._debit_chunks)
-        total_credits = math.fsum(self._credit_chunks)
+        total_debits = sum(self._debit_chunks, Decimal("0"))
+        total_credits = sum(self._credit_chunks, Decimal("0"))
         difference = total_debits - total_credits
-        is_balanced = abs(Decimal(str(difference))) < BALANCE_TOLERANCE
+        is_balanced = abs(difference) < BALANCE_TOLERANCE
 
         return {
             "status": "success",
@@ -459,7 +462,7 @@ class StreamingAuditor:
         if classified_accounts is None:
             classified_accounts = self.get_classified_accounts()
 
-        display_balances: dict[str, dict[str, float]] = {}
+        display_balances: dict[str, dict[str, Any]] = {}
         display_classifications: dict[str, str] = {}
         display_subtypes: dict[str, str] = {}
 
