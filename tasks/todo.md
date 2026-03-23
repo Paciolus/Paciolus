@@ -114,3 +114,23 @@
 - **Verification:** Full backend test suite PASS
 - **Status:** COMPLETE
 
+### Sprint 574: Response Schema Reconciliation + Decimal Serialization (AUDIT-06-F002, AUDIT-11-F001, AUDIT-11-F005)
+> Source: AUDIT-06 F002 (float serialization), AUDIT-11 F001 (undeclared fields), AUDIT-11 F005 (cast workarounds)
+
+#### Backend (diagnostic_response_schemas.py)
+- [x] `MonetaryDecimal` annotated type: Decimal field → float JSON serialization
+- [x] `RiskSummaryResponse`: add risk_score, risk_tier, risk_factors, coverage_pct
+- [x] `TrialBalanceResponse`: add informational_count, data_quality, all_accounts, account_balances, classified_accounts, account_subtypes, lease_diagnostic, cutoff_risk, going_concern
+- [x] Monetary fields → `MonetaryDecimal`: TrialBalance, AbnormalBalance, FluxItem, BalanceSheetValidation, SheetResult
+- [x] `category_totals` field type: `dict[str, float]` → `dict[str, str]` (matches actual output)
+
+#### Frontend
+- [x] `RiskSummary` (mapping.ts): add risk_score, risk_tier, risk_factors, coverage_pct
+- [x] `AuditResult` (diagnostic.ts): add data_quality, all_accounts, account_balances, classified_accounts, account_subtypes, lease/cutoff/going_concern, balance_sheet_validation, category_totals; informational_count → required
+- [x] `page.tsx`: replace `AuditResultCast` with canonical `AuditResult` import
+- [x] `useMultiPeriodComparison.ts`: `AuditResultForComparison` → type alias to `AuditResult`
+
+- **Tests:** 7,064 backend, 1,735 frontend — 0 failures
+- **Verification:** npm run build PASS, npm test PASS, pytest PASS
+- **Status:** COMPLETE
+

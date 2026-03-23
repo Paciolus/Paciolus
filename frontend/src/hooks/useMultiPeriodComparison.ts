@@ -13,6 +13,7 @@
  */
 
 import { useState, useCallback } from 'react'
+import type { AuditResult } from '@/types/diagnostic'
 import { apiPost, apiDownload, downloadBlob } from '@/utils'
 
 // =============================================================================
@@ -84,24 +85,8 @@ export interface MovementSummaryResponse {
   accounts_on_budget?: number
 }
 
-export interface AuditResultForComparison {
-  all_accounts?: Array<{
-    account: string
-    debit: number
-    credit: number
-    type: string
-  }>
-  lead_sheet_grouping?: {
-    summaries: Array<{
-      accounts: Array<{
-        account: string
-        debit: number
-        credit: number
-        type: string
-      }>
-    }>
-  }
-}
+// Sprint 573: AuditResultForComparison replaced by canonical AuditResult
+export type AuditResultForComparison = AuditResult
 
 export interface UseMultiPeriodComparisonReturn {
   comparison: MovementSummaryResponse | null
@@ -163,7 +148,7 @@ export function useMultiPeriodComparison(engagementId?: number | null): UseMulti
               account: acct.account,
               debit: acct.debit || 0,
               credit: acct.credit || 0,
-              type: acct.type || 'unknown',
+              type: (acct as unknown as { type?: string }).type || acct.category || 'unknown',
             })
           }
         }

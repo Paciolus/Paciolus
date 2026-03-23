@@ -19,10 +19,9 @@ import {
 import { GuestCTA, ZeroStorageNotice, DisclaimerBox } from '@/components/shared'
 import { Reveal } from '@/components/ui/Reveal'
 import { useMultiPeriodComparison, type MovementSummaryResponse } from '@/hooks'
+import type { AuditResult } from '@/types/diagnostic'
 import { apiPost } from '@/utils/apiClient'
 import { apiDownload, downloadBlob } from '@/utils'
-
-type AuditResultCast = { all_accounts?: Array<{ account: string; debit: number; credit: number; type: string }>; lead_sheet_grouping?: { summaries: Array<{ accounts: Array<{ account: string; debit: number; credit: number; type: string }> }> } }
 
 export default function MultiPeriodPage() {
   const { user, isAuthenticated, isLoading: authLoading, token } = useAuthSession()
@@ -114,13 +113,13 @@ export default function MultiPeriodPage() {
   const handleCompare = useCallback(async () => {
     if (!prior.result || !current.result) return
     const success = await compareResults(
-      prior.result as AuditResultCast,
-      current.result as AuditResultCast,
+      prior.result as unknown as AuditResult,
+      current.result as unknown as AuditResult,
       priorLabel,
       currentLabel,
       materialityThreshold,
       token,
-      showBudget && budget.result ? budget.result as AuditResultCast : null,
+      showBudget && budget.result ? budget.result as unknown as AuditResult : null,
       budgetLabel,
     )
 
@@ -133,13 +132,13 @@ export default function MultiPeriodPage() {
   const handleExportCsv = useCallback(async () => {
     if (!prior.result || !current.result) return
     await exportCsv(
-      prior.result as AuditResultCast,
-      current.result as AuditResultCast,
+      prior.result as unknown as AuditResult,
+      current.result as unknown as AuditResult,
       priorLabel,
       currentLabel,
       materialityThreshold,
       token,
-      showBudget && budget.result ? budget.result as AuditResultCast : null,
+      showBudget && budget.result ? budget.result as unknown as AuditResult : null,
       budgetLabel,
     )
   }, [prior.result, current.result, budget.result, priorLabel, currentLabel, budgetLabel, materialityThreshold, token, showBudget, exportCsv])

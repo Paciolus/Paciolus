@@ -91,6 +91,7 @@ export interface AbnormalBalanceExtended {
 
 // Risk summary from API (Day 10, fixed Sprint 225: added medium_severity)
 // Sprint 537: added informational_count
+// Sprint 573: added risk_score, risk_tier, risk_factors, coverage_pct
 export interface RiskSummary {
   total_anomalies: number;
   high_severity: number;
@@ -100,6 +101,10 @@ export interface RiskSummary {
   anomaly_types: {
     natural_balance_violation: number;
   };
+  risk_score?: number;
+  risk_tier?: string;
+  risk_factors?: Array<[string, number]>;
+  coverage_pct?: number;
 }
 
 // Mapping storage key for sessionStorage
