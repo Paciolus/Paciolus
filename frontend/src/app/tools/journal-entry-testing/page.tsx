@@ -74,7 +74,7 @@ export default function JournalEntryTestingPage() {
           )}
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-sage-50 border border-sage-200 mb-6">
             <div className="w-2 h-2 bg-sage-500 rounded-full animate-pulse" />
-            <span className="text-sage-700 text-sm font-sans font-medium">Automated Analysis</span>
+            <span className="text-sage-700 text-sm font-sans font-medium">ISA 240 / PCAOB AS 2401</span>
           </div>
           <h1 className="type-tool-title mb-3">
             Journal Entry Testing

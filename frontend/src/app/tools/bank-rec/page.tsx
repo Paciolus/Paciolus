@@ -142,7 +142,7 @@ export default function BankRecPage() {
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-sage-50 border border-sage-200 mb-6">
             <div className="w-2 h-2 bg-sage-500 rounded-full animate-pulse" />
-            <span className="text-sage-700 text-sm font-sans font-medium">Reconciliation Tool</span>
+            <span className="text-sage-700 text-sm font-sans font-medium">ISA 505 External Confirmations</span>
           </div>
           <h1 className="type-tool-title mb-3">
             Bank Statement Reconciliation

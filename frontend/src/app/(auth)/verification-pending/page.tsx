@@ -93,7 +93,7 @@ function VerificationPendingContent() {
             <p
               className="text-oatmeal-400 font-sans text-sm"
             >
-              We sent a verification link to
+              We sent a verification link to{!email && ' your email address'}
             </p>
             {email && (
               <p

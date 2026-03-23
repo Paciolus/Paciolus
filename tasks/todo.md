@@ -173,3 +173,16 @@
 - **Tests:** 7,086 backend passed (1 new), 0 failed; frontend build PASS
 - **Status:** COMPLETE
 
+### Sprint 569: Chrome QA Content Remediation (6 Findings)
+> Source: Exhaustive Chrome browser review of all 42 pages
+
+- [x] **NEW-012 (P2):** Update `backend/version.py` from `1.9.3` to `2.1.0` — status page displayed stale version
+- [x] **NEW-013 (P2):** Extract `key` from spread props in `BrandIcon.tsx` — React 19 console error on every page with BrandIcon
+- [x] **NEW-014 (P3):** Add fallback "your email address" text on `/verification-pending` when email state is empty
+- [x] **NEW-016 (P3):** Replace generic "Automated Analysis" badges with specific standard citations on 5 tool pages (JE→ISA 240/PCAOB AS 2401, AP→ISA 500, Payroll→ISA 500, Bank Rec→ISA 505, Three-Way Match→ISA 500)
+- [x] **NEW-017 (P3):** Add `isAuthenticated` gate + `GuestCTA` to `/flux` and `/recon` diagnostic pages, consistent with tool pages
+- [ ] **NEW-015 (P3):** "Forgot password?" shows "Coming soon" — deferred (requires backend password reset flow)
+
+- **Tests:** 1,725 frontend passed, frontend build PASS; 93 backend version/health tests pass
+- **Status:** COMPLETE
+

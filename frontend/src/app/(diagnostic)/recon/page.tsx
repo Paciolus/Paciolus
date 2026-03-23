@@ -2,12 +2,23 @@
 
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import { useAuthSession } from '@/contexts/AuthSessionContext';
 import { useDiagnostic } from '@/contexts/DiagnosticContext';
-import { DisclaimerBox, CitationFooter } from '@/components/shared';
+import { GuestCTA , DisclaimerBox, CitationFooter } from '@/components/shared';
 import { getRiskLevelClasses, type RiskLevel } from '@/utils/themeUtils';
 
 export default function ReconPage() {
+    const { isAuthenticated } = useAuthSession();
     const { result } = useDiagnostic();
+
+    if (!isAuthenticated) {
+        return (
+            <div className="min-h-screen bg-surface-page text-content-primary p-8 flex flex-col items-center justify-center">
+                <h2 className="text-xl font-serif font-bold text-content-secondary mb-4">Reconciliation Scoring</h2>
+                <GuestCTA description="Reconciliation Scoring requires a verified account. Sign in or create an account for Zero-Storage processing." />
+            </div>
+        );
+    }
 
     if (!result) {
         return (
