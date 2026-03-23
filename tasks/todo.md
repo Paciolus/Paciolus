@@ -61,3 +61,32 @@
 - **Verification:** pytest PASS, npm run build PASS, npm test PASS (1,725/1,725), 0 `bg-white`, 0 `from routes.export import`, archive pattern verified
 - **Status:** COMPLETE
 
+### Sprint 571: Launch Readiness Engineering (8 Items)
+> Source: `reports/launch-readiness-2026-03-23.md`
+
+#### Legal/Compliance
+- [x] **B-11:** Updated ToS Section 8.1 pricing table — Solo/$100, Professional/$500, Enterprise/$1,000 (was Solo/$50, Team/$130, Organization/$400)
+- [x] **B-11b:** Updated ToS Section 8.2 seat-based pricing — Team/Organization → Professional/Enterprise
+
+#### SEO/Marketing
+- [x] **B-12:** Added `robots.txt` (disallow authenticated routes) + `sitemap.ts` (11 public URLs)
+- [x] **B-13:** Added Open Graph image + Twitter card metadata to root layout
+- [x] **B-14:** Added per-page SEO metadata to 8 marketing pages (about, pricing, trust, contact, demo, approach, terms, privacy) via route-level `layout.tsx` server components
+
+#### Backend Hardening
+- [x] **H-04:** Upgraded CORS non-HTTPS origin from warning → hard fail in production (`config.py`)
+- [x] **H-05:** Parameterized SQL in `database.py:191-194` — replaced f-string interpolation with bindparams for `information_schema` query
+- [x] **H-02:** Added production guardrail requiring `SENDGRID_API_KEY` in production mode (`config.py`)
+
+#### Frontend UX
+- [x] **B-15:** Replaced disabled "Forgot password?" button ("Coming soon") with `mailto:support@paciolus.com` link; updated test
+
+#### Already Implemented (verified, no action needed)
+- [x] **H-01:** SQLite rejection in production — already enforced (`config.py:242-247`)
+- [x] **H-03:** PostgreSQL TLS enforcement — already enforced (`config.py:249-263`)
+- [x] **H-06:** Rate limit on `/auth/resend-verification` — already has `@limiter.limit("3/minute")`
+
+- **Tests:** 7,096 backend, 1,725 frontend — 0 failures
+- **Verification:** npm run build PASS, npm test PASS (1,725/1,725), backend smoke PASS, auth tests PASS (26/26)
+- **Status:** COMPLETE
+

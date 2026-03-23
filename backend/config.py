@@ -85,10 +85,12 @@ if ENV_MODE == "production":
             "Wildcard (*) CORS origins are not allowed in production mode.\n"
             "Please specify explicit origins in CORS_ORIGINS."
         )
-    # Validate HTTPS in production
+    # Validate HTTPS in production — hard fail on non-HTTPS origins
     for origin in CORS_ORIGINS:
         if not origin.startswith("https://"):
-            _config_logger.warning("Non-HTTPS origin in production: %s — consider using HTTPS", origin)
+            _hard_fail(
+                f"Non-HTTPS CORS origin in production: {origin}\nAll CORS_ORIGINS must use https:// in production mode."
+            )
 
 # =============================================================================
 # OPTIONAL CONFIGURATION
@@ -366,6 +368,21 @@ PRICING_V2_ENABLED = True  # Always enabled; retained for backward compat during
 # =============================================================================
 
 ANALYTICS_WRITE_KEY = _load_optional("ANALYTICS_WRITE_KEY", "")
+
+# =============================================================================
+# EMAIL SERVICE (Sprint 571 — production guardrail)
+# =============================================================================
+# SendGrid API key is loaded in email_service.py from os.getenv, not config.py.
+# This guardrail validates that it is set in production so user registration
+# and email verification work correctly.
+
+_sendgrid_key = _resolve_secret("SENDGRID_API_KEY")
+if ENV_MODE == "production" and (not _sendgrid_key or not _sendgrid_key.strip()):
+    _hard_fail(
+        "SENDGRID_API_KEY is required in production mode.\n"
+        "Without it, user registration succeeds but verification emails are never sent,\n"
+        "leaving users permanently unverified. Set SENDGRID_API_KEY in your environment."
+    )
 
 # =============================================================================
 # PER-FORMAT FEATURE FLAGS (Sprint 436 — format rollout control)

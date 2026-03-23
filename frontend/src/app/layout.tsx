@@ -14,7 +14,24 @@ export const metadata: Metadata = {
     title: 'Paciolus - Surgical Precision for Trial Balance Diagnostics',
     description: 'Upload. Map. Export. Zero-Storage trial balance diagnostics for Financial Professionals.',
     type: 'website',
+    url: 'https://paciolus.com',
+    siteName: 'Paciolus',
+    images: [
+      {
+        url: '/PaciolusLogo_LightBG.png',
+        width: 800,
+        height: 600,
+        alt: 'Paciolus — Trial Balance Diagnostics',
+      },
+    ],
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Paciolus - Surgical Precision for Trial Balance Diagnostics',
+    description: 'Upload. Map. Export. Zero-Storage trial balance diagnostics for Financial Professionals.',
+    images: ['/PaciolusLogo_LightBG.png'],
+  },
+  metadataBase: new URL('https://paciolus.com'),
 }
 
 export default async function RootLayout({

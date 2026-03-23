@@ -1,0 +1,13 @@
+# Paciolus — https://paciolus.com
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /tools
+Disallow: /settings
+Disallow: /engagements
+Disallow: /history
+Disallow: /portfolio
+Disallow: /diagnostics
+Disallow: /status
+
+Sitemap: https://paciolus.com/sitemap.xml

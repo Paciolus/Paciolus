@@ -190,10 +190,12 @@ def init_db() -> None:
                     result = conn.execute(
                         text(
                             "SELECT column_name FROM information_schema.columns "
-                            f"WHERE table_name = 'refresh_tokens' AND column_name = '{col_name}'"
-                        )
+                            "WHERE table_name = :table_name AND column_name = :col_name"
+                        ),
+                        {"table_name": "refresh_tokens", "col_name": col_name},
                     )
                     if not result.fetchone():
+                        # col_name and col_type are from a hardcoded allowlist above — safe for DDL
                         conn.execute(text(f"ALTER TABLE refresh_tokens ADD COLUMN {col_name} {col_type}"))
                         added.append(col_name)
                 if added:
