@@ -341,7 +341,7 @@ function NavArrow({
           ? 'opacity-20 cursor-not-allowed'
           : 'hover:bg-obsidian-700/80 hover:border-obsidian-500/50 hover:text-oatmeal-200 hover:scale-105'
         }
-        ${direction === 'left' ? 'left-0 lg:-left-6' : 'right-0 lg:-right-6'}
+        ${direction === 'left' ? 'left-2 lg:-left-6' : 'right-2 lg:-right-6'}
       `}
     >
       <svg
@@ -531,7 +531,7 @@ export function ToolSlideshow() {
           />
 
           {/* Slide Area */}
-          <div className="overflow-hidden px-4 lg:px-12">
+          <div className="overflow-hidden px-14 sm:px-4 lg:px-12">
             <AnimatePresence mode="wait" custom={direction}>
               <motion.div
                 key={activeIndex}
