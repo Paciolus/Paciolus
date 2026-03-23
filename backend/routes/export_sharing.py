@@ -23,6 +23,7 @@ from database import get_db
 from export_share_model import ExportShare
 from models import User
 from shared.entitlement_checks import check_export_sharing_access
+from shared.organization_schemas import DetailResponse, ExportShareCreateResponse, ExportShareResponse
 from shared.rate_limits import RATE_LIMIT_EXPORT, RATE_LIMIT_WRITE, limiter
 
 logger = logging.getLogger(__name__)
@@ -84,7 +85,7 @@ def _validate_export_magic_bytes(export_bytes: bytes, export_format: str) -> Non
         )
 
 
-@router.post("/create")
+@router.post("/create", response_model=ExportShareCreateResponse)
 @limiter.limit(RATE_LIMIT_WRITE)
 async def create_share(
     body: CreateShareRequest,
@@ -199,7 +200,7 @@ async def download_share(
     )
 
 
-@router.delete("/{token}")
+@router.delete("/{token}", response_model=DetailResponse)
 @limiter.limit(RATE_LIMIT_WRITE)
 async def revoke_share(
     token: str,
@@ -226,7 +227,7 @@ async def revoke_share(
     return {"detail": "Share link revoked."}
 
 
-@router.get("/")
+@router.get("/", response_model=list[ExportShareResponse])
 async def list_shares(
     user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),

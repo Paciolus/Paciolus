@@ -30,6 +30,14 @@ from organization_model import (
     OrgRole,
 )
 from shared.entitlement_checks import check_seat_limit_for_org
+from shared.organization_schemas import (
+    DetailResponse,
+    OrganizationInviteCreateResponse,
+    OrganizationInviteResponse,
+    OrganizationMemberResponse,
+    OrganizationResponse,
+    OrganizationWithMemberCountResponse,
+)
 from shared.rate_limits import RATE_LIMIT_WRITE, limiter
 
 logger = logging.getLogger(__name__)
@@ -133,7 +141,7 @@ def _require_owner(db: Session, user: User, org: Organization) -> OrganizationMe
 # ---------------------------------------------------------------------------
 
 
-@router.post("")
+@router.post("", response_model=OrganizationResponse)
 @limiter.limit(RATE_LIMIT_WRITE)
 async def create_organization(
     body: CreateOrgRequest,
@@ -168,7 +176,7 @@ async def create_organization(
     return org.to_dict()
 
 
-@router.get("")
+@router.get("", response_model=OrganizationWithMemberCountResponse)
 async def get_organization(
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
@@ -181,7 +189,7 @@ async def get_organization(
     return result
 
 
-@router.put("")
+@router.put("", response_model=OrganizationResponse)
 @limiter.limit(RATE_LIMIT_WRITE)
 async def update_organization(
     body: UpdateOrgRequest,
@@ -203,7 +211,7 @@ async def update_organization(
 # ---------------------------------------------------------------------------
 
 
-@router.post("/invite")
+@router.post("/invite", response_model=OrganizationInviteCreateResponse)
 @limiter.limit(RATE_LIMIT_WRITE)
 async def create_invite(
     body: InviteRequest,
@@ -259,7 +267,7 @@ async def create_invite(
     return result
 
 
-@router.get("/invites")
+@router.get("/invites", response_model=list[OrganizationInviteResponse])
 async def list_invites(
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
@@ -280,7 +288,7 @@ async def list_invites(
     return [inv.to_dict() for inv in invites]
 
 
-@router.delete("/invites/{invite_id}")
+@router.delete("/invites/{invite_id}", response_model=DetailResponse)
 @limiter.limit(RATE_LIMIT_WRITE)
 async def revoke_invite(
     invite_id: int,
@@ -309,7 +317,7 @@ async def revoke_invite(
     return {"detail": "Invite revoked."}
 
 
-@router.post("/invite/accept/{token}")
+@router.post("/invite/accept/{token}", response_model=DetailResponse)
 @limiter.limit(RATE_LIMIT_WRITE)
 async def accept_invite(
     token: str,
@@ -412,7 +420,7 @@ async def accept_invite(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/members")
+@router.get("/members", response_model=list[OrganizationMemberResponse])
 async def list_members(
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
@@ -438,7 +446,7 @@ async def list_members(
     return results
 
 
-@router.put("/members/{member_id}/role")
+@router.put("/members/{member_id}/role", response_model=OrganizationMemberResponse)
 @limiter.limit(RATE_LIMIT_WRITE)
 async def update_member_role(
     member_id: int,
@@ -470,7 +478,7 @@ async def update_member_role(
     return member.to_dict()
 
 
-@router.delete("/members/{member_id}")
+@router.delete("/members/{member_id}", response_model=DetailResponse)
 @limiter.limit(RATE_LIMIT_WRITE)
 async def remove_member(
     member_id: int,

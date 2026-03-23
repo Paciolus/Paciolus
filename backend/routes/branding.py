@@ -19,6 +19,7 @@ from firm_branding_model import FirmBranding
 from models import User
 from organization_model import OrganizationMember
 from shared.entitlement_checks import check_custom_branding_access
+from shared.organization_schemas import BrandingResponse, DetailResponse
 from shared.rate_limits import RATE_LIMIT_WRITE, limiter
 
 router = APIRouter(prefix="/branding", tags=["branding"])
@@ -65,7 +66,7 @@ def _get_branding(db: Session, user: User) -> tuple[FirmBranding, int]:
 # ---------------------------------------------------------------------------
 
 
-@router.get("/")
+@router.get("/", response_model=BrandingResponse)
 async def get_branding(
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
@@ -75,7 +76,7 @@ async def get_branding(
     return branding.to_dict()
 
 
-@router.put("/")
+@router.put("/", response_model=BrandingResponse)
 @limiter.limit(RATE_LIMIT_WRITE)
 async def update_branding(
     body: UpdateBrandingRequest,
@@ -96,7 +97,7 @@ async def update_branding(
     return branding.to_dict()
 
 
-@router.post("/logo")
+@router.post("/logo", response_model=BrandingResponse)
 @limiter.limit(RATE_LIMIT_WRITE)
 async def upload_logo(
     request: Any = None,
@@ -144,7 +145,7 @@ async def upload_logo(
     return branding.to_dict()
 
 
-@router.delete("/logo")
+@router.delete("/logo", response_model=DetailResponse)
 @limiter.limit(RATE_LIMIT_WRITE)
 async def delete_logo(
     request: Any = None,
