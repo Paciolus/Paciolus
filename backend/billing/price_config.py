@@ -274,19 +274,20 @@ def validate_billing_config() -> list[str]:
     if not STRIPE_WEBHOOK_SECRET:
         issues.append("Missing STRIPE_WEBHOOK_SECRET — webhook signature verification will fail")
 
-    # Warning: seat price IDs (non-critical)
+    # Non-critical warnings: gate by environment to reduce dev noise
+    _log = logger.warning if ENV_MODE == "production" else logger.debug
+
     pro_seat_ids = _load_pro_seat_price_ids()
     if not pro_seat_ids.get("monthly") or not pro_seat_ids.get("annual"):
-        logger.warning("Billing config: Professional seat price IDs incomplete — seat add-ons won't work")
+        _log("Billing config: Professional seat price IDs incomplete — seat add-ons won't work")
 
     ent_seat_ids = _load_ent_seat_price_ids()
     if not ent_seat_ids.get("monthly") or not ent_seat_ids.get("annual"):
-        logger.warning("Billing config: Enterprise seat price IDs incomplete — seat add-ons won't work")
+        _log("Billing config: Enterprise seat price IDs incomplete — seat add-ons won't work")
 
-    # Warning: coupon IDs (non-critical)
     coupon_ids = _load_coupon_ids()
     if not coupon_ids.get("monthly") or not coupon_ids.get("annual"):
-        logger.warning("Billing config: coupon IDs incomplete — promo codes won't work")
+        _log("Billing config: coupon IDs incomplete — promo codes won't work")
 
     if issues and ENV_MODE == "production":
         for issue in issues:

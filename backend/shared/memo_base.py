@@ -63,6 +63,37 @@ def standard_table_style(
     return TableStyle(commands)
 
 
+def wrap_table_strings(data: list[list], styles: dict, *, skip_header: bool = True) -> list[list]:
+    """Wrap raw string cells in Paragraph objects to enable word-wrapping in PDF tables.
+
+    BUG-003 fix: ReportLab Table cells with raw strings do not word-wrap,
+    causing text to overflow column boundaries. Wrapping in Paragraph enables
+    proper line breaking within the allocated column width.
+
+    Args:
+        data: Table data (list of rows, each a list of cell values).
+        styles: Memo styles dict (needs 'MemoTableCell' key).
+        skip_header: If True (default), leave the first row (headers) unwrapped.
+
+    Returns:
+        New table data with raw strings replaced by Paragraph objects.
+    """
+    cell_style = styles.get("MemoTableCell") or styles.get("Normal")
+    wrapped = []
+    for row_idx, row in enumerate(data):
+        if skip_header and row_idx == 0:
+            wrapped.append(row)
+            continue
+        wrapped_row = []
+        for cell in row:
+            if isinstance(cell, str):
+                wrapped_row.append(Paragraph(cell, cell_style))
+            else:
+                wrapped_row.append(cell)
+        wrapped.append(wrapped_row)
+    return wrapped
+
+
 # =============================================================================
 # Risk tier display mapping (identical across all 3 memo generators)
 # =============================================================================

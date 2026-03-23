@@ -44,34 +44,34 @@
      Override via [data-theme="light"] for vault interior
      ============================================ */
 
-  /* Surface tokens */
+  /* Surface tokens — contrast-tuned: wider luminosity gaps between levels */
   --surface-page: #121212;
-  --surface-card: rgba(48, 48, 48, 0.8);
-  --surface-card-secondary: rgba(48, 48, 48, 0.5);
-  --surface-elevated: rgba(55, 55, 55, 0.9);
-  --surface-card-elevated: rgba(60, 60, 60, 0.9);
-  --surface-card-inset: rgba(30, 30, 30, 0.6);
-  --surface-input: #212121;
+  --surface-card: rgba(52, 52, 52, 0.88);
+  --surface-card-secondary: rgba(46, 46, 46, 0.65);
+  --surface-elevated: rgba(60, 60, 60, 0.95);
+  --surface-card-elevated: rgba(66, 66, 66, 0.95);
+  --surface-card-inset: rgba(22, 22, 22, 0.75);
+  --surface-input: #1c1c1c;
 
   /* Text tokens */
   --text-primary: #EBE9E4;
   --text-secondary: #C9C3B8;
-  --text-tertiary: #9A9486;
+  --text-tertiary: #A09A8E;
   --text-disabled: #757575;
 
-  /* Border tokens */
-  --border-default: rgba(235, 233, 228, 0.08);
-  --border-hover: rgba(235, 233, 228, 0.15);
-  --border-active: rgba(235, 233, 228, 0.25);
-  --border-divider: rgba(235, 233, 228, 0.06);
-  --border-hairline: rgba(235, 233, 228, 0.05);
+  /* Border tokens — contrast-tuned: visible structure without heaviness */
+  --border-default: rgba(235, 233, 228, 0.13);
+  --border-hover: rgba(235, 233, 228, 0.22);
+  --border-active: rgba(235, 233, 228, 0.32);
+  --border-divider: rgba(235, 233, 228, 0.10);
+  --border-hairline: rgba(235, 233, 228, 0.08);
 
-  /* Shadow tokens */
-  --shadow-theme-card: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.03);
-  --shadow-theme-card-hover: 0 8px 25px -5px rgba(0, 0, 0, 0.4), 0 4px 10px -2px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  --shadow-theme-card-lg: 0 16px 40px -8px rgba(0, 0, 0, 0.45), 0 6px 16px -4px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  --shadow-theme-elevated: 0 12px 40px -8px rgba(0, 0, 0, 0.5);
-  --shadow-theme-card-inset: inset 0 2px 4px rgba(0, 0, 0, 0.15);
+  /* Shadow tokens — contrast-tuned: stronger depth cues + brighter rim highlights */
+  --shadow-theme-card: 0 4px 8px -1px rgba(0, 0, 0, 0.35), 0 2px 4px -1px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --shadow-theme-card-hover: 0 8px 25px -5px rgba(0, 0, 0, 0.45), 0 4px 10px -2px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  --shadow-theme-card-lg: 0 16px 40px -8px rgba(0, 0, 0, 0.5), 0 6px 16px -4px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  --shadow-theme-elevated: 0 12px 40px -8px rgba(0, 0, 0, 0.55);
+  --shadow-theme-card-inset: inset 0 2px 4px rgba(0, 0, 0, 0.2);
 
   /* Semantic color tokens */
   --color-success-text: #9BC5AB;
@@ -114,18 +114,18 @@
   --text-tertiary: #766F61; /* WCAG AA ~5.0:1 on #F5F4F2 (was #9A9486 = 3.2:1) */
   --text-disabled: #BDBDBD;
 
-  --border-default: #C8C3BA;
-  --border-hover: #B5AD9F;
+  --border-default: #BFB9AE;
+  --border-hover: #ADA698;
   --border-active: #9A9486;
-  --border-divider: #DDD9D1;
-  --border-hairline: #BFB9AE;
+  --border-divider: #D5D0C6;
+  --border-hairline: #C8C3BA;
 
-  /* Warm-toned shadows — parchment-adjacent feel */
-  --shadow-theme-card: 0 2px 8px rgba(139, 119, 91, 0.08), 0 1px 3px rgba(139, 119, 91, 0.05);
-  --shadow-theme-card-hover: 0 4px 16px rgba(139, 119, 91, 0.12), 0 2px 6px rgba(139, 119, 91, 0.07);
-  --shadow-theme-card-lg: 0 8px 24px rgba(139, 119, 91, 0.14), 0 4px 10px rgba(139, 119, 91, 0.08);
-  --shadow-theme-elevated: 0 12px 32px rgba(139, 119, 91, 0.16), 0 4px 12px rgba(139, 119, 91, 0.08);
-  --shadow-theme-card-inset: inset 0 2px 4px rgba(139, 119, 91, 0.06);
+  /* Warm-toned shadows — parchment-adjacent feel, contrast-tuned */
+  --shadow-theme-card: 0 2px 8px rgba(139, 119, 91, 0.10), 0 1px 3px rgba(139, 119, 91, 0.07);
+  --shadow-theme-card-hover: 0 4px 16px rgba(139, 119, 91, 0.15), 0 2px 6px rgba(139, 119, 91, 0.09);
+  --shadow-theme-card-lg: 0 8px 24px rgba(139, 119, 91, 0.18), 0 4px 10px rgba(139, 119, 91, 0.10);
+  --shadow-theme-elevated: 0 12px 32px rgba(139, 119, 91, 0.20), 0 4px 12px rgba(139, 119, 91, 0.10);
+  --shadow-theme-card-inset: inset 0 2px 4px rgba(139, 119, 91, 0.08);
 
   --color-success-text: #3D6649;
   --color-success-bg: #F2F7F4;

@@ -609,7 +609,11 @@ def _build_high_severity_detail(
     """BUG-03: Build High Severity Asset Detail section."""
     test_results = result.get("test_results", [])
 
-    high_tests = [tr for tr in test_results if tr.get("severity") == "high" and tr.get("entries_flagged", 0) > 0]
+    high_tests = [
+        tr
+        for tr in test_results
+        if tr.get("severity") == "high" and tr.get("entries_flagged", 0) > 0 and tr.get("flagged_entries")
+    ]
 
     if not high_tests:
         return section_counter

@@ -50,9 +50,8 @@ function renderElements(definition: IconDefinition, strokeWidth: number): React.
       strokeLinecap: (attrs.strokeLinecap as string) || 'round',
       strokeLinejoin: (attrs.strokeLinejoin as string) || 'round',
       strokeWidth: attrs.strokeWidth ?? strokeWidth,
-      key: i,
     }
-    return <Tag {...(props as React.SVGAttributes<SVGElement>)} />
+    return <Tag key={i} {...(props as React.SVGAttributes<SVGElement>)} />
   })
 }
 

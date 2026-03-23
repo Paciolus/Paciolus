@@ -164,8 +164,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
         billing_issues = validate_billing_config()
         if billing_issues:
+            _bill_log = logger.warning if ENV_MODE == "production" else logger.debug
             for issue in billing_issues:
-                logger.warning("Billing config: %s", issue)
+                _bill_log("Billing config: %s", issue)
 
     logger.info("Rate-limit storage backend: %s", get_storage_backend())
     logger.info("Paciolus API v%s started (debug=%s)", __version__, DEBUG)

@@ -33,6 +33,7 @@ from shared.memo_base import (
     build_workpaper_signoff,
     create_memo_styles,
     standard_table_style,
+    wrap_table_strings,
 )
 from shared.report_chrome import (
     ReportMetadata,
@@ -493,6 +494,7 @@ def generate_expense_category_memo(
             cat_data.append(["TOTAL", f"${total_expenses:,.2f}", total_pct_str])
 
         courier_cols = [1, 3, 4] if has_prior else [1]
+        cat_data = wrap_table_strings(cat_data, styles)
         cat_table = Table(cat_data, colWidths=col_widths, repeatRows=1)
         cat_style = _standard_table_style(courier_cols=courier_cols)
         # Bold the total row
@@ -730,6 +732,7 @@ def generate_expense_category_memo(
                     }
                 )
 
+        ratio_data = wrap_table_strings(ratio_data, styles)
         ratio_table = Table(ratio_data, colWidths=ratio_widths, repeatRows=1)
         ratio_table.setStyle(_standard_table_style(courier_cols=[1, 2]))
         story.append(ratio_table)

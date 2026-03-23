@@ -244,7 +244,11 @@ def _build_ar_extra_sections(
     test_results = result.get("test_results", [])
 
     credit_tests = [
-        tr for tr in test_results if tr.get("test_key") == "credit_limit_breaches" and tr.get("entries_flagged", 0) > 0
+        tr
+        for tr in test_results
+        if tr.get("test_key") == "credit_limit_breaches"
+        and tr.get("entries_flagged", 0) > 0
+        and tr.get("flagged_entries")
     ]
     if not credit_tests:
         return section_counter

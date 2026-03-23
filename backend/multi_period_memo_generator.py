@@ -117,33 +117,42 @@ def compute_apc_diagnostic_score(
 compute_apc_risk_score = compute_apc_diagnostic_score
 
 
-_RISK_CONCLUSIONS: dict[str, str] = {
+# Conclusion suffixes by risk tier — BUG-002: score-aware
+_RISK_CONCLUSION_SUFFIXES: dict[str, str] = {
     "low": (
-        "Based on the analytical procedures applied, the trial balance comparison "
-        "returned LOW movement density. Account balances are consistent with prior "
+        "Account balances are consistent with prior "
         "period expectations. No additional substantive procedures are indicated."
     ),
     "moderate": (
-        "Based on the analytical procedures applied, the trial balance comparison "
-        "returned MODERATE movement density. Several accounts exhibit period-over-period "
+        "Several accounts exhibit period-over-period "
         "changes that should be corroborated with management explanations and additional "
         "substantive procedures per ISA 520."
     ),
     "elevated": (
-        "Based on the analytical procedures applied, the trial balance comparison "
-        "returned ELEVATED movement density. Material movements and structural changes "
+        "Material movements and structural changes "
         "were detected that require focused investigation. The engagement team should "
         "evaluate whether expanded substantive procedures are appropriate per ISA 520 "
         "and PCAOB AS 2305."
     ),
     "high": (
-        "Based on the analytical procedures applied, the trial balance comparison "
-        "returned HIGH movement density. Significant variances, sign changes, and/or "
+        "Significant variances, sign changes, and/or "
         "structural changes indicate potential misstatement risk across multiple account "
         "categories. Expanded substantive procedures are recommended per ISA 520 and "
         "PCAOB AS 2305."
     ),
 }
+
+
+def _build_risk_conclusion(risk_tier: str, score: float) -> str:
+    """Build score-aware risk conclusion text (BUG-002)."""
+    tier_upper = risk_tier.upper() if risk_tier else "LOW"
+    suffix = _RISK_CONCLUSION_SUFFIXES.get(risk_tier, _RISK_CONCLUSION_SUFFIXES["low"])
+    return (
+        f"Based on the analytical procedures applied, the trial balance comparison "
+        f"returned {tier_upper} movement density "
+        f"(Composite Diagnostic Score: {score:.1f}/100). "
+        f"{suffix}"
+    )
 
 
 # =============================================================================
@@ -692,7 +701,7 @@ def _build_sign_change_detail(
         )
 
     # Suggested procedure
-    procedure = get_follow_up_procedure("apc_sign_change")
+    procedure = get_follow_up_procedure("apc_sign_change", rotation_index=len(sign_changes))
     if procedure:
         story.append(Spacer(1, 4))
         story.append(Paragraph(f"<i>{procedure}</i>", styles["MemoBodySmall"]))
@@ -775,7 +784,7 @@ def _build_dormant_accounts_detail(
         )
 
     # Suggested procedure
-    procedure = get_follow_up_procedure("apc_dormant_account")
+    procedure = get_follow_up_procedure("apc_dormant_account", rotation_index=len(dormant_accounts))
     if procedure:
         story.append(Spacer(1, 4))
         story.append(Paragraph(f"<i>{procedure}</i>", styles["MemoBodySmall"]))
@@ -910,8 +919,8 @@ def _build_new_closed_account_detail(
         story.append(Spacer(1, 4))
 
     # Suggested procedure
-    procedure = get_follow_up_procedure("new_account")
-    closed_procedure = get_follow_up_procedure("apc_closed_account", rotation_index=1 if new_accounts else 0)
+    procedure = get_follow_up_procedure("new_account", rotation_index=len(new_accounts))
+    closed_procedure = get_follow_up_procedure("apc_closed_account", rotation_index=len(closed_accounts))
     combined = []
     if new_accounts and procedure:
         combined.append(procedure)
@@ -1374,7 +1383,7 @@ def generate_multi_period_memo(
     story.append(Paragraph(f"{section_num}. Conclusion", styles["MemoSection"]))
     story.append(LedgerRule(doc.width))
 
-    assessment = _RISK_CONCLUSIONS.get(risk_tier, _RISK_CONCLUSIONS["low"])
+    assessment = _build_risk_conclusion(risk_tier, risk_score)
     story.append(Paragraph(assessment, styles["MemoBody"]))
     story.append(Spacer(1, 12))
 

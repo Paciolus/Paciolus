@@ -29,6 +29,7 @@ from shared.memo_base import (
     build_workpaper_signoff,
     create_memo_styles,
     standard_table_style,
+    wrap_table_strings,
 )
 from shared.report_chrome import (
     ReportMetadata,
@@ -186,6 +187,7 @@ def generate_population_profile_memo(
     stats_data.append(["25th Percentile (P25)", f"${profile_result.get('p25', 0):,.2f}"])
     stats_data.append(["75th Percentile (P75)", f"${profile_result.get('p75', 0):,.2f}"])
 
+    stats_data = wrap_table_strings(stats_data, styles)
     stats_table = Table(stats_data, colWidths=[3.5 * inch, 3.0 * inch])
     stats_table.setStyle(_standard_table_style(courier_cols=[1]))
     story.append(stats_table)
@@ -227,6 +229,7 @@ def generate_population_profile_memo(
         dq_data.append(["Active Balances (non-zero)", "25%", f"{data_quality.get('zero_balance_score', 0):.1f}%"])
         dq_data.append(["Overall Score", "", f"{data_quality.get('overall_score', 0):.1f}%"])
 
+        dq_data = wrap_table_strings(dq_data, styles)
         dq_table = Table(dq_data, colWidths=[3.5 * inch, 1.0 * inch, 2.0 * inch])
         dq_style = _standard_table_style(courier_cols=[2])
         # Bold the totals row
@@ -258,6 +261,7 @@ def generate_population_profile_memo(
         bucket_total = sum(b.get("sum_abs", 0) for b in buckets if isinstance(b, dict))
         bucket_data.append(["Total", str(account_count), "100.0%", f"${bucket_total:,.2f}"])
 
+        bucket_data = wrap_table_strings(bucket_data, styles)
         bucket_table = Table(bucket_data, colWidths=[1.8 * inch, 1.0 * inch, 1.5 * inch, 2.2 * inch])
         b_style = _standard_table_style(courier_cols=[1, 3])
         b_style.add("FONTNAME", (0, -1), (-1, -1), "Times-Bold")

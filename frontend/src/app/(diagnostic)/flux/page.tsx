@@ -4,6 +4,7 @@ import { useState, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useAuthSession } from '@/contexts/AuthSessionContext';
 import { useDiagnostic } from '@/contexts/DiagnosticContext';
+import { GuestCTA } from '@/components/shared';
 import type { FluxItem, FluxSummary, ReconScore, ReconStats } from '@/types/diagnostic';
 import { ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fileFormats';
 import { getRiskLevelClasses, type RiskLevel } from '@/utils/themeUtils';
@@ -28,7 +29,7 @@ interface FluxAnalysisResponse {
 }
 
 export default function FluxPage() {
-    const { token } = useAuthSession();
+    const { token, isAuthenticated } = useAuthSession();
     const { result, setResult, isLoading, setIsLoading } = useDiagnostic();
 
     // Local state for files
@@ -156,6 +157,11 @@ export default function FluxPage() {
                     <p className="text-content-secondary mt-2 font-sans">Compare period-over-period changes and identify risks.</p>
                 </header>
 
+                {!isAuthenticated && (
+                    <GuestCTA description="Flux & Variance Intelligence requires a verified account. Sign in or create an account for Zero-Storage processing." />
+                )}
+
+                {isAuthenticated && (<>
                 {/* Input Section */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
  <div className="theme-card p-6">
@@ -375,6 +381,7 @@ export default function FluxPage() {
                         )}
                     </div>
                 )}
+                </>)}
             </motion.div>
         </div>
     );

@@ -264,6 +264,36 @@ class TestComputePopulationProfile:
         assert result.data_quality is not None
         assert 0.0 <= result.data_quality.overall_score <= 100.0
 
+    def test_data_quality_varies_by_input(self):
+        """BUG-006 meridian: data_quality scores must differ for different input quality.
+
+        High-quality input (no missing fields, no zero balances) should score
+        higher than degraded input (missing names/balances, zero balances).
+        """
+        # High-quality: complete records, no missing fields
+        good_balances = {
+            "Cash": {"debit": 10000.0, "credit": 0.0},
+            "Revenue": {"debit": 0.0, "credit": 50000.0},
+            "Expenses": {"debit": 20000.0, "credit": 0.0},
+            "Equipment": {"debit": 75000.0, "credit": 0.0},
+            "Loans": {"debit": 0.0, "credit": 30000.0},
+        }
+        good_result = compute_population_profile(good_balances, missing_names=0, missing_balances=0)
+        good_score = good_result.data_quality.overall_score
+
+        # Degraded: same structure but with many missing names and zero balances
+        bad_balances = {
+            "Expenses": {"debit": 20000.0, "credit": 0.0},
+        }
+        bad_result = compute_population_profile(bad_balances, missing_names=4, missing_balances=3)
+        bad_score = bad_result.data_quality.overall_score
+
+        # Scores must differ — identical scores indicate the bug is still present
+        assert good_score != bad_score, f"data_quality_score is identical ({good_score}) for different inputs"
+        assert good_score > bad_score, (
+            f"High-quality input ({good_score}) should score higher than degraded input ({bad_score})"
+        )
+
     def test_suggested_procedures_included(self):
         """Profile should include suggested_procedures."""
         balances = {

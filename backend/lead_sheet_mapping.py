@@ -638,15 +638,15 @@ def lead_sheet_grouping_to_dict(grouping: LeadSheetGrouping) -> dict:
                 "lead_sheet": s.lead_sheet.value,
                 "name": s.name,
                 "category": s.category,
-                "total_debit": s.total_debit,
-                "total_credit": s.total_credit,
-                "net_balance": s.net_balance,
+                "total_debit": float(s.total_debit),
+                "total_credit": float(s.total_credit),
+                "net_balance": float(s.net_balance),
                 "account_count": s.account_count,
                 "accounts": s.accounts,
             }
             for s in grouping.summaries
         ],
-        "total_debits": grouping.total_debits,
-        "total_credits": grouping.total_credits,
+        "total_debits": float(grouping.total_debits),
+        "total_credits": float(grouping.total_credits),
         "unclassified_count": grouping.unclassified_count,
     }

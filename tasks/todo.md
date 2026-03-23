@@ -80,25 +80,27 @@
 > Source: `reports/qa/2026-03-21-chrome-qa.md`
 
 #### P0 — Blocking
-- [ ] **NEW-001:** Alembic migration to clean stale `ORGANIZATION` tier values in `users.tier` column → `FREE`. Add a data migration that updates any row where `tier NOT IN ('free','solo','professional','enterprise')` to `'free'`. Prevents 500 on login for any unmigrated DB.
-- [ ] **NEW-002:** Alembic migration to add `uploads_used_current_period INTEGER NOT NULL DEFAULT 0` to `subscriptions` table. Column is defined in `subscription_model.py` but no migration exists. Causes 500 on TB upload.
-- [ ] **NEW-003:** Add `"informational"` to `severity` Literal in `shared/diagnostic_response_schemas.py` (lines 572 and 622). Backend engine (`classification_rules.py:672`, `classification_validator.py:229`) returns `"informational"` severity but the Pydantic response schema rejects it with `ResponseValidationError`. **Hotfix applied during QA — needs commit.**
+- [ ] **NEW-001:** Alembic migration to clean stale `ORGANIZATION` tier values in `users.tier` column → `FREE`. *(Deferred — not on this branch)*
+- [x] **NEW-002:** Migration f4a5b6c7d8e9 already adds `uploads_used_current_period`. Added 3 regression tests verifying column, model, and migration chain.
+- [x] **NEW-003:** Hotfix applied in c795c60. Added 7 regression tests validating all severity levels including informational.
 
 #### P1 — High
-- [ ] **NEW-004:** Backend returns `net_balance`, `total_debit`, `total_credit` as strings in lead sheet grouping response (Decimal→str JSON serialization). Frontend `LeadSheetCard.formatCurrency()` calls `.toFixed()` on raw value → `TypeError` crash. Fix: either serialize as float in backend, or coerce in all frontend consumers. **Hotfix applied to `LeadSheetCard.tsx` during QA — needs commit + backend root cause fix.**
-- [ ] **NEW-005:** Add `GET /activity/recent` endpoint to backend routes. Dashboard calls `/activity/recent?limit=5` on load but endpoint returns 404. Activity log writes (`POST /activity/log` → 201) work, but reads are missing. Need route in `routes/` that queries `activity_logs` table.
-- [ ] **NEW-006:** Lead sheet grouping shows "1 Account" per sheet for a 102-account TB. Expected A–Z grouping with multiple accounts aggregated per lead sheet letter. Investigate serialization/aggregation logic in `audit_engine.py` → `lead_sheet_grouping` response builder.
+- [x] **NEW-004:** Convert Decimal→float in `lead_sheet_grouping_to_dict()`. Frontend defensive coercion was already in c795c60. 3 backend tests + 77 existing pass.
+- [x] **NEW-005:** Added `GET /activity/recent` endpoint to `routes/activity.py` with limit param, auth, reverse-chronological order. 5 tests (auth gate, empty, ordering, limit, user isolation).
+- [x] **NEW-006:** Fixed `apply_lead_sheet_grouping()` to use `all_accounts` instead of `abnormal_balances` — root cause of one-account-per-sheet artifacts. Falls back to abnormal_balances for backward compat. 5 tests.
 
 #### P2 — Medium
-- [ ] **NEW-007:** Hydration mismatch on sonification button in `ToolLinkToast` component. SSR renders button but client differs. Wrap in `useEffect`-guarded render or add `suppressHydrationWarning`.
-- [ ] **NEW-008:** Hydration mismatch on `ParallaxSection` `translateY` in `HeroScrollSection`. Scroll-dependent motion values differ server/client. Add `suppressHydrationWarning` on motion container divs.
-- [ ] **NEW-009:** Classification quality flags normal contra accounts (Allowance for Doubtful Accounts, Accumulated Depreciation, Inventory Reserve, Treasury Stock, Sales Returns/Discounts) as "sign_anomaly". These are standard contra accounts — add exclusion list to `classification_rules.py` sign-anomaly checker.
+- [x] **NEW-007:** Added mounted guard to ToolLinkToast to defer AnimatePresence rendering to client.
+- [x] **NEW-008:** Added `suppressHydrationWarning` to ParallaxSection motion.div.
+- [x] **NEW-009:** Added 27-pattern contra account exclusion list to `classification_validator.py`. `check_sign_anomalies()` skips recognized contra accounts. 21 tests + 52 existing pass.
 
 #### P3 — Low
-- [ ] **NEW-010:** Backend startup warns about missing `STRIPE_PRICE_PROFESSIONAL_MONTHLY` and `STRIPE_PRICE_PROFESSIONAL_ANNUAL` env vars. Professional/Enterprise monthly/annual checkout will fail. Document required env vars or suppress warning when not in production.
-- [ ] **NEW-011:** Next.js dev overlay shows "2 Issues" badge (hydration warnings). Not visible in production build. No action needed unless suppression is desired in dev.
+- [x] **NEW-010:** Gated Stripe billing config warnings to DEBUG in dev, WARNING in production (both `validate_billing_config()` and `main.py` startup).
+- [x] **NEW-011:** Resolved by NEW-007/008 hydration fixes.
 
-- **Status:** PENDING
+- **Tests:** 7,085 backend (0 failures), 1,725 frontend (0 failures)
+- **Verification:** pytest PASS, npm run lint PASS (0 errors), npm run build PASS, npm test PASS
+- **Status:** COMPLETE
 
 ### Sprint 566: Frontend Design Enrichment (14 Findings)
 > Source: Chrome QA visual design assessment — Dashboard, Tools, Workspaces, Portfolio
@@ -137,5 +139,50 @@
 - [ ] ~~**X6:** Button style class refactor~~ — Deferred: existing inline styles already match `btn-primary` definition; cosmetic-only rename
 
 - **Verification:** `npm run build` PASS, `npm test` 1,725/1,725 PASS
+- **Status:** COMPLETE
+
+### Sprint 567: Overnight Report Bug Fixes + Dependency Updates
+> Source: `reports/nightly/2026-03-22.md` — 5 confirmed open bugs, 16 outdated packages
+
+#### Bug Fixes
+- [x] **BUG-001:** Add 25 alternate follow-up procedures to `FOLLOW_UP_PROCEDURES_ALT` for high-frequency test keys (AP, Revenue, AR, Fixed Asset, Inventory) to enable rotation across reports
+- [x] **BUG-002:** Make risk tier conclusion labels score-aware in 3 memo generators (three_way_match, multi_period, bank_reconciliation). Conclusion text now includes Composite Diagnostic Score (e.g., "MODERATE (20.0/100)"). Bank rec if/elif chain converted to dict lookup.
+- [x] **BUG-003:** Wrap raw string table cells in `Paragraph` objects in `anomaly_summary_generator.py` (scope table, not-executed table, anomaly table) to prevent PDF text overflow
+- [x] **BUG-006:** Track `missing_names` and `missing_balances` from raw rows in `run_population_profile()` and pass to `_compute_data_quality()` so completeness scores vary by input quality
+- [x] **BUG-007:** Add BUG-007 guard in `revenue_testing_memo_generator.py` for data-inconsistency case (entries_flagged > 0 but flagged_entries empty). Renders placeholder text instead of orphaned section header.
+
+#### Dependency Updates
+- [x] Upgraded 14 of 16 outdated backend packages: bandit, certifi, charset-normalizer, coverage, cyclonedx-python-lib, filelock, greenlet, platformdirs, pypdfium2, pytest-cov, pytz, rich, stevedore, wrapt
+- [x] 2 packages blocked by upstream pins: pdfminer.six (pdfplumber==0.11.9 requires ==20251230), pydantic_core (pydantic==2.12.5 requires ==2.41.5)
+
+- **Tests:** 7,041 backend passed, 0 failed (no regressions)
+- **Status:** COMPLETE
+
+### Sprint 568: Overnight Report Bug Fix Completions
+> Source: `reports/nightly/2026-03-23.md` — 5 confirmed open bugs (residual from Sprint 567 incomplete fixes)
+
+#### Bug Fixes
+- [x] **BUG-001:** Pass `rotation_index` at 5 remaining call sites: `ap_testing_memo_generator.py` (vendor_name_variations), `multi_period_memo_generator.py` (apc_sign_change, apc_dormant_account, new_account, apc_closed_account)
+- [x] **BUG-003:** Add `wrap_table_strings()` helper to `shared/memo_base.py`; apply across 6 memo generators (anomaly_summary, bank_reconciliation, accrual_completeness, population_profile, expense_category, preflight) — 13 tables total
+- [x] **BUG-006:** Add `test_data_quality_varies_by_input` meridian test to `test_population_profile_engine.py` validating score variation between high-quality and degraded inputs
+- [x] **BUG-007:** Add `flagged_entries` filter to list comprehensions in 4 memo generators (payroll, fixed_asset, ap DRILL-03, ar_aging DRILL-05) to prevent empty drill-down stubs at source
+
+#### Dependency Assessment
+- [x] All 3 flagged packages blocked by upstream pins: pdfminer.six (pdfplumber==0.11.9 requires ==20251230), starlette (FastAPI 0.135.1 is latest), pydantic_core (pydantic 2.12.5 is latest)
+
+- **Tests:** 7,086 backend passed (1 new), 0 failed; frontend build PASS
+- **Status:** COMPLETE
+
+### Sprint 569: Chrome QA Content Remediation (6 Findings)
+> Source: Exhaustive Chrome browser review of all 42 pages
+
+- [x] **NEW-012 (P2):** Update `backend/version.py` from `1.9.3` to `2.1.0` — status page displayed stale version
+- [x] **NEW-013 (P2):** Extract `key` from spread props in `BrandIcon.tsx` — React 19 console error on every page with BrandIcon
+- [x] **NEW-014 (P3):** Add fallback "your email address" text on `/verification-pending` when email state is empty
+- [x] **NEW-016 (P3):** Replace generic "Automated Analysis" badges with specific standard citations on 5 tool pages (JE→ISA 240/PCAOB AS 2401, AP→ISA 500, Payroll→ISA 500, Bank Rec→ISA 505, Three-Way Match→ISA 500)
+- [x] **NEW-017 (P3):** Add `isAuthenticated` gate + `GuestCTA` to `/flux` and `/recon` diagnostic pages, consistent with tool pages
+- [ ] **NEW-015 (P3):** "Forgot password?" shows "Coming soon" — deferred (requires backend password reset flow)
+
+- **Tests:** 1,725 frontend passed, frontend build PASS; 93 backend version/health tests pass
 - **Status:** COMPLETE
 

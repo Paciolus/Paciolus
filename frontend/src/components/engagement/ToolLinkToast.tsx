@@ -9,7 +9,7 @@
  * Guardrail: "Results linked to [Workspace Name]" — never "audit findings linked"
  */
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 interface ToolLinkToastProps {
@@ -18,6 +18,9 @@ interface ToolLinkToastProps {
 }
 
 export function ToolLinkToast({ message, onDismiss }: ToolLinkToastProps) {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+
   useEffect(() => {
     if (!message) return
 
@@ -27,7 +30,7 @@ export function ToolLinkToast({ message, onDismiss }: ToolLinkToastProps) {
 
   return (
     <AnimatePresence>
-      {message && (
+      {mounted && message && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

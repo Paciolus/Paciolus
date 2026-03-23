@@ -186,7 +186,7 @@ export function ParallaxSection({
 
   return (
     <div ref={ref} className={className}>
-      <motion.div style={prefersReducedMotion ? undefined : { y }}>
+      <motion.div suppressHydrationWarning style={prefersReducedMotion ? undefined : { y }}>
         {children}
       </motion.div>
     </div>

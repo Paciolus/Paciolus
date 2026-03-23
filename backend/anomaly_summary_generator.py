@@ -44,7 +44,7 @@ from follow_up_items_model import FollowUpItem
 from models import Client
 from pdf_generator import ClassicalColors, LedgerRule, generate_reference_number
 from shared.framework_resolution import ResolvedFramework
-from shared.memo_base import RISK_TIER_DISPLAY, create_memo_styles
+from shared.memo_base import RISK_TIER_DISPLAY, create_memo_styles, wrap_table_strings
 from shared.report_chrome import ReportMetadata, build_cover_page, draw_page_footer, find_logo
 from shared.scope_methodology import (
     build_methodology_statement,
@@ -338,9 +338,9 @@ class AnomalySummaryGenerator:
                     last_date = latest.run_at.strftime("%b %d, %Y %H:%M") if latest.run_at else "N/A"
                     scope_data.append(
                         [
-                            TOOL_LABELS.get(tool_name, tool_name.value),
-                            str(len(runs)),
-                            last_date,
+                            Paragraph(TOOL_LABELS.get(tool_name, tool_name.value), styles["MemoTableCell"]),
+                            Paragraph(str(len(runs)), styles["MemoTableCell"]),
+                            Paragraph(last_date, styles["MemoTableCell"]),
                         ]
                     )
 
@@ -375,9 +375,9 @@ class AnomalySummaryGenerator:
             for tool_name in not_executed_tools:
                 not_exec_data.append(
                     [
-                        TOOL_LABELS.get(tool_name, tool_name.value),
-                        "Not Run",
-                        "\u2014",
+                        Paragraph(TOOL_LABELS.get(tool_name, tool_name.value), styles["MemoTableCell"]),
+                        Paragraph("Not Run", styles["MemoTableCell"]),
+                        Paragraph("\u2014", styles["MemoTableCell"]),
                     ]
                 )
 
@@ -466,9 +466,9 @@ class AnomalySummaryGenerator:
                     desc = item.description[:200]
                     anomaly_data.append(
                         [
-                            cross_ref,
-                            str(idx),
-                            sev,
+                            Paragraph(cross_ref, styles["MemoTableCell"]),
+                            Paragraph(str(idx), styles["MemoTableCell"]),
+                            Paragraph(sev, styles["MemoTableCell"]),
                             Paragraph(desc, styles["MemoTableCell"]),
                         ]
                     )
@@ -708,6 +708,7 @@ class AnomalySummaryGenerator:
                 [Paragraph("Inconclusive", styles["MemoTableCell"]), "\u2014", "\u2014"],
             ]
 
+            classification_data = wrap_table_strings(classification_data, styles)
             classification_table = Table(
                 classification_data,
                 colWidths=[2.4 * inch, 0.8 * inch, 3.2 * inch],
