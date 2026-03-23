@@ -196,3 +196,20 @@
 
 - **Status:** COMPLETE
 
+### Sprint 578: Synthetic Anomaly Framework Expansion (AUDIT-06-F005)
+> Source: AUDIT-06 F005 (anomaly framework covers only 6 families, missing claimed-but-untested types)
+
+#### New Generators (4 new)
+- [x] `related_party_activity` — intercompany/affiliate accounts with offsetting balances
+- [x] `revenue_concentration` — 90% revenue in single account
+- [x] `expense_concentration` — 89% expenses in single account
+- [x] `balance_sheet_imbalance` — $10K unbalanced debit entry
+
+#### Registry & Coverage Map
+- [x] `registry.py`: 4 new generators registered with metadata
+- [x] `COVERAGE_MAP.md`: 4 new rows (all COVERED), Blind Spots section with 7 documented future categories
+
+- **Tests:** 7,077 backend (4 new detection tests via parametrized runner) — 0 failures
+- **Verification:** Full backend test suite PASS
+- **Status:** COMPLETE
+
