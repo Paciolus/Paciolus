@@ -158,3 +158,18 @@
 - **Tests:** 7,041 backend passed, 0 failed (no regressions)
 - **Status:** COMPLETE
 
+### Sprint 568: Overnight Report Bug Fix Completions
+> Source: `reports/nightly/2026-03-23.md` — 5 confirmed open bugs (residual from Sprint 567 incomplete fixes)
+
+#### Bug Fixes
+- [x] **BUG-001:** Pass `rotation_index` at 5 remaining call sites: `ap_testing_memo_generator.py` (vendor_name_variations), `multi_period_memo_generator.py` (apc_sign_change, apc_dormant_account, new_account, apc_closed_account)
+- [x] **BUG-003:** Add `wrap_table_strings()` helper to `shared/memo_base.py`; apply across 6 memo generators (anomaly_summary, bank_reconciliation, accrual_completeness, population_profile, expense_category, preflight) — 13 tables total
+- [x] **BUG-006:** Add `test_data_quality_varies_by_input` meridian test to `test_population_profile_engine.py` validating score variation between high-quality and degraded inputs
+- [x] **BUG-007:** Add `flagged_entries` filter to list comprehensions in 4 memo generators (payroll, fixed_asset, ap DRILL-03, ar_aging DRILL-05) to prevent empty drill-down stubs at source
+
+#### Dependency Assessment
+- [x] All 3 flagged packages blocked by upstream pins: pdfminer.six (pdfplumber==0.11.9 requires ==20251230), starlette (FastAPI 0.135.1 is latest), pydantic_core (pydantic 2.12.5 is latest)
+
+- **Tests:** 7,086 backend passed (1 new), 0 failed; frontend build PASS
+- **Status:** COMPLETE
+

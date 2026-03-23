@@ -47,6 +47,7 @@ from shared.memo_base import (
     build_proof_summary_section,
     build_workpaper_signoff,
     create_memo_styles,
+    wrap_table_strings,
 )
 from shared.report_chrome import (
     ReportMetadata,
@@ -212,6 +213,7 @@ def _build_reconciliation_results(
         ["General Ledger Total", f"${total_ledger:,.2f}"],
         ["Reconciling Difference", f"${rec_diff:,.2f}"],
     ]
+    balance_data = wrap_table_strings(balance_data, styles)
     balance_table = Table(balance_data, colWidths=[3.0 * inch, 2.5 * inch])
     balance_table.setStyle(TableStyle(ledger_table_style() + [("ALIGN", (1, 0), (-1, -1), "RIGHT")]))
     story.append(balance_table)

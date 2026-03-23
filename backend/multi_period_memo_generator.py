@@ -701,7 +701,7 @@ def _build_sign_change_detail(
         )
 
     # Suggested procedure
-    procedure = get_follow_up_procedure("apc_sign_change")
+    procedure = get_follow_up_procedure("apc_sign_change", rotation_index=len(sign_changes))
     if procedure:
         story.append(Spacer(1, 4))
         story.append(Paragraph(f"<i>{procedure}</i>", styles["MemoBodySmall"]))
@@ -784,7 +784,7 @@ def _build_dormant_accounts_detail(
         )
 
     # Suggested procedure
-    procedure = get_follow_up_procedure("apc_dormant_account")
+    procedure = get_follow_up_procedure("apc_dormant_account", rotation_index=len(dormant_accounts))
     if procedure:
         story.append(Spacer(1, 4))
         story.append(Paragraph(f"<i>{procedure}</i>", styles["MemoBodySmall"]))
@@ -919,8 +919,8 @@ def _build_new_closed_account_detail(
         story.append(Spacer(1, 4))
 
     # Suggested procedure
-    procedure = get_follow_up_procedure("new_account")
-    closed_procedure = get_follow_up_procedure("apc_closed_account", rotation_index=1 if new_accounts else 0)
+    procedure = get_follow_up_procedure("new_account", rotation_index=len(new_accounts))
+    closed_procedure = get_follow_up_procedure("apc_closed_account", rotation_index=len(closed_accounts))
     combined = []
     if new_accounts and procedure:
         combined.append(procedure)

@@ -33,6 +33,7 @@ from shared.memo_base import (
     build_workpaper_signoff,
     create_memo_styles,
     standard_table_style,
+    wrap_table_strings,
 )
 from shared.report_chrome import (
     ReportMetadata,
@@ -321,6 +322,7 @@ def generate_accrual_completeness_memo(
                     ]
                 )
 
+        checklist_data = wrap_table_strings(checklist_data, styles)
         checklist_table = Table(
             checklist_data,
             colWidths=[1.8 * inch, 0.9 * inch, 1.3 * inch, 2.5 * inch],
@@ -348,6 +350,7 @@ def generate_accrual_completeness_memo(
             ]
         )
 
+        analysis_data = wrap_table_strings(analysis_data, styles)
         analysis_table = Table(analysis_data, colWidths=[3.5 * inch, 3.0 * inch])
         analysis_table.setStyle(_standard_table_style(courier_cols=[1]))
         story.append(analysis_table)
@@ -457,6 +460,7 @@ def generate_accrual_completeness_memo(
                     ]
                 )
 
+        dr_data = wrap_table_strings(dr_data, styles)
         dr_table = Table(dr_data, colWidths=[3.5 * inch, 3.0 * inch])
         dr_table.setStyle(_standard_table_style(courier_cols=[1]))
         story.append(dr_table)

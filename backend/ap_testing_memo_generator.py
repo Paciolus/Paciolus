@@ -264,7 +264,11 @@ def _build_ap_extra_sections(
 
     # DRILL-03: Vendor name variation pairs
     vendor_var_tests = [
-        tr for tr in test_results if tr.get("test_key") == "vendor_name_variations" and tr.get("entries_flagged", 0) > 0
+        tr
+        for tr in test_results
+        if tr.get("test_key") == "vendor_name_variations"
+        and tr.get("entries_flagged", 0) > 0
+        and tr.get("flagged_entries")
     ]
     if vendor_var_tests:
         flagged = vendor_var_tests[0].get("flagged_entries", [])
@@ -318,7 +322,7 @@ def _build_ap_extra_sections(
                 col_widths=[1.6 * inch, 1.6 * inch, 0.8 * inch, 1.3 * inch, 1.3 * inch],
                 right_align_cols=[2, 3, 4],
             )
-            procedure = get_follow_up_procedure("vendor_name_variations")
+            procedure = get_follow_up_procedure("vendor_name_variations", rotation_index=total_pairs)
             if procedure:
                 from reportlab.platypus import Spacer
 

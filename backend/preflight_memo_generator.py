@@ -20,7 +20,13 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, Tabl
 
 from pdf_generator import ClassicalColors, LedgerRule, create_leader_dots, generate_reference_number
 from shared.framework_resolution import ResolvedFramework
-from shared.memo_base import build_disclaimer, build_intelligence_stamp, build_workpaper_signoff, create_memo_styles
+from shared.memo_base import (
+    build_disclaimer,
+    build_intelligence_stamp,
+    build_workpaper_signoff,
+    create_memo_styles,
+    wrap_table_strings,
+)
 from shared.memo_template import _roman
 from shared.report_chrome import ReportMetadata, build_cover_page, draw_page_footer, find_logo
 from shared.scope_methodology import (
@@ -152,6 +158,7 @@ def generate_preflight_memo(
 
         breakdown_data.append(["Total", "100%", "", f"{total_contribution:.1f} / 100"])
 
+        breakdown_data = wrap_table_strings(breakdown_data, styles)
         breakdown_table = Table(
             breakdown_data,
             colWidths=[2.2 * inch, 0.8 * inch, 0.8 * inch, 1.2 * inch],
