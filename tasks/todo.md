@@ -72,3 +72,30 @@
 - **Verification:** npm run build PASS, npm test PASS (1,735/1,735), pytest test_activity_api PASS (9/9)
 - **Status:** COMPLETE
 
+### Sprint 580: Merge Portfolio & Workspaces into Unified Client Hub
+> Source: CEO directive — eliminate redundant Portfolio vs. Workspaces navigation
+
+#### Backend
+- [x] `ClientEngagementSummary` + `ClientWithSummaryResponse` Pydantic models (schemas/client_schemas.py)
+- [x] `get_clients_with_engagement_summary()` — LEFT JOIN clients → engagements → tool_runs (client_manager.py)
+- [x] `GET /clients/with-engagement-summary` endpoint (routes/clients.py)
+
+#### Frontend
+- [x] ClientCard enhanced: engagement summary inline, expandable workspace list with lazy-load, "New Workspace" button
+- [x] Workspace detail route: `/portfolio/[clientId]/workspace/[engagementId]` — extracted 4-tab detail view (Status/Follow-Up/Workpaper/Convergence)
+- [x] Portfolio page: wired to enriched client data, CreateEngagementModal with defaultClientId pre-fill
+- [x] Engagements page → redirect to `/portfolio`
+- [x] Navigation: removed "Workspaces" from TOOLBAR_NAV and ACCOUNT_NAV
+- [x] Dashboard: merged Portfolio + Workspaces quick-access into single card
+- [x] CreateEngagementModal: added `defaultClientId` prop
+- [x] Types: `ClientEngagementSummary`, `ClientWithSummary`, `ClientWithSummaryListResponse`
+- [x] Hook: `fetchClientsWithSummary()` in useClients
+
+#### Tests
+- [x] PortfolioPage tests updated: mocks for CreateEngagementModal + useClients
+- [x] EngagementsPage tests rewritten: redirect behavior (2 tests)
+
+- **Tests:** 1,729 frontend — 0 failures
+- **Verification:** npm run build PASS, npm test PASS (1,729/1,729)
+- **Status:** COMPLETE
+

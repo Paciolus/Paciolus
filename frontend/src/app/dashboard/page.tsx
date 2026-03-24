@@ -348,12 +348,12 @@ export default function DashboardPage() {
           </div>
         </Reveal>
 
-        {/* Quick Access Row: Portfolio + Workspaces */}
+        {/* Quick Access: Portfolio (now includes workspaces) */}
         <Reveal delay={0.12}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
+          <div className="mb-10">
             <Link
               href="/portfolio"
-              className="theme-card p-5 group hover:shadow-theme-card-hover transition-shadow"
+              className="theme-card p-5 group hover:shadow-theme-card-hover transition-shadow block"
             >
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-9 h-9 rounded-lg bg-sage-50 text-sage-600 flex items-center justify-center group-hover:bg-sage-100 transition-colors">
@@ -361,24 +361,9 @@ export default function DashboardPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
                   </svg>
                 </div>
-                <h3 className="font-sans font-semibold text-sm text-content-primary">Portfolio</h3>
+                <h3 className="font-sans font-semibold text-sm text-content-primary">Portfolio &amp; Workspaces</h3>
               </div>
-              <p className="text-xs font-sans text-content-secondary">View and manage your clients</p>
-            </Link>
-
-            <Link
-              href="/engagements"
-              className="theme-card p-5 group hover:shadow-theme-card-hover transition-shadow"
-            >
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-9 h-9 rounded-lg bg-sage-50 text-sage-600 flex items-center justify-center group-hover:bg-sage-100 transition-colors">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
-                  </svg>
-                </div>
-                <h3 className="font-sans font-semibold text-sm text-content-primary">Workspaces</h3>
-              </div>
-              <p className="text-xs font-sans text-content-secondary">Manage diagnostic workspaces</p>
+              <p className="text-xs font-sans text-content-secondary">Manage your clients and their diagnostic workspaces</p>
             </Link>
           </div>
         </Reveal>

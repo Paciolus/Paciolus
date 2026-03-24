@@ -44,6 +44,21 @@ class ClientResponse(BaseModel):
     settings: str
 
 
+class ClientEngagementSummary(BaseModel):
+    """Lightweight engagement summary per client (Sprint 580)."""
+
+    active_count: int = 0
+    archived_count: int = 0
+    latest_period_end: Optional[str] = None
+    tool_run_count: int = 0
+
+
+class ClientWithSummaryResponse(ClientResponse):
+    """Client response extended with engagement summary."""
+
+    engagement_summary: Optional[ClientEngagementSummary] = None
+
+
 class ResolvedFrameworkResponse(BaseModel):
     framework: str
     resolution_reason: str

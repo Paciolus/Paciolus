@@ -15,6 +15,8 @@ interface CreateEngagementModalProps {
   onSubmit: (data: EngagementCreateInput) => Promise<boolean>;
   clients: Client[];
   isLoading: boolean;
+  /** Sprint 580: Pre-select client when creating workspace from portfolio */
+  defaultClientId?: number;
 }
 
 export function CreateEngagementModal({
@@ -23,8 +25,9 @@ export function CreateEngagementModal({
   onSubmit,
   clients,
   isLoading,
+  defaultClientId,
 }: CreateEngagementModalProps) {
-  const [clientId, setClientId] = useState('');
+  const [clientId, setClientId] = useState(defaultClientId?.toString() ?? '');
   const [periodStart, setPeriodStart] = useState('');
   const [periodEnd, setPeriodEnd] = useState('');
   const [materialityBasis, setMaterialityBasis] = useState<MaterialityBasis | ''>('');
@@ -36,7 +39,7 @@ export function CreateEngagementModal({
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   const resetForm = () => {
-    setClientId('');
+    setClientId(defaultClientId?.toString() ?? '');
     setPeriodStart('');
     setPeriodEnd('');
     setMaterialityBasis('');

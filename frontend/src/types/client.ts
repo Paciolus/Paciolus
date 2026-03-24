@@ -87,6 +87,23 @@ export interface Client {
 }
 
 /**
+ * Lightweight engagement summary per client (Sprint 580).
+ */
+export interface ClientEngagementSummary {
+  active_count: number;
+  archived_count: number;
+  latest_period_end: string | null;
+  tool_run_count: number;
+}
+
+/**
+ * Client with engagement summary for unified portfolio view.
+ */
+export interface ClientWithSummary extends Client {
+  engagement_summary: ClientEngagementSummary | null;
+}
+
+/**
  * Input for creating a new client.
  */
 export interface ClientCreateInput {
@@ -112,6 +129,13 @@ export interface ClientUpdateInput {
  */
 export interface ClientListResponse {
   items: Client[];
+  total_count: number;
+  page: number;
+  page_size: number;
+}
+
+export interface ClientWithSummaryListResponse {
+  items: ClientWithSummary[];
   total_count: number;
   page: number;
   page_size: number;

@@ -150,6 +150,77 @@ class ClientManager:
 
         return clients, total_count
 
+    def get_clients_with_engagement_summary(
+        self, user_id: int, limit: int = 100, offset: int = 0
+    ) -> tuple[list[dict], int]:
+        """Get paginated clients with engagement summary data (Sprint 580).
+
+        Returns (list of dicts with client + engagement_summary, total_count).
+        Uses a LEFT JOIN to compute per-client engagement stats in a single pass.
+        """
+        from sqlalchemy import case, literal_column
+        from sqlalchemy.orm import aliased
+
+        from engagement_model import Engagement, EngagementStatus, ToolRun
+
+        accessible_ids = self._accessible_user_ids(user_id)
+
+        total_count = (self.db.query(func.count(Client.id)).filter(Client.user_id.in_(accessible_ids)).scalar()) or 0
+
+        # Subquery: engagement summary per client
+        eng_summary = (
+            self.db.query(
+                Engagement.client_id,
+                func.sum(case((Engagement.status == EngagementStatus.ACTIVE, 1), else_=0)).label("active_count"),
+                func.sum(case((Engagement.status == EngagementStatus.ARCHIVED, 1), else_=0)).label("archived_count"),
+                func.max(Engagement.period_end).label("latest_period_end"),
+            )
+            .group_by(Engagement.client_id)
+            .subquery()
+        )
+
+        # Subquery: tool run count per client (via engagement)
+        run_count_sq = (
+            self.db.query(
+                Engagement.client_id,
+                func.count(ToolRun.id).label("tool_run_count"),
+            )
+            .join(ToolRun, ToolRun.engagement_id == Engagement.id)
+            .group_by(Engagement.client_id)
+            .subquery()
+        )
+
+        rows = (
+            self.db.query(
+                Client,
+                eng_summary.c.active_count,
+                eng_summary.c.archived_count,
+                eng_summary.c.latest_period_end,
+                run_count_sq.c.tool_run_count,
+            )
+            .outerjoin(eng_summary, Client.id == eng_summary.c.client_id)
+            .outerjoin(run_count_sq, Client.id == run_count_sq.c.client_id)
+            .filter(Client.user_id.in_(accessible_ids))
+            .order_by(Client.name.asc())
+            .offset(offset)
+            .limit(limit)
+            .all()
+        )
+
+        results = []
+        for client, active_count, archived_count, latest_period_end, tool_run_count in rows:
+            results.append({
+                "client": client,
+                "engagement_summary": {
+                    "active_count": active_count or 0,
+                    "archived_count": archived_count or 0,
+                    "latest_period_end": latest_period_end.isoformat() if latest_period_end else None,
+                    "tool_run_count": tool_run_count or 0,
+                },
+            })
+
+        return results, total_count
+
     def update_client(
         self,
         user_id: int,

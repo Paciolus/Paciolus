@@ -78,7 +78,6 @@ const ADVANCED: ToolColumn = {
 export const ACCOUNT_NAV: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard' },
   { label: 'Portfolio', href: '/portfolio' },
-  { label: 'Workspaces', href: '/engagements' },
   { label: 'History', href: '/history' },
   { label: 'Profile', href: '/settings/profile', dividerAbove: true },
   { label: 'Practice Settings', href: '/settings/practice' },
@@ -91,7 +90,6 @@ export const TOOL_COLUMNS: ToolColumn[] = [CORE_ANALYSIS, TESTING_SUITE, ADVANCE
 /** Primary nav links shown in the toolbar center zone (ordered by frequency of use) */
 export const TOOLBAR_NAV: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: 'bar-chart' },
-  { label: 'Workspaces', href: '/engagements', icon: 'clipboard-check' },
   { label: 'Portfolio', href: '/portfolio', icon: 'building' },
   { label: 'History', href: '/history', icon: 'clock' },
 ]
