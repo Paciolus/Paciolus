@@ -96,5 +96,5 @@ export const TOOLBAR_NAV: NavItem[] = [
   { label: 'History', href: '/history', icon: 'clock' },
 ]
 
-/** All tool hrefs for active-page detection */
-export const ALL_TOOL_HREFS = TOOL_COLUMNS.flatMap(col => col.items.map(i => i.href))
+/** All tool hrefs for active-page detection (includes /tools catalog) */
+export const ALL_TOOL_HREFS = ['/tools', ...TOOL_COLUMNS.flatMap(col => col.items.map(i => i.href))]

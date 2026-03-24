@@ -5,7 +5,7 @@ from decimal import Decimal
 from enum import Enum as PyEnum
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import Boolean, Date, DateTime, Enum, Float, ForeignKey, Integer, Numeric, String, func
+from sqlalchemy import Boolean, Date, DateTime, Enum, Float, ForeignKey, Index, Integer, Numeric, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database import Base
@@ -217,6 +217,41 @@ class ActivityLog(SoftDeleteMixin, Base):
             "archived_by": self.archived_by,
             "archive_reason": self.archive_reason,
         }
+
+
+class ToolActivity(Base):
+    """Lightweight tool activity log for unified dashboard feed.
+
+    Records all tool executions across the platform. TB entries are also
+    logged to ActivityLog for SOC 2 chain hash compliance.
+
+    ZERO-STORAGE: Only stores tool name, filename display, record count,
+    and a JSON summary blob. No financial data.
+    """
+
+    __tablename__ = "tool_activities"
+    __table_args__ = (
+        Index("ix_tool_activities_user_timestamp", "user_id", "timestamp"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    tool_name: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    filename_display: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    record_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    summary_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    engagement_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("engagements.id", use_alter=True, name="fk_tool_activities_engagement_id"),
+        nullable=True,
+    )
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(UTC), server_default=func.now(), index=True
+    )
+
+    user: Mapped["User"] = relationship("User", foreign_keys=[user_id])
+
+    def __repr__(self) -> str:
+        return f"<ToolActivity(id={self.id}, tool={self.tool_name}, user={self.user_id})>"
 
 
 class Client(Base):

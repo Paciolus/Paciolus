@@ -56,6 +56,8 @@ async def execute_file_tool(
                 user_id,
                 tool_name,
                 True,
+                filename=filename,
+                record_count=result.get("record_count") if isinstance(result, dict) else None,
                 **kwargs,
             )
 
