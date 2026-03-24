@@ -40,7 +40,7 @@ export const STEP_POSITIONS: Record<FilmStep, number> = {
 const DWELL_BY_STEP: Record<FilmStep, number> = {
   upload: 6000,
   analyze: 11000,
-  export: 4000,
+  export: 6000,
 }
 
 /** Ordered auto-play cycle: upload → analyze → export → upload … */
@@ -133,16 +133,16 @@ export function useScrubberFilm(onStepChange?: OnStepChange): ScrubberFilmState 
   const [isAutoPlaying, setIsAutoPlaying] = useState(true)
   const autoPlayTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Three crossfading opacity transforms
-  const uploadOpacity = useTransform(progress, [0, 0.35, 0.45], [1, 1, 0])
-  const analyzeOpacity = useTransform(progress, [0.35, 0.45, 0.55, 0.65], [0, 1, 1, 0])
-  const exportOpacity = useTransform(progress, [0.55, 0.65, 1.0], [0, 1, 1])
+  // Three crossfading opacity transforms — wider bands for smooth dissolves
+  const uploadOpacity = useTransform(progress, [0, 0.25, 0.45], [1, 1, 0])
+  const analyzeOpacity = useTransform(progress, [0.25, 0.45, 0.55, 0.75], [0, 1, 1, 0])
+  const exportOpacity = useTransform(progress, [0.55, 0.75, 1.0], [0, 1, 1])
 
   // Track active step
   useEffect(() => {
     const unsubscribe = progress.on('change', (v) => {
       let step: FilmStep = 'upload'
-      if (v >= 0.55) step = 'export'
+      if (v >= 0.65) step = 'export'
       else if (v >= 0.35) step = 'analyze'
 
       if (step !== lastStepRef.current) {
@@ -206,12 +206,18 @@ export function useScrubberFilm(onStepChange?: OnStepChange): ScrubberFilmState 
         const nextStep = AUTO_CYCLE[nextIdx] ?? 'upload'
         const target = STEP_POSITIONS[nextStep]
 
-        // Use a smooth tween for the auto-play sweep
-        animate(progress, target, {
-          type: 'tween' as const,
-          duration: 0.9,
-          ease: [0.4, 0.0, 0.2, 1],
-        })
+        if (nextIdx === 0 && currentIdx === AUTO_CYCLE.length - 1) {
+          // Wrapping from last step back to first — instant reset to avoid
+          // jarring backward sweep through all intermediate layers
+          progress.set(0)
+        } else {
+          // Forward sweep between adjacent steps
+          animate(progress, target, {
+            type: 'tween' as const,
+            duration: 0.9,
+            ease: [0.4, 0.0, 0.2, 1],
+          })
+        }
 
         scheduleNext()
       }, dwellMs)

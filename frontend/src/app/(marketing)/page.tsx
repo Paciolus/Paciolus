@@ -4,7 +4,6 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { FeaturePillars, ProcessTimeline, HeroScrollSection, ToolSlideshow, BottomProof, EvidenceBand } from '@/components/marketing'
-import { Reveal } from '@/components/ui/Reveal'
 import { ParallaxSection } from '@/utils/marketingMotion'
 
 /**
@@ -15,7 +14,8 @@ import { ParallaxSection } from '@/utils/marketingMotion'
  * Features: interactive hero with timeline scrubber, animated tool slideshow
  * with rich mock previews, credential evidence band, and closing proof section.
  *
- * Uniform vertical fadeUp entrances (Linear-style precision).
+ * Sections manage their own scroll-reveal internally — no outer Reveal
+ * wrappers here to avoid compounding entrance delays.
  */
 export default function HomePage() {
   const { isAuthenticated, isLoading } = useAuthSession()
@@ -32,9 +32,9 @@ export default function HomePage() {
       <HeroScrollSection />
 
       {/* Tool Slideshow — Animated slideshow with rich previews + modern city atmosphere */}
-      <Reveal className="lobby-surface-recessed lobby-atmosphere-modern relative z-10">
+      <div className="lobby-surface-recessed lobby-atmosphere-modern relative z-10">
         <ToolSlideshow />
-      </Reveal>
+      </div>
 
       {/* Section Divider */}
       <div className="relative z-10 max-w-4xl mx-auto px-6">
@@ -43,9 +43,7 @@ export default function HomePage() {
 
       {/* Feature Pillars — accent surface + sage glow + parallax */}
       <ParallaxSection className="lobby-surface-accent lobby-glow-sage relative z-10" speed={0.06}>
-        <Reveal>
-          <FeaturePillars />
-        </Reveal>
+        <FeaturePillars />
       </ParallaxSection>
 
       {/* Section Divider — sage accent between pillars and timeline */}
@@ -54,15 +52,13 @@ export default function HomePage() {
       </div>
 
       {/* Process Timeline — raised + vignette */}
-      <Reveal className="lobby-surface-raised lobby-vignette relative z-10">
+      <div className="lobby-surface-raised lobby-vignette relative z-10">
         <ProcessTimeline />
-      </Reveal>
+      </div>
 
       {/* Evidence Band — platform credentials + parallax */}
       <ParallaxSection className="lobby-surface-recessed relative z-10" speed={0.05}>
-        <Reveal>
-          <EvidenceBand />
-        </Reveal>
+        <EvidenceBand />
       </ParallaxSection>
 
       {/* Section Divider — wide before closing proof */}
@@ -71,9 +67,9 @@ export default function HomePage() {
       </div>
 
       {/* Bottom Proof — Standards + Closing CTA */}
-      <Reveal className="lobby-surface-raised relative z-10">
+      <div className="lobby-surface-raised relative z-10">
         <BottomProof />
-      </Reveal>
+      </div>
 
     </main>
   )

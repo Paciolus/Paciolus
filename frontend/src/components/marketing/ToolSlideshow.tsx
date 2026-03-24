@@ -219,9 +219,9 @@ const slideVariants = {
 } as const
 
 const slideTransition = {
-  x: { type: 'spring' as const, stiffness: 300, damping: 30 },
-  opacity: { duration: 0.3 },
-  scale: { duration: 0.3 },
+  x: { type: 'spring' as const, stiffness: 220, damping: 28 },
+  opacity: { duration: 0.45 },
+  scale: { duration: 0.45 },
 }
 
 // ── Slide Content (Centered Hero) ───────────────────────────────────

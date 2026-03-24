@@ -122,7 +122,7 @@ const numberVariants = {
 
 export function ProcessTimeline() {
   const containerRef = useRef<HTMLDivElement>(null)
-  const isInView = useInView(containerRef, { once: true, margin: '-100px' })
+  const isInView = useInView(containerRef, { once: true, margin: '0px 0px 200px 0px' })
 
   return (
     <section className="py-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
