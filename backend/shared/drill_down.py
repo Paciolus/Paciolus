@@ -37,7 +37,7 @@ def build_drill_down_table(
     total_flagged: Optional[int] = None,
     col_widths: Optional[list[float]] = None,
     right_align_cols: Optional[list[int]] = None,
-    suppress_empty: bool = True,
+    suppress_empty: bool = False,
 ) -> None:
     """Build a drill-down detail table in the PDF story.
 
@@ -75,11 +75,17 @@ def build_drill_down_table(
 
     display_rows = rows[:max_rows]
 
-    # Auto-compute column widths if not provided
+    # Auto-compute column widths proportional to header text length (BUG-003 fix)
     if col_widths is None:
         n_cols = len(headers)
-        col_width = doc_width / n_cols
-        col_widths = [col_width] * n_cols
+        header_lengths = [max(len(str(h)), 4) for h in headers]
+        total_length = sum(header_lengths)
+        min_col = doc_width * 0.08  # minimum 8% per column
+        col_widths = [max(min_col, (hl / total_length) * doc_width) for hl in header_lengths]
+        # Normalize to fit doc_width exactly
+        width_sum = sum(col_widths)
+        if width_sum > 0:
+            col_widths = [w * doc_width / width_sum for w in col_widths]
 
     # Wrap cell content in Paragraph for word wrapping
     wrapped_rows = []

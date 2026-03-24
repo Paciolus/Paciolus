@@ -1,4 +1,4 @@
-fastapi==0.135.1
+fastapi==0.135.2
 uvicorn[standard]==0.42.0
 pydantic[email]==2.12.5
 pandas==3.0.1
@@ -55,6 +55,6 @@ APScheduler==3.11.2
 # SECURITY: Pinned transitive dependency patches (pip-audit CVEs)
 cryptography>=46.0.5  # CVE-2026-26007
 pillow>=12.1.1  # CVE-2026-25990
-werkzeug>=3.1.6  # CVE-2026-27199
+werkzeug>=3.1.7  # CVE-2026-27199
 pyasn1>=0.6.3  # CVE-2026-30922 (DoS via recursive ASN.1 decoding)
-pypdf>=6.9.1  # CVE-2026-31826, CVE-2026-33123 (memory exhaustion via crafted PDF)
+pypdf>=6.9.2  # CVE-2026-31826, CVE-2026-33123 (memory exhaustion via crafted PDF)

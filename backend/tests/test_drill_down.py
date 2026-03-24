@@ -79,8 +79,8 @@ class TestDrillDownTable:
         )
         assert len(story) == 0
 
-    def test_default_suppress_empty_is_true(self, styles):
-        """Default behavior (no suppress_empty arg) renders nothing on empty rows."""
+    def test_default_suppress_empty_is_false(self, styles):
+        """Default behavior (no suppress_empty arg) renders placeholder on empty rows."""
         story: list = []
         build_drill_down_table(
             story,
@@ -90,4 +90,5 @@ class TestDrillDownTable:
             headers=["Col A"],
             rows=[],
         )
-        assert len(story) == 0
+        # BUG-007 fix: default suppress_empty=False now renders the empty-state placeholder
+        assert len(story) > 0

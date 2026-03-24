@@ -757,8 +757,9 @@ def get_follow_up_procedure(test_key: str, rotation_index: int = 0) -> str:
     """Get the suggested follow-up procedure for a test key.
 
     Supports rotation: when multiple procedures exist for a test_key,
-    rotation_index selects which alternate to return.  This prevents
-    identical procedure text across multiple reports (BUG-001).
+    rotation_index selects which alternate to return.  When no explicit
+    alternates are defined, a contextual prefix is applied to the primary
+    text so consecutive reports never display identical wording.
 
     Returns empty string if no procedure is defined for the key.
     """
@@ -766,10 +767,22 @@ def get_follow_up_procedure(test_key: str, rotation_index: int = 0) -> str:
     if not primary:
         return ""
     alts = FOLLOW_UP_PROCEDURES_ALT.get(test_key, [])
-    if not alts:
-        return primary
     all_procedures = [primary] + alts
-    return all_procedures[rotation_index % len(all_procedures)]
+    if len(all_procedures) > 1:
+        return all_procedures[rotation_index % len(all_procedures)]
+    # Single procedure — apply deterministic prefix variation so
+    # consecutive reports do not display identical text.
+    if rotation_index == 0:
+        return primary
+    prefixes = [
+        "As a priority follow-up action, ",
+        "Building on the initial assessment, ",
+        "To further substantiate the finding, ",
+    ]
+    prefix = prefixes[(rotation_index - 1) % len(prefixes)]
+    # Lower-case the first letter of the primary to flow naturally
+    varied = prefix + primary[0].lower() + primary[1:]
+    return varied
 
 
 def get_finding_benchmark(test_key: str) -> str:

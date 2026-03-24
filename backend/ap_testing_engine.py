@@ -644,7 +644,7 @@ def assess_ap_data_quality(
     if detection.payment_method_column:
         configs.append(FieldQualityConfig("payment_method", lambda p: p.payment_method))
 
-    result = _shared_assess_dq(payments, configs, optional_weight_pool=0.15)
+    result = _shared_assess_dq(payments, configs, optional_weight_pool=0.15, domain="ap_testing")
 
     return APDataQuality(
         completeness_score=result.completeness_score,

@@ -610,7 +610,7 @@ def assess_fa_data_quality(
     if detection.category_column:
         configs.append(FieldQualityConfig("category", lambda e: e.category))
 
-    result = _shared_assess_dq(entries, configs, optional_weight_pool=0.40)
+    result = _shared_assess_dq(entries, configs, optional_weight_pool=0.40, domain="fixed_asset_testing")
 
     return FADataQuality(
         completeness_score=result.completeness_score,

@@ -355,7 +355,17 @@ def generate_testing_memo(
     story.append(LedgerRule(doc.width))
 
     risk_tier = composite.get("risk_tier", "low")
-    assessment = config.risk_assessments.get(risk_tier, config.risk_assessments["low"])
+    assessment = config.risk_assessments.get(risk_tier)
+    if assessment is None:
+        # Dynamic fallback: generate assessment from actual risk tier rather
+        # than silently falling back to "low" (BUG-002 fix).
+        tier_label = risk_tier.replace("_", " ").title()
+        assessment = (
+            f"Based on the composite risk scoring, overall risk is assessed as "
+            f"{tier_label}. The practitioner should apply professional judgment "
+            f"to determine whether additional procedures are warranted given "
+            f"the assessed risk level."
+        )
 
     story.append(Paragraph(assessment, styles["MemoBody"]))
     story.append(Spacer(1, 12))

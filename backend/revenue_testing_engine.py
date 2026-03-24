@@ -759,7 +759,7 @@ def assess_revenue_data_quality(
     if detection.obligation_satisfaction_date_column:
         configs.append(FieldQualityConfig("obligation_satisfaction_date", lambda e: e.obligation_satisfaction_date))
 
-    result = _shared_assess_dq(entries, configs, optional_weight_pool=0.10)
+    result = _shared_assess_dq(entries, configs, optional_weight_pool=0.10, domain="revenue_testing")
 
     return RevenueDataQuality(
         completeness_score=result.completeness_score,

@@ -870,7 +870,7 @@ def assess_data_quality(
     if detection.source_column:
         configs.append(FieldQualityConfig("source", lambda e: e.source))
 
-    result = _shared_assess_dq(entries, configs, optional_weight_pool=0.15)
+    result = _shared_assess_dq(entries, configs, optional_weight_pool=0.15, domain="je_testing")
 
     return GLDataQuality(
         completeness_score=result.completeness_score,

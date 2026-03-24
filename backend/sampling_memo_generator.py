@@ -398,7 +398,7 @@ def _build_evaluation_next_steps(
                 "For any errors management agrees to correct, obtain the correcting "
                 "journal entry or amended invoice before the engagement is finalized. "
                 "If corrections relate to a subsequent period, confirm the adjustment "
-                "was recorded in the correct period per ASC 250-10."
+                "was recorded in the correct period under applicable accounting standards."
             ),
         },
         {

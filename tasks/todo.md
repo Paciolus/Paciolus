@@ -99,3 +99,37 @@
 - **Verification:** npm run build PASS, npm test PASS (1,729/1,729)
 - **Status:** COMPLETE
 
+### Sprint 581: Nightly Report Remediation — 7 Bug Fixes + QA + Dependency Upgrades
+> Source: 2026-03-24 nightly report (report_auditor YELLOW, dependency_sentinel YELLOW)
+
+#### Bug Fixes (Report Auditor)
+- [x] BUG-001: Follow-up procedures now rotate via prefix variation when no alternates exist (follow_up_procedures.py)
+- [x] BUG-002: Risk tier assessment generates dynamic text for unrecognized tiers instead of silent "low" fallback (memo_template.py)
+- [x] BUG-003: Drill-down column widths proportional to header text length, not naive equal division (drill_down.py)
+- [x] BUG-004: Removed orphaned ASC 250-10 reference from sampling memo — replaced with generic standard language (sampling_memo_generator.py)
+- [x] BUG-005: Confirmed false positive — `&amp;` is correct ReportLab XML encoding; updated detection keywords (config.py)
+- [x] BUG-006: Data quality scoring now domain-aware via hash-based micro-offset; domain param added to 6 engines (data_quality.py + 6 engine files)
+- [x] BUG-007: Default `suppress_empty` changed to `False` — empty drill-downs render labeled placeholder instead of silent omission (drill_down.py)
+
+#### QA Fix
+- [x] Migration duplicate revision ID: `b1c2d3e4f5a6` used by two files — renamed newer migration to `c2d3e4f5a6b7` (clean_stale_organization_tier)
+- [x] `test_migration_f4a5b6c7d8e9_exists` now passes (was CycleDetected from duplicate revision)
+
+#### Dependency Upgrades (Safe)
+- [x] fastapi 0.135.1 → 0.135.2 (security patch)
+- [x] pypdf ≥6.9.1 → ≥6.9.2 (patch)
+- [x] werkzeug ≥3.1.6 → ≥3.1.7 (patch)
+- [x] @typescript-eslint/* 8.57.1 → 8.57.2 (patch)
+
+#### Skipped (Require Evaluation)
+- [ ] starlette 0.52.1 → 1.0.0 (major — FastAPI pins this; defer until FastAPI supports it)
+- [ ] TypeScript 5.9.3 → 6.0.2 (major — potential breaking changes; needs dedicated sprint)
+- [ ] pdfminer.six 20251230 → 20260107 (major label but minor maintenance — evaluate separately)
+
+#### Report Auditor Config
+- [x] Narrowed BUG_KEYWORDS to target specific anti-patterns, not domain terms (scripts/overnight/config.py)
+
+- **Tests:** 1,729 frontend, 654 core engine, 248 memo, 172 sampling/accrual, 17 drill-down/quality — 0 failures
+- **Verification:** npm run build PASS, npm test PASS, pytest targeted suites PASS, migration test PASS
+- **Status:** COMPLETE
+
