@@ -47,3 +47,11 @@
 > Sprints 572–578 archived to `tasks/archive/sprints-572-578-details.md`.
 > Sprints 579–585 archived to `tasks/archive/sprints-579-585-details.md`.
 
+### Sprint 586: Nightly Report Remediation (2026-03-25) — COMPLETE
+- [x] Fix policy guard false positive — exclude `client_manager.py` from `no_hard_delete` rule (Sprint 580 import of `ToolRun` for read-only query triggered false positive on unrelated `db.delete(client)`)
+- [x] Fix XSS regression test — update assertion to match `sanitize_name` HTML-stripping behavior (defense-in-depth pentest fix)
+- [x] Fix BUG-001 — add prefix variation fallback to `get_tb_suggested_procedure()` in `tb_diagnostic_constants.py` (matched existing fix in `follow_up_procedures.py`)
+- [x] Fix BUG-006 — track `missing_names`/`missing_balances` in `StreamingAuditor`, pass through both pipeline paths to `compute_population_profile()`, remove cosmetic domain micro-offset from `data_quality.py`
+- [x] Update nightly report BUG_KEYWORDS for BUG-001 and BUG-006 to match actual anti-patterns
+- **Review:** 2 test failures fixed, 2 confirmed bugs fixed. 152 module tests + 73 pipeline tests + frontend build all pass.
+

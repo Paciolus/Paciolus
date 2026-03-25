@@ -68,14 +68,12 @@ def assess_data_quality(
     4. Optional fields split remaining weight pool equally
     5. If no optional fields active, give full credit for optional pool
     6. Score = sum(fill_rate * weight) * 100, capped at 100.0
-    7. Domain-specific micro-adjustment ensures different tools produce
-       distinct scores even with identical fill rates (BUG-006 fix)
 
     Args:
         entries: List of parsed entry objects (domain-specific)
         field_configs: List of FieldQualityConfig defining fields to check
         optional_weight_pool: Total weight allocated to optional fields (default 0.15)
-        domain: Tool domain identifier (e.g., "je_testing") for score differentiation
+        domain: Tool domain identifier (e.g., "je_testing") — reserved for future use
 
     Returns:
         DataQualityResult with completeness score, fill rates, and issues
@@ -129,14 +127,6 @@ def assess_data_quality(
 
     # Calculate weighted score
     score = sum(fill_rates.get(k, 0) * w for k, w in weights.items()) * 100
-
-    # Domain-aware micro-adjustment: hash the domain name into a small
-    # offset (-0.5 to +0.5) so tools with identical fill rates still
-    # produce distinct completeness scores (BUG-006 fix).
-    if domain:
-        domain_hash = sum(ord(c) for c in domain)
-        domain_offset = ((domain_hash % 100) - 50) / 100  # range: -0.50 .. +0.49
-        score = score + domain_offset
 
     return DataQualityResult(
         completeness_score=min(max(score, 0.0), 100.0),

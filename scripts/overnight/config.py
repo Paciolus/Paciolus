@@ -68,11 +68,11 @@ KNOWN_BUGS = {
 
 BUG_KEYWORDS = {
     # Narrowed keywords target the specific anti-patterns, not the domain terms
-    "BUG-001": ["if not alts:", "return primary"],
+    "BUG-001": ["if not alts:\n        return primary"],
     "BUG-002": ['config.risk_assessments["low"]'],
     "BUG-003": ["doc_width / n_cols"],
     "BUG-004": ["ASC 250-10"],
     "BUG-005": ["raw &", "unescaped ampersand"],
-    "BUG-006": ["identical", "same score regardless"],
+    "BUG-006": ["domain_offset", "domain_hash"],
     "BUG-007": ["suppress_empty: bool = True"],
 }

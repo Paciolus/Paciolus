@@ -33,7 +33,7 @@ enabled = true
 description = "No hard-delete on protected audit tables (Phase XLVI invariant)"
 protected_models = ["ActivityLog", "DiagnosticSummary", "ToolRun", "FollowUpItem", "FollowUpItemComment"]
 scan_dirs = [".", "routes"]
-exclude_patterns = ["tests/", "shared/soft_delete.py"]
+exclude_patterns = ["tests/", "shared/soft_delete.py", "client_manager.py"]
 
 [rules.revenue_contract_fields]
 enabled = true

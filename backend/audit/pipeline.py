@@ -162,7 +162,12 @@ def audit_trial_balance_streaming(
         # Population Profile
         from population_profile_engine import compute_population_profile
 
-        pop_profile = compute_population_profile(display_balances, display_classifications)
+        pop_profile = compute_population_profile(
+            display_balances,
+            display_classifications,
+            missing_names=auditor.missing_names_count,
+            missing_balances=auditor.missing_balances_count,
+        )
         result["population_profile"] = pop_profile.to_dict()
 
         # Surface population profile data quality to top-level (BUG-006)
@@ -323,6 +328,8 @@ def audit_trial_balance_multi_sheet(
     first_sheet_columns: Optional[tuple[str, str, str]] = None
     consolidated_category_totals = CategoryTotals()
     consolidated_account_balances: dict[str, dict[str, Any]] = {}
+    consolidated_missing_names = 0
+    consolidated_missing_balances = 0
 
     try:
         for sheet_name in selected_sheets:
@@ -420,6 +427,8 @@ def audit_trial_balance_multi_sheet(
                 consolidated_account_balances[acct]["debit"] += bals["debit"]
                 consolidated_account_balances[acct]["credit"] += bals["credit"]
 
+            consolidated_missing_names += auditor.missing_names_count
+            consolidated_missing_balances += auditor.missing_balances_count
             auditor.clear()
 
         # Consolidated balance check
@@ -519,7 +528,11 @@ def audit_trial_balance_multi_sheet(
         # Population Profile
         from population_profile_engine import compute_population_profile
 
-        pop_profile = compute_population_profile(consolidated_account_balances)
+        pop_profile = compute_population_profile(
+            consolidated_account_balances,
+            missing_names=consolidated_missing_names,
+            missing_balances=consolidated_missing_balances,
+        )
         result["population_profile"] = pop_profile.to_dict()
 
         # Surface population profile data quality to top-level (BUG-006)

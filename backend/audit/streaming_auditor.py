@@ -88,6 +88,10 @@ class StreamingAuditor:
         self._credit_chunks: list[Decimal] = []
         self.total_rows = 0
 
+        # BUG-006: Track missing field counts for data quality scoring
+        self.missing_names_count = 0
+        self.missing_balances_count = 0
+
         # Per-account aggregation for abnormal balance detection
         self.account_balances: dict[str, dict[str, Decimal]] = {}
 
@@ -224,10 +228,19 @@ class StreamingAuditor:
         self._credit_chunks.append(Decimal(str(math.fsum(credits.values))))
         self.total_rows = rows_so_far
 
+        # BUG-006: Count rows with missing account names or zero balances
+        if self.account_col:
+            acct_series = chunk[self.account_col].astype(str).str.strip()
+            blank_mask = acct_series.isin(["", "nan", "none", "None", "NaN"])
+            self.missing_names_count += int(blank_mask.sum())
+
+        zero_balance_mask = (debits == 0) & (credits == 0)
+        self.missing_balances_count += int(zero_balance_mask.sum())
+
         if self.account_col:
             temp_df = pd.DataFrame(
                 {
-                    "account": chunk[self.account_col].astype(str).str.strip(),
+                    "account": acct_series,
                     "debit": debits.values,
                     "credit": credits.values,
                 }
@@ -493,5 +506,7 @@ class StreamingAuditor:
         self._debit_chunks.clear()
         self._credit_chunks.clear()
         self.total_rows = 0
+        self.missing_names_count = 0
+        self.missing_balances_count = 0
         gc.collect()
         log_secure_operation("streaming_clear", "Auditor state cleared")
