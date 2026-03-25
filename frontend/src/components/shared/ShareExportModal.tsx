@@ -81,13 +81,16 @@ export function ShareExportModal({
 
           {/* Modal */}
           <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="share-export-title"
             variants={fadeScale}
             initial="hidden"
             animate="visible"
             exit="exit"
             className="relative z-10 bg-surface-card border border-theme rounded-2xl p-6 shadow-xl max-w-md w-full mx-4"
           >
-            <h2 className="text-xl font-serif font-semibold text-content-primary mb-2">
+            <h2 id="share-export-title" className="text-xl font-serif font-semibold text-content-primary mb-2">
               Share Export
             </h2>
             <p className="text-content-secondary text-sm font-sans mb-6">

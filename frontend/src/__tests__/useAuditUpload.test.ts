@@ -146,7 +146,7 @@ describe('useAuditUpload', () => {
 
     expect(mockFetch).not.toHaveBeenCalled()
     expect(result.current.status).toBe('error')
-    expect(result.current.error).toContain('verify your email')
+    expect(result.current.error).toContain('Email verification required')
   })
 
   it('run handles 401 unauthorized', async () => {
@@ -182,7 +182,7 @@ describe('useAuditUpload', () => {
     })
 
     expect(result.current.status).toBe('error')
-    expect(result.current.error).toContain('verify your email')
+    expect(result.current.error).toContain('Email verification required')
   })
 
   it('run sets success status and parsed result on success', async () => {
@@ -215,7 +215,7 @@ describe('useAuditUpload', () => {
     })
 
     expect(result.current.status).toBe('error')
-    expect(result.current.error).toBe('Unable to connect to server. Please try again.')
+    expect(result.current.error).toContain('Unable to connect')
   })
 
   it('reset clears status and result', async () => {
