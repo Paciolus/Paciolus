@@ -52,10 +52,10 @@
 - [x] Bump `stripe` 14.4.1 → 15.0.0 (major — StripeObject no longer dict subclass; no impact on our usage)
 - [x] Bump `starlette` 0.52.1 → 1.0.0 (major — FastAPI 0.135.2 already compatible; removed deprecations don't affect us)
 - [x] Bump `sentry-sdk` 2.55.0 → 2.56.0
-- [x] Bump `typescript` 5.9.3 → 6.0.2 (major — build + 1745 tests pass clean)
 - [x] Bump 6 transitive deps: anyio 4.13.0, chardet 7.3.0, redis 7.4.0, requests 2.33.0, tomli 2.4.1
-- [x] Deferred: pdfminer.six (locked by pdfplumber==0.11.9), pydantic_core (locked by pydantic==2.12.5)
-- **Review:** 9 packages upgraded (3 major, 1 security patch, 5 minor). Backend 7121 tests, frontend 1745 tests, build all pass. 2 transitive deps deferred (parent-locked).
+- [x] Fix 3 npm audit vulnerabilities: flatted (prototype pollution), picomatch (ReDoS), yaml (stack overflow)
+- [x] Deferred: pdfminer.six (locked by pdfplumber==0.11.9), pydantic_core (locked by pydantic==2.12.5), typescript 6.0 (blocked by @typescript-eslint <6.0.0 peer dep)
+- **Review:** 8 packages upgraded (2 major, 1 security patch, 5 minor), 3 npm audit vulns fixed. Backend 7121 tests, frontend 1745 tests, build all pass. 3 deps deferred (parent/toolchain-locked).
 
 ### Sprint 586: Nightly Report Remediation (2026-03-25) — COMPLETE
 - [x] Fix policy guard false positive — exclude `client_manager.py` from `no_hard_delete` rule (Sprint 580 import of `ToolRun` for read-only query triggered false positive on unrelated `db.delete(client)`)
