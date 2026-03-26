@@ -20,6 +20,16 @@ telemetry, caches, or any other durable medium. Only non-financial metadata
 (user accounts, subscription state, upload timestamps, aggregate usage metrics)
 is persisted.
 
+**Zero-storage boundary clarification:** The invariant protects *raw financial
+data* — individual account names, balances, transaction details, and any content
+that could identify a client's financial position. *Derived aggregates* (e.g.,
+total debits/credits, materiality thresholds, category ratios) are classified as
+operational metadata and may be persisted in the database for history/UX
+purposes. These aggregates cannot be reverse-engineered to reconstruct the
+original trial balance. However, **no financial data — raw or derived — may be
+stored in browser storage** (localStorage, sessionStorage, IndexedDB). Browser
+storage is untrusted and outside the platform's security perimeter.
+
 ---
 
 ## 2. Architecture Snapshot
@@ -91,6 +101,24 @@ scratch — instead, verify that resolutions hold and flag any regressions.
 | —         | Marketing copy & trust language audit    | Completed |
 | —         | Billing security & correctness review    | Completed |
 | —         | Code quality / structural debt review    | Completed |
+| FULL-SWEEP| Full sweep (2026-03-26)                  | Completed |
+
+### Open Findings From Full Sweep (2026-03-26)
+
+These findings are confirmed and queued for remediation. Do not re-flag them;
+verify their resolution status on the next sweep.
+
+| Finding | Severity | Summary                                              | Status     |
+|---------|----------|------------------------------------------------------|------------|
+| F-001   | HIGH     | sessionStorage fallback stores derived financial data | REMEDIATE  |
+| F-002   | MEDIUM   | `/auth/refresh` CSRF-exempt despite cookie auth      | REMEDIATE  |
+| F-003   | MEDIUM   | Stripe `items[0]` positional assumption in sync path | REMEDIATE  |
+| F-004   | MEDIUM   | Float conversion in monetary API/model helpers       | REMEDIATE  |
+
+Note: F-001's database persistence component (total_debits, total_credits,
+materiality_threshold in ActivityLog/DiagnosticSummary) was reviewed and
+accepted as operational metadata — see § 8. Only the browser sessionStorage
+fallback portion requires remediation.
 
 **"Completed"** = audit ran, findings generated, remediation prompts executed.
 **"Prompted"** = audit prompt was written and delivered but execution status in
@@ -127,8 +155,6 @@ risk that the fix *could* break).
   `GET /billing/analytics/weekly-review` endpoint was globally scoped.
   Remediation prompt issued to scope by org_id. Verify the fix is in place;
   do not re-discover the finding.
-- **Seat mutation targeting wrong Stripe line item** — `items[0]` assumption
-  in dual-line-item subscriptions. Remediation prompt issued. Verify fix.
 
 ---
 
@@ -166,6 +192,14 @@ decisions.
   financial data. Non-financial metadata (timestamps, upload counts, user
   profiles, subscription state) is intentionally persisted. Do not flag
   metadata persistence as a zero-storage violation.
+- **Derived financial aggregates in database** — Summary statistics
+  (total_debits, total_credits, materiality_threshold, category ratios) in
+  `ActivityLog` and `DiagnosticSummary` tables are classified as operational
+  metadata. They cannot reconstruct the original trial balance and are
+  retained for history UX. Do not flag these as zero-storage violations.
+  **However**, any derived financial data in browser storage (sessionStorage,
+  localStorage, IndexedDB) IS a violation and should be flagged — browser
+  storage is outside the security perimeter.
 - **Solo founder operation** — There is no team. Do not recommend "assign to
   a team member" or "establish a review committee." All recommendations must
   be actionable by a single developer.
