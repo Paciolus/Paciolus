@@ -47,6 +47,49 @@
 > Sprints 572–578 archived to `tasks/archive/sprints-572-578-details.md`.
 > Sprints 579–585 archived to `tasks/archive/sprints-579-585-details.md`.
 
+### Sprint 591: Dunning & Failed Payment Workflow (2026-03-26) — COMPLETE
+- [x] Create `dunning_model.py` — DunningEpisode table with 6 states, composite indexes
+- [x] Create Alembic migration `591a_add_dunning_episodes.py`
+- [x] Add 5 dunning email functions to `email_service.py` (first failure, second, final notice, suspended, recovered) with Oat & Obsidian HTML templates
+- [x] Create `billing/dunning_engine.py` — state machine engine (handle_payment_failed, handle_payment_recovered, process_grace_period_expirations, resolve_manually)
+- [x] Integrate dunning into `webhook_handler.py` — invoice.payment_failed triggers state advance, invoice.paid resolves episodes
+- [x] Add `_job_dunning_grace_period()` hourly task to `cleanup_scheduler.py` for grace period expiration
+- [x] Add dunning metrics to `compute_churn_metrics()` (active episodes, at-risk MRR, recovered, lost, recovery rate)
+- [x] Add `DunningMetrics` schema to `internal_metrics_schemas.py`
+- [x] Add dunning info to admin customer detail (`_get_dunning_info()` in `admin_customers.py`)
+- [x] Add `POST /internal/admin/dunning/{episode_id}/resolve` endpoint for manual resolution
+- [x] Register DunningEpisode in `conftest.py` and `alembic/env.py`
+- [x] Create `tests/test_dunning.py` — 21 tests (full lifecycle, early recovery, idempotency, grace period, manual resolve, metrics, email triggers, new episode after resolution)
+- [x] Verification: 99 tests pass (21 dunning + 32 admin + 41 metrics + 5 analytics), no regressions
+- **Review:** Automated dunning state machine (FIRST→SECOND→THIRD→GRACE→CANCELED) with idempotent webhook-driven transitions, 5 branded email templates, hourly grace period expiration job, dunning metrics in churn API, manual admin resolve. Stripe Smart Retries handle actual payment retries — we only track state + communicate. Files: 3 new (model, engine, tests), 7 modified (webhook, email, scheduler, metrics, schemas, admin, conftest).
+
+### Sprint 590: Internal Admin Console — Superadmin CRM (2026-03-26) — COMPLETE
+- [x] Add `is_superadmin` boolean to User model (default false, CLI-only grant)
+- [x] Create `admin_audit_model.py` — AdminAuditLog model with 8 action types
+- [x] Create Alembic migration `590a_add_superadmin_and_admin_audit_log.py`
+- [x] Add `require_superadmin` auth dependency to `auth.py`
+- [x] Add `create_impersonation_token()` — time-boxed JWT with `imp`/`imp_by` claims
+- [x] Create `billing/admin_customers.py` — service layer (customer list/detail, 6 admin actions, audit log query)
+- [x] Create `schemas/admin_customer_schemas.py` — 14 Pydantic models (requests + responses)
+- [x] Create `routes/internal_admin.py` — 10 endpoints under `/internal/admin/` (customers CRUD, 6 actions, impersonation, audit log)
+- [x] Add `ImpersonationMiddleware` to `security_middleware.py` — blocks mutations on `imp` JWT tokens (403)
+- [x] Register middleware in `main.py`
+- [x] Create `scripts/set_superadmin.py` — CLI for granting/revoking superadmin
+- [x] Create `tests/test_internal_admin.py` — 32 tests (auth, CRUD, actions, impersonation, audit log, service layer)
+- [x] Create frontend: types, hook, 3 pages (customer list, customer detail, audit log), impersonation banner
+- [x] Register `ImpersonationBanner` in providers.tsx
+- [x] Verification: 73 backend tests pass (32 admin + 41 metrics), frontend build passes
+- **Review:** Full superadmin CRM — customer list with search/filter/pagination, customer detail with billing/usage/activity/members, 6 admin actions (plan override, trial extension, credit, refund, cancel, impersonation) all with audit trail, impersonation read-only enforcement via middleware, admin audit log with filtering. Backend: 7 new files, 5 modified. Frontend: 7 new files, 1 modified.
+
+### Sprint 589: Internal Metrics API — Founder Ops Dashboard (2026-03-26) — COMPLETE
+- [x] Create `billing/internal_metrics.py` — MRR/ARR computation engine with 4 metric functions
+- [x] Create `schemas/internal_metrics_schemas.py` — Pydantic response models (Revenue, Churn, TrialFunnel, History)
+- [x] Create `routes/internal_metrics.py` — 4 GET endpoints under `/internal/metrics/` with owner-only auth
+- [x] Register router in `routes/__init__.py`
+- [x] Create `tests/test_internal_metrics.py` — 41 tests (auth, MRR calc, churn rates, trial funnel, revenue history, edge cases)
+- [x] Verification: 46 billing tests pass (41 new + 5 existing), no regressions
+- **Review:** 4 new endpoints (revenue, churn, trial-funnel, revenue/history), read-only, owner-gated. Service layer computes MRR from Subscription table + 30-day movements from BillingEvent log. Files: 3 new (service, schemas, route), 1 modified (routes/__init__.py), 1 test file (41 tests).
+
 ### Sprint 588: Chrome QA Remediation (2026-03-26) — COMPLETE
 - [x] Remove `version` field from `/health` endpoint response — prevents server version disclosure (information leakage)
 - [x] Update `test_health_api.py` assertions to verify version is absent

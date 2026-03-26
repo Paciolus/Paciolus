@@ -20,8 +20,6 @@ from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-from shared.schemas import ErrorResponse
-
 from config import (
     API_HOST,
     API_PORT,
@@ -39,6 +37,7 @@ from logging_config import request_id_var, setup_logging
 from routes import all_routers
 from security_middleware import (
     CSRFMiddleware,
+    ImpersonationMiddleware,
     MaxBodySizeMiddleware,
     RateLimitIdentityMiddleware,
     RequestIdMiddleware,
@@ -46,6 +45,7 @@ from security_middleware import (
 )
 from security_utils import log_secure_operation
 from shared.rate_limits import get_storage_backend, limiter
+from shared.schemas import ErrorResponse
 from version import __version__
 
 # Initialize logging before anything else
@@ -209,6 +209,9 @@ app.add_middleware(SecurityHeadersMiddleware, production_mode=not DEBUG)
 
 # CSRF protection for state-changing requests (Sprint 200)
 app.add_middleware(CSRFMiddleware)
+
+# Sprint 590: Block mutations for impersonation sessions (read-only enforcement)
+app.add_middleware(ImpersonationMiddleware)
 
 # Global request body size limit (110 MB — above per-file 100 MB to allow multipart overhead)
 app.add_middleware(MaxBodySizeMiddleware)

@@ -133,6 +133,51 @@ def create_access_token(
     return token, expire
 
 
+def create_impersonation_token(
+    target_user_id: int,
+    target_email: str,
+    admin_user_id: int,
+    tier: str = "free",
+    ttl_minutes: int = 15,
+) -> tuple[str, datetime]:
+    """Create a time-boxed read-only impersonation JWT.
+
+    Sprint 590: The token includes `imp: true` and `imp_by` claims so
+    middleware can enforce read-only mode and audit trail.
+
+    Args:
+        target_user_id: The user being impersonated.
+        target_email: Target user's email.
+        admin_user_id: The superadmin performing impersonation.
+        tier: Target user's subscription tier.
+        ttl_minutes: Token lifetime (default 15 minutes).
+
+    Returns:
+        Tuple of (token_string, expiration_datetime).
+    """
+    expire = datetime.now(UTC) + timedelta(minutes=ttl_minutes)
+
+    payload = {
+        "sub": str(target_user_id),
+        "email": target_email,
+        "tier": tier,
+        "jti": secrets.token_hex(16),
+        "iat": datetime.now(UTC),
+        "exp": expire,
+        "imp": True,  # Impersonation flag
+        "imp_by": admin_user_id,  # Admin who initiated
+    }
+
+    token = jwt.encode(payload, JWT_SECRET_KEY or "", algorithm=JWT_ALGORITHM)
+
+    log_secure_operation(
+        "impersonation_token_created",
+        f"Admin user_id={admin_user_id} impersonating user_id={target_user_id}",
+    )
+
+    return token, expire
+
+
 def decode_access_token(token: str) -> Optional[TokenData]:
     """
     Decode and validate a JWT access token.
@@ -270,6 +315,23 @@ def require_verified_user(
                 "code": "EMAIL_NOT_VERIFIED",
                 "message": "Email verification required. Please check your inbox for the verification email.",
             },
+        )
+
+    return user
+
+
+def require_superadmin(token: Annotated[Optional[str], Depends(oauth2_scheme)], db: Session = Depends(get_db)) -> User:
+    """FastAPI dependency that REQUIRES superadmin platform-level access.
+
+    Sprint 590: Separate from org-level RBAC — this is platform-level.
+    Raises HTTPException 403 if user is not a superadmin.
+    """
+    user = require_verified_user(token, db)
+
+    if not getattr(user, "is_superadmin", False):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Superadmin access required.",
         )
 
     return user

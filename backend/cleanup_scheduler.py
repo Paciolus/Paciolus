@@ -355,6 +355,22 @@ def _job_expired_upload_dedup() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Dunning grace period expiration (Sprint 591)
+# ---------------------------------------------------------------------------
+
+
+def _job_dunning_grace_period() -> None:
+    """Cancel subscriptions whose dunning grace period has expired."""
+
+    def _process(db: Any) -> int:
+        from billing.dunning_engine import process_grace_period_expirations
+
+        return process_grace_period_expirations(db)
+
+    _run_cleanup_job("dunning_grace_period", _process)
+
+
+# ---------------------------------------------------------------------------
 # Watchdog
 # ---------------------------------------------------------------------------
 
@@ -479,6 +495,15 @@ def init_scheduler() -> None:
         id="expired_upload_dedup",
         jitter=30,
     )
+    # Sprint 591: Dunning grace period expiration — runs hourly
+    _scheduler.add_job(
+        _job_dunning_grace_period,
+        "interval",
+        hours=1,
+        id="dunning_grace_period",
+        jitter=60,
+    )
+
     _scheduler.add_job(
         _watchdog,
         "interval",

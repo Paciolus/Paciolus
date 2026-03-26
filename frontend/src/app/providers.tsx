@@ -7,6 +7,7 @@ import { CommandPaletteProvider } from '@/contexts/CommandPaletteContext'
 import { ToastProvider } from '@/contexts/ToastContext'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { GlobalCommandPalette, ToastContainer } from '@/components/shared'
+import { ImpersonationBanner } from '@/components/shared/ImpersonationBanner'
 import { ThemeProvider } from '@/components/ThemeProvider'
 
 /**
@@ -26,6 +27,7 @@ export function Providers({ children }: { children: React.ReactNode }): ReactEle
           <AuthProvider>
             <ToastProvider>
               <CommandPaletteProvider>
+                <ImpersonationBanner />
                 {children}
                 <GlobalCommandPalette />
                 <ToastContainer />

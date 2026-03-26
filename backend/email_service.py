@@ -468,6 +468,137 @@ def is_email_service_configured() -> bool:
     return SENDGRID_AVAILABLE and bool(SENDGRID_API_KEY)
 
 
+# =============================================================================
+# DUNNING EMAILS (Sprint 591)
+# =============================================================================
+
+
+def _send_dunning_email(
+    to_email: str,
+    subject: str,
+    html_body: str,
+    plain_body: str,
+) -> EmailResult:
+    """Internal helper for dunning emails — fire-and-forget with error logging."""
+    if not SENDGRID_AVAILABLE or not SENDGRID_API_KEY:
+        log_secure_operation("dunning_email_skipped", f"to={mask_email(to_email)} subj={subject[:40]}")
+        return EmailResult(success=True, message="Email sending skipped (not configured).")
+
+    try:
+        message = Mail(
+            from_email=Email(SENDGRID_FROM_EMAIL, SENDGRID_FROM_NAME),
+            to_emails=To(to_email),
+            subject=subject,
+        )
+        message.add_content(Content("text/plain", plain_body))
+        message.add_content(HtmlContent(html_body))
+
+        sg = SendGridAPIClient(SENDGRID_API_KEY)
+        response = sg.send(message)
+
+        if response.status_code in (200, 201, 202):
+            log_secure_operation("dunning_email_sent", f"to={mask_email(to_email)} subj={subject[:40]}")
+            return EmailResult(
+                success=True, message="Dunning email sent", message_id=response.headers.get("X-Message-Id")
+            )
+        else:
+            log_secure_operation("dunning_email_failed", f"SendGrid {response.status_code}")
+            return EmailResult(success=False, message=f"Failed (status {response.status_code})")
+
+    except (OSError, ValueError, RuntimeError) as e:
+        from shared.log_sanitizer import sanitize_exception
+
+        log_secure_operation("dunning_email_error", sanitize_exception(e, context="dunning email"))
+        return EmailResult(success=False, message="Email send error")
+
+
+def _dunning_html(title: str, body: str, cta_url: str, cta_text: str) -> str:
+    """Generate Oat & Obsidian branded dunning email HTML."""
+    return f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head>
+<body style="margin:0;padding:0;background-color:#EBE9E4;font-family:Lato,Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#EBE9E4;padding:40px 20px">
+<tr><td align="center">
+<table width="560" cellpadding="0" cellspacing="0" style="background-color:#fff;border-radius:8px;overflow:hidden">
+<tr><td style="background-color:#212121;padding:24px 32px">
+<h1 style="margin:0;color:#EBE9E4;font-family:Merriweather,Georgia,serif;font-size:20px">{title}</h1>
+</td></tr>
+<tr><td style="padding:32px">
+{body}
+<table width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px">
+<tr><td align="center">
+<a href="{cta_url}" style="display:inline-block;padding:12px 28px;background-color:#4A7C59;color:#fff;text-decoration:none;border-radius:6px;font-weight:600;font-size:14px">{cta_text}</a>
+</td></tr>
+</table>
+</td></tr>
+<tr><td style="padding:16px 32px;background-color:#f5f4f1;border-top:1px solid #e0ddd8;text-align:center;color:#888;font-size:12px">
+Paciolus — Professional Audit Intelligence
+</td></tr>
+</table>
+</td></tr></table>
+</body></html>"""
+
+
+def send_dunning_first_failure(to_email: str, amount: str, plan_name: str, portal_url: str) -> EmailResult:
+    """First payment failure — friendly, informational."""
+    body = f'<p style="color:#212121;font-size:15px;line-height:1.6">Your payment of <strong>{amount}</strong> for <strong>{plan_name}</strong> didn\'t go through. This can happen — we\'ll try again in a few days.</p><p style="color:#212121;font-size:15px;line-height:1.6">If you\'d like to update your payment method now, click below:</p>'
+    plain = f"Your payment of {amount} for {plan_name} didn't go through. We'll try again in a few days. Update your payment method: {portal_url}"
+    return _send_dunning_email(
+        to_email,
+        "We couldn't process your Paciolus payment",
+        _dunning_html("Payment Issue", body, portal_url, "Update Payment Method"),
+        plain,
+    )
+
+
+def send_dunning_second_failure(to_email: str, amount: str, portal_url: str) -> EmailResult:
+    """Second failure — urgent."""
+    body = f'<p style="color:#212121;font-size:15px;line-height:1.6">We\'ve tried twice to process your <strong>{amount}</strong> payment. To avoid service interruption, please update your payment method.</p>'
+    plain = f"We've tried twice to process your {amount} payment. Update your payment method to avoid interruption: {portal_url}"
+    return _send_dunning_email(
+        to_email,
+        "Action needed: Update your Paciolus payment method",
+        _dunning_html("Payment Action Needed", body, portal_url, "Update Payment Method"),
+        plain,
+    )
+
+
+def send_dunning_final_notice(to_email: str, suspension_date: str, portal_url: str) -> EmailResult:
+    """Final notice — last chance before suspension."""
+    body = f'<p style="color:#212121;font-size:15px;line-height:1.6">We haven\'t been able to collect your payment after multiple attempts.</p><p style="color:#BC4749;font-size:15px;line-height:1.6;font-weight:600">Your account will be suspended on {suspension_date} unless payment is received.</p>'
+    plain = f"Your Paciolus account will be suspended on {suspension_date} unless payment is received. Update your payment method: {portal_url}"
+    return _send_dunning_email(
+        to_email,
+        "Final notice: Your Paciolus account will be suspended in 7 days",
+        _dunning_html("Final Payment Notice", body, portal_url, "Update Payment Method"),
+        plain,
+    )
+
+
+def send_dunning_suspended(to_email: str, reactivation_url: str) -> EmailResult:
+    """Account suspended due to non-payment."""
+    body = '<p style="color:#212121;font-size:15px;line-height:1.6">Your subscription has been canceled due to non-payment. Your data will be retained for 30 days.</p><p style="color:#212121;font-size:15px;line-height:1.6">To reactivate your account, click below:</p>'
+    plain = f"Your Paciolus subscription has been canceled due to non-payment. Data retained for 30 days. Reactivate: {reactivation_url}"
+    return _send_dunning_email(
+        to_email,
+        "Your Paciolus account has been suspended",
+        _dunning_html("Account Suspended", body, reactivation_url, "Reactivate Account"),
+        plain,
+    )
+
+
+def send_dunning_recovered(to_email: str, amount: str) -> EmailResult:
+    """Payment recovered — all clear."""
+    body = f'<p style="color:#212121;font-size:15px;line-height:1.6">Great news — your payment of <strong>{amount}</strong> has been processed successfully. Your Paciolus account is fully active.</p><p style="color:#4A7C59;font-size:15px;line-height:1.6;font-weight:600">No action needed.</p>'
+    plain = f"Your payment of {amount} has been processed. Your Paciolus account is fully active. No action needed."
+    return _send_dunning_email(
+        to_email,
+        "Payment received — you're all set!",
+        _dunning_html("Payment Received", body, f"{FRONTEND_URL}/dashboard", "Go to Dashboard"),
+        plain,
+    )
+
+
 def get_service_status() -> dict:
     """Get email service configuration status (for admin/debug)."""
     return {

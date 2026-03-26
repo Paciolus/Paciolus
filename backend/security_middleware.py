@@ -779,3 +779,58 @@ def get_client_ip(request: Request) -> str:
             return forwarded.split(",")[0].strip()
 
     return peer_ip
+
+
+# =============================================================================
+# IMPERSONATION READ-ONLY MIDDLEWARE (Sprint 590)
+# =============================================================================
+
+_MUTATION_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+
+
+class ImpersonationMiddleware(BaseHTTPMiddleware):
+    """Block mutations when the request carries an impersonation JWT.
+
+    Impersonation tokens include an `imp: true` claim. When detected,
+    all state-changing HTTP methods are rejected with 403.
+
+    This middleware runs early (before route dispatch) so it catches
+    all mutation attempts regardless of endpoint.
+    """
+
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        if request.method not in _MUTATION_METHODS:
+            return await call_next(request)
+
+        # Check for impersonation token in Authorization header
+        auth_header = request.headers.get("authorization", "")
+        if not auth_header.startswith("Bearer "):
+            return await call_next(request)
+
+        token_str = auth_header[7:]
+        try:
+            import jwt as _jwt
+
+            from config import JWT_ALGORITHM, JWT_SECRET_KEY
+
+            payload = _jwt.decode(
+                token_str,
+                JWT_SECRET_KEY or "",
+                algorithms=[JWT_ALGORITHM],
+                options={"verify_exp": False},  # Just checking the flag, not validating
+            )
+            if payload.get("imp"):
+                from starlette.responses import JSONResponse
+
+                return JSONResponse(
+                    status_code=403,
+                    content={
+                        "code": "IMPERSONATION_READ_ONLY",
+                        "message": "Impersonation sessions are read-only.",
+                        "detail": "Impersonation sessions are read-only.",
+                    },
+                )
+        except Exception:
+            pass  # Not a valid JWT — let downstream handle auth
+
+        return await call_next(request)

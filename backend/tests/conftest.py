@@ -26,7 +26,9 @@ from sqlalchemy.orm import Session, sessionmaker
 # Ensure backend is on the path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from admin_audit_model import AdminAuditLog  # noqa: F401 — Sprint 590: admin audit trail
 from database import Base
+from dunning_model import DunningEpisode  # noqa: F401 — Sprint 591: dunning state machine
 from engagement_model import Engagement, EngagementStatus, MaterialityBasis, ToolName, ToolRun, ToolRunStatus
 from export_share_model import ExportShare  # noqa: F401 — needed for FK resolution in create_all
 from follow_up_items_model import FollowUpDisposition, FollowUpItem, FollowUpItemComment, FollowUpSeverity

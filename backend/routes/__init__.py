@@ -25,6 +25,8 @@ from routes.export_sharing import router as export_sharing_router
 from routes.fixed_asset_testing import router as fixed_asset_testing_router
 from routes.follow_up_items import router as follow_up_items_router
 from routes.health import router as health_router
+from routes.internal_admin import router as internal_admin_router
+from routes.internal_metrics import router as internal_metrics_router
 from routes.inventory_testing import router as inventory_testing_router
 from routes.je_testing import router as je_testing_router
 from routes.metrics import router as metrics_router
@@ -76,4 +78,6 @@ all_routers = [
     branding_router,
     bulk_upload_router,
     composite_risk_router,
+    internal_metrics_router,
+    internal_admin_router,
 ]

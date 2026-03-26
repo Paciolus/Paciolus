@@ -122,6 +122,9 @@ class User(Base):
     failed_login_attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     locked_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
+    # Sprint 590: Platform-level superadmin (set via CLI only — no UI granting)
+    is_superadmin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
     # User settings (JSON string) - for future preferences
     # IMPORTANT: This is for UI preferences only, NOT financial data
     settings: Mapped[str] = mapped_column(String(2000), default="{}")
@@ -230,9 +233,7 @@ class ToolActivity(Base):
     """
 
     __tablename__ = "tool_activities"
-    __table_args__ = (
-        Index("ix_tool_activities_user_timestamp", "user_id", "timestamp"),
-    )
+    __table_args__ = (Index("ix_tool_activities_user_timestamp", "user_id", "timestamp"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False, index=True)
@@ -241,7 +242,8 @@ class ToolActivity(Base):
     record_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     summary_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     engagement_id: Mapped[int | None] = mapped_column(
-        Integer, ForeignKey("engagements.id", use_alter=True, name="fk_tool_activities_engagement_id"),
+        Integer,
+        ForeignKey("engagements.id", use_alter=True, name="fk_tool_activities_engagement_id"),
         nullable=True,
     )
     timestamp: Mapped[datetime] = mapped_column(
