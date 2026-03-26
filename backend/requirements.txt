@@ -17,7 +17,7 @@ psycopg2-binary==2.9.11
 alembic==1.18.4
 
 # Billing (Sprint 362)
-stripe==14.4.1
+stripe==15.0.0
 
 # Email Service (Sprint 57)
 sendgrid==6.12.5
@@ -32,7 +32,7 @@ limits>=5.8.0
 redis>=5.0.0
 
 # APM / Error Tracking (Sprint 275)
-sentry-sdk[fastapi]==2.55.0
+sentry-sdk[fastapi]==2.56.0
 
 # ODS (OpenDocument Spreadsheet) support (Sprint 432)
 odfpy>=1.4.1
@@ -53,7 +53,7 @@ APScheduler==3.11.2
 # No direct imports exist — pip resolves them automatically. No pin needed.
 
 # SECURITY: Pinned transitive dependency patches (pip-audit CVEs)
-cryptography>=46.0.5  # CVE-2026-26007
+cryptography>=46.0.6  # CVE-2026-26007
 pillow>=12.1.1  # CVE-2026-25990
 werkzeug>=3.1.7  # CVE-2026-27199
 pyasn1>=0.6.3  # CVE-2026-30922 (DoS via recursive ASN.1 decoding)

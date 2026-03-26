@@ -47,6 +47,16 @@
 > Sprints 572–578 archived to `tasks/archive/sprints-572-578-details.md`.
 > Sprints 579–585 archived to `tasks/archive/sprints-579-585-details.md`.
 
+### Sprint 587: Dependency Sentinel Remediation (2026-03-26) — COMPLETE
+- [x] Bump `cryptography` 46.0.5 → 46.0.6 (security patch, CVE-2026-26007 pin update)
+- [x] Bump `stripe` 14.4.1 → 15.0.0 (major — StripeObject no longer dict subclass; no impact on our usage)
+- [x] Bump `starlette` 0.52.1 → 1.0.0 (major — FastAPI 0.135.2 already compatible; removed deprecations don't affect us)
+- [x] Bump `sentry-sdk` 2.55.0 → 2.56.0
+- [x] Bump `typescript` 5.9.3 → 6.0.2 (major — build + 1745 tests pass clean)
+- [x] Bump 6 transitive deps: anyio 4.13.0, chardet 7.3.0, redis 7.4.0, requests 2.33.0, tomli 2.4.1
+- [x] Deferred: pdfminer.six (locked by pdfplumber==0.11.9), pydantic_core (locked by pydantic==2.12.5)
+- **Review:** 9 packages upgraded (3 major, 1 security patch, 5 minor). Backend 7121 tests, frontend 1745 tests, build all pass. 2 transitive deps deferred (parent-locked).
+
 ### Sprint 586: Nightly Report Remediation (2026-03-25) — COMPLETE
 - [x] Fix policy guard false positive — exclude `client_manager.py` from `no_hard_delete` rule (Sprint 580 import of `ToolRun` for read-only query triggered false positive on unrelated `db.delete(client)`)
 - [x] Fix XSS regression test — update assertion to match `sanitize_name` HTML-stripping behavior (defense-in-depth pentest fix)
