@@ -449,7 +449,7 @@ class TestRefreshXRequestedWith:
 
     @pytest.mark.asyncio
     async def test_refresh_without_header_rejected(self, override_db, registered_user):
-        """POST /auth/refresh without X-Requested-With returns 401."""
+        """POST /auth/refresh without X-Requested-With returns 403 (CSRF middleware rejects first)."""
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             login_resp = await client.post(
                 "/auth/login",
@@ -457,14 +457,13 @@ class TestRefreshXRequestedWith:
             )
             assert login_resp.status_code == 200
 
-            # Refresh without the header
+            # Refresh without the header — CSRF middleware blocks before endpoint check
             refresh_resp = await client.post("/auth/refresh")
-            assert refresh_resp.status_code == 401
-            assert "X-Requested-With" in refresh_resp.json()["detail"]
+            assert refresh_resp.status_code == 403
 
     @pytest.mark.asyncio
     async def test_refresh_with_wrong_header_value(self, override_db, registered_user):
-        """POST /auth/refresh with wrong X-Requested-With value returns 401."""
+        """POST /auth/refresh with wrong X-Requested-With value returns 403 (CSRF middleware)."""
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             login_resp = await client.post(
                 "/auth/login",
@@ -476,4 +475,4 @@ class TestRefreshXRequestedWith:
                 "/auth/refresh",
                 headers={"X-Requested-With": "WrongValue"},
             )
-            assert refresh_resp.status_code == 401
+            assert refresh_resp.status_code == 403

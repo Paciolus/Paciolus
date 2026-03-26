@@ -283,23 +283,24 @@ CSRF_TOKEN_EXPIRY_MINUTES = 30
 # POLICY: These paths are exempt because they are either:
 #   1. Pre-authentication (no CSRF token available):
 #      /auth/login, /auth/register
-#   2. Bootstrap-exempt (no CSRF token on first page load; CORS already
-#      prevents cross-origin response reads):
-#      /auth/refresh
-#   3. Public forms with alternative protection (honeypot + rate limiting):
+#   2. Public forms with alternative protection (honeypot + rate limiting):
 #      /contact/submit, /waitlist
-#   4. Email-link triggered (no session context):
+#   3. Email-link triggered (no session context):
 #      /auth/verify-email
-#   5. Documentation/schema endpoints (read-only):
+#   4. Documentation/schema endpoints (read-only):
 #      /docs, /openapi.json, /redoc, /auth/csrf
 #
-# NOTE: /auth/logout is NO LONGER exempt — it is cookie-authenticated and
+# NOTE: /auth/refresh is NOT exempt — it uses cookie-based auth and must
+# be CSRF-protected. The refresh endpoint accepts either a valid CSRF token
+# or the X-Requested-With custom header as a bootstrap-safe CSRF mitigation
+# (see CSRF_CUSTOM_HEADER_PATHS).
+#
+# NOTE: /auth/logout is NOT exempt — it is cookie-authenticated and
 # the user always has a valid CSRF token at logout time.
 # ---------------------------------------------------------------------------
 CSRF_EXEMPT_PATHS = {
     "/auth/login",
     "/auth/register",
-    "/auth/refresh",  # Bootstrap-exempt: CORS prevents cross-origin response reads
     "/auth/verify-email",
     "/auth/forgot-password",  # Sprint 572: Pre-auth, no CSRF token available
     "/auth/reset-password",  # Sprint 572: Pre-auth, token-authenticated via email link
@@ -310,6 +311,15 @@ CSRF_EXEMPT_PATHS = {
     "/docs",
     "/openapi.json",
     "/redoc",
+}
+
+# Paths that accept X-Requested-With as an alternative CSRF proof.
+# Used for cookie-authenticated endpoints that may be called before a CSRF
+# token is available (bootstrap). If a CSRF token IS provided, it is validated
+# normally; if absent, the X-Requested-With custom header serves as mitigation
+# (browsers never auto-attach custom headers on simple/form requests).
+CSRF_CUSTOM_HEADER_PATHS = {
+    "/auth/refresh",
 }
 
 # Methods that require CSRF validation
@@ -528,6 +538,39 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         # Recover the owning user from the refresh cookie instead.
         if expected_user_id is None and path == "/auth/logout":
             expected_user_id = self._extract_user_id_from_refresh_cookie(request)
+
+        # For refresh, recover user from cookie for binding if no Bearer token
+        if expected_user_id is None and path == "/auth/refresh":
+            expected_user_id = self._extract_user_id_from_refresh_cookie(request)
+
+        # Custom header paths: if no CSRF token is provided, accept
+        # X-Requested-With as an alternative CSRF proof (bootstrap case).
+        # If a CSRF token IS provided, validate it normally.
+        if path in CSRF_CUSTOM_HEADER_PATHS:
+            if csrf_token:
+                # Token provided — validate it
+                if not validate_csrf_token(csrf_token, expected_user_id=expected_user_id):
+                    log_secure_operation("csrf_blocked", f"Blocked {method} to {path} - invalid CSRF token")
+                    return Response(
+                        content='{"detail":"CSRF validation failed"}',
+                        status_code=403,
+                        media_type="application/json",
+                    )
+            else:
+                # No CSRF token — require X-Requested-With custom header
+                xrw = request.headers.get("X-Requested-With")
+                if xrw != "XMLHttpRequest":
+                    log_secure_operation(
+                        "csrf_blocked", f"Blocked {method} to {path} - missing CSRF token and X-Requested-With header"
+                    )
+                    return Response(
+                        content='{"detail":"CSRF validation failed"}',
+                        status_code=403,
+                        media_type="application/json",
+                    )
+            # Passed validation — proceed
+            final_response = await call_next(request)
+            return final_response
 
         if not validate_csrf_token(csrf_token, expected_user_id=expected_user_id):
             log_secure_operation("csrf_blocked", f"Blocked {method} to {path} - invalid/missing CSRF token")

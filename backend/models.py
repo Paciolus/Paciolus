@@ -448,16 +448,16 @@ class DiagnosticSummary(SoftDeleteMixin, Base):
     def get_category_totals_dict(self) -> dict[str, Any]:
         """Get category totals as a dictionary for ratio calculations."""
         return {
-            "total_assets": float(self.total_assets or 0),
-            "current_assets": float(self.current_assets or 0),
-            "inventory": float(self.inventory or 0),
-            "total_liabilities": float(self.total_liabilities or 0),
-            "current_liabilities": float(self.current_liabilities or 0),
-            "total_equity": float(self.total_equity or 0),
-            "total_revenue": float(self.total_revenue or 0),
-            "cost_of_goods_sold": float(self.cost_of_goods_sold or 0),
-            "total_expenses": float(self.total_expenses or 0),
-            "operating_expenses": float(self.operating_expenses or 0),
+            "total_assets": self.total_assets or Decimal(0),
+            "current_assets": self.current_assets or Decimal(0),
+            "inventory": self.inventory or Decimal(0),
+            "total_liabilities": self.total_liabilities or Decimal(0),
+            "current_liabilities": self.current_liabilities or Decimal(0),
+            "total_equity": self.total_equity or Decimal(0),
+            "total_revenue": self.total_revenue or Decimal(0),
+            "cost_of_goods_sold": self.cost_of_goods_sold or Decimal(0),
+            "total_expenses": self.total_expenses or Decimal(0),
+            "operating_expenses": self.operating_expenses or Decimal(0),
         }
 
     def get_all_ratios_dict(self) -> dict[str, Any]:

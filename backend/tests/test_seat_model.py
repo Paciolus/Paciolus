@@ -23,8 +23,8 @@ from billing.price_config import (
     get_max_self_serve_seats,
     get_seat_price_cents,
 )
-from billing.subscription_manager import _extract_seat_quantity
-from subscription_model import Subscription, SubscriptionStatus
+from billing.subscription_manager import _extract_billing_interval, _extract_seat_quantity
+from subscription_model import BillingInterval, Subscription, SubscriptionStatus
 
 # ---------------------------------------------------------------------------
 # Subscription seat columns
@@ -284,6 +284,52 @@ class TestCalculateAdditionalSeatsCost:
 # ---------------------------------------------------------------------------
 # Stripe seat quantity extraction
 # ---------------------------------------------------------------------------
+
+
+class TestExtractBillingInterval:
+    """Test extraction of billing interval from the base plan line item."""
+
+    def test_single_item_monthly(self):
+        """Single item (base plan only) → interval extracted correctly."""
+        items = [{"price": {"id": "price_base"}, "plan": {"interval": "month"}}]
+        assert _extract_billing_interval(items) == BillingInterval.MONTHLY
+
+    def test_single_item_annual(self):
+        """Single item (base plan only) → annual interval."""
+        items = [{"price": {"id": "price_base"}, "plan": {"interval": "year"}}]
+        assert _extract_billing_interval(items) == BillingInterval.ANNUAL
+
+    def test_two_items_base_first(self):
+        """Base plan first, seat add-on second → interval from base plan."""
+        from unittest.mock import patch
+
+        with patch("billing.price_config.get_all_seat_price_ids", return_value={"price_seat_addon"}):
+            items = [
+                {"price": {"id": "price_base"}, "plan": {"interval": "year"}},
+                {"price": {"id": "price_seat_addon"}, "plan": {"interval": "year"}, "quantity": 3},
+            ]
+            assert _extract_billing_interval(items) == BillingInterval.ANNUAL
+
+    def test_two_items_addon_first(self):
+        """Seat add-on first, base plan second → still uses base plan interval."""
+        from unittest.mock import patch
+
+        with patch("billing.price_config.get_all_seat_price_ids", return_value={"price_seat_addon"}):
+            items = [
+                {"price": {"id": "price_seat_addon"}, "plan": {"interval": "year"}, "quantity": 3},
+                {"price": {"id": "price_base"}, "plan": {"interval": "month"}},
+            ]
+            # Should read from the base plan (month), NOT the add-on
+            assert _extract_billing_interval(items) == BillingInterval.MONTHLY
+
+    def test_empty_items(self):
+        """No items → defaults to MONTHLY."""
+        assert _extract_billing_interval([]) == BillingInterval.MONTHLY
+
+    def test_missing_plan_defaults_monthly(self):
+        """Item with no plan key → defaults to MONTHLY."""
+        items = [{"price": {"id": "price_base"}}]
+        assert _extract_billing_interval(items) == BillingInterval.MONTHLY
 
 
 class TestExtractSeatQuantity:

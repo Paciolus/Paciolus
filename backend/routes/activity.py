@@ -172,9 +172,9 @@ def log_activity(
         filename_display=db_activity.filename_display,
         timestamp=db_activity.timestamp.isoformat(),
         record_count=db_activity.record_count,
-        total_debits=float(db_activity.total_debits),
-        total_credits=float(db_activity.total_credits),
-        materiality_threshold=float(db_activity.materiality_threshold),
+        total_debits=db_activity.total_debits,
+        total_credits=db_activity.total_credits,
+        materiality_threshold=db_activity.materiality_threshold,
         was_balanced=db_activity.was_balanced,
         anomaly_count=db_activity.anomaly_count,
         material_count=db_activity.material_count,
@@ -367,11 +367,7 @@ def get_dashboard_stats(
     tools_used = tool_stats.tools_used or 0 if tool_stats else 0
 
     # Use ToolActivity last timestamp if newer than ActivityLog
-    tool_last = (
-        db.query(func.max(ToolActivity.timestamp))
-        .filter(ToolActivity.user_id == current_user.id)
-        .scalar()
-    )
+    tool_last = db.query(func.max(ToolActivity.timestamp)).filter(ToolActivity.user_id == current_user.id).scalar()
     if tool_last and (not last_assessment_date or tool_last.isoformat() > last_assessment_date):
         last_assessment_date = tool_last.isoformat()
 

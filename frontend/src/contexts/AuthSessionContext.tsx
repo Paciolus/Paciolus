@@ -87,12 +87,14 @@ export function AuthSessionProvider({ children }: { children: ReactNode }): Reac
 
     const promise = (async () => {
       try {
+        const csrfToken = getCsrfToken()
         const response = await fetch(`${API_URL}/auth/refresh`, {
           method: 'POST',
           credentials: 'include',  // Sends HttpOnly refresh cookie automatically
           headers: {
             'Content-Type': 'application/json',
             'X-Requested-With': 'XMLHttpRequest',
+            ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
           },
           // No body — cookie is sent automatically by the browser
         })

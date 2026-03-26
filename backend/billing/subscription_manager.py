@@ -83,6 +83,29 @@ def _extract_additional_seats(stripe_subscription: dict) -> int:
     return 0
 
 
+def _extract_billing_interval(items: list[dict]) -> BillingInterval:
+    """Extract billing interval from the base plan line item.
+
+    Identifies the base plan item (non-seat-add-on) and reads its interval.
+    Uses the same seat-price-ID exclusion logic as _extract_seat_quantity
+    for consistency. Falls back to MONTHLY if no items are present.
+    """
+    from billing.price_config import get_all_seat_price_ids
+
+    seat_ids = get_all_seat_price_ids()
+    # Find the base plan item (not a seat add-on)
+    for item in items:
+        price_id = item.get("price", {}).get("id", "")
+        if price_id not in seat_ids:
+            stripe_interval = item.get("plan", {}).get("interval", "month")
+            return _INTERVAL_MAP.get(stripe_interval, BillingInterval.MONTHLY)
+    # Fallback for single-item subscriptions (backward compat)
+    if items:
+        stripe_interval = items[0].get("plan", {}).get("interval", "month")
+        return _INTERVAL_MAP.get(stripe_interval, BillingInterval.MONTHLY)
+    return BillingInterval.MONTHLY
+
+
 def sync_subscription_from_stripe(
     db: Session,
     user_id: int,
@@ -108,12 +131,9 @@ def sync_subscription_from_stripe(
         )
         status = SubscriptionStatus.PAUSED
 
-    # Extract billing interval from the first item
+    # Extract billing interval from the base plan item (not seat add-on)
     items = stripe_subscription.get("items", {}).get("data", [])
-    interval = BillingInterval.MONTHLY
-    if items:
-        stripe_interval = items[0].get("plan", {}).get("interval", "month")
-        interval = _INTERVAL_MAP.get(stripe_interval, BillingInterval.MONTHLY)
+    interval = _extract_billing_interval(items)
 
     # Extract seat counts (Self-Serve Checkout: dual line item support)
     seat_quantity = _extract_seat_quantity(stripe_subscription)
