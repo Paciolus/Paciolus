@@ -40,10 +40,9 @@ else
 fi
 
 # ── Count completed sprints ───────────────────────────────────────────
-# A completed sprint is a "### Sprint NNN" heading followed (within a few lines)
-# by "**Status:** COMPLETE"
+# A completed sprint heading ends with "— COMPLETE" (or has "**Status:** COMPLETE" on a following line)
 COMPLETED_SPRINTS=$(sed -n "${ACTIVE_START},${ACTIVE_END}p" "$TODO" \
-  | grep -c '\*\*Status:\*\* COMPLETE' 2>/dev/null || true)
+  | grep -cE '(— COMPLETE$|\*\*Status:\*\* COMPLETE)' 2>/dev/null || true)
 COMPLETED_SPRINTS=$(echo "$COMPLETED_SPRINTS" | tr -d '[:space:]')
 COMPLETED_SPRINTS=${COMPLETED_SPRINTS:-0}
 
@@ -65,7 +64,7 @@ fi
 # ── Identify sprint numbers to archive ────────────────────────────────
 # Collect sprint numbers from completed sprint sections
 SPRINT_NUMBERS=$(sed -n "${ACTIVE_START},${ACTIVE_END}p" "$TODO" \
-  | grep -B3 '^\*\*Status:\*\* COMPLETE' \
+  | grep -E '(— COMPLETE$|\*\*Status:\*\* COMPLETE)' \
   | grep -oE 'Sprint [0-9]+' \
   | grep -oE '[0-9]+' \
   | sort -n)
@@ -106,7 +105,7 @@ echo "$ACTIVE_CONTENT" | awk '
   }
   in_sprint && /^### |^---$/ {
     # Check if this block is COMPLETE
-    if (block ~ /\*\*Status:\*\* COMPLETE/) {
+    if (block ~ /(— COMPLETE|\*\*Status:\*\* COMPLETE)/) {
       printf "%s\n---\n\n", block
     }
     if (/^### Sprint [0-9]+/) {
@@ -121,7 +120,7 @@ echo "$ACTIVE_CONTENT" | awk '
     block = block $0 "\n"
   }
   END {
-    if (in_sprint && block ~ /\*\*Status:\*\* COMPLETE/) {
+    if (in_sprint && block ~ /(— COMPLETE|\*\*Status:\*\* COMPLETE)/) {
       printf "%s\n---\n\n", block
     }
   }
