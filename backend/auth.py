@@ -12,6 +12,7 @@ All libraries are open-source with permissive licenses.
 """
 
 import hashlib
+import re
 import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Optional
@@ -301,7 +302,8 @@ class UserCreate(BaseModel):
     """Schema for user registration."""
 
     model_config = ConfigDict(
-        json_schema_extra={"example": {"email": "cfo@example.com", "password": "SecurePassword123!"}}  # nosec B106 — schema example, not a real password
+        extra="forbid",
+        json_schema_extra={"example": {"email": "cfo@example.com", "password": "SecurePassword123!"}},  # nosec B106 — schema example, not a real password
     )
 
     email: EmailStr
@@ -339,10 +341,21 @@ class UserResponse(BaseModel):
 class UserProfileUpdate(BaseModel):
     """Schema for updating user profile (name and/or email)."""
 
-    model_config = ConfigDict(json_schema_extra={"example": {"name": "John Smith", "email": "john.smith@example.com"}})
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={"example": {"name": "John Smith", "email": "john.smith@example.com"}},
+    )
 
     name: Optional[str] = Field(None, max_length=200)
     email: Optional[EmailStr] = Field(None, max_length=254)
+
+    @field_validator("name")
+    @classmethod
+    def sanitize_name(cls, v: Optional[str]) -> Optional[str]:
+        """Strip HTML tags to prevent stored XSS (pentest finding)."""
+        if v is None:
+            return v
+        return re.sub(r"<[^>]+>", "", v).strip() or None
 
 
 class PasswordChange(BaseModel):

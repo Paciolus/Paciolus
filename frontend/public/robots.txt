@@ -1,7 +1,14 @@
 # Paciolus — https://paciolus.com
 User-agent: *
 Allow: /
+Allow: /login
+Allow: /register
+Allow: /pricing
+Allow: /trust
+Allow: /privacy
+Allow: /terms
 Disallow: /dashboard
+Disallow: /workspace
 Disallow: /tools
 Disallow: /settings
 Disallow: /engagements
@@ -9,5 +16,10 @@ Disallow: /history
 Disallow: /portfolio
 Disallow: /diagnostics
 Disallow: /status
+Disallow: /admin
+Disallow: /billing
+Disallow: /export
+Disallow: /forgot-password
+Disallow: /verify-email
 
 Sitemap: https://paciolus.com/sitemap.xml

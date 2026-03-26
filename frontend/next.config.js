@@ -44,11 +44,24 @@ const nextConfig = {
             key: 'X-Frame-Options',
             value: 'DENY',
           },
+          {
+            key: 'Cross-Origin-Opener-Policy',
+            value: 'same-origin',
+          },
           ...(isProd
             ? [
                 {
                   key: 'Strict-Transport-Security',
                   value: 'max-age=31536000; includeSubDomains; preload',
+                },
+              ]
+            : []),
+          // Prevent search engine indexing on preview/non-production deployments
+          ...(!isProd
+            ? [
+                {
+                  key: 'X-Robots-Tag',
+                  value: 'noindex, nofollow',
                 },
               ]
             : []),

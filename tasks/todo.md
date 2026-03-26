@@ -47,6 +47,22 @@
 > Sprints 572–578 archived to `tasks/archive/sprints-572-578-details.md`.
 > Sprints 579–585 archived to `tasks/archive/sprints-579-585-details.md`.
 
+### Sprint 588: Chrome QA Remediation (2026-03-26) — COMPLETE
+- [x] Remove `version` field from `/health` endpoint response — prevents server version disclosure (information leakage)
+- [x] Update `test_health_api.py` assertions to verify version is absent
+- [x] Add `Cross-Origin-Opener-Policy: same-origin` header to backend `SecurityHeadersMiddleware`
+- [x] Add `Cross-Origin-Opener-Policy: same-origin` header to frontend `next.config.js`
+- [x] Add `X-Robots-Tag: noindex, nofollow` header for non-production deployments in `next.config.js`
+- [x] Add `extra="forbid"` to `UserCreate` and `UserProfileUpdate` Pydantic models — reject unknown fields
+- [x] Add `sanitize_name` field validator on `UserProfileUpdate` — strip HTML tags to prevent stored XSS
+- [x] Add `\n` (newline) to CSV formula injection trigger set in `shared/helpers.py` (CWE-1236)
+- [x] Expand `robots.txt` — Allow public pages (login, register, pricing, trust, privacy, terms); Disallow authenticated routes (workspace, admin, billing, export, forgot-password, verify-email)
+- [x] Add `name` and `autoComplete` attributes to login page inputs (email + password)
+- [x] Add `name` and `autoComplete` attributes to register page inputs (email + password + confirmPassword)
+- [x] Fix CommandPalette SSR hydration mismatch — defer `localStorage` read to `useEffect` (React #418)
+- [x] Add Vercel `NEXT_PUBLIC_API_URL` env var action item to `ceo-actions.md`
+- **Review:** 8 security fixes, 2 SEO/crawl improvements, 3 UX form fixes, 1 SSR hydration fix, 1 CEO action. Files: 4 backend, 1 test, 5 frontend, 1 task doc.
+
 ### Sprint 587: Dependency Sentinel Remediation (2026-03-26) — COMPLETE
 - [x] Bump `cryptography` 46.0.5 → 46.0.6 (security patch, CVE-2026-26007 pin update)
 - [x] Bump `stripe` 14.4.1 → 15.0.0 (major — StripeObject no longer dict subclass; no impact on our usage)

@@ -55,6 +55,15 @@ These are live in public-facing documents and need to be filled in before launch
 
 ---
 
+## ⚪ Vercel Environment Variable — Security Review 2026-03-24
+
+> Pentest found the preview deployment at `paciolus-mvrbyh4ek-paciolus-projects.vercel.app` falls back to `http://localhost:8000` — all API calls fail. The `NEXT_PUBLIC_API_URL` env var is missing or scoped only to Production.
+
+- [ ] Vercel Dashboard → Project Settings → Environment Variables → `NEXT_PUBLIC_API_URL` = `https://paciolus-api.onrender.com` → enable for **Production**, **Preview**, and **Development** contexts
+- [ ] Redeploy latest commit to verify API calls work on preview URL
+
+---
+
 ## ⚪ One-Time Infrastructure Setup
 
 ### GitHub Branch Protection — Sprint 496 (Engineering Process Hardening)
