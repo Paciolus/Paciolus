@@ -422,6 +422,14 @@ export default function DashboardPage() {
               <div className="space-y-2">
                 {activity.map(item => {
                   const tool = TOOLS.find(t => t.key === item.tool_name)
+                  const anomalyCount = typeof item.summary?.anomaly_count === 'number' ? (item.summary.anomaly_count as number) : 0
+                  const rowLabel = item.record_count != null ? `${item.record_count.toLocaleString()} rows` : null
+
+                  // Build a unique primary title: filename first, then a generated summary
+                  const primaryTitle = item.filename
+                    || [rowLabel, anomalyCount > 0 ? `${anomalyCount} anomalies` : null, item.summary?.was_balanced === false ? 'Out of Balance' : item.summary?.was_balanced === true ? 'Balanced' : null].filter(Boolean).join(' · ')
+                    || 'Analysis complete'
+
                   return (
                     <div
                       key={item.id}
@@ -431,19 +439,13 @@ export default function DashboardPage() {
                         {getToolIcon(tool?.icon || 'cube')}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
+                        <p className="font-sans text-sm font-medium text-content-primary truncate">{primaryTitle}</p>
+                        <div className="flex items-center gap-2 mt-1">
                           <span className="text-xs font-sans font-medium px-2 py-0.5 rounded-full bg-oatmeal-100 text-content-secondary border border-oatmeal-200">
                             {item.tool_label}
                           </span>
-                          {item.filename && (
-                            <p className="font-sans text-sm text-content-primary truncate">{item.filename}</p>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-3 mt-1">
-                          {item.record_count != null && (
-                            <span className="text-xs font-sans text-content-tertiary">
-                              {item.record_count.toLocaleString()} rows
-                            </span>
+                          {item.filename && rowLabel && (
+                            <span className="text-xs font-sans text-content-tertiary">{rowLabel}</span>
                           )}
                           {item.summary?.was_balanced === true && (
                             <span className="text-xs font-sans font-medium px-1.5 py-0.5 rounded-full bg-sage-50 text-sage-700 border border-sage-200">Balanced</span>
@@ -451,9 +453,9 @@ export default function DashboardPage() {
                           {item.summary?.was_balanced === false && (
                             <span className="text-xs font-sans font-medium px-1.5 py-0.5 rounded-full bg-clay-50 text-clay-700 border border-clay-200">Out of Balance</span>
                           )}
-                          {typeof item.summary?.anomaly_count === 'number' && (item.summary.anomaly_count as number) > 0 && (
+                          {item.filename && anomalyCount > 0 && (
                             <span className="text-xs font-sans text-clay-600">
-                              {item.summary.anomaly_count as number} anomalies
+                              {anomalyCount} anomalies
                             </span>
                           )}
                         </div>

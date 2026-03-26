@@ -95,7 +95,7 @@ export function ToolNav({ currentTool, showBrandText }: ToolNavProps) {
         href={tool.href}
         onClick={() => setMoreOpen(false)}
         {...(isDropdown ? { role: 'menuitem' as const } : {})}
-        className={`text-sm font-sans text-oatmeal-400 hover:text-oatmeal-200 transition-colors ${isDropdown ? 'block px-3 py-1.5 rounded-lg hover:bg-obsidian-700/50' : ''}`}
+        className={`text-sm font-sans text-oatmeal-400 hover:text-oatmeal-200 transition-colors ${isDropdown ? 'block px-3 py-1.5 rounded-lg hover:bg-obsidian-700' : ''}`}
       >
         {tool.label}
       </Link>
@@ -155,7 +155,7 @@ export function ToolNav({ currentTool, showBrandText }: ToolNavProps) {
                 <BrandIcon name="chevron-down" className={`inline-block w-3 h-3 ml-1 transition-transform ${moreOpen ? 'rotate-180' : ''}`} />
               </button>
               {moreOpen && (
-                <div role="menu" aria-label="Additional tools" className="absolute top-full right-0 mt-2 w-48 bg-obsidian-800 border border-obsidian-600/40 rounded-xl shadow-xl py-2 space-y-0.5">
+                <div role="menu" aria-label="Additional tools" className="absolute top-full right-0 mt-2 w-48 bg-obsidian-800 border border-obsidian-600 rounded-xl shadow-xl py-2 space-y-0.5">
                   {overflowTools.map(tool => renderToolLink(tool, true))}
                 </div>
               )}
