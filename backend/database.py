@@ -138,6 +138,18 @@ def init_db() -> None:
         except Exception:
             logger.warning("Could not patch users table for organization_id column (SQLite)", exc_info=True)
 
+        # Sprint 590: Patch is_superadmin column (added after initial table creation)
+        try:
+            with engine.connect() as conn:
+                result = conn.execute(text("PRAGMA table_info(users)"))
+                columns = {row[1] for row in result.fetchall()}
+                if "is_superadmin" not in columns:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN is_superadmin BOOLEAN NOT NULL DEFAULT 0"))
+                    conn.commit()
+                    logger.info("Patched users table (SQLite): added is_superadmin column")
+        except Exception:
+            logger.warning("Could not patch users table for is_superadmin column (SQLite)", exc_info=True)
+
         # AUDIT-02 FIX 2: Patch refresh_tokens with session metadata columns
         # (last_used_at, user_agent, ip_address added by migration b6c7d8e9f0a1)
         try:
@@ -177,6 +189,22 @@ def init_db() -> None:
                     logger.info("Patched users table: added organization_id column")
         except Exception:
             logger.warning("Could not patch users table for organization_id column", exc_info=True)
+
+        # Sprint 590: Patch is_superadmin column
+        try:
+            with engine.connect() as conn:
+                result = conn.execute(
+                    text(
+                        "SELECT column_name FROM information_schema.columns "
+                        "WHERE table_name = 'users' AND column_name = 'is_superadmin'"
+                    )
+                )
+                if not result.fetchone():
+                    conn.execute(text("ALTER TABLE users ADD COLUMN is_superadmin BOOLEAN NOT NULL DEFAULT FALSE"))
+                    conn.commit()
+                    logger.info("Patched users table: added is_superadmin column")
+        except Exception:
+            logger.warning("Could not patch users table for is_superadmin column", exc_info=True)
 
         # AUDIT-02 FIX 2: Patch refresh_tokens with session metadata columns
         try:

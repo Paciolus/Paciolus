@@ -1,0 +1,31 @@
+{
+  "agent": "qa_warden",
+  "status": "green",
+  "backend": {
+    "passed": 7220,
+    "failed": 0,
+    "errors": 0,
+    "duration_s": 302.9,
+    "failing_tests": [],
+    "new_failures": [],
+    "resolved": [
+      "tests/test_email_verification.py::TestRegistrationWithDisposableEmail::test_allows_legitimate_email_registration",
+      "tests/test_pricing_launch_validation.py::TestWebhookReconciliation::test_webhook_dispatch_event_type[invoice.payment_failed]",
+      "tests/test_security.py::TestAccountLockoutIntegration::test_failed_login_returns_generic_401",
+      "tests/test_security.py::TestAccountLockoutIntegration::test_nonexistent_user_returns_identical_shape",
+      "tests/test_security.py::TestAccountLockoutIntegration::test_locked_user_returns_401_not_429",
+      "tests/test_timestamp_defaults.py::TestDBGeneratedTimestamps::test_user_timestamps",
+      "tests/test_timestamp_defaults.py::TestDBGeneratedTimestamps::test_activity_log_timestamp",
+      "tests/test_timestamp_defaults.py::TestDBGeneratedTimestamps::test_client_timestamps",
+      "tests/test_timestamp_defaults.py::TestDBGeneratedTimestamps::test_engagement_timestamps",
+      "tests/test_timestamp_defaults.py::TestDBGeneratedTimestamps::test_tool_run_timestamp",
+      "tests/test_timestamp_defaults.py::TestSQLiteCurrentTimestampIsUTC::test_server_default_timestamp_is_utc"
+    ]
+  },
+  "frontend": {
+    "passed": 1745,
+    "failed": 0,
+    "duration_s": 43.7
+  },
+  "summary": "Backend: 7220 passed / 0 failed in 302.9s. Frontend: 1745 passed / 0 failed in 43.7s. 11 failures remediated."
+}

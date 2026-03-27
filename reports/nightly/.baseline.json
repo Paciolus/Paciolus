@@ -1,0 +1,71 @@
+{
+  "qa_warden": {
+    "date": "2026-03-27",
+    "backend": {
+      "passed": 7220,
+      "failed": 0,
+      "errors": 0,
+      "duration_s": 302.9,
+      "failing_tests": [],
+      "new_failures": [],
+      "resolved": [
+        "tests/test_email_verification.py::TestRegistrationWithDisposableEmail::test_allows_legitimate_email_registration",
+        "tests/test_pricing_launch_validation.py::TestWebhookReconciliation::test_webhook_dispatch_event_type[invoice.payment_failed]",
+        "tests/test_security.py::TestAccountLockoutIntegration::test_failed_login_returns_generic_401",
+        "tests/test_security.py::TestAccountLockoutIntegration::test_locked_user_returns_401_not_429",
+        "tests/test_security.py::TestAccountLockoutIntegration::test_nonexistent_user_returns_identical_shape",
+        "tests/test_timestamp_defaults.py::TestDBGeneratedTimestamps::test_activity_log_timestamp",
+        "tests/test_timestamp_defaults.py::TestDBGeneratedTimestamps::test_client_timestamps",
+        "tests/test_timestamp_defaults.py::TestDBGeneratedTimestamps::test_engagement_timestamps",
+        "tests/test_timestamp_defaults.py::TestDBGeneratedTimestamps::test_tool_run_timestamp",
+        "tests/test_timestamp_defaults.py::TestDBGeneratedTimestamps::test_user_timestamps",
+        "tests/test_timestamp_defaults.py::TestSQLiteCurrentTimestampIsUTC::test_server_default_timestamp_is_utc"
+      ]
+    },
+    "frontend": {
+      "passed": 1745,
+      "failed": 0,
+      "duration_s": 43.7
+    }
+  },
+  "report_auditor": {
+    "date": "2026-03-27",
+    "bug_tracker": {
+      "BUG-001": {
+        "description": "Suggested procedures rotation bug — procedures repeat rather than rotate across reports",
+        "status": "CLOSED",
+        "changed_today": true
+      },
+      "BUG-002": {
+        "description": "Hardcoded risk tier labels — labels do not reflect dynamic risk scoring",
+        "status": "CLOSED",
+        "changed_today": true
+      },
+      "BUG-003": {
+        "description": "PDF cell overflow — long text overflows table cells in generated PDFs",
+        "status": "CLOSED",
+        "changed_today": true
+      },
+      "BUG-004": {
+        "description": "Orphaned ASC 250-10 references — appear in reports where not applicable",
+        "status": "CLOSED",
+        "changed_today": true
+      },
+      "BUG-005": {
+        "description": "PP&E ampersand escaping — & renders as &amp; in PDF output",
+        "status": "CLOSED",
+        "changed_today": true
+      },
+      "BUG-006": {
+        "description": "Identical data quality scores — multiple reports return same score regardless of input",
+        "status": "CLOSED",
+        "changed_today": true
+      },
+      "BUG-007": {
+        "description": "Empty drill-down stubs — drill-down sections render with no content",
+        "status": "CLOSED",
+        "changed_today": true
+      }
+    }
+  }
+}

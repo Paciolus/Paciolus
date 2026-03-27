@@ -1113,7 +1113,8 @@ class TestWebhookReconciliation:
             "invoice.paid",
         ],
     )
-    def test_webhook_dispatch_event_type(self, event_type):
+    @patch("billing.dunning_engine.handle_payment_failed")
+    def test_webhook_dispatch_event_type(self, _mock_dunning, event_type):
         from billing.webhook_handler import process_webhook_event
 
         mock_db = MagicMock()

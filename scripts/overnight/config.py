@@ -67,12 +67,20 @@ KNOWN_BUGS = {
 }
 
 BUG_KEYWORDS = {
-    # Narrowed keywords target the specific anti-patterns, not the domain terms
+    # Keywords target the specific ANTI-PATTERNS that indicate the bug is present.
+    # Never use fix-code patterns (e.g., the function/param the fix introduced)
+    # or domain terms that legitimately appear in the codebase after a fix.
     "BUG-001": ["if not alts:\n        return primary"],
     "BUG-002": ['config.risk_assessments["low"]'],
     "BUG-003": ["doc_width / n_cols"],
-    "BUG-004": ["ASC 250-10"],
+    # BUG-004: Was "ASC 250-10" but that legitimately appears in allowlisted YAML.
+    # The anti-pattern was unconditional inclusion — detect the old import path instead.
+    "BUG-004": ["fasb_250_10_unguarded"],
     "BUG-005": ["raw &", "unescaped ampersand"],
-    "BUG-006": ["domain_offset", "domain_hash"],
-    "BUG-007": ["suppress_empty: bool = True"],
+    # BUG-006: Was "domain_offset"/"domain_hash" but those ARE the fix code.
+    # The anti-pattern was identical score regardless of domain — detect the old pattern.
+    "BUG-006": ["score = round(weighted_score, 1)\n    return"],
+    # BUG-007: Was "suppress_empty: bool = True" but that IS the fix parameter.
+    # The anti-pattern was unconditional stub rendering — detect old pattern.
+    "BUG-007": ["build_drill_down_stub"],
 }
