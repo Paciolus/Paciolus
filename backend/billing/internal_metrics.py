@@ -368,13 +368,14 @@ def _compute_dunning_metrics(db: Session, since: datetime, until: datetime) -> d
             at_risk_mrr += _subscription_monthly_revenue(sub)
     at_risk_mrr = round(at_risk_mrr, 2)
 
-    # Recovered in 30d
+    # Recovered in 30d — use <= for upper bound since `until` is "now"
+    # and episodes resolved in the same tick must be included.
     recovered = (
         db.query(DunningEpisode)
         .filter(
             DunningEpisode.resolution == DunningResolution.PAID,
             DunningEpisode.resolved_at >= since,
-            DunningEpisode.resolved_at < until,
+            DunningEpisode.resolved_at <= until,
         )
         .all()
     )
@@ -392,7 +393,7 @@ def _compute_dunning_metrics(db: Session, since: datetime, until: datetime) -> d
         .filter(
             DunningEpisode.resolution == DunningResolution.CANCELED,
             DunningEpisode.resolved_at >= since,
-            DunningEpisode.resolved_at < until,
+            DunningEpisode.resolved_at <= until,
         )
         .all()
     )
