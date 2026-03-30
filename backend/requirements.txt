@@ -1,4 +1,4 @@
-fastapi==0.135.1
+fastapi==0.135.2
 uvicorn[standard]==0.42.0
 pydantic[email]==2.12.5
 pandas==3.0.1
@@ -32,7 +32,7 @@ limits>=5.8.0
 redis>=5.0.0
 
 # APM / Error Tracking (Sprint 275)
-sentry-sdk[fastapi]==2.55.0
+sentry-sdk[fastapi]==2.56.0
 
 # ODS (OpenDocument Spreadsheet) support (Sprint 432)
 odfpy>=1.4.1
