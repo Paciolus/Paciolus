@@ -261,16 +261,31 @@ def _format_dependency_section(data: dict | None) -> str:
         for p in security:
             lines.append(f"- **{p['package']}**: {p['current']} \u2192 {p['latest']} ({p['severity']})")
 
+    # Deferred packages — shown for transparency but don't affect status
+    deferred = data.get("deferred", [])
+    if deferred:
+        lines.append(f"\n**Deferred ({len(deferred)}):** monitored, not affecting status")
+        for p in deferred:
+            reason = p.get("deferral_reason", "")
+            review = p.get("deferral_review_by", "")
+            review_note = f" (review by {review})" if review else ""
+            lines.append(
+                f"- ~{p['package']}~ {p['current']} \u2192 {p['latest']} — {reason}{review_note}"
+            )
+
     # Show ALL outdated packages (not just top 5) so nothing is silently hidden.
     # Notes are only generated for top-5 by the sentinel (API cost control).
     all_pkgs = data.get("backend_outdated", []) + data.get("frontend_outdated", [])
+    # Exclude deferred packages from the main table (they're shown above)
+    deferred_names = {p["package"] for p in deferred}
+    actionable_pkgs = [p for p in all_pkgs if p["package"] not in deferred_names]
     note_map = {p["package"]: p.get("note", "") for p in data.get("top5_updates", [])}
-    if all_pkgs:
+    if actionable_pkgs:
         severity_order = {"major": 0, "minor": 1, "patch": 2}
-        all_pkgs.sort(key=lambda p: severity_order.get(p.get("severity", ""), 3))
+        actionable_pkgs.sort(key=lambda p: severity_order.get(p.get("severity", ""), 3))
         lines.append(f"\n| Package | Current | Latest | Severity | Note |")
         lines.append(f"|---------|---------|--------|----------|------|")
-        for p in all_pkgs:
+        for p in actionable_pkgs:
             note = note_map.get(p["package"], "")[:60]
             lines.append(
                 f"| {p['package']} | {p['current']} | {p['latest']} | {p['severity']} | {note} |"
