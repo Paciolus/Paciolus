@@ -288,7 +288,7 @@ export function ToolSettingsDrawer({ toolKey, open, onClose }: ToolSettingsDrawe
               <button
                 onClick={handleSave}
                 disabled={isSaving}
-                className="w-full px-4 py-2.5 bg-sage-600 border border-sage-600 rounded-lg text-white font-sans text-sm font-medium hover:bg-sage-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full px-4 py-2.5 bg-sage-600 border border-sage-600 rounded-lg text-oatmeal-50 font-sans text-sm font-medium hover:bg-sage-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSaving ? 'Saving...' : saveSuccess ? 'Saved' : 'Save Settings'}
               </button>

@@ -234,7 +234,7 @@ export default function StatisticalSamplingPage() {
                         <div className="flex items-center gap-3">
                           <button
                             onClick={handleSwitchToEvaluate}
-                            className="px-4 py-2 bg-sage-600 border border-sage-600 rounded-lg text-white font-sans text-sm hover:bg-sage-700 transition-colors"
+                            className="px-4 py-2 bg-sage-600 border border-sage-600 rounded-lg text-oatmeal-50 font-sans text-sm hover:bg-sage-700 transition-colors"
                           >
                             Proceed to Evaluation
                           </button>

@@ -208,7 +208,7 @@ export default function ARAgingPage() {
                   <div className="text-center mb-6">
                     <button
                       onClick={handleRunTests}
-                      className="px-8 py-3 bg-sage-600 border border-sage-600 rounded-xl text-white font-sans text-sm hover:bg-sage-700 transition-colors"
+                      className="px-8 py-3 bg-sage-600 border border-sage-600 rounded-xl text-oatmeal-50 font-sans text-sm hover:bg-sage-700 transition-colors"
                     >
                       Run AR Aging Analysis{slFile ? ' (Full Mode)' : ' (TB-Only)'}
                     </button>
@@ -269,7 +269,7 @@ export default function ARAgingPage() {
                     <button
                       onClick={() => exportBody && handleExportMemo(exportBody)}
                       disabled={exporting !== null || !result}
-                      className="px-4 py-2 bg-sage-600 border border-sage-600 rounded-lg text-white font-sans text-sm hover:bg-sage-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-4 py-2 bg-sage-600 border border-sage-600 rounded-lg text-oatmeal-50 font-sans text-sm hover:bg-sage-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {exporting === 'pdf' ? 'Generating...' : 'Download Testing Memo'}
                     </button>

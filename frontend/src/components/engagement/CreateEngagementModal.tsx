@@ -323,7 +323,7 @@ export function CreateEngagementModal({
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="px-5 py-2.5 bg-sage-600 hover:bg-sage-700 disabled:bg-sage-500/50 text-white font-sans font-bold rounded-xl transition-colors flex items-center gap-2"
+                  className="px-5 py-2.5 bg-sage-600 hover:bg-sage-700 disabled:bg-sage-500/50 text-oatmeal-50 font-sans font-bold rounded-xl transition-colors flex items-center gap-2"
                 >
                   {isLoading ? (
                     <>

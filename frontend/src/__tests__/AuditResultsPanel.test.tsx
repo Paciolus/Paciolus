@@ -8,6 +8,8 @@
 import userEvent from '@testing-library/user-event'
 import { AuditResultsPanel } from '@/components/trialBalance/AuditResultsPanel'
 import type { AuditResult } from '@/types/diagnostic'
+import type { LeadSheetGrouping } from '@/types/leadSheet'
+import type { Analytics } from '@/types/mapping'
 import { render, screen } from '@/test-utils'
 
 // Mock MappingContext
@@ -132,12 +134,12 @@ const resultWithAnalytics: AuditResult = {
     variances: {},
     has_previous_data: false,
     category_totals: { total_assets: 1000000, current_assets: 500000, total_liabilities: 400000, total_equity: 600000, total_revenue: 2000000 },
-  } as any,
+  } as unknown as Analytics,
 }
 
 const resultWithLeadSheet: AuditResult = {
   ...baseResult,
-  lead_sheet_grouping: { A: [], B: [], C: [] } as any,
+  lead_sheet_grouping: { summaries: [], unmapped_count: 0, total_accounts: 0 } satisfies LeadSheetGrouping,
 }
 
 const resultWithClassification: AuditResult = {

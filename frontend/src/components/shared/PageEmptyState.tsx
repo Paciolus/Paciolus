@@ -54,7 +54,7 @@ export function PageEmptyState({ icon, title, description, action, trustBadge }:
           whileHover={{ y: -2 }}
           whileTap={{ y: 0, scale: 0.98 }}
           onClick={action.onClick}
-          className="inline-flex items-center gap-2 px-6 py-3.5 bg-sage-600 hover:bg-sage-700 text-white font-sans font-bold rounded-xl transition-colors shadow-theme-card"
+          className="inline-flex items-center gap-2 px-6 py-3.5 bg-sage-600 hover:bg-sage-700 text-oatmeal-50 font-sans font-bold rounded-xl transition-colors shadow-theme-card"
         >
           {action.icon || (
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

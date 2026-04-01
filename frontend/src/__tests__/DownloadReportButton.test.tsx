@@ -6,6 +6,7 @@
  */
 import React from 'react'
 import { DownloadReportButton } from '@/components/export/DownloadReportButton'
+import type { AuditResult } from '@/types/diagnostic'
 import { render, screen, fireEvent, waitFor } from '@/test-utils'
 
 jest.mock('framer-motion', () => {
@@ -56,7 +57,7 @@ const defaultProps = {
     total_debits: 100000,
     total_credits: 100000,
     difference: 0,
-  } as any,
+  } as unknown as AuditResult,
   filename: 'Test_Report.pdf',
   token: 'test-token',
 }

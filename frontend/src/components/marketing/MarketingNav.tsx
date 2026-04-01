@@ -114,7 +114,7 @@ export function MarketingNav() {
                   </Link>
                   <Link
                     href="/register"
-                    className="px-4 py-1.5 text-sm font-sans font-medium text-white rounded-lg bg-sage-600/70 backdrop-blur-md border border-sage-400/20 shadow-lg shadow-sage-900/30 hover:bg-sage-500/80 hover:border-sage-400/30 hover:shadow-xl hover:shadow-sage-900/40 transition-all duration-200"
+                    className="px-4 py-1.5 text-sm font-sans font-medium text-oatmeal-50 rounded-lg bg-sage-600/70 backdrop-blur-md border border-sage-400/20 shadow-lg shadow-sage-900/30 hover:bg-sage-500/80 hover:border-sage-400/30 hover:shadow-xl hover:shadow-sage-900/40 transition-all duration-200"
                     style={{ boxShadow: 'inset 0 1px 0 0 rgba(255,255,255,0.1), 0 4px 12px -2px rgba(74,124,89,0.3)' }}
                   >
                     Get Started
@@ -195,7 +195,7 @@ export function MarketingNav() {
                     <Link
                       href="/register"
                       onClick={closeMobile}
-                      className="block text-center px-3 py-2.5 text-sm font-sans font-medium text-white rounded-lg bg-sage-600/70 backdrop-blur-md border border-sage-400/20 shadow-lg shadow-sage-900/30 hover:bg-sage-500/80 hover:border-sage-400/30 transition-all duration-200"
+                      className="block text-center px-3 py-2.5 text-sm font-sans font-medium text-oatmeal-50 rounded-lg bg-sage-600/70 backdrop-blur-md border border-sage-400/20 shadow-lg shadow-sage-900/30 hover:bg-sage-500/80 hover:border-sage-400/30 transition-all duration-200"
                       style={{ boxShadow: 'inset 0 1px 0 0 rgba(255,255,255,0.1), 0 4px 12px -2px rgba(74,124,89,0.3)' }}
                     >
                       Start Free Trial

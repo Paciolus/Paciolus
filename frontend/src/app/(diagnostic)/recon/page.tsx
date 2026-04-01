@@ -25,7 +25,7 @@ export default function ReconPage() {
             <div className="min-h-screen bg-surface-page text-content-primary p-8 flex flex-col items-center justify-center">
                 <h2 className="text-xl font-serif font-bold text-content-secondary mb-4">No Analysis Data Found</h2>
                 <p className="mb-6 font-sans text-content-secondary">Please run a Flux Analysis first to generate reconciliation scores.</p>
-                <Link href="/flux" className="bg-sage-600 hover:bg-sage-700 text-white px-6 py-3 rounded-xl font-sans font-bold transition-colors">
+                <Link href="/flux" className="bg-sage-600 hover:bg-sage-700 text-oatmeal-50 px-6 py-3 rounded-xl font-sans font-bold transition-colors">
                     Go to Flux Analysis
                 </Link>
             </div>

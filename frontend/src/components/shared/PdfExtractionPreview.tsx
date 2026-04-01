@@ -223,7 +223,7 @@ export function PdfExtractionPreview({
                   disabled={!passesGate}
                   className={`px-4 py-2 text-sm font-sans rounded-lg transition-colors ${
                     passesGate
-                      ? 'bg-sage-500 text-white hover:bg-sage-600'
+                      ? 'bg-sage-500 text-oatmeal-50 hover:bg-sage-600'
                       : 'bg-surface-card-secondary text-content-tertiary cursor-not-allowed'
                   }`}
                 >

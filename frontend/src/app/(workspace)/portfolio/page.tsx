@@ -3,10 +3,10 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useWorkspaceContext } from '@/contexts/WorkspaceContext';
-import { ClientCard, CreateClientModal, EditClientModal } from '@/components/portfolio';
 import { CreateEngagementModal } from '@/components/engagement';
-import type { Client, ClientCreateInput, ClientWithSummary, ClientEngagementSummary } from '@/types/client';
+import { ClientCard, CreateClientModal, EditClientModal } from '@/components/portfolio';
 import { useClients } from '@/hooks/useClients';
+import type { Client, ClientCreateInput, ClientWithSummary, ClientEngagementSummary } from '@/types/client';
 import { staggerContainerTight, fadeUp, fadeScale } from '@/lib/motion';
 
 /**
@@ -149,7 +149,7 @@ export default function PortfolioPage() {
             whileHover="hover"
             whileTap="tap"
             onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center gap-2 px-5 py-3 bg-sage-600 hover:bg-sage-700 text-white font-sans font-bold rounded-xl transition-colors shadow-theme-card"
+            className="inline-flex items-center gap-2 px-5 py-3 bg-sage-600 hover:bg-sage-700 text-oatmeal-50 font-sans font-bold rounded-xl transition-colors shadow-theme-card"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -240,7 +240,7 @@ export default function PortfolioPage() {
               whileHover="hover"
               whileTap="tap"
               onClick={() => setShowCreateModal(true)}
-              className="inline-flex items-center gap-2 px-6 py-3.5 bg-sage-600 hover:bg-sage-700 text-white font-sans font-bold rounded-xl transition-colors shadow-theme-card"
+              className="inline-flex items-center gap-2 px-6 py-3.5 bg-sage-600 hover:bg-sage-700 text-oatmeal-50 font-sans font-bold rounded-xl transition-colors shadow-theme-card"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -360,7 +360,7 @@ export default function PortfolioPage() {
               <button
                 onClick={confirmDelete}
                 disabled={isDeleting}
-                className="flex-1 px-4 py-2.5 bg-clay-600 hover:bg-clay-700 disabled:bg-clay-600/50 text-white font-sans font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-2.5 bg-clay-600 hover:bg-clay-700 disabled:bg-clay-600/50 text-oatmeal-50 font-sans font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
               >
                 {isDeleting ? (
                   <>

@@ -205,7 +205,7 @@ export default function TeamPage() {
               </p>
               <Link
                 href="/pricing"
-                className="inline-block px-6 py-3 bg-sage-600 text-white rounded-lg font-sans font-medium hover:bg-sage-700 transition-colors"
+                className="inline-block px-6 py-3 bg-sage-600 text-oatmeal-50 rounded-lg font-sans font-medium hover:bg-sage-700 transition-colors"
               >
                 View Plans
               </Link>
@@ -296,7 +296,7 @@ export default function TeamPage() {
                     <button
                       onClick={handleInvite}
                       disabled={actionLoading || !inviteEmail.trim()}
-                      className="px-4 py-2 bg-sage-600 text-white rounded-lg font-sans text-sm font-medium hover:bg-sage-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-4 py-2 bg-sage-600 text-oatmeal-50 rounded-lg font-sans text-sm font-medium hover:bg-sage-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {actionLoading ? 'Sending...' : 'Send Invite'}
                     </button>

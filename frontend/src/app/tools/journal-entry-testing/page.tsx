@@ -180,7 +180,7 @@ export default function JournalEntryTestingPage() {
                 <button
                   onClick={() => jeExportBody && handleExportMemo({ ...jeExportBody, client_name: null, period_tested: null, prepared_by: null, reviewed_by: null, workpaper_date: null })}
                   disabled={exporting !== null || !result}
-                  className="px-4 py-2 bg-sage-600 text-white rounded-xl font-sans text-sm hover:bg-sage-700 transition-colors disabled:opacity-50"
+                  className="px-4 py-2 bg-sage-600 text-oatmeal-50 rounded-xl font-sans text-sm hover:bg-sage-700 transition-colors disabled:opacity-50"
                 >
                   {exporting === 'pdf' ? 'Generating...' : 'Download Testing Memo'}
                 </button>

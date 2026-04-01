@@ -29,10 +29,10 @@ export function SkeletonPage({
       <div className={`pt-24 pb-16 px-6 ${maxWidth} mx-auto`}>
         <div className="animate-pulse mb-8">
           <div className={`h-8 ${titleWidth} bg-oatmeal-200/80 rounded-lg mb-3 overflow-hidden relative`}>
-            <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent" style={{ animation: 'shimmer 1.5s infinite' }} />
+            <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-oatmeal-50/20 to-transparent" style={{ animation: 'shimmer 1.5s infinite' }} />
           </div>
           <div className={`h-4 ${subtitleWidth} bg-oatmeal-200/50 rounded-sm overflow-hidden relative`}>
-            <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent" style={{ animation: 'shimmer 1.5s infinite 0.15s' }} />
+            <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-oatmeal-50/20 to-transparent" style={{ animation: 'shimmer 1.5s infinite 0.15s' }} />
           </div>
         </div>
         {children}

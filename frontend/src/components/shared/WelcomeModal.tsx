@@ -192,7 +192,7 @@ export function WelcomeModal({ forceShow = false }: WelcomeModalProps) {
               </button>
               <button
                 onClick={handleNext}
-                className="flex-1 py-3 bg-sage-600 text-white rounded-xl font-sans text-sm font-bold hover:bg-sage-700 transition-colors"
+                className="flex-1 py-3 bg-sage-600 text-oatmeal-50 rounded-xl font-sans text-sm font-bold hover:bg-sage-700 transition-colors"
               >
                 {currentStep === STEPS.length - 1 ? step.cta : 'Next'}
               </button>

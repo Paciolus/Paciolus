@@ -279,7 +279,7 @@ export function RollingWindowSection({
               className={`
                 px-4 py-2 rounded-lg text-sm font-medium transition-all
                 ${selectedWindow === option.value
-                  ? 'bg-sage-600 text-white'
+                  ? 'bg-sage-600 text-oatmeal-50'
                   : 'bg-oatmeal-100 text-content-secondary hover:bg-oatmeal-200'
                 }
               `}

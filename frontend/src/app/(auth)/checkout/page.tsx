@@ -338,7 +338,7 @@ function CheckoutContent() {
         <button
           onClick={handleCheckout}
           disabled={isLoading || (requiresDpa && !dpaAccepted)}
-          className="w-full py-3 bg-sage-600 text-white rounded-lg font-sans font-medium hover:bg-sage-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full py-3 bg-sage-600 text-oatmeal-50 rounded-lg font-sans font-medium hover:bg-sage-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isLoading ? 'Redirecting to payment...' : 'Continue to Checkout'}
         </button>

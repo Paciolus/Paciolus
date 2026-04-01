@@ -60,7 +60,7 @@ function ResetPasswordContent() {
         </p>
         <Link
           href="/forgot-password"
-          className="inline-block py-3 px-8 rounded-xl font-sans font-bold bg-sage-700 text-white hover:bg-sage-600 transition-colors"
+          className="inline-block py-3 px-8 rounded-xl font-sans font-bold bg-sage-700 text-oatmeal-50 hover:bg-sage-600 transition-colors"
         >
           Request a New Link
         </Link>
@@ -134,7 +134,7 @@ function ResetPasswordContent() {
         </p>
         <button
           onClick={() => router.push('/login')}
-          className="w-full py-3 rounded-xl font-sans font-bold bg-sage-700 text-white hover:bg-sage-600 transition-colors"
+          className="w-full py-3 rounded-xl font-sans font-bold bg-sage-700 text-oatmeal-50 hover:bg-sage-600 transition-colors"
         >
           Go to Login
         </button>
@@ -162,7 +162,7 @@ function ResetPasswordContent() {
         <p className="text-oatmeal-400 font-sans mb-8">{errorMessage}</p>
         <Link
           href="/forgot-password"
-          className="inline-block w-full py-3 rounded-xl font-sans font-bold bg-sage-700 text-white hover:bg-sage-600 transition-colors"
+          className="inline-block w-full py-3 rounded-xl font-sans font-bold bg-sage-700 text-oatmeal-50 hover:bg-sage-600 transition-colors"
         >
           Request a New Link
         </Link>
@@ -235,7 +235,7 @@ function ResetPasswordContent() {
           className={`w-full py-3 rounded-xl font-sans font-bold transition-all ${
             isSubmitting
               ? 'bg-obsidian-600 text-oatmeal-500 cursor-not-allowed'
-              : 'bg-sage-700 text-white hover:bg-sage-600'
+              : 'bg-sage-700 text-oatmeal-50 hover:bg-sage-600'
           }`}
         >
           {isSubmitting ? 'Resetting...' : 'Reset Password'}

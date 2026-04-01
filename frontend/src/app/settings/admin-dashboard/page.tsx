@@ -198,7 +198,7 @@ export default function AdminDashboardPage() {
                 />
                 <button
                   onClick={handleApplyFilters}
-                  className="px-4 py-2 bg-sage-600 text-white rounded-lg font-sans text-sm font-medium hover:bg-sage-700 transition-colors"
+                  className="px-4 py-2 bg-sage-600 text-oatmeal-50 rounded-lg font-sans text-sm font-medium hover:bg-sage-700 transition-colors"
                 >
                   Apply
                 </button>

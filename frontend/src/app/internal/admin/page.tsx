@@ -121,7 +121,7 @@ export default function InternalAdminPage() {
                 </div>
                 <button
                   onClick={() => { setPage(0); loadCustomers() }}
-                  className="px-4 py-2 bg-sage-600 text-white rounded-lg font-sans font-medium text-sm hover:bg-sage-700 transition-colors"
+                  className="px-4 py-2 bg-sage-600 text-oatmeal-50 rounded-lg font-sans font-medium text-sm hover:bg-sage-700 transition-colors"
                 >
                   Search
                 </button>

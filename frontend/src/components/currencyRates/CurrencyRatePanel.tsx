@@ -223,7 +223,7 @@ export function CurrencyRatePanel() {
               <button
                 type="submit"
                 disabled={!fromCurrency || !toCurrency || !manualRate}
-                className="px-3 py-1.5 text-xs font-medium rounded-sm bg-sage-600 text-white hover:bg-sage-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="px-3 py-1.5 text-xs font-medium rounded-sm bg-sage-600 text-oatmeal-50 hover:bg-sage-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Add Rate
               </button>

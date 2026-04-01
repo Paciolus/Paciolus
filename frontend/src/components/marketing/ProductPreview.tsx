@@ -283,7 +283,7 @@ export function ProductPreview() {
             </p>
             <Link
               href="/register"
-              className="px-4 py-2 bg-sage-600 text-white text-sm font-sans font-medium rounded-lg hover:bg-sage-500 transition-colors shadow-md shadow-sage-600/20"
+              className="px-4 py-2 bg-sage-600 text-oatmeal-50 text-sm font-sans font-medium rounded-lg hover:bg-sage-500 transition-colors shadow-md shadow-sage-600/20"
             >
               Try it yourself
             </Link>

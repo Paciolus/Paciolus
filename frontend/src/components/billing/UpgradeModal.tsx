@@ -115,7 +115,7 @@ export function UpgradeModal({ currentTier, isOpen, onClose }: UpgradeModalProps
             onClick={() => setInterval('monthly')}
             className={`px-4 py-2 rounded-lg text-sm font-sans font-medium transition-colors ${
               interval === 'monthly'
-                ? 'bg-sage-600 text-white'
+                ? 'bg-sage-600 text-oatmeal-50'
                 : 'bg-surface-input text-content-secondary hover:text-content-primary'
             }`}
           >
@@ -125,7 +125,7 @@ export function UpgradeModal({ currentTier, isOpen, onClose }: UpgradeModalProps
             onClick={() => setInterval('annual')}
             className={`px-4 py-2 rounded-lg text-sm font-sans font-medium transition-colors ${
               interval === 'annual'
-                ? 'bg-sage-600 text-white'
+                ? 'bg-sage-600 text-oatmeal-50'
                 : 'bg-surface-input text-content-secondary hover:text-content-primary'
             }`}
           >
@@ -182,7 +182,7 @@ export function UpgradeModal({ currentTier, isOpen, onClose }: UpgradeModalProps
                     ) : (
                       <Link
                         href={`/checkout?plan=${tier.id}&interval=${interval}${tier.hasSeats && additionalSeats > 0 ? `&seats=${additionalSeats}` : ''}`}
-                        className="inline-block px-4 py-2 bg-sage-600 text-white rounded-lg text-sm font-sans font-medium hover:bg-sage-700 transition-colors"
+                        className="inline-block px-4 py-2 bg-sage-600 text-oatmeal-50 rounded-lg text-sm font-sans font-medium hover:bg-sage-700 transition-colors"
                         onClick={onClose}
                       >
                         {isTrialEligible ? 'Start Free Trial' : 'Upgrade'}

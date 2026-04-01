@@ -2,6 +2,7 @@
  * Insight Microcopy Pure Function Tests — Sprint 408: Phase LVII
  */
 
+import type { FollowUpSummary, ToolRunTrend } from '@/types/engagement'
 import { deriveInsightMessages, type InsightInputs } from '@/lib/insightMicrocopy'
 
 function makeInputs(overrides: Partial<InsightInputs> = {}): InsightInputs {
@@ -49,7 +50,8 @@ describe('deriveInsightMessages', () => {
         total_count: 5,
         by_disposition: { not_reviewed: 3, investigated_no_issue: 2 },
         by_severity: { high: 1, medium: 2, low: 2 },
-      } as any,
+        by_tool_source: {},
+      } satisfies FollowUpSummary,
     }))
     const attention = messages.filter(m => m.tone === 'attention')
     expect(attention.some(m => m.text.includes('follow-up'))).toBe(true)
@@ -94,9 +96,10 @@ describe('deriveInsightMessages', () => {
         total_count: 10,
         by_disposition: { not_reviewed: 8 },
         by_severity: { high: 5 },
-      } as any,
+        by_tool_source: {},
+      } satisfies FollowUpSummary,
       toolRunTrends: [
-        { tool_name: 'ap_testing' as any, direction: 'degrading' as any, score_change: -5 },
+        { tool_name: 'ap_testing', direction: 'degrading', latest_score: 70, previous_score: 75, score_delta: -5 } satisfies ToolRunTrend,
       ],
       toolsCovered: 3,
       proofReadiness: { toolsWithEvidence: 3, totalTools: 12, percentage: 25, level: 'insufficient' },
@@ -128,11 +131,12 @@ describe('deriveInsightMessages', () => {
         total_count: 10,
         by_disposition: { not_reviewed: 8 },
         by_severity: { high: 5 },
-      } as any,
+        by_tool_source: {},
+      } satisfies FollowUpSummary,
       toolRunTrends: [
-        { tool_name: 'ap_testing' as any, direction: 'degrading' as any, score_change: -5 },
-        { tool_name: 'je_testing' as any, direction: 'improving' as any, score_change: 3 },
-        { tool_name: 'revenue_testing' as any, direction: 'improving' as any, score_change: 2 },
+        { tool_name: 'ap_testing', direction: 'degrading', latest_score: 70, previous_score: 75, score_delta: -5 } satisfies ToolRunTrend,
+        { tool_name: 'je_testing', direction: 'improving', latest_score: 85, previous_score: 82, score_delta: 3 } satisfies ToolRunTrend,
+        { tool_name: 'revenue_testing', direction: 'improving', latest_score: 90, previous_score: 88, score_delta: 2 } satisfies ToolRunTrend,
       ],
       toolsCovered: 5,
       proofReadiness: { toolsWithEvidence: 5, totalTools: 12, percentage: 42, level: 'limited' },

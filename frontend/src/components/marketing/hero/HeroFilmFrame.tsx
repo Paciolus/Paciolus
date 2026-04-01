@@ -452,13 +452,13 @@ export function ExportLayer({ opacity, isActive }: { opacity: MotionValue<number
                 animate={{ scale: 1, rotate: 0 }}
                 transition={SPRING.bouncy}
               >
-                <BrandIcon name="checkmark" className="w-4 h-4 text-white" />
+                <BrandIcon name="checkmark" className="w-4 h-4 text-oatmeal-50" />
               </motion.div>
             ) : (
               <BrandIcon name="download-arrow" className="w-4 h-4 text-obsidian-700" />
             )}
             <span className={`font-sans text-sm font-medium transition-colors duration-300 ${
-              phase >= 4 ? 'text-white' : 'text-obsidian-700'
+              phase >= 4 ? 'text-oatmeal-50' : 'text-obsidian-700'
             }`}>
               {phase >= 5 ? 'Download Complete' : 'Download Engagement File'}
             </span>

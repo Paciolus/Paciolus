@@ -476,7 +476,7 @@ export function AdjustmentEntryForm({
           <button
             type="submit"
             disabled={isLoading || !totals.isBalanced || !reference.trim() || !description.trim()}
-            className="flex-1 px-4 py-2 bg-sage-500 border border-sage-400 rounded-lg text-white font-medium hover:bg-sage-600 transition-colors disabled:opacity-50"
+            className="flex-1 px-4 py-2 bg-sage-500 border border-sage-400 rounded-lg text-oatmeal-50 font-medium hover:bg-sage-600 transition-colors disabled:opacity-50"
           >
             {isLoading ? 'Saving...' : 'Create Entry'}
           </button>

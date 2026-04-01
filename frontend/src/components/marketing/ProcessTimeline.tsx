@@ -201,7 +201,7 @@ export function ProcessTimeline() {
                     className={`relative z-10 w-24 h-24 rounded-2xl ${accent.bg} border ${accent.border} flex items-center justify-center mb-6 ${accent.text} shadow-lg ${accent.glow}`}
                   >
                     {/* Subtle inner glow */}
-                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
+                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-oatmeal-50/5 to-transparent pointer-events-none" />
                     <BrandIcon name={step.icon} />
                   </motion.div>
 
@@ -262,7 +262,7 @@ export function ProcessTimeline() {
                     </motion.div>
 
                     {/* Inner glow */}
-                    <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
+                    <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-oatmeal-50/5 to-transparent pointer-events-none" />
                     <BrandIcon name={step.icon} />
                   </motion.div>
 

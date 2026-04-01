@@ -109,7 +109,7 @@ export function CancelModal({ isOpen, periodEnd, status, onConfirm, onClose }: C
           <button
             onClick={handleConfirm}
             disabled={isLoading}
-            className="flex-1 py-2.5 bg-clay-600 text-white rounded-lg font-sans font-medium hover:bg-clay-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 py-2.5 bg-clay-600 text-oatmeal-50 rounded-lg font-sans font-medium hover:bg-clay-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? 'Canceling...' : isTrialing ? 'Cancel Trial' : 'Cancel Subscription'}
           </button>

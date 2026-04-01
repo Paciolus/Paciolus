@@ -52,13 +52,13 @@ export function ImpersonationBanner() {
   if (!isImpersonating) return null
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-[100] bg-clay-600 text-white py-2 px-4 flex items-center justify-center gap-4 text-sm font-sans shadow-lg">
+    <div className="fixed top-0 left-0 right-0 z-[100] bg-clay-600 text-oatmeal-50 py-2 px-4 flex items-center justify-center gap-4 text-sm font-sans shadow-lg">
       <span>
         You are viewing as <strong>{email}</strong> — Read-only mode — {timeRemaining} remaining
       </span>
       <button
         onClick={endSession}
-        className="px-3 py-1 bg-white text-clay-700 rounded font-medium hover:bg-clay-50 transition-colors"
+        className="px-3 py-1 bg-oatmeal-50 text-clay-700 rounded font-medium hover:bg-clay-50 transition-colors"
       >
         End Session
       </button>

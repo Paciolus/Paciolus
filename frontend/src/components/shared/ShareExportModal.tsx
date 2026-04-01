@@ -101,7 +101,7 @@ export function ShareExportModal({
               <button
                 onClick={handleCreate}
                 disabled={isCreating}
-                className="w-full px-5 py-2.5 bg-sage-600 text-white rounded-lg font-sans font-medium hover:bg-sage-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full px-5 py-2.5 bg-sage-600 text-oatmeal-50 rounded-lg font-sans font-medium hover:bg-sage-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isCreating ? 'Creating...' : 'Create Share Link'}
               </button>
@@ -116,7 +116,7 @@ export function ShareExportModal({
                   />
                   <button
                     onClick={handleCopy}
-                    className="px-4 py-2 bg-sage-600 text-white rounded-lg font-sans text-sm font-medium hover:bg-sage-700 transition-colors whitespace-nowrap"
+                    className="px-4 py-2 bg-sage-600 text-oatmeal-50 rounded-lg font-sans text-sm font-medium hover:bg-sage-700 transition-colors whitespace-nowrap"
                   >
                     {copied ? 'Copied!' : 'Copy'}
                   </button>

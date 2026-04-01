@@ -305,7 +305,7 @@ function SlideContent({ tool }: { tool: ToolSlide }) {
         {/* CTA */}
         <Link
           href={tool.href}
-          className="group inline-flex items-center gap-2 px-7 py-3 rounded-xl font-sans text-sm font-medium bg-sage-600 text-white hover:bg-sage-500 shadow-lg shadow-sage-600/20 transition-all"
+          className="group inline-flex items-center gap-2 px-7 py-3 rounded-xl font-sans text-sm font-medium bg-sage-600 text-oatmeal-50 hover:bg-sage-500 shadow-lg shadow-sage-600/20 transition-all"
         >
           Try This Tool
           <BrandIcon name="chevron-right" className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />

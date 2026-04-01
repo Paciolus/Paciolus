@@ -81,7 +81,7 @@ export default function ForgotPasswordPage() {
           </button>
           <Link
             href="/login"
-            className="w-full py-3 rounded-xl font-sans font-bold text-center bg-sage-700 text-white hover:bg-sage-600 transition-colors"
+            className="w-full py-3 rounded-xl font-sans font-bold text-center bg-sage-700 text-oatmeal-50 hover:bg-sage-600 transition-colors"
           >
             Back to Login
           </Link>
@@ -140,7 +140,7 @@ export default function ForgotPasswordPage() {
           className={`w-full py-3 rounded-xl font-sans font-bold transition-all ${
             isSubmitting
               ? 'bg-obsidian-600 text-oatmeal-500 cursor-not-allowed'
-              : 'bg-sage-700 text-white hover:bg-sage-600'
+              : 'bg-sage-700 text-oatmeal-50 hover:bg-sage-600'
           }`}
         >
           {isSubmitting ? 'Sending...' : 'Send Reset Link'}

@@ -393,7 +393,7 @@ export default function PracticeSettingsPage() {
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="px-8 py-3 bg-sage-600 text-white rounded-lg font-sans font-semibold hover:bg-sage-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-8 py-3 bg-sage-600 text-oatmeal-50 rounded-lg font-sans font-semibold hover:bg-sage-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSaving ? 'Saving...' : 'Save All Settings'}
             </button>

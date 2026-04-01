@@ -496,7 +496,7 @@ function ArchitectureDiagram() {
                       aria-controls={`flow-detail-${stage.id}`}
                       className={`relative w-[4.5rem] h-[4.5rem] rounded-2xl ${a.bg} border ${a.border} flex items-center justify-center mb-4 ${a.text} shadow-lg ${a.glow} transition-all duration-200 hover:border-sage-500/60 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-sage-400`}
                     >
-                      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
+                      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-oatmeal-50/5 to-transparent pointer-events-none" />
                       <BrandIcon name={stage.icon} className="w-7 h-7" />
                     </button>
 
@@ -564,7 +564,7 @@ function ArchitectureDiagram() {
                     aria-controls={`flow-detail-m-${stage.id}`}
                     className={`relative z-10 flex-shrink-0 w-[4.5rem] h-[4.5rem] rounded-xl ${a.bg} border ${a.border} flex items-center justify-center ${a.text} shadow-lg ${a.glow} focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-sage-400`}
                   >
-                    <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
+                    <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-oatmeal-50/5 to-transparent pointer-events-none" />
                     <BrandIcon name={stage.icon} className="w-7 h-7" />
                   </button>
 

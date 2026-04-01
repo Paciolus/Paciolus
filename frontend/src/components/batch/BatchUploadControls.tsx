@@ -45,7 +45,7 @@ function Button({ onClick, disabled, variant, size, loading, children }: ButtonP
 
   const variantClasses = {
     primary: cx(
-      'bg-sage-600 hover:bg-sage-500 text-white',
+      'bg-sage-600 hover:bg-sage-500 text-oatmeal-50',
       'disabled:bg-oatmeal-200 disabled:text-content-disabled'
     ),
     secondary: cx(

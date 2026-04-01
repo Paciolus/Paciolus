@@ -378,7 +378,7 @@ export default function MultiPeriodPage() {
                     disabled={!canCompare || isProcessing}
                     className={`px-6 py-2 rounded-xl text-sm font-sans font-medium transition-colors ${
                       canCompare && !isProcessing
-                        ? 'bg-sage-600 text-white hover:bg-sage-700'
+                        ? 'bg-sage-600 text-oatmeal-50 hover:bg-sage-700'
                         : 'bg-surface-card-secondary border border-theme text-content-tertiary cursor-not-allowed'
                     }`}
                   >
@@ -426,7 +426,7 @@ export default function MultiPeriodPage() {
                       <button
                         onClick={handleExportMemo}
                         disabled={exportingMemo}
-                        className="px-4 py-1.5 text-xs font-sans font-medium bg-sage-600 text-white rounded-xl hover:bg-sage-700 transition-colors disabled:opacity-50"
+                        className="px-4 py-1.5 text-xs font-sans font-medium bg-sage-600 text-oatmeal-50 rounded-xl hover:bg-sage-700 transition-colors disabled:opacity-50"
                       >
                         {exportingMemo ? 'Generating...' : 'Download Memo'}
                       </button>

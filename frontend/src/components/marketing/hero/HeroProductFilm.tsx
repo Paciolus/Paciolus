@@ -129,7 +129,7 @@ function LeftColumn({ trackCtaClick }: { trackCtaClick: (cta: string) => void })
           <MagneticButton>
             <Link
               href="/register"
-              className="group relative inline-block px-8 py-3.5 bg-sage-600 rounded-xl text-white font-sans font-medium hover:bg-sage-500 transition-all shadow-lg shadow-sage-600/25 hover:shadow-xl hover:shadow-sage-600/30"
+              className="group relative inline-block px-8 py-3.5 bg-sage-600 rounded-xl text-oatmeal-50 font-sans font-medium hover:bg-sage-500 transition-all shadow-lg shadow-sage-600/25 hover:shadow-xl hover:shadow-sage-600/30"
               onClick={() => trackCtaClick('start_trial')}
             >
               <span className="relative z-10">Start Free Trial</span>

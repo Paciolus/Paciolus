@@ -190,7 +190,7 @@ export default function BankRecPage() {
                       disabled={!bankFile || !ledgerFile}
                       className={`px-6 py-2.5 rounded-xl text-sm font-sans font-medium transition-colors ${
                         bankFile && ledgerFile
-                          ? 'bg-sage-600 text-white hover:bg-sage-700'
+                          ? 'bg-sage-600 text-oatmeal-50 hover:bg-sage-700'
                           : 'bg-surface-card-secondary border border-theme text-content-tertiary cursor-not-allowed'
                       }`}
                     >
@@ -245,7 +245,7 @@ export default function BankRecPage() {
                     <button
                       onClick={handleExportMemo}
                       disabled={exportingMemo}
-                      className="px-4 py-2 bg-sage-600 text-white rounded-xl font-sans text-sm font-medium hover:bg-sage-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-4 py-2 bg-sage-600 text-oatmeal-50 rounded-xl font-sans text-sm font-medium hover:bg-sage-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {exportingMemo ? 'Generating...' : 'Download Memo'}
                     </button>

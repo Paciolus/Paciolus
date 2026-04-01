@@ -5,10 +5,10 @@ import { renderHook, act } from '@testing-library/react'
 import { WorkspaceProvider, useWorkspaceContext } from '@/contexts/WorkspaceContext'
 
 const mockClients = [
-  { id: 1, name: 'Acme Corp', industry: 'technology', fiscal_year_end: '12-31' },
+  { id: 1, user_id: 1, name: 'Acme Corp', industry: 'technology' as const, fiscal_year_end: '12-31', created_at: '2025-01-01T00:00:00Z', updated_at: '2025-01-01T00:00:00Z', settings: '{}' },
 ]
 const mockEngagements = [
-  { id: 1, client_id: 1, status: 'active', period_start: '2025-01-01', period_end: '2025-12-31' },
+  { id: 1, client_id: 1, status: 'active' as const, period_start: '2025-01-01', period_end: '2025-12-31', materiality_basis: null, materiality_percentage: null, materiality_amount: null, performance_materiality_factor: 0.75, trivial_threshold_factor: 0.05, created_by: 1, created_at: '2025-01-01T00:00:00Z', updated_at: '2025-01-01T00:00:00Z' },
 ]
 
 jest.mock('@/hooks/useClients', () => ({
@@ -74,7 +74,7 @@ describe('WorkspaceContext', () => {
     expect(result.current.activeClient).toBeNull()
 
     act(() => {
-      result.current.setActiveClient(mockClients[0] as any)
+      result.current.setActiveClient(mockClients[0])
     })
     expect(result.current.activeClient).toEqual(mockClients[0])
   })
@@ -84,7 +84,7 @@ describe('WorkspaceContext', () => {
     expect(result.current.activeEngagement).toBeNull()
 
     act(() => {
-      result.current.setActiveEngagement(mockEngagements[0] as any)
+      result.current.setActiveEngagement(mockEngagements[0])
     })
     expect(result.current.activeEngagement).toEqual(mockEngagements[0])
   })

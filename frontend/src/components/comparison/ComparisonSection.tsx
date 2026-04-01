@@ -188,7 +188,7 @@ function SavePeriodModal({
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2 bg-sage-600 text-white font-sans font-medium hover:bg-sage-700 rounded-xl transition-colors disabled:opacity-50"
+              className="flex-1 px-4 py-2 bg-sage-600 text-oatmeal-50 font-sans font-medium hover:bg-sage-700 rounded-xl transition-colors disabled:opacity-50"
               disabled={isSaving || !label.trim()}
             >
               {isSaving ? 'Saving...' : 'Save Period'}
@@ -340,7 +340,7 @@ export function ComparisonSection({
                   <button
                     onClick={() => setShowSaveModal(true)}
                     disabled={isSaving}
-                    className="px-4 py-2 bg-sage-600 text-white rounded-xl text-sm font-sans font-medium hover:bg-sage-700 transition-colors disabled:opacity-50"
+                    className="px-4 py-2 bg-sage-600 text-oatmeal-50 rounded-xl text-sm font-sans font-medium hover:bg-sage-700 transition-colors disabled:opacity-50"
                   >
                     Save as Prior Period
                   </button>

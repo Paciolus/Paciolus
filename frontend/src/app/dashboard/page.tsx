@@ -410,7 +410,7 @@ export default function DashboardPage() {
                 </p>
                 <Link
                   href="/tools"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-sage-600 text-white rounded-xl font-sans text-sm font-bold hover:bg-sage-700 transition-colors shadow-theme-card"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-sage-600 text-oatmeal-50 rounded-xl font-sans text-sm font-bold hover:bg-sage-700 transition-colors shadow-theme-card"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
