@@ -209,11 +209,18 @@ def _resolve_storage_uri() -> str:
 
     When REDIS_URL is configured, returns a ``redis://`` URI so that
     counters are shared across all workers and survive restarts.
-    Falls back to ``memory://`` (per-process, ephemeral).
+
+    Behavior depends on RATE_LIMIT_STRICT_MODE:
+    - **Strict (production default):** If Redis is configured but unreachable,
+      raise RuntimeError to prevent the app from starting with weakened
+      rate-limit enforcement.
+    - **Permissive (dev/test default):** Fall back to ``memory://``
+      (per-process, ephemeral).
     """
-    from config import REDIS_URL
+    from config import RATE_LIMIT_STRICT_MODE, REDIS_URL
 
     if not REDIS_URL:
+        # config.py already hard-fails if strict + no URL, so this is dev/test only
         return "memory://"
 
     # Validate connectivity eagerly so misconfigurations surface at startup
@@ -225,6 +232,15 @@ def _resolve_storage_uri() -> str:
         _logger.info("Rate-limit storage: Redis (%s)", REDIS_URL.split("@")[-1])
         return REDIS_URL
     except Exception as exc:  # noqa: BLE001
+        if RATE_LIMIT_STRICT_MODE:
+            _logger.critical(
+                "FAIL-CLOSED: Redis configured but unreachable (%s). "
+                "Refusing to start — RATE_LIMIT_STRICT_MODE is enabled. "
+                "Rate limits would not be shared across workers.",
+                exc,
+            )
+            raise RuntimeError(f"Rate-limit storage backend unavailable (strict mode): {exc}") from exc
+
         _logger.warning(
             "Redis configured but unreachable (%s) — falling back to in-memory storage. "
             "Rate limits will NOT be shared across workers.",

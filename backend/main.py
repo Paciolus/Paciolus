@@ -170,7 +170,22 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             for issue in billing_issues:
                 _bill_log("Billing config: %s", issue)
 
-    logger.info("Rate-limit storage backend: %s", get_storage_backend())
+    # Startup verification: confirm rate-limit storage backend
+    _rl_backend = get_storage_backend()
+    logger.info("Rate-limit storage backend: %s", _rl_backend)
+    if _rl_backend != "redis" and ENV_MODE == "production":
+        log_secure_operation(
+            "rate_limit_degraded",
+            f"Rate-limit storage is '{_rl_backend}' in production — counters are NOT shared across workers",
+        )
+        logger.warning(
+            "SECURITY: Rate-limit backend is '%s' in production. "
+            "Counters will reset per-worker and are not shared across instances.",
+            _rl_backend,
+        )
+    elif _rl_backend == "redis":
+        log_secure_operation("rate_limit_verified", "Redis rate-limit backend confirmed at startup")
+
     logger.info("Paciolus API v%s started (debug=%s)", __version__, DEBUG)
     log_secure_operation("app_startup", "Paciolus API started")
 

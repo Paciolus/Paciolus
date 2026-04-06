@@ -54,6 +54,7 @@ _EXPECTED_INTERVALS: dict[str, timedelta] = {
     "verification_tokens": timedelta(minutes=CLEANUP_VERIFICATION_TOKEN_INTERVAL_MINUTES),
     "tool_sessions": timedelta(minutes=CLEANUP_TOOL_SESSION_INTERVAL_MINUTES),
     "retention_cleanup": timedelta(hours=CLEANUP_RETENTION_INTERVAL_HOURS),
+    "verify_database_tls": timedelta(hours=24),
 }
 
 WATCHDOG_INTERVAL_MINUTES = 5
@@ -371,6 +372,60 @@ def _job_dunning_grace_period() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Daily DB TLS verification (continuous evidence)
+# ---------------------------------------------------------------------------
+
+
+def _job_verify_database_tls() -> None:
+    """Daily TLS verification — writes HMAC-signed evidence artifact.
+
+    Queries pg_stat_ssl to confirm the database connection is encrypted,
+    then emits a signed structured security event as continuous audit evidence.
+    """
+    import hashlib
+    import hmac
+
+    from sqlalchemy import text
+
+    from database import SessionLocal, engine
+    from security_utils import log_secure_operation
+
+    if engine.dialect.name != "postgresql":
+        return  # SQLite in dev — nothing to verify
+
+    db = SessionLocal()
+    try:
+        ssl_row = db.execute(text("SELECT ssl FROM pg_stat_ssl WHERE pid = pg_backend_pid()")).fetchone()
+        ssl_active = bool(ssl_row and ssl_row[0])
+
+        timestamp = datetime.now(UTC).isoformat()
+        status = "active" if ssl_active else "INACTIVE"
+
+        # HMAC-sign the evidence using JWT secret for tamper evidence
+        from config import JWT_SECRET_KEY
+
+        evidence_payload = f"db_tls_check|{status}|{timestamp}"
+        signature = hmac.new(JWT_SECRET_KEY.encode(), evidence_payload.encode(), hashlib.sha256).hexdigest()[:16]
+
+        log_secure_operation(
+            "db_tls_daily_check",
+            f"tls={status}, timestamp={timestamp}, sig={signature}",
+        )
+
+        if ssl_active:
+            logger.info("Daily DB TLS check: tls=active, sig=%s", signature)
+        else:
+            logger.warning(
+                "Daily DB TLS check: tls=INACTIVE — database connection is unencrypted. sig=%s",
+                signature,
+            )
+    except Exception:
+        logger.warning("Daily DB TLS verification check failed", exc_info=True)
+    finally:
+        db.close()
+
+
+# ---------------------------------------------------------------------------
 # Watchdog
 # ---------------------------------------------------------------------------
 
@@ -502,6 +557,14 @@ def init_scheduler() -> None:
         hours=1,
         id="dunning_grace_period",
         jitter=60,
+    )
+    # Daily DB TLS verification — continuous evidence for audit
+    _scheduler.add_job(
+        _job_verify_database_tls,
+        "interval",
+        hours=24,
+        id="verify_database_tls",
+        jitter=120,
     )
 
     _scheduler.add_job(

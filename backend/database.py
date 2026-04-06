@@ -20,7 +20,15 @@ from typing import Any
 from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
-from config import DATABASE_URL, DB_MAX_OVERFLOW, DB_POOL_RECYCLE, DB_POOL_SIZE
+from config import (
+    DATABASE_URL,
+    DB_MAX_OVERFLOW,
+    DB_POOL_RECYCLE,
+    DB_POOL_SIZE,
+    DB_TLS_OVERRIDE_TICKET,
+    DB_TLS_OVERRIDE_VALID,
+    DB_TLS_REQUIRED,
+)
 from security_utils import log_secure_operation
 
 # Create engine with dialect-specific configuration
@@ -267,12 +275,49 @@ def init_db() -> None:
                 DB_POOL_RECYCLE,
                 "active" if ssl_active else "INACTIVE",
             )
-            if not ssl_active:
+            if ssl_active:
+                log_secure_operation("db_tls_verified", "PostgreSQL TLS active at startup")
+            elif DB_TLS_OVERRIDE_VALID:
+                # Break-glass exception: TLS not active but documented override exists
+                logger.warning(
+                    "PostgreSQL TLS INACTIVE — bypassed via DB_TLS_OVERRIDE (ticket=%s). "
+                    "This exception must be resolved before expiration.",
+                    DB_TLS_OVERRIDE_TICKET,
+                )
+                log_secure_operation(
+                    "db_tls_override",
+                    f"TLS inactive but bypassed via override ticket={DB_TLS_OVERRIDE_TICKET}",
+                )
+            elif DB_TLS_REQUIRED:
+                log_secure_operation(
+                    "db_tls_enforcement_failure",
+                    "PostgreSQL TLS inactive — startup blocked by DB_TLS_REQUIRED",
+                )
+                logger.critical(
+                    "FAIL-CLOSED: PostgreSQL connection is NOT using TLS encryption. "
+                    "DB_TLS_REQUIRED is enabled — refusing to start. "
+                    "Fix: add ?sslmode=require to DATABASE_URL, or set a temporary "
+                    "override: DB_TLS_OVERRIDE=TICKET_ID:YYYY-MM-DD"
+                )
+                raise RuntimeError(
+                    "Database TLS verification failed: connection is not encrypted and DB_TLS_REQUIRED is enabled"
+                )
+            else:
                 logger.warning(
                     "PostgreSQL connection is NOT using TLS encryption — "
                     "add ?sslmode=require to DATABASE_URL for production"
                 )
+        except RuntimeError:
+            raise  # Re-raise TLS enforcement failure
         except Exception:
+            if DB_TLS_REQUIRED and not DB_TLS_OVERRIDE_VALID:
+                logger.critical(
+                    "FAIL-CLOSED: Could not verify PostgreSQL TLS status. "
+                    "DB_TLS_REQUIRED is enabled — refusing to start without TLS confirmation."
+                )
+                raise RuntimeError(
+                    "Database TLS verification failed: could not query TLS status and DB_TLS_REQUIRED is enabled"
+                )
             logger.warning("Could not retrieve PostgreSQL server version or TLS status")
     elif dialect_name == "sqlite":
         logger.info("SQLite mode (development): WAL journal, FK constraints enabled")
