@@ -11,4 +11,6 @@ export interface ExportShareInfo {
   created_at: string
   expires_at: string
   access_count: number
+  single_use?: boolean
+  has_passcode?: boolean
 }

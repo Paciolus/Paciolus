@@ -22,7 +22,7 @@ This document defines Paciolus's security principles, practices, and incident re
 - ✅ TLS 1.3 encryption for all data in transit
 - ✅ AES-256 encryption at rest (Render managed PostgreSQL — verified monthly, evidence in `docs/08-internal/soc2-evidence/cc7/`)
 - ✅ bcrypt password hashing (direct library, 12 rounds, salted)
-- ✅ JWT authentication with short-lived access tokens (30-minute expiration) and rotating refresh tokens (7-day expiration)
+- ✅ JWT authentication with short-lived access tokens (15-minute expiration) and rotating refresh tokens (7-day expiration)
 - ✅ Stateless HMAC-SHA256 user-bound CSRF protection (4-part tokens, 30-min expiry, origin enforcement, user binding)
 - ✅ DB-backed account lockout (5 failed attempts, 15-minute lockout)
 - ✅ Multi-tenant data isolation (user-level database filtering)
@@ -138,7 +138,7 @@ See **ZERO_STORAGE_ARCHITECTURE.md** for detailed retention policies.
 | User credentials | Until deletion request | Account management |
 | Activity logs (aggregates) | 365 days (1 year) | Workflow tracking, compliance |
 | Client metadata | Until deletion request | Business functionality |
-| Export share artifacts | 48 hours (auto-purged) | Controlled exception (see 2.4) |
+| Export share artifacts | 24–48 hours, tier-dependent (auto-purged) | Controlled exception (see 2.4) |
 
 ### 2.4 Controlled Exceptions to Zero-Storage
 
@@ -150,7 +150,7 @@ The following feature stores **derived** financial data (analysis results, not r
 
 **Storage location:** `export_shares.export_data` column (LargeBinary) in the application database.
 
-**Retention:** 48-hour TTL. Expired shares are purged by the background cleanup scheduler (hourly cycle). Maximum data lifetime: ~49 hours (48h TTL + up to 1h cleanup lag).
+**Retention:** Tier-configurable TTL (Professional: 24 hours, Enterprise: 48 hours). Expired shares are purged by the background cleanup scheduler (hourly cycle). Maximum data lifetime: ~49 hours (48h TTL + up to 1h cleanup lag).
 
 **Compensating controls:**
 1. **Tier-gated access:** Only Professional and Enterprise subscribers can create share links
@@ -158,10 +158,13 @@ The following feature stores **derived** financial data (analysis results, not r
 3. **User-scoped:** All shares are bound to the creating user's ID
 4. **Auto-purge:** Background scheduler (`cleanup_scheduler.py`) deletes expired shares hourly
 5. **Revocable:** Users can revoke share links before expiry
-6. **Access logging:** Each download increments `access_count` for audit trail
+6. **Access logging:** Each download increments `access_count` for audit trail; anomaly warnings at >10 downloads
 7. **Provider-level encryption at rest:** Render managed PostgreSQL provides AES-256 encryption
+8. **Optional passcode protection:** Creators can set a passcode (SHA-256 hashed) required for download
+9. **Single-use mode:** Optional setting to auto-revoke after first successful download
+10. **Security headers:** Download responses include `Referrer-Policy: no-referrer`, `X-Content-Type-Options: nosniff`, `Cache-Control: no-store`
 
-**Risk accepted:** If the database is compromised during the 48-hour window, derived financial analysis results in active export shares could be exposed. Blast radius is limited to Professional/Enterprise users who have actively created unexpired share links.
+**Risk accepted:** If the database is compromised during the TTL window, derived financial analysis results in active export shares could be exposed. Blast radius is limited to Professional/Enterprise users who have actively created unexpired share links.
 
 **Review cycle:** This exception is reviewed quarterly as part of the security policy review cycle.
 
@@ -173,7 +176,7 @@ The following feature stores **derived** financial data (analysis results, not r
 
 #### JWT (JSON Web Tokens)
 - **Algorithm:** HS256 (HMAC with SHA-256, hardcoded to prevent downgrade attacks)
-- **Access token expiration:** 30 minutes (configurable via `JWT_EXPIRATION_MINUTES`)
+- **Access token expiration:** 15 minutes (configurable via `JWT_EXPIRATION_MINUTES`)
 - **Refresh token expiration:** 7 days (configurable via `REFRESH_TOKEN_EXPIRATION_DAYS`)
 - **Secret Key:** 64-character random hex string (stored in environment variables; minimum 32 chars enforced, production startup hard-fails if unset)
 - **Rotation Policy:** Secret rotated every 90 days
@@ -183,7 +186,7 @@ The following feature stores **derived** financial data (analysis results, not r
 {
   "sub": "user_id",
   "email": "user@example.com",
-  "tier": "team",
+  "tier": "professional",
   "jti": "unique_token_id",
   "iat": 1704672000,
   "exp": 1704673800,
@@ -383,8 +386,8 @@ All API endpoints are rate-limited via a tiered policy matrix. Limits are per-us
 | **Anonymous** | 5 | 10 | 20 | 30 | 60 |
 | **Free** | 5 | 15 | 30 | 45 | 90 |
 | **Solo** | 8 | 20 | 45 | 60 | 120 |
-| **Team** | 15 | 45 | 90 | 135 | 240 |
-| **Organization** | 20 | 60 | 120 | 180 | 300 |
+| **Professional** | 15 | 45 | 90 | 135 | 240 |
+| **Enterprise** | 20 | 60 | 120 | 180 | 300 |
 
 #### Enforcement Behavior
 - **Key resolution:** Authenticated requests keyed by `user_id`; anonymous requests keyed by client IP

@@ -70,3 +70,27 @@
 - No `dangerouslySetInnerHTML` usage found in codebase (clean baseline)
 - `style-src 'unsafe-inline'` retained (React inline styles — documented limitation)
 
+### Sprint 593: Share-Link Security Hardening + Documentation Integrity CI
+**Status:** COMPLETE
+**Goal:** Strengthen public share-link security and prevent documentation drift
+
+**Changes:**
+- [x] DB migration: `passcode_hash` (String(64)) + `single_use` (Boolean) columns on `export_shares`
+- [x] Optional passcode protection: SHA-256 hashed passcode, 403 on wrong/missing passcode
+- [x] Single-use mode: auto-revoke (`revoked_at = now`) after first successful download
+- [x] Tier-configurable TTL: Professional 24h, Enterprise 48h (was 48h flat), `share_ttl_hours` entitlement
+- [x] Security headers: `Cache-Control: no-store` on download responses (middleware provides `X-Content-Type-Options`, `Referrer-Policy`)
+- [x] Download anomaly logging: per-download structured log (share_id, masked IP, UA hash), warning at >10 access_count
+- [x] Frontend: passcode input + single-use checkbox in ShareExportModal, protection column in shares page
+- [x] Doc consistency guard: `guards/doc_consistency_guard.py` — checks tier names, pricing, JWT expiry across docs vs code
+- [x] CI job: `doc-consistency` gate in ci.yml (blocking)
+- [x] Doc fixes: SECURITY_POLICY.md (JWT 30m→15m, Team/Org→Professional/Enterprise, TTL 48h→24-48h, 10 compensating controls)
+- [x] Doc fixes: TERMS_OF_SERVICE.md (Solo limits 20→100/10→unlimited, Team/Org→Professional/Enterprise, seat pricing $80/$70→$65/$45 flat)
+- [x] Tests: 25 backend (12 new: passcode, single-use, headers, TTL, anomaly), 20 frontend (6 new)
+
+**Review:**
+- Backward compatible: existing shares (passcode_hash=NULL, single_use=False) work unchanged
+- Passcode brute-force mitigated by existing 20/min rate limit on download endpoint
+- Single-use race condition: concurrent downloads both succeed, link revoked after first commit (acceptable for ephemeral links)
+- Guard catches tier name drift, pricing drift, JWT expiry drift — stdlib only, no external deps
+

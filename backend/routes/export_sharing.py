@@ -1,8 +1,11 @@
 """
 Export Sharing Routes — Phase LXIX: Pricing v3 (Phase 6).
 
-Share export results via temporary public links (48h TTL).
+Share export results via temporary public links (tier-configurable TTL).
 Gated to Professional+ tiers.
+
+Sprint 593: Passcode protection, single-use mode, security headers,
+            anomaly logging, tier-configurable TTL (24h Pro / 48h Ent).
 
 Route group prefix: /export-sharing
 """
@@ -10,10 +13,10 @@ Route group prefix: /export-sharing
 import hashlib
 import logging
 import secrets
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -22,11 +25,13 @@ from auth import require_verified_user
 from database import get_db
 from export_share_model import ExportShare
 from models import User
-from shared.entitlement_checks import check_export_sharing_access
+from shared.entitlement_checks import check_export_sharing_access, get_effective_entitlements
 from shared.organization_schemas import DetailResponse, ExportShareCreateResponse, ExportShareResponse
 from shared.rate_limits import RATE_LIMIT_EXPORT, RATE_LIMIT_WRITE, limiter
 
 logger = logging.getLogger(__name__)
+
+ANOMALY_ACCESS_THRESHOLD = 10
 
 # Magic bytes for allowed export formats
 _MAGIC_BYTES: dict[str, list[bytes]] = {
@@ -47,6 +52,23 @@ class CreateShareRequest(BaseModel):
     tool_name: str = Field(..., max_length=100)
     export_format: str = Field(..., pattern="^(pdf|xlsx|csv)$")
     export_data_b64: str = Field(..., description="Base64-encoded export file bytes")
+    passcode: str | None = Field(
+        None, min_length=4, max_length=64, description="Optional passcode for download protection"
+    )
+    single_use: bool = Field(False, description="Auto-revoke after first download")
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _mask_ip(ip: str) -> str:
+    """Mask last octet of IPv4 for Zero-Storage compliant logging."""
+    parts = ip.split(".")
+    if len(parts) == 4:
+        return f"{parts[0]}.{parts[1]}.{parts[2]}.***"
+    return "***"  # IPv6 or unexpected format
 
 
 # ---------------------------------------------------------------------------
@@ -97,6 +119,12 @@ async def create_share(
     # AUDIT-08: pass db so subscription status is checked (not sessionless fallback)
     check_export_sharing_access(user, db)
 
+    # Resolve tier-configurable TTL
+    entitlements = get_effective_entitlements(user, db)
+    ttl_hours = entitlements.share_ttl_hours
+    if ttl_hours <= 0:
+        raise HTTPException(status_code=403, detail="Export sharing is not available on your current plan.")
+
     import base64
     import binascii
 
@@ -115,6 +143,11 @@ async def create_share(
     raw_token = secrets.token_urlsafe(32)
     token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
 
+    # Hash optional passcode (SHA-256 — sufficient for ephemeral links)
+    passcode_hash = None
+    if body.passcode:
+        passcode_hash = hashlib.sha256(body.passcode.encode()).hexdigest()
+
     share = ExportShare(
         user_id=user.id,
         organization_id=getattr(user, "organization_id", None),
@@ -122,7 +155,10 @@ async def create_share(
         tool_name=body.tool_name,
         export_format=body.export_format,
         export_data=export_bytes,
+        passcode_hash=passcode_hash,
+        single_use=body.single_use,
         shared_by_name=user.name or user.email,
+        expires_at=datetime.now(UTC) + timedelta(hours=ttl_hours),
     )
     db.add(share)
     db.commit()
@@ -130,12 +166,14 @@ async def create_share(
 
     # Log share creation for abuse monitoring
     logger.info(
-        "Export share created: user_id=%s, tool=%s, format=%s, size=%d, share_id=%s",
+        "Export share created: user_id=%s, tool=%s, format=%s, size=%d, share_id=%s, single_use=%s, has_passcode=%s",
         user.id,
         body.tool_name,
         body.export_format,
         len(export_bytes),
         share.id,
+        body.single_use,
+        passcode_hash is not None,
     )
 
     result = share.to_dict()
@@ -149,6 +187,7 @@ async def download_share(
     token: str,
     request: Any = None,
     db: Session = Depends(get_db),
+    passcode: str | None = Query(None, description="Passcode if the share link is protected"),
 ) -> Response:
     """Download a shared export. Public endpoint (no auth required)."""
     token_hash = hashlib.sha256(token.encode()).hexdigest()
@@ -174,10 +213,47 @@ async def download_share(
     if now > expires:
         raise HTTPException(status_code=410, detail="This share link has expired.")
 
+    # Passcode verification (Sprint 593)
+    if share.passcode_hash:
+        if not passcode:
+            raise HTTPException(status_code=403, detail="This share link requires a passcode.")
+        if hashlib.sha256(passcode.encode()).hexdigest() != share.passcode_hash:
+            raise HTTPException(status_code=403, detail="Invalid passcode.")
+
     # Update access counter
     share.access_count = (share.access_count or 0) + 1
     share.last_accessed_at = now
+
+    # Single-use auto-revoke (Sprint 593): revoke after serving
+    if share.single_use:
+        share.revoked_at = now
+
     db.commit()
+
+    # Anomaly detection logging (Sprint 593)
+    client_ip = getattr(request, "client", None)
+    masked_ip = _mask_ip(client_ip.host) if client_ip else "unknown"
+    ua_hash = (
+        hashlib.sha256((request.headers.get("user-agent", "") or "").encode()).hexdigest()[:12]
+        if request
+        else "unknown"
+    )
+
+    logger.info(
+        "Share download: share_id=%s, ip=%s, ua_hash=%s, access_count=%d",
+        share.id,
+        masked_ip,
+        ua_hash,
+        share.access_count,
+    )
+
+    if share.access_count > ANOMALY_ACCESS_THRESHOLD:
+        logger.warning(
+            "Share download anomaly: share_id=%s exceeded threshold (count=%d), ip=%s",
+            share.id,
+            share.access_count,
+            masked_ip,
+        )
 
     # Determine content type
     content_types = {
@@ -196,7 +272,11 @@ async def download_share(
     return Response(
         content=share.export_data,
         media_type=content_type,
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "no-store",
+            # X-Content-Type-Options and Referrer-Policy set by SecurityHeadersMiddleware
+        },
     )
 
 

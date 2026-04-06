@@ -10,7 +10,6 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-
 # ---------------------------------------------------------------------------
 # Organization
 # ---------------------------------------------------------------------------
@@ -185,6 +184,8 @@ class ExportShareResponse(BaseModel):
     expires_at: str | None = None
     revoked_at: str | None = None
     access_count: int = 0
+    single_use: bool = False
+    has_passcode: bool = False
 
     model_config = {"from_attributes": True}
 
