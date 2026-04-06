@@ -99,9 +99,10 @@ if ENV_MODE == "production":
 # Debug mode (enables detailed error messages)
 DEBUG = _load_optional("DEBUG", "false").lower() == "true"
 
-# Cookie security — HttpOnly refresh cookie uses Secure flag in production
+# Cookie security — HttpOnly cookies use Secure flag in production
 COOKIE_SECURE = ENV_MODE == "production"
 REFRESH_COOKIE_NAME = "paciolus_refresh"
+ACCESS_COOKIE_NAME = "paciolus_access"
 
 # =============================================================================
 # AUTHENTICATION CONFIGURATION (Day 13)
@@ -151,7 +152,9 @@ if not _using_generated_jwt and JWT_SECRET_KEY is not None and len(JWT_SECRET_KE
 # Hardcoded — only HS256 is supported. Operator-configurable algorithms
 # risk downgrade attacks (e.g., "none" algorithm). Sprint 279.
 JWT_ALGORITHM = "HS256"
-JWT_EXPIRATION_MINUTES = int(_load_optional("JWT_EXPIRATION_MINUTES", "30"))  # 30 minutes default (Sprint 198)
+JWT_EXPIRATION_MINUTES = int(
+    _load_optional("JWT_EXPIRATION_MINUTES", "15")
+)  # 15 minutes default (reduced from 30 to limit XSS blast radius)
 REFRESH_TOKEN_EXPIRATION_DAYS = int(_load_optional("REFRESH_TOKEN_EXPIRATION_DAYS", "7"))
 
 # =============================================================================
@@ -224,6 +227,20 @@ TRUSTED_PROXY_IPS: frozenset[str] = frozenset(ip.strip() for ip in _trusted_raw.
 # are used (reset on restart, not shared across workers).
 REDIS_URL = _load_optional("REDIS_URL", "")
 
+# Fail-closed mode: refuse to start if Redis is unavailable.
+# Default: true in production, false in development/test.
+_strict_default = "true" if ENV_MODE == "production" else "false"
+RATE_LIMIT_STRICT_MODE = _load_optional("RATE_LIMIT_STRICT_MODE", _strict_default).lower() == "true"
+
+# Production guardrail: strict mode requires REDIS_URL to be configured
+if RATE_LIMIT_STRICT_MODE and not REDIS_URL:
+    _hard_fail(
+        "RATE_LIMIT_STRICT_MODE is enabled but REDIS_URL is not set.\n"
+        "Rate limiting requires shared Redis storage in strict mode to prevent\n"
+        "per-worker counter isolation under multi-instance deployments.\n"
+        "Either set REDIS_URL or disable strict mode: RATE_LIMIT_STRICT_MODE=false"
+    )
+
 # =============================================================================
 # RATE LIMIT TIER OVERRIDES (Sprint 306 — tiered rate limiting)
 # =============================================================================
@@ -248,8 +265,59 @@ if ENV_MODE == "production" and DATABASE_URL.startswith("sqlite"):
         "Example: DATABASE_URL=postgresql://user:password@host:5432/paciolus_db"
     )
 
-# Production guardrail: PostgreSQL connections must use TLS
-if ENV_MODE == "production" and not DATABASE_URL.startswith("sqlite"):
+# DB TLS enforcement: require TLS at both connection-string and session level.
+# Default: true in production, false in dev/test.
+_db_tls_default = "true" if ENV_MODE == "production" else "false"
+DB_TLS_REQUIRED = _load_optional("DB_TLS_REQUIRED", _db_tls_default).lower() == "true"
+
+# Break-glass exception: TICKET_ID:YYYY-MM-DD (e.g., "SEC-1234:2026-04-15").
+# Allows temporary TLS bypass with documented approval and expiration.
+DB_TLS_OVERRIDE = _load_optional("DB_TLS_OVERRIDE", "")
+
+# Validate override format and expiration if provided
+_db_tls_override_valid = False
+_db_tls_override_ticket = ""
+if DB_TLS_OVERRIDE:
+    _override_parts = DB_TLS_OVERRIDE.split(":", 1)
+    if len(_override_parts) != 2:
+        _config_logger.warning(
+            "DB_TLS_OVERRIDE malformed (expected TICKET_ID:YYYY-MM-DD): %r — override ignored",
+            DB_TLS_OVERRIDE,
+        )
+    else:
+        _db_tls_override_ticket = _override_parts[0].strip()
+        _override_expiry_str = _override_parts[1].strip()
+        try:
+            from datetime import date as _date_cls
+
+            _override_expiry = _date_cls.fromisoformat(_override_expiry_str)
+            if _override_expiry < _date_cls.today():
+                _config_logger.warning(
+                    "DB_TLS_OVERRIDE expired on %s (ticket %s) — override ignored",
+                    _override_expiry_str,
+                    _db_tls_override_ticket,
+                )
+            elif not _db_tls_override_ticket:
+                _config_logger.warning("DB_TLS_OVERRIDE has empty ticket ID — override ignored")
+            else:
+                _db_tls_override_valid = True
+                _config_logger.warning(
+                    "DB_TLS_OVERRIDE active: ticket=%s, expires=%s. "
+                    "TLS enforcement bypassed under documented exception.",
+                    _db_tls_override_ticket,
+                    _override_expiry_str,
+                )
+        except ValueError:
+            _config_logger.warning(
+                "DB_TLS_OVERRIDE has invalid date (expected YYYY-MM-DD): %r — override ignored",
+                _override_expiry_str,
+            )
+
+DB_TLS_OVERRIDE_VALID = _db_tls_override_valid
+DB_TLS_OVERRIDE_TICKET = _db_tls_override_ticket
+
+# Production guardrail: PostgreSQL connections must use TLS in connection string
+if DB_TLS_REQUIRED and not DATABASE_URL.startswith("sqlite") and not DB_TLS_OVERRIDE_VALID:
     from urllib.parse import parse_qs as _parse_qs
     from urllib.parse import urlparse as _urlparse_db
 
@@ -258,10 +326,11 @@ if ENV_MODE == "production" and not DATABASE_URL.startswith("sqlite"):
     _SECURE_SSL_MODES = {"require", "verify-ca", "verify-full"}
     if _ssl_mode not in _SECURE_SSL_MODES:
         _hard_fail(
-            "Insecure PostgreSQL transport in production.\n"
+            "Insecure PostgreSQL transport — DB_TLS_REQUIRED is enabled.\n"
             "DATABASE_URL must include ?sslmode=require (or verify-ca / verify-full).\n"
             "Example: postgresql://user:password@host:5432/db?sslmode=require\n"
-            f"Current sslmode: {_ssl_mode!r}"
+            f"Current sslmode: {_ssl_mode!r}\n"
+            "To temporarily bypass, set DB_TLS_OVERRIDE=TICKET_ID:YYYY-MM-DD"
         )
 
 # =============================================================================
@@ -431,7 +500,7 @@ def print_config_summary() -> None:
     _config_logger.info(
         "Paciolus Configuration Loaded: env=%s, secrets=%s, host=%s:%s, "
         "cors=%s, debug=%s, jwt_algo=%s, jwt_exp=%dm, refresh_exp=%dd, "
-        "csrf=%s, db=%s, redis=%s, stripe=%s, entitlement=%s",
+        "csrf=%s, db=%s, db_tls=%s, redis=%s, rate_limit_strict=%s, stripe=%s, entitlement=%s",
         ENV_MODE,
         get_secrets_manager().get_provider(),
         API_HOST,
@@ -443,7 +512,11 @@ def print_config_summary() -> None:
         REFRESH_TOKEN_EXPIRATION_DAYS,
         "[auto-generated]" if _using_generated_csrf else "[configured]",
         _mask_database_url(DATABASE_URL),
+        f"required{f' (override:{DB_TLS_OVERRIDE_TICKET})' if DB_TLS_OVERRIDE_VALID else ''}"
+        if DB_TLS_REQUIRED
+        else "not-required",
         REDIS_URL.split("@")[-1] if REDIS_URL else "disabled",
+        RATE_LIMIT_STRICT_MODE,
         "enabled" if STRIPE_ENABLED else "disabled",
         ENTITLEMENT_ENFORCEMENT,
     )

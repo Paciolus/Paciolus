@@ -16,6 +16,7 @@
 > new features or architectural changes. Each entry is one line.
 > Format: `- [date] commit-sha: description (files touched)`
 
+- [2026-04-04] PENDING: dependency upgrades — 14 packages updated, 3 security-relevant (fastapi 0.135.3, SQLAlchemy 2.0.49, stripe 15.0.1), tzdata 2026.1, uvicorn 0.43.0, pillow 12.2.0, next watchlist patch
 - [2026-03-26] e04e63e: full sweep remediation — sessionStorage financial data removal, CSRF on /auth/refresh, billing interval base-plan fix, Decimal float-cast elimination (13 files, 16 tests added)
 - [2026-03-21] 8b3f76d: resolve 25 test failures (4 root causes: StyleSheet1 iteration, Decimal returns, IIF int IDs, ActivityLog defaults), 5 report bugs (procedure rotation, risk tier labels, PDF overflow, population profile, empty drill-downs), dependency updates (Next.js 16.2.1, Sentry, Tailwind, psycopg2, ruff)
 - [2026-03-21] 8372073: resolve all 1,013 mypy type errors — Mapped annotations, Decimal/float casts, return types, stale ignores (#49)
@@ -48,4 +49,24 @@
 > Sprints 572–578 archived to `tasks/archive/sprints-572-578-details.md`.
 > Sprints 579–585 archived to `tasks/archive/sprints-579-585-details.md`.
 > Sprints 586–591 archived to `tasks/archive/sprints-586-591-details.md`.
+
+### Sprint 592: Token Exposure Reduction — Cookie-Only Auth
+**Status:** COMPLETE
+**Goal:** Eliminate JS-readable bearer tokens from browser auth flow
+
+**Changes:**
+- [x] Backend: `paciolus_access` HttpOnly cookie set on login/register/refresh, cleared on logout
+- [x] Backend: `resolve_access_token` dependency — Bearer header (API clients) → cookie fallback (browser)
+- [x] Backend: JWT lifetime reduced 30m → 15m (config default + .env.example)
+- [x] Frontend: `injectAuthHeaders` no longer injects `Authorization: Bearer` header
+- [x] Frontend: `fetchCsrfToken`, `uploadTransport` — use cookie auth, not Bearer
+- [x] Frontend: `downloadAdapter` — add missing `credentials: 'include'`
+- [x] ESLint: XSS sink governance — `no-eval`, `no-implied-eval`, ban `dangerouslySetInnerHTML`, `innerHTML`, `document.write`
+- [x] Tests: 3 test suites updated (removed Bearer assertions), 1745 frontend + 26 backend auth tests pass
+
+**Review:**
+- Access token cookie: HttpOnly, Secure (prod), SameSite=None (prod) / Lax (dev), path=/, max-age=JWT_EXPIRATION_MINUTES*60
+- Bearer header still accepted for non-browser API clients (backward compatible)
+- No `dangerouslySetInnerHTML` usage found in codebase (clean baseline)
+- `style-src 'unsafe-inline'` retained (React inline styles — documented limitation)
 

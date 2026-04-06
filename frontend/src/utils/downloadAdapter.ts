@@ -65,6 +65,7 @@ export async function apiDownload(
         headers,
         body: requestBody,
         signal: controller.signal,
+        credentials: 'include',
       });
 
       clearTimeout(timeoutId);

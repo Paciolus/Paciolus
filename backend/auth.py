@@ -19,13 +19,19 @@ from typing import Annotated, Optional
 
 import bcrypt as _bcrypt
 import jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import PyJWTError
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 from sqlalchemy.orm import Session
 
-from config import JWT_ALGORITHM, JWT_EXPIRATION_MINUTES, JWT_SECRET_KEY, REFRESH_TOKEN_EXPIRATION_DAYS
+from config import (
+    ACCESS_COOKIE_NAME,
+    JWT_ALGORITHM,
+    JWT_EXPIRATION_MINUTES,
+    JWT_SECRET_KEY,
+    REFRESH_TOKEN_EXPIRATION_DAYS,
+)
 from database import get_db
 from models import EmailVerificationToken, RefreshToken, User
 from security_utils import log_secure_operation
@@ -70,6 +76,21 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 # OAuth2 scheme for token extraction from Authorization header
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
+
+
+def resolve_access_token(
+    request: "Request",
+    header_token: Annotated[Optional[str], Depends(oauth2_scheme)] = None,
+) -> Optional[str]:
+    """Resolve access token from Bearer header (API clients) or HttpOnly cookie (browser).
+
+    Priority: Bearer header > paciolus_access cookie.
+    Browser clients send the access token via HttpOnly cookie (no JS exposure).
+    Non-browser API clients can still use the Authorization: Bearer header.
+    """
+    if header_token:
+        return header_token
+    return request.cookies.get(ACCESS_COOKIE_NAME)
 
 
 class TokenResponse(BaseModel):
@@ -209,13 +230,14 @@ def decode_access_token(token: str) -> Optional[TokenData]:
 
 
 def get_current_user(
-    token: Annotated[Optional[str], Depends(oauth2_scheme)], db: Session = Depends(get_db)
+    token: Annotated[Optional[str], Depends(resolve_access_token)], db: Session = Depends(get_db)
 ) -> Optional[User]:
     """
     FastAPI dependency to get the current authenticated user.
 
     Returns User if authenticated, None if not authenticated.
     Use this for routes that support both authenticated and anonymous access.
+    Token resolved from Bearer header (API clients) or HttpOnly cookie (browser).
     """
     if token is None:
         return None
@@ -233,13 +255,14 @@ def get_current_user(
 
 
 def require_current_user(
-    token: Annotated[Optional[str], Depends(oauth2_scheme)], db: Session = Depends(get_db)
+    token: Annotated[Optional[str], Depends(resolve_access_token)], db: Session = Depends(get_db)
 ) -> User:
     """
     FastAPI dependency that REQUIRES authentication.
 
     Raises HTTPException 401 if user is not authenticated.
     Use this for protected routes.
+    Token resolved from Bearer header (API clients) or HttpOnly cookie (browser).
 
     Sprint 199: Also validates pwd_at claim against DB password_changed_at.
     Tokens issued before a password change are rejected.
@@ -291,7 +314,7 @@ def require_current_user(
 
 
 def require_verified_user(
-    token: Annotated[Optional[str], Depends(oauth2_scheme)], db: Session = Depends(get_db)
+    token: Annotated[Optional[str], Depends(resolve_access_token)], db: Session = Depends(get_db)
 ) -> User:
     """
     FastAPI dependency that REQUIRES authentication AND email verification.
@@ -320,7 +343,9 @@ def require_verified_user(
     return user
 
 
-def require_superadmin(token: Annotated[Optional[str], Depends(oauth2_scheme)], db: Session = Depends(get_db)) -> User:
+def require_superadmin(
+    token: Annotated[Optional[str], Depends(resolve_access_token)], db: Session = Depends(get_db)
+) -> User:
     """FastAPI dependency that REQUIRES superadmin platform-level access.
 
     Sprint 590: Separate from org-level RBAC — this is platform-level.

@@ -179,6 +179,7 @@ export async function apiFetch<T>(
     }
 
     // Silent token refresh on 401
+    // The refresh endpoint sets a new HttpOnly access cookie — no Bearer header needed.
     const tokenRefreshCallback = getTokenRefreshCallback();
     if (
       lastError?.status === 401 &&
@@ -189,10 +190,9 @@ export async function apiFetch<T>(
     ) {
       const newToken = await tokenRefreshCallback();
       if (newToken) {
-        await _fetchCsrfToken(newToken);
+        await _fetchCsrfToken();
         const refreshedHeaders = {
           ...headers,
-          'Authorization': `Bearer ${newToken}`,
           ...(_getCsrfToken() && _CSRF_METHODS.has(method) ? { 'X-CSRF-Token': _getCsrfToken()! } : {}),
         };
         const retryResult = await performFetch<T>(url, refreshedHeaders, method, requestBody, timeout);

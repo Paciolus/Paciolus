@@ -30,7 +30,14 @@ from auth import (
     revoke_refresh_token,
     rotate_refresh_token,
 )
-from config import COOKIE_SECURE, ENV_MODE, JWT_EXPIRATION_MINUTES, REFRESH_COOKIE_NAME, REFRESH_TOKEN_EXPIRATION_DAYS
+from config import (
+    ACCESS_COOKIE_NAME,
+    COOKIE_SECURE,
+    ENV_MODE,
+    JWT_EXPIRATION_MINUTES,
+    REFRESH_COOKIE_NAME,
+    REFRESH_TOKEN_EXPIRATION_DAYS,
+)
 from database import get_db
 from disposable_email import is_disposable_email
 from email_service import (
@@ -91,6 +98,34 @@ def _clear_refresh_cookie(response: Response) -> None:
     response.delete_cookie(
         key=REFRESH_COOKIE_NAME,
         path="/auth",
+        secure=COOKIE_SECURE,
+        samesite="none" if COOKIE_SECURE else "lax",
+    )
+
+
+def _set_access_cookie(response: Response, token: str) -> None:
+    """Set the HttpOnly access token cookie.
+
+    Unlike the refresh cookie (path=/auth), the access cookie is sent on
+    ALL API paths so the browser never needs a JS-readable bearer token.
+    Max-age matches the JWT expiration so the cookie auto-expires with the token.
+    """
+    response.set_cookie(
+        key=ACCESS_COOKIE_NAME,
+        value=token,
+        httponly=True,
+        secure=COOKIE_SECURE,
+        samesite="none" if COOKIE_SECURE else "lax",
+        path="/",
+        max_age=JWT_EXPIRATION_MINUTES * 60,
+    )
+
+
+def _clear_access_cookie(response: Response) -> None:
+    """Clear the HttpOnly access token cookie."""
+    response.delete_cookie(
+        key=ACCESS_COOKIE_NAME,
+        path="/",
         secure=COOKIE_SECURE,
         samesite="none" if COOKIE_SECURE else "lax",
     )
@@ -209,6 +244,7 @@ def register(
     )
     # Registration is always session-only (no "Remember Me" option)
     _set_refresh_cookie(response, raw_refresh_token, remember_me=False)
+    _set_access_cookie(response, jwt_token)
 
     csrf_token_value = generate_csrf_token(user_id=str(user.id))
     return AuthResponse(
@@ -276,6 +312,7 @@ def login(request: Request, credentials: UserLogin, response: Response, db: Sess
         ip_address=request.client.host if request.client else None,
     )
     _set_refresh_cookie(response, raw_refresh_token, credentials.remember_me)
+    _set_access_cookie(response, token)
 
     csrf_token_value = generate_csrf_token(user_id=str(user.id))
     return AuthResponse(
@@ -580,6 +617,7 @@ def refresh(request: Request, response: Response, db: Session = Depends(get_db))
     access_token, new_refresh_token, user = rotate_refresh_token(db, raw_token)
     # Always issue a session cookie on rotation (security best-practice)
     _set_refresh_cookie(response, new_refresh_token, remember_me=False)
+    _set_access_cookie(response, access_token)
     expires_in = JWT_EXPIRATION_MINUTES * 60
 
     csrf_token_value = generate_csrf_token(user_id=str(user.id))
@@ -600,6 +638,7 @@ def logout(request: Request, response: Response, db: Session = Depends(get_db)) 
     if raw_token:
         revoke_refresh_token(db, raw_token)
     _clear_refresh_cookie(response)
+    _clear_access_cookie(response)
     return SuccessResponse(success=True, message="Logged out successfully")
 
 

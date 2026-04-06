@@ -36,12 +36,12 @@ export interface UploadTransportResult<T = unknown> {
 export async function uploadFetch<T = unknown>(
   endpoint: string,
   formData: FormData,
-  token: string | null,
+  _token: string | null,
 ): Promise<UploadTransportResult<T>> {
   try {
     const csrfToken = getCsrfToken()
     const headers: Record<string, string> = {}
-    if (token) headers['Authorization'] = `Bearer ${token}`
+    // Auth via HttpOnly cookie (credentials: 'include') — no Bearer header needed
     if (csrfToken) headers['X-CSRF-Token'] = csrfToken
 
     const url = endpoint.startsWith('http') ? endpoint : `${API_URL}${endpoint}`
