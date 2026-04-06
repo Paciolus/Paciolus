@@ -485,12 +485,19 @@ USER appuser
   - Render: Environment Variables (encrypted at rest)
   - Self-hosted: AWS Secrets Manager / Google Secret Manager
 
-**Example secret:** `JWT_SECRET_KEY`
+**Secret domain separation:** Three independent HMAC keys with separate rotation schedules:
+- `JWT_SECRET_KEY` — Authentication token signing (HS256)
+- `CSRF_SECRET_KEY` — CSRF token signing (HMAC-SHA256)
+- `AUDIT_CHAIN_SECRET_KEY` — Audit log chain integrity (HMAC-SHA512, SOC 2 CC7.4)
+
+Each key can be rotated independently without affecting the other domains. `AUDIT_CHAIN_SECRET_KEY` includes backward-compatible verification — records signed with the previous key remain verifiable during rotation windows.
 
 #### Rotation Policy
 | Secret Type | Rotation Frequency | Automated |
 |-------------|-------------------|-----------|
 | JWT secret key | 90 days | No (manual) |
+| CSRF secret key | 90 days | No (manual) |
+| Audit chain secret key | 180 days | No (manual, backward-compatible) |
 | Database password | 180 days | Yes (managed service) |
 | API keys (third-party) | 365 days | No (manual) |
 

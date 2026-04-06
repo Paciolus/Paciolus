@@ -209,6 +209,39 @@ if (
     )
 
 # =============================================================================
+# AUDIT CHAIN SECRET (Secret domain separation — independent from JWT)
+# =============================================================================
+
+# Audit Chain Secret Key — HMAC key for audit log chain integrity (SOC 2 CC7.4).
+# Falls back to JWT_SECRET_KEY if unset for backward compatibility.
+# In production, set a dedicated key so JWT rotation doesn't break audit chains.
+_audit_chain_secret = _resolve_secret("AUDIT_CHAIN_SECRET_KEY")
+
+if _audit_chain_secret is None or _audit_chain_secret.strip() == "":
+    _audit_chain_secret = JWT_SECRET_KEY
+    if ENV_MODE == "production" and not _using_generated_jwt:
+        _config_logger.warning(
+            "AUDIT_CHAIN_SECRET_KEY not set — falling back to JWT_SECRET_KEY. "
+            "Set a dedicated key for independent rotation."
+        )
+
+AUDIT_CHAIN_SECRET_KEY = _audit_chain_secret
+
+# Validate strength when explicitly set (not falling back to JWT)
+if AUDIT_CHAIN_SECRET_KEY != JWT_SECRET_KEY and AUDIT_CHAIN_SECRET_KEY is not None and len(AUDIT_CHAIN_SECRET_KEY) < 32:
+    if ENV_MODE == "production":
+        _hard_fail(
+            f"AUDIT_CHAIN_SECRET_KEY is too short ({len(AUDIT_CHAIN_SECRET_KEY)} chars).\n"
+            "Use at least 32 characters (64 hex chars recommended).\n"
+            'Generate a secure key with: python -c "import secrets; print(secrets.token_hex(32))"'
+        )
+    else:
+        _config_logger.warning(
+            "AUDIT_CHAIN_SECRET_KEY is short (%d chars). Use at least 32 characters for production.",
+            len(AUDIT_CHAIN_SECRET_KEY),
+        )
+
+# =============================================================================
 # PROXY TRUST (Sprint 279 — X-Forwarded-For spoofing protection)
 # =============================================================================
 

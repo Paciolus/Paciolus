@@ -3,6 +3,9 @@
 Sprint 461: HMAC-SHA512 hash chain on ActivityLog records.
 Each new record's chain_hash = HMAC(key, previous_chain_hash | serialized_record).
 Verification traverses the chain and recomputes each hash to detect tampering.
+
+Secret domain separation: Uses AUDIT_CHAIN_SECRET_KEY (independent from JWT).
+Backward-compatible verification falls back to JWT_SECRET_KEY for pre-rotation records.
 """
 
 import hashlib
@@ -10,7 +13,7 @@ import hmac
 from dataclasses import dataclass
 from typing import Any, Optional
 
-from config import JWT_SECRET_KEY
+from config import AUDIT_CHAIN_SECRET_KEY, JWT_SECRET_KEY
 
 # The genesis hash for the first record in the chain (128 hex zeros = SHA-512 output length)
 GENESIS_HASH = "0" * 128
@@ -42,18 +45,23 @@ def _serialize_record(record: Any) -> str:
     return "|".join(fields)
 
 
+def _compute_hash_with_key(key: str, previous_hash: str, record: Any) -> str:
+    """Compute HMAC-SHA512 chain hash with a specific key."""
+    content = previous_hash + "|" + _serialize_record(record)
+    return hmac.new(
+        (key or "").encode("utf-8"),
+        content.encode("utf-8"),
+        hashlib.sha512,
+    ).hexdigest()
+
+
 def compute_chain_hash(previous_hash: str, record: Any) -> str:
     """Compute HMAC-SHA512 chain hash: HMAC(key, previous_hash | serialized_record).
 
     Uses SHA-512 for 128-char hex output.
-    The JWT_SECRET_KEY is used as HMAC key for domain separation.
+    Uses AUDIT_CHAIN_SECRET_KEY (separate security domain from JWT).
     """
-    content = previous_hash + "|" + _serialize_record(record)
-    return hmac.new(
-        (JWT_SECRET_KEY or "").encode("utf-8"),
-        content.encode("utf-8"),
-        hashlib.sha512,
-    ).hexdigest()
+    return _compute_hash_with_key(AUDIT_CHAIN_SECRET_KEY, previous_hash, record)
 
 
 @dataclass
@@ -109,9 +117,19 @@ def verify_audit_chain(db: Any, start_id: int, end_id: int, user_id: int) -> Cha
     )
     previous_hash = previous_record.chain_hash if previous_record else GENESIS_HASH
 
+    # Backward-compatible verification: try current AUDIT_CHAIN_SECRET_KEY first,
+    # fall back to JWT_SECRET_KEY for records created before key separation.
+    _fallback_needed = AUDIT_CHAIN_SECRET_KEY != JWT_SECRET_KEY
+
     for idx, record in enumerate(records):
         expected_hash = compute_chain_hash(previous_hash, record)
         if record.chain_hash != expected_hash:
+            # Try legacy JWT_SECRET_KEY for pre-rotation records
+            if _fallback_needed:
+                legacy_hash = _compute_hash_with_key(JWT_SECRET_KEY, previous_hash, record)
+                if record.chain_hash == legacy_hash:
+                    previous_hash = record.chain_hash
+                    continue
             return ChainVerificationResult(
                 is_valid=False,
                 records_checked=idx + 1,

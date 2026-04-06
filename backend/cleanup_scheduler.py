@@ -401,11 +401,13 @@ def _job_verify_database_tls() -> None:
         timestamp = datetime.now(UTC).isoformat()
         status = "active" if ssl_active else "INACTIVE"
 
-        # HMAC-sign the evidence using JWT secret for tamper evidence
-        from config import JWT_SECRET_KEY
+        # HMAC-sign the evidence using audit chain secret for tamper evidence
+        from config import AUDIT_CHAIN_SECRET_KEY
 
         evidence_payload = f"db_tls_check|{status}|{timestamp}"
-        signature = hmac.new(JWT_SECRET_KEY.encode(), evidence_payload.encode(), hashlib.sha256).hexdigest()[:16]
+        signature = hmac.new(AUDIT_CHAIN_SECRET_KEY.encode(), evidence_payload.encode(), hashlib.sha256).hexdigest()[
+            :16
+        ]
 
         log_secure_operation(
             "db_tls_daily_check",
