@@ -1,0 +1,139 @@
+{
+  "agent": "dependency_sentinel",
+  "status": "yellow",
+  "backend_outdated": [
+    {
+      "package": "fastapi",
+      "current": "0.135.2",
+      "latest": "0.135.3",
+      "severity": "patch",
+      "watchlist": true,
+      "deferred": false
+    },
+    {
+      "package": "pdfminer.six",
+      "current": "20251230",
+      "latest": "20260107",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": true,
+      "deferral_reason": "Calendar-versioned release; waiting on downstream compatibility confirmation",
+      "deferral_review_by": "2026-04-30"
+    },
+    {
+      "package": "pillow",
+      "current": "12.1.1",
+      "latest": "12.2.0",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "pydantic_core",
+      "current": "2.41.5",
+      "latest": "2.45.0",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "stripe",
+      "current": "15.0.0",
+      "latest": "15.0.1",
+      "severity": "patch",
+      "watchlist": true,
+      "deferred": false
+    }
+  ],
+  "frontend_outdated": [
+    {
+      "package": "@playwright/test",
+      "current": "1.59.0",
+      "latest": "1.59.1",
+      "severity": "patch",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "ts-jest",
+      "current": "29.4.6",
+      "latest": "29.4.9",
+      "severity": "patch",
+      "watchlist": false,
+      "deferred": false
+    }
+  ],
+  "security_flagged": [
+    {
+      "package": "fastapi",
+      "current": "0.135.2",
+      "latest": "0.135.3",
+      "severity": "patch",
+      "watchlist": true,
+      "deferred": false
+    },
+    {
+      "package": "stripe",
+      "current": "15.0.0",
+      "latest": "15.0.1",
+      "severity": "patch",
+      "watchlist": true,
+      "deferred": false
+    }
+  ],
+  "deferred": [
+    {
+      "package": "pdfminer.six",
+      "current": "20251230",
+      "latest": "20260107",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": true,
+      "deferral_reason": "Calendar-versioned release; waiting on downstream compatibility confirmation",
+      "deferral_review_by": "2026-04-30"
+    }
+  ],
+  "top5_updates": [
+    {
+      "package": "pillow",
+      "current": "12.1.1",
+      "latest": "12.2.0",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "pydantic_core",
+      "current": "2.41.5",
+      "latest": "2.45.0",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "fastapi",
+      "current": "0.135.2",
+      "latest": "0.135.3",
+      "severity": "patch",
+      "watchlist": true,
+      "deferred": false
+    },
+    {
+      "package": "stripe",
+      "current": "15.0.0",
+      "latest": "15.0.1",
+      "severity": "patch",
+      "watchlist": true,
+      "deferred": false
+    },
+    {
+      "package": "@playwright/test",
+      "current": "1.59.0",
+      "latest": "1.59.1",
+      "severity": "patch",
+      "watchlist": false,
+      "deferred": false
+    }
+  ],
+  "summary": "Backend: 5 outdated. Frontend: 2 outdated. 2 security-relevant packages have updates. 1 deferred."
+}

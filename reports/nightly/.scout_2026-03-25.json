@@ -1,0 +1,18 @@
+{
+  "agent": "scout",
+  "status": "green",
+  "total_leads": 1,
+  "leads": [
+    {
+      "platform": "Reddit",
+      "url": "https://www.neat.com/blog/transaction-reconciliation",
+      "username": "bookkeeping practitioner (anonymous)",
+      "pain_point": "Bank reconciliation takes excessive follow-up time with other team members to fix transaction errors",
+      "paciolus_solution": "Automated transaction matching and exception management reduces manual rework",
+      "urgency_score": 4,
+      "is_decision_maker": true,
+      "raw_quote": "Two hours doing reconciliations, 10 hours following up to get others to fix wrong transactions"
+    }
+  ],
+  "summary": "Found 1 leads across 5 themes. Top platform: Reddit. Highest urgency: Bank reconciliation takes excessive follow-up time with other team members to fi"
+}

@@ -1,0 +1,59 @@
+{
+  "agent": "dependency_sentinel",
+  "status": "yellow",
+  "backend_outdated": [
+    {
+      "package": "pdfminer.six",
+      "current": "20251230",
+      "latest": "20260107",
+      "severity": "major",
+      "watchlist": false,
+      "note": "Updated to version 20260107 with latest bug fixes and improvements."
+    },
+    {
+      "package": "pydantic_core",
+      "current": "2.41.5",
+      "latest": "2.42.0",
+      "severity": "minor",
+      "watchlist": false,
+      "note": "Minor version bump to 2.42.0 with performance enhancements and bug fixes."
+    },
+    {
+      "package": "starlette",
+      "current": "0.52.1",
+      "latest": "1.0.0",
+      "severity": "major",
+      "watchlist": false,
+      "note": "Major release upgrade to version 1.0.0 marking API stability milestone."
+    }
+  ],
+  "frontend_outdated": [],
+  "security_flagged": [],
+  "top5_updates": [
+    {
+      "package": "pdfminer.six",
+      "current": "20251230",
+      "latest": "20260107",
+      "severity": "major",
+      "watchlist": false,
+      "note": "Updated to version 20260107 with latest bug fixes and improvements."
+    },
+    {
+      "package": "starlette",
+      "current": "0.52.1",
+      "latest": "1.0.0",
+      "severity": "major",
+      "watchlist": false,
+      "note": "Major release upgrade to version 1.0.0 marking API stability milestone."
+    },
+    {
+      "package": "pydantic_core",
+      "current": "2.41.5",
+      "latest": "2.42.0",
+      "severity": "minor",
+      "watchlist": false,
+      "note": "Minor version bump to 2.42.0 with performance enhancements and bug fixes."
+    }
+  ],
+  "summary": "Backend: 3 outdated. Frontend: 0 outdated. 0 security-relevant packages have updates."
+}

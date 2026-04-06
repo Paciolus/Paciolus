@@ -1,0 +1,27 @@
+{
+  "agent": "qa_warden",
+  "status": "green",
+  "backend": {
+    "passed": 6667,
+    "failed": 0,
+    "errors": 0,
+    "duration_s": 286.5,
+    "failing_tests": [
+      "tests/test_activity_api.py::TestActivityHistory::test_returns_paginated_history",
+      "tests/test_activity_api.py::TestActivityHistory::test_empty_history - ...",
+      "tests/test_clients_api.py::TestGetClients::test_returns_paginated_list"
+    ],
+    "new_failures": [
+      "tests/test_activity_api.py::TestActivityHistory::test_empty_history - ...",
+      "tests/test_activity_api.py::TestActivityHistory::test_returns_paginated_history",
+      "tests/test_clients_api.py::TestGetClients::test_returns_paginated_list"
+    ],
+    "resolved": []
+  },
+  "frontend": {
+    "passed": 1426,
+    "failed": 0,
+    "duration_s": 14.2
+  },
+  "summary": "Backend: 6667 passed / 0 failed in 286.5s. Frontend: 1426 passed / 0 failed in 14.2s. 3 new failure(s) since yesterday."
+}

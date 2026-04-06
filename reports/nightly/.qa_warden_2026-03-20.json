@@ -1,0 +1,28 @@
+{
+  "agent": "qa_warden",
+  "status": "green",
+  "backend": {
+    "passed": 6897,
+    "failed": 0,
+    "errors": 0,
+    "duration_s": 256.7,
+    "failing_tests": [
+      "tests/test_sampling_memo.py::TestEvaluationNextSteps::test_evaluation_intro_pass_accepted",
+      "tests/test_sampling_memo.py::TestEvaluationNextSteps::test_evaluation_intro_fail_not_accepted"
+    ],
+    "new_failures": [
+      "tests/test_sampling_memo.py::TestEvaluationNextSteps::test_evaluation_intro_fail_not_accepted",
+      "tests/test_sampling_memo.py::TestEvaluationNextSteps::test_evaluation_intro_pass_accepted"
+    ],
+    "resolved": [
+      "tests/test_email_verification.py::TestRegistrationWithDisposableEmail::test_allows_legitimate_email_registration",
+      "tests/test_security.py::TestAccountLockoutIntegration::test_failed_login_returns_lockout_info"
+    ]
+  },
+  "frontend": {
+    "passed": 1725,
+    "failed": 0,
+    "duration_s": 17.3
+  },
+  "summary": "Backend: 6897 passed / 0 failed in 256.7s. Frontend: 1725 passed / 0 failed in 17.3s. 2 new failure(s) since yesterday. 2 failure(s) resolved."
+}

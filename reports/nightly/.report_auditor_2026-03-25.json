@@ -1,0 +1,48 @@
+{
+  "agent": "report_auditor",
+  "status": "green",
+  "meridian_tests": {
+    "passed": 2,
+    "failed": 0,
+    "failures": []
+  },
+  "bug_tracker": {
+    "BUG-001": {
+      "description": "Suggested procedures rotation bug \u2014 procedures repeat rather than rotate across reports",
+      "status": "CONFIRMED_OPEN",
+      "changed_today": false
+    },
+    "BUG-002": {
+      "description": "Hardcoded risk tier labels \u2014 labels do not reflect dynamic risk scoring",
+      "status": "POSSIBLY_FIXED",
+      "changed_today": true
+    },
+    "BUG-003": {
+      "description": "PDF cell overflow \u2014 long text overflows table cells in generated PDFs",
+      "status": "POSSIBLY_FIXED",
+      "changed_today": true
+    },
+    "BUG-004": {
+      "description": "Orphaned ASC 250-10 references \u2014 appear in reports where not applicable",
+      "status": "POSSIBLY_FIXED",
+      "changed_today": false
+    },
+    "BUG-005": {
+      "description": "PP&E ampersand escaping \u2014 & renders as &amp; in PDF output",
+      "status": "POSSIBLY_FIXED",
+      "changed_today": false
+    },
+    "BUG-006": {
+      "description": "Identical data quality scores \u2014 multiple reports return same score regardless of input",
+      "status": "CONFIRMED_OPEN",
+      "changed_today": false
+    },
+    "BUG-007": {
+      "description": "Empty drill-down stubs \u2014 drill-down sections render with no content",
+      "status": "POSSIBLY_FIXED",
+      "changed_today": true
+    }
+  },
+  "open_bug_count": 2,
+  "summary": "Meridian tests: 2 passed, 0 failed. 2/7 known bugs confirmed open."
+}

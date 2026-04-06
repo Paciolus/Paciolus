@@ -1,0 +1,23 @@
+{
+  "agent": "qa_warden",
+  "status": "red",
+  "backend": {
+    "passed": 7230,
+    "failed": 1,
+    "errors": 0,
+    "duration_s": 297.4,
+    "failing_tests": [
+      "tests/test_dunning.py::TestDunningMetrics::test_recovered_episode_counted"
+    ],
+    "new_failures": [
+      "tests/test_dunning.py::TestDunningMetrics::test_recovered_episode_counted"
+    ],
+    "resolved": []
+  },
+  "frontend": {
+    "passed": 1745,
+    "failed": 0,
+    "duration_s": 53.5
+  },
+  "summary": "Backend: 7230 passed / 1 failed in 297.4s. Frontend: 1745 passed / 0 failed in 53.5s. 1 new failure(s) since yesterday."
+}

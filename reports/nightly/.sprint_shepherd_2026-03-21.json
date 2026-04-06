@@ -1,0 +1,33 @@
+{
+  "agent": "sprint_shepherd",
+  "status": "yellow",
+  "commits_last_24h": 54,
+  "commits_last_7d": 138,
+  "work_categories_24h": {
+    "bug fix": 4,
+    "other": 36,
+    "audit": 7,
+    "api": 2,
+    "test": 5
+  },
+  "risk_commits": [
+    {
+      "hash": "41caa5a",
+      "message": "fix: resolve merge conflict in todo.md (keep merged state)",
+      "keyword": "TODO"
+    },
+    {
+      "hash": "2228447",
+      "message": "fix(decimal): mark FIX-1A as complete in todo.md",
+      "keyword": "TODO"
+    }
+  ],
+  "sprint_checklist": {
+    "found": false,
+    "total": 0,
+    "completed": 0,
+    "pct": 0
+  },
+  "open_items": [],
+  "summary": "54 commits in last 24h, 138 in last 7d. 2 risk signal(s) detected."
+}

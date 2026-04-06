@@ -1,0 +1,113 @@
+{
+  "agent": "dependency_sentinel",
+  "status": "yellow",
+  "backend_outdated": [
+    {
+      "package": "anyio",
+      "current": "4.12.1",
+      "latest": "4.13.0",
+      "severity": "minor",
+      "watchlist": false,
+      "note": "Minor update to 4.13.0 with bug fixes and performance enhancements."
+    },
+    {
+      "package": "chardet",
+      "current": "7.2.0",
+      "latest": "7.3.0",
+      "severity": "minor",
+      "watchlist": false,
+      "note": "Updated to 7.3.0 with improved character encoding detection."
+    },
+    {
+      "package": "pdfminer.six",
+      "current": "20251230",
+      "latest": "20260107",
+      "severity": "major",
+      "watchlist": false,
+      "note": "Updated to version 20260107 with latest bug fixes and improvements."
+    },
+    {
+      "package": "pydantic_core",
+      "current": "2.41.5",
+      "latest": "2.42.0",
+      "severity": "minor",
+      "watchlist": false
+    },
+    {
+      "package": "redis",
+      "current": "7.3.0",
+      "latest": "7.4.0",
+      "severity": "minor",
+      "watchlist": false
+    },
+    {
+      "package": "sentry-sdk",
+      "current": "2.55.0",
+      "latest": "2.56.0",
+      "severity": "minor",
+      "watchlist": false
+    },
+    {
+      "package": "starlette",
+      "current": "0.52.1",
+      "latest": "1.0.0",
+      "severity": "major",
+      "watchlist": false,
+      "note": "Major release 1.0.0 with API stabilization and potential breaking changes."
+    }
+  ],
+  "frontend_outdated": [
+    {
+      "package": "typescript",
+      "current": "5.9.3",
+      "latest": "6.0.2",
+      "severity": "major",
+      "watchlist": false,
+      "note": "Major version 6.0.2 with new language features and compiler improvements."
+    }
+  ],
+  "security_flagged": [],
+  "top5_updates": [
+    {
+      "package": "pdfminer.six",
+      "current": "20251230",
+      "latest": "20260107",
+      "severity": "major",
+      "watchlist": false,
+      "note": "Updated to version 20260107 with latest bug fixes and improvements."
+    },
+    {
+      "package": "starlette",
+      "current": "0.52.1",
+      "latest": "1.0.0",
+      "severity": "major",
+      "watchlist": false,
+      "note": "Major release 1.0.0 with API stabilization and potential breaking changes."
+    },
+    {
+      "package": "typescript",
+      "current": "5.9.3",
+      "latest": "6.0.2",
+      "severity": "major",
+      "watchlist": false,
+      "note": "Major version 6.0.2 with new language features and compiler improvements."
+    },
+    {
+      "package": "anyio",
+      "current": "4.12.1",
+      "latest": "4.13.0",
+      "severity": "minor",
+      "watchlist": false,
+      "note": "Minor update to 4.13.0 with bug fixes and performance enhancements."
+    },
+    {
+      "package": "chardet",
+      "current": "7.2.0",
+      "latest": "7.3.0",
+      "severity": "minor",
+      "watchlist": false,
+      "note": "Updated to 7.3.0 with improved character encoding detection."
+    }
+  ],
+  "summary": "Backend: 7 outdated. Frontend: 1 outdated. 0 security-relevant packages have updates."
+}
