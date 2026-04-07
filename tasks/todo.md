@@ -16,6 +16,7 @@
 > new features or architectural changes. Each entry is one line.
 > Format: `- [date] commit-sha: description (files touched)`
 
+- [2026-04-07] PENDING: dependency patch — uvicorn 0.43.0→0.44.0, python-multipart 0.0.22→0.0.24 (nightly report remediation)
 - [2026-04-06] PENDING: secret domain separation — AUDIT_CHAIN_SECRET_KEY independent from JWT, backward-compat verification fallback, TLS evidence signing updated
 - [2026-04-04] PENDING: dependency upgrades — 14 packages updated, 3 security-relevant (fastapi 0.135.3, SQLAlchemy 2.0.49, stripe 15.0.1), tzdata 2026.1, uvicorn 0.43.0, pillow 12.2.0, next watchlist patch
 - [2026-03-26] e04e63e: full sweep remediation — sessionStorage financial data removal, CSRF on /auth/refresh, billing interval base-plan fix, Decimal float-cast elimination (13 files, 16 tests added)
