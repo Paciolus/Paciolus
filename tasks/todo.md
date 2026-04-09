@@ -72,6 +72,30 @@
 - No `dangerouslySetInnerHTML` usage found in codebase (clean baseline)
 - `style-src 'unsafe-inline'` retained (React inline styles — documented limitation)
 
+### Sprint 595: verify-email 422 Fix + forgot-password Diagnostic
+**Status:** COMPLETE
+**Goal:** Unblock the production email-verification click-through and gather data on why post-Sprint-594 password reset still returns "unknown email".
+
+**Symptoms observed post-Sprint-594 deploy:**
+1. CEO clicks an email (from spam) → `/verify-email` page shows "Verification Failed". Render logs: `POST /auth/verify-email?token=... 422`.
+2. CEO retries `/auth/forgot-password` → still logs `"Password reset requested for unknown email: com***@gmail.com"`. The Sprint 594 migration ran cleanly (`Running upgrade a848ac91d39a -> f7b3c91a04e2`) but the lookup still fails.
+
+**Root cause (Problem A — verify-email 422):**
+`VerificationContext.verifyEmail` was calling `apiPost('/auth/verify-email?token=...', null, {})` — token in the URL query string, empty body. The backend's `VerifyEmailRequest` is a Pydantic body model requiring `{token: string}` in the JSON body, so every click-through 422'd on the missing field. Latent since Sprint 58 (original email verification work) because Phase 1 only tested email *delivery*, not the click-through path. The email the CEO kept clicking was the old verification email from the 17:39:51 registration sitting in spam.
+
+**Root cause (Problem B — unknown email):** still undetermined. Options are (a) the Neon DB has zero user rows (user wiped somehow between 17:39 creation and now), or (b) the stored email is genuinely different from `comcgee89@gmail.com` despite what the CEO is typing. Sprint 595 instruments this so the NEXT failure answers the question.
+
+**Changes:**
+- [x] Frontend: `VerificationContext.verifyEmail` now POSTs `'/auth/verify-email'` with `{token}` in the JSON body. Retains the `encodeURIComponent`-free path since tokens are already URL-safe hex.
+- [x] Frontend test: `src/__tests__/VerificationContext.test.tsx` — new file with 3 tests asserting (i) endpoint has no query string, (ii) body contains `{token}`, (iii) success/failure paths propagate correctly. Regression guard for this specific bug.
+- [x] Backend: `/auth/forgot-password` now logs `total_users=N` when the lookup fails. Zero PII leaked (we do not log other addresses). Temporary instrumentation — to be removed once the root cause is understood. Docstring notes the Sprint tie-in so it's clear this is not permanent.
+- [x] Backend: `scripts/set_superadmin.py` switches from raw `User.email == args.email` to `get_user_by_email(db, args.email)` so the CLI respects the Sprint 594 case-insensitive lookup. Also prints `total_users=N` on failure so a Render Shell session can diagnose from the other direction.
+
+**Review:**
+- All 40 backend auth/password-reset tests green (`test_auth_routes_api.py` + `test_password_reset.py`)
+- New `VerificationContext.test.tsx` — 3/3 pass
+- Deploy sequence: push → Vercel auto-deploys frontend → Render auto-deploys backend → CEO retries forgot-password → Render logs expose `total_users` → we know whether the DB is empty or the email is mismatched → either re-register or dig into the stored email
+
 ### Sprint 594: Email Case-Insensitivity Fix (Production Lockout Hotfix)
 **Status:** COMPLETE
 **Goal:** Resolve 2026-04-09 production login lockout caused by case-sensitive email lookup

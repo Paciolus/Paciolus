@@ -40,12 +40,18 @@ const VerificationContext = createContext<VerificationContextType | undefined>(u
 export function VerificationProvider({ children }: { children: ReactNode }): ReactElement {
   const { token: authToken, refreshUser } = useAuthSession()
 
-  // Verify email with token — no auth required
+  // Verify email with token — no auth required.
+  //
+  // NOTE: the token MUST be sent in the request body. The backend's
+  // `VerifyEmailRequest` is a Pydantic body model (not a query param), so
+  // passing the token via the URL query string produced a 422 on the
+  // missing body field. This was a latent bug until the 2026-04-09
+  // incident exposed it — Phase 1 only tested delivery, never click-through.
   const verifyEmail = useCallback(async (verificationToken: string): Promise<AuthResult> => {
     const { error, ok } = await apiPost<{ message: string; user: { id: number; email: string; is_verified: boolean } }>(
-      `/auth/verify-email?token=${encodeURIComponent(verificationToken)}`,
+      '/auth/verify-email',
       null,
-      {}
+      { token: verificationToken }
     )
 
     if (ok) {
