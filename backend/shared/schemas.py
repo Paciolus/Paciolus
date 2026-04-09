@@ -2,7 +2,7 @@
 Paciolus API — Shared Pydantic Schemas
 """
 
-from typing import Any, Optional, Union
+from typing import Any, Optional
 
 from pydantic import BaseModel
 
@@ -23,7 +23,7 @@ class ErrorResponse(BaseModel):
     code: str
     message: str
     request_id: str
-    detail: Optional[Union[str, list[dict[str, Any]]]] = None
+    detail: Optional[str | list[dict[str, Any]]] = None
 
 
 class AuditResultInput(BaseModel):

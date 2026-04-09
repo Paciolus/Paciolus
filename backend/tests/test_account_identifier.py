@@ -9,7 +9,6 @@ types for account identifier columns.
 import io
 
 import pandas as pd
-import pytest
 
 from security_utils import (
     process_tb_chunked,
@@ -17,10 +16,10 @@ from security_utils import (
     read_csv_secure,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_csv_bytes(rows: list[list[str]], header: list[str] | None = None) -> bytes:
     """Build CSV bytes from a list of rows."""
@@ -43,6 +42,7 @@ def _make_excel_bytes(df: pd.DataFrame) -> bytes:
 # ---------------------------------------------------------------------------
 # CSV: leading-zero account codes
 # ---------------------------------------------------------------------------
+
 
 class TestLeadingZeroPreservationCSV:
     """Account codes with leading zeros must be preserved through CSV ingestion."""
@@ -95,6 +95,7 @@ class TestLeadingZeroPreservationCSV:
 # CSV: mixed account formats (numeric + alphanumeric)
 # ---------------------------------------------------------------------------
 
+
 class TestMixedAccountFormats:
     """Mixed formats (numeric codes, alphanumeric codes) must all survive."""
 
@@ -138,18 +139,21 @@ class TestMixedAccountFormats:
 # Excel: leading-zero account codes
 # ---------------------------------------------------------------------------
 
+
 class TestLeadingZeroPreservationExcel:
     """Account codes with leading zeros must be preserved through Excel ingestion."""
 
     def test_process_tb_in_memory_excel_preserves_leading_zeros(self):
         """process_tb_in_memory must keep '0010' when reading XLSX."""
         # Build a DataFrame with string account codes, then serialize to XLSX
-        df_source = pd.DataFrame({
-            "Account": ["0010", "0020", "0100"],
-            "Account Name": ["Cash", "AR", "AP"],
-            "Debit": [5000.0, 3000.0, 0.0],
-            "Credit": [0.0, 0.0, 4000.0],
-        })
+        df_source = pd.DataFrame(
+            {
+                "Account": ["0010", "0020", "0100"],
+                "Account Name": ["Cash", "AR", "AP"],
+                "Debit": [5000.0, 3000.0, 0.0],
+                "Credit": [0.0, 0.0, 4000.0],
+            }
+        )
         xlsx_bytes = _make_excel_bytes(df_source)
         df = process_tb_in_memory(xlsx_bytes, filename="trial_balance.xlsx")
 
@@ -161,12 +165,14 @@ class TestLeadingZeroPreservationExcel:
 
     def test_process_tb_chunked_excel_preserves_types(self):
         """process_tb_chunked with XLSX must return string-typed account values."""
-        df_source = pd.DataFrame({
-            "Account": ["A-100", "B-200", "0010"],
-            "Account Name": ["Revenue", "COGS", "Cash"],
-            "Debit": [0.0, 6000.0, 5000.0],
-            "Credit": [10000.0, 0.0, 0.0],
-        })
+        df_source = pd.DataFrame(
+            {
+                "Account": ["A-100", "B-200", "0010"],
+                "Account Name": ["Revenue", "COGS", "Cash"],
+                "Debit": [0.0, 6000.0, 5000.0],
+                "Credit": [10000.0, 0.0, 0.0],
+            }
+        )
         xlsx_bytes = _make_excel_bytes(df_source)
         chunks = list(process_tb_chunked(xlsx_bytes, filename="trial_balance.xlsx"))
 
@@ -177,6 +183,7 @@ class TestLeadingZeroPreservationExcel:
 # ---------------------------------------------------------------------------
 # End-to-end: StreamingAuditor preserves identifiers
 # ---------------------------------------------------------------------------
+
 
 class TestStreamingAuditorAccountPreservation:
     """Verify the full pipeline from ingestion through StreamingAuditor.
@@ -206,15 +213,9 @@ class TestStreamingAuditorAccountPreservation:
             auditor.process_chunk(chunk, rows)
 
         account_keys = list(auditor.account_balances.keys())
-        assert any(k.startswith("0010") for k in account_keys), (
-            f"Expected a key starting with '0010' in {account_keys}"
-        )
-        assert any(k.startswith("0020") for k in account_keys), (
-            f"Expected a key starting with '0020' in {account_keys}"
-        )
-        assert any(k.startswith("0100") for k in account_keys), (
-            f"Expected a key starting with '0100' in {account_keys}"
-        )
+        assert any(k.startswith("0010") for k in account_keys), f"Expected a key starting with '0010' in {account_keys}"
+        assert any(k.startswith("0020") for k in account_keys), f"Expected a key starting with '0020' in {account_keys}"
+        assert any(k.startswith("0100") for k in account_keys), f"Expected a key starting with '0100' in {account_keys}"
 
     def test_streaming_auditor_mixed_format_accounts(self):
         """Account keys with mixed formats survive the full pipeline."""
@@ -234,12 +235,6 @@ class TestStreamingAuditorAccountPreservation:
             auditor.process_chunk(chunk, rows)
 
         account_keys = list(auditor.account_balances.keys())
-        assert any("A-100" in k for k in account_keys), (
-            f"Expected 'A-100' in {account_keys}"
-        )
-        assert any(k.startswith("0010") for k in account_keys), (
-            f"Expected '0010' in {account_keys}"
-        )
-        assert any(k.startswith("42") for k in account_keys), (
-            f"Expected '42' in {account_keys}"
-        )
+        assert any("A-100" in k for k in account_keys), f"Expected 'A-100' in {account_keys}"
+        assert any(k.startswith("0010") for k in account_keys), f"Expected '0010' in {account_keys}"
+        assert any(k.startswith("42") for k in account_keys), f"Expected '42' in {account_keys}"

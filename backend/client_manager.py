@@ -158,8 +158,7 @@ class ClientManager:
         Returns (list of dicts with client + engagement_summary, total_count).
         Uses a LEFT JOIN to compute per-client engagement stats in a single pass.
         """
-        from sqlalchemy import case, literal_column
-        from sqlalchemy.orm import aliased
+        from sqlalchemy import case
 
         from engagement_model import Engagement, EngagementStatus, ToolRun
 
@@ -209,15 +208,17 @@ class ClientManager:
 
         results = []
         for client, active_count, archived_count, latest_period_end, tool_run_count in rows:
-            results.append({
-                "client": client,
-                "engagement_summary": {
-                    "active_count": active_count or 0,
-                    "archived_count": archived_count or 0,
-                    "latest_period_end": latest_period_end.isoformat() if latest_period_end else None,
-                    "tool_run_count": tool_run_count or 0,
-                },
-            })
+            results.append(
+                {
+                    "client": client,
+                    "engagement_summary": {
+                        "active_count": active_count or 0,
+                        "archived_count": archived_count or 0,
+                        "latest_period_end": latest_period_end.isoformat() if latest_period_end else None,
+                        "tool_run_count": tool_run_count or 0,
+                    },
+                }
+            )
 
         return results, total_count
 

@@ -2492,6 +2492,40 @@
         "title": "AccrualProcedureResponse",
         "type": "object"
       },
+      "ActivityEntry": {
+        "properties": {
+          "filename_display": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filename Display"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "record_count": {
+            "default": 0,
+            "title": "Record Count",
+            "type": "integer"
+          },
+          "timestamp": {
+            "title": "Timestamp",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "timestamp"
+        ],
+        "title": "ActivityEntry",
+        "type": "object"
+      },
       "ActivityLogCreate": {
         "properties": {
           "anomaly_count": {
@@ -3336,6 +3370,66 @@
         "title": "AdjustmentTypesResponse",
         "type": "object"
       },
+      "AdminActionResponse": {
+        "description": "Standard response for admin actions.",
+        "properties": {
+          "audit_log_id": {
+            "title": "Audit Log Id",
+            "type": "integer"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "success": {
+            "default": true,
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "message",
+          "audit_log_id"
+        ],
+        "title": "AdminActionResponse",
+        "type": "object"
+      },
+      "AdminOverviewResponse": {
+        "description": "GET /admin/overview — dashboard summary.",
+        "properties": {
+          "active_members_30d": {
+            "title": "Active Members 30D",
+            "type": "integer"
+          },
+          "organization_name": {
+            "title": "Organization Name",
+            "type": "string"
+          },
+          "tool_usage": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Tool Usage",
+            "type": "object"
+          },
+          "total_members": {
+            "title": "Total Members",
+            "type": "integer"
+          },
+          "uploads_this_month": {
+            "title": "Uploads This Month",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total_members",
+          "uploads_this_month",
+          "active_members_30d",
+          "organization_name"
+        ],
+        "title": "AdminOverviewResponse",
+        "type": "object"
+      },
       "ApplyAdjustmentsRequest": {
         "properties": {
           "adjustment_ids": {
@@ -3373,6 +3467,120 @@
           "adjustment_ids"
         ],
         "title": "ApplyAdjustmentsRequest",
+        "type": "object"
+      },
+      "AuditLogEntry": {
+        "properties": {
+          "action_type": {
+            "title": "Action Type",
+            "type": "string"
+          },
+          "admin_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Admin Email"
+          },
+          "admin_user_id": {
+            "title": "Admin User Id",
+            "type": "integer"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "details_json": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details Json"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "ip_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ip Address"
+          },
+          "target_org_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Org Id"
+          },
+          "target_user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target User Id"
+          }
+        },
+        "required": [
+          "id",
+          "admin_user_id",
+          "action_type",
+          "created_at"
+        ],
+        "title": "AuditLogEntry",
+        "type": "object"
+      },
+      "AuditLogResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AuditLogEntry"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "offset",
+          "limit"
+        ],
+        "title": "AuditLogResponse",
         "type": "object"
       },
       "AuditResultInput": {
@@ -4499,6 +4707,62 @@
         "title": "BenfordAnalysisResponse",
         "type": "object"
       },
+      "BillingEventEntry": {
+        "properties": {
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "event_type": {
+            "title": "Event Type",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "interval": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interval"
+          },
+          "metadata_json": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata Json"
+          },
+          "tier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tier"
+          }
+        },
+        "required": [
+          "id",
+          "event_type",
+          "created_at"
+        ],
+        "title": "BillingEventEntry",
+        "type": "object"
+      },
       "BillingMessageResponse": {
         "description": "Simple message response.",
         "properties": {
@@ -5619,6 +5883,96 @@
         "title": "Body_upload_rate_table_audit_currency_rates_post",
         "type": "object"
       },
+      "BrandingResponse": {
+        "description": "Response for branding GET/PUT/POST-logo endpoints.",
+        "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "footer_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Footer Text"
+          },
+          "has_logo": {
+            "default": false,
+            "title": "Has Logo",
+            "type": "boolean"
+          },
+          "header_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Header Text"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "logo_content_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo Content Type"
+          },
+          "logo_size_bytes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo Size Bytes"
+          },
+          "organization_id": {
+            "title": "Organization Id",
+            "type": "integer"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "required": [
+          "id",
+          "organization_id"
+        ],
+        "title": "BrandingResponse",
+        "type": "object"
+      },
       "BucketBreakdownResponse": {
         "description": "One row in the magnitude histogram.",
         "properties": {
@@ -5662,6 +6016,102 @@
           "percent_count"
         ],
         "title": "BucketBreakdownResponse",
+        "type": "object"
+      },
+      "BulkFileStatusEntry": {
+        "description": "Single file entry in the bulk job status.",
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filename"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "BulkFileStatusEntry",
+        "type": "object"
+      },
+      "BulkUploadStartResponse": {
+        "description": "POST /upload/bulk — initiation response.",
+        "properties": {
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "total_files": {
+            "title": "Total Files",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "job_id",
+          "total_files",
+          "status"
+        ],
+        "title": "BulkUploadStartResponse",
+        "type": "object"
+      },
+      "BulkUploadStatusResponse": {
+        "description": "GET /upload/bulk/{job_id}/status — poll response.",
+        "properties": {
+          "completed_count": {
+            "title": "Completed Count",
+            "type": "integer"
+          },
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/BulkFileStatusEntry"
+            },
+            "title": "Files",
+            "type": "array"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "total_count": {
+            "title": "Total Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "job_id",
+          "status",
+          "completed_count",
+          "total_count"
+        ],
+        "title": "BulkUploadStatusResponse",
         "type": "object"
       },
       "CancelRequest": {
@@ -5840,6 +6290,43 @@
           "checkout_url"
         ],
         "title": "CheckoutResponse",
+        "type": "object"
+      },
+      "ChurnMetricsResponse": {
+        "properties": {
+          "dunning": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DunningMetrics"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Dunning episode metrics"
+          },
+          "involuntary_churn": {
+            "$ref": "#/components/schemas/InvoluntaryChurn"
+          },
+          "logo_churn": {
+            "$ref": "#/components/schemas/LogoChurn"
+          },
+          "period": {
+            "default": "trailing_30d",
+            "description": "Measurement period",
+            "title": "Period",
+            "type": "string"
+          },
+          "revenue_churn": {
+            "$ref": "#/components/schemas/RevenueChurn"
+          }
+        },
+        "required": [
+          "logo_churn",
+          "revenue_churn",
+          "involuntary_churn"
+        ],
+        "title": "ChurnMetricsResponse",
         "type": "object"
       },
       "ClassificationIssueResponse": {
@@ -6031,6 +6518,39 @@
           "name"
         ],
         "title": "ClientCreate",
+        "type": "object"
+      },
+      "ClientEngagementSummary": {
+        "description": "Lightweight engagement summary per client (Sprint 580).",
+        "properties": {
+          "active_count": {
+            "default": 0,
+            "title": "Active Count",
+            "type": "integer"
+          },
+          "archived_count": {
+            "default": 0,
+            "title": "Archived Count",
+            "type": "integer"
+          },
+          "latest_period_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Period End"
+          },
+          "tool_run_count": {
+            "default": 0,
+            "title": "Tool Run Count",
+            "type": "integer"
+          }
+        },
+        "title": "ClientEngagementSummary",
         "type": "object"
       },
       "ClientResponse": {
@@ -6338,6 +6858,92 @@
           }
         },
         "title": "ClientUpdate",
+        "type": "object"
+      },
+      "ClientWithSummaryResponse": {
+        "description": "Client response extended with engagement summary.",
+        "properties": {
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "engagement_summary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClientEngagementSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "entity_type": {
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "fiscal_year_end": {
+            "title": "Fiscal Year End",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "industry": {
+            "title": "Industry",
+            "type": "string"
+          },
+          "jurisdiction_country": {
+            "title": "Jurisdiction Country",
+            "type": "string"
+          },
+          "jurisdiction_state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jurisdiction State"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "reporting_framework": {
+            "title": "Reporting Framework",
+            "type": "string"
+          },
+          "settings": {
+            "title": "Settings",
+            "type": "string"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          },
+          "user_id": {
+            "title": "User Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "user_id",
+          "name",
+          "industry",
+          "fiscal_year_end",
+          "reporting_framework",
+          "entity_type",
+          "jurisdiction_country",
+          "jurisdiction_state",
+          "created_at",
+          "updated_at",
+          "settings"
+        ],
+        "title": "ClientWithSummaryResponse",
         "type": "object"
       },
       "ColumnDetectionResponse": {
@@ -7245,6 +7851,26 @@
             "title": "Export Format",
             "type": "string"
           },
+          "passcode": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 4,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional passcode for download protection",
+            "title": "Passcode"
+          },
+          "single_use": {
+            "default": false,
+            "description": "Auto-revoke after first download",
+            "title": "Single Use",
+            "type": "boolean"
+          },
           "tool_name": {
             "maxLength": 100,
             "title": "Tool Name",
@@ -7257,6 +7883,28 @@
           "export_data_b64"
         ],
         "title": "CreateShareRequest",
+        "type": "object"
+      },
+      "CreditRequest": {
+        "properties": {
+          "amount_cents": {
+            "maximum": 1000000.0,
+            "minimum": 1.0,
+            "title": "Amount Cents",
+            "type": "integer"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount_cents",
+          "reason"
+        ],
+        "title": "CreditRequest",
         "type": "object"
       },
       "CsrfTokenResponse": {
@@ -7446,8 +8094,268 @@
         "title": "CurrencyConversionMemoInput",
         "type": "object"
       },
+      "CustomerDetailResponse": {
+        "description": "Full customer account profile.",
+        "properties": {
+          "active_session_count": {
+            "default": 0,
+            "title": "Active Session Count",
+            "type": "integer"
+          },
+          "billing_events": {
+            "items": {
+              "$ref": "#/components/schemas/BillingEventEntry"
+            },
+            "title": "Billing Events",
+            "type": "array"
+          },
+          "is_verified": {
+            "default": false,
+            "title": "Is Verified",
+            "type": "boolean"
+          },
+          "last_login": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Login"
+          },
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/MemberInfo"
+            },
+            "title": "Members",
+            "type": "array"
+          },
+          "org_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Org Id"
+          },
+          "org_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Org Name"
+          },
+          "owner_email": {
+            "title": "Owner Email",
+            "type": "string"
+          },
+          "owner_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner Name"
+          },
+          "recent_activity": {
+            "items": {
+              "$ref": "#/components/schemas/ActivityEntry"
+            },
+            "title": "Recent Activity",
+            "type": "array"
+          },
+          "signup_date": {
+            "title": "Signup Date",
+            "type": "string"
+          },
+          "subscription": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SubscriptionDetail"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "usage_stats": {
+            "additionalProperties": true,
+            "title": "Usage Stats",
+            "type": "object"
+          },
+          "user_id": {
+            "title": "User Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "user_id",
+          "owner_email",
+          "signup_date"
+        ],
+        "title": "CustomerDetailResponse",
+        "type": "object"
+      },
+      "CustomerListResponse": {
+        "description": "Paginated customer list response.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CustomerSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "offset",
+          "limit"
+        ],
+        "title": "CustomerListResponse",
+        "type": "object"
+      },
+      "CustomerSummary": {
+        "description": "Summary row for the customer list view.",
+        "properties": {
+          "billing_interval": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Billing Interval"
+          },
+          "is_verified": {
+            "default": false,
+            "title": "Is Verified",
+            "type": "boolean"
+          },
+          "last_login": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Login"
+          },
+          "mrr": {
+            "default": 0.0,
+            "title": "Mrr",
+            "type": "number"
+          },
+          "org_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Org Id"
+          },
+          "org_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Org Name"
+          },
+          "owner_email": {
+            "title": "Owner Email",
+            "type": "string"
+          },
+          "owner_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner Name"
+          },
+          "plan": {
+            "default": "free",
+            "title": "Plan",
+            "type": "string"
+          },
+          "signup_date": {
+            "title": "Signup Date",
+            "type": "string"
+          },
+          "status": {
+            "default": "active",
+            "title": "Status",
+            "type": "string"
+          },
+          "total_reports_generated": {
+            "default": 0,
+            "title": "Total Reports Generated",
+            "type": "integer"
+          },
+          "uploads_this_period": {
+            "default": 0,
+            "title": "Uploads This Period",
+            "type": "integer"
+          },
+          "user_id": {
+            "title": "User Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "user_id",
+          "owner_email",
+          "signup_date"
+        ],
+        "title": "CustomerSummary",
+        "type": "object"
+      },
       "DashboardStatsResponse": {
         "properties": {
+          "active_workspaces": {
+            "default": 0,
+            "title": "Active Workspaces",
+            "type": "integer"
+          },
           "assessments_today": {
             "title": "Assessments Today",
             "type": "integer"
@@ -7463,12 +8371,27 @@
             ],
             "title": "Last Assessment Date"
           },
+          "tool_runs_today": {
+            "default": 0,
+            "title": "Tool Runs Today",
+            "type": "integer"
+          },
+          "tools_used": {
+            "default": 0,
+            "title": "Tools Used",
+            "type": "integer"
+          },
           "total_assessments": {
             "title": "Total Assessments",
             "type": "integer"
           },
           "total_clients": {
             "title": "Total Clients",
+            "type": "integer"
+          },
+          "total_tool_runs": {
+            "default": 0,
+            "title": "Total Tool Runs",
             "type": "integer"
           }
         },
@@ -7582,6 +8505,20 @@
           "latency_ms"
         ],
         "title": "DependencyStatus",
+        "type": "object"
+      },
+      "DetailResponse": {
+        "description": "Generic response containing a detail message.",
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          }
+        },
+        "required": [
+          "detail"
+        ],
+        "title": "DetailResponse",
         "type": "object"
       },
       "DiagnosticHistoryResponse": {
@@ -8044,6 +8981,62 @@
           "direction"
         ],
         "title": "DiagnosticVarianceResponse",
+        "type": "object"
+      },
+      "DunningMetrics": {
+        "properties": {
+          "active_episodes": {
+            "description": "Currently active dunning episodes",
+            "title": "Active Episodes",
+            "type": "integer"
+          },
+          "lost_to_dunning_30d": {
+            "$ref": "#/components/schemas/DunningRecovery",
+            "description": "Lost to dunning in trailing 30 days"
+          },
+          "recovered_30d": {
+            "$ref": "#/components/schemas/DunningRecovery",
+            "description": "Recovered in trailing 30 days"
+          },
+          "recovery_rate_30d": {
+            "description": "Recovery rate (0.0-1.0)",
+            "title": "Recovery Rate 30D",
+            "type": "number"
+          },
+          "total_at_risk_mrr": {
+            "description": "MRR at risk from active dunning",
+            "title": "Total At Risk Mrr",
+            "type": "number"
+          }
+        },
+        "required": [
+          "active_episodes",
+          "total_at_risk_mrr",
+          "recovered_30d",
+          "lost_to_dunning_30d",
+          "recovery_rate_30d"
+        ],
+        "title": "DunningMetrics",
+        "type": "object"
+      },
+      "DunningRecovery": {
+        "properties": {
+          "count": {
+            "description": "Number of episodes recovered/lost",
+            "title": "Count",
+            "type": "integer"
+          },
+          "mrr": {
+            "description": "MRR recovered/lost (USD)",
+            "title": "Mrr",
+            "type": "number"
+          }
+        },
+        "required": [
+          "count",
+          "mrr"
+        ],
+        "title": "DunningRecovery",
         "type": "object"
       },
       "EmailVerifyResponse": {
@@ -8769,6 +9762,177 @@
           "category_count"
         ],
         "title": "ExpenseCategoryReportResponse",
+        "type": "object"
+      },
+      "ExportShareCreateResponse": {
+        "description": "POST /export-sharing/create — includes the plaintext share_token.",
+        "properties": {
+          "access_count": {
+            "default": 0,
+            "title": "Access Count",
+            "type": "integer"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "export_format": {
+            "title": "Export Format",
+            "type": "string"
+          },
+          "has_passcode": {
+            "default": false,
+            "title": "Has Passcode",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          },
+          "share_token": {
+            "title": "Share Token",
+            "type": "string"
+          },
+          "shared_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shared By Name"
+          },
+          "single_use": {
+            "default": false,
+            "title": "Single Use",
+            "type": "boolean"
+          },
+          "tool_name": {
+            "title": "Tool Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "tool_name",
+          "export_format",
+          "share_token"
+        ],
+        "title": "ExportShareCreateResponse",
+        "type": "object"
+      },
+      "ExportShareResponse": {
+        "description": "Single export-share entry (list and create).",
+        "properties": {
+          "access_count": {
+            "default": 0,
+            "title": "Access Count",
+            "type": "integer"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "export_format": {
+            "title": "Export Format",
+            "type": "string"
+          },
+          "has_passcode": {
+            "default": false,
+            "title": "Has Passcode",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          },
+          "shared_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shared By Name"
+          },
+          "single_use": {
+            "default": false,
+            "title": "Single Use",
+            "type": "boolean"
+          },
+          "tool_name": {
+            "title": "Tool Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "tool_name",
+          "export_format"
+        ],
+        "title": "ExportShareResponse",
         "type": "object"
       },
       "FAColumnDetectionResponse": {
@@ -10269,6 +11433,55 @@
         "title": "FollowUpSummaryResponse",
         "type": "object"
       },
+      "ForceCancelRequest": {
+        "properties": {
+          "immediate": {
+            "default": false,
+            "title": "Immediate",
+            "type": "boolean"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "ForceCancelRequest",
+        "type": "object"
+      },
+      "ForgotPasswordRequest": {
+        "description": "Request body for forgot-password (initiate reset).",
+        "properties": {
+          "email": {
+            "minLength": 1,
+            "title": "Email",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "title": "ForgotPasswordRequest",
+        "type": "object"
+      },
+      "ForgotPasswordResponse": {
+        "description": "Response for forgot-password — always returns success to prevent enumeration.",
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "ForgotPasswordResponse",
+        "type": "object"
+      },
       "GLColumnDetectionResponse": {
         "description": "GL column auto-detection result.",
         "properties": {
@@ -10490,18 +11703,46 @@
           "timestamp": {
             "title": "Timestamp",
             "type": "string"
-          },
-          "version": {
-            "title": "Version",
-            "type": "string"
           }
         },
         "required": [
           "status",
-          "timestamp",
-          "version"
+          "timestamp"
         ],
         "title": "HealthResponse",
+        "type": "object"
+      },
+      "ImpersonationResponse": {
+        "properties": {
+          "access_token": {
+            "title": "Access Token",
+            "type": "string"
+          },
+          "expires_at": {
+            "title": "Expires At",
+            "type": "string"
+          },
+          "is_impersonation": {
+            "default": true,
+            "title": "Is Impersonation",
+            "type": "boolean"
+          },
+          "target_email": {
+            "title": "Target Email",
+            "type": "string"
+          },
+          "target_user_id": {
+            "title": "Target User Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "access_token",
+          "expires_at",
+          "target_user_id",
+          "target_email"
+        ],
+        "title": "ImpersonationResponse",
         "type": "object"
       },
       "IncomeStatementTotals": {
@@ -11364,6 +12605,32 @@
         "title": "InvoiceResponse",
         "type": "object"
       },
+      "InvoluntaryChurn": {
+        "properties": {
+          "failed_payments_30d": {
+            "description": "Failed payment events in trailing 30 days",
+            "title": "Failed Payments 30D",
+            "type": "integer"
+          },
+          "past_due_count": {
+            "description": "Subscriptions currently past due",
+            "title": "Past Due Count",
+            "type": "integer"
+          },
+          "past_due_mrr": {
+            "description": "MRR at risk from past-due subscriptions",
+            "title": "Past Due Mrr",
+            "type": "number"
+          }
+        },
+        "required": [
+          "past_due_count",
+          "past_due_mrr",
+          "failed_payments_30d"
+        ],
+        "title": "InvoluntaryChurn",
+        "type": "object"
+      },
       "JEFlaggedEntryResponse": {
         "description": "Flagged journal entry with test metadata.",
         "properties": {
@@ -11967,6 +13234,78 @@
         "title": "LivenessResponse",
         "type": "object"
       },
+      "LogoChurn": {
+        "properties": {
+          "count": {
+            "description": "Number of canceled subscriptions in period",
+            "title": "Count",
+            "type": "integer"
+          },
+          "rate": {
+            "description": "Logo churn rate (canceled / starting count)",
+            "title": "Rate",
+            "type": "number"
+          },
+          "starting_count": {
+            "description": "Active subscribers at start of period",
+            "title": "Starting Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "rate",
+          "count",
+          "starting_count"
+        ],
+        "title": "LogoChurn",
+        "type": "object"
+      },
+      "MRRBreakdown": {
+        "properties": {
+          "by_plan": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/PlanMRR"
+            },
+            "description": "MRR breakdown by plan tier",
+            "title": "By Plan",
+            "type": "object"
+          },
+          "churned_mrr_30d": {
+            "description": "MRR lost from cancellations in trailing 30 days (negative)",
+            "title": "Churned Mrr 30D",
+            "type": "number"
+          },
+          "contraction_mrr_30d": {
+            "description": "MRR lost from downgrades in trailing 30 days (negative)",
+            "title": "Contraction Mrr 30D",
+            "type": "number"
+          },
+          "expansion_mrr_30d": {
+            "description": "MRR gained from upgrades in trailing 30 days",
+            "title": "Expansion Mrr 30D",
+            "type": "number"
+          },
+          "net_new_mrr_30d": {
+            "description": "MRR from new subscriptions in trailing 30 days",
+            "title": "Net New Mrr 30D",
+            "type": "number"
+          },
+          "total": {
+            "description": "Total MRR across all plans (USD)",
+            "title": "Total",
+            "type": "number"
+          }
+        },
+        "required": [
+          "total",
+          "net_new_mrr_30d",
+          "expansion_mrr_30d",
+          "contraction_mrr_30d",
+          "churned_mrr_30d"
+        ],
+        "title": "MRRBreakdown",
+        "type": "object"
+      },
       "MatchVarianceResponse": {
         "description": "Variance between matched documents.",
         "properties": {
@@ -12239,6 +13578,51 @@
           "trivial_threshold_factor"
         ],
         "title": "MaterialityResponse",
+        "type": "object"
+      },
+      "MemberInfo": {
+        "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "joined_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Joined At"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "user_id": {
+            "title": "User Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "user_id",
+          "email",
+          "role"
+        ],
+        "title": "MemberInfo",
         "type": "object"
       },
       "MovementExportRequest": {
@@ -12658,6 +14042,377 @@
         "title": "NextReferenceResponse",
         "type": "object"
       },
+      "OrganizationInviteCreateResponse": {
+        "description": "POST /organization/invite — includes the plaintext invite_token.",
+        "properties": {
+          "accepted_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accepted At"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "invite_token": {
+            "title": "Invite Token",
+            "type": "string"
+          },
+          "invitee_email": {
+            "title": "Invitee Email",
+            "type": "string"
+          },
+          "organization_id": {
+            "title": "Organization Id",
+            "type": "integer"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "required": [
+          "id",
+          "organization_id",
+          "invitee_email",
+          "invite_token"
+        ],
+        "title": "OrganizationInviteCreateResponse",
+        "type": "object"
+      },
+      "OrganizationInviteResponse": {
+        "description": "Single invite entry returned by list-invites.",
+        "properties": {
+          "accepted_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accepted At"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "invitee_email": {
+            "title": "Invitee Email",
+            "type": "string"
+          },
+          "organization_id": {
+            "title": "Organization Id",
+            "type": "integer"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "required": [
+          "id",
+          "organization_id",
+          "invitee_email"
+        ],
+        "title": "OrganizationInviteResponse",
+        "type": "object"
+      },
+      "OrganizationMemberResponse": {
+        "description": "Single member entry returned by list-members and update-role.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "invited_by_user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invited By User Id"
+          },
+          "joined_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Joined At"
+          },
+          "organization_id": {
+            "title": "Organization Id",
+            "type": "integer"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
+          "user_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Email"
+          },
+          "user_id": {
+            "title": "User Id",
+            "type": "integer"
+          },
+          "user_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Name"
+          }
+        },
+        "required": [
+          "id",
+          "organization_id",
+          "user_id"
+        ],
+        "title": "OrganizationMemberResponse",
+        "type": "object"
+      },
+      "OrganizationResponse": {
+        "description": "Response for Organization CRUD endpoints.",
+        "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "owner_user_id": {
+            "title": "Owner User Id",
+            "type": "integer"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "subscription_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subscription Id"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "owner_user_id"
+        ],
+        "title": "OrganizationResponse",
+        "type": "object"
+      },
+      "OrganizationWithMemberCountResponse": {
+        "description": "GET /organization — includes member_count.",
+        "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "member_count": {
+            "default": 0,
+            "title": "Member Count",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "owner_user_id": {
+            "title": "Owner User Id",
+            "type": "integer"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "subscription_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subscription Id"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "owner_user_id"
+        ],
+        "title": "OrganizationWithMemberCountResponse",
+        "type": "object"
+      },
       "POColumnDetectionResponse": {
         "description": "PO column auto-detection result.",
         "properties": {
@@ -12863,6 +14618,37 @@
           "page_size"
         ],
         "title": "PaginatedResponse[ClientResponse]",
+        "type": "object"
+      },
+      "PaginatedResponse_ClientWithSummaryResponse_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ClientWithSummaryResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "total_count": {
+            "title": "Total Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total_count",
+          "page",
+          "page_size"
+        ],
+        "title": "PaginatedResponse[ClientWithSummaryResponse]",
         "type": "object"
       },
       "PaginatedResponse_EngagementResponse_": {
@@ -14209,6 +15995,52 @@
         ],
         "title": "PeriodType",
         "type": "string"
+      },
+      "PlanMRR": {
+        "properties": {
+          "count": {
+            "description": "Number of active subscriptions on this plan",
+            "title": "Count",
+            "type": "integer"
+          },
+          "mrr": {
+            "description": "Monthly recurring revenue from this plan (USD)",
+            "title": "Mrr",
+            "type": "number"
+          }
+        },
+        "required": [
+          "count",
+          "mrr"
+        ],
+        "title": "PlanMRR",
+        "type": "object"
+      },
+      "PlanOverrideRequest": {
+        "properties": {
+          "effective_immediately": {
+            "default": true,
+            "title": "Effective Immediately",
+            "type": "boolean"
+          },
+          "new_plan": {
+            "pattern": "^(solo|professional|enterprise)$",
+            "title": "New Plan",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "new_plan",
+          "reason"
+        ],
+        "title": "PlanOverrideRequest",
+        "type": "object"
       },
       "PopulationProfileCSVInput": {
         "description": "Input model for population profile CSV export.",
@@ -16201,6 +18033,35 @@
         "title": "ReconciliationSummaryResponse",
         "type": "object"
       },
+      "RefundRequest": {
+        "properties": {
+          "amount_cents": {
+            "maximum": 1000000.0,
+            "minimum": 1.0,
+            "title": "Amount Cents",
+            "type": "integer"
+          },
+          "payment_intent_id": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Payment Intent Id",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "payment_intent_id",
+          "amount_cents",
+          "reason"
+        ],
+        "title": "RefundRequest",
+        "type": "object"
+      },
       "ResendVerificationResponse": {
         "properties": {
           "cooldown_minutes": {
@@ -16217,6 +18078,41 @@
           "cooldown_minutes"
         ],
         "title": "ResendVerificationResponse",
+        "type": "object"
+      },
+      "ResetPasswordRequest": {
+        "description": "Request body for reset-password (consume token + set new password).",
+        "properties": {
+          "new_password": {
+            "minLength": 8,
+            "title": "New Password",
+            "type": "string"
+          },
+          "token": {
+            "minLength": 1,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "new_password"
+        ],
+        "title": "ResetPasswordRequest",
+        "type": "object"
+      },
+      "ResetPasswordResponse": {
+        "description": "Response for successful password reset.",
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "ResetPasswordResponse",
         "type": "object"
       },
       "ResolvedFrameworkResponse": {
@@ -16243,6 +18139,38 @@
           "warnings"
         ],
         "title": "ResolvedFrameworkResponse",
+        "type": "object"
+      },
+      "RevenueChurn": {
+        "properties": {
+          "churned_mrr": {
+            "description": "MRR lost from cancellations (USD)",
+            "title": "Churned Mrr",
+            "type": "number"
+          },
+          "expansion_mrr": {
+            "description": "MRR gained from upgrades (USD)",
+            "title": "Expansion Mrr",
+            "type": "number"
+          },
+          "gross_rate": {
+            "description": "Gross revenue churn rate",
+            "title": "Gross Rate",
+            "type": "number"
+          },
+          "net_rate": {
+            "description": "Net revenue churn rate (gross - expansion)",
+            "title": "Net Rate",
+            "type": "number"
+          }
+        },
+        "required": [
+          "gross_rate",
+          "net_rate",
+          "churned_mrr",
+          "expansion_mrr"
+        ],
+        "title": "RevenueChurn",
         "type": "object"
       },
       "RevenueColumnDetectionResponse": {
@@ -16662,6 +18590,72 @@
         "title": "RevenueFlaggedEntryResponse",
         "type": "object"
       },
+      "RevenueHistoryPoint": {
+        "properties": {
+          "active_subscribers": {
+            "description": "Active paid subscribers at this date",
+            "title": "Active Subscribers",
+            "type": "integer"
+          },
+          "arr": {
+            "description": "ARR at this date (USD)",
+            "title": "Arr",
+            "type": "number"
+          },
+          "date": {
+            "description": "Date of the snapshot (YYYY-MM-DD)",
+            "title": "Date",
+            "type": "string"
+          },
+          "mrr": {
+            "description": "MRR at this date (USD)",
+            "title": "Mrr",
+            "type": "number"
+          },
+          "trialing": {
+            "description": "Trialing subscribers at this date",
+            "title": "Trialing",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "date",
+          "mrr",
+          "arr",
+          "active_subscribers",
+          "trialing"
+        ],
+        "title": "RevenueHistoryPoint",
+        "type": "object"
+      },
+      "RevenueMetricsResponse": {
+        "properties": {
+          "arr": {
+            "description": "Annual recurring revenue (MRR x 12)",
+            "title": "Arr",
+            "type": "number"
+          },
+          "as_of": {
+            "description": "Snapshot timestamp (ISO 8601 UTC)",
+            "title": "As Of",
+            "type": "string"
+          },
+          "mrr": {
+            "$ref": "#/components/schemas/MRRBreakdown"
+          },
+          "subscribers": {
+            "$ref": "#/components/schemas/SubscriberCounts"
+          }
+        },
+        "required": [
+          "as_of",
+          "mrr",
+          "arr",
+          "subscribers"
+        ],
+        "title": "RevenueMetricsResponse",
+        "type": "object"
+      },
       "RevenueTestResultResponse": {
         "description": "Single revenue test result with flagged entries.",
         "properties": {
@@ -16992,6 +18986,17 @@
           "anomaly_types": {
             "$ref": "#/components/schemas/RiskSummaryAnomalyTypesResponse"
           },
+          "coverage_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage Pct"
+          },
           "high_severity": {
             "title": "High Severity",
             "type": "integer"
@@ -17003,6 +19008,43 @@
           "medium_severity": {
             "title": "Medium Severity",
             "type": "integer"
+          },
+          "risk_factors": {
+            "anyOf": [
+              {
+                "items": {
+                  "items": {},
+                  "type": "array"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Factors"
+          },
+          "risk_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Score"
+          },
+          "risk_tier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Tier"
           },
           "total_anomalies": {
             "title": "Total Anomalies",
@@ -18297,6 +20339,139 @@
         "title": "SingleRateResponse",
         "type": "object"
       },
+      "SubscriberCounts": {
+        "properties": {
+          "past_due": {
+            "description": "Subscribers with past-due payments",
+            "title": "Past Due",
+            "type": "integer"
+          },
+          "total_active": {
+            "description": "Total active (incl. trialing) paid subscribers",
+            "title": "Total Active",
+            "type": "integer"
+          },
+          "trialing": {
+            "description": "Subscribers currently in trial period",
+            "title": "Trialing",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total_active",
+          "trialing",
+          "past_due"
+        ],
+        "title": "SubscriberCounts",
+        "type": "object"
+      },
+      "SubscriptionDetail": {
+        "properties": {
+          "additional_seats": {
+            "default": 0,
+            "title": "Additional Seats",
+            "type": "integer"
+          },
+          "billing_interval": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Billing Interval"
+          },
+          "cancel_at_period_end": {
+            "default": false,
+            "title": "Cancel At Period End",
+            "type": "boolean"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "current_period_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Period End"
+          },
+          "current_period_start": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Period Start"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "seat_count": {
+            "default": 1,
+            "title": "Seat Count",
+            "type": "integer"
+          },
+          "status": {
+            "default": "active",
+            "title": "Status",
+            "type": "string"
+          },
+          "stripe_customer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stripe Customer Id"
+          },
+          "tier": {
+            "default": "free",
+            "title": "Tier",
+            "type": "string"
+          },
+          "total_seats": {
+            "default": 1,
+            "title": "Total Seats",
+            "type": "integer"
+          },
+          "uploads_used_current_period": {
+            "default": 0,
+            "title": "Uploads Used Current Period",
+            "type": "integer"
+          }
+        },
+        "title": "SubscriptionDetail",
+        "type": "object"
+      },
       "SubscriptionResponse": {
         "description": "Current subscription details.",
         "properties": {
@@ -18440,6 +20615,74 @@
           "receipt"
         ],
         "title": "TWMColumnDetectionResponse",
+        "type": "object"
+      },
+      "TeamActivityEntryResponse": {
+        "description": "Single entry in the team-activity list.",
+        "properties": {
+          "action_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Type"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "organization_id": {
+            "title": "Organization Id",
+            "type": "integer"
+          },
+          "tool_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tool Name"
+          },
+          "user_id": {
+            "title": "User Id",
+            "type": "integer"
+          },
+          "user_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Name"
+          }
+        },
+        "required": [
+          "id",
+          "organization_id",
+          "user_id"
+        ],
+        "title": "TeamActivityEntryResponse",
         "type": "object"
       },
       "ThreeWayComparisonRequest": {
@@ -19275,6 +21518,69 @@
         "title": "ThreeWayMovementSummaryResponse",
         "type": "object"
       },
+      "ToolActivityResponse": {
+        "description": "Unified tool activity entry for the dashboard feed.",
+        "properties": {
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filename"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "record_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Record Count"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "tool_label": {
+            "title": "Tool Label",
+            "type": "string"
+          },
+          "tool_name": {
+            "title": "Tool Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "tool_name",
+          "tool_label",
+          "created_at"
+        ],
+        "title": "ToolActivityResponse",
+        "type": "object"
+      },
       "ToolRunResponse": {
         "properties": {
           "composite_score": {
@@ -19491,6 +21797,32 @@
             "title": "Abnormal Balances",
             "type": "array"
           },
+          "account_balances": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Balances"
+          },
+          "account_subtypes": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Subtypes"
+          },
           "accrual_completeness": {
             "anyOf": [
               {
@@ -19500,6 +21832,21 @@
                 "type": "null"
               }
             ]
+          },
+          "all_accounts": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "All Accounts"
           },
           "analytics": {
             "additionalProperties": true,
@@ -19515,7 +21862,7 @@
           },
           "category_totals": {
             "additionalProperties": {
-              "type": "number"
+              "type": "string"
             },
             "title": "Category Totals",
             "type": "object"
@@ -19529,6 +21876,20 @@
             },
             "title": "Classification Summary",
             "type": "object"
+          },
+          "classified_accounts": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Classified Accounts"
           },
           "column_detection": {
             "anyOf": [
@@ -19554,6 +21915,30 @@
             ],
             "title": "Column Order Warnings"
           },
+          "cutoff_risk": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cutoff Risk"
+          },
+          "data_quality": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Quality"
+          },
           "difference": {
             "title": "Difference",
             "type": "number"
@@ -19567,6 +21952,18 @@
                 "type": "null"
               }
             ]
+          },
+          "going_concern": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Going Concern"
           },
           "has_column_order_mismatch": {
             "anyOf": [
@@ -19585,6 +21982,11 @@
           },
           "immaterial_count": {
             "title": "Immaterial Count",
+            "type": "integer"
+          },
+          "informational_count": {
+            "default": 0,
+            "title": "Informational Count",
             "type": "integer"
           },
           "is_consolidated": {
@@ -19609,6 +22011,18 @@
               }
             ],
             "title": "Lead Sheet Grouping"
+          },
+          "lease_diagnostic": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lease Diagnostic"
           },
           "material_count": {
             "title": "Material Count",
@@ -19744,6 +22158,90 @@
         "title": "TrialBalanceResponse",
         "type": "object"
       },
+      "TrialExtensionRequest": {
+        "properties": {
+          "days": {
+            "maximum": 90.0,
+            "minimum": 1.0,
+            "title": "Days",
+            "type": "integer"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "days",
+          "reason"
+        ],
+        "title": "TrialExtensionRequest",
+        "type": "object"
+      },
+      "TrialFunnelResponse": {
+        "properties": {
+          "conversion_rate": {
+            "description": "Trial-to-paid conversion rate (0.0-1.0)",
+            "title": "Conversion Rate",
+            "type": "number"
+          },
+          "converted_to_paid": {
+            "description": "Trials converted to paid in period",
+            "title": "Converted To Paid",
+            "type": "integer"
+          },
+          "first_report_generated": {
+            "description": "Unique users with first report in period",
+            "title": "First Report Generated",
+            "type": "integer"
+          },
+          "first_upload": {
+            "description": "Unique users with first file upload in period",
+            "title": "First Upload",
+            "type": "integer"
+          },
+          "median_time_to_conversion_days": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Median days from trial start to paid conversion",
+            "title": "Median Time To Conversion Days"
+          },
+          "period": {
+            "default": "trailing_30d",
+            "description": "Measurement period",
+            "title": "Period",
+            "type": "string"
+          },
+          "signups": {
+            "description": "New user registrations in period",
+            "title": "Signups",
+            "type": "integer"
+          },
+          "trials_started": {
+            "description": "Trial subscriptions started in period",
+            "title": "Trials Started",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "signups",
+          "trials_started",
+          "first_upload",
+          "first_report_generated",
+          "converted_to_paid",
+          "conversion_rate"
+        ],
+        "title": "TrialFunnelResponse",
+        "type": "object"
+      },
       "UnmatchedDocumentResponse": {
         "description": "Unmatched PO, invoice, or receipt.",
         "properties": {
@@ -19833,6 +22331,30 @@
         "title": "UpdateOrgRequest",
         "type": "object"
       },
+      "UsageByMemberResponse": {
+        "description": "Single entry in the usage-by-member list.",
+        "properties": {
+          "uploads": {
+            "title": "Uploads",
+            "type": "integer"
+          },
+          "user_id": {
+            "title": "User Id",
+            "type": "integer"
+          },
+          "user_name": {
+            "title": "User Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "user_name",
+          "uploads"
+        ],
+        "title": "UsageByMemberResponse",
+        "type": "object"
+      },
       "UsageResponse": {
         "description": "Current usage stats for the billing period.",
         "properties": {
@@ -19878,6 +22400,7 @@
         "type": "object"
       },
       "UserCreate": {
+        "additionalProperties": false,
         "description": "Schema for user registration.",
         "example": {
           "email": "cfo@example.com",
@@ -19930,7 +22453,37 @@
         "title": "UserLogin",
         "type": "object"
       },
+      "UserPreferencesInput": {
+        "description": "Input for updating user preferences.",
+        "properties": {
+          "favorite_tools": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 15,
+            "title": "Favorite Tools",
+            "type": "array"
+          }
+        },
+        "title": "UserPreferencesInput",
+        "type": "object"
+      },
+      "UserPreferencesResponse": {
+        "description": "User tool preferences (favorites, etc.).",
+        "properties": {
+          "favorite_tools": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Favorite Tools",
+            "type": "array"
+          }
+        },
+        "title": "UserPreferencesResponse",
+        "type": "object"
+      },
       "UserProfileUpdate": {
+        "additionalProperties": false,
         "description": "Schema for updating user profile (name and/or email).",
         "example": {
           "email": "john.smith@example.com",
@@ -20617,6 +23170,177 @@
         ]
       }
     },
+    "/activity/tool-feed": {
+      "get": {
+        "description": "Get unified tool activity feed across all tools for the dashboard.",
+        "operationId": "get_tool_activity_feed_activity_tool_feed_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ToolActivityResponse"
+                  },
+                  "title": "Response Get Tool Activity Feed Activity Tool Feed Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Tool Activity Feed",
+        "tags": [
+          "activity"
+        ]
+      }
+    },
+    "/activity/tool-log": {
+      "post": {
+        "description": "Log a tool execution to the unified activity feed.",
+        "operationId": "log_tool_activity_activity_tool_log_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tool_name",
+            "required": true,
+            "schema": {
+              "maxLength": 50,
+              "minLength": 1,
+              "title": "Tool Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "filename",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 500,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Filename"
+            }
+          },
+          {
+            "in": "query",
+            "name": "record_count",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Record Count"
+            }
+          },
+          {
+            "in": "query",
+            "name": "summary",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 2000,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Summary"
+            }
+          },
+          {
+            "in": "query",
+            "name": "engagement_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Engagement Id"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolActivityResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Log Tool Activity",
+        "tags": [
+          "activity"
+        ]
+      }
+    },
     "/admin/export-activity-csv": {
       "get": {
         "description": "Export team activity as CSV.",
@@ -20693,9 +23417,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Overview Admin Overview Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AdminOverviewResponse"
                 }
               }
             },
@@ -20787,8 +23509,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "additionalProperties": true,
-                    "type": "object"
+                    "$ref": "#/components/schemas/TeamActivityEntryResponse"
                   },
                   "title": "Response Get Team Activity Admin Team Activity Get",
                   "type": "array"
@@ -20839,8 +23560,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "additionalProperties": true,
-                    "type": "object"
+                    "$ref": "#/components/schemas/UsageByMemberResponse"
                   },
                   "title": "Response Get Usage By Member Admin Usage By Member Get",
                   "type": "array"
@@ -22680,6 +25400,48 @@
         ]
       }
     },
+    "/auth/forgot-password": {
+      "post": {
+        "description": "Initiate password reset. Always returns 200 to prevent account enumeration.",
+        "operationId": "forgot_password_auth_forgot_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForgotPasswordResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Forgot Password",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/auth/login": {
       "post": {
         "description": "Authenticate user and return JWT token.",
@@ -22857,6 +25619,48 @@
           }
         ],
         "summary": "Resend Verification",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/reset-password": {
+      "post": {
+        "description": "Consume a password reset token and set a new password.",
+        "operationId": "reset_password_auth_reset_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResetPasswordResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reset Password",
         "tags": [
           "auth"
         ]
@@ -23528,9 +26332,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Branding Branding  Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BrandingResponse"
                 }
               }
             },
@@ -23575,9 +26377,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Update Branding Branding  Put",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BrandingResponse"
                 }
               }
             },
@@ -23624,11 +26424,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "title": "Response Delete Logo Branding Logo Delete",
-                  "type": "object"
+                  "$ref": "#/components/schemas/DetailResponse"
                 }
               }
             },
@@ -23683,9 +26479,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Upload Logo Branding Logo Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BrandingResponse"
                 }
               }
             },
@@ -23861,6 +26655,72 @@
           }
         },
         "summary": "Get Industries",
+        "tags": [
+          "clients"
+        ]
+      }
+    },
+    "/clients/with-engagement-summary": {
+      "get": {
+        "description": "Get clients with engagement summary data for the unified portfolio view (Sprint 580).",
+        "operationId": "get_clients_with_summary_clients_with_engagement_summary_get",
+        "parameters": [
+          {
+            "description": "Page number (1-indexed)",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "description": "Page number (1-indexed)",
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Items per page",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "description": "Items per page",
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_ClientWithSummaryResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Clients With Summary",
         "tags": [
           "clients"
         ]
@@ -24689,7 +27549,7 @@
     },
     "/dashboard/stats": {
       "get": {
-        "description": "Get dashboard statistics for workspace header.",
+        "description": "Get dashboard statistics — includes multi-tool activity (Sprint 579).",
         "operationId": "get_dashboard_stats_dashboard_stats_get",
         "responses": {
           "200": {
@@ -25898,8 +28758,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "additionalProperties": true,
-                    "type": "object"
+                    "$ref": "#/components/schemas/ExportShareResponse"
                   },
                   "title": "Response List Shares Export Sharing  Get",
                   "type": "array"
@@ -25949,9 +28808,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Create Share Export Sharing Create Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ExportShareCreateResponse"
                 }
               }
             },
@@ -26007,11 +28864,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "title": "Response Revoke Share Export Sharing  Token  Delete",
-                  "type": "object"
+                  "$ref": "#/components/schemas/DetailResponse"
                 }
               }
             },
@@ -26057,6 +28910,24 @@
             "required": false,
             "schema": {
               "title": "Request"
+            }
+          },
+          {
+            "description": "Passcode if the share link is protected",
+            "in": "query",
+            "name": "passcode",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Passcode if the share link is protected",
+              "title": "Passcode"
             }
           }
         ],
@@ -28186,6 +31057,977 @@
         ]
       }
     },
+    "/internal/admin/audit-log": {
+      "get": {
+        "description": "Paginated admin audit log with filters.",
+        "operationId": "get_audit_log_internal_admin_audit_log_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "action_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Action Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "admin_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Admin Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "target_org_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Target Org Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since"
+            }
+          },
+          {
+            "in": "query",
+            "name": "until",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Until"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditLogResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Audit Log",
+        "tags": [
+          "internal-admin"
+        ]
+      }
+    },
+    "/internal/admin/customers/": {
+      "get": {
+        "description": "Paginated customer list with sorting, filtering, and search.",
+        "operationId": "list_customers_internal_admin_customers__get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort_by",
+            "required": false,
+            "schema": {
+              "default": "created_at",
+              "pattern": "^(created_at|last_login|email)$",
+              "title": "Sort By",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort_dir",
+            "required": false,
+            "schema": {
+              "default": "desc",
+              "pattern": "^(asc|desc)$",
+              "title": "Sort Dir",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "plan",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Plan"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Search"
+            }
+          },
+          {
+            "in": "query",
+            "name": "signup_after",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Signup After"
+            }
+          },
+          {
+            "in": "query",
+            "name": "signup_before",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Signup Before"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List Customers",
+        "tags": [
+          "internal-admin"
+        ]
+      }
+    },
+    "/internal/admin/customers/{org_id}": {
+      "get": {
+        "description": "Full customer account profile.",
+        "operationId": "get_customer_detail_internal_admin_customers__org_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "title": "Org Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerDetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Customer Detail",
+        "tags": [
+          "internal-admin"
+        ]
+      }
+    },
+    "/internal/admin/customers/{org_id}/cancel": {
+      "post": {
+        "description": "Force cancel a customer's subscription.",
+        "operationId": "force_cancel_internal_admin_customers__org_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "title": "Org Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForceCancelRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminActionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Force Cancel",
+        "tags": [
+          "internal-admin"
+        ]
+      }
+    },
+    "/internal/admin/customers/{org_id}/credit": {
+      "post": {
+        "description": "Issue a credit to a customer's Stripe balance.",
+        "operationId": "issue_credit_internal_admin_customers__org_id__credit_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "title": "Org Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreditRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminActionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Issue Credit",
+        "tags": [
+          "internal-admin"
+        ]
+      }
+    },
+    "/internal/admin/customers/{org_id}/extend-trial": {
+      "post": {
+        "description": "Extend a customer's trial period.",
+        "operationId": "extend_trial_internal_admin_customers__org_id__extend_trial_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "title": "Org Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TrialExtensionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminActionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Extend Trial",
+        "tags": [
+          "internal-admin"
+        ]
+      }
+    },
+    "/internal/admin/customers/{org_id}/impersonate": {
+      "post": {
+        "description": "Generate a time-boxed read-only impersonation token (15-minute TTL).",
+        "operationId": "impersonate_customer_internal_admin_customers__org_id__impersonate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "title": "Org Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImpersonationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Impersonate Customer",
+        "tags": [
+          "internal-admin"
+        ]
+      }
+    },
+    "/internal/admin/customers/{org_id}/plan-override": {
+      "post": {
+        "description": "Override a customer's plan.",
+        "operationId": "plan_override_internal_admin_customers__org_id__plan_override_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "title": "Org Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanOverrideRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminActionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Plan Override",
+        "tags": [
+          "internal-admin"
+        ]
+      }
+    },
+    "/internal/admin/customers/{org_id}/refund": {
+      "post": {
+        "description": "Issue a partial or full refund.",
+        "operationId": "issue_refund_internal_admin_customers__org_id__refund_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "title": "Org Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefundRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminActionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Issue Refund",
+        "tags": [
+          "internal-admin"
+        ]
+      }
+    },
+    "/internal/admin/customers/{org_id}/revoke-sessions": {
+      "post": {
+        "description": "Revoke all active sessions for a customer.",
+        "operationId": "revoke_sessions_internal_admin_customers__org_id__revoke_sessions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "title": "Org Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminActionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Revoke Sessions",
+        "tags": [
+          "internal-admin"
+        ]
+      }
+    },
+    "/internal/admin/dunning/{episode_id}/resolve": {
+      "post": {
+        "description": "Manually resolve a dunning episode.",
+        "operationId": "resolve_dunning_internal_admin_dunning__episode_id__resolve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "episode_id",
+            "required": true,
+            "schema": {
+              "title": "Episode Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "reason",
+            "required": false,
+            "schema": {
+              "default": "Manual resolution",
+              "maxLength": 500,
+              "title": "Reason",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminActionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Resolve Dunning",
+        "tags": [
+          "internal-admin"
+        ]
+      }
+    },
+    "/internal/metrics/churn": {
+      "get": {
+        "description": "Logo churn, revenue churn, and involuntary churn metrics (trailing 30 days).",
+        "operationId": "get_churn_metrics_internal_metrics_churn_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChurnMetricsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Churn Metrics",
+        "tags": [
+          "internal-metrics"
+        ]
+      }
+    },
+    "/internal/metrics/revenue": {
+      "get": {
+        "description": "MRR, ARR, subscriber counts, and 30-day MRR movements.",
+        "operationId": "get_revenue_metrics_internal_metrics_revenue_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevenueMetricsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Revenue Metrics",
+        "tags": [
+          "internal-metrics"
+        ]
+      }
+    },
+    "/internal/metrics/revenue/history": {
+      "get": {
+        "description": "Historical revenue snapshots for time series charting.",
+        "operationId": "get_revenue_history_internal_metrics_revenue_history_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "granularity",
+            "required": false,
+            "schema": {
+              "default": "monthly",
+              "pattern": "^(daily|weekly|monthly)$",
+              "title": "Granularity",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Start date (YYYY-MM-DD)",
+            "in": "query",
+            "name": "start_date",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Start date (YYYY-MM-DD)",
+              "title": "Start Date"
+            }
+          },
+          {
+            "description": "End date (YYYY-MM-DD)",
+            "in": "query",
+            "name": "end_date",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "End date (YYYY-MM-DD)",
+              "title": "End Date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RevenueHistoryPoint"
+                  },
+                  "title": "Response Get Revenue History Internal Metrics Revenue History Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Revenue History",
+        "tags": [
+          "internal-metrics"
+        ]
+      }
+    },
+    "/internal/metrics/trial-funnel": {
+      "get": {
+        "description": "Trial funnel metrics: signups → first upload → report → conversion (trailing 30 days).",
+        "operationId": "get_trial_funnel_internal_metrics_trial_funnel_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrialFunnelResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Trial Funnel",
+        "tags": [
+          "internal-metrics"
+        ]
+      }
+    },
     "/organization": {
       "get": {
         "description": "Get the current user's organization.",
@@ -28195,9 +32037,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Organization Organization Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/OrganizationWithMemberCountResponse"
                 }
               }
             },
@@ -28242,9 +32082,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Create Organization Organization Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/OrganizationResponse"
                 }
               }
             },
@@ -28299,9 +32137,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Update Organization Organization Put",
-                  "type": "object"
+                  "$ref": "#/components/schemas/OrganizationResponse"
                 }
               }
             },
@@ -28358,9 +32194,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Create Invite Organization Invite Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/OrganizationInviteCreateResponse"
                 }
               }
             },
@@ -28416,11 +32250,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "title": "Response Accept Invite Organization Invite Accept  Token  Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/DetailResponse"
                 }
               }
             },
@@ -28458,8 +32288,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "additionalProperties": true,
-                    "type": "object"
+                    "$ref": "#/components/schemas/OrganizationInviteResponse"
                   },
                   "title": "Response List Invites Organization Invites Get",
                   "type": "array"
@@ -28508,11 +32337,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "title": "Response Revoke Invite Organization Invites  Invite Id  Delete",
-                  "type": "object"
+                  "$ref": "#/components/schemas/DetailResponse"
                 }
               }
             },
@@ -28550,8 +32375,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "additionalProperties": true,
-                    "type": "object"
+                    "$ref": "#/components/schemas/OrganizationMemberResponse"
                   },
                   "title": "Response List Members Organization Members Get",
                   "type": "array"
@@ -28600,11 +32424,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "title": "Response Remove Member Organization Members  Member Id  Delete",
-                  "type": "object"
+                  "$ref": "#/components/schemas/DetailResponse"
                 }
               }
             },
@@ -28670,9 +32490,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Update Member Role Organization Members  Member Id  Role Put",
-                  "type": "object"
+                  "$ref": "#/components/schemas/OrganizationMemberResponse"
                 }
               }
             },
@@ -28890,6 +32708,78 @@
         ]
       }
     },
+    "/settings/preferences": {
+      "get": {
+        "description": "Get the current user's tool preferences (favorites).",
+        "operationId": "get_user_preferences_settings_preferences_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserPreferencesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get User Preferences",
+        "tags": [
+          "activity"
+        ]
+      },
+      "put": {
+        "description": "Update user tool preferences (favorites).",
+        "operationId": "update_user_preferences_settings_preferences_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserPreferencesInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserPreferencesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Update User Preferences",
+        "tags": [
+          "activity"
+        ]
+      }
+    },
     "/upload/bulk": {
       "post": {
         "description": "Accept up to 5 files for bulk processing. Enterprise only.",
@@ -28919,9 +32809,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Start Bulk Upload Upload Bulk Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BulkUploadStartResponse"
                 }
               }
             },
@@ -28969,9 +32857,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Bulk Status Upload Bulk  Job Id  Status Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BulkUploadStatusResponse"
                 }
               }
             },
