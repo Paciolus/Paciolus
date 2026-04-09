@@ -44,6 +44,29 @@ const eslintConfig = [
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
 
+      // XSS sink governance — ban patterns that expose the app to injection
+      'no-eval': 'error',
+      'no-implied-eval': 'error',
+      'no-restricted-properties': [
+        'error',
+        {
+          object: 'document',
+          property: 'write',
+          message: 'document.write is an XSS sink. Use DOM APIs instead.',
+        },
+      ],
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'JSXAttribute[name.name="dangerouslySetInnerHTML"]',
+          message: 'dangerouslySetInnerHTML bypasses React XSS protections. Use safe alternatives or get security review.',
+        },
+        {
+          selector: 'AssignmentExpression[left.property.name="innerHTML"]',
+          message: 'Direct innerHTML assignment is an XSS sink. Use textContent or DOM APIs.',
+        },
+      ],
+
       // Accessibility
       ...jsxA11y.configs.recommended.rules,
       'jsx-a11y/label-has-associated-control': ['error', { assert: 'either', depth: 3 }],

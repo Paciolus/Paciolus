@@ -77,7 +77,7 @@ export function UnifiedToolbar() {
     >
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[60] focus:px-4 focus:py-2 focus:bg-sage-600 focus:text-white focus:rounded-lg focus:text-sm focus:font-sans focus:font-medium"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[60] focus:px-4 focus:py-2 focus:bg-sage-600 focus:text-oatmeal-50 focus:rounded-lg focus:text-sm focus:font-sans focus:font-medium"
       >
         Skip to main content
       </a>
@@ -325,7 +325,7 @@ export function UnifiedToolbar() {
                     <Link
                       href="/register"
                       onClick={closeMobile}
-                      className="block px-3 py-2.5 text-center rounded-lg text-sm font-sans font-medium text-white bg-sage-600 hover:bg-sage-700 transition-colors"
+                      className="block px-3 py-2.5 text-center rounded-lg text-sm font-sans font-medium text-oatmeal-50 bg-sage-600 hover:bg-sage-700 transition-colors"
                     >
                       Start Free Trial
                     </Link>

@@ -12,19 +12,26 @@ All libraries are open-source with permissive licenses.
 """
 
 import hashlib
+import re
 import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Optional
 
 import bcrypt as _bcrypt
 import jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import PyJWTError
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 from sqlalchemy.orm import Session
 
-from config import JWT_ALGORITHM, JWT_EXPIRATION_MINUTES, JWT_SECRET_KEY, REFRESH_TOKEN_EXPIRATION_DAYS
+from config import (
+    ACCESS_COOKIE_NAME,
+    JWT_ALGORITHM,
+    JWT_EXPIRATION_MINUTES,
+    JWT_SECRET_KEY,
+    REFRESH_TOKEN_EXPIRATION_DAYS,
+)
 from database import get_db
 from models import EmailVerificationToken, RefreshToken, User
 from security_utils import log_secure_operation
@@ -69,6 +76,21 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 # OAuth2 scheme for token extraction from Authorization header
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
+
+
+def resolve_access_token(
+    request: "Request",
+    header_token: Annotated[Optional[str], Depends(oauth2_scheme)] = None,
+) -> Optional[str]:
+    """Resolve access token from Bearer header (API clients) or HttpOnly cookie (browser).
+
+    Priority: Bearer header > paciolus_access cookie.
+    Browser clients send the access token via HttpOnly cookie (no JS exposure).
+    Non-browser API clients can still use the Authorization: Bearer header.
+    """
+    if header_token:
+        return header_token
+    return request.cookies.get(ACCESS_COOKIE_NAME)
 
 
 class TokenResponse(BaseModel):
@@ -132,6 +154,51 @@ def create_access_token(
     return token, expire
 
 
+def create_impersonation_token(
+    target_user_id: int,
+    target_email: str,
+    admin_user_id: int,
+    tier: str = "free",
+    ttl_minutes: int = 15,
+) -> tuple[str, datetime]:
+    """Create a time-boxed read-only impersonation JWT.
+
+    Sprint 590: The token includes `imp: true` and `imp_by` claims so
+    middleware can enforce read-only mode and audit trail.
+
+    Args:
+        target_user_id: The user being impersonated.
+        target_email: Target user's email.
+        admin_user_id: The superadmin performing impersonation.
+        tier: Target user's subscription tier.
+        ttl_minutes: Token lifetime (default 15 minutes).
+
+    Returns:
+        Tuple of (token_string, expiration_datetime).
+    """
+    expire = datetime.now(UTC) + timedelta(minutes=ttl_minutes)
+
+    payload = {
+        "sub": str(target_user_id),
+        "email": target_email,
+        "tier": tier,
+        "jti": secrets.token_hex(16),
+        "iat": datetime.now(UTC),
+        "exp": expire,
+        "imp": True,  # Impersonation flag
+        "imp_by": admin_user_id,  # Admin who initiated
+    }
+
+    token = jwt.encode(payload, JWT_SECRET_KEY or "", algorithm=JWT_ALGORITHM)
+
+    log_secure_operation(
+        "impersonation_token_created",
+        f"Admin user_id={admin_user_id} impersonating user_id={target_user_id}",
+    )
+
+    return token, expire
+
+
 def decode_access_token(token: str) -> Optional[TokenData]:
     """
     Decode and validate a JWT access token.
@@ -163,13 +230,14 @@ def decode_access_token(token: str) -> Optional[TokenData]:
 
 
 def get_current_user(
-    token: Annotated[Optional[str], Depends(oauth2_scheme)], db: Session = Depends(get_db)
+    token: Annotated[Optional[str], Depends(resolve_access_token)], db: Session = Depends(get_db)
 ) -> Optional[User]:
     """
     FastAPI dependency to get the current authenticated user.
 
     Returns User if authenticated, None if not authenticated.
     Use this for routes that support both authenticated and anonymous access.
+    Token resolved from Bearer header (API clients) or HttpOnly cookie (browser).
     """
     if token is None:
         return None
@@ -187,13 +255,14 @@ def get_current_user(
 
 
 def require_current_user(
-    token: Annotated[Optional[str], Depends(oauth2_scheme)], db: Session = Depends(get_db)
+    token: Annotated[Optional[str], Depends(resolve_access_token)], db: Session = Depends(get_db)
 ) -> User:
     """
     FastAPI dependency that REQUIRES authentication.
 
     Raises HTTPException 401 if user is not authenticated.
     Use this for protected routes.
+    Token resolved from Bearer header (API clients) or HttpOnly cookie (browser).
 
     Sprint 199: Also validates pwd_at claim against DB password_changed_at.
     Tokens issued before a password change are rejected.
@@ -245,7 +314,7 @@ def require_current_user(
 
 
 def require_verified_user(
-    token: Annotated[Optional[str], Depends(oauth2_scheme)], db: Session = Depends(get_db)
+    token: Annotated[Optional[str], Depends(resolve_access_token)], db: Session = Depends(get_db)
 ) -> User:
     """
     FastAPI dependency that REQUIRES authentication AND email verification.
@@ -269,6 +338,25 @@ def require_verified_user(
                 "code": "EMAIL_NOT_VERIFIED",
                 "message": "Email verification required. Please check your inbox for the verification email.",
             },
+        )
+
+    return user
+
+
+def require_superadmin(
+    token: Annotated[Optional[str], Depends(resolve_access_token)], db: Session = Depends(get_db)
+) -> User:
+    """FastAPI dependency that REQUIRES superadmin platform-level access.
+
+    Sprint 590: Separate from org-level RBAC — this is platform-level.
+    Raises HTTPException 403 if user is not a superadmin.
+    """
+    user = require_verified_user(token, db)
+
+    if not getattr(user, "is_superadmin", False):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Superadmin access required.",
         )
 
     return user
@@ -301,7 +389,8 @@ class UserCreate(BaseModel):
     """Schema for user registration."""
 
     model_config = ConfigDict(
-        json_schema_extra={"example": {"email": "cfo@example.com", "password": "SecurePassword123!"}}  # nosec B106 — schema example, not a real password
+        extra="forbid",
+        json_schema_extra={"example": {"email": "cfo@example.com", "password": "SecurePassword123!"}},  # nosec B106 — schema example, not a real password
     )
 
     email: EmailStr
@@ -339,10 +428,21 @@ class UserResponse(BaseModel):
 class UserProfileUpdate(BaseModel):
     """Schema for updating user profile (name and/or email)."""
 
-    model_config = ConfigDict(json_schema_extra={"example": {"name": "John Smith", "email": "john.smith@example.com"}})
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={"example": {"name": "John Smith", "email": "john.smith@example.com"}},
+    )
 
     name: Optional[str] = Field(None, max_length=200)
     email: Optional[EmailStr] = Field(None, max_length=254)
+
+    @field_validator("name")
+    @classmethod
+    def sanitize_name(cls, v: Optional[str]) -> Optional[str]:
+        """Strip HTML tags to prevent stored XSS (pentest finding)."""
+        if v is None:
+            return v
+        return re.sub(r"<[^>]+>", "", v).strip() or None
 
 
 class PasswordChange(BaseModel):

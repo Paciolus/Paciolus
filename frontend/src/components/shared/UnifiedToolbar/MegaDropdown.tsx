@@ -137,7 +137,7 @@ export function MegaDropdown({ isOpen, onClose }: MegaDropdownProps) {
     return (
       <div key={item.href}>
         {item.dividerAbove && (
-          <div className="border-t border-oatmeal-200/60 my-2" />
+          <div className="border-t border-oatmeal-200 my-2" />
         )}
         <Link
           href={item.href}
@@ -167,7 +167,7 @@ export function MegaDropdown({ isOpen, onClose }: MegaDropdownProps) {
           animate="visible"
           exit="exit"
           onKeyDown={handleKeyDown}
-          className="fixed left-1/2 -translate-x-1/2 w-[min(calc(100vw-2rem),64rem)] bg-white/95 backdrop-blur-xl border border-oatmeal-200/80 rounded-2xl shadow-theme-elevated z-50 overflow-hidden"
+          className="fixed left-1/2 -translate-x-1/2 w-[min(calc(100vw-2rem),64rem)] bg-oatmeal-50 border border-oatmeal-200 rounded-2xl shadow-theme-elevated z-50 overflow-hidden"
           style={{ transformOrigin: 'top center', top: 'calc(var(--toolbar-height, 56px) + 4px)' }}
         >
           <div className="grid grid-cols-4 gap-0 p-5">
@@ -175,7 +175,7 @@ export function MegaDropdown({ isOpen, onClose }: MegaDropdownProps) {
             {TOOL_COLUMNS.map((col, colIdx) => (
               <div
                 key={col.heading}
-                className={`px-3 ${colIdx < TOOL_COLUMNS.length - 1 ? 'border-r border-oatmeal-200/50' : ''}`}
+                className={`px-3 ${colIdx < TOOL_COLUMNS.length - 1 ? 'border-r border-oatmeal-200' : ''}`}
               >
                 <h3 className="font-serif text-xs font-semibold text-content-secondary uppercase tracking-wider mb-3 px-3">
                   {col.heading}
@@ -187,7 +187,7 @@ export function MegaDropdown({ isOpen, onClose }: MegaDropdownProps) {
             ))}
 
             {/* Account column */}
-            <div className="px-3 border-l border-oatmeal-200/50">
+            <div className="px-3 border-l border-oatmeal-200">
               <h3 className="font-serif text-xs font-semibold text-content-secondary uppercase tracking-wider mb-3 px-3">
                 Account
               </h3>

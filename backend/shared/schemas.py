@@ -2,9 +2,28 @@
 Paciolus API — Shared Pydantic Schemas
 """
 
-from typing import Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel
+
+
+class ErrorResponse(BaseModel):
+    """Unified error envelope returned by all exception handlers.
+
+    Every error response carries the same top-level shape so the frontend
+    can parse errors with a single code path.
+
+    Fields:
+        code:       Machine-readable error code (e.g. "VALIDATION_ERROR", "INTERNAL_ERROR").
+        message:    Human-readable summary safe for UI display.
+        request_id: Correlation ID for log tracing.
+        detail:     Optional — validation error list (422) or contextual string.
+    """
+
+    code: str
+    message: str
+    request_id: str
+    detail: Optional[str | list[dict[str, Any]]] = None
 
 
 class AuditResultInput(BaseModel):

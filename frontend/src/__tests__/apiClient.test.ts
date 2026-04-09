@@ -232,7 +232,7 @@ describe('cache operations', () => {
 // =============================================================================
 
 describe('apiFetch', () => {
-  it('makes GET request with auth header', async () => {
+  it('makes GET request with cookie-based auth (no Bearer header)', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       status: 200,
@@ -247,11 +247,12 @@ describe('apiFetch', () => {
       expect.stringContaining('/endpoint'),
       expect.objectContaining({
         method: 'GET',
-        headers: expect.objectContaining({
-          'Authorization': 'Bearer my-token',
-        }),
+        credentials: 'include',
       })
     )
+    // Auth is via HttpOnly cookie — no Authorization header injected by frontend
+    const callHeaders = mockFetch.mock.calls[0][1].headers
+    expect(callHeaders).not.toHaveProperty('Authorization')
   })
 
   it('makes POST request with JSON body', async () => {

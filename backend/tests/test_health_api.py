@@ -39,7 +39,7 @@ class TestHealthCheck:
             data = response.json()
             assert data["status"] == "healthy"
             assert "timestamp" in data
-            assert "version" in data
+            assert "version" not in data  # removed from public endpoint (security hardening)
 
     @pytest.mark.asyncio
     async def test_no_auth_required(self):
@@ -76,7 +76,7 @@ class TestHealthDeepProbe:
             data = response.json()
             assert data["status"] == "healthy"
             assert data["database"] == "connected"
-            assert "version" in data
+            assert "version" not in data  # removed from public endpoint (security hardening)
 
     @pytest.mark.asyncio
     async def test_deep_has_deprecation_header(self):

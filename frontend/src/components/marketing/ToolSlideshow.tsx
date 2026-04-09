@@ -219,9 +219,9 @@ const slideVariants = {
 } as const
 
 const slideTransition = {
-  x: { type: 'spring' as const, stiffness: 300, damping: 30 },
-  opacity: { duration: 0.3 },
-  scale: { duration: 0.3 },
+  x: { type: 'spring' as const, stiffness: 220, damping: 28 },
+  opacity: { duration: 0.45 },
+  scale: { duration: 0.45 },
 }
 
 // ── Slide Content (Centered Hero) ───────────────────────────────────
@@ -305,7 +305,7 @@ function SlideContent({ tool }: { tool: ToolSlide }) {
         {/* CTA */}
         <Link
           href={tool.href}
-          className="group inline-flex items-center gap-2 px-7 py-3 rounded-xl font-sans text-sm font-medium bg-sage-600 text-white hover:bg-sage-500 shadow-lg shadow-sage-600/20 transition-all"
+          className="group inline-flex items-center gap-2 px-7 py-3 rounded-xl font-sans text-sm font-medium bg-sage-600 text-oatmeal-50 hover:bg-sage-500 shadow-lg shadow-sage-600/20 transition-all"
         >
           Try This Tool
           <BrandIcon name="chevron-right" className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
@@ -341,7 +341,7 @@ function NavArrow({
           ? 'opacity-20 cursor-not-allowed'
           : 'hover:bg-obsidian-700/80 hover:border-obsidian-500/50 hover:text-oatmeal-200 hover:scale-105'
         }
-        ${direction === 'left' ? 'left-0 lg:-left-6' : 'right-0 lg:-right-6'}
+        ${direction === 'left' ? 'left-2 lg:-left-6' : 'right-2 lg:-right-6'}
       `}
     >
       <svg
@@ -531,7 +531,7 @@ export function ToolSlideshow() {
           />
 
           {/* Slide Area */}
-          <div className="overflow-hidden px-4 lg:px-12">
+          <div className="overflow-hidden px-14 sm:px-4 lg:px-12">
             <AnimatePresence mode="wait" custom={direction}>
               <motion.div
                 key={activeIndex}

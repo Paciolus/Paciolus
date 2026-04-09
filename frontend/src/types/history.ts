@@ -80,18 +80,6 @@ export function mapActivityLogToAuditActivity(log: ActivityLogResponse): AuditAc
   };
 }
 
-// Stored metadata structure (localStorage - fallback for non-authenticated users)
-export interface AuditHistoryStorage {
-  version: string;
-  activities: AuditActivity[];
-  lastUpdated: string;
-}
-
-// Storage constants
-export const HISTORY_STORAGE_KEY = 'paciolus_audit_history';
-export const HISTORY_VERSION = '1.0.0';
-export const MAX_HISTORY_ENTRIES = 50;  // Limit stored entries
-
 // What IS stored vs NOT stored (for Zero-Storage transparency)
 export const STORED_METADATA = [
   'Timestamp of audit',

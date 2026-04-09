@@ -135,7 +135,7 @@ export function EngagementList({
               whileHover={{ y: -2 }}
               whileTap={{ y: 0, scale: 0.98 }}
               onClick={onCreateNew}
-              className="inline-flex items-center gap-2 px-6 py-3.5 bg-sage-600 hover:bg-sage-700 text-white font-sans font-bold rounded-xl transition-colors shadow-theme-card"
+              className="inline-flex items-center gap-2 px-6 py-3.5 bg-sage-600 hover:bg-sage-700 text-oatmeal-50 font-sans font-bold rounded-xl transition-colors shadow-theme-card"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />

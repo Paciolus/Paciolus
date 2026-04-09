@@ -93,11 +93,10 @@ describe('LoginPage', () => {
     expect(screen.getByRole('checkbox')).toBeInTheDocument()
   })
 
-  it('shows forgot password button (disabled)', () => {
+  it('shows forgot password link to reset page', () => {
     render(<LoginPage />)
-    const forgotButton = screen.getByText('Forgot password?')
-    expect(forgotButton).toBeDisabled()
-    expect(forgotButton).toHaveAttribute('title', 'Coming soon')
+    const forgotLink = screen.getByText('Forgot password?')
+    expect(forgotLink).toHaveAttribute('href', '/forgot-password')
   })
 
   it('shows server error on failed login', async () => {

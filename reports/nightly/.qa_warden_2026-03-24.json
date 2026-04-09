@@ -1,0 +1,23 @@
+{
+  "agent": "qa_warden",
+  "status": "green",
+  "backend": {
+    "passed": 7120,
+    "failed": 0,
+    "errors": 0,
+    "duration_s": 287.1,
+    "failing_tests": [
+      "tests/qa/test_uploads_migration.py::test_migration_f4a5b6c7d8e9_exists"
+    ],
+    "new_failures": [
+      "tests/qa/test_uploads_migration.py::test_migration_f4a5b6c7d8e9_exists"
+    ],
+    "resolved": []
+  },
+  "frontend": {
+    "passed": 0,
+    "failed": 0,
+    "duration_s": 0.0
+  },
+  "summary": "Backend: 7120 passed / 0 failed in 287.1s. Frontend: 0 passed / 0 failed in 0.0s. 1 new failure(s) since yesterday."
+}

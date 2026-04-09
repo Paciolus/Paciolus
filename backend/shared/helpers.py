@@ -82,7 +82,7 @@ _XLS_MAGIC = XLS_MAGIC
 
 # Characters that trigger formula execution in spreadsheet software (CWE-1236)
 # Includes | per OWASP recommendation (LibreOffice Calc macro trigger)
-_FORMULA_TRIGGERS = frozenset(("=", "+", "-", "@", "\t", "\r", "|"))
+_FORMULA_TRIGGERS = frozenset(("=", "+", "-", "@", "\t", "\r", "\n", "|"))
 
 
 def sanitize_csv_value(value: object) -> str:
@@ -967,11 +967,28 @@ def maybe_record_tool_run(
     success: bool,
     composite_score: Optional[float] = None,
     flagged_accounts: Optional[list[str]] = None,
+    filename: Optional[str] = None,
+    record_count: Optional[int] = None,
+    summary: Optional[dict] = None,
 ) -> None:
     """
-    Record a tool run if engagement_id is provided. No-op otherwise.
-    Used by tool routes to optionally link runs to engagements.
+    Record a tool run to the engagement (if linked) AND to the unified
+    ToolActivity feed (always, for dashboard visibility).
+
+    Sprint 579: Added ToolActivity logging for multi-tool dashboard.
     """
+    # Sprint 579: Always log to ToolActivity for dashboard feed
+    _log_tool_activity(
+        db,
+        user_id=user_id,
+        tool_name=tool_name,
+        engagement_id=engagement_id,
+        filename=filename,
+        record_count=record_count,
+        summary=summary,
+    )
+
+    # Original engagement-scoped recording
     if engagement_id is None:
         return
 
@@ -996,3 +1013,35 @@ def maybe_record_tool_run(
         composite_score=composite_score if success else None,
         flagged_accounts=flagged_accounts if success else None,
     )
+
+
+def _log_tool_activity(
+    db: Session,
+    user_id: int,
+    tool_name: str,
+    engagement_id: Optional[int] = None,
+    filename: Optional[str] = None,
+    record_count: Optional[int] = None,
+    summary: Optional[dict] = None,
+) -> None:
+    """Log a tool execution to the unified ToolActivity table (Sprint 579)."""
+    import json as _json
+
+    from models import ToolActivity
+
+    display_name = get_filename_display(filename) if filename else None
+    summary_json = _json.dumps(summary) if summary else None
+
+    try:
+        activity = ToolActivity(
+            user_id=user_id,
+            tool_name=tool_name,
+            filename_display=display_name,
+            record_count=record_count,
+            summary_json=summary_json,
+            engagement_id=engagement_id,
+        )
+        db.add(activity)
+        # Don't commit — let the caller's transaction handle it
+    except Exception:
+        logger.exception("Failed to log tool activity for user %d, tool %s", user_id, tool_name)

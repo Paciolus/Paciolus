@@ -334,7 +334,17 @@ def get_tb_suggested_procedure(anomaly: dict, *, is_material: bool = False, rota
         return primary
     alts = SUGGESTED_PROCEDURES_ALT.get(proc_key, [])
     if not alts:
-        return primary
+        # No explicit alternates — apply deterministic prefix variation so
+        # consecutive reports do not display identical text (BUG-001 fix).
+        if rotation_index == 0:
+            return primary
+        prefixes = [
+            "As a priority follow-up action, ",
+            "Building on the initial assessment, ",
+            "To further substantiate the finding, ",
+        ]
+        prefix = prefixes[(rotation_index - 1) % len(prefixes)]
+        return prefix + primary[0].lower() + primary[1:]
     all_procedures = [primary, *alts]
     return all_procedures[rotation_index % len(all_procedures)]
 

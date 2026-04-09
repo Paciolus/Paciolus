@@ -24,7 +24,7 @@ export function EmptyState({ query }: EmptyStateProps) {
   }
 
   return (
-    <div className="px-4 py-8 text-center">
+    <div className="px-4 py-8 text-center" role="status">
       <p className="text-sm font-sans text-oatmeal-400">
         {query ? 'No results found' : 'No commands available'}
       </p>

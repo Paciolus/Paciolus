@@ -194,7 +194,7 @@ export function PreFlightSummary({ report, onProceed, onExportPDF, onExportCSV }
         </div>
         <button
           onClick={onProceed}
-          className="px-5 py-2 text-sm font-sans font-semibold text-white bg-sage-600 hover:bg-sage-700 rounded-lg transition-colors"
+          className="px-5 py-2 text-sm font-sans font-semibold text-oatmeal-50 bg-sage-600 hover:bg-sage-700 rounded-lg transition-colors"
         >
           Proceed to Full Analysis
         </button>

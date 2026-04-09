@@ -7,7 +7,7 @@ import { ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fileFormats'
 export interface PeriodState {
   file: File | null
   status: UploadStatus
-  result: Record<string, unknown> | null
+  result: Record<string, unknown> | null  // TODO: type as AuditResult after full migration
   error: string | null
 }
 

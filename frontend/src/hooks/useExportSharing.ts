@@ -40,12 +40,19 @@ export function useExportSharing() {
     tool: string,
     format: string,
     b64data: string,
+    options?: { passcode?: string; singleUse?: boolean },
   ): Promise<ExportShareInfo | null> => {
     setState(prev => ({ ...prev, isLoading: true, error: null }))
     const { data, ok, error: apiError } = await apiPost<ExportShareInfo>(
       '/export-sharing/create',
       token,
-      { tool, format, data: b64data },
+      {
+        tool,
+        format,
+        data: b64data,
+        ...(options?.passcode ? { passcode: options.passcode } : {}),
+        ...(options?.singleUse ? { single_use: true } : {}),
+      },
     )
     if (ok && data) {
       setState(prev => ({

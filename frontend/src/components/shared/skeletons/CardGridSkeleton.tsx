@@ -61,7 +61,7 @@ export function CardGridSkeleton({
           className="animate-pulse bg-surface-card border border-oatmeal-300/30 rounded-xl p-6 relative overflow-hidden"
         >
           <CardContent variant={variant} />
-          <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent" style={{ animation: 'shimmer 1.5s infinite' }} />
+          <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-oatmeal-50/10 to-transparent" style={{ animation: 'shimmer 1.5s infinite' }} />
         </div>
       ))}
     </div>

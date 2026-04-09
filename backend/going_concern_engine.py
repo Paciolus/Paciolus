@@ -177,7 +177,7 @@ def _test_negative_working_capital(
 
     if triggered:
         deficit = abs(working_capital)
-        severity = "high" if deficit > current_assets * 0.5 else "medium"
+        severity = "high" if deficit > current_assets / 2 else "medium"
         description = (
             f"Working capital is negative: ${working_capital:,.2f} "
             f"(current assets ${current_assets:,.2f} minus "

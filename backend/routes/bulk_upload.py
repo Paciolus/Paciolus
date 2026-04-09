@@ -22,6 +22,7 @@ from database import get_db
 from models import User
 from shared.entitlement_checks import check_bulk_upload_access, check_upload_limit, increment_upload_count
 from shared.helpers import validate_file_size
+from shared.organization_schemas import BulkUploadStartResponse, BulkUploadStatusResponse
 from shared.rate_limits import RATE_LIMIT_WRITE, limiter
 
 logger = logging.getLogger(__name__)
@@ -36,7 +37,7 @@ _JOB_TTL_HOURS = 2
 _bulk_jobs: OrderedDict[str, dict] = OrderedDict()
 
 
-@router.post("")
+@router.post("", response_model=BulkUploadStartResponse)
 @limiter.limit(RATE_LIMIT_WRITE)
 async def start_bulk_upload(
     request: Any = None,
@@ -164,7 +165,7 @@ async def _process_bulk_files(
     job["status"] = "complete"
 
 
-@router.get("/{job_id}/status")
+@router.get("/{job_id}/status", response_model=BulkUploadStatusResponse)
 async def get_bulk_status(
     job_id: str,
     user: User = Depends(require_verified_user),

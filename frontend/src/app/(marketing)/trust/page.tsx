@@ -135,15 +135,15 @@ const securityControls: SecurityControl[] = [
   { name: 'Rate Limiting', description: 'Per-endpoint and global 60/min rate limits on all routes.', category: 'transport', standard: 'OWASP API4', active: true },
   { name: 'Body Size Middleware', description: 'Global request body size limits preventing oversized payload attacks.', category: 'transport', standard: 'OWASP API4', active: true },
   { name: 'CORS Hardening', description: 'Strict origin allowlist with credentialed request support.', category: 'transport', standard: 'OWASP ASVS 14.5', active: true },
-  { name: 'Row-Level Isolation', description: 'Every database query scoped to authenticated user_id. No cross-tenant data leakage.', category: 'tenancy', standard: 'SOC 2 CC6.1', active: true },
+  { name: 'Row-Level Isolation', description: 'Every database query scoped to authenticated user_id. No cross-tenant data leakage.', category: 'tenancy', standard: 'OWASP ASVS 4.1', active: true },
   { name: 'Diagnostic Zone Protection', description: 'Tool pages require verified authentication before any data access.', category: 'tenancy', standard: 'OWASP ASVS 4.1', active: true },
-  { name: 'Soft-Delete Immutability', description: 'Audit trail records use soft-delete with ORM-level deletion guards.', category: 'tenancy', standard: 'SOC 2 CC8.1', active: true },
+  { name: 'Soft-Delete Immutability', description: 'Audit trail records use soft-delete with ORM-level deletion guards.', category: 'tenancy', standard: 'OWASP ASVS 8.3', active: true },
   { name: 'Formula Injection Guard', description: 'All CSV/Excel exports sanitized against =, +, -, @ formula injection.', category: 'export', standard: 'CWE-1236', active: true },
   { name: 'Export Signing', description: 'Workpaper signoff metadata embedded in every PDF and Excel export.', category: 'export', standard: 'PCAOB AS 1215', active: true },
   { name: 'Column & Cell Limits', description: 'Upload validation enforces column count and cell count boundaries.', category: 'export', standard: 'OWASP Input Val.', active: true },
   { name: 'Zero-Storage Architecture', description: 'No raw uploaded files or line-level financial data persisted. Only aggregate metadata stored.', category: 'data-handling', standard: 'GDPR Art. 25', active: true },
   { name: 'Memory Cleanup', description: 'Context-managed memory purge after every analysis operation.', category: 'data-handling', standard: 'CWE-401', active: true },
-  { name: 'Structured Logging', description: 'Request-ID correlated logs with sanitized error output. No PII in logs.', category: 'data-handling', standard: 'SOC 2 CC7.2', active: true },
+  { name: 'Structured Logging', description: 'Request-ID correlated logs with sanitized error output. No PII in logs.', category: 'data-handling', standard: 'OWASP ASVS 7.1', active: true },
 ]
 
 const complianceMilestones: ComplianceMilestone[] = [
@@ -167,12 +167,6 @@ const complianceMilestones: ComplianceMilestone[] = [
     detail: 'Data Processing Agreement — Organization tier',
     year: '2025',
     artifact: { label: 'Request DPA', href: '/contact?inquiry_type=organization' },
-  },
-  {
-    label: 'SOC 2 Type II',
-    status: 'in-progress',
-    detail: 'Controls designed to meet SOC 2 Type II requirements — audit in progress, expected Q3 2026',
-    year: '2026',
   },
 ]
 
@@ -502,7 +496,7 @@ function ArchitectureDiagram() {
                       aria-controls={`flow-detail-${stage.id}`}
                       className={`relative w-[4.5rem] h-[4.5rem] rounded-2xl ${a.bg} border ${a.border} flex items-center justify-center mb-4 ${a.text} shadow-lg ${a.glow} transition-all duration-200 hover:border-sage-500/60 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-sage-400`}
                     >
-                      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
+                      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-oatmeal-50/5 to-transparent pointer-events-none" />
                       <BrandIcon name={stage.icon} className="w-7 h-7" />
                     </button>
 
@@ -570,7 +564,7 @@ function ArchitectureDiagram() {
                     aria-controls={`flow-detail-m-${stage.id}`}
                     className={`relative z-10 flex-shrink-0 w-[4.5rem] h-[4.5rem] rounded-xl ${a.bg} border ${a.border} flex items-center justify-center ${a.text} shadow-lg ${a.glow} focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-sage-400`}
                   >
-                    <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
+                    <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-oatmeal-50/5 to-transparent pointer-events-none" />
                     <BrandIcon name={stage.icon} className="w-7 h-7" />
                   </button>
 
@@ -916,7 +910,7 @@ function ComplianceTimeline() {
       {/* Attestation disclaimer */}
       <p className="font-sans text-xs text-oatmeal-600 text-center mt-8 max-w-2xl mx-auto leading-relaxed">
         GDPR and CCPA compliance reflects our self-assessed posture based on implemented controls and privacy architecture.
-        SOC 2 Type II independent attestation is in progress. Security controls listed above are implemented and active but have not yet been independently audited.
+        Security controls listed above are implemented and active.
       </p>
     </div>
   )

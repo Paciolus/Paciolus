@@ -120,7 +120,8 @@ async def run_single_file_testing(
             )
             flagged = extract_accounts(result_dict) if extract_accounts else None
             background_tasks.add_task(
-                maybe_record_tool_run, db, engagement_id, current_user.id, tool_name, True, score, flagged
+                maybe_record_tool_run, db, engagement_id, current_user.id, tool_name, True, score, flagged,
+                filename, result_dict.get("record_count"),
             )
 
             return dict(result_dict)

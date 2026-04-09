@@ -94,9 +94,14 @@ function saveRecentIds(ids: string[]): void {
 
 export function CommandPaletteProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false)
-  const [recentIds, setRecentIds] = useState<string[]>(loadRecentIds)
+  const [recentIds, setRecentIds] = useState<string[]>([])
   const scopedCommandsRef = useRef<Map<string, PaletteCommand[]>>(new Map())
   const [scopedCommandsVersion, setScopedCommandsVersion] = useState(0)
+
+  // Hydration-safe: load recency data after mount to avoid SSR/client mismatch (React #418)
+  useEffect(() => {
+    setRecentIds(loadRecentIds())
+  }, [])
 
   // Global Cmd+K listener — must fire even from input fields
   useEffect(() => {

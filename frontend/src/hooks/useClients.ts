@@ -20,6 +20,8 @@ import type {
   ClientCreateInput,
   ClientUpdateInput,
   ClientListResponse,
+  ClientWithSummary,
+  ClientWithSummaryListResponse,
   IndustryOption,
 } from '@/types/client';
 import { apiGet, apiPost, apiPut, apiDelete, isAuthError } from '@/utils';
@@ -46,6 +48,8 @@ interface UseClientsReturn {
   industries: IndustryOption[];
   /** Fetch clients (with optional search) */
   fetchClients: (search?: string, page?: number) => Promise<void>;
+  /** Fetch clients with engagement summary data (Sprint 580) */
+  fetchClientsWithSummary: (page?: number) => Promise<ClientWithSummary[]>;
   /** Create a new client */
   createClient: (data: ClientCreateInput) => Promise<Client | null>;
   /** Update an existing client */
@@ -272,6 +276,39 @@ export function useClients(options: UseClientsOptions = {}): UseClientsReturn {
   }, [isAuthenticated, token]);
 
   /**
+   * Fetch clients with engagement summary data (Sprint 580).
+   * Returns ClientWithSummary[] for the unified portfolio view.
+   */
+  const fetchClientsWithSummary = useCallback(async (newPage: number = 1): Promise<ClientWithSummary[]> => {
+    if (!isAuthenticated || !token) return [];
+
+    setIsLoading(true);
+    setError(null);
+
+    const params = new URLSearchParams({
+      page: newPage.toString(),
+      page_size: pageSize.toString(),
+    });
+
+    const { data, ok } = await apiGet<ClientWithSummaryListResponse>(
+      `/clients/with-engagement-summary?${params}`,
+      token
+    );
+
+    setIsLoading(false);
+
+    if (ok && data) {
+      // Also update the base clients state for backward compat
+      setClients(data.items);
+      setTotalCount(data.total_count);
+      setPage(data.page);
+      return data.items;
+    }
+
+    return [];
+  }, [isAuthenticated, token, pageSize]);
+
+  /**
    * Refresh the client list.
    */
   const refresh = useCallback(async () => {
@@ -299,6 +336,7 @@ export function useClients(options: UseClientsOptions = {}): UseClientsReturn {
     error,
     industries,
     fetchClients,
+    fetchClientsWithSummary,
     createClient,
     updateClient,
     deleteClient,

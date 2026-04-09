@@ -29,7 +29,7 @@ jest.mock('@/hooks/useVerification', () => ({
 }))
 
 const mockUseAuthSession = {
-  user: { id: 1, email: 'test@example.com', is_verified: false },
+  user: { id: 1, email: 'test@example.com', is_verified: false, is_active: true, created_at: '2026-01-01T00:00:00Z' },
   isAuthenticated: true,
 }
 
@@ -42,7 +42,7 @@ describe('VerificationBanner', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     // Reset mock state
-    mockUseAuthSession.user = { id: 1, email: 'test@example.com', is_verified: false }
+    mockUseAuthSession.user = { id: 1, email: 'test@example.com', is_verified: false, is_active: true, created_at: '2026-01-01T00:00:00Z' }
     mockUseAuthSession.isAuthenticated = true
     mockUseVerification.cooldownSeconds = 0
     mockUseVerification.canResend = true
@@ -51,7 +51,7 @@ describe('VerificationBanner', () => {
   })
 
   it('renders nothing for verified users', () => {
-    mockUseAuthSession.user = { id: 1, email: 'test@example.com', is_verified: true } as any
+    mockUseAuthSession.user = { id: 1, email: 'test@example.com', is_verified: true, is_active: true, created_at: '2026-01-01T00:00:00Z' }
     const { container } = render(<VerificationBanner />)
     expect(container.innerHTML).toBe('')
   })

@@ -221,7 +221,7 @@ export default function ProfileSettingsPage() {
             <button
               onClick={handleProfileSave}
               disabled={profileSaving}
-              className="px-6 py-2.5 bg-sage-600 text-white rounded-lg font-sans font-medium hover:bg-sage-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 py-2.5 bg-sage-600 text-oatmeal-50 rounded-lg font-sans font-medium hover:bg-sage-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {profileSaving ? 'Saving...' : 'Save Profile'}
             </button>
@@ -310,7 +310,7 @@ export default function ProfileSettingsPage() {
             <button
               onClick={handlePasswordChange}
               disabled={passwordSaving || !currentPassword || !newPassword || newPassword !== confirmPassword}
-              className="px-6 py-2.5 bg-sage-600 text-white rounded-lg font-sans font-medium hover:bg-sage-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 py-2.5 bg-sage-600 text-oatmeal-50 rounded-lg font-sans font-medium hover:bg-sage-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {passwordSaving ? 'Changing...' : 'Change Password'}
             </button>

@@ -98,6 +98,45 @@ export function isValidationError(status: number): boolean {
 }
 
 // =============================================================================
+// UNIFIED ERROR PARSING (AUDIT-11-F004)
+// =============================================================================
+
+/**
+ * Structured error envelope returned by the backend.
+ * Matches the `ErrorResponse` Pydantic model.
+ */
+export interface ParsedApiError {
+  /** Machine-readable error code (e.g. "VALIDATION_ERROR", "INTERNAL_ERROR") */
+  code: string;
+  /** Human-readable message */
+  message: string;
+  /** Request correlation ID for support / debugging */
+  requestId: string;
+  /** Optional detail — validation errors or contextual string */
+  detail?: unknown;
+}
+
+/**
+ * Parse a backend error response body into a structured error.
+ *
+ * Reads the unified `ErrorResponse` envelope (code, message, request_id)
+ * when available, with fallback to legacy shapes (`detail`, `error_code`).
+ * Both `transport.ts` and `uploadTransport.ts` share this function
+ * so error parsing is consistent across all fetch paths.
+ */
+export function parseErrorResponse(
+  data: Record<string, unknown>,
+  status: number,
+): ParsedApiError {
+  return {
+    code: (data.code ?? data.error_code ?? `HTTP_${status}`) as string,
+    message: (data.message ?? '') as string,
+    requestId: (data.request_id ?? '') as string,
+    detail: data.detail,
+  };
+}
+
+// =============================================================================
 // ERROR NORMALIZATION
 // =============================================================================
 
@@ -189,14 +228,16 @@ export async function performFetch<T>(
 
       try {
         const errorData = await response.json();
+        const parsed = parseErrorResponse(errorData, response.status);
+
         if (response.status === 422) {
           // Custom validation handler — never expose field paths
-          errorMessage = 'Please check your input and try again.';
+          errorMessage = parsed.message || 'Please check your input and try again.';
         } else {
-          const detail = errorData.detail;
-          const raw = typeof detail === 'string'
-            ? detail
-            : errorData.message || '';
+          // Prefer unified `message`, fall back to legacy `detail` string
+          const raw = parsed.message
+            || (typeof parsed.detail === 'string' ? parsed.detail : '')
+            || '';
           errorMessage = raw ? normalizeApiError(raw) : getStatusMessage(response.status);
         }
       } catch {

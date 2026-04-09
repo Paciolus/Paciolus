@@ -398,10 +398,11 @@ class TestXSSPayloadRegression:
 
     @pytest.mark.asyncio
     async def test_xss_in_user_name_returned_as_json_string(self, override_auth_current):
-        """XSS payload in user name should be returned as inert JSON string.
+        """XSS payload in user name is stripped by sanitize_name validator.
 
-        FastAPI serializes to JSON with Content-Type: application/json,
-        so HTML is never rendered by the browser.
+        Defense-in-depth: the UserProfileUpdate schema strips HTML tags
+        server-side (pentest finding), so <script> tags never reach the DB.
+        JSON Content-Type provides an additional layer of protection.
         """
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.put(
@@ -413,8 +414,8 @@ class TestXSSPayloadRegression:
                 data = response.json()
                 # Verify JSON content type prevents browser rendering
                 assert response.headers["content-type"].startswith("application/json")
-                # The name is stored and returned as literal string, not rendered as HTML
-                assert data["name"] == "<script>alert('xss')</script>"
+                # HTML tags stripped by sanitize_name validator (defense-in-depth)
+                assert data["name"] == "alert('xss')"
 
     @pytest.mark.asyncio
     async def test_xss_in_client_name_returned_as_json(self, override_auth_current):

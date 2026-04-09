@@ -5,7 +5,7 @@ from decimal import Decimal
 from enum import Enum as PyEnum
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import Boolean, Date, DateTime, Enum, Float, ForeignKey, Integer, Numeric, String, func
+from sqlalchemy import Boolean, Date, DateTime, Enum, Float, ForeignKey, Index, Integer, Numeric, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database import Base
@@ -122,6 +122,9 @@ class User(Base):
     failed_login_attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     locked_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
+    # Sprint 590: Platform-level superadmin (set via CLI only — no UI granting)
+    is_superadmin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
     # User settings (JSON string) - for future preferences
     # IMPORTANT: This is for UI preferences only, NOT financial data
     settings: Mapped[str] = mapped_column(String(2000), default="{}")
@@ -137,6 +140,9 @@ class User(Base):
     )
     verification_tokens: Mapped[list["EmailVerificationToken"]] = relationship(
         "EmailVerificationToken", back_populates="user"
+    )
+    password_reset_tokens: Mapped[list["PasswordResetToken"]] = relationship(
+        "PasswordResetToken", back_populates="user"
     )
     refresh_tokens: Mapped[list["RefreshToken"]] = relationship("RefreshToken", back_populates="user")
     engagements: Mapped[list["Engagement"]] = relationship(
@@ -214,6 +220,40 @@ class ActivityLog(SoftDeleteMixin, Base):
             "archived_by": self.archived_by,
             "archive_reason": self.archive_reason,
         }
+
+
+class ToolActivity(Base):
+    """Lightweight tool activity log for unified dashboard feed.
+
+    Records all tool executions across the platform. TB entries are also
+    logged to ActivityLog for SOC 2 chain hash compliance.
+
+    ZERO-STORAGE: Only stores tool name, filename display, record count,
+    and a JSON summary blob. No financial data.
+    """
+
+    __tablename__ = "tool_activities"
+    __table_args__ = (Index("ix_tool_activities_user_timestamp", "user_id", "timestamp"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    tool_name: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    filename_display: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    record_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    summary_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    engagement_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("engagements.id", use_alter=True, name="fk_tool_activities_engagement_id"),
+        nullable=True,
+    )
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(UTC), server_default=func.now(), index=True
+    )
+
+    user: Mapped["User"] = relationship("User", foreign_keys=[user_id])
+
+    def __repr__(self) -> str:
+        return f"<ToolActivity(id={self.id}, tool={self.tool_name}, user={self.user_id})>"
 
 
 class Client(Base):
@@ -408,16 +448,16 @@ class DiagnosticSummary(SoftDeleteMixin, Base):
     def get_category_totals_dict(self) -> dict[str, Any]:
         """Get category totals as a dictionary for ratio calculations."""
         return {
-            "total_assets": float(self.total_assets or 0),
-            "current_assets": float(self.current_assets or 0),
-            "inventory": float(self.inventory or 0),
-            "total_liabilities": float(self.total_liabilities or 0),
-            "current_liabilities": float(self.current_liabilities or 0),
-            "total_equity": float(self.total_equity or 0),
-            "total_revenue": float(self.total_revenue or 0),
-            "cost_of_goods_sold": float(self.cost_of_goods_sold or 0),
-            "total_expenses": float(self.total_expenses or 0),
-            "operating_expenses": float(self.operating_expenses or 0),
+            "total_assets": self.total_assets or Decimal(0),
+            "current_assets": self.current_assets or Decimal(0),
+            "inventory": self.inventory or Decimal(0),
+            "total_liabilities": self.total_liabilities or Decimal(0),
+            "current_liabilities": self.current_liabilities or Decimal(0),
+            "total_equity": self.total_equity or Decimal(0),
+            "total_revenue": self.total_revenue or Decimal(0),
+            "cost_of_goods_sold": self.cost_of_goods_sold or Decimal(0),
+            "total_expenses": self.total_expenses or Decimal(0),
+            "operating_expenses": self.operating_expenses or Decimal(0),
         }
 
     def get_all_ratios_dict(self) -> dict[str, Any]:
@@ -470,6 +510,52 @@ class EmailVerificationToken(Base):
         """Check if token has expired."""
         now = datetime.now(UTC)
         # Handle timezone-naive datetimes from SQLite
+        if self.expires_at.tzinfo is None:
+            from datetime import timezone
+
+            expires = self.expires_at.replace(tzinfo=timezone.utc)
+        else:
+            expires = self.expires_at
+        return now > expires
+
+    @property
+    def is_used(self) -> bool:
+        """Check if token has been used."""
+        return self.used_at is not None
+
+
+class PasswordResetToken(Base):
+    """
+    Password reset tokens for account recovery.
+    Sprint 572: Password Reset Flow
+
+    Tokens are single-use and expire after 1 hour.
+    SHA-256 hash stored — raw token sent via email, never persisted.
+    """
+
+    __tablename__ = "password_reset_tokens"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+
+    # Link to user
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    user: Mapped["User"] = relationship("User", back_populates="password_reset_tokens")
+
+    # Token data (hashed — SHA-256 hex digest of raw token; never stored plaintext)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+
+    # Usage tracking
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
+    used_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    def __repr__(self) -> str:
+        return f"<PasswordResetToken(id={self.id}, user_id={self.user_id})>"
+
+    @property
+    def is_expired(self) -> bool:
+        """Check if token has expired."""
+        now = datetime.now(UTC)
         if self.expires_at.tzinfo is None:
             from datetime import timezone
 

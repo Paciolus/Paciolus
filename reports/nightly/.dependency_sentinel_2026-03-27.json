@@ -1,0 +1,96 @@
+{
+  "agent": "dependency_sentinel",
+  "status": "yellow",
+  "backend_outdated": [
+    {
+      "package": "chardet",
+      "current": "7.3.0",
+      "latest": "7.4.0.post1",
+      "severity": "minor",
+      "watchlist": false
+    },
+    {
+      "package": "pdfminer.six",
+      "current": "20251230",
+      "latest": "20260107",
+      "severity": "major",
+      "watchlist": false
+    },
+    {
+      "package": "pydantic_core",
+      "current": "2.41.5",
+      "latest": "2.42.0",
+      "severity": "minor",
+      "watchlist": false
+    },
+    {
+      "package": "ruff",
+      "current": "0.15.7",
+      "latest": "0.15.8",
+      "severity": "patch",
+      "watchlist": false
+    }
+  ],
+  "frontend_outdated": [
+    {
+      "package": "@sentry/nextjs",
+      "current": "10.45.0",
+      "latest": "10.46.0",
+      "severity": "minor",
+      "watchlist": false
+    },
+    {
+      "package": "recharts",
+      "current": "3.8.0",
+      "latest": "3.8.1",
+      "severity": "patch",
+      "watchlist": false
+    },
+    {
+      "package": "typescript",
+      "current": "5.9.3",
+      "latest": "6.0.2",
+      "severity": "major",
+      "watchlist": false
+    }
+  ],
+  "security_flagged": [],
+  "top5_updates": [
+    {
+      "package": "pdfminer.six",
+      "current": "20251230",
+      "latest": "20260107",
+      "severity": "major",
+      "watchlist": false
+    },
+    {
+      "package": "typescript",
+      "current": "5.9.3",
+      "latest": "6.0.2",
+      "severity": "major",
+      "watchlist": false
+    },
+    {
+      "package": "chardet",
+      "current": "7.3.0",
+      "latest": "7.4.0.post1",
+      "severity": "minor",
+      "watchlist": false
+    },
+    {
+      "package": "pydantic_core",
+      "current": "2.41.5",
+      "latest": "2.42.0",
+      "severity": "minor",
+      "watchlist": false
+    },
+    {
+      "package": "@sentry/nextjs",
+      "current": "10.45.0",
+      "latest": "10.46.0",
+      "severity": "minor",
+      "watchlist": false
+    }
+  ],
+  "summary": "Backend: 4 outdated. Frontend: 3 outdated. 0 security-relevant packages have updates."
+}

@@ -1,0 +1,27 @@
+{
+  "agent": "qa_warden",
+  "status": "green",
+  "backend": {
+    "passed": 7119,
+    "failed": 0,
+    "errors": 0,
+    "duration_s": 286.8,
+    "failing_tests": [
+      "tests/test_accounting_policy_guard.py::TestIntegration::test_guard_passes_on_current_codebase",
+      "tests/test_injection_regression.py::TestXSSPayloadRegression::test_xss_in_user_name_returned_as_json_string"
+    ],
+    "new_failures": [
+      "tests/test_accounting_policy_guard.py::TestIntegration::test_guard_passes_on_current_codebase",
+      "tests/test_injection_regression.py::TestXSSPayloadRegression::test_xss_in_user_name_returned_as_json_string"
+    ],
+    "resolved": [
+      "tests/qa/test_uploads_migration.py::test_migration_f4a5b6c7d8e9_exists"
+    ]
+  },
+  "frontend": {
+    "passed": 1745,
+    "failed": 0,
+    "duration_s": 36.3
+  },
+  "summary": "Backend: 7119 passed / 0 failed in 286.8s. Frontend: 1745 passed / 0 failed in 36.3s. 2 new failure(s) since yesterday. 1 failure(s) resolved."
+}

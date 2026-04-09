@@ -101,7 +101,7 @@ export function BottomProof() {
         </Reveal>
 
         {/* Closing metric band */}
-        <Reveal delay={0.08} className="grid grid-cols-3 gap-6 mt-12">
+        <Reveal delay={0.08} className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mt-12">
           {CLOSING_METRICS.map((metric) => (
             <div
               key={metric.label}
@@ -121,7 +121,7 @@ export function BottomProof() {
           {mounted && !isAuthenticated && (
             <Link
               href="/register"
-              className="px-8 py-3.5 bg-sage-600 rounded-xl text-white font-sans font-medium hover:bg-sage-500 transition-all shadow-lg shadow-sage-600/25 hover:shadow-xl hover:shadow-sage-600/30"
+              className="px-8 py-3.5 bg-sage-600 rounded-xl text-oatmeal-50 font-sans font-medium hover:bg-sage-500 transition-all shadow-lg shadow-sage-600/25 hover:shadow-xl hover:shadow-sage-600/30"
             >
               Start Free Trial
             </Link>

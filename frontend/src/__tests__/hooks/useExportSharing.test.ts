@@ -1,5 +1,5 @@
 /**
- * useExportSharing Hook Tests — Sprint 545c
+ * useExportSharing Hook Tests — Sprint 545c / Sprint 593
  */
 
 import { renderHook, act } from '@testing-library/react'
@@ -28,6 +28,8 @@ const mockShare = {
   created_at: '2026-03-17T10:00:00Z',
   expires_at: '2026-03-19T10:00:00Z',
   access_count: 3,
+  single_use: false,
+  has_passcode: false,
 }
 
 describe('useExportSharing', () => {
@@ -73,6 +75,32 @@ describe('useExportSharing', () => {
       '/export-sharing/create',
       mockToken,
       { tool: 'trial_balance', format: 'pdf', data: 'base64data' },
+    )
+  })
+
+  it('createShare passes passcode and singleUse in request body', async () => {
+    const newShare = { ...mockShare, token: 'secure1', single_use: true, has_passcode: true }
+    mockApiPost.mockResolvedValueOnce({ data: newShare, ok: true })
+
+    const { result } = renderHook(() => useExportSharing())
+
+    await act(async () => {
+      await result.current.createShare('trial_balance', 'pdf', 'base64data', {
+        passcode: 'mySecret',
+        singleUse: true,
+      })
+    })
+
+    expect(mockApiPost).toHaveBeenCalledWith(
+      '/export-sharing/create',
+      mockToken,
+      {
+        tool: 'trial_balance',
+        format: 'pdf',
+        data: 'base64data',
+        passcode: 'mySecret',
+        single_use: true,
+      },
     )
   })
 

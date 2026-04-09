@@ -43,7 +43,6 @@ class WaitlistRequest(BaseModel):
 class HealthResponse(BaseModel):
     status: str
     timestamp: str
-    version: str
     database: Optional[str] = None
 
 
@@ -86,7 +85,6 @@ async def health_check(
         return HealthResponse(
             status="healthy",
             timestamp=datetime.now(UTC).isoformat(),
-            version=__version__,
         )
 
     # Signal deprecation — clients should migrate to /health/ready
@@ -110,7 +108,6 @@ async def health_check(
             detail=HealthResponse(
                 status="unhealthy",
                 timestamp=datetime.now(UTC).isoformat(),
-                version=__version__,
                 database="unreachable",
             ).model_dump(),
         )
@@ -118,7 +115,6 @@ async def health_check(
     return HealthResponse(
         status="healthy",
         timestamp=datetime.now(UTC).isoformat(),
-        version=__version__,
         database=db_status,
     )
 

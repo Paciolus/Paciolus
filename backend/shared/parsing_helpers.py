@@ -59,8 +59,12 @@ def safe_decimal(value: object, default: Decimal = Decimal("0")) -> Decimal:
 
 
 def safe_float(value: object) -> float:
-    # Deprecated: Use safe_decimal() for monetary fields.
     """Convert *value* to float, returning ``0.0`` for non-numeric.
+
+    .. deprecated::
+        DEPRECATED for monetary values. Use :func:`safe_decimal` instead.
+        This function is retained only for genuinely non-financial numeric
+        parsing (e.g., quantities, hours, statistical z-scores).
 
     Handles:
     - ``None`` → 0.0

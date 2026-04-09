@@ -1,5 +1,6 @@
 /**
  * Sprint 276: useActivityHistory hook tests
+ * Updated: Remove sessionStorage fallback tests (zero-storage remediation)
  */
 import { renderHook, act } from '@testing-library/react'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
@@ -24,8 +25,6 @@ jest.mock('@/utils', () => ({
 }))
 
 jest.mock('@/types/history', () => ({
-  HISTORY_STORAGE_KEY: 'paciolus_audit_history',
-  HISTORY_VERSION: '1.0.0',
   mapActivityLogToAuditActivity: (...args: unknown[]) => mockMapActivityLogToAuditActivity(...args),
 }))
 
@@ -53,22 +52,9 @@ const mockApiResponse = {
   page_size: 50,
 }
 
-// sessionStorage mock
-const sessionStorageMock = (() => {
-  let store: Record<string, string> = {}
-  return {
-    getItem: jest.fn((key: string) => store[key] || null),
-    setItem: jest.fn((key: string, value: string) => { store[key] = value }),
-    removeItem: jest.fn((key: string) => { delete store[key] }),
-    clear: jest.fn(() => { store = {} }),
-  }
-})()
-Object.defineProperty(window, 'sessionStorage', { value: sessionStorageMock })
-
 describe('useActivityHistory', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    sessionStorageMock.clear()
     mockUseAuthSession.mockReturnValue({
       token: 'test-token',
       isAuthenticated: true,
@@ -158,18 +144,12 @@ describe('useActivityHistory', () => {
     expect(result.current.page).toBe(1)
   })
 
-  it('falls back to sessionStorage when unauthenticated', async () => {
+  it('shows empty state when unauthenticated (no sessionStorage fallback)', async () => {
     mockUseAuthSession.mockReturnValue({
       token: null,
       isAuthenticated: false,
       isLoading: false,
     })
-
-    const storedData = {
-      version: '1.0.0',
-      activities: [mockActivity],
-    }
-    sessionStorageMock.getItem.mockReturnValue(JSON.stringify(storedData))
 
     const { result } = renderHook(() =>
       useActivityHistory({ autoFetch: false })
@@ -178,38 +158,27 @@ describe('useActivityHistory', () => {
     await act(async () => { await result.current.refetch() })
 
     expect(mockApiGet).not.toHaveBeenCalled()
-    expect(sessionStorageMock.getItem).toHaveBeenCalledWith('paciolus_audit_history')
-    expect(result.current.activities).toEqual([mockActivity])
-    expect(result.current.totalCount).toBe(1)
+    expect(result.current.activities).toEqual([])
+    expect(result.current.totalCount).toBe(0)
+    expect(result.current.isLoading).toBe(false)
   })
 
-  it('falls back to sessionStorage on auth error (isAuthError returns true)', async () => {
+  it('shows error on auth error without sessionStorage fallback', async () => {
     mockApiGet.mockResolvedValue({ ok: false, status: 401, data: null })
 
-    const storedData = {
-      version: '1.0.0',
-      activities: [mockActivity],
-    }
-    sessionStorageMock.getItem.mockReturnValue(JSON.stringify(storedData))
-
     const { result } = renderHook(() =>
       useActivityHistory({ autoFetch: false })
     )
 
     await act(async () => { await result.current.refetch() })
 
-    expect(sessionStorageMock.getItem).toHaveBeenCalledWith('paciolus_audit_history')
-    expect(result.current.activities).toEqual([mockActivity])
+    expect(result.current.activities).toEqual([])
+    expect(result.current.totalCount).toBe(0)
+    expect(result.current.error).toBe('Session expired. Please log in again.')
   })
 
-  it('handles API error gracefully (sets error, falls back to sessionStorage)', async () => {
+  it('handles API error gracefully without sessionStorage fallback', async () => {
     mockApiGet.mockRejectedValue(new Error('Network error'))
-
-    const storedData = {
-      version: '1.0.0',
-      activities: [mockActivity],
-    }
-    sessionStorageMock.getItem.mockReturnValue(JSON.stringify(storedData))
 
     const { result } = renderHook(() =>
       useActivityHistory({ autoFetch: false })
@@ -217,8 +186,9 @@ describe('useActivityHistory', () => {
 
     await act(async () => { await result.current.refetch() })
 
-    expect(result.current.error).toBe('Failed to load history. Showing local data.')
-    expect(result.current.activities).toEqual([mockActivity])
+    expect(result.current.error).toBe('Failed to load history. Please try again.')
+    expect(result.current.activities).toEqual([])
+    expect(result.current.totalCount).toBe(0)
     expect(result.current.isLoading).toBe(false)
   })
 

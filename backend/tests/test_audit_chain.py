@@ -416,3 +416,57 @@ class TestChainHashOnCreation:
         # Both should be valid 128-char hex strings
         assert len(hash1) == 128
         assert len(hash2) == 128
+
+
+# =============================================================================
+# Secret Domain Separation Tests
+# =============================================================================
+
+
+class TestSecretDomainSeparation:
+    """Tests for AUDIT_CHAIN_SECRET_KEY domain separation and backward compat."""
+
+    def test_new_key_produces_different_hash(self, db_session, mock_user, monkeypatch):
+        """A distinct AUDIT_CHAIN_SECRET_KEY produces different hashes than JWT_SECRET_KEY."""
+        import shared.audit_chain as chain_mod
+
+        record = _make_activity_log(db_session, mock_user, record_count=42)
+
+        # Hash with current key
+        hash_current = compute_chain_hash(GENESIS_HASH, record)
+
+        # Monkeypatch to a different key
+        monkeypatch.setattr(
+            chain_mod, "AUDIT_CHAIN_SECRET_KEY", "completely_different_secret_key_value_that_is_long_enough"
+        )
+        hash_new = compute_chain_hash(GENESIS_HASH, record)
+
+        assert hash_current != hash_new
+        assert len(hash_new) == 128
+
+    def test_backward_compatible_verification_with_old_key(self, db_session, mock_user, monkeypatch):
+        """Records created with JWT_SECRET_KEY remain verifiable after key rotation."""
+        import shared.audit_chain as chain_mod
+
+        # Create chain records with current key (which defaults to JWT_SECRET_KEY)
+        r1 = _make_activity_log(db_session, mock_user, record_count=10)
+        r1.chain_hash = compute_chain_hash(GENESIS_HASH, r1)
+        db_session.flush()
+
+        r2 = _make_activity_log(db_session, mock_user, record_count=20)
+        r2.chain_hash = compute_chain_hash(r1.chain_hash, r2)
+        db_session.flush()
+
+        # Verify chain is valid before rotation
+        result_before = verify_audit_chain(db_session, r1.id, r2.id, mock_user.id)
+        assert result_before.is_valid
+        assert result_before.records_checked == 2
+
+        # Simulate key rotation: set a new AUDIT_CHAIN_SECRET_KEY
+        new_key = "rotated_audit_chain_key_for_testing_purposes_32chars"
+        monkeypatch.setattr(chain_mod, "AUDIT_CHAIN_SECRET_KEY", new_key)
+
+        # Old records should still verify via JWT_SECRET_KEY fallback
+        result_after = verify_audit_chain(db_session, r1.id, r2.id, mock_user.id)
+        assert result_after.is_valid, f"Expected valid after rotation, got: {result_after.error_message}"
+        assert result_after.records_checked == 2

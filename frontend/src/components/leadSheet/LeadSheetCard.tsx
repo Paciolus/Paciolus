@@ -87,7 +87,7 @@ export function LeadSheetCard({ summary, index = 0 }: LeadSheetCardProps) {
           <div className="flex items-center gap-3">
             <div className={`
               w-10 h-10 rounded-lg flex items-center justify-center
-              ${colors.accent} text-white font-mono font-bold text-lg
+              ${colors.accent} text-oatmeal-50 font-mono font-bold text-lg
             `}>
               {summary.lead_sheet}
             </div>

@@ -1,0 +1,45 @@
+{
+  "agent": "qa_warden",
+  "status": "green",
+  "backend": {
+    "passed": 7039,
+    "failed": 0,
+    "errors": 0,
+    "duration_s": 274.9,
+    "failing_tests": [],
+    "new_failures": [],
+    "resolved": [
+      "tests/test_accrual_completeness.py::TestComputeAccrualCompleteness::test_deferred_revenue_excluded_from_ratio",
+      "tests/test_accrual_completeness.py::TestComputeAccrualCompleteness::test_deferred_revenue_ratio_corrected",
+      "tests/test_accrual_completeness.py::TestComputeAccrualCompleteness::test_excludes_non_liability",
+      "tests/test_accrual_completeness.py::TestComputeAccrualCompleteness::test_identifies_accrual_liabilities",
+      "tests/test_expense_category.py::TestComputeExpenseCategories::test_amounts_sum",
+      "tests/test_expense_category.py::TestComputeExpenseCategories::test_non_expense_accounts_excluded",
+      "tests/test_expense_category.py::TestComputeExpenseCategories::test_pct_of_revenue_calculation",
+      "tests/test_financial_statements.py::TestFinancialStatementPDF::test_pdf_bytes_nonempty",
+      "tests/test_financial_statements.py::TestFinancialStatementPDF::test_pdf_bytes_type",
+      "tests/test_financial_statements.py::TestFinancialStatementPDF::test_pdf_with_workpaper_fields",
+      "tests/test_financial_statements.py::TestMappingTracePDF::test_pdf_with_mapping_trace",
+      "tests/test_financial_statements.py::TestSprint488Ratios::test_pdf_with_prior_period",
+      "tests/test_iif_parser.py::TestIifSectionParsing::test_block_id_assigned",
+      "tests/test_iif_parser.py::TestIifTransactionProjection::test_column_mapping",
+      "tests/test_iif_parser.py::TestParseIifEndToEnd::test_block_id_in_dataframe",
+      "tests/test_report_chrome.py::TestBuildCoverPage::test_cover_page_with_classical_styles",
+      "tests/test_report_chrome.py::TestCoverMetadataPresence::test_diagnostic_pdf_has_multiple_pages",
+      "tests/test_report_chrome.py::TestRegressionPdfGenerator::test_diagnostic_pdf",
+      "tests/test_report_chrome.py::TestRegressionPdfGenerator::test_diagnostic_pdf_with_anomalies",
+      "tests/test_report_regression.py::TestDiagnosticPdfRegression::test_anomaly_diagnostic_valid_pdf",
+      "tests/test_report_regression.py::TestDiagnosticPdfRegression::test_balanced_diagnostic_valid_pdf",
+      "tests/test_report_regression.py::TestDiagnosticPdfRegression::test_diagnostic_no_spaced_caps_in_output",
+      "tests/test_report_regression.py::TestDiagnosticPdfRegression::test_diagnostic_signoff_default_off",
+      "tests/test_report_regression.py::TestDiagnosticPdfRegression::test_diagnostic_with_source_document_metadata",
+      "tests/test_timestamp_defaults.py::TestDBGeneratedTimestamps::test_activity_log_timestamp"
+    ]
+  },
+  "frontend": {
+    "passed": 1725,
+    "failed": 0,
+    "duration_s": 51.8
+  },
+  "summary": "Backend: 7039 passed / 0 failed in 274.9s. Frontend: 1725 passed / 0 failed in 51.8s. 25 failure(s) resolved."
+}

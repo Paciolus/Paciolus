@@ -57,6 +57,7 @@ def assess_data_quality(
     field_configs: list[FieldQualityConfig],
     *,
     optional_weight_pool: float = 0.15,
+    domain: str = "",
 ) -> DataQualityResult:
     """Assess data quality using config-driven field definitions.
 
@@ -72,6 +73,7 @@ def assess_data_quality(
         entries: List of parsed entry objects (domain-specific)
         field_configs: List of FieldQualityConfig defining fields to check
         optional_weight_pool: Total weight allocated to optional fields (default 0.15)
+        domain: Tool domain identifier (e.g., "je_testing") — reserved for future use
 
     Returns:
         DataQualityResult with completeness score, fill rates, and issues
@@ -127,7 +129,7 @@ def assess_data_quality(
     score = sum(fill_rates.get(k, 0) * w for k, w in weights.items()) * 100
 
     return DataQualityResult(
-        completeness_score=min(score, 100.0),
+        completeness_score=min(max(score, 0.0), 100.0),
         field_fill_rates=fill_rates,
         detected_issues=issues,
         total_rows=total,

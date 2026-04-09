@@ -25,6 +25,7 @@ from inventory_testing_memo_generator import (
 # TEST FIXTURES
 # =============================================================================
 
+
 def _make_inv_result(
     score: float = 15.0,
     risk_tier: str = "elevated",
@@ -35,59 +36,77 @@ def _make_inv_result(
 ) -> dict:
     """Build a minimal InvTestingResult.to_dict() shape."""
     test_keys = [
-        "missing_fields", "negative_values", "value_mismatch",
-        "unit_cost_outliers", "quantity_outliers", "slow_moving",
-        "category_concentration", "duplicate_items", "zero_value_items",
+        "missing_fields",
+        "negative_values",
+        "value_mismatch",
+        "unit_cost_outliers",
+        "quantity_outliers",
+        "slow_moving",
+        "category_concentration",
+        "duplicate_items",
+        "zero_value_items",
     ]
     test_names = [
-        "Missing Required Fields", "Negative Values",
-        "Extended Value Mismatch", "Unit Cost Outliers",
-        "Quantity Outliers", "Slow-Moving Inventory",
-        "Category Concentration", "Duplicate Items",
+        "Missing Required Fields",
+        "Negative Values",
+        "Extended Value Mismatch",
+        "Unit Cost Outliers",
+        "Quantity Outliers",
+        "Slow-Moving Inventory",
+        "Category Concentration",
+        "Duplicate Items",
         "Zero-Value Items",
     ]
     tiers = [
-        "structural", "structural", "structural",
-        "statistical", "statistical", "statistical", "statistical",
-        "advanced", "advanced",
+        "structural",
+        "structural",
+        "structural",
+        "statistical",
+        "statistical",
+        "statistical",
+        "statistical",
+        "advanced",
+        "advanced",
     ]
 
     test_results = []
     for i in range(min(num_tests, 9)):
         flagged_count = 2 if i < 3 else 1 if i < 6 else 0
-        test_results.append({
-            "test_name": test_names[i],
-            "test_key": test_keys[i],
-            "test_tier": tiers[i],
-            "entries_flagged": flagged_count,
-            "total_entries": total_entries,
-            "flag_rate": flagged_count / max(total_entries, 1),
-            "severity": "high" if i < 2 else "medium" if i < 5 else "low",
-            "description": f"Test description for {test_keys[i]}",
-            "flagged_entries": [
-                {
-                    "entry": {
-                        "item_id": f"INV-{i:03d}-{j}",
-                        "description": f"Widget {j + 1}",
-                        "quantity": 100.0 + j * 50,
-                        "unit_cost": 25.0 + j * 10,
-                        "extended_value": (100.0 + j * 50) * (25.0 + j * 10),
-                        "location": "Warehouse A",
-                        "last_movement_date": "2025-10-15",
-                        "category": "Raw Materials",
-                        "row_number": i * 10 + j + 1,
-                    },
-                    "test_name": test_names[i],
-                    "test_key": test_keys[i],
-                    "test_tier": tiers[i],
-                    "severity": "high" if i < 2 else "medium",
-                    "issue": f"Flagged by {test_names[i]}",
-                    "confidence": 0.85,
-                    "details": {},
-                }
-                for j in range(flagged_count)
-            ],
-        })
+        test_results.append(
+            {
+                "test_name": test_names[i],
+                "test_key": test_keys[i],
+                "test_tier": tiers[i],
+                "entries_flagged": flagged_count,
+                "total_entries": total_entries,
+                "flag_rate": flagged_count / max(total_entries, 1),
+                "severity": "high" if i < 2 else "medium" if i < 5 else "low",
+                "description": f"Test description for {test_keys[i]}",
+                "flagged_entries": [
+                    {
+                        "entry": {
+                            "item_id": f"INV-{i:03d}-{j}",
+                            "description": f"Widget {j + 1}",
+                            "quantity": 100.0 + j * 50,
+                            "unit_cost": 25.0 + j * 10,
+                            "extended_value": (100.0 + j * 50) * (25.0 + j * 10),
+                            "location": "Warehouse A",
+                            "last_movement_date": "2025-10-15",
+                            "category": "Raw Materials",
+                            "row_number": i * 10 + j + 1,
+                        },
+                        "test_name": test_names[i],
+                        "test_key": test_keys[i],
+                        "test_tier": tiers[i],
+                        "severity": "high" if i < 2 else "medium",
+                        "issue": f"Flagged by {test_names[i]}",
+                        "confidence": 0.85,
+                        "details": {},
+                    }
+                    for j in range(flagged_count)
+                ],
+            }
+        )
 
     return {
         "composite_score": {
@@ -98,7 +117,8 @@ def _make_inv_result(
             "total_flagged": total_flagged,
             "flag_rate": total_flagged / max(total_entries, 1),
             "flags_by_severity": {"high": 3, "medium": 3, "low": 2},
-            "top_findings": top_findings or [
+            "top_findings": top_findings
+            or [
                 "Missing Required Fields: 2 entries flagged (4.0%)",
                 "Negative Values: 2 entries flagged (4.0%)",
                 "Extended Value Mismatch: 2 entries flagged (4.0%)",
@@ -123,6 +143,7 @@ def _make_inv_result(
 # =============================================================================
 # MEMO GENERATION TESTS
 # =============================================================================
+
 
 class TestInventoryMemoGeneration:
     """Tests for generate_inventory_testing_memo()."""
@@ -209,14 +230,21 @@ class TestInventoryMemoGeneration:
 # TEST DESCRIPTIONS COVERAGE
 # =============================================================================
 
+
 class TestInvTestDescriptions:
     """Tests for INV_TEST_DESCRIPTIONS completeness."""
 
     def test_all_9_tests_have_descriptions(self):
         expected_keys = [
-            "missing_fields", "negative_values", "value_mismatch",
-            "unit_cost_outliers", "quantity_outliers", "slow_moving",
-            "category_concentration", "duplicate_items", "zero_value_items",
+            "missing_fields",
+            "negative_values",
+            "value_mismatch",
+            "unit_cost_outliers",
+            "quantity_outliers",
+            "slow_moving",
+            "category_concentration",
+            "duplicate_items",
+            "zero_value_items",
         ]
         for key in expected_keys:
             assert key in INV_TEST_DESCRIPTIONS, f"Missing description for {key}"
@@ -233,6 +261,7 @@ class TestInvTestDescriptions:
 # GUARDRAIL TESTS
 # =============================================================================
 
+
 class TestInventoryGuardrails:
     """Guardrail compliance: terminology, disclaimers, ISA references.
 
@@ -244,12 +273,8 @@ class TestInventoryGuardrails:
         """No description should claim NRV determination."""
         for key, desc in INV_TEST_DESCRIPTIONS.items():
             lower = desc.lower()
-            assert "nrv is sufficient" not in lower, (
-                f"GUARDRAIL VIOLATION: '{key}' uses 'NRV is sufficient'"
-            )
-            assert "nrv is insufficient" not in lower, (
-                f"GUARDRAIL VIOLATION: '{key}' uses 'NRV is insufficient'"
-            )
+            assert "nrv is sufficient" not in lower, f"GUARDRAIL VIOLATION: '{key}' uses 'NRV is sufficient'"
+            assert "nrv is insufficient" not in lower, f"GUARDRAIL VIOLATION: '{key}' uses 'NRV is insufficient'"
 
     def test_no_obsolescence_sufficiency_in_descriptions(self):
         """No description should claim obsolescence provision sufficiency."""
@@ -266,63 +291,63 @@ class TestInventoryGuardrails:
         """No description should use 'valuation testing' language."""
         for key, desc in INV_TEST_DESCRIPTIONS.items():
             lower = desc.lower()
-            assert "valuation testing" not in lower, (
-                f"GUARDRAIL VIOLATION: '{key}' uses 'valuation testing'"
-            )
+            assert "valuation testing" not in lower, f"GUARDRAIL VIOLATION: '{key}' uses 'valuation testing'"
 
     def test_memo_generator_references_isa_501(self):
         """Memo source code must pass ISA 501 reference to the PDF builder."""
         import inspect
+
         source = inspect.getsource(inspect.getmodule(generate_inventory_testing_memo))
         assert "ISA 501" in source, "Memo must reference ISA 501"
 
     def test_memo_generator_references_isa_500(self):
         """Memo source code must pass ISA 500 reference to the PDF builder."""
         import inspect
+
         source = inspect.getsource(inspect.getmodule(generate_inventory_testing_memo))
         assert "ISA 500" in source, "Memo must reference ISA 500"
 
     def test_memo_generator_references_isa_540(self):
         """Memo source code must pass ISA 540 reference to the PDF builder."""
         import inspect
+
         source = inspect.getsource(inspect.getmodule(generate_inventory_testing_memo))
         assert "ISA 540" in source, "Memo must reference ISA 540"
 
     def test_memo_generator_references_pcaob_as_2501(self):
         """Memo source code must pass PCAOB AS 2501 reference to the PDF builder."""
         import inspect
+
         source = inspect.getsource(inspect.getmodule(generate_inventory_testing_memo))
         assert "PCAOB AS 2501" in source, "Memo must reference PCAOB AS 2501"
 
     def test_memo_generator_references_ias_2(self):
         """Memo source code must reference IAS 2."""
         import inspect
+
         source = inspect.getsource(inspect.getmodule(generate_inventory_testing_memo))
         assert "IAS 2" in source, "Memo must reference IAS 2"
 
     def test_memo_generator_uses_anomaly_indicators_language(self):
         """Methodology text must say 'anomaly indicators' not 'adequacy conclusions'."""
         import inspect
+
         source = inspect.getsource(inspect.getmodule(generate_inventory_testing_memo))
-        assert "anomaly indicator" in source.lower(), (
-            "Methodology must use 'anomaly indicators' language"
-        )
+        assert "anomaly indicator" in source.lower(), "Methodology must use 'anomaly indicators' language"
 
     def test_memo_generator_no_nrv_adequacy_positive(self):
         """Conclusion must not claim 'NRV is adequate'."""
         import inspect
+
         source = inspect.getsource(inspect.getmodule(generate_inventory_testing_memo))
         lower = source.lower()
-        assert "nrv is adequate" not in lower, (
-            "GUARDRAIL VIOLATION: must not claim 'NRV is adequate'"
-        )
-        assert "nrv is inadequate" not in lower, (
-            "GUARDRAIL VIOLATION: must not claim 'NRV is inadequate'"
-        )
+        assert "nrv is adequate" not in lower, "GUARDRAIL VIOLATION: must not claim 'NRV is adequate'"
+        assert "nrv is inadequate" not in lower, "GUARDRAIL VIOLATION: must not claim 'NRV is inadequate'"
 
     def test_memo_generator_calls_disclaimer(self):
         """Memo config must specify inventory-specific disclaimer domain."""
         import inspect
+
         source = inspect.getsource(inspect.getmodule(generate_inventory_testing_memo))
         # Template guarantees build_disclaimer is called; verify domain config
         assert "generate_testing_memo" in source or "build_disclaimer" in source
@@ -331,6 +356,7 @@ class TestInventoryGuardrails:
     def test_memo_disclaimer_references_isa_500_and_540(self):
         """Disclaimer ISA reference must include ISA 500 and ISA 540."""
         import inspect
+
         source = inspect.getsource(inspect.getmodule(generate_inventory_testing_memo))
         assert "ISA 500" in source
         assert "ISA 540" in source
@@ -338,6 +364,7 @@ class TestInventoryGuardrails:
     def test_no_nrv_determination_in_memo_source(self):
         """Memo source must not use 'NRV determination' as a conclusion."""
         import inspect
+
         source = inspect.getsource(inspect.getmodule(generate_inventory_testing_memo))
         lower = source.lower()
         # The phrase "not an NRV determination" is acceptable; "NRV determination" as a standalone claim is not
@@ -353,21 +380,25 @@ class TestInventoryGuardrails:
 # EXPORT ROUTE REGISTRATION TESTS
 # =============================================================================
 
+
 class TestInventoryExportRoutes:
     """Tests for inventory export route registration."""
 
     def test_pdf_route_registered(self):
         from main import app
+
         paths = [r.path for r in app.routes if hasattr(r, "path")]
         assert "/export/inventory-memo" in paths
 
     def test_csv_route_registered(self):
         from main import app
+
         paths = [r.path for r in app.routes if hasattr(r, "path")]
         assert "/export/csv/inventory" in paths
 
     def test_pdf_route_is_post(self):
         from main import app
+
         for route in app.routes:
             if hasattr(route, "path") and route.path == "/export/inventory-memo":
                 assert "POST" in route.methods
@@ -377,6 +408,7 @@ class TestInventoryExportRoutes:
 
     def test_csv_route_is_post(self):
         from main import app
+
         for route in app.routes:
             if hasattr(route, "path") and route.path == "/export/csv/inventory":
                 assert "POST" in route.methods
@@ -389,17 +421,20 @@ class TestInventoryExportRoutes:
 # EXPORT INPUT MODEL TESTS
 # =============================================================================
 
+
 class TestInventoryExportInput:
     """Tests for InventoryExportInput Pydantic model."""
 
     def test_model_accepts_valid_data(self):
-        from routes.export import InventoryExportInput
+        from shared.export_schemas import InventoryExportInput
+
         data = _make_inv_result()
         model = InventoryExportInput(**data)
         assert model.filename == "inventory_testing"
 
     def test_model_defaults(self):
-        from routes.export import InventoryExportInput
+        from shared.export_schemas import InventoryExportInput
+
         data = _make_inv_result()
         model = InventoryExportInput(**data)
         assert model.client_name is None
@@ -409,22 +444,26 @@ class TestInventoryExportInput:
         assert model.workpaper_date is None
 
     def test_model_with_all_fields(self):
-        from routes.export import InventoryExportInput
+        from shared.export_schemas import InventoryExportInput
+
         data = _make_inv_result()
-        data.update({
-            "filename": "acme_inv",
-            "client_name": "Acme Corp",
-            "period_tested": "FY 2025",
-            "prepared_by": "JS",
-            "reviewed_by": "JD",
-            "workpaper_date": "2025-03-15",
-        })
+        data.update(
+            {
+                "filename": "acme_inv",
+                "client_name": "Acme Corp",
+                "period_tested": "FY 2025",
+                "prepared_by": "JS",
+                "reviewed_by": "JD",
+                "workpaper_date": "2025-03-15",
+            }
+        )
         model = InventoryExportInput(**data)
         assert model.client_name == "Acme Corp"
         assert model.period_tested == "FY 2025"
 
     def test_model_dump_round_trips(self):
-        from routes.export import InventoryExportInput
+        from shared.export_schemas import InventoryExportInput
+
         data = _make_inv_result()
         model = InventoryExportInput(**data)
         dumped = model.model_dump()
@@ -432,14 +471,16 @@ class TestInventoryExportInput:
         assert len(dumped["test_results"]) > 0
 
     def test_model_accepts_no_data_quality(self):
-        from routes.export import InventoryExportInput
+        from shared.export_schemas import InventoryExportInput
+
         data = _make_inv_result()
         data["data_quality"] = None
         model = InventoryExportInput(**data)
         assert model.data_quality is None
 
     def test_model_preserves_column_detection(self):
-        from routes.export import InventoryExportInput
+        from shared.export_schemas import InventoryExportInput
+
         data = _make_inv_result()
         model = InventoryExportInput(**data)
         dumped = model.model_dump()

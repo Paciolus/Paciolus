@@ -37,12 +37,13 @@ export function getCsrfToken(): string | null {
 
 /**
  * Fetch a fresh CSRF token from the backend (auth-guarded endpoint).
+ * Auth is provided via HttpOnly cookie — no Bearer header needed.
  */
-export async function fetchCsrfToken(accessToken?: string): Promise<string | null> {
+export async function fetchCsrfToken(_accessToken?: string): Promise<string | null> {
   try {
-    const headers: HeadersInit = {}
-    if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`
-    const response = await fetch(`${API_URL}/auth/csrf`, { headers });
+    const response = await fetch(`${API_URL}/auth/csrf`, {
+      credentials: 'include',
+    });
     if (response.ok) {
       const data = await response.json();
       _csrfToken = data.csrf_token;
@@ -58,17 +59,21 @@ export async function fetchCsrfToken(accessToken?: string): Promise<string | nul
 export const CSRF_METHODS = new Set(['POST', 'PUT', 'DELETE', 'PATCH']);
 
 /**
- * Inject auth and CSRF headers into a request header object.
+ * Inject CSRF and idempotency headers into a request header object.
+ *
+ * Access token is delivered via HttpOnly cookie (set by the backend on
+ * login/register/refresh) — the browser sends it automatically with
+ * credentials: 'include'.  No Authorization header is injected for
+ * browser clients, eliminating JS-readable token exposure.
+ *
+ * Non-browser API clients can still send Authorization: Bearer manually.
  */
 export function injectAuthHeaders(
   headers: Record<string, string>,
-  token: string | null,
+  _token: string | null,
   method: string,
   idempotencyKey?: string
 ): void {
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
   if (CSRF_METHODS.has(method) && _csrfToken) {
     headers['X-CSRF-Token'] = _csrfToken;
   }

@@ -33,6 +33,7 @@ jest.mock('@/contexts/WorkspaceContext', () => ({
     updateClient: mockUpdateClient,
     deleteClient: mockDeleteClient,
     refreshClients: mockRefreshClients,
+    createEngagement: jest.fn(),
     engagements: [],
     engagementsLoading: false,
     engagementsError: null,
@@ -63,6 +64,17 @@ jest.mock('@/components/portfolio', () => ({
     isOpen ? <div data-testid="create-modal">Create Modal <button onClick={onClose}>Close</button></div> : null,
   EditClientModal: ({ isOpen, client, onClose }: any) =>
     isOpen ? <div data-testid="edit-modal">Edit {client?.name} <button onClick={onClose}>Close</button></div> : null,
+}))
+
+jest.mock('@/components/engagement', () => ({
+  CreateEngagementModal: ({ isOpen }: any) =>
+    isOpen ? <div data-testid="create-workspace-modal">Create Workspace</div> : null,
+}))
+
+jest.mock('@/hooks/useClients', () => ({
+  useClients: () => ({
+    fetchClientsWithSummary: jest.fn().mockResolvedValue([]),
+  }),
 }))
 
 jest.mock('framer-motion', () => ({

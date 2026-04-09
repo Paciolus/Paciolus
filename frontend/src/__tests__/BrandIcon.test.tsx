@@ -4,6 +4,7 @@
  * Tests: rendering with various icon names, className prop.
  */
 import { BrandIcon } from '@/components/shared/BrandIcon/BrandIcon'
+import type { BrandIconName } from '@/components/shared/BrandIcon/types'
 import { render } from '@/test-utils'
 
 describe('BrandIcon', () => {
@@ -20,9 +21,9 @@ describe('BrandIcon', () => {
   })
 
   it('renders different icons', () => {
-    const icons = ['padlock', 'shield-check', 'calculator', 'bar-chart', 'chevron-right', 'chevron-down']
+    const icons: BrandIconName[] = ['padlock', 'shield-check', 'calculator', 'bar-chart', 'chevron-right', 'chevron-down']
     for (const name of icons) {
-      const { container } = render(<BrandIcon name={name as any} />)
+      const { container } = render(<BrandIcon name={name} />)
       expect(container.querySelector('svg')).toBeInTheDocument()
     }
   })

@@ -10,9 +10,16 @@ Typed Pydantic models replacing response_model=dict for:
 - Adjusting Entries
 """
 
-from typing import Any, Literal, Optional
+from decimal import Decimal
+from typing import Annotated, Any, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, PlainSerializer
+
+# Monetary Decimal: stores as Decimal in Python, serializes as JSON number (float).
+MonetaryDecimal = Annotated[
+    Decimal,
+    PlainSerializer(lambda v: float(v), return_type=float, when_used="always"),
+]
 
 # ═══════════════════════════════════════════════════════════════
 # Flux Analysis
@@ -24,9 +31,9 @@ class FluxItemResponse(BaseModel):
 
     account: str
     type: str
-    current: float
-    prior: float
-    delta_amount: float
+    current: MonetaryDecimal
+    prior: MonetaryDecimal
+    delta_amount: MonetaryDecimal
     delta_percent: Optional[float] = None
     display_percent: str
     is_new: bool
@@ -558,9 +565,9 @@ class AbnormalBalanceResponse(BaseModel):
     account: str
     type: str
     issue: str
-    amount: float
-    debit: float
-    credit: float
+    amount: MonetaryDecimal
+    debit: MonetaryDecimal
+    credit: MonetaryDecimal
     materiality: Literal["material", "immaterial"]
     category: str
     confidence: float
@@ -602,6 +609,13 @@ class RiskSummaryAnomalyTypesResponse(BaseModel):
     balance_sheet_imbalance: int = 0
 
 
+class RiskFactorResponse(BaseModel):
+    """Individual risk factor contributing to the diagnostic score."""
+
+    name: str
+    points: float
+
+
 class RiskSummaryResponse(BaseModel):
     """Aggregated risk metrics for trial balance."""
 
@@ -610,6 +624,12 @@ class RiskSummaryResponse(BaseModel):
     medium_severity: int
     low_severity: int
     anomaly_types: RiskSummaryAnomalyTypesResponse
+
+    # Sprint 573: Previously undeclared fields computed by pipeline
+    risk_score: Optional[float] = None
+    risk_tier: Optional[str] = None
+    risk_factors: Optional[list[list[Any]]] = None
+    coverage_pct: Optional[float] = None
 
 
 class ClassificationIssueResponse(BaseModel):
@@ -659,12 +679,12 @@ class BalanceSheetValidationResponse(BaseModel):
         "moderate_imbalance",
         "significant_imbalance",
     ]
-    total_assets: float
-    total_liabilities: float
-    total_equity: float
-    liabilities_plus_equity: float
-    difference: float
-    abs_difference: float
+    total_assets: MonetaryDecimal
+    total_liabilities: MonetaryDecimal
+    total_equity: MonetaryDecimal
+    liabilities_plus_equity: MonetaryDecimal
+    difference: MonetaryDecimal
+    abs_difference: MonetaryDecimal
     severity: Optional[Literal["high", "medium", "low"]] = None
     recommendation: str
     equation: str
@@ -674,9 +694,9 @@ class SheetResultResponse(BaseModel):
     """Per-sheet audit result for multi-sheet audits."""
 
     balanced: bool
-    total_debits: float
-    total_credits: float
-    difference: float
+    total_debits: MonetaryDecimal
+    total_credits: MonetaryDecimal
+    difference: MonetaryDecimal
     row_count: int
     abnormal_count: int
     column_detection: Optional[ColumnDetectionResponse] = None
@@ -693,9 +713,9 @@ class TrialBalanceResponse(BaseModel):
     # Core balance data
     status: str
     balanced: bool
-    total_debits: float
-    total_credits: float
-    difference: float
+    total_debits: MonetaryDecimal
+    total_credits: MonetaryDecimal
+    difference: MonetaryDecimal
     row_count: int
     timestamp: str
     message: str
@@ -705,6 +725,7 @@ class TrialBalanceResponse(BaseModel):
     materiality_threshold: float
     material_count: int
     immaterial_count: int
+    informational_count: int = 0
     has_risk_alerts: bool
 
     # Analysis
@@ -713,8 +734,15 @@ class TrialBalanceResponse(BaseModel):
     classification_quality: ClassificationQualityResponse
     column_detection: Optional[ColumnDetectionResponse] = None
     analytics: dict[str, Any]
-    category_totals: dict[str, float]
+    category_totals: dict[str, str]
     balance_sheet_validation: BalanceSheetValidationResponse
+
+    # Sprint 573: Previously undeclared fields returned by pipeline
+    data_quality: Optional[dict[str, Any]] = None
+    all_accounts: Optional[list[dict[str, Any]]] = None
+    account_balances: Optional[dict[str, Any]] = None
+    classified_accounts: Optional[dict[str, str]] = None
+    account_subtypes: Optional[dict[str, str]] = None
 
     # Optional: population profile (Sprint 287)
     population_profile: Optional[PopulationProfileResponse] = None
@@ -724,6 +752,11 @@ class TrialBalanceResponse(BaseModel):
 
     # Optional: accrual completeness (Sprint 290)
     accrual_completeness: Optional[AccrualCompletenessReportResponse] = None
+
+    # Optional: diagnostics (Sprint 291+)
+    lease_diagnostic: Optional[dict[str, Any]] = None
+    cutoff_risk: Optional[dict[str, Any]] = None
+    going_concern: Optional[dict[str, Any]] = None
 
     # Sprint 310: Materiality source ('manual', 'engagement', 'none')
     materiality_source: Optional[str] = None

@@ -128,7 +128,7 @@ export interface AuditResult {
   materiality_threshold: number
   material_count: number
   immaterial_count: number
-  informational_count?: number
+  informational_count: number
   classification_summary?: {
     high: number
     medium: number
@@ -161,6 +161,23 @@ export interface AuditResult {
   population_profile?: PopulationProfile
   expense_category_analytics?: ExpenseCategoryReport
   accrual_completeness?: AccrualCompletenessReport
+
+  // Sprint 573: Previously undeclared fields from pipeline
+  data_quality?: Record<string, unknown>
+  all_accounts?: Array<{
+    account: string
+    debit: number
+    credit: number
+    type: string
+  }>
+  account_balances?: Record<string, { debit: number; credit: number }>
+  classified_accounts?: Record<string, string>
+  account_subtypes?: Record<string, string>
+  lease_diagnostic?: Record<string, unknown>
+  cutoff_risk?: Record<string, unknown>
+  going_concern?: Record<string, unknown>
+  balance_sheet_validation?: Record<string, unknown>
+  category_totals?: Record<string, string>
 }
 
 /**

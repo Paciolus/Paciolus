@@ -714,7 +714,7 @@ def assess_payroll_data_quality(
     if detection.check_number_column:
         configs.append(FieldQualityConfig("check_number", lambda e: e.check_number))
 
-    result = _shared_assess_dq(entries, configs, optional_weight_pool=0.15)
+    result = _shared_assess_dq(entries, configs, optional_weight_pool=0.15, domain="payroll_testing")
 
     # Payroll-specific: zero-pay issue (not covered by threshold check since
     # the issue_template above triggers at <90%, but we always report zero-pay count)

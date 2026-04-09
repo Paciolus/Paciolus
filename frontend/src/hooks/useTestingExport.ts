@@ -8,6 +8,7 @@
 
 import { useState, useCallback, useRef } from 'react'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
+import { useToast } from '@/contexts/ToastContext'
 import { useSonification } from '@/hooks/useSonification'
 import { apiDownload, downloadBlob } from '@/utils'
 
@@ -31,6 +32,7 @@ export function useTestingExport(
   fallbackCsvFilename: string = 'flagged_entries.csv',
 ): UseTestingExportReturn {
   const { token } = useAuthSession()
+  const toast = useToast()
   const { playTone } = useSonification()
   const [exporting, setExporting] = useState<ExportType>(null)
   const [lastExportSuccess, setLastExportSuccess] = useState<ExportType>(null)
@@ -58,11 +60,14 @@ export function useTestingExport(
       if (ok && blob) {
         downloadBlob(blob, filename || fallbackMemoFilename)
         markComplete('pdf')
+        toast.success('PDF memo exported', filename || fallbackMemoFilename)
       }
+    } catch {
+      toast.error('Export failed', 'Unable to generate PDF memo. Please try again.')
     } finally {
       setExporting(null)
     }
-  }, [token, memoEndpoint, fallbackMemoFilename, markComplete])
+  }, [token, memoEndpoint, fallbackMemoFilename, markComplete, toast])
 
   const handleExportCSV = useCallback(async (body: unknown) => {
     if (!token) return
@@ -76,11 +81,14 @@ export function useTestingExport(
       if (ok && blob) {
         downloadBlob(blob, filename || fallbackCsvFilename)
         markComplete('csv')
+        toast.success('CSV exported', filename || fallbackCsvFilename)
       }
+    } catch {
+      toast.error('Export failed', 'Unable to generate CSV export. Please try again.')
     } finally {
       setExporting(null)
     }
-  }, [token, csvEndpoint, fallbackCsvFilename, markComplete])
+  }, [token, csvEndpoint, fallbackCsvFilename, markComplete, toast])
 
   return { exporting, lastExportSuccess, handleExportMemo, handleExportCSV }
 }

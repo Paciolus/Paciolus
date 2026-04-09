@@ -228,6 +228,8 @@ export default function LoginPage() {
                 <input
                   type="email"
                   id="email"
+                  name="email"
+                  autoComplete="email"
                   value={values.email}
                   onChange={(e) => setValue('email', e.target.value)}
                   placeholder="you@company.com"
@@ -264,6 +266,8 @@ export default function LoginPage() {
                 <input
                   type="password"
                   id="password"
+                  name="password"
+                  autoComplete="current-password"
                   value={values.password}
                   onChange={(e) => setValue('password', e.target.value)}
                   placeholder="Enter your password"
@@ -301,14 +305,12 @@ export default function LoginPage() {
                 <span className="text-sm text-oatmeal-400 font-sans">Remember me</span>
               </label>
 
-              <button
-                type="button"
-                className="text-sm text-oatmeal-500 hover:text-oatmeal-400 font-sans transition-colors cursor-not-allowed"
-                disabled
-                title="Coming soon"
+              <Link
+                href="/forgot-password"
+                className="text-sm text-oatmeal-500 hover:text-oatmeal-400 font-sans transition-colors"
               >
                 Forgot password?
-              </button>
+              </Link>
             </div>
 
             {/* Submit Button */}

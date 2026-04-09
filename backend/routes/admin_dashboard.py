@@ -24,6 +24,11 @@ from models import ActivityLog, User
 from organization_model import Organization, OrganizationMember
 from shared.entitlement_checks import check_admin_dashboard_access
 from shared.helpers import sanitize_csv_value
+from shared.organization_schemas import (
+    AdminOverviewResponse,
+    TeamActivityEntryResponse,
+    UsageByMemberResponse,
+)
 from shared.rate_limits import RATE_LIMIT_DEFAULT, RATE_LIMIT_EXPORT, limiter
 from team_activity_model import TeamActivityLog
 
@@ -70,7 +75,7 @@ def _org_member_ids(db: Session, org_id: int) -> list[int]:
 # ---------------------------------------------------------------------------
 
 
-@router.get("/overview")
+@router.get("/overview", response_model=AdminOverviewResponse)
 @limiter.limit(RATE_LIMIT_DEFAULT)
 async def get_overview(
     request: Any = None,
@@ -129,7 +134,7 @@ async def get_overview(
     }
 
 
-@router.get("/team-activity")
+@router.get("/team-activity", response_model=list[TeamActivityEntryResponse])
 @limiter.limit(RATE_LIMIT_DEFAULT)
 async def get_team_activity(
     request: Any = None,
@@ -168,7 +173,7 @@ async def get_team_activity(
     return results
 
 
-@router.get("/usage-by-member")
+@router.get("/usage-by-member", response_model=list[UsageByMemberResponse])
 @limiter.limit(RATE_LIMIT_DEFAULT)
 async def get_usage_by_member(
     request: Any = None,

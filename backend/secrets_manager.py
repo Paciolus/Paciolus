@@ -1,10 +1,13 @@
 """Secure credential management with multiple backend support (env, Docker, AWS/GCP/Azure)."""
 
+import logging
 import os
 import sys
 from functools import lru_cache
 from pathlib import Path
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 
 class SecretsManager:
@@ -85,10 +88,10 @@ class SecretsManager:
             result: Optional[str] = response.get("SecretString")
             return result
         except ImportError:
-            print("[WARNING] boto3 not installed. AWS secrets unavailable.")
+            logger.warning("boto3 not installed. AWS secrets unavailable.")
             return None
         except Exception as e:  # Cloud SDK exceptions are unpredictable
-            print(f"[WARNING] AWS secret retrieval failed for {key}: {e}")
+            logger.warning("AWS secret retrieval failed for %s: %s", key, e)
             return None
 
     def _read_gcp_secret(self, key: str) -> Optional[str]:
@@ -105,10 +108,10 @@ class SecretsManager:
             decoded: str = response.payload.data.decode("UTF-8")
             return decoded
         except ImportError:
-            print("[WARNING] google-cloud-secret-manager not installed.")
+            logger.warning("google-cloud-secret-manager not installed.")
             return None
         except Exception as e:  # Cloud SDK exceptions are unpredictable
-            print(f"[WARNING] GCP secret retrieval failed for {key}: {e}")
+            logger.warning("GCP secret retrieval failed for %s: %s", key, e)
             return None
 
     def _read_azure_secret(self, key: str) -> Optional[str]:
@@ -124,10 +127,10 @@ class SecretsManager:
             secret_value: Optional[str] = client.get_secret(key).value
             return secret_value
         except ImportError:
-            print("[WARNING] azure-keyvault-secrets not installed.")
+            logger.warning("azure-keyvault-secrets not installed.")
             return None
         except Exception as e:  # Cloud SDK exceptions are unpredictable
-            print(f"[WARNING] Azure secret retrieval failed for {key}: {e}")
+            logger.warning("Azure secret retrieval failed for %s: %s", key, e)
             return None
 
     def clear_cache(self) -> None:
@@ -171,25 +174,21 @@ def validate_production_secrets() -> bool:
             missing.append(secret)
 
     if missing:
-        print("\n" + "=" * 60)
-        print("PRODUCTION CONFIGURATION ERROR")
-        print("=" * 60)
-        print("\nThe following required secrets are not configured:")
-        for s in missing:
-            print(f"  - {s}")
-        print("\nPlease configure these secrets before starting in production mode.")
-        print("=" * 60 + "\n")
+        missing_list = ", ".join(missing)
+        logger.critical(
+            "PRODUCTION CONFIGURATION ERROR: Required secrets not configured: %s. "
+            "Please configure these secrets before starting in production mode.",
+            missing_list,
+        )
         sys.exit(1)
 
     # Validate JWT_SECRET_KEY strength
     jwt_key = sm.get_secret("JWT_SECRET_KEY")
     if jwt_key and len(jwt_key) < 32:
-        print("\n" + "=" * 60)
-        print("SECURITY WARNING")
-        print("=" * 60)
-        print("\nJWT_SECRET_KEY should be at least 32 characters for production.")
-        print('Generate a secure key with: python -c "import secrets; print(secrets.token_hex(32))"')
-        print("=" * 60 + "\n")
+        logger.critical(
+            "SECURITY WARNING: JWT_SECRET_KEY should be at least 32 characters for production. "
+            'Generate a secure key with: python -c "import secrets; print(secrets.token_hex(32))"'
+        )
         sys.exit(1)
 
     return True

@@ -14,8 +14,10 @@ from lead_sheet_mapping import get_lead_sheet_options
 from models import Client, EntityType, Industry, ReportingFramework, User
 from schemas.client_schemas import (  # noqa: F401 — backward compat re-exports
     ClientCreate,
+    ClientEngagementSummary,
     ClientResponse,
     ClientUpdate,
+    ClientWithSummaryResponse,
     IndustryOption,
     ResolvedFrameworkResponse,
 )
@@ -86,6 +88,49 @@ def get_clients(
 
     return PaginatedResponse[ClientResponse](
         items=[_client_to_response(c) for c in clients],
+        total_count=total_count,
+        page=pagination.page,
+        page_size=pagination.page_size,
+    )
+
+
+@router.get("/clients/with-engagement-summary", response_model=PaginatedResponse[ClientWithSummaryResponse])
+def get_clients_with_summary(
+    pagination: PaginationParams = Depends(),
+    current_user: User = Depends(require_current_user),
+    db: Session = Depends(get_db),
+) -> PaginatedResponse[ClientWithSummaryResponse]:
+    """Get clients with engagement summary data for the unified portfolio view (Sprint 580)."""
+    log_secure_operation("clients_with_summary", f"User {current_user.id} fetching clients with engagement summary")
+
+    manager = ClientManager(db)
+    rows, total_count = manager.get_clients_with_engagement_summary(
+        current_user.id, limit=pagination.page_size, offset=pagination.offset
+    )
+
+    items = []
+    for row in rows:
+        c = row["client"]
+        summary = row["engagement_summary"]
+        resp = ClientWithSummaryResponse(
+            id=c.id,
+            user_id=c.user_id,
+            name=c.name,
+            industry=c.industry.value if c.industry else "other",
+            fiscal_year_end=c.fiscal_year_end,
+            reporting_framework=c.reporting_framework.value if c.reporting_framework else "auto",
+            entity_type=c.entity_type.value if c.entity_type else "other",
+            jurisdiction_country=c.jurisdiction_country or "US",
+            jurisdiction_state=c.jurisdiction_state,
+            created_at=c.created_at.isoformat() if c.created_at else "",
+            updated_at=c.updated_at.isoformat() if c.updated_at else "",
+            settings=c.settings or "{}",
+            engagement_summary=ClientEngagementSummary(**summary) if summary else None,
+        )
+        items.append(resp)
+
+    return PaginatedResponse[ClientWithSummaryResponse](
+        items=items,
         total_count=total_count,
         page=pagination.page,
         page_size=pagination.page_size,

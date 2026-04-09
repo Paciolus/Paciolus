@@ -90,7 +90,8 @@ describe('InsightMicrocopy', () => {
           total_count: 5,
           by_disposition: { not_reviewed: 3 },
           by_severity: { high: 1 },
-        } as any}
+          by_tool_source: {},
+        }}
       />
     )
     // Should have 2 attention messages: clusters + follow-ups

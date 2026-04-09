@@ -109,6 +109,7 @@ export default function ExportSharingPage() {
                       <tr className="border-b border-theme bg-surface-input/50">
                         <th className="text-left px-4 py-3 font-medium text-content-secondary">Tool</th>
                         <th className="text-left px-4 py-3 font-medium text-content-secondary">Format</th>
+                        <th className="text-center px-4 py-3 font-medium text-content-secondary">Protection</th>
                         <th className="text-right px-4 py-3 font-medium text-content-secondary">Views</th>
                         <th className="text-left px-4 py-3 font-medium text-content-secondary">Expires</th>
                         <th className="text-right px-4 py-3 font-medium text-content-secondary"></th>
@@ -121,6 +122,23 @@ export default function ExportSharingPage() {
                           <tr key={share.token} className="border-b border-theme last:border-0">
                             <td className="px-4 py-3 text-content-primary">{share.tool}</td>
                             <td className="px-4 py-3 text-content-secondary uppercase font-mono text-xs">{share.format}</td>
+                            <td className="px-4 py-3 text-center">
+                              <span className="inline-flex items-center gap-1">
+                                {share.has_passcode && (
+                                  <span title="Passcode-protected" className="text-sage-600 text-xs" aria-label="Passcode-protected">
+                                    &#128274;
+                                  </span>
+                                )}
+                                {share.single_use && (
+                                  <span className="inline-block px-1.5 py-0.5 bg-oatmeal-200 text-obsidian-600 rounded text-[10px] font-medium font-sans">
+                                    1x
+                                  </span>
+                                )}
+                                {!share.has_passcode && !share.single_use && (
+                                  <span className="text-content-muted text-xs">—</span>
+                                )}
+                              </span>
+                            </td>
                             <td className="px-4 py-3 text-right font-mono text-content-primary">{share.access_count}</td>
                             <td className="px-4 py-3">
                               <span className={isExpired ? 'text-clay-600' : 'text-content-tertiary'}>

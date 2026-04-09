@@ -15,7 +15,7 @@ export function UploadZoneSkeleton() {
         <div className="h-4 w-48 bg-oatmeal-200/60 rounded-sm" />
         <div className="h-3 w-32 bg-oatmeal-200/40 rounded-sm" />
       </div>
-      <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent" style={{ animation: 'shimmer 1.5s infinite' }} />
+      <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-oatmeal-50/10 to-transparent" style={{ animation: 'shimmer 1.5s infinite' }} />
     </div>
   )
 }

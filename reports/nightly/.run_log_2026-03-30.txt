@@ -1,0 +1,57 @@
+[17:56:01] === Paciolus Overnight Run — 2026-03-30 ===
+[17:56:01] Start time: 2026-03-30T17:56:01.746133
+[17:56:01]   Target 02:00 already passed — starting immediately.
+[17:56:01] --- Agent: qa_warden ---
+[17:56:01]   Executing: D:\Dev\Paciolus\backend\venv\Scripts\python.exe D:\Dev\Paciolus\scripts\overnight\agents\qa_warden.py
+[18:07:10]   stdout:     "failed": 0,
+[18:07:10]   stdout:     "duration_s": 44.3
+[18:07:10]   stdout:   },
+[18:07:10]   stdout:   "summary": "Backend: 7325 passed / 0 failed in 560.2s. Frontend: 1745 passed / 0 failed in 44.3s."
+[18:07:10]   stdout: }
+[18:07:10]   Completed successfully in 669.0s
+[18:07:15]   Target 02:15 already passed — starting immediately.
+[18:07:15] --- Agent: report_auditor ---
+[18:07:15]   Executing: D:\Dev\Paciolus\backend\venv\Scripts\python.exe D:\Dev\Paciolus\scripts\overnight\agents\report_auditor.py
+[18:07:41]   stdout:     }
+[18:07:41]   stdout:   },
+[18:07:41]   stdout:   "open_bug_count": 0,
+[18:07:41]   stdout:   "summary": "Meridian tests: 2 passed, 0 failed. 0/7 known bugs confirmed open."
+[18:07:41]   stdout: }
+[18:07:41]   Completed successfully in 25.8s
+[18:07:46]   Target 02:45 already passed — starting immediately.
+[18:07:46] --- Agent: scout ---
+[18:07:46]   Executing: D:\Dev\Paciolus\backend\venv\Scripts\python.exe D:\Dev\Paciolus\scripts\overnight\agents\scout.py
+[18:12:13]   stdout:   "status": "green",
+[18:12:13]   stdout:   "total_leads": 0,
+[18:12:13]   stdout:   "leads": [],
+[18:12:13]   stdout:   "summary": "Found 0 leads across 5 themes. Top platform: none. Highest urgency: "
+[18:12:13]   stdout: }
+[18:12:13]   Completed successfully in 267.1s
+[18:12:18]   Target 03:30 already passed — starting immediately.
+[18:12:18] --- Agent: sprint_shepherd ---
+[18:12:18]   Executing: D:\Dev\Paciolus\backend\venv\Scripts\python.exe D:\Dev\Paciolus\scripts\overnight\agents\sprint_shepherd.py
+[18:12:18]   stdout:     "pct": 0
+[18:12:18]   stdout:   },
+[18:12:19]   stdout:   "open_items": [],
+[18:12:19]   stdout:   "summary": "0 commits in last 24h, 20 in last 7d."
+[18:12:19]   stdout: }
+[18:12:19]   Completed successfully in 0.3s
+[18:12:24]   Target 03:45 already passed — starting immediately.
+[18:12:24] --- Agent: dependency_sentinel ---
+[18:12:24]   Executing: D:\Dev\Paciolus\backend\venv\Scripts\python.exe D:\Dev\Paciolus\scripts\overnight\agents\dependency_sentinel.py
+[18:12:43]   stdout:       "watchlist": false
+[18:12:43]   stdout:     }
+[18:12:43]   stdout:   ],
+[18:12:43]   stdout:   "summary": "Backend: 8 outdated. Frontend: 2 outdated. 0 security-relevant packages have updates."
+[18:12:43]   stdout: }
+[18:12:43]   Completed successfully in 19.9s
+[18:12:48]   Target 04:00 already passed — starting immediately.
+[18:12:48] --- Agent: briefing_compiler ---
+[18:12:48]   Executing: D:\Dev\Paciolus\backend\venv\Scripts\python.exe D:\Dev\Paciolus\scripts\overnight\briefing_compiler.py
+[18:12:50]   stdout:   "agent": "briefing_compiler",
+[18:12:50]   stdout:   "status": "yellow",
+[18:12:50]   stdout:   "agents_run": 5,
+[18:12:50]   stdout:   "report_path": "D:\\Dev\\Paciolus\\reports\\nightly\\2026-03-30.md"
+[18:12:50]   stdout: }
+[18:12:50]   Completed successfully in 1.5s
+[18:12:50] === Run complete: 6/6 agents succeeded in 1008.7s ===

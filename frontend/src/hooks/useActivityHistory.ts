@@ -2,19 +2,15 @@
  * Paciolus Activity History Hook
  * Phase 2 Refactor: Extracted from history page
  *
- * Handles fetching diagnostic history from API with sessionStorage fallback.
+ * Fetches diagnostic history exclusively from the API.
  *
- * ZERO-STORAGE: Only metadata is stored, never financial data.
+ * ZERO-STORAGE: No financial data is cached in browser storage.
  */
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import type { AuditActivity, ActivityHistoryResponse } from '@/types/history'
-import {
-  HISTORY_STORAGE_KEY,
-  HISTORY_VERSION,
-  mapActivityLogToAuditActivity,
-} from '@/types/history'
+import { mapActivityLogToAuditActivity } from '@/types/history'
 import { apiGet, isAuthError, prefetch } from '@/utils'
 
 interface UseActivityHistoryOptions {
@@ -82,23 +78,6 @@ export function useActivityHistory(
   // Track if prefetch has been triggered to avoid duplicate prefetches
   const prefetchedPages = useRef<Set<number>>(new Set())
 
-  // Load from sessionStorage as fallback
-  const loadFromLocalStorage = useCallback(() => {
-    try {
-      const stored = sessionStorage.getItem(HISTORY_STORAGE_KEY)
-      if (stored) {
-        const parsed = JSON.parse(stored)
-        if (parsed.version === HISTORY_VERSION) {
-          const localActivities = parsed.activities || []
-          setActivities(localActivities)
-          setTotalCount(localActivities.length)
-        }
-      }
-    } catch (err) {
-      console.error('Failed to load from sessionStorage:', err)
-    }
-  }, [])
-
   // Fetch history from API
   const fetchHistory = useCallback(async () => {
     setIsLoading(true)
@@ -117,23 +96,26 @@ export function useActivityHistory(
           setActivities(mappedActivities)
           setTotalCount(data.total_count)
         } else if (isAuthError(status)) {
-          // Token expired or invalid, fall back to sessionStorage
-          loadFromLocalStorage()
+          setActivities([])
+          setTotalCount(0)
+          setError('Session expired. Please log in again.')
         } else {
           throw new Error('Failed to fetch history')
         }
       } else {
-        // Not authenticated: Load from sessionStorage
-        loadFromLocalStorage()
+        // Not authenticated: show empty state
+        setActivities([])
+        setTotalCount(0)
       }
     } catch (err) {
       console.error('Failed to load audit history:', err)
-      setError('Failed to load history. Showing local data.')
-      loadFromLocalStorage()
+      setError('Failed to load history. Please try again.')
+      setActivities([])
+      setTotalCount(0)
     } finally {
       setIsLoading(false)
     }
-  }, [isAuthenticated, token, page, pageSize, loadFromLocalStorage])
+  }, [isAuthenticated, token, page, pageSize])
 
   // Auto-fetch on mount and when dependencies change
   useEffect(() => {

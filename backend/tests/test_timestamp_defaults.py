@@ -78,8 +78,8 @@ class TestDBGeneratedTimestamps:
         """User.created_at and updated_at get DB defaults."""
         db_session.execute(
             text(
-                "INSERT INTO users (email, hashed_password, is_active, is_verified, tier, failed_login_attempts, settings) "
-                "VALUES ('dbtest@example.com', 'hash123', TRUE, FALSE, :tier, 0, '{}')"
+                "INSERT INTO users (email, hashed_password, is_active, is_verified, tier, failed_login_attempts, is_superadmin, settings) "
+                "VALUES ('dbtest@example.com', 'hash123', TRUE, FALSE, :tier, 0, FALSE, '{}')"
             ).bindparams(tier=_enum_val("FREE"))
         )
         db_session.flush()
@@ -94,8 +94,8 @@ class TestDBGeneratedTimestamps:
         # Create user first
         db_session.execute(
             text(
-                "INSERT INTO users (email, hashed_password, is_active, is_verified, tier, failed_login_attempts, settings) "
-                "VALUES ('log@example.com', 'hash', TRUE, FALSE, :tier, 0, '{}')"
+                "INSERT INTO users (email, hashed_password, is_active, is_verified, tier, failed_login_attempts, is_superadmin, settings) "
+                "VALUES ('log@example.com', 'hash', TRUE, FALSE, :tier, 0, FALSE, '{}')"
             ).bindparams(tier=_enum_val("FREE"))
         )
         db_session.flush()
@@ -115,8 +115,8 @@ class TestDBGeneratedTimestamps:
         """Client.created_at and updated_at get DB defaults."""
         db_session.execute(
             text(
-                "INSERT INTO users (email, hashed_password, is_active, is_verified, tier, failed_login_attempts, settings) "
-                "VALUES ('client@example.com', 'hash', TRUE, FALSE, :tier, 0, '{}')"
+                "INSERT INTO users (email, hashed_password, is_active, is_verified, tier, failed_login_attempts, is_superadmin, settings) "
+                "VALUES ('client@example.com', 'hash', TRUE, FALSE, :tier, 0, FALSE, '{}')"
             ).bindparams(tier=_enum_val("FREE"))
         )
         db_session.flush()
@@ -139,8 +139,8 @@ class TestDBGeneratedTimestamps:
         # Setup: user + client
         db_session.execute(
             text(
-                "INSERT INTO users (email, hashed_password, is_active, is_verified, tier, failed_login_attempts, settings) "
-                "VALUES ('eng@example.com', 'hash', TRUE, FALSE, :tier, 0, '{}')"
+                "INSERT INTO users (email, hashed_password, is_active, is_verified, tier, failed_login_attempts, is_superadmin, settings) "
+                "VALUES ('eng@example.com', 'hash', TRUE, FALSE, :tier, 0, FALSE, '{}')"
             ).bindparams(tier=_enum_val("FREE"))
         )
         db_session.flush()
@@ -172,8 +172,8 @@ class TestDBGeneratedTimestamps:
         # Setup chain: user → client → engagement
         db_session.execute(
             text(
-                "INSERT INTO users (email, hashed_password, is_active, is_verified, tier, failed_login_attempts, settings) "
-                "VALUES ('tr@example.com', 'hash', TRUE, FALSE, :tier, 0, '{}')"
+                "INSERT INTO users (email, hashed_password, is_active, is_verified, tier, failed_login_attempts, is_superadmin, settings) "
+                "VALUES ('tr@example.com', 'hash', TRUE, FALSE, :tier, 0, FALSE, '{}')"
             ).bindparams(tier=_enum_val("FREE"))
         )
         db_session.flush()
@@ -244,8 +244,8 @@ class TestSQLiteCurrentTimestampIsUTC:
         utc_before = datetime.now(UTC).replace(tzinfo=None)
         db_session.execute(
             text(
-                "INSERT INTO users (email, hashed_password, is_active, is_verified, tier, failed_login_attempts, settings) "
-                "VALUES ('utctest@example.com', 'hash', TRUE, FALSE, :tier, 0, '{}')"
+                "INSERT INTO users (email, hashed_password, is_active, is_verified, tier, failed_login_attempts, is_superadmin, settings) "
+                "VALUES ('utctest@example.com', 'hash', TRUE, FALSE, :tier, 0, FALSE, '{}')"
             ).bindparams(tier=_enum_val("FREE"))
         )
         db_session.flush()

@@ -1,0 +1,168 @@
+{
+  "agent": "dependency_sentinel",
+  "status": "yellow",
+  "backend_outdated": [
+    {
+      "package": "bandit",
+      "current": "1.9.3",
+      "latest": "1.9.4",
+      "severity": "patch",
+      "watchlist": false
+    },
+    {
+      "package": "certifi",
+      "current": "2026.1.4",
+      "latest": "2026.2.25",
+      "severity": "minor",
+      "watchlist": false,
+      "note": "Updated to 2026.2.25 with refreshed SSL certificate bundle."
+    },
+    {
+      "package": "charset-normalizer",
+      "current": "3.4.4",
+      "latest": "3.4.6",
+      "severity": "patch",
+      "watchlist": false
+    },
+    {
+      "package": "coverage",
+      "current": "7.13.4",
+      "latest": "7.13.5",
+      "severity": "patch",
+      "watchlist": false
+    },
+    {
+      "package": "cyclonedx-python-lib",
+      "current": "11.6.0",
+      "latest": "11.7.0",
+      "severity": "minor",
+      "watchlist": false,
+      "note": "Updated to 11.7.0 with new features and enhancements for SBOM generation."
+    },
+    {
+      "package": "filelock",
+      "current": "3.25.0",
+      "latest": "3.25.2",
+      "severity": "patch",
+      "watchlist": false
+    },
+    {
+      "package": "greenlet",
+      "current": "3.3.1",
+      "latest": "3.3.2",
+      "severity": "patch",
+      "watchlist": false
+    },
+    {
+      "package": "pdfminer.six",
+      "current": "20251230",
+      "latest": "20260107",
+      "severity": "major",
+      "watchlist": false,
+      "note": "Updated to version 20260107 with latest bug fixes and improvements."
+    },
+    {
+      "package": "platformdirs",
+      "current": "4.9.2",
+      "latest": "4.9.4",
+      "severity": "patch",
+      "watchlist": false
+    },
+    {
+      "package": "pydantic_core",
+      "current": "2.41.5",
+      "latest": "2.42.0",
+      "severity": "minor",
+      "watchlist": false,
+      "note": "Updated to 2.42.0 with performance improvements and validation enhancements."
+    },
+    {
+      "package": "pypdfium2",
+      "current": "5.5.0",
+      "latest": "5.6.0",
+      "severity": "minor",
+      "watchlist": false
+    },
+    {
+      "package": "pytest-cov",
+      "current": "7.0.0",
+      "latest": "7.1.0",
+      "severity": "minor",
+      "watchlist": false
+    },
+    {
+      "package": "pytz",
+      "current": "2025.2",
+      "latest": "2026.1.post1",
+      "severity": "major",
+      "watchlist": false,
+      "note": "Updated to 2026.1.post1 with the latest timezone database changes."
+    },
+    {
+      "package": "rich",
+      "current": "14.3.2",
+      "latest": "14.3.3",
+      "severity": "patch",
+      "watchlist": false
+    },
+    {
+      "package": "stevedore",
+      "current": "5.6.0",
+      "latest": "5.7.0",
+      "severity": "minor",
+      "watchlist": false
+    },
+    {
+      "package": "wrapt",
+      "current": "2.1.1",
+      "latest": "2.1.2",
+      "severity": "patch",
+      "watchlist": false
+    }
+  ],
+  "frontend_outdated": [],
+  "security_flagged": [],
+  "top5_updates": [
+    {
+      "package": "pdfminer.six",
+      "current": "20251230",
+      "latest": "20260107",
+      "severity": "major",
+      "watchlist": false,
+      "note": "Updated to version 20260107 with latest bug fixes and improvements."
+    },
+    {
+      "package": "pytz",
+      "current": "2025.2",
+      "latest": "2026.1.post1",
+      "severity": "major",
+      "watchlist": false,
+      "note": "Updated to 2026.1.post1 with the latest timezone database changes."
+    },
+    {
+      "package": "certifi",
+      "current": "2026.1.4",
+      "latest": "2026.2.25",
+      "severity": "minor",
+      "watchlist": false,
+      "note": "Updated to 2026.2.25 with refreshed SSL certificate bundle."
+    },
+    {
+      "package": "cyclonedx-python-lib",
+      "current": "11.6.0",
+      "latest": "11.7.0",
+      "severity": "minor",
+      "watchlist": false,
+      "note": "Updated to 11.7.0 with new features and enhancements for SBOM generation."
+    },
+    {
+      "package": "pydantic_core",
+      "current": "2.41.5",
+      "latest": "2.42.0",
+      "severity": "minor",
+      "watchlist": false,
+      "note": "Updated to 2.42.0 with performance improvements and validation enhancements."
+    }
+  ],
+  "summary": "Backend: 16 outdated. Frontend: 0 outdated. 0 security-relevant packages have updates."
+}

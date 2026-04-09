@@ -497,6 +497,21 @@ jobs:
       - name: Run report standards validator
         run: python scripts/validate_report_standards.py
 
+  # ── Documentation Consistency Gate ──────────────────────────
+  doc-consistency:
+    name: Documentation Consistency Gate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # pin: v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # pin: v6
+        with:
+          python-version: "3.12"
+      - name: Run documentation consistency guard
+        run: python -m guards.doc_consistency_guard
+
   # ── Dependency Audit: pip (blocking on HIGH/CRITICAL) ────────
   pip-audit-blocking:
     name: Python Dependency Audit (blocking)

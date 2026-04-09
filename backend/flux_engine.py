@@ -12,9 +12,10 @@ Zero-Storage Compliance:
 """
 
 from dataclasses import dataclass, field
+from decimal import Decimal
 from typing import Any
 
-NEAR_ZERO = 0.005  # Below any meaningful financial balance; guards division-by-near-zero
+NEAR_ZERO = Decimal("0.005")  # Below any meaningful financial balance; guards division-by-near-zero
 from enum import Enum
 
 from security_utils import log_secure_operation
@@ -158,20 +159,20 @@ class FluxEngine:
         reclass_count = 0
 
         for account in all_accounts:
-            # Extract current data (float() handles Decimal/str from audit engine)
+            # Extract current data — keep Decimal for monetary precision
             curr_data = current_balances.get(account)
-            curr_bal = float(curr_data.get("net", 0.0)) if curr_data else 0.0
+            curr_bal = Decimal(str(curr_data.get("net", 0))) if curr_data else Decimal("0")
             # Fallback to dictionary lookups if "net" isn't pre-calculated
             if curr_data and "net" not in curr_data:
-                curr_bal = float(curr_data.get("debit", 0.0)) - float(curr_data.get("credit", 0.0))
+                curr_bal = Decimal(str(curr_data.get("debit", 0))) - Decimal(str(curr_data.get("credit", 0)))
 
             curr_type = curr_data.get("type", "Unknown") if curr_data else "Unknown"
 
             # Extract prior data
             prior_data = prior_balances.get(account)
-            prior_bal = float(prior_data.get("net", 0.0)) if prior_data else 0.0
+            prior_bal = Decimal(str(prior_data.get("net", 0))) if prior_data else Decimal("0")
             if prior_data and "net" not in prior_data:
-                prior_bal = float(prior_data.get("debit", 0.0)) - float(prior_data.get("credit", 0.0))
+                prior_bal = Decimal(str(prior_data.get("debit", 0))) - Decimal(str(prior_data.get("credit", 0)))
 
             # Sprint 294: Capture prior type for reclassification detection
             prior_type_str = prior_data.get("type", "Unknown") if prior_data else "Unknown"
@@ -180,11 +181,11 @@ class FluxEngine:
             if not curr_data and prior_data:
                 curr_type = prior_type_str
 
-            # Calculations
+            # Calculations — Decimal for monetary, float for display-only percentage
             delta_amt = curr_bal - prior_bal
             delta_pct = 0.0
             if abs(prior_bal) > NEAR_ZERO:
-                delta_pct = (delta_amt / abs(prior_bal)) * 100.0
+                delta_pct = float(delta_amt / abs(prior_bal)) * 100.0
 
             # Flags
             is_new = prior_data is None
@@ -258,9 +259,9 @@ class FluxEngine:
             item = FluxItem(
                 account_name=account,
                 account_type=curr_type,
-                current_balance=curr_bal,
-                prior_balance=prior_bal,
-                delta_amount=delta_amt,
+                current_balance=float(curr_bal),
+                prior_balance=float(prior_bal),
+                delta_amount=float(delta_amt),
                 delta_percent=delta_pct,
                 is_new_account=is_new,
                 is_removed_account=is_removed,

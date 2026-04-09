@@ -1,0 +1,63 @@
+{
+  "agent": "sprint_shepherd",
+  "status": "yellow",
+  "commits_last_24h": 46,
+  "commits_last_7d": 71,
+  "work_categories_24h": {
+    "bug fix": 16,
+    "other": 13,
+    "audit": 12,
+    "api": 3,
+    "report": 2
+  },
+  "risk_commits": [
+    {
+      "hash": "7288a83",
+      "message": "fix: add AUDIT-07 hotfix entries to todo.md",
+      "keyword": "TODO"
+    },
+    {
+      "hash": "aff6113",
+      "message": "fix: mark Sprint 556 AUDIT-05 as COMPLETE in todo.md",
+      "keyword": "TODO"
+    },
+    {
+      "hash": "fa5dad2",
+      "message": "fix: mark Sprint 554 AUDIT-03 as COMPLETE in todo.md",
+      "keyword": "TODO"
+    },
+    {
+      "hash": "36c7049",
+      "message": "fix: mark Sprint 553 AUDIT-02 as COMPLETE in todo.md",
+      "keyword": "TODO"
+    },
+    {
+      "hash": "551944b",
+      "message": "Sprint 551: Fix 3 high-confidence bugs \u00e2\u20ac\u201d invite seat double-count, member removal tier wipe, export sharing provenance",
+      "keyword": "WIP"
+    },
+    {
+      "hash": "6ef8de6",
+      "message": "fix: record Sprint 550 commit SHA in todo.md",
+      "keyword": "TODO"
+    },
+    {
+      "hash": "cbc9883",
+      "message": "harness: split tasks/todo.md \u00e2\u20ac\u201d extract protocol, executive blockers, and completed eras",
+      "keyword": "TODO"
+    },
+    {
+      "hash": "289cfbf",
+      "message": "harness: add AGENTS.md, SESSION_STATE.md, features/status.json, init.sh, docs index, archive stale docs, fix contradictions, split todo",
+      "keyword": "TODO"
+    }
+  ],
+  "sprint_checklist": {
+    "found": false,
+    "total": 0,
+    "completed": 0,
+    "pct": 0
+  },
+  "open_items": [],
+  "summary": "46 commits in last 24h, 71 in last 7d. 8 risk signal(s) detected."
+}

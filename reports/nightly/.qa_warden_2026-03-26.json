@@ -1,0 +1,22 @@
+{
+  "agent": "qa_warden",
+  "status": "green",
+  "backend": {
+    "passed": 7121,
+    "failed": 0,
+    "errors": 0,
+    "duration_s": 293.3,
+    "failing_tests": [],
+    "new_failures": [],
+    "resolved": [
+      "tests/test_accounting_policy_guard.py::TestIntegration::test_guard_passes_on_current_codebase",
+      "tests/test_injection_regression.py::TestXSSPayloadRegression::test_xss_in_user_name_returned_as_json_string"
+    ]
+  },
+  "frontend": {
+    "passed": 1745,
+    "failed": 0,
+    "duration_s": 53.4
+  },
+  "summary": "Backend: 7121 passed / 0 failed in 293.3s. Frontend: 1745 passed / 0 failed in 53.4s. 2 failure(s) resolved."
+}

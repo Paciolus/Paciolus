@@ -2,22 +2,22 @@
 ExportShare model — Phase LXIX: Pricing v3 (Phase 6).
 
 Temporary shared export links for Professional+ tiers.
-Export data (PDF/Excel/CSV bytes) stored temporarily with a 48h TTL.
+Export data (PDF/Excel/CSV bytes) stored temporarily with tier-configurable TTL.
 Auto-purged by cleanup scheduler.
 
 ZERO-STORAGE NOTE: This stores rendered export ARTIFACTS (cached outputs),
-NOT source financial data. All records auto-expire within 48 hours.
+NOT source financial data. All records auto-expire within 24–48 hours.
 """
 
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import DateTime, Integer, LargeBinary, String, func
+from sqlalchemy import Boolean, DateTime, Integer, LargeBinary, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.schema import ForeignKey
 
 from database import Base
 
-SHARE_EXPIRY_HOURS = 48
+DEFAULT_SHARE_EXPIRY_HOURS = 24
 
 
 class ExportShare(Base):
@@ -28,7 +28,9 @@ class ExportShare(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
 
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    organization_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("organizations.id"), nullable=True, index=True)
+    organization_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("organizations.id"), nullable=True, index=True
+    )
 
     # Token stored as SHA-256 hash
     share_token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
@@ -37,8 +39,14 @@ class ExportShare(Base):
     tool_name: Mapped[str] = mapped_column(String(100), nullable=False)
     export_format: Mapped[str] = mapped_column(String(20), nullable=False)  # pdf, xlsx, csv
 
-    # Cached export bytes (auto-purged after 48h)
+    # Cached export bytes (auto-purged after TTL)
     export_data: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+
+    # Security: optional passcode protection (SHA-256 hash)
+    passcode_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
+    # Single-use: auto-revoke after first download
+    single_use: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     # Metadata
     shared_by_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -47,7 +55,7 @@ class ExportShare(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
     expires_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=lambda: datetime.now(UTC) + timedelta(hours=SHARE_EXPIRY_HOURS),
+        default=lambda: datetime.now(UTC) + timedelta(hours=DEFAULT_SHARE_EXPIRY_HOURS),
         nullable=False,
     )
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
@@ -65,4 +73,6 @@ class ExportShare(Base):
             "expires_at": self.expires_at.isoformat() if self.expires_at else None,
             "revoked_at": self.revoked_at.isoformat() if self.revoked_at else None,
             "access_count": self.access_count,
+            "single_use": self.single_use,
+            "has_passcode": self.passcode_hash is not None,
         }

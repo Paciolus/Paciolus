@@ -42,7 +42,7 @@ export default function CheckoutSuccessPage() {
 
         <Link
           href="/tools/trial-balance"
-          className="inline-block px-6 py-3 bg-sage-600 text-white rounded-lg font-sans font-medium hover:bg-sage-700 transition-colors"
+          className="inline-block px-6 py-3 bg-sage-600 text-oatmeal-50 rounded-lg font-sans font-medium hover:bg-sage-700 transition-colors"
         >
           Start Using Your Tools
         </Link>

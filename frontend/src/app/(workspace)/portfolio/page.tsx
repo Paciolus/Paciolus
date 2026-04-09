@@ -1,10 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useWorkspaceContext } from '@/contexts/WorkspaceContext';
+import { CreateEngagementModal } from '@/components/engagement';
 import { ClientCard, CreateClientModal, EditClientModal } from '@/components/portfolio';
-import type { Client, ClientCreateInput } from '@/types/client';
+import { useClients } from '@/hooks/useClients';
+import type { Client, ClientCreateInput, ClientWithSummary, ClientEngagementSummary } from '@/types/client';
 import { staggerContainerTight, fadeUp, fadeScale } from '@/lib/motion';
 
 /**
@@ -31,16 +33,53 @@ export default function PortfolioPage() {
     updateClient,
     deleteClient,
     refreshClients,
+    createEngagement,
   } = useWorkspaceContext();
 
-  // Search state — P4: search/filter controls
+  // Sprint 580: Fetch clients with engagement summary
+  const { fetchClientsWithSummary } = useClients({ autoFetch: false });
+  const [summaryMap, setSummaryMap] = useState<Record<number, ClientEngagementSummary>>({});
+
+  useEffect(() => {
+    fetchClientsWithSummary().then((enriched: ClientWithSummary[]) => {
+      const map: Record<number, ClientEngagementSummary> = {};
+      for (const c of enriched) {
+        if (c.engagement_summary) map[c.id] = c.engagement_summary;
+      }
+      setSummaryMap(map);
+    });
+  }, [clients.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Search state
   const [searchQuery, setSearchQuery] = useState('');
 
   // Modal state
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showCreateWorkspace, setShowCreateWorkspace] = useState(false);
+  const [workspaceClientId, setWorkspaceClientId] = useState<number | undefined>();
   const [editClient, setEditClient] = useState<Client | null>(null);
   const [deleteConfirmClient, setDeleteConfirmClient] = useState<Client | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleCreateWorkspace = (clientId: number) => {
+    setWorkspaceClientId(clientId);
+    setShowCreateWorkspace(true);
+  };
+
+  const handleWorkspaceCreated = async (data: Parameters<typeof createEngagement>[0]): Promise<boolean> => {
+    const result = await createEngagement(data);
+    if (result) {
+      // Refresh summaries
+      fetchClientsWithSummary().then((enriched: ClientWithSummary[]) => {
+        const map: Record<number, ClientEngagementSummary> = {};
+        for (const c of enriched) {
+          if (c.engagement_summary) map[c.id] = c.engagement_summary;
+        }
+        setSummaryMap(map);
+      });
+    }
+    return result !== null;
+  };
 
   // Filtered clients based on search
   const filteredClients = searchQuery.trim()
@@ -110,7 +149,7 @@ export default function PortfolioPage() {
             whileHover="hover"
             whileTap="tap"
             onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center gap-2 px-5 py-3 bg-sage-600 hover:bg-sage-700 text-white font-sans font-bold rounded-xl transition-colors shadow-theme-card"
+            className="inline-flex items-center gap-2 px-5 py-3 bg-sage-600 hover:bg-sage-700 text-oatmeal-50 font-sans font-bold rounded-xl transition-colors shadow-theme-card"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -201,7 +240,7 @@ export default function PortfolioPage() {
               whileHover="hover"
               whileTap="tap"
               onClick={() => setShowCreateModal(true)}
-              className="inline-flex items-center gap-2 px-6 py-3.5 bg-sage-600 hover:bg-sage-700 text-white font-sans font-bold rounded-xl transition-colors shadow-theme-card"
+              className="inline-flex items-center gap-2 px-6 py-3.5 bg-sage-600 hover:bg-sage-700 text-oatmeal-50 font-sans font-bold rounded-xl transition-colors shadow-theme-card"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -234,9 +273,10 @@ export default function PortfolioPage() {
                 key={client.id}
                 client={client}
                 index={index}
-                lastAuditDate={null}
+                engagementSummary={summaryMap[client.id] ?? null}
                 onEdit={(c) => setEditClient(c)}
                 onDelete={handleDeleteClient}
+                onCreateWorkspace={handleCreateWorkspace}
               />
             ))}
           </motion.div>
@@ -320,7 +360,7 @@ export default function PortfolioPage() {
               <button
                 onClick={confirmDelete}
                 disabled={isDeleting}
-                className="flex-1 px-4 py-2.5 bg-clay-600 hover:bg-clay-700 disabled:bg-clay-600/50 text-white font-sans font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-2.5 bg-clay-600 hover:bg-clay-700 disabled:bg-clay-600/50 text-oatmeal-50 font-sans font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
               >
                 {isDeleting ? (
                   <>
@@ -337,6 +377,15 @@ export default function PortfolioPage() {
           </motion.div>
         </div>
       )}
+      {/* Create Workspace Modal (Sprint 580) */}
+      <CreateEngagementModal
+        isOpen={showCreateWorkspace}
+        onClose={() => { setShowCreateWorkspace(false); setWorkspaceClientId(undefined); }}
+        onSubmit={handleWorkspaceCreated}
+        clients={clients}
+        isLoading={clientsLoading}
+        defaultClientId={workspaceClientId}
+      />
     </motion.div>
   );
 }

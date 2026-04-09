@@ -1,0 +1,9 @@
+{
+  "_comment": "Packages listed here are intentionally deferred. They still appear in reports but do not affect status color. If 'latest' advances beyond 'deferred_version' or 'review_by' passes, the deferral expires and the package counts toward status again.",
+  "pdfminer.six": {
+    "deferred_version": "20260107",
+    "reason": "Calendar-versioned release; waiting on downstream compatibility confirmation",
+    "deferred_on": "2026-03-30",
+    "review_by": "2026-04-30"
+  }
+}

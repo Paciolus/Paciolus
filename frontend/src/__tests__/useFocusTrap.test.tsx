@@ -28,7 +28,9 @@ describe('useFocusTrap', () => {
 
   afterEach(() => {
     jest.useRealTimers()
-    document.body.innerHTML = ''
+    // Use replaceChildren() instead of innerHTML = '' to comply with the
+    // Sprint 592 XSS sink governance ESLint rule (no-restricted-syntax).
+    document.body.replaceChildren()
   })
 
   it('returns a ref to attach to the container', () => {

@@ -152,9 +152,9 @@ You may **NOT** use Paciolus to:
 | Tier | Diagnostic Limit | Client Limit |
 |------|-------------------|--------------|
 | **Free** | 10 per month | 3 |
-| **Solo** | 20 per month | 10 |
-| **Team** | Unlimited | Unlimited |
-| **Organization** | Unlimited | Unlimited |
+| **Solo** | 100 per month | Unlimited |
+| **Professional** | 500 per month | Unlimited |
+| **Enterprise** | Unlimited | Unlimited |
 
 **Abuse prevention:** We may throttle or suspend accounts engaging in excessive use (e.g., >1,000 analyses per day without legitimate business justification).
 
@@ -263,11 +263,11 @@ Paciolus operates under a **Zero-Storage** model:
 | Tier | Monthly | Annual | Included Seats |
 |------|---------|--------|----------------|
 | **Free** | $0 | $0 | 1 |
-| **Solo** | $50/month | $500/year | 1 |
-| **Team** | $130/month | $1,300/year | 3 |
-| **Organization** | $400/month | $4,000/year | 3 |
+| **Solo** | $100/month | $1,000/year | 1 |
+| **Professional** | $500/month | $5,000/year | 7 |
+| **Enterprise** | $1,000/month | $10,000/year | 20 |
 
-Annual billing includes an approximate 17% discount compared to monthly billing.
+All paid tiers include access to all 12 diagnostic tools. Annual billing includes an approximate 17% discount compared to monthly billing.
 
 **Current pricing:** See https://paciolus.com/pricing
 
@@ -275,15 +275,14 @@ Annual billing includes an approximate 17% discount compared to monthly billing.
 
 ### 8.2 Seat-Based Pricing
 
-Paid multi-user plans (Team, Organization) include a number of base seats at no additional cost (see Section 8.1). Additional seats beyond the base allocation are billed at the following rates:
+Paid multi-user plans (Professional, Enterprise) include a number of base seats at no additional cost (see Section 8.1). Additional seats beyond the base allocation are billed at flat per-tier rates:
 
-| Seat Position | Monthly (per seat) | Annual (per seat) |
-|---------------|--------------------|--------------------|
-| Base seats (included in plan) | $0 | $0 |
-| Seats 4–10 | $80/month | $800/year |
-| Seats 11–25 | $70/month | $700/year |
+| Plan | Additional Seats | Monthly (per seat) | Annual (per seat) | Max Seats |
+|------|------------------|--------------------|--------------------|-----------| 
+| **Professional** | Seats 8–20 | $65/month | $650/year | 20 |
+| **Enterprise** | Seats 21–100 | $45/month | $450/year | 100 |
 
-Each additional seat is priced at the rate corresponding to its position in the tier schedule (i.e., rates are not blended across tiers).
+Each additional seat is priced at the flat rate for the plan tier.
 
 **Seat enforcement:** We may enforce seat limits through logging-only monitoring or active access restrictions. We will provide reasonable notice before transitioning from monitoring to active enforcement for existing subscribers.
 

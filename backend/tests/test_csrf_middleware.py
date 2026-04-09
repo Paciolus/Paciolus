@@ -185,9 +185,9 @@ class TestCsrfExemptPaths:
     def test_auth_register_exempt(self):
         assert "/auth/register" in CSRF_EXEMPT_PATHS
 
-    def test_auth_refresh_exempt(self):
-        """Sprint 200: refresh must be exempt (called by 401 interceptor)."""
-        assert "/auth/refresh" in CSRF_EXEMPT_PATHS
+    def test_auth_refresh_not_exempt(self):
+        """Refresh is cookie-authenticated — CSRF enforced (custom header fallback)."""
+        assert "/auth/refresh" not in CSRF_EXEMPT_PATHS
 
     def test_auth_logout_not_exempt(self):
         """HttpOnly cookie hardening: logout is cookie-authenticated and CSRF IS enforced."""
@@ -371,11 +371,9 @@ class TestCsrfMiddleware:
 
     @pytest.mark.asyncio
     async def test_all_new_exempt_paths_pass(self):
-        """Sprint 200 exempt paths (excluding /auth/logout which now requires CSRF) pass without CSRF token."""
+        """Sprint 200 exempt paths (excluding /auth/logout and /auth/refresh) pass without CSRF token."""
         middleware = CSRFMiddleware(app=MagicMock())
-        # /auth/logout removed from this list — it is cookie-authenticated and CSRF IS enforced
         new_exemptions = [
-            "/auth/refresh",
             "/auth/verify-email",
             "/contact/submit",
             "/waitlist",
@@ -552,8 +550,8 @@ class TestCsrfSecretSeparation:
 class TestCsrfExemptionPolicy:
     """Verify CSRF exemption assumptions are documented and correct."""
 
-    def test_refresh_exempt_documented(self):
-        """Source must contain a comment explaining /auth/refresh exemption."""
+    def test_refresh_csrf_documented(self):
+        """Source must contain documentation explaining /auth/refresh CSRF enforcement."""
         source_path = Path(__file__).parent.parent / "security_middleware.py"
         source = source_path.read_text()
         assert "/auth/refresh" in source
@@ -570,14 +568,16 @@ class TestCsrfExemptionPolicy:
 
     def test_exempt_set_is_frozen(self):
         """The exempt set must contain exactly the expected paths.
-        NOTE: /auth/logout removed from exempt set — it is cookie-authenticated,
-        so CSRF IS enforced (HttpOnly cookie hardening sprint).
+        NOTE: /auth/logout and /auth/refresh removed from exempt set —
+        both are cookie-authenticated, so CSRF IS enforced.
+        /auth/refresh uses CSRF_CUSTOM_HEADER_PATHS for bootstrap fallback.
         """
         expected = {
             "/auth/login",
             "/auth/register",
-            "/auth/refresh",
             "/auth/verify-email",
+            "/auth/forgot-password",
+            "/auth/reset-password",
             "/auth/csrf",
             "/billing/webhook",
             "/contact/submit",
@@ -589,6 +589,12 @@ class TestCsrfExemptionPolicy:
         assert CSRF_EXEMPT_PATHS == expected, (
             f"Unexpected CSRF exemptions: added={CSRF_EXEMPT_PATHS - expected}, removed={expected - CSRF_EXEMPT_PATHS}"
         )
+
+    def test_refresh_in_custom_header_paths(self):
+        """POST /auth/refresh must be in CSRF_CUSTOM_HEADER_PATHS (bootstrap fallback)."""
+        from security_middleware import CSRF_CUSTOM_HEADER_PATHS
+
+        assert "/auth/refresh" in CSRF_CUSTOM_HEADER_PATHS
 
     def test_config_guardrail_csrf_required_in_production(self):
         """config.py must hard-fail if CSRF_SECRET_KEY is missing in production."""
@@ -912,3 +918,100 @@ class TestLogoutCsrfBinding:
 
             # No cookie → None expected_user_id → signature-only validation passes
             call_next.assert_awaited_once_with(request)
+
+
+# =============================================================================
+# Refresh CSRF Enforcement (CSRF_CUSTOM_HEADER_PATHS)
+# =============================================================================
+
+
+class TestRefreshCsrfEnforcement:
+    """Verify /auth/refresh CSRF enforcement via CSRF_CUSTOM_HEADER_PATHS.
+
+    /auth/refresh accepts either:
+    1. A valid X-CSRF-Token header (normal path), OR
+    2. An X-Requested-With: XMLHttpRequest header (bootstrap path)
+    Without either, the request is rejected with 403.
+    """
+
+    def setup_method(self):
+        """Restore original validate_csrf_token."""
+        _sm.validate_csrf_token = validate_csrf_token
+
+    def teardown_method(self):
+        """Re-apply the conftest bypass for other API tests."""
+        _sm.validate_csrf_token = lambda token, expected_user_id=None: True
+
+    def _make_refresh_request(
+        self,
+        csrf_token: str | None = None,
+        x_requested_with: str | None = None,
+    ) -> MagicMock:
+        """Create a mock POST /auth/refresh request."""
+        request = MagicMock()
+        request.method = "POST"
+        request.url.path = "/auth/refresh"
+        headers: dict[str, str] = {}
+        if csrf_token:
+            headers["X-CSRF-Token"] = csrf_token
+        if x_requested_with:
+            headers["X-Requested-With"] = x_requested_with
+        request.headers = MagicMock()
+        request.headers.get = lambda key, default=None: headers.get(key, default)
+        request.cookies = MagicMock()
+        request.cookies.get = lambda key, default=None: default
+        return request
+
+    @pytest.mark.asyncio
+    async def test_refresh_with_valid_csrf_passes(self):
+        """POST /auth/refresh with valid CSRF token → passes."""
+        middleware = CSRFMiddleware(app=MagicMock())
+        token = generate_csrf_token("test-uid")
+        request = self._make_refresh_request(csrf_token=token)
+        call_next = AsyncMock(return_value=MagicMock())
+
+        response = await middleware.dispatch(request, call_next)
+        call_next.assert_awaited_once_with(request)
+
+    @pytest.mark.asyncio
+    async def test_refresh_with_invalid_csrf_blocked(self):
+        """POST /auth/refresh with invalid CSRF token → 403."""
+        middleware = CSRFMiddleware(app=MagicMock())
+        request = self._make_refresh_request(csrf_token="bogus-invalid-token")
+        call_next = AsyncMock()
+
+        response = await middleware.dispatch(request, call_next)
+        assert response.status_code == 403
+        call_next.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_refresh_no_csrf_with_xrw_passes(self):
+        """POST /auth/refresh with no CSRF but X-Requested-With → passes (bootstrap)."""
+        middleware = CSRFMiddleware(app=MagicMock())
+        request = self._make_refresh_request(x_requested_with="XMLHttpRequest")
+        call_next = AsyncMock(return_value=MagicMock())
+
+        response = await middleware.dispatch(request, call_next)
+        call_next.assert_awaited_once_with(request)
+
+    @pytest.mark.asyncio
+    async def test_refresh_no_csrf_no_xrw_blocked(self):
+        """POST /auth/refresh with neither CSRF token nor X-Requested-With → 403."""
+        middleware = CSRFMiddleware(app=MagicMock())
+        request = self._make_refresh_request()  # No CSRF, no XRW
+        call_next = AsyncMock()
+
+        response = await middleware.dispatch(request, call_next)
+        assert response.status_code == 403
+        call_next.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_refresh_no_csrf_wrong_xrw_blocked(self):
+        """POST /auth/refresh with wrong X-Requested-With value → 403."""
+        middleware = CSRFMiddleware(app=MagicMock())
+        request = self._make_refresh_request(x_requested_with="SomethingElse")
+        call_next = AsyncMock()
+
+        response = await middleware.dispatch(request, call_next)
+        assert response.status_code == 403
+        call_next.assert_not_awaited()

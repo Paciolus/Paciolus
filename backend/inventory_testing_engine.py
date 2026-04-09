@@ -561,7 +561,7 @@ def assess_inv_data_quality(
     if detection.category_column:
         configs.append(FieldQualityConfig("category", lambda e: e.category))
 
-    result = _shared_assess_dq(entries, configs, optional_weight_pool=0.45)
+    result = _shared_assess_dq(entries, configs, optional_weight_pool=0.45, domain="inventory_testing")
 
     return InvDataQuality(
         completeness_score=result.completeness_score,

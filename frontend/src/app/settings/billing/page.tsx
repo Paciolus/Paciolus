@@ -140,7 +140,7 @@ export default function BillingSettingsPage() {
               {isFree && (
                 <button
                   onClick={() => setShowUpgradeModal(true)}
-                  className="px-5 py-2.5 bg-sage-600 text-white rounded-lg font-sans font-medium hover:bg-sage-700 transition-colors"
+                  className="px-5 py-2.5 bg-sage-600 text-oatmeal-50 rounded-lg font-sans font-medium hover:bg-sage-700 transition-colors"
                 >
                   Start Free Trial
                 </button>
@@ -150,7 +150,7 @@ export default function BillingSettingsPage() {
                   {!isTrialing && (
                     <button
                       onClick={() => setShowUpgradeModal(true)}
-                      className="px-5 py-2.5 bg-sage-600 text-white rounded-lg font-sans font-medium hover:bg-sage-700 transition-colors"
+                      className="px-5 py-2.5 bg-sage-600 text-oatmeal-50 rounded-lg font-sans font-medium hover:bg-sage-700 transition-colors"
                     >
                       Change Plan
                     </button>
@@ -167,7 +167,7 @@ export default function BillingSettingsPage() {
                 <button
                   onClick={handleReactivate}
                   disabled={reactivateLoading}
-                  className="px-5 py-2.5 bg-sage-600 text-white rounded-lg font-sans font-medium hover:bg-sage-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-5 py-2.5 bg-sage-600 text-oatmeal-50 rounded-lg font-sans font-medium hover:bg-sage-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {reactivateLoading ? 'Reactivating...' : 'Reactivate Subscription'}
                 </button>
@@ -230,7 +230,7 @@ export default function BillingSettingsPage() {
                       setSeatLoading(false)
                     }}
                     disabled={seatLoading}
-                    className="px-4 py-2 bg-sage-600 text-white rounded-lg font-sans text-sm font-medium hover:bg-sage-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-4 py-2 bg-sage-600 text-oatmeal-50 rounded-lg font-sans text-sm font-medium hover:bg-sage-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {seatLoading ? 'Updating...' : 'Add Seat'}
                   </button>
@@ -293,7 +293,7 @@ export default function BillingSettingsPage() {
               <button
                 onClick={handlePortalClick}
                 disabled={portalLoading}
-                className="px-5 py-2.5 bg-sage-600 text-white rounded-lg font-sans font-medium hover:bg-sage-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-5 py-2.5 bg-sage-600 text-oatmeal-50 rounded-lg font-sans font-medium hover:bg-sage-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {portalLoading ? 'Opening...' : 'Manage Payment Details'}
               </button>

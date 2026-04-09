@@ -1,0 +1,373 @@
+{
+  "agent": "dependency_sentinel",
+  "status": "yellow",
+  "backend_outdated": [
+    {
+      "package": "bandit",
+      "current": "1.9.3",
+      "latest": "1.9.4",
+      "severity": "patch",
+      "watchlist": false
+    },
+    {
+      "package": "bcrypt",
+      "current": "4.3.0",
+      "latest": "5.0.0",
+      "severity": "major",
+      "watchlist": false,
+      "note": "Major version upgrade with potential breaking changes to the password hashing library."
+    },
+    {
+      "package": "certifi",
+      "current": "2026.1.4",
+      "latest": "2026.2.25",
+      "severity": "minor",
+      "watchlist": false
+    },
+    {
+      "package": "chardet",
+      "current": "5.2.0",
+      "latest": "7.1.0",
+      "severity": "major",
+      "watchlist": false,
+      "note": "Significant version jump with improved character encoding detection capabilities."
+    },
+    {
+      "package": "charset-normalizer",
+      "current": "3.4.4",
+      "latest": "3.4.6",
+      "severity": "patch",
+      "watchlist": false
+    },
+    {
+      "package": "fastapi",
+      "current": "0.133.1",
+      "latest": "0.135.1",
+      "severity": "minor",
+      "watchlist": true
+    },
+    {
+      "package": "filelock",
+      "current": "3.25.0",
+      "latest": "3.25.2",
+      "severity": "patch",
+      "watchlist": false
+    },
+    {
+      "package": "greenlet",
+      "current": "3.3.1",
+      "latest": "3.3.2",
+      "severity": "patch",
+      "watchlist": false
+    },
+    {
+      "package": "limits",
+      "current": "5.7.0",
+      "latest": "5.8.0",
+      "severity": "minor",
+      "watchlist": false
+    },
+    {
+      "package": "numpy",
+      "current": "1.26.4",
+      "latest": "2.4.3",
+      "severity": "major",
+      "watchlist": false,
+      "note": "Major version 2.x release with performance improvements and API changes."
+    },
+    {
+      "package": "pdfminer.six",
+      "current": "20251230",
+      "latest": "20260107",
+      "severity": "major",
+      "watchlist": false,
+      "note": "Minor update with bug fixes and improvements to PDF text extraction."
+    },
+    {
+      "package": "pip",
+      "current": "25.3",
+      "latest": "26.0.1",
+      "severity": "major",
+      "watchlist": false,
+      "note": "Major version update to Python's package installer with new features and improvements."
+    },
+    {
+      "package": "platformdirs",
+      "current": "4.9.2",
+      "latest": "4.9.4",
+      "severity": "patch",
+      "watchlist": false
+    },
+    {
+      "package": "pyasn1",
+      "current": "0.6.2",
+      "latest": "0.6.3",
+      "severity": "patch",
+      "watchlist": false
+    },
+    {
+      "package": "pydantic_core",
+      "current": "2.41.5",
+      "latest": "2.42.0",
+      "severity": "minor",
+      "watchlist": false
+    },
+    {
+      "package": "PyJWT",
+      "current": "2.11.0",
+      "latest": "2.12.1",
+      "severity": "minor",
+      "watchlist": true
+    },
+    {
+      "package": "pypdf",
+      "current": "6.7.5",
+      "latest": "6.9.0",
+      "severity": "minor",
+      "watchlist": false
+    },
+    {
+      "package": "pypdfium2",
+      "current": "5.5.0",
+      "latest": "5.6.0",
+      "severity": "minor",
+      "watchlist": false
+    },
+    {
+      "package": "python-dotenv",
+      "current": "1.0.0",
+      "latest": "1.2.2",
+      "severity": "minor",
+      "watchlist": false
+    },
+    {
+      "package": "pytz",
+      "current": "2025.2",
+      "latest": "2026.1.post1",
+      "severity": "major",
+      "watchlist": false
+    },
+    {
+      "package": "rich",
+      "current": "14.3.2",
+      "latest": "14.3.3",
+      "severity": "patch",
+      "watchlist": false
+    },
+    {
+      "package": "ruff",
+      "current": "0.15.1",
+      "latest": "0.15.6",
+      "severity": "patch",
+      "watchlist": false
+    },
+    {
+      "package": "sentry-sdk",
+      "current": "2.53.0",
+      "latest": "2.54.0",
+      "severity": "minor",
+      "watchlist": false
+    },
+    {
+      "package": "SQLAlchemy",
+      "current": "2.0.47",
+      "latest": "2.0.48",
+      "severity": "patch",
+      "watchlist": true
+    },
+    {
+      "package": "stevedore",
+      "current": "5.6.0",
+      "latest": "5.7.0",
+      "severity": "minor",
+      "watchlist": false
+    },
+    {
+      "package": "stripe",
+      "current": "14.4.0",
+      "latest": "14.4.1",
+      "severity": "patch",
+      "watchlist": true
+    },
+    {
+      "package": "uvicorn",
+      "current": "0.41.0",
+      "latest": "0.42.0",
+      "severity": "minor",
+      "watchlist": false
+    },
+    {
+      "package": "wrapt",
+      "current": "2.1.1",
+      "latest": "2.1.2",
+      "severity": "patch",
+      "watchlist": false
+    }
+  ],
+  "frontend_outdated": [
+    {
+      "package": "@eslint/eslintrc",
+      "current": "3.3.3",
+      "latest": "3.3.5",
+      "severity": "patch",
+      "watchlist": false
+    },
+    {
+      "package": "@sentry/nextjs",
+      "current": "10.40.0",
+      "latest": "10.43.0",
+      "severity": "minor",
+      "watchlist": false
+    },
+    {
+      "package": "@types/node",
+      "current": "25.3.1",
+      "latest": "25.5.0",
+      "severity": "minor",
+      "watchlist": false
+    },
+    {
+      "package": "@typescript-eslint/eslint-plugin",
+      "current": "8.56.0",
+      "latest": "8.57.1",
+      "severity": "minor",
+      "watchlist": false
+    },
+    {
+      "package": "@typescript-eslint/parser",
+      "current": "8.56.0",
+      "latest": "8.57.1",
+      "severity": "minor",
+      "watchlist": false
+    },
+    {
+      "package": "framer-motion",
+      "current": "12.34.3",
+      "latest": "12.37.0",
+      "severity": "minor",
+      "watchlist": false
+    },
+    {
+      "package": "jest",
+      "current": "30.2.0",
+      "latest": "30.3.0",
+      "severity": "minor",
+      "watchlist": false
+    },
+    {
+      "package": "jest-environment-jsdom",
+      "current": "30.2.0",
+      "latest": "30.3.0",
+      "severity": "minor",
+      "watchlist": false
+    },
+    {
+      "package": "lint-staged",
+      "current": "16.2.7",
+      "latest": "16.4.0",
+      "severity": "minor",
+      "watchlist": false
+    },
+    {
+      "package": "next",
+      "current": "16.1.6",
+      "latest": "16.1.7",
+      "severity": "patch",
+      "watchlist": true
+    },
+    {
+      "package": "postcss",
+      "current": "8.5.6",
+      "latest": "8.5.8",
+      "severity": "patch",
+      "watchlist": false
+    },
+    {
+      "package": "recharts",
+      "current": "3.7.0",
+      "latest": "3.8.0",
+      "severity": "minor",
+      "watchlist": false
+    }
+  ],
+  "security_flagged": [
+    {
+      "package": "fastapi",
+      "current": "0.133.1",
+      "latest": "0.135.1",
+      "severity": "minor",
+      "watchlist": true
+    },
+    {
+      "package": "PyJWT",
+      "current": "2.11.0",
+      "latest": "2.12.1",
+      "severity": "minor",
+      "watchlist": true
+    },
+    {
+      "package": "SQLAlchemy",
+      "current": "2.0.47",
+      "latest": "2.0.48",
+      "severity": "patch",
+      "watchlist": true
+    },
+    {
+      "package": "stripe",
+      "current": "14.4.0",
+      "latest": "14.4.1",
+      "severity": "patch",
+      "watchlist": true
+    },
+    {
+      "package": "next",
+      "current": "16.1.6",
+      "latest": "16.1.7",
+      "severity": "patch",
+      "watchlist": true
+    }
+  ],
+  "top5_updates": [
+    {
+      "package": "bcrypt",
+      "current": "4.3.0",
+      "latest": "5.0.0",
+      "severity": "major",
+      "watchlist": false,
+      "note": "Major version upgrade with potential breaking changes to the password hashing library."
+    },
+    {
+      "package": "chardet",
+      "current": "5.2.0",
+      "latest": "7.1.0",
+      "severity": "major",
+      "watchlist": false,
+      "note": "Significant version jump with improved character encoding detection capabilities."
+    },
+    {
+      "package": "numpy",
+      "current": "1.26.4",
+      "latest": "2.4.3",
+      "severity": "major",
+      "watchlist": false,
+      "note": "Major version 2.x release with performance improvements and API changes."
+    },
+    {
+      "package": "pdfminer.six",
+      "current": "20251230",
+      "latest": "20260107",
+      "severity": "major",
+      "watchlist": false,
+      "note": "Minor update with bug fixes and improvements to PDF text extraction."
+    },
+    {
+      "package": "pip",
+      "current": "25.3",
+      "latest": "26.0.1",
+      "severity": "major",
+      "watchlist": false,
+      "note": "Major version update to Python's package installer with new features and improvements."
+    }
+  ],
+  "summary": "Backend: 28 outdated. Frontend: 12 outdated. 5 security-relevant packages have updates."
+}

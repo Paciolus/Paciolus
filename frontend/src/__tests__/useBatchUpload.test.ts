@@ -6,9 +6,10 @@
  */
 import { renderHook } from '@testing-library/react'
 import { useBatchUpload } from '@/hooks/useBatchUpload'
+import type { FileQueueItem } from '@/types/batch'
 
 const mockContext = {
-  files: [] as any[],
+  files: [] as FileQueueItem[],
   status: 'idle' as const,
   totalFiles: 0,
   completedFiles: 0,

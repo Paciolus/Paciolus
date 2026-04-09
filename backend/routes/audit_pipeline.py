@@ -168,8 +168,15 @@ async def audit_trial_balance(
             analysis_result["materiality_source"] = materiality_source
 
             flagged = extract_tb_accounts(analysis_result)
+            tb_filename = file.filename or ""
+            tb_record_count = analysis_result.get("record_count")
+            tb_summary = {
+                "was_balanced": analysis_result.get("was_balanced"),
+                "anomaly_count": analysis_result.get("anomaly_count", 0),
+            }
             background_tasks.add_task(
-                maybe_record_tool_run, db, engagement_id, current_user.id, "trial_balance", True, None, flagged
+                maybe_record_tool_run, db, engagement_id, current_user.id, "trial_balance", True, None, flagged,
+                tb_filename, tb_record_count, tb_summary,
             )
 
             return analysis_result  # type: ignore[return-value]

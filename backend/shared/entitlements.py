@@ -42,6 +42,8 @@ class TierEntitlements:
     admin_dashboard: bool
     bulk_upload: bool
     custom_branding: bool
+    # Sprint 593: Tier-configurable share link TTL (0 = no sharing)
+    share_ttl_hours: int
 
 
 # Tool route names matching ToolName enum values
@@ -78,6 +80,7 @@ TIER_ENTITLEMENTS: dict[UserTier, TierEntitlements] = {
         admin_dashboard=False,
         bulk_upload=False,
         custom_branding=False,
+        share_ttl_hours=0,
     ),
     UserTier.SOLO: TierEntitlements(
         uploads_per_month=100,
@@ -96,6 +99,7 @@ TIER_ENTITLEMENTS: dict[UserTier, TierEntitlements] = {
         admin_dashboard=False,
         bulk_upload=False,
         custom_branding=False,
+        share_ttl_hours=0,
     ),
     UserTier.PROFESSIONAL: TierEntitlements(
         uploads_per_month=500,
@@ -114,6 +118,7 @@ TIER_ENTITLEMENTS: dict[UserTier, TierEntitlements] = {
         admin_dashboard=True,
         bulk_upload=False,
         custom_branding=False,
+        share_ttl_hours=24,
     ),
     UserTier.ENTERPRISE: TierEntitlements(
         uploads_per_month=0,  # unlimited
@@ -132,6 +137,7 @@ TIER_ENTITLEMENTS: dict[UserTier, TierEntitlements] = {
         admin_dashboard=True,
         bulk_upload=True,
         custom_branding=True,
+        share_ttl_hours=48,
     ),
 }
 

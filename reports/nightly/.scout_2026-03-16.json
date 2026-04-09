@@ -1,0 +1,18 @@
+{
+  "agent": "scout",
+  "status": "green",
+  "total_leads": 1,
+  "leads": [
+    {
+      "platform": "Forum",
+      "url": "https://forum.another71.com/forum/welcome-cpa-exam-forum/the-forum/topic/which-is-worse-audit-busy-season-or-studying-for-the-cpa-exam/",
+      "username": "Forum member (anonymous)",
+      "pain_point": "Audit busy season causes chaos when juggling multiple workpapers at once, leaving new auditors spinning wheels on deliverables.",
+      "paciolus_solution": "Automated workpaper organization and audit documentation management",
+      "urgency_score": 8,
+      "is_decision_maker": false,
+      "raw_quote": "Audit busy season can be chaotic and juggling multiple workpapers at once. New auditors spin their wheels completing deliverables."
+    }
+  ],
+  "summary": "Found 1 leads across 5 themes. Top platform: Forum. Highest urgency: Audit busy season causes chaos when juggling multiple workpapers at once, leavin"
+}

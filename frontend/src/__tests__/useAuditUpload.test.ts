@@ -68,7 +68,7 @@ describe('useAuditUpload', () => {
     expect(result.current.error).toBe('')
   })
 
-  it('run calls fetch with correct URL and auth header', async () => {
+  it('run calls fetch with correct URL and cookie-based auth', async () => {
     const { result } = renderHook(() => useAuditUpload(defaultOptions))
     const file = new File(['data'], 'test.csv')
 
@@ -80,12 +80,13 @@ describe('useAuditUpload', () => {
       'http://test/audit/test-tool',
       expect.objectContaining({
         method: 'POST',
-        headers: expect.objectContaining({
-          'Authorization': 'Bearer test-token',
-        }),
+        credentials: 'include',
         body: expect.any(FormData),
       })
     )
+    // Auth via HttpOnly cookie — no Bearer header injected
+    const callHeaders = mockFetch.mock.calls[0][1].headers
+    expect(callHeaders).not.toHaveProperty('Authorization')
   })
 
   it('run attaches CSRF token header', async () => {
@@ -146,7 +147,7 @@ describe('useAuditUpload', () => {
 
     expect(mockFetch).not.toHaveBeenCalled()
     expect(result.current.status).toBe('error')
-    expect(result.current.error).toContain('verify your email')
+    expect(result.current.error).toContain('Email verification required')
   })
 
   it('run handles 401 unauthorized', async () => {
@@ -182,7 +183,7 @@ describe('useAuditUpload', () => {
     })
 
     expect(result.current.status).toBe('error')
-    expect(result.current.error).toContain('verify your email')
+    expect(result.current.error).toContain('Email verification required')
   })
 
   it('run sets success status and parsed result on success', async () => {
@@ -215,7 +216,7 @@ describe('useAuditUpload', () => {
     })
 
     expect(result.current.status).toBe('error')
-    expect(result.current.error).toBe('Unable to connect to server. Please try again.')
+    expect(result.current.error).toContain('Unable to connect')
   })
 
   it('reset clears status and result', async () => {

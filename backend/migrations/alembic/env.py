@@ -10,8 +10,10 @@ from sqlalchemy import engine_from_config, pool
 # Ensure backend root is on the path so we can import our modules
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
+from admin_audit_model import AdminAuditLog  # noqa: F401  # Sprint 590
 from config import DATABASE_URL
 from database import Base
+from dunning_model import DunningEpisode  # noqa: F401  # Sprint 591
 from engagement_model import Engagement, ToolRun  # noqa: F401  # Phase X
 from export_share_model import ExportShare  # noqa: F401  # Phase LXIX (Phase 6)
 from firm_branding_model import FirmBranding  # noqa: F401  # Phase LXIX (Phase 8)

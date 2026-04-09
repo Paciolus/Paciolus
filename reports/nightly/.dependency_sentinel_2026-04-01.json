@@ -1,0 +1,203 @@
+{
+  "agent": "dependency_sentinel",
+  "status": "yellow",
+  "backend_outdated": [
+    {
+      "package": "chardet",
+      "current": "7.4.0.post1",
+      "latest": "7.4.0.post2",
+      "severity": "patch",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "hypothesis",
+      "current": "6.151.9",
+      "latest": "6.151.10",
+      "severity": "patch",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "mypy",
+      "current": "1.19.1",
+      "latest": "1.20.0",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "numpy",
+      "current": "2.4.3",
+      "latest": "2.4.4",
+      "severity": "patch",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "pandas",
+      "current": "3.0.1",
+      "latest": "3.0.2",
+      "severity": "patch",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "pdfminer.six",
+      "current": "20251230",
+      "latest": "20260107",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": true,
+      "deferral_reason": "Calendar-versioned release; waiting on downstream compatibility confirmation",
+      "deferral_review_by": "2026-04-30"
+    },
+    {
+      "package": "pip-licenses",
+      "current": "5.5.1",
+      "latest": "5.5.5",
+      "severity": "patch",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "pydantic_core",
+      "current": "2.41.5",
+      "latest": "2.45.0",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "Pygments",
+      "current": "2.19.2",
+      "latest": "2.20.0",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "requests",
+      "current": "2.33.0",
+      "latest": "2.33.1",
+      "severity": "patch",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "sentry-sdk",
+      "current": "2.56.0",
+      "latest": "2.57.0",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": false
+    }
+  ],
+  "frontend_outdated": [
+    {
+      "package": "@playwright/test",
+      "current": "1.58.2",
+      "latest": "1.59.0",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "@sentry/nextjs",
+      "current": "10.46.0",
+      "latest": "10.47.0",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "@typescript-eslint/eslint-plugin",
+      "current": "8.57.2",
+      "latest": "8.58.0",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "@typescript-eslint/parser",
+      "current": "8.57.2",
+      "latest": "8.58.0",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "next",
+      "current": "16.2.1",
+      "latest": "16.2.2",
+      "severity": "patch",
+      "watchlist": true,
+      "deferred": false
+    }
+  ],
+  "security_flagged": [
+    {
+      "package": "next",
+      "current": "16.2.1",
+      "latest": "16.2.2",
+      "severity": "patch",
+      "watchlist": true,
+      "deferred": false
+    }
+  ],
+  "deferred": [
+    {
+      "package": "pdfminer.six",
+      "current": "20251230",
+      "latest": "20260107",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": true,
+      "deferral_reason": "Calendar-versioned release; waiting on downstream compatibility confirmation",
+      "deferral_review_by": "2026-04-30"
+    }
+  ],
+  "top5_updates": [
+    {
+      "package": "mypy",
+      "current": "1.19.1",
+      "latest": "1.20.0",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "pydantic_core",
+      "current": "2.41.5",
+      "latest": "2.45.0",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "Pygments",
+      "current": "2.19.2",
+      "latest": "2.20.0",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "sentry-sdk",
+      "current": "2.56.0",
+      "latest": "2.57.0",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "@playwright/test",
+      "current": "1.58.2",
+      "latest": "1.59.0",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": false
+    }
+  ],
+  "summary": "Backend: 11 outdated. Frontend: 5 outdated. 1 security-relevant packages have updates. 1 deferred."
+}

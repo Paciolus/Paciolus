@@ -129,7 +129,7 @@ function LeftColumn({ trackCtaClick }: { trackCtaClick: (cta: string) => void })
           <MagneticButton>
             <Link
               href="/register"
-              className="group relative inline-block px-8 py-3.5 bg-sage-600 rounded-xl text-white font-sans font-medium hover:bg-sage-500 transition-all shadow-lg shadow-sage-600/25 hover:shadow-xl hover:shadow-sage-600/30"
+              className="group relative inline-block px-8 py-3.5 bg-sage-600 rounded-xl text-oatmeal-50 font-sans font-medium hover:bg-sage-500 transition-all shadow-lg shadow-sage-600/25 hover:shadow-xl hover:shadow-sage-600/30"
               onClick={() => trackCtaClick('start_trial')}
             >
               <span className="relative z-10">Start Free Trial</span>
@@ -349,7 +349,7 @@ function FilmStage({
 }) {
   return (
     <div className="w-full max-w-md mx-auto lg:max-w-none">
-      <div className="rounded-2xl border border-obsidian-200/30 bg-white/90 backdrop-blur-xl overflow-hidden shadow-xl shadow-obsidian-200/20">
+      <div className="rounded-2xl border border-obsidian-200/30 bg-oatmeal-50/90 backdrop-blur-xl overflow-hidden shadow-xl shadow-obsidian-200/20">
         {/* Panel header */}
         <div className="flex items-center justify-between px-4 py-2.5 border-b border-obsidian-200/20">
           <div className="flex items-center gap-1.5">
@@ -443,7 +443,7 @@ function ScrubberHero() {
 
   return (
     <section
-      className="relative z-10 min-h-[600px] lg:min-h-[700px] max-h-[900px] flex flex-col justify-center pt-28 lg:pt-20 pb-8 px-6"
+      className="relative z-10 min-h-[520px] sm:min-h-[600px] lg:min-h-[700px] max-h-[900px] flex flex-col justify-center pt-28 lg:pt-20 pb-8 px-6"
       aria-label="Product demonstration"
     >
       <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col justify-center">
@@ -464,7 +464,7 @@ function ScrubberHero() {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 1.0 }}
+          transition={{ duration: 0.6, delay: 0.5 }}
         >
           <TimelineScrubber
             progress={progress}

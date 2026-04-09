@@ -33,42 +33,16 @@
 
 ---
 
-### Sprint 463 — SIEM / Log Aggregation Integration
-**Status:** PENDING (CEO decision required)
-**Criteria:** CC4.2 / C1.3
+## 🗄️ Deferred — SOC 2 (Revisit When Needed)
 
-Options: A: Grafana Loki, B: Elastic Stack, C: Datadog, D: Defer (use existing Prometheus/Sentry)
+> All items below deferred per CEO directive (2026-03-23). Not legally required for launch.
+> Engineering scaffolding remains in codebase. Activate when enterprise demand materializes.
 
----
-
-### Sprint 464 — Cross-Region Database Replication
-**Status:** PENDING (CEO decision required)
-**Criteria:** S3.2 / BCP
-
-Options: read replica vs. cross-region standby vs. pgBackRest to secondary region
-
----
-
-### Sprint 466 — Secrets Vault Secondary Backup
-**Status:** PENDING (CEO decision required)
-**Criteria:** CC7.3 / BCP
-
-Options: AWS Secrets Manager (separate account), encrypted offline store, secondary cloud provider
-
----
-
-### Sprint 467 — External Penetration Test Engagement
-**Status:** PENDING (CEO decision required)
-**Criteria:** S1.1 / CC4.3
-
-Scope: auth flows, CSRF/CSP, rate limiting, API authorization, file upload, JWT, billing. Target: Q2 2026.
-
----
-
-### Sprint 468 — Bug Bounty Program Launch
-**Status:** PARTIAL (security.txt + VDP deployed; CEO decision pending on program model)
-**Criteria:** CC4.3 / VDP
-
-- [x] `frontend/public/.well-known/security.txt` (RFC 9116)
-- [x] VDP doc updated (v1.0→v1.1)
-- [ ] CEO decision: public bounty (HackerOne/Bugcrowd) vs. private invite-only vs. enhanced VDP
+| Sprint | Item | Status |
+|--------|------|--------|
+| 463 | SIEM / Log Aggregation (Grafana Loki) | Decision made, sprint not yet scheduled |
+| 464 | Cross-Region DB Replication (pgBackRest to S3) | Decision made, sprint not yet scheduled |
+| 466 | Secrets Vault Backup (AWS Secrets Manager) | Decision made, sprint not yet scheduled |
+| 467 | External Penetration Test | Deferred — budget not available |
+| 468 | Bug Bounty Program | Deferred — existing VDP sufficient |
+| 469 | SOC 2 Auditor + Observation Window | Deferred — not needed for launch |

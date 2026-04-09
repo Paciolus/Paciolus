@@ -30,17 +30,26 @@ from auth import (
     revoke_refresh_token,
     rotate_refresh_token,
 )
-from config import COOKIE_SECURE, ENV_MODE, JWT_EXPIRATION_MINUTES, REFRESH_COOKIE_NAME, REFRESH_TOKEN_EXPIRATION_DAYS
+from config import (
+    ACCESS_COOKIE_NAME,
+    COOKIE_SECURE,
+    ENV_MODE,
+    JWT_EXPIRATION_MINUTES,
+    REFRESH_COOKIE_NAME,
+    REFRESH_TOKEN_EXPIRATION_DAYS,
+)
 from database import get_db
 from disposable_email import is_disposable_email
 from email_service import (
     RESEND_COOLDOWN_MINUTES,
     can_resend_verification,
+    generate_password_reset_token,
     generate_verification_token,
     is_email_service_configured,
+    send_password_reset_email,
     send_verification_email,
 )
-from models import EmailVerificationToken, RefreshToken, User
+from models import EmailVerificationToken, PasswordResetToken, RefreshToken, User
 from security_middleware import (
     check_ip_blocked,
     check_lockout_status,
@@ -89,6 +98,34 @@ def _clear_refresh_cookie(response: Response) -> None:
     response.delete_cookie(
         key=REFRESH_COOKIE_NAME,
         path="/auth",
+        secure=COOKIE_SECURE,
+        samesite="none" if COOKIE_SECURE else "lax",
+    )
+
+
+def _set_access_cookie(response: Response, token: str) -> None:
+    """Set the HttpOnly access token cookie.
+
+    Unlike the refresh cookie (path=/auth), the access cookie is sent on
+    ALL API paths so the browser never needs a JS-readable bearer token.
+    Max-age matches the JWT expiration so the cookie auto-expires with the token.
+    """
+    response.set_cookie(
+        key=ACCESS_COOKIE_NAME,
+        value=token,
+        httponly=True,
+        secure=COOKIE_SECURE,
+        samesite="none" if COOKIE_SECURE else "lax",
+        path="/",
+        max_age=JWT_EXPIRATION_MINUTES * 60,
+    )
+
+
+def _clear_access_cookie(response: Response) -> None:
+    """Clear the HttpOnly access token cookie."""
+    response.delete_cookie(
+        key=ACCESS_COOKIE_NAME,
+        path="/",
         secure=COOKIE_SECURE,
         samesite="none" if COOKIE_SECURE else "lax",
     )
@@ -207,6 +244,7 @@ def register(
     )
     # Registration is always session-only (no "Remember Me" option)
     _set_refresh_cookie(response, raw_refresh_token, remember_me=False)
+    _set_access_cookie(response, jwt_token)
 
     csrf_token_value = generate_csrf_token(user_id=str(user.id))
     return AuthResponse(
@@ -274,6 +312,7 @@ def login(request: Request, credentials: UserLogin, response: Response, db: Sess
         ip_address=request.client.host if request.client else None,
     )
     _set_refresh_cookie(response, raw_refresh_token, credentials.remember_me)
+    _set_access_cookie(response, token)
 
     csrf_token_value = generate_csrf_token(user_id=str(user.id))
     return AuthResponse(
@@ -300,7 +339,9 @@ def get_csrf_token(current_user: User = Depends(require_current_user)) -> dict[s
 
 @router.post("/auth/verify-email", response_model=EmailVerifyResponse)
 @limiter.limit(RATE_LIMIT_AUTH)
-def verify_email(request: Request, request_data: VerifyEmailRequest, db: Session = Depends(get_db)) -> dict[str, object]:
+def verify_email(
+    request: Request, request_data: VerifyEmailRequest, db: Session = Depends(get_db)
+) -> dict[str, object]:
     """Verify email address with token."""
     token = request_data.token
 
@@ -340,6 +381,148 @@ def verify_email(request: Request, request_data: VerifyEmailRequest, db: Session
     log_secure_operation("email_verified", f"User {user.id} email verified")
 
     return {"message": "Email verified successfully", "user": UserResponse.model_validate(user)}
+
+
+# =============================================================================
+# PASSWORD RESET (Sprint 572)
+# =============================================================================
+
+
+class ForgotPasswordRequest(BaseModel):
+    """Request body for forgot-password (initiate reset)."""
+
+    email: str = Field(..., min_length=1)
+
+
+class ForgotPasswordResponse(BaseModel):
+    """Response for forgot-password — always returns success to prevent enumeration."""
+
+    message: str
+
+
+class ResetPasswordRequest(BaseModel):
+    """Request body for reset-password (consume token + set new password)."""
+
+    token: str = Field(..., min_length=1)
+    new_password: str = Field(..., min_length=8)
+
+
+class ResetPasswordResponse(BaseModel):
+    """Response for successful password reset."""
+
+    message: str
+
+
+@router.post("/auth/forgot-password", response_model=ForgotPasswordResponse)
+@limiter.limit(RATE_LIMIT_AUTH)
+def forgot_password(
+    request: Request,
+    body: ForgotPasswordRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+) -> ForgotPasswordResponse:
+    """Initiate password reset. Always returns 200 to prevent account enumeration."""
+    masked = mask_email(body.email)
+    log_secure_operation("password_reset_request", f"Password reset requested for {masked}")
+
+    # Generic success message — returned whether or not the email exists
+    generic_response = ForgotPasswordResponse(
+        message="If an account with that email exists, a password reset link has been sent."
+    )
+
+    user = get_user_by_email(db, body.email.strip().lower())
+    if not user:
+        # Don't reveal whether the email is registered
+        logger.info("Password reset requested for unknown email: %s", masked)
+        return generic_response
+
+    if not user.is_active:
+        logger.info("Password reset requested for inactive account: %s", masked)
+        return generic_response
+
+    # Generate token
+    token_result = generate_password_reset_token()
+    reset_token = PasswordResetToken(
+        user_id=user.id,
+        token_hash=hash_token(token_result.token),
+        expires_at=token_result.expires_at,
+    )
+    db.add(reset_token)
+
+    try:
+        db.commit()
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.exception("Database error creating password reset token")
+        raise HTTPException(status_code=500, detail=sanitize_error(e, log_label="db_password_reset"))
+
+    # Send email in background (don't block the response)
+    background_tasks.add_task(
+        safe_background_email,
+        send_password_reset_email,
+        label="password_reset",
+        to_email=user.email,
+        token=token_result.token,
+        user_name=user.name,
+    )
+
+    return generic_response
+
+
+@router.post("/auth/reset-password", response_model=ResetPasswordResponse)
+@limiter.limit(RATE_LIMIT_AUTH)
+def reset_password(
+    request: Request,
+    body: ResetPasswordRequest,
+    db: Session = Depends(get_db),
+) -> ResetPasswordResponse:
+    """Consume a password reset token and set a new password."""
+    token_hash = hash_token(body.token)
+
+    reset_token = db.query(PasswordResetToken).filter(PasswordResetToken.token_hash == token_hash).first()
+
+    if not reset_token:
+        log_secure_operation("password_reset_invalid", "Invalid password reset token submitted")
+        raise HTTPException(status_code=400, detail="Invalid or expired reset link. Please request a new one.")
+
+    if reset_token.is_used:
+        log_secure_operation("password_reset_reused", f"Attempt to reuse password reset token id={reset_token.id}")
+        raise HTTPException(status_code=400, detail="This reset link has already been used. Please request a new one.")
+
+    if reset_token.is_expired:
+        log_secure_operation("password_reset_expired", f"Expired password reset token id={reset_token.id}")
+        raise HTTPException(status_code=400, detail="This reset link has expired. Please request a new one.")
+
+    user = reset_token.user
+    if not user or not user.is_active:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset link. Please request a new one.")
+
+    # Update password
+    from auth import hash_password
+
+    user.hashed_password = hash_password(body.new_password)
+    user.password_changed_at = datetime.now(UTC)
+
+    # Mark token as used
+    reset_token.used_at = datetime.now(UTC)
+
+    # Revoke all existing refresh tokens (force re-login on all devices)
+    _revoke_all_user_tokens(db, user.id)
+
+    # Reset lockout state
+    user.failed_login_attempts = 0
+    user.locked_until = None
+
+    try:
+        db.commit()
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.exception("Database error during password reset")
+        raise HTTPException(status_code=500, detail=sanitize_error(e, log_label="db_reset_password"))
+
+    log_secure_operation("password_reset_success", f"Password reset completed for user {user.id}")
+
+    return ResetPasswordResponse(message="Your password has been reset successfully. You can now log in.")
 
 
 @router.post("/auth/resend-verification", response_model=ResendVerificationResponse)
@@ -434,6 +617,7 @@ def refresh(request: Request, response: Response, db: Session = Depends(get_db))
     access_token, new_refresh_token, user = rotate_refresh_token(db, raw_token)
     # Always issue a session cookie on rotation (security best-practice)
     _set_refresh_cookie(response, new_refresh_token, remember_me=False)
+    _set_access_cookie(response, access_token)
     expires_in = JWT_EXPIRATION_MINUTES * 60
 
     csrf_token_value = generate_csrf_token(user_id=str(user.id))
@@ -454,6 +638,7 @@ def logout(request: Request, response: Response, db: Session = Depends(get_db)) 
     if raw_token:
         revoke_refresh_token(db, raw_token)
     _clear_refresh_cookie(response)
+    _clear_access_cookie(response)
     return SuccessResponse(success=True, message="Logged out successfully")
 
 

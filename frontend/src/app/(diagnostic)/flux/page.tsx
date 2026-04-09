@@ -221,7 +221,7 @@ export default function FluxPage() {
                             disabled={isLoading}
                             className={`w-full py-3 rounded-xl font-sans font-bold mt-6 transition-colors ${isLoading
                                     ? "bg-surface-card-secondary cursor-not-allowed text-content-tertiary"
-                                    : "bg-sage-600 hover:bg-sage-700 text-white"
+                                    : "bg-sage-600 hover:bg-sage-700 text-oatmeal-50"
                                 }`}
                         >
                             {isLoading ? "Processing..." : "Run Analysis"}

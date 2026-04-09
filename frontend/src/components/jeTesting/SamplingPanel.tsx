@@ -222,7 +222,7 @@ export function SamplingPanel({ file, token }: SamplingPanelProps) {
               <button
                 onClick={handlePreview}
                 disabled={loading || criteria.length === 0}
-                className="w-full px-4 py-2.5 bg-sage-600 text-white rounded-xl font-sans text-sm hover:bg-sage-700 transition-colors disabled:opacity-50"
+                className="w-full px-4 py-2.5 bg-sage-600 text-oatmeal-50 rounded-xl font-sans text-sm hover:bg-sage-700 transition-colors disabled:opacity-50"
               >
                 {loading ? 'Loading preview...' : 'Preview Strata'}
               </button>
@@ -292,7 +292,7 @@ export function SamplingPanel({ file, token }: SamplingPanelProps) {
               <button
                 onClick={handleSample}
                 disabled={loading}
-                className="w-full px-4 py-2.5 bg-sage-600 text-white rounded-xl font-sans text-sm hover:bg-sage-700 transition-colors disabled:opacity-50"
+                className="w-full px-4 py-2.5 bg-sage-600 text-oatmeal-50 rounded-xl font-sans text-sm hover:bg-sage-700 transition-colors disabled:opacity-50"
               >
                 {loading ? 'Running CSPRNG sampling...' : 'Execute Sampling'}
               </button>

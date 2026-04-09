@@ -494,6 +494,12 @@ def handle_invoice_payment_failed(db: Session, event_data: dict) -> None:
             tier=sub.tier,
         )
 
+        # Sprint 591: Advance dunning state machine
+        from billing.dunning_engine import handle_payment_failed
+
+        stripe_invoice_id = event_data.get("id")
+        handle_payment_failed(db, sub, stripe_invoice_id=stripe_invoice_id)
+
 
 def handle_invoice_paid(db: Session, event_data: dict) -> None:
     """Handle invoice.paid — successful payment (renewal or recovery)."""
@@ -516,6 +522,11 @@ def handle_invoice_paid(db: Session, event_data: dict) -> None:
             user_id=sub.user_id,
             tier=sub.tier,
         )
+
+        # Sprint 591: Resolve dunning episode on payment recovery
+        from billing.dunning_engine import handle_payment_recovered
+
+        handle_payment_recovered(db, sub)
 
 
 def handle_subscription_trial_will_end(db: Session, event_data: dict) -> None:

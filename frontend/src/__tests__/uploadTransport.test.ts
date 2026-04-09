@@ -117,7 +117,7 @@ describe('uploadFetch', () => {
     expect(result.error).toBe('Unable to connect to server. Please try again.')
   })
 
-  it('injects Authorization and X-CSRF-Token headers', async () => {
+  it('injects X-CSRF-Token header (auth via HttpOnly cookie, no Bearer)', async () => {
     ;(global.fetch as jest.Mock).mockResolvedValue({
       ok: true,
       status: 200,
@@ -131,10 +131,10 @@ describe('uploadFetch', () => {
       expect.objectContaining({
         method: 'POST',
         headers: {
-          Authorization: 'Bearer test-bearer-token',
           'X-CSRF-Token': 'test-csrf-token',
         },
         body: formData,
+        credentials: 'include',
       }),
     )
   })
@@ -166,7 +166,7 @@ describe('uploadFetch', () => {
 
     const callArgs = (global.fetch as jest.Mock).mock.calls[0]
     const headers = callArgs[1].headers
-    expect(headers).toHaveProperty('Authorization', 'Bearer test-bearer-token')
+    expect(headers).not.toHaveProperty('Authorization')
     expect(headers).not.toHaveProperty('X-CSRF-Token')
   })
 

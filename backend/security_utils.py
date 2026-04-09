@@ -53,7 +53,7 @@ class SecureBuffer:
         return self._buffer
 
 
-def read_csv_secure(file_bytes: bytes, dtype: dict | None = None) -> pd.DataFrame:
+def read_csv_secure(file_bytes: bytes, dtype: dict | str | None = None) -> pd.DataFrame:
     """Read CSV from bytes into DataFrame without disk writes."""
     with SecureBuffer(file_bytes) as buffer:
         df = pd.read_csv(buffer, dtype=dtype)
@@ -61,7 +61,7 @@ def read_csv_secure(file_bytes: bytes, dtype: dict | None = None) -> pd.DataFram
 
 
 def read_excel_secure(
-    file_bytes: bytes, sheet_name: int | str = 0, dtype: dict[str, Any] | None = None
+    file_bytes: bytes, sheet_name: int | str = 0, dtype: dict[str, Any] | type | None = None
 ) -> pd.DataFrame:
     """Read Excel from bytes into DataFrame without disk writes."""
     with SecureBuffer(file_bytes) as buffer:
@@ -72,7 +72,7 @@ def read_excel_secure(
 def read_csv_chunked(
     file_bytes: bytes,
     chunk_size: int = DEFAULT_CHUNK_SIZE,
-    dtype: dict | None = None,
+    dtype: dict | type | None = None,
 ) -> Generator[tuple[pd.DataFrame, int], None, None]:
     """Yield CSV chunks as (DataFrame, rows_processed) tuples."""
     log_secure_operation("read_csv_chunked", f"Starting chunked read (chunk_size={chunk_size})")
@@ -101,7 +101,7 @@ def read_excel_chunked(
     file_bytes: bytes,
     chunk_size: int = DEFAULT_CHUNK_SIZE,
     sheet_name: int | str = 0,
-    dtype: dict | None = None,
+    dtype: dict | type | None = None,
 ) -> Generator[tuple[pd.DataFrame, int], None, None]:
     """Yield Excel chunks as (DataFrame, rows_processed) tuples. Reads entire file first."""
     log_secure_operation("read_excel_chunked", f"Starting chunked read (chunk_size={chunk_size}, sheet={sheet_name})")
@@ -142,7 +142,7 @@ def read_excel_multi_sheet_chunked(
     file_bytes: bytes,
     sheet_names: list[str],
     chunk_size: int = DEFAULT_CHUNK_SIZE,
-    dtype: dict | None = None,
+    dtype: dict | type | None = None,
 ) -> Generator[tuple[pd.DataFrame, int, str], None, None]:
     """Yield chunks from multiple sheets as (DataFrame, rows_processed, sheet_name) tuples."""
     log_secure_operation("read_excel_multi_sheet", f"Reading {len(sheet_names)} sheets: {sheet_names}")
@@ -181,21 +181,26 @@ def read_excel_multi_sheet_chunked(
 def process_tb_chunked(
     file_bytes: bytes, filename: str = "", chunk_size: int = DEFAULT_CHUNK_SIZE
 ) -> Generator[tuple[pd.DataFrame, int], None, None]:
-    """Process trial balance in chunks, auto-detecting format. Yields (chunk, rows_processed)."""
+    """Process trial balance in chunks, auto-detecting format. Yields (chunk, rows_processed).
+
+    All columns are read as ``str`` to preserve account identifiers (e.g.
+    leading-zero codes like ``"0010"``).  Numeric conversion for debit/credit
+    columns happens downstream via ``pd.to_numeric(errors='coerce')``.
+    """
     log_secure_operation("process_tb_chunked", f"Processing trial balance in chunks (file: {filename})")
 
     filename_lower = filename.lower()
 
     if filename_lower.endswith((".xlsx", ".xls")):
-        yield from read_excel_chunked(file_bytes, chunk_size)
+        yield from read_excel_chunked(file_bytes, chunk_size, dtype=str)
     elif filename_lower.endswith(".csv"):
-        yield from read_csv_chunked(file_bytes, chunk_size)
+        yield from read_csv_chunked(file_bytes, chunk_size, dtype=str)
     else:
         # Try CSV first, then Excel — broad catch is intentional (format detection)
         try:
-            yield from read_csv_chunked(file_bytes, chunk_size)
+            yield from read_csv_chunked(file_bytes, chunk_size, dtype=str)
         except Exception:
-            yield from read_excel_chunked(file_bytes, chunk_size)
+            yield from read_excel_chunked(file_bytes, chunk_size, dtype=str)
 
 
 def clear_memory() -> None:
@@ -242,19 +247,24 @@ def get_security_log() -> list[dict]:
 
 
 def process_tb_in_memory(file_bytes: bytes, filename: str = "") -> pd.DataFrame:
-    """Process trial balance file in-memory, auto-detecting CSV or Excel format."""
+    """Process trial balance file in-memory, auto-detecting CSV or Excel format.
+
+    All columns are read as ``str`` to preserve account identifiers (e.g.
+    leading-zero codes like ``"0010"``).  Numeric conversion for debit/credit
+    columns happens downstream via ``pd.to_numeric(errors='coerce')``.
+    """
     log_secure_operation("process_tb", "Processing trial balance in memory")
 
     # Determine file type from filename or try CSV first
     filename_lower = filename.lower()
 
     if filename_lower.endswith((".xlsx", ".xls")):
-        return read_excel_secure(file_bytes)
+        return read_excel_secure(file_bytes, dtype=str)
     elif filename_lower.endswith(".csv"):
-        return read_csv_secure(file_bytes)
+        return read_csv_secure(file_bytes, dtype=str)
     else:
         # Try CSV first, then Excel — broad catch is intentional (format detection)
         try:
-            return read_csv_secure(file_bytes)
+            return read_csv_secure(file_bytes, dtype=str)
         except Exception:
-            return read_excel_secure(file_bytes)
+            return read_excel_secure(file_bytes, dtype=str)

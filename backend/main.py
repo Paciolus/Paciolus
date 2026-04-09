@@ -12,7 +12,7 @@ from contextlib import asynccontextmanager
 from decimal import Decimal
 from typing import Any
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -37,6 +37,7 @@ from logging_config import request_id_var, setup_logging
 from routes import all_routers
 from security_middleware import (
     CSRFMiddleware,
+    ImpersonationMiddleware,
     MaxBodySizeMiddleware,
     RateLimitIdentityMiddleware,
     RequestIdMiddleware,
@@ -44,6 +45,7 @@ from security_middleware import (
 )
 from security_utils import log_secure_operation
 from shared.rate_limits import get_storage_backend, limiter
+from shared.schemas import ErrorResponse
 from version import __version__
 
 # Initialize logging before anything else
@@ -168,7 +170,22 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             for issue in billing_issues:
                 _bill_log("Billing config: %s", issue)
 
-    logger.info("Rate-limit storage backend: %s", get_storage_backend())
+    # Startup verification: confirm rate-limit storage backend
+    _rl_backend = get_storage_backend()
+    logger.info("Rate-limit storage backend: %s", _rl_backend)
+    if _rl_backend != "redis" and ENV_MODE == "production":
+        log_secure_operation(
+            "rate_limit_degraded",
+            f"Rate-limit storage is '{_rl_backend}' in production — counters are NOT shared across workers",
+        )
+        logger.warning(
+            "SECURITY: Rate-limit backend is '%s' in production. "
+            "Counters will reset per-worker and are not shared across instances.",
+            _rl_backend,
+        )
+    elif _rl_backend == "redis":
+        log_secure_operation("rate_limit_verified", "Redis rate-limit backend confirmed at startup")
+
     logger.info("Paciolus API v%s started (debug=%s)", __version__, DEBUG)
     log_secure_operation("app_startup", "Paciolus API started")
 
@@ -208,6 +225,9 @@ app.add_middleware(SecurityHeadersMiddleware, production_mode=not DEBUG)
 # CSRF protection for state-changing requests (Sprint 200)
 app.add_middleware(CSRFMiddleware)
 
+# Sprint 590: Block mutations for impersonation sessions (read-only enforcement)
+app.add_middleware(ImpersonationMiddleware)
+
 # Global request body size limit (110 MB — above per-file 100 MB to allow multipart overhead)
 app.add_middleware(MaxBodySizeMiddleware)
 
@@ -230,10 +250,47 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # ty
 async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     rid = request_id_var.get("-")
     logger.exception("Unhandled exception on %s %s [request_id=%s]", request.method, request.url.path, rid)
-    return JSONResponse(
-        status_code=500,
-        content={"detail": "Internal server error", "request_id": rid},
+    body = ErrorResponse(
+        code="INTERNAL_ERROR",
+        message="Internal server error",
+        request_id=rid,
+        detail="Internal server error",
     )
+    return JSONResponse(status_code=500, content=body.model_dump())
+
+
+# HTTPException handler — wraps FastAPI's default with the unified error envelope
+# while preserving the `detail` field that many callers and tests rely on.
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+    rid = request_id_var.get("-")
+    # Derive a machine-readable code from the status
+    code_map: dict[int, str] = {
+        400: "BAD_REQUEST",
+        401: "UNAUTHORIZED",
+        403: "FORBIDDEN",
+        404: "NOT_FOUND",
+        409: "CONFLICT",
+        429: "RATE_LIMITED",
+    }
+    code = code_map.get(exc.status_code, f"HTTP_{exc.status_code}")
+    # Extract a string message from detail (detail can be str or dict)
+    if isinstance(exc.detail, str):
+        message = exc.detail
+    elif isinstance(exc.detail, dict):
+        message = exc.detail.get("message", str(exc.detail))
+    else:
+        message = str(exc.detail)
+    body = ErrorResponse(
+        code=code,
+        message=message,
+        request_id=rid,
+        detail=exc.detail if isinstance(exc.detail, str) else None,
+    )
+    # Build content dict — keep `detail` at top level for backward compatibility
+    content = body.model_dump()
+    content["detail"] = exc.detail
+    return JSONResponse(status_code=exc.status_code, content=content, headers=getattr(exc, "headers", None))
 
 
 # Custom 422 handler — prevents Pydantic loc paths and field names from leaking
@@ -241,14 +298,15 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
 async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
     rid = request_id_var.get("-")
     logger.debug("Validation error on %s %s: %s", request.method, request.url.path, exc.errors())
-    return JSONResponse(
-        status_code=422,
-        content={
-            "error_code": "VALIDATION_ERROR",
-            "message": "The request could not be processed. Please check your input.",
-            "request_id": rid,
-        },
+    body = ErrorResponse(
+        code="VALIDATION_ERROR",
+        message="The request could not be processed. Please check your input.",
+        request_id=rid,
     )
+    # Keep legacy `error_code` alias for any clients still reading it
+    content = body.model_dump()
+    content["error_code"] = "VALIDATION_ERROR"
+    return JSONResponse(status_code=422, content=content)
 
 
 # Register all route modules

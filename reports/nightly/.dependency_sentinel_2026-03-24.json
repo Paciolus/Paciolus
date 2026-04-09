@@ -1,0 +1,135 @@
+{
+  "agent": "dependency_sentinel",
+  "status": "yellow",
+  "backend_outdated": [
+    {
+      "package": "chardet",
+      "current": "7.2.0",
+      "latest": "7.3.0",
+      "severity": "minor",
+      "watchlist": false,
+      "note": "Minor version update with enhanced character encoding detection capabilities."
+    },
+    {
+      "package": "fastapi",
+      "current": "0.135.1",
+      "latest": "0.135.2",
+      "severity": "patch",
+      "watchlist": true
+    },
+    {
+      "package": "pdfminer.six",
+      "current": "20251230",
+      "latest": "20260107",
+      "severity": "major",
+      "watchlist": false,
+      "note": "Minor maintenance update with bug fixes and improvements."
+    },
+    {
+      "package": "pydantic_core",
+      "current": "2.41.5",
+      "latest": "2.42.0",
+      "severity": "minor",
+      "watchlist": false,
+      "note": "Patch release with performance improvements and bug fixes for Pydantic validation."
+    },
+    {
+      "package": "pypdf",
+      "current": "6.9.1",
+      "latest": "6.9.2",
+      "severity": "patch",
+      "watchlist": false
+    },
+    {
+      "package": "starlette",
+      "current": "0.52.1",
+      "latest": "1.0.0",
+      "severity": "major",
+      "watchlist": false,
+      "note": "Major version 1.0.0 release with API stabilization and potential breaking changes."
+    },
+    {
+      "package": "Werkzeug",
+      "current": "3.1.6",
+      "latest": "3.1.7",
+      "severity": "patch",
+      "watchlist": false
+    }
+  ],
+  "frontend_outdated": [
+    {
+      "package": "@typescript-eslint/eslint-plugin",
+      "current": "8.57.1",
+      "latest": "8.57.2",
+      "severity": "patch",
+      "watchlist": false
+    },
+    {
+      "package": "@typescript-eslint/parser",
+      "current": "8.57.1",
+      "latest": "8.57.2",
+      "severity": "patch",
+      "watchlist": false
+    },
+    {
+      "package": "typescript",
+      "current": "5.9.3",
+      "latest": "6.0.2",
+      "severity": "major",
+      "watchlist": false,
+      "note": "Major version 6.0.2 release with new language features and compiler improvements."
+    }
+  ],
+  "security_flagged": [
+    {
+      "package": "fastapi",
+      "current": "0.135.1",
+      "latest": "0.135.2",
+      "severity": "patch",
+      "watchlist": true
+    }
+  ],
+  "top5_updates": [
+    {
+      "package": "pdfminer.six",
+      "current": "20251230",
+      "latest": "20260107",
+      "severity": "major",
+      "watchlist": false,
+      "note": "Minor maintenance update with bug fixes and improvements."
+    },
+    {
+      "package": "starlette",
+      "current": "0.52.1",
+      "latest": "1.0.0",
+      "severity": "major",
+      "watchlist": false,
+      "note": "Major version 1.0.0 release with API stabilization and potential breaking changes."
+    },
+    {
+      "package": "typescript",
+      "current": "5.9.3",
+      "latest": "6.0.2",
+      "severity": "major",
+      "watchlist": false,
+      "note": "Major version 6.0.2 release with new language features and compiler improvements."
+    },
+    {
+      "package": "chardet",
+      "current": "7.2.0",
+      "latest": "7.3.0",
+      "severity": "minor",
+      "watchlist": false,
+      "note": "Minor version update with enhanced character encoding detection capabilities."
+    },
+    {
+      "package": "pydantic_core",
+      "current": "2.41.5",
+      "latest": "2.42.0",
+      "severity": "minor",
+      "watchlist": false,
+      "note": "Patch release with performance improvements and bug fixes for Pydantic validation."
+    }
+  ],
+  "summary": "Backend: 7 outdated. Frontend: 3 outdated. 1 security-relevant packages have updates."
+}

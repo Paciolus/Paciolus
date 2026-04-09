@@ -19,10 +19,9 @@ import {
 import { GuestCTA, ZeroStorageNotice, DisclaimerBox } from '@/components/shared'
 import { Reveal } from '@/components/ui/Reveal'
 import { useMultiPeriodComparison, type MovementSummaryResponse } from '@/hooks'
+import type { AuditResult } from '@/types/diagnostic'
 import { apiPost } from '@/utils/apiClient'
 import { apiDownload, downloadBlob } from '@/utils'
-
-type AuditResultCast = { all_accounts?: Array<{ account: string; debit: number; credit: number; type: string }>; lead_sheet_grouping?: { summaries: Array<{ accounts: Array<{ account: string; debit: number; credit: number; type: string }> }> } }
 
 export default function MultiPeriodPage() {
   const { user, isAuthenticated, isLoading: authLoading, token } = useAuthSession()
@@ -114,13 +113,13 @@ export default function MultiPeriodPage() {
   const handleCompare = useCallback(async () => {
     if (!prior.result || !current.result) return
     const success = await compareResults(
-      prior.result as AuditResultCast,
-      current.result as AuditResultCast,
+      prior.result as unknown as AuditResult,
+      current.result as unknown as AuditResult,
       priorLabel,
       currentLabel,
       materialityThreshold,
       token,
-      showBudget && budget.result ? budget.result as AuditResultCast : null,
+      showBudget && budget.result ? budget.result as unknown as AuditResult : null,
       budgetLabel,
     )
 
@@ -133,13 +132,13 @@ export default function MultiPeriodPage() {
   const handleExportCsv = useCallback(async () => {
     if (!prior.result || !current.result) return
     await exportCsv(
-      prior.result as AuditResultCast,
-      current.result as AuditResultCast,
+      prior.result as unknown as AuditResult,
+      current.result as unknown as AuditResult,
       priorLabel,
       currentLabel,
       materialityThreshold,
       token,
-      showBudget && budget.result ? budget.result as AuditResultCast : null,
+      showBudget && budget.result ? budget.result as unknown as AuditResult : null,
       budgetLabel,
     )
   }, [prior.result, current.result, budget.result, priorLabel, currentLabel, budgetLabel, materialityThreshold, token, showBudget, exportCsv])
@@ -379,7 +378,7 @@ export default function MultiPeriodPage() {
                     disabled={!canCompare || isProcessing}
                     className={`px-6 py-2 rounded-xl text-sm font-sans font-medium transition-colors ${
                       canCompare && !isProcessing
-                        ? 'bg-sage-600 text-white hover:bg-sage-700'
+                        ? 'bg-sage-600 text-oatmeal-50 hover:bg-sage-700'
                         : 'bg-surface-card-secondary border border-theme text-content-tertiary cursor-not-allowed'
                     }`}
                   >
@@ -427,7 +426,7 @@ export default function MultiPeriodPage() {
                       <button
                         onClick={handleExportMemo}
                         disabled={exportingMemo}
-                        className="px-4 py-1.5 text-xs font-sans font-medium bg-sage-600 text-white rounded-xl hover:bg-sage-700 transition-colors disabled:opacity-50"
+                        className="px-4 py-1.5 text-xs font-sans font-medium bg-sage-600 text-oatmeal-50 rounded-xl hover:bg-sage-700 transition-colors disabled:opacity-50"
                       >
                         {exportingMemo ? 'Generating...' : 'Download Memo'}
                       </button>

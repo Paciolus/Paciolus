@@ -142,7 +142,7 @@ export default function ThreeWayMatchPage() {
                   <button
                     onClick={handleRunMatch}
                     disabled={!canRun}
-                    className="px-8 py-3 bg-sage-600 rounded-xl text-white font-sans text-sm font-medium hover:bg-sage-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="px-8 py-3 bg-sage-600 rounded-xl text-oatmeal-50 font-sans text-sm font-medium hover:bg-sage-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     Run Match
                   </button>
