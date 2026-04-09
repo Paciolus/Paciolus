@@ -3,10 +3,10 @@
 import { useState, useCallback } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { Client, ClientEngagementSummary } from '@/types/client';
-import type { Engagement } from '@/types/engagement';
-import { INDUSTRY_LABELS, formatFiscalYearEnd } from '@/types/client';
 import { useAuthSession } from '@/contexts/AuthSessionContext';
+import type { Client, ClientEngagementSummary } from '@/types/client';
+import { INDUSTRY_LABELS, formatFiscalYearEnd } from '@/types/client';
+import type { Engagement } from '@/types/engagement';
 import { apiGet } from '@/utils/apiClient';
 import { fadeUp } from '@/lib/motion';
 

@@ -11,8 +11,8 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useAuthSession } from '@/contexts/AuthSessionContext';
 import { useWorkspaceContext } from '@/contexts/WorkspaceContext';
