@@ -24,6 +24,7 @@ import engagement_model  # noqa: F401
 import follow_up_items_model  # noqa: F401
 import subscription_model  # noqa: F401
 import tool_session_model  # noqa: F401
+from auth import get_user_by_email
 from database import SessionLocal
 from models import User
 
@@ -36,9 +37,13 @@ def main() -> None:
 
     db = SessionLocal()
     try:
-        user = db.query(User).filter(User.email == args.email).first()
+        # Sprint 594: `get_user_by_email` normalizes email case so a
+        # mixed-case registration can still be located from the CLI.
+        user = get_user_by_email(db, args.email)
         if not user:
+            total_users = db.query(User).count()
             print(f"ERROR: No user found with email '{args.email}'")
+            print(f"       Total user rows in DB: {total_users}")
             sys.exit(1)
 
         if args.revoke:

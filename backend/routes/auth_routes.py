@@ -432,8 +432,22 @@ def forgot_password(
 
     user = get_user_by_email(db, body.email)
     if not user:
-        # Don't reveal whether the email is registered
-        logger.info("Password reset requested for unknown email: %s", masked)
+        # Don't reveal whether the email is registered.
+        # Temporary diagnostic (Sprint 594/595 incident): when the lookup
+        # fails, log the total user row count so we can distinguish
+        # "DB was wiped" (count=0) from "stored email does not match typed
+        # email" (count>0). No PII is leaked — we never log other users'
+        # addresses. Remove this instrumentation once the post-incident
+        # root cause is fully understood.
+        try:
+            total_users = db.query(User).count()
+        except Exception:  # pragma: no cover — diagnostic must never block the response
+            total_users = -1
+        logger.info(
+            "Password reset requested for unknown email: %s (total_users=%d)",
+            masked,
+            total_users,
+        )
         return generic_response
 
     if not user.is_active:
