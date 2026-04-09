@@ -72,6 +72,29 @@
 - No `dangerouslySetInnerHTML` usage found in codebase (clean baseline)
 - `style-src 'unsafe-inline'` retained (React inline styles — documented limitation)
 
+### Sprint 594: Email Case-Insensitivity Fix (Production Lockout Hotfix)
+**Status:** COMPLETE
+**Goal:** Resolve 2026-04-09 production login lockout caused by case-sensitive email lookup
+
+**Incident:** CEO registered on prod Neon DB at 17:39 UTC, then could not log in or request a password reset at 21:24/22:07. Render logs showed `POST /auth/login 401` and `"Password reset requested for unknown email"`. Root cause: `create_user` stored the email exactly as typed (`auth.py:494`), but `forgot_password` did `get_user_by_email(db, body.email.strip().lower())` (`auth_routes.py:433`). A mixed-case registration created a user row that lowercased lookups could not find. Login's `get_user_by_email` was also case-sensitive, so the same row was unreachable from `/auth/login` when the email was typed in a different case. The Phase 1 smoke test masked the bug because it only verified `/auth/me` (which rides the cookie set by `/auth/register`) plus a deliberately-wrong-password `/auth/login → 401` — it never asserted that a correct-password `/auth/login` returns 200.
+
+**Changes:**
+- [x] Backend: new `normalize_email()` helper in `auth.py` — canonical form is `email.strip().lower()`
+- [x] Backend: `get_user_by_email` normalizes input before the ORM filter (case-insensitive lookup at the application layer)
+- [x] Backend: `create_user` stores the normalized email so existing-row checks are deterministic
+- [x] Backend: `update_user_profile` normalizes both the duplicate-email check and the `pending_email` assignment
+- [x] Backend: `/auth/forgot-password` drops its redundant inline `.strip().lower()` — normalization is centralized in `get_user_by_email`
+- [x] Migration: `f7b3c91a04e2_normalize_user_emails_lowercase.py` backfills `users.email` and `users.pending_email` with `LOWER(TRIM(...))`; aborts with a clear error if case-collision duplicates exist rather than silently dropping rows
+- [x] Smoke test: `scripts/smoke_test_render.sh` adds three new assertions — correct-password login → 200, wrong-password login → 401 (renamed 5b), mixed-case email login → 200 (regression guard)
+- [x] Tests: `test_register_then_login_case_insensitive` covers mixed-case register → lowercase/alt-case/padded login → 200; `test_register_duplicate_differs_only_in_case` asserts case-only duplicates are rejected at registration
+
+**Review:**
+- No existing tests or fixtures needed to change: `make_user` (bypasses `create_user`) and the existing test emails are already lowercase
+- Migration is idempotent: the `WHERE email <> LOWER(TRIM(email))` filter means re-running on an already-normalized table is a no-op
+- Downgrade is a deliberate no-op: lowercasing is lossy and restoring original casing would require information we no longer have
+- Backfill pre-check refuses to merge case-collision groups — operator must resolve manually. Production currently has one user (the CEO) so the collision branch is inert, but the guard protects future re-runs on a populated DB
+- Deploy sequence: push → Render auto-deploys → Alembic runs in Dockerfile entrypoint (per Sprint 545) → CEO retries password reset → SendGrid email arrives → CEO sets new password → login succeeds
+
 ### Sprint 593: Share-Link Security Hardening + Documentation Integrity CI
 **Status:** COMPLETE
 **Goal:** Strengthen public share-link security and prevent documentation drift
