@@ -1,235 +1,230 @@
 # CEO Action Items
 
-> **Single source of truth for everything requiring your direct action.**
-> Engineering delivers scaffolding; you complete execution.
-> Check boxes (`[ ]` → `[x]`) as you complete items, then move to [Completed](#completed).
+> **Single source of truth for every action required to launch Paciolus.**
+> Top-to-bottom execution order. Each phase's exit criteria must be met before the next phase starts.
 
-**Last synchronized:** 2026-04-08 — Launch Infrastructure Restoration plan added after free-tier Postgres expiration outage. Sprints 447–593 in scope.
+**Status as of 2026-04-08:** Login is currently broken in production. The free-tier Render Postgres (`paciolus-db`) expired 2026-04-01 and was suspended by billing, taking authentication down with it. This is infrastructure, not code.
 
----
+**Your next action:** Phase 1.1 — sign up for Neon, Upstash, Sentry, and SendGrid. Once you have those four credentials ready, I take over the Render side.
 
-## Priority Guide
+**Launch ETA:** ~1 month from today.
 
-| Symbol | Meaning |
-|--------|---------|
-| 🟡 | Milestone — major business action (billing launch, legal) |
-| ⚪ | Setup — one-time infrastructure/admin tasks |
-| 🔵 | Decision — blocks an engineering sprint |
-| 🗄️ | Deferred — SOC 2 items, revisit when enterprise demand materializes |
+**Ongoing monthly cost after launch:** ~$44/mo (Render Standard $25 + Neon Launch ~$19 + free tiers for Redis/Sentry/SendGrid). Stripe transaction fees on actual revenue.
 
 ---
 
-## 🟡 Launch Infrastructure Restoration (Plan B-Early)
+## Phase 1 — Restore Login (BLOCKING)
 
-> **Status as of 2026-04-08:** Free-tier Render Postgres `paciolus-db` (`dpg-d6iqlq5m5p6s73dude20-a`) expired 2026-04-01, was suspended by Render billing, and its DNS record was torn down. Every `/auth/login` request now hangs on `psycopg2.OperationalError: could not translate host name` until the frontend's 30s fetch timeout fires — from the user's perspective, login "times out." This is an infrastructure outage, not a code bug.
->
-> **Plan:** Stand up production-grade infra on the **current `main`** code first (Sprint 565 era), verify login works end-to-end, then merge the Sprint 588–593 + hotfix backlog into the working environment in small batches, then complete launch-day items. Strict dependency order — no calendar buckets, run as fast as each step completes.
->
-> **Target cost:** ~$44/mo (Render Standard $25 + Neon Launch ~$19 + Upstash Redis / Sentry / SendGrid on free tiers).
->
-> **Why not cheaper "testing stack first":** A Neon free + Render Starter setup would save ~$37 total but gives you a flaky 512 MB box with no observability during the most bug-hunting-intensive phase of the project. Same deployment pipeline, same env-var work, but you'd need to re-test everything on the real stack before launch anyway. False economy at this scale. See chat history 2026-04-08 for full tradeoff analysis.
->
-> **Task ownership:** `(CEO)` = you execute directly (billing, provider signup, secret values, DNS). `(Eng)` = engineering-side (code merges, deploys, log reading, smoke tests). Unmarked = either.
->
-> **Audit findings uncovered 2026-04-08 during pre-flight check** (see chat history):
-> 1. **Email provider is SendGrid, not Resend.** `backend/config.py:481` hard-fails production startup on missing `SENDGRID_API_KEY`. The `email_service.py` module imports and calls SendGrid's SDK directly. Adding Resend would be a code change (half-day of work). Plan updated to use SendGrid free tier (100 emails/day forever).
-> 2. **Backlog is ~56 commits spanning Sprints 566–593 plus ~30 hotfixes**, not 5 sprints as originally stated. Covered sprints: 566, 567, 568, 569, 570, 571, 572, 573, 574, 576, 578, 579, 580, 581, 582–585, 586, 587, 588, 589–591, 592, 593. Merge plan section below has been rewritten to reflect the real scope in reviewable batches.
-> 3. **Migration collision fixed locally, uncommitted.** Sprint 593 migration `b2c3d4e5f6a7_add_share_security_columns.py` collided with existing Sprint 345 `b2c3d4e5f6a7_add_soft_delete_columns.py` — both used the same revision ID. The new one has been renamed to `d1e2f3a4b5c6_add_share_security_columns.py` with the internal revision ID updated. File rename is staged via `git mv`. **Commit this with the Sprint 593 merge batch.**
-> 4. **Alembic multi-head fixed locally, uncommitted.** The backlog introduced 3 parallel migration heads (`591a_dunning`, `c2d3e4f5a6b7`, `d1e2f3a4b5c6`) that would have caused `alembic upgrade head` to fail on deploy. A merge migration `a848ac91d39a_merge_sprint_590_591_593_heads.py` has been generated. It has empty `upgrade()`/`downgrade()` — purely a graph merge. **Commit this with the final hotfix batch of the merge train.** Single head confirmed after merge.
-> 5. **Fresh-DB bootstrap verified safe.** Dockerfile `CMD` runs `alembic stamp head` (not `upgrade head`) when `alembic_version` table is missing; then FastAPI lifespan calls `init_db()` → `Base.metadata.create_all()` which builds all tables from current model definitions. Fresh Neon DB will boot clean.
-> 6. **Frontend baseline green.** `npm test`: 1751/1751 passed, 167 suites, 64s. `npm run build`: clean. Both match the expectations in memory notes (1,357 Jest tests listed in memory is stale — real count is 1751).
+Stand up production-grade infra on the **current `main`** (Sprint 569 era) before touching any code. This isolates infrastructure bugs from code bugs in the Phase 2 merge train.
 
-### Provider signups (CEO)
-- [ ] **Neon** (neon.tech) — create account → create project `paciolus` in **AWS US East 2 (Ohio)** region → create database `paciolus`, role `paciolus_user` → upgrade project to **Launch** tier (~$19/mo) so compute does not auto-suspend → copy the **pooled** connection string (ends in `-pooler`) → append `?sslmode=require` if not already present
-- [ ] **Upstash Redis** (upstash.com) — create account → create Redis database in `us-east-1` → copy the **TLS** connection URL (`rediss://...`) — free tier is sufficient
-- [ ] **Sentry** (sentry.io) — create account → create Python/FastAPI project → copy the DSN — free tier is sufficient
-- [ ] **SendGrid** (sendgrid.com) — create account → verify a sender identity (single sender or authenticated domain) → create API key with **Mail Send** permission → record `SENDGRID_API_KEY`. Free tier is 100 emails/day forever. **Note:** the code is wired to SendGrid, not Resend — `backend/email_service.py` imports `sendgrid` directly and `backend/config.py:481` hard-fails production on missing `SENDGRID_API_KEY`. Swapping to Resend would be a code change, not a config change.
+### 1.1 Provider signups — owner: **you**
 
-### Render infra stand-up
-- [ ] **(CEO)** Render dashboard → `paciolus-api` → **upgrade plan to Standard** (2 GB RAM, 1 CPU, $25/mo)
-- [ ] **(CEO)** Render dashboard → `paciolus-api` → **Environment** → set/update. The production `_hard_fail` list in `backend/config.py` is authoritative; every item below is either required or strongly recommended:
-  - **Required (hard-fail if missing in production):**
-    - `ENV_MODE` = `production`
-    - `API_HOST` = `0.0.0.0`  *(should already be set; verify)*
-    - `API_PORT` = `8000`  *(should already be set; verify)*
-    - `CORS_ORIGINS` = comma-separated `https://` origins only — include the Vercel production URL + any custom domain you'll add later. **Any `http://` origin hard-fails in production.**
-    - `JWT_SECRET_KEY` = 32+ char random hex (`python -c "import secrets; print(secrets.token_hex(32))"`)
-    - `CSRF_SECRET_KEY` = 32+ char random hex, **must differ from `JWT_SECRET_KEY`**
-    - `DATABASE_URL` = Neon pooled URL from signup step, **must include `?sslmode=require`** (pool-mode connection, not direct)
-    - `SENDGRID_API_KEY` = key from SendGrid signup (hard-fails production startup if missing)
-  - **Strongly recommended:**
-    - `REDIS_URL` = Upstash `rediss://` URL (required if `RATE_LIMIT_STRICT_MODE=true`, which defaults to true in production — leaving Redis unset forces `RATE_LIMIT_STRICT_MODE=false` which degrades rate limits to per-worker and is a SOC 2 / AUDIT-07 regression)
-    - `RATE_LIMIT_STRICT_MODE` = `true`  *(default in production, but set explicitly so it's visible in the env list)*
-    - `SENTRY_DSN` = from Sentry (optional but you'll want it during the merge train for crash visibility)
-    - `AUDIT_CHAIN_SECRET_KEY` = dedicated 32+ char hex key for audit-log HMAC chain integrity. **Falls back to `JWT_SECRET_KEY` if unset** (works fine, but logs a warning; set a dedicated key so JWT rotation doesn't break audit chains).
-    - `SENDGRID_FROM_EMAIL`, `SENDGRID_FROM_NAME` (defaults: `noreply@paciolus.com` / `Paciolus`)
-  - **Leave alone unless specifically needed:**
-    - `FRONTEND_URL` (used for email verification links; default `http://localhost:3000` is dev-only — set to your Vercel URL before production)
-    - `TRUSTED_PROXY_IPS`, `DB_POOL_SIZE`, `DB_MAX_OVERFLOW`, `DB_POOL_RECYCLE` — tunable, defaults are fine
-    - `STRIPE_*` — handled by the existing Sprint 447 Stripe Cutover item below
-- [ ] **(CEO)** Render dashboard → `paciolus-api` → **Manual Deploy** → `main` branch. This boots March-23 Sprint 565 code against the new infra so the first test isolates infra from code changes.
-- [ ] **(Eng)** Tail Render logs during the deploy. Confirm Alembic migrations run clean (Dockerfile runs them on boot per Sprint 543-545). Confirm `Uvicorn running on ...`. Flag any startup errors before moving on.
-- [ ] **(Eng)** `curl https://paciolus-api.onrender.com/health` → expect HTTP 200 within ~1s. Or run the full post-deploy smoke test: `scripts/smoke_test_render.sh` (exercises /health, /auth/csrf rejection, register, /auth/me, wrong-password rejection, logout, session revocation).
-- [ ] Confirm Sentry receives a test event — use Sentry's "Verify Installation" flow or intentionally hit a broken endpoint and watch Issues populate.
-- [ ] **(CEO)** Vercel dashboard → Project Settings → Environment Variables → verify `NEXT_PUBLIC_API_URL` = `https://paciolus-api.onrender.com` is enabled for **Production, Preview, and Development** contexts (this overlaps with the existing "Vercel Environment Variable" item below — resolves both).
-- [ ] Smoke test Sprint 565 code: register a new account → verify email → login → `/dashboard` loads → upload smallest sample TB from `backend/tests/data/` → run one diagnostic tool → export one PDF memo. If anything 500s, stop and debug before the backlog merge.
-- [ ] **(CEO)** Once the new DB is verified working, delete the old suspended `paciolus-db` from the Render dashboard to stop confusing yourself with a dead resource. *(Optional cleanup — do not do before smoke test passes.)*
+- [ ] **Neon Postgres** → neon.tech → create project `paciolus` in **AWS us-east-2 (Ohio)** → create database `paciolus`, role `paciolus_user` → **upgrade the project to Launch tier** (~$19/mo) so compute doesn't auto-suspend → copy the **pooled** connection string (ends in `-pooler`) → append `?sslmode=require` if Neon didn't already include it
+- [ ] **Upstash Redis** → upstash.com → create Redis database in **us-east-1** → copy the **TLS** connection URL (`rediss://...`) — free tier is fine
+- [ ] **Sentry** → sentry.io → create a Python/FastAPI project → copy the DSN — free tier is fine
+- [ ] **SendGrid** → sendgrid.com → verify a sender identity (single sender or authenticated domain) → create an API key with **Mail Send** permission → copy the key. Free tier is 100 emails/day forever. *(Code is wired to SendGrid, not Resend — swapping providers would be a code change.)*
 
-### Sprint backlog merge (Eng-led, CEO approves each merge)
-> **Real scope (audit 2026-04-08):** Branch `sprint-565-chrome-qa-remediation` is **56 commits** ahead of `main`, spanning **Sprints 566–593 plus ~30 hotfixes**, 17 days of divergence (2026-03-22 to 2026-04-07). Merge in the batches below — each batch is small enough to bisect if it breaks. Run the full smoke test between batches.
->
-> **Pre-merge fixes already staged locally (uncommitted, included with the batches indicated below):**
-> - Sprint 593 migration rename: `b2c3d4e5f6a7_add_share_security_columns.py` → `d1e2f3a4b5c6_add_share_security_columns.py` with internal `revision` string updated. Commit with Batch D (Sprint 593).
-> - Alembic merge migration: `a848ac91d39a_merge_sprint_590_591_593_heads.py`. Commit with Batch E (final hotfix batch) so all three heads exist before the merge node.
+**→ Ping me once you have all four credentials. I'll drive the Render side from here.**
 
-- [ ] **(Eng)** Branch audit — ✅ completed 2026-04-08. Frontend baseline: 1751/1751 Jest tests pass in 64s, `npm run build` clean. Backend baseline: pytest run in progress at report time; see chat for final result. Record any pre-existing failures before the merge train starts so they're not mis-attributed to later merges.
-- [ ] **(Eng) Batch A — Design + Mission Control (Sprints 566–571):** Includes Sprint 566 frontend design enrichment, Sprint 567 14-dep backend upgrade, theme contrast hotfix, Sprints 568/569 QA bug fixes, Sprint 570 DEC remediation, SOC 2 deferral, Sprint 571 launch readiness (8 items), archive-570/571 hotfix. ~10 commits. Deploy. Smoke test.
-- [ ] **(Eng) Batch B — Precision + Pydantic + Errors (Sprints 572–578):** Password reset flow (572), Decimal arithmetic (573), TB response model reconciliation (574), Pydantic response models for org/admin/branding/export/bulk-upload (576), ingest string-dtype hotfix, backend error envelope standardization, synthetic generators (578), responsive hotfixes. ~9 commits. Deploy. Smoke test password reset flow specifically.
-- [ ] **(Eng) Batch C — Mission Control + UX Polish (Sprints 579–587):** Mission Control dashboard (579), Portfolio/Workspaces merge (580), nightly report remediation (581), UX polish bundle — toast/onboarding/a11y/actionable errors (582–585), nightly remediation (586), dependency sentinel 2x (587). ~7 commits. Deploy. Smoke test dashboard + portfolio/workspace flows.
-- [ ] **(Eng) Batch D — Chrome QA + Founder Ops + Sprint 592 + Sprint 593 (Sprints 588–593):** Sprint 588 Chrome QA (8 security fixes), dashboard activity hotfix, Sprint 589–591 Founder Ops (metrics API, admin console, dunning), audit baseline + full sweep hotfixes, archive 586–591, nightly remediation (11 failures fixed), dunning metrics timing race fix, Meridian framework (3 commits), dep sentinel calver, DEC remediation, dependency upgrades (14 packages), **infrastructure hardening** (introduces `RATE_LIMIT_STRICT_MODE` default true in prod and `DB_TLS_REQUIRED`), **Sprint 592 cookie-only auth**, nightly remediation hotfix, **Sprint 593 share-link hardening** (includes the renamed `d1e2f3a4b5c6` migration). ~23 commits. Largest batch — consider splitting D into D1 (588–591) and D2 (592–593) if you want finer bisect granularity.
-  - **Highest-risk merge inside this batch is Sprint 592 (c58861a).** Extra regression test after deploy: fresh incognito → register → DevTools → confirm `paciolus_access` + `paciolus_refresh` HttpOnly cookies are set → close tab → reopen → confirm silent refresh works with no re-login → logout → confirm both cookies cleared. The frontend/backend auth contract changes cross-cut the whole app.
-- [ ] **(Eng) Batch E — Terminal hotfixes (post-593):** Audit chain secret separation (`AUDIT_CHAIN_SECRET_KEY` from `JWT_SECRET_KEY`), uvicorn 0.44.0 + python-multipart 0.0.24 dependency patch, **and the alembic merge migration `a848ac91d39a`** that collapses the three-head state into a single head. ~3 commits. Deploy. Smoke test.
-- [ ] **(Eng)** Full end-to-end smoke test on the latest code once all batches are in: `scripts/smoke_test_render.sh` + manual browser session covering dashboard, one testing tool, one PDF memo, admin dashboard.
+### 1.2 Render infrastructure — owner: **you, guided by me**
 
-### Full functional exercise
-- [ ] Run all **12 testing tools** against a realistic sample TB: JE (19 tests), AP (13), Payroll (11), Revenue (16), AR Aging (11), Fixed Assets (9), Inventory (9), Bank Rec, Three-Way Match, Multi-Period TB, Statistical Sampling, Multi-Currency. Log any abnormal output as `fix:` entries in `tasks/todo.md`.
-- [ ] Generate all **21 PDF memos** back-to-back on a single engagement. Watch Sentry for memory warnings and request duration spikes. If p99 > 10s, flag for investigation before launch.
-- [ ] Exercise the **engagement layer** end-to-end: create engagement → set materiality → run diagnostics → add follow-up items → build workpaper index → export diagnostic package ZIP → hit completion gate.
-- [ ] Exercise **export sharing** and **admin dashboard**: create a shared export link, access it from an incognito window, confirm expiration behavior, revoke it, confirm revocation is enforced.
-- [ ] **(CEO)** Test **bulk upload** (Enterprise tier feature) with 5+ TBs to verify memory holds under sustained load.
-- [ ] Fix any bugs found as `fix:` hotfixes committed to `main`. Redeploy. Re-test the affected flows.
+- [ ] Render → `paciolus-api` → **Upgrade plan to Standard** (2 GB RAM, 1 CPU, $25/mo). Required so the backend has enough memory for TB uploads + PDF memo generation without OOM kills.
+- [ ] Render → `paciolus-api` → **Environment** → paste the env vars from [Appendix A](#appendix-a--render-environment-variables). I'll walk you through each one.
+- [ ] Render → `paciolus-api` → **Manual Deploy** → `main` branch
+- [ ] *(I do this)* Tail Render build + runtime logs; confirm Alembic migrations run clean and Uvicorn boots
+- [ ] *(I do this)* Run `scripts/smoke_test_render.sh` against the new instance; confirm 7/7 checks pass
+- [ ] *(I do this)* Trigger a test event in Sentry; confirm the event lands in the Sentry dashboard
+- [ ] Vercel → Project Settings → Environment Variables → confirm `NEXT_PUBLIC_API_URL` = `https://paciolus-api.onrender.com` is enabled for **Production, Preview, and Development** contexts
+- [ ] Manual browser test: register a test account → verify email → login → `/dashboard` loads → upload the smallest sample TB → run one diagnostic tool → export one PDF memo. Any 500 here halts Phase 2.
+- [ ] *(Optional)* Delete the old suspended `paciolus-db` from the Render dashboard. Only after the above passes.
 
-### Launch-day items
-- [ ] **(CEO)** Complete the **Stripe Production Cutover (Sprint 447)** section below — this is the existing blocker item and is unchanged. Set live Stripe secret keys on Render + Vercel, configure webhook → `https://paciolus-api.onrender.com/billing/webhook`, record `STRIPE_WEBHOOK_SECRET`, run `alembic upgrade head` if any new migrations landed during the backlog merge.
-- [ ] **(CEO)** Complete the **Legal + Admin Placeholders** section below — TOS address/state/agent, Privacy address/EU rep/DPO, Security emergency contact. Legal counsel sign-off required on TOS and Privacy before launch.
-- [ ] **(CEO)** Acquire custom domain if not already owned. Configure DNS:
-  - Root + `www` → Vercel (frontend)
-  - `api.paciolus.com` (or chosen subdomain) → Render `paciolus-api`
-- [ ] **(CEO)** Render → `paciolus-api` → Settings → **Custom Domains** → add API subdomain, verify TLS certificate issues cleanly.
-- [ ] **(CEO)** Vercel → Project → Settings → **Domains** → add root + www, verify.
-- [ ] **(Eng)** Update `CORS_ORIGINS` env var on Render to include the new frontend custom domain. Redeploy `paciolus-api`.
-- [ ] **(Eng)** Set up a daily `pg_dump` → S3/R2 cron as belt-and-suspenders on top of Neon PITR. Options: Render Cron Job (~$1/mo), GitHub Action (free), or a small script on a Render Background Worker. Rotate keys and test restore once before relying on it.
-- [ ] Final smoke test from the custom domain on a clean incognito browser: register → verify email (confirm real delivery through SendGrid) → subscribe via Stripe **live** key with a real card → upload TB → generate memo → cancel subscription → confirm webhook delivered cleanly. Refund the test charge afterward through the Stripe dashboard.
-- [ ] Monitor Sentry + Render logs + Stripe webhooks for **24 hours** after the final smoke test. No new errors and clean webhook delivery = green light.
-- [ ] **(CEO)** Launch announcement.
+**Phase 1 exit criteria:** You can register, verify, login, and see the dashboard end-to-end. Smoke test passes. Sentry is receiving events.
 
 ---
 
-## 🟡 Stripe Production Cutover (Sprint 447)
+## Phase 2 — Code Backlog Merge Train
 
-> All 27/27 E2E smoke tests passed. Code is production-ready. Blocked only on your `sk_live_` keys and sign-off.
+**Owner: Engineering (me). You approve each merge PR.**
+
+`origin/main` is on Sprint 569-era code. The working branch `sprint-565-chrome-qa-remediation` is **43 commits ahead** (40 backlog commits + 3 pre-flight fix commits pushed 2026-04-08). I'll merge in 5 batches, each small enough to bisect if something breaks. Smoke test runs between batches.
+
+- [ ] **Batch A — Sprints 570–571** (DEC remediation, SOC 2 deferral, launch readiness) — ~4 commits
+- [ ] **Batch B — Sprints 572–578** (password reset, Decimal precision, Pydantic response models, error envelope standardization, synthetic anomaly generators) — ~8 commits. Extra post-deploy test: full password reset flow.
+- [ ] **Batch C — Sprints 579–587** (Mission Control dashboard, Portfolio/Workspaces merge, UX polish bundle, dependency sentinel) — ~7 commits
+- [ ] **Batch D — Sprints 588–593** (Chrome QA, Founder Ops metrics/admin/dunning, infra hardening, **Sprint 592 cookie-only auth**, Sprint 593 share-link hardening) — ~20 commits. **Highest-risk batch.** Extra regression test after Sprint 592: fresh incognito → register → confirm `paciolus_access` + `paciolus_refresh` HttpOnly cookies set → close tab → reopen → confirm silent refresh → logout → confirm cookies cleared. I can split D into D1 (588–591) and D2 (592–593) if you want finer bisect granularity.
+- [ ] **Batch E — Terminal hotfixes** (audit chain secret separation, uvicorn/python-multipart deps) — ~2 commits + the alembic merge migration already staged on the branch
+- [ ] Full end-to-end smoke test on the latest code after all batches
+
+**Phase 2 exit criteria:** Render is running latest `main`, the smoke test passes, and no batch left any open bugs in `tasks/todo.md`.
+
+---
+
+## Phase 3 — Functional Validation
+
+**Owner: you for exercising the app; me on standby for bug fixes.**
+
+The goal is to catch anything broken in normal usage before you start charging real money.
+
+- [ ] Run all **12 testing tools** against a realistic sample trial balance. File bugs for any abnormal output.
+  - JE (19 tests), AP (13), Payroll (11), Revenue (16, ASC 606), AR Aging (11), Fixed Assets (9), Inventory (9), Bank Rec, 3-Way Match, Multi-Period TB, Statistical Sampling, Multi-Currency
+- [ ] Generate all **21 PDF memos** back-to-back on a single engagement. Watch Sentry for memory warnings or request-duration spikes >10s.
+- [ ] Exercise the **engagement layer** end-to-end: create engagement → set materiality → run diagnostics → add follow-up items → build workpaper index → export diagnostic package ZIP → hit the completion gate.
+- [ ] Exercise **export sharing**: create a shared link, access it from an incognito window, confirm passcode protection works, revoke it, confirm revocation is enforced.
+- [ ] Exercise **admin dashboard**: org listing, customer drill-down, impersonation read-only mode, audit log.
+- [ ] Exercise **bulk upload** (Enterprise tier) with 5+ TBs to verify memory holds under sustained load.
+- [ ] File any bugs found as `fix:` entries in `tasks/todo.md`. I fix and redeploy.
+
+**Phase 3 exit criteria:** Every tool produces expected output on the sample TB. No open P0/P1 bugs. Memory headroom observed under bulk upload load.
+
+---
+
+## Phase 4 — Launch Day
+
+### 4.1 Stripe production cutover
 
 - [ ] Stripe Dashboard → Products → confirm `STRIPE_SEAT_PRICE_MONTHLY` uses **graduated pricing**: Tier 1 (qty 1–7) = $80, Tier 2 (qty 8–22) = $70
 - [ ] Stripe Dashboard → Settings → **Customer Portal** → enable: payment method updates, invoice history, cancel at period end
-- [ ] Manual test: click "Manage Billing" from `/settings/billing` → confirm it opens the Stripe portal
-- [ ] Sign [`tasks/pricing-launch-readiness.md`](pricing-launch-readiness.md) Section 7 (Code Owner + CEO lines) → mark **GO**
-- [ ] Create production Stripe products/prices/coupons using `sk_live_` key — same structure as test mode (4 products, 8 prices, 2 coupons per Sprint 439)
-- [ ] Set all `STRIPE_*` production env vars on Render + Vercel; deploy with `alembic upgrade head`
-- [ ] Smoke test: place a real charge on Solo monthly (lowest tier) using a real card
-- [ ] Monitor Stripe Dashboard → Developers → Webhooks for 24 hours; confirm delivery ≥99%
+- [ ] Stripe Dashboard → create production products/prices/coupons using your **live secret key**. Mirror the test-mode structure: 4 products, 8 prices, 2 coupons (Sprint 439 reference). Keep the test-mode price IDs in a safe place for reference.
+- [ ] Render + Vercel env vars → set `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET` (live values), plus any `STRIPE_PRICE_*` IDs used by your frontend
+- [ ] Stripe Dashboard → Developers → Webhooks → configure endpoint → `https://api.paciolus.com/billing/webhook` (or the onrender.com URL if you haven't set up custom domain yet) → copy the signing secret into `STRIPE_WEBHOOK_SECRET`
+- [ ] Sign `tasks/pricing-launch-readiness.md` Section 7 (Code Owner + CEO lines) → mark **GO**
+- [ ] Manual test: click "Manage Billing" from `/settings/billing` → confirm it opens the Stripe Customer Portal
+- [ ] Real-money smoke test: subscribe to **Solo monthly** (lowest tier) with a real card → confirm the subscription appears in Stripe Dashboard and in the admin dashboard → cancel → confirm webhook delivery → refund the charge
+- [ ] Monitor Stripe Dashboard → Developers → Webhooks for 24 hours → confirm delivery ≥99%
+
+### 4.2 Legal + policy placeholders
+
+Legal counsel sign-off is required on Terms and Privacy before launch.
+
+- [ ] **`docs/04-compliance/TERMS_OF_SERVICE.md`** — replace:
+  - `[Address to be added]` / `[City, State, ZIP]` → registered business address
+  - `[City, State]` in arbitration section → registered state
+  - `[To be appointed]` (registered agent for legal service) → real agent name and address
+  - Add effective date + legal counsel sign-off name to the header
+- [ ] **`docs/04-compliance/PRIVACY_POLICY.md`** — replace:
+  - `[Address to be added]` / `[City, State, ZIP]` → registered business address
+  - `[To be appointed if EEA users exceed threshold]` (EU Representative, GDPR Art. 27) — appoint one OR document that EEA user count is below threshold and file the decision
+  - `[To be appointed]` (DPO) — appoint one OR document small-company exemption under GDPR Art. 37
+  - Add effective date + legal counsel sign-off name to the header
+- [ ] **`docs/04-compliance/SECURITY_POLICY.md`** — replace `Phone: [To be established]` in §12 with a real emergency contact number (personal mobile or VoIP is fine)
+
+### 4.3 Custom domain
+
+- [ ] Acquire domain (if not already owned)
+- [ ] DNS records:
+  - Root + `www` → Vercel (CNAME or A/AAAA per Vercel's instructions)
+  - `api.paciolus.com` (or chosen subdomain) → Render `paciolus-api`
+- [ ] Render → `paciolus-api` → Settings → **Custom Domains** → add the API subdomain → verify TLS certificate issues cleanly
+- [ ] Vercel → Project → Settings → **Domains** → add root + `www` → verify
+- [ ] *(I do this)* Update `CORS_ORIGINS` env var on Render to include the new frontend custom domain; redeploy
+
+### 4.4 Backups
+
+- [ ] *(I set this up; you provide credentials)* Daily `pg_dump` → S3/R2 cron as belt-and-suspenders on top of Neon's built-in PITR. Options: Render Cron Job (~$1/mo), GitHub Action (free), or Upstash Scheduled Functions. You'll need to provision an S3/R2 bucket and create an IAM key or R2 token.
+- [ ] *(I do this once you provide creds)* Test restore from one backup to confirm the chain works end-to-end
+
+### 4.5 Go-live smoke test
+
+- [ ] Final smoke test from the custom domain on a clean incognito browser:
+  1. Register with a fresh email
+  2. Verify email (confirm real delivery through SendGrid)
+  3. Subscribe via Stripe **live** key with a real card
+  4. Upload a trial balance
+  5. Generate a PDF memo
+  6. Cancel subscription
+  7. Confirm webhook delivered cleanly
+  8. Refund the test charge
+- [ ] Monitor Sentry + Render logs + Stripe webhooks for **24 hours**. Zero new errors and clean webhook delivery = green light.
+- [ ] **Launch announcement**
 
 ---
 
-## 🟡 Legal + Admin Placeholders
+## Phase 5 — Post-Launch (Not blocking)
 
-These are live in public-facing documents and need to be filled in before launch.
+These are important but should not delay launch. Schedule them in the first 2 weeks after going live.
 
-### Terms of Service [`docs/04-compliance/TERMS_OF_SERVICE.md`](../docs/04-compliance/TERMS_OF_SERVICE.md)
-- [ ] Replace `[Address to be added]` / `[City, State, ZIP]` with registered business address
-- [ ] Replace `[City, State]` in the arbitration section with registered state
-- [ ] Replace `[To be appointed]` (registered agent for legal service) with actual registered agent name/address
-- [ ] Obtain legal counsel sign-off → add effective date + sign-off name to doc header
+### GitHub branch protection
+- [ ] Settings → Branches → `main` protection rule → Enable "Require review from Code Owners"
+- [ ] Add required status checks: `secrets-scan`, `frontend-tests`, `mypy-check` (in addition to existing gates: `backend-tests`, `frontend-build`, `backend-lint`, `lint-baseline-gate`, `pip-audit-blocking`, `npm-audit-blocking`, `bandit`)
 
-### Privacy Policy [`docs/04-compliance/PRIVACY_POLICY.md`](../docs/04-compliance/PRIVACY_POLICY.md)
-- [ ] Replace `[Address to be added]` / `[City, State, ZIP]` with registered business address
-- [ ] Replace `[To be appointed if EEA users exceed threshold]` (EU Representative, GDPR Art. 27) — either appoint or confirm EEA user count is below threshold and document the decision
-- [ ] Replace `[To be appointed]` (DPO) — appoint a Data Protection Officer or document that one is not required (small company exemption under GDPR Art. 37)
-- [ ] Obtain legal counsel sign-off → add effective date + sign-off name to doc header
-
-### Security Policy [`docs/04-compliance/SECURITY_POLICY.md`](../docs/04-compliance/SECURITY_POLICY.md)
-- [ ] Replace `Phone: [To be established]` in §12 with an actual emergency contact number for critical security incidents (can be a personal mobile or a VoIP number)
+### Observability polish
+- [ ] Set up Sentry alert rules: notify on 5xx spike, notify on new issue type
+- [ ] Set up a simple uptime monitor (Cronitor free tier, UptimeRobot, Better Stack) hitting `/health` every 5 min
 
 ---
 
-## ⚪ Vercel Environment Variable — Security Review 2026-03-24
+## Deferred — SOC 2 (revisit when enterprise demand materializes)
 
-> Pentest found the preview deployment at `paciolus-mvrbyh4ek-paciolus-projects.vercel.app` falls back to `http://localhost:8000` — all API calls fail. The `NEXT_PUBLIC_API_URL` env var is missing or scoped only to Production.
+Deferred per CEO directive 2026-03-23. Not required for launch. The engineering scaffolding (docs, templates, CI gates) remains in the codebase and can be activated without rewriting.
 
-- [ ] Vercel Dashboard → Project Settings → Environment Variables → `NEXT_PUBLIC_API_URL` = `https://paciolus-api.onrender.com` → enable for **Production**, **Preview**, and **Development** contexts
-- [ ] Redeploy latest commit to verify API calls work on preview URL
+**Decisions already made:** Grafana Loki (SIEM), pgBackRest→S3 (cross-region DR, ~$5/mo), AWS Secrets Manager (secrets vault backup, ~$5/mo).
 
----
-
-## ⚪ One-Time Infrastructure Setup
-
-### GitHub Branch Protection — Sprint 496 (Engineering Process Hardening)
-> CODEOWNERS and new CI jobs are deployed but require GitHub settings to enforce.
-- [ ] Settings > Branches > `main` protection rule: Enable "Require review from Code Owners"
-- [ ] Settings > Branches > `main` protection rule: Add required status checks: `secrets-scan`, `frontend-tests`, `mypy-check` (in addition to existing gates)
-- [ ] Settings > Branches > `main` protection rule: Confirm all existing required checks still listed (backend-tests, frontend-build, backend-lint, lint-baseline-gate, pip-audit-blocking, npm-audit-blocking, bandit)
-- [x] Replace `@paciolus/security-leads` in `.github/CODEOWNERS` with `@Paciolus`
+**Pending when SOC 2 is reactivated:**
+- Penetration test vendor ($5K–30K) — Sprint 467
+- Bug bounty program (existing VDP sufficient for now) — Sprint 468
+- SOC 2 auditor + observation window ($15K–50K) — Sprint 469
+- Evidence collection: Q1 access review, Q1 risk register review, DPA acceptance outreach, GPG commit signing, backup integrity check, data-deletion end-to-end test, encryption verification screenshots, security training (5 modules), weekly security review cadence, backup restore test, PagerDuty/on-call rotation
 
 ---
 
-## 🔵 Decisions Made (Ready for Engineering)
+## Appendix A — Render Environment Variables
 
-> These decisions were made 2026-03-23. Engineering can begin when prioritized.
+Authoritative list derived from `backend/config.py` hard-fail checks. Every item below is either required or strongly recommended.
 
-- [x] **Sprint 463 — SIEM approach**: **Grafana Loki** (Grafana Cloud free tier)
-- [x] **Sprint 464 — Cross-region DB replication**: **pgBackRest to S3** (~$5/mo)
-- [x] **Sprint 466 — Secrets vault secondary backup**: **AWS Secrets Manager** (~$5/mo)
+### Required — app will not boot in production without these
 
----
+| Variable | Value | Notes |
+|---|---|---|
+| `ENV_MODE` | `production` | Triggers all production guardrails |
+| `API_HOST` | `0.0.0.0` | Should already be set; verify |
+| `API_PORT` | `8000` | Should already be set; verify |
+| `CORS_ORIGINS` | comma-separated `https://` origins | **Any `http://` origin hard-fails in production.** Include Vercel frontend URL + any custom domain. |
+| `JWT_SECRET_KEY` | 32+ char hex | Generate: `python -c "import secrets; print(secrets.token_hex(32))"` |
+| `CSRF_SECRET_KEY` | 32+ char hex | **Must differ from `JWT_SECRET_KEY`** or startup hard-fails |
+| `DATABASE_URL` | Neon **pooled** URL | Must include `?sslmode=require` |
+| `SENDGRID_API_KEY` | from SendGrid | Hard-fails production startup if missing or empty |
 
-## 🗄️ Deferred — SOC 2 (Revisit When Needed)
+### Strongly recommended
 
-> All items below are deferred per CEO directive (2026-03-23). SOC 2 is not legally
-> required for launch. Revisit if/when enterprise customers require SOC 2 attestation.
-> The engineering scaffolding (docs, templates, CI gates) remains in the codebase and
-> can be activated when needed.
+| Variable | Value | Notes |
+|---|---|---|
+| `REDIS_URL` | Upstash `rediss://` URL | Required when `RATE_LIMIT_STRICT_MODE=true` (the prod default). Without Redis, rate-limit counters are per-worker (SOC 2 / AUDIT-07 regression). |
+| `RATE_LIMIT_STRICT_MODE` | `true` | Default in production; set explicitly for env-list visibility |
+| `SENTRY_DSN` | from Sentry | Crash visibility during merge train + post-launch |
+| `AUDIT_CHAIN_SECRET_KEY` | 32+ char hex | Dedicated HMAC key for audit-log chain. Falls back to `JWT_SECRET_KEY` if unset (works but logs a warning — set explicitly so JWT rotation doesn't break audit chains). |
+| `FRONTEND_URL` | Vercel production URL | Used for email verification links. Default `http://localhost:3000` is dev-only. |
+| `SENDGRID_FROM_EMAIL` | `noreply@paciolus.com` | Default is fine unless you want a different from-address |
+| `SENDGRID_FROM_NAME` | `Paciolus` | Default is fine |
 
-### Deferred Decisions
-- [ ] **Sprint 467 — Penetration test vendor** ($5K-30K)
-- [ ] **Sprint 468 — Bug bounty program** (existing VDP sufficient for now)
-- [ ] **Sprint 469 — SOC 2 auditor + observation window** ($15K-50K)
+### Stripe — set during Phase 4.1, not Phase 1
 
-### Deferred CEO Tasks (SOC 2 Evidence)
-- [ ] Q1 Access Review (7 dashboards) — CC6.1
-- [ ] Q1 Risk Register review (12 risks) — CC4.1
-- [ ] DPA Acceptance — existing customer outreach — PI1.3 / C2.1
-- [ ] GPG Commit Signing setup — CC8.6
-- [ ] Backup Integrity Check — first run — S1.5 / CC4.2
-- [ ] Data Deletion Procedure — end-to-end test — PI4.3 / CC7.4
-- [ ] Encryption Verification Screenshots — CC7.2
-- [ ] Security Training (5 modules) — CC2.2
-- [ ] Weekly Security Review cadence — CC4.2 / C1.3
-- [ ] Backup Restore Test — S3.5
-- [ ] PagerDuty / On-Call Rotation setup
+| Variable | Notes |
+|---|---|
+| `STRIPE_SECRET_KEY` | Live secret key from Stripe Dashboard |
+| `STRIPE_PUBLISHABLE_KEY` | Live publishable key |
+| `STRIPE_WEBHOOK_SECRET` | From the webhook endpoint you configure in Stripe |
+| `STRIPE_COUPON_MONTHLY_20` | 20%-off-first-3-months coupon ID (if using) |
+| `STRIPE_COUPON_ANNUAL_10` | 10%-off-first-annual-invoice coupon ID (if using) |
 
-### Deferred Recurring Calendar (SOC 2)
-> These recurring tasks are only needed once SOC 2 observation window begins.
-> Not listed here in detail — full schedule preserved in git history.
+### Leave alone unless you have a reason
 
----
-
-## ✅ Completed
-
-Move items here with date when done.
-
-| # | Item | Completed |
-|---|------|----------|
-| — | *(none yet)* | |
+`DEBUG`, `JWT_EXPIRATION_MINUTES`, `REFRESH_TOKEN_EXPIRATION_DAYS`, `TRUSTED_PROXY_IPS`, `DB_POOL_SIZE`, `DB_MAX_OVERFLOW`, `DB_POOL_RECYCLE`, `SENTRY_TRACES_SAMPLE_RATE`, `ENTITLEMENT_ENFORCEMENT`, `SEAT_ENFORCEMENT_MODE`, `DB_TLS_REQUIRED`, `DB_TLS_OVERRIDE`, format flags (`FORMAT_*_ENABLED`), cleanup scheduler intervals.
 
 ---
 
-## How This File Works
+## Completed
 
-- **Engineering** adds new items at the end of each sprint (post-sprint checklist step)
-- **You** work top-to-bottom: 🟡 → ⚪ → 🔵 → 🗄️ (only when needed)
-- When done: check the box, move to ✅ with the date
-- This file is version-controlled — the action history is auditable
+| Date | Item |
+|---|---|
+| 2026-04-08 | Alembic migration collision fix (Sprint 593 `b2c3d4e5f6a7` → `d1e2f3a4b5c6`) — commits `4c25ac2` + `e8c289e` |
+| 2026-04-08 | Alembic multi-head merge migration `a848ac91d39a` — commit `4c25ac2` |
+| 2026-04-08 | Post-deploy smoke test script `scripts/smoke_test_render.sh` — commit `0f83273` |
+| 2026-04-08 | Launch infrastructure plan (this document, original draft) — commit `0f83273` |
+| 2026-04-08 | Local `main` fast-forwarded to `origin/main` at `90777b2` |
+| 2026-04-08 | Branch audit baseline: 1,751 frontend tests + 7,361 backend tests, 0 failures |
+| 2026-03-23 | Infrastructure decisions: Grafana Loki (SIEM), pgBackRest→S3 (DR), AWS Secrets Manager (secrets backup) |
+| 2026-03-23 | CODEOWNERS updated to `@Paciolus` (was `@paciolus/security-leads`) |
 
 ---
 
-*Synchronized with: `tasks/todo.md` active phase + `docs/04-compliance/` full audit*
-*SOC 2 deferral: 2026-03-23 — all SOC 2 actions tabled until enterprise demand materializes*
+*Last revised: 2026-04-08. Rewritten from the scattered pre-audit version into phase-based execution order. The Vercel `NEXT_PUBLIC_API_URL` item from the 2026-03-24 security review is rolled into Phase 1.2.*
