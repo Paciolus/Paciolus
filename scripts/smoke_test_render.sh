@@ -16,9 +16,12 @@
 #   3.  /auth/register succeeds and sets paciolus_access + paciolus_refresh HttpOnly cookies
 #   4.  Register response includes access_token + csrf_token + user object
 #   5.  /auth/me with the register cookies returns 200 and the same user
-#   6.  /auth/login (fresh attempt with a known-bad password) returns 401
-#   7.  /auth/logout succeeds and the Set-Cookie header clears both cookies
-#   8.  /auth/me after logout returns 401 (session is actually revoked)
+#   6.  /auth/login with the CORRECT password returns 200 (proves login works)
+#   7.  /auth/login with a known-bad password returns 401 (proves wrong creds rejected)
+#   8.  /auth/login with the registered email in DIFFERENT CASE returns 200
+#       (regression guard for case-sensitivity lockout — see 2026-04-09 incident)
+#   9.  /auth/logout succeeds and the Set-Cookie header clears both cookies
+#  10.  /auth/me after logout returns 401 (session is actually revoked)
 #
 # Exit codes:
 #   0  all checks pass
@@ -130,9 +133,38 @@ ME_EMAIL=$(jq -r '.email' <<<"$ME_JSON")
 pass "/auth/me returned correct user"
 
 # -----------------------------------------------------------------------------
-# Step 5: /auth/login with wrong password (should be 401)
+# Step 5a: /auth/login with CORRECT password (should be 200)
+#
+# Without this check, a broken login path can ship silently because /auth/me
+# succeeds via the cookie set by /auth/register. The 2026-04-09 incident
+# (case-sensitive email lookup locking out a mixed-case registration) went
+# undetected precisely because this assertion was missing.
 # -----------------------------------------------------------------------------
-step "5. /auth/login (wrong password)"
+step "5a. /auth/login (correct password)"
+GOOD_LOGIN=$(jq -n --arg email "$TEST_EMAIL" --arg pw "$TEST_PASSWORD" \
+    '{email: $email, password: $pw}')
+
+GOOD_LOGIN_RESPONSE=$(curl --silent --show-error --max-time 15 \
+    -H "Content-Type: application/json" \
+    -H "X-Requested-With: XMLHttpRequest" \
+    -d "$GOOD_LOGIN" \
+    -w "\n%{http_code}" \
+    "$BASE_URL/auth/login")
+
+GOOD_LOGIN_CODE="${GOOD_LOGIN_RESPONSE##*$'\n'}"
+GOOD_LOGIN_JSON="${GOOD_LOGIN_RESPONSE%$'\n'*}"
+
+[ "$GOOD_LOGIN_CODE" = "200" ] || fail "/auth/login returned $GOOD_LOGIN_CODE (expected 200)\n$GOOD_LOGIN_JSON"
+pass "/auth/login accepted correct credentials"
+
+jq -e '.access_token' <<<"$GOOD_LOGIN_JSON" >/dev/null || fail "login response missing access_token"
+jq -e '.csrf_token'   <<<"$GOOD_LOGIN_JSON" >/dev/null || fail "login response missing csrf_token"
+pass "login response shape valid (access_token, csrf_token)"
+
+# -----------------------------------------------------------------------------
+# Step 5b: /auth/login with wrong password (should be 401)
+# -----------------------------------------------------------------------------
+step "5b. /auth/login (wrong password)"
 BAD_LOGIN=$(jq -n --arg email "$TEST_EMAIL" '{email: $email, password: "definitelyWrongPassword!1"}')
 
 BAD_LOGIN_CODE=$(curl --silent --max-time 15 --output /dev/null --write-out "%{http_code}" \
@@ -143,6 +175,34 @@ BAD_LOGIN_CODE=$(curl --silent --max-time 15 --output /dev/null --write-out "%{h
 
 [ "$BAD_LOGIN_CODE" = "401" ] && pass "/auth/login correctly rejected wrong password" \
                               || fail "/auth/login returned $BAD_LOGIN_CODE (expected 401)"
+
+# -----------------------------------------------------------------------------
+# Step 5c: /auth/login with mixed-case email (regression guard)
+#
+# Canonicalizing emails on register and lookup means the exact same account
+# must be reachable regardless of how the user types the email. Compute an
+# alternating-case variant and confirm login still returns 200.
+# -----------------------------------------------------------------------------
+step "5c. /auth/login (mixed-case email — regression guard)"
+MIXED_EMAIL=$(printf '%s' "$TEST_EMAIL" | awk '{
+    out="";
+    for (i=1; i<=length($0); i++) {
+        ch = substr($0, i, 1);
+        out = out (i % 2 == 0 ? toupper(ch) : tolower(ch));
+    }
+    print out
+}')
+MIXED_LOGIN=$(jq -n --arg email "$MIXED_EMAIL" --arg pw "$TEST_PASSWORD" \
+    '{email: $email, password: $pw}')
+
+MIXED_LOGIN_CODE=$(curl --silent --max-time 15 --output /dev/null --write-out "%{http_code}" \
+    -H "Content-Type: application/json" \
+    -H "X-Requested-With: XMLHttpRequest" \
+    -d "$MIXED_LOGIN" \
+    "$BASE_URL/auth/login")
+
+[ "$MIXED_LOGIN_CODE" = "200" ] && pass "/auth/login accepted mixed-case email ($MIXED_EMAIL)" \
+                                || fail "/auth/login returned $MIXED_LOGIN_CODE for mixed-case email $MIXED_EMAIL (expected 200 — case-insensitive lookup regression)"
 
 # -----------------------------------------------------------------------------
 # Step 6: /auth/logout

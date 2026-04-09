@@ -477,9 +477,22 @@ class AuthResponse(BaseModel):
 # =============================================================================
 
 
+def normalize_email(email: str) -> str:
+    """
+    Canonicalize an email for storage and lookup.
+
+    Email local-parts are formally case-sensitive per RFC 5321, but every
+    mail provider we care about treats them case-insensitively in practice.
+    We lowercase + strip so that register/login/reset/change-email all agree
+    on a single canonical form, preventing "account exists but I can't log in"
+    lockouts when the user types a different case than at registration.
+    """
+    return email.strip().lower()
+
+
 def get_user_by_email(db: Session, email: str) -> Optional[User]:
-    """Get a user by email address."""
-    return db.query(User).filter(User.email == email).first()
+    """Get a user by email address (case-insensitive lookup)."""
+    return db.query(User).filter(User.email == normalize_email(email)).first()
 
 
 def create_user(db: Session, user_data: UserCreate) -> User:
@@ -488,16 +501,17 @@ def create_user(db: Session, user_data: UserCreate) -> User:
 
     SECURITY: Password is hashed before storage.
     Plaintext password is NEVER stored or logged.
+    Email is normalized (lowercased + stripped) for consistent lookup.
     """
     hashed = hash_password(user_data.password)
 
-    db_user = User(email=user_data.email, hashed_password=hashed)
+    db_user = User(email=normalize_email(user_data.email), hashed_password=hashed)
 
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
 
-    log_secure_operation("user_created", f"New user registered: {mask_email(user_data.email)}")
+    log_secure_operation("user_created", f"New user registered: {mask_email(db_user.email)}")
 
     return db_user
 
@@ -545,10 +559,10 @@ def update_user_profile(db: Session, user: User, profile_data: UserProfileUpdate
 
     verification_token = None
 
-    if profile_data.email and profile_data.email != user.email:
-        new_email = profile_data.email
+    if profile_data.email and normalize_email(profile_data.email) != user.email:
+        new_email = normalize_email(profile_data.email)
 
-        # Check if new email is already taken
+        # Check if new email is already taken (case-insensitive)
         existing = db.query(User).filter(User.email == new_email, User.id != user.id).first()
         if existing:
             raise ValueError("Email already in use by another account")

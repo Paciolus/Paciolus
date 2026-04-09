@@ -176,6 +176,77 @@ class TestLogin:
             )
             assert response.status_code == 401
 
+    @pytest.mark.asyncio
+    async def test_register_then_login_case_insensitive(self, override_db):
+        """
+        Regression test for 2026-04-09 lockout incident.
+
+        A user registered with a mixed-case email, and /auth/login with a
+        lower-case email returned 401 because the DB lookup was case-sensitive.
+        Registration, login, and forgot-password must all agree on a single
+        canonical (lowercased) email form.
+        """
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            # Register with mixed-case email
+            register_response = await client.post(
+                "/auth/register",
+                json={
+                    "email": "MixedCase@Example.COM",
+                    "password": TEST_PASSWORD,
+                },
+            )
+            assert register_response.status_code == 201
+            # Stored canonical form is lowercased
+            assert register_response.json()["user"]["email"] == "mixedcase@example.com"
+
+            # Lowercase login succeeds
+            lower_response = await client.post(
+                "/auth/login",
+                json={
+                    "email": "mixedcase@example.com",
+                    "password": TEST_PASSWORD,
+                },
+            )
+            assert lower_response.status_code == 200, (
+                "Lowercase login must match a mixed-case registration (2026-04-09 regression guard)"
+            )
+
+            # Alternating-case login succeeds
+            alt_response = await client.post(
+                "/auth/login",
+                json={
+                    "email": "mIxEdCaSe@ExAmPlE.cOm",
+                    "password": TEST_PASSWORD,
+                },
+            )
+            assert alt_response.status_code == 200
+
+            # Leading/trailing whitespace is tolerated
+            padded_response = await client.post(
+                "/auth/login",
+                json={
+                    "email": "  mixedcase@example.com  ",
+                    "password": TEST_PASSWORD,
+                },
+            )
+            assert padded_response.status_code == 200
+
+    @pytest.mark.asyncio
+    async def test_register_duplicate_differs_only_in_case(self, override_db):
+        """A second registration with only case differences must be rejected."""
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            first = await client.post(
+                "/auth/register",
+                json={"email": "dup@example.com", "password": TEST_PASSWORD},
+            )
+            assert first.status_code == 201
+
+            second = await client.post(
+                "/auth/register",
+                json={"email": "DUP@Example.com", "password": TEST_PASSWORD},
+            )
+            assert second.status_code == 400
+
 
 # =============================================================================
 # POST /auth/logout

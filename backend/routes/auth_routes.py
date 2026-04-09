@@ -430,7 +430,7 @@ def forgot_password(
         message="If an account with that email exists, a password reset link has been sent."
     )
 
-    user = get_user_by_email(db, body.email.strip().lower())
+    user = get_user_by_email(db, body.email)
     if not user:
         # Don't reveal whether the email is registered
         logger.info("Password reset requested for unknown email: %s", masked)
