@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { PayrollScoreCard, PayrollTestResultGrid, PayrollDataQualityBadge, FlaggedEmployeeTable } from '@/components/payrollTesting'
-import { GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, UpgradeGate, ToolSettingsDrawer, CitationFooter } from '@/components/shared'
+import { GuestCTA, UnverifiedCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, UpgradeGate, ToolSettingsDrawer, CitationFooter } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractPayrollProof } from '@/components/shared/proof'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
 import { useFileUpload } from '@/hooks/useFileUpload'
@@ -88,6 +88,10 @@ export default function PayrollTestingPage() {
         {/* Guest CTA */}
         {!authLoading && !isAuthenticated && (
           <GuestCTA description="Payroll &amp; Employee Testing requires a verified account. Sign in or create an account to analyze your payroll data." />
+        )}
+
+        {!authLoading && isAuthenticated && !isVerified && (
+          <UnverifiedCTA />
         )}
 
         {/* Tool State Blocks */}

@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { FixedAssetScoreCard, FixedAssetTestResultGrid, FixedAssetDataQualityBadge, FlaggedFixedAssetTable } from '@/components/fixedAssetTesting'
-import { GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, UpgradeGate, Citation, CitationFooter } from '@/components/shared'
+import { GuestCTA, UnverifiedCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, UpgradeGate, Citation, CitationFooter } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractFAProof } from '@/components/shared/proof'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
 import { useFileUpload } from '@/hooks/useFileUpload'
@@ -73,6 +73,10 @@ export default function FixedAssetTestingPage() {
         {/* Guest CTA */}
         {!authLoading && !isAuthenticated && (
           <GuestCTA description="Fixed Asset Testing requires a verified account. Sign in or create an account to analyze your fixed asset register." />
+        )}
+
+        {!authLoading && isAuthenticated && !isVerified && (
+          <UnverifiedCTA />
         )}
 
         {/* Tool State Blocks */}

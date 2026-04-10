@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { InventoryScoreCard, InventoryTestResultGrid, InventoryDataQualityBadge, FlaggedInventoryTable } from '@/components/inventoryTesting'
-import { GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, UpgradeGate, Citation, CitationFooter } from '@/components/shared'
+import { GuestCTA, UnverifiedCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, UpgradeGate, Citation, CitationFooter } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractInventoryProof } from '@/components/shared/proof'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
 import { useFileUpload } from '@/hooks/useFileUpload'
@@ -73,6 +73,10 @@ export default function InventoryTestingPage() {
         {/* Guest CTA */}
         {!authLoading && !isAuthenticated && (
           <GuestCTA description="Inventory Testing requires a verified account. Sign in or create an account to analyze your inventory register." />
+        )}
+
+        {!authLoading && isAuthenticated && !isVerified && (
+          <UnverifiedCTA />
         )}
 
         {/* State blocks */}

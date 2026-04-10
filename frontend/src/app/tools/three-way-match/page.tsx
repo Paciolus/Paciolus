@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
-import { GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, FileDropZone, UpgradeGate, ToolSettingsDrawer, CitationFooter } from '@/components/shared'
+import { GuestCTA, UnverifiedCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, FileDropZone, UpgradeGate, ToolSettingsDrawer, CitationFooter } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractTWMProof } from '@/components/shared/proof'
 import { MatchSummaryCard, MatchResultsTable, UnmatchedDocumentsPanel, VarianceDetailCard } from '@/components/threeWayMatch'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
@@ -88,6 +88,10 @@ export default function ThreeWayMatchPage() {
         {/* Guest CTA */}
         {!authLoading && !isAuthenticated && (
           <GuestCTA description="Three-Way Match Validation requires a verified account. Sign in or create an account to match your procurement documents." />
+        )}
+
+        {!authLoading && isAuthenticated && !isVerified && (
+          <UnverifiedCTA />
         )}
 
         {/* State blocks — wrapped in ToolStatePresence for unified transitions */}
