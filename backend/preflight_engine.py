@@ -12,7 +12,7 @@ Pure-Python engine (no Pandas). Takes parsed data from parse_uploaded_file().
 
 import re
 from dataclasses import dataclass, field
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from column_detector import (
     ColumnDetectionResult,
@@ -326,14 +326,30 @@ def run_preflight(
 
 
 def _coerce_to_decimal(val: object) -> Decimal:
-    """Coerce a cell value to Decimal, treating None/empty/NaN as 0."""
+    """Coerce a cell value to Decimal, treating None/empty/NaN as 0.
+
+    Handles common currency formats: $1,234.56  (1,234.56)  -$500
+    Returns Decimal("0") for truly unparseable values.
+    """
     if val is None:
         return Decimal("0")
     if isinstance(val, str):
         stripped = val.strip()
         if stripped == "":
             return Decimal("0")
-        return Decimal(stripped)
+        # Handle parenthesised negatives: (1,234.56) → -1234.56
+        negative = stripped.startswith("(") and stripped.endswith(")")
+        if negative:
+            stripped = stripped[1:-1].strip()
+        # Strip currency symbols and thousands separators
+        cleaned = stripped.replace("$", "").replace(",", "").replace("€", "").replace("£", "").strip()
+        if cleaned == "" or cleaned == "-":
+            return Decimal("0")
+        try:
+            result = Decimal(cleaned)
+            return -result if negative else result
+        except Exception:
+            return Decimal("0")
     if isinstance(val, Decimal):
         return val
     if isinstance(val, (int, float)):
@@ -342,7 +358,10 @@ def _coerce_to_decimal(val: object) -> Decimal:
         if isinstance(val, float) and (math.isnan(val) or math.isinf(val)):
             return Decimal("0")
         return Decimal(str(val))
-    return Decimal(str(val))
+    try:
+        return Decimal(str(val))
+    except Exception:
+        return Decimal("0")
 
 
 def _check_tb_balance(
@@ -366,11 +385,11 @@ def _check_tb_balance(
     for row in rows:
         try:
             total_debits += _coerce_to_decimal(row.get(debit_col))
-        except (ValueError, TypeError):
+        except (ValueError, TypeError, InvalidOperation):
             pass
         try:
             total_credits += _coerce_to_decimal(row.get(credit_col))
-        except (ValueError, TypeError):
+        except (ValueError, TypeError, InvalidOperation):
             pass
 
     difference = total_debits - total_credits
