@@ -53,6 +53,32 @@
 > Sprints 586–591 archived to `tasks/archive/sprints-586-591-details.md`.
 > Sprints 592–595 archived to `tasks/archive/sprints-592-595-details.md`.
 
+### Sprint 597: DOCX File Format Support
+**Status:** COMPLETE
+**Goal:** Add Word document (.docx) as an 11th supported file format for trial balance uploads
+
+**Changes:**
+- [x] `python-docx>=1.1.0` added to `backend/requirements.txt`
+- [x] `FileFormat.DOCX` enum + `FormatProfile` in `shared/file_formats.py`
+- [x] ZIP disambiguation: `_is_docx_zip()` checks for `word/` directory
+- [x] `shared/docx_parser.py` — extracts tables from DOCX via python-docx
+- [x] Parser dispatch in `shared/helpers.py` (`_parse_docx` wrapper + magic byte validation)
+- [x] `FORMAT_DOCX_ENABLED` feature flag in `config.py` (default: true)
+- [x] Frontend: `.docx` extension, MIME type, label in `utils/fileFormats.ts`
+- [x] Backend tests: `test_docx_parser.py` (29 tests — disambiguation, parsing, detection, profile)
+- [x] Updated `test_file_formats.py` (11 extensions, 13 MIME types)
+- [x] Updated `fileFormats.test.ts` (11 entries, 13 types, DOCX acceptance)
+- [x] Tier gating: paid tiers only (same as PDF/OFX/IIF/QBO/ODS)
+
+**Review:**
+- 89 backend tests pass (test_docx_parser + test_file_formats), 27 ODS tests unaffected
+- 27 frontend fileFormats tests pass
+- `npm run build` clean — all pages compile
+- DOCX parsing extracts first table with data rows; skips header-only tables
+- ZIP disambiguation: ODS (mimetype/content.xml) > DOCX (word/) > XLSX (default)
+
+---
+
 ### Sprint 596: UnverifiedCTA — Explicit Verification Prompt on All Tool Pages
 **Status:** COMPLETE
 **Goal:** Replace silent content gating with an explicit "Verify Your Email" card so unverified users understand why tool pages appear blank

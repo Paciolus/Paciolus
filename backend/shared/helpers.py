@@ -346,6 +346,13 @@ async def validate_file_size(file: UploadFile) -> bytes:
                 status_code=400,
                 detail="File content does not match ODS format. Please verify the file is a valid OpenDocument Spreadsheet.",
             )
+    elif ext == ".docx":
+        if not file_bytes.startswith(_XLSX_MAGIC):
+            log_secure_operation("magic_byte_mismatch", "File has .docx extension but invalid ZIP signature")
+            raise HTTPException(
+                status_code=400,
+                detail="File content does not match DOCX format. Please verify the file is a valid Word document.",
+            )
     elif ext == ".pdf":
         if not file_bytes.startswith(b"%PDF"):
             log_secure_operation("magic_byte_mismatch", "File has .pdf extension but missing %PDF signature")
@@ -650,6 +657,13 @@ def _parse_ods(file_bytes: bytes, filename: str) -> pd.DataFrame:
     return parse_ods(file_bytes, filename)
 
 
+def _parse_docx(file_bytes: bytes, filename: str) -> pd.DataFrame:
+    """Parse DOCX bytes into a DataFrame via shared.docx_parser."""
+    from shared.docx_parser import parse_docx
+
+    return parse_docx(file_bytes, filename)
+
+
 def _parse_excel(file_bytes: bytes, filename: str) -> pd.DataFrame:
     """Parse Excel (.xlsx/.xls) bytes into a DataFrame.
 
@@ -858,6 +872,8 @@ def parse_uploaded_file_by_format(
                 df = _parse_pdf(file_bytes, filename)
             elif detected.format == FileFormat.ODS:
                 df = _parse_ods(file_bytes, filename)
+            elif detected.format == FileFormat.DOCX:
+                df = _parse_docx(file_bytes, filename)
             elif detected.format == FileFormat.UNKNOWN:
                 filename_lower = (filename or "").lower()
                 if filename_lower.endswith((".xlsx", ".xls")):
