@@ -56,7 +56,7 @@ APScheduler==3.11.2
 # No direct imports exist — pip resolves them automatically. No pin needed.
 
 # SECURITY: Pinned transitive dependency patches (pip-audit CVEs)
-cryptography>=46.0.6  # CVE-2026-26007
+cryptography>=46.0.7  # CVE-2026-26007
 pillow>=12.2.0  # CVE-2026-25990
 werkzeug>=3.1.8  # CVE-2026-27199
 pyasn1>=0.6.3  # CVE-2026-30922 (DoS via recursive ASN.1 decoding)
