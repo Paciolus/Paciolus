@@ -40,6 +40,9 @@ odfpy>=1.4.1
 # PDF Table Extraction (Sprint 427)
 pdfplumber>=0.11.0
 
+# DOCX (Word Document) table extraction (Sprint 597)
+python-docx>=1.1.0
+
 # Safe XML parsing — defuses XXE / billion laughs (Sprint 470)
 defusedxml>=0.7.1
 

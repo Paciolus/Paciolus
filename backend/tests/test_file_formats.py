@@ -39,7 +39,7 @@ class TestFileFormatEnum:
         assert FileFormat.CSV.value == "csv"
 
     def test_all_members_present(self):
-        expected = {"csv", "xlsx", "xls", "tsv", "txt", "qbo", "ofx", "iif", "pdf", "ods", "unknown"}
+        expected = {"csv", "xlsx", "xls", "tsv", "txt", "qbo", "ofx", "iif", "pdf", "ods", "docx", "unknown"}
         actual = {f.value for f in FileFormat}
         assert actual == expected
 
@@ -94,11 +94,23 @@ class TestAllowedSets:
     """ALLOWED_EXTENSIONS and ALLOWED_CONTENT_TYPES must match helpers.py originals."""
 
     def test_allowed_extensions_match(self):
-        """Must contain exactly the 10 active extensions."""
-        assert ALLOWED_EXTENSIONS == {".csv", ".tsv", ".txt", ".xlsx", ".xls", ".ods", ".qbo", ".ofx", ".iif", ".pdf"}
+        """Must contain exactly the 11 active extensions."""
+        assert ALLOWED_EXTENSIONS == {
+            ".csv",
+            ".tsv",
+            ".txt",
+            ".xlsx",
+            ".xls",
+            ".ods",
+            ".docx",
+            ".qbo",
+            ".ofx",
+            ".iif",
+            ".pdf",
+        }
 
     def test_allowed_content_types_match(self):
-        """Must contain the 12 MIME types from all active profiles."""
+        """Must contain the 13 MIME types from all active profiles."""
         expected = {
             "text/csv",
             "application/csv",
@@ -107,6 +119,7 @@ class TestAllowedSets:
             "application/vnd.ms-excel",
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             "application/vnd.oasis.opendocument.spreadsheet",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             "application/octet-stream",
             "application/x-ofx",
             "application/ofx",

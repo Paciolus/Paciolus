@@ -496,6 +496,7 @@ FORMAT_PDF_ENABLED = _load_optional("FORMAT_PDF_ENABLED", "true").lower() == "tr
 FORMAT_IIF_ENABLED = _load_optional("FORMAT_IIF_ENABLED", "true").lower() == "true"
 FORMAT_OFX_ENABLED = _load_optional("FORMAT_OFX_ENABLED", "true").lower() == "true"
 FORMAT_QBO_ENABLED = _load_optional("FORMAT_QBO_ENABLED", "true").lower() == "true"
+FORMAT_DOCX_ENABLED = _load_optional("FORMAT_DOCX_ENABLED", "true").lower() == "true"
 
 CLEANUP_SCHEDULER_ENABLED = _load_optional("CLEANUP_SCHEDULER_ENABLED", "true").lower() == "true"
 CLEANUP_REFRESH_TOKEN_INTERVAL_MINUTES = _load_optional_int("CLEANUP_REFRESH_TOKEN_INTERVAL_MINUTES", 60)
