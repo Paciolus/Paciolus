@@ -7,7 +7,7 @@ import { EngagementDetailsPanel, MaterialityControl, DEFAULT_ENGAGEMENT_METADATA
 import type { EngagementMetadata } from '@/components/diagnostic'
 import { ColumnMappingModal } from '@/components/mapping'
 import { PreFlightSummary } from '@/components/preflight/PreFlightSummary'
-import { GuestCTA, DisclaimerBox, Citation, CitationFooter } from '@/components/shared'
+import { GuestCTA, UnverifiedCTA, DisclaimerBox, Citation, CitationFooter } from '@/components/shared'
 import { PdfExtractionPreview } from '@/components/shared/PdfExtractionPreview'
 import { AuditResultsPanel } from '@/components/trialBalance/AuditResultsPanel'
 import { WorkbookInspector } from '@/components/workbook'
@@ -92,6 +92,10 @@ function HomeContent() {
         {/* Guest CTA */}
         {!isAuthenticated && (
           <GuestCTA description="Trial Balance Diagnostics requires a verified account. Sign in or create an account to analyze your trial balance." />
+        )}
+
+        {isAuthenticated && !isVerified && (
+          <UnverifiedCTA />
         )}
 
         {isAuthenticated && isVerified && (

@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef } from 'react'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { MatchSummaryCards, BankRecMatchTable, ReconciliationBridge } from '@/components/bankRec'
-import { FileDropZone, GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, UpgradeGate, Citation, CitationFooter } from '@/components/shared'
+import { FileDropZone, GuestCTA, UnverifiedCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, UpgradeGate, Citation, CitationFooter } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractBankRecProof } from '@/components/shared/proof'
 import { useBankReconciliation } from '@/hooks/useBankReconciliation'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
@@ -156,6 +156,10 @@ export default function BankRecPage() {
         {/* Guest CTA */}
         {!authLoading && !isAuthenticated && (
           <GuestCTA description="Bank Reconciliation requires a verified account. Sign in or create an account to reconcile your data." />
+        )}
+
+        {!authLoading && isAuthenticated && !isVerified && (
+          <UnverifiedCTA />
         )}
 
         {/* State blocks — wrapped in ToolStatePresence for unified transitions */}

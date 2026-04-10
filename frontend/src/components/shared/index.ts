@@ -27,6 +27,7 @@ export { ToolNav, type ToolKey } from './ToolNav'
 export { FileDropZone } from './FileDropZone'
 
 export { GuestCTA } from './GuestCTA'
+export { UnverifiedCTA } from './UnverifiedCTA'
 export { ZeroStorageNotice } from './ZeroStorageNotice'
 export { DisclaimerBox } from './DisclaimerBox'
 export { BrandIcon, type BrandIconName, type IconSize, type IconTone, type IconState } from './BrandIcon'

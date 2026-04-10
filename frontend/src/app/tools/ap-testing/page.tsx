@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { APScoreCard, APTestResultGrid, APDataQualityBadge, FlaggedPaymentTable } from '@/components/apTesting'
-import { GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, ToolSettingsDrawer, CitationFooter } from '@/components/shared'
+import { GuestCTA, UnverifiedCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, ToolSettingsDrawer, CitationFooter } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractAPProof } from '@/components/shared/proof'
 import { useAPTesting } from '@/hooks/useAPTesting'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
@@ -86,6 +86,10 @@ export default function APTestingPage() {
         {/* Guest CTA */}
         {!authLoading && !isAuthenticated && (
           <GuestCTA description="AP Payment Testing requires a verified account. Sign in or create an account to analyze your payment data." />
+        )}
+
+        {!authLoading && isAuthenticated && !isVerified && (
+          <UnverifiedCTA />
         )}
 
         {/* State Choreography — Upload/Loading/Error/Results */}
