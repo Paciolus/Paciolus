@@ -250,19 +250,25 @@ class RateLimitIdentityMiddleware(BaseHTTPMiddleware):
         auth_header = request.headers.get("authorization", "")
         if auth_header.startswith("Bearer ") and len(auth_header) > 7:
             token = auth_header[7:]
+            import jwt as _pyjwt
+
+            from config import JWT_ALGORITHM, JWT_SECRET_KEY
+
             try:
-                import jwt as _pyjwt
-
-                from config import JWT_ALGORITHM, JWT_SECRET_KEY
-
                 payload = _pyjwt.decode(token, JWT_SECRET_KEY or "", algorithms=[JWT_ALGORITHM])
                 sub = payload.get("sub")
                 if sub is not None:
                     user_id = int(sub)
                     tier = payload.get("tier", "free")
-            except Exception:
-                # Any decode failure → anonymous; do not block the request
+            except _pyjwt.PyJWTError:
+                # Expected decode failure (malformed / expired / bad sig) → anonymous
                 pass
+            except (TypeError, ValueError) as exc:
+                # Payload shape anomaly (non-int 'sub', etc.) → anonymous, log for visibility
+                logger.warning(
+                    "rate_limit_identity: unexpected payload shape, downgrading to anonymous: %s",
+                    exc.__class__.__name__,
+                )
 
         request.state.rate_limit_user_id = user_id
         request.state.rate_limit_user_tier = tier
@@ -851,29 +857,31 @@ class ImpersonationMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         token_str = auth_header[7:]
+        import jwt as _jwt
+
+        from config import JWT_ALGORITHM, JWT_SECRET_KEY
+
         try:
-            import jwt as _jwt
-
-            from config import JWT_ALGORITHM, JWT_SECRET_KEY
-
             payload = _jwt.decode(
                 token_str,
                 JWT_SECRET_KEY or "",
                 algorithms=[JWT_ALGORITHM],
                 options={"verify_exp": False},  # Just checking the flag, not validating
             )
-            if payload.get("imp"):
-                from starlette.responses import JSONResponse
+        except _jwt.PyJWTError:
+            # Not a valid JWT — let downstream auth dependency return 401
+            return await call_next(request)
 
-                return JSONResponse(
-                    status_code=403,
-                    content={
-                        "code": "IMPERSONATION_READ_ONLY",
-                        "message": "Impersonation sessions are read-only.",
-                        "detail": "Impersonation sessions are read-only.",
-                    },
-                )
-        except Exception:
-            pass  # Not a valid JWT — let downstream handle auth
+        if payload.get("imp"):
+            from starlette.responses import JSONResponse
+
+            return JSONResponse(
+                status_code=403,
+                content={
+                    "code": "IMPERSONATION_READ_ONLY",
+                    "message": "Impersonation sessions are read-only.",
+                    "detail": "Impersonation sessions are read-only.",
+                },
+            )
 
         return await call_next(request)

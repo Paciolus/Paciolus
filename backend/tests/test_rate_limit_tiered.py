@@ -448,6 +448,85 @@ class TestRateLimitIdentityMiddleware:
         assert captured_state["user_id"] == 99
         assert captured_state["tier"] == "free"
 
+    @freeze_time("2026-03-19T10:00:00")
+    @pytest.mark.asyncio
+    async def test_non_int_sub_logs_and_falls_through(self, caplog):
+        """Sprint 598: non-integer 'sub' claim logs a warning and downgrades to anonymous."""
+        import logging as _logging
+
+        from config import JWT_ALGORITHM, JWT_SECRET_KEY
+
+        payload = {
+            "sub": "not-an-int",
+            "email": "test@example.com",
+            "tier": "professional",
+            "exp": int(time.time()) + 3600,
+        }
+        token = pyjwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
+
+        captured_state = {}
+
+        async def _capture_app(scope, receive, send):
+            from starlette.requests import Request
+            from starlette.responses import Response
+
+            request = Request(scope, receive, send)
+            captured_state["user_id"] = getattr(request.state, "rate_limit_user_id", "MISSING")
+            captured_state["tier"] = getattr(request.state, "rate_limit_user_tier", "MISSING")
+            response = Response("ok", media_type="text/plain")
+            await response(scope, receive, send)
+
+        from security_middleware import RateLimitIdentityMiddleware
+
+        middleware = RateLimitIdentityMiddleware(_capture_app)
+
+        with caplog.at_level(_logging.WARNING, logger="security_middleware"):
+            async with httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=middleware),
+                base_url="http://test",
+            ) as client:
+                r = await client.get("/test", headers={"Authorization": f"Bearer {token}"})
+
+        assert r.status_code == 200
+        assert captured_state["user_id"] is None
+        assert captured_state["tier"] == "anonymous"
+        assert any("rate_limit_identity: unexpected payload shape" in rec.message for rec in caplog.records), (
+            "Expected warning for non-int sub, got none"
+        )
+
+    @pytest.mark.asyncio
+    async def test_malformed_jwt_does_not_log_warning(self, caplog):
+        """Sprint 598: genuine PyJWTError stays silent (expected failure mode)."""
+        import logging as _logging
+
+        captured_state = {}
+
+        async def _capture_app(scope, receive, send):
+            from starlette.requests import Request
+            from starlette.responses import Response
+
+            request = Request(scope, receive, send)
+            captured_state["tier"] = getattr(request.state, "rate_limit_user_tier", "MISSING")
+            response = Response("ok", media_type="text/plain")
+            await response(scope, receive, send)
+
+        from security_middleware import RateLimitIdentityMiddleware
+
+        middleware = RateLimitIdentityMiddleware(_capture_app)
+
+        with caplog.at_level(_logging.WARNING, logger="security_middleware"):
+            async with httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=middleware),
+                base_url="http://test",
+            ) as client:
+                r = await client.get("/test", headers={"Authorization": "Bearer totally.bogus.token"})
+
+        assert r.status_code == 200
+        assert captured_state["tier"] == "anonymous"
+        assert not any("rate_limit_identity" in rec.message for rec in caplog.records), (
+            "Malformed JWT should not emit a warning (it's an expected failure)"
+        )
+
 
 # ===========================================================================
 # 5. Tier claim in create_access_token

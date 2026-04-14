@@ -52,6 +52,33 @@
 > Sprints 586–591 archived to `tasks/archive/sprints-586-591-details.md`.
 > Sprints 592–595 archived to `tasks/archive/sprints-592-595-details.md`.
 
+### Sprint 598: Middleware Fail-Secure Hardening + Dep Hygiene
+**Status:** COMPLETE
+**Goal:** Close two latent middleware fail-open handlers uncovered by the weekly nightly review, tighten dev-dep floors
+
+**Problem:** Weekly weakness hunt (2026-04-14) flagged two `except Exception: pass` sites in `security_middleware.py`:
+- `RateLimitIdentityMiddleware` (line 263) — any non-JWT exception (e.g., config import failure, non-int `sub` claim, unicode decode error) silently downgrades the request to the anonymous rate-limit tier with no log and no metric. Rate-limit tier bypass was invisible.
+- `ImpersonationMiddleware` (line 876) — any non-JWT exception on the pre-dispatch impersonation check was swallowed, bypassing the read-only gate. Downstream `require_current_user` still gates auth, but the defence-in-depth layer is lost when unexpected errors occur.
+
+Both are narrow defence-in-depth issues, not exploitable in the tested happy-path (hence 0/0 test failures), but the fail-open semantics violated the stated intent of both middlewares.
+
+**Changes:**
+- [x] `security_middleware.py` — narrow `RateLimitIdentityMiddleware` except to `jwt.PyJWTError`, log non-JWT payload-shape failures (`TypeError`/`ValueError`) at `warning`, preserve anonymous fallthrough for genuine decode errors
+- [x] `security_middleware.py` — narrow `ImpersonationMiddleware` except to `jwt.PyJWTError`, restructure so decode failure returns early to downstream auth dependency; unexpected exception types now surface instead of being swallowed
+- [x] `backend/tests/test_rate_limit_tiered.py` — added 2 new tests: non-int `sub` triggers a warning log, malformed JWT stays silent (expected-failure path)
+- [x] `backend/tests/test_impersonation_middleware.py` (new, 9 tests) — GET pass-through, POST without auth pass-through, valid non-imp token pass-through, `imp: true` blocked on POST/PUT/DELETE, expired imp still blocks, malformed JWT pass-through to downstream, non-Bearer auth pass-through
+- [x] `backend/requirements.txt` — `python-multipart` 0.0.24 → 0.0.26 (patch), `sentry-sdk[fastapi]` 2.57.0 → 2.58.0 (minor), `prometheus_client` floor 0.22.0 → 0.25.0, `pypdf` floor 6.9.2 → 6.10.0
+- [x] `backend/requirements-dev.txt` — `ruff` floor 0.15.8 → 0.15.10, `mypy` floor 1.19.0 → 1.20.1
+
+**Review:**
+- Backend: **7,403 passed, 19 xfailed** (+11 new: 9 impersonation + 2 rate-limit) in 649s — zero regressions
+- Frontend: **1,757 passed** in 41s — zero regressions, `npm run build` clean, all 24 pages compile with dynamic CSP
+- Scope deliberately narrow: bare `except Exception: pass` was the root cause, fix is to narrow the catch to the expected exception class. Unexpected exception types now bubble up as 500s, which is fail-closed.
+- Refresh-token race condition in `auth.py:731-764` (also flagged by the weekly hunt) was left intact — the fail-secure behavior is deliberate and documented. Revisit only if multi-tab UX complaints appear.
+- Deferred to future sprint: billing/checkout orchestrator bare-except review (needs deeper saga-compensation analysis), accrual_completeness float-site audit (needs domain-model review), CSRF-exempt `/auth/forgot-password` re-evaluation for authenticated-session case (low risk).
+
+---
+
 ### Sprint 597: DOCX File Format Support
 **Status:** COMPLETE
 **Goal:** Add Word document (.docx) as an 11th supported file format for trial balance uploads
