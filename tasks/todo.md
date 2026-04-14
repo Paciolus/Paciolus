@@ -52,6 +52,27 @@
 > Sprints 586–591 archived to `tasks/archive/sprints-586-591-details.md`.
 > Sprints 592–595 archived to `tasks/archive/sprints-592-595-details.md`.
 
+### Sprint 599: Coverage Sentinel + Subagent-Verification Lesson
+**Status:** COMPLETE
+**Goal:** Replace the weekly weakness hunt's hallucinated "coverage gap" analysis with a deterministic `pytest --cov` run wired into the nightly brief, and capture the subagent-verification discipline as a reusable lesson. Both are Audit 34 top-priorities.
+
+**Problem:** Sprint 598's weekly hunt dispatched two parallel `Explore` subagents. The security-hunt agent produced verifiable findings at the file:line level; the coverage-hunt agent hallucinated — falsely claiming `ratio_engine.py`, `accrual_completeness_engine.py`, and `three_way_match_engine.py` had no test files (each has 1–3 dedicated ones), and reporting "44,081" / "55,283 lines" which were actually byte counts. The operator caught all three false claims and stripped them before acting, but the underlying workflow is wrong: coverage should stand on `pytest --cov --cov-report=json` data, not LLM introspection.
+
+**Changes:**
+- [x] `scripts/overnight/agents/coverage_sentinel.py` (new) — runs `pytest --cov=. --cov-report=json` in `backend/`, parses `totals.percent_covered`, maintains a rolling 7-day history in `reports/nightly/.baseline.json` under the `coverage_sentinel` key, computes delta vs 7-day mean, ranks top 10 uncovered files by missing-line count, writes `.coverage_sentinel_<DATE>.json`. Status rules: ≥90% green, 85–90% yellow, <85% red; additional drift gates (>0.5pp under mean → yellow, >2pp → red).
+- [x] `scripts/overnight/orchestrator.py` — added `coverage_sentinel` to `AGENT_SCHEDULE` at 3:00 (between Scout at 2:45 and Sprint Shepherd at 3:30); added `AGENT_TIMEOUT_OVERRIDES` mechanism with `coverage_sentinel: 1700s` (pytest --cov is ~1.3–1.5× slower than the bare run); made the "Run complete: N/M" summary count derive from `len(AGENT_SCHEDULE) + 1` instead of the hardcoded `/6`.
+- [x] `scripts/overnight/briefing_compiler.py` — added `coverage_sentinel` to the `AGENTS` list, added `_format_coverage_section()` rendering percentage + 7-day mean + delta arrow + top uncovered files table, inserted the section between Report Auditor and Scout in the daily brief template, changed the "Agents run: N/5" hardcoded denominator to `len(AGENTS)`.
+- [x] `tasks/lessons.md` — appended new lesson "Subagent findings must be verified against live code before acting (Sprint 598)" documenting the ratio_engine/accrual/three_way_match hallucinations, the fake line counts, and the `file:line` vs structural-claim trust heuristic.
+
+**Review:**
+- Standalone dry-run against the live backend test suite: **92.09% line coverage** (79,816 / 86,671 statements, 6,855 uncovered) — status GREEN, no drift (baseline is building from today).
+- `briefing_compiler.py` regenerated `reports/nightly/2026-04-14.md` with `agents_run: 6/6`, new Coverage Sentinel section renders cleanly with the top-uncovered-files table.
+- Top uncovered files surfaced by the real data: `guards/doc_consistency_guard.py` (0%), `leadsheet_generator.py` (11.4%), `workbook_inspector.py` (18.6%), `pdf/sections/diagnostic.py` (65.7%). These are the actual coverage gaps — notably NONE of them match the hallucinated agent's claims (ratio/accrual/three_way_match). The hallucinations were total noise.
+- `.baseline.json` now carries `coverage_sentinel.history` — on 2026-04-21 this will reach 7 entries and delta tracking will start driving status on its own.
+- No changes to the backend test suite itself. No changes to production code. Pure observability infra.
+
+---
+
 ### Sprint 598: Middleware Fail-Secure Hardening + Dep Hygiene
 **Status:** COMPLETE
 **Goal:** Close two latent middleware fail-open handlers uncovered by the weekly nightly review, tighten dev-dep floors

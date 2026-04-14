@@ -21,7 +21,14 @@ from scripts.overnight.config import (
     TODAY,
 )
 
-AGENTS = ["qa_warden", "report_auditor", "scout", "sprint_shepherd", "dependency_sentinel"]
+AGENTS = [
+    "qa_warden",
+    "report_auditor",
+    "scout",
+    "sprint_shepherd",
+    "dependency_sentinel",
+    "coverage_sentinel",
+]
 
 STATUS_EMOJI = {"green": "\U0001f7e2", "yellow": "\U0001f7e1", "red": "\U0001f534"}
 
@@ -294,6 +301,70 @@ def _format_dependency_section(data: dict | None) -> str:
     return "\n".join(lines)
 
 
+def _format_coverage_section(data: dict | None) -> str:
+    """Format Coverage Sentinel section (Sprint 599)."""
+    if not data:
+        return (
+            f"## \U0001f4ca Coverage Sentinel — \U0001f534 AGENT DID NOT RUN\n"
+            f"\u26a0\ufe0f Agent did not produce output — check run log.\n"
+        )
+
+    if "error" in data and "percent_covered" not in data:
+        e = STATUS_EMOJI.get("red", "\U0001f534")
+        return (
+            f"## \U0001f4ca Coverage Sentinel — {e} RED\n"
+            f"\u26a0\ufe0f Coverage run failed: `{data.get('error', 'unknown')}`\n"
+        )
+
+    e = STATUS_EMOJI.get(data.get("status", "green"), "\U0001f7e2")
+    pct = data.get("percent_covered", 0.0)
+    covered = data.get("covered_lines", 0)
+    total = data.get("num_statements", 0)
+    missing = data.get("missing_lines", 0)
+    mean_pct = data.get("rolling_mean_pct")
+    delta = data.get("delta_pp")
+    window = data.get("rolling_window_days", 7)
+
+    lines = [
+        f"## \U0001f4ca Coverage Sentinel — {e} {data.get('status', 'unknown').upper()}",
+        f"**Backend line coverage:** {pct:.2f}% "
+        f"({covered:,}/{total:,} statements, {missing:,} uncovered)  ",
+    ]
+
+    if mean_pct is not None and delta is not None:
+        sign = "+" if delta >= 0 else ""
+        arrow = "\u2193" if delta < 0 else "\u2191" if delta > 0 else "\u2192"
+        lines.append(
+            f"**{window}-day mean:** {mean_pct:.2f}%  |  "
+            f"**Delta:** {arrow} {sign}{delta:.2f}pp  "
+        )
+    else:
+        lines.append(f"**{window}-day mean:** _building baseline (need more runs)_  ")
+
+    reasons = data.get("reasons", [])
+    if reasons:
+        lines.append("")
+        lines.append("\u26a0\ufe0f **Flags:**")
+        for r in reasons:
+            lines.append(f"- {r}")
+
+    top_uncovered = data.get("top_uncovered_files", [])
+    if top_uncovered:
+        lines.append("")
+        lines.append("**Top uncovered files** (by missing statement count):")
+        lines.append("")
+        lines.append("| File | Coverage | Missing | Statements |")
+        lines.append("|------|---------:|--------:|-----------:|")
+        for f in top_uncovered[:10]:
+            path = f.get("path", "?")
+            fpct = f.get("percent_covered", 0.0)
+            fmissing = f.get("missing_lines", 0)
+            fstmts = f.get("num_statements", 0)
+            lines.append(f"| `{path}` | {fpct:.1f}% | {fmissing:,} | {fstmts:,} |")
+
+    return "\n".join(lines)
+
+
 def run() -> dict:
     """Compile the morning briefing report."""
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
@@ -314,9 +385,10 @@ def run() -> dict:
     tomorrow = (datetime.date.today() + datetime.timedelta(days=1)).isoformat()
 
     # Build the report
+    total_agents = len(AGENTS)
     report = f"""# \U0001f305 Paciolus Overnight Brief — {TODAY}
 **Overall Status:** {overall_emoji} {overall.upper()}
-**Report generated:** {datetime.datetime.now().strftime('%I:%M %p')} | **Agents run:** {agents_run}/5
+**Report generated:** {datetime.datetime.now().strftime('%I:%M %p')} | **Agents run:** {agents_run}/{total_agents}
 
 {exec_summary}
 
@@ -327,6 +399,10 @@ def run() -> dict:
 ---
 
 {_format_report_auditor_section(agent_data.get('report_auditor'))}
+
+---
+
+{_format_coverage_section(agent_data.get('coverage_sentinel'))}
 
 ---
 
