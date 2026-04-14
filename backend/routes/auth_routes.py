@@ -621,7 +621,7 @@ def refresh(request: Request, response: Response, db: Session = Depends(get_db))
     # form POSTs. Browsers never auto-attach custom headers on simple requests.
     xrw = request.headers.get("X-Requested-With")
     if xrw != "XMLHttpRequest":
-        raise HTTPException(status_code=401, detail="Missing or invalid X-Requested-With header")
+        raise HTTPException(status_code=403, detail="Missing or invalid X-Requested-With header")
 
     logger.debug("Token refresh requested")
     raw_token = request.cookies.get(REFRESH_COOKIE_NAME)
