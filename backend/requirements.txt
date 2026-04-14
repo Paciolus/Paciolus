@@ -3,7 +3,7 @@ uvicorn[standard]==0.44.0
 pydantic[email]==2.12.5
 pandas==3.0.2
 openpyxl==3.1.5
-python-multipart==0.0.24
+python-multipart==0.0.26
 python-dotenv==1.2.2
 
 # PDF Generation (Day 12)
@@ -32,7 +32,7 @@ limits>=5.8.0
 redis>=5.0.0
 
 # APM / Error Tracking (Sprint 275)
-sentry-sdk[fastapi]==2.57.0
+sentry-sdk[fastapi]==2.58.0
 
 # ODS (OpenDocument Spreadsheet) support (Sprint 432)
 odfpy>=1.4.1
@@ -47,7 +47,7 @@ python-docx>=1.1.0
 defusedxml>=0.7.1
 
 # Prometheus Metrics (Sprint 435)
-prometheus_client>=0.22.0
+prometheus_client>=0.25.0
 
 # Background Scheduler (Sprint 307)
 APScheduler==3.11.2
@@ -56,8 +56,8 @@ APScheduler==3.11.2
 # No direct imports exist — pip resolves them automatically. No pin needed.
 
 # SECURITY: Pinned transitive dependency patches (pip-audit CVEs)
-cryptography>=46.0.6  # CVE-2026-26007
+cryptography>=46.0.7  # CVE-2026-26007
 pillow>=12.2.0  # CVE-2026-25990
 werkzeug>=3.1.8  # CVE-2026-27199
 pyasn1>=0.6.3  # CVE-2026-30922 (DoS via recursive ASN.1 decoding)
-pypdf>=6.9.2  # CVE-2026-31826, CVE-2026-33123 (memory exhaustion via crafted PDF)
+pypdf>=6.10.0  # CVE-2026-31826, CVE-2026-33123 (memory exhaustion via crafted PDF)

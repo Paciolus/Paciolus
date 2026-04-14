@@ -46,13 +46,27 @@ _load_env()
 
 # ── Agent schedule ─────────────────────────────────────────────────────────
 # Each entry: (agent_name, script_path, target_hour, target_minute)
+# Coverage Sentinel (Sprint 599) is scheduled at 3:00 — after Scout, before
+# Sprint Shepherd — because a full pytest --cov run takes ~13–16 min and
+# needs a clear 25-min window. See AGENT_TIMEOUT_OVERRIDES for the longer
+# subprocess timeout.
 AGENT_SCHEDULE = [
     ("qa_warden",            "scripts/overnight/agents/qa_warden.py",            2,  0),
     ("report_auditor",       "scripts/overnight/agents/report_auditor.py",       2, 15),
     ("scout",                "scripts/overnight/agents/scout.py",                2, 45),
+    ("coverage_sentinel",    "scripts/overnight/agents/coverage_sentinel.py",    3,  0),
     ("sprint_shepherd",      "scripts/overnight/agents/sprint_shepherd.py",      3, 30),
     ("dependency_sentinel",  "scripts/overnight/agents/dependency_sentinel.py",  3, 45),
 ]
+
+# Per-agent subprocess timeout override (seconds). Agents not listed use
+# the default below. Coverage Sentinel re-runs the full backend test suite
+# with coverage instrumentation, which is ~1.3–1.5x slower than the base
+# QA Warden run.
+DEFAULT_AGENT_TIMEOUT_S = 900
+AGENT_TIMEOUT_OVERRIDES = {
+    "coverage_sentinel": 1700,  # 28 min — pytest --cov + margin
+}
 
 BRIEFING_COMPILER = ("briefing_compiler", "scripts/overnight/briefing_compiler.py", 4, 0)
 
@@ -100,6 +114,7 @@ def _run_agent(name: str, script: str, log: RunLog, dry_run: bool = False) -> bo
 
     log.log(f"  Executing: {PYTHON_BIN} {script_path}")
     t0 = time.time()
+    timeout_s = AGENT_TIMEOUT_OVERRIDES.get(name, DEFAULT_AGENT_TIMEOUT_S)
 
     try:
         result = subprocess.run(
@@ -107,7 +122,7 @@ def _run_agent(name: str, script: str, log: RunLog, dry_run: bool = False) -> bo
             cwd=str(PROJECT_ROOT),
             capture_output=True,
             text=True,
-            timeout=900,  # 15 min max per agent
+            timeout=timeout_s,
         )
         elapsed = round(time.time() - t0, 1)
 
@@ -126,7 +141,7 @@ def _run_agent(name: str, script: str, log: RunLog, dry_run: bool = False) -> bo
         return True
 
     except subprocess.TimeoutExpired:
-        log.log(f"  TIMEOUT after 900s — killed subprocess")
+        log.log(f"  TIMEOUT after {timeout_s}s — killed subprocess")
         return False
     except Exception as e:
         log.log(f"  EXCEPTION: {e}")
@@ -161,7 +176,11 @@ def main() -> None:
         success_count += 1
 
     total_elapsed = round(time.time() - total_start, 1)
-    log.log(f"=== Run complete: {success_count}/6 agents succeeded in {total_elapsed}s ===")
+    total_agents = len(AGENT_SCHEDULE) + 1  # +1 for briefing compiler
+    log.log(
+        f"=== Run complete: {success_count}/{total_agents} agents succeeded "
+        f"in {total_elapsed}s ==="
+    )
     log.save()
 
     sys.exit(0)

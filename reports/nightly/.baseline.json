@@ -1,11 +1,11 @@
 {
   "qa_warden": {
-    "date": "2026-04-07",
+    "date": "2026-04-10",
     "backend": {
-      "passed": 7361,
+      "passed": 7363,
       "failed": 0,
       "errors": 0,
-      "duration_s": 554.5,
+      "duration_s": 548.1,
       "failing_tests": [],
       "new_failures": [],
       "resolved": []
@@ -13,11 +13,11 @@
     "frontend": {
       "passed": 1751,
       "failed": 0,
-      "duration_s": 63.5
+      "duration_s": 41.3
     }
   },
   "report_auditor": {
-    "date": "2026-04-07",
+    "date": "2026-04-10",
     "bug_tracker": {
       "BUG-001": {
         "description": "Suggested procedures rotation bug \u2014 procedures repeat rather than rotate across reports",
