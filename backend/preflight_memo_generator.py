@@ -242,23 +242,31 @@ def generate_preflight_memo(
         story.append(Paragraph(f"{_roman(section_counter)}. Column Detection", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
-        col_data = [["Role", "Detected Column", "Confidence", "Status"]]
+        # Sprint 668 Issue 8: Downstream Use column added so the reader
+        # can see at a glance how each detected column is consumed (or
+        # explicitly NOT consumed) by downstream analysis.
+        col_data = [["Role", "Detected Column", "Confidence", "Status", "Downstream Use"]]
         low_confidence_columns = []
         for col in columns:
             conf = col.get("confidence", 0)
+            downstream_use = col.get("downstream_use") or "Not used in current analysis"
             col_data.append(
                 [
                     col.get("role", "").title(),
                     col.get("detected_name") or "\u2014",
                     f"{conf:.0%}",
                     col.get("status", "").replace("_", " ").title(),
+                    Paragraph(downstream_use, styles["MemoBody"]),
                 ]
             )
             # Track low-confidence columns for remediation note (IMP-02)
             if col.get("status") == "low_confidence" or (0 < conf < 0.80):
                 low_confidence_columns.append(col)
 
-        col_table = Table(col_data, colWidths=[1.2 * inch, 2.5 * inch, 1.2 * inch, 1.5 * inch])
+        col_table = Table(
+            col_data,
+            colWidths=[1.0 * inch, 1.6 * inch, 0.8 * inch, 1.0 * inch, 2.6 * inch],
+        )
         col_table.setStyle(
             TableStyle(
                 [

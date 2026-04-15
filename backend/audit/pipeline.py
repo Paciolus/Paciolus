@@ -238,10 +238,27 @@ def audit_trial_balance_streaming(
         # ── Stage 4: Risk Summary ────────────────────────────────────
         result["abnormal_balances"] = abnormal_balances
         result["materiality_threshold"] = materiality_threshold
-        result["material_count"] = sum(1 for ab in abnormal_balances if ab.get("materiality") == "material")
+        # Sprint 668 Issue 1: coverage_analysis findings (concentration risk)
+        # are informational context, not structural anomalies. They are kept
+        # in abnormal_balances so the report can render them in a dedicated
+        # "Materiality Coverage Analysis" section, but they are excluded
+        # from material_count, has_risk_alerts, and every scoring input
+        # below. Without this split a perfectly clean TB scored elevated(42)
+        # purely because four large-but-normal accounts (Sales, COGS, PP&E,
+        # Long-Term Debt) tripped the concentration-risk thresholds.
+        result["material_count"] = sum(
+            1 for ab in abnormal_balances if ab.get("materiality") == "material" and not ab.get("coverage_analysis")
+        )
         _informational_count = sum(1 for ab in abnormal_balances if ab.get("severity") == "informational")
-        result["immaterial_count"] = len(abnormal_balances) - result["material_count"] - _informational_count
+        result["immaterial_count"] = sum(
+            1
+            for ab in abnormal_balances
+            if ab.get("materiality") == "immaterial"
+            and ab.get("severity") != "informational"
+            and not ab.get("coverage_analysis")
+        )
         result["informational_count"] = _informational_count
+        result["coverage_finding_count"] = sum(1 for ab in abnormal_balances if ab.get("coverage_analysis"))
         result["has_risk_alerts"] = result["material_count"] > 0
 
         result["classification_summary"] = auditor.get_classification_summary()
@@ -258,33 +275,39 @@ def audit_trial_balance_streaming(
             for ab in abnormal_balances
         )
         _total_debits = Decimal(str(result.get("total_debits", 0)))
-        # Coverage uses real account-level material items only — the
-        # injected tb_out_of_balance entry would saturate coverage and
-        # skew the denominator.
+        # Coverage uses real structural material items only. The injected
+        # tb_out_of_balance entry (Sprint 667) would saturate coverage and
+        # skew the denominator. Coverage-analysis (concentration) entries
+        # are excluded too — Sprint 668 Issue 1 — because flagging the
+        # single largest revenue/expense/asset account on a balanced TB
+        # is not a coverage signal, it's an arithmetic certainty.
         _material_items = [
             ab
             for ab in abnormal_balances
-            if ab.get("materiality") == "material" and ab.get("anomaly_type") != "tb_out_of_balance"
+            if ab.get("materiality") == "material"
+            and ab.get("anomaly_type") != "tb_out_of_balance"
+            and not ab.get("coverage_analysis")
         ]
         _flagged_value = sum(abs(Decimal(str(ab.get("amount", 0)))) for ab in _material_items)
         _coverage_pct = min(_flagged_value / _total_debits * 100, Decimal("100")) if _total_debits > 0 else Decimal("0")
 
-        # Subtract the injected OOB entry from the count used for scoring
-        # so it is not double-weighted (60 points from the flag + 8 per
-        # material entry). Coverage_pct is already computed above from
-        # real items only.
-        _scoring_material_count = sum(
-            1
+        # Same exclusion criteria for the scoring count and the abnormal_balances
+        # list passed to compute_tb_diagnostic_score — keeps the +60 OOB factor
+        # from being double-weighted and stops concentration findings from
+        # being counted as structural exceptions (8pt each in the score model).
+        _scoring_abnormals = [
+            ab
             for ab in abnormal_balances
-            if ab.get("materiality") == "material" and ab.get("anomaly_type") != "tb_out_of_balance"
-        )
+            if ab.get("anomaly_type") != "tb_out_of_balance" and not ab.get("coverage_analysis")
+        ]
+        _scoring_material_count = sum(1 for ab in _scoring_abnormals if ab.get("materiality") == "material")
         risk_score, risk_factors = compute_tb_diagnostic_score(
             _scoring_material_count,
             result["immaterial_count"],
             _coverage_pct,
             _has_suspense,
             _has_credit_balance,
-            abnormal_balances=[ab for ab in abnormal_balances if ab.get("anomaly_type") != "tb_out_of_balance"],
+            abnormal_balances=_scoring_abnormals,
             informational_count=result["informational_count"],
             tb_out_of_balance=_tb_out_of_balance,
             tb_imbalance_amount=_tb_imbalance_amount,

@@ -506,7 +506,17 @@ def render_risk_summary(story: list, styles: dict, audit_result: dict) -> None:
 
 
 def render_anomaly_details(story: list, styles: dict, audit_result: dict) -> None:
-    """Build the anomaly details with ledger-style tables."""
+    """Build the anomaly details with ledger-style tables.
+
+    Sprint 668 Issue 1: Concentration findings carry ``coverage_analysis=True``
+    and render in a dedicated "Materiality Coverage Analysis" section instead
+    of being mixed into Material Exceptions. A trial balance with no
+    structural anomalies but legitimate large account balances should not
+    say "Material Exceptions: 4" — that contradicts Issue 1's principle.
+    The split is based on the ``coverage_analysis`` flag, NOT on
+    ``anomaly_type``, because future coverage analyses may use different
+    type labels.
+    """
     abnormal_balances = audit_result.get("abnormal_balances", [])
 
     if not abnormal_balances:
@@ -517,13 +527,16 @@ def render_anomaly_details(story: list, styles: dict, audit_result: dict) -> Non
     story.append(LedgerRule(color=ClassicalColors.OBSIDIAN_DEEP, thickness=1))
     story.append(Spacer(1, 4))
 
-    # Separate by materiality / severity tier (Sprint 537: three tiers)
-    material = [ab for ab in abnormal_balances if ab.get("materiality") == "material"]
-    informational = [ab for ab in abnormal_balances if ab.get("severity") == "informational"]
+    # Sprint 668: split coverage-analysis entries out of the structural
+    # anomaly buckets. Structural buckets follow the historic three-tier
+    # split (material / immaterial / informational).
+    coverage_findings = [ab for ab in abnormal_balances if ab.get("coverage_analysis")]
+    structural = [ab for ab in abnormal_balances if not ab.get("coverage_analysis")]
+
+    material = [ab for ab in structural if ab.get("materiality") == "material"]
+    informational = [ab for ab in structural if ab.get("severity") == "informational"]
     immaterial = [
-        ab
-        for ab in abnormal_balances
-        if ab.get("materiality") == "immaterial" and ab.get("severity") != "informational"
+        ab for ab in structural if ab.get("materiality") == "immaterial" and ab.get("severity") != "informational"
     ]
 
     # Sprint 667 Issue 3: Trial-balance-out-of-balance is a structural
@@ -538,6 +551,7 @@ def render_anomaly_details(story: list, styles: dict, audit_result: dict) -> Non
     )
     immaterial.sort(key=lambda ab: abs(ab.get("amount", 0)), reverse=True)
     informational.sort(key=lambda ab: abs(ab.get("amount", 0)), reverse=True)
+    coverage_findings.sort(key=lambda ab: abs(ab.get("amount", 0)), reverse=True)
 
     if material:
         story.append(Paragraph(f"Material Exceptions ({len(material)})", styles["SubsectionHeader"]))
@@ -561,6 +575,44 @@ def render_anomaly_details(story: list, styles: dict, audit_result: dict) -> Non
         )
         story.append(Spacer(1, 4))
         story.append(_create_informational_table(styles, informational))
+        story.append(Spacer(1, 10))
+
+    # Sprint 668 Issue 1: When no structural exceptions remain, state that
+    # explicitly so the reader is not left wondering whether the section
+    # was suppressed or empty by accident. Coverage findings on the same
+    # file render below, in their own clearly-labelled section.
+    if not material and not immaterial and not informational:
+        story.append(
+            Paragraph(
+                "<b>No structural anomalies identified.</b> The trial balance "
+                "reconciles, account types are recognised, no duplicate codes "
+                "or natural-balance violations were detected, and there are no "
+                "blank account names. Any items in the Materiality Coverage "
+                "Analysis section below are documented for context only.",
+                styles["BodyText"],
+            )
+        )
+        story.append(Spacer(1, 10))
+
+    if coverage_findings:
+        story.append(
+            Paragraph(
+                f"Materiality Coverage Analysis ({len(coverage_findings)})",
+                styles["SubsectionHeader"],
+            )
+        )
+        story.append(
+            Paragraph(
+                "<i>Coverage analysis identifies the largest balances within "
+                "each account category. These accounts are documented for "
+                "materiality coverage; concentration is not by itself a "
+                "structural anomaly. They are excluded from risk scoring and "
+                "do not appear in Material Exceptions.</i>",
+                styles["BodyText"],
+            )
+        )
+        story.append(Spacer(1, 4))
+        story.append(_create_ledger_table(styles, coverage_findings, is_material=False))
 
 
 def _create_ledger_table(styles: dict, anomalies: list, is_material: bool) -> KeepTogether:

@@ -28,12 +28,21 @@ from shared.parsing_helpers import safe_decimal
 
 @dataclass
 class ColumnQuality:
-    """Detection confidence for a single column role."""
+    """Detection confidence for a single column role.
 
-    role: str  # "account", "debit", "credit"
+    Sprint 668 Issue 6: ``status`` now distinguishes ``inferred`` (the
+    role was filled by content-based fallback, not a header match) from
+    ``found`` (matched a recognised header) and ``missing`` (no candidate
+    at all). The legacy "low_confidence" value remains for moderate
+    matches between the two extremes. Sprint 668 Issue 8: ``downstream_use``
+    is the user-facing description of how the column is consumed.
+    """
+
+    role: str  # "account", "debit", "credit", or auxiliary role hint
     detected_name: str | None
     confidence: float
-    status: str  # "found", "low_confidence", "missing"
+    status: str  # "found" | "inferred" | "low_confidence" | "missing"
+    downstream_use: str = ""  # Sprint 668 Issue 8: stated downstream use
 
 
 @dataclass
@@ -132,6 +141,7 @@ class PreFlightReport:
                     "detected_name": c.detected_name,
                     "confidence": round(c.confidence, 2),
                     "status": c.status,
+                    "downstream_use": c.downstream_use,
                 }
                 for c in self.columns
             ],
@@ -600,6 +610,41 @@ def _check_tb_balance(
     )
 
 
+_DOWNSTREAM_USE_BY_ROLE: dict[str, str] = {
+    # Core roles consumed by the diagnostic engine
+    "account": "Account identification — lead sheets, classification, exception attribution",
+    "debit": "Balance verification, exception detection, anomaly aggregation",
+    "credit": "Balance verification, exception detection, anomaly aggregation",
+    # Auxiliary roles surfaced for transparency
+    "Account Name": "Human-readable label paired with account identifier",
+    "Account Type": "Classification override (revenue/expense/asset/liability/equity)",
+    "Account Code": "Reference / account code — paired with Account Name where present",
+    "Classification": "Optional classification override",
+    "Department": "Not used in current analysis",
+    "Cost Center": "Not used in current analysis",
+    "Currency": "Not used in current analysis",
+    "Balance": "Net balance column — verified against debit/credit pair",
+    "Description": "Not used in current analysis",
+    "Memo": "Not used in current analysis",
+    "Reference": "Not used in current analysis",
+    "Date": "Not used in current analysis",
+    "Period": "Not used in current analysis",
+    "Entity": "Not used in current analysis",
+    "Segment": "Not used in current analysis",
+}
+
+
+def _downstream_use_for_role(role: str) -> str:
+    """Return the user-facing description for a column role.
+
+    Sprint 668 Issue 8: every column in the detection table now carries an
+    explicit downstream-use description. Unknown auxiliary roles fall back
+    to the explicit "Not used in current analysis" message rather than a
+    blank cell.
+    """
+    return _DOWNSTREAM_USE_BY_ROLE.get(role, "Not used in current analysis")
+
+
 def _check_column_detection(
     detection: ColumnDetectionResult,
     columns_quality: list[ColumnQuality],
@@ -610,6 +655,15 @@ def _check_column_detection(
     Reports all columns from the file — not just the 3 core roles.
     Unmapped columns are shown with role "unmapped" so users can verify
     the engine saw them.
+
+    Sprint 668 Issue 6: The status field now distinguishes between a
+    real header match (``found``) and a content-based fallback
+    (``inferred``). The legacy ``account_column`` fallback path in
+    ``column_detector.py`` reaches for the first unassigned column when
+    no header pattern matches — that case used to surface as ``found``
+    at 30% confidence, which is misleading. It now surfaces as
+    ``inferred``. Sprint 668 Issue 8: every column carries a
+    ``downstream_use`` description.
     """
     # Core role mappings
     core_mappings: dict[str, tuple[str | None, float]] = {
@@ -618,22 +672,61 @@ def _check_column_detection(
         "credit": (detection.credit_column, detection.credit_confidence),
     }
 
+    # Sprint 668 Issue 6: detect the fallback path. column_detector emits a
+    # detection note containing "fallback" when it reached for the first
+    # unassigned column to fill the account role. Treat that as inferred.
+    _account_inferred = any("fallback" in note.lower() for note in detection.detection_notes)
+
+    # Sprint 668 Issue 6: When NO core role matched at exact-pattern
+    # confidence (≥ 0.85), the file probably has no header row — every
+    # match was via a loose partial regex against data content. Demote
+    # any matched role to ``inferred`` so the caller knows downstream
+    # results are derived from content inference, not column semantics.
+    # 0.85 cleanly separates exact patterns (0.90–1.0) from partials
+    # (0.30–0.80) in column_detector.py.
+    _max_core_conf = max(
+        detection.account_confidence,
+        detection.debit_confidence,
+        detection.credit_confidence,
+    )
+    _row_inferred = _max_core_conf < 0.85
+
     mapped_cols: set[str] = set()
     for role, (col_name, conf) in core_mappings.items():
+        downstream_use = _downstream_use_for_role(role)
         if col_name is None:
-            columns_quality.append(ColumnQuality(role, None, 0.0, "missing"))
+            columns_quality.append(ColumnQuality(role, None, 0.0, "missing", downstream_use))
+        elif role == "account" and _account_inferred:
+            columns_quality.append(ColumnQuality(role, col_name, conf, "inferred", downstream_use))
+            mapped_cols.add(col_name.lower().strip())
+        elif _row_inferred:
+            columns_quality.append(ColumnQuality(role, col_name, conf, "inferred", downstream_use))
+            mapped_cols.add(col_name.lower().strip())
         elif conf < 0.80:
-            columns_quality.append(ColumnQuality(role, col_name, conf, "low_confidence"))
+            columns_quality.append(ColumnQuality(role, col_name, conf, "low_confidence", downstream_use))
             mapped_cols.add(col_name.lower().strip())
         else:
-            columns_quality.append(ColumnQuality(role, col_name, conf, "found"))
+            columns_quality.append(ColumnQuality(role, col_name, conf, "found", downstream_use))
             mapped_cols.add(col_name.lower().strip())
 
     # Add unmapped columns so the user can see the full file structure.
-    # Infer a descriptive role label from the column name where possible.
+    # Sprint 668 Issue 8: account-code-style columns get the explicit
+    # "Account Code" role rather than being lumped under "unmapped" — they
+    # carry a stated downstream use even though they are not used as the
+    # primary balance-verification key.
     _AUXILIARY_ROLE_HINTS = {
         "account_name": "Account Name",
         "account_type": "Account Type",
+        "account_no": "Account Code",
+        "account_number": "Account Code",
+        "account_code": "Account Code",
+        "acct_no": "Account Code",
+        "acct_number": "Account Code",
+        "acct_code": "Account Code",
+        "gl_code": "Account Code",
+        "gl_account": "Account Code",
+        "gl_account_number": "Account Code",
+        "code": "Account Code",
         "classification": "Classification",
         "department": "Department",
         "cost_center": "Cost Center",
@@ -652,11 +745,47 @@ def _check_column_detection(
             continue
         col_lower = col.lower().strip().replace(" ", "_").replace("-", "_")
         inferred_role = _AUXILIARY_ROLE_HINTS.get(col_lower, "unmapped")
-        columns_quality.append(ColumnQuality(role=inferred_role, detected_name=col, confidence=1.0, status="found"))
+        columns_quality.append(
+            ColumnQuality(
+                role=inferred_role,
+                detected_name=col,
+                confidence=1.0,
+                status="found",
+                downstream_use=_downstream_use_for_role(inferred_role),
+            )
+        )
 
     # Issue generation
     missing = [c for c in columns_quality if c.status == "missing"]
     low_conf = [c for c in columns_quality if c.status == "low_confidence"]
+    inferred = [c for c in columns_quality if c.status == "inferred"]
+
+    # Sprint 668 Issue 6: When NO core role found a real header match (every
+    # core role is missing or inferred), the file probably has no header
+    # row. Surface a dedicated warning so the user knows downstream
+    # results are derived from content inference, not column semantics.
+    core_roles = [c for c in columns_quality if c.role in ("account", "debit", "credit")]
+    no_real_headers = all(c.status in ("missing", "inferred") for c in core_roles) and any(
+        c.status == "inferred" for c in core_roles
+    )
+    if no_real_headers:
+        issues.append(
+            PreFlightIssue(
+                category="column_detection",
+                severity="high",
+                message=(
+                    "No headers detected — the first row of the file does not match "
+                    "any recognised trial-balance column vocabulary. Roles below were "
+                    "inferred from content."
+                ),
+                affected_count=len(core_roles),
+                remediation=(
+                    "Re-export the file with a header row containing standard column "
+                    "names (Account, Debit, Credit), or use column mapping to confirm "
+                    "the inferred roles before proceeding."
+                ),
+            )
+        )
 
     if missing:
         names = ", ".join(c.role for c in missing)
@@ -668,6 +797,25 @@ def _check_column_detection(
                 affected_count=len(missing),
                 remediation="Use column mapping to manually assign the missing column(s), "
                 "or rename columns to standard names (Account, Debit, Credit).",
+            )
+        )
+    elif inferred:
+        # Inferred columns are not "low confidence" — they are explicit
+        # content-based guesses. Surface them as a medium-severity warning
+        # so the conclusion text routes to "Ready with caveats" rather
+        # than blocking, but the user is told to confirm before relying on
+        # downstream results.
+        names = ", ".join(c.role for c in inferred)
+        issues.append(
+            PreFlightIssue(
+                category="column_detection",
+                severity="medium",
+                message=f"Column role(s) inferred from content (not header match): {names}",
+                affected_count=len(inferred),
+                remediation=(
+                    "Confirm the inferred role assignments are correct, or use "
+                    "column mapping to override before downstream testing."
+                ),
             )
         )
     elif detection.overall_confidence < 0.80:

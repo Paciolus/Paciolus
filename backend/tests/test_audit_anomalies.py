@@ -577,7 +577,14 @@ Sales Revenue,,400
             assert entry["category_total"] > 0
 
     def test_concentration_includes_recommendation(self, high_concentration_csv):
-        """Verify concentration risks include recommendation."""
+        """Verify concentration risks include a coverage-oriented recommendation.
+
+        Sprint 668 Issue 1: recommendation text was rewritten to frame
+        concentration as materiality coverage (not an anomaly). The
+        recommendation must still be present and non-empty, and must
+        carry the new coverage framing so the report renderer can group
+        it into the Materiality Coverage Analysis section.
+        """
         auditor = StreamingAuditor(materiality_threshold=0)
         df = pd.read_csv(io.BytesIO(high_concentration_csv))
         auditor.process_chunk(df, len(df))
@@ -586,7 +593,10 @@ Sales Revenue,,400
 
         for entry in concentration:
             assert "recommendation" in entry
-            assert "review" in entry["recommendation"].lower()
+            rec = entry["recommendation"].lower()
+            # Sprint 668: explicit coverage framing instead of "review for…"
+            assert "coverage" in rec or "concentration" in rec
+            assert entry.get("coverage_analysis") is True
 
     def test_concentration_merged_into_abnormal_balances(self, high_concentration_csv):
         """Verify concentration risks are merged into audit result."""

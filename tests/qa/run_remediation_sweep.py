@@ -96,6 +96,7 @@ def _slim_diagnostic(diag: dict) -> dict:
         "material_count": diag.get("material_count"),
         "immaterial_count": diag.get("immaterial_count"),
         "informational_count": diag.get("informational_count"),
+        "coverage_finding_count": diag.get("coverage_finding_count"),
         "has_risk_alerts": diag.get("has_risk_alerts"),
         "risk_score": rs.get("risk_score"),
         "risk_tier": rs.get("risk_tier"),
@@ -113,6 +114,7 @@ def _slim_diagnostic(diag: dict) -> dict:
                 "anomaly_type": ab.get("anomaly_type"),
                 "severity": ab.get("severity"),
                 "confidence": ab.get("confidence"),
+                "coverage_analysis": ab.get("coverage_analysis", False),
             }
             for ab in abnormals[:25]
         ],

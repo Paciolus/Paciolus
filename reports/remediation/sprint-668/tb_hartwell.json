@@ -1,0 +1,152 @@
+{
+  "filename": "tb_hartwell.docx",
+  "size_bytes": 11024,
+  "errors": [
+    {
+      "stage": "diagnostic",
+      "type": "OptionError",
+      "message": "No such keys(s): 'io.excel.zip.reader'",
+      "traceback": "Traceback (most recent call last):\n  File \"D:\\Dev\\Paciolus\\backend\\security_utils.py\", line 201, in process_tb_chunked\n    yield from read_csv_chunked(file_bytes, chunk_size, dtype=str)\n  File \"D:\\Dev\\Paciolus\\backend\\security_utils.py\", line 84, in read_csv_chunked\n    for chunk in pd.read_csv(buffer, chunksize=chunk_size, dtype=dtype):\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Python312\\Lib\\site-packages\\pandas\\io\\parsers\\readers.py\", line 873, in read_csv\n    return _read(filepath_or_buffer, kwds)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Python312\\Lib\\site-packages\\pandas\\io\\parsers\\readers.py\", line 300, in _read\n    parser = TextFileReader(filepath_or_buffer, **kwds)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Python312\\Lib\\site-packages\\pandas\\io\\parsers\\readers.py\", line 1645, in __init__\n    self._engine = self._make_engine(f, self.engine)\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Python312\\Lib\\site-packages\\pandas\\io\\parsers\\readers.py\", line 1922, in _make_engine\n    return mapping[engine](f, **self.options)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nUnicodeDecodeError: 'utf-8' codec can't decode byte 0x86 in position 12: invalid start byte\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"D:\\Dev\\Paciolus\\tests\\qa\\run_remediation_sweep.py\", line 179, in run_one\n    diag = audit_trial_balance_streaming(file_bytes, path.name)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\Dev\\Paciolus\\backend\\audit\\pipeline.py\", line 73, in audit_trial_balance_streaming\n    for chunk, rows_processed in process_tb_chunked(file_bytes, filename, chunk_size):\n                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\Dev\\Paciolus\\backend\\security_utils.py\", line 203, in process_tb_chunked\n    yield from read_excel_chunked(file_bytes, chunk_size, dtype=str)\n  File \"D:\\Dev\\Paciolus\\backend\\security_utils.py\", line 114, in read_excel_chunked\n    full_df = pd.read_excel(buffer, sheet_name=sheet_name, dtype=dtype)\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Python312\\Lib\\site-packages\\pandas\\io\\excel\\_base.py\", line 481, in read_excel\n    io = ExcelFile(\n         ^^^^^^^^^^\n  File \"C:\\Python312\\Lib\\site-packages\\pandas\\io\\excel\\_base.py\", line 1613, in __init__\n    engine = config.get_option(f\"io.excel.{ext}.reader\")\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\npandas.errors.OptionError: No such keys(s): 'io.excel.zip.reader'\n"
+    }
+  ],
+  "parse": {
+    "column_names": [
+      "Account Name",
+      "Category",
+      "Net Balance (USD)",
+      "Dr / Cr"
+    ],
+    "row_count": 37,
+    "first_row_sample": {
+      "Account Name": "Cash - Operations",
+      "Category": "Current Asset",
+      "Net Balance (USD)": "284,500.00",
+      "Dr / Cr": "Dr"
+    },
+    "last_row_sample": {
+      "Account Name": "NET (should = 0)",
+      "Category": "",
+      "Net Balance (USD)": "0.00",
+      "Dr / Cr": ""
+    }
+  },
+  "preflight": {
+    "filename": "tb_hartwell.docx",
+    "row_count": 37,
+    "column_count": 4,
+    "readiness_score": 80.0,
+    "readiness_label": "Ready",
+    "columns": [
+      {
+        "role": "account",
+        "detected_name": "Account Name",
+        "confidence": 1.0,
+        "status": "found",
+        "downstream_use": "Account identification \u2014 lead sheets, classification, exception attribution"
+      },
+      {
+        "role": "debit",
+        "detected_name": "Dr / Cr",
+        "confidence": 0.7,
+        "status": "low_confidence",
+        "downstream_use": "Balance verification, exception detection, anomaly aggregation"
+      },
+      {
+        "role": "credit",
+        "detected_name": null,
+        "confidence": 0.0,
+        "status": "missing",
+        "downstream_use": "Balance verification, exception detection, anomaly aggregation"
+      },
+      {
+        "role": "unmapped",
+        "detected_name": "Category",
+        "confidence": 1.0,
+        "status": "found",
+        "downstream_use": "Not used in current analysis"
+      },
+      {
+        "role": "unmapped",
+        "detected_name": "Net Balance (USD)",
+        "confidence": 1.0,
+        "status": "found",
+        "downstream_use": "Not used in current analysis"
+      }
+    ],
+    "issues": [
+      {
+        "category": "column_detection",
+        "severity": "high",
+        "message": "Required column(s) not detected: credit",
+        "affected_count": 1,
+        "remediation": "Use column mapping to manually assign the missing column(s), or rename columns to standard names (Account, Debit, Credit).",
+        "downstream_impact": "All diagnostic tools depend on correct column mapping. Incorrect detection causes miscalculated balances, failed ratio analysis, and unreliable anomaly detection across every downstream report.",
+        "affected_items": [],
+        "affected_items_truncated": false,
+        "affected_items_total": 0,
+        "tests_affected": 12
+      }
+    ],
+    "duplicates": [],
+    "encoding_anomalies": [],
+    "mixed_sign_accounts": [],
+    "zero_balance_count": 0,
+    "null_counts": {
+      "Category": 1,
+      "Dr / Cr": 1
+    },
+    "score_breakdown": [
+      {
+        "component": "tb_balance",
+        "weight": 0.25,
+        "score": 100.0,
+        "contribution": 25.0
+      },
+      {
+        "component": "column_detection",
+        "weight": 0.2,
+        "score": 0.0,
+        "contribution": 0.0
+      },
+      {
+        "component": "null_values",
+        "weight": 0.15,
+        "score": 100.0,
+        "contribution": 15.0
+      },
+      {
+        "component": "duplicates",
+        "weight": 0.1,
+        "score": 100.0,
+        "contribution": 10.0
+      },
+      {
+        "component": "encoding",
+        "weight": 0.05,
+        "score": 100.0,
+        "contribution": 5.0
+      },
+      {
+        "component": "mixed_signs",
+        "weight": 0.15,
+        "score": 100.0,
+        "contribution": 15.0
+      },
+      {
+        "component": "zero_balance",
+        "weight": 0.1,
+        "score": 100.0,
+        "contribution": 10.0
+      }
+    ],
+    "intake": {
+      "rows_submitted": 37,
+      "rows_accepted": 37,
+      "rows_rejected": 0,
+      "rows_excluded": 0,
+      "reconciles": true,
+      "notes": []
+    },
+    "rendered_conclusion": "The trial balance file (tb_hartwell.docx) achieved a Readiness Score of 80.0/100 \u2014 assessed as Review Required. The file contains 37 accounts and presents 1 issue that must be resolved before downstream diagnostic testing can be relied upon: (1) Required column(s) not detected: credit. Confirm the column mapping or use the override feature before proceeding. The high-severity finding(s) above invalidates downstream test results; do not record conclusions against the affected figures until the issues are remediated and the file is re-processed."
+  }
+}
