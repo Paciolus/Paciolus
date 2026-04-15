@@ -92,7 +92,7 @@ For Issue 1 we considered (a) reducing the concentration thresholds, (b) deletin
 - [x] `tb_hartwell_clean.csv` detection table includes the new `Account Code` auxiliary role for "Account No" with the "Reference / account code…" downstream use string.
 - [x] All six rendered conclusions still grep clean for the Sprint 667 forbidden phrase.
 - [x] Backend test suite — 186 green: 154 audit/preflight regression + 29 preflight memo + 3 Sprint 667 contract tests. The single failing test (`test_concentration_includes_recommendation`) was rewritten to the new coverage framing as part of this sprint.
-- [x] Commit SHA: _pending this commit_
+- [x] Commit SHA: `2fa2ceb`
 
 **Note on `tb_hartwell_adjusted.pdf` and `tb_hartwell.docx`:**
 Both still error at the diagnostic ingestion layer because `process_tb_chunked` in `security_utils.py` only dispatches CSV/Excel. That is the Sprint 671 bonus finding from Sprint 665 and remains pending. Sprint 668 changes still apply correctly to their preflight reports — the diagnostic just doesn't run.
@@ -100,20 +100,32 @@ Both still error at the diagnostic ingestion layer because `process_tb_chunked` 
 ---
 
 ### Sprint 669: Multi-Column TB + Net-Balance TB Modes
-**Status:** PENDING
+**Status:** COMPLETE
 **Source:** CEO remediation brief v6 — Issues 11, 16
-**Files:** `backend/shared/column_detector.py`, `backend/preflight_engine.py`, new `shared/tb_layout.py`
+**Files:** `backend/shared/tb_layout.py` (new), `backend/column_detector.py`, `backend/preflight_engine.py`, `backend/tests/test_tb_layout.py` (new)
 **Problem:** (11) `tb_hartwell_adjusted.pdf` is a nine-column adjusted TB with Beginning / Adjustments / Ending balance column pairs. Current detector maps Beginning as primary Debit/Credit, so downstream calculations run against beginning balances instead of period-end. (16) `tb_hartwell.docx` uses single "Net Balance (USD)" column + "Dr / Cr" indicator column. Current detector matches "Dr / Cr" to Debit at 70% confidence and fails to find a Credit column, blocking analysis on a legitimate common layout.
 
-**Changes:**
-- [ ] New `tb_layout.py` module with an enum: `single_dr_cr` (default), `multi_column_adjusted`, `net_balance_with_indicator`
-- [ ] Multi-column detector identifies Beginning/Adjustments/Ending triplets; maps Ending as primary, Beginning + Adjustments as supplementary context
-- [ ] Net-balance detector recognizes a single numeric balance column + a Dr/Cr indicator column; prompts user to confirm sign convention before proceeding (`requires_confirmation` flag in `ColumnDetectionResult`)
-- [ ] Both new modes surface in preflight column detection table with a new "Layout" row showing the detected mode
+**Decision:**
+We considered three approaches: (a) extend the existing pattern weights so Ending Balance outranks Beginning, (b) add a per-engine override hook, or (c) introduce a dedicated layout-detection module that runs alongside the pattern detector and overrides assignments when a non-default layout is recognised. Picked (c). The pattern-weight approach is fragile — it would need re-tuning every time a new TB shape arrives, and a tie at the same weight produces alphabetical ordering which is brittle. A dedicated layout module gives us a single place to encode TB-shape semantics (multi-step adjustments, net-balance + indicator) and lets each layout carry its own metadata (supplementary pairs, requires_confirmation flag) for the preflight balance check to react to.
 
-**Validation (via Sprint 665 harness):**
-- [ ] `tb_hartwell_adjusted.pdf` → layout = `multi_column_adjusted`, Ending Balance Debit/Credit mapped as primary; all downstream calculations use ending balances
-- [ ] `tb_hartwell.docx` → layout = `net_balance_with_indicator`, Net Balance + Dr/Cr both "Found" at high confidence, no missing-credit warning
+**Changes:**
+- [x] `backend/shared/tb_layout.py` (new, ~200 lines) — `TBLayoutMode` enum (`single_dr_cr`, `multi_column_adjusted`, `net_balance_with_indicator`), `TBLayoutDetection` dataclass, `detect_tb_layout()` function. Pure-string detection against the column header list with regex-based tokenisation that recognises "Beg", "Begin", "Beginning", "Opening", "Prior Year" / "PY" for beginning columns; "Adjust(ment)(s)", "Adj", "JA", "JE Adj" for adjustments; "Ending", "End", "Period End", "YTD", "Closing" for ending. Net-balance detection requires both a balance/amount-named column AND an explicit Dr/Cr indicator column (sign / nature / side / indicator) — falls through to single_dr_cr otherwise. Multi-column takes precedence over net-balance when both signals are present (an adjusted TB with a Net Balance memo column should not be misclassified).
+- [x] `backend/column_detector.py::ColumnDetectionResult` gained four new fields: `layout`, `requires_confirmation`, `supplementary_balance_pairs`, `indicator_column`. `to_dict()` surfaces all four. `detect_columns()` calls `detect_tb_layout()` first and, when a non-default layout is recognised, overrides the canonical Debit/Credit assignments with the layout-derived columns at 0.95 confidence — so a multi-column adjusted TB picks `Ending Balance Debit/Credit` as primary and a net-balance TB surfaces both `Net Balance (USD)` and `Dr / Cr` as Found instead of the indicator column being missing.
+- [x] `backend/preflight_engine.py::_check_tb_balance` accepts new `layout` and `supplementary_balance_pairs` kwargs. Two new code paths:
+  - `net_balance_with_indicator` short-circuits the balance check with a layout-specific medium-severity caveat ("Balance check skipped — net-balance layout detected. The credit role is filled by a Dr/Cr indicator column, not a numeric balance. Confirm the sign convention before downstream balance verification.") instead of coercing the indicator to zero and reporting a phantom variance.
+  - `multi_column_adjusted` filters the supplementary Beginning/Adjustments columns out of the Sprint 667 unmapped-balance-column check, so legitimate multi-step layouts no longer trip the "balance check skipped" path. The actual balance check then runs against the layout-selected Ending Balance pair.
+- [x] `backend/preflight_engine.py::run_preflight` passes the layout and supplementary pairs into `_check_tb_balance`.
+- [x] `backend/tests/test_tb_layout.py` (new, 10 tests) — covers `single_dr_cr` defaults (classic, extended with Account No/Type, empty columns), `multi_column_adjusted` (full three-step PDF-extracted shape with newline-laden headers, two-step beginning/ending, single-pair fallback), `net_balance_with_indicator` (full hartwell.docx shape, balance + sign variant, signed-only fallback, multi-column precedence over net-balance).
+
+**Validation (via Sprint 665 harness, `reports/remediation/sprint-669/`):**
+- [x] `tb_hartwell_adjusted.pdf` → `pf=Ready(100.0)` (was `Review Recommended(67.5)`); columns table shows debit=`'Ending Balance\nDebit'`, credit=`'Ending Balance\nCredit'`; balance check ran (not skipped), `total_debits=$11,047,200`, `total_credits=$11,047,200`, `diff=$0.00`, `balanced=True`. Beginning Balance and Adjustments columns appear as auxiliary "unmapped" entries in the columns table for transparency.
+- [x] `tb_hartwell.docx` → `pf=Ready(85.0)` (was `Ready(80.0)` with a missing-credit hard block); columns table shows debit=`'Net Balance (USD)'`, credit=`'Dr / Cr'`, both Found, no missing-credit warning. Balance check skipped with the new net-balance caveat. `requires_confirmation=True` on the column detection result.
+- [x] All four other test files unchanged from Sprint 668 (single_dr_cr layout — no behaviour change).
+- [x] Backend test suite — 196 green: 186 audit/preflight/memo regression + 10 new tb_layout contract tests.
+- [x] Commit SHA: _pending this commit_
+
+**Note on diagnostic ingestion:**
+Both `tb_hartwell_adjusted.pdf` and `tb_hartwell.docx` still error at the diagnostic ingestion layer because `process_tb_chunked` only dispatches CSV/Excel — the bonus finding from Sprint 665. Sprint 669 fixes the column detection on these layouts, but the diagnostic itself can't run on them until Sprint 671 routes non-CSV/Excel formats through `parse_uploaded_file_by_format`. The preflight reports are now fully correct for both files.
 
 ---
 

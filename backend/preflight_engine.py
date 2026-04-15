@@ -329,7 +329,21 @@ def run_preflight(
     # Sprint 667 Issue 12: pass the full column list so the balance check
     # can detect unmapped balance-like columns (multi-column adjusted TBs)
     # and skip rather than report a spurious variance.
-    balance_check = _check_tb_balance(rows, debit_col, credit_col, issues, all_columns=column_names)
+    # Sprint 669: pass the detected layout so the multi-column path can
+    # treat Beginning/Adjustments columns as INTENTIONAL supplementary
+    # data instead of "unmapped balance columns" — they are part of the
+    # layout, not a mapping error. Net-balance layouts also short-circuit
+    # the balance check because their credit column is an indicator,
+    # not a numeric value.
+    balance_check = _check_tb_balance(
+        rows,
+        debit_col,
+        credit_col,
+        issues,
+        all_columns=column_names,
+        layout=detection.layout,
+        supplementary_balance_pairs=detection.supplementary_balance_pairs,
+    )
 
     # ── Check 2: Null/empty values (weight 15%) ──
     null_counts = _check_null_values(rows, column_names, account_col, debit_col, credit_col, issues)
@@ -524,6 +538,8 @@ def _check_tb_balance(
     tolerance: float = 0.01,
     *,
     all_columns: list[str] | None = None,
+    layout: str = "single_dr_cr",
+    supplementary_balance_pairs: list[tuple[str, str]] | None = None,
 ) -> BalanceCheck | None:
     """Check 0: Verify total debits equal total credits.
 
@@ -537,12 +553,61 @@ def _check_tb_balance(
     pair is only a partial view of the data. We skip the balance
     calculation entirely in that case and emit a caveat issue instead
     of a spurious variance.
+
+    Sprint 669: When the layout detector identifies a recognised
+    multi-column or net-balance layout, the "extra" balance columns
+    are intentional, not a mapping error. The balance check then runs
+    against the layout-selected primary pair (Ending Balance for
+    multi-column TBs) without emitting the Sprint 667 caveat. For
+    net-balance layouts the credit column is a Dr/Cr text indicator —
+    coercing it to a numeric will always produce zero, so the check
+    is skipped with a layout-specific note instead of reporting "out
+    of balance by $X."
     """
     if not debit_col or not credit_col or not rows:
         return None
 
+    # Sprint 669: net_balance_with_indicator — credit column is a
+    # text indicator, not a numeric. Skip the balance check rather
+    # than coerce-to-zero and report a phantom variance.
+    if layout == "net_balance_with_indicator":
+        issues.append(
+            PreFlightIssue(
+                category="tb_balance",
+                severity="medium",
+                message=(
+                    "Balance check skipped — net-balance layout detected. The "
+                    "credit role is filled by a Dr/Cr indicator column, not a "
+                    "numeric balance. Confirm the sign convention before "
+                    "downstream balance verification."
+                ),
+                affected_count=1,
+                remediation=(
+                    "Re-export the file as a one-sided Debit/Credit trial "
+                    "balance, or confirm the Dr/Cr indicator semantics so "
+                    "Paciolus can derive a signed view of the balances."
+                ),
+            )
+        )
+        return BalanceCheck(
+            total_debits=0.0,
+            total_credits=0.0,
+            difference=0.0,
+            balanced=False,
+            tolerance=tolerance,
+            skipped=True,
+        )
+
     if all_columns:
         extra_balance_cols = _has_unmapped_balance_columns(all_columns, debit_col, credit_col)
+        # Sprint 669: in a recognised multi-column adjusted layout the
+        # supplementary Beginning / Adjustments columns ARE expected and
+        # should not trip the Sprint 667 skip. Filter them out before
+        # deciding whether to caveat.
+        if layout == "multi_column_adjusted" and supplementary_balance_pairs:
+            supplementary_set = {col for pair in supplementary_balance_pairs for col in pair if col is not None}
+            extra_balance_cols = [c for c in extra_balance_cols if c not in supplementary_set]
+
         if extra_balance_cols:
             extras_text = ", ".join(f"'{c}'" for c in extra_balance_cols[:6])
             if len(extra_balance_cols) > 6:
