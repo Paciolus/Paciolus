@@ -526,8 +526,16 @@ def render_anomaly_details(story: list, styles: dict, audit_result: dict) -> Non
         if ab.get("materiality") == "immaterial" and ab.get("severity") != "informational"
     ]
 
-    # Fix 3: Sort findings by absolute amount descending within each tier
-    material.sort(key=lambda ab: abs(ab.get("amount", 0)), reverse=True)
+    # Sprint 667 Issue 3: Trial-balance-out-of-balance is a structural
+    # exception that must render as P1 regardless of per-account amount.
+    # The sort key is a tuple — tb_out_of_balance sorts first (False < True),
+    # then by absolute amount descending within each group.
+    material.sort(
+        key=lambda ab: (
+            ab.get("anomaly_type") != "tb_out_of_balance",
+            -abs(ab.get("amount", 0)),
+        )
+    )
     immaterial.sort(key=lambda ab: abs(ab.get("amount", 0)), reverse=True)
     informational.sort(key=lambda ab: abs(ab.get("amount", 0)), reverse=True)
 

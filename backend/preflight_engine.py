@@ -71,6 +71,7 @@ class BalanceCheck:
     difference: float
     balanced: bool
     tolerance: float = 0.01
+    skipped: bool = False  # Sprint 667: True when balance check was skipped (e.g. multi-column TB)
 
 
 @dataclass
@@ -168,6 +169,7 @@ class PreFlightReport:
                 "difference": self.balance_check.difference,
                 "balanced": self.balance_check.balanced,
                 "tolerance": self.balance_check.tolerance,
+                "skipped": self.balance_check.skipped,
             }
         if self.score_breakdown:
             result["score_breakdown"] = [
@@ -314,7 +316,10 @@ def run_preflight(
     row_count = len(rows)  # post-exclusion; drives all downstream denominators
 
     # ── Check 0: TB Balance Check (weight 25%) ──
-    balance_check = _check_tb_balance(rows, debit_col, credit_col, issues)
+    # Sprint 667 Issue 12: pass the full column list so the balance check
+    # can detect unmapped balance-like columns (multi-column adjusted TBs)
+    # and skip rather than report a spurious variance.
+    balance_check = _check_tb_balance(rows, debit_col, credit_col, issues, all_columns=column_names)
 
     # ── Check 2: Null/empty values (weight 15%) ──
     null_counts = _check_null_values(rows, column_names, account_col, debit_col, credit_col, issues)
@@ -454,21 +459,110 @@ def _coerce_to_decimal(val: object) -> Decimal:
         return Decimal("0")
 
 
+_UNMAPPED_BALANCE_HINTS: tuple[str, ...] = (
+    "debit",
+    "credit",
+    "balance",
+    " dr",
+    "\tdr",
+    " cr",
+    "\tcr",
+    "dr ",
+    "cr ",
+)
+
+
+def _has_unmapped_balance_columns(
+    all_columns: list[str],
+    mapped_debit: str | None,
+    mapped_credit: str | None,
+) -> list[str]:
+    """Return any unmapped columns that look like balance columns.
+
+    Multi-column trial balances (e.g. Beginning/Adjustments/Ending
+    balance triples on an adjusted TB PDF) expose more than one debit
+    and credit column pair. The default column detector resolves to
+    one pair — typically the first alphabetically — and leaves the
+    other balance columns unmapped. Running the balance check on that
+    mapped subset produces a variance that is a pure mapping artifact:
+    the numbers sum correctly against the wrong columns.
+
+    This helper identifies unmapped columns whose names contain
+    `debit`, `credit`, `balance`, or standalone `dr`/`cr` tokens, so
+    the caller can caveat or skip the balance check when a multi-
+    column layout is detected. The full multi-column layout fix is
+    Sprint 669; Sprint 667 only stops reporting the false variance.
+    """
+    mapped_lower = {c.lower().strip() for c in (mapped_debit, mapped_credit) if c is not None}
+    suspicious: list[str] = []
+    for col in all_columns:
+        if col is None:
+            continue
+        lower = str(col).lower().strip()
+        if not lower or lower in mapped_lower:
+            continue
+        if any(hint in lower for hint in _UNMAPPED_BALANCE_HINTS):
+            suspicious.append(col)
+    return suspicious
+
+
 def _check_tb_balance(
     rows: list[dict],
     debit_col: str | None,
     credit_col: str | None,
     issues: list[PreFlightIssue],
     tolerance: float = 0.01,
+    *,
+    all_columns: list[str] | None = None,
 ) -> BalanceCheck | None:
     """Check 0: Verify total debits equal total credits.
 
     Coerces null/empty values to 0.0 before summing — standard for
     one-sided trial balances where each row has a value in either
     the debit or credit column, not both.
+
+    Sprint 667 Issue 12: When the layout contains unmapped columns
+    whose names look like balance columns (multi-column adjusted TBs
+    with Beginning/Adjustments/Ending triples), the single mapped
+    pair is only a partial view of the data. We skip the balance
+    calculation entirely in that case and emit a caveat issue instead
+    of a spurious variance.
     """
     if not debit_col or not credit_col or not rows:
         return None
+
+    if all_columns:
+        extra_balance_cols = _has_unmapped_balance_columns(all_columns, debit_col, credit_col)
+        if extra_balance_cols:
+            extras_text = ", ".join(f"'{c}'" for c in extra_balance_cols[:6])
+            if len(extra_balance_cols) > 6:
+                extras_text += f" (+{len(extra_balance_cols) - 6} more)"
+            issues.append(
+                PreFlightIssue(
+                    category="tb_balance",
+                    severity="medium",
+                    message=(
+                        "Balance check skipped — one or more balance columns are "
+                        "unmapped. This file appears to use a multi-column layout "
+                        f"(unmapped balance-like columns: {extras_text}). Map all "
+                        "balance columns before running balance verification."
+                    ),
+                    affected_count=len(extra_balance_cols),
+                    remediation=(
+                        "Use column mapping to explicitly assign the intended Debit "
+                        "and Credit columns, or re-export the trial balance as a "
+                        "single Debit/Credit pair before re-uploading."
+                    ),
+                )
+            )
+            return BalanceCheck(
+                total_debits=0.0,
+                total_credits=0.0,
+                difference=0.0,
+                balanced=False,  # unknown — treated as unresolved
+                tolerance=tolerance,
+                skipped=True,
+            )
 
     total_debits = Decimal("0")
     total_credits = Decimal("0")

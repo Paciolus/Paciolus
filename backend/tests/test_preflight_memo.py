@@ -359,6 +359,66 @@ class TestPreflightConclusion:
         conclusion = _build_conclusion(result, "test.xlsx")
         assert "87.3" in conclusion
 
+    # ── Sprint 667 Issue 4: severity-keyed conclusion contract ────
+
+    _FORBIDDEN_PHRASE = "do not prevent diagnostic testing from proceeding"
+
+    def test_conclusion_high_severity_routes_to_review_required(self):
+        """Any high-severity issue must route to 'Review Required' and
+        must NOT contain the legacy 'do not prevent' phrase."""
+        result = _make_preflight_result(readiness_score=72.0, readiness_label="Review Recommended")
+        result["issues"] = [
+            {
+                "category": "column_detection",
+                "severity": "high",
+                "message": "Required column(s) not detected: credit",
+                "affected_count": 1,
+                "tests_affected": 12,
+                "remediation": "Confirm or override column mapping",
+                "downstream_impact": "All balance-dependent tests blocked",
+                "affected_items": [],
+            }
+        ]
+        conclusion = _build_conclusion(result, "high_sev_tb.csv")
+        assert "Review Required" in conclusion
+        assert self._FORBIDDEN_PHRASE not in conclusion
+        assert "do not record conclusions" in conclusion
+
+    def test_conclusion_medium_only_routes_to_ready_with_caveats(self):
+        """Medium-only issues route to 'Ready with caveats' (never 'Review Required')."""
+        result = _make_preflight_with_issues()  # null + duplicates medium, mixed_signs low
+        conclusion = _build_conclusion(result, "med_only_tb.csv")
+        assert "Ready with caveats" in conclusion
+        assert "Review Required" not in conclusion
+        assert self._FORBIDDEN_PHRASE not in conclusion
+
+    def test_conclusion_skipped_balance_check_does_not_report_oob(self):
+        """Sprint 667 Issue 12: when balance check is skipped (multi-column TB),
+        the conclusion must NOT report 'out of balance by $0.00'."""
+        result = _make_preflight_with_balance_check(balanced=False)
+        # Mark as skipped — sentinel returned by _check_tb_balance for
+        # multi-column layouts (Sprint 667).
+        result["balance_check"]["skipped"] = True
+        result["balance_check"]["difference"] = 0.0
+        result["issues"] = [
+            {
+                "category": "tb_balance",
+                "severity": "medium",
+                "message": (
+                    "Balance check skipped — one or more balance columns are "
+                    "unmapped. This file appears to use a multi-column layout."
+                ),
+                "affected_count": 4,
+                "tests_affected": 0,
+                "remediation": "Map all balance columns explicitly.",
+                "downstream_impact": "Balance verification not performed",
+                "affected_items": [],
+            }
+        ]
+        conclusion = _build_conclusion(result, "multi_col_tb.pdf")
+        assert "out of balance" not in conclusion
+        assert "Ready with caveats" in conclusion
+
 
 # =============================================================================
 # GUARDRAIL TESTS

@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from datetime import UTC, datetime
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from typing import Any, Optional
 
 from account_classifier import create_classifier
@@ -201,6 +201,40 @@ def audit_trial_balance_streaming(
             expense_concentration=expense_concentration,
         )
 
+        # ── Sprint 667 Issue 3: TB Out-of-Balance as P1 Exception ────
+        # When the trial balance does not reconcile we inject a synthetic
+        # entry at the top of abnormal_balances so it renders as the
+        # first material exception in the report. The companion flag
+        # passed to compute_tb_diagnostic_score below produces a
+        # dominant +60 risk factor so the composite score always lands
+        # in the High tier on an out-of-balance TB.
+        _tb_imbalance_amount = Decimal(0)
+        _tb_out_of_balance = False
+        if result.get("balanced") is False:
+            try:
+                _tb_imbalance_amount = abs(Decimal(str(result.get("difference", 0))))
+            except (ValueError, InvalidOperation):
+                _tb_imbalance_amount = Decimal(0)
+            if _tb_imbalance_amount != 0:
+                _tb_out_of_balance = True
+                _oob_entry: dict[str, Any] = {
+                    "account": "Trial Balance — Overall",
+                    "type": "structural",
+                    "issue": (
+                        f"Trial balance is out of balance by ${_tb_imbalance_amount:,.2f}. "
+                        f"Total debits do not equal total credits; all downstream "
+                        f"diagnostic results are unreliable until this is corrected."
+                    ),
+                    "amount": float(_tb_imbalance_amount),
+                    "materiality": "material",
+                    "anomaly_type": "tb_out_of_balance",
+                    "severity": "high",
+                    "confidence": 1.0,
+                }
+                # Prepend so the OOB entry is P1 regardless of per-account
+                # amount sort ordering downstream.
+                abnormal_balances = [_oob_entry] + list(abnormal_balances)
+
         # ── Stage 4: Risk Summary ────────────────────────────────────
         result["abnormal_balances"] = abnormal_balances
         result["materiality_threshold"] = materiality_threshold
@@ -224,18 +258,36 @@ def audit_trial_balance_streaming(
             for ab in abnormal_balances
         )
         _total_debits = Decimal(str(result.get("total_debits", 0)))
-        _material_items = [ab for ab in abnormal_balances if ab.get("materiality") == "material"]
+        # Coverage uses real account-level material items only — the
+        # injected tb_out_of_balance entry would saturate coverage and
+        # skew the denominator.
+        _material_items = [
+            ab
+            for ab in abnormal_balances
+            if ab.get("materiality") == "material" and ab.get("anomaly_type") != "tb_out_of_balance"
+        ]
         _flagged_value = sum(abs(Decimal(str(ab.get("amount", 0)))) for ab in _material_items)
         _coverage_pct = min(_flagged_value / _total_debits * 100, Decimal("100")) if _total_debits > 0 else Decimal("0")
 
+        # Subtract the injected OOB entry from the count used for scoring
+        # so it is not double-weighted (60 points from the flag + 8 per
+        # material entry). Coverage_pct is already computed above from
+        # real items only.
+        _scoring_material_count = sum(
+            1
+            for ab in abnormal_balances
+            if ab.get("materiality") == "material" and ab.get("anomaly_type") != "tb_out_of_balance"
+        )
         risk_score, risk_factors = compute_tb_diagnostic_score(
-            result["material_count"],
+            _scoring_material_count,
             result["immaterial_count"],
             _coverage_pct,
             _has_suspense,
             _has_credit_balance,
-            abnormal_balances=abnormal_balances,
+            abnormal_balances=[ab for ab in abnormal_balances if ab.get("anomaly_type") != "tb_out_of_balance"],
             informational_count=result["informational_count"],
+            tb_out_of_balance=_tb_out_of_balance,
+            tb_imbalance_amount=_tb_imbalance_amount,
         )
         result["risk_summary"]["risk_score"] = risk_score
         result["risk_summary"]["risk_tier"] = get_diagnostic_tier(risk_score)

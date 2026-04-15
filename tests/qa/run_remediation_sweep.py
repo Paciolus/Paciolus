@@ -36,6 +36,7 @@ if str(BACKEND) not in sys.path:
 
 from audit.pipeline import audit_trial_balance_streaming  # noqa: E402
 from preflight_engine import run_preflight  # noqa: E402
+from preflight_memo_generator import _build_conclusion  # noqa: E402
 from shared.helpers import parse_uploaded_file_by_format  # noqa: E402
 from shared.intake_utils import count_raw_data_rows  # noqa: E402
 
@@ -159,7 +160,15 @@ def run_one(path: Path) -> dict:
             preflight = run_preflight(
                 column_names, rows, path.name, rows_submitted=raw_count
             )
-            record["preflight"] = preflight.to_dict()
+            preflight_dict = preflight.to_dict()
+            # Sprint 667 Issue 4: capture the rendered conclusion so we
+            # can grep it for the forbidden phrase and verify the
+            # severity-keyed branching landed correctly.
+            try:
+                preflight_dict["rendered_conclusion"] = _build_conclusion(preflight_dict, path.name)
+            except Exception as conclusion_exc:  # noqa: BLE001 — keep harness resilient
+                preflight_dict["rendered_conclusion_error"] = str(conclusion_exc)
+            record["preflight"] = preflight_dict
         except Exception as e:
             record["errors"].append(_capture_error("preflight", e))
 
