@@ -180,7 +180,7 @@ For Issue 15 we kept the existing 5-minute dedup gate (it's protecting against d
 - [x] All four other test files unchanged from Sprint 670 — the new dispatch path only fires for non-CSV/non-Excel extensions.
 - [x] **Issue 15 — duplicate detection UX**: 409 response now returns a structured dict naming the filename, window, and override path. `force_resubmit=true` form parameter purges the matched dedup key. Preflight route confirmed to be free of any dedup gate.
 - [x] Backend test suite — 294 green: 277 prior regression + 17 new format-dispatch tests.
-- [x] Commit SHA: _pending this commit_
+- [x] Commit SHA: `081dfed`
 
 **Note on Issue 15 frontend wiring:**
 The backend now exposes a structured 409 with the override path. Wiring the frontend Upload page to display the matched filename and a "Re-run anyway" button is a follow-up task — the API contract is in place but the React component change is out of scope for this remediation sprint.
