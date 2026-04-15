@@ -95,27 +95,41 @@
 
 - **Note on harness limitation** — the harness runs each file in isolation, so the brief's Issue 15 (duplicate detection blocking after session-prior CSVs) cannot be exercised by the current sweep. Sprint 671 will need a supplementary test case for sequential uploads, or validation against the live API. Filing for attention at that sprint.
 
-- Commit SHA: _pending this commit_
+- Commit SHA: `4263c6c`
 
 ---
 
-### Sprint 666: Intake Hardening — CSV Parser, Zero-Row Block, Totals Row, Row Reconciliation
-**Status:** PENDING
+### Sprint 666: Intake Hardening — Zero-Row Block, Totals Row Exclusion, Row Reconciliation
+**Status:** COMPLETE
 **Source:** CEO remediation brief v6 — Issues 5 (BLOCKING), 9, 2, 7
-**Files:** `backend/shared/helpers.py`, `backend/preflight_engine.py`, `backend/audit/pipeline.py`
-**Problem:** Four related intake failures. (5) Zero-row ingestion returns a BALANCED/0-score/"no exceptions" report instead of an error. (9) CSV parser mishandles RFC 4180 quoted fields on `tb_unusual_accounts.csv`, shifting columns and producing a phantom $306k variance. (2) Summary totals row is treated as a data row, adding a false null warning and doubling the out-of-balance variance from $100k to $200k. (7) `tb_no_headers.csv` silently loses one row in intake (40 submitted, 39 reported).
+**Files:** `backend/shared/intake_utils.py` (new), `backend/preflight_engine.py`, `backend/audit/pipeline.py`, `backend/audit/streaming_auditor.py`, `backend/routes/audit_diagnostics.py`, `backend/tests/test_intake_utils.py` (new), `backend/tests/test_audit_core.py` (test_empty_file rewritten for new behavior)
+**Problem:** Four related intake failures surfaced by the Sprint 665 baseline sweep. (5) `tb_no_headers.csv` → diagnostic `low(0)` with `mat=0 anom=0`: ingestion dropped all rows because column detection failed, and the pipeline silently returned "balanced / no exceptions." (9) `tb_unusual_accounts.csv` → preflight diff=$306,262 attributed to "RFC 4180 quoted-field parse corruption." (2) Summary totals row treated as a data row — `clean.csv` → false null warning; `outofbalance.csv` → variance doubled from $100k to $200k because the totals row sum was added to the real data sum on both sides. (7) `no_headers.csv` → preflight reports 39 rows on a 40-row file; one row silently consumed by pandas header inference.
+
+**Issue 9 finding — brief was misdiagnosed:**
+A direct audit of the CSV parser against `tb_unusual_accounts.csv` confirmed pandas' default QUOTE_MINIMAL handling is correct. Every quoted field in the file (`"Temp Clearing - DO NOT USE"`, `"A/P - K.H. Owner Loan (personal?)"`, `"Meals/Ent 50% (non-ded?)"`) parses without column shift — those fields contain no embedded commas, only parentheses/slashes/question marks which are not CSV-special characters. A manual sum of the 53 non-totals data rows produces debit=$5,796,762 and credit=$5,490,500 — a genuine $306,262 imbalance that is NOT a parsing artifact. The brief's claim that "the file was built to balance" did not match the actual file contents. After this sprint the reported variance for that file is $306,262 — unchanged from baseline, but for the right reason now: the totals row is correctly excluded and the variance reflects real ledger data, which is exactly what the Issue 9 Expected Result asks for ("reports an accurate variance that reflects actual ledger data, not parsing artifacts").
+
+**Decision:**
+Push totals-row detection and row reconciliation into a new `shared/intake_utils.py` module that both pipelines import, rather than duplicating heuristics in preflight and diagnostic. The tight heuristic — "last three rows, every account-identifier column blank, both debit AND credit non-zero" — safely distinguishes totals rows from legitimate one-sided data rows (like row 6055 in `unusual_accounts.csv` which has a blank account name but only a debit populated). Two-sided contra-accounts like Accumulated Depreciation are never mistaken for totals rows because they have non-blank names.
 
 **Changes:**
-- [ ] Audit CSV parser (`shared/helpers.py:501`) for quoted-field handling; add an explicit `quoting=csv.QUOTE_MINIMAL`-equivalent config and a post-parse sanity check that rejects rows where a non-numeric value lands in a numeric column (reason: "Column shift detected")
-- [ ] Add `detect_totals_row()` in preflight intake: blank account name/code OR debit+credit ≈ sum of prior rows, positioned last. Excluded rows surfaced in intake summary as "Row N excluded as totals row"
-- [ ] Zero-row guard in diagnostic pipeline: when `rows_accepted == 0`, replace report body with "ANALYSIS COULD NOT BE COMPLETED" message; no balance status, no score, no findings
-- [ ] Row reconciliation invariant: `rows_submitted == rows_accepted + rows_rejected + rows_excluded` enforced; any silent drops get an explicit rejection reason
+- [x] `backend/shared/intake_utils.py` (new, ~210 lines) — `IntakeSummary` dataclass with `reconciles()` invariant, `count_raw_data_rows()` for CSV/TSV/TXT raw line counting (returns None for binary formats), `detect_totals_row()` and `exclude_totals_row()` helpers with the tight heuristic above. Every account-identifier column (`account`, `acct`, `gl *`, `code`, `no`, `number`, `name`) must be blank for a candidate to qualify — multi-column TBs with both Account No and Account Name are handled correctly.
+- [x] `backend/preflight_engine.py` — added `intake: IntakeSummary | None` to `PreFlightReport`, accept optional `rows_submitted: int | None` kwarg on `run_preflight`, apply totals-row exclusion before every downstream check (`_check_tb_balance`, `_check_null_values`, `_check_duplicates`, `_check_encoding`, `_check_mixed_signs`, `_check_zero_balances`). Row reconciliation uses the column-detection result to decide whether a real header was consumed: if both Debit and Credit columns resolved to real names, subtract 1 from `rows_submitted` for the header line; otherwise leave it full so the header-less case (`tb_no_headers.csv`) is reconciled as `submitted=40, accepted=39, rejected=1` rather than `submitted=39, accepted=39, rejected=0`.
+- [x] `backend/audit/pipeline.py` — Issue 5 BLOCKING guard: after Stage 1 ingestion, if `auditor.total_rows == 0` OR `auditor.debit_col is None` OR `auditor.credit_col is None`, short-circuit the pipeline and return a `TrialBalanceResponse`-compatible failure dict with `analysis_failed=True`, `failure_reason=("zero_rows_ingested" | "columns_not_detected")`, and `error_message="ANALYSIS COULD NOT BE COMPLETED — ..."`. The safe-default fields (`balanced=False`, empty `classification_quality`, empty `balance_sheet_validation`, etc.) satisfy the Pydantic response schema so FastAPI can serialize the failure; downstream consumers MUST check `analysis_failed` before interpreting any other field.
+- [x] `backend/audit/streaming_auditor.py` — `process_chunk` now detects totals rows (blank account name + both debit and credit non-zero) and zeroes their debit/credit values before `math.fsum`, so they do not contribute to the balance check or account-level aggregates. Excluded rows are tracked via `self.totals_rows_excluded` and surfaced through `get_balance_result()` as a new `totals_rows_excluded` field. `missing_names_count` is corrected to subtract totals rows (they are a pipeline artifact, not a data quality issue).
+- [x] `backend/routes/audit_diagnostics.py` — `preflight_check` now passes `rows_submitted=count_raw_data_rows(file_bytes, filename)` so the intake summary reconciles correctly for production uploads.
+- [x] `tests/qa/run_remediation_sweep.py` — harness also passes `rows_submitted` and captures `intake`, `analysis_failed`, `failure_reason`, `totals_rows_excluded` in the slim diagnostic dump. The one-line summary now shows `intake=S/A/R/X` format (submitted/accepted/rejected/excluded).
+- [x] `backend/tests/test_intake_utils.py` (new, 29 tests) — full coverage of `count_raw_data_rows` (CSV/TSV/TXT/XLSX/PDF/DOCX/missing/empty/Latin-1), `detect_totals_row` (all-blank vs one-sided, position scan, multi-id-column, NaN handling, currency strings), `exclude_totals_row` (non-mutating), and `IntakeSummary.reconciles()` invariant.
+- [x] `backend/tests/test_audit_core.py::test_empty_file` — rewritten. The old assertion was validating the silent-success bug itself (expected `status="success"`, `balanced=True`, `row_count=0` on a headers-only file). The new assertion enforces the post-fix contract: `status="failed"`, `analysis_failed=True`, `failure_reason="zero_rows_ingested"`, `balanced=False`, and the blocking error message contains the mandated "ANALYSIS COULD NOT BE COMPLETED" prefix.
 
-**Validation (via Sprint 665 harness):**
-- [ ] `tb_no_headers.csv` → diagnostic shows failure notice; preflight shows 40 submitted, reconciled count
-- [ ] `tb_unusual_accounts.csv` → 54 rows parsed, no column-shift errors, TB balances
-- [ ] `tb_hartwell_clean.csv` → 40 accepted + 1 excluded (totals), no null warning
-- [ ] `tb_hartwell_outofbalance.csv` → variance exactly $100,000.00
+**Validation (via Sprint 665 harness, `reports/remediation/sprint-666/`):**
+- [x] `tb_hartwell_clean.csv` — intake=41/40/0/1, preflight `Ready(100.0)`, balance `diff=$0.00`. Totals row excluded, false null warning gone.
+- [x] `tb_hartwell_outofbalance.csv` — intake=41/40/0/1, balance **`diff=$100,000.00`** (was $200,000 in baseline). Real data variance, not doubled.
+- [x] `tb_no_headers.csv` — intake=40/39/1/0 with note "1 row consumed as header row," diagnostic **`DIAG_FAILED[zero_rows_ingested]`** with the full blocking error message. Silent success eliminated — this was the BLOCKING issue.
+- [x] `tb_unusual_accounts.csv` — intake=54/53/0/1, balance `diff=$306,262.00`. Same number as baseline, but now reflects the real data imbalance (rows 0–52 after excluding totals row 53) rather than a totals-inclusive miscalculation. Brief's RFC 4180 claim is misdiagnosed; documented in Review above and in a new lesson.
+- [x] `tb_hartwell_adjusted.pdf` — unchanged by this sprint. Preflight `diff=$-67,000.00` (Issue 12, Sprint 667). Diagnostic still fails at `process_tb_chunked` because the ingestion layer doesn't route PDFs (bonus finding from Sprint 665 — Sprint 671 territory).
+- [x] `tb_hartwell.docx` — unchanged. Preflight parses (37 rows), diagnostic fails at routing layer. Sprint 671 territory.
+- [x] Backend test suite: 125 audit/preflight tests pass (`test_preflight`, `test_audit_core`, `test_audit_anomalies`, `test_audit_api`, `test_audit_pipeline_routes`, `test_audit_validation`); 29 new `test_intake_utils` tests pass; total 154 green.
+- [x] Commit SHA: _pending this commit_
 
 ---
 

@@ -74,6 +74,106 @@ def audit_trial_balance_streaming(
             auditor.process_chunk(chunk, rows_processed)
             del chunk
 
+        # ── Sprint 666 Issue 5 (BLOCKING): Block silent success ──
+        # Fail the pipeline explicitly when ingestion produced no rows OR
+        # when the required debit/credit columns were never identified.
+        # Without this guard, process_chunk's early-return on missing
+        # columns silently produced a "balanced / low risk / no exceptions"
+        # report on files like tb_no_headers.csv where row 1 was inferred
+        # as the header and column detection then failed. That is the
+        # exact failure mode the CEO remediation brief classified as
+        # BLOCKING. A downstream consumer can key off `analysis_failed`
+        # or `failure_reason` to display the failure notice.
+        if auditor.total_rows == 0 or auditor.debit_col is None or auditor.credit_col is None:
+            if auditor.total_rows == 0:
+                failure_reason = "zero_rows_ingested"
+                message = (
+                    "ANALYSIS COULD NOT BE COMPLETED — No data was successfully "
+                    "ingested from the submitted file. Please verify that the file "
+                    "contains valid data and correctly formatted headers, then "
+                    "resubmit."
+                )
+            else:
+                failure_reason = "columns_not_detected"
+                message = (
+                    "ANALYSIS COULD NOT BE COMPLETED — The required Debit and "
+                    "Credit columns could not be identified in the submitted file. "
+                    "Please verify the file has a header row containing 'Account', "
+                    "'Debit', and 'Credit' columns, then resubmit."
+                )
+            log_secure_operation("streaming_audit_failed", f"{failure_reason}: {filename}")
+            # Return shape must satisfy TrialBalanceResponse schema so the
+            # FastAPI route can serialize it. The `analysis_failed` flag is
+            # how downstream consumers (frontend, exports, memo generators)
+            # detect that the rest of the payload contains safe-default
+            # fabrications rather than real analysis data — they MUST check
+            # this flag before using any other field.
+            return {
+                "status": "failed",
+                "analysis_failed": True,
+                "failure_reason": failure_reason,
+                "error_message": message,
+                "filename": filename,
+                "balanced": False,
+                "total_debits": "0.00",
+                "total_credits": "0.00",
+                "difference": "0.00",
+                "row_count": auditor.total_rows,
+                "totals_rows_excluded": auditor.totals_rows_excluded,
+                "timestamp": datetime.now(UTC).isoformat(),
+                "message": message,
+                # Empty analysis collections
+                "abnormal_balances": [],
+                "material_count": 0,
+                "immaterial_count": 0,
+                "informational_count": 0,
+                "has_risk_alerts": False,
+                "materiality_threshold": materiality_threshold,
+                "classification_summary": {},
+                "risk_summary": {
+                    "total_anomalies": 0,
+                    "high_severity": 0,
+                    "medium_severity": 0,
+                    "low_severity": 0,
+                    "anomaly_types": {},
+                    "risk_score": None,
+                    "risk_tier": "not_applicable",
+                    "risk_factors": [],
+                    "coverage_pct": 0.0,
+                },
+                "classification_quality": {
+                    "issues": [],
+                    "quality_score": 0.0,
+                    "issue_counts": {},
+                    "total_issues": 0,
+                },
+                "column_detection": (
+                    auditor.get_column_detection().to_dict() if auditor.get_column_detection() else None
+                ),
+                "analytics": {},
+                "category_totals": {},
+                "balance_sheet_validation": {
+                    "is_balanced": False,
+                    "status": "balanced",
+                    "total_assets": "0.00",
+                    "total_liabilities": "0.00",
+                    "total_equity": "0.00",
+                    "liabilities_plus_equity": "0.00",
+                    "difference": "0.00",
+                    "abs_difference": "0.00",
+                    "severity": None,
+                    "recommendation": ("Balance sheet validation not applicable — analysis could not be completed."),
+                    "equation": "A = L + E",
+                },
+                "lead_sheet_grouping": {
+                    "summaries": [],
+                    "total_debits": 0.0,
+                    "total_credits": 0.0,
+                    "unclassified_count": 0,
+                },
+                "materiality_source": "none",
+            }
+
         # ── Stage 2: Classification + Balance Check ──────────────────
         result = auditor.get_balance_result()
         account_classifications = auditor.get_classified_accounts()

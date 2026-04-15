@@ -37,6 +37,7 @@ if str(BACKEND) not in sys.path:
 from audit.pipeline import audit_trial_balance_streaming  # noqa: E402
 from preflight_engine import run_preflight  # noqa: E402
 from shared.helpers import parse_uploaded_file_by_format  # noqa: E402
+from shared.intake_utils import count_raw_data_rows  # noqa: E402
 
 EVALUATING_DIR = ROOT / "tests" / "evaluatingfiles"
 REPORTS_DIR = ROOT / "reports" / "remediation"
@@ -82,10 +83,15 @@ def _slim_diagnostic(diag: dict) -> dict:
     rs = diag.get("risk_summary") or {}
     abnormals = diag.get("abnormal_balances") or []
     return {
+        "analysis_failed": diag.get("analysis_failed", False),
+        "failure_reason": diag.get("failure_reason"),
+        "error_message": diag.get("error_message"),
         "balanced": diag.get("balanced"),
         "total_debits": diag.get("total_debits"),
         "total_credits": diag.get("total_credits"),
         "difference": diag.get("difference"),
+        "row_count": diag.get("row_count"),
+        "totals_rows_excluded": diag.get("totals_rows_excluded"),
         "material_count": diag.get("material_count"),
         "immaterial_count": diag.get("immaterial_count"),
         "informational_count": diag.get("informational_count"),
@@ -149,7 +155,10 @@ def run_one(path: Path) -> dict:
     # ── PreFlight (only if parse succeeded) ──
     if column_names is not None and rows is not None:
         try:
-            preflight = run_preflight(column_names, rows, path.name)
+            raw_count = count_raw_data_rows(file_bytes, path.name)
+            preflight = run_preflight(
+                column_names, rows, path.name, rows_submitted=raw_count
+            )
             record["preflight"] = preflight.to_dict()
         except Exception as e:
             record["errors"].append(_capture_error("preflight", e))
@@ -172,6 +181,12 @@ def _one_line_summary(fname: str, record: dict) -> str:
 
     preflight = record.get("preflight") or {}
     if preflight:
+        intake = preflight.get("intake") or {}
+        if intake:
+            parts.append(
+                f"intake={intake.get('rows_submitted')}/{intake.get('rows_accepted')}/"
+                f"{intake.get('rows_rejected')}/{intake.get('rows_excluded')}"
+            )
         score = preflight.get("readiness_score")
         label = preflight.get("readiness_label")
         parts.append(f"pf={label}({score})")
@@ -182,11 +197,14 @@ def _one_line_summary(fname: str, record: dict) -> str:
 
     diag = record.get("diagnostic") or {}
     if diag:
-        score = diag.get("risk_score")
-        tier = diag.get("risk_tier")
-        parts.append(f"diag={tier}({score})")
-        parts.append(f"mat={diag.get('material_count', 0)}")
-        parts.append(f"anom={diag.get('abnormal_balance_count', 0)}")
+        if diag.get("analysis_failed"):
+            parts.append(f"DIAG_FAILED[{diag.get('failure_reason')}]")
+        else:
+            score = diag.get("risk_score")
+            tier = diag.get("risk_tier")
+            parts.append(f"diag={tier}({score})")
+            parts.append(f"mat={diag.get('material_count', 0)}")
+            parts.append(f"anom={diag.get('abnormal_balance_count', 0)}")
 
     errors = record.get("errors") or []
     if errors:

@@ -1,0 +1,174 @@
+{
+  "filename": "tb_no_headers.csv",
+  "size_bytes": 1339,
+  "errors": [],
+  "parse": {
+    "column_names": [
+      "1010",
+      "Cash - Operating Account",
+      "284500",
+      "Unnamed: 3"
+    ],
+    "row_count": 39,
+    "first_row_sample": {
+      "1010": 1020,
+      "Cash - Operating Account": "Cash - Payroll Account",
+      "284500": 45200.0,
+      "Unnamed: 3": NaN
+    },
+    "last_row_sample": {
+      "1010": 7030,
+      "Cash - Operating Account": "Gain on Asset Disposal",
+      "284500": NaN,
+      "Unnamed: 3": 8750.0
+    }
+  },
+  "preflight": {
+    "filename": "tb_no_headers.csv",
+    "row_count": 39,
+    "column_count": 4,
+    "readiness_score": 80.0,
+    "readiness_label": "Ready",
+    "columns": [
+      {
+        "role": "account",
+        "detected_name": "Cash - Operating Account",
+        "confidence": 0.7,
+        "status": "low_confidence"
+      },
+      {
+        "role": "debit",
+        "detected_name": null,
+        "confidence": 0.0,
+        "status": "missing"
+      },
+      {
+        "role": "credit",
+        "detected_name": null,
+        "confidence": 0.0,
+        "status": "missing"
+      },
+      {
+        "role": "unmapped",
+        "detected_name": "1010",
+        "confidence": 1.0,
+        "status": "found"
+      },
+      {
+        "role": "unmapped",
+        "detected_name": "284500",
+        "confidence": 1.0,
+        "status": "found"
+      },
+      {
+        "role": "unmapped",
+        "detected_name": "Unnamed: 3",
+        "confidence": 1.0,
+        "status": "found"
+      }
+    ],
+    "issues": [
+      {
+        "category": "column_detection",
+        "severity": "high",
+        "message": "Required column(s) not detected: debit, credit",
+        "affected_count": 2,
+        "remediation": "Use column mapping to manually assign the missing column(s), or rename columns to standard names (Account, Debit, Credit).",
+        "downstream_impact": "All diagnostic tools depend on correct column mapping. Incorrect detection causes miscalculated balances, failed ratio analysis, and unreliable anomaly detection across every downstream report.",
+        "affected_items": [],
+        "affected_items_truncated": false,
+        "affected_items_total": 0,
+        "tests_affected": 12
+      }
+    ],
+    "duplicates": [],
+    "encoding_anomalies": [],
+    "mixed_sign_accounts": [],
+    "zero_balance_count": 0,
+    "null_counts": {
+      "284500": 15,
+      "Unnamed: 3": 24
+    },
+    "score_breakdown": [
+      {
+        "component": "tb_balance",
+        "weight": 0.25,
+        "score": 100.0,
+        "contribution": 25.0
+      },
+      {
+        "component": "column_detection",
+        "weight": 0.2,
+        "score": 0.0,
+        "contribution": 0.0
+      },
+      {
+        "component": "null_values",
+        "weight": 0.15,
+        "score": 100.0,
+        "contribution": 15.0
+      },
+      {
+        "component": "duplicates",
+        "weight": 0.1,
+        "score": 100.0,
+        "contribution": 10.0
+      },
+      {
+        "component": "encoding",
+        "weight": 0.05,
+        "score": 100.0,
+        "contribution": 5.0
+      },
+      {
+        "component": "mixed_signs",
+        "weight": 0.15,
+        "score": 100.0,
+        "contribution": 15.0
+      },
+      {
+        "component": "zero_balance",
+        "weight": 0.1,
+        "score": 100.0,
+        "contribution": 10.0
+      }
+    ],
+    "intake": {
+      "rows_submitted": 40,
+      "rows_accepted": 39,
+      "rows_rejected": 1,
+      "rows_excluded": 0,
+      "reconciles": true,
+      "notes": [
+        "1 row(s) from the source file are not present in the parsed dataset. This usually means the first data row was consumed as the header row because no recognizable header was detected. Re-upload with explicit column headers to recover every row."
+      ]
+    }
+  },
+  "diagnostic": {
+    "analysis_failed": true,
+    "failure_reason": "zero_rows_ingested",
+    "error_message": "ANALYSIS COULD NOT BE COMPLETED \u2014 No data was successfully ingested from the submitted file. Please verify that the file contains valid data and correctly formatted headers, then resubmit.",
+    "balanced": false,
+    "total_debits": "0.00",
+    "total_credits": "0.00",
+    "difference": "0.00",
+    "row_count": 0,
+    "totals_rows_excluded": 0,
+    "material_count": 0,
+    "immaterial_count": 0,
+    "informational_count": 0,
+    "has_risk_alerts": false,
+    "risk_score": null,
+    "risk_tier": "not_applicable",
+    "risk_factors": [],
+    "coverage_pct": 0.0,
+    "anomaly_types": {},
+    "abnormal_balance_count": 0,
+    "abnormal_balances": [],
+    "abnormal_balances_truncated": false,
+    "classification_quality": {
+      "score": null,
+      "issue_count": 0
+    }
+  }
+}

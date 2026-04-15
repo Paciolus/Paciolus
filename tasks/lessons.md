@@ -16,6 +16,20 @@ For CEO-facing sequential remediation work where each sprint will change the exp
 
 ---
 
+## Audit the file before auditing the code on a misdiagnosed bug report (Sprint 666)
+
+The CEO remediation brief v6 Issue 9 attributed `tb_unusual_accounts.csv`'s $306,262 variance to "RFC 4180 quoted field handling" — claiming account names with embedded commas caused column shift and phantom imbalances. Before touching the CSV parser I ran pandas directly on the file: every quoted field parses cleanly (none actually contain embedded commas — just parentheses, question marks, slashes which are not CSV-special), every row lands in the right columns, and the data-only sum is $5,791,962 debit / $5,490,500 credit for a genuine $301,462 imbalance. The file was never built to balance. The totals row in the file claims $5,681,962 each side but the actual data sums to different numbers. After Sprint 666's totals-row exclusion the reported variance is $306,262 — unchanged from baseline but now for the right reason (real data imbalance, not a totals-inclusive artifact).
+
+**Pattern:** When a bug report attributes a number to a parser/algorithm cause, verify the number by computing it against the source data by hand before writing a "fix." A misdiagnosed report can waste a sprint building defenses against a non-existent bug, leaving the real cause untouched. The right first step on any "parser is mishandling X" claim is a 5-minute manual sum in a REPL — not a dive into `pd.read_csv` options.
+
+---
+
+## Silent-success bugs surface only when you explicitly test the failure mode (Sprint 666)
+
+The Sprint 666 zero-row guard uncovered a pre-existing pytest case (`test_audit_core::TestEdgeCases::test_empty_file`) that was *validating* the silent-success bug itself — it asserted `status == "success"`, `balanced == True`, `row_count == 0` on a headers-only file. The test was green for however many sprints that bug existed, because nobody had asked "is returning 'balanced' on a zero-row ingestion the right behavior?" The bug was structural, the test was its fossil record. **Pattern:** When fixing a silent-success class of bug, grep for tests that assert the silent-success shape and rewrite them to the post-fix contract BEFORE running the full suite. A green test that encodes a wrong invariant is worse than a missing test — it will actively defend the bug against any fix. Look for tests with names like `test_empty_*`, `test_zero_*`, `test_missing_*` when the bug is about input edge cases.
+
+---
+
 ## Breaking API shape changes require simultaneous backend + frontend + test updates (Sprint 544)
 
 When changing a response shape (e.g., `clients` → `items` in PaginatedResponse), ALL consumers must be updated atomically: backend routes, frontend types, frontend hooks, AND test mocks. In Sprint 544, changing the list key from domain-specific (`clients`, `engagements`, `activities`) to generic (`items`) required updating 4 routes, 4 hooks, 3 type files, and 4 test files. Missing any one creates silent data loss (hook reads `data.items` but API returns `data.clients` → empty list). **Pattern:** Before making a breaking shape change, `grep` for ALL consumers of the old key across both backend and frontend.

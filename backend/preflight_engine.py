@@ -18,6 +18,7 @@ from column_detector import (
     ColumnDetectionResult,
     detect_columns,
 )
+from shared.intake_utils import IntakeSummary, detect_totals_row
 from shared.parsing_helpers import safe_decimal
 
 # ═══════════════════════════════════════════════════════════════
@@ -114,6 +115,7 @@ class PreFlightReport:
     null_counts: dict[str, int] = field(default_factory=dict)
     balance_check: BalanceCheck | None = None
     score_breakdown: list[ScoreComponent] = field(default_factory=list)
+    intake: IntakeSummary | None = None  # Sprint 666: row reconciliation + totals-row disposition
 
     def to_dict(self) -> dict:
         """Convert to dictionary for API response."""
@@ -177,6 +179,8 @@ class PreFlightReport:
                 }
                 for sc in self.score_breakdown
             ]
+        if self.intake is not None:
+            result["intake"] = self.intake.to_dict()
         return result
 
 
@@ -247,6 +251,7 @@ def run_preflight(
     column_names: list[str],
     rows: list[dict],
     filename: str,
+    rows_submitted: int | None = None,
 ) -> PreFlightReport:
     """Run pre-flight data quality assessment.
 
@@ -254,11 +259,28 @@ def run_preflight(
         column_names: Column headers from the parsed file.
         rows: List of row dicts from parse_uploaded_file().
         filename: Original filename for the report.
+        rows_submitted: Raw file row count for reconciliation (Sprint 666).
+            When the caller can determine the raw line count (e.g. for CSV,
+            TSV, TXT), it should pass it so the Data Intake Summary can
+            reconcile submitted vs accepted and surface any rows silently
+            lost to pandas header inference. For parsers where raw row
+            count is indeterminate (XLSX, PDF, DOCX, ODS), leave as None
+            and reconciliation will treat the parsed row count as both
+            submitted and accepted.
 
     Returns:
-        PreFlightReport with all quality checks completed.
+        PreFlightReport with all quality checks completed and an
+        ``intake`` summary reconciling every raw row against its disposition.
+
+    Sprint 666 behavior change:
+        The totals row (summary row at the end of the TB with a blank
+        account name and non-zero debit AND credit values) is now detected
+        and excluded from every downstream check. Before this sprint the
+        totals row contributed to the balance calculation, doubling the
+        reported variance on out-of-balance TBs and producing a false
+        null-value warning on clean TBs.
     """
-    row_count = len(rows)
+    parsed_row_count = len(rows)
     col_count = len(column_names)
     issues: list[PreFlightIssue] = []
     columns_quality: list[ColumnQuality] = []
@@ -271,6 +293,25 @@ def run_preflight(
     account_col = detection.account_column
     debit_col = detection.debit_column
     credit_col = detection.credit_column
+
+    # ── Sprint 666 Issue 2: Totals row detection + exclusion ──
+    # Applied before any data-dependent check so every downstream count
+    # works against the real account rows only.
+    intake_notes: list[str] = []
+    excluded_count = 0
+    totals_idx = detect_totals_row(rows, column_names, debit_col, credit_col)
+    if totals_idx is not None:
+        # 1-based position for user-facing notes; parsed_row_count does not
+        # count the CSV header line, so idx 40 → "row 41" in the file.
+        intake_notes.append(
+            f"Row {totals_idx + 2} appears to be a summary totals row "
+            f"(blank account name with non-zero debit and credit) and has been "
+            f"excluded from analysis."
+        )
+        rows = rows[:totals_idx] + rows[totals_idx + 1 :]
+        excluded_count = 1
+
+    row_count = len(rows)  # post-exclusion; drives all downstream denominators
 
     # ── Check 0: TB Balance Check (weight 25%) ──
     balance_check = _check_tb_balance(rows, debit_col, credit_col, issues)
@@ -302,6 +343,54 @@ def run_preflight(
     else:
         readiness_label = "Issues Found"
 
+    # ── Sprint 666 Issue 7: Row reconciliation ──
+    # The raw count supplied by the caller (count_raw_data_rows) is the
+    # *total* non-empty line count — header-inclusive. That accounting
+    # choice matters for header-less files like tb_no_headers.csv where
+    # pandas consumes row 1 as column names even though it is real data;
+    # treating the raw count as "header-subtracted" would silently drop
+    # the lost row from the reconciliation.
+    #
+    # We decide whether to subtract 1 for a header line here, using the
+    # column-detection result. If both the Debit and Credit columns were
+    # resolved to real column names, row 1 is a legitimate header; one
+    # line must be deducted from the raw count. Otherwise the "header" is
+    # inferred from data, no line was consumed, and rows_submitted is the
+    # full raw count.
+    #
+    # submitted = raw line count - (1 if real header else 0)
+    # accepted  = rows that reached analysis (post-totals-row exclusion)
+    # excluded  = totals rows removed
+    # rejected  = submitted - accepted - excluded  (>= 0)
+    #   Non-zero rejected usually means pandas consumed a data row as the
+    #   header on a header-less file.
+    real_header_found = debit_col is not None and credit_col is not None
+    if rows_submitted is None:
+        # Caller did not supply a raw count. Reconcile trivially against
+        # the parsed row count + excluded totals rows.
+        effective_submitted = parsed_row_count + excluded_count
+        rejected = 0
+    else:
+        effective_submitted = rows_submitted - (1 if real_header_found else 0)
+        effective_submitted = max(0, effective_submitted)
+        rejected = max(0, effective_submitted - row_count - excluded_count)
+        if rejected > 0:
+            intake_notes.append(
+                f"{rejected} row(s) from the source file are not present in the "
+                f"parsed dataset. This usually means the first data row was "
+                f"consumed as the header row because no recognizable header was "
+                f"detected. Re-upload with explicit column headers to recover "
+                f"every row."
+            )
+
+    intake = IntakeSummary(
+        rows_submitted=effective_submitted,
+        rows_accepted=row_count,
+        rows_rejected=rejected,
+        rows_excluded=excluded_count,
+        notes=intake_notes,
+    )
+
     return PreFlightReport(
         filename=filename,
         row_count=row_count,
@@ -317,6 +406,7 @@ def run_preflight(
         null_counts=null_counts,
         balance_check=balance_check,
         score_breakdown=score_breakdown,
+        intake=intake,
     )
 
 
