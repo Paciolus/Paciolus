@@ -7,15 +7,11 @@
 
 import type { BrandIconName } from '@/components/shared/BrandIcon/types'
 
-export type TierBadge = 'Solo' | 'Team' | 'Org'
-
 export interface ToolItem {
   label: string
   href: string
   /** Tool key matching backend entitlement names */
   toolKey: string
-  /** Minimum tier required */
-  tier: TierBadge
 }
 
 export interface NavItem {
@@ -32,21 +28,14 @@ export interface ToolColumn {
   items: ToolItem[]
 }
 
-/** Tier badge styling tokens */
-export const TIER_BADGE_STYLES: Record<TierBadge, string> = {
-  Solo: 'bg-sage-50 text-sage-700 border-sage-200',
-  Team: 'bg-oatmeal-100 text-obsidian-800 border-oatmeal-300',
-  Org: 'bg-obsidian-800 text-oatmeal-200 border-obsidian-600',
-}
-
 /** Core Analysis column */
 const CORE_ANALYSIS: ToolColumn = {
   heading: 'Core Analysis',
   items: [
-    { label: 'TB Diagnostics', href: '/tools/trial-balance', toolKey: 'trial_balance', tier: 'Solo' },
-    { label: 'Multi-Period Analysis', href: '/tools/multi-period', toolKey: 'multi_period', tier: 'Solo' },
-    { label: 'Bank Reconciliation', href: '/tools/bank-rec', toolKey: 'bank_reconciliation', tier: 'Team' },
-    { label: 'Three-Way Match', href: '/tools/three-way-match', toolKey: 'three_way_match', tier: 'Team' },
+    { label: 'TB Diagnostics', href: '/tools/trial-balance', toolKey: 'trial_balance' },
+    { label: 'Multi-Period Analysis', href: '/tools/multi-period', toolKey: 'multi_period' },
+    { label: 'Bank Reconciliation', href: '/tools/bank-rec', toolKey: 'bank_reconciliation' },
+    { label: 'Three-Way Match', href: '/tools/three-way-match', toolKey: 'three_way_match' },
   ],
 }
 
@@ -54,13 +43,13 @@ const CORE_ANALYSIS: ToolColumn = {
 const TESTING_SUITE: ToolColumn = {
   heading: 'Testing Suite',
   items: [
-    { label: 'Journal Entry Testing', href: '/tools/journal-entry-testing', toolKey: 'journal_entry', tier: 'Solo' },
-    { label: 'AP Testing', href: '/tools/ap-testing', toolKey: 'ap_testing', tier: 'Solo' },
-    { label: 'Revenue Testing', href: '/tools/revenue-testing', toolKey: 'revenue_testing', tier: 'Team' },
-    { label: 'AR Aging', href: '/tools/ar-aging', toolKey: 'ar_aging', tier: 'Team' },
-    { label: 'Payroll Testing', href: '/tools/payroll-testing', toolKey: 'payroll_testing', tier: 'Team' },
-    { label: 'Fixed Assets', href: '/tools/fixed-assets', toolKey: 'fixed_assets', tier: 'Team' },
-    { label: 'Inventory Testing', href: '/tools/inventory-testing', toolKey: 'inventory_testing', tier: 'Team' },
+    { label: 'Journal Entry Testing', href: '/tools/journal-entry-testing', toolKey: 'journal_entry' },
+    { label: 'AP Testing', href: '/tools/ap-testing', toolKey: 'ap_testing' },
+    { label: 'Revenue Testing', href: '/tools/revenue-testing', toolKey: 'revenue_testing' },
+    { label: 'AR Aging', href: '/tools/ar-aging', toolKey: 'ar_aging' },
+    { label: 'Payroll Testing', href: '/tools/payroll-testing', toolKey: 'payroll_testing' },
+    { label: 'Fixed Assets', href: '/tools/fixed-assets', toolKey: 'fixed_assets' },
+    { label: 'Inventory Testing', href: '/tools/inventory-testing', toolKey: 'inventory_testing' },
   ],
 }
 
@@ -68,9 +57,9 @@ const TESTING_SUITE: ToolColumn = {
 const ADVANCED: ToolColumn = {
   heading: 'Advanced',
   items: [
-    { label: 'Statistical Sampling', href: '/tools/statistical-sampling', toolKey: 'statistical_sampling', tier: 'Org' },
-    { label: 'Flux Analysis', href: '/flux', toolKey: 'flux_analysis', tier: 'Solo' },
-    { label: 'Reconciliation Intel', href: '/recon', toolKey: 'reconciliation_intel', tier: 'Org' },
+    { label: 'Statistical Sampling', href: '/tools/statistical-sampling', toolKey: 'statistical_sampling' },
+    { label: 'Flux Analysis', href: '/flux', toolKey: 'flux_analysis' },
+    { label: 'Reconciliation Intel', href: '/recon', toolKey: 'reconciliation_intel' },
   ],
 }
 

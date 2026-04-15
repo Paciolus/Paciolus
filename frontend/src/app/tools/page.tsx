@@ -22,7 +22,6 @@ interface UserPreferences {
   favorite_tools: string[]
 }
 
-type TierBadge = 'Solo' | 'Team' | 'Org'
 type Category = 'Core Analysis' | 'Testing Suite' | 'Advanced'
 
 interface ToolDef {
@@ -32,7 +31,6 @@ interface ToolDef {
   description: string
   reference: string
   category: Category
-  tier: TierBadge
   testCount?: number
 }
 
@@ -40,30 +38,24 @@ interface ToolDef {
 
 const TOOLS: ToolDef[] = [
   // Core Analysis
-  { key: 'trial_balance', label: 'TB Diagnostics', href: '/tools/trial-balance', description: 'Upload a trial balance for streaming diagnostic analysis — ratio analysis, anomaly detection, benchmarks, and lead sheet generation.', reference: 'ISA 520 Analytical Procedures', category: 'Core Analysis', tier: 'Solo' },
-  { key: 'multi_period', label: 'Multi-Period Analysis', href: '/tools/multi-period', description: 'Compare trial balances across reporting periods to identify trends, anomalies, and period-over-period changes.', reference: 'ISA 520 Trend Analysis', category: 'Core Analysis', tier: 'Solo' },
-  { key: 'bank_reconciliation', label: 'Bank Reconciliation', href: '/tools/bank-rec', description: 'Match bank statement entries against book records to identify reconciling items and discrepancies.', reference: 'ISA 500 External Confirmation', category: 'Core Analysis', tier: 'Team' },
-  { key: 'three_way_match', label: 'Three-Way Match', href: '/tools/three-way-match', description: 'Match purchase orders, receiving reports, and vendor invoices to detect procurement anomalies.', reference: 'ISA 500 Substantive Testing', category: 'Core Analysis', tier: 'Team' },
+  { key: 'trial_balance', label: 'TB Diagnostics', href: '/tools/trial-balance', description: 'Upload a trial balance for streaming diagnostic analysis — ratio analysis, anomaly detection, benchmarks, and lead sheet generation.', reference: 'ISA 520 Analytical Procedures', category: 'Core Analysis' },
+  { key: 'multi_period', label: 'Multi-Period Analysis', href: '/tools/multi-period', description: 'Compare trial balances across reporting periods to identify trends, anomalies, and period-over-period changes.', reference: 'ISA 520 Trend Analysis', category: 'Core Analysis' },
+  { key: 'bank_reconciliation', label: 'Bank Reconciliation', href: '/tools/bank-rec', description: 'Match bank statement entries against book records to identify reconciling items and discrepancies.', reference: 'ISA 500 External Confirmation', category: 'Core Analysis' },
+  { key: 'three_way_match', label: 'Three-Way Match', href: '/tools/three-way-match', description: 'Match purchase orders, receiving reports, and vendor invoices to detect procurement anomalies.', reference: 'ISA 500 Substantive Testing', category: 'Core Analysis' },
   // Testing Suite
-  { key: 'journal_entry_testing', label: 'Journal Entry Testing', href: '/tools/journal-entry-testing', description: "Upload a General Ledger extract for automated testing — Benford's Law, structural validation, and statistical anomaly detection.", reference: 'ISA 240 / PCAOB AS 2401', category: 'Testing Suite', tier: 'Solo', testCount: 19 },
-  { key: 'ap_testing', label: 'AP Payment Testing', href: '/tools/ap-testing', description: 'Test AP payment registers for duplicate payments, vendor anomalies, ghost vendors, and fraud indicators.', reference: 'ISA 500 Substantive Testing', category: 'Testing Suite', tier: 'Solo', testCount: 13 },
-  { key: 'revenue_testing', label: 'Revenue Testing', href: '/tools/revenue-testing', description: 'Analyze revenue GL extracts for recognition anomalies per ISA 240, ASC 606, and IFRS 15 contract standards.', reference: 'ISA 240 / ASC 606 / IFRS 15', category: 'Testing Suite', tier: 'Team', testCount: 16 },
-  { key: 'ar_aging', label: 'AR Aging', href: '/tools/ar-aging', description: 'Analyze accounts receivable aging schedules for collectibility risks, concentration, and unusual patterns.', reference: 'ISA 540 Accounting Estimates', category: 'Testing Suite', tier: 'Team', testCount: 11 },
-  { key: 'payroll_testing', label: 'Payroll Testing', href: '/tools/payroll-testing', description: 'Test payroll registers for ghost employees, rate anomalies, overtime spikes, and segregation issues.', reference: 'ISA 240 Fraud Indicators', category: 'Testing Suite', tier: 'Team', testCount: 11 },
-  { key: 'fixed_asset_testing', label: 'Fixed Assets', href: '/tools/fixed-assets', description: 'Test fixed asset registers for depreciation accuracy, impairment indicators, disposals, and lease indicators.', reference: 'ISA 500 / IAS 16 / ASC 360', category: 'Testing Suite', tier: 'Team', testCount: 9 },
-  { key: 'inventory_testing', label: 'Inventory Testing', href: '/tools/inventory-testing', description: 'Analyze inventory records for valuation anomalies, obsolescence indicators, and cutoff issues.', reference: 'ISA 501 / IAS 2 / ASC 330', category: 'Testing Suite', tier: 'Team', testCount: 9 },
+  { key: 'journal_entry_testing', label: 'Journal Entry Testing', href: '/tools/journal-entry-testing', description: "Upload a General Ledger extract for automated testing — Benford's Law, structural validation, and statistical anomaly detection.", reference: 'ISA 240 / PCAOB AS 2401', category: 'Testing Suite', testCount: 19 },
+  { key: 'ap_testing', label: 'AP Payment Testing', href: '/tools/ap-testing', description: 'Test AP payment registers for duplicate payments, vendor anomalies, ghost vendors, and fraud indicators.', reference: 'ISA 500 Substantive Testing', category: 'Testing Suite', testCount: 13 },
+  { key: 'revenue_testing', label: 'Revenue Testing', href: '/tools/revenue-testing', description: 'Analyze revenue GL extracts for recognition anomalies per ISA 240, ASC 606, and IFRS 15 contract standards.', reference: 'ISA 240 / ASC 606 / IFRS 15', category: 'Testing Suite', testCount: 16 },
+  { key: 'ar_aging', label: 'AR Aging', href: '/tools/ar-aging', description: 'Analyze accounts receivable aging schedules for collectibility risks, concentration, and unusual patterns.', reference: 'ISA 540 Accounting Estimates', category: 'Testing Suite', testCount: 11 },
+  { key: 'payroll_testing', label: 'Payroll Testing', href: '/tools/payroll-testing', description: 'Test payroll registers for ghost employees, rate anomalies, overtime spikes, and segregation issues.', reference: 'ISA 240 Fraud Indicators', category: 'Testing Suite', testCount: 11 },
+  { key: 'fixed_asset_testing', label: 'Fixed Assets', href: '/tools/fixed-assets', description: 'Test fixed asset registers for depreciation accuracy, impairment indicators, disposals, and lease indicators.', reference: 'ISA 500 / IAS 16 / ASC 360', category: 'Testing Suite', testCount: 9 },
+  { key: 'inventory_testing', label: 'Inventory Testing', href: '/tools/inventory-testing', description: 'Analyze inventory records for valuation anomalies, obsolescence indicators, and cutoff issues.', reference: 'ISA 501 / IAS 2 / ASC 330', category: 'Testing Suite', testCount: 9 },
   // Advanced
-  { key: 'statistical_sampling', label: 'Statistical Sampling', href: '/tools/statistical-sampling', description: 'Design and evaluate audit samples using ISA 530 methodology — MUS, classical variables, and attribute sampling.', reference: 'ISA 530 Audit Sampling', category: 'Advanced', tier: 'Org' },
-  { key: 'flux_analysis', label: 'Flux Analysis', href: '/flux', description: 'Account-level variance analysis comparing current and prior period balances with materiality-based flagging.', reference: 'ISA 520 Analytical Procedures', category: 'Advanced', tier: 'Solo' },
+  { key: 'statistical_sampling', label: 'Statistical Sampling', href: '/tools/statistical-sampling', description: 'Design and evaluate audit samples using ISA 530 methodology — MUS, classical variables, and attribute sampling.', reference: 'ISA 530 Audit Sampling', category: 'Advanced' },
+  { key: 'flux_analysis', label: 'Flux Analysis', href: '/flux', description: 'Account-level variance analysis comparing current and prior period balances with materiality-based flagging.', reference: 'ISA 520 Analytical Procedures', category: 'Advanced' },
 ]
 
 const CATEGORIES: Category[] = ['Core Analysis', 'Testing Suite', 'Advanced']
-
-const TIER_STYLES: Record<TierBadge, string> = {
-  Solo: 'bg-sage-50 text-sage-700 border-sage-200',
-  Team: 'bg-oatmeal-100 text-obsidian-800 border-oatmeal-300',
-  Org: 'bg-obsidian-800 text-oatmeal-200 border-obsidian-600',
-}
 
 /* ─── Component ─────────────────────────────────────────────────────── */
 
@@ -130,9 +122,6 @@ export default function ToolsCatalogPage() {
                       >
                         <div className="flex items-center justify-between mb-2">
                           <h3 className="font-sans font-bold text-sm text-content-primary">{tool.label}</h3>
-                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium leading-none border ${TIER_STYLES[tool.tier]}`}>
-                            {tool.tier}
-                          </span>
                         </div>
                         <p className="text-xs font-sans text-content-secondary flex-1 mb-3">{tool.description}</p>
                         <div className="flex items-center justify-between">

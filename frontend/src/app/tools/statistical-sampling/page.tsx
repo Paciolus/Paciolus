@@ -175,7 +175,7 @@ export default function StatisticalSamplingPage() {
 
         {/* Authenticated Content */}
         {isAuthenticated && isVerified && (
-          <UpgradeGate toolName="sampling">
+          <UpgradeGate toolName="statistical_sampling">
           <>
             {/* Tab Navigation */}
             <div className="flex gap-1 p-1 rounded-xl bg-surface-card-secondary mb-8 max-w-md mx-auto">

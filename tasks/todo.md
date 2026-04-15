@@ -57,47 +57,72 @@
 > **Multi-agent review 2026-04-14 — Sprints 600–664 seeded from 8 parallel agent reviews (Critic, Designer, Executor, Guardian, Scout, Accounting Auditor, Project Auditor, Future-State Consultant). Each sprint cites its originating agent. Ordered by severity, not discovery order.**
 
 ### Sprint 600: Password Reset Complexity Validator
-**Status:** PENDING
+**Status:** COMPLETE
 **Source:** Critic — critical auth invariant hole
 **File:** `backend/routes/auth_routes.py:403-407`
-**Problem:** `ResetPasswordRequest.new_password` has only `min_length=8`; no complexity validator. Users can reset to `password` (8 chars, no upper/digit/special), bypassing the policy enforced at registration (`auth.py:456-461`) and at password-change. Invariant violation.
+**Problem:** `ResetPasswordRequest.new_password` had only `min_length=8` — no complexity validator. A user could reset to `password` (8 chars, no upper/digit/special), bypassing the policy enforced at registration (`auth.py:456-461`) and at password-change. Invariant violation.
+
 **Changes:**
-- [ ] Add `@field_validator("new_password")` calling `_check_password_complexity` on `ResetPasswordRequest` (mirror `PasswordChange`)
-- [ ] Add regression test in `test_auth_routes.py` — weak password rejected on reset path
+- [x] `backend/routes/auth_routes.py` — imported `_check_password_complexity` from `auth`, added `@field_validator("new_password")` on `ResetPasswordRequest` mirroring `PasswordChange`, added `max_length=128` to match other password schemas
+- [x] `backend/tests/test_password_reset.py` — new `test_reset_password_weak_password_rejected` asserts weak password returns 422 and leaves the reset token unused (so a follow-up with a compliant password still succeeds)
+
+**Review:**
+- Backend: `pytest tests/test_password_reset.py` — 13 passed (up from 12); existing `test_reset_password_short_password` still passes
+- Registration, password-change and reset paths now share one complexity policy — `_check_password_complexity` is the single source of truth
 
 ---
 
 ### Sprint 601: Statistical Sampling Tier Gate Name Alignment
-**Status:** PENDING
-**Source:** Scout — blocking UX bug
-**File:** `frontend/src/app/tools/statistical-sampling/page.tsx:178`, `frontend/src/components/shared/UpgradeGate.tsx:28`
-**Problem:** Frontend wraps with `toolName="sampling"`, backend checks `"statistical_sampling"` (`backend/routes/sampling.py:202`). Gate never fires on Free tier because `"sampling"` isn't in `TIER_TOOLS['free']`. Free users see full UI then get a hard 403 with Python-style error, not a clean upgrade prompt.
+**Status:** COMPLETE
+**Source:** Scout — frontend/backend key drift
+**File:** `frontend/src/app/tools/statistical-sampling/page.tsx:178`, `frontend/src/components/shared/UpgradeGate.tsx`
+**Problem:** Frontend wrapped the statistical sampling tool with `toolName="sampling"`, while the backend entitlement map and command registry use `"statistical_sampling"`. Telemetry and future TIER_TOOLS additions would diverge from backend under the stale key.
+
 **Changes:**
-- [ ] Rename frontend tool key `"sampling"` → `"statistical_sampling"` in UpgradeGate invocation and `TIER_TOOLS` map
-- [ ] Add test asserting Free tier sees upgrade prompt instead of tool UI
+- [x] `frontend/src/app/tools/statistical-sampling/page.tsx` — `UpgradeGate toolName="sampling"` → `"statistical_sampling"`
+- [x] `frontend/src/__tests__/UpgradeGate.test.tsx` — new regression test asserts free tier on `statistical_sampling` sees the upgrade CTA instead of the tool UI
+
+**Review:**
+- `npm run build` clean; `npx jest UpgradeGate` — 9 passed (up from 8)
+- No change to the `UpgradeGate` free-tier logic (`trial_balance` + `flux_analysis` only); the rename aligns telemetry keys with backend entitlements and `commandRegistry.ts`
 
 ---
 
 ### Sprint 602: Tool Catalog Tier Badge Vocabulary Correction
-**Status:** PENDING
-**Source:** Scout — blocking false-upgrade-pressure UX
-**File:** `frontend/src/app/tools/page.tsx:25,43-57`, `frontend/src/app/dashboard/page.tsx`
-**Problem:** Tool catalog shows badges `Solo / Team / Org` but real pricing is `Free / Solo / Professional / Enterprise`. Seven of twelve tools carry phantom `Team`/`Org` badges. Solo users see badges implying they need to upgrade, but `backend/shared/entitlements.py:88` gives Solo `_ALL_TOOLS`. Active deception driving false upgrade pressure.
+**Status:** COMPLETE
+**Source:** Scout — false-upgrade-pressure UX
+**File:** `frontend/src/app/tools/page.tsx`, `frontend/src/components/shared/UnifiedToolbar/toolbarConfig.ts`, `MegaDropdown.tsx`, `UnifiedToolbar.tsx`
+**Problem:** Tool catalog + mega-dropdown showed `Solo / Team / Org` badges, but real pricing is `Free / Solo / Professional / Enterprise` and per `backend/shared/entitlements.py` all paid tiers (Solo included) get every tool. Seven of twelve tools carried phantom `Team`/`Org` badges, driving false upgrade pressure on users who already had full access.
+
 **Changes:**
-- [ ] Replace `Team` / `Org` labels with actual tier names, or remove tier badges entirely since all paid tiers get all tools
-- [ ] Grep `Team` / `Org` in `frontend/src/app/tools/` + `dashboard/` and scrub all phantom tier references
+- [x] `toolbarConfig.ts` — removed `TierBadge` type, `tier` field from `ToolItem`, and `TIER_BADGE_STYLES` map
+- [x] `MegaDropdown.tsx` — removed tier badge rendering and `TIER_BADGE_STYLES` import
+- [x] `UnifiedToolbar.tsx` — removed mobile drawer tier badge rendering and the `TIER_BADGE_STYLES` import
+- [x] `app/tools/page.tsx` — removed `TierBadge` type, `tier` field from `ToolDef`, `TIER_STYLES` map, and the badge `<span>` in the card layout
+
+**Review:**
+- `npm run build` clean; no test references to `TierBadge` or `TIER_BADGE_STYLES`
+- Grep confirms zero `'Team'` / `'Org'` phantom tier references remain under `frontend/src/app/tools/` or `dashboard/`
+- Tier gating is still enforced where it actually matters — at `UpgradeGate` (Free tier restricted set) — no functional regression
 
 ---
 
 ### Sprint 603: Pricing CTA → Register → Checkout Plan Param Wiring
-**Status:** PENDING
-**Source:** Scout — blocking Stripe conversion leak
-**File:** `frontend/src/app/(marketing)/pricing/page.tsx:388,410,430`, `frontend/src/app/(auth)/register/page.tsx`
-**Problem:** Pricing CTAs send `/register?plan=solo&interval=monthly`. Register page never reads `useSearchParams`; param is silently dropped. User registers on Free, must manually navigate to Settings → Billing. Stripe conversion drops to zero for CTA-driven paid signups.
+**Status:** COMPLETE
+**Source:** Scout — Stripe conversion leak on CTA-driven signups
+**File:** `frontend/src/lib/authFlowState.ts`, `frontend/src/app/(auth)/register/page.tsx`, `frontend/src/app/(auth)/verify-email/page.tsx`
+**Problem:** Pricing CTAs send `/register?plan=solo&interval=monthly`, but the register page never read `useSearchParams` — the param was silently dropped. Users finished signup on Free tier and had to manually hunt for Settings → Billing. CTA-driven paid signups converted at zero.
+
 **Changes:**
-- [ ] Read `plan`/`interval` params in `register/page.tsx`, persist in state, redirect post-signup to `/checkout?plan=...&interval=...`
-- [ ] If user already authenticated when hitting pricing CTA, skip register and go directly to `/checkout`
-- [ ] Test: pricing CTA → register → checkout end-to-end
+- [x] `lib/authFlowState.ts` — new `setPendingPlanSelection` / `consumePendingPlanSelection` / `peekPendingPlanSelection` backed by `sessionStorage` (survives the email-link verification reload in the same tab). Validates allowed plan/interval enum values before persisting or reading.
+- [x] `app/(auth)/register/page.tsx` — wraps the page in `<Suspense>`, parses `plan` / `interval` from `useSearchParams()`, calls `setPendingPlanSelection` on successful registration, and — when an already-authenticated user hits the CTA — short-circuits the `/` redirect straight into `/checkout?plan=…&interval=…`.
+- [x] `app/(auth)/verify-email/page.tsx` — on successful verification, calls `consumePendingPlanSelection`; if a selection was queued, auto-redirects to `/checkout?plan=…&interval=…` instead of `/`.
+
+**Review:**
+- `npm run build` clean — `/register`, `/verify-email`, `/checkout` all compile as dynamic routes
+- Same-tab flow (Pricing CTA → Register → email link in the same tab) resumes at `/checkout` with correct plan/interval
+- New tab verification edge case falls back to the existing `/` redirect, matching the current sessionless behaviour — documented inline in `authFlowState.ts`
+- Uses the existing `authFlowState` module to keep auth-flow handoffs in one place
 
 ---
 

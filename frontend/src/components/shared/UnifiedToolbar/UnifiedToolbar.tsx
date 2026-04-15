@@ -22,7 +22,7 @@ import { ProfileDropdown } from '@/components/auth/ProfileDropdown'
 import { BrandIcon } from '@/components/shared/BrandIcon'
 import { useCommandPalette } from '@/hooks/useCommandPalette'
 import { MegaDropdown } from './MegaDropdown'
-import { TOOLBAR_NAV, TOOL_COLUMNS, ACCOUNT_NAV, ALL_TOOL_HREFS, TIER_BADGE_STYLES } from './toolbarConfig'
+import { TOOLBAR_NAV, TOOL_COLUMNS, ACCOUNT_NAV, ALL_TOOL_HREFS } from './toolbarConfig'
 
 /** framer-motion variants for mobile drawer */
 const drawerContainerVariants = {
@@ -256,9 +256,6 @@ export function UnifiedToolbar() {
                         }`}
                       >
                         <span>{item.label}</span>
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium leading-none border ${TIER_BADGE_STYLES[item.tier]}`}>
-                          {item.tier}
-                        </span>
                       </Link>
                     ))}
                   </div>

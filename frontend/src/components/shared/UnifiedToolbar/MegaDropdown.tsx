@@ -16,7 +16,6 @@ import { fadeScale } from '@/lib/motion'
 import {
   TOOL_COLUMNS,
   ACCOUNT_NAV,
-  TIER_BADGE_STYLES,
   type ToolItem,
   type NavItem,
 } from './toolbarConfig'
@@ -107,7 +106,6 @@ export function MegaDropdown({ isOpen, onClose }: MegaDropdownProps) {
 
   function renderToolItem(item: ToolItem) {
     const active = isActive(item.href)
-    const badgeStyle = TIER_BADGE_STYLES[item.tier]
 
     return (
       <Link
@@ -122,11 +120,6 @@ export function MegaDropdown({ isOpen, onClose }: MegaDropdownProps) {
         }`}
       >
         <span className="flex-1">{item.label}</span>
-        <span
-          className={`px-1.5 py-0.5 rounded text-[10px] font-medium leading-none border ${badgeStyle}`}
-        >
-          {item.tier}
-        </span>
       </Link>
     )
   }

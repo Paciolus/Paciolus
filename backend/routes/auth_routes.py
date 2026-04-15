@@ -6,7 +6,7 @@ import logging
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -19,6 +19,7 @@ from auth import (
     UserCreate,
     UserLogin,
     UserResponse,
+    _check_password_complexity,
     _revoke_all_user_tokens,
     authenticate_user,
     create_access_token,
@@ -404,7 +405,12 @@ class ResetPasswordRequest(BaseModel):
     """Request body for reset-password (consume token + set new password)."""
 
     token: str = Field(..., min_length=1)
-    new_password: str = Field(..., min_length=8)
+    new_password: str = Field(..., min_length=8, max_length=128)
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_new_password(cls, v: str) -> str:
+        return _check_password_complexity(v)
 
 
 class ResetPasswordResponse(BaseModel):
