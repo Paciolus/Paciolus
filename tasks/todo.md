@@ -52,96 +52,795 @@
 > Sprints 579–585 archived to `tasks/archive/sprints-579-585-details.md`.
 > Sprints 586–591 archived to `tasks/archive/sprints-586-591-details.md`.
 > Sprints 592–595 archived to `tasks/archive/sprints-592-595-details.md`.
+> Sprints 596–599 archived to `tasks/archive/sprints-596-599-details.md`.
 
-### Sprint 599: Coverage Sentinel + Subagent-Verification Lesson
-**Status:** COMPLETE
-**Goal:** Replace the weekly weakness hunt's hallucinated "coverage gap" analysis with a deterministic `pytest --cov` run wired into the nightly brief, and capture the subagent-verification discipline as a reusable lesson. Both are Audit 34 top-priorities.
+> **Multi-agent review 2026-04-14 — Sprints 600–664 seeded from 8 parallel agent reviews (Critic, Designer, Executor, Guardian, Scout, Accounting Auditor, Project Auditor, Future-State Consultant). Each sprint cites its originating agent. Ordered by severity, not discovery order.**
 
-**Problem:** Sprint 598's weekly hunt dispatched two parallel `Explore` subagents. The security-hunt agent produced verifiable findings at the file:line level; the coverage-hunt agent hallucinated — falsely claiming `ratio_engine.py`, `accrual_completeness_engine.py`, and `three_way_match_engine.py` had no test files (each has 1–3 dedicated ones), and reporting "44,081" / "55,283 lines" which were actually byte counts. The operator caught all three false claims and stripped them before acting, but the underlying workflow is wrong: coverage should stand on `pytest --cov --cov-report=json` data, not LLM introspection.
-
+### Sprint 600: Password Reset Complexity Validator
+**Status:** PENDING
+**Source:** Critic — critical auth invariant hole
+**File:** `backend/routes/auth_routes.py:403-407`
+**Problem:** `ResetPasswordRequest.new_password` has only `min_length=8`; no complexity validator. Users can reset to `password` (8 chars, no upper/digit/special), bypassing the policy enforced at registration (`auth.py:456-461`) and at password-change. Invariant violation.
 **Changes:**
-- [x] `scripts/overnight/agents/coverage_sentinel.py` (new) — runs `pytest --cov=. --cov-report=json` in `backend/`, parses `totals.percent_covered`, maintains a rolling 7-day history in `reports/nightly/.baseline.json` under the `coverage_sentinel` key, computes delta vs 7-day mean, ranks top 10 uncovered files by missing-line count, writes `.coverage_sentinel_<DATE>.json`. Status rules: ≥90% green, 85–90% yellow, <85% red; additional drift gates (>0.5pp under mean → yellow, >2pp → red).
-- [x] `scripts/overnight/orchestrator.py` — added `coverage_sentinel` to `AGENT_SCHEDULE` at 3:00 (between Scout at 2:45 and Sprint Shepherd at 3:30); added `AGENT_TIMEOUT_OVERRIDES` mechanism with `coverage_sentinel: 1700s` (pytest --cov is ~1.3–1.5× slower than the bare run); made the "Run complete: N/M" summary count derive from `len(AGENT_SCHEDULE) + 1` instead of the hardcoded `/6`.
-- [x] `scripts/overnight/briefing_compiler.py` — added `coverage_sentinel` to the `AGENTS` list, added `_format_coverage_section()` rendering percentage + 7-day mean + delta arrow + top uncovered files table, inserted the section between Report Auditor and Scout in the daily brief template, changed the "Agents run: N/5" hardcoded denominator to `len(AGENTS)`.
-- [x] `tasks/lessons.md` — appended new lesson "Subagent findings must be verified against live code before acting (Sprint 598)" documenting the ratio_engine/accrual/three_way_match hallucinations, the fake line counts, and the `file:line` vs structural-claim trust heuristic.
-
-**Review:**
-- Standalone dry-run against the live backend test suite: **92.09% line coverage** (79,816 / 86,671 statements, 6,855 uncovered) — status GREEN, no drift (baseline is building from today).
-- `briefing_compiler.py` regenerated `reports/nightly/2026-04-14.md` with `agents_run: 6/6`, new Coverage Sentinel section renders cleanly with the top-uncovered-files table.
-- Top uncovered files surfaced by the real data: `guards/doc_consistency_guard.py` (0%), `leadsheet_generator.py` (11.4%), `workbook_inspector.py` (18.6%), `pdf/sections/diagnostic.py` (65.7%). These are the actual coverage gaps — notably NONE of them match the hallucinated agent's claims (ratio/accrual/three_way_match). The hallucinations were total noise.
-- `.baseline.json` now carries `coverage_sentinel.history` — on 2026-04-21 this will reach 7 entries and delta tracking will start driving status on its own.
-- No changes to the backend test suite itself. No changes to production code. Pure observability infra.
+- [ ] Add `@field_validator("new_password")` calling `_check_password_complexity` on `ResetPasswordRequest` (mirror `PasswordChange`)
+- [ ] Add regression test in `test_auth_routes.py` — weak password rejected on reset path
 
 ---
 
-### Sprint 598: Middleware Fail-Secure Hardening + Dep Hygiene
-**Status:** COMPLETE
-**Goal:** Close two latent middleware fail-open handlers uncovered by the weekly nightly review, tighten dev-dep floors
-
-**Problem:** Weekly weakness hunt (2026-04-14) flagged two `except Exception: pass` sites in `security_middleware.py`:
-- `RateLimitIdentityMiddleware` (line 263) — any non-JWT exception (e.g., config import failure, non-int `sub` claim, unicode decode error) silently downgrades the request to the anonymous rate-limit tier with no log and no metric. Rate-limit tier bypass was invisible.
-- `ImpersonationMiddleware` (line 876) — any non-JWT exception on the pre-dispatch impersonation check was swallowed, bypassing the read-only gate. Downstream `require_current_user` still gates auth, but the defence-in-depth layer is lost when unexpected errors occur.
-
-Both are narrow defence-in-depth issues, not exploitable in the tested happy-path (hence 0/0 test failures), but the fail-open semantics violated the stated intent of both middlewares.
-
+### Sprint 601: Statistical Sampling Tier Gate Name Alignment
+**Status:** PENDING
+**Source:** Scout — blocking UX bug
+**File:** `frontend/src/app/tools/statistical-sampling/page.tsx:178`, `frontend/src/components/shared/UpgradeGate.tsx:28`
+**Problem:** Frontend wraps with `toolName="sampling"`, backend checks `"statistical_sampling"` (`backend/routes/sampling.py:202`). Gate never fires on Free tier because `"sampling"` isn't in `TIER_TOOLS['free']`. Free users see full UI then get a hard 403 with Python-style error, not a clean upgrade prompt.
 **Changes:**
-- [x] `security_middleware.py` — narrow `RateLimitIdentityMiddleware` except to `jwt.PyJWTError`, log non-JWT payload-shape failures (`TypeError`/`ValueError`) at `warning`, preserve anonymous fallthrough for genuine decode errors
-- [x] `security_middleware.py` — narrow `ImpersonationMiddleware` except to `jwt.PyJWTError`, restructure so decode failure returns early to downstream auth dependency; unexpected exception types now surface instead of being swallowed
-- [x] `backend/tests/test_rate_limit_tiered.py` — added 2 new tests: non-int `sub` triggers a warning log, malformed JWT stays silent (expected-failure path)
-- [x] `backend/tests/test_impersonation_middleware.py` (new, 9 tests) — GET pass-through, POST without auth pass-through, valid non-imp token pass-through, `imp: true` blocked on POST/PUT/DELETE, expired imp still blocks, malformed JWT pass-through to downstream, non-Bearer auth pass-through
-- [x] `backend/requirements.txt` — `python-multipart` 0.0.24 → 0.0.26 (patch), `sentry-sdk[fastapi]` 2.57.0 → 2.58.0 (minor), `prometheus_client` floor 0.22.0 → 0.25.0, `pypdf` floor 6.9.2 → 6.10.0
-- [x] `backend/requirements-dev.txt` — `ruff` floor 0.15.8 → 0.15.10, `mypy` floor 1.19.0 → 1.20.1
-
-**Review:**
-- Backend: **7,403 passed, 19 xfailed** (+11 new: 9 impersonation + 2 rate-limit) in 649s — zero regressions
-- Frontend: **1,757 passed** in 41s — zero regressions, `npm run build` clean, all 24 pages compile with dynamic CSP
-- Scope deliberately narrow: bare `except Exception: pass` was the root cause, fix is to narrow the catch to the expected exception class. Unexpected exception types now bubble up as 500s, which is fail-closed.
-- Refresh-token race condition in `auth.py:731-764` (also flagged by the weekly hunt) was left intact — the fail-secure behavior is deliberate and documented. Revisit only if multi-tab UX complaints appear.
-- Deferred to future sprint: billing/checkout orchestrator bare-except review (needs deeper saga-compensation analysis), accrual_completeness float-site audit (needs domain-model review), CSRF-exempt `/auth/forgot-password` re-evaluation for authenticated-session case (low risk).
+- [ ] Rename frontend tool key `"sampling"` → `"statistical_sampling"` in UpgradeGate invocation and `TIER_TOOLS` map
+- [ ] Add test asserting Free tier sees upgrade prompt instead of tool UI
 
 ---
 
-### Sprint 597: DOCX File Format Support
-**Status:** COMPLETE
-**Goal:** Add Word document (.docx) as an 11th supported file format for trial balance uploads
-
+### Sprint 602: Tool Catalog Tier Badge Vocabulary Correction
+**Status:** PENDING
+**Source:** Scout — blocking false-upgrade-pressure UX
+**File:** `frontend/src/app/tools/page.tsx:25,43-57`, `frontend/src/app/dashboard/page.tsx`
+**Problem:** Tool catalog shows badges `Solo / Team / Org` but real pricing is `Free / Solo / Professional / Enterprise`. Seven of twelve tools carry phantom `Team`/`Org` badges. Solo users see badges implying they need to upgrade, but `backend/shared/entitlements.py:88` gives Solo `_ALL_TOOLS`. Active deception driving false upgrade pressure.
 **Changes:**
-- [x] `python-docx>=1.1.0` added to `backend/requirements.txt`
-- [x] `FileFormat.DOCX` enum + `FormatProfile` in `shared/file_formats.py`
-- [x] ZIP disambiguation: `_is_docx_zip()` checks for `word/` directory
-- [x] `shared/docx_parser.py` — extracts tables from DOCX via python-docx
-- [x] Parser dispatch in `shared/helpers.py` (`_parse_docx` wrapper + magic byte validation)
-- [x] `FORMAT_DOCX_ENABLED` feature flag in `config.py` (default: true)
-- [x] Frontend: `.docx` extension, MIME type, label in `utils/fileFormats.ts`
-- [x] Backend tests: `test_docx_parser.py` (29 tests — disambiguation, parsing, detection, profile)
-- [x] Updated `test_file_formats.py` (11 extensions, 13 MIME types)
-- [x] Updated `fileFormats.test.ts` (11 entries, 13 types, DOCX acceptance)
-- [x] Tier gating: paid tiers only (same as PDF/OFX/IIF/QBO/ODS)
-
-**Review:**
-- 89 backend tests pass (test_docx_parser + test_file_formats), 27 ODS tests unaffected
-- 27 frontend fileFormats tests pass
-- `npm run build` clean — all pages compile
-- DOCX parsing extracts first table with data rows; skips header-only tables
-- ZIP disambiguation: ODS (mimetype/content.xml) > DOCX (word/) > XLSX (default)
+- [ ] Replace `Team` / `Org` labels with actual tier names, or remove tier badges entirely since all paid tiers get all tools
+- [ ] Grep `Team` / `Org` in `frontend/src/app/tools/` + `dashboard/` and scrub all phantom tier references
 
 ---
 
-### Sprint 596: UnverifiedCTA — Explicit Verification Prompt on All Tool Pages
-**Status:** COMPLETE
-**Goal:** Replace silent content gating with an explicit "Verify Your Email" card so unverified users understand why tool pages appear blank
-
-**Problem:** 11 of 12 tool pages hid their entire UI behind `isAuthenticated && isVerified` with no explanation. Authenticated users who hadn't verified their email saw only the page title and a blank area below — no upload zone, no controls, no message. The `VerificationBanner` in the top shell existed but was a small dismissible bar, easily overlooked. Users assumed the app was broken.
-
+### Sprint 603: Pricing CTA → Register → Checkout Plan Param Wiring
+**Status:** PENDING
+**Source:** Scout — blocking Stripe conversion leak
+**File:** `frontend/src/app/(marketing)/pricing/page.tsx:388,410,430`, `frontend/src/app/(auth)/register/page.tsx`
+**Problem:** Pricing CTAs send `/register?plan=solo&interval=monthly`. Register page never reads `useSearchParams`; param is silently dropped. User registers on Free, must manually navigate to Settings → Billing. Stripe conversion drops to zero for CTA-driven paid signups.
 **Changes:**
-- [x] New `UnverifiedCTA` component (`frontend/src/components/shared/UnverifiedCTA.tsx`) — email icon, "Verify Your Email" heading, explanation text, pointer to the resend banner. Oat & Obsidian tokens, motion entrance animation. Parallel to `GuestCTA`.
-- [x] Exported from `frontend/src/components/shared/index.ts`
-- [x] Added `{isAuthenticated && !isVerified && (<UnverifiedCTA />)}` block to all 11 tool pages: trial-balance, ap-testing, ar-aging, bank-rec, fixed-assets, inventory-testing, journal-entry-testing, payroll-testing, revenue-testing, statistical-sampling, three-way-match
-- [x] Multi-period page left untouched — already has its own inline "Verify Your Email" card (Pattern B)
-- [x] `npm run build` passes — all 12 tool pages compile cleanly
+- [ ] Read `plan`/`interval` params in `register/page.tsx`, persist in state, redirect post-signup to `/checkout?plan=...&interval=...`
+- [ ] If user already authenticated when hitting pricing CTA, skip register and go directly to `/checkout`
+- [ ] Test: pricing CTA → register → checkout end-to-end
 
-**Review:**
-- Consistent three-state UX across all tools: unauthenticated → GuestCTA, unverified → UnverifiedCTA, verified → full tool UI
-- The `VerificationBanner` in `AuthenticatedShell` still renders above the CTA for redundancy (resend button lives there)
-- No backend changes; purely frontend UX improvement
+---
 
+### Sprint 604: Remove ISA/PCAOB "Compliant" Marketing Overclaim
+**Status:** PENDING
+**Source:** Scout + Accounting Auditor — launch-blocking legal risk
+**File:** `frontend/src/app/(marketing)/demo/page.tsx:40`, `frontend/src/components/marketing/ToolShowcase.tsx:101`, `frontend/src/components/marketing/ToolSlideshow.tsx:126-127`
+**Problem:** Three marketing surfaces claim "ISA 530 / PCAOB AS 2315 compliant MUS and random sampling". AICPA/PCAOB do not certify software. "Compliant" implies third-party assessment or that using the tool satisfies the standard — neither is true. Malpractice exposure.
+**Changes:**
+- [ ] Replace "compliant" with "per ISA 530 methodology" / "designed to support ISA 530 procedures" across all three files
+- [ ] Grep all marketing copy for other occurrences of "compliant" / "certified" near ISA/PCAOB/AS references
+
+---
+
+### Sprint 605: Remove ISA 265 Deficiency Classification From Anomaly PDF
+**Status:** PENDING
+**Source:** Accounting Auditor — assurance-adjacent guardrail violation
+**File:** `backend/anomaly_summary_generator.py:17, 642-708`
+**Problem:** PDF emits "Deficiency Classification: Control Deficiency / Significant Deficiency / Material Weakness" checkbox block and aggregate summary table (lines 704-705) — directly contradicting the file's own GUARDRAIL 3 at line 17. ISA 265 deficiency classification is auditor-judgment-only; platform must not imply it delivers this.
+**Changes:**
+- [ ] Delete the deficiency classification checkbox block (lines 642-651)
+- [ ] Delete the aggregate deficiency summary table rows (lines 686-708)
+- [ ] Replace with a free-text "Practitioner Classification Notes" field
+- [ ] Update snapshot tests
+
+---
+
+### Sprint 606: Rename "Assurance Center" → Trust Center
+**Status:** PENDING
+**Source:** Accounting Auditor — regulated-term drift
+**File:** `frontend/src/app/(marketing)/trust/page.tsx:1034`
+**Problem:** "Assurance Center" is a regulated professional-services term. In marketing context, a regulator or peer could read it as claiming the platform delivers assurance services. Subtitle mitigation on line 1222 is insufficient — not on the same visual element.
+**Changes:**
+- [ ] Rename heading to "Trust Center" or "Security & Compliance"
+- [ ] Grep remaining occurrences of "Assurance Center" in frontend and rename
+
+---
+
+### Sprint 607: Internal Admin Canonical IP Helper
+**Status:** PENDING
+**Source:** Critic — audit log forgery risk
+**File:** `backend/routes/internal_admin.py:45-50`
+**Problem:** Local `_get_client_ip` blindly trusts `X-Forwarded-For`, bypassing `TRUSTED_PROXY_IPS` check in `security_middleware.py:814-830`. Every admin audit log entry (plan_override, refund, impersonation) has forgeable IP. Attacker who compromises a superadmin can make all audit entries appear from `127.0.0.1`.
+**Changes:**
+- [ ] Delete `_get_client_ip` from `internal_admin.py`
+- [ ] Import `get_client_ip` from `security_middleware`, replace all 8 call-sites
+- [ ] Regression test: spoofed `X-Forwarded-For` from untrusted peer does not land in audit log
+
+---
+
+### Sprint 608: Telemetry Beacon Endpoint
+**Status:** PENDING
+**Source:** Executor — silent prod bug
+**File:** `frontend/src/utils/telemetry.ts:59`
+**Problem:** `navigator.sendBeacon('/api/telemetry', ...)` fires in production when `NEXT_PUBLIC_ANALYTICS_WRITE_KEY` is set, but no Next.js route handler exists under `frontend/src/app/api/`. Every pricing-page view and CTA click 404s silently.
+**Changes:**
+- [ ] Decide: create `frontend/src/app/api/telemetry/route.ts` stub that returns 200 (forwards to real analytics service), or remove the beacon call entirely
+- [ ] If kept, validate payload schema and rate-limit per-IP
+- [ ] Document decision in lessons.md
+
+---
+
+### Sprint 609: global-error.tsx A11y + Token Remediation
+**Status:** PENDING
+**Source:** Designer — critical crash-screen a11y + brand violation
+**File:** `frontend/src/app/global-error.tsx:86, 110, 122, 134, 148-151, 155`
+**Problem:** Hardcoded hex `#9e9e9e` is not even a brand token (should be `var(--text-tertiary)`). Buttons ("Try Again", "Reload Page") have no `aria-label`, no visible focus outline — exactly the screen where keyboard-only users need access. WCAG 2.4.11 failure.
+**Changes:**
+- [ ] Replace all hardcoded hex with CSS variables (`var(--text-tertiary)`, `var(--color-error-text)`, `var(--text-disabled)`)
+- [ ] Add `aria-label` to both buttons
+- [ ] Add `outline: 2px solid var(--color-success-text)` + `outlineOffset: 2px` on `:focus`
+- [ ] Manual keyboard-only test on the error screen
+
+---
+
+### Sprint 610: LIKE Wildcard Escape In Admin + Client Search
+**Status:** PENDING
+**Source:** Critic — perf DoS + correctness
+**File:** `backend/billing/admin_customers.py:107`, `backend/client_manager.py:305`
+**Problem:** User input goes directly into `.ilike(f"%{search}%")` without escaping `%` / `_` / `\`. Superadmin searching `%` triggers full table scan on User+Organization. Type-ahead widget on a 50k-user table = DoS.
+**Changes:**
+- [ ] Add LIKE-escape helper in `backend/shared/helpers.py`
+- [ ] Apply at both call-sites with `.ilike(pattern, escape="\\")`
+- [ ] Add tests: `%`, `_`, `\\` literal search matches only literal characters
+
+---
+
+### Sprint 611: ExportShare Object Store Migration
+**Status:** PENDING
+**Source:** Critic — DB bloat risk
+**File:** `backend/export_share_model.py:43`
+**Problem:** `export_data: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)` stores up to 50 MB per shared export in primary Neon Postgres. 20 concurrent shares = 1 GB of binary row storage; Neon Launch tier cap is 10 GB. Also bloats every DB backup — unclear whether zero-storage policy permits this.
+**Changes:**
+- [ ] Provision object store bucket (R2 or S3) with pre-signed URL pattern
+- [ ] Store `export_data` in bucket keyed by `share_token_hash`; DB row keeps metadata + object key only
+- [ ] Extend cleanup scheduler to delete object when share revoked/expired
+- [ ] Backfill migration for existing shares
+
+---
+
+### Sprint 612: Constant-Time Passcode Compare
+**Status:** PENDING
+**Source:** Critic — timing consistency
+**File:** `backend/routes/export_sharing.py:220`
+**Problem:** `hashlib.sha256(...).hexdigest() != share.passcode_hash` uses Python `!=` which short-circuits. Inconsistent with `security_middleware.py:408` which uses `hmac.compare_digest`. Low real-world risk but violates the codebase's own constant-time comparison standard.
+**Changes:**
+- [ ] Replace with `hmac.compare_digest(computed, stored)`
+- [ ] Grep remaining hex-digest `!=` comparisons in backend; fix any others
+
+---
+
+### Sprint 613: Anomaly Detection xfail Resolution (Bank Rec / TWM / Currency)
+**Status:** PENDING
+**Source:** Guardian — test debt on production tools
+**File:** `backend/tests/test_tool_anomaly_detection.py:224, 263, 361` (and :92, 111, 150, 191, 210 runtime xfails)
+**Problem:** Three `@pytest.mark.xfail` markers permanently disable anomaly detection tests for Bank Rec, Three-Way Match, and Currency engines. Reason cited: engine returns typed objects instead of dicts — "needs adapter". Runtime `pytest.xfail()` calls also hide detection gaps in revenue_contra_anomaly and duplicate_names. 3 of 12 production tools have zero anomaly-detection coverage.
+**Changes:**
+- [ ] Write adapter layer converting typed `ReconciliationMatch` / `PurchaseOrder / Invoice / Receipt` / `CurrencyRateTable` into the detection-framework dict shape
+- [ ] Remove all three permanent `xfail` markers
+- [ ] Replace runtime `pytest.xfail()` with assertions on the actual expected detection output
+- [ ] Verify coverage delta on coverage sentinel after fix
+
+---
+
+### Sprint 614: Thread-Safe Classification Counter
+**Status:** PENDING
+**Source:** Guardian — unprotected shared state
+**File:** `backend/audit/classification.py:140-157`
+**Problem:** Module-level `_csv_type_log_count` mutated without lock. Under Gunicorn multi-worker two requests can double-increment, cap becomes unreliable. Violates "no unprotected shared state" rule.
+**Changes:**
+- [ ] Wrap counter in `threading.Lock()`, or convert to per-request logging through the `StreamingAuditor` instance (already safe at `streaming_auditor.py:120`)
+- [ ] Delete the module-level counter
+
+---
+
+### Sprint 615: Sentry before_send Hook Hardening
+**Status:** PENDING
+**Source:** Guardian — zero-storage leak risk
+**File:** `backend/main.py:84-88`
+**Problem:** `_before_send` strips `event["request"]["data"]` only. Misses `query_string`, `contexts`, `extra`. Future `sentry_sdk.set_context()` / `set_extra()` callsites would bypass the strip. Not defensive against additions.
+**Changes:**
+- [ ] Strip `event["request"]["query_string"]`
+- [ ] Filter `event["extra"]` and `event["contexts"]` against an allowlist of safe keys
+- [ ] Unit test: event with financial-data-shaped `extra` gets scrubbed before send
+
+---
+
+### Sprint 616: Workpaper Generator Ownership Check
+**Status:** PENDING
+**Source:** Guardian — cross-user leak if data integrity drifts
+**File:** `backend/workpaper_index_generator.py:95-96`
+**Problem:** Fetches Client by engagement.client_id without `Client.user_id == current_user.id` filter. Engagement access is checked upstream, but if an engagement drifts to reference a client from another user (data integrity failure scenario), client name leaks. Compare `routes/diagnostics.py:210` which correctly filters.
+**Changes:**
+- [ ] Add `.filter(Client.id == engagement.client_id, Client.user_id == user_id)` to the fetch
+- [ ] Regression test: engagement pointing at foreign-user client raises 403
+
+---
+
+### Sprint 617: MappingToolbar Modal Confirmation
+**Status:** PENDING
+**Source:** Executor + Designer — hostile UX pattern
+**File:** `frontend/src/components/mapping/MappingToolbar.tsx:69`
+**Problem:** `window.confirm()` is a sync blocking call. Breaks PWA/iframe context, fails Oat & Obsidian design system, popup-blocker-suppressed in some browsers.
+**Changes:**
+- [ ] Replace with existing modal confirm pattern (see `deleteConfirmClient` state in `portfolio/page.tsx`)
+- [ ] Use Oat & Obsidian tokens on the modal
+
+---
+
+### Sprint 618: Dashboard Error State + Toasts
+**Status:** PENDING
+**Source:** Executor — silent data failures
+**File:** `frontend/src/app/dashboard/page.tsx:142, 147, 152`
+**Problem:** Three `.catch(() => {})` swallow dashboard stats, activity feed, and user preferences errors. When APIs fail after a backend deploy, user sees a blank dashboard with zero feedback — no error state, no retry, no toast.
+**Changes:**
+- [ ] Replace silent catches with `useToast` error notification + local error state
+- [ ] Add retry button per-section
+- [ ] Component test: mock 500 response, assert toast fires
+
+---
+
+### Sprint 619: Orphan Billing Router Cleanup
+**Status:** PENDING
+**Source:** Executor — dead code confusion
+**File:** `backend/routes/billing_checkout.py`, `backend/routes/billing_analytics.py`, `backend/routes/billing_webhooks.py`
+**Problem:** None are imported in `routes/__init__.py`. Define duplicate `/billing/` prefix routers cloning live `billing.py` endpoints. Never served, but waste maintenance attention and invite merge confusion.
+**Changes:**
+- [ ] Delete all three files
+- [ ] Grep remaining imports to confirm zero references
+
+---
+
+### Sprint 620: Hero Headline Clarity + Trust Micro-Copy
+**Status:** PENDING
+**Source:** Scout — 5-second test failure
+**File:** `frontend/src/components/marketing/hero/HeroProductFilm.tsx:83-147`
+**Problem:** "The Workpapers Write Themselves" is clever but doesn't answer "what do I drop in and what do I get back?" in 5 seconds. "No credit card required" only appears in pricing page FAQ, not near any landing-page CTA.
+**Changes:**
+- [ ] Add a secondary subheadline under the tagline: "Drop your trial balance. Get ISA/PCAOB-methodology-grade diagnostics and workpapers in seconds."
+- [ ] Add "No credit card required" micro-copy directly under the CTA button
+- [ ] A/B test or at minimum measure bounce-rate delta
+
+---
+
+### Sprint 621: h3 font-serif Brand Remediation
+**Status:** PENDING
+**Source:** Designer — brand mandate violation
+**File:** `frontend/src/app/dashboard/page.tsx:328, 365`, `frontend/src/app/tools/page.tsx:132`, `frontend/src/app/(diagnostic)/recon/page.tsx:58, 63, 68`, `frontend/src/components/sensitivity/WeightedMaterialityEditor.tsx:100`, `frontend/src/app/status/page.tsx:182`
+**Problem:** Seven `<h3>` headings explicitly use `font-sans` — brand mandate requires `font-serif` on all headers. These are labelled section headings, not UI labels.
+**Changes:**
+- [ ] Replace `font-sans` with `font-serif` at all seven sites (or use `type-tool-section` utility)
+- [ ] Grep remaining `<h[1-6].*font-sans` across `frontend/src/` and fix any stragglers
+
+---
+
+### Sprint 622: Dashboard Favorite Toggle A11y
+**Status:** PENDING
+**Source:** Designer — mobile/screen-reader invisible
+**File:** `frontend/src/app/dashboard/page.tsx:332-335`
+**Problem:** Favorite button uses `opacity-0 group-hover:opacity-100` with only `title=` attribute. Screen readers on mobile (no hover) never surface it. `title` alone fails WCAG 4.1.2 (accessible name).
+**Changes:**
+- [ ] Add `aria-label={favorites.includes(tool.key) ? 'Remove from favorites' : 'Add to favorites'}`
+- [ ] Add `focus-visible:opacity-100` so keyboard focus surfaces the button
+
+---
+
+### Sprint 623: focus:outline-hidden Uniform Sweep
+**Status:** PENDING
+**Source:** Designer — Tailwind v3/v4 semantic inconsistency
+**File:** `frontend/src/app/(auth)/forgot-password/page.tsx:133`, `frontend/src/app/(auth)/reset-password/page.tsx:213, 228`, `frontend/src/app/(marketing)/pricing/page.tsx:302`, `frontend/src/components/pricing/PricingEstimator.tsx:138`
+**Problem:** Five inputs use `focus:outline-none` (v3 keyword) while 75 other occurrences across the codebase use `focus:outline-hidden` (v4 alias). Inconsistent semantics; v3 maps to `outline: 0` which removes native outline before the ring renders.
+**Changes:**
+- [ ] Replace all five occurrences with `focus:outline-hidden`
+- [ ] Grep to confirm no remaining `focus:outline-none` in `frontend/src/`
+
+---
+
+### Sprint 624: Interest Coverage Ratio
+**Status:** PENDING
+**Source:** Accounting Auditor + Future-State — quick win capability gap (Priority 4.0)
+**File:** `backend/ratio_engine.py:2223` (interest expense extracted, never used in output)
+**Problem:** 17+ ratios implemented but no EBIT / interest expense ratio. Interest expense is already extracted from the TB keyword list. Every going concern and solvency engagement requires this.
+**Changes:**
+- [ ] Add `calculate_interest_coverage()` in `ratio_engine.py` returning `RatioResult`
+- [ ] Logic: EBIT / interest expense. If interest expense = 0, return N/A with "No interest-bearing debt detected"
+- [ ] Thresholds: <1.5x elevated, 1.5x–3.0x watch, >3.0x adequate
+- [ ] Include in `calculate_all_ratios()` dict + PDF memo Ratio section
+- [ ] Tests for positive, zero, negative EBIT paths
+
+---
+
+### Sprint 625: Loan Amortization Generator (Quick Win, Priority 9/2)
+**Status:** PENDING
+**Source:** Future-State Consultant — missing catalog feature #5
+**File:** new engine + route
+**Problem:** Every entity with debt needs this. Universal monthly use, direct revenue driver for Solo/Professional. Deterministic math, form-input only, no upload.
+**Changes:**
+- [ ] New engine `backend/loan_amortization_engine.py` — principal, rate, term, frequency, start date, method (SL/interest-only/balloon), extra payments, variable rate support
+- [ ] Period-by-period schedule output + total interest + payoff date + annual summary + JE templates
+- [ ] New route `backend/routes/loan_amortization.py` + schemas
+- [ ] Frontend: form-only page under `frontend/src/app/tools/loan-amortization/page.tsx`
+- [ ] Excel + PDF export
+- [ ] Zero-storage compliant (form input, no upload)
+
+---
+
+### Sprint 626: Depreciation Calculator (Book + MACRS)
+**Status:** PENDING
+**Source:** Future-State Consultant — missing catalog feature #6 (Quick Win, Priority 8/3)
+**File:** new engine + route
+**Problem:** Existing `fixed_asset_testing_engine.py` reads `depreciation_method` to verify it — does NOT calculate schedules. No SL, DDB, SYD, or MACRS generator exists.
+**Changes:**
+- [ ] New engine `backend/depreciation_engine.py` — SL, declining balance, SYD, MACRS
+- [ ] MACRS tables hardcoded per IRS property class
+- [ ] Conventions: half-year, mid-quarter, mid-month
+- [ ] Book vs tax comparison + deferred tax impact
+- [ ] New route + PDF + Excel export
+- [ ] Frontend page
+
+---
+
+### Sprint 627: Account-Level Risk Signal Heatmap
+**Status:** PENDING
+**Source:** Accounting Auditor — highest-audit-workflow-value capability gap
+**File:** new aggregator engine
+**Problem:** Composite risk scoring operates at engagement level. No output collects all signals (anomaly flags, classification issues, cutoff risk, lease indicator, accrual gaps) against a single account row for triage density scanning. Auditor opens five separate views instead of one.
+**Changes:**
+- [ ] New `backend/account_risk_heatmap_engine.py` aggregating outputs from `audit_engine`, `classification_validator`, `cutoff_risk_engine`, `accrual_completeness_engine`, `composite_risk_engine`
+- [ ] Per-account: signal count, materiality-weighted signal score, priority tier (Top 10% High, next 20% Moderate, rest Low)
+- [ ] JSON + CSV export, integration into Diagnostic Canvas
+- [ ] In-memory aggregation only (zero-storage)
+
+---
+
+### Sprint 628: Benford Second-Digit + First-Two-Digit Extension
+**Status:** PENDING
+**Source:** Accounting Auditor + Future-State — spec deviation in shared Benford module
+**File:** `backend/shared/benford.py:36-203`
+**Problem:** Only first-digit analysis implemented. Second-digit catches round-number manipulation invisible to first-digit tests. Standard complementary test, trivial extension.
+**Changes:**
+- [ ] Add `digit_position: Literal["first", "second", "first_two"] = "first"` parameter to `analyze_benford()`
+- [ ] Add expected distributions for second digit and first-two-digit (Benford-2)
+- [ ] Extend chi-squared threshold per df
+- [ ] Tests for second-digit detection of rounding patterns
+- [ ] Integrate into JE and Payroll anomaly panels
+
+---
+
+### Sprint 629: ASC 842 Lease Calculator
+**Status:** PENDING
+**Source:** Future-State Consultant — missing catalog feature #17 (Strategic Bet, Priority 8/6)
+**File:** `backend/lease_diagnostic_engine.py` currently diagnostic-only; new calculator engine needed
+**Problem:** Lease diagnostic flags audit risk only — no ROU asset, no PV of lease payments, no classification tests, no amortization schedule, no disclosure support. ASC 842 is mandatory for non-micro entities.
+**Changes:**
+- [ ] New `backend/lease_accounting_engine.py` — 5-criteria classification test, initial measurement, amortization schedule
+- [ ] Operating vs finance lease separation
+- [ ] Disclosure tables: maturity analysis, weighted-average remaining term, weighted-average discount rate
+- [ ] Defer modification/remeasurement to future sprint
+- [ ] Route + PDF memo + Excel schedule export
+
+---
+
+### Sprint 630: Segregation of Duties Checker
+**Status:** PENDING
+**Source:** Future-State Consultant — missing catalog feature #19 (Enterprise differentiator)
+**File:** new engine + route
+**Problem:** JE-T9 flags single-user high-volume as an SoD indicator but there is no user-role matrix analysis tool. Required for every SOC 1 / internal audit engagement.
+**Changes:**
+- [ ] New `backend/sod_engine.py` ingesting user-role matrix + role-permission matrix
+- [ ] Hardcoded SoD rule library (AP create+approve, JE create+post, vendor create+payment, etc.)
+- [ ] Conflict matrix, per-user risk ranking, mitigating control suggestions
+- [ ] Route + PDF export
+- [ ] Enterprise-tier gated
+
+---
+
+### Sprint 631: Balance Sheet Assertion Completeness Checker
+**Status:** PENDING
+**Source:** Accounting Auditor — preflight capability gap
+**File:** `backend/preflight_engine.py` extension
+**Problem:** Classification validator checks individual accounts but does not assert population-level completeness — no engine verifies the uploaded TB has at least one account in each GAAP category (Assets/Liabilities/Equity/Revenue/Expenses) before downstream tools run.
+**Changes:**
+- [ ] After classification, check all 5 categories have ≥1 mapped account
+- [ ] Emit preflight warning: "No [category] accounts detected — financial statement output will be incomplete"
+- [ ] Secondary check: Revenue > 0 but COGS = 0 → flag classification gap
+- [ ] Surface in preflight gate UI
+
+---
+
+### Sprint 632: Account Sequence Gap Detector
+**Status:** PENDING
+**Source:** Accounting Auditor — TB-only fraud signal not currently surfaced
+**File:** new engine under `backend/audit/rules/`
+**Problem:** Gaps in numeric account number sequences can reveal suppressed accounts. No existing tool surfaces this.
+**Changes:**
+- [ ] Parse numeric component from account numbers, sort, detect gaps
+- [ ] Configurable tolerance (default: gaps of 10+ where adjacent within 5 of boundary)
+- [ ] Exclude category boundary gaps (1xxx→2xxx)
+- [ ] Integrate into Classification Validator output
+- [ ] Test against fabricated TB with suppressed account ranges
+
+---
+
+### Sprint 633: Cash Flow Projector (30/60/90-Day)
+**Status:** PENDING
+**Source:** Future-State Consultant — missing catalog feature #16 (Strategic Bet, Priority 7/4)
+**File:** new engine; reuses AR/AP aging parsers
+**Problem:** Existing `financial_statement_builder.py` cash flow statement is historical indirect-method only. No forward-looking AR/AP-based projector. Operational finance teams need this.
+**Changes:**
+- [ ] New `backend/cash_flow_projector_engine.py`
+- [ ] Inputs: AR aging, AP aging (both already parsed by existing engines), recurring cash flows, opening balance
+- [ ] Base/stress/best-case scenarios
+- [ ] Daily/weekly 30/60/90-day forecast
+- [ ] Collection probability analysis, suggested AR priorities, AP deferral candidates
+- [ ] Route + PDF + Excel
+
+---
+
+### Sprint 634: 1099 Preparation Helper
+**Status:** PENDING
+**Source:** Future-State Consultant — missing catalog feature #12
+**File:** new engine + route
+**Problem:** Not in any route or engine file. 1099 prep is annual pain point with intense Oct–Jan demand.
+**Changes:**
+- [ ] New `backend/form_1099_engine.py` — aggregate AP payments by vendor, apply 1099 reporting rules, validate vendor data (TIN, address)
+- [ ] Output: 1099 candidate listing with amounts by box, data quality report, IRS-ready file format, W-9 collection list
+- [ ] Route + PDF + CSV export
+- [ ] Seasonal marketing hook (release before October)
+
+---
+
+### Sprint 635: Book-to-Tax Adjustment Calculator
+**Status:** PENDING
+**Source:** Future-State Consultant — missing catalog feature #13
+**File:** new engine + route
+**Problem:** Not present. M-1/M-3, UNICAP, meals/entertainment — none implemented.
+**Changes:**
+- [ ] New `backend/book_to_tax_engine.py` — permanent differences (meals 50%, fines, life insurance, tax-exempt interest), temporary differences (depreciation, bad debt, prepaids, accruals, UNICAP, stock comp)
+- [ ] M-1/M-3 formatted output based on entity size
+- [ ] Deferred tax asset/liability rollforward
+- [ ] Route + PDF
+
+---
+
+### Sprint 636: W-2/W-3 Reconciliation Tool
+**Status:** PENDING
+**Source:** Future-State Consultant — missing catalog feature #14
+**File:** new engine + route
+**Problem:** Not present. Payroll testing tests data integrity, not W-2 reconciliation. W-2 errors create amended filings + penalties.
+**Changes:**
+- [ ] New `backend/w2_reconciliation_engine.py` — reconcile payroll system → draft W-2 → quarterly 941s
+- [ ] Validate SS wage base, HSA, retirement plan limits
+- [ ] Employee-level discrepancy report
+- [ ] Route + PDF
+
+---
+
+### Sprint 637: Multi-Entity Intercompany Elimination
+**Status:** PENDING
+**Source:** Future-State Consultant — partial catalog feature #11
+**File:** `backend/audit/rules/relationships.py:81` currently single-TB only
+**Problem:** Existing single-TB intercompany imbalance detection exists. Missing: multi-entity TB input, elimination JE generation, consolidation worksheet.
+**Changes:**
+- [ ] Accept multiple TB uploads in one session
+- [ ] Extract intercompany balances per entity, match reciprocal pairs
+- [ ] Calculate elimination JEs
+- [ ] Flag timing/currency/error imbalances
+- [ ] Consolidation worksheet output (pre-elim, elim, post-elim)
+
+---
+
+### Sprint 638: Statement Of Changes In Equity
+**Status:** PENDING
+**Source:** Future-State Consultant — partial catalog feature #7
+**File:** `backend/financial_statement_builder.py:275`
+**Problem:** TB → Financial Statements mapper builds BS, IS, Cash Flow. Statement of Changes in Equity is missing from spec output.
+**Changes:**
+- [ ] Extend `financial_statement_builder.py` to generate equity rollforward from TB equity accounts
+- [ ] Include in PDF financial statement package
+- [ ] Explicit unmapped-accounts report alongside the mapping trace
+
+---
+
+### Sprint 639: Bank Reconciliation One-to-Many + Suggested JEs
+**Status:** PENDING
+**Source:** Future-State Consultant — partial catalog feature #2
+**File:** `backend/bank_reconciliation.py:399-518, 1201`
+**Problem:** V1 exact + tolerance matching only. No one-to-many matching (one bank txn → multiple GL entries). No suggested JE templates for common reconciling items (fees, interest, bank charges).
+**Changes:**
+- [ ] Add split-matching pass after greedy pass
+- [ ] Emit `suggested_journal_entries` field on `BankRecResult` for BANK_ONLY items classified as fees/interest
+- [ ] Tests for split-match scenarios
+
+---
+
+### Sprint 640: Budget vs Actual Favorable/Unfavorable Classification
+**Status:** PENDING
+**Source:** Future-State Consultant — partial catalog feature #8
+**File:** `backend/multi_period_comparison.py:707-934`
+**Problem:** Computes variance amount/percent but never classifies favorable/unfavorable. Opposite signs mean different things for revenue vs expense — expense underage is favorable, revenue underage is unfavorable. Currently ambiguous.
+**Changes:**
+- [ ] Add `variance_direction: Literal["favorable", "unfavorable"]` derived from account type + sign
+- [ ] Add `commentary_prompt` field for `SignificanceTier.CRITICAL` movements
+- [ ] Update PDF and CSV exports
+
+---
+
+### Sprint 641: Revenue Benford MAD/Conformity Parity
+**Status:** PENDING
+**Source:** Future-State Consultant — inconsistent detection depth
+**File:** `backend/shared/benford.py:7` (comment), `backend/revenue_testing_engine.py`
+**Problem:** Revenue engine explicitly excluded from shared Benford module ("NOT used by revenue_testing_engine.py — chi-squared only, no MAD/conformity"). Revenue gets a weaker fraud test than JE or Payroll.
+**Changes:**
+- [ ] Migrate `revenue_testing_engine.py` Benford to `shared.benford.analyze_benford()`
+- [ ] Remove the carve-out comment
+- [ ] Update revenue testing snapshot
+
+---
+
+### Sprint 642: Ghost Employee HR-Master Cross-File Input
+**Status:** PENDING
+**Source:** Future-State Consultant — partial catalog feature #20
+**File:** `backend/payroll_testing_engine.py:1339-1418`
+**Problem:** PR-T9 operates entirely within the payroll file. Cannot identify employees on payroll who are absent from HR master — the most forensically significant ghost employee indicator.
+**Changes:**
+- [ ] Add optional `hr_master_rows` input to `run_payroll_testing()`
+- [ ] When provided, compare payroll employee IDs to HR active list
+- [ ] Flag payroll entries with no HR record, or payroll after termination date
+- [ ] Address-match-to-executive heuristic
+
+---
+
+### Sprint 643: Duplicate Payment Recovery-Value Summary
+**Status:** PENDING
+**Source:** Future-State Consultant — partial catalog feature #3
+**File:** `backend/ap_testing_engine.py:671, 1014`
+**Problem:** Exact and fuzzy duplicate detection implemented. Missing: estimated recovery value total, duplicate rate % by vendor, time-trend of elevated activity.
+**Changes:**
+- [ ] Aggregate duplicate candidates into total recovery value
+- [ ] Vendor-level duplicate rate summary
+- [ ] Time-trend chart data in memo output
+
+---
+
+### Sprint 644: doc_consistency_guard.py Test Coverage
+**Status:** PENDING
+**Source:** Project Auditor + Coverage Sentinel — first real finding from Sprint 599
+**File:** `backend/guards/doc_consistency_guard.py` (0% coverage)
+**Problem:** Guard runs in CI consistency check but has zero test coverage. Surfaced as top uncovered file by the new deterministic coverage sentinel.
+**Changes:**
+- [ ] New `backend/tests/test_doc_consistency_guard.py` with smoke coverage
+- [ ] Fixtures exercising each guard rule
+- [ ] Coverage sentinel green on next run
+
+---
+
+### Sprint 645: Hotfix SHA Backfill + Archival Hygiene
+**Status:** PENDING
+**Source:** Project Auditor — top priority from Audit 35
+**File:** `tasks/todo.md:19`, `tasks/archive/`
+**Problem:** Hotfix entry reads `pending: hallucination audit hotfix` but commit `a32f566` is already in git history. Also: Active Phase has 4 completed sprints (596–599); next `Sprint N:` commit will be rejected by Husky archival gate at 5.
+**Changes:**
+- [ ] Change `pending` to `a32f566` in hotfix entry at line 19
+- [ ] Run `sh scripts/archive_sprints.sh` to archive 596–599 into `tasks/archive/sprints-596-599-details.md`
+- [ ] Verify commit-msg hook passes on a probe commit
+
+---
+
+### Sprint 646: PeriodFileDropZone Deferred Item Tracking
+**Status:** PENDING
+**Source:** Project Auditor — 3 consecutive audit mention
+**File:** `frontend/src/components/multiPeriod/PeriodFileDropZone.tsx:10`, `tasks/todo.md` Deferred Items table
+**Problem:** `// TODO: type as AuditResult after full migration` has appeared in three consecutive audits without being added to the Deferred Items table. Untracked deferrals are a tracking liability.
+**Changes:**
+- [ ] Add row to Deferred Items table: `| PeriodFileDropZone type migration | Full AuditResult typing deferred until multi-period migration completes | Sprint 596+ |`
+
+---
+
+### Sprint 647: PeriodFileDropZone AuditResult Type Migration
+**Status:** PENDING
+**Source:** Executor — type-safety escape hatch
+**File:** `frontend/src/components/multiPeriod/PeriodFileDropZone.tsx:10`, `frontend/src/app/tools/multi-period/page.tsx:116-141`
+**Problem:** `result: Record<string, unknown> | null` forces `as unknown as AuditResult` casts in 6 places. Type-unsafe.
+**Changes:**
+- [ ] Change property type to `AuditResult | null`
+- [ ] Remove all 6 cast sites
+- [ ] Update consumers to use typed access
+
+---
+
+### Sprint 648: useTrialBalanceUpload Error Response Typing
+**Status:** PENDING
+**Source:** Executor — error shape untyped
+**File:** `frontend/src/hooks/useTrialBalanceUpload.ts:247`
+**Problem:** `data as unknown as Record<string, string>` on the error path — typed as `TrialBalanceResponse` elsewhere, double-cast indicates untyped error response.
+**Changes:**
+- [ ] Add discriminated union for success vs error response
+- [ ] Replace the cast with a type guard
+- [ ] Apply pattern to other hooks with similar escape hatches
+
+---
+
+### Sprint 649: Export Filename Context
+**Status:** PENDING
+**Source:** Scout — 10 identical `Paciolus_Report.pdf` downloads
+**File:** `frontend/src/components/export/DownloadReportButton.tsx:73`, `frontend/src/components/preflight/PreFlightSummary.tsx:186`, `frontend/src/components/trialBalance/AccrualCompletenessSection.tsx:138`
+**Problem:** Default filename is `Paciolus_Report.pdf`. A CPA running 10 engagements gets 10 identical filenames in their Downloads folder. Also: no adjacent micro-copy explaining what the export contains.
+**Changes:**
+- [ ] Dynamic filename: `Paciolus_<Tool>_<Client>_<YYYYMMDD>.pdf`
+- [ ] Micro-copy under each export button: "PDF — full diagnostic memo" / "CSV — raw findings"
+
+---
+
+### Sprint 650: PricingComparison Duplicate Render Cleanup
+**Status:** PENDING
+**Source:** Designer — duplicated table markup
+**File:** `frontend/src/app/(marketing)/pricing/page.tsx:789-790`, `frontend/src/components/pricing/PricingComparison.tsx:50`
+**Problem:** Pricing page renders an inline table identical to the `PricingComparison` component, then has the component elsewhere. Two separate `min-w-[700px]` tables on the same page.
+**Changes:**
+- [ ] Delete inline duplicate at `pricing/page.tsx:789-790`, render `<PricingComparison />` in its place
+- [ ] Add CSS fade-edge scroll hint on overflow container
+
+---
+
+### Sprint 651: UnifiedToolbar Responsive Zone Collapse
+**Status:** PENDING
+**Source:** Designer — 768px breakpoint overflow
+**File:** `frontend/src/components/shared/UnifiedToolbar/UnifiedToolbar.tsx:86, 140`
+**Problem:** Both action zones fixed at `w-[120px] flex-shrink-0`. At 640–768px the zones consume 240px of a ~640px bar, leaving only ~160px for logo+nav. Center nav has no `min-w-0 overflow-hidden` guard.
+**Changes:**
+- [ ] Add `min-w-0 overflow-hidden` to center nav container
+- [ ] Scale zones: `w-[80px] sm:w-[120px]`
+- [ ] Visual regression test at 375/640/768/1024
+
+---
+
+### Sprint 652: Frontend Hook Test Coverage Backfill
+**Status:** PENDING
+**Source:** Guardian — 20+ hooks without dedicated tests
+**File:** `frontend/src/hooks/` (20+ untested)
+**Problem:** Untested hooks include `useAuthSession` (token refresh race potential), `useExportSharing` (sensitive delivery), all 5 tool-specific testing hooks, `useActivityHistory`, `useBatchUpload`, `useCommandPalette`, `useFeatureFlag`, `useInternalAdmin`, `useWorkspaceInsights`, etc.
+**Changes:**
+- [ ] Prioritize by risk: `useAuthSession` → `useExportSharing` → 5 tool hooks
+- [ ] Test: concurrent refresh, 401 mid-session, network error path
+- [ ] One test file per hook with at minimum happy path + error path
+
+---
+
+### Sprint 653: CSRF Middleware Connection Pool Bypass
+**Status:** PENDING
+**Source:** Critic — low severity architectural debt
+**File:** `backend/security_middleware.py:476-512`
+**Problem:** `_extract_user_id_from_refresh_cookie` opens fresh `SessionLocal()` per `/auth/logout` and `/auth/refresh` call, outside `get_db()` lifetime. Bypasses connection pool accounting. Silently swallows DB exceptions, degrading CSRF to signature-only on DB outage.
+**Changes:**
+- [ ] For `/auth/refresh`, skip the DB lookup entirely (already covered by `X-Requested-With` header proof at lines 566-576)
+- [ ] For `/auth/logout`, accept CSRF token via request body alongside cookie
+- [ ] Remove the session-factory helper
+
+---
+
+### Sprint 654: Trust Page Self-Assessed Disclosure Prominence
+**Status:** PENDING
+**Source:** Scout — omission-by-silence trust gap
+**File:** `frontend/src/app/(marketing)/trust/page.tsx:151-159`
+**Problem:** GDPR/CCPA show green "Compliant" badge with self-assessed detail text, but the visual treatment doesn't prominently mark it as self-assessed. SOC 2 absence is correct per CEO deferral but unspoken — creates trust gap when enterprise buyer asks.
+**Changes:**
+- [ ] Add "Self-assessed — no third-party audit" callout directly adjacent to each compliance badge
+- [ ] Add single sentence: "No SOC 2 audit completed — planned for 2026"
+- [ ] Match Oat & Obsidian tokens
+
+---
+
+### Sprint 655: Zip-Bomb Test Determinism
+**Status:** PENDING
+**Source:** Guardian — silent CI skip of a security guard
+**File:** `backend/tests/test_parser_resource_guards.py:163`
+**Problem:** `pytest.skip`s itself when compression ratio isn't high enough — in constrained CI envs the guard is never exercised. Production guard logic is real but CI hides it.
+**Changes:**
+- [ ] Replace skip with a deterministic synthetic buffer guaranteed to trigger >100:1 ratio
+- [ ] Or use `hypothesis` strategy to build the input
+- [ ] Ensure test runs (not skipped) on all CI environments
+
+---
+
+### Sprint 656: KeyMetricsSection Mono Label/Value Separation
+**Status:** PENDING
+**Source:** Designer — typography consistency
+**File:** `frontend/src/components/analytics/KeyMetricsSection.tsx:235-245`
+**Problem:** Labels like "Assets:" render inside the `font-mono` span alongside the numeric value, making labels look mechanical. Should be `font-sans` label + `font-mono` number.
+**Changes:**
+- [ ] Split into `<span font-sans text-xs>Assets:</span> <span font-mono>$X</span>` pattern
+- [ ] Apply to all 4 category totals
+
+---
+
+### Sprint 657: ToolSettingsDrawer Mobile Gutter Cap
+**Status:** PENDING
+**Source:** Designer — 375px viewport clipping
+**File:** `frontend/src/components/shared/ToolSettingsDrawer.tsx:189`
+**Problem:** `w-[400px] max-w-[90vw]` means on a 375px device the drawer is `337px` — close button clipped.
+**Changes:**
+- [ ] Change to `w-full max-w-[400px]` with `sm:w-[400px]`, or `max-w-[min(400px,100vw-24px)]`
+- [ ] Manual test at 320/375/414 widths
+
+---
+
+### Sprint 658: MatchSummaryCards Mono Numerics
+**Status:** PENDING
+**Source:** Designer — financial data not in font-mono
+**File:** `frontend/src/components/bankRec/MatchSummaryCards.tsx:104`
+**Problem:** `Match Rate: X% (N of M items)` renders as plain text. Match rate is a financial metric that should use `font-mono` per brand mandate.
+**Changes:**
+- [ ] Wrap `matchRate.toFixed(0)%` and counts in `font-mono` spans
+- [ ] Grep remaining untagged numeric metrics across bankRec and other tool summaries
+
+---
+
+### Sprint 659: follow_up_items_manager DB Aggregation
+**Status:** PENDING
+**Source:** Guardian — in-memory N+1 pattern
+**File:** `backend/follow_up_items_manager.py:314-337`
+**Problem:** `get_summary_for_engagement` loads all items into Python memory first (`.all()`) then aggregates. For high-volume engagements this is an in-memory N+1 — OOM risk on large engagements.
+**Changes:**
+- [ ] Rewrite as `db.query(func.count(), FollowUpItem.severity).group_by(...)`
+- [ ] Performance test with 10k items
+- [ ] Verify memory footprint unchanged at 10k vs 100 items
+
+---
+
+### Sprint 660: accrual_completeness monthly_run_rate Decimal Guard
+**Status:** PENDING
+**Source:** Guardian — float/Decimal precision fragility
+**File:** `backend/accrual_completeness_engine.py:891-892`
+**Problem:** `monthly_run_rate = prior_operating_expenses / MONTHS_PER_YEAR` uses raw `float`. `NEAR_ZERO` guard then compares `float` to `Decimal` constant. Works today but fragile at exact boundary values.
+**Changes:**
+- [ ] Convert `prior_operating_expenses` to `Decimal` before the division
+- [ ] Use `Decimal(str(...))` guard consistently
+- [ ] Test with `prior_operating_expenses = 1e-7` to verify NEAR_ZERO fires
+
+---
+
+### Sprint 661: Impersonation Token Expiry Asymmetry
+**Status:** PENDING
+**Source:** Critic — asymmetric revocation risk
+**File:** `backend/security_middleware.py:869`
+**Problem:** `ImpersonationMiddleware` uses `verify_exp=False` to block mutations. If a 15-minute impersonation token leaks (logs/proxies), the blocking path is effectively permanent for the impersonated user — no server-side revocation, `jti` claim exists but is not registered in any revocation store.
+**Changes:**
+- [ ] Add `jti` to a Redis revocation set on token revocation
+- [ ] Check revocation set in the mutation-blocking path
+- [ ] Document the asymmetric behavior in `SECURE_SDL_CHANGE_MANAGEMENT.md`
+- [ ] Test: revoked impersonation token stops blocking mutations
+
+---
+
+### Sprint 662: Payroll Memo "Physical Existence" Language Reframe
+**Status:** PENDING
+**Source:** Accounting Auditor — assurance-adjacent procedure language
+**File:** `backend/payroll_testing_memo_generator.py:387-390`
+**Problem:** "Confirm physical existence of employee and legitimacy of the payment" is a field audit procedure, not a TB diagnostic. Parenthetical qualifier exists but phrasing blurs diagnostic output vs audit instruction.
+**Changes:**
+- [ ] Reframe as "Suggested Auditor Procedure — practitioner to consider whether physical verification is warranted based on engagement risk"
+- [ ] Audit all memo generators for similar assurance-voice drift
+
+---
+
+### Sprint 663: Anomaly Generator "Control Testing" Checkbox Reframe
+**Status:** PENDING
+**Source:** Accounting Auditor — platform-directed audit methodology implication
+**File:** `backend/anomaly_summary_generator.py:635`
+**Problem:** "[ ] Add control testing procedures" appears as a platform-suggested next step. Control testing is auditor-judgment and engagement scope — platform should not direct methodology.
+**Changes:**
+- [ ] Remove the checkbox line
+- [ ] Replace with free-text "Planned Response" field for practitioner use
+
+---
+
+### Sprint 664: accrual_completeness "Legal Counsel" Language Reframe
+**Status:** PENDING
+**Source:** Accounting Auditor — legal-adjacency risk
+**File:** `backend/accrual_completeness_engine.py:487`, `backend/generate_sample_reports.py:3716`
+**Problem:** `driver_source = "Requires legal counsel confirmation"` embeds a legal-requirement determination in automated engine output. Reliance on this could create liability if auditor treats the platform's output as authoritative.
+**Changes:**
+- [ ] Rephrase to "Legal obligations may be present — practitioner should evaluate whether legal confirmation is warranted"
+- [ ] Apply same softening pattern across all engine `driver_source` strings that reference legal/regulatory determinations
+
+---
