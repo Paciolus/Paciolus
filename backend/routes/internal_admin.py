@@ -30,24 +30,12 @@ from schemas.admin_customer_schemas import (
     RefundRequest,
     TrialExtensionRequest,
 )
+from security_middleware import get_client_ip
 from shared.rate_limits import RATE_LIMIT_DEFAULT, RATE_LIMIT_WRITE, limiter
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/internal/admin", tags=["internal-admin"])
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-def _get_client_ip(request: Request) -> str:
-    """Extract client IP for audit logging."""
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.client.host if request.client else "unknown"
 
 
 # ---------------------------------------------------------------------------
@@ -143,7 +131,7 @@ def plan_override(
             body.reason,
             body.effective_immediately,
             admin_user_id=admin.id,
-            ip_address=_get_client_ip(request),
+            ip_address=get_client_ip(request),
         )
         db.commit()
         return result
@@ -170,7 +158,7 @@ def extend_trial(
             body.days,
             body.reason,
             admin_user_id=admin.id,
-            ip_address=_get_client_ip(request),
+            ip_address=get_client_ip(request),
         )
         db.commit()
         return result
@@ -197,7 +185,7 @@ def issue_credit(
             body.amount_cents,
             body.reason,
             admin_user_id=admin.id,
-            ip_address=_get_client_ip(request),
+            ip_address=get_client_ip(request),
         )
         db.commit()
         return result
@@ -228,7 +216,7 @@ def issue_refund(
             body.amount_cents,
             body.reason,
             admin_user_id=admin.id,
-            ip_address=_get_client_ip(request),
+            ip_address=get_client_ip(request),
         )
         db.commit()
         return result
@@ -258,7 +246,7 @@ def force_cancel(
             body.reason,
             body.immediate,
             admin_user_id=admin.id,
-            ip_address=_get_client_ip(request),
+            ip_address=get_client_ip(request),
         )
         db.commit()
         return result
@@ -281,7 +269,7 @@ def revoke_sessions(
         db,
         org_id,
         admin_user_id=admin.id,
-        ip_address=_get_client_ip(request),
+        ip_address=get_client_ip(request),
     )
     db.commit()
     return result
@@ -305,7 +293,7 @@ def resolve_dunning(
             episode_id,
             reason,
             admin_user_id=admin.id,
-            ip_address=_get_client_ip(request),
+            ip_address=get_client_ip(request),
         )
         db.commit()
         return result
@@ -355,7 +343,7 @@ def impersonate_customer(
         target_org_id=org.id if org else None,
         target_user_id=target_user.id,
         details={"expires_at": expires.isoformat()},
-        ip_address=_get_client_ip(request),
+        ip_address=get_client_ip(request),
     )
     db.commit()
 

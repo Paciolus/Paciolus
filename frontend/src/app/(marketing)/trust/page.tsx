@@ -1031,7 +1031,7 @@ export default function TrustAndSecurity() {
       >
         <div className="max-w-5xl mx-auto text-center">
           <h1 className="type-display-xl text-oatmeal-100 mb-6">
-            Assurance Center
+            Trust Center
           </h1>
           <p className="type-body-lg text-oatmeal-400 max-w-2xl mx-auto mb-10">
             How we protect your data — and the evidence to prove it.

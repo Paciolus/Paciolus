@@ -78,7 +78,7 @@ describe('SamplingPanel', () => {
   it('shows configure step by default with header', () => {
     render(<SamplingPanel {...defaultProps} />)
     expect(screen.getByText('Stratified Sampling')).toBeInTheDocument()
-    expect(screen.getByText('PCAOB AS 2315 / ISA 530 compliant')).toBeInTheDocument()
+    expect(screen.getByText('Per PCAOB AS 2315 / ISA 530 methodology')).toBeInTheDocument()
   })
 
   it('shows step indicators (1, 2, 3)', () => {

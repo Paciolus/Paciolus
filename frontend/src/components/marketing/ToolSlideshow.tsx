@@ -123,8 +123,8 @@ const TOOLS: ToolSlide[] = [
   {
     title: 'Statistical Sampling',
     shortTitle: 'Sampling',
-    description: 'ISA 530 / PCAOB AS 2315 compliant MUS and random sampling with Stringer bounds.',
-    valueProposition: 'Design your sample using ISA 530-compliant parameters, then evaluate results with Stringer bound analysis. Two-phase workflow mirrors audit methodology — design and select first, evaluate exceptions second. Supports both monetary unit sampling (MUS) and random selection with 2-tier stratification.',
+    description: 'MUS and random sampling with Stringer bounds — designed to support ISA 530 / PCAOB AS 2315 procedures.',
+    valueProposition: 'Design your sample using ISA 530 methodology parameters, then evaluate results with Stringer bound analysis. Two-phase workflow mirrors audit methodology — design and select first, evaluate exceptions second. Supports both monetary unit sampling (MUS) and random selection with 2-tier stratification.',
     href: '/tools/statistical-sampling',
     icon: 'bar-chart',
     tier: 'solo',

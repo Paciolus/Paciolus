@@ -635,6 +635,22 @@ class TestCustomerServiceLayer:
         assert customer_with_org["sub"].status == SubscriptionStatus.TRIALING
         assert customer_with_org["sub"].current_period_end is not None
 
+    def test_sprint_607_uses_proxy_aware_ip_helper(self):
+        """Sprint 607: audit log IP extraction must use the TRUSTED_PROXY_IPS-aware helper.
+
+        Regression: a local helper that blindly trusted X-Forwarded-For would let an attacker
+        with superadmin credentials forge the source IP in every admin audit entry.
+        """
+        from routes import internal_admin
+        from security_middleware import get_client_ip as shared_get_client_ip
+
+        # The canonical proxy-aware helper is the one imported from security_middleware
+        assert internal_admin.get_client_ip is shared_get_client_ip
+        # The old local helper must not exist
+        assert not hasattr(internal_admin, "_get_client_ip"), (
+            "Local _get_client_ip is gone — all call-sites use the shared proxy-aware helper."
+        )
+
 
 # =============================================================================
 # Impersonation Token — Unit Tests
