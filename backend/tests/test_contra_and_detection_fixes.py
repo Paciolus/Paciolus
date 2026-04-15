@@ -666,9 +666,16 @@ class TestSuspenseKeywordCleanup:
         kw_terms = [kw for kw, _w, _p in SUSPENSE_KEYWORDS]
         assert "general" not in kw_terms
 
-    def test_unidentified_removed(self):
+    def test_unidentified_re_added_sprint_670(self):
+        """Sprint 670 Issue 10: 'unidentified' was deliberately re-added.
+
+        The Sprint 530 cleanup removed 'unidentified' as a vague term, but
+        the CEO remediation brief v6 (Issue 10) explicitly requires
+        detection of '????-UNIDENTIFIED' style accounts. Re-added at high
+        confidence (0.95) — the word is unambiguously a placeholder.
+        """
         kw_terms = [kw for kw, _w, _p in SUSPENSE_KEYWORDS]
-        assert "unidentified" not in kw_terms
+        assert "unidentified" in kw_terms
 
     def test_wash_account_added(self):
         kw_terms = [kw for kw, _w, _p in SUSPENSE_KEYWORDS]

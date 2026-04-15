@@ -122,7 +122,7 @@ We considered three approaches: (a) extend the existing pattern weights so Endin
 - [x] `tb_hartwell.docx` → `pf=Ready(85.0)` (was `Ready(80.0)` with a missing-credit hard block); columns table shows debit=`'Net Balance (USD)'`, credit=`'Dr / Cr'`, both Found, no missing-credit warning. Balance check skipped with the new net-balance caveat. `requires_confirmation=True` on the column detection result.
 - [x] All four other test files unchanged from Sprint 668 (single_dr_cr layout — no behaviour change).
 - [x] Backend test suite — 196 green: 186 audit/preflight/memo regression + 10 new tb_layout contract tests.
-- [x] Commit SHA: _pending this commit_
+- [x] Commit SHA: `aba8eef`
 
 **Note on diagnostic ingestion:**
 Both `tb_hartwell_adjusted.pdf` and `tb_hartwell.docx` still error at the diagnostic ingestion layer because `process_tb_chunked` only dispatches CSV/Excel — the bonus finding from Sprint 665. Sprint 669 fixes the column detection on these layouts, but the diagnostic itself can't run on them until Sprint 671 routes non-CSV/Excel formats through `parse_uploaded_file_by_format`. The preflight reports are now fully correct for both files.
@@ -130,19 +130,30 @@ Both `tb_hartwell_adjusted.pdf` and `tb_hartwell.docx` still error at the diagno
 ---
 
 ### Sprint 670: Account-Type-Aware Diagnostics — Null Suppression + Unusual Account Detection
-**Status:** PENDING
+**Status:** COMPLETE
 **Source:** CEO remediation brief v6 — Issues 13, 10
-**Files:** `backend/audit/rules/suspense.py`, `backend/classification_rules.py`, `backend/preflight_engine.py`, `backend/account_classifier.py`
+**Files:** `backend/classification_rules.py`, `backend/audit/rules/suspense.py`, `backend/audit/pipeline.py`, `backend/tests/test_contra_and_detection_fixes.py`, `backend/tests/test_unusual_account_patterns.py` (new)
+
 **Problem:** (13) `tb_hartwell_adjusted.pdf` flags Depreciation Expense and Bad Debt Expense for null beginning-balance — but both are P&L accounts that legitimately have no opening balance. (10) `tb_unusual_accounts.csv` contains ~10 genuinely suspicious accounts (SUSP-001, ????-UNIDENTIFIED, A/R-DISPUTED, Owner Draw, Revenue-MISC unclassified, EUR-AR, Inventory-OBSOLETE/WRITE-OFF, Meals/Ent 50%, Rounding Adj $12); only one clearing account was detected. Unrecognized Account Types counter shows 0, contradicting the detection.
 
-**Changes:**
-- [ ] Preflight null-value check (`preflight_engine.py`) suppresses warnings on beginning-balance columns for P&L accounts (revenue/expense); fallback: suppress when ending-balance is populated
-- [ ] Expand `SUSPENSE_KEYWORDS` / unusual-account detection to include: symbolic names (only non-alphabetic chars), annotation-style names (parens + question marks), owner-draw/contribution, foreign-currency prefixes (EUR-, GBP-, etc.), obsolete/writeoff with non-zero balances, rounding-adjustment > de minimis, unclassified (MISC/UNCLASSIFIED suffixes)
-- [ ] Fix `Unrecognized Account Types` counter in Data Intake Summary to reflect detection results (or remove the field if we can't compute it)
+**Decision:**
+For Issue 13 we considered (a) plumbing the account classifier into the preflight null check so it can skip P&L beginning-balance nulls explicitly, or (b) relying on Sprint 669's column mapping fix which routes Ending Balance as the primary debit/credit pair (and the null check already only fires on critical columns). Picked (b): no new code is needed for `tb_hartwell_adjusted.pdf` because Sprint 669 already eliminated the spurious Beg Balance null warnings by re-mapping the critical columns to Ending Balance Debit/Credit. The Sprint 668 baseline showed two medium null_values issues on Beg Balance Debit/Credit; Sprint 669's harness output shows zero issues on the same file. Issue 13 is therefore resolved by the column-mapping cascade, not by adding classifier-aware logic that would be brittle in the multi-column case.
 
-**Validation (via Sprint 665 harness):**
-- [ ] `tb_hartwell_adjusted.pdf` → zero null warnings on Depreciation Exp, Bad Debt Exp
-- [ ] `tb_unusual_accounts.csv` → flags SUSP-001, ????-UNIDENTIFIED, A/R-DISPUTED, Owner Draw, Revenue-MISC, EUR-AR (minimum); Unrecognized Account Types counter > 0
+For Issue 10 we extended suspense detection along two axes: (i) literal SUSPENSE_KEYWORDS additions for the named patterns the brief calls out, and (ii) a new structural detector (`_detect_unusual_patterns`) that augments the literal vocabulary with regex-based shape detection — symbolic-only names, annotation parens with question marks, foreign-currency ISO prefixes. Both contribute to the same confidence sum on the same suspense_account anomaly type so the report renderer doesn't need a new bucket.
+
+**Changes:**
+- [x] `backend/classification_rules.py::SUSPENSE_KEYWORDS` extended with new literal patterns: `susp-` (covers `SUSP-001` codes), `unidentified` (re-added — Sprint 530 had removed it as vague), `unclassified`, `do not use` / `do_not_use` / `not for use`, `disputed`, `obsolete`, `write-off` / `writeoff` / `write off`, `rounding adj` / `rounding adjustment`, `misc unclassified`, `owner draw` / `owner contribution` / `owner contrib`, and `temp clearing` (specific phrase variant). Each carries a confidence weight calibrated against the brief's expected detection set.
+- [x] `backend/audit/rules/suspense.py` — added `_detect_unusual_patterns()` helper with three regex families: symbolic-only names (zero alphabetic characters), annotation parentheses containing a question mark (`(personal?)`, `(non-ded?)`), foreign-currency ISO-4217 prefixes (`EUR-`, `GBP_`, etc.). Wired into `detect_suspense_accounts()` to augment the literal-keyword confidence sum. Structural matches appear in `matched_keywords` so the user can see why each account was flagged.
+- [x] `backend/audit/pipeline.py` (both single- and multi-sheet code paths) — populates `data_quality["unrecognized_types"]` from `classification_quality.issues` filtered by `issue_type == "unclassified"`. The PDF Data Intake Summary used to read this field with a default of 0 and nothing populated it, so the counter was permanently wrong (Issue 10's secondary fix).
+- [x] `backend/tests/test_contra_and_detection_fixes.py::test_unidentified_removed` renamed to `test_unidentified_re_added_sprint_670` and inverted — the Sprint 530 removal was deliberately reverted by Sprint 670 with a docstring explaining why.
+- [x] `backend/tests/test_unusual_account_patterns.py` (new, 12 tests) — direct unit tests of `_detect_unusual_patterns` (symbolic, predominantly symbolic, annotation paren+?, annotation meals, trailing ?, EUR prefix, GBP prefix, clean name returns 0, normal description returns 0, legitimate `401(k) Plan` not flagged) plus an end-to-end integration test (`TestUnusualAccountsEndToEnd`) that runs the streaming auditor against a CSV mirroring the six brief-named accounts and asserts every required name is flagged while a clean Cash account is not.
+
+**Validation (via Sprint 665 harness, `reports/remediation/sprint-670/`):**
+- [x] `tb_unusual_accounts.csv` — `mat=12 anom=16` (was `mat=2 anom=6` in Sprint 669). Eleven structural exceptions detected: `????-UNIDENTIFIED`, `A/P - K.H. Owner Loan (personal?)`, `A/R - DISPUTED (see note)`, `EUR-AR (Euro Receivables)`, `Inventory - OBSOLETE/WRITE-OFF`, `Meals/Ent 50% (non-ded?)`, `Owner Draw/Contrib - K.H.`, `Revenue - MISC (unclassified)`, `Rounding Adj`, `SUSP-001`, `Temp Clearing - DO NOT USE`. `data_quality.unrecognized_types = 13` (was always 0). Diagnostic tier remains `high(100)` — appropriate for a file with 11 unusual accounts and a $306k imbalance.
+- [x] `tb_hartwell_adjusted.pdf` — preflight unchanged from Sprint 669 (zero null warnings on Beg Balance Debit/Credit because the critical columns are now Ending Balance). Issue 13 confirmed resolved by the Sprint 669 column-mapping cascade.
+- [x] `tb_hartwell_clean.csv` and other clean files — unchanged. Clean accounts do not match any new pattern (verified by `test_clean_name_returns_zero` and `test_legitimate_4xx_account_not_symbolic`).
+- [x] Backend test suite — 277 green: 196 audit/preflight/memo/layout regression + 12 new unusual-pattern tests + 56 contra/detection/suspense tests + others.
+- [x] Commit SHA: _pending this commit_
 
 ---
 

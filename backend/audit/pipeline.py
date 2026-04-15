@@ -349,6 +349,18 @@ def audit_trial_balance_streaming(
         if "data_quality" in result["population_profile"]:
             result["data_quality"] = result["population_profile"]["data_quality"]
 
+        # Sprint 670 Issue 10: Populate the Unrecognized Account Types
+        # counter in data_quality from the classification validator output.
+        # The PDF Data Intake Summary used to read `unrecognized_types`
+        # from data_quality with a default of 0 — and nothing populated
+        # it, so the counter always read 0 and contradicted the actual
+        # detection results. Now we derive it from cv_result, which has
+        # already classified every account.
+        cv_dict = result.get("classification_quality") or {}
+        unrecognized_count = sum(1 for issue in cv_dict.get("issues", []) if issue.get("issue_type") == "unclassified")
+        if isinstance(result.get("data_quality"), dict):
+            result["data_quality"]["unrecognized_types"] = unrecognized_count
+
         # Expense Category Analytical Procedures
         from expense_category_engine import compute_expense_categories
 

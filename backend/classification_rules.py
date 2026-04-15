@@ -310,16 +310,38 @@ SUSPENSE_KEYWORDS: list[tuple[str, float, bool]] = [
     # High confidence (0.90+) — definitive suspense terms
     ("suspense", 0.95, False),
     ("suspense account", 0.98, True),
+    ("susp-", 0.90, False),  # Sprint 670: covers "SUSP-001" style codes
     ("clearing account", 0.95, True),
     ("clearing", 0.85, False),
     ("unallocated", 0.90, False),
+    ("unidentified", 0.95, False),  # Sprint 670: "????-UNIDENTIFIED"
+    ("unclassified", 0.85, False),  # Sprint 670: "Revenue - MISC (unclassified)"
     ("pending classification", 0.95, True),
     ("awaiting classification", 0.95, True),
+    # Sprint 670 Issue 10: Explicit "do not use" / disposition markers
+    ("do not use", 0.95, True),
+    ("not for use", 0.95, True),
+    ("do_not_use", 0.95, True),
+    ("disputed", 0.85, False),  # "A/R - DISPUTED (see note)"
+    ("obsolete", 0.85, False),  # "Inventory - OBSOLETE/WRITE-OFF"
+    ("write-off", 0.80, False),
+    ("writeoff", 0.80, False),
+    ("write off", 0.80, False),
+    # Sprint 670: round-number housekeeping & catch-all accounts
+    ("rounding adj", 0.80, False),
+    ("rounding adjustment", 0.85, False),
+    ("misc unclassified", 0.90, True),
+    # Owner draws / contributions are legitimate but warrant review
+    # since they often hide personal expenses or related-party items.
+    ("owner draw", 0.75, False),
+    ("owner contribution", 0.75, False),
+    ("owner contrib", 0.75, False),
     # Medium confidence (0.70–0.89) — likely suspense terms
     # Sprint 535 P1-3: Changed "temporary" to phrase "temporary account" to
     # avoid false positive on "Temporary Labor" / "Temporary Staff".
     ("temporary account", 0.80, True),
     ("temporary balance", 0.80, True),
+    ("temp clearing", 0.85, True),  # Sprint 670: "Temp Clearing - DO NOT USE"
     ("hold account", 0.85, True),
     ("in transit", 0.80, True),
     ("intercompany clearing", 0.90, True),
