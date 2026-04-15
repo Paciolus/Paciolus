@@ -2,6 +2,7 @@
 
 import gc
 import io
+import re
 from collections.abc import Callable, Generator
 from functools import wraps
 from types import TracebackType
@@ -178,6 +179,39 @@ def read_excel_multi_sheet_chunked(
         log_secure_operation("read_sheet_done", f"Sheet '{sheet_name}': {rows_processed} rows")
 
 
+_CURRENCY_NUMERIC_RE = re.compile(r"^\s*[\$£€]?\s*\(?\s*[\d,]+(?:\.\d+)?\s*\)?\s*$")
+
+
+def _strip_currency_formatting(value: object) -> object:
+    """Strip currency formatting from a numeric-looking string cell.
+
+    Returns the value unchanged if it does not look numeric. Used by
+    the Sprint 671 PDF/DOCX dispatch path to make currency-formatted
+    values consumable by ``pd.to_numeric`` downstream. Examples:
+
+    * ``"$284,500.00"``  → ``"284500.00"``
+    * ``"(1,234.56)"``   → ``"-1234.56"``
+    * ``"$(1,234.56)"``  → ``"-1234.56"``
+    * ``"  100  "``      → ``"100"``
+    * ``"Cash, Op."``    → unchanged (not numeric-shaped)
+    * ``"Dr"``           → unchanged
+    """
+    if not isinstance(value, str):
+        return value
+    stripped = value.strip()
+    if not stripped or not _CURRENCY_NUMERIC_RE.match(stripped):
+        return value
+    # Strip currency symbol first so $(1,234.56) → (1,234.56) → -1234.56.
+    stripped = stripped.replace("$", "").replace("£", "").replace("€", "").strip()
+    negative = stripped.startswith("(") and stripped.endswith(")")
+    if negative:
+        stripped = stripped[1:-1].strip()
+    cleaned = stripped.replace(",", "").strip()
+    if not cleaned:
+        return value
+    return f"-{cleaned}" if negative else cleaned
+
+
 def process_tb_chunked(
     file_bytes: bytes, filename: str = "", chunk_size: int = DEFAULT_CHUNK_SIZE
 ) -> Generator[tuple[pd.DataFrame, int], None, None]:
@@ -186,6 +220,16 @@ def process_tb_chunked(
     All columns are read as ``str`` to preserve account identifiers (e.g.
     leading-zero codes like ``"0010"``).  Numeric conversion for debit/credit
     columns happens downstream via ``pd.to_numeric(errors='coerce')``.
+
+    Sprint 671 Issue 14: This dispatcher historically only routed CSV and
+    Excel. Every other supported format (PDF, DOCX, ODS, OFX, QBO, IIF,
+    TSV, TXT) failed at the diagnostic ingestion layer with a generic
+    "Excel file format cannot be determined" / "OptionError" message,
+    even though preflight handled the same files via
+    ``parse_uploaded_file_by_format`` in ``shared/helpers.py``. The fix
+    is to route those formats through the same parser dispatch the
+    preflight uses, then convert the resulting list-of-dicts to a
+    DataFrame chunk so the streaming auditor consumes it unchanged.
     """
     log_secure_operation("process_tb_chunked", f"Processing trial balance in chunks (file: {filename})")
 
@@ -193,14 +237,61 @@ def process_tb_chunked(
 
     if filename_lower.endswith((".xlsx", ".xls")):
         yield from read_excel_chunked(file_bytes, chunk_size, dtype=str)
-    elif filename_lower.endswith(".csv"):
+        return
+    if filename_lower.endswith(".csv"):
         yield from read_csv_chunked(file_bytes, chunk_size, dtype=str)
-    else:
-        # Try CSV first, then Excel — broad catch is intentional (format detection)
+        return
+
+    # Sprint 671 Issue 14: Non-CSV/Excel formats route through the
+    # preflight parser dispatch. The result is a (columns, rows) tuple
+    # of plain Python dicts which we materialise into a DataFrame in
+    # one shot — these formats are bounded in size by upstream
+    # validation (parse_uploaded_file_by_format enforces MAX_ROW_COUNT)
+    # so a single-chunk yield is acceptable. The streaming chunk loop
+    # in audit_trial_balance_streaming still iterates correctly even
+    # when the generator only produces one item.
+    _NON_TABULAR_EXTS = (".pdf", ".docx", ".ods", ".ofx", ".qbo", ".iif", ".tsv", ".txt")
+    if filename_lower.endswith(_NON_TABULAR_EXTS):
+        # Lazy import to avoid a circular dependency between
+        # security_utils and shared.helpers.
+        from shared.helpers import parse_uploaded_file_by_format
+
         try:
-            yield from read_csv_chunked(file_bytes, chunk_size, dtype=str)
-        except Exception:
-            yield from read_excel_chunked(file_bytes, chunk_size, dtype=str)
+            columns, rows = parse_uploaded_file_by_format(file_bytes, filename)
+        except Exception as exc:
+            log_secure_operation(
+                "process_tb_chunked_format_error",
+                f"{filename}: {type(exc).__name__}: {exc}",
+            )
+            raise
+        # Build a string-typed DataFrame so leading-zero codes survive.
+        df = pd.DataFrame(rows, columns=columns).astype(str).fillna("")
+        # Replace pandas' "nan" string artefact with empty so downstream
+        # null detection still fires correctly.
+        df = df.replace({"nan": "", "None": ""})
+
+        # Sprint 671: PDF / DOCX / ODS parsers preserve currency formatting
+        # (commas, leading $, parenthesised negatives). The downstream
+        # streaming auditor uses ``pd.to_numeric(errors='coerce')`` which
+        # does NOT understand any of these formats — every formatted
+        # number coerces to NaN→0, which would silently produce a
+        # phantom "balanced / total_debits=0 / total_credits=0"
+        # diagnostic. Strip currency formatting on numeric-looking cells
+        # only, leaving text cells untouched so account names like
+        # "A/P - K.H. Owner Loan (personal?)" survive.
+        # pandas 2.x deprecates DataFrame.applymap → DataFrame.map.
+        for col in df.columns:
+            df[col] = df[col].map(_strip_currency_formatting)
+        yield df, len(df)
+        return
+
+    # Unknown extension — fall back to the legacy try-CSV-then-Excel
+    # path so we don't regress on extension-less uploads. Broad catch
+    # is intentional (format detection).
+    try:
+        yield from read_csv_chunked(file_bytes, chunk_size, dtype=str)
+    except Exception:
+        yield from read_excel_chunked(file_bytes, chunk_size, dtype=str)
 
 
 def clear_memory() -> None:

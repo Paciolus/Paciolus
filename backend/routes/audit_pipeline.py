@@ -53,6 +53,7 @@ async def audit_trial_balance(
     selected_sheets: Optional[str] = Form(default=None),
     engagement_id: Optional[int] = Form(default=None),
     preflight_token: Optional[str] = Form(default=None),
+    force_resubmit: bool = Form(default=False),
     current_user: User = Depends(check_diagnostic_limit),
     _verified: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
@@ -80,6 +81,19 @@ async def audit_trial_balance(
     dedup_key = f"{current_user.id}:{engagement_id or 0}:{file_hash}:trial_balance"
     now = datetime.now(UTC)
     expires_at = now + timedelta(minutes=5)
+    submitted_filename = file.filename or (cached_entry.filename if cached_entry else "(unknown)")
+
+    # Sprint 671 Issue 15: When the client passes ``force_resubmit=true``
+    # the dedup gate is bypassed entirely — the matched key is removed
+    # before the insert so the gate cannot fire. The user-facing error
+    # below also explicitly tells the client how to re-submit.
+    if force_resubmit:
+        db.execute(text("DELETE FROM upload_dedup WHERE dedup_key = :key"), {"key": dedup_key})
+        db.commit()
+        log_secure_operation(
+            "audit_dedup_force_resubmit",
+            f"User {current_user.id} bypassed dedup for {submitted_filename}",
+        )
 
     # Attempt insert; on conflict check expiry
     result = db.execute(
@@ -95,9 +109,29 @@ async def audit_trial_balance(
     db.commit()
 
     if result.rowcount == 0:  # type: ignore[attr-defined]
+        # Sprint 671 Issue 15: Name the matched filename and explicitly
+        # tell the client how to override. The historic message ("please
+        # wait for the current analysis to complete") was misleading —
+        # it implied something was still in progress, which it usually
+        # wasn't. The 5-minute expiry simply blocks rapid re-submission
+        # of identical bytes. The override path is documented in the
+        # error detail so a user inspecting the network response can act
+        # on it without reading our docs.
         raise HTTPException(
             status_code=409,
-            detail="Duplicate submission detected. Please wait for the current analysis to complete.",
+            detail={
+                "error": "duplicate_submission",
+                "message": (
+                    f"This file ('{submitted_filename}') matches a previous submission "
+                    "within the last 5 minutes. The earlier upload is either still "
+                    "processing or completed recently. To re-run the diagnostic on the "
+                    "same file before the 5-minute window expires, re-submit with "
+                    "force_resubmit=true."
+                ),
+                "filename": submitted_filename,
+                "match_window_seconds": 300,
+                "override": "force_resubmit=true",
+            },
         )
 
     overrides_dict: Optional[dict[str, str]] = None
@@ -175,8 +209,17 @@ async def audit_trial_balance(
                 "anomaly_count": analysis_result.get("anomaly_count", 0),
             }
             background_tasks.add_task(
-                maybe_record_tool_run, db, engagement_id, current_user.id, "trial_balance", True, None, flagged,
-                tb_filename, tb_record_count, tb_summary,
+                maybe_record_tool_run,
+                db,
+                engagement_id,
+                current_user.id,
+                "trial_balance",
+                True,
+                None,
+                flagged,
+                tb_filename,
+                tb_record_count,
+                tb_summary,
             )
 
             return analysis_result  # type: ignore[return-value]
