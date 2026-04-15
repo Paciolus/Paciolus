@@ -107,7 +107,7 @@ The remediation brief frames Issue 3 as "add OOB to the score." We went one step
 - [x] **All six rendered conclusions** grep clean for the forbidden phrase `"do not prevent diagnostic testing from proceeding"` (validated programmatically against `reports/remediation/sprint-667/*.json`)
 - [x] `tb_no_headers.csv` and `tb_hartwell.docx` correctly route to `"Review Required"` because of high-severity column-detection failures
 - [x] Backend test suite — 186 green: 154 audit/preflight regression (`test_preflight`, `test_audit_core`, `test_audit_anomalies`, `test_audit_api`, `test_audit_pipeline_routes`, `test_audit_validation`, `test_intake_utils`), 29 preflight memo, 3 new Sprint 667 contract tests
-- [x] Commit SHA: _pending this commit_
+- [x] Commit SHA: `8f5d695`
 
 **Note on Issue 1 (clean TB scoring 42/ELEVATED):**
 Sprint 667 deliberately did not touch the four-fake-exceptions contribution on the clean file. That's the materiality-coverage-vs-structural-anomaly split which is Sprint 668's scope. The clean file still reads `elevated(42)` after this sprint, but that score is now correct relative to the *current* model: there are 4 abnormal_balances on the file at material level, each contributing 8 risk points. Sprint 668 will reclassify those as "materiality coverage analysis" rather than exceptions, after which the clean file will land below the elevated threshold.
