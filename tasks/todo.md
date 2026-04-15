@@ -58,6 +58,163 @@
 
 > **Multi-agent review 2026-04-14 — Sprints 600–664 seeded from 8 parallel agent reviews (Critic, Designer, Executor, Guardian, Scout, Accounting Auditor, Project Auditor, Future-State Consultant). Each sprint cites its originating agent. Ordered by severity, not discovery order.**
 
+> **CEO remediation brief 2026-04-15 — Sprints 665–671 inserted ahead of the seeded 610–664 backlog. Source: six-file TB test sweep (`tests/evaluatingfiles/`) surfacing 16 issues across intake, scoring, column detection, and multi-format handling. Issue 5 (silent success on zero-row ingestion) is BLOCKING. Must complete 665–671 before resuming the 610–664 backlog.**
+
+---
+
+### Sprint 665: Diagnostic Remediation Test Harness
+**Status:** COMPLETE
+**Source:** CEO remediation brief v6 — pre-req for sprints 666–671
+**File:** `tests/qa/run_remediation_sweep.py` (new), `reports/remediation/baseline/` (new)
+**Problem:** No end-to-end harness runs preflight + diagnostic on a TB file and dumps the sections the remediation brief asks about (intake summary, column detection, conclusion, risk score, exception details). Without one, we cannot mechanically validate each fix against its Expected Result, and we cannot diff before/after on the six test files.
+
+**Decision:** Build a read-only Python script, not a pytest case. The harness is a CEO-facing validator, not a regression gate — pytest would force us to hardcode expected values that are about to change over the next six sprints. A script that writes structured JSON per test file lets us eyeball the diff each sprint and keeps the evolving expectations in the sprint review sections, not in assertion code.
+
+**Changes:**
+- [x] `tests/qa/run_remediation_sweep.py` (new) — `--out <subdir>` flag, iterates the six files in `tests/evaluatingfiles/`, runs `parse_uploaded_file_by_format` → `run_preflight` → `audit_trial_balance_streaming`, writes one JSON dump per file to `reports/remediation/<subdir>/<stem>.json`. Each record captures: parse (columns, row_count, first/last row samples), full preflight `to_dict()`, slimmed diagnostic (risk_score, risk_tier, risk_factors, coverage_pct, anomaly_types, top 25 abnormal_balances), and a structured `errors[]` array with stage + type + traceback for any pipeline stage that raised. On failure, other stages still run so we can see partial success.
+- [x] `reports/remediation/baseline/` — six JSONs captured against pre-remediation code. Each subsequent sprint will write to `reports/remediation/sprint-NNN/` and diff.
+- [x] Script prints a one-line summary per file so the CEO can scan without opening JSON.
+- [x] Harness installed `python-docx` into the backend venv (the package was missing and the docx parser raised HTTP 500 before it could reach the data-extraction layer). That install is the reason the brief's Issue 14 is now reproducible end-to-end; without python-docx the failure mode was "parse errors before diagnostic ever ran," which would have hidden the downstream pipeline routing bug.
+
+**Review:**
+- [x] Ran clean from `D:\Dev\Paciolus` with the backend venv. Elapsed 2.6s across all 6 files.
+- [x] Baseline reproduces every issue in the remediation brief:
+  - **Issue 1** — `clean.csv` → diagnostic `elevated(42)` with 4 material exceptions on a perfectly clean TB
+  - **Issue 2** — `outofbalance.csv` → `diff=$200,000.00` (brief says should be $100k); `clean.csv` → `rows=41` (brief says should be 40 + 1 totals row)
+  - **Issue 3** — `outofbalance.csv` → `elevated(42)`, exactly the same score as `clean.csv`; out-of-balance condition contributes zero risk points
+  - **Issue 5 (BLOCKING)** — `no_headers.csv` → diagnostic `low(0)` with `mat=0 anom=0` on a file where ingestion dropped rows; silent success confirmed
+  - **Issue 6** — `no_headers.csv` → account column = `"Cash - Operating Account"` at 0.7 confidence (row-1 data treated as header)
+  - **Issue 7** — `no_headers.csv` → `rows=39` (file has 40 data rows; one lost to pandas header inference)
+  - **Issue 9** — `unusual_accounts.csv` → `diff=$306,262.00` on a file built to balance; confirms RFC 4180 quoted-field corruption
+  - **Issue 10** — `unusual_accounts.csv` → `mat=5` but the file contains ~10 genuinely suspicious accounts
+  - **Issue 11** — `adjusted.pdf` → debit column mapped to `"Beg Balance\nDebit"` instead of Ending Balance
+  - **Issue 12** — `adjusted.pdf` → `diff=$-67,000.00` despite the file being built to balance; artifact of incomplete column mapping
+  - **Issue 16** — `hartwell.docx` → debit column = `"Dr / Cr"` at 0.7, credit column = `missing`; net-balance layout not recognized
+
+- **Bonus finding — broadens Sprint 671 scope:** The diagnostic ingestion layer at `backend/security_utils.py:201` (`process_tb_chunked`) only dispatches CSV then Excel — it has no path for PDF, DOCX, ODS, OFX, QBO, IIF, TSV, or TXT. Both `adjusted.pdf` and `hartwell.docx` fail the diagnostic with the same downstream error (`OptionError: No such keys(s): 'io.excel.zip.reader'` / `ValueError: Excel file format cannot be determined`). Preflight handles these formats correctly via `parse_uploaded_file_by_format` in `shared/helpers.py:797`, but the diagnostic never calls that dispatcher — it routes straight to `process_tb_chunked`. Sprint 671 was originally scoped as "docx pipeline + duplicate UX"; the real fix is to route *all* non-CSV/non-Excel formats through the parser dispatch at the diagnostic ingestion layer. We'll confirm exact approach when we get to Sprint 671, but noting it now so the scope is not underestimated.
+
+- **Note on harness limitation** — the harness runs each file in isolation, so the brief's Issue 15 (duplicate detection blocking after session-prior CSVs) cannot be exercised by the current sweep. Sprint 671 will need a supplementary test case for sequential uploads, or validation against the live API. Filing for attention at that sprint.
+
+- Commit SHA: _pending this commit_
+
+---
+
+### Sprint 666: Intake Hardening — CSV Parser, Zero-Row Block, Totals Row, Row Reconciliation
+**Status:** PENDING
+**Source:** CEO remediation brief v6 — Issues 5 (BLOCKING), 9, 2, 7
+**Files:** `backend/shared/helpers.py`, `backend/preflight_engine.py`, `backend/audit/pipeline.py`
+**Problem:** Four related intake failures. (5) Zero-row ingestion returns a BALANCED/0-score/"no exceptions" report instead of an error. (9) CSV parser mishandles RFC 4180 quoted fields on `tb_unusual_accounts.csv`, shifting columns and producing a phantom $306k variance. (2) Summary totals row is treated as a data row, adding a false null warning and doubling the out-of-balance variance from $100k to $200k. (7) `tb_no_headers.csv` silently loses one row in intake (40 submitted, 39 reported).
+
+**Changes:**
+- [ ] Audit CSV parser (`shared/helpers.py:501`) for quoted-field handling; add an explicit `quoting=csv.QUOTE_MINIMAL`-equivalent config and a post-parse sanity check that rejects rows where a non-numeric value lands in a numeric column (reason: "Column shift detected")
+- [ ] Add `detect_totals_row()` in preflight intake: blank account name/code OR debit+credit ≈ sum of prior rows, positioned last. Excluded rows surfaced in intake summary as "Row N excluded as totals row"
+- [ ] Zero-row guard in diagnostic pipeline: when `rows_accepted == 0`, replace report body with "ANALYSIS COULD NOT BE COMPLETED" message; no balance status, no score, no findings
+- [ ] Row reconciliation invariant: `rows_submitted == rows_accepted + rows_rejected + rows_excluded` enforced; any silent drops get an explicit rejection reason
+
+**Validation (via Sprint 665 harness):**
+- [ ] `tb_no_headers.csv` → diagnostic shows failure notice; preflight shows 40 submitted, reconciled count
+- [ ] `tb_unusual_accounts.csv` → 54 rows parsed, no column-shift errors, TB balances
+- [ ] `tb_hartwell_clean.csv` → 40 accepted + 1 excluded (totals), no null warning
+- [ ] `tb_hartwell_outofbalance.csv` → variance exactly $100,000.00
+
+---
+
+### Sprint 667: Risk Scoring + Conclusion Logic
+**Status:** PENDING
+**Source:** CEO remediation brief v6 — Issues 3, 4, 12
+**Files:** `backend/shared/tb_diagnostic_constants.py`, `backend/preflight_memo_generator.py`, `backend/preflight_engine.py`
+**Problem:** (3) TB out-of-balance condition appears only in the executive banner and contributes nothing to risk score — clean and out-of-balance files both return 42/ELEVATED with the same four findings. (4) PreFlight Downstream Impact correctly marks issues as invalidating, then Conclusion says testing can proceed anyway (appeared in 4 of 6 test runs). (12) Balance check runs even when balance columns are Unmapped, producing a $67k artifact on `tb_hartwell_adjusted.pdf`.
+
+**Changes:**
+- [ ] Add `tb_out_of_balance` as a high-weight signal in `compute_tb_diagnostic_score()` — dominant over all other contributors when present, pushes score to High tier (≥51)
+- [ ] Insert out-of-balance as P1 exception in Exception Details with variance amount and imbalance-specific suggested procedure
+- [ ] `_build_conclusion()` (`preflight_memo_generator.py:427`) rewritten to key off highest severity present: no issues → "Ready"; medium only → "Ready with caveats"; any high → "Review Required." Forbid the phrase "do not prevent diagnostic testing from proceeding" when any high-severity issue is present
+- [ ] Preflight balance check (`preflight_engine.py:374`) skips entirely when required balance columns are Unmapped; surfaces "Balance check skipped — one or more balance columns are unmapped" instead of computing a false variance
+
+**Validation (via Sprint 665 harness):**
+- [ ] `tb_hartwell_outofbalance.csv` → score ≥ 51 (High), P1 exception = out-of-balance $100k, Conclusion = "Review Required"
+- [ ] `tb_hartwell_clean.csv` → Conclusion = "Ready"
+- [ ] `tb_hartwell_adjusted.pdf` → no false $67k variance; either balance check skipped or correctly $0.00
+- [ ] All four "Review Required" files have zero instances of the forbidden pass-through phrase
+
+---
+
+### Sprint 668: Materiality Coverage + Column Detection Semantics
+**Status:** PENDING
+**Source:** CEO remediation brief v6 — Issues 1, 6, 8
+**Files:** `backend/shared/tb_diagnostic_constants.py`, `backend/audit/pipeline.py`, `backend/shared/column_detector.py`, `backend/preflight_memo_generator.py`
+**Problem:** (1) Clean TB scores 42/ELEVATED with four fake exceptions (Sales Revenue, PP&E, COGS, Long-Term Debt) that are flagged solely because they are large relative to category. Materiality coverage is conflated with anomaly detection. (6) Column detection reports "Found" with 70% confidence on `tb_no_headers.csv` where row 1 is actually data, not headers. No distinction between confirmed header detection and content inference. (8) Detection table shows "Unmapped" with no explanation of what that status means or how it affects downstream analysis.
+
+**Changes:**
+- [ ] Split risk scoring into two: structural anomaly signals (out-of-balance, duplicate codes, wrong normal balance, missing account types, blank names) vs. materiality coverage (informational only, not scored)
+- [ ] Rename "Exception Details" display of large accounts to a dedicated "Materiality Coverage Analysis" section with no exception language
+- [ ] Clean TB with no structural anomalies → Exception Details states "No structural anomalies identified"
+- [ ] Account type-aware suggested procedures (replace the identical boilerplate currently returned for every finding)
+- [ ] `ColumnDetectionResult` gains a `status` enum: `found` (recognized header in row 1), `inferred` (role inferred from data content), `missing`
+- [ ] `run_preflight` adds a "No headers detected" warning when zero columns in row 1 match known header vocabulary
+- [ ] Detection table in preflight memo adds a "Downstream Use" column; unmapped columns render "Not used in current analysis"
+- [ ] Account No column promoted to a mapped "Reference / Account Code" role with a stated downstream use
+
+**Validation (via Sprint 665 harness):**
+- [ ] `tb_hartwell_clean.csv` → score ≤ 10 (Low), Exception Details = "No structural anomalies identified," Sales/PP&E/COGS/Long-Term Debt appear only in Materiality Coverage Analysis
+- [ ] `tb_no_headers.csv` → all columns show Inferred or Missing, zero Found, "No headers detected" warning present
+- [ ] All six preflight reports → detection table has Downstream Use column; Account No maps to Reference role OR shows explicit non-use explanation
+
+---
+
+### Sprint 669: Multi-Column TB + Net-Balance TB Modes
+**Status:** PENDING
+**Source:** CEO remediation brief v6 — Issues 11, 16
+**Files:** `backend/shared/column_detector.py`, `backend/preflight_engine.py`, new `shared/tb_layout.py`
+**Problem:** (11) `tb_hartwell_adjusted.pdf` is a nine-column adjusted TB with Beginning / Adjustments / Ending balance column pairs. Current detector maps Beginning as primary Debit/Credit, so downstream calculations run against beginning balances instead of period-end. (16) `tb_hartwell.docx` uses single "Net Balance (USD)" column + "Dr / Cr" indicator column. Current detector matches "Dr / Cr" to Debit at 70% confidence and fails to find a Credit column, blocking analysis on a legitimate common layout.
+
+**Changes:**
+- [ ] New `tb_layout.py` module with an enum: `single_dr_cr` (default), `multi_column_adjusted`, `net_balance_with_indicator`
+- [ ] Multi-column detector identifies Beginning/Adjustments/Ending triplets; maps Ending as primary, Beginning + Adjustments as supplementary context
+- [ ] Net-balance detector recognizes a single numeric balance column + a Dr/Cr indicator column; prompts user to confirm sign convention before proceeding (`requires_confirmation` flag in `ColumnDetectionResult`)
+- [ ] Both new modes surface in preflight column detection table with a new "Layout" row showing the detected mode
+
+**Validation (via Sprint 665 harness):**
+- [ ] `tb_hartwell_adjusted.pdf` → layout = `multi_column_adjusted`, Ending Balance Debit/Credit mapped as primary; all downstream calculations use ending balances
+- [ ] `tb_hartwell.docx` → layout = `net_balance_with_indicator`, Net Balance + Dr/Cr both "Found" at high confidence, no missing-credit warning
+
+---
+
+### Sprint 670: Account-Type-Aware Diagnostics — Null Suppression + Unusual Account Detection
+**Status:** PENDING
+**Source:** CEO remediation brief v6 — Issues 13, 10
+**Files:** `backend/audit/rules/suspense.py`, `backend/classification_rules.py`, `backend/preflight_engine.py`, `backend/account_classifier.py`
+**Problem:** (13) `tb_hartwell_adjusted.pdf` flags Depreciation Expense and Bad Debt Expense for null beginning-balance — but both are P&L accounts that legitimately have no opening balance. (10) `tb_unusual_accounts.csv` contains ~10 genuinely suspicious accounts (SUSP-001, ????-UNIDENTIFIED, A/R-DISPUTED, Owner Draw, Revenue-MISC unclassified, EUR-AR, Inventory-OBSOLETE/WRITE-OFF, Meals/Ent 50%, Rounding Adj $12); only one clearing account was detected. Unrecognized Account Types counter shows 0, contradicting the detection.
+
+**Changes:**
+- [ ] Preflight null-value check (`preflight_engine.py`) suppresses warnings on beginning-balance columns for P&L accounts (revenue/expense); fallback: suppress when ending-balance is populated
+- [ ] Expand `SUSPENSE_KEYWORDS` / unusual-account detection to include: symbolic names (only non-alphabetic chars), annotation-style names (parens + question marks), owner-draw/contribution, foreign-currency prefixes (EUR-, GBP-, etc.), obsolete/writeoff with non-zero balances, rounding-adjustment > de minimis, unclassified (MISC/UNCLASSIFIED suffixes)
+- [ ] Fix `Unrecognized Account Types` counter in Data Intake Summary to reflect detection results (or remove the field if we can't compute it)
+
+**Validation (via Sprint 665 harness):**
+- [ ] `tb_hartwell_adjusted.pdf` → zero null warnings on Depreciation Exp, Bad Debt Exp
+- [ ] `tb_unusual_accounts.csv` → flags SUSP-001, ????-UNIDENTIFIED, A/R-DISPUTED, Owner Draw, Revenue-MISC, EUR-AR (minimum); Unrecognized Account Types counter > 0
+
+---
+
+### Sprint 671: DOCX Diagnostic Pipeline + Duplicate-Detection UX
+**Status:** PENDING
+**Source:** CEO remediation brief v6 — Issues 14, 15
+**Files:** `backend/routes/audit.py`, `backend/routes/audit_diagnostics.py`, `backend/upload_dedup_model.py`, `frontend/src/app/upload/`
+**Problem:** (14) `tb_hartwell.docx` produces a preflight successfully but the diagnostic returns a generic "Failed to process the uploaded file" error — preflight and diagnostic use different parsing pipelines for docx, and the error is not actionable. (15) Submitting `tb_hartwell_adjusted.pdf` after CSV files in the same session blocks the diagnostic citing duplicate submission with no explanation of what matched or how to override.
+
+**Changes:**
+- [ ] Identify whether the diagnostic docx failure is at parse-layer (it's not — preflight extracts 37 rows) or downstream; fix the downstream pipeline OR explicitly exclude docx from diagnostic with a specific message: "The Diagnostic Report is not currently available for .docx files. The PreFlight Memo has been generated."
+- [ ] Display a format-support matrix at upload (what each extension produces: preflight-only vs preflight+diagnostic)
+- [ ] Duplicate-detection block rewrites the error to name the matched file ("This file appears substantially similar to [filename] already processed this session") and exposes an override button
+- [ ] Ensure preflight is never blocked by duplicate detection (only the diagnostic)
+
+**Validation (via Sprint 665 harness):**
+- [ ] `tb_hartwell.docx` → either diagnostic runs, or error message names the format limitation specifically
+- [ ] Sequential test (`tb_hartwell_clean.csv` → `tb_hartwell_adjusted.pdf`) → duplicate notice names the CSV, preflight still runs, override button present
+
+---
+
 ### Sprint 608: Telemetry Beacon Endpoint
 **Status:** COMPLETE
 **Source:** Executor — silent prod 404
