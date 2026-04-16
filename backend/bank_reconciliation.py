@@ -38,8 +38,22 @@ class MatchType(str, Enum):
     """Type of reconciliation match."""
 
     MATCHED = "matched"
+    SPLIT = "split"  # Sprint 639: one bank txn → multiple ledger txns
     BANK_ONLY = "bank_only"
     LEDGER_ONLY = "ledger_only"
+
+
+class SuggestedJEKind(str, Enum):
+    """Sprint 639: Category of auto-proposed journal entry for unmatched bank items."""
+
+    BANK_FEE = "bank_fee"
+    INTEREST_INCOME = "interest_income"
+    INTEREST_EXPENSE = "interest_expense"
+    NSF_CHARGE = "nsf_charge"
+    WIRE_FEE = "wire_fee"
+    SERVICE_CHARGE = "service_charge"
+    OVERDRAFT = "overdraft"
+    OTHER = "other"
 
 
 @dataclass
@@ -265,19 +279,61 @@ class LedgerTransaction:
 
 @dataclass
 class ReconciliationMatch:
-    """A single reconciliation match or unmatched item."""
+    """A single reconciliation match or unmatched item.
+
+    Sprint 639: `ledger_txns` carries the list of ledger transactions
+    when ``match_type`` is ``SPLIT`` (one bank txn → multiple ledger
+    txns summing within tolerance). For the legacy one-to-one and
+    unmatched cases it remains empty and ``ledger_txn`` is the single
+    entry as before.
+    """
 
     bank_txn: Optional[BankTransaction] = None
     ledger_txn: Optional[LedgerTransaction] = None
     match_type: MatchType = MatchType.MATCHED
     match_confidence: float = 0.0
+    ledger_txns: list[LedgerTransaction] = field(default_factory=list)  # Sprint 639
 
     def to_dict(self) -> dict:
-        return {
+        result = {
             "bank_txn": self.bank_txn.to_dict() if self.bank_txn else None,
             "ledger_txn": self.ledger_txn.to_dict() if self.ledger_txn else None,
             "match_type": self.match_type.value,
             "match_confidence": round(self.match_confidence, 2),
+        }
+        if self.ledger_txns:
+            result["ledger_txns"] = [t.to_dict() for t in self.ledger_txns]
+        return result
+
+
+@dataclass
+class SuggestedJE:
+    """Sprint 639: A suggested journal entry for an unmatched bank-only item.
+
+    The engine classifies the bank description into a ``SuggestedJEKind``
+    and proposes a debit / credit account pair. The engine does not book
+    the JE — the practitioner reviews and posts. Proposed accounts are
+    generic (e.g. "Bank Service Fees") so the caller can map to the
+    client's chart of accounts.
+    """
+
+    bank_txn: BankTransaction
+    kind: SuggestedJEKind
+    debit_account: str
+    credit_account: str
+    amount: float
+    description: str
+    confidence: float  # 0.0–1.0
+
+    def to_dict(self) -> dict:
+        return {
+            "bank_txn": self.bank_txn.to_dict(),
+            "kind": self.kind.value,
+            "debit_account": self.debit_account,
+            "credit_account": self.credit_account,
+            "amount": round(self.amount, 2),
+            "description": self.description,
+            "confidence": round(self.confidence, 2),
         }
 
 
@@ -321,6 +377,7 @@ class BankRecResult:
     rec_tests: list["RecTestResult"] = field(default_factory=list)
     outstanding_aging: list["OutstandingItemsAging"] = field(default_factory=list)
     composite_score: Optional[dict] = None
+    suggested_journal_entries: list[SuggestedJE] = field(default_factory=list)  # Sprint 639
 
     def to_dict(self) -> dict:
         result: dict = {
@@ -334,6 +391,8 @@ class BankRecResult:
             result["outstanding_aging"] = [a.to_dict() for a in self.outstanding_aging]
         if self.composite_score is not None:
             result["composite_score"] = self.composite_score
+        if self.suggested_journal_entries:
+            result["suggested_journal_entries"] = [je.to_dict() for je in self.suggested_journal_entries]
         return result
 
 
@@ -515,7 +574,237 @@ def match_transactions(
                 )
             )
 
+    # Sprint 639: Split-match pass — one bank txn ↔ multiple ledger txns.
+    _split_match_pass(matches, config)
+
     return matches
+
+
+# =============================================================================
+# Sprint 639 — Split Matching (one bank txn → multiple ledger txns)
+# =============================================================================
+
+
+# Max number of ledger entries to combine into a single split match. Larger
+# values explode the combinatorial search without improving precision.
+_MAX_SPLIT_SET_SIZE = 4
+
+
+def _find_split_subset(
+    target_amount: Decimal,
+    candidates: list[tuple[int, LedgerTransaction]],
+    tolerance: Decimal,
+    max_size: int = _MAX_SPLIT_SET_SIZE,
+) -> list[tuple[int, LedgerTransaction]] | None:
+    """Find a subset of ``candidates`` summing to ``target_amount`` within tolerance.
+
+    Small n (< ~20) here — candidates are pre-filtered to ledger rows
+    whose dates fall inside the bank txn's window. Brute-force
+    combinations up to ``max_size`` keep the search bounded. Returns
+    None when no subset reconciles.
+    """
+    from itertools import combinations
+
+    for size in range(2, min(max_size, len(candidates)) + 1):
+        for combo in combinations(candidates, size):
+            total = sum((c[1].amount for c in combo), Decimal("0"))
+            if abs(total - target_amount) <= tolerance:
+                return list(combo)
+    return None
+
+
+def _split_match_pass(
+    matches: list[ReconciliationMatch],
+    config: BankRecConfig,
+) -> None:
+    """Convert BANK_ONLY + LEDGER_ONLY items into SPLIT matches where possible.
+
+    Mutates ``matches`` in place. A BANK_ONLY entry converts to SPLIT
+    when 2–4 LEDGER_ONLY entries sum to within ``amount_tolerance`` of
+    the bank amount and fall within the bank's date window.
+    """
+    tolerance = Decimal(str(config.amount_tolerance))
+    bank_only: list[tuple[int, ReconciliationMatch]] = [
+        (i, m) for i, m in enumerate(matches) if m.match_type == MatchType.BANK_ONLY
+    ]
+    ledger_only: list[tuple[int, ReconciliationMatch]] = [
+        (i, m) for i, m in enumerate(matches) if m.match_type == MatchType.LEDGER_ONLY
+    ]
+    if not bank_only or not ledger_only:
+        return
+
+    ledger_date_cache: dict[int, Optional[date]] = {}
+    for _idx, m in ledger_only:
+        if m.ledger_txn:
+            ledger_date_cache[id(m.ledger_txn)] = parse_date(m.ledger_txn.date)
+
+    consumed_ledger_indices: set[int] = set()
+    consumed_bank_indices: set[int] = set()
+
+    for match_idx, bank_match in bank_only:
+        bank_txn = bank_match.bank_txn
+        if bank_txn is None:
+            continue
+        bank_date = parse_date(bank_txn.date)
+        target = bank_txn.amount
+
+        # Build date-filtered candidate pool.
+        candidate_indices: list[int] = []
+        candidates: list[tuple[int, LedgerTransaction]] = []
+        for ledger_match_idx, ledger_match in ledger_only:
+            if ledger_match_idx in consumed_ledger_indices:
+                continue
+            ltx = ledger_match.ledger_txn
+            if ltx is None:
+                continue
+            if bank_date and config.date_tolerance_days > 0:
+                ldate = ledger_date_cache.get(id(ltx))
+                if ldate and abs((bank_date - ldate).days) > config.date_tolerance_days:
+                    continue
+            candidates.append((ledger_match_idx, ltx))
+            candidate_indices.append(ledger_match_idx)
+
+        if len(candidates) < 2:
+            continue
+
+        subset = _find_split_subset(target, candidates, tolerance)
+        if subset is None:
+            continue
+
+        # Apply: bank_only entry becomes SPLIT; ledger_only siblings removed.
+        bank_match.match_type = MatchType.SPLIT
+        bank_match.match_confidence = 0.85
+        bank_match.ledger_txns = [pair[1] for pair in subset]
+        bank_match.ledger_txn = subset[0][1]  # keep first for legacy consumers
+        for ledger_match_idx, _ledger_txn in subset:
+            consumed_ledger_indices.add(ledger_match_idx)
+        consumed_bank_indices.add(match_idx)
+
+    # Remove consumed ledger_only rows (in reverse order so indices stay valid).
+    for idx in sorted(consumed_ledger_indices, reverse=True):
+        del matches[idx]
+
+
+# =============================================================================
+# Sprint 639 — Suggested Journal Entries for BANK_ONLY items
+# =============================================================================
+
+
+# Keyword -> (kind, debit_account, credit_account, base_confidence).
+# The debit account defaults reflect the typical accounting for each kind;
+# callers remap to the client's chart. Credit account is always "Cash /
+# Bank" for withdrawals (negative amounts) — for interest income (positive)
+# the flow reverses and the engine swaps debit / credit.
+_JE_CLASSIFIERS: tuple[tuple[tuple[str, ...], SuggestedJEKind, str, str, float], ...] = (
+    (
+        ("nsf", "non-sufficient", "non sufficient", "returned item", "returned check"),
+        SuggestedJEKind.NSF_CHARGE,
+        "Bank Service Fees / NSF Charges",
+        "Cash / Bank",
+        0.95,
+    ),
+    (
+        ("wire fee", "wire transfer fee", "wire charge"),
+        SuggestedJEKind.WIRE_FEE,
+        "Bank Service Fees / Wire Transfer Fees",
+        "Cash / Bank",
+        0.92,
+    ),
+    (
+        ("overdraft", "od fee"),
+        SuggestedJEKind.OVERDRAFT,
+        "Bank Service Fees / Overdraft Charges",
+        "Cash / Bank",
+        0.92,
+    ),
+    (
+        ("service charge", "service fee", "monthly fee", "account analysis"),
+        SuggestedJEKind.SERVICE_CHARGE,
+        "Bank Service Fees",
+        "Cash / Bank",
+        0.90,
+    ),
+    (
+        ("interest income", "interest earned", "credit interest", "int earned"),
+        SuggestedJEKind.INTEREST_INCOME,
+        "Cash / Bank",
+        "Interest Income",
+        0.92,
+    ),
+    (
+        ("interest charge", "interest expense", "loan interest", "int chg"),
+        SuggestedJEKind.INTEREST_EXPENSE,
+        "Interest Expense",
+        "Cash / Bank",
+        0.90,
+    ),
+    (
+        ("bank fee", "bank charge", "atm fee", "maintenance fee"),
+        SuggestedJEKind.BANK_FEE,
+        "Bank Service Fees",
+        "Cash / Bank",
+        0.85,
+    ),
+)
+
+
+def _keyword_hits(keyword: str, haystack: str) -> bool:
+    """Substring match with word-boundary guard for very short tokens.
+
+    "nsf" substring-matches "tra*nsf*er" which is the wrong intent.
+    Keywords of 4 characters or fewer are matched on word boundaries;
+    longer keywords use plain substring containment since phrases like
+    "interest charge" don't need boundary guards.
+    """
+    if len(keyword) <= 4:
+        # Surround the haystack with spaces so boundary matches work at
+        # start / end of the string.
+        return f" {keyword} " in f" {haystack} "
+    return keyword in haystack
+
+
+def _classify_bank_only(txn: BankTransaction) -> Optional[SuggestedJE]:
+    """Inspect the description and return a SuggestedJE, or None if uncategorised."""
+    description_raw = (txn.description or "").lower()
+    # Also scan the reference so NSF check numbers with no description classify.
+    ref_raw = (txn.reference or "").lower()
+    haystack = f"{description_raw} {ref_raw}"
+    for keywords, kind, debit, credit, confidence in _JE_CLASSIFIERS:
+        if any(_keyword_hits(kw, haystack) for kw in keywords):
+            amount = float(abs(txn.amount))
+            return SuggestedJE(
+                bank_txn=txn,
+                kind=kind,
+                debit_account=debit,
+                credit_account=credit,
+                amount=amount,
+                description=(
+                    f"{kind.value.replace('_', ' ').title()} — posted per bank statement "
+                    f"({txn.description or txn.reference or 'no description'})"
+                ),
+                confidence=confidence,
+            )
+    return None
+
+
+def generate_suggested_journal_entries(
+    matches: list[ReconciliationMatch],
+) -> list[SuggestedJE]:
+    """Sprint 639: Scan BANK_ONLY matches and propose JEs for common items.
+
+    Only BANK_ONLY items are considered — LEDGER_ONLY items have already
+    been booked and are likely outstanding checks or deposits in transit.
+    """
+    suggestions: list[SuggestedJE] = []
+    for match in matches:
+        if match.match_type != MatchType.BANK_ONLY:
+            continue
+        if match.bank_txn is None:
+            continue
+        je = _classify_bank_only(match.bank_txn)
+        if je is not None:
+            suggestions.append(je)
+    return suggestions
 
 
 # =============================================================================
@@ -1198,6 +1487,9 @@ def reconcile_bank_statement(
         rec_tests, summary, performance_materiality=config.performance_materiality
     )
 
+    # 8. Sprint 639: Propose JEs for common BANK_ONLY items (fees, interest, NSF)
+    suggested_jes = generate_suggested_journal_entries(matches)
+
     return BankRecResult(
         summary=summary,
         bank_column_detection=bank_detection,
@@ -1205,4 +1497,5 @@ def reconcile_bank_statement(
         rec_tests=rec_tests,
         outstanding_aging=outstanding_aging,
         composite_score=composite_score,
+        suggested_journal_entries=suggested_jes,
     )

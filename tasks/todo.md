@@ -154,14 +154,23 @@
 ---
 
 ### Sprint 639: Bank Reconciliation One-to-Many + Suggested JEs
-**Status:** PENDING
+**Status:** COMPLETE
 **Source:** Future-State Consultant — partial catalog feature #2
 **File:** `backend/bank_reconciliation.py:399-518, 1201`
 **Problem:** V1 exact + tolerance matching only. No one-to-many matching (one bank txn → multiple GL entries). No suggested JE templates for common reconciling items (fees, interest, bank charges).
 **Changes:**
-- [ ] Add split-matching pass after greedy pass
-- [ ] Emit `suggested_journal_entries` field on `BankRecResult` for BANK_ONLY items classified as fees/interest
-- [ ] Tests for split-match scenarios
+- [x] Add split-matching pass after greedy pass
+- [x] Emit `suggested_journal_entries` field on `BankRecResult` for BANK_ONLY items classified as fees/interest
+- [x] Tests for split-match scenarios
+
+**Review:**
+- New `MatchType.SPLIT` variant and `ledger_txns: list` field on `ReconciliationMatch` for one-to-many matches.
+- `_split_match_pass()` runs after the greedy exact-match pass. For each remaining BANK_ONLY item, it searches combinations of 2–4 date-windowed LEDGER_ONLY candidates whose sum reconciles within amount tolerance. When found, the BANK_ONLY promotes to SPLIT and the sibling LEDGER_ONLY entries are consumed.
+- `SuggestedJE` + `SuggestedJEKind` enum: BANK_FEE / INTEREST_INCOME / INTEREST_EXPENSE / NSF_CHARGE / WIRE_FEE / SERVICE_CHARGE / OVERDRAFT / OTHER.
+- `generate_suggested_journal_entries()` scans only BANK_ONLY items (LEDGER_ONLY are already booked). Keyword classifier with word-boundary guard for short tokens (fixes "nsf" false-matching "tra*nsf*er").
+- `BankRecResult.suggested_journal_entries` populated by `run_bank_reconciliation()`; serialised on `to_dict()` when non-empty.
+- 12 new tests cover 2/3-way splits, tolerance enforcement, date-window respect, greedy-preferred-over-split, NSF / interest / wire / service classification, unmatched vendor payment not classified, matched items not suggested, serialisation.
+- Regression: 128 existing bank rec tests unchanged. Full bank rec suite: 140 passed.
 
 ---
 
