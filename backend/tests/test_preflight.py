@@ -21,11 +21,16 @@ class TestPreflightCleanFile:
 
     def test_clean_file_high_readiness(self):
         column_names = ["Account Name", "Debit", "Credit"]
+        # Sprint 631: TB must include every GAAP category or the
+        # completeness check reduces readiness. Expense of 500 kept
+        # but named "Cost of Goods Sold" so the Revenue/COGS gap
+        # secondary check also stays silent.
         rows = [
-            {"Account Name": "Cash", "Debit": 1000.0, "Credit": 0.0},
+            {"Account Name": "Cash", "Debit": 2000.0, "Credit": 0.0},
+            {"Account Name": "Accounts Payable", "Debit": 0.0, "Credit": 400.0},
             {"Account Name": "Revenue", "Debit": 0.0, "Credit": 1500.0},
-            {"Account Name": "Expenses", "Debit": 500.0, "Credit": 0.0},
-            {"Account Name": "Equity", "Debit": 0.0, "Credit": 0.0},
+            {"Account Name": "Cost of Goods Sold", "Debit": 500.0, "Credit": 0.0},
+            {"Account Name": "Retained Earnings", "Debit": 0.0, "Credit": 600.0},
         ]
 
         report = run_preflight(column_names, rows, "clean.csv")
@@ -33,7 +38,7 @@ class TestPreflightCleanFile:
         assert isinstance(report, PreFlightReport)
         assert report.readiness_score >= 90
         assert report.readiness_label == "Ready"
-        assert report.row_count == 4
+        assert report.row_count == 5
         assert report.column_count == 3
         assert report.filename == "clean.csv"
 
@@ -296,9 +301,14 @@ class TestPreflightScoreBreakdown:
     def test_clean_file_all_components_100(self):
         """Clean file → all component scores should be 100."""
         column_names = ["Account Name", "Debit", "Credit"]
+        # Sprint 631: include every GAAP category so the completeness
+        # component also scores 100.
         rows = [
             {"Account Name": "Cash", "Debit": 1000, "Credit": 0},
+            {"Account Name": "Accounts Payable", "Debit": 0, "Credit": 200},
+            {"Account Name": "Retained Earnings", "Debit": 0, "Credit": 100},
             {"Account Name": "Revenue", "Debit": 0, "Credit": 1000},
+            {"Account Name": "Cost of Goods Sold", "Debit": 300, "Credit": 0},
         ]
 
         report = run_preflight(column_names, rows, "clean.csv")
@@ -444,3 +454,115 @@ class TestPreflightToDictSprint510:
             assert "weight" in sc
             assert "score" in sc
             assert "contribution" in sc
+
+
+# ═══════════════════════════════════════════════════════════════
+# Sprint 631 — GAAP category completeness check
+# ═══════════════════════════════════════════════════════════════
+
+
+class TestCategoryCompleteness:
+    """Sprint 631: Balance-sheet-assertion completeness checker."""
+
+    def _full_tb(self) -> tuple[list[str], list[dict]]:
+        columns = ["Account Name", "Debit", "Credit"]
+        rows = [
+            {"Account Name": "Cash", "Debit": 1000.0, "Credit": 0.0},
+            {"Account Name": "Accounts Payable", "Debit": 0.0, "Credit": 300.0},
+            {"Account Name": "Retained Earnings", "Debit": 0.0, "Credit": 200.0},
+            {"Account Name": "Revenue", "Debit": 0.0, "Credit": 800.0},
+            {"Account Name": "Cost of Goods Sold", "Debit": 300.0, "Credit": 0.0},
+        ]
+        return columns, rows
+
+    def test_complete_tb_has_no_completeness_issue(self):
+        columns, rows = self._full_tb()
+        report = run_preflight(columns, rows, "complete.csv")
+
+        completeness_issues = [i for i in report.issues if i.category == "category_completeness"]
+        assert completeness_issues == []
+
+        cc = report.category_completeness
+        assert cc is not None
+        assert cc.asset_count >= 1
+        assert cc.liability_count >= 1
+        assert cc.equity_count >= 1
+        assert cc.revenue_count >= 1
+        assert cc.expense_count >= 1
+        assert cc.missing_categories == []
+        assert cc.cogs_gap is False
+
+    def test_missing_equity_raises_high_severity(self):
+        columns = ["Account Name", "Debit", "Credit"]
+        rows = [
+            {"Account Name": "Cash", "Debit": 1000.0, "Credit": 0.0},
+            {"Account Name": "Accounts Payable", "Debit": 0.0, "Credit": 300.0},
+            {"Account Name": "Revenue", "Debit": 0.0, "Credit": 700.0},
+            {"Account Name": "Cost of Goods Sold", "Debit": 400.0, "Credit": 0.0},
+        ]
+
+        report = run_preflight(columns, rows, "no_equity.csv")
+        issues = [i for i in report.issues if i.category == "category_completeness"]
+        assert len(issues) == 1
+        assert issues[0].severity == "high"
+        assert "Equity" in issues[0].message
+
+        cc = report.category_completeness
+        assert cc is not None
+        assert cc.equity_count == 0
+        assert "Equity" in cc.missing_categories
+
+    def test_revenue_with_zero_cogs_flags_classification_gap(self):
+        columns = ["Account Name", "Debit", "Credit"]
+        rows = [
+            {"Account Name": "Cash", "Debit": 1000.0, "Credit": 0.0},
+            {"Account Name": "Accounts Payable", "Debit": 0.0, "Credit": 300.0},
+            {"Account Name": "Retained Earnings", "Debit": 0.0, "Credit": 500.0},
+            {"Account Name": "Sales Revenue", "Debit": 0.0, "Credit": 800.0},
+            # Expense exists but is not COGS-like — Revenue>0 + no COGS + expense material
+            {"Account Name": "Rent Expense", "Debit": 600.0, "Credit": 0.0},
+        ]
+
+        report = run_preflight(columns, rows, "no_cogs.csv")
+        gap_issues = [
+            i for i in report.issues if i.category == "category_completeness" and "Cost of Goods Sold" in i.message
+        ]
+        assert len(gap_issues) == 1
+        assert gap_issues[0].severity == "medium"
+        assert report.category_completeness is not None
+        assert report.category_completeness.cogs_gap is True
+
+    def test_service_business_no_revenue_no_cogs_does_not_flag(self):
+        """If neither revenue nor cogs exists, the COGS gap must not fire."""
+        columns = ["Account Name", "Debit", "Credit"]
+        rows = [
+            {"Account Name": "Cash", "Debit": 1000.0, "Credit": 0.0},
+            {"Account Name": "Accounts Payable", "Debit": 0.0, "Credit": 300.0},
+            {"Account Name": "Retained Earnings", "Debit": 0.0, "Credit": 500.0},
+            {"Account Name": "Consulting Revenue", "Debit": 0.0, "Credit": 800.0},
+            {"Account Name": "Cost of Sales", "Debit": 600.0, "Credit": 0.0},
+        ]
+        report = run_preflight(columns, rows, "service.csv")
+        cc = report.category_completeness
+        assert cc is not None
+        assert cc.cogs_gap is False
+
+    def test_to_dict_includes_category_completeness(self):
+        columns, rows = self._full_tb()
+        d = run_preflight(columns, rows, "t.csv").to_dict()
+
+        assert "category_completeness" in d
+        cc = d["category_completeness"]
+        for key in (
+            "asset_count",
+            "liability_count",
+            "equity_count",
+            "revenue_count",
+            "expense_count",
+            "unknown_count",
+            "missing_categories",
+            "revenue_total",
+            "cogs_total",
+            "cogs_gap",
+        ):
+            assert key in cc

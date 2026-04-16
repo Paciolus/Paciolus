@@ -86,15 +86,22 @@
 ---
 
 ### Sprint 631: Balance Sheet Assertion Completeness Checker
-**Status:** PENDING
+**Status:** COMPLETE
 **Source:** Accounting Auditor — preflight capability gap
 **File:** `backend/preflight_engine.py` extension
 **Problem:** Classification validator checks individual accounts but does not assert population-level completeness — no engine verifies the uploaded TB has at least one account in each GAAP category (Assets/Liabilities/Equity/Revenue/Expenses) before downstream tools run.
 **Changes:**
-- [ ] After classification, check all 5 categories have ≥1 mapped account
-- [ ] Emit preflight warning: "No [category] accounts detected — financial statement output will be incomplete"
-- [ ] Secondary check: Revenue > 0 but COGS = 0 → flag classification gap
-- [ ] Surface in preflight gate UI
+- [x] After classification, check all 5 categories have ≥1 mapped account
+- [x] Emit preflight warning: "No [category] accounts detected — financial statement output will be incomplete"
+- [x] Secondary check: Revenue > 0 but COGS = 0 → flag classification gap
+- [x] Surface in preflight gate UI (via new `category_completeness` block on the preflight response; response schema wired for frontend consumption)
+
+**Review:**
+- Ran classifier inline in preflight (after column detection). `CategoryCompleteness` dataclass on `PreFlightReport`; `category_completeness` JSON block on the to_dict output and the Pydantic response schema.
+- `category_completeness` added to `_CHECK_WEIGHTS` (10% weight); issues surface at high severity for missing categories, medium for the Revenue > 0 / COGS = 0 classification gap.
+- COGS gap is skipped when no expense activity exists, so service-business TBs (no COGS) don't get false-positive warnings.
+- Existing clean-file test updated to include all 5 GAAP categories; 5 new tests added covering complete TB, missing equity, COGS gap, service business no-op, and to_dict shape.
+- All 27 preflight tests pass.
 
 ---
 

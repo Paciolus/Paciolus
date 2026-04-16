@@ -14,6 +14,8 @@ import re
 from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
 
+from account_classifier import AccountClassifier
+from classification_rules import AccountCategory
 from column_detector import (
     ColumnDetectionResult,
     detect_columns,
@@ -94,6 +96,30 @@ class ScoreComponent:
 
 
 @dataclass
+class CategoryCompleteness:
+    """Sprint 631: Balance-sheet-assertion completeness for the 5 GAAP categories.
+
+    A TB that is missing any of the five categories will produce incomplete
+    financial statement output downstream (a Balance Sheet with no equity
+    row, an Income Statement with no revenue line, etc.). The secondary
+    ``cogs_gap`` flag catches the common classification miss where Revenue
+    has activity but COGS is zero — a signal that cost accounts exist but
+    are mis-mapped, not absent.
+    """
+
+    asset_count: int
+    liability_count: int
+    equity_count: int
+    revenue_count: int
+    expense_count: int
+    unknown_count: int
+    missing_categories: list[str] = field(default_factory=list)
+    revenue_total: float = 0.0
+    cogs_total: float = 0.0
+    cogs_gap: bool = False
+
+
+@dataclass
 class PreFlightIssue:
     """A single pre-flight quality issue."""
 
@@ -126,6 +152,7 @@ class PreFlightReport:
     balance_check: BalanceCheck | None = None
     score_breakdown: list[ScoreComponent] = field(default_factory=list)
     intake: IntakeSummary | None = None  # Sprint 666: row reconciliation + totals-row disposition
+    category_completeness: CategoryCompleteness | None = None  # Sprint 631
 
     def to_dict(self) -> dict:
         """Convert to dictionary for API response."""
@@ -193,6 +220,20 @@ class PreFlightReport:
             ]
         if self.intake is not None:
             result["intake"] = self.intake.to_dict()
+        if self.category_completeness is not None:
+            cc = self.category_completeness
+            result["category_completeness"] = {
+                "asset_count": cc.asset_count,
+                "liability_count": cc.liability_count,
+                "equity_count": cc.equity_count,
+                "revenue_count": cc.revenue_count,
+                "expense_count": cc.expense_count,
+                "unknown_count": cc.unknown_count,
+                "missing_categories": list(cc.missing_categories),
+                "revenue_total": round(cc.revenue_total, 2),
+                "cogs_total": round(cc.cogs_total, 2),
+                "cogs_gap": cc.cogs_gap,
+            }
         return result
 
 
@@ -208,6 +249,7 @@ DOWNSTREAM_IMPACT: dict[str, str] = {
     "mixed_signs": "Inconsistent sign conventions produce incorrect debit/credit separation, unreliable balance sheet classification, and distorted abnormal balance detection.",
     "zero_balance": "Zero-balance rows add noise to statistical tests (Benford's Law, sampling), inflate account counts, and reduce the signal-to-noise ratio in anomaly detection.",
     "tb_balance": "An out-of-balance trial balance invalidates all downstream diagnostic results. Debit/credit totals must reconcile before any testing can proceed.",
+    "category_completeness": "Missing GAAP categories produce incomplete financial statement output — a Balance Sheet without equity or an Income Statement without revenue. Downstream ratio analysis and lead sheets degrade silently when an entire category is absent.",
 }
 
 # Number of downstream tests affected per issue category
@@ -219,6 +261,7 @@ TESTS_AFFECTED_BY_CATEGORY: dict[str, int] = {
     "mixed_signs": 7,  # Balance sheet classification, abnormal balance, ratios, JE, AP, sampling, cash flow
     "zero_balance": 4,  # Benford, sampling, anomaly, population profile
     "tb_balance": 12,  # ALL tests — blocker
+    "category_completeness": 6,  # Financial statements, ratios, lead sheets, cash flow, expense category, accrual
 }
 
 
@@ -229,11 +272,12 @@ TESTS_AFFECTED_BY_CATEGORY: dict[str, int] = {
 _CHECK_WEIGHTS = {
     "tb_balance": 25,
     "column_detection": 20,
-    "null_values": 15,
-    "duplicates": 10,
-    "encoding": 5,
-    "mixed_signs": 15,
-    "zero_balance": 10,
+    "null_values": 13,
+    "duplicates": 8,
+    "encoding": 4,
+    "mixed_signs": 13,
+    "zero_balance": 7,
+    "category_completeness": 10,  # Sprint 631
 }
 
 # Severity deduction multipliers (fraction of weight)
@@ -360,6 +404,9 @@ def run_preflight(
     # ── Check 6: Zero-balance rows (weight 10%) ──
     zero_count = _check_zero_balances(rows, debit_col, credit_col, row_count, issues)
 
+    # ── Check 7: GAAP category completeness (Sprint 631) ──
+    category_completeness = _check_category_completeness(rows, account_col, debit_col, credit_col, issues)
+
     # ── Populate downstream impact descriptions and tests_affected ──
     _populate_downstream_impact(issues)
 
@@ -436,6 +483,7 @@ def run_preflight(
         balance_check=balance_check,
         score_breakdown=score_breakdown,
         intake=intake,
+        category_completeness=category_completeness,
     )
 
 
@@ -1256,6 +1304,136 @@ def _check_zero_balances(
     )
 
     return zero_count
+
+
+# ═══════════════════════════════════════════════════════════════
+# Sprint 631: GAAP category completeness
+# ═══════════════════════════════════════════════════════════════
+
+_COGS_PATTERNS = (
+    "cost of goods sold",
+    "cost of goods",
+    "cost of sales",
+    "cost of revenue",
+    "cogs",
+)
+
+
+def _looks_like_cogs(name: str) -> bool:
+    lower = name.lower()
+    return any(pattern in lower for pattern in _COGS_PATTERNS)
+
+
+def _check_category_completeness(
+    rows: list[dict],
+    account_col: str | None,
+    debit_col: str | None,
+    credit_col: str | None,
+    issues: list[PreFlightIssue],
+) -> CategoryCompleteness | None:
+    """Sprint 631: Verify all 5 GAAP categories have ≥1 classified account.
+
+    Classifies every account in the TB with the default classifier, counts
+    per category, and flags:
+      - Any GAAP category with zero accounts (high severity)
+      - Revenue > 0 but COGS = 0 (medium severity; likely classification gap)
+
+    Returns None when the inputs are insufficient to classify anything.
+    """
+    if not account_col or not rows:
+        return None
+
+    classifier = AccountClassifier()
+    counts: dict[AccountCategory, int] = {cat: 0 for cat in AccountCategory}
+    revenue_total = Decimal("0")
+    cogs_total = Decimal("0")
+
+    for row in rows:
+        name_val = row.get(account_col)
+        if name_val is None:
+            continue
+        name = str(name_val).strip()
+        if not name:
+            continue
+
+        debit = _coerce_to_decimal(row.get(debit_col)) if debit_col else Decimal("0")
+        credit = _coerce_to_decimal(row.get(credit_col)) if credit_col else Decimal("0")
+        net = float(debit - credit)
+
+        result = classifier.classify(name, net)
+        counts[result.category] = counts.get(result.category, 0) + 1
+
+        # Revenue activity is naturally credit-balance — take the absolute value.
+        if result.category == AccountCategory.REVENUE:
+            revenue_total += abs(debit - credit)
+        if result.category == AccountCategory.EXPENSE and _looks_like_cogs(name):
+            cogs_total += abs(debit - credit)
+
+    required = [
+        AccountCategory.ASSET,
+        AccountCategory.LIABILITY,
+        AccountCategory.EQUITY,
+        AccountCategory.REVENUE,
+        AccountCategory.EXPENSE,
+    ]
+    missing = [cat.value.capitalize() for cat in required if counts.get(cat, 0) == 0]
+
+    # Revenue>0 with COGS=0 is a common classification gap. Skip this check
+    # for service-business TBs where genuinely no COGS exists: gate on the
+    # expense category having material activity.
+    cogs_gap = (
+        revenue_total > Decimal("0") and cogs_total == Decimal("0") and counts.get(AccountCategory.EXPENSE, 0) > 0
+    )
+
+    if missing:
+        names = ", ".join(missing)
+        issues.append(
+            PreFlightIssue(
+                category="category_completeness",
+                severity="high",
+                message=f"No accounts mapped to GAAP category: {names}",
+                affected_count=len(missing),
+                remediation=(
+                    "Verify the trial balance contains every statement category. "
+                    "Missing categories produce incomplete financial statements, "
+                    "broken ratio analysis, and empty lead sheets."
+                ),
+                affected_items=missing,
+            )
+        )
+
+    if cogs_gap:
+        issues.append(
+            PreFlightIssue(
+                category="category_completeness",
+                severity="medium",
+                message=(
+                    "Revenue activity detected but Cost of Goods Sold is zero — "
+                    "cost accounts may be mis-classified under a different "
+                    "expense category."
+                ),
+                affected_count=1,
+                remediation=(
+                    "Review expense accounts for COGS-like activity "
+                    "(Cost of Goods Sold / Cost of Sales / Cost of Revenue) "
+                    "and reclassify so the Income Statement gross margin "
+                    "calculation is meaningful."
+                ),
+            )
+        )
+
+    return CategoryCompleteness(
+        asset_count=counts.get(AccountCategory.ASSET, 0),
+        liability_count=counts.get(AccountCategory.LIABILITY, 0),
+        equity_count=counts.get(AccountCategory.EQUITY, 0),
+        revenue_count=counts.get(AccountCategory.REVENUE, 0),
+        expense_count=counts.get(AccountCategory.EXPENSE, 0),
+        unknown_count=counts.get(AccountCategory.UNKNOWN, 0),
+        missing_categories=missing,
+        revenue_total=float(revenue_total),
+        cogs_total=float(cogs_total),
+        cogs_gap=cogs_gap,
+    )
 
 
 # ═══════════════════════════════════════════════════════════════
