@@ -67,14 +67,15 @@
 
 
 ### Sprint 610: LIKE Wildcard Escape In Admin + Client Search
-**Status:** PENDING
+**Status:** COMPLETE
 **Source:** Critic — perf DoS + correctness
 **File:** `backend/billing/admin_customers.py:107`, `backend/client_manager.py:305`
 **Problem:** User input goes directly into `.ilike(f"%{search}%")` without escaping `%` / `_` / `\`. Superadmin searching `%` triggers full table scan on User+Organization. Type-ahead widget on a 50k-user table = DoS.
 **Changes:**
-- [ ] Add LIKE-escape helper in `backend/shared/helpers.py`
-- [ ] Apply at both call-sites with `.ilike(pattern, escape="\\")`
-- [ ] Add tests: `%`, `_`, `\\` literal search matches only literal characters
+- [x] Add LIKE-escape helper in `backend/shared/helpers.py` — `escape_like_wildcards()` escapes `\`, `%`, `_` in that order
+- [x] Apply at both call-sites with `.ilike(pattern, escape="\\")`
+- [x] Add tests: 6 unit tests for helper + 3 integration tests on `ClientManager.search_clients` (literal `%`, literal `_`, normal search still works)
+- [x] 9 tests, all green
 
 ---
 

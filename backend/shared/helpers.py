@@ -85,6 +85,18 @@ _XLS_MAGIC = XLS_MAGIC
 _FORMULA_TRIGGERS = frozenset(("=", "+", "-", "@", "\t", "\r", "\n", "|"))
 
 
+def escape_like_wildcards(term: str) -> str:
+    """Escape SQL LIKE wildcards (``%``, ``_``, ``\\``) for literal matching.
+
+    Paired with ``.ilike(pattern, escape="\\")`` so user input can never
+    trigger a full table scan. A user searching for a literal ``%`` gets
+    exactly that — not every row.
+    """
+    if not term:
+        return ""
+    return term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
 def sanitize_csv_value(value: object) -> str:
     """Escape formula injection in CSV/Excel cell values (CWE-1236).
 

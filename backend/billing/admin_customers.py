@@ -20,6 +20,7 @@ from billing.price_config import (
 )
 from models import ActivityLog, DiagnosticSummary, RefreshToken, User
 from organization_model import Organization, OrganizationMember
+from shared.helpers import escape_like_wildcards
 from subscription_model import (
     BillingEvent,
     Subscription,
@@ -104,13 +105,14 @@ def get_customer_list(
 
     # Filters
     if search:
-        search_pattern = f"%{search}%"
-        # Search by email or org name
-        org_ids_matching = db.query(Organization.id).filter(Organization.name.ilike(search_pattern)).subquery()
+        search_pattern = f"%{escape_like_wildcards(search)}%"
+        org_ids_matching = (
+            db.query(Organization.id).filter(Organization.name.ilike(search_pattern, escape="\\")).subquery()
+        )
         query = query.filter(
             or_(
-                User.email.ilike(search_pattern),
-                User.name.ilike(search_pattern),
+                User.email.ilike(search_pattern, escape="\\"),
+                User.name.ilike(search_pattern, escape="\\"),
                 User.organization_id.in_(db.query(org_ids_matching)),
             )
         )

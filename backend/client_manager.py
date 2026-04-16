@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from models import Client, EntityType, Industry, ReportingFramework, User
 from security_utils import log_secure_operation
+from shared.helpers import escape_like_wildcards
 
 
 class ClientManager:
@@ -300,9 +301,13 @@ class ClientManager:
     def search_clients(self, user_id: int, query: str, limit: int = 20) -> list[Client]:
         """Search clients by name (case-insensitive), including org co-members' clients."""
         accessible_ids = self._accessible_user_ids(user_id)
+        pattern = f"%{escape_like_wildcards(query)}%"
         return (
             self.db.query(Client)
-            .filter(Client.user_id.in_(accessible_ids), Client.name.ilike(f"%{query}%"))
+            .filter(
+                Client.user_id.in_(accessible_ids),
+                Client.name.ilike(pattern, escape="\\"),
+            )
             .order_by(Client.name.asc())
             .limit(limit)
             .all()
