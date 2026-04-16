@@ -332,6 +332,88 @@ def _build_ap_extra_sections(
     if has_detail:
         section_counter += 1
 
+    # DRILL-04: Duplicate Payment Summary (Sprint 643)
+    dup_summary = result.get("duplicate_payment_summary") or {}
+    has_any_dup_signal = bool(dup_summary) and (
+        dup_summary.get("exact_duplicate_count", 0) > 0 or dup_summary.get("fuzzy_duplicate_count", 0) > 0
+    )
+    if has_any_dup_signal:
+        section_label = _roman(section_counter)
+        story.append(Paragraph(f"{section_label}. Duplicate Payment Recovery Summary", styles["MemoSection"]))
+        story.append(LedgerRule(doc_width))
+
+        recovery = dup_summary.get("recovery_value_total", 0.0) or 0.0
+        distinct = dup_summary.get("distinct_flagged_payments", 0) or 0
+        exact_n = dup_summary.get("exact_duplicate_count", 0) or 0
+        fuzzy_n = dup_summary.get("fuzzy_duplicate_count", 0) or 0
+
+        story.append(
+            Paragraph(
+                create_leader_dots(
+                    "Estimated Recovery Value (excess payments)",
+                    format_currency(recovery),
+                ),
+                styles["MemoLeader"],
+            )
+        )
+        story.append(
+            Paragraph(
+                create_leader_dots("Distinct Flagged Payments", str(distinct)),
+                styles["MemoLeader"],
+            )
+        )
+        story.append(
+            Paragraph(
+                create_leader_dots(
+                    "Exact / Fuzzy Duplicate Rows Flagged",
+                    f"{exact_n} / {fuzzy_n}",
+                ),
+                styles["MemoLeader"],
+            )
+        )
+
+        vendor_rates = dup_summary.get("vendor_rates") or []
+        if vendor_rates:
+            story.append(Spacer(1, 6))
+            rows = [
+                [
+                    safe_str_value(v.get("vendor"), "")[:30],
+                    str(v.get("duplicate_payments", 0)),
+                    str(v.get("total_payments", 0)),
+                    f"{(v.get('duplicate_rate') or 0) * 100:.1f}%",
+                ]
+                for v in vendor_rates
+            ]
+            build_drill_down_table(
+                story,
+                styles,
+                doc_width,
+                title=f"Top {len(vendor_rates)} Vendors by Duplicate Payment Rate",
+                headers=["Vendor", "Duplicate", "Total", "Rate"],
+                rows=rows,
+                total_flagged=distinct,
+                col_widths=[2.4 * inch, 1.0 * inch, 1.0 * inch, 1.0 * inch],
+                right_align_cols=[1, 2, 3],
+            )
+
+        monthly = dup_summary.get("monthly_trend") or []
+        if monthly:
+            story.append(Spacer(1, 6))
+            rows = [[m.get("month", ""), str(m.get("duplicate_payments", 0))] for m in monthly]
+            build_drill_down_table(
+                story,
+                styles,
+                doc_width,
+                title="Duplicate Payments by Month",
+                headers=["Month", "Flagged"],
+                rows=rows,
+                total_flagged=distinct,
+                col_widths=[1.5 * inch, 1.0 * inch],
+                right_align_cols=[1],
+            )
+
+        section_counter += 1
+
     return section_counter
 
 

@@ -18,7 +18,6 @@ Audit Standards References:
 """
 
 import statistics
-from collections import Counter
 from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
@@ -80,9 +79,11 @@ class RevenueTestingConfig:
     period_start: Optional[str] = None
     period_end: Optional[str] = None
 
-    # RT-10: Benford's Law
+    # RT-10: Benford's Law (Sprint 641 — shared module parity with JE/payroll)
     benford_min_entries: int = 50
-    benford_chi_sq_threshold: float = 15.507  # df=8, alpha=0.05
+    benford_min_magnitude_range: float = 2.0  # orders of magnitude
+    benford_min_amount: float = 1.0  # exclude sub-dollar amounts
+    benford_chi_sq_threshold: float = 15.507  # df=8, alpha=0.05 (legacy fallback; conformity now drives severity)
 
     # RT-11: Duplicate entries
     duplicate_enabled: bool = True
@@ -1398,18 +1399,9 @@ def test_cutoff_risk(
 # TIER 3 — ADVANCED TESTS
 # =============================================================================
 
-# Expected Benford's Law first digit distribution
-BENFORD_EXPECTED = {
-    1: 0.301,
-    2: 0.176,
-    3: 0.125,
-    4: 0.097,
-    5: 0.079,
-    6: 0.067,
-    7: 0.058,
-    8: 0.051,
-    9: 0.046,
-}
+# Expected Benford's Law first digit distribution — re-exported from
+# shared.benford (Sprint 641) for any direct importers.
+from shared.benford import analyze_benford, get_first_digit  # noqa: E402
 
 
 def test_benford_law(
@@ -1418,11 +1410,28 @@ def test_benford_law(
 ) -> RevenueTestResult:
     """RT-10: Benford's Law on Revenue Transaction Leading Digits.
 
-    Chi-squared test against expected first-digit distribution.
+    Delegates statistical analysis to shared.benford.analyze_benford() so
+    revenue gets the same MAD + conformity tiers (Nigrini 2012) as JE and
+    payroll. Chi-squared threshold is retained as a legacy fallback for the
+    precheck-failure path.
     """
-    amounts = [abs(e.amount) for e in entries if abs(e.amount) >= 1]
+    amounts: list[float] = []
+    amount_entries: list[RevenueEntry] = []
+    for e in entries:
+        amt = float(abs(e.amount))
+        if amt >= config.benford_min_amount:
+            amounts.append(amt)
+            amount_entries.append(e)
 
-    if len(amounts) < config.benford_min_entries:
+    benford = analyze_benford(
+        amounts,
+        total_count=len(entries),
+        min_entries=config.benford_min_entries,
+        min_amount=config.benford_min_amount,
+        min_magnitude_range=config.benford_min_magnitude_range,
+    )
+
+    if not benford.passed_prechecks:
         return RevenueTestResult(
             test_name="Benford's Law Analysis",
             test_key="benford_law",
@@ -1431,71 +1440,66 @@ def test_benford_law(
             total_entries=len(entries),
             flag_rate=0.0,
             severity=Severity.LOW,
-            description=f"Requires at least {config.benford_min_entries} entries for Benford's Law analysis.",
+            description=benford.precheck_message or "Benford prechecks failed.",
             flagged_entries=[],
         )
 
-    # Extract first digits
-    digit_counts: Counter = Counter()
-    for amt in amounts:
-        first_digit = int(str(amt).lstrip("0.")[0]) if amt > 0 else 0
-        if 1 <= first_digit <= 9:
-            digit_counts[first_digit] += 1
+    # Build entry-to-digit map for flagging
+    entry_by_digit: dict[int, list[RevenueEntry]] = {d: [] for d in range(1, 10)}
+    for amt, entry in zip(amounts, amount_entries):
+        digit = get_first_digit(amt)
+        if digit and 1 <= digit <= 9:
+            entry_by_digit[digit].append(entry)
 
-    n = sum(digit_counts.values())
-    if n == 0:
-        return RevenueTestResult(
-            test_name="Benford's Law Analysis",
-            test_key="benford_law",
-            test_tier=TestTier.ADVANCED,
-            entries_flagged=0,
-            total_entries=len(entries),
-            flag_rate=0.0,
-            severity=Severity.LOW,
-            description="No valid first digits extracted.",
-            flagged_entries=[],
-        )
-
-    # Chi-squared statistic
-    chi_sq = 0.0
-    digit_details: dict[str, dict] = {}
-    for digit in range(1, 10):
-        observed = digit_counts.get(digit, 0)
-        expected = BENFORD_EXPECTED[digit] * n
-        if expected > 0:
-            chi_sq += (observed - expected) ** 2 / expected
-        digit_details[str(digit)] = {
-            "observed": observed,
-            "expected": round(expected, 1),
-            "observed_pct": round(observed / n, 4) if n > 0 else 0,
-            "expected_pct": BENFORD_EXPECTED[digit],
+    conformity = benford.conformity_level
+    digit_details: dict[str, dict] = {
+        str(d): {
+            "observed": benford.actual_counts.get(d, 0),
+            "expected": round(benford.expected_distribution[d] * max(sum(benford.actual_counts.values()), 1), 1),
+            "observed_pct": round(benford.actual_distribution.get(d, 0.0), 4),
+            "expected_pct": round(benford.expected_distribution[d], 4),
         }
+        for d in range(1, 10)
+    }
 
     flagged: list[FlaggedRevenue] = []
-    if chi_sq > config.benford_chi_sq_threshold:
-        severity = Severity.HIGH if chi_sq > config.benford_chi_sq_threshold * 2 else Severity.MEDIUM
+    if conformity in ("marginally_acceptable", "nonconforming"):
+        for digit in benford.most_deviated_digits:
+            dev_pct = benford.deviation_by_digit[digit]
+            if dev_pct <= 0:
+                continue
+            for e in entry_by_digit[digit]:
+                flagged.append(
+                    FlaggedRevenue(
+                        entry=e,
+                        test_name="Benford's Law Analysis",
+                        test_key="benford_law",
+                        test_tier=TestTier.ADVANCED,
+                        severity=Severity.MEDIUM if conformity == "nonconforming" else Severity.LOW,
+                        issue=(
+                            f"First digit {digit} overrepresented "
+                            f"({benford.actual_distribution[digit]:.1%} vs expected "
+                            f"{benford.expected_distribution[digit]:.1%})"
+                        ),
+                        confidence=min(abs(dev_pct) / 0.05, 1.0),
+                        details={
+                            "first_digit": digit,
+                            "actual_pct": round(benford.actual_distribution[digit], 4),
+                            "expected_pct": round(benford.expected_distribution[digit], 4),
+                            "deviation": round(dev_pct, 4),
+                            "chi_squared": round(benford.chi_squared, 2),
+                            "sample_size": sum(benford.actual_counts.values()),
+                            "digit_analysis": digit_details,
+                        },
+                    )
+                )
 
-        flagged.append(
-            FlaggedRevenue(
-                entry=RevenueEntry(
-                    amount=Decimal(0),
-                    account_name="[Benford's Law Analysis]",
-                    row_number=0,
-                ),
-                test_name="Benford's Law Analysis",
-                test_key="benford_law",
-                test_tier=TestTier.ADVANCED,
-                severity=severity,
-                issue=f"Revenue data deviates from Benford's Law (chi-squared: {chi_sq:.2f}, threshold: {config.benford_chi_sq_threshold:.2f})",
-                confidence=min(0.70 + (chi_sq / config.benford_chi_sq_threshold - 1) * 0.1, 0.95),
-                details={
-                    "chi_squared": round(chi_sq, 2),
-                    "threshold": config.benford_chi_sq_threshold,
-                    "sample_size": n,
-                    "digit_analysis": digit_details,
-                },
-            )
-        )
+    if conformity == "nonconforming":
+        overall_severity = Severity.HIGH
+    elif conformity == "marginally_acceptable":
+        overall_severity = Severity.MEDIUM
+    else:
+        overall_severity = Severity.LOW
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return RevenueTestResult(
@@ -1505,8 +1509,10 @@ def test_benford_law(
         entries_flagged=len(flagged),
         total_entries=len(entries),
         flag_rate=flag_rate,
-        severity=Severity.MEDIUM,
-        description="Tests revenue transaction leading digits against Benford's Law expected distribution.",
+        severity=overall_severity,
+        description=(
+            f"First-digit distribution analysis (MAD={benford.mad:.4f}, {conformity}, χ²={benford.chi_squared:.2f})."
+        ),
         flagged_entries=flagged,
     )
 

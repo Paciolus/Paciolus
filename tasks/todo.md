@@ -65,6 +65,7 @@
 > Sprints 626–630 archived to `tasks/archive/sprints-626-630-details.md`.
 > Sprints 631–635 archived to `tasks/archive/sprints-631-635-details.md`.
 > Sprints 636–640 archived to `tasks/archive/sprints-636-640-details.md`.
+> Sprints 641–645 archived to `tasks/archive/sprints-641-645-details.md`.
 
 > **Multi-agent review 2026-04-14 — Sprints 600–664 seeded from 8 parallel agent reviews (Critic, Designer, Executor, Guardian, Scout, Accounting Auditor, Project Auditor, Future-State Consultant). Each sprint cites its originating agent. Ordered by severity, not discovery order.**
 
@@ -89,62 +90,7 @@
 
 
 
-### Sprint 641: Revenue Benford MAD/Conformity Parity
-**Status:** PENDING
-**Source:** Future-State Consultant — inconsistent detection depth
-**File:** `backend/shared/benford.py:7` (comment), `backend/revenue_testing_engine.py`
-**Problem:** Revenue engine explicitly excluded from shared Benford module ("NOT used by revenue_testing_engine.py — chi-squared only, no MAD/conformity"). Revenue gets a weaker fraud test than JE or Payroll.
-**Changes:**
-- [ ] Migrate `revenue_testing_engine.py` Benford to `shared.benford.analyze_benford()`
-- [ ] Remove the carve-out comment
-- [ ] Update revenue testing snapshot
-
----
-
-### Sprint 642: Ghost Employee HR-Master Cross-File Input
-**Status:** PENDING
-**Source:** Future-State Consultant — partial catalog feature #20
-**File:** `backend/payroll_testing_engine.py:1339-1418`
-**Problem:** PR-T9 operates entirely within the payroll file. Cannot identify employees on payroll who are absent from HR master — the most forensically significant ghost employee indicator.
-**Changes:**
-- [ ] Add optional `hr_master_rows` input to `run_payroll_testing()`
-- [ ] When provided, compare payroll employee IDs to HR active list
-- [ ] Flag payroll entries with no HR record, or payroll after termination date
-- [ ] Address-match-to-executive heuristic
-
----
-
-### Sprint 643: Duplicate Payment Recovery-Value Summary
-**Status:** PENDING
-**Source:** Future-State Consultant — partial catalog feature #3
-**File:** `backend/ap_testing_engine.py:671, 1014`
-**Problem:** Exact and fuzzy duplicate detection implemented. Missing: estimated recovery value total, duplicate rate % by vendor, time-trend of elevated activity.
-**Changes:**
-- [ ] Aggregate duplicate candidates into total recovery value
-- [ ] Vendor-level duplicate rate summary
-- [ ] Time-trend chart data in memo output
-
----
-
-### Sprint 644: doc_consistency_guard.py Test Coverage
-**Status:** PENDING
-**Source:** Project Auditor + Coverage Sentinel — first real finding from Sprint 599
-**File:** `backend/guards/doc_consistency_guard.py` (0% coverage)
-**Problem:** Guard runs in CI consistency check but has zero test coverage. Surfaced as top uncovered file by the new deterministic coverage sentinel.
-**Changes:**
-- [ ] New `backend/tests/test_doc_consistency_guard.py` with smoke coverage
-- [ ] Fixtures exercising each guard rule
-- [ ] Coverage sentinel green on next run
-
----
-
-### Sprint 645: Commit-Msg Hook Probe Verification
-**Status:** PENDING
-**Source:** Project Auditor — residual from Audit 35 (SHA backfill + 596–599 archival already complete)
-**File:** `frontend/.husky/commit-msg`
-**Problem:** Both archival gate and todo-staged gate should pass cleanly on the next `Sprint N:` commit. No standalone probe has verified the hook post-cleanup.
-**Changes:**
-- [ ] Confirm commit-msg hook passes on the next real Sprint commit (fold into that sprint's close verification)
+<!-- Sprints 641–645 archived to tasks/archive/sprints-641-645-details.md -->
 
 ---
 

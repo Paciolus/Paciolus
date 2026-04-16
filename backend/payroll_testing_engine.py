@@ -487,6 +487,170 @@ class PayrollEntry:
 
 
 @dataclass
+class HRMasterRecord:
+    """Single HR-master record — Sprint 642.
+
+    Parsed from an optional second file/sheet uploaded alongside the payroll
+    register. Keyed by `employee_id` (preferred) or `employee_name` fallback.
+    """
+
+    employee_id: str = ""
+    employee_name: str = ""
+    status: str = ""  # 'active', 'terminated', 'inactive', 'on leave', ...
+    termination_date: Optional[date] = None
+    address: str = ""
+    is_executive: bool = False
+
+    @property
+    def is_active(self) -> bool:
+        status = self.status.strip().lower()
+        if status in {"terminated", "inactive", "separated"}:
+            return False
+        if self.termination_date is not None:
+            return False
+        return True
+
+
+# HR master column patterns — same detection style as payroll columns.
+HR_MASTER_ID_PATTERNS = [
+    (r"^employee\s*id$", 1.0, True),
+    (r"^emp\s*id$", 0.95, True),
+    (r"^emp\s*no$", 0.90, True),
+    (r"^employee\s*number$", 0.90, True),
+    (r"^personnel\s*id$", 0.90, True),
+    (r"employee.*id", 0.70, False),
+    (r"emp.*id", 0.60, False),
+    (r"\bid\b", 0.40, False),
+]
+
+HR_MASTER_NAME_PATTERNS = [
+    (r"^employee\s*name$", 1.0, True),
+    (r"^full\s*name$", 0.90, True),
+    (r"^name$", 0.80, True),
+    (r"employee.*name", 0.70, False),
+    (r"\bname\b", 0.50, False),
+]
+
+HR_MASTER_STATUS_PATTERNS = [
+    (r"^employment\s*status$", 1.0, True),
+    (r"^status$", 0.85, True),
+    (r"^active$", 0.80, True),
+    (r"status", 0.60, False),
+]
+
+HR_MASTER_TERM_PATTERNS = [
+    (r"^termination\s*date$", 1.0, True),
+    (r"^term\s*date$", 0.95, True),
+    (r"^separation\s*date$", 0.90, True),
+    (r"^end\s*date$", 0.80, True),
+    (r"term.*date", 0.70, False),
+]
+
+HR_MASTER_ADDRESS_PATTERNS = [
+    (r"^address$", 1.0, True),
+    (r"^home\s*address$", 0.95, True),
+    (r"address", 0.60, False),
+]
+
+HR_MASTER_ROLE_PATTERNS = [
+    (r"^role$", 0.90, True),
+    (r"^title$", 0.90, True),
+    (r"^job\s*title$", 0.95, True),
+    (r"^position$", 0.80, True),
+    (r"\bofficer\b", 0.60, False),
+]
+
+
+# Executive-like titles (case-insensitive substring match).
+HR_EXECUTIVE_MARKERS = (
+    "ceo",
+    "cfo",
+    "coo",
+    "cto",
+    "cio",
+    "chief ",
+    "president",
+    "vice president",
+    " vp ",
+    "executive",
+    "director",
+    "partner",
+    "owner",
+    "officer",
+)
+
+
+def _parse_hr_status(value: str) -> str:
+    v = (value or "").strip().lower()
+    if v in {"a", "active", "y", "yes", "true"}:
+        return "active"
+    if v in {"t", "terminated", "term", "inactive", "separated", "ex-employee"}:
+        return "terminated"
+    return v
+
+
+def parse_hr_master_rows(rows: list[dict]) -> dict[str, HRMasterRecord]:
+    """Build a lookup of HR-master records keyed by normalised employee id
+    (or name fallback). Sprint 642.
+
+    Column detection uses the same patterns as the payroll columns — callers
+    may pass a CSV/Excel export in any common layout.
+    """
+    if not rows:
+        return {}
+
+    headers = list(rows[0].keys()) if rows else []
+    if not headers:
+        return {}
+
+    fields = [
+        ColumnFieldConfig("id", HR_MASTER_ID_PATTERNS, priority=100),
+        ColumnFieldConfig("name", HR_MASTER_NAME_PATTERNS, priority=90),
+        ColumnFieldConfig("status", HR_MASTER_STATUS_PATTERNS, priority=80),
+        ColumnFieldConfig("term_date", HR_MASTER_TERM_PATTERNS, priority=70),
+        ColumnFieldConfig("address", HR_MASTER_ADDRESS_PATTERNS, priority=60),
+        ColumnFieldConfig("role", HR_MASTER_ROLE_PATTERNS, priority=50),
+    ]
+    detected = detect_columns(headers, fields)
+
+    def _col(field_key: str) -> Optional[str]:
+        assignment = detected.assignments.get(field_key)
+        return assignment[0] if assignment else None
+
+    id_col = _col("id")
+    name_col = _col("name")
+    status_col = _col("status")
+    term_col = _col("term_date")
+    addr_col = _col("address")
+    role_col = _col("role")
+
+    lookup: dict[str, HRMasterRecord] = {}
+    for row in rows:
+        emp_id = safe_str(row.get(id_col, "")) if id_col else ""
+        emp_name = safe_str(row.get(name_col, "")) if name_col else ""
+        key = (emp_id or emp_name).strip().lower()
+        if not key:
+            continue
+
+        status_val = _parse_hr_status(safe_str(row.get(status_col, ""))) if status_col else ""
+        term_date = parse_date(safe_str(row.get(term_col, ""))) if term_col else None
+        address = safe_str(row.get(addr_col, "")) if addr_col else ""
+        role = safe_str(row.get(role_col, "")) if role_col else ""
+        is_exec = any(marker in role.lower() for marker in HR_EXECUTIVE_MARKERS) if role else False
+
+        lookup[key] = HRMasterRecord(
+            employee_id=emp_id,
+            employee_name=emp_name,
+            status=status_val,
+            termination_date=term_date,
+            address=address,
+            is_executive=is_exec,
+        )
+
+    return lookup
+
+
+@dataclass
 class FlaggedEmployee:
     """A payroll entry flagged by a test."""
 
@@ -1340,13 +1504,20 @@ def _test_ghost_employee_indicators(
     entries: list[PayrollEntry],
     config: PayrollTestingConfig,
     detection: PayrollColumnDetectionResult,
+    hr_master: Optional[dict[str, HRMasterRecord]] = None,
 ) -> PayrollTestResult:
     """PR-T9: Ghost Employee Indicators — flag employees with multiple fraud indicators.
 
-    Indicators:
+    Indicators (in-file):
     1. No department assignment (if department column exists)
     2. Pay entries only in first/last month of period (boundary-only employees)
     3. Single pay entry (one-time payroll fraud pattern)
+
+    Indicators (cross-file against HR master, Sprint 642 — only when
+    ``hr_master`` lookup is supplied):
+    4. Payroll employee absent from HR master (ghost)
+    5. Pay entries after termination date recorded in HR master
+    6. Employee address matches an executive in HR master
     """
     flagged: list[FlaggedEmployee] = []
 
@@ -1360,6 +1531,14 @@ def _test_ghost_employee_indicators(
         )
 
     has_dept = detection.department_column is not None
+    has_address = detection.address_column is not None
+    hr_enabled = hr_master is not None  # explicit empty dict still enables the cross-file check
+
+    executive_addresses: set[str] = set()
+    if hr_enabled:
+        for rec in hr_master.values():
+            if rec.is_executive and rec.address.strip():
+                executive_addresses.add(rec.address.strip().lower())
 
     # Group by employee identifier
     emp_groups: dict[str, list[PayrollEntry]] = {}
@@ -1405,6 +1584,23 @@ def _test_ghost_employee_indicators(
             entry_months = set((e.pay_date.year, e.pay_date.month) for e in dated_entries if e.pay_date)
             if entry_months <= {first_month, last_month}:
                 indicators.append("Pay entries only in first/last month of period")
+
+        # Indicators 4–6: HR master cross-file (Sprint 642)
+        if hr_enabled:
+            hr_rec = hr_master.get(emp_key)
+            if hr_rec is None:
+                indicators.append("Absent from HR master (no matching employee record)")
+            else:
+                if hr_rec.termination_date is not None:
+                    post_term = [e for e in dated_entries if e.pay_date and e.pay_date > hr_rec.termination_date]
+                    if post_term:
+                        indicators.append(
+                            f"Pay entries after HR termination date ({hr_rec.termination_date.isoformat()})"
+                        )
+                if has_address and executive_addresses:
+                    emp_addrs = {e.address.strip().lower() for e in group if e.address.strip()}
+                    if emp_addrs & executive_addresses and not hr_rec.is_executive:
+                        indicators.append("Address matches an executive in HR master")
 
         if len(indicators) < config.ghost_min_indicators:
             continue
@@ -1652,8 +1848,13 @@ def run_payroll_test_battery(
     entries: list[PayrollEntry],
     config: PayrollTestingConfig,
     detection: PayrollColumnDetectionResult,
+    hr_master: Optional[dict[str, HRMasterRecord]] = None,
 ) -> list[PayrollTestResult]:
-    """Run all payroll tests in sequence."""
+    """Run all payroll tests in sequence.
+
+    ``hr_master``: optional HR-master lookup (Sprint 642) — enables
+    cross-file ghost indicators in PR-T9 when supplied.
+    """
     results: list[PayrollTestResult] = []
 
     # Tier 1 — Structural
@@ -1675,7 +1876,7 @@ def run_payroll_test_battery(
     results.append(_test_benford_gross_pay(entries, config))
 
     # Tier 3 — Fraud Indicators
-    results.append(_test_ghost_employee_indicators(entries, config, detection))
+    results.append(_test_ghost_employee_indicators(entries, config, detection, hr_master))
 
     # PR-T10: only if bank_account or address column exists
     if detection.has_bank_accounts or detection.has_addresses:
@@ -1747,9 +1948,15 @@ def calculate_payroll_composite_score(
 class PayrollTestingEngine(AuditEngineBase):
     """Payroll testing engine — extends AuditEngineBase."""
 
-    def __init__(self, config: Optional[PayrollTestingConfig] = None, filename: str = ""):
+    def __init__(
+        self,
+        config: Optional[PayrollTestingConfig] = None,
+        filename: str = "",
+        hr_master: Optional[dict[str, HRMasterRecord]] = None,
+    ):
         super().__init__(config or PayrollTestingConfig())
         self.filename = filename
+        self.hr_master = hr_master
 
     def detect_columns(self, column_names: list[str]) -> Any:
         return detect_payroll_columns(column_names)
@@ -1875,7 +2082,7 @@ class PayrollTestingEngine(AuditEngineBase):
         }
 
     def run_tests(self, entries: list) -> Any:
-        return run_payroll_test_battery(entries, self.config, self.detection)
+        return run_payroll_test_battery(entries, self.config, self.detection, self.hr_master)
 
     def compute_score(self, test_results: list, entry_count: int) -> Any:
         return calculate_payroll_composite_score(test_results, entry_count)
@@ -1915,6 +2122,7 @@ def run_payroll_testing(
     config: Optional[PayrollTestingConfig] = None,
     column_mapping: Optional[dict[str, str]] = None,
     filename: str = "",
+    hr_master_rows: Optional[list[dict]] = None,
 ) -> PayrollTestingResult:
     """Run complete payroll testing pipeline.
 
@@ -1924,10 +2132,15 @@ def run_payroll_testing(
         config: Optional custom configuration
         column_mapping: Optional manual column mapping override
         filename: Source filename for reporting
+        hr_master_rows: Optional list of dicts from an HR-master extract.
+            When supplied, PR-T9 runs additional cross-file ghost-employee
+            indicators (absent from HR, post-termination pay,
+            executive-address match). Sprint 642.
 
     Returns:
         PayrollTestingResult with composite score, test results, data quality
     """
-    engine = PayrollTestingEngine(config, filename)
+    hr_master = parse_hr_master_rows(hr_master_rows) if hr_master_rows else None
+    engine = PayrollTestingEngine(config, filename, hr_master=hr_master)
     result: PayrollTestingResult = engine.run_pipeline(rows, headers, column_mapping)
     return result

@@ -13,8 +13,8 @@ catches round-number manipulation invisible to first-digit tests.
 First-two-digit gives finer-grained detection at the cost of needing a much
 larger sample.
 
-NOT used by revenue_testing_engine.py (structurally different:
-chi-squared only, no MAD/conformity, different precision).
+Sprint 641: revenue_testing_engine.py now delegates here for MAD/conformity
+parity with JE and payroll (previously chi-squared only).
 
 References:
 - Nigrini, M.J. (2012). Benford's Law: Applications for Forensic

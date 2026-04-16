@@ -17,9 +17,10 @@ from datetime import date
 import pytest
 
 from payroll_testing_engine import (
+    # Data models
+    HRMasterRecord,
     # Column detection
     PayrollColumnDetectionResult,
-    # Data models
     PayrollEntry,
     # Config
     PayrollTestingConfig,
@@ -34,6 +35,8 @@ from payroll_testing_engine import (
     _test_round_salary_amounts,
     # Scoring
     calculate_payroll_composite_score,
+    parse_hr_master_rows,
+    run_payroll_testing,
 )
 
 # =============================================================================
@@ -192,6 +195,141 @@ class TestGhostEmployeeIndicators:
         config = PayrollTestingConfig()
         result = _test_ghost_employee_indicators(entries, config, detection_no_dept)
         assert result.test_key == "PR-T9"
+
+
+# =============================================================================
+# TestHRMasterCrossFile (PR-T9 — Sprint 642)
+# =============================================================================
+
+
+class TestHRMasterCrossFile:
+    """PR-T9 extension: cross-file ghost-employee indicators against an HR master."""
+
+    @pytest.fixture
+    def detection(self):
+        return PayrollColumnDetectionResult(
+            employee_id_column="emp_id",
+            employee_name_column="name",
+            department_column="dept",
+            pay_date_column="date",
+            gross_pay_column="pay",
+            address_column="addr",
+            has_addresses=True,
+        )
+
+    def _entry(self, emp_id, dept, month, address=""):
+        return PayrollEntry(
+            employee_id=emp_id,
+            employee_name=emp_id,
+            department=dept,
+            pay_date=date(2025, month, 15),
+            gross_pay=5000,
+            address=address,
+            _row_index=hash((emp_id, month)) & 0xFFFF,
+        )
+
+    def test_absent_from_hr_master_flags(self, detection):
+        entries = [
+            self._entry("E001", "Sales", 2),
+            self._entry("E001", "Sales", 3),
+        ]
+        hr_master = {}  # empty master — E001 is a ghost
+        config = PayrollTestingConfig(ghost_min_indicators=1)
+        result = _test_ghost_employee_indicators(entries, config, detection, hr_master)
+        assert result.entries_flagged == 2
+        assert any("Absent from HR master" in f.issue for f in result.flagged_entries)
+
+    def test_pay_after_hr_termination_flags(self, detection):
+        entries = [
+            self._entry("E002", "Eng", 3),
+            self._entry("E002", "Eng", 6),  # after termination
+        ]
+        hr_master = {
+            "e002": HRMasterRecord(
+                employee_id="E002",
+                employee_name="E002",
+                status="terminated",
+                termination_date=date(2025, 4, 30),
+            ),
+        }
+        config = PayrollTestingConfig(ghost_min_indicators=1)
+        result = _test_ghost_employee_indicators(entries, config, detection, hr_master)
+        assert result.entries_flagged >= 1
+        assert any("after HR termination" in f.issue for f in result.flagged_entries)
+
+    def test_address_match_to_executive_flags(self, detection):
+        exec_addr = "123 Embezzle Ln"
+        entries = [
+            self._entry("E010", "Ops", 2, address=exec_addr),
+            self._entry("E010", "Ops", 3, address=exec_addr),
+        ]
+        hr_master = {
+            "e010": HRMasterRecord(
+                employee_id="E010",
+                employee_name="E010",
+                status="active",
+                address=exec_addr,
+                is_executive=False,
+            ),
+            "ceo": HRMasterRecord(
+                employee_id="CEO",
+                employee_name="CEO",
+                status="active",
+                address=exec_addr,
+                is_executive=True,
+            ),
+        }
+        config = PayrollTestingConfig(ghost_min_indicators=1)
+        result = _test_ghost_employee_indicators(entries, config, detection, hr_master)
+        assert any("Address matches an executive" in f.issue for f in result.flagged_entries)
+
+    def test_no_hr_master_preserves_legacy_behaviour(self, detection):
+        # Without hr_master, single-entry ghost indicator still fires.
+        entries = [self._entry("E999", "", 3)]
+        config = PayrollTestingConfig()
+        baseline = _test_ghost_employee_indicators(entries, config, detection)
+        with_empty_hr = _test_ghost_employee_indicators(entries, config, detection, None)
+        assert baseline.entries_flagged == with_empty_hr.entries_flagged
+
+    def test_parse_hr_master_rows_detects_columns(self):
+        rows = [
+            {
+                "Employee ID": "E001",
+                "Name": "Alice",
+                "Status": "Active",
+                "Title": "CFO",
+                "Home Address": "1 Main",
+                "Termination Date": "",
+            },
+            {
+                "Employee ID": "E002",
+                "Name": "Bob",
+                "Status": "Terminated",
+                "Title": "Analyst",
+                "Home Address": "",
+                "Termination Date": "2025-03-15",
+            },
+        ]
+        lookup = parse_hr_master_rows(rows)
+        assert "e001" in lookup
+        assert lookup["e001"].is_executive is True
+        assert lookup["e002"].status == "terminated"
+        assert lookup["e002"].termination_date == date(2025, 3, 15)
+
+    def test_run_payroll_testing_accepts_hr_master_rows(self):
+        headers = ["emp_id", "name", "dept", "date", "pay"]
+        rows = [
+            {"emp_id": "E001", "name": "Alice", "dept": "Sales", "date": "2025-03-15", "pay": "5000"},
+            {"emp_id": "E001", "name": "Alice", "dept": "Sales", "date": "2025-04-15", "pay": "5000"},
+        ]
+        hr_rows = [
+            {"Employee ID": "E999", "Name": "Ghost", "Status": "Active"},
+        ]
+        # E001 is on payroll but missing from HR master — should trigger.
+        out = run_payroll_testing(headers, rows, hr_master_rows=hr_rows)
+        ghost_result = next(r for r in out.test_results if r.test_key == "PR-T9")
+        assert ghost_result.entries_flagged >= 1
+        assert any("Absent from HR master" in f.issue for f in ghost_result.flagged_entries)
 
 
 # =============================================================================
