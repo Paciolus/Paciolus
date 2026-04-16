@@ -107,20 +107,22 @@
 - [x] Frontend page `/tools/depreciation` with form, summary cards, three tables
 - [x] Catalog entry under Advanced
 - [ ] PDF and XLSX export deferred to a follow-up sprint (matches loan-amortization deferral pattern)
-**Review:** Decimal-precision math with HALF_UP cents quantization. Standard MACRS 5-year HY 200%DB returns the published [20.00, 32.00, 19.20, 11.52, 11.52, 5.76]% schedule on $10k = $2k/$3.2k/$1.92k/$1.152k/$1.152k/$576. Final-year clamp guarantees ending book value matches salvage exactly under all book methods. Book/tax timing differences net to zero at maturity (verified). 21/21 engine tests pass; backend loads 218 routes (was 216); `npm run build` succeeds with `/tools/depreciation` listed.
+**Review:** Decimal-precision math with HALF_UP cents quantization. Standard MACRS 5-year HY 200%DB returns the published [20.00, 32.00, 19.20, 11.52, 11.52, 5.76]% schedule on $10k = $2k/$3.2k/$1.92k/$1.152k/$1.152k/$576. Final-year clamp guarantees ending book value matches salvage exactly under all book methods. Book/tax timing differences net to zero at maturity (verified). 21/21 engine tests pass; backend loads 218 routes (was 216); `npm run build` succeeds with `/tools/depreciation` listed. Commit `98b6d87`.
 
 ---
 
 ### Sprint 627: Account-Level Risk Signal Heatmap
-**Status:** PENDING
+**Status:** COMPLETE
 **Source:** Accounting Auditor — highest-audit-workflow-value capability gap
-**File:** new aggregator engine
+**File:** `backend/account_risk_heatmap_engine.py` (new), `backend/routes/account_risk_heatmap.py` (new), `backend/routes/__init__.py`, `backend/tests/test_account_risk_heatmap_engine.py` (new, 13 tests)
 **Problem:** Composite risk scoring operates at engagement level. No output collects all signals (anomaly flags, classification issues, cutoff risk, lease indicator, accrual gaps) against a single account row for triage density scanning. Auditor opens five separate views instead of one.
 **Changes:**
-- [ ] New `backend/account_risk_heatmap_engine.py` aggregating outputs from `audit_engine`, `classification_validator`, `cutoff_risk_engine`, `accrual_completeness_engine`, `composite_risk_engine`
-- [ ] Per-account: signal count, materiality-weighted signal score, priority tier (Top 10% High, next 20% Moderate, rest Low)
-- [ ] JSON + CSV export, integration into Diagnostic Canvas
-- [ ] In-memory aggregation only (zero-storage)
+- [x] New `backend/account_risk_heatmap_engine.py` aggregating outputs via adapter functions for `audit_engine`, `classification_validator`, `cutoff_risk_engine`, `accrual_completeness_engine`, `composite_risk_engine`
+- [x] Per-account: signal count, materiality-weighted signal score (sev × log10(materiality+10) × confidence), source list, severity counts, priority tier (Top 10% High, next 20% Moderate, rest Low)
+- [x] JSON + CSV export endpoints (`/audit/account-risk-heatmap` + `/export.csv`)
+- [x] In-memory aggregation only (zero-storage)
+- [ ] Diagnostic Canvas frontend integration deferred to a follow-up sprint
+**Review:** Pure aggregation design — adapters translate concrete engine outputs into a generic `RiskSignal` interface, so the engine is testable independently of upstream changes. Composite risk adapter excludes `low` combined-risk assessments to avoid noise. Top 10%/next 20% bucketing uses ceiling on small lists so even a 3-account input gets at least one High. 13/13 engine tests pass; backend loads 220 routes (was 218).
 
 ---
 

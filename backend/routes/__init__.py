@@ -2,6 +2,7 @@
 Paciolus API — Route Registration
 """
 
+from routes.account_risk_heatmap import router as account_risk_heatmap_router
 from routes.activity import router as activity_router
 from routes.adjustments import router as adjustments_router
 from routes.admin_dashboard import router as admin_dashboard_router
@@ -82,6 +83,7 @@ all_routers = [
     branding_router,
     bulk_upload_router,
     composite_risk_router,
+    account_risk_heatmap_router,
     internal_metrics_router,
     internal_admin_router,
 ]
