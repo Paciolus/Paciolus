@@ -4,6 +4,7 @@ import { useState, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { AuditResult } from '@/types/diagnostic'
 import { apiDownload, downloadBlob } from '@/utils/apiClient'
+import { buildExportFilename } from '@/utils/exportFilenames'
 import { RESOLVE_ENTER } from '@/utils/motionTokens'
 
 interface DownloadReportButtonProps {
@@ -11,6 +12,10 @@ interface DownloadReportButtonProps {
   filename: string
   disabled?: boolean
   token?: string | null
+  /** Sprint 649: tool identifier used in the dynamic download filename. */
+  toolName?: string
+  /** Sprint 649: optional client name appended to the filename. */
+  clientName?: string | null
 }
 
 
@@ -32,6 +37,8 @@ export function DownloadReportButton({
   filename,
   disabled = false,
   token,
+  toolName = 'TB_Diagnostic',
+  clientName = null,
 }: DownloadReportButtonProps) {
   const [isGenerating, setIsGenerating] = useState(false)
   const [isComplete, setIsComplete] = useState(false)
@@ -70,7 +77,12 @@ export function DownloadReportButton({
         throw new Error(downloadError || 'Failed to generate report')
       }
 
-      downloadBlob(blob, downloadFilename || 'Paciolus_Report.pdf')
+      const fallbackName = buildExportFilename({
+        tool: toolName,
+        client: clientName,
+        extension: 'pdf',
+      })
+      downloadBlob(blob, downloadFilename || fallbackName)
       markComplete()
 
     } catch (err) {
@@ -236,9 +248,14 @@ export function DownloadReportButton({
 
       {/* Subtle hint */}
       {!isGenerating && !error && (
-        <p className="text-content-tertiary text-xs font-sans">
-          Zero-Storage: Summary generated on-demand, never stored
-        </p>
+        <>
+          <p className="text-content-secondary text-xs font-sans">
+            PDF — full diagnostic memo
+          </p>
+          <p className="text-content-tertiary text-xs font-sans">
+            Zero-Storage: Summary generated on-demand, never stored
+          </p>
+        </>
       )}
     </div>
   )

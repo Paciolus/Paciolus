@@ -66,6 +66,7 @@
 > Sprints 631–635 archived to `tasks/archive/sprints-631-635-details.md`.
 > Sprints 636–640 archived to `tasks/archive/sprints-636-640-details.md`.
 > Sprints 641–645 archived to `tasks/archive/sprints-641-645-details.md`.
+> Sprints 646–650 archived to `tasks/archive/sprints-646-650-details.md`.
 
 > **Multi-agent review 2026-04-14 — Sprints 600–664 seeded from 8 parallel agent reviews (Critic, Designer, Executor, Guardian, Scout, Accounting Auditor, Project Auditor, Future-State Consultant). Each sprint cites its originating agent. Ordered by severity, not discovery order.**
 
@@ -94,59 +95,7 @@
 
 ---
 
-### Sprint 646: PeriodFileDropZone Deferred Item Tracking
-**Status:** PENDING
-**Source:** Project Auditor — 3 consecutive audit mention
-**File:** `frontend/src/components/multiPeriod/PeriodFileDropZone.tsx:10`, `tasks/todo.md` Deferred Items table
-**Problem:** `// TODO: type as AuditResult after full migration` has appeared in three consecutive audits without being added to the Deferred Items table. Untracked deferrals are a tracking liability.
-**Changes:**
-- [ ] Add row to Deferred Items table: `| PeriodFileDropZone type migration | Full AuditResult typing deferred until multi-period migration completes | Sprint 596+ |`
-
----
-
-### Sprint 647: PeriodFileDropZone AuditResult Type Migration
-**Status:** PENDING
-**Source:** Executor — type-safety escape hatch
-**File:** `frontend/src/components/multiPeriod/PeriodFileDropZone.tsx:10`, `frontend/src/app/tools/multi-period/page.tsx:116-141`
-**Problem:** `result: Record<string, unknown> | null` forces `as unknown as AuditResult` casts in 6 places. Type-unsafe.
-**Changes:**
-- [ ] Change property type to `AuditResult | null`
-- [ ] Remove all 6 cast sites
-- [ ] Update consumers to use typed access
-
----
-
-### Sprint 648: useTrialBalanceUpload Error Response Typing
-**Status:** PENDING
-**Source:** Executor — error shape untyped
-**File:** `frontend/src/hooks/useTrialBalanceUpload.ts:247`
-**Problem:** `data as unknown as Record<string, string>` on the error path — typed as `TrialBalanceResponse` elsewhere, double-cast indicates untyped error response.
-**Changes:**
-- [ ] Add discriminated union for success vs error response
-- [ ] Replace the cast with a type guard
-- [ ] Apply pattern to other hooks with similar escape hatches
-
----
-
-### Sprint 649: Export Filename Context
-**Status:** PENDING
-**Source:** Scout — 10 identical `Paciolus_Report.pdf` downloads
-**File:** `frontend/src/components/export/DownloadReportButton.tsx:73`, `frontend/src/components/preflight/PreFlightSummary.tsx:186`, `frontend/src/components/trialBalance/AccrualCompletenessSection.tsx:138`
-**Problem:** Default filename is `Paciolus_Report.pdf`. A CPA running 10 engagements gets 10 identical filenames in their Downloads folder. Also: no adjacent micro-copy explaining what the export contains.
-**Changes:**
-- [ ] Dynamic filename: `Paciolus_<Tool>_<Client>_<YYYYMMDD>.pdf`
-- [ ] Micro-copy under each export button: "PDF — full diagnostic memo" / "CSV — raw findings"
-
----
-
-### Sprint 650: PricingComparison Duplicate Render Cleanup
-**Status:** PENDING
-**Source:** Designer — duplicated table markup
-**File:** `frontend/src/app/(marketing)/pricing/page.tsx:789-790`, `frontend/src/components/pricing/PricingComparison.tsx:50`
-**Problem:** Pricing page renders an inline table identical to the `PricingComparison` component, then has the component elsewhere. Two separate `min-w-[700px]` tables on the same page.
-**Changes:**
-- [ ] Delete inline duplicate at `pricing/page.tsx:789-790`, render `<PricingComparison />` in its place
-- [ ] Add CSS fade-edge scroll hint on overflow container
+<!-- Sprints 646–650 archived to tasks/archive/sprints-646-650-details.md -->
 
 ---
 

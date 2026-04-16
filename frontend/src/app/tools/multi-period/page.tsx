@@ -82,7 +82,7 @@ export default function MultiPeriodPage() {
         return
       }
 
-      setPeriod(prev => ({ ...prev, status: 'success', result: response.data as Record<string, unknown> }))
+      setPeriod(prev => ({ ...prev, status: 'success', result: response.data as AuditResult }))
     } catch {
       setPeriod(prev => ({ ...prev, status: 'error', error: 'Network error during audit' }))
     }
@@ -113,13 +113,13 @@ export default function MultiPeriodPage() {
   const handleCompare = useCallback(async () => {
     if (!prior.result || !current.result) return
     const success = await compareResults(
-      prior.result as unknown as AuditResult,
-      current.result as unknown as AuditResult,
+      prior.result,
+      current.result,
       priorLabel,
       currentLabel,
       materialityThreshold,
       token,
-      showBudget && budget.result ? budget.result as unknown as AuditResult : null,
+      showBudget && budget.result ? budget.result : null,
       budgetLabel,
     )
 
@@ -132,13 +132,13 @@ export default function MultiPeriodPage() {
   const handleExportCsv = useCallback(async () => {
     if (!prior.result || !current.result) return
     await exportCsv(
-      prior.result as unknown as AuditResult,
-      current.result as unknown as AuditResult,
+      prior.result,
+      current.result,
       priorLabel,
       currentLabel,
       materialityThreshold,
       token,
-      showBudget && budget.result ? budget.result as unknown as AuditResult : null,
+      showBudget && budget.result ? budget.result : null,
       budgetLabel,
     )
   }, [prior.result, current.result, budget.result, priorLabel, currentLabel, budgetLabel, materialityThreshold, token, showBudget, exportCsv])

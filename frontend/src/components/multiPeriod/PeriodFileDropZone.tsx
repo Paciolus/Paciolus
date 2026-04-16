@@ -1,13 +1,14 @@
 'use client'
 
 import { useState, useCallback } from 'react'
+import type { AuditResult } from '@/types/diagnostic'
 import type { UploadStatus } from '@/types/shared'
 import { ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fileFormats'
 
 export interface PeriodState {
   file: File | null
   status: UploadStatus
-  result: Record<string, unknown> | null  // TODO: type as AuditResult after full migration
+  result: AuditResult | null
   error: string | null
 }
 

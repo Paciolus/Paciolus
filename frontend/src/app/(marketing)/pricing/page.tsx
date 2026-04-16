@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
+import PricingComparison from '@/components/pricing/PricingComparison'
 import { trackEvent } from '@/utils/telemetry'
 
 /* ────────────────────────────────────────────────
@@ -437,33 +438,9 @@ const tiers: Tier[] = [
    Feature comparison table data
    ──────────────────────────────────────────────── */
 
-type CellValue = true | false | string
-
-interface ComparisonRow {
-  feature: string
-  free: CellValue
-  solo: CellValue
-  professional: CellValue
-  enterprise: CellValue
-}
-
-const comparisonRows: ComparisonRow[] = [
-  { feature: 'Monthly uploads', free: '10', solo: '100', professional: '500', enterprise: 'Unlimited' },
-  { feature: 'Diagnostic Tools', free: '2 (TB + Flux)', solo: 'All 12', professional: 'All 12', enterprise: 'All 12' },
-  { feature: 'Clients', free: '3', solo: 'Unlimited', professional: 'Unlimited', enterprise: 'Unlimited' },
-  { feature: 'Export Formats', free: false, solo: 'PDF, Excel & CSV', professional: 'All formats', enterprise: 'All formats' },
-  { feature: 'Diagnostic Workspace', free: false, solo: true, professional: true, enterprise: true },
-  { feature: 'Team Seats', free: '1', solo: '1', professional: '7 (up to 20)', enterprise: '20 (up to 100)' },
-  { feature: 'Export Sharing', free: false, solo: false, professional: true, enterprise: true },
-  { feature: 'Admin Dashboard', free: false, solo: false, professional: true, enterprise: true },
-  { feature: 'Activity Logs', free: false, solo: false, professional: true, enterprise: true },
-  { feature: 'Bulk Upload', free: false, solo: false, professional: false, enterprise: true },
-  { feature: 'Custom PDF Branding', free: false, solo: false, professional: false, enterprise: true },
-  { feature: 'Priority Support', free: false, solo: false, professional: true, enterprise: true },
-  { feature: 'Dedicated Account Manager', free: false, solo: false, professional: false, enterprise: true },
-  { feature: 'Support SLA', free: 'Community', solo: 'Email — next business day', professional: 'Email — 8 hr response', enterprise: 'Custom SLA' },
-  { feature: 'Free Trial', free: false, solo: '7 days', professional: '7 days', enterprise: '7 days' },
-]
+// Sprint 650: comparison table now lives in <PricingComparison /> — imported
+// from `@/components/pricing/PricingComparison`. The data source is
+// `@/domain/pricing.comparisonRows`.
 
 /* ────────────────────────────────────────────────
    FAQ data
@@ -558,24 +535,6 @@ const fadeUp = {
     transition: { duration: 0.5, ease: 'easeOut' as const },
   },
 } as const
-
-/* ────────────────────────────────────────────────
-   Cell renderer for comparison table
-   ──────────────────────────────────────────────── */
-
-function CellContent({ value }: { value: CellValue }) {
-  if (value === true) {
-    return (
-      <svg className="w-5 h-5 text-sage-400 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-label="Included">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-      </svg>
-    )
-  }
-  if (value === false) {
-    return <span className="text-oatmeal-600 font-sans text-sm">&mdash;</span>
-  }
-  return <span className="font-sans text-sm text-oatmeal-300">{value}</span>
-}
 
 /* ────────────────────────────────────────────────
    Price display helper
@@ -774,49 +733,10 @@ export default function PricingPage() {
         <div className="h-px bg-gradient-to-r from-transparent via-sage-500/40 to-transparent" />
       </div>
 
-      {/* -- Feature Comparison Table ---------- */}
+      {/* -- Feature Comparison Table (shared <PricingComparison />, Sprint 650) -- */}
       <section className="pb-20 px-6">
         <div className="max-w-5xl mx-auto">
-          <motion.div
-            variants={fadeUp}
-            initial="hidden"
-            animate="visible"
-          >
-            <h2 className="type-headline-sm text-sage-300 text-center mb-10">
-              Feature Comparison
-            </h2>
-
-            <div className="overflow-x-auto rounded-2xl border border-sage-500/20">
-              <table className="w-full text-left min-w-[700px]">
-                <caption className="sr-only">Feature comparison across Free, Solo, Professional, and Enterprise tiers</caption>
-                <thead>
-                  <tr className="border-b border-obsidian-500/30">
-                    <th scope="col" className="font-serif text-sm text-oatmeal-400 py-4 px-5 w-[20%]">Feature</th>
-                    <th scope="col" className="font-serif text-xs text-oatmeal-400 py-4 px-3 text-center w-[20%]">Free</th>
-                    <th scope="col" className="font-serif text-xs text-oatmeal-400 py-4 px-3 text-center w-[20%]">Solo</th>
-                    <th scope="col" className="font-serif text-xs text-sage-400 py-4 px-3 text-center w-[20%]">Professional</th>
-                    <th scope="col" className="font-serif text-xs text-oatmeal-400 py-4 px-3 text-center w-[20%]">Enterprise</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {comparisonRows.map((row, idx) => (
-                    <tr
-                      key={row.feature}
-                      className={`border-b border-obsidian-500/20 last:border-b-0 ${
-                        idx % 2 === 0 ? 'bg-obsidian-800/60' : 'bg-obsidian-800/30'
-                      }`}
-                    >
-                      <th scope="row" className="font-sans text-sm text-oatmeal-300 py-3 px-5 font-normal">{row.feature}</th>
-                      <td className="py-3 px-3 text-center"><CellContent value={row.free} /></td>
-                      <td className="py-3 px-3 text-center"><CellContent value={row.solo} /></td>
-                      <td className="py-3 px-3 text-center"><CellContent value={row.professional} /></td>
-                      <td className="py-3 px-3 text-center"><CellContent value={row.enterprise} /></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </motion.div>
+          <PricingComparison />
         </div>
       </section>
 

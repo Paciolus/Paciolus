@@ -10,7 +10,7 @@ import { render, screen, fireEvent } from '@/test-utils'
 
 const idlePeriod: PeriodState = { file: null, status: 'idle', result: null, error: null }
 const loadingPeriod: PeriodState = { file: new File([''], 'tb.csv'), status: 'loading', result: null, error: null }
-const successPeriod: PeriodState = { file: new File([''], 'tb-2024.csv'), status: 'success', result: {}, error: null }
+const successPeriod: PeriodState = { file: new File([''], 'tb-2024.csv'), status: 'success', result: null, error: null }
 const errorPeriod: PeriodState = { file: new File([''], 'bad.csv'), status: 'error', result: null, error: 'Invalid format' }
 const fileSelectedPeriod: PeriodState = { file: new File([''], 'ready.csv'), status: 'idle', result: null, error: null }
 

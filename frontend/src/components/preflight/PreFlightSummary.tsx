@@ -178,19 +178,24 @@ export function PreFlightSummary({ report, onProceed, onExportPDF, onExportCSV }
 
       {/* Action Buttons */}
       <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={onExportPDF}
-            className="px-3 py-1.5 text-xs font-sans font-medium text-content-secondary border border-theme-divider rounded-lg hover:bg-surface-card-secondary transition-colors"
-          >
-            Export PDF
-          </button>
-          <button
-            onClick={onExportCSV}
-            className="px-3 py-1.5 text-xs font-sans font-medium text-content-secondary border border-theme-divider rounded-lg hover:bg-surface-card-secondary transition-colors"
-          >
-            Export CSV
-          </button>
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onExportPDF}
+              className="px-3 py-1.5 text-xs font-sans font-medium text-content-secondary border border-theme-divider rounded-lg hover:bg-surface-card-secondary transition-colors"
+            >
+              Export PDF
+            </button>
+            <button
+              onClick={onExportCSV}
+              className="px-3 py-1.5 text-xs font-sans font-medium text-content-secondary border border-theme-divider rounded-lg hover:bg-surface-card-secondary transition-colors"
+            >
+              Export CSV
+            </button>
+          </div>
+          <p className="text-[11px] font-sans text-content-tertiary">
+            PDF — pre-flight summary memo &nbsp;•&nbsp; CSV — raw issue list
+          </p>
         </div>
         <button
           onClick={onProceed}
