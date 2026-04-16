@@ -18,6 +18,7 @@ from routes.clients import router as clients_router
 from routes.composite_risk import router as composite_risk_router
 from routes.contact import router as contact_router
 from routes.currency import router as currency_router
+from routes.depreciation import router as depreciation_router
 from routes.diagnostics import router as diagnostics_router
 from routes.engagements import router as engagements_router
 from routes.export import router as export_router
@@ -59,6 +60,7 @@ all_routers = [
     adjustments_router,
     je_testing_router,
     loan_amortization_router,
+    depreciation_router,
     ap_testing_router,
     bank_reconciliation_router,
     payroll_testing_router,

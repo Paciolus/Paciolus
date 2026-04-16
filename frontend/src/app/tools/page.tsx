@@ -54,6 +54,7 @@ const TOOLS: ToolDef[] = [
   { key: 'statistical_sampling', label: 'Statistical Sampling', href: '/tools/statistical-sampling', description: 'Design and evaluate audit samples using ISA 530 methodology — MUS, classical variables, and attribute sampling.', reference: 'ISA 530 Audit Sampling', category: 'Advanced' },
   { key: 'flux_analysis', label: 'Flux Analysis', href: '/flux', description: 'Account-level variance analysis comparing current and prior period balances with materiality-based flagging.', reference: 'ISA 520 Analytical Procedures', category: 'Advanced' },
   { key: 'loan_amortization', label: 'Loan Amortization', href: '/tools/loan-amortization', description: 'Generate period-by-period amortization schedules — standard, interest-only, and balloon loans with extra payments and book journal entry templates.', reference: 'Form input — no upload', category: 'Advanced' },
+  { key: 'depreciation', label: 'Depreciation Calculator', href: '/tools/depreciation', description: 'Generate book and MACRS tax depreciation schedules — straight-line, declining balance, SYD, units of production; book vs tax timing reconciliation with deferred tax bridge.', reference: 'IRS Pub 946 / IAS 16 / ASC 360', category: 'Advanced' },
 ]
 
 const CATEGORIES: Category[] = ['Core Analysis', 'Testing Suite', 'Advanced']

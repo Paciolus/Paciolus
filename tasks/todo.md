@@ -16,8 +16,8 @@
 > new features or architectural changes. Each entry is one line.
 > Format: `- [date] commit-sha: description (files touched)`
 
-- [2026-04-16] pending: backlog hygiene — Sprint 611 R2/S3 bucket added to ceo-actions Backlog Blockers; Sprint 672 placeholder for Loan Amortization XLSX/PDF export (Sprint 625 deferred work)
-- [2026-04-14] pending: hallucination audit hotfix — /auth/refresh handler 401→403 for X-Requested-With mismatch (aligns with CSRF middleware); added .claude/agents/LLM_HALLUCINATION_AUDIT_PROMPT.md
+- [2026-04-16] 22e16dc: backlog hygiene — Sprint 611 R2/S3 bucket added to ceo-actions Backlog Blockers; Sprint 672 placeholder for Loan Amortization XLSX/PDF export (Sprint 625 deferred work)
+- [2026-04-14] a32f566: hallucination audit hotfix — /auth/refresh handler 401→403 for X-Requested-With mismatch (aligns with CSRF middleware); added .claude/agents/LLM_HALLUCINATION_AUDIT_PROMPT.md
 - [2026-04-07] 73aaa51: dependency patch — uvicorn 0.44.0, python-multipart 0.0.24 (nightly report remediation)
 - [2026-04-06] 39791ec: secret domain separation — AUDIT_CHAIN_SECRET_KEY independent from JWT, backward-compat verification fallback, TLS evidence signing updated
 - [2026-04-04] 29f768e: dependency upgrades — 14 packages updated, 3 security-relevant (fastapi 0.135.3, SQLAlchemy 2.0.49, stripe 15.0.1), tzdata 2026.1, uvicorn 0.43.0, pillow 12.2.0, next watchlist patch
@@ -94,17 +94,20 @@
 
 
 ### Sprint 626: Depreciation Calculator (Book + MACRS)
-**Status:** PENDING
+**Status:** COMPLETE
 **Source:** Future-State Consultant — missing catalog feature #6 (Quick Win, Priority 8/3)
-**File:** new engine + route
+**File:** `backend/depreciation_engine.py` (new), `backend/routes/depreciation.py` (new), `backend/routes/__init__.py`, `backend/tests/test_depreciation_engine.py` (new, 21 tests), `frontend/src/app/tools/depreciation/page.tsx` (new), `frontend/src/app/tools/page.tsx`
 **Problem:** Existing `fixed_asset_testing_engine.py` reads `depreciation_method` to verify it — does NOT calculate schedules. No SL, DDB, SYD, or MACRS generator exists.
 **Changes:**
-- [ ] New engine `backend/depreciation_engine.py` — SL, declining balance, SYD, MACRS
-- [ ] MACRS tables hardcoded per IRS property class
-- [ ] Conventions: half-year, mid-quarter, mid-month
-- [ ] Book vs tax comparison + deferred tax impact
-- [ ] New route + PDF + Excel export
-- [ ] Frontend page
+- [x] New engine `backend/depreciation_engine.py` — SL, declining balance (with switch to SL), SYD, units of production, MACRS
+- [x] MACRS tables hardcoded from IRS Pub 946 (Table A-1 HY 200%/150% DB for classes 3, 5, 7, 10, 15, 20; Table A-2/3/4/5 mid-quarter for 5-year)
+- [x] Conventions: half-year, mid-quarter, mid-month (for real property)
+- [x] Book vs tax comparison + per-year deferred tax change + cumulative DTL/DTA bridge
+- [x] New route `/audit/depreciation` + CSV export `/audit/depreciation/export.csv`
+- [x] Frontend page `/tools/depreciation` with form, summary cards, three tables
+- [x] Catalog entry under Advanced
+- [ ] PDF and XLSX export deferred to a follow-up sprint (matches loan-amortization deferral pattern)
+**Review:** Decimal-precision math with HALF_UP cents quantization. Standard MACRS 5-year HY 200%DB returns the published [20.00, 32.00, 19.20, 11.52, 11.52, 5.76]% schedule on $10k = $2k/$3.2k/$1.92k/$1.152k/$1.152k/$576. Final-year clamp guarantees ending book value matches salvage exactly under all book methods. Book/tax timing differences net to zero at maturity (verified). 21/21 engine tests pass; backend loads 218 routes (was 216); `npm run build` succeeds with `/tools/depreciation` listed.
 
 ---
 
@@ -343,15 +346,13 @@
 
 ---
 
-### Sprint 645: Hotfix SHA Backfill + Archival Hygiene
+### Sprint 645: Commit-Msg Hook Probe Verification
 **Status:** PENDING
-**Source:** Project Auditor — top priority from Audit 35
-**File:** `tasks/todo.md:19`, `tasks/archive/`
-**Problem:** Hotfix entry reads `pending: hallucination audit hotfix` but commit `a32f566` is already in git history. Also: Active Phase has 4 completed sprints (596–599); next `Sprint N:` commit will be rejected by Husky archival gate at 5.
+**Source:** Project Auditor — residual from Audit 35 (SHA backfill + 596–599 archival already complete)
+**File:** `frontend/.husky/commit-msg`
+**Problem:** Both archival gate and todo-staged gate should pass cleanly on the next `Sprint N:` commit. No standalone probe has verified the hook post-cleanup.
 **Changes:**
-- [ ] Change `pending` to `a32f566` in hotfix entry at line 19
-- [ ] Run `sh scripts/archive_sprints.sh` to archive 596–599 into `tasks/archive/sprints-596-599-details.md`
-- [ ] Verify commit-msg hook passes on a probe commit
+- [ ] Confirm commit-msg hook passes on the next real Sprint commit (fold into that sprint's close verification)
 
 ---
 
