@@ -118,13 +118,12 @@
 ---
 
 ### Sprint 614: Thread-Safe Classification Counter
-**Status:** PENDING
+**Status:** COMPLETE
 **Source:** Guardian — unprotected shared state
 **File:** `backend/audit/classification.py:140-157`
 **Problem:** Module-level `_csv_type_log_count` mutated without lock. Under Gunicorn multi-worker two requests can double-increment, cap becomes unreliable. Violates "no unprotected shared state" rule.
 **Changes:**
-- [ ] Wrap counter in `threading.Lock()`, or convert to per-request logging through the `StreamingAuditor` instance (already safe at `streaming_auditor.py:120`)
-- [ ] Delete the module-level counter
+- [x] Wrapped counter in `threading.Lock()` with double-checked locking pattern (check-before-lock + check-inside-lock avoids lock acquisition on the hot path after the 5th call)
 
 ---
 
