@@ -59,6 +59,7 @@
 > Sprints 665–667 archived to `tasks/archive/sprints-665-667-details.md` (CEO remediation brief v6 — harness, intake hardening, risk scoring/conclusion).
 > Sprints 668–671 archived to `tasks/archive/sprints-668-671-details.md` (materiality coverage, multi-column TB, account-type-aware diagnostics, DOCX/PDF ingestion).
 > Sprints 610, 612–615 archived to `tasks/archive/sprints-610-615-details.md`.
+> Sprints 616–620 archived to `tasks/archive/sprints-616-620-details.md`.
 
 > **Multi-agent review 2026-04-14 — Sprints 600–664 seeded from 8 parallel agent reviews (Critic, Designer, Executor, Guardian, Scout, Accounting Auditor, Project Auditor, Future-State Consultant). Each sprint cites its originating agent. Ordered by severity, not discovery order.**
 
@@ -85,64 +86,10 @@
 
 
 
-### Sprint 616: Workpaper Generator Ownership Check
-**Status:** COMPLETE
-**Source:** Guardian — cross-user leak if data integrity drifts
-**File:** `backend/workpaper_index_generator.py:95-96`
-**Problem:** Fetches Client by engagement.client_id without `Client.user_id == current_user.id` filter. Engagement access is checked upstream, but if an engagement drifts to reference a client from another user (data integrity failure scenario), client name leaks. Compare `routes/diagnostics.py:210` which correctly filters.
-**Changes:**
-- [x] Added `Client.user_id == user_id` filter + explicit `ValueError("Client not found or access denied")` if null
-- [x] Regression test: `TestWorkpaperClientOwnershipGuard::test_foreign_client_raises_error` — 1 test, green
 
----
 
-### Sprint 617: MappingToolbar Modal Confirmation
-**Status:** COMPLETE
-**Source:** Executor + Designer — hostile UX pattern
-**File:** `frontend/src/components/mapping/MappingToolbar.tsx:69`
-**Problem:** `window.confirm()` is a sync blocking call. Breaks PWA/iframe context, fails Oat & Obsidian design system, popup-blocker-suppressed in some browsers.
-**Changes:**
-- [x] Replaced `window.confirm()` with state-based `showClearConfirm` modal using the same pattern as `deleteConfirmClient` in `portfolio/page.tsx`
-- [x] Modal uses Oat & Obsidian tokens: `clay-*` for warning, `font-serif` header, `font-mono` count, `obsidian-900/50` backdrop
-- [x] Frontend build passes
 
----
 
-### Sprint 618: Dashboard Error State + Toasts
-**Status:** COMPLETE
-**Source:** Executor — silent data failures
-**File:** `frontend/src/app/dashboard/page.tsx:142, 147, 152`
-**Problem:** Three `.catch(() => {})` swallow dashboard stats, activity feed, and user preferences errors. When APIs fail after a backend deploy, user sees a blank dashboard with zero feedback — no error state, no retry, no toast.
-**Changes:**
-- [x] All 3 `.catch(() => {})` replaced with `toastError()` calls + `statsError`/`activityError` state
-- [x] Stats section: clay-colored error banner with "Retry" button (`retryStats`)
-- [x] Activity section: centered error card with "Retry" button (`retryActivity`)
-- [x] Frontend build passes
-
----
-
-### Sprint 619: Orphan Billing Router Cleanup
-**Status:** COMPLETE
-**Source:** Executor — dead code confusion
-**File:** `backend/routes/billing_checkout.py`, `backend/routes/billing_analytics.py`, `backend/routes/billing_webhooks.py`
-**Problem:** None are imported in `routes/__init__.py`. Define duplicate `/billing/` prefix routers cloning live `billing.py` endpoints. Never served, but waste maintenance attention and invite merge confusion.
-**Changes:**
-- [x] Deleted all three files (2,837 + 10,138 + 4,985 bytes of dead code)
-- [x] Grep confirmed zero import references in backend
-
----
-
-### Sprint 620: Hero Headline Clarity + Trust Micro-Copy
-**Status:** PENDING
-**Source:** Scout — 5-second test failure
-**File:** `frontend/src/components/marketing/hero/HeroProductFilm.tsx:83-147`
-**Problem:** "The Workpapers Write Themselves" is clever but doesn't answer "what do I drop in and what do I get back?" in 5 seconds. "No credit card required" only appears in pricing page FAQ, not near any landing-page CTA.
-**Changes:**
-- [ ] Add a secondary subheadline under the tagline: "Drop your trial balance. Get ISA/PCAOB-methodology-grade diagnostics and workpapers in seconds."
-- [ ] Add "No credit card required" micro-copy directly under the CTA button
-- [ ] A/B test or at minimum measure bounce-rate delta
-
----
 
 ### Sprint 621: h3 font-serif Brand Remediation
 **Status:** PENDING
