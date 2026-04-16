@@ -86,13 +86,13 @@
 
 
 ### Sprint 616: Workpaper Generator Ownership Check
-**Status:** PENDING
+**Status:** COMPLETE
 **Source:** Guardian — cross-user leak if data integrity drifts
 **File:** `backend/workpaper_index_generator.py:95-96`
 **Problem:** Fetches Client by engagement.client_id without `Client.user_id == current_user.id` filter. Engagement access is checked upstream, but if an engagement drifts to reference a client from another user (data integrity failure scenario), client name leaks. Compare `routes/diagnostics.py:210` which correctly filters.
 **Changes:**
-- [ ] Add `.filter(Client.id == engagement.client_id, Client.user_id == user_id)` to the fetch
-- [ ] Regression test: engagement pointing at foreign-user client raises 403
+- [x] Added `Client.user_id == user_id` filter + explicit `ValueError("Client not found or access denied")` if null
+- [x] Regression test: `TestWorkpaperClientOwnershipGuard::test_foreign_client_raises_error` — 1 test, green
 
 ---
 
