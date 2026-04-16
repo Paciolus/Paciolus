@@ -137,7 +137,8 @@ export default function ToolsCatalogPage() {
                       </Link>
                       <button
                         onClick={(e) => { e.preventDefault(); toggleFavorite(tool.key) }}
-                        className="absolute top-3 right-3 w-7 h-7 flex items-center justify-center rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-oatmeal-100"
+                        className="absolute top-3 right-3 w-7 h-7 flex items-center justify-center rounded-lg opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity hover:bg-oatmeal-100"
+                        aria-label={favorites.includes(tool.key) ? 'Remove from favorites' : 'Pin to dashboard'}
                         title={favorites.includes(tool.key) ? 'Remove from favorites' : 'Pin to dashboard'}
                       >
                         <svg

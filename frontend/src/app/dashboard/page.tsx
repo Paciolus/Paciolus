@@ -363,7 +363,8 @@ export default function DashboardPage() {
                   </Link>
                   <button
                     onClick={(e) => { e.preventDefault(); toggleFavorite(tool.key) }}
-                    className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-oatmeal-100"
+                    className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-md opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity hover:bg-oatmeal-100"
+                    aria-label={favorites.includes(tool.key) ? 'Remove from favorites' : 'Add to favorites'}
                     title={favorites.includes(tool.key) ? 'Remove from favorites' : 'Add to favorites'}
                   >
                     <svg

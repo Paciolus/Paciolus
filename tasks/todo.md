@@ -99,7 +99,7 @@
 **Changes:**
 - [x] Replace `font-sans` with `font-serif` at all seven sites (or use `type-tool-section` utility)
 - [x] Grep remaining `<h[1-6].*font-sans` across `frontend/src/` and fix any stragglers
-**Review:** Fixed 10 sites total (7 cited + 3 stragglers in admin customers page and RecentHistoryMini). Grep for `<h[1-6].*font-sans` returns zero across `frontend/src/`.
+**Review:** Fixed 10 sites total (7 cited + 3 stragglers in admin customers page and RecentHistoryMini). Grep for `<h[1-6].*font-sans` returns zero across `frontend/src/`. Commit `299175c`.
 
 ---
 
