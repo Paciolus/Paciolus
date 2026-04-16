@@ -67,6 +67,7 @@
 > Sprints 636–640 archived to `tasks/archive/sprints-636-640-details.md`.
 > Sprints 641–645 archived to `tasks/archive/sprints-641-645-details.md`.
 > Sprints 646–650 archived to `tasks/archive/sprints-646-650-details.md`.
+> Sprints 651–655 archived to `tasks/archive/sprints-651-655-details.md`.
 
 > **Multi-agent review 2026-04-14 — Sprints 600–664 seeded from 8 parallel agent reviews (Critic, Designer, Executor, Guardian, Scout, Accounting Auditor, Project Auditor, Future-State Consultant). Each sprint cites its originating agent. Ordered by severity, not discovery order.**
 
@@ -99,63 +100,7 @@
 
 ---
 
-### Sprint 651: UnifiedToolbar Responsive Zone Collapse
-**Status:** PENDING
-**Source:** Designer — 768px breakpoint overflow
-**File:** `frontend/src/components/shared/UnifiedToolbar/UnifiedToolbar.tsx:86, 140`
-**Problem:** Both action zones fixed at `w-[120px] flex-shrink-0`. At 640–768px the zones consume 240px of a ~640px bar, leaving only ~160px for logo+nav. Center nav has no `min-w-0 overflow-hidden` guard.
-**Changes:**
-- [ ] Add `min-w-0 overflow-hidden` to center nav container
-- [ ] Scale zones: `w-[80px] sm:w-[120px]`
-- [ ] Visual regression test at 375/640/768/1024
-
----
-
-### Sprint 652: Frontend Hook Test Coverage Backfill
-**Status:** PENDING
-**Source:** Guardian — 20+ hooks without dedicated tests
-**File:** `frontend/src/hooks/` (20+ untested)
-**Problem:** Untested hooks include `useAuthSession` (token refresh race potential), `useExportSharing` (sensitive delivery), all 5 tool-specific testing hooks, `useActivityHistory`, `useBatchUpload`, `useCommandPalette`, `useFeatureFlag`, `useInternalAdmin`, `useWorkspaceInsights`, etc.
-**Changes:**
-- [ ] Prioritize by risk: `useAuthSession` → `useExportSharing` → 5 tool hooks
-- [ ] Test: concurrent refresh, 401 mid-session, network error path
-- [ ] One test file per hook with at minimum happy path + error path
-
----
-
-### Sprint 653: CSRF Middleware Connection Pool Bypass
-**Status:** PENDING
-**Source:** Critic — low severity architectural debt
-**File:** `backend/security_middleware.py:476-512`
-**Problem:** `_extract_user_id_from_refresh_cookie` opens fresh `SessionLocal()` per `/auth/logout` and `/auth/refresh` call, outside `get_db()` lifetime. Bypasses connection pool accounting. Silently swallows DB exceptions, degrading CSRF to signature-only on DB outage.
-**Changes:**
-- [ ] For `/auth/refresh`, skip the DB lookup entirely (already covered by `X-Requested-With` header proof at lines 566-576)
-- [ ] For `/auth/logout`, accept CSRF token via request body alongside cookie
-- [ ] Remove the session-factory helper
-
----
-
-### Sprint 654: Trust Page Self-Assessed Disclosure Prominence
-**Status:** PENDING
-**Source:** Scout — omission-by-silence trust gap
-**File:** `frontend/src/app/(marketing)/trust/page.tsx:151-159`
-**Problem:** GDPR/CCPA show green "Compliant" badge with self-assessed detail text, but the visual treatment doesn't prominently mark it as self-assessed. SOC 2 absence is correct per CEO deferral but unspoken — creates trust gap when enterprise buyer asks.
-**Changes:**
-- [ ] Add "Self-assessed — no third-party audit" callout directly adjacent to each compliance badge
-- [ ] Add single sentence: "No SOC 2 audit completed — planned for 2026"
-- [ ] Match Oat & Obsidian tokens
-
----
-
-### Sprint 655: Zip-Bomb Test Determinism
-**Status:** PENDING
-**Source:** Guardian — silent CI skip of a security guard
-**File:** `backend/tests/test_parser_resource_guards.py:163`
-**Problem:** `pytest.skip`s itself when compression ratio isn't high enough — in constrained CI envs the guard is never exercised. Production guard logic is real but CI hides it.
-**Changes:**
-- [ ] Replace skip with a deterministic synthetic buffer guaranteed to trigger >100:1 ratio
-- [ ] Or use `hypothesis` strategy to build the input
-- [ ] Ensure test runs (not skipped) on all CI environments
+<!-- Sprints 651–655 archived to tasks/archive/sprints-651-655-details.md -->
 
 ---
 

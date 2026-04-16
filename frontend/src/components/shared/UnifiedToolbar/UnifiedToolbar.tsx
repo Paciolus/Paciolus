@@ -83,7 +83,7 @@ export function UnifiedToolbar() {
       </a>
       <div className="max-w-7xl mx-auto px-6 h-full flex items-center">
         {/* ═══ Zone 1 — Left: Identity ═══ */}
-        <div className="w-[120px] flex-shrink-0">
+        <div className="w-[80px] sm:w-[120px] flex-shrink-0">
           <Link href="/dashboard" className="flex items-center">
             <Image
               src="/PaciolusLogo_LightBG.png"
@@ -98,7 +98,7 @@ export function UnifiedToolbar() {
         </div>
 
         {/* ═══ Zone 2 — Center: Primary Nav ═══ */}
-        <div className="hidden md:flex flex-1 items-center justify-center h-full gap-1">
+        <div className="hidden md:flex flex-1 items-center justify-center h-full gap-1 min-w-0 overflow-hidden">
           {/* Dashboard — first (highest frequency) */}
           <Link href="/dashboard" className={navItemClass(isActive('/dashboard'))}>
             <BrandIcon name="bar-chart" className="w-4 h-4" />
@@ -137,7 +137,7 @@ export function UnifiedToolbar() {
         </div>
 
         {/* ═══ Zone 3 — Right: User/System ═══ */}
-        <div className="hidden md:flex items-center gap-1 w-[120px] justify-end flex-shrink-0">
+        <div className="hidden md:flex items-center gap-1 w-[80px] sm:w-[120px] justify-end flex-shrink-0">
           {/* Search — icon-only */}
           <button
             onClick={() => openPalette('button')}

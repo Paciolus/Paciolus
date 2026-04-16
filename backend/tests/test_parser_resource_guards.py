@@ -143,24 +143,62 @@ class TestArchiveBombGuard:
         assert "entries" in exc_info.value.detail.lower()
 
     def test_high_compression_ratio(self):
-        """ZIP with compression ratio > 100:1."""
-        buf = io.BytesIO()
-        # Highly compressible data — repeated zeros
-        big_data = b"\x00" * (10 * 1024 * 1024)  # 10MB of zeros
-        with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-            zf.writestr("big.xml", big_data)
+        """ZIP with compression ratio > 100:1 must trip the guard.
 
-        # Verify the ratio would trip the guard
-        with zipfile.ZipFile(io.BytesIO(buf.getvalue())) as zf:
+        Sprint 655: previously wrapped in `pytest.skip` when zlib didn't
+        produce a high-enough ratio — which silently hid the guard in
+        constrained CI envs. Now we patch the central directory's
+        `file_size` field to a value guaranteed to exceed the 100:1
+        threshold, so the test is deterministic regardless of the host
+        compression library's behaviour.
+        """
+        buf = io.BytesIO()
+        # Minimal deflate-compressed entry — the actual payload is small
+        # but we overwrite the central directory size in the next step.
+        real_data = b"\x00" * 256
+        with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr("big.xml", real_data)
+
+        raw = bytearray(buf.getvalue())
+
+        # End-of-central-directory signature: 0x06054b50 (little-endian).
+        eocd_sig = b"\x50\x4b\x05\x06"
+        eocd_offset = raw.rfind(eocd_sig)
+        assert eocd_offset != -1, "EOCD signature not found — malformed ZIP fixture"
+
+        # EOCD layout: the central directory start offset lives at
+        # bytes 16-20 (unsigned 32-bit little-endian) of the EOCD record.
+        cd_offset = int.from_bytes(raw[eocd_offset + 16 : eocd_offset + 20], "little")
+
+        # Central directory header layout (first entry):
+        #   bytes  0- 3  signature 0x02014b50
+        #   bytes 20-24  compressed size      (uint32 LE)
+        #   bytes 24-28  uncompressed size    (uint32 LE)
+        cd_sig = b"\x50\x4b\x01\x02"
+        assert bytes(raw[cd_offset : cd_offset + 4]) == cd_sig, "central directory header mismatch"
+
+        # Overwrite uncompressed size with a 10 MB value so the ratio is
+        # guaranteed >> 100:1 whatever the real compressed size is.
+        ten_megabytes = (10 * 1024 * 1024).to_bytes(4, "little")
+        raw[cd_offset + 24 : cd_offset + 28] = ten_megabytes
+
+        patched = bytes(raw)
+
+        # Sanity check the patched bytes produce the ratio we expect.
+        with zipfile.ZipFile(io.BytesIO(patched)) as zf:
             entries = zf.infolist()
             total_c = sum(e.compress_size for e in entries)
             total_u = sum(e.file_size for e in entries)
-            if total_c > 0 and total_u / total_c > 100:
-                with pytest.raises(HTTPException) as exc_info:
-                    _validate_xlsx_archive(buf.getvalue(), "highratio.xlsx")
-                assert exc_info.value.status_code == 400
-            else:
-                pytest.skip("Compression ratio not high enough to trigger guard")
+            assert total_c > 0, "deflate stream should have non-zero compressed size"
+            assert total_u / total_c > 100, (
+                f"synthetic fixture produced ratio {total_u / total_c:.1f}:1, "
+                "but the test requires >100:1 to exercise the guard"
+            )
+
+        with pytest.raises(HTTPException) as exc_info:
+            _validate_xlsx_archive(patched, "highratio.xlsx")
+        assert exc_info.value.status_code == 400
+        assert "compression ratio" in exc_info.value.detail.lower()
 
     def test_nested_archive_rejected(self):
         """ZIP containing another .zip file."""

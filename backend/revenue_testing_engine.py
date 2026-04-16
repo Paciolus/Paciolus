@@ -1399,9 +1399,11 @@ def test_cutoff_risk(
 # TIER 3 — ADVANCED TESTS
 # =============================================================================
 
-# Expected Benford's Law first digit distribution — re-exported from
-# shared.benford (Sprint 641) for any direct importers.
-from shared.benford import analyze_benford, get_first_digit  # noqa: E402
+# BENFORD_EXPECTED is re-exported from shared.benford (Sprint 641) so
+# existing test files (tests/test_revenue_testing.py) can still import it
+# from this module. The `noqa: F401` is load-bearing — do not let a
+# formatter strip the unused-looking import.
+from shared.benford import BENFORD_EXPECTED, analyze_benford, get_first_digit  # noqa: E402, F401
 
 
 def test_benford_law(
