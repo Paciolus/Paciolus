@@ -92,35 +92,38 @@
 
 
 ### Sprint 621: h3 font-serif Brand Remediation
-**Status:** PENDING
+**Status:** COMPLETE
 **Source:** Designer — brand mandate violation
-**File:** `frontend/src/app/dashboard/page.tsx:328, 365`, `frontend/src/app/tools/page.tsx:132`, `frontend/src/app/(diagnostic)/recon/page.tsx:58, 63, 68`, `frontend/src/components/sensitivity/WeightedMaterialityEditor.tsx:100`, `frontend/src/app/status/page.tsx:182`
+**File:** `frontend/src/app/dashboard/page.tsx:360, 397`, `frontend/src/app/tools/page.tsx:124`, `frontend/src/app/(diagnostic)/recon/page.tsx:58, 63, 68`, `frontend/src/components/sensitivity/WeightedMaterialityEditor.tsx:100`, `frontend/src/app/status/page.tsx:182`, `frontend/src/app/internal/admin/customers/[orgId]/page.tsx:155`, `frontend/src/components/workspace/RecentHistoryMini.tsx:125`
 **Problem:** Seven `<h3>` headings explicitly use `font-sans` — brand mandate requires `font-serif` on all headers. These are labelled section headings, not UI labels.
 **Changes:**
-- [ ] Replace `font-sans` with `font-serif` at all seven sites (or use `type-tool-section` utility)
-- [ ] Grep remaining `<h[1-6].*font-sans` across `frontend/src/` and fix any stragglers
+- [x] Replace `font-sans` with `font-serif` at all seven sites (or use `type-tool-section` utility)
+- [x] Grep remaining `<h[1-6].*font-sans` across `frontend/src/` and fix any stragglers
+**Review:** Fixed 10 sites total (7 cited + 3 stragglers in admin customers page and RecentHistoryMini). Grep for `<h[1-6].*font-sans` returns zero across `frontend/src/`.
 
 ---
 
 ### Sprint 622: Dashboard Favorite Toggle A11y
-**Status:** PENDING
+**Status:** COMPLETE
 **Source:** Designer — mobile/screen-reader invisible
-**File:** `frontend/src/app/dashboard/page.tsx:332-335`
+**File:** `frontend/src/app/dashboard/page.tsx:364-368`, `frontend/src/app/tools/page.tsx:138-141`
 **Problem:** Favorite button uses `opacity-0 group-hover:opacity-100` with only `title=` attribute. Screen readers on mobile (no hover) never surface it. `title` alone fails WCAG 4.1.2 (accessible name).
 **Changes:**
-- [ ] Add `aria-label={favorites.includes(tool.key) ? 'Remove from favorites' : 'Add to favorites'}`
-- [ ] Add `focus-visible:opacity-100` so keyboard focus surfaces the button
+- [x] Add `aria-label={favorites.includes(tool.key) ? 'Remove from favorites' : 'Add to favorites'}`
+- [x] Add `focus-visible:opacity-100` so keyboard focus surfaces the button
+**Review:** Applied to both dashboard and tools page favorite buttons (same a11y pattern). Both retain `title` for cursor hover hint and now expose `aria-label` for screen readers + `focus-visible:opacity-100` for keyboard focus.
 
 ---
 
 ### Sprint 623: focus:outline-hidden Uniform Sweep
-**Status:** PENDING
+**Status:** COMPLETE
 **Source:** Designer — Tailwind v3/v4 semantic inconsistency
 **File:** `frontend/src/app/(auth)/forgot-password/page.tsx:133`, `frontend/src/app/(auth)/reset-password/page.tsx:213, 228`, `frontend/src/app/(marketing)/pricing/page.tsx:302`, `frontend/src/components/pricing/PricingEstimator.tsx:138`
 **Problem:** Five inputs use `focus:outline-none` (v3 keyword) while 75 other occurrences across the codebase use `focus:outline-hidden` (v4 alias). Inconsistent semantics; v3 maps to `outline: 0` which removes native outline before the ring renders.
 **Changes:**
-- [ ] Replace all five occurrences with `focus:outline-hidden`
-- [ ] Grep to confirm no remaining `focus:outline-none` in `frontend/src/`
+- [x] Replace all five occurrences with `focus:outline-hidden`
+- [x] Grep to confirm no remaining `focus:outline-none` in `frontend/src/`
+**Review:** All five replaced. Final grep returns zero `focus:outline-none` matches in `frontend/src/`.
 
 ---
 

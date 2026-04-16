@@ -121,7 +121,7 @@ export default function ToolsCatalogPage() {
                         className="theme-card p-5 flex flex-col h-full hover:shadow-theme-card-hover transition-all block"
                       >
                         <div className="flex items-center justify-between mb-2">
-                          <h3 className="font-sans font-bold text-sm text-content-primary">{tool.label}</h3>
+                          <h3 className="font-serif font-bold text-sm text-content-primary">{tool.label}</h3>
                         </div>
                         <p className="text-xs font-sans text-content-secondary flex-1 mb-3">{tool.description}</p>
                         <div className="flex items-center justify-between">
