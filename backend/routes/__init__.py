@@ -48,6 +48,7 @@ from routes.sod import router as sod_router
 from routes.three_way_match import router as three_way_match_router
 from routes.trends import router as trends_router
 from routes.users import router as users_router
+from routes.w2_reconciliation import router as w2_reconciliation_router
 
 all_routers = [
     health_router,
@@ -96,4 +97,5 @@ all_routers = [
     sod_router,
     internal_metrics_router,
     internal_admin_router,
+    w2_reconciliation_router,
 ]

@@ -88,15 +88,23 @@
 
 
 ### Sprint 636: W-2/W-3 Reconciliation Tool
-**Status:** PENDING
+**Status:** COMPLETE
 **Source:** Future-State Consultant — missing catalog feature #14
 **File:** new engine + route
 **Problem:** Not present. Payroll testing tests data integrity, not W-2 reconciliation. W-2 errors create amended filings + penalties.
 **Changes:**
-- [ ] New `backend/w2_reconciliation_engine.py` — reconcile payroll system → draft W-2 → quarterly 941s
-- [ ] Validate SS wage base, HSA, retirement plan limits
-- [ ] Employee-level discrepancy report
-- [ ] Route + PDF
+- [x] New `backend/w2_reconciliation_engine.py` — reconcile payroll system → draft W-2 → quarterly 941s
+- [x] Validate SS wage base, HSA, retirement plan limits (including age-50 catch-up and 60–63 Secure 2.0 super-catch-up)
+- [x] Employee-level discrepancy report
+- [x] Route + CSV (PDF deferred)
+
+**Review:**
+- Engine enforces 2026 reference limits (SS wage base $176,100, 401(k) $23,500 + age-based catch-ups, HSA $4,300/$8,550, SIMPLE IRA $16,500, additional Medicare threshold $200k at 0.9%). All thresholds are caller-overridable via `W2ReconciliationConfig`.
+- Checks: box 1/2/3/4/5/6 reconciliation to payroll; SS wage base cap; HSA over-limit per coverage level; 401(k)/SIMPLE IRA elective limit with age-aware catch-up; additional Medicare threshold-crossed informational; Form 941 4-quarter sum vs payroll YTD.
+- W-3 totals = sum of every W-2 draft, returned as its own block.
+- Missing W-2 draft falls back to a self-consistent payroll-derived draft so limit checks still fire.
+- Route: `POST /audit/w2-reconciliation`, `POST /audit/w2-reconciliation/export.csv`.
+- 19 new tests cover happy path, SS wage base cap + mismatch, Medicare standard vs additional, HSA self-only/family/none, 401(k) + catch-up + super-catch-up + SIMPLE IRA limits, 941 matching and divergence, W-3 totals, input validation, missing-draft self-consistency fallback, and serialisation. Backend imports 234 routes.
 
 ---
 
