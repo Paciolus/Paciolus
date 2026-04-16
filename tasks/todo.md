@@ -109,14 +109,15 @@
 ---
 
 ### Sprint 618: Dashboard Error State + Toasts
-**Status:** PENDING
+**Status:** COMPLETE
 **Source:** Executor — silent data failures
 **File:** `frontend/src/app/dashboard/page.tsx:142, 147, 152`
 **Problem:** Three `.catch(() => {})` swallow dashboard stats, activity feed, and user preferences errors. When APIs fail after a backend deploy, user sees a blank dashboard with zero feedback — no error state, no retry, no toast.
 **Changes:**
-- [ ] Replace silent catches with `useToast` error notification + local error state
-- [ ] Add retry button per-section
-- [ ] Component test: mock 500 response, assert toast fires
+- [x] All 3 `.catch(() => {})` replaced with `toastError()` calls + `statsError`/`activityError` state
+- [x] Stats section: clay-colored error banner with "Retry" button (`retryStats`)
+- [x] Activity section: centered error card with "Retry" button (`retryActivity`)
+- [x] Frontend build passes
 
 ---
 

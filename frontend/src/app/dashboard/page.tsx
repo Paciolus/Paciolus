@@ -17,6 +17,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
+import { useToast } from '@/contexts/ToastContext'
 import { WelcomeModal } from '@/components/shared/WelcomeModal'
 import { Reveal } from '@/components/ui/Reveal'
 import { apiGet, apiPut } from '@/utils/apiClient'
@@ -122,11 +123,34 @@ function getToolIcon(iconKey: string) {
 export default function DashboardPage() {
   const router = useRouter()
   const { user, token, isAuthenticated, isLoading: authLoading } = useAuthSession()
+  const { error: toastError } = useToast()
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [activity, setActivity] = useState<ToolActivityItem[]>([])
   const [favorites, setFavorites] = useState<string[]>(DEFAULT_FAVORITES)
   const [statsLoading, setStatsLoading] = useState(true)
   const [activityLoading, setActivityLoading] = useState(true)
+  const [statsError, setStatsError] = useState(false)
+  const [activityError, setActivityError] = useState(false)
+
+  const retryStats = useCallback(() => {
+    if (!token) return
+    setStatsError(false)
+    setStatsLoading(true)
+    apiGet<DashboardStats>('/dashboard/stats', token)
+      .then(res => { if (res.data) setStats(res.data) })
+      .catch(() => { setStatsError(true); toastError('Failed to load dashboard stats') })
+      .finally(() => setStatsLoading(false))
+  }, [token, toastError])
+
+  const retryActivity = useCallback(() => {
+    if (!token) return
+    setActivityError(false)
+    setActivityLoading(true)
+    apiGet<ToolActivityItem[]>('/activity/tool-feed?limit=8', token)
+      .then(res => { if (res.data) setActivity(res.data) })
+      .catch(() => { setActivityError(true); toastError('Failed to load activity feed') })
+      .finally(() => setActivityLoading(false))
+  }, [token, toastError])
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -139,17 +163,17 @@ export default function DashboardPage() {
 
     apiGet<DashboardStats>('/dashboard/stats', token)
       .then(res => { if (res.data) setStats(res.data) })
-      .catch(() => {})
+      .catch(() => { setStatsError(true); toastError('Failed to load dashboard stats') })
       .finally(() => setStatsLoading(false))
 
     apiGet<ToolActivityItem[]>('/activity/tool-feed?limit=8', token)
       .then(res => { if (res.data) setActivity(res.data) })
-      .catch(() => {})
+      .catch(() => { setActivityError(true); toastError('Failed to load activity feed') })
       .finally(() => setActivityLoading(false))
 
     apiGet<UserPreferences>('/settings/preferences', token)
       .then(res => { if (res.data?.favorite_tools?.length) setFavorites(res.data.favorite_tools) })
-      .catch(() => {})
+      .catch(() => { toastError('Failed to load preferences') })
   }, [token])
 
   const toggleFavorite = useCallback(
@@ -214,6 +238,14 @@ export default function DashboardPage() {
         </Reveal>
 
         {/* Stat Cards — 4-column platform-wide stats */}
+        {statsError && (
+          <div className="theme-card p-4 mb-4 flex items-center justify-between border-clay-500/30 bg-clay-50/10">
+            <p className="text-sm font-sans text-clay-600">Dashboard stats unavailable</p>
+            <button onClick={retryStats} className="text-sm font-sans font-medium text-sage-600 hover:text-sage-700 transition-colors">
+              Retry
+            </button>
+          </div>
+        )}
         <Reveal delay={0.05}>
           <motion.div
             variants={staggerContainerTight}
@@ -382,7 +414,14 @@ export default function DashboardPage() {
               </Link>
             </div>
 
-            {activityLoading ? (
+            {activityError ? (
+              <div className="theme-card p-6 text-center">
+                <p className="text-sm font-sans text-clay-600 mb-3">Failed to load activity feed</p>
+                <button onClick={retryActivity} className="text-sm font-sans font-medium text-sage-600 hover:text-sage-700 transition-colors">
+                  Retry
+                </button>
+              </div>
+            ) : activityLoading ? (
               <div className="space-y-3">
                 {[1, 2, 3].map(i => (
                   <div key={i} className="theme-card p-4 animate-pulse">
