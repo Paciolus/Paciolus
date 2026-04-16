@@ -97,13 +97,14 @@
 ---
 
 ### Sprint 617: MappingToolbar Modal Confirmation
-**Status:** PENDING
+**Status:** COMPLETE
 **Source:** Executor + Designer — hostile UX pattern
 **File:** `frontend/src/components/mapping/MappingToolbar.tsx:69`
 **Problem:** `window.confirm()` is a sync blocking call. Breaks PWA/iframe context, fails Oat & Obsidian design system, popup-blocker-suppressed in some browsers.
 **Changes:**
-- [ ] Replace with existing modal confirm pattern (see `deleteConfirmClient` state in `portfolio/page.tsx`)
-- [ ] Use Oat & Obsidian tokens on the modal
+- [x] Replaced `window.confirm()` with state-based `showClearConfirm` modal using the same pattern as `deleteConfirmClient` in `portfolio/page.tsx`
+- [x] Modal uses Oat & Obsidian tokens: `clay-*` for warning, `font-serif` header, `font-mono` count, `obsidian-900/50` backdrop
+- [x] Frontend build passes
 
 ---
 
