@@ -16,6 +16,7 @@
 > new features or architectural changes. Each entry is one line.
 > Format: `- [date] commit-sha: description (files touched)`
 
+- [2026-04-16] pending: backlog hygiene — Sprint 611 R2/S3 bucket added to ceo-actions Backlog Blockers; Sprint 672 placeholder for Loan Amortization XLSX/PDF export (Sprint 625 deferred work)
 - [2026-04-14] pending: hallucination audit hotfix — /auth/refresh handler 401→403 for X-Requested-With mismatch (aligns with CSRF middleware); added .claude/agents/LLM_HALLUCINATION_AUDIT_PROMPT.md
 - [2026-04-07] 73aaa51: dependency patch — uvicorn 0.44.0, python-multipart 0.0.24 (nightly report remediation)
 - [2026-04-06] 39791ec: secret domain separation — AUDIT_CHAIN_SECRET_KEY independent from JWT, backward-compat verification fallback, TLS evidence signing updated
@@ -570,5 +571,19 @@
 **Changes:**
 - [ ] Rephrase to "Legal obligations may be present — practitioner should evaluate whether legal confirmation is warranted"
 - [ ] Apply same softening pattern across all engine `driver_source` strings that reference legal/regulatory determinations
+
+---
+
+### Sprint 672: Loan Amortization XLSX + PDF Export
+**Status:** PENDING
+**Source:** Sprint 625 follow-up — XLSX and PDF deferred at sprint close
+**File:** `backend/routes/loan_amortization.py` (extend), new `backend/pdf/sections/loan_amortization.py`, possibly new `backend/loan_amortization_excel.py`
+**Problem:** Sprint 625 shipped CSV export only. Auditors and operational finance teams routinely paste these schedules into engagement workpapers — XLSX preserves cell formatting and PDF locks the schedule for evidence. Both were deferred so the engine, route, and frontend could land in one sprint.
+**Changes:**
+- [ ] XLSX export endpoint `/audit/loan-amortization/export.xlsx` — schedule sheet + annual summary sheet + inputs sheet, currency-formatted columns, frozen header row
+- [ ] PDF section module rendering the inputs block, summary cards, annual table, and the period schedule (paginated — 30-yr monthly = 360 rows, must page cleanly)
+- [ ] PDF endpoint `/audit/loan-amortization/export.pdf`
+- [ ] Frontend: add XLSX and PDF download buttons next to the existing CSV button on `/tools/loan-amortization`
+- [ ] Tests: row count + total-interest cell match the JSON response for both formats
 
 ---
