@@ -111,7 +111,7 @@
 **Changes:**
 - [x] Add `aria-label={favorites.includes(tool.key) ? 'Remove from favorites' : 'Add to favorites'}`
 - [x] Add `focus-visible:opacity-100` so keyboard focus surfaces the button
-**Review:** Applied to both dashboard and tools page favorite buttons (same a11y pattern). Both retain `title` for cursor hover hint and now expose `aria-label` for screen readers + `focus-visible:opacity-100` for keyboard focus.
+**Review:** Applied to both dashboard and tools page favorite buttons (same a11y pattern). Both retain `title` for cursor hover hint and now expose `aria-label` for screen readers + `focus-visible:opacity-100` for keyboard focus. Commit `94024a8`.
 
 ---
 

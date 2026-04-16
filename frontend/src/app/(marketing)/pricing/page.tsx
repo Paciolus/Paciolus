@@ -299,7 +299,7 @@ function SeatCalculator({
                 max={999}
                 value={teamSize}
                 onChange={(e) => handleChange(idx, e.target.value)}
-                className="w-24 px-3 py-2 rounded-lg bg-obsidian-700/50 border border-obsidian-500/40 text-oatmeal-100 font-mono text-sm tabular-nums text-center focus:outline-none focus:border-sage-500/50 transition-colors"
+                className="w-24 px-3 py-2 rounded-lg bg-obsidian-700/50 border border-obsidian-500/40 text-oatmeal-100 font-mono text-sm tabular-nums text-center focus:outline-hidden focus:border-sage-500/50 transition-colors"
               />
             </div>
 
