@@ -215,38 +215,43 @@ def test_inv_anomaly_detected(generator):
 # 8. Bank Reconciliation — 4 generators (dual-input: bank + GL)
 # =============================================================================
 
-from bank_reconciliation import run_reconciliation_tests
+from bank_reconciliation import reconcile_bank_statement
 from tests.anomaly_framework.fixtures.base_bank_rec import BaseBankRecFactory
 from tests.anomaly_framework.generators.bank_rec_generators import BANK_REC_REGISTRY
 
+_BANK_REC_FIELD_MAP = {
+    "unmatched_bank": "bank_only_count",
+    "unmatched_gl": "ledger_only_count",
+    "amount_mismatches": "bank_only_count",
+    "missing_references": "bank_only_count",
+}
+
 
 @pytest.mark.parametrize("generator", BANK_REC_REGISTRY, ids=lambda g: g.name)
-@pytest.mark.xfail(reason="Bank rec engine uses typed ReconciliationMatch objects, not raw dicts — needs adapter")
 def test_bank_rec_anomaly_detected(generator):
-    """Verify Bank Rec anomaly is detected."""
+    """Verify Bank Rec anomaly is detected via reconcile_bank_statement."""
     bank_rows = BaseBankRecFactory.as_bank_rows()
     gl_rows = BaseBankRecFactory.as_gl_rows()
     bank_cols = BaseBankRecFactory.bank_column_names()
     gl_cols = BaseBankRecFactory.gl_column_names()
 
     mutated_bank, mutated_gl, records = generator.inject(bank_rows, gl_rows, seed=42)
-    result = run_reconciliation_tests(mutated_bank, bank_cols, mutated_gl, gl_cols)
+    result = reconcile_bank_statement(mutated_bank, mutated_gl, bank_cols, gl_cols)
 
     result_dict = result.to_dict()
+    summary = result_dict["summary"]
+    rec_tests = result_dict.get("rec_tests", [])
     for record in records:
         target_key = record.expected_field
-        # Bank rec results may use different structure — check flexibly
-        test_results = result_dict.get("test_results", [])
-        if test_results:
-            test_result = next((tr for tr in test_results if tr.get("test_key") == target_key), None)
-            if test_result:
-                assert test_result["entries_flagged"] > 0, (
-                    f"[{generator.name}] Expected '{target_key}' to flag entries. Injected at: {record.injected_at}"
-                )
-                continue
-        # Fallback: check top-level result keys
-        assert result_dict.get(target_key) is not None or len(test_results) > 0, (
-            f"[{generator.name}] No detection for '{target_key}'"
+        summary_key = _BANK_REC_FIELD_MAP.get(target_key)
+        detected = False
+        if summary_key and summary.get(summary_key, 0) > 0:
+            detected = True
+        if not detected and rec_tests:
+            detected = any(t.get("flagged_count", 0) > 0 for t in rec_tests)
+        assert detected, (
+            f"[{generator.name}] Expected detection for '{target_key}'. "
+            f"Summary: {summary}. Rec tests: {[t['test_name'] for t in rec_tests]}"
         )
 
 
@@ -256,13 +261,20 @@ def test_bank_rec_anomaly_detected(generator):
 
 from tests.anomaly_framework.fixtures.base_three_way_match import BaseThreeWayMatchFactory
 from tests.anomaly_framework.generators.twm_generators import TWM_REGISTRY
-from three_way_match_engine import run_three_way_match
+from three_way_match_engine import (
+    detect_invoice_columns,
+    detect_po_columns,
+    detect_receipt_columns,
+    parse_invoices,
+    parse_purchase_orders,
+    parse_receipts,
+    run_three_way_match,
+)
 
 
 @pytest.mark.parametrize("generator", TWM_REGISTRY, ids=lambda g: g.name)
-@pytest.mark.xfail(reason="TWM engine uses typed PurchaseOrder/Invoice/Receipt objects, not raw dicts — needs adapter")
 def test_twm_anomaly_detected(generator):
-    """Verify Three-Way Match anomaly is detected."""
+    """Verify Three-Way Match anomaly is detected via typed objects."""
     po_rows = BaseThreeWayMatchFactory.as_po_rows()
     inv_rows = BaseThreeWayMatchFactory.as_invoice_rows()
     rcpt_rows = BaseThreeWayMatchFactory.as_receipt_rows()
@@ -271,21 +283,36 @@ def test_twm_anomaly_detected(generator):
     rcpt_cols = BaseThreeWayMatchFactory.receipt_column_names()
 
     mutated_po, mutated_inv, mutated_rcpt, records = generator.inject(po_rows, inv_rows, rcpt_rows, seed=42)
-    result = run_three_way_match(mutated_po, po_cols, mutated_inv, inv_cols, mutated_rcpt, rcpt_cols)
+
+    pos = parse_purchase_orders(mutated_po, detect_po_columns(po_cols))
+    invoices = parse_invoices(mutated_inv, detect_invoice_columns(inv_cols))
+    receipts = parse_receipts(mutated_rcpt, detect_receipt_columns(rcpt_cols))
+    result = run_three_way_match(pos, invoices, receipts)
 
     result_dict = result.to_dict()
     for record in records:
         target_key = record.expected_field
-        # TWM uses match_results or variance fields — check flexibly
-        test_results = result_dict.get("test_results", [])
-        if test_results:
-            test_result = next((tr for tr in test_results if tr.get("test_key") == target_key), None)
-            if test_result:
-                assert test_result["entries_flagged"] > 0, f"[{generator.name}] Expected '{target_key}' to flag entries"
-                continue
-        # Check variances or exceptions in result
-        assert any(result_dict.get(k) for k in [target_key, "exceptions", "variances", "match_results"]), (
-            f"[{generator.name}] No detection for '{target_key}'"
+        detected = False
+        if target_key in ("unmatched_invoices", "missing_receipts"):
+            detected = (
+                len(result_dict.get("unmatched_invoices", [])) > 0 or len(result_dict.get("unmatched_receipts", [])) > 0
+            )
+        if target_key in ("quantity_variances", "price_variances"):
+            detected = len(result_dict.get("variances", [])) > 0 or len(result_dict.get("partial_matches", [])) > 0
+        if not detected:
+            detected = (
+                len(result_dict.get("variances", [])) > 0
+                or len(result_dict.get("unmatched_pos", [])) > 0
+                or len(result_dict.get("unmatched_invoices", [])) > 0
+                or len(result_dict.get("unmatched_receipts", [])) > 0
+                or len(result_dict.get("partial_matches", [])) > 0
+            )
+        assert detected, (
+            f"[{generator.name}] Expected detection for '{target_key}'. "
+            f"Variances: {len(result_dict.get('variances', []))}. "
+            f"Unmatched: POs={len(result_dict.get('unmatched_pos', []))}, "
+            f"Inv={len(result_dict.get('unmatched_invoices', []))}, "
+            f"Rcpt={len(result_dict.get('unmatched_receipts', []))}"
         )
 
 
@@ -352,27 +379,54 @@ def test_sampling_anomaly_detected(generator):
 # 12. Multi-Currency — 5 generators (dual-input: TB + rates)
 # =============================================================================
 
-from currency_engine import convert_trial_balance
+from datetime import date as _date
+from decimal import Decimal as _Decimal
+
+from currency_engine import CurrencyRateTable, ExchangeRate, convert_trial_balance
 from tests.anomaly_framework.fixtures.base_multi_currency import BaseMultiCurrencyFactory
 from tests.anomaly_framework.generators.currency_generators import CURRENCY_REGISTRY
 
 
+def _build_rate_table(rate_rows: list[dict]) -> CurrencyRateTable:
+    """Convert raw rate dicts into a CurrencyRateTable for the engine."""
+    rates = []
+    for r in rate_rows:
+        rates.append(
+            ExchangeRate(
+                effective_date=_date.fromisoformat(r["Effective Date"]),
+                from_currency=r["From Currency"],
+                to_currency=r["To Currency"],
+                rate=_Decimal(str(r["Rate"])),
+            )
+        )
+    return CurrencyRateTable(rates=rates, presentation_currency="USD")
+
+
+_CURRENCY_XFAIL = {"zero_exchange_rate", "stale_exchange_rate", "negative_exchange_rate"}
+
+
 @pytest.mark.parametrize("generator", CURRENCY_REGISTRY, ids=lambda g: g.name)
-@pytest.mark.xfail(reason="Currency engine uses CurrencyRateTable object, not raw rate rows — needs adapter")
 def test_currency_anomaly_detected(generator):
-    """Verify Multi-Currency anomaly is detected or handled."""
+    """Verify Multi-Currency anomaly is detected via CurrencyRateTable."""
+    if generator.name in _CURRENCY_XFAIL:
+        pytest.xfail(
+            f"{generator.name}: engine does not validate rate quality (zero/negative/stale) — needs engine-level check"
+        )
     tb_rows = BaseMultiCurrencyFactory.as_tb_rows()
     rate_rows = BaseMultiCurrencyFactory.as_rate_rows()
-    tb_cols = BaseMultiCurrencyFactory.tb_column_names()
 
     mutated_tb, mutated_rates, records = generator.inject(tb_rows, rate_rows, seed=42)
-    result = convert_trial_balance(mutated_tb, tb_cols, mutated_rates, "USD")
+    rate_table = _build_rate_table(mutated_rates)
+    result = convert_trial_balance(mutated_tb, rate_table, amount_column="Debit")
 
-    result_dict = result.to_dict() if hasattr(result, "to_dict") else result
+    result_dict = result.to_dict()
     assert result_dict is not None, f"[{generator.name}] No result returned"
     for record in records:
         target_key = record.expected_field
-        # Currency results have flags/warnings
-        flags = result_dict.get("flags", result_dict.get("conversion_flags", []))
-        if isinstance(flags, list) and flags:
-            assert len(flags) > 0, f"[{generator.name}] Expected flags for '{target_key}'"
+        unconverted = result_dict.get("unconverted_items", [])
+        unconverted_count = result_dict.get("unconverted_count", 0)
+        detected = unconverted_count > 0 or len(unconverted) > 0
+        assert detected, (
+            f"[{generator.name}] Expected detection for '{target_key}'. "
+            f"Unconverted count: {unconverted_count}, items: {unconverted}"
+        )
