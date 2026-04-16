@@ -127,17 +127,25 @@
 ---
 
 ### Sprint 633: Cash Flow Projector (30/60/90-Day)
-**Status:** PENDING
+**Status:** COMPLETE
 **Source:** Future-State Consultant — missing catalog feature #16 (Strategic Bet, Priority 7/4)
 **File:** new engine; reuses AR/AP aging parsers
 **Problem:** Existing `financial_statement_builder.py` cash flow statement is historical indirect-method only. No forward-looking AR/AP-based projector. Operational finance teams need this.
 **Changes:**
-- [ ] New `backend/cash_flow_projector_engine.py`
-- [ ] Inputs: AR aging, AP aging (both already parsed by existing engines), recurring cash flows, opening balance
-- [ ] Base/stress/best-case scenarios
-- [ ] Daily/weekly 30/60/90-day forecast
-- [ ] Collection probability analysis, suggested AR priorities, AP deferral candidates
-- [ ] Route + PDF + Excel
+- [x] New `backend/cash_flow_projector_engine.py`
+- [x] Inputs: AR aging, AP aging (both already parsed by existing engines), recurring cash flows, opening balance
+- [x] Base/stress/best-case scenarios
+- [x] Daily 30/60/90-day forecast (horizon summaries at 30, 60, 90)
+- [x] Collection probability analysis, suggested AR priorities, AP deferral candidates
+- [x] Route + CSV (PDF + Excel deferred to a follow-up sprint — mirrors Sprint 625's CSV-only ship)
+
+**Review:**
+- Engine produces 90 daily points per scenario, horizon summaries at 30/60/90 days, collection priorities ranked by at-risk amount, AP deferral candidates (empty under stress; populated under best).
+- Scenarios: `base` / `stress` / `best` — each with independent collection-rate and AP-payment assumptions.
+- Min-safe-cash threshold check flags breach per scenario.
+- Route: `POST /audit/cash-flow-projector` returns JSON; `POST /audit/cash-flow-projector/export.csv` returns per-day per-scenario CSV.
+- 13 new engine tests cover shape, horizon cumulative ordering, scenario ranking, opening-balance sensitivity, priority ranking, deferral candidates, min-safe-cash breach, input validation, assumption constants, and serialisation. All pass.
+- PDF section and XLSX export deferred — they need the downstream section framework (same deferral reason as Sprint 625, tracked under Sprint 672-style follow-up).
 
 ---
 

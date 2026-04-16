@@ -13,8 +13,10 @@ from routes.auth_routes import router as auth_router
 from routes.bank_reconciliation import router as bank_reconciliation_router
 from routes.benchmarks import router as benchmarks_router
 from routes.billing import router as billing_router
+from routes.book_to_tax import router as book_to_tax_router
 from routes.branding import router as branding_router
 from routes.bulk_upload import router as bulk_upload_router
+from routes.cash_flow_projector import router as cash_flow_projector_router
 from routes.clients import router as clients_router
 from routes.composite_risk import router as composite_risk_router
 from routes.contact import router as contact_router
@@ -26,6 +28,7 @@ from routes.export import router as export_router
 from routes.export_sharing import router as export_sharing_router
 from routes.fixed_asset_testing import router as fixed_asset_testing_router
 from routes.follow_up_items import router as follow_up_items_router
+from routes.form_1099 import router as form_1099_router
 from routes.health import router as health_router
 from routes.internal_admin import router as internal_admin_router
 from routes.internal_metrics import router as internal_metrics_router
@@ -63,6 +66,8 @@ all_routers = [
     adjustments_router,
     je_testing_router,
     loan_amortization_router,
+    cash_flow_projector_router,
+    book_to_tax_router,
     depreciation_router,
     lease_accounting_router,
     ap_testing_router,
@@ -72,6 +77,7 @@ all_routers = [
     revenue_testing_router,
     ar_aging_router,
     fixed_asset_testing_router,
+    form_1099_router,
     inventory_testing_router,
     engagements_router,
     follow_up_items_router,
