@@ -128,16 +128,17 @@
 ---
 
 ### Sprint 624: Interest Coverage Ratio
-**Status:** PENDING
+**Status:** COMPLETE
 **Source:** Accounting Auditor + Future-State — quick win capability gap (Priority 4.0)
-**File:** `backend/ratio_engine.py:2223` (interest expense extracted, never used in output)
+**File:** `backend/ratio_engine.py` (CategoryTotals.interest_expense, INTEREST_EXPENSE_KEYWORDS, RatioEngine.calculate_interest_coverage), `backend/audit/pipeline.py` (consolidation summing), `backend/tests/test_ratio_core.py` (9 new tests), `backend/tests/test_cash_conversion_cycle.py` (count update)
 **Problem:** 17+ ratios implemented but no EBIT / interest expense ratio. Interest expense is already extracted from the TB keyword list. Every going concern and solvency engagement requires this.
 **Changes:**
-- [ ] Add `calculate_interest_coverage()` in `ratio_engine.py` returning `RatioResult`
-- [ ] Logic: EBIT / interest expense. If interest expense = 0, return N/A with "No interest-bearing debt detected"
-- [ ] Thresholds: <1.5x elevated, 1.5x–3.0x watch, >3.0x adequate
-- [ ] Include in `calculate_all_ratios()` dict + PDF memo Ratio section
-- [ ] Tests for positive, zero, negative EBIT paths
+- [x] Add `calculate_interest_coverage()` in `ratio_engine.py` returning `RatioResult`
+- [x] Logic: EBIT / interest expense. If interest expense = 0, return N/A with "No interest-bearing debt detected"
+- [x] Thresholds: <1.5x elevated, 1.5x–3.0x watch, >3.0x adequate
+- [x] Include in `calculate_all_ratios()` dict + PDF memo Ratio section (PDF section already had it via financial_statement_builder path)
+- [x] Tests for positive, zero, negative EBIT paths
+**Review:** `interest_expense` added to `CategoryTotals` with `__post_init__`, `to_dict`, `from_dict` updates. New `INTEREST_EXPENSE_KEYWORDS` list with `income`/`receivable` exclusion to keep interest income/receivables out. Pipeline consolidation now sums `interest_expense` and `operating_expenses` (latter was a pre-existing gap). Total ratios now 18 (was 17). All 163 ratio/CCC tests green; 9 new tests cover adequate, watch, elevated, negative EBIT, zero-interest, derived-opex, calculate_all wiring, extraction, and interest-income-not-misclassified paths.
 
 ---
 

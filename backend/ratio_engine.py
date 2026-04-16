@@ -78,6 +78,10 @@ DSO_GOOD = 45
 DSO_MODERATE = 60
 DSO_POOR = 90
 
+# Interest Coverage Ratio thresholds (Sprint 624)
+INTEREST_COVERAGE_ADEQUATE = Decimal("3.0")
+INTEREST_COVERAGE_WATCH = Decimal("1.5")
+
 # DPO thresholds (industry-generic)
 DPO_EXCELLENT = 30
 DPO_MODERATE = 60
@@ -203,6 +207,7 @@ class CategoryTotals:
     cost_of_goods_sold: Decimal = Decimal("0")
     total_expenses: Decimal = Decimal("0")
     operating_expenses: Decimal = Decimal("0")  # Sprint 26: For Operating Profit Margin
+    interest_expense: Decimal = Decimal("0")  # Sprint 624: For Interest Coverage Ratio
 
     def __post_init__(self) -> None:
         """Coerce any float/int/str inputs to Decimal for monetary precision."""
@@ -219,6 +224,7 @@ class CategoryTotals:
             "cost_of_goods_sold",
             "total_expenses",
             "operating_expenses",
+            "interest_expense",
         ):
             val = getattr(self, f)
             if not isinstance(val, Decimal):
@@ -238,6 +244,7 @@ class CategoryTotals:
             "cost_of_goods_sold": str(quantize_monetary(self.cost_of_goods_sold)),
             "total_expenses": str(quantize_monetary(self.total_expenses)),
             "operating_expenses": str(quantize_monetary(self.operating_expenses)),
+            "interest_expense": str(quantize_monetary(self.interest_expense)),
         }
 
     @classmethod
@@ -261,6 +268,7 @@ class CategoryTotals:
             cost_of_goods_sold=_to_decimal(data.get("cost_of_goods_sold", 0)),
             total_expenses=_to_decimal(data.get("total_expenses", 0)),
             operating_expenses=_to_decimal(data.get("operating_expenses", 0)),
+            interest_expense=_to_decimal(data.get("interest_expense", 0)),
         )
 
 
@@ -617,6 +625,77 @@ class RatioEngine:
             name="Operating Margin",
             value=round(margin, 1),
             display_value=f"{margin:.1f}%",
+            is_calculable=True,
+            interpretation=interpretation,
+            threshold_status=health,
+        )
+
+    def calculate_interest_coverage(self) -> RatioResult:
+        """
+        Interest Coverage Ratio = EBIT / Interest Expense.
+
+        Measures the ability of a company to service its debt obligations from
+        operating earnings. EBIT is derived from totals as
+        (Revenue − COGS − Operating Expenses); interest expense is extracted
+        separately during category aggregation (Sprint 624).
+
+        IFRS/GAAP Note:
+        - IFRS 16 reclassifies most operating lease expense into interest +
+          depreciation, increasing interest expense vs. US GAAP operating lease
+          treatment. Cross-framework comparisons should normalize for this.
+        - Capitalized interest (US GAAP and IFRS) is excluded from this ratio.
+        - Threshold guidance (industry-generic): >= 3.0x adequate, 1.5x-3.0x
+          watch, < 1.5x elevated risk.
+        """
+        if self.totals.interest_expense <= 0:
+            return RatioResult(
+                name="Interest Coverage",
+                value=None,
+                display_value="N/A",
+                is_calculable=False,
+                interpretation="No interest-bearing debt detected",
+                threshold_status="neutral",
+            )
+
+        # Derive operating expenses the same way calculate_operating_margin does.
+        if self.totals.operating_expenses > 0:
+            operating_exp = self.totals.operating_expenses
+        else:
+            derived = self.totals.total_expenses - self.totals.cost_of_goods_sold
+            if derived < 0 or self.totals.total_expenses == 0:
+                return RatioResult(
+                    name="Interest Coverage",
+                    value=None,
+                    display_value="N/A",
+                    is_calculable=False,
+                    interpretation=(
+                        "Cannot calculate: Unable to derive operating expenses "
+                        "(total expenses absent or less than COGS)"
+                    ),
+                    threshold_status="neutral",
+                )
+            operating_exp = derived
+
+        ebit = self.totals.total_revenue - self.totals.cost_of_goods_sold - operating_exp
+        coverage = ebit / self.totals.interest_expense
+
+        if ebit < 0:
+            health = "below_threshold"
+            interpretation = "Operating loss — earnings do not cover interest"
+        elif coverage >= INTEREST_COVERAGE_ADEQUATE:
+            health = "above_threshold"
+            interpretation = "Adequate cushion to service interest obligations"
+        elif coverage >= INTEREST_COVERAGE_WATCH:
+            health = "at_threshold"
+            interpretation = "Watch — limited margin above interest obligations"
+        else:
+            health = "below_threshold"
+            interpretation = "Elevated solvency risk — earnings barely cover interest"
+
+        return RatioResult(
+            name="Interest Coverage",
+            value=round(float(coverage), 2),
+            display_value=f"{coverage:.2f}x",
             is_calculable=True,
             interpretation=interpretation,
             threshold_status=health,
@@ -1287,6 +1366,7 @@ class RatioEngine:
             "gross_margin": self.calculate_gross_margin(),
             "net_profit_margin": self.calculate_net_profit_margin(),
             "operating_margin": self.calculate_operating_margin(),
+            "interest_coverage": self.calculate_interest_coverage(),
             "return_on_assets": self.calculate_return_on_assets(),
             "return_on_equity": self.calculate_return_on_equity(),
             "dso": dso,
@@ -2235,6 +2315,19 @@ NON_OPERATING_KEYWORDS = [
     "restructuring",
 ]
 
+# Sprint 624: Keywords identifying interest expense for the Interest Coverage
+# ratio. "Interest income" and "interest receivable" are revenue/asset items —
+# excluded by both category routing (these flow through revenue/asset paths,
+# not the expense branch) and by the explicit "income"/"receivable" check.
+INTEREST_EXPENSE_KEYWORDS = [
+    "interest expense",
+    "interest payment",
+    "interest paid",
+    "finance charge",
+    "finance cost",
+    "borrowing cost",
+]
+
 
 def extract_category_totals(
     account_balances: dict[str, dict[str, Any]],
@@ -2356,6 +2449,11 @@ def extract_category_totals(
                 # Exclude non-operating items
                 if not any(kw in account_lower for kw in NON_OPERATING_KEYWORDS):
                     totals.operating_expenses += amount
+
+            # Sprint 624: Capture interest expense separately for coverage ratio
+            if "income" not in account_lower and "receivable" not in account_lower:
+                if any(kw in account_lower for kw in INTEREST_EXPENSE_KEYWORDS):
+                    totals.interest_expense += amount
 
     log_secure_operation(
         "category_totals_extracted",

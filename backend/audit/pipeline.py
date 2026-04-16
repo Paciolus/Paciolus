@@ -607,6 +607,8 @@ def audit_trial_balance_multi_sheet(
             consolidated_category_totals.total_revenue += sheet_category_totals.total_revenue
             consolidated_category_totals.cost_of_goods_sold += sheet_category_totals.cost_of_goods_sold
             consolidated_category_totals.total_expenses += sheet_category_totals.total_expenses
+            consolidated_category_totals.operating_expenses += sheet_category_totals.operating_expenses
+            consolidated_category_totals.interest_expense += sheet_category_totals.interest_expense
 
             for acct, bals in auditor.account_balances.items():
                 if acct not in consolidated_account_balances:

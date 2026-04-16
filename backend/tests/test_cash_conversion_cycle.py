@@ -270,9 +270,9 @@ class TestAllRatiosIncludesNewMetrics:
         ratios = engine.calculate_all_ratios()
         assert "ccc" in ratios
 
-    def test_ratio_count_now_seventeen(self):
-        """Should now have 17 ratios total (12 original + 5 structural)."""
+    def test_ratio_count_now_eighteen(self):
+        """Should now have 18 ratios total (Sprint 624: added interest_coverage)."""
         totals = CategoryTotals()
         engine = RatioEngine(totals)
         ratios = engine.calculate_all_ratios()
-        assert len(ratios) == 17
+        assert len(ratios) == 18
