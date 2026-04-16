@@ -7,6 +7,12 @@ Provides pure statistical Benford analysis (engine-agnostic).
 Engines call analyze_benford() with raw amounts, then use the
 BenfordAnalysis result to create domain-specific flagged entries.
 
+Sprint 628 extension: `digit_position` parameter selects first-digit (default,
+1–9), second-digit (0–9), or first-two-digit (10–99) analysis. Second-digit
+catches round-number manipulation invisible to first-digit tests.
+First-two-digit gives finer-grained detection at the cost of needing a much
+larger sample.
+
 NOT used by revenue_testing_engine.py (structurally different:
 chi-squared only, no MAD/conformity, different precision).
 
@@ -18,7 +24,9 @@ References:
 
 import math
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Literal, Optional
+
+DigitPosition = Literal["first", "second", "first_two"]
 
 # Benford's Law expected first-digit distribution (Newcomb-Benford)
 BENFORD_EXPECTED: dict[int, float] = {
@@ -33,11 +41,42 @@ BENFORD_EXPECTED: dict[int, float] = {
     9: 0.04576,
 }
 
+
+def _build_second_digit_expected() -> dict[int, float]:
+    """Second-digit distribution: P(d) = sum_{k=1..9} log10(1 + 1/(10k+d))
+    for d in 0..9. Each digit value's contribution from each two-digit prefix.
+    """
+    expected: dict[int, float] = {}
+    for d in range(0, 10):
+        expected[d] = sum(math.log10(1 + 1 / (10 * k + d)) for k in range(1, 10))
+    return expected
+
+
+def _build_first_two_digit_expected() -> dict[int, float]:
+    """First-two-digit distribution: P(d) = log10(1 + 1/d) for d in 10..99."""
+    return {d: math.log10(1 + 1 / d) for d in range(10, 100)}
+
+
+BENFORD_SECOND_DIGIT_EXPECTED: dict[int, float] = _build_second_digit_expected()
+BENFORD_FIRST_TWO_EXPECTED: dict[int, float] = _build_first_two_digit_expected()
+
+
 # MAD (Mean Absolute Deviation) thresholds per Nigrini (2012)
+# First digit
 BENFORD_MAD_CONFORMING = 0.006
 BENFORD_MAD_ACCEPTABLE = 0.012
 BENFORD_MAD_MARGINALLY_ACCEPTABLE = 0.015
 # Above 0.015 = nonconforming
+
+# Second digit (Nigrini, 2012)
+BENFORD_MAD_2ND_CONFORMING = 0.008
+BENFORD_MAD_2ND_ACCEPTABLE = 0.010
+BENFORD_MAD_2ND_MARGINALLY = 0.012
+
+# First-two-digit (Nigrini, 2012)
+BENFORD_MAD_F2D_CONFORMING = 0.0012
+BENFORD_MAD_F2D_ACCEPTABLE = 0.0018
+BENFORD_MAD_F2D_MARGINALLY = 0.0022
 
 
 def get_first_digit(value: float) -> Optional[int]:
@@ -55,13 +94,59 @@ def get_first_digit(value: float) -> Optional[int]:
     return None
 
 
+def get_second_digit(value: float) -> Optional[int]:
+    """Extract the second significant digit (0-9). The first significant
+    digit is skipped, then the next digit position is returned.
+
+    Returns None for zero or values with fewer than 2 significant digits.
+    """
+    if value == 0:
+        return None
+    abs_val = abs(value)
+    s = f"{abs_val:.12f}".lstrip("0").lstrip(".")
+    found_first = False
+    for ch in s:
+        if not ch.isdigit():
+            continue
+        if not found_first:
+            if ch != "0":
+                found_first = True
+            continue
+        return int(ch)
+    return None
+
+
+def get_first_two_digits(value: float) -> Optional[int]:
+    """Extract the first two significant digits (10-99) as a single integer."""
+    if value == 0:
+        return None
+    abs_val = abs(value)
+    s = f"{abs_val:.12f}".lstrip("0").lstrip(".")
+    digits: list[str] = []
+    started = False
+    for ch in s:
+        if not ch.isdigit():
+            continue
+        if not started and ch == "0":
+            continue
+        started = True
+        digits.append(ch)
+        if len(digits) == 2:
+            break
+    if len(digits) < 2:
+        return None
+    value_int = int("".join(digits))
+    if not (10 <= value_int <= 99):
+        return None
+    return value_int
+
+
 @dataclass
 class BenfordAnalysis:
-    """Results of Benford's Law first-digit analysis.
+    """Results of Benford's Law digit analysis.
 
     Pure statistical result — no domain-specific entry types.
-    Identical field names and to_dict() output to the former
-    je_testing_engine.BenfordResult for backward compatibility.
+    Field names preserved for backward compatibility with first-digit callers.
     """
 
     passed_prechecks: bool
@@ -76,6 +161,7 @@ class BenfordAnalysis:
     chi_squared: float = 0.0
     conformity_level: str = ""
     most_deviated_digits: list[int] = field(default_factory=list)
+    digit_position: DigitPosition = "first"
 
     def to_dict(self) -> dict:
         return {
@@ -91,7 +177,49 @@ class BenfordAnalysis:
             "chi_squared": round(self.chi_squared, 3),
             "conformity_level": self.conformity_level,
             "most_deviated_digits": self.most_deviated_digits,
+            "digit_position": self.digit_position,
         }
+
+
+def _digit_extractor(position: DigitPosition):
+    """Return the (extractor function, expected distribution dict, valid digit
+    range) for the requested digit position.
+    """
+    if position == "first":
+        return get_first_digit, BENFORD_EXPECTED, range(1, 10)
+    if position == "second":
+        return get_second_digit, BENFORD_SECOND_DIGIT_EXPECTED, range(0, 10)
+    if position == "first_two":
+        return get_first_two_digits, BENFORD_FIRST_TWO_EXPECTED, range(10, 100)
+    raise ValueError(f"Unsupported digit_position: {position}")
+
+
+def _conformity_level(mad: float, position: DigitPosition) -> str:
+    """Map MAD to conformity tier using position-specific Nigrini thresholds."""
+    if position == "first":
+        if mad < BENFORD_MAD_CONFORMING:
+            return "conforming"
+        if mad < BENFORD_MAD_ACCEPTABLE:
+            return "acceptable"
+        if mad < BENFORD_MAD_MARGINALLY_ACCEPTABLE:
+            return "marginally_acceptable"
+        return "nonconforming"
+    if position == "second":
+        if mad < BENFORD_MAD_2ND_CONFORMING:
+            return "conforming"
+        if mad < BENFORD_MAD_2ND_ACCEPTABLE:
+            return "acceptable"
+        if mad < BENFORD_MAD_2ND_MARGINALLY:
+            return "marginally_acceptable"
+        return "nonconforming"
+    # first_two
+    if mad < BENFORD_MAD_F2D_CONFORMING:
+        return "conforming"
+    if mad < BENFORD_MAD_F2D_ACCEPTABLE:
+        return "acceptable"
+    if mad < BENFORD_MAD_F2D_MARGINALLY:
+        return "marginally_acceptable"
+    return "nonconforming"
 
 
 def analyze_benford(
@@ -101,8 +229,9 @@ def analyze_benford(
     min_entries: int = 500,
     min_amount: float = 1.0,
     min_magnitude_range: float = 2.0,
+    digit_position: DigitPosition = "first",
 ) -> BenfordAnalysis:
-    """Run Benford's Law first-digit analysis on a list of amounts.
+    """Run Benford's Law digit analysis on a list of amounts.
 
     Args:
         amounts: Pre-filtered list of absolute amounts (>= min_amount).
@@ -111,6 +240,10 @@ def analyze_benford(
         min_amount: Minimum amount threshold (used in precheck message only;
             caller should pre-filter amounts).
         min_magnitude_range: Minimum orders of magnitude range required.
+        digit_position: "first" (default, 1–9), "second" (0–9), or
+            "first_two" (10–99). First-two-digit needs ≥1000 entries to be
+            statistically meaningful — the caller should raise `min_entries`
+            accordingly.
 
     Returns:
         BenfordAnalysis with statistical results. Does NOT create flagged
@@ -125,6 +258,7 @@ def analyze_benford(
             precheck_message=f"Insufficient data: {eligible_count} eligible entries (minimum {min_entries} required).",
             eligible_count=eligible_count,
             total_count=total_count,
+            digit_position=digit_position,
         )
 
     # Pre-check 2: Magnitude range
@@ -141,58 +275,57 @@ def analyze_benford(
             precheck_message=f"Insufficient magnitude range: {magnitude_range:.1f} orders (minimum {min_magnitude_range} required).",
             eligible_count=eligible_count,
             total_count=total_count,
+            digit_position=digit_position,
         )
 
-    # Calculate first-digit distribution
-    digit_counts: dict[int, int] = {d: 0 for d in range(1, 10)}
+    extractor, expected_dist, digit_range = _digit_extractor(digit_position)
+
+    # Calculate digit distribution
+    digit_counts: dict[int, int] = {d: 0 for d in digit_range}
     for amt in amounts:
-        digit = get_first_digit(amt)
-        if digit and 1 <= digit <= 9:
+        digit = extractor(amt)
+        if digit is not None and digit in digit_counts:
             digit_counts[digit] += 1
 
     counted_total = sum(digit_counts.values())
     if counted_total == 0:
         return BenfordAnalysis(
             passed_prechecks=False,
-            precheck_message="No valid first digits found.",
+            precheck_message=f"No valid {digit_position}-digit values found.",
             eligible_count=eligible_count,
             total_count=total_count,
+            digit_position=digit_position,
         )
 
     # Actual distribution
-    actual_dist: dict[int, float] = {d: digit_counts[d] / counted_total for d in range(1, 10)}
+    actual_dist: dict[int, float] = {d: digit_counts[d] / counted_total for d in digit_range}
 
     # Deviation by digit
-    deviation: dict[int, float] = {d: actual_dist[d] - BENFORD_EXPECTED[d] for d in range(1, 10)}
+    deviation: dict[int, float] = {d: actual_dist[d] - expected_dist[d] for d in digit_range}
 
     # MAD
-    mad = math.fsum(abs(deviation[d]) for d in range(1, 10)) / 9
+    n_buckets = len(digit_range)
+    mad = math.fsum(abs(deviation[d]) for d in digit_range) / n_buckets
 
-    # Chi-squared
-    chi_sq = sum(
-        ((digit_counts[d] - BENFORD_EXPECTED[d] * counted_total) ** 2) / (BENFORD_EXPECTED[d] * counted_total)
-        for d in range(1, 10)
-    )
+    # Chi-squared (skip buckets with expected_count == 0 to avoid div-by-zero
+    # — only happens if a caller passes a malformed expected dict)
+    chi_sq = 0.0
+    for d in digit_range:
+        expected_count = expected_dist[d] * counted_total
+        if expected_count > 0:
+            chi_sq += ((digit_counts[d] - expected_count) ** 2) / expected_count
 
-    # Conformity level
-    if mad < BENFORD_MAD_CONFORMING:
-        conformity = "conforming"
-    elif mad < BENFORD_MAD_ACCEPTABLE:
-        conformity = "acceptable"
-    elif mad < BENFORD_MAD_MARGINALLY_ACCEPTABLE:
-        conformity = "marginally_acceptable"
-    else:
-        conformity = "nonconforming"
+    conformity = _conformity_level(mad, digit_position)
 
-    # Most deviated digits (top 3 with deviation > MAD)
-    sorted_deviations = sorted(range(1, 10), key=lambda d: abs(deviation[d]), reverse=True)
+    # Most deviated digits (top 3 with deviation >= MAD)
+    sorted_deviations = sorted(digit_range, key=lambda d: abs(deviation[d]), reverse=True)
     most_deviated = [d for d in sorted_deviations[:3] if abs(deviation[d]) >= mad]
 
     return BenfordAnalysis(
         passed_prechecks=True,
         eligible_count=eligible_count,
         total_count=total_count,
-        expected_distribution=dict(BENFORD_EXPECTED),
+        expected_distribution=dict(expected_dist),
         actual_distribution=actual_dist,
         actual_counts=digit_counts,
         deviation_by_digit=deviation,
@@ -200,4 +333,5 @@ def analyze_benford(
         chi_squared=chi_sq,
         conformity_level=conformity,
         most_deviated_digits=most_deviated,
+        digit_position=digit_position,
     )

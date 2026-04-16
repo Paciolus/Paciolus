@@ -122,21 +122,23 @@
 - [x] JSON + CSV export endpoints (`/audit/account-risk-heatmap` + `/export.csv`)
 - [x] In-memory aggregation only (zero-storage)
 - [ ] Diagnostic Canvas frontend integration deferred to a follow-up sprint
-**Review:** Pure aggregation design — adapters translate concrete engine outputs into a generic `RiskSignal` interface, so the engine is testable independently of upstream changes. Composite risk adapter excludes `low` combined-risk assessments to avoid noise. Top 10%/next 20% bucketing uses ceiling on small lists so even a 3-account input gets at least one High. 13/13 engine tests pass; backend loads 220 routes (was 218).
+**Review:** Pure aggregation design — adapters translate concrete engine outputs into a generic `RiskSignal` interface, so the engine is testable independently of upstream changes. Composite risk adapter excludes `low` combined-risk assessments to avoid noise. Top 10%/next 20% bucketing uses ceiling on small lists so even a 3-account input gets at least one High. 13/13 engine tests pass; backend loads 220 routes (was 218). Commit `1ebf81b`.
 
 ---
 
 ### Sprint 628: Benford Second-Digit + First-Two-Digit Extension
-**Status:** PENDING
+**Status:** COMPLETE
 **Source:** Accounting Auditor + Future-State — spec deviation in shared Benford module
-**File:** `backend/shared/benford.py:36-203`
+**File:** `backend/shared/benford.py` (extended), `backend/tests/test_benford.py` (21 new tests)
 **Problem:** Only first-digit analysis implemented. Second-digit catches round-number manipulation invisible to first-digit tests. Standard complementary test, trivial extension.
 **Changes:**
-- [ ] Add `digit_position: Literal["first", "second", "first_two"] = "first"` parameter to `analyze_benford()`
-- [ ] Add expected distributions for second digit and first-two-digit (Benford-2)
-- [ ] Extend chi-squared threshold per df
-- [ ] Tests for second-digit detection of rounding patterns
-- [ ] Integrate into JE and Payroll anomaly panels
+- [x] Add `digit_position: Literal["first", "second", "first_two"] = "first"` parameter to `analyze_benford()`
+- [x] Add expected distributions for second-digit (10 buckets, 0–9) and first-two-digit (90 buckets, 10–99); both verified to integrate to 1.0
+- [x] Position-specific Nigrini MAD thresholds (first: 0.006/0.012/0.015; second: 0.008/0.010/0.012; F2D: 0.0012/0.0018/0.0022)
+- [x] Tests for second-digit detection of rounding patterns (forced 2nd-digit-5 dataset triggers nonconforming and most_deviated_digits includes 5)
+- [x] `digit_position` round-trips into the result dict for downstream consumers
+- [ ] JE/Payroll panel integration deferred — engines continue to call `analyze_benford(... digit_position="first")` (default); panels can add second/first_two side-by-side in a follow-up
+**Review:** Backwards-compatible — existing callers don't change. New `get_second_digit()` and `get_first_two_digits()` extractors handle decimals, negatives, and zero correctly. F2D needs ≥1000 samples per Nigrini guidance; engine doesn't refuse small samples but the caller's `min_entries` controls the gate. 49/49 Benford tests pass (28 existing + 21 new); JE + Payroll engine tests still pass.
 
 ---
 
