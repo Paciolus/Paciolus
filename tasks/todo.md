@@ -106,16 +106,23 @@
 ---
 
 ### Sprint 632: Account Sequence Gap Detector
-**Status:** PENDING
+**Status:** COMPLETE
 **Source:** Accounting Auditor — TB-only fraud signal not currently surfaced
 **File:** new engine under `backend/audit/rules/`
 **Problem:** Gaps in numeric account number sequences can reveal suppressed accounts. No existing tool surfaces this.
 **Changes:**
-- [ ] Parse numeric component from account numbers, sort, detect gaps
-- [ ] Configurable tolerance (default: gaps of 10+ where adjacent within 5 of boundary)
-- [ ] Exclude category boundary gaps (1xxx→2xxx)
-- [ ] Integrate into Classification Validator output
-- [ ] Test against fabricated TB with suppressed account ranges
+- [x] Parse numeric component from account numbers, sort, detect gaps
+- [x] Configurable tolerance (default: gap > cluster_step; cluster_step default 10)
+- [x] Exclude category boundary gaps (1xxx→2xxx)
+- [x] Integrate into Classification Validator output (new CV-4b check)
+- [x] Test against fabricated TB with suppressed account ranges
+
+**Review:**
+- New `backend/audit/rules/gaps.py` with `detect_account_number_gaps()` and `AccountGap` dataclass.
+- Cluster test: fires only when neighbours step by ≤ `cluster_step` (default 10) on both sides of the gap — excludes sparse numbering and isolated singletons.
+- Category boundary detector (1xxx→2xxx) suppresses false positives at chart block boundaries.
+- CV-4b `check_suspicious_sequence_gaps` integrated into `run_classification_validation`; complementary to CV-4's raw threshold check.
+- 12 new tests cover sequential series, suppressed ranges (high/medium severity), boundary skip, isolated neighbours, cluster tuning, and validator integration. All 64 gap + validator tests pass.
 
 ---
 
