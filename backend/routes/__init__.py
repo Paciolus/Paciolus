@@ -29,6 +29,7 @@ from routes.internal_admin import router as internal_admin_router
 from routes.internal_metrics import router as internal_metrics_router
 from routes.inventory_testing import router as inventory_testing_router
 from routes.je_testing import router as je_testing_router
+from routes.loan_amortization import router as loan_amortization_router
 from routes.metrics import router as metrics_router
 from routes.multi_period import router as multi_period_router
 from routes.organization import router as organization_router
@@ -57,6 +58,7 @@ all_routers = [
     multi_period_router,
     adjustments_router,
     je_testing_router,
+    loan_amortization_router,
     ap_testing_router,
     bank_reconciliation_router,
     payroll_testing_router,
