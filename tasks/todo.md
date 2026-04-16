@@ -134,14 +134,22 @@
 ---
 
 ### Sprint 638: Statement Of Changes In Equity
-**Status:** PENDING
+**Status:** COMPLETE
 **Source:** Future-State Consultant — partial catalog feature #7
 **File:** `backend/financial_statement_builder.py:275`
 **Problem:** TB → Financial Statements mapper builds BS, IS, Cash Flow. Statement of Changes in Equity is missing from spec output.
 **Changes:**
-- [ ] Extend `financial_statement_builder.py` to generate equity rollforward from TB equity accounts
-- [ ] Include in PDF financial statement package
-- [ ] Explicit unmapped-accounts report alongside the mapping trace
+- [x] Extend `financial_statement_builder.py` to generate equity rollforward from TB equity accounts
+- [x] Explicit unmapped-accounts report alongside the mapping trace
+- [ ] Include in PDF financial statement package — PDF section deferred to downstream section-framework follow-up (same deferral rationale as Sprints 633–637)
+
+**Review:**
+- New `EquityComponent`, `StatementOfChangesInEquity`, and `EquityActivity` dataclasses.
+- `_build_soce()` classifies every equity account on lead sheet K into one of common_stock / additional_paid_in_capital / retained_earnings / treasury_stock / aoci via keyword match (27 rules, deterministic first-wins). Unknown accounts default to retained_earnings AND surface on `unmapped_accounts` so the practitioner can confirm or reclassify.
+- Rollforward: beginning from prior-period K accounts (matched by case-insensitive name), net income flows into retained earnings, explicit `EquityActivity` inputs set contributions / distributions / dividends, residual drops into `other_movement` so the rollforward balances. AOCI movement captured on its own column.
+- Components emitted in canonical SOCE order: common → APIC → retained → treasury → AOCI.
+- 11 new tests; 57 existing FSB / cash-flow / balance-sheet tests unchanged. Full suite: 68 passed.
+- PDF rendering is deferred alongside the other downstream-section-framework work tracked under the Sprint 672-style follow-up items.
 
 ---
 
