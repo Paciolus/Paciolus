@@ -839,6 +839,16 @@ class ImpersonationMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         if payload.get("imp"):
+            # Sprint 661: Revoked impersonation tokens stop blocking mutations
+            # so an admin can end a session immediately rather than waiting
+            # for the 15-minute `exp`. Since the middleware uses
+            # verify_exp=False, revocation is the only server-side way to
+            # release the block after issuance.
+            from shared.impersonation_revocation import is_revoked
+
+            if is_revoked(payload.get("jti")):
+                return await call_next(request)
+
             from starlette.responses import JSONResponse
 
             return JSONResponse(

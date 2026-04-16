@@ -1,9 +1,9 @@
 """
-Loan Amortization Routes (Sprint 625).
+Loan Amortization Routes (Sprint 625 / Sprint 672).
 
 Form-input only — zero-storage compliant. Generates an amortization schedule
-and a CSV export for download. PDF memo support is deferred to a follow-up
-sprint when the PDF section framework can render schedule tables natively.
+with CSV, XLSX, and PDF exports. Sprint 672 added the XLSX and PDF exports
+so auditors can paste formatted schedules into engagement workpapers.
 """
 
 from __future__ import annotations
@@ -21,6 +21,7 @@ from pydantic import BaseModel, Field, ValidationError
 
 from auth import User, require_verified_user
 from loan_amortization_engine import (
+    AmortizationResult,
     ExtraPayment,
     LoanConfig,
     LoanInputError,
@@ -189,4 +190,51 @@ def export_schedule_csv(
         iter([buffer.getvalue()]),
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=loan_amortization_schedule.csv"},
+    )
+
+
+def _compute_or_400(payload: LoanAmortizationRequest) -> AmortizationResult:
+    try:
+        return generate_amortization_schedule(_build_config(payload))
+    except LoanInputError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/audit/loan-amortization/export.xlsx")
+@limiter.limit(RATE_LIMIT_AUDIT)
+def export_schedule_xlsx(
+    request: Request,
+    payload: LoanAmortizationRequest,
+    current_user: User = Depends(require_verified_user),
+) -> StreamingResponse:
+    """XLSX export with Schedule, Annual Summary, and Inputs sheets (Sprint 672)."""
+    from loan_amortization_excel import build_amortization_workbook
+
+    result = _compute_or_400(payload)
+    xlsx_bytes = build_amortization_workbook(result)
+
+    return StreamingResponse(
+        iter([xlsx_bytes]),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=loan_amortization_schedule.xlsx"},
+    )
+
+
+@router.post("/audit/loan-amortization/export.pdf")
+@limiter.limit(RATE_LIMIT_AUDIT)
+def export_schedule_pdf(
+    request: Request,
+    payload: LoanAmortizationRequest,
+    current_user: User = Depends(require_verified_user),
+) -> StreamingResponse:
+    """PDF export of the amortization schedule (Sprint 672)."""
+    from pdf.sections.loan_amortization import build_amortization_pdf
+
+    result = _compute_or_400(payload)
+    pdf_bytes = build_amortization_pdf(result)
+
+    return StreamingResponse(
+        iter([pdf_bytes]),
+        media_type="application/pdf",
+        headers={"Content-Disposition": "attachment; filename=loan_amortization_schedule.pdf"},
     )

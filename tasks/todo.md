@@ -69,6 +69,8 @@
 > Sprints 646–650 archived to `tasks/archive/sprints-646-650-details.md`.
 > Sprints 651–655 archived to `tasks/archive/sprints-651-655-details.md`.
 > Sprints 656–660 archived to `tasks/archive/sprints-656-660-details.md`.
+> Sprints 661–664 archived to `tasks/archive/sprints-661-664-details.md`.
+> Sprint 672 archived to `tasks/archive/sprint-672-details.md`.
 
 > **Multi-agent review 2026-04-14 — Sprints 600–664 seeded from 8 parallel agent reviews (Critic, Designer, Executor, Guardian, Scout, Accounting Auditor, Project Auditor, Future-State Consultant). Each sprint cites its originating agent. Ordered by severity, not discovery order.**
 
@@ -109,62 +111,8 @@
 
 ---
 
-### Sprint 661: Impersonation Token Expiry Asymmetry
-**Status:** PENDING
-**Source:** Critic — asymmetric revocation risk
-**File:** `backend/security_middleware.py:869`
-**Problem:** `ImpersonationMiddleware` uses `verify_exp=False` to block mutations. If a 15-minute impersonation token leaks (logs/proxies), the blocking path is effectively permanent for the impersonated user — no server-side revocation, `jti` claim exists but is not registered in any revocation store.
-**Changes:**
-- [ ] Add `jti` to a Redis revocation set on token revocation
-- [ ] Check revocation set in the mutation-blocking path
-- [ ] Document the asymmetric behavior in `SECURE_SDL_CHANGE_MANAGEMENT.md`
-- [ ] Test: revoked impersonation token stops blocking mutations
+<!-- Sprints 661–664 archived to tasks/archive/sprints-661-664-details.md -->
 
----
-
-### Sprint 662: Payroll Memo "Physical Existence" Language Reframe
-**Status:** PENDING
-**Source:** Accounting Auditor — assurance-adjacent procedure language
-**File:** `backend/payroll_testing_memo_generator.py:387-390`
-**Problem:** "Confirm physical existence of employee and legitimacy of the payment" is a field audit procedure, not a TB diagnostic. Parenthetical qualifier exists but phrasing blurs diagnostic output vs audit instruction.
-**Changes:**
-- [ ] Reframe as "Suggested Auditor Procedure — practitioner to consider whether physical verification is warranted based on engagement risk"
-- [ ] Audit all memo generators for similar assurance-voice drift
-
----
-
-### Sprint 663: Anomaly Generator "Control Testing" Checkbox Reframe
-**Status:** PENDING
-**Source:** Accounting Auditor — platform-directed audit methodology implication
-**File:** `backend/anomaly_summary_generator.py:635`
-**Problem:** "[ ] Add control testing procedures" appears as a platform-suggested next step. Control testing is auditor-judgment and engagement scope — platform should not direct methodology.
-**Changes:**
-- [ ] Remove the checkbox line
-- [ ] Replace with free-text "Planned Response" field for practitioner use
-
----
-
-### Sprint 664: accrual_completeness "Legal Counsel" Language Reframe
-**Status:** PENDING
-**Source:** Accounting Auditor — legal-adjacency risk
-**File:** `backend/accrual_completeness_engine.py:487`, `backend/generate_sample_reports.py:3716`
-**Problem:** `driver_source = "Requires legal counsel confirmation"` embeds a legal-requirement determination in automated engine output. Reliance on this could create liability if auditor treats the platform's output as authoritative.
-**Changes:**
-- [ ] Rephrase to "Legal obligations may be present — practitioner should evaluate whether legal confirmation is warranted"
-- [ ] Apply same softening pattern across all engine `driver_source` strings that reference legal/regulatory determinations
-
----
-
-### Sprint 672: Loan Amortization XLSX + PDF Export
-**Status:** PENDING
-**Source:** Sprint 625 follow-up — XLSX and PDF deferred at sprint close
-**File:** `backend/routes/loan_amortization.py` (extend), new `backend/pdf/sections/loan_amortization.py`, possibly new `backend/loan_amortization_excel.py`
-**Problem:** Sprint 625 shipped CSV export only. Auditors and operational finance teams routinely paste these schedules into engagement workpapers — XLSX preserves cell formatting and PDF locks the schedule for evidence. Both were deferred so the engine, route, and frontend could land in one sprint.
-**Changes:**
-- [ ] XLSX export endpoint `/audit/loan-amortization/export.xlsx` — schedule sheet + annual summary sheet + inputs sheet, currency-formatted columns, frozen header row
-- [ ] PDF section module rendering the inputs block, summary cards, annual table, and the period schedule (paginated — 30-yr monthly = 360 rows, must page cleanly)
-- [ ] PDF endpoint `/audit/loan-amortization/export.pdf`
-- [ ] Frontend: add XLSX and PDF download buttons next to the existing CSV button on `/tools/loan-amortization`
-- [ ] Tests: row count + total-interest cell match the JSON response for both formats
+<!-- Sprint 672 archived to tasks/archive/sprint-672-details.md -->
 
 ---

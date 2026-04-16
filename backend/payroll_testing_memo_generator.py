@@ -384,10 +384,12 @@ _DETAIL_PROCEDURES = {
         "been initiated."
     ),
     "PR-T9": (
-        "Trace the flagged employee(s) to HR personnel file. Confirm physical existence "
-        "of employee and legitimacy of the payment. Physical verification of employee existence, "
-        "if warranted, must be performed by the engagement team directly and not delegated "
-        "to management."
+        "Trace the flagged employee(s) to HR personnel file and evaluate whether the "
+        "evidence on file supports a bona fide employee and a legitimate payment. Whether "
+        "physical verification of employee existence is warranted is a matter of auditor "
+        "judgment based on engagement risk; if the practitioner elects to perform it, it "
+        "should be performed by the engagement team directly rather than delegated to "
+        "management."
     ),
     "PR-T10": (
         "Obtain bank account authorization forms for all affected employees. Confirm whether "

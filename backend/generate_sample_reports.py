@@ -395,7 +395,16 @@ def _make_testing_result(
     return result
 
 
-def _test(name: str, key: str, tier: str, flagged: int, rate: float, severity: str, status: str = "warning", flagged_entries: list | None = None) -> dict:
+def _test(
+    name: str,
+    key: str,
+    tier: str,
+    flagged: int,
+    rate: float,
+    severity: str,
+    status: str = "warning",
+    flagged_entries: list | None = None,
+) -> dict:
     result = {
         "test_name": name,
         "test_key": key,
@@ -3691,7 +3700,7 @@ def gen_accrual_completeness() -> None:
                 "account_name": "Accrued Interest Payable",
                 "recorded_balance": 24_500.00,
                 "annual_driver": None,
-                "driver_source": "Requires debt schedule \u2014 not derivable from TB",
+                "driver_source": "Reasonableness not derivable from TB \u2014 practitioner should evaluate whether a debt schedule is available",
                 "months_to_accrue": 1,
                 "expected_balance": None,
                 "variance": None,
@@ -3713,7 +3722,7 @@ def gen_accrual_completeness() -> None:
                 "account_name": "Accrued Legal Fees",
                 "recorded_balance": 35_000.00,
                 "annual_driver": None,
-                "driver_source": "Requires legal counsel confirmation",
+                "driver_source": "Legal obligations may be present \u2014 practitioner should evaluate whether legal confirmation is warranted",
                 "months_to_accrue": 1,
                 "expected_balance": None,
                 "variance": None,
@@ -3724,7 +3733,7 @@ def gen_accrual_completeness() -> None:
                 "account_name": "Warranty Reserve",
                 "recorded_balance": 18_750.00,
                 "annual_driver": None,
-                "driver_source": "Requires warranty claims history",
+                "driver_source": "Reasonableness typically relies on warranty claims history \u2014 practitioner should evaluate whether claims data is available",
                 "months_to_accrue": 1,
                 "expected_balance": None,
                 "variance": None,

@@ -623,13 +623,14 @@ class AnomalySummaryGenerator:
                             Paragraph("[PRACTITIONER TO COMPLETE]", styles["MemoTableCell"]),
                         ],
                         [
-                            Paragraph("Implication for Audit", styles["MemoTableCell"]),
+                            Paragraph("Planned Response", styles["MemoTableCell"]),
                             Paragraph(
-                                "[ ] No change to planned procedures<br/>"
-                                "[ ] Expand scope of substantive testing<br/>"
-                                "[ ] Add control testing procedures<br/>"
-                                "[ ] Escalate to engagement partner<br/>"
-                                "[ ] Refer to specialist",
+                                "[PRACTITIONER TO COMPLETE]<br/>"
+                                "<i>Document the response the engagement team intends to take "
+                                "(e.g., no change to planned procedures, expanded substantive "
+                                "testing, escalation, specialist referral). Whether control "
+                                "testing is appropriate is a matter of auditor judgment and "
+                                "engagement scope — this platform does not direct methodology.</i>",
                                 styles["MemoTableCell"],
                             ),
                         ],

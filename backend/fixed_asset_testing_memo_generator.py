@@ -443,10 +443,11 @@ _DETAIL_PROCEDURES = {
         "materially exceeding cost may require write-off and removal from the register."
     ),
     "duplicate_assets": (
-        "Verify whether these records represent two distinct physical assets or a single asset "
-        "entered twice. If a duplicate, reverse the duplicate capitalization entry and "
-        "corresponding accumulated depreciation. Obtain the asset tag or serial number to "
-        "confirm physical existence of both."
+        "Evaluate whether these records represent two distinct physical assets or a single asset "
+        "entered twice. If the practitioner concludes it is a duplicate, reverse the duplicate "
+        "capitalization entry and corresponding accumulated depreciation. Obtaining the asset "
+        "tag or serial number to corroborate the existence of both is a suggested procedure "
+        "where engagement risk warrants."
     ),
     "negative_values": (
         "Obtain the original capitalization documentation for this asset. Correct the cost to "

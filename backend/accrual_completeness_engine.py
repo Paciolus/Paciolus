@@ -476,30 +476,50 @@ def _build_reasonableness_results(
                 source = "Estimated from operating expenses (25% allocation)"
         elif "interest" in name_lower:
             # Interest is hard to estimate without debt schedule
-            source = "Requires debt schedule — not derivable from TB"
+            source = "Reasonableness not derivable from TB — practitioner should evaluate whether a debt schedule is available"
         elif any(kw in name_lower for kw in ["utilities", "electric", "gas", "water"]):
             # Utilities typically ~2% of operating expenses
             if prior_operating_expenses is not None:
                 driver = prior_operating_expenses * 0.02
                 source = "Estimated from operating expenses (2% allocation)"
         elif any(kw in name_lower for kw in ["legal", "litigation"]):
-            # Legal fees are judgment-dependent
-            source = "Requires legal counsel confirmation"
+            # Legal fees are judgment-dependent. Sprint 664: avoid directing the
+            # practitioner to obtain legal counsel — whether legal confirmation
+            # is warranted is an auditor-judgment call.
+            source = (
+                "Legal obligations may be present — practitioner should evaluate "
+                "whether legal confirmation is warranted"
+            )
         elif any(kw in name_lower for kw in ["warranty", "guarantee"]):
             # Warranty reserve requires historical claims data
-            source = "Requires warranty claims history"
+            source = (
+                "Reasonableness typically relies on warranty claims history — "
+                "practitioner should evaluate whether claims data is available"
+            )
         elif any(kw in name_lower for kw in ["rent", "lease"]):
             if prior_operating_expenses is not None:
                 driver = prior_operating_expenses * 0.05
                 source = "Estimated from operating expenses (5% allocation)"
         elif any(kw in name_lower for kw in ["bonus", "incentive"]):
-            source = "Requires compensation plan details"
+            source = (
+                "Reasonableness typically relies on compensation plan details — "
+                "practitioner should evaluate whether plan terms are available"
+            )
         elif any(kw in name_lower for kw in ["vacation", "pto", "leave"]):
-            source = "Requires PTO policy and headcount data"
+            source = (
+                "Reasonableness typically relies on PTO policy and headcount — "
+                "practitioner should evaluate whether that data is available"
+            )
         elif any(kw in name_lower for kw in ["tax", "income tax"]):
-            source = "Requires tax provision computation"
+            source = (
+                "Reasonableness typically relies on a tax provision computation — "
+                "practitioner should evaluate whether the provision is available"
+            )
         elif any(kw in name_lower for kw in ["insurance", "premium"]):
-            source = "Requires insurance policy schedule"
+            source = (
+                "Reasonableness typically relies on the insurance policy schedule — "
+                "practitioner should evaluate whether the schedule is available"
+            )
         elif prior_operating_expenses is not None:
             # Generic fallback: use total opex as a rough proxy
             driver = prior_operating_expenses

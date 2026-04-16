@@ -356,6 +356,68 @@ def impersonate_customer(
     }
 
 
+@router.post("/impersonate/stop")
+@limiter.limit(RATE_LIMIT_WRITE)
+def stop_impersonation(
+    request: Request,
+    admin: Annotated[User, Depends(require_superadmin)],
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """Revoke an active impersonation token (Sprint 661).
+
+    The admin POSTs the impersonation token they received from
+    ``/customers/{org_id}/impersonate``. The token's ``jti`` is added to the
+    revocation set so ImpersonationMiddleware stops treating it as read-only.
+    The token is decoded with ``verify_exp=False`` so already-expired sessions
+    can still be explicitly closed out.
+    """
+    import jwt as _jwt
+
+    from admin_audit_model import AdminActionType
+    from billing.admin_customers import _create_audit_entry
+    from config import JWT_ALGORITHM, JWT_SECRET_KEY
+    from shared.impersonation_revocation import revoke
+
+    auth_header = request.headers.get("authorization", "")
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=400, detail="Missing bearer token.")
+
+    try:
+        payload = _jwt.decode(
+            auth_header[7:],
+            JWT_SECRET_KEY or "",
+            algorithms=[JWT_ALGORITHM],
+            options={"verify_exp": False},
+        )
+    except _jwt.PyJWTError:
+        raise HTTPException(status_code=400, detail="Invalid token.")
+
+    if not payload.get("imp"):
+        raise HTTPException(status_code=400, detail="Not an impersonation token.")
+
+    jti = payload.get("jti")
+    if not jti:
+        raise HTTPException(status_code=400, detail="Impersonation token missing jti.")
+
+    exp = int(payload.get("exp") or 0)
+    now = int(datetime.now(UTC).timestamp())
+    ttl = max(60, exp - now + 60)
+
+    revoke(jti, ttl)
+
+    _create_audit_entry(
+        db,
+        admin.id,
+        AdminActionType.IMPERSONATION_END,
+        target_user_id=int(payload.get("sub") or 0) or None,
+        details={"jti": jti, "revoked_at": datetime.now(UTC).isoformat()},
+        ip_address=get_client_ip(request),
+    )
+    db.commit()
+
+    return {"revoked": True, "jti": jti}
+
+
 # ---------------------------------------------------------------------------
 # Audit Log
 # ---------------------------------------------------------------------------

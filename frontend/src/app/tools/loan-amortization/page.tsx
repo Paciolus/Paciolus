@@ -130,35 +130,38 @@ export default function LoanAmortizationPage() {
     }
   }, [token, buildPayload])
 
-  const downloadCsv = useCallback(async () => {
-    if (!token) return
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL || ''}/audit/loan-amortization/export.csv`,
-      {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-          'X-Requested-With': 'XMLHttpRequest',
-        },
-        body: JSON.stringify(buildPayload()),
+  const downloadExport = useCallback(
+    async (format: 'csv' | 'xlsx' | 'pdf') => {
+      if (!token) return
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || ''}/audit/loan-amortization/export.${format}`,
+        {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+            'X-Requested-With': 'XMLHttpRequest',
+          },
+          body: JSON.stringify(buildPayload()),
+        }
+      )
+      if (!response.ok) {
+        setError(`${format.toUpperCase()} export failed`)
+        return
       }
-    )
-    if (!response.ok) {
-      setError('CSV export failed')
-      return
-    }
-    const blob = await response.blob()
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = 'loan_amortization_schedule.csv'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
-  }, [token, buildPayload])
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `loan_amortization_schedule.${format}`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+    },
+    [token, buildPayload]
+  )
 
   const monthlyPayment = useMemo(() => {
     const first = result?.schedule[0]
@@ -301,13 +304,29 @@ export default function LoanAmortizationPage() {
                 {submitting ? 'Calculating…' : 'Generate Schedule'}
               </button>
               {result && (
-                <button
-                  type="button"
-                  onClick={downloadCsv}
-                  className="px-5 py-2.5 rounded-xl bg-sage-600 text-oatmeal-50 font-sans font-bold hover:bg-sage-700 transition-colors"
-                >
-                  Download CSV
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={() => downloadExport('csv')}
+                    className="px-5 py-2.5 rounded-xl bg-sage-600 text-oatmeal-50 font-sans font-bold hover:bg-sage-700 transition-colors"
+                  >
+                    Download CSV
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => downloadExport('xlsx')}
+                    className="px-5 py-2.5 rounded-xl bg-sage-600 text-oatmeal-50 font-sans font-bold hover:bg-sage-700 transition-colors"
+                  >
+                    Download XLSX
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => downloadExport('pdf')}
+                    className="px-5 py-2.5 rounded-xl bg-obsidian-700 text-oatmeal-50 font-sans font-bold hover:bg-obsidian-600 transition-colors"
+                  >
+                    Download PDF
+                  </button>
+                </>
               )}
             </div>
 

@@ -183,3 +183,40 @@ class TestImpersonationMiddleware:
         ) as client:
             r = await client.post("/anything", headers={"Authorization": "Basic dXNlcjpwYXNz"})
         assert r.status_code == 200
+
+    @pytest.mark.asyncio
+    async def test_revoked_imp_token_stops_blocking_mutations(self):
+        """Sprint 661: revoking the jti releases the mutation block."""
+        from shared.impersonation_revocation import _reset_for_tests, revoke
+
+        _reset_for_tests()
+
+        jti = "revoked-jti-abc"
+        token = _encode(
+            {
+                "sub": "42",
+                "email": "user@example.com",
+                "imp": True,
+                "jti": jti,
+                "exp": int(time.time()) + 3600,
+            }
+        )
+
+        middleware = _build_middleware()
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=middleware),
+            base_url="http://test",
+        ) as client:
+            r = await client.post("/anything", headers={"Authorization": f"Bearer {token}"})
+        assert r.status_code == 403
+
+        revoke(jti, ttl_seconds=3600)
+
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=middleware),
+            base_url="http://test",
+        ) as client:
+            r = await client.post("/anything", headers={"Authorization": f"Bearer {token}"})
+        assert r.status_code == 200
+
+        _reset_for_tests()
