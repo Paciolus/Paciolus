@@ -31,6 +31,7 @@ from routes.internal_admin import router as internal_admin_router
 from routes.internal_metrics import router as internal_metrics_router
 from routes.inventory_testing import router as inventory_testing_router
 from routes.je_testing import router as je_testing_router
+from routes.lease_accounting import router as lease_accounting_router
 from routes.loan_amortization import router as loan_amortization_router
 from routes.metrics import router as metrics_router
 from routes.multi_period import router as multi_period_router
@@ -62,6 +63,7 @@ all_routers = [
     je_testing_router,
     loan_amortization_router,
     depreciation_router,
+    lease_accounting_router,
     ap_testing_router,
     bank_reconciliation_router,
     payroll_testing_router,

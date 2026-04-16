@@ -138,21 +138,25 @@
 - [x] Tests for second-digit detection of rounding patterns (forced 2nd-digit-5 dataset triggers nonconforming and most_deviated_digits includes 5)
 - [x] `digit_position` round-trips into the result dict for downstream consumers
 - [ ] JE/Payroll panel integration deferred — engines continue to call `analyze_benford(... digit_position="first")` (default); panels can add second/first_two side-by-side in a follow-up
-**Review:** Backwards-compatible — existing callers don't change. New `get_second_digit()` and `get_first_two_digits()` extractors handle decimals, negatives, and zero correctly. F2D needs ≥1000 samples per Nigrini guidance; engine doesn't refuse small samples but the caller's `min_entries` controls the gate. 49/49 Benford tests pass (28 existing + 21 new); JE + Payroll engine tests still pass.
+**Review:** Backwards-compatible — existing callers don't change. New `get_second_digit()` and `get_first_two_digits()` extractors handle decimals, negatives, and zero correctly. F2D needs ≥1000 samples per Nigrini guidance; engine doesn't refuse small samples but the caller's `min_entries` controls the gate. 49/49 Benford tests pass (28 existing + 21 new); JE + Payroll engine tests still pass. Commit `01ea813`.
 
 ---
 
 ### Sprint 629: ASC 842 Lease Calculator
-**Status:** PENDING
+**Status:** COMPLETE
 **Source:** Future-State Consultant — missing catalog feature #17 (Strategic Bet, Priority 8/6)
-**File:** `backend/lease_diagnostic_engine.py` currently diagnostic-only; new calculator engine needed
+**File:** `backend/lease_accounting_engine.py` (new), `backend/routes/lease_accounting.py` (new), `backend/routes/__init__.py`, `backend/tests/test_lease_accounting_engine.py` (new, 24 tests)
 **Problem:** Lease diagnostic flags audit risk only — no ROU asset, no PV of lease payments, no classification tests, no amortization schedule, no disclosure support. ASC 842 is mandatory for non-micro entities.
 **Changes:**
-- [ ] New `backend/lease_accounting_engine.py` — 5-criteria classification test, initial measurement, amortization schedule
-- [ ] Operating vs finance lease separation
-- [ ] Disclosure tables: maturity analysis, weighted-average remaining term, weighted-average discount rate
-- [ ] Defer modification/remeasurement to future sprint
-- [ ] Route + PDF memo + Excel schedule export
+- [x] New `backend/lease_accounting_engine.py` — 5-criteria classification test (ASC 842-10-25-2 (a)–(e)), initial measurement (PV of payments → liability; liability + IDC + prepaid – incentives → ROU), liability amortization (effective interest), ROU amortization
+- [x] Operating vs finance lease separation: operating uses straight-line lease cost (ROU plugs SL minus interest); finance uses straight-line ROU amortization with separate interest
+- [x] Disclosure tables: 5-year + thereafter maturity analysis, weighted-average remaining term, weighted-average discount rate
+- [x] Defer modification/remeasurement to future sprint (documented in module docstring)
+- [x] Route `/audit/lease-accounting` + CSV export
+- [x] Annual escalation (CPI/fixed step-up) supported
+- [ ] PDF memo + Excel export deferred to a follow-up sprint (matches loan-amortization deferral)
+- [ ] Frontend page deferred to a follow-up sprint
+**Review:** Decimal-precision math; in-advance amortization correctly skips post-final-period interest accrual. Liability schedule reconciles: sum(principal) ≈ initial liability (within $0.01 across quantized rows); sum(payments) - sum(principal) = total interest. Operating lease produces uniform period_lease_cost; finance lease produces interest-front-loaded period_lease_cost. 24/24 engine tests pass; backend loads 222 routes (was 220).
 
 ---
 
