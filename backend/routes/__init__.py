@@ -41,6 +41,7 @@ from routes.prior_period import router as prior_period_router
 from routes.revenue_testing import router as revenue_testing_router
 from routes.sampling import router as sampling_router
 from routes.settings import router as settings_router
+from routes.sod import router as sod_router
 from routes.three_way_match import router as three_way_match_router
 from routes.trends import router as trends_router
 from routes.users import router as users_router
@@ -86,6 +87,7 @@ all_routers = [
     bulk_upload_router,
     composite_risk_router,
     account_risk_heatmap_router,
+    sod_router,
     internal_metrics_router,
     internal_admin_router,
 ]
