@@ -219,12 +219,20 @@ class MovementSummaryResponse(BaseModel):
 
 
 class BudgetVarianceResponse(BaseModel):
-    """Budget variance data for a single account."""
+    """Budget variance data for a single account.
+
+    Sprint 640: ``variance_direction`` classifies the variance as
+    favorable / unfavorable / on_budget / neutral based on the account's
+    income-statement role. Balance-sheet accounts return ``neutral``.
+    ``commentary_prompt`` is populated for MATERIAL variances.
+    """
 
     budget_balance: float
     variance_amount: float
     variance_percent: Optional[float] = None
     variance_significance: Literal["material", "significant", "minor"]
+    variance_direction: Literal["favorable", "unfavorable", "on_budget", "neutral"] = "neutral"
+    commentary_prompt: Optional[str] = None
 
 
 class ThreeWayLeadSheetSummaryResponse(BaseModel):

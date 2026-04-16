@@ -701,20 +701,96 @@ def compare_trial_balances(
 
 @dataclass
 class BudgetVariance:
-    """Budget variance data for a single account."""
+    """Budget variance data for a single account.
+
+    Sprint 640: ``variance_direction`` classifies the variance as
+    favorable / unfavorable / on_budget / neutral by combining the raw
+    amount with the account's income-statement role. Balance-sheet
+    accounts use ``neutral`` because favorability for assets,
+    liabilities, and equity is context-dependent (a growing asset
+    balance can be favorable or not depending on engagement).
+    """
 
     budget_balance: float
     variance_amount: float  # current - budget
     variance_percent: Optional[float]
     variance_significance: SignificanceTier
+    variance_direction: str = "neutral"  # "favorable" | "unfavorable" | "on_budget" | "neutral"
+    commentary_prompt: Optional[str] = None
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        d = {
             "budget_balance": self.budget_balance,
             "variance_amount": self.variance_amount,
             "variance_percent": self.variance_percent,
             "variance_significance": self.variance_significance.value,
+            "variance_direction": self.variance_direction,
         }
+        if self.commentary_prompt is not None:
+            d["commentary_prompt"] = self.commentary_prompt
+        return d
+
+
+# Sprint 640: Categories where the favorable / unfavorable distinction
+# is meaningful on the income statement. Balance-sheet categories default
+# to "neutral" because favorability depends on engagement context.
+_INCOME_STATEMENT_CATEGORIES: frozenset[str] = frozenset(
+    {
+        "Revenue",
+        "Cost of Goods Sold",
+        "Operating Expenses",
+        "Other Income and Expense",
+    }
+)
+
+
+def _classify_variance_direction(
+    variance_amount: float,
+    lead_sheet_category: str,
+    on_budget_tolerance: float = 0.01,
+) -> str:
+    """Return favorable / unfavorable / on_budget / neutral.
+
+    For income-statement categories the signed raw ``variance_amount``
+    (current − budget, in debit-positive terms) is interpreted:
+
+      * Revenue — credit-normal; raw variance < 0 means actual is more
+        credit-heavy than budget (more revenue) → favorable.
+      * COGS / Expense / Other — debit-normal; raw variance > 0 means
+        over-spent → unfavorable; < 0 means under-spent → favorable.
+      * Both cases collapse to: favorable = variance < 0 in raw debit-
+        positive terms. On-budget when within tolerance.
+
+    Balance-sheet categories (Assets, Liabilities, Equity, etc.) return
+    ``neutral`` — favorability is engagement-dependent.
+    """
+    if lead_sheet_category not in _INCOME_STATEMENT_CATEGORIES:
+        return "neutral"
+    if abs(variance_amount) < on_budget_tolerance:
+        return "on_budget"
+    return "favorable" if variance_amount < 0 else "unfavorable"
+
+
+def _commentary_prompt(
+    account_name: str,
+    variance_amount: float,
+    variance_direction: str,
+    lead_sheet_category: str,
+) -> str:
+    """Sprint 640: Placeholder prompt for the practitioner on CRITICAL variances.
+
+    The platform does not generate commentary — that is auditor judgment
+    based on supporting documentation. The prompt structures what the
+    commentary needs to cover so the practitioner can fill it in.
+    """
+    direction_label = variance_direction.replace("_", " ")
+    amount_label = f"${abs(variance_amount):,.2f}"
+    return (
+        f"Critical {direction_label} variance of {amount_label} on "
+        f"{account_name} ({lead_sheet_category}). Document the driver: "
+        "timing difference, estimate change, one-time item, or ongoing "
+        "run-rate shift. Cite supporting evidence if material."
+    )
 
 
 @dataclass
@@ -891,11 +967,28 @@ def compare_three_periods(
 
             variance_sig = classify_significance(variance_amount, variance_percent, materiality_threshold)
 
+            # Sprint 640: classify the variance direction and emit a
+            # commentary prompt for CRITICAL movements.
+            variance_direction = _classify_variance_direction(variance_amount, movement.lead_sheet_category)
+            commentary_prompt: Optional[str] = None
+            # Sprint 640: the sprint brief referenced a "CRITICAL" tier;
+            # this codebase's top tier is ``MATERIAL`` and is the correct
+            # threshold for auditor commentary.
+            if variance_sig == SignificanceTier.MATERIAL:
+                commentary_prompt = _commentary_prompt(
+                    movement.account_name,
+                    variance_amount,
+                    variance_direction,
+                    movement.lead_sheet_category,
+                )
+
             m_dict["budget_variance"] = BudgetVariance(
                 budget_balance=budget_balance,
                 variance_amount=variance_amount,
                 variance_percent=variance_percent,
                 variance_significance=variance_sig,
+                variance_direction=variance_direction,
+                commentary_prompt=commentary_prompt,
             ).to_dict()
 
             budget_sig_counts[variance_sig.value] += 1
