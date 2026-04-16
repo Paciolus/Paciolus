@@ -68,6 +68,7 @@
 > Sprints 641–645 archived to `tasks/archive/sprints-641-645-details.md`.
 > Sprints 646–650 archived to `tasks/archive/sprints-646-650-details.md`.
 > Sprints 651–655 archived to `tasks/archive/sprints-651-655-details.md`.
+> Sprints 656–660 archived to `tasks/archive/sprints-656-660-details.md`.
 
 > **Multi-agent review 2026-04-14 — Sprints 600–664 seeded from 8 parallel agent reviews (Critic, Designer, Executor, Guardian, Scout, Accounting Auditor, Project Auditor, Future-State Consultant). Each sprint cites its originating agent. Ordered by severity, not discovery order.**
 
@@ -104,60 +105,7 @@
 
 ---
 
-### Sprint 656: KeyMetricsSection Mono Label/Value Separation
-**Status:** PENDING
-**Source:** Designer — typography consistency
-**File:** `frontend/src/components/analytics/KeyMetricsSection.tsx:235-245`
-**Problem:** Labels like "Assets:" render inside the `font-mono` span alongside the numeric value, making labels look mechanical. Should be `font-sans` label + `font-mono` number.
-**Changes:**
-- [ ] Split into `<span font-sans text-xs>Assets:</span> <span font-mono>$X</span>` pattern
-- [ ] Apply to all 4 category totals
-
----
-
-### Sprint 657: ToolSettingsDrawer Mobile Gutter Cap
-**Status:** PENDING
-**Source:** Designer — 375px viewport clipping
-**File:** `frontend/src/components/shared/ToolSettingsDrawer.tsx:189`
-**Problem:** `w-[400px] max-w-[90vw]` means on a 375px device the drawer is `337px` — close button clipped.
-**Changes:**
-- [ ] Change to `w-full max-w-[400px]` with `sm:w-[400px]`, or `max-w-[min(400px,100vw-24px)]`
-- [ ] Manual test at 320/375/414 widths
-
----
-
-### Sprint 658: MatchSummaryCards Mono Numerics
-**Status:** PENDING
-**Source:** Designer — financial data not in font-mono
-**File:** `frontend/src/components/bankRec/MatchSummaryCards.tsx:104`
-**Problem:** `Match Rate: X% (N of M items)` renders as plain text. Match rate is a financial metric that should use `font-mono` per brand mandate.
-**Changes:**
-- [ ] Wrap `matchRate.toFixed(0)%` and counts in `font-mono` spans
-- [ ] Grep remaining untagged numeric metrics across bankRec and other tool summaries
-
----
-
-### Sprint 659: follow_up_items_manager DB Aggregation
-**Status:** PENDING
-**Source:** Guardian — in-memory N+1 pattern
-**File:** `backend/follow_up_items_manager.py:314-337`
-**Problem:** `get_summary_for_engagement` loads all items into Python memory first (`.all()`) then aggregates. For high-volume engagements this is an in-memory N+1 — OOM risk on large engagements.
-**Changes:**
-- [ ] Rewrite as `db.query(func.count(), FollowUpItem.severity).group_by(...)`
-- [ ] Performance test with 10k items
-- [ ] Verify memory footprint unchanged at 10k vs 100 items
-
----
-
-### Sprint 660: accrual_completeness monthly_run_rate Decimal Guard
-**Status:** PENDING
-**Source:** Guardian — float/Decimal precision fragility
-**File:** `backend/accrual_completeness_engine.py:891-892`
-**Problem:** `monthly_run_rate = prior_operating_expenses / MONTHS_PER_YEAR` uses raw `float`. `NEAR_ZERO` guard then compares `float` to `Decimal` constant. Works today but fragile at exact boundary values.
-**Changes:**
-- [ ] Convert `prior_operating_expenses` to `Decimal` before the division
-- [ ] Use `Decimal(str(...))` guard consistently
-- [ ] Test with `prior_operating_expenses = 1e-7` to verify NEAR_ZERO fires
+<!-- Sprints 656–660 archived to tasks/archive/sprints-656-660-details.md -->
 
 ---
 

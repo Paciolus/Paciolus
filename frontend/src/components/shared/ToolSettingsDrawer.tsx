@@ -186,7 +186,7 @@ export function ToolSettingsDrawer({ toolKey, open, onClose }: ToolSettingsDrawe
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring' as const, damping: 30, stiffness: 300 }}
-            className="fixed right-0 top-0 bottom-0 w-[400px] max-w-[90vw] bg-surface-page border-l border-theme shadow-theme-elevated z-50 flex flex-col"
+            className="fixed right-0 top-0 bottom-0 w-full max-w-[min(400px,100vw-24px)] sm:w-[400px] sm:max-w-[400px] bg-surface-page border-l border-theme shadow-theme-elevated z-50 flex flex-col"
             role="dialog"
             aria-modal="true"
             aria-label={`${TOOL_TITLES[toolKey]} Settings`}

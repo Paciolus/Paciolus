@@ -888,9 +888,11 @@ def compute_accrual_completeness(
 
     if prior_available:
         assert prior_operating_expenses is not None
-        monthly_run_rate = prior_operating_expenses / MONTHS_PER_YEAR
-        if abs(monthly_run_rate) > NEAR_ZERO:
-            accrual_to_run_rate = float(total_accrued / Decimal(str(monthly_run_rate)) * 100)
+        prior_ops_dec = Decimal(str(prior_operating_expenses))
+        monthly_run_rate_dec = prior_ops_dec / Decimal(MONTHS_PER_YEAR)
+        monthly_run_rate = float(monthly_run_rate_dec)
+        if abs(monthly_run_rate_dec) > Decimal(str(NEAR_ZERO)):
+            accrual_to_run_rate = float(total_accrued / monthly_run_rate_dec * 100)
             meets_threshold = accrual_to_run_rate >= threshold_pct
 
     # Per-account reasonableness testing
