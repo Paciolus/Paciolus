@@ -93,13 +93,13 @@
 ---
 
 ### Sprint 612: Constant-Time Passcode Compare
-**Status:** PENDING
+**Status:** COMPLETE
 **Source:** Critic — timing consistency
 **File:** `backend/routes/export_sharing.py:220`
 **Problem:** `hashlib.sha256(...).hexdigest() != share.passcode_hash` uses Python `!=` which short-circuits. Inconsistent with `security_middleware.py:408` which uses `hmac.compare_digest`. Low real-world risk but violates the codebase's own constant-time comparison standard.
 **Changes:**
-- [ ] Replace with `hmac.compare_digest(computed, stored)`
-- [ ] Grep remaining hex-digest `!=` comparisons in backend; fix any others
+- [x] Replace with `hmac.compare_digest(computed, stored)`
+- [x] Grep remaining hex-digest `!=` comparisons in backend — none found; this was the only site
 
 ---
 
