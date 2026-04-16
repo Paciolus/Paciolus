@@ -30,6 +30,7 @@ from routes.fixed_asset_testing import router as fixed_asset_testing_router
 from routes.follow_up_items import router as follow_up_items_router
 from routes.form_1099 import router as form_1099_router
 from routes.health import router as health_router
+from routes.intercompany_elimination import router as intercompany_elimination_router
 from routes.internal_admin import router as internal_admin_router
 from routes.internal_metrics import router as internal_metrics_router
 from routes.inventory_testing import router as inventory_testing_router
@@ -98,4 +99,5 @@ all_routers = [
     internal_metrics_router,
     internal_admin_router,
     w2_reconciliation_router,
+    intercompany_elimination_router,
 ]

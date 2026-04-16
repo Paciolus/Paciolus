@@ -109,16 +109,27 @@
 ---
 
 ### Sprint 637: Multi-Entity Intercompany Elimination
-**Status:** PENDING
+**Status:** COMPLETE
 **Source:** Future-State Consultant — partial catalog feature #11
-**File:** `backend/audit/rules/relationships.py:81` currently single-TB only
+**File:** new engine (`backend/intercompany_elimination_engine.py`) + route; single-TB detection in `audit/rules/relationships.py` left intact
 **Problem:** Existing single-TB intercompany imbalance detection exists. Missing: multi-entity TB input, elimination JE generation, consolidation worksheet.
 **Changes:**
-- [ ] Accept multiple TB uploads in one session
-- [ ] Extract intercompany balances per entity, match reciprocal pairs
-- [ ] Calculate elimination JEs
-- [ ] Flag timing/currency/error imbalances
-- [ ] Consolidation worksheet output (pre-elim, elim, post-elim)
+- [x] Accept multiple TB uploads in one session (≥2, ≤50 entities)
+- [x] Extract intercompany balances per entity, match reciprocal pairs
+- [x] Calculate elimination JEs
+- [x] Flag timing/currency/error imbalances (amount mismatch, direction mismatch, no-reciprocal)
+- [x] Consolidation worksheet output (pre-elim, elim, post-elim)
+
+**Review:**
+- New `backend/intercompany_elimination_engine.py` — standalone from `relationships.py` so the single-TB rule keeps its existing contract.
+- Direction parser recognises "Due from", "Due to", "Intercompany revenue/expense", "Investment in subsidiary", management-fee variants, and the generic "intercompany" token.
+- Counterparty parser: uses explicit `counterparty_entity` if provided, else extracts from "Due from X" / "Intercompany — X" patterns; falls back to a NO_RECIPROCAL mismatch when the parsed name doesn't match any entity in the consolidation.
+- Reciprocal direction map: receivable↔payable, revenue↔expense; UNKNOWN matches any; direction mismatch surfaces as its own mismatch kind.
+- Tolerance-based reconciliation: residual ≤ $1.00 default tolerance reconciles the pair; above tolerance fires AMOUNT_MISMATCH.
+- Elimination JEs generated only for reconciling pairs (practitioner must fix mismatches first).
+- Consolidation worksheet: per-entity columns, pre-elimination totals, elimination sum, post-elimination consolidated.
+- Route: `POST /audit/intercompany-elimination`, `POST /audit/intercompany-elimination/export.csv`.
+- 13 new engine tests cover happy path, direction parsing, no-reciprocal, amount mismatch, tolerance absorbing small residuals, worksheet shape, 3-entity consolidation, input validation (single-entity, duplicate IDs), counterparty parsing from account names, serialisation. Backend imports 236 routes.
 
 ---
 
