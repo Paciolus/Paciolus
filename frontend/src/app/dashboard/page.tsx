@@ -174,7 +174,7 @@ export default function DashboardPage() {
     apiGet<UserPreferences>('/settings/preferences', token)
       .then(res => { if (res.data?.favorite_tools?.length) setFavorites(res.data.favorite_tools) })
       .catch(() => { toastError('Failed to load preferences') })
-  }, [token])
+  }, [token, toastError])
 
   const toggleFavorite = useCallback(
     async (toolKey: string) => {
