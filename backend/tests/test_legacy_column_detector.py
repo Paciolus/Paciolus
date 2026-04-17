@@ -12,6 +12,7 @@ from column_detector import ColumnMapping, ColumnType, detect_columns
 # STANDARD DETECTION — high confidence exact matches
 # =============================================================================
 
+
 class TestStandardDetection:
     """Standard TB headers should be detected with full confidence."""
 
@@ -69,6 +70,7 @@ class TestStandardDetection:
 # PARTIAL / LOW CONFIDENCE MATCHES
 # =============================================================================
 
+
 class TestPartialMatches:
     """Partial/substring matches should produce appropriate confidence."""
 
@@ -104,6 +106,7 @@ class TestPartialMatches:
 # =============================================================================
 # MISSING COLUMNS — fallback and error notes
 # =============================================================================
+
 
 class TestMissingColumns:
     """Missing columns should produce appropriate fallbacks and notes."""
@@ -159,6 +162,7 @@ class TestMissingColumns:
 # to_dict SHAPE VALIDATION
 # =============================================================================
 
+
 class TestToDict:
     """to_dict() output must match the expected API contract."""
 
@@ -167,10 +171,21 @@ class TestToDict:
         result = detect_columns(["Account Name", "Debit", "Credit"])
         d = result.to_dict()
         expected_keys = {
-            "account_column", "debit_column", "credit_column",
-            "account_confidence", "debit_confidence", "credit_confidence",
-            "overall_confidence", "requires_mapping", "all_columns",
+            "account_column",
+            "debit_column",
+            "credit_column",
+            "account_confidence",
+            "debit_confidence",
+            "credit_confidence",
+            "overall_confidence",
+            "requires_mapping",
+            "all_columns",
             "detection_notes",
+            # Sprint 669: layout metadata
+            "layout",
+            "requires_confirmation",
+            "supplementary_balance_pairs",
+            "indicator_column",
         }
         assert set(d.keys()) == expected_keys
 
@@ -207,6 +222,7 @@ class TestToDict:
 # =============================================================================
 # COLUMN MAPPING
 # =============================================================================
+
 
 class TestColumnMapping:
     """ColumnMapping dataclass for user overrides."""
@@ -279,6 +295,7 @@ class TestColumnMapping:
 # COLUMN TYPE ENUM
 # =============================================================================
 
+
 class TestColumnType:
     """ColumnType enum should still be importable and correct."""
 
@@ -292,6 +309,7 @@ class TestColumnType:
 # =============================================================================
 # EDGE CASES
 # =============================================================================
+
 
 class TestEdgeCases:
     """Edge cases for robustness."""

@@ -1,13 +1,16 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { Suspense, useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useFormValidation, commonValidators } from '@/hooks'
-import { setPendingEmail } from '@/lib/authFlowState'
+import { setPendingEmail, setPendingPlanSelection } from '@/lib/authFlowState'
 import { fadeUp } from '@/lib/motion'
+
+const ALLOWED_PLANS = new Set(['solo', 'professional', 'enterprise'])
+const ALLOWED_INTERVALS = new Set(['monthly', 'annual'])
 
 /**
  * Obsidian Vault Registration Page - Day 13
@@ -69,9 +72,20 @@ const initialValues: RegisterFormValues = {
   acceptTerms: false,
 }
 
-export default function RegisterPage() {
+function RegisterPageInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { register, isAuthenticated, isLoading: authLoading } = useAuthSession()
+
+  // Sprint 603: pricing CTAs send ?plan=X&interval=Y — capture for post-signup checkout hand-off
+  const planSelection = useMemo(() => {
+    const planParam = searchParams.get('plan')
+    const intervalParam = searchParams.get('interval') ?? 'monthly'
+    if (planParam && ALLOWED_PLANS.has(planParam) && ALLOWED_INTERVALS.has(intervalParam)) {
+      return { plan: planParam, interval: intervalParam }
+    }
+    return null
+  }, [searchParams])
 
   // Server-side error (from failed registration attempt)
   const [serverError, setServerError] = useState('')
@@ -123,6 +137,9 @@ export default function RegisterPage() {
 
       if (result.success) {
         setPendingEmail(formValues.email)
+        if (planSelection) {
+          setPendingPlanSelection(planSelection.plan, planSelection.interval)
+        }
         router.push('/verification-pending')
       } else {
         setServerError(result.error || 'Registration failed. Please try again.')
@@ -139,12 +156,16 @@ export default function RegisterPage() {
   // Computed: do passwords match (for UI indicator)
   const passwordsMatch = values.password === values.confirmPassword && values.confirmPassword.length > 0
 
-  // Redirect if already authenticated
+  // Redirect if already authenticated. Sprint 603: honor pricing CTA plan selection.
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
+      if (planSelection) {
+        router.push(`/checkout?plan=${planSelection.plan}&interval=${planSelection.interval}`)
+        return
+      }
       router.push('/')
     }
-  }, [isAuthenticated, authLoading, router])
+  }, [isAuthenticated, authLoading, router, planSelection])
 
   // Button disabled state
   const isButtonDisabled = isSubmitting || !values.acceptTerms || !passwordsMatch || passwordStrength.score < 3
@@ -584,5 +605,13 @@ export default function RegisterPage() {
         </div>
 
     </motion.div>
+  )
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={null}>
+      <RegisterPageInner />
+    </Suspense>
   )
 }

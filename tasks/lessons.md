@@ -4,6 +4,32 @@
 
 ---
 
+## Diagnostic ingestion bypasses the parser dispatcher (Sprint 665)
+
+While building the Sprint 665 remediation harness, every PDF and DOCX input failed the diagnostic pipeline with an incongruous pandas error (`'io.excel.zip.reader'` / `Excel file format cannot be determined`). Root cause: `backend/audit/pipeline.py:73` calls `process_tb_chunked(file_bytes, filename, chunk_size)` in `security_utils.py:201`, which only attempts `read_csv_chunked` → falls back to `read_excel_chunked`. It never dispatches to `parse_uploaded_file_by_format` (`backend/shared/helpers.py:797`), which is the correct entry point that knows about PDF, DOCX, ODS, OFX, QBO, IIF, TSV, TXT. PreFlight uses the dispatcher; diagnostic does not. Every file format the brief says is "supported" is actually only supported on the preflight side. **Pattern:** Two-pipeline features (preflight + diagnostic) need the same ingestion entry point, not parallel copies that drift apart. When a format is added, `grep` every place that accepts `file_bytes + filename` to ensure *all* ingestion paths route through the shared dispatcher.
+
+---
+
+## Remediation harness over pytest when expected values are moving (Sprint 665)
+
+For CEO-facing sequential remediation work where each sprint will change the expected output of the preceding sprint, a pytest regression suite is the wrong tool. Hardcoded expected values in assertions would fight us across six sprints. Instead: a single Python script that parses, runs both pipelines, and writes one diffable JSON per test file per sprint (`reports/remediation/sprint-NNN/<stem>.json`). Diff is done in review, not in code. Expected results live in the sprint review sections, not in `assert` lines. **Pattern:** When the "expected" side of a test is going to change N times in the next N sprints, capture state to diffable artifacts instead of asserting. Pytest is for regression; this pattern is for progression.
+
+---
+
+## Audit the file before auditing the code on a misdiagnosed bug report (Sprint 666)
+
+The CEO remediation brief v6 Issue 9 attributed `tb_unusual_accounts.csv`'s $306,262 variance to "RFC 4180 quoted field handling" — claiming account names with embedded commas caused column shift and phantom imbalances. Before touching the CSV parser I ran pandas directly on the file: every quoted field parses cleanly (none actually contain embedded commas — just parentheses, question marks, slashes which are not CSV-special), every row lands in the right columns, and the data-only sum is $5,791,962 debit / $5,490,500 credit for a genuine $301,462 imbalance. The file was never built to balance. The totals row in the file claims $5,681,962 each side but the actual data sums to different numbers. After Sprint 666's totals-row exclusion the reported variance is $306,262 — unchanged from baseline but now for the right reason (real data imbalance, not a totals-inclusive artifact).
+
+**Pattern:** When a bug report attributes a number to a parser/algorithm cause, verify the number by computing it against the source data by hand before writing a "fix." A misdiagnosed report can waste a sprint building defenses against a non-existent bug, leaving the real cause untouched. The right first step on any "parser is mishandling X" claim is a 5-minute manual sum in a REPL — not a dive into `pd.read_csv` options.
+
+---
+
+## Silent-success bugs surface only when you explicitly test the failure mode (Sprint 666)
+
+The Sprint 666 zero-row guard uncovered a pre-existing pytest case (`test_audit_core::TestEdgeCases::test_empty_file`) that was *validating* the silent-success bug itself — it asserted `status == "success"`, `balanced == True`, `row_count == 0` on a headers-only file. The test was green for however many sprints that bug existed, because nobody had asked "is returning 'balanced' on a zero-row ingestion the right behavior?" The bug was structural, the test was its fossil record. **Pattern:** When fixing a silent-success class of bug, grep for tests that assert the silent-success shape and rewrite them to the post-fix contract BEFORE running the full suite. A green test that encodes a wrong invariant is worse than a missing test — it will actively defend the bug against any fix. Look for tests with names like `test_empty_*`, `test_zero_*`, `test_missing_*` when the bug is about input edge cases.
+
+---
+
 ## Breaking API shape changes require simultaneous backend + frontend + test updates (Sprint 544)
 
 When changing a response shape (e.g., `clients` → `items` in PaginatedResponse), ALL consumers must be updated atomically: backend routes, frontend types, frontend hooks, AND test mocks. In Sprint 544, changing the list key from domain-specific (`clients`, `engagements`, `activities`) to generic (`items`) required updating 4 routes, 4 hooks, 3 type files, and 4 test files. Missing any one creates silent data loss (hook reads `data.items` but API returns `data.clients` → empty list). **Pattern:** Before making a breaking shape change, `grep` for ALL consumers of the old key across both backend and frontend.

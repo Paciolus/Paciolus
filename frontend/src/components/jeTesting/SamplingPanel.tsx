@@ -106,7 +106,7 @@ export function SamplingPanel({ file, token }: SamplingPanelProps) {
             </div>
             <div>
               <h3 className="font-serif text-sm text-content-primary">Stratified Sampling</h3>
-              <p className="font-sans text-xs text-content-tertiary">PCAOB AS 2315 / ISA 530 compliant</p>
+              <p className="font-sans text-xs text-content-tertiary">Per PCAOB AS 2315 / ISA 530 methodology</p>
             </div>
           </div>
           {/* Step indicator */}

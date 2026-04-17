@@ -1,0 +1,257 @@
+{
+  "filename": "tb_hartwell_adjusted.pdf",
+  "size_bytes": 6938,
+  "errors": [
+    {
+      "stage": "diagnostic",
+      "type": "ValueError",
+      "message": "Excel file format cannot be determined, you must specify an engine manually.",
+      "traceback": "Traceback (most recent call last):\n  File \"D:\\Dev\\Paciolus\\backend\\security_utils.py\", line 201, in process_tb_chunked\n    yield from read_csv_chunked(file_bytes, chunk_size, dtype=str)\n  File \"D:\\Dev\\Paciolus\\backend\\security_utils.py\", line 84, in read_csv_chunked\n    for chunk in pd.read_csv(buffer, chunksize=chunk_size, dtype=dtype):\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Python312\\Lib\\site-packages\\pandas\\io\\parsers\\readers.py\", line 873, in read_csv\n    return _read(filepath_or_buffer, kwds)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Python312\\Lib\\site-packages\\pandas\\io\\parsers\\readers.py\", line 300, in _read\n    parser = TextFileReader(filepath_or_buffer, **kwds)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Python312\\Lib\\site-packages\\pandas\\io\\parsers\\readers.py\", line 1645, in __init__\n    self._engine = self._make_engine(f, self.engine)\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Python312\\Lib\\site-packages\\pandas\\io\\parsers\\readers.py\", line 1922, in _make_engine\n    return mapping[engine](f, **self.options)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nUnicodeDecodeError: 'utf-8' codec can't decode byte 0x93 in position 10: invalid start byte\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"D:\\Dev\\Paciolus\\tests\\qa\\run_remediation_sweep.py\", line 177, in run_one\n    diag = audit_trial_balance_streaming(file_bytes, path.name)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\Dev\\Paciolus\\backend\\audit\\pipeline.py\", line 73, in audit_trial_balance_streaming\n    for chunk, rows_processed in process_tb_chunked(file_bytes, filename, chunk_size):\n                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\Dev\\Paciolus\\backend\\security_utils.py\", line 203, in process_tb_chunked\n    yield from read_excel_chunked(file_bytes, chunk_size, dtype=str)\n  File \"D:\\Dev\\Paciolus\\backend\\security_utils.py\", line 114, in read_excel_chunked\n    full_df = pd.read_excel(buffer, sheet_name=sheet_name, dtype=dtype)\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Python312\\Lib\\site-packages\\pandas\\io\\excel\\_base.py\", line 481, in read_excel\n    io = ExcelFile(\n         ^^^^^^^^^^\n  File \"C:\\Python312\\Lib\\site-packages\\pandas\\io\\excel\\_base.py\", line 1608, in __init__\n    raise ValueError(\nValueError: Excel file format cannot be determined, you must specify an engine manually.\n"
+    }
+  ],
+  "parse": {
+    "column_names": [
+      "Acct\nNo.",
+      "Account Name",
+      "Beg Balance\nDebit",
+      "Beg Balance\nCredit",
+      "Adjustments\nDebit",
+      "Adjustments\nCredit",
+      "Ending Balance\nDebit",
+      "Ending Balance\nCredit",
+      "WP\nRef"
+    ],
+    "row_count": 41,
+    "first_row_sample": {
+      "Acct\nNo.": "1010",
+      "Account Name": "Cash - Operating Account",
+      "Beg Balance\nDebit": "274,500.00",
+      "Beg Balance\nCredit": "",
+      "Adjustments\nDebit": "10,000.00",
+      "Adjustments\nCredit": "",
+      "Ending Balance\nDebit": "284,500.00",
+      "Ending Balance\nCredit": "",
+      "WP\nRef": "A-1"
+    },
+    "last_row_sample": {
+      "Acct\nNo.": "",
+      "Account Name": "TOTALS",
+      "Beg Balance\nDebit": "5,400,700.00",
+      "Beg Balance\nCredit": "5,434,200.00",
+      "Adjustments\nDebit": "124,400.00",
+      "Adjustments\nCredit": "109,400.00",
+      "Ending Balance\nDebit": "5,523,600.00",
+      "Ending Balance\nCredit": "5,523,600.00",
+      "WP\nRef": ""
+    }
+  },
+  "preflight": {
+    "filename": "tb_hartwell_adjusted.pdf",
+    "row_count": 41,
+    "column_count": 9,
+    "readiness_score": 67.5,
+    "readiness_label": "Review Recommended",
+    "columns": [
+      {
+        "role": "account",
+        "detected_name": "Account Name",
+        "confidence": 1.0,
+        "status": "found"
+      },
+      {
+        "role": "debit",
+        "detected_name": "Beg Balance\nDebit",
+        "confidence": 0.8,
+        "status": "found"
+      },
+      {
+        "role": "credit",
+        "detected_name": "Beg Balance\nCredit",
+        "confidence": 0.8,
+        "status": "found"
+      },
+      {
+        "role": "unmapped",
+        "detected_name": "Acct\nNo.",
+        "confidence": 1.0,
+        "status": "found"
+      },
+      {
+        "role": "unmapped",
+        "detected_name": "Adjustments\nDebit",
+        "confidence": 1.0,
+        "status": "found"
+      },
+      {
+        "role": "unmapped",
+        "detected_name": "Adjustments\nCredit",
+        "confidence": 1.0,
+        "status": "found"
+      },
+      {
+        "role": "unmapped",
+        "detected_name": "Ending Balance\nDebit",
+        "confidence": 1.0,
+        "status": "found"
+      },
+      {
+        "role": "unmapped",
+        "detected_name": "Ending Balance\nCredit",
+        "confidence": 1.0,
+        "status": "found"
+      },
+      {
+        "role": "unmapped",
+        "detected_name": "WP\nRef",
+        "confidence": 1.0,
+        "status": "found"
+      }
+    ],
+    "issues": [
+      {
+        "category": "column_detection",
+        "severity": "medium",
+        "message": "Column detection confidence is moderate (80%)",
+        "affected_count": 0,
+        "remediation": "Verify detected columns are correct before proceeding.",
+        "downstream_impact": "All diagnostic tools depend on correct column mapping. Incorrect detection causes miscalculated balances, failed ratio analysis, and unreliable anomaly detection across every downstream report.",
+        "affected_items": [],
+        "affected_items_truncated": false,
+        "affected_items_total": 0,
+        "tests_affected": 12
+      },
+      {
+        "category": "tb_balance",
+        "severity": "medium",
+        "message": "Balance check skipped \u2014 one or more balance columns are unmapped. This file appears to use a multi-column layout (unmapped balance-like columns: 'Adjustments\nDebit', 'Adjustments\nCredit', 'Ending Balance\nDebit', 'Ending Balance\nCredit'). Map all balance columns before running balance verification.",
+        "affected_count": 4,
+        "remediation": "Use column mapping to explicitly assign the intended Debit and Credit columns, or re-export the trial balance as a single Debit/Credit pair before re-uploading.",
+        "downstream_impact": "An out-of-balance trial balance invalidates all downstream diagnostic results. Debit/credit totals must reconcile before any testing can proceed.",
+        "affected_items": [],
+        "affected_items_truncated": false,
+        "affected_items_total": 0,
+        "tests_affected": 12
+      },
+      {
+        "category": "null_values",
+        "severity": "medium",
+        "message": "Column 'Beg Balance\nCredit' has 2 rows with missing data (4.9% of rows)",
+        "affected_count": 2,
+        "remediation": "Review rows with missing 'Beg Balance\nCredit' values. Fill in missing data or remove incomplete rows before analysis.",
+        "downstream_impact": "Missing values in critical columns produce incomplete trial balance totals, skewed ratio calculations, and may cause accounts to be silently excluded from testing tools.",
+        "affected_items": [
+          "Depreciation Expense",
+          "Bad Debt Expense"
+        ],
+        "affected_items_truncated": false,
+        "affected_items_total": 2,
+        "tests_affected": 11
+      },
+      {
+        "category": "null_values",
+        "severity": "medium",
+        "message": "Column 'Beg Balance\nDebit' has 2 rows with missing data (4.9% of rows)",
+        "affected_count": 2,
+        "remediation": "Review rows with missing 'Beg Balance\nDebit' values. Fill in missing data or remove incomplete rows before analysis.",
+        "downstream_impact": "Missing values in critical columns produce incomplete trial balance totals, skewed ratio calculations, and may cause accounts to be silently excluded from testing tools.",
+        "affected_items": [
+          "Depreciation Expense",
+          "Bad Debt Expense"
+        ],
+        "affected_items_truncated": false,
+        "affected_items_total": 2,
+        "tests_affected": 11
+      },
+      {
+        "category": "zero_balance",
+        "severity": "low",
+        "message": "2 rows have zero balance in both debit and credit columns (5% of rows)",
+        "affected_count": 2,
+        "remediation": "Zero-balance rows add noise to the analysis. Consider filtering them out if they represent closed or inactive accounts.",
+        "downstream_impact": "Zero-balance rows add noise to statistical tests (Benford's Law, sampling), inflate account counts, and reduce the signal-to-noise ratio in anomaly detection.",
+        "affected_items": [
+          "6050",
+          "6090"
+        ],
+        "affected_items_truncated": false,
+        "affected_items_total": 2,
+        "tests_affected": 4
+      }
+    ],
+    "duplicates": [],
+    "encoding_anomalies": [],
+    "mixed_sign_accounts": [],
+    "zero_balance_count": 2,
+    "null_counts": {
+      "Acct\nNo.": 1,
+      "Beg Balance\nDebit": 17,
+      "Beg Balance\nCredit": 25,
+      "Adjustments\nDebit": 35,
+      "Adjustments\nCredit": 35,
+      "Ending Balance\nDebit": 15,
+      "Ending Balance\nCredit": 25,
+      "WP\nRef": 1
+    },
+    "balance_check": {
+      "total_debits": 0.0,
+      "total_credits": 0.0,
+      "difference": 0.0,
+      "balanced": false,
+      "tolerance": 0.01,
+      "skipped": true
+    },
+    "score_breakdown": [
+      {
+        "component": "tb_balance",
+        "weight": 0.25,
+        "score": 50.0,
+        "contribution": 12.5
+      },
+      {
+        "component": "column_detection",
+        "weight": 0.2,
+        "score": 50.0,
+        "contribution": 10.0
+      },
+      {
+        "component": "null_values",
+        "weight": 0.15,
+        "score": 50.0,
+        "contribution": 7.5
+      },
+      {
+        "component": "duplicates",
+        "weight": 0.1,
+        "score": 100.0,
+        "contribution": 10.0
+      },
+      {
+        "component": "encoding",
+        "weight": 0.05,
+        "score": 100.0,
+        "contribution": 5.0
+      },
+      {
+        "component": "mixed_signs",
+        "weight": 0.15,
+        "score": 100.0,
+        "contribution": 15.0
+      },
+      {
+        "component": "zero_balance",
+        "weight": 0.1,
+        "score": 75.0,
+        "contribution": 7.5
+      }
+    ],
+    "intake": {
+      "rows_submitted": 41,
+      "rows_accepted": 41,
+      "rows_rejected": 0,
+      "rows_excluded": 0,
+      "reconciles": true,
+      "notes": []
+    },
+    "rendered_conclusion": "The trial balance file (tb_hartwell_adjusted.pdf) achieved a Readiness Score of 67.5/100 \u2014 assessed as Ready with caveats. The file is suitable for downstream diagnostic testing subject to the following caveats: (1) Column detection confidence is moderate (80%). Confirm the column mapping or use the override feature before proceeding. (2) Balance check skipped \u2014 one or more balance columns are unmapped. This file appears to use a multi-column layout (unmapped balance-like columns: 'Adjustments\nDebit', 'Adjustments\nCredit', 'Ending Balance\nDebit', 'Ending Balance\nCredit'). Map all balance columns before running balance verification.. Map all balance columns explicitly, or re-export the trial balance with a single Debit/Credit pair before re-uploading. (3) Column 'Beg Balance\nCredit' has 2 rows with missing data (4.9% of rows). Fill in missing values before running tests that rely on account classification. (4) Column 'Beg Balance\nDebit' has 2 rows with missing data (4.9% of rows). Fill in missing values before running tests that rely on account classification. Remediate before final workpaper sign-off."
+  }
+}

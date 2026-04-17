@@ -384,14 +384,27 @@ class TestEdgeCases:
     """Edge case tests."""
 
     def test_empty_file(self, empty_csv):
-        """Verify graceful handling of empty file (headers only)."""
+        """Sprint 666 Issue 5 (BLOCKING): empty files must fail loudly.
+
+        Before Sprint 666 the pipeline returned "success / balanced / 0 /
+        no exceptions" on a headers-only file — a silent success that hid
+        the fact that no data had been ingested. The fix returns an
+        explicit failure result keyed by ``analysis_failed = True`` and
+        ``failure_reason = "zero_rows_ingested"`` so downstream UIs can
+        render a blocking notice instead of a fake "ready" report.
+        """
         result = audit_trial_balance_streaming(file_bytes=empty_csv, filename="empty.csv", materiality_threshold=0)
 
-        assert result["status"] == "success"
+        assert result["status"] == "failed"
+        assert result["analysis_failed"] is True
+        assert result["failure_reason"] == "zero_rows_ingested"
+        assert "ANALYSIS COULD NOT BE COMPLETED" in result["error_message"]
         assert result["row_count"] == 0
-        assert result["balanced"] is True  # 0 = 0
+        assert result["balanced"] is False
         assert result["total_debits"] == "0.00"
         assert result["total_credits"] == "0.00"
+        assert result["abnormal_balances"] == []
+        assert result["material_count"] == 0
 
     def test_non_numeric_values(self, non_numeric_csv):
         """Verify non-numeric values are coerced to 0."""

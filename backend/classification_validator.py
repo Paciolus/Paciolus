@@ -396,12 +396,59 @@ def check_sign_anomalies(
 # =============================================================================
 
 
+def check_suspicious_sequence_gaps(
+    accounts: dict[str, dict[str, float]],
+) -> list[ClassificationIssue]:
+    """CV-4b (Sprint 632): Forensic sequence-gap detector.
+
+    Surfaces gaps that are likely to indicate *suppressed* accounts —
+    where the range has been renumbered or removed without trace — as
+    distinct from ordinary sparse numbering. The detector ignores
+    category-block boundaries (1xxx→2xxx) and isolated singletons, and
+    only fires where the surrounding accounts cluster tightly against
+    the gap edges.
+
+    Complementary to ``check_number_gaps`` (CV-4): CV-4 flags every
+    raw gap above a fixed threshold; CV-4b is tuned for the narrower
+    "missing range" pattern auditors care about.
+    """
+    from audit.rules.gaps import detect_account_number_gaps
+
+    gaps, _stats = detect_account_number_gaps(list(accounts.keys()))
+
+    issues: list[ClassificationIssue] = []
+    for gap in gaps:
+        issues.append(
+            ClassificationIssue(
+                account_number=str(gap.next_number),
+                account_name=gap.next_account,
+                issue_type=ClassificationIssueType.NUMBER_GAP,
+                description=(
+                    f"Suspicious gap of {gap.gap_size} between accounts "
+                    f"{gap.prev_number} and {gap.next_number} in the "
+                    f"{gap.category_block_start}-series block — neighbours "
+                    f"cluster tightly against both edges."
+                ),
+                severity=gap.severity,
+                confidence=0.80,
+                category="",
+                suggested_action=(
+                    "Review whether the range "
+                    f"{gap.prev_number + 1}–{gap.next_number - 1} previously "
+                    "contained active accounts that have been renumbered, "
+                    "merged, or suppressed."
+                ),
+            )
+        )
+    return issues
+
+
 def run_classification_validation(
     accounts: dict[str, dict[str, float]],
     classifications: dict[str, str],
     gap_threshold: int = DEFAULT_GAP_THRESHOLD,
 ) -> ClassificationResult:
-    """Run all 6 structural classification checks.
+    """Run all 7 structural classification checks.
 
     Args:
         accounts: {account_name: {"debit": float, "credit": float}}
@@ -422,8 +469,11 @@ def run_classification_validation(
     # CV-3: Unclassified Accounts
     all_issues.extend(check_unclassified_accounts(accounts, classifications))
 
-    # CV-4: Account Number Gaps
+    # CV-4: Account Number Gaps (raw threshold)
     all_issues.extend(check_number_gaps(accounts, classifications, gap_threshold))
+
+    # CV-4b (Sprint 632): Forensic suppressed-account gap detector
+    all_issues.extend(check_suspicious_sequence_gaps(accounts))
 
     # CV-5: Inconsistent Naming
     all_issues.extend(check_inconsistent_naming(accounts, classifications))

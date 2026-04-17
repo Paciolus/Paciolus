@@ -242,23 +242,31 @@ def generate_preflight_memo(
         story.append(Paragraph(f"{_roman(section_counter)}. Column Detection", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
-        col_data = [["Role", "Detected Column", "Confidence", "Status"]]
+        # Sprint 668 Issue 8: Downstream Use column added so the reader
+        # can see at a glance how each detected column is consumed (or
+        # explicitly NOT consumed) by downstream analysis.
+        col_data = [["Role", "Detected Column", "Confidence", "Status", "Downstream Use"]]
         low_confidence_columns = []
         for col in columns:
             conf = col.get("confidence", 0)
+            downstream_use = col.get("downstream_use") or "Not used in current analysis"
             col_data.append(
                 [
                     col.get("role", "").title(),
                     col.get("detected_name") or "\u2014",
                     f"{conf:.0%}",
                     col.get("status", "").replace("_", " ").title(),
+                    Paragraph(downstream_use, styles["MemoBody"]),
                 ]
             )
             # Track low-confidence columns for remediation note (IMP-02)
             if col.get("status") == "low_confidence" or (0 < conf < 0.80):
                 low_confidence_columns.append(col)
 
-        col_table = Table(col_data, colWidths=[1.2 * inch, 2.5 * inch, 1.2 * inch, 1.5 * inch])
+        col_table = Table(
+            col_data,
+            colWidths=[1.0 * inch, 1.6 * inch, 0.8 * inch, 1.0 * inch, 2.6 * inch],
+        )
         col_table.setStyle(
             TableStyle(
                 [
@@ -425,15 +433,37 @@ def generate_preflight_memo(
 
 
 def _build_conclusion(preflight_result: dict, filename: str) -> str:
-    """Build dynamic conclusion text based on preflight results."""
+    """Build dynamic conclusion text based on preflight results.
+
+    Sprint 667 Issue 4: Conclusion is keyed off the highest-severity issue
+    actually present, not the readiness score alone. The historic logic
+    qualified every multi-issue file as "Ready with minor issues" and
+    appended the phrase "do not prevent diagnostic testing from proceeding"
+    even on files with high-severity blockers — directly contradicting
+    the Downstream Impact section that flagged the same issues as
+    invalidating. The new contract:
+
+    * No issues at all → "Ready"
+    * Only low/medium severity, no high → "Ready with caveats"
+    * Any high-severity issue → "Review Required" (forbidden phrase
+      removed; the conclusion explicitly states downstream testing
+      should not proceed until the high-severity items are resolved)
+
+    The blocking out-of-balance message is unchanged in spirit, but is
+    suppressed when the balance check was skipped (multi-column TB
+    layout — see Issue 12) so we don't report "$0.00 out of balance"
+    on files where we didn't actually check.
+    """
     readiness = preflight_result.get("readiness_score", 0)
-    label = preflight_result.get("readiness_label", "Unknown")
     row_count = preflight_result.get("row_count", 0)
     issues = preflight_result.get("issues", [])
 
-    # Check for balance failure (blocker)
+    # ── Hard blocker: TB does not reconcile ───────────────────────
+    # Skip-path balance checks (multi-column layout) carry skipped=True
+    # and must not be reported as out of balance — the variance is
+    # unknown, not zero.
     balance_check = preflight_result.get("balance_check")
-    if balance_check and not balance_check.get("balanced", True):
+    if balance_check and not balance_check.get("balanced", True) and not balance_check.get("skipped", False):
         diff = abs(balance_check.get("difference", 0))
         return (
             f"The trial balance file ({filename}) is out of balance by ${diff:,.2f}. "
@@ -442,57 +472,73 @@ def _build_conclusion(preflight_result: dict, filename: str) -> str:
             "where total debits equal total credits before running any analysis."
         )
 
-    # Build caveats from issues
-    caveats: list[str] = []
-    for issue in sorted(issues, key=lambda i: i.get("tests_affected", 0), reverse=True):
+    # ── Severity tally drives the conclusion tier ────────────────
+    high_issues = [i for i in issues if i.get("severity") == "high"]
+    medium_issues = [i for i in issues if i.get("severity") == "medium"]
+
+    # Build per-issue caveats once so both medium-only and high-severity
+    # branches can render them.
+    def _caveat(issue: dict, idx: int) -> str:
         category = issue.get("category", "")
         message = issue.get("message", "")
-        if category == "null_values":
-            caveats.append(
-                f"({len(caveats) + 1}) {message}. "
-                "Fill in missing values before running tests that rely on account classification."
-            )
-        elif category == "column_detection":
-            caveats.append(
-                f"({len(caveats) + 1}) {message}. "
-                "Confirm the column mapping or use the override feature before proceeding."
-            )
-        elif category == "mixed_signs":
-            caveats.append(
-                f"({len(caveats) + 1}) {message}. "
-                "Tests that rely on debit/credit separation may produce reduced accuracy."
-            )
-        elif category == "duplicates":
-            caveats.append(
-                f"({len(caveats) + 1}) {message}. "
-                "Review for unintended duplicates before running balance-dependent tests."
-            )
-        elif category == "encoding":
-            caveats.append(
-                f"({len(caveats) + 1}) {message}. Account matching in lead sheets and classification may be affected."
-            )
-        elif category == "zero_balance":
-            caveats.append(
-                f"({len(caveats) + 1}) {message}. Consider filtering inactive accounts before statistical testing."
-            )
-        else:
-            caveats.append(f"({len(caveats) + 1}) {message}.")
+        suffix_map = {
+            "null_values": "Fill in missing values before running tests that rely on account classification.",
+            "column_detection": "Confirm the column mapping or use the override feature before proceeding.",
+            "mixed_signs": "Tests that rely on debit/credit separation may produce reduced accuracy.",
+            "duplicates": "Review for unintended duplicates before running balance-dependent tests.",
+            "encoding": "Account matching in lead sheets and classification may be affected.",
+            "zero_balance": "Consider filtering inactive accounts before statistical testing.",
+            "tb_balance": (
+                "Map all balance columns explicitly, or re-export the trial balance "
+                "with a single Debit/Credit pair before re-uploading."
+            ),
+        }
+        suffix = suffix_map.get(category, "")
+        return f"({idx}) {message}." + (f" {suffix}" if suffix else "")
 
-    if not caveats:
+    # ── No issues → Ready ─────────────────────────────────────────
+    if not issues:
         return (
             f"The trial balance file ({filename}) achieved a Readiness Score of "
-            f"{readiness:.1f}/100 \u2014 assessed as {label}. The file contains {row_count:,} "
-            "accounts and is suitable for all downstream diagnostic testing with no caveats."
+            f"{readiness:.1f}/100 \u2014 assessed as Ready. The file contains "
+            f"{row_count:,} accounts and is suitable for all downstream diagnostic "
+            "testing with no caveats."
         )
 
-    qualifier = "Ready with minor issues" if readiness >= 80 else label
-    caveats_text = " ".join(caveats)
-    caveat_word = "caveat" if len(caveats) == 1 else "caveats"
+    # ── Any high-severity issue → Review Required ────────────────
+    # The forbidden phrase is intentionally absent. When a high-severity
+    # issue is present the report must NOT claim downstream testing can
+    # proceed, because that contradicts the Downstream Impact section.
+    if high_issues:
+        ranked = sorted(
+            high_issues + medium_issues,
+            key=lambda i: (
+                {"high": 0, "medium": 1, "low": 2}.get(i.get("severity", "low"), 2),
+                -i.get("tests_affected", 0),
+            ),
+        )
+        items_text = " ".join(_caveat(it, idx + 1) for idx, it in enumerate(ranked))
+        item_word = "issue" if len(ranked) == 1 else "issues"
+        plural_invalidate = "invalidates" if len(high_issues) == 1 else "invalidate"
+        return (
+            f"The trial balance file ({filename}) achieved a Readiness Score of "
+            f"{readiness:.1f}/100 \u2014 assessed as Review Required. The file "
+            f"contains {row_count:,} accounts and presents {len(ranked)} "
+            f"{item_word} that must be resolved before downstream diagnostic "
+            f"testing can be relied upon: {items_text} The high-severity "
+            f"finding(s) above {plural_invalidate} downstream test results; "
+            "do not record conclusions against the affected figures until "
+            "the issues are remediated and the file is re-processed."
+        )
 
+    # ── Medium-only → Ready with caveats ─────────────────────────
+    ranked_medium = sorted(medium_issues, key=lambda i: -i.get("tests_affected", 0))
+    items_text = " ".join(_caveat(it, idx + 1) for idx, it in enumerate(ranked_medium))
+    caveat_word = "caveat" if len(ranked_medium) == 1 else "caveats"
     return (
         f"The trial balance file ({filename}) achieved a Readiness Score of "
-        f"{readiness:.1f}/100 \u2014 assessed as {qualifier}. The file is suitable for "
-        f"downstream diagnostic testing with the following {caveat_word}: {caveats_text} "
-        "These issues do not prevent diagnostic testing from proceeding but should be "
-        "remediated before final workpaper sign-off."
+        f"{readiness:.1f}/100 \u2014 assessed as Ready with caveats. The file "
+        f"is suitable for downstream diagnostic testing subject to the "
+        f"following {caveat_word}: {items_text} Remediate before final "
+        "workpaper sign-off."
     )

@@ -191,3 +191,22 @@ export interface AuditResultResponse extends AuditResult {
   status: string
   column_detection?: ColumnDetectionInfo & { requires_mapping?: boolean }
 }
+
+/**
+ * Sprint 648: discriminated error shape for /audit/trial-balance.
+ * Backend may return a JSON body with `status: 'error'` and either a
+ * `message` or FastAPI-style `detail` string.
+ */
+export interface AuditErrorResponse {
+  status: 'error' | string
+  message?: string
+  detail?: string
+}
+
+export type AuditRunResponse = AuditResultResponse | AuditErrorResponse
+
+export function isAuditErrorResponse(
+  data: AuditRunResponse | undefined | null,
+): data is AuditErrorResponse {
+  return !!data && data.status !== 'success'
+}

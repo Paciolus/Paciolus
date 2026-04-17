@@ -6,11 +6,29 @@
  * Next.js requirement: must include its own <html> and <body> tags
  * since it replaces the root layout entirely when triggered.
  *
- * Uses hardcoded Oat & Obsidian dark theme (vault exterior) since
+ * Uses hardcoded Oat & Obsidian brand hex (vault exterior) since
  * ThemeProvider and CSS custom properties are unavailable here.
+ * Every literal below maps to a value in tailwind.config.js — see the
+ * BRAND_TOKENS map so future readers never reach for a random gray.
  *
  * Next.js App Router Hardening
  */
+
+// Literal brand hex copies of tailwind.config.js — kept in sync manually since
+// CSS custom properties do not resolve in the global-error boundary.
+const BRAND_TOKENS = {
+  obsidianDeep: '#121212',
+  obsidianBase: '#212121',
+  obsidianElevated: '#303030',
+  oatmealBase: '#EBE9E4',
+  oatmealMuted: '#B5AD9F', // oatmeal-500: secondary body text on dark surface
+  oatmealDisabled: '#7F7A6E', // oatmeal-700: tertiary / disabled hint text
+  clayBase: '#BC4749',
+  clayLight: '#E99A9B',
+  sageBase: '#4A7C59',
+  sageHover: '#3D6649',
+} as const
+
 export default function GlobalError({
   error,
   reset,
@@ -33,9 +51,9 @@ export default function GlobalError({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: '#121212',
-          backgroundImage: 'linear-gradient(to bottom, #121212, #212121 40%, #1a1a1a 60%, #121212)',
-          color: '#EBE9E4',
+          backgroundColor: BRAND_TOKENS.obsidianDeep,
+          backgroundImage: `linear-gradient(to bottom, ${BRAND_TOKENS.obsidianDeep}, ${BRAND_TOKENS.obsidianBase} 40%, #1a1a1a 60%, ${BRAND_TOKENS.obsidianDeep})`,
+          color: BRAND_TOKENS.oatmealBase,
           fontFamily: 'Lato, sans-serif',
         }}
       >
@@ -58,10 +76,11 @@ export default function GlobalError({
               height="32"
               viewBox="0 0 24 24"
               fill="none"
-              stroke="#BC4749"
+              stroke={BRAND_TOKENS.clayBase}
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
+              aria-hidden="true"
             >
               <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
               <line x1="12" y1="9" x2="12" y2="13" />
@@ -75,7 +94,7 @@ export default function GlobalError({
               fontSize: '1.5rem',
               fontWeight: 700,
               marginBottom: '0.75rem',
-              color: '#EBE9E4',
+              color: BRAND_TOKENS.oatmealBase,
             }}
           >
             Something went wrong
@@ -83,7 +102,7 @@ export default function GlobalError({
 
           <p
             style={{
-              color: '#9e9e9e',
+              color: BRAND_TOKENS.oatmealMuted,
               marginBottom: '2rem',
               lineHeight: 1.6,
             }}
@@ -107,7 +126,7 @@ export default function GlobalError({
                 style={{
                   fontFamily: 'monospace',
                   fontSize: '0.75rem',
-                  color: '#E99A9B',
+                  color: BRAND_TOKENS.clayLight,
                   wordBreak: 'break-all',
                   margin: 0,
                 }}
@@ -119,7 +138,7 @@ export default function GlobalError({
                   style={{
                     fontFamily: 'monospace',
                     fontSize: '0.7rem',
-                    color: '#757575',
+                    color: BRAND_TOKENS.oatmealDisabled,
                     marginTop: '0.5rem',
                     marginBottom: 0,
                   }}
@@ -132,44 +151,64 @@ export default function GlobalError({
 
           <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
             <button
+              type="button"
               onClick={() => reset()}
+              aria-label="Retry the last action that failed"
               style={{
                 padding: '0.625rem 1.5rem',
-                backgroundColor: '#4A7C59',
-                color: '#EBE9E4',
+                backgroundColor: BRAND_TOKENS.sageBase,
+                color: BRAND_TOKENS.oatmealBase,
                 border: 'none',
                 borderRadius: '0.5rem',
                 fontFamily: 'Lato, sans-serif',
                 fontSize: '0.875rem',
                 fontWeight: 700,
                 cursor: 'pointer',
-                transition: 'background-color 200ms',
+                outline: 'none',
+                transition: 'background-color 200ms, outline-color 200ms',
               }}
-              onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#3D6649')}
-              onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#4A7C59')}
-              onFocus={(e) => (e.currentTarget.style.backgroundColor = '#3D6649')}
-              onBlur={(e) => (e.currentTarget.style.backgroundColor = '#4A7C59')}
+              onMouseOver={(e) => (e.currentTarget.style.backgroundColor = BRAND_TOKENS.sageHover)}
+              onMouseOut={(e) => (e.currentTarget.style.backgroundColor = BRAND_TOKENS.sageBase)}
+              onFocus={(e) => {
+                e.currentTarget.style.backgroundColor = BRAND_TOKENS.sageHover
+                e.currentTarget.style.outline = `2px solid ${BRAND_TOKENS.oatmealBase}`
+                e.currentTarget.style.outlineOffset = '2px'
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.backgroundColor = BRAND_TOKENS.sageBase
+                e.currentTarget.style.outline = 'none'
+              }}
             >
               Try Again
             </button>
             <button
+              type="button"
               onClick={() => window.location.reload()}
+              aria-label="Reload the Paciolus application"
               style={{
                 padding: '0.625rem 1.5rem',
                 backgroundColor: 'transparent',
-                color: '#EBE9E4',
+                color: BRAND_TOKENS.oatmealBase,
                 border: '1px solid rgba(235, 233, 228, 0.2)',
                 borderRadius: '0.5rem',
                 fontFamily: 'Lato, sans-serif',
                 fontSize: '0.875rem',
                 fontWeight: 700,
                 cursor: 'pointer',
-                transition: 'border-color 200ms',
+                outline: 'none',
+                transition: 'border-color 200ms, outline-color 200ms',
               }}
               onMouseOver={(e) => (e.currentTarget.style.borderColor = 'rgba(235, 233, 228, 0.4)')}
               onMouseOut={(e) => (e.currentTarget.style.borderColor = 'rgba(235, 233, 228, 0.2)')}
-              onFocus={(e) => (e.currentTarget.style.borderColor = 'rgba(235, 233, 228, 0.4)')}
-              onBlur={(e) => (e.currentTarget.style.borderColor = 'rgba(235, 233, 228, 0.2)')}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(235, 233, 228, 0.4)'
+                e.currentTarget.style.outline = `2px solid ${BRAND_TOKENS.oatmealBase}`
+                e.currentTarget.style.outlineOffset = '2px'
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(235, 233, 228, 0.2)'
+                e.currentTarget.style.outline = 'none'
+              }}
             >
               Reload Paciolus
             </button>

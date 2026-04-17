@@ -1,0 +1,246 @@
+{
+  "filename": "tb_hartwell.docx",
+  "size_bytes": 11024,
+  "errors": [],
+  "parse": {
+    "column_names": [
+      "Account Name",
+      "Category",
+      "Net Balance (USD)",
+      "Dr / Cr"
+    ],
+    "row_count": 37,
+    "first_row_sample": {
+      "Account Name": "Cash - Operations",
+      "Category": "Current Asset",
+      "Net Balance (USD)": "284,500.00",
+      "Dr / Cr": "Dr"
+    },
+    "last_row_sample": {
+      "Account Name": "NET (should = 0)",
+      "Category": "",
+      "Net Balance (USD)": "0.00",
+      "Dr / Cr": ""
+    }
+  },
+  "preflight": {
+    "filename": "tb_hartwell.docx",
+    "row_count": 37,
+    "column_count": 4,
+    "readiness_score": 85.0,
+    "readiness_label": "Ready",
+    "columns": [
+      {
+        "role": "account",
+        "detected_name": "Account Name",
+        "confidence": 1.0,
+        "status": "found",
+        "downstream_use": "Account identification \u2014 lead sheets, classification, exception attribution"
+      },
+      {
+        "role": "debit",
+        "detected_name": "Net Balance (USD)",
+        "confidence": 0.95,
+        "status": "found",
+        "downstream_use": "Balance verification, exception detection, anomaly aggregation"
+      },
+      {
+        "role": "credit",
+        "detected_name": "Dr / Cr",
+        "confidence": 0.95,
+        "status": "found",
+        "downstream_use": "Balance verification, exception detection, anomaly aggregation"
+      },
+      {
+        "role": "unmapped",
+        "detected_name": "Category",
+        "confidence": 1.0,
+        "status": "found",
+        "downstream_use": "Not used in current analysis"
+      }
+    ],
+    "issues": [
+      {
+        "category": "tb_balance",
+        "severity": "medium",
+        "message": "Balance check skipped \u2014 net-balance layout detected. The credit role is filled by a Dr/Cr indicator column, not a numeric balance. Confirm the sign convention before downstream balance verification.",
+        "affected_count": 1,
+        "remediation": "Re-export the file as a one-sided Debit/Credit trial balance, or confirm the Dr/Cr indicator semantics so Paciolus can derive a signed view of the balances.",
+        "downstream_impact": "An out-of-balance trial balance invalidates all downstream diagnostic results. Debit/credit totals must reconcile before any testing can proceed.",
+        "affected_items": [],
+        "affected_items_truncated": false,
+        "affected_items_total": 0,
+        "tests_affected": 12
+      },
+      {
+        "category": "zero_balance",
+        "severity": "low",
+        "message": "1 rows have zero balance in both debit and credit columns (3% of rows)",
+        "affected_count": 1,
+        "remediation": "Zero-balance rows add noise to the analysis. Consider filtering them out if they represent closed or inactive accounts.",
+        "downstream_impact": "Zero-balance rows add noise to statistical tests (Benford's Law, sampling), inflate account counts, and reduce the signal-to-noise ratio in anomaly detection.",
+        "affected_items": [
+          "NET (should = 0)"
+        ],
+        "affected_items_truncated": false,
+        "affected_items_total": 1,
+        "tests_affected": 4
+      }
+    ],
+    "duplicates": [],
+    "encoding_anomalies": [],
+    "mixed_sign_accounts": [],
+    "zero_balance_count": 1,
+    "null_counts": {
+      "Category": 1,
+      "Dr / Cr": 1
+    },
+    "balance_check": {
+      "total_debits": 0.0,
+      "total_credits": 0.0,
+      "difference": 0.0,
+      "balanced": false,
+      "tolerance": 0.01,
+      "skipped": true
+    },
+    "score_breakdown": [
+      {
+        "component": "tb_balance",
+        "weight": 0.25,
+        "score": 50.0,
+        "contribution": 12.5
+      },
+      {
+        "component": "column_detection",
+        "weight": 0.2,
+        "score": 100.0,
+        "contribution": 20.0
+      },
+      {
+        "component": "null_values",
+        "weight": 0.15,
+        "score": 100.0,
+        "contribution": 15.0
+      },
+      {
+        "component": "duplicates",
+        "weight": 0.1,
+        "score": 100.0,
+        "contribution": 10.0
+      },
+      {
+        "component": "encoding",
+        "weight": 0.05,
+        "score": 100.0,
+        "contribution": 5.0
+      },
+      {
+        "component": "mixed_signs",
+        "weight": 0.15,
+        "score": 100.0,
+        "contribution": 15.0
+      },
+      {
+        "component": "zero_balance",
+        "weight": 0.1,
+        "score": 75.0,
+        "contribution": 7.5
+      }
+    ],
+    "intake": {
+      "rows_submitted": 37,
+      "rows_accepted": 37,
+      "rows_rejected": 0,
+      "rows_excluded": 0,
+      "reconciles": true,
+      "notes": []
+    },
+    "rendered_conclusion": "The trial balance file (tb_hartwell.docx) achieved a Readiness Score of 85.0/100 \u2014 assessed as Ready with caveats. The file is suitable for downstream diagnostic testing subject to the following caveat: (1) Balance check skipped \u2014 net-balance layout detected. The credit role is filled by a Dr/Cr indicator column, not a numeric balance. Confirm the sign convention before downstream balance verification.. Map all balance columns explicitly, or re-export the trial balance with a single Debit/Credit pair before re-uploading. Remediate before final workpaper sign-off."
+  },
+  "diagnostic": {
+    "analysis_failed": false,
+    "failure_reason": null,
+    "error_message": null,
+    "balanced": true,
+    "total_debits": "0.00",
+    "total_credits": "0.00",
+    "difference": "0.00",
+    "row_count": 37,
+    "totals_rows_excluded": 0,
+    "material_count": 0,
+    "immaterial_count": 0,
+    "informational_count": 0,
+    "coverage_finding_count": 4,
+    "has_risk_alerts": false,
+    "risk_score": 0,
+    "risk_tier": "low",
+    "risk_factors": [],
+    "coverage_pct": 0.0,
+    "anomaly_types": {
+      "natural_balance_violation": 0,
+      "suspense_account": 0,
+      "concentration_risk": 4,
+      "revenue_concentration": 1,
+      "asset_concentration": 1,
+      "liability_concentration": 1,
+      "expense_concentration": 1,
+      "rounding_anomaly": 0,
+      "related_party": 0,
+      "intercompany_imbalance": 0,
+      "equity_signal": 0,
+      "balance_sheet_imbalance": 1
+    },
+    "abnormal_balance_count": 4,
+    "abnormal_balances": [
+      {
+        "account": "Sales Revenue",
+        "type": "Revenue",
+        "issue": "Represents 90.0% of total revenues \u2014 coverage observation, not an anomaly",
+        "amount": 2156400.0,
+        "materiality": "material",
+        "anomaly_type": "revenue_concentration",
+        "severity": "high",
+        "confidence": 0.8997746807977969,
+        "coverage_analysis": true
+      },
+      {
+        "account": "Long-Term Debt",
+        "type": "Liability",
+        "issue": "Represents 64.6% of total liabilities \u2014 coverage observation, not an anomaly",
+        "amount": 750000.0,
+        "materiality": "material",
+        "anomaly_type": "liability_concentration",
+        "severity": "high",
+        "confidence": 0.6464402689191519,
+        "coverage_analysis": true
+      },
+      {
+        "account": "PP&E, net",
+        "type": "Asset",
+        "issue": "Represents 49.1% of total assets \u2014 coverage observation, not an anomaly",
+        "amount": 1167600.0,
+        "materiality": "material",
+        "anomaly_type": "asset_concentration",
+        "severity": "medium",
+        "confidence": 0.49120740429112325,
+        "coverage_analysis": true
+      },
+      {
+        "account": "Cost of Goods Sold",
+        "type": "Expense",
+        "issue": "Represents 48.1% of total expenses \u2014 coverage observation, not an anomaly",
+        "amount": 1124300.0,
+        "materiality": "material",
+        "anomaly_type": "expense_concentration",
+        "severity": "medium",
+        "confidence": 0.48098395721925136,
+        "coverage_analysis": true
+      }
+    ],
+    "abnormal_balances_truncated": false,
+    "classification_quality": {
+      "score": null,
+      "issue_count": 6
+    }
+  }
+}

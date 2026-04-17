@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from decimal import Decimal
 from typing import Any
 
@@ -14,6 +15,72 @@ from classification_rules import (
 )
 from security_utils import log_secure_operation
 from shared.monetary import BALANCE_TOLERANCE
+
+# Sprint 670 Issue 10: Structural patterns that indicate an unusual or
+# placeholder account regardless of vocabulary. These augment the literal
+# SUSPENSE_KEYWORDS table for accounts whose names don't contain a
+# recognised suspense word but whose shape is suspect.
+
+# Symbolic name: contains AT LEAST one non-alphabetic character AND has
+# fewer alphabetic characters than non-alphabetic ones. Catches "????-001"
+# and "###-pending" without flagging legitimate names like "401(k)".
+_SYMBOLIC_NON_ALPHA_RE = re.compile(r"[^a-zA-Z\s]")
+
+# Annotation pattern: parentheses containing a question mark. Catches
+# "(personal?)", "(non-ded?)", "(see note)" — auditor-visible margin
+# notes the bookkeeper left in the account name itself.
+_ANNOTATION_QMARK_RE = re.compile(r"\([^)]*\?[^)]*\)")
+
+# Foreign currency prefix: ISO-4217 code followed by a separator. Catches
+# "EUR-AR", "GBP_Receivables", "JPY Payables" — accounts denominated in
+# a non-functional currency that may need translation review.
+_FX_PREFIX_RE = re.compile(
+    r"^(eur|gbp|jpy|cad|aud|chf|cny|hkd|sgd|inr|brl|mxn|nzd|sek|nok|dkk|zar|try|krw)[\s\-_]",
+    re.IGNORECASE,
+)
+
+# Annotation-only marker: a question mark on its own at the end of the
+# name (e.g. "Vendor Refund?"). Less specific than the parens variant
+# but still worth surfacing.
+_TRAILING_QMARK_RE = re.compile(r"\?\s*$")
+
+
+def _detect_unusual_patterns(display: str) -> tuple[float, list[str]]:
+    """Return (confidence, matched patterns) for structural unusual-name signals.
+
+    Confidence is summed across all matching patterns and capped at 1.0
+    by the caller. The matched-patterns list is plain-language and
+    appears in `matched_keywords` on the resulting suspense entry so the
+    user can see why the account was flagged.
+    """
+    matched: list[str] = []
+    confidence = 0.0
+
+    alpha_count = sum(1 for c in display if c.isalpha())
+    non_space_count = sum(1 for c in display if not c.isspace())
+
+    # Symbolic-only name: zero alphabetic characters, or fewer than 25%
+    # alphabetic when stripped of whitespace. Strong signal.
+    if non_space_count > 0:
+        if alpha_count == 0:
+            matched.append("symbolic-only name")
+            confidence += 0.95
+        elif alpha_count / non_space_count < 0.25 and _SYMBOLIC_NON_ALPHA_RE.search(display):
+            matched.append("predominantly symbolic name")
+            confidence += 0.80
+
+    if _ANNOTATION_QMARK_RE.search(display):
+        matched.append("annotation with question mark")
+        confidence += 0.75
+    elif _TRAILING_QMARK_RE.search(display):
+        matched.append("trailing question mark")
+        confidence += 0.65
+
+    if _FX_PREFIX_RE.match(display):
+        matched.append("foreign currency prefix")
+        confidence += 0.70
+
+    return confidence, matched
 
 
 def detect_suspense_accounts(
@@ -45,6 +112,13 @@ def detect_suspense_accounts(
             if keyword in account_lower:
                 matched_keywords.append(keyword)
                 total_weight += weight
+
+        # Sprint 670 Issue 10: structural patterns (symbolic, annotation,
+        # FX prefix) augment the literal vocabulary check.
+        structural_weight, structural_matches = _detect_unusual_patterns(display)
+        if structural_matches:
+            matched_keywords.extend(structural_matches)
+            total_weight += structural_weight
 
         confidence = min(total_weight, 1.0)
 

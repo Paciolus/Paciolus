@@ -238,6 +238,7 @@ export function AuthSessionProvider({ children }: { children: ReactNode }): Reac
         credentials: 'include',  // Sends HttpOnly cookie for server-side revocation
         headers: {
           'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',  // Sprint 653: custom-header CSRF fallback
           ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
         },
         // No body — cookie is sent automatically

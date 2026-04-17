@@ -1,0 +1,307 @@
+{
+  "agent": "dependency_sentinel",
+  "status": "yellow",
+  "backend_outdated": [
+    {
+      "package": "chardet",
+      "current": "7.4.0.post2",
+      "latest": "7.4.1",
+      "severity": "patch",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "charset-normalizer",
+      "current": "3.4.6",
+      "latest": "3.4.7",
+      "severity": "patch",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "click",
+      "current": "8.3.1",
+      "latest": "8.3.2",
+      "severity": "patch",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "cryptography",
+      "current": "46.0.6",
+      "latest": "46.0.7",
+      "severity": "patch",
+      "watchlist": true,
+      "deferred": false
+    },
+    {
+      "package": "fastapi",
+      "current": "0.135.2",
+      "latest": "0.135.3",
+      "severity": "patch",
+      "watchlist": true,
+      "deferred": false
+    },
+    {
+      "package": "greenlet",
+      "current": "3.3.2",
+      "latest": "3.4.0",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "hypothesis",
+      "current": "6.151.10",
+      "latest": "6.151.12",
+      "severity": "patch",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "pdfminer.six",
+      "current": "20251230",
+      "latest": "20260107",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": true,
+      "deferral_reason": "Calendar-versioned release; waiting on downstream compatibility confirmation",
+      "deferral_review_by": "2026-04-30"
+    },
+    {
+      "package": "pillow",
+      "current": "12.1.1",
+      "latest": "12.2.0",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "platformdirs",
+      "current": "4.9.4",
+      "latest": "4.9.6",
+      "severity": "patch",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "pydantic_core",
+      "current": "2.41.5",
+      "latest": "2.45.0",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "pypdfium2",
+      "current": "5.6.0",
+      "latest": "5.7.0",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "pytest",
+      "current": "9.0.2",
+      "latest": "9.0.3",
+      "severity": "patch",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "ruff",
+      "current": "0.15.8",
+      "latest": "0.15.9",
+      "severity": "patch",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "SQLAlchemy",
+      "current": "2.0.48",
+      "latest": "2.0.49",
+      "severity": "patch",
+      "watchlist": true,
+      "deferred": false
+    },
+    {
+      "package": "stripe",
+      "current": "15.0.0",
+      "latest": "15.0.1",
+      "severity": "patch",
+      "watchlist": true,
+      "deferred": false
+    },
+    {
+      "package": "tzdata",
+      "current": "2025.3",
+      "latest": "2026.1",
+      "severity": "major",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "Werkzeug",
+      "current": "3.1.7",
+      "latest": "3.1.8",
+      "severity": "patch",
+      "watchlist": false,
+      "deferred": false
+    }
+  ],
+  "frontend_outdated": [
+    {
+      "package": "@typescript-eslint/eslint-plugin",
+      "current": "8.58.0",
+      "latest": "8.58.1",
+      "severity": "patch",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "@typescript-eslint/parser",
+      "current": "8.58.0",
+      "latest": "8.58.1",
+      "severity": "patch",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "next",
+      "current": "16.2.2",
+      "latest": "16.2.3",
+      "severity": "patch",
+      "watchlist": true,
+      "deferred": false
+    },
+    {
+      "package": "postcss",
+      "current": "8.5.8",
+      "latest": "8.5.9",
+      "severity": "patch",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "react",
+      "current": "19.2.4",
+      "latest": "19.2.5",
+      "severity": "patch",
+      "watchlist": true,
+      "deferred": false
+    },
+    {
+      "package": "react-dom",
+      "current": "19.2.4",
+      "latest": "19.2.5",
+      "severity": "patch",
+      "watchlist": false,
+      "deferred": false
+    }
+  ],
+  "security_flagged": [
+    {
+      "package": "cryptography",
+      "current": "46.0.6",
+      "latest": "46.0.7",
+      "severity": "patch",
+      "watchlist": true,
+      "deferred": false
+    },
+    {
+      "package": "fastapi",
+      "current": "0.135.2",
+      "latest": "0.135.3",
+      "severity": "patch",
+      "watchlist": true,
+      "deferred": false
+    },
+    {
+      "package": "SQLAlchemy",
+      "current": "2.0.48",
+      "latest": "2.0.49",
+      "severity": "patch",
+      "watchlist": true,
+      "deferred": false
+    },
+    {
+      "package": "stripe",
+      "current": "15.0.0",
+      "latest": "15.0.1",
+      "severity": "patch",
+      "watchlist": true,
+      "deferred": false
+    },
+    {
+      "package": "next",
+      "current": "16.2.2",
+      "latest": "16.2.3",
+      "severity": "patch",
+      "watchlist": true,
+      "deferred": false
+    },
+    {
+      "package": "react",
+      "current": "19.2.4",
+      "latest": "19.2.5",
+      "severity": "patch",
+      "watchlist": true,
+      "deferred": false
+    }
+  ],
+  "deferred": [
+    {
+      "package": "pdfminer.six",
+      "current": "20251230",
+      "latest": "20260107",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": true,
+      "deferral_reason": "Calendar-versioned release; waiting on downstream compatibility confirmation",
+      "deferral_review_by": "2026-04-30"
+    }
+  ],
+  "top5_updates": [
+    {
+      "package": "tzdata",
+      "current": "2025.3",
+      "latest": "2026.1",
+      "severity": "major",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "greenlet",
+      "current": "3.3.2",
+      "latest": "3.4.0",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "pillow",
+      "current": "12.1.1",
+      "latest": "12.2.0",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "pydantic_core",
+      "current": "2.41.5",
+      "latest": "2.45.0",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "pypdfium2",
+      "current": "5.6.0",
+      "latest": "5.7.0",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": false
+    }
+  ],
+  "summary": "Backend: 18 outdated. Frontend: 6 outdated. 6 security-relevant packages have updates. 1 deferred."
+}

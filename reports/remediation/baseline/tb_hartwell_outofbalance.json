@@ -1,0 +1,245 @@
+{
+  "filename": "tb_hartwell_outofbalance.csv",
+  "size_bytes": 1394,
+  "errors": [],
+  "parse": {
+    "column_names": [
+      "Account No",
+      "Account Name",
+      "Debit",
+      "Credit"
+    ],
+    "row_count": 41,
+    "first_row_sample": {
+      "Account No": "1010",
+      "Account Name": "Cash - Operating Account",
+      "Debit": 384500.0,
+      "Credit": NaN
+    },
+    "last_row_sample": {
+      "Account No": "",
+      "Account Name": NaN,
+      "Debit": 5623600.0,
+      "Credit": 5523600.0
+    }
+  },
+  "preflight": {
+    "filename": "tb_hartwell_outofbalance.csv",
+    "row_count": 41,
+    "column_count": 4,
+    "readiness_score": 67.5,
+    "readiness_label": "Review Recommended",
+    "columns": [
+      {
+        "role": "account",
+        "detected_name": "Account Name",
+        "confidence": 1.0,
+        "status": "found"
+      },
+      {
+        "role": "debit",
+        "detected_name": "Debit",
+        "confidence": 1.0,
+        "status": "found"
+      },
+      {
+        "role": "credit",
+        "detected_name": "Credit",
+        "confidence": 1.0,
+        "status": "found"
+      },
+      {
+        "role": "unmapped",
+        "detected_name": "Account No",
+        "confidence": 1.0,
+        "status": "found"
+      }
+    ],
+    "issues": [
+      {
+        "category": "tb_balance",
+        "severity": "high",
+        "message": "Trial balance is out of balance by $200,000.00",
+        "affected_count": 41,
+        "remediation": "Obtain a corrected trial balance where total debits equal total credits before proceeding with any diagnostic testing.",
+        "downstream_impact": "An out-of-balance trial balance invalidates all downstream diagnostic results. Debit/credit totals must reconcile before any testing can proceed.",
+        "affected_items": [],
+        "affected_items_truncated": false,
+        "affected_items_total": 0,
+        "tests_affected": 12
+      },
+      {
+        "category": "null_values",
+        "severity": "medium",
+        "message": "Column 'Account Name' has 1 rows with missing data (2.4% of rows)",
+        "affected_count": 1,
+        "remediation": "Review rows with missing 'Account Name' values. Fill in missing data or remove incomplete rows before analysis.",
+        "downstream_impact": "Missing values in critical columns produce incomplete trial balance totals, skewed ratio calculations, and may cause accounts to be silently excluded from testing tools.",
+        "affected_items": [
+          "Row 41"
+        ],
+        "affected_items_truncated": false,
+        "affected_items_total": 1,
+        "tests_affected": 11
+      }
+    ],
+    "duplicates": [],
+    "encoding_anomalies": [],
+    "mixed_sign_accounts": [],
+    "zero_balance_count": 0,
+    "null_counts": {
+      "Account No": 1,
+      "Account Name": 1,
+      "Debit": 15,
+      "Credit": 25
+    },
+    "balance_check": {
+      "total_debits": 11247200.0,
+      "total_credits": 11047200.0,
+      "difference": 200000.0,
+      "balanced": false,
+      "tolerance": 0.01
+    },
+    "score_breakdown": [
+      {
+        "component": "tb_balance",
+        "weight": 0.25,
+        "score": 0.0,
+        "contribution": 0.0
+      },
+      {
+        "component": "column_detection",
+        "weight": 0.2,
+        "score": 100.0,
+        "contribution": 20.0
+      },
+      {
+        "component": "null_values",
+        "weight": 0.15,
+        "score": 50.0,
+        "contribution": 7.5
+      },
+      {
+        "component": "duplicates",
+        "weight": 0.1,
+        "score": 100.0,
+        "contribution": 10.0
+      },
+      {
+        "component": "encoding",
+        "weight": 0.05,
+        "score": 100.0,
+        "contribution": 5.0
+      },
+      {
+        "component": "mixed_signs",
+        "weight": 0.15,
+        "score": 100.0,
+        "contribution": 15.0
+      },
+      {
+        "component": "zero_balance",
+        "weight": 0.1,
+        "score": 100.0,
+        "contribution": 10.0
+      }
+    ]
+  },
+  "diagnostic": {
+    "balanced": false,
+    "total_debits": "11247200.00",
+    "total_credits": "11047200.00",
+    "difference": "200000.00",
+    "material_count": 4,
+    "immaterial_count": 0,
+    "informational_count": 0,
+    "has_risk_alerts": true,
+    "risk_score": 42,
+    "risk_tier": "elevated",
+    "risk_factors": [
+      [
+        "Sales Revenue: material exception",
+        8
+      ],
+      [
+        "Property Plant and Equipment: material exception",
+        8
+      ],
+      [
+        "Cost of Goods Sold: material exception",
+        8
+      ],
+      [
+        "Long-Term Debt: material exception",
+        8
+      ],
+      [
+        "Anomaly-weighted coverage exceeds 50%",
+        10
+      ]
+    ],
+    "coverage_pct": 52.2,
+    "anomaly_types": {
+      "natural_balance_violation": 0,
+      "suspense_account": 0,
+      "concentration_risk": 4,
+      "revenue_concentration": 1,
+      "asset_concentration": 1,
+      "liability_concentration": 1,
+      "expense_concentration": 1,
+      "rounding_anomaly": 0,
+      "related_party": 0,
+      "intercompany_imbalance": 0,
+      "equity_signal": 0,
+      "balance_sheet_imbalance": 1
+    },
+    "abnormal_balance_count": 4,
+    "abnormal_balances": [
+      {
+        "account": "Sales Revenue",
+        "type": "Revenue",
+        "issue": "Represents 90.0% of total revenues",
+        "amount": 2156400.0,
+        "materiality": "material",
+        "anomaly_type": "revenue_concentration",
+        "severity": "high",
+        "confidence": 0.8997746807977969
+      },
+      {
+        "account": "Long-Term Debt",
+        "type": "Liability",
+        "issue": "Represents 64.6% of total liabilities",
+        "amount": 750000.0,
+        "materiality": "material",
+        "anomaly_type": "liability_concentration",
+        "severity": "high",
+        "confidence": 0.6464402689191519
+      },
+      {
+        "account": "Cost of Goods Sold",
+        "type": "Expense",
+        "issue": "Represents 63.6% of total expenses",
+        "amount": 1124300.0,
+        "materiality": "material",
+        "anomaly_type": "expense_concentration",
+        "severity": "high",
+        "confidence": 0.6363482001358388
+      },
+      {
+        "account": "Property Plant and Equipment",
+        "type": "Asset",
+        "issue": "Represents 47.9% of total assets",
+        "amount": 1840000.0,
+        "materiality": "material",
+        "anomaly_type": "asset_concentration",
+        "severity": "medium",
+        "confidence": 0.47912923469520613
+      }
+    ],
+    "abnormal_balances_truncated": false,
+    "classification_quality": {
+      "score": null,
+      "issue_count": 9
+    }
+  }
+}

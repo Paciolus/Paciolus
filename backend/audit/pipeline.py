@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from datetime import UTC, datetime
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from typing import Any, Optional
 
 from account_classifier import create_classifier
@@ -74,6 +74,106 @@ def audit_trial_balance_streaming(
             auditor.process_chunk(chunk, rows_processed)
             del chunk
 
+        # ── Sprint 666 Issue 5 (BLOCKING): Block silent success ──
+        # Fail the pipeline explicitly when ingestion produced no rows OR
+        # when the required debit/credit columns were never identified.
+        # Without this guard, process_chunk's early-return on missing
+        # columns silently produced a "balanced / low risk / no exceptions"
+        # report on files like tb_no_headers.csv where row 1 was inferred
+        # as the header and column detection then failed. That is the
+        # exact failure mode the CEO remediation brief classified as
+        # BLOCKING. A downstream consumer can key off `analysis_failed`
+        # or `failure_reason` to display the failure notice.
+        if auditor.total_rows == 0 or auditor.debit_col is None or auditor.credit_col is None:
+            if auditor.total_rows == 0:
+                failure_reason = "zero_rows_ingested"
+                message = (
+                    "ANALYSIS COULD NOT BE COMPLETED — No data was successfully "
+                    "ingested from the submitted file. Please verify that the file "
+                    "contains valid data and correctly formatted headers, then "
+                    "resubmit."
+                )
+            else:
+                failure_reason = "columns_not_detected"
+                message = (
+                    "ANALYSIS COULD NOT BE COMPLETED — The required Debit and "
+                    "Credit columns could not be identified in the submitted file. "
+                    "Please verify the file has a header row containing 'Account', "
+                    "'Debit', and 'Credit' columns, then resubmit."
+                )
+            log_secure_operation("streaming_audit_failed", f"{failure_reason}: {filename}")
+            # Return shape must satisfy TrialBalanceResponse schema so the
+            # FastAPI route can serialize it. The `analysis_failed` flag is
+            # how downstream consumers (frontend, exports, memo generators)
+            # detect that the rest of the payload contains safe-default
+            # fabrications rather than real analysis data — they MUST check
+            # this flag before using any other field.
+            return {
+                "status": "failed",
+                "analysis_failed": True,
+                "failure_reason": failure_reason,
+                "error_message": message,
+                "filename": filename,
+                "balanced": False,
+                "total_debits": "0.00",
+                "total_credits": "0.00",
+                "difference": "0.00",
+                "row_count": auditor.total_rows,
+                "totals_rows_excluded": auditor.totals_rows_excluded,
+                "timestamp": datetime.now(UTC).isoformat(),
+                "message": message,
+                # Empty analysis collections
+                "abnormal_balances": [],
+                "material_count": 0,
+                "immaterial_count": 0,
+                "informational_count": 0,
+                "has_risk_alerts": False,
+                "materiality_threshold": materiality_threshold,
+                "classification_summary": {},
+                "risk_summary": {
+                    "total_anomalies": 0,
+                    "high_severity": 0,
+                    "medium_severity": 0,
+                    "low_severity": 0,
+                    "anomaly_types": {},
+                    "risk_score": None,
+                    "risk_tier": "not_applicable",
+                    "risk_factors": [],
+                    "coverage_pct": 0.0,
+                },
+                "classification_quality": {
+                    "issues": [],
+                    "quality_score": 0.0,
+                    "issue_counts": {},
+                    "total_issues": 0,
+                },
+                "column_detection": (
+                    auditor.get_column_detection().to_dict() if auditor.get_column_detection() else None
+                ),
+                "analytics": {},
+                "category_totals": {},
+                "balance_sheet_validation": {
+                    "is_balanced": False,
+                    "status": "balanced",
+                    "total_assets": "0.00",
+                    "total_liabilities": "0.00",
+                    "total_equity": "0.00",
+                    "liabilities_plus_equity": "0.00",
+                    "difference": "0.00",
+                    "abs_difference": "0.00",
+                    "severity": None,
+                    "recommendation": ("Balance sheet validation not applicable — analysis could not be completed."),
+                    "equation": "A = L + E",
+                },
+                "lead_sheet_grouping": {
+                    "summaries": [],
+                    "total_debits": 0.0,
+                    "total_credits": 0.0,
+                    "unclassified_count": 0,
+                },
+                "materiality_source": "none",
+            }
+
         # ── Stage 2: Classification + Balance Check ──────────────────
         result = auditor.get_balance_result()
         account_classifications = auditor.get_classified_accounts()
@@ -101,13 +201,64 @@ def audit_trial_balance_streaming(
             expense_concentration=expense_concentration,
         )
 
+        # ── Sprint 667 Issue 3: TB Out-of-Balance as P1 Exception ────
+        # When the trial balance does not reconcile we inject a synthetic
+        # entry at the top of abnormal_balances so it renders as the
+        # first material exception in the report. The companion flag
+        # passed to compute_tb_diagnostic_score below produces a
+        # dominant +60 risk factor so the composite score always lands
+        # in the High tier on an out-of-balance TB.
+        _tb_imbalance_amount = Decimal(0)
+        _tb_out_of_balance = False
+        if result.get("balanced") is False:
+            try:
+                _tb_imbalance_amount = abs(Decimal(str(result.get("difference", 0))))
+            except (ValueError, InvalidOperation):
+                _tb_imbalance_amount = Decimal(0)
+            if _tb_imbalance_amount != 0:
+                _tb_out_of_balance = True
+                _oob_entry: dict[str, Any] = {
+                    "account": "Trial Balance — Overall",
+                    "type": "structural",
+                    "issue": (
+                        f"Trial balance is out of balance by ${_tb_imbalance_amount:,.2f}. "
+                        f"Total debits do not equal total credits; all downstream "
+                        f"diagnostic results are unreliable until this is corrected."
+                    ),
+                    "amount": float(_tb_imbalance_amount),
+                    "materiality": "material",
+                    "anomaly_type": "tb_out_of_balance",
+                    "severity": "high",
+                    "confidence": 1.0,
+                }
+                # Prepend so the OOB entry is P1 regardless of per-account
+                # amount sort ordering downstream.
+                abnormal_balances = [_oob_entry] + list(abnormal_balances)
+
         # ── Stage 4: Risk Summary ────────────────────────────────────
         result["abnormal_balances"] = abnormal_balances
         result["materiality_threshold"] = materiality_threshold
-        result["material_count"] = sum(1 for ab in abnormal_balances if ab.get("materiality") == "material")
+        # Sprint 668 Issue 1: coverage_analysis findings (concentration risk)
+        # are informational context, not structural anomalies. They are kept
+        # in abnormal_balances so the report can render them in a dedicated
+        # "Materiality Coverage Analysis" section, but they are excluded
+        # from material_count, has_risk_alerts, and every scoring input
+        # below. Without this split a perfectly clean TB scored elevated(42)
+        # purely because four large-but-normal accounts (Sales, COGS, PP&E,
+        # Long-Term Debt) tripped the concentration-risk thresholds.
+        result["material_count"] = sum(
+            1 for ab in abnormal_balances if ab.get("materiality") == "material" and not ab.get("coverage_analysis")
+        )
         _informational_count = sum(1 for ab in abnormal_balances if ab.get("severity") == "informational")
-        result["immaterial_count"] = len(abnormal_balances) - result["material_count"] - _informational_count
+        result["immaterial_count"] = sum(
+            1
+            for ab in abnormal_balances
+            if ab.get("materiality") == "immaterial"
+            and ab.get("severity") != "informational"
+            and not ab.get("coverage_analysis")
+        )
         result["informational_count"] = _informational_count
+        result["coverage_finding_count"] = sum(1 for ab in abnormal_balances if ab.get("coverage_analysis"))
         result["has_risk_alerts"] = result["material_count"] > 0
 
         result["classification_summary"] = auditor.get_classification_summary()
@@ -124,18 +275,42 @@ def audit_trial_balance_streaming(
             for ab in abnormal_balances
         )
         _total_debits = Decimal(str(result.get("total_debits", 0)))
-        _material_items = [ab for ab in abnormal_balances if ab.get("materiality") == "material"]
+        # Coverage uses real structural material items only. The injected
+        # tb_out_of_balance entry (Sprint 667) would saturate coverage and
+        # skew the denominator. Coverage-analysis (concentration) entries
+        # are excluded too — Sprint 668 Issue 1 — because flagging the
+        # single largest revenue/expense/asset account on a balanced TB
+        # is not a coverage signal, it's an arithmetic certainty.
+        _material_items = [
+            ab
+            for ab in abnormal_balances
+            if ab.get("materiality") == "material"
+            and ab.get("anomaly_type") != "tb_out_of_balance"
+            and not ab.get("coverage_analysis")
+        ]
         _flagged_value = sum(abs(Decimal(str(ab.get("amount", 0)))) for ab in _material_items)
         _coverage_pct = min(_flagged_value / _total_debits * 100, Decimal("100")) if _total_debits > 0 else Decimal("0")
 
+        # Same exclusion criteria for the scoring count and the abnormal_balances
+        # list passed to compute_tb_diagnostic_score — keeps the +60 OOB factor
+        # from being double-weighted and stops concentration findings from
+        # being counted as structural exceptions (8pt each in the score model).
+        _scoring_abnormals = [
+            ab
+            for ab in abnormal_balances
+            if ab.get("anomaly_type") != "tb_out_of_balance" and not ab.get("coverage_analysis")
+        ]
+        _scoring_material_count = sum(1 for ab in _scoring_abnormals if ab.get("materiality") == "material")
         risk_score, risk_factors = compute_tb_diagnostic_score(
-            result["material_count"],
+            _scoring_material_count,
             result["immaterial_count"],
             _coverage_pct,
             _has_suspense,
             _has_credit_balance,
-            abnormal_balances=abnormal_balances,
+            abnormal_balances=_scoring_abnormals,
             informational_count=result["informational_count"],
+            tb_out_of_balance=_tb_out_of_balance,
+            tb_imbalance_amount=_tb_imbalance_amount,
         )
         result["risk_summary"]["risk_score"] = risk_score
         result["risk_summary"]["risk_tier"] = get_diagnostic_tier(risk_score)
@@ -173,6 +348,18 @@ def audit_trial_balance_streaming(
         # Surface population profile data quality to top-level (BUG-006)
         if "data_quality" in result["population_profile"]:
             result["data_quality"] = result["population_profile"]["data_quality"]
+
+        # Sprint 670 Issue 10: Populate the Unrecognized Account Types
+        # counter in data_quality from the classification validator output.
+        # The PDF Data Intake Summary used to read `unrecognized_types`
+        # from data_quality with a default of 0 — and nothing populated
+        # it, so the counter always read 0 and contradicted the actual
+        # detection results. Now we derive it from cv_result, which has
+        # already classified every account.
+        cv_dict = result.get("classification_quality") or {}
+        unrecognized_count = sum(1 for issue in cv_dict.get("issues", []) if issue.get("issue_type") == "unclassified")
+        if isinstance(result.get("data_quality"), dict):
+            result["data_quality"]["unrecognized_types"] = unrecognized_count
 
         # Expense Category Analytical Procedures
         from expense_category_engine import compute_expense_categories
@@ -420,6 +607,8 @@ def audit_trial_balance_multi_sheet(
             consolidated_category_totals.total_revenue += sheet_category_totals.total_revenue
             consolidated_category_totals.cost_of_goods_sold += sheet_category_totals.cost_of_goods_sold
             consolidated_category_totals.total_expenses += sheet_category_totals.total_expenses
+            consolidated_category_totals.operating_expenses += sheet_category_totals.operating_expenses
+            consolidated_category_totals.interest_expense += sheet_category_totals.interest_expense
 
             for acct, bals in auditor.account_balances.items():
                 if acct not in consolidated_account_balances:

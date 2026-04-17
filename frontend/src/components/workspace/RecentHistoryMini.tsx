@@ -122,7 +122,7 @@ export function RecentHistoryMini({ token }: RecentHistoryMiniProps) {
                                 <div className="flex items-center justify-between">
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-3 mb-2">
-                                            <h3 className="text-oatmeal-200 font-sans font-medium truncate">
+                                            <h3 className="text-oatmeal-200 font-serif font-medium truncate">
                                                 {item.filename}
                                             </h3>
                                             {item.was_balanced ? (

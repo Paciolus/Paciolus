@@ -17,6 +17,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
+import { useToast } from '@/contexts/ToastContext'
 import { WelcomeModal } from '@/components/shared/WelcomeModal'
 import { Reveal } from '@/components/ui/Reveal'
 import { apiGet, apiPut } from '@/utils/apiClient'
@@ -122,11 +123,34 @@ function getToolIcon(iconKey: string) {
 export default function DashboardPage() {
   const router = useRouter()
   const { user, token, isAuthenticated, isLoading: authLoading } = useAuthSession()
+  const { error: toastError } = useToast()
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [activity, setActivity] = useState<ToolActivityItem[]>([])
   const [favorites, setFavorites] = useState<string[]>(DEFAULT_FAVORITES)
   const [statsLoading, setStatsLoading] = useState(true)
   const [activityLoading, setActivityLoading] = useState(true)
+  const [statsError, setStatsError] = useState(false)
+  const [activityError, setActivityError] = useState(false)
+
+  const retryStats = useCallback(() => {
+    if (!token) return
+    setStatsError(false)
+    setStatsLoading(true)
+    apiGet<DashboardStats>('/dashboard/stats', token)
+      .then(res => { if (res.data) setStats(res.data) })
+      .catch(() => { setStatsError(true); toastError('Failed to load dashboard stats') })
+      .finally(() => setStatsLoading(false))
+  }, [token, toastError])
+
+  const retryActivity = useCallback(() => {
+    if (!token) return
+    setActivityError(false)
+    setActivityLoading(true)
+    apiGet<ToolActivityItem[]>('/activity/tool-feed?limit=8', token)
+      .then(res => { if (res.data) setActivity(res.data) })
+      .catch(() => { setActivityError(true); toastError('Failed to load activity feed') })
+      .finally(() => setActivityLoading(false))
+  }, [token, toastError])
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -139,18 +163,18 @@ export default function DashboardPage() {
 
     apiGet<DashboardStats>('/dashboard/stats', token)
       .then(res => { if (res.data) setStats(res.data) })
-      .catch(() => {})
+      .catch(() => { setStatsError(true); toastError('Failed to load dashboard stats') })
       .finally(() => setStatsLoading(false))
 
     apiGet<ToolActivityItem[]>('/activity/tool-feed?limit=8', token)
       .then(res => { if (res.data) setActivity(res.data) })
-      .catch(() => {})
+      .catch(() => { setActivityError(true); toastError('Failed to load activity feed') })
       .finally(() => setActivityLoading(false))
 
     apiGet<UserPreferences>('/settings/preferences', token)
       .then(res => { if (res.data?.favorite_tools?.length) setFavorites(res.data.favorite_tools) })
-      .catch(() => {})
-  }, [token])
+      .catch(() => { toastError('Failed to load preferences') })
+  }, [token, toastError])
 
   const toggleFavorite = useCallback(
     async (toolKey: string) => {
@@ -214,6 +238,14 @@ export default function DashboardPage() {
         </Reveal>
 
         {/* Stat Cards — 4-column platform-wide stats */}
+        {statsError && (
+          <div className="theme-card p-4 mb-4 flex items-center justify-between border-clay-500/30 bg-clay-50/10">
+            <p className="text-sm font-sans text-clay-600">Dashboard stats unavailable</p>
+            <button onClick={retryStats} className="text-sm font-sans font-medium text-sage-600 hover:text-sage-700 transition-colors">
+              Retry
+            </button>
+          </div>
+        )}
         <Reveal delay={0.05}>
           <motion.div
             variants={staggerContainerTight}
@@ -325,13 +357,14 @@ export default function DashboardPage() {
                       {getToolIcon(tool.icon)}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h3 className="font-sans font-semibold text-sm text-content-primary">{tool.label}</h3>
+                      <h3 className="font-serif font-semibold text-sm text-content-primary">{tool.label}</h3>
                       <p className="text-xs font-sans text-content-tertiary mt-0.5 line-clamp-2">{tool.description}</p>
                     </div>
                   </Link>
                   <button
                     onClick={(e) => { e.preventDefault(); toggleFavorite(tool.key) }}
-                    className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-oatmeal-100"
+                    className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-md opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity hover:bg-oatmeal-100"
+                    aria-label={favorites.includes(tool.key) ? 'Remove from favorites' : 'Add to favorites'}
                     title={favorites.includes(tool.key) ? 'Remove from favorites' : 'Add to favorites'}
                   >
                     <svg
@@ -362,7 +395,7 @@ export default function DashboardPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
                   </svg>
                 </div>
-                <h3 className="font-sans font-semibold text-sm text-content-primary">Portfolio &amp; Workspaces</h3>
+                <h3 className="font-serif font-semibold text-sm text-content-primary">Portfolio &amp; Workspaces</h3>
               </div>
               <p className="text-xs font-sans text-content-secondary">Manage your clients and their diagnostic workspaces</p>
             </Link>
@@ -382,7 +415,14 @@ export default function DashboardPage() {
               </Link>
             </div>
 
-            {activityLoading ? (
+            {activityError ? (
+              <div className="theme-card p-6 text-center">
+                <p className="text-sm font-sans text-clay-600 mb-3">Failed to load activity feed</p>
+                <button onClick={retryActivity} className="text-sm font-sans font-medium text-sage-600 hover:text-sage-700 transition-colors">
+                  Retry
+                </button>
+              </div>
+            ) : activityLoading ? (
               <div className="space-y-3">
                 {[1, 2, 3].map(i => (
                   <div key={i} className="theme-card p-4 animate-pulse">

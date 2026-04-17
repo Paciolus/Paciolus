@@ -6,6 +6,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useVerificationContext } from '@/contexts/VerificationContext'
+import { consumePendingPlanSelection } from '@/lib/authFlowState'
 import { fadeUp } from '@/lib/motion'
 
 /**
@@ -57,8 +58,14 @@ function VerifyEmailContent() {
         if (isAuthenticated) {
           await refreshUser()
         }
+        // Sprint 603: if the user arrived from a pricing CTA, resume checkout flow.
+        const pendingPlan = consumePendingPlanSelection()
         // Auto-redirect after 3 seconds
         setTimeout(() => {
+          if (pendingPlan && isAuthenticated) {
+            router.push(`/checkout?plan=${pendingPlan.plan}&interval=${pendingPlan.interval}`)
+            return
+          }
           router.push(isAuthenticated ? '/' : '/login')
         }, 3000)
       } else {

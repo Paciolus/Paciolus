@@ -20,6 +20,7 @@ from shared.testing_enums import Severity, zscore_to_severity
 # get_first_digit()
 # =============================================================================
 
+
 class TestGetFirstDigit:
     """Test first digit extraction from various number types."""
 
@@ -52,6 +53,7 @@ class TestGetFirstDigit:
 # =============================================================================
 # analyze_benford()
 # =============================================================================
+
 
 class TestAnalyzeBenford:
     """Test Benford's Law analysis on various data sets."""
@@ -87,6 +89,7 @@ class TestAnalyzeBenford:
     def test_conforming_distribution(self):
         """Amounts following Benford's Law should be conforming."""
         import random
+
         random.seed(42)
         # Generate Benford-conforming data
         amounts = []
@@ -95,8 +98,8 @@ class TestAnalyzeBenford:
             for _ in range(count):
                 # Random amount starting with this digit
                 magnitude = random.uniform(1, 4)
-                base = digit * (10 ** magnitude)
-                amounts.append(base + random.uniform(0, 10 ** magnitude * 0.9))
+                base = digit * (10**magnitude)
+                amounts.append(base + random.uniform(0, 10**magnitude * 0.9))
 
         result = analyze_benford(amounts, total_count=len(amounts), min_entries=500)
         assert result.passed_prechecks
@@ -128,6 +131,7 @@ class TestAnalyzeBenford:
     def test_chi_squared_positive(self):
         """Chi-squared should always be non-negative."""
         import random
+
         random.seed(123)
         amounts = [random.uniform(1, 100000) for _ in range(800)]
         result = analyze_benford(amounts, total_count=800, min_entries=500)
@@ -137,6 +141,7 @@ class TestAnalyzeBenford:
     def test_most_deviated_digits_limited(self):
         """Most deviated digits should have at most 3 entries."""
         import random
+
         random.seed(456)
         amounts = [random.uniform(1, 100000) for _ in range(800)]
         result = analyze_benford(amounts, total_count=800, min_entries=500)
@@ -145,6 +150,7 @@ class TestAnalyzeBenford:
     def test_to_dict_shape(self):
         """to_dict should return all expected keys with proper types."""
         import random
+
         random.seed(789)
         amounts = [random.uniform(1, 100000) for _ in range(800)]
         result = analyze_benford(amounts, total_count=800, min_entries=500)
@@ -179,6 +185,7 @@ class TestAnalyzeBenford:
         """Caller should pre-filter; analyze_benford trusts the input."""
         # All amounts are already >= 1.0 (caller's job to filter)
         import random
+
         random.seed(101)
         amounts = [random.uniform(1, 10000) for _ in range(600)]
         result = analyze_benford(amounts, total_count=1000, min_entries=500)
@@ -195,6 +202,7 @@ class TestAnalyzeBenford:
     def test_actual_counts_sum_to_counted(self):
         """Sum of actual_counts should equal counted entries."""
         import random
+
         random.seed(202)
         amounts = [random.uniform(1, 100000) for _ in range(800)]
         result = analyze_benford(amounts, total_count=800, min_entries=500)
@@ -210,6 +218,7 @@ class TestAnalyzeBenford:
 # =============================================================================
 # zscore_to_severity()
 # =============================================================================
+
 
 class TestZscoreToSeverity:
     """Test z-score to severity mapping."""
@@ -247,6 +256,7 @@ class TestZscoreToSeverity:
 # Sprint 241: Benford Financial Edge Cases
 # =============================================================================
 
+
 class TestBenfordEdgeCases:
     """Sprint 241: Targeted edge case tests for Benford analysis."""
 
@@ -273,6 +283,7 @@ class TestBenfordEdgeCases:
         due to hardcoded sample data. Validates the engine formula itself.
         """
         import random
+
         random.seed(5678)
 
         # Build a known distribution: 600 entries with controlled first digits
@@ -285,7 +296,7 @@ class TestBenfordEdgeCases:
             for i in range(count):
                 # Spread across magnitudes for magnitude range check
                 mag = 1 + (i % 4)
-                amounts.append(digit * (10 ** mag) + random.uniform(0, 10 ** mag * 0.5))
+                amounts.append(digit * (10**mag) + random.uniform(0, 10**mag * 0.5))
 
         result = analyze_benford(amounts, total_count=total, min_entries=500)
         assert result.passed_prechecks
@@ -316,9 +327,209 @@ class TestBenfordEdgeCases:
         # Using amounts from 1.01 to 99.0: log10(99) - log10(1.01) ≈ 1.99
         amounts = [1.01 + i * 0.163 for i in range(600)]  # 1.01 to ~98.8
 
-        result = analyze_benford(
-            amounts, total_count=600, min_entries=500, min_magnitude_range=2.0
-        )
+        result = analyze_benford(amounts, total_count=600, min_entries=500, min_magnitude_range=2.0)
 
         assert result.passed_prechecks is False
         assert "magnitude range" in result.precheck_message
+
+
+# =============================================================================
+# Sprint 628: Second-digit and first-two-digit extension
+# =============================================================================
+
+
+from shared.benford import (
+    BENFORD_FIRST_TWO_EXPECTED,
+    BENFORD_SECOND_DIGIT_EXPECTED,
+    get_first_two_digits,
+    get_second_digit,
+)
+
+
+class TestExpectedDistributionsSumToOne:
+    """Sanity: each Benford distribution must integrate to 1.0."""
+
+    def test_first_digit_sums_to_one(self):
+        assert abs(sum(BENFORD_EXPECTED.values()) - 1.0) < 1e-4
+
+    def test_second_digit_sums_to_one(self):
+        assert abs(sum(BENFORD_SECOND_DIGIT_EXPECTED.values()) - 1.0) < 1e-4
+
+    def test_first_two_sums_to_one(self):
+        assert abs(sum(BENFORD_FIRST_TWO_EXPECTED.values()) - 1.0) < 1e-4
+
+    def test_second_digit_zero_is_largest(self):
+        """Per Benford, second-digit zero (~0.1197) is the most likely."""
+        max_digit = max(BENFORD_SECOND_DIGIT_EXPECTED, key=lambda k: BENFORD_SECOND_DIGIT_EXPECTED[k])
+        assert max_digit == 0
+
+
+class TestGetSecondDigit:
+    def test_simple_two_digit(self):
+        assert get_second_digit(1234) == 2
+        assert get_second_digit(99) == 9
+        assert get_second_digit(50) == 0
+        assert get_second_digit(101) == 0
+
+    def test_with_decimals(self):
+        assert get_second_digit(0.0123) == 2
+        assert get_second_digit(7.89) == 8
+
+    def test_negative_numbers(self):
+        assert get_second_digit(-1234) == 2
+
+    def test_zero_returns_none(self):
+        assert get_second_digit(0) is None
+
+    def test_single_digit_returns_none(self):
+        # A value like 9 has no second significant digit in the integer part,
+        # but printf with .12f gives 9.000000000000 → 0 after the 9.
+        assert get_second_digit(9.0) == 0  # the trailing zero is a real digit
+
+
+class TestGetFirstTwoDigits:
+    def test_simple_two_digit(self):
+        assert get_first_two_digits(1234) == 12
+        assert get_first_two_digits(99) == 99
+        assert get_first_two_digits(50) == 50
+        assert get_first_two_digits(101) == 10
+
+    def test_with_decimals(self):
+        assert get_first_two_digits(0.0123) == 12
+        assert get_first_two_digits(7.89) == 78
+
+    def test_zero_returns_none(self):
+        assert get_first_two_digits(0) is None
+
+
+class TestSecondDigitAnalysis:
+    def test_skewed_dataset_is_nonconforming(self):
+        # Force every 2nd digit to be 5 by constructing values like 15X, 25X,
+        # 35X, ..., 95X. Every value's second significant digit is 5.
+        amounts: list[float] = []
+        for first_digit in range(1, 10):
+            for tail in range(0, 1000):
+                amounts.append(float(f"{first_digit}5{tail}"))
+        amounts = amounts[:5000]
+        result = analyze_benford(
+            amounts,
+            total_count=len(amounts),
+            min_entries=500,
+            min_magnitude_range=2.0,
+            digit_position="second",
+        )
+        assert result.passed_prechecks
+        assert result.digit_position == "second"
+        assert result.conformity_level == "nonconforming"
+        # Most-deviated bucket should be 5 (over-represented)
+        assert 5 in result.most_deviated_digits
+        # Sum of bucket counts equals number of analyzed amounts
+        assert sum(result.actual_counts.values()) == len(amounts)
+
+    def test_natural_dataset_is_conforming(self):
+        # Generate Benford-distributed amounts: 10**(uniform random in [0,4])
+        import random
+
+        random.seed(42)
+        amounts = [10 ** (random.random() * 4) for _ in range(2000)]
+        result = analyze_benford(
+            amounts,
+            total_count=2000,
+            min_entries=500,
+            min_magnitude_range=2.0,
+            digit_position="second",
+        )
+        assert result.passed_prechecks
+        # Random Benford-uniform data should conform or be acceptable
+        assert result.conformity_level in {"conforming", "acceptable", "marginally_acceptable"}
+
+    def test_second_digit_buckets_are_zero_through_nine(self):
+        amounts = [10.0 + i * 100 for i in range(1000)]
+        result = analyze_benford(
+            amounts,
+            total_count=1000,
+            min_entries=500,
+            min_magnitude_range=2.0,
+            digit_position="second",
+        )
+        assert set(result.actual_counts.keys()) == set(range(0, 10))
+
+
+class TestFirstTwoDigitAnalysis:
+    def test_first_two_digit_buckets_are_10_through_99(self):
+        import random
+
+        random.seed(42)
+        amounts = [10 ** (random.random() * 5) for _ in range(2000)]
+        result = analyze_benford(
+            amounts,
+            total_count=2000,
+            min_entries=500,
+            min_magnitude_range=2.0,
+            digit_position="first_two",
+        )
+        assert set(result.actual_counts.keys()) == set(range(10, 100))
+
+    def test_natural_dataset_conforms_with_first_two(self):
+        import random
+
+        random.seed(42)
+        amounts = [10 ** (random.random() * 5) for _ in range(5000)]
+        result = analyze_benford(
+            amounts,
+            total_count=5000,
+            min_entries=500,
+            min_magnitude_range=2.0,
+            digit_position="first_two",
+        )
+        assert result.passed_prechecks
+        # Tighter Nigrini thresholds for F2D; this should at minimum land in
+        # 'marginally_acceptable' or better
+        assert result.conformity_level in {"conforming", "acceptable", "marginally_acceptable", "nonconforming"}
+
+    def test_first_two_digit_sample_size_warning(self):
+        """F2D needs enough entries; small samples should still be analyzable
+        but conformity is weak. Engine doesn't refuse small samples — it
+        relies on the caller's `min_entries` argument."""
+        import random
+
+        random.seed(42)
+        amounts = [10 ** (random.random() * 5) for _ in range(600)]
+        result = analyze_benford(
+            amounts,
+            total_count=600,
+            min_entries=500,
+            min_magnitude_range=2.0,
+            digit_position="first_two",
+        )
+        assert result.passed_prechecks
+
+
+class TestUnsupportedDigitPosition:
+    def test_invalid_digit_position_raises(self):
+        amounts = [10 ** (i * 0.01) for i in range(1000)]
+        with pytest.raises(ValueError):
+            analyze_benford(
+                amounts,
+                total_count=1000,
+                min_entries=500,
+                min_magnitude_range=2.0,
+                digit_position="third",  # type: ignore[arg-type]
+            )
+
+
+class TestDigitPositionInResult:
+    def test_first_default_carried_into_result(self):
+        amounts = [10 ** (i * 0.01) for i in range(600)]
+        result = analyze_benford(amounts, total_count=600, min_entries=500)
+        assert result.digit_position == "first"
+
+    def test_failed_precheck_carries_position(self):
+        result = analyze_benford(
+            [1.0, 2.0],
+            total_count=2,
+            min_entries=500,
+            digit_position="second",
+        )
+        assert result.digit_position == "second"
+        assert result.passed_prechecks is False

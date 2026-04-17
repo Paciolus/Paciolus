@@ -10,8 +10,10 @@ import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { render, screen, waitFor } from '@/test-utils'
 
 const mockPush = jest.fn()
+const mockSearchParams = new URLSearchParams()
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
+  useSearchParams: () => mockSearchParams,
 }))
 
 const mockRegister = jest.fn()

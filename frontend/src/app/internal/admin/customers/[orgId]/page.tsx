@@ -152,7 +152,7 @@ export default function CustomerDetailPage() {
                 </dl>
                 {d.members.length > 0 && (
                   <div className="mt-3 border-t border-theme pt-3">
-                    <h3 className="text-xs font-sans text-content-tertiary uppercase tracking-wide mb-2">Team Members</h3>
+                    <h3 className="text-xs font-serif text-content-tertiary uppercase tracking-wide mb-2">Team Members</h3>
                     {d.members.map(m => (
                       <div key={m.user_id} className="flex items-center justify-between py-1 text-sm font-sans">
                         <span className="text-content-primary">{m.name || m.email}</span>

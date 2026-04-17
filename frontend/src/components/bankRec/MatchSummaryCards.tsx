@@ -101,10 +101,10 @@ export function MatchSummaryCards({ summary }: MatchSummaryCardsProps) {
         </div>
         <div className="flex items-center justify-between border-t border-theme-divider pt-2">
           <span className="font-sans text-xs text-content-tertiary">
-            Match Rate: {matchRate.toFixed(0)}% ({summary.matched_count} of {totalItems} items)
+            Match Rate: <span className="font-mono">{matchRate.toFixed(0)}%</span> (<span className="font-mono">{summary.matched_count}</span> of <span className="font-mono">{totalItems}</span> items)
           </span>
-          <span className="font-mono text-xs text-content-tertiary">
-            Bank {formatAmount(summary.total_bank)} / GL {formatAmount(summary.total_ledger)}
+          <span className="font-sans text-xs text-content-tertiary">
+            Bank <span className="font-mono">{formatAmount(summary.total_bank)}</span> / GL <span className="font-mono">{formatAmount(summary.total_ledger)}</span>
           </span>
         </div>
       </motion.div>

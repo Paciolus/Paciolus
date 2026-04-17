@@ -7,6 +7,8 @@ Trial Balance Diagnostic Intelligence Summary report.
 Changes 1 & 4: Suggested procedures per finding, concentration benchmark language.
 """
 
+from decimal import Decimal, InvalidOperation
+
 from classification_rules import (
     EXPENSE_CONCENTRATION_THRESHOLD,
     REVENUE_CONCENTRATION_THRESHOLD,
@@ -17,6 +19,15 @@ from classification_rules import (
 # ─────────────────────────────────────────────────────────────────────
 
 SUGGESTED_PROCEDURES: dict[str, str] = {
+    "tb_out_of_balance": (
+        "STOP — the trial balance does not reconcile. Do not proceed with any "
+        "substantive or analytical procedures until total debits equal total "
+        "credits within tolerance. Obtain a corrected TB from the client, "
+        "compare against the general ledger system of record, and identify the "
+        "journal entries or postings that produced the imbalance. Document the "
+        "reconciliation in the engagement file before the downstream testing "
+        "tools are re-run."
+    ),
     "suspense": (
         "Obtain management explanation for uncleared suspense balance; confirm "
         "the item was cleared or properly reclassified prior to the report date. "
@@ -97,6 +108,17 @@ DEFAULT_PROCEDURE = "Review supporting documentation and obtain management expla
 
 # Escalated procedures for material-level findings
 MATERIAL_PROCEDURE_UPGRADES: dict[str, str] = {
+    "tb_out_of_balance": (
+        "STOP — the trial balance does not reconcile. Do not proceed with any "
+        "substantive or analytical procedures until total debits equal total "
+        "credits within tolerance. Obtain a corrected TB from the client, "
+        "compare against the general ledger system of record, and identify the "
+        "journal entries or postings that produced the imbalance. Given that "
+        "the imbalance invalidates every downstream test, escalate to the "
+        "engagement partner immediately and treat the current run as a failed "
+        "preview — do not record any conclusions against the affected figures "
+        "until a reconciled TB is obtained and re-processed."
+    ),
     "suspense": (
         "Obtain transaction-level detail for the outstanding suspense balance and "
         "confirm each item was cleared or reclassified prior to the report date. "
@@ -282,7 +304,9 @@ def get_tb_suggested_procedure(anomaly: dict, *, is_material: bool = False, rota
     # Resolve procedure key based on anomaly classification
     proc_key: str | None = None
 
-    if anomaly_type == "suspense_account":
+    if anomaly_type == "tb_out_of_balance":
+        proc_key = "tb_out_of_balance"
+    elif anomaly_type == "suspense_account":
         proc_key = "suspense"
     elif anomaly_type == "rounding_anomaly":
         if is_material:
@@ -445,6 +469,8 @@ def compute_tb_diagnostic_score(
     *,
     abnormal_balances: list[dict] | None = None,
     informational_count: int = 0,
+    tb_out_of_balance: bool = False,
+    tb_imbalance_amount: float | Decimal = 0,
 ) -> tuple[int, list[tuple[str, int]]]:
     """Compute composite diagnostic score for the TB Diagnostic report.
 
@@ -455,12 +481,32 @@ def compute_tb_diagnostic_score(
     Sprint 537: Added informational_count — each contributes +1, grouped into
     a single summary line (not individually listed).
 
+    Sprint 667 Issue 3: `tb_out_of_balance` is a dominant high-weight signal.
+    When set it prepends a ``"Trial balance out of balance by $X"`` factor
+    worth +60 points to the top of the factors list, guaranteeing the
+    composite score lands in the High tier (≥51) regardless of other
+    contributors. A TB that does not reconcile invalidates every downstream
+    test by definition; no combination of "clean" exception counts should
+    obscure that. The +60 weight is chosen so an OOB file with zero other
+    anomalies still scores 60 (High); an OOB file with multiple material
+    findings scores higher and remains High.
+
     Returns (score, factors) where factors is a list of (name, contribution) tuples.
     When abnormal_balances is provided, material findings appear as individually
     named factor lines instead of an aggregate count.
     """
     factors: list[tuple[str, int]] = []
     score = 0
+
+    # Sprint 667 Issue 3: Dominant out-of-balance signal. Prepended so it
+    # anchors the factor decomposition as P1.
+    if tb_out_of_balance:
+        try:
+            imbalance_abs = abs(Decimal(str(tb_imbalance_amount)))
+        except (InvalidOperation, ValueError):
+            imbalance_abs = Decimal(0)
+        factors.append((f"Trial balance out of balance by ${imbalance_abs:,.2f}", 60))
+        score += 60
 
     # Sprint 530 Fix 9: Top-N named factors + summary remainder.
     # Show the 8 highest-amount material findings individually and collapse the

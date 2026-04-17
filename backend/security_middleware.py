@@ -302,7 +302,7 @@ CSRF_TOKEN_EXPIRY_MINUTES = 30
 # (see CSRF_CUSTOM_HEADER_PATHS).
 #
 # NOTE: /auth/logout is NOT exempt — it is cookie-authenticated and
-# the user always has a valid CSRF token at logout time.
+# accepts the same custom-header fallback as /auth/refresh (Sprint 653).
 # ---------------------------------------------------------------------------
 CSRF_EXEMPT_PATHS = {
     "/auth/login",
@@ -324,8 +324,15 @@ CSRF_EXEMPT_PATHS = {
 # token is available (bootstrap). If a CSRF token IS provided, it is validated
 # normally; if absent, the X-Requested-With custom header serves as mitigation
 # (browsers never auto-attach custom headers on simple/form requests).
+#
+# Sprint 653: /auth/logout joined this set so the middleware can drop the
+# per-request DB lookup that previously recovered the user_id from the
+# refresh cookie. Signature + origin/referer + custom-header proof is
+# sufficient for logout (worst-case CSRF on logout just signs the victim
+# out, no data leak).
 CSRF_CUSTOM_HEADER_PATHS = {
     "/auth/refresh",
+    "/auth/logout",
 }
 
 # Methods that require CSRF validation
@@ -473,44 +480,6 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         except Exception:
             return None
 
-    def _extract_user_id_from_refresh_cookie(self, request: Request) -> Optional[str]:
-        """Recover the owning user_id from the refresh cookie for CSRF binding on logout.
-
-        Reads the raw refresh token from the cookie, hashes it (SHA-256),
-        and queries the DB for a non-revoked row to pull the user_id.
-        Returns None if no valid refresh token is found (downstream
-        revocation logic will handle the invalid token).
-        """
-        from config import REFRESH_COOKIE_NAME
-        from database import SessionLocal
-
-        raw_token = request.cookies.get(REFRESH_COOKIE_NAME)
-        if not raw_token:
-            return None
-
-        token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
-
-        db = SessionLocal()
-        try:
-            from models import RefreshToken
-
-            db_token = (
-                db.query(RefreshToken)
-                .filter(
-                    RefreshToken.token_hash == token_hash,
-                    RefreshToken.revoked_at.is_(None),
-                )
-                .first()
-            )
-            if db_token is not None:
-                return str(db_token.user_id)
-            return None
-        except Exception:
-            # DB unavailable or schema mismatch — fall through to None
-            return None
-        finally:
-            db.close()
-
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         path = request.url.path
         method = request.method
@@ -539,15 +508,12 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         # Extract user from Authorization header for binding check
         expected_user_id = self._extract_user_id_from_auth(request)
 
-        # FIX 1 (AUDIT-02): On logout, no Bearer token is present so
-        # expected_user_id is None, degrading CSRF to signature-only.
-        # Recover the owning user from the refresh cookie instead.
-        if expected_user_id is None and path == "/auth/logout":
-            expected_user_id = self._extract_user_id_from_refresh_cookie(request)
-
-        # For refresh, recover user from cookie for binding if no Bearer token
-        if expected_user_id is None and path == "/auth/refresh":
-            expected_user_id = self._extract_user_id_from_refresh_cookie(request)
+        # Sprint 653: /auth/refresh and /auth/logout historically ran a
+        # per-request DB lookup to recover the user_id from the refresh
+        # cookie for CSRF binding. Those paths are now handled by the
+        # custom-header branch below (signature + origin + X-Requested-With
+        # proof), which avoids opening a fresh SessionLocal() outside the
+        # `get_db()` lifecycle and bypassing connection-pool accounting.
 
         # Custom header paths: if no CSRF token is provided, accept
         # X-Requested-With as an alternative CSRF proof (bootstrap case).
@@ -873,6 +839,16 @@ class ImpersonationMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         if payload.get("imp"):
+            # Sprint 661: Revoked impersonation tokens stop blocking mutations
+            # so an admin can end a session immediately rather than waiting
+            # for the 15-minute `exp`. Since the middleware uses
+            # verify_exp=False, revocation is the only server-side way to
+            # release the block after issuance.
+            from shared.impersonation_revocation import is_revoked
+
+            if is_revoked(payload.get("jti")):
+                return await call_next(request)
+
             from starlette.responses import JSONResponse
 
             return JSONResponse(

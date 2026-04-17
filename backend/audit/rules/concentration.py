@@ -94,7 +94,10 @@ def detect_concentration_risk(
                     {
                         "account": display,
                         "type": CATEGORY_DISPLAY_NAMES.get(category, "Unknown"),
-                        "issue": f"Represents {concentration_pct:.1%} of total {cat_plural}",
+                        "issue": (
+                            f"Represents {concentration_pct:.1%} of total {cat_plural} — "
+                            "coverage observation, not an anomaly"
+                        ),
                         "amount": round(abs_balance, 2),
                         "debit": round(debit_amount, 2),
                         "credit": round(credit_amount, 2),
@@ -102,16 +105,21 @@ def detect_concentration_risk(
                         "category": category.value,
                         "confidence": concentration_pct,
                         "matched_keywords": [],
-                        "requires_review": True,
+                        "requires_review": False,
                         "anomaly_type": f"{category.value}_concentration",
                         "concentration_percent": round(concentration_pct * 100, 1),
                         "category_total": round(float(total_dec), 2),
                         "severity": severity,
                         "suggestions": [],
+                        # Sprint 668 Issue 1: Coverage analysis is informational
+                        # context, NOT a structural anomaly. Excluded from risk
+                        # scoring and rendered in a dedicated "Materiality
+                        # Coverage Analysis" section instead of Exception Details.
+                        "coverage_analysis": True,
                         "recommendation": (
                             f"This account represents {concentration_pct:.1%} of total {cat_plural}. "
-                            "Review for over-reliance on a single counterparty and consider "
-                            "the impact if this balance becomes uncollectible or disputed."
+                            "Documented for materiality coverage. Concentration is not by itself an "
+                            "anomaly; consider the impact if this balance is misstated or contested."
                         ),
                     }
                 )
@@ -163,7 +171,10 @@ def detect_revenue_concentration(
                 {
                     "account": display,
                     "type": "Revenue",
-                    "issue": f"Revenue concentration: {pct:.1%} of total revenue (${float(total_revenue):,.0f})",
+                    "issue": (
+                        f"Revenue concentration: {pct:.1%} of total revenue "
+                        f"(${float(total_revenue):,.0f}) — coverage observation, not an anomaly"
+                    ),
                     "amount": round(abs_bal, 2),
                     "debit": round(bals["debit"], 2),
                     "credit": round(bals["credit"], 2),
@@ -171,12 +182,14 @@ def detect_revenue_concentration(
                     "category": "revenue",
                     "confidence": pct,
                     "matched_keywords": [],
-                    "requires_review": True,
+                    "requires_review": False,
                     "anomaly_type": "concentration_risk",
                     "concentration_percent": round(pct * 100, 1),
                     "category_total": round(float(total_revenue), 2),
                     "severity": "high" if is_material and pct >= REVENUE_CONCENTRATION_THRESHOLD else "medium",
                     "suggestions": [],
+                    # Sprint 668 Issue 1: see detect_concentration_risk for rationale.
+                    "coverage_analysis": True,
                 }
             )
 
@@ -221,7 +234,10 @@ def detect_expense_concentration(
                 {
                     "account": display,
                     "type": "Expense",
-                    "issue": f"Expense concentration: {pct:.1%} of total expenses (${float(total_expense):,.0f})",
+                    "issue": (
+                        f"Expense concentration: {pct:.1%} of total expenses "
+                        f"(${float(total_expense):,.0f}) — coverage observation, not an anomaly"
+                    ),
                     "amount": round(abs_bal, 2),
                     "debit": round(bals["debit"], 2),
                     "credit": round(bals["credit"], 2),
@@ -229,12 +245,14 @@ def detect_expense_concentration(
                     "category": "expense",
                     "confidence": pct,
                     "matched_keywords": [],
-                    "requires_review": True,
+                    "requires_review": False,
                     "anomaly_type": "concentration_risk",
                     "concentration_percent": round(pct * 100, 1),
                     "category_total": round(float(total_expense), 2),
                     "severity": "high" if is_material else "medium",
                     "suggestions": [],
+                    # Sprint 668 Issue 1: see detect_concentration_risk for rationale.
+                    "coverage_analysis": True,
                 }
             )
 

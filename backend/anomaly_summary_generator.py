@@ -44,7 +44,7 @@ from follow_up_items_model import FollowUpItem
 from models import Client
 from pdf_generator import ClassicalColors, LedgerRule, generate_reference_number
 from shared.framework_resolution import ResolvedFramework
-from shared.memo_base import RISK_TIER_DISPLAY, create_memo_styles, wrap_table_strings
+from shared.memo_base import RISK_TIER_DISPLAY, create_memo_styles
 from shared.report_chrome import ReportMetadata, build_cover_page, draw_page_footer, find_logo
 from shared.scope_methodology import (
     build_methodology_statement,
@@ -60,8 +60,9 @@ DISCLAIMER_TEXT = (
     "DATA ANALYTICS REPORT \u2014 NOT AN AUDIT COMMUNICATION. "
     "This report lists data anomalies detected through automated testing. It does not "
     "constitute an audit opinion, internal control assessment, or management letter per "
-    "ISA 265/PCAOB AS 1305. The auditor must perform additional procedures and provide "
-    "all deficiency classifications in the assessment section below."
+    "ISA 265/PCAOB AS 1305. Classification of findings as deficiencies, significant "
+    "deficiencies, or material weaknesses is a matter of auditor judgment and is "
+    "outside the scope of this report."
 )
 
 AUDITOR_INSTRUCTIONS = (
@@ -582,12 +583,6 @@ class AnomalySummaryGenerator:
                 styles["MemoBody"],
             )
         )
-        story.append(
-            Paragraph(
-                "<b>Deficiency Classifications Made:</b> 0",
-                styles["MemoBody"],
-            )
-        )
         if total_anomalies > 0:
             story.append(Spacer(1, 4))
             story.append(
@@ -628,25 +623,23 @@ class AnomalySummaryGenerator:
                             Paragraph("[PRACTITIONER TO COMPLETE]", styles["MemoTableCell"]),
                         ],
                         [
-                            Paragraph("Implication for Audit", styles["MemoTableCell"]),
+                            Paragraph("Planned Response", styles["MemoTableCell"]),
                             Paragraph(
-                                "[ ] No change to planned procedures<br/>"
-                                "[ ] Expand scope of substantive testing<br/>"
-                                "[ ] Add control testing procedures<br/>"
-                                "[ ] Escalate to engagement partner<br/>"
-                                "[ ] Refer to specialist",
+                                "[PRACTITIONER TO COMPLETE]<br/>"
+                                "<i>Document the response the engagement team intends to take "
+                                "(e.g., no change to planned procedures, expanded substantive "
+                                "testing, escalation, specialist referral). Whether control "
+                                "testing is appropriate is a matter of auditor judgment and "
+                                "engagement scope — this platform does not direct methodology.</i>",
                                 styles["MemoTableCell"],
                             ),
                         ],
                         [
-                            Paragraph("Deficiency Classification", styles["MemoTableCell"]),
+                            Paragraph("Practitioner Classification Notes", styles["MemoTableCell"]),
                             Paragraph(
-                                "[ ] Not a deficiency<br/>"
-                                "[ ] Control deficiency<br/>"
-                                "[ ] Significant deficiency<br/>"
-                                "[ ] Material weakness<br/>"
-                                "[ ] Inconclusive \u2014 requires further investigation<br/>"
-                                "<i>(Per ISA 265 / PCAOB AS 1305)</i>",
+                                "[PRACTITIONER TO COMPLETE]<br/>"
+                                "<i>Classification of findings (e.g., deficiency, exception, inquiry) "
+                                "is a matter of auditor judgment and is outside the scope of this report.</i>",
                                 styles["MemoTableCell"],
                             ),
                         ],
@@ -682,56 +675,6 @@ class AnomalySummaryGenerator:
                     )
                     story.append(response_table)
                     story.append(Spacer(1, 12))
-
-            # Aggregate Deficiency Classification Summary
-            story.append(
-                Paragraph(
-                    "Aggregate Deficiency Classification Summary (DRAFT)",
-                    styles["MemoSection"],
-                )
-            )
-            story.append(LedgerRule(doc_width))
-            story.append(
-                Paragraph(
-                    "<i>This table auto-populates as the practitioner completes assessments above. "
-                    "Marked as DRAFT until all anomalies are assessed.</i>",
-                    styles["MemoBodySmall"],
-                )
-            )
-
-            classification_data = [
-                ["Classification", "Count", "Anomaly IDs"],
-                [Paragraph("Material Weakness", styles["MemoTableCell"]), "\u2014", "\u2014"],
-                [Paragraph("Significant Deficiency", styles["MemoTableCell"]), "\u2014", "\u2014"],
-                [Paragraph("Control Deficiency", styles["MemoTableCell"]), "\u2014", "\u2014"],
-                [Paragraph("Not a Deficiency", styles["MemoTableCell"]), "\u2014", "\u2014"],
-                [Paragraph("Inconclusive", styles["MemoTableCell"]), "\u2014", "\u2014"],
-            ]
-
-            classification_data = wrap_table_strings(classification_data, styles)
-            classification_table = Table(
-                classification_data,
-                colWidths=[2.4 * inch, 0.8 * inch, 3.2 * inch],
-            )
-            classification_table.setStyle(
-                TableStyle(
-                    [
-                        ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-                        ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
-                        ("FONTSIZE", (0, 0), (-1, -1), 9),
-                        ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-                        ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-                        ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-                        ("ALIGN", (1, 0), (1, -1), "CENTER"),
-                        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                        ("TOPPADDING", (0, 0), (-1, -1), 3),
-                        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-                        ("LEFTPADDING", (0, 0), (0, -1), 0),
-                    ]
-                )
-            )
-            story.append(Spacer(1, 4))
-            story.append(classification_table)
         else:
             story.append(
                 Paragraph(

@@ -519,6 +519,148 @@ class TestOperatingMargin:
 
 
 # =============================================================================
+# RatioEngine Tests - Interest Coverage (Sprint 624)
+# =============================================================================
+
+
+class TestInterestCoverage:
+    """Test cases for Interest Coverage Ratio (Sprint 624)."""
+
+    def test_interest_coverage_adequate(self):
+        """EBIT comfortably above 3.0x threshold."""
+        totals = CategoryTotals(
+            total_revenue=1_000_000.0,
+            cost_of_goods_sold=400_000.0,
+            operating_expenses=300_000.0,
+            interest_expense=50_000.0,
+        )
+        result = RatioEngine(totals).calculate_interest_coverage()
+
+        assert result.is_calculable is True
+        assert result.name == "Interest Coverage"
+        # EBIT = 1,000,000 - 400,000 - 300,000 = 300,000; 300,000 / 50,000 = 6.0x
+        assert result.value == pytest.approx(6.0, rel=0.01)
+        assert result.threshold_status == "above_threshold"
+        assert result.display_value.endswith("x")
+
+    def test_interest_coverage_watch_band(self):
+        """1.5x <= coverage < 3.0x is the watch band."""
+        totals = CategoryTotals(
+            total_revenue=500_000.0,
+            cost_of_goods_sold=200_000.0,
+            operating_expenses=200_000.0,
+            interest_expense=50_000.0,
+        )
+        result = RatioEngine(totals).calculate_interest_coverage()
+
+        # EBIT = 100,000; coverage = 2.0x
+        assert result.value == pytest.approx(2.0, rel=0.01)
+        assert result.threshold_status == "at_threshold"
+        assert "Watch" in result.interpretation
+
+    def test_interest_coverage_elevated_risk(self):
+        """Below 1.5x is elevated risk."""
+        totals = CategoryTotals(
+            total_revenue=500_000.0,
+            cost_of_goods_sold=300_000.0,
+            operating_expenses=180_000.0,
+            interest_expense=20_000.0,
+        )
+        result = RatioEngine(totals).calculate_interest_coverage()
+
+        # EBIT = 20,000; coverage = 1.0x
+        assert result.value == pytest.approx(1.0, rel=0.01)
+        assert result.threshold_status == "below_threshold"
+
+    def test_interest_coverage_negative_ebit(self):
+        """Operating loss flags below_threshold regardless of denominator."""
+        totals = CategoryTotals(
+            total_revenue=200_000.0,
+            cost_of_goods_sold=150_000.0,
+            operating_expenses=100_000.0,
+            interest_expense=10_000.0,
+        )
+        result = RatioEngine(totals).calculate_interest_coverage()
+
+        # EBIT = -50,000
+        assert result.is_calculable is True
+        assert result.threshold_status == "below_threshold"
+        assert "loss" in result.interpretation.lower()
+
+    def test_interest_coverage_zero_interest(self):
+        """No interest-bearing debt returns N/A, not a divide-by-zero."""
+        totals = CategoryTotals(
+            total_revenue=500_000.0,
+            cost_of_goods_sold=200_000.0,
+            operating_expenses=150_000.0,
+            interest_expense=0.0,
+        )
+        result = RatioEngine(totals).calculate_interest_coverage()
+
+        assert result.is_calculable is False
+        assert result.value is None
+        assert result.display_value == "N/A"
+        assert "No interest-bearing debt" in result.interpretation
+
+    def test_interest_coverage_derived_opex(self):
+        """When operating_expenses is 0, derive from total_expenses - COGS."""
+        totals = CategoryTotals(
+            total_revenue=600_000.0,
+            cost_of_goods_sold=200_000.0,
+            total_expenses=400_000.0,  # implies opex = 200,000
+            interest_expense=40_000.0,
+        )
+        result = RatioEngine(totals).calculate_interest_coverage()
+
+        # EBIT = 600,000 - 200,000 - 200,000 = 200,000; coverage = 5.0x
+        assert result.value == pytest.approx(5.0, rel=0.01)
+        assert result.threshold_status == "above_threshold"
+
+    def test_interest_coverage_in_calculate_all_ratios(self):
+        """Wired into calculate_all_ratios output."""
+        totals = CategoryTotals(
+            total_revenue=500_000.0,
+            cost_of_goods_sold=200_000.0,
+            operating_expenses=150_000.0,
+            interest_expense=30_000.0,
+        )
+        ratios = RatioEngine(totals).calculate_all_ratios()
+        assert "interest_coverage" in ratios
+        assert ratios["interest_coverage"].is_calculable is True
+
+
+class TestInterestExpenseExtraction:
+    """Verify extract_category_totals routes interest accounts correctly."""
+
+    def test_interest_expense_extracted_from_tb(self):
+        """Interest expense accounts populate CategoryTotals.interest_expense."""
+        from ratio_engine import extract_category_totals
+
+        balances = {
+            "Interest Expense": {"debit": 50_000, "credit": 0},
+            "Salaries Expense": {"debit": 200_000, "credit": 0},
+        }
+        classified = {
+            "Interest Expense": "expense",
+            "Salaries Expense": "expense",
+        }
+        totals = extract_category_totals(balances, classified)
+        assert totals.interest_expense == 50_000
+        assert totals.total_expenses == 250_000
+
+    def test_interest_income_not_treated_as_expense(self):
+        """Account containing 'interest income' must not flow into interest_expense."""
+        from ratio_engine import extract_category_totals
+
+        balances = {
+            "Interest Income": {"debit": 0, "credit": 5_000},
+        }
+        classified = {"Interest Income": "revenue"}
+        totals = extract_category_totals(balances, classified)
+        assert totals.interest_expense == 0
+
+
+# =============================================================================
 # RatioEngine Tests - Return on Assets (Sprint 27)
 # =============================================================================
 
@@ -829,6 +971,7 @@ class TestCalculateAllRatios:
         assert "gross_margin" in ratios
         assert "net_profit_margin" in ratios  # Sprint 26
         assert "operating_margin" in ratios  # Sprint 26
+        assert "interest_coverage" in ratios  # Sprint 624
         assert "return_on_assets" in ratios  # Sprint 27
         assert "return_on_equity" in ratios  # Sprint 27
         assert "dso" in ratios  # Sprint 53
@@ -840,7 +983,7 @@ class TestCalculateAllRatios:
         assert "asset_turnover" in ratios  # Sprint 449
         assert "inventory_turnover" in ratios  # Sprint 449
         assert "receivables_turnover" in ratios  # Sprint 449
-        assert len(ratios) == 17  # Sprint 449: 17 ratios (added 5 structural metrics)
+        assert len(ratios) == 18  # Sprint 624: 18 ratios (added interest_coverage)
 
     def test_calculate_all_returns_ratio_results(self, healthy_company_totals):
         """Test that each ratio is a RatioResult instance."""
@@ -856,7 +999,7 @@ class TestCalculateAllRatios:
         result = engine.to_dict()
 
         assert isinstance(result, dict)
-        assert len(result) == 17  # Sprint 449: 17 ratios (added 5 structural metrics)
+        assert len(result) == 18  # Sprint 624: 18 ratios (added interest_coverage)
         for key, ratio_dict in result.items():
             assert isinstance(ratio_dict, dict)
             assert "name" in ratio_dict
@@ -889,6 +1032,7 @@ class TestEdgeCases:
             inventory=50_000_000_000.0,
             accounts_receivable=30_000_000_000.0,
             accounts_payable=20_000_000_000.0,
+            interest_expense=10_000_000_000.0,  # Sprint 624
         )
         engine = RatioEngine(totals)
         ratios = engine.calculate_all_ratios()
@@ -911,6 +1055,7 @@ class TestEdgeCases:
             inventory=0.10,
             accounts_receivable=0.05,
             accounts_payable=0.03,
+            interest_expense=0.02,  # Sprint 624
         )
         engine = RatioEngine(totals)
         ratios = engine.calculate_all_ratios()

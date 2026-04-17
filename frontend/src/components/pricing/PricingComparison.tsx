@@ -46,7 +46,13 @@ export default function PricingComparison() {
         Feature Comparison
       </h2>
 
-      <div className="overflow-x-auto rounded-2xl border border-sage-500/20">
+      <div
+        className="relative overflow-x-auto rounded-2xl border border-sage-500/20 [mask-image:linear-gradient(to_right,transparent,black_16px,black_calc(100%-16px),transparent)] md:[mask-image:none]"
+        aria-describedby="pricing-comparison-scroll-hint"
+      >
+        <span id="pricing-comparison-scroll-hint" className="sr-only">
+          Scroll horizontally to reveal the full comparison table on narrow viewports.
+        </span>
         <table className="w-full text-left min-w-[700px]">
           <caption className="sr-only">Feature comparison across Free, Solo, Professional, and Enterprise tiers</caption>
           <thead>

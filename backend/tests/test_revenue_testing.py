@@ -768,15 +768,17 @@ class TestBenfordLaw:
 
         random.seed(99)
         entries = []
-        for i in range(200):
-            # Create amounts with roughly uniform first digits
+        # Cover ~4 orders of magnitude (10, 100, 1000, 10000) so the shared
+        # benford precheck for magnitude range passes.
+        for i in range(400):
             first = random.randint(1, 9)
-            amt = first * 1000 + random.randint(0, 999)
+            scale = 10 ** random.randint(1, 4)
+            amt = first * scale + random.randint(0, scale - 1)
             entries.append(RevenueEntry(amount=-amt, row_number=i + 1))
 
         config = RevenueTestingConfig(benford_min_entries=50)
         result = run_benford_test(entries, config)
-        # Uniform dist should fail Benford's
+        # Uniform distribution is non-conforming per Nigrini MAD tiers.
         assert result.entries_flagged >= 1
 
     def test_insufficient_entries(self):
@@ -784,7 +786,7 @@ class TestBenfordLaw:
         config = RevenueTestingConfig(benford_min_entries=50)
         result = run_benford_test(entries, config)
         assert result.entries_flagged == 0
-        assert "Requires at least" in result.description
+        assert "Insufficient data" in result.description
 
     def test_benford_expected_distribution(self):
         """Verify BENFORD_EXPECTED sums to ~1.0."""

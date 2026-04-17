@@ -11,6 +11,7 @@ Route group prefix: /export-sharing
 """
 
 import hashlib
+import hmac
 import logging
 import secrets
 from datetime import UTC, datetime, timedelta
@@ -217,7 +218,7 @@ async def download_share(
     if share.passcode_hash:
         if not passcode:
             raise HTTPException(status_code=403, detail="This share link requires a passcode.")
-        if hashlib.sha256(passcode.encode()).hexdigest() != share.passcode_hash:
+        if not hmac.compare_digest(hashlib.sha256(passcode.encode()).hexdigest(), share.passcode_hash):
             raise HTTPException(status_code=403, detail="Invalid passcode.")
 
     # Update access counter

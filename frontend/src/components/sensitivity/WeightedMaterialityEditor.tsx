@@ -97,7 +97,7 @@ export function WeightedMaterialityEditor({
       {/* Header with Toggle */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-content-primary font-sans font-medium">
+          <h3 className="text-content-primary font-serif font-medium">
             Weighted Materiality by Account Type
           </h3>
           <p className="text-content-tertiary text-xs font-sans mt-1">

@@ -98,7 +98,7 @@ const TOOLS: Tool[] = [
   },
   {
     title: 'Statistical Sampling',
-    description: 'ISA 530 / PCAOB AS 2315 compliant MUS and random sampling with Stringer bounds.',
+    description: 'MUS and random sampling with Stringer bounds — designed to support ISA 530 / PCAOB AS 2315 procedures.',
     href: '/tools/statistical-sampling',
     icon: 'bar-chart',
     tier: 'solo',

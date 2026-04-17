@@ -55,17 +55,17 @@ export default function ReconPage() {
                 {/* Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     <div className="bg-surface-card p-6 rounded-xl border-l-4 border-clay-500 shadow-theme-card">
-                        <h3 className="text-content-secondary text-sm font-sans">High Risk Accounts</h3>
+                        <h3 className="text-content-secondary text-sm font-serif">High Risk Accounts</h3>
                         <div className="text-3xl font-mono font-bold text-content-primary mt-2">{result.recon.stats.high}</div>
                         <p className="text-xs text-content-tertiary mt-1 font-sans">Require detailed evidence</p>
                     </div>
                     <div className="bg-surface-card p-6 rounded-xl border-l-4 border-oatmeal-400 shadow-theme-card">
-                        <h3 className="text-content-secondary text-sm font-sans">Medium Risk Accounts</h3>
+                        <h3 className="text-content-secondary text-sm font-serif">Medium Risk Accounts</h3>
                         <div className="text-3xl font-mono font-bold text-content-primary mt-2">{result.recon.stats.medium}</div>
                         <p className="text-xs text-content-tertiary mt-1 font-sans">Standard review needed</p>
                     </div>
                     <div className="bg-surface-card p-6 rounded-xl border-l-4 border-sage-500 shadow-theme-card">
-                        <h3 className="text-content-secondary text-sm font-sans">Low Risk Accounts</h3>
+                        <h3 className="text-content-secondary text-sm font-serif">Low Risk Accounts</h3>
                         <div className="text-3xl font-mono font-bold text-content-primary mt-2">{result.recon.stats.low}</div>
                         <p className="text-xs text-content-tertiary mt-1 font-sans">Automated/Batch approval</p>
                     </div>

@@ -23,6 +23,7 @@ Audit Standards References:
 
 import re
 import statistics
+from collections import Counter
 from dataclasses import dataclass, field
 from decimal import Decimal
 from difflib import SequenceMatcher
@@ -516,6 +517,7 @@ class APTestingResult:
     test_results: list[APTestResult] = field(default_factory=list)
     data_quality: Optional[APDataQuality] = None
     column_detection: Optional[APColumnDetectionResult] = None
+    duplicate_payment_summary: Optional[dict] = None  # Sprint 643 — recovery-value aggregate
 
     def to_dict(self) -> dict:
         return {
@@ -523,6 +525,7 @@ class APTestingResult:
             "test_results": [t.to_dict() for t in self.test_results],
             "data_quality": self.data_quality.to_dict() if self.data_quality else None,
             "column_detection": self.column_detection.to_dict() if self.column_detection else None,
+            "duplicate_payment_summary": self.duplicate_payment_summary,
         }
 
 
@@ -1731,6 +1734,135 @@ def calculate_ap_composite_score(
     )
 
 
+def compute_duplicate_payment_summary(
+    test_results: list[APTestResult],
+    payments: list[APPayment],
+    *,
+    top_vendors: int = 5,
+) -> dict:
+    """Sprint 643 — aggregate recovery value, vendor-level duplicate rate,
+    and time-trend for AP duplicate-payment detection.
+
+    Recovery value: each duplicate group contributes (count - 1) copies of
+    the average amount — the conservative estimate of the excess paid.
+    Deduplicates payments that appear in both the exact and fuzzy tests.
+    """
+    exact = next((t for t in test_results if t.test_key == "exact_duplicate_payments"), None)
+    fuzzy = next((t for t in test_results if t.test_key == "fuzzy_duplicate_payments"), None)
+
+    summary: dict[str, Any] = {
+        "exact_duplicate_count": exact.entries_flagged if exact else 0,
+        "fuzzy_duplicate_count": fuzzy.entries_flagged if fuzzy else 0,
+        "recovery_value_total": 0.0,
+        "vendor_rates": [],
+        "monthly_trend": [],
+    }
+
+    seen_rows: set[int] = set()
+    dup_rows: set[int] = set()
+    dup_vendor_counts: Counter = Counter()
+    dup_monthly_counts: Counter = Counter()
+    recovery = Decimal("0")
+
+    # Exact duplicates — group by (vendor, invoice, amount, date).
+    if exact and exact.flagged_entries:
+        exact_groups: dict[tuple, list[FlaggedPayment]] = {}
+        for fe in exact.flagged_entries:
+            details = fe.details or {}
+            key = (
+                details.get("vendor", ""),
+                details.get("invoice_number", ""),
+                details.get("amount", 0),
+                details.get("payment_date", ""),
+            )
+            exact_groups.setdefault(key, []).append(fe)
+
+        for group in exact_groups.values():
+            if len(group) < 2:
+                continue
+            avg_amount = sum(abs(f.entry.amount) for f in group) / len(group)
+            recovery += Decimal(str(avg_amount)) * (len(group) - 1)
+            for f in group:
+                if f.entry.row_number in seen_rows:
+                    continue
+                seen_rows.add(f.entry.row_number)
+                dup_rows.add(f.entry.row_number)
+                vendor = f.entry.vendor_name.strip() or "(blank)"
+                dup_vendor_counts[vendor] += 1
+                parsed = parse_date(f.entry.payment_date)
+                if parsed:
+                    dup_monthly_counts[f"{parsed.year:04d}-{parsed.month:02d}"] += 1
+
+    # Fuzzy duplicates — pairs emit two flagged rows that already cross-reference
+    # each other via `matched_row`. Build pair keys to avoid double-counting.
+    if fuzzy and fuzzy.flagged_entries:
+        fuzzy_pairs: set[tuple[int, int]] = set()
+        row_to_fe: dict[int, FlaggedPayment] = {fe.entry.row_number: fe for fe in fuzzy.flagged_entries}
+        for fe in fuzzy.flagged_entries:
+            details = fe.details or {}
+            matched = details.get("matched_row")
+            if matched is None:
+                continue
+            pair_key = tuple(sorted((fe.entry.row_number, matched)))  # type: ignore[arg-type]
+            if pair_key in fuzzy_pairs:
+                continue
+            fuzzy_pairs.add(pair_key)
+            a_row, b_row = pair_key
+            a_fe = row_to_fe.get(a_row)
+            b_fe = row_to_fe.get(b_row)
+            # Use the available side's amount; average when both sides present.
+            if a_fe and b_fe:
+                avg_amount = (abs(a_fe.entry.amount) + abs(b_fe.entry.amount)) / 2
+            elif a_fe:
+                avg_amount = abs(a_fe.entry.amount)
+            elif b_fe:
+                avg_amount = abs(b_fe.entry.amount)
+            else:
+                continue
+            recovery += Decimal(str(avg_amount))
+            for row in (a_row, b_row):
+                if row in seen_rows:
+                    continue
+                seen_rows.add(row)
+                dup_rows.add(row)
+                src_fe = row_to_fe.get(row)
+                if src_fe is None:
+                    continue
+                vendor = src_fe.entry.vendor_name.strip() or "(blank)"
+                dup_vendor_counts[vendor] += 1
+                parsed = parse_date(src_fe.entry.payment_date)
+                if parsed:
+                    dup_monthly_counts[f"{parsed.year:04d}-{parsed.month:02d}"] += 1
+
+    # Vendor-level duplicate rate: flagged / total payments per vendor.
+    vendor_totals: Counter = Counter()
+    for p in payments:
+        vendor_totals[p.vendor_name.strip() or "(blank)"] += 1
+
+    vendor_rates: list[dict[str, Any]] = []
+    for vendor, dup_count in dup_vendor_counts.most_common(top_vendors):
+        total = vendor_totals.get(vendor, 0)
+        rate = (dup_count / total) if total > 0 else 0.0
+        vendor_rates.append(
+            {
+                "vendor": vendor,
+                "duplicate_payments": dup_count,
+                "total_payments": total,
+                "duplicate_rate": round(rate, 4),
+            }
+        )
+
+    monthly_trend = [
+        {"month": month, "duplicate_payments": count} for month, count in sorted(dup_monthly_counts.items())
+    ]
+
+    summary["recovery_value_total"] = float(recovery.quantize(Decimal("0.01")))
+    summary["vendor_rates"] = vendor_rates
+    summary["monthly_trend"] = monthly_trend
+    summary["distinct_flagged_payments"] = len(dup_rows)
+    return summary
+
+
 # =============================================================================
 # ENGINE CLASS (Sprint 519 Phase 3)
 # =============================================================================
@@ -1798,6 +1930,7 @@ class APTestingEngine(AuditEngineBase):
             test_results=test_output,
             data_quality=data_quality,
             column_detection=detection,
+            duplicate_payment_summary=compute_duplicate_payment_summary(test_output, entries),
         )
 
 

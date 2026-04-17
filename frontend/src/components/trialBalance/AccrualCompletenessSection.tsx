@@ -129,23 +129,28 @@ export function AccrualCompletenessSection({ data, onExportPDF, onExportCSV }: A
 
           {/* Export buttons */}
           {(onExportPDF || onExportCSV) && (
-            <div className="px-6 py-3 flex gap-2">
-              {onExportPDF && (
-                <button
-                  onClick={onExportPDF}
-                  className="px-3 py-1.5 text-xs font-sans rounded-lg border border-theme bg-surface-card-secondary text-content-secondary hover:bg-oatmeal-100 transition-colors"
-                >
-                  Export PDF
-                </button>
-              )}
-              {onExportCSV && (
-                <button
-                  onClick={onExportCSV}
-                  className="px-3 py-1.5 text-xs font-sans rounded-lg border border-theme bg-surface-card-secondary text-content-secondary hover:bg-oatmeal-100 transition-colors"
-                >
-                  Export CSV
-                </button>
-              )}
+            <div className="px-6 py-3 flex flex-col gap-1">
+              <div className="flex gap-2">
+                {onExportPDF && (
+                  <button
+                    onClick={onExportPDF}
+                    className="px-3 py-1.5 text-xs font-sans rounded-lg border border-theme bg-surface-card-secondary text-content-secondary hover:bg-oatmeal-100 transition-colors"
+                  >
+                    Export PDF
+                  </button>
+                )}
+                {onExportCSV && (
+                  <button
+                    onClick={onExportCSV}
+                    className="px-3 py-1.5 text-xs font-sans rounded-lg border border-theme bg-surface-card-secondary text-content-secondary hover:bg-oatmeal-100 transition-colors"
+                  >
+                    Export CSV
+                  </button>
+                )}
+              </div>
+              <p className="text-[11px] font-sans text-content-tertiary">
+                PDF — accrual completeness memo &nbsp;•&nbsp; CSV — flagged account list
+              </p>
             </div>
           )}
         </div>

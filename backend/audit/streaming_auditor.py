@@ -92,6 +92,9 @@ class StreamingAuditor:
         self.missing_names_count = 0
         self.missing_balances_count = 0
 
+        # Sprint 666: Totals-row exclusion counter (see process_chunk)
+        self.totals_rows_excluded = 0
+
         # Per-account aggregation for abnormal balance detection
         self.account_balances: dict[str, dict[str, Decimal]] = {}
 
@@ -224,15 +227,44 @@ class StreamingAuditor:
         debits = pd.to_numeric(chunk[self.debit_col], errors="coerce").fillna(0)
         credits = pd.to_numeric(chunk[self.credit_col], errors="coerce").fillna(0)
 
+        # Sprint 666 Issue 2: Exclude totals rows from aggregation.
+        # Heuristic: blank account name + both debit AND credit non-zero.
+        # Legitimate data rows may have a blank account name (e.g. a row
+        # identified only by account code) but will be one-sided — they
+        # carry a debit OR a credit, not both. A totals row sums both
+        # columns independently and is two-sided by construction.
+        # The debit/credit values for detected totals rows are zeroed out
+        # before summation so they do not contribute to the balance check
+        # or account-level aggregates.
+        blank_mask = None
+        totals_mask = None
+        if self.account_col:
+            acct_series = chunk[self.account_col].astype(str).str.strip()
+            blank_mask = acct_series.isin(["", "nan", "none", "None", "NaN"])
+            totals_mask = blank_mask & (debits != 0) & (credits != 0)
+            if bool(totals_mask.any()):
+                excluded = int(totals_mask.sum())
+                self.totals_rows_excluded += excluded
+                debits = debits.mask(totals_mask, 0)
+                credits = credits.mask(totals_mask, 0)
+                log_secure_operation(
+                    "totals_row_excluded",
+                    f"Excluded {excluded} summary totals row(s) from aggregation",
+                )
+
         self._debit_chunks.append(Decimal(str(math.fsum(debits.values))))
         self._credit_chunks.append(Decimal(str(math.fsum(credits.values))))
         self.total_rows = rows_so_far
 
-        # BUG-006: Count rows with missing account names or zero balances
+        # BUG-006: Count rows with missing account names or zero balances.
+        # Totals rows (excluded above) must not inflate the missing-names
+        # count — they are a known pipeline artifact, not a data quality issue.
         if self.account_col:
-            acct_series = chunk[self.account_col].astype(str).str.strip()
-            blank_mask = acct_series.isin(["", "nan", "none", "None", "NaN"])
-            self.missing_names_count += int(blank_mask.sum())
+            if totals_mask is not None:
+                true_blank = blank_mask & ~totals_mask
+            else:
+                true_blank = blank_mask
+            self.missing_names_count += int(true_blank.sum()) if true_blank is not None else 0
 
         zero_balance_mask = (debits == 0) & (credits == 0)
         self.missing_balances_count += int(zero_balance_mask.sum())
@@ -323,6 +355,7 @@ class StreamingAuditor:
             "total_credits": str(quantize_monetary(total_credits)),
             "difference": str(quantize_monetary(difference)),
             "row_count": self.total_rows,
+            "totals_rows_excluded": self.totals_rows_excluded,
             "timestamp": datetime.now(UTC).isoformat(),
             "message": "Trial balance is balanced" if is_balanced else "Trial balance is OUT OF BALANCE",
         }

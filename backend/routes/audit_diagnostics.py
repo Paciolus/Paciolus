@@ -43,9 +43,14 @@ async def preflight_check(
 
     def _analyze(file_bytes: bytes, filename: str) -> dict[str, Any]:
         from preflight_engine import run_preflight
+        from shared.intake_utils import count_raw_data_rows
 
         column_names, rows = parse_uploaded_file(file_bytes, filename)
-        report = run_preflight(column_names, rows, filename)
+        # Sprint 666: pass raw data-row count so the PreFlight intake summary
+        # can reconcile submitted vs accepted and surface any rows silently
+        # consumed by pandas header inference on header-less files.
+        raw_count = count_raw_data_rows(file_bytes, filename)
+        report = run_preflight(column_names, rows, filename, rows_submitted=raw_count)
         result = report.to_dict()
         del column_names, rows
         return result

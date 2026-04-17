@@ -14,10 +14,13 @@ import re
 from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
 
+from account_classifier import AccountClassifier
+from classification_rules import AccountCategory
 from column_detector import (
     ColumnDetectionResult,
     detect_columns,
 )
+from shared.intake_utils import IntakeSummary, detect_totals_row
 from shared.parsing_helpers import safe_decimal
 
 # ═══════════════════════════════════════════════════════════════
@@ -27,12 +30,21 @@ from shared.parsing_helpers import safe_decimal
 
 @dataclass
 class ColumnQuality:
-    """Detection confidence for a single column role."""
+    """Detection confidence for a single column role.
 
-    role: str  # "account", "debit", "credit"
+    Sprint 668 Issue 6: ``status`` now distinguishes ``inferred`` (the
+    role was filled by content-based fallback, not a header match) from
+    ``found`` (matched a recognised header) and ``missing`` (no candidate
+    at all). The legacy "low_confidence" value remains for moderate
+    matches between the two extremes. Sprint 668 Issue 8: ``downstream_use``
+    is the user-facing description of how the column is consumed.
+    """
+
+    role: str  # "account", "debit", "credit", or auxiliary role hint
     detected_name: str | None
     confidence: float
-    status: str  # "found", "low_confidence", "missing"
+    status: str  # "found" | "inferred" | "low_confidence" | "missing"
+    downstream_use: str = ""  # Sprint 668 Issue 8: stated downstream use
 
 
 @dataclass
@@ -70,6 +82,7 @@ class BalanceCheck:
     difference: float
     balanced: bool
     tolerance: float = 0.01
+    skipped: bool = False  # Sprint 667: True when balance check was skipped (e.g. multi-column TB)
 
 
 @dataclass
@@ -80,6 +93,30 @@ class ScoreComponent:
     weight: float  # 0-1 (e.g. 0.25 for 25%)
     score: float  # 0-100
     contribution: float  # weight * score
+
+
+@dataclass
+class CategoryCompleteness:
+    """Sprint 631: Balance-sheet-assertion completeness for the 5 GAAP categories.
+
+    A TB that is missing any of the five categories will produce incomplete
+    financial statement output downstream (a Balance Sheet with no equity
+    row, an Income Statement with no revenue line, etc.). The secondary
+    ``cogs_gap`` flag catches the common classification miss where Revenue
+    has activity but COGS is zero — a signal that cost accounts exist but
+    are mis-mapped, not absent.
+    """
+
+    asset_count: int
+    liability_count: int
+    equity_count: int
+    revenue_count: int
+    expense_count: int
+    unknown_count: int
+    missing_categories: list[str] = field(default_factory=list)
+    revenue_total: float = 0.0
+    cogs_total: float = 0.0
+    cogs_gap: bool = False
 
 
 @dataclass
@@ -114,6 +151,8 @@ class PreFlightReport:
     null_counts: dict[str, int] = field(default_factory=dict)
     balance_check: BalanceCheck | None = None
     score_breakdown: list[ScoreComponent] = field(default_factory=list)
+    intake: IntakeSummary | None = None  # Sprint 666: row reconciliation + totals-row disposition
+    category_completeness: CategoryCompleteness | None = None  # Sprint 631
 
     def to_dict(self) -> dict:
         """Convert to dictionary for API response."""
@@ -129,6 +168,7 @@ class PreFlightReport:
                     "detected_name": c.detected_name,
                     "confidence": round(c.confidence, 2),
                     "status": c.status,
+                    "downstream_use": c.downstream_use,
                 }
                 for c in self.columns
             ],
@@ -166,6 +206,7 @@ class PreFlightReport:
                 "difference": self.balance_check.difference,
                 "balanced": self.balance_check.balanced,
                 "tolerance": self.balance_check.tolerance,
+                "skipped": self.balance_check.skipped,
             }
         if self.score_breakdown:
             result["score_breakdown"] = [
@@ -177,6 +218,22 @@ class PreFlightReport:
                 }
                 for sc in self.score_breakdown
             ]
+        if self.intake is not None:
+            result["intake"] = self.intake.to_dict()
+        if self.category_completeness is not None:
+            cc = self.category_completeness
+            result["category_completeness"] = {
+                "asset_count": cc.asset_count,
+                "liability_count": cc.liability_count,
+                "equity_count": cc.equity_count,
+                "revenue_count": cc.revenue_count,
+                "expense_count": cc.expense_count,
+                "unknown_count": cc.unknown_count,
+                "missing_categories": list(cc.missing_categories),
+                "revenue_total": round(cc.revenue_total, 2),
+                "cogs_total": round(cc.cogs_total, 2),
+                "cogs_gap": cc.cogs_gap,
+            }
         return result
 
 
@@ -192,6 +249,7 @@ DOWNSTREAM_IMPACT: dict[str, str] = {
     "mixed_signs": "Inconsistent sign conventions produce incorrect debit/credit separation, unreliable balance sheet classification, and distorted abnormal balance detection.",
     "zero_balance": "Zero-balance rows add noise to statistical tests (Benford's Law, sampling), inflate account counts, and reduce the signal-to-noise ratio in anomaly detection.",
     "tb_balance": "An out-of-balance trial balance invalidates all downstream diagnostic results. Debit/credit totals must reconcile before any testing can proceed.",
+    "category_completeness": "Missing GAAP categories produce incomplete financial statement output — a Balance Sheet without equity or an Income Statement without revenue. Downstream ratio analysis and lead sheets degrade silently when an entire category is absent.",
 }
 
 # Number of downstream tests affected per issue category
@@ -203,6 +261,7 @@ TESTS_AFFECTED_BY_CATEGORY: dict[str, int] = {
     "mixed_signs": 7,  # Balance sheet classification, abnormal balance, ratios, JE, AP, sampling, cash flow
     "zero_balance": 4,  # Benford, sampling, anomaly, population profile
     "tb_balance": 12,  # ALL tests — blocker
+    "category_completeness": 6,  # Financial statements, ratios, lead sheets, cash flow, expense category, accrual
 }
 
 
@@ -213,11 +272,12 @@ TESTS_AFFECTED_BY_CATEGORY: dict[str, int] = {
 _CHECK_WEIGHTS = {
     "tb_balance": 25,
     "column_detection": 20,
-    "null_values": 15,
-    "duplicates": 10,
-    "encoding": 5,
-    "mixed_signs": 15,
-    "zero_balance": 10,
+    "null_values": 13,
+    "duplicates": 8,
+    "encoding": 4,
+    "mixed_signs": 13,
+    "zero_balance": 7,
+    "category_completeness": 10,  # Sprint 631
 }
 
 # Severity deduction multipliers (fraction of weight)
@@ -247,6 +307,7 @@ def run_preflight(
     column_names: list[str],
     rows: list[dict],
     filename: str,
+    rows_submitted: int | None = None,
 ) -> PreFlightReport:
     """Run pre-flight data quality assessment.
 
@@ -254,11 +315,28 @@ def run_preflight(
         column_names: Column headers from the parsed file.
         rows: List of row dicts from parse_uploaded_file().
         filename: Original filename for the report.
+        rows_submitted: Raw file row count for reconciliation (Sprint 666).
+            When the caller can determine the raw line count (e.g. for CSV,
+            TSV, TXT), it should pass it so the Data Intake Summary can
+            reconcile submitted vs accepted and surface any rows silently
+            lost to pandas header inference. For parsers where raw row
+            count is indeterminate (XLSX, PDF, DOCX, ODS), leave as None
+            and reconciliation will treat the parsed row count as both
+            submitted and accepted.
 
     Returns:
-        PreFlightReport with all quality checks completed.
+        PreFlightReport with all quality checks completed and an
+        ``intake`` summary reconciling every raw row against its disposition.
+
+    Sprint 666 behavior change:
+        The totals row (summary row at the end of the TB with a blank
+        account name and non-zero debit AND credit values) is now detected
+        and excluded from every downstream check. Before this sprint the
+        totals row contributed to the balance calculation, doubling the
+        reported variance on out-of-balance TBs and producing a false
+        null-value warning on clean TBs.
     """
-    row_count = len(rows)
+    parsed_row_count = len(rows)
     col_count = len(column_names)
     issues: list[PreFlightIssue] = []
     columns_quality: list[ColumnQuality] = []
@@ -272,8 +350,44 @@ def run_preflight(
     debit_col = detection.debit_column
     credit_col = detection.credit_column
 
+    # ── Sprint 666 Issue 2: Totals row detection + exclusion ──
+    # Applied before any data-dependent check so every downstream count
+    # works against the real account rows only.
+    intake_notes: list[str] = []
+    excluded_count = 0
+    totals_idx = detect_totals_row(rows, column_names, debit_col, credit_col)
+    if totals_idx is not None:
+        # 1-based position for user-facing notes; parsed_row_count does not
+        # count the CSV header line, so idx 40 → "row 41" in the file.
+        intake_notes.append(
+            f"Row {totals_idx + 2} appears to be a summary totals row "
+            f"(blank account name with non-zero debit and credit) and has been "
+            f"excluded from analysis."
+        )
+        rows = rows[:totals_idx] + rows[totals_idx + 1 :]
+        excluded_count = 1
+
+    row_count = len(rows)  # post-exclusion; drives all downstream denominators
+
     # ── Check 0: TB Balance Check (weight 25%) ──
-    balance_check = _check_tb_balance(rows, debit_col, credit_col, issues)
+    # Sprint 667 Issue 12: pass the full column list so the balance check
+    # can detect unmapped balance-like columns (multi-column adjusted TBs)
+    # and skip rather than report a spurious variance.
+    # Sprint 669: pass the detected layout so the multi-column path can
+    # treat Beginning/Adjustments columns as INTENTIONAL supplementary
+    # data instead of "unmapped balance columns" — they are part of the
+    # layout, not a mapping error. Net-balance layouts also short-circuit
+    # the balance check because their credit column is an indicator,
+    # not a numeric value.
+    balance_check = _check_tb_balance(
+        rows,
+        debit_col,
+        credit_col,
+        issues,
+        all_columns=column_names,
+        layout=detection.layout,
+        supplementary_balance_pairs=detection.supplementary_balance_pairs,
+    )
 
     # ── Check 2: Null/empty values (weight 15%) ──
     null_counts = _check_null_values(rows, column_names, account_col, debit_col, credit_col, issues)
@@ -290,6 +404,9 @@ def run_preflight(
     # ── Check 6: Zero-balance rows (weight 10%) ──
     zero_count = _check_zero_balances(rows, debit_col, credit_col, row_count, issues)
 
+    # ── Check 7: GAAP category completeness (Sprint 631) ──
+    category_completeness = _check_category_completeness(rows, account_col, debit_col, credit_col, issues)
+
     # ── Populate downstream impact descriptions and tests_affected ──
     _populate_downstream_impact(issues)
 
@@ -301,6 +418,54 @@ def run_preflight(
         readiness_label = "Review Recommended"
     else:
         readiness_label = "Issues Found"
+
+    # ── Sprint 666 Issue 7: Row reconciliation ──
+    # The raw count supplied by the caller (count_raw_data_rows) is the
+    # *total* non-empty line count — header-inclusive. That accounting
+    # choice matters for header-less files like tb_no_headers.csv where
+    # pandas consumes row 1 as column names even though it is real data;
+    # treating the raw count as "header-subtracted" would silently drop
+    # the lost row from the reconciliation.
+    #
+    # We decide whether to subtract 1 for a header line here, using the
+    # column-detection result. If both the Debit and Credit columns were
+    # resolved to real column names, row 1 is a legitimate header; one
+    # line must be deducted from the raw count. Otherwise the "header" is
+    # inferred from data, no line was consumed, and rows_submitted is the
+    # full raw count.
+    #
+    # submitted = raw line count - (1 if real header else 0)
+    # accepted  = rows that reached analysis (post-totals-row exclusion)
+    # excluded  = totals rows removed
+    # rejected  = submitted - accepted - excluded  (>= 0)
+    #   Non-zero rejected usually means pandas consumed a data row as the
+    #   header on a header-less file.
+    real_header_found = debit_col is not None and credit_col is not None
+    if rows_submitted is None:
+        # Caller did not supply a raw count. Reconcile trivially against
+        # the parsed row count + excluded totals rows.
+        effective_submitted = parsed_row_count + excluded_count
+        rejected = 0
+    else:
+        effective_submitted = rows_submitted - (1 if real_header_found else 0)
+        effective_submitted = max(0, effective_submitted)
+        rejected = max(0, effective_submitted - row_count - excluded_count)
+        if rejected > 0:
+            intake_notes.append(
+                f"{rejected} row(s) from the source file are not present in the "
+                f"parsed dataset. This usually means the first data row was "
+                f"consumed as the header row because no recognizable header was "
+                f"detected. Re-upload with explicit column headers to recover "
+                f"every row."
+            )
+
+    intake = IntakeSummary(
+        rows_submitted=effective_submitted,
+        rows_accepted=row_count,
+        rows_rejected=rejected,
+        rows_excluded=excluded_count,
+        notes=intake_notes,
+    )
 
     return PreFlightReport(
         filename=filename,
@@ -317,6 +482,8 @@ def run_preflight(
         null_counts=null_counts,
         balance_check=balance_check,
         score_breakdown=score_breakdown,
+        intake=intake,
+        category_completeness=category_completeness,
     )
 
 
@@ -364,21 +531,161 @@ def _coerce_to_decimal(val: object) -> Decimal:
         return Decimal("0")
 
 
+_UNMAPPED_BALANCE_HINTS: tuple[str, ...] = (
+    "debit",
+    "credit",
+    "balance",
+    " dr",
+    "\tdr",
+    " cr",
+    "\tcr",
+    "dr ",
+    "cr ",
+)
+
+
+def _has_unmapped_balance_columns(
+    all_columns: list[str],
+    mapped_debit: str | None,
+    mapped_credit: str | None,
+) -> list[str]:
+    """Return any unmapped columns that look like balance columns.
+
+    Multi-column trial balances (e.g. Beginning/Adjustments/Ending
+    balance triples on an adjusted TB PDF) expose more than one debit
+    and credit column pair. The default column detector resolves to
+    one pair — typically the first alphabetically — and leaves the
+    other balance columns unmapped. Running the balance check on that
+    mapped subset produces a variance that is a pure mapping artifact:
+    the numbers sum correctly against the wrong columns.
+
+    This helper identifies unmapped columns whose names contain
+    `debit`, `credit`, `balance`, or standalone `dr`/`cr` tokens, so
+    the caller can caveat or skip the balance check when a multi-
+    column layout is detected. The full multi-column layout fix is
+    Sprint 669; Sprint 667 only stops reporting the false variance.
+    """
+    mapped_lower = {c.lower().strip() for c in (mapped_debit, mapped_credit) if c is not None}
+    suspicious: list[str] = []
+    for col in all_columns:
+        if col is None:
+            continue
+        lower = str(col).lower().strip()
+        if not lower or lower in mapped_lower:
+            continue
+        if any(hint in lower for hint in _UNMAPPED_BALANCE_HINTS):
+            suspicious.append(col)
+    return suspicious
+
+
 def _check_tb_balance(
     rows: list[dict],
     debit_col: str | None,
     credit_col: str | None,
     issues: list[PreFlightIssue],
     tolerance: float = 0.01,
+    *,
+    all_columns: list[str] | None = None,
+    layout: str = "single_dr_cr",
+    supplementary_balance_pairs: list[tuple[str, str]] | None = None,
 ) -> BalanceCheck | None:
     """Check 0: Verify total debits equal total credits.
 
     Coerces null/empty values to 0.0 before summing — standard for
     one-sided trial balances where each row has a value in either
     the debit or credit column, not both.
+
+    Sprint 667 Issue 12: When the layout contains unmapped columns
+    whose names look like balance columns (multi-column adjusted TBs
+    with Beginning/Adjustments/Ending triples), the single mapped
+    pair is only a partial view of the data. We skip the balance
+    calculation entirely in that case and emit a caveat issue instead
+    of a spurious variance.
+
+    Sprint 669: When the layout detector identifies a recognised
+    multi-column or net-balance layout, the "extra" balance columns
+    are intentional, not a mapping error. The balance check then runs
+    against the layout-selected primary pair (Ending Balance for
+    multi-column TBs) without emitting the Sprint 667 caveat. For
+    net-balance layouts the credit column is a Dr/Cr text indicator —
+    coercing it to a numeric will always produce zero, so the check
+    is skipped with a layout-specific note instead of reporting "out
+    of balance by $X."
     """
     if not debit_col or not credit_col or not rows:
         return None
+
+    # Sprint 669: net_balance_with_indicator — credit column is a
+    # text indicator, not a numeric. Skip the balance check rather
+    # than coerce-to-zero and report a phantom variance.
+    if layout == "net_balance_with_indicator":
+        issues.append(
+            PreFlightIssue(
+                category="tb_balance",
+                severity="medium",
+                message=(
+                    "Balance check skipped — net-balance layout detected. The "
+                    "credit role is filled by a Dr/Cr indicator column, not a "
+                    "numeric balance. Confirm the sign convention before "
+                    "downstream balance verification."
+                ),
+                affected_count=1,
+                remediation=(
+                    "Re-export the file as a one-sided Debit/Credit trial "
+                    "balance, or confirm the Dr/Cr indicator semantics so "
+                    "Paciolus can derive a signed view of the balances."
+                ),
+            )
+        )
+        return BalanceCheck(
+            total_debits=0.0,
+            total_credits=0.0,
+            difference=0.0,
+            balanced=False,
+            tolerance=tolerance,
+            skipped=True,
+        )
+
+    if all_columns:
+        extra_balance_cols = _has_unmapped_balance_columns(all_columns, debit_col, credit_col)
+        # Sprint 669: in a recognised multi-column adjusted layout the
+        # supplementary Beginning / Adjustments columns ARE expected and
+        # should not trip the Sprint 667 skip. Filter them out before
+        # deciding whether to caveat.
+        if layout == "multi_column_adjusted" and supplementary_balance_pairs:
+            supplementary_set = {col for pair in supplementary_balance_pairs for col in pair if col is not None}
+            extra_balance_cols = [c for c in extra_balance_cols if c not in supplementary_set]
+
+        if extra_balance_cols:
+            extras_text = ", ".join(f"'{c}'" for c in extra_balance_cols[:6])
+            if len(extra_balance_cols) > 6:
+                extras_text += f" (+{len(extra_balance_cols) - 6} more)"
+            issues.append(
+                PreFlightIssue(
+                    category="tb_balance",
+                    severity="medium",
+                    message=(
+                        "Balance check skipped — one or more balance columns are "
+                        "unmapped. This file appears to use a multi-column layout "
+                        f"(unmapped balance-like columns: {extras_text}). Map all "
+                        "balance columns before running balance verification."
+                    ),
+                    affected_count=len(extra_balance_cols),
+                    remediation=(
+                        "Use column mapping to explicitly assign the intended Debit "
+                        "and Credit columns, or re-export the trial balance as a "
+                        "single Debit/Credit pair before re-uploading."
+                    ),
+                )
+            )
+            return BalanceCheck(
+                total_debits=0.0,
+                total_credits=0.0,
+                difference=0.0,
+                balanced=False,  # unknown — treated as unresolved
+                tolerance=tolerance,
+                skipped=True,
+            )
 
     total_debits = Decimal("0")
     total_credits = Decimal("0")
@@ -416,6 +723,41 @@ def _check_tb_balance(
     )
 
 
+_DOWNSTREAM_USE_BY_ROLE: dict[str, str] = {
+    # Core roles consumed by the diagnostic engine
+    "account": "Account identification — lead sheets, classification, exception attribution",
+    "debit": "Balance verification, exception detection, anomaly aggregation",
+    "credit": "Balance verification, exception detection, anomaly aggregation",
+    # Auxiliary roles surfaced for transparency
+    "Account Name": "Human-readable label paired with account identifier",
+    "Account Type": "Classification override (revenue/expense/asset/liability/equity)",
+    "Account Code": "Reference / account code — paired with Account Name where present",
+    "Classification": "Optional classification override",
+    "Department": "Not used in current analysis",
+    "Cost Center": "Not used in current analysis",
+    "Currency": "Not used in current analysis",
+    "Balance": "Net balance column — verified against debit/credit pair",
+    "Description": "Not used in current analysis",
+    "Memo": "Not used in current analysis",
+    "Reference": "Not used in current analysis",
+    "Date": "Not used in current analysis",
+    "Period": "Not used in current analysis",
+    "Entity": "Not used in current analysis",
+    "Segment": "Not used in current analysis",
+}
+
+
+def _downstream_use_for_role(role: str) -> str:
+    """Return the user-facing description for a column role.
+
+    Sprint 668 Issue 8: every column in the detection table now carries an
+    explicit downstream-use description. Unknown auxiliary roles fall back
+    to the explicit "Not used in current analysis" message rather than a
+    blank cell.
+    """
+    return _DOWNSTREAM_USE_BY_ROLE.get(role, "Not used in current analysis")
+
+
 def _check_column_detection(
     detection: ColumnDetectionResult,
     columns_quality: list[ColumnQuality],
@@ -426,6 +768,15 @@ def _check_column_detection(
     Reports all columns from the file — not just the 3 core roles.
     Unmapped columns are shown with role "unmapped" so users can verify
     the engine saw them.
+
+    Sprint 668 Issue 6: The status field now distinguishes between a
+    real header match (``found``) and a content-based fallback
+    (``inferred``). The legacy ``account_column`` fallback path in
+    ``column_detector.py`` reaches for the first unassigned column when
+    no header pattern matches — that case used to surface as ``found``
+    at 30% confidence, which is misleading. It now surfaces as
+    ``inferred``. Sprint 668 Issue 8: every column carries a
+    ``downstream_use`` description.
     """
     # Core role mappings
     core_mappings: dict[str, tuple[str | None, float]] = {
@@ -434,22 +785,61 @@ def _check_column_detection(
         "credit": (detection.credit_column, detection.credit_confidence),
     }
 
+    # Sprint 668 Issue 6: detect the fallback path. column_detector emits a
+    # detection note containing "fallback" when it reached for the first
+    # unassigned column to fill the account role. Treat that as inferred.
+    _account_inferred = any("fallback" in note.lower() for note in detection.detection_notes)
+
+    # Sprint 668 Issue 6: When NO core role matched at exact-pattern
+    # confidence (≥ 0.85), the file probably has no header row — every
+    # match was via a loose partial regex against data content. Demote
+    # any matched role to ``inferred`` so the caller knows downstream
+    # results are derived from content inference, not column semantics.
+    # 0.85 cleanly separates exact patterns (0.90–1.0) from partials
+    # (0.30–0.80) in column_detector.py.
+    _max_core_conf = max(
+        detection.account_confidence,
+        detection.debit_confidence,
+        detection.credit_confidence,
+    )
+    _row_inferred = _max_core_conf < 0.85
+
     mapped_cols: set[str] = set()
     for role, (col_name, conf) in core_mappings.items():
+        downstream_use = _downstream_use_for_role(role)
         if col_name is None:
-            columns_quality.append(ColumnQuality(role, None, 0.0, "missing"))
+            columns_quality.append(ColumnQuality(role, None, 0.0, "missing", downstream_use))
+        elif role == "account" and _account_inferred:
+            columns_quality.append(ColumnQuality(role, col_name, conf, "inferred", downstream_use))
+            mapped_cols.add(col_name.lower().strip())
+        elif _row_inferred:
+            columns_quality.append(ColumnQuality(role, col_name, conf, "inferred", downstream_use))
+            mapped_cols.add(col_name.lower().strip())
         elif conf < 0.80:
-            columns_quality.append(ColumnQuality(role, col_name, conf, "low_confidence"))
+            columns_quality.append(ColumnQuality(role, col_name, conf, "low_confidence", downstream_use))
             mapped_cols.add(col_name.lower().strip())
         else:
-            columns_quality.append(ColumnQuality(role, col_name, conf, "found"))
+            columns_quality.append(ColumnQuality(role, col_name, conf, "found", downstream_use))
             mapped_cols.add(col_name.lower().strip())
 
     # Add unmapped columns so the user can see the full file structure.
-    # Infer a descriptive role label from the column name where possible.
+    # Sprint 668 Issue 8: account-code-style columns get the explicit
+    # "Account Code" role rather than being lumped under "unmapped" — they
+    # carry a stated downstream use even though they are not used as the
+    # primary balance-verification key.
     _AUXILIARY_ROLE_HINTS = {
         "account_name": "Account Name",
         "account_type": "Account Type",
+        "account_no": "Account Code",
+        "account_number": "Account Code",
+        "account_code": "Account Code",
+        "acct_no": "Account Code",
+        "acct_number": "Account Code",
+        "acct_code": "Account Code",
+        "gl_code": "Account Code",
+        "gl_account": "Account Code",
+        "gl_account_number": "Account Code",
+        "code": "Account Code",
         "classification": "Classification",
         "department": "Department",
         "cost_center": "Cost Center",
@@ -468,11 +858,47 @@ def _check_column_detection(
             continue
         col_lower = col.lower().strip().replace(" ", "_").replace("-", "_")
         inferred_role = _AUXILIARY_ROLE_HINTS.get(col_lower, "unmapped")
-        columns_quality.append(ColumnQuality(role=inferred_role, detected_name=col, confidence=1.0, status="found"))
+        columns_quality.append(
+            ColumnQuality(
+                role=inferred_role,
+                detected_name=col,
+                confidence=1.0,
+                status="found",
+                downstream_use=_downstream_use_for_role(inferred_role),
+            )
+        )
 
     # Issue generation
     missing = [c for c in columns_quality if c.status == "missing"]
     low_conf = [c for c in columns_quality if c.status == "low_confidence"]
+    inferred = [c for c in columns_quality if c.status == "inferred"]
+
+    # Sprint 668 Issue 6: When NO core role found a real header match (every
+    # core role is missing or inferred), the file probably has no header
+    # row. Surface a dedicated warning so the user knows downstream
+    # results are derived from content inference, not column semantics.
+    core_roles = [c for c in columns_quality if c.role in ("account", "debit", "credit")]
+    no_real_headers = all(c.status in ("missing", "inferred") for c in core_roles) and any(
+        c.status == "inferred" for c in core_roles
+    )
+    if no_real_headers:
+        issues.append(
+            PreFlightIssue(
+                category="column_detection",
+                severity="high",
+                message=(
+                    "No headers detected — the first row of the file does not match "
+                    "any recognised trial-balance column vocabulary. Roles below were "
+                    "inferred from content."
+                ),
+                affected_count=len(core_roles),
+                remediation=(
+                    "Re-export the file with a header row containing standard column "
+                    "names (Account, Debit, Credit), or use column mapping to confirm "
+                    "the inferred roles before proceeding."
+                ),
+            )
+        )
 
     if missing:
         names = ", ".join(c.role for c in missing)
@@ -484,6 +910,25 @@ def _check_column_detection(
                 affected_count=len(missing),
                 remediation="Use column mapping to manually assign the missing column(s), "
                 "or rename columns to standard names (Account, Debit, Credit).",
+            )
+        )
+    elif inferred:
+        # Inferred columns are not "low confidence" — they are explicit
+        # content-based guesses. Surface them as a medium-severity warning
+        # so the conclusion text routes to "Ready with caveats" rather
+        # than blocking, but the user is told to confirm before relying on
+        # downstream results.
+        names = ", ".join(c.role for c in inferred)
+        issues.append(
+            PreFlightIssue(
+                category="column_detection",
+                severity="medium",
+                message=f"Column role(s) inferred from content (not header match): {names}",
+                affected_count=len(inferred),
+                remediation=(
+                    "Confirm the inferred role assignments are correct, or use "
+                    "column mapping to override before downstream testing."
+                ),
             )
         )
     elif detection.overall_confidence < 0.80:
@@ -859,6 +1304,136 @@ def _check_zero_balances(
     )
 
     return zero_count
+
+
+# ═══════════════════════════════════════════════════════════════
+# Sprint 631: GAAP category completeness
+# ═══════════════════════════════════════════════════════════════
+
+_COGS_PATTERNS = (
+    "cost of goods sold",
+    "cost of goods",
+    "cost of sales",
+    "cost of revenue",
+    "cogs",
+)
+
+
+def _looks_like_cogs(name: str) -> bool:
+    lower = name.lower()
+    return any(pattern in lower for pattern in _COGS_PATTERNS)
+
+
+def _check_category_completeness(
+    rows: list[dict],
+    account_col: str | None,
+    debit_col: str | None,
+    credit_col: str | None,
+    issues: list[PreFlightIssue],
+) -> CategoryCompleteness | None:
+    """Sprint 631: Verify all 5 GAAP categories have ≥1 classified account.
+
+    Classifies every account in the TB with the default classifier, counts
+    per category, and flags:
+      - Any GAAP category with zero accounts (high severity)
+      - Revenue > 0 but COGS = 0 (medium severity; likely classification gap)
+
+    Returns None when the inputs are insufficient to classify anything.
+    """
+    if not account_col or not rows:
+        return None
+
+    classifier = AccountClassifier()
+    counts: dict[AccountCategory, int] = {cat: 0 for cat in AccountCategory}
+    revenue_total = Decimal("0")
+    cogs_total = Decimal("0")
+
+    for row in rows:
+        name_val = row.get(account_col)
+        if name_val is None:
+            continue
+        name = str(name_val).strip()
+        if not name:
+            continue
+
+        debit = _coerce_to_decimal(row.get(debit_col)) if debit_col else Decimal("0")
+        credit = _coerce_to_decimal(row.get(credit_col)) if credit_col else Decimal("0")
+        net = float(debit - credit)
+
+        result = classifier.classify(name, net)
+        counts[result.category] = counts.get(result.category, 0) + 1
+
+        # Revenue activity is naturally credit-balance — take the absolute value.
+        if result.category == AccountCategory.REVENUE:
+            revenue_total += abs(debit - credit)
+        if result.category == AccountCategory.EXPENSE and _looks_like_cogs(name):
+            cogs_total += abs(debit - credit)
+
+    required = [
+        AccountCategory.ASSET,
+        AccountCategory.LIABILITY,
+        AccountCategory.EQUITY,
+        AccountCategory.REVENUE,
+        AccountCategory.EXPENSE,
+    ]
+    missing = [cat.value.capitalize() for cat in required if counts.get(cat, 0) == 0]
+
+    # Revenue>0 with COGS=0 is a common classification gap. Skip this check
+    # for service-business TBs where genuinely no COGS exists: gate on the
+    # expense category having material activity.
+    cogs_gap = (
+        revenue_total > Decimal("0") and cogs_total == Decimal("0") and counts.get(AccountCategory.EXPENSE, 0) > 0
+    )
+
+    if missing:
+        names = ", ".join(missing)
+        issues.append(
+            PreFlightIssue(
+                category="category_completeness",
+                severity="high",
+                message=f"No accounts mapped to GAAP category: {names}",
+                affected_count=len(missing),
+                remediation=(
+                    "Verify the trial balance contains every statement category. "
+                    "Missing categories produce incomplete financial statements, "
+                    "broken ratio analysis, and empty lead sheets."
+                ),
+                affected_items=missing,
+            )
+        )
+
+    if cogs_gap:
+        issues.append(
+            PreFlightIssue(
+                category="category_completeness",
+                severity="medium",
+                message=(
+                    "Revenue activity detected but Cost of Goods Sold is zero — "
+                    "cost accounts may be mis-classified under a different "
+                    "expense category."
+                ),
+                affected_count=1,
+                remediation=(
+                    "Review expense accounts for COGS-like activity "
+                    "(Cost of Goods Sold / Cost of Sales / Cost of Revenue) "
+                    "and reclassify so the Income Statement gross margin "
+                    "calculation is meaningful."
+                ),
+            )
+        )
+
+    return CategoryCompleteness(
+        asset_count=counts.get(AccountCategory.ASSET, 0),
+        liability_count=counts.get(AccountCategory.LIABILITY, 0),
+        equity_count=counts.get(AccountCategory.EQUITY, 0),
+        revenue_count=counts.get(AccountCategory.REVENUE, 0),
+        expense_count=counts.get(AccountCategory.EXPENSE, 0),
+        unknown_count=counts.get(AccountCategory.UNKNOWN, 0),
+        missing_categories=missing,
+        revenue_total=float(revenue_total),
+        cogs_total=float(cogs_total),
+        cogs_gap=cogs_gap,
+    )
 
 
 # ═══════════════════════════════════════════════════════════════

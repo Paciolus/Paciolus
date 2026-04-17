@@ -243,7 +243,24 @@ Any red? → Merge blocked
 
 See [SECURITY_POLICY.md](./SECURITY_POLICY.md) Section 7 for vulnerability management details.
 
-### 5.3 Zero-Storage Compliance Verification
+### 5.3 Impersonation Token Semantics (Sprints 590, 661)
+
+Superadmin impersonation tokens carry an `imp: true` claim. `ImpersonationMiddleware` rejects all mutation methods (POST/PUT/PATCH/DELETE) with HTTP 403 when this claim is present.
+
+**Asymmetric expiry:** The middleware decodes the token with `verify_exp=False`. This is intentional — an expired impersonation token still triggers the read-only block, so a token that escaped into logs or proxies cannot be silently exchanged for a writable session by letting it expire.
+
+**Revocation (Sprint 661):** The asymmetry means the 15-minute `exp` does **not** by itself end the session's blocking behavior. Ending a session requires an explicit revoke:
+
+| Step | Action |
+|------|--------|
+| 1 | Admin `POST /internal/admin/impersonate/stop` with the impersonation token as the `Authorization: Bearer` header |
+| 2 | Handler adds the token's `jti` to the revocation store (Redis when configured, per-process memory otherwise) with TTL bounded by the token's remaining lifetime plus a short buffer |
+| 3 | `ImpersonationMiddleware` checks the revocation store for every mutation; revoked `jti` values bypass the read-only block |
+| 4 | `IMPERSONATION_END` is written to `admin_audit_logs` |
+
+**Cluster note:** Multi-worker deployments must set `REDIS_URL`. The in-memory fallback is not visible across workers, so a revocation posted to worker A will not release the block on worker B.
+
+### 5.4 Zero-Storage Compliance Verification
 
 Every change that touches data handling is verified for Zero-Storage compliance:
 

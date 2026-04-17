@@ -93,10 +93,16 @@ function LeftColumn({ trackCtaClick }: { trackCtaClick: (cta: string) => void })
 
       {/* Subheadline */}
       <motion.p
-        className="font-sans text-lg text-oatmeal-400 max-w-lg mb-6 text-center lg:text-left"
+        className="font-sans text-lg text-oatmeal-400 max-w-lg mb-3 text-center lg:text-left"
         variants={fadeUp}
       >
-        Professional-grade diagnostics, testing, and workpapers — built on ISA and PCAOB standards. Zero data retained.
+        Drop your trial balance. Get ISA/PCAOB-methodology diagnostics and workpapers in seconds.
+      </motion.p>
+      <motion.p
+        className="font-sans text-sm text-oatmeal-500 max-w-lg mb-6 text-center lg:text-left"
+        variants={fadeUp}
+      >
+        Professional-grade analysis across 12 testing tools. Zero data retained.
       </motion.p>
 
       {/* Introductory pricing callout */}
@@ -144,6 +150,12 @@ function LeftColumn({ trackCtaClick }: { trackCtaClick: (cta: string) => void })
           Explore Demo
         </Link>
       </motion.div>
+      <motion.p
+        className="font-sans text-xs text-oatmeal-500 mt-3 text-center lg:text-left"
+        variants={fadeUp}
+      >
+        No credit card required
+      </motion.p>
     </motion.div>
   )
 }

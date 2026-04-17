@@ -108,4 +108,15 @@ describe('UpgradeGate', () => {
     )
     expect(screen.getByText('Upgrade Required')).toBeInTheDocument()
   })
+
+  it('Sprint 601: shows upgrade CTA for free tier on statistical_sampling', () => {
+    mockUser = { tier: 'free' }
+    render(
+      <UpgradeGate toolName="statistical_sampling">
+        <div>Sampling UI</div>
+      </UpgradeGate>
+    )
+    expect(screen.queryByText('Sampling UI')).not.toBeInTheDocument()
+    expect(screen.getByText('Upgrade Required')).toBeInTheDocument()
+  })
 })

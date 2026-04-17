@@ -1,0 +1,85 @@
+{
+  "agent": "coverage_sentinel",
+  "status": "green",
+  "percent_covered": 92.1,
+  "covered_lines": 79826,
+  "num_statements": 86676,
+  "missing_lines": 6850,
+  "rolling_mean_pct": 92.09,
+  "delta_pp": 0.01,
+  "rolling_window_days": 7,
+  "history": [
+    {
+      "date": "2026-04-14",
+      "percent_covered": 92.09
+    },
+    {
+      "date": "2026-04-15",
+      "percent_covered": 92.1
+    }
+  ],
+  "top_uncovered_files": [
+    {
+      "path": "excel_generator.py",
+      "percent_covered": 45.7,
+      "missing_lines": 328,
+      "num_statements": 604
+    },
+    {
+      "path": "generate_sample_reports.py",
+      "percent_covered": 0.0,
+      "missing_lines": 294,
+      "num_statements": 294
+    },
+    {
+      "path": "services\\organization_service.py",
+      "percent_covered": 0.0,
+      "missing_lines": 180,
+      "num_statements": 180
+    },
+    {
+      "path": "billing\\webhook_handler.py",
+      "percent_covered": 55.11,
+      "missing_lines": 180,
+      "num_statements": 401
+    },
+    {
+      "path": "population_profile_memo.py",
+      "percent_covered": 39.72,
+      "missing_lines": 170,
+      "num_statements": 282
+    },
+    {
+      "path": "export\\serializers\\csv.py",
+      "percent_covered": 0.0,
+      "missing_lines": 158,
+      "num_statements": 158
+    },
+    {
+      "path": "guards\\doc_consistency_guard.py",
+      "percent_covered": 0.0,
+      "missing_lines": 153,
+      "num_statements": 153
+    },
+    {
+      "path": "workbook_inspector.py",
+      "percent_covered": 18.56,
+      "missing_lines": 136,
+      "num_statements": 167
+    },
+    {
+      "path": "pdf\\sections\\diagnostic.py",
+      "percent_covered": 65.68,
+      "missing_lines": 127,
+      "num_statements": 370
+    },
+    {
+      "path": "leadsheet_generator.py",
+      "percent_covered": 11.43,
+      "missing_lines": 124,
+      "num_statements": 140
+    }
+  ],
+  "reasons": [],
+  "summary": "Backend coverage: 92.10% (79,826/86,676 statements, 6,850 uncovered). 7-day mean: 92.09% (+0.01pp)."
+}

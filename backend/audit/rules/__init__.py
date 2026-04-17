@@ -12,6 +12,7 @@ from audit.rules.concentration import (
     detect_revenue_concentration,
 )
 from audit.rules.equity import detect_equity_signals
+from audit.rules.gaps import AccountGap, detect_account_number_gaps
 from audit.rules.merger import _merge_anomalies
 from audit.rules.relationships import (
     detect_intercompany_imbalances,
@@ -30,5 +31,7 @@ __all__ = [
     "detect_equity_signals",
     "detect_revenue_concentration",
     "detect_expense_concentration",
+    "detect_account_number_gaps",
+    "AccountGap",
     "_merge_anomalies",
 ]

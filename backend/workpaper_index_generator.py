@@ -92,8 +92,17 @@ class WorkpaperIndexGenerator:
         if not engagement:
             raise ValueError("Engagement not found or access denied")
 
-        client = self.db.query(Client).filter(Client.id == engagement.client_id).first()
-        client_name = client.name if client else f"Client #{engagement.client_id}"
+        client = (
+            self.db.query(Client)
+            .filter(
+                Client.id == engagement.client_id,
+                Client.user_id == user_id,
+            )
+            .first()
+        )
+        if not client:
+            raise ValueError("Client not found or access denied")
+        client_name = client.name
 
         # Build document register from tool runs (active only)
         tool_runs = (

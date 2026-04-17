@@ -10,6 +10,7 @@ lists retained for backward compatibility.
 
 from __future__ import annotations
 
+import threading
 from decimal import Decimal
 from typing import Any
 
@@ -136,7 +137,7 @@ _CSV_TYPE_SUFFIXES: list[tuple[str, AccountCategory]] = [
     ("expenses", AccountCategory.EXPENSE),
 ]
 
-# Module-level counter for deploy-verification logging
+_csv_type_log_lock = threading.Lock()
 _csv_type_log_count: int = 0
 
 
@@ -149,13 +150,14 @@ def resolve_csv_type(raw_value: str) -> tuple[AccountCategory | None, float]:
     global _csv_type_log_count
     normalized = raw_value.lower().strip()
 
-    # Sprint 528 Step 4: Log first 5 CSV type values for deploy verification
     if _csv_type_log_count < 5 and raw_value:
-        _csv_type_log_count += 1
-        log_secure_operation(
-            "csv_type_trace",
-            f"[{_csv_type_log_count}/5] raw={raw_value!r} normalized={normalized!r}",
-        )
+        with _csv_type_log_lock:
+            if _csv_type_log_count < 5:
+                _csv_type_log_count += 1
+                log_secure_operation(
+                    "csv_type_trace",
+                    f"[{_csv_type_log_count}/5] raw={raw_value!r} normalized={normalized!r}",
+                )
 
     if not normalized:
         return None, 0.0

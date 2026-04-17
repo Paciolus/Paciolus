@@ -165,6 +165,101 @@ class MappingTraceEntry:
 
 
 @dataclass
+class EquityComponent:
+    """Sprint 638: A single equity component row on the SOCE rollforward.
+
+    ``component_type`` uses the standard SOCE column headers so the
+    exporter can render the matrix without re-classifying. Unmapped
+    equity accounts fall into ``RETAINED_EARNINGS`` by default but are
+    surfaced on ``StatementOfChangesInEquity.unmapped_accounts`` for
+    practitioner review.
+    """
+
+    component_type: (
+        str  # "common_stock" / "additional_paid_in_capital" / "retained_earnings" / "treasury_stock" / "aoci" / "other"
+    )
+    label: str
+    beginning_balance: float
+    contributions: float = 0.0  # Owner contributions / stock issuance
+    distributions: float = 0.0  # Distributions / share buybacks (negative to equity)
+    dividends: float = 0.0  # Dividends declared (negative to retained earnings)
+    net_income_allocation: float = 0.0  # Net income attribution (retained earnings only)
+    other_comprehensive_income: float = 0.0  # AOCI movement only
+    other_movement: float = 0.0  # Catch-all for residuals
+    ending_balance: float = 0.0
+
+
+@dataclass
+class StatementOfChangesInEquity:
+    """Sprint 638: Equity rollforward produced alongside BS / IS / CF.
+
+    The engine does NOT attempt to distinguish contributions from
+    dividends automatically — that is auditor judgement and requires
+    supporting documentation. The SOCE is driven from the equity
+    balances on the TB: beginning from prior period (if supplied),
+    ending from current period, net income flowing into the retained
+    earnings component. Extra activity (contributions, distributions,
+    dividends) is accepted via ``EquityActivity`` inputs when the
+    caller has them.
+    """
+
+    components: list[EquityComponent]
+    beginning_total_equity: float
+    net_income: float
+    total_contributions: float
+    total_distributions: float
+    total_dividends: float
+    total_other_comprehensive_income: float
+    total_other_movement: float
+    ending_total_equity: float
+    unmapped_accounts: list[str] = field(default_factory=list)
+
+    def to_dict(self) -> dict:
+        return {
+            "components": [
+                {
+                    "component_type": c.component_type,
+                    "label": c.label,
+                    "beginning_balance": c.beginning_balance,
+                    "contributions": c.contributions,
+                    "distributions": c.distributions,
+                    "dividends": c.dividends,
+                    "net_income_allocation": c.net_income_allocation,
+                    "other_comprehensive_income": c.other_comprehensive_income,
+                    "other_movement": c.other_movement,
+                    "ending_balance": c.ending_balance,
+                }
+                for c in self.components
+            ],
+            "beginning_total_equity": self.beginning_total_equity,
+            "net_income": self.net_income,
+            "total_contributions": self.total_contributions,
+            "total_distributions": self.total_distributions,
+            "total_dividends": self.total_dividends,
+            "total_other_comprehensive_income": self.total_other_comprehensive_income,
+            "total_other_movement": self.total_other_movement,
+            "ending_total_equity": self.ending_total_equity,
+            "unmapped_accounts": list(self.unmapped_accounts),
+        }
+
+
+@dataclass
+class EquityActivity:
+    """Optional per-account activity passed in when the caller has it.
+
+    Account names are matched case-insensitively against equity accounts
+    on the current-period lead sheet. When an account is not supplied
+    here, the engine infers movement from the beginning-to-ending delta
+    less the net-income share for retained-earnings accounts.
+    """
+
+    account: str
+    contributions: float = 0.0
+    distributions: float = 0.0
+    dividends: float = 0.0
+
+
+@dataclass
 class FinancialStatements:
     """Complete financial statements built from lead sheet groupings."""
 
@@ -183,6 +278,8 @@ class FinancialStatements:
     net_income: float = 0.0
     # Cash Flow Statement (Sprint 83)
     cash_flow_statement: Optional[CashFlowStatement] = None
+    # Statement of Changes in Equity (Sprint 638)
+    statement_of_changes_in_equity: Optional[StatementOfChangesInEquity] = None
     # Account-to-Statement Mapping Trace (Sprint 284)
     mapping_trace: list[MappingTraceEntry] = field(default_factory=list)
     # Derived amounts for ratio computation (Sprint 488)
@@ -242,6 +339,8 @@ class FinancialStatements:
         }
         if self.cash_flow_statement is not None:
             result["cash_flow_statement"] = self.cash_flow_statement.to_dict()
+        if self.statement_of_changes_in_equity is not None:
+            result["statement_of_changes_in_equity"] = self.statement_of_changes_in_equity.to_dict()
         if self.mapping_trace:
             result["mapping_trace"] = [
                 {
@@ -289,11 +388,13 @@ class FinancialStatementBuilder:
         entity_name: str = "",
         period_end: str = "",
         prior_lead_sheet_grouping: Optional[dict] = None,
+        equity_activity: Optional[list["EquityActivity"]] = None,
     ):
         self.grouping = lead_sheet_grouping
         self.entity_name = entity_name
         self.period_end = period_end
         self.prior_grouping = prior_lead_sheet_grouping
+        self.equity_activity = equity_activity or []
         # Index summaries by lead sheet letter for fast lookup
         self._balance_map: dict[str, float] = {}
         for summary in self.grouping.get("summaries", []):
@@ -386,6 +487,9 @@ class FinancialStatementBuilder:
         # Cash Flow Statement (Sprint 83)
         cash_flow = self._build_cash_flow_statement(net_income)
 
+        # Statement of Changes in Equity (Sprint 638)
+        soce = self._build_soce(net_income, total_equity, prior_total_equity)
+
         # Sprint 535 P2-3: Detect pre-closing TB imbalance
         # In a pre-closing TB, balance_difference ≈ net_income because
         # revenue/expense accounts haven't been closed to retained earnings.
@@ -424,6 +528,7 @@ class FinancialStatementBuilder:
             prior_operating_income=prior_operating_income,
             prior_net_income=prior_net_income,
             cash_flow_statement=cash_flow,
+            statement_of_changes_in_equity=soce,
             is_pre_closing=is_pre_closing,
             pre_closing_note=pre_closing_note,
             entity_name=self.entity_name,
@@ -1102,6 +1207,201 @@ class FinancialStatementBuilder:
                 )
 
         return items
+
+    # ---------------------------------------------------------------------
+    # Sprint 638 — Statement of Changes in Equity
+    # ---------------------------------------------------------------------
+
+    # Keyword → component type. Case-insensitive substring match against the
+    # account name. First matching rule wins. Unmapped accounts default to
+    # retained_earnings AND are added to ``unmapped_accounts`` for review.
+    _SOCE_COMPONENT_RULES: tuple[tuple[str, str, str], ...] = (
+        ("treasury stock", "treasury_stock", "Treasury Stock"),
+        ("treasury shares", "treasury_stock", "Treasury Stock"),
+        ("additional paid-in capital", "additional_paid_in_capital", "Additional Paid-In Capital"),
+        ("additional paid in capital", "additional_paid_in_capital", "Additional Paid-In Capital"),
+        ("paid-in capital", "additional_paid_in_capital", "Additional Paid-In Capital"),
+        ("paid in capital", "additional_paid_in_capital", "Additional Paid-In Capital"),
+        ("apic", "additional_paid_in_capital", "Additional Paid-In Capital"),
+        ("common stock", "common_stock", "Common Stock"),
+        ("preferred stock", "common_stock", "Preferred Stock"),
+        ("capital stock", "common_stock", "Capital Stock"),
+        ("members capital", "common_stock", "Members' Capital"),
+        ("members' capital", "common_stock", "Members' Capital"),
+        ("partners capital", "common_stock", "Partners' Capital"),
+        ("partners' capital", "common_stock", "Partners' Capital"),
+        ("owners capital", "common_stock", "Owner's Capital"),
+        ("owner's capital", "common_stock", "Owner's Capital"),
+        ("retained earnings", "retained_earnings", "Retained Earnings"),
+        ("accumulated earnings", "retained_earnings", "Retained Earnings"),
+        ("accumulated deficit", "retained_earnings", "Accumulated Deficit"),
+        ("accumulated other comprehensive", "aoci", "Accumulated Other Comprehensive Income"),
+        ("aoci", "aoci", "Accumulated Other Comprehensive Income"),
+        ("oci", "aoci", "Other Comprehensive Income"),
+        ("dividends", "retained_earnings", "Dividends"),
+        ("distributions", "retained_earnings", "Distributions"),
+    )
+
+    @staticmethod
+    def _classify_equity_account(account_name: str) -> tuple[str, str, bool]:
+        """Return (component_type, default_label, is_explicit_match)."""
+        low = (account_name or "").lower()
+        for keyword, component_type, label in FinancialStatementBuilder._SOCE_COMPONENT_RULES:
+            if keyword in low:
+                return component_type, label, True
+        return "retained_earnings", "Retained Earnings (unmapped)", False
+
+    def _collect_equity_accounts(self) -> list[dict]:
+        """Return the K-lead-sheet account dicts from the current period."""
+        for summary in self.grouping.get("summaries", []):
+            if summary.get("lead_sheet") == "K":
+                accounts = summary.get("accounts", []) or []
+                return [a for a in accounts if isinstance(a, dict)]
+        return []
+
+    def _collect_prior_equity_accounts(self) -> list[dict]:
+        if not self.prior_grouping:
+            return []
+        for summary in self.prior_grouping.get("summaries", []):
+            if summary.get("lead_sheet") == "K":
+                accounts = summary.get("accounts", []) or []
+                return [a for a in accounts if isinstance(a, dict)]
+        return []
+
+    def _build_soce(
+        self,
+        net_income: float,
+        total_equity: float,
+        prior_total_equity: float,
+    ) -> StatementOfChangesInEquity:
+        """Build the Statement of Changes in Equity rollforward.
+
+        Sprint 638: Equity accounts on lead sheet K are classified into
+        SOCE components (common stock, APIC, retained earnings, treasury,
+        AOCI). Beginning balances come from the prior period lead sheet
+        when supplied; ending balances from the current period. Net
+        income flows into the retained-earnings component. Explicit
+        activity (contributions, distributions, dividends) is accepted
+        via ``EquityActivity`` inputs and matched to accounts by name;
+        anything not accounted for falls into ``other_movement`` so the
+        rollforward balances.
+
+        ``unmapped_accounts`` lists equity accounts whose names didn't
+        match any of the SOCE component keywords, so the practitioner
+        can review the default classification.
+        """
+        current_accounts = self._collect_equity_accounts()
+        prior_accounts = self._collect_prior_equity_accounts()
+
+        # Build prior-balance lookup by account name (case-insensitive).
+        prior_by_name: dict[str, float] = {}
+        for acct in prior_accounts:
+            name = str(acct.get("name", "")).strip().lower()
+            prior_by_name[name] = float(acct.get("net_balance", 0.0) or 0.0)
+
+        # Equity accounts are credit-normal — flip sign so positive values
+        # display as equity.
+        components: dict[str, EquityComponent] = {}
+        unmapped: list[str] = []
+
+        # Explicit activity lookup by account name.
+        activity_by_name: dict[str, EquityActivity] = {}
+        for act in self.equity_activity:
+            activity_by_name[(act.account or "").strip().lower()] = act
+
+        for acct in current_accounts:
+            name = str(acct.get("name", "")).strip()
+            if not name:
+                continue
+            component_type, label, is_explicit = self._classify_equity_account(name)
+            if not is_explicit:
+                unmapped.append(name)
+            ending = -float(acct.get("net_balance", 0.0) or 0.0)  # flip sign
+            beginning = -prior_by_name.get(name.lower(), 0.0)
+            act = activity_by_name.get(name.lower())
+            contributions = act.contributions if act else 0.0
+            distributions = act.distributions if act else 0.0
+            dividends = act.dividends if act else 0.0
+
+            component = components.get(component_type)
+            if component is None:
+                component = EquityComponent(
+                    component_type=component_type,
+                    label=label,
+                    beginning_balance=beginning,
+                    contributions=contributions,
+                    distributions=distributions,
+                    dividends=dividends,
+                    ending_balance=ending,
+                )
+                components[component_type] = component
+            else:
+                component.beginning_balance += beginning
+                component.contributions += contributions
+                component.distributions += distributions
+                component.dividends += dividends
+                component.ending_balance += ending
+
+        # Attribute net income to retained earnings.
+        if net_income:
+            re = components.setdefault(
+                "retained_earnings",
+                EquityComponent(
+                    component_type="retained_earnings",
+                    label="Retained Earnings",
+                    beginning_balance=0.0,
+                    ending_balance=0.0,
+                ),
+            )
+            re.net_income_allocation += net_income
+
+        # OCI movement — if an AOCI component exists, the movement is
+        # beginning → ending less explicit contributions / distributions.
+        if "aoci" in components:
+            aoci = components["aoci"]
+            explained = aoci.contributions + aoci.net_income_allocation - aoci.distributions - aoci.dividends
+            aoci.other_comprehensive_income = aoci.ending_balance - aoci.beginning_balance - explained
+
+        # Residual for every other component → other_movement so the
+        # rollforward balances.
+        for component in components.values():
+            if component.component_type == "aoci":
+                continue
+            explained = (
+                component.contributions
+                + component.net_income_allocation
+                - component.distributions
+                - component.dividends
+            )
+            component.other_movement = component.ending_balance - component.beginning_balance - explained
+            # Collapse tiny rounding residuals.
+            if abs(component.other_movement) < 0.005:
+                component.other_movement = 0.0
+
+        components_list = list(components.values())
+        # Deterministic order: common, APIC, retained, treasury, AOCI, other
+        priority = {
+            "common_stock": 0,
+            "additional_paid_in_capital": 1,
+            "retained_earnings": 2,
+            "treasury_stock": 3,
+            "aoci": 4,
+            "other": 5,
+        }
+        components_list.sort(key=lambda c: priority.get(c.component_type, 99))
+
+        return StatementOfChangesInEquity(
+            components=components_list,
+            beginning_total_equity=prior_total_equity if self.prior_grouping else 0.0,
+            net_income=net_income,
+            total_contributions=sum(c.contributions for c in components_list),
+            total_distributions=sum(c.distributions for c in components_list),
+            total_dividends=sum(c.dividends for c in components_list),
+            total_other_comprehensive_income=sum(c.other_comprehensive_income for c in components_list),
+            total_other_movement=sum(c.other_movement for c in components_list),
+            ending_total_equity=total_equity,
+            unmapped_accounts=unmapped,
+        )
 
     def _build_cash_flow_statement(self, net_income: float) -> CashFlowStatement:
         """

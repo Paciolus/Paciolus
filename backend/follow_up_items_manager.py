@@ -6,6 +6,7 @@ Stores only narrative descriptions, never financial data.
 from datetime import UTC, datetime
 from typing import Optional
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
 from engagement_model import Engagement, ToolRun
@@ -306,35 +307,44 @@ class FollowUpItemsManager:
     # ------------------------------------------------------------------
 
     def get_summary(self, user_id: int, engagement_id: int) -> dict:
-        """Get follow-up item counts grouped by severity, disposition, and tool source."""
+        """Get follow-up item counts grouped by severity, disposition, and tool source.
+
+        Aggregation runs in the database via GROUP BY to avoid loading every
+        row into Python memory (prevents OOM on high-volume engagements).
+        """
         engagement = self._verify_engagement_access(user_id, engagement_id)
         if not engagement:
             raise ValueError("Engagement not found or access denied")
 
-        items = (
-            self.db.query(FollowUpItem)
-            .filter(
-                FollowUpItem.engagement_id == engagement_id,
-                FollowUpItem.archived_at.is_(None),
-            )
+        base_filter = (
+            FollowUpItem.engagement_id == engagement_id,
+            FollowUpItem.archived_at.is_(None),
+        )
+
+        total = self.db.query(func.count(FollowUpItem.id)).filter(*base_filter).scalar() or 0
+
+        severity_rows = (
+            self.db.query(FollowUpItem.severity, func.count(FollowUpItem.id))
+            .filter(*base_filter)
+            .group_by(FollowUpItem.severity)
+            .all()
+        )
+        disposition_rows = (
+            self.db.query(FollowUpItem.disposition, func.count(FollowUpItem.id))
+            .filter(*base_filter)
+            .group_by(FollowUpItem.disposition)
+            .all()
+        )
+        tool_source_rows = (
+            self.db.query(FollowUpItem.tool_source, func.count(FollowUpItem.id))
+            .filter(*base_filter)
+            .group_by(FollowUpItem.tool_source)
             .all()
         )
 
-        total = len(items)
-
-        by_severity: dict[str, int] = {}
-        by_disposition: dict[str, int] = {}
-        by_tool_source: dict[str, int] = {}
-
-        for item in items:
-            sev = item.severity.value if item.severity else "unknown"
-            by_severity[sev] = by_severity.get(sev, 0) + 1
-
-            disp = item.disposition.value if item.disposition else "unknown"
-            by_disposition[disp] = by_disposition.get(disp, 0) + 1
-
-            src = item.tool_source or "unknown"
-            by_tool_source[src] = by_tool_source.get(src, 0) + 1
+        by_severity = {(sev.value if sev is not None else "unknown"): count for sev, count in severity_rows}
+        by_disposition = {(disp.value if disp is not None else "unknown"): count for disp, count in disposition_rows}
+        by_tool_source = {(src or "unknown"): count for src, count in tool_source_rows}
 
         return {
             "total_count": total,

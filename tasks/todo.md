@@ -16,7 +16,8 @@
 > new features or architectural changes. Each entry is one line.
 > Format: `- [date] commit-sha: description (files touched)`
 
-- [2026-04-14] pending: hallucination audit hotfix — /auth/refresh handler 401→403 for X-Requested-With mismatch (aligns with CSRF middleware); added .claude/agents/LLM_HALLUCINATION_AUDIT_PROMPT.md
+- [2026-04-16] 22e16dc: backlog hygiene — Sprint 611 R2/S3 bucket added to ceo-actions Backlog Blockers; Sprint 672 placeholder for Loan Amortization XLSX/PDF export (Sprint 625 deferred work)
+- [2026-04-14] a32f566: hallucination audit hotfix — /auth/refresh handler 401→403 for X-Requested-With mismatch (aligns with CSRF middleware); added .claude/agents/LLM_HALLUCINATION_AUDIT_PROMPT.md
 - [2026-04-07] 73aaa51: dependency patch — uvicorn 0.44.0, python-multipart 0.0.24 (nightly report remediation)
 - [2026-04-06] 39791ec: secret domain separation — AUDIT_CHAIN_SECRET_KEY independent from JWT, backward-compat verification fallback, TLS evidence signing updated
 - [2026-04-04] 29f768e: dependency upgrades — 14 packages updated, 3 security-relevant (fastapi 0.135.3, SQLAlchemy 2.0.49, stripe 15.0.1), tzdata 2026.1, uvicorn 0.43.0, pillow 12.2.0, next watchlist patch
@@ -38,110 +39,46 @@
 | Item | Reason | Source |
 |------|--------|--------|
 | Preflight cache Redis migration | In-memory cache is not cluster-safe; will break preview→audit flow under horizontal scaling. Migrate to Redis when scaling beyond single worker. | Security Review 2026-03-24 |
+| `PeriodFileDropZone.tsx` deferred type migration | TODO open for 3+ consecutive audit cycles. Benign incomplete type migration, not a hack. Revisit when touching the upload surface for another reason. | Project-Auditor Audit 35 (2026-04-14) |
 
 ---
 
 ## Active Phase
-> Sprints 478–531 archived to `tasks/archive/sprints-478-531-details.md` (consolidated).
-> Sprints 532–561 archived to `tasks/archive/sprints-532-561-details.md` (consolidated).
-> FIX-1A/1B, Sprint 562, FIX-2A/2B archived to `tasks/archive/fix-1-2-sprint562-details.md`.
-> FIX-3–8B, AUDIT-09–10 archived to `tasks/archive/fix-3-8b-audit-09-10-details.md`.
-> Sprints 563–569, CI-FIX archived to `tasks/archive/sprints-563-569-details.md`.
-> Sprints 570–571 archived to `tasks/archive/sprints-570-571-details.md`.
-> Sprints 572–578 archived to `tasks/archive/sprints-572-578-details.md`.
-> Sprints 579–585 archived to `tasks/archive/sprints-579-585-details.md`.
-> Sprints 586–591 archived to `tasks/archive/sprints-586-591-details.md`.
-> Sprints 592–595 archived to `tasks/archive/sprints-592-595-details.md`.
 
-### Sprint 599: Coverage Sentinel + Subagent-Verification Lesson
-**Status:** COMPLETE
-**Goal:** Replace the weekly weakness hunt's hallucinated "coverage gap" analysis with a deterministic `pytest --cov` run wired into the nightly brief, and capture the subagent-verification discipline as a reusable lesson. Both are Audit 34 top-priorities.
+> **Launch-readiness Council Review — 2026-04-16.** 8-agent consensus: code is launch-ready; gating path is CEO calendar (Phase 3 validation → Phase 4.1 Stripe cutover → legal sign-off). **Recommended path: ship on ~3-week ETA** with two engineering amendments — Sprint 673 below removes the 2026-05-09 TLS-override fuse before it collides with launch week, and Guardian's 5-item production-behavior checklist runs in parallel with Phase 3/4.1 (tracked in [`ceo-actions.md`](ceo-actions.md) "This Week's Action Map"). Full verdict tradeoff map in conversation transcript.
 
-**Problem:** Sprint 598's weekly hunt dispatched two parallel `Explore` subagents. The security-hunt agent produced verifiable findings at the file:line level; the coverage-hunt agent hallucinated — falsely claiming `ratio_engine.py`, `accrual_completeness_engine.py`, and `three_way_match_engine.py` had no test files (each has 1–3 dedicated ones), and reporting "44,081" / "55,283 lines" which were actually byte counts. The operator caught all three false claims and stripped them before acting, but the underlying workflow is wrong: coverage should stand on `pytest --cov --cov-report=json` data, not LLM introspection.
+> **Prior sprint detail:** All pre-Sprint-673 work archived under `tasks/archive/`. See [`tasks/COMPLETED_ERAS.md`](COMPLETED_ERAS.md) for the era index and archive file pointers.
 
-**Changes:**
-- [x] `scripts/overnight/agents/coverage_sentinel.py` (new) — runs `pytest --cov=. --cov-report=json` in `backend/`, parses `totals.percent_covered`, maintains a rolling 7-day history in `reports/nightly/.baseline.json` under the `coverage_sentinel` key, computes delta vs 7-day mean, ranks top 10 uncovered files by missing-line count, writes `.coverage_sentinel_<DATE>.json`. Status rules: ≥90% green, 85–90% yellow, <85% red; additional drift gates (>0.5pp under mean → yellow, >2pp → red).
-- [x] `scripts/overnight/orchestrator.py` — added `coverage_sentinel` to `AGENT_SCHEDULE` at 3:00 (between Scout at 2:45 and Sprint Shepherd at 3:30); added `AGENT_TIMEOUT_OVERRIDES` mechanism with `coverage_sentinel: 1700s` (pytest --cov is ~1.3–1.5× slower than the bare run); made the "Run complete: N/M" summary count derive from `len(AGENT_SCHEDULE) + 1` instead of the hardcoded `/6`.
-- [x] `scripts/overnight/briefing_compiler.py` — added `coverage_sentinel` to the `AGENTS` list, added `_format_coverage_section()` rendering percentage + 7-day mean + delta arrow + top uncovered files table, inserted the section between Report Auditor and Scout in the daily brief template, changed the "Agents run: N/5" hardcoded denominator to `len(AGENTS)`.
-- [x] `tasks/lessons.md` — appended new lesson "Subagent findings must be verified against live code before acting (Sprint 598)" documenting the ratio_engine/accrual/three_way_match hallucinations, the fake line counts, and the `file:line` vs structural-claim trust heuristic.
-
-**Review:**
-- Standalone dry-run against the live backend test suite: **92.09% line coverage** (79,816 / 86,671 statements, 6,855 uncovered) — status GREEN, no drift (baseline is building from today).
-- `briefing_compiler.py` regenerated `reports/nightly/2026-04-14.md` with `agents_run: 6/6`, new Coverage Sentinel section renders cleanly with the top-uncovered-files table.
-- Top uncovered files surfaced by the real data: `guards/doc_consistency_guard.py` (0%), `leadsheet_generator.py` (11.4%), `workbook_inspector.py` (18.6%), `pdf/sections/diagnostic.py` (65.7%). These are the actual coverage gaps — notably NONE of them match the hallucinated agent's claims (ratio/accrual/three_way_match). The hallucinations were total noise.
-- `.baseline.json` now carries `coverage_sentinel.history` — on 2026-04-21 this will reach 7 entries and delta tracking will start driving status on its own.
-- No changes to the backend test suite itself. No changes to production code. Pure observability infra.
+> **CEO remediation brief 2026-04-15** — Sprints 665–671 cleared the blocking TB-intake issues from the six-file test sweep. Sprints 668–671 remaining pending items archived alongside — no longer blocking launch.
 
 ---
 
-### Sprint 598: Middleware Fail-Secure Hardening + Dep Hygiene
-**Status:** COMPLETE
-**Goal:** Close two latent middleware fail-open handlers uncovered by the weekly nightly review, tighten dev-dep floors
-
-**Problem:** Weekly weakness hunt (2026-04-14) flagged two `except Exception: pass` sites in `security_middleware.py`:
-- `RateLimitIdentityMiddleware` (line 263) — any non-JWT exception (e.g., config import failure, non-int `sub` claim, unicode decode error) silently downgrades the request to the anonymous rate-limit tier with no log and no metric. Rate-limit tier bypass was invisible.
-- `ImpersonationMiddleware` (line 876) — any non-JWT exception on the pre-dispatch impersonation check was swallowed, bypassing the read-only gate. Downstream `require_current_user` still gates auth, but the defence-in-depth layer is lost when unexpected errors occur.
-
-Both are narrow defence-in-depth issues, not exploitable in the tested happy-path (hence 0/0 test failures), but the fail-open semantics violated the stated intent of both middlewares.
-
+### Sprint 611: ExportShare Object Store Migration
+**Status:** PENDING — CEO-gated (bucket provision)
+**Source:** Critic — DB bloat risk
+**File:** `backend/export_share_model.py:43`
+**Problem:** `export_data: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)` stores up to 50 MB per shared export in primary Neon Postgres. 20 concurrent shares = 1 GB of binary row storage; Neon Launch tier cap is 10 GB. Also bloats every DB backup — unclear whether zero-storage policy permits this.
 **Changes:**
-- [x] `security_middleware.py` — narrow `RateLimitIdentityMiddleware` except to `jwt.PyJWTError`, log non-JWT payload-shape failures (`TypeError`/`ValueError`) at `warning`, preserve anonymous fallthrough for genuine decode errors
-- [x] `security_middleware.py` — narrow `ImpersonationMiddleware` except to `jwt.PyJWTError`, restructure so decode failure returns early to downstream auth dependency; unexpected exception types now surface instead of being swallowed
-- [x] `backend/tests/test_rate_limit_tiered.py` — added 2 new tests: non-int `sub` triggers a warning log, malformed JWT stays silent (expected-failure path)
-- [x] `backend/tests/test_impersonation_middleware.py` (new, 9 tests) — GET pass-through, POST without auth pass-through, valid non-imp token pass-through, `imp: true` blocked on POST/PUT/DELETE, expired imp still blocks, malformed JWT pass-through to downstream, non-Bearer auth pass-through
-- [x] `backend/requirements.txt` — `python-multipart` 0.0.24 → 0.0.26 (patch), `sentry-sdk[fastapi]` 2.57.0 → 2.58.0 (minor), `prometheus_client` floor 0.22.0 → 0.25.0, `pypdf` floor 6.9.2 → 6.10.0
-- [x] `backend/requirements-dev.txt` — `ruff` floor 0.15.8 → 0.15.10, `mypy` floor 1.19.0 → 1.20.1
-
-**Review:**
-- Backend: **7,403 passed, 19 xfailed** (+11 new: 9 impersonation + 2 rate-limit) in 649s — zero regressions
-- Frontend: **1,757 passed** in 41s — zero regressions, `npm run build` clean, all 24 pages compile with dynamic CSP
-- Scope deliberately narrow: bare `except Exception: pass` was the root cause, fix is to narrow the catch to the expected exception class. Unexpected exception types now bubble up as 500s, which is fail-closed.
-- Refresh-token race condition in `auth.py:731-764` (also flagged by the weekly hunt) was left intact — the fail-secure behavior is deliberate and documented. Revisit only if multi-tab UX complaints appear.
-- Deferred to future sprint: billing/checkout orchestrator bare-except review (needs deeper saga-compensation analysis), accrual_completeness float-site audit (needs domain-model review), CSRF-exempt `/auth/forgot-password` re-evaluation for authenticated-session case (low risk).
+- [ ] Provision object store bucket (R2 or S3) with pre-signed URL pattern — CEO owns this, tracked in [`ceo-actions.md`](ceo-actions.md) "Backlog Blockers"
+- [ ] Store `export_data` in bucket keyed by `share_token_hash`; DB row keeps metadata + object key only
+- [ ] Extend cleanup scheduler to delete object when share revoked/expired
+- [ ] Backfill migration for existing shares
 
 ---
 
-### Sprint 597: DOCX File Format Support
-**Status:** COMPLETE
-**Goal:** Add Word document (.docx) as an 11th supported file format for trial balance uploads
-
+### Sprint 673: Remove DB_TLS_OVERRIDE via pooler-aware pg_stat_ssl skip
+**Status:** PENDING — engineering-owned, **time-fused (2026-05-09)**
+**Source:** Council Review 2026-04-16 — Critic (time-fused architectural debt) + Executor (front-run launch week)
+**Why now:** `DB_TLS_OVERRIDE=NEON-POOLER-PGSSL-BLINDSPOT:2026-05-09` expires in 23 days. Without the proper fix landed first, the override must either be renewed (kicks the can) or allowed to expire (hard-fails production startup during Phase 4 launch window). Fixing before Phase 4 removes one ticking clock from launch week.
+**File:** `backend/database.py:268`
+**Problem:** Production startup runs a `pg_stat_ssl` check to confirm the DB connection is encrypted. Neon's pooled endpoint (`-pooler` hostname) is a transparent connection pooler — the underlying connection IS TLS-encrypted, but `pg_stat_ssl` reports the pooler-to-backend hop, not the client-to-pooler hop. The check therefore returns `ssl=false` on a correctly encrypted connection, forcing the current override.
 **Changes:**
-- [x] `python-docx>=1.1.0` added to `backend/requirements.txt`
-- [x] `FileFormat.DOCX` enum + `FormatProfile` in `shared/file_formats.py`
-- [x] ZIP disambiguation: `_is_docx_zip()` checks for `word/` directory
-- [x] `shared/docx_parser.py` — extracts tables from DOCX via python-docx
-- [x] Parser dispatch in `shared/helpers.py` (`_parse_docx` wrapper + magic byte validation)
-- [x] `FORMAT_DOCX_ENABLED` feature flag in `config.py` (default: true)
-- [x] Frontend: `.docx` extension, MIME type, label in `utils/fileFormats.ts`
-- [x] Backend tests: `test_docx_parser.py` (29 tests — disambiguation, parsing, detection, profile)
-- [x] Updated `test_file_formats.py` (11 extensions, 13 MIME types)
-- [x] Updated `fileFormats.test.ts` (11 entries, 13 types, DOCX acceptance)
-- [x] Tier gating: paid tiers only (same as PDF/OFX/IIF/QBO/ODS)
-
-**Review:**
-- 89 backend tests pass (test_docx_parser + test_file_formats), 27 ODS tests unaffected
-- 27 frontend fileFormats tests pass
-- `npm run build` clean — all pages compile
-- DOCX parsing extracts first table with data rows; skips header-only tables
-- ZIP disambiguation: ODS (mimetype/content.xml) > DOCX (word/) > XLSX (default)
+- [ ] Detect `-pooler` in `DATABASE_URL` hostname at the TLS verification point (`backend/database.py:268`)
+- [ ] On pooled hostnames: skip the `pg_stat_ssl` assertion and log an info-level notice that the pooler-blindspot path was taken
+- [ ] On direct hostnames: retain the assertion (Neon direct endpoint, RDS, local postgres all continue to verify)
+- [ ] Add a unit test covering both branches (pooled hostname skips, direct hostname asserts)
+- [ ] Deploy; verify Render startup logs show the new pooler-aware notice and no override warning
+- [ ] Remove `DB_TLS_OVERRIDE` from Render env vars once startup is confirmed green
+- [ ] If `DB_TLS_OVERRIDE` handling path in `backend/config.py` exists solely for this case, remove it
 
 ---
-
-### Sprint 596: UnverifiedCTA — Explicit Verification Prompt on All Tool Pages
-**Status:** COMPLETE
-**Goal:** Replace silent content gating with an explicit "Verify Your Email" card so unverified users understand why tool pages appear blank
-
-**Problem:** 11 of 12 tool pages hid their entire UI behind `isAuthenticated && isVerified` with no explanation. Authenticated users who hadn't verified their email saw only the page title and a blank area below — no upload zone, no controls, no message. The `VerificationBanner` in the top shell existed but was a small dismissible bar, easily overlooked. Users assumed the app was broken.
-
-**Changes:**
-- [x] New `UnverifiedCTA` component (`frontend/src/components/shared/UnverifiedCTA.tsx`) — email icon, "Verify Your Email" heading, explanation text, pointer to the resend banner. Oat & Obsidian tokens, motion entrance animation. Parallel to `GuestCTA`.
-- [x] Exported from `frontend/src/components/shared/index.ts`
-- [x] Added `{isAuthenticated && !isVerified && (<UnverifiedCTA />)}` block to all 11 tool pages: trial-balance, ap-testing, ar-aging, bank-rec, fixed-assets, inventory-testing, journal-entry-testing, payroll-testing, revenue-testing, statistical-sampling, three-way-match
-- [x] Multi-period page left untouched — already has its own inline "Verify Your Email" card (Pattern B)
-- [x] `npm run build` passes — all 12 tool pages compile cleanly
-
-**Review:**
-- Consistent three-state UX across all tools: unauthenticated → GuestCTA, unverified → UnverifiedCTA, verified → full tool UI
-- The `VerificationBanner` in `AuthenticatedShell` still renders above the CTA for redundancy (resend button lives there)
-- No backend changes; purely frontend UX improvement
-

@@ -3186,6 +3186,58 @@
         "title": "AdjustmentLineResponse",
         "type": "object"
       },
+      "AdjustmentRequest": {
+        "properties": {
+          "amount": {
+            "maxLength": 24,
+            "minLength": 1,
+            "title": "Amount",
+            "type": "string"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "difference_type": {
+            "enum": [
+              "permanent",
+              "temporary"
+            ],
+            "title": "Difference Type",
+            "type": "string"
+          },
+          "direction": {
+            "enum": [
+              "add",
+              "subtract"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "amount",
+          "difference_type",
+          "direction"
+        ],
+        "title": "AdjustmentRequest",
+        "type": "object"
+      },
       "AdjustmentSetResponse": {
         "properties": {
           "approved_count": {
@@ -3428,6 +3480,105 @@
           "organization_name"
         ],
         "title": "AdminOverviewResponse",
+        "type": "object"
+      },
+      "AgingBucketsRequest": {
+        "properties": {
+          "current": {
+            "default": "0",
+            "maxLength": 24,
+            "title": "Current",
+            "type": "string"
+          },
+          "days_1_30": {
+            "default": "0",
+            "maxLength": 24,
+            "title": "Days 1 30",
+            "type": "string"
+          },
+          "days_31_60": {
+            "default": "0",
+            "maxLength": 24,
+            "title": "Days 31 60",
+            "type": "string"
+          },
+          "days_61_90": {
+            "default": "0",
+            "maxLength": 24,
+            "title": "Days 61 90",
+            "type": "string"
+          },
+          "days_over_90": {
+            "default": "0",
+            "maxLength": 24,
+            "title": "Days Over 90",
+            "type": "string"
+          }
+        },
+        "title": "AgingBucketsRequest",
+        "type": "object"
+      },
+      "AmortizationScheduleResponse": {
+        "properties": {
+          "annual_summary": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Annual Summary",
+            "type": "array"
+          },
+          "inputs": {
+            "additionalProperties": true,
+            "title": "Inputs",
+            "type": "object"
+          },
+          "journal_entry_templates": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Journal Entry Templates",
+            "type": "array"
+          },
+          "payoff_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payoff Date"
+          },
+          "schedule": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Schedule",
+            "type": "array"
+          },
+          "total_interest": {
+            "title": "Total Interest",
+            "type": "string"
+          },
+          "total_payments": {
+            "title": "Total Payments",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schedule",
+          "annual_summary",
+          "inputs",
+          "total_interest",
+          "total_payments",
+          "payoff_date",
+          "journal_entry_templates"
+        ],
+        "title": "AmortizationScheduleResponse",
         "type": "object"
       },
       "ApplyAdjustmentsRequest": {
@@ -5377,6 +5528,11 @@
             "title": "File",
             "type": "string"
           },
+          "force_resubmit": {
+            "default": false,
+            "title": "Force Resubmit",
+            "type": "boolean"
+          },
           "materiality_threshold": {
             "default": 0.0,
             "minimum": 0.0,
@@ -5883,6 +6039,59 @@
         "title": "Body_upload_rate_table_audit_currency_rates_post",
         "type": "object"
       },
+      "BookToTaxRequest": {
+        "properties": {
+          "adjustments": {
+            "items": {
+              "$ref": "#/components/schemas/AdjustmentRequest"
+            },
+            "maxItems": 500,
+            "title": "Adjustments",
+            "type": "array"
+          },
+          "book_pretax_income": {
+            "maxLength": 24,
+            "minLength": 1,
+            "title": "Book Pretax Income",
+            "type": "string"
+          },
+          "federal_tax_rate": {
+            "maxLength": 12,
+            "minLength": 1,
+            "title": "Federal Tax Rate",
+            "type": "string"
+          },
+          "rollforward": {
+            "$ref": "#/components/schemas/RollforwardRequest"
+          },
+          "state_tax_rate": {
+            "default": "0",
+            "maxLength": 12,
+            "title": "State Tax Rate",
+            "type": "string"
+          },
+          "tax_year": {
+            "maximum": 2099.0,
+            "minimum": 2000.0,
+            "title": "Tax Year",
+            "type": "integer"
+          },
+          "total_assets": {
+            "maxLength": 24,
+            "minLength": 1,
+            "title": "Total Assets",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tax_year",
+          "book_pretax_income",
+          "total_assets",
+          "federal_tax_rate"
+        ],
+        "title": "BookToTaxRequest",
+        "type": "object"
+      },
       "BrandingResponse": {
         "description": "Response for branding GET/PUT/POST-logo endpoints.",
         "properties": {
@@ -6131,6 +6340,53 @@
           }
         },
         "title": "CancelRequest",
+        "type": "object"
+      },
+      "CashFlowProjectionRequest": {
+        "properties": {
+          "ap_aging": {
+            "$ref": "#/components/schemas/AgingBucketsRequest"
+          },
+          "ar_aging": {
+            "$ref": "#/components/schemas/AgingBucketsRequest"
+          },
+          "min_safe_cash": {
+            "anyOf": [
+              {
+                "maxLength": 24,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Safe Cash"
+          },
+          "opening_balance": {
+            "maxLength": 24,
+            "minLength": 1,
+            "title": "Opening Balance",
+            "type": "string"
+          },
+          "recurring_flows": {
+            "items": {
+              "$ref": "#/components/schemas/RecurringFlowRequest"
+            },
+            "maxItems": 100,
+            "title": "Recurring Flows",
+            "type": "array"
+          },
+          "start_date": {
+            "format": "date",
+            "title": "Start Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "opening_balance",
+          "start_date"
+        ],
+        "title": "CashFlowProjectionRequest",
         "type": "object"
       },
       "CategoryVarianceResponse": {
@@ -8094,6 +8350,61 @@
         "title": "CurrencyConversionMemoInput",
         "type": "object"
       },
+      "CustomRuleRequest": {
+        "properties": {
+          "code": {
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Code",
+            "type": "string"
+          },
+          "mitigation": {
+            "default": "",
+            "maxLength": 500,
+            "title": "Mitigation",
+            "type": "string"
+          },
+          "permissions_alternate": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Permissions Alternate",
+            "type": "array"
+          },
+          "permissions_required": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Permissions Required",
+            "type": "array"
+          },
+          "rationale": {
+            "default": "",
+            "maxLength": 500,
+            "title": "Rationale",
+            "type": "string"
+          },
+          "severity": {
+            "default": "medium",
+            "title": "Severity",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "title"
+        ],
+        "title": "CustomRuleRequest",
+        "type": "object"
+      },
       "CustomerDetailResponse": {
         "description": "Full customer account profile.",
         "properties": {
@@ -8505,6 +8816,208 @@
           "latency_ms"
         ],
         "title": "DependencyStatus",
+        "type": "object"
+      },
+      "DepreciationRequest": {
+        "properties": {
+          "asset_name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Asset Name",
+            "type": "string"
+          },
+          "book_method": {
+            "default": "straight_line",
+            "enum": [
+              "straight_line",
+              "declining_balance",
+              "sum_of_years_digits",
+              "units_of_production"
+            ],
+            "title": "Book Method",
+            "type": "string"
+          },
+          "cost": {
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Cost",
+            "type": "string"
+          },
+          "db_factor": {
+            "default": "2",
+            "maxLength": 10,
+            "title": "Db Factor",
+            "type": "string"
+          },
+          "macrs_convention": {
+            "default": "half_year",
+            "enum": [
+              "half_year",
+              "mid_quarter",
+              "mid_month"
+            ],
+            "title": "Macrs Convention",
+            "type": "string"
+          },
+          "macrs_property_class": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Macrs Property Class"
+          },
+          "macrs_system": {
+            "anyOf": [
+              {
+                "enum": [
+                  "gds_200db",
+                  "gds_150db",
+                  "gds_sl"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Macrs System"
+          },
+          "placed_in_service_month": {
+            "default": 1,
+            "maximum": 12.0,
+            "minimum": 1.0,
+            "title": "Placed In Service Month",
+            "type": "integer"
+          },
+          "placed_in_service_quarter": {
+            "default": 1,
+            "enum": [
+              1,
+              2,
+              3,
+              4
+            ],
+            "title": "Placed In Service Quarter",
+            "type": "integer"
+          },
+          "placed_in_service_year": {
+            "anyOf": [
+              {
+                "maximum": 2100.0,
+                "minimum": 1900.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Placed In Service Year"
+          },
+          "salvage_value": {
+            "default": "0",
+            "maxLength": 20,
+            "title": "Salvage Value",
+            "type": "string"
+          },
+          "tax_rate": {
+            "default": "0.21",
+            "maxLength": 10,
+            "title": "Tax Rate",
+            "type": "string"
+          },
+          "units_per_year": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Units Per Year",
+            "type": "array"
+          },
+          "units_total": {
+            "anyOf": [
+              {
+                "maxLength": 20,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Units Total"
+          },
+          "useful_life_years": {
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Useful Life Years",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "asset_name",
+          "cost",
+          "useful_life_years"
+        ],
+        "title": "DepreciationRequest",
+        "type": "object"
+      },
+      "DepreciationResponse": {
+        "properties": {
+          "book_schedule": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Book Schedule",
+            "type": "array"
+          },
+          "book_tax_comparison": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Book Tax Comparison",
+            "type": "array"
+          },
+          "cumulative_deferred_tax": {
+            "title": "Cumulative Deferred Tax",
+            "type": "string"
+          },
+          "inputs": {
+            "additionalProperties": true,
+            "title": "Inputs",
+            "type": "object"
+          },
+          "tax_schedule": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Tax Schedule",
+            "type": "array"
+          },
+          "total_book_depreciation": {
+            "title": "Total Book Depreciation",
+            "type": "string"
+          },
+          "total_tax_depreciation": {
+            "title": "Total Tax Depreciation",
+            "type": "string"
+          }
+        },
+        "required": [
+          "inputs",
+          "book_schedule",
+          "tax_schedule",
+          "book_tax_comparison",
+          "total_book_depreciation",
+          "total_tax_depreciation",
+          "cumulative_deferred_tax"
+        ],
+        "title": "DepreciationResponse",
         "type": "object"
       },
       "DetailResponse": {
@@ -9056,6 +9569,189 @@
         "title": "EmailVerifyResponse",
         "type": "object"
       },
+      "EmployeePayrollRequest": {
+        "properties": {
+          "age": {
+            "anyOf": [
+              {
+                "maximum": 120.0,
+                "minimum": 14.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age"
+          },
+          "employee_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Employee Id",
+            "type": "string"
+          },
+          "employee_name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Employee Name",
+            "type": "string"
+          },
+          "federal_wages": {
+            "default": "0",
+            "maxLength": 24,
+            "title": "Federal Wages",
+            "type": "string"
+          },
+          "federal_withholding": {
+            "default": "0",
+            "maxLength": 24,
+            "title": "Federal Withholding",
+            "type": "string"
+          },
+          "hsa_contributions": {
+            "default": "0",
+            "maxLength": 24,
+            "title": "Hsa Contributions",
+            "type": "string"
+          },
+          "hsa_coverage": {
+            "default": "none",
+            "enum": [
+              "none",
+              "self_only",
+              "family"
+            ],
+            "title": "Hsa Coverage",
+            "type": "string"
+          },
+          "medicare_tax_withheld": {
+            "default": "0",
+            "maxLength": 24,
+            "title": "Medicare Tax Withheld",
+            "type": "string"
+          },
+          "medicare_wages": {
+            "default": "0",
+            "maxLength": 24,
+            "title": "Medicare Wages",
+            "type": "string"
+          },
+          "retirement_401k": {
+            "default": "0",
+            "maxLength": 24,
+            "title": "Retirement 401K",
+            "type": "string"
+          },
+          "retirement_plan_type": {
+            "anyOf": [
+              {
+                "enum": [
+                  "401k",
+                  "simple_ira"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retirement Plan Type"
+          },
+          "retirement_simple_ira": {
+            "default": "0",
+            "maxLength": 24,
+            "title": "Retirement Simple Ira",
+            "type": "string"
+          },
+          "ss_tax_withheld": {
+            "default": "0",
+            "maxLength": 24,
+            "title": "Ss Tax Withheld",
+            "type": "string"
+          },
+          "ss_wages": {
+            "default": "0",
+            "maxLength": 24,
+            "title": "Ss Wages",
+            "type": "string"
+          }
+        },
+        "required": [
+          "employee_id",
+          "employee_name"
+        ],
+        "title": "EmployeePayrollRequest",
+        "type": "object"
+      },
+      "EmployeeW2DraftRequest": {
+        "properties": {
+          "box_12_code_d_401k": {
+            "default": "0",
+            "maxLength": 24,
+            "title": "Box 12 Code D 401K",
+            "type": "string"
+          },
+          "box_12_code_s_simple": {
+            "default": "0",
+            "maxLength": 24,
+            "title": "Box 12 Code S Simple",
+            "type": "string"
+          },
+          "box_12_code_w_hsa": {
+            "default": "0",
+            "maxLength": 24,
+            "title": "Box 12 Code W Hsa",
+            "type": "string"
+          },
+          "box_1_federal_wages": {
+            "default": "0",
+            "maxLength": 24,
+            "title": "Box 1 Federal Wages",
+            "type": "string"
+          },
+          "box_2_federal_withholding": {
+            "default": "0",
+            "maxLength": 24,
+            "title": "Box 2 Federal Withholding",
+            "type": "string"
+          },
+          "box_3_ss_wages": {
+            "default": "0",
+            "maxLength": 24,
+            "title": "Box 3 Ss Wages",
+            "type": "string"
+          },
+          "box_4_ss_tax_withheld": {
+            "default": "0",
+            "maxLength": 24,
+            "title": "Box 4 Ss Tax Withheld",
+            "type": "string"
+          },
+          "box_5_medicare_wages": {
+            "default": "0",
+            "maxLength": 24,
+            "title": "Box 5 Medicare Wages",
+            "type": "string"
+          },
+          "box_6_medicare_tax_withheld": {
+            "default": "0",
+            "maxLength": 24,
+            "title": "Box 6 Medicare Tax Withheld",
+            "type": "string"
+          },
+          "employee_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Employee Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "employee_id"
+        ],
+        "title": "EmployeeW2DraftRequest",
+        "type": "object"
+      },
       "EngagementCreate": {
         "properties": {
           "client_id": {
@@ -9362,6 +10058,75 @@
           }
         },
         "title": "EngagementUpdate",
+        "type": "object"
+      },
+      "EntityAccountRequest": {
+        "properties": {
+          "account": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Account",
+            "type": "string"
+          },
+          "counterparty_entity": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Counterparty Entity"
+          },
+          "credit": {
+            "default": "0",
+            "maxLength": 24,
+            "title": "Credit",
+            "type": "string"
+          },
+          "debit": {
+            "default": "0",
+            "maxLength": 24,
+            "title": "Debit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account"
+        ],
+        "title": "EntityAccountRequest",
+        "type": "object"
+      },
+      "EntityTBRequest": {
+        "properties": {
+          "accounts": {
+            "items": {
+              "$ref": "#/components/schemas/EntityAccountRequest"
+            },
+            "maxItems": 5000,
+            "title": "Accounts",
+            "type": "array"
+          },
+          "entity_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "entity_name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Entity Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entity_id",
+          "entity_name"
+        ],
+        "title": "EntityTBRequest",
         "type": "object"
       },
       "EnumOptionResponse": {
@@ -9933,6 +10698,28 @@
           "export_format"
         ],
         "title": "ExportShareResponse",
+        "type": "object"
+      },
+      "ExtraPaymentRequest": {
+        "properties": {
+          "amount": {
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Amount",
+            "type": "string"
+          },
+          "period_number": {
+            "maximum": 600.0,
+            "minimum": 1.0,
+            "title": "Period Number",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "period_number",
+          "amount"
+        ],
+        "title": "ExtraPaymentRequest",
         "type": "object"
       },
       "FAColumnDetectionResponse": {
@@ -11482,6 +12269,76 @@
         "title": "ForgotPasswordResponse",
         "type": "object"
       },
+      "Form1099Request": {
+        "properties": {
+          "payments": {
+            "items": {
+              "$ref": "#/components/schemas/PaymentRequest"
+            },
+            "maxItems": 50000,
+            "title": "Payments",
+            "type": "array"
+          },
+          "tax_year": {
+            "maximum": 2099.0,
+            "minimum": 2000.0,
+            "title": "Tax Year",
+            "type": "integer"
+          },
+          "vendors": {
+            "items": {
+              "$ref": "#/components/schemas/VendorRequest"
+            },
+            "maxItems": 5000,
+            "title": "Vendors",
+            "type": "array"
+          }
+        },
+        "required": [
+          "tax_year"
+        ],
+        "title": "Form1099Request",
+        "type": "object"
+      },
+      "Form941QuarterRequest": {
+        "properties": {
+          "quarter": {
+            "maximum": 4.0,
+            "minimum": 1.0,
+            "title": "Quarter",
+            "type": "integer"
+          },
+          "total_federal_wages": {
+            "default": "0",
+            "maxLength": 24,
+            "title": "Total Federal Wages",
+            "type": "string"
+          },
+          "total_federal_withholding": {
+            "default": "0",
+            "maxLength": 24,
+            "title": "Total Federal Withholding",
+            "type": "string"
+          },
+          "total_medicare_wages": {
+            "default": "0",
+            "maxLength": 24,
+            "title": "Total Medicare Wages",
+            "type": "string"
+          },
+          "total_ss_wages": {
+            "default": "0",
+            "maxLength": 24,
+            "title": "Total Ss Wages",
+            "type": "string"
+          }
+        },
+        "required": [
+          "quarter"
+        ],
+        "title": "Form941QuarterRequest",
+        "type": "object"
+      },
       "GLColumnDetectionResponse": {
         "description": "GL column auto-detection result.",
         "properties": {
@@ -11712,6 +12569,180 @@
         "title": "HealthResponse",
         "type": "object"
       },
+      "HeatmapRequest": {
+        "description": "Signals can be passed either pre-normalized (`signals`) or as upstream\nengine outputs in their native dict shape (the adapter functions translate).\nAll fields are optional — the engine runs against whatever subset is given.",
+        "properties": {
+          "accrual_findings": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Accrual Findings",
+            "type": "array"
+          },
+          "audit_anomalies": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Audit Anomalies",
+            "type": "array"
+          },
+          "classification_issues": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Classification Issues",
+            "type": "array"
+          },
+          "composite_risk_profile": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Composite Risk Profile"
+          },
+          "cutoff_flags": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Cutoff Flags",
+            "type": "array"
+          },
+          "signals": {
+            "items": {
+              "$ref": "#/components/schemas/RawSignalRequest"
+            },
+            "title": "Signals",
+            "type": "array"
+          }
+        },
+        "title": "HeatmapRequest",
+        "type": "object"
+      },
+      "HeatmapResponse": {
+        "properties": {
+          "high_priority_count": {
+            "title": "High Priority Count",
+            "type": "integer"
+          },
+          "low_priority_count": {
+            "title": "Low Priority Count",
+            "type": "integer"
+          },
+          "moderate_priority_count": {
+            "title": "Moderate Priority Count",
+            "type": "integer"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/HeatmapRowResponse"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "sources_active": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Sources Active",
+            "type": "array"
+          },
+          "total_accounts_with_signals": {
+            "title": "Total Accounts With Signals",
+            "type": "integer"
+          },
+          "total_signals": {
+            "title": "Total Signals",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "rows",
+          "total_accounts_with_signals",
+          "high_priority_count",
+          "moderate_priority_count",
+          "low_priority_count",
+          "total_signals",
+          "sources_active"
+        ],
+        "title": "HeatmapResponse",
+        "type": "object"
+      },
+      "HeatmapRowResponse": {
+        "properties": {
+          "account_name": {
+            "title": "Account Name",
+            "type": "string"
+          },
+          "account_number": {
+            "title": "Account Number",
+            "type": "string"
+          },
+          "issues": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "priority_tier": {
+            "title": "Priority Tier",
+            "type": "string"
+          },
+          "rank": {
+            "title": "Rank",
+            "type": "integer"
+          },
+          "severities": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Severities",
+            "type": "object"
+          },
+          "signal_count": {
+            "title": "Signal Count",
+            "type": "integer"
+          },
+          "sources": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "total_materiality": {
+            "title": "Total Materiality",
+            "type": "string"
+          },
+          "weighted_score": {
+            "title": "Weighted Score",
+            "type": "number"
+          }
+        },
+        "required": [
+          "account_number",
+          "account_name",
+          "signal_count",
+          "weighted_score",
+          "sources",
+          "severities",
+          "issues",
+          "total_materiality",
+          "priority_tier",
+          "rank"
+        ],
+        "title": "HeatmapRowResponse",
+        "type": "object"
+      },
       "ImpersonationResponse": {
         "properties": {
           "access_token": {
@@ -11843,6 +12874,30 @@
           "available_industries"
         ],
         "title": "IndustryRatiosResponse",
+        "type": "object"
+      },
+      "IntercompanyEliminationRequest": {
+        "properties": {
+          "entities": {
+            "items": {
+              "$ref": "#/components/schemas/EntityTBRequest"
+            },
+            "maxItems": 50,
+            "minItems": 2,
+            "title": "Entities",
+            "type": "array"
+          },
+          "tolerance": {
+            "default": "1.00",
+            "maxLength": 12,
+            "title": "Tolerance",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entities"
+        ],
+        "title": "IntercompanyEliminationRequest",
         "type": "object"
       },
       "InvColumnDetectionResponse": {
@@ -13210,6 +14265,198 @@
         "title": "LeadSheetMovementSummaryResponse",
         "type": "object"
       },
+      "LeaseAccountingRequest": {
+        "properties": {
+          "annual_discount_rate": {
+            "maxLength": 12,
+            "minLength": 1,
+            "title": "Annual Discount Rate",
+            "type": "string"
+          },
+          "annual_escalation_rate": {
+            "default": "0",
+            "maxLength": 12,
+            "title": "Annual Escalation Rate",
+            "type": "string"
+          },
+          "asset_fair_value": {
+            "anyOf": [
+              {
+                "maxLength": 20,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asset Fair Value"
+          },
+          "asset_useful_life_years": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asset Useful Life Years"
+          },
+          "bargain_purchase_option": {
+            "default": false,
+            "title": "Bargain Purchase Option",
+            "type": "boolean"
+          },
+          "frequency": {
+            "default": "monthly",
+            "enum": [
+              "monthly",
+              "quarterly",
+              "semi-annual",
+              "annual"
+            ],
+            "title": "Frequency",
+            "type": "string"
+          },
+          "initial_direct_costs": {
+            "default": "0",
+            "maxLength": 20,
+            "title": "Initial Direct Costs",
+            "type": "string"
+          },
+          "lease_incentives": {
+            "default": "0",
+            "maxLength": 20,
+            "title": "Lease Incentives",
+            "type": "string"
+          },
+          "lease_name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Lease Name",
+            "type": "string"
+          },
+          "payment_amount": {
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Payment Amount",
+            "type": "string"
+          },
+          "payments_in_advance": {
+            "default": true,
+            "title": "Payments In Advance",
+            "type": "boolean"
+          },
+          "prepaid_lease_payments": {
+            "default": "0",
+            "maxLength": 20,
+            "title": "Prepaid Lease Payments",
+            "type": "string"
+          },
+          "specialized_nature": {
+            "default": false,
+            "title": "Specialized Nature",
+            "type": "boolean"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date"
+          },
+          "term_periods": {
+            "maximum": 600.0,
+            "minimum": 1.0,
+            "title": "Term Periods",
+            "type": "integer"
+          },
+          "transfers_ownership": {
+            "default": false,
+            "title": "Transfers Ownership",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "lease_name",
+          "payment_amount",
+          "term_periods",
+          "annual_discount_rate"
+        ],
+        "title": "LeaseAccountingRequest",
+        "type": "object"
+      },
+      "LeaseAccountingResponse": {
+        "properties": {
+          "classification": {
+            "additionalProperties": true,
+            "title": "Classification",
+            "type": "object"
+          },
+          "disclosure_tables": {
+            "additionalProperties": true,
+            "title": "Disclosure Tables",
+            "type": "object"
+          },
+          "initial_lease_liability": {
+            "title": "Initial Lease Liability",
+            "type": "string"
+          },
+          "initial_rou_asset": {
+            "title": "Initial Rou Asset",
+            "type": "string"
+          },
+          "inputs": {
+            "additionalProperties": true,
+            "title": "Inputs",
+            "type": "object"
+          },
+          "liability_schedule": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Liability Schedule",
+            "type": "array"
+          },
+          "rou_schedule": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Rou Schedule",
+            "type": "array"
+          },
+          "total_interest_expense": {
+            "title": "Total Interest Expense",
+            "type": "string"
+          },
+          "total_lease_cost": {
+            "title": "Total Lease Cost",
+            "type": "string"
+          }
+        },
+        "required": [
+          "inputs",
+          "classification",
+          "initial_lease_liability",
+          "initial_rou_asset",
+          "liability_schedule",
+          "rou_schedule",
+          "disclosure_tables",
+          "total_lease_cost",
+          "total_interest_expense"
+        ],
+        "title": "LeaseAccountingResponse",
+        "type": "object"
+      },
       "LivenessResponse": {
         "properties": {
           "status": {
@@ -13232,6 +14479,96 @@
           "version"
         ],
         "title": "LivenessResponse",
+        "type": "object"
+      },
+      "LoanAmortizationRequest": {
+        "properties": {
+          "annual_rate": {
+            "maxLength": 12,
+            "minLength": 1,
+            "title": "Annual Rate",
+            "type": "string"
+          },
+          "balloon_amount": {
+            "anyOf": [
+              {
+                "maxLength": 20,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Balloon Amount"
+          },
+          "extra_payments": {
+            "items": {
+              "$ref": "#/components/schemas/ExtraPaymentRequest"
+            },
+            "maxItems": 200,
+            "title": "Extra Payments",
+            "type": "array"
+          },
+          "frequency": {
+            "default": "monthly",
+            "enum": [
+              "monthly",
+              "quarterly",
+              "semi-annual",
+              "annual"
+            ],
+            "title": "Frequency",
+            "type": "string"
+          },
+          "method": {
+            "default": "standard",
+            "enum": [
+              "standard",
+              "interest_only",
+              "balloon"
+            ],
+            "title": "Method",
+            "type": "string"
+          },
+          "principal": {
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Principal",
+            "type": "string"
+          },
+          "rate_changes": {
+            "items": {
+              "$ref": "#/components/schemas/RateChangeRequest"
+            },
+            "maxItems": 50,
+            "title": "Rate Changes",
+            "type": "array"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date"
+          },
+          "term_periods": {
+            "maximum": 600.0,
+            "minimum": 1.0,
+            "title": "Term Periods",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "principal",
+          "annual_rate",
+          "term_periods"
+        ],
+        "title": "LoanAmortizationRequest",
         "type": "object"
       },
       "LogoChurn": {
@@ -14738,6 +16075,80 @@
           "new_password"
         ],
         "title": "PasswordChange",
+        "type": "object"
+      },
+      "PaymentRequest": {
+        "properties": {
+          "amount": {
+            "maxLength": 24,
+            "minLength": 1,
+            "title": "Amount",
+            "type": "string"
+          },
+          "invoice_number": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invoice Number"
+          },
+          "payment_category": {
+            "default": "nonemployee_comp",
+            "enum": [
+              "nonemployee_comp",
+              "rents",
+              "royalties",
+              "medical",
+              "legal",
+              "interest",
+              "other"
+            ],
+            "title": "Payment Category",
+            "type": "string"
+          },
+          "payment_date": {
+            "anyOf": [
+              {
+                "maxLength": 20,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Date"
+          },
+          "payment_method": {
+            "default": "check",
+            "enum": [
+              "check",
+              "ach",
+              "wire",
+              "cash",
+              "credit_card",
+              "paypal",
+              "unknown"
+            ],
+            "title": "Payment Method",
+            "type": "string"
+          },
+          "vendor_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Vendor Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "vendor_id",
+          "amount"
+        ],
+        "title": "PaymentRequest",
         "type": "object"
       },
       "PayrollColumnDetectionResponse": {
@@ -16687,6 +18098,68 @@
         "title": "PreFlightCSVInput",
         "type": "object"
       },
+      "PreFlightCategoryCompletenessResponse": {
+        "description": "Sprint 631: GAAP category completeness snapshot.",
+        "properties": {
+          "asset_count": {
+            "title": "Asset Count",
+            "type": "integer"
+          },
+          "cogs_gap": {
+            "default": false,
+            "title": "Cogs Gap",
+            "type": "boolean"
+          },
+          "cogs_total": {
+            "default": 0.0,
+            "title": "Cogs Total",
+            "type": "number"
+          },
+          "equity_count": {
+            "title": "Equity Count",
+            "type": "integer"
+          },
+          "expense_count": {
+            "title": "Expense Count",
+            "type": "integer"
+          },
+          "liability_count": {
+            "title": "Liability Count",
+            "type": "integer"
+          },
+          "missing_categories": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing Categories",
+            "type": "array"
+          },
+          "revenue_count": {
+            "title": "Revenue Count",
+            "type": "integer"
+          },
+          "revenue_total": {
+            "default": 0.0,
+            "title": "Revenue Total",
+            "type": "number"
+          },
+          "unknown_count": {
+            "title": "Unknown Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "asset_count",
+          "liability_count",
+          "equity_count",
+          "revenue_count",
+          "expense_count",
+          "unknown_count"
+        ],
+        "title": "PreFlightCategoryCompletenessResponse",
+        "type": "object"
+      },
       "PreFlightColumnQualityResponse": {
         "description": "Detection confidence for a single column role.",
         "properties": {
@@ -17011,6 +18484,16 @@
               }
             ]
           },
+          "category_completeness": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PreFlightCategoryCompletenessResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "column_count": {
             "title": "Column Count",
             "type": "integer"
@@ -17231,6 +18714,28 @@
         "title": "PurchaseOrderResponse",
         "type": "object"
       },
+      "RateChangeRequest": {
+        "properties": {
+          "new_annual_rate": {
+            "maxLength": 12,
+            "minLength": 1,
+            "title": "New Annual Rate",
+            "type": "string"
+          },
+          "period_number": {
+            "maximum": 600.0,
+            "minimum": 1.0,
+            "title": "Period Number",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "period_number",
+          "new_annual_rate"
+        ],
+        "title": "RateChangeRequest",
+        "type": "object"
+      },
       "RateTableStatusResponse": {
         "description": "Response for rate table status check.",
         "properties": {
@@ -17370,6 +18875,61 @@
           "is_percentage"
         ],
         "title": "RatioVarianceResponse",
+        "type": "object"
+      },
+      "RawSignalRequest": {
+        "description": "A direct RiskSignal record — caller has already normalized.",
+        "properties": {
+          "account_name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Account Name",
+            "type": "string"
+          },
+          "account_number": {
+            "default": "",
+            "maxLength": 64,
+            "title": "Account Number",
+            "type": "string"
+          },
+          "confidence": {
+            "default": 1.0,
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "issue": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Issue",
+            "type": "string"
+          },
+          "materiality": {
+            "default": "0",
+            "maxLength": 20,
+            "title": "Materiality",
+            "type": "string"
+          },
+          "severity": {
+            "default": "medium",
+            "maxLength": 16,
+            "title": "Severity",
+            "type": "string"
+          },
+          "source": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_name",
+          "source",
+          "issue"
+        ],
+        "title": "RawSignalRequest",
         "type": "object"
       },
       "ReadinessResponse": {
@@ -18033,6 +19593,45 @@
         "title": "ReconciliationSummaryResponse",
         "type": "object"
       },
+      "RecurringFlowRequest": {
+        "properties": {
+          "amount": {
+            "maxLength": 24,
+            "minLength": 1,
+            "title": "Amount",
+            "type": "string"
+          },
+          "first_date": {
+            "format": "date",
+            "title": "First Date",
+            "type": "string"
+          },
+          "frequency": {
+            "enum": [
+              "weekly",
+              "biweekly",
+              "monthly",
+              "quarterly"
+            ],
+            "title": "Frequency",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "amount",
+          "frequency",
+          "first_date"
+        ],
+        "title": "RecurringFlowRequest",
+        "type": "object"
+      },
       "RefundRequest": {
         "properties": {
           "amount_cents": {
@@ -18084,6 +19683,7 @@
         "description": "Request body for reset-password (consume token + set new password).",
         "properties": {
           "new_password": {
+            "maxLength": 128,
             "minLength": 8,
             "title": "New Password",
             "type": "string"
@@ -19059,6 +20659,47 @@
           "anomaly_types"
         ],
         "title": "RiskSummaryResponse",
+        "type": "object"
+      },
+      "RolePermissionRequest": {
+        "properties": {
+          "permissions": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 200,
+            "title": "Permissions",
+            "type": "array"
+          },
+          "role_code": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Role Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role_code"
+        ],
+        "title": "RolePermissionRequest",
+        "type": "object"
+      },
+      "RollforwardRequest": {
+        "properties": {
+          "beginning_dta": {
+            "default": "0",
+            "maxLength": 24,
+            "title": "Beginning Dta",
+            "type": "string"
+          },
+          "beginning_dtl": {
+            "default": "0",
+            "maxLength": 24,
+            "title": "Beginning Dtl",
+            "type": "string"
+          }
+        },
+        "title": "RollforwardRequest",
         "type": "object"
       },
       "RollingAnalysisResponse": {
@@ -20337,6 +21978,86 @@
           "total_rates"
         ],
         "title": "SingleRateResponse",
+        "type": "object"
+      },
+      "SodAnalysisRequest": {
+        "properties": {
+          "extra_rules": {
+            "items": {
+              "$ref": "#/components/schemas/CustomRuleRequest"
+            },
+            "maxItems": 200,
+            "title": "Extra Rules",
+            "type": "array"
+          },
+          "role_permissions": {
+            "items": {
+              "$ref": "#/components/schemas/RolePermissionRequest"
+            },
+            "maxItems": 2000,
+            "title": "Role Permissions",
+            "type": "array"
+          },
+          "user_assignments": {
+            "items": {
+              "$ref": "#/components/schemas/UserAssignmentRequest"
+            },
+            "maxItems": 10000,
+            "title": "User Assignments",
+            "type": "array"
+          }
+        },
+        "required": [
+          "user_assignments",
+          "role_permissions"
+        ],
+        "title": "SodAnalysisRequest",
+        "type": "object"
+      },
+      "SodAnalysisResponse": {
+        "properties": {
+          "conflicts": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Conflicts",
+            "type": "array"
+          },
+          "high_risk_users": {
+            "title": "High Risk Users",
+            "type": "integer"
+          },
+          "rules_evaluated": {
+            "title": "Rules Evaluated",
+            "type": "integer"
+          },
+          "user_summaries": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "User Summaries",
+            "type": "array"
+          },
+          "users_evaluated": {
+            "title": "Users Evaluated",
+            "type": "integer"
+          },
+          "users_with_conflicts": {
+            "title": "Users With Conflicts",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "conflicts",
+          "user_summaries",
+          "rules_evaluated",
+          "users_evaluated",
+          "users_with_conflicts",
+          "high_risk_users"
+        ],
+        "title": "SodAnalysisResponse",
         "type": "object"
       },
       "SubscriberCounts": {
@@ -22399,6 +24120,36 @@
         "title": "UsageResponse",
         "type": "object"
       },
+      "UserAssignmentRequest": {
+        "properties": {
+          "role_codes": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Role Codes",
+            "type": "array"
+          },
+          "user_id": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "User Id",
+            "type": "string"
+          },
+          "user_name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "User Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "user_name"
+        ],
+        "title": "UserAssignmentRequest",
+        "type": "object"
+      },
       "UserCreate": {
         "additionalProperties": false,
         "description": "Schema for user registration.",
@@ -22621,6 +24372,103 @@
         "title": "ValidationError",
         "type": "object"
       },
+      "VendorRequest": {
+        "properties": {
+          "address_line_1": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address Line 1"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "entity_type": {
+            "default": "unknown",
+            "enum": [
+              "individual",
+              "partnership",
+              "llc",
+              "corporation",
+              "s_corporation",
+              "government",
+              "tax_exempt",
+              "unknown"
+            ],
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "postal_code": {
+            "anyOf": [
+              {
+                "maxLength": 24,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Postal Code"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "maxLength": 24,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "tin": {
+            "anyOf": [
+              {
+                "maxLength": 24,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tin"
+          },
+          "vendor_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Vendor Id",
+            "type": "string"
+          },
+          "vendor_name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Vendor Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "vendor_id",
+          "vendor_name"
+        ],
+        "title": "VendorRequest",
+        "type": "object"
+      },
       "VerificationStatusResponse": {
         "properties": {
           "can_resend": {
@@ -22678,6 +24526,51 @@
           "token"
         ],
         "title": "VerifyEmailRequest",
+        "type": "object"
+      },
+      "W2ReconciliationRequest": {
+        "properties": {
+          "employees": {
+            "items": {
+              "$ref": "#/components/schemas/EmployeePayrollRequest"
+            },
+            "maxItems": 10000,
+            "title": "Employees",
+            "type": "array"
+          },
+          "form_941_quarters": {
+            "items": {
+              "$ref": "#/components/schemas/Form941QuarterRequest"
+            },
+            "maxItems": 4,
+            "title": "Form 941 Quarters",
+            "type": "array"
+          },
+          "tax_year": {
+            "maximum": 2099.0,
+            "minimum": 2000.0,
+            "title": "Tax Year",
+            "type": "integer"
+          },
+          "tolerance": {
+            "default": "1.00",
+            "maxLength": 12,
+            "title": "Tolerance",
+            "type": "string"
+          },
+          "w2_drafts": {
+            "items": {
+              "$ref": "#/components/schemas/EmployeeW2DraftRequest"
+            },
+            "maxItems": 10000,
+            "title": "W2 Drafts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "tax_year"
+        ],
+        "title": "W2ReconciliationRequest",
         "type": "object"
       },
       "WaitlistRequest": {
@@ -23591,6 +25484,98 @@
         ]
       }
     },
+    "/audit/account-risk-heatmap": {
+      "post": {
+        "description": "Aggregate signals into a per-account heatmap with priority tiers.",
+        "operationId": "generate_heatmap_audit_account_risk_heatmap_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HeatmapRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HeatmapResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Generate Heatmap",
+        "tags": [
+          "account-risk-heatmap"
+        ]
+      }
+    },
+    "/audit/account-risk-heatmap/export.csv": {
+      "post": {
+        "description": "CSV export of the heatmap.",
+        "operationId": "export_heatmap_csv_audit_account_risk_heatmap_export_csv_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HeatmapRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Export Heatmap Csv",
+        "tags": [
+          "account-risk-heatmap"
+        ]
+      }
+    },
     "/audit/accrual-completeness": {
       "post": {
         "description": "Compute accrual completeness estimator for a trial balance file.",
@@ -24205,6 +26190,219 @@
         ]
       }
     },
+    "/audit/book-to-tax": {
+      "post": {
+        "operationId": "calculate_audit_book_to_tax_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BookToTaxRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Calculate Audit Book To Tax Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Calculate",
+        "tags": [
+          "book-to-tax"
+        ]
+      }
+    },
+    "/audit/book-to-tax/export.csv": {
+      "post": {
+        "operationId": "export_book_to_tax_csv_audit_book_to_tax_export_csv_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BookToTaxRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Export Book To Tax Csv",
+        "tags": [
+          "book-to-tax"
+        ]
+      }
+    },
+    "/audit/book-to-tax/standard-adjustments": {
+      "get": {
+        "description": "Return the catalog of common permanent / temporary adjustments.\n\nUsed by the frontend to pre-populate the adjustment picker so the\npractitioner can select from the common list rather than typing\nadjustment codes from memory.",
+        "operationId": "list_standard_adjustments_audit_book_to_tax_standard_adjustments_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Standard Adjustments Audit Book To Tax Standard Adjustments Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List Standard Adjustments",
+        "tags": [
+          "book-to-tax"
+        ]
+      }
+    },
+    "/audit/cash-flow-projector": {
+      "post": {
+        "operationId": "run_projection_audit_cash_flow_projector_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CashFlowProjectionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Run Projection Audit Cash Flow Projector Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Run Projection",
+        "tags": [
+          "cash-flow-projector"
+        ]
+      }
+    },
+    "/audit/cash-flow-projector/export.csv": {
+      "post": {
+        "operationId": "export_projection_csv_audit_cash_flow_projector_export_csv_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CashFlowProjectionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Export Projection Csv",
+        "tags": [
+          "cash-flow-projector"
+        ]
+      }
+    },
     "/audit/chain-verify": {
       "get": {
         "description": "Verify the integrity of the audit log hash chain between two record IDs.\n\nTraverses the chain from start_id to end_id and recomputes each HMAC-SHA512\nhash to detect tampering. Requires a verified user account.\n\nSprint 461: Cryptographic audit log chaining (SOC 2 CC7.4).",
@@ -24542,6 +26740,98 @@
         ]
       }
     },
+    "/audit/depreciation": {
+      "post": {
+        "description": "Calculate book + MACRS depreciation schedules from form inputs.\n\nZero-storage: nothing persisted. Salvage value is honored under book methods\nand ignored under MACRS (per IRC §168).",
+        "operationId": "calculate_depreciation_audit_depreciation_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DepreciationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DepreciationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Calculate Depreciation",
+        "tags": [
+          "depreciation"
+        ]
+      }
+    },
+    "/audit/depreciation/export.csv": {
+      "post": {
+        "description": "CSV export of the depreciation schedules + book/tax comparison.",
+        "operationId": "export_depreciation_csv_audit_depreciation_export_csv_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DepreciationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Export Depreciation Csv",
+        "tags": [
+          "depreciation"
+        ]
+      }
+    },
     "/audit/expense-category-analytics": {
       "post": {
         "description": "Compute expense category analytical procedures for a trial balance file.",
@@ -24685,6 +26975,98 @@
         ]
       }
     },
+    "/audit/form-1099": {
+      "post": {
+        "operationId": "prepare_1099_candidates_audit_form_1099_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Form1099Request"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Prepare 1099 Candidates Audit Form 1099 Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Prepare 1099 Candidates",
+        "tags": [
+          "form-1099"
+        ]
+      }
+    },
+    "/audit/form-1099/export.csv": {
+      "post": {
+        "operationId": "export_1099_csv_audit_form_1099_export_csv_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Form1099Request"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Export 1099 Csv",
+        "tags": [
+          "form-1099"
+        ]
+      }
+    },
     "/audit/inspect-workbook": {
       "post": {
         "description": "Inspect an Excel workbook to retrieve sheet metadata.",
@@ -24730,6 +27112,98 @@
         "tags": [
           "audit",
           "audit"
+        ]
+      }
+    },
+    "/audit/intercompany-elimination": {
+      "post": {
+        "operationId": "run_consolidation_audit_intercompany_elimination_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IntercompanyEliminationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Run Consolidation Audit Intercompany Elimination Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Run Consolidation",
+        "tags": [
+          "intercompany-elimination"
+        ]
+      }
+    },
+    "/audit/intercompany-elimination/export.csv": {
+      "post": {
+        "operationId": "export_consolidation_csv_audit_intercompany_elimination_export_csv_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IntercompanyEliminationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Export Consolidation Csv",
+        "tags": [
+          "intercompany-elimination"
         ]
       }
     },
@@ -24943,6 +27417,280 @@
         "tags": [
           "clients",
           "reference"
+        ]
+      }
+    },
+    "/audit/lease-accounting": {
+      "post": {
+        "description": "Run ASC 842 lessee workflow: classification + initial measurement +\namortization + disclosures.\n\nZero-storage: nothing persisted. Single-lease only — multi-lease bundling\nis a future-sprint enhancement.",
+        "operationId": "calculate_lease_audit_lease_accounting_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LeaseAccountingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeaseAccountingResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Calculate Lease",
+        "tags": [
+          "lease-accounting"
+        ]
+      }
+    },
+    "/audit/lease-accounting/export.csv": {
+      "post": {
+        "description": "CSV export of liability schedule, ROU schedule, and disclosures.",
+        "operationId": "export_lease_csv_audit_lease_accounting_export_csv_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LeaseAccountingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Export Lease Csv",
+        "tags": [
+          "lease-accounting"
+        ]
+      }
+    },
+    "/audit/loan-amortization": {
+      "post": {
+        "description": "Calculate a loan amortization schedule from form inputs.\n\nZero-storage: nothing is persisted; the response is computed on demand.",
+        "operationId": "calculate_schedule_audit_loan_amortization_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoanAmortizationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AmortizationScheduleResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Calculate Schedule",
+        "tags": [
+          "loan-amortization"
+        ]
+      }
+    },
+    "/audit/loan-amortization/export.csv": {
+      "post": {
+        "description": "CSV export of the amortization schedule.",
+        "operationId": "export_schedule_csv_audit_loan_amortization_export_csv_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoanAmortizationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Export Schedule Csv",
+        "tags": [
+          "loan-amortization"
+        ]
+      }
+    },
+    "/audit/loan-amortization/export.pdf": {
+      "post": {
+        "description": "PDF export of the amortization schedule (Sprint 672).",
+        "operationId": "export_schedule_pdf_audit_loan_amortization_export_pdf_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoanAmortizationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Export Schedule Pdf",
+        "tags": [
+          "loan-amortization"
+        ]
+      }
+    },
+    "/audit/loan-amortization/export.xlsx": {
+      "post": {
+        "description": "XLSX export with Schedule, Annual Summary, and Inputs sheets (Sprint 672).",
+        "operationId": "export_schedule_xlsx_audit_loan_amortization_export_xlsx_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoanAmortizationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Export Schedule Xlsx",
+        "tags": [
+          "loan-amortization"
         ]
       }
     },
@@ -25278,6 +28026,127 @@
         ]
       }
     },
+    "/audit/sod/analyze": {
+      "post": {
+        "description": "Run the SoD checker against the supplied matrices.",
+        "operationId": "analyze_sod_audit_sod_analyze_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SodAnalysisRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SodAnalysisResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Analyze Sod",
+        "tags": [
+          "segregation-of-duties"
+        ]
+      }
+    },
+    "/audit/sod/analyze.csv": {
+      "post": {
+        "description": "CSV export of the SoD analysis.",
+        "operationId": "analyze_sod_csv_audit_sod_analyze_csv_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SodAnalysisRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Analyze Sod Csv",
+        "tags": [
+          "segregation-of-duties"
+        ]
+      }
+    },
+    "/audit/sod/rules": {
+      "get": {
+        "description": "Return the hardcoded SoD rule library so the frontend can render a\nrule reference card.",
+        "operationId": "list_default_rules_audit_sod_rules_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Default Rules Audit Sod Rules Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List Default Rules",
+        "tags": [
+          "segregation-of-duties"
+        ]
+      }
+    },
     "/audit/three-way-match": {
       "post": {
         "description": "Run three-way match validation across PO, Invoice, and Receipt files.",
@@ -25370,6 +28239,98 @@
         "tags": [
           "audit",
           "audit"
+        ]
+      }
+    },
+    "/audit/w2-reconciliation": {
+      "post": {
+        "operationId": "run_reconciliation_audit_w2_reconciliation_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/W2ReconciliationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Run Reconciliation Audit W2 Reconciliation Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Run Reconciliation",
+        "tags": [
+          "w2-reconciliation"
+        ]
+      }
+    },
+    "/audit/w2-reconciliation/export.csv": {
+      "post": {
+        "operationId": "export_reconciliation_csv_audit_w2_reconciliation_export_csv_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/W2ReconciliationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Export Reconciliation Csv",
+        "tags": [
+          "w2-reconciliation"
         ]
       }
     },
@@ -31852,6 +34813,35 @@
           }
         ],
         "summary": "Resolve Dunning",
+        "tags": [
+          "internal-admin"
+        ]
+      }
+    },
+    "/internal/admin/impersonate/stop": {
+      "post": {
+        "description": "Revoke an active impersonation token (Sprint 661).\n\nThe admin POSTs the impersonation token they received from\n``/customers/{org_id}/impersonate``. The token's ``jti`` is added to the\nrevocation set so ImpersonationMiddleware stops treating it as read-only.\nThe token is decoded with ``verify_exp=False`` so already-expired sessions\ncan still be explicitly closed out.",
+        "operationId": "stop_impersonation_internal_admin_impersonate_stop_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Stop Impersonation Internal Admin Impersonate Stop Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Stop Impersonation",
         "tags": [
           "internal-admin"
         ]

@@ -1,0 +1,284 @@
+{
+  "filename": "tb_unusual_accounts.csv",
+  "size_bytes": 1838,
+  "errors": [],
+  "parse": {
+    "column_names": [
+      "Account No",
+      "Account Name",
+      "Debit",
+      "Credit"
+    ],
+    "row_count": 54,
+    "first_row_sample": {
+      "Account No": "1010",
+      "Account Name": "Cash - Operating Account",
+      "Debit": 284500.0,
+      "Credit": NaN
+    },
+    "last_row_sample": {
+      "Account No": "",
+      "Account Name": NaN,
+      "Debit": 5681962.0,
+      "Credit": 5681962.0
+    }
+  },
+  "preflight": {
+    "filename": "tb_unusual_accounts.csv",
+    "row_count": 53,
+    "column_count": 4,
+    "readiness_score": 67.5,
+    "readiness_label": "Review Recommended",
+    "columns": [
+      {
+        "role": "account",
+        "detected_name": "Account Name",
+        "confidence": 1.0,
+        "status": "found",
+        "downstream_use": "Account identification \u2014 lead sheets, classification, exception attribution"
+      },
+      {
+        "role": "debit",
+        "detected_name": "Debit",
+        "confidence": 1.0,
+        "status": "found",
+        "downstream_use": "Balance verification, exception detection, anomaly aggregation"
+      },
+      {
+        "role": "credit",
+        "detected_name": "Credit",
+        "confidence": 1.0,
+        "status": "found",
+        "downstream_use": "Balance verification, exception detection, anomaly aggregation"
+      },
+      {
+        "role": "Account Code",
+        "detected_name": "Account No",
+        "confidence": 1.0,
+        "status": "found",
+        "downstream_use": "Reference / account code \u2014 paired with Account Name where present"
+      }
+    ],
+    "issues": [
+      {
+        "category": "tb_balance",
+        "severity": "high",
+        "message": "Trial balance is out of balance by $306,262.00",
+        "affected_count": 53,
+        "remediation": "Obtain a corrected trial balance where total debits equal total credits before proceeding with any diagnostic testing.",
+        "downstream_impact": "An out-of-balance trial balance invalidates all downstream diagnostic results. Debit/credit totals must reconcile before any testing can proceed.",
+        "affected_items": [],
+        "affected_items_truncated": false,
+        "affected_items_total": 0,
+        "tests_affected": 12
+      },
+      {
+        "category": "null_values",
+        "severity": "medium",
+        "message": "Column 'Account Name' has 1 rows with missing data (1.9% of rows)",
+        "affected_count": 1,
+        "remediation": "Review rows with missing 'Account Name' values. Fill in missing data or remove incomplete rows before analysis.",
+        "downstream_impact": "Missing values in critical columns produce incomplete trial balance totals, skewed ratio calculations, and may cause accounts to be silently excluded from testing tools.",
+        "affected_items": [
+          "Row 43"
+        ],
+        "affected_items_truncated": false,
+        "affected_items_total": 1,
+        "tests_affected": 11
+      }
+    ],
+    "duplicates": [],
+    "encoding_anomalies": [],
+    "mixed_sign_accounts": [],
+    "zero_balance_count": 0,
+    "null_counts": {
+      "Account Name": 1,
+      "Debit": 19,
+      "Credit": 34
+    },
+    "balance_check": {
+      "total_debits": 5796762.0,
+      "total_credits": 5490500.0,
+      "difference": 306262.0,
+      "balanced": false,
+      "tolerance": 0.01,
+      "skipped": false
+    },
+    "score_breakdown": [
+      {
+        "component": "tb_balance",
+        "weight": 0.25,
+        "score": 0.0,
+        "contribution": 0.0
+      },
+      {
+        "component": "column_detection",
+        "weight": 0.2,
+        "score": 100.0,
+        "contribution": 20.0
+      },
+      {
+        "component": "null_values",
+        "weight": 0.15,
+        "score": 50.0,
+        "contribution": 7.5
+      },
+      {
+        "component": "duplicates",
+        "weight": 0.1,
+        "score": 100.0,
+        "contribution": 10.0
+      },
+      {
+        "component": "encoding",
+        "weight": 0.05,
+        "score": 100.0,
+        "contribution": 5.0
+      },
+      {
+        "component": "mixed_signs",
+        "weight": 0.15,
+        "score": 100.0,
+        "contribution": 15.0
+      },
+      {
+        "component": "zero_balance",
+        "weight": 0.1,
+        "score": 100.0,
+        "contribution": 10.0
+      }
+    ],
+    "intake": {
+      "rows_submitted": 54,
+      "rows_accepted": 53,
+      "rows_rejected": 0,
+      "rows_excluded": 1,
+      "reconciles": true,
+      "notes": [
+        "Row 55 appears to be a summary totals row (blank account name with non-zero debit and credit) and has been excluded from analysis."
+      ]
+    },
+    "rendered_conclusion": "The trial balance file (tb_unusual_accounts.csv) is out of balance by $306,262.00. This is a critical data integrity failure that prevents any downstream diagnostic testing from proceeding. Obtain a corrected trial balance where total debits equal total credits before running any analysis."
+  },
+  "diagnostic": {
+    "analysis_failed": false,
+    "failure_reason": null,
+    "error_message": null,
+    "balanced": false,
+    "total_debits": "11478724.00",
+    "total_credits": "11172462.00",
+    "difference": "306262.00",
+    "row_count": 54,
+    "totals_rows_excluded": 0,
+    "material_count": 2,
+    "immaterial_count": 0,
+    "informational_count": 0,
+    "coverage_finding_count": 4,
+    "has_risk_alerts": true,
+    "risk_score": 73,
+    "risk_tier": "high",
+    "risk_factors": [
+      [
+        "Trial balance out of balance by $306,262.00",
+        60
+      ],
+      [
+        "Temp Clearing - DO NOT USE: uncleared suspense",
+        8
+      ],
+      [
+        "Suspense balance at period end",
+        5
+      ]
+    ],
+    "coverage_pct": 0.1,
+    "anomaly_types": {
+      "natural_balance_violation": 0,
+      "suspense_account": 1,
+      "concentration_risk": 4,
+      "revenue_concentration": 1,
+      "asset_concentration": 1,
+      "liability_concentration": 1,
+      "expense_concentration": 1,
+      "rounding_anomaly": 0,
+      "related_party": 0,
+      "intercompany_imbalance": 0,
+      "equity_signal": 0,
+      "balance_sheet_imbalance": 1
+    },
+    "abnormal_balance_count": 6,
+    "abnormal_balances": [
+      {
+        "account": "Trial Balance \u2014 Overall",
+        "type": "structural",
+        "issue": "Trial balance is out of balance by $306,262.00. Total debits do not equal total credits; all downstream diagnostic results are unreliable until this is corrected.",
+        "amount": 306262.0,
+        "materiality": "material",
+        "anomaly_type": "tb_out_of_balance",
+        "severity": "high",
+        "confidence": 1.0,
+        "coverage_analysis": false
+      },
+      {
+        "account": "Temp Clearing - DO NOT USE",
+        "type": "Unknown",
+        "issue": "Suspense/clearing account with outstanding balance",
+        "amount": 6800.0,
+        "materiality": "material",
+        "anomaly_type": "suspense_account",
+        "severity": "high",
+        "confidence": 0.85,
+        "coverage_analysis": false
+      },
+      {
+        "account": "Sales Revenue",
+        "type": "Revenue",
+        "issue": "Represents 89.1% of total revenues \u2014 coverage observation, not an anomaly",
+        "amount": 2156400.0,
+        "materiality": "material",
+        "anomaly_type": "revenue_concentration",
+        "severity": "high",
+        "confidence": 0.8914427449359239,
+        "coverage_analysis": true
+      },
+      {
+        "account": "Cost of Goods Sold",
+        "type": "Expense",
+        "issue": "Represents 63.6% of total expenses \u2014 coverage observation, not an anomaly",
+        "amount": 1124300.0,
+        "materiality": "material",
+        "anomaly_type": "expense_concentration",
+        "severity": "high",
+        "confidence": 0.6363482001358388,
+        "coverage_analysis": true
+      },
+      {
+        "account": "Long-Term Debt",
+        "type": "Liability",
+        "issue": "Represents 62.4% of total liabilities \u2014 coverage observation, not an anomaly",
+        "amount": 750000.0,
+        "materiality": "material",
+        "anomaly_type": "liability_concentration",
+        "severity": "high",
+        "confidence": 0.6238562635168857,
+        "coverage_analysis": true
+      },
+      {
+        "account": "Property Plant and Equipment",
+        "type": "Asset",
+        "issue": "Represents 48.4% of total assets \u2014 coverage observation, not an anomaly",
+        "amount": 1840000.0,
+        "materiality": "material",
+        "anomaly_type": "asset_concentration",
+        "severity": "medium",
+        "confidence": 0.483707724864943,
+        "coverage_analysis": true
+      }
+    ],
+    "abnormal_balances_truncated": false,
+    "classification_quality": {
+      "score": null,
+      "issue_count": 17
+    }
+  }
+}

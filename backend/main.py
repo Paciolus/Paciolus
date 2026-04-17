@@ -81,10 +81,36 @@ class DecimalJSONResponse(JSONResponse):
 if SENTRY_DSN:
     import sentry_sdk
 
+    _SAFE_EXTRA_KEYS = frozenset(
+        {
+            "sentry_logger",
+            "sys.argv",
+            "celery-job",
+        }
+    )
+    _SAFE_CONTEXT_KEYS = frozenset(
+        {
+            "runtime",
+            "os",
+            "device",
+            "browser",
+            "trace",
+            "threadpool",
+        }
+    )
+
     def _before_send(event: dict, hint: dict) -> dict:
-        """Strip request bodies to comply with Zero-Storage policy."""
-        if "request" in event and "data" in event["request"]:
-            event["request"]["data"] = "[Stripped — Zero-Storage]"
+        """Strip request bodies/query strings/extra/contexts for Zero-Storage."""
+        req = event.get("request")
+        if req:
+            req.pop("data", None)
+            req.pop("query_string", None)
+        extra = event.get("extra")
+        if extra:
+            event["extra"] = {k: v for k, v in extra.items() if k in _SAFE_EXTRA_KEYS}
+        contexts = event.get("contexts")
+        if contexts:
+            event["contexts"] = {k: v for k, v in contexts.items() if k in _SAFE_CONTEXT_KEYS}
         return event
 
     def _before_send_transaction(event: dict, hint: dict) -> dict:

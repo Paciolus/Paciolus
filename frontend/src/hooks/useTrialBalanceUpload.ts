@@ -12,7 +12,8 @@ import { useMappings } from '@/contexts/MappingContext'
 import type { ColumnMapping } from '@/components/mapping'
 import type { DisplayMode } from '@/components/sensitivity'
 import { useSettings } from '@/hooks/useSettings'
-import type { AuditResult, AuditResultResponse } from '@/types/diagnostic'
+import type { AuditResult, AuditResultResponse, AuditRunResponse } from '@/types/diagnostic'
+import { isAuditErrorResponse } from '@/types/diagnostic'
 import type { UploadStatus } from '@/types/shared'
 import { uploadFetch } from '@/utils/uploadTransport'
 import { apiPost } from '@/utils'
@@ -204,47 +205,49 @@ export function useTrialBalanceUpload(): UseTrialBalanceUploadReturn {
         return
       }
 
-      const data = result.data as AuditResultResponse
+      const data = result.data as AuditRunResponse
 
-      if (data.status === 'success') {
-        if (data.column_detection?.requires_mapping && !columnMapping) {
+      if (isAuditErrorResponse(data)) {
+        setAuditStatus('error')
+        setAuditError(data.message || data.detail || 'Failed to analyze file')
+      } else {
+        const success: AuditResultResponse = data
+
+        if (success.column_detection?.requires_mapping && !columnMapping) {
           // Signal to preflight hook via return — handled by composite
-          setAuditResult(data as AuditResult)
+          setAuditResult(success as AuditResult)
           setAuditStatus('success')
           stopProgressIndicator()
           return
         }
 
         setAuditStatus('success')
-        setAuditResult(data as AuditResult)
+        setAuditResult(success as AuditResult)
 
         if (engagement?.engagementId) {
           engagement.refreshToolRuns()
           engagement.triggerLinkToast('TB Diagnostics')
         }
 
-        if (data.abnormal_balances) {
-          mappingContext.initializeFromAudit(data.abnormal_balances)
+        if (success.abnormal_balances) {
+          mappingContext.initializeFromAudit(success.abnormal_balances)
         }
 
         if (!isRecalc && isAuthenticated && token) {
           apiPost('/activity/log', token, {
             filename: file.name,
-            record_count: data.row_count,
-            total_debits: data.total_debits,
-            total_credits: data.total_credits,
+            record_count: success.row_count,
+            total_debits: success.total_debits,
+            total_credits: success.total_credits,
             materiality_threshold: threshold,
-            was_balanced: data.balanced,
-            anomaly_count: data.abnormal_balances?.length || 0,
-            material_count: data.material_count || 0,
-            immaterial_count: data.immaterial_count || 0,
-            is_consolidated: data.is_consolidated || false,
-            sheet_count: data.sheet_count || null,
+            was_balanced: success.balanced,
+            anomaly_count: success.abnormal_balances?.length || 0,
+            material_count: success.material_count || 0,
+            immaterial_count: success.immaterial_count || 0,
+            is_consolidated: success.is_consolidated || false,
+            sheet_count: success.sheet_count || null,
           }).catch(() => {})
         }
-      } else {
-        setAuditStatus('error')
-        setAuditError((data as unknown as Record<string, string>).message || (data as unknown as Record<string, string>).detail || 'Failed to analyze file')
       }
     } catch {
       setAuditStatus('error')

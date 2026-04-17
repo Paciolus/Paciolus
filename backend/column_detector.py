@@ -10,12 +10,13 @@ Direct use of ``shared.column_detector`` is preferred for new code.
 Full removal deferred until next major version.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
 
 from shared.column_detector import ColumnFieldConfig
 from shared.column_detector import detect_columns as _shared_detect
+from shared.tb_layout import TBLayoutMode, detect_tb_layout
 
 
 class ColumnType(Enum):
@@ -55,6 +56,14 @@ class ColumnDetectionResult:
     account_type_confidence: float = 0.0
     account_name_column: Optional[str] = None
     account_name_confidence: float = 0.0
+    # Sprint 669: TB layout (single_dr_cr / multi_column_adjusted /
+    # net_balance_with_indicator). Default is single_dr_cr — every
+    # historic Paciolus file uses this layout. The other two modes
+    # carry supplementary metadata so downstream consumers can react.
+    layout: str = "single_dr_cr"
+    requires_confirmation: bool = False
+    supplementary_balance_pairs: list[tuple[str, str]] = field(default_factory=list)
+    indicator_column: Optional[str] = None
 
     @property
     def requires_mapping(self) -> bool:
@@ -74,6 +83,11 @@ class ColumnDetectionResult:
             "requires_mapping": self.requires_mapping,
             "all_columns": self.all_columns,
             "detection_notes": self.detection_notes,
+            # Sprint 669: layout metadata
+            "layout": self.layout,
+            "requires_confirmation": self.requires_confirmation,
+            "supplementary_balance_pairs": [{"debit": d, "credit": c} for d, c in self.supplementary_balance_pairs],
+            "indicator_column": self.indicator_column,
         }
         # Sprint 526: Include supplementary column detection
         if self.account_type_column:
@@ -228,8 +242,18 @@ def detect_columns(column_names: list[str]) -> ColumnDetectionResult:
 
     Sprint 526: Also detects account_type and account_name columns for
     classification pipeline support.
+
+    Sprint 669: Calls detect_tb_layout() first. When a non-default layout
+    is recognised, the canonical Debit/Credit assignments come from the
+    layout detector rather than the generic pattern match — so a multi-
+    column adjusted TB picks the Ending Balance pair as primary, and a
+    net-balance + Dr/Cr indicator file surfaces both columns as Found
+    instead of the indicator column being reported as "missing credit."
+    The layout itself is stored on the result so downstream consumers
+    can branch on it.
     """
     shared_result = _shared_detect(column_names, TB_COLUMN_CONFIGS)
+    layout = detect_tb_layout(column_names)
 
     account_col = shared_result.get_column("account_column")
     account_conf = shared_result.get_confidence("account_column")
@@ -237,6 +261,20 @@ def detect_columns(column_names: list[str]) -> ColumnDetectionResult:
     debit_conf = shared_result.get_confidence("debit_column")
     credit_col = shared_result.get_column("credit_column")
     credit_conf = shared_result.get_confidence("credit_column")
+
+    # Sprint 669: Override the generic debit/credit assignments with the
+    # layout-aware result when a special layout is detected. The shared
+    # pattern-based detector picks the first matching pair alphabetically,
+    # which on a multi-column adjusted TB is "Adjustments Debit" /
+    # "Adjustments Credit" — wrong for downstream calculations. Layout
+    # detection prefers the Ending Balance pair, which is correct.
+    if layout.mode != TBLayoutMode.SINGLE_DR_CR:
+        if layout.debit_column is not None:
+            debit_col = layout.debit_column
+            debit_conf = 0.95  # layout-derived match is high confidence
+        if layout.credit_column is not None:
+            credit_col = layout.credit_column
+            credit_conf = 0.95
 
     # Sprint 526: Extract supplementary columns
     account_type_col = shared_result.get_column("account_type_column")
@@ -281,6 +319,10 @@ def detect_columns(column_names: list[str]) -> ColumnDetectionResult:
     if not required:
         notes.append("Cannot process file: missing required Debit/Credit columns")
 
+    # Sprint 669: surface layout notes
+    if layout.mode != TBLayoutMode.SINGLE_DR_CR:
+        notes.extend(layout.notes)
+
     return ColumnDetectionResult(
         account_column=account_col,
         debit_column=debit_col,
@@ -295,6 +337,10 @@ def detect_columns(column_names: list[str]) -> ColumnDetectionResult:
         account_type_confidence=account_type_conf,
         account_name_column=account_name_col,
         account_name_confidence=account_name_conf,
+        layout=layout.mode.value,
+        requires_confirmation=layout.requires_confirmation,
+        supplementary_balance_pairs=layout.supplementary_pairs,
+        indicator_column=layout.indicator_column,
     )
 
 

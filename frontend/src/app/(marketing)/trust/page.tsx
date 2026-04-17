@@ -38,6 +38,8 @@ interface ComplianceMilestone {
   detail: string
   year: string
   artifact?: { label: string; href: string }
+  /** Sprint 654: flag this milestone as a self-assessment (not a third-party audit). */
+  selfAssessed?: boolean
 }
 
 interface PlaybookPhase {
@@ -150,23 +152,33 @@ const complianceMilestones: ComplianceMilestone[] = [
   {
     label: 'GDPR',
     status: 'compliant',
-    detail: 'EU General Data Protection Regulation — self-assessed',
+    detail: 'EU General Data Protection Regulation.',
     year: '2024',
     artifact: { label: 'Privacy Policy', href: '/privacy' },
+    selfAssessed: true,
   },
   {
     label: 'CCPA',
     status: 'compliant',
-    detail: 'California Consumer Privacy Act — self-assessed',
+    detail: 'California Consumer Privacy Act.',
     year: '2024',
     artifact: { label: 'Privacy Policy', href: '/privacy' },
+    selfAssessed: true,
   },
   {
     label: 'DPA',
     status: 'planned',
-    detail: 'Data Processing Agreement — Organization tier',
+    detail: 'Data Processing Agreement — Organization tier.',
     year: '2025',
     artifact: { label: 'Request DPA', href: '/contact?inquiry_type=organization' },
+  },
+  {
+    // Sprint 654: explicit SOC 2 placeholder so the absence of a third-party
+    // audit is addressed in the UI rather than left silent.
+    label: 'SOC 2 Type II',
+    status: 'planned',
+    detail: 'No SOC 2 audit completed — planned for 2026.',
+    year: '2026',
   },
 ]
 
@@ -842,6 +854,11 @@ function ComplianceTimeline() {
                   <span className={`inline-block font-sans text-xs font-medium px-2.5 py-1 rounded-full border ${s.badge}`}>
                     {s.label}
                   </span>
+                  {m.selfAssessed && (
+                    <div className="font-sans text-[10px] text-oatmeal-500 mt-2 italic">
+                      Self-assessed — no third-party audit
+                    </div>
+                  )}
                   <p className="font-sans text-xs text-oatmeal-500 mt-3">{m.detail}</p>
 
                   {/* Artifact Link */}
@@ -888,6 +905,11 @@ function ComplianceTimeline() {
                       {s.label}
                     </span>
                   </div>
+                  {m.selfAssessed && (
+                    <div className="font-sans text-[10px] text-oatmeal-500 mb-1 italic">
+                      Self-assessed — no third-party audit
+                    </div>
+                  )}
                   <div className="font-mono text-[10px] text-oatmeal-600 tracking-wider mb-1">{m.year}</div>
                   <p className="font-sans text-xs text-oatmeal-500">{m.detail}</p>
                   {m.artifact && (
@@ -1031,7 +1053,7 @@ export default function TrustAndSecurity() {
       >
         <div className="max-w-5xl mx-auto text-center">
           <h1 className="type-display-xl text-oatmeal-100 mb-6">
-            Assurance Center
+            Trust Center
           </h1>
           <p className="type-body-lg text-oatmeal-400 max-w-2xl mx-auto mb-10">
             How we protect your data — and the evidence to prove it.

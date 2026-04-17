@@ -1,0 +1,275 @@
+{
+  "filename": "tb_hartwell_adjusted.pdf",
+  "size_bytes": 6938,
+  "errors": [],
+  "parse": {
+    "column_names": [
+      "Acct\nNo.",
+      "Account Name",
+      "Beg Balance\nDebit",
+      "Beg Balance\nCredit",
+      "Adjustments\nDebit",
+      "Adjustments\nCredit",
+      "Ending Balance\nDebit",
+      "Ending Balance\nCredit",
+      "WP\nRef"
+    ],
+    "row_count": 41,
+    "first_row_sample": {
+      "Acct\nNo.": "1010",
+      "Account Name": "Cash - Operating Account",
+      "Beg Balance\nDebit": "274,500.00",
+      "Beg Balance\nCredit": "",
+      "Adjustments\nDebit": "10,000.00",
+      "Adjustments\nCredit": "",
+      "Ending Balance\nDebit": "284,500.00",
+      "Ending Balance\nCredit": "",
+      "WP\nRef": "A-1"
+    },
+    "last_row_sample": {
+      "Acct\nNo.": "",
+      "Account Name": "TOTALS",
+      "Beg Balance\nDebit": "5,400,700.00",
+      "Beg Balance\nCredit": "5,434,200.00",
+      "Adjustments\nDebit": "124,400.00",
+      "Adjustments\nCredit": "109,400.00",
+      "Ending Balance\nDebit": "5,523,600.00",
+      "Ending Balance\nCredit": "5,523,600.00",
+      "WP\nRef": ""
+    }
+  },
+  "preflight": {
+    "filename": "tb_hartwell_adjusted.pdf",
+    "row_count": 41,
+    "column_count": 9,
+    "readiness_score": 100.0,
+    "readiness_label": "Ready",
+    "columns": [
+      {
+        "role": "account",
+        "detected_name": "Account Name",
+        "confidence": 1.0,
+        "status": "found",
+        "downstream_use": "Account identification \u2014 lead sheets, classification, exception attribution"
+      },
+      {
+        "role": "debit",
+        "detected_name": "Ending Balance\nDebit",
+        "confidence": 0.95,
+        "status": "found",
+        "downstream_use": "Balance verification, exception detection, anomaly aggregation"
+      },
+      {
+        "role": "credit",
+        "detected_name": "Ending Balance\nCredit",
+        "confidence": 0.95,
+        "status": "found",
+        "downstream_use": "Balance verification, exception detection, anomaly aggregation"
+      },
+      {
+        "role": "unmapped",
+        "detected_name": "Acct\nNo.",
+        "confidence": 1.0,
+        "status": "found",
+        "downstream_use": "Not used in current analysis"
+      },
+      {
+        "role": "unmapped",
+        "detected_name": "Beg Balance\nDebit",
+        "confidence": 1.0,
+        "status": "found",
+        "downstream_use": "Not used in current analysis"
+      },
+      {
+        "role": "unmapped",
+        "detected_name": "Beg Balance\nCredit",
+        "confidence": 1.0,
+        "status": "found",
+        "downstream_use": "Not used in current analysis"
+      },
+      {
+        "role": "unmapped",
+        "detected_name": "Adjustments\nDebit",
+        "confidence": 1.0,
+        "status": "found",
+        "downstream_use": "Not used in current analysis"
+      },
+      {
+        "role": "unmapped",
+        "detected_name": "Adjustments\nCredit",
+        "confidence": 1.0,
+        "status": "found",
+        "downstream_use": "Not used in current analysis"
+      },
+      {
+        "role": "unmapped",
+        "detected_name": "WP\nRef",
+        "confidence": 1.0,
+        "status": "found",
+        "downstream_use": "Not used in current analysis"
+      }
+    ],
+    "issues": [],
+    "duplicates": [],
+    "encoding_anomalies": [],
+    "mixed_sign_accounts": [],
+    "zero_balance_count": 0,
+    "null_counts": {
+      "Acct\nNo.": 1,
+      "Beg Balance\nDebit": 17,
+      "Beg Balance\nCredit": 25,
+      "Adjustments\nDebit": 35,
+      "Adjustments\nCredit": 35,
+      "Ending Balance\nDebit": 15,
+      "Ending Balance\nCredit": 25,
+      "WP\nRef": 1
+    },
+    "balance_check": {
+      "total_debits": 11047200.0,
+      "total_credits": 11047200.0,
+      "difference": 0.0,
+      "balanced": true,
+      "tolerance": 0.01,
+      "skipped": false
+    },
+    "score_breakdown": [
+      {
+        "component": "tb_balance",
+        "weight": 0.25,
+        "score": 100.0,
+        "contribution": 25.0
+      },
+      {
+        "component": "column_detection",
+        "weight": 0.2,
+        "score": 100.0,
+        "contribution": 20.0
+      },
+      {
+        "component": "null_values",
+        "weight": 0.15,
+        "score": 100.0,
+        "contribution": 15.0
+      },
+      {
+        "component": "duplicates",
+        "weight": 0.1,
+        "score": 100.0,
+        "contribution": 10.0
+      },
+      {
+        "component": "encoding",
+        "weight": 0.05,
+        "score": 100.0,
+        "contribution": 5.0
+      },
+      {
+        "component": "mixed_signs",
+        "weight": 0.15,
+        "score": 100.0,
+        "contribution": 15.0
+      },
+      {
+        "component": "zero_balance",
+        "weight": 0.1,
+        "score": 100.0,
+        "contribution": 10.0
+      }
+    ],
+    "intake": {
+      "rows_submitted": 41,
+      "rows_accepted": 41,
+      "rows_rejected": 0,
+      "rows_excluded": 0,
+      "reconciles": true,
+      "notes": []
+    },
+    "rendered_conclusion": "The trial balance file (tb_hartwell_adjusted.pdf) achieved a Readiness Score of 100.0/100 \u2014 assessed as Ready. The file contains 41 accounts and is suitable for all downstream diagnostic testing with no caveats."
+  },
+  "diagnostic": {
+    "analysis_failed": false,
+    "failure_reason": null,
+    "error_message": null,
+    "balanced": true,
+    "total_debits": "11047200.00",
+    "total_credits": "11047200.00",
+    "difference": "0.00",
+    "row_count": 41,
+    "totals_rows_excluded": 0,
+    "material_count": 0,
+    "immaterial_count": 0,
+    "informational_count": 0,
+    "coverage_finding_count": 4,
+    "has_risk_alerts": false,
+    "risk_score": 0,
+    "risk_tier": "low",
+    "risk_factors": [],
+    "coverage_pct": 0.0,
+    "anomaly_types": {
+      "natural_balance_violation": 0,
+      "suspense_account": 0,
+      "concentration_risk": 4,
+      "revenue_concentration": 1,
+      "asset_concentration": 1,
+      "liability_concentration": 1,
+      "expense_concentration": 1,
+      "rounding_anomaly": 0,
+      "related_party": 0,
+      "intercompany_imbalance": 0,
+      "equity_signal": 0,
+      "balance_sheet_imbalance": 1
+    },
+    "abnormal_balance_count": 4,
+    "abnormal_balances": [
+      {
+        "account": "Sales Revenue",
+        "type": "Revenue",
+        "issue": "Represents 90.0% of total revenues \u2014 coverage observation, not an anomaly",
+        "amount": 2156400.0,
+        "materiality": "material",
+        "anomaly_type": "revenue_concentration",
+        "severity": "high",
+        "confidence": 0.8997746807977969,
+        "coverage_analysis": true
+      },
+      {
+        "account": "Long-Term Debt",
+        "type": "Liability",
+        "issue": "Represents 64.6% of total liabilities \u2014 coverage observation, not an anomaly",
+        "amount": 750000.0,
+        "materiality": "material",
+        "anomaly_type": "liability_concentration",
+        "severity": "high",
+        "confidence": 0.6464402689191519,
+        "coverage_analysis": true
+      },
+      {
+        "account": "Cost of Goods Sold",
+        "type": "Expense",
+        "issue": "Represents 63.6% of total expenses \u2014 coverage observation, not an anomaly",
+        "amount": 1124300.0,
+        "materiality": "material",
+        "anomaly_type": "expense_concentration",
+        "severity": "high",
+        "confidence": 0.6363482001358388,
+        "coverage_analysis": true
+      },
+      {
+        "account": "Property, Plant & Equipment",
+        "type": "Asset",
+        "issue": "Represents 49.2% of total assets \u2014 coverage observation, not an anomaly",
+        "amount": 1840000.0,
+        "materiality": "material",
+        "anomaly_type": "asset_concentration",
+        "severity": "medium",
+        "confidence": 0.49193914926610166,
+        "coverage_analysis": true
+      }
+    ],
+    "abnormal_balances_truncated": false,
+    "classification_quality": {
+      "score": null,
+      "issue_count": 10
+    }
+  }
+}

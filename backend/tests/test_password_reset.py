@@ -212,6 +212,26 @@ class TestResetPassword:
 
         assert response.status_code == 422
 
+    @pytest.mark.asyncio
+    async def test_reset_password_weak_password_rejected(self, db_session, reset_user, reset_token, client_with_db):
+        """Sprint 600: reset path must enforce the same complexity policy as registration."""
+        raw_token, _ = reset_token
+
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.post(
+                "/auth/reset-password",
+                json={"token": raw_token, "new_password": "password"},
+            )
+
+        assert response.status_code == 422
+        # The complexity validator must have been the rejection reason — the rejection must
+        # happen at pydantic validation (422), not because the token was consumed afterwards.
+        # Confirm the token is still unused so a follow-up request with a valid password works.
+        db_session.expire_all()
+        token_row = db_session.query(PasswordResetToken).first()
+        assert token_row is not None
+        assert token_row.used_at is None
+
 
 # =============================================================================
 # CSRF Exemption

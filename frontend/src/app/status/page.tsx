@@ -179,7 +179,7 @@ export default function StatusPage() {
               return (
                 <div key={category} className="bg-surface-card-secondary rounded-xl p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-content-primary font-sans font-medium">{category}</h3>
+                    <h3 className="text-content-primary font-serif font-medium">{category}</h3>
                     <span className={`text-sm font-sans ${categoryAllPassed ? 'text-sage-600' : 'text-clay-600'}`}>
                       {categoryPassed}/{categoryTests.length}
                     </span>
