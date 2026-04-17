@@ -176,6 +176,7 @@ def _run_cleanup_job(
     t0 = time.perf_counter()
     records_processed = 0
     error_msg: str | None = None
+    caught_exc: BaseException | None = None
     db = SessionLocal()
 
     try:
@@ -192,6 +193,12 @@ def _run_cleanup_job(
         from shared.log_sanitizer import sanitize_exception
 
         error_msg = sanitize_exception(exc, context="scheduled cleanup")
+        # Preserve the exception so the final logger.error can emit the full
+        # traceback via exc_info. The sanitized message still drives the
+        # user-visible telemetry payload; the traceback is for ops triage
+        # (Sentry, structured log sinks) — scheduled-job inputs are internal,
+        # no PII leaks.
+        caught_exc = exc
     finally:
         db.close()
 
@@ -207,7 +214,7 @@ def _run_cleanup_job(
     )
 
     if error_msg:
-        logger.error("Cleanup job failed: %s", telemetry.to_log_dict())
+        logger.error("Cleanup job failed: %s", telemetry.to_log_dict(), exc_info=caught_exc)
     elif records_processed > 0:
         logger.info("Cleanup job completed: %s", telemetry.to_log_dict())
     else:
