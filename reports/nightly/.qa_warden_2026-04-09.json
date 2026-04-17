@@ -1,0 +1,19 @@
+{
+  "agent": "qa_warden",
+  "status": "green",
+  "backend": {
+    "passed": 7361,
+    "failed": 0,
+    "errors": 0,
+    "duration_s": 552.5,
+    "failing_tests": [],
+    "new_failures": [],
+    "resolved": []
+  },
+  "frontend": {
+    "passed": 1751,
+    "failed": 0,
+    "duration_s": 43.7
+  },
+  "summary": "Backend: 7361 passed / 0 failed in 552.5s. Frontend: 1751 passed / 0 failed in 43.7s."
+}

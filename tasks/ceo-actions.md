@@ -13,6 +13,52 @@
 
 ---
 
+## 📋 This Week's Action Map — Council Review 2026-04-16
+
+> **Council verdict:** Code is launch-ready. Gating path is your calendar, not engineering. Ship on ~3-week ETA (Path A). See conversation transcript for the 8-agent breakdown and tradeoff map.
+
+**Recommended order — approximately three focused afternoons:**
+
+### Afternoon 1 (tomorrow, 2026-04-17): Phase 3 — Functional Validation
+Open [Phase 3](#phase-3--functional-validation) and work the checklist top-to-bottom on https://paciolus.com. Specifically:
+- [ ] All 12 testing tools against one realistic sample TB (file bugs as you find them, I fix them)
+- [ ] All 21 PDF memos back-to-back on a single engagement (watch Sentry for memory warnings)
+- [ ] Engagement layer end-to-end (create → materiality → diagnostics → follow-ups → workpaper index → ZIP → completion gate)
+- [ ] Export sharing flow (create share → incognito access → passcode → revoke → verify revocation)
+- [ ] Admin dashboard (orgs, drill-down, impersonation read-only, audit log)
+- [ ] Bulk upload with 5+ TBs (Enterprise tier — watch Render memory graph)
+- [ ] Fire a deliberate broken endpoint to confirm a Sentry event actually lands in the dashboard *(Phase 1 follow-up, folds in here)*
+
+**Exit:** No open P0/P1 bugs. Memory headroom observed under bulk load. Sentry event confirmed visible.
+
+### Afternoon 2 (~next week): Phase 4.1 — Stripe Live Cutover + Legal Placeholders
+- [ ] Generate/confirm Stripe live-mode secret key, publishable key, and webhook signing secret. Set on Render + Vercel env vars.
+- [ ] Stripe Dashboard configuration per [Phase 4.1](#41-stripe-production-cutover) (graduated pricing confirmed, Customer Portal enabled, products/prices/coupons mirrored from test mode)
+- [ ] Sign `tasks/pricing-launch-readiness.md` Section 7 → mark **GO**
+- [ ] Real-money smoke test: Solo monthly with real card → subscribe → webhook delivered → cancel → refund
+- [ ] Legal placeholders in [Phase 4.2](#42-legal--policy-placeholders) — fill business address, registered agent, DPO/EU-rep decision, effective dates, security emergency phone. Counsel sign-off on Terms + Privacy before go-live.
+
+### Afternoon 3 (~week 3): Phase 4.3–4.5 — Domain, Backups, Go-Live
+- [ ] Provision R2/S3 bucket (serves both Phase 4.4 pg_dump backups AND Sprint 611 ExportShare migration — [Backlog Blockers](#backlog-blockers--provisioning-gates))
+- [ ] Custom domain + DNS per [Phase 4.3](#43-custom-domain)
+- [ ] I run the pg_dump restore round-trip on your bucket ([Phase 4.4](#44-backups))
+- [ ] Go-live smoke test from custom domain ([Phase 4.5](#45-go-live-smoke-test)) — 24h monitor of Sentry + Render logs + Stripe webhook delivery ≥99%
+- [ ] **Launch announcement**
+
+### Parallel Engineering Track (I own — no CEO action)
+- **Sprint 673:** `DB_TLS_OVERRIDE` proper fix (pooler-aware `pg_stat_ssl` skip). 23-day fuse before 2026-05-09 override expiry. Lands before your Phase 4.3 work starts so it doesn't collide with launch week. Tracked in [`tasks/todo.md`](todo.md) Active Phase.
+- **DMARC tightening:** I'll flag when to move `_dmarc.paciolus.com` from `p=none` to `p=quarantine` (~2 weeks after your first real-money transaction confirms deliverability holds).
+
+### Guardian's Production-Behavior Verification Checklist
+Already embedded in the phases above — listed here explicitly so nothing slips:
+1. Stripe real-card E2E (Phase 4.1) ✅ in map
+2. Sentry verify event lands in dashboard (Afternoon 1) ✅ in map
+3. pg_dump restore round-trip (Phase 4.4) ✅ in map
+4. Bulk upload 5+ TBs (Phase 3) ✅ in map
+5. 24h webhook delivery ≥99% (Phase 4.5) ✅ in map
+
+---
+
 ## Phase 1 — Restore Login ✅ DONE 2026-04-09
 
 Render Standard deploy live. Neon (us-east-1 pooled) + Upstash Redis + Sentry wired. SendGrid Domain Authentication for `paciolus.com` verified after an initial DMARC bounce on the `@gmail.com` sender — DNS records (SPF/DKIM/DMARC) added to Vercel, propagated in under 2 minutes, and verified by SendGrid. Email verification flow confirmed end-to-end in Gmail inbox. Smoke test green (health, CSRF, register with HttpOnly cookies, /auth/me, wrong-password, logout). First user landed in the fresh Neon DB.

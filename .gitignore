@@ -113,4 +113,12 @@ images/*-unsplash.jpg
 # =============================================================================
 # .agent/ - Uncomment if you don't want to share agent rules
 .claude/settings.local.json
+.claude/scheduled_tasks.lock
 .vercel
+
+# =============================================================================
+# Additional env/test scratch (do not commit — may contain secrets)
+# =============================================================================
+.env.overnight
+backend/.env.test
+backend/tests/qa/last_response.json

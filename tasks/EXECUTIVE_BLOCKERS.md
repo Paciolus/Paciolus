@@ -6,30 +6,16 @@
 
 ---
 
-### Sprint 447 — Stripe Production Cutover
+## Active (CEO-gated, in launch path)
 
-**Status:** PENDING (CEO action required)
-**Goal:** Complete Stripe Dashboard configuration and cut over to live mode.
-**Context:** Sprint 440 E2E smoke test passed (27/27). All billing code is production-ready.
+These items are **tracked in [`ceo-actions.md`](ceo-actions.md)** — this file keeps a one-line pointer so they're visible in the executive-blockers view without duplicating checklists that would drift.
 
-#### Stripe Dashboard Configuration
-- [ ] Confirm `STRIPE_SEAT_PRICE_MONTHLY` is graduated pricing: Tier 1 (qty 1–7) = $80, Tier 2 (qty 8–22) = $70
-- [ ] Enable Customer Portal: payment method updates, invoice viewing, cancellation at period end
-- [ ] Verify "Manage Billing" button opens portal from `/settings/billing`
-- [ ] CEO signs `tasks/pricing-launch-readiness.md` → mark as GO
-
-#### Production Cutover
-- [ ] Create production Stripe products/prices/coupons (live secret key)
-- [ ] Set production env vars + deploy with `alembic upgrade head`
-- [ ] Smoke test with real card on lowest tier (Solo monthly)
-- [ ] Monitor webhook delivery in Stripe Dashboard for 24h
-
----
-
-### Pending Legal Sign-Off
-
-- [ ] **Terms of Service v2.0** — legal owner sign-off with new effective date
-- [ ] **Privacy Policy v2.0** — legal owner sign-off with new effective date
+| Item | Canonical location |
+|------|---------------------|
+| **Sprint 447 — Stripe Production Cutover** | [`ceo-actions.md` Phase 4.1](ceo-actions.md#41-stripe-production-cutover) (also in "This Week's Action Map" → Afternoon 2) |
+| **Terms of Service v2.0 — legal sign-off** | [`ceo-actions.md` Phase 4.2](ceo-actions.md#42-legal--policy-placeholders) |
+| **Privacy Policy v2.0 — legal sign-off** | [`ceo-actions.md` Phase 4.2](ceo-actions.md#42-legal--policy-placeholders) |
+| **Security Policy §12 — emergency contact phone** | [`ceo-actions.md` Phase 4.2](ceo-actions.md#42-legal--policy-placeholders) |
 
 ---
 
@@ -41,8 +27,12 @@
 | Sprint | Item | Status |
 |--------|------|--------|
 | 463 | SIEM / Log Aggregation (Grafana Loki) | Decision made, sprint not yet scheduled |
-| 464 | Cross-Region DB Replication (pgBackRest to S3) | Decision made, sprint not yet scheduled |
+| 464 | Cross-Region DB Replication (pgBackRest to S3) | Decision made, sprint not yet scheduled. Note: Phase 4.4's daily `pg_dump` → S3 already covers launch-grade DR; pgBackRest is continuous WAL streaming for enterprise cross-region requirements. |
 | 466 | Secrets Vault Backup (AWS Secrets Manager) | Decision made, sprint not yet scheduled |
-| 467 | External Penetration Test | Deferred — budget not available |
+| 467 | External Penetration Test | Deferred — budget not available. **Revisit trigger:** ~Month 2–3 post-launch once subscription revenue establishes the $5K–30K budget line. Council Review 2026-04-16 flagged this as the highest-value SOC 2 precursor once it becomes financeable. |
 | 468 | Bug Bounty Program | Deferred — existing VDP sufficient |
-| 469 | SOC 2 Auditor + Observation Window | Deferred — not needed for launch |
+| 469 | SOC 2 Auditor + Observation Window | Deferred — not needed for launch. Activate when a qualifying enterprise prospect asks for the report. |
+
+---
+
+*Last revised: 2026-04-16 — collapsed Stripe + Legal to `ceo-actions.md` pointers (removing duplicate checklists that would drift); added revenue-milestone revisit trigger to Sprint 467 per Council Review 2026-04-16.*

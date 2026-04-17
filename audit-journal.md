@@ -1552,3 +1552,68 @@ This is the 34th audit. Key observations since Audit 33 (2026-03-26):
 - Oat & Obsidian compliance: no frontend style tokens touched this cycle
 - Archival enforcement: Active Phase at 3 completed sprints (threshold: 5) — mechanical gate operational
 - Minor gap: `tasks/lessons.md` was not updated this cycle despite a new reusable pattern (subagent verification) surfacing — 1 of 30+ lesson-worthy events missed, not a systemic regression
+
+---
+## Audit — 2026-04-14 (35th) | 🟢 Excellent | Overall: 4.8/5.0
+---
+
+### Scores at a Glance
+| Pillar                  | Score |
+|-------------------------|-------|
+| Workflow Orchestration  | 4.8   |
+| Task Management         | 4/5   |
+| Core Principles         | 5/5   |
+| **Overall**             | **4.8** |
+
+### A1. Plan Mode Default — 5/5
+**Finding:** Sprint 599 (the only sprint-classified work since Audit 34) was pre-planned with a clear Problem/Changes/Review structure in `tasks/todo.md` before implementation. The scope was precise: deterministic coverage measurement via `pytest --cov`, wiring into the nightly orchestrator, and one lesson capture. The hotfix `a32f566` (401→403 alignment) was correctly classified as a hotfix (no new features, no architectural changes) and did not require a sprint plan entry. Plan Mode criterion is satisfied.
+**Recommendation:** Continue current practice.
+
+### A2. Subagent Strategy — 5/5
+**Finding:** The `.claude/agents/` directory now contains 12 files including the newly added `LLM_HALLUCINATION_AUDIT_PROMPT.md` — a meta-governance artifact added this cycle as a direct outcome of the Sprint 598 hallucination event. It codifies the "verify agent findings before acting" protocol as a reusable prompt template. Adding a targeted agent artifact rather than embedding the discipline only in `lessons.md` shows architectural thinking about the agent governance layer. All agents remain single-purpose with stable role boundaries across multiple consecutive audit cycles.
+**Recommendation:** Continue current practice.
+
+### A3. Self-Improvement Loop — 5/5
+**Finding:** Audit 34 explicitly flagged the missing subagent-verification lesson as the sole minor gap and made it the joint top priority. Sprint 599 closed both: `tasks/lessons.md` now ends with a fully structured lesson at line 968 ("Subagent findings must be verified against live code before acting — Sprint 598") with the specific incident, pattern, trust heuristic (file:line references are higher-trust than structural claims), and the systemic fix. The lesson was committed in the same sprint that shipped the deterministic coverage sentinel. The self-improvement loop completed in exactly one cycle — consistent with the pattern observed across the last four audits.
+**Recommendation:** Continue current practice.
+
+### A4. Verification Before Done — 5/5
+**Finding:** Sprint 599 Review section documents a dry-run against the live backend test suite: 92.09% line coverage (79,816 / 86,671 statements), status GREEN. `briefing_compiler.py` was regenerated with `agents_run: 6/6` and the Coverage Sentinel section verified as rendering cleanly. The real top-uncovered files (none matching the hallucinated claims) were surfaced: `guards/doc_consistency_guard.py` (0%), `leadsheet_generator.py` (11.4%), `workbook_inspector.py` (18.6%), `pdf/sections/diagnostic.py` (65.7%). The hotfix `a32f566` was committed with `tasks/todo.md` staged as required by the commit-msg hook. The modified `reports/nightly/.baseline.json` is an expected auto-updating nightly artifact — not a verification gap.
+**Recommendation:** Continue current practice.
+
+### A5. Demand Elegance (Balanced) — 5/5
+**Finding:** Sprint 599 is infrastructure-only with no production code changes. The coverage sentinel, orchestrator addition, and briefing compiler extension follow established patterns in the overnight agent infrastructure. The hotfix `a32f566` is a single-line HTTP status code correction (`401→403` in `auth_routes.py`). TODO/FIXME/HACK scan: 6 pre-existing occurrences in backend test infrastructure, 1 pre-existing TODO in frontend (`PeriodFileDropZone.tsx` — deferred type migration, unchanged for 3+ consecutive audit cycles). Zero new markers introduced.
+**Recommendation:** The `PeriodFileDropZone.tsx` TODO has been open for at least 3 consecutive audit cycles without a corresponding Deferred Items table entry. It is not a hack, but it should be formally tracked. Add it to `tasks/todo.md` Deferred Items with explicit rationale so it does not silently accumulate.
+
+### A6. Autonomous Bug Fixing — 5/5
+**Finding:** The hotfix `a32f566` was self-contained and correctly identified: `/auth/refresh` was returning 401 for `X-Requested-With` validation failures while the CSRF middleware returns 403 for equivalent checks — a client-visible inconsistency. Fix was autonomous (branch `fix/hallucination-audit-xrw-403`, clean scope, committed without user micromanagement). Sprint 599 replaced the unreliable hallucination-prone coverage pillar with deterministic `pytest --cov` measurement — a root-cause fix rather than a patch. No back-and-forth patches visible in the git log since Audit 34.
+**Recommendation:** Continue current practice.
+
+### B. Task Management — 4/5
+**Finding:** Five of six sub-practices are fully applied. Plan First: Sprint 599 has a structured todo.md entry. Track Progress: all Sprint 599 items checked. Explain Changes: Review section documents verification results with real data. Document Results: sprint marked COMPLETE. Capture Lessons: Sprint 599 lesson captured in `tasks/lessons.md`.
+
+One specific, fixable violation: the hotfix entry at line 18 of `tasks/todo.md` reads `[2026-04-14] pending: hallucination audit hotfix` — but commit `a32f566` exists in git history. The SHA was not backfilled. The `## Hotfixes` section format requires `[date] commit-sha: description`; this entry still shows "pending." This is a direct violation of the hotfix tracking protocol and leaves the record inconsistent with git history.
+
+Additionally, the Active Phase now contains 4 completed sprints (596, 597, 598, 599) — one sprint away from the mechanical archival gate. The next sprint commit will be blocked unless archival runs first.
+**Recommendation:** (1) Backfill SHA in `tasks/todo.md` line 18: change `pending` to `a32f566`. (2) Archive Sprints 596–599 before beginning the next sprint.
+
+### C. Core Principles — 5/5
+**Finding:**
+- **Simplicity First:** Sprint 599 adds one new script and wires it into two existing orchestrator files. No new abstraction layers. The rolling 7-day history in `.baseline.json` is a simple JSON append under a new key — no new schema.
+- **No Laziness:** Rather than adding more LLM prompting to the weakness-hunt workflow, Sprint 599 replaced the unreliable component with deterministic measurement (`pytest --cov`). Root-cause fix, not a patch.
+- **Minimal Impact:** The hotfix touches exactly `auth_routes.py` and `tasks/todo.md`. Sprint 599 touches exactly 4 files with no production or frontend changes. Zero-Storage compliance unchanged. Oat and Obsidian tokens not touched.
+
+22nd consecutive cycle at 5/5 for Core Principles.
+**Recommendation:** Continue current practice.
+
+### Top Priority for Next Cycle
+**Backfill `a32f566` into the hotfix entry in `tasks/todo.md` (one edit, 30 seconds), then archive Sprints 596–599 before the next sprint.** The Active Phase is at 4 completed sprints — one sprint away from the mechanical commit-msg gate blocking the next sprint commit. The archival is mechanically enforced; deferring it means the next sprint will be blocked at commit time. After archival: coverage baseline is building toward the 7-day delta threshold (activates 2026-04-21). Sprint 447 (Stripe Production Cutover) remains gated on CEO external inputs.
+
+### Trend Note
+Slight regression from 34th audit (5.0) to 35th audit (4.8) — single procedural gap.
+- Workflow Orchestration: 5.0 → 4.8 (flat at 5/5 on all A-pillars; composite reflects Pillar B regression)
+- Task Management: 5/5 → 4/5 (regressed — hotfix SHA not backfilled; `pending` persists in tracking record after commit landed; 4 sprints approaching archival threshold)
+- Core Principles: 5/5 → 5/5 (maintained — 22nd consecutive cycle at 5/5)
+- Overall: 5.0 → 4.8 (slight regression — project remains in Excellent band)
+
+This is the 35th audit. The project remains in the Excellent band (4.8 ≥ 4.5). The 34th audit top priority (subagent-verification lesson + coverage sentinel) was fully addressed in Sprint 599. The sole finding this cycle is procedural and trivially fixable: hotfix SHA `a32f566` was not backfilled in `tasks/todo.md` after the commit landed, leaving the record showing "pending." This is a 30-second edit. Active Phase at 4 completed sprints requires proactive archival before the next sprint to avoid a hook-blocked commit. Code quality, test count (7,403 backend + 1,757 frontend = 9,160 total), and design token compliance are all at peak.
