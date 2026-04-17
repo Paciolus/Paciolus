@@ -134,6 +134,85 @@ class TestRuntimeTLSEnforcement:
             init_db()  # Should not raise
 
 
+class TestPoolerHostnameSkip:
+    """Sprint 673: transparent poolers terminate TLS at the pool layer, so
+    pg_stat_ssl reports the pooler-to-backend hop and always returns ssl=false.
+    Detect `-pooler` in the hostname and skip the assertion in that case.
+    """
+
+    def test_pooler_hostname_skips_pg_stat_ssl_even_when_required(self):
+        """`-pooler` host + DB_TLS_REQUIRED=true + ssl=false → no crash, no query."""
+        mock_engine = _make_pg_engine_mock(ssl_active=False)
+        # .example is an IANA-reserved TLD that never resolves — keeps
+        # TruffleHog's Postgres detector from "verifying" the URL.
+        pooler_url = "postgresql://tb-test-pooler.example:5432/db?sslmode=require"
+
+        with (
+            patch("database.engine", mock_engine),
+            patch("database.DATABASE_URL", pooler_url),
+            patch("database.DB_TLS_REQUIRED", True),
+            patch("database.DB_TLS_OVERRIDE_VALID", False),
+            patch("database.DB_TLS_OVERRIDE_TICKET", ""),
+            patch("database.Base") as mock_base,
+            patch("database.log_secure_operation") as mock_log,
+        ):
+            mock_base.metadata.create_all = MagicMock()
+
+            from database import init_db
+
+            init_db()  # Must NOT raise even though ssl_active=False
+
+            # The pooler-skip secure event was emitted
+            skip_events = [
+                call for call in mock_log.call_args_list if call.args and call.args[0] == "db_tls_pooler_skip"
+            ]
+            assert skip_events, "expected db_tls_pooler_skip event"
+
+            # pg_stat_ssl was never queried on the pooled connection
+            conn = mock_engine.connect.return_value
+            queries = [str(c.args[0]) for c in conn.execute.call_args_list]
+            assert not any("pg_stat_ssl" in q for q in queries), (
+                f"pg_stat_ssl should be skipped on pooler hostname; saw: {queries}"
+            )
+
+    def test_direct_hostname_still_runs_pg_stat_ssl(self):
+        """Non-pooler host → existing assertion runs, ssl_active=True logs verified."""
+        mock_engine = _make_pg_engine_mock(ssl_active=True)
+        direct_url = "postgresql://tb-test.example:5432/db?sslmode=require"
+
+        with (
+            patch("database.engine", mock_engine),
+            patch("database.DATABASE_URL", direct_url),
+            patch("database.DB_TLS_REQUIRED", True),
+            patch("database.DB_TLS_OVERRIDE_VALID", False),
+            patch("database.DB_TLS_OVERRIDE_TICKET", ""),
+            patch("database.Base") as mock_base,
+            patch("database.log_secure_operation") as mock_log,
+        ):
+            mock_base.metadata.create_all = MagicMock()
+
+            from database import init_db
+
+            init_db()
+
+            conn = mock_engine.connect.return_value
+            queries = [str(c.args[0]) for c in conn.execute.call_args_list]
+            assert any("pg_stat_ssl" in q for q in queries), (
+                "pg_stat_ssl assertion must still run for non-pooler hostnames"
+            )
+            mock_log.assert_any_call("db_tls_verified", "PostgreSQL TLS active at startup")
+
+    def test_is_pooled_hostname_helper_recognises_pooler_suffix(self):
+        """Direct unit test for the hostname helper."""
+        from database import _is_pooled_hostname
+
+        assert _is_pooled_hostname("postgresql://tb-abc-pooler.example:5432/db")
+        assert _is_pooled_hostname("postgresql://tb-abc-pooler.example/db?sslmode=require")
+        assert not _is_pooled_hostname("postgresql://tb-abc.example:5432/db")
+        assert not _is_pooled_hostname("sqlite:///./test.db")
+        assert not _is_pooled_hostname("")
+
+
 class TestBreakGlassOverride:
     """DB_TLS_OVERRIDE allows temporary bypass with ticket + expiration."""
 

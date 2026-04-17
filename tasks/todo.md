@@ -67,18 +67,24 @@
 ---
 
 ### Sprint 673: Remove DB_TLS_OVERRIDE via pooler-aware pg_stat_ssl skip
-**Status:** PENDING — engineering-owned, **time-fused (2026-05-09)**
+**Status:** CODE-COMPLETE — pending deploy + CEO env-var removal
 **Source:** Council Review 2026-04-16 — Critic (time-fused architectural debt) + Executor (front-run launch week)
 **Why now:** `DB_TLS_OVERRIDE=NEON-POOLER-PGSSL-BLINDSPOT:2026-05-09` expires in 23 days. Without the proper fix landed first, the override must either be renewed (kicks the can) or allowed to expire (hard-fails production startup during Phase 4 launch window). Fixing before Phase 4 removes one ticking clock from launch week.
-**File:** `backend/database.py:268`
+**File:** `backend/database.py`
 **Problem:** Production startup runs a `pg_stat_ssl` check to confirm the DB connection is encrypted. Neon's pooled endpoint (`-pooler` hostname) is a transparent connection pooler — the underlying connection IS TLS-encrypted, but `pg_stat_ssl` reports the pooler-to-backend hop, not the client-to-pooler hop. The check therefore returns `ssl=false` on a correctly encrypted connection, forcing the current override.
 **Changes:**
-- [ ] Detect `-pooler` in `DATABASE_URL` hostname at the TLS verification point (`backend/database.py:268`)
-- [ ] On pooled hostnames: skip the `pg_stat_ssl` assertion and log an info-level notice that the pooler-blindspot path was taken
-- [ ] On direct hostnames: retain the assertion (Neon direct endpoint, RDS, local postgres all continue to verify)
-- [ ] Add a unit test covering both branches (pooled hostname skips, direct hostname asserts)
-- [ ] Deploy; verify Render startup logs show the new pooler-aware notice and no override warning
-- [ ] Remove `DB_TLS_OVERRIDE` from Render env vars once startup is confirmed green
-- [ ] If `DB_TLS_OVERRIDE` handling path in `backend/config.py` exists solely for this case, remove it
+- [x] Detect `-pooler` in `DATABASE_URL` hostname via new `_is_pooled_hostname()` helper (`backend/database.py`)
+- [x] On pooled hostnames: skip the `pg_stat_ssl` assertion, log `tls=pooler-skip`, emit `db_tls_pooler_skip` secure event (sslmode still enforced in config.py)
+- [x] On direct hostnames: retain the assertion (Neon direct endpoint, RDS, local postgres all continue to verify)
+- [x] Unit tests cover all branches: pooler host with ssl_active=False doesn't crash, direct host with ssl_active=True still logs `db_tls_verified`, helper recognises pooler suffix (18/18 tests pass)
+- [ ] **CEO deploy step:** Deploy; verify Render startup logs show `tls=pooler-skip` and no override warning
+- [ ] **CEO env-var step:** Remove `DB_TLS_OVERRIDE` from Render env vars once startup is confirmed green
+- [x] `DB_TLS_OVERRIDE` config path kept intact — it's a general break-glass used by both the `pg_stat_ssl` check AND the `sslmode` connection-string check in `config.py`; not pooler-specific, so deletion would lose a legitimate escape hatch.
+
+**Review:**
+- New helper `_is_pooled_hostname()` lives alongside imports in `backend/database.py`; it's a parse-and-substring test with no DB coupling (trivially unit-testable).
+- The pooled branch short-circuits BEFORE the four-way `ssl_active / DB_TLS_OVERRIDE_VALID / DB_TLS_REQUIRED / else` logic, so `DB_TLS_REQUIRED=true` + pooler host no longer crashes startup.
+- Secure event `db_tls_pooler_skip` added — distinct from `db_tls_verified` and `db_tls_override` so log audits can tell "TLS is actually on, just invisible" apart from "TLS is off, break-glass approved".
+- Existing 15 TLS tests still pass unchanged; 3 new tests added (pooler skip, direct still runs, helper unit).
 
 ---

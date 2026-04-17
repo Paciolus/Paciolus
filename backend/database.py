@@ -31,6 +31,22 @@ from config import (
 )
 from security_utils import log_secure_operation
 
+
+def _is_pooled_hostname(database_url: str) -> bool:
+    """Return True if DATABASE_URL hostname looks like a transparent pooler endpoint.
+
+    Transparent poolers (e.g., Neon's `-pooler` hostnames) terminate TLS at the
+    pool layer. `pg_stat_ssl` reports the pooler-to-backend hop, not the
+    client-to-pooler hop, so the view returns ssl=false even when the
+    client-to-pooler connection IS encrypted. Client-to-pooler TLS is still
+    enforced separately by the `sslmode` check in `config.py`.
+    """
+    from urllib.parse import urlparse
+
+    host = (urlparse(database_url).hostname or "").lower()
+    return "-pooler" in host
+
+
 # Create engine with dialect-specific configuration
 _is_sqlite = DATABASE_URL.startswith("sqlite")
 
@@ -263,9 +279,18 @@ def init_db() -> None:
 
     if dialect_name == "postgresql":
         try:
+            pooled = _is_pooled_hostname(DATABASE_URL)
             with engine.connect() as conn:
                 pg_version = conn.execute(text("SELECT version()")).scalar()
-                ssl_row = conn.execute(text("SELECT ssl FROM pg_stat_ssl WHERE pid = pg_backend_pid()")).fetchone()
+                # Transparent poolers terminate TLS at the pool layer, so
+                # pg_stat_ssl reports the pooler-to-backend hop, not the
+                # client-to-pooler hop. Skip the assertion on pooled hosts;
+                # client-to-pooler TLS is enforced by the sslmode check in
+                # config.py.
+                if pooled:
+                    ssl_row = None
+                else:
+                    ssl_row = conn.execute(text("SELECT ssl FROM pg_stat_ssl WHERE pid = pg_backend_pid()")).fetchone()
                 ssl_active = bool(ssl_row and ssl_row[0])
             logger.info(
                 "PostgreSQL: version=%s, pool_size=%d, max_overflow=%d, recycle=%ds, tls=%s",
@@ -273,9 +298,15 @@ def init_db() -> None:
                 DB_POOL_SIZE,
                 DB_MAX_OVERFLOW,
                 DB_POOL_RECYCLE,
-                "active" if ssl_active else "INACTIVE",
+                "pooler-skip" if pooled else ("active" if ssl_active else "INACTIVE"),
             )
-            if ssl_active:
+            if pooled:
+                log_secure_operation(
+                    "db_tls_pooler_skip",
+                    "pg_stat_ssl assertion skipped for -pooler hostname "
+                    "(transparent pooler TLS blindspot; sslmode enforced in config)",
+                )
+            elif ssl_active:
                 log_secure_operation("db_tls_verified", "PostgreSQL TLS active at startup")
             elif DB_TLS_OVERRIDE_VALID:
                 # Break-glass exception: TLS not active but documented override exists
