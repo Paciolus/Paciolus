@@ -268,10 +268,15 @@ class TestLogout:
                     "email": registered_user.email,
                     "password": TEST_PASSWORD,
                 },
+                headers={"X-Requested-With": "XMLHttpRequest"},
             )
 
-            # Logout — httpx sends the cookie automatically
-            response = await client.post("/auth/logout")
+            # Sprint 653: /auth/logout is a custom-header CSRF path — either
+            # X-CSRF-Token or X-Requested-With must be present.
+            response = await client.post(
+                "/auth/logout",
+                headers={"X-Requested-With": "XMLHttpRequest"},
+            )
             assert response.status_code == 200
             assert response.json()["success"] is True
 
@@ -279,7 +284,10 @@ class TestLogout:
     async def test_logout_no_cookie(self, override_db):
         """POST /auth/logout with no refresh cookie still returns success=true (graceful)."""
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
-            response = await client.post("/auth/logout")
+            response = await client.post(
+                "/auth/logout",
+                headers={"X-Requested-With": "XMLHttpRequest"},
+            )
             assert response.status_code == 200
             assert response.json()["success"] is True
 
