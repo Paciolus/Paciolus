@@ -36,7 +36,7 @@ def _run_backend_tests() -> dict:
         "--json-report", f"--json-report-file={json_report}",
     ]
     result = subprocess.run(
-        cmd_json, cwd=str(BACKEND_ROOT), capture_output=True, text=True, timeout=600,
+        cmd_json, cwd=str(BACKEND_ROOT), capture_output=True, text=True, timeout=1200,
     )
 
     passed = failed = errors = 0
@@ -66,7 +66,7 @@ def _run_backend_tests() -> dict:
     if "unrecognized arguments" in result.stderr or result.returncode == 4:
         cmd_plain = [str(SYSTEM_PYTHON), "-m", "pytest", "--tb=no", "-q"]
         result = subprocess.run(
-            cmd_plain, cwd=str(BACKEND_ROOT), capture_output=True, text=True, timeout=600,
+            cmd_plain, cwd=str(BACKEND_ROOT), capture_output=True, text=True, timeout=1200,
         )
 
     # Parse stdout summary line

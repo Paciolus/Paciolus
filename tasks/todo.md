@@ -53,6 +53,49 @@
 
 ---
 
+### Sprint 674: QA Warden pytest timeout raised 600s → 1200s
+**Status:** COMPLETE
+**Source:** Nightly audit review 2026-04-18 — Sprint Shepherd / QA Warden trend
+**Why now:** 2026-04-17 overnight RED because `qa_warden.py` backend pytest subprocess hit its 600s hard timeout at 601.8s. On 2026-04-18 the suite ran in 581.2s — **19s of margin**. Test count grew 7,405 (04-15) → 7,804 (04-18); next sprint or two reliably re-triggers the timeout.
+**File:** `scripts/overnight/agents/qa_warden.py:39, 69`
+**Changes:**
+- [x] Raise `subprocess.run` timeout from 600 → 1200 in `_run_backend_tests` (both the json-report path and the fallback path)
+- [x] No changes to `_run_frontend_tests` — ran 46.3s of 300s budget, ample headroom
+- [x] No migration to pytest-xdist — rejected to avoid DB-fixture parallelism risk (single-worker guarantees in current fixtures); revisit if 1200s ceiling approached again
+
+**Review:**
+- Rationale for 1200s (vs. 900s or 1800s): 1200s gives ~2× current runtime — enough to absorb ~3,000 new tests at current pace without requiring another bump; not so generous that a genuine regression (e.g. a hanging test) burns the whole nightly window before surfacing. Next agent (`report_auditor`) sleeps until 02:15, so even a full 1200s wait still completes ahead of schedule.
+- Did NOT touch pytest config — keeps the fix isolated to the nightly driver so regular `pytest` and CI behavior are unchanged.
+
+---
+
+### Sprint 675: Security-relevant dependency bump sweep
+**Status:** PENDING
+**Source:** Nightly audit review 2026-04-18 — Dependency Sentinel YELLOW (stable across 04-15, 04-17, 04-18)
+**Why now:** Five security-relevant updates have been pending unaddressed across three consecutive nightlies. Bundling into one PR is lower overhead than repeated single-package hotfixes and keeps Dependency Sentinel out of chronic YELLOW before launch.
+**Changes:**
+- [ ] Backend: `cryptography` 46.0.6 → 46.0.7 (patch), `fastapi` 0.135.2 → 0.136.0 (minor), `SQLAlchemy` 2.0.48 → 2.0.49 (patch), `stripe` 15.0.0 → 15.0.1 (patch), `pydantic` 2.12.5 → 2.13.2 (minor)
+- [ ] Frontend: `next` 16.2.3 → 16.2.4 (patch)
+- [ ] Run full backend + frontend test suite; pydantic 2.12→2.13 is the only non-trivial one (schema-validation semantics) — watch for any Pydantic API deprecation warnings
+- [ ] Verify `npm run build` passes post-next bump (CSP proxy.ts, dynamic rendering intact)
+- [ ] Defer majors (`rich` 14→15, `tzdata` 2025→2026) to a separate sprint if needed — not security-blocking
+
+---
+
+### Sprint 676: Coverage fill for 0% production-path files
+**Status:** PENDING
+**Source:** Nightly audit review 2026-04-18 — Coverage Sentinel (stable green 92.24% but persistent 0% files)
+**Why now:** Three production-path files show 0% or near-0% coverage and have been stable in the nightly "top uncovered" list across all three audits. Not regressing, but a real test gap — especially `billing/webhook_handler.py` (Stripe webhook is business-critical) and `services/organization_service.py` (org entity lifecycle).
+**Scope (targeted, not a sweep):**
+- [ ] `services/organization_service.py` — **0%** / 180 statements — add service-level tests covering create / update / delete / member add-remove paths
+- [ ] `export/serializers/csv.py` — **0%** / 158 statements — round-trip tests for CSV export of each tool's result envelope
+- [ ] `billing/webhook_handler.py` — **55.1%** / 180 missing — target the 180 uncovered lines (failure paths for signature mismatch, unknown event types, idempotency replay)
+- [ ] Explicitly defer: `excel_generator.py`, `leadsheet_generator.py`, `workbook_inspector.py` — older utilities, bigger lift, lower priority than billing/org
+- [ ] Explicitly defer: `generate_sample_reports.py` — one-off dev script, not production path
+- [ ] Target: lift overall backend coverage 92.24% → ≥92.6% (adds ~300 statements covered)
+
+---
+
 ### Sprint 611: ExportShare Object Store Migration
 **Status:** PENDING — CEO-gated (bucket provision)
 **Source:** Critic — DB bloat risk
