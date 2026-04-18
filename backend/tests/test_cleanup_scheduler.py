@@ -94,6 +94,38 @@ class TestRunCleanupJob:
         mock_session.close.assert_called_once()
         assert "Cleanup job failed" in caplog.text
 
+    def test_failure_log_includes_traceback_exc_info(self, caplog):
+        """Sanitized telemetry goes to user-visible logs, but the full
+        exception (with traceback) is attached via exc_info so Sentry and
+        other structured-log sinks can capture the stack trace.
+
+        Regression guard — without this, scheduled-job failures surface in
+        Sentry as just "InternalError: scheduled cleanup failed" with no
+        traceback, defeating triage.
+        """
+        from cleanup_scheduler import _run_cleanup_job
+
+        def failing_func(db):
+            raise RuntimeError("boom-with-traceback")
+
+        mock_session = MagicMock()
+
+        with (
+            patch("database.SessionLocal", return_value=mock_session),
+            caplog.at_level(logging.ERROR, logger="cleanup_scheduler"),
+        ):
+            _run_cleanup_job("failing_job", failing_func)
+
+        error_records = [r for r in caplog.records if "Cleanup job failed" in r.getMessage()]
+        assert error_records, "expected a 'Cleanup job failed' error record"
+        record = error_records[0]
+        assert record.exc_info is not None, "exc_info must be attached for Sentry traceback"
+        exc_type, exc_value, _tb = record.exc_info
+        assert exc_type is RuntimeError
+        assert "boom-with-traceback" in str(exc_value)
+        # Sanitized message preserved in the telemetry payload
+        assert "RuntimeError: scheduled cleanup failed" in caplog.text
+
     def test_session_always_closed_on_success(self):
         """Session is closed even when cleanup returns 0."""
         from cleanup_scheduler import _run_cleanup_job
