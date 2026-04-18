@@ -4,6 +4,24 @@
 
 ---
 
+## A coverage-sentinel gap can be dead code, not a testing gap (Sprint 676)
+
+Sprint 676 targeted three 0%-coverage files from the nightly Coverage Sentinel report. Investigation showed `services/organization_service.py` (180 statements, 0%) had **zero imports anywhere** — Sprint 546's archive claimed "Refactor 5: organization.py → services/organization_service.py + thin routes" but only created the service module, never wired the routes to use it. Writing tests for the orphan would have inflated the coverage number without improving safety; deletion was the right move. **Pattern:** Before writing tests to fix a coverage gap, `grep -r <module_name>` across the whole repo. If nothing imports it, the gap isn't a test gap — it's dead code from an incomplete refactor. The sentinel report doesn't distinguish between "untested" and "unused"; you have to.
+
+---
+
+## Overnight scanners can scan the wrong Python (Sprint 675)
+
+The Dependency Sentinel was executing `pip list --outdated` against `C:/Python312/python.exe` (system Python), not `backend/venv/Scripts/python.exe` (the venv that mirrors production `requirements.txt`). System Python had drifted: `fastapi 0.135.2` vs. venv `0.135.3`, `stripe 15.0.0` vs. venv `15.0.1`, `SQLAlchemy 2.0.48` vs. venv `2.0.49`. The nightly report flagged packages as "outdated" that were actually current in production — three nights of false YELLOW. Root cause: a pre-existing `PYTHON_BIN` constant in `scripts/overnight/config.py` pointed at the venv but was unused; `SYSTEM_PYTHON` was used instead. **Pattern:** Any CI/nightly tool that scans the environment (pip, npm, bundler) must scan the *same* environment that production installs into. When two Python interpreters exist on a machine, pin the scanner to the one backing the app, and make the fallback explicit.
+
+---
+
+## A nightly pytest subprocess timeout is a ticking clock, not a background concern (Sprint 674)
+
+2026-04-17 nightly ran RED because backend pytest hit the 600s subprocess timeout at 601.8s — first time ever. 2026-04-18 completed in 581.2s. Test count growth was 7,405 → 7,804 across three days. At that growth rate, a fixed per-suite timeout will fail again inside a sprint or two. **Pattern:** When the nightly driver subprocess timeout is within 5% of the observed runtime, treat it as a same-week fix, not a future problem — the next test-adding sprint will re-trigger it. The bias should be toward *more* headroom (2×–3× of current runtime), not less; a sleeping wait that could have been shorter costs nothing, but a re-triggered timeout costs a lost nightly signal.
+
+---
+
 ## Diagnostic ingestion bypasses the parser dispatcher (Sprint 665)
 
 While building the Sprint 665 remediation harness, every PDF and DOCX input failed the diagnostic pipeline with an incongruous pandas error (`'io.excel.zip.reader'` / `Excel file format cannot be determined`). Root cause: `backend/audit/pipeline.py:73` calls `process_tb_chunked(file_bytes, filename, chunk_size)` in `security_utils.py:201`, which only attempts `read_csv_chunked` → falls back to `read_excel_chunked`. It never dispatches to `parse_uploaded_file_by_format` (`backend/shared/helpers.py:797`), which is the correct entry point that knows about PDF, DOCX, ODS, OFX, QBO, IIF, TSV, TXT. PreFlight uses the dispatcher; diagnostic does not. Every file format the brief says is "supported" is actually only supported on the preflight side. **Pattern:** Two-pipeline features (preflight + diagnostic) need the same ingestion entry point, not parallel copies that drift apart. When a format is added, `grep` every place that accepts `file_bytes + filename` to ensure *all* ingestion paths route through the shared dispatcher.
