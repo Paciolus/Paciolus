@@ -370,10 +370,6 @@ def _build_evaluation_next_steps(
             "apply to errors already identified:"
         )
 
-    pop_type = ""
-    if design_result:
-        pop_type = design_result.get("population_type", "").upper()
-
     # Build cross-reference step body based on population type
     cross_ref_body = (
         f"Cross-reference the {errors_found} identified errors to the related testing "

@@ -60,9 +60,11 @@ async def audit_three_way_match(
 
     enforce_tool_access(current_user, "three_way_match", db)
 
-    po_mapping = parse_json_mapping(po_column_mapping, "twm_po")
-    inv_mapping = parse_json_mapping(invoice_column_mapping, "twm_invoice")
-    rec_mapping = parse_json_mapping(receipt_column_mapping, "twm_receipt")
+    # parse_json_mapping has a log_secure_operation side effect; returns ignored
+    # until column-override wiring is implemented for three-way-match.
+    _ = parse_json_mapping(po_column_mapping, "twm_po")
+    _ = parse_json_mapping(invoice_column_mapping, "twm_invoice")
+    _ = parse_json_mapping(receipt_column_mapping, "twm_receipt")
 
     log_secure_operation(
         "three_way_match_upload",
