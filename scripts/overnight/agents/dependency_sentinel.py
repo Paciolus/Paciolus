@@ -19,6 +19,7 @@ from scripts.overnight.config import (
     BACKEND_ROOT,
     CLAUDE_MODEL,
     FRONTEND_ROOT,
+    PYTHON_BIN,
     REPORTS_DIR,
     SYSTEM_PYTHON,
     TODAY,
@@ -109,8 +110,11 @@ def _severity(current: str, latest: str) -> str:
 
 
 def _check_backend() -> list[dict]:
-    """Run pip list --outdated and parse results."""
-    cmd = [str(SYSTEM_PYTHON), "-m", "pip", "list", "--outdated", "--format=json"]
+    """Run pip list --outdated against the backend venv and parse results."""
+    # Scan the venv that backs the running backend — matches what production installs
+    # from requirements.txt. Fall back to SYSTEM_PYTHON only if venv is missing.
+    python_bin = PYTHON_BIN if PYTHON_BIN.exists() else SYSTEM_PYTHON
+    cmd = [str(python_bin), "-m", "pip", "list", "--outdated", "--format=json"]
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
 
     outdated = []

@@ -69,16 +69,34 @@
 
 ---
 
-### Sprint 675: Security-relevant dependency bump sweep
-**Status:** PENDING
+### Sprint 675: Security-relevant dependency bump sweep + Sentinel scan-path fix
+**Status:** COMPLETE
 **Source:** Nightly audit review 2026-04-18 — Dependency Sentinel YELLOW (stable across 04-15, 04-17, 04-18)
-**Why now:** Five security-relevant updates have been pending unaddressed across three consecutive nightlies. Bundling into one PR is lower overhead than repeated single-package hotfixes and keeps Dependency Sentinel out of chronic YELLOW before launch.
+**Why now:** Security-relevant updates pending unaddressed across three consecutive nightlies. While bumping, discovered the Dependency Sentinel was scanning `C:/Python312` (system Python, stale fork) instead of `backend/venv/Scripts/python.exe` (what actually matches `requirements.txt` and runs in production). Two of the five "security-relevant" packages reported in the nightly (SQLAlchemy 2.0.48→49, stripe 15.0.0→1) were already synced in the venv — the sentinel was giving false signals.
+
 **Changes:**
-- [ ] Backend: `cryptography` 46.0.6 → 46.0.7 (patch), `fastapi` 0.135.2 → 0.136.0 (minor), `SQLAlchemy` 2.0.48 → 2.0.49 (patch), `stripe` 15.0.0 → 15.0.1 (patch), `pydantic` 2.12.5 → 2.13.2 (minor)
-- [ ] Frontend: `next` 16.2.3 → 16.2.4 (patch)
-- [ ] Run full backend + frontend test suite; pydantic 2.12→2.13 is the only non-trivial one (schema-validation semantics) — watch for any Pydantic API deprecation warnings
-- [ ] Verify `npm run build` passes post-next bump (CSP proxy.ts, dynamic rendering intact)
-- [ ] Defer majors (`rich` 14→15, `tzdata` 2025→2026) to a separate sprint if needed — not security-blocking
+- [x] `scripts/overnight/agents/dependency_sentinel.py` — switch backend scan from `SYSTEM_PYTHON` to `PYTHON_BIN` (the venv); keeps `SYSTEM_PYTHON` as fallback if venv missing. Import `PYTHON_BIN` from `config.py` (already defined, unused until now).
+- [x] `backend/requirements.txt`: `fastapi` 0.135.3 → 0.136.0, `pydantic[email]` 2.12.5 → 2.13.2
+- [x] `backend/requirements.txt`: `cryptography>=46.0.7` was already pinned but venv had 46.0.6 installed; `pip install -U` brought it current
+- [x] `frontend/package.json`: `next` ^16.2.2 → ^16.2.4 (resolves 16.2.4 per nightly sentinel)
+- [x] `npm install` — 3 packages changed, 0 vulnerabilities, all frontend deps intact
+- [x] `npm run build` passes — all routes render as `ƒ (Dynamic)` (CSP proxy.ts nonce-based rendering intact after next 16.2.2→16.2.4)
+- [x] Backend `pytest`: **7805 passed, 9 xfailed, 0 failed** in 644.25s after the bump — pydantic 2.13 migration clean, no API deprecations surfaced
+- [x] Frontend `npm test` passes (see review below)
+
+**Skipped (legitimately not outdated in the venv despite nightly report):**
+- SQLAlchemy 2.0.48 → 2.0.49 — venv already at 2.0.49 (sentinel was reading system Python 2.0.48)
+- stripe 15.0.0 → 15.0.1 — venv already at 15.0.1 (same root cause)
+
+**Explicitly deferred:**
+- `rich` 14.3.3 → 15.0.0 (major) — not security-relevant, defer until a feature needs it
+- `tzdata` 2025.3 → 2026.1 (major) — not security-relevant
+- `pdfminer.six` 20251230 → 20260107 — previously deferred, reviewed by 2026-04-30
+
+**Review:**
+- The Sentinel fix is the more important half of this sprint: without it, next week's nightly would continue reporting stale YELLOW signals from the system-Python fork even though production (Render) is on current requirements.txt. After this fix, Dependency Sentinel reports match what prod actually installs.
+- pydantic 2.12 → 2.13 is semver-minor but changed validation internals; full 7805-test pass is strong evidence the upgrade is clean for our schemas.
+- next 16.2.2 → 16.2.4 contains the patch advisory referenced in nightly reports; build output confirms dynamic-render + CSP nonce contract unbroken (`ƒ` on all routes).
 
 ---
 
