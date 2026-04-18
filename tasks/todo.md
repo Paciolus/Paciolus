@@ -128,6 +128,38 @@ The nightly Coverage Sentinel's three worst 0%-coverage files turned out to have
 
 ---
 
+### Sprint 677: Dead-code hygiene + route-wiring guardrail + deprecation register
+**Status:** COMPLETE
+**Source:** Targeted audit directive 2026-04-18 — safe dead-code pass, no behavior change
+
+**Changes:**
+- [x] Remove 11 unused locals flagged by ruff F841 across 7 production files:
+  - `backend/bank_reconciliation_memo_generator.py` (rec_diff, match_rate)
+  - `backend/je_testing_engine.py` (total_groups)
+  - `backend/je_testing_memo_generator.py` (total_entries, preparer_total)
+  - `backend/routes/three_way_match.py` (po_mapping, inv_mapping, rec_mapping — switched to `_ = ...` to preserve the `log_secure_operation` side effect inside `parse_json_mapping`)
+  - `backend/sampling_memo_generator.py` (pop_type — both assignments unused)
+  - `backend/shared/drill_down.py` (n_cols)
+  - `backend/shared/tb_diagnostic_constants.py` (excess, and its only-feeder raw_sum)
+- [x] Add `scripts/check_route_wiring.py` — scans `backend/routes/*.py`, flags modules not imported by `routes/__init__.py` or by the known aggregators (`audit.py`, `export.py`, `engagements.py`); exits non-zero on true orphans
+- [x] Add `docs/runbooks/deprecations.md` — deprecation register with Active / Removed sections. Seeded with: `excel_generator.py` signoff fields, `pdf/orchestrator.py` signoff gating, `shared/schemas.py` signoff fields, `shared/parsing_helpers.py::safe_float` (monetary-unsafe), `frontend/src/utils/motionTokens.ts::DISTANCE`
+
+**Verification:**
+- `cd backend && python -m ruff check . --select F401,F841` on the seven target files: `All checks passed!` (target scope clean)
+- `python scripts/check_route_wiring.py`: 58 modules scanned, 48 via `__init__.py`, 10 via aggregators, PASS
+- Targeted pytest: `test_bank_rec_memo.py`, `test_je_testing_engine.py`, `test_je_testing_memo.py`, `test_three_way_match.py`, `test_sampling_memo.py`, `test_drill_down.py`, `test_diagnostics_api.py` → **315 passed, 1 warning in 10.53s**
+- `test_contra_and_detection_fixes.py` (exercises `compute_tb_diagnostic_score`) → **69 passed in 0.82s**
+- Backend smoke: `python -c "from main import app; ..."` → 239 routes registered, no regression
+
+**Review:**
+- `three_way_match` column mappings are intentionally discarded today (override wiring is a pre-existing gap). The `_ = ...` assignments keep `log_secure_operation` firing so the audit trail still shows receipt of the caller's JSON payload, and the inline comment flags the call site for whoever picks the wiring up.
+- `raw_sum` in `tb_diagnostic_constants.py` was the sole feeder of the removed `excess`; the trimming algorithm that follows uses `capped` and `running` directly, so removing both cleans the function rather than leaving a dangling `raw_sum` warning for the next pass.
+- `scripts/check_route_wiring.py` is wired to be CI-safe: no third-party deps, pure-stdlib regex, aggregator allowlist is explicit and easy to extend when a new aggregator pattern appears.
+- The remaining 23 F841 warnings in `backend/tests/*.py` and 3 in `generate_sample_reports.py` are explicitly **out of scope** — cleaning test fixtures risks hiding intent (e.g., `user = make_user(...)` in webhook fixtures is descriptive even when the handle isn't referenced) and warrants a separate test-hygiene sprint.
+- Residuals: `routes/three_way_match.py` override plumbing is now a documented follow-up rather than a silent drop; `backend/tests` F841 cleanup tracked for a future hygiene pass.
+
+---
+
 ### Sprint 611: ExportShare Object Store Migration
 **Status:** PENDING — CEO-gated (bucket provision)
 **Source:** Critic — DB bloat risk

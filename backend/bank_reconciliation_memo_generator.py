@@ -962,8 +962,6 @@ def generate_bank_rec_memo(
     story.append(LedgerRule(doc.width))
 
     risk_tier = str(composite.get("risk_tier", "low")).lower() if composite else "low"
-    rec_diff = summary.get("reconciling_difference", 0)
-    match_rate = matched / total_txns if total_txns > 0 else 0
 
     base_tier_label, _ = RISK_TIER_DISPLAY.get(risk_tier, ("LOW", ClassicalColors.SAGE))
     score_val = composite.get("score", 0) if composite else 0

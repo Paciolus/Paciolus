@@ -322,11 +322,9 @@ def _build_preparer_analysis(
     Shows top 5 preparers by flagged entry count.
     """
     test_results = result.get("test_results", [])
-    total_entries = result.get("composite_score", {}).get("total_entries", 0)
 
     # Collect all flagged entries with preparer info
     preparer_flagged: Counter[str] = Counter()
-    preparer_total: Counter[str] = Counter()
     total_flagged_with_preparer = 0
     total_flagged_count = 0
 

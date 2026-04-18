@@ -77,7 +77,6 @@ def build_drill_down_table(
 
     # Auto-compute column widths proportional to header text length (BUG-003 fix)
     if col_widths is None:
-        n_cols = len(headers)
         header_lengths = [max(len(str(h)), 4) for h in headers]
         total_length = sum(header_lengths)
         min_col = doc_width * 0.08  # minimum 8% per column

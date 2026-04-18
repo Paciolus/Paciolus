@@ -601,9 +601,7 @@ def compute_tb_diagnostic_score(
     # decomposition visually sums to the displayed total.
     capped = min(score, 100)
     if score > 100 and factors:
-        raw_sum = sum(pts for _, pts in factors)
         # Walk backwards (lowest-priority factors last) and trim.
-        excess = raw_sum - capped
         reconciled: list[tuple[str, int]] = []
         # Accumulate from the top; once we've consumed the cap, zero the rest.
         running = 0

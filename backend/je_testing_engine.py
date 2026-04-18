@@ -946,7 +946,6 @@ def test_unbalanced_entries(
             ungrouped.append(e)
 
     flagged: list[FlaggedEntry] = []
-    total_groups = len(groups)
 
     for group_key, group_entries in groups.items():
         total_debit = sum((e.debit for e in group_entries), Decimal("0"))
