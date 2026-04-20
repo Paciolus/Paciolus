@@ -303,7 +303,7 @@ Two findings bundled into this sprint had different outcomes after audit. The co
 **Review:**
 - Source of truth for the matrix is ISA 315 (Revised 2019) Appendix 1; kept the constant and the helper in the same module so future auditor reviews can diff them against the standard without jumping files.
 - 7,955 full-backend tests pass post-change — no other engine relied on the old max() behaviour even though 17 direct composite-risk tests had to be updated to the new contract.
-- Commit SHA: pending (landed with Sprints 686/687/690/694 — see final commit below).
+- Commit SHA: `674c63c` (bundle commit covering Sprints 680/686/687/690/694).
 
 ---
 
@@ -427,7 +427,7 @@ Two findings bundled into this sprint had different outcomes after audit. The co
 **Review:**
 - The "day 1 of next month" heuristic is intentionally tight — ISA/Nigrini don't prescribe an exact window for what counts as a "standard accrual reversal", but first-of-month is the convention that every audit firm I've worked with trains juniors to spot. A looser window (e.g., first-week-of-next-month) would suppress too many genuine cross-month adjustments.
 - Lowering Benford to 300 enables first-digit analysis on mid-size populations (300–499) that the prior threshold rejected. For populations below 300, Benford is unreliable (Nigrini 2012, p. 79) — keep the skip.
-- Commit SHA: pending (landed with Sprints 680/687/690/694).
+- Commit SHA: `674c63c` (bundle commit covering Sprints 680/686/687/690/694).
 
 ---
 
@@ -448,7 +448,7 @@ Two findings bundled into this sprint had different outcomes after audit. The co
 **Review:**
 - The original "remove from `__all__` or document" decision: document wins. Removing breaks any downstream integration that imports from `audit_engine`, and the list IS still used by `detect_abnormal_balances` (a secondary path); marking it as a fallback rather than deleting keeps the compatibility surface intact.
 - Extending the list was the real win — a "Goodwill" or "ROU Asset" account on a modern TB would previously fall through to the weighted classifier without the keyword sanity check, weakening the abnormal-balance vectorized fast-path.
-- Commit SHA: pending (landed with Sprints 680/686/690/694).
+- Commit SHA: `674c63c` (bundle commit covering Sprints 680/686/687/690/694).
 
 ---
 
@@ -512,7 +512,7 @@ Two findings bundled into this sprint had different outcomes after audit. The co
 **Review:**
 - Reusing the dunning email chassis was the pragmatic call: the brand template, deliverability wiring, and "email send is skipped gracefully when SENDGRID_API_KEY is absent" behaviour are all already tested on that code path. Writing a parallel template would have meant duplicating ~40 lines of HTML and the SendGrid error handling.
 - The portal-URL fallback to `/settings/billing` is deliberate — if Stripe's portal session creation fails (billing portal config missing, customer ID stale), we still want the CTA to land somewhere useful; the in-app settings page always works for authenticated users.
-- Commit SHA: pending (landed with Sprints 680/686/687/694).
+- Commit SHA: `674c63c` (bundle commit covering Sprints 680/686/687/690/694).
 - [ ] Add a unit test (mock SendGrid) that verifies the send call + args; add an integration test that runs the webhook handler end-to-end.
 - [ ] Update `tasks/pricing-launch-readiness.md:48` acceptance note — trial email no longer deferred.
 
@@ -641,7 +641,7 @@ Nothing weakened — auth/security/zero-storage untouched, no tests silenced, ev
 **Review:**
 - Baseline-only exclusion for alembic (not all migrations) was deliberate: regular migrations run in production on deploy and absolutely should be tested; only the frozen baseline file is genuinely non-productive to cover.
 - Non-production exclusion is additive — the totals/percent_covered metrics still include these files (coverage.json's totals aren't affected), just the top-10 uncovered ranking changes. This keeps the overall coverage number stable so the rolling-mean drift detection isn't affected.
-- Commit SHA: pending (landed with Sprints 680/686/687/690).
+- Commit SHA: `674c63c` (bundle commit covering Sprints 680/686/687/690/694).
 
 ---
 
