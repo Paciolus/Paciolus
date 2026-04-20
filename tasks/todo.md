@@ -202,6 +202,7 @@ Two findings bundled into this sprint had different outcomes after audit. The co
 - Rejecting the concentration finding was the correct call: testing dead code or breaking a live contract for a phantom bug would have churned consumers without fixing anything. The characterization tests now guard against a future refactor silently breaking the contract.
 - The branding fix is minimal (one new return-value check, one 503) but closes a real integrity gap that Sprint 679 would otherwise stumble into.
 - `logo_s3_key` backfill (for any existing rows pointing at missing S3 objects) is deferred to Sprint 679's branding pipeline, which is when it will first matter in production.
+- Commit SHA: `768aa34` (landed together with Sprint 678).
 
 ---
 
@@ -256,6 +257,7 @@ Two findings bundled into this sprint had different outcomes after audit. The co
 - Choice of route-level `dependencies=[Depends(check_export_access)]` over per-handler parameter was deliberate: keeps the gate visible at the decorator, survives the registry-based code in `export_memos.py` (which builds handlers in a loop), and doesn't require touching 30+ handler signatures.
 - `enforce_format_access` as an imperative helper (rather than a dependency factory) was required by the shape of polymorphic upload routes — format is only knowable after the file is in hand.
 - The `conftest.py` update is load-bearing: without it, ~90 existing export tests would 401 on the new gate without testing anything meaningful. The fix is intentionally narrow (override `require_current_user` to the same user as `require_verified_user`), so it doesn't mask legitimate auth issues — tests that specifically check auth rejection (`test_get_branding_no_auth_returns_401`, etc.) clear overrides first and still pass.
+- Commit SHA: `768aa34` (landed together with Sprint 677).
 
 ---
 
