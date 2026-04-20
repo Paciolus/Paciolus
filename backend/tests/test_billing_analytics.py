@@ -708,6 +708,98 @@ class TestWebhookEventRecording:
         )
         assert len(expired_events) == 0
 
+    def test_trial_will_end_sends_trial_ending_email(self, db_session, make_user, monkeypatch):
+        """Sprint 690: handle_subscription_trial_will_end must dispatch the
+        trial-ending email in addition to recording the billing event.
+        Previously email dispatch was deferred; this test prevents a
+        regression back to logging-only."""
+        from billing import webhook_handler as wh
+
+        user = make_user(email="trial_email@example.com")
+        sub = Subscription(
+            user_id=user.id,
+            tier="solo",
+            status=SubscriptionStatus.TRIALING,
+            billing_interval=BillingInterval.MONTHLY,
+            stripe_customer_id="cus_trial_email",
+        )
+        db_session.add(sub)
+        db_session.flush()
+
+        calls: list[dict] = []
+
+        class _FakeResult:
+            success = True
+            message = "sent"
+
+        def _fake_send(**kwargs):
+            calls.append(kwargs)
+            return _FakeResult()
+
+        # Patch the real email sender + avoid Stripe network call for the portal URL.
+        monkeypatch.setattr("email_service.send_trial_ending_email", _fake_send)
+        monkeypatch.setattr(
+            "billing.webhook_handler._portal_url_for_user",
+            lambda _db, _uid: "https://billing.example/portal",
+        )
+
+        # Trial ends ~5 days from now (epoch seconds in the future).
+        from datetime import UTC, datetime, timedelta
+
+        trial_end_epoch = int((datetime.now(UTC) + timedelta(days=5)).timestamp())
+
+        wh.handle_subscription_trial_will_end(
+            db_session,
+            {"customer": "cus_trial_email", "trial_end": trial_end_epoch},
+        )
+
+        assert len(calls) == 1
+        call = calls[0]
+        assert call["to_email"] == "trial_email@example.com"
+        # days_remaining should land in [4, 6] accounting for int-day truncation.
+        assert 4 <= call["days_remaining"] <= 6
+        assert "Solo" in call["plan_name"]
+        assert call["portal_url"] == "https://billing.example/portal"
+
+    def test_trial_will_end_missing_trial_end_defaults_to_3_days(self, db_session, make_user, monkeypatch):
+        """Sprint 690: when Stripe omits trial_end, the email still fires
+        with the 3-day default (the standard Stripe notice window)."""
+        from billing import webhook_handler as wh
+
+        user = make_user(email="trial_default@example.com")
+        sub = Subscription(
+            user_id=user.id,
+            tier="professional",
+            status=SubscriptionStatus.TRIALING,
+            billing_interval=BillingInterval.MONTHLY,
+            stripe_customer_id="cus_trial_default",
+        )
+        db_session.add(sub)
+        db_session.flush()
+
+        calls: list[dict] = []
+
+        class _FakeResult:
+            success = True
+            message = "sent"
+
+        monkeypatch.setattr(
+            "email_service.send_trial_ending_email",
+            lambda **kwargs: calls.append(kwargs) or _FakeResult(),
+        )
+        monkeypatch.setattr(
+            "billing.webhook_handler._portal_url_for_user",
+            lambda _db, _uid: "https://billing.example/portal",
+        )
+
+        wh.handle_subscription_trial_will_end(
+            db_session,
+            {"customer": "cus_trial_default"},  # no trial_end field
+        )
+
+        assert len(calls) == 1
+        assert calls[0]["days_remaining"] == 3
+
     def test_subscription_deleted_still_uses_trial_expired_not_ending(self, db_session, make_user):
         """subscription.deleted (actual churn) must NOT use TRIAL_ENDING.
 

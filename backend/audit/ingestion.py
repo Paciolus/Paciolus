@@ -79,29 +79,11 @@ def detect_abnormal_balances(df: pd.DataFrame, materiality_threshold: float = 0.
     """
     import re
 
-    # Legacy keyword mappings (kept for backward compatibility)
-    ASSET_KEYWORDS = [
-        "cash",
-        "bank",
-        "receivable",
-        "inventory",
-        "prepaid",
-        "equipment",
-        "land",
-        "building",
-        "vehicle",
-    ]
-    LIABILITY_KEYWORDS = [
-        "payable",
-        "loan",
-        "tax",
-        "accrued",
-        "unearned",
-        "deferred",
-        "debt",
-        "mortgage",
-        "note payable",
-    ]
+    # Sprint 687: source the keyword lists from ``audit/classification`` so
+    # the legacy vectorized path stays in lock-step with the canonical list
+    # (previously these were hardcoded duplicates and drifted from the
+    # canonical list when goodwill/intangible/ROU/DTA were added).
+    from audit.classification import ASSET_KEYWORDS, LIABILITY_KEYWORDS
 
     log_secure_operation(
         "detect_abnormal", f"Scanning for abnormal balances (threshold: ${materiality_threshold:,.2f})"

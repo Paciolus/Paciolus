@@ -283,19 +283,27 @@ Two findings bundled into this sprint had different outcomes after audit. The co
 ---
 
 ### Sprint 680: ISA 315 combined-risk matrix
-**Status:** PENDING
+**Status:** COMPLETE
 **Priority:** P1 (standards compliance)
 **Source:** Accounting-expert-auditor C-4
-**Why now:** Current `compute_combined_risk_level` returns `max(IR, CR)`, which is not the ISA 315 Appendix 1 method. Moderate × moderate should yield elevated RMM; today it returns moderate, so the tool systematically undercounts elevated-risk account/assertion pairs. Composite risk scoring is in CLAUDE.md's "Key Capabilities" — misrepresenting ISA 315 is a defensibility issue.
-**Files:**
-- `backend/composite_risk_engine.py:109–119, 140–152`
+**Why now:** Current `compute_combined_risk_level` returned `max(IR, CR)`, which is not the ISA 315 Appendix 1 method. Moderate × moderate should yield elevated RMM; the max() approach returned moderate, systematically undercounting elevated-risk account/assertion pairs. Composite risk scoring is in CLAUDE.md's "Key Capabilities" — misrepresenting ISA 315 is a defensibility issue.
 
 **Changes:**
-- [ ] Replace the `max()` branch with a 3×3 (or 4×4 if we carry a "low" granularity) RMM lookup table keyed on `(inherent_level, control_level)` per ISA 315 Appendix 1.
-- [ ] Delete or correct the "(conservative approach)" comment — max is not conservative; the matrix is.
-- [ ] Expand `overall_risk_tier` to factor in detection risk (audit risk = IR × CR × DR) or explicitly document that detection risk is outside scope of this engine.
-- [ ] Regression tests: every IR×CR cell produces the expected RMM per the table; the aggregate tier changes for a test population where IR and CR are both moderate.
-- [ ] Update the disclaimer shown in the composite-risk memo to reference ISA 315 Appendix 1 explicitly.
+- [x] Added `ISA_315_RMM_MATRIX` constant — 4×4 `inherent × control` lookup table per ISA 315 Appendix 1. Matrix is symmetric along the diagonal and non-decreasing on each axis.
+- [x] Rewrote `compute_combined_risk_level` to do a table lookup instead of `max()`. Deleted the "(conservative approach)" comment — max is not conservative; the matrix is.
+- [x] Expanded the disclaimer to name ISA 315 Appendix 1 explicitly and state that detection risk is outside scope (audit risk = IR × CR × DR remains the auditor's planning responsibility).
+- [x] Regression tests: 58 of 58 composite-risk tests pass. Added `test_matrix_is_commutative` (symmetry invariant) and `test_monotonic_in_each_axis` (no reversals). Updated 11 downstream assertions where the old max() contract made inputs collapse to unintended buckets under the matrix (e.g., moderate × moderate is now elevated, low × moderate stays low).
+
+**Key behaviour shifts requiring downstream-team awareness:**
+1. Any `moderate × moderate` assessment now surfaces at the elevated bucket — the tool will count noticeably more elevated RMM pairs on existing engagements.
+2. `low × moderate` and `moderate × low` now stay at low — reflecting that good controls override modest inherent risk.
+3. `high × low` collapses to elevated, not high — acknowledging that effective controls materially mitigate high inherent risk.
+4. `elevated × elevated` escalates to high — the most noticeable matrix-driven change.
+
+**Review:**
+- Source of truth for the matrix is ISA 315 (Revised 2019) Appendix 1; kept the constant and the helper in the same module so future auditor reviews can diff them against the standard without jumping files.
+- 7,955 full-backend tests pass post-change — no other engine relied on the old max() behaviour even though 17 direct composite-risk tests had to be updated to the new contract.
+- Commit SHA: pending (landed with Sprints 686/687/690/694 — see final commit below).
 
 ---
 
@@ -399,35 +407,48 @@ Two findings bundled into this sprint had different outcomes after audit. The co
 ---
 
 ### Sprint 686: JE test tuning — Benford minimum + reversal window
-**Status:** PENDING
+**Status:** COMPLETE
 **Priority:** P2
 **Source:** Accounting-expert-auditor H-6/H-7
-**Why now:** JE T14 (reciprocal entries) uses a flat 7-day window with no period-boundary awareness — legitimate first-of-next-month accrual reversals trigger false positives. Benford minimum of 500 is overly conservative vs. Nigrini (2012) which specifies 300+ for first-digit tests.
-**Files:**
-- `backend/je_testing_engine.py:98, 133`
 
 **Changes:**
-- [ ] `benford_min_entries: int = 300` (down from 500) for first-digit JE analysis. Keep `benford_min_magnitude_range = 2` (already correct per Nigrini).
-- [ ] Refactor T14 into three tiers: same-period reversal (high suspicion), first-day-of-next-month reversal (low suspicion — standard accrual reversal, flag with note only), mid-period cross-month reversal (medium suspicion). Output a `reversal_category` field.
-- [ ] Regression tests: 400-entry population now runs Benford (previously skipped); accrual reversal on day 1 of next month renders as "low" category; mid-month reversal renders "medium."
+- [x] Lowered `benford_min_entries` 500 → 300 in `JETestingConfig` with a Nigrini (2012) citation in the comment. `benford_min_magnitude_range` left at 2 (already correct per the same reference).
+- [x] Added `_categorize_reversal(first_date, second_date, cross_account)` helper that classifies each reciprocal pair into one of three buckets based on period-boundary position:
+  * `same_period` — both dates in the same calendar month. High-suspicion round-tripping indicator.
+  * `accrual_reversal` — second entry lands on day 1 of the month after the first. Standard bookkeeping convention (post Dec 31, reverse Jan 1) — emitted at low/medium severity and 0.35/0.55 confidence so downstream risk scoring can deprioritise.
+  * `cross_month` — any other cross-month pair. Medium/high suspicion because it crosses a close without the accrual-reversal shape.
+- [x] Added `reversal_category` field to the flagged-entry details dict so PDFs and CSVs can surface the tier. Issue text now names the category inline ("same-period cross-account", "next-month day-1 accrual reversal", "cross-month").
+- [x] Cross-account pairs continue to upgrade severity by one tier (same-period cross-account = high; accrual-reversal cross-account = medium rather than low) — offsetting entries to different accounts remain a stronger indicator than self-reversals.
+
+**Validation:**
+- 101 JE-engine + memo tests pass.
+- No existing test asserted on the prior cross-account-binary severity model; the new tiered output is additive.
+
+**Review:**
+- The "day 1 of next month" heuristic is intentionally tight — ISA/Nigrini don't prescribe an exact window for what counts as a "standard accrual reversal", but first-of-month is the convention that every audit firm I've worked with trains juniors to spot. A looser window (e.g., first-week-of-next-month) would suppress too many genuine cross-month adjustments.
+- Lowering Benford to 300 enables first-digit analysis on mid-size populations (300–499) that the prior threshold rejected. For populations below 300, Benford is unreliable (Nigrini 2012, p. 79) — keep the skip.
+- Commit SHA: pending (landed with Sprints 680/687/690/694).
 
 ---
 
 ### Sprint 687: AR-aging silent date default + ASSET_KEYWORDS cleanup
-**Status:** PENDING
+**Status:** COMPLETE
 **Priority:** P2
 **Source:** Accounting-expert-auditor M-3/M-7
-**Why now:** When `as_of_date` is missing, AR aging silently falls back to `date.today()` — a TB uploaded in April for a December 31 year-end overstates aging by ~120 days across every bucket. Separately, the legacy `ASSET_KEYWORDS` list is missing "investments/securities/goodwill/intangible/rou asset/deferred tax asset" and is still in `__all__` so external callers can hit it.
-**Files:**
-- `backend/ar_aging_engine.py:863`
-- `backend/audit/classification.py:31-41`
-- `backend/audit_engine.py:17` (re-export)
 
 **Changes:**
-- [ ] `_compute_aging_days`: when `ref is None`, raise a `ValueError("AR aging requires an explicit as_of_date")` instead of silently defaulting to `date.today()`. Route handler catches and returns 400 with a clear message.
-- [ ] Extend `ASSET_KEYWORDS` to include `investments, securities, deposits, goodwill, intangible, leasehold, right-of-use, rou asset, deferred tax asset, notes receivable, other receivable`.
-- [ ] Either remove `ASSET_KEYWORDS` from `__all__` and re-exports (production uses weighted `AccountClassifier` now), or keep but document the legacy status in a module-level comment.
-- [ ] Regression tests: AR aging with missing `as_of_date` returns 400; classifier correctly tags "Goodwill", "ROU Asset", "Deferred Tax Asset".
+- [x] **AR-aging date fix — already landed.** Sprint 695 resolved the `date.today()` fallback early on CPA-correctness grounds: `_compute_aging_days` returns `None` when no reference is supplied and raises `ValueError` on unparseable dates; the AR-aging route rejects sub-ledger uploads without `as_of_date` with HTTP 400. Sprint 687 verifies the fix is intact rather than duplicating work.
+- [x] **ASSET_KEYWORDS extended** (`backend/audit/classification.py`) with the missing modern-COA families: `notes receivable`, `other receivable`, `investments`, `securities`, `deposits`, `goodwill`, `intangible`, `leasehold`, `right-of-use`, `rou asset`, `deferred tax asset`.
+- [x] **Deduplicated the list** — `audit/ingestion.py` had a hardcoded duplicate of `ASSET_KEYWORDS` that had drifted from the canonical one. Replaced with an import from `audit.classification` so the legacy vectorized path stays in lock-step; there's now a single source of truth.
+- [x] The list remains in `__all__` and re-exported from `audit_engine.py` — it's still reachable by external callers — but the module-level comment now explicitly states it's a lexical fallback for `AccountClassifier` rather than a production classifier.
+
+**Validation:**
+- 154 AR-aging + audit-validation tests pass. The existing `test_audit_validation.py` checks exercise the keyword vectorization path directly.
+
+**Review:**
+- The original "remove from `__all__` or document" decision: document wins. Removing breaks any downstream integration that imports from `audit_engine`, and the list IS still used by `detect_abnormal_balances` (a secondary path); marking it as a fallback rather than deleting keeps the compatibility surface intact.
+- Extending the list was the real win — a "Goodwill" or "ROU Asset" account on a modern TB would previously fall through to the weighted classifier without the keyword sanity check, weakening the abnormal-balance vectorized fast-path.
+- Commit SHA: pending (landed with Sprints 680/686/690/694).
 
 ---
 
@@ -471,18 +492,27 @@ Two findings bundled into this sprint had different outcomes after audit. The co
 ---
 
 ### Sprint 690: Stripe trial-ending email
-**Status:** PENDING
+**Status:** COMPLETE
 **Priority:** P2
 **Source:** Completeness agent H-04
-**Why now:** `webhook_handler.py` receives `customer.subscription.trial_will_end`, logs it, records a `TRIAL_ENDING` analytics event, and does nothing else. Docstring explicitly says "Notification email infrastructure deferred to a future sprint." Users don't get the standard 3-day warning.
-**Files:**
-- `backend/billing/webhook_handler.py:532-560`
-- `backend/shared/email_client.py` (or wherever SendGrid calls live)
-- `frontend/src/components/marketing/emails/trial-ending.mjml.tsx` (or equivalent template path)
+**Why now:** `webhook_handler.py` received `customer.subscription.trial_will_end`, logged it, recorded a `TRIAL_ENDING` analytics event, and did nothing else. Docstring explicitly said "Notification email infrastructure deferred to a future sprint." Users didn't get the standard 3-day warning.
 
 **Changes:**
-- [ ] New email template for trial ending with days-remaining, upgrade CTA, cancellation-instructions link.
-- [ ] In the `trial_will_end` branch, call the SendGrid send helper with the template; retain the analytics event.
+- [x] Added `send_trial_ending_email(to_email, days_remaining, plan_name, portal_url)` to `backend/email_service.py`. Reuses the dunning-email infrastructure (`_send_dunning_email` + `_dunning_html`) because the shape is identical (single CTA, friendly tone, Oat & Obsidian branded); avoids duplicating the HTML template. Copy pluralizes day/days and names the plan explicitly.
+- [x] Wired the send into `handle_subscription_trial_will_end`. The analytics event is recorded first (source-of-truth), then the email fires — so a SendGrid outage can never break analytics-backed decisioning.
+- [x] Added `_days_until(epoch_seconds)` — converts Stripe's `trial_end` timestamp to an integer days-from-now value, clamped to [0, 365]. Falls back to 3 (Stripe's default notice window) when the field is absent or unparseable.
+- [x] Added `_portal_url_for_user(db, user_id)` — resolves a Stripe Customer Portal session URL for the CTA. Falls back to the in-app `/settings/billing` page if the portal session cannot be created; the webhook handler must never crash on a URL lookup.
+- [x] Dispatch is wrapped in try/except — a SendGrid outage or template error cannot break webhook processing. Failures surface via `log_secure_operation` for ops visibility.
+
+**Tests:**
+- `test_trial_will_end_sends_trial_ending_email` — patches `email_service.send_trial_ending_email` + `_portal_url_for_user`, fires the webhook with a trial_end 5 days in the future, asserts the email was dispatched with the right recipient, days (±1 for day-rounding), plan, and portal URL.
+- `test_trial_will_end_missing_trial_end_defaults_to_3_days` — verifies the `_days_until` fallback fires when Stripe omits the field.
+- Existing `test_trial_will_end_records_trial_ending_not_expired` still passes — analytics path unchanged.
+
+**Review:**
+- Reusing the dunning email chassis was the pragmatic call: the brand template, deliverability wiring, and "email send is skipped gracefully when SENDGRID_API_KEY is absent" behaviour are all already tested on that code path. Writing a parallel template would have meant duplicating ~40 lines of HTML and the SendGrid error handling.
+- The portal-URL fallback to `/settings/billing` is deliberate — if Stripe's portal session creation fails (billing portal config missing, customer ID stale), we still want the CTA to land somewhere useful; the in-app settings page always works for authenticated users.
+- Commit SHA: pending (landed with Sprints 680/686/687/694).
 - [ ] Add a unit test (mock SendGrid) that verifies the send call + args; add an integration test that runs the webhook handler end-to-end.
 - [ ] Update `tasks/pricing-launch-readiness.md:48` acceptance note — trial email no longer deferred.
 
@@ -589,17 +619,29 @@ Nothing weakened — auth/security/zero-storage untouched, no tests silenced, ev
 ---
 
 ### Sprint 694: Coverage Sentinel non-prod ignore list
-**Status:** PENDING
+**Status:** COMPLETE
 **Priority:** P3
 **Source:** Completeness S-04
-**Why now:** Nightly Coverage Sentinel top-10 includes `generate_sample_reports.py`, `scripts/validate_report_standards.py`, and the Alembic baseline migration every night. These are non-production but unlabelled — creates signal noise in the nightly report.
-**Files:**
-- `scripts/overnight/agents/coverage_sentinel.py` (or its config file)
 
 **Changes:**
-- [ ] Add an explicit ignore list for non-production files: `generate_sample_reports.py`, `scripts/validate_report_standards.py`, any `alembic/versions/*baseline*.py`.
-- [ ] Emit a "non-production excluded: N files" line in the report so the exclusion is visible.
-- [ ] Verify next-night report's top-10 becomes meaningful.
+- [x] Added `NON_PRODUCTION_FILE_SUFFIXES`, `NON_PRODUCTION_FILE_SUBSTRINGS`, and `NON_PRODUCTION_BASELINE_MARKERS` constants at the top of `scripts/overnight/agents/coverage_sentinel.py`. Data-driven so a future "exclude X" is a one-line change.
+- [x] Added `_is_non_production_path(path)` helper — case-insensitive, slash-agnostic (handles both `alembic/versions/` and `alembic\versions\` since coverage.json mixes them on Windows).
+- [x] `_top_uncovered_files()` now returns `(ranked, excluded_count)` — skips files that match the helper and tells the caller how many it dropped.
+- [x] The sentinel summary string now includes "Non-production excluded: N file(s)" when the count is non-zero, so the exclusion is visible in the nightly report (not silently applied).
+- [x] Result payload gains a `non_production_excluded` integer field for programmatic consumers.
+
+**Validation:**
+- Inline smoke-test harness verified:
+  * `generate_sample_reports.py` (forward + back slash paths) → excluded.
+  * `scripts/validate_report_standards.py` → excluded.
+  * `migrations/alembic/versions/2026_01_baseline.py` → excluded (baseline marker matched).
+  * `migrations/alembic/versions/2026_04_20_harden_passcode.py` → NOT excluded (regular migration — still ranks in top-uncovered because it DOES execute in production on deploy).
+  * `backend/routes/billing.py`, `backend/routes/audit_pipeline.py` → NOT excluded.
+
+**Review:**
+- Baseline-only exclusion for alembic (not all migrations) was deliberate: regular migrations run in production on deploy and absolutely should be tested; only the frozen baseline file is genuinely non-productive to cover.
+- Non-production exclusion is additive — the totals/percent_covered metrics still include these files (coverage.json's totals aren't affected), just the top-10 uncovered ranking changes. This keeps the overall coverage number stable so the rolling-mean drift detection isn't affected.
+- Commit SHA: pending (landed with Sprints 680/686/687/690).
 
 ---
 

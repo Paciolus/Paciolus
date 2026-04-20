@@ -26,18 +26,42 @@ from security_utils import log_secure_operation
 from shared.monetary import BALANCE_TOLERANCE
 
 # ── Legacy keyword mappings ──────────────────────────────────────────
-# Kept for backward compatibility with detect_abnormal_balances().
-# The production path uses weighted heuristics in AccountClassifier.
+# Kept for backward compatibility with ``detect_abnormal_balances()``.
+# The production path uses weighted heuristics in ``AccountClassifier`` —
+# these lists are retained only as a secondary lexical fallback when the
+# weighted classifier returns low confidence.
+#
+# Sprint 687: extended ASSET_KEYWORDS to cover account families that CPA
+# firms consistently surface on trial balances but the original list missed:
+#   - investments / securities / deposits (financial assets)
+#   - goodwill / intangible / leasehold (intangible assets)
+#   - right-of-use / ROU asset (ASC 842 / IFRS 16 leases)
+#   - deferred tax asset (ASC 740)
+#   - notes receivable / other receivable (receivable variants)
+# Previously a chart of accounts containing "Goodwill" or "ROU Asset" with
+# no CSV type override could fall through to ``AccountClassifier`` without
+# the legacy fallback catching them.
 ASSET_KEYWORDS = [
     "cash",
     "bank",
     "receivable",
+    "notes receivable",
+    "other receivable",
     "inventory",
     "prepaid",
     "equipment",
     "land",
     "building",
     "vehicle",
+    "investments",
+    "securities",
+    "deposits",
+    "goodwill",
+    "intangible",
+    "leasehold",
+    "right-of-use",
+    "rou asset",
+    "deferred tax asset",
 ]
 LIABILITY_KEYWORDS = [
     "payable",

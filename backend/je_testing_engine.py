@@ -95,7 +95,10 @@ class JETestingConfig:
     unusual_amount_min_entries: int = 5  # Min entries per account for stats
 
     # T6: Benford's Law
-    benford_min_entries: int = 500  # Min entries for Benford analysis
+    # Sprint 686: lowered from 500 → 300 to align with Nigrini (2012) which
+    # specifies ≥300 entries for first-digit Benford analysis. 500 was
+    # overly conservative and caused legitimate populations to skip Benford.
+    benford_min_entries: int = 300  # Min entries for Benford analysis (Nigrini 2012)
     benford_min_magnitude_range: int = 2  # Min orders of magnitude ($10→$1,000+)
     benford_min_amount: float = 1.0  # Exclude sub-dollar entries
 
@@ -2068,6 +2071,59 @@ def test_holiday_postings(
 # =============================================================================
 
 
+def _categorize_reversal(
+    first_date: date,
+    second_date: date,
+    cross_account: bool,
+) -> tuple[str, Severity, float, str]:
+    """Sprint 686: classify a reciprocal pair by timing relative to the
+    period boundary and return (category, severity, confidence, note).
+
+    Three tiers per the Sprint 686 directive:
+      * ``same_period``: both dates in the same calendar month — no period
+        boundary crossed. Round-tripping indicator, high suspicion.
+      * ``accrual_reversal``: second entry lands on day 1 of the month
+        immediately after the first entry's month. Matches the standard
+        accrual-reversal convention (post Dec 31, reverse Jan 1). Low
+        suspicion; flagged as informational.
+      * ``cross_month``: any other cross-month reversal — suggests
+        backdating or manual adjustments that cross a close boundary.
+        Medium suspicion.
+
+    Cross-account pairs upgrade severity by one tier because posting an
+    offsetting entry to a different account is a stronger round-tripping
+    indicator than a self-reversal.
+    """
+    early, late = sorted((first_date, second_date))
+
+    same_month = early.year == late.year and early.month == late.month
+    # Day 1 of the month right after ``early`` — wrap across year boundary.
+    next_month = early.month + 1 if early.month < 12 else 1
+    next_year = early.year if early.month < 12 else early.year + 1
+    is_next_month_day_one = late.year == next_year and late.month == next_month and late.day == 1
+
+    if same_month:
+        category = "same_period"
+        severity = Severity.HIGH if cross_account else Severity.MEDIUM
+        confidence = 0.9 if cross_account else 0.7
+        note = "same-period" + (" cross-account" if cross_account else "")
+    elif is_next_month_day_one:
+        category = "accrual_reversal"
+        # Accrual reversals are standard bookkeeping; low-suspicion unless
+        # also cross-account (then bump to medium as a softer flag than
+        # a same-period cross-account pair).
+        severity = Severity.MEDIUM if cross_account else Severity.LOW
+        confidence = 0.55 if cross_account else 0.35
+        note = "next-month day-1 accrual reversal"
+    else:
+        category = "cross_month"
+        severity = Severity.HIGH if cross_account else Severity.MEDIUM
+        confidence = 0.8 if cross_account else 0.6
+        note = "cross-month" + (" cross-account" if cross_account else "")
+
+    return category, severity, confidence, note
+
+
 def test_reciprocal_entries(
     entries: list[JournalEntry],
     config: JETestingConfig,
@@ -2077,6 +2133,11 @@ def test_reciprocal_entries(
     Detects potential round-tripping: a debit to Account A followed by
     a credit of the same amount within a configurable time window.
     Enhanced: detects cross-account patterns.
+
+    Sprint 686 — categorizes pairs by period boundary position so that
+    standard accrual reversals (day 1 of the following month) are not
+    treated with the same weight as same-period round-tripping. Output
+    carries a ``reversal_category`` field for downstream risk scoring.
     """
     if not config.reciprocal_enabled:
         return TestResult(
@@ -2128,9 +2189,8 @@ def test_reciprocal_entries(
                 days_apart = abs((d_date - c_date).days)
                 if days_apart <= config.reciprocal_days_window:
                     seen_pairs.add(pair_key)
-                    # Cross-account check (stronger indicator)
                     cross_account = d_entry.account != c_entry.account
-                    severity = Severity.HIGH if cross_account else Severity.MEDIUM
+                    category, severity, confidence, note = _categorize_reversal(d_date, c_date, cross_account)
 
                     for entry in (d_entry, c_entry):
                         flagged.append(
@@ -2140,14 +2200,18 @@ def test_reciprocal_entries(
                                 test_key="reciprocal_entries",
                                 test_tier=TestTier.ADVANCED,
                                 severity=severity,
-                                issue=f"Matching {'cross-account ' if cross_account else ''}pair: ${amt:,.2f} within {days_apart} days",
-                                confidence=0.9 if cross_account else 0.7,
+                                issue=(
+                                    f"Matching {'cross-account ' if cross_account else ''}"
+                                    f"pair: ${amt:,.2f} within {days_apart} days ({note})"
+                                ),
+                                confidence=confidence,
                                 details={
                                     "matched_amount": amt,
                                     "days_apart": days_apart,
                                     "cross_account": cross_account,
                                     "debit_account": d_entry.account,
                                     "credit_account": c_entry.account,
+                                    "reversal_category": category,
                                 },
                             )
                         )
@@ -2161,7 +2225,11 @@ def test_reciprocal_entries(
         total_entries=len(entries),
         flag_rate=flag_rate,
         severity=Severity.HIGH,
-        description=f"Flags matching debit/credit pairs within {config.reciprocal_days_window} days (round-tripping indicator).",
+        description=(
+            f"Flags matching debit/credit pairs within {config.reciprocal_days_window} days "
+            "(round-tripping indicator). Sprint 686: categorized as same_period / "
+            "accrual_reversal / cross_month."
+        ),
         flagged_entries=flagged,
     )
 

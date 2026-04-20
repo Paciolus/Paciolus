@@ -599,6 +599,45 @@ def send_dunning_recovered(to_email: str, amount: str) -> EmailResult:
     )
 
 
+def send_trial_ending_email(
+    to_email: str,
+    days_remaining: int,
+    plan_name: str,
+    portal_url: str,
+) -> EmailResult:
+    """Sprint 690: 3-day trial-ending notice.
+
+    Fired by the ``customer.subscription.trial_will_end`` Stripe webhook
+    (which delivers 3 days before the trial converts). Reuses the dunning
+    email infrastructure (Oat & Obsidian branded, same deliverability path)
+    because the shape — single CTA, friendly tone, informational — matches.
+
+    ``days_remaining`` is accepted from the webhook's trial_end timestamp
+    so the copy adapts if Stripe's notice window shifts.
+    """
+    day_word = "day" if days_remaining == 1 else "days"
+    body = (
+        f'<p style="color:#212121;font-size:15px;line-height:1.6">Heads up — your Paciolus free trial '
+        f"ends in <strong>{days_remaining} {day_word}</strong>.</p>"
+        f'<p style="color:#212121;font-size:15px;line-height:1.6">After the trial, your <strong>{plan_name}</strong> '
+        "subscription will activate automatically using the payment method on file. You don't need to do "
+        "anything to continue.</p>"
+        '<p style="color:#212121;font-size:15px;line-height:1.6">If you\'d like to change plans, update '
+        "your payment method, or cancel before the trial converts, you can manage everything in the billing portal.</p>"
+    )
+    plain = (
+        f"Your Paciolus free trial ends in {days_remaining} {day_word}. "
+        f"Your {plan_name} subscription will activate automatically. "
+        f"Manage, change, or cancel at: {portal_url}"
+    )
+    return _send_dunning_email(
+        to_email,
+        f"Your Paciolus trial ends in {days_remaining} {day_word}",
+        _dunning_html("Trial Ending Soon", body, portal_url, "Manage Subscription"),
+        plain,
+    )
+
+
 def get_service_status() -> dict:
     """Get email service configuration status (for admin/debug)."""
     return {

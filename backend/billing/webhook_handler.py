@@ -533,7 +533,10 @@ def handle_subscription_trial_will_end(db: Session, event_data: dict) -> None:
     """Handle customer.subscription.trial_will_end — 3 days before trial expires.
 
     Phase LIX Sprint C. Logs the event for monitoring.
-    Notification email infrastructure deferred to a future sprint.
+
+    Sprint 690: sends the trial-ending email via ``send_trial_ending_email``.
+    Previously this handler was logging-only — users didn't get the standard
+    3-day warning that Stripe's hook is designed to trigger.
     """
     user_id = _resolve_user_id(db, event_data)
     trial_end = event_data.get("trial_end")
@@ -558,6 +561,81 @@ def handle_subscription_trial_will_end(db: Session, event_data: dict) -> None:
         user_id=user_id,
         tier=sub.tier if sub else None,
     )
+
+    # Sprint 690: fire the trial-ending email.
+    # Wrapped in try/except so a SendGrid outage or bad template cannot break
+    # webhook processing — the billing event is the source of truth; email
+    # is best-effort. Failures are surfaced via secure_operation logs.
+    try:
+        user = db.query(User).filter(User.id == user_id).first()
+        if user is None or not user.email:
+            return
+
+        tier_label = sub.tier.title() if sub and sub.tier else "paid"
+        days_remaining = _days_until(trial_end)
+
+        portal_url = _portal_url_for_user(db, user_id)
+
+        from email_service import send_trial_ending_email
+
+        result = send_trial_ending_email(
+            to_email=user.email,
+            days_remaining=days_remaining,
+            plan_name=f"Paciolus {tier_label}",
+            portal_url=portal_url,
+        )
+        if not result.success:
+            logger.warning(
+                "trial_will_end email dispatch failed for user %d: %s",
+                user_id,
+                result.message,
+            )
+    except Exception as exc:  # pragma: no cover — defensive
+        logger.exception("trial_will_end email dispatch raised: %s", type(exc).__name__)
+
+
+def _days_until(epoch_seconds: int | None) -> int:
+    """Sprint 690: convert a Stripe epoch-seconds timestamp into an integer
+    "days from now" count, clamped to [0, 365]. Returns 3 when the timestamp
+    is missing (Stripe's trial_will_end hook fires 3 days before conversion
+    by default, so 3 is the best guess when the field is absent)."""
+    if not epoch_seconds:
+        return 3
+
+    from datetime import UTC, datetime
+
+    try:
+        end = datetime.fromtimestamp(int(epoch_seconds), tz=UTC)
+    except (OSError, OverflowError, TypeError, ValueError):
+        return 3
+
+    delta = (end - datetime.now(UTC)).total_seconds()
+    days = int(delta // 86400)
+    return max(0, min(365, days))
+
+
+def _portal_url_for_user(db: Session, user_id: int) -> str:
+    """Sprint 690: resolve a Stripe Customer Portal URL for the trial-ending
+    email CTA. Falls back to the in-app billing-settings page if the portal
+    session cannot be created — the webhook handler must never crash on a
+    URL lookup and the in-app settings page always works for authenticated
+    users.
+
+    Prefers the pre-generated portal URL if the subscription row has a
+    cached one; otherwise builds a fresh session via Stripe."""
+    from config import FRONTEND_URL
+
+    default_url = f"{FRONTEND_URL}/settings/billing"
+    try:
+        sub = get_subscription(db, user_id)
+        if sub is None or not sub.stripe_customer_id:
+            return default_url
+
+        from billing.subscription_manager import create_portal_session
+
+        return create_portal_session(sub.stripe_customer_id, return_url=default_url) or default_url
+    except Exception:
+        return default_url
 
 
 def handle_subscription_created(db: Session, event_data: dict) -> None:

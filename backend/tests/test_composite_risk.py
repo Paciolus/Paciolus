@@ -59,25 +59,34 @@ def _make_assessment(
 
 
 class TestComputeCombinedRiskLevel:
-    """Tests for compute_combined_risk_level() — conservative max approach."""
+    """Tests for compute_combined_risk_level() — ISA 315 Appendix 1 RMM matrix.
+
+    Sprint 680: the prior implementation used max(IR, CR); the ISA 315
+    Appendix 1 table escalates moderate × moderate to elevated, and
+    elevated × elevated to high. Assertions here mirror the canonical table.
+    """
 
     def test_both_low(self):
         assert compute_combined_risk_level("low", "low") == "low"
 
-    def test_both_moderate(self):
-        assert compute_combined_risk_level("moderate", "moderate") == "moderate"
+    def test_both_moderate_escalates_to_elevated(self):
+        """ISA 315: moderate IR × moderate CR → elevated RMM (not moderate)."""
+        assert compute_combined_risk_level("moderate", "moderate") == "elevated"
 
-    def test_both_elevated(self):
-        assert compute_combined_risk_level("elevated", "elevated") == "elevated"
+    def test_both_elevated_escalates_to_high(self):
+        """ISA 315: elevated × elevated → high RMM."""
+        assert compute_combined_risk_level("elevated", "elevated") == "high"
 
     def test_both_high(self):
         assert compute_combined_risk_level("high", "high") == "high"
 
-    def test_inherent_higher(self):
-        assert compute_combined_risk_level("high", "low") == "high"
+    def test_high_inherent_low_control_is_elevated(self):
+        """ISA 315: good controls partially mitigate high inherent risk."""
+        assert compute_combined_risk_level("high", "low") == "elevated"
 
-    def test_control_higher(self):
-        assert compute_combined_risk_level("low", "high") == "high"
+    def test_low_inherent_high_control_is_elevated(self):
+        """ISA 315: high control risk elevates even a low-IR population."""
+        assert compute_combined_risk_level("low", "high") == "elevated"
 
     def test_moderate_and_elevated(self):
         assert compute_combined_risk_level("moderate", "elevated") == "elevated"
@@ -85,17 +94,22 @@ class TestComputeCombinedRiskLevel:
     def test_elevated_and_moderate(self):
         assert compute_combined_risk_level("elevated", "moderate") == "elevated"
 
-    def test_low_and_high(self):
-        assert compute_combined_risk_level("low", "high") == "high"
-
-    def test_low_and_moderate(self):
-        assert compute_combined_risk_level("low", "moderate") == "moderate"
+    def test_low_and_moderate_stays_low(self):
+        """ISA 315: low IR with moderate CR stays low — controls override."""
+        assert compute_combined_risk_level("low", "moderate") == "low"
 
     def test_moderate_and_high(self):
         assert compute_combined_risk_level("moderate", "high") == "high"
 
     def test_elevated_and_high(self):
         assert compute_combined_risk_level("elevated", "high") == "high"
+
+    def test_matrix_is_commutative(self):
+        """Sprint 680: ISA 315 matrix is symmetric — IR×CR = CR×IR."""
+        levels = ["low", "moderate", "elevated", "high"]
+        for inherent in levels:
+            for control in levels:
+                assert compute_combined_risk_level(inherent, control) == compute_combined_risk_level(control, inherent)
 
     def test_all_combinations_return_valid_level(self):
         """Exhaustive: every combination returns a valid RiskLevel."""
@@ -105,14 +119,16 @@ class TestComputeCombinedRiskLevel:
                 result = compute_combined_risk_level(inherent, control)
                 assert result in levels
 
-    def test_combined_always_gte_both_inputs(self):
-        """The combined risk is always >= both inputs (conservative)."""
+    def test_monotonic_in_each_axis(self):
+        """Sprint 680: holding one axis fixed, RMM is non-decreasing in the
+        other — ISA 315 matrix has no reversals."""
         levels = ["low", "moderate", "elevated", "high"]
-        for inherent in levels:
-            for control in levels:
-                result = compute_combined_risk_level(inherent, control)
-                assert RISK_LEVEL_WEIGHTS[result] >= RISK_LEVEL_WEIGHTS[inherent]
-                assert RISK_LEVEL_WEIGHTS[result] >= RISK_LEVEL_WEIGHTS[control]
+        for fixed in levels:
+            prev_w = -1
+            for other in levels:
+                rmm = compute_combined_risk_level(fixed, other)
+                assert RISK_LEVEL_WEIGHTS[rmm] >= prev_w
+                prev_w = RISK_LEVEL_WEIGHTS[rmm]
 
 
 # =============================================================================
@@ -131,29 +147,38 @@ class TestComputeOverallRiskTier:
         assert _compute_overall_risk_tier(assessments) == "low"
 
     def test_any_high_returns_high(self):
+        """Sprint 680: high×low is elevated (not high) under ISA 315, so the
+        overall-high path needs a combination that actually yields high."""
         assessments = [
             _make_assessment(inherent_risk="low", control_risk="low"),
             _make_assessment(inherent_risk="low", control_risk="low"),
-            _make_assessment(inherent_risk="high", control_risk="low"),
+            _make_assessment(inherent_risk="high", control_risk="moderate"),
         ]
         assert _compute_overall_risk_tier(assessments) == "high"
 
     def test_majority_elevated_returns_elevated(self):
+        """Sprint 680: under ISA 315, moderate×elevated = elevated and
+        elevated×elevated = high; use elevated×moderate to get a
+        deterministic elevated combined."""
         assessments = [
-            _make_assessment(inherent_risk="elevated", control_risk="elevated"),
-            _make_assessment(inherent_risk="elevated", control_risk="low"),
+            _make_assessment(inherent_risk="elevated", control_risk="moderate"),
+            _make_assessment(inherent_risk="elevated", control_risk="moderate"),
             _make_assessment(inherent_risk="low", control_risk="low"),
         ]
-        # 2/3 are elevated combined => >50% elevated => "elevated"
+        # 2/3 combined = elevated => >50% elevated-or-above => "elevated"
+        # None are "high" so the "any high" short-circuit doesn't fire.
         assert _compute_overall_risk_tier(assessments) == "elevated"
 
     def test_majority_moderate_returns_moderate(self):
+        """Sprint 680: moderate×low = low under ISA 315, so to get a
+        combined-moderate we need elevated×low (= moderate)."""
         assessments = [
-            _make_assessment(inherent_risk="moderate", control_risk="low"),
-            _make_assessment(inherent_risk="moderate", control_risk="low"),
+            _make_assessment(inherent_risk="elevated", control_risk="low"),
+            _make_assessment(inherent_risk="elevated", control_risk="low"),
             _make_assessment(inherent_risk="low", control_risk="low"),
         ]
-        # 2/3 are moderate combined => >50% moderate or above => "moderate"
+        # 2/3 combined = moderate, 1/3 = low.
+        # elevated-or-above count = 0, moderate-or-above count = 2 > 1.5.
         assert _compute_overall_risk_tier(assessments) == "moderate"
 
     def test_single_assessment_low(self):
@@ -165,12 +190,16 @@ class TestComputeOverallRiskTier:
         assert _compute_overall_risk_tier(assessments) == "high"
 
     def test_even_split_moderate_low(self):
-        """50/50 moderate/low — moderate count == total/2, not > total/2, so 'low'."""
+        """50/50 moderate/low — moderate count == total/2, not > total/2, so 'low'.
+
+        Sprint 680: under ISA 315, moderate×low = low, so reach a combined
+        moderate via elevated×low. Two-assessment split: 1 moderate, 1 low.
+        """
         assessments = [
-            _make_assessment(inherent_risk="moderate", control_risk="low"),
+            _make_assessment(inherent_risk="elevated", control_risk="low"),
             _make_assessment(inherent_risk="low", control_risk="low"),
         ]
-        # 1/2 moderate => not >50% => "low"
+        # 1/2 moderate-or-above => not > 50% => default to "low"
         assert _compute_overall_risk_tier(assessments) == "low"
 
 
@@ -211,10 +240,13 @@ class TestBuildCompositeRiskProfile:
         assert profile.fraud_risk_accounts == 2
 
     def test_mixed_risk_distribution(self):
+        """Sprint 680: combined levels under ISA 315 are
+        low×low=low, moderate×moderate=elevated, elevated×moderate=elevated.
+        Use inputs that straddle the distribution cleanly."""
         assessments = [
             _make_assessment(inherent_risk="low", control_risk="low"),
-            _make_assessment(inherent_risk="moderate", control_risk="low"),
-            _make_assessment(inherent_risk="elevated", control_risk="low"),
+            _make_assessment(inherent_risk="elevated", control_risk="low"),  # → moderate
+            _make_assessment(inherent_risk="elevated", control_risk="moderate"),  # → elevated
         ]
         profile = build_composite_risk_profile(assessments)
         assert profile.risk_distribution == {
@@ -359,7 +391,8 @@ class TestAccountRiskAssessmentToDict:
         assert d["assertion"] == "existence"
         assert d["inherent_risk"] == "moderate"
         assert d["control_risk"] == "low"
-        assert d["combined_risk"] == "moderate"  # max of moderate, low
+        # Sprint 680: ISA 315 matrix — moderate × low = low (controls override)
+        assert d["combined_risk"] == "low"
         assert d["fraud_risk_factor"] is False
 
     def test_to_dict_with_notes(self):
@@ -392,8 +425,9 @@ class TestCompositeRiskProfileToDict:
     """Tests for CompositeRiskProfile.to_dict() serialization."""
 
     def test_to_dict_structure(self):
+        """Sprint 680: moderate×moderate = elevated under ISA 315."""
         assessments = [
-            _make_assessment(inherent_risk="moderate", control_risk="low"),
+            _make_assessment(inherent_risk="moderate", control_risk="moderate"),
         ]
         profile = build_composite_risk_profile(
             assessments,
@@ -413,8 +447,8 @@ class TestCompositeRiskProfileToDict:
         assert d["high_risk_accounts"] == 0
         assert d["fraud_risk_accounts"] == 0
         assert d["total_assessments"] == 1
-        assert d["risk_distribution"] == {"low": 0, "moderate": 1, "elevated": 0, "high": 0}
-        assert d["overall_risk_tier"] == "moderate"
+        assert d["risk_distribution"] == {"low": 0, "moderate": 0, "elevated": 1, "high": 0}
+        assert d["overall_risk_tier"] == "elevated"
         assert d["disclaimer"] == DISCLAIMER
 
     def test_to_dict_empty_profile(self):
@@ -426,13 +460,16 @@ class TestCompositeRiskProfileToDict:
         assert d["disclaimer"] == DISCLAIMER
 
     def test_to_dict_nested_assessments(self):
-        """Assessment dicts within to_dict() include combined_risk."""
+        """Assessment dicts within to_dict() include combined_risk.
+
+        Sprint 680: high × low = elevated under ISA 315 (good controls
+        partially mitigate high inherent risk)."""
         assessments = [
             _make_assessment(inherent_risk="high", control_risk="low"),
         ]
         profile = build_composite_risk_profile(assessments)
         d = profile.to_dict()
-        assert d["account_assessments"][0]["combined_risk"] == "high"
+        assert d["account_assessments"][0]["combined_risk"] == "elevated"
 
 
 # =============================================================================
@@ -483,10 +520,12 @@ class TestLargeInput:
     """Tests with many assessments to verify scaling behavior."""
 
     def test_hundred_assessments(self):
+        """Sprint 680: under ISA 315, moderate × moderate = elevated, so use
+        elevated × low to land cleanly on the moderate combined bucket."""
         assessments = [
             _make_assessment(
                 account_name=f"Account_{i}",
-                inherent_risk="moderate",
+                inherent_risk="elevated",
                 control_risk="low",
             )
             for i in range(100)
@@ -497,12 +536,15 @@ class TestLargeInput:
         assert profile.overall_risk_tier == "moderate"
 
     def test_mixed_large_set(self):
-        """60% low, 20% moderate, 10% elevated, 10% high."""
+        """60% low, 20% moderate, 10% elevated, 10% high combined under
+        ISA 315. Sprint 680: chose inputs whose (IR, CR) combination lands
+        cleanly on each combined bucket (moderate×low=low would collapse;
+        elevated×low=moderate; elevated×moderate=elevated; high×moderate=high)."""
         assessments = (
             [_make_assessment(inherent_risk="low", control_risk="low") for _ in range(60)]
-            + [_make_assessment(inherent_risk="moderate", control_risk="low") for _ in range(20)]
-            + [_make_assessment(inherent_risk="elevated", control_risk="low") for _ in range(10)]
-            + [_make_assessment(inherent_risk="high", control_risk="low") for _ in range(10)]
+            + [_make_assessment(inherent_risk="elevated", control_risk="low") for _ in range(20)]
+            + [_make_assessment(inherent_risk="elevated", control_risk="moderate") for _ in range(10)]
+            + [_make_assessment(inherent_risk="high", control_risk="moderate") for _ in range(10)]
         )
         profile = build_composite_risk_profile(assessments)
         assert profile.total_assessments == 100
@@ -519,8 +561,15 @@ class TestMultipleAssertionsPerAccount:
     """An account can have separate risk assessments per assertion."""
 
     def test_same_account_different_assertions(self):
+        """Sprint 680: high × moderate = high under ISA 315 (low CR would
+        mitigate to elevated, not high)."""
         assessments = [
-            _make_assessment(account_name="Revenue", assertion="existence", inherent_risk="high"),
+            _make_assessment(
+                account_name="Revenue",
+                assertion="existence",
+                inherent_risk="high",
+                control_risk="moderate",
+            ),
             _make_assessment(account_name="Revenue", assertion="completeness", inherent_risk="low"),
             _make_assessment(account_name="Revenue", assertion="valuation", inherent_risk="moderate"),
         ]

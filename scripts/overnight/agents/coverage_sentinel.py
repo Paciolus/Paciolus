@@ -44,6 +44,48 @@ ROLLING_WINDOW_DAYS = 7
 
 PYTEST_TIMEOUT_S = 1500         # 25 min ceiling for pytest run w/ coverage
 
+# Sprint 694: files that are technically "backend code" but are not part of
+# the production runtime surface.  These persistently topped the "worst
+# coverage" list every night even though covering them would be noise:
+#
+#   * generate_sample_reports.py — fixture-data generator used by
+#     docs/marketing; never imported by the FastAPI app.
+#   * scripts/validate_report_standards.py — one-off structural validator
+#     run by humans, not by tests.
+#   * alembic/versions/*baseline*.py — the frozen baseline migration; any
+#     coverage on it would be incidental.
+#
+# The matcher uses case-insensitive suffix / substring checks so both the
+# forward-slash and backslash path forms in coverage.json are handled.
+NON_PRODUCTION_FILE_SUFFIXES: tuple[str, ...] = (
+    "generate_sample_reports.py",
+    "scripts/validate_report_standards.py",
+    "scripts\\validate_report_standards.py",
+)
+NON_PRODUCTION_FILE_SUBSTRINGS: tuple[str, ...] = (
+    "alembic/versions/",
+    "alembic\\versions\\",
+)
+# An extra fast-path: any Alembic baseline revision is always excluded (the
+# canonical baseline file name contains "baseline" — future naming drift is
+# still caught by the substring check above).
+NON_PRODUCTION_BASELINE_MARKERS: tuple[str, ...] = ("baseline",)
+
+
+def _is_non_production_path(path: str) -> bool:
+    """Sprint 694: return True if ``path`` should be excluded from the
+    coverage-sentinel top-uncovered list.  Case-insensitive, slash-agnostic.
+    """
+    lower = path.replace("\\", "/").lower()
+    if any(lower.endswith(suffix.replace("\\", "/").lower()) for suffix in NON_PRODUCTION_FILE_SUFFIXES):
+        return True
+    if any(fragment in lower for fragment in NON_PRODUCTION_FILE_SUBSTRINGS):
+        # Only exclude if the file also matches a baseline-migration marker
+        # — regular migrations still belong in the ranking (they execute in
+        # production on deploy).
+        return any(marker in lower for marker in NON_PRODUCTION_BASELINE_MARKERS)
+    return False
+
 
 def _run_pytest_with_coverage() -> tuple[dict | None, str]:
     """Run pytest --cov=. and return (parsed coverage.json dict, stderr tail)."""
@@ -122,15 +164,26 @@ def _save_history(history: list[dict]) -> None:
     BASELINE_FILE.write_text(json.dumps(baseline, indent=2), encoding="utf-8")
 
 
-def _top_uncovered_files(files: dict, limit: int = 10) -> list[dict]:
-    """Rank files by uncovered line count, descending."""
+def _top_uncovered_files(files: dict, limit: int = 10) -> tuple[list[dict], int]:
+    """Rank files by uncovered line count, descending.
+
+    Sprint 694: non-production files (sample-data generators, one-off
+    structural validators, baseline migrations) are excluded so the
+    top-uncovered list is actionable signal rather than persistent noise.
+    Returns ``(ranked, excluded_count)`` so the caller can surface the
+    exclusion count in the sentinel report.
+    """
     ranked: list[dict] = []
+    excluded = 0
     for path, entry in files.items():
         summary = entry.get("summary", {}) if isinstance(entry, dict) else {}
         missing = summary.get("missing_lines", 0)
         num_statements = summary.get("num_statements", 0)
         pct = summary.get("percent_covered", 0.0)
         if num_statements == 0:
+            continue
+        if _is_non_production_path(path):
+            excluded += 1
             continue
         ranked.append({
             "path": path,
@@ -139,7 +192,7 @@ def _top_uncovered_files(files: dict, limit: int = 10) -> list[dict]:
             "num_statements": num_statements,
         })
     ranked.sort(key=lambda r: (r["missing_lines"], -r["percent_covered"]), reverse=True)
-    return ranked[:limit]
+    return ranked[:limit], excluded
 
 
 def _classify_status(current_pct: float, delta_pp: float | None) -> tuple[str, list[str]]:
@@ -205,7 +258,7 @@ def run() -> dict:
     _save_history(history)
 
     status, status_reasons = _classify_status(current_pct, delta_pp)
-    top_uncovered = _top_uncovered_files(files, limit=10)
+    top_uncovered, non_prod_excluded = _top_uncovered_files(files, limit=10)
 
     summary_parts = [
         f"Backend coverage: {current_pct:.2f}% "
@@ -219,6 +272,10 @@ def run() -> dict:
         )
     else:
         summary_parts.append("7-day mean: building baseline.")
+    if non_prod_excluded:
+        summary_parts.append(
+            f"Non-production excluded: {non_prod_excluded} file(s)."
+        )
     if status_reasons:
         summary_parts.append("Flags: " + "; ".join(status_reasons) + ".")
 
@@ -234,6 +291,7 @@ def run() -> dict:
         "rolling_window_days": ROLLING_WINDOW_DAYS,
         "history": history,
         "top_uncovered_files": top_uncovered,
+        "non_production_excluded": non_prod_excluded,
         "reasons": status_reasons,
         "summary": " ".join(summary_parts),
     }
