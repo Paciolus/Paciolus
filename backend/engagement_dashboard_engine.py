@@ -10,6 +10,8 @@ Data source: List of previously-generated report result dicts passed from fronte
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
+from shared.testing_enums import normalize_risk_tier
+
 # ═══════════════════════════════════════════════════════════════
 # Risk Thread Rules
 # ═══════════════════════════════════════════════════════════════
@@ -160,7 +162,7 @@ def _extract_report_summary(report: dict[str, Any]) -> Optional[ReportSummary]:
             report_type=report_type,
             report_title=report.get("report_title", report_type.replace("_", " ").title()),
             risk_score=risk_score,
-            risk_tier=summary.get("risk_assessment", "low"),
+            risk_tier=normalize_risk_tier(summary.get("risk_assessment", "low")),
             total_flagged=total_flagged,
             high_severity_count=high_sev,
             tests_run=tests_run,
@@ -171,7 +173,7 @@ def _extract_report_summary(report: dict[str, Any]) -> Optional[ReportSummary]:
         report_type=report.get("report_type", "unknown"),
         report_title=report.get("report_title", "Unknown Report"),
         risk_score=composite.get("score", 0),
-        risk_tier=composite.get("risk_tier", "low"),
+        risk_tier=normalize_risk_tier(composite.get("risk_tier", "low")),
         total_flagged=composite.get("total_flagged", 0),
         high_severity_count=flags_by_severity.get("high", 0),
         tests_run=composite.get("tests_run", 0),
@@ -204,6 +206,9 @@ def _evaluate_risk_threads(
                     test_results = report.get("test_results", [])
                     for tr in test_results:
                         if tr.get("test_key") == condition["test_key"]:
+                            # Severity taxonomy here (Severity enum) is 3-tier
+                            # high/medium/low — do NOT normalize to the 4-tier
+                            # RiskTier scale used at report aggregation level.
                             sev = tr.get("severity", "low")
                             min_sev = condition.get("min_severity", "low")
                             if SEVERITY_ORDER.get(sev, 0) >= SEVERITY_ORDER.get(min_sev, 0):

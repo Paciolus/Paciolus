@@ -835,10 +835,27 @@ def _parse_date_to_str(val: object) -> Optional[str]:
 
 
 def _compute_aging_days(due_date_str: Optional[str], reference_date_str: Optional[str] = None) -> Optional[int]:
-    """Compute aging days from due date. Positive = past due."""
+    """Compute aging days from due date. Positive = past due.
+
+    RPT-07 remediation (2026-04-20): this function previously fell back to
+    ``date.today()`` when ``reference_date_str`` was None or unparseable,
+    producing non-reproducible aging output (a TB uploaded in April for a
+    December year-end would report aging ~120 days too high across every
+    bucket).  Deterministic policy:
+
+        * If ``reference_date_str`` is provided and parseable → use it.
+        * If ``reference_date_str`` is provided but unparseable → raise
+          ValueError (callers are expected to validate at the route layer).
+        * If ``reference_date_str`` is None → return ``None`` (caller
+          requested aging without supplying the reference date; no
+          reproducible answer is possible).
+
+    The route layer enforces explicit ``as_of_date`` when a sub-ledger is
+    uploaded, converting this to an HTTP 400 for the caller.
+    """
     if not due_date_str:
         return None
-    from datetime import date, datetime
+    from datetime import datetime
 
     try:
         # Try common date formats
@@ -859,11 +876,23 @@ def _compute_aging_days(due_date_str: Optional[str], reference_date_str: Optiona
                     break
                 except ValueError:
                     continue
+            if ref is None:
+                # An as_of_date was supplied but no format matched — surface
+                # the problem rather than silently shifting to today().
+                raise ValueError(
+                    f"AR aging reference date '{reference_date_str}' is not in a supported "
+                    "format (expected YYYY-MM-DD, MM/DD/YYYY, or DD/MM/YYYY)."
+                )
+
         if ref is None:
-            ref = date.today()
+            # No reference date and none was supplied — aging is undefined.
+            # Returning None is safer than using today(); the bucket assignment
+            # logic downstream treats None as "not past due" and callers who
+            # need aging should supply as_of_date at the route.
+            return None
 
         return (ref - due).days
-    except (ValueError, TypeError, AttributeError):
+    except (TypeError, AttributeError):
         return None
 
 
@@ -1553,7 +1582,9 @@ def test_rollforward_reconciliation(
     total_revenue = abs(sum((a.balance for a in revenue_accounts), Decimal("0")))
 
     if config.beginning_ar_balance is not None and config.collections_total is not None:
-        expected_ending = Decimal(str(config.beginning_ar_balance)) + total_revenue - Decimal(str(config.collections_total))
+        expected_ending = (
+            Decimal(str(config.beginning_ar_balance)) + total_revenue - Decimal(str(config.collections_total))
+        )
         difference = abs(ending_ar - expected_ending)
         threshold = max(abs(ending_ar) * Decimal(str(config.rollforward_threshold_pct)), Decimal("100"))
 

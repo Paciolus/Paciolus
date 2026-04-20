@@ -64,6 +64,21 @@ async def audit_ar_aging(
     tb_mapping_dict = parse_json_mapping(tb_column_mapping, "ar_aging_tb")
     sl_mapping_dict = parse_json_mapping(sl_column_mapping, "ar_aging_sl")
 
+    # RPT-07 remediation (2026-04-20): aging requires a deterministic
+    # reference date when sub-ledger detail is provided, otherwise bucket
+    # assignments depend on the server clock and are not reproducible.
+    # TB-only analyses (4 tests) do not use aging days so they remain
+    # permissive.
+    if subledger_file is not None and subledger_file.filename and not as_of_date:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "AR aging requires an explicit as_of_date when a sub-ledger file is "
+                "provided.  Supply as_of_date in YYYY-MM-DD, MM/DD/YYYY, or DD/MM/YYYY "
+                "format."
+            ),
+        )
+
     log_secure_operation(
         "ar_aging_upload", f"Processing AR aging: tb={tb_file.filename}, subledger={'yes' if subledger_file else 'no'}"
     )

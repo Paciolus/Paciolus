@@ -40,6 +40,65 @@ from three_way_match_engine import (
 router = APIRouter(tags=["three_way_match"])
 
 
+# ---------------------------------------------------------------------------
+# Config override bounds (RPT-11 remediation, 2026-04-20)
+# ---------------------------------------------------------------------------
+# Accept validated tolerance overrides from request.  Bounds are defensive:
+# they reject nonsensical or weaponised inputs (e.g. negative tolerances,
+# >100% variance thresholds, or date windows measured in years) that would
+# otherwise silently produce degenerate match results.
+_TWM_CONFIG_BOUNDS: dict[str, tuple[float, float]] = {
+    "amount_tolerance": (0.0, 10_000.0),  # up to $10K absolute
+    "quantity_tolerance": (0.0, 10_000.0),  # up to 10K units
+    "date_window_days": (0.0, 365.0),  # up to 1 year
+    "fuzzy_vendor_threshold": (0.0, 1.0),
+    "price_variance_threshold": (0.0, 1.0),  # 0–100%
+    "fuzzy_composite_threshold": (0.0, 1.0),
+}
+
+
+def _build_twm_config(
+    *,
+    amount_tolerance: Optional[float],
+    quantity_tolerance: Optional[float],
+    date_window_days: Optional[int],
+    fuzzy_vendor_threshold: Optional[float],
+    price_variance_threshold: Optional[float],
+    enable_fuzzy_matching: Optional[bool],
+    fuzzy_composite_threshold: Optional[float],
+) -> ThreeWayMatchConfig:
+    """Build a validated ThreeWayMatchConfig from optional override params.
+
+    Any ``None`` override falls back to the dataclass default so existing
+    clients (which supply no overrides) are bit-for-bit unchanged.
+    Out-of-bounds numeric overrides raise HTTP 400.
+    """
+    overrides: dict[str, Any] = {
+        "amount_tolerance": amount_tolerance,
+        "quantity_tolerance": quantity_tolerance,
+        "date_window_days": date_window_days,
+        "fuzzy_vendor_threshold": fuzzy_vendor_threshold,
+        "price_variance_threshold": price_variance_threshold,
+        "enable_fuzzy_matching": enable_fuzzy_matching,
+        "fuzzy_composite_threshold": fuzzy_composite_threshold,
+    }
+    supplied: dict[str, Any] = {}
+    for key, value in overrides.items():
+        if value is None:
+            continue
+        if key == "enable_fuzzy_matching":
+            supplied[key] = bool(value)
+            continue
+        lo, hi = _TWM_CONFIG_BOUNDS[key]
+        if not (lo <= float(value) <= hi):
+            raise HTTPException(
+                status_code=400,
+                detail=(f"Three-way match config override out of range: {key}={value} must be within [{lo}, {hi}]."),
+            )
+        supplied[key] = int(value) if key == "date_window_days" else float(value)
+    return ThreeWayMatchConfig(**supplied)
+
+
 @router.post("/audit/three-way-match", response_model=ThreeWayMatchResponse)
 @limiter.limit(RATE_LIMIT_AUDIT)
 async def audit_three_way_match(
@@ -52,6 +111,16 @@ async def audit_three_way_match(
     invoice_column_mapping: Optional[str] = Form(default=None),
     receipt_column_mapping: Optional[str] = Form(default=None),
     engagement_id: Optional[int] = Form(default=None),
+    # RPT-11 remediation: optional config overrides.  All default to None so
+    # existing clients (which pass none) continue to use ThreeWayMatchConfig
+    # defaults.  Each override is bounds-checked in _build_twm_config.
+    amount_tolerance: Optional[float] = Form(default=None),
+    quantity_tolerance: Optional[float] = Form(default=None),
+    date_window_days: Optional[int] = Form(default=None),
+    fuzzy_vendor_threshold: Optional[float] = Form(default=None),
+    price_variance_threshold: Optional[float] = Form(default=None),
+    enable_fuzzy_matching: Optional[bool] = Form(default=None),
+    fuzzy_composite_threshold: Optional[float] = Form(default=None),
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
@@ -63,6 +132,18 @@ async def audit_three_way_match(
     po_mapping = parse_json_mapping(po_column_mapping, "twm_po")
     inv_mapping = parse_json_mapping(invoice_column_mapping, "twm_invoice")
     rec_mapping = parse_json_mapping(receipt_column_mapping, "twm_receipt")
+
+    # Build the config before file I/O so bounds-check errors short-circuit
+    # without having to read / parse the uploads.
+    config = _build_twm_config(
+        amount_tolerance=amount_tolerance,
+        quantity_tolerance=quantity_tolerance,
+        date_window_days=date_window_days,
+        fuzzy_vendor_threshold=fuzzy_vendor_threshold,
+        price_variance_threshold=price_variance_threshold,
+        enable_fuzzy_matching=enable_fuzzy_matching,
+        fuzzy_composite_threshold=fuzzy_composite_threshold,
+    )
 
     log_secure_operation(
         "three_way_match_upload",
@@ -94,7 +175,6 @@ async def audit_three_way_match(
 
                 data_quality = assess_three_way_data_quality(pos, invoices, receipts)
 
-                config = ThreeWayMatchConfig()
                 result = run_three_way_match(pos, invoices, receipts, config)
 
                 result.data_quality = data_quality
@@ -114,6 +194,9 @@ async def audit_three_way_match(
 
             return result.to_dict()  # type: ignore[no-any-return]
 
+        except HTTPException:
+            # Preserve 400 bounds-check errors raised upstream of the thread.
+            raise
         except (ValueError, KeyError, TypeError) as e:
             logger.exception("Three-way match analysis failed")
             maybe_record_tool_run(db, engagement_id, current_user.id, "three_way_match", False)

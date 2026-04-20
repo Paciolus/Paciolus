@@ -29,6 +29,18 @@ from typing import Any, Optional
 from shared.column_detector import ColumnFieldConfig, detect_columns
 from shared.parsing_helpers import parse_date, safe_decimal, safe_float, safe_str
 
+# Monetary epsilon for denominator guards — values whose absolute magnitude
+# is below this are considered "near zero" and cannot be used as a divisor.
+# 0.005 is half a cent: below any presentation-rounded currency amount yet
+# large enough to avoid false near-zero triggers from floating-point noise.
+#
+# IMPORTANT: this is separate from ``price_variance_threshold`` (which is a
+# *decision* threshold — "what variance % is material?").  Conflating the two
+# produced RPT-11: a 5% decision threshold being used as a "$0.05 is close
+# enough to zero" denominator guard, which mis-classified any unit_price
+# below $0.05 as a 100% variance.
+MONETARY_EPSILON: Decimal = Decimal("0.005")
+
 # =============================================================================
 # ENUMS
 # =============================================================================
@@ -990,7 +1002,14 @@ class UnmatchedDocument:
 
 @dataclass
 class ThreeWayMatchSummary:
-    """Summary statistics for the matching results."""
+    """Summary statistics for the matching results.
+
+    Match-rate denominator policy (RPT-11 remediation, 2026-04-20):
+        ``full_match_rate`` and ``partial_match_rate`` divide by the largest
+        of the PO / Invoice / Receipt populations.  This is emitted as
+        ``match_rate_denominator_basis`` so downstream consumers (memos,
+        PDFs, dashboard) can disclose the basis to the practitioner.
+    """
 
     total_pos: int = 0
     total_invoices: int = 0
@@ -1005,6 +1024,12 @@ class ThreeWayMatchSummary:
     net_variance: float = 0.0
     material_variances_count: int = 0
     risk_assessment: str = "low"  # low, medium, high
+    # Documented denominator basis — declared explicitly so consumers do not
+    # have to infer it from the raw counts.  Value is the integer denominator
+    # that was actually used, and ``match_rate_denominator_source`` names the
+    # population it was drawn from.
+    match_rate_denominator: int = 1
+    match_rate_denominator_source: str = "max(pos, invoices, receipts)"
 
     def to_dict(self) -> dict:
         return {
@@ -1021,6 +1046,8 @@ class ThreeWayMatchSummary:
             "net_variance": round(self.net_variance, 2),
             "material_variances_count": self.material_variances_count,
             "risk_assessment": self.risk_assessment,
+            "match_rate_denominator": self.match_rate_denominator,
+            "match_rate_denominator_source": self.match_rate_denominator_source,
         }
 
 
@@ -1069,15 +1096,19 @@ def _compute_variances(
     variances: list[MatchVariance] = []
 
     # Amount variance: PO total vs Invoice total
+    # Decimal-first arithmetic throughout; float conversion happens only at
+    # MatchVariance boundaries.  Denominator guard uses MONETARY_EPSILON
+    # (0.005 = half a cent) — a monetary floor, not the amount_tolerance
+    # decision threshold.
     if po and invoice:
         po_amt = po.total_amount
         inv_amt = invoice.total_amount
         if po_amt != 0 or inv_amt != 0:
             diff = abs(po_amt - inv_amt)
-            if float(abs(po_amt)) > config.amount_tolerance:
+            if abs(po_amt) > MONETARY_EPSILON:
                 pct = float(diff / abs(po_amt))
             else:
-                pct = 1.0  # 100% — near-zero base, cap variance percentage
+                pct = 1.0  # near-zero base, cap variance percentage
             if float(diff) > config.amount_tolerance:
                 sev = "high" if pct > 0.10 else ("medium" if pct > 0.05 else "low")
                 variances.append(
@@ -1092,15 +1123,19 @@ def _compute_variances(
                 )
 
     # Quantity variance: PO qty vs Receipt qty
+    # Quantities are floats (counts, not currency).  Use a small count-space
+    # epsilon to avoid divide-by-zero while keeping quantity_tolerance as the
+    # decision threshold only.
+    _QUANTITY_EPSILON = 1e-6
     if po and receipt:
         po_qty = po.quantity
         rec_qty = receipt.quantity_received
         if po_qty != 0 or rec_qty != 0:
             diff_qty = abs(po_qty - rec_qty)
-            if abs(po_qty) > config.quantity_tolerance:
+            if abs(po_qty) > _QUANTITY_EPSILON:
                 pct = diff_qty / abs(po_qty)
             else:
-                pct = 1.0  # 100% — near-zero base, cap variance percentage
+                pct = 1.0  # near-zero base, cap variance percentage
             if diff_qty > config.quantity_tolerance:
                 sev = "high" if pct > 0.10 else ("medium" if pct > 0.05 else "low")
                 variances.append(
@@ -1115,12 +1150,16 @@ def _compute_variances(
                 )
 
     # Price variance: PO unit_price vs Invoice unit_price
+    # The denominator guard is MONETARY_EPSILON (half a cent).  The decision
+    # threshold remains ``price_variance_threshold`` (default 5%).  Prior
+    # behaviour conflated the two — any unit_price < 5¢ was treated as zero,
+    # producing a spurious 100% variance flag.
     if po and invoice and po.unit_price > 0 and invoice.unit_price > 0:
         price_diff = abs(po.unit_price - invoice.unit_price)
-        if float(abs(po.unit_price)) > config.price_variance_threshold:
+        if abs(po.unit_price) > MONETARY_EPSILON:
             pct = float(price_diff / abs(po.unit_price))
         else:
-            pct = 1.0  # 100% — near-zero base, cap variance percentage
+            pct = 1.0  # near-zero base, cap variance percentage
         if pct > config.price_variance_threshold:
             sev = "high" if pct > 0.10 else ("medium" if pct > 0.05 else "low")
             variances.append(
@@ -1383,7 +1422,25 @@ def run_three_way_match(
             )
 
     # ---- Summary ----
-    total_docs = max(len(pos), len(invoices), 1)
+    # Match-rate denominator uses max across all three document populations
+    # (PO, Invoice, Receipt).  Previously this was ``max(pos, invoices, 1)``,
+    # which inflated match rates when the receipt file carried more rows
+    # than PO/Invoice (common: partial receipts split across deliveries).
+    # The semantics are now: ``full_match_rate = full_matches / largest
+    # document population`` — a conservative denominator that bounds the
+    # rate ≤ 1.0 even when receipt volume exceeds PO volume.
+    #
+    # Downstream consumers should treat the rate as "matches against the
+    # largest document stream"; the per-stream counts are also published
+    # via ``total_pos`` / ``total_invoices`` / ``total_receipts``.
+    total_docs = max(len(pos), len(invoices), len(receipts), 1)
+    # Track which population drove the denominator for auditability.
+    pop_sizes = {
+        "pos": len(pos),
+        "invoices": len(invoices),
+        "receipts": len(receipts),
+    }
+    denom_source_label = max(pop_sizes, key=lambda k: pop_sizes[k]) if any(pop_sizes.values()) else "empty"
     summary = ThreeWayMatchSummary(
         total_pos=len(pos),
         total_invoices=len(invoices),
@@ -1395,8 +1452,15 @@ def run_three_way_match(
         total_po_amount=float(sum(po.total_amount for po in pos)),
         total_invoice_amount=float(sum(inv.total_amount for inv in invoices)),
         total_receipt_amount=0.0,  # Receipts don't always have amounts
-        net_variance=float(abs(sum((po.total_amount for po in pos), Decimal("0")) - sum((inv.total_amount for inv in invoices), Decimal("0")))),
+        net_variance=float(
+            abs(
+                sum((po.total_amount for po in pos), Decimal("0"))
+                - sum((inv.total_amount for inv in invoices), Decimal("0"))
+            )
+        ),
         material_variances_count=sum(1 for v in result.variances if v.severity in ("high", "medium")),
+        match_rate_denominator=total_docs,
+        match_rate_denominator_source=f"max({denom_source_label})",
     )
 
     # Risk assessment
