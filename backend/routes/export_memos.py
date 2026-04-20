@@ -15,6 +15,7 @@ from pydantic import BaseModel
 
 from auth import require_verified_user
 from models import User
+from shared.entitlement_checks import check_export_access
 
 logger = logging.getLogger(__name__)
 from accrual_completeness_memo import generate_accrual_completeness_memo
@@ -389,7 +390,9 @@ def _register_standard_routes() -> None:
 
         handler = _make_handler()
         decorated = limiter.limit(RATE_LIMIT_EXPORT)(handler)
-        router.post(entry.route_path)(decorated)
+        # Sprint 678: tier-gate every memo export behind check_export_access.
+        # Free tier has no pdf/excel/csv export; helper raises 403 in hard mode.
+        router.post(entry.route_path, dependencies=[Depends(check_export_access)])(decorated)
 
 
 _register_standard_routes()
@@ -413,7 +416,7 @@ _SAMPLING_EVAL_ENTRY = MemoRegistryEntry(
 )
 
 
-@router.post(_SAMPLING_EVAL_ENTRY.route_path)
+@router.post(_SAMPLING_EVAL_ENTRY.route_path, dependencies=[Depends(check_export_access)])
 @limiter.limit(RATE_LIMIT_EXPORT)
 def export_sampling_evaluation_memo(
     request: Request,
@@ -442,7 +445,7 @@ _FLUX_ENTRY = MemoRegistryEntry(
 )
 
 
-@router.post(_FLUX_ENTRY.route_path)
+@router.post(_FLUX_ENTRY.route_path, dependencies=[Depends(check_export_access)])
 @limiter.limit(RATE_LIMIT_EXPORT)
 def export_flux_expectations_memo(
     request: Request,

@@ -29,6 +29,7 @@ from shared.rate_limits import limiter
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture()
 def enable_rate_limiter():
     """Re-enable rate limiter for 429 enforcement tests.
@@ -48,23 +49,31 @@ def enable_rate_limiter():
 @pytest.fixture()
 def mock_current_user():
     """Mock user for require_current_user-protected endpoints."""
+    from models import UserTier
+
     user = MagicMock()
     user.id = 998
     user.email = "ratelimit-current@test.com"
     user.is_active = True
     user.is_verified = True
     user.settings = "{}"
+    # Sprint 678: tier must be a real UserTier for entitlement gates
+    user.tier = UserTier.PROFESSIONAL
     return user
 
 
 @pytest.fixture()
 def mock_verified_user():
     """Mock user for require_verified_user-protected endpoints."""
+    from models import UserTier
+
     user = MagicMock()
     user.id = 999
     user.email = "ratelimit-verified@test.com"
     user.is_active = True
     user.is_verified = True
+    # Sprint 678: entitlement gates read user.tier.value
+    user.tier = UserTier.PROFESSIONAL
     return user
 
 
@@ -80,8 +89,12 @@ def override_current_user(mock_current_user):
 def override_verified_user(mock_verified_user):
     """Override require_verified_user for rate limit tests."""
     app.dependency_overrides[require_verified_user] = lambda: mock_verified_user
+    # Sprint 678: export/tool gates pull require_current_user; fall back
+    # to the same mock so the test path isn't blocked by an extra 401.
+    app.dependency_overrides[require_current_user] = lambda: mock_verified_user
     yield
     app.dependency_overrides.pop(require_verified_user, None)
+    app.dependency_overrides.pop(require_current_user, None)
 
 
 @pytest.fixture()
@@ -96,6 +109,7 @@ def override_db(db_session):
 # AUTH Tier: POST /auth/login — 5/minute
 # ---------------------------------------------------------------------------
 
+
 class TestAuthTier429:
     """POST /auth/login is rate-limited at RATE_LIMIT_AUTH (5/minute).
 
@@ -108,7 +122,9 @@ class TestAuthTier429:
 
     @pytest.mark.asyncio
     async def test_login_returns_429_after_limit_exceeded(
-        self, enable_rate_limiter, override_db,
+        self,
+        enable_rate_limiter,
+        override_db,
     ):
         async with httpx.AsyncClient(
             transport=httpx.ASGITransport(app=app),
@@ -120,9 +136,7 @@ class TestAuthTier429:
                     self.ENDPOINT,
                     json={"email": "nobody@example.com", "password": "wrongpass"},
                 )
-                assert r.status_code == 401, (
-                    f"Expected 401 on request {i + 1}/{self.LIMIT}, got {r.status_code}"
-                )
+                assert r.status_code == 401, f"Expected 401 on request {i + 1}/{self.LIMIT}, got {r.status_code}"
 
             # The (LIMIT+1)th request should be rate-limited
             r = await client.post(
@@ -135,6 +149,7 @@ class TestAuthTier429:
 # ---------------------------------------------------------------------------
 # WRITE Tier: POST /settings/materiality/preview — 30/minute
 # ---------------------------------------------------------------------------
+
 
 class TestWriteTier429:
     """POST /settings/materiality/preview is rate-limited at RATE_LIMIT_WRITE (30/minute).
@@ -154,7 +169,10 @@ class TestWriteTier429:
 
     @pytest.mark.asyncio
     async def test_materiality_preview_returns_429_after_limit_exceeded(
-        self, enable_rate_limiter, bypass_csrf, override_current_user,
+        self,
+        enable_rate_limiter,
+        bypass_csrf,
+        override_current_user,
     ):
         async with httpx.AsyncClient(
             transport=httpx.ASGITransport(app=app),
@@ -167,9 +185,7 @@ class TestWriteTier429:
                     json=self.PAYLOAD,
                     headers={"X-CSRF-Token": "test"},
                 )
-                assert r.status_code == 200, (
-                    f"Expected 200 on request {i + 1}/{self.LIMIT}, got {r.status_code}"
-                )
+                assert r.status_code == 200, f"Expected 200 on request {i + 1}/{self.LIMIT}, got {r.status_code}"
 
             # The (LIMIT+1)th request should be rate-limited
             r = await client.post(
@@ -183,6 +199,7 @@ class TestWriteTier429:
 # ---------------------------------------------------------------------------
 # AUDIT Tier: POST /audit/compare-periods — 10/minute
 # ---------------------------------------------------------------------------
+
 
 class TestAuditTier429:
     """POST /audit/compare-periods is rate-limited at RATE_LIMIT_AUDIT (10/minute).
@@ -203,7 +220,10 @@ class TestAuditTier429:
 
     @pytest.mark.asyncio
     async def test_compare_periods_returns_429_after_limit_exceeded(
-        self, enable_rate_limiter, bypass_csrf, override_verified_user,
+        self,
+        enable_rate_limiter,
+        bypass_csrf,
+        override_verified_user,
     ):
         async with httpx.AsyncClient(
             transport=httpx.ASGITransport(app=app),
@@ -216,9 +236,7 @@ class TestAuditTier429:
                     json=self.PAYLOAD,
                     headers={"X-CSRF-Token": "test"},
                 )
-                assert r.status_code == 200, (
-                    f"Expected 200 on request {i + 1}/{self.LIMIT}, got {r.status_code}"
-                )
+                assert r.status_code == 200, f"Expected 200 on request {i + 1}/{self.LIMIT}, got {r.status_code}"
 
             # The (LIMIT+1)th request should be rate-limited
             r = await client.post(
@@ -232,6 +250,7 @@ class TestAuditTier429:
 # ---------------------------------------------------------------------------
 # EXPORT Tier: POST /export/csv/movements — 20/minute
 # ---------------------------------------------------------------------------
+
 
 class TestExportTier429:
     """POST /export/csv/movements is rate-limited at RATE_LIMIT_EXPORT (20/minute).
@@ -253,7 +272,10 @@ class TestExportTier429:
 
     @pytest.mark.asyncio
     async def test_export_csv_movements_returns_429_after_limit_exceeded(
-        self, enable_rate_limiter, bypass_csrf, override_verified_user,
+        self,
+        enable_rate_limiter,
+        bypass_csrf,
+        override_verified_user,
     ):
         async with httpx.AsyncClient(
             transport=httpx.ASGITransport(app=app),
@@ -266,9 +288,7 @@ class TestExportTier429:
                     json=self.PAYLOAD,
                     headers={"X-CSRF-Token": "test"},
                 )
-                assert r.status_code == 200, (
-                    f"Expected 200 on request {i + 1}/{self.LIMIT}, got {r.status_code}"
-                )
+                assert r.status_code == 200, f"Expected 200 on request {i + 1}/{self.LIMIT}, got {r.status_code}"
 
             # The (LIMIT+1)th request should be rate-limited
             r = await client.post(

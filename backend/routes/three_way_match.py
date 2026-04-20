@@ -125,9 +125,12 @@ async def audit_three_way_match(
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """Run three-way match validation across PO, Invoice, and Receipt files."""
+    from shared.entitlement_checks import check_upload_limit
     from shared.testing_route import enforce_tool_access
 
     enforce_tool_access(current_user, "three_way_match", db)
+    # Sprint 678: count three-way-match uploads toward the monthly quota.
+    check_upload_limit(current_user, db)
 
     po_mapping = parse_json_mapping(po_column_mapping, "twm_po")
     inv_mapping = parse_json_mapping(invoice_column_mapping, "twm_invoice")

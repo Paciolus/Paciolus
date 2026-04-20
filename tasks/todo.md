@@ -43,6 +43,10 @@
 |------|--------|--------|
 | Preflight cache Redis migration | In-memory cache is not cluster-safe; will break preview→audit flow under horizontal scaling. Migrate to Redis when scaling beyond single worker. | Security Review 2026-03-24 |
 | `PeriodFileDropZone.tsx` deferred type migration | TODO open for 3+ consecutive audit cycles. Benign incomplete type migration, not a hack. Revisit when touching the upload surface for another reason. | Project-Auditor Audit 35 (2026-04-14) |
+| `routes/billing.py::stripe_webhook` decomposition (signature-verify / dedup / error-mapping triad) | Already touched lightly in the 2026-04-20 refactor pass; full extraction pairs better with the deferred webhook-coverage sprint flagged in Sprint 676 review (handler is currently exercised by 6 route-test files but lacks unit coverage). Bundle both then. | Refactor Pass 2026-04-20 |
+| `useTrialBalanceUpload` decomposition into composable hooks | Hook's state machine (progress indicator, recalc debounce, mapping-required preflight handoff) is tightly coupled to consumer semantics. Not a drop-in extraction — needs Playwright coverage of the mapping-required flow before a split is safe. | Refactor Pass 2026-04-20 |
+| Move client-access helpers (`is_authorized_for_client`, `get_accessible_client`, `require_client`) out of `shared/helpers.py` shim | Three helpers depend on `User` / `Client` / `OrganizationMember` / `require_current_user`; a dedicated `shared/client_access.py` module isn't justified under the "prefer moving code, avoid new abstractions" guidance. Revisit if a fourth helper joins them, or if the shim grows another responsibility. | Refactor Pass 2026-04-20 |
+| `routes/auth_routes.py` cookie/CSRF helper extraction | Module is already reasonably thin; cookie/token primitives (`_set_refresh_cookie`, `_set_access_cookie`, etc.) are security-critical. Touching them without a specific bug or audit finding is net-negative. Revisit only if a follow-up auth/CSRF audit produces an actionable finding. | Refactor Pass 2026-04-20 |
 
 ---
 
@@ -174,41 +178,84 @@ The nightly Coverage Sentinel's three worst 0%-coverage files turned out to have
 ---
 
 ### Sprint 677: Concentration % overflow + logo upload DB integrity
-**Status:** PENDING
+**Status:** COMPLETE
 **Priority:** P0
 **Source:** Backend-bugs agent (CRITICAL #1); Completeness agent (B-06)
-**Why now:** One-line math bug publishes concentration percentages 100× too high (50% rendered as 5000%) in the API response and any persisted row — highest-impact / lowest-effort fix in the batch. Pair with the logo-upload integrity fix so the bundle is still one atomic PR.
-**Files:**
-- `backend/audit/rules/concentration.py:110`
-- `backend/routes/branding.py:131-137`
 
-**Changes:**
-- [ ] `concentration.py:110` — drop the `* 100` multiplication; `concentration_pct` is already 0–1 (line 98 `:.1%` format string multiplies internally). Store the raw decimal in `"concentration_percent"` or rename the key to `"concentration_ratio"`.
-- [ ] `branding.py:131-137` — only commit `branding.logo_s3_key` when `upload_bytes` actually returned True. Today an S3-unconfigured environment silently records a DB row that claims a logo exists but nothing is in storage. Combined with Sprint 679 this would become a data-integrity bug.
-- [ ] Backfill check: add a migration note or admin script stub to null out `logo_s3_key` rows for which the S3 object is missing (defer actual cleanup to the Sprint 679 branch).
-- [ ] Unit tests: concentration percentage under several balances (50%, 100%, 0.1%) to lock the new contract; `branding` upload failure path doesn't persist `logo_s3_key`.
+**Scope adjustment during execution (validate-then-fix per Sprint 695 precedent):**
+Two findings bundled into this sprint had different outcomes after audit. The concentration "50% → 5000%" claim was invalidated by the existing test contract; the logo-upload integrity finding was confirmed and fixed.
+
+**Confirmed defect — FIXED:**
+- [x] **Logo upload DB integrity** (`backend/routes/branding.py:129-150`): `POST /branding/logo` previously set `branding.logo_s3_key = s3_key` unconditionally, even when `upload_bytes` returned False (S3 unconfigured). The `except ImportError` branch caught a case that never fires (`upload_bytes` catches missing boto3 internally). Route now captures the return value and returns HTTP 503 when storage is unavailable, preventing dangling `logo_s3_key` rows that Sprint 679's PDF branding pipeline would then fail to resolve.
+
+**Suspicion — REJECTED:**
+- [x] **Concentration overflow** (`backend/audit/rules/concentration.py:110`): The audit claim was that `round(concentration_pct * 100, 1)` produced values that were then formatted with `:.1%` elsewhere, yielding 5000% for 50% concentration. Systematic search across `backend/`, `frontend/`, PDF memos, and diagnostic schemas found no such consumer. Existing tests (`test_float_precision.py:218,233,247,262`, `test_audit_anomalies.py:529,543`, `test_audit_validation.py:469,488`) all explicitly lock in the contract that `concentration_percent` is a 0-100 scaled percentage (50.0 for 50%), and the two `:.1%` format specifiers in `concentration.py` (lines 98, 120) apply to `concentration_pct` (the 0-1 local), not the stored field. Contract is correct as-is. Sprint 695 set the "validate-then-fix" precedent for rejecting un-reproducible audit findings.
+
+**Test additions:**
+- `backend/tests/test_post_audit_2026_04_20_batch2.py::TestConcentrationOverflowSuspicion` (2 tests) — pins the 0-100 scale contract + issue-text rendering.
+- `backend/tests/test_post_audit_2026_04_20_batch2.py::TestLogoUploadDBIntegrity` (2 tests) — happy path + 503 rejection when storage is unavailable.
+
+**Validation:**
+- Full touched-surface regression (branding + three_way + multi_period + concentration-consuming suites): 628 passed, 0 failed.
+
+**Review:**
+- Rejecting the concentration finding was the correct call: testing dead code or breaking a live contract for a phantom bug would have churned consumers without fixing anything. The characterization tests now guard against a future refactor silently breaking the contract.
+- The branding fix is minimal (one new return-value check, one 503) but closes a real integrity gap that Sprint 679 would otherwise stumble into.
+- `logo_s3_key` backfill (for any existing rows pointing at missing S3 objects) is deferred to Sprint 679's branding pipeline, which is when it will first matter in production.
 
 ---
 
 ### Sprint 678: Tier entitlement enforcement wire-up
-**Status:** PENDING
+**Status:** COMPLETE
 **Priority:** P0 (revenue blocker)
 **Source:** Completeness agent (B-02/B-03/B-04/B-05 + C-06)
 **Why now:** Today a Free user can download every PDF/Excel/CSV export, upload every file format (OFX/QBO/PDF/ODS), and run 11 of 12 tools unbounded. The helpers exist; they're just never called. This single sprint closes the paid-tier moat without new engine work.
-**Files:**
-- `backend/shared/entitlement_checks.py` (reference — already defines helpers)
-- `backend/routes/export_memos.py`, `export_diagnostics.py`, `export_testing.py`, `export_sharing.py`, `engagements_exports.py`, `loan_amortization.py`
-- `backend/routes/multi_period.py`, `backend/routes/currency.py`
-- All 11 testing-tool routes (JE/AP/Payroll/Revenue/AR/FA/Inventory/Bank Rec/Three-Way Match/Multi-Period/Sampling) — audit call sites for `check_upload_limit`
-- `backend/routes/audit_pipeline.py` (already gated — reference pattern)
 
-**Changes:**
-- [ ] Wire `check_export_access` onto every export endpoint across all six export modules. Returns 403 when tier has `pdf_export=False and excel_export=False and csv_export=False` (i.e., Free).
-- [ ] Wire `check_format_access` into the TB-upload and bulk-upload entrypoints so Free tier rejects OFX/QBO/IIF/PDF/ODS.
-- [ ] Wire `check_upload_limit` (or `check_diagnostic_limit`) into the 11 testing-tool routes that currently bypass it. Use the `shared/testing_route.py:enforce_tool_access` pattern already in place on 6 of them.
-- [ ] Add `enforce_tool_access` call sites to `routes/multi_period.py` and `routes/currency.py` (neither currently checks `tools_allowed`).
-- [ ] Regression tests: a Free user (1) is rejected on all 18 memo exports, (2) is rejected on OFX/QBO/IIF/PDF/ODS upload, (3) trips the upload quota on JE/AP/Payroll job #11, (4) is rejected on `/audit/multi-period/compare` and `/audit/currency-rates`.
-- [ ] Update `shared/entitlements.py:34-36,92-95` docstrings so the `pdf_export/excel_export/csv_export` booleans are noted as "enforced via `check_export_access`" — leaves no ambiguity for the next auditor.
+**Export gates (`check_export_access`):**
+- [x] `routes/export_memos.py` — all 18 memo endpoints (16 registry-driven + sampling evaluation + flux expectations) wrapped with `dependencies=[Depends(check_export_access)]`.
+- [x] `routes/export_diagnostics.py` — all 10 endpoints (`/export/pdf`, `/export/excel`, `/export/csv/trial-balance`, `/export/csv/anomalies`, `/export/leadsheets`, `/export/financial-statements`, `/export/csv/preflight-issues`, `/export/csv/population-profile`, `/export/csv/expense-category-analytics`, `/export/csv/accrual-completeness`) gated.
+- [x] `routes/export_testing.py` — all 9 CSV export endpoints (JE/AP/Payroll/Revenue/AR/FA/Inventory/TWM/Sampling-selection) gated via regex patch.
+- [x] `routes/engagements_exports.py` — anomaly-summary / package / convergence-csv gated.
+- [x] `routes/loan_amortization.py` — CSV / XLSX / PDF export endpoints gated.
+- [x] `routes/multi_period.py` — `/export/csv/movements` gated.
+- [x] `routes/export_sharing.py` — already gated by the stricter `check_export_sharing_access` (Professional+ only, which implies any export access). No change needed.
+
+**Format gates (`enforce_format_access` — new helper):**
+- [x] Added `enforce_format_access(user, db, filename)` to `shared/entitlement_checks.py`. Unlike the dependency-factory form of `check_format_access`, this helper resolves the format from the uploaded filename at request time, which is the only way to gate format access on a polymorphic upload endpoint.
+- [x] Wired into `routes/audit_pipeline.py::audit_trial_balance` and `routes/audit_upload.py::inspect_workbook_endpoint`. Free tier's `formats_allowed={csv,xlsx,xls,tsv,txt}` rejects OFX/QBO/IIF/PDF/ODS before any heavy processing.
+
+**Tool-access gates (`enforce_tool_access`):**
+- [x] `routes/multi_period.py::compare_period_trial_balances` and `::compare_three_way_trial_balances` — `multi_period` tool gate added.
+- [x] `routes/currency.py::upload_rate_table` and `::add_single_rate` — `currency_rates` tool gate added. GET / DELETE endpoints left open (idempotent).
+
+**Upload-limit gates (`check_upload_limit`):**
+- [x] `shared/testing_route.py::run_single_file_testing` now calls `check_upload_limit` in addition to `enforce_tool_access`. Covers JE/AP/Payroll/Revenue/FA/Inventory in one place.
+- [x] Non-factory routes updated individually: `routes/ar_aging.py`, `routes/bank_reconciliation.py`, `routes/three_way_match.py`, `routes/sampling.py`.
+- [x] `routes/audit_pipeline.py` already had `check_diagnostic_limit` (alias for `check_upload_limit`).
+
+**Test-fixture fixes (fallout from the new `require_current_user` dependency on export routes):**
+- [x] `tests/conftest.py::override_auth_verified` — also overrides `require_current_user`.
+- [x] `tests/test_multi_period_api.py`, `tests/test_engagements_exports_api.py`, `tests/test_three_way_comparison.py`, `tests/test_compare_periods_api.py`, `tests/test_rate_limit_enforcement.py` — mock users given a real `UserTier.PROFESSIONAL` (MagicMock `tier.value` attribute didn't resolve to a valid enum) and `require_current_user` overridden where missing.
+
+**Test additions:**
+- `backend/tests/test_post_audit_2026_04_20_batch2.py::TestEntitlementHelpersExist` (3 tests) — smoke-test each helper's callable shape.
+- `TestExportRoutesAreGated` (4 parametrized tests) — structural guard that each export module has at least one `check_export_access`-gated route, so a future refactor can't silently drop the gate.
+- `TestFormatAccessWiredOnUploadRoutes`, `TestToolRoutesCheckUploadLimit` — helper-availability checks.
+
+**Validation:**
+- Full touched-surface sweep (628 tests): all pass.
+- Full backend pytest (ex. anomaly_framework): 7,939 passed / 9 xfailed / 0 failed after fixture fixes.
+
+**Behaviour changes requiring stakeholder notice:**
+1. Every PDF/Excel/CSV export endpoint now returns HTTP 403 with `code=TIER_LIMIT_EXCEEDED` for Free-tier users. Frontend UpgradeModal copy should surface this gracefully.
+2. Uploads with OFX/QBO/IIF/PDF/ODS extensions now return 403 for Free tier before bytes are parsed. Error detail names the format explicitly.
+3. Every testing-tool upload now increments the monthly upload counter. Free tier's 10-uploads-per-month cap now applies to testing tools as well as TB uploads; this changes the quota math for heavy-trial Free users.
+4. `/audit/compare-periods`, `/audit/compare-three-way`, `/audit/currency-rates`, `/audit/currency-rate` now 403 for Free tier.
+
+**Review:**
+- Choice of route-level `dependencies=[Depends(check_export_access)]` over per-handler parameter was deliberate: keeps the gate visible at the decorator, survives the registry-based code in `export_memos.py` (which builds handlers in a loop), and doesn't require touching 30+ handler signatures.
+- `enforce_format_access` as an imperative helper (rather than a dependency factory) was required by the shape of polymorphic upload routes — format is only knowable after the file is in hand.
+- The `conftest.py` update is load-bearing: without it, ~90 existing export tests would 401 on the new gate without testing anything meaningful. The fix is intentionally narrow (override `require_current_user` to the same user as `require_verified_user`), so it doesn't mask legitimate auth issues — tests that specifically check auth rejection (`test_get_branding_no_auth_returns_401`, etc.) clear overrides first and still pass.
 
 ---
 
@@ -551,5 +598,300 @@ Nothing weakened — auth/security/zero-storage untouched, no tests silenced, ev
 - [ ] Add an explicit ignore list for non-production files: `generate_sample_reports.py`, `scripts/validate_report_standards.py`, any `alembic/versions/*baseline*.py`.
 - [ ] Emit a "non-production excluded: N files" line in the report so the exclusion is visible.
 - [ ] Verify next-night report's top-10 becomes meaningful.
+
+---
+
+## Security Hardening Follow-Ups — 2026-04-20
+
+> **Source:** Residual-risk + follow-up list from the six-objective security hardening batch (Sprint 696 when committed). Grouped by area; safe to land individually.
+
+---
+
+### Sprint 697: Argon2id upgrade for export-share passcodes
+**Status:** PENDING
+**Priority:** P2
+**Source:** Security hardening brief 2026-04-20 — preferred KDF was Argon2id; bcrypt was the spec-permitted fallback because `argon2-cffi` is not in the dep tree.
+**Why now:** Not urgent (bcrypt cost-12 is audit-defensible), but the hardening brief explicitly prefers Argon2id. Doing it as a standalone sprint keeps the dep churn out of the security sprint diff and lets us run the memory-cost parameter under a load test before landing.
+**Files:**
+- `backend/requirements.txt`
+- `backend/shared/passcode_security.py`
+- `backend/tests/test_security_hardening_2026_04_20.py`
+
+**Changes:**
+- [ ] Add `argon2-cffi>=23.1.0` to requirements.
+- [ ] Switch `hash_passcode` to Argon2id (time_cost=3, memory_cost=65536, parallelism=4 — AWS-SECS recommendation; run local bench to confirm ≤ 250ms on Render Standard).
+- [ ] Extend `verify_passcode` to:
+  - accept Argon2 hashes (prefix `$argon2id$`),
+  - continue rejecting legacy SHA-256,
+  - still accept bcrypt hashes during the transition window (≤48h — one share-TTL cycle),
+  - after cycle, remove the bcrypt branch.
+- [ ] Update `_looks_like_bcrypt` → `_is_legacy_hash_format` (three-way: argon2 / bcrypt / sha256).
+- [ ] Regression tests: argon2 round-trip, bcrypt→argon2 dual-path, rejection of sha256.
+- [ ] Docs: note the rollout window in `docs/04-compliance/` security policy.
+
+---
+
+### Sprint 698: Per-IP passcode-failure throttle
+**Status:** PENDING
+**Priority:** P2
+**Source:** Security hardening follow-up (brute-force defence — per-token is necessary, not sufficient).
+**Why now:** Sprint 696 added per-token passcode lockout; an attacker cycling through multiple share tokens from one IP is bounded only by the slowapi IP rate limit (60/min generic). A focused per-IP failure counter — the same pattern `record_ip_failure` uses for auth — would catch credential-stuffing attempts across many share links before they accumulate enough signal.
+**Files:**
+- `backend/security_middleware.py` (reuse `record_ip_failure` / `check_ip_blocked` helpers)
+- `backend/routes/export_sharing.py`
+- `backend/tests/test_security_hardening_2026_04_20.py`
+
+**Changes:**
+- [ ] In `_verify_passcode_or_raise`, also call `record_ip_failure(client_ip)` on mismatch. Use `get_client_ip(request)` so trusted-proxy rules apply.
+- [ ] Before verification, call `check_ip_blocked(client_ip)` and return 429 with generic "too many failed attempts" message (do NOT leak share-token existence).
+- [ ] Keep per-token throttle intact; the new per-IP check is additive.
+- [ ] Add env overrides for share-specific IP threshold if the auth threshold (20 failures / 15 min) is too loose — tentatively `SHARE_IP_FAILURE_THRESHOLD=10`.
+- [ ] Tests: 10 wrong passcodes across 10 different share tokens from one IP → 11th attempt from that IP is 429 even against a fresh token.
+
+---
+
+### Sprint 699: Frontend passcode download flow audit
+**Status:** PENDING
+**Priority:** P1 (user-facing: broken UI if missed)
+**Source:** Security hardening rollout — passcode download surface changed from GET `?passcode=` to POST body.
+**Why now:** Sprint 696 removed the query-string passcode pattern. Anywhere in the frontend still constructing `?passcode=` URLs (download links, share-received modal, email copy) will render as "Invalid passcode" or "requires a passcode" 403s post-deploy.
+**Files:**
+- `frontend/src/app/(shares)/` — share-received page
+- `frontend/src/components/share/*` — passcode modal
+- `frontend/src/hooks/useShareDownload.ts` (if present) / fetch helpers
+- `frontend/src/app/*/page.tsx` — audit grep for `export-sharing/` URL construction
+- `backend/shared/email_templates/` — share-notification emails (ensure links don't carry passcodes)
+
+**Changes:**
+- [ ] Grep `frontend/src` for `export-sharing/` and any `passcode=` URL construction; migrate to POST body.
+- [ ] Passcode modal: POST `/export-sharing/{token}/download` with `{passcode}` JSON body; show `Retry-After`-based countdown on 429.
+- [ ] Non-passcode shares: confirm GET path still works end-to-end.
+- [ ] Validate share-notification emails do NOT embed the passcode (user must enter it manually — that's the point of the out-of-band channel).
+- [ ] Playwright/E2E: passcode-protected share receives file; wrong passcode shows clear error; 5 wrong attempts surface the lockout countdown.
+- [ ] Jest unit tests for the passcode modal component.
+
+---
+
+### Sprint 700: Legacy passcode hash proactive cleanup
+**Status:** PENDING
+**Priority:** P3
+**Source:** Security hardening residual risk — pre-Sprint-696 shares carry unverifiable SHA-256 hashes.
+**Why now:** Shares auto-expire in ≤48h, so in practice legacy rows drain themselves within one weekend. A proactive cleanup script makes the invariant explicit and gives support a one-shot way to invalidate affected shares during the rollover window rather than users hitting silent 403s.
+**Files:**
+- `backend/scripts/invalidate_legacy_passcode_shares.py` (new)
+- `backend/retention_cleanup.py` (optional: roll into the existing nightly cleanup)
+- `backend/tests/test_retention_cleanup.py`
+
+**Changes:**
+- [ ] New admin script: scan `export_shares` WHERE `passcode_hash` is 64 chars hex AND not bcrypt prefix → set `revoked_at = now()` with reason-logged secure_event.
+- [ ] Safe-mode dry-run flag; CEO-visible CSV of affected share IDs + owners for optional courtesy email.
+- [ ] Optional: fold into `retention_cleanup.py` so the nightly scheduler handles it without manual intervention.
+- [ ] Tests: legacy-hashed share is invalidated; bcrypt-hashed share is untouched; no-passcode share is untouched.
+
+---
+
+### Sprint 701: Compliance documentation refresh — security hardening
+**Status:** PENDING
+**Priority:** P2 (SOC 2 / operator hygiene)
+**Source:** Security hardening sprint — contract changes need documentation before launch sign-off.
+**Why now:** Sprint 696 introduced user-visible contract changes (passcode policy, `POST /download`, removed query-string flow) and operator-facing env changes (`RATE_LIMIT_STRICT_OVERRIDE`, dev-user script requirements). Documentation must land before external callers hit the first 403 "invalid passcode" wall.
+**Files:**
+- `docs/04-compliance/security-policy.md` (passcode KDF claim)
+- `docs/runbooks/rate-limiter-modernization.md` (strict-mode override semantics)
+- `docs/runbooks/emergency-playbook.md` (new: issuing a `RATE_LIMIT_STRICT_OVERRIDE`)
+- `docs/api-reference.md` / OpenAPI tags (document `POST /export-sharing/{token}/download`)
+- `README.md` or `backend/scripts/README.md` (new `create_dev_user.py` usage)
+
+**Changes:**
+- [ ] Security Policy: bump to v2.7; passcode section moves from "SHA-256" to "bcrypt cost-12 (Argon2id planned Sprint 697)"; per-token brute-force documented.
+- [ ] Runbook: how to issue / rotate / retire a `RATE_LIMIT_STRICT_OVERRIDE` ticket.
+- [ ] Runbook: how to bootstrap a dev user without the old `DevPass1!` default.
+- [ ] API reference: document the new POST endpoint, the 429 `Retry-After` contract, and the removed GET `?passcode=` pattern (link to migration guide).
+- [ ] Verify `docs/04-compliance/soc2-readiness.md` criteria still match what the code enforces (CC6.1 / CC6.6 updated passcode KDF).
+
+---
+
+## Design Refresh — 2026-04-20
+
+> **Source:** Browser-walked design audit of paciolus.com public surface (home, demo with all four tabs, pricing, about, trust, contact, login, register) on 2026-04-20. Hero ("The Workpapers Write Themselves" + browser mock) is distinctive; the remaining 95% of the site reads "competent SaaS" rather than "forensic instrument." Sprints below execute the full pitch: auth-page quality, a cohesive editorial typography + texture system, homepage composition rhythm, the "Every Test Cites" specimen page as the signature moment, a ledger-style tool catalog, demo signature touches, a question-first pricing page, and one small-detail polish batch. All stays within Oat & Obsidian (one new brass accent token scoped to a single use).
+
+---
+
+### Sprint 702: Auth-page polish — autofill fix + Obsidian Vault commitment
+**Status:** PENDING
+**Priority:** P1 (first-impression break)
+**Source:** Design audit 2026-04-20
+**Why now:** `/login` with a Chrome-autofilled email/password renders the inputs in lavender-blue — a color that does not exist in Oat & Obsidian. The illusion of craft breaks the moment a paying auditor opens the sign-in screen. Cheapest / highest-leverage design fix on the site; lands independently of the typography overhaul.
+**Files:**
+- `frontend/src/app/(auth)/login/page.tsx`
+- `frontend/src/app/(auth)/register/page.tsx`
+- `frontend/src/app/(auth)/verify-email/page.tsx` + `verification-pending/page.tsx`
+- `frontend/src/components/auth/AuthCard.tsx` (or equivalent card wrapper)
+- `frontend/src/styles/globals.css` — global autofill override
+
+**Changes:**
+- [ ] Add `-webkit-autofill` override to input styles: `-webkit-box-shadow: 0 0 0 1000px theme('colors.obsidian.800') inset; -webkit-text-fill-color: theme('colors.oatmeal.100'); caret-color: theme('colors.sage.400');` Apply in `globals.css` so every form (auth, contact, billing, engagement config) inherits.
+- [ ] Commit to the "Obsidian Vault" framing rather than half-using it: either (a) restore a minimal Paciolus wordmark at top-left so the auth page isn't an orphan from the marketing header, or (b) go full Vault — centered monogram, hairline frame around the card, "The Vault" in Merriweather italic. CEO picks one in PR review.
+- [ ] Cross-browser verify: Chromium (blue autofill), Firefox (yellow autofill), Safari — all should render in-palette.
+- [ ] Playwright / snapshot coverage of `/login` populated state so regressions are visible.
+
+---
+
+### Sprint 703: Typography system upgrade + signature paper texture
+**Status:** PENDING
+**Priority:** P1 (foundation for subsequent design sprints)
+**Source:** Design audit 2026-04-20
+**Why now:** Merriweather-everywhere reads "Medium blog," not "audit journal." Introducing a proper editorial serif pair + oldstyle figures on marketing + a single repeating aged-paper texture creates the foundation every other design sprint composes against. The italic pull-quote on About ("The moment when you need a defensible answer…") is the site's best typographic moment and needs to become a recurring rhythm device.
+**Files:**
+- `frontend/tailwind.config.js` — font tokens
+- `frontend/src/app/layout.tsx` — `next/font` registrations
+- `frontend/src/styles/globals.css` — base body, heading, `::selection`, numeral-variant defaults
+- `skills/theme-factory/themes/oat-and-obsidian.md` — update the canonical spec
+- `frontend/src/components/marketing/Blockquote.tsx` — new shared italic pull-quote
+
+**Changes:**
+- [ ] Adopt an editorial body serif (candidates: Tiempos Text, GT Sectra, Source Serif 4). Keep Merriweather for headers **or** upgrade the display face (GT Super Display / Canela). Evaluate license + file size; prefer Google Fonts / Adobe Fonts integration over custom hosting.
+- [ ] Register the new body face via `next/font` (preserves FOUT avoidance). Add a `font-display` token distinct from `font-serif` so heading and body are independently tunable.
+- [ ] Default marketing pages to `font-variant-numeric: oldstyle-nums proportional-nums;`; override with `tabular-nums lining-nums` on product/reporting screens + every table + `font-mono` surfaces.
+- [ ] Add a seamless 256×256 aged-paper noise PNG (< 15 KB, ~3% opacity) applied as a `::before` overlay via a shared `.paper-grain` utility. Apply to every `section`.
+- [ ] Remove the marble/liquid backdrop from the "Standards-Driven by Design" section. Replace with `paper-grain`; one texture language across the entire site.
+- [ ] New `<Blockquote italic>` shared component — display-serif italic, hairline left rule in sage. Retrofit the About page blockquote as the first consumer. **Convention:** every marketing page uses it exactly once as a rhythm break.
+- [ ] A11y: verify new fonts pass WCAG AAA against obsidian backgrounds (body 7:1, large text 4.5:1). Smoke-test Windows Chrome text-size rendering.
+- [ ] Jest / Playwright: sample marketing page renders with the new body face; `::selection` is sage; `tabular-nums` applies on ratio dashboards while `oldstyle-nums` applies on marketing.
+
+---
+
+### Sprint 704: Homepage composition rhythm — alternating axis + engraved-monument stats + CTA variety
+**Status:** PENDING
+**Priority:** P1 (composition)
+**Source:** Design audit 2026-04-20
+**Blocks on:** Sprint 703 (typography system must land first)
+**Why now:** Nine consecutive centered serif-heading → centered sub → centered card-row sections. The eye stops tracking after section three. Alternating left/right axis composition + one visually distinctive stat block restores narrative rhythm and replaces the "stat tile row" cliché.
+**Files:**
+- `frontend/src/app/(marketing)/page.tsx` — homepage section sequence
+- `frontend/src/components/marketing/Section.tsx` — add `axis="left" | "right" | "center"` prop
+- `frontend/src/components/marketing/EngravedStat.tsx` — new component
+- `frontend/src/components/ui/Button.tsx` — formalize `variant="primary" | "secondary" | "tertiary"`
+
+**Changes:**
+- [ ] Extend `Section` with `axis` prop. Left anchor: heading/sub sits left, supporting content takes a 40% right column. Right anchor: mirror. Centered reserved for hero + the specimen page (Sprint 705).
+- [ ] Re-sequence homepage: `center` (hero) → `left` (Twelve Tools) → `right` (Built for Pros) → `left` (How It Works) → `center` (Every Test Cites — Sprint 705) → `right` (stats).
+- [ ] Replace `140+ / 12 / 7` stat cards with `<EngravedStat>` — oversized display-serif numeral (oldstyle figures), hairline underline, roman-numeral kicker ("I. Automated Tests"), small-caps label. Three instances on homepage, reusable elsewhere.
+- [ ] CTA variety: add `secondary` (hairline obsidian border, serif label, no fill) and `tertiary` (sage underline, serif italic) variants to the Button component. Audit every marketing CTA — one primary sage-fill per section maximum; secondaries for alternatives (Explore Demo); tertiaries for low-priority (See Pricing →, Learn more about our technical approach).
+- [ ] Mobile (`<md`): retain center-column layout — alternating axis activates at `md:` breakpoint only.
+- [ ] Jest: `axis="left"` renders heading on left + content on right; `<EngravedStat>` renders the roman-numeral kicker and small-caps label.
+
+---
+
+### Sprint 705: "Every Test Cites Its Standard" — typographic specimen page (THE ONE THING)
+**Status:** PENDING
+**Priority:** P0 (the differentiating moment)
+**Source:** Design audit 2026-04-20 — "the one thing to do if only one"
+**Blocks on:** Sprint 703 (editorial fonts required)
+**Why now:** "Every test cites its standard" is the single claim that separates Paciolus from every other AI-branded audit tool. Currently it's rendered as a thin strip of gray pills — visually indistinguishable from a tech blog's tech-stack badges. Rendering it as a specimen page from a bound journal of auditing standards turns the section into something an auditor will screenshot and share. This is the headline of the entire redesign.
+**Files:**
+- `frontend/src/components/marketing/StandardsSpecimen.tsx` — new component replacing the pill strip
+- `frontend/src/app/(marketing)/page.tsx` — consume
+- `frontend/src/content/standards-specimen.ts` — data source (standard code, citation, paragraph, governing body, scope, linked tool)
+- Tailwind utilities for hairline column rules, drop-cap, small-caps
+
+**Changes:**
+- [ ] Design brief: recreate a specimen page from a bound audit-reference volume. Two-column grid with a hairline vertical rule between. Per entry: standard code (small caps, oldstyle figures), paragraph citation, one-line scope description, governing body. Drop-cap on the first letter of each column. Footnote-style superscripts where tests cite multiple standards.
+- [ ] Build `<StandardsSpecimen>` as a data-driven component — citations live in `content/standards-specimen.ts` so new tests from Sprints 682 / 683 absorb without code changes.
+- [ ] Content must include every currently-cited standard: ISA 240 / 315 / 500 / 501 / 505 / 520 / 530 / 540 / 570, PCAOB AS 1215 / 2401 / 2501 / 2315, ASC 230 / 330 / 360 / 606, IAS 2 / 7 / 16, IFRS 15.
+- [ ] Hover state on a row: briefly expands to reveal the one-sentence test description and a link to the tool that cites it (deep-link to the matching catalog card).
+- [ ] Keep the current pill strip as a **mobile-only fallback** (specimen layout does not collapse under 768 px).
+- [ ] A11y: semantic `<dl>` with `<dt>` citations and `<dd>` scopes; screen-reader-friendly; keyboard-navigable rows with visible focus rings.
+- [ ] Jest: renders every standard; clicking a row routes/scrolls to the correct tool page.
+
+---
+
+### Sprint 706: Twelve Tools — ledger-column grid (replace carousel)
+**Status:** PENDING
+**Priority:** P1
+**Source:** Design audit 2026-04-20
+**Blocks on:** Sprint 703 (typography)
+**Depends on clarity from:** Sprint 689 (catalog reconciliation — tool-count truth source)
+**Why now:** The current "01 / 12 ‹ ›" carousel shows one tool at a time; users see the first card and bounce. The full catalog *is* the product pitch. Rendering all twelve at once in a bound-ledger grid respects the auditor's reading pattern (scanning an index, not advancing a slideshow).
+**Files:**
+- `frontend/src/components/marketing/ToolLedger.tsx` — new grid component
+- `frontend/src/components/marketing/ToolShowcase.tsx` — refactor or delete (existing carousel)
+- `frontend/src/app/(marketing)/page.tsx` — consume the new component
+- Retain a minimal carousel for the mobile breakpoint only
+
+**Changes:**
+- [ ] Ledger layout at `md+`: 12 rows × 4 columns (Tool # · Name · Test Count · Standards). Hairline rules between rows. Tool # in `font-mono` with right-aligned oldstyle figures. Standards in small caps.
+- [ ] Row hover: accordion expansion in place — reveals description, checklist, export formats, standards tags. No page navigation.
+- [ ] Palette: tool number in sage; body in oatmeal; rules in obsidian-600. No new tokens.
+- [ ] Mobile (`<md`): fall back to a simplified carousel; feature-flag via `useMediaQuery`.
+- [ ] Tool count must read from the canonical source (`shared/entitlements.py:CANONICAL_TOOL_COUNT` surfaced via an API or a generated TS constant) — no hardcoded "12" in the marketing surface. Prevents drift after Sprint 689 reconciles the catalog.
+- [ ] Jest: renders all rows; hover expands in-place; mobile breakpoint renders the carousel fallback.
+
+---
+
+### Sprint 707: Demo page — signature "forensic instrument" moments
+**Status:** PENDING
+**Priority:** P2
+**Source:** Design audit 2026-04-20
+**Blocks on:** Sprint 703 (fonts)
+**Why now:** Demo tabs (TB Diagnostics / Testing Suite / Workspace / Sample Reports / Standards) function correctly but read as "generic SaaS dashboard." Three small signature moments would sell the "forensic instrument" positioning viscerally without touching the underlying data model.
+**Files:**
+- `frontend/src/components/demo/TBDiagnosticsTab.tsx` (or equivalent)
+- `frontend/src/components/demo/TestingSuiteTab.tsx`
+- `frontend/src/components/demo/ScanlineOverlay.tsx` — new
+- `frontend/src/components/demo/MechanicalGauge.tsx` — new
+- `frontend/src/components/demo/MarginAnnotation.tsx` — new
+
+**Changes:**
+- [ ] **Scanline animation:** On TB Diagnostics tab mount, render a subtle sage-tinted horizontal scanline that sweeps the TB table once in 1.2 s before the ratios resolve. Sells the "under three seconds" claim viscerally.
+- [ ] **Mechanical gauge for Composite Diagnostic Score (76):** Replace the flat circle dial with a proper arc gauge — hairline tick marks every 10, serif numeral at center, needle easing on mount. Component signature: `<MechanicalGauge score={76} riskLevel="low" />`.
+- [ ] **Margin annotations for anomaly flags:** Replace pill / toast styling with typewriter-style red-pen margin annotations — hairline left border in clay, serif italic copy, inline caret glyph. Matches the physical audit-review language.
+- [ ] All three respect `prefers-reduced-motion: reduce` — scanline and needle skip animation, rendering the final state immediately.
+- [ ] Component isolation: everything in `components/demo/` — cannot leak into real product views.
+- [ ] Jest: each new component tested; reduced-motion path explicitly covered.
+
+---
+
+### Sprint 708: Pricing page — calculator-first + "Most Popular" foil treatment
+**Status:** PENDING
+**Priority:** P2
+**Source:** Design audit 2026-04-20
+**Why now:** The Find-Your-Plan + Seat Calculator is the pricing page's most differentiated element and it's buried beneath three standard plan cards. Leading with a consultative question-first flow and following with plan confirmation is rare in audit software and matches Paciolus's tone. Also: the current "Most Popular" badge on Professional is invisible.
+**Files:**
+- `frontend/src/app/(marketing)/pricing/page.tsx`
+- `frontend/src/components/marketing/PlanCard.tsx`
+- `frontend/src/components/marketing/SeatCalculator.tsx`
+- `frontend/src/components/marketing/FindYourPlan.tsx`
+- `frontend/tailwind.config.js` — one new scoped `brass` token
+
+**Changes:**
+- [ ] Reorder the page: hero → `FindYourPlan` (3 questions: practice size → features needed → team size) → recommended-plan sticky callout → `SeatCalculator` → three plan cards (as confirmation) → feature comparison → FAQ.
+- [ ] `FindYourPlan` keeps the existing pillbox toggles. "Based on your needs, we recommend …" becomes a sticky callout that scrolls into the matching plan card when clicked.
+- [ ] Add one new token `brass-400: #B08D57` (or comparable warm accent). Use **only** on the Most Popular badge + one hairline accent on the Professional card. No other surface uses brass — the scarcity is the design point.
+- [ ] Apply the editorial typography system from Sprint 703: plan name in display serif, price in `font-mono` with oldstyle figures, feature list in body serif.
+- [ ] Verify pricing copy parity with the homepage Twelve Tools. One Platform. preview and with Sprint 692's canonical source.
+- [ ] A11y: the question-first flow must be fully keyboard-navigable; the plan recommendation must be announced to screen readers when it changes.
+
+---
+
+### Sprint 709: Small-detail polish batch — contact alignment, Pacioli colophon, nav anchor hint, CTA audit, favicon, demo copy bug
+**Status:** PENDING
+**Priority:** P3 (polish)
+**Source:** Design audit 2026-04-20
+**Why now:** Six small but high-signal details that ship as one atomic polish PR after the larger design sprints land.
+**Files:**
+- `frontend/src/app/(marketing)/contact/page.tsx`
+- `frontend/src/components/marketing/Footer.tsx`
+- `frontend/src/components/marketing/MarketingHeader.tsx`
+- `frontend/src/app/(marketing)/demo/page.tsx` — copy correction
+- `frontend/public/favicon.svg` + 16×16, 32×32, 180×180, OG preview sizes
+
+**Changes:**
+- [ ] **Contact page alignment:** "Contact Us" heading is left-aligned while the form itself is centered — axis mismatch. Align both to a left-anchored editorial column (preferred) or both centered. Pick one.
+- [ ] **Demo copy bug:** "Seven tools included with Solo — all twelve with Team." Contradicts the canonical pricing policy (all paid tiers receive all 12 tools). Fix to "All twelve tools included with every paid plan." Cross-check `shared/entitlements.py` + Sprint 692's reconciled language.
+- [ ] **Footer Pacioli colophon:** "*Particularis de Computis et Scripturis* — On Accounts and Records, Luca Pacioli 1494" currently renders at link-list size. Upgrade to a real colophon — 24–28 px display-serif italic, centered on its own row with generous top/bottom spacing, hairline rule above. The emotional climax of the site should feel like one.
+- [ ] **Header nav anchor hint:** the `Platform` nav link is a homepage anchor, not a route. Add a subtle visual hint on anchor-only items (a small `↓` glyph, a leading dot, or a dashed underline) to distinguish them from real-route links — prevents the "I clicked Platform and nothing happened" confusion.
+- [ ] **CTA audit:** grep the marketing surface for `Start Free Trial` / `Get Started` / `Explore Demo` / `Sign In` / `Schedule a call` and align each to the correct variant from Sprint 704 — one primary per section; secondaries for alternatives; tertiaries for low-priority. Deduplicate stacked primaries.
+- [ ] **Favicon check:** verify the `P` monogram renders sharply at 16×16 / 32×32 / 180×180 / OG preview. If the current SVG is too detailed at 16 px, export a simplified variant specifically for the favicon size.
 
 ---

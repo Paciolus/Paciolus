@@ -30,9 +30,11 @@ from shared.diagnostic_response_schemas import (
     MovementSummaryResponse,
     ThreeWayMovementSummaryResponse,
 )
+from shared.entitlement_checks import check_export_access
 from shared.error_messages import sanitize_error
 from shared.helpers import maybe_record_tool_run
 from shared.rate_limits import RATE_LIMIT_AUDIT, RATE_LIMIT_EXPORT, limiter
+from shared.testing_route import enforce_tool_access
 
 router = APIRouter(tags=["multi_period"])
 
@@ -140,6 +142,8 @@ def compare_period_trial_balances(
     db: Session = Depends(get_db),
 ) -> dict[str, object]:
     """Compare two trial balance datasets at the account level."""
+    # Sprint 678: multi-period is a paid tool — gate Free tier
+    enforce_tool_access(current_user, "multi_period", db)
     log_secure_operation(
         "compare_period_trial_balances",
         f"User {current_user.id} comparing {len(payload.prior_accounts)} vs {len(payload.current_accounts)} accounts",
@@ -174,6 +178,7 @@ def compare_three_way_trial_balances(
     db: Session = Depends(get_db),
 ) -> dict[str, object]:
     """Compare three trial balance datasets: Prior vs Current vs Budget/Forecast."""
+    enforce_tool_access(current_user, "multi_period", db)
     log_secure_operation(
         "compare_three_way_trial_balances",
         f"User {current_user.id} three-way: {len(payload.prior_accounts)} vs "
@@ -201,7 +206,7 @@ def compare_three_way_trial_balances(
     return result_dict
 
 
-@router.post("/export/csv/movements")
+@router.post("/export/csv/movements", dependencies=[Depends(check_export_access)])
 @limiter.limit(RATE_LIMIT_EXPORT)
 def export_csv_movements(
     request: Request,

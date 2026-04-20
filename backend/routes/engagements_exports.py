@@ -18,12 +18,16 @@ from engagement_export import EngagementExporter
 from engagement_manager import EngagementManager
 from models import User
 from security_utils import log_secure_operation
+from shared.entitlement_checks import check_export_access
 from shared.rate_limits import RATE_LIMIT_EXPORT, limiter
 
 router = APIRouter(tags=["engagements"])
 
 
-@router.post("/engagements/{engagement_id}/export/anomaly-summary")
+@router.post(
+    "/engagements/{engagement_id}/export/anomaly-summary",
+    dependencies=[Depends(check_export_access)],
+)
 @limiter.limit(RATE_LIMIT_EXPORT)
 def export_anomaly_summary(
     request: Request,
@@ -59,7 +63,10 @@ def export_anomaly_summary(
     )
 
 
-@router.post("/engagements/{engagement_id}/export/package")
+@router.post(
+    "/engagements/{engagement_id}/export/package",
+    dependencies=[Depends(check_export_access)],
+)
 @limiter.limit(RATE_LIMIT_EXPORT)
 def export_engagement_package(
     request: Request,
@@ -95,7 +102,10 @@ def export_engagement_package(
     )
 
 
-@router.post("/engagements/{engagement_id}/export/convergence-csv")
+@router.post(
+    "/engagements/{engagement_id}/export/convergence-csv",
+    dependencies=[Depends(check_export_access)],
+)
 @limiter.limit(RATE_LIMIT_EXPORT)
 def export_convergence_csv(
     request: Request,

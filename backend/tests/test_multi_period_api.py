@@ -17,7 +17,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from auth import require_verified_user
+from auth import require_current_user, require_verified_user
 from database import get_db
 from main import app
 from models import User, UserTier
@@ -47,6 +47,7 @@ def auth_user(db_session):
 def override_verified(db_session, auth_user):
     """Override auth + db."""
     app.dependency_overrides[require_verified_user] = lambda: auth_user
+    app.dependency_overrides[require_current_user] = lambda: auth_user
     app.dependency_overrides[get_db] = lambda: db_session
     yield auth_user
     app.dependency_overrides.clear()

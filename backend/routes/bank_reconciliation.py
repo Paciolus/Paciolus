@@ -60,9 +60,12 @@ async def audit_bank_reconciliation(
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """Reconcile bank statement against general ledger."""
+    from shared.entitlement_checks import check_upload_limit
     from shared.testing_route import enforce_tool_access
 
     enforce_tool_access(current_user, "bank_reconciliation", db)
+    # Sprint 678: count bank rec uploads toward the monthly quota.
+    check_upload_limit(current_user, db)
 
     bank_mapping_dict = parse_json_mapping(bank_column_mapping, "bank_rec_bank")
     ledger_mapping_dict = parse_json_mapping(ledger_column_mapping, "bank_rec_ledger")

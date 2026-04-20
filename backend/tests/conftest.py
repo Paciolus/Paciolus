@@ -246,7 +246,7 @@ def override_auth_verified(db_session):
     Clears overrides after test. New API tests should use this fixture
     instead of duplicating the override pattern.
     """
-    from auth import require_verified_user
+    from auth import require_current_user, require_verified_user
     from database import get_db
     from main import app
 
@@ -262,6 +262,9 @@ def override_auth_verified(db_session):
     db_session.flush()
 
     app.dependency_overrides[require_verified_user] = lambda: user
+    # Sprint 678: export/tool gates depend on require_current_user; override
+    # both so existing test suites don't 401 on the new entitlement checks.
+    app.dependency_overrides[require_current_user] = lambda: user
     app.dependency_overrides[get_db] = lambda: db_session
     yield user
     app.dependency_overrides.clear()

@@ -23,7 +23,7 @@ from models import User
 from security_utils import log_secure_operation
 from shared.account_extractors import extract_tb_accounts
 from shared.diagnostic_response_schemas import TrialBalanceResponse
-from shared.entitlement_checks import check_diagnostic_limit
+from shared.entitlement_checks import check_diagnostic_limit, enforce_format_access
 from shared.error_messages import sanitize_error
 from shared.helpers import (
     maybe_record_tool_run,
@@ -59,6 +59,10 @@ async def audit_trial_balance(
     db: Session = Depends(get_db),
 ) -> TrialBalanceResponse:
     """Analyze a trial balance file for balance validation using streaming processing."""
+
+    # Sprint 678: tier-gate the upload by file extension. Free tier is limited
+    # to csv/xlsx/xls/tsv/txt; paid tiers accept ofx/qbo/iif/pdf/ods too.
+    enforce_format_access(current_user, db, file.filename)
 
     # Check preflight cache — reuse file bytes from a prior preview/inspect call
     from shared.preflight_cache import preflight_cache

@@ -423,8 +423,9 @@ from unittest.mock import MagicMock
 
 import httpx
 
-from auth import require_verified_user
+from auth import require_current_user, require_verified_user
 from main import app
+from models import UserTier
 
 
 @pytest.fixture
@@ -433,6 +434,8 @@ def mock_user():
     user.id = 1
     user.email = "test@example.com"
     user.is_verified = True
+    # Sprint 678: tool-access gate resolves user.tier.value → real enum.
+    user.tier = UserTier.PROFESSIONAL
     return user
 
 
@@ -454,6 +457,7 @@ class TestThreeWayApiEndpoint:
     @pytest.mark.asyncio
     async def test_three_way_success(self, mock_user):
         app.dependency_overrides[require_verified_user] = lambda: mock_user
+        app.dependency_overrides[require_current_user] = lambda: mock_user
         try:
             async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 payload = {
@@ -495,6 +499,7 @@ class TestCsvExportApiEndpoint:
     @pytest.mark.asyncio
     async def test_csv_export_two_way(self, mock_user):
         app.dependency_overrides[require_verified_user] = lambda: mock_user
+        app.dependency_overrides[require_current_user] = lambda: mock_user
         try:
             async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 payload = {
@@ -515,6 +520,7 @@ class TestCsvExportApiEndpoint:
     @pytest.mark.asyncio
     async def test_csv_export_three_way(self, mock_user):
         app.dependency_overrides[require_verified_user] = lambda: mock_user
+        app.dependency_overrides[require_current_user] = lambda: mock_user
         try:
             async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 payload = {

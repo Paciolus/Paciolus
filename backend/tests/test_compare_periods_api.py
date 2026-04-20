@@ -28,8 +28,9 @@ import pytest
 
 sys.path.insert(0, "..")
 
-from auth import require_verified_user
+from auth import require_current_user, require_verified_user
 from main import app
+from models import UserTier
 
 # =============================================================================
 # TEST CLIENT SETUP
@@ -38,11 +39,16 @@ from main import app
 
 @pytest.fixture
 def mock_user():
-    """Create a mock verified user for authenticated endpoints."""
+    """Create a mock verified user for authenticated endpoints.
+
+    Sprint 678: tier attribute must be a real UserTier so the entitlement
+    gate can resolve ``user.tier.value`` without MagicMock indirection.
+    """
     user = MagicMock()
     user.id = 1
     user.email = "test@example.com"
     user.is_verified = True
+    user.tier = UserTier.PROFESSIONAL
     return user
 
 
@@ -50,6 +56,8 @@ def mock_user():
 def override_auth(mock_user):
     """Override authentication for protected endpoints."""
     app.dependency_overrides[require_verified_user] = lambda: mock_user
+    # Sprint 678: the multi_period tool-access gate calls require_current_user
+    app.dependency_overrides[require_current_user] = lambda: mock_user
     yield
     app.dependency_overrides.clear()
 

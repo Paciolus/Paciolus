@@ -128,13 +128,23 @@ async def upload_logo(
 
     # Store in S3 (or local for development)
     s3_key = f"branding/{org_id}/logo"
+    upload_succeeded = False
     try:
         from shared.storage_client import upload_bytes
 
-        upload_bytes(s3_key, contents, file.content_type or "image/png")
+        upload_succeeded = upload_bytes(s3_key, contents, file.content_type or "image/png")
     except ImportError:
-        # S3 not configured — store key placeholder for development
-        pass
+        upload_succeeded = False
+
+    # Sprint 677: Only persist logo metadata when the object is actually in S3.
+    # Previously the DB row was committed regardless of upload success, leaving
+    # dangling logo_s3_key rows in dev / S3-unconfigured environments that Sprint
+    # 679's PDF branding pipeline would then try to fetch and fail on.
+    if not upload_succeeded:
+        raise HTTPException(
+            status_code=503,
+            detail="Logo storage is not configured. Contact support to enable custom branding.",
+        )
 
     branding.logo_s3_key = s3_key
     branding.logo_content_type = file.content_type

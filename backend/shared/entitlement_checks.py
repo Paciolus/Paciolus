@@ -226,6 +226,39 @@ def check_format_access(format_name: str) -> object:
     return _dependency
 
 
+def enforce_format_access(user: User, db: Session, filename: str | None) -> None:
+    """Programmatic format-access check for upload routes.
+
+    Sprint 678: format is determined from the uploaded file at request time,
+    so the dependency-factory form of ``check_format_access`` (which needs the
+    format name at route definition time) does not fit. This helper takes a
+    filename and extracts the extension without the leading dot, lower-cased,
+    matching ``TierEntitlements.formats_allowed``.
+
+    Invoked from ``routes/audit_pipeline.py`` and ``routes/audit_upload.py``
+    after the file is received but before heavy processing.
+    """
+    if not filename:
+        return
+
+    import os
+
+    ext = os.path.splitext(filename)[1].lower().lstrip(".")
+    if not ext:
+        return
+
+    entitlements = get_effective_entitlements(user, db)
+    if not entitlements.formats_allowed:
+        return
+
+    if ext not in entitlements.formats_allowed:
+        _raise_or_log(
+            user,
+            "format_access",
+            f"File format '.{ext}' is not available on your current plan. Upgrade for access.",
+        )
+
+
 def check_workspace_access(
     user: Annotated[User, Depends(require_current_user)],
     db: Session = Depends(get_db),

@@ -14,6 +14,7 @@ from fastapi.responses import StreamingResponse
 
 from auth import require_verified_user
 from models import User
+from shared.entitlement_checks import check_export_access
 from shared.error_messages import sanitize_error
 from shared.helpers import safe_download_filename, sanitize_csv_value
 from shared.rate_limits import RATE_LIMIT_EXPORT, limiter
@@ -274,7 +275,7 @@ def _ar_aging_summary_writer(writer: Any, composite_score: dict[str, Any]) -> No
 # ---------------------------------------------------------------------------
 
 
-@router.post("/export/csv/je-testing")
+@router.post("/export/csv/je-testing", dependencies=[Depends(check_export_access)])
 @limiter.limit(RATE_LIMIT_EXPORT)
 def export_csv_je_testing(
     request: Request,
@@ -294,7 +295,7 @@ def export_csv_je_testing(
     )
 
 
-@router.post("/export/csv/ap-testing")
+@router.post("/export/csv/ap-testing", dependencies=[Depends(check_export_access)])
 @limiter.limit(RATE_LIMIT_EXPORT)
 def export_csv_ap_testing(
     request: Request,
@@ -314,7 +315,7 @@ def export_csv_ap_testing(
     )
 
 
-@router.post("/export/csv/payroll-testing")
+@router.post("/export/csv/payroll-testing", dependencies=[Depends(check_export_access)])
 @limiter.limit(RATE_LIMIT_EXPORT)
 def export_csv_payroll_testing(
     request: Request,
@@ -334,7 +335,7 @@ def export_csv_payroll_testing(
     )
 
 
-@router.post("/export/csv/revenue-testing")
+@router.post("/export/csv/revenue-testing", dependencies=[Depends(check_export_access)])
 @limiter.limit(RATE_LIMIT_EXPORT)
 def export_csv_revenue_testing(
     request: Request,
@@ -354,7 +355,7 @@ def export_csv_revenue_testing(
     )
 
 
-@router.post("/export/csv/ar-aging")
+@router.post("/export/csv/ar-aging", dependencies=[Depends(check_export_access)])
 @limiter.limit(RATE_LIMIT_EXPORT)
 def export_csv_ar_aging(
     request: Request,
@@ -375,7 +376,7 @@ def export_csv_ar_aging(
     )
 
 
-@router.post("/export/csv/fixed-assets")
+@router.post("/export/csv/fixed-assets", dependencies=[Depends(check_export_access)])
 @limiter.limit(RATE_LIMIT_EXPORT)
 def export_csv_fixed_assets(
     request: Request,
@@ -395,7 +396,7 @@ def export_csv_fixed_assets(
     )
 
 
-@router.post("/export/csv/inventory")
+@router.post("/export/csv/inventory", dependencies=[Depends(check_export_access)])
 @limiter.limit(RATE_LIMIT_EXPORT)
 def export_csv_inventory(
     request: Request,
@@ -420,7 +421,7 @@ def export_csv_inventory(
 # ---------------------------------------------------------------------------
 
 
-@router.post("/export/csv/three-way-match")
+@router.post("/export/csv/three-way-match", dependencies=[Depends(check_export_access)])
 @limiter.limit(RATE_LIMIT_EXPORT)
 def export_csv_three_way_match(
     request: Request,
@@ -497,7 +498,7 @@ def export_csv_three_way_match(
         raise HTTPException(status_code=500, detail=sanitize_error(e, "export", "twm_csv_export_error"))
 
 
-@router.post("/export/csv/sampling-selection")
+@router.post("/export/csv/sampling-selection", dependencies=[Depends(check_export_access)])
 @limiter.limit(RATE_LIMIT_EXPORT)
 def export_csv_sampling_selection(
     request: Request,
