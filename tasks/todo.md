@@ -678,7 +678,7 @@ Nothing weakened — auth/security/zero-storage untouched, no tests silenced, ev
 **Review:**
 - Chose cohort-based staleness over requiring as_of_date because it mirrors how auditors actually think: "is this rate stale relative to the others in the table?" is the fast screening question. Target-date mode stays available for engagements that need period-specific validation.
 - `invalid_rate` as a distinct flag from `missing_rate` preserves auditor signal — "rate wasn't there" and "rate was there but bad" require different follow-up.
-- Commit SHA: pending (landed in anomaly-framework bundle commit).
+- Commit SHA: `633643a` (bundle commit covering Sprints 699-703).
 
 ---
 
@@ -706,7 +706,7 @@ Nothing weakened — auth/security/zero-storage untouched, no tests silenced, ev
 - Placed `contract.py` in `shared/` rather than under `tests/` so production engines can import it without test-tree coupling. The module is pure data (dataclasses + one pure function) — arguably production infrastructure, not test scaffolding.
 - Substring pattern matching (not set equality) is the correct shape for real-world account-name detection: engines look for "returns" anywhere in a name like "Sales Returns and Allowances", not for exact equality.
 - Report-only mode for this sprint was deliberate: Sprints C/D can populate contracts incrementally; Sprint E flips to strict mode once coverage is meaningful.
-- Commit SHA: pending (landed in anomaly-framework bundle commit).
+- Commit SHA: `633643a` (bundle commit covering Sprints 699-703).
 
 ---
 
@@ -728,7 +728,7 @@ Nothing weakened — auth/security/zero-storage untouched, no tests silenced, ev
 **Review:**
 - PR-T12 was the right fix rather than retargeting the generator. Ghost-employee detection is a material gap; the existing `duplicate_name_similarity` config was orphaned (defined but unused). Filling the gap AND closing the xfail in one move.
 - Revenue fix was generator-side because the engine's 15% threshold is correct per real auditor practice — the generator was just under-injecting relative to the base population size.
-- Commit SHA: pending (landed in anomaly-framework bundle commit).
+- Commit SHA: `633643a` (bundle commit covering Sprints 699-703).
 
 ---
 
@@ -753,7 +753,7 @@ Nothing weakened — auth/security/zero-storage untouched, no tests silenced, ev
 - AR-01 / AR-01b split was the right shape; widening AR-01 to include SL-level negative invoices would have muddied the auditor memo (one test firing for two different control objectives).
 - FA and INV duplicate fixes were symmetric generator-side fixes — the engines were correct, the generators were asking the wrong question.
 - INV missing fields fix aligned the generator with the engine's strict identifier definition. Category being "required" is contested in literature (different inventory frameworks treat category differently); the engine's narrower definition is defensible.
-- Commit SHA: pending (landed in anomaly-framework bundle commit).
+- Commit SHA: `633643a` (bundle commit covering Sprints 699-703).
 
 ---
 
@@ -776,7 +776,7 @@ Nothing weakened — auth/security/zero-storage untouched, no tests silenced, ev
 **Review:**
 - Strict mode caught a real drift on day one — exactly the Sprint E design. The revenue contract was over-strict; reconciliation was a one-line change. This is the pattern future maintainers will see: add a generator, run the meta-test, get a precise violation report, fix, merge.
 - Property-based tests for the contract itself (mentioned in the plan) were deprioritised — the unit tests in `test_contract.py` already cover the pure function exhaustively across all violation types. Adding hypothesis tests would be noise on top.
-- Commit SHA: pending (landed in anomaly-framework bundle commit).
+- Commit SHA: `633643a` (bundle commit covering Sprints 699-703).
 
 ---
 
