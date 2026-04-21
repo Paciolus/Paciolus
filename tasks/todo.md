@@ -957,24 +957,35 @@ Nothing weakened — auth/security/zero-storage untouched, no tests silenced, ev
 ---
 
 ### Sprint 699: Frontend passcode download flow audit
-**Status:** PENDING
+**Status:** COMPLETE
 **Priority:** P1 (user-facing: broken UI if missed)
 **Source:** Security hardening rollout — passcode download surface changed from GET `?passcode=` to POST body.
 **Why now:** Sprint 696 removed the query-string passcode pattern. Anywhere in the frontend still constructing `?passcode=` URLs (download links, share-received modal, email copy) will render as "Invalid passcode" or "requires a passcode" 403s post-deploy.
 **Files:**
-- `frontend/src/app/(shares)/` — share-received page
-- `frontend/src/components/share/*` — passcode modal
-- `frontend/src/hooks/useShareDownload.ts` (if present) / fetch helpers
-- `frontend/src/app/*/page.tsx` — audit grep for `export-sharing/` URL construction
-- `backend/shared/email_templates/` — share-notification emails (ensure links don't carry passcodes)
+- `frontend/src/app/shared/[token]/page.tsx` (new) — public share-receive page
+- `frontend/src/__tests__/SharedDownloadPage.test.tsx` (new)
+
+**Audit result:**
+- Greps for `passcode=` / `?passcode=` / `export-sharing` in `frontend/src` turned up **zero** legacy call sites — the query-string flow had never landed on the frontend. The real gap was that `ShareExportModal` constructed share URLs pointing at `/shared/{token}`, but **no page existed at that route** — recipients clicking a share link hit a Next.js 404. P1 status was correct for a different reason than expected.
+- No backend `email_templates/share*` files exist — there is no auto-sent share-notification email, so the "passcode leak in email" concern is moot. Creators copy-paste the URL and deliver the passcode via their own out-of-band channel, which is the intended design.
 
 **Changes:**
-- [ ] Grep `frontend/src` for `export-sharing/` and any `passcode=` URL construction; migrate to POST body.
-- [ ] Passcode modal: POST `/export-sharing/{token}/download` with `{passcode}` JSON body; show `Retry-After`-based countdown on 429.
-- [ ] Non-passcode shares: confirm GET path still works end-to-end.
-- [ ] Validate share-notification emails do NOT embed the passcode (user must enter it manually — that's the point of the out-of-band channel).
-- [ ] Playwright/E2E: passcode-protected share receives file; wrong passcode shows clear error; 5 wrong attempts surface the lockout countdown.
-- [ ] Jest unit tests for the passcode modal component.
+- [x] Built the missing public share-receive page at `/shared/[token]`. Probes GET first; 200 → immediate blob download, 403 → passcode form, 410 → expired terminal state, 404 → not-found terminal state. Passcode submit POSTs `{passcode}` JSON to `/export-sharing/{token}/download`.
+- [x] Handles 429 by reading the `Retry-After` header, showing a countdown (`Nm Ss` formatting), and hiding the passcode form for the duration of the lockout so the user cannot burn further attempts blindly.
+- [x] Zero-Storage: blobs stream through `URL.createObjectURL` → anchor click → `revokeObjectURL`. Page uses `credentials: 'omit'` so no session cookie leaks to the public endpoint.
+- [x] Parses RFC 5987 `filename*=UTF-8''` first, then falls back to plain `filename=` for the browser download name; safe default `paciolus_export_{first-8-of-token}` if neither is present.
+- [x] Uses the established `useParams()` pattern (next/navigation) rather than React 19 `use(params)` — stays consistent with the five other dynamic routes in this codebase.
+- [x] 7 Jest tests cover: immediate-download (non-passcode), passcode form appearance on 403, POST body shape, invalid-passcode error surfacing + field clear, 429 → lockout view with parsed Retry-After, 410 → expired, 404 → not-found.
+- [x] `npm run build` passes; `/shared/[token]` renders as `ƒ (Dynamic)` alongside the rest of the route tree.
+
+**Explicit non-goals:**
+- Playwright/E2E was deferred — no existing Playwright suite in this repo to extend. Jest coverage plus the type-checked contract is proportionate for a small public page.
+- The existing `ShareExportModal` creates share URLs; no passcode UI changes were needed on the creator side because the Sprint 696 contract changes only affected recipients.
+
+**Review:**
+- The "audit" framing undersold what this sprint actually needed to ship. The real finding was that the share-receive experience didn't exist at all — the modal promised a URL that 404'd. A post-launch recipient would have hit a broken link on their first passcode-protected share.
+- Hiding the passcode input while the lockout countdown runs is a small but deliberate UX call: leaving it visible would invite the recipient to burn attempts into a 429 wall, making the lockout window longer via the per-IP tracker (Sprint 698).
+- Commit SHA: TBD after commit.
 
 ---
 
