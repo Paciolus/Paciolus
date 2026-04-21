@@ -18,7 +18,18 @@ export default function AuthLayout({
   children: React.ReactNode
 }) {
   return (
-    <main className="min-h-screen bg-gradient-obsidian flex items-center justify-center p-6">
+    <main className="min-h-screen bg-gradient-obsidian flex flex-col items-center justify-center p-6">
+      {/* Sprint 702: minimal wordmark so the auth surface isn't an orphan
+          from the marketing nav. Clickable home link reinforces the path
+          back without duplicating the footer CTA. */}
+      <Link
+        href="/"
+        className="mb-8 font-serif text-lg font-semibold tracking-wide text-oatmeal-200 hover:text-oatmeal-100 transition-colors"
+        aria-label="Paciolus — go to homepage"
+      >
+        Paciolus
+      </Link>
+
       <div className="relative z-10 w-full max-w-md">
         {children}
         <div className="mt-6 text-center">

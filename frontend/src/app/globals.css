@@ -851,3 +851,56 @@
 .animate-progress-smooth {
   animation: progress-indeterminate 8s ease-out forwards;
 }
+
+/* ─────────────────────────────────────────────────────────────────
+   Browser-autofill override (Sprint 702, 2026-04-21)
+   Chrome / Edge render autofilled inputs with a pale-blue background
+   + dark text regardless of the site's palette. That reads "broken
+   craft" on the Obsidian Vault auth surface. The workaround uses an
+   enormous inset box-shadow to mask the default UA background, then
+   swaps text + caret colors to match Oat & Obsidian. Applies globally
+   so contact forms, billing, engagement config inherit.
+
+   Dark surfaces (auth Vault, intelligence canvas) use obsidian-800
+   via data-theme / bg token; light surfaces (marketing, settings)
+   use surface-input. We key off the currently-resolved CSS custom
+   property `--color-surface-input` so the same rule serves both.
+   ───────────────────────────────────────────────────────────────── */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+textarea:-webkit-autofill:active,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus,
+select:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px var(--color-surface-input, #0f0f0f) inset !important;
+  -webkit-text-fill-color: var(--color-content-primary, #EBE9E4) !important;
+  caret-color: var(--color-sage-400, #6FA37A) !important;
+  /* Slow Chromium's fade-in so our override paints before the default flash. */
+  transition: background-color 9999s ease-in-out 0s, color 9999s ease-in-out 0s;
+}
+
+/* Auth route group specifically lives on the obsidian gradient rather
+   than a surface-input background, so inputs inside it need the
+   obsidian-900 inset. Scope via the gradient class that only appears
+   on that layout. */
+.bg-gradient-obsidian input:-webkit-autofill,
+.bg-gradient-obsidian input:-webkit-autofill:hover,
+.bg-gradient-obsidian input:-webkit-autofill:focus,
+.bg-gradient-obsidian input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #0a0a0a inset !important; /* obsidian-900 */
+  -webkit-text-fill-color: #EBE9E4 !important; /* oatmeal-200 */
+}
+
+/* Firefox uses a separate pseudo-class; keep the fill + text matching. */
+input:autofill,
+textarea:autofill,
+select:autofill {
+  background-color: var(--color-surface-input, #0f0f0f) !important;
+  color: var(--color-content-primary, #EBE9E4) !important;
+}

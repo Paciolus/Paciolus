@@ -1110,7 +1110,7 @@ Nothing weakened — auth/security/zero-storage untouched, no tests silenced, ev
 - Kept the Security Policy changelog block at the top of the doc rather than at the bottom — that's where auditors look first, and the 2026-04-20 hardening batch is big enough it deserves the visibility.
 - Emergency playbook intentionally documents that **no break-glass exists for the passcode throttle**. Permitting a runtime bypass would re-open the exact exposure the lockout was added to close; making this explicit in the runbook prevents future pressure to add one.
 - Deferred the `.docx` mirrors — the `.md` is the source of truth and someone regenerates docx on the quarterly review cycle.
-- Commit SHA: TBD.
+- Commit SHA: `9266b4f`.
 
 ---
 
@@ -1121,22 +1121,29 @@ Nothing weakened — auth/security/zero-storage untouched, no tests silenced, ev
 ---
 
 ### Sprint 702: Auth-page polish — autofill fix + Obsidian Vault commitment
-**Status:** PENDING
+**Status:** COMPLETE (partial — autofill + wordmark landed; full Vault framing deferred to CEO pick)
 **Priority:** P1 (first-impression break)
 **Source:** Design audit 2026-04-20
-**Why now:** `/login` with a Chrome-autofilled email/password renders the inputs in lavender-blue — a color that does not exist in Oat & Obsidian. The illusion of craft breaks the moment a paying auditor opens the sign-in screen. Cheapest / highest-leverage design fix on the site; lands independently of the typography overhaul.
+**Why now:** `/login` with a Chrome-autofilled email/password renders the inputs in lavender-blue — a color that does not exist in Oat & Obsidian. The illusion of craft breaks the moment a paying auditor opens the sign-in screen.
 **Files:**
-- `frontend/src/app/(auth)/login/page.tsx`
-- `frontend/src/app/(auth)/register/page.tsx`
-- `frontend/src/app/(auth)/verify-email/page.tsx` + `verification-pending/page.tsx`
-- `frontend/src/components/auth/AuthCard.tsx` (or equivalent card wrapper)
-- `frontend/src/styles/globals.css` — global autofill override
+- `frontend/src/app/globals.css` (global `-webkit-autofill` + Firefox `:autofill` rules)
+- `frontend/src/app/(auth)/layout.tsx` (minimal wordmark)
+- `frontend/src/__tests__/AuthLayout.test.tsx` (new)
 
 **Changes:**
-- [ ] Add `-webkit-autofill` override to input styles: `-webkit-box-shadow: 0 0 0 1000px theme('colors.obsidian.800') inset; -webkit-text-fill-color: theme('colors.oatmeal.100'); caret-color: theme('colors.sage.400');` Apply in `globals.css` so every form (auth, contact, billing, engagement config) inherits.
-- [ ] Commit to the "Obsidian Vault" framing rather than half-using it: either (a) restore a minimal Paciolus wordmark at top-left so the auth page isn't an orphan from the marketing header, or (b) go full Vault — centered monogram, hairline frame around the card, "The Vault" in Merriweather italic. CEO picks one in PR review.
-- [ ] Cross-browser verify: Chromium (blue autofill), Firefox (yellow autofill), Safari — all should render in-palette.
-- [ ] Playwright / snapshot coverage of `/login` populated state so regressions are visible.
+- [x] Global `-webkit-autofill` override covers the `input` / `textarea` / `select` elements with a large inset box-shadow (masks the UA background), `-webkit-text-fill-color` keyed off `--color-content-primary`, sage caret, and a 9999s transition as a fallback to mask Chromium's default fade-in flash. Light/dark surfaces both served by the same rule via the `--color-surface-input` custom property.
+- [x] Auth route group (`.bg-gradient-obsidian`) gets a second, more specific rule that inks the inset to obsidian-900 + oatmeal-200 text, because the auth layout sits on a gradient rather than a card surface.
+- [x] Firefox `:autofill` pseudo-class covered by a standard `background-color` + `color` rule.
+- [x] Auth layout now renders a minimal `"Paciolus"` serif wordmark above the card, linked to `/` (chose option (a) from the sprint brief — least invasive). Existing "Back to Paciolus" footer link retained.
+- [x] 3 Jest tests cover wordmark presence + href, footer link unchanged, children render slot.
+- [ ] **Deferred for CEO pick:** option (b) — the full Vault framing (centered monogram, hairline frame, "The Vault" in Merriweather italic). Lands cleanly on top of this commit if CEO wants to upgrade.
+- [ ] **Deferred:** Playwright snapshot coverage of `/login` populated state — no Playwright harness exists in this repo. Jest `AuthLayout.test` pins the wordmark contract; manual browser verification is the loop for the autofill colors.
+
+**Review:**
+- Chose the global `globals.css` approach rather than per-component styling. The autofill issue touches every form surface (auth, contact, billing, engagement), so one declaration serves them all.
+- Two-rule structure (generic + auth-specific) is deliberate: the auth layout is on a gradient and doesn't expose `--color-surface-input`, so a fallback inks are hard-coded. Every other surface inherits from CSS custom properties and picks up dark-vs-light mode automatically.
+- The 9999s transition trick is a known workaround for Chromium's autofill flash — without it, the default blue paints for ~100ms before our box-shadow takes over. Ugly but correct.
+- Commit SHA: TBD.
 
 ---
 
