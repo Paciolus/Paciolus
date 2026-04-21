@@ -879,10 +879,11 @@ class TestAPCompositeScoring:
 class TestAPBattery:
     """3 tests for the full test battery."""
 
-    def test_all_thirteen_tests_run(self):
+    def test_all_fourteen_tests_run(self):
+        # Sprint 682: AP test count grew 13 -> 14 (AP-T14 Invoice Without PO).
         payments = make_payments(sample_ap_rows(), sample_ap_columns())
         results = run_ap_test_battery(payments)
-        assert len(results) == 13
+        assert len(results) == 14
 
     def test_all_test_keys_present(self):
         payments = make_payments(sample_ap_rows(), sample_ap_columns())
@@ -902,6 +903,7 @@ class TestAPBattery:
             "vendor_name_variations",
             "just_below_threshold",
             "suspicious_descriptions",
+            "invoice_without_po",  # Sprint 682: AP-T14
         }
         assert keys == expected
 
@@ -922,7 +924,7 @@ class TestRunAPTesting:
         result = run_ap_testing(rows, cols)
         assert isinstance(result, APTestingResult)
         assert result.composite_score is not None
-        assert len(result.test_results) == 13
+        assert len(result.test_results) == 14  # Sprint 682: +AP-T14
         assert result.data_quality is not None
         assert result.column_detection is not None
 
@@ -961,7 +963,7 @@ class TestRunAPTesting:
         cols = sample_ap_columns()
         result = run_ap_testing(rows, cols)
         # Should work without explicit config
-        assert result.composite_score.tests_run == 13
+        assert result.composite_score.tests_run == 14  # Sprint 682: +AP-T14
 
 
 class TestAPSerialization:
