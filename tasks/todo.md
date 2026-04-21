@@ -371,7 +371,7 @@ Two findings bundled into this sprint had different outcomes after audit. The co
 **Review:**
 - The "emit skipped result when column not detected" pattern (AP-T14, IN-T10) is important for dashboard stability — downstream consumers that count test slots stay consistent across fixtures with and without the optional column. FA-T11 doesn't need this pattern because it silently skips PER-ROW when inputs are missing (already a non-reconcilable row) rather than the whole test.
 - PR-T13's tolerance of $0.01 is tight; the test is valuable because payroll-integrity mismatches are usually dollar-level or higher and $0.01 catches rounding-convention drift before it becomes a habit.
-- Commit SHA: pending (landed with Sprint 684 in the same bundle).
+- Commit SHA: `9dd554a` (bundle commit covering Sprints 682 + 684).
 
 ---
 
@@ -425,7 +425,7 @@ Two findings bundled into this sprint had different outcomes after audit. The co
 **Review:**
 - Dropping the legacy-flag fallback was the right call: the homemade formula was wrong in one direction only (under-sizes), so a flag would hide the fix rather than enable a migration. Engagements that have already run under the old formula don't need to re-run — the correct response is "use the larger sample size going forward."
 - AICPA Table A-1 is the industry-standard reference; hardcoding it in a pure data module (no side effects, exhaustive unit tests) is appropriate. If/when the AICPA publishes a revised table, this is a one-dict edit.
-- Commit SHA: pending (landed with Sprint 682 in the same bundle).
+- Commit SHA: `9dd554a` (bundle commit covering Sprints 682 + 684).
 
 ---
 
