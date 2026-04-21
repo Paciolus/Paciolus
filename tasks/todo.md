@@ -427,7 +427,7 @@ The original plan proposed threading a `branding_context` kwarg through every me
 - Splitting RT-09 via a shared `_resolve_period_boundaries` helper kept the boundary-inference logic DRY — both tests compute p_start / p_end identically; they just disagree on which boundary to filter against.
 - The `is_aggregate` flag pattern is a low-disruption path to the sprint plan's intent. If a future sprint decides to do the full dataclass refactor, the flag is forward-compatible — the data is already segregated in the details dict.
 - RT-17 rule 3 overlaps with what the original sprint plan called RT-18 — intentional consolidation. A real RT-18 (contract price vs. recognised amount) needs the model extension before it's meaningful.
-- Commit SHA: pending.
+- Commit SHA: `09506e6`.
 
 ---
 
