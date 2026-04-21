@@ -5420,6 +5420,39 @@
       },
       "Body_audit_three_way_match_audit_three_way_match_post": {
         "properties": {
+          "amount_tolerance": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Tolerance"
+          },
+          "date_window_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Window Days"
+          },
+          "enable_fuzzy_matching": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enable Fuzzy Matching"
+          },
           "engagement_id": {
             "anyOf": [
               {
@@ -5430,6 +5463,28 @@
               }
             ],
             "title": "Engagement Id"
+          },
+          "fuzzy_composite_threshold": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fuzzy Composite Threshold"
+          },
+          "fuzzy_vendor_threshold": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fuzzy Vendor Threshold"
           },
           "invoice_column_mapping": {
             "anyOf": [
@@ -5462,6 +5517,28 @@
             "contentMediaType": "application/octet-stream",
             "title": "Po File",
             "type": "string"
+          },
+          "price_variance_threshold": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Variance Threshold"
+          },
+          "quantity_tolerance": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quantity Tolerance"
           },
           "receipt_column_mapping": {
             "anyOf": [
@@ -7441,6 +7518,33 @@
             "minLength": 1,
             "title": "Prior Label",
             "type": "string"
+          },
+          "significant_variance_amount": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Override for significance variance absolute $ (default $10,000)",
+            "title": "Significant Variance Amount"
+          },
+          "significant_variance_percent": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Override for significance variance percent (default 10%)",
+            "title": "Significant Variance Percent"
           }
         },
         "required": [
@@ -8110,15 +8214,15 @@
           "passcode": {
             "anyOf": [
               {
-                "maxLength": 64,
-                "minLength": 4,
+                "maxLength": 128,
+                "minLength": 10,
                 "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "Optional passcode for download protection",
+            "description": "Optional passcode for download protection. Must be 10-128 characters and include at least 3 of: lowercase, uppercase, digit, symbol.",
             "title": "Passcode"
           },
           "single_use": {
@@ -9494,6 +9598,27 @@
           "direction"
         ],
         "title": "DiagnosticVarianceResponse",
+        "type": "object"
+      },
+      "DownloadRequest": {
+        "description": "POST body for /export-sharing/{token}/download.\n\nPasscodes MUST be submitted via this body rather than a query string —\nquery strings leak via access logs, browser history, and proxy layers.\nNon-passcode shares can still use the GET endpoint for convenience.",
+        "properties": {
+          "passcode": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Passcode if the share link is protected.",
+            "title": "Passcode"
+          }
+        },
+        "title": "DownloadRequest",
         "type": "object"
       },
       "DunningMetrics": {
@@ -15029,6 +15154,31 @@
             "minLength": 1,
             "title": "Prior Label",
             "type": "string"
+          },
+          "significant_variance_amount": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Significant Variance Amount"
+          },
+          "significant_variance_percent": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Significant Variance Percent"
           }
         },
         "required": [
@@ -22478,6 +22628,33 @@
             "minLength": 1,
             "title": "Prior Label",
             "type": "string"
+          },
+          "significant_variance_amount": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Override for significance variance absolute $ (default $10,000)",
+            "title": "Significant Variance Amount"
+          },
+          "significant_variance_percent": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Override for significance variance percent (default 10%)",
+            "title": "Significant Variance Percent"
           }
         },
         "required": [
@@ -26605,7 +26782,7 @@
     },
     "/audit/currency-rate": {
       "post": {
-        "description": "Add a single exchange rate for simple conversions.\n\nIf a rate table already exists, the rate is appended.\nOtherwise, a new single-rate table is created.",
+        "description": "Add a single exchange rate for simple conversions.\n\nIf a rate table already exists, the rate is appended.\nOtherwise, a new single-rate table is created.\n\nSprint 678: paid tool — Free tier is blocked.",
         "operationId": "add_single_rate_audit_currency_rate_post",
         "requestBody": {
           "content": {
@@ -28983,7 +29160,7 @@
     },
     "/billing/analytics/weekly-review": {
       "get": {
-        "description": "Weekly pricing review — 5 decision metrics with period-over-period deltas.\n\nMetrics: trial starts, trial→paid rate, paid by plan, avg seats, cancellations by reason.\nSecurity Sprint: Restricted to org owner/admin to prevent sensitive billing data leakage.",
+        "description": "Weekly pricing review — 5 decision metrics with period-over-period deltas.\n\nMetrics: trial starts, trial→paid rate, paid by plan, avg seats, cancellations by reason.\nAccess: org owner/admin, or solo user with an active subscription.",
         "operationId": "get_weekly_review_endpoint_billing_analytics_weekly_review_get",
         "responses": {
           "200": {
@@ -31853,7 +32030,7 @@
         ]
       },
       "get": {
-        "description": "Download a shared export. Public endpoint (no auth required).",
+        "description": "Download a non-passcode-protected shared export.\n\nPublic endpoint (no auth required).  Passcode-protected shares MUST\nuse the POST /{token}/download endpoint; this endpoint returns a 403\nwith an instructional message when a passcode is required.\n\n2026-04-20 hardening: the ``?passcode=`` query-string pattern has been\nREMOVED.  Query-string secrets leak via access logs, browser history,\nand transparent proxies.  Callers must migrate to the POST variant.",
         "operationId": "download_share_export_sharing__token__get",
         "parameters": [
           {
@@ -31871,24 +32048,6 @@
             "required": false,
             "schema": {
               "title": "Request"
-            }
-          },
-          {
-            "description": "Passcode if the share link is protected",
-            "in": "query",
-            "name": "passcode",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Passcode if the share link is protected",
-              "title": "Passcode"
             }
           }
         ],
@@ -31913,6 +32072,65 @@
           }
         },
         "summary": "Download Share",
+        "tags": [
+          "export-sharing"
+        ]
+      }
+    },
+    "/export-sharing/{token}/download": {
+      "post": {
+        "description": "POST-body download: accepts the passcode in JSON instead of query string.\n\nPublic endpoint (no auth required).  For passcode-protected shares, the\nrequest body must include ``{\"passcode\": \"...\"}``.  Non-passcode shares\nmay also POST here (body.passcode is ignored) for clients that prefer\na single call pattern.",
+        "operationId": "download_share_with_passcode_export_sharing__token__download_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "title": "Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "request",
+            "required": false,
+            "schema": {
+              "title": "Request"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DownloadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Download Share With Passcode",
         "tags": [
           "export-sharing"
         ]

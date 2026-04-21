@@ -47,7 +47,9 @@ def _make_share(db_session, passcode_hash: str | None = None):
 
     share = ExportShare(
         user_id=user.id,
-        share_token_hash="hash_" + "a" * 60,
+        # share_token_hash is VARCHAR(64) — keep within the limit so
+        # this test passes on Postgres (SQLite doesn't enforce length).
+        share_token_hash="a" * 64,
         export_data=b"PK\x03\x04test",
         export_format="xlsx",
         tool_name="test",
