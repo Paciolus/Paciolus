@@ -12,6 +12,11 @@ reportlab==4.4.10
 # Authentication (Day 13)
 PyJWT[crypto]==2.12.1
 bcrypt>=5.0.0
+# Sprint 697: export-share passcode hashing upgraded from bcrypt → Argon2id
+# (OWASP 2024 recommendation). bcrypt retained for legacy-hash verification
+# during the ≤48h share-TTL transition window; argon2-cffi is the required
+# dep for new passcode hashes.
+argon2-cffi>=23.1.0
 sqlalchemy==2.0.49
 psycopg2-binary==2.9.11
 alembic==1.18.4
