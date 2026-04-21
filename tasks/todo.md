@@ -563,7 +563,7 @@ The original plan proposed threading a `branding_context` kwarg through every me
 - Chose not to introduce separate `components/compositeRisk/*` and `components/accountRiskHeatmap/*` folders — both tools are small enough that inlining the result sub-components (`RiskPill`, `Stat`, `TierPill`, `StatBox`) in the page keeps the call site visible without abstracting prematurely. If either grows a second consumer, extract then.
 - Upstream-engine JSON paste is the pragmatic adapter for heatmap triage: users who already have diagnostic output can drop it in without a custom upload flow, and the backend's existing `build_signals_from_*` adapter functions translate it. Form-only entry remains possible for hand-curated triage.
 - TypeScript caveat: `{...prev, [field]: value}` widens to `Partial<T>` with computed keys — cast at the assignment boundary, not in the function signature, so the outer generic remains sound.
-- Commit SHA: TBD after commit.
+- Commit SHA: `4b2757a`.
 
 ---
 
