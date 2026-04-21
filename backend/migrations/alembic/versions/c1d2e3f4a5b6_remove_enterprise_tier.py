@@ -24,8 +24,15 @@ def upgrade() -> None:
     # Step 2: Migrate all enterprise subscriptions → team
     op.execute("UPDATE subscriptions SET tier = 'team' WHERE tier = 'enterprise'")
 
+    # Steps 3/4: enum recreation is PostgreSQL-only.  SQLite stores enum
+    # columns as plain TEXT and has no type-altering DDL, so the data
+    # UPDATEs above are the complete migration there.  (Added 2026-04-21
+    # audit so `alembic upgrade head` works from scratch on SQLite.)
+    bind = op.get_bind()
+    if bind.dialect.name != "postgresql":
+        return
+
     # Step 3: Remove 'enterprise' from the usertier enum
-    # PostgreSQL requires creating a new enum, migrating columns, then dropping the old one.
     op.execute("ALTER TYPE usertier RENAME TO usertier_old")
     op.execute("CREATE TYPE usertier AS ENUM ('free', 'solo', 'professional', 'team')")
     op.execute("ALTER TABLE users ALTER COLUMN tier TYPE usertier USING tier::text::usertier")
@@ -39,6 +46,10 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    bind = op.get_bind()
+    if bind.dialect.name != "postgresql":
+        return
+
     # Re-add 'enterprise' to usertier enum
     op.execute("ALTER TYPE usertier RENAME TO usertier_old")
     op.execute("CREATE TYPE usertier AS ENUM ('free', 'solo', 'professional', 'team', 'enterprise')")
