@@ -614,20 +614,23 @@ Two findings bundled into this sprint had different outcomes after audit. The co
 ---
 
 ### Sprint 693: Frontend polish — framer-motion + silent catches
-**Status:** PENDING
+**Status:** COMPLETE
 **Priority:** P3
 **Source:** Frontend-bugs agent (4 HIGH + 2 silent catches)
-**Why now:** Five minor improvements, bundleable into one PR. No functional bugs; type-safety + observability only.
-**Files:**
-- `frontend/src/app/(auth)/verification-pending/page.tsx:70`
-- `frontend/src/app/(auth)/verify-email/page.tsx:95, 112, 131`
-- `frontend/src/app/tools/page.tsx:72`
-- `frontend/src/hooks/useTrialBalanceUpload.ts:249`
 
-**Changes:**
-- [ ] Add `as const` to all four `type: 'spring'` framer-motion transitions in the auth pages.
-- [ ] Replace `.catch(() => {})` in `tools/page.tsx:72` and `useTrialBalanceUpload.ts:249` with a structured logger call (`logger.warn(...)` or Sentry breadcrumb) — silent catches hide bugs in preference loading and telemetry.
-- [ ] No new tests needed; existing suites cover behaviour.
+**Changes landed:**
+- [x] Added `as const` to all 4 `type: 'spring'` framer-motion transitions in `verification-pending/page.tsx:70` and `verify-email/page.tsx:95, 112, 131`. Required by framer-motion's `Transition` type (typed as a union where `'spring'` narrows to a literal).
+- [x] Replaced `.catch(() => {})` in `app/tools/page.tsx:72` with `console.warn('[tools] preference load failed', err)` — preference-load regressions now surface in dev console and Sentry breadcrumbs without breaking the page.
+- [x] Replaced `.catch(() => {})` in `hooks/useTrialBalanceUpload.ts:217` with `console.warn('[trial-balance] telemetry post failed', err)` — telemetry is best-effort but failures should be observable.
+
+**Validation:**
+- Frontend jest: 177 suites, 1,821 tests pass.
+- `npx tsc --noEmit`: my touched files produce no errors (pre-existing `__tests__/` tsconfig errors are unrelated).
+- `npm run build`: clean. All routes render as `ƒ (Dynamic)` — CSP nonce contract intact.
+
+**Review:**
+- Chose `console.warn` over a structured-logger module because the frontend doesn't currently have one and introducing it for this sprint is scope creep. Sentry automatically captures console.warn as a breadcrumb, so the observability story is unchanged from what a custom `logger.warn` would provide.
+- Commit SHA: pending.
 
 ---
 

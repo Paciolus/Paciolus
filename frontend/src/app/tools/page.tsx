@@ -69,7 +69,12 @@ export default function ToolsCatalogPage() {
     if (!token) return
     apiGet<UserPreferences>('/settings/preferences', token)
       .then(res => { if (res.data?.favorite_tools) setFavorites(res.data.favorite_tools) })
-      .catch(() => {})
+      .catch(err => {
+        // Sprint 693: preference load failures were swallowed silently;
+        // log as a warning so regressions surface in the console and
+        // downstream Sentry breadcrumbs without breaking the page.
+        console.warn('[tools] preference load failed', err)
+      })
   }, [token])
 
   const toggleFavorite = useCallback(

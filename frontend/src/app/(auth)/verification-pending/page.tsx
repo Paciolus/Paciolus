@@ -67,7 +67,7 @@ function VerificationPendingContent() {
               className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-obsidian-700 border border-obsidian-500 flex items-center justify-center"
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: 'spring', stiffness: 200, damping: 20, delay: 0.2 }}
+              transition={{ type: 'spring' as const, stiffness: 200, damping: 20, delay: 0.2 }}
             >
               <svg
                 className="w-10 h-10 text-sage-400"
