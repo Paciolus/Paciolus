@@ -333,7 +333,7 @@ Two findings bundled into this sprint had different outcomes after audit. The co
 **Review:**
 - The ICR `used_derived_path` branch is load-bearing: without it, callers passing `operating_expenses` directly would see their ICR inflated by `interest / interest_expense` = 1 ratio unit (wrong in the opposite direction from the pre-fix bug). The production path via `extract_category_totals` goes through the direct branch, so production output is unchanged for engagements that upload a real TB; test fixtures that set CategoryTotals directly get the path the sprint plan wanted.
 - DuPont `math.isclose(rel_tol=1e-6, abs_tol=1e-9)` is calibrated to IEEE 754 double precision. The prior `abs(...) < 0.0001` would have failed for entities with ROE > 1000% (which exists for highly-levered firms in distress — e.g., ROE = 50 when equity is tiny and relative to net income is large).
-- Commit SHA: pending (landed with Sprint 685 in the same bundle).
+- Commit SHA: `965d769` (bundle commit covering Sprints 681 + 685).
 - [ ] Propagate `prior_period_totals` plumbing through `routes/audit_pipeline.py` and `routes/ratios.py` (accept optional uploaded prior-period TB; if absent, compute with disclosure).
 - [ ] Update memo copy in every ratio memo generator to reference the disclosure when applicable.
 
@@ -424,7 +424,7 @@ Two findings bundled into this sprint had different outcomes after audit. The co
 - Kept `CURRENT_RATIO_THRESHOLD` constant for backward-compat with any callers importing it — module top-level comment notes it's preserved but not used by the consolidated test.
 - The cash-flow test's sub-materiality filter is important: without it, any operational timing difference (e.g., a month-end receipt arriving Jan 2 vs Dec 31) would fire a GC indicator. ISA 570 ¶16(b) specifically names MATERIAL negative operating cash flow; the materiality gate implements that.
 - Covenant breach test is inert when `covenant_thresholds=None` — zero false positives when an engagement hasn't loaded the entity's loan agreement.
-- Commit SHA: pending (landed with Sprint 681 in the same bundle).
+- Commit SHA: `965d769` (bundle commit covering Sprints 681 + 685).
 
 ---
 
