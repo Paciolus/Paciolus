@@ -296,7 +296,7 @@ The original plan proposed threading a `branding_context` kwarg through every me
 - ContextVar-based propagation is the right call for this shape: 18 generators + 2 report generators + engagement exporters = 20+ call sites that would need signature updates under the kwarg-threading approach, vs. ~5 route-side `with apply_pdf_branding(...)` wrappers under the ContextVar approach. The test suite still exercises the explicit-kwarg path (for unit tests that inject branding directly) so both entry points are verified.
 - Not caching the logo bytes across the request was deliberate — branding can change mid-session (user uploads new logo) and the PDF flow is infrequent enough that per-request S3 downloads are acceptable (one `get_object` per export, capped by the ~500KB logo size limit).
 - The original plan's "logo at top-left" rendering placement was reconsidered in implementation: cover-page replacement (where the existing Paciolus logo renders) preserves layout consistency across branded and unbranded PDFs. Top-left header logos on every page would require redesigning the page header layout — a larger scope that belongs in a design sprint.
-- Commit SHA: pending.
+- Commit SHA: `5b0675e`.
 
 ---
 
