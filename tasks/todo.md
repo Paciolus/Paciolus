@@ -1081,28 +1081,36 @@ Nothing weakened — auth/security/zero-storage untouched, no tests silenced, ev
 **Review:**
 - Chose a regex guard on the SHA-256 detector (`^[a-fA-F0-9]{64}$`) rather than just a length check, so a future 64-char bcrypt variant (hypothetical) won't be false-positive classified as legacy.
 - CSV export helper stubbed with just share_id / owner_user_id so a future courtesy-email workflow has a canonical shape. Not wired to SendGrid — that's a CEO-initiated workflow.
-- Commit SHA: TBD.
+- Commit SHA: `5b0dbc4`.
 
 ---
 
 ### Sprint 701: Compliance documentation refresh — security hardening
-**Status:** PENDING
+**Status:** COMPLETE
 **Priority:** P2 (SOC 2 / operator hygiene)
 **Source:** Security hardening sprint — contract changes need documentation before launch sign-off.
 **Why now:** Sprint 696 introduced user-visible contract changes (passcode policy, `POST /download`, removed query-string flow) and operator-facing env changes (`RATE_LIMIT_STRICT_OVERRIDE`, dev-user script requirements). Documentation must land before external callers hit the first 403 "invalid passcode" wall.
 **Files:**
-- `docs/04-compliance/security-policy.md` (passcode KDF claim)
-- `docs/runbooks/rate-limiter-modernization.md` (strict-mode override semantics)
-- `docs/runbooks/emergency-playbook.md` (new: issuing a `RATE_LIMIT_STRICT_OVERRIDE`)
-- `docs/api-reference.md` / OpenAPI tags (document `POST /export-sharing/{token}/download`)
-- `README.md` or `backend/scripts/README.md` (new `create_dev_user.py` usage)
+- `docs/04-compliance/SECURITY_POLICY.md` (passcode KDF claim — bumped v2.6 → v2.7)
+- `docs/runbooks/rate-limiter-modernization.md` (new "Strict-Mode Production Fail-Closed" section)
+- `docs/runbooks/emergency-playbook.md` (new file — four break-glass scenarios + override index)
+- `docs/02-technical/API_REFERENCE_GENERATED.md` (export-sharing section rewritten with POST /download, passcode contract, 403/429/422 error shapes, migration notes)
+- `backend/scripts/README.md` (new file — create_dev_user + invalidate_legacy_passcode_shares usage)
+- `docs/08-internal/soc2-readiness-assessment-202603.md` (CC6.3 + CC6.6 updated)
 
 **Changes:**
-- [ ] Security Policy: bump to v2.7; passcode section moves from "SHA-256" to "bcrypt cost-12 (Argon2id planned Sprint 697)"; per-token brute-force documented.
-- [ ] Runbook: how to issue / rotate / retire a `RATE_LIMIT_STRICT_OVERRIDE` ticket.
-- [ ] Runbook: how to bootstrap a dev user without the old `DevPass1!` default.
-- [ ] API reference: document the new POST endpoint, the 429 `Retry-After` contract, and the removed GET `?passcode=` pattern (link to migration guide).
-- [ ] Verify `docs/04-compliance/soc2-readiness.md` criteria still match what the code enforces (CC6.1 / CC6.6 updated passcode KDF).
+- [x] Security Policy: bumped to v2.7; v2.7 changelog block added up-front; §2.2 passcode KDF sentence replaced with the Argon2id + OWASP 2024 parameters; §2.4 #8 export-share bullet rewritten with 10+/3-class policy, POST JSON body, per-token + per-IP lockout with Retry-After.
+- [x] Rate-limiter runbook: new "Strict-Mode Production Fail-Closed (Sprint 696)" section covers the `RATE_LIMIT_STRICT_OVERRIDE=TICKET:YYYY-MM-DD` shape, when to issue / not to issue, how to retire, and the three related secure-operations events (`rate_limit_strict_override_active`, `rate_limit_fail_closed`, `rate_limit_degraded`).
+- [x] New `emergency-playbook.md`: four break-glass scenarios — (1) Redis outage + rate-limit override, (2) Neon pooler TLS blind-spot, (3) passcode lockout remediation, (4) failed `alembic upgrade head`. Closes with an index of every break-glass env var + max expiry.
+- [x] API reference: export-sharing section rewritten with POST `/{token}/download`, full passcode contract (create-side + download-side), full error-code matrix (200/403/404/410/422/429), and explicit migration notes for callers still building `?passcode=` URLs.
+- [x] New `backend/scripts/README.md`: `create_dev_user.py` + `invalidate_legacy_passcode_shares.py` usage. Documents the "no default password" Sprint 696 change and the Sprint 700 dry-run/apply/yes/verbose contract.
+- [x] SOC 2 readiness: CC6.3 cites Argon2id + per-token/per-IP throttle for export-share passcodes; CC6.6 notes the KDF upgrade replaced legacy SHA-256.
+
+**Review:**
+- Kept the Security Policy changelog block at the top of the doc rather than at the bottom — that's where auditors look first, and the 2026-04-20 hardening batch is big enough it deserves the visibility.
+- Emergency playbook intentionally documents that **no break-glass exists for the passcode throttle**. Permitting a runtime bypass would re-open the exact exposure the lockout was added to close; making this explicit in the runbook prevents future pressure to add one.
+- Deferred the `.docx` mirrors — the `.md` is the source of truth and someone regenerates docx on the quarterly review cycle.
+- Commit SHA: TBD.
 
 ---
 

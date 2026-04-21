@@ -94,3 +94,83 @@ Only the middleware integration layer changes.
 - Decorator migration (123 sites): 1-2 sprints
 - Testing: 1 sprint
 - Total: 3-4 sprints
+
+---
+
+## Strict-Mode Production Fail-Closed (Sprint 696, 2026-04-20)
+
+### What it does
+
+`config.py` enforces that production deployments run with a shared rate-limit
+storage backend (Redis via `REDIS_URL`). If an operator sets
+`RATE_LIMIT_STRICT_MODE=false` in a production deployment, the app **refuses
+to start** unless a time-boxed break-glass is also set:
+
+```
+RATE_LIMIT_STRICT_OVERRIDE=TICKET-ID:YYYY-MM-DD
+```
+
+The override follows the same shape as `DB_TLS_OVERRIDE`:
+
+- **`TICKET-ID`** — your ticket system identifier (Linear, Jira, Notion page, etc.)
+  so the secure-operations log can be joined back to a decision record.
+- **`YYYY-MM-DD`** — the date the override expires. After this date, startup
+  hard-fails on the override parse; there is no way to set an indefinite
+  override.
+
+At startup, if `ENV_MODE=production` and `RATE_LIMIT_STRICT_MODE=false`:
+1. If `RATE_LIMIT_STRICT_OVERRIDE` is missing → hard-fail with an operator-
+   actionable error.
+2. If it parses but the expiry date has passed → hard-fail with the same
+   error, naming the expired ticket.
+3. If it parses and is in the future → log `rate_limit_strict_override_active`
+   to secure-operations with the ticket + expiry and boot with the warning
+   that rate limits may degrade to memory backend under Redis outage.
+
+### When to issue an override
+
+Only when **both** of the following are true:
+
+- Redis is unavailable and cannot be restored within the next 15 minutes.
+- Refusing traffic while Redis is down is worse than allowing per-worker
+  rate-limit drift for the override window.
+
+For any other reason, **fix Redis**. The override exists to unblock a live
+incident, not as a comfort knob.
+
+### How to issue an override
+
+1. File a ticket describing the root cause and the ETA to restore Redis.
+2. Pick an expiry date at most **3 days** out; shorter is better. The longer
+   the window, the more production runs with weakened per-worker rate limits.
+3. Set the env var on Render (or equivalent):
+
+   ```
+   RATE_LIMIT_STRICT_OVERRIDE=ORG-NNN:2026-05-02
+   ```
+
+4. Restart the service. The startup log line `rate_limit_strict_override_active`
+   confirms the override is in effect; `rate_limit_fail_closed` appears instead
+   if startup refused (override missing or expired).
+5. Track the ticket; remove the env var and the `RATE_LIMIT_STRICT_MODE=false`
+   setting within the window. Do **not** renew — if the underlying issue
+   persists past the ETA, that is a separate decision that deserves a new
+   ticket and a new override.
+
+### How to retire an override
+
+- Restore Redis connectivity.
+- In Render env vars, delete `RATE_LIMIT_STRICT_OVERRIDE` and set
+  `RATE_LIMIT_STRICT_MODE=true` (or remove it — `production` defaults to
+  `true`).
+- Restart the service. Startup log line `Rate-limit storage backend: redis`
+  confirms strict mode is back.
+
+### Related secure-operations events
+
+| Event | Meaning |
+|-------|---------|
+| `rate_limit_strict_override_active` | Override accepted at startup; tier degraded. |
+| `rate_limit_fail_closed` | Startup refused: prod + non-Redis + no active override. |
+| `rate_limit_degraded` | Informational: Redis unreachable in non-production. |
+
