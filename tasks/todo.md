@@ -915,7 +915,7 @@ Nothing weakened — auth/security/zero-storage untouched, no tests silenced, ev
 **Review:**
 - This sprint should NOT have been split from the hardening batch in the first place. Shipping 697/698/699 without 696 left the main branch in a state that would have silently broken export-share passcode protection on deploy (truncated hashes, missing columns, dev-user default password).
 - The CSRF Sec-Fetch-Site tightening is a cheap, browser-native defense-in-depth on top of the existing Origin/Referer check. Non-browser clients continue to work because they omit the header entirely rather than sending `cross-site`.
-- Commit SHA: TBD.
+- Commit SHA: `200eedd`.
 
 ---
 
@@ -958,7 +958,7 @@ Nothing weakened — auth/security/zero-storage untouched, no tests silenced, ev
 **Review:**
 - Body was written 2026-04-20 but never committed; discovered during the 2026-04-21 audit after Sprints 688 + 699 shipped. The only reason the app kept building in this session was that the untracked files were present on the working tree — a clean checkout would have failed immediately.
 - The shim-preserves-imports approach kept the refactor's blast radius at zero on the call-site side. Every `from shared.helpers import X` that worked before continues to work.
-- Commit SHA: TBD.
+- Commit SHA: `ed8a098`.
 
 ---
 
