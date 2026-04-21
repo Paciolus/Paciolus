@@ -543,20 +543,27 @@ The original plan proposed threading a `branding_context` kwarg through every me
 ---
 
 ### Sprint 688: Composite Risk + Account Risk Heatmap frontend
-**Status:** PENDING
+**Status:** COMPLETE
 **Priority:** P2 (feature completeness — marketed in CLAUDE.md)
 **Source:** Completeness agent H-01/H-02
 **Why now:** Both tools ship with full backend engines, routes, and tests; neither has a single line of frontend code. CLAUDE.md markets both under "Key Capabilities." Either wire the UI or stop marketing them.
 **Files (new):**
-- `frontend/src/types/compositeRisk.ts`, `hooks/useCompositeRisk.ts`, `components/compositeRisk/*`, `app/tools/composite-risk/page.tsx`
-- `frontend/src/types/accountRiskHeatmap.ts`, `hooks/useAccountRiskHeatmap.ts`, `components/accountRiskHeatmap/*`, `app/tools/account-risk-heatmap/page.tsx`
+- `frontend/src/types/compositeRisk.ts`, `hooks/useCompositeRisk.ts`, `app/tools/composite-risk/page.tsx`
+- `frontend/src/types/accountRiskHeatmap.ts`, `hooks/useAccountRiskHeatmap.ts`, `app/tools/account-risk-heatmap/page.tsx`
+- `frontend/src/__tests__/{useCompositeRisk, useAccountRiskHeatmap, CompositeRiskPage, AccountRiskHeatmapPage}.test.{ts,tsx}`
 
 **Changes:**
-- [ ] Composite Risk: auditor-input workflow (inherent/control/fraud risk per account/assertion) → combine with TB/testing signals → render RMM matrix + priority table. Bind to existing `/composite-risk/*` endpoints.
-- [ ] Account Risk Heatmap: render the heatmap + CSV download. Bind to existing `/account-risk-heatmap/*` endpoints.
-- [ ] Add both to `app/tools/page.tsx` catalog and `lib/commandRegistry.ts`.
-- [ ] Both pages use Oat & Obsidian tokens, Reveal scroll-reveal, and tier-gating per `useEntitlements`.
-- [ ] Jest tests for hook + at least one components/page happy path per tool.
+- [x] Composite Risk: auditor-input workflow (account/assertion rows with inherent/control/fraud + notes); builds ISA 315 RMM profile + risk distribution + overall-tier badge. Optional TB-score / GC-indicator integration fields. Bound to POST `/composite-risk/profile`.
+- [x] Account Risk Heatmap: raw-signal form + upstream-engine JSON paste. Renders ranked account table with priority-tier pills, severities/sources chips, total materiality. CSV download via POST `/audit/account-risk-heatmap/export.csv`. Invalid JSON surfaces inline — no request is sent.
+- [x] Added both entries to `app/tools/page.tsx` catalog (Advanced category) and `lib/commandRegistry.ts` TOOL_ENTRIES (tier guard = `solo+` by default).
+- [x] Oat & Obsidian tokens (sage/clay/oatmeal) throughout; every section wrapped in `Reveal`; UpgradeGate wraps the tool body per Pricing v3 pattern.
+- [x] 17 new Jest tests — hook contracts (success + error + reset) and page happy-paths + error surfacing.
+
+**Review:**
+- Chose not to introduce separate `components/compositeRisk/*` and `components/accountRiskHeatmap/*` folders — both tools are small enough that inlining the result sub-components (`RiskPill`, `Stat`, `TierPill`, `StatBox`) in the page keeps the call site visible without abstracting prematurely. If either grows a second consumer, extract then.
+- Upstream-engine JSON paste is the pragmatic adapter for heatmap triage: users who already have diagnostic output can drop it in without a custom upload flow, and the backend's existing `build_signals_from_*` adapter functions translate it. Form-only entry remains possible for hand-curated triage.
+- TypeScript caveat: `{...prev, [field]: value}` widens to `Partial<T>` with computed keys — cast at the assignment boundary, not in the function signature, so the outer generic remains sound.
+- Commit SHA: TBD after commit.
 
 ---
 
