@@ -1143,7 +1143,7 @@ Nothing weakened — auth/security/zero-storage untouched, no tests silenced, ev
 - Chose the global `globals.css` approach rather than per-component styling. The autofill issue touches every form surface (auth, contact, billing, engagement), so one declaration serves them all.
 - Two-rule structure (generic + auth-specific) is deliberate: the auth layout is on a gradient and doesn't expose `--color-surface-input`, so a fallback inks are hard-coded. Every other surface inherits from CSS custom properties and picks up dark-vs-light mode automatically.
 - The 9999s transition trick is a known workaround for Chromium's autofill flash — without it, the default blue paints for ~100ms before our box-shadow takes over. Ugly but correct.
-- Commit SHA: TBD.
+- Commit SHA: `8b75a86`.
 
 ---
 
