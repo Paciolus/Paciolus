@@ -1063,20 +1063,25 @@ Nothing weakened — auth/security/zero-storage untouched, no tests silenced, ev
 ---
 
 ### Sprint 700: Legacy passcode hash proactive cleanup
-**Status:** PENDING
+**Status:** COMPLETE
 **Priority:** P3
 **Source:** Security hardening residual risk — pre-Sprint-696 shares carry unverifiable SHA-256 hashes.
 **Why now:** Shares auto-expire in ≤48h, so in practice legacy rows drain themselves within one weekend. A proactive cleanup script makes the invariant explicit and gives support a one-shot way to invalidate affected shares during the rollover window rather than users hitting silent 403s.
 **Files:**
 - `backend/scripts/invalidate_legacy_passcode_shares.py` (new)
-- `backend/retention_cleanup.py` (optional: roll into the existing nightly cleanup)
-- `backend/tests/test_retention_cleanup.py`
+- `backend/retention_cleanup.py` (new `cleanup_legacy_passcode_shares` + wired into `run_retention_cleanup`)
+- `backend/tests/test_legacy_passcode_cleanup.py` (new)
 
 **Changes:**
-- [ ] New admin script: scan `export_shares` WHERE `passcode_hash` is 64 chars hex AND not bcrypt prefix → set `revoked_at = now()` with reason-logged secure_event.
-- [ ] Safe-mode dry-run flag; CEO-visible CSV of affected share IDs + owners for optional courtesy email.
-- [ ] Optional: fold into `retention_cleanup.py` so the nightly scheduler handles it without manual intervention.
-- [ ] Tests: legacy-hashed share is invalidated; bcrypt-hashed share is untouched; no-passcode share is untouched.
+- [x] Admin script `scripts/invalidate_legacy_passcode_shares.py`: scans `export_shares WHERE passcode_hash IS NOT NULL AND revoked_at IS NULL`, filters to rows whose hash is a bare 64-char hex (no `$2a$`/`$2b$`/`$2y$`/`$argon2` prefix), sets `revoked_at = now()` with a `legacy_passcode_invalidation` secure event logging the affected share IDs.
+- [x] Default dry-run; `--apply` mutates; `--yes` skips confirmation prompt; `--verbose` streams per-row details. Exit codes: 0 success, 1 precondition fail, 2 user abort.
+- [x] Folded into `retention_cleanup.run_retention_cleanup` so the lifespan scheduler handles it without manual intervention. Best-effort: swallows exceptions so a logging hiccup doesn't block the rest of the retention pass.
+- [x] 13 new tests (`test_legacy_passcode_cleanup.py`): format detector across SHA-256 / bcrypt / Argon2id / empty / non-hex; `find_legacy_shares` filters bcrypt + no-passcode + already-revoked; `invalidate_legacy_shares` dry-run vs apply; `run_retention_cleanup` integration carries the new `legacy_passcode_shares` counter; CLI `--help` exits clean. Existing 17 retention tests still green.
+
+**Review:**
+- Chose a regex guard on the SHA-256 detector (`^[a-fA-F0-9]{64}$`) rather than just a length check, so a future 64-char bcrypt variant (hypothetical) won't be false-positive classified as legacy.
+- CSV export helper stubbed with just share_id / owner_user_id so a future courtesy-email workflow has a canonical shape. Not wired to SendGrid — that's a CEO-initiated workflow.
+- Commit SHA: TBD.
 
 ---
 

@@ -39,15 +39,19 @@ def cleanup_expired_activity_logs(db: Session, *, cutoff: datetime | None = None
     if cutoff is None:
         cutoff = datetime.now(UTC) - timedelta(days=RETENTION_DAYS)
 
-    archived = db.query(ActivityLog).filter(
-        ActivityLog.timestamp < cutoff,
-        ActivityLog.archived_at.is_(None),
-    ).update(
-        {
-            "archived_at": cutoff,
-            "archive_reason": "retention_policy",
-        },
-        synchronize_session=False,
+    archived = (
+        db.query(ActivityLog)
+        .filter(
+            ActivityLog.timestamp < cutoff,
+            ActivityLog.archived_at.is_(None),
+        )
+        .update(
+            {
+                "archived_at": cutoff,
+                "archive_reason": "retention_policy",
+            },
+            synchronize_session=False,
+        )
     )
 
     if archived > 0:
@@ -66,20 +70,50 @@ def cleanup_expired_diagnostic_summaries(db: Session, *, cutoff: datetime | None
     if cutoff is None:
         cutoff = datetime.now(UTC) - timedelta(days=RETENTION_DAYS)
 
-    archived = db.query(DiagnosticSummary).filter(
-        DiagnosticSummary.timestamp < cutoff,
-        DiagnosticSummary.archived_at.is_(None),
-    ).update(
-        {
-            "archived_at": cutoff,
-            "archive_reason": "retention_policy",
-        },
-        synchronize_session=False,
+    archived = (
+        db.query(DiagnosticSummary)
+        .filter(
+            DiagnosticSummary.timestamp < cutoff,
+            DiagnosticSummary.archived_at.is_(None),
+        )
+        .update(
+            {
+                "archived_at": cutoff,
+                "archive_reason": "retention_policy",
+            },
+            synchronize_session=False,
+        )
     )
 
     if archived > 0:
         db.commit()
     return archived
+
+
+def cleanup_legacy_passcode_shares(db: Session) -> int:
+    """Revoke pre-Sprint-696 SHA-256 passcode shares that are still live.
+
+    Sprint 700: after Sprint 696's bcrypt → Argon2id passcode upgrade,
+    any ``export_shares`` row whose ``passcode_hash`` is still a 64-char
+    hex SHA-256 cannot be verified at runtime and silently 403s any
+    recipient.  Shares have ≤48h TTL so the population naturally drains
+    within one weekend post-deploy — but having the nightly job revoke
+    the stragglers means owners see "revoked" rather than recipients
+    seeing a silent "invalid passcode" wall.
+
+    Best-effort: swallows unexpected exceptions rather than blocking the
+    rest of the retention cleanup.  Returns the count of rows revoked.
+    """
+    try:
+        from scripts.invalidate_legacy_passcode_shares import invalidate_legacy_shares
+
+        summary = invalidate_legacy_shares(db, apply=True, verbose=False)
+        if summary["count"] > 0:
+            db.commit()
+        return int(summary["count"])
+    except Exception as e:
+        logger.warning("Legacy passcode cleanup skipped: %s", e)
+        return 0
 
 
 def run_retention_cleanup(db: Session) -> dict[str, int]:
@@ -92,14 +126,16 @@ def run_retention_cleanup(db: Session) -> dict[str, int]:
 
     results["activity_logs"] = cleanup_expired_activity_logs(db)
     results["diagnostic_summaries"] = cleanup_expired_diagnostic_summaries(db)
+    results["legacy_passcode_shares"] = cleanup_legacy_passcode_shares(db)
 
     total = sum(results.values())
     if total > 0:
         logger.info(
-            "Retention cleanup: archived %d activity_logs, %d diagnostic_summaries "
-            "(retention=%d days)",
+            "Retention cleanup: archived %d activity_logs, %d diagnostic_summaries, "
+            "revoked %d legacy-passcode shares (retention=%d days)",
             results["activity_logs"],
             results["diagnostic_summaries"],
+            results["legacy_passcode_shares"],
             RETENTION_DAYS,
         )
     return results
