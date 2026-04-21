@@ -30,6 +30,14 @@ from organization_model import (
     OrgRole,
 )
 from shared.entitlement_checks import check_seat_limit_for_org
+from shared.organization_policy import (
+    apply_org_subscription_to_user,
+    get_user_org,
+    require_admin,
+    require_owner,
+    revert_user_tier_after_removal,
+    unique_slug,
+)
 from shared.organization_schemas import (
     DetailResponse,
     OrganizationInviteCreateResponse,
@@ -67,76 +75,6 @@ class UpdateMemberRoleRequest(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-def _slugify(name: str) -> str:
-    """Create a URL-safe slug from an organization name."""
-    import re
-
-    slug = name.lower().strip()
-    slug = re.sub(r"[^a-z0-9]+", "-", slug)
-    slug = slug.strip("-")
-    return slug[:90]  # Leave room for uniqueness suffix
-
-
-def _unique_slug(db: Session, base: str) -> str:
-    """Ensure slug uniqueness by appending a short random suffix if needed."""
-    slug = _slugify(base)
-    if not db.query(Organization).filter(Organization.slug == slug).first():
-        return slug
-    for _ in range(10):
-        candidate = f"{slug}-{secrets.token_hex(3)}"
-        if not db.query(Organization).filter(Organization.slug == candidate).first():
-            return candidate
-    return f"{slug}-{secrets.token_hex(6)}"
-
-
-def _get_user_org(db: Session, user: User) -> Organization:
-    """Get the user's organization or raise 404."""
-    member = db.query(OrganizationMember).filter(OrganizationMember.user_id == user.id).first()
-    if not member:
-        raise HTTPException(status_code=404, detail="You are not part of an organization.")
-    org = db.query(Organization).filter(Organization.id == member.organization_id).first()
-    if not org:
-        raise HTTPException(status_code=404, detail="Organization not found.")
-    return org
-
-
-def _require_admin(db: Session, user: User, org: Organization) -> OrganizationMember:
-    """Require user to be owner or admin of the org. Returns their membership."""
-    member = (
-        db.query(OrganizationMember)
-        .filter(
-            OrganizationMember.organization_id == org.id,
-            OrganizationMember.user_id == user.id,
-        )
-        .first()
-    )
-    if not member or member.role not in (OrgRole.OWNER, OrgRole.ADMIN):
-        logger.warning("403 access denied: user_id=%s, required_role=admin_or_owner", user.id)
-        raise HTTPException(status_code=403, detail="Access denied.")
-    return member
-
-
-def _require_owner(db: Session, user: User, org: Organization) -> OrganizationMember:
-    """Require user to be the owner of the org."""
-    member = (
-        db.query(OrganizationMember)
-        .filter(
-            OrganizationMember.organization_id == org.id,
-            OrganizationMember.user_id == user.id,
-        )
-        .first()
-    )
-    if not member or member.role != OrgRole.OWNER:
-        logger.warning("403 access denied: user_id=%s, required_role=owner", user.id)
-        raise HTTPException(status_code=403, detail="Access denied.")
-    return member
-
-
-# ---------------------------------------------------------------------------
 # Organization CRUD
 # ---------------------------------------------------------------------------
 
@@ -155,7 +93,7 @@ async def create_organization(
     if existing:
         raise HTTPException(status_code=409, detail="You already belong to an organization.")
 
-    slug = _unique_slug(db, body.name)
+    slug = unique_slug(db, body.name)
     org = Organization(name=body.name, slug=slug, owner_user_id=user.id)
     db.add(org)
     db.flush()  # Get org.id
@@ -182,7 +120,7 @@ async def get_organization(
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """Get the current user's organization."""
-    org = _get_user_org(db, user)
+    org = get_user_org(db, user)
     member_count = db.query(OrganizationMember).filter(OrganizationMember.organization_id == org.id).count()
     result = org.to_dict()
     result["member_count"] = member_count
@@ -198,8 +136,8 @@ async def update_organization(
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """Update organization name. Owner or admin only."""
-    org = _get_user_org(db, user)
-    _require_admin(db, user, org)
+    org = get_user_org(db, user)
+    require_admin(db, user, org)
     org.name = body.name
     db.commit()
     db.refresh(org)
@@ -220,8 +158,8 @@ async def create_invite(
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """Send an organization invite. Owner/admin only. Checks seat limit."""
-    org = _get_user_org(db, user)
-    _require_admin(db, user, org)
+    org = get_user_org(db, user)
+    require_admin(db, user, org)
 
     # Check seat limit against org subscription (not the inviter's personal subscription)
     check_seat_limit_for_org(db, org.id)
@@ -273,8 +211,8 @@ async def list_invites(
     db: Session = Depends(get_db),
 ) -> list[dict[str, Any]]:
     """List pending invites. Owner/admin only."""
-    org = _get_user_org(db, user)
-    _require_admin(db, user, org)
+    org = get_user_org(db, user)
+    require_admin(db, user, org)
 
     invites = (
         db.query(OrganizationInvite)
@@ -297,8 +235,8 @@ async def revoke_invite(
     db: Session = Depends(get_db),
 ) -> dict[str, str]:
     """Revoke a pending invite. Owner/admin only."""
-    org = _get_user_org(db, user)
-    _require_admin(db, user, org)
+    org = get_user_org(db, user)
+    require_admin(db, user, org)
 
     invite = (
         db.query(OrganizationInvite)
@@ -373,38 +311,10 @@ async def accept_invite(
     )
     db.add(membership)
 
-    # Update user
+    # Update user + inherit org's subscription tier (backfills org.subscription_id
+    # when it can be resolved only from the org owner's personal subscription).
     user.organization_id = org.id
-    # Inherit org's tier from subscription
-    from subscription_model import Subscription, SubscriptionStatus
-
-    sub = None
-    if org.subscription_id:
-        sub = (
-            db.query(Subscription)
-            .filter(
-                Subscription.id == org.subscription_id,
-                Subscription.status.in_([SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIALING]),
-            )
-            .first()
-        )
-
-    # Fallback: resolve subscription from org owner if org.subscription_id is null
-    if sub is None and org.owner_user_id:
-        sub = (
-            db.query(Subscription)
-            .filter(
-                Subscription.user_id == org.owner_user_id,
-                Subscription.status.in_([SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIALING]),
-            )
-            .first()
-        )
-        # Backfill linkage
-        if sub is not None:
-            org.subscription_id = sub.id
-
-    if sub:
-        user.tier = sub.tier  # type: ignore[assignment]
+    apply_org_subscription_to_user(db, user, org)
 
     # Mark invite accepted
     invite.status = InviteStatus.ACCEPTED
@@ -426,7 +336,7 @@ async def list_members(
     db: Session = Depends(get_db),
 ) -> list[dict[str, Any]]:
     """List organization members."""
-    org = _get_user_org(db, user)
+    org = get_user_org(db, user)
 
     members = (
         db.query(OrganizationMember, User)
@@ -456,8 +366,8 @@ async def update_member_role(
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """Change a member's role. Owner only."""
-    org = _get_user_org(db, user)
-    _require_owner(db, user, org)
+    org = get_user_org(db, user)
+    require_owner(db, user, org)
 
     member = (
         db.query(OrganizationMember)
@@ -487,8 +397,8 @@ async def remove_member(
     db: Session = Depends(get_db),
 ) -> dict[str, str]:
     """Remove a member from the organization. Reverts their tier to free."""
-    org = _get_user_org(db, user)
-    _require_admin(db, user, org)
+    org = get_user_org(db, user)
+    require_admin(db, user, org)
 
     member = (
         db.query(OrganizationMember)
@@ -508,24 +418,7 @@ async def remove_member(
     # otherwise default to FREE.
     removed_user = db.query(User).filter(User.id == member.user_id).first()
     if removed_user:
-        from models import UserTier
-        from subscription_model import Subscription, SubscriptionStatus
-
-        removed_user.organization_id = None
-
-        # Check if the user has their own active personal subscription
-        personal_sub = (
-            db.query(Subscription)
-            .filter(
-                Subscription.user_id == removed_user.id,
-                Subscription.status.in_([SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIALING]),
-            )
-            .first()
-        )
-        if personal_sub and personal_sub.tier:
-            removed_user.tier = UserTier(personal_sub.tier)
-        else:
-            removed_user.tier = UserTier.FREE
+        revert_user_tier_after_removal(db, removed_user)
 
     db.delete(member)
     db.commit()

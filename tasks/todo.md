@@ -919,6 +919,49 @@ Nothing weakened — auth/security/zero-storage untouched, no tests silenced, ev
 
 ---
 
+### Sprint 710: 2026-04-20 refactor pass — upload unification + helpers split + route thinning
+**Status:** COMPLETE (committed retroactively 2026-04-21 — body dated 2026-04-20)
+**Priority:** P0 — contains the frontend module that Sprint 693's already-pushed import depends on
+**Why retroactive:** Same discovery as Sprint 696. Sprint 693 (`d22dc86`) committed `import { uploadTrialBalance } from '@/utils/trialBalanceUpload'` into `useTrialBalanceUpload.ts`, but the `utils/trialBalanceUpload.ts` module was written 2026-04-20, never committed. Any fresh checkout of the pushed branch fails `npx next build` with an unresolved module. Landing this fixes the dangling import AND formalises the documented refactor pass.
+
+**Scope doc:** `docs/architecture/REFACTOR_2026_04_20.md` — additive refactor, no behaviour change, no API contract change.
+
+**Priority 1 — Frontend upload unification:**
+- New: `frontend/src/utils/trialBalanceUpload.ts` — `buildTrialBalanceFormData` + `uploadTrialBalance` with a discriminated `TrialBalanceUploadOutcome` union (`success` | `audit_error` | `auth` | `email_not_verified` | `forbidden` | `transport`). `classifyTrialBalanceFailure` is a pure mapper testable in isolation.
+- New: `frontend/src/__tests__/trialBalanceUpload.test.ts` — 15 tests covering FormData construction (every optional field), each failure-classification branch, and the async outcome contract.
+- Modified: `frontend/src/app/tools/multi-period/page.tsx` — `auditFile` now calls `uploadTrialBalance` instead of the generic `apiPost`, gaining the same auth / EMAIL_NOT_VERIFIED / 403 discrimination as the main TB flow. `frontend/src/hooks/useTrialBalanceUpload.ts` already migrated in Sprint 693 (the reason we need this).
+
+**Priority 2 — `shared/helpers.py` decomposition:**
+- New: `backend/shared/upload_pipeline.py` (822 lines) — ten-step upload defense: `validate_file_size`, XLSX archive inspection, magic-byte checks, text sniff, row-count estimates, all format-specific parsers, `_validate_and_convert_df`, `parse_uploaded_file[_by_format]`, `memory_cleanup`.
+- New: `backend/shared/filenames.py` (59 lines) — `hash_filename`, `get_filename_display`, `safe_download_filename`, `sanitize_csv_value`, `escape_like_wildcards`.
+- New: `backend/shared/background_email.py` (37 lines) — `safe_background_email` BackgroundTasks wrapper with structured-log failure recording.
+- New: `backend/shared/tool_run_recorder.py` (107 lines) — `maybe_record_tool_run` + `_log_tool_activity` (engagement ToolRun + unified ToolActivity feed; caller commits).
+- Modified: `backend/shared/helpers.py` — 1,075→~150 line re-export shim; every symbol still imports via `shared.helpers`. 50+ call sites audited, zero changes required downstream.
+
+**Priority 3 — Route thinning:**
+- New: `backend/shared/organization_policy.py` (179 lines) — `slugify`, `unique_slug`, `get_user_org`, `require_admin`, `require_owner`, `apply_org_subscription_to_user` (new named helper replacing ~25 inline lines in `accept_invite`, handles the owner-backfill fallback), `revert_user_tier_after_removal` (new named helper replacing ~18 inline lines in `remove_member`).
+- New: `backend/shared/billing_access.py` (52 lines) — `require_billing_analytics_access` centralising the weekly-review ACL (org member must be OWNER/ADMIN; solo user must own an active subscription).
+- Modified: `backend/routes/organization.py` (−60 lines net) — private `_get_user_org`, `_require_admin`, `_require_owner`, `_slugify`, `_unique_slug` eliminated; invite-accept + member-remove tier plumbing collapsed to 1–2 lines each.
+- Modified: `backend/routes/billing.py` (−30 lines net) — weekly-review ACL reduced to one helper call.
+
+**Tests (verified 2026-04-21):**
+- Backend: `test_refactor_2026_04_20.py` (13 tests, all passed) — re-export shim preserves every symbol; `apply_org_subscription_to_user` happy + backfill + no-sub paths; `revert_user_tier_after_removal` personal-sub + no-sub paths; `require_billing_analytics_access` 4-branch matrix.
+- Backend regression: 303 tests across `test_organization_routes`, `test_billing_routes`, `test_billing_analytics`, `test_upload_validation`, `test_export_helpers` — no regressions.
+- Frontend: 53 tests across `trialBalanceUpload`, `useTrialBalanceUpload`, `useAuditUpload`, `uploadTransport`, `MultiPeriod` — no regressions.
+
+**Deferred (per scope doc):**
+- `routes/auth_routes.py` extraction — security-sensitive cookie/CSRF/refresh primitives already well-factored; no net-positive extraction.
+- `routes/billing.py::stripe_webhook` further split — paired with the dedicated webhook-handler coverage work reserved by Sprint 676.
+- `useTrialBalanceUpload` full state-machine decomposition — tightly coupled to consumer semantics; deserves a focused sprint with Playwright coverage before any split.
+- `shared/helpers.py` client-access helpers (`is_authorized_for_client` / `get_accessible_client` / `require_client`) — too small and specific to justify their own module under "prefer moving code, avoid new abstractions."
+
+**Review:**
+- Body was written 2026-04-20 but never committed; discovered during the 2026-04-21 audit after Sprints 688 + 699 shipped. The only reason the app kept building in this session was that the untracked files were present on the working tree — a clean checkout would have failed immediately.
+- The shim-preserves-imports approach kept the refactor's blast radius at zero on the call-site side. Every `from shared.helpers import X` that worked before continues to work.
+- Commit SHA: TBD.
+
+---
+
 ### Sprint 697: Argon2id upgrade for export-share passcodes
 **Status:** COMPLETE
 **Priority:** P2

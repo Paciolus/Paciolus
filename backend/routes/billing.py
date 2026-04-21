@@ -330,35 +330,11 @@ def get_weekly_review_endpoint(
     """Weekly pricing review — 5 decision metrics with period-over-period deltas.
 
     Metrics: trial starts, trial→paid rate, paid by plan, avg seats, cancellations by reason.
-    Security Sprint: Restricted to org owner/admin to prevent sensitive billing data leakage.
+    Access: org owner/admin, or solo user with an active subscription.
     """
-    from organization_model import OrganizationMember, OrgRole
+    from shared.billing_access import require_billing_analytics_access
 
-    # Security: Only org owner/admin can access billing analytics
-    if user.organization_id:
-        member = (
-            db.query(OrganizationMember)
-            .filter(
-                OrganizationMember.user_id == user.id,
-                OrganizationMember.organization_id == user.organization_id,
-            )
-            .first()
-        )
-        if not member or member.role not in (OrgRole.OWNER, OrgRole.ADMIN):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Admin or owner role required to access billing analytics.",
-            )
-    else:
-        # Solo user — only allow if they have an active subscription (they're viewing their own data)
-        from billing.subscription_manager import get_subscription
-
-        sub = get_subscription(db, user.id)
-        if not sub:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Active subscription required to access billing analytics.",
-            )
+    require_billing_analytics_access(db, user)
 
     from billing.analytics import get_weekly_review
 
