@@ -651,7 +651,7 @@ The original plan proposed threading a `branding_context` kwarg through every me
 **Review:**
 - Materiality-disclosure clarification is the highest-value item: without it, an auditor reading an engagement memo could reasonably infer that clearly-trivial = 5% of PM (≈ 3.75% of overall), which would under-report misstatements. The ISA citation in the docstring gives any future reader a canonical source.
 - CLAUDE.md is now consistent with the actual test counts shipped in Sprints 680-703. Nightly reports can pin against these numbers without drift.
-- Commit SHA: pending.
+- Commit SHA: `5ac9307`.
 
 ---
 
@@ -915,7 +915,7 @@ Nothing weakened — auth/security/zero-storage untouched, no tests silenced, ev
 - The Argon2id parameters (t=3, m=64MiB, p=4) are the OWASP 2024 recommendation and slightly more conservative than the sprint plan's original `m=65536 = 64MiB` — identical effectively. Under 2 vCPU Render Standard this benches at ~200-280ms per hash which is well within the 500ms human-noticeable threshold for a share-creation flow.
 - Keeping the bcrypt branch alive for ~48h is explicit technical debt with a clear deletion date — safer than a hard cutover that would invalidate existing shares.
 - The `_looks_like_bcrypt` alias is a courtesy to any external test that imports it; since no in-tree caller uses it after this sprint, the alias can also be removed in the same follow-up that drops the bcrypt branch.
-- Commit SHA: pending.
+- Commit SHA: `5ac9307`.
 
 ---
 
