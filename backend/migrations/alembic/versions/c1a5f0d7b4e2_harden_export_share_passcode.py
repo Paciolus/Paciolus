@@ -14,8 +14,17 @@ legacy-hashed shares that are still alive at deploy time will simply
 return 403 and their owners can re-issue.
 
 Revision ID: c1a5f0d7b4e2
-Revises: f8a3d1c09b72
+Revises: f7b3c91a04e2
 Create Date: 2026-04-20
+
+Chain note: the file originally set ``down_revision = "f8a3d1c09b72"`` —
+but that revision is a branchpoint from 2026-Q1 whose downstream chain
+was already consumed by the ``dd9b8bff6e0c`` mergepoint.  Descending
+from it would have produced a second alembic head parallel to the
+Sprint 594 email-normalize chain (head ``f7b3c91a04e2``).  Corrected on
+2026-04-21 audit: re-parented to descend directly from the actual head
+``f7b3c91a04e2``.  The migration body is independent of user.email
+normalization, so the re-parenting is semantically safe.
 """
 
 from __future__ import annotations
@@ -24,7 +33,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision = "c1a5f0d7b4e2"
-down_revision = "f8a3d1c09b72"
+down_revision = "f7b3c91a04e2"
 branch_labels = None
 depends_on = None
 
