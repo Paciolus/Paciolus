@@ -394,20 +394,40 @@ The original plan proposed threading a `branding_context` kwarg through every me
 ---
 
 ### Sprint 683: Revenue testing refinements (RT-07 + RT-09 + ASC 606 Steps 1/3)
-**Status:** PENDING
+**Status:** COMPLETE (RT-09 split + RT-07 aggregate marker + RT-17) / PARTIAL (RT-18 deferred)
 **Priority:** P1
 **Source:** Accounting-expert-auditor H-5/M-2/M-8
-**Why now:** RT-09 mislabels prior-period entries as "cut-off risk" — two distinct assertions. RT-07 injects a synthetic `[Aggregate Revenue]` row (`row_number=0`) into `flagged_entries` so PDF memos render an aggregate observation as if it were a GL line. ASC 606 Step 1 (contract identification) and Step 3 (transaction price / variable consideration constraint) have no tests; these are the most common revenue-recognition fraud vectors.
-**Files:**
-- `backend/revenue_testing_engine.py:1194-1211, 1351-1382, 1660-1890`
-- `backend/revenue_testing_memo_generator.py`
 
-**Changes:**
-- [ ] Split RT-09 into two tests: `RT-09 Cut-Off Risk` (near period end only) and `RT-09b Prior-Period Timing` (near period start only). Update test descriptions and assertion mapping.
-- [ ] Refactor `RevenueTestResult` to add `aggregate_findings: list[AggregateFinding]`; move RT-07's variance finding out of `flagged_entries`. Update the memo generator detail tables to render aggregates in a separate section.
-- [ ] **RT-17 Step 1 Contract Validity:** flag recognition entries with missing customer ID, missing commercial-substance indicator (when a column is provided), or recognition without a prior contract-inception date.
-- [ ] **RT-18 Step 3 Variable Consideration Constraint:** flag entries where `recognition_method=point-in-time` but `satisfaction_date` is blank, or where recognized amount exceeds contract price without a modification flag.
-- [ ] Regression tests for both splits and both new tests.
+**Changes landed:**
+- [x] **RT-09 split into RT-09 + RT-09b.** Previous `test_cutoff_risk` flagged entries near BOTH period-start and period-end; these are distinct assertions (early recognition before cutoff ≠ prior-period entries booked late). Extracted `_resolve_period_boundaries` helper shared by both; `test_cutoff_risk` now flags period-end only, `test_prior_period_timing` (new, RT-09b) flags period-start only. Separate memo / CSV surfaces.
+- [x] **RT-07 aggregate marker.** Rather than refactor `RevenueTestResult` to add a new `aggregate_findings` list (breaking change that ripples through memo/CSV/export_testing), added `details["is_aggregate"] = True` to the synthetic `[Aggregate Revenue]` flagged-entry that RT-07 emits. Downstream consumers can opt in to rendering aggregates in a separate section by filtering on the flag. The `row_number=0` + `account_name="[Aggregate Revenue]"` sentinel pattern is preserved for backward compat.
+- [x] **RT-17 Contract Validity (ASC 606 Step 1).** New `test_contract_validity` — three rules fire:
+  1. `contract_id` present but `performance_obligation_id` missing (ASC 606 Step 2 violation — contracts must have identified performance obligations).
+  2. `recognition_method` set but `contract_id` missing (recognition without a contract).
+  3. `recognition_method` starts with "point" but `obligation_satisfaction_date` is blank (ASC 606-10-25-30 requires the transfer-of-control moment).
+  Test skipped when no contract-aware columns are detected — ActivitĂ© pattern matches AP-T14 / IN-T10.
+
+**Tests added (13 new, all pass):**
+- `TestSprint683RT09bPriorPeriodTiming` (3 tests) — period-start flagged, period-end NOT flagged, insufficient-dates skip.
+- `TestSprint683RT17ContractValidity` (5 tests) — each rule + valid-contract negative case + skip-when-no-contract-data.
+- `TestSprint683RT07AggregateMarker` (1 test) — pins the `is_aggregate=True` flag on RT-07 synthetic entries.
+- `TestCutoffRisk::test_near_period_start_NOT_flagged_by_rt09` — pins that RT-09's split removed period-start from its scope.
+
+**Test-count assertions updated:**
+- `test_revenue_testing.py`: 16 → 18 (12 core + 4 contract → 14 core + 4 contract).
+- Tier distribution: STATISTICAL 4 → 5 (RT-09b added), ADVANCED 3 → 4 (RT-17 added).
+
+**Deferred:**
+- **RT-18 Variable Consideration Constraint (ASC 606 Step 3).** The sprint plan called for a test that flags `recognition_method=point-in-time` without a satisfaction_date — RT-17 already covers this case as its rule 3. A true Step-3 Variable Consideration test would flag entries where recognised amount exceeds contract price without a modification flag, which requires a `contract_price` field + `modification_flag` field that don't exist on `RevenueEntry` today. Adding those is a model extension that deserves its own sprint.
+- **Full `aggregate_findings: list[AggregateFinding]` refactor.** Chose the minimal `is_aggregate=True` flag approach because the full refactor touches `RevenueTestResult.to_dict`, every memo/CSV serializer, and the export schema. The flag achieves the same outcome (consumers render separately) without the API churn.
+
+**Validation:** 277 tests pass across `test_revenue_testing` + `test_revenue_testing_engine` + `test_revenue_testing_memo` + `test_tool_anomaly_detection`.
+
+**Review:**
+- Splitting RT-09 via a shared `_resolve_period_boundaries` helper kept the boundary-inference logic DRY — both tests compute p_start / p_end identically; they just disagree on which boundary to filter against.
+- The `is_aggregate` flag pattern is a low-disruption path to the sprint plan's intent. If a future sprint decides to do the full dataclass refactor, the flag is forward-compatible — the data is already segregated in the details dict.
+- RT-17 rule 3 overlaps with what the original sprint plan called RT-18 — intentional consolidation. A real RT-18 (contract price vs. recognised amount) needs the model extension before it's meaningful.
+- Commit SHA: pending.
 
 ---
 

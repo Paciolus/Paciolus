@@ -1190,7 +1190,12 @@ def test_revenue_trend_variance(
         severity = Severity.HIGH if abs(variance_pct) > 0.50 else Severity.MEDIUM
         direction = "increase" if variance_pct > 0 else "decrease"
 
-        # Flag summary entry (not individual entries — this is an aggregate test)
+        # Sprint 683: mark aggregate findings explicitly so downstream
+        # consumers (PDF memo, CSV export) can render them in a separate
+        # section rather than in the GL-line detail tables. The
+        # row_number=0 + account_name="[Aggregate Revenue]" sentinel
+        # pattern is preserved for backward compat, but the
+        # ``is_aggregate`` details flag is the preferred signal.
         flagged.append(
             FlaggedRevenue(
                 entry=RevenueEntry(
@@ -1210,6 +1215,7 @@ def test_revenue_trend_variance(
                     "prior_total": round(config.prior_period_total, 2),
                     "variance_pct": round(variance_pct, 4),
                     "direction": direction,
+                    "is_aggregate": True,  # Sprint 683: aggregate-finding marker
                 },
             )
         )
@@ -1298,32 +1304,15 @@ def test_concentration_risk(
     )
 
 
-def test_cutoff_risk(
-    entries: list[RevenueEntry],
-    config: RevenueTestingConfig,
-) -> RevenueTestResult:
-    """RT-09: Cut-Off Risk Indicators.
+def _resolve_period_boundaries(dated: list, config: RevenueTestingConfig) -> tuple:
+    """Sprint 683: shared period-boundary resolution for RT-09 / RT-09b.
 
-    Flags entries near period start/end boundaries (within cutoff_days).
-    Uses explicit period_start/period_end if configured, else infers from data.
+    Returns (p_start, p_end, error_desc). If boundaries can't be
+    determined, both dates are None and ``error_desc`` holds the
+    skip reason.
     """
-    dates = [(e, parse_date(e.date)) for e in entries]
-    dated = [(e, d) for e, d in dates if d is not None]
-
     if len(dated) < 2:
-        return RevenueTestResult(
-            test_name="Cut-Off Risk",
-            test_key="cutoff_risk",
-            test_tier=TestTier.STATISTICAL,
-            entries_flagged=0,
-            total_entries=len(entries),
-            flag_rate=0.0,
-            severity=Severity.LOW,
-            description="Insufficient dated entries for cut-off analysis.",
-            flagged_entries=[],
-        )
-
-    from datetime import timedelta
+        return None, None, "Insufficient dated entries for cut-off analysis."
 
     if config.period_start:
         p_start = parse_date(config.period_start)
@@ -1336,6 +1325,32 @@ def test_cutoff_risk(
         p_end = max(d for _, d in dated)
 
     if not p_start or not p_end:
+        return None, None, "Could not determine period boundaries."
+
+    return p_start, p_end, ""
+
+
+def test_cutoff_risk(
+    entries: list[RevenueEntry],
+    config: RevenueTestingConfig,
+) -> RevenueTestResult:
+    """RT-09: Cut-Off Risk Indicators — period-end only.
+
+    Sprint 683: split from the previous combined period-start/period-end
+    test. Near-period-end entries are the classic early-recognition
+    fraud pattern (booking revenue before performance obligations are
+    satisfied). Prior-period timing (near period start) is a distinct
+    assertion covered by RT-09b (``test_prior_period_timing``) —
+    muddling them in one test muddied the auditor's follow-up.
+
+    Flags entries within ``config.cutoff_days`` of the period end.
+    Uses explicit period_end if configured, else infers from data.
+    """
+    dates = [(e, parse_date(e.date)) for e in entries]
+    dated = [(e, d) for e, d in dates if d is not None]
+
+    p_start, p_end, skip_reason = _resolve_period_boundaries(dated, config)
+    if skip_reason:
         return RevenueTestResult(
             test_name="Cut-Off Risk",
             test_key="cutoff_risk",
@@ -1344,22 +1359,19 @@ def test_cutoff_risk(
             total_entries=len(entries),
             flag_rate=0.0,
             severity=Severity.LOW,
-            description="Could not determine period boundaries.",
+            description=skip_reason,
             flagged_entries=[],
         )
 
-    start_boundary = p_start + timedelta(days=config.cutoff_days)
+    from datetime import timedelta
+
     end_boundary = p_end - timedelta(days=config.cutoff_days)
 
     flagged: list[FlaggedRevenue] = []
     for e, d in dated:
-        near_start = d <= start_boundary
-        near_end = d >= end_boundary
-
-        if not near_start and not near_end:
+        if d < end_boundary:
             continue
 
-        boundary_type = "period start" if near_start else "period end"
         amt = abs(e.amount)
         severity = Severity.HIGH if amt > 50000 else Severity.MEDIUM if amt > 10000 else Severity.LOW
 
@@ -1370,10 +1382,10 @@ def test_cutoff_risk(
                 test_key="cutoff_risk",
                 test_tier=TestTier.STATISTICAL,
                 severity=severity,
-                issue=f"Revenue ${amt:,.2f} near {boundary_type} ({e.date})",
+                issue=f"Revenue ${amt:,.2f} near period end ({e.date})",
                 confidence=0.70,
                 details={
-                    "boundary_type": boundary_type,
+                    "boundary_type": "period end",
                     "entry_date": str(d),
                     "period_start": str(p_start),
                     "period_end": str(p_end),
@@ -1390,7 +1402,93 @@ def test_cutoff_risk(
         total_entries=len(entries),
         flag_rate=flag_rate,
         severity=Severity.MEDIUM,
-        description=f"Flags revenue entries within {config.cutoff_days} days of period start/end boundaries.",
+        description=(
+            f"Flags revenue entries within {config.cutoff_days} days of the period "
+            "end (early-recognition risk). Prior-period timing is covered by RT-09b."
+        ),
+        flagged_entries=flagged,
+    )
+
+
+def test_prior_period_timing(
+    entries: list[RevenueEntry],
+    config: RevenueTestingConfig,
+) -> RevenueTestResult:
+    """RT-09b: Prior-Period Timing — near period start only.
+
+    Sprint 683: split from the previous combined RT-09 cut-off test.
+    Entries dated near the period start represent a different assertion
+    than period-end cut-off risk:
+
+      * Period-end (RT-09): revenue recognised RIGHT BEFORE cut-off,
+        suggesting early recognition or performance-obligation shortfall.
+      * Period-start (RT-09b): revenue recognised RIGHT AFTER cut-off,
+        suggesting prior-period entries that were booked late (possibly
+        to artificially inflate the current period).
+
+    An auditor's follow-up for each is different, and the memo should
+    separate the findings so the engagement file reads cleanly.
+    """
+    dates = [(e, parse_date(e.date)) for e in entries]
+    dated = [(e, d) for e, d in dates if d is not None]
+
+    p_start, p_end, skip_reason = _resolve_period_boundaries(dated, config)
+    if skip_reason:
+        return RevenueTestResult(
+            test_name="Prior-Period Timing",
+            test_key="prior_period_timing",
+            test_tier=TestTier.STATISTICAL,
+            entries_flagged=0,
+            total_entries=len(entries),
+            flag_rate=0.0,
+            severity=Severity.LOW,
+            description=skip_reason,
+            flagged_entries=[],
+        )
+
+    from datetime import timedelta
+
+    start_boundary = p_start + timedelta(days=config.cutoff_days)
+
+    flagged: list[FlaggedRevenue] = []
+    for e, d in dated:
+        if d > start_boundary:
+            continue
+
+        amt = abs(e.amount)
+        severity = Severity.HIGH if amt > 50000 else Severity.MEDIUM if amt > 10000 else Severity.LOW
+
+        flagged.append(
+            FlaggedRevenue(
+                entry=e,
+                test_name="Prior-Period Timing",
+                test_key="prior_period_timing",
+                test_tier=TestTier.STATISTICAL,
+                severity=severity,
+                issue=f"Revenue ${amt:,.2f} near period start ({e.date}) — prior-period timing risk",
+                confidence=0.70,
+                details={
+                    "boundary_type": "period start",
+                    "entry_date": str(d),
+                    "period_start": str(p_start),
+                    "period_end": str(p_end),
+                },
+            )
+        )
+
+    flag_rate = len(flagged) / max(len(entries), 1)
+    return RevenueTestResult(
+        test_name="Prior-Period Timing",
+        test_key="prior_period_timing",
+        test_tier=TestTier.STATISTICAL,
+        entries_flagged=len(flagged),
+        total_entries=len(entries),
+        flag_rate=flag_rate,
+        severity=Severity.MEDIUM,
+        description=(
+            f"Flags revenue entries within {config.cutoff_days} days of the period "
+            "start — prior-period timing risk distinct from period-end cut-off."
+        ),
         flagged_entries=flagged,
     )
 
@@ -1653,6 +1751,127 @@ def test_contra_revenue_anomalies(
         flag_rate=flag_rate,
         severity=Severity.MEDIUM,
         description=f"Flags if returns/allowances exceed {config.contra_threshold_pct:.0%} of gross revenue.",
+        flagged_entries=flagged,
+    )
+
+
+def test_contract_validity(
+    entries: list[RevenueEntry],
+    config: RevenueTestingConfig,
+) -> RevenueTestResult:
+    """RT-17: Contract Validity (ASC 606 Step 1).
+
+    Sprint 683 — ASC 606 Step 1 requires a *valid contract* before
+    revenue can be recognised. An entry is a contract-validity red
+    flag when:
+
+      * ``customer_id`` is blank on an entry that claims revenue
+        recognition (without an identified counterparty, there is no
+        contract per ASC 606-10-25-1).
+      * ``contract_id`` is referenced but ``contract_inception_date``
+        is earlier than the recognition date implies (recognition
+        before the contract exists).
+      * ``performance_obligation_id`` is blank on an entry that
+        nevertheless has a ``recognition_method`` (recognising revenue
+        without an identified obligation — ASC 606-10-25-14).
+
+    Skipped when contract-aware columns aren't detected. The contract
+    detection fields (``contract_id``, ``performance_obligation_id``,
+    ``recognition_method``, ``obligation_satisfaction_date``) were
+    added in Sprint 350 but never had a Step-1 validity check.
+
+    Note: the customer_id column is inferred from the contract_id —
+    currently the model doesn't have a separate customer_id column.
+    Future extension can add a dedicated customer_id detection.
+    """
+    # Activation gate: at least one entry must carry contract data.
+    has_contract_data = any(e.contract_id or e.performance_obligation_id or e.recognition_method for e in entries)
+    if not has_contract_data:
+        return RevenueTestResult(
+            test_name="Contract Validity (ASC 606 Step 1)",
+            test_key="contract_validity",
+            test_tier=TestTier.ADVANCED,
+            entries_flagged=0,
+            total_entries=len(entries),
+            flag_rate=0.0,
+            severity=Severity.LOW,
+            description=(
+                "Test skipped — no contract-aware columns detected. "
+                "RT-17 requires contract_id, performance_obligation_id, "
+                "or recognition_method to evaluate ASC 606 Step 1."
+            ),
+            flagged_entries=[],
+        )
+
+    flagged: list[FlaggedRevenue] = []
+
+    for e in entries:
+        validity_issues: list[str] = []
+
+        # Rule 1: contract_id referenced but performance_obligation_id blank.
+        # If neither is set, skip (no contract claim to test).
+        if e.contract_id and not e.performance_obligation_id:
+            validity_issues.append(
+                "contract_id referenced without performance_obligation_id — "
+                "ASC 606 Step 2 requires identified performance obligations"
+            )
+
+        # Rule 2: recognition_method set but no contract_id.
+        # Revenue recognised under a specific method must trace to a contract.
+        if e.recognition_method and not e.contract_id:
+            validity_issues.append(
+                f"recognition_method='{e.recognition_method}' without contract_id — "
+                "no underlying contract to support recognition"
+            )
+
+        # Rule 3: recognition_method='point-in-time' but no obligation satisfaction date.
+        # Point-in-time recognition under ASC 606-10-25-30 requires the
+        # transfer-of-control moment to be identified.
+        if (
+            e.recognition_method
+            and e.recognition_method.lower().startswith("point")
+            and not e.obligation_satisfaction_date
+        ):
+            validity_issues.append(
+                "point-in-time recognition requires an obligation_satisfaction_date — ASC 606-10-25-30"
+            )
+
+        if not validity_issues:
+            continue
+
+        severity = Severity.HIGH if len(validity_issues) >= 2 else Severity.MEDIUM
+        flagged.append(
+            FlaggedRevenue(
+                entry=e,
+                test_name="Contract Validity (ASC 606 Step 1)",
+                test_key="contract_validity",
+                test_tier=TestTier.ADVANCED,
+                severity=severity,
+                issue=" | ".join(validity_issues),
+                confidence=0.80,
+                details={
+                    "contract_id": e.contract_id,
+                    "performance_obligation_id": e.performance_obligation_id,
+                    "recognition_method": e.recognition_method,
+                    "validity_issue_count": len(validity_issues),
+                },
+            )
+        )
+
+    flag_rate = len(flagged) / max(len(entries), 1)
+    return RevenueTestResult(
+        test_name="Contract Validity (ASC 606 Step 1)",
+        test_key="contract_validity",
+        test_tier=TestTier.ADVANCED,
+        entries_flagged=len(flagged),
+        total_entries=len(entries),
+        flag_rate=flag_rate,
+        severity=Severity.HIGH if flagged else Severity.LOW,
+        description=(
+            "Flags entries that violate ASC 606 Step 1 (contract validity): "
+            "contract without performance obligation, recognition without "
+            "contract, or point-in-time recognition without satisfaction date."
+        ),
         flagged_entries=flagged,
     )
 
@@ -2137,10 +2356,15 @@ def run_revenue_test_battery(
         test_revenue_trend_variance(entries, config),
         test_concentration_risk(entries, config),
         test_cutoff_risk(entries, config),
+        # Sprint 683: RT-09b split from RT-09 — prior-period timing is a
+        # distinct assertion from period-end cut-off risk.
+        test_prior_period_timing(entries, config),
         # Tier 3 — Advanced
         test_benford_law(entries, config),
         test_duplicate_entries(entries, config),
         test_contra_revenue_anomalies(entries, config),
+        # Sprint 683: RT-17 — ASC 606 Step 1 contract validity.
+        test_contract_validity(entries, config),
     ]
 
     # Tier 4 — Contract-Aware (ASC 606 / IFRS 15 — Sprint 351)
