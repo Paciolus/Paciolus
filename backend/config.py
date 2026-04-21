@@ -265,6 +265,50 @@ REDIS_URL = _load_optional("REDIS_URL", "")
 _strict_default = "true" if ENV_MODE == "production" else "false"
 RATE_LIMIT_STRICT_MODE = _load_optional("RATE_LIMIT_STRICT_MODE", _strict_default).lower() == "true"
 
+# 2026-04-20 hardening: production deployments MUST run with strict mode
+# enabled.  Disabling strict in production used to be a silent operator
+# footgun — an operator could set RATE_LIMIT_STRICT_MODE=false and
+# unknowingly degrade to per-worker memory storage, losing cross-worker
+# rate-limit enforcement.
+#
+# A break-glass override follows the DB_TLS_OVERRIDE pattern:
+# ``RATE_LIMIT_STRICT_OVERRIDE=TICKET-ID:YYYY-MM-DD``.  The override is
+# parsed, logged to secure-operations, and REJECTED if the date has
+# elapsed — no indefinite escape hatches.
+RATE_LIMIT_STRICT_OVERRIDE = _load_optional("RATE_LIMIT_STRICT_OVERRIDE", "")
+
+_override_active = False
+if ENV_MODE == "production" and not RATE_LIMIT_STRICT_MODE:
+    if not RATE_LIMIT_STRICT_OVERRIDE:
+        _hard_fail(
+            "RATE_LIMIT_STRICT_MODE=false is not allowed in production.\n"
+            "Set RATE_LIMIT_STRICT_MODE=true (recommended) or provide an explicit\n"
+            "break-glass override: RATE_LIMIT_STRICT_OVERRIDE=TICKET-ID:YYYY-MM-DD\n"
+            "Overrides expire automatically at the specified date."
+        )
+    try:
+        _ticket, _expiry_str = RATE_LIMIT_STRICT_OVERRIDE.split(":", 1)
+        from datetime import date as _date
+        from datetime import datetime as _dt
+
+        _expiry_date = _dt.strptime(_expiry_str.strip(), "%Y-%m-%d").date()
+        if _date.today() > _expiry_date:
+            _hard_fail(
+                f"RATE_LIMIT_STRICT_OVERRIDE expired on {_expiry_str} (ticket {_ticket}).\n"
+                "Set RATE_LIMIT_STRICT_MODE=true or issue a new dated override."
+            )
+        _override_active = True
+        _config_logger.warning(
+            "SECURITY: RATE_LIMIT_STRICT_MODE override active — ticket=%s expiry=%s. "
+            "Rate limits may degrade to memory backend under Redis outage.",
+            _ticket.strip(),
+            _expiry_str.strip(),
+        )
+    except ValueError:
+        _hard_fail(
+            f"RATE_LIMIT_STRICT_OVERRIDE must be in the form TICKET-ID:YYYY-MM-DD (got {RATE_LIMIT_STRICT_OVERRIDE!r})."
+        )
+
 # Production guardrail: strict mode requires REDIS_URL to be configured
 if RATE_LIMIT_STRICT_MODE and not REDIS_URL:
     _hard_fail(

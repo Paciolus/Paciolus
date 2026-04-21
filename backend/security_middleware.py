@@ -319,17 +319,17 @@ CSRF_EXEMPT_PATHS = {
     "/redoc",
 }
 
-# Paths that accept X-Requested-With as an alternative CSRF proof.
-# Used for cookie-authenticated endpoints that may be called before a CSRF
-# token is available (bootstrap). If a CSRF token IS provided, it is validated
-# normally; if absent, the X-Requested-With custom header serves as mitigation
-# (browsers never auto-attach custom headers on simple/form requests).
+# Paths that historically accepted X-Requested-With as an alternative CSRF
+# proof for cookie-authenticated bootstrap requests.
 #
-# Sprint 653: /auth/logout joined this set so the middleware can drop the
-# per-request DB lookup that previously recovered the user_id from the
-# refresh cookie. Signature + origin/referer + custom-header proof is
-# sufficient for logout (worst-case CSRF on logout just signs the victim
-# out, no data leak).
+# 2026-04-20 hardening: in **production**, this fallback is no longer
+# accepted — callers must provide a valid ``X-CSRF-Token``.  The dev/test
+# path still honours it so local tooling that cannot mint a CSRF token
+# (e.g. quick curl requests during local development) keeps working.
+#
+# The fetch frontend already mints a CSRF token on every refresh/logout
+# (see ``useAuth`` / ``authFetch``); this change removes the server-side
+# softening, not the client-side happy path.
 CSRF_CUSTOM_HEADER_PATHS = {
     "/auth/refresh",
     "/auth/logout",
@@ -337,6 +337,13 @@ CSRF_CUSTOM_HEADER_PATHS = {
 
 # Methods that require CSRF validation
 CSRF_REQUIRED_METHODS = {"POST", "PUT", "DELETE", "PATCH"}
+
+# Sec-Fetch-Site values that are considered *safe* for mutation requests.
+# Browsers (Chrome, Firefox, Safari, Edge) send this header automatically
+# on every request originating from the browser.  ``same-origin`` and
+# ``same-site`` are safe; ``cross-site`` and ``none`` are not.  Non-browser
+# clients (server-to-server, CLI tools) typically omit the header entirely.
+_SAFE_FETCH_SITES = frozenset({"same-origin", "same-site"})
 
 
 def _get_csrf_secret() -> str:
@@ -440,19 +447,40 @@ class CSRFMiddleware(BaseHTTPMiddleware):
     """
 
     def _validate_request_origin(self, request: Request) -> bool:
-        """Return True if Origin/Referer matches CORS_ORIGINS, or if neither header is present.
+        """Return True if the request origin policy is satisfied.
 
-        Non-browser clients (e.g., mobile apps, server-to-server) typically omit both headers,
-        so absence is allowed. When present, the value must prefix-match a configured origin.
+        Policy (2026-04-20 hardening):
+
+        1. If ``Origin`` or ``Referer`` is present, it must prefix-match a
+           configured origin in ``CORS_ORIGINS``.  A mismatch is a hard reject.
+        2. If both headers are absent but ``Sec-Fetch-Site`` indicates the
+           request came from a browser (``cross-site`` or ``none``), reject —
+           this catches the rare browser that suppresses Origin/Referer on a
+           cross-origin request (e.g. strict Referer-Policy on the attacker
+           page).
+        3. If both Origin/Referer and Sec-Fetch-Site are absent, allow.  This
+           covers genuine non-browser clients (CLI, server-to-server, mobile
+           apps that omit both).  These clients are already authenticated via
+           Bearer token which is itself not auto-attached by browsers.
         """
         from config import CORS_ORIGINS
 
         origin = request.headers.get("Origin")
         referer = request.headers.get("Referer")
         check = origin or referer
-        if not check:
-            return True  # Non-browser or Referer suppressed — allow
-        return any(check == allowed or check.startswith(allowed + "/") for allowed in CORS_ORIGINS)
+        if check:
+            return any(check == allowed or check.startswith(allowed + "/") for allowed in CORS_ORIGINS)
+
+        # Origin and Referer both absent — consult Sec-Fetch-Site.
+        fetch_site = request.headers.get("Sec-Fetch-Site")
+        if fetch_site:
+            # A browser is telling us explicitly this is a cross-site or
+            # navigation-initiated request — block it.  Only same-origin /
+            # same-site are safe.
+            return fetch_site.lower() in _SAFE_FETCH_SITES
+
+        # Neither Origin/Referer nor Sec-Fetch-Site — treat as non-browser.
+        return True
 
     def _extract_user_id_from_auth(self, request: Request) -> Optional[str]:
         """Decode Bearer token to extract sub (user_id) for CSRF binding check.
@@ -515,10 +543,20 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         # proof), which avoids opening a fresh SessionLocal() outside the
         # `get_db()` lifecycle and bypassing connection-pool accounting.
 
-        # Custom header paths: if no CSRF token is provided, accept
-        # X-Requested-With as an alternative CSRF proof (bootstrap case).
-        # If a CSRF token IS provided, validate it normally.
+        # Cookie-auth mutation paths (refresh/logout).
+        #
+        # Policy (2026-04-20 hardening):
+        #   * In production, a valid X-CSRF-Token is MANDATORY — the old
+        #     X-Requested-With-only fallback is removed.  The frontend has
+        #     been minting CSRF tokens for every refresh/logout call for
+        #     months so this is a no-op for legitimate traffic.
+        #   * In development/test, X-Requested-With is still accepted as a
+        #     bootstrap convenience for local tooling.  This mirrors the
+        #     "fail-closed in production, permissive in dev" pattern used
+        #     elsewhere (rate limits, DB TLS, …).
         if path in CSRF_CUSTOM_HEADER_PATHS:
+            from config import ENV_MODE
+
             if csrf_token:
                 # Token provided — validate it
                 if not validate_csrf_token(csrf_token, expected_user_id=expected_user_id):
@@ -529,7 +567,17 @@ class CSRFMiddleware(BaseHTTPMiddleware):
                         media_type="application/json",
                     )
             else:
-                # No CSRF token — require X-Requested-With custom header
+                if ENV_MODE == "production":
+                    log_secure_operation(
+                        "csrf_blocked",
+                        f"Blocked {method} to {path} - missing CSRF token in production (X-Requested-With fallback removed)",
+                    )
+                    return Response(
+                        content='{"detail":"CSRF validation failed"}',
+                        status_code=403,
+                        media_type="application/json",
+                    )
+                # Dev/test: X-Requested-With fallback still accepted.
                 xrw = request.headers.get("X-Requested-With")
                 if xrw != "XMLHttpRequest":
                     log_secure_operation(

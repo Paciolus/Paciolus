@@ -890,6 +890,35 @@ Nothing weakened — auth/security/zero-storage untouched, no tests silenced, ev
 
 ---
 
+### Sprint 696: Six-objective security hardening batch (2026-04-20)
+**Status:** COMPLETE (committed retroactively 2026-04-21 — originally written 2026-04-20 but never landed)
+**Priority:** P0 — prerequisite for already-deployed Sprints 697, 698, 699
+**Why retroactive:** Audit of uncommitted working-tree state revealed this batch had been written 2026-04-20 and the follow-up Sprints 697/698/699 shipped referencing "Sprint 696 when committed" — but the body of Sprint 696 itself never actually got committed. Result: Sprint 697's Argon2id code writes ~95-char hashes into a `VARCHAR(64)` column (truncates), Sprint 698 reads lockout columns that don't exist, Sprint 699's rollout copy assumes policy changes that weren't live. Landing Sprint 696 unblocks all three for deploy.
+
+**Objectives (all six):**
+1. **Passcode policy hardening** — `passcode_security.py` enforces 10+ chars across 3+ character classes, POST-body passcode transport, and per-token brute-force lockout (5 fails → 5 min, doubling). Already live via Sprint 697's module; Sprint 696 supplies the schema + test updates that make it function end-to-end.
+2. **Column schema widen + lockout tracking** — `export_shares.passcode_hash` widened 64→255 (holds bcrypt then Argon2id); adds `passcode_failed_attempts` (INTEGER NOT NULL DEFAULT 0) and `passcode_locked_until` (TIMESTAMP NULL). Alembic: `c1a5f0d7b4e2_harden_export_share_passcode`, down-revision `f8a3d1c09b72`. SQLite uses `batch_alter_table`; Postgres uses direct ALTER.
+3. **CSRF hardening** — `security_middleware.py` now rejects the `X-Requested-With` custom-header fallback in production (was a silent softening; dev/test still honours it for curl). Adds `Sec-Fetch-Site` enforcement — only `same-origin` / `same-site` pass for mutation requests; `cross-site` / `none` are refused unless the request carries a valid Origin/Referer matching CORS_ORIGINS. Non-browser clients (server-to-server) still pass via the existing no-header path.
+4. **Rate-limit production fail-closed** — `config.py` adds `RATE_LIMIT_STRICT_OVERRIDE=TICKET-ID:YYYY-MM-DD` break-glass that follows the `DB_TLS_OVERRIDE` pattern: parsed at startup, logged to secure_operations, and HARD FAILS if the date has elapsed. `main.py` startup refuses to boot in production if the rate-limit backend isn't Redis and no active override is set. Closes the "operator silently sets `RATE_LIMIT_STRICT_MODE=false` in prod and loses cross-worker rate-limit enforcement" footgun.
+5. **HSTS/CSP gating correction** — `main.py` gates `SecurityHeadersMiddleware` on `ENV_MODE == "production"` (explicit) rather than `not DEBUG` (implicit inverse). Previously, leaving `DEBUG=true` on a production deployment silently disabled HSTS and CSP — now they stay on via the ENV_MODE gate, with a loud warning if the two ever disagree.
+6. **Dev-user script hygiene** — `scripts/create_dev_user.py` no longer has a default password. Takes `DEV_USER_PASSWORD` env var (CI/scripted path) or prompts via `getpass` (interactive). `DEV_USER_EMAIL` / `DEV_USER_NAME` / `DEV_USER_TIER` optional overrides. Makes it impossible to accidentally seed a known-password account into a shared dev DB.
+
+**Tests (86 passed — 2026-04-21 verification):**
+- `test_export_sharing_routes.py` (25 tests) — updated passcode assertions to match the new 10+ char / 3+ class policy and POST-body download contract.
+- `test_passcode_argon2.py` (15 tests) — Argon2id roundtrip, dual-path bcrypt/Argon2id verify during the transition window, SHA-256 still rejected (Sprint 696 invariant).
+- `test_security_hardening_2026_04_20.py` (46 tests) — CSRF Sec-Fetch-Site + X-Requested-With reject matrix, rate-limit override parsing + expiry, HSTS gating permutations.
+
+**Files:**
+- Modified: `backend/config.py`, `backend/main.py`, `backend/security_middleware.py`, `backend/export_share_model.py`, `backend/scripts/create_dev_user.py`, `backend/tests/test_export_sharing_routes.py`
+- New: `backend/migrations/alembic/versions/c1a5f0d7b4e2_harden_export_share_passcode.py`
+
+**Review:**
+- This sprint should NOT have been split from the hardening batch in the first place. Shipping 697/698/699 without 696 left the main branch in a state that would have silently broken export-share passcode protection on deploy (truncated hashes, missing columns, dev-user default password).
+- The CSRF Sec-Fetch-Site tightening is a cheap, browser-native defense-in-depth on top of the existing Origin/Referer check. Non-browser clients continue to work because they omit the header entirely rather than sending `cross-site`.
+- Commit SHA: TBD.
+
+---
+
 ### Sprint 697: Argon2id upgrade for export-share passcodes
 **Status:** COMPLETE
 **Priority:** P2

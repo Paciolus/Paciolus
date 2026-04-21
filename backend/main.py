@@ -196,10 +196,27 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             for issue in billing_issues:
                 _bill_log("Billing config: %s", issue)
 
-    # Startup verification: confirm rate-limit storage backend
+    # Startup verification: confirm rate-limit storage backend.
+    # 2026-04-20 hardening: in production, degrading to memory is only
+    # permitted when a break-glass RATE_LIMIT_STRICT_OVERRIDE is active
+    # (config.py validates the override at import time).  If we somehow
+    # reach startup in production with memory backend and no active
+    # override, fail the app rather than silently weaken the limiter.
+    from config import RATE_LIMIT_STRICT_MODE, RATE_LIMIT_STRICT_OVERRIDE
+
     _rl_backend = get_storage_backend()
     logger.info("Rate-limit storage backend: %s", _rl_backend)
     if _rl_backend != "redis" and ENV_MODE == "production":
+        if RATE_LIMIT_STRICT_MODE and not RATE_LIMIT_STRICT_OVERRIDE:
+            log_secure_operation(
+                "rate_limit_fail_closed",
+                f"Rate-limit storage '{_rl_backend}' in production without override — refusing startup",
+            )
+            raise RuntimeError(
+                "Rate-limit storage is not Redis in production. "
+                "Either restore Redis connectivity or set RATE_LIMIT_STRICT_OVERRIDE "
+                "(TICKET-ID:YYYY-MM-DD) as a documented break-glass."
+            )
         log_secure_operation(
             "rate_limit_degraded",
             f"Rate-limit storage is '{_rl_backend}' in production — counters are NOT shared across workers",
@@ -246,7 +263,23 @@ app.add_middleware(
 app.add_middleware(GZipMiddleware, minimum_size=500)
 
 # Security headers middleware
-app.add_middleware(SecurityHeadersMiddleware, production_mode=not DEBUG)
+# 2026-04-20 hardening: gate HSTS/CSP on the explicit ENV_MODE setting, NOT
+# on the inverse of DEBUG.  Using ``not DEBUG`` silently disabled HSTS/CSP
+# whenever an operator left DEBUG=true on a production deployment — a
+# misconfiguration surface we now close by making the gate explicit.
+_production_mode = ENV_MODE == "production"
+if _production_mode and DEBUG:
+    # Loud warning rather than hard fail — production may legitimately run
+    # with DEBUG=true during an incident, but HSTS/CSP must still apply.
+    logger.warning(
+        "CONFIG: ENV_MODE=production with DEBUG=true. Security headers (HSTS, CSP) "
+        "remain ENABLED via ENV_MODE gating; DEBUG no longer disables them.",
+    )
+    log_secure_operation(
+        "config_contradiction",
+        "ENV_MODE=production + DEBUG=true — headers still enforced",
+    )
+app.add_middleware(SecurityHeadersMiddleware, production_mode=_production_mode)
 
 # CSRF protection for state-changing requests (Sprint 200)
 app.add_middleware(CSRFMiddleware)
