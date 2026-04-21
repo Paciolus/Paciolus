@@ -16,15 +16,15 @@ Covers:
 """
 
 from going_concern_engine import (
-    CURRENT_RATIO_THRESHOLD,
     DISCLAIMER,
     LEVERAGE_THRESHOLD,
-    _test_current_ratio,
+    CovenantThresholds,
     _test_high_leverage,
-    _test_negative_working_capital,
+    _test_negative_operating_cash_flow,
     _test_net_liability_position,
     _test_recurring_losses,
     _test_revenue_decline,
+    _test_working_capital_deficit,
     compute_going_concern_profile,
 )
 
@@ -62,69 +62,52 @@ class TestNetLiabilityPosition:
 # =============================================================================
 
 
-class TestCurrentRatio:
-    """Tests for _test_current_ratio()."""
+class TestWorkingCapitalDeficit:
+    """Sprint 685: consolidated test for the merged current-ratio +
+    negative-working-capital check."""
 
-    def test_healthy_ratio_not_triggered(self):
-        ind = _test_current_ratio(200000, 100000)
+    def test_healthy_wc_not_triggered(self):
+        ind = _test_working_capital_deficit(200000, 100000)
         assert ind.triggered is False
-        assert ind.metric_value == 2.0
+        assert ind.metric_value == 100000  # WC dollar amount, not ratio
 
-    def test_below_one_triggered(self):
-        ind = _test_current_ratio(80000, 100000)
+    def test_deficit_triggered(self):
+        ind = _test_working_capital_deficit(80000, 100000)
         assert ind.triggered is True
-        assert ind.metric_value == 0.8
+        assert ind.metric_value == -20000
+        # ratio = 0.8; deficit = 20000 < 80000/2 → medium
         assert ind.threshold_proximity == "medium"
 
-    def test_very_low_ratio_high_severity(self):
-        ind = _test_current_ratio(40000, 100000)
+    def test_severe_deficit_high_severity(self):
+        """Deficit > half of current assets → high severity."""
+        ind = _test_working_capital_deficit(50000, 200000)
+        # deficit = 150000 > 50000/2 = 25000 → high
         assert ind.triggered is True
-        assert ind.threshold_proximity == "high"  # < 0.5
+        assert ind.threshold_proximity == "high"
 
-    def test_exact_one_not_triggered(self):
-        ind = _test_current_ratio(100000, 100000)
+    def test_moderate_deficit_medium_severity(self):
+        ind = _test_working_capital_deficit(100000, 110000)
+        # deficit = 10000 < 100000/2 = 50000 → medium
+        assert ind.triggered is True
+        assert ind.threshold_proximity == "medium"
+
+    def test_exact_balance_not_triggered(self):
+        ind = _test_working_capital_deficit(100000, 100000)
         assert ind.triggered is False
 
     def test_zero_liabilities_not_triggered(self):
-        ind = _test_current_ratio(100000, 0.0)
+        ind = _test_working_capital_deficit(100000, 0.0)
         assert ind.triggered is False
-        assert "not calculable" in ind.description
+        assert "not meaningful" in ind.description
+        assert ind.metric_value == 100000  # all CA is WC
 
-    def test_threshold_value(self):
-        ind = _test_current_ratio(80000, 100000)
-        assert ind.threshold == CURRENT_RATIO_THRESHOLD
-
-
-# =============================================================================
-# TEST 3: NEGATIVE WORKING CAPITAL
-# =============================================================================
-
-
-class TestNegativeWorkingCapital:
-    """Tests for _test_negative_working_capital()."""
-
-    def test_positive_wc_not_triggered(self):
-        ind = _test_negative_working_capital(150000, 100000)
-        assert ind.triggered is False
-        assert ind.metric_value == 50000
-
-    def test_negative_wc_triggered(self):
-        ind = _test_negative_working_capital(80000, 120000)
-        assert ind.triggered is True
-        assert ind.metric_value == -40000
-
-    def test_high_severity_large_deficit(self):
-        """Large deficit relative to current assets → high severity."""
-        ind = _test_negative_working_capital(50000, 200000)
-        assert ind.threshold_proximity == "high"  # deficit 150000 > 50000 * 0.5
-
-    def test_medium_severity_small_deficit(self):
-        ind = _test_negative_working_capital(100000, 110000)
-        assert ind.threshold_proximity == "medium"  # deficit 10000 < 100000 * 0.5
-
-    def test_zero_wc_not_triggered(self):
-        ind = _test_negative_working_capital(100000, 100000)
-        assert ind.triggered is False
+    def test_description_names_ratio_and_deficit(self):
+        """Sprint 685: consolidated description includes BOTH the ratio
+        (for cross-entity comparability) and the dollar deficit (for
+        engagement-specific action)."""
+        ind = _test_working_capital_deficit(80000, 100000)
+        assert "$20,000" in ind.description
+        assert "0.80" in ind.description
 
 
 # =============================================================================
@@ -276,7 +259,10 @@ class TestComputeGoingConcernProfile:
             total_expenses=700000,
         )
         assert report.indicators_triggered == 0
-        assert report.indicators_checked == 5  # No prior → 5 tests (skips revenue decline)
+        # Sprint 685: baseline = 4 tests (net-liability, working-capital-
+        # deficit, recurring-losses, high-leverage). Revenue decline needs
+        # prior period; cash-flow + covenant tests are opt-in.
+        assert report.indicators_checked == 4
         assert report.prior_period_available is False
         assert "No going concern indicators triggered" in report.narrative
 
@@ -290,8 +276,11 @@ class TestComputeGoingConcernProfile:
             total_revenue=200000,
             total_expenses=400000,
         )
-        assert report.indicators_triggered >= 4  # Net liability, current ratio, neg WC, losses, leverage
-        assert report.indicators_checked == 5
+        # Sprint 685: net-liability + working-capital-deficit + recurring-
+        # losses + high-leverage = 4 triggered (was 5 pre-consolidation;
+        # current-ratio and negative-working-capital were double-counted).
+        assert report.indicators_triggered >= 4
+        assert report.indicators_checked == 4
 
     def test_with_prior_period(self):
         report = compute_going_concern_profile(
@@ -306,7 +295,71 @@ class TestComputeGoingConcernProfile:
             prior_expenses=800000,
         )
         assert report.prior_period_available is True
-        assert report.indicators_checked == 6  # All 6 tests run
+        # Sprint 685: baseline 4 + revenue decline = 5.
+        assert report.indicators_checked == 5
+
+    def test_with_negative_operating_cash_flow(self):
+        """Sprint 685: opt-in OCF test fires when supplied."""
+        report = compute_going_concern_profile(
+            total_assets=1000000,
+            total_liabilities=400000,
+            total_equity=600000,
+            current_assets=300000,
+            current_liabilities=150000,
+            total_revenue=800000,
+            total_expenses=700000,
+            operating_cash_flow=-50000,
+            materiality_threshold=5000,
+        )
+        # Baseline 4 tests + OCF test = 5
+        assert report.indicators_checked == 5
+        ocf = [i for i in report.indicators if i.indicator_name == "Negative Operating Cash Flow"]
+        assert len(ocf) == 1
+        assert ocf[0].triggered is True
+
+    def test_sub_materiality_ocf_does_not_fire(self):
+        """Sprint 685: negative OCF below materiality is noted but not flagged."""
+        ind = _test_negative_operating_cash_flow(-500, materiality_threshold=5000)
+        assert ind.triggered is False
+        assert "below the materiality threshold" in ind.description
+
+    def test_positive_ocf_does_not_fire(self):
+        ind = _test_negative_operating_cash_flow(20000, materiality_threshold=5000)
+        assert ind.triggered is False
+
+    def test_with_covenant_thresholds(self):
+        """Sprint 685: opt-in covenant-breach test fires when thresholds supplied."""
+        thresholds = CovenantThresholds(min_current_ratio=2.0, max_debt_to_equity=1.0)
+        report = compute_going_concern_profile(
+            total_assets=1000000,
+            total_liabilities=400000,
+            total_equity=600000,
+            current_assets=150000,  # ratio 1.0 → breach of 2.0 floor
+            current_liabilities=150000,
+            total_revenue=800000,
+            total_expenses=700000,
+            covenant_thresholds=thresholds,
+        )
+        covenant = [i for i in report.indicators if i.indicator_name == "Debt Covenant Breach"]
+        assert len(covenant) == 1
+        assert covenant[0].triggered is True
+        assert "current ratio" in covenant[0].description.lower()
+
+    def test_covenant_pass_no_breach(self):
+        thresholds = CovenantThresholds(min_current_ratio=1.0, max_debt_to_equity=5.0)
+        report = compute_going_concern_profile(
+            total_assets=1000000,
+            total_liabilities=400000,
+            total_equity=600000,
+            current_assets=300000,
+            current_liabilities=150000,
+            total_revenue=800000,
+            total_expenses=700000,
+            covenant_thresholds=thresholds,
+        )
+        covenant = [i for i in report.indicators if i.indicator_name == "Debt Covenant Breach"]
+        assert len(covenant) == 1
+        assert covenant[0].triggered is False
 
     def test_revenue_decline_with_prior(self):
         report = compute_going_concern_profile(

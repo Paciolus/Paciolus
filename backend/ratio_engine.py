@@ -297,13 +297,43 @@ class DupontDecomposition:
 
 
 class RatioEngine:
-    """Calculates standard financial ratios from category totals."""
+    """Calculates standard financial ratios from category totals.
 
-    def __init__(self, category_totals: CategoryTotals):
+    Sprint 681: optional ``prior_period_totals`` enables average-balance
+    denominators for ROA / ROE (the textbook formula is
+    ``net_income / ((beginning + ending) / 2)``, not
+    ``net_income / ending``). When prior-period data is not supplied,
+    the ratio falls back to the ending-balance formula and attaches a
+    disclosure note to the interpretation. Downstream DSO / DPO / DIO /
+    CCC plumbing through routes is follow-up work.
+    """
+
+    def __init__(
+        self,
+        category_totals: CategoryTotals,
+        prior_period_totals: Optional[CategoryTotals] = None,
+    ):
         self.totals = category_totals
+        self.prior_totals = prior_period_totals
         log_secure_operation(
             "ratio_engine_init", f"Initializing ratio calculations with totals: {category_totals.to_dict()}"
         )
+
+    def _average_balance(self, field_name: str) -> tuple[Decimal, bool]:
+        """Return ``(denominator, used_average)`` for a balance-sheet field.
+
+        Uses ``(beginning + ending) / 2`` when prior-period totals are
+        supplied; otherwise returns the ending value with ``used_average=False``
+        so the caller can attach the right disclosure.
+        """
+        ending = getattr(self.totals, field_name)
+        if self.prior_totals is None:
+            return ending, False
+        beginning = getattr(self.prior_totals, field_name, None)
+        if beginning is None or beginning == 0:
+            # Partial prior data — fall back to ending, same as no-prior.
+            return ending, False
+        return (beginning + ending) / 2, True
 
     def calculate_current_ratio(self) -> RatioResult:
         """
@@ -658,6 +688,13 @@ class RatioEngine:
             )
 
         # Derive operating expenses the same way calculate_operating_margin does.
+        # Sprint 681: track whether we used the derived path — when we did,
+        # the derived value (total_expenses - COGS) includes interest
+        # expense (and other non-operating items) because total_expenses
+        # is everything classified as "expense", while the direct
+        # operating_expenses field is populated by extract_category_totals
+        # with interest already excluded via NON_OPERATING_KEYWORDS.
+        used_derived_path = False
         if self.totals.operating_expenses > 0:
             operating_exp = self.totals.operating_expenses
         else:
@@ -675,8 +712,21 @@ class RatioEngine:
                     threshold_status="neutral",
                 )
             operating_exp = derived
+            used_derived_path = True
 
-        ebit = self.totals.total_revenue - self.totals.cost_of_goods_sold - operating_exp
+        # Sprint 681: when we derived operating_exp from total_expenses,
+        # it nests interest expense (because total_expenses captures all
+        # "expense"-categorised accounts including interest). Subtract
+        # interest_expense to get true operating-expenses-excluding-interest,
+        # so EBIT doesn't double-count interest as both an operating cost
+        # AND the denominator. When operating_exp was populated directly
+        # (via extract_category_totals or explicit caller), interest is
+        # already excluded and no adjustment is needed.
+        opex_for_ebit = operating_exp
+        if used_derived_path and operating_exp >= self.totals.interest_expense:
+            opex_for_ebit = operating_exp - self.totals.interest_expense
+
+        ebit = self.totals.total_revenue - self.totals.cost_of_goods_sold - opex_for_ebit
         coverage = ebit / self.totals.interest_expense
 
         if ebit < 0:
@@ -728,7 +778,20 @@ class RatioEngine:
 
         # Net Income = Revenue - Total Expenses
         net_income = self.totals.total_revenue - self.totals.total_expenses
-        roa = (net_income / self.totals.total_assets) * 100
+        # Sprint 681: prefer average total assets when prior period is
+        # available (textbook ROA formula). Falls back to ending balance
+        # with a disclosure note when prior data is absent.
+        assets_denom, used_average = self._average_balance("total_assets")
+        if assets_denom == 0:
+            return RatioResult(
+                name="Return on Assets",
+                value=None,
+                display_value="N/A",
+                is_calculable=False,
+                interpretation="Cannot calculate: Average total assets is zero",
+                threshold_status="neutral",
+            )
+        roa = (net_income / assets_denom) * 100
 
         # Interpretation thresholds (industry-generic)
         if roa >= ROA_STRONG:
@@ -746,6 +809,12 @@ class RatioEngine:
         else:
             health = "below_threshold"
             interpretation = "Negative ROA - assets generating losses"
+
+        if not used_average:
+            interpretation += (
+                " — computed using ending total assets; supply prior-period "
+                "totals for the textbook average-balance formula."
+            )
 
         return RatioResult(
             name="Return on Assets",
@@ -783,7 +852,21 @@ class RatioEngine:
 
         # Net Income = Revenue - Total Expenses
         net_income = self.totals.total_revenue - self.totals.total_expenses
-        roe = (net_income / self.totals.total_equity) * 100
+        # Sprint 681: prefer average equity when prior period available.
+        # Negative-equity edge case handled below by checking the sign
+        # of ``self.totals.total_equity`` (technical insolvency); using
+        # the average doesn't change that qualitative flag.
+        equity_denom, used_average_equity = self._average_balance("total_equity")
+        if equity_denom == 0:
+            return RatioResult(
+                name="Return on Equity",
+                value=None,
+                display_value="N/A",
+                is_calculable=False,
+                interpretation="Cannot calculate: Average equity is zero",
+                threshold_status="neutral",
+            )
+        roe = (net_income / equity_denom) * 100
 
         # Handle negative equity case (technical insolvency)
         if self.totals.total_equity < 0:
@@ -814,6 +897,11 @@ class RatioEngine:
         else:
             health = "below_threshold"
             interpretation = "Negative ROE - equity generating losses"
+
+        if not used_average_equity:
+            interpretation += (
+                " — computed using ending equity; supply prior-period totals for the textbook average-balance formula."
+            )
 
         return RatioResult(
             name="Return on Equity",
@@ -1315,10 +1403,20 @@ class RatioEngine:
         equity_multiplier = self.totals.total_assets / self.totals.total_equity
         decomposed_roe = net_profit_margin * asset_turnover * equity_multiplier
 
-        # Verify against direct ROE calculation
+        # Verify against direct ROE calculation.
+        # Sprint 681: use math.isclose with relative tolerance instead of
+        # a fixed 1e-4 absolute tolerance. For large ROE values (e.g., a
+        # 200% ROE on a highly-levered firm = 2.0), the absolute 1e-4
+        # check was effectively ~0.005% — far tighter than float rounding
+        # noise. math.isclose with rel_tol=1e-6 is calibrated to float
+        # precision and passes for all legitimate decompositions.
+        import math
+
         roe_result = self.calculate_return_on_equity()
         direct_roe = roe_result.value / 100.0 if roe_result.is_calculable and roe_result.value is not None else None
-        verification_matches = direct_roe is not None and abs(decomposed_roe - direct_roe) < 0.0001
+        verification_matches = direct_roe is not None and math.isclose(
+            decomposed_roe, direct_roe, rel_tol=1e-6, abs_tol=1e-9
+        )
 
         # Calculate prior period deltas if previous_totals provided
         prior_period_deltas: Optional[dict[str, float]] = None

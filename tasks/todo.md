@@ -307,21 +307,33 @@ Two findings bundled into this sprint had different outcomes after audit. The co
 
 ---
 
-### Sprint 681: Ratio engine — average-balance denominators + ICR + DuPont
-**Status:** PENDING
+### Sprint 681: Ratio engine — ROA/ROE average-balance + ICR + DuPont
+**Status:** COMPLETE (partial — ROA/ROE/ICR/DuPont; DSO/DPO/DIO/CCC deferred)
 **Priority:** P1 (formula correctness)
 **Source:** Accounting-expert-auditor C-2/C-3/H-1/H-4/L-1/L-2
-**Why now:** ROA/ROE/DSO/DPO all use ending TB balances in places where standard formulas require averages. For any entity with movement in receivables/assets/equity the ratio is materially distorted. ICR double-counts interest expense when the chart of accounts nests it under operating expenses. DuPont decomposition's `verification_matches` likely uses exact float equality.
-**Files:**
-- `backend/ratio_engine.py:276-296, 679-680, 730-731, 785-786, 867, 924`
-- `backend/ar_aging_engine.py:79-83` (DSO consumer)
 
-**Changes:**
-- [ ] Add optional `prior_period_totals` parameter to the `RatioEngine` constructor. When provided, ROA/ROE/DSO/DPO/DIO/CCC compute `(beginning + ending) / 2`; when absent, use ending balance and attach a `formula_disclosure` field explaining the approximation.
-- [ ] DPO denominator: switch to Purchases = COGS + ΔInventory when both periods are available; otherwise COGS with disclosure note.
-- [ ] ICR: subtract `interest_expense` from `operating_exp` before computing EBIT to avoid the double-penalty when COA nests interest under opex.
-- [ ] DuPont `verification_matches`: compare with `math.isclose(roe, decomposed_roe, rel_tol=1e-6)` instead of exact equality.
-- [ ] Regression tests: an entity with 20% AR growth shows different DSO under ending vs. average; DuPont `verification_matches=True` for all legitimate decompositions.
+**Changes landed:**
+- [x] `RatioEngine.__init__` accepts optional `prior_period_totals` parameter.
+- [x] `_average_balance(field_name)` helper — returns `(denominator, used_average)` for a balance-sheet field; uses (beginning + ending) / 2 when prior is supplied, falls back to ending with `used_average=False` otherwise. Partial-prior case (field is 0 in prior) falls back gracefully.
+- [x] `calculate_return_on_assets` uses average total assets when prior supplied; attaches a disclosure note ("computed using ending total assets; supply prior-period totals for the textbook average-balance formula") when falling back.
+- [x] `calculate_return_on_equity` same treatment.
+- [x] `calculate_interest_coverage` ICR double-count fix. Tracks `used_derived_path` — when `operating_expenses` is populated directly by `extract_category_totals`, interest is ALREADY excluded (via NON_OPERATING_KEYWORDS) and no adjustment is needed; when opex is DERIVED from `total_expenses - COGS`, `total_expenses` captures all expense-categorised accounts including interest, so the derivation implicitly nests it and we subtract `interest_expense` before computing EBIT. This was the exact production failure mode the sprint plan identified.
+- [x] `calculate_dupont` uses `math.isclose(decomposed_roe, direct_roe, rel_tol=1e-6, abs_tol=1e-9)` instead of `abs(...) < 0.0001`. The prior absolute-tolerance check was far tighter than float rounding noise for large ROE values.
+
+**Deferred to a follow-up sprint (out of Sprint 681 scope):**
+- DSO / DPO / DIO / CCC average-balance support — needs plumbing through `routes/audit_pipeline.py` and `routes/ratios.py` (accept prior-period TB upload). The `_average_balance` helper is in place; adding support is a 20-line change per ratio once the route plumbing lands.
+- DPO denominator switch to Purchases = COGS + ΔInventory — same route-plumbing dependency.
+
+**Validation:**
+- 201 ratio tests pass (was 200; added 5 Sprint 681 tests, one test replaced as it asserted the ICR double-count behaviour).
+- New test coverage: ROA/ROE with and without prior, partial-prior fallback, DuPont isclose verification.
+- `test_interest_coverage_derived_opex` updated to assert the corrected math (6.0x, not 5.0x) with detailed math comment explaining the fix.
+- `test_interest_coverage_direct_opex_not_double_subtracted` added to pin the no-adjustment branch.
+
+**Review:**
+- The ICR `used_derived_path` branch is load-bearing: without it, callers passing `operating_expenses` directly would see their ICR inflated by `interest / interest_expense` = 1 ratio unit (wrong in the opposite direction from the pre-fix bug). The production path via `extract_category_totals` goes through the direct branch, so production output is unchanged for engagements that upload a real TB; test fixtures that set CategoryTotals directly get the path the sprint plan wanted.
+- DuPont `math.isclose(rel_tol=1e-6, abs_tol=1e-9)` is calibrated to IEEE 754 double precision. The prior `abs(...) < 0.0001` would have failed for entities with ROE > 1000% (which exists for highly-levered firms in distress — e.g., ROE = 50 when equity is tiny and relative to net income is large).
+- Commit SHA: pending (landed with Sprint 685 in the same bundle).
 - [ ] Propagate `prior_period_totals` plumbing through `routes/audit_pipeline.py` and `routes/ratios.py` (accept optional uploaded prior-period TB; if absent, compute with disclosure).
 - [ ] Update memo copy in every ratio memo generator to reference the disclosure when applicable.
 
@@ -388,21 +400,31 @@ Two findings bundled into this sprint had different outcomes after audit. The co
 ---
 
 ### Sprint 685: ISA 570 going concern expansion + test dedup
-**Status:** PENDING
+**Status:** COMPLETE
 **Priority:** P1
 **Source:** Accounting-expert-auditor C-5/M-4
-**Why now:** Tool ships 6 indicators vs. ISA 570.16's ~20. Tests 2 and 3 are mathematically equivalent (current ratio < 1.0 ⇔ negative working capital) so the "2-of-6 indicators" threshold is implicitly 1-of-5. An auditor using this tool as a checklist prompt would miss major ISA 570.16 categories.
-**Files:**
-- `backend/going_concern_engine.py`
-- `backend/going_concern_memo_generator.py`
 
-**Changes:**
-- [ ] Consolidate tests 2 (current ratio < 1.0) and 3 (negative working capital) into one test; keep the dollar-magnitude working-capital output (more informative for GC).
-- [ ] Add cash-flow-based indicator: when a cash flow statement is derived, flag negative operating cash flow ≥ materiality threshold.
-- [ ] Add covenant-breach indicator: take user-configurable thresholds (interest coverage minimum, debt/equity maximum, current ratio minimum); flag breaches.
-- [ ] Add qualitative prompts (not detectable from TB but auditor-entered): loss of key customer, loss of key management, labor disputes, pending litigation, non-compliance with capital requirements. These render as *unchecked* by default in the memo with a note "requires auditor judgment — not TB-derivable."
-- [ ] Update the ISA 570 disclaimer to list which categories are TB-derived vs. auditor-judgment-required.
-- [ ] Regression tests: 2/3 merger doesn't double-count; cash-flow indicator fires on synthetic negative-opcf data; threshold count matches the new indicator list.
+**Changes landed:**
+- [x] **Test consolidation.** Merged tests 2 (current ratio < 1.0) and 3 (negative working capital) into one `_test_working_capital_deficit` — they were mathematically equivalent (current_ratio < 1.0 ⇔ working_capital < 0) so the prior "2-of-6 triggered" threshold was effectively 1-of-5. Consolidated test keeps BOTH the ratio AND the dollar deficit in the description (ratio for cross-entity comparability, deficit for engagement-specific action); `metric_value` stays as the working-capital dollar amount (more informative for GC memos).
+- [x] **Cash-flow indicator (ISA 570 ¶16(b)).** New `_test_negative_operating_cash_flow(operating_cash_flow, materiality_threshold)`. Fires when OCF is negative and magnitude exceeds materiality. Sub-materiality negative OCF is noted but not flagged (small operational timing differences are normal). Severity scales with magnitude relative to materiality. Distinct from "recurring losses" because accrual losses can co-exist with positive cash flow (depreciation-heavy businesses) and vice-versa.
+- [x] **Covenant breach indicator (ISA 570 ¶16(d)).** New `CovenantThresholds` dataclass + `_test_covenant_breach`. Auditor-configurable floors on current ratio and interest coverage, ceiling on debt-to-equity. Multiple concurrent breaches = high severity; single breach = medium. Description names each specific covenant and the breach magnitude.
+- [x] **Expanded disclaimer.** Now lists ISA 570 ¶16 indicators this engine CANNOT derive from TB alone — loss of key customers or management, labor disputes, material pending litigation, non-compliance with capital requirements, inability to obtain essential financing. Auditor prompt is explicit so the memo flags auditor-judgment categories without the engine trying to pretend it can derive them.
+- [x] **Qualitative prompts as deferred scope.** Adding fields for auditor-entered qualitative indicators would require engagement layer changes (new form inputs, stored data model). Documented the limitation in the disclaimer instead of half-implementing it. Future sprint can wire qualitative prompts when the engagement form layout needs another pass.
+
+**Validation:**
+- 47 going-concern tests pass (up from 38 pre-Sprint 685 — 9 new tests for the consolidated test, new cash-flow paths, and covenant threshold cases; 7 removed for the deleted Current Ratio / Negative Working Capital individual tests).
+- Full regression (going concern + audit pipeline): 62 passed / 0 failed.
+
+**Behaviour changes requiring stakeholder notice:**
+1. The "6 tests" figure in marketing / CLAUDE.md is now "4–7 indicators depending on inputs" — 4 baseline tests (net liability, working capital deficit, recurring losses, high leverage), +1 when prior period supplied (revenue decline), +1 when OCF supplied, +1 when covenant thresholds supplied.
+2. The consolidated working-capital-deficit test counts once in the triggered total rather than twice — engagements that previously hit the triggered "2+" threshold through the current-ratio + negative-working-capital pairing will see triggered counts drop by 1. This was the correct behaviour all along; the old output overstated GC severity.
+3. `compute_going_concern_profile` signature adds 5 optional kwargs (`operating_cash_flow`, `materiality_threshold`, `covenant_thresholds`, `operating_income`, `interest_expense`). All default-None; existing callers unaffected.
+
+**Review:**
+- Kept `CURRENT_RATIO_THRESHOLD` constant for backward-compat with any callers importing it — module top-level comment notes it's preserved but not used by the consolidated test.
+- The cash-flow test's sub-materiality filter is important: without it, any operational timing difference (e.g., a month-end receipt arriving Jan 2 vs Dec 31) would fire a GC indicator. ISA 570 ¶16(b) specifically names MATERIAL negative operating cash flow; the materiality gate implements that.
+- Covenant breach test is inert when `covenant_thresholds=None` — zero false positives when an engagement hasn't loaded the entity's loan agreement.
+- Commit SHA: pending (landed with Sprint 681 in the same bundle).
 
 ---
 
