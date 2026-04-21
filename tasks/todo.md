@@ -985,7 +985,7 @@ Nothing weakened — auth/security/zero-storage untouched, no tests silenced, ev
 **Review:**
 - The "audit" framing undersold what this sprint actually needed to ship. The real finding was that the share-receive experience didn't exist at all — the modal promised a URL that 404'd. A post-launch recipient would have hit a broken link on their first passcode-protected share.
 - Hiding the passcode input while the lockout countdown runs is a small but deliberate UX call: leaving it visible would invite the recipient to burn attempts into a 429 wall, making the lockout window longer via the per-IP tracker (Sprint 698).
-- Commit SHA: TBD after commit.
+- Commit SHA: `a393c3d`.
 
 ---
 
