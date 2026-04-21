@@ -46,8 +46,9 @@ class TestARAgingPipeline:
         rows, columns = _make_tb_rows()
         result = run_ar_aging(rows, columns)
         assert isinstance(result.test_results, list)
-        # TB-only: 11 tests total (some skipped without sub-ledger)
-        assert len(result.test_results) == 11
+        # Sprint 702: 12 tests total (added AR-01b SL negative invoice).
+        # Without sub-ledger, AR-01b is one of the skipped slots.
+        assert len(result.test_results) == 12
         for tr in result.test_results:
             assert isinstance(tr, ARTestResult)
 
@@ -62,12 +63,16 @@ class TestARAgingPipeline:
         assert cs.has_subledger is False
 
     def test_skipped_tests_without_subledger(self):
-        """Without sub-ledger, most tests should be skipped (sub-ledger + DSO)."""
+        """Without sub-ledger, most tests should be skipped (sub-ledger + DSO).
+
+        Sprint 702: bumped 8 → 9 with AR-01b (SL negative invoice) added.
+        Breakdown: 7 original SL tests + 1 new SL test (AR-01b) + DSO trend
+        (no prior_period_dso) = 9 skipped.
+        """
         rows, columns = _make_tb_rows()
         result = run_ar_aging(rows, columns)
         skipped = [t for t in result.test_results if t.skipped]
-        # 7 sub-ledger tests + DSO trend (no prior_period_dso) = 8 skipped
-        assert len(skipped) == 8
+        assert len(skipped) == 9
 
     def test_empty_tb_returns_valid_result(self):
         """Engine should handle empty TB data gracefully."""

@@ -954,6 +954,91 @@ def _test_duplicate_employee_ids(
     )
 
 
+def _test_duplicate_employee_names(
+    entries: list[PayrollEntry],
+    config: PayrollTestingConfig,
+) -> PayrollTestResult:
+    """PR-T12: Duplicate Employee Names (ghost-employee scheme indicator).
+
+    Sprint 701: flags distinct ``employee_id`` records that share the same
+    employee name (exact match after case/whitespace normalisation). The
+    fuzzy-match sibling test is PR-T12b (reserved; not yet implemented —
+    exact-match is the higher-confidence signal and the canonical ACFE
+    ghost-employee indicator).
+
+    Why this matters: paired with PR-T1 (one ID, multiple names) this
+    completes the four-quadrant employee-identity check:
+      * PR-T1: same ID, different names → ID reuse / name change pending
+      * PR-T12: same name, different IDs → classic ghost employee scheme
+      * PR-T10: same bank account / address across IDs → payment-rail reuse
+      * PR-T11: same tax_id across IDs → identity reuse / duplicate SSN
+
+    The test is tight — only the first three identified above are
+    traditional "duplicate employee" fraud indicators; without PR-T12
+    the payroll engine had a gap an auditor would have spotted. ACFE
+    2024 Report to the Nations identifies ghost-employee schemes as
+    26% of payroll-fraud cases; detecting shared names across IDs is
+    the first screen auditors run.
+    """
+    flagged: list[FlaggedEmployee] = []
+
+    # Group by normalised employee_name
+    name_groups: dict[str, list[PayrollEntry]] = {}
+    for entry in entries:
+        name_key = entry.employee_name.strip().lower()
+        if name_key:
+            name_groups.setdefault(name_key, []).append(entry)
+
+    for name_key, group in name_groups.items():
+        # Collect the distinct IDs associated with this name.
+        ids = set()
+        for e in group:
+            eid = e.employee_id.strip().lower()
+            if eid:
+                ids.add(eid)
+
+        if len(ids) > 1:
+            # Same name, multiple distinct IDs — ghost-employee candidate.
+            display_name = group[0].employee_name.strip()
+            for entry in group:
+                flagged.append(
+                    FlaggedEmployee(
+                        entry=entry,
+                        test_name="Duplicate Employee Names",
+                        test_key="PR-T12",
+                        test_tier=TestTier.ADVANCED.value,
+                        severity=Severity.HIGH.value,
+                        issue=(
+                            f"Employee name '{display_name}' appears under "
+                            f"{len(ids)} distinct employee IDs — potential "
+                            "ghost-employee scheme (ACFE Report to the Nations 2024)."
+                        ),
+                        confidence=0.90,
+                        details={
+                            "employee_name": display_name,
+                            "distinct_ids": sorted(ids),
+                            "entry_count": len(group),
+                        },
+                    )
+                )
+
+    total = len(entries)
+    return PayrollTestResult(
+        test_name="Duplicate Employee Names",
+        test_key="PR-T12",
+        test_tier=TestTier.ADVANCED.value,
+        entries_flagged=len(flagged),
+        total_entries=total,
+        flag_rate=len(flagged) / total if total > 0 else 0.0,
+        severity=Severity.HIGH.value,
+        description=(
+            "Flag distinct employee IDs that share the same employee name "
+            "(canonical ghost-employee scheme indicator — ACFE 2024)."
+        ),
+        flagged_entries=flagged,
+    )
+
+
 def _test_missing_critical_fields(
     entries: list[PayrollEntry],
     config: PayrollTestingConfig,
@@ -1859,6 +1944,7 @@ def run_payroll_test_battery(
 
     # Tier 1 — Structural
     results.append(_test_duplicate_employee_ids(entries, config))
+    results.append(_test_duplicate_employee_names(entries, config))  # Sprint 701: PR-T12
     results.append(_test_missing_critical_fields(entries, config))
     results.append(_test_round_salary_amounts(entries, config))
 
@@ -2144,3 +2230,30 @@ def run_payroll_testing(
     engine = PayrollTestingEngine(config, filename, hr_master=hr_master)
     result: PayrollTestingResult = engine.run_pipeline(rows, headers, column_mapping)
     return result
+
+
+# =============================================================================
+# Sprint 700/703: Anomaly-framework contract registration
+# =============================================================================
+from shared.engine_contract import DetectionPreconditions, EngineInputContract
+
+ENGINE_CONTRACT = EngineInputContract(
+    tool="payroll",
+    required_columns=frozenset({"Employee ID", "Employee Name", "Gross Pay"}),
+    optional_columns=frozenset(
+        {"Department", "Pay Date", "Net Pay", "Tax ID", "Address", "Bank Account", "Check Number"}
+    ),
+    entry_point="payroll_testing_engine.run_payroll_testing",
+    detection_targets={
+        "PR-T12": DetectionPreconditions(
+            requires_columns=frozenset({"Employee ID", "Employee Name"}),
+            scope="standalone",
+            description=(
+                "Sprint 701: PR-T12 Duplicate Employee Names — distinct "
+                "employee_ids sharing the same employee_name indicate a "
+                "ghost-employee scheme (ACFE 2024 — 26% of payroll fraud)."
+            ),
+            emits_fields=frozenset({"entries_flagged", "flagged_entries"}),
+        ),
+    },
+)

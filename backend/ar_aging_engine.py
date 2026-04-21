@@ -1124,6 +1124,76 @@ def test_ar_sign_anomalies(
     )
 
 
+def test_ar_sl_negative_invoice(
+    sl_entries: list[ARSubledgerEntry],
+    config: ARAgingConfig,
+) -> ARTestResult:
+    """AR-01b: Flag sub-ledger invoices with negative ``amount``.
+
+    Sprint 702: complement to ``test_ar_sign_anomalies`` (AR-01), which
+    checks the **TB-level** AR account for a credit balance. A negative
+    invoice amount in the sub-ledger is a different assertion — the TB
+    may still be balanced (if offsets exist), but the individual invoice
+    is a credit-memo / reversal / data-entry error that the TB-level
+    test cannot see.
+
+    Why split rather than widen AR-01:
+      * TB-level sign anomaly = asset account with credit balance (a
+        misclassification / overpayment pattern).
+      * SL-level negative invoice = individual invoice with negative
+        amount (a credit-memo or reversal that wasn't reconciled).
+
+    Two separate auditor-facing assertions; a memo with one finding
+    combining both would muddy the auditor's follow-up. AICPA Audit
+    Guide for Receivables (§5.11) describes the two as distinct control
+    objectives.
+    """
+    flagged: list[FlaggedAR] = []
+
+    if config.sign_anomaly_enabled:
+        for entry in sl_entries:
+            # Credit-memo invoices are conventionally flagged in SL with
+            # a negative ``amount``. Auditor needs visibility: was this
+            # an approved credit memo, or a data-entry error?
+            if entry.amount < 0:
+                severity = Severity.HIGH if abs(entry.amount) > 10000 else Severity.MEDIUM
+                flagged.append(
+                    FlaggedAR(
+                        entry=entry,
+                        test_name="AR Sub-ledger Negative Invoice",
+                        test_key="ar_sl_negative_invoice",
+                        test_tier=TestTier.STRUCTURAL,
+                        severity=severity,
+                        issue=(
+                            f"Sub-ledger invoice has negative amount "
+                            f"{entry.amount:,.2f} — credit memo or data-entry "
+                            "error requiring auditor confirmation."
+                        ),
+                        details={"amount": entry.amount},
+                    )
+                )
+
+    total = len(sl_entries)
+    return ARTestResult(
+        test_name="AR Sub-ledger Negative Invoice",
+        test_key="ar_sl_negative_invoice",
+        test_tier=TestTier.STRUCTURAL,
+        entries_flagged=len(flagged),
+        total_entries=total,
+        flag_rate=len(flagged) / total if total > 0 else 0.0,
+        severity=max(
+            (f.severity for f in flagged),
+            default=Severity.LOW,
+            key=lambda s: SEVERITY_WEIGHTS[s],
+        ),
+        description=(
+            "Sub-ledger invoices with negative amounts — credit memos or "
+            "reversal entries that the TB-level AR sign check cannot see."
+        ),
+        flagged_entries=flagged,
+    )
+
+
 def test_missing_allowance(
     accounts: list[TBAccount],
     config: ARAgingConfig,
@@ -1769,9 +1839,26 @@ def run_ar_test_battery(
     results.append(test_missing_allowance(accounts, config))
 
     if has_subledger:
+        # Sprint 702: AR-01b — sub-ledger negative invoices (distinct
+        # assertion from AR-01 TB-level sign). Only runs when sub-ledger
+        # present; the TB-level check above runs regardless.
+        results.append(test_ar_sl_negative_invoice(sl_entries, config))
         results.append(test_negative_aging(sl_entries, config))
         results.append(test_unreconciled_detail(accounts, sl_entries, config))
     else:
+        # Keep the test-slot count stable across has_subledger branches.
+        # Downstream consumers (dashboards, CSV exports) assume one slot
+        # per test, so each sub-ledger-dependent test emits a skipped
+        # result when the sub-ledger is absent.
+        results.append(
+            _skipped_result(
+                "AR Sub-ledger Negative Invoice",
+                "ar_sl_negative_invoice",
+                TestTier.STRUCTURAL,
+                "Sub-ledger invoices with negative amounts",
+                "Requires sub-ledger file",
+            )
+        )
         results.append(
             _skipped_result(
                 "Negative Aging Buckets",
@@ -2064,3 +2151,29 @@ def run_ar_aging(
         ar_summary=ar_summary,
         aging_schedule=aging_schedule,
     )
+
+
+# =============================================================================
+# Sprint 700/703: Anomaly-framework contract registration
+# =============================================================================
+from shared.engine_contract import DetectionPreconditions, EngineInputContract
+
+ENGINE_CONTRACT = EngineInputContract(
+    tool="ar_aging",
+    required_columns=frozenset({"Account", "Debit", "Credit"}),
+    optional_columns=frozenset(
+        {"Account Name", "Customer ID", "Customer Name", "Invoice Number", "Amount", "Invoice Date"}
+    ),
+    entry_point="ar_aging_engine.run_ar_aging",
+    detection_targets={
+        "ar_sl_negative_invoice": DetectionPreconditions(
+            requires_columns=frozenset({"Amount"}),
+            scope="sub_ledger",
+            description=(
+                "Sprint 702: AR-01b — sub-ledger invoice with amount < 0. "
+                "Distinct from AR-01 (TB credit balance on asset account)."
+            ),
+            emits_fields=frozenset({"entries_flagged", "flagged_entries"}),
+        ),
+    },
+)

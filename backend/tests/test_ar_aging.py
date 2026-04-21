@@ -973,17 +973,17 @@ class TestBattery:
         accounts = make_tb_accounts()
         config = ARAgingConfig()
         results = run_ar_test_battery(accounts, [], config, False)
-        assert len(results) == 11  # All 11 test slots
+        assert len(results) == 12  # Sprint 702: AR-01b added as 12th test slot
         active = [r for r in results if not r.skipped]
         # AR01, AR02, AR07, AR09 = 4 active (AR09 may also be skipped if no prior DSO)
         assert len(active) >= 3  # At minimum AR01, AR02, AR07
 
-    def test_full_mode_all_11(self):
+    def test_full_mode_all_12(self):
         accounts = make_tb_accounts()
         entries = make_sl_entries()
         config = ARAgingConfig()
         results = run_ar_test_battery(accounts, entries, config, True)
-        assert len(results) == 11
+        assert len(results) == 12  # Sprint 702: AR-01b
         # At least 8 should be active (AR09, AR10, AR11 may be skipped without config)
         active = [r for r in results if not r.skipped]
         assert len(active) >= 8
@@ -1053,7 +1053,7 @@ class TestCompositeScoring:
 
     def test_score_capped_at_100(self):
         composite = ARCompositeScore(
-            score=150.0, risk_tier=RiskTier.HIGH, tests_run=11, tests_skipped=0, total_flagged=100
+            score=150.0, risk_tier=RiskTier.HIGH, tests_run=12, tests_skipped=0, total_flagged=100
         )
         # Just verify the model allows it; actual scoring caps at 100
         assert composite.score == 150.0  # Model doesn't cap; function does
@@ -1106,7 +1106,7 @@ class TestFullPipeline:
         tb_cols = list(tb_rows[0].keys())
         result = run_ar_aging(tb_rows, tb_cols)
         assert result.composite_score is not None
-        assert len(result.test_results) == 11
+        assert len(result.test_results) == 12  # Sprint 702: AR-01b
         assert result.data_quality is not None
         assert result.tb_column_detection is not None
         assert result.sl_column_detection is None
@@ -1143,7 +1143,7 @@ class TestFullPipeline:
     def test_empty_tb(self):
         result = run_ar_aging([], [])
         assert result.composite_score.tests_run >= 0
-        assert len(result.test_results) == 11
+        assert len(result.test_results) == 12  # Sprint 702: AR-01b
 
 
 # =============================================================================
@@ -1164,7 +1164,7 @@ class TestSerialization:
         assert "data_quality" in d
         assert "ar_summary" in d
         assert isinstance(d["test_results"], list)
-        assert len(d["test_results"]) == 11
+        assert len(d["test_results"]) == 12  # Sprint 702: AR-01b
 
     def test_test_result_serialization(self):
         result = ARTestResult(

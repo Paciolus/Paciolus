@@ -71,10 +71,38 @@ class PayrollDuplicateEmployeeIDsGenerator(PayrollGeneratorBase):
 
 
 class PayrollDuplicateNamesGenerator(PayrollGeneratorBase):
-    """PR-T2: Inject duplicate Employee Names (different IDs, same name)."""
+    """PR-T12: Inject duplicate Employee Names (different IDs, same name).
+
+    Sprint 701: retargeted to ``PR-T12`` (Duplicate Employee Names) —
+    the new engine test for same-name-different-ID ghost employee
+    detection. The prior target ``PR-T2`` was "Missing Critical
+    Fields", which did not test name duplication.
+    """
 
     name = "duplicate_names"
-    target_test_key = "PR-T2"
+    target_test_key = "PR-T12"
+
+    # Sprint 700: contract evidence.
+    from shared.engine_contract import GeneratorEvidence as _GE
+
+    PRODUCES_EVIDENCE = _GE(
+        target_test_key="PR-T12",
+        populates_columns=frozenset(
+            {
+                "Employee ID",
+                "Employee Name",
+                "Department",
+                "Pay Date",
+                "Gross Pay",
+                "Net Pay",
+            }
+        ),
+        scope="standalone",
+        notes=(
+            "Adds EMP-201 with name 'David Kowalski' (already exists under "
+            "EMP-102). PR-T12 same-name-different-ID logic fires."
+        ),
+    )
 
     def inject(self, rows, seed=42):
         rows = deepcopy(rows)
@@ -97,9 +125,9 @@ class PayrollDuplicateNamesGenerator(PayrollGeneratorBase):
         )
         record = AnomalyRecord(
             anomaly_type="duplicate_names",
-            report_targets=["PR-T2"],
+            report_targets=["PR-T12"],
             injected_at="Employee Name 'David Kowalski' appears under EMP-102 and EMP-201",
-            expected_field="PR-T2",
+            expected_field="PR-T12",
             expected_condition="entries_flagged > 0",
             metadata={"duplicate_name": "David Kowalski", "employee_ids": ["EMP-102", "EMP-201"]},
         )

@@ -32,10 +32,28 @@ class ARGeneratorBase:
 
 
 class ARSignAnomaliesGenerator(ARGeneratorBase):
-    """AR-01: Inject negative amounts in sub-ledger (sign anomalies)."""
+    """AR-01b: Inject negative amounts in sub-ledger (credit-memo pattern).
 
-    name = "ar_sign_anomalies"
-    target_test_key = "ar_sign_anomalies"
+    Sprint 702: retargeted from ``ar_sign_anomalies`` (TB-level) to
+    ``ar_sl_negative_invoice`` (SL-level). The generator's injection
+    shape — a negative-amount invoice in the sub-ledger with the TB AR
+    balance adjusted to stay positive — matches AR-01b's assertion, not
+    AR-01's. Splitting the engine test let the generator and test-key
+    line up without fudging either side.
+    """
+
+    name = "ar_sign_anomalies"  # keep generator name stable for test param IDs
+    target_test_key = "ar_sl_negative_invoice"
+
+    # Sprint 700: contract evidence.
+    from shared.engine_contract import GeneratorEvidence as _GE
+
+    PRODUCES_EVIDENCE = _GE(
+        target_test_key="ar_sl_negative_invoice",
+        populates_columns=frozenset({"Amount", "Customer ID", "Invoice Number"}),
+        scope="sub_ledger",
+        notes="Sprint 702: -$3,500 invoice in sub-ledger; TB debit adjusted to keep AR-01 quiet.",
+    )
 
     def inject_tb(self, tb_rows, sl_rows, seed=42):
         tb_rows = deepcopy(tb_rows)
@@ -52,16 +70,18 @@ class ARSignAnomaliesGenerator(ARGeneratorBase):
                 "Aging Bucket": "Current",
             }
         )
-        # Adjust TB AR balance to keep reconciliation clean
+        # Adjust TB AR balance to keep reconciliation clean — we don't want
+        # to trip AR-01 (TB sign) too; this generator is specifically about
+        # the SL-level credit-memo signal.
         for row in tb_rows:
             if row["Account"] == "1100":
                 row["Debit"] -= 3500.00
                 break
         record = AnomalyRecord(
-            anomaly_type="ar_sign_anomalies",
-            report_targets=["AR-01"],
+            anomaly_type="ar_sl_negative_invoice",
+            report_targets=["AR-01b"],
             injected_at="SL invoice INV-9901 with negative amount -$3,500",
-            expected_field="ar_sign_anomalies",
+            expected_field="ar_sl_negative_invoice",
             expected_condition="entries_flagged > 0",
             metadata={"amount": -3500.00},
         )

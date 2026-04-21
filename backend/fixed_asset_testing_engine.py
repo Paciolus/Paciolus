@@ -1490,3 +1490,37 @@ def run_fixed_asset_testing(
         data_quality=data_quality,
         column_detection=detection,
     )
+
+
+# =============================================================================
+# Sprint 700/703: Anomaly-framework contract registration
+# =============================================================================
+from shared.engine_contract import DetectionPreconditions, EngineInputContract
+
+ENGINE_CONTRACT = EngineInputContract(
+    tool="fixed_asset",
+    required_columns=frozenset({"Asset ID", "Cost"}),
+    optional_columns=frozenset(
+        {
+            "Description",
+            "Accumulated Depreciation",
+            "Useful Life Years",
+            "Acquisition Date",
+            "Depreciation Method",
+            "Residual Value",
+        }
+    ),
+    entry_point="fixed_asset_testing_engine.run_fixed_asset_testing",
+    detection_targets={
+        "duplicate_assets": DetectionPreconditions(
+            requires_columns=frozenset({"Cost", "Description", "Acquisition Date"}),
+            scope="standalone",
+            description=(
+                "FA-08: dedups on (cost, description, acquisition_date). "
+                "A distinct asset_id with the same triple is flagged as "
+                "double-booked capitalisation."
+            ),
+            emits_fields=frozenset({"entries_flagged", "flagged_entries"}),
+        ),
+    },
+)

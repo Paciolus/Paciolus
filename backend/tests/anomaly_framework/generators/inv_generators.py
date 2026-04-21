@@ -30,16 +30,36 @@ class INVGeneratorBase:
 
 
 class INVMissingFieldsGenerator(INVGeneratorBase):
-    """IN-01: Inject an item with blank required fields."""
+    """IN-01: Inject an item with blank required fields.
+
+    Sprint 702: engine's IN-01 treats identifier (item_id OR description),
+    quantity, and cost/value as the required set; Category and
+    Last Transaction Date are optional. The prior generator blanked
+    Category + Last Transaction Date but kept item_id populated, so
+    the engine's strict definition did not fire. Corrected: blank BOTH
+    item_id AND description — the row is now truly unidentifiable,
+    which is the actual assertion the engine enforces.
+    """
 
     name = "inv_missing_fields"
     target_test_key = "missing_fields"
+
+    # Sprint 700: contract evidence.
+    from shared.engine_contract import GeneratorEvidence as _GE
+
+    PRODUCES_EVIDENCE = _GE(
+        target_test_key="missing_fields",
+        populates_columns=frozenset(),
+        scope="standalone",
+        notes="Sprint 702: Item ID + Description both blank → engine's strict identifier check fires.",
+    )
 
     def inject(self, rows, seed=42):
         rows = deepcopy(rows)
         rows.append(
             {
-                "Item ID": "INV-099",
+                # Both identifiers blank → engine flags "missing identifier"
+                "Item ID": "",
                 "Description": "",
                 "Category": "",
                 "Unit Cost": 50.00,
@@ -51,7 +71,7 @@ class INVMissingFieldsGenerator(INVGeneratorBase):
         record = AnomalyRecord(
             anomaly_type="inv_missing_fields",
             report_targets=["IN-01"],
-            injected_at="Item INV-099 with blank Description, Category, and Last Transaction Date",
+            injected_at="Row with blank Item ID AND Description — unidentifiable inventory item",
             expected_field="missing_fields",
             expected_condition="entries_flagged > 0",
         )
@@ -233,24 +253,44 @@ class INVCategoryConcentrationGenerator(INVGeneratorBase):
 
 
 class INVDuplicateItemsGenerator(INVGeneratorBase):
-    """IN-08: Inject duplicate Item IDs."""
+    """IN-08: Inject duplicate items.
+
+    Sprint 702: engine dedups on (unit_cost, description). The prior
+    generator mutated the description ("Duplicate of ..."), which
+    broke the tuple match. Corrected: keep description and unit_cost
+    identical but use a distinct Item ID — the double-counted-item
+    pattern the engine is designed to surface.
+    """
 
     name = "inv_duplicate_items"
     target_test_key = "duplicate_items"
 
+    # Sprint 700: contract evidence.
+    from shared.engine_contract import GeneratorEvidence as _GE
+
+    PRODUCES_EVIDENCE = _GE(
+        target_test_key="duplicate_items",
+        populates_columns=frozenset({"Unit Cost", "Description"}),
+        scope="standalone",
+        notes="Sprint 702: identical (description, unit_cost); distinct Item ID.",
+    )
+
     def inject(self, rows, seed=42):
         rows = deepcopy(rows)
-        # Duplicate an existing item with the same ID
+        # Identical description + unit_cost, distinct Item ID.
         dup = dict(rows[0])
-        dup["Description"] = "Duplicate of " + dup["Description"]
+        dup["Item ID"] = str(rows[0].get("Item ID", "INV-000")) + "-DUP"
         rows.append(dup)
         record = AnomalyRecord(
             anomaly_type="inv_duplicate_items",
             report_targets=["IN-08"],
-            injected_at=f"Duplicated item {rows[0]['Item ID']}",
+            injected_at=f"Duplicated item {rows[0]['Item ID']} under new ID {dup['Item ID']}",
             expected_field="duplicate_items",
             expected_condition="entries_flagged > 0",
-            metadata={"duplicated_id": rows[0]["Item ID"]},
+            metadata={
+                "duplicated_id": rows[0]["Item ID"],
+                "new_id": dup["Item ID"],
+            },
         )
         return rows, [record]
 

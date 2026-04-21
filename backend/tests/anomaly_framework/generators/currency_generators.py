@@ -3,10 +3,19 @@
 Each generator injects a specific currency-related anomaly into clean
 multi-currency trial balance and exchange rate data, returning
 AnomalyRecords describing the expected detection outcome.
+
+Sprint 700: every generator in this module carries a
+``PRODUCES_EVIDENCE`` class attribute that declares, in the framework's
+contract language, what it promises to inject. The anomaly-framework
+meta-test (``test_contract_compliance.py``) verifies that promise
+against the engine's contract. This is the first worked example of the
+Sprint 700 pattern — Sprints C/D extend it to the other tool
+generators.
 """
 
 from copy import deepcopy
 
+from shared.engine_contract import GeneratorEvidence
 from tests.anomaly_framework.base import AnomalyRecord
 
 
@@ -34,6 +43,12 @@ class MissingExchangeRateGenerator(CurrencyGeneratorBase):
 
     name = "missing_exchange_rate"
     target_test_key = "missing_rates"
+    PRODUCES_EVIDENCE = GeneratorEvidence(
+        target_test_key="missing_rates",
+        populates_columns=frozenset({"Account", "Account Name", "Currency", "Debit"}),
+        scope="standalone",
+        notes="Appends JPY row with no JPY→USD rate → convert_trial_balance emits missing_rate flag.",
+    )
 
     def inject(self, tb_rows, rate_rows, seed=42):
         tb_rows = deepcopy(tb_rows)
@@ -74,6 +89,12 @@ class InvalidCurrencyCodeGenerator(CurrencyGeneratorBase):
 
     name = "invalid_currency_code"
     target_test_key = "invalid_currencies"
+    PRODUCES_EVIDENCE = GeneratorEvidence(
+        target_test_key="invalid_currencies",
+        populates_columns=frozenset({"Account", "Account Name", "Currency", "Debit"}),
+        scope="standalone",
+        notes="TB row carries 'XXX' (not in ISO_4217_CODES) → engine flags missing_currency_code.",
+    )
 
     def inject(self, tb_rows, rate_rows, seed=42):
         tb_rows = deepcopy(tb_rows)
@@ -114,6 +135,16 @@ class ZeroExchangeRateGenerator(CurrencyGeneratorBase):
 
     name = "zero_exchange_rate"
     target_test_key = "zero_rates"
+    PRODUCES_EVIDENCE = GeneratorEvidence(
+        target_test_key="zero_rates",
+        populates_columns=frozenset(),
+        scope="standalone",
+        notes=(
+            "Mutates EUR→USD rate to 0.0 in the rate table. Sprint 699: "
+            "rejected at ExchangeRate construction; use-time defense-in-depth "
+            "emits invalid_rate flag if it somehow slips through."
+        ),
+    )
 
     def inject(self, tb_rows, rate_rows, seed=42):
         tb_rows = deepcopy(tb_rows)
@@ -149,6 +180,16 @@ class StaleExchangeRateGenerator(CurrencyGeneratorBase):
 
     name = "stale_exchange_rate"
     target_test_key = "stale_rates"
+    PRODUCES_EVIDENCE = GeneratorEvidence(
+        target_test_key="stale_rates",
+        populates_columns=frozenset(),
+        scope="standalone",
+        notes=(
+            "Sets GBP→USD effective_date to 2025-02-01 (>90 days before the "
+            "other rates at 2025-06-02). Sprint 699 cohort-based staleness "
+            "check fires without a target_date."
+        ),
+    )
 
     def inject(self, tb_rows, rate_rows, seed=42):
         tb_rows = deepcopy(tb_rows)
@@ -185,6 +226,12 @@ class NegativeExchangeRateGenerator(CurrencyGeneratorBase):
 
     name = "negative_exchange_rate"
     target_test_key = "negative_rates"
+    PRODUCES_EVIDENCE = GeneratorEvidence(
+        target_test_key="negative_rates",
+        populates_columns=frozenset(),
+        scope="standalone",
+        notes="Mutates EUR→USD rate to -1.0850. Sprint 699: rejected at construction.",
+    )
 
     def inject(self, tb_rows, rate_rows, seed=42):
         tb_rows = deepcopy(tb_rows)

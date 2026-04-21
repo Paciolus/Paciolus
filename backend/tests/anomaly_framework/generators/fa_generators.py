@@ -247,24 +247,49 @@ class FAAgeConcentrationGenerator(FAGeneratorBase):
 
 
 class FADuplicateAssetsGenerator(FAGeneratorBase):
-    """FA-08: Inject duplicate Asset IDs."""
+    """FA-08: Inject duplicate assets.
+
+    Sprint 702: engine dedups on (cost, description, acquisition_date)
+    — the classic "same asset booked twice" pattern. The prior
+    generator mutated the description ("Duplicate of ..."), which
+    broke the tuple match, so the test never fired.
+
+    Corrected shape: append a row with identical cost + description +
+    acquisition_date but a distinct asset_id. This matches the engine's
+    assertion and the ACFE 2024 "duplicate capitalisation" fraud
+    pattern (same asset, two IDs, double depreciation claimed).
+    """
 
     name = "fa_duplicate_assets"
     target_test_key = "duplicate_assets"
 
+    # Sprint 700: contract evidence.
+    from shared.engine_contract import GeneratorEvidence as _GE
+
+    PRODUCES_EVIDENCE = _GE(
+        target_test_key="duplicate_assets",
+        populates_columns=frozenset({"Cost", "Description", "Acquisition Date"}),
+        scope="standalone",
+        notes="Sprint 702: duplicates (cost, description, acquisition_date); distinct Asset ID.",
+    )
+
     def inject(self, rows, seed=42):
         rows = deepcopy(rows)
-        # Duplicate an existing asset with same ID
+        # Same cost / description / acquisition_date; distinct asset_id.
+        # This is the classic "double-booked" pattern the engine flags.
         dup = dict(rows[0])
-        dup["Description"] = "Duplicate of " + dup["Description"]
+        dup["Asset ID"] = str(rows[0].get("Asset ID", "FA-000")) + "-DUP"
         rows.append(dup)
         record = AnomalyRecord(
             anomaly_type="fa_duplicate_assets",
             report_targets=["FA-08"],
-            injected_at=f"Duplicated asset {rows[0]['Asset ID']}",
+            injected_at=f"Duplicated asset {rows[0]['Asset ID']} under new ID {dup['Asset ID']}",
             expected_field="duplicate_assets",
             expected_condition="entries_flagged > 0",
-            metadata={"duplicated_id": rows[0]["Asset ID"]},
+            metadata={
+                "duplicated_id": rows[0]["Asset ID"],
+                "new_id": dup["Asset ID"],
+            },
         )
         return rows, [record]
 

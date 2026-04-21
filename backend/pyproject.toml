@@ -1,4 +1,5 @@
 [tool.pytest.ini_options]
 markers = [
     "slow: marks tests as slow (excluded from PR CI runs, run nightly)",
+    "anomaly_contract: Sprint 700 — generator ↔ engine contract compliance tests",
 ]

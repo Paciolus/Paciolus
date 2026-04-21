@@ -197,6 +197,68 @@ SEVERITY_MEDIUM_THRESHOLD = Decimal("0.01")  # > 1%
 
 
 # =============================================================================
+# Sprint 700: generator ↔ engine contract
+# =============================================================================
+# Declarative contract the anomaly-framework meta-test uses to verify each
+# multi-currency generator produces data the engine actually inspects.
+# Kept next to the detection logic so an auditor reviewing the engine can
+# read the contract and the detection code in one place.
+from shared.engine_contract import DetectionPreconditions, EngineInputContract
+
+ENGINE_CONTRACT = EngineInputContract(
+    tool="currency",
+    required_columns=frozenset({"Currency"}),
+    optional_columns=frozenset({"Account", "Account Name", "Debit", "Credit"}),
+    entry_point="currency_engine.convert_trial_balance",
+    detection_targets={
+        "missing_rates": DetectionPreconditions(
+            requires_columns=frozenset({"Currency"}),
+            scope="standalone",
+            description=(
+                "TB row's currency has no matching pair in the CurrencyRateTable. "
+                "Engine emits ConversionFlag(issue='missing_rate')."
+            ),
+            emits_fields=frozenset({"unconverted_items", "unconverted_count"}),
+        ),
+        "invalid_currencies": DetectionPreconditions(
+            requires_columns=frozenset({"Currency"}),
+            scope="standalone",
+            description=(
+                "Currency code fails ISO 4217 validation. Engine emits "
+                "ConversionFlag(issue='missing_currency_code' or 'invalid_currency')."
+            ),
+            emits_fields=frozenset({"unconverted_items"}),
+        ),
+        "zero_rates": DetectionPreconditions(
+            requires_columns=frozenset(),
+            scope="standalone",
+            description=(
+                "Rate = 0. Sprint 699 — rejected at ExchangeRate construction; "
+                "use-time defense-in-depth also flags as 'invalid_rate'."
+            ),
+            emits_fields=frozenset({"unconverted_items"}),
+        ),
+        "negative_rates": DetectionPreconditions(
+            requires_columns=frozenset(),
+            scope="standalone",
+            description=("Rate < 0. Sprint 699 — rejected at ExchangeRate construction."),
+            emits_fields=frozenset({"unconverted_items"}),
+        ),
+        "stale_rates": DetectionPreconditions(
+            requires_columns=frozenset(),
+            scope="standalone",
+            description=(
+                "Rate's effective_date is older than staleness_threshold_days "
+                "relative to either target_date or the table's newest cohort date. "
+                "Sprint 699 — cohort check fires even without a target_date."
+            ),
+            emits_fields=frozenset({"unconverted_items"}),
+        ),
+    },
+)
+
+
+# =============================================================================
 # COLUMN DETECTION — Currency column patterns
 # =============================================================================
 
@@ -227,12 +289,62 @@ CURRENCY_FIELD_CONFIG = ColumnFieldConfig(
 
 @dataclass
 class ExchangeRate:
-    """A single exchange rate entry."""
+    """A single exchange rate entry.
+
+    Sprint 699: validate-at-construction. Previously this was an unvalidated
+    dataclass — any path that bypassed ``parse_rate_table`` (programmatic
+    construction, ``from_storage_dict`` DB hydration, test fixtures) could
+    admit zero, negative, or malformed rates into a ``CurrencyRateTable``,
+    which the conversion engine then used as-is, silently producing bad
+    output. Validation here is the first line of defense; ``convert_trial_
+    balance`` adds a second (defense-in-depth) check in case a malformed
+    rate still slips through via unsafe reflection or a future attribute
+    mutation.
+    """
 
     effective_date: date
     from_currency: str
     to_currency: str
     rate: Decimal
+
+    def __post_init__(self) -> None:
+        # Normalise rate to Decimal — a programmatic caller may pass str/int/float.
+        # Doing the coercion here means the invariants below can rely on Decimal.
+        if not isinstance(self.rate, Decimal):
+            try:
+                object.__setattr__(self, "rate", Decimal(str(self.rate)))
+            except (InvalidOperation, TypeError, ValueError) as exc:
+                # Use ValueError directly — RateValidationError is defined later
+                # in the module and importing it here would create a forward
+                # reference loop.
+                raise ValueError(f"ExchangeRate.rate must be convertible to Decimal (got {self.rate!r})") from exc
+
+        if self.rate <= 0:
+            raise ValueError(
+                f"ExchangeRate.rate must be positive (got {self.rate}); "
+                "zero and negative rates are mathematically invalid for currency conversion."
+            )
+
+        if not isinstance(self.from_currency, str) or not self.from_currency.strip():
+            raise ValueError("ExchangeRate.from_currency is required and must be non-empty.")
+        if not isinstance(self.to_currency, str) or not self.to_currency.strip():
+            raise ValueError("ExchangeRate.to_currency is required and must be non-empty.")
+
+        # Uppercase ISO-4217-shaped currency codes. We do NOT enforce the full
+        # ISO_4217_CODES set here — ``validate_currency_code`` is the upload-path
+        # boundary check; here we only ensure the code is a non-empty 3-letter
+        # string so downstream dict-keyed rate lookup behaves deterministically.
+        if len(self.from_currency) != 3 or len(self.to_currency) != 3:
+            raise ValueError(
+                "ExchangeRate currency codes must be 3 letters "
+                f"(got from={self.from_currency!r}, to={self.to_currency!r})."
+            )
+
+        if self.from_currency == self.to_currency:
+            raise ValueError(f"ExchangeRate from_currency and to_currency must differ (both are {self.from_currency}).")
+
+        if not isinstance(self.effective_date, date):
+            raise ValueError(f"ExchangeRate.effective_date must be a date (got {type(self.effective_date).__name__}).")
 
     def to_dict(self) -> dict:
         return {
@@ -245,11 +357,19 @@ class ExchangeRate:
 
 @dataclass
 class CurrencyRateTable:
-    """Session-scoped rate table (Zero-Storage compliant)."""
+    """Session-scoped rate table (Zero-Storage compliant).
+
+    Sprint 699: ``staleness_threshold_days`` promoted from a module-level
+    constant to a first-class configurable field. The table can now detect
+    stale rates against its own cohort (newest rate in the table) even when
+    the caller hasn't supplied an as-of-date — which the prior implementation
+    required. Set to 0 to disable the cohort-based staleness check.
+    """
 
     rates: list[ExchangeRate] = field(default_factory=list)
     uploaded_at: Optional[datetime] = None
     presentation_currency: str = "USD"
+    staleness_threshold_days: int = STALE_RATE_DAYS  # Sprint 699: configurable
 
     def to_dict(self) -> dict:
         return {
@@ -257,6 +377,7 @@ class CurrencyRateTable:
             "uploaded_at": self.uploaded_at.isoformat() if self.uploaded_at else None,
             "presentation_currency": self.presentation_currency,
             "currency_pairs": list({f"{r.from_currency}/{r.to_currency}" for r in self.rates}),
+            "staleness_threshold_days": self.staleness_threshold_days,
         }
 
     def to_storage_dict(self) -> dict:
@@ -265,11 +386,17 @@ class CurrencyRateTable:
             "rates": [r.to_dict() for r in self.rates],
             "uploaded_at": self.uploaded_at.isoformat() if self.uploaded_at else None,
             "presentation_currency": self.presentation_currency,
+            "staleness_threshold_days": self.staleness_threshold_days,
         }
 
     @classmethod
     def from_storage_dict(cls, data: dict) -> "CurrencyRateTable":
-        """Reconstruct from DB session storage dict (Sprint 262)."""
+        """Reconstruct from DB session storage dict (Sprint 262).
+
+        Sprint 699: every reconstructed ExchangeRate now runs through
+        ``__post_init__`` validation, so a corrupted DB row can no longer
+        silently re-admit a zero/negative rate.
+        """
         rates = []
         for r in data.get("rates", []):
             rates.append(
@@ -287,7 +414,19 @@ class CurrencyRateTable:
             rates=rates,
             uploaded_at=uploaded_at,
             presentation_currency=data.get("presentation_currency", "USD"),
+            staleness_threshold_days=int(data.get("staleness_threshold_days", STALE_RATE_DAYS)),
         )
+
+    def newest_rate_date(self) -> Optional[date]:
+        """Return the latest ``effective_date`` across all rates.
+
+        Sprint 699: used by the cohort-based staleness check — a rate from
+        2024-01-01 is "stale" relative to a 2024-12-31 entry in the same
+        table even when the caller hasn't supplied a target_date.
+        """
+        if not self.rates:
+            return None
+        return max(r.effective_date for r in self.rates)
 
 
 @dataclass
@@ -298,7 +437,9 @@ class ConversionFlag:
     account_name: str
     original_amount: Decimal
     original_currency: str
-    issue: str  # "missing_rate" | "missing_currency_code" | "invalid_currency" | "stale_rate"
+    # Sprint 699: added "invalid_rate" for use-time defense-in-depth rejection
+    # (zero/negative rates that leaked through parse-time validation).
+    issue: str  # "missing_rate" | "missing_currency_code" | "invalid_currency" | "stale_rate" | "invalid_rate"
     severity: str  # "high" | "medium" | "low"
 
     def to_dict(self) -> dict:
@@ -541,19 +682,30 @@ def find_rate(
     from_currency: str,
     to_currency: str,
     target_date: Optional[date] = None,
+    newest_cohort_date: Optional[date] = None,
+    staleness_threshold_days: int = STALE_RATE_DAYS,
 ) -> tuple[Optional[Decimal], Optional[str]]:
     """Look up exchange rate for a currency pair.
 
     Args:
-        lookup: Rate lookup dict
-        from_currency: Source currency
-        to_currency: Target currency
-        target_date: Date to match (None = use latest available)
+        lookup: Rate lookup dict.
+        from_currency: Source currency.
+        to_currency: Target currency.
+        target_date: Date to match (None = use latest available).
+        newest_cohort_date: Sprint 699 — the newest ``effective_date`` across
+            the entire rate table. Used as a fallback staleness reference
+            when ``target_date`` is None. Without this, a rate from 2024-01
+            alongside a rate from 2024-12 would never be flagged stale on a
+            ``target_date=None`` call because the "most recent" rate wins by
+            default.
+        staleness_threshold_days: Days beyond the reference date after which
+            a rate is considered stale. Sprint 699: was a hardcoded 90;
+            now plumbed through so callers can tune per engagement.
 
     Returns:
-        Tuple of (rate, issue_or_None).
-        issue is "stale_rate" if rate date > 90 days from target.
-        None rate means no rate found.
+        Tuple of (rate, issue_or_None). ``issue`` is ``"stale_rate"`` when
+        the matched rate's date exceeds the threshold, or ``"missing_rate"``
+        when no rate exists for the pair. ``None`` rate means no rate found.
     """
     if from_currency == to_currency:
         return Decimal("1"), None
@@ -563,27 +715,58 @@ def find_rate(
         # Try inverse
         inverse_rates = lookup.get((to_currency, from_currency))
         if inverse_rates:
-            rate, issue = _find_best_rate(inverse_rates, target_date)
+            rate, issue = _find_best_rate(
+                inverse_rates,
+                target_date,
+                newest_cohort_date=newest_cohort_date,
+                staleness_threshold_days=staleness_threshold_days,
+            )
             if rate is not None:
                 # Invert: 1 / rate
                 inverted = (Decimal("1") / rate).quantize(INTERNAL_PRECISION, rounding=ROUND_HALF_EVEN)
                 return inverted, issue
         return None, "missing_rate"
 
-    return _find_best_rate(pair_rates, target_date)
+    return _find_best_rate(
+        pair_rates,
+        target_date,
+        newest_cohort_date=newest_cohort_date,
+        staleness_threshold_days=staleness_threshold_days,
+    )
 
 
 def _find_best_rate(
     sorted_rates: list[ExchangeRate],
     target_date: Optional[date],
+    *,
+    newest_cohort_date: Optional[date] = None,
+    staleness_threshold_days: int = STALE_RATE_DAYS,
 ) -> tuple[Optional[Decimal], Optional[str]]:
-    """Find the best matching rate from a sorted (desc) list."""
+    """Find the best matching rate from a sorted (desc) list.
+
+    Sprint 699: staleness is now checked in two independent modes:
+      * If ``target_date`` is supplied, staleness = days between the matched
+        rate's date and ``target_date`` (the original behaviour).
+      * If ``target_date`` is None but ``newest_cohort_date`` is supplied,
+        staleness = days between the matched rate's date and the newest
+        rate in the whole table. This catches "stale rate alongside a
+        fresh one" cases that the original target-date-only check missed.
+
+    If both are None, no staleness check runs (original behaviour preserved
+    for call sites that opt out).
+    """
     if not sorted_rates:
         return None, "missing_rate"
 
     if target_date is None:
         # Use the most recent rate
-        return sorted_rates[0].rate, None
+        best = sorted_rates[0]
+        # Sprint 699: cohort-based staleness check when no target_date.
+        if newest_cohort_date is not None and staleness_threshold_days > 0:
+            days_diff = abs((newest_cohort_date - best.effective_date).days)
+            if days_diff > staleness_threshold_days:
+                return best.rate, "stale_rate"
+        return best.rate, None
 
     # Find exact match or nearest prior
     best: Optional[ExchangeRate] = None
@@ -598,9 +781,9 @@ def _find_best_rate(
         # All rates are after target date — use the earliest
         best = sorted_rates[-1]
 
-    # Check staleness
+    # Check staleness against the supplied target_date
     days_diff = abs((target_date - best.effective_date).days)
-    issue = "stale_rate" if days_diff > STALE_RATE_DAYS else None
+    issue = "stale_rate" if days_diff > staleness_threshold_days else None
     return best.rate, issue
 
 
@@ -711,6 +894,12 @@ def convert_trial_balance(
     # Build rate lookup
     rate_lookup = _build_rate_lookup(rate_table.rates)
 
+    # Sprint 699: cohort-based staleness check — when no target_date is
+    # supplied, we still want to catch "stale rate alongside a fresh one"
+    # by comparing each matched rate to the table's newest entry.
+    newest_cohort_date = rate_table.newest_rate_date()
+    staleness_threshold = rate_table.staleness_threshold_days
+
     # Vectorized conversion: build rate and issue columns
     converted_amounts: list[Optional[Decimal]] = []
     flags: list[ConversionFlag] = []
@@ -722,7 +911,21 @@ def convert_trial_balance(
         if curr == presentation_currency:
             currency_rates[curr] = (Decimal("1"), None)
         else:
-            rate, issue = find_rate(rate_lookup, curr, presentation_currency, target_date)
+            rate, issue = find_rate(
+                rate_lookup,
+                curr,
+                presentation_currency,
+                target_date,
+                newest_cohort_date=newest_cohort_date,
+                staleness_threshold_days=staleness_threshold,
+            )
+            # Sprint 699: defense-in-depth at use time. ExchangeRate
+            # __post_init__ enforces rate > 0, but a future attribute
+            # mutation or an unvalidated construction path could still
+            # leak a bad rate into rate_lookup. Reject it here so the
+            # engine never produces silent 0 or negative conversions.
+            if rate is not None and rate <= 0:
+                rate, issue = None, "invalid_rate"
             currency_rates[curr] = (rate, issue)
             if rate is not None:
                 rates_applied[f"{curr}/{presentation_currency}"] = str(rate)
@@ -770,7 +973,9 @@ def convert_trial_balance(
 
         rate_info = currency_rates.get(row_currency)
         if rate_info is None or rate_info[0] is None:
-            # No rate available
+            # No rate available — either the pair wasn't in the table
+            # ("missing_rate") or the matched rate failed use-time validation
+            # ("invalid_rate") — Sprint 699 defense-in-depth.
             acct_num = (
                 str(df.at[idx, account_number_column])
                 if account_number_column and account_number_column in df.columns
@@ -781,14 +986,18 @@ def convert_trial_balance(
                 if account_name_column and account_name_column in df.columns
                 else ""
             )
+            # Carry through the specific issue from find_rate so downstream
+            # memos / reports can distinguish "data wasn't there" from "data
+            # was there but invalid" — different remediation for the auditor.
+            carried_issue = rate_info[1] if rate_info and rate_info[1] else "missing_rate"
             flags.append(
                 ConversionFlag(
                     account_number=acct_num,
                     account_name=acct_name,
                     original_amount=amount,
                     original_currency=row_currency,
-                    issue="missing_rate",
-                    severity="medium",  # Recalculated below
+                    issue=carried_issue,
+                    severity="high" if carried_issue == "invalid_rate" else "medium",
                 )
             )
             unconverted_count += 1

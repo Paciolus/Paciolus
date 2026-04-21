@@ -2245,3 +2245,41 @@ def run_revenue_testing(
         column_detection=detection,
         contract_evidence=evidence,
     )
+
+
+# =============================================================================
+# Sprint 700/703: Anomaly-framework contract registration
+# =============================================================================
+# Declares which test_keys the engine emits and what each requires from an
+# injected anomaly row. Loaded by the compliance meta-test
+# (``tests/anomaly_framework/test_contract_compliance.py``). Only annotates
+# test_keys exercised by current generators — extend as new generators are
+# added.
+from shared.engine_contract import DetectionPreconditions, EngineInputContract
+
+ENGINE_CONTRACT = EngineInputContract(
+    tool="revenue",
+    required_columns=frozenset({"Date", "Amount", "Account Name"}),
+    optional_columns=frozenset({"Account Number", "Description", "Entry Type", "Reference"}),
+    entry_point="revenue_testing_engine.run_revenue_testing",
+    detection_targets={
+        "contra_revenue_anomalies": DetectionPreconditions(
+            requires_columns=frozenset({"Account Name", "Amount"}),
+            # Engine's _is_contra_revenue checks description OR account
+            # name — the contract requires at least one recognisable
+            # contra-revenue account-name pattern. "credit memo" is
+            # commonly in the Description column, not Account Name, so
+            # it's not a required account-name pattern here.
+            account_name_patterns=frozenset({"return", "refund", "allowance"}),
+            scope="standalone",
+            description=(
+                "RT-12: contra revenue >15% of gross revenue. Engine "
+                "accepts contra keywords in EITHER Account Name OR "
+                "Description; the contract requires at least one "
+                "account-name match for the standard pattern (Returns / "
+                "Refunds / Allowances)."
+            ),
+            emits_fields=frozenset({"entries_flagged", "flagged_entries"}),
+        ),
+    },
+)

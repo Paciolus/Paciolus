@@ -82,14 +82,14 @@ from revenue_testing_engine import run_revenue_testing
 from tests.anomaly_framework.fixtures.base_revenue_entries import BaseRevenueEntryFactory
 from tests.anomaly_framework.generators.revenue_generators import REVENUE_REGISTRY_SMALL
 
-_REVENUE_XFAIL = {"revenue_contra_anomaly"}  # Engine contra detection requires specific account patterns
+# Sprint 701: revenue_contra_anomaly xfail closed — generator now injects
+# $60K of contras (vs. $6K before) so the engine's 15% threshold actually
+# fires. No remaining xfails in this module.
 
 
 @pytest.mark.parametrize("generator", REVENUE_REGISTRY_SMALL, ids=lambda g: g.name)
 def test_revenue_anomaly_detected(generator):
     """Verify Revenue anomaly is detected."""
-    if generator.name in _REVENUE_XFAIL:
-        pytest.xfail(f"{generator.name}: generator-engine alignment pending")
     _run_tool_test(generator, BaseRevenueEntryFactory.as_rows, run_revenue_testing)
 
 
@@ -101,14 +101,15 @@ from payroll_testing_engine import run_payroll_testing
 from tests.anomaly_framework.fixtures.base_payroll_register import BasePayrollRegisterFactory
 from tests.anomaly_framework.generators.payroll_generators import PAYROLL_REGISTRY_SMALL
 
-_PAYROLL_XFAIL = {"duplicate_names"}  # Engine PR-T2 name matching uses fuzzy logic
+# Sprint 701: duplicate_names xfail closed — new engine test PR-T12
+# (Duplicate Employee Names / ghost-employee scheme) now catches what the
+# generator injects. The old PR-T2 target was "Missing Critical Fields"
+# which did not test name duplication.
 
 
 @pytest.mark.parametrize("generator", PAYROLL_REGISTRY_SMALL, ids=lambda g: g.name)
 def test_payroll_anomaly_detected(generator):
     """Verify Payroll anomaly is detected."""
-    if generator.name in _PAYROLL_XFAIL:
-        pytest.xfail(f"{generator.name}: generator-engine alignment pending")
     rows = BasePayrollRegisterFactory.as_rows()
     mutated_rows, records = generator.inject(rows, seed=42)
     cols = list(dict.fromkeys(k for r in mutated_rows for k in r.keys()))
@@ -140,14 +141,14 @@ from ar_aging_engine import run_ar_aging
 from tests.anomaly_framework.fixtures.base_ar_aging import BaseARAgingFactory
 from tests.anomaly_framework.generators.ar_generators import AR_REGISTRY_SMALL
 
-_AR_XFAIL = {"ar_sign_anomalies"}  # Engine sign detection requires TB-level sign mismatch
+# Sprint 702: ar_sign_anomalies xfail closed — generator retargeted to the
+# new engine test ar_sl_negative_invoice (AR-01b). AR-01 (TB-level sign) and
+# AR-01b (SL-level negative invoice) are now distinct tests.
 
 
 @pytest.mark.parametrize("generator", AR_REGISTRY_SMALL, ids=lambda g: g.name)
 def test_ar_anomaly_detected(generator):
     """Verify AR Aging anomaly is detected."""
-    if generator.name in _AR_XFAIL:
-        pytest.xfail(f"{generator.name}: generator-engine alignment pending")
     tb_rows = BaseARAgingFactory.as_tb_rows()
     sl_rows = BaseARAgingFactory.as_sl_rows()
     tb_cols = BaseARAgingFactory.tb_column_names()
@@ -181,14 +182,14 @@ from fixed_asset_testing_engine import run_fixed_asset_testing
 from tests.anomaly_framework.fixtures.base_fixed_assets import BaseFixedAssetFactory
 from tests.anomaly_framework.generators.fa_generators import FA_REGISTRY_SMALL
 
-_FA_XFAIL = {"fa_duplicate_assets"}  # Engine duplicate detection uses asset_id key matching
+# Sprint 702: fa_duplicate_assets xfail closed — generator now produces
+# (cost, description, acquisition_date)-identical row with distinct asset_id,
+# matching the engine's dedup key.
 
 
 @pytest.mark.parametrize("generator", FA_REGISTRY_SMALL, ids=lambda g: g.name)
 def test_fa_anomaly_detected(generator):
     """Verify Fixed Asset anomaly is detected."""
-    if generator.name in _FA_XFAIL:
-        pytest.xfail(f"{generator.name}: generator-engine alignment pending")
     _run_tool_test(generator, BaseFixedAssetFactory.as_rows, run_fixed_asset_testing)
 
 
@@ -200,14 +201,16 @@ from inventory_testing_engine import run_inventory_testing
 from tests.anomaly_framework.fixtures.base_inventory import BaseInventoryFactory
 from tests.anomaly_framework.generators.inv_generators import INV_REGISTRY_SMALL
 
-_INV_XFAIL = {"inv_missing_fields", "inv_duplicate_items"}  # Engine field/dup detection uses different column keys
+# Sprint 702: both INV xfails closed.
+# * inv_missing_fields — generator now blanks Item ID AND Description (engine's
+#   strict identifier definition).
+# * inv_duplicate_items — generator keeps (description, unit_cost) identical
+#   with distinct Item ID (matches engine dedup key).
 
 
 @pytest.mark.parametrize("generator", INV_REGISTRY_SMALL, ids=lambda g: g.name)
 def test_inv_anomaly_detected(generator):
     """Verify Inventory anomaly is detected."""
-    if generator.name in _INV_XFAIL:
-        pytest.xfail(f"{generator.name}: generator-engine alignment pending")
     _run_tool_test(generator, BaseInventoryFactory.as_rows, run_inventory_testing)
 
 
@@ -387,36 +390,54 @@ from tests.anomaly_framework.fixtures.base_multi_currency import BaseMultiCurren
 from tests.anomaly_framework.generators.currency_generators import CURRENCY_REGISTRY
 
 
-def _build_rate_table(rate_rows: list[dict]) -> CurrencyRateTable:
-    """Convert raw rate dicts into a CurrencyRateTable for the engine."""
-    rates = []
+def _build_rate_table(rate_rows: list[dict]) -> tuple[CurrencyRateTable, list[dict]]:
+    """Convert raw rate dicts into a CurrencyRateTable for the engine.
+
+    Sprint 699: ExchangeRate now validates at construction (zero/negative
+    rates, empty currency codes, identical from/to → all raise ValueError).
+    To let the anomaly-injection tests drive the engine without short-
+    circuiting at the fixture layer, we skip rows that fail validation and
+    record them in the returned ``rejected`` list. This simulates what
+    happens when the upload path's ``parse_rate_table`` rejects a row:
+    downstream the affected currency has no rate, producing ``missing_rate``
+    flags in ``convert_trial_balance``. That IS detection — just via the
+    construction-time boundary rather than the use-time boundary.
+    """
+    rates: list[ExchangeRate] = []
+    rejected: list[dict] = []
     for r in rate_rows:
-        rates.append(
-            ExchangeRate(
-                effective_date=_date.fromisoformat(r["Effective Date"]),
-                from_currency=r["From Currency"],
-                to_currency=r["To Currency"],
-                rate=_Decimal(str(r["Rate"])),
+        try:
+            rates.append(
+                ExchangeRate(
+                    effective_date=_date.fromisoformat(r["Effective Date"]),
+                    from_currency=r["From Currency"],
+                    to_currency=r["To Currency"],
+                    rate=_Decimal(str(r["Rate"])),
+                )
             )
-        )
-    return CurrencyRateTable(rates=rates, presentation_currency="USD")
-
-
-_CURRENCY_XFAIL = {"zero_exchange_rate", "stale_exchange_rate", "negative_exchange_rate"}
+        except ValueError as exc:
+            rejected.append({"row": r, "reason": str(exc)})
+    return CurrencyRateTable(rates=rates, presentation_currency="USD"), rejected
 
 
 @pytest.mark.parametrize("generator", CURRENCY_REGISTRY, ids=lambda g: g.name)
 def test_currency_anomaly_detected(generator):
-    """Verify Multi-Currency anomaly is detected via CurrencyRateTable."""
-    if generator.name in _CURRENCY_XFAIL:
-        pytest.xfail(
-            f"{generator.name}: engine does not validate rate quality (zero/negative/stale) — needs engine-level check"
-        )
+    """Verify Multi-Currency anomaly is detected via CurrencyRateTable.
+
+    Sprint 699: previously 3 of these tests were xfailed ("engine does not
+    validate rate quality"). Now detection can happen at either of two
+    boundaries:
+      * Construction-time rejection (ExchangeRate.__post_init__) —
+        zero/negative rates never enter the table.
+      * Use-time flagging (convert_trial_balance) — stale rates produce
+        ``stale_rate`` flags via the cohort-based staleness check.
+    The test accepts both detection mechanisms.
+    """
     tb_rows = BaseMultiCurrencyFactory.as_tb_rows()
     rate_rows = BaseMultiCurrencyFactory.as_rate_rows()
 
     mutated_tb, mutated_rates, records = generator.inject(tb_rows, rate_rows, seed=42)
-    rate_table = _build_rate_table(mutated_rates)
+    rate_table, rejected_at_construction = _build_rate_table(mutated_rates)
     result = convert_trial_balance(mutated_tb, rate_table, amount_column="Debit")
 
     result_dict = result.to_dict()
@@ -425,8 +446,11 @@ def test_currency_anomaly_detected(generator):
         target_key = record.expected_field
         unconverted = result_dict.get("unconverted_items", [])
         unconverted_count = result_dict.get("unconverted_count", 0)
-        detected = unconverted_count > 0 or len(unconverted) > 0
+        # Sprint 699: detection succeeds if EITHER construction rejected
+        # the malformed rate OR the engine flagged it at use time.
+        detected = unconverted_count > 0 or len(unconverted) > 0 or len(rejected_at_construction) > 0
         assert detected, (
             f"[{generator.name}] Expected detection for '{target_key}'. "
-            f"Unconverted count: {unconverted_count}, items: {unconverted}"
+            f"Unconverted count: {unconverted_count}, items: {unconverted}, "
+            f"rejected_at_construction: {rejected_at_construction}"
         )

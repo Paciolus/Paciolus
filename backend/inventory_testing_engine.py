@@ -1358,3 +1358,36 @@ def run_inventory_testing(
         data_quality=data_quality,
         column_detection=detection,
     )
+
+
+# =============================================================================
+# Sprint 700/703: Anomaly-framework contract registration
+# =============================================================================
+from shared.engine_contract import DetectionPreconditions, EngineInputContract
+
+ENGINE_CONTRACT = EngineInputContract(
+    tool="inventory",
+    required_columns=frozenset({"Unit Cost", "Quantity"}),
+    optional_columns=frozenset({"Item ID", "Description", "Category", "Extended Value", "Last Transaction Date"}),
+    entry_point="inventory_testing_engine.run_inventory_testing",
+    detection_targets={
+        "missing_fields": DetectionPreconditions(
+            requires_columns=frozenset(),
+            scope="standalone",
+            description=(
+                "IN-01: identifier (item_id OR description), quantity, and "
+                "cost/value are all required. Category and date are optional."
+            ),
+            emits_fields=frozenset({"entries_flagged", "flagged_entries"}),
+        ),
+        "duplicate_items": DetectionPreconditions(
+            requires_columns=frozenset({"Unit Cost", "Description"}),
+            scope="standalone",
+            description=(
+                "IN-08: dedups on (unit_cost, description). A distinct "
+                "Item ID with the same tuple is flagged as double-counted."
+            ),
+            emits_fields=frozenset({"entries_flagged", "flagged_entries"}),
+        ),
+    },
+)
