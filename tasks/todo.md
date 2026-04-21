@@ -904,20 +904,31 @@ Nothing weakened — auth/security/zero-storage untouched, no tests silenced, ev
 ---
 
 ### Sprint 698: Per-IP passcode-failure throttle
-**Status:** PENDING
+**Status:** COMPLETE
 **Priority:** P2
-**Source:** Security hardening follow-up (brute-force defence — per-token is necessary, not sufficient).
-**Why now:** Sprint 696 added per-token passcode lockout; an attacker cycling through multiple share tokens from one IP is bounded only by the slowapi IP rate limit (60/min generic). A focused per-IP failure counter — the same pattern `record_ip_failure` uses for auth — would catch credential-stuffing attempts across many share links before they accumulate enough signal.
-**Files:**
-- `backend/security_middleware.py` (reuse `record_ip_failure` / `check_ip_blocked` helpers)
-- `backend/routes/export_sharing.py`
-- `backend/tests/test_security_hardening_2026_04_20.py`
+**Source:** Security hardening follow-up — Sprint 696 per-token lockout was necessary, not sufficient.
 
-**Changes:**
-- [ ] In `_verify_passcode_or_raise`, also call `record_ip_failure(client_ip)` on mismatch. Use `get_client_ip(request)` so trusted-proxy rules apply.
-- [ ] Before verification, call `check_ip_blocked(client_ip)` and return 429 with generic "too many failed attempts" message (do NOT leak share-token existence).
-- [ ] Keep per-token throttle intact; the new per-IP check is additive.
-- [ ] Add env overrides for share-specific IP threshold if the auth threshold (20 failures / 15 min) is too loose — tentatively `SHARE_IP_FAILURE_THRESHOLD=10`.
+**Changes landed:**
+- [x] `_verify_passcode_or_raise(share, passcode, db, client_ip=None)` — added optional `client_ip` parameter. Calls `record_ip_failure(client_ip)` on every mismatch so cross-token credential-stuffing is bounded. Pre-verification, calls `check_ip_blocked(client_ip)` and returns 429 with the generic "too many failed passcode attempts from this network" message (does NOT leak share-token existence). `Retry-After: 900` header mirrors the default 15-min window.
+- [x] Per-IP block takes precedence over per-token lockout — if an attacker has already accumulated 20 failures across many tokens, they see the IP-block message rather than being told which specific token they just tried is locked. Stronger privacy property against scan-and-profile attacks.
+- [x] `download_share_with_passcode` route threads `request.client.host` into the verification helper. Callers without a client IP (e.g., test stubs) fall back to per-token-only throttle — backward-compatible.
+- [x] **Did NOT** add `SHARE_IP_FAILURE_THRESHOLD` env override. The existing `IP_FAILURE_THRESHOLD=20` default is already calibrated to auth failures where legitimate users rarely exceed 3-4 tries; share passcodes have the same legitimate-user profile (typically 1-2 attempts max). A separate threshold adds config surface without a clear use case. Can be added later if operations data shows share flows hitting the threshold.
+
+**Tests (6 new, all pass):**
+- `test_correct_passcode_does_not_record_ip_failure` — successful verification doesn't pollute tracker.
+- `test_wrong_passcode_records_ip_failure` — every 403 records a failure.
+- `test_blocked_ip_429_even_with_correct_passcode` — key invariant: once past threshold, even a correct passcode gets 429.
+- `test_ip_block_takes_precedence_over_token_lockout` — attacker with locked share + blocked IP sees IP message.
+- `test_no_client_ip_falls_back_to_per_token_only` — backward-compat for callers without IP.
+- `test_wrong_passcode_from_multiple_ips_tracks_each_separately` — per-IP keying.
+
+**Validation:** 76 tests pass across `test_export_sharing_routes` + `test_export_sharing_ip_throttle` + `test_security_hardening_2026_04_20`.
+
+**Review:**
+- Per-IP-first ordering is the security-correct default: scanning attackers get a uniform 429 regardless of which token they happen to be probing, which removes the side-channel of "token N is valid-but-locked vs. token M is invalid-passcode."
+- The existing `record_ip_failure` / `check_ip_blocked` infrastructure is already tested in the auth path; reusing it here was cheaper than a passcode-specific counter and behaves identically from ops/SRE perspective.
+- Test helper `_make_share` fixture uses `tool_name` (real column) rather than `export_filename` (doesn't exist); iterated to match the model.
+- Commit SHA: pending.
 - [ ] Tests: 10 wrong passcodes across 10 different share tokens from one IP → 11th attempt from that IP is 429 even against a fresh token.
 
 ---

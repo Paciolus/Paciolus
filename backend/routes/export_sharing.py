@@ -6,18 +6,21 @@ Gated to Professional+ tiers.
 
 Sprint 593: Passcode protection, single-use mode, security headers,
             anomaly logging, tier-configurable TTL (24h Pro / 48h Ent).
+2026-04-20 hardening: passcode upgraded to bcrypt KDF + per-token
+            brute-force throttle; passcode moved out of query string
+            onto a dedicated POST /download body.
 
 Route group prefix: /export-sharing
 """
 
 import hashlib
-import hmac
 import logging
+import re
 import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -28,6 +31,16 @@ from export_share_model import ExportShare
 from models import User
 from shared.entitlement_checks import check_export_sharing_access, get_effective_entitlements
 from shared.organization_schemas import DetailResponse, ExportShareCreateResponse, ExportShareResponse
+from shared.passcode_security import (
+    PASSCODE_MAX_LENGTH,
+    PASSCODE_MIN_LENGTH,
+    PasscodeThrottleState,
+    WeakPasscodeError,
+    current_lockout_remaining_seconds,
+    hash_passcode,
+    validate_passcode_strength,
+    verify_passcode,
+)
 from shared.rate_limits import RATE_LIMIT_EXPORT, RATE_LIMIT_WRITE, limiter
 
 logger = logging.getLogger(__name__)
@@ -53,10 +66,36 @@ class CreateShareRequest(BaseModel):
     tool_name: str = Field(..., max_length=100)
     export_format: str = Field(..., pattern="^(pdf|xlsx|csv)$")
     export_data_b64: str = Field(..., description="Base64-encoded export file bytes")
+    # Passcode length range is echoed from shared.passcode_security so clients
+    # see one authoritative policy boundary.  Strength rules (char classes)
+    # are enforced at runtime — Pydantic cannot express "3 of 4 classes".
     passcode: str | None = Field(
-        None, min_length=4, max_length=64, description="Optional passcode for download protection"
+        None,
+        min_length=PASSCODE_MIN_LENGTH,
+        max_length=PASSCODE_MAX_LENGTH,
+        description=(
+            f"Optional passcode for download protection. "
+            f"Must be {PASSCODE_MIN_LENGTH}-{PASSCODE_MAX_LENGTH} characters "
+            "and include at least 3 of: lowercase, uppercase, digit, symbol."
+        ),
     )
     single_use: bool = Field(False, description="Auto-revoke after first download")
+
+
+class DownloadRequest(BaseModel):
+    """POST body for /export-sharing/{token}/download.
+
+    Passcodes MUST be submitted via this body rather than a query string —
+    query strings leak via access logs, browser history, and proxy layers.
+    Non-passcode shares can still use the GET endpoint for convenience.
+    """
+
+    passcode: str | None = Field(
+        None,
+        min_length=1,  # weak/short input is rejected by the verifier, not the schema
+        max_length=PASSCODE_MAX_LENGTH,
+        description="Passcode if the share link is protected.",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -108,6 +147,134 @@ def _validate_export_magic_bytes(export_bytes: bytes, export_format: str) -> Non
         )
 
 
+def _resolve_share_or_404(token: str, db: Session) -> ExportShare:
+    """Look up a non-revoked share by raw token; raise 404 otherwise."""
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    share = (
+        db.query(ExportShare)
+        .filter(
+            ExportShare.share_token_hash == token_hash,
+            ExportShare.revoked_at.is_(None),
+        )
+        .first()
+    )
+    if not share:
+        raise HTTPException(status_code=404, detail="Share link not found or revoked.")
+    return share
+
+
+def _enforce_not_expired(share: ExportShare) -> datetime:
+    """Raise 410 if the share has expired; otherwise return ``now``."""
+    now = datetime.now(UTC)
+    expires = share.expires_at
+    if expires.tzinfo is None:
+        expires = expires.replace(tzinfo=UTC)
+    if now > expires:
+        raise HTTPException(status_code=410, detail="This share link has expired.")
+    return now
+
+
+def _build_download_response(share: ExportShare) -> Response:
+    """Serialize a share's bytes into a safe downloadable Response."""
+    content_types = {
+        "pdf": "application/pdf",
+        "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "csv": "text/csv",
+    }
+    content_type = content_types.get(share.export_format, "application/octet-stream")
+    safe_name = re.sub(r"[^\w\-]", "_", share.tool_name or "export")[:80]
+    filename = f"paciolus-{safe_name}.{share.export_format}"
+    return Response(
+        content=share.export_data,
+        media_type=content_type,
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "no-store",
+            # X-Content-Type-Options and Referrer-Policy set by SecurityHeadersMiddleware
+        },
+    )
+
+
+def _log_access(share: ExportShare, request: Any) -> tuple[str, str]:
+    """Record the access attempt (masked IP, hashed UA) and return them."""
+    client_ip = getattr(request, "client", None)
+    masked_ip = _mask_ip(client_ip.host) if client_ip else "unknown"
+    ua_hash = (
+        hashlib.sha256((request.headers.get("user-agent", "") or "").encode()).hexdigest()[:12]
+        if request
+        else "unknown"
+    )
+    return masked_ip, ua_hash
+
+
+def _verify_passcode_or_raise(
+    share: ExportShare,
+    passcode: str | None,
+    db: Session,
+    client_ip: str | None = None,
+) -> None:
+    """Enforce passcode, brute-force throttle (per-token + per-IP), and
+    update counters.
+
+    Sprint 698: per-IP throttle layered on top of the per-token lockout.
+    Sprint 696 hardened single-token brute-force; an attacker cycling
+    through multiple share tokens from one IP was only bounded by the
+    slowapi 60/min generic limit. Per-IP failure tracking (same pattern
+    as auth failures — see ``record_ip_failure`` / ``check_ip_blocked``)
+    catches credential-stuffing across many share links before it
+    accumulates enough signal.
+
+    Raises:
+        403 if passcode missing or invalid.
+        429 if the share is locked (per-token) OR the IP is blocked (per-IP).
+    """
+    # Per-IP block takes precedence — if the attacker's IP is already
+    # over threshold we refuse before even consulting the token state.
+    if client_ip:
+        from security_middleware import check_ip_blocked
+
+        if check_ip_blocked(client_ip):
+            raise HTTPException(
+                status_code=429,
+                detail=("Too many failed passcode attempts from this network. Try again later."),
+                headers={"Retry-After": "900"},  # 15-min default window
+            )
+
+    throttle = PasscodeThrottleState(share)
+    if throttle.is_locked():
+        remaining = current_lockout_remaining_seconds(share.passcode_locked_until)
+        raise HTTPException(
+            status_code=429,
+            detail=(f"Too many failed passcode attempts. Try again in {remaining} seconds."),
+            headers={"Retry-After": str(max(1, remaining))},
+        )
+
+    if not passcode:
+        raise HTTPException(
+            status_code=403,
+            detail="This share link requires a passcode. POST it to /export-sharing/{token}/download.",
+        )
+
+    if not verify_passcode(passcode, share.passcode_hash or ""):
+        throttle.register_failure()
+        db.commit()
+        # Sprint 698: also record the failure against the IP tracker so
+        # cross-token credential-stuffing is bounded.
+        if client_ip:
+            from security_middleware import record_ip_failure
+
+            record_ip_failure(client_ip)
+        logger.info(
+            "Share passcode mismatch: share_id=%s, attempts=%s, ip=%s",
+            share.id,
+            share.passcode_failed_attempts,
+            client_ip or "unknown",
+        )
+        raise HTTPException(status_code=403, detail="Invalid passcode.")
+
+    throttle.reset()
+
+
 @router.post("/create", response_model=ExportShareCreateResponse)
 @limiter.limit(RATE_LIMIT_WRITE)
 async def create_share(
@@ -144,10 +311,14 @@ async def create_share(
     raw_token = secrets.token_urlsafe(32)
     token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
 
-    # Hash optional passcode (SHA-256 — sufficient for ephemeral links)
-    passcode_hash = None
+    # Passcode strength + KDF (2026-04-20 hardening).
+    passcode_hash: str | None = None
     if body.passcode:
-        passcode_hash = hashlib.sha256(body.passcode.encode()).hexdigest()
+        try:
+            validate_passcode_strength(body.passcode)
+        except WeakPasscodeError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        passcode_hash = hash_passcode(body.passcode)
 
     share = ExportShare(
         user_id=user.id,
@@ -182,44 +353,9 @@ async def create_share(
     return result
 
 
-@router.get("/{token}")
-@limiter.limit(RATE_LIMIT_EXPORT)
-async def download_share(
-    token: str,
-    request: Any = None,
-    db: Session = Depends(get_db),
-    passcode: str | None = Query(None, description="Passcode if the share link is protected"),
-) -> Response:
-    """Download a shared export. Public endpoint (no auth required)."""
-    token_hash = hashlib.sha256(token.encode()).hexdigest()
-
-    share = (
-        db.query(ExportShare)
-        .filter(
-            ExportShare.share_token_hash == token_hash,
-            ExportShare.revoked_at.is_(None),
-        )
-        .first()
-    )
-    if not share:
-        raise HTTPException(status_code=404, detail="Share link not found or revoked.")
-
-    # Check expiry
-    now = datetime.now(UTC)
-    expires = share.expires_at
-    if expires.tzinfo is None:
-        from datetime import timezone
-
-        expires = expires.replace(tzinfo=timezone.utc)
-    if now > expires:
-        raise HTTPException(status_code=410, detail="This share link has expired.")
-
-    # Passcode verification (Sprint 593)
-    if share.passcode_hash:
-        if not passcode:
-            raise HTTPException(status_code=403, detail="This share link requires a passcode.")
-        if not hmac.compare_digest(hashlib.sha256(passcode.encode()).hexdigest(), share.passcode_hash):
-            raise HTTPException(status_code=403, detail="Invalid passcode.")
+def _finalize_download(share: ExportShare, request: Any, db: Session) -> Response:
+    """Shared tail logic for both GET and POST download paths."""
+    now = _enforce_not_expired(share)
 
     # Update access counter
     share.access_count = (share.access_count or 0) + 1
@@ -231,14 +367,7 @@ async def download_share(
 
     db.commit()
 
-    # Anomaly detection logging (Sprint 593)
-    client_ip = getattr(request, "client", None)
-    masked_ip = _mask_ip(client_ip.host) if client_ip else "unknown"
-    ua_hash = (
-        hashlib.sha256((request.headers.get("user-agent", "") or "").encode()).hexdigest()[:12]
-        if request
-        else "unknown"
-    )
+    masked_ip, ua_hash = _log_access(share, request)
 
     logger.info(
         "Share download: share_id=%s, ip=%s, ua_hash=%s, access_count=%d",
@@ -256,29 +385,67 @@ async def download_share(
             masked_ip,
         )
 
-    # Determine content type
-    content_types = {
-        "pdf": "application/pdf",
-        "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "csv": "text/csv",
-    }
-    content_type = content_types.get(share.export_format, "application/octet-stream")
+    return _build_download_response(share)
 
-    # Sanitize tool_name for Content-Disposition: strip control chars, quotes, path separators
-    import re
 
-    safe_name = re.sub(r"[^\w\-]", "_", share.tool_name or "export")[:80]
-    filename = f"paciolus-{safe_name}.{share.export_format}"
+@router.get("/{token}")
+@limiter.limit(RATE_LIMIT_EXPORT)
+async def download_share(
+    token: str,
+    request: Any = None,
+    db: Session = Depends(get_db),
+) -> Response:
+    """Download a non-passcode-protected shared export.
 
-    return Response(
-        content=share.export_data,
-        media_type=content_type,
-        headers={
-            "Content-Disposition": f'attachment; filename="{filename}"',
-            "Cache-Control": "no-store",
-            # X-Content-Type-Options and Referrer-Policy set by SecurityHeadersMiddleware
-        },
-    )
+    Public endpoint (no auth required).  Passcode-protected shares MUST
+    use the POST /{token}/download endpoint; this endpoint returns a 403
+    with an instructional message when a passcode is required.
+
+    2026-04-20 hardening: the ``?passcode=`` query-string pattern has been
+    REMOVED.  Query-string secrets leak via access logs, browser history,
+    and transparent proxies.  Callers must migrate to the POST variant.
+    """
+    share = _resolve_share_or_404(token, db)
+    _enforce_not_expired(share)
+
+    if share.passcode_hash:
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "This share link requires a passcode. POST it as JSON to "
+                "/export-sharing/{token}/download — query-string passcodes are no longer accepted."
+            ),
+        )
+
+    return _finalize_download(share, request, db)
+
+
+@router.post("/{token}/download")
+@limiter.limit(RATE_LIMIT_EXPORT)
+async def download_share_with_passcode(
+    token: str,
+    body: DownloadRequest,
+    request: Any = None,
+    db: Session = Depends(get_db),
+) -> Response:
+    """POST-body download: accepts the passcode in JSON instead of query string.
+
+    Public endpoint (no auth required).  For passcode-protected shares, the
+    request body must include ``{"passcode": "..."}``.  Non-passcode shares
+    may also POST here (body.passcode is ignored) for clients that prefer
+    a single call pattern.
+    """
+    share = _resolve_share_or_404(token, db)
+    _enforce_not_expired(share)
+
+    if share.passcode_hash:
+        # Sprint 698: thread the client IP so per-IP throttle can fire.
+        client_ip = None
+        if request is not None and getattr(request, "client", None) is not None:
+            client_ip = request.client.host
+        _verify_passcode_or_raise(share, body.passcode, db, client_ip=client_ip)
+
+    return _finalize_download(share, request, db)
 
 
 @router.delete("/{token}", response_model=DetailResponse)
