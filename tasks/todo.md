@@ -928,7 +928,7 @@ Nothing weakened — auth/security/zero-storage untouched, no tests silenced, ev
 - Per-IP-first ordering is the security-correct default: scanning attackers get a uniform 429 regardless of which token they happen to be probing, which removes the side-channel of "token N is valid-but-locked vs. token M is invalid-passcode."
 - The existing `record_ip_failure` / `check_ip_blocked` infrastructure is already tested in the auth path; reusing it here was cheaper than a passcode-specific counter and behaves identically from ops/SRE perspective.
 - Test helper `_make_share` fixture uses `tool_name` (real column) rather than `export_filename` (doesn't exist); iterated to match the model.
-- Commit SHA: pending.
+- Commit SHA: `6613005`.
 - [ ] Tests: 10 wrong passcodes across 10 different share tokens from one IP → 11th attempt from that IP is 429 even against a fresh token.
 
 ---
