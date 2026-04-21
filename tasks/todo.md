@@ -630,7 +630,7 @@ Two findings bundled into this sprint had different outcomes after audit. The co
 
 **Review:**
 - Chose `console.warn` over a structured-logger module because the frontend doesn't currently have one and introducing it for this sprint is scope creep. Sentry automatically captures console.warn as a breadcrumb, so the observability story is unchanged from what a custom `logger.warn` would provide.
-- Commit SHA: pending.
+- Commit SHA: `d22dc86`.
 
 ---
 
