@@ -1378,11 +1378,150 @@ def test_lease_indicators(
 # =============================================================================
 
 
+def test_depreciation_recalculation(
+    entries: list[FixedAssetEntry],
+    config: FixedAssetTestingConfig,
+) -> FATestResult:
+    """FA-T11: Depreciation Recalculation (IAS 16 / ASC 360).
+
+    Sprint 682 — when cost, residual_value, useful_life, and
+    depreciation_method are all present, recalculate expected annual
+    depreciation and flag entries whose reported accumulated
+    depreciation deviates materially from the expected amount.
+
+    Supported methods:
+      * Straight-Line (SL): annual = (cost − residual) / useful_life
+      * Double-Declining Balance (DDB): annual ≈ 2/useful_life × NBV
+        — approximated here as a one-year average charge on the
+        straight-line baseline; without an acquisition_date-based
+        year count we can't compute compound DDB. Tolerance is wider
+        for DDB to absorb that approximation.
+
+    The test compares the *annual* expected charge against accumulated
+    depreciation / years_elapsed where years_elapsed is derived from
+    acquisition_date. Rows lacking any required input are silently
+    skipped (not flagged) — this test is additive on top of FA-T02
+    missing-required-fields, which is the structural check.
+    """
+    from datetime import UTC as _UTC
+    from datetime import datetime as _dt
+
+    # 5% tolerance — per sprint plan; tighter than typical estimate-
+    # based recalcs (10-15%) but loose enough to absorb depreciation-
+    # convention noise (half-year, mid-quarter, etc.).
+    SL_TOLERANCE = Decimal("0.05")
+    DDB_TOLERANCE = Decimal("0.15")  # wider to absorb compound vs. linear approx
+
+    flagged: list[FlaggedFixedAsset] = []
+    today = _dt.now(_UTC).date()
+
+    for e in entries:
+        if not e.useful_life or e.useful_life <= 0:
+            continue
+        if e.cost <= 0:
+            continue
+        if not e.acquisition_date:
+            continue
+        if not e.depreciation_method:
+            continue
+        # Parse acquisition date
+        acq_date = None
+        for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y"):
+            try:
+                acq_date = _dt.strptime(e.acquisition_date.strip(), fmt).date()
+                break
+            except (ValueError, AttributeError):
+                continue
+        if acq_date is None:
+            continue
+
+        years_elapsed = (today - acq_date).days / 365.25
+        if years_elapsed <= 0 or years_elapsed > e.useful_life * 1.5:
+            # Asset is either future-dated or already beyond 1.5× life;
+            # FA-T01 (fully-depreciated) and FA-T03 (over-depreciation)
+            # cover those cases — skip to avoid double-flagging.
+            continue
+
+        method = (e.depreciation_method or "").lower()
+        expected_annual = Decimal("0")
+        tolerance = SL_TOLERANCE
+        method_used = ""
+        if "straight" in method or method in ("sl", "s/l", "s-l"):
+            depreciable_base = e.cost - e.residual_value
+            expected_annual = depreciable_base / Decimal(str(e.useful_life))
+            method_used = "Straight-Line"
+        elif "declining" in method or "ddb" in method or "double" in method:
+            # DDB approximation: 2/useful_life × (cost − accum_depr).
+            # Use the CURRENT NBV as the DDB basis for one-year charge.
+            nbv = e.cost - e.accumulated_depreciation
+            if nbv <= 0:
+                continue
+            expected_annual = (Decimal("2") / Decimal(str(e.useful_life))) * nbv
+            method_used = "Double-Declining Balance"
+            tolerance = DDB_TOLERANCE
+        else:
+            # Unknown method — skip rather than mis-flag.
+            continue
+
+        expected_accum = expected_annual * Decimal(str(years_elapsed))
+        if expected_accum <= 0:
+            continue
+        variance = abs(e.accumulated_depreciation - expected_accum) / expected_accum
+        if variance <= tolerance:
+            continue
+
+        severity = Severity.HIGH if variance > Decimal("0.25") else Severity.MEDIUM
+        flagged.append(
+            FlaggedFixedAsset(
+                entry=e,
+                test_name="Depreciation Recalculation",
+                test_key="depreciation_recalc",
+                test_tier=TestTier.STATISTICAL,
+                severity=severity,
+                issue=(
+                    f"{method_used}: expected ~${expected_accum:,.2f} accumulated "
+                    f"after {years_elapsed:.1f}y, but reported "
+                    f"${e.accumulated_depreciation:,.2f} (variance {variance:.1%}). "
+                    "IAS 16 / ASC 360 — review useful life, method, or salvage value."
+                ),
+                confidence=0.80,
+                details={
+                    "method": method_used,
+                    "expected_accum": float(expected_accum),
+                    "reported_accum": float(e.accumulated_depreciation),
+                    "years_elapsed": round(years_elapsed, 2),
+                    "variance_pct": round(float(variance), 4),
+                    "tolerance": float(tolerance),
+                },
+            )
+        )
+
+    flag_rate = len(flagged) / max(len(entries), 1)
+    return FATestResult(
+        test_name="Depreciation Recalculation",
+        test_key="depreciation_recalc",
+        test_tier=TestTier.STATISTICAL,
+        entries_flagged=len(flagged),
+        total_entries=len(entries),
+        flag_rate=flag_rate,
+        severity=Severity.HIGH if flagged else Severity.LOW,
+        description=(
+            "Recalculates expected depreciation (IAS 16 / ASC 360) when "
+            "cost, useful life, method, and acquisition date are present; "
+            "flags variance >5% (SL) or >15% (DDB)."
+        ),
+        flagged_entries=flagged,
+    )
+
+
 def run_fa_test_battery(
     entries: list[FixedAssetEntry],
     config: Optional[FixedAssetTestingConfig] = None,
 ) -> list[FATestResult]:
-    """Run all 10 fixed asset tests."""
+    """Run the fixed-asset test battery.
+
+    Sprint 682: 11 tests (added FA-T11 Depreciation Recalculation).
+    """
     if config is None:
         config = FixedAssetTestingConfig()
 
@@ -1396,6 +1535,7 @@ def run_fa_test_battery(
         test_useful_life_outliers(entries, config),
         test_cost_zscore_outliers(entries, config),
         test_age_concentration(entries, config),
+        test_depreciation_recalculation(entries, config),  # Sprint 682: FA-T11
         # Tier 3 — Advanced
         test_duplicate_assets(entries, config),
         test_residual_value_anomalies(entries, config),

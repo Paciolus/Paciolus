@@ -33,11 +33,15 @@ def _make_fa_result(
     risk_tier: str = "elevated",
     total_flagged: int = 8,
     total_entries: int = 50,
-    num_tests: int = 10,
+    num_tests: int = 11,
     top_findings: list | None = None,
     include_enrichments: bool = False,
 ) -> dict:
-    """Build a minimal FATestingResult.to_dict() shape."""
+    """Build a minimal FATestingResult.to_dict() shape.
+
+    Sprint 682: default num_tests bumped 10 → 11 to include FA-T11
+    (depreciation_recalc).
+    """
     test_keys = [
         "fully_depreciated",
         "missing_fields",
@@ -49,6 +53,7 @@ def _make_fa_result(
         "duplicate_assets",
         "residual_value_anomalies",
         "lease_indicators",
+        "depreciation_recalc",  # Sprint 682: FA-T11
     ]
     test_names = [
         "Fully Depreciated Assets",
@@ -61,6 +66,7 @@ def _make_fa_result(
         "Duplicate Assets",
         "Residual Value Anomalies",
         "Lease Asset Indicators",
+        "Depreciation Recalculation",  # Sprint 682
     ]
     tiers = [
         "structural",
@@ -73,10 +79,11 @@ def _make_fa_result(
         "advanced",
         "advanced",
         "advanced",
+        "statistical",  # Sprint 682: depreciation_recalc lives in Tier 2
     ]
 
     test_results = []
-    for i in range(min(num_tests, 10)):
+    for i in range(min(num_tests, 11)):
         flagged_count = 2 if i < 3 else 1 if i < 6 else 0
         test_results.append(
             {
@@ -255,9 +262,10 @@ class TestFixedAssetMemoGeneration:
         pdf = generate_fixed_asset_testing_memo(result)
         assert isinstance(pdf, bytes)
 
-    def test_all_ten_tests(self):
-        result = _make_fa_result(num_tests=10)
-        assert len(result["test_results"]) == 10
+    def test_all_eleven_tests(self):
+        # Sprint 682: bumped to 11 with FA-T11 depreciation_recalc.
+        result = _make_fa_result(num_tests=11)
+        assert len(result["test_results"]) == 11
         pdf = generate_fixed_asset_testing_memo(result)
         assert isinstance(pdf, bytes)
         assert len(pdf) > 100
@@ -430,7 +438,7 @@ class TestRollForwardAndEnrichments:
 class TestFATestDescriptions:
     """Tests for FA_TEST_DESCRIPTIONS completeness."""
 
-    def test_all_10_tests_have_descriptions(self):
+    def test_all_11_tests_have_descriptions(self):
         expected_keys = [
             "fully_depreciated",
             "missing_fields",
@@ -451,7 +459,7 @@ class TestFATestDescriptions:
             assert len(desc) > 20, f"Description too short for {key}"
 
     def test_exactly_10_descriptions(self):
-        assert len(FA_TEST_DESCRIPTIONS) == 10
+        assert len(FA_TEST_DESCRIPTIONS) == 11  # Sprint 682: FA-T11 depreciation recalc added
 
     def test_cost_zscore_description_substantive(self):
         """Sprint 502 BUG-02: Cost Z-Score Outliers must have a real description."""
@@ -795,6 +803,6 @@ class TestLeaseIndicatorEngine:
             ),
         ]
         results = run_fa_test_battery(entries)
-        assert len(results) == 10
+        assert len(results) == 11  # Sprint 682: FA-T11 depreciation recalc added
         lease_test = [r for r in results if r.test_key == "lease_indicators"]
         assert len(lease_test) == 1

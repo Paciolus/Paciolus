@@ -294,11 +294,20 @@ def calculate_mus_sample_size(
 
     confidence_factor = get_confidence_factor(confidence_level)
 
-    # Expansion factor for expected misstatement
-    # When expected > 0, use the expansion factor approach
+    # Sprint 684: expansion factor sourced from AICPA Audit Sampling
+    # Guide Table A-1 (interpolated between tabulated e/TM buckets).
+    # Previously a homemade 1 + (e/TM) approximation systematically
+    # under-sized samples vs. the published table — e.g., at e/TM=0.25
+    # the published factor is 1.75 but the approximation gave 1.25,
+    # yielding ~4.6% fewer sample items.
     if expected_misstatement > 0:
-        expansion_factor = 1.0 + (expected_misstatement / tolerable_misstatement)
-        adjusted_factor = confidence_factor * expansion_factor
+        from shared.aicpa_tables import expansion_factor as aicpa_expansion
+
+        adjusted_factor = confidence_factor * aicpa_expansion(
+            confidence_level=confidence_level,
+            expected_misstatement=expected_misstatement,
+            tolerable_misstatement=tolerable_misstatement,
+        )
     else:
         adjusted_factor = confidence_factor
 
@@ -307,8 +316,6 @@ def calculate_mus_sample_size(
         raise ValueError("Net tolerable misstatement must be positive")
 
     # Standard MUS formula: interval = (Tolerable - Expected) / Confidence Factor
-    # Note: Expansion factor approximation used above is a simplification.
-    # For expected misstatement > 0, verify against AICPA Audit Sampling Guide Table A factors.
     sampling_interval = net_tolerable / adjusted_factor
 
     sample_size = math.ceil(population_value / sampling_interval)
@@ -323,13 +330,21 @@ def select_mus_sample(
     items: list[PopulationItem],
     sampling_interval: float,
     random_start: Optional[float] = None,
-) -> tuple[list[SelectedSample], float]:
+) -> tuple[list[SelectedSample], float, list[PopulationItem]]:
     """Select sample using Monetary Unit Sampling (interval-based).
 
     Uses cumulative dollar tracking with CSPRNG random start.
     Each item containing a selection point is selected.
 
-    Returns: (selected_items, random_start_used)
+    Sprint 684: negative-balance items are excluded from MUS selection
+    (AICPA Audit Sampling Guide §5.06) — MUS applies to positive-balance
+    populations only because the proportional-to-size selection
+    mechanism assumes monotonic dollar coverage. Negative balances
+    (credit memos, contra entries, refunds) require a separate
+    stratum for understatement testing. Returns the list of excluded
+    items so the caller can surface them in the memo disclosure.
+
+    Returns: (selected_items, random_start_used, negative_items_excluded)
     """
     if sampling_interval <= 0:
         raise ValueError("Sampling interval must be positive")
@@ -340,12 +355,19 @@ def select_mus_sample(
         if random_start == 0:
             random_start = 0.01  # Avoid zero start
 
+    # Sprint 684: separate negative-balance items up front — MUS is not
+    # valid on them. ``item.recorded_amount`` is Decimal or float; do the
+    # comparison against zero to catch both.
+    negative_items: list[PopulationItem] = [item for item in items if float(item.recorded_amount) < 0]
+    positive_items: list[PopulationItem] = [item for item in items if float(item.recorded_amount) >= 0]
+
     selected: list[SelectedSample] = []
     cumulative = Decimal("0")
     next_selection_point = Decimal(str(random_start))
 
-    # Sort by absolute amount descending for consistent selection
-    sorted_items = sorted(items, key=lambda x: abs(x.recorded_amount), reverse=True)
+    # Sort by absolute amount descending for consistent selection.
+    # Positive-only — negatives already filtered above.
+    sorted_items = sorted(positive_items, key=lambda x: abs(x.recorded_amount), reverse=True)
 
     for item in sorted_items:
         abs_amount = abs(item.recorded_amount)
@@ -367,7 +389,7 @@ def select_mus_sample(
                 )
             next_selection_point += Decimal(str(sampling_interval))
 
-    return selected, random_start
+    return selected, random_start, negative_items
 
 
 def select_random_sample(
@@ -425,6 +447,7 @@ def evaluate_mus_sample_stringer(
     tolerable_misstatement: float,
     population_value: float,
     sample_size: int,
+    sample_items: list[SelectedSample] | None = None,
 ) -> SampleEvaluationResult:
     """Evaluate MUS sample using the Stringer bound method.
 
@@ -434,6 +457,13 @@ def evaluate_mus_sample_stringer(
     Projected Misstatement = sum(tainting_i × sampling_interval) for each error
     Incremental Allowance = sum(tainting_i × interval × (incremental_factor_i - 1))
         where taintings are ranked largest to smallest
+
+    Sprint 684: ``sample_items`` is the new optional full selected-sample
+    list (including non-error items). When supplied, ``sample_value`` is
+    computed as the sum of recorded amounts across ALL selected items —
+    the auditor-facing "dollar coverage" of the test. Previously
+    ``sample_value`` was only the sum of error items' recorded amounts,
+    which under-stated coverage for any sample with < 100% error rate.
     """
     confidence_factor = get_confidence_factor(confidence_level)
     incremental_factors = _get_incremental_factors(confidence_level)
@@ -468,8 +498,13 @@ def evaluate_mus_sample_stringer(
     # Upper Error Limit
     upper_error_limit = basic_precision + projected_misstatement + incremental_allowance
 
-    # Sample value
-    sample_value = math.fsum(e.recorded_amount for e in errors) if errors else 0.0
+    # Sample value — Sprint 684: prefer the full selected-sample sum when
+    # supplied. Falls back to the error-only sum for backward compatibility
+    # with callers that haven't yet threaded ``sample_items`` through.
+    if sample_items is not None:
+        sample_value = math.fsum(abs(s.recorded_amount) for s in sample_items)
+    else:
+        sample_value = math.fsum(e.recorded_amount for e in errors) if errors else 0.0
 
     # Conclusion
     if upper_error_limit <= tolerable_misstatement:
@@ -658,7 +693,17 @@ def design_sample(
                 population_value=remainder_value,
             )
 
-            remainder_selected, random_start = select_mus_sample(remainder_items, sampling_interval)
+            remainder_selected, random_start, mus_negative_excluded = select_mus_sample(
+                remainder_items, sampling_interval
+            )
+            if mus_negative_excluded:
+                # Sprint 684: surface the negative-balance exclusion so the
+                # memo can disclose that MUS didn't cover them. AICPA
+                # Audit Sampling Guide §5.06.
+                logger.info(
+                    "MUS excluded %d negative-balance items; consider a separate stratum for understatement testing.",
+                    len(mus_negative_excluded),
+                )
         elif remainder_value <= 0:
             logger.info("Remainder stratum has zero value — no MUS selection needed")
         else:

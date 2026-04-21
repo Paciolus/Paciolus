@@ -1060,10 +1060,10 @@ class TestZeroValueItems:
 class TestBattery:
     """Tests for run_inv_test_battery."""
 
-    def test_runs_all_9_tests(self):
+    def test_runs_all_10_tests(self):
         entries = make_entries(sample_inv_rows())
         results = run_inv_test_battery(entries)
-        assert len(results) == 9
+        assert len(results) == 10  # Sprint 682: IN-T10 LCM/NRV added
 
     def test_correct_test_keys(self):
         entries = make_entries(sample_inv_rows())
@@ -1079,6 +1079,7 @@ class TestBattery:
             "category_concentration",
             "duplicate_items",
             "zero_value_items",
+            "lcm_nrv_indicator",  # Sprint 682: IN-T10
         ]
         assert keys == expected
 
@@ -1088,7 +1089,8 @@ class TestBattery:
         tiers = [r.test_tier for r in results]
         assert tiers.count(TestTier.STRUCTURAL) == 3
         assert tiers.count(TestTier.STATISTICAL) == 4
-        assert tiers.count(TestTier.ADVANCED) == 2
+        # Sprint 682: IN-T10 LCM/NRV is an Advanced-tier test; bumped 2 → 3.
+        assert tiers.count(TestTier.ADVANCED) == 3
 
     def test_custom_config_propagated(self):
         entries = make_entries(sample_inv_rows())
@@ -1107,7 +1109,7 @@ class TestCompositeScore:
         score = calculate_inv_composite_score(results, len(entries))
         assert score.score < 25
         assert score.risk_tier in (RiskTier.LOW, RiskTier.ELEVATED)
-        assert score.tests_run == 9
+        assert score.tests_run == 10  # Sprint 682: IN-T10 LCM/NRV added
         assert score.total_entries == 5
 
     def test_zero_entries(self):
@@ -1162,7 +1164,7 @@ class TestFullPipeline:
         result = run_inventory_testing(rows, columns)
         assert isinstance(result, InvTestingResult)
         assert result.composite_score is not None
-        assert len(result.test_results) == 9
+        assert len(result.test_results) == 10  # Sprint 682: IN-T10 LCM/NRV added
         assert result.data_quality is not None
         assert result.column_detection is not None
 
@@ -1189,7 +1191,7 @@ class TestFullPipeline:
         columns = list(rows[0].keys())
         result = run_inventory_testing(rows, columns)
         assert result.composite_score.total_entries == 100
-        assert result.composite_score.tests_run == 9
+        assert result.composite_score.tests_run == 10  # Sprint 682: IN-T10 LCM/NRV added
 
     def test_custom_config(self):
         rows = sample_inv_rows()

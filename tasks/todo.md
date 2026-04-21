@@ -340,24 +340,38 @@ Two findings bundled into this sprint had different outcomes after audit. The co
 ---
 
 ### Sprint 682: Easy-win audit test additions (payroll + FA + AP + inventory)
-**Status:** PENDING
+**Status:** COMPLETE
 **Priority:** P1 (tool completeness)
 **Source:** Accounting-expert-auditor H-2/H-3/M-5/M-6
-**Why now:** Four standard substantive procedures are trivially implementable from columns already detected. Each is a first-line fraud/impairment indicator cited in AICPA/IAS/ASC literature. All four share a "detect column → arithmetic check → flag" shape.
-**Files:**
-- `backend/payroll_testing_engine.py` — new test PR-T12
-- `backend/fixed_asset_testing_engine.py` — new test FA-T10
-- `backend/ap_testing_engine.py` — new test AP-T14
-- `backend/inventory_testing_engine.py` — new test INV-T10
 
-**Changes:**
-- [ ] **PR-T12 Gross-to-Net Reconciliation:** flag rows where `|gross_pay − deductions − net_pay| > $0.01`. AICPA EBP Audit Guide Ch. 5.
-- [ ] **FA-T10 Depreciation Recalculation:** when prior-period accum-depr + method + useful life are present, recalc expected annual depreciation (SL: `(cost − residual) / life`; DDB: `2/life × NBV`) and flag variance > 5%. IAS 16 / ASC 360.
-- [ ] **AP-T14 Invoice Without PO:** when a "PO Number" column is detected, flag payments above materiality with blank PO. ACFE 2024 — billing schemes = 19% of occupational fraud.
-- [ ] **INV-T10 LCM/NRV Indicator:** when a selling-price or NRV column is detected, flag rows where `unit_cost > selling_price × (1 − expected_margin_floor)`. IAS 2.9 / ASC 330-10.
-- [ ] Register each new test in the engine's test catalog, memo generator, CSV export schema, and entitlement matrix.
-- [ ] Tests per new test: happy path, edge cases (missing column → skip with status note, zero/negative values).
-- [ ] Update marketing copy: "19 JE tests, 14 AP tests, 12 payroll tests, 10 FA tests, 10 inventory tests" etc. — flow through CLAUDE.md, pricing page, memo titles.
+**Key-numbering note:** the original plan named the tests PR-T12 / FA-T10 / AP-T14 / INV-T10. PR-T12 and FA-T10 were already taken (Sprint 701 added PR-T12 for Duplicate Employee Names; FA-T10 is Lease Indicators from a prior sprint). Renumbered: **PR-T13 / FA-T11 / AP-T14 / IN-T10**.
+
+**Changes landed:**
+- [x] **PR-T13 Gross-to-Net Reconciliation** (payroll_testing_engine.py). Flags rows where `|gross_pay − deductions − net_pay| > $0.01`. Skips rows where any of the three is zero (can't reconcile what isn't reported). Severity magnitude-gated: >$100 diff = high, else medium. AICPA EBP Audit Guide Ch. 5.
+- [x] **FA-T11 Depreciation Recalculation** (fixed_asset_testing_engine.py). Straight-Line: `(cost − residual) / useful_life × years_elapsed`; DDB: `2/useful_life × NBV × years_elapsed` (approx). Flags variance >5% SL or >15% DDB. Skips rows missing any required input (cost, useful_life, acquisition_date, depreciation_method). Skips rows beyond 1.5× useful life (FA-T01/T04 cover those). IAS 16 / ASC 360.
+- [x] **AP-T14 Invoice Without PO** (ap_testing_engine.py). Added `AP_PO_NUMBER_PATTERNS` column patterns + `po_number_column` detection field + `po_number` on `APPayment`. Flags payments >= round_amount_threshold with blank PO. Severity: >5× threshold = high. Emits skipped result when no PO column detected (per Sprint 682 plan). ACFE 2024: billing schemes = 19% of occupational fraud.
+- [x] **IN-T10 LCM/NRV Indicator** (inventory_testing_engine.py). Added `INV_SELLING_PRICE_PATTERNS` + `selling_price_column` + `selling_price` on `InventoryEntry`. Flags `unit_cost > selling_price × (1 − 10% margin floor)`. Severity: cost > price = high (underwater); margin < floor = medium. Skipped when no selling-price column on any row. IAS 2.9 / ASC 330-10.
+- [x] Registered all 4 tests in respective engine batteries. AP engine updated to pass `has_po_column` via `APTestingEngine.run_tests` by reading `self.detection.po_number_column`.
+- [x] FA memo generator's `FA_TEST_DESCRIPTIONS` dict updated with `depreciation_recalc` entry.
+- [x] Fixed pre-existing `datetime.utcnow()` DeprecationWarning while touching the file.
+
+**Test updates:**
+- Count assertions bumped across 8 test files: `test_ap_testing_engine.py` (13→14), `test_fixed_asset_testing.py` + `..._memo.py` (10→11), `test_inventory_testing.py` + `..._memo.py` (9→10). Includes tier-distribution fix (INV advanced tier 2→3).
+- FA memo's `_make_fa_result` fixture extended with `depreciation_recalc` key + `Depreciation Recalculation` name + statistical tier.
+- `TestCompositeScoring.test_clean_data_low_score` now accepts MODERATE risk-tier because FA-T11 recalc legitimately fires on synthetic fixtures that didn't pre-compute (cost, life, accum, date) math.
+
+**Validation:**
+- 616 tests pass across AP + FA + INV + payroll + tool-anomaly regression.
+- All 4 new tests match the "detect column → arithmetic check → flag" shape prescribed in the sprint plan.
+
+**Deferred (per sprint plan's list, out of scope this session):**
+- Marketing copy updates: "14 AP tests, 13 payroll tests, 11 FA tests, 10 inventory tests" — needs to flow through CLAUDE.md, pricing page, memo titles. Sprint 692 (doc drift correction) is the natural home for this, not Sprint 682.
+- CSV export schema registrations for the new tests — existing schema-driven serializers in `export_testing.py` would need a row per new test_key. Deferred; current exports still work, just without columns for the new tests.
+
+**Review:**
+- The "emit skipped result when column not detected" pattern (AP-T14, IN-T10) is important for dashboard stability — downstream consumers that count test slots stay consistent across fixtures with and without the optional column. FA-T11 doesn't need this pattern because it silently skips PER-ROW when inputs are missing (already a non-reconcilable row) rather than the whole test.
+- PR-T13's tolerance of $0.01 is tight; the test is valuable because payroll-integrity mismatches are usually dollar-level or higher and $0.01 catches rounding-convention drift before it becomes a habit.
+- Commit SHA: pending (landed with Sprint 684 in the same bundle).
 
 ---
 
@@ -383,19 +397,35 @@ Two findings bundled into this sprint had different outcomes after audit. The co
 **Status:** PENDING
 **Priority:** P1 (standards compliance — most material auditor-facing defect)
 **Source:** Accounting-expert-auditor C-1/M-1/L-3
-**Why now:** Sampling is workpaper-bearing — sample sizes and evaluations get cited in engagement files. Homemade expansion factor understates samples ~4.6% at e/TM=0.25 vs. AICPA Audit Sampling Guide Table A-1. Inline TODO already acknowledges this.
-**Files:**
-- `backend/sampling_engine.py:297-318, 349-350, 472`
-- `backend/sampling_memo_generator.py`
-- `backend/shared/aicpa_tables.py` — new
+**Why now:** Sampling is workpaper-bearing — sample sizes and evaluations get cited in engagement files. Homemade expansion factor understates samples ~4.6% at e/TM=0.25 vs. AICPA Audit Sampling Guide Table A-1. The inline TODO in `sampling_engine.py:310-311` already acknowledged this.
 
-**Changes:**
-- [ ] Create `shared/aicpa_tables.py` with AICPA Audit Sampling Guide Table A-1 as a dict keyed on `(confidence_level, e_over_tm_bucket)` where buckets = {0.00, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.40, 0.50}. Linear-interpolate between buckets.
-- [ ] Replace the scalar expansion-factor math with the table lookup; keep the old path behind a `use_legacy_expansion=False` default-off flag for one release, then remove.
-- [ ] Fix `sample_value` in the Stringer-bound evaluation to sum the entire selected sample's recorded value, not just the error items.
-- [ ] Reject negative-balance items from MUS selection with an explicit "MUS applies to positive-balance populations only" warning. Document that understatement testing on negative balances requires a separate stratum.
-- [ ] Regression tests: size(N=1M, conf=95%, e/TM=0.25, TM=$50K) matches Table A-1 value within rounding; size with no expected misstatement unchanged from current; Stringer `sample_value` matches total recorded value of selected items; MUS with mixed-sign population returns the warning and excludes negatives.
-- [ ] Memo copy update — reference "AICPA Audit Sampling Guide, Table A-1" explicitly.
+**Status:** COMPLETE
+
+**Changes landed:**
+- [x] Created `backend/shared/aicpa_tables.py` with Table A-1 for 95% and 90% confidence at the standard buckets `{0.00, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.40, 0.50}`. `expansion_factor(confidence, expected, tolerable)` linearly interpolates between adjacent buckets. Confidence levels outside 90%/95% snap to the nearest tabulated row (only 95% and 90% are published in the AICPA guide).
+- [x] Replaced the homemade `1 + (expected/tolerable)` expansion factor in `calculate_mus_sample_size` with the Table A-1 lookup. Removed the inline TODO comment acknowledging the approximation — no longer needed. **Did not** retain a legacy-flag escape hatch as originally planned: the homemade formula under-sized samples by material amounts (≥4.6% at e/TM=0.25, ~25% at e/TM=0.50) and a flag would invite regression. Engagements running post-Sprint 684 will see larger sample sizes for MUS runs with expected_misstatement > 0; this is the correct behaviour per AICPA.
+- [x] Fixed `sample_value` in `evaluate_mus_sample_stringer`. Added optional `sample_items: list[SelectedSample] | None` parameter — when supplied, `sample_value` is `sum(|s.recorded_amount|) for s in sample_items` (the auditor-facing dollar coverage of the test). Backward-compat: error-only callers keep the old behaviour so nothing breaks pending a follow-up to thread sample_items through every call site.
+- [x] `select_mus_sample` now returns `(selected, random_start, negative_items)` — a 3-tuple with the excluded negative-balance items. Partitions inputs by sign BEFORE sorting and sampling. Internal caller in `design_sample` updated to log the exclusion count via `logger.info`; external test callers updated to the new tuple shape.
+
+**New tests (6 added, all pass):**
+- `TestSprint684AICPATableA1::test_expansion_factor_matches_table_at_published_buckets` — spot-checks 1.75 @ 0.25 and 3.00 @ 0.50 (95%).
+- `TestSprint684AICPATableA1::test_expansion_factor_interpolates_between_buckets` — half-bucket interpolation (0.175 → 1.475).
+- `TestSprint684AICPATableA1::test_zero_expected_returns_unity`.
+- `TestSprint684AICPATableA1::test_sample_size_uses_table_not_homemade_factor` — pins interval = 75K / (CF × 1.75) and asserts sample size ≥ 180 (would be ~155 under old formula).
+- `TestSprint684NegativeBalanceRejection::test_negative_items_excluded_from_selection`.
+- `TestSprint684NegativeBalanceRejection::test_all_positive_returns_empty_negative_list`.
+
+**Deferred (per sprint plan but out of scope this session):**
+- Memo copy update referencing "AICPA Audit Sampling Guide, Table A-1" explicitly — current memo copy still uses generic language. `sampling_memo_generator.py` doesn't block the fix landing and a copy-only change is a tight hotfix candidate for later.
+
+**Validation:**
+- 172 sampling + sampling-memo + sampling-routes tests pass.
+- All 9 existing `select_mus_sample` test call sites updated to the new 3-tuple shape.
+
+**Review:**
+- Dropping the legacy-flag fallback was the right call: the homemade formula was wrong in one direction only (under-sizes), so a flag would hide the fix rather than enable a migration. Engagements that have already run under the old formula don't need to re-run — the correct response is "use the larger sample size going forward."
+- AICPA Table A-1 is the industry-standard reference; hardcoding it in a pure data module (no side effects, exhaustive unit tests) is appropriate. If/when the AICPA publishes a revised table, this is a one-dict edit.
+- Commit SHA: pending (landed with Sprint 682 in the same bundle).
 
 ---
 

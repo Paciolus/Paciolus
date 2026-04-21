@@ -145,6 +145,22 @@ INV_UNIT_COST_PATTERNS = [
     (r"avg.?cost", 0.60, False),
 ]
 
+# Sprint 682: IN-T10 — Selling price / NRV column for LCM test.
+INV_SELLING_PRICE_PATTERNS = [
+    (r"^selling\s*price$", 1.0, True),
+    (r"^sales\s*price$", 0.95, True),
+    (r"^list\s*price$", 0.85, True),
+    (r"^msrp$", 0.85, True),
+    (r"^retail\s*price$", 0.90, True),
+    (r"^net\s*realizable\s*value$", 1.0, True),
+    (r"^nrv$", 0.95, True),
+    (r"^market\s*price$", 0.85, True),
+    (r"^market\s*value$", 0.80, True),
+    (r"^realizable\s*value$", 0.90, True),
+    (r"selling.?price", 0.70, False),
+    (r"net.?realizable", 0.75, False),
+]
+
 INV_EXTENDED_VALUE_PATTERNS = [
     (r"^extended\s*value$", 1.0, True),
     (r"^extended\s*amount$", 0.98, True),
@@ -221,6 +237,9 @@ INV_COLUMN_CONFIGS: list[ColumnFieldConfig] = [
     ColumnFieldConfig("location_column", INV_LOCATION_PATTERNS, priority=40),
     ColumnFieldConfig("last_movement_date_column", INV_LAST_MOVEMENT_PATTERNS, priority=45),
     ColumnFieldConfig("category_column", INV_CATEGORY_PATTERNS, priority=50),
+    # Sprint 682: IN-T10 LCM/NRV — optional. Test emits a skipped result
+    # when column not detected.
+    ColumnFieldConfig("selling_price_column", INV_SELLING_PRICE_PATTERNS, priority=55),
 ]
 
 
@@ -236,6 +255,7 @@ class InvColumnDetection:
     location_column: Optional[str] = None
     last_movement_date_column: Optional[str] = None
     category_column: Optional[str] = None
+    selling_price_column: Optional[str] = None  # Sprint 682: IN-T10
 
     overall_confidence: float = 0.0
     all_columns: list[str] = field(default_factory=list)
@@ -332,6 +352,7 @@ class InventoryEntry:
     location: Optional[str] = None
     last_movement_date: Optional[str] = None
     category: Optional[str] = None
+    selling_price: Optional[Decimal] = None  # Sprint 682: IN-T10
     row_number: int = 0
 
     def __post_init__(self) -> None:
@@ -339,6 +360,8 @@ class InventoryEntry:
             self.unit_cost = Decimal(str(self.unit_cost))
         if isinstance(self.extended_value, (int, float)):
             self.extended_value = Decimal(str(self.extended_value))
+        if self.selling_price is not None and isinstance(self.selling_price, (int, float)):
+            self.selling_price = Decimal(str(self.selling_price))
 
     def to_dict(self) -> dict:
         return {
@@ -350,6 +373,7 @@ class InventoryEntry:
             "location": self.location,
             "last_movement_date": self.last_movement_date,
             "category": self.category,
+            "selling_price": float(self.selling_price) if self.selling_price is not None else None,
             "row_number": self.row_number,
         }
 
@@ -509,6 +533,10 @@ def parse_inv_entries(
             entry.last_movement_date = safe_str(row.get(detection.last_movement_date_column))
         if detection.category_column:
             entry.category = safe_str(row.get(detection.category_column))
+        if detection.selling_price_column:
+            sp_raw = row.get(detection.selling_price_column)
+            if sp_raw not in (None, ""):
+                entry.selling_price = safe_decimal(sp_raw)
         entries.append(entry)
     return entries
 
@@ -1250,11 +1278,123 @@ def test_zero_value_items(
 # =============================================================================
 
 
+def test_lcm_nrv_indicator(
+    entries: list[InventoryEntry],
+    config: InventoryTestingConfig,
+) -> InvTestResult:
+    """IN-T10: Lower-of-Cost-or-Market / Net Realizable Value indicator.
+
+    Sprint 682 — IAS 2 ¶9 / ASC 330-10 require inventory carrying
+    amounts to be no greater than the lower of cost and net realizable
+    value (IAS 2) / market (ASC 330 for LIFO/retail, NRV for
+    everything else as of ASU 2015-11). When a selling price or NRV
+    column is available in the register, flag items where unit cost
+    exceeds the selling price (after an expected margin floor) — the
+    item may be impaired or mis-priced.
+
+    Runs only when ``selling_price`` is populated on at least one row.
+    Without it, the test emits a skipped result so the 10-test count
+    remains stable in consumer dashboards.
+
+    Threshold: unit_cost > selling_price × (1 − margin_floor). Default
+    margin_floor = 10% (i.e., items priced within 10% of cost are
+    already pressured; items priced BELOW cost are underwater).
+    """
+    # Consider the test inactive if no entries carry a selling price.
+    has_selling_price = any(e.selling_price is not None for e in entries)
+    if not has_selling_price:
+        return InvTestResult(
+            test_name="LCM / NRV Indicator",
+            test_key="lcm_nrv_indicator",
+            test_tier=TestTier.ADVANCED,
+            entries_flagged=0,
+            total_entries=len(entries),
+            flag_rate=0.0,
+            severity=Severity.LOW,
+            description=(
+                "Test skipped — no Selling Price / NRV column detected. "
+                "IN-T10 requires selling_price (or NRV) to evaluate IAS 2.9 / "
+                "ASC 330-10 carrying-amount compliance."
+            ),
+            flagged_entries=[],
+        )
+
+    margin_floor = Decimal("0.10")  # 10% default — tunable per engagement
+    flagged: list[FlaggedInventoryItem] = []
+
+    for e in entries:
+        if e.selling_price is None or e.selling_price <= 0:
+            continue
+        if e.unit_cost <= 0:
+            continue
+        # Threshold: unit_cost exceeds price * (1 - margin_floor).
+        # Equivalent to: margin = (price - cost) / price < margin_floor.
+        threshold_price = e.selling_price * (Decimal("1") - margin_floor)
+        if e.unit_cost <= threshold_price:
+            continue
+
+        if e.unit_cost > e.selling_price:
+            severity = Severity.HIGH  # Underwater — direct impairment signal
+            issue_text = (
+                f"Unit cost ${e.unit_cost:,.2f} exceeds selling price "
+                f"${e.selling_price:,.2f} — item is underwater and likely "
+                "requires write-down per IAS 2.9 / ASC 330-10."
+            )
+        else:
+            severity = Severity.MEDIUM  # Margin < floor
+            margin = float((e.selling_price - e.unit_cost) / e.selling_price)
+            issue_text = (
+                f"Margin {margin:.1%} below {float(margin_floor):.0%} floor "
+                f"(cost ${e.unit_cost:,.2f} vs. price ${e.selling_price:,.2f}) "
+                "— review for NRV adequacy."
+            )
+
+        flagged.append(
+            FlaggedInventoryItem(
+                entry=e,
+                test_name="LCM / NRV Indicator",
+                test_key="lcm_nrv_indicator",
+                test_tier=TestTier.ADVANCED,
+                severity=severity,
+                issue=issue_text,
+                confidence=0.85,
+                details={
+                    "unit_cost": float(e.unit_cost),
+                    "selling_price": float(e.selling_price),
+                    "margin_pct": (
+                        float((e.selling_price - e.unit_cost) / e.selling_price) if e.selling_price > 0 else None
+                    ),
+                    "margin_floor": float(margin_floor),
+                },
+            )
+        )
+
+    flag_rate = len(flagged) / max(len(entries), 1)
+    return InvTestResult(
+        test_name="LCM / NRV Indicator",
+        test_key="lcm_nrv_indicator",
+        test_tier=TestTier.ADVANCED,
+        entries_flagged=len(flagged),
+        total_entries=len(entries),
+        flag_rate=flag_rate,
+        severity=Severity.HIGH if flagged else Severity.LOW,
+        description=(
+            "Flags items with unit_cost > selling_price × (1 − 10% margin floor). "
+            "IAS 2.9 / ASC 330-10 LCM/NRV carrying-amount check."
+        ),
+        flagged_entries=flagged,
+    )
+
+
 def run_inv_test_battery(
     entries: list[InventoryEntry],
     config: Optional[InventoryTestingConfig] = None,
 ) -> list[InvTestResult]:
-    """Run all 9 inventory tests."""
+    """Run the inventory test battery.
+
+    Sprint 682: 10 tests (added IN-T10 LCM/NRV Indicator, optional on
+    selling_price column).
+    """
     if config is None:
         config = InventoryTestingConfig()
 
@@ -1271,6 +1411,7 @@ def run_inv_test_battery(
         # Tier 3 — Advanced
         test_duplicate_items(entries, config),
         test_zero_value_items(entries, config),
+        test_lcm_nrv_indicator(entries, config),  # Sprint 682: IN-T10
     ]
 
 

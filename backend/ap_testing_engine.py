@@ -127,6 +127,19 @@ AP_INVOICE_NUMBER_PATTERNS = [
     (r"invoice.?n", 0.65, False),
 ]
 
+# Sprint 682: PO Number column patterns for AP-T14 (Invoice Without PO).
+AP_PO_NUMBER_PATTERNS = [
+    (r"^po\s*number$", 1.0, True),
+    (r"^po\s*no$", 0.98, True),
+    (r"^po\s*#$", 0.95, True),
+    (r"^purchase\s*order$", 0.95, True),
+    (r"^purchase\s*order\s*number$", 0.98, True),
+    (r"^purchase\s*order\s*no$", 0.95, True),
+    (r"^order\s*number$", 0.80, True),
+    (r"\bpo\b", 0.60, False),
+    (r"purchase.?order", 0.70, False),
+]
+
 AP_INVOICE_DATE_PATTERNS = [
     (r"^invoice\s*date$", 1.0, True),
     (r"^inv\s*date$", 0.95, True),
@@ -258,6 +271,7 @@ class APColumnDetectionResult:
     description_column: Optional[str] = None
     gl_account_column: Optional[str] = None
     payment_method_column: Optional[str] = None
+    po_number_column: Optional[str] = None  # Sprint 682: AP-T14
 
     # Metadata
     has_dual_dates: bool = False
@@ -324,6 +338,10 @@ AP_COLUMN_CONFIGS = [
     ColumnFieldConfig(field_name="description_column", patterns=AP_DESCRIPTION_PATTERNS, priority=50),
     ColumnFieldConfig(field_name="gl_account_column", patterns=AP_GL_ACCOUNT_PATTERNS, priority=55),
     ColumnFieldConfig(field_name="payment_method_column", patterns=AP_PAYMENT_METHOD_PATTERNS, priority=60),
+    # Sprint 682: AP-T14 — optional PO column; required to activate the
+    # "Invoice Without PO" test. When absent, the test emits a skipped
+    # result (column-not-detected) rather than firing false positives.
+    ColumnFieldConfig(field_name="po_number_column", patterns=AP_PO_NUMBER_PATTERNS, priority=65),
 ]
 
 
@@ -389,6 +407,7 @@ class APPayment:
     description: Optional[str] = None
     gl_account: Optional[str] = None
     payment_method: Optional[str] = None
+    po_number: Optional[str] = None  # Sprint 682: AP-T14
     row_number: int = 0
 
     def __post_init__(self) -> None:
@@ -575,6 +594,8 @@ def parse_ap_payments(
             payment.gl_account = safe_str(row.get(detection.gl_account_column))
         if detection.payment_method_column:
             payment.payment_method = safe_str(row.get(detection.payment_method_column))
+        if detection.po_number_column:
+            payment.po_number = safe_str(row.get(detection.po_number_column))
 
         payments.append(payment)
 
@@ -1676,6 +1697,95 @@ def test_suspicious_descriptions(
     )
 
 
+def test_invoice_without_po(
+    payments: list[APPayment],
+    config: APTestingConfig,
+    has_po_column: bool,
+) -> APTestResult:
+    """AP-T14: Invoice Without PO.
+
+    Sprint 682 — flags payments above the materiality threshold with a
+    blank ``po_number`` field. Per ACFE 2024 Report to the Nations,
+    billing schemes (fictitious-invoice fraud) account for ~19% of
+    occupational fraud cases — missing PO linkage is the canonical
+    first-line screen because legitimate vendor payments in a
+    PO-required environment should always trace to an approved PO.
+
+    Only runs when a PO column was detected; without it the assertion
+    is meaningless (every payment would flag) and the test emits a
+    skipped result so the sub-ledger tier count stays stable.
+    """
+    if not has_po_column:
+        return APTestResult(
+            test_name="Invoice Without PO",
+            test_key="invoice_without_po",
+            test_tier=TestTier.STRUCTURAL,
+            entries_flagged=0,
+            total_entries=len(payments),
+            flag_rate=0.0,
+            severity=Severity.LOW,
+            description=(
+                "Test skipped — no PO Number column detected in the AP file. "
+                "AP-T14 requires a ``PO Number`` (or equivalent) column to "
+                "evaluate PO compliance."
+            ),
+            flagged_entries=[],
+        )
+
+    # Use AP-T04's round-amount threshold (already configurable) as the
+    # materiality proxy — payments above this floor warrant PO review;
+    # smaller transactions don't justify the false-positive noise.
+    threshold = Decimal(str(config.round_amount_threshold))
+
+    flagged: list[FlaggedPayment] = []
+    for p in payments:
+        # PO field is considered "present" when non-empty after stripping.
+        po = (p.po_number or "").strip()
+        if po:
+            continue
+        # Threshold gate — low-value payments often bypass PO in practice.
+        if abs(p.amount) < threshold:
+            continue
+        severity = Severity.HIGH if abs(p.amount) > threshold * 5 else Severity.MEDIUM
+        flagged.append(
+            FlaggedPayment(
+                entry=p,
+                test_name="Invoice Without PO",
+                test_key="invoice_without_po",
+                test_tier=TestTier.STRUCTURAL,
+                severity=severity,
+                issue=(
+                    f"Payment ${abs(p.amount):,.2f} to {p.vendor_name or '(no vendor)'} "
+                    "has no PO Number. ACFE 2024: billing schemes — 19% of "
+                    "occupational fraud — typically lack PO linkage."
+                ),
+                confidence=0.85,
+                details={
+                    "amount": float(p.amount),
+                    "vendor_name": p.vendor_name,
+                    "invoice_number": p.invoice_number,
+                    "threshold": float(threshold),
+                },
+            )
+        )
+
+    flag_rate = len(flagged) / max(len(payments), 1)
+    return APTestResult(
+        test_name="Invoice Without PO",
+        test_key="invoice_without_po",
+        test_tier=TestTier.STRUCTURAL,
+        entries_flagged=len(flagged),
+        total_entries=len(payments),
+        flag_rate=flag_rate,
+        severity=Severity.HIGH,
+        description=(
+            f"Flags payments ≥ ${threshold:,.0f} with no PO Number. "
+            "ACFE 2024 Report to the Nations — billing-scheme indicator."
+        ),
+        flagged_entries=flagged,
+    )
+
+
 # =============================================================================
 # TEST BATTERY + SCORING
 # =============================================================================
@@ -1684,8 +1794,13 @@ def test_suspicious_descriptions(
 def run_ap_test_battery(
     payments: list[APPayment],
     config: Optional[APTestingConfig] = None,
+    has_po_column: bool = False,
 ) -> list[APTestResult]:
-    """Run all 13 AP tests (Tier 1-3) on the payments.
+    """Run the AP test battery on the payments.
+
+    Sprint 682: 14 tests (added AP-T14 Invoice Without PO). AP-T14 is
+    conditional on ``has_po_column`` — when no PO column was detected,
+    the test emits a skipped result rather than flag every payment.
 
     Returns list of APTestResult.
     """
@@ -1699,6 +1814,7 @@ def run_ap_test_battery(
         test_check_number_gaps(payments, config),
         test_round_dollar_amounts(payments, config),
         test_payment_before_invoice(payments, config),
+        test_invoice_without_po(payments, config, has_po_column),  # Sprint 682: AP-T14
         # Tier 2 — Statistical
         test_fuzzy_duplicate_payments(payments, config),
         test_invoice_number_reuse(payments, config),
@@ -1911,7 +2027,11 @@ class APTestingEngine(AuditEngineBase):
         return assess_ap_data_quality(entries, detection)
 
     def run_tests(self, entries: list) -> Any:
-        return run_ap_test_battery(entries, self.config)
+        # Sprint 682: pass PO-column presence so AP-T14 knows whether to
+        # fire or emit a skipped result. Detection is set by the base
+        # pipeline before run_tests is invoked.
+        has_po_column = bool(self.detection and getattr(self.detection, "po_number_column", None))
+        return run_ap_test_battery(entries, self.config, has_po_column=has_po_column)
 
     def compute_score(self, test_results: list, entry_count: int) -> Any:
         return calculate_ap_composite_score(test_results, entry_count)
