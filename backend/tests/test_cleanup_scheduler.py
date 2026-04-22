@@ -138,6 +138,79 @@ class TestRunCleanupJob:
 
         mock_session.close.assert_called_once()
 
+    def test_sentry_capture_exception_called_on_failure(self):
+        """Sprint 711 Bug 2: failures must explicitly call
+        sentry_sdk.capture_exception while still inside the except block.
+
+        Without this, the deferred logger.error(..., exc_info=caught_exc) call
+        runs outside the except block — and although Python's LogRecord does
+        carry exc_info, Sentry's logging integration was observed dropping it
+        in production (104 dunning_grace_period failures landed as
+        traceback-less '[InternalError]' events). The explicit
+        capture_exception is belt-and-suspenders so the traceback never
+        gets lost again.
+        """
+        from cleanup_scheduler import _run_cleanup_job
+
+        def failing_func(db):
+            raise RuntimeError("explicit-capture-test")
+
+        mock_session = MagicMock()
+        mock_sentry = MagicMock()
+
+        with (
+            patch("database.SessionLocal", return_value=mock_session),
+            patch.dict("sys.modules", {"sentry_sdk": mock_sentry}),
+        ):
+            _run_cleanup_job("failing_job", failing_func)
+
+        mock_sentry.capture_exception.assert_called_once()
+        captured = mock_sentry.capture_exception.call_args[0][0]
+        assert isinstance(captured, RuntimeError)
+        assert "explicit-capture-test" in str(captured)
+
+    def test_session_rollback_before_close_on_failure(self):
+        """Sprint 711 Bug 2: defensive rollback before close() prevents a
+        poisoned-transaction connection from being returned to the pool and
+        inherited by a subsequent job. Pure cleanup hygiene; on success-path
+        cleanup_func should have already committed."""
+        from cleanup_scheduler import _run_cleanup_job
+
+        def failing_func(db):
+            raise RuntimeError("rollback-test")
+
+        mock_session = MagicMock()
+
+        with patch("database.SessionLocal", return_value=mock_session):
+            _run_cleanup_job("failing_job", failing_func)
+
+        # Both rollback and close must run, with rollback first.
+        mock_session.rollback.assert_called_once()
+        mock_session.close.assert_called_once()
+        rollback_call_index = mock_session.method_calls.index(
+            next(c for c in mock_session.method_calls if c[0] == "rollback")
+        )
+        close_call_index = mock_session.method_calls.index(
+            next(c for c in mock_session.method_calls if c[0] == "close")
+        )
+        assert rollback_call_index < close_call_index, "rollback must precede close"
+
+    def test_rollback_failure_does_not_mask_close(self):
+        """Sprint 711 Bug 2: if defensive rollback itself raises, the session
+        must still be closed. The rollback is best-effort."""
+        from cleanup_scheduler import _run_cleanup_job
+
+        def failing_func(db):
+            raise RuntimeError("compound-failure-test")
+
+        mock_session = MagicMock()
+        mock_session.rollback.side_effect = RuntimeError("rollback exploded")
+
+        with patch("database.SessionLocal", return_value=mock_session):
+            _run_cleanup_job("failing_job", failing_func)
+
+        mock_session.close.assert_called_once()
+
     def test_retention_dict_summing(self):
         """is_retention=True sums dict values for records_deleted."""
         from cleanup_scheduler import _run_cleanup_job

@@ -1364,3 +1364,50 @@ Nothing weakened — auth/security/zero-storage untouched, no tests silenced, ev
 - Commit SHA: TBD.
 
 ---
+
+## Production Bug Triage — 2026-04-22
+
+> **Source:** Live Sentry triage during CEO Phase 1 follow-up walkthrough. Verifying the Sentry integration was capturing events surfaced two real P1 bugs that had been accumulating untriaged in production for 14 days. Both fixed in one bundled sprint.
+
+---
+
+### Sprint 711: P1 production bug-fix batch — verification-status datetime + cleanup_scheduler visibility
+**Status:** CODE-COMPLETE — pending deploy + 24h Sentry verification
+**Priority:** P1
+**Source:** Sentry triage 2026-04-22 (paciolus.sentry.io issues `7423012667` + `auth/verification-status` cluster)
+**Why now:** Both bugs are mid-stream production regressions, not new feature work. Together they account for >670 Sentry events in the last 14 days against ~1 active user — every authenticated session hits #1, and #2 fires every hour through the cleanup window. Fixing before Phase 3 functional validation prevents real bugs from being masked by background noise.
+
+**Bug 1 — `TypeError: can't compare offset-naive and offset-aware datetimes` on `GET /auth/verification-status` (365 events: 193 raw + 172 unhandled-exception aggregations).**
+**Root cause:** `backend/email_service.py:109` — `if now >= cooldown_end:` compares `datetime.now(UTC)` (tz-aware) against `cooldown_end = last_sent_at + timedelta(...)` where `last_sent_at` is the user's `email_verification_sent_at` column, which round-trips from Postgres as **naive** (the column is declared `DateTime` without `timezone=True`, so SQLAlchemy strips tz on hydrate). Every authenticated request that hits the verification-status endpoint with a non-null `email_verification_sent_at` raises.
+
+**Bug 2 — `Cleanup job failed: dunning_grace_period` (104 events over 4 days, accumulating).**
+**Identified failing job:** `dunning_grace_period` → `backend/billing/dunning_engine.py:140` `process_grace_period_expirations`. Sentry's breadcrumbs show the lock-acquire INSERT, the SELECT against `dunning_episodes`, and the lock-release DELETE all executed cleanly — the InternalError fires 4ms after the DELETE. Most likely cause: psycopg2 `InFailedSqlTransaction` from a poisoned session inherited from a previous job in the same APScheduler worker. **Underlying exception type unverifiable** because the original `cleanup_scheduler.py:217` logging path was dropping `exc_info` between the except block and the deferred logger.error call — Sentry events have NO exception block, just the sanitized log message.
+
+**Files:**
+- `backend/email_service.py` — Bug 1 fix
+- `backend/cleanup_scheduler.py` — Bug 2 visibility + defensive rollback
+- `backend/tests/test_email_verification.py` — Bug 1 regression tests
+- `backend/tests/test_cleanup_scheduler.py` — Bug 2 regression tests
+
+**Changes:**
+- [x] **Bug 1 fix:** `can_resend_verification` (`backend/email_service.py:106-112`) normalizes naive `last_sent_at` to UTC-aware before the `cooldown_end` arithmetic. Comment explains the Postgres hydration cause so future readers don't strip the defense.
+- [x] **Bug 1 audit:** Greped 30+ files. Defensive `tzinfo is None → replace(tzinfo=UTC)` already in use at `models.py:513/559/614` (token expiry), `organization_model.py:179` (invitation tokens), `security_middleware.py:720` (account lockout), `shared/passcode_security.py:241` (passcode lockout), `auth.py:144` (JWT pwd_at). `email_service.py:can_resend_verification` was the lone gap. **No other unprotected comparison sites found.**
+- [x] **Bug 1 regression tests:** 2 new tests in `TestResendCooldown` (`test_handles_naive_datetime_from_db`, `test_handles_naive_datetime_past_cooldown`). Full file: 47/47 pass.
+- [x] **Bug 2 visibility fix:** `_run_cleanup_job` now calls `sentry_sdk.capture_exception(exc)` explicitly inside the except block (belt-and-suspenders alongside the existing `logger.error(..., exc_info=caught_exc)`). Next failure lands in Sentry with full type + traceback so we can fix the underlying cause if the rollback alone doesn't.
+- [x] **Bug 2 defensive rollback:** Added `db.rollback()` before `db.close()` in the cleanup-job `finally` block. If the InternalError is psycopg2's "current transaction is aborted, commands ignored until end of transaction block" (most likely hypothesis), the rollback prevents a poisoned connection from being returned to the pool. May eliminate the failures even before we see the actual exception type.
+- [x] **Bug 2 regression tests:** 3 new tests in `TestRunCleanupJob` (`test_sentry_capture_exception_called_on_failure`, `test_session_rollback_before_close_on_failure`, `test_rollback_failure_does_not_mask_close`). Full file: 28/28 pass. Adjacent files (auth_routes_api, dunning) also pass: 124/124 across the 4-file sweep.
+- [ ] **Deploy step:** Push branch → PR → merge → Render auto-deploy → confirm green.
+- [ ] **24h Sentry watch:** Verify `auth/verification-status` TypeError stops accumulating new events. Verify next `dunning_grace_period` failure (if any) lands with a real exception type + traceback. If `InternalError` recurs, the captured traceback tells us whether the rollback fix solved it or whether the real cause is downstream of the dunning query.
+
+**Review:**
+- Bug 1 is a surgical fix; the defense pattern was already established elsewhere in the codebase, so this just closes the lone gap. The 365 events stop on deploy.
+- Bug 2 has *two* possible outcomes after deploy. **Optimistic:** the defensive rollback was the actual cure and `dunning_grace_period` failures stop. **Realistic:** failures continue but now with a real Sentry traceback, opening a focused follow-up sprint with the actual root cause in hand. Either way, the visibility fix permanently prevents future cleanup-job failures from accumulating as untriageable `[InternalError]` events.
+- Did NOT migrate `email_verification_sent_at` (or the other ~25 `DateTime` columns lacking `timezone=True`) to `DateTime(timezone=True)`. That's a larger schema-migration sprint with its own test fallout; the defensive normalization here covers the actual bug. Filed as future hygiene work.
+
+**Defer / out-of-scope (P2 backlog from same triage):**
+- `Trial balance analysis failed [OptionError]` and `[ValueError]` on `/audit/trial-balance` (1 event each — edge cases in upload parsing)
+- `InvalidOperation [decimal.ConversionSyntax]` on `/audit/preflight` (3 events — likely malformed numeric input)
+- `Background register_verification exception [ForbiddenError]` (count unknown, classification pending)
+- File these as Sprint 712 (or a single batched P2 sweep) after Sprint 711 deploys clean.
+
+---
