@@ -56,9 +56,14 @@ describe('BottomProof', () => {
   })
 
   it('renders credential badges', () => {
+    // Sprint 705: pill strip replaced with <StandardsSpecimen>, which
+    // emits each code twice (desktop specimen row + mobile fallback
+    // link). getByText would throw on the duplicate; getAllByText is
+    // the correct assertion — the intent is "these standards appear
+    // on the page," and they do.
     render(<BottomProof />)
-    expect(screen.getByText(/ISA 240/)).toBeInTheDocument()
-    expect(screen.getByText(/PCAOB AS 2315/)).toBeInTheDocument()
+    expect(screen.getAllByText(/ISA 240/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/PCAOB AS 2315/).length).toBeGreaterThan(0)
   })
 
   it('renders closing metrics', () => {

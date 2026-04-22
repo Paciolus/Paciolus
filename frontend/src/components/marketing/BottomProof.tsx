@@ -4,9 +4,11 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
+import { EngravedStat } from '@/components/marketing/EngravedStat'
+import { StandardsSpecimen } from '@/components/marketing/StandardsSpecimen'
 import { Reveal } from '@/components/ui/Reveal'
-import { VIEWPORT, CountUp } from '@/utils/marketingMotion'
-import { staggerContainerTight, fadeUp } from '@/lib/motion'
+import { VIEWPORT } from '@/utils/marketingMotion'
+import { fadeUp } from '@/lib/motion'
 
 /**
  * BottomProof — Sprint 334, motion migrated Sprint 337, revised Sprint 448
@@ -46,16 +48,6 @@ const CLOSING_METRICS: ClosingMetric[] = [
   },
 ]
 
-const CREDENTIAL_BADGES = [
-  'ISA 240 — Fraud Risk in Revenue',
-  'ISA 530 — Audit Sampling',
-  'PCAOB AS 2315 — Sampling',
-  'ASC 606 / IFRS 15 — Revenue',
-  'IAS 2 — Inventory',
-  'IAS 16 — Fixed Assets',
-  'ISA 501 — Cutoff Risk',
-]
-
 export function BottomProof() {
   const { isAuthenticated } = useAuthSession()
   const [mounted, setMounted] = useState(false)
@@ -79,40 +71,29 @@ export function BottomProof() {
           <div className="w-12 h-[2px] bg-sage-500 rounded-full mx-auto" />
         </Reveal>
 
-        {/* Standards badge strip */}
+        {/* Sprint 705 — Standards specimen replaces the pill strip.
+            The specimen layout is the single differentiating design
+            moment on the homepage; the pill strip is retained as a
+            mobile-only fallback inside <StandardsSpecimen>. */}
         <Reveal>
-          <motion.div
-            className="flex flex-wrap justify-center gap-2 mt-10"
-            variants={staggerContainerTight}
-            initial="hidden"
-            whileInView="visible"
-            viewport={VIEWPORT.eager}
-          >
-            {CREDENTIAL_BADGES.map((badge) => (
-              <motion.span
-                key={badge}
-                variants={fadeUp}
-                className="px-3 py-1.5 rounded-full font-sans text-xs text-oatmeal-400 bg-obsidian-800/50 border border-obsidian-500/25"
-              >
-                {badge}
-              </motion.span>
-            ))}
-          </motion.div>
+          <StandardsSpecimen />
         </Reveal>
 
-        {/* Closing metric band */}
-        <Reveal delay={0.08} className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mt-12">
-          {CLOSING_METRICS.map((metric) => (
-            <div
+        {/* Sprint 704 — closing metric band rendered as engraved
+            monuments (oversized display serif numerals + Roman-numeral
+            kicker + hairline underline + small-caps label). Replaces the
+            pre-Sprint-704 obsidian-tile stat-cards. CountUp retired —
+            the editorial reading mode values a stable number more than
+            an animated one. */}
+        <Reveal delay={0.08} className="grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-6 mt-16">
+          {CLOSING_METRICS.map((metric, i) => (
+            <EngravedStat
               key={metric.label}
-              className="text-center bg-obsidian-800/40 border border-obsidian-500/20 rounded-xl p-5"
-            >
-              <p className="type-num-lg text-oatmeal-200">
-                <CountUp target={metric.target} suffix={metric.suffix} />
-              </p>
-              <p className="font-sans text-sm text-oatmeal-300 mt-1 font-medium">{metric.label}</p>
-              <p className="font-sans text-xs text-oatmeal-600 mt-0.5">{metric.sub}</p>
-            </div>
+              kicker={['I.', 'II.', 'III.'][i]}
+              value={`${metric.target.toLocaleString()}${metric.suffix}`}
+              label={metric.label}
+              sub={metric.sub}
+            />
           ))}
         </Reveal>
 

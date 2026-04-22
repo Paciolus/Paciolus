@@ -91,7 +91,7 @@ export default function DemoPage() {
               The Complete Tool Suite
             </h2>
             <p className="font-sans text-oatmeal-500 text-sm">
-              Seven tools included with Solo — all twelve with Team.
+              All twelve tools included with every paid plan.
             </p>
           </Reveal>
 

@@ -149,13 +149,20 @@ export function MarketingFooter() {
             </div>
           </div>
 
-          {/* Motto */}
-          <div className="mt-10 pt-6 border-t border-obsidian-500/15 flex items-center justify-center">
-            <p className="font-serif text-xs text-oatmeal-600 italic tracking-wide">
+          {/* Sprint 709 — Pacioli colophon.
+              Upgraded from link-list size to a proper colophon:
+              display-serif italic, centered on its own row with a
+              hairline rule above and generous vertical spacing. The
+              emotional climax of the site now reads like one. */}
+          <div className="mt-14 pt-10 border-t border-obsidian-500/20 flex flex-col items-center text-center px-6">
+            <p
+              className="font-serif text-2xl md:text-[28px] text-oatmeal-400 italic leading-snug tracking-wide"
+              style={{ fontVariantNumeric: 'oldstyle-nums proportional-nums' }}
+            >
               &ldquo;Particularis de Computis et Scripturis&rdquo;
-              <span className="block text-[10px] text-oatmeal-700 not-italic mt-1">
-                On Accounts and Records &mdash; Luca Pacioli, 1494
-              </span>
+            </p>
+            <p className="mt-4 font-sans text-[11px] uppercase tracking-[0.22em] text-oatmeal-600">
+              On Accounts &amp; Records · Luca Pacioli · 1494
             </p>
           </div>
         </div>

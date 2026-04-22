@@ -62,6 +62,16 @@ const config = {
           DEFAULT: '#4A7C59',
         },
 
+        // Sprint 708: scarcity-scoped accent — ONLY used on the
+        // "Most Popular" pricing badge + one hairline on the
+        // Professional card. The rarity is the design point; adding
+        // brass anywhere else dilutes it. See docs/04-compliance/
+        // brand-guidelines if/when that doc exists.
+        brass: {
+          400: '#B08D57',  // warm metallic accent
+          DEFAULT: '#B08D57',
+        },
+
         // Semantic theme tokens — reference CSS custom properties
         // These adapt automatically based on data-theme attribute
         surface: {

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { ScanlineOverlay, MechanicalGauge, MarginAnnotation } from '@/components/demo'
 import { Reveal } from '@/components/ui/Reveal'
 import { AXIS } from '@/utils/marketingMotion'
 import { SPRING } from '@/utils/themeUtils'
@@ -31,82 +32,69 @@ const TABS: Array<{ id: DemoTab; label: string; icon: string }> = [
 
 function DiagnosticsTab() {
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3 p-3 rounded-lg bg-sage-500/10 border border-sage-500/20">
-        <div className="w-8 h-8 rounded-full bg-sage-500/20 flex items-center justify-center">
-          <svg className="w-5 h-5 text-sage-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
-        </div>
-        <div className="flex-1">
-          <p className="text-sage-400 text-sm font-serif font-semibold">Trial Balance: Balanced</p>
-          <p className="text-oatmeal-500 text-xs font-sans">47 accounts analyzed · 1.2s runtime</p>
-        </div>
-        <span className="font-mono text-xs text-oatmeal-400">$12.4M total</span>
-      </div>
-
-      <div className="grid grid-cols-3 gap-3">
-        {[
-          { label: 'Current Ratio', value: '1.82', status: 'good' },
-          { label: 'Debt to Equity', value: '0.67', status: 'good' },
-          { label: 'Quick Ratio', value: '1.24', status: 'neutral' },
-        ].map((ratio) => (
-          <div key={ratio.label} className="p-3 rounded-lg bg-obsidian-700/50 border border-obsidian-500/30">
-            <p className="text-oatmeal-600 text-[10px] font-sans uppercase tracking-wide mb-1">{ratio.label}</p>
-            <p className={`font-mono text-lg font-bold ${ratio.status === 'good' ? 'text-sage-400' : 'text-oatmeal-300'}`}>
-              {ratio.value}
-            </p>
+    // Sprint 707 — scanline overlay sweeps the TB diagnostic block once
+    // on tab mount. Sells the "under three seconds" claim viscerally.
+    // Reduced-motion skips the sweep; content renders immediately.
+    <ScanlineOverlay>
+      <div className="space-y-4">
+        <div className="flex items-center gap-3 p-3 rounded-lg bg-sage-500/10 border border-sage-500/20">
+          <div className="w-8 h-8 rounded-full bg-sage-500/20 flex items-center justify-center">
+            <svg className="w-5 h-5 text-sage-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
           </div>
-        ))}
-      </div>
-
-      <div className="space-y-2">
-        <p className="text-oatmeal-500 text-xs font-sans uppercase tracking-wide">Anomaly Flags</p>
-        {[
-          { text: 'Suspense account detected: Account 9999', severity: 'high' },
-          { text: 'Revenue concentration: 84% from top 3 accounts', severity: 'medium' },
-          { text: 'Rounding anomaly: 7 accounts with cents', severity: 'low' },
-        ].map((flag, i) => (
-          <div
-            key={i}
-            className={`flex items-center gap-2 p-2 rounded-lg border ${
-              flag.severity === 'high'
-                ? 'border-clay-500/30 bg-clay-500/5'
-                : flag.severity === 'medium'
-                ? 'border-oatmeal-400/30 bg-oatmeal-400/5'
-                : 'border-obsidian-500/30 bg-obsidian-700/30'
-            }`}
-          >
-            <div className={`w-1.5 h-1.5 rounded-full ${
-              flag.severity === 'high' ? 'bg-clay-500' : flag.severity === 'medium' ? 'bg-oatmeal-400' : 'bg-oatmeal-600'
-            }`} />
-            <span className="text-oatmeal-300 text-xs font-sans">{flag.text}</span>
+          <div className="flex-1">
+            <p className="text-sage-400 text-sm font-serif font-semibold">Trial Balance: Balanced</p>
+            <p className="text-oatmeal-500 text-xs font-sans">47 accounts analyzed · 1.2s runtime</p>
           </div>
-        ))}
+          <span className="font-mono text-xs text-oatmeal-400">$12.4M total</span>
+        </div>
+
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { label: 'Current Ratio', value: '1.82', status: 'good' },
+            { label: 'Debt to Equity', value: '0.67', status: 'good' },
+            { label: 'Quick Ratio', value: '1.24', status: 'neutral' },
+          ].map((ratio) => (
+            <div key={ratio.label} className="p-3 rounded-lg bg-obsidian-700/50 border border-obsidian-500/30">
+              <p className="text-oatmeal-600 text-[10px] font-sans uppercase tracking-wide mb-1">{ratio.label}</p>
+              <p className={`font-mono text-lg font-bold ${ratio.status === 'good' ? 'text-sage-400' : 'text-oatmeal-300'}`}>
+                {ratio.value}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {/* Sprint 707 — Anomaly flags render as margin annotations
+            (red-pen italic with caret glyph) rather than pill toasts.
+            Matches the physical audit-review language. */}
+        <div className="space-y-1">
+          <p className="text-oatmeal-500 text-xs font-sans uppercase tracking-wide mb-2">Anomaly Flags</p>
+          <MarginAnnotation severity="high">
+            Suspense account detected: Account 9999
+          </MarginAnnotation>
+          <MarginAnnotation severity="moderate">
+            Revenue concentration: 84% from top 3 accounts
+          </MarginAnnotation>
+          <MarginAnnotation severity="low">
+            Rounding anomaly: 7 accounts with cents
+          </MarginAnnotation>
+        </div>
       </div>
-    </div>
+    </ScanlineOverlay>
   )
 }
 
 function TestingTab() {
   return (
     <div className="space-y-4">
+      {/* Sprint 707 — Composite Diagnostic Score now rendered as a proper
+          arc-style MechanicalGauge (180° sweep, hairline tick marks every
+          10 units, needle eases to the score on mount). Replaces the
+          flat circle-dial. Reduced-motion skips the needle animation. */}
       <div className="flex items-center gap-4 p-3 rounded-lg bg-obsidian-700/50 border border-obsidian-500/30">
-        <div className="relative w-14 h-14 flex-shrink-0">
-          <svg viewBox="0 0 100 100" className="w-full h-full">
-            <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" strokeWidth="4" className="text-obsidian-600" />
-            <circle
-              cx="50" cy="50" r="40" fill="none" stroke="currentColor" strokeWidth="4"
-              className="text-sage-500"
-              strokeLinecap="round"
-              strokeDasharray={`${2 * Math.PI * 40}`}
-              strokeDashoffset={2 * Math.PI * 40 * 0.24}
-              transform="rotate(-90 50 50)"
-            />
-          </svg>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className="font-mono text-sm font-bold text-sage-400">76</span>
-          </div>
+        <div className="flex-shrink-0">
+          <MechanicalGauge score={76} riskLevel="low" size={140} />
         </div>
         <div>
           <p className="text-oatmeal-200 text-sm font-serif font-semibold">Composite Diagnostic Score</p>

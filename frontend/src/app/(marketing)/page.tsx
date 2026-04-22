@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
-import { FeaturePillars, ProcessTimeline, HeroScrollSection, ToolSlideshow, BottomProof, EvidenceBand } from '@/components/marketing'
+import { FeaturePillars, ProcessTimeline, HeroScrollSection, ToolLedger, BottomProof, EvidenceBand } from '@/components/marketing'
 import { ParallaxSection } from '@/utils/marketingMotion'
 
 /**
@@ -31,9 +31,12 @@ export default function HomePage() {
       {/* Hero Section — Scroll-Linked Product Film */}
       <HeroScrollSection />
 
-      {/* Tool Slideshow — Animated slideshow with rich previews + modern city atmosphere */}
+      {/* Sprint 706 — Tool ledger. Full 12-tool catalog rendered in place
+          of the one-card-at-a-time slideshow. Respects the auditor's
+          scan-the-index reading pattern. ToolSlideshow retained in-tree
+          for other consumers / potential future use. */}
       <div className="lobby-surface-recessed lobby-atmosphere-modern relative z-10">
-        <ToolSlideshow />
+        <ToolLedger />
       </div>
 
       {/* Section Divider */}

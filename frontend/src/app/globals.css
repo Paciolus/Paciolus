@@ -492,6 +492,57 @@
     mix-blend-mode: overlay;
   }
 
+  /* Sprint 703 numeral-variant defaults.
+     Marketing pages default to oldstyle + proportional figures (editorial
+     voice — numerals sit on the reading line rather than marching in
+     uniform width). Tables, monospaced surfaces, and anything where
+     numerical alignment matters override back to tabular + lining.
+     Scope: anything descended from .marketing-type (applied on the
+     marketing route group layout). Does not affect product/app surfaces.
+
+     Override escape hatches (in preference order):
+       1. Add Tailwind `tabular-nums` utility at the call site.
+       2. Wrap in an element with a class that explicitly sets the
+          `font-variant-numeric` property.
+       3. Use .font-mono — the selector below forces tabular+lining. */
+  .marketing-type {
+    font-variant-numeric: oldstyle-nums proportional-nums;
+  }
+  .marketing-type table,
+  .marketing-type .font-mono,
+  .marketing-type [class*='tabular-nums'] {
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+
+  /* Sprint 703 paper-grain — single canonical aged-paper texture.
+     Apply to any <section> (or wrapper `position: relative`) to get a
+     subtle blotch overlay. 256×256 tile generated deterministically by
+     scripts/generate_paper_grain.py (FFT-based pink noise, palette mode,
+     5.6 KB on disk). Overlay at ~3% via mix-blend-mode: multiply so the
+     texture reads as aged paper on light surfaces and soft grain on dark.
+     Use once per section; do not stack with .paper-texture or .grain-overlay. */
+  .paper-grain {
+    position: relative;
+    isolation: isolate;  /* establish a stacking context so ::before doesn't fight z-index */
+  }
+  .paper-grain::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url('/backgrounds/paper-grain.png');
+    background-repeat: repeat;
+    background-size: 256px 256px;
+    opacity: 0.03;
+    mix-blend-mode: multiply;
+    pointer-events: none;
+    z-index: 0;
+  }
+  /* Ensure children paint above the texture */
+  .paper-grain > * {
+    position: relative;
+    z-index: 1;
+  }
+
   /* ============================================
      Lobby Brand-Layer Utilities
      Dark marketing page section depth system.
