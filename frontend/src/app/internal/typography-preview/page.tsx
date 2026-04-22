@@ -26,10 +26,8 @@
  *   the bottom of the page for validation against the real typefaces.
  */
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { Reveal } from '@/components/ui/Reveal'
 
 type CandidateKey = 'merriweather' | 'source-serif-4' | 'lora' | 'playfair-display'
@@ -111,18 +109,14 @@ const STATS = [
 /* ─── Component ─────────────────────────────────────────────────── */
 
 export default function TypographyPreviewPage() {
-  const { isAuthenticated, isLoading } = useAuthSession()
-  const router = useRouter()
   const [selectedLeft, setSelectedLeft] = useState<CandidateKey>('merriweather')
   const [selectedRight, setSelectedRight] = useState<CandidateKey>('source-serif-4')
 
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.push('/login?next=/internal/typography-preview')
-    }
-  }, [isAuthenticated, isLoading, router])
-
-  if (isLoading || !isAuthenticated) return null
+  // Note: No auth gate — this is a decision-aid page (typography mockups, no
+  // sensitive data). The /internal path prefix is a discoverability convention;
+  // AuthenticatedShell in the layout renders the nav chrome but doesn't
+  // redirect. A prior auth gate here raced the session-load and left the page
+  // blank when the hook was still loading.
 
   return (
     <>
