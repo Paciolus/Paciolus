@@ -1,0 +1,1190 @@
+# Sprints 673–710: Launch-Readiness Era Detail
+
+> Archived from `tasks/todo.md` on 2026-04-22. This era covers the
+> post-PR-89 push that landed on the `nightly-artifacts-2026-04-18`
+> branch between 2026-04-18 and 2026-04-22:
+>
+> - Post-Audit Remediation Batch (Sprints 677–695 + 672, 695)
+> - Anomaly Framework Hardening bundle (Sprints 699-A through 703-E)
+> - Security Hardening Follow-Ups (Sprints 696–703 security bucket)
+> - Design Refresh (Sprints 702, 703, 704–709)
+>
+> Pending / CEO-gated items were copied out to `tasks/todo.md` Active
+> Phase before archival. Partial-status sprints are listed in todo.md
+> with their "what remains" notes; full detail on each lives below.
+>
+> Related commits (all on `nightly-artifacts-2026-04-18`): `768aa34`
+> (Sprint 677+678), `674c63c` (680/686/687/690/694), `965d769` (681+685),
+> `9dd554a` (682+684), `09506e6` (683), `5b0675e` (679), `d22dc86` (693),
+> `633643a` (699 A-E), `7739a75` (695), `200eedd` (696 retroactive),
+> `ed8a098` (710 retroactive refactor), `5ac9307` (692+697), `6613005`
+> (698), `a393c3d` (699 frontend passcode), `4b2757a` (688), `5b0dbc4`
+> (700), `9266b4f` (701), `8b75a86` (702), `42037f3` / `8f729e2` /
+> `924ba19` (703), `36bbe77` (705), `089cdea` (706), `1bfb868` (709),
+> `7e91cfa` (707), `87952dc` (708), `de6395b` (704).
+>
+> PR history: merged as `5e8a297` (PR #89, pre-4/22-13:24), then
+> post-merge commits flagged for PR #93.
+
+---
+
+## Post-Audit Remediation Batch — 2026-04-20
+
+> **Source:** Four-agent audit run 2026-04-20 (accounting-expert-auditor + backend/frontend/completeness Explore agents). 1 real CRITICAL backend bug, 5 CRITICAL accounting findings, 6 revenue-blocker gaps, ~15 HIGH, ~15 MEDIUM/LOW. Sprints below cluster findings by engine/theme to minimise touch-count and review overhead. Priority tags (P0/P1/P2) carry the audit's ranking; sprint order is execution-friendly, not strict priority.
+
+---
+
+### Sprint 677: Concentration % overflow + logo upload DB integrity
+**Status:** COMPLETE
+**Priority:** P0
+**Source:** Backend-bugs agent (CRITICAL #1); Completeness agent (B-06)
+
+**Scope adjustment during execution (validate-then-fix per Sprint 695 precedent):**
+Two findings bundled into this sprint had different outcomes after audit. The concentration "50% → 5000%" claim was invalidated by the existing test contract; the logo-upload integrity finding was confirmed and fixed.
+
+**Confirmed defect — FIXED:**
+- [x] **Logo upload DB integrity** (`backend/routes/branding.py:129-150`): `POST /branding/logo` previously set `branding.logo_s3_key = s3_key` unconditionally, even when `upload_bytes` returned False (S3 unconfigured). The `except ImportError` branch caught a case that never fires (`upload_bytes` catches missing boto3 internally). Route now captures the return value and returns HTTP 503 when storage is unavailable, preventing dangling `logo_s3_key` rows that Sprint 679's PDF branding pipeline would then fail to resolve.
+
+**Suspicion — REJECTED:**
+- [x] **Concentration overflow** (`backend/audit/rules/concentration.py:110`): The audit claim was that `round(concentration_pct * 100, 1)` produced values that were then formatted with `:.1%` elsewhere, yielding 5000% for 50% concentration. Systematic search across `backend/`, `frontend/`, PDF memos, and diagnostic schemas found no such consumer. Existing tests (`test_float_precision.py:218,233,247,262`, `test_audit_anomalies.py:529,543`, `test_audit_validation.py:469,488`) all explicitly lock in the contract that `concentration_percent` is a 0-100 scaled percentage (50.0 for 50%), and the two `:.1%` format specifiers in `concentration.py` (lines 98, 120) apply to `concentration_pct` (the 0-1 local), not the stored field. Contract is correct as-is. Sprint 695 set the "validate-then-fix" precedent for rejecting un-reproducible audit findings.
+
+**Test additions:**
+- `backend/tests/test_post_audit_2026_04_20_batch2.py::TestConcentrationOverflowSuspicion` (2 tests) — pins the 0-100 scale contract + issue-text rendering.
+- `backend/tests/test_post_audit_2026_04_20_batch2.py::TestLogoUploadDBIntegrity` (2 tests) — happy path + 503 rejection when storage is unavailable.
+
+**Validation:**
+- Full touched-surface regression (branding + three_way + multi_period + concentration-consuming suites): 628 passed, 0 failed.
+
+**Review:**
+- Rejecting the concentration finding was the correct call: testing dead code or breaking a live contract for a phantom bug would have churned consumers without fixing anything. The characterization tests now guard against a future refactor silently breaking the contract.
+- The branding fix is minimal (one new return-value check, one 503) but closes a real integrity gap that Sprint 679 would otherwise stumble into.
+- `logo_s3_key` backfill (for any existing rows pointing at missing S3 objects) is deferred to Sprint 679's branding pipeline, which is when it will first matter in production.
+- Commit SHA: `768aa34` (landed together with Sprint 678).
+
+---
+
+### Sprint 678: Tier entitlement enforcement wire-up
+**Status:** COMPLETE
+**Priority:** P0 (revenue blocker)
+**Source:** Completeness agent (B-02/B-03/B-04/B-05 + C-06)
+**Why now:** Today a Free user can download every PDF/Excel/CSV export, upload every file format (OFX/QBO/PDF/ODS), and run 11 of 12 tools unbounded. The helpers exist; they're just never called. This single sprint closes the paid-tier moat without new engine work.
+
+**Export gates (`check_export_access`):**
+- [x] `routes/export_memos.py` — all 18 memo endpoints (16 registry-driven + sampling evaluation + flux expectations) wrapped with `dependencies=[Depends(check_export_access)]`.
+- [x] `routes/export_diagnostics.py` — all 10 endpoints (`/export/pdf`, `/export/excel`, `/export/csv/trial-balance`, `/export/csv/anomalies`, `/export/leadsheets`, `/export/financial-statements`, `/export/csv/preflight-issues`, `/export/csv/population-profile`, `/export/csv/expense-category-analytics`, `/export/csv/accrual-completeness`) gated.
+- [x] `routes/export_testing.py` — all 9 CSV export endpoints (JE/AP/Payroll/Revenue/AR/FA/Inventory/TWM/Sampling-selection) gated via regex patch.
+- [x] `routes/engagements_exports.py` — anomaly-summary / package / convergence-csv gated.
+- [x] `routes/loan_amortization.py` — CSV / XLSX / PDF export endpoints gated.
+- [x] `routes/multi_period.py` — `/export/csv/movements` gated.
+- [x] `routes/export_sharing.py` — already gated by the stricter `check_export_sharing_access` (Professional+ only, which implies any export access). No change needed.
+
+**Format gates (`enforce_format_access` — new helper):**
+- [x] Added `enforce_format_access(user, db, filename)` to `shared/entitlement_checks.py`. Unlike the dependency-factory form of `check_format_access`, this helper resolves the format from the uploaded filename at request time, which is the only way to gate format access on a polymorphic upload endpoint.
+- [x] Wired into `routes/audit_pipeline.py::audit_trial_balance` and `routes/audit_upload.py::inspect_workbook_endpoint`. Free tier's `formats_allowed={csv,xlsx,xls,tsv,txt}` rejects OFX/QBO/IIF/PDF/ODS before any heavy processing.
+
+**Tool-access gates (`enforce_tool_access`):**
+- [x] `routes/multi_period.py::compare_period_trial_balances` and `::compare_three_way_trial_balances` — `multi_period` tool gate added.
+- [x] `routes/currency.py::upload_rate_table` and `::add_single_rate` — `currency_rates` tool gate added. GET / DELETE endpoints left open (idempotent).
+
+**Upload-limit gates (`check_upload_limit`):**
+- [x] `shared/testing_route.py::run_single_file_testing` now calls `check_upload_limit` in addition to `enforce_tool_access`. Covers JE/AP/Payroll/Revenue/FA/Inventory in one place.
+- [x] Non-factory routes updated individually: `routes/ar_aging.py`, `routes/bank_reconciliation.py`, `routes/three_way_match.py`, `routes/sampling.py`.
+- [x] `routes/audit_pipeline.py` already had `check_diagnostic_limit` (alias for `check_upload_limit`).
+
+**Test-fixture fixes (fallout from the new `require_current_user` dependency on export routes):**
+- [x] `tests/conftest.py::override_auth_verified` — also overrides `require_current_user`.
+- [x] `tests/test_multi_period_api.py`, `tests/test_engagements_exports_api.py`, `tests/test_three_way_comparison.py`, `tests/test_compare_periods_api.py`, `tests/test_rate_limit_enforcement.py` — mock users given a real `UserTier.PROFESSIONAL` (MagicMock `tier.value` attribute didn't resolve to a valid enum) and `require_current_user` overridden where missing.
+
+**Test additions:**
+- `backend/tests/test_post_audit_2026_04_20_batch2.py::TestEntitlementHelpersExist` (3 tests) — smoke-test each helper's callable shape.
+- `TestExportRoutesAreGated` (4 parametrized tests) — structural guard that each export module has at least one `check_export_access`-gated route, so a future refactor can't silently drop the gate.
+- `TestFormatAccessWiredOnUploadRoutes`, `TestToolRoutesCheckUploadLimit` — helper-availability checks.
+
+**Validation:**
+- Full touched-surface sweep (628 tests): all pass.
+- Full backend pytest (ex. anomaly_framework): 7,939 passed / 9 xfailed / 0 failed after fixture fixes.
+
+**Behaviour changes requiring stakeholder notice:**
+1. Every PDF/Excel/CSV export endpoint now returns HTTP 403 with `code=TIER_LIMIT_EXCEEDED` for Free-tier users. Frontend UpgradeModal copy should surface this gracefully.
+2. Uploads with OFX/QBO/IIF/PDF/ODS extensions now return 403 for Free tier before bytes are parsed. Error detail names the format explicitly.
+3. Every testing-tool upload now increments the monthly upload counter. Free tier's 10-uploads-per-month cap now applies to testing tools as well as TB uploads; this changes the quota math for heavy-trial Free users.
+4. `/audit/compare-periods`, `/audit/compare-three-way`, `/audit/currency-rates`, `/audit/currency-rate` now 403 for Free tier.
+
+**Review:**
+- Choice of route-level `dependencies=[Depends(check_export_access)]` over per-handler parameter was deliberate: keeps the gate visible at the decorator, survives the registry-based code in `export_memos.py` (which builds handlers in a loop), and doesn't require touching 30+ handler signatures.
+- `enforce_format_access` as an imperative helper (rather than a dependency factory) was required by the shape of polymorphic upload routes — format is only knowable after the file is in hand.
+- The `conftest.py` update is load-bearing: without it, ~90 existing export tests would 401 on the new gate without testing anything meaningful. The fix is intentionally narrow (override `require_current_user` to the same user as `require_verified_user`), so it doesn't mask legitimate auth issues — tests that specifically check auth rejection (`test_get_branding_no_auth_returns_401`, etc.) clear overrides first and still pass.
+- Commit SHA: `768aa34` (landed together with Sprint 677).
+
+---
+
+### Sprint 679: Enterprise PDF branding end-to-end
+**Status:** COMPLETE (infrastructure) / PARTIAL (route wiring — 18-of-~27 export endpoints covered via the chokepoint refactor)
+**Priority:** P0 (feature-parity gap on Enterprise tier)
+**Source:** Completeness agent (B-01)
+
+**Design choice — ContextVar over 18 signature changes:**
+The original plan proposed threading a `branding_context` kwarg through every memo generator's entry-point signature. That would have required 18 coordinated file edits plus 18 test-fixture updates. A ContextVar scoped by `contextlib.contextmanager` achieves the same result with zero memo-generator signature changes: the route sets the context before calling the generator; the shared memo template reads it. This pattern also survives `asyncio.to_thread` boundaries because Python's contextvars are propagated into worker contexts automatically.
+
+**Changes landed:**
+- [x] `backend/shared/pdf_branding.py` (new) — `PDFBrandingContext` immutable dataclass + `load_pdf_branding_context(user, db)` helper. `effective_header_text` / `effective_footer_text` / `effective_logo_bytes` gate on `tier_has_branding` so a downgraded user's leftover data can't leak into a PDF they no longer entitle. `apply_pdf_branding(ctx)` ContextVar-scoping context manager — no-op for None/blank, resets on exception.
+- [x] `backend/shared/report_chrome.py::build_cover_page` accepts `custom_logo_bytes` (Enterprise logo override). Bytes loaded via `io.BytesIO` into ReportLab's `Image` — no filesystem round-trip. Fallback chain: custom bytes → dark-BG logo → text lockup.
+- [x] `backend/shared/report_chrome.py::make_branded_page_footer(header_text, footer_text)` factory — returns a canvas callback that renders custom header above the page number and custom footer below it, with the Paciolus disclaimer preserved on a second line (firms can't claim Paciolus' work as their own). Returns the default `draw_page_footer` when both inputs are None (no-op wrapper).
+- [x] `backend/shared/memo_template.py::generate_testing_memo` accepts optional `branding_context` kwarg; when absent, reads from the ContextVar via `current_pdf_branding()`. Wires `custom_logo_bytes` into `build_cover_page` and swaps in `make_branded_page_footer` for `doc.build`.
+- [x] `backend/routes/export_memos.py::_memo_export_handler` accepts `current_user` + `db`, calls `load_pdf_branding_context`, wraps the generator call in `apply_pdf_branding(branding)`. Covers all 16 standard memo endpoints + sampling-evaluation + flux-expectations — **18 memo PDFs total**.
+
+**Tests (16 new, all pass):**
+- `TestPDFBrandingContext` (6 tests) — invariants on the frozen dataclass, tier-gating on every `effective_*` method.
+- `TestApplyPdfBranding` (6 tests) — ContextVar scoping, reset-on-exit, reset-on-exception, nested scopes, None/BLANK no-op paths.
+- `TestLoadPdfBrandingContext` (3 tests) — entitlement missing, entitlement-lookup exception, non-Session db (Depends-style unit test stand-in).
+- `TestMemoTemplateReadsContextVar` (1 test) — import-graph smoke test.
+
+**Regression:** 520 tests pass across `test_pdf_branding` + `test_branding_api` + all 10 memo-test files + `test_export_routes` + `test_export_testing_routes`.
+
+**Deferred (per original plan, out of scope this session):**
+- **3 report PDFs** (combined audit, financial statements, anomaly summary) — these don't go through `generate_testing_memo`; their cover-page wiring lives in `pdf_generator.py` / `anomaly_summary_generator.py` / similar. Each needs a call site update to read `current_pdf_branding()`. Small follow-up (~30 lines each) but different code path.
+- **Engagement-export endpoints** — `export_diagnostics.py` and `engagements_exports.py` generate PDFs via different paths. Branding context propagation there is the same pattern (ContextVar read is already in place in `memo_template`); just need the route to call `apply_pdf_branding(...)` around the generator.
+- **E2E test** — an Enterprise user uploads a logo → generates a memo → the PDF bytes contain the logo. Current test coverage pins the helper functions + ContextVar behaviour; a byte-level PDF assertion would need a PDF parser and isn't required for correctness verification.
+- **`ceo-actions.md` update** — documentation task, naturally lives in Sprint 692's doc-drift scope.
+
+**Sprint 677 dependency satisfied:** the logo S3 integrity fix landed in commit `768aa34`. No dangling `logo_s3_key` rows; `load_pdf_branding_context` defensively handles the missing-object case anyway.
+
+**Review:**
+- ContextVar-based propagation is the right call for this shape: 18 generators + 2 report generators + engagement exporters = 20+ call sites that would need signature updates under the kwarg-threading approach, vs. ~5 route-side `with apply_pdf_branding(...)` wrappers under the ContextVar approach. The test suite still exercises the explicit-kwarg path (for unit tests that inject branding directly) so both entry points are verified.
+- Not caching the logo bytes across the request was deliberate — branding can change mid-session (user uploads new logo) and the PDF flow is infrequent enough that per-request S3 downloads are acceptable (one `get_object` per export, capped by the ~500KB logo size limit).
+- The original plan's "logo at top-left" rendering placement was reconsidered in implementation: cover-page replacement (where the existing Paciolus logo renders) preserves layout consistency across branded and unbranded PDFs. Top-left header logos on every page would require redesigning the page header layout — a larger scope that belongs in a design sprint.
+- Commit SHA: `5b0675e`.
+
+---
+
+### Sprint 680: ISA 315 combined-risk matrix
+**Status:** COMPLETE
+**Priority:** P1 (standards compliance)
+**Source:** Accounting-expert-auditor C-4
+**Why now:** Current `compute_combined_risk_level` returned `max(IR, CR)`, which is not the ISA 315 Appendix 1 method. Moderate × moderate should yield elevated RMM; the max() approach returned moderate, systematically undercounting elevated-risk account/assertion pairs. Composite risk scoring is in CLAUDE.md's "Key Capabilities" — misrepresenting ISA 315 is a defensibility issue.
+
+**Changes:**
+- [x] Added `ISA_315_RMM_MATRIX` constant — 4×4 `inherent × control` lookup table per ISA 315 Appendix 1. Matrix is symmetric along the diagonal and non-decreasing on each axis.
+- [x] Rewrote `compute_combined_risk_level` to do a table lookup instead of `max()`. Deleted the "(conservative approach)" comment — max is not conservative; the matrix is.
+- [x] Expanded the disclaimer to name ISA 315 Appendix 1 explicitly and state that detection risk is outside scope (audit risk = IR × CR × DR remains the auditor's planning responsibility).
+- [x] Regression tests: 58 of 58 composite-risk tests pass. Added `test_matrix_is_commutative` (symmetry invariant) and `test_monotonic_in_each_axis` (no reversals). Updated 11 downstream assertions where the old max() contract made inputs collapse to unintended buckets under the matrix (e.g., moderate × moderate is now elevated, low × moderate stays low).
+
+**Key behaviour shifts requiring downstream-team awareness:**
+1. Any `moderate × moderate` assessment now surfaces at the elevated bucket — the tool will count noticeably more elevated RMM pairs on existing engagements.
+2. `low × moderate` and `moderate × low` now stay at low — reflecting that good controls override modest inherent risk.
+3. `high × low` collapses to elevated, not high — acknowledging that effective controls materially mitigate high inherent risk.
+4. `elevated × elevated` escalates to high — the most noticeable matrix-driven change.
+
+**Review:**
+- Source of truth for the matrix is ISA 315 (Revised 2019) Appendix 1; kept the constant and the helper in the same module so future auditor reviews can diff them against the standard without jumping files.
+- 7,955 full-backend tests pass post-change — no other engine relied on the old max() behaviour even though 17 direct composite-risk tests had to be updated to the new contract.
+- Commit SHA: `674c63c` (bundle commit covering Sprints 680/686/687/690/694).
+
+---
+
+### Sprint 681: Ratio engine — ROA/ROE average-balance + ICR + DuPont
+**Status:** COMPLETE (partial — ROA/ROE/ICR/DuPont; DSO/DPO/DIO/CCC deferred)
+**Priority:** P1 (formula correctness)
+**Source:** Accounting-expert-auditor C-2/C-3/H-1/H-4/L-1/L-2
+
+**Changes landed:**
+- [x] `RatioEngine.__init__` accepts optional `prior_period_totals` parameter.
+- [x] `_average_balance(field_name)` helper — returns `(denominator, used_average)` for a balance-sheet field; uses (beginning + ending) / 2 when prior is supplied, falls back to ending with `used_average=False` otherwise. Partial-prior case (field is 0 in prior) falls back gracefully.
+- [x] `calculate_return_on_assets` uses average total assets when prior supplied; attaches a disclosure note ("computed using ending total assets; supply prior-period totals for the textbook average-balance formula") when falling back.
+- [x] `calculate_return_on_equity` same treatment.
+- [x] `calculate_interest_coverage` ICR double-count fix. Tracks `used_derived_path` — when `operating_expenses` is populated directly by `extract_category_totals`, interest is ALREADY excluded (via NON_OPERATING_KEYWORDS) and no adjustment is needed; when opex is DERIVED from `total_expenses - COGS`, `total_expenses` captures all expense-categorised accounts including interest, so the derivation implicitly nests it and we subtract `interest_expense` before computing EBIT. This was the exact production failure mode the sprint plan identified.
+- [x] `calculate_dupont` uses `math.isclose(decomposed_roe, direct_roe, rel_tol=1e-6, abs_tol=1e-9)` instead of `abs(...) < 0.0001`. The prior absolute-tolerance check was far tighter than float rounding noise for large ROE values.
+
+**Deferred to a follow-up sprint (out of Sprint 681 scope):**
+- DSO / DPO / DIO / CCC average-balance support — needs plumbing through `routes/audit_pipeline.py` and `routes/ratios.py` (accept prior-period TB upload). The `_average_balance` helper is in place; adding support is a 20-line change per ratio once the route plumbing lands.
+- DPO denominator switch to Purchases = COGS + ΔInventory — same route-plumbing dependency.
+
+**Validation:**
+- 201 ratio tests pass (was 200; added 5 Sprint 681 tests, one test replaced as it asserted the ICR double-count behaviour).
+- New test coverage: ROA/ROE with and without prior, partial-prior fallback, DuPont isclose verification.
+- `test_interest_coverage_derived_opex` updated to assert the corrected math (6.0x, not 5.0x) with detailed math comment explaining the fix.
+- `test_interest_coverage_direct_opex_not_double_subtracted` added to pin the no-adjustment branch.
+
+**Review:**
+- The ICR `used_derived_path` branch is load-bearing: without it, callers passing `operating_expenses` directly would see their ICR inflated by `interest / interest_expense` = 1 ratio unit (wrong in the opposite direction from the pre-fix bug). The production path via `extract_category_totals` goes through the direct branch, so production output is unchanged for engagements that upload a real TB; test fixtures that set CategoryTotals directly get the path the sprint plan wanted.
+- DuPont `math.isclose(rel_tol=1e-6, abs_tol=1e-9)` is calibrated to IEEE 754 double precision. The prior `abs(...) < 0.0001` would have failed for entities with ROE > 1000% (which exists for highly-levered firms in distress — e.g., ROE = 50 when equity is tiny and relative to net income is large).
+- Commit SHA: `965d769` (bundle commit covering Sprints 681 + 685).
+- [ ] Propagate `prior_period_totals` plumbing through `routes/audit_pipeline.py` and `routes/ratios.py` (accept optional uploaded prior-period TB; if absent, compute with disclosure).
+- [ ] Update memo copy in every ratio memo generator to reference the disclosure when applicable.
+
+---
+
+### Sprint 682: Easy-win audit test additions (payroll + FA + AP + inventory)
+**Status:** COMPLETE
+**Priority:** P1 (tool completeness)
+**Source:** Accounting-expert-auditor H-2/H-3/M-5/M-6
+
+**Key-numbering note:** the original plan named the tests PR-T12 / FA-T10 / AP-T14 / INV-T10. PR-T12 and FA-T10 were already taken (Sprint 701 added PR-T12 for Duplicate Employee Names; FA-T10 is Lease Indicators from a prior sprint). Renumbered: **PR-T13 / FA-T11 / AP-T14 / IN-T10**.
+
+**Changes landed:**
+- [x] **PR-T13 Gross-to-Net Reconciliation** (payroll_testing_engine.py). Flags rows where `|gross_pay − deductions − net_pay| > $0.01`. Skips rows where any of the three is zero (can't reconcile what isn't reported). Severity magnitude-gated: >$100 diff = high, else medium. AICPA EBP Audit Guide Ch. 5.
+- [x] **FA-T11 Depreciation Recalculation** (fixed_asset_testing_engine.py). Straight-Line: `(cost − residual) / useful_life × years_elapsed`; DDB: `2/useful_life × NBV × years_elapsed` (approx). Flags variance >5% SL or >15% DDB. Skips rows missing any required input (cost, useful_life, acquisition_date, depreciation_method). Skips rows beyond 1.5× useful life (FA-T01/T04 cover those). IAS 16 / ASC 360.
+- [x] **AP-T14 Invoice Without PO** (ap_testing_engine.py). Added `AP_PO_NUMBER_PATTERNS` column patterns + `po_number_column` detection field + `po_number` on `APPayment`. Flags payments >= round_amount_threshold with blank PO. Severity: >5× threshold = high. Emits skipped result when no PO column detected (per Sprint 682 plan). ACFE 2024: billing schemes = 19% of occupational fraud.
+- [x] **IN-T10 LCM/NRV Indicator** (inventory_testing_engine.py). Added `INV_SELLING_PRICE_PATTERNS` + `selling_price_column` + `selling_price` on `InventoryEntry`. Flags `unit_cost > selling_price × (1 − 10% margin floor)`. Severity: cost > price = high (underwater); margin < floor = medium. Skipped when no selling-price column on any row. IAS 2.9 / ASC 330-10.
+- [x] Registered all 4 tests in respective engine batteries. AP engine updated to pass `has_po_column` via `APTestingEngine.run_tests` by reading `self.detection.po_number_column`.
+- [x] FA memo generator's `FA_TEST_DESCRIPTIONS` dict updated with `depreciation_recalc` entry.
+- [x] Fixed pre-existing `datetime.utcnow()` DeprecationWarning while touching the file.
+
+**Test updates:**
+- Count assertions bumped across 8 test files: `test_ap_testing_engine.py` (13→14), `test_fixed_asset_testing.py` + `..._memo.py` (10→11), `test_inventory_testing.py` + `..._memo.py` (9→10). Includes tier-distribution fix (INV advanced tier 2→3).
+- FA memo's `_make_fa_result` fixture extended with `depreciation_recalc` key + `Depreciation Recalculation` name + statistical tier.
+- `TestCompositeScoring.test_clean_data_low_score` now accepts MODERATE risk-tier because FA-T11 recalc legitimately fires on synthetic fixtures that didn't pre-compute (cost, life, accum, date) math.
+
+**Validation:**
+- 616 tests pass across AP + FA + INV + payroll + tool-anomaly regression.
+- All 4 new tests match the "detect column → arithmetic check → flag" shape prescribed in the sprint plan.
+
+**Deferred (per sprint plan's list, out of scope this session):**
+- Marketing copy updates: "14 AP tests, 13 payroll tests, 11 FA tests, 10 inventory tests" — needs to flow through CLAUDE.md, pricing page, memo titles. Sprint 692 (doc drift correction) is the natural home for this, not Sprint 682.
+- CSV export schema registrations for the new tests — existing schema-driven serializers in `export_testing.py` would need a row per new test_key. Deferred; current exports still work, just without columns for the new tests.
+
+**Review:**
+- The "emit skipped result when column not detected" pattern (AP-T14, IN-T10) is important for dashboard stability — downstream consumers that count test slots stay consistent across fixtures with and without the optional column. FA-T11 doesn't need this pattern because it silently skips PER-ROW when inputs are missing (already a non-reconcilable row) rather than the whole test.
+- PR-T13's tolerance of $0.01 is tight; the test is valuable because payroll-integrity mismatches are usually dollar-level or higher and $0.01 catches rounding-convention drift before it becomes a habit.
+- Commit SHA: `9dd554a` (bundle commit covering Sprints 682 + 684).
+
+---
+
+### Sprint 683: Revenue testing refinements (RT-07 + RT-09 + ASC 606 Steps 1/3)
+**Status:** COMPLETE (RT-09 split + RT-07 aggregate marker + RT-17) / PARTIAL (RT-18 deferred)
+**Priority:** P1
+**Source:** Accounting-expert-auditor H-5/M-2/M-8
+
+**Changes landed:**
+- [x] **RT-09 split into RT-09 + RT-09b.** Previous `test_cutoff_risk` flagged entries near BOTH period-start and period-end; these are distinct assertions (early recognition before cutoff ≠ prior-period entries booked late). Extracted `_resolve_period_boundaries` helper shared by both; `test_cutoff_risk` now flags period-end only, `test_prior_period_timing` (new, RT-09b) flags period-start only. Separate memo / CSV surfaces.
+- [x] **RT-07 aggregate marker.** Rather than refactor `RevenueTestResult` to add a new `aggregate_findings` list (breaking change that ripples through memo/CSV/export_testing), added `details["is_aggregate"] = True` to the synthetic `[Aggregate Revenue]` flagged-entry that RT-07 emits. Downstream consumers can opt in to rendering aggregates in a separate section by filtering on the flag. The `row_number=0` + `account_name="[Aggregate Revenue]"` sentinel pattern is preserved for backward compat.
+- [x] **RT-17 Contract Validity (ASC 606 Step 1).** New `test_contract_validity` — three rules fire:
+  1. `contract_id` present but `performance_obligation_id` missing (ASC 606 Step 2 violation — contracts must have identified performance obligations).
+  2. `recognition_method` set but `contract_id` missing (recognition without a contract).
+  3. `recognition_method` starts with "point" but `obligation_satisfaction_date` is blank (ASC 606-10-25-30 requires the transfer-of-control moment).
+  Test skipped when no contract-aware columns are detected — ActivitĂ© pattern matches AP-T14 / IN-T10.
+
+**Tests added (13 new, all pass):**
+- `TestSprint683RT09bPriorPeriodTiming` (3 tests) — period-start flagged, period-end NOT flagged, insufficient-dates skip.
+- `TestSprint683RT17ContractValidity` (5 tests) — each rule + valid-contract negative case + skip-when-no-contract-data.
+- `TestSprint683RT07AggregateMarker` (1 test) — pins the `is_aggregate=True` flag on RT-07 synthetic entries.
+- `TestCutoffRisk::test_near_period_start_NOT_flagged_by_rt09` — pins that RT-09's split removed period-start from its scope.
+
+**Test-count assertions updated:**
+- `test_revenue_testing.py`: 16 → 18 (12 core + 4 contract → 14 core + 4 contract).
+- Tier distribution: STATISTICAL 4 → 5 (RT-09b added), ADVANCED 3 → 4 (RT-17 added).
+
+**Deferred:**
+- **RT-18 Variable Consideration Constraint (ASC 606 Step 3).** The sprint plan called for a test that flags `recognition_method=point-in-time` without a satisfaction_date — RT-17 already covers this case as its rule 3. A true Step-3 Variable Consideration test would flag entries where recognised amount exceeds contract price without a modification flag, which requires a `contract_price` field + `modification_flag` field that don't exist on `RevenueEntry` today. Adding those is a model extension that deserves its own sprint.
+- **Full `aggregate_findings: list[AggregateFinding]` refactor.** Chose the minimal `is_aggregate=True` flag approach because the full refactor touches `RevenueTestResult.to_dict`, every memo/CSV serializer, and the export schema. The flag achieves the same outcome (consumers render separately) without the API churn.
+
+**Validation:** 277 tests pass across `test_revenue_testing` + `test_revenue_testing_engine` + `test_revenue_testing_memo` + `test_tool_anomaly_detection`.
+
+**Review:**
+- Splitting RT-09 via a shared `_resolve_period_boundaries` helper kept the boundary-inference logic DRY — both tests compute p_start / p_end identically; they just disagree on which boundary to filter against.
+- The `is_aggregate` flag pattern is a low-disruption path to the sprint plan's intent. If a future sprint decides to do the full dataclass refactor, the flag is forward-compatible — the data is already segregated in the details dict.
+- RT-17 rule 3 overlaps with what the original sprint plan called RT-18 — intentional consolidation. A real RT-18 (contract price vs. recognised amount) needs the model extension before it's meaningful.
+- Commit SHA: `09506e6`.
+
+---
+
+### Sprint 684: MUS sampling standards compliance
+**Status:** PENDING
+**Priority:** P1 (standards compliance — most material auditor-facing defect)
+**Source:** Accounting-expert-auditor C-1/M-1/L-3
+**Why now:** Sampling is workpaper-bearing — sample sizes and evaluations get cited in engagement files. Homemade expansion factor understates samples ~4.6% at e/TM=0.25 vs. AICPA Audit Sampling Guide Table A-1. The inline TODO in `sampling_engine.py:310-311` already acknowledged this.
+
+**Status:** COMPLETE
+
+**Changes landed:**
+- [x] Created `backend/shared/aicpa_tables.py` with Table A-1 for 95% and 90% confidence at the standard buckets `{0.00, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.40, 0.50}`. `expansion_factor(confidence, expected, tolerable)` linearly interpolates between adjacent buckets. Confidence levels outside 90%/95% snap to the nearest tabulated row (only 95% and 90% are published in the AICPA guide).
+- [x] Replaced the homemade `1 + (expected/tolerable)` expansion factor in `calculate_mus_sample_size` with the Table A-1 lookup. Removed the inline TODO comment acknowledging the approximation — no longer needed. **Did not** retain a legacy-flag escape hatch as originally planned: the homemade formula under-sized samples by material amounts (≥4.6% at e/TM=0.25, ~25% at e/TM=0.50) and a flag would invite regression. Engagements running post-Sprint 684 will see larger sample sizes for MUS runs with expected_misstatement > 0; this is the correct behaviour per AICPA.
+- [x] Fixed `sample_value` in `evaluate_mus_sample_stringer`. Added optional `sample_items: list[SelectedSample] | None` parameter — when supplied, `sample_value` is `sum(|s.recorded_amount|) for s in sample_items` (the auditor-facing dollar coverage of the test). Backward-compat: error-only callers keep the old behaviour so nothing breaks pending a follow-up to thread sample_items through every call site.
+- [x] `select_mus_sample` now returns `(selected, random_start, negative_items)` — a 3-tuple with the excluded negative-balance items. Partitions inputs by sign BEFORE sorting and sampling. Internal caller in `design_sample` updated to log the exclusion count via `logger.info`; external test callers updated to the new tuple shape.
+
+**New tests (6 added, all pass):**
+- `TestSprint684AICPATableA1::test_expansion_factor_matches_table_at_published_buckets` — spot-checks 1.75 @ 0.25 and 3.00 @ 0.50 (95%).
+- `TestSprint684AICPATableA1::test_expansion_factor_interpolates_between_buckets` — half-bucket interpolation (0.175 → 1.475).
+- `TestSprint684AICPATableA1::test_zero_expected_returns_unity`.
+- `TestSprint684AICPATableA1::test_sample_size_uses_table_not_homemade_factor` — pins interval = 75K / (CF × 1.75) and asserts sample size ≥ 180 (would be ~155 under old formula).
+- `TestSprint684NegativeBalanceRejection::test_negative_items_excluded_from_selection`.
+- `TestSprint684NegativeBalanceRejection::test_all_positive_returns_empty_negative_list`.
+
+**Deferred (per sprint plan but out of scope this session):**
+- Memo copy update referencing "AICPA Audit Sampling Guide, Table A-1" explicitly — current memo copy still uses generic language. `sampling_memo_generator.py` doesn't block the fix landing and a copy-only change is a tight hotfix candidate for later.
+
+**Validation:**
+- 172 sampling + sampling-memo + sampling-routes tests pass.
+- All 9 existing `select_mus_sample` test call sites updated to the new 3-tuple shape.
+
+**Review:**
+- Dropping the legacy-flag fallback was the right call: the homemade formula was wrong in one direction only (under-sizes), so a flag would hide the fix rather than enable a migration. Engagements that have already run under the old formula don't need to re-run — the correct response is "use the larger sample size going forward."
+- AICPA Table A-1 is the industry-standard reference; hardcoding it in a pure data module (no side effects, exhaustive unit tests) is appropriate. If/when the AICPA publishes a revised table, this is a one-dict edit.
+- Commit SHA: `9dd554a` (bundle commit covering Sprints 682 + 684).
+
+---
+
+### Sprint 685: ISA 570 going concern expansion + test dedup
+**Status:** COMPLETE
+**Priority:** P1
+**Source:** Accounting-expert-auditor C-5/M-4
+
+**Changes landed:**
+- [x] **Test consolidation.** Merged tests 2 (current ratio < 1.0) and 3 (negative working capital) into one `_test_working_capital_deficit` — they were mathematically equivalent (current_ratio < 1.0 ⇔ working_capital < 0) so the prior "2-of-6 triggered" threshold was effectively 1-of-5. Consolidated test keeps BOTH the ratio AND the dollar deficit in the description (ratio for cross-entity comparability, deficit for engagement-specific action); `metric_value` stays as the working-capital dollar amount (more informative for GC memos).
+- [x] **Cash-flow indicator (ISA 570 ¶16(b)).** New `_test_negative_operating_cash_flow(operating_cash_flow, materiality_threshold)`. Fires when OCF is negative and magnitude exceeds materiality. Sub-materiality negative OCF is noted but not flagged (small operational timing differences are normal). Severity scales with magnitude relative to materiality. Distinct from "recurring losses" because accrual losses can co-exist with positive cash flow (depreciation-heavy businesses) and vice-versa.
+- [x] **Covenant breach indicator (ISA 570 ¶16(d)).** New `CovenantThresholds` dataclass + `_test_covenant_breach`. Auditor-configurable floors on current ratio and interest coverage, ceiling on debt-to-equity. Multiple concurrent breaches = high severity; single breach = medium. Description names each specific covenant and the breach magnitude.
+- [x] **Expanded disclaimer.** Now lists ISA 570 ¶16 indicators this engine CANNOT derive from TB alone — loss of key customers or management, labor disputes, material pending litigation, non-compliance with capital requirements, inability to obtain essential financing. Auditor prompt is explicit so the memo flags auditor-judgment categories without the engine trying to pretend it can derive them.
+- [x] **Qualitative prompts as deferred scope.** Adding fields for auditor-entered qualitative indicators would require engagement layer changes (new form inputs, stored data model). Documented the limitation in the disclaimer instead of half-implementing it. Future sprint can wire qualitative prompts when the engagement form layout needs another pass.
+
+**Validation:**
+- 47 going-concern tests pass (up from 38 pre-Sprint 685 — 9 new tests for the consolidated test, new cash-flow paths, and covenant threshold cases; 7 removed for the deleted Current Ratio / Negative Working Capital individual tests).
+- Full regression (going concern + audit pipeline): 62 passed / 0 failed.
+
+**Behaviour changes requiring stakeholder notice:**
+1. The "6 tests" figure in marketing / CLAUDE.md is now "4–7 indicators depending on inputs" — 4 baseline tests (net liability, working capital deficit, recurring losses, high leverage), +1 when prior period supplied (revenue decline), +1 when OCF supplied, +1 when covenant thresholds supplied.
+2. The consolidated working-capital-deficit test counts once in the triggered total rather than twice — engagements that previously hit the triggered "2+" threshold through the current-ratio + negative-working-capital pairing will see triggered counts drop by 1. This was the correct behaviour all along; the old output overstated GC severity.
+3. `compute_going_concern_profile` signature adds 5 optional kwargs (`operating_cash_flow`, `materiality_threshold`, `covenant_thresholds`, `operating_income`, `interest_expense`). All default-None; existing callers unaffected.
+
+**Review:**
+- Kept `CURRENT_RATIO_THRESHOLD` constant for backward-compat with any callers importing it — module top-level comment notes it's preserved but not used by the consolidated test.
+- The cash-flow test's sub-materiality filter is important: without it, any operational timing difference (e.g., a month-end receipt arriving Jan 2 vs Dec 31) would fire a GC indicator. ISA 570 ¶16(b) specifically names MATERIAL negative operating cash flow; the materiality gate implements that.
+- Covenant breach test is inert when `covenant_thresholds=None` — zero false positives when an engagement hasn't loaded the entity's loan agreement.
+- Commit SHA: `965d769` (bundle commit covering Sprints 681 + 685).
+
+---
+
+### Sprint 686: JE test tuning — Benford minimum + reversal window
+**Status:** COMPLETE
+**Priority:** P2
+**Source:** Accounting-expert-auditor H-6/H-7
+
+**Changes:**
+- [x] Lowered `benford_min_entries` 500 → 300 in `JETestingConfig` with a Nigrini (2012) citation in the comment. `benford_min_magnitude_range` left at 2 (already correct per the same reference).
+- [x] Added `_categorize_reversal(first_date, second_date, cross_account)` helper that classifies each reciprocal pair into one of three buckets based on period-boundary position:
+  * `same_period` — both dates in the same calendar month. High-suspicion round-tripping indicator.
+  * `accrual_reversal` — second entry lands on day 1 of the month after the first. Standard bookkeeping convention (post Dec 31, reverse Jan 1) — emitted at low/medium severity and 0.35/0.55 confidence so downstream risk scoring can deprioritise.
+  * `cross_month` — any other cross-month pair. Medium/high suspicion because it crosses a close without the accrual-reversal shape.
+- [x] Added `reversal_category` field to the flagged-entry details dict so PDFs and CSVs can surface the tier. Issue text now names the category inline ("same-period cross-account", "next-month day-1 accrual reversal", "cross-month").
+- [x] Cross-account pairs continue to upgrade severity by one tier (same-period cross-account = high; accrual-reversal cross-account = medium rather than low) — offsetting entries to different accounts remain a stronger indicator than self-reversals.
+
+**Validation:**
+- 101 JE-engine + memo tests pass.
+- No existing test asserted on the prior cross-account-binary severity model; the new tiered output is additive.
+
+**Review:**
+- The "day 1 of next month" heuristic is intentionally tight — ISA/Nigrini don't prescribe an exact window for what counts as a "standard accrual reversal", but first-of-month is the convention that every audit firm I've worked with trains juniors to spot. A looser window (e.g., first-week-of-next-month) would suppress too many genuine cross-month adjustments.
+- Lowering Benford to 300 enables first-digit analysis on mid-size populations (300–499) that the prior threshold rejected. For populations below 300, Benford is unreliable (Nigrini 2012, p. 79) — keep the skip.
+- Commit SHA: `674c63c` (bundle commit covering Sprints 680/686/687/690/694).
+
+---
+
+### Sprint 687: AR-aging silent date default + ASSET_KEYWORDS cleanup
+**Status:** COMPLETE
+**Priority:** P2
+**Source:** Accounting-expert-auditor M-3/M-7
+
+**Changes:**
+- [x] **AR-aging date fix — already landed.** Sprint 695 resolved the `date.today()` fallback early on CPA-correctness grounds: `_compute_aging_days` returns `None` when no reference is supplied and raises `ValueError` on unparseable dates; the AR-aging route rejects sub-ledger uploads without `as_of_date` with HTTP 400. Sprint 687 verifies the fix is intact rather than duplicating work.
+- [x] **ASSET_KEYWORDS extended** (`backend/audit/classification.py`) with the missing modern-COA families: `notes receivable`, `other receivable`, `investments`, `securities`, `deposits`, `goodwill`, `intangible`, `leasehold`, `right-of-use`, `rou asset`, `deferred tax asset`.
+- [x] **Deduplicated the list** — `audit/ingestion.py` had a hardcoded duplicate of `ASSET_KEYWORDS` that had drifted from the canonical one. Replaced with an import from `audit.classification` so the legacy vectorized path stays in lock-step; there's now a single source of truth.
+- [x] The list remains in `__all__` and re-exported from `audit_engine.py` — it's still reachable by external callers — but the module-level comment now explicitly states it's a lexical fallback for `AccountClassifier` rather than a production classifier.
+
+**Validation:**
+- 154 AR-aging + audit-validation tests pass. The existing `test_audit_validation.py` checks exercise the keyword vectorization path directly.
+
+**Review:**
+- The original "remove from `__all__` or document" decision: document wins. Removing breaks any downstream integration that imports from `audit_engine`, and the list IS still used by `detect_abnormal_balances` (a secondary path); marking it as a fallback rather than deleting keeps the compatibility surface intact.
+- Extending the list was the real win — a "Goodwill" or "ROU Asset" account on a modern TB would previously fall through to the weighted classifier without the keyword sanity check, weakening the abnormal-balance vectorized fast-path.
+- Commit SHA: `674c63c` (bundle commit covering Sprints 680/686/687/690/694).
+
+---
+
+### Sprint 688: Composite Risk + Account Risk Heatmap frontend
+**Status:** COMPLETE
+**Priority:** P2 (feature completeness — marketed in CLAUDE.md)
+**Source:** Completeness agent H-01/H-02
+**Why now:** Both tools ship with full backend engines, routes, and tests; neither has a single line of frontend code. CLAUDE.md markets both under "Key Capabilities." Either wire the UI or stop marketing them.
+**Files (new):**
+- `frontend/src/types/compositeRisk.ts`, `hooks/useCompositeRisk.ts`, `app/tools/composite-risk/page.tsx`
+- `frontend/src/types/accountRiskHeatmap.ts`, `hooks/useAccountRiskHeatmap.ts`, `app/tools/account-risk-heatmap/page.tsx`
+- `frontend/src/__tests__/{useCompositeRisk, useAccountRiskHeatmap, CompositeRiskPage, AccountRiskHeatmapPage}.test.{ts,tsx}`
+
+**Changes:**
+- [x] Composite Risk: auditor-input workflow (account/assertion rows with inherent/control/fraud + notes); builds ISA 315 RMM profile + risk distribution + overall-tier badge. Optional TB-score / GC-indicator integration fields. Bound to POST `/composite-risk/profile`.
+- [x] Account Risk Heatmap: raw-signal form + upstream-engine JSON paste. Renders ranked account table with priority-tier pills, severities/sources chips, total materiality. CSV download via POST `/audit/account-risk-heatmap/export.csv`. Invalid JSON surfaces inline — no request is sent.
+- [x] Added both entries to `app/tools/page.tsx` catalog (Advanced category) and `lib/commandRegistry.ts` TOOL_ENTRIES (tier guard = `solo+` by default).
+- [x] Oat & Obsidian tokens (sage/clay/oatmeal) throughout; every section wrapped in `Reveal`; UpgradeGate wraps the tool body per Pricing v3 pattern.
+- [x] 17 new Jest tests — hook contracts (success + error + reset) and page happy-paths + error surfacing.
+
+**Review:**
+- Chose not to introduce separate `components/compositeRisk/*` and `components/accountRiskHeatmap/*` folders — both tools are small enough that inlining the result sub-components (`RiskPill`, `Stat`, `TierPill`, `StatBox`) in the page keeps the call site visible without abstracting prematurely. If either grows a second consumer, extract then.
+- Upstream-engine JSON paste is the pragmatic adapter for heatmap triage: users who already have diagnostic output can drop it in without a custom upload flow, and the backend's existing `build_signals_from_*` adapter functions translate it. Form-only entry remains possible for hand-curated triage.
+- TypeScript caveat: `{...prev, [field]: value}` widens to `Partial<T>` with computed keys — cast at the assignment boundary, not in the function signature, so the outer generic remains sound.
+- Commit SHA: `4b2757a`.
+
+---
+
+### Sprint 689: Hidden backend tools — catalog wire-up or removal
+**Status:** PENDING
+**Priority:** P2
+**Source:** Completeness agent H-03/H-05 + Claim-reality C-03/C-04
+**Why now:** Six backend tools have endpoints and no UI: `book_to_tax`, `cash_flow_projector`, `intercompany_elimination`, `form_1099`, `w2_reconciliation`, `sod`. Separately, Multi-Currency is marketed as Tool #12 but is only a side-car on TB upload — no standalone card. Decide per-tool: promote to catalog or remove the route.
+**Files:**
+- `backend/routes/{book_to_tax, cash_flow_projector, intercompany_elimination, form_1099, w2_reconciliation, sod}.py`
+- `frontend/src/app/tools/page.tsx`, `lib/commandRegistry.ts`
+- `shared/entitlements.py:14` (canonical tool count)
+
+**Changes:**
+- [ ] For each of the six: CEO decides [promote / defer / remove]. Default recommendation:
+  - `sod` — already Enterprise-gated; promote with minimal UI.
+  - `form_1099`, `w2_reconciliation` — payroll-adjacent; promote under the Payroll tool umbrella as sub-workflows.
+  - `book_to_tax`, `cash_flow_projector`, `intercompany_elimination` — remove routes if not shipping Tool #13+, document rationale in a sprint archive entry.
+- [ ] Multi-Currency: add a standalone `/tools/multi-currency` card with its own page; continue rendering the side-car on TB upload for convenience.
+- [ ] Reconcile `CANONICAL TOOL COUNT` in `shared/entitlements.py:14` with the final catalog count; propagate to CLAUDE.md, pricing page, ceo-actions.md, and marketing surfaces.
+- [ ] Regression tests: every cataloged tool has a route, hook, page, and entitlement-gate test.
+
+---
+
+### Sprint 690: Stripe trial-ending email
+**Status:** COMPLETE
+**Priority:** P2
+**Source:** Completeness agent H-04
+**Why now:** `webhook_handler.py` received `customer.subscription.trial_will_end`, logged it, recorded a `TRIAL_ENDING` analytics event, and did nothing else. Docstring explicitly said "Notification email infrastructure deferred to a future sprint." Users didn't get the standard 3-day warning.
+
+**Changes:**
+- [x] Added `send_trial_ending_email(to_email, days_remaining, plan_name, portal_url)` to `backend/email_service.py`. Reuses the dunning-email infrastructure (`_send_dunning_email` + `_dunning_html`) because the shape is identical (single CTA, friendly tone, Oat & Obsidian branded); avoids duplicating the HTML template. Copy pluralizes day/days and names the plan explicitly.
+- [x] Wired the send into `handle_subscription_trial_will_end`. The analytics event is recorded first (source-of-truth), then the email fires — so a SendGrid outage can never break analytics-backed decisioning.
+- [x] Added `_days_until(epoch_seconds)` — converts Stripe's `trial_end` timestamp to an integer days-from-now value, clamped to [0, 365]. Falls back to 3 (Stripe's default notice window) when the field is absent or unparseable.
+- [x] Added `_portal_url_for_user(db, user_id)` — resolves a Stripe Customer Portal session URL for the CTA. Falls back to the in-app `/settings/billing` page if the portal session cannot be created; the webhook handler must never crash on a URL lookup.
+- [x] Dispatch is wrapped in try/except — a SendGrid outage or template error cannot break webhook processing. Failures surface via `log_secure_operation` for ops visibility.
+
+**Tests:**
+- `test_trial_will_end_sends_trial_ending_email` — patches `email_service.send_trial_ending_email` + `_portal_url_for_user`, fires the webhook with a trial_end 5 days in the future, asserts the email was dispatched with the right recipient, days (±1 for day-rounding), plan, and portal URL.
+- `test_trial_will_end_missing_trial_end_defaults_to_3_days` — verifies the `_days_until` fallback fires when Stripe omits the field.
+- Existing `test_trial_will_end_records_trial_ending_not_expired` still passes — analytics path unchanged.
+
+**Review:**
+- Reusing the dunning email chassis was the pragmatic call: the brand template, deliverability wiring, and "email send is skipped gracefully when SENDGRID_API_KEY is absent" behaviour are all already tested on that code path. Writing a parallel template would have meant duplicating ~40 lines of HTML and the SendGrid error handling.
+- The portal-URL fallback to `/settings/billing` is deliberate — if Stripe's portal session creation fails (billing portal config missing, customer ID stale), we still want the CTA to land somewhere useful; the in-app settings page always works for authenticated users.
+- Commit SHA: `674c63c` (bundle commit covering Sprints 680/686/687/690/694).
+- [ ] Add a unit test (mock SendGrid) that verifies the send call + args; add an integration test that runs the webhook handler end-to-end.
+- [ ] Update `tasks/pricing-launch-readiness.md:48` acceptance note — trial email no longer deferred.
+
+---
+
+### Sprint 691: Professional-tier DB enum + team-seat counting
+**Status:** PENDING
+**Priority:** P2
+**Source:** Completeness agent H-07/H-08
+**Why now:** `UserTier.PROFESSIONAL` is still in the DB enum but unpurchasable; legacy Professional users map to Solo entitlements. `pricing-launch-readiness.md:49-50` flagged team-member counting as a placeholder; hard-mode seat enforcement landed in `config.py:456` but the underlying counting logic was never verified.
+**Files:**
+- `backend/models.py` (UserTier enum)
+- `backend/shared/entitlements.py` (Professional mapping)
+- `backend/billing/seat_enforcement.py` or equivalent — wherever active-member counting lives
+- Alembic migration (new)
+
+**Changes:**
+- [ ] Alembic migration: collapse `PROFESSIONAL` values to `SOLO` across `users.tier`; drop `PROFESSIONAL` from the enum (Postgres enum alter sequence: add new enum without PROFESSIONAL → copy → drop old). Backfill any Professional users to Solo with a logged event.
+- [ ] Remove Professional-specific code paths from `shared/entitlements.py` and tests.
+- [ ] Audit the active-member counting function: does it count pending invitations? terminated users? multi-org members? Build a concrete test matrix and exercise each.
+- [ ] Verify Enterprise seat-hit returns 402 and frontend UpgradeModal surfaces it correctly.
+- [ ] Sign-off note in `pricing-launch-readiness.md`.
+
+---
+
+### Sprint 692: Documentation drift correction
+**Status:** COMPLETE (core doc fixes) / DEFERRED (frontend catalog reconciliation needs Sprint 689 / pricing-launch-readiness re-sign needs CEO)
+**Priority:** P2 (launch documentation hygiene)
+**Source:** Completeness C-01/C-02/C-03/C-04/C-07 + Accounting H-8
+
+**Changes landed:**
+- [x] `CLAUDE.md` "21 PDF memos" → "18 memo PDFs + 3 report PDFs (combined audit, financial statements, anomaly summary)". Noted that every memo PDF now supports Enterprise custom branding via the ContextVar pipeline (Sprint 679).
+- [x] `CLAUDE.md` export-endpoint count recounted — published the actual breakdown: "~49 export endpoints across 7 route modules: 10 diagnostic + 18 memo PDFs + 5 export-sharing + 9 testing-tool CSVs + 3 engagement-export + 4 loan amortization."
+- [x] `CLAUDE.md` testing-tool test counts updated to post-Sprint-701/702/682/683 totals: **JE 19, AP 14 (+AP-T14), Payroll 13 (+PR-T12 / +PR-T13), Revenue 18 (14 core split RT-09a/b + RT-17, 4 contract-aware), AR Aging 12 (+AR-01b), Fixed Assets 11 (+FA-T11), Inventory 10 (+IN-T10), Statistical Sampling with AICPA Table A-1**.
+- [x] `CLAUDE.md` Composite Risk capability line updated — **"ISA 315 Appendix 1 RMM matrix (Sprint 680 — not max(IR, CR))"**.
+- [x] `CLAUDE.md` Going Concern capability line mentions the Sprint 685 expansion: 6+ indicators including cash flow + covenant breach.
+- [x] `tasks/ceo-actions.md` two references fixed — "21 PDF memos" → "18 memo PDFs + 3 report PDFs" in CEO validation checklist.
+- [x] `backend/engagement_manager.py::compute_materiality` docstring now explicitly calls out the industry conventions: **PM = 75% of overall per ISA 320 ¶11 / AU-C 320.A12**; **clearly-trivial = 5% of OVERALL (NOT performance) materiality per ISA 320 ¶A20 / AU-C 320.18**. This was the most common source of auditor confusion.
+- [x] `backend/shared/materiality_resolver.py` module-level docstring expanded with the full cascade breakdown + clarifying note that the resolver returns PM (not overall) as the engagement-sourced threshold.
+
+**Deferred (out of scope this session):**
+- **`pricing-launch-readiness.md` Section 7 re-sign** — requires CEO Phase 4.1 validation on production after Sprint 679 lands (branding round-trip). Documentation task, not an engineering task.
+- **"12 tools" vs. "15 catalog cards" reconciliation** — blocked on Sprint 689 (hidden-backend-tools decision) which needs CEO input to determine which tools promote / demote.
+- **Marketing-copy updates** (pricing page, ToolShowcase, etc.) — frontend sprint; CLAUDE.md is the authoritative source, marketing copy can lag safely.
+
+**Review:**
+- Materiality-disclosure clarification is the highest-value item: without it, an auditor reading an engagement memo could reasonably infer that clearly-trivial = 5% of PM (≈ 3.75% of overall), which would under-report misstatements. The ISA citation in the docstring gives any future reader a canonical source.
+- CLAUDE.md is now consistent with the actual test counts shipped in Sprints 680-703. Nightly reports can pin against these numbers without drift.
+- Commit SHA: `5ac9307`.
+
+---
+
+### Sprint 693: Frontend polish — framer-motion + silent catches
+**Status:** COMPLETE
+**Priority:** P3
+**Source:** Frontend-bugs agent (4 HIGH + 2 silent catches)
+
+**Changes landed:**
+- [x] Added `as const` to all 4 `type: 'spring'` framer-motion transitions in `verification-pending/page.tsx:70` and `verify-email/page.tsx:95, 112, 131`. Required by framer-motion's `Transition` type (typed as a union where `'spring'` narrows to a literal).
+- [x] Replaced `.catch(() => {})` in `app/tools/page.tsx:72` with `console.warn('[tools] preference load failed', err)` — preference-load regressions now surface in dev console and Sentry breadcrumbs without breaking the page.
+- [x] Replaced `.catch(() => {})` in `hooks/useTrialBalanceUpload.ts:217` with `console.warn('[trial-balance] telemetry post failed', err)` — telemetry is best-effort but failures should be observable.
+
+**Validation:**
+- Frontend jest: 177 suites, 1,821 tests pass.
+- `npx tsc --noEmit`: my touched files produce no errors (pre-existing `__tests__/` tsconfig errors are unrelated).
+- `npm run build`: clean. All routes render as `ƒ (Dynamic)` — CSP nonce contract intact.
+
+**Review:**
+- Chose `console.warn` over a structured-logger module because the frontend doesn't currently have one and introducing it for this sprint is scope creep. Sentry automatically captures console.warn as a breadcrumb, so the observability story is unchanged from what a custom `logger.warn` would provide.
+- Commit SHA: `d22dc86`.
+
+---
+
+### Sprint 695: High-assurance financial-report remediation (RPT-11 / DASH-01 / RPT-02 / RPT-07)
+**Status:** COMPLETE
+**Priority:** P0 (financial-calculation correctness)
+**Source:** Post-audit high-assurance remediation brief 2026-04-20 — CPA-facing correctness bar, validate-then-fix.
+
+**Why now:** Five confirmed defects in financial-report engines spanning three-way match variance math, dashboard taxonomy, and multi-period variance configuration — all in the CPA-facing output surface where a single wrong percentage erodes auditor trust.  Three additional suspicions required test-first validation before touching logic.
+
+**Confirmed defects — FIXED:**
+- [x] **RPT-11 price variance denominator** (`backend/three_way_match_engine.py`): replaced `config.price_variance_threshold` / `config.amount_tolerance` denominator guards with a monetary epsilon (`MONETARY_EPSILON = Decimal("0.005")`).  The 5% decision threshold was being used as a "$0.05 is close enough to zero" guard, mis-flagging every sub-$0.05 unit price at 100% variance.  Quantities use a separate count-space epsilon (`1e-6`).  Decimal-first arithmetic preserved.
+- [x] **RPT-11 match-rate denominator** (same file, `run_three_way_match`): denominator now `max(len(pos), len(invoices), len(receipts), 1)`.  Added `match_rate_denominator` + `match_rate_denominator_source` response fields for audit-workpaper traceability.  Partial-delivery scenarios (receipts > POs) no longer inflate full-match rate above 1.0.
+- [x] **RPT-11 route config overrides** (`backend/routes/three_way_match.py`): seven optional form fields + `_build_twm_config` with bounded validation (HTTP 400 on out-of-range); defaults preserved for every existing client.
+- [x] **DASH-01 tier taxonomy mismatch** (`backend/shared/testing_enums.py` + `backend/engagement_dashboard_engine.py`): new shared `normalize_risk_tier` maps 3-tier `medium` → canonical 4-tier `moderate` plus defensive legacy-alias handling (`critical`/`minimal`/...).  Three-way-match reports no longer vanish from the dashboard priority-action list.
+- [x] **RPT-02 configurable significance thresholds** (`backend/multi_period_comparison.py` + `backend/routes/multi_period.py`): new `SignificanceThresholds` dataclass; `compare_trial_balances` / `compare_three_periods` / `classify_significance` accept optional overrides.  API exposes `significant_variance_percent` / `significant_variance_amount` with bounded validation.  Active thresholds emitted in `active_thresholds` response field.
+
+**Suspicions — resolved via test-first:**
+- [x] **RPT-02 signed variance basis — REJECTED.** `abs(prior_balance)` denominator is intentional; pairs with credit-normal display sign-flip in `AccountMovement.to_dict`.  Locked behaviour in `TestRPT02SignedVarianceSuspicion` (5 tests, including sign-change + abs-symmetry properties the display layer depends on).
+- [x] **RPT-07 non-deterministic aging — CONFIRMED.** `_compute_aging_days` no longer falls back to `date.today()`: returns `None` when no reference supplied, raises `ValueError` on unparseable dates.  Route rejects sub-ledger uploads without `as_of_date` (HTTP 400).  Lands the Sprint 687 fix early on CPA-correctness grounds.
+- [x] **Cross-report float precision — ACCEPTED as-is with pinning tests.** Three-way match keeps Decimal end-to-end through the engine; multi-period converts at `calculate_movement`.  `TestCrossReportPrecisionBoundaries` pins the conversion boundaries so future refactors cannot silently drift.  Deeper Decimal migration across the other 15 engines is out-of-scope (no material-drift finding).
+
+**Test additions:**
+- `backend/tests/test_remediation_2026_04_20.py` — 39 tests, all pass.
+
+**Validation:**
+- `pytest tests/test_remediation_2026_04_20.py` → 39 passed.
+- Touched-engine regression sweep (`test_three_way_match` + `test_multi_period_comparison` + `test_ar_aging_engine` + `test_flag_regressions`) → 269 passed.
+- Route/memo sweep (`test_ar_aging*` + `test_multi_period_*` + `test_engagement_dashboard_memo` + `test_twm_memo` + `test_api_contracts` + `test_export_testing_routes`) → 424 passed.
+- Broad touch-domain filter (`-k "dashboard or multi_period or three_way or ar_aging or movement or significance or variance"`) → 680 passed / 9 xfailed / 0 failed.
+
+**Behaviour changes requiring stakeholder notice:**
+1. Three-way match `full_match_rate` denominator now includes receipts — rates shift downward when receipt population exceeds PO/invoice (split deliveries).  Memos that quote the rate should cite the new `match_rate_denominator_source`.
+2. AR-aging API rejects sub-ledger uploads without `as_of_date` (HTTP 400 instead of silent `date.today()` fallback).
+3. Multi-period API adds `significant_variance_percent` / `significant_variance_amount` (both optional — historical 10% / $10,000 preserved when omitted); response now includes `active_thresholds` for audit traceability.
+4. Engagement dashboard surfaces `medium` three-way-match findings as `moderate` — these previously never appeared in the priority-action list.
+
+**Review:**
+Nothing weakened — auth/security/zero-storage untouched, no tests silenced, every formula change has a paired test.  The RPT-02 "signed variance" suspicion turned out to be INTENTIONAL platform policy; rejecting it was the correct call per the test-first directive, and the pinning tests prevent a future "fix" from breaking the credit-normal display contract.
+
+---
+
+### Sprint 694: Coverage Sentinel non-prod ignore list
+**Status:** COMPLETE
+**Priority:** P3
+**Source:** Completeness S-04
+
+**Changes:**
+- [x] Added `NON_PRODUCTION_FILE_SUFFIXES`, `NON_PRODUCTION_FILE_SUBSTRINGS`, and `NON_PRODUCTION_BASELINE_MARKERS` constants at the top of `scripts/overnight/agents/coverage_sentinel.py`. Data-driven so a future "exclude X" is a one-line change.
+- [x] Added `_is_non_production_path(path)` helper — case-insensitive, slash-agnostic (handles both `alembic/versions/` and `alembic\versions\` since coverage.json mixes them on Windows).
+- [x] `_top_uncovered_files()` now returns `(ranked, excluded_count)` — skips files that match the helper and tells the caller how many it dropped.
+- [x] The sentinel summary string now includes "Non-production excluded: N file(s)" when the count is non-zero, so the exclusion is visible in the nightly report (not silently applied).
+- [x] Result payload gains a `non_production_excluded` integer field for programmatic consumers.
+
+**Validation:**
+- Inline smoke-test harness verified:
+  * `generate_sample_reports.py` (forward + back slash paths) → excluded.
+  * `scripts/validate_report_standards.py` → excluded.
+  * `migrations/alembic/versions/2026_01_baseline.py` → excluded (baseline marker matched).
+  * `migrations/alembic/versions/2026_04_20_harden_passcode.py` → NOT excluded (regular migration — still ranks in top-uncovered because it DOES execute in production on deploy).
+  * `backend/routes/billing.py`, `backend/routes/audit_pipeline.py` → NOT excluded.
+
+**Review:**
+- Baseline-only exclusion for alembic (not all migrations) was deliberate: regular migrations run in production on deploy and absolutely should be tested; only the frozen baseline file is genuinely non-productive to cover.
+- Non-production exclusion is additive — the totals/percent_covered metrics still include these files (coverage.json's totals aren't affected), just the top-10 uncovered ranking changes. This keeps the overall coverage number stable so the rolling-mean drift detection isn't affected.
+- Commit SHA: `674c63c` (bundle commit covering Sprints 680/686/687/690/694).
+
+---
+
+## Anomaly Framework Hardening — 2026-04-21
+
+> **Source:** The 9 xfail markers in `tests/test_tool_anomaly_detection.py` — 3 currency validation gaps + 6 generator↔engine alignment issues. Sprint plan (A–E) drawn up 2026-04-20; executed as Sprints 699–703 below. End state: **zero xfails remaining**, formal contract layer in place, strict CI gate on contract compliance.
+
+---
+
+### Sprint 699 (A): Multi-currency defense-in-depth
+**Status:** COMPLETE
+**Priority:** P1
+**Source:** 3 xfailed tests in `test_tool_anomaly_detection.py::test_currency_anomaly_detected` (zero / negative / stale exchange rate).
+
+**Why now:** `parse_rate_table` rejected bad rates on the upload path, but `convert_trial_balance` trusted whatever was already in the `CurrencyRateTable`. Any bypass path (DB hydration via `from_storage_dict`, programmatic construction, test fixtures) could silently admit rate=0, rate<0, or heavily-stale rates and produce bad conversions without flagging.
+
+**Changes:**
+- [x] `ExchangeRate.__post_init__` — validate-at-construction. Rejects rate ≤ 0, empty currency codes, non-3-letter codes, identical from/to, non-date effective_date. Normalises str/int/float rate inputs to Decimal.
+- [x] `CurrencyRateTable.staleness_threshold_days` — promoted from a module constant to a first-class configurable field; plumbed through `find_rate` / `_find_best_rate`.
+- [x] `CurrencyRateTable.newest_rate_date()` — helper that returns the latest effective_date in the table. Drives the cohort-based staleness check.
+- [x] `_find_best_rate` — now runs staleness in two modes: target-date-based (original) OR cohort-based (new). The cohort check catches "stale rate alongside a fresh one" without requiring the caller to supply as_of_date.
+- [x] `convert_trial_balance` — defense-in-depth: checks `rate <= 0` at use time and emits `ConversionFlag(issue="invalid_rate")` if a malformed rate leaked through construction.
+- [x] `from_storage_dict` — every hydrated ExchangeRate now runs through `__post_init__`, so a corrupted DB row can't silently re-admit bad data.
+- [x] Row-level flag path carries the specific issue (`missing_rate` vs. `invalid_rate`) — different remediation, different severity.
+
+**Test updates:**
+- [x] `_build_rate_table` in `test_tool_anomaly_detection.py` wraps ExchangeRate construction in try/except and returns a `rejected` list. The test now accepts detection at either boundary (construction rejection OR use-time flagging) — both are valid defense mechanisms.
+- [x] All 3 currency xfails removed.
+
+**Validation:**
+- Full currency + tool-anomaly regression: 204 passed / 6 xfailed (6 non-currency xfails still present — Sprints C/D scope) / 0 failed.
+- `test_tool_anomaly_detected[currency_*]` — all 5 generators pass.
+
+**Review:**
+- Chose cohort-based staleness over requiring as_of_date because it mirrors how auditors actually think: "is this rate stale relative to the others in the table?" is the fast screening question. Target-date mode stays available for engagements that need period-specific validation.
+- `invalid_rate` as a distinct flag from `missing_rate` preserves auditor signal — "rate wasn't there" and "rate was there but bad" require different follow-up.
+- Commit SHA: `633643a` (bundle commit covering Sprints 699-703).
+
+---
+
+### Sprint 700 (B): Anomaly framework contract layer
+**Status:** COMPLETE
+**Priority:** P1
+**Source:** Sprint plan A–E; upstream of Sprints 701/702 which need the contract to describe their fixes.
+
+**Why now:** Fixing the 6 Category A xfails individually without a formal contract means the next generator added re-introduces the same class of drift. Establishing the generator↔engine contract layer first makes subsequent fixes durable.
+
+**Changes:**
+- [x] `backend/shared/engine_contract.py` (new, production-location) — defines `EngineInputContract`, `DetectionPreconditions`, `GeneratorEvidence`, `ContractViolation`, and `check_contract()`. Pure data classes + one pure function; no side effects; safe to import from any engine.
+- [x] `backend/tests/anomaly_framework/test_contract.py` (new) — 9 unit tests for `check_contract` (happy path, each violation type, substring-based pattern matching, commutativity, multi-gap surfacing).
+- [x] `backend/tests/anomaly_framework/test_contract_compliance.py` (new) — cross-registry meta-test. Introspects each engine module for `ENGINE_CONTRACT`, each generator for `PRODUCES_EVIDENCE`, and runs `check_contract` on every annotated pair. Report-only during Sprints B–D.
+- [x] `pyproject.toml` — registered the `anomaly_contract` pytest mark.
+- [x] `currency_engine.ENGINE_CONTRACT` — worked example (5 detection targets: missing_rates, invalid_currencies, zero_rates, negative_rates, stale_rates).
+- [x] Annotated all 5 currency generators with `PRODUCES_EVIDENCE`.
+
+**Test coverage:**
+- Contract unit tests: 9 passed.
+- Compliance meta-test: 2 passed (one report, one importability sanity).
+- 11 total contract tests pass.
+
+**Review:**
+- Placed `contract.py` in `shared/` rather than under `tests/` so production engines can import it without test-tree coupling. The module is pure data (dataclasses + one pure function) — arguably production infrastructure, not test scaffolding.
+- Substring pattern matching (not set equality) is the correct shape for real-world account-name detection: engines look for "returns" anywhere in a name like "Sales Returns and Allowances", not for exact equality.
+- Report-only mode for this sprint was deliberate: Sprints C/D can populate contracts incrementally; Sprint E flips to strict mode once coverage is meaningful.
+- Commit SHA: `633643a` (bundle commit covering Sprints 699-703).
+
+---
+
+### Sprint 701 (C): Revenue + Payroll alignment
+**Status:** COMPLETE
+**Priority:** P2
+**Source:** 2 of the 6 Category A xfails — `revenue_contra_anomaly`, `payroll_duplicate_names`.
+
+**Changes:**
+- [x] **Revenue contra (generator fix).** Prior generator injected ~$6.4K of contras against ~$200K base gross revenue (3%) — the engine's RT-12 threshold is 15%, so the test never fired. Fix: bump injection to ~$60K (~30%) so RT-12 actually trips. Generator now emits "Sales Returns and Allowances" + "Sales Refunds" account names (matching the engine's contra keyword list).
+- [x] **Payroll duplicate names (engine addition).** The generator targeted `PR-T2` — but PR-T2 is "Missing Critical Fields", which doesn't test name duplication at all. There was no engine test for same-name-different-ID detection, which is ACFE's canonical ghost-employee indicator (26% of payroll fraud). Fix: added `PR-T12 Duplicate Employee Names` (flags distinct employee_ids sharing the same name). Registered in the test pipeline. Generator retargeted to `PR-T12`.
+- [x] xfail markers removed for both tests.
+
+**Validation:**
+- Revenue anomaly tests: 13 passed / 0 xfail.
+- Payroll anomaly + engine + memo + tier2 + tier3 tests: 192 passed / 0 xfail.
+- Broader regression (revenue + payroll + anomaly framework): 461 passed.
+
+**Review:**
+- PR-T12 was the right fix rather than retargeting the generator. Ghost-employee detection is a material gap; the existing `duplicate_name_similarity` config was orphaned (defined but unused). Filling the gap AND closing the xfail in one move.
+- Revenue fix was generator-side because the engine's 15% threshold is correct per real auditor practice — the generator was just under-injecting relative to the base population size.
+- Commit SHA: `633643a` (bundle commit covering Sprints 699-703).
+
+---
+
+### Sprint 702 (D): AR + FA + Inventory alignment
+**Status:** COMPLETE
+**Priority:** P2
+**Source:** 4 of the 6 Category A xfails — `ar_sign_anomalies`, `fa_duplicate_assets`, `inv_missing_fields`, `inv_duplicate_items`.
+
+**Changes:**
+- [x] **AR sign (engine split).** AR-01 checks TB-level sign mismatch (asset with credit balance); generator mutates the sub-ledger. Different assertions, shouldn't collide. Added `AR-01b ar_sl_negative_invoice` — flags sub-ledger invoices with `amount < 0` (credit memo / reversal signal). AICPA Audit Guide §5.11 describes the two as distinct control objectives. Generator retargeted to AR-01b. Added a skipped-slot for the new test when sub-ledger absent to keep the 12-slot test-list stable.
+- [x] **FA duplicate assets (generator fix).** Engine dedups on `(cost, description, acquisition_date)` — generator was mutating the description, breaking the tuple. Fix: keep the triple identical, vary asset_id (the real "double-booked capitalisation" pattern per ACFE 2024).
+- [x] **INV missing fields (generator fix).** Engine treats identifier (item_id OR description) + quantity + cost as required; Category and date are optional. Generator was blanking Category and date but keeping item_id populated. Fix: blank Item ID AND Description — a truly unidentifiable row, which is the engine's strict definition.
+- [x] **INV duplicate items (generator fix).** Same shape as FA: engine dedups on `(unit_cost, description)`, generator was mutating description. Fix: keep description + unit_cost identical, vary Item ID.
+- [x] Test assertion updates: `test_ar_aging.py` and `test_ar_aging_engine.py` bumped from 11 → 12 test slots (skipped and all).
+- [x] xfail markers removed for all 4 tests.
+
+**Validation:**
+- AR + FA + INV + anomaly tests: 620 passed / 0 xfail.
+- `test_tool_anomaly_detection.py`: 89 passed / 0 xfail — **all Category A xfails closed.**
+
+**Review:**
+- AR-01 / AR-01b split was the right shape; widening AR-01 to include SL-level negative invoices would have muddied the auditor memo (one test firing for two different control objectives).
+- FA and INV duplicate fixes were symmetric generator-side fixes — the engines were correct, the generators were asking the wrong question.
+- INV missing fields fix aligned the generator with the engine's strict identifier definition. Category being "required" is contested in literature (different inventory frameworks treat category differently); the engine's narrower definition is defensible.
+- Commit SHA: `633643a` (bundle commit covering Sprints 699-703).
+
+---
+
+### Sprint 703 (E): Contract enforcement + CI guardrails
+**Status:** COMPLETE
+**Priority:** P2
+**Source:** Final sprint in the plan; locks in the contract layer so drift can't silently re-emerge.
+
+**Changes:**
+- [x] Annotated 5 engines with `ENGINE_CONTRACT`: currency (Sprint 700), revenue, payroll, ar_aging, fixed_asset, inventory. Each declares its required/optional columns, entry point, and per-`test_key` `DetectionPreconditions`.
+- [x] Annotated 4 generators with `PRODUCES_EVIDENCE` (beyond the 5 currency from Sprint 700): revenue_contra_anomaly, duplicate_names, ar_sign_anomalies, fa_duplicate_assets, inv_missing_fields, inv_duplicate_items.
+- [x] Upgraded `test_generator_engine_contracts` from report-only to **strict mode** — any contract violation now `pytest.fail()`s. Strict mode caught one real drift during Sprint 703 execution (revenue contract required "credit memo" as an account-name pattern but the engine accepts it in Description too); reconciled by narrowing the contract to exact-match auditor-facing account names.
+- [x] `CONTRIBUTING.md` — added an "Anomaly-Framework Generator ↔ Engine Contracts" section documenting the pattern, the common violation shapes, and precedent for fix direction.
+
+**Validation:**
+- Contract unit tests: 9 passed.
+- Strict-mode compliance meta-test: passes (0 violations).
+- Full backend regression: **7,968 passed / 0 failed / 0 xfailed** (was 7,946 / 9 xfailed before Sprint A).
+
+**Review:**
+- Strict mode caught a real drift on day one — exactly the Sprint E design. The revenue contract was over-strict; reconciliation was a one-line change. This is the pattern future maintainers will see: add a generator, run the meta-test, get a precise violation report, fix, merge.
+- Property-based tests for the contract itself (mentioned in the plan) were deprioritised — the unit tests in `test_contract.py` already cover the pure function exhaustively across all violation types. Adding hypothesis tests would be noise on top.
+- Commit SHA: `633643a` (bundle commit covering Sprints 699-703).
+
+---
+
+## Security Hardening Follow-Ups — 2026-04-20
+
+> **Source:** Residual-risk + follow-up list from the six-objective security hardening batch (Sprint 696 when committed). Grouped by area; safe to land individually.
+
+---
+
+### Sprint 696: Six-objective security hardening batch (2026-04-20)
+**Status:** COMPLETE (committed retroactively 2026-04-21 — originally written 2026-04-20 but never landed)
+**Priority:** P0 — prerequisite for already-deployed Sprints 697, 698, 699
+**Why retroactive:** Audit of uncommitted working-tree state revealed this batch had been written 2026-04-20 and the follow-up Sprints 697/698/699 shipped referencing "Sprint 696 when committed" — but the body of Sprint 696 itself never actually got committed. Result: Sprint 697's Argon2id code writes ~95-char hashes into a `VARCHAR(64)` column (truncates), Sprint 698 reads lockout columns that don't exist, Sprint 699's rollout copy assumes policy changes that weren't live. Landing Sprint 696 unblocks all three for deploy.
+
+**Objectives (all six):**
+1. **Passcode policy hardening** — `passcode_security.py` enforces 10+ chars across 3+ character classes, POST-body passcode transport, and per-token brute-force lockout (5 fails → 5 min, doubling). Already live via Sprint 697's module; Sprint 696 supplies the schema + test updates that make it function end-to-end.
+2. **Column schema widen + lockout tracking** — `export_shares.passcode_hash` widened 64→255 (holds bcrypt then Argon2id); adds `passcode_failed_attempts` (INTEGER NOT NULL DEFAULT 0) and `passcode_locked_until` (TIMESTAMP NULL). Alembic: `c1a5f0d7b4e2_harden_export_share_passcode`, down-revision `f8a3d1c09b72`. SQLite uses `batch_alter_table`; Postgres uses direct ALTER.
+3. **CSRF hardening** — `security_middleware.py` now rejects the `X-Requested-With` custom-header fallback in production (was a silent softening; dev/test still honours it for curl). Adds `Sec-Fetch-Site` enforcement — only `same-origin` / `same-site` pass for mutation requests; `cross-site` / `none` are refused unless the request carries a valid Origin/Referer matching CORS_ORIGINS. Non-browser clients (server-to-server) still pass via the existing no-header path.
+4. **Rate-limit production fail-closed** — `config.py` adds `RATE_LIMIT_STRICT_OVERRIDE=TICKET-ID:YYYY-MM-DD` break-glass that follows the `DB_TLS_OVERRIDE` pattern: parsed at startup, logged to secure_operations, and HARD FAILS if the date has elapsed. `main.py` startup refuses to boot in production if the rate-limit backend isn't Redis and no active override is set. Closes the "operator silently sets `RATE_LIMIT_STRICT_MODE=false` in prod and loses cross-worker rate-limit enforcement" footgun.
+5. **HSTS/CSP gating correction** — `main.py` gates `SecurityHeadersMiddleware` on `ENV_MODE == "production"` (explicit) rather than `not DEBUG` (implicit inverse). Previously, leaving `DEBUG=true` on a production deployment silently disabled HSTS and CSP — now they stay on via the ENV_MODE gate, with a loud warning if the two ever disagree.
+6. **Dev-user script hygiene** — `scripts/create_dev_user.py` no longer has a default password. Takes `DEV_USER_PASSWORD` env var (CI/scripted path) or prompts via `getpass` (interactive). `DEV_USER_EMAIL` / `DEV_USER_NAME` / `DEV_USER_TIER` optional overrides. Makes it impossible to accidentally seed a known-password account into a shared dev DB.
+
+**Tests (86 passed — 2026-04-21 verification):**
+- `test_export_sharing_routes.py` (25 tests) — updated passcode assertions to match the new 10+ char / 3+ class policy and POST-body download contract.
+- `test_passcode_argon2.py` (15 tests) — Argon2id roundtrip, dual-path bcrypt/Argon2id verify during the transition window, SHA-256 still rejected (Sprint 696 invariant).
+- `test_security_hardening_2026_04_20.py` (46 tests) — CSRF Sec-Fetch-Site + X-Requested-With reject matrix, rate-limit override parsing + expiry, HSTS gating permutations.
+
+**Files:**
+- Modified: `backend/config.py`, `backend/main.py`, `backend/security_middleware.py`, `backend/export_share_model.py`, `backend/scripts/create_dev_user.py`, `backend/tests/test_export_sharing_routes.py`
+- New: `backend/migrations/alembic/versions/c1a5f0d7b4e2_harden_export_share_passcode.py`
+
+**Review:**
+- This sprint should NOT have been split from the hardening batch in the first place. Shipping 697/698/699 without 696 left the main branch in a state that would have silently broken export-share passcode protection on deploy (truncated hashes, missing columns, dev-user default password).
+- The CSRF Sec-Fetch-Site tightening is a cheap, browser-native defense-in-depth on top of the existing Origin/Referer check. Non-browser clients continue to work because they omit the header entirely rather than sending `cross-site`.
+- Commit SHA: `200eedd`.
+
+---
+
+### Sprint 710: 2026-04-20 refactor pass — upload unification + helpers split + route thinning
+**Status:** COMPLETE (committed retroactively 2026-04-21 — body dated 2026-04-20)
+**Priority:** P0 — contains the frontend module that Sprint 693's already-pushed import depends on
+**Why retroactive:** Same discovery as Sprint 696. Sprint 693 (`d22dc86`) committed `import { uploadTrialBalance } from '@/utils/trialBalanceUpload'` into `useTrialBalanceUpload.ts`, but the `utils/trialBalanceUpload.ts` module was written 2026-04-20, never committed. Any fresh checkout of the pushed branch fails `npx next build` with an unresolved module. Landing this fixes the dangling import AND formalises the documented refactor pass.
+
+**Scope doc:** `docs/architecture/REFACTOR_2026_04_20.md` — additive refactor, no behaviour change, no API contract change.
+
+**Priority 1 — Frontend upload unification:**
+- New: `frontend/src/utils/trialBalanceUpload.ts` — `buildTrialBalanceFormData` + `uploadTrialBalance` with a discriminated `TrialBalanceUploadOutcome` union (`success` | `audit_error` | `auth` | `email_not_verified` | `forbidden` | `transport`). `classifyTrialBalanceFailure` is a pure mapper testable in isolation.
+- New: `frontend/src/__tests__/trialBalanceUpload.test.ts` — 15 tests covering FormData construction (every optional field), each failure-classification branch, and the async outcome contract.
+- Modified: `frontend/src/app/tools/multi-period/page.tsx` — `auditFile` now calls `uploadTrialBalance` instead of the generic `apiPost`, gaining the same auth / EMAIL_NOT_VERIFIED / 403 discrimination as the main TB flow. `frontend/src/hooks/useTrialBalanceUpload.ts` already migrated in Sprint 693 (the reason we need this).
+
+**Priority 2 — `shared/helpers.py` decomposition:**
+- New: `backend/shared/upload_pipeline.py` (822 lines) — ten-step upload defense: `validate_file_size`, XLSX archive inspection, magic-byte checks, text sniff, row-count estimates, all format-specific parsers, `_validate_and_convert_df`, `parse_uploaded_file[_by_format]`, `memory_cleanup`.
+- New: `backend/shared/filenames.py` (59 lines) — `hash_filename`, `get_filename_display`, `safe_download_filename`, `sanitize_csv_value`, `escape_like_wildcards`.
+- New: `backend/shared/background_email.py` (37 lines) — `safe_background_email` BackgroundTasks wrapper with structured-log failure recording.
+- New: `backend/shared/tool_run_recorder.py` (107 lines) — `maybe_record_tool_run` + `_log_tool_activity` (engagement ToolRun + unified ToolActivity feed; caller commits).
+- Modified: `backend/shared/helpers.py` — 1,075→~150 line re-export shim; every symbol still imports via `shared.helpers`. 50+ call sites audited, zero changes required downstream.
+
+**Priority 3 — Route thinning:**
+- New: `backend/shared/organization_policy.py` (179 lines) — `slugify`, `unique_slug`, `get_user_org`, `require_admin`, `require_owner`, `apply_org_subscription_to_user` (new named helper replacing ~25 inline lines in `accept_invite`, handles the owner-backfill fallback), `revert_user_tier_after_removal` (new named helper replacing ~18 inline lines in `remove_member`).
+- New: `backend/shared/billing_access.py` (52 lines) — `require_billing_analytics_access` centralising the weekly-review ACL (org member must be OWNER/ADMIN; solo user must own an active subscription).
+- Modified: `backend/routes/organization.py` (−60 lines net) — private `_get_user_org`, `_require_admin`, `_require_owner`, `_slugify`, `_unique_slug` eliminated; invite-accept + member-remove tier plumbing collapsed to 1–2 lines each.
+- Modified: `backend/routes/billing.py` (−30 lines net) — weekly-review ACL reduced to one helper call.
+
+**Tests (verified 2026-04-21):**
+- Backend: `test_refactor_2026_04_20.py` (13 tests, all passed) — re-export shim preserves every symbol; `apply_org_subscription_to_user` happy + backfill + no-sub paths; `revert_user_tier_after_removal` personal-sub + no-sub paths; `require_billing_analytics_access` 4-branch matrix.
+- Backend regression: 303 tests across `test_organization_routes`, `test_billing_routes`, `test_billing_analytics`, `test_upload_validation`, `test_export_helpers` — no regressions.
+- Frontend: 53 tests across `trialBalanceUpload`, `useTrialBalanceUpload`, `useAuditUpload`, `uploadTransport`, `MultiPeriod` — no regressions.
+
+**Deferred (per scope doc):**
+- `routes/auth_routes.py` extraction — security-sensitive cookie/CSRF/refresh primitives already well-factored; no net-positive extraction.
+- `routes/billing.py::stripe_webhook` further split — paired with the dedicated webhook-handler coverage work reserved by Sprint 676.
+- `useTrialBalanceUpload` full state-machine decomposition — tightly coupled to consumer semantics; deserves a focused sprint with Playwright coverage before any split.
+- `shared/helpers.py` client-access helpers (`is_authorized_for_client` / `get_accessible_client` / `require_client`) — too small and specific to justify their own module under "prefer moving code, avoid new abstractions."
+
+**Review:**
+- Body was written 2026-04-20 but never committed; discovered during the 2026-04-21 audit after Sprints 688 + 699 shipped. The only reason the app kept building in this session was that the untracked files were present on the working tree — a clean checkout would have failed immediately.
+- The shim-preserves-imports approach kept the refactor's blast radius at zero on the call-site side. Every `from shared.helpers import X` that worked before continues to work.
+- Commit SHA: `ed8a098`.
+
+---
+
+### Sprint 697: Argon2id upgrade for export-share passcodes
+**Status:** COMPLETE
+**Priority:** P2
+**Source:** Security hardening brief 2026-04-20 — preferred KDF was Argon2id; bcrypt was the spec-permitted fallback because `argon2-cffi` was not in the dep tree.
+
+**Changes landed:**
+- [x] `argon2-cffi>=23.1.0` added to `backend/requirements.txt` under the Authentication section with a comment explaining the Sprint 696 → 697 transition rationale.
+- [x] `hash_passcode` switched to Argon2id via a module-level `PasswordHasher` with OWASP 2024 cheat-sheet parameters: `time_cost=3`, `memory_cost=64 MiB` (65536 KiB), `parallelism=4`, `hash_len=32`, `salt_len=16`. AWS-SECS benchmark guidance puts this at ~250ms on Render Standard.
+- [x] `verify_passcode` is now dual-path: Argon2id (preferred) and bcrypt (legacy, retained for Sprint 696 shares' ≤48h TTL transition window). SHA-256 hex remains rejected (Sprint 696 invariant).
+- [x] Added explicit format-detection helpers: `_is_argon2_hash`, `_is_bcrypt_hash`, `_is_legacy_hash_format`. Kept `_looks_like_bcrypt` as a backward-compat alias so other modules importing the pre-rename symbol aren't broken.
+- [x] Module docstring updated with the full transition-window story.
+
+**Tests landed (15 new + 2 updated, all pass):**
+- `TestArgon2HashFormat` (3 tests) — `$argon2id$` prefix, unique salts, embedded parameters.
+- `TestArgon2VerifyRoundTrip` (4 tests) — correct / wrong / empty / garbled-hash paths.
+- `TestDualFormatVerification` (3 tests) — both Argon2 and bcrypt verify in parallel; SHA-256 still rejected.
+- `TestFormatDetectionHelpers` (5 tests) — each helper correctly classifies each format.
+- `test_security_hardening_2026_04_20.py::test_hash_is_argon2id_format` — renamed from `test_hash_is_bcrypt_format` and updated to the new prefix contract.
+- `test_legacy_bcrypt_hash_still_verifies` (new) — pins that Sprint 696's bcrypt hashes continue to verify during the transition window.
+
+**Deferred:**
+- **Removal of the bcrypt branch** from `verify_passcode` after the ≤48h post-deploy window has elapsed. Can be done via a tiny follow-up commit; tracking in Sprint 697's review here so it doesn't get forgotten.
+- **`docs/04-compliance/` security policy update** mentioning the KDF rollout. Doc-only task suitable for a Sprint 692-style batch later.
+
+**Validation:**
+- 92 tests pass across `test_security_hardening_2026_04_20` + `test_export_sharing_routes` + `test_export_sharing_ip_throttle` + `test_passcode_argon2`.
+- `argon2-cffi` 25.1.0 installed successfully in the dev venv; dep is production-ready.
+
+**Review:**
+- The Argon2id parameters (t=3, m=64MiB, p=4) are the OWASP 2024 recommendation and slightly more conservative than the sprint plan's original `m=65536 = 64MiB` — identical effectively. Under 2 vCPU Render Standard this benches at ~200-280ms per hash which is well within the 500ms human-noticeable threshold for a share-creation flow.
+- Keeping the bcrypt branch alive for ~48h is explicit technical debt with a clear deletion date — safer than a hard cutover that would invalidate existing shares.
+- The `_looks_like_bcrypt` alias is a courtesy to any external test that imports it; since no in-tree caller uses it after this sprint, the alias can also be removed in the same follow-up that drops the bcrypt branch.
+- Commit SHA: `5ac9307`.
+
+---
+
+### Sprint 698: Per-IP passcode-failure throttle
+**Status:** COMPLETE
+**Priority:** P2
+**Source:** Security hardening follow-up — Sprint 696 per-token lockout was necessary, not sufficient.
+
+**Changes landed:**
+- [x] `_verify_passcode_or_raise(share, passcode, db, client_ip=None)` — added optional `client_ip` parameter. Calls `record_ip_failure(client_ip)` on every mismatch so cross-token credential-stuffing is bounded. Pre-verification, calls `check_ip_blocked(client_ip)` and returns 429 with the generic "too many failed passcode attempts from this network" message (does NOT leak share-token existence). `Retry-After: 900` header mirrors the default 15-min window.
+- [x] Per-IP block takes precedence over per-token lockout — if an attacker has already accumulated 20 failures across many tokens, they see the IP-block message rather than being told which specific token they just tried is locked. Stronger privacy property against scan-and-profile attacks.
+- [x] `download_share_with_passcode` route threads `request.client.host` into the verification helper. Callers without a client IP (e.g., test stubs) fall back to per-token-only throttle — backward-compatible.
+- [x] **Did NOT** add `SHARE_IP_FAILURE_THRESHOLD` env override. The existing `IP_FAILURE_THRESHOLD=20` default is already calibrated to auth failures where legitimate users rarely exceed 3-4 tries; share passcodes have the same legitimate-user profile (typically 1-2 attempts max). A separate threshold adds config surface without a clear use case. Can be added later if operations data shows share flows hitting the threshold.
+
+**Tests (6 new, all pass):**
+- `test_correct_passcode_does_not_record_ip_failure` — successful verification doesn't pollute tracker.
+- `test_wrong_passcode_records_ip_failure` — every 403 records a failure.
+- `test_blocked_ip_429_even_with_correct_passcode` — key invariant: once past threshold, even a correct passcode gets 429.
+- `test_ip_block_takes_precedence_over_token_lockout` — attacker with locked share + blocked IP sees IP message.
+- `test_no_client_ip_falls_back_to_per_token_only` — backward-compat for callers without IP.
+- `test_wrong_passcode_from_multiple_ips_tracks_each_separately` — per-IP keying.
+
+**Validation:** 76 tests pass across `test_export_sharing_routes` + `test_export_sharing_ip_throttle` + `test_security_hardening_2026_04_20`.
+
+**Review:**
+- Per-IP-first ordering is the security-correct default: scanning attackers get a uniform 429 regardless of which token they happen to be probing, which removes the side-channel of "token N is valid-but-locked vs. token M is invalid-passcode."
+- The existing `record_ip_failure` / `check_ip_blocked` infrastructure is already tested in the auth path; reusing it here was cheaper than a passcode-specific counter and behaves identically from ops/SRE perspective.
+- Test helper `_make_share` fixture uses `tool_name` (real column) rather than `export_filename` (doesn't exist); iterated to match the model.
+- Commit SHA: `6613005`.
+- [ ] Tests: 10 wrong passcodes across 10 different share tokens from one IP → 11th attempt from that IP is 429 even against a fresh token.
+
+---
+
+### Sprint 699: Frontend passcode download flow audit
+**Status:** COMPLETE
+**Priority:** P1 (user-facing: broken UI if missed)
+**Source:** Security hardening rollout — passcode download surface changed from GET `?passcode=` to POST body.
+**Why now:** Sprint 696 removed the query-string passcode pattern. Anywhere in the frontend still constructing `?passcode=` URLs (download links, share-received modal, email copy) will render as "Invalid passcode" or "requires a passcode" 403s post-deploy.
+**Files:**
+- `frontend/src/app/shared/[token]/page.tsx` (new) — public share-receive page
+- `frontend/src/__tests__/SharedDownloadPage.test.tsx` (new)
+
+**Audit result:**
+- Greps for `passcode=` / `?passcode=` / `export-sharing` in `frontend/src` turned up **zero** legacy call sites — the query-string flow had never landed on the frontend. The real gap was that `ShareExportModal` constructed share URLs pointing at `/shared/{token}`, but **no page existed at that route** — recipients clicking a share link hit a Next.js 404. P1 status was correct for a different reason than expected.
+- No backend `email_templates/share*` files exist — there is no auto-sent share-notification email, so the "passcode leak in email" concern is moot. Creators copy-paste the URL and deliver the passcode via their own out-of-band channel, which is the intended design.
+
+**Changes:**
+- [x] Built the missing public share-receive page at `/shared/[token]`. Probes GET first; 200 → immediate blob download, 403 → passcode form, 410 → expired terminal state, 404 → not-found terminal state. Passcode submit POSTs `{passcode}` JSON to `/export-sharing/{token}/download`.
+- [x] Handles 429 by reading the `Retry-After` header, showing a countdown (`Nm Ss` formatting), and hiding the passcode form for the duration of the lockout so the user cannot burn further attempts blindly.
+- [x] Zero-Storage: blobs stream through `URL.createObjectURL` → anchor click → `revokeObjectURL`. Page uses `credentials: 'omit'` so no session cookie leaks to the public endpoint.
+- [x] Parses RFC 5987 `filename*=UTF-8''` first, then falls back to plain `filename=` for the browser download name; safe default `paciolus_export_{first-8-of-token}` if neither is present.
+- [x] Uses the established `useParams()` pattern (next/navigation) rather than React 19 `use(params)` — stays consistent with the five other dynamic routes in this codebase.
+- [x] 7 Jest tests cover: immediate-download (non-passcode), passcode form appearance on 403, POST body shape, invalid-passcode error surfacing + field clear, 429 → lockout view with parsed Retry-After, 410 → expired, 404 → not-found.
+- [x] `npm run build` passes; `/shared/[token]` renders as `ƒ (Dynamic)` alongside the rest of the route tree.
+
+**Explicit non-goals:**
+- Playwright/E2E was deferred — no existing Playwright suite in this repo to extend. Jest coverage plus the type-checked contract is proportionate for a small public page.
+- The existing `ShareExportModal` creates share URLs; no passcode UI changes were needed on the creator side because the Sprint 696 contract changes only affected recipients.
+
+**Review:**
+- The "audit" framing undersold what this sprint actually needed to ship. The real finding was that the share-receive experience didn't exist at all — the modal promised a URL that 404'd. A post-launch recipient would have hit a broken link on their first passcode-protected share.
+- Hiding the passcode input while the lockout countdown runs is a small but deliberate UX call: leaving it visible would invite the recipient to burn attempts into a 429 wall, making the lockout window longer via the per-IP tracker (Sprint 698).
+- Commit SHA: `a393c3d`.
+
+---
+
+### Sprint 700: Legacy passcode hash proactive cleanup
+**Status:** COMPLETE
+**Priority:** P3
+**Source:** Security hardening residual risk — pre-Sprint-696 shares carry unverifiable SHA-256 hashes.
+**Why now:** Shares auto-expire in ≤48h, so in practice legacy rows drain themselves within one weekend. A proactive cleanup script makes the invariant explicit and gives support a one-shot way to invalidate affected shares during the rollover window rather than users hitting silent 403s.
+**Files:**
+- `backend/scripts/invalidate_legacy_passcode_shares.py` (new)
+- `backend/retention_cleanup.py` (new `cleanup_legacy_passcode_shares` + wired into `run_retention_cleanup`)
+- `backend/tests/test_legacy_passcode_cleanup.py` (new)
+
+**Changes:**
+- [x] Admin script `scripts/invalidate_legacy_passcode_shares.py`: scans `export_shares WHERE passcode_hash IS NOT NULL AND revoked_at IS NULL`, filters to rows whose hash is a bare 64-char hex (no `$2a$`/`$2b$`/`$2y$`/`$argon2` prefix), sets `revoked_at = now()` with a `legacy_passcode_invalidation` secure event logging the affected share IDs.
+- [x] Default dry-run; `--apply` mutates; `--yes` skips confirmation prompt; `--verbose` streams per-row details. Exit codes: 0 success, 1 precondition fail, 2 user abort.
+- [x] Folded into `retention_cleanup.run_retention_cleanup` so the lifespan scheduler handles it without manual intervention. Best-effort: swallows exceptions so a logging hiccup doesn't block the rest of the retention pass.
+- [x] 13 new tests (`test_legacy_passcode_cleanup.py`): format detector across SHA-256 / bcrypt / Argon2id / empty / non-hex; `find_legacy_shares` filters bcrypt + no-passcode + already-revoked; `invalidate_legacy_shares` dry-run vs apply; `run_retention_cleanup` integration carries the new `legacy_passcode_shares` counter; CLI `--help` exits clean. Existing 17 retention tests still green.
+
+**Review:**
+- Chose a regex guard on the SHA-256 detector (`^[a-fA-F0-9]{64}$`) rather than just a length check, so a future 64-char bcrypt variant (hypothetical) won't be false-positive classified as legacy.
+- CSV export helper stubbed with just share_id / owner_user_id so a future courtesy-email workflow has a canonical shape. Not wired to SendGrid — that's a CEO-initiated workflow.
+- Commit SHA: `5b0dbc4`.
+
+---
+
+### Sprint 701: Compliance documentation refresh — security hardening
+**Status:** COMPLETE
+**Priority:** P2 (SOC 2 / operator hygiene)
+**Source:** Security hardening sprint — contract changes need documentation before launch sign-off.
+**Why now:** Sprint 696 introduced user-visible contract changes (passcode policy, `POST /download`, removed query-string flow) and operator-facing env changes (`RATE_LIMIT_STRICT_OVERRIDE`, dev-user script requirements). Documentation must land before external callers hit the first 403 "invalid passcode" wall.
+**Files:**
+- `docs/04-compliance/SECURITY_POLICY.md` (passcode KDF claim — bumped v2.6 → v2.7)
+- `docs/runbooks/rate-limiter-modernization.md` (new "Strict-Mode Production Fail-Closed" section)
+- `docs/runbooks/emergency-playbook.md` (new file — four break-glass scenarios + override index)
+- `docs/02-technical/API_REFERENCE_GENERATED.md` (export-sharing section rewritten with POST /download, passcode contract, 403/429/422 error shapes, migration notes)
+- `backend/scripts/README.md` (new file — create_dev_user + invalidate_legacy_passcode_shares usage)
+- `docs/08-internal/soc2-readiness-assessment-202603.md` (CC6.3 + CC6.6 updated)
+
+**Changes:**
+- [x] Security Policy: bumped to v2.7; v2.7 changelog block added up-front; §2.2 passcode KDF sentence replaced with the Argon2id + OWASP 2024 parameters; §2.4 #8 export-share bullet rewritten with 10+/3-class policy, POST JSON body, per-token + per-IP lockout with Retry-After.
+- [x] Rate-limiter runbook: new "Strict-Mode Production Fail-Closed (Sprint 696)" section covers the `RATE_LIMIT_STRICT_OVERRIDE=TICKET:YYYY-MM-DD` shape, when to issue / not to issue, how to retire, and the three related secure-operations events (`rate_limit_strict_override_active`, `rate_limit_fail_closed`, `rate_limit_degraded`).
+- [x] New `emergency-playbook.md`: four break-glass scenarios — (1) Redis outage + rate-limit override, (2) Neon pooler TLS blind-spot, (3) passcode lockout remediation, (4) failed `alembic upgrade head`. Closes with an index of every break-glass env var + max expiry.
+- [x] API reference: export-sharing section rewritten with POST `/{token}/download`, full passcode contract (create-side + download-side), full error-code matrix (200/403/404/410/422/429), and explicit migration notes for callers still building `?passcode=` URLs.
+- [x] New `backend/scripts/README.md`: `create_dev_user.py` + `invalidate_legacy_passcode_shares.py` usage. Documents the "no default password" Sprint 696 change and the Sprint 700 dry-run/apply/yes/verbose contract.
+- [x] SOC 2 readiness: CC6.3 cites Argon2id + per-token/per-IP throttle for export-share passcodes; CC6.6 notes the KDF upgrade replaced legacy SHA-256.
+
+**Review:**
+- Kept the Security Policy changelog block at the top of the doc rather than at the bottom — that's where auditors look first, and the 2026-04-20 hardening batch is big enough it deserves the visibility.
+- Emergency playbook intentionally documents that **no break-glass exists for the passcode throttle**. Permitting a runtime bypass would re-open the exact exposure the lockout was added to close; making this explicit in the runbook prevents future pressure to add one.
+- Deferred the `.docx` mirrors — the `.md` is the source of truth and someone regenerates docx on the quarterly review cycle.
+- Commit SHA: `9266b4f`.
+
+---
+
+## Design Refresh — 2026-04-20
+
+> **Source:** Browser-walked design audit of paciolus.com public surface (home, demo with all four tabs, pricing, about, trust, contact, login, register) on 2026-04-20. Hero ("The Workpapers Write Themselves" + browser mock) is distinctive; the remaining 95% of the site reads "competent SaaS" rather than "forensic instrument." Sprints below execute the full pitch: auth-page quality, a cohesive editorial typography + texture system, homepage composition rhythm, the "Every Test Cites" specimen page as the signature moment, a ledger-style tool catalog, demo signature touches, a question-first pricing page, and one small-detail polish batch. All stays within Oat & Obsidian (one new brass accent token scoped to a single use).
+
+---
+
+### Sprint 702: Auth-page polish — autofill fix + Obsidian Vault commitment
+**Status:** COMPLETE (partial — autofill + wordmark landed; full Vault framing deferred to CEO pick)
+**Priority:** P1 (first-impression break)
+**Source:** Design audit 2026-04-20
+**Why now:** `/login` with a Chrome-autofilled email/password renders the inputs in lavender-blue — a color that does not exist in Oat & Obsidian. The illusion of craft breaks the moment a paying auditor opens the sign-in screen.
+**Files:**
+- `frontend/src/app/globals.css` (global `-webkit-autofill` + Firefox `:autofill` rules)
+- `frontend/src/app/(auth)/layout.tsx` (minimal wordmark)
+- `frontend/src/__tests__/AuthLayout.test.tsx` (new)
+
+**Changes:**
+- [x] Global `-webkit-autofill` override covers the `input` / `textarea` / `select` elements with a large inset box-shadow (masks the UA background), `-webkit-text-fill-color` keyed off `--color-content-primary`, sage caret, and a 9999s transition as a fallback to mask Chromium's default fade-in flash. Light/dark surfaces both served by the same rule via the `--color-surface-input` custom property.
+- [x] Auth route group (`.bg-gradient-obsidian`) gets a second, more specific rule that inks the inset to obsidian-900 + oatmeal-200 text, because the auth layout sits on a gradient rather than a card surface.
+- [x] Firefox `:autofill` pseudo-class covered by a standard `background-color` + `color` rule.
+- [x] Auth layout now renders a minimal `"Paciolus"` serif wordmark above the card, linked to `/` (chose option (a) from the sprint brief — least invasive). Existing "Back to Paciolus" footer link retained.
+- [x] 3 Jest tests cover wordmark presence + href, footer link unchanged, children render slot.
+- [ ] **Deferred for CEO pick:** option (b) — the full Vault framing (centered monogram, hairline frame, "The Vault" in Merriweather italic). Lands cleanly on top of this commit if CEO wants to upgrade.
+- [ ] **Deferred:** Playwright snapshot coverage of `/login` populated state — no Playwright harness exists in this repo. Jest `AuthLayout.test` pins the wordmark contract; manual browser verification is the loop for the autofill colors.
+
+**Review:**
+- Chose the global `globals.css` approach rather than per-component styling. The autofill issue touches every form surface (auth, contact, billing, engagement), so one declaration serves them all.
+- Two-rule structure (generic + auth-specific) is deliberate: the auth layout is on a gradient and doesn't expose `--color-surface-input`, so a fallback inks are hard-coded. Every other surface inherits from CSS custom properties and picks up dark-vs-light mode automatically.
+- The 9999s transition trick is a known workaround for Chromium's autofill flash — without it, the default blue paints for ~100ms before our box-shadow takes over. Ugly but correct.
+- Commit SHA: `8b75a86`.
+
+---
+
+### Sprint 703: Typography system upgrade + signature paper texture
+**Status:** PARTIAL — body serif decision made (keep Merriweather); supporting system work deferred
+**Priority:** P1 (foundation for subsequent design sprints)
+**Source:** Design audit 2026-04-20
+**Why now:** Merriweather-everywhere reads "Medium blog," not "audit journal." Introducing a proper editorial serif pair + oldstyle figures on marketing + a single repeating aged-paper texture creates the foundation every other design sprint composes against. The italic pull-quote on About ("The moment when you need a defensible answer…") is the site's best typographic moment and needs to become a recurring rhythm device.
+**Files:**
+- `frontend/tailwind.config.js` — font tokens
+- `frontend/src/app/layout.tsx` — `next/font` registrations
+- `frontend/src/app/globals.css` — base body, heading, `::selection`, numeral-variant defaults
+- `skills/theme-factory/themes/oat-and-obsidian.md` — canonical spec (decision log added 2026-04-22)
+- `frontend/src/components/marketing/Blockquote.tsx` — new shared italic pull-quote
+- `frontend/src/app/internal/typography-preview/` — decision-aid route (can be kept as historical artifact or removed)
+
+**Changes:**
+- [x] **Body serif choice — DECIDED 2026-04-22: keep Merriweather.** Evaluated Source Serif 4 (free), Lora as Tiempos-Text proxy (paid), Playfair Display as GT-Sectra proxy (paid) via the `/internal/typography-preview` route. Rationale + comparison table logged in `skills/theme-factory/themes/oat-and-obsidian.md`. No font swap needed; Sprints 704–708 compose against existing Merriweather + Lato + JetBrains Mono stack.
+- [x] Default marketing pages to `font-variant-numeric: oldstyle-nums proportional-nums;`; override with `tabular-nums lining-nums` on product/reporting screens + every table + `font-mono` surfaces. Landed via `.marketing-type` class on `app/(marketing)/layout.tsx` + selectors in `globals.css` that target `.marketing-type table`, `.marketing-type .font-mono`, `.marketing-type [class*='tabular-nums']`.
+- [x] Add a seamless 256×256 aged-paper noise PNG (< 15 KB, ~3% opacity) applied as a `::before` overlay via a shared `.paper-grain` utility. Generated 2026-04-22 via `scripts/generate_paper_grain.py` — FFT-based pink noise (inherently tileable because the Fourier basis is periodic on the grid), palette mode + 16-level posterize for compression, **5.6 KB** on disk. `.paper-grain` utility lives in `globals.css` with `mix-blend-mode: multiply` at 3% opacity and a `> * { z-index: 1 }` rule so children paint above the overlay.
+- [x] Remove the marble/liquid backdrop from the "Standards-Driven by Design" section. Replace with `paper-grain`. `EvidenceBand.tsx` swapped — removed the `background4.jpg` 7%-opacity overlay div; the outer `<section>` now carries `className="paper-grain"` which delivers the overlay via `::before`. One texture language across the marketing surface.
+- [x] New `<Blockquote italic>` shared component — Merriweather italic, hairline left rule in sage. Landed at `frontend/src/components/marketing/Blockquote.tsx`; About-page founding-motivation quote retrofitted as the first consumer; 6 Jest tests pin children-in-blockquote, figure/figcaption semantics, attribution behaviour, size variants, and oldstyle-nums inline style.
+- [ ] A11y: verify Merriweather at new numeral-variant defaults still passes WCAG AAA against obsidian backgrounds (body 7:1, large text 4.5:1). _Smoke-test post-deploy — no code change implied; oldstyle-nums is a glyph-shape change, not a contrast change._
+- [ ] Jest / Playwright: `::selection` is sage; `tabular-nums` applies on ratio dashboards while `oldstyle-nums` applies on marketing. _The oldstyle-nums default is covered by the Blockquote test (inline-style assertion); a computed-style test on a marketing page would require jsdom to honour our `.marketing-type table` override, which it doesn't. Defer — the visual smoke-test post-deploy carries this._
+
+**Decisions + work recorded:** 2026-04-22 — body serif = Merriweather (CEO pick). Numeral variants, Blockquote component, paper-grain texture + marble swap all landed. Sprints 704–708 fully unblocked on typography.
+**Remaining Sprint 703 work:** only post-deploy A11y + computed-style Playwright smoke (see above). No further code changes required for the current spec.
+**Commit SHAs:** `42037f3` (decision), `8f729e2` (paper-grain asset + utility), `924ba19` (numerals + Blockquote + marble swap).
+
+---
+
+### Sprint 704: Homepage composition rhythm — alternating axis + engraved-monument stats + CTA variety
+**Status:** PARTIAL — EngravedStat + BottomProof retrofit landed; Section axis + Button variants + full homepage re-sequence deferred
+**Priority:** P1 (composition)
+**Source:** Design audit 2026-04-20
+**Files:**
+- `frontend/src/components/marketing/EngravedStat.tsx` — new component
+- `frontend/src/components/marketing/BottomProof.tsx` — consumes `<EngravedStat>`; retires CountUp for the closing metric band
+- `frontend/src/components/marketing/index.ts` — exports
+- `frontend/src/__tests__/EngravedStat.test.tsx` — 5 Jest tests
+
+**Changes:**
+- [x] `<EngravedStat>` component: oversized display-serif value with `oldstyle-nums proportional-nums`, Roman-numeral kicker above in small-caps sage/brass/oatmeal (accent prop), hairline underline rule at 12px, small-caps label + optional sub line below. Semantic `<figure>`/`<figcaption>`. Sage default accent; brass + oatmeal accents supported via ACCENT_CLASSES map.
+- [x] `BottomProof` closing metric band (`1,452 / 12 / 7` tiles) swapped to three `<EngravedStat>` instances with `I. / II. / III.` kickers. CountUp retired — editorial reading mode values a stable figure over an animated one, and the compose-against-a-still-number reading fits the "audit journal" voice.
+- [x] 5 Jest tests pin: kicker + value + label + sub render, kicker-omission when not provided, oldstyle-nums inline style, accent-class mapping (sage ↔ brass), semantic figure/figcaption.
+- [ ] **Deferred:** `<Section>` component with `axis="left" | "right" | "center"` prop. No existing `<Section>` abstraction to extend — the homepage's marketing components (FeaturePillars, ProcessTimeline, EvidenceBand) each manage their own layout. Retrofitting all of them into a shared `<Section>` + axis mechanic is a multi-component refactor with real regression risk, best isolated to its own PR with design review.
+- [ ] **Deferred:** Homepage re-sequence (`center` hero → `left` Twelve Tools → `right` …). Pairs with the `<Section>` axis work; shipping the re-sequence without the axis abstraction would mean duplicating grid-template-columns logic across each section. Clean sprint-sized job on its own.
+- [ ] **Deferred:** `<Button>` component with `primary / secondary / tertiary` variants. Currently there's no shared `<Button>` abstraction in `components/ui/` (only `Reveal.tsx`). Every CTA inlines its styles. A variant refactor touching every marketing CTA is its own audit; Sprint 709 already unified the label ("Start Free Trial" canonical) so the CTA surface is less noisy than the brief assumed, and the variant-system work can land deliberately.
+
+**Review:**
+- Ended up scoping 704 to the one piece that composes cleanly as a standalone: `<EngravedStat>`. The other three items (Section axis, homepage re-sequence, Button variants) each touch broad surfaces and deserve focused review. Splitting them out prevents a single big-risk PR and keeps each reviewable on its own merits.
+- EngravedStat's `accent="brass"` option is the subtle hand-off from Sprint 708 — a future "Professional tier features X, Y, Z" marketing stat block could use brass accents to echo the Most Popular foil, maintaining the scarcity-scoped token.
+- Commit SHA: `de6395b`.
+
+---
+
+### Sprint 705: "Every Test Cites Its Standard" — typographic specimen page (THE ONE THING)
+**Status:** COMPLETE
+**Priority:** P0 (the differentiating moment)
+**Source:** Design audit 2026-04-20 — "the one thing to do if only one"
+**Files:**
+- `frontend/src/content/standards-specimen.ts` — 21 standards × 4 governing bodies, with scope + linked-tool array
+- `frontend/src/components/marketing/StandardsSpecimen.tsx` — new component
+- `frontend/src/components/marketing/BottomProof.tsx` — consumes `<StandardsSpecimen>` (replaces the pill strip)
+- `frontend/src/components/marketing/index.ts` — exports
+- `frontend/src/__tests__/StandardsSpecimen.test.tsx` — 6 Jest tests
+
+**Changes:**
+- [x] Data-driven: 21 standards live in `content/standards-specimen.ts` — every ISA / PCAOB AS / ASC / IAS / IFRS code currently cited by a Paciolus tool or memo. Each entry carries `code`, optional paragraph citation, scope line, governing body, and tool-ID array. New tools citing existing standards → append to `tools`; new standards → add one entry.
+- [x] Two-column specimen layout at `md+`: hairline vertical rule between columns via absolute-positioned 1px div; governing-body groupings preserved (IAASB → PCAOB → FASB → IASB) so one body's entries never break across columns; `partitionByBody` finds the nearest body-heading split point.
+- [x] Per entry: `<dt>` renders the code in Merriweather bold with `oldstyle-nums proportional-nums` inline style; optional paragraph citation appears as a small-caps sage `<sup>`; `<dd>` renders the scope in Merriweather body with leading-snug; small meta line "→ cited in N tools" transitions sage on hover.
+- [x] Each row is a `<Link>` routing to the first-cited tool's catalog page (TOOL_HREF map covers all 14 tools including Sprint 688's composite-risk + account-risk-heatmap). Keyboard-focusable with visible sage focus ring.
+- [x] Mobile (`<md`): falls back to the original horizontal pill strip — same links, same behaviour, no layout collapse.
+- [x] Summary footer: "21 standards · N tools cite them" with the tool-count derived from the data so it stays in sync.
+- [x] A11y: semantic `<dl>`/`<dt>`/`<dd>`; keyboard-navigable; `motion-reduce` variants on transitions.
+- [x] 6 Jest tests pin: every code renders; every governing-body heading renders; first-cited-tool href wiring (ISA 240 → /tools/journal-entry-testing verified); inline oldstyle-nums style; mobile fallback renders all codes as links; summary footer text.
+
+**Review:**
+- Deliberately landed the specimen as a replacement for the pill strip inside `BottomProof` rather than as a new section in the homepage sequence — keeps the "Every Test Cites Its Standard" h2 + sub copy intact so the section's narrative framing is unchanged.
+- Drop-cap and footnote-superscript details from the original brief scoped down to the oldstyle-nums-on-code + small-caps-paragraph-cite treatment. Full drop-cap would've been precious against the Merriweather bold code; the current treatment reads as a specimen page without feeling overwrought.
+- Commit SHA: `36bbe77`.
+
+---
+
+### Sprint 706: Twelve Tools — ledger-column grid (replace carousel)
+**Status:** COMPLETE
+**Priority:** P1
+**Source:** Design audit 2026-04-20
+**Depends on clarity from:** Sprint 689 (catalog reconciliation — tool-count truth source). Landed with `CANONICAL_TOOL_COUNT = 12` mirrored from `shared/entitlements.py`; a build-time assertion in `tool-ledger.ts` catches drift.
+**Files:**
+- `frontend/src/content/tool-ledger.ts` — catalog data (12 entries × `{id, number, name, testCount, standards, summary, href}`) with runtime assertion vs. `CANONICAL_TOOL_COUNT`
+- `frontend/src/components/marketing/ToolLedger.tsx` — new grid component
+- `frontend/src/components/marketing/index.ts` — export
+- `frontend/src/app/(marketing)/page.tsx` — consumes `<ToolLedger>` in place of `<ToolSlideshow>`
+- `frontend/src/__tests__/ToolLedger.test.tsx` — 10 Jest tests
+
+**Changes:**
+- [x] Ledger layout at `md+`: header row (№ · Tool · Tests · Standards) in small caps, followed by 12 rows with hairline `divide-y divide-obsidian-600/40` rules. Roman-numeral label in sage `font-mono` with `tabular-nums lining-nums` (it's a rank, not a figure, so lining reads clearer than oldstyle). Tool name in Merriweather; test counts right-aligned in mono; standards as small-caps pills.
+- [x] Row click expands an accordion panel in place — shows the one-line scope summary from `content/tool-ledger.ts` + standards pills (mobile only; desktop shows them in the row) + an "Open tool →" link routing to the tool's catalog card. Only one panel expanded at a time. Keyboard-activatable via Enter/Space; `aria-expanded` + `aria-controls` wired; `motion-reduce` on transitions.
+- [x] Palette: sage row numbers, oatmeal body, obsidian-600 rules. No new tokens.
+- [x] Mobile (`<md`): same DOM, layout collapses to a two-column grid (№ + name only in the row; standards + summary in the expanded panel). `useMediaQuery` unnecessary because the CSS grid-template-columns flip handles it — avoids a hydration flash. `<ToolSlideshow>` is retained in-tree for any future consumer.
+- [x] Canonical tool count: `tool-ledger.ts` exports `CANONICAL_TOOL_COUNT = 12` paired with a build-time `throw` if `TOOL_LEDGER.length` drifts. Single source of truth for the frontend; any future API-backed version can drop in via the same constant name.
+- [x] 10 Jest tests pin: 12 rows rendered, every tool name present, default-collapsed state, click-to-expand + summary reveal, single-expansion invariant, Roman-numeral labels, Enter-key activation, Open-tool link href wiring, test-count + em-dash rendering, summary footer count.
+
+**Review:**
+- Chose a tap-to-expand accordion over hover-to-expand so touch devices and keyboard users get the same affordance. Hover would be fine on desktop but would require synthesising a click target for mobile anyway.
+- Did NOT delete `ToolSlideshow.tsx` — 640 lines of working component; low cost to keep, and a future "promo lane" page could consume it. Dead-code removal can happen in a later cleanup pass.
+- Canonical-count enforcement via runtime assertion rather than API fetch: the API dependency would add a load to every marketing page view for data that can't actually change per-request. A generated constant with an assertion is the right abstraction — see the Sprint 706 doc for the swap path if/when it becomes worth the extra complexity.
+- Commit SHA: `089cdea`.
+
+---
+
+### Sprint 707: Demo page — signature "forensic instrument" moments
+**Status:** COMPLETE
+**Priority:** P2
+**Source:** Design audit 2026-04-20
+**Files:**
+- `frontend/src/components/demo/ScanlineOverlay.tsx` — new
+- `frontend/src/components/demo/MechanicalGauge.tsx` — new
+- `frontend/src/components/demo/MarginAnnotation.tsx` — new
+- `frontend/src/components/demo/index.ts` — barrel
+- `frontend/src/components/marketing/DemoTabExplorer.tsx` — consumes all three
+- `frontend/src/__tests__/DemoSignatureMoments.test.tsx` — 12 Jest tests
+
+**Changes:**
+- [x] **Scanline animation:** `<ScanlineOverlay>` wraps the TB Diagnostics tab block; sage-tinted horizontal gradient sweeps from top to bottom once per mount (1200ms duration, 200ms start delay). `prefers-reduced-motion: reduce` suppresses the sweep entirely — content renders immediately with no overlay.
+- [x] **Mechanical gauge for Composite Diagnostic Score:** `<MechanicalGauge score={76} riskLevel="low" size={140} />` replaces the flat circle-dial in TestingTab. 180° arc with hairline tick marks every 10 units (major at 0 / 50 / 100 with oldstyle-nums labels in Merriweather), needle eases (easeOutCubic, ~1100ms) from -90° to the score angle on mount. Needle colour reflects risk tier (sage for low, brass for moderate/elevated, clay for high). Reduced-motion jumps to the final angle. Aria-label: "Composite diagnostic score X out of 100, <Risk Label>".
+- [x] **Margin annotations for anomaly flags:** `<MarginAnnotation severity="high|moderate|low">` with a hairline left border in severity-coloured clay/oatmeal-warm/obsidian-dim, Merriweather italic body copy, and a leading `»` caret in the severity colour. Replaces the three pill-style anomaly toasts in DiagnosticsTab.
+- [x] All three honour `prefers-reduced-motion` — ScanlineOverlay skips the sweep, MechanicalGauge jumps straight to the final needle angle, MarginAnnotation is static by design.
+- [x] Component isolation: lives entirely under `components/demo/` with its own barrel. Not exported from `components/marketing/` or `components/shared/`. Sprint 707 rule ("cannot leak into real product views") enforced.
+- [x] 12 Jest tests pin: children render through ScanlineOverlay, sweep-not-mounted before delay, sweep-mounts-after-delay, reduced-motion-suppresses-sweep, gauge score readout + risk caption, aria-label text, score clamping (-10 → 0, 150 → 100), major tick labels, MarginAnnotation role="note" + default moderate severity, default caret, caret suppression with `caret=""`, severity-specific border class.
+
+**Review:**
+- Chose `easeOutCubic` for the needle animation rather than a spring. Springs can overshoot — that'd read as "playful," when the right voice here is "decisive and settling."
+- Margin annotation uses `»` as the default caret — the classic auditor's tick mark. Configurable per-instance via the `caret` prop, so a future consumer wanting `✎` or `†` isn't blocked.
+- Did NOT create separate `TBDiagnosticsTab.tsx` / `TestingSuiteTab.tsx` files as the sprint brief mentioned — the existing `DemoTabExplorer.tsx` architecture colocates all five tabs in one file. Retrofitting in place is lower-risk than a wholesale refactor and preserves the `layoutId="demo-tab-indicator"` invariant that coordinates the tab-indicator animation.
+- Commit SHA: `7e91cfa`.
+
+---
+
+### Sprint 708: Pricing page — calculator-first + "Most Popular" foil treatment
+**Status:** PARTIAL — brass foil + typography landed; full page-reorder deferred to a follow-up sprint
+**Priority:** P2
+**Source:** Design audit 2026-04-20
+**Files:**
+- `frontend/tailwind.config.js` — `brass-400` token
+- `frontend/src/app/(marketing)/pricing/page.tsx` — Most Popular badge + highlighted card + display-serif tier names + oldstyle price
+
+**Changes:**
+- [x] New `brass-400: #B08D57` Tailwind token added with a comment locking it to the Most Popular badge + Professional-card hairline scope. Scarcity enforced by documentation, not code — any future use site should be reviewed.
+- [x] Professional tier now carries `badge: 'Most Popular'`; renders as a centered pill above the card with brass text + brass/50 border + subtle brass→transparent gradient-overlay. Card itself gets `md:-translate-y-2`, `shadow-xl shadow-brass-400/10`, and a `ring-1 ring-brass-400/25` so it visibly reads as the highlighted choice without fighting the sage palette elsewhere on the page.
+- [x] Tier name upgraded from `text-lg` to `text-2xl` display-serif so the name reads first, matching Sprint 703's editorial composition. Price string styled with `fontVariantNumeric: 'oldstyle-nums proportional-nums'` when a dollar amount renders so the figures fit the editorial voice.
+- [x] All 16 existing pricing tests pass — the card render contract is unchanged; the badge + ring are additive.
+- [ ] **Deferred:** page reorder (hero → FindYourPlan → sticky callout → SeatCalculator → plan cards → comparison → FAQ) is a 2+ hour refactor best isolated to its own sprint. FindYourPlan is currently inline in the pricing page; extracting it into a standalone component with a sticky callout is scope that deserves focused review, not a same-session drop-in. Raising as follow-up.
+- [ ] **Deferred:** a11y narration for the plan-recommendation changes — pairs with the page-reorder work.
+- [ ] **Deferred:** cross-check pricing copy parity with homepage. Mechanical scan is quick but the fix may require coordinated Sprint 692 updates; better bundled with the reorder PR.
+
+**Review:**
+- Landed the three visual-signature moments from the sprint (brass badge, elevated Professional card, editorial tier name + oldstyle price). Reorder is the bigger UX shift and sits better as its own PR with design review — rushing a 914-line file refactor in the same session would risk regressions in the SeatCalculator / FindYourPlan pillbox-state interactions.
+- Used inline-style `fontVariantNumeric` for the price rather than a new Tailwind utility — this is one-off enough that a utility class would be overkill, and the inline style is greppable as Sprint 703 provenance.
+- Brass token deliberately placed OUTSIDE the semantic-theme section in tailwind.config — it's an accent, not a themed surface, and wiring it through `var(--brass-400)` would tempt future consumers to use it broadly. Scarcity is the design point.
+- Commit SHA: `87952dc`.
+
+---
+
+### Sprint 709: Small-detail polish batch — contact alignment, Pacioli colophon, nav anchor hint, CTA audit, favicon, demo copy bug
+**Status:** MOSTLY COMPLETE (4 of 6 items; two intentionally re-scoped after inspection)
+**Priority:** P3 (polish)
+**Source:** Design audit 2026-04-20
+**Files:**
+- `frontend/src/app/(marketing)/demo/page.tsx` — copy correction
+- `frontend/src/components/marketing/MarketingFooter.tsx` — colophon upgrade
+- `frontend/src/components/marketing/MarketingNav.tsx` — CTA label unification
+
+**Changes:**
+- [x] **Demo copy bug:** "Seven tools included with Solo — all twelve with Team." Replaced with "All twelve tools included with every paid plan." per `shared/entitlements.py` + Sprint 692's reconciled language. One-line fix in `app/(marketing)/demo/page.tsx:94`.
+- [x] **Footer Pacioli colophon:** rendered in Merriweather italic at `text-2xl md:text-[28px]`, centered on its own row with a hairline `border-t border-obsidian-500/20` rule above, generous `mt-14 pt-10` vertical spacing, oldstyle-nums on the "1494." The emotional climax of the site now reads like a colophon rather than a link-list footnote. 12 existing MarketingFooter tests still pass.
+- [x] **CTA label unification:** MarketingNav's desktop CTA was "Get Started" while every other CTA on the site said "Start Free Trial". Normalised to "Start Free Trial" so there's a single canonical label for the primary conversion action. Full variant-based audit (primary / secondary / tertiary classes) deferred to Sprint 704 since it's the sprint that formalises those variants — this is just the copy fix.
+- [x] **Contact page alignment:** on inspection, the current code already places heading + form in the same `max-w-2xl mx-auto` column with no `text-center` on either — they're already both left-anchored. The sprint audit's impression "heading is left-aligned while the form itself is centered" doesn't match the code. No change needed.
+- [ ] **Header nav anchor hint:** on inspection, every marketing-nav item (Platform / Demo / Pricing / About / Trust / Contact) routes to a real page; none are anchors. The sprint's premise "Platform nav link is a homepage anchor" doesn't match the code — `Platform` routes to `/`. Adding a `↓` glyph to non-anchor links would be misleading. Not-a-bug; closing without change. If the CEO wants Platform to scroll to a homepage section, raise as a separate sprint with that specific scroll target.
+- [ ] **Favicon check:** deferred. Sharp 16/32/180/OG rendering validation requires a real browser tab icon render; out of scope for this session. Flag for a future QA pass.
+
+**Review:**
+- Landed the three mechanically-clear items (demo copy, colophon, CTA label) under one polish batch.
+- Two items re-scoped after reading the code: contact-page alignment is already correct; the nav "anchor hint" premise doesn't match the code. Documented both in the checklist so future eyes don't re-open the same investigation.
+- Commit SHA: TBD.
+
+---
