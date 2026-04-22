@@ -4,9 +4,10 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
+import { EngravedStat } from '@/components/marketing/EngravedStat'
 import { StandardsSpecimen } from '@/components/marketing/StandardsSpecimen'
 import { Reveal } from '@/components/ui/Reveal'
-import { VIEWPORT, CountUp } from '@/utils/marketingMotion'
+import { VIEWPORT } from '@/utils/marketingMotion'
 import { fadeUp } from '@/lib/motion'
 
 /**
@@ -78,19 +79,21 @@ export function BottomProof() {
           <StandardsSpecimen />
         </Reveal>
 
-        {/* Closing metric band */}
-        <Reveal delay={0.08} className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mt-12">
-          {CLOSING_METRICS.map((metric) => (
-            <div
+        {/* Sprint 704 — closing metric band rendered as engraved
+            monuments (oversized display serif numerals + Roman-numeral
+            kicker + hairline underline + small-caps label). Replaces the
+            pre-Sprint-704 obsidian-tile stat-cards. CountUp retired —
+            the editorial reading mode values a stable number more than
+            an animated one. */}
+        <Reveal delay={0.08} className="grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-6 mt-16">
+          {CLOSING_METRICS.map((metric, i) => (
+            <EngravedStat
               key={metric.label}
-              className="text-center bg-obsidian-800/40 border border-obsidian-500/20 rounded-xl p-5"
-            >
-              <p className="type-num-lg text-oatmeal-200">
-                <CountUp target={metric.target} suffix={metric.suffix} />
-              </p>
-              <p className="font-sans text-sm text-oatmeal-300 mt-1 font-medium">{metric.label}</p>
-              <p className="font-sans text-xs text-oatmeal-600 mt-0.5">{metric.sub}</p>
-            </div>
+              kicker={['I.', 'II.', 'III.'][i]}
+              value={`${metric.target.toLocaleString()}${metric.suffix}`}
+              label={metric.label}
+              sub={metric.sub}
+            />
           ))}
         </Reveal>
 

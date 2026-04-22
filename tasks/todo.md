@@ -1176,24 +1176,27 @@ Nothing weakened — auth/security/zero-storage untouched, no tests silenced, ev
 ---
 
 ### Sprint 704: Homepage composition rhythm — alternating axis + engraved-monument stats + CTA variety
-**Status:** PENDING
+**Status:** PARTIAL — EngravedStat + BottomProof retrofit landed; Section axis + Button variants + full homepage re-sequence deferred
 **Priority:** P1 (composition)
 **Source:** Design audit 2026-04-20
-**Blocks on:** ~~Sprint 703 (typography system must land first)~~ UNBLOCKED 2026-04-22 — body serif decision = keep Merriweather; compose against existing stack.
-**Why now:** Nine consecutive centered serif-heading → centered sub → centered card-row sections. The eye stops tracking after section three. Alternating left/right axis composition + one visually distinctive stat block restores narrative rhythm and replaces the "stat tile row" cliché.
 **Files:**
-- `frontend/src/app/(marketing)/page.tsx` — homepage section sequence
-- `frontend/src/components/marketing/Section.tsx` — add `axis="left" | "right" | "center"` prop
 - `frontend/src/components/marketing/EngravedStat.tsx` — new component
-- `frontend/src/components/ui/Button.tsx` — formalize `variant="primary" | "secondary" | "tertiary"`
+- `frontend/src/components/marketing/BottomProof.tsx` — consumes `<EngravedStat>`; retires CountUp for the closing metric band
+- `frontend/src/components/marketing/index.ts` — exports
+- `frontend/src/__tests__/EngravedStat.test.tsx` — 5 Jest tests
 
 **Changes:**
-- [ ] Extend `Section` with `axis` prop. Left anchor: heading/sub sits left, supporting content takes a 40% right column. Right anchor: mirror. Centered reserved for hero + the specimen page (Sprint 705).
-- [ ] Re-sequence homepage: `center` (hero) → `left` (Twelve Tools) → `right` (Built for Pros) → `left` (How It Works) → `center` (Every Test Cites — Sprint 705) → `right` (stats).
-- [ ] Replace `140+ / 12 / 7` stat cards with `<EngravedStat>` — oversized display-serif numeral (oldstyle figures), hairline underline, roman-numeral kicker ("I. Automated Tests"), small-caps label. Three instances on homepage, reusable elsewhere.
-- [ ] CTA variety: add `secondary` (hairline obsidian border, serif label, no fill) and `tertiary` (sage underline, serif italic) variants to the Button component. Audit every marketing CTA — one primary sage-fill per section maximum; secondaries for alternatives (Explore Demo); tertiaries for low-priority (See Pricing →, Learn more about our technical approach).
-- [ ] Mobile (`<md`): retain center-column layout — alternating axis activates at `md:` breakpoint only.
-- [ ] Jest: `axis="left"` renders heading on left + content on right; `<EngravedStat>` renders the roman-numeral kicker and small-caps label.
+- [x] `<EngravedStat>` component: oversized display-serif value with `oldstyle-nums proportional-nums`, Roman-numeral kicker above in small-caps sage/brass/oatmeal (accent prop), hairline underline rule at 12px, small-caps label + optional sub line below. Semantic `<figure>`/`<figcaption>`. Sage default accent; brass + oatmeal accents supported via ACCENT_CLASSES map.
+- [x] `BottomProof` closing metric band (`1,452 / 12 / 7` tiles) swapped to three `<EngravedStat>` instances with `I. / II. / III.` kickers. CountUp retired — editorial reading mode values a stable figure over an animated one, and the compose-against-a-still-number reading fits the "audit journal" voice.
+- [x] 5 Jest tests pin: kicker + value + label + sub render, kicker-omission when not provided, oldstyle-nums inline style, accent-class mapping (sage ↔ brass), semantic figure/figcaption.
+- [ ] **Deferred:** `<Section>` component with `axis="left" | "right" | "center"` prop. No existing `<Section>` abstraction to extend — the homepage's marketing components (FeaturePillars, ProcessTimeline, EvidenceBand) each manage their own layout. Retrofitting all of them into a shared `<Section>` + axis mechanic is a multi-component refactor with real regression risk, best isolated to its own PR with design review.
+- [ ] **Deferred:** Homepage re-sequence (`center` hero → `left` Twelve Tools → `right` …). Pairs with the `<Section>` axis work; shipping the re-sequence without the axis abstraction would mean duplicating grid-template-columns logic across each section. Clean sprint-sized job on its own.
+- [ ] **Deferred:** `<Button>` component with `primary / secondary / tertiary` variants. Currently there's no shared `<Button>` abstraction in `components/ui/` (only `Reveal.tsx`). Every CTA inlines its styles. A variant refactor touching every marketing CTA is its own audit; Sprint 709 already unified the label ("Start Free Trial" canonical) so the CTA surface is less noisy than the brief assumed, and the variant-system work can land deliberately.
+
+**Review:**
+- Ended up scoping 704 to the one piece that composes cleanly as a standalone: `<EngravedStat>`. The other three items (Section axis, homepage re-sequence, Button variants) each touch broad surfaces and deserve focused review. Splitting them out prevents a single big-risk PR and keeps each reviewable on its own merits.
+- EngravedStat's `accent="brass"` option is the subtle hand-off from Sprint 708 — a future "Professional tier features X, Y, Z" marketing stat block could use brass accents to echo the Most Popular foil, maintaining the scarcity-scoped token.
+- Commit SHA: TBD.
 
 ---
 
@@ -1302,7 +1305,7 @@ Nothing weakened — auth/security/zero-storage untouched, no tests silenced, ev
 - Landed the three visual-signature moments from the sprint (brass badge, elevated Professional card, editorial tier name + oldstyle price). Reorder is the bigger UX shift and sits better as its own PR with design review — rushing a 914-line file refactor in the same session would risk regressions in the SeatCalculator / FindYourPlan pillbox-state interactions.
 - Used inline-style `fontVariantNumeric` for the price rather than a new Tailwind utility — this is one-off enough that a utility class would be overkill, and the inline style is greppable as Sprint 703 provenance.
 - Brass token deliberately placed OUTSIDE the semantic-theme section in tailwind.config — it's an accent, not a themed surface, and wiring it through `var(--brass-400)` would tempt future consumers to use it broadly. Scarcity is the design point.
-- Commit SHA: TBD.
+- Commit SHA: `87952dc`.
 
 ---
 
