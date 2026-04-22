@@ -62,6 +62,8 @@ htmlcov/
 .pytest_cache/
 coverage/
 coverage.json
+# Hypothesis per-developer example database (regenerated on failing runs)
+.hypothesis/
 
 # =============================================================================
 # ZERO-STORAGE POLICY - Accounting Data Protection
@@ -80,6 +82,11 @@ test_*.csv
 
 # QA regression test data (committed intentionally)
 !tests/qa/*.csv
+
+# Ad-hoc CEO validation trial-balance fixtures — may contain real/derived
+# client data, must never enter git. Zero-Storage policy applies even for
+# locally-stored evaluation files.
+tests/evaluatingfiles/
 
 # =============================================================================
 # Logs and Cache
@@ -114,6 +121,8 @@ images/*-unsplash.jpg
 # .agent/ - Uncomment if you don't want to share agent rules
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
+# Claude Code isolation worktrees — ephemeral per-agent-run state
+.claude/worktrees/
 .vercel
 
 # =============================================================================
