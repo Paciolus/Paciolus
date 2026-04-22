@@ -57,13 +57,12 @@ const CELLS: EvidenceCell[] = [
 
 export function EvidenceBand() {
   return (
-    <section className="relative py-16 px-6 overflow-hidden">
-      {/* Background texture */}
-      <div
-        className="absolute inset-0 bg-cover bg-center opacity-[0.07] pointer-events-none"
-        style={{ backgroundImage: "url('/backgrounds/background4.jpg')" }}
-        aria-hidden="true"
-      />
+    <section className="relative py-16 px-6 overflow-hidden paper-grain">
+      {/* Background texture — Sprint 703: swapped marble JPG at 7% for the
+          canonical .paper-grain utility (256x256 seamless FFT noise, 5.6KB,
+          3% opacity via mix-blend-mode multiply). One texture language
+          across the site, and the decorative div below is no longer
+          needed — .paper-grain handles the overlay via ::before. */}
       <div className="max-w-5xl mx-auto relative z-10">
 
         {/* Section Header */}

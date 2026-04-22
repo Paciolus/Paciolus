@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { motion } from 'framer-motion'
+import { Blockquote } from '@/components/marketing/Blockquote'
 
 /* ---------- Animation helpers ---------- */
 const fadeUp = {
@@ -115,20 +116,16 @@ export default function AboutPage() {
         </div>
       </motion.section>
 
-      {/* ===== Founding Motivation Blockquote ===== */}
+      {/* ===== Founding Motivation Blockquote — Sprint 703 editorial treatment ===== */}
       <motion.section
         className="px-6 pb-16"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.3, ease: 'easeOut' as const }}
       >
-        <div className="max-w-3xl mx-auto">
-          <blockquote className="border-l-4 border-sage-500 bg-obsidian-700/60 backdrop-blur-sm rounded-r-lg pl-6 pr-8 py-6">
-            <p className="font-serif text-xl md:text-2xl text-oatmeal-200 italic leading-relaxed">
-              &ldquo;The moment when you need a defensible answer shouldn&rsquo;t depend on the size of your firm. We built Paciolus so it doesn&rsquo;t.&rdquo;
-            </p>
-          </blockquote>
-        </div>
+        <Blockquote attribution="Paciolus — founding motivation">
+          &ldquo;The moment when you need a defensible answer shouldn&rsquo;t depend on the size of your firm. We built Paciolus so it doesn&rsquo;t.&rdquo;
+        </Blockquote>
       </motion.section>
 
       {/* ===== What Paciolus Is vs Is NOT ===== */}

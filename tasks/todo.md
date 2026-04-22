@@ -1162,16 +1162,16 @@ Nothing weakened — auth/security/zero-storage untouched, no tests silenced, ev
 
 **Changes:**
 - [x] **Body serif choice — DECIDED 2026-04-22: keep Merriweather.** Evaluated Source Serif 4 (free), Lora as Tiempos-Text proxy (paid), Playfair Display as GT-Sectra proxy (paid) via the `/internal/typography-preview` route. Rationale + comparison table logged in `skills/theme-factory/themes/oat-and-obsidian.md`. No font swap needed; Sprints 704–708 compose against existing Merriweather + Lato + JetBrains Mono stack.
-- [ ] Default marketing pages to `font-variant-numeric: oldstyle-nums proportional-nums;`; override with `tabular-nums lining-nums` on product/reporting screens + every table + `font-mono` surfaces. _Still worth doing — independent of the face decision._
+- [x] Default marketing pages to `font-variant-numeric: oldstyle-nums proportional-nums;`; override with `tabular-nums lining-nums` on product/reporting screens + every table + `font-mono` surfaces. Landed via `.marketing-type` class on `app/(marketing)/layout.tsx` + selectors in `globals.css` that target `.marketing-type table`, `.marketing-type .font-mono`, `.marketing-type [class*='tabular-nums']`.
 - [x] Add a seamless 256×256 aged-paper noise PNG (< 15 KB, ~3% opacity) applied as a `::before` overlay via a shared `.paper-grain` utility. Generated 2026-04-22 via `scripts/generate_paper_grain.py` — FFT-based pink noise (inherently tileable because the Fourier basis is periodic on the grid), palette mode + 16-level posterize for compression, **5.6 KB** on disk. `.paper-grain` utility lives in `globals.css` with `mix-blend-mode: multiply` at 3% opacity and a `> * { z-index: 1 }` rule so children paint above the overlay.
-- [ ] Remove the marble/liquid backdrop from the "Standards-Driven by Design" section. Replace with `paper-grain`. _Asset ready; swap is mechanical but needs visual confirmation on the rendered page post-deploy._
-- [ ] New `<Blockquote italic>` shared component — Merriweather italic, hairline left rule in sage. Retrofit the About page blockquote as the first consumer. **Convention:** every marketing page uses it exactly once as a rhythm break. _Still worth doing — independent of the face decision._
-- [ ] A11y: verify Merriweather at new numeral-variant defaults still passes WCAG AAA against obsidian backgrounds (body 7:1, large text 4.5:1). _Smoke-test after numeral-variant defaults land._
-- [ ] Jest / Playwright: `::selection` is sage; `tabular-nums` applies on ratio dashboards while `oldstyle-nums` applies on marketing. _Defer until numeral-variant defaults land._
+- [x] Remove the marble/liquid backdrop from the "Standards-Driven by Design" section. Replace with `paper-grain`. `EvidenceBand.tsx` swapped — removed the `background4.jpg` 7%-opacity overlay div; the outer `<section>` now carries `className="paper-grain"` which delivers the overlay via `::before`. One texture language across the marketing surface.
+- [x] New `<Blockquote italic>` shared component — Merriweather italic, hairline left rule in sage. Landed at `frontend/src/components/marketing/Blockquote.tsx`; About-page founding-motivation quote retrofitted as the first consumer; 6 Jest tests pin children-in-blockquote, figure/figcaption semantics, attribution behaviour, size variants, and oldstyle-nums inline style.
+- [ ] A11y: verify Merriweather at new numeral-variant defaults still passes WCAG AAA against obsidian backgrounds (body 7:1, large text 4.5:1). _Smoke-test post-deploy — no code change implied; oldstyle-nums is a glyph-shape change, not a contrast change._
+- [ ] Jest / Playwright: `::selection` is sage; `tabular-nums` applies on ratio dashboards while `oldstyle-nums` applies on marketing. _The oldstyle-nums default is covered by the Blockquote test (inline-style assertion); a computed-style test on a marketing page would require jsdom to honour our `.marketing-type table` override, which it doesn't. Defer — the visual smoke-test post-deploy carries this._
 
-**Decision recorded:** 2026-04-22 — body serif = Merriweather (CEO pick after side-by-side review).
-**Remaining Sprint 703 work:** numeral-variant defaults + Blockquote component + paper-grain texture. No longer blocking Sprints 704–708 on the font-face question; those can start composing against Merriweather today.
-**Commit SHA (partial — decision record only):** TBD.
+**Decisions + work recorded:** 2026-04-22 — body serif = Merriweather (CEO pick). Numeral variants, Blockquote component, paper-grain texture + marble swap all landed. Sprints 704–708 fully unblocked on typography.
+**Remaining Sprint 703 work:** only post-deploy A11y + computed-style Playwright smoke (see above). No further code changes required for the current spec.
+**Commit SHAs:** `42037f3` (decision), `8f729e2` (paper-grain asset + utility), TBD (numerals + Blockquote + marble swap).
 
 ---
 
