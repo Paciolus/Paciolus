@@ -1,0 +1,812 @@
+"""Upload validation + parsing pipeline.
+
+Ten-step defense from request ingress through DataFrame materialization:
+
+  Request → MaxBodySizeMiddleware (110 MB global)
+    → validate_file_size():
+      1. Extension check (.csv, .xlsx, .xls, .tsv, .txt, .ofx, .qbo, .iif,
+         .pdf, .ods, .docx)
+      2. Content-Type check (all allowed MIME types)
+      3. Chunked read with 100 MB per-file limit
+      4. Empty file detection
+      5. Magic byte validation (PK / OLE / binary rejection)
+      6. XLSX archive inspection:
+         a. ZIP entry count ≤ 10,000
+         b. No nested archives
+         c. Total uncompressed ≤ 1 GB
+         d. Compression ratio ≤ 100:1
+         e. XML bomb scan (no <!DOCTYPE> or <!ENTITY>)
+    → parse_uploaded_file_by_format():
+      7. Row count ≤ 500,000
+      8. Column count ≤ 1,000
+      9. Cell length ≤ 100,000 chars
+      10. Formula injection sanitization (CWE-1236, on export)
+"""
+
+from __future__ import annotations
+
+import io
+import logging
+import os
+import zipfile
+import zlib
+from collections import Counter
+from collections.abc import Generator
+from contextlib import contextmanager
+
+import pandas as pd
+from fastapi import HTTPException, UploadFile
+
+from security_utils import clear_memory, log_secure_operation
+from shared.file_formats import (
+    ALLOWED_CONTENT_TYPES,
+    ALLOWED_EXTENSIONS,
+    XLS_MAGIC,
+    XLSX_MAGIC,
+    FileFormat,
+    detect_format,
+    get_active_extensions_display,
+)
+
+logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Limits
+# ---------------------------------------------------------------------------
+
+MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024
+MAX_FILE_SIZE_MB = 100
+MAX_ROW_COUNT = 500_000
+MAX_COL_COUNT = 1_000
+MAX_CELL_LENGTH = 100_000
+
+# Archive bomb detection limits (XLSX files are ZIP containers)
+MAX_ZIP_ENTRIES = 10_000
+MAX_ZIP_UNCOMPRESSED_BYTES = 1_000 * 1024 * 1024  # 1GB
+MAX_COMPRESSION_RATIO = 100
+
+# XML bomb detection (billion laughs / entity expansion attacks)
+_XML_HEADER_SCAN_SIZE = 8192
+_XML_SCAN_EXTENSIONS = (".xml", ".rels", ".vml")
+_XML_BOMB_PATTERNS = (b"<!doctype", b"<!entity")
+
+# Backward-compat aliases (existing code references underscore-prefixed names)
+_XLSX_MAGIC = XLSX_MAGIC
+_XLS_MAGIC = XLS_MAGIC
+
+
+# ---------------------------------------------------------------------------
+# XLSX archive inspection
+# ---------------------------------------------------------------------------
+
+
+def _scan_xlsx_xml_for_bombs(zf: zipfile.ZipFile, entries: list[zipfile.ZipInfo]) -> None:
+    """Scan XML entries inside an XLSX ZIP for entity-expansion attacks.
+
+    OOXML (ISO/IEC 29500) does NOT use DTDs. Legitimate XLSX files never
+    contain ``<!DOCTYPE>`` or ``<!ENTITY>``. Scanning raw bytes before the
+    XML parser touches them has zero false positives.
+    """
+    for entry in entries:
+        entry_lower = entry.filename.lower()
+        if not entry_lower.endswith(_XML_SCAN_EXTENSIONS):
+            continue
+        try:
+            with zf.open(entry.filename) as f:
+                header = f.read(_XML_HEADER_SCAN_SIZE).lower()
+            for pattern in _XML_BOMB_PATTERNS:
+                if pattern in header:
+                    log_secure_operation(
+                        "xml_bomb_detected",
+                        f"XML bomb pattern {pattern!r} in '{entry.filename}'",
+                    )
+                    raise HTTPException(
+                        status_code=400,
+                        detail="The file contains prohibited XML constructs "
+                        "(DTD/entity declarations) and cannot be processed.",
+                    )
+        except (zlib.error, KeyError):
+            log_secure_operation("corrupted_xml_entry", f"Corrupted ZIP entry '{entry.filename}'")
+            raise HTTPException(
+                status_code=400,
+                detail="The file contains a corrupted XML entry and cannot be processed.",
+            )
+
+
+def _validate_xlsx_archive(file_bytes: bytes, filename: str) -> None:
+    """Inspect XLSX ZIP container for archive-bomb indicators."""
+    try:
+        with zipfile.ZipFile(io.BytesIO(file_bytes)) as zf:
+            entries = zf.infolist()
+
+            if len(entries) > MAX_ZIP_ENTRIES:
+                log_secure_operation(
+                    "archive_bomb_entries",
+                    f"ZIP has {len(entries)} entries (limit {MAX_ZIP_ENTRIES})",
+                )
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"The file contains {len(entries):,} archive entries, "
+                    f"exceeding the maximum of {MAX_ZIP_ENTRIES:,}.",
+                )
+
+            total_compressed = 0
+            total_uncompressed = 0
+
+            for entry in entries:
+                entry_lower = entry.filename.lower()
+                if entry_lower.endswith((".zip", ".gz", ".tar", ".7z", ".rar", ".bz2")):
+                    log_secure_operation(
+                        "nested_archive_detected",
+                        f"Nested archive '{entry.filename}' found",
+                    )
+                    raise HTTPException(
+                        status_code=400,
+                        detail="The file contains nested archives, which are not permitted.",
+                    )
+
+                total_compressed += entry.compress_size
+                total_uncompressed += entry.file_size
+
+            if total_uncompressed > MAX_ZIP_UNCOMPRESSED_BYTES:
+                log_secure_operation(
+                    "archive_bomb_size",
+                    f"ZIP uncompressed size {total_uncompressed} exceeds limit",
+                )
+                raise HTTPException(
+                    status_code=400,
+                    detail="The file's uncompressed content exceeds the maximum allowed size.",
+                )
+
+            if total_compressed > 0:
+                ratio = total_uncompressed / total_compressed
+                if ratio > MAX_COMPRESSION_RATIO:
+                    log_secure_operation(
+                        "archive_bomb_ratio",
+                        f"Compression ratio {ratio:.1f}:1 exceeds limit of {MAX_COMPRESSION_RATIO}:1",
+                    )
+                    raise HTTPException(
+                        status_code=400,
+                        detail="The file has a suspiciously high compression ratio and may be malformed.",
+                    )
+
+            _scan_xlsx_xml_for_bombs(zf, entries)
+
+    except zipfile.BadZipFile:
+        raise HTTPException(
+            status_code=400,
+            detail="The .xlsx file is not a valid ZIP archive. Please verify the file is a valid Excel workbook.",
+        )
+
+
+# ---------------------------------------------------------------------------
+# Pre-parse row-count estimation & content sniff
+# ---------------------------------------------------------------------------
+
+
+def _estimate_csv_row_count(file_bytes: bytes, sample_bytes: int = 65536) -> int:
+    """Estimate total row count from average line length in a byte sample."""
+    sample = file_bytes[:sample_bytes]
+    if not sample:
+        return 0
+    newlines = sample.count(b"\n")
+    if newlines == 0:
+        return 1
+    avg_line_bytes = len(sample) / newlines
+    estimated = int(len(file_bytes) / avg_line_bytes)
+    return estimated
+
+
+def _estimate_xlsx_row_count(file_bytes: bytes) -> int:
+    """Read sheet dimensions from XLSX metadata without loading cell values."""
+    import openpyxl
+
+    try:
+        wb = openpyxl.load_workbook(io.BytesIO(file_bytes), read_only=True, data_only=True)
+        ws = wb.active
+        max_row = ws.max_row or 0
+        wb.close()
+        return max_row
+    except Exception:
+        return 0
+
+
+def _sniff_text_format(file_bytes: bytes, declared_extension: str) -> bool:
+    """Lightweight content validation for text-based upload formats."""
+    header = file_bytes[:512]
+    if not header:
+        return True
+
+    try:
+        header_text = header.decode("utf-8", errors="replace")
+    except Exception:
+        header_text = ""
+
+    ext = declared_extension.lower()
+
+    if ext in (".csv", ".tsv", ".txt"):
+        return b"\x00" not in header
+
+    if ext == ".qbo":
+        upper = header_text.upper()
+        return "OFXHEADER" in upper or "<OFX" in upper
+
+    if ext == ".ofx":
+        upper = header_text.upper()
+        return "OFXHEADER" in upper or "<OFX>" in upper
+
+    if ext == ".iif":
+        return header_text.lstrip("\ufeff").startswith("!")
+
+    return True
+
+
+# ---------------------------------------------------------------------------
+# validate_file_size — ingress gate
+# ---------------------------------------------------------------------------
+
+
+async def validate_file_size(file: UploadFile) -> bytes:
+    """Read uploaded file with size, content-type, and extension validation."""
+    filename = (file.filename or "").lower()
+    ext = os.path.splitext(filename)[1]
+
+    detected = detect_format(filename=file.filename, content_type=file.content_type)
+    logger.debug(
+        "File format detection: %s (confidence=%s, source=%s) for '%s'",
+        detected.format,
+        detected.confidence,
+        detected.source,
+        file.filename,
+    )
+    if ext and ext not in ALLOWED_EXTENSIONS:
+        log_secure_operation("file_type_rejected", f"Rejected file with extension: {ext}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported file type '{ext}'. Please upload a {get_active_extensions_display()} file.",
+        )
+
+    content_type = (file.content_type or "").lower()
+    if content_type and content_type not in ALLOWED_CONTENT_TYPES:
+        log_secure_operation(
+            "content_type_rejected",
+            f"Rejected content type: {content_type} for file: {file.filename}",
+        )
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported file type. Please upload a {get_active_extensions_display()} file.",
+        )
+
+    contents = bytearray()
+    chunk_size = 1024 * 1024
+
+    while True:
+        chunk = await file.read(chunk_size)
+        if not chunk:
+            break
+        contents.extend(chunk)
+
+        if len(contents) > MAX_FILE_SIZE_BYTES:
+            log_secure_operation(
+                "file_size_exceeded",
+                f"File {file.filename} exceeds {MAX_FILE_SIZE_MB}MB limit",
+            )
+            raise HTTPException(
+                status_code=413,
+                detail=f"File size exceeds maximum allowed size of {MAX_FILE_SIZE_MB}MB. "
+                f"Please reduce file size or split into smaller files.",
+            )
+
+    file_bytes = bytes(contents)
+
+    if len(file_bytes) == 0:
+        raise HTTPException(status_code=400, detail="The uploaded file is empty. Please select a file with data.")
+
+    # File signature (magic byte) validation
+    if ext == ".xlsx":
+        if not file_bytes.startswith(_XLSX_MAGIC):
+            log_secure_operation("magic_byte_mismatch", "File has .xlsx extension but invalid ZIP signature")
+            raise HTTPException(
+                status_code=400,
+                detail="File content does not match .xlsx format. Please verify the file is a valid Excel workbook.",
+            )
+    elif ext == ".xls":
+        if not file_bytes.startswith(_XLS_MAGIC):
+            log_secure_operation("magic_byte_mismatch", "File has .xls extension but invalid OLE signature")
+            raise HTTPException(
+                status_code=400,
+                detail="File content does not match .xls format. Please verify the file is a valid Excel workbook.",
+            )
+    elif ext == ".ods":
+        if not file_bytes.startswith(_XLSX_MAGIC):
+            log_secure_operation("magic_byte_mismatch", "File has .ods extension but invalid ZIP signature")
+            raise HTTPException(
+                status_code=400,
+                detail="File content does not match ODS format. Please verify the file is a valid OpenDocument Spreadsheet.",
+            )
+    elif ext == ".docx":
+        if not file_bytes.startswith(_XLSX_MAGIC):
+            log_secure_operation("magic_byte_mismatch", "File has .docx extension but invalid ZIP signature")
+            raise HTTPException(
+                status_code=400,
+                detail="File content does not match DOCX format. Please verify the file is a valid Word document.",
+            )
+    elif ext == ".pdf":
+        if not file_bytes.startswith(b"%PDF"):
+            log_secure_operation("magic_byte_mismatch", "File has .pdf extension but missing %PDF signature")
+            raise HTTPException(
+                status_code=400,
+                detail="File content does not match PDF format. Please verify the file is a valid PDF document.",
+            )
+    elif ext in (".qbo", ".ofx", ".iif"):
+        if file_bytes.startswith(_XLSX_MAGIC) or file_bytes.startswith(_XLS_MAGIC):
+            log_secure_operation("magic_byte_mismatch", f"File appears to be a binary spreadsheet, not {ext}")
+            raise HTTPException(
+                status_code=400,
+                detail="File appears to be a binary spreadsheet. Please provide a valid text-based file.",
+            )
+    elif ext in (".csv", ".tsv", ".txt") or not ext:
+        if file_bytes.startswith(_XLSX_MAGIC) or file_bytes.startswith(_XLS_MAGIC):
+            log_secure_operation(
+                "magic_byte_mismatch",
+                f"File appears to be a binary spreadsheet, not {ext or 'text'}",
+            )
+            raise HTTPException(
+                status_code=400,
+                detail="File appears to be a binary spreadsheet. "
+                "Please use the correct .xlsx or .xls extension, "
+                "or provide a valid text-based file.",
+            )
+
+    if ext in (".csv", ".tsv", ".txt", ".qbo", ".ofx", ".iif"):
+        if not _sniff_text_format(file_bytes, ext):
+            log_secure_operation(
+                "content_sniff_rejected",
+                f"File '{file.filename}' content inconsistent with declared extension {ext}",
+            )
+            raise HTTPException(
+                status_code=400,
+                detail="The uploaded file content does not match the expected format for "
+                f"'{ext}' files. Please verify the file and try again.",
+            )
+
+    if file_bytes.startswith(_XLSX_MAGIC):
+        _validate_xlsx_archive(file_bytes, filename)
+
+    return file_bytes
+
+
+# ---------------------------------------------------------------------------
+# memory_cleanup — post-processing context manager
+# ---------------------------------------------------------------------------
+
+
+@contextmanager
+def memory_cleanup() -> Generator[None, None, None]:
+    """Context manager guaranteeing gc.collect() after CPU-bound file processing."""
+    try:
+        yield
+    finally:
+        clear_memory()
+
+
+# ---------------------------------------------------------------------------
+# Format-specific parsers
+# ---------------------------------------------------------------------------
+
+
+def _parse_csv(file_bytes: bytes, filename: str) -> pd.DataFrame:
+    """Parse CSV bytes with UTF-8 → Latin-1 encoding fallback."""
+    df = None
+    for encoding in ("utf-8", "latin-1"):
+        try:
+            df = pd.read_csv(io.BytesIO(file_bytes), encoding=encoding)
+            break
+        except UnicodeDecodeError:
+            continue
+        except pd.errors.EmptyDataError:
+            raise HTTPException(
+                status_code=400,
+                detail="The uploaded file appears to be empty or has no readable columns.",
+            )
+        except pd.errors.ParserError:
+            raise HTTPException(
+                status_code=400,
+                detail="The CSV file format is invalid. Please verify it is a properly formatted CSV file.",
+            )
+    if df is None:
+        raise HTTPException(
+            status_code=400,
+            detail="The file contains characters that could not be decoded. Try saving the file as UTF-8 CSV.",
+        )
+    return df
+
+
+def _parse_tsv(file_bytes: bytes, filename: str) -> pd.DataFrame:
+    """Parse TSV bytes with UTF-8 → Latin-1 encoding fallback."""
+    df = None
+    for encoding in ("utf-8", "latin-1"):
+        try:
+            df = pd.read_csv(io.BytesIO(file_bytes), sep="\t", encoding=encoding)
+            break
+        except UnicodeDecodeError:
+            continue
+        except pd.errors.EmptyDataError:
+            raise HTTPException(
+                status_code=400,
+                detail="The uploaded file appears to be empty or has no readable columns.",
+            )
+        except pd.errors.ParserError:
+            raise HTTPException(
+                status_code=400,
+                detail="The TSV file format is invalid. Please verify it is a properly formatted tab-separated file.",
+            )
+    if df is None:
+        raise HTTPException(
+            status_code=400,
+            detail="The file contains characters that could not be decoded. Try saving the file as UTF-8.",
+        )
+    return df
+
+
+def _detect_delimiter(file_bytes: bytes, filename: str) -> str:
+    """Detect the delimiter in a text file by analyzing up to 20 non-empty lines."""
+    try:
+        text = file_bytes.decode("utf-8")
+    except UnicodeDecodeError:
+        text = file_bytes.decode("latin-1")
+
+    lines = [line for line in text.splitlines() if line.strip()][:20]
+    if len(lines) < 2:
+        raise HTTPException(
+            status_code=400,
+            detail="The text file has too few lines to determine its format. "
+            "Please provide a file with a header row and at least one data row.",
+        )
+
+    candidates = ["\t", ",", "|", ";"]
+    best_delimiter = None
+    best_score = 0.0
+    best_consistency = 0.0
+
+    for delim in candidates:
+        counts = [len(line.split(delim)) for line in lines]
+        if all(c == 1 for c in counts):
+            continue
+
+        counter = Counter(counts)
+        mode_count, mode_freq = counter.most_common(1)[0]
+        consistency = mode_freq / len(counts)
+        score = consistency * mode_count
+
+        if score > best_score:
+            best_score = score
+            best_consistency = consistency
+            best_delimiter = delim
+
+    if best_delimiter is None or best_consistency < 0.75:
+        raise HTTPException(
+            status_code=400,
+            detail="Could not determine the delimiter in the text file. "
+            "Please save the file as CSV (.csv) or TSV (.tsv) with a consistent delimiter.",
+        )
+
+    return best_delimiter
+
+
+def _parse_txt(file_bytes: bytes, filename: str) -> pd.DataFrame:
+    """Parse a plain text file by detecting its delimiter, then reading as CSV."""
+    delimiter = _detect_delimiter(file_bytes, filename)
+
+    df = None
+    for encoding in ("utf-8", "latin-1"):
+        try:
+            df = pd.read_csv(io.BytesIO(file_bytes), sep=delimiter, encoding=encoding)
+            break
+        except UnicodeDecodeError:
+            continue
+        except pd.errors.EmptyDataError:
+            raise HTTPException(
+                status_code=400,
+                detail="The uploaded file appears to be empty or has no readable columns.",
+            )
+        except pd.errors.ParserError:
+            raise HTTPException(
+                status_code=400,
+                detail="The text file format is invalid. Please verify it has a consistent delimiter.",
+            )
+    if df is None:
+        raise HTTPException(
+            status_code=400,
+            detail="The file contains characters that could not be decoded. Try saving the file as UTF-8.",
+        )
+    return df
+
+
+def _parse_ofx(file_bytes: bytes, filename: str) -> pd.DataFrame:
+    from shared.ofx_parser import parse_ofx
+
+    return parse_ofx(file_bytes, filename)
+
+
+def _parse_iif(file_bytes: bytes, filename: str) -> pd.DataFrame:
+    from shared.iif_parser import parse_iif
+
+    return parse_iif(file_bytes, filename)
+
+
+def _parse_pdf(file_bytes: bytes, filename: str) -> pd.DataFrame:
+    from shared.pdf_parser import parse_pdf
+
+    return parse_pdf(file_bytes, filename)
+
+
+def _parse_ods(file_bytes: bytes, filename: str) -> pd.DataFrame:
+    from shared.ods_parser import parse_ods
+
+    return parse_ods(file_bytes, filename)
+
+
+def _parse_docx(file_bytes: bytes, filename: str) -> pd.DataFrame:
+    from shared.docx_parser import parse_docx
+
+    return parse_docx(file_bytes, filename)
+
+
+def _parse_excel(file_bytes: bytes, filename: str) -> pd.DataFrame:
+    """Parse Excel (.xlsx/.xls) bytes into a DataFrame.
+
+    SECURITY NOTE: XLSX ingestion explicitly disables formula evaluation,
+    macro execution, and external link resolution via openpyxl's read_only
+    and data_only modes. Do not replace this block with a bare
+    ``pd.read_excel()`` without a security review — ``pd.read_excel()``
+    engine behavior varies and does not guarantee formula suppression across
+    all supported file formats.
+
+    For .xls (legacy binary), xlrd 2.x is used via pandas. xlrd 2.x dropped
+    formula support entirely, so formulas are not evaluated.
+    """
+    ext = os.path.splitext(filename or "")[1].lower()
+
+    if ext == ".xls":
+        try:
+            return pd.read_excel(io.BytesIO(file_bytes), engine="xlrd")
+        except (ValueError, KeyError, OSError, UnicodeDecodeError) as e:
+            logger.warning("XLS parse failed: %s", type(e).__name__)
+            raise HTTPException(
+                status_code=400,
+                detail="The Excel file could not be read. Please verify it is a valid .xls file.",
+            )
+
+    import openpyxl
+
+    try:
+        buf = io.BytesIO(file_bytes)
+        wb = openpyxl.load_workbook(
+            buf,
+            read_only=True,
+            data_only=True,  # returns cached formula results, never re-evaluates
+            keep_vba=False,  # explicitly discard VBA content
+            keep_links=False,  # do not follow external links
+        )
+        try:
+            ws = wb.active
+            data = ws.values
+            headers = next(data, None)
+            if headers is None:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Uploaded workbook contains no header row.",
+                )
+            df = pd.DataFrame(data, columns=headers)
+        finally:
+            wb.close()
+        return df
+    except HTTPException:
+        raise
+    except (ValueError, KeyError, OSError, UnicodeDecodeError, Exception) as e:
+        logger.warning("XLSX parse failed: %s", type(e).__name__)
+        raise HTTPException(
+            status_code=400,
+            detail="The Excel file could not be read. Please verify it is a valid .xlsx file.",
+        )
+
+
+# ---------------------------------------------------------------------------
+# Post-parse validation
+# ---------------------------------------------------------------------------
+
+
+def _validate_and_convert_df(
+    df: pd.DataFrame,
+    max_rows: int,
+) -> tuple[list[str], list[dict]]:
+    """Validate parsed DataFrame and convert to column names + row dicts.
+
+    Checks: row count, column count, zero data rows, cell length, identifier dtype.
+    """
+    if len(df) > max_rows:
+        row_count = len(df)
+        del df
+        raise HTTPException(
+            status_code=400,
+            detail=f"The file contains {row_count:,} rows, which exceeds the maximum of "
+            f"{max_rows:,}. Please reduce the file size or split into smaller files.",
+        )
+
+    if len(df.columns) > MAX_COL_COUNT:
+        col_count = len(df.columns)
+        del df
+        raise HTTPException(
+            status_code=400,
+            detail=f"The file contains {col_count:,} columns, which exceeds the maximum of "
+            f"{MAX_COL_COUNT:,}. Please reduce the number of columns.",
+        )
+
+    if len(df) == 0:
+        del df
+        raise HTTPException(
+            status_code=400,
+            detail="The file has column headers but contains no data rows. "
+            "Please upload a file with at least one row of data.",
+        )
+
+    # Cell content length protection (prevent OOM from oversized string operations).
+    # pandas 3.0 uses pd.StringDtype() ("str") for string columns instead of object;
+    # is_string_dtype() covers both the legacy object dtype and the new str dtype.
+    for col in df.columns:
+        if pd.api.types.is_string_dtype(df[col]):
+            max_len = df[col].astype(str).str.len().max()
+            if pd.notna(max_len) and max_len > MAX_CELL_LENGTH:
+                del df
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"A cell in column '{col}' exceeds the maximum length of "
+                    f"{MAX_CELL_LENGTH:,} characters. Please reduce cell content size.",
+                )
+
+    # Preserve leading zeros in identifier columns (account codes, IDs).
+    _IDENTIFIER_HINTS = {"account", "acct", "code", "id", "number", "no", "num", "gl"}
+    for col in df.columns:
+        col_lower = str(col).lower().strip()
+        if any(hint in col_lower for hint in _IDENTIFIER_HINTS):
+            if pd.api.types.is_numeric_dtype(df[col]):
+                df[col] = df[col].apply(
+                    lambda x: (
+                        str(int(x)) if pd.notna(x) and float(x) == int(float(x)) else (str(x) if pd.notna(x) else "")
+                    )
+                )
+
+    column_names = list(df.columns.astype(str))
+    rows = df.to_dict("records")
+    del df
+    return column_names, rows
+
+
+# ---------------------------------------------------------------------------
+# Entry points
+# ---------------------------------------------------------------------------
+
+
+def parse_uploaded_file_by_format(
+    file_bytes: bytes,
+    filename: str,
+    content_type: str | None = None,
+    max_rows: int = MAX_ROW_COUNT,
+) -> tuple[list[str], list[dict]]:
+    """Parse file bytes using ``detect_format()`` to dispatch to the correct parser."""
+    from shared.file_formats import is_format_enabled
+    from shared.parser_metrics import (
+        active_parses,
+        parse_duration_seconds,
+        parse_errors_total,
+        parse_total,
+    )
+
+    detected = detect_format(filename=filename, content_type=content_type, file_bytes=file_bytes)
+    fmt_label = detected.format.value
+
+    if detected.format != FileFormat.UNKNOWN and not is_format_enabled(detected.format):
+        raise HTTPException(
+            status_code=400,
+            detail=f"File format '{detected.format.value}' is currently disabled. "
+            "Please contact support or try a different format.",
+        )
+
+    parse_total.labels(format=fmt_label, stage="detect").inc()
+
+    # Pre-parse row-count gate (20% buffer — estimates aren't exact).
+    _TEXT_FORMATS = {FileFormat.CSV, FileFormat.TSV, FileFormat.TXT}
+    _XLSX_FORMATS = {FileFormat.XLSX, FileFormat.XLS}
+    row_estimate_limit = int(max_rows * 1.2)
+
+    if detected.format in _TEXT_FORMATS:
+        estimated_rows = _estimate_csv_row_count(file_bytes)
+        if estimated_rows > row_estimate_limit:
+            log_secure_operation(
+                "pre_parse_row_limit",
+                f"File '{filename}' estimated at {estimated_rows:,} rows (limit {max_rows:,})",
+            )
+            raise HTTPException(
+                status_code=400,
+                detail=f"File appears to exceed the maximum row limit of {max_rows:,} rows "
+                f"(estimated {estimated_rows:,} rows). Please reduce the file size.",
+            )
+    elif detected.format in _XLSX_FORMATS:
+        estimated_rows = _estimate_xlsx_row_count(file_bytes)
+        if estimated_rows > max_rows:
+            log_secure_operation(
+                "pre_parse_row_limit",
+                f"File '{filename}' has {estimated_rows:,} rows in metadata (limit {max_rows:,})",
+            )
+            raise HTTPException(
+                status_code=400,
+                detail=f"File appears to exceed the maximum row limit of {max_rows:,} rows "
+                f"(estimated {estimated_rows:,} rows). Please reduce the file size.",
+            )
+
+    active_parses.labels(format=fmt_label).inc()
+    try:
+        with parse_duration_seconds.labels(format=fmt_label, stage="parse").time():
+            if detected.format in (FileFormat.XLSX, FileFormat.XLS):
+                df = _parse_excel(file_bytes, filename)
+            elif detected.format == FileFormat.CSV:
+                df = _parse_csv(file_bytes, filename)
+            elif detected.format == FileFormat.TSV:
+                df = _parse_tsv(file_bytes, filename)
+            elif detected.format == FileFormat.TXT:
+                df = _parse_txt(file_bytes, filename)
+            elif detected.format in (FileFormat.QBO, FileFormat.OFX):
+                df = _parse_ofx(file_bytes, filename)
+            elif detected.format == FileFormat.IIF:
+                df = _parse_iif(file_bytes, filename)
+            elif detected.format == FileFormat.PDF:
+                df = _parse_pdf(file_bytes, filename)
+            elif detected.format == FileFormat.ODS:
+                df = _parse_ods(file_bytes, filename)
+            elif detected.format == FileFormat.DOCX:
+                df = _parse_docx(file_bytes, filename)
+            elif detected.format == FileFormat.UNKNOWN:
+                filename_lower = (filename or "").lower()
+                if filename_lower.endswith((".xlsx", ".xls")):
+                    df = _parse_excel(file_bytes, filename)
+                else:
+                    # Guard: reject binary files that slipped through format detection.
+                    # Prevents binary-as-CSV parsing which produces garbage data.
+                    if file_bytes[:4] in (XLSX_MAGIC, XLS_MAGIC) or file_bytes.startswith(b"%PDF"):
+                        raise HTTPException(
+                            status_code=400,
+                            detail="File appears to be a binary format but could not be identified. "
+                            "Please save as CSV or a supported Excel format.",
+                        )
+                    df = _parse_csv(file_bytes, filename)
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Unsupported file format '{detected.format}'. "
+                    f"Please upload a {get_active_extensions_display()} file.",
+                )
+
+        parse_total.labels(format=fmt_label, stage="parse").inc()
+
+    except HTTPException as e:
+        parse_errors_total.labels(format=fmt_label, stage="parse", error_code=str(e.status_code)).inc()
+        raise
+    finally:
+        active_parses.labels(format=fmt_label).dec()
+
+    return _validate_and_convert_df(df, max_rows)
+
+
+def parse_uploaded_file(
+    file_bytes: bytes,
+    filename: str,
+    max_rows: int = MAX_ROW_COUNT,
+) -> tuple[list[str], list[dict]]:
+    """Parse CSV/Excel file bytes into column names and row dicts.
+
+    Thin wrapper around :func:`parse_uploaded_file_by_format` for callers
+    that never supply a content-type.
+    """
+    return parse_uploaded_file_by_format(file_bytes, filename, max_rows=max_rows)

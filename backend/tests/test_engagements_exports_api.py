@@ -47,6 +47,8 @@ def auth_user(db_session):
 def override_verified(db_session, auth_user):
     """Override require_verified_user + get_db."""
     app.dependency_overrides[require_verified_user] = lambda: auth_user
+    # Sprint 678: export gate (check_export_access) pulls require_current_user
+    app.dependency_overrides[require_current_user] = lambda: auth_user
     app.dependency_overrides[get_db] = lambda: db_session
     yield auth_user
     app.dependency_overrides.clear()

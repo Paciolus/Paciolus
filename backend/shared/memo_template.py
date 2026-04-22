@@ -44,6 +44,7 @@ from shared.report_chrome import (
     build_cover_page,
     draw_page_footer,
     find_logo,
+    make_branded_page_footer,
 )
 from shared.scope_methodology import (
     build_authoritative_reference_block,
@@ -154,6 +155,7 @@ def generate_testing_memo(
     format_finding: Optional[FindingFormatter] = None,
     resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
     include_signoff: bool = False,
+    branding_context: Any = None,  # Sprint 679: Optional PDFBrandingContext
 ) -> bytes:
     """Generate a standard testing memo PDF using the provided config.
 
@@ -217,7 +219,14 @@ def generate_testing_memo(
         prepared_by=prepared_by or "",
         reviewed_by=reviewed_by or "",
     )
-    build_cover_page(story, styles, metadata, doc.width, logo_path)
+    # Sprint 679: resolve branding. Explicit kwarg wins (test injection);
+    # otherwise read from the ContextVar populated by the route handler.
+    if branding_context is None:
+        from shared.pdf_branding import current_pdf_branding
+
+        branding_context = current_pdf_branding()
+    custom_logo_bytes = getattr(branding_context, "effective_logo_bytes", lambda: None)()
+    build_cover_page(story, styles, metadata, doc.width, logo_path, custom_logo_bytes=custom_logo_bytes)
 
     # 2. SCOPE (standard or custom)
     if build_scope is not None:
@@ -386,8 +395,19 @@ def generate_testing_memo(
     # DISCLAIMER
     build_disclaimer(story, styles, domain=config.domain, isa_reference=config.isa_reference)
 
-    # Build PDF (page footer on all pages: page numbers + disclaimer)
-    doc.build(story, onFirstPage=draw_page_footer, onLaterPages=draw_page_footer)
+    # Build PDF (page footer on all pages: page numbers + disclaimer).
+    # Sprint 679: swap in the branded footer factory when an Enterprise
+    # user has supplied header_text / footer_text. Factory returns the
+    # default callback when both are absent so branding-free flows are
+    # unaffected.
+    if branding_context is not None:
+        footer_cb = make_branded_page_footer(
+            header_text=getattr(branding_context, "effective_header_text", lambda: None)(),
+            footer_text=getattr(branding_context, "effective_footer_text", lambda: None)(),
+        )
+    else:
+        footer_cb = draw_page_footer
+    doc.build(story, onFirstPage=footer_cb, onLaterPages=footer_cb)
     pdf_bytes = buffer.getvalue()
     buffer.close()
 

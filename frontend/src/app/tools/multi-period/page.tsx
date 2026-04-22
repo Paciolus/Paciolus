@@ -19,8 +19,7 @@ import {
 import { GuestCTA, ZeroStorageNotice, DisclaimerBox } from '@/components/shared'
 import { Reveal } from '@/components/ui/Reveal'
 import { useMultiPeriodComparison, type MovementSummaryResponse } from '@/hooks'
-import type { AuditResult } from '@/types/diagnostic'
-import { apiPost } from '@/utils/apiClient'
+import { uploadTrialBalance } from '@/utils/trialBalanceUpload'
 import { apiDownload, downloadBlob } from '@/utils'
 
 export default function MultiPeriodPage() {
@@ -66,26 +65,20 @@ export default function MultiPeriodPage() {
   const auditFile = useCallback(async (file: File, setPeriod: React.Dispatch<React.SetStateAction<PeriodState>>) => {
     setPeriod(prev => ({ ...prev, file, status: 'loading', result: null, error: null }))
 
-    const formData = new FormData()
-    formData.append('file', file)
-    formData.append('materiality_threshold', materialityThreshold.toString())
+    const outcome = await uploadTrialBalance(
+      {
+        file,
+        materialityThreshold,
+        engagementId,
+      },
+      token,
+    )
 
-    if (engagementId) {
-      formData.append('engagement_id', engagementId.toString())
+    if (outcome.kind === 'success') {
+      setPeriod(prev => ({ ...prev, status: 'success', result: outcome.result }))
+      return
     }
-
-    try {
-      const response = await apiPost('/audit/trial-balance', token, formData)
-
-      if (!response.ok) {
-        setPeriod(prev => ({ ...prev, status: 'error', error: response.error || `Audit failed (${response.status})` }))
-        return
-      }
-
-      setPeriod(prev => ({ ...prev, status: 'success', result: response.data as AuditResult }))
-    } catch {
-      setPeriod(prev => ({ ...prev, status: 'error', error: 'Network error during audit' }))
-    }
+    setPeriod(prev => ({ ...prev, status: 'error', error: outcome.message }))
   }, [token, materialityThreshold, engagementId])
 
   const handlePriorFile = useCallback((file: File) => {

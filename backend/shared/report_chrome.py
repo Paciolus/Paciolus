@@ -266,6 +266,7 @@ def build_cover_page(
     metadata: ReportMetadata,
     doc_width: float,
     logo_path: Optional[str] = None,
+    custom_logo_bytes: Optional[bytes] = None,
 ) -> None:
     """Append cover page flowables to *story*.
 
@@ -279,23 +280,53 @@ def build_cover_page(
       6. Metadata table (client, period, source, reference, timestamp)
       7. PageBreak — content starts on page 2
 
+    Sprint 679: ``custom_logo_bytes`` — when supplied (Enterprise-tier
+    users who've uploaded a firm logo), replaces the default Paciolus
+    cover logo. Bytes are loaded into a ``BytesIO`` so ReportLab's
+    ``Image`` accepts them without a filesystem round-trip. Fallback
+    order on decode failure: custom bytes → ``find_logo_dark()`` → text
+    lockup.
+
     The function modifies *story* in-place and returns None.
     """
+    import io as _io
+
     # 0. Inverted Dark Field background
     story.append(CoverBands())
 
-    # 1. Logo or text lockup — prefer dark-BG variant for dark cover
-    cover_logo = find_logo_dark() or logo_path
-    if cover_logo:
+    # 1. Logo or text lockup.
+    # Sprint 679: Enterprise custom logo wins over the default Paciolus
+    # dark-BG logo. If the custom bytes are corrupt, fall back to
+    # defaults so the PDF still ships.
+    rendered_logo = False
+    if custom_logo_bytes:
         try:
-            logo = Image(cover_logo, width=1.2 * inch, height=0.4 * inch, kind="proportional")
+            logo = Image(
+                _io.BytesIO(custom_logo_bytes),
+                width=1.2 * inch,
+                height=0.4 * inch,
+                kind="proportional",
+            )
             logo.hAlign = "CENTER"
             story.append(logo)
             story.append(Spacer(1, SPACE_COVER_AFTER_LOGO))
+            rendered_logo = True
         except (OSError, ValueError):
+            # Custom logo bytes unreadable — fall through to default path.
+            pass
+
+    if not rendered_logo:
+        cover_logo = find_logo_dark() or logo_path
+        if cover_logo:
+            try:
+                logo = Image(cover_logo, width=1.2 * inch, height=0.4 * inch, kind="proportional")
+                logo.hAlign = "CENTER"
+                story.append(logo)
+                story.append(Spacer(1, SPACE_COVER_AFTER_LOGO))
+            except (OSError, ValueError):
+                _append_text_lockup(story, styles)
+        else:
             _append_text_lockup(story, styles)
-    else:
-        _append_text_lockup(story, styles)
 
     # 2. Gold gradient rule above title
     story.append(GoldGradientRule(width=doc_width, spaceAfter=8))
@@ -499,29 +530,97 @@ _DISCLAIMER_LINE = (
 
 
 def draw_page_footer(canvas: Any, doc: Any) -> None:
-    """Canvas callback for all pages.
+    """Canvas callback for all pages — default Paciolus disclaimer only.
 
-    Cover page (page 1): subtle disclaimer only, no page number.
+    Cover page (page 1): subtle disclaimer, no page number.
     Later pages: centered page number and disclaimer.
+
+    Sprint 679: ``make_branded_page_footer(header_text, footer_text)``
+    returns a canvas callback that renders the custom text alongside
+    the Paciolus disclaimer — use that instead of this default when
+    building Enterprise-branded PDFs.
     """
+    _draw_footer_impl(canvas, doc, custom_header=None, custom_footer=None)
+
+
+def _draw_footer_impl(
+    canvas: Any,
+    doc: Any,
+    custom_header: Optional[str] = None,
+    custom_footer: Optional[str] = None,
+) -> None:
+    """Shared footer-rendering worker (Sprint 679)."""
     page_width = letter[0]
 
     canvas.saveState()
 
     if doc.page == 1:
-        # Cover page — no page number; subtle disclaimer for dark background
+        # Cover page — no page number; subtle disclaimer for dark background.
         canvas.setFont(FONT_BODY, 7)
         canvas.setFillColor(Color(1, 1, 1, alpha=0.25))
         canvas.drawCentredString(page_width / 2, SPACE_FOOTER_Y - 12, _DISCLAIMER_LINE)
     else:
+        # Sprint 679: Enterprise-branded header appears above the page
+        # number on all non-cover pages so auditor-branded workpapers
+        # read the firm's name before the generic Paciolus disclaimer.
+        if custom_header:
+            canvas.setFont(FONT_BODY, SIZE_FOOTER)
+            canvas.setFillColor(ClassicalColors.OBSIDIAN_500)
+            # Header sits in the top margin (page height - 0.5in from top).
+            canvas.drawCentredString(page_width / 2, letter[1] - 0.5 * inch, custom_header[:200])
+
         # Page number — classical style: — N —
         canvas.setFont(FONT_BODY, SIZE_FOOTER + 1)
         canvas.setFillColor(ClassicalColors.OBSIDIAN_500)
         canvas.drawCentredString(page_width / 2, SPACE_FOOTER_Y, f"\u2014 {doc.page} \u2014")
 
-        # Disclaimer line
-        canvas.setFont(FONT_BODY, SIZE_DISCLAIMER)
-        canvas.setFillColor(ClassicalColors.OBSIDIAN_500)
-        canvas.drawCentredString(page_width / 2, SPACE_FOOTER_Y - 12, _DISCLAIMER_LINE)
+        # Sprint 679: custom footer text replaces the default disclaimer
+        # on branded PDFs. The Paciolus disclaimer is preserved on a
+        # second line below the custom text so attribution remains
+        # visible — the firm isn't claiming Paciolus' work as its own.
+        if custom_footer:
+            canvas.setFont(FONT_BODY, SIZE_DISCLAIMER)
+            canvas.setFillColor(ClassicalColors.OBSIDIAN_500)
+            canvas.drawCentredString(page_width / 2, SPACE_FOOTER_Y - 12, custom_footer[:300])
+            canvas.setFont(FONT_BODY, SIZE_DISCLAIMER - 1)
+            canvas.setFillColor(Color(0, 0, 0, alpha=0.4))
+            canvas.drawCentredString(page_width / 2, SPACE_FOOTER_Y - 24, _DISCLAIMER_LINE)
+        else:
+            canvas.setFont(FONT_BODY, SIZE_DISCLAIMER)
+            canvas.setFillColor(ClassicalColors.OBSIDIAN_500)
+            canvas.drawCentredString(page_width / 2, SPACE_FOOTER_Y - 12, _DISCLAIMER_LINE)
 
     canvas.restoreState()
+
+
+def make_branded_page_footer(
+    header_text: Optional[str],
+    footer_text: Optional[str],
+) -> Any:
+    """Sprint 679: factory that returns a canvas callback with custom
+    header/footer text baked in.
+
+    Used by ``generate_testing_memo`` when a branding context is supplied:
+
+        cb = make_branded_page_footer(
+            branding.effective_header_text(),
+            branding.effective_footer_text(),
+        )
+        doc.build(story, onFirstPage=cb, onLaterPages=cb)
+
+    Returns the default ``draw_page_footer`` when both inputs are None
+    (no-op wrapper) so callers can always pass the factory result
+    regardless of whether branding is active.
+    """
+    if not header_text and not footer_text:
+        return draw_page_footer
+
+    def _callback(canvas: Any, doc: Any) -> None:
+        _draw_footer_impl(
+            canvas,
+            doc,
+            custom_header=header_text,
+            custom_footer=footer_text,
+        )
+
+    return _callback

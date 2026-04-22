@@ -41,6 +41,9 @@ from revenue_testing_engine import (
     test_contra_revenue_anomalies as run_contra_test,
 )
 from revenue_testing_engine import (
+    test_contract_validity as run_contract_validity_test,
+)
+from revenue_testing_engine import (
     test_cutoff_risk as run_cutoff_test,
 )
 from revenue_testing_engine import (
@@ -48,6 +51,9 @@ from revenue_testing_engine import (
 )
 from revenue_testing_engine import (
     test_large_manual_entries as run_large_manual_test,
+)
+from revenue_testing_engine import (
+    test_prior_period_timing as run_prior_period_test,
 )
 from revenue_testing_engine import (
     test_revenue_trend_variance as run_trend_variance_test,
@@ -722,7 +728,9 @@ class TestCutoffRisk:
         result = run_cutoff_test(entries, config)
         assert result.entries_flagged >= 1
 
-    def test_near_period_start_flagged(self):
+    def test_near_period_start_NOT_flagged_by_rt09(self):
+        """Sprint 683: RT-09 now flags period-end only. Period-start
+        entries are handled by RT-09b test_prior_period_timing instead."""
         entries = [
             RevenueEntry(date="2025-01-01", amount=-5000, row_number=1),
             RevenueEntry(date="2025-01-02", amount=-3000, row_number=2),
@@ -731,9 +739,11 @@ class TestCutoffRisk:
         config = RevenueTestingConfig(
             cutoff_days=3,
             period_start="2025-01-01",
+            period_end="2025-12-31",
         )
         result = run_cutoff_test(entries, config)
-        assert result.entries_flagged >= 1
+        # RT-09 does NOT flag period-start entries anymore.
+        assert result.entries_flagged == 0
 
     def test_mid_period_not_flagged(self):
         entries = [
@@ -752,6 +762,138 @@ class TestCutoffRisk:
         config = RevenueTestingConfig(cutoff_days=3)
         result = run_cutoff_test(entries, config)
         assert result.entries_flagged == 0
+
+
+class TestSprint683RT09bPriorPeriodTiming:
+    """Sprint 683: RT-09b split from RT-09 — prior-period timing is a
+    distinct assertion from period-end cut-off risk."""
+
+    def test_near_period_start_flagged_by_rt09b(self):
+        entries = [
+            RevenueEntry(date="2025-01-01", amount=-5000, row_number=1),
+            RevenueEntry(date="2025-01-02", amount=-3000, row_number=2),
+            RevenueEntry(date="2025-06-15", amount=-1000, row_number=3),
+            RevenueEntry(date="2025-12-31", amount=-4000, row_number=4),
+        ]
+        config = RevenueTestingConfig(
+            cutoff_days=3,
+            period_start="2025-01-01",
+            period_end="2025-12-31",
+        )
+        result = run_prior_period_test(entries, config)
+        # Two period-start entries (Jan 1 + Jan 2) should flag.
+        assert result.entries_flagged == 2
+        assert result.test_key == "prior_period_timing"
+
+    def test_near_period_end_NOT_flagged_by_rt09b(self):
+        """RT-09b ignores period-end entries — those belong to RT-09."""
+        entries = [
+            RevenueEntry(date="2025-12-30", amount=-5000, row_number=1),
+            RevenueEntry(date="2025-12-31", amount=-3000, row_number=2),
+        ]
+        config = RevenueTestingConfig(
+            cutoff_days=3,
+            period_start="2025-01-01",
+            period_end="2025-12-31",
+        )
+        result = run_prior_period_test(entries, config)
+        assert result.entries_flagged == 0
+
+    def test_insufficient_dates_skipped(self):
+        entries = [RevenueEntry(amount=-1000, row_number=1)]
+        result = run_prior_period_test(entries, RevenueTestingConfig(cutoff_days=3))
+        assert result.entries_flagged == 0
+
+
+class TestSprint683RT17ContractValidity:
+    """Sprint 683: RT-17 — ASC 606 Step 1 contract validity."""
+
+    def test_skipped_when_no_contract_data(self):
+        """If no entries carry contract_id / performance_obligation_id /
+        recognition_method, test is inactive (skipped)."""
+        entries = [
+            RevenueEntry(date="2025-06-15", amount=-1000, row_number=1),
+        ]
+        result = run_contract_validity_test(entries, RevenueTestingConfig())
+        assert result.entries_flagged == 0
+        assert "no contract-aware columns" in result.description.lower()
+
+    def test_contract_without_performance_obligation_flagged(self):
+        entries = [
+            RevenueEntry(
+                amount=-1000,
+                row_number=1,
+                contract_id="C-100",
+                performance_obligation_id=None,
+            ),
+        ]
+        result = run_contract_validity_test(entries, RevenueTestingConfig())
+        assert result.entries_flagged == 1
+        assert "performance_obligation_id" in result.flagged_entries[0].issue
+
+    def test_recognition_without_contract_flagged(self):
+        entries = [
+            RevenueEntry(
+                amount=-1000,
+                row_number=1,
+                contract_id=None,
+                recognition_method="point-in-time",
+            ),
+        ]
+        result = run_contract_validity_test(entries, RevenueTestingConfig())
+        assert result.entries_flagged == 1
+
+    def test_point_in_time_without_satisfaction_date_flagged(self):
+        entries = [
+            RevenueEntry(
+                amount=-1000,
+                row_number=1,
+                contract_id="C-200",
+                performance_obligation_id="PO-200",
+                recognition_method="point-in-time",
+                obligation_satisfaction_date=None,
+            ),
+        ]
+        result = run_contract_validity_test(entries, RevenueTestingConfig())
+        assert result.entries_flagged == 1
+        assert "satisfaction_date" in result.flagged_entries[0].issue
+
+    def test_valid_contract_not_flagged(self):
+        entries = [
+            RevenueEntry(
+                amount=-1000,
+                row_number=1,
+                contract_id="C-300",
+                performance_obligation_id="PO-300",
+                recognition_method="point-in-time",
+                obligation_satisfaction_date="2025-06-15",
+            ),
+        ]
+        result = run_contract_validity_test(entries, RevenueTestingConfig())
+        assert result.entries_flagged == 0
+
+
+class TestSprint683RT07AggregateMarker:
+    """Sprint 683: RT-07 aggregate findings carry is_aggregate=True so
+    downstream consumers can render them in a separate section."""
+
+    def test_aggregate_finding_has_is_aggregate_flag(self):
+        entries = [
+            RevenueEntry(amount=-1000000, row_number=1),
+            RevenueEntry(amount=-500000, row_number=2),
+        ]
+        # Force a large variance vs. a tiny prior total → flagged.
+        config = RevenueTestingConfig(
+            prior_period_total=100_000,
+            trend_variance_pct=0.30,
+        )
+        from revenue_testing_engine import test_revenue_trend_variance
+
+        result = test_revenue_trend_variance(entries, config)
+        assert result.entries_flagged >= 1
+        aggregate = result.flagged_entries[0]
+        assert aggregate.details.get("is_aggregate") is True
+        assert aggregate.entry.row_number == 0  # Sentinel preserved
 
 
 # =============================================================================
@@ -1020,10 +1162,10 @@ class TestScoreToRiskTier:
 class TestBattery:
     """Tests for run_revenue_test_battery."""
 
-    def test_runs_all_16_tests(self):
+    def test_runs_all_18_tests(self):
         entries = make_many_entries(20)
         results = run_revenue_test_battery(entries)
-        assert len(results) == 16  # 12 core + 4 contract (skipped without data)
+        assert len(results) == 18  # Sprint 683: 14 core (added RT-09b + RT-17) + 4 contract
 
     def test_all_test_keys_unique(self):
         entries = make_many_entries(20)
@@ -1036,8 +1178,10 @@ class TestBattery:
         results = run_revenue_test_battery(entries)
         tiers = [r.test_tier for r in results]
         assert tiers.count(TestTier.STRUCTURAL) == 5
-        assert tiers.count(TestTier.STATISTICAL) == 4
-        assert tiers.count(TestTier.ADVANCED) == 3
+        # Sprint 683: RT-09b prior_period_timing added to Tier 2 — bumped 4 → 5.
+        assert tiers.count(TestTier.STATISTICAL) == 5
+        # Sprint 683: RT-17 contract_validity added to Tier 3 — bumped 3 → 4.
+        assert tiers.count(TestTier.ADVANCED) == 4
         assert tiers.count(TestTier.CONTRACT) == 4
 
     def test_contract_tests_skipped_without_evidence(self):
@@ -1050,7 +1194,7 @@ class TestBattery:
     def test_default_config_used(self):
         entries = make_many_entries(20)
         results = run_revenue_test_battery(entries)
-        assert len(results) == 16  # 12 core + 4 contract (skipped)
+        assert len(results) == 18  # Sprint 683: 14 core + 4 contract
 
 
 # =============================================================================
@@ -1067,7 +1211,7 @@ class TestFullPipeline:
         result = run_revenue_testing(rows, columns)
         assert isinstance(result, RevenueTestingResult)
         assert result.composite_score is not None
-        assert len(result.test_results) == 16  # 12 core + 4 contract
+        assert len(result.test_results) == 18  # Sprint 683: 14 core + 4 contract
         assert result.data_quality is not None
         assert result.column_detection is not None
         assert result.contract_evidence is not None
@@ -1160,7 +1304,7 @@ class TestSerialization:
         assert "data_quality" in d
         assert "column_detection" in d
         assert isinstance(d["test_results"], list)
-        assert len(d["test_results"]) == 16  # 12 core + 4 contract
+        assert len(d["test_results"]) == 18  # Sprint 683: 14 core + 4 contract
         assert "contract_evidence" in d
         assert d["contract_evidence"]["level"] == "none"
 
@@ -1482,7 +1626,7 @@ class TestAllocationInconsistency:
 class TestBatteryWithContractTests:
     """Tests for battery integration with contract tests."""
 
-    def test_16_results_with_evidence(self):
+    def test_18_results_with_evidence(self):
 
         entries = [
             RevenueEntry(
@@ -1510,7 +1654,7 @@ class TestBatteryWithContractTests:
             detected_fields=["contract_id", "performance_obligation_id", "obligation_satisfaction_date"],
         )
         results = run_revenue_test_battery(entries, evidence=evidence)
-        assert len(results) == 16
+        assert len(results) == 18  # Sprint 683
         contract_results = [r for r in results if r.test_tier == TestTier.CONTRACT]
         assert len(contract_results) == 4
         # Some should be active (not skipped), some may be skipped due to missing columns

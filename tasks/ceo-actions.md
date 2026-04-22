@@ -22,7 +22,7 @@
 ### Afternoon 1 (tomorrow, 2026-04-17): Phase 3 — Functional Validation
 Open [Phase 3](#phase-3--functional-validation) and work the checklist top-to-bottom on https://paciolus.com. Specifically:
 - [ ] All 12 testing tools against one realistic sample TB (file bugs as you find them, I fix them)
-- [ ] All 21 PDF memos back-to-back on a single engagement (watch Sentry for memory warnings)
+- [ ] All 18 memo PDFs + 3 report PDFs back-to-back on a single engagement (watch Sentry for memory warnings)
 - [ ] Engagement layer end-to-end (create → materiality → diagnostics → follow-ups → workpaper index → ZIP → completion gate)
 - [ ] Export sharing flow (create share → incognito access → passcode → revoke → verify revocation)
 - [ ] Admin dashboard (orgs, drill-down, impersonation read-only, audit log)
@@ -91,7 +91,7 @@ The goal is to catch anything broken in normal usage before you start charging r
 
 - [ ] Run all **12 testing tools** against a realistic sample trial balance. File bugs for any abnormal output.
   - JE (19 tests), AP (13), Payroll (11), Revenue (16, ASC 606), AR Aging (11), Fixed Assets (9), Inventory (9), Bank Rec, 3-Way Match, Multi-Period TB, Statistical Sampling, Multi-Currency
-- [ ] Generate all **21 PDF memos** back-to-back on a single engagement. Watch Sentry for memory warnings or request-duration spikes >10s.
+- [ ] Generate all **18 memo PDFs + 3 report PDFs** back-to-back on a single engagement. Watch Sentry for memory warnings or request-duration spikes >10s.
 - [ ] Exercise the **engagement layer** end-to-end: create engagement → set materiality → run diagnostics → add follow-up items → build workpaper index → export diagnostic package ZIP → hit the completion gate.
 - [ ] Exercise **export sharing**: create a shared link, access it from an incognito window, confirm passcode protection works, revoke it, confirm revocation is enforced.
 - [ ] Exercise **admin dashboard**: org listing, customer drill-down, impersonation read-only mode, audit log.

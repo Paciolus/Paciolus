@@ -28,9 +28,13 @@ RISK_LEVEL_WEIGHTS: dict[RiskLevel, int] = {
 
 DISCLAIMER = (
     "IMPORTANT: This composite risk profile structures auditor-provided risk "
-    "assessments alongside automated diagnostic data. Risk classifications are "
-    "auditor judgment per ISA 315 and are not algorithmically determined. "
-    "This tool does not replace the auditor's independent assessment."
+    "assessments alongside automated diagnostic data. Combined risk (RMM) is "
+    "computed per ISA 315 (Revised 2019) Appendix 1 — the 4×4 inherent × "
+    "control matrix (not a simple max). Risk classifications are auditor "
+    "judgment per ISA 315 and are not algorithmically determined. Detection "
+    "risk is outside the scope of this engine; audit risk (IR × CR × DR) "
+    "is the auditor's responsibility to plan and respond to. This tool does "
+    "not replace the auditor's independent assessment."
 )
 
 
@@ -106,17 +110,50 @@ class CompositeRiskProfile:
 # ═══════════════════════════════════════════════════════════════
 
 
-def compute_combined_risk_level(inherent: RiskLevel, control: RiskLevel) -> RiskLevel:
-    """Combine inherent and control risk per ISA 315 risk matrix.
+# ISA 315 (Revised 2019) Appendix 1 / ISA 330 — Risks of Material Misstatement
+# matrix.  RMM is NOT max(IR, CR); the ISA uses a 4×4 combination table where
+# moderate × moderate escalates to "elevated" rather than staying at moderate.
+# Sprint 680 remediation: the prior max() implementation systematically
+# understated elevated-risk account/assertion pairs.
+#
+# Reading convention: ISA_315_RMM_MATRIX[inherent][control] → combined.
+ISA_315_RMM_MATRIX: dict[RiskLevel, dict[RiskLevel, RiskLevel]] = {
+    "low": {
+        "low": "low",
+        "moderate": "low",
+        "elevated": "moderate",
+        "high": "elevated",
+    },
+    "moderate": {
+        "low": "low",
+        "moderate": "elevated",
+        "elevated": "elevated",
+        "high": "high",
+    },
+    "elevated": {
+        "low": "moderate",
+        "moderate": "elevated",
+        "elevated": "high",
+        "high": "high",
+    },
+    "high": {
+        "low": "elevated",
+        "moderate": "high",
+        "elevated": "high",
+        "high": "high",
+    },
+}
 
-    Returns the higher of the two (conservative approach).
-    The auditor's own assessment of inherent and control risk determines
-    the combined risk — this function simply takes the more conservative
-    (higher) of the two inputs.
+
+def compute_combined_risk_level(inherent: RiskLevel, control: RiskLevel) -> RiskLevel:
+    """Combine inherent and control risk per ISA 315 Appendix 1 RMM matrix.
+
+    Sprint 680: replaced ``max(inherent, control)`` with the ISA 315 4×4
+    table.  The prior "conservative max" approach undercounted elevated-risk
+    pairs (e.g., moderate × moderate now escalates to elevated, not moderate).
+    The table is symmetric along the diagonal.
     """
-    if RISK_LEVEL_WEIGHTS[inherent] >= RISK_LEVEL_WEIGHTS[control]:
-        return inherent
-    return control
+    return ISA_315_RMM_MATRIX[inherent][control]
 
 
 # ═══════════════════════════════════════════════════════════════

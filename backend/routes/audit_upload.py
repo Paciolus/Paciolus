@@ -8,10 +8,13 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
 from auth import require_verified_user
+from database import get_db
 from models import User
 from security_utils import log_secure_operation
+from shared.entitlement_checks import enforce_format_access
 from shared.error_messages import sanitize_error
 from shared.helpers import memory_cleanup, validate_file_size
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
@@ -47,9 +50,12 @@ async def inspect_workbook_endpoint(
     request: Request,
     file: UploadFile = File(...),
     current_user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
 ) -> WorkbookInspectResponse:
     """Inspect an Excel workbook to retrieve sheet metadata."""
     log_secure_operation("inspect_workbook_upload", f"Inspecting workbook: {file.filename}")
+    # Sprint 678: reject premium formats (ofx/qbo/iif/pdf/ods) on Free tier
+    enforce_format_access(current_user, db, file.filename)
 
     with memory_cleanup():
         try:

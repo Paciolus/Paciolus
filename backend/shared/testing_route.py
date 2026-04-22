@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 
 from models import User, UserTier
 from security_utils import log_secure_operation
-from shared.entitlement_checks import get_effective_entitlements
+from shared.entitlement_checks import check_upload_limit, get_effective_entitlements
 from shared.error_messages import sanitize_error
 from shared.helpers import (
     maybe_record_tool_run,
@@ -97,6 +97,8 @@ async def run_single_file_testing(
     """
     # Sprint 367: Entitlement check — verify tool access before processing
     enforce_tool_access(current_user, tool_name, db)
+    # Sprint 678: every testing-tool upload counts against the monthly quota.
+    check_upload_limit(current_user, db)
 
     column_mapping_dict = parse_json_mapping(column_mapping, mapping_key)
 
@@ -120,8 +122,16 @@ async def run_single_file_testing(
             )
             flagged = extract_accounts(result_dict) if extract_accounts else None
             background_tasks.add_task(
-                maybe_record_tool_run, db, engagement_id, current_user.id, tool_name, True, score, flagged,
-                filename, result_dict.get("record_count"),
+                maybe_record_tool_run,
+                db,
+                engagement_id,
+                current_user.id,
+                tool_name,
+                True,
+                score,
+                flagged,
+                filename,
+                result_dict.get("record_count"),
             )
 
             return dict(result_dict)

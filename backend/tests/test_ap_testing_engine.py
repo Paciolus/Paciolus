@@ -46,7 +46,10 @@ class TestAPTestingPipeline:
         rows, columns = _make_ap_rows()
         result = run_ap_testing(rows, columns)
         assert isinstance(result.test_results, list)
-        assert len(result.test_results) == 13  # AP-T1 through AP-T13
+        # Sprint 682: AP-T14 Invoice Without PO added. 14 total slots; the
+        # new test emits a skipped result when no PO column is detected
+        # so the count is stable across PO/non-PO fixtures.
+        assert len(result.test_results) == 14  # AP-T1 through AP-T14
         for tr in result.test_results:
             assert isinstance(tr, APTestResult)
 
@@ -56,7 +59,7 @@ class TestAPTestingPipeline:
         cs = result.composite_score
         assert 0 <= cs.score <= 100
         assert isinstance(cs.risk_tier, RiskTier)
-        assert cs.tests_run == 13
+        assert cs.tests_run == 14  # Sprint 682: AP-T14 added
         assert cs.total_entries > 0
         assert isinstance(cs.flags_by_severity, dict)
 

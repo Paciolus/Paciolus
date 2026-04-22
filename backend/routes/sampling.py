@@ -197,9 +197,12 @@ async def sampling_design(
     Phase 1 of 2: Upload population data + configure parameters.
     Returns selected sample items for the auditor to test.
     """
+    from shared.entitlement_checks import check_upload_limit
     from shared.testing_route import enforce_tool_access
 
     enforce_tool_access(current_user, "statistical_sampling", db)
+    # Sprint 678: count sampling uploads toward the monthly quota.
+    check_upload_limit(current_user, db)
 
     if method not in ("mus", "random"):
         raise HTTPException(status_code=422, detail="Method must be 'mus' or 'random'")

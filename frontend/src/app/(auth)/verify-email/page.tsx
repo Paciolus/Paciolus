@@ -92,7 +92,7 @@ function VerifyEmailContent() {
               className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-obsidian-700 border border-obsidian-500 flex items-center justify-center"
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: 'spring', stiffness: 200, damping: 20, delay: 0.2 }}
+              transition={{ type: 'spring' as const, stiffness: 200, damping: 20, delay: 0.2 }}
             >
               <AnimatePresence mode="wait">
                 {verifyState === 'loading' && (
@@ -109,7 +109,7 @@ function VerifyEmailContent() {
                     key="success"
                     initial={{ scale: 0, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
-                    transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                    transition={{ type: 'spring' as const, stiffness: 300, damping: 20 }}
                     className="w-10 h-10 text-sage-400"
                     fill="none"
                     stroke="currentColor"
@@ -128,7 +128,7 @@ function VerifyEmailContent() {
                     key="error"
                     initial={{ scale: 0, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
-                    transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                    transition={{ type: 'spring' as const, stiffness: 300, damping: 20 }}
                     className="w-10 h-10 text-clay-400"
                     fill="none"
                     stroke="currentColor"

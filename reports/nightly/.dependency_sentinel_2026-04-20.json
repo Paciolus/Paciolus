@@ -1,0 +1,32 @@
+{
+  "agent": "dependency_sentinel",
+  "status": "green",
+  "backend_outdated": [
+    {
+      "package": "pdfminer.six",
+      "current": "20251230",
+      "latest": "20260107",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": true,
+      "deferral_reason": "Calendar-versioned release; waiting on downstream compatibility confirmation",
+      "deferral_review_by": "2026-04-30"
+    }
+  ],
+  "frontend_outdated": [],
+  "security_flagged": [],
+  "deferred": [
+    {
+      "package": "pdfminer.six",
+      "current": "20251230",
+      "latest": "20260107",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": true,
+      "deferral_reason": "Calendar-versioned release; waiting on downstream compatibility confirmation",
+      "deferral_review_by": "2026-04-30"
+    }
+  ],
+  "top5_updates": [],
+  "summary": "Backend: 1 outdated. Frontend: 0 outdated. 0 security-relevant packages have updates. 1 deferred."
+}

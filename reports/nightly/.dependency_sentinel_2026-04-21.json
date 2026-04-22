@@ -1,0 +1,138 @@
+{
+  "agent": "dependency_sentinel",
+  "status": "green",
+  "backend_outdated": [
+    {
+      "package": "pdfminer.six",
+      "current": "20251230",
+      "latest": "20260107",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": true,
+      "deferral_reason": "Calendar-versioned release; waiting on downstream compatibility confirmation",
+      "deferral_review_by": "2026-04-30"
+    },
+    {
+      "package": "psycopg2-binary",
+      "current": "2.9.11",
+      "latest": "2.9.12",
+      "severity": "patch",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "pydantic",
+      "current": "2.13.2",
+      "latest": "2.13.3",
+      "severity": "patch",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "pydantic_core",
+      "current": "2.46.2",
+      "latest": "2.46.3",
+      "severity": "patch",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "pypdfium2",
+      "current": "5.7.0",
+      "latest": "5.7.1",
+      "severity": "patch",
+      "watchlist": false,
+      "deferred": false
+    }
+  ],
+  "frontend_outdated": [
+    {
+      "package": "@tailwindcss/postcss",
+      "current": "4.2.2",
+      "latest": "4.2.3",
+      "severity": "patch",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "@typescript-eslint/eslint-plugin",
+      "current": "8.58.2",
+      "latest": "8.59.0",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "@typescript-eslint/parser",
+      "current": "8.58.2",
+      "latest": "8.59.0",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "tailwindcss",
+      "current": "4.2.2",
+      "latest": "4.2.3",
+      "severity": "patch",
+      "watchlist": false,
+      "deferred": false
+    }
+  ],
+  "security_flagged": [],
+  "deferred": [
+    {
+      "package": "pdfminer.six",
+      "current": "20251230",
+      "latest": "20260107",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": true,
+      "deferral_reason": "Calendar-versioned release; waiting on downstream compatibility confirmation",
+      "deferral_review_by": "2026-04-30"
+    }
+  ],
+  "top5_updates": [
+    {
+      "package": "@typescript-eslint/eslint-plugin",
+      "current": "8.58.2",
+      "latest": "8.59.0",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "@typescript-eslint/parser",
+      "current": "8.58.2",
+      "latest": "8.59.0",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "psycopg2-binary",
+      "current": "2.9.11",
+      "latest": "2.9.12",
+      "severity": "patch",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "pydantic",
+      "current": "2.13.2",
+      "latest": "2.13.3",
+      "severity": "patch",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "pydantic_core",
+      "current": "2.46.2",
+      "latest": "2.46.3",
+      "severity": "patch",
+      "watchlist": false,
+      "deferred": false
+    }
+  ],
+  "summary": "Backend: 5 outdated. Frontend: 4 outdated. 0 security-relevant packages have updates. 1 deferred."
+}

@@ -42,8 +42,21 @@ class ExportShare(Base):
     # Cached export bytes (auto-purged after TTL)
     export_data: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
 
-    # Security: optional passcode protection (SHA-256 hash)
-    passcode_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # Security: optional passcode protection.
+    # Historically a 64-char SHA-256 hex hash; as of 2026-04-20 this column
+    # stores bcrypt hashes (~60 chars, salt built in).  Column widened to 255
+    # to accommodate the new format.  Mixed-format rows are rejected at
+    # verification time — SHA-256 rows from pre-migration shares are
+    # invalidated and must be re-created (shares are ephemeral, ≤48h TTL).
+    passcode_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    # Brute-force protection for passcode-protected shares (2026-04-20).
+    # Tracks consecutive failed passcode attempts and an absolute lockout
+    # timestamp.  Lockout is token-scoped, not global — one attacker
+    # brute-forcing one share cannot lock out another share's legitimate
+    # owner.
+    passcode_failed_attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    passcode_locked_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     # Single-use: auto-revoke after first download
     single_use: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

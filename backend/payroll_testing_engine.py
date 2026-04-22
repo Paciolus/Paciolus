@@ -954,6 +954,162 @@ def _test_duplicate_employee_ids(
     )
 
 
+def _test_duplicate_employee_names(
+    entries: list[PayrollEntry],
+    config: PayrollTestingConfig,
+) -> PayrollTestResult:
+    """PR-T12: Duplicate Employee Names (ghost-employee scheme indicator).
+
+    Sprint 701: flags distinct ``employee_id`` records that share the same
+    employee name (exact match after case/whitespace normalisation). The
+    fuzzy-match sibling test is PR-T12b (reserved; not yet implemented —
+    exact-match is the higher-confidence signal and the canonical ACFE
+    ghost-employee indicator).
+
+    Why this matters: paired with PR-T1 (one ID, multiple names) this
+    completes the four-quadrant employee-identity check:
+      * PR-T1: same ID, different names → ID reuse / name change pending
+      * PR-T12: same name, different IDs → classic ghost employee scheme
+      * PR-T10: same bank account / address across IDs → payment-rail reuse
+      * PR-T11: same tax_id across IDs → identity reuse / duplicate SSN
+
+    The test is tight — only the first three identified above are
+    traditional "duplicate employee" fraud indicators; without PR-T12
+    the payroll engine had a gap an auditor would have spotted. ACFE
+    2024 Report to the Nations identifies ghost-employee schemes as
+    26% of payroll-fraud cases; detecting shared names across IDs is
+    the first screen auditors run.
+    """
+    flagged: list[FlaggedEmployee] = []
+
+    # Group by normalised employee_name
+    name_groups: dict[str, list[PayrollEntry]] = {}
+    for entry in entries:
+        name_key = entry.employee_name.strip().lower()
+        if name_key:
+            name_groups.setdefault(name_key, []).append(entry)
+
+    for name_key, group in name_groups.items():
+        # Collect the distinct IDs associated with this name.
+        ids = set()
+        for e in group:
+            eid = e.employee_id.strip().lower()
+            if eid:
+                ids.add(eid)
+
+        if len(ids) > 1:
+            # Same name, multiple distinct IDs — ghost-employee candidate.
+            display_name = group[0].employee_name.strip()
+            for entry in group:
+                flagged.append(
+                    FlaggedEmployee(
+                        entry=entry,
+                        test_name="Duplicate Employee Names",
+                        test_key="PR-T12",
+                        test_tier=TestTier.ADVANCED.value,
+                        severity=Severity.HIGH.value,
+                        issue=(
+                            f"Employee name '{display_name}' appears under "
+                            f"{len(ids)} distinct employee IDs — potential "
+                            "ghost-employee scheme (ACFE Report to the Nations 2024)."
+                        ),
+                        confidence=0.90,
+                        details={
+                            "employee_name": display_name,
+                            "distinct_ids": sorted(ids),
+                            "entry_count": len(group),
+                        },
+                    )
+                )
+
+    total = len(entries)
+    return PayrollTestResult(
+        test_name="Duplicate Employee Names",
+        test_key="PR-T12",
+        test_tier=TestTier.ADVANCED.value,
+        entries_flagged=len(flagged),
+        total_entries=total,
+        flag_rate=len(flagged) / total if total > 0 else 0.0,
+        severity=Severity.HIGH.value,
+        description=(
+            "Flag distinct employee IDs that share the same employee name "
+            "(canonical ghost-employee scheme indicator — ACFE 2024)."
+        ),
+        flagged_entries=flagged,
+    )
+
+
+def _test_gross_to_net_reconciliation(
+    entries: list[PayrollEntry],
+    config: PayrollTestingConfig,
+) -> PayrollTestResult:
+    """PR-T13: Gross-to-Net Reconciliation.
+
+    Sprint 682: flags payroll rows where gross_pay − deductions ≠ net_pay.
+    AICPA Employee Benefit Plan Audit Guide Ch. 5 names this as a first-
+    line integrity check — if the three columns don't reconcile, at least
+    one is wrong (data-entry error, misallocated withholding, or
+    fabricated net pay).
+
+    Skips rows where any of the three values is zero (can't reconcile
+    what isn't reported) and uses a $0.01 tolerance for float rounding.
+    """
+    TOLERANCE = Decimal("0.01")
+
+    flagged: list[FlaggedEmployee] = []
+    reconcilable = 0
+
+    for entry in entries:
+        if entry.gross_pay == 0 or entry.net_pay == 0 or entry.deductions == 0:
+            # Incomplete data — not a reconciliation failure per se;
+            # PR-T2 (Missing Critical Fields) catches these separately.
+            continue
+        reconcilable += 1
+        expected_net = entry.gross_pay - entry.deductions
+        diff = abs(expected_net - entry.net_pay)
+        if diff > TOLERANCE:
+            # Magnitude-based severity: >$100 discrepancy is high, else medium.
+            severity = Severity.HIGH if diff > Decimal("100") else Severity.MEDIUM
+            flagged.append(
+                FlaggedEmployee(
+                    entry=entry,
+                    test_name="Gross-to-Net Reconciliation",
+                    test_key="PR-T13",
+                    test_tier=TestTier.STRUCTURAL.value,
+                    severity=severity.value,
+                    issue=(
+                        f"Gross-to-net mismatch: gross ${entry.gross_pay:,.2f} − "
+                        f"deductions ${entry.deductions:,.2f} = ${expected_net:,.2f}, "
+                        f"but net pay is ${entry.net_pay:,.2f} (Δ ${diff:,.2f})."
+                    ),
+                    confidence=0.95,
+                    details={
+                        "gross_pay": float(entry.gross_pay),
+                        "deductions": float(entry.deductions),
+                        "net_pay": float(entry.net_pay),
+                        "expected_net": float(expected_net),
+                        "variance": float(diff),
+                    },
+                )
+            )
+
+    total = len(entries)
+    return PayrollTestResult(
+        test_name="Gross-to-Net Reconciliation",
+        test_key="PR-T13",
+        test_tier=TestTier.STRUCTURAL.value,
+        entries_flagged=len(flagged),
+        total_entries=total,
+        flag_rate=len(flagged) / total if total > 0 else 0.0,
+        severity=Severity.HIGH.value,
+        description=(
+            "Flag rows where gross_pay − deductions ≠ net_pay (±$0.01). "
+            "AICPA EBP Audit Guide Ch. 5 — first-line payroll integrity check."
+        ),
+        flagged_entries=flagged,
+    )
+
+
 def _test_missing_critical_fields(
     entries: list[PayrollEntry],
     config: PayrollTestingConfig,
@@ -1859,6 +2015,8 @@ def run_payroll_test_battery(
 
     # Tier 1 — Structural
     results.append(_test_duplicate_employee_ids(entries, config))
+    results.append(_test_duplicate_employee_names(entries, config))  # Sprint 701: PR-T12
+    results.append(_test_gross_to_net_reconciliation(entries, config))  # Sprint 682: PR-T13
     results.append(_test_missing_critical_fields(entries, config))
     results.append(_test_round_salary_amounts(entries, config))
 
@@ -2144,3 +2302,30 @@ def run_payroll_testing(
     engine = PayrollTestingEngine(config, filename, hr_master=hr_master)
     result: PayrollTestingResult = engine.run_pipeline(rows, headers, column_mapping)
     return result
+
+
+# =============================================================================
+# Sprint 700/703: Anomaly-framework contract registration
+# =============================================================================
+from shared.engine_contract import DetectionPreconditions, EngineInputContract
+
+ENGINE_CONTRACT = EngineInputContract(
+    tool="payroll",
+    required_columns=frozenset({"Employee ID", "Employee Name", "Gross Pay"}),
+    optional_columns=frozenset(
+        {"Department", "Pay Date", "Net Pay", "Tax ID", "Address", "Bank Account", "Check Number"}
+    ),
+    entry_point="payroll_testing_engine.run_payroll_testing",
+    detection_targets={
+        "PR-T12": DetectionPreconditions(
+            requires_columns=frozenset({"Employee ID", "Employee Name"}),
+            scope="standalone",
+            description=(
+                "Sprint 701: PR-T12 Duplicate Employee Names — distinct "
+                "employee_ids sharing the same employee_name indicate a "
+                "ghost-employee scheme (ACFE 2024 — 26% of payroll fraud)."
+            ),
+            emits_fields=frozenset({"entries_flagged", "flagged_entries"}),
+        ),
+    },
+)

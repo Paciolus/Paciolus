@@ -336,9 +336,19 @@ class EngagementManager:
 
         Returns dict with:
           - overall_materiality: the base amount
-          - performance_materiality: overall * PM factor
-          - trivial_threshold: overall * trivial factor
+          - performance_materiality: overall × performance-materiality factor
+            (default 0.75 — i.e., PM = 75% of overall; the industry
+            convention per ISA 320 / AU-C 320)
+          - trivial_threshold: overall × trivial factor
+            (default 0.05 — i.e., clearly-trivial = 5% of **overall**
+            materiality, NOT 5% of performance materiality)
           - basis, percentage, factors
+
+        Sprint 692: docstring made explicit on which denominator drives
+        clearly-trivial and performance-materiality thresholds, because
+        memo copy and audit-standards references sometimes vary (ISA
+        vs. AU-C) and readers of the memo should be able to verify the
+        cascade math against a single documented source.
         """
         overall = safe_decimal(engagement.materiality_amount or 0)
 

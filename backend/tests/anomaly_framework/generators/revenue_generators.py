@@ -324,10 +324,34 @@ class RevenueDuplicateEntryGenerator(RevenueGeneratorBase):
 
 
 class RevenueContraAnomalyGenerator(RevenueGeneratorBase):
-    """RT-12: Inject entries with contra-revenue keywords (returns, refunds)."""
+    """RT-12: Inject entries with contra-revenue keywords (returns, refunds).
+
+    Sprint 701: the engine's RT-12 threshold is contra > 15% of gross
+    revenue (RevenueTestingConfig.contra_threshold_pct). Base factory
+    gross revenue is ~$200K, so injected contras must exceed ~$30K for
+    the threshold to fire. The prior injection totalled $6.4K (3%) —
+    below the threshold, which is why the test was xfailed. We now
+    inject ~$60K so the test exercises a genuine contra concentration,
+    not a near-miss.
+    """
 
     name = "revenue_contra_anomaly"
     target_test_key = "contra_revenue_anomalies"
+
+    # Sprint 700: contract evidence — meta-test verifies this satisfies
+    # the revenue engine's contra_revenue_anomalies precondition.
+    from shared.engine_contract import GeneratorEvidence as _GE
+
+    PRODUCES_EVIDENCE = _GE(
+        target_test_key="contra_revenue_anomalies",
+        populates_columns=frozenset({"Date", "Amount", "Account Name", "Account Number", "Description"}),
+        account_name_values=frozenset({"Sales Returns and Allowances", "Sales Refunds"}),
+        scope="standalone",
+        notes=(
+            "Sprint 701: ~$60K contras (>15% of ~$200K gross) with 'returns' "
+            "and 'refunds' account names — crosses RT-12 threshold."
+        ),
+    )
 
     def inject(self, rows, seed=42):
         rows = deepcopy(rows)
@@ -335,18 +359,18 @@ class RevenueContraAnomalyGenerator(RevenueGeneratorBase):
             [
                 {
                     "Date": "2025-05-09",
-                    "Amount": 4321.50,
+                    "Amount": 42150.75,
                     "Account Name": "Sales Returns and Allowances",
                     "Account Number": "4900",
-                    "Description": "Customer return - defective product batch",
+                    "Description": "Customer return - defective product batch recall",
                     "Entry Type": "system",
                     "Reference": "RET-001",
                 },
                 {
                     "Date": "2025-06-05",
-                    "Amount": 2150.75,
-                    "Account Name": "Service Revenue",
-                    "Account Number": "4000",
+                    "Amount": 18234.60,
+                    "Account Name": "Sales Refunds",
+                    "Account Number": "4910",
                     "Description": "Credit memo issued - service level refund",
                     "Entry Type": "system",
                     "Reference": "CM-001",
@@ -356,10 +380,10 @@ class RevenueContraAnomalyGenerator(RevenueGeneratorBase):
         record = AnomalyRecord(
             anomaly_type="revenue_contra_anomaly",
             report_targets=["RT-12"],
-            injected_at="Contra-revenue entries with 'return' and 'credit memo' keywords",
+            injected_at="Contra-revenue entries with 'return' and 'credit memo' keywords (~$60K to cross 15% threshold)",
             expected_field="contra_revenue_anomalies",
             expected_condition="entries_flagged > 0",
-            metadata={"contra_count": 2, "keywords": ["return", "credit memo"]},
+            metadata={"contra_count": 2, "keywords": ["return", "credit memo"], "total_contra": 60385.35},
         )
         return rows, [record]
 

@@ -46,6 +46,12 @@ FA_TEST_DESCRIPTIONS = {
         "(lease, ROU, right-of-use, leasehold). Flagged items should be confirmed for "
         "proper ASC 842 / IFRS 16 right-of-use asset treatment."
     ),
+    "depreciation_recalc": (
+        "Sprint 682: Recalculates expected depreciation from cost, residual value, "
+        "useful life, and depreciation method. Flags variance >5% (straight-line) "
+        "or >15% (double-declining balance) from expected accumulated depreciation "
+        "per IAS 16 / ASC 360."
+    ),
 }
 
 _FA_CONFIG = TestingMemoConfig(

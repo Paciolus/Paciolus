@@ -302,10 +302,14 @@ class TestExportSharingMagicByteUnit:
 class TestExportSharingPasscode:
     """Sprint 593: Passcode protection for share links."""
 
+    # 2026-04-20 hardening: passcode policy is now 10+ chars, 3+ classes,
+    # and passcodes travel in POST JSON bodies instead of query strings.
+    # Tests below are updated to match the new contract.
+
     @pytest.mark.usefixtures("bypass_csrf")
     @pytest.mark.anyio
     async def test_create_share_with_passcode(self, db_session, make_user):
-        """Creating a share with a passcode sets has_passcode=True."""
+        """Creating a share with a strong passcode sets has_passcode=True."""
         from auth import require_verified_user
         from database import get_db
         from main import app
@@ -325,7 +329,7 @@ class TestExportSharingPasscode:
                         "tool_name": "trial_balance",
                         "export_format": "pdf",
                         "export_data_b64": base64.b64encode(VALID_PDF_BYTES).decode(),
-                        "passcode": "mySecret1",
+                        "passcode": "StrongP@ss1",
                     },
                 )
             assert resp.status_code == 200
@@ -338,7 +342,7 @@ class TestExportSharingPasscode:
     @pytest.mark.usefixtures("bypass_csrf")
     @pytest.mark.anyio
     async def test_download_with_correct_passcode(self, db_session, make_user):
-        """Download succeeds with the correct passcode."""
+        """Download succeeds with the correct passcode via POST body."""
         from auth import require_verified_user
         from database import get_db
         from main import app
@@ -358,13 +362,16 @@ class TestExportSharingPasscode:
                         "tool_name": "trial_balance",
                         "export_format": "pdf",
                         "export_data_b64": base64.b64encode(VALID_PDF_BYTES).decode(),
-                        "passcode": "secret123",
+                        "passcode": "StrongP@ss1",
                     },
                 )
                 assert resp.status_code == 200
                 token = resp.json()["share_token"]
 
-                dl_resp = await client.get(f"/export-sharing/{token}?passcode=secret123")
+                dl_resp = await client.post(
+                    f"/export-sharing/{token}/download",
+                    json={"passcode": "StrongP@ss1"},
+                )
                 assert dl_resp.status_code == 200
                 assert dl_resp.content == VALID_PDF_BYTES
         finally:
@@ -393,13 +400,16 @@ class TestExportSharingPasscode:
                         "tool_name": "trial_balance",
                         "export_format": "pdf",
                         "export_data_b64": base64.b64encode(VALID_PDF_BYTES).decode(),
-                        "passcode": "secret123",
+                        "passcode": "StrongP@ss1",
                     },
                 )
                 assert resp.status_code == 200
                 token = resp.json()["share_token"]
 
-                dl_resp = await client.get(f"/export-sharing/{token}?passcode=wrongpass")
+                dl_resp = await client.post(
+                    f"/export-sharing/{token}/download",
+                    json={"passcode": "WRONGpass2!"},
+                )
                 assert dl_resp.status_code == 403
                 assert "invalid passcode" in dl_resp.json()["detail"].lower()
         finally:
@@ -408,7 +418,7 @@ class TestExportSharingPasscode:
     @pytest.mark.usefixtures("bypass_csrf")
     @pytest.mark.anyio
     async def test_download_without_passcode_when_required_returns_403(self, db_session, make_user):
-        """Download returns 403 when passcode is required but not provided."""
+        """GET returns 403 with instructional message when passcode is required."""
         from auth import require_verified_user
         from database import get_db
         from main import app
@@ -428,7 +438,7 @@ class TestExportSharingPasscode:
                         "tool_name": "trial_balance",
                         "export_format": "pdf",
                         "export_data_b64": base64.b64encode(VALID_PDF_BYTES).decode(),
-                        "passcode": "secret123",
+                        "passcode": "StrongP@ss1",
                     },
                 )
                 assert resp.status_code == 200
@@ -436,7 +446,7 @@ class TestExportSharingPasscode:
 
                 dl_resp = await client.get(f"/export-sharing/{token}")
                 assert dl_resp.status_code == 403
-                assert "requires a passcode" in dl_resp.json()["detail"].lower()
+                assert "passcode" in dl_resp.json()["detail"].lower()
         finally:
             app.dependency_overrides.clear()
 

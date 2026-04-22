@@ -396,9 +396,10 @@ class TestAPScoringCalibration:
 
         assert clean_result.composite_score.score <= moderate_result.composite_score.score
 
-    def test_thirteen_tests_always_run(self):
+    def test_fourteen_tests_always_run(self):
+        # Sprint 682: AP test count grew 13 -> 14 (AP-T14 Invoice Without PO).
         result = run_ap_testing(sample_ap_rows(), sample_ap_columns())
-        assert result.composite_score.tests_run == 13
+        assert result.composite_score.tests_run == 14
 
 
 class TestAPTestingAPI:

@@ -603,18 +603,50 @@ class TestInterestCoverage:
         assert "No interest-bearing debt" in result.interpretation
 
     def test_interest_coverage_derived_opex(self):
-        """When operating_expenses is 0, derive from total_expenses - COGS."""
+        """When operating_expenses is 0, derive from total_expenses - COGS.
+
+        Sprint 681: fix double-count. ``total_expenses`` captures ALL
+        expense-categorised accounts including interest, so the derived
+        operating_exp (total_expenses - COGS) also includes interest.
+        EBIT must subtract interest out — otherwise coverage is
+        systematically under-stated by a factor equal to the interest load.
+
+        Expected math:
+          derived_opex = 400,000 - 200,000 = 200,000 (includes 40K interest)
+          opex_for_ebit = 200,000 - 40,000 = 160,000 (operating-only)
+          EBIT = 600,000 - 200,000 - 160,000 = 240,000
+          coverage = 240,000 / 40,000 = 6.0x
+        """
         totals = CategoryTotals(
             total_revenue=600_000.0,
             cost_of_goods_sold=200_000.0,
-            total_expenses=400_000.0,  # implies opex = 200,000
+            total_expenses=400_000.0,
             interest_expense=40_000.0,
         )
         result = RatioEngine(totals).calculate_interest_coverage()
-
-        # EBIT = 600,000 - 200,000 - 200,000 = 200,000; coverage = 5.0x
-        assert result.value == pytest.approx(5.0, rel=0.01)
+        assert result.value == pytest.approx(6.0, rel=0.01)
         assert result.threshold_status == "above_threshold"
+
+    def test_interest_coverage_direct_opex_not_double_subtracted(self):
+        """Sprint 681: when operating_expenses is explicitly populated
+        (via extract_category_totals, which excludes interest by design),
+        the ICR calculation must NOT subtract interest again. This test
+        pins the "direct path" branch.
+
+        Expected math (no double subtraction):
+          operating_exp = 150,000 (interest-free, direct path)
+          opex_for_ebit = 150,000 (unchanged)
+          EBIT = 500,000 - 200,000 - 150,000 = 150,000
+          coverage = 150,000 / 30,000 = 5.0x
+        """
+        totals = CategoryTotals(
+            total_revenue=500_000.0,
+            cost_of_goods_sold=200_000.0,
+            operating_expenses=150_000.0,
+            interest_expense=30_000.0,
+        )
+        result = RatioEngine(totals).calculate_interest_coverage()
+        assert result.value == pytest.approx(5.0, rel=0.01)
 
     def test_interest_coverage_in_calculate_all_ratios(self):
         """Wired into calculate_all_ratios output."""
@@ -663,6 +695,91 @@ class TestInterestExpenseExtraction:
 # =============================================================================
 # RatioEngine Tests - Return on Assets (Sprint 27)
 # =============================================================================
+
+
+class TestSprint681AverageBalance:
+    """Sprint 681: ROA / ROE with optional prior-period totals compute
+    using the textbook (beginning + ending) / 2 average-balance formula.
+
+    Falls back to ending-balance with a disclosure note when prior is
+    absent (backward-compatible with existing callers).
+    """
+
+    def test_roa_uses_average_when_prior_supplied(self):
+        """With prior totals, ROA denominator should be the average of
+        beginning + ending total assets."""
+        current = CategoryTotals(
+            total_revenue=500000.0,
+            total_expenses=350000.0,
+            total_assets=1_200_000.0,
+        )
+        prior = CategoryTotals(total_assets=800_000.0)
+        # Net Income = 150K. Average assets = (800K + 1.2M) / 2 = 1.0M.
+        # ROA = 150K / 1.0M = 15.0%
+        engine = RatioEngine(current, prior_period_totals=prior)
+        result = engine.calculate_return_on_assets()
+        assert result.value == pytest.approx(15.0, rel=0.01)
+        # Disclosure note should NOT appear when average was used.
+        assert "ending total assets" not in result.interpretation
+
+    def test_roa_falls_back_to_ending_without_prior(self):
+        """Without prior totals, ROA uses ending assets + attaches disclosure."""
+        current = CategoryTotals(
+            total_revenue=500000.0,
+            total_expenses=350000.0,
+            total_assets=1_200_000.0,
+        )
+        engine = RatioEngine(current)  # no prior
+        result = engine.calculate_return_on_assets()
+        # 150K / 1.2M = 12.5%
+        assert result.value == pytest.approx(12.5, rel=0.01)
+        assert "ending total assets" in result.interpretation
+        assert "prior-period" in result.interpretation
+
+    def test_roe_uses_average_when_prior_supplied(self):
+        current = CategoryTotals(
+            total_revenue=500000.0,
+            total_expenses=350000.0,
+            total_equity=800_000.0,
+        )
+        prior = CategoryTotals(total_equity=600_000.0)
+        # Net Income = 150K. Average equity = 700K. ROE = 21.4%
+        engine = RatioEngine(current, prior_period_totals=prior)
+        result = engine.calculate_return_on_equity()
+        assert result.value == pytest.approx(21.4, rel=0.01)
+        assert "ending equity" not in result.interpretation
+
+    def test_roe_partial_prior_falls_back(self):
+        """If prior_totals is supplied but prior equity is 0 / missing,
+        fall back to ending equity (matches the 'no prior' path)."""
+        current = CategoryTotals(
+            total_revenue=500000.0,
+            total_expenses=350000.0,
+            total_equity=800_000.0,
+        )
+        prior = CategoryTotals()  # all zeros
+        engine = RatioEngine(current, prior_period_totals=prior)
+        result = engine.calculate_return_on_equity()
+        # 150K / 800K = 18.75%
+        assert result.value == pytest.approx(18.75, rel=0.01)
+        assert "ending equity" in result.interpretation
+
+    def test_dupont_verification_matches_with_isclose(self):
+        """Sprint 681: DuPont verification_matches must use math.isclose,
+        not a fixed 1e-4 absolute tolerance. Under realistic conditions
+        the decomposition should always verify."""
+        current = CategoryTotals(
+            total_revenue=1_000_000.0,
+            total_expenses=800_000.0,
+            total_assets=1_500_000.0,
+            total_equity=500_000.0,
+        )
+        result = RatioEngine(current).calculate_dupont()
+        assert result is not None
+        # Under the old absolute-tolerance check, large ROE values could
+        # produce false negatives due to float noise. With math.isclose
+        # (rel_tol=1e-6), legitimate decompositions always verify.
+        assert result.verification_matches is True
 
 
 class TestReturnOnAssets:

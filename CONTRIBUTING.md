@@ -161,3 +161,64 @@ Rotate your key annually (or immediately if your device is lost or the key is co
 The `main` branch requires all CI status checks to pass and branches to be up to date before merging.
 
 Once all committers have registered their GPG keys, **"Require signed commits"** will be enabled on `main`. Unsigned commits will be rejected by GitHub.
+
+
+---
+
+## Anomaly-Framework Generator ↔ Engine Contracts (Sprint 700)
+
+The testing-tool anomaly framework (`backend/tests/anomaly_framework/`)
+couples each **generator** (which mutates clean fixture data to exercise
+a specific detection path) with an **engine** (JE / AP / Payroll /
+Revenue / AR / FA / Inventory / Sampling / Multi-Currency / Three-Way
+Match / Multi-Period / Bank-Rec). When the two drift — the generator
+emits data the engine doesn't inspect, or targets a `test_key` the
+engine doesn't emit — the only signal is a failing assertion, which
+historically got a silent `xfail` marker instead of a fix.
+
+The **contract layer** (`backend/shared/engine_contract.py`) makes the
+coupling explicit. Before adding a new generator or engine detection
+path:
+
+1. **Engine side** — append an `ENGINE_CONTRACT = EngineInputContract(...)`
+   at the end of the engine module. Declare the columns the engine
+   reads and a `DetectionPreconditions` entry for each `test_key` the
+   engine's `TestResult` emits.
+2. **Generator side** — set `PRODUCES_EVIDENCE = GeneratorEvidence(...)`
+   on the generator class. Declare the columns the generator populates
+   and (for pattern-based detections) the account-name values it emits.
+3. **Verify** — the meta-test
+   `tests/anomaly_framework/test_contract_compliance.py` runs in strict
+   mode and will fail the build if a generator's evidence doesn't
+   satisfy its target engine's precondition. Run it locally with:
+   ```
+   pytest tests/anomaly_framework/test_contract_compliance.py -v
+   ```
+
+**Common violations and what they mean:**
+
+| Violation field | What failed |
+|-----------------|-------------|
+| `missing_columns` | Generator doesn't populate a column the engine reads |
+| `missing_account_name_patterns` | Generator doesn't emit an account name matching the engine's pattern list |
+| `scope_mismatch` | Generator writes to sub-ledger but engine reads TB (or vice versa) |
+| `no contract entry for test_key` | Generator targets a test the engine doesn't declare |
+
+**Precedent for fix direction:**
+
+When generator and engine disagree, prefer fixing the side that's WRONG
+about real auditor workflow, not whichever is easier. Examples from
+Sprint 701/702:
+
+* Revenue contra: engine's 15% threshold matched real auditor
+  practice; generator was under-injecting. Fix: larger injection.
+* Payroll duplicate names: generator targeted the wrong test_key;
+  engine had no same-name-different-ID test at all. Fix: add
+  engine-side test PR-T12 (ghost-employee scheme).
+* AR sign: generator mutated sub-ledger but engine checked TB. Fix:
+  split engine into AR-01 (TB) and AR-01b (SL) — two distinct
+  assertions per AICPA Audit Guide §5.11.
+* FA / INV duplicates: engine dedups on (cost, description, date);
+  generator mutated description. Fix: keep description identical,
+  vary asset_id/item_id (the real "double-booked" pattern).
+

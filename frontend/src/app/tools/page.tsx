@@ -52,6 +52,8 @@ const TOOLS: ToolDef[] = [
   { key: 'inventory_testing', label: 'Inventory Testing', href: '/tools/inventory-testing', description: 'Analyze inventory records for valuation anomalies, obsolescence indicators, and cutoff issues.', reference: 'ISA 501 / IAS 2 / ASC 330', category: 'Testing Suite', testCount: 9 },
   // Advanced
   { key: 'statistical_sampling', label: 'Statistical Sampling', href: '/tools/statistical-sampling', description: 'Design and evaluate audit samples using ISA 530 methodology — MUS, classical variables, and attribute sampling.', reference: 'ISA 530 Audit Sampling', category: 'Advanced' },
+  { key: 'composite_risk', label: 'Composite Risk Scoring', href: '/tools/composite-risk', description: 'Record auditor-assessed inherent/control/fraud risk per account/assertion; combine via the ISA 315 RMM matrix with optional diagnostic integration.', reference: 'ISA 315 (Revised 2019) / ISA 330', category: 'Advanced' },
+  { key: 'account_risk_heatmap', label: 'Account Risk Heatmap', href: '/tools/account-risk-heatmap', description: 'Aggregate per-account signals across diagnostic engines into a ranked triage-density view with priority tiers and CSV export.', reference: 'ISA 315 / ISA 520', category: 'Advanced' },
   { key: 'flux_analysis', label: 'Flux Analysis', href: '/flux', description: 'Account-level variance analysis comparing current and prior period balances with materiality-based flagging.', reference: 'ISA 520 Analytical Procedures', category: 'Advanced' },
   { key: 'loan_amortization', label: 'Loan Amortization', href: '/tools/loan-amortization', description: 'Generate period-by-period amortization schedules — standard, interest-only, and balloon loans with extra payments and book journal entry templates.', reference: 'Form input — no upload', category: 'Advanced' },
   { key: 'depreciation', label: 'Depreciation Calculator', href: '/tools/depreciation', description: 'Generate book and MACRS tax depreciation schedules — straight-line, declining balance, SYD, units of production; book vs tax timing reconciliation with deferred tax bridge.', reference: 'IRS Pub 946 / IAS 16 / ASC 360', category: 'Advanced' },
@@ -69,7 +71,12 @@ export default function ToolsCatalogPage() {
     if (!token) return
     apiGet<UserPreferences>('/settings/preferences', token)
       .then(res => { if (res.data?.favorite_tools) setFavorites(res.data.favorite_tools) })
-      .catch(() => {})
+      .catch(err => {
+        // Sprint 693: preference load failures were swallowed silently;
+        // log as a warning so regressions surface in the console and
+        // downstream Sentry breadcrumbs without breaking the page.
+        console.warn('[tools] preference load failed', err)
+      })
   }, [token])
 
   const toggleFavorite = useCallback(

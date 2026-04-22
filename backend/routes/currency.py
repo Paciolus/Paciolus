@@ -28,6 +28,7 @@ from database import get_db
 from shared.error_messages import sanitize_error
 from shared.helpers import memory_cleanup, validate_file_size
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
+from shared.testing_route import enforce_tool_access
 from tool_session_model import delete_tool_session, load_tool_session, save_tool_session
 
 logger = logging.getLogger(__name__)
@@ -124,6 +125,8 @@ async def upload_rate_table(
 
     Expected CSV columns: effective_date, from_currency, to_currency, rate
     """
+    # Sprint 678: currency_rates is a paid tool — gate Free tier
+    enforce_tool_access(current_user, "currency_rates", db)
     with memory_cleanup():
         try:
             file_bytes = await validate_file_size(file)
@@ -198,7 +201,10 @@ def add_single_rate(
 
     If a rate table already exists, the rate is appended.
     Otherwise, a new single-rate table is created.
+
+    Sprint 678: paid tool — Free tier is blocked.
     """
+    enforce_tool_access(current_user, "currency_rates", db)
     try:
         rate = parse_single_rate(
             rate_data.from_currency,

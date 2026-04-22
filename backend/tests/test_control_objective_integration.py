@@ -28,6 +28,7 @@ import pytest
 # Fixture: Revenue entries with contract-aware columns
 # ---------------------------------------------------------------------------
 
+
 def _make_revenue_entries_with_contracts():
     """Build deterministic RevenueEntry list with contract fields.
 
@@ -222,6 +223,7 @@ def _make_revenue_entries_with_contracts():
 # CO-1: Revenue Contract-Aware Recognition Timing (ASC 606 / IFRS 15)
 # ===========================================================================
 
+
 class TestRevenueContractRecognitionTiming:
     """Control Objective: Revenue is recognised only when performance
     obligations are satisfied (ASC 606-10-25-30).
@@ -238,27 +240,35 @@ class TestRevenueContractRecognitionTiming:
             RevenueTestingConfig,
             run_revenue_test_battery,
         )
+
         self.entries = _make_revenue_entries_with_contracts()
         # Full evidence — all 6 contract fields present in at least some entries
         self.evidence = ContractEvidenceLevel(
             level="full",
             confidence_modifier=1.0,
             detected_fields=[
-                "contract_id", "performance_obligation_id",
-                "recognition_method", "contract_modification",
-                "allocation_basis", "obligation_satisfaction_date",
+                "contract_id",
+                "performance_obligation_id",
+                "recognition_method",
+                "contract_modification",
+                "allocation_basis",
+                "obligation_satisfaction_date",
             ],
         )
         self.config = RevenueTestingConfig()
         self.results = run_revenue_test_battery(
-            self.entries, self.config, self.evidence,
+            self.entries,
+            self.config,
+            self.evidence,
         )
         # Index results by test_key for deterministic lookup
         self.by_key = {r.test_key: r for r in self.results}
 
-    def test_battery_returns_16_results(self):
-        """12 core + 4 contract = 16 total results."""
-        assert len(self.results) == 16
+    def test_battery_returns_18_results(self):
+        """14 core + 4 contract = 18 total results. Sprint 683 split RT-09 into
+        RT-09 (cut-off) + RT-09b (prior-period) and added RT-17 (Contract Validity),
+        growing the core count 12 -> 14."""
+        assert len(self.results) == 18
 
     def test_no_contract_tests_skipped(self):
         """All 4 contract tests should run (not skipped) with full evidence."""
@@ -318,8 +328,9 @@ class TestRevenueContractRecognitionTiming:
         from revenue_testing_engine import calculate_revenue_composite_score
 
         score = calculate_revenue_composite_score(self.results, len(self.entries))
-        # With full evidence, all 16 tests run — tests_run should be 16
-        assert score.tests_run == 16
+        # With full evidence, all 18 tests run — tests_run should be 18
+        # (Sprint 683: 12 core -> 14 core after RT-09 split + RT-17 add)
+        assert score.tests_run == 18
 
     def test_no_evidence_skips_all_contract_tests(self):
         """When evidence.level == 'none', all 4 contract tests are skipped."""
@@ -344,6 +355,7 @@ class TestRevenueContractRecognitionTiming:
 # ===========================================================================
 # CO-2: Adjustment Create/Approve/Post with SoD Enforcement
 # ===========================================================================
+
 
 class TestAdjustmentApprovalWorkflowSoD:
     """Control Objective: Adjusting entries follow a strict
@@ -463,13 +475,10 @@ class TestAdjustmentApprovalWorkflowSoD:
         entry.approved_at = datetime.now(UTC)
 
         # SoD violation: prepared_by == approved_by
-        assert entry.prepared_by == entry.approved_by, \
-            "Metadata must capture identity for SoD detection"
+        assert entry.prepared_by == entry.approved_by, "Metadata must capture identity for SoD detection"
         # Downstream enforcement can check this condition
         is_sod_violation = (
-            entry.prepared_by is not None
-            and entry.approved_by is not None
-            and entry.prepared_by == entry.approved_by
+            entry.prepared_by is not None and entry.approved_by is not None and entry.prepared_by == entry.approved_by
         )
         assert is_sod_violation is True
 
@@ -480,9 +489,7 @@ class TestAdjustmentApprovalWorkflowSoD:
         entry.approved_at = datetime.now(UTC)
 
         is_sod_violation = (
-            entry.prepared_by is not None
-            and entry.approved_by is not None
-            and entry.prepared_by == entry.approved_by
+            entry.prepared_by is not None and entry.approved_by is not None and entry.prepared_by == entry.approved_by
         )
         assert is_sod_violation is False
 
@@ -559,14 +566,14 @@ class TestAdjustmentApprovalWorkflowSoD:
 
         result = apply_adjustments(tb, adj_set, mode="official")
         assert result.is_balanced, (
-            f"ATB out of balance: debits={result.total_adjusted_debits}, "
-            f"credits={result.total_adjusted_credits}"
+            f"ATB out of balance: debits={result.total_adjusted_debits}, credits={result.total_adjusted_credits}"
         )
 
 
 # ===========================================================================
 # CO-3: Audit-History Wipe Attempt (Must Be Blocked / Non-Destructive)
 # ===========================================================================
+
 
 class TestAuditHistoryWipeBlocked:
     """Control Objective: Audit trail records (ActivityLog, DiagnosticSummary,
@@ -685,16 +692,24 @@ class TestAuditHistoryWipeBlocked:
         user = make_user(email="audit_test_4@example.com")
         # Create two logs
         log_a = ActivityLog(
-            user_id=user.id, filename_hash="d" * 64, filename_display="a.csv",
+            user_id=user.id,
+            filename_hash="d" * 64,
+            filename_display="a.csv",
             record_count=1,
-            total_debits=Decimal("100.00"), total_credits=Decimal("100.00"),
-            materiality_threshold=Decimal("10.00"), was_balanced=True,
+            total_debits=Decimal("100.00"),
+            total_credits=Decimal("100.00"),
+            materiality_threshold=Decimal("10.00"),
+            was_balanced=True,
         )
         log_b = ActivityLog(
-            user_id=user.id, filename_hash="e" * 64, filename_display="b.csv",
+            user_id=user.id,
+            filename_hash="e" * 64,
+            filename_display="b.csv",
             record_count=2,
-            total_debits=Decimal("200.00"), total_credits=Decimal("200.00"),
-            materiality_threshold=Decimal("20.00"), was_balanced=True,
+            total_debits=Decimal("200.00"),
+            total_credits=Decimal("200.00"),
+            materiality_threshold=Decimal("20.00"),
+            was_balanced=True,
         )
         db_session.add_all([log_a, log_b])
         db_session.flush()
@@ -718,31 +733,44 @@ class TestAuditHistoryWipeBlocked:
 
         user = make_user(email="audit_test_5@example.com")
         log = ActivityLog(
-            user_id=user.id, filename_hash="f" * 64, record_count=5,
-            total_debits=Decimal("500.00"), total_credits=Decimal("500.00"),
-            materiality_threshold=Decimal("50.00"), was_balanced=True,
+            user_id=user.id,
+            filename_hash="f" * 64,
+            record_count=5,
+            total_debits=Decimal("500.00"),
+            total_credits=Decimal("500.00"),
+            materiality_threshold=Decimal("50.00"),
+            was_balanced=True,
         )
         db_session.add(log)
         db_session.flush()
 
-        count_before = db_session.query(ActivityLog).filter(
-            ActivityLog.user_id == user.id,
-        ).count()
+        count_before = (
+            db_session.query(ActivityLog)
+            .filter(
+                ActivityLog.user_id == user.id,
+            )
+            .count()
+        )
 
         from shared.soft_delete import soft_delete
+
         soft_delete(db_session, log, user.id, "count_test")
 
-        count_after = db_session.query(ActivityLog).filter(
-            ActivityLog.user_id == user.id,
-        ).count()
+        count_after = (
+            db_session.query(ActivityLog)
+            .filter(
+                ActivityLog.user_id == user.id,
+            )
+            .count()
+        )
 
-        assert count_after >= count_before, \
-            f"Row count decreased from {count_before} to {count_after}"
+        assert count_after >= count_before, f"Row count decreased from {count_before} to {count_after}"
 
 
 # ===========================================================================
 # CO-4: IFRS Benchmarking Against GAAP Source with Comparability Flags
 # ===========================================================================
+
 
 class TestIFRSBenchmarkComparability:
     """Control Objective: When client uses IFRS and benchmarks are GAAP-sourced,
@@ -769,9 +797,9 @@ class TestIFRSBenchmarkComparability:
         import dataclasses
 
         from benchmark_engine import BenchmarkComparison
+
         field_names = {f.name for f in dataclasses.fields(BenchmarkComparison)}
-        assert "framework_note" in field_names, \
-            "BenchmarkComparison missing framework_note field"
+        assert "framework_note" in field_names, "BenchmarkComparison missing framework_note field"
 
     def test_percentile_at_median_returns_50(self):
         """Client value at median (p50) should yield percentile ~50."""
@@ -786,6 +814,7 @@ class TestIFRSBenchmarkComparability:
 
         # Client value exactly at p50
         from benchmark_engine import calculate_percentile
+
         pct = calculate_percentile(cr_bench.p50, cr_bench)
         assert pct == 50, f"Expected percentile 50 at median, got {pct}"
 
@@ -820,11 +849,14 @@ class TestIFRSBenchmarkComparability:
         assert len(comparisons) > 0, "No comparisons produced"
 
         for comp in comparisons:
-            assert 1 <= comp.percentile <= 99, \
-                f"{comp.ratio_name}: percentile {comp.percentile} out of range"
+            assert 1 <= comp.percentile <= 99, f"{comp.ratio_name}: percentile {comp.percentile} out of range"
             assert comp.position in (
-                "excellent", "above_average", "average",
-                "below_average", "concerning", "critical",
+                "excellent",
+                "above_average",
+                "average",
+                "below_average",
+                "concerning",
+                "critical",
             )
             assert comp.health_indicator in ("positive", "neutral", "negative")
 
@@ -833,6 +865,7 @@ class TestIFRSBenchmarkComparability:
         import dataclasses
 
         from multi_period_comparison import MovementSummary
+
         field_names = {f.name for f in dataclasses.fields(MovementSummary)}
         assert "framework_note" in field_names
 
@@ -841,6 +874,7 @@ class TestIFRSBenchmarkComparability:
         import dataclasses
 
         from prior_period_comparison import PeriodComparison
+
         field_names = {f.name for f in dataclasses.fields(PeriodComparison)}
         assert "framework_note" in field_names
 
@@ -877,23 +911,27 @@ class TestIFRSBenchmarkComparability:
 
         available = get_available_industries()
         expected = {
-            Industry.RETAIL, Industry.MANUFACTURING,
-            Industry.PROFESSIONAL_SERVICES, Industry.TECHNOLOGY,
-            Industry.HEALTHCARE, Industry.FINANCIAL_SERVICES,
+            Industry.RETAIL,
+            Industry.MANUFACTURING,
+            Industry.PROFESSIONAL_SERVICES,
+            Industry.TECHNOLOGY,
+            Industry.HEALTHCARE,
+            Industry.FINANCIAL_SERVICES,
         }
-        assert expected.issubset(set(available)), \
-            f"Missing industries: {expected - set(available)}"
+        assert expected.issubset(set(available)), f"Missing industries: {expected - set(available)}"
 
         for ind in expected:
             bench_set = get_benchmark_set(ind)
             assert bench_set is not None, f"No benchmark set for {ind.value}"
-            assert len(bench_set.benchmarks) >= 8, \
+            assert len(bench_set.benchmarks) >= 8, (
                 f"{ind.value}: only {len(bench_set.benchmarks)} ratios (expected >= 8)"
+            )
 
 
 # ===========================================================================
 # CO-5: Decimal Persistence Roundtrip — No Debit/Credit Imbalance
 # ===========================================================================
+
 
 class TestDecimalPersistenceRoundtrip:
     """Control Objective: Monetary values survive a create -> DB persist ->
@@ -1005,8 +1043,7 @@ class TestDecimalPersistenceRoundtrip:
 
         for field_name, expected in values.items():
             actual = getattr(reloaded, field_name)
-            assert monetary_equal(actual, expected), \
-                f"{field_name}: expected {expected}, got {actual}"
+            assert monetary_equal(actual, expected), f"{field_name}: expected {expected}, got {actual}"
 
     def test_debit_credit_balance_invariant(self, db_session, make_user):
         """After quantization + DB roundtrip, debits must equal credits."""
@@ -1037,8 +1074,7 @@ class TestDecimalPersistenceRoundtrip:
 
         debit_dec = Decimal(str(reloaded.total_debits))
         credit_dec = Decimal(str(reloaded.total_credits))
-        assert debit_dec == credit_dec, \
-            f"Imbalance after roundtrip: debits={debit_dec}, credits={credit_dec}"
+        assert debit_dec == credit_dec, f"Imbalance after roundtrip: debits={debit_dec}, credits={credit_dec}"
 
     def test_apply_adjustments_preserves_balance(self):
         """Applying balanced adjusting entries preserves TB debit=credit invariant."""
@@ -1086,13 +1122,11 @@ class TestDecimalPersistenceRoundtrip:
 
         # Adjustment debits must equal adjustment credits
         adj_diff = abs(result.total_adjustment_debits - result.total_adjustment_credits)
-        assert adj_diff < BALANCE_TOLERANCE, \
-            f"Adjustment imbalance: {adj_diff}"
+        assert adj_diff < BALANCE_TOLERANCE, f"Adjustment imbalance: {adj_diff}"
 
         # Adjusted TB must be balanced
         adjusted_diff = abs(result.total_adjusted_debits - result.total_adjusted_credits)
-        assert adjusted_diff < BALANCE_TOLERANCE, \
-            f"Adjusted TB imbalance: {adjusted_diff}"
+        assert adjusted_diff < BALANCE_TOLERANCE, f"Adjusted TB imbalance: {adjusted_diff}"
 
     def test_high_volume_sum_precision(self):
         """math.fsum prevents drift when summing 10,000 small values."""

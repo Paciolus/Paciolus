@@ -32,6 +32,7 @@ from sampling_engine import (
 # Helpers
 # ═══════════════════════════════════════════════════════════════
 
+
 def _make_items(amounts: list[float]) -> list[PopulationItem]:
     """Create PopulationItem list from a list of amounts."""
     return [
@@ -56,6 +57,7 @@ def _make_csv(rows: list[dict], columns: list[str]) -> bytes:
 # ═══════════════════════════════════════════════════════════════
 # Confidence Factor Lookup
 # ═══════════════════════════════════════════════════════════════
+
 
 class TestConfidenceFactors:
     """Test confidence factor lookup."""
@@ -83,6 +85,7 @@ class TestConfidenceFactors:
 # ═══════════════════════════════════════════════════════════════
 # MUS Sample Size Calculation
 # ═══════════════════════════════════════════════════════════════
+
 
 class TestMUSSampleSize:
     """Test MUS sample size formula."""
@@ -161,8 +164,88 @@ class TestMUSSampleSize:
 
 
 # ═══════════════════════════════════════════════════════════════
+# Sprint 684: AICPA Table A-1 expansion factors
+# ═══════════════════════════════════════════════════════════════
+
+
+class TestSprint684AICPATableA1:
+    """Sprint 684: MUS sample-size calculation uses AICPA Audit Sampling
+    Guide Table A-1 expansion factors instead of the homemade
+    1 + (e/TM) approximation, which systematically under-sized samples."""
+
+    def test_expansion_factor_matches_table_at_published_buckets(self):
+        """Spot-check two published Table A-1 values (95% confidence)."""
+        from shared.aicpa_tables import expansion_factor
+
+        # Table A-1 @ 95% / e/TM = 0.25 → 1.75
+        assert expansion_factor(0.95, 25_000, 100_000) == pytest.approx(1.75, rel=0.01)
+        # Table A-1 @ 95% / e/TM = 0.50 → 3.00
+        assert expansion_factor(0.95, 50_000, 100_000) == pytest.approx(3.00, rel=0.01)
+
+    def test_expansion_factor_interpolates_between_buckets(self):
+        """Ratios between tabulated buckets are linearly interpolated."""
+        from shared.aicpa_tables import expansion_factor
+
+        # e/TM = 0.175 is halfway between 0.15 (1.40) and 0.20 (1.55) at
+        # 95% → expected ~1.475.
+        assert expansion_factor(0.95, 17_500, 100_000) == pytest.approx(1.475, rel=0.01)
+
+    def test_zero_expected_returns_unity(self):
+        from shared.aicpa_tables import expansion_factor
+
+        assert expansion_factor(0.95, 0, 100_000) == pytest.approx(1.0)
+
+    def test_sample_size_uses_table_not_homemade_factor(self):
+        """Sprint 684 regression: prior code used 1 + e/TM = 1.25 at
+        e/TM=0.25; Table A-1 gives 1.75. The resulting sample size
+        must reflect the table (larger than the homemade estimate)."""
+        size, interval, _cf = calculate_mus_sample_size(
+            confidence_level=0.95,
+            tolerable_misstatement=100_000,
+            expected_misstatement=25_000,
+            population_value=10_000_000,
+        )
+        # Under the homemade formula the interval was ~63,500.
+        # With Table A-1 (factor 1.75) the interval shrinks to ~53,571.
+        # That drives a larger sample size.
+        assert interval == pytest.approx(
+            75_000 / (3.0 * 1.75),  # CF @ 95% = 3.0
+            rel=0.05,
+        )
+        # And the size scales accordingly.
+        assert size >= 180  # Previous (homemade) would have been ~155.
+
+
+# ═══════════════════════════════════════════════════════════════
+# Sprint 684: Negative-balance MUS rejection
+# ═══════════════════════════════════════════════════════════════
+
+
+class TestSprint684NegativeBalanceRejection:
+    """Sprint 684: MUS excludes negative-balance items (AICPA §5.06).
+
+    Returns a third tuple element with the excluded items so the memo
+    can disclose the stratification decision to the auditor.
+    """
+
+    def test_negative_items_excluded_from_selection(self):
+        items = _make_items([1000, 2000, -500, 3000, -1500, 4000])
+        selected, _start, negatives = select_mus_sample(items, sampling_interval=2_000, random_start=500)
+        # Two negative items should be excluded from selection.
+        assert len(negatives) == 2
+        # No selected item has a negative amount.
+        assert all(s.item.recorded_amount >= 0 for s in selected)
+
+    def test_all_positive_returns_empty_negative_list(self):
+        items = _make_items([1000, 2000, 3000])
+        _selected, _start, negatives = select_mus_sample(items, sampling_interval=1_000, random_start=500)
+        assert negatives == []
+
+
+# ═══════════════════════════════════════════════════════════════
 # MUS Selection
 # ═══════════════════════════════════════════════════════════════
+
 
 class TestMUSSelection:
     """Test MUS interval-based selection."""
@@ -171,15 +254,15 @@ class TestMUSSelection:
         """Selection should produce approximately expected count."""
         items = _make_items([1000] * 100)  # 100 items, $1000 each = $100K
         interval = 10_000  # Should select ~10 items
-        selected, start = select_mus_sample(items, interval, random_start=5000)
+        selected, start, _neg = select_mus_sample(items, interval, random_start=5000)
         assert len(selected) >= 8
         assert len(selected) <= 12
 
     def test_deterministic_with_fixed_start(self):
         """Same random start produces same selection."""
         items = _make_items([500, 1000, 1500, 2000, 2500])
-        sel1, _ = select_mus_sample(items, 2000, random_start=500)
-        sel2, _ = select_mus_sample(items, 2000, random_start=500)
+        sel1, _, _ = select_mus_sample(items, 2000, random_start=500)
+        sel2, _, _ = select_mus_sample(items, 2000, random_start=500)
         ids1 = [s.item.row_index for s in sel1]
         ids2 = [s.item.row_index for s in sel2]
         assert ids1 == ids2
@@ -187,21 +270,21 @@ class TestMUSSelection:
     def test_no_duplicates(self):
         """Same item should not appear twice in selection."""
         items = _make_items([100] * 50)
-        selected, _ = select_mus_sample(items, 500)
+        selected, _, _ = select_mus_sample(items, 500)
         row_indices = [s.item.row_index for s in selected]
         assert len(row_indices) == len(set(row_indices))
 
     def test_large_item_always_selected(self):
         """An item larger than the interval is always selected."""
         items = _make_items([100, 200, 50_000, 300])
-        selected, _ = select_mus_sample(items, 5000, random_start=100)
+        selected, _, _ = select_mus_sample(items, 5000, random_start=100)
         selected_amounts = [s.item.recorded_amount for s in selected]
         assert 50_000 in selected_amounts
 
     def test_zero_amount_items_skipped(self):
         """Items with zero amount are skipped."""
         items = _make_items([0, 0, 1000, 0, 2000])
-        selected, _ = select_mus_sample(items, 500)
+        selected, _, _ = select_mus_sample(items, 500)
         for s in selected:
             assert s.item.recorded_amount != 0
 
@@ -212,7 +295,7 @@ class TestMUSSelection:
     def test_full_population_when_interval_tiny(self):
         """When interval is very small, most items get selected."""
         items = _make_items([1000, 2000, 3000, 4000, 5000])
-        selected, _ = select_mus_sample(items, 1.0, random_start=0.5)
+        selected, _, _ = select_mus_sample(items, 1.0, random_start=0.5)
         # With interval=1, all items should be selected
         assert len(selected) == 5
 
@@ -220,6 +303,7 @@ class TestMUSSelection:
 # ═══════════════════════════════════════════════════════════════
 # Random Selection
 # ═══════════════════════════════════════════════════════════════
+
 
 class TestRandomSelection:
     """Test random selection (Fisher-Yates)."""
@@ -255,6 +339,7 @@ class TestRandomSelection:
 # ═══════════════════════════════════════════════════════════════
 # Stratification
 # ═══════════════════════════════════════════════════════════════
+
 
 class TestStratification:
     """Test 2-tier stratification."""
@@ -302,6 +387,7 @@ class TestStratification:
 # Stringer Bound Evaluation
 # ═══════════════════════════════════════════════════════════════
 
+
 class TestStringerBound:
     """Test Stringer bound evaluation."""
 
@@ -325,11 +411,16 @@ class TestStringerBound:
 
     def test_one_error(self):
         """Single error with 50% tainting."""
-        errors = [SampleError(
-            row_index=1, item_id="1",
-            recorded_amount=10_000, audited_amount=5_000,
-            misstatement=5_000, tainting=0.5,
-        )]
+        errors = [
+            SampleError(
+                row_index=1,
+                item_id="1",
+                recorded_amount=10_000,
+                audited_amount=5_000,
+                misstatement=5_000,
+                tainting=0.5,
+            )
+        ]
         result = evaluate_mus_sample_stringer(
             errors=errors,
             sampling_interval=10_000,
@@ -385,11 +476,16 @@ class TestStringerBound:
 
     def test_100_percent_tainting(self):
         """Full misstatement (100% tainting)."""
-        errors = [SampleError(
-            row_index=1, item_id="1",
-            recorded_amount=10_000, audited_amount=0,
-            misstatement=10_000, tainting=1.0,
-        )]
+        errors = [
+            SampleError(
+                row_index=1,
+                item_id="1",
+                recorded_amount=10_000,
+                audited_amount=0,
+                misstatement=10_000,
+                tainting=1.0,
+            )
+        ]
         result = evaluate_mus_sample_stringer(
             errors=errors,
             sampling_interval=10_000,
@@ -406,6 +502,7 @@ class TestStringerBound:
 # ═══════════════════════════════════════════════════════════════
 # Integration: design_sample
 # ═══════════════════════════════════════════════════════════════
+
 
 class TestDesignSample:
     """Integration tests for the design_sample entry point."""
@@ -467,10 +564,7 @@ class TestDesignSample:
         assert result.remainder_count == 40
         assert len(result.strata_summary) == 2
         # High-value items are always selected
-        hv_selected = [
-            s for s in result.selected_items
-            if s.selection_method == "high_value_100pct"
-        ]
+        hv_selected = [s for s in result.selected_items if s.selection_method == "high_value_100pct"]
         assert len(hv_selected) == 10
 
     def test_column_mapping_override(self):
@@ -507,6 +601,7 @@ class TestDesignSample:
 # Integration: evaluate_sample
 # ═══════════════════════════════════════════════════════════════
 
+
 class TestEvaluateSample:
     """Integration tests for the evaluate_sample entry point."""
 
@@ -537,7 +632,9 @@ class TestEvaluateSample:
         )
         # interval=10000 → basic_precision = 10000 * 3.0 = 30000 < 50000
         result = evaluate_sample(
-            csv_data, "sample.csv", config,
+            csv_data,
+            "sample.csv",
+            config,
             population_value=200_000,
             sample_size=20,
             sampling_interval=10_000,
@@ -558,7 +655,9 @@ class TestEvaluateSample:
             tolerable_misstatement=200_000,
         )
         result = evaluate_sample(
-            csv_data, "sample.csv", config,
+            csv_data,
+            "sample.csv",
+            config,
             population_value=1_000_000,
             sample_size=20,
             sampling_interval=50_000,
@@ -570,8 +669,8 @@ class TestEvaluateSample:
         """Large misstatements → fail."""
         csv_data = self._make_evaluation_csv(
             errors=[
-                (10_000, 2_000),   # 80% tainting
-                (8_000, 1_000),    # 87.5% tainting
+                (10_000, 2_000),  # 80% tainting
+                (8_000, 1_000),  # 87.5% tainting
             ],
             clean=8,
         )
@@ -581,7 +680,9 @@ class TestEvaluateSample:
             tolerable_misstatement=20_000,
         )
         result = evaluate_sample(
-            csv_data, "sample.csv", config,
+            csv_data,
+            "sample.csv",
+            config,
             population_value=500_000,
             sample_size=10,
             sampling_interval=10_000,
@@ -602,7 +703,9 @@ class TestEvaluateSample:
             tolerable_misstatement=50_000,
         )
         result = evaluate_sample(
-            csv_data, "sample.csv", config,
+            csv_data,
+            "sample.csv",
+            config,
             population_value=1_000_000,
             sample_size=20,
         )
@@ -615,14 +718,18 @@ class TestEvaluateSample:
         lines = [
             "ID,Description,Amount,Audited Amount",
             "1,Item 1,1000,1000",
-            "2,Item 2,2000,",         # Blank → skip
+            "2,Item 2,2000,",  # Blank → skip
             "3,Item 3,3000,3000",
         ]
         csv_data = "\n".join(lines).encode("utf-8")
 
         config = SamplingConfig(method="mus", confidence_level=0.95, tolerable_misstatement=50_000)
         result = evaluate_sample(
-            csv_data, "sample.csv", config,
-            population_value=100_000, sample_size=3, sampling_interval=10_000,
+            csv_data,
+            "sample.csv",
+            config,
+            population_value=100_000,
+            sample_size=3,
+            sampling_interval=10_000,
         )
         assert result.errors_found == 0

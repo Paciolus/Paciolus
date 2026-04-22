@@ -29,6 +29,7 @@ from loan_amortization_engine import (
     RateChange,
     generate_amortization_schedule,
 )
+from shared.entitlement_checks import check_export_access
 from shared.error_messages import sanitize_error
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 
@@ -140,6 +141,7 @@ def calculate_schedule(
 
 @router.post(
     "/audit/loan-amortization/export.csv",
+    dependencies=[Depends(check_export_access)],
 )
 @limiter.limit(RATE_LIMIT_AUDIT)
 def export_schedule_csv(
@@ -200,7 +202,10 @@ def _compute_or_400(payload: LoanAmortizationRequest) -> AmortizationResult:
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.post("/audit/loan-amortization/export.xlsx")
+@router.post(
+    "/audit/loan-amortization/export.xlsx",
+    dependencies=[Depends(check_export_access)],
+)
 @limiter.limit(RATE_LIMIT_AUDIT)
 def export_schedule_xlsx(
     request: Request,
@@ -220,7 +225,10 @@ def export_schedule_xlsx(
     )
 
 
-@router.post("/audit/loan-amortization/export.pdf")
+@router.post(
+    "/audit/loan-amortization/export.pdf",
+    dependencies=[Depends(check_export_access)],
+)
 @limiter.limit(RATE_LIMIT_AUDIT)
 def export_schedule_pdf(
     request: Request,

@@ -1,0 +1,89 @@
+/**
+ * Composite Risk Scoring Types (Sprint 688)
+ *
+ * Mirrors backend `routes/composite_risk.py` schemas. ISA 315 (Revised 2019):
+ * auditor-provided inherent/control/fraud risk assessments per account/assertion,
+ * combined via the 4x4 RMM matrix, optionally enriched with automated diagnostic
+ * data (TB anomaly score, tool scores, going concern indicators).
+ */
+
+export type RiskLevel = 'low' | 'moderate' | 'elevated' | 'high'
+
+export type Assertion =
+  | 'existence'
+  | 'completeness'
+  | 'valuation'
+  | 'rights'
+  | 'presentation'
+
+export const RISK_LEVELS: RiskLevel[] = ['low', 'moderate', 'elevated', 'high']
+export const ASSERTIONS: Assertion[] = [
+  'existence',
+  'completeness',
+  'valuation',
+  'rights',
+  'presentation',
+]
+
+export const RISK_LEVEL_LABELS: Record<RiskLevel, string> = {
+  low: 'Low',
+  moderate: 'Moderate',
+  elevated: 'Elevated',
+  high: 'High',
+}
+
+export const ASSERTION_LABELS: Record<Assertion, string> = {
+  existence: 'Existence',
+  completeness: 'Completeness',
+  valuation: 'Valuation',
+  rights: 'Rights & Obligations',
+  presentation: 'Presentation',
+}
+
+export const RISK_BADGE_STYLES: Record<RiskLevel, string> = {
+  low: 'bg-sage-50 text-sage-700 border-sage-200',
+  moderate: 'bg-oatmeal-100 text-obsidian-700 border-oatmeal-300',
+  elevated: 'bg-clay-50 text-clay-700 border-clay-200',
+  high: 'bg-clay-100 text-clay-800 border-clay-300',
+}
+
+export interface AccountRiskAssessmentInput {
+  account_name: string
+  assertion: Assertion
+  inherent_risk: RiskLevel
+  control_risk: RiskLevel
+  fraud_risk_factor: boolean
+  auditor_notes: string
+}
+
+export interface CompositeRiskProfileRequest {
+  account_assessments: AccountRiskAssessmentInput[]
+  tb_diagnostic_score?: number | null
+  tb_diagnostic_tier?: string | null
+  testing_scores?: Record<string, number> | null
+  going_concern_indicators_triggered: number
+}
+
+export interface AccountRiskAssessmentResponse {
+  account_name: string
+  assertion: Assertion
+  inherent_risk: RiskLevel
+  control_risk: RiskLevel
+  combined_risk: RiskLevel
+  fraud_risk_factor: boolean
+  auditor_notes?: string | null
+}
+
+export interface CompositeRiskProfileResponse {
+  account_assessments: AccountRiskAssessmentResponse[]
+  tb_diagnostic_score?: number | null
+  tb_diagnostic_tier?: string | null
+  testing_scores: Record<string, number>
+  going_concern_indicators_triggered: number
+  high_risk_accounts: number
+  fraud_risk_accounts: number
+  total_assessments: number
+  risk_distribution: Record<RiskLevel, number>
+  overall_risk_tier?: RiskLevel | null
+  disclaimer: string
+}

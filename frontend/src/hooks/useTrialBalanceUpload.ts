@@ -12,10 +12,9 @@ import { useMappings } from '@/contexts/MappingContext'
 import type { ColumnMapping } from '@/components/mapping'
 import type { DisplayMode } from '@/components/sensitivity'
 import { useSettings } from '@/hooks/useSettings'
-import type { AuditResult, AuditResultResponse, AuditRunResponse } from '@/types/diagnostic'
-import { isAuditErrorResponse } from '@/types/diagnostic'
+import type { AuditResult, AuditResultResponse } from '@/types/diagnostic'
 import type { UploadStatus } from '@/types/shared'
-import { uploadFetch } from '@/utils/uploadTransport'
+import { uploadTrialBalance } from '@/utils/trialBalanceUpload'
 import { apiPost } from '@/utils'
 
 export interface UseTrialBalanceUploadReturn {
@@ -161,93 +160,66 @@ export function useTrialBalanceUpload(): UseTrialBalanceUploadReturn {
       startProgressIndicator()
     }
 
-    const formData = new FormData()
-    formData.append('file', file)
-    formData.append('materiality_threshold', threshold.toString())
-
-    const overrides = mappingContext.getOverridesForApi()
-    if (Object.keys(overrides).length > 0) {
-      formData.append('account_type_overrides', JSON.stringify(overrides))
-    }
-
-    if (columnMapping) {
-      formData.append('column_mapping', JSON.stringify(columnMapping))
-    }
-
-    if (sheets && sheets.length > 0) {
-      formData.append('selected_sheets', JSON.stringify(sheets))
-    }
-
-    if (engagement?.engagementId) {
-      formData.append('engagement_id', engagement.engagementId.toString())
-    }
-
-    if (preflightToken) {
-      formData.append('preflight_token', preflightToken)
-    }
-
     try {
-      const result = await uploadFetch('/audit/trial-balance', formData, token ?? null)
+      const outcome = await uploadTrialBalance(
+        {
+          file,
+          materialityThreshold: threshold,
+          accountTypeOverrides: mappingContext.getOverridesForApi(),
+          columnMapping: columnMapping ?? null,
+          selectedSheets: sheets ?? null,
+          engagementId: engagement?.engagementId ?? null,
+          preflightToken: preflightToken ?? null,
+        },
+        token ?? null,
+      )
 
-      if (!result.ok) {
+      if (outcome.kind !== 'success') {
         setAuditStatus('error')
-        if (result.status === 401) {
-          setAuditError('Please sign in to run diagnostics.')
-        } else if (result.errorCode === 'EMAIL_NOT_VERIFIED') {
-          setAuditError('Please verify your email address before running diagnostics. Check your inbox for the verification link.')
-        } else if (result.status === 403) {
-          setAuditError('Access denied.')
-        } else {
-          setAuditError(result.error || 'Failed to analyze file')
-        }
-        stopProgressIndicator()
-        setIsRecalculating(false)
+        setAuditError(outcome.message)
         return
       }
 
-      const data = result.data as AuditRunResponse
+      const success: AuditResultResponse = outcome.result
 
-      if (isAuditErrorResponse(data)) {
-        setAuditStatus('error')
-        setAuditError(data.message || data.detail || 'Failed to analyze file')
-      } else {
-        const success: AuditResultResponse = data
-
-        if (success.column_detection?.requires_mapping && !columnMapping) {
-          // Signal to preflight hook via return — handled by composite
-          setAuditResult(success as AuditResult)
-          setAuditStatus('success')
-          stopProgressIndicator()
-          return
-        }
-
-        setAuditStatus('success')
+      if (success.column_detection?.requires_mapping && !columnMapping) {
+        // Signal to preflight hook — the composite upload hook renders the mapping modal.
         setAuditResult(success as AuditResult)
+        setAuditStatus('success')
+        return
+      }
 
-        if (engagement?.engagementId) {
-          engagement.refreshToolRuns()
-          engagement.triggerLinkToast('TB Diagnostics')
-        }
+      setAuditStatus('success')
+      setAuditResult(success as AuditResult)
 
-        if (success.abnormal_balances) {
-          mappingContext.initializeFromAudit(success.abnormal_balances)
-        }
+      if (engagement?.engagementId) {
+        engagement.refreshToolRuns()
+        engagement.triggerLinkToast('TB Diagnostics')
+      }
 
-        if (!isRecalc && isAuthenticated && token) {
-          apiPost('/activity/log', token, {
-            filename: file.name,
-            record_count: success.row_count,
-            total_debits: success.total_debits,
-            total_credits: success.total_credits,
-            materiality_threshold: threshold,
-            was_balanced: success.balanced,
-            anomaly_count: success.abnormal_balances?.length || 0,
-            material_count: success.material_count || 0,
-            immaterial_count: success.immaterial_count || 0,
-            is_consolidated: success.is_consolidated || false,
-            sheet_count: success.sheet_count || null,
-          }).catch(() => {})
-        }
+      if (success.abnormal_balances) {
+        mappingContext.initializeFromAudit(success.abnormal_balances)
+      }
+
+      if (!isRecalc && isAuthenticated && token) {
+        apiPost('/activity/log', token, {
+          filename: file.name,
+          record_count: success.row_count,
+          total_debits: success.total_debits,
+          total_credits: success.total_credits,
+          materiality_threshold: threshold,
+          was_balanced: success.balanced,
+          anomaly_count: success.abnormal_balances?.length || 0,
+          material_count: success.material_count || 0,
+          immaterial_count: success.immaterial_count || 0,
+          is_consolidated: success.is_consolidated || false,
+          sheet_count: success.sheet_count || null,
+        }).catch(err => {
+          // Sprint 693: telemetry is best-effort — don't break the
+          // upload flow if it fails. Logging surfaces regressions in
+          // the telemetry pipeline without blocking the user.
+          console.warn('[trial-balance] telemetry post failed', err)
+        })
       }
     } catch {
       setAuditStatus('error')

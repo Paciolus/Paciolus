@@ -835,10 +835,27 @@ def _parse_date_to_str(val: object) -> Optional[str]:
 
 
 def _compute_aging_days(due_date_str: Optional[str], reference_date_str: Optional[str] = None) -> Optional[int]:
-    """Compute aging days from due date. Positive = past due."""
+    """Compute aging days from due date. Positive = past due.
+
+    RPT-07 remediation (2026-04-20): this function previously fell back to
+    ``date.today()`` when ``reference_date_str`` was None or unparseable,
+    producing non-reproducible aging output (a TB uploaded in April for a
+    December year-end would report aging ~120 days too high across every
+    bucket).  Deterministic policy:
+
+        * If ``reference_date_str`` is provided and parseable → use it.
+        * If ``reference_date_str`` is provided but unparseable → raise
+          ValueError (callers are expected to validate at the route layer).
+        * If ``reference_date_str`` is None → return ``None`` (caller
+          requested aging without supplying the reference date; no
+          reproducible answer is possible).
+
+    The route layer enforces explicit ``as_of_date`` when a sub-ledger is
+    uploaded, converting this to an HTTP 400 for the caller.
+    """
     if not due_date_str:
         return None
-    from datetime import date, datetime
+    from datetime import datetime
 
     try:
         # Try common date formats
@@ -859,11 +876,23 @@ def _compute_aging_days(due_date_str: Optional[str], reference_date_str: Optiona
                     break
                 except ValueError:
                     continue
+            if ref is None:
+                # An as_of_date was supplied but no format matched — surface
+                # the problem rather than silently shifting to today().
+                raise ValueError(
+                    f"AR aging reference date '{reference_date_str}' is not in a supported "
+                    "format (expected YYYY-MM-DD, MM/DD/YYYY, or DD/MM/YYYY)."
+                )
+
         if ref is None:
-            ref = date.today()
+            # No reference date and none was supplied — aging is undefined.
+            # Returning None is safer than using today(); the bucket assignment
+            # logic downstream treats None as "not past due" and callers who
+            # need aging should supply as_of_date at the route.
+            return None
 
         return (ref - due).days
-    except (ValueError, TypeError, AttributeError):
+    except (TypeError, AttributeError):
         return None
 
 
@@ -1091,6 +1120,76 @@ def test_ar_sign_anomalies(
         flag_rate=len(flagged) / total if total > 0 else 0.0,
         severity=max((f.severity for f in flagged), default=Severity.LOW, key=lambda s: SEVERITY_WEIGHTS[s]),
         description="AR accounts with credit balances indicating potential misclassification, overpayment, or contra-AR entries",
+        flagged_entries=flagged,
+    )
+
+
+def test_ar_sl_negative_invoice(
+    sl_entries: list[ARSubledgerEntry],
+    config: ARAgingConfig,
+) -> ARTestResult:
+    """AR-01b: Flag sub-ledger invoices with negative ``amount``.
+
+    Sprint 702: complement to ``test_ar_sign_anomalies`` (AR-01), which
+    checks the **TB-level** AR account for a credit balance. A negative
+    invoice amount in the sub-ledger is a different assertion — the TB
+    may still be balanced (if offsets exist), but the individual invoice
+    is a credit-memo / reversal / data-entry error that the TB-level
+    test cannot see.
+
+    Why split rather than widen AR-01:
+      * TB-level sign anomaly = asset account with credit balance (a
+        misclassification / overpayment pattern).
+      * SL-level negative invoice = individual invoice with negative
+        amount (a credit-memo or reversal that wasn't reconciled).
+
+    Two separate auditor-facing assertions; a memo with one finding
+    combining both would muddy the auditor's follow-up. AICPA Audit
+    Guide for Receivables (§5.11) describes the two as distinct control
+    objectives.
+    """
+    flagged: list[FlaggedAR] = []
+
+    if config.sign_anomaly_enabled:
+        for entry in sl_entries:
+            # Credit-memo invoices are conventionally flagged in SL with
+            # a negative ``amount``. Auditor needs visibility: was this
+            # an approved credit memo, or a data-entry error?
+            if entry.amount < 0:
+                severity = Severity.HIGH if abs(entry.amount) > 10000 else Severity.MEDIUM
+                flagged.append(
+                    FlaggedAR(
+                        entry=entry,
+                        test_name="AR Sub-ledger Negative Invoice",
+                        test_key="ar_sl_negative_invoice",
+                        test_tier=TestTier.STRUCTURAL,
+                        severity=severity,
+                        issue=(
+                            f"Sub-ledger invoice has negative amount "
+                            f"{entry.amount:,.2f} — credit memo or data-entry "
+                            "error requiring auditor confirmation."
+                        ),
+                        details={"amount": entry.amount},
+                    )
+                )
+
+    total = len(sl_entries)
+    return ARTestResult(
+        test_name="AR Sub-ledger Negative Invoice",
+        test_key="ar_sl_negative_invoice",
+        test_tier=TestTier.STRUCTURAL,
+        entries_flagged=len(flagged),
+        total_entries=total,
+        flag_rate=len(flagged) / total if total > 0 else 0.0,
+        severity=max(
+            (f.severity for f in flagged),
+            default=Severity.LOW,
+            key=lambda s: SEVERITY_WEIGHTS[s],
+        ),
+        description=(
+            "Sub-ledger invoices with negative amounts — credit memos or "
+            "reversal entries that the TB-level AR sign check cannot see."
+        ),
         flagged_entries=flagged,
     )
 
@@ -1553,7 +1652,9 @@ def test_rollforward_reconciliation(
     total_revenue = abs(sum((a.balance for a in revenue_accounts), Decimal("0")))
 
     if config.beginning_ar_balance is not None and config.collections_total is not None:
-        expected_ending = Decimal(str(config.beginning_ar_balance)) + total_revenue - Decimal(str(config.collections_total))
+        expected_ending = (
+            Decimal(str(config.beginning_ar_balance)) + total_revenue - Decimal(str(config.collections_total))
+        )
         difference = abs(ending_ar - expected_ending)
         threshold = max(abs(ending_ar) * Decimal(str(config.rollforward_threshold_pct)), Decimal("100"))
 
@@ -1738,9 +1839,26 @@ def run_ar_test_battery(
     results.append(test_missing_allowance(accounts, config))
 
     if has_subledger:
+        # Sprint 702: AR-01b — sub-ledger negative invoices (distinct
+        # assertion from AR-01 TB-level sign). Only runs when sub-ledger
+        # present; the TB-level check above runs regardless.
+        results.append(test_ar_sl_negative_invoice(sl_entries, config))
         results.append(test_negative_aging(sl_entries, config))
         results.append(test_unreconciled_detail(accounts, sl_entries, config))
     else:
+        # Keep the test-slot count stable across has_subledger branches.
+        # Downstream consumers (dashboards, CSV exports) assume one slot
+        # per test, so each sub-ledger-dependent test emits a skipped
+        # result when the sub-ledger is absent.
+        results.append(
+            _skipped_result(
+                "AR Sub-ledger Negative Invoice",
+                "ar_sl_negative_invoice",
+                TestTier.STRUCTURAL,
+                "Sub-ledger invoices with negative amounts",
+                "Requires sub-ledger file",
+            )
+        )
         results.append(
             _skipped_result(
                 "Negative Aging Buckets",
@@ -2033,3 +2151,29 @@ def run_ar_aging(
         ar_summary=ar_summary,
         aging_schedule=aging_schedule,
     )
+
+
+# =============================================================================
+# Sprint 700/703: Anomaly-framework contract registration
+# =============================================================================
+from shared.engine_contract import DetectionPreconditions, EngineInputContract
+
+ENGINE_CONTRACT = EngineInputContract(
+    tool="ar_aging",
+    required_columns=frozenset({"Account", "Debit", "Credit"}),
+    optional_columns=frozenset(
+        {"Account Name", "Customer ID", "Customer Name", "Invoice Number", "Amount", "Invoice Date"}
+    ),
+    entry_point="ar_aging_engine.run_ar_aging",
+    detection_targets={
+        "ar_sl_negative_invoice": DetectionPreconditions(
+            requires_columns=frozenset({"Amount"}),
+            scope="sub_ledger",
+            description=(
+                "Sprint 702: AR-01b — sub-ledger invoice with amount < 0. "
+                "Distinct from AR-01 (TB credit balance on asset account)."
+            ),
+            emits_fields=frozenset({"entries_flagged", "flagged_entries"}),
+        ),
+    },
+)

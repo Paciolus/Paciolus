@@ -12,9 +12,13 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
 from auth import require_verified_user
+from database import get_db
 from models import User
+from shared.entitlement_checks import check_export_access
+from shared.pdf_branding import apply_pdf_branding, load_pdf_branding_context
 
 logger = logging.getLogger(__name__)
 from accrual_completeness_memo import generate_accrual_completeness_memo
@@ -119,8 +123,16 @@ def _memo_export_handler(
     entry: MemoRegistryEntry,
     payload: BaseModel,
     preprocessor: CustomPreprocessor = _standard_preprocessor,
+    current_user: User | None = None,
+    db: Session | None = None,
 ) -> StreamingResponse:
-    """Deserialize -> generate -> stream -> exception handling for any memo type."""
+    """Deserialize -> generate -> stream -> exception handling for any memo type.
+
+    Sprint 679: ``current_user`` + ``db`` propagate the Enterprise PDF
+    branding context via ContextVar. When present, the memo template
+    picks up the user's firm logo / header / footer automatically — no
+    signature changes needed on the 18 downstream memo generators.
+    """
     try:
         result_dict, extra_kwargs = preprocessor(payload)
 
@@ -138,11 +150,20 @@ def _memo_export_handler(
             "include_signoff": payload.include_signoff,  # type: ignore[attr-defined]
         }
 
-        pdf_bytes: bytes = entry.generator(
-            **{entry.result_kwarg: result_dict},
-            **common_kwargs,
-            **extra_kwargs,
-        )
+        # Sprint 679: resolve branding for the caller and scope it to the
+        # PDF-generation call via ContextVar. Falls back to blank
+        # (Paciolus default) when user/db aren't supplied or the tier
+        # doesn't include custom branding.
+        branding = None
+        if current_user is not None and db is not None:
+            branding = load_pdf_branding_context(current_user, db)
+
+        with apply_pdf_branding(branding):
+            pdf_bytes: bytes = entry.generator(
+                **{entry.result_kwarg: result_dict},
+                **common_kwargs,
+                **extra_kwargs,
+            )
 
         download_filename = safe_download_filename(
             payload.filename,  # type: ignore[attr-defined]
@@ -380,8 +401,10 @@ def _register_standard_routes() -> None:
                 request: Request,
                 payload: _schema,  # type: ignore[valid-type]
                 current_user: User = Depends(require_verified_user),
+                db: Session = Depends(get_db),
             ) -> StreamingResponse:
-                return _memo_export_handler(_entry, payload)
+                # Sprint 679: thread user + db for PDF branding.
+                return _memo_export_handler(_entry, payload, current_user=current_user, db=db)
 
             _handler.__doc__ = _entry.docstring
             _handler.__name__ = f"export_{_entry.route_path.split('/')[-1].replace('-', '_')}"
@@ -389,7 +412,9 @@ def _register_standard_routes() -> None:
 
         handler = _make_handler()
         decorated = limiter.limit(RATE_LIMIT_EXPORT)(handler)
-        router.post(entry.route_path)(decorated)
+        # Sprint 678: tier-gate every memo export behind check_export_access.
+        # Free tier has no pdf/excel/csv export; helper raises 403 in hard mode.
+        router.post(entry.route_path, dependencies=[Depends(check_export_access)])(decorated)
 
 
 _register_standard_routes()
@@ -413,18 +438,21 @@ _SAMPLING_EVAL_ENTRY = MemoRegistryEntry(
 )
 
 
-@router.post(_SAMPLING_EVAL_ENTRY.route_path)
+@router.post(_SAMPLING_EVAL_ENTRY.route_path, dependencies=[Depends(check_export_access)])
 @limiter.limit(RATE_LIMIT_EXPORT)
 def export_sampling_evaluation_memo(
     request: Request,
     eval_input: SamplingEvaluationMemoInput,
     current_user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
 ) -> StreamingResponse:
     """Generate and download a Sampling Evaluation Memo PDF."""
     return _memo_export_handler(
         _SAMPLING_EVAL_ENTRY,
         eval_input,
         preprocessor=_sampling_evaluation_preprocessor,
+        current_user=current_user,
+        db=db,
     )
 
 
@@ -442,16 +470,19 @@ _FLUX_ENTRY = MemoRegistryEntry(
 )
 
 
-@router.post(_FLUX_ENTRY.route_path)
+@router.post(_FLUX_ENTRY.route_path, dependencies=[Depends(check_export_access)])
 @limiter.limit(RATE_LIMIT_EXPORT)
 def export_flux_expectations_memo(
     request: Request,
     payload: FluxExpectationsMemoInput,
     current_user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
 ) -> StreamingResponse:
     """Generate and download ISA 520 Flux Expectations Memo PDF."""
     return _memo_export_handler(
         _FLUX_ENTRY,
         payload,
         preprocessor=_flux_expectations_preprocessor,
+        current_user=current_user,
+        db=db,
     )

@@ -17,6 +17,9 @@ from auth import require_verified_user
 from database import get_db
 from models import User
 from multi_period_comparison import (
+    SIGNIFICANT_VARIANCE_AMOUNT,
+    SIGNIFICANT_VARIANCE_PERCENT,
+    SignificanceThresholds,
     compare_three_periods,
     compare_trial_balances,
     export_movements_csv,
@@ -27,9 +30,11 @@ from shared.diagnostic_response_schemas import (
     MovementSummaryResponse,
     ThreeWayMovementSummaryResponse,
 )
+from shared.entitlement_checks import check_export_access
 from shared.error_messages import sanitize_error
 from shared.helpers import maybe_record_tool_run
 from shared.rate_limits import RATE_LIMIT_AUDIT, RATE_LIMIT_EXPORT, limiter
+from shared.testing_route import enforce_tool_access
 
 router = APIRouter(tags=["multi_period"])
 
@@ -43,6 +48,38 @@ class AccountEntry(BaseModel):
     type: str = "unknown"
 
 
+# Significance-threshold bounds for the multi-period RPT-02 override.
+# 0–100% for the pct threshold; 0–$100M for the absolute threshold (well
+# below any realistic single-account materiality).
+_SIG_PCT_BOUNDS: tuple[float, float] = (0.0, 100.0)
+_SIG_AMOUNT_BOUNDS: tuple[float, float] = (0.0, 100_000_000.0)
+
+
+def _resolve_sig_thresholds(
+    significant_variance_percent: Optional[float],
+    significant_variance_amount: Optional[float],
+) -> Optional[SignificanceThresholds]:
+    """Build a validated SignificanceThresholds instance from optional overrides.
+
+    Returns None when neither override is supplied so engine defaults apply
+    (preserves historical behaviour for every existing caller)."""
+    if significant_variance_percent is None and significant_variance_amount is None:
+        return None
+    pct = SIGNIFICANT_VARIANCE_PERCENT if significant_variance_percent is None else significant_variance_percent
+    amt = SIGNIFICANT_VARIANCE_AMOUNT if significant_variance_amount is None else significant_variance_amount
+    if not (_SIG_PCT_BOUNDS[0] <= pct <= _SIG_PCT_BOUNDS[1]):
+        raise HTTPException(
+            status_code=400,
+            detail=f"significant_variance_percent must be within {_SIG_PCT_BOUNDS}",
+        )
+    if not (_SIG_AMOUNT_BOUNDS[0] <= amt <= _SIG_AMOUNT_BOUNDS[1]):
+        raise HTTPException(
+            status_code=400,
+            detail=f"significant_variance_amount must be within {_SIG_AMOUNT_BOUNDS}",
+        )
+    return SignificanceThresholds(variance_percent=pct, variance_amount=amt)
+
+
 class ComparePeriodAccountsRequest(BaseModel):
     """Request to compare two trial balance datasets at the account level."""
 
@@ -51,6 +88,14 @@ class ComparePeriodAccountsRequest(BaseModel):
     prior_label: str = Field("Prior Period", min_length=1, max_length=100, description="Label for prior period")
     current_label: str = Field("Current Period", min_length=1, max_length=100, description="Label for current period")
     materiality_threshold: float = Field(0.0, ge=0, description="Materiality threshold in dollars")
+    # RPT-02 configurable thresholds (2026-04-20).  Optional: when omitted,
+    # engine defaults (10% / $10,000) apply.
+    significant_variance_percent: Optional[float] = Field(
+        None, ge=0, le=100, description="Override for significance variance percent (default 10%)"
+    )
+    significant_variance_amount: Optional[float] = Field(
+        None, ge=0, description="Override for significance variance absolute $ (default $10,000)"
+    )
     engagement_id: Optional[int] = Field(None, description="Optional engagement to link this run to")
 
 
@@ -64,6 +109,12 @@ class ThreeWayComparisonRequest(BaseModel):
     current_label: str = Field("Current Year", min_length=1, max_length=100, description="Label for current period")
     budget_label: str = Field("Budget", min_length=1, max_length=100, description="Label for budget/forecast")
     materiality_threshold: float = Field(0.0, ge=0, description="Materiality threshold in dollars")
+    significant_variance_percent: Optional[float] = Field(
+        None, ge=0, le=100, description="Override for significance variance percent (default 10%)"
+    )
+    significant_variance_amount: Optional[float] = Field(
+        None, ge=0, description="Override for significance variance absolute $ (default $10,000)"
+    )
     engagement_id: Optional[int] = Field(None, description="Optional engagement to link this run to")
 
 
@@ -77,6 +128,8 @@ class MovementExportRequest(BaseModel):
     current_label: str = Field("Current Period", min_length=1, max_length=100, description="Label for current period")
     budget_label: str = Field("Budget", min_length=1, max_length=100, description="Label for budget/forecast")
     materiality_threshold: float = Field(0.0, ge=0, description="Materiality threshold in dollars")
+    significant_variance_percent: Optional[float] = Field(None, ge=0, le=100)
+    significant_variance_amount: Optional[float] = Field(None, ge=0)
 
 
 @router.post("/audit/compare-periods", response_model=MovementSummaryResponse)
@@ -89,17 +142,21 @@ def compare_period_trial_balances(
     db: Session = Depends(get_db),
 ) -> dict[str, object]:
     """Compare two trial balance datasets at the account level."""
+    # Sprint 678: multi-period is a paid tool — gate Free tier
+    enforce_tool_access(current_user, "multi_period", db)
     log_secure_operation(
         "compare_period_trial_balances",
         f"User {current_user.id} comparing {len(payload.prior_accounts)} vs {len(payload.current_accounts)} accounts",
     )
 
+    thresholds = _resolve_sig_thresholds(payload.significant_variance_percent, payload.significant_variance_amount)
     result = compare_trial_balances(
         prior_accounts=payload.prior_accounts,
         current_accounts=payload.current_accounts,
         prior_label=payload.prior_label,
         current_label=payload.current_label,
         materiality_threshold=payload.materiality_threshold,
+        thresholds=thresholds,
     )
 
     result_dict = result.to_dict()
@@ -121,12 +178,14 @@ def compare_three_way_trial_balances(
     db: Session = Depends(get_db),
 ) -> dict[str, object]:
     """Compare three trial balance datasets: Prior vs Current vs Budget/Forecast."""
+    enforce_tool_access(current_user, "multi_period", db)
     log_secure_operation(
         "compare_three_way_trial_balances",
         f"User {current_user.id} three-way: {len(payload.prior_accounts)} vs "
         f"{len(payload.current_accounts)} vs {len(payload.budget_accounts)} accounts",
     )
 
+    thresholds = _resolve_sig_thresholds(payload.significant_variance_percent, payload.significant_variance_amount)
     result = compare_three_periods(
         prior_accounts=payload.prior_accounts,
         current_accounts=payload.current_accounts,
@@ -135,6 +194,7 @@ def compare_three_way_trial_balances(
         current_label=payload.current_label,
         budget_label=payload.budget_label,
         materiality_threshold=payload.materiality_threshold,
+        thresholds=thresholds,
     )
 
     result_dict = result.to_dict()
@@ -146,7 +206,7 @@ def compare_three_way_trial_balances(
     return result_dict
 
 
-@router.post("/export/csv/movements")
+@router.post("/export/csv/movements", dependencies=[Depends(check_export_access)])
 @limiter.limit(RATE_LIMIT_EXPORT)
 def export_csv_movements(
     request: Request,
@@ -158,6 +218,7 @@ def export_csv_movements(
 
     try:
         has_budget = payload.budget_accounts is not None and len(payload.budget_accounts) > 0
+        thresholds = _resolve_sig_thresholds(payload.significant_variance_percent, payload.significant_variance_amount)
 
         if has_budget:
             three_way = compare_three_periods(
@@ -168,6 +229,7 @@ def export_csv_movements(
                 current_label=payload.current_label,
                 budget_label=payload.budget_label,
                 materiality_threshold=payload.materiality_threshold,
+                thresholds=thresholds,
             )
             csv_content = export_movements_csv(
                 three_way,  # type: ignore[arg-type]
@@ -181,6 +243,7 @@ def export_csv_movements(
                 prior_label=payload.prior_label,
                 current_label=payload.current_label,
                 materiality_threshold=payload.materiality_threshold,
+                thresholds=thresholds,
             )
             csv_content = export_movements_csv(two_way)
 

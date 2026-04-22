@@ -578,11 +578,40 @@ _Aggregator router. Composes sub-routers: engagements_analytics, engagements_exp
 | Method | Path | Summary |
 |--------|------|---------|
 | POST | /export-sharing/create | Create a shareable export link. Professional+ only. |
-| GET | /export-sharing/{token} | Download a shared export. Public endpoint (no auth required). |
+| GET | /export-sharing/{token} | Download a non-passcode shared export. Public (no auth). Returns **403** with an instructional message if the share is passcode-protected — callers must switch to the POST variant below. |
+| POST | /export-sharing/{token}/download | Download a passcode-protected shared export. Public (no auth). Body: `{"passcode": "..."}`. |
 | DELETE | /export-sharing/{token} | Revoke a share link. Creator only. |
 | GET | /export-sharing/ | List current user's active share links. |
 
-> **Narrative pending:** Add usage context, request/response examples, and integration notes here.
+### Passcode contract (Sprints 696/697/698, 2026-04-20)
+
+Create-side (`POST /export-sharing/create`):
+- `passcode` (optional) — must be **10+ characters** across **3+ character classes** (upper, lower, digit, special). Weak passcodes are rejected at create time with 422.
+- Hash format: **Argon2id** (OWASP 2024 params). bcrypt retained on verify for the ≤48h share-TTL transition window.
+
+Download-side (`POST /export-sharing/{token}/download`):
+- For passcode-protected shares the body **must** include `{"passcode": "..."}`. Non-passcode shares accept this endpoint too and ignore `body.passcode`, letting clients use a single call pattern.
+- The **GET** variant is retained for non-passcode shares only. The historical `GET /export-sharing/{token}?passcode=…` pattern has been **removed** — query-string passcodes leak via access logs, browser history, and proxies.
+
+Lockout + throttle (Sprint 698):
+- **Per-token:** 5 consecutive failures → 5-minute lockout scoped to the share token, doubling thereafter. Response is 429 with `Retry-After: <seconds>`.
+- **Per-IP:** independent per-IP failure tracker bounds credential-stuffing across many share tokens from one network. Response is 429 with `Retry-After: 900` (15-minute default).
+
+### Error shapes
+
+| Status | Meaning |
+|--------|---------|
+| 200 | Bytes streamed; `Content-Disposition` carries the filename. |
+| 403 | Missing / invalid passcode, or GET hit a passcode-protected share. |
+| 404 | Share not found or revoked. |
+| 410 | Share expired (past TTL). |
+| 422 | Create-side: passcode below strength threshold. |
+| 429 | Lockout active (per-token or per-IP). `Retry-After` header present. |
+
+### Migration notes for callers
+
+- **Query-string passcodes are removed.** Any client constructing `?passcode=X` URLs will receive 403 with an instructional message. Migrate to POST body.
+- **Pre-Sprint-696 SHA-256 hashes** are rejected at verification. The nightly retention cleanup (Sprint 700) revokes them proactively, so owners see "revoked" in their dashboard rather than recipients seeing a silent 403. TTL-expired shares drain within ≤48h anyway.
 
 ---
 

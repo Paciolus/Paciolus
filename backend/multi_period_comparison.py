@@ -40,9 +40,42 @@ from shared.parsing_helpers import safe_decimal
 
 NEAR_ZERO = 0.005  # Below any meaningful financial balance; guards division-by-near-zero
 
-# Significance thresholds
+# Significance thresholds — DEFAULTS.  These constants preserve the historical
+# behaviour (10% / $10,000) and are used when no override is supplied.  Callers
+# that need engagement-specific thresholds should pass them via ``compare_*``
+# functions' ``significant_variance_percent`` / ``significant_variance_amount``
+# parameters.  The API exposes these overrides through route params so settings
+# can be driven by engagement materiality.  Active thresholds are emitted in
+# ``MovementSummary.active_thresholds`` for auditability.
 SIGNIFICANT_VARIANCE_PERCENT = 10.0  # Flag variances > 10%
 SIGNIFICANT_VARIANCE_AMOUNT = 10000.0  # Flag variances > $10,000
+
+
+@dataclass(frozen=True)
+class SignificanceThresholds:
+    """Configurable significance thresholds for multi-period comparison.
+
+    RPT-02 remediation (2026-04-20): previously hard-coded in module-level
+    constants.  Keeping the constants intact preserves every existing call
+    site while adding an explicit, validated override path for new callers.
+    """
+
+    variance_percent: float = SIGNIFICANT_VARIANCE_PERCENT
+    variance_amount: float = SIGNIFICANT_VARIANCE_AMOUNT
+
+    def __post_init__(self) -> None:  # pragma: no cover — trivial
+        if self.variance_percent < 0 or self.variance_amount < 0:
+            raise ValueError(
+                "SignificanceThresholds values must be non-negative; got "
+                f"percent={self.variance_percent}, amount={self.variance_amount}"
+            )
+
+    def to_dict(self) -> dict[str, float]:
+        return {
+            "significant_variance_percent": self.variance_percent,
+            "significant_variance_amount": self.variance_amount,
+        }
+
 
 # Account matching
 ABBREVIATION_MAP: dict[str, str] = {
@@ -236,6 +269,11 @@ class MovementSummary:
     # Duplicate account coalescing warnings (FIX-2A)
     duplicate_account_warnings: list[dict] = field(default_factory=list)
 
+    # Active significance thresholds (RPT-02, 2026-04-20).  Populated by
+    # compare_trial_balances so downstream consumers — memos, PDFs, audit
+    # workpapers — can disclose the thresholds that shaped the classification.
+    active_thresholds: Optional[dict] = None
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "prior_label": self.prior_label,
@@ -255,6 +293,7 @@ class MovementSummary:
             "current_total_credits": self.current_total_credits,
             "framework_note": self.framework_note,
             "duplicate_account_warnings": self.duplicate_account_warnings,
+            "active_thresholds": self.active_thresholds,
         }
 
 
@@ -452,21 +491,24 @@ def classify_significance(
     change_percent: Optional[float],
     materiality_threshold: float = 0.0,
     movement_type: MovementType = MovementType.UNCHANGED,
+    thresholds: Optional[SignificanceThresholds] = None,
 ) -> SignificanceTier:
     """
     Determine the significance tier of a movement.
 
     Material: exceeds materiality threshold (if set)
-    Significant: >10% or >$10K but below materiality
+    Significant: > configured variance % or > configured variance $ but below
+        materiality.  Defaults preserve historical behaviour (10% / $10,000).
     Minor: below both thresholds
     """
+    t = thresholds or SignificanceThresholds()
     abs_change = abs(change_amount)
 
     # New and closed accounts are always at least significant
     if movement_type in (MovementType.NEW_ACCOUNT, MovementType.CLOSED_ACCOUNT):
         if materiality_threshold > 0 and abs_change >= materiality_threshold:
             return SignificanceTier.MATERIAL
-        if abs_change >= SIGNIFICANT_VARIANCE_AMOUNT:
+        if abs_change >= t.variance_amount:
             return SignificanceTier.SIGNIFICANT
         return SignificanceTier.SIGNIFICANT  # Always significant regardless of amount
 
@@ -481,9 +523,9 @@ def classify_significance(
         return SignificanceTier.MATERIAL
 
     # Standard significance thresholds
-    if abs_change >= SIGNIFICANT_VARIANCE_AMOUNT:
+    if abs_change >= t.variance_amount:
         return SignificanceTier.SIGNIFICANT
-    if change_percent is not None and abs(change_percent) >= SIGNIFICANT_VARIANCE_PERCENT:
+    if change_percent is not None and abs(change_percent) >= t.variance_percent:
         return SignificanceTier.SIGNIFICANT
 
     return SignificanceTier.MINOR
@@ -571,6 +613,7 @@ def compare_trial_balances(
     prior_label: str = "Prior Period",
     current_label: str = "Current Period",
     materiality_threshold: float = 0.0,
+    thresholds: Optional[SignificanceThresholds] = None,
 ) -> MovementSummary:
     """
     Compare two trial balance datasets at the account level.
@@ -583,10 +626,14 @@ def compare_trial_balances(
         prior_label: Display label for the prior period (e.g., "FY2024").
         current_label: Display label for the current period (e.g., "FY2025").
         materiality_threshold: Dollar threshold for material classification.
+        thresholds: Optional override for significance thresholds.  When None,
+            preserves historical defaults (10% / $10,000).  Emitted in
+            ``MovementSummary.active_thresholds`` for auditability.
 
     Returns:
         MovementSummary with all movements classified and grouped by lead sheet.
     """
+    active_thresholds = thresholds or SignificanceThresholds()
     matched, duplicate_account_warnings = match_accounts(prior_accounts, current_accounts)
 
     all_movements: list[AccountMovement] = []
@@ -619,7 +666,13 @@ def compare_trial_balances(
         )
 
         # Classify significance
-        significance = classify_significance(change_amount, change_percent, materiality_threshold, movement_type)
+        significance = classify_significance(
+            change_amount,
+            change_percent,
+            materiality_threshold,
+            movement_type,
+            thresholds=active_thresholds,
+        )
 
         # Get lead sheet info
         ls_letter, ls_name, ls_category = _get_lead_sheet_info(display_name, account_type)
@@ -691,6 +744,7 @@ def compare_trial_balances(
         current_total_debits=float(current_total_debits),
         current_total_credits=float(current_total_credits),
         duplicate_account_warnings=duplicate_account_warnings,
+        active_thresholds=active_thresholds.to_dict(),
     )
 
 
@@ -867,6 +921,9 @@ class ThreeWayMovementSummary:
     # Duplicate account coalescing warnings (FIX-2A)
     duplicate_account_warnings: list[dict] = field(default_factory=list)
 
+    # Active significance thresholds (RPT-02, 2026-04-20).
+    active_thresholds: Optional[dict] = None
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "prior_label": self.prior_label,
@@ -893,6 +950,7 @@ class ThreeWayMovementSummary:
             "accounts_on_budget": self.accounts_on_budget,
             "framework_note": self.framework_note,
             "duplicate_account_warnings": self.duplicate_account_warnings,
+            "active_thresholds": self.active_thresholds,
         }
 
 
@@ -904,6 +962,7 @@ def compare_three_periods(
     current_label: str = "Current Year",
     budget_label: str = "Budget",
     materiality_threshold: float = 0.0,
+    thresholds: Optional[SignificanceThresholds] = None,
 ) -> ThreeWayMovementSummary:
     """
     Compare three trial balance datasets: Prior vs Current vs Budget/Forecast.
@@ -923,13 +982,17 @@ def compare_three_periods(
     Returns:
         ThreeWayMovementSummary with movements, budget variances, and lead sheet grouping.
     """
-    # Step 1: Run standard two-way comparison
+    # Step 1: Run standard two-way comparison.  Threshold overrides are
+    # threaded through so budget-variance classification uses the same
+    # policy as the prior/current comparison.
+    active_thresholds = thresholds or SignificanceThresholds()
     two_way = compare_trial_balances(
         prior_accounts,
         current_accounts,
         prior_label,
         current_label,
         materiality_threshold,
+        thresholds=active_thresholds,
     )
 
     # Step 2: Build budget lookup and pre-compute balances (single pass)
@@ -965,7 +1028,12 @@ def compare_three_periods(
             else:
                 variance_percent = None
 
-            variance_sig = classify_significance(variance_amount, variance_percent, materiality_threshold)
+            variance_sig = classify_significance(
+                variance_amount,
+                variance_percent,
+                materiality_threshold,
+                thresholds=active_thresholds,
+            )
 
             # Sprint 640: classify the variance direction and emit a
             # commentary prompt for CRITICAL movements.
@@ -1075,6 +1143,7 @@ def compare_three_periods(
         accounts_under_budget=under_budget,
         accounts_on_budget=on_budget,
         duplicate_account_warnings=two_way.duplicate_account_warnings,
+        active_thresholds=active_thresholds.to_dict(),
     )
 
 

@@ -25,6 +25,7 @@ class RiskTier(str, Enum):
 
 class TestTier(str, Enum):
     """Test classification tier."""
+
     __test__ = False  # Prevent pytest collection warning
 
     STRUCTURAL = "structural"  # Tier 1: Basic structural checks
@@ -62,6 +63,60 @@ def score_to_risk_tier(score: float) -> RiskTier:
         return RiskTier.ELEVATED
     else:
         return RiskTier.HIGH
+
+
+# ---------------------------------------------------------------------------
+# Tier taxonomy normalization (DASH-01 remediation, 2026-04-20)
+# ---------------------------------------------------------------------------
+#
+# Historical tension: different report producers emit different tier
+# vocabularies.  Tool-level ``MatchRiskLevel`` (three-way match) uses a
+# 3-tier scale (low / medium / high) while the canonical dashboard scale
+# ``RiskTier`` is 4-tier (low / moderate / elevated / high).  The engagement
+# dashboard was silently mis-aligning — ``medium`` never matched any of the
+# 4-tier branches, so three-way-match findings with ``medium`` tier never
+# surfaced in the priority action list.
+#
+# ``normalize_risk_tier`` is the single consumer-side translation point.
+# It should be called by any aggregator that ingests tier strings from
+# heterogeneous report producers.
+
+_CANONICAL_TIERS: frozenset[str] = frozenset({"low", "moderate", "elevated", "high"})
+
+# Aliases from other producer taxonomies → canonical dashboard tier.
+# "medium" is the three-way-match aliasing bug; other entries cover legacy
+# spellings that have appeared in older report fixtures.
+_TIER_ALIASES: dict[str, str] = {
+    "medium": "moderate",
+    "med": "moderate",
+    "moderate risk": "moderate",
+    "elevated risk": "elevated",
+    "high risk": "high",
+    "low risk": "low",
+    "critical": "high",
+    "none": "low",
+    "minimal": "low",
+}
+
+
+def normalize_risk_tier(tier: object, *, default: str = "low") -> str:
+    """Normalize a tier string into the canonical 4-tier dashboard taxonomy.
+
+    Accepts lists/tuples by taking the first element, strings case-insensitively,
+    and unknown values fall back to ``default`` (low, by default).  This keeps
+    the dashboard defensive: a new producer introducing an unrecognised tier
+    cannot silently widen the ``elevated`` priority list.
+    """
+    if isinstance(tier, (list, tuple)):
+        tier = tier[0] if tier else default
+    if tier is None:
+        return default
+    t = str(tier).strip().lower()
+    if t in _CANONICAL_TIERS:
+        return t
+    if t in _TIER_ALIASES:
+        return _TIER_ALIASES[t]
+    return default
 
 
 def zscore_to_severity(z: float) -> Severity:

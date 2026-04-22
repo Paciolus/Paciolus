@@ -22,6 +22,7 @@ from leadsheet_generator import generate_leadsheets
 from models import User
 from pdf_generator import generate_audit_report, generate_financial_statements_pdf
 from recon_engine import ReconResult, ReconScore
+from shared.entitlement_checks import check_export_access
 from shared.error_messages import sanitize_error
 from shared.export_helpers import streaming_csv_response, streaming_excel_response, streaming_pdf_response
 from shared.export_schemas import (
@@ -42,7 +43,7 @@ router = APIRouter(tags=["export"])
 # --- PDF Export ---
 
 
-@router.post("/export/pdf")
+@router.post("/export/pdf", dependencies=[Depends(check_export_access)])
 @limiter.limit(RATE_LIMIT_EXPORT)
 def export_pdf_report(
     request: Request, audit_result: AuditResultInput, current_user: User = Depends(require_verified_user)
@@ -78,7 +79,7 @@ def export_pdf_report(
 # --- Excel Export ---
 
 
-@router.post("/export/excel")
+@router.post("/export/excel", dependencies=[Depends(check_export_access)])
 @limiter.limit(RATE_LIMIT_EXPORT)
 def export_excel_workpaper(
     request: Request, audit_result: AuditResultInput, current_user: User = Depends(require_verified_user)
@@ -114,7 +115,7 @@ def export_excel_workpaper(
 # --- CSV Trial Balance ---
 
 
-@router.post("/export/csv/trial-balance")
+@router.post("/export/csv/trial-balance", dependencies=[Depends(check_export_access)])
 @limiter.limit(RATE_LIMIT_EXPORT)
 def export_csv_trial_balance(
     request: Request, audit_result: AuditResultInput, current_user: User = Depends(require_verified_user)
@@ -197,7 +198,7 @@ def export_csv_trial_balance(
 # --- CSV Anomalies ---
 
 
-@router.post("/export/csv/anomalies")
+@router.post("/export/csv/anomalies", dependencies=[Depends(check_export_access)])
 @limiter.limit(RATE_LIMIT_EXPORT)
 def export_csv_anomalies(
     request: Request, audit_result: AuditResultInput, current_user: User = Depends(require_verified_user)
@@ -281,7 +282,7 @@ def export_csv_anomalies(
 # --- Lead Sheet Export ---
 
 
-@router.post("/export/leadsheets")
+@router.post("/export/leadsheets", dependencies=[Depends(check_export_access)])
 @limiter.limit(RATE_LIMIT_EXPORT)
 def export_leadsheets(
     request: Request, payload: LeadSheetInput, current_user: User = Depends(require_verified_user)
@@ -353,7 +354,7 @@ def export_leadsheets(
 # --- Financial Statements Export ---
 
 
-@router.post("/export/financial-statements")
+@router.post("/export/financial-statements", dependencies=[Depends(check_export_access)])
 @limiter.limit(RATE_LIMIT_EXPORT)
 def export_financial_statements(
     request: Request,
@@ -414,7 +415,7 @@ def export_financial_statements(
 # --- Pre-Flight Issues CSV (Sprint 283) ---
 
 
-@router.post("/export/csv/preflight-issues")
+@router.post("/export/csv/preflight-issues", dependencies=[Depends(check_export_access)])
 @limiter.limit(RATE_LIMIT_EXPORT)
 def export_csv_preflight_issues(
     request: Request,
@@ -454,7 +455,7 @@ def export_csv_preflight_issues(
 # --- Population Profile CSV (Sprint 287) ---
 
 
-@router.post("/export/csv/population-profile")
+@router.post("/export/csv/population-profile", dependencies=[Depends(check_export_access)])
 @limiter.limit(RATE_LIMIT_EXPORT)
 def export_csv_population_profile(
     request: Request,
@@ -528,7 +529,7 @@ def export_csv_population_profile(
 # --- Expense Category CSV (Sprint 289) ---
 
 
-@router.post("/export/csv/expense-category-analytics")
+@router.post("/export/csv/expense-category-analytics", dependencies=[Depends(check_export_access)])
 @limiter.limit(RATE_LIMIT_EXPORT)
 def export_csv_expense_category(
     request: Request,
@@ -609,7 +610,7 @@ def export_csv_expense_category(
 # --- Accrual Completeness CSV (Sprint 290) ---
 
 
-@router.post("/export/csv/accrual-completeness")
+@router.post("/export/csv/accrual-completeness", dependencies=[Depends(check_export_access)])
 @limiter.limit(RATE_LIMIT_EXPORT)
 def export_csv_accrual_completeness(
     request: Request,

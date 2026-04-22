@@ -1,12 +1,20 @@
 # Security Policy
 
-**Version:** 2.6
+**Version:** 2.7
 **Document Classification:** Public
-**Effective Date:** February 26, 2026
-**Last Updated:** February 27, 2026
+**Effective Date:** April 21, 2026
+**Last Updated:** April 21, 2026
 **Owner:** Chief Information Security Officer
 **Review Cycle:** Quarterly
-**Next Review:** May 26, 2026
+**Next Review:** July 21, 2026
+
+**v2.7 changes (Sprints 696–700, 2026-04-20):**
+- Export-share passcode KDF upgraded from SHA-256 → bcrypt (cost 12) → Argon2id (OWASP 2024 params: m=64 MiB, t=3, p=4, 32-byte tag, 16-byte salt). See §2.2 and §2.4 #8.
+- Passcode transport moved from GET `?passcode=` query string to POST `/export-sharing/{token}/download` JSON body (query strings leak via access logs, browser history, proxies).
+- Per-token brute-force lockout: 5 fails → 5-minute token-scoped lockout, doubling thereafter; `Retry-After` header returned on 429.
+- Per-IP passcode-failure throttle layered on top, bounding credential-stuffing across many share tokens from a single network.
+- Rate-limit strict-mode fail-closed in production — `RATE_LIMIT_STRICT_OVERRIDE=TICKET-ID:YYYY-MM-DD` break-glass (dated, auto-expires).
+- CSRF hardening: production rejects the `X-Requested-With` custom-header fallback; `Sec-Fetch-Site=cross-site|none` refused unless a matching Origin/Referer is present.
 
 ---
 
@@ -108,7 +116,8 @@ ssl_prefer_server_ciphers on;
 ```
 
 #### Data at Rest
-- **bcrypt** for password hashing (work factor: 12 rounds, auto-salted)
+- **bcrypt** for user-account password hashing (work factor: 12 rounds, auto-salted)
+- **Argon2id** for export-share passcodes (OWASP 2024 cheat-sheet params — memory=64 MiB, time=3, parallelism=4, 32-byte tag, 16-byte salt). bcrypt retained on the verify path during the ≤48h share-TTL transition window so Sprint 696 shares still open while Sprint 697 (Argon2id) shares are the new write format. SHA-256 hex passcodes (pre-Sprint-696) are refused at verification and proactively revoked by the nightly retention cleanup (Sprint 700).
 - **AES-256 encryption** for all application data at rest — provided and enforced by Render's managed PostgreSQL service (industry-standard provider-level encryption; not reliant on application configuration)
 - **No encryption needed for financial data** (Zero-Storage — data is ephemeral; trial balance data is never written to disk)
 - **Vercel** (frontend hosting) has no persistent storage configured — no KV, Blob, Postgres, or Edge Config instances are provisioned; all application data resides exclusively on Render
@@ -160,7 +169,7 @@ The following feature stores **derived** financial data (analysis results, not r
 5. **Revocable:** Users can revoke share links before expiry
 6. **Access logging:** Each download increments `access_count` for audit trail; anomaly warnings at >10 downloads
 7. **Provider-level encryption at rest:** Render managed PostgreSQL provides AES-256 encryption
-8. **Optional passcode protection:** Creators can set a passcode (SHA-256 hashed) required for download
+8. **Optional passcode protection:** Creators can set a passcode (Argon2id hashed with OWASP 2024 parameters; see §2.2) required for download. Passcodes must be 10+ characters across 3+ character classes, are transported via POST JSON body (never query string), and are protected by per-token + per-IP brute-force lockout with `Retry-After`-governed cooldown on 429.
 9. **Single-use mode:** Optional setting to auto-revoke after first successful download
 10. **Security headers:** Download responses include `Referrer-Policy: no-referrer`, `X-Content-Type-Options: nosniff`, `Cache-Control: no-store`
 
