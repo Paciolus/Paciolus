@@ -1,23 +1,24 @@
 {
   "qa_warden": {
-    "date": "2026-04-21",
+    "date": "2026-04-22",
     "backend": {
-      "passed": 7975,
+      "passed": 8046,
       "failed": 0,
       "errors": 0,
-      "duration_s": 584.5,
+      "duration_s": 607.7,
       "failing_tests": [],
+      "collection_error": null,
       "new_failures": [],
       "resolved": []
     },
     "frontend": {
-      "passed": 1821,
+      "passed": 1887,
       "failed": 0,
-      "duration_s": 46.2
+      "duration_s": 47.1
     }
   },
   "report_auditor": {
-    "date": "2026-04-21",
+    "date": "2026-04-22",
     "bug_tracker": {
       "BUG-001": {
         "description": "Suggested procedures rotation bug \u2014 procedures repeat rather than rotate across reports",
@@ -57,7 +58,7 @@
     }
   },
   "coverage_sentinel": {
-    "date": "2026-04-21",
+    "date": "2026-04-22",
     "history": [
       {
         "date": "2026-04-14",
@@ -82,6 +83,10 @@
       {
         "date": "2026-04-21",
         "percent_covered": 92.8
+      },
+      {
+        "date": "2026-04-22",
+        "percent_covered": 92.71
       }
     ]
   }

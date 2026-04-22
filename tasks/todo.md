@@ -1408,6 +1408,46 @@ Nothing weakened — auth/security/zero-storage untouched, no tests silenced, ev
 - `Trial balance analysis failed [OptionError]` and `[ValueError]` on `/audit/trial-balance` (1 event each — edge cases in upload parsing)
 - `InvalidOperation [decimal.ConversionSyntax]` on `/audit/preflight` (3 events — likely malformed numeric input)
 - `Background register_verification exception [ForbiddenError]` (count unknown, classification pending)
-- File these as Sprint 712 (or a single batched P2 sweep) after Sprint 711 deploys clean.
+- File as Sprint 713 (batched P2 Sentry sweep) after Sprint 711 deploys clean. Sprint 712 was repurposed for the nightly-agent false-green fix surfaced by the 2026-04-22 nightly.
 
 ---
+
+## Nightly Agent Remediation — 2026-04-22
+
+> **Source:** 2026-04-22 nightly went RED. Coverage Sentinel failed with 38 collection errors; QA Warden reported a **false green** (`Backend: 0 passed / 0 failed in 0.0s`, `status: green`). Both are symptoms of the same environment drift Sprint 675 partially fixed — the venv is the source of truth, not `C:/Python312`.
+
+---
+
+### Sprint 712: Nightly agents venv-first + QA Warden false-green guard
+**Status:** COMPLETE
+**Priority:** P1 (nightly signal integrity)
+**Source:** Nightly audit 2026-04-22 — Coverage Sentinel RED (38 collection errors), QA Warden false GREEN (0 backend tests ran, classified as healthy).
+
+**Root cause:** Sprint 697 added `argon2-cffi>=23.1.0` to `backend/requirements.txt`. The dep installs into `backend/venv/` (production contract) but is absent from `C:/Python312` (the stale system Python). `qa_warden.py` and `coverage_sentinel.py` still invoke pytest via `SYSTEM_PYTHON`, so every test module that transitively imports `shared.passcode_security` → `argon2` fails at collection. Thirty-eight files import `main` directly or indirectly, which pulls in `routes/export_sharing.py`, which imports the passcode module. That's the "38 errors during collection" surface.
+
+Secondary defect: QA Warden's status classifier treats `passed == failed == errors == 0` as GREEN. When collection interrupts pytest (exit 2), no `N passed in Xs` summary line is emitted, the parsing regex fails silently, and the run is recorded as healthy — hiding a catastrophic environment breakage behind a clean badge. The commit-msg hook and CEO validation flow both depend on nightly signal quality; a silent false-green is the worst possible failure mode for launch-week operational trust.
+
+Sprint 675 established the exact fix pattern for `dependency_sentinel.py` (switch to `PYTHON_BIN` with `SYSTEM_PYTHON` fallback). This sprint propagates the fix to the remaining two agents AND adds a structural guard so a future environment breakage cannot re-open the false-green class.
+
+**Changes:**
+- [x] `scripts/overnight/agents/qa_warden.py::_run_backend_tests` — resolve `python_bin = PYTHON_BIN if PYTHON_BIN.exists() else SYSTEM_PYTHON` once at the top of the function; threaded into both the json-report path and the unrecognised-arguments fallback path. Matches the Sprint 675 pattern exactly.
+- [x] `scripts/overnight/agents/coverage_sentinel.py::_run_pytest_with_coverage` — same venv-first resolution for the `--cov` invocation.
+- [x] `scripts/overnight/agents/qa_warden.py` — false-green guard: capture `subprocess.run().returncode`; if `passed + failed + errors == 0` AND `returncode not in (0, 5)` (5 is pytest's "no tests collected" — a legitimate empty run), populate `backend["collection_error"]` with the last 15 lines of stdout/stderr. `run()` now escalates to RED status when a collection_error is present, regardless of the zero-failures signal. Exit code 5 with zero tests ran is still treated as healthy because it's the documented pytest signal for "glob matched nothing" rather than a crash.
+- [x] `scripts/overnight/config.py` — update the stale `# System Python has pytest + all backend deps; venv has anthropic SDK` comment. The venv is now the source of truth for ALL backend dep versions; the Anthropic SDK lives in the venv too via `backend/requirements.txt`. System Python is a degraded fallback for fresh-checkout environments where the venv hasn't been provisioned.
+- [x] No change to `dependency_sentinel.py` (already on `PYTHON_BIN` per Sprint 675). No change to `scout.py` / `report_auditor.py` / `sprint_shepherd.py` / `briefing_compiler.py` — none of them run pytest, so the drift doesn't reach them.
+
+**Verification:**
+- Reproduced the original failure: `C:/Python312/python.exe -m pytest tests/test_metrics_api.py --collect-only` → `ModuleNotFoundError: No module named 'argon2'` (pytest exit 2, 1 error).
+- Confirmed venv path works: `backend/venv/Scripts/python.exe -m pytest tests/test_metrics_api.py tests/test_passcode_argon2.py --collect-only` → 19 tests collected clean.
+- **QA Warden end-to-end** (`python scripts/overnight/agents/qa_warden.py`): `status: green` — Backend 8,046 passed / 0 failed in 607.7s, Frontend 1,887 passed / 0 failed in 47.1s. The previous 2026-04-22 false-green reported `0 passed / 0 failed in 0.0s` — now showing the true ~8k count with `collection_error: null`.
+- **Coverage Sentinel end-to-end** (`python scripts/overnight/agents/coverage_sentinel.py`): `status: green` — 92.71% (88,973 / 95,973 statements covered, 7,000 uncovered). 7-day mean 92.42%, delta +0.29pp. 3 non-production files excluded (Sprint 694 allowlist). Previous nightly had failed with 38 collection errors; now clean.
+- **False-green guard unit tests** (`scripts/overnight/tests/test_qa_warden_guard.py`, 5 tests, all pass): mocks `subprocess.run` to return `returncode=2` + empty stdout → asserts `collection_error` populated + `run()` escalates to RED; complementary test verifies `returncode=5` ("no tests collected") is NOT escalated; venv-preference test verifies the PYTHON_BIN-first resolution order.
+
+**Review:**
+- The comment deletion in `config.py` is small but load-bearing: the old comment actively misled Sprint 675's reviewer ("System Python has pytest + all backend deps") into believing the system Python was a viable source of truth. Retiring that claim prevents the next reviewer from re-introducing the same drift.
+- Chose `returncode not in (0, 5)` rather than `returncode != 0` for the guard because exit code 5 is legitimate when a path filter matches nothing (future CI variant might run subsets). Getting the exclusion right here keeps the guard from false-positive-ing on a legitimate narrow run.
+- Did NOT audit every other script for `SYSTEM_PYTHON` references. A full sweep + switch-to-venv would be a larger hygiene pass; this sprint fixes the two agents that were actively lying about CI state. Any remaining `SYSTEM_PYTHON` usages are either (a) already fine (don't run pytest), or (b) will surface the next time they break — at which point they get the same treatment.
+- `tasks/todo.md` Sprint 711 review referenced "Sprint 712" as the placeholder name for the P2 Sentry backlog sweep. Repurposed to this more-urgent nightly fix; P2 Sentry sweep renumbered to Sprint 713 in-place.
+
+---
+

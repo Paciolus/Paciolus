@@ -19,6 +19,7 @@ from scripts.overnight.config import (
     BACKEND_ROOT,
     BASELINE_FILE,
     FRONTEND_ROOT,
+    PYTHON_BIN,
     REPORTS_DIR,
     SYSTEM_PYTHON,
     TODAY,
@@ -29,9 +30,16 @@ def _run_backend_tests() -> dict:
     """Run pytest and capture summary."""
     json_report = REPORTS_DIR / ".pytest_results.json"
 
+    # Sprint 712: venv is the source of truth for backend deps (installed from
+    # requirements.txt). System Python is a degraded fallback for fresh-checkout
+    # environments where the venv hasn't been provisioned. The older SYSTEM_PYTHON
+    # path missed deps added after Sprint 675 (e.g. argon2-cffi added Sprint 697),
+    # which caused the 2026-04-22 nightly false-green.
+    python_bin = PYTHON_BIN if PYTHON_BIN.exists() else SYSTEM_PYTHON
+
     # Try with --json-report first
     cmd_json = [
-        str(SYSTEM_PYTHON), "-m", "pytest",
+        str(python_bin), "-m", "pytest",
         "--tb=no", "-q",
         "--json-report", f"--json-report-file={json_report}",
     ]
@@ -58,13 +66,14 @@ def _run_backend_tests() -> dict:
             return {
                 "passed": passed, "failed": failed, "errors": errors,
                 "duration_s": round(duration, 1), "failing_tests": failing_tests,
+                "collection_error": None,
             }
         except (json.JSONDecodeError, KeyError):
             pass
 
     # json-report plugin not installed or failed — retry without it
     if "unrecognized arguments" in result.stderr or result.returncode == 4:
-        cmd_plain = [str(SYSTEM_PYTHON), "-m", "pytest", "--tb=no", "-q"]
+        cmd_plain = [str(python_bin), "-m", "pytest", "--tb=no", "-q"]
         result = subprocess.run(
             cmd_plain, cwd=str(BACKEND_ROOT), capture_output=True, text=True, timeout=1200,
         )
@@ -91,9 +100,22 @@ def _run_backend_tests() -> dict:
     if failing_tests and failed == 0:
         failed = len(failing_tests)
 
+    # Sprint 712: false-green guard. Collection errors (pytest exit 2) or
+    # internal errors (exit 3) emit no "N passed in Xs" line, so the regex above
+    # matches nothing and the caller would record the run as 0-passed / 0-failed
+    # — which the status classifier treats as GREEN. Exit code 5 ("no tests
+    # collected") is a legitimate empty-subset signal and stays unescalated.
+    collection_error: str | None = None
+    if (passed + failed + errors == 0) and result.returncode not in (0, 5):
+        tail_lines = output.strip().splitlines()[-15:]
+        collection_error = "\n".join(tail_lines) or (
+            f"pytest exited {result.returncode} with no parseable summary"
+        )
+
     return {
         "passed": passed, "failed": failed, "errors": errors,
         "duration_s": round(duration, 1), "failing_tests": failing_tests,
+        "collection_error": collection_error,
     }
 
 
@@ -177,9 +199,15 @@ def run() -> dict:
     backend["new_failures"] = new_failures
     backend["resolved"] = resolved
 
-    # Determine status
+    # Determine status. Sprint 712: a collection_error signals that pytest
+    # could not even enumerate the suite (e.g. missing runtime dep) — this MUST
+    # escalate to red, even though failed+errors parse as zero. Hiding that
+    # behind a green badge caused the 2026-04-22 false-green incident.
     total_failures = backend["failed"] + backend["errors"] + frontend["failed"]
-    if total_failures == 0:
+    collection_error = backend.get("collection_error")
+    if collection_error:
+        status = "red"
+    elif total_failures == 0:
         status = "green"
     elif new_failures:
         status = "red"
@@ -189,10 +217,19 @@ def run() -> dict:
     # Save updated baseline
     _save_baseline(backend, frontend)
 
-    summary_parts = [
-        f"Backend: {backend['passed']} passed / {backend['failed']} failed in {backend['duration_s']}s.",
-        f"Frontend: {frontend['passed']} passed / {frontend['failed']} failed in {frontend['duration_s']}s.",
-    ]
+    summary_parts = []
+    if collection_error:
+        # Lead with the collection failure — it's the most important signal.
+        summary_parts.append(
+            "Backend: pytest collection FAILED — see reports/nightly/.run_log for details."
+        )
+    else:
+        summary_parts.append(
+            f"Backend: {backend['passed']} passed / {backend['failed']} failed in {backend['duration_s']}s."
+        )
+    summary_parts.append(
+        f"Frontend: {frontend['passed']} passed / {frontend['failed']} failed in {frontend['duration_s']}s."
+    )
     if new_failures:
         summary_parts.append(f"{len(new_failures)} new failure(s) since yesterday.")
     if resolved:
