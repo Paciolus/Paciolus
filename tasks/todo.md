@@ -1249,7 +1249,7 @@ Nothing weakened — auth/security/zero-storage untouched, no tests silenced, ev
 - Chose a tap-to-expand accordion over hover-to-expand so touch devices and keyboard users get the same affordance. Hover would be fine on desktop but would require synthesising a click target for mobile anyway.
 - Did NOT delete `ToolSlideshow.tsx` — 640 lines of working component; low cost to keep, and a future "promo lane" page could consume it. Dead-code removal can happen in a later cleanup pass.
 - Canonical-count enforcement via runtime assertion rather than API fetch: the API dependency would add a load to every marketing page view for data that can't actually change per-request. A generated constant with an assertion is the right abstraction — see the Sprint 706 doc for the swap path if/when it becomes worth the extra complexity.
-- Commit SHA: TBD.
+- Commit SHA: `089cdea`.
 
 ---
 
@@ -1299,23 +1299,25 @@ Nothing weakened — auth/security/zero-storage untouched, no tests silenced, ev
 ---
 
 ### Sprint 709: Small-detail polish batch — contact alignment, Pacioli colophon, nav anchor hint, CTA audit, favicon, demo copy bug
-**Status:** PENDING
+**Status:** MOSTLY COMPLETE (4 of 6 items; two intentionally re-scoped after inspection)
 **Priority:** P3 (polish)
 **Source:** Design audit 2026-04-20
-**Why now:** Six small but high-signal details that ship as one atomic polish PR after the larger design sprints land.
 **Files:**
-- `frontend/src/app/(marketing)/contact/page.tsx`
-- `frontend/src/components/marketing/Footer.tsx`
-- `frontend/src/components/marketing/MarketingHeader.tsx`
 - `frontend/src/app/(marketing)/demo/page.tsx` — copy correction
-- `frontend/public/favicon.svg` + 16×16, 32×32, 180×180, OG preview sizes
+- `frontend/src/components/marketing/MarketingFooter.tsx` — colophon upgrade
+- `frontend/src/components/marketing/MarketingNav.tsx` — CTA label unification
 
 **Changes:**
-- [ ] **Contact page alignment:** "Contact Us" heading is left-aligned while the form itself is centered — axis mismatch. Align both to a left-anchored editorial column (preferred) or both centered. Pick one.
-- [ ] **Demo copy bug:** "Seven tools included with Solo — all twelve with Team." Contradicts the canonical pricing policy (all paid tiers receive all 12 tools). Fix to "All twelve tools included with every paid plan." Cross-check `shared/entitlements.py` + Sprint 692's reconciled language.
-- [ ] **Footer Pacioli colophon:** "*Particularis de Computis et Scripturis* — On Accounts and Records, Luca Pacioli 1494" currently renders at link-list size. Upgrade to a real colophon — 24–28 px display-serif italic, centered on its own row with generous top/bottom spacing, hairline rule above. The emotional climax of the site should feel like one.
-- [ ] **Header nav anchor hint:** the `Platform` nav link is a homepage anchor, not a route. Add a subtle visual hint on anchor-only items (a small `↓` glyph, a leading dot, or a dashed underline) to distinguish them from real-route links — prevents the "I clicked Platform and nothing happened" confusion.
-- [ ] **CTA audit:** grep the marketing surface for `Start Free Trial` / `Get Started` / `Explore Demo` / `Sign In` / `Schedule a call` and align each to the correct variant from Sprint 704 — one primary per section; secondaries for alternatives; tertiaries for low-priority. Deduplicate stacked primaries.
-- [ ] **Favicon check:** verify the `P` monogram renders sharply at 16×16 / 32×32 / 180×180 / OG preview. If the current SVG is too detailed at 16 px, export a simplified variant specifically for the favicon size.
+- [x] **Demo copy bug:** "Seven tools included with Solo — all twelve with Team." Replaced with "All twelve tools included with every paid plan." per `shared/entitlements.py` + Sprint 692's reconciled language. One-line fix in `app/(marketing)/demo/page.tsx:94`.
+- [x] **Footer Pacioli colophon:** rendered in Merriweather italic at `text-2xl md:text-[28px]`, centered on its own row with a hairline `border-t border-obsidian-500/20` rule above, generous `mt-14 pt-10` vertical spacing, oldstyle-nums on the "1494." The emotional climax of the site now reads like a colophon rather than a link-list footnote. 12 existing MarketingFooter tests still pass.
+- [x] **CTA label unification:** MarketingNav's desktop CTA was "Get Started" while every other CTA on the site said "Start Free Trial". Normalised to "Start Free Trial" so there's a single canonical label for the primary conversion action. Full variant-based audit (primary / secondary / tertiary classes) deferred to Sprint 704 since it's the sprint that formalises those variants — this is just the copy fix.
+- [x] **Contact page alignment:** on inspection, the current code already places heading + form in the same `max-w-2xl mx-auto` column with no `text-center` on either — they're already both left-anchored. The sprint audit's impression "heading is left-aligned while the form itself is centered" doesn't match the code. No change needed.
+- [ ] **Header nav anchor hint:** on inspection, every marketing-nav item (Platform / Demo / Pricing / About / Trust / Contact) routes to a real page; none are anchors. The sprint's premise "Platform nav link is a homepage anchor" doesn't match the code — `Platform` routes to `/`. Adding a `↓` glyph to non-anchor links would be misleading. Not-a-bug; closing without change. If the CEO wants Platform to scroll to a homepage section, raise as a separate sprint with that specific scroll target.
+- [ ] **Favicon check:** deferred. Sharp 16/32/180/OG rendering validation requires a real browser tab icon render; out of scope for this session. Flag for a future QA pass.
+
+**Review:**
+- Landed the three mechanically-clear items (demo copy, colophon, CTA label) under one polish batch.
+- Two items re-scoped after reading the code: contact-page alignment is already correct; the nav "anchor hint" premise doesn't match the code. Documented both in the checklist so future eyes don't re-open the same investigation.
+- Commit SHA: TBD.
 
 ---
