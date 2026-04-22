@@ -1171,7 +1171,7 @@ Nothing weakened — auth/security/zero-storage untouched, no tests silenced, ev
 
 **Decisions + work recorded:** 2026-04-22 — body serif = Merriweather (CEO pick). Numeral variants, Blockquote component, paper-grain texture + marble swap all landed. Sprints 704–708 fully unblocked on typography.
 **Remaining Sprint 703 work:** only post-deploy A11y + computed-style Playwright smoke (see above). No further code changes required for the current spec.
-**Commit SHAs:** `42037f3` (decision), `8f729e2` (paper-grain asset + utility), TBD (numerals + Blockquote + marble swap).
+**Commit SHAs:** `42037f3` (decision), `8f729e2` (paper-grain asset + utility), `924ba19` (numerals + Blockquote + marble swap).
 
 ---
 
