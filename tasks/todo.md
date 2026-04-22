@@ -1196,7 +1196,7 @@ Nothing weakened — auth/security/zero-storage untouched, no tests silenced, ev
 **Review:**
 - Ended up scoping 704 to the one piece that composes cleanly as a standalone: `<EngravedStat>`. The other three items (Section axis, homepage re-sequence, Button variants) each touch broad surfaces and deserve focused review. Splitting them out prevents a single big-risk PR and keeps each reviewable on its own merits.
 - EngravedStat's `accent="brass"` option is the subtle hand-off from Sprint 708 — a future "Professional tier features X, Y, Z" marketing stat block could use brass accents to echo the Most Popular foil, maintaining the scarcity-scoped token.
-- Commit SHA: TBD.
+- Commit SHA: `de6395b`.
 
 ---
 
