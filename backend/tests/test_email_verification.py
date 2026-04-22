@@ -168,6 +168,35 @@ class TestResendCooldown:
         # Should have about 2 minutes (120 seconds) remaining
         assert 100 < remaining < 140
 
+    def test_handles_naive_datetime_from_db(self):
+        """
+        Sprint 711 Bug 1 regression: Postgres `DateTime` columns hydrate as
+        naive datetimes; comparing them against datetime.now(UTC) raised
+        TypeError("can't compare offset-naive and offset-aware datetimes")
+        and fired 365 Sentry events on /auth/verification-status before the
+        fix. Verify naive input is normalized and produces correct output.
+        """
+        # Simulate a naive datetime as it would come back from Postgres on
+        # a column declared without `timezone=True`.
+        naive_recent = (datetime.now(UTC) - timedelta(minutes=2)).replace(tzinfo=None)
+        assert naive_recent.tzinfo is None  # confirms test setup
+
+        # Must not raise TypeError
+        can_resend, remaining = can_resend_verification(naive_recent)
+        assert can_resend is False
+        assert remaining > 0
+        assert remaining <= RESEND_COOLDOWN_MINUTES * 60
+
+    def test_handles_naive_datetime_past_cooldown(self):
+        """Sprint 711 Bug 1 regression: naive input past cooldown should also
+        normalize cleanly and report can_resend=True."""
+        naive_old = (datetime.now(UTC) - timedelta(minutes=RESEND_COOLDOWN_MINUTES + 1)).replace(tzinfo=None)
+        assert naive_old.tzinfo is None
+
+        can_resend, remaining = can_resend_verification(naive_old)
+        assert can_resend is True
+        assert remaining == 0
+
 
 # =============================================================================
 # EMAIL SERVICE TESTS

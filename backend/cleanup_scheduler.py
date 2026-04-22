@@ -193,13 +193,29 @@ def _run_cleanup_job(
         from shared.log_sanitizer import sanitize_exception
 
         error_msg = sanitize_exception(exc, context="scheduled cleanup")
-        # Preserve the exception so the final logger.error can emit the full
-        # traceback via exc_info. The sanitized message still drives the
-        # user-visible telemetry payload; the traceback is for ops triage
-        # (Sentry, structured log sinks) — scheduled-job inputs are internal,
-        # no PII leaks.
         caught_exc = exc
+
+        # Sprint 711 Bug 2: capture exception explicitly while still inside the
+        # except block so the traceback survives. The deferred logger.error
+        # below loses sys.exc_info() context; Sentry's logging integration was
+        # only attaching the message, dropping the actual exception type +
+        # frames (104 events accumulated as untriageable "InternalError").
+        try:
+            import sentry_sdk
+
+            sentry_sdk.capture_exception(exc)
+        except Exception:  # noqa: BLE001 — telemetry must never mask the original
+            pass
     finally:
+        # Defensive rollback: if cleanup_func or with_scheduler_lock raised
+        # mid-transaction, the session can be in an aborted state. close()
+        # alone does not always recover the connection cleanly under psycopg2
+        # — explicit rollback first prevents subsequent jobs from inheriting
+        # a poisoned connection out of the pool.
+        try:
+            db.rollback()
+        except Exception:  # noqa: BLE001 — best-effort cleanup
+            pass
         db.close()
 
     duration_ms = (time.perf_counter() - t0) * 1000

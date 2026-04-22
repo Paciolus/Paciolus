@@ -103,6 +103,12 @@ def can_resend_verification(last_sent_at: Optional[datetime]) -> tuple[bool, int
     if last_sent_at is None:
         return True, 0
 
+    # Postgres `DateTime` columns hydrate as naive even when written tz-aware;
+    # normalize to UTC so the comparison against `datetime.now(UTC)` below
+    # doesn't raise TypeError("can't compare offset-naive and offset-aware").
+    if last_sent_at.tzinfo is None:
+        last_sent_at = last_sent_at.replace(tzinfo=UTC)
+
     cooldown_end = last_sent_at + timedelta(minutes=RESEND_COOLDOWN_MINUTES)
     now = datetime.now(UTC)
 
