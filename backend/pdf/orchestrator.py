@@ -59,6 +59,10 @@ def generate_audit_report(
 
     Sprint 53: Added workpaper fields for professional documentation.
     Sprint 7: Signoff deprecated -- gated by include_signoff (default False).
+    Sprint 679 (completion): reads the active ``PDFBrandingContext`` via
+    ``current_pdf_branding()`` — Enterprise firms receive their logo on
+    the cover and their header/footer on every non-cover page. Route
+    handlers wrap the call in ``apply_pdf_branding(...)``.
     """
     log_secure_operation("pdf_generator_init", f"Initializing Classical PDF generator for: {filename}")
 
@@ -77,7 +81,16 @@ def generate_audit_report(
     story: list = []
 
     # Cover page (shared chrome)
-    from shared.report_chrome import ReportMetadata, build_cover_page, draw_page_footer, find_logo
+    from shared.pdf_branding import current_pdf_branding
+    from shared.report_chrome import (
+        ReportMetadata,
+        build_cover_page,
+        find_logo,
+        make_branded_page_footer,
+    )
+
+    branding = current_pdf_branding()
+    custom_logo_bytes = branding.effective_logo_bytes()
 
     logo_path = find_logo()
     reference_number = generate_reference_number()
@@ -90,7 +103,7 @@ def generate_audit_report(
         prepared_by=prepared_by or "",
         reviewed_by=reviewed_by or "",
     )
-    build_cover_page(story, styles, metadata, doc.width, logo_path)
+    build_cover_page(story, styles, metadata, doc.width, logo_path, custom_logo_bytes=custom_logo_bytes)
 
     # Sections
     render_table_of_contents(story, styles)
@@ -121,14 +134,22 @@ def generate_audit_report(
     render_limitations(story, styles)
     render_classical_footer(story, styles)
 
-    # Page decorations
+    # Page decorations — Sprint 679: swap in the branded footer factory when
+    # an Enterprise user has supplied header_text / footer_text. Factory
+    # returns the default footer callback when both are absent, so unbranded
+    # flows are unaffected.
+    branded_footer_cb = make_branded_page_footer(
+        header_text=branding.effective_header_text(),
+        footer_text=branding.effective_footer_text(),
+    )
+
     def _on_first_page(canvas: Any, doc: Any) -> None:
         draw_diagnostic_watermark(canvas)
-        draw_page_footer(canvas, doc)
+        branded_footer_cb(canvas, doc)
 
     def _on_later_pages(canvas: Any, doc: Any) -> None:
         draw_diagnostic_watermark(canvas)
-        draw_page_footer(canvas, doc)
+        branded_footer_cb(canvas, doc)
 
     log_secure_operation("pdf_generate_start", "Starting Classical PDF generation")
     doc.build(story, onFirstPage=_on_first_page, onLaterPages=_on_later_pages)
@@ -157,6 +178,11 @@ def generate_financial_statements_pdf(
     Notes, and Account Mapping Trace.
 
     Sprint 71: Financial Statements PDF using Renaissance Ledger aesthetic.
+    Sprint 679 (completion): reads the active ``PDFBrandingContext`` via
+    ``current_pdf_branding()`` — Enterprise firms receive their logo on
+    the cover and their header/footer on every non-cover page. Custom
+    footer layers above the standard FS disclaimer so Paciolus attribution
+    is always preserved.
     """
     buffer = io.BytesIO()
     styles = create_classical_styles()
@@ -174,7 +200,13 @@ def generate_financial_statements_pdf(
     page_counter = [0]
 
     # Cover page
+    from shared.pdf_branding import current_pdf_branding
     from shared.report_chrome import ReportMetadata, build_cover_page, find_logo
+
+    branding = current_pdf_branding()
+    custom_logo_bytes = branding.effective_logo_bytes()
+    custom_header = branding.effective_header_text()
+    custom_footer = branding.effective_footer_text()
 
     entity_name = statements.entity_name or "Financial Statements"
     fs_logo_path = find_logo()
@@ -185,7 +217,7 @@ def generate_financial_statements_pdf(
         engagement_period=statements.period_end or "",
         fiscal_year_end=statements.period_end or "",
     )
-    build_cover_page(story, styles, fs_metadata, doc.width, fs_logo_path)
+    build_cover_page(story, styles, fs_metadata, doc.width, fs_logo_path, custom_logo_bytes=custom_logo_bytes)
 
     # Header
     story.append(Paragraph("FINANCIAL STATEMENTS", styles["ClassicalTitle"]))
@@ -236,9 +268,16 @@ def generate_financial_statements_pdf(
         )
     )
 
-    # Build with page decorations
+    # Build with page decorations — Sprint 679 passes custom header/footer
+    # through to draw_fs_decorations so branding layers onto every page.
     def _fs_deco(canvas: Any, doc: Any) -> None:
-        draw_fs_decorations(canvas, doc, page_counter)
+        draw_fs_decorations(
+            canvas,
+            doc,
+            page_counter,
+            custom_header=custom_header,
+            custom_footer=custom_footer,
+        )
 
     doc.build(story, onFirstPage=_fs_deco, onLaterPages=_fs_deco)
 

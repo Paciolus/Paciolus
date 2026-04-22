@@ -45,7 +45,12 @@ from models import Client
 from pdf_generator import ClassicalColors, LedgerRule, generate_reference_number
 from shared.framework_resolution import ResolvedFramework
 from shared.memo_base import RISK_TIER_DISPLAY, create_memo_styles
-from shared.report_chrome import ReportMetadata, build_cover_page, draw_page_footer, find_logo
+from shared.report_chrome import (
+    ReportMetadata,
+    build_cover_page,
+    find_logo,
+    make_branded_page_footer,
+)
 from shared.scope_methodology import (
     build_methodology_statement,
     build_scope_statement,
@@ -155,7 +160,21 @@ class AnomalySummaryGenerator:
         engagement_id: int,
         resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
     ) -> bytes:
-        """Generate anomaly summary PDF. Returns raw PDF bytes."""
+        """Generate anomaly summary PDF. Returns raw PDF bytes.
+
+        Sprint 679 (completion): reads the active ``PDFBrandingContext``
+        via ``current_pdf_branding()`` — Enterprise firms get their logo
+        on the cover and their header/footer on every non-cover page.
+        Route handlers wrap this call in ``apply_pdf_branding(...)``.
+        """
+        # Sprint 679: resolve branding at the top of generate, read once,
+        # pass the resolved context down so _build_story + the footer
+        # callback see consistent values even if the ContextVar resets
+        # mid-build for some reason.
+        from shared.pdf_branding import current_pdf_branding
+
+        branding = current_pdf_branding()
+
         engagement = self._verify_engagement_access(user_id, engagement_id)
         if not engagement:
             raise ValueError("Engagement not found or access denied")
@@ -205,9 +224,14 @@ class AnomalySummaryGenerator:
             tool_runs,
             follow_up_items,
             resolved_framework=resolved_framework,
+            custom_logo_bytes=branding.effective_logo_bytes(),
         )
 
-        doc.build(story, onFirstPage=draw_page_footer, onLaterPages=draw_page_footer)
+        footer_cb = make_branded_page_footer(
+            header_text=branding.effective_header_text(),
+            footer_text=branding.effective_footer_text(),
+        )
+        doc.build(story, onFirstPage=footer_cb, onLaterPages=footer_cb)
         pdf_bytes = buffer.getvalue()
         buffer.close()
         return pdf_bytes
@@ -221,6 +245,7 @@ class AnomalySummaryGenerator:
         tool_runs: list,
         follow_up_items: list,
         resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
+        custom_logo_bytes: Optional[bytes] = None,
     ) -> list:
         story: list = []
 
@@ -256,7 +281,7 @@ class AnomalySummaryGenerator:
             source_document_title="Aggregated from individual tool runs",
             reference=reference,
         )
-        build_cover_page(story, styles, metadata, doc_width, logo_path)
+        build_cover_page(story, styles, metadata, doc_width, logo_path, custom_logo_bytes=custom_logo_bytes)
 
         # --- Pre-compute data structures ---
         runs_by_tool: dict[str, list] = {}
