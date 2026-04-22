@@ -62,9 +62,34 @@
 | Element | Font Family | Weight | Usage |
 |---------|-------------|--------|-------|
 | **Headers** | Merriweather | 700 (Bold) | H1-H6, brand name, section titles |
+| **Body Serif** | Merriweather | 400 (Regular) | Pull-quotes, editorial body copy, marketing prose |
 | **Body** | Lato | 400 (Regular) | Body text, paragraphs, UI elements |
 | **Body Bold** | Lato | 700 (Bold) | Emphasis, labels, buttons |
 | **Mono** | JetBrains Mono | 400 | Numbers, code, financial data |
+
+### Body serif decision log (2026-04-22)
+
+Sprint 703 evaluated four candidates side-by-side at
+`/internal/typography-preview` against the same three compositions
+(italic pull-quote, stats block with oldstyle figures, report heading +
+body paragraph):
+
+| Candidate | License | Decision |
+|-----------|---------|----------|
+| **Merriweather** (current) | Free, Google Fonts | **✓ Kept** |
+| Source Serif 4 | Free, Google Fonts | Not selected |
+| Tiempos Text | Paid, Typotheque (~$600/yr) | Not selected |
+| GT Sectra | Paid, Grilli Type (~$400/yr) | Not selected |
+
+Rationale: Merriweather's slab-adjacent weight and confident italics
+read as "audit-firm dependable" — aligned with the product voice.
+Lighter editorial serifs (Source Serif 4) felt underweight; higher-
+contrast display serifs (Playfair / GT Sectra direction) felt editorial-
+magazine rather than forensic. Tiempos' warmth was attractive but
+didn't clearly beat Merriweather enough to justify a paid license.
+
+Downstream design sprints (704 homepage rhythm, 705 specimen page,
+706 tools grid) compose against Merriweather.
 
 ### Font Sizes (rem)
 - Display: 3.75rem (60px)

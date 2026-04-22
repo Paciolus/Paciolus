@@ -1148,26 +1148,30 @@ Nothing weakened — auth/security/zero-storage untouched, no tests silenced, ev
 ---
 
 ### Sprint 703: Typography system upgrade + signature paper texture
-**Status:** PENDING
+**Status:** PARTIAL — body serif decision made (keep Merriweather); supporting system work deferred
 **Priority:** P1 (foundation for subsequent design sprints)
 **Source:** Design audit 2026-04-20
 **Why now:** Merriweather-everywhere reads "Medium blog," not "audit journal." Introducing a proper editorial serif pair + oldstyle figures on marketing + a single repeating aged-paper texture creates the foundation every other design sprint composes against. The italic pull-quote on About ("The moment when you need a defensible answer…") is the site's best typographic moment and needs to become a recurring rhythm device.
 **Files:**
 - `frontend/tailwind.config.js` — font tokens
 - `frontend/src/app/layout.tsx` — `next/font` registrations
-- `frontend/src/styles/globals.css` — base body, heading, `::selection`, numeral-variant defaults
-- `skills/theme-factory/themes/oat-and-obsidian.md` — update the canonical spec
+- `frontend/src/app/globals.css` — base body, heading, `::selection`, numeral-variant defaults
+- `skills/theme-factory/themes/oat-and-obsidian.md` — canonical spec (decision log added 2026-04-22)
 - `frontend/src/components/marketing/Blockquote.tsx` — new shared italic pull-quote
+- `frontend/src/app/internal/typography-preview/` — decision-aid route (can be kept as historical artifact or removed)
 
 **Changes:**
-- [ ] Adopt an editorial body serif (candidates: Tiempos Text, GT Sectra, Source Serif 4). Keep Merriweather for headers **or** upgrade the display face (GT Super Display / Canela). Evaluate license + file size; prefer Google Fonts / Adobe Fonts integration over custom hosting.
-- [ ] Register the new body face via `next/font` (preserves FOUT avoidance). Add a `font-display` token distinct from `font-serif` so heading and body are independently tunable.
-- [ ] Default marketing pages to `font-variant-numeric: oldstyle-nums proportional-nums;`; override with `tabular-nums lining-nums` on product/reporting screens + every table + `font-mono` surfaces.
-- [ ] Add a seamless 256×256 aged-paper noise PNG (< 15 KB, ~3% opacity) applied as a `::before` overlay via a shared `.paper-grain` utility. Apply to every `section`.
-- [ ] Remove the marble/liquid backdrop from the "Standards-Driven by Design" section. Replace with `paper-grain`; one texture language across the entire site.
-- [ ] New `<Blockquote italic>` shared component — display-serif italic, hairline left rule in sage. Retrofit the About page blockquote as the first consumer. **Convention:** every marketing page uses it exactly once as a rhythm break.
-- [ ] A11y: verify new fonts pass WCAG AAA against obsidian backgrounds (body 7:1, large text 4.5:1). Smoke-test Windows Chrome text-size rendering.
-- [ ] Jest / Playwright: sample marketing page renders with the new body face; `::selection` is sage; `tabular-nums` applies on ratio dashboards while `oldstyle-nums` applies on marketing.
+- [x] **Body serif choice — DECIDED 2026-04-22: keep Merriweather.** Evaluated Source Serif 4 (free), Lora as Tiempos-Text proxy (paid), Playfair Display as GT-Sectra proxy (paid) via the `/internal/typography-preview` route. Rationale + comparison table logged in `skills/theme-factory/themes/oat-and-obsidian.md`. No font swap needed; Sprints 704–708 compose against existing Merriweather + Lato + JetBrains Mono stack.
+- [ ] Default marketing pages to `font-variant-numeric: oldstyle-nums proportional-nums;`; override with `tabular-nums lining-nums` on product/reporting screens + every table + `font-mono` surfaces. _Still worth doing — independent of the face decision._
+- [ ] Add a seamless 256×256 aged-paper noise PNG (< 15 KB, ~3% opacity) applied as a `::before` overlay via a shared `.paper-grain` utility. Apply to every `section`. _Visual asset decision pending — needs CEO to pick the noise style or approve a generated candidate._
+- [ ] Remove the marble/liquid backdrop from the "Standards-Driven by Design" section. Replace with `paper-grain`. _Blocks on paper-grain asset above._
+- [ ] New `<Blockquote italic>` shared component — Merriweather italic, hairline left rule in sage. Retrofit the About page blockquote as the first consumer. **Convention:** every marketing page uses it exactly once as a rhythm break. _Still worth doing — independent of the face decision._
+- [ ] A11y: verify Merriweather at new numeral-variant defaults still passes WCAG AAA against obsidian backgrounds (body 7:1, large text 4.5:1). _Smoke-test after numeral-variant defaults land._
+- [ ] Jest / Playwright: `::selection` is sage; `tabular-nums` applies on ratio dashboards while `oldstyle-nums` applies on marketing. _Defer until numeral-variant defaults land._
+
+**Decision recorded:** 2026-04-22 — body serif = Merriweather (CEO pick after side-by-side review).
+**Remaining Sprint 703 work:** numeral-variant defaults + Blockquote component + paper-grain texture. No longer blocking Sprints 704–708 on the font-face question; those can start composing against Merriweather today.
+**Commit SHA (partial — decision record only):** TBD.
 
 ---
 
@@ -1175,7 +1179,7 @@ Nothing weakened — auth/security/zero-storage untouched, no tests silenced, ev
 **Status:** PENDING
 **Priority:** P1 (composition)
 **Source:** Design audit 2026-04-20
-**Blocks on:** Sprint 703 (typography system must land first)
+**Blocks on:** ~~Sprint 703 (typography system must land first)~~ UNBLOCKED 2026-04-22 — body serif decision = keep Merriweather; compose against existing stack.
 **Why now:** Nine consecutive centered serif-heading → centered sub → centered card-row sections. The eye stops tracking after section three. Alternating left/right axis composition + one visually distinctive stat block restores narrative rhythm and replaces the "stat tile row" cliché.
 **Files:**
 - `frontend/src/app/(marketing)/page.tsx` — homepage section sequence
@@ -1197,7 +1201,7 @@ Nothing weakened — auth/security/zero-storage untouched, no tests silenced, ev
 **Status:** PENDING
 **Priority:** P0 (the differentiating moment)
 **Source:** Design audit 2026-04-20 — "the one thing to do if only one"
-**Blocks on:** Sprint 703 (editorial fonts required)
+**Blocks on:** ~~Sprint 703 (editorial fonts required)~~ UNBLOCKED 2026-04-22 — body serif = Merriweather (kept).
 **Why now:** "Every test cites its standard" is the single claim that separates Paciolus from every other AI-branded audit tool. Currently it's rendered as a thin strip of gray pills — visually indistinguishable from a tech blog's tech-stack badges. Rendering it as a specimen page from a bound journal of auditing standards turns the section into something an auditor will screenshot and share. This is the headline of the entire redesign.
 **Files:**
 - `frontend/src/components/marketing/StandardsSpecimen.tsx` — new component replacing the pill strip
@@ -1220,7 +1224,7 @@ Nothing weakened — auth/security/zero-storage untouched, no tests silenced, ev
 **Status:** PENDING
 **Priority:** P1
 **Source:** Design audit 2026-04-20
-**Blocks on:** Sprint 703 (typography)
+**Blocks on:** ~~Sprint 703 (typography)~~ UNBLOCKED 2026-04-22 — compose against Merriweather.
 **Depends on clarity from:** Sprint 689 (catalog reconciliation — tool-count truth source)
 **Why now:** The current "01 / 12 ‹ ›" carousel shows one tool at a time; users see the first card and bounce. The full catalog *is* the product pitch. Rendering all twelve at once in a bound-ledger grid respects the auditor's reading pattern (scanning an index, not advancing a slideshow).
 **Files:**
@@ -1243,7 +1247,7 @@ Nothing weakened — auth/security/zero-storage untouched, no tests silenced, ev
 **Status:** PENDING
 **Priority:** P2
 **Source:** Design audit 2026-04-20
-**Blocks on:** Sprint 703 (fonts)
+**Blocks on:** ~~Sprint 703 (fonts)~~ UNBLOCKED 2026-04-22 — Merriweather retained.
 **Why now:** Demo tabs (TB Diagnostics / Testing Suite / Workspace / Sample Reports / Standards) function correctly but read as "generic SaaS dashboard." Three small signature moments would sell the "forensic instrument" positioning viscerally without touching the underlying data model.
 **Files:**
 - `frontend/src/components/demo/TBDiagnosticsTab.tsx` (or equivalent)
