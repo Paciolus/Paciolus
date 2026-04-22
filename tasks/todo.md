@@ -1408,6 +1408,51 @@ Nothing weakened — auth/security/zero-storage untouched, no tests silenced, ev
 - `Trial balance analysis failed [OptionError]` and `[ValueError]` on `/audit/trial-balance` (1 event each — edge cases in upload parsing)
 - `InvalidOperation [decimal.ConversionSyntax]` on `/audit/preflight` (3 events — likely malformed numeric input)
 - `Background register_verification exception [ForbiddenError]` (count unknown, classification pending)
-- File these as Sprint 712 (or a single batched P2 sweep) after Sprint 711 deploys clean.
+- File these as Sprint 713 (batched P2 Sentry sweep) after Sprint 711 deploys clean.
 
 ---
+
+## Database Hygiene — 2026-04-22
+
+> **Source:** Discovery during 2026-04-22 CEO Phase 3 tier upgrade. `UPDATE users SET tier = 'enterprise'` on production returned `SQLSTATE 22P02: invalid input value for enum usertier: "enterprise"`. Investigation showed the live Postgres enum stores **uppercase** values (`FREE, SOLO, PROFESSIONAL, ENTERPRISE`), but every Alembic migration in `backend/migrations/alembic/versions/` uses **lowercase** (`'free', 'solo', 'professional', 'enterprise'`). Production is running an enum shape that doesn't match any checked-in migration. The upgrade ultimately worked with uppercase, but the drift is a real landmine.
+
+---
+
+### Sprint 715: Alembic ↔ production enum-case reconciliation
+**Status:** PENDING
+**Priority:** P2 (latent — no user impact today, but blocks any future migration that references enum values by case-sensitive literal)
+**Source:** Production DB introspection 2026-04-22.
+
+**Root cause hypothesis:** The Neon production DB was initialized via SQLAlchemy `Base.metadata.create_all()` (or an `alembic stamp` against a fresh DB) rather than `alembic upgrade head` from scratch. SQLAlchemy's default `Enum(UserTier)` column emits Python enum **names** (uppercase — `FREE`, `SOLO`, `PROFESSIONAL`, `ENTERPRISE`) into the Postgres enum type. The hand-written migrations use `op.execute("CREATE TYPE usertier AS ENUM ('free', 'solo', ...)")` (lowercase — Python enum **values**). The two paths diverge on case, and prod went with the SQLAlchemy path.
+
+**Why this is a landmine:**
+1. Any future migration that references `'enterprise'`/`'free'`/etc. lowercase via raw SQL (`UPDATE users WHERE tier = 'enterprise'`) will fail on prod with 22P02. There are already migrations doing this pattern — e.g., `c1d2e3f4a5b6_remove_enterprise_tier.py`, `e3f4a5b6c7d8_pricing_v3_enum_restructure.py`. They run fine on SQLite (TEXT column) and never hit prod because the migration history on Neon never actually replayed them (prod came up via `create_all`), but this is accidental, not designed.
+2. `alembic upgrade head` against a fresh DB emits lowercase, so a disaster-recovery rebuild from scratch would produce a DB that the application code (which compares via `UserTier.FREE == user.tier`) can't populate correctly.
+3. The same drift likely exists on `subscription_tier` (same migration history), `userrole`, `subscriptionstatus`, and every other enum created via SQLAlchemy. Unverified — part of Sprint 715 scope.
+
+**Scope:**
+- [ ] Enumerate every Postgres enum type in production via `SELECT t.typname, e.enumlabel FROM pg_type t JOIN pg_enum e ON e.enumtypid = t.oid ORDER BY t.typname, e.enumsortorder;` and compare against the values expected by the checked-in Alembic migrations.
+- [ ] Pick a canonical direction: either (a) standardize on uppercase by adding `values_callable=lambda x: [e.name for e in x]` to every `Enum(...)` mapped_column (matches prod) or (b) add `values_callable=lambda x: [e.value for e in x]` (matches lowercase migrations). Recommend (b) since Python enum *values* are the idiomatic enum wire format; but the migration cost is higher on that path (must rewrite prod enum values).
+- [ ] Write a one-shot migration that performs the enum-case conversion on production, with a rollback path. Must be run as a single transaction against a disk-backed snapshot since `ALTER TYPE` is not fully transactional on all Postgres versions.
+- [ ] Add a pytest that reflects the production enum values and asserts every Python enum member's wire form matches the DB. Catches future drift.
+- [ ] Audit the other models for enums: `UserRole`, `SubscriptionStatus`, `Industry`, `ReportingFramework`, `Severity`, `ToolName`, etc.
+
+**Files (likely to touch):**
+- `backend/models.py` — every `Enum(...)` column gains `values_callable=...`
+- `backend/migrations/alembic/versions/` — new revision file for the case reconciliation
+- `backend/tests/test_enum_wire_format.py` (new) — pins the contract
+
+**Why not now:**
+- Not user-visible. The application stores and reads uppercase consistently; reads work fine.
+- A schema migration on a live tenant DB is a deployment-coordinated activity, not a between-PR drop-in. Pairs better with the Phase 4.1 Stripe cutover window than Phase 3 validation.
+- Fixing in the wrong direction (e.g., flipping prod to lowercase without updating models.py) would cause an outage. Needs paired code + schema changes behind a feature flag or a paired deploy.
+
+**Immediate workaround in the meantime:** any SQL hotfix touching enum literals must use **uppercase**. See the 2026-04-22 tier upgrade for reference.
+
+**Review (filer's notes, 2026-04-22):**
+- Discovered while executing the CEO's Enterprise-tier upgrade for Phase 3 testing. The upgrade landed successfully on second attempt using uppercase.
+- Not catastrophic but deserves a dedicated sprint — enum drift is the kind of latent bug that surfaces during disaster recovery or a long-deferred migration, exactly when teams can least afford surprises.
+- Related but out of scope: SQLAlchemy 2.0's `Enum` with `native_enum=False` would sidestep this entirely (stores as VARCHAR, no Postgres enum type). Worth considering as a forward-only direction if the case reconciliation proves too expensive.
+
+---
+
