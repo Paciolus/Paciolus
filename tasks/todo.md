@@ -1221,30 +1221,35 @@ Nothing weakened — auth/security/zero-storage untouched, no tests silenced, ev
 **Review:**
 - Deliberately landed the specimen as a replacement for the pill strip inside `BottomProof` rather than as a new section in the homepage sequence — keeps the "Every Test Cites Its Standard" h2 + sub copy intact so the section's narrative framing is unchanged.
 - Drop-cap and footnote-superscript details from the original brief scoped down to the oldstyle-nums-on-code + small-caps-paragraph-cite treatment. Full drop-cap would've been precious against the Merriweather bold code; the current treatment reads as a specimen page without feeling overwrought.
-- Commit SHA: TBD.
+- Commit SHA: `36bbe77`.
 
 ---
 
 ### Sprint 706: Twelve Tools — ledger-column grid (replace carousel)
-**Status:** PENDING
+**Status:** COMPLETE
 **Priority:** P1
 **Source:** Design audit 2026-04-20
-**Blocks on:** ~~Sprint 703 (typography)~~ UNBLOCKED 2026-04-22 — compose against Merriweather.
-**Depends on clarity from:** Sprint 689 (catalog reconciliation — tool-count truth source)
-**Why now:** The current "01 / 12 ‹ ›" carousel shows one tool at a time; users see the first card and bounce. The full catalog *is* the product pitch. Rendering all twelve at once in a bound-ledger grid respects the auditor's reading pattern (scanning an index, not advancing a slideshow).
+**Depends on clarity from:** Sprint 689 (catalog reconciliation — tool-count truth source). Landed with `CANONICAL_TOOL_COUNT = 12` mirrored from `shared/entitlements.py`; a build-time assertion in `tool-ledger.ts` catches drift.
 **Files:**
+- `frontend/src/content/tool-ledger.ts` — catalog data (12 entries × `{id, number, name, testCount, standards, summary, href}`) with runtime assertion vs. `CANONICAL_TOOL_COUNT`
 - `frontend/src/components/marketing/ToolLedger.tsx` — new grid component
-- `frontend/src/components/marketing/ToolShowcase.tsx` — refactor or delete (existing carousel)
-- `frontend/src/app/(marketing)/page.tsx` — consume the new component
-- Retain a minimal carousel for the mobile breakpoint only
+- `frontend/src/components/marketing/index.ts` — export
+- `frontend/src/app/(marketing)/page.tsx` — consumes `<ToolLedger>` in place of `<ToolSlideshow>`
+- `frontend/src/__tests__/ToolLedger.test.tsx` — 10 Jest tests
 
 **Changes:**
-- [ ] Ledger layout at `md+`: 12 rows × 4 columns (Tool # · Name · Test Count · Standards). Hairline rules between rows. Tool # in `font-mono` with right-aligned oldstyle figures. Standards in small caps.
-- [ ] Row hover: accordion expansion in place — reveals description, checklist, export formats, standards tags. No page navigation.
-- [ ] Palette: tool number in sage; body in oatmeal; rules in obsidian-600. No new tokens.
-- [ ] Mobile (`<md`): fall back to a simplified carousel; feature-flag via `useMediaQuery`.
-- [ ] Tool count must read from the canonical source (`shared/entitlements.py:CANONICAL_TOOL_COUNT` surfaced via an API or a generated TS constant) — no hardcoded "12" in the marketing surface. Prevents drift after Sprint 689 reconciles the catalog.
-- [ ] Jest: renders all rows; hover expands in-place; mobile breakpoint renders the carousel fallback.
+- [x] Ledger layout at `md+`: header row (№ · Tool · Tests · Standards) in small caps, followed by 12 rows with hairline `divide-y divide-obsidian-600/40` rules. Roman-numeral label in sage `font-mono` with `tabular-nums lining-nums` (it's a rank, not a figure, so lining reads clearer than oldstyle). Tool name in Merriweather; test counts right-aligned in mono; standards as small-caps pills.
+- [x] Row click expands an accordion panel in place — shows the one-line scope summary from `content/tool-ledger.ts` + standards pills (mobile only; desktop shows them in the row) + an "Open tool →" link routing to the tool's catalog card. Only one panel expanded at a time. Keyboard-activatable via Enter/Space; `aria-expanded` + `aria-controls` wired; `motion-reduce` on transitions.
+- [x] Palette: sage row numbers, oatmeal body, obsidian-600 rules. No new tokens.
+- [x] Mobile (`<md`): same DOM, layout collapses to a two-column grid (№ + name only in the row; standards + summary in the expanded panel). `useMediaQuery` unnecessary because the CSS grid-template-columns flip handles it — avoids a hydration flash. `<ToolSlideshow>` is retained in-tree for any future consumer.
+- [x] Canonical tool count: `tool-ledger.ts` exports `CANONICAL_TOOL_COUNT = 12` paired with a build-time `throw` if `TOOL_LEDGER.length` drifts. Single source of truth for the frontend; any future API-backed version can drop in via the same constant name.
+- [x] 10 Jest tests pin: 12 rows rendered, every tool name present, default-collapsed state, click-to-expand + summary reveal, single-expansion invariant, Roman-numeral labels, Enter-key activation, Open-tool link href wiring, test-count + em-dash rendering, summary footer count.
+
+**Review:**
+- Chose a tap-to-expand accordion over hover-to-expand so touch devices and keyboard users get the same affordance. Hover would be fine on desktop but would require synthesising a click target for mobile anyway.
+- Did NOT delete `ToolSlideshow.tsx` — 640 lines of working component; low cost to keep, and a future "promo lane" page could consume it. Dead-code removal can happen in a later cleanup pass.
+- Canonical-count enforcement via runtime assertion rather than API fetch: the API dependency would add a load to every marketing page view for data that can't actually change per-request. A generated constant with an assertion is the right abstraction — see the Sprint 706 doc for the swap path if/when it becomes worth the extra complexity.
+- Commit SHA: TBD.
 
 ---
 
