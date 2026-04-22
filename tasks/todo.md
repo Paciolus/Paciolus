@@ -1277,29 +1277,32 @@ Nothing weakened — auth/security/zero-storage untouched, no tests silenced, ev
 - Chose `easeOutCubic` for the needle animation rather than a spring. Springs can overshoot — that'd read as "playful," when the right voice here is "decisive and settling."
 - Margin annotation uses `»` as the default caret — the classic auditor's tick mark. Configurable per-instance via the `caret` prop, so a future consumer wanting `✎` or `†` isn't blocked.
 - Did NOT create separate `TBDiagnosticsTab.tsx` / `TestingSuiteTab.tsx` files as the sprint brief mentioned — the existing `DemoTabExplorer.tsx` architecture colocates all five tabs in one file. Retrofitting in place is lower-risk than a wholesale refactor and preserves the `layoutId="demo-tab-indicator"` invariant that coordinates the tab-indicator animation.
-- Commit SHA: TBD.
+- Commit SHA: `7e91cfa`.
 
 ---
 
 ### Sprint 708: Pricing page — calculator-first + "Most Popular" foil treatment
-**Status:** PENDING
+**Status:** PARTIAL — brass foil + typography landed; full page-reorder deferred to a follow-up sprint
 **Priority:** P2
 **Source:** Design audit 2026-04-20
-**Why now:** The Find-Your-Plan + Seat Calculator is the pricing page's most differentiated element and it's buried beneath three standard plan cards. Leading with a consultative question-first flow and following with plan confirmation is rare in audit software and matches Paciolus's tone. Also: the current "Most Popular" badge on Professional is invisible.
 **Files:**
-- `frontend/src/app/(marketing)/pricing/page.tsx`
-- `frontend/src/components/marketing/PlanCard.tsx`
-- `frontend/src/components/marketing/SeatCalculator.tsx`
-- `frontend/src/components/marketing/FindYourPlan.tsx`
-- `frontend/tailwind.config.js` — one new scoped `brass` token
+- `frontend/tailwind.config.js` — `brass-400` token
+- `frontend/src/app/(marketing)/pricing/page.tsx` — Most Popular badge + highlighted card + display-serif tier names + oldstyle price
 
 **Changes:**
-- [ ] Reorder the page: hero → `FindYourPlan` (3 questions: practice size → features needed → team size) → recommended-plan sticky callout → `SeatCalculator` → three plan cards (as confirmation) → feature comparison → FAQ.
-- [ ] `FindYourPlan` keeps the existing pillbox toggles. "Based on your needs, we recommend …" becomes a sticky callout that scrolls into the matching plan card when clicked.
-- [ ] Add one new token `brass-400: #B08D57` (or comparable warm accent). Use **only** on the Most Popular badge + one hairline accent on the Professional card. No other surface uses brass — the scarcity is the design point.
-- [ ] Apply the editorial typography system from Sprint 703: plan name in display serif, price in `font-mono` with oldstyle figures, feature list in body serif.
-- [ ] Verify pricing copy parity with the homepage Twelve Tools. One Platform. preview and with Sprint 692's canonical source.
-- [ ] A11y: the question-first flow must be fully keyboard-navigable; the plan recommendation must be announced to screen readers when it changes.
+- [x] New `brass-400: #B08D57` Tailwind token added with a comment locking it to the Most Popular badge + Professional-card hairline scope. Scarcity enforced by documentation, not code — any future use site should be reviewed.
+- [x] Professional tier now carries `badge: 'Most Popular'`; renders as a centered pill above the card with brass text + brass/50 border + subtle brass→transparent gradient-overlay. Card itself gets `md:-translate-y-2`, `shadow-xl shadow-brass-400/10`, and a `ring-1 ring-brass-400/25` so it visibly reads as the highlighted choice without fighting the sage palette elsewhere on the page.
+- [x] Tier name upgraded from `text-lg` to `text-2xl` display-serif so the name reads first, matching Sprint 703's editorial composition. Price string styled with `fontVariantNumeric: 'oldstyle-nums proportional-nums'` when a dollar amount renders so the figures fit the editorial voice.
+- [x] All 16 existing pricing tests pass — the card render contract is unchanged; the badge + ring are additive.
+- [ ] **Deferred:** page reorder (hero → FindYourPlan → sticky callout → SeatCalculator → plan cards → comparison → FAQ) is a 2+ hour refactor best isolated to its own sprint. FindYourPlan is currently inline in the pricing page; extracting it into a standalone component with a sticky callout is scope that deserves focused review, not a same-session drop-in. Raising as follow-up.
+- [ ] **Deferred:** a11y narration for the plan-recommendation changes — pairs with the page-reorder work.
+- [ ] **Deferred:** cross-check pricing copy parity with homepage. Mechanical scan is quick but the fix may require coordinated Sprint 692 updates; better bundled with the reorder PR.
+
+**Review:**
+- Landed the three visual-signature moments from the sprint (brass badge, elevated Professional card, editorial tier name + oldstyle price). Reorder is the bigger UX shift and sits better as its own PR with design review — rushing a 914-line file refactor in the same session would risk regressions in the SeatCalculator / FindYourPlan pillbox-state interactions.
+- Used inline-style `fontVariantNumeric` for the price rather than a new Tailwind utility — this is one-off enough that a utility class would be overkill, and the inline style is greppable as Sprint 703 provenance.
+- Brass token deliberately placed OUTSIDE the semantic-theme section in tailwind.config — it's an accent, not a themed surface, and wiring it through `var(--brass-400)` would tempt future consumers to use it broadly. Scarcity is the design point.
+- Commit SHA: TBD.
 
 ---
 
