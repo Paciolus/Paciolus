@@ -182,7 +182,7 @@ The nightly Coverage Sentinel's three worst 0%-coverage files turned out to have
 (Sprints 611 and 673 kept in Active Phase above with full detail — they're still-active work.)
 
 - **Sprint 684 — MUS sampling Table A-1 compliance.** Shipped in bundle commit `9dd554a` alongside Sprint 682. Status in the archive doc reads "PENDING" from a stale checkbox; treat as COMPLETE.
-- **Sprint 689 — Six hidden backend tools catalog reconciliation.** Needs per-tool CEO decision (promote / defer / remove) for `book_to_tax`, `cash_flow_projector`, `intercompany_elimination`, `form_1099`, `w2_reconciliation`, `sod`. Plus the question of whether Multi-Currency keeps its Tool-#12 marketing claim or gets a dedicated `/tools/multi-currency` page.
+- **Sprint 689 — Six hidden backend tools catalog reconciliation.** Decision brief at [`tasks/sprint-689-research-brief.md`](sprint-689-research-brief.md) with per-tool recommendation + evidence. **Default recommendations:** promote `sod` (already Enterprise-gated, ~1 sprint of UI); defer the other five (zero maintenance cost, no near-term ROI); correct CLAUDE.md "Tool #12" attribution (Statistical Sampling, not Multi-Currency — Multi-Currency is a deliberate side-car). CEO approves / overrides per tool.
 - **Sprint 691 — Professional-tier DB enum + team-seat counting.** Schema change; CEO migration review required before execution.
 
 ### Design sprints — partial deliveries (follow-up work queued)
@@ -209,5 +209,5 @@ The nightly Coverage Sentinel's three worst 0%-coverage files turned out to have
 | 4 | **Remove `DB_TLS_OVERRIDE` env var** on Render once startup logs show `tls=pooler-skip` | Sprint 673 retire (override expires 2026-05-09) |
 | 5 | **Stripe prod cutover** — drop the live-mode secret + publishable keys into Render env vars (`STRIPE_SECRET_KEY` + `STRIPE_PUBLISHABLE_KEY`) and ping for a test-charge verification | Sprint 447 |
 | 6 | **Provision R2/S3 bucket** for ExportShare object-store | Sprint 611 |
-| 7 | **Per-tool decisions** for Sprint 689 (six hidden backend tools) | Sprint 689 + marketing copy truth |
+| 7 | **Approve / override Sprint 689 decision brief** at [`tasks/sprint-689-research-brief.md`](sprint-689-research-brief.md) — per-tool recommendations with evidence; default path is promote `sod` + defer the other five + fix the "Tool #12" attribution | Sprint 689 + marketing copy truth |
 | 8 | **DB migration review** for Sprint 691 Professional-tier enum + seat counting | Sprint 691 |
