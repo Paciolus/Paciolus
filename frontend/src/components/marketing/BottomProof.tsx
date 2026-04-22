@@ -4,9 +4,10 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
+import { StandardsSpecimen } from '@/components/marketing/StandardsSpecimen'
 import { Reveal } from '@/components/ui/Reveal'
 import { VIEWPORT, CountUp } from '@/utils/marketingMotion'
-import { staggerContainerTight, fadeUp } from '@/lib/motion'
+import { fadeUp } from '@/lib/motion'
 
 /**
  * BottomProof — Sprint 334, motion migrated Sprint 337, revised Sprint 448
@@ -46,16 +47,6 @@ const CLOSING_METRICS: ClosingMetric[] = [
   },
 ]
 
-const CREDENTIAL_BADGES = [
-  'ISA 240 — Fraud Risk in Revenue',
-  'ISA 530 — Audit Sampling',
-  'PCAOB AS 2315 — Sampling',
-  'ASC 606 / IFRS 15 — Revenue',
-  'IAS 2 — Inventory',
-  'IAS 16 — Fixed Assets',
-  'ISA 501 — Cutoff Risk',
-]
-
 export function BottomProof() {
   const { isAuthenticated } = useAuthSession()
   const [mounted, setMounted] = useState(false)
@@ -79,25 +70,12 @@ export function BottomProof() {
           <div className="w-12 h-[2px] bg-sage-500 rounded-full mx-auto" />
         </Reveal>
 
-        {/* Standards badge strip */}
+        {/* Sprint 705 — Standards specimen replaces the pill strip.
+            The specimen layout is the single differentiating design
+            moment on the homepage; the pill strip is retained as a
+            mobile-only fallback inside <StandardsSpecimen>. */}
         <Reveal>
-          <motion.div
-            className="flex flex-wrap justify-center gap-2 mt-10"
-            variants={staggerContainerTight}
-            initial="hidden"
-            whileInView="visible"
-            viewport={VIEWPORT.eager}
-          >
-            {CREDENTIAL_BADGES.map((badge) => (
-              <motion.span
-                key={badge}
-                variants={fadeUp}
-                className="px-3 py-1.5 rounded-full font-sans text-xs text-oatmeal-400 bg-obsidian-800/50 border border-obsidian-500/25"
-              >
-                {badge}
-              </motion.span>
-            ))}
-          </motion.div>
+          <StandardsSpecimen />
         </Reveal>
 
         {/* Closing metric band */}

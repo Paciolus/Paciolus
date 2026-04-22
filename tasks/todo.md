@@ -1198,25 +1198,30 @@ Nothing weakened — auth/security/zero-storage untouched, no tests silenced, ev
 ---
 
 ### Sprint 705: "Every Test Cites Its Standard" — typographic specimen page (THE ONE THING)
-**Status:** PENDING
+**Status:** COMPLETE
 **Priority:** P0 (the differentiating moment)
 **Source:** Design audit 2026-04-20 — "the one thing to do if only one"
-**Blocks on:** ~~Sprint 703 (editorial fonts required)~~ UNBLOCKED 2026-04-22 — body serif = Merriweather (kept).
-**Why now:** "Every test cites its standard" is the single claim that separates Paciolus from every other AI-branded audit tool. Currently it's rendered as a thin strip of gray pills — visually indistinguishable from a tech blog's tech-stack badges. Rendering it as a specimen page from a bound journal of auditing standards turns the section into something an auditor will screenshot and share. This is the headline of the entire redesign.
 **Files:**
-- `frontend/src/components/marketing/StandardsSpecimen.tsx` — new component replacing the pill strip
-- `frontend/src/app/(marketing)/page.tsx` — consume
-- `frontend/src/content/standards-specimen.ts` — data source (standard code, citation, paragraph, governing body, scope, linked tool)
-- Tailwind utilities for hairline column rules, drop-cap, small-caps
+- `frontend/src/content/standards-specimen.ts` — 21 standards × 4 governing bodies, with scope + linked-tool array
+- `frontend/src/components/marketing/StandardsSpecimen.tsx` — new component
+- `frontend/src/components/marketing/BottomProof.tsx` — consumes `<StandardsSpecimen>` (replaces the pill strip)
+- `frontend/src/components/marketing/index.ts` — exports
+- `frontend/src/__tests__/StandardsSpecimen.test.tsx` — 6 Jest tests
 
 **Changes:**
-- [ ] Design brief: recreate a specimen page from a bound audit-reference volume. Two-column grid with a hairline vertical rule between. Per entry: standard code (small caps, oldstyle figures), paragraph citation, one-line scope description, governing body. Drop-cap on the first letter of each column. Footnote-style superscripts where tests cite multiple standards.
-- [ ] Build `<StandardsSpecimen>` as a data-driven component — citations live in `content/standards-specimen.ts` so new tests from Sprints 682 / 683 absorb without code changes.
-- [ ] Content must include every currently-cited standard: ISA 240 / 315 / 500 / 501 / 505 / 520 / 530 / 540 / 570, PCAOB AS 1215 / 2401 / 2501 / 2315, ASC 230 / 330 / 360 / 606, IAS 2 / 7 / 16, IFRS 15.
-- [ ] Hover state on a row: briefly expands to reveal the one-sentence test description and a link to the tool that cites it (deep-link to the matching catalog card).
-- [ ] Keep the current pill strip as a **mobile-only fallback** (specimen layout does not collapse under 768 px).
-- [ ] A11y: semantic `<dl>` with `<dt>` citations and `<dd>` scopes; screen-reader-friendly; keyboard-navigable rows with visible focus rings.
-- [ ] Jest: renders every standard; clicking a row routes/scrolls to the correct tool page.
+- [x] Data-driven: 21 standards live in `content/standards-specimen.ts` — every ISA / PCAOB AS / ASC / IAS / IFRS code currently cited by a Paciolus tool or memo. Each entry carries `code`, optional paragraph citation, scope line, governing body, and tool-ID array. New tools citing existing standards → append to `tools`; new standards → add one entry.
+- [x] Two-column specimen layout at `md+`: hairline vertical rule between columns via absolute-positioned 1px div; governing-body groupings preserved (IAASB → PCAOB → FASB → IASB) so one body's entries never break across columns; `partitionByBody` finds the nearest body-heading split point.
+- [x] Per entry: `<dt>` renders the code in Merriweather bold with `oldstyle-nums proportional-nums` inline style; optional paragraph citation appears as a small-caps sage `<sup>`; `<dd>` renders the scope in Merriweather body with leading-snug; small meta line "→ cited in N tools" transitions sage on hover.
+- [x] Each row is a `<Link>` routing to the first-cited tool's catalog page (TOOL_HREF map covers all 14 tools including Sprint 688's composite-risk + account-risk-heatmap). Keyboard-focusable with visible sage focus ring.
+- [x] Mobile (`<md`): falls back to the original horizontal pill strip — same links, same behaviour, no layout collapse.
+- [x] Summary footer: "21 standards · N tools cite them" with the tool-count derived from the data so it stays in sync.
+- [x] A11y: semantic `<dl>`/`<dt>`/`<dd>`; keyboard-navigable; `motion-reduce` variants on transitions.
+- [x] 6 Jest tests pin: every code renders; every governing-body heading renders; first-cited-tool href wiring (ISA 240 → /tools/journal-entry-testing verified); inline oldstyle-nums style; mobile fallback renders all codes as links; summary footer text.
+
+**Review:**
+- Deliberately landed the specimen as a replacement for the pill strip inside `BottomProof` rather than as a new section in the homepage sequence — keeps the "Every Test Cites Its Standard" h2 + sub copy intact so the section's narrative framing is unchanged.
+- Drop-cap and footnote-superscript details from the original brief scoped down to the oldstyle-nums-on-code + small-caps-paragraph-cite treatment. Full drop-cap would've been precious against the Merriweather bold code; the current treatment reads as a specimen page without feeling overwrought.
+- Commit SHA: TBD.
 
 ---
 
