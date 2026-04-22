@@ -1254,25 +1254,30 @@ Nothing weakened — auth/security/zero-storage untouched, no tests silenced, ev
 ---
 
 ### Sprint 707: Demo page — signature "forensic instrument" moments
-**Status:** PENDING
+**Status:** COMPLETE
 **Priority:** P2
 **Source:** Design audit 2026-04-20
-**Blocks on:** ~~Sprint 703 (fonts)~~ UNBLOCKED 2026-04-22 — Merriweather retained.
-**Why now:** Demo tabs (TB Diagnostics / Testing Suite / Workspace / Sample Reports / Standards) function correctly but read as "generic SaaS dashboard." Three small signature moments would sell the "forensic instrument" positioning viscerally without touching the underlying data model.
 **Files:**
-- `frontend/src/components/demo/TBDiagnosticsTab.tsx` (or equivalent)
-- `frontend/src/components/demo/TestingSuiteTab.tsx`
 - `frontend/src/components/demo/ScanlineOverlay.tsx` — new
 - `frontend/src/components/demo/MechanicalGauge.tsx` — new
 - `frontend/src/components/demo/MarginAnnotation.tsx` — new
+- `frontend/src/components/demo/index.ts` — barrel
+- `frontend/src/components/marketing/DemoTabExplorer.tsx` — consumes all three
+- `frontend/src/__tests__/DemoSignatureMoments.test.tsx` — 12 Jest tests
 
 **Changes:**
-- [ ] **Scanline animation:** On TB Diagnostics tab mount, render a subtle sage-tinted horizontal scanline that sweeps the TB table once in 1.2 s before the ratios resolve. Sells the "under three seconds" claim viscerally.
-- [ ] **Mechanical gauge for Composite Diagnostic Score (76):** Replace the flat circle dial with a proper arc gauge — hairline tick marks every 10, serif numeral at center, needle easing on mount. Component signature: `<MechanicalGauge score={76} riskLevel="low" />`.
-- [ ] **Margin annotations for anomaly flags:** Replace pill / toast styling with typewriter-style red-pen margin annotations — hairline left border in clay, serif italic copy, inline caret glyph. Matches the physical audit-review language.
-- [ ] All three respect `prefers-reduced-motion: reduce` — scanline and needle skip animation, rendering the final state immediately.
-- [ ] Component isolation: everything in `components/demo/` — cannot leak into real product views.
-- [ ] Jest: each new component tested; reduced-motion path explicitly covered.
+- [x] **Scanline animation:** `<ScanlineOverlay>` wraps the TB Diagnostics tab block; sage-tinted horizontal gradient sweeps from top to bottom once per mount (1200ms duration, 200ms start delay). `prefers-reduced-motion: reduce` suppresses the sweep entirely — content renders immediately with no overlay.
+- [x] **Mechanical gauge for Composite Diagnostic Score:** `<MechanicalGauge score={76} riskLevel="low" size={140} />` replaces the flat circle-dial in TestingTab. 180° arc with hairline tick marks every 10 units (major at 0 / 50 / 100 with oldstyle-nums labels in Merriweather), needle eases (easeOutCubic, ~1100ms) from -90° to the score angle on mount. Needle colour reflects risk tier (sage for low, brass for moderate/elevated, clay for high). Reduced-motion jumps to the final angle. Aria-label: "Composite diagnostic score X out of 100, <Risk Label>".
+- [x] **Margin annotations for anomaly flags:** `<MarginAnnotation severity="high|moderate|low">` with a hairline left border in severity-coloured clay/oatmeal-warm/obsidian-dim, Merriweather italic body copy, and a leading `»` caret in the severity colour. Replaces the three pill-style anomaly toasts in DiagnosticsTab.
+- [x] All three honour `prefers-reduced-motion` — ScanlineOverlay skips the sweep, MechanicalGauge jumps straight to the final needle angle, MarginAnnotation is static by design.
+- [x] Component isolation: lives entirely under `components/demo/` with its own barrel. Not exported from `components/marketing/` or `components/shared/`. Sprint 707 rule ("cannot leak into real product views") enforced.
+- [x] 12 Jest tests pin: children render through ScanlineOverlay, sweep-not-mounted before delay, sweep-mounts-after-delay, reduced-motion-suppresses-sweep, gauge score readout + risk caption, aria-label text, score clamping (-10 → 0, 150 → 100), major tick labels, MarginAnnotation role="note" + default moderate severity, default caret, caret suppression with `caret=""`, severity-specific border class.
+
+**Review:**
+- Chose `easeOutCubic` for the needle animation rather than a spring. Springs can overshoot — that'd read as "playful," when the right voice here is "decisive and settling."
+- Margin annotation uses `»` as the default caret — the classic auditor's tick mark. Configurable per-instance via the `caret` prop, so a future consumer wanting `✎` or `†` isn't blocked.
+- Did NOT create separate `TBDiagnosticsTab.tsx` / `TestingSuiteTab.tsx` files as the sprint brief mentioned — the existing `DemoTabExplorer.tsx` architecture colocates all five tabs in one file. Retrofitting in place is lower-risk than a wholesale refactor and preserves the `layoutId="demo-tab-indicator"` invariant that coordinates the tab-indicator animation.
+- Commit SHA: TBD.
 
 ---
 
