@@ -696,6 +696,8 @@ H-07 enum-collapse piece **rejected as obsolete**. H-08 seat-counting audit kept
 **Follow-up flagged (out of scope this sprint):**
 - `routes/organization.py:168-176` has the same shape: the duplicate-invite check filters on `status == PENDING` without checking `expires_at`. Result: if Alice invites `bob@example.com`, the invite lapses, Alice cannot re-invite Bob — the 409 "unable to send invite" response fires against a dead stale invite. Minor UX bug rather than a seat-consumption bug; lives on a separate surface; deserves a targeted hotfix rather than being bundled here.
 
+**Commit SHA:** `12f5956`.
+
 ---
 
 ### Sprint 692: Documentation drift correction
