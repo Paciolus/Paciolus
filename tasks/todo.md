@@ -16,6 +16,7 @@
 > new features or architectural changes. Each entry is one line.
 > Format: `- [date] commit-sha: description (files touched)`
 
+- [2026-04-22] dep hygiene + Sprint 684 tail — 3 backend pins bumped (uvicorn 0.44.0→0.45.0, pydantic 2.13.2→2.13.3, psycopg2-binary 2.9.11→2.9.12), 3 backend transitives refreshed in venv (idna 3.11→3.13, pydantic_core 2.46.2→2.46.3, pypdfium2 5.7.0→5.7.1), mypy dev-pin bumped 1.20.1→1.20.2; 4 frontend caret pins bumped (@typescript-eslint/eslint-plugin + parser ^8.58.0→^8.59.0, @tailwindcss/postcss + tailwindcss ^4.2.2→^4.2.4). Sprint 684 deferred memo-copy item landed: `sampling_memo_generator.py` Expected Misstatement Derivation section now cites AICPA Audit Sampling Guide Table A-1 explicitly. Backend `pytest` 8046 passed / 0 failed; frontend `jest` 1887 passed / 0 failed; `npm run build` clean.
 - [2026-04-22] nightly audit artifacts — 2026-04-22 batch (original RED report + 4 sentinel JSONs + run_log). Preserved as historical evidence of the false-green incident that motivated Sprint 712. `.qa_warden_2026-04-22.json`, `.coverage_sentinel_2026-04-22.json`, and `.baseline.json` were committed in Sprint 712 (5d29cce) with the post-fix genuine-green values.
 - [2026-04-21] 9820bb2: nightly audit artifacts — 2026-04-19, 2026-04-20, 2026-04-21 batch. Commits daily report .md + 6 sentinel JSONs + run_log per day, plus .baseline.json update to capture the Sprints 677–710 test-count growth (8028 backend / 1845 frontend).
 - [2026-04-19] 9f00070: nightly dep hygiene (part 2) — remaining 3 majors cleared in venv (numpy 1.26→2.4, pip 25.3→26.0.1, pytz 2025.2→2026.1.post1). Verified zero direct imports for numpy/pytz; pandas 3.0.2 compatible with numpy 2.x; pytz has no current dependents. pytest 7836 passed / 0 failed. Venv-only change (no requirements.txt edits needed).
@@ -487,8 +488,8 @@ The original plan proposed threading a `branding_context` kwarg through every me
 - `TestSprint684NegativeBalanceRejection::test_negative_items_excluded_from_selection`.
 - `TestSprint684NegativeBalanceRejection::test_all_positive_returns_empty_negative_list`.
 
-**Deferred (per sprint plan but out of scope this session):**
-- Memo copy update referencing "AICPA Audit Sampling Guide, Table A-1" explicitly — current memo copy still uses generic language. `sampling_memo_generator.py` doesn't block the fix landing and a copy-only change is a tight hotfix candidate for later.
+**Deferred follow-up — landed 2026-04-22 as dep-hygiene hotfix:**
+- Memo copy update referencing "AICPA Audit Sampling Guide, Table A-1" explicitly — `sampling_memo_generator.py` Expected Misstatement Derivation section now cites Table A-1 with linear-interpolation note. Shipped alongside the 2026-04-22 dep hygiene hotfix batch.
 
 **Validation:**
 - 172 sampling + sampling-memo + sampling-routes tests pass.
