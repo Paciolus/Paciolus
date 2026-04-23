@@ -473,7 +473,7 @@ The original plan proposed threading a `branding_context` kwarg through every me
 ---
 
 ### Sprint 689: Hidden backend tools — catalog wire-up (CEO Path B, 2026-04-23)
-**Status:** IN PROGRESS — 689a/b/c COMPLETE, 689d–g pending
+**Status:** IN PROGRESS — 689a/b/c/d COMPLETE, 689e–g pending
 **Priority:** P2
 **Source:** Completeness agent H-03/H-05 + Claim-reality C-03/C-04 + CEO decision 2026-04-23
 
@@ -609,6 +609,27 @@ Validation:
 - `npm run build` — clean, exit 0; `/tools/intercompany` registered alongside other `ƒ (Dynamic)` tool routes.
 
 **Commit SHA:** `e17a052`
+
+**689d completion — 2026-04-23:**
+
+**Status:** COMPLETE
+
+Triple-CSV upload (payroll.csv required; w2_drafts.csv + form_941.csv optional), following the 689b/c pattern. Backend tier-gate retrofit applied (same two-line pattern as 689c).
+
+Delivered:
+- [x] `backend/routes/w2_reconciliation.py` — `enforce_tool_access` + `check_upload_limit` on analyze; `enforce_tool_access` on CSV export.
+- [x] `backend/tests/test_w2_reconciliation_routes.py` — 4 gate tests (Free 403 on analyze/export; Professional pass on both).
+- [x] `frontend/src/app/tools/w2-reconciliation/page.tsx` — standalone page.
+- [x] `frontend/src/hooks/useW2Reconciliation.ts` — analyze + exportCsv.
+- [x] `frontend/src/types/w2Reconciliation.ts` — request/response shapes.
+- [x] `frontend/src/components/w2Reconciliation/` — `parseCsv.ts` (three parsers), `W2FileUpload.tsx`, `W2Results.tsx`.
+- [x] `frontend/src/lib/commandRegistry.ts` — `tool:w2-reconciliation` entry.
+- [x] `frontend/src/app/tools/page.tsx` — new `TOOLS` row.
+- [x] `frontend/src/__tests__/W2ReconciliationPage.test.tsx` — 4 tests.
+
+Validation: 4 backend gate tests pass; +4 jest tests. Full jest + build run at 689g wrap.
+
+**Commit SHA:** _(to fill after commit)_
 
 ---
 

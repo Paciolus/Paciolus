@@ -17,10 +17,14 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, ValidationError
+from sqlalchemy.orm import Session
 
 from auth import User, require_verified_user
+from database import get_db
+from shared.entitlement_checks import check_upload_limit
 from shared.error_messages import sanitize_error
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
+from shared.testing_route import enforce_tool_access
 from w2_reconciliation_engine import (
     EmployeePayroll,
     EmployeeW2Draft,
@@ -153,7 +157,12 @@ def run_reconciliation(
     request: Request,
     payload: W2ReconciliationRequest,
     current_user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
 ) -> dict:
+    # Sprint 689d: gate promoted tool at tier + upload-limit level.
+    enforce_tool_access(current_user, "w2_reconciliation", db)
+    check_upload_limit(current_user, db)
+
     try:
         result = reconcile_w2(_build_config(payload))
     except W2ReconciliationInputError as e:
@@ -173,7 +182,11 @@ def export_reconciliation_csv(
     request: Request,
     payload: W2ReconciliationRequest,
     current_user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
 ) -> StreamingResponse:
+    # Sprint 689d: gate promoted tool (export mirrors analyze-route gating).
+    enforce_tool_access(current_user, "w2_reconciliation", db)
+
     try:
         result = reconcile_w2(_build_config(payload))
     except W2ReconciliationInputError as e:

@@ -124,6 +124,7 @@ const TOOL_ENTRIES: { id: string; label: string; href: string; toolName: string;
   { id: 'tool:multi-currency', label: 'Multi-Currency Conversion', href: '/tools/multi-currency', toolName: 'currency_rates', keywords: ['currency', 'fx', 'exchange', 'multi', 'ias21', 'asc830', 'rates'] },
   { id: 'tool:sod-checker', label: 'Segregation of Duties', href: '/tools/sod', toolName: 'sod_checker', keywords: ['sod', 'segregation', 'duties', 'fraud', 'compliance', 'aicpa', 'soc1', 'coso'] },
   { id: 'tool:intercompany', label: 'Intercompany Elimination', href: '/tools/intercompany', toolName: 'intercompany_elimination', keywords: ['intercompany', 'elimination', 'consolidation', 'asc810', 'ifrs10', 'isa600', 'multi-entity', 'group'] },
+  { id: 'tool:w2-reconciliation', label: 'W-2 / W-3 Reconciliation', href: '/tools/w2-reconciliation', toolName: 'w2_reconciliation', keywords: ['w2', 'w3', '941', 'payroll', 'reconciliation', 'form', 'ssa', 'irs'] },
 ]
 
 const TOOL_COMMANDS: PaletteCommand[] = TOOL_ENTRIES.map(t => ({
