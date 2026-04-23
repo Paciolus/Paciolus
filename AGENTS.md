@@ -48,4 +48,4 @@ Paciolus is a 12-tool zero-storage AI audit intelligence SaaS for financial prof
 - **Pricing tiers:** Free / Solo / Professional / Enterprise (not Team/Organization — those are retired)
 - **Oat & Obsidian design mandate:** use `obsidian-*`, `oatmeal-*`, `clay-*`, `sage-*` tokens only — no generic Tailwind colors
 - **Commit-msg hook:** `Sprint N:` commits require `tasks/todo.md` staged; hotfixes use `fix:` prefix
-- **12 diagnostic tools:** TB Diagnostics, Multi-Period, JE Testing, AP Testing, Bank Rec, Payroll, Three-Way Match, Revenue, AR Aging, Fixed Assets, Inventory, Statistical Sampling
+- **18 diagnostic tools:** TB Diagnostics, Multi-Period, JE Testing, AP Testing, Bank Rec, Payroll, Three-Way Match, Revenue, AR Aging, Fixed Assets, Inventory, Statistical Sampling, Multi-Currency Conversion, Segregation of Duties, Intercompany Elimination, W-2/W-3 Reconciliation, Form 1099 Preparation, Book-to-Tax, Cash Flow Projector (Sprint 689 promoted 7 hidden tools to standalone pages; 11 → 18)

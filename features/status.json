@@ -704,10 +704,10 @@
   {
     "id": "pricing-tiers",
     "category": "billing",
-    "description": "A user sees Free/Solo($100)/Professional($500)/Enterprise($1000) pricing tiers — all paid tiers get all 12 tools",
+    "description": "A user sees Free/Solo($100)/Professional($500)/Enterprise($1000) pricing tiers — all paid tiers get all 18 tools",
     "verification_steps": [
       "Verify pricing page shows correct tier names and prices",
-      "Verify all paid tiers have access to all 12 tools",
+      "Verify all paid tiers have access to all 18 tools",
       "Verify Free tier limitations"
     ],
     "status": "complete",
@@ -746,7 +746,7 @@
     "description": "A user is gated to their tier's entitlements — Free tier has limited access, paid tiers get all tools",
     "verification_steps": [
       "Verify Free tier blocked from premium endpoints",
-      "Verify paid tier has access to all 12 tools",
+      "Verify paid tier has access to all 18 tools",
       "Verify hard/soft enforcement modes"
     ],
     "status": "complete",
@@ -834,10 +834,10 @@
   {
     "id": "workspace-shell",
     "category": "ui",
-    "description": "A user works within the Workspace Shell ('Audit OS') that provides workspace-centric navigation across all 12 tools",
+    "description": "A user works within the Workspace Shell ('Audit OS') that provides workspace-centric navigation across all 18 tools",
     "verification_steps": [
       "Verify workspace-centric navigation model",
-      "Verify all 12 tools accessible from workspace context",
+      "Verify all 18 tools accessible from workspace context",
       "Verify workspace state persistence"
     ],
     "status": "complete",
@@ -995,7 +995,7 @@
     "description": "features/status.json provides machine-readable ground truth for all built and unbuilt features",
     "verification_steps": [
       "Verify features/status.json exists and is valid JSON",
-      "Verify all 12 tools have entries",
+      "Verify all 18 tools have entries",
       "Verify all 20 memo reports have entries"
     ],
     "status": "complete",

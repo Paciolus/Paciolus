@@ -473,7 +473,7 @@ The original plan proposed threading a `branding_context` kwarg through every me
 ---
 
 ### Sprint 689: Hidden backend tools — catalog wire-up (CEO Path B, 2026-04-23)
-**Status:** IN PROGRESS — 689a/b/c/d/e/f COMPLETE, 689g pending
+**Status:** COMPLETE — 689a–g all shipped; catalog flipped 11 → 18 tools, CANONICAL_TOOL_COUNT now 18
 **Priority:** P2
 **Source:** Completeness agent H-03/H-05 + Claim-reality C-03/C-04 + CEO decision 2026-04-23
 
@@ -666,6 +666,41 @@ Delivered:
 - [x] Catalog + command registry + 4 jest tests.
 
 Validation: 4 backend + 4 jest pass.
+
+**Commit SHA:** `b3cc205`
+
+**689g completion — 2026-04-23:**
+
+**Status:** COMPLETE
+
+Final sub-sprint: ships Cash Flow Projector as a standalone page AND flips the "12 → 18 tools" marketing surfaces in a single commit pass (per CEO directive "single-pass flip at 689g").
+
+Cash Flow Projector deliverables:
+- [x] `backend/routes/cash_flow_projector.py` — tier gate on both routes.
+- [x] `backend/tests/test_cash_flow_projector_routes.py` — 4 gate tests.
+- [x] `frontend/src/app/tools/cash-flow-projector/page.tsx`.
+- [x] `frontend/src/hooks/useCashFlowProjector.ts`.
+- [x] `frontend/src/types/cashFlowProjector.ts`.
+- [x] `frontend/src/components/cashFlowProjector/CashFlowForm.tsx` + `CashFlowResults.tsx`.
+- [x] Catalog + command registry + 4 jest tests.
+
+Marketing flip ("12 → 18 tools"):
+- [x] `backend/shared/entitlements.py` — `CANONICAL_TOOL_COUNT: 12 → 18`; docstring + `tools_allowed` comments updated.
+- [x] Bulk `sed` across **34 live files**: frontend marketing components (BottomProof, EvidenceBand, EngravedStat, ProofStrip, ToolLedger, ToolShowcase, ToolSlideshow, MarketingFooter), pricing / about / demo / terms / register pages, shared UI (UpgradeGate, FeatureGate, GuestCTA, WelcomeModal, UpgradeModal), workspace progress indicator, `domain/pricing.ts`, `commandRegistry.ts`, and 5 test files (EngravedStat, EntitlementParity, EvidenceBand, PricingPage, ProofStrip) that assert on the live copy.
+- [x] Docs: `CLAUDE.md` (current-state line 140), `AGENTS.md` (tool list expanded with all 7 promoted tools + sprint 689 note), `docs/02-technical/ARCHITECTURE.md`, `docs/04-compliance/ACCESS_CONTROL_POLICY.md` + `TERMS_OF_SERVICE.md`, `docs/07-user-facing/USER_GUIDE.md`, `features/status.json`, `tasks/pricing-launch-qa.md`.
+- [x] Historical rows preserved: `CLAUDE.md:111` (v1.5.0 era) restored to `12 tools, v1.5.0` after sed flipped it by mistake; archive files, `reports/`, and the `website-usability-analysis.md` snapshot all left untouched (point-in-time records). `backend/tests/test_tool_anomaly_detection.py` line 7 left at "113 generators across 12 tools" — that count refers to anomaly generators, not catalog tools, and the 7 promoted tools do not add generators.
+
+Validation (applies to all 689a–g cumulatively):
+- All 5 new backend route-gate test files: **20 passed** (4 per tool × 5 gated routes).
+- `npx jest` full: **195 suites, 1915 tests pass** (+16 new from 689d–g × 4).
+- `npm run build`: clean, exit 0. All 7 new `/tools/*` routes registered as `ƒ (Dynamic)`.
+
+Implementation notes:
+- **Gate-retrofit pattern locked in 689c is the recipe for 689d–g**: `enforce_tool_access(user, "<name>", db) + check_upload_limit(user, db)` on analyze; `enforce_tool_access` only on CSV export. Applied verbatim to each of w2_reconciliation, form_1099, book_to_tax, cash_flow_projector. Every retrofit shipped with a 4-test fixture (Free 403 × 2 endpoints; Professional 200 × 2 endpoints).
+- **Form vs. CSV upload split**: 689b (SOD), 689c (Intercompany), 689d (W-2), 689e (1099) use CSV upload because the payloads are rowwise and map cleanly to ERP / IAM exports. 689f (Book-to-Tax) and 689g (Cash Flow Projector) use pure form input because the payloads are small and spreadsheet-uploading a 5-field form would be hostile UX.
+- **CSV parser reuse deferred**: each of the 4 CSV tools has its own `parseCsv.ts`. Extracting a shared `lib/csv/minimalParser.ts` would save ~60 LoC per file but would couple 4 otherwise-independent tools; scoping it to 689 was out of sprint scope. A later refactor sprint can consolidate.
+- **No new FeatureGate additions after 689b**: SOD needed `sod_checker` because it's Enterprise-only on the backend. 689c–g follow the standard paid-tier-allowed pattern (Free blocked via `_FREE_TOOLS`), so `UpgradeGate toolName="..."` is sufficient.
+- **sed false-positive in CLAUDE.md history row**: bulk sed flipped a v1.5.0-era "12 tools" claim in the completed-eras table. Reverted after review. Historical claims ("at the time this sprint shipped, the catalog was 12 tools") are correct and must not move with the canonical count.
 
 **Commit SHA:** _(to fill after commit)_
 

@@ -11,13 +11,13 @@ describe('EngravedStat', () => {
         kicker="I."
         value="1,452"
         label="Automated Tests"
-        sub="Across all 12 diagnostic tools"
+        sub="Across all 18 diagnostic tools"
       />,
     )
     expect(screen.getByText('I.')).toBeInTheDocument()
     expect(screen.getByText('1,452')).toBeInTheDocument()
     expect(screen.getByText('Automated Tests')).toBeInTheDocument()
-    expect(screen.getByText('Across all 12 diagnostic tools')).toBeInTheDocument()
+    expect(screen.getByText('Across all 18 diagnostic tools')).toBeInTheDocument()
   })
 
   it('omits the kicker when not provided', () => {

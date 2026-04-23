@@ -415,7 +415,7 @@ const PRICING_TIERS = [
     name: 'Solo',
     price: '$100',
     period: '/mo',
-    summary: 'All 12 tools · PDF + Excel + CSV',
+    summary: 'All 18 tools · PDF + Excel + CSV',
     popular: false,
   },
   {
@@ -508,7 +508,7 @@ export function ToolSlideshow() {
             The Suite
           </span>
           <h2 className="font-serif text-3xl md:text-4xl text-oatmeal-100 mb-3">
-            Twelve Tools. One Platform.
+            Eighteen Tools. One Platform.
           </h2>
           <p className="font-sans text-oatmeal-500 text-sm max-w-lg mx-auto mb-4">
             Twelve purpose-built tools. Explore each one to see exactly what you get.
@@ -578,7 +578,7 @@ export function ToolSlideshow() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
               </svg>
               <span className="font-sans text-xs text-oatmeal-600">
-                Browse all 12 tools
+                Browse all 18 tools
               </span>
               <svg className="w-3.5 h-3.5 text-oatmeal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />

@@ -67,7 +67,7 @@ describe('EvidenceBand', () => {
 
   it('renders demo CTA link', () => {
     render(<EvidenceBand />)
-    const link = screen.getByText(/Explore all 12 tools/)
+    const link = screen.getByText(/Explore all 18 tools/)
     expect(link.closest('a')).toHaveAttribute('href', '/demo')
   })
 

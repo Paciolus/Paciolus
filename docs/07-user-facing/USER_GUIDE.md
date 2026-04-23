@@ -627,7 +627,7 @@ Paciolus offers three purchasable plans plus a Free tier for evaluation.
 
 ### 15.2 Tool Access by Plan
 
-All paid tiers (Solo, Professional, Enterprise) have access to all 12 tools.
+All paid tiers (Solo, Professional, Enterprise) have access to all 18 tools.
 
 | Tool | Free | Solo | Professional | Enterprise |
 |------|------|------|-------------|------------|
@@ -955,7 +955,7 @@ A: Yes. Upgrade or downgrade at any time from Settings > Billing. Plan changes t
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 3.0 | 2026-02-26 | Complete rewrite: 12 tools, 10 file formats, billing plans, engagement workspaces, command palette, data handling guarantees, v2.1.0 |
+| 3.0 | 2026-02-26 | Complete rewrite: 18 tools, 10 file formats, billing plans, engagement workspaces, command palette, data handling guarantees, v2.1.0 |
 | 2.0 | 2026-02-06 | Added Tools 2–5 guides, updated navigation, v0.70.0 |
 | 1.0 | 2026-02-04 | Initial user guide (Tool 1 only) |
 

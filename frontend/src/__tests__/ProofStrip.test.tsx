@@ -60,6 +60,6 @@ describe('ProofStrip', () => {
     expect(screen.getByText('For standard file sizes')).toBeInTheDocument()
     expect(screen.getByText('Raw files destroyed on completion')).toBeInTheDocument()
     expect(screen.getByText('Standards-aligned output')).toBeInTheDocument()
-    expect(screen.getByText('Across all 12 tools')).toBeInTheDocument()
+    expect(screen.getByText('Across all 18 tools')).toBeInTheDocument()
   })
 })

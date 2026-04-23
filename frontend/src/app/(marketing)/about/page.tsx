@@ -338,7 +338,7 @@ export default function AboutPage() {
             Start your first analysis.
           </h2>
           <p className="type-body text-oatmeal-400 mb-8">
-            Seven-day trial. All twelve tools. Your client&apos;s raw files are never stored.
+            Seven-day trial. All eighteen tools. Your client&apos;s raw files are never stored.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link

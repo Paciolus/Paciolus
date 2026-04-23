@@ -82,7 +82,7 @@ export default function DemoPage() {
         </div>
       </section>
 
-      {/* ── All 12 Tools Grid (>8 items — single fadeUp, no stagger) ── */}
+      {/* ── All 18 Tools Grid (>8 items — single fadeUp, no stagger) ── */}
       <section className="py-20 px-6">
         <div className="max-w-5xl mx-auto">
 
@@ -91,7 +91,7 @@ export default function DemoPage() {
               The Complete Tool Suite
             </h2>
             <p className="font-sans text-oatmeal-500 text-sm">
-              All twelve tools included with every paid plan.
+              All eighteen tools included with every paid plan.
             </p>
           </Reveal>
 

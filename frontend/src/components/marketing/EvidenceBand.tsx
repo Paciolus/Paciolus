@@ -29,7 +29,7 @@ const CELLS: EvidenceCell[] = [
     icon: 'shield-check',
     stat: '140+',
     label: 'Automated Tests',
-    sub: 'Across all 12 diagnostic tools',
+    sub: 'Across all 18 diagnostic tools',
     accent: 'sage',
   },
   {
@@ -130,7 +130,7 @@ export function EvidenceBand() {
             href="/demo"
             className="inline-flex items-center gap-2 font-sans text-sm text-oatmeal-400 hover:text-oatmeal-200 transition-colors group"
           >
-            Explore all 12 tools in the interactive demo
+            Explore all 18 tools in the interactive demo
             <BrandIcon name="chevron-right" className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
           </Link>
         </Reveal>

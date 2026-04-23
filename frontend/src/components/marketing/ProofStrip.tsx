@@ -40,7 +40,7 @@ const OUTCOME_METRICS: OutcomeMetric[] = [
   { value: 'Typically under three seconds', label: 'For standard file sizes', icon: 'clock' },
   { value: 'Zero file storage', label: 'Raw files destroyed on completion', icon: 'padlock' },
   { value: 'ISA & PCAOB', label: 'Standards-aligned output', icon: 'shield-check' },
-  { value: '140+ automated tests', label: 'Across all 12 tools', icon: 'clipboard-check' },
+  { value: '140+ automated tests', label: 'Across all 18 tools', icon: 'clipboard-check' },
 ]
 
 export function ProofStrip() {

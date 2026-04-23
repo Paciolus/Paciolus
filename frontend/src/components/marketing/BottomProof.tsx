@@ -32,7 +32,7 @@ const CLOSING_METRICS: ClosingMetric[] = [
     target: 140,
     suffix: '+',
     label: 'Automated Tests',
-    sub: 'Across all 12 diagnostic tools',
+    sub: 'Across all 18 diagnostic tools',
   },
   {
     target: 12,

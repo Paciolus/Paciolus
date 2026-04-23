@@ -378,7 +378,7 @@ const tiers: Tier[] = [
     priceSubtitle: (interval) => interval === 'annual' ? 'per year' : 'per month',
     features: [
       { text: '100 uploads per month' },
-      { text: 'All 12 diagnostic tools' },
+      { text: 'All 18 diagnostic tools' },
       { text: 'Unlimited clients' },
       { text: 'PDF, Excel & CSV exports' },
       { text: 'Diagnostic Workspace — engagement tracking & follow-ups' },
@@ -398,7 +398,7 @@ const tiers: Tier[] = [
     priceSubtitle: (interval) => interval === 'annual' ? 'per year, 7 seats included' : 'per month, 7 seats included',
     features: [
       { text: '500 uploads per month' },
-      { text: 'All 12 diagnostic tools' },
+      { text: 'All 18 diagnostic tools' },
       { text: 'Unlimited clients' },
       { text: 'All export formats' },
       { text: '7 seats included (up to 20)' },
@@ -479,7 +479,7 @@ const faqItems: FaqItem[] = [
   },
   {
     question: 'What is the difference between Solo and Professional?',
-    answer: 'Both Solo and Professional include all 12 diagnostic tools and all export formats. Professional adds team collaboration (7 seats included), export sharing, admin dashboard with activity logs, and priority support. Professional is ideal for growing firms that need team-level visibility and collaboration.',
+    answer: 'Both Solo and Professional include all 18 diagnostic tools and all export formats. Professional adds team collaboration (7 seats included), export sharing, admin dashboard with activity logs, and priority support. Professional is ideal for growing firms that need team-level visibility and collaboration.',
   },
   {
     question: 'What does Enterprise include beyond Professional?',
@@ -605,7 +605,7 @@ export default function PricingPage() {
               Straightforward Pricing for Serious Work
             </h1>
             <p className="type-body text-oatmeal-400 max-w-xl mx-auto mb-3">
-              Twelve tools. Zero file storage. One platform. Pick the plan that matches your practice.
+              Eighteen tools. Zero file storage. One platform. Pick the plan that matches your practice.
             </p>
             <p className="font-sans text-sm text-sage-400">
               Every plan includes a 7-day free trial — no credit card required to start.

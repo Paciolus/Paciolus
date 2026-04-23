@@ -5,7 +5,7 @@
  *
  * Replaces the pre-Sprint-706 <ToolSlideshow> one-card-at-a-time carousel
  * (users hit "01 / 12 ‹ ›" and bounce on the first card) with the full
- * catalog rendered as a ledger-style grid: all 12 tools visible at once,
+ * catalog rendered as a ledger-style grid: all 18 tools visible at once,
  * rows expand in place on click.
  *
  * Layout:
@@ -66,7 +66,7 @@ export function ToolLedger() {
           Catalog
         </span>
         <h2 className="font-serif text-3xl md:text-4xl text-oatmeal-100 mb-2">
-          Twelve Tools · One Platform
+          Eighteen Tools · One Platform
         </h2>
         <p className="font-sans text-sm text-oatmeal-400 max-w-xl mx-auto">
           Every paid tier unlocks the full suite. Click any row for the one-line scope.

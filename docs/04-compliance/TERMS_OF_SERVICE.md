@@ -267,7 +267,7 @@ Paciolus operates under a **Zero-Storage** model:
 | **Professional** | $500/month | $5,000/year | 7 |
 | **Enterprise** | $1,000/month | $10,000/year | 20 |
 
-All paid tiers include access to all 12 diagnostic tools. Annual billing includes an approximate 17% discount compared to monthly billing.
+All paid tiers include access to all 18 diagnostic tools. Annual billing includes an approximate 17% discount compared to monthly billing.
 
 **Current pricing:** See https://paciolus.com/pricing
 
