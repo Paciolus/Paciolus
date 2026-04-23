@@ -1634,5 +1634,6 @@ Sprint 675 established the exact fix pattern for `dependency_sentinel.py` (switc
 - The FS generator posed the only design tension — `draw_fs_decorations` is a composite callback that already draws watermark + rules + page number + disclaimer, so the Sprint 679 pattern of "swap `draw_page_footer` → `make_branded_page_footer`" wouldn't work without losing FS-specific chrome. Chose to extend `draw_fs_decorations` with optional kwargs rather than refactor it to delegate to `_draw_footer_impl`; the kwargs are additive, preserve existing output bit-for-bit when branding is absent, and keep the FS aesthetic (custom disclaimer language, watermark, rules) intact.
 - `_build_story`'s new `custom_logo_bytes` kwarg is internal — the public method is `generate_pdf`, which reads the ContextVar. Keeping the explicit kwarg on the internal method is a defense against future splits where `_build_story` might be called from a test path that bypasses `generate_pdf`.
 - Lesson reinforced from Sprint 679: ContextVar-based propagation continues to be the right shape. Adding 3 more generators just meant 3 ContextVar reads + 3 small chrome-handler tweaks, not 3 signature migrations.
+- Commit SHA: `7c6c92c` (PR #98 squash-merge 2026-04-23).
 
 ---
