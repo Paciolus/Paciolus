@@ -7,13 +7,20 @@
  * Supports CSV upload and manual single-rate entry.
  */
 
-import { useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useCurrencyRates } from '@/hooks/useCurrencyRates'
 import { ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fileFormats'
 
 const COMMON_CURRENCIES = ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY']
 
-export function CurrencyRatePanel() {
+interface CurrencyRatePanelProps {
+  /** Render the panel expanded on mount. Sprint 689a — standalone
+   *  /tools/multi-currency page wants the controls visible immediately;
+   *  TB-upload sidebar keeps the default (collapsed). */
+  defaultOpen?: boolean
+}
+
+export function CurrencyRatePanel({ defaultOpen = false }: CurrencyRatePanelProps = {}) {
   const {
     rateStatus,
     uploadStatus,
@@ -24,7 +31,13 @@ export function CurrencyRatePanel() {
     refreshStatus,
   } = useCurrencyRates()
 
-  const [isOpen, setIsOpen] = useState(false)
+  const [isOpen, setIsOpen] = useState(defaultOpen)
+
+  useEffect(() => {
+    if (defaultOpen) {
+      refreshStatus()
+    }
+  }, [defaultOpen, refreshStatus])
   const [mode, setMode] = useState<'upload' | 'manual'>('upload')
   const [presentationCurrency, setPresentationCurrency] = useState('USD')
   const [dragActive, setDragActive] = useState(false)

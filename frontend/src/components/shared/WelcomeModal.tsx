@@ -9,7 +9,7 @@
  *
  * Steps:
  * 1. Upload a trial balance (core action)
- * 2. Explore your diagnostic tools (12 tools)
+ * 2. Explore your diagnostic tools (18 tools)
  * 3. Export audit-ready memos (deliverable)
  */
 

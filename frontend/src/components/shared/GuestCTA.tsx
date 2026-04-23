@@ -11,7 +11,7 @@ interface GuestCTAProps {
  * GuestCTA — Shared sign-in prompt for unauthenticated visitors.
  *
  * Displayed on tool pages when the user is not logged in.
- * Standardizes the "Sign in to get started" block across all 12 tools.
+ * Standardizes the "Sign in to get started" block across all 18 tools.
  *
  * Sprint 239: Extracted from duplicated inline blocks.
  */

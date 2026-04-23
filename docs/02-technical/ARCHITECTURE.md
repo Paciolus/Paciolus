@@ -30,7 +30,7 @@ Paciolus is a modern, cloud-native audit intelligence platform built on a **Zero
 Paciolus uses a Workspace-centric navigation model.
 
 **Workspaces** are the primary organizational unit. Each Workspace represents a discrete
-client engagement and is the container within which all 12 diagnostic tools are executed.
+client engagement and is the container within which all 18 diagnostic tools are executed.
 
 **Dashboard** is a summary view only. It surfaces active Workspace status, recent activity,
 and account-level metrics. It does not represent a separate product area.

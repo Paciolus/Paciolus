@@ -2,7 +2,7 @@
  * Entitlement Parity Test — frontend-side cross-check.
  *
  * Pricing v3: Only FREE tier has restricted tools (TB + Flux Analysis).
- * All paid tiers (Solo, Professional, Enterprise) have access to all 12 tools.
+ * All paid tiers (Solo, Professional, Enterprise) have access to all 18 tools.
  *
  * Asserts that UpgradeGate FREE_TOOLS and commandRegistry FREE_TOOLS + toolGuard
  * are identical, preventing drift between the two frontend guard systems.
@@ -39,7 +39,7 @@ const COMMAND_REGISTRY_PATH = path.resolve(
 const upgradeGateSource = fs.readFileSync(UPGRADE_GATE_PATH, 'utf-8')
 const commandRegistrySource = fs.readFileSync(COMMAND_REGISTRY_PATH, 'utf-8')
 
-/** All 12 tools in the system. */
+/** All 18 tools in the system. */
 const ALL_TOOLS = [
   'trial_balance',
   'flux_analysis',

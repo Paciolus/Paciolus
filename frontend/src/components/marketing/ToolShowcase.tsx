@@ -27,7 +27,7 @@ interface Tool {
 }
 
 const TOOLS: Tool[] = [
-  // ─── All 12 tools available from Solo ($100/mo) ─────────────────────
+  // ─── All 18 tools available from Solo ($100/mo) ─────────────────────
   {
     title: 'Trial Balance Diagnostics',
     description: 'Anomaly detection, ratio analysis, lead sheet mapping, and financial statement generation.',
@@ -136,7 +136,7 @@ const TOOLS: Tool[] = [
 const TOTAL_COUNT = TOOLS.length                                  // 12
 
 const FILTER_TABS: { id: ActiveFilter; label: string; sub: string }[] = [
-  { id: 'all',          label: 'All 12 tools',  sub: '' },
+  { id: 'all',          label: 'All 18 tools',  sub: '' },
   { id: 'solo',         label: 'Paid Plans',    sub: `All ${TOTAL_COUNT} tools · from $100/mo` },
 ]
 
@@ -281,7 +281,7 @@ export function ToolShowcase() {
                 </span>
               </div>
               <p className="font-sans text-xs text-oatmeal-500 truncate">
-                All 12 tools · 100 uploads/mo · PDF + Excel + CSV
+                All 18 tools · 100 uploads/mo · PDF + Excel + CSV
               </p>
             </div>
             <div className="flex items-center gap-1 text-sage-500 group-hover:text-sage-400 shrink-0 transition-colors">
@@ -325,7 +325,7 @@ export function ToolShowcase() {
           <Link href="/pricing" className="text-oatmeal-500 hover:text-oatmeal-300 transition-colors underline underline-offset-2">
             Enterprise ($1,000/mo)
           </Link>
-          {' '}— all 12 tools, 20 seats, custom branding, bulk upload.
+          {' '}— all 18 tools, 20 seats, custom branding, bulk upload.
         </Reveal>
 
       </div>

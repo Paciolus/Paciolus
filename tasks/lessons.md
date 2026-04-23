@@ -4,6 +4,14 @@
 
 ---
 
+## Screenshotting a Render env-var edit form leaks secrets into the tool log (session 2026-04-23)
+
+During R2 provisioning, after pasting the `paciolus-exports-rw` Access Key ID and Secret Access Key into a Render env-var Edit form, I took a screenshot to show the "Save, rebuild, and deploy" button location — and Render's edit mode renders every value as a plain `<textarea>` with the raw text exposed, so both secrets landed in the screenshot and therefore in the tool-result log. The view-mode surface is safe (values are masked as `••••••••••` until the eye icon is explicitly clicked), but the edit-mode surface is not. Mitigation took a full Cloudflare token roll (Roll → re-copy → re-paste) before the compromised values could be saved to Render. The earlier 2026-04-22 DATABASE_URL screenshot leak during the orphan-DB investigation was the same failure mode; this is a recurring class of bug that warrants a standing rule.
+
+**Pattern:** Never screenshot a cloud-provider env-var page (Render, Vercel, Cloudflare Workers, AWS, etc.) while in edit mode. To drive a button on an edit form, use `find` + `ref_id` click, or DOM-based `querySelector` + JS coordinate extraction, never a pixel screenshot. Before every screenshot on a credentials-adjacent surface, ask "is any form field on this page in edit mode?" If yes, do not screenshot — use JS DOM extraction with a strict allowlist (labels/counts only, never values, never lengths that imply value shape beyond generic format classes). Safe alternatives: masked view-mode screenshots (values show as dots), JS-only length-and-regex checks (e.g. `valueLength: 32, looksLikeHex32: true`), or narrating the UI position from DOM rect data. When a credential does leak: the remediation order is **(1) do not Save the form** (containment — keep the exposure DOM-only), **(2) rotate the credential at the issuer**, **(3) re-paste into the still-open form with the rotated value**, **(4) only then Save** — this prevents the compromised value from reaching the secrets store, where recovery is much harder than rolling a single token.
+
+---
+
 ## A coverage-sentinel gap can be dead code, not a testing gap (Sprint 676)
 
 Sprint 676 targeted three 0%-coverage files from the nightly Coverage Sentinel report. Investigation showed `services/organization_service.py` (180 statements, 0%) had **zero imports anywhere** — Sprint 546's archive claimed "Refactor 5: organization.py → services/organization_service.py + thin routes" but only created the service module, never wired the routes to use it. Writing tests for the orphan would have inflated the coverage number without improving safety; deletion was the right move. **Pattern:** Before writing tests to fix a coverage gap, `grep -r <module_name>` across the whole repo. If nothing imports it, the gap isn't a test gap — it's dead code from an incomplete refactor. The sentinel report doesn't distinguish between "untested" and "unused"; you have to.

@@ -24,7 +24,7 @@ function tierIndex(tier: UserTier): number {
 
 // --- Tool tier guards (mirrors UpgradeGate TIER_TOOLS) ---
 // Pricing v3: Only FREE tier is restricted (TB + Flux Analysis).
-// All paid tiers (Solo, Professional, Enterprise) have access to all 12 tools.
+// All paid tiers (Solo, Professional, Enterprise) have access to all 18 tools.
 
 const FREE_TOOLS = new Set(['trial_balance', 'flux_analysis'])
 
@@ -121,6 +121,13 @@ const TOOL_ENTRIES: { id: string; label: string; href: string; toolName: string;
   { id: 'tool:statistical-sampling', label: 'Statistical Sampling', href: '/tools/statistical-sampling', toolName: 'statistical_sampling', keywords: ['sampling', 'statistical', 'mus', 'isa530'] },
   { id: 'tool:composite-risk', label: 'Composite Risk Scoring', href: '/tools/composite-risk', toolName: 'composite_risk', keywords: ['composite', 'risk', 'rmm', 'isa315', 'inherent', 'control', 'fraud'] },
   { id: 'tool:account-risk-heatmap', label: 'Account Risk Heatmap', href: '/tools/account-risk-heatmap', toolName: 'account_risk_heatmap', keywords: ['heatmap', 'risk', 'triage', 'account', 'signals'] },
+  { id: 'tool:multi-currency', label: 'Multi-Currency Conversion', href: '/tools/multi-currency', toolName: 'currency_rates', keywords: ['currency', 'fx', 'exchange', 'multi', 'ias21', 'asc830', 'rates'] },
+  { id: 'tool:sod-checker', label: 'Segregation of Duties', href: '/tools/sod', toolName: 'sod_checker', keywords: ['sod', 'segregation', 'duties', 'fraud', 'compliance', 'aicpa', 'soc1', 'coso'] },
+  { id: 'tool:intercompany', label: 'Intercompany Elimination', href: '/tools/intercompany', toolName: 'intercompany_elimination', keywords: ['intercompany', 'elimination', 'consolidation', 'asc810', 'ifrs10', 'isa600', 'multi-entity', 'group'] },
+  { id: 'tool:w2-reconciliation', label: 'W-2 / W-3 Reconciliation', href: '/tools/w2-reconciliation', toolName: 'w2_reconciliation', keywords: ['w2', 'w3', '941', 'payroll', 'reconciliation', 'form', 'ssa', 'irs'] },
+  { id: 'tool:form-1099', label: 'Form 1099 Preparation', href: '/tools/form-1099', toolName: 'form_1099', keywords: ['1099', 'nec', 'misc', 'int', 'vendor', 'w9', 'tin', 'irs'] },
+  { id: 'tool:book-to-tax', label: 'Book-to-Tax Reconciliation', href: '/tools/book-to-tax', toolName: 'book_to_tax', keywords: ['book', 'tax', 'm1', 'm3', 'schedule', 'asc740', 'deferred', 'provision', '1120'] },
+  { id: 'tool:cash-flow-projector', label: 'Cash Flow Projector', href: '/tools/cash-flow-projector', toolName: 'cash_flow_projector', keywords: ['cash', 'flow', 'projection', 'forecast', 'liquidity', 'runway', '90day'] },
 ]
 
 const TOOL_COMMANDS: PaletteCommand[] = TOOL_ENTRIES.map(t => ({

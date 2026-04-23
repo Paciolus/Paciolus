@@ -210,7 +210,7 @@ function RegisterPageInner() {
             <p
               className="text-oatmeal-400 font-sans text-sm"
             >
-              Seven-day trial. All twelve tools. Raw financial files are never stored.
+              Seven-day trial. All eighteen tools. Raw financial files are never stored.
             </p>
           </div>
 

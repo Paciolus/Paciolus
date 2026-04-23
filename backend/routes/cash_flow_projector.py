@@ -19,6 +19,7 @@ from typing import Literal, Optional
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, ValidationError
+from sqlalchemy.orm import Session
 
 from auth import User, require_verified_user
 from cash_flow_projector_engine import (
@@ -28,8 +29,11 @@ from cash_flow_projector_engine import (
     RecurringFlow,
     project_cash_flow,
 )
+from database import get_db
+from shared.entitlement_checks import check_upload_limit
 from shared.error_messages import sanitize_error
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
+from shared.testing_route import enforce_tool_access
 
 logger = logging.getLogger(__name__)
 
@@ -102,7 +106,12 @@ def run_projection(
     request: Request,
     payload: CashFlowProjectionRequest,
     current_user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
 ) -> dict:
+    # Sprint 689g: gate promoted tool at tier + upload-limit level.
+    enforce_tool_access(current_user, "cash_flow_projector", db)
+    check_upload_limit(current_user, db)
+
     try:
         config = _build_config(payload)
         result = project_cash_flow(config)
@@ -123,7 +132,11 @@ def export_projection_csv(
     request: Request,
     payload: CashFlowProjectionRequest,
     current_user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
 ) -> StreamingResponse:
+    # Sprint 689g: gate promoted tool (export mirrors analyze-route gating).
+    enforce_tool_access(current_user, "cash_flow_projector", db)
+
     try:
         config = _build_config(payload)
         result = project_cash_flow(config)

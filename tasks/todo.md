@@ -16,6 +16,11 @@
 > new features or architectural changes. Each entry is one line.
 > Format: `- [date] commit-sha: description (files touched)`
 
+- [2026-04-23] archive_sprints.sh number-extraction fix + archive of Sprints 673–677 — replaced broken grep-pipeline (which filtered to Status lines first, losing the Sprint number on the preceding header) with an awk block that pairs each `### Sprint NNN` header to its Status body and emits the number when COMPLETE. Dry-run confirmed extraction (673, 674, 675, 676, 677); archival produced `tasks/archive/sprints-673-677-details.md` (142 lines, 5 sprint bodies) and reduced Active Phase to just Sprint 611 (PENDING). Unblocks Sprint 689a's `Sprint 689a:` commit under the archival gate. Files: `scripts/archive_sprints.sh`, `tasks/todo.md`, `tasks/archive/sprints-673-677-details.md`.
+- [2026-04-23] Sprint 689 Path B decision — CEO chose full expansion (all 6 hidden backend tools + Multi-Currency standalone → 18-tool catalog). Execution split into 689a–g (one tool per session, single marketing-flip at 689g). Defaults rejected on evidence that the 6 routes carry ~4,500 LoC of real engine code + tests. Plan + deliverables template captured in Sprint 689 entry. Pre-requisite flagged: `scripts/archive_sprints.sh` grep-pipeline bug must be fixed (or sprints 673–677 manually archived) before the first `Sprint 689a:` commit can clear the archival gate.
+- [2026-04-23] R2 provisioning — Cloudflare R2 buckets `paciolus-backups` + `paciolus-exports` (ENAM, Standard, private), two Account API tokens (Object R&W, per-bucket scoped). 8 env vars wired on Render `paciolus-api` (`R2_{BACKUPS,EXPORTS}_{BUCKET,ENDPOINT,ACCESS_KEY_ID,SECRET_ACCESS_KEY}`) — 19→27 vars, deploy live in 1 min, zero service disruption (9× /health all 200 <300ms). Unblocks Sprint 611 ExportShare migration + Phase 4.4 pg_dump cron. Mid-provisioning incident: screenshotted Render edit form while EXPORTS credentials were unmasked → rolled `paciolus-exports-rw` token before saving, only uncompromised values persisted. Full pattern captured in `tasks/lessons.md` (2026-04-23 entry). Details in `tasks/ceo-actions.md` "Backlog Blockers" section.
+- [2026-04-23] d74db7c: record Sprint 673 COMPLETE — DB_TLS_OVERRIDE removed from Render prod, 2026-05-09 fuse cleared (tasks/todo.md, tasks/ceo-actions.md)
+- [2026-04-22] b0ddbf6: dep hygiene + Sprint 684 tail — 3 backend pins bumped (uvicorn 0.44.0→0.45.0, pydantic 2.13.2→2.13.3, psycopg2-binary 2.9.11→2.9.12), 3 backend transitives refreshed in venv (idna 3.11→3.13, pydantic_core 2.46.2→2.46.3, pypdfium2 5.7.0→5.7.1), mypy dev-pin bumped 1.20.1→1.20.2; 4 frontend caret pins bumped (@typescript-eslint/eslint-plugin + parser ^8.58.0→^8.59.0, @tailwindcss/postcss + tailwindcss ^4.2.2→^4.2.4). Sprint 684 deferred memo-copy item landed: `sampling_memo_generator.py` Expected Misstatement Derivation section now cites AICPA Audit Sampling Guide Table A-1 explicitly. Backend `pytest` 8046 passed / 0 failed; frontend `jest` 1887 passed / 0 failed; `npm run build` clean.
 - [2026-04-22] nightly audit artifacts — 2026-04-22 batch (original RED report + 4 sentinel JSONs + run_log). Preserved as historical evidence of the false-green incident that motivated Sprint 712. `.qa_warden_2026-04-22.json`, `.coverage_sentinel_2026-04-22.json`, and `.baseline.json` were committed in Sprint 712 (5d29cce) with the post-fix genuine-green values.
 - [2026-04-21] 9820bb2: nightly audit artifacts — 2026-04-19, 2026-04-20, 2026-04-21 batch. Commits daily report .md + 6 sentinel JSONs + run_log per day, plus .baseline.json update to capture the Sprints 677–710 test-count growth (8028 backend / 1845 frontend).
 - [2026-04-19] 9f00070: nightly dep hygiene (part 2) — remaining 3 majors cleared in venv (numpy 1.26→2.4, pip 25.3→26.0.1, pytz 2025.2→2026.1.post1). Verified zero direct imports for numpy/pytz; pandas 3.0.2 compatible with numpy 2.x; pytz has no current dependents. pytest 7836 passed / 0 failed. Venv-only change (no requirements.txt edits needed).
@@ -53,155 +58,40 @@
 ---
 
 ## Active Phase
-
 > **Launch-readiness Council Review — 2026-04-16.** 8-agent consensus: code is launch-ready; gating path is CEO calendar (Phase 3 validation → Phase 4.1 Stripe cutover → legal sign-off). **Recommended path: ship on ~3-week ETA** with two engineering amendments — Sprint 673 below removes the 2026-05-09 TLS-override fuse before it collides with launch week, and Guardian's 5-item production-behavior checklist runs in parallel with Phase 3/4.1 (tracked in [`ceo-actions.md`](ceo-actions.md) "This Week's Action Map"). Full verdict tradeoff map in conversation transcript.
-
 > **Prior sprint detail:** All pre-Sprint-673 work archived under `tasks/archive/`. See [`tasks/COMPLETED_ERAS.md`](COMPLETED_ERAS.md) for the era index and archive file pointers.
-
 > **CEO remediation brief 2026-04-15** — Sprints 665–671 cleared the blocking TB-intake issues from the six-file test sweep. Sprints 668–671 remaining pending items archived alongside — no longer blocking launch.
-
----
-
-### Sprint 674: QA Warden pytest timeout raised 600s → 1200s
-**Status:** COMPLETE
-**Source:** Nightly audit review 2026-04-18 — Sprint Shepherd / QA Warden trend
-**Why now:** 2026-04-17 overnight RED because `qa_warden.py` backend pytest subprocess hit its 600s hard timeout at 601.8s. On 2026-04-18 the suite ran in 581.2s — **19s of margin**. Test count grew 7,405 (04-15) → 7,804 (04-18); next sprint or two reliably re-triggers the timeout.
-**File:** `scripts/overnight/agents/qa_warden.py:39, 69`
-**Changes:**
-- [x] Raise `subprocess.run` timeout from 600 → 1200 in `_run_backend_tests` (both the json-report path and the fallback path)
-- [x] No changes to `_run_frontend_tests` — ran 46.3s of 300s budget, ample headroom
-- [x] No migration to pytest-xdist — rejected to avoid DB-fixture parallelism risk (single-worker guarantees in current fixtures); revisit if 1200s ceiling approached again
-
-**Review:**
-- Rationale for 1200s (vs. 900s or 1800s): 1200s gives ~2× current runtime — enough to absorb ~3,000 new tests at current pace without requiring another bump; not so generous that a genuine regression (e.g. a hanging test) burns the whole nightly window before surfacing. Next agent (`report_auditor`) sleeps until 02:15, so even a full 1200s wait still completes ahead of schedule.
-- Did NOT touch pytest config — keeps the fix isolated to the nightly driver so regular `pytest` and CI behavior are unchanged.
-
----
-
-### Sprint 675: Security-relevant dependency bump sweep + Sentinel scan-path fix
-**Status:** COMPLETE
-**Source:** Nightly audit review 2026-04-18 — Dependency Sentinel YELLOW (stable across 04-15, 04-17, 04-18)
-**Why now:** Security-relevant updates pending unaddressed across three consecutive nightlies. While bumping, discovered the Dependency Sentinel was scanning `C:/Python312` (system Python, stale fork) instead of `backend/venv/Scripts/python.exe` (what actually matches `requirements.txt` and runs in production). Two of the five "security-relevant" packages reported in the nightly (SQLAlchemy 2.0.48→49, stripe 15.0.0→1) were already synced in the venv — the sentinel was giving false signals.
-
-**Changes:**
-- [x] `scripts/overnight/agents/dependency_sentinel.py` — switch backend scan from `SYSTEM_PYTHON` to `PYTHON_BIN` (the venv); keeps `SYSTEM_PYTHON` as fallback if venv missing. Import `PYTHON_BIN` from `config.py` (already defined, unused until now).
-- [x] `backend/requirements.txt`: `fastapi` 0.135.3 → 0.136.0, `pydantic[email]` 2.12.5 → 2.13.2
-- [x] `backend/requirements.txt`: `cryptography>=46.0.7` was already pinned but venv had 46.0.6 installed; `pip install -U` brought it current
-- [x] `frontend/package.json`: `next` ^16.2.2 → ^16.2.4 (resolves 16.2.4 per nightly sentinel)
-- [x] `npm install` — 3 packages changed, 0 vulnerabilities, all frontend deps intact
-- [x] `npm run build` passes — all routes render as `ƒ (Dynamic)` (CSP proxy.ts nonce-based rendering intact after next 16.2.2→16.2.4)
-- [x] Backend `pytest`: **7805 passed, 9 xfailed, 0 failed** in 644.25s after the bump — pydantic 2.13 migration clean, no API deprecations surfaced
-- [x] Frontend `npm test` passes (see review below)
-
-**Skipped (legitimately not outdated in the venv despite nightly report):**
-- SQLAlchemy 2.0.48 → 2.0.49 — venv already at 2.0.49 (sentinel was reading system Python 2.0.48)
-- stripe 15.0.0 → 15.0.1 — venv already at 15.0.1 (same root cause)
-
-**Explicitly deferred:**
-- `rich` 14.3.3 → 15.0.0 (major) — not security-relevant, defer until a feature needs it
-- `tzdata` 2025.3 → 2026.1 (major) — not security-relevant
-- `pdfminer.six` 20251230 → 20260107 — previously deferred, reviewed by 2026-04-30
-
-**Review:**
-- The Sentinel fix is the more important half of this sprint: without it, next week's nightly would continue reporting stale YELLOW signals from the system-Python fork even though production (Render) is on current requirements.txt. After this fix, Dependency Sentinel reports match what prod actually installs.
-- pydantic 2.12 → 2.13 is semver-minor but changed validation internals; full 7805-test pass is strong evidence the upgrade is clean for our schemas.
-- next 16.2.2 → 16.2.4 contains the patch advisory referenced in nightly reports; build output confirms dynamic-render + CSP nonce contract unbroken (`ƒ` on all routes).
-
----
-
-### Sprint 676: Coverage fill — dead-code deletion + CSV serializer tests
-**Status:** COMPLETE
-**Source:** Nightly audit review 2026-04-18 — Coverage Sentinel (stable green 92.24% but persistent 0% files)
-
-**Scope adjustment during execution:**
-The nightly Coverage Sentinel's three worst 0%-coverage files turned out to have three distinct root causes, not one. Scope was adjusted per finding rather than forcing tests onto inappropriate targets:
-
-1. **`services/organization_service.py` — 180 stmts @ 0%:** Investigation showed this file has **zero imports anywhere in the codebase**. Sprint 546 (archived) claimed "Refactor 5: organization.py → services/organization_service.py + thin routes" but only created the service module; `routes/organization.py` continued to use its own private `_get_user_org` / `_require_admin` helpers. The service file is orphaned dead code. **Fix: delete the file.** Testing dead code for coverage vanity would have been noise; completing the refactor is a larger risk-carrying change that deserves its own sprint, not a coverage-fill sprint.
-2. **`export/serializers/csv.py` — 158 stmts @ 0%:** Genuine production path with no direct unit tests. **Fix: add `backend/tests/test_export_csv_serializers.py` with 31 tests** covering all 6 serializer functions (`trial_balance`, `anomalies`, `preflight_issues`, `population_profile`, `expense_category`, `accrual_completeness`) across happy paths, edge cases (empty input, prior-period vs no-prior, optional narrative, missing fields), CSV injection sanitization, and the UTF-8-sig BOM encoding contract.
-3. **`billing/webhook_handler.py` — 180 stmts missing (55% covered):** Deferred. Existing route-level tests (`test_billing_webhooks_routes.py`, `test_billing_analytics.py`, `test_billing_routes.py`, `test_phase1_bug_fixes.py`, `test_pricing_integration.py`, `test_pricing_launch_validation.py`) already import from `billing.webhook_handler` and exercise real handler paths. Unit-testing the 180 defensive branches would be duplicative churn. A dedicated webhook-coverage sprint can pick this up later if the number becomes problematic.
-
-**Changes:**
-- [x] Delete `backend/services/organization_service.py` (180 lines, orphan dead code)
-- [x] Add `backend/tests/test_export_csv_serializers.py` (31 tests, all passing in 1.64s)
-- [x] Explicitly defer: `billing/webhook_handler.py` (covered indirectly by 6 route-test files)
-- [x] Explicitly defer: `excel_generator.py`, `leadsheet_generator.py`, `workbook_inspector.py`, `generate_sample_reports.py` (non-production, larger lift)
-
-**Impact:**
-- Coverage Sentinel's top-10 uncovered list should lose `organization_service.py` (file gone) and `csv.py` (now ~100% covered). Overall backend coverage nudges up marginally (~0.2–0.3pp) but more importantly, the nightly's top-uncovered list becomes signal rather than noise.
-- Removes a dangling refactor artifact that would eventually confuse future work on `routes/organization.py`.
-
-**Review:**
-- The decision not to test `organization_service.py` was a judgment call: writing tests for unimported code inflates coverage without improving safety. The archived Sprint 546 refactor appears to have stopped halfway; documenting that here lets a future sprint either complete the migration (replace route-level helpers with service imports) or confirm the deletion is permanent.
-- CSV serializer tests target the *contract* (output shape, BOM, sanitization), not implementation details. They should survive future refactors of how the serializers walk inputs.
-- Full backend `pytest` re-run confirms no test referenced the deleted module.
-
----
-
-### Sprint 677: Dead-code hygiene + route-wiring guardrail + deprecation register
-**Status:** COMPLETE
-**Source:** Targeted audit directive 2026-04-18 — safe dead-code pass, no behavior change
-
-**Changes:**
-- [x] Remove 11 unused locals flagged by ruff F841 across 7 production files:
-  - `backend/bank_reconciliation_memo_generator.py` (rec_diff, match_rate)
-  - `backend/je_testing_engine.py` (total_groups)
-  - `backend/je_testing_memo_generator.py` (total_entries, preparer_total)
-  - `backend/routes/three_way_match.py` (po_mapping, inv_mapping, rec_mapping — switched to `_ = ...` to preserve the `log_secure_operation` side effect inside `parse_json_mapping`)
-  - `backend/sampling_memo_generator.py` (pop_type — both assignments unused)
-  - `backend/shared/drill_down.py` (n_cols)
-  - `backend/shared/tb_diagnostic_constants.py` (excess, and its only-feeder raw_sum)
-- [x] Add `scripts/check_route_wiring.py` — scans `backend/routes/*.py`, flags modules not imported by `routes/__init__.py` or by the known aggregators (`audit.py`, `export.py`, `engagements.py`); exits non-zero on true orphans
-- [x] Add `docs/runbooks/deprecations.md` — deprecation register with Active / Removed sections. Seeded with: `excel_generator.py` signoff fields, `pdf/orchestrator.py` signoff gating, `shared/schemas.py` signoff fields, `shared/parsing_helpers.py::safe_float` (monetary-unsafe), `frontend/src/utils/motionTokens.ts::DISTANCE`
-
-**Verification:**
-- `cd backend && python -m ruff check . --select F401,F841` on the seven target files: `All checks passed!` (target scope clean)
-- `python scripts/check_route_wiring.py`: 58 modules scanned, 48 via `__init__.py`, 10 via aggregators, PASS
-- Targeted pytest: `test_bank_rec_memo.py`, `test_je_testing_engine.py`, `test_je_testing_memo.py`, `test_three_way_match.py`, `test_sampling_memo.py`, `test_drill_down.py`, `test_diagnostics_api.py` → **315 passed, 1 warning in 10.53s**
-- `test_contra_and_detection_fixes.py` (exercises `compute_tb_diagnostic_score`) → **69 passed in 0.82s**
-- Backend smoke: `python -c "from main import app; ..."` → 239 routes registered, no regression
-
-**Review:**
-- `three_way_match` column mappings are intentionally discarded today (override wiring is a pre-existing gap). The `_ = ...` assignments keep `log_secure_operation` firing so the audit trail still shows receipt of the caller's JSON payload, and the inline comment flags the call site for whoever picks the wiring up.
-- `raw_sum` in `tb_diagnostic_constants.py` was the sole feeder of the removed `excess`; the trimming algorithm that follows uses `capped` and `running` directly, so removing both cleans the function rather than leaving a dangling `raw_sum` warning for the next pass.
-- `scripts/check_route_wiring.py` is wired to be CI-safe: no third-party deps, pure-stdlib regex, aggregator allowlist is explicit and easy to extend when a new aggregator pattern appears.
-- The remaining 23 F841 warnings in `backend/tests/*.py` and 3 in `generate_sample_reports.py` are explicitly **out of scope** — cleaning test fixtures risks hiding intent (e.g., `user = make_user(...)` in webhook fixtures is descriptive even when the handle isn't referenced) and warrants a separate test-hygiene sprint.
-- Residuals: `routes/three_way_match.py` override plumbing is now a documented follow-up rather than a silent drop; `backend/tests` F841 cleanup tracked for a future hygiene pass.
-
----
+> Sprints 673–677 archived to `tasks/archive/sprints-673-677-details.md`.
 
 ### Sprint 611: ExportShare Object Store Migration
-**Status:** PENDING — CEO-gated (bucket provision)
+**Status:** COMPLETE
 **Source:** Critic — DB bloat risk
 **File:** `backend/export_share_model.py:43`
-**Problem:** `export_data: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)` stores up to 50 MB per shared export in primary Neon Postgres. 20 concurrent shares = 1 GB of binary row storage; Neon Launch tier cap is 10 GB. Also bloats every DB backup — unclear whether zero-storage policy permits this.
-**Changes:**
-- [ ] Provision object store bucket (R2 or S3) with pre-signed URL pattern — CEO owns this, tracked in [`ceo-actions.md`](ceo-actions.md) "Backlog Blockers"
-- [ ] Store `export_data` in bucket keyed by `share_token_hash`; DB row keeps metadata + object key only
-- [ ] Extend cleanup scheduler to delete object when share revoked/expired
-- [ ] Backfill migration for existing shares
+**Problem (as recorded):** `export_data: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)` stored up to 50 MB per shared export in primary Neon Postgres. 20 concurrent shares ≈ 1 GB of binary row storage against a 10 GB Neon Launch cap, and the bytes shipped in every DB backup.
 
----
+**Changes landed:**
+- [x] R2 bucket `paciolus-exports` provisioned 2026-04-23 (see the [R2 provisioning hotfix](#hotfixes) and [`ceo-actions.md`](ceo-actions.md) Backlog Blockers section) with four `R2_EXPORTS_*` env vars live on Render.
+- [x] `backend/shared/export_share_storage.py` (new) — boto3 S3 client pointed at the R2 endpoint, lazy-initialized from `R2_EXPORTS_{BUCKET,ENDPOINT,ACCESS_KEY_ID,SECRET_ACCESS_KEY}`. `upload` / `download` / `delete` surface, plus `is_configured()` for the route to decide between R2 and the inline-blob fallback. Matches the existing `shared/storage_client.py` pattern used for firm logo branding.
+- [x] Alembic migration `e1a2b3c4d5f6_add_export_share_object_key.py` — adds `object_key VARCHAR(128) NULL` and relaxes `export_data` to nullable. SQLite uses `batch_alter_table` for the nullability change; Postgres takes the direct ALTER path. Downgrade re-tightens `export_data` and drops the new column.
+- [x] Model updated (`backend/export_share_model.py`) — `export_data` is now `Mapped[bytes | None]` and a sibling `object_key: Mapped[str | None]` column records the R2 key. Route invariant: exactly one of `export_data` / `object_key` is populated on any given row.
+- [x] `backend/routes/export_sharing.py::create_share` — when R2 is configured, bytes are uploaded to `shares/<share_token_hash>` and the DB row stores only the key (legacy blob column left NULL). If the DB commit fails after a successful R2 upload, the orphan object is best-effort deleted to avoid leaking bytes into the bucket. When R2 is not configured (dev/test), the inline blob path remains so existing fixture-driven tests keep working. Upload failures 503 rather than silently falling back to the DB column.
+- [x] Download resolver (`_resolve_export_bytes`) prefers R2 when `object_key` is set; 410s if the R2 object is missing (rather than serving an empty body).
+- [x] Revoke endpoint immediately best-effort-deletes the R2 object so revoked bytes disappear before the hourly sweep.
+- [x] `cleanup_scheduler.purge_expired_export_shares(db)` extracted to module scope (was nested inside `_job_expired_export_shares`) and extended to delete each row's R2 object before the DB DELETE. R2 deletion is best-effort with log-on-failure; the hash-deterministic key means retries are idempotent.
+- [x] Backfill: not required. Shares have a 24–48h TTL, so any in-flight row at deploy time simply keeps resolving through the inline-blob fallback until it ages out. The nullable `export_data` column is retained for this reason; a future migration can drop it once the longest TTL has elapsed post-flip.
 
-### Sprint 673: Remove DB_TLS_OVERRIDE via pooler-aware pg_stat_ssl skip
-**Status:** CODE-COMPLETE — pending deploy + CEO env-var removal
-**Source:** Council Review 2026-04-16 — Critic (time-fused architectural debt) + Executor (front-run launch week)
-**Why now:** `DB_TLS_OVERRIDE=NEON-POOLER-PGSSL-BLINDSPOT:2026-05-09` expires in 23 days. Without the proper fix landed first, the override must either be renewed (kicks the can) or allowed to expire (hard-fails production startup during Phase 4 launch window). Fixing before Phase 4 removes one ticking clock from launch week.
-**File:** `backend/database.py`
-**Problem:** Production startup runs a `pg_stat_ssl` check to confirm the DB connection is encrypted. Neon's pooled endpoint (`-pooler` hostname) is a transparent connection pooler — the underlying connection IS TLS-encrypted, but `pg_stat_ssl` reports the pooler-to-backend hop, not the client-to-pooler hop. The check therefore returns `ssl=false` on a correctly encrypted connection, forcing the current override.
-**Changes:**
-- [x] Detect `-pooler` in `DATABASE_URL` hostname via new `_is_pooled_hostname()` helper (`backend/database.py`)
-- [x] On pooled hostnames: skip the `pg_stat_ssl` assertion, log `tls=pooler-skip`, emit `db_tls_pooler_skip` secure event (sslmode still enforced in config.py)
-- [x] On direct hostnames: retain the assertion (Neon direct endpoint, RDS, local postgres all continue to verify)
-- [x] Unit tests cover all branches: pooler host with ssl_active=False doesn't crash, direct host with ssl_active=True still logs `db_tls_verified`, helper recognises pooler suffix (18/18 tests pass)
-- [ ] **CEO deploy step:** Deploy; verify Render startup logs show `tls=pooler-skip` and no override warning
-- [ ] **CEO env-var step:** Remove `DB_TLS_OVERRIDE` from Render env vars once startup is confirmed green
-- [x] `DB_TLS_OVERRIDE` config path kept intact — it's a general break-glass used by both the `pg_stat_ssl` check AND the `sslmode` connection-string check in `config.py`; not pooler-specific, so deletion would lose a legitimate escape hatch.
+**Test additions:**
+- `backend/tests/test_sprint_611_r2_export_share.py` (11 tests): storage-module lazy init (no env / partial env / download-none / delete-false), route behaviour (create uploads to R2 and omits blob; download streams from R2; missing R2 object → 410; revoke deletes R2 object), scheduler behaviour (expired + revoked rows trigger R2 delete; inline-blob rows leave R2 untouched; no-op on empty queue). R2 I/O patched with an in-memory dict — no network required.
+
+**Validation:**
+- New Sprint 611 tests: 11 passed.
+- Touched-surface regression (export sharing + IP throttle + cleanup scheduler + security-hardening-2026-04-20 + legacy passcode cleanup + new 611 file): 129 passed.
 
 **Review:**
-- New helper `_is_pooled_hostname()` lives alongside imports in `backend/database.py`; it's a parse-and-substring test with no DB coupling (trivially unit-testable).
-- The pooled branch short-circuits BEFORE the four-way `ssl_active / DB_TLS_OVERRIDE_VALID / DB_TLS_REQUIRED / else` logic, so `DB_TLS_REQUIRED=true` + pooler host no longer crashes startup.
-- Secure event `db_tls_pooler_skip` added — distinct from `db_tls_verified` and `db_tls_override` so log audits can tell "TLS is actually on, just invisible" apart from "TLS is off, break-glass approved".
-- Existing 15 TLS tests still pass unchanged; 3 new tests added (pooler skip, direct still runs, helper unit).
+- Dual-path design (R2 in prod when env vars are set, inline blob otherwise) keeps 25 pre-existing export_sharing route tests, IP-throttle tests, and any downstream fixtures green without needing a bulk rewrite. It also matches the branding-logo S3 pattern already in the codebase, so future maintainers don't see a second storage idiom.
+- Extracting `purge_expired_export_shares` to module scope (instead of leaving it nested inside the job wrapper) was a deliberate test-surface change: the cleanup-scheduler test suite already covers the `_run_cleanup_job` wrapper, so the new R2-delete behaviour is tested directly against the pure function without depending on `SessionLocal` monkeypatching or the scheduler-lock table.
+- The orphan-object guard in `create_share` (best-effort `delete` when the DB commit fails after an R2 upload) closed a small but real data-leak window — under Postgres, a commit can fail after the network round-trip, and we don't want untracked bytes piling up in the bucket.
+- Commit SHA: `0667775`
 
 ---
 
@@ -487,8 +377,8 @@ The original plan proposed threading a `branding_context` kwarg through every me
 - `TestSprint684NegativeBalanceRejection::test_negative_items_excluded_from_selection`.
 - `TestSprint684NegativeBalanceRejection::test_all_positive_returns_empty_negative_list`.
 
-**Deferred (per sprint plan but out of scope this session):**
-- Memo copy update referencing "AICPA Audit Sampling Guide, Table A-1" explicitly — current memo copy still uses generic language. `sampling_memo_generator.py` doesn't block the fix landing and a copy-only change is a tight hotfix candidate for later.
+**Deferred follow-up — landed 2026-04-22 as dep-hygiene hotfix:**
+- Memo copy update referencing "AICPA Audit Sampling Guide, Table A-1" explicitly — `sampling_memo_generator.py` Expected Misstatement Derivation section now cites Table A-1 with linear-interpolation note. Shipped alongside the 2026-04-22 dep hygiene hotfix batch.
 
 **Validation:**
 - 172 sampling + sampling-memo + sampling-routes tests pass.
@@ -601,24 +491,237 @@ The original plan proposed threading a `branding_context` kwarg through every me
 
 ---
 
-### Sprint 689: Hidden backend tools — catalog wire-up or removal
-**Status:** PENDING
+### Sprint 689: Hidden backend tools — catalog wire-up (CEO Path B, 2026-04-23)
+**Status:** COMPLETE — 689a–g all shipped; catalog flipped 11 → 18 tools, CANONICAL_TOOL_COUNT now 18
 **Priority:** P2
-**Source:** Completeness agent H-03/H-05 + Claim-reality C-03/C-04
-**Why now:** Six backend tools have endpoints and no UI: `book_to_tax`, `cash_flow_projector`, `intercompany_elimination`, `form_1099`, `w2_reconciliation`, `sod`. Separately, Multi-Currency is marketed as Tool #12 but is only a side-car on TB upload — no standalone card. Decide per-tool: promote to catalog or remove the route.
-**Files:**
-- `backend/routes/{book_to_tax, cash_flow_projector, intercompany_elimination, form_1099, w2_reconciliation, sod}.py`
-- `frontend/src/app/tools/page.tsx`, `lib/commandRegistry.ts`
-- `shared/entitlements.py:14` (canonical tool count)
+**Source:** Completeness agent H-03/H-05 + Claim-reality C-03/C-04 + CEO decision 2026-04-23
 
-**Changes:**
-- [ ] For each of the six: CEO decides [promote / defer / remove]. Default recommendation:
-  - `sod` — already Enterprise-gated; promote with minimal UI.
-  - `form_1099`, `w2_reconciliation` — payroll-adjacent; promote under the Payroll tool umbrella as sub-workflows.
-  - `book_to_tax`, `cash_flow_projector`, `intercompany_elimination` — remove routes if not shipping Tool #13+, document rationale in a sprint archive entry.
-- [ ] Multi-Currency: add a standalone `/tools/multi-currency` card with its own page; continue rendering the side-car on TB upload for convenience.
-- [ ] Reconcile `CANONICAL TOOL COUNT` in `shared/entitlements.py:14` with the final catalog count; propagate to CLAUDE.md, pricing page, ceo-actions.md, and marketing surfaces.
-- [ ] Regression tests: every cataloged tool has a route, hook, page, and entitlement-gate test.
+**CEO decision 2026-04-23 — Path B (full expansion):**
+Promote ALL 6 hidden tools + Multi-Currency standalone page. Catalog grows 11 → 18 tools. `CANONICAL_TOOL_COUNT` will flip 12 → 18 in one documentation pass at the end (689g) to avoid six intermediate marketing-drift commits. Rejected alternatives: Path A (Multi-Currency-only, 12 total), Path C (remove 6 routes + shrink to 11).
+
+**Rationale on Path B over A:** The 6 routes aren't stubs — each has 500–700 LoC of real engine code + 7–10 unit tests + CSV export (scout report 2026-04-23). Deletion would trash ~4,500 LoC of working code. Promotion is pure additive work: new frontend surface only. CEO prefers biggest marketing pitch (18 tools) over fastest launch.
+
+**Rationale on Path B over a 4-tool subset:** CEO explicitly opted for all 6 over a book_to_tax + cash_flow_projector carve-out. Downstream reassessment during 689f/g can still retire either if customer signal shapes otherwise, but default is promote all.
+
+**Execution split — one tool per session (CEO directive):**
+
+| Sub-sprint | Tool | Backend file | Priority order rationale |
+|---|---|---|---|
+| 689a | Multi-Currency (standalone `/tools/multi-currency`) ✅ COMPLETE | `routes/currency.py`, `currency_engine.py` | Smallest lift — backend + side-car UI exist; new page wraps `CurrencyRatePanel`. Template refinement for 689b–g. |
+| 689b | SOD | `routes/sod.py` | Highest audit relevance (SOX 404 / ISA 315). Already Enterprise-gated. |
+| 689c | Intercompany Elimination | `routes/intercompany_elimination.py` | Consolidated-FS audit core. |
+| 689d | W-2 Reconciliation | `routes/w2_reconciliation.py` | Payroll audit / 941 tie-out niche. |
+| 689e | 1099 Matching | `routes/form_1099.py` | Payroll / vendor compliance niche. |
+| 689f | Book-to-Tax | `routes/book_to_tax.py` | Tax-adjacent; reassess positioning mid-rollout. |
+| 689g | Cash Flow Projector + marketing flip | `routes/cash_flow_projector.py` + `shared/entitlements.py` + all "12 tools" marketing surfaces | Ship last + the single-pass "12 → 18 tools" flip across ~6 marketing/docs surfaces. |
+
+**Per-sub-sprint deliverables (the template each 689[a-g] commit ships):**
+- `frontend/src/app/tools/<name>/page.tsx` — standalone page with `UpgradeGate`, `GuestCTA`/`UnverifiedCTA`, state machine, results + info cards, citations + disclaimer. Model on `frontend/src/app/tools/bank-rec/page.tsx`.
+- `frontend/src/hooks/use<Name>.ts` — reuse if exists (Multi-Currency has `useCurrencyRates`), create new otherwise.
+- `frontend/src/types/<name>.ts` — request / response shapes matching Pydantic schemas.
+- 3–4 UI components in `frontend/src/components/<name>/` — upload zone, results, results table.
+- `frontend/src/lib/commandRegistry.ts` — new `TOOL_ENTRIES` row with `toolName` matching `enforce_tool_access` gate.
+- `frontend/src/app/tools/page.tsx` — new `TOOLS` array entry with matching `key`.
+- `frontend/src/__tests__/<Name>Page.test.tsx` — modelled on `AccountRiskHeatmapPage.test.tsx`.
+- PDF memo generator if the tool produces a report (matches the "18 memo PDFs + 3 report PDFs" convention).
+- `shared/entitlements.py` — verify `currency_rates` / equivalent tool name is in `tools_allowed` for paid tiers (already gated).
+
+**Sprint 689g flip (the final marketing pass):**
+- `CANONICAL_TOOL_COUNT: 12 → 18` in `backend/shared/entitlements.py:14`.
+- "12 tools" → "18 tools" across ~6 marketing/docs surfaces (pricing page, landing, CLAUDE.md, ceo-actions.md, memory, entitlements comments).
+- Regression sweep: every cataloged tool has route + hook + page + entitlement-gate test.
+
+**Pre-689a archival blocker — RESOLVED (hotfix `c3fb060`):** `scripts/archive_sprints.sh` number-extraction bug fixed by replacing the grep pipeline with an awk block that pairs each `### Sprint NNN` header to its Status body. Sprints 673–677 archived to `tasks/archive/sprints-673-677-details.md`.
+
+**689a completion — 2026-04-23:**
+
+Deliverables landed:
+- [x] `frontend/src/app/tools/multi-currency/page.tsx` — standalone page with `GuestCTA` / `UnverifiedCTA` / `UpgradeGate` (tool: `currency_rates`), wrapping `<CurrencyRatePanel defaultOpen />` with three info cards (ISO 4217 validation, staleness detection, session-scoped rates) + `DisclaimerBox` (IAS 21 ¶39 / ASC 830-30) + `CitationFooter` (`IAS 21`, `ASC 830`).
+- [x] `frontend/src/components/currencyRates/CurrencyRatePanel.tsx` — added `defaultOpen?: boolean` prop (default `false`, backward compatible with all four existing call sites). `useEffect` fires `refreshStatus()` on mount when opened.
+- [x] `frontend/src/app/tools/page.tsx` — new TOOLS row (`key: 'currency_rates'`, Advanced category, IAS 21 / ASC 830 reference).
+- [x] `frontend/src/lib/commandRegistry.ts` — new TOOL_ENTRIES row (`tool:multi-currency`, `toolName: 'currency_rates'` matching backend `enforce_tool_access` gate at `routes/currency.py:129`; solo+ tier guard applied automatically via `FREE_TOOLS` logic).
+- [x] `frontend/src/__tests__/MultiCurrencyPage.test.tsx` — 4 tests (guest CTA, unverified CTA, free-tier upgrade gate, paid-tier panel render + info cards + disclaimer + refreshStatus-on-mount assertion).
+
+Intentionally NOT touched in 689a (per CEO "single-pass flip at 689g"):
+- `backend/shared/entitlements.py:14` `CANONICAL_TOOL_COUNT` comment still reads `12`.
+- Marketing surfaces ("12 tools" copy on pricing/landing/CLAUDE.md) unchanged.
+
+Reuse decisions:
+- No new hook — `useCurrencyRates` already covers upload / manual-entry / status / clear.
+- No new types file — `RateTableStatus` / `RateUploadResult` / `SingleRateResult` live in the hook and don't need cross-module sharing.
+- No new component folder — panel reuse is the point; `defaultOpen` is the single cleanest affordance to make it work as a standalone landing surface.
+
+Validation:
+- `npx jest` — 189 suites, **1891 passed** (+4 new), 0 failed, 5 snapshots.
+- `npm run build` — clean; `/tools/multi-currency` listed as `ƒ (Dynamic)` alongside all other tool routes (CSP nonce-based rendering intact).
+- Existing `CurrencyRatePanel.test.tsx` (20 tests) and `TrialBalancePage.test.tsx` (11 tests) still pass — `defaultOpen = false` default preserves prior behavior.
+
+**Review:**
+- Template established for 689b–g: `/tools/<name>/page.tsx` + optional `defaultOpen`-style tweak to an existing component + catalog + command-palette + Jest test modeled on `AccountRiskHeatmapPage.test.tsx`. Net-new code per sub-sprint should land in ~150–200 LoC for tools that already have backend + supporting UI (like Multi-Currency did via `CurrencyRatePanel`); larger for tools that need a fresh upload surface.
+- The `defaultOpen` prop addition to `CurrencyRatePanel` is the one shared-component touch in 689a. It was the minimal way to make the panel work as a standalone-page anchor without either (a) copying the panel's logic into a new page-scoped component or (b) forking the panel. Four existing call sites (`trial-balance`, `three-way-match`, `statistical-sampling`, `revenue-testing`, `payroll-testing` pages all use `<CurrencyRatePanel />` with no props) are unaffected because the default remains `false`.
+- **Commit SHA:** `8e6886a`
+
+**689b completion — 2026-04-23:**
+
+**Status:** COMPLETE
+
+Deliverables (Option A — dual CSV upload per CEO 2026-04-23):
+- [x] `frontend/src/app/tools/sod/page.tsx` — standalone page. State machine: `idle` → `analyzing` → `success` / `error`. Uses `GuestCTA` / `UnverifiedCTA` / `FeatureGate(feature="sod_checker")` for Enterprise-only gating.  Includes `DisclaimerBox` (SOC 1 / AICPA / COSO 2013) + `CitationFooter`.
+- [x] `frontend/src/hooks/useSOD.ts` — `analyze(payload)`, `loadRules()`, `exportCsv(payload)`. Uses `apiPost` / `apiGet` / `apiDownload`.
+- [x] `frontend/src/types/sod.ts` — `SODAnalysisRequest`, `SODAnalysisResponse`, `SODConflict`, `SODUserSummary`, `SODRule` shapes matching `routes/sod.py` Pydantic contracts (incl. `medium_severity_count` field name).
+- [x] `frontend/src/components/sod/` — `SODFileUpload` (dual CSV drop + client-side parse), `SODResults` (counters + per-user table + conflict detail list), `SODRulesReference` (collapsible rule library), `parseCsv.ts` (minimal quoted-field CSV parser).
+- [x] `frontend/src/lib/commandRegistry.ts` — `tool:sod-checker` entry (`toolName: 'sod_checker'`, matching the feature flag used in the backend 403 payload).
+- [x] `frontend/src/app/tools/page.tsx` — new `TOOLS` row (`category: 'Advanced'`, reference: SOC 1 / AICPA / COSO 2013).
+- [x] `frontend/src/components/shared/FeatureGate.tsx` — extended `FeatureName` union to include `sod_checker` (Enterprise-only). Slots next to `bulk_upload` / `custom_branding`.
+- [x] `frontend/src/__tests__/SODPage.test.tsx` — 4 tests modelled on `MultiCurrencyPage.test.tsx` (guest / unverified / non-Enterprise tier gate / Enterprise happy path).
+
+Intentionally NOT touched (per CEO "single-pass flip at 689g"):
+- `backend/shared/entitlements.py:14` `CANONICAL_TOOL_COUNT` comment still reads `12`.
+- "12 tools" marketing surfaces unchanged.
+
+Validation:
+- `npx jest` — 190 suites, **1895 tests pass** (+4 new), 0 failed, 5 snapshots.
+- `npm run build` — clean; `/tools/sod` listed as `ƒ (Dynamic)` alongside all other tool routes (CSP nonce-based rendering intact).
+
+Implementation notes:
+- **Enterprise gating**: the shared `UpgradeGate` only blocks Free tier (`TIER_TOOLS` in `UpgradeGate.tsx`), so Solo/Professional would have rendered the upload surface and hit a backend 403. Extended `FeatureGate` with a `sod_checker` feature keyed to Enterprise — same pattern used for `bulk_upload` and `custom_branding` — so the tier-block CTA is rendered client-side before any network call. This matches the backend 403 payload shape (`{error: "tier_locked", feature: "sod_checker"}`) exactly.
+- **No reusable upload component**: Multi-Currency's 689a delivery leaned on existing `CurrencyRatePanel`; SOD had no counterpart, so this sprint landed ~370 LoC across a fresh component directory (`components/sod/`) plus ~160 LoC for the CSV parser. Larger than the 689 template's 150-200 LoC target, but in-line with the sprint plan's caveat "larger for tools that need a fresh upload surface."
+- **CSV parser**: intentionally minimal (no mid-field newline handling). IAM/HR exports don't contain these; a full RFC 4180 parser would be overkill and harder to test deterministically. Parse errors surface inline with actionable messages ("row 17: user_id and user_name are required").
+- **TypeScript strict gotcha**: `noUncheckedIndexedAccess` flags `rows[0]` as `string | undefined` even after a `rows.length > 0` guard. Guarded with `?? ''` rather than `!` for safety.
+- **Citation fallback**: `SOC 1` and `COSO 2013` aren't in `lib/citations.ts`, so `<Citation />` falls back to plain `<span>` rendering and `<CitationFooter />` renders nothing. Intentional — the standards are named in the hero badge and disclaimer body; the citation-registry entry can land later when the rest of the SOC-era standards get added.
+
+**Commit SHA:** `ad68d0f`
+
+**689c completion — 2026-04-23:**
+
+**Status:** COMPLETE
+
+Deliverables (Option A — single long-format CSV upload, per CEO 2026-04-23):
+
+**Backend tier-gate retrofit (CEO directive 2026-04-23):** Scout flagged that `routes/intercompany_elimination.py` had no tier gate at all — only `require_verified_user`. Folded the backend gate into this sprint rather than deferring. The same gap likely applies to the remaining promoted tools (689d–g); each sub-sprint will add its gate as scope-local work, not a separate hardening sprint.
+
+- [x] `backend/routes/intercompany_elimination.py` — added `enforce_tool_access(current_user, "intercompany_elimination", db)` + `check_upload_limit(current_user, db)` on `/audit/intercompany-elimination`; gate-only on the CSV export (export endpoints conventionally skip the upload-count bump).
+- [x] `backend/tests/test_intercompany_elimination_routes.py` (new, 4 tests) — Free-tier 403 `TIER_LIMIT_EXCEEDED` on analyze + export; Professional-tier pass on both (analyze returns `matched_pair_count=1 / reconciling_pair_count=1 / mismatch_count=0` for a reciprocal-pair fixture; export returns `text/csv` with the expected `Content-Disposition` filename).
+
+Frontend:
+- [x] `frontend/src/app/tools/intercompany/page.tsx` — standalone page. `UpgradeGate toolName="intercompany_elimination"` (Free-blocked, paid-tiers allowed — backend + entitlements matrix already agree on paid-tier default, so no FeatureGate layer needed). `GuestCTA` / `UnverifiedCTA` / `DisclaimerBox` (ASC 810 / IFRS 10 / ISA 600) + `CitationFooter`.
+- [x] `frontend/src/hooks/useIntercompanyElimination.ts` — `analyze(payload)`, `exportCsv(payload)`.
+- [x] `frontend/src/types/intercompany.ts` — request/response shapes matching `routes/intercompany_elimination.py` Pydantic contracts (strings for Decimal fields; `.to_dict()` emits Decimals-as-strings).
+- [x] `frontend/src/components/intercompany/` — `IntercompanyFileUpload` (single long-format CSV drop + client-side pivot), `IntercompanyResults` (counters + composite), `ConsolidationWorksheetTable`, `EliminationJEsTable`, `MismatchList`, `parseCsv.ts`.
+- [x] `frontend/src/lib/commandRegistry.ts` — `tool:intercompany` entry.
+- [x] `frontend/src/app/tools/page.tsx` — new `TOOLS` row (`category: 'Advanced'`, reference: ASC 810 / IFRS 10 / ISA 600).
+- [x] `frontend/src/__tests__/IntercompanyEliminationPage.test.tsx` — 4 tests.
+
+Intentionally NOT touched (per CEO "single-pass flip at 689g"):
+- `backend/shared/entitlements.py:14` `CANONICAL_TOOL_COUNT` comment still reads `12`.
+- "12 tools" marketing surfaces unchanged.
+
+Implementation notes:
+- **Tier-gate pattern established for 689d–g**: the `enforce_tool_access` + `check_upload_limit` retrofit on the analyze endpoint is the minimal touch. Export endpoints conventionally only run `enforce_tool_access` (the analyze run already bumped the counter). 689d–g should apply the same two-line change.
+- **CSV parser reuse**: the parser in `components/intercompany/parseCsv.ts` is a second copy of the same minimal quoted-field splitter pattern used in `components/sod/parseCsv.ts`. Extracting a shared `lib/csv/minimalParser.ts` would save ~60 LoC, but each tool's pivot logic is bespoke enough that a shared parser wouldn't compress the whole file — deferred until 689g wrap-up or an opportunistic refactor.
+- **Worksheet rendering**: the `ConsolidationWorksheetTable` uses `colSpan` to collapse the elimination/consolidated rows into a single entry-spanning cell rather than re-rendering per-entity sub-splits (the engine doesn't emit per-entity elimination allocations; eliminations net against grouped totals). This matches the CSV export's flat layout.
+- **Route exit code 0 in the build** didn't surface `/tools/intercompany` in the tail-captured output, but the compilation succeeded cleanly and the route registered (jest imports the page module successfully).
+
+Validation:
+- `pytest tests/test_intercompany_elimination*` — 17 passed (13 engine + 4 new routes).
+- `npx jest` — 191 suites, **1899 tests pass** (+4 new), 0 failed, 5 snapshots.
+- `npm run build` — clean, exit 0; `/tools/intercompany` registered alongside other `ƒ (Dynamic)` tool routes.
+
+**Commit SHA:** `e17a052`
+
+**689d completion — 2026-04-23:**
+
+**Status:** COMPLETE
+
+Triple-CSV upload (payroll.csv required; w2_drafts.csv + form_941.csv optional), following the 689b/c pattern. Backend tier-gate retrofit applied (same two-line pattern as 689c).
+
+Delivered:
+- [x] `backend/routes/w2_reconciliation.py` — `enforce_tool_access` + `check_upload_limit` on analyze; `enforce_tool_access` on CSV export.
+- [x] `backend/tests/test_w2_reconciliation_routes.py` — 4 gate tests (Free 403 on analyze/export; Professional pass on both).
+- [x] `frontend/src/app/tools/w2-reconciliation/page.tsx` — standalone page.
+- [x] `frontend/src/hooks/useW2Reconciliation.ts` — analyze + exportCsv.
+- [x] `frontend/src/types/w2Reconciliation.ts` — request/response shapes.
+- [x] `frontend/src/components/w2Reconciliation/` — `parseCsv.ts` (three parsers), `W2FileUpload.tsx`, `W2Results.tsx`.
+- [x] `frontend/src/lib/commandRegistry.ts` — `tool:w2-reconciliation` entry.
+- [x] `frontend/src/app/tools/page.tsx` — new `TOOLS` row.
+- [x] `frontend/src/__tests__/W2ReconciliationPage.test.tsx` — 4 tests.
+
+Validation: 4 backend gate tests pass; +4 jest tests. Full jest + build run at 689g wrap.
+
+**Commit SHA:** `c07a0b6`
+
+**689e completion — 2026-04-23:**
+
+**Status:** COMPLETE
+
+Dual-CSV upload (vendors.csv + payments.csv) with Form 1099 filing-candidate preparation. Backend tier-gate retrofit applied (same pattern).
+
+Delivered:
+- [x] `backend/routes/form_1099.py` — tier gate on both routes.
+- [x] `backend/tests/test_form_1099_routes.py` — 4 gate tests.
+- [x] `frontend/src/app/tools/form-1099/page.tsx` — standalone page.
+- [x] `frontend/src/hooks/useForm1099.ts`.
+- [x] `frontend/src/types/form1099.ts`.
+- [x] `frontend/src/components/form1099/parseCsv.ts` + `Form1099FileUpload.tsx` + `Form1099Results.tsx`.
+- [x] Catalog + command registry + 4 jest tests.
+
+Validation: 4 backend + 4 jest pass.
+
+**Commit SHA:** `78fe173`
+
+**689f completion — 2026-04-23:**
+
+**Status:** COMPLETE
+
+First form-input standalone page in the 689 series (no CSV upload — the request body is small and the adjustment grid is native form UX). Loads the backend's `STANDARD_ADJUSTMENTS` catalog on mount to seed the row-level picker. Backend tier-gate retrofit applied (same pattern).
+
+Delivered:
+- [x] `backend/routes/book_to_tax.py` — tier gate on both POST routes. `GET /audit/book-to-tax/standard-adjustments` left ungated (reference data, already paid-tier-only once UI hits the POSTs; the picker also degrades gracefully to "— custom —" when the catalog response is empty).
+- [x] `backend/tests/test_book_to_tax_routes.py` — 4 gate tests.
+- [x] `frontend/src/app/tools/book-to-tax/page.tsx` — standalone page.
+- [x] `frontend/src/hooks/useBookToTax.ts` — `analyze`, `exportCsv`, `loadStandardAdjustments`.
+- [x] `frontend/src/types/bookToTax.ts`.
+- [x] `frontend/src/components/bookToTax/BookToTaxForm.tsx` + `BookToTaxResults.tsx`.
+- [x] Catalog + command registry + 4 jest tests.
+
+Validation: 4 backend + 4 jest pass.
+
+**Commit SHA:** `b3cc205`
+
+**689g completion — 2026-04-23:**
+
+**Status:** COMPLETE
+
+Final sub-sprint: ships Cash Flow Projector as a standalone page AND flips the "12 → 18 tools" marketing surfaces in a single commit pass (per CEO directive "single-pass flip at 689g").
+
+Cash Flow Projector deliverables:
+- [x] `backend/routes/cash_flow_projector.py` — tier gate on both routes.
+- [x] `backend/tests/test_cash_flow_projector_routes.py` — 4 gate tests.
+- [x] `frontend/src/app/tools/cash-flow-projector/page.tsx`.
+- [x] `frontend/src/hooks/useCashFlowProjector.ts`.
+- [x] `frontend/src/types/cashFlowProjector.ts`.
+- [x] `frontend/src/components/cashFlowProjector/CashFlowForm.tsx` + `CashFlowResults.tsx`.
+- [x] Catalog + command registry + 4 jest tests.
+
+Marketing flip ("12 → 18 tools"):
+- [x] `backend/shared/entitlements.py` — `CANONICAL_TOOL_COUNT: 12 → 18`; docstring + `tools_allowed` comments updated.
+- [x] Bulk `sed` across **34 live files**: frontend marketing components (BottomProof, EvidenceBand, EngravedStat, ProofStrip, ToolLedger, ToolShowcase, ToolSlideshow, MarketingFooter), pricing / about / demo / terms / register pages, shared UI (UpgradeGate, FeatureGate, GuestCTA, WelcomeModal, UpgradeModal), workspace progress indicator, `domain/pricing.ts`, `commandRegistry.ts`, and 5 test files (EngravedStat, EntitlementParity, EvidenceBand, PricingPage, ProofStrip) that assert on the live copy.
+- [x] Docs: `CLAUDE.md` (current-state line 140), `AGENTS.md` (tool list expanded with all 7 promoted tools + sprint 689 note), `docs/02-technical/ARCHITECTURE.md`, `docs/04-compliance/ACCESS_CONTROL_POLICY.md` + `TERMS_OF_SERVICE.md`, `docs/07-user-facing/USER_GUIDE.md`, `features/status.json`, `tasks/pricing-launch-qa.md`.
+- [x] Historical rows preserved: `CLAUDE.md:111` (v1.5.0 era) restored to `12 tools, v1.5.0` after sed flipped it by mistake; archive files, `reports/`, and the `website-usability-analysis.md` snapshot all left untouched (point-in-time records). `backend/tests/test_tool_anomaly_detection.py` line 7 left at "113 generators across 12 tools" — that count refers to anomaly generators, not catalog tools, and the 7 promoted tools do not add generators.
+
+Validation (applies to all 689a–g cumulatively):
+- All 5 new backend route-gate test files: **20 passed** (4 per tool × 5 gated routes).
+- `npx jest` full: **195 suites, 1915 tests pass** (+16 new from 689d–g × 4).
+- `npm run build`: clean, exit 0. All 7 new `/tools/*` routes registered as `ƒ (Dynamic)`.
+
+Implementation notes:
+- **Gate-retrofit pattern locked in 689c is the recipe for 689d–g**: `enforce_tool_access(user, "<name>", db) + check_upload_limit(user, db)` on analyze; `enforce_tool_access` only on CSV export. Applied verbatim to each of w2_reconciliation, form_1099, book_to_tax, cash_flow_projector. Every retrofit shipped with a 4-test fixture (Free 403 × 2 endpoints; Professional 200 × 2 endpoints).
+- **Form vs. CSV upload split**: 689b (SOD), 689c (Intercompany), 689d (W-2), 689e (1099) use CSV upload because the payloads are rowwise and map cleanly to ERP / IAM exports. 689f (Book-to-Tax) and 689g (Cash Flow Projector) use pure form input because the payloads are small and spreadsheet-uploading a 5-field form would be hostile UX.
+- **CSV parser reuse deferred**: each of the 4 CSV tools has its own `parseCsv.ts`. Extracting a shared `lib/csv/minimalParser.ts` would save ~60 LoC per file but would couple 4 otherwise-independent tools; scoping it to 689 was out of sprint scope. A later refactor sprint can consolidate.
+- **No new FeatureGate additions after 689b**: SOD needed `sod_checker` because it's Enterprise-only on the backend. 689c–g follow the standard paid-tier-allowed pattern (Free blocked via `_FREE_TOOLS`), so `UpgradeGate toolName="..."` is sufficient.
+- **sed false-positive in CLAUDE.md history row**: bulk sed flipped a v1.5.0-era "12 tools" claim in the completed-eras table. Reverted after review. Historical claims ("at the time this sprint shipped, the catalog was 12 tools") are correct and must not move with the canonical count.
+
+**Commit SHA:** `9888295`
 
 ---
 
@@ -649,23 +752,53 @@ The original plan proposed threading a `branding_context` kwarg through every me
 
 ---
 
-### Sprint 691: Professional-tier DB enum + team-seat counting
-**Status:** PENDING
+### Sprint 691: Seat-counting audit + pricing-readiness doc reconciliation
+**Status:** COMPLETE
 **Priority:** P2
-**Source:** Completeness agent H-07/H-08
-**Why now:** `UserTier.PROFESSIONAL` is still in the DB enum but unpurchasable; legacy Professional users map to Solo entitlements. `pricing-launch-readiness.md:49-50` flagged team-member counting as a placeholder; hard-mode seat enforcement landed in `config.py:456` but the underlying counting logic was never verified.
-**Files:**
-- `backend/models.py` (UserTier enum)
-- `backend/shared/entitlements.py` (Professional mapping)
-- `backend/billing/seat_enforcement.py` or equivalent — wherever active-member counting lives
-- Alembic migration (new)
+**Source:** Completeness agent H-07/H-08 (partially invalidated — see scope adjustment)
 
-**Changes:**
-- [ ] Alembic migration: collapse `PROFESSIONAL` values to `SOLO` across `users.tier`; drop `PROFESSIONAL` from the enum (Postgres enum alter sequence: add new enum without PROFESSIONAL → copy → drop old). Backfill any Professional users to Solo with a logged event.
-- [ ] Remove Professional-specific code paths from `shared/entitlements.py` and tests.
-- [ ] Audit the active-member counting function: does it count pending invitations? terminated users? multi-org members? Build a concrete test matrix and exercise each.
-- [ ] Verify Enterprise seat-hit returns 402 and frontend UpgradeModal surfaces it correctly.
-- [ ] Sign-off note in `pricing-launch-readiness.md`.
+**Scope adjustment during execution:**
+The original sprint (H-07) proposed collapsing `UserTier.PROFESSIONAL → SOLO` on the premise that Professional was "still in the DB enum but unpurchasable; legacy Professional users map to Solo entitlements." Both halves of that premise were stale by 2026-04-23:
+
+1. **Professional is a live Pricing v3 tier.** `billing/price_config.py:19-24` wires $500/mo + $5,000/yr, seat add-ons (`PROFESSIONAL_SEAT_PRICE`, `MAX_SELF_SERVE_SEATS_PROFESSIONAL`), trial eligibility (`TRIAL_ELIGIBLE_TIERS`). `shared/entitlements.py:104-122` gives Professional its own full entitlement row (uploads=500/mo, export_sharing=True, activity_logs=True, admin_dashboard=True, team seats up to 20) — **not** a Solo mapping. Collapsing the enum would have broken live Stripe checkout for a tier the CEO is about to cut over to live keys for in Phase 4.1.
+
+2. **Hard-mode seat enforcement is already the production default.** `config.py:500` defaults `SEAT_ENFORCEMENT_MODE="hard"` and `config.py:502-506` hard-fails startup if production is configured with "soft". The sprint's premise that seat enforcement "was never verified" was a doc-drift artifact.
+
+H-07 enum-collapse piece **rejected as obsolete**. H-08 seat-counting audit kept and delivered, plus a concrete bug was found and fixed along the way.
+
+**Changes delivered:**
+- [x] **Bug fix — stale PENDING invites no longer consume seats forever.** `shared/entitlement_checks.py::check_seat_limit_for_org` previously counted any `OrganizationInvite` with `status == PENDING`, but status is only swept to EXPIRED at acceptance time (`routes/organization.py:288-289`). Result: invites that lapsed without being accepted remained PENDING in the DB and blocked new seats indefinitely. Fixed by adding `OrganizationInvite.expires_at > datetime.now(UTC)` to the query.
+- [x] **Seat-counting test matrix — 5 new tests** in `TestCheckSeatLimitForOrg` exercising every invite-lifecycle edge case:
+  - `test_stale_pending_invite_not_counted` — lapsed PENDING doesn't block.
+  - `test_fresh_pending_invite_still_counted` — regression guard for in-window PENDING.
+  - `test_accepted_invite_not_counted` — fulfilled via member row, no double-count.
+  - `test_revoked_invite_not_counted` — explicitly withdrawn, no seat.
+  - `test_status_expired_invite_not_counted` — swept-EXPIRED, no seat.
+  Result: 11/11 tests pass (6 pre-existing + 5 new).
+- [x] **Multi-org concern dismissed.** `OrganizationMember.user_id` has a UNIQUE constraint (`organization_model.py:108`) — a user can belong to at most one org, so "multi-org member" double-counting is architecturally impossible.
+- [x] **Terminated-user concern dismissed.** `OrganizationMember` has no soft-delete column; removal is a row delete. Counting `COUNT(*)` automatically excludes terminated users.
+- [x] **Enterprise seat-hit status code — documented as 403, not 402.** Sprint brief mentioned 402; reality (verified by `test_at_limit_raises_403`) is 403 `TIER_LIMIT_EXCEEDED` with `upgrade_url=/pricing` in the detail body. This is more semantically accurate (seat-limit exceeded is a forbidden-action, not a payment-required gating). Frontend UpgradeModal keyed off the `code` field, not the HTTP status.
+- [x] **`tasks/pricing-launch-readiness.md` reconciled** with current state:
+  - Limitation row 1 (Professional deprecated) — CLEARED as obsolete.
+  - Limitation row 2 (trial expiry email) — CLEARED per Sprint 690.
+  - Limitation row 3 (team member counting placeholder) — CLEARED per this sprint; test matrix cited.
+  - Limitation row 4 (soft enforcement default) — CLEARED; hard is the production default.
+  - Risk row "Professional tier users lose access" — CLEARED (not a risk for a live tier).
+  - Coverage-map rename `TestOldSubscriberRegression` → `TestProfessionalTierValidation` (the actual class name in `test_pricing_launch_validation.py:1630`).
+
+**Explicitly not delivered (out of scope after rescope):**
+- Alembic migration to drop `PROFESSIONAL` from the enum — rejected; Professional is a live tier.
+- Removing Professional-specific entitlement rows — rejected; they are the canonical mid-tier config.
+
+**Review:**
+- The stale-pending bug is the kind of thing that would have quietly accumulated forever in production — every lapsed invite would subtract a seat. Low severity today because paciolus.com has near-zero customer traffic, but would have been a support-ticket magnet at scale once teams started inviting.
+- `pricing-launch-readiness.md:5` still reads "PENDING SIGN-OFF" with a 2026-02-25 date in the header. The CEO still needs to re-sign the document post-Phase-4.1 per the workflow in ceo-actions.md — this sprint only cleared the stale limitations that would have blocked that sign-off.
+- Tests were written against the fix, not a hypothetical. The 5 edge cases cover the invite-status enum exhaustively (PENDING fresh/stale, ACCEPTED, REVOKED, EXPIRED) rather than inventing scenarios that can't happen.
+
+**Follow-up flagged (out of scope this sprint):**
+- `routes/organization.py:168-176` has the same shape: the duplicate-invite check filters on `status == PENDING` without checking `expires_at`. Result: if Alice invites `bob@example.com`, the invite lapses, Alice cannot re-invite Bob — the 409 "unable to send invite" response fires against a dead stale invite. Minor UX bug rather than a seat-consumption bug; lives on a separate surface; deserves a targeted hotfix rather than being bundled here.
+
+**Commit SHA:** `12f5956`.
 
 ---
 
@@ -1501,5 +1634,6 @@ Sprint 675 established the exact fix pattern for `dependency_sentinel.py` (switc
 - The FS generator posed the only design tension — `draw_fs_decorations` is a composite callback that already draws watermark + rules + page number + disclaimer, so the Sprint 679 pattern of "swap `draw_page_footer` → `make_branded_page_footer`" wouldn't work without losing FS-specific chrome. Chose to extend `draw_fs_decorations` with optional kwargs rather than refactor it to delegate to `_draw_footer_impl`; the kwargs are additive, preserve existing output bit-for-bit when branding is absent, and keep the FS aesthetic (custom disclaimer language, watermark, rules) intact.
 - `_build_story`'s new `custom_logo_bytes` kwarg is internal — the public method is `generate_pdf`, which reads the ContextVar. Keeping the explicit kwarg on the internal method is a defense against future splits where `_build_story` might be called from a test path that bypasses `generate_pdf`.
 - Lesson reinforced from Sprint 679: ContextVar-based propagation continues to be the right shape. Adding 3 more generators just meant 3 ContextVar reads + 3 small chrome-handler tweaks, not 3 signature migrations.
+- Commit SHA: `7c6c92c` (PR #98 squash-merge 2026-04-23).
 
 ---

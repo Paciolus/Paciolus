@@ -24,7 +24,7 @@ const TIERS = [
     name: 'Solo',
     monthly: '$100/mo',
     annual: '$1,000/yr',
-    features: ['100 uploads/mo', 'Unlimited clients', 'All 12 tools', 'PDF, Excel & CSV exports', '7-day free trial'],
+    features: ['100 uploads/mo', 'Unlimited clients', 'All 18 tools', 'PDF, Excel & CSV exports', '7-day free trial'],
     hasSeats: false,
   },
   {
@@ -32,7 +32,7 @@ const TIERS = [
     name: 'Professional',
     monthly: '$500/mo',
     annual: '$5,000/yr',
-    features: ['500 uploads/mo', 'Unlimited clients', 'All 12 tools', 'All exports', '7 seats (up to 20)', 'Export sharing', 'Admin dashboard', '7-day free trial'],
+    features: ['500 uploads/mo', 'Unlimited clients', 'All 18 tools', 'All exports', '7 seats (up to 20)', 'Export sharing', 'Admin dashboard', '7-day free trial'],
     hasSeats: true,
   },
   {
@@ -40,7 +40,7 @@ const TIERS = [
     name: 'Enterprise',
     monthly: '$1,000/mo',
     annual: '$10,000/yr',
-    features: ['Unlimited uploads', 'Unlimited clients', 'All 12 tools', 'All exports', '20 seats (up to 100)', 'Export sharing', 'Admin dashboard', 'Bulk upload', 'Custom PDF branding', '7-day free trial'],
+    features: ['Unlimited uploads', 'Unlimited clients', 'All 18 tools', 'All exports', '20 seats (up to 100)', 'Export sharing', 'Admin dashboard', 'Bulk upload', 'Custom PDF branding', '7-day free trial'],
     hasSeats: true,
   },
 ]

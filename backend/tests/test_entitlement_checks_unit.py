@@ -1431,3 +1431,162 @@ class TestCheckSeatLimitForOrg:
         with patch("shared.entitlement_checks._get_seat_enforcement_mode", return_value="soft"):
             # Should not raise in soft mode
             check_seat_limit_for_org(db_session, org.id)
+
+    # ------------------------------------------------------------------
+    # Sprint 691: invite-lifecycle edge cases
+    # ------------------------------------------------------------------
+
+    def _build_pro_org_at_cap(self, make_user, db_session, email_prefix: str, total_seats: int = 3):
+        """Shared setup: Professional org with `total_seats` cap, fully populated with members."""
+        from datetime import UTC, datetime, timedelta
+
+        from organization_model import Organization, OrganizationMember, OrgRole
+        from subscription_model import BillingInterval, Subscription, SubscriptionStatus
+
+        owner = make_user(tier=UserTier.PROFESSIONAL, email=f"{email_prefix}_owner@example.com")
+        sub = Subscription(
+            user_id=owner.id,
+            tier="professional",
+            status=SubscriptionStatus.ACTIVE,
+            billing_interval=BillingInterval.MONTHLY,
+            seat_count=total_seats,
+            additional_seats=0,
+        )
+        db_session.add(sub)
+        db_session.flush()
+
+        org = Organization(
+            name=f"Sprint691 {email_prefix}",
+            slug=f"sprint691-{email_prefix}",
+            owner_user_id=owner.id,
+            subscription_id=sub.id,
+        )
+        db_session.add(org)
+        db_session.flush()
+
+        # Fill to total_seats - 1 (leaving 1 seat) so any additional counted invite pushes to cap.
+        for i in range(total_seats - 1):
+            db_session.add(
+                OrganizationMember(
+                    organization_id=org.id,
+                    user_id=make_user(email=f"{email_prefix}_m{i}@example.com").id,
+                    role=OrgRole.MEMBER,
+                )
+            )
+        db_session.flush()
+        return org, datetime.now(UTC), timedelta
+
+    def test_stale_pending_invite_not_counted(self, make_user, db_session):
+        """Sprint 691: PENDING invites past their expires_at no longer consume a seat."""
+        from organization_model import InviteStatus, OrganizationInvite, OrgRole
+        from shared.entitlement_checks import check_seat_limit_for_org
+
+        org, now, timedelta = self._build_pro_org_at_cap(make_user, db_session, "stale_pending")
+
+        # Stale PENDING invite — expired 1 hour ago, never swept.
+        db_session.add(
+            OrganizationInvite(
+                organization_id=org.id,
+                invite_token_hash="1" * 64,
+                invitee_email="stale@example.com",
+                role=OrgRole.MEMBER,
+                status=InviteStatus.PENDING,
+                expires_at=now - timedelta(hours=1),
+            )
+        )
+        db_session.flush()
+
+        # 2 members + 0 counted invites < 3 cap → passes.
+        with patch("shared.entitlement_checks._get_seat_enforcement_mode", return_value="hard"):
+            check_seat_limit_for_org(db_session, org.id)
+
+    def test_fresh_pending_invite_still_counted(self, make_user, db_session):
+        """Sprint 691 regression guard: PENDING invites still in their expiry window DO count."""
+        from organization_model import InviteStatus, OrganizationInvite, OrgRole
+        from shared.entitlement_checks import check_seat_limit_for_org
+
+        org, now, timedelta = self._build_pro_org_at_cap(make_user, db_session, "fresh_pending")
+
+        db_session.add(
+            OrganizationInvite(
+                organization_id=org.id,
+                invite_token_hash="2" * 64,
+                invitee_email="fresh@example.com",
+                role=OrgRole.MEMBER,
+                status=InviteStatus.PENDING,
+                expires_at=now + timedelta(hours=12),
+            )
+        )
+        db_session.flush()
+
+        # 2 members + 1 fresh pending invite = 3 at cap → raises.
+        with patch("shared.entitlement_checks._get_seat_enforcement_mode", return_value="hard"):
+            with pytest.raises(HTTPException) as exc_info:
+                check_seat_limit_for_org(db_session, org.id)
+            assert exc_info.value.status_code == 403
+
+    def test_accepted_invite_not_counted(self, make_user, db_session):
+        """ACCEPTED invites are fulfilled via a member row and must not double-count."""
+        from organization_model import InviteStatus, OrganizationInvite, OrgRole
+        from shared.entitlement_checks import check_seat_limit_for_org
+
+        org, now, timedelta = self._build_pro_org_at_cap(make_user, db_session, "accepted")
+
+        db_session.add(
+            OrganizationInvite(
+                organization_id=org.id,
+                invite_token_hash="3" * 64,
+                invitee_email="accepted@example.com",
+                role=OrgRole.MEMBER,
+                status=InviteStatus.ACCEPTED,
+                expires_at=now + timedelta(hours=12),
+            )
+        )
+        db_session.flush()
+
+        with patch("shared.entitlement_checks._get_seat_enforcement_mode", return_value="hard"):
+            check_seat_limit_for_org(db_session, org.id)
+
+    def test_revoked_invite_not_counted(self, make_user, db_session):
+        """REVOKED invites are explicitly withdrawn and must not consume a seat."""
+        from organization_model import InviteStatus, OrganizationInvite, OrgRole
+        from shared.entitlement_checks import check_seat_limit_for_org
+
+        org, now, timedelta = self._build_pro_org_at_cap(make_user, db_session, "revoked")
+
+        db_session.add(
+            OrganizationInvite(
+                organization_id=org.id,
+                invite_token_hash="4" * 64,
+                invitee_email="revoked@example.com",
+                role=OrgRole.MEMBER,
+                status=InviteStatus.REVOKED,
+                expires_at=now + timedelta(hours=12),
+            )
+        )
+        db_session.flush()
+
+        with patch("shared.entitlement_checks._get_seat_enforcement_mode", return_value="hard"):
+            check_seat_limit_for_org(db_session, org.id)
+
+    def test_status_expired_invite_not_counted(self, make_user, db_session):
+        """Invites whose status was swept to EXPIRED must not consume a seat."""
+        from organization_model import InviteStatus, OrganizationInvite, OrgRole
+        from shared.entitlement_checks import check_seat_limit_for_org
+
+        org, now, timedelta = self._build_pro_org_at_cap(make_user, db_session, "status_expired")
+
+        db_session.add(
+            OrganizationInvite(
+                organization_id=org.id,
+                invite_token_hash="5" * 64,
+                invitee_email="expired@example.com",
+                role=OrgRole.MEMBER,
+                status=InviteStatus.EXPIRED,
+                expires_at=now - timedelta(hours=1),
+            )
+        )
+        db_session.flush()
+
+        with patch("shared.entitlement_checks._get_seat_enforcement_mode", return_value="hard"):
+            check_seat_limit_for_org(db_session, org.id)

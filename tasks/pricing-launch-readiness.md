@@ -44,10 +44,10 @@ These deficiencies are accepted for launch. Each has a documented mitigation.
 
 | # | Limitation | Impact | Mitigation |
 |---|-----------|--------|------------|
-| 1 | Professional tier deprecated but not removed from DB enum | Legacy users retain access | Maps to Solo entitlements; no purchase path |
-| 2 | Trial expiry email notifications deferred | Users won't receive email 3 days before trial ends | Webhook event logged; manual monitoring |
-| 3 | Team member counting is placeholder | Seat usage not validated against actual team size | seat_limit check is soft-mode only |
-| 4 | Seat enforcement mode defaults to "soft" | Extra seats are logged, not blocked | Conscious decision — team features are placeholder |
+| 1 | ~~Professional tier deprecated but not removed from DB enum~~ CLEARED 2026-04-23 — Professional is a live paid tier under Pricing v3 (Sprints 449–476). `billing/price_config.py` wires $500/mo + $5,000/yr, seat add-ons, trial eligibility. Entitlements row has full mid-tier features. | n/a | n/a |
+| 2 | Trial expiry email notifications deferred | Users won't receive email 3 days before trial ends | ~~Webhook event logged; manual monitoring~~ CLEARED 2026-04-10 per Sprint 690 — `send_trial_ending_email` wired, 3-day default window, graceful SendGrid outage handling. |
+| 3 | ~~Team member counting is placeholder~~ CLEARED 2026-04-23 per Sprint 691 — `check_seat_limit_for_org` verified against 11-test matrix: member count + fresh pending invites counted; stale pending (`expires_at` lapsed), ACCEPTED, REVOKED, and status=EXPIRED invites excluded. | n/a | n/a |
+| 4 | ~~Seat enforcement mode defaults to "soft"~~ CLEARED 2026-04-23 — `config.py:500` defaults `SEAT_ENFORCEMENT_MODE="hard"` and production hard-fails startup on "soft" per `config.py:502-506`. Hard mode returns HTTP 403 `TIER_LIMIT_EXCEEDED` with `upgrade_url=/pricing`. | n/a | n/a |
 | 5 | No Stripe signature verification unit test | Relies on Stripe SDK internal logic | Stripe SDK handles signature verification |
 | 6 | No idempotency key tests | Stripe handles server-side deduplication | Client retry logic uses unique session creation |
 | 7 | Tax handling not implemented | No tax calculation in checkout | Recommend Stripe Tax for production |
@@ -64,7 +64,7 @@ These deficiencies are accepted for launch. Each has a documented mitigation.
 | Trial abuse (repeated signups) | Low | Medium | Trial eligibility checks existing subscriptions |
 | Promo code leakage | Low | Low | Only 2 codes; Stripe-side usage limits configurable |
 | Seat pricing calculation error | Low | High | Covered by 15+ seat pricing unit tests |
-| Professional tier users lose access | Low | Medium | Entitlements explicitly map to Solo parity |
+| ~~Professional tier users lose access~~ | n/a | n/a | CLEARED 2026-04-23 — Professional is a live Pricing v3 tier with full entitlements; no Solo-parity mapping required. |
 | Stripe webhook secret rotation | Low | High | Documented in runbook; CI validates config |
 | Concurrent checkout race condition | Low | Medium | Stripe deduplicates by customer ID |
 
@@ -80,7 +80,7 @@ TestBillingLifecycle                 — subscription_manager.py, webhook_handle
 TestWebhookReconciliation           — webhook_handler.py (_resolve_*, _find_*)
 TestEntitlementEnforcement           — entitlements.py, entitlement_checks.py
 TestPromoApplicationPolicy           — price_config.py (promo functions)
-TestOldSubscriberRegression          — entitlements.py (professional tier)
+TestProfessionalTierValidation      — entitlements.py (live Pricing v3 Professional tier)
 ```
 
 ### Frontend

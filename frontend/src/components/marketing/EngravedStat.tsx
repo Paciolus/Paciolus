@@ -15,7 +15,7 @@
  *     kicker="I."
  *     value="1,452"
  *     label="Automated Tests"
- *     sub="Across all 12 diagnostic tools"
+ *     sub="Across all 18 diagnostic tools"
  *   />
  *
  * Convention: use three instances in a row (`grid grid-cols-3` on

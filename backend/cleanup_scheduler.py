@@ -297,22 +297,42 @@ def _job_reset_upload_quotas() -> None:
     _run_cleanup_job("reset_upload_quotas", _reset)
 
 
+def purge_expired_export_shares(db: Any) -> int:
+    """Delete expired or revoked export-share rows and their R2 objects.
+
+    Sprint 611: rows whose bytes live in R2 also have the bucket object
+    deleted.  R2 deletion is best-effort — a failure here logs and moves
+    on rather than blocking the DB purge, since the next cleanup pass
+    will retry and the object key is hash-deterministic (no orphan
+    proliferation from retries).
+
+    Module-level (not nested) so the behaviour is directly testable
+    without running the full APScheduler wrapper.
+    """
+    from export_share_model import ExportShare
+    from shared import export_share_storage
+
+    now = datetime.now(UTC)
+    expired = db.query(ExportShare).filter(ExportShare.expires_at <= now).all()
+    revoked = db.query(ExportShare).filter(ExportShare.revoked_at.isnot(None)).all()
+    doomed = {s.id: s for s in expired}
+    doomed.update({s.id: s for s in revoked})
+    if not doomed:
+        return 0
+
+    for share in doomed.values():
+        key = share.object_key
+        if key:
+            export_share_storage.delete(key)  # best-effort; logs on failure
+
+    db.query(ExportShare).filter(ExportShare.id.in_(doomed.keys())).delete(synchronize_session=False)
+    db.commit()
+    return len(doomed)
+
+
 def _job_expired_export_shares() -> None:
-    """Purge expired or revoked export share records (48h TTL)."""
-
-    def _purge(db: Any) -> int:
-        from export_share_model import ExportShare
-
-        now = datetime.now(UTC)
-        expired = db.query(ExportShare).filter(ExportShare.expires_at <= now).all()
-        revoked = db.query(ExportShare).filter(ExportShare.revoked_at.isnot(None)).all()
-        to_delete = {s.id for s in expired} | {s.id for s in revoked}
-        if to_delete:
-            db.query(ExportShare).filter(ExportShare.id.in_(to_delete)).delete(synchronize_session=False)
-            db.commit()
-        return len(to_delete)
-
-    _run_cleanup_job("expired_export_shares", _purge)
+    """Scheduler entry-point wrapping ``purge_expired_export_shares``."""
+    _run_cleanup_job("expired_export_shares", purge_expired_export_shares)
 
 
 def _job_bulk_upload_cleanup() -> None:

@@ -738,6 +738,15 @@ def _generate_sampling_memo(
             else:
                 em_text = f"The expected misstatement of ${em_value:,.2f} was entered by the practitioner."
             story.append(Paragraph(em_text, styles["MemoBody"]))
+            story.append(
+                Paragraph(
+                    "The expansion factor used to derive the MUS sample size from this "
+                    "expected misstatement is drawn from the AICPA Audit Sampling Guide, "
+                    "Table A-1, with linear interpolation between the guide's published "
+                    "expected-to-tolerable ratio buckets.",
+                    styles["MemoBody"],
+                )
+            )
             story.append(Spacer(1, 8))
 
         # ─── Stratification Table ─────────────────────────────

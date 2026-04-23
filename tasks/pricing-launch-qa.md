@@ -164,7 +164,7 @@
 - [ ] All export types work (PDF, Excel, CSV)
 
 ### Team Tier
-- [ ] Can access all 12 tools
+- [ ] Can access all 18 tools
 - [ ] Unlimited diagnostics
 - [ ] Unlimited clients
 - [ ] Workspace access works

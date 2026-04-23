@@ -7,7 +7,7 @@
  * Shows children normally when the user has access.
  *
  * Pricing v3: Only FREE tier has restricted tools (TB + Flux Analysis).
- * All paid tiers (Solo, Professional, Enterprise) have access to all 12 tools.
+ * All paid tiers (Solo, Professional, Enterprise) have access to all 18 tools.
  */
 
 import { useEffect } from 'react'

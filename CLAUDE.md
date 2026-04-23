@@ -137,7 +137,7 @@ Located in `docs/04-compliance/`:
 - **18 memo PDFs + 3 report PDFs** (combined audit, financial statements, anomaly summary). PCAOB AS 1215/2401/2501, ISA 240/500/501/505/520/530/540. All memo PDFs support Enterprise-tier custom branding (logo + header/footer) via ContextVar propagation from the route (Sprint 679). Excel/CSV export available on all tiers above Free.
 - ~49 export endpoints across 7 route modules: 10 diagnostic (PDF/Excel/CSV TB, anomalies, leadsheets, FS, preflight, population profile, expense category, accrual completeness), 18 memo PDFs, 5 export-sharing (Professional+ with Argon2id passcode hashing + per-IP + per-token brute-force throttle per Sprints 697/698), 9 testing-tool CSVs, 3 engagement-export endpoints (anomaly summary, diagnostic package, convergence CSV), 4 loan amortization (calc + CSV/XLSX/PDF).
 - JWT auth (HttpOnly cookie refresh, in-memory access tokens), CSRF, account lockout
-- Free/Solo/Professional/Enterprise tiers: all paid tiers get all 12 tools. Solo ($100/$1,000), Professional ($500/$5,000, org features), Enterprise ($1,000/$10,000, PDF branding, bulk upload)
+- Free/Solo/Professional/Enterprise tiers: all paid tiers get all 18 tools. Solo ($100/$1,000), Professional ($500/$5,000, org features), Enterprise ($1,000/$10,000, PDF branding, bulk upload)
 - Engagement Layer: materiality cascade, follow-up tracker, workpaper index, diagnostic package ZIP, completion gate
 - Universal command palette (Cmd+K), Workspace Shell ("Audit OS"), Proof Architecture
 - 10 file formats: XLSX, XLS, CSV, TSV, TXT, OFX, QBO, IIF, PDF, ODS

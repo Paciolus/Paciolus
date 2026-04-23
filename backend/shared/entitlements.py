@@ -3,7 +3,7 @@ Tier-based entitlement configuration.
 
 Phase LXIX: Pricing Restructure v3.
 - 4 tiers: Free, Solo, Professional, Enterprise
-- All paid tiers get all 12 tools
+- All paid tiers get all 18 tools
 - FREE tier = view only (TB + Flux Analysis, no exports)
 - New boolean feature entitlements: export_sharing, activity_logs, admin_dashboard, bulk_upload, custom_branding
 
@@ -11,7 +11,7 @@ Defines per-tier limits for uploads, clients, tools, exports, and features.
 Used by entitlement_checks.py dependency functions to gate access.
 """
 
-# CANONICAL TOOL COUNT: 12
+# CANONICAL TOOL COUNT: 18
 # This is the single source of truth for Paciolus tool count across all docs, copy,
 # and marketing surfaces. If tools are added or removed, update this comment and all
 # references identified in COHESION_REMEDIATION.md before merging.
@@ -85,7 +85,7 @@ TIER_ENTITLEMENTS: dict[UserTier, TierEntitlements] = {
     UserTier.SOLO: TierEntitlements(
         uploads_per_month=100,
         max_clients=0,  # unlimited
-        tools_allowed=_ALL_TOOLS,  # All 12 tools
+        tools_allowed=_ALL_TOOLS,  # All 18 tools
         formats_allowed=_ALL_FORMATS,  # All formats
         max_team_seats=0,  # No team features
         seats_included=1,

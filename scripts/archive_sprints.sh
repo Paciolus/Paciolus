@@ -62,12 +62,39 @@ if [ "$1" = "--check" ]; then
 fi
 
 # ── Identify sprint numbers to archive ────────────────────────────────
-# Collect sprint numbers from completed sprint sections
-SPRINT_NUMBERS=$(sed -n "${ACTIVE_START},${ACTIVE_END}p" "$TODO" \
-  | grep -E '(— COMPLETE$|\*\*Status:\*\* COMPLETE)' \
-  | grep -oE 'Sprint [0-9]+' \
-  | grep -oE '[0-9]+' \
-  | sort -n)
+# Pair each "### Sprint NNN" header with its status body and emit the
+# number when the block's status is COMPLETE. The previous grep pipeline
+# filtered to Status lines first, losing access to the header's number.
+SPRINT_NUMBERS=$(sed -n "${ACTIVE_START},${ACTIVE_END}p" "$TODO" | awk '
+  function emit_if_complete() {
+    if (in_sprint && block ~ /(— COMPLETE|\*\*Status:\*\* COMPLETE)/) {
+      print header_num
+    }
+  }
+  /^### Sprint [0-9]+/ {
+    emit_if_complete()
+    in_sprint = 1
+    block = $0 "\n"
+    match($0, /[0-9]+/)
+    header_num = substr($0, RSTART, RLENGTH)
+    next
+  }
+  in_sprint && /^### |^---$/ {
+    emit_if_complete()
+    if (/^### Sprint [0-9]+/) {
+      block = $0 "\n"
+      match($0, /[0-9]+/)
+      header_num = substr($0, RSTART, RLENGTH)
+    } else {
+      in_sprint = 0
+      block = ""
+      header_num = ""
+    }
+    next
+  }
+  in_sprint { block = block $0 "\n" }
+  END { emit_if_complete() }
+' | sort -n)
 
 if [ -z "$SPRINT_NUMBERS" ]; then
   echo "No completed sprint numbers found."
