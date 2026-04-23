@@ -473,7 +473,7 @@ The original plan proposed threading a `branding_context` kwarg through every me
 ---
 
 ### Sprint 689: Hidden backend tools — catalog wire-up (CEO Path B, 2026-04-23)
-**Status:** IN PROGRESS — 689a/b/c/d COMPLETE, 689e–g pending
+**Status:** IN PROGRESS — 689a/b/c/d/e COMPLETE, 689f–g pending
 **Priority:** P2
 **Source:** Completeness agent H-03/H-05 + Claim-reality C-03/C-04 + CEO decision 2026-04-23
 
@@ -628,6 +628,25 @@ Delivered:
 - [x] `frontend/src/__tests__/W2ReconciliationPage.test.tsx` — 4 tests.
 
 Validation: 4 backend gate tests pass; +4 jest tests. Full jest + build run at 689g wrap.
+
+**Commit SHA:** `c07a0b6`
+
+**689e completion — 2026-04-23:**
+
+**Status:** COMPLETE
+
+Dual-CSV upload (vendors.csv + payments.csv) with Form 1099 filing-candidate preparation. Backend tier-gate retrofit applied (same pattern).
+
+Delivered:
+- [x] `backend/routes/form_1099.py` — tier gate on both routes.
+- [x] `backend/tests/test_form_1099_routes.py` — 4 gate tests.
+- [x] `frontend/src/app/tools/form-1099/page.tsx` — standalone page.
+- [x] `frontend/src/hooks/useForm1099.ts`.
+- [x] `frontend/src/types/form1099.ts`.
+- [x] `frontend/src/components/form1099/parseCsv.ts` + `Form1099FileUpload.tsx` + `Form1099Results.tsx`.
+- [x] Catalog + command registry + 4 jest tests.
+
+Validation: 4 backend + 4 jest pass.
 
 **Commit SHA:** _(to fill after commit)_
 

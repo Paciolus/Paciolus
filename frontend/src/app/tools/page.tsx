@@ -61,6 +61,7 @@ const TOOLS: ToolDef[] = [
   { key: 'sod_checker', label: 'Segregation of Duties', href: '/tools/sod', description: 'Analyze user-role and role-permission matrices against a hardcoded SoD rule library — per-user risk ranking with mitigating control suggestions. Enterprise plan.', reference: 'SOC 1 / AICPA / COSO 2013', category: 'Advanced' },
   { key: 'intercompany_elimination', label: 'Intercompany Elimination', href: '/tools/intercompany', description: 'Upload a multi-entity trial balance to match reciprocal intercompany balances, propose elimination journal entries, and render a consolidation worksheet with mismatch detection.', reference: 'ASC 810 / IFRS 10 / ISA 600', category: 'Advanced' },
   { key: 'w2_reconciliation', label: 'W-2 / W-3 Reconciliation', href: '/tools/w2-reconciliation', description: 'Reconcile payroll YTD to draft W-2s and Form 941 quarterlies before year-end filing. Detects box mismatches, SS wage-base overages, and 941-to-W-2 tie-out gaps.', reference: 'IRC §6051 / Form W-2 / W-3 / 941', category: 'Advanced' },
+  { key: 'form_1099', label: 'Form 1099 Preparation', href: '/tools/form-1099', description: 'Identify vendors meeting 1099-NEC / 1099-MISC / 1099-INT thresholds. Applies IRS corporate safe-harbor, processor-reported exemptions, and flags vendors needing W-9 on file.', reference: 'IRC §6041 / §6041A / Pub 1220', category: 'Advanced' },
 ]
 
 const CATEGORIES: Category[] = ['Core Analysis', 'Testing Suite', 'Advanced']

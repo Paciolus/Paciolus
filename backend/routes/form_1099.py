@@ -17,8 +17,10 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, ValidationError
+from sqlalchemy.orm import Session
 
 from auth import User, require_verified_user
+from database import get_db
 from form_1099_engine import (
     EntityType,
     Form1099Config,
@@ -29,8 +31,10 @@ from form_1099_engine import (
     VendorRecord,
     prepare_1099s,
 )
+from shared.entitlement_checks import check_upload_limit
 from shared.error_messages import sanitize_error
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
+from shared.testing_route import enforce_tool_access
 
 logger = logging.getLogger(__name__)
 
@@ -124,7 +128,12 @@ def prepare_1099_candidates(
     request: Request,
     payload: Form1099Request,
     current_user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
 ) -> dict:
+    # Sprint 689e: gate promoted tool at tier + upload-limit level.
+    enforce_tool_access(current_user, "form_1099", db)
+    check_upload_limit(current_user, db)
+
     try:
         result = prepare_1099s(_build_config(payload))
     except Form1099InputError as e:
@@ -144,7 +153,11 @@ def export_1099_csv(
     request: Request,
     payload: Form1099Request,
     current_user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
 ) -> StreamingResponse:
+    # Sprint 689e: gate promoted tool (export mirrors analyze-route gating).
+    enforce_tool_access(current_user, "form_1099", db)
+
     try:
         result = prepare_1099s(_build_config(payload))
     except Form1099InputError as e:
