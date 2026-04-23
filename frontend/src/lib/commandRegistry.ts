@@ -123,6 +123,7 @@ const TOOL_ENTRIES: { id: string; label: string; href: string; toolName: string;
   { id: 'tool:account-risk-heatmap', label: 'Account Risk Heatmap', href: '/tools/account-risk-heatmap', toolName: 'account_risk_heatmap', keywords: ['heatmap', 'risk', 'triage', 'account', 'signals'] },
   { id: 'tool:multi-currency', label: 'Multi-Currency Conversion', href: '/tools/multi-currency', toolName: 'currency_rates', keywords: ['currency', 'fx', 'exchange', 'multi', 'ias21', 'asc830', 'rates'] },
   { id: 'tool:sod-checker', label: 'Segregation of Duties', href: '/tools/sod', toolName: 'sod_checker', keywords: ['sod', 'segregation', 'duties', 'fraud', 'compliance', 'aicpa', 'soc1', 'coso'] },
+  { id: 'tool:intercompany', label: 'Intercompany Elimination', href: '/tools/intercompany', toolName: 'intercompany_elimination', keywords: ['intercompany', 'elimination', 'consolidation', 'asc810', 'ifrs10', 'isa600', 'multi-entity', 'group'] },
 ]
 
 const TOOL_COMMANDS: PaletteCommand[] = TOOL_ENTRIES.map(t => ({

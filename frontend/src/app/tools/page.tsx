@@ -59,6 +59,7 @@ const TOOLS: ToolDef[] = [
   { key: 'depreciation', label: 'Depreciation Calculator', href: '/tools/depreciation', description: 'Generate book and MACRS tax depreciation schedules — straight-line, declining balance, SYD, units of production; book vs tax timing reconciliation with deferred tax bridge.', reference: 'IRS Pub 946 / IAS 16 / ASC 360', category: 'Advanced' },
   { key: 'currency_rates', label: 'Multi-Currency Conversion', href: '/tools/multi-currency', description: 'Manage exchange-rate tables and manual rate entries for multi-currency trial balances — ISO 4217 validation, cohort-aware staleness detection, and defense-in-depth rate validation.', reference: 'IAS 21 / ASC 830', category: 'Advanced' },
   { key: 'sod_checker', label: 'Segregation of Duties', href: '/tools/sod', description: 'Analyze user-role and role-permission matrices against a hardcoded SoD rule library — per-user risk ranking with mitigating control suggestions. Enterprise plan.', reference: 'SOC 1 / AICPA / COSO 2013', category: 'Advanced' },
+  { key: 'intercompany_elimination', label: 'Intercompany Elimination', href: '/tools/intercompany', description: 'Upload a multi-entity trial balance to match reciprocal intercompany balances, propose elimination journal entries, and render a consolidation worksheet with mismatch detection.', reference: 'ASC 810 / IFRS 10 / ISA 600', category: 'Advanced' },
 ]
 
 const CATEGORIES: Category[] = ['Core Analysis', 'Testing Suite', 'Advanced']

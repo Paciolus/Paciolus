@@ -473,7 +473,7 @@ The original plan proposed threading a `branding_context` kwarg through every me
 ---
 
 ### Sprint 689: Hidden backend tools — catalog wire-up (CEO Path B, 2026-04-23)
-**Status:** IN PROGRESS — 689a/b COMPLETE, 689c–g pending
+**Status:** IN PROGRESS — 689a/b COMPLETE, 689c IN PROGRESS, 689d–g pending
 **Priority:** P2
 **Source:** Completeness agent H-03/H-05 + Claim-reality C-03/C-04 + CEO decision 2026-04-23
 
@@ -572,6 +572,37 @@ Implementation notes:
 - **Citation fallback**: `SOC 1` and `COSO 2013` aren't in `lib/citations.ts`, so `<Citation />` falls back to plain `<span>` rendering and `<CitationFooter />` renders nothing. Intentional — the standards are named in the hero badge and disclaimer body; the citation-registry entry can land later when the rest of the SOC-era standards get added.
 
 **Commit SHA:** `ad68d0f`
+
+**689c completion — 2026-04-23:**
+
+**Status:** IN PROGRESS
+
+Deliverables (Option A — single long-format CSV upload, per CEO 2026-04-23):
+
+**Backend tier-gate retrofit (CEO directive 2026-04-23):** Scout flagged that `routes/intercompany_elimination.py` had no tier gate at all — only `require_verified_user`. Folded the backend gate into this sprint rather than deferring. The same gap likely applies to the remaining promoted tools (689d–g); each sub-sprint will add its gate as scope-local work, not a separate hardening sprint.
+
+- [ ] `backend/routes/intercompany_elimination.py` — add `enforce_tool_access(current_user, "intercompany_elimination", db)` + `check_upload_limit(current_user, db)` to both endpoints (`/audit/intercompany-elimination` + `/audit/intercompany-elimination/export.csv`). Wire `db: Session = Depends(get_db)`.
+- [ ] `backend/tests/test_intercompany_elimination_routes.py` (new) — Free tier → 403 `TIER_LIMIT_EXCEEDED`; Solo/Professional/Enterprise pass.
+
+Frontend:
+- [ ] `frontend/src/app/tools/intercompany/page.tsx` — standalone page. `UpgradeGate toolName="intercompany_elimination"` (Free-blocked, paid-tiers allowed — no FeatureGate layer needed because backend + entitlements matrix agree on paid-tier default). `GuestCTA` / `UnverifiedCTA` / `DisclaimerBox` (ASC 810 / IFRS 10 / ISA 600) + `CitationFooter`.
+- [ ] `frontend/src/hooks/useIntercompanyElimination.ts` — `analyze(payload)`, `exportCsv(payload)`.
+- [ ] `frontend/src/types/intercompany.ts` — request/response shapes matching `routes/intercompany_elimination.py` Pydantic contracts (strings for Decimal fields; `.to_dict()` emits Decimals-as-strings).
+- [ ] `frontend/src/components/intercompany/` — `IntercompanyFileUpload` (single long-format CSV drop + client-side pivot to entities), `ConsolidationWorksheet` (per-entity columns + totals + eliminations + consolidated rows), `EliminationJEsTable`, `MismatchList`, `parseCsv.ts`.
+- [ ] `frontend/src/lib/commandRegistry.ts` — `tool:intercompany-elimination` entry.
+- [ ] `frontend/src/app/tools/page.tsx` — new `TOOLS` row (`category: 'Advanced'`, reference: ASC 810 / IFRS 10).
+- [ ] `frontend/src/__tests__/IntercompanyEliminationPage.test.tsx` — 4 tests modelled on `SODPage.test.tsx` / `MultiCurrencyPage.test.tsx`.
+
+Intentionally NOT touched (per CEO "single-pass flip at 689g"):
+- `backend/shared/entitlements.py:14` `CANONICAL_TOOL_COUNT` comment still reads `12`.
+- "12 tools" marketing surfaces unchanged.
+
+Validation targets:
+- `pytest backend/tests/test_intercompany_elimination*` — full pass + new tier-gate cases.
+- `npx jest` — full suite passing, +4 new tests.
+- `npm run build` — clean; `/tools/intercompany` renders as `ƒ (Dynamic)`.
+
+**Commit SHA:** _(to fill after commit)_
 
 ---
 
