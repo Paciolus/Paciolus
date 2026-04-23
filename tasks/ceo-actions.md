@@ -39,7 +39,7 @@ Open [Phase 3](#phase-3--functional-validation) and work the checklist top-to-bo
 - [ ] Legal placeholders in [Phase 4.2](#42-legal--policy-placeholders) — fill business address, registered agent, DPO/EU-rep decision, effective dates, security emergency phone. Counsel sign-off on Terms + Privacy before go-live.
 
 ### Afternoon 3 (~week 3): Phase 4.3–4.5 — Domain, Backups, Go-Live
-- [ ] Provision R2/S3 bucket (serves both Phase 4.4 pg_dump backups AND Sprint 611 ExportShare migration — [Backlog Blockers](#backlog-blockers--provisioning-gates))
+- [x] ~~Provision R2/S3 bucket~~ — buckets provisioned 2026-04-23 and Sprint 611 ExportShare migration landed against `paciolus-exports` the same day. Phase 4.4 pg_dump backups are the only remaining consumer (tracked in [Phase 4.4](#44-backups)).
 - [ ] Custom domain + DNS per [Phase 4.3](#43-custom-domain)
 - [ ] I run the pg_dump restore round-trip on your bucket ([Phase 4.4](#44-backups))
 - [ ] Go-live smoke test from custom domain ([Phase 4.5](#45-go-live-smoke-test)) — 24h monitor of Sentry + Render logs + Stripe webhook delivery ≥99%
@@ -177,7 +177,7 @@ is queued and is held until the resource exists.
   2. `paciolus-exports` — will back the **Sprint 611 ExportShare object store migration** (removes up-to-50-MB blobs from `backend/export_share_model.py:43` / Neon Postgres).
 - [x] **Two scoped Account API tokens, each Object Read & Write on exactly one bucket.** `paciolus-backups-rw` and `paciolus-exports-rw` (the latter rolled mid-provisioning after a screenshot-leak of its initial secret — see `tasks/lessons.md` for the pattern, fix, and prevention rule). The original secrets never reached Render's persistent store; only the rolled values saved.
 - [x] **8 env vars wired to Render `paciolus-api` (deploy live 2026-04-23 12:11 UTC):** `R2_{BACKUPS,EXPORTS}_{BUCKET,ENDPOINT,ACCESS_KEY_ID,SECRET_ACCESS_KEY}`. Env var count 19 → 27. `/health` returned HTTP 200 in <300ms across 9 polls spanning the rolling deploy — zero service disruption. Shared S3 endpoint: `https://8fd7f43a3458f2ec09d400e0b7a7a5e8.r2.cloudflarestorage.com`.
-- **Consumers (no code wired yet — vars sit unused until these land):** Sprint 611 ExportShare migration (unblocked), Phase 4.4 pg_dump cron (unblocked). Both can proceed without further CEO action on R2.
+- **Consumers:** Sprint 611 ExportShare migration **landed 2026-04-23** — route now uploads shared-export bytes to `paciolus-exports` at `shares/<share_token_hash>` and the cleanup scheduler deletes the R2 object on expiry/revoke. Phase 4.4 pg_dump cron still pending and is the remaining `paciolus-backups` consumer.
 
 ---
 

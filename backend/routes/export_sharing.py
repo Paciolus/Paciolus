@@ -29,6 +29,7 @@ from auth import require_verified_user
 from database import get_db
 from export_share_model import ExportShare
 from models import User
+from shared import export_share_storage
 from shared.entitlement_checks import check_export_sharing_access, get_effective_entitlements
 from shared.organization_schemas import DetailResponse, ExportShareCreateResponse, ExportShareResponse
 from shared.passcode_security import (
@@ -174,18 +175,47 @@ def _enforce_not_expired(share: ExportShare) -> datetime:
     return now
 
 
+_CONTENT_TYPES = {
+    "pdf": "application/pdf",
+    "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "csv": "text/csv",
+}
+
+
+def _resolve_export_bytes(share: ExportShare) -> bytes:
+    """Return the export payload, preferring R2 when ``object_key`` is set.
+
+    Raises 410 when the row points at R2 but the object is missing —
+    rather than silently serving an empty body.  The inline-blob path
+    is retained as a fallback for rows created before the Sprint 611
+    flip and for dev/test environments without R2 configured.
+    """
+    if share.object_key:
+        data = export_share_storage.download(share.object_key)
+        if data is None:
+            logger.warning(
+                "Share object missing from R2: share_id=%s key=%s",
+                share.id,
+                share.object_key,
+            )
+            raise HTTPException(
+                status_code=410,
+                detail="Shared export is no longer available.",
+            )
+        return data
+    if share.export_data is not None:
+        return bytes(share.export_data)
+    logger.error("Share row has neither object_key nor export_data: share_id=%s", share.id)
+    raise HTTPException(status_code=410, detail="Shared export is no longer available.")
+
+
 def _build_download_response(share: ExportShare) -> Response:
     """Serialize a share's bytes into a safe downloadable Response."""
-    content_types = {
-        "pdf": "application/pdf",
-        "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "csv": "text/csv",
-    }
-    content_type = content_types.get(share.export_format, "application/octet-stream")
+    content_type = _CONTENT_TYPES.get(share.export_format, "application/octet-stream")
     safe_name = re.sub(r"[^\w\-]", "_", share.tool_name or "export")[:80]
     filename = f"paciolus-{safe_name}.{share.export_format}"
     return Response(
-        content=share.export_data,
+        content=_resolve_export_bytes(share),
         media_type=content_type,
         headers={
             "Content-Disposition": f'attachment; filename="{filename}"',
@@ -320,20 +350,53 @@ async def create_share(
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         passcode_hash = hash_passcode(body.passcode)
 
+    # Sprint 611: store the bytes in R2 when configured; fall back to the
+    # inline DB column otherwise (dev / test).  Exactly one of
+    # ``object_key`` / ``export_data`` is set on each row.
+    object_key: str | None = None
+    inline_bytes: bytes | None = export_bytes
+    if export_share_storage.is_configured():
+        content_type = _CONTENT_TYPES.get(body.export_format, "application/octet-stream")
+        try:
+            object_key = export_share_storage.upload(token_hash, export_bytes, content_type)
+        except Exception as exc:
+            logger.error("R2 upload failed: %s", type(exc).__name__, exc_info=exc)
+            raise HTTPException(
+                status_code=503,
+                detail="Export storage is temporarily unavailable. Please try again.",
+            ) from exc
+        if object_key is None:
+            # is_configured() said yes but upload returned None — treat as
+            # transient and 503 rather than silently falling back to the
+            # DB blob (which would re-introduce the capacity risk).
+            raise HTTPException(
+                status_code=503,
+                detail="Export storage is temporarily unavailable. Please try again.",
+            )
+        inline_bytes = None
+
     share = ExportShare(
         user_id=user.id,
         organization_id=getattr(user, "organization_id", None),
         share_token_hash=token_hash,
         tool_name=body.tool_name,
         export_format=body.export_format,
-        export_data=export_bytes,
+        export_data=inline_bytes,
+        object_key=object_key,
         passcode_hash=passcode_hash,
         single_use=body.single_use,
         shared_by_name=user.name or user.email,
         expires_at=datetime.now(UTC) + timedelta(hours=ttl_hours),
     )
     db.add(share)
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        # DB write failed after R2 upload succeeded — best-effort delete
+        # the orphan object so we don't leak bytes into the bucket.
+        if object_key:
+            export_share_storage.delete(object_key)
+        raise
     db.refresh(share)
 
     # Log share creation for abuse monitoring
@@ -472,6 +535,11 @@ async def revoke_share(
 
     share.revoked_at = datetime.now(UTC)
     db.commit()
+    # Best-effort immediate R2 cleanup so revoked bytes disappear before
+    # the hourly sweep runs.  Failure is non-fatal — the scheduler will
+    # retry the delete on the next expired-shares pass.
+    if share.object_key:
+        export_share_storage.delete(share.object_key)
     return {"detail": "Share link revoked."}
 
 

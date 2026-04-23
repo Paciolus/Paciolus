@@ -64,15 +64,34 @@
 > Sprints 673–677 archived to `tasks/archive/sprints-673-677-details.md`.
 
 ### Sprint 611: ExportShare Object Store Migration
-**Status:** PENDING — CEO-gated (bucket provision)
+**Status:** COMPLETE
 **Source:** Critic — DB bloat risk
 **File:** `backend/export_share_model.py:43`
-**Problem:** `export_data: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)` stores up to 50 MB per shared export in primary Neon Postgres. 20 concurrent shares = 1 GB of binary row storage; Neon Launch tier cap is 10 GB. Also bloats every DB backup — unclear whether zero-storage policy permits this.
-**Changes:**
-- [ ] Provision object store bucket (R2 or S3) with pre-signed URL pattern — CEO owns this, tracked in [`ceo-actions.md`](ceo-actions.md) "Backlog Blockers"
-- [ ] Store `export_data` in bucket keyed by `share_token_hash`; DB row keeps metadata + object key only
-- [ ] Extend cleanup scheduler to delete object when share revoked/expired
-- [ ] Backfill migration for existing shares
+**Problem (as recorded):** `export_data: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)` stored up to 50 MB per shared export in primary Neon Postgres. 20 concurrent shares ≈ 1 GB of binary row storage against a 10 GB Neon Launch cap, and the bytes shipped in every DB backup.
+
+**Changes landed:**
+- [x] R2 bucket `paciolus-exports` provisioned 2026-04-23 (see the [R2 provisioning hotfix](#hotfixes) and [`ceo-actions.md`](ceo-actions.md) Backlog Blockers section) with four `R2_EXPORTS_*` env vars live on Render.
+- [x] `backend/shared/export_share_storage.py` (new) — boto3 S3 client pointed at the R2 endpoint, lazy-initialized from `R2_EXPORTS_{BUCKET,ENDPOINT,ACCESS_KEY_ID,SECRET_ACCESS_KEY}`. `upload` / `download` / `delete` surface, plus `is_configured()` for the route to decide between R2 and the inline-blob fallback. Matches the existing `shared/storage_client.py` pattern used for firm logo branding.
+- [x] Alembic migration `e1a2b3c4d5f6_add_export_share_object_key.py` — adds `object_key VARCHAR(128) NULL` and relaxes `export_data` to nullable. SQLite uses `batch_alter_table` for the nullability change; Postgres takes the direct ALTER path. Downgrade re-tightens `export_data` and drops the new column.
+- [x] Model updated (`backend/export_share_model.py`) — `export_data` is now `Mapped[bytes | None]` and a sibling `object_key: Mapped[str | None]` column records the R2 key. Route invariant: exactly one of `export_data` / `object_key` is populated on any given row.
+- [x] `backend/routes/export_sharing.py::create_share` — when R2 is configured, bytes are uploaded to `shares/<share_token_hash>` and the DB row stores only the key (legacy blob column left NULL). If the DB commit fails after a successful R2 upload, the orphan object is best-effort deleted to avoid leaking bytes into the bucket. When R2 is not configured (dev/test), the inline blob path remains so existing fixture-driven tests keep working. Upload failures 503 rather than silently falling back to the DB column.
+- [x] Download resolver (`_resolve_export_bytes`) prefers R2 when `object_key` is set; 410s if the R2 object is missing (rather than serving an empty body).
+- [x] Revoke endpoint immediately best-effort-deletes the R2 object so revoked bytes disappear before the hourly sweep.
+- [x] `cleanup_scheduler.purge_expired_export_shares(db)` extracted to module scope (was nested inside `_job_expired_export_shares`) and extended to delete each row's R2 object before the DB DELETE. R2 deletion is best-effort with log-on-failure; the hash-deterministic key means retries are idempotent.
+- [x] Backfill: not required. Shares have a 24–48h TTL, so any in-flight row at deploy time simply keeps resolving through the inline-blob fallback until it ages out. The nullable `export_data` column is retained for this reason; a future migration can drop it once the longest TTL has elapsed post-flip.
+
+**Test additions:**
+- `backend/tests/test_sprint_611_r2_export_share.py` (11 tests): storage-module lazy init (no env / partial env / download-none / delete-false), route behaviour (create uploads to R2 and omits blob; download streams from R2; missing R2 object → 410; revoke deletes R2 object), scheduler behaviour (expired + revoked rows trigger R2 delete; inline-blob rows leave R2 untouched; no-op on empty queue). R2 I/O patched with an in-memory dict — no network required.
+
+**Validation:**
+- New Sprint 611 tests: 11 passed.
+- Touched-surface regression (export sharing + IP throttle + cleanup scheduler + security-hardening-2026-04-20 + legacy passcode cleanup + new 611 file): 129 passed.
+
+**Review:**
+- Dual-path design (R2 in prod when env vars are set, inline blob otherwise) keeps 25 pre-existing export_sharing route tests, IP-throttle tests, and any downstream fixtures green without needing a bulk rewrite. It also matches the branding-logo S3 pattern already in the codebase, so future maintainers don't see a second storage idiom.
+- Extracting `purge_expired_export_shares` to module scope (instead of leaving it nested inside the job wrapper) was a deliberate test-surface change: the cleanup-scheduler test suite already covers the `_run_cleanup_job` wrapper, so the new R2-delete behaviour is tested directly against the pure function without depending on `SessionLocal` monkeypatching or the scheduler-lock table.
+- The orphan-object guard in `create_share` (best-effort `delete` when the DB commit fails after an R2 upload) closed a small but real data-leak window — under Postgres, a commit can fail after the network round-trip, and we don't want untracked bytes piling up in the bucket.
+- Commit SHA: (to fill in before push)
 
 ---
 

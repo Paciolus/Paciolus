@@ -39,8 +39,18 @@ class ExportShare(Base):
     tool_name: Mapped[str] = mapped_column(String(100), nullable=False)
     export_format: Mapped[str] = mapped_column(String(20), nullable=False)  # pdf, xlsx, csv
 
-    # Cached export bytes (auto-purged after TTL)
-    export_data: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    # Cached export bytes.  Sprint 611 migrated production storage to R2
+    # (``object_key`` below); this column stays nullable so shares created
+    # before the R2 flip keep resolving until they age out of TTL, and so
+    # environments without R2 configured (dev / test) can continue using
+    # the inline path.  Exactly one of ``export_data`` / ``object_key``
+    # is populated on any given row.
+    export_data: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
+
+    # R2 object key for the cached export bytes (Sprint 611).  When set,
+    # the bytes live in the ``paciolus-exports`` R2 bucket at
+    # ``shares/<share_token_hash>``; this column stores only the key.
+    object_key: Mapped[str | None] = mapped_column(String(128), nullable=True)
 
     # Security: optional passcode protection.
     # Historically a 64-char SHA-256 hex hash; as of 2026-04-20 this column
