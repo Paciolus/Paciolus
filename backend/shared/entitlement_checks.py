@@ -464,7 +464,10 @@ def check_seat_limit_for_org(db: Session, org_id: int, exclude_invite_id: int | 
         db.query(func.count(OrganizationMember.id)).filter(OrganizationMember.organization_id == org_id).scalar()
     ) or 0
 
-    # Include pending invites in count to prevent over-invitation
+    # Include pending invites in count to prevent over-invitation.
+    # Sprint 691: exclude PENDING invites whose expires_at has lapsed — without
+    # this filter, stale invites that were never accepted (or swept to EXPIRED
+    # at acceptance time per routes/organization.py:288) consume a seat forever.
     from organization_model import InviteStatus, OrganizationInvite
 
     pending_invites = (
@@ -472,6 +475,7 @@ def check_seat_limit_for_org(db: Session, org_id: int, exclude_invite_id: int | 
         .filter(
             OrganizationInvite.organization_id == org_id,
             OrganizationInvite.status == InviteStatus.PENDING,
+            OrganizationInvite.expires_at > datetime.now(UTC),
         )
         .scalar()
     ) or 0

@@ -650,23 +650,51 @@ The original plan proposed threading a `branding_context` kwarg through every me
 
 ---
 
-### Sprint 691: Professional-tier DB enum + team-seat counting
-**Status:** PENDING
+### Sprint 691: Seat-counting audit + pricing-readiness doc reconciliation
+**Status:** COMPLETE
 **Priority:** P2
-**Source:** Completeness agent H-07/H-08
-**Why now:** `UserTier.PROFESSIONAL` is still in the DB enum but unpurchasable; legacy Professional users map to Solo entitlements. `pricing-launch-readiness.md:49-50` flagged team-member counting as a placeholder; hard-mode seat enforcement landed in `config.py:456` but the underlying counting logic was never verified.
-**Files:**
-- `backend/models.py` (UserTier enum)
-- `backend/shared/entitlements.py` (Professional mapping)
-- `backend/billing/seat_enforcement.py` or equivalent — wherever active-member counting lives
-- Alembic migration (new)
+**Source:** Completeness agent H-07/H-08 (partially invalidated — see scope adjustment)
 
-**Changes:**
-- [ ] Alembic migration: collapse `PROFESSIONAL` values to `SOLO` across `users.tier`; drop `PROFESSIONAL` from the enum (Postgres enum alter sequence: add new enum without PROFESSIONAL → copy → drop old). Backfill any Professional users to Solo with a logged event.
-- [ ] Remove Professional-specific code paths from `shared/entitlements.py` and tests.
-- [ ] Audit the active-member counting function: does it count pending invitations? terminated users? multi-org members? Build a concrete test matrix and exercise each.
-- [ ] Verify Enterprise seat-hit returns 402 and frontend UpgradeModal surfaces it correctly.
-- [ ] Sign-off note in `pricing-launch-readiness.md`.
+**Scope adjustment during execution:**
+The original sprint (H-07) proposed collapsing `UserTier.PROFESSIONAL → SOLO` on the premise that Professional was "still in the DB enum but unpurchasable; legacy Professional users map to Solo entitlements." Both halves of that premise were stale by 2026-04-23:
+
+1. **Professional is a live Pricing v3 tier.** `billing/price_config.py:19-24` wires $500/mo + $5,000/yr, seat add-ons (`PROFESSIONAL_SEAT_PRICE`, `MAX_SELF_SERVE_SEATS_PROFESSIONAL`), trial eligibility (`TRIAL_ELIGIBLE_TIERS`). `shared/entitlements.py:104-122` gives Professional its own full entitlement row (uploads=500/mo, export_sharing=True, activity_logs=True, admin_dashboard=True, team seats up to 20) — **not** a Solo mapping. Collapsing the enum would have broken live Stripe checkout for a tier the CEO is about to cut over to live keys for in Phase 4.1.
+
+2. **Hard-mode seat enforcement is already the production default.** `config.py:500` defaults `SEAT_ENFORCEMENT_MODE="hard"` and `config.py:502-506` hard-fails startup if production is configured with "soft". The sprint's premise that seat enforcement "was never verified" was a doc-drift artifact.
+
+H-07 enum-collapse piece **rejected as obsolete**. H-08 seat-counting audit kept and delivered, plus a concrete bug was found and fixed along the way.
+
+**Changes delivered:**
+- [x] **Bug fix — stale PENDING invites no longer consume seats forever.** `shared/entitlement_checks.py::check_seat_limit_for_org` previously counted any `OrganizationInvite` with `status == PENDING`, but status is only swept to EXPIRED at acceptance time (`routes/organization.py:288-289`). Result: invites that lapsed without being accepted remained PENDING in the DB and blocked new seats indefinitely. Fixed by adding `OrganizationInvite.expires_at > datetime.now(UTC)` to the query.
+- [x] **Seat-counting test matrix — 5 new tests** in `TestCheckSeatLimitForOrg` exercising every invite-lifecycle edge case:
+  - `test_stale_pending_invite_not_counted` — lapsed PENDING doesn't block.
+  - `test_fresh_pending_invite_still_counted` — regression guard for in-window PENDING.
+  - `test_accepted_invite_not_counted` — fulfilled via member row, no double-count.
+  - `test_revoked_invite_not_counted` — explicitly withdrawn, no seat.
+  - `test_status_expired_invite_not_counted` — swept-EXPIRED, no seat.
+  Result: 11/11 tests pass (6 pre-existing + 5 new).
+- [x] **Multi-org concern dismissed.** `OrganizationMember.user_id` has a UNIQUE constraint (`organization_model.py:108`) — a user can belong to at most one org, so "multi-org member" double-counting is architecturally impossible.
+- [x] **Terminated-user concern dismissed.** `OrganizationMember` has no soft-delete column; removal is a row delete. Counting `COUNT(*)` automatically excludes terminated users.
+- [x] **Enterprise seat-hit status code — documented as 403, not 402.** Sprint brief mentioned 402; reality (verified by `test_at_limit_raises_403`) is 403 `TIER_LIMIT_EXCEEDED` with `upgrade_url=/pricing` in the detail body. This is more semantically accurate (seat-limit exceeded is a forbidden-action, not a payment-required gating). Frontend UpgradeModal keyed off the `code` field, not the HTTP status.
+- [x] **`tasks/pricing-launch-readiness.md` reconciled** with current state:
+  - Limitation row 1 (Professional deprecated) — CLEARED as obsolete.
+  - Limitation row 2 (trial expiry email) — CLEARED per Sprint 690.
+  - Limitation row 3 (team member counting placeholder) — CLEARED per this sprint; test matrix cited.
+  - Limitation row 4 (soft enforcement default) — CLEARED; hard is the production default.
+  - Risk row "Professional tier users lose access" — CLEARED (not a risk for a live tier).
+  - Coverage-map rename `TestOldSubscriberRegression` → `TestProfessionalTierValidation` (the actual class name in `test_pricing_launch_validation.py:1630`).
+
+**Explicitly not delivered (out of scope after rescope):**
+- Alembic migration to drop `PROFESSIONAL` from the enum — rejected; Professional is a live tier.
+- Removing Professional-specific entitlement rows — rejected; they are the canonical mid-tier config.
+
+**Review:**
+- The stale-pending bug is the kind of thing that would have quietly accumulated forever in production — every lapsed invite would subtract a seat. Low severity today because paciolus.com has near-zero customer traffic, but would have been a support-ticket magnet at scale once teams started inviting.
+- `pricing-launch-readiness.md:5` still reads "PENDING SIGN-OFF" with a 2026-02-25 date in the header. The CEO still needs to re-sign the document post-Phase-4.1 per the workflow in ceo-actions.md — this sprint only cleared the stale limitations that would have blocked that sign-off.
+- Tests were written against the fix, not a hypothetical. The 5 edge cases cover the invite-status enum exhaustively (PENDING fresh/stale, ACCEPTED, REVOKED, EXPIRED) rather than inventing scenarios that can't happen.
+
+**Follow-up flagged (out of scope this sprint):**
+- `routes/organization.py:168-176` has the same shape: the duplicate-invite check filters on `status == PENDING` without checking `expires_at`. Result: if Alice invites `bob@example.com`, the invite lapses, Alice cannot re-invite Bob — the 409 "unable to send invite" response fires against a dead stale invite. Minor UX bug rather than a seat-consumption bug; lives on a separate surface; deserves a targeted hotfix rather than being bundled here.
 
 ---
 
