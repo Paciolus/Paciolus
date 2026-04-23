@@ -8,6 +8,7 @@ import logging
 from io import StringIO
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from sqlalchemy.orm import Session
 
 from security_utils import log_secure_operation
 
@@ -15,6 +16,7 @@ logger = logging.getLogger(__name__)
 from fastapi.responses import StreamingResponse
 
 from auth import require_verified_user
+from database import get_db
 from excel_generator import generate_financial_statements_excel, generate_workpaper
 from financial_statement_builder import FinancialStatementBuilder
 from flux_engine import FluxItem, FluxResult
@@ -34,6 +36,7 @@ from shared.export_schemas import (
     PreFlightCSVInput,
 )
 from shared.helpers import safe_download_filename, sanitize_csv_value, try_parse_risk, try_parse_risk_band
+from shared.pdf_branding import apply_pdf_branding, load_pdf_branding_context
 from shared.rate_limits import RATE_LIMIT_EXPORT, limiter
 from shared.schemas import AuditResultInput
 
@@ -46,22 +49,30 @@ router = APIRouter(tags=["export"])
 @router.post("/export/pdf", dependencies=[Depends(check_export_access)])
 @limiter.limit(RATE_LIMIT_EXPORT)
 def export_pdf_report(
-    request: Request, audit_result: AuditResultInput, current_user: User = Depends(require_verified_user)
+    request: Request,
+    audit_result: AuditResultInput,
+    current_user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
 ) -> StreamingResponse:
-    """Generate and stream a PDF audit report."""
+    """Generate and stream a PDF audit report.
+
+    Sprint 679 (completion): Enterprise branding layered on via ContextVar.
+    """
     log_secure_operation("pdf_export_start", f"Generating PDF report for: {audit_result.filename}")
 
     try:
         result_dict = audit_result.model_dump()
 
-        pdf_bytes = generate_audit_report(
-            result_dict,
-            audit_result.filename,
-            prepared_by=audit_result.prepared_by,
-            reviewed_by=audit_result.reviewed_by,
-            workpaper_date=audit_result.workpaper_date,
-            include_signoff=audit_result.include_signoff,
-        )
+        branding = load_pdf_branding_context(current_user, db)
+        with apply_pdf_branding(branding):
+            pdf_bytes = generate_audit_report(
+                result_dict,
+                audit_result.filename,
+                prepared_by=audit_result.prepared_by,
+                reviewed_by=audit_result.reviewed_by,
+                workpaper_date=audit_result.workpaper_date,
+                include_signoff=audit_result.include_signoff,
+            )
 
         download_filename = safe_download_filename(audit_result.filename or "TrialBalance", "Diagnostic", "pdf")
 
@@ -361,8 +372,13 @@ def export_financial_statements(
     payload: FinancialStatementsInput,
     format: str = Query(default="pdf", pattern="^(pdf|excel)$"),
     current_user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
 ) -> StreamingResponse:
-    """Generate and download financial statements as PDF or Excel."""
+    """Generate and download financial statements as PDF or Excel.
+
+    Sprint 679 (completion): PDF path applies Enterprise branding via
+    ContextVar. Excel path is unaffected — branding lives in PDF chrome.
+    """
     log_secure_operation(
         "financial_statements_export_start", f"Generating {format} financial statements for: {payload.filename}"
     )
@@ -392,13 +408,15 @@ def export_financial_statements(
             download_filename = safe_download_filename(payload.filename or "FinancialStatements", "FinStmts", "xlsx")
             return streaming_excel_response(file_bytes, download_filename)
         else:
-            file_bytes = generate_financial_statements_pdf(
-                statements,
-                prepared_by=payload.prepared_by,
-                reviewed_by=payload.reviewed_by,
-                workpaper_date=payload.workpaper_date,
-                include_signoff=payload.include_signoff,
-            )
+            branding = load_pdf_branding_context(current_user, db)
+            with apply_pdf_branding(branding):
+                file_bytes = generate_financial_statements_pdf(
+                    statements,
+                    prepared_by=payload.prepared_by,
+                    reviewed_by=payload.reviewed_by,
+                    workpaper_date=payload.workpaper_date,
+                    include_signoff=payload.include_signoff,
+                )
             download_filename = safe_download_filename(payload.filename or "FinancialStatements", "FinStmts", "pdf")
 
         log_secure_operation(

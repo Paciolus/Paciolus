@@ -33240,7 +33240,7 @@
     },
     "/export/financial-statements": {
       "post": {
-        "description": "Generate and download financial statements as PDF or Excel.",
+        "description": "Generate and download financial statements as PDF or Excel.\n\nSprint 679 (completion): PDF path applies Enterprise branding via\nContextVar. Excel path is unaffected — branding lives in PDF chrome.",
         "operationId": "export_financial_statements_export_financial_statements_post",
         "parameters": [
           {
@@ -33621,7 +33621,7 @@
     },
     "/export/pdf": {
       "post": {
-        "description": "Generate and stream a PDF audit report.",
+        "description": "Generate and stream a PDF audit report.\n\nSprint 679 (completion): Enterprise branding layered on via ContextVar.",
         "operationId": "export_pdf_report_export_pdf_post",
         "requestBody": {
           "content": {

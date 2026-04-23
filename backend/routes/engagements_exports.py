@@ -19,6 +19,7 @@ from engagement_manager import EngagementManager
 from models import User
 from security_utils import log_secure_operation
 from shared.entitlement_checks import check_export_access
+from shared.pdf_branding import apply_pdf_branding, load_pdf_branding_context
 from shared.rate_limits import RATE_LIMIT_EXPORT, limiter
 
 router = APIRouter(tags=["engagements"])
@@ -43,8 +44,12 @@ def export_anomaly_summary(
 
     generator = AnomalySummaryGenerator(db)
 
+    # Sprint 679 (completion): Enterprise branding on anomaly summary PDFs.
+    # apply_pdf_branding no-ops for non-Enterprise tiers.
+    branding = load_pdf_branding_context(current_user, db)
     try:
-        pdf_bytes = generator.generate_pdf(current_user.id, engagement_id)
+        with apply_pdf_branding(branding):
+            pdf_bytes = generator.generate_pdf(current_user.id, engagement_id)
     except ValueError:
         raise HTTPException(status_code=404, detail="Engagement not found")
 

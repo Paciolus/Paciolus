@@ -16,6 +16,7 @@
 > new features or architectural changes. Each entry is one line.
 > Format: `- [date] commit-sha: description (files touched)`
 
+- [2026-04-22] nightly audit artifacts — 2026-04-22 batch (original RED report + 4 sentinel JSONs + run_log). Preserved as historical evidence of the false-green incident that motivated Sprint 712. `.qa_warden_2026-04-22.json`, `.coverage_sentinel_2026-04-22.json`, and `.baseline.json` were committed in Sprint 712 (5d29cce) with the post-fix genuine-green values.
 - [2026-04-21] 9820bb2: nightly audit artifacts — 2026-04-19, 2026-04-20, 2026-04-21 batch. Commits daily report .md + 6 sentinel JSONs + run_log per day, plus .baseline.json update to capture the Sprints 677–710 test-count growth (8028 backend / 1845 frontend).
 - [2026-04-19] 9f00070: nightly dep hygiene (part 2) — remaining 3 majors cleared in venv (numpy 1.26→2.4, pip 25.3→26.0.1, pytz 2025.2→2026.1.post1). Verified zero direct imports for numpy/pytz; pandas 3.0.2 compatible with numpy 2.x; pytz has no current dependents. pytest 7836 passed / 0 failed. Venv-only change (no requirements.txt edits needed).
 - [2026-04-19] 8fd93bb: nightly dep hygiene — 26 safe package bumps (19 backend venv: anthropic, anyio, docstring_parser, greenlet, hypothesis, jiter, librt, lxml, Mako, mypy, packaging, prometheus_client, pypdf, pypdfium2, pytest, python-multipart, ruff, sentry-sdk, uvicorn; 6 frontend via npm update: @sentry/nextjs, eslint-plugin-react-hooks, @typescript-eslint/*, postcss, typescript). Deferred: numpy 2.x, pip 26, pytz 2026 (majors). frontend/package-lock.json only.
@@ -295,7 +296,7 @@ Two findings bundled into this sprint had different outcomes after audit. The co
 ---
 
 ### Sprint 679: Enterprise PDF branding end-to-end
-**Status:** COMPLETE (infrastructure) / PARTIAL (route wiring — 18-of-~27 export endpoints covered via the chokepoint refactor)
+**Status:** COMPLETE — 18 memo PDFs landed in the original Sprint 679; the 3 report PDFs + engagement-export wiring landed in Sprint 714 (see below). Full Enterprise branding coverage now.
 **Priority:** P0 (feature-parity gap on Enterprise tier)
 **Source:** Completeness agent (B-01)
 
@@ -1408,6 +1409,97 @@ Nothing weakened — auth/security/zero-storage untouched, no tests silenced, ev
 - `Trial balance analysis failed [OptionError]` and `[ValueError]` on `/audit/trial-balance` (1 event each — edge cases in upload parsing)
 - `InvalidOperation [decimal.ConversionSyntax]` on `/audit/preflight` (3 events — likely malformed numeric input)
 - `Background register_verification exception [ForbiddenError]` (count unknown, classification pending)
-- File these as Sprint 712 (or a single batched P2 sweep) after Sprint 711 deploys clean.
+- File as Sprint 713 (batched P2 Sentry sweep) after Sprint 711 deploys clean. Sprint 712 was repurposed for the nightly-agent false-green fix surfaced by the 2026-04-22 nightly.
+
+---
+
+## Nightly Agent Remediation — 2026-04-22
+
+> **Source:** 2026-04-22 nightly went RED. Coverage Sentinel failed with 38 collection errors; QA Warden reported a **false green** (`Backend: 0 passed / 0 failed in 0.0s`, `status: green`). Both are symptoms of the same environment drift Sprint 675 partially fixed — the venv is the source of truth, not `C:/Python312`.
+
+---
+
+### Sprint 712: Nightly agents venv-first + QA Warden false-green guard
+**Status:** COMPLETE
+**Priority:** P1 (nightly signal integrity)
+**Source:** Nightly audit 2026-04-22 — Coverage Sentinel RED (38 collection errors), QA Warden false GREEN (0 backend tests ran, classified as healthy).
+
+**Root cause:** Sprint 697 added `argon2-cffi>=23.1.0` to `backend/requirements.txt`. The dep installs into `backend/venv/` (production contract) but is absent from `C:/Python312` (the stale system Python). `qa_warden.py` and `coverage_sentinel.py` still invoke pytest via `SYSTEM_PYTHON`, so every test module that transitively imports `shared.passcode_security` → `argon2` fails at collection. Thirty-eight files import `main` directly or indirectly, which pulls in `routes/export_sharing.py`, which imports the passcode module. That's the "38 errors during collection" surface.
+
+Secondary defect: QA Warden's status classifier treats `passed == failed == errors == 0` as GREEN. When collection interrupts pytest (exit 2), no `N passed in Xs` summary line is emitted, the parsing regex fails silently, and the run is recorded as healthy — hiding a catastrophic environment breakage behind a clean badge. The commit-msg hook and CEO validation flow both depend on nightly signal quality; a silent false-green is the worst possible failure mode for launch-week operational trust.
+
+Sprint 675 established the exact fix pattern for `dependency_sentinel.py` (switch to `PYTHON_BIN` with `SYSTEM_PYTHON` fallback). This sprint propagates the fix to the remaining two agents AND adds a structural guard so a future environment breakage cannot re-open the false-green class.
+
+**Changes:**
+- [x] `scripts/overnight/agents/qa_warden.py::_run_backend_tests` — resolve `python_bin = PYTHON_BIN if PYTHON_BIN.exists() else SYSTEM_PYTHON` once at the top of the function; threaded into both the json-report path and the unrecognised-arguments fallback path. Matches the Sprint 675 pattern exactly.
+- [x] `scripts/overnight/agents/coverage_sentinel.py::_run_pytest_with_coverage` — same venv-first resolution for the `--cov` invocation.
+- [x] `scripts/overnight/agents/qa_warden.py` — false-green guard: capture `subprocess.run().returncode`; if `passed + failed + errors == 0` AND `returncode not in (0, 5)` (5 is pytest's "no tests collected" — a legitimate empty run), populate `backend["collection_error"]` with the last 15 lines of stdout/stderr. `run()` now escalates to RED status when a collection_error is present, regardless of the zero-failures signal. Exit code 5 with zero tests ran is still treated as healthy because it's the documented pytest signal for "glob matched nothing" rather than a crash.
+- [x] `scripts/overnight/config.py` — update the stale `# System Python has pytest + all backend deps; venv has anthropic SDK` comment. The venv is now the source of truth for ALL backend dep versions; the Anthropic SDK lives in the venv too via `backend/requirements.txt`. System Python is a degraded fallback for fresh-checkout environments where the venv hasn't been provisioned.
+- [x] No change to `dependency_sentinel.py` (already on `PYTHON_BIN` per Sprint 675). No change to `scout.py` / `report_auditor.py` / `sprint_shepherd.py` / `briefing_compiler.py` — none of them run pytest, so the drift doesn't reach them.
+
+**Verification:**
+- Reproduced the original failure: `C:/Python312/python.exe -m pytest tests/test_metrics_api.py --collect-only` → `ModuleNotFoundError: No module named 'argon2'` (pytest exit 2, 1 error).
+- Confirmed venv path works: `backend/venv/Scripts/python.exe -m pytest tests/test_metrics_api.py tests/test_passcode_argon2.py --collect-only` → 19 tests collected clean.
+- **QA Warden end-to-end** (`python scripts/overnight/agents/qa_warden.py`): `status: green` — Backend 8,046 passed / 0 failed in 607.7s, Frontend 1,887 passed / 0 failed in 47.1s. The previous 2026-04-22 false-green reported `0 passed / 0 failed in 0.0s` — now showing the true ~8k count with `collection_error: null`.
+- **Coverage Sentinel end-to-end** (`python scripts/overnight/agents/coverage_sentinel.py`): `status: green` — 92.71% (88,973 / 95,973 statements covered, 7,000 uncovered). 7-day mean 92.42%, delta +0.29pp. 3 non-production files excluded (Sprint 694 allowlist). Previous nightly had failed with 38 collection errors; now clean.
+- **False-green guard unit tests** (`scripts/overnight/tests/test_qa_warden_guard.py`, 5 tests, all pass): mocks `subprocess.run` to return `returncode=2` + empty stdout → asserts `collection_error` populated + `run()` escalates to RED; complementary test verifies `returncode=5` ("no tests collected") is NOT escalated; venv-preference test verifies the PYTHON_BIN-first resolution order.
+
+**Review:**
+- The comment deletion in `config.py` is small but load-bearing: the old comment actively misled Sprint 675's reviewer ("System Python has pytest + all backend deps") into believing the system Python was a viable source of truth. Retiring that claim prevents the next reviewer from re-introducing the same drift.
+- Chose `returncode not in (0, 5)` rather than `returncode != 0` for the guard because exit code 5 is legitimate when a path filter matches nothing (future CI variant might run subsets). Getting the exclusion right here keeps the guard from false-positive-ing on a legitimate narrow run.
+- Did NOT audit every other script for `SYSTEM_PYTHON` references. A full sweep + switch-to-venv would be a larger hygiene pass; this sprint fixes the two agents that were actively lying about CI state. Any remaining `SYSTEM_PYTHON` usages are either (a) already fine (don't run pytest), or (b) will surface the next time they break — at which point they get the same treatment.
+- `tasks/todo.md` Sprint 711 review referenced "Sprint 712" as the placeholder name for the P2 Sentry backlog sweep. Repurposed to this more-urgent nightly fix; P2 Sentry sweep renumbered to Sprint 713 in-place.
+
+---
+
+## Branding Coverage Completion — 2026-04-22
+
+> **Source:** Sprint 679's deferred follow-up list. Sprint 679 landed Enterprise PDF branding for the 18 memo PDFs via a ContextVar-based chokepoint refactor; the 3 report PDFs (combined audit, financial statements, anomaly summary) + the 4 engagement-export route paths were carved out as deferred because they don't flow through `generate_testing_memo`. Sprint 714 closes that gap so Enterprise coverage is 100%.
+
+---
+
+### Sprint 714: Sprint 679 completion — report PDFs + engagement-export branding
+**Status:** COMPLETE
+**Priority:** P1 (feature-parity completion — marketed capability, partial delivery)
+**Source:** Sprint 679 deferred-work list.
+
+**Why now:** Sprint 679 shipped with an explicit PARTIAL flag: 18-of-~27 export endpoints covered via `_memo_export_handler`, with the three non-memo report PDFs + engagement-export routes called out as a "~30 lines each" follow-up. Enterprise users currently see their logo/header/footer on the 18 memo PDFs but fall back to default Paciolus chrome on the combined audit, financial statements, and anomaly summary PDFs — exactly the reports an engagement package most prominently features. Closes that inconsistency.
+
+**Generator changes:**
+- [x] `pdf/orchestrator.py::generate_audit_report` — reads `current_pdf_branding()` at entry, threads `custom_logo_bytes` into `build_cover_page`, composes the diagnostic watermark with `make_branded_page_footer(header, footer)` inside the `_on_first_page` / `_on_later_pages` closures. Non-branded flows are unaffected (factory returns default `draw_page_footer` when both inputs None).
+- [x] `pdf/orchestrator.py::generate_financial_statements_pdf` — same ContextVar read, threads `custom_logo_bytes` into the FS cover. Custom header/footer plumbed into a new `_fs_deco` closure that forwards to `draw_fs_decorations(canvas, doc, page_counter, custom_header=..., custom_footer=...)`.
+- [x] `pdf/chrome.py::draw_fs_decorations` — accepts optional `custom_header` / `custom_footer` kwargs. Custom header sits below the top gold rule (pages 2+); custom footer sits between the page number and the preserved Paciolus disclaimer. Disclaimer stays on every page regardless of branding — firms cannot claim Paciolus' work as their own.
+- [x] `anomaly_summary_generator.py::AnomalySummaryGenerator.generate_pdf` — reads branding at the top of the generator (single read, passed down explicitly) so `_build_story` and the footer callback see consistent values even if the ContextVar resets mid-build. `_build_story` gets a new `custom_logo_bytes` kwarg; footer uses `make_branded_page_footer`.
+
+**Route changes:**
+- [x] `routes/export_diagnostics.py::export_pdf_report` — added `db: Session = Depends(get_db)`, wraps `generate_audit_report` in `apply_pdf_branding(load_pdf_branding_context(user, db))`.
+- [x] `routes/export_diagnostics.py::export_financial_statements` — same pattern on the PDF branch; Excel branch is intentionally untouched since branding lives in PDF chrome (Excel cover-page branding is a separate, larger design question and was never in scope for Sprint 679).
+- [x] `routes/engagements_exports.py::export_anomaly_summary` — `db` was already a dependency; just wraps the `generate_pdf` call in the same branding scope.
+
+**Design decisions:**
+- FS custom header rendered on pages 2+ only — page 1 already carries firm identity via the branded cover logo, so a second header on the same page would be redundant and may collide with the cover-page title block.
+- FS custom footer shifts the existing "This output supports professional judgment..." disclaimer down by one line (0.35in → 0.22in) rather than replacing it. Both read cleanly on the same page; the Paciolus attribution stays visible. Considered replacing the FS disclaimer entirely with `_DISCLAIMER_LINE` (the memo-style disclaimer) but kept the FS-specific language because the FS aesthetic has always used slightly different copy and changing it would surprise existing engagements.
+- Generator signatures unchanged where possible. The three generators just read the ContextVar internally — no new required kwargs. The one new optional kwarg (`custom_logo_bytes` on `_build_story`) is internal to `anomaly_summary_generator.py` and not part of any public API.
+
+**Tests (`tests/test_pdf_branding.py::TestReportGeneratorsReadContextVar`, 4 tests, all pass):**
+- `test_generate_audit_report_threads_branding_into_chrome` — patches `build_cover_page` + `make_branded_page_footer`; asserts `custom_logo_bytes` matches ctx bytes and footer factory receives both header + footer text.
+- `test_generate_financial_statements_pdf_threads_branding` — invokes doc.build's onFirstPage closure in a faked `SimpleDocTemplate`; asserts `draw_fs_decorations` was called with `custom_header` + `custom_footer` kwargs matching the ctx.
+- `test_anomaly_summary_generator_threads_branding` — stubs DB queries; asserts `_build_story` received `custom_logo_bytes` and `make_branded_page_footer` received the header/footer strings.
+- `test_unbranded_tier_leaves_generators_unchanged` — pins that a downgraded user with `tier_has_branding=False` triggers the effective-None gates, so `build_cover_page` sees no logo and the footer factory sees None/None.
+
+**Validation:**
+- New 4 ContextVar-propagation tests: PASS.
+- Touched-surface regression (361 tests across `test_pdf_branding`, `test_export_routes`, `test_export_diagnostics_routes`, `test_engagements_exports_api`, `test_financial_statements`, `test_anomaly_summary`, `test_pdf_upload_integration`, `test_pdf_parser`, `test_export_testing_routes`, `test_memo_template`, `test_branding_api`): PASS.
+- Full backend pytest sweep: **8,050 passed / 0 failed / 0 xfailed** in 631.6s. +4 from the 8,046 pre-sprint baseline (matches the new `TestReportGeneratorsReadContextVar` additions exactly).
+
+**Not done, with reasons:**
+- **E2E byte-level PDF assertion** — Sprint 679 deferred this originally; same reasoning applies: a real-bytes "this PDF contains the uploaded PNG" test needs a PDF parser + pixel diff tooling, and the mock-level ContextVar assertions already pin the critical contract (logo bytes flow into the cover builder; header/footer strings flow into the footer factory). The cost-benefit isn't there for a launch-blocker sprint.
+- **Excel cover-page branding** — intentionally out of scope. Sprint 679 was Enterprise PDF branding; Excel workpapers use a different chrome pipeline (`excel_generator.py`) and Enterprise differentiation has been marketed as PDF-only.
+- **`ceo-actions.md` update** — Sprint 679 punted this to Sprint 692; Sprint 692 closed the CLAUDE.md + engagement_manager documentation drift but didn't touch ceo-actions.md specifically. Low-pri doc hygiene; can land in a future doc sweep.
+
+**Review:**
+- The FS generator posed the only design tension — `draw_fs_decorations` is a composite callback that already draws watermark + rules + page number + disclaimer, so the Sprint 679 pattern of "swap `draw_page_footer` → `make_branded_page_footer`" wouldn't work without losing FS-specific chrome. Chose to extend `draw_fs_decorations` with optional kwargs rather than refactor it to delegate to `_draw_footer_impl`; the kwargs are additive, preserve existing output bit-for-bit when branding is absent, and keep the FS aesthetic (custom disclaimer language, watermark, rules) intact.
+- `_build_story`'s new `custom_logo_bytes` kwarg is internal — the public method is `generate_pdf`, which reads the ContextVar. Keeping the explicit kwarg on the internal method is a defense against future splits where `_build_story` might be called from a test path that bypasses `generate_pdf`.
+- Lesson reinforced from Sprint 679: ContextVar-based propagation continues to be the right shape. Adding 3 more generators just meant 3 ContextVar reads + 3 small chrome-handler tweaks, not 3 signature migrations.
 
 ---

@@ -24,7 +24,11 @@ PROJECT_ROOT = Path("D:/Dev/Paciolus")
 BACKEND_ROOT = PROJECT_ROOT / "backend"
 FRONTEND_ROOT = PROJECT_ROOT / "frontend"
 PYTHON_BIN = PROJECT_ROOT / "backend/venv/Scripts/python.exe"
-# System Python has pytest + all backend deps; venv has anthropic SDK
+# Sprint 712: the venv is the canonical environment — it installs from
+# backend/requirements.txt (matches production on Render) and holds every dep
+# including the Anthropic SDK. SYSTEM_PYTHON is retained as a degraded fallback
+# for fresh-checkout environments where `python -m venv` hasn't run yet; agents
+# that need to invoke pytest / scan deps should prefer PYTHON_BIN first.
 SYSTEM_PYTHON = Path("C:/Python312/python.exe")
 REPORTS_DIR = PROJECT_ROOT / "reports/nightly"
 BASELINE_FILE = REPORTS_DIR / ".baseline.json"

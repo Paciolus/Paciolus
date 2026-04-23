@@ -27,6 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 from scripts.overnight.config import (
     BACKEND_ROOT,
     BASELINE_FILE,
+    PYTHON_BIN,
     REPORTS_DIR,
     SYSTEM_PYTHON,
     TODAY,
@@ -94,8 +95,15 @@ def _run_pytest_with_coverage() -> tuple[dict | None, str]:
     if cov_report.exists():
         cov_report.unlink()
 
+    # Sprint 712: venv is the source of truth for backend deps (installed from
+    # requirements.txt). System Python is a degraded fallback for fresh-checkout
+    # environments where the venv hasn't been provisioned. The older SYSTEM_PYTHON
+    # path missed deps added after Sprint 675 (argon2-cffi per Sprint 697), which
+    # caused 38 collection errors on the 2026-04-22 nightly.
+    python_bin = PYTHON_BIN if PYTHON_BIN.exists() else SYSTEM_PYTHON
+
     cmd = [
-        str(SYSTEM_PYTHON), "-m", "pytest",
+        str(python_bin), "-m", "pytest",
         "--tb=no", "-q",
         "--cov=.",
         f"--cov-report=json:{cov_report}",
