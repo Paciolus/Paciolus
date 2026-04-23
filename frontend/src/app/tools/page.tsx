@@ -62,6 +62,7 @@ const TOOLS: ToolDef[] = [
   { key: 'intercompany_elimination', label: 'Intercompany Elimination', href: '/tools/intercompany', description: 'Upload a multi-entity trial balance to match reciprocal intercompany balances, propose elimination journal entries, and render a consolidation worksheet with mismatch detection.', reference: 'ASC 810 / IFRS 10 / ISA 600', category: 'Advanced' },
   { key: 'w2_reconciliation', label: 'W-2 / W-3 Reconciliation', href: '/tools/w2-reconciliation', description: 'Reconcile payroll YTD to draft W-2s and Form 941 quarterlies before year-end filing. Detects box mismatches, SS wage-base overages, and 941-to-W-2 tie-out gaps.', reference: 'IRC §6051 / Form W-2 / W-3 / 941', category: 'Advanced' },
   { key: 'form_1099', label: 'Form 1099 Preparation', href: '/tools/form-1099', description: 'Identify vendors meeting 1099-NEC / 1099-MISC / 1099-INT thresholds. Applies IRS corporate safe-harbor, processor-reported exemptions, and flags vendors needing W-9 on file.', reference: 'IRC §6041 / §6041A / Pub 1220', category: 'Advanced' },
+  { key: 'book_to_tax', label: 'Book-to-Tax Reconciliation', href: '/tools/book-to-tax', description: 'Bridge book pretax income to taxable income with a Schedule M-1 / M-3 reconciliation. Rolls deferred taxes under ASC 740 and computes a federal + state tax provision with effective-rate reconciliation.', reference: 'Form 1120 Schedule M-1 / M-3 / ASC 740', category: 'Advanced' },
 ]
 
 const CATEGORIES: Category[] = ['Core Analysis', 'Testing Suite', 'Advanced']

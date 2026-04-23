@@ -473,7 +473,7 @@ The original plan proposed threading a `branding_context` kwarg through every me
 ---
 
 ### Sprint 689: Hidden backend tools — catalog wire-up (CEO Path B, 2026-04-23)
-**Status:** IN PROGRESS — 689a/b/c/d/e COMPLETE, 689f–g pending
+**Status:** IN PROGRESS — 689a/b/c/d/e/f COMPLETE, 689g pending
 **Priority:** P2
 **Source:** Completeness agent H-03/H-05 + Claim-reality C-03/C-04 + CEO decision 2026-04-23
 
@@ -644,6 +644,25 @@ Delivered:
 - [x] `frontend/src/hooks/useForm1099.ts`.
 - [x] `frontend/src/types/form1099.ts`.
 - [x] `frontend/src/components/form1099/parseCsv.ts` + `Form1099FileUpload.tsx` + `Form1099Results.tsx`.
+- [x] Catalog + command registry + 4 jest tests.
+
+Validation: 4 backend + 4 jest pass.
+
+**Commit SHA:** `78fe173`
+
+**689f completion — 2026-04-23:**
+
+**Status:** COMPLETE
+
+First form-input standalone page in the 689 series (no CSV upload — the request body is small and the adjustment grid is native form UX). Loads the backend's `STANDARD_ADJUSTMENTS` catalog on mount to seed the row-level picker. Backend tier-gate retrofit applied (same pattern).
+
+Delivered:
+- [x] `backend/routes/book_to_tax.py` — tier gate on both POST routes. `GET /audit/book-to-tax/standard-adjustments` left ungated (reference data, already paid-tier-only once UI hits the POSTs; the picker also degrades gracefully to "— custom —" when the catalog response is empty).
+- [x] `backend/tests/test_book_to_tax_routes.py` — 4 gate tests.
+- [x] `frontend/src/app/tools/book-to-tax/page.tsx` — standalone page.
+- [x] `frontend/src/hooks/useBookToTax.ts` — `analyze`, `exportCsv`, `loadStandardAdjustments`.
+- [x] `frontend/src/types/bookToTax.ts`.
+- [x] `frontend/src/components/bookToTax/BookToTaxForm.tsx` + `BookToTaxResults.tsx`.
 - [x] Catalog + command registry + 4 jest tests.
 
 Validation: 4 backend + 4 jest pass.
