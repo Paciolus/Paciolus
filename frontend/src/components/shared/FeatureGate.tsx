@@ -25,6 +25,7 @@ type FeatureName =
   | 'admin_dashboard'
   | 'bulk_upload'
   | 'custom_branding'
+  | 'sod_checker'
 
 const TIER_ORDER = ['free', 'solo', 'professional', 'enterprise'] as const
 
@@ -34,6 +35,7 @@ const FEATURE_MIN_TIER: Record<FeatureName, typeof TIER_ORDER[number]> = {
   admin_dashboard: 'professional',
   bulk_upload: 'enterprise',
   custom_branding: 'enterprise',
+  sod_checker: 'enterprise',
 }
 
 const FEATURE_DISPLAY_NAMES: Record<FeatureName, string> = {
@@ -42,6 +44,7 @@ const FEATURE_DISPLAY_NAMES: Record<FeatureName, string> = {
   admin_dashboard: 'Admin Dashboard',
   bulk_upload: 'Bulk Upload',
   custom_branding: 'Custom PDF Branding',
+  sod_checker: 'Segregation of Duties Checker',
 }
 
 const TIER_DISPLAY_NAMES: Record<string, string> = {

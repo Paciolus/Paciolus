@@ -473,7 +473,7 @@ The original plan proposed threading a `branding_context` kwarg through every me
 ---
 
 ### Sprint 689: Hidden backend tools — catalog wire-up (CEO Path B, 2026-04-23)
-**Status:** IN PROGRESS — 689a COMPLETE, 689b–g pending
+**Status:** IN PROGRESS — 689a COMPLETE, 689b IN PROGRESS, 689c–g pending
 **Priority:** P2
 **Source:** Completeness agent H-03/H-05 + Claim-reality C-03/C-04 + CEO decision 2026-04-23
 
@@ -541,6 +541,30 @@ Validation:
 - Template established for 689b–g: `/tools/<name>/page.tsx` + optional `defaultOpen`-style tweak to an existing component + catalog + command-palette + Jest test modeled on `AccountRiskHeatmapPage.test.tsx`. Net-new code per sub-sprint should land in ~150–200 LoC for tools that already have backend + supporting UI (like Multi-Currency did via `CurrencyRatePanel`); larger for tools that need a fresh upload surface.
 - The `defaultOpen` prop addition to `CurrencyRatePanel` is the one shared-component touch in 689a. It was the minimal way to make the panel work as a standalone-page anchor without either (a) copying the panel's logic into a new page-scoped component or (b) forking the panel. Four existing call sites (`trial-balance`, `three-way-match`, `statistical-sampling`, `revenue-testing`, `payroll-testing` pages all use `<CurrencyRatePanel />` with no props) are unaffected because the default remains `false`.
 - **Commit SHA:** `8e6886a`
+
+**689b completion — 2026-04-23:**
+
+**Status:** IN PROGRESS
+
+Deliverables (Option A — dual CSV upload per CEO 2026-04-23):
+- [ ] `frontend/src/app/tools/sod/page.tsx` — standalone page. State machine: `idle` → `analyzing` → `success` / `error`. Uses `GuestCTA` / `UnverifiedCTA` / a custom Enterprise-only tier check (backend is `require_enterprise_tier`; the standard `UpgradeGate` only blocks Free, so an inline tier check via `FeatureGate`-style pattern is needed for Solo/Professional too). Paid-tier users render the SOD workspace. Includes `DisclaimerBox` (SOC 1 / AICPA segregation of incompatible duties / COSO 2013) + `CitationFooter`.
+- [ ] `frontend/src/hooks/useSOD.ts` — `analyze(payload)`, `loadRules()`, `exportCsv(payload)`. Uses `apiPost` / `apiFetch` / `apiDownload`.
+- [ ] `frontend/src/types/sod.ts` — `SODAnalysisRequest`, `SODAnalysisResponse`, `SODConflict`, `SODUserSummary`, `SODRule` shapes matching `routes/sod.py` Pydantic contracts (incl. `medium_severity_count` field name).
+- [ ] `frontend/src/components/sod/` — four components: `SODFileUpload` (dual CSV drop + client-side parse), `SODConflictsTable`, `SODUserSummaries`, `SODRulesReference` (collapsible).
+- [ ] `frontend/src/lib/commandRegistry.ts` — `tool:sod-checker` entry (`toolName: 'sod_checker'`, matching the feature flag used in the backend 403 payload).
+- [ ] `frontend/src/app/tools/page.tsx` — new `TOOLS` row (`category: 'Advanced'`, reference: SOC 1 / AICPA).
+- [ ] `frontend/src/components/shared/FeatureGate.tsx` — extend `FeatureName` enum to include `sod_checker` (Enterprise-only). This matches the backend 403 `feature: "sod_checker"` payload exactly, and slots cleanly next to `bulk_upload` and `custom_branding` which are already Enterprise-only.
+- [ ] `frontend/src/__tests__/SODPage.test.tsx` — 4 tests modelled on `MultiCurrencyPage.test.tsx` (guest / unverified / non-Enterprise tier gate / Enterprise happy path).
+
+Intentionally NOT touched (per CEO "single-pass flip at 689g"):
+- `backend/shared/entitlements.py:14` `CANONICAL_TOOL_COUNT` comment still reads `12`.
+- "12 tools" marketing surfaces unchanged.
+
+Validation targets:
+- `npx jest` — full suite passing, +4 new tests.
+- `npm run build` — clean; `/tools/sod` renders as `ƒ (Dynamic)`.
+
+**Commit SHA:** _(to fill after commit)_
 
 ---
 
