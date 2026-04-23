@@ -121,6 +121,7 @@ const TOOL_ENTRIES: { id: string; label: string; href: string; toolName: string;
   { id: 'tool:statistical-sampling', label: 'Statistical Sampling', href: '/tools/statistical-sampling', toolName: 'statistical_sampling', keywords: ['sampling', 'statistical', 'mus', 'isa530'] },
   { id: 'tool:composite-risk', label: 'Composite Risk Scoring', href: '/tools/composite-risk', toolName: 'composite_risk', keywords: ['composite', 'risk', 'rmm', 'isa315', 'inherent', 'control', 'fraud'] },
   { id: 'tool:account-risk-heatmap', label: 'Account Risk Heatmap', href: '/tools/account-risk-heatmap', toolName: 'account_risk_heatmap', keywords: ['heatmap', 'risk', 'triage', 'account', 'signals'] },
+  { id: 'tool:multi-currency', label: 'Multi-Currency Conversion', href: '/tools/multi-currency', toolName: 'currency_rates', keywords: ['currency', 'fx', 'exchange', 'multi', 'ias21', 'asc830', 'rates'] },
 ]
 
 const TOOL_COMMANDS: PaletteCommand[] = TOOL_ENTRIES.map(t => ({

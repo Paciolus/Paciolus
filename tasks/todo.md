@@ -473,7 +473,7 @@ The original plan proposed threading a `branding_context` kwarg through every me
 ---
 
 ### Sprint 689: Hidden backend tools — catalog wire-up (CEO Path B, 2026-04-23)
-**Status:** IN PROGRESS — decision locked, execution split into 689a–g
+**Status:** IN PROGRESS — 689a COMPLETE, 689b–g pending
 **Priority:** P2
 **Source:** Completeness agent H-03/H-05 + Claim-reality C-03/C-04 + CEO decision 2026-04-23
 
@@ -488,7 +488,7 @@ Promote ALL 6 hidden tools + Multi-Currency standalone page. Catalog grows 11 �
 
 | Sub-sprint | Tool | Backend file | Priority order rationale |
 |---|---|---|---|
-| 689a | Multi-Currency (standalone `/tools/multi-currency`) | `routes/currency.py`, `currency_engine.py` | Smallest lift — backend + side-car UI exist; new page wraps `CurrencyRatePanel`. Template refinement for 689b–g. |
+| 689a | Multi-Currency (standalone `/tools/multi-currency`) ✅ COMPLETE | `routes/currency.py`, `currency_engine.py` | Smallest lift — backend + side-car UI exist; new page wraps `CurrencyRatePanel`. Template refinement for 689b–g. |
 | 689b | SOD | `routes/sod.py` | Highest audit relevance (SOX 404 / ISA 315). Already Enterprise-gated. |
 | 689c | Intercompany Elimination | `routes/intercompany_elimination.py` | Consolidated-FS audit core. |
 | 689d | W-2 Reconciliation | `routes/w2_reconciliation.py` | Payroll audit / 941 tie-out niche. |
@@ -512,8 +512,35 @@ Promote ALL 6 hidden tools + Multi-Currency standalone page. Catalog grows 11 �
 - "12 tools" → "18 tools" across ~6 marketing/docs surfaces (pricing page, landing, CLAUDE.md, ceo-actions.md, memory, entitlements comments).
 - Regression sweep: every cataloged tool has route + hook + page + entitlement-gate test.
 
-**Deferred blocker (pre-689a):**
-- `scripts/archive_sprints.sh` has a grep-pipeline bug: it counts COMPLETE sprints correctly (5 in current Active Phase) but fails to extract sprint numbers from Status-line matches ("No completed sprint numbers found"). The script runs the "Status: COMPLETE" match through `grep -oE 'Sprint [0-9]+'` but the previous pipe filter returned only the Status line (which doesn't carry the sprint number — that's on the `### Sprint NNN` header line above it). Fix: change the awk/sed block to pair each `### Sprint NNN` header with its status body and emit the sprint number when the paired status is COMPLETE. Until this is fixed, Sprint 689a can't commit under `Sprint 689a:` prefix — either manual archival of Sprints 673–677 into `tasks/archive/sprints-673-677-details.md` first, or fix the script first. Sprint 689a session should tackle one of the two as step 0.
+**Pre-689a archival blocker — RESOLVED (hotfix `c3fb060`):** `scripts/archive_sprints.sh` number-extraction bug fixed by replacing the grep pipeline with an awk block that pairs each `### Sprint NNN` header to its Status body. Sprints 673–677 archived to `tasks/archive/sprints-673-677-details.md`.
+
+**689a completion — 2026-04-23:**
+
+Deliverables landed:
+- [x] `frontend/src/app/tools/multi-currency/page.tsx` — standalone page with `GuestCTA` / `UnverifiedCTA` / `UpgradeGate` (tool: `currency_rates`), wrapping `<CurrencyRatePanel defaultOpen />` with three info cards (ISO 4217 validation, staleness detection, session-scoped rates) + `DisclaimerBox` (IAS 21 ¶39 / ASC 830-30) + `CitationFooter` (`IAS 21`, `ASC 830`).
+- [x] `frontend/src/components/currencyRates/CurrencyRatePanel.tsx` — added `defaultOpen?: boolean` prop (default `false`, backward compatible with all four existing call sites). `useEffect` fires `refreshStatus()` on mount when opened.
+- [x] `frontend/src/app/tools/page.tsx` — new TOOLS row (`key: 'currency_rates'`, Advanced category, IAS 21 / ASC 830 reference).
+- [x] `frontend/src/lib/commandRegistry.ts` — new TOOL_ENTRIES row (`tool:multi-currency`, `toolName: 'currency_rates'` matching backend `enforce_tool_access` gate at `routes/currency.py:129`; solo+ tier guard applied automatically via `FREE_TOOLS` logic).
+- [x] `frontend/src/__tests__/MultiCurrencyPage.test.tsx` — 4 tests (guest CTA, unverified CTA, free-tier upgrade gate, paid-tier panel render + info cards + disclaimer + refreshStatus-on-mount assertion).
+
+Intentionally NOT touched in 689a (per CEO "single-pass flip at 689g"):
+- `backend/shared/entitlements.py:14` `CANONICAL_TOOL_COUNT` comment still reads `12`.
+- Marketing surfaces ("12 tools" copy on pricing/landing/CLAUDE.md) unchanged.
+
+Reuse decisions:
+- No new hook — `useCurrencyRates` already covers upload / manual-entry / status / clear.
+- No new types file — `RateTableStatus` / `RateUploadResult` / `SingleRateResult` live in the hook and don't need cross-module sharing.
+- No new component folder — panel reuse is the point; `defaultOpen` is the single cleanest affordance to make it work as a standalone landing surface.
+
+Validation:
+- `npx jest` — 189 suites, **1891 passed** (+4 new), 0 failed, 5 snapshots.
+- `npm run build` — clean; `/tools/multi-currency` listed as `ƒ (Dynamic)` alongside all other tool routes (CSP nonce-based rendering intact).
+- Existing `CurrencyRatePanel.test.tsx` (20 tests) and `TrialBalancePage.test.tsx` (11 tests) still pass — `defaultOpen = false` default preserves prior behavior.
+
+**Review:**
+- Template established for 689b–g: `/tools/<name>/page.tsx` + optional `defaultOpen`-style tweak to an existing component + catalog + command-palette + Jest test modeled on `AccountRiskHeatmapPage.test.tsx`. Net-new code per sub-sprint should land in ~150–200 LoC for tools that already have backend + supporting UI (like Multi-Currency did via `CurrencyRatePanel`); larger for tools that need a fresh upload surface.
+- The `defaultOpen` prop addition to `CurrencyRatePanel` is the one shared-component touch in 689a. It was the minimal way to make the panel work as a standalone-page anchor without either (a) copying the panel's logic into a new page-scoped component or (b) forking the panel. Four existing call sites (`trial-balance`, `three-way-match`, `statistical-sampling`, `revenue-testing`, `payroll-testing` pages all use `<CurrencyRatePanel />` with no props) are unaffected because the default remains `false`.
+- **Commit SHA:** _to be recorded after commit_
 
 ---
 

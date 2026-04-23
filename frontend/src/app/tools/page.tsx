@@ -57,6 +57,7 @@ const TOOLS: ToolDef[] = [
   { key: 'flux_analysis', label: 'Flux Analysis', href: '/flux', description: 'Account-level variance analysis comparing current and prior period balances with materiality-based flagging.', reference: 'ISA 520 Analytical Procedures', category: 'Advanced' },
   { key: 'loan_amortization', label: 'Loan Amortization', href: '/tools/loan-amortization', description: 'Generate period-by-period amortization schedules — standard, interest-only, and balloon loans with extra payments and book journal entry templates.', reference: 'Form input — no upload', category: 'Advanced' },
   { key: 'depreciation', label: 'Depreciation Calculator', href: '/tools/depreciation', description: 'Generate book and MACRS tax depreciation schedules — straight-line, declining balance, SYD, units of production; book vs tax timing reconciliation with deferred tax bridge.', reference: 'IRS Pub 946 / IAS 16 / ASC 360', category: 'Advanced' },
+  { key: 'currency_rates', label: 'Multi-Currency Conversion', href: '/tools/multi-currency', description: 'Manage exchange-rate tables and manual rate entries for multi-currency trial balances — ISO 4217 validation, cohort-aware staleness detection, and defense-in-depth rate validation.', reference: 'IAS 21 / ASC 830', category: 'Advanced' },
 ]
 
 const CATEGORIES: Category[] = ['Core Analysis', 'Testing Suite', 'Advanced']
