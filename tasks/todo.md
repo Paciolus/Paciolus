@@ -16,6 +16,7 @@
 > new features or architectural changes. Each entry is one line.
 > Format: `- [date] commit-sha: description (files touched)`
 
+- [2026-04-23] Sprint 689 Path B decision — CEO chose full expansion (all 6 hidden backend tools + Multi-Currency standalone → 18-tool catalog). Execution split into 689a–g (one tool per session, single marketing-flip at 689g). Defaults rejected on evidence that the 6 routes carry ~4,500 LoC of real engine code + tests. Plan + deliverables template captured in Sprint 689 entry. Pre-requisite flagged: `scripts/archive_sprints.sh` grep-pipeline bug must be fixed (or sprints 673–677 manually archived) before the first `Sprint 689a:` commit can clear the archival gate.
 - [2026-04-23] R2 provisioning — Cloudflare R2 buckets `paciolus-backups` + `paciolus-exports` (ENAM, Standard, private), two Account API tokens (Object R&W, per-bucket scoped). 8 env vars wired on Render `paciolus-api` (`R2_{BACKUPS,EXPORTS}_{BUCKET,ENDPOINT,ACCESS_KEY_ID,SECRET_ACCESS_KEY}`) — 19→27 vars, deploy live in 1 min, zero service disruption (9× /health all 200 <300ms). Unblocks Sprint 611 ExportShare migration + Phase 4.4 pg_dump cron. Mid-provisioning incident: screenshotted Render edit form while EXPORTS credentials were unmasked → rolled `paciolus-exports-rw` token before saving, only uncompromised values persisted. Full pattern captured in `tasks/lessons.md` (2026-04-23 entry). Details in `tasks/ceo-actions.md` "Backlog Blockers" section.
 - [2026-04-23] d74db7c: record Sprint 673 COMPLETE — DB_TLS_OVERRIDE removed from Render prod, 2026-05-09 fuse cleared (tasks/todo.md, tasks/ceo-actions.md)
 - [2026-04-22] b0ddbf6: dep hygiene + Sprint 684 tail — 3 backend pins bumped (uvicorn 0.44.0→0.45.0, pydantic 2.13.2→2.13.3, psycopg2-binary 2.9.11→2.9.12), 3 backend transitives refreshed in venv (idna 3.11→3.13, pydantic_core 2.46.2→2.46.3, pypdfium2 5.7.0→5.7.1), mypy dev-pin bumped 1.20.1→1.20.2; 4 frontend caret pins bumped (@typescript-eslint/eslint-plugin + parser ^8.58.0→^8.59.0, @tailwindcss/postcss + tailwindcss ^4.2.2→^4.2.4). Sprint 684 deferred memo-copy item landed: `sampling_memo_generator.py` Expected Misstatement Derivation section now cites AICPA Audit Sampling Guide Table A-1 explicitly. Backend `pytest` 8046 passed / 0 failed; frontend `jest` 1887 passed / 0 failed; `npm run build` clean.
@@ -605,24 +606,48 @@ The original plan proposed threading a `branding_context` kwarg through every me
 
 ---
 
-### Sprint 689: Hidden backend tools — catalog wire-up or removal
-**Status:** PENDING
+### Sprint 689: Hidden backend tools — catalog wire-up (CEO Path B, 2026-04-23)
+**Status:** IN PROGRESS — decision locked, execution split into 689a–g
 **Priority:** P2
-**Source:** Completeness agent H-03/H-05 + Claim-reality C-03/C-04
-**Why now:** Six backend tools have endpoints and no UI: `book_to_tax`, `cash_flow_projector`, `intercompany_elimination`, `form_1099`, `w2_reconciliation`, `sod`. Separately, Multi-Currency is marketed as Tool #12 but is only a side-car on TB upload — no standalone card. Decide per-tool: promote to catalog or remove the route.
-**Files:**
-- `backend/routes/{book_to_tax, cash_flow_projector, intercompany_elimination, form_1099, w2_reconciliation, sod}.py`
-- `frontend/src/app/tools/page.tsx`, `lib/commandRegistry.ts`
-- `shared/entitlements.py:14` (canonical tool count)
+**Source:** Completeness agent H-03/H-05 + Claim-reality C-03/C-04 + CEO decision 2026-04-23
 
-**Changes:**
-- [ ] For each of the six: CEO decides [promote / defer / remove]. Default recommendation:
-  - `sod` — already Enterprise-gated; promote with minimal UI.
-  - `form_1099`, `w2_reconciliation` — payroll-adjacent; promote under the Payroll tool umbrella as sub-workflows.
-  - `book_to_tax`, `cash_flow_projector`, `intercompany_elimination` — remove routes if not shipping Tool #13+, document rationale in a sprint archive entry.
-- [ ] Multi-Currency: add a standalone `/tools/multi-currency` card with its own page; continue rendering the side-car on TB upload for convenience.
-- [ ] Reconcile `CANONICAL TOOL COUNT` in `shared/entitlements.py:14` with the final catalog count; propagate to CLAUDE.md, pricing page, ceo-actions.md, and marketing surfaces.
-- [ ] Regression tests: every cataloged tool has a route, hook, page, and entitlement-gate test.
+**CEO decision 2026-04-23 — Path B (full expansion):**
+Promote ALL 6 hidden tools + Multi-Currency standalone page. Catalog grows 11 → 18 tools. `CANONICAL_TOOL_COUNT` will flip 12 → 18 in one documentation pass at the end (689g) to avoid six intermediate marketing-drift commits. Rejected alternatives: Path A (Multi-Currency-only, 12 total), Path C (remove 6 routes + shrink to 11).
+
+**Rationale on Path B over A:** The 6 routes aren't stubs — each has 500–700 LoC of real engine code + 7–10 unit tests + CSV export (scout report 2026-04-23). Deletion would trash ~4,500 LoC of working code. Promotion is pure additive work: new frontend surface only. CEO prefers biggest marketing pitch (18 tools) over fastest launch.
+
+**Rationale on Path B over a 4-tool subset:** CEO explicitly opted for all 6 over a book_to_tax + cash_flow_projector carve-out. Downstream reassessment during 689f/g can still retire either if customer signal shapes otherwise, but default is promote all.
+
+**Execution split — one tool per session (CEO directive):**
+
+| Sub-sprint | Tool | Backend file | Priority order rationale |
+|---|---|---|---|
+| 689a | Multi-Currency (standalone `/tools/multi-currency`) | `routes/currency.py`, `currency_engine.py` | Smallest lift — backend + side-car UI exist; new page wraps `CurrencyRatePanel`. Template refinement for 689b–g. |
+| 689b | SOD | `routes/sod.py` | Highest audit relevance (SOX 404 / ISA 315). Already Enterprise-gated. |
+| 689c | Intercompany Elimination | `routes/intercompany_elimination.py` | Consolidated-FS audit core. |
+| 689d | W-2 Reconciliation | `routes/w2_reconciliation.py` | Payroll audit / 941 tie-out niche. |
+| 689e | 1099 Matching | `routes/form_1099.py` | Payroll / vendor compliance niche. |
+| 689f | Book-to-Tax | `routes/book_to_tax.py` | Tax-adjacent; reassess positioning mid-rollout. |
+| 689g | Cash Flow Projector + marketing flip | `routes/cash_flow_projector.py` + `shared/entitlements.py` + all "12 tools" marketing surfaces | Ship last + the single-pass "12 → 18 tools" flip across ~6 marketing/docs surfaces. |
+
+**Per-sub-sprint deliverables (the template each 689[a-g] commit ships):**
+- `frontend/src/app/tools/<name>/page.tsx` — standalone page with `UpgradeGate`, `GuestCTA`/`UnverifiedCTA`, state machine, results + info cards, citations + disclaimer. Model on `frontend/src/app/tools/bank-rec/page.tsx`.
+- `frontend/src/hooks/use<Name>.ts` — reuse if exists (Multi-Currency has `useCurrencyRates`), create new otherwise.
+- `frontend/src/types/<name>.ts` — request / response shapes matching Pydantic schemas.
+- 3–4 UI components in `frontend/src/components/<name>/` — upload zone, results, results table.
+- `frontend/src/lib/commandRegistry.ts` — new `TOOL_ENTRIES` row with `toolName` matching `enforce_tool_access` gate.
+- `frontend/src/app/tools/page.tsx` — new `TOOLS` array entry with matching `key`.
+- `frontend/src/__tests__/<Name>Page.test.tsx` — modelled on `AccountRiskHeatmapPage.test.tsx`.
+- PDF memo generator if the tool produces a report (matches the "18 memo PDFs + 3 report PDFs" convention).
+- `shared/entitlements.py` — verify `currency_rates` / equivalent tool name is in `tools_allowed` for paid tiers (already gated).
+
+**Sprint 689g flip (the final marketing pass):**
+- `CANONICAL_TOOL_COUNT: 12 → 18` in `backend/shared/entitlements.py:14`.
+- "12 tools" → "18 tools" across ~6 marketing/docs surfaces (pricing page, landing, CLAUDE.md, ceo-actions.md, memory, entitlements comments).
+- Regression sweep: every cataloged tool has route + hook + page + entitlement-gate test.
+
+**Deferred blocker (pre-689a):**
+- `scripts/archive_sprints.sh` has a grep-pipeline bug: it counts COMPLETE sprints correctly (5 in current Active Phase) but fails to extract sprint numbers from Status-line matches ("No completed sprint numbers found"). The script runs the "Status: COMPLETE" match through `grep -oE 'Sprint [0-9]+'` but the previous pipe filter returned only the Status line (which doesn't carry the sprint number — that's on the `### Sprint NNN` header line above it). Fix: change the awk/sed block to pair each `### Sprint NNN` header with its status body and emit the sprint number when the paired status is COMPLETE. Until this is fixed, Sprint 689a can't commit under `Sprint 689a:` prefix — either manual archival of Sprints 673–677 into `tasks/archive/sprints-673-677-details.md` first, or fix the script first. Sprint 689a session should tackle one of the two as step 0.
 
 ---
 
