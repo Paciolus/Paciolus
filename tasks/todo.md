@@ -702,7 +702,7 @@ Implementation notes:
 - **No new FeatureGate additions after 689b**: SOD needed `sod_checker` because it's Enterprise-only on the backend. 689c–g follow the standard paid-tier-allowed pattern (Free blocked via `_FREE_TOOLS`), so `UpgradeGate toolName="..."` is sufficient.
 - **sed false-positive in CLAUDE.md history row**: bulk sed flipped a v1.5.0-era "12 tools" claim in the completed-eras table. Reverted after review. Historical claims ("at the time this sprint shipped, the catalog was 12 tools") are correct and must not move with the canonical count.
 
-**Commit SHA:** _(to fill after commit)_
+**Commit SHA:** `9888295`
 
 ---
 
