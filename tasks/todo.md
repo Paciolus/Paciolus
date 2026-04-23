@@ -91,7 +91,7 @@
 - Dual-path design (R2 in prod when env vars are set, inline blob otherwise) keeps 25 pre-existing export_sharing route tests, IP-throttle tests, and any downstream fixtures green without needing a bulk rewrite. It also matches the branding-logo S3 pattern already in the codebase, so future maintainers don't see a second storage idiom.
 - Extracting `purge_expired_export_shares` to module scope (instead of leaving it nested inside the job wrapper) was a deliberate test-surface change: the cleanup-scheduler test suite already covers the `_run_cleanup_job` wrapper, so the new R2-delete behaviour is tested directly against the pure function without depending on `SessionLocal` monkeypatching or the scheduler-lock table.
 - The orphan-object guard in `create_share` (best-effort `delete` when the DB commit fails after an R2 upload) closed a small but real data-leak window — under Postgres, a commit can fail after the network round-trip, and we don't want untracked bytes piling up in the bucket.
-- Commit SHA: (to fill in before push)
+- Commit SHA: `0667775`
 
 ---
 
