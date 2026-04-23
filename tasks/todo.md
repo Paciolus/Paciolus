@@ -184,7 +184,7 @@ The nightly Coverage Sentinel's three worst 0%-coverage files turned out to have
 ---
 
 ### Sprint 673: Remove DB_TLS_OVERRIDE via pooler-aware pg_stat_ssl skip
-**Status:** CODE-COMPLETE — pending deploy + CEO env-var removal
+**Status:** COMPLETE (2026-04-23 — override removed from Render prod)
 **Source:** Council Review 2026-04-16 — Critic (time-fused architectural debt) + Executor (front-run launch week)
 **Why now:** `DB_TLS_OVERRIDE=NEON-POOLER-PGSSL-BLINDSPOT:2026-05-09` expires in 23 days. Without the proper fix landed first, the override must either be renewed (kicks the can) or allowed to expire (hard-fails production startup during Phase 4 launch window). Fixing before Phase 4 removes one ticking clock from launch week.
 **File:** `backend/database.py`
@@ -194,8 +194,8 @@ The nightly Coverage Sentinel's three worst 0%-coverage files turned out to have
 - [x] On pooled hostnames: skip the `pg_stat_ssl` assertion, log `tls=pooler-skip`, emit `db_tls_pooler_skip` secure event (sslmode still enforced in config.py)
 - [x] On direct hostnames: retain the assertion (Neon direct endpoint, RDS, local postgres all continue to verify)
 - [x] Unit tests cover all branches: pooler host with ssl_active=False doesn't crash, direct host with ssl_active=True still logs `db_tls_verified`, helper recognises pooler suffix (18/18 tests pass)
-- [ ] **CEO deploy step:** Deploy; verify Render startup logs show `tls=pooler-skip` and no override warning
-- [ ] **CEO env-var step:** Remove `DB_TLS_OVERRIDE` from Render env vars once startup is confirmed green
+- [x] **CEO deploy step (done 2026-04-23):** Sprint 673 code shipped to prod via the 2026-04-22 password-rotation redeploy (commit `937997a`); startup logs at 2026-04-22 16:49:08 UTC confirmed `tls=pooler-skip` on all 4 workers BEFORE today's env-var removal, so the override branch was already dead code.
+- [x] **CEO env-var step (done 2026-04-23 10:26 UTC):** `DB_TLS_OVERRIDE` deleted from Render env vars; redeploy went green at 10:28 UTC (2 min). New instance `csfxr` — 4 fresh worker startups all logged `tls=pooler-skip`; zero matches for `DB_TLS_OVERRIDE` substring in last-hour logs; `/health` returns 200 in 355 ms. 2026-05-09 fuse cleared.
 - [x] `DB_TLS_OVERRIDE` config path kept intact — it's a general break-glass used by both the `pg_stat_ssl` check AND the `sslmode` connection-string check in `config.py`; not pooler-specific, so deletion would lose a legitimate escape hatch.
 
 **Review:**
@@ -203,6 +203,7 @@ The nightly Coverage Sentinel's three worst 0%-coverage files turned out to have
 - The pooled branch short-circuits BEFORE the four-way `ssl_active / DB_TLS_OVERRIDE_VALID / DB_TLS_REQUIRED / else` logic, so `DB_TLS_REQUIRED=true` + pooler host no longer crashes startup.
 - Secure event `db_tls_pooler_skip` added — distinct from `db_tls_verified` and `db_tls_override` so log audits can tell "TLS is actually on, just invisible" apart from "TLS is off, break-glass approved".
 - Existing 15 TLS tests still pass unchanged; 3 new tests added (pooler skip, direct still runs, helper unit).
+- **2026-04-23 verification chain:** env-var count 20 → 19 confirmed via DOM read; `DATABASE_URL` verified to still carry `sslmode=require` (config.py's URL-string TLS check remains satisfied independent of the override); fresh startup logs at 10:28:30–32 UTC on instance `csfxr` show `tls=pooler-skip` on all 4 workers; Render log search for `DB_TLS_OVERRIDE` returns "No matching logs" for the last hour — clean cut-over, no warnings.
 
 ---
 
