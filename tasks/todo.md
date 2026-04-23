@@ -540,7 +540,7 @@ Validation:
 **Review:**
 - Template established for 689b–g: `/tools/<name>/page.tsx` + optional `defaultOpen`-style tweak to an existing component + catalog + command-palette + Jest test modeled on `AccountRiskHeatmapPage.test.tsx`. Net-new code per sub-sprint should land in ~150–200 LoC for tools that already have backend + supporting UI (like Multi-Currency did via `CurrencyRatePanel`); larger for tools that need a fresh upload surface.
 - The `defaultOpen` prop addition to `CurrencyRatePanel` is the one shared-component touch in 689a. It was the minimal way to make the panel work as a standalone-page anchor without either (a) copying the panel's logic into a new page-scoped component or (b) forking the panel. Four existing call sites (`trial-balance`, `three-way-match`, `statistical-sampling`, `revenue-testing`, `payroll-testing` pages all use `<CurrencyRatePanel />` with no props) are unaffected because the default remains `false`.
-- **Commit SHA:** _to be recorded after commit_
+- **Commit SHA:** `8e6886a`
 
 ---
 
