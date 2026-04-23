@@ -170,21 +170,14 @@ These items unblock backlog sprints that cannot proceed without infra you must
 provision. Not launch-blocking, but each one is a sprint that's been started or
 is queued and is held until the resource exists.
 
-### Object store bucket (R2 or S3)
+### Object store bucket (R2 or S3) — PROVISIONED 2026-04-23
 
-- [ ] Provision an object store bucket (Cloudflare R2 or AWS S3) and create a
-  scoped IAM/token credential for it. **Same bucket can serve two needs:**
-  1. **Phase 4.4** — daily `pg_dump` backup target (already on your list).
-  2. **Sprint 611 — ExportShare object store migration.** Currently `export_data`
-     up to 50 MB per shared export is stored in primary Neon Postgres
-     (`backend/export_share_model.py:43`). 20 concurrent shares = 1 GB of
-     binary row storage; Neon Launch tier cap is 10 GB. Migrating to the bucket
-     keyed by `share_token_hash` keeps DB rows metadata-only and removes the
-     blob bloat from every DB backup. Pre-signed URL pattern; cleanup scheduler
-     deletes objects on share revoke/expire; backfill migration moves existing
-     blobs.
-- [ ] Provide bucket name, region, endpoint URL, and credential (access key +
-  secret, or R2 token) so I can wire env vars on Render and write the migration.
+- [x] **Provisioned 2026-04-23 on Cloudflare R2.** Two buckets (for least-privilege isolation between the two consumers), both ENAM (us-east-1-adjacent), Standard storage class, public access disabled:
+  1. `paciolus-backups` — will back the **Phase 4.4** daily `pg_dump` target.
+  2. `paciolus-exports` — will back the **Sprint 611 ExportShare object store migration** (removes up-to-50-MB blobs from `backend/export_share_model.py:43` / Neon Postgres).
+- [x] **Two scoped Account API tokens, each Object Read & Write on exactly one bucket.** `paciolus-backups-rw` and `paciolus-exports-rw` (the latter rolled mid-provisioning after a screenshot-leak of its initial secret — see `tasks/lessons.md` for the pattern, fix, and prevention rule). The original secrets never reached Render's persistent store; only the rolled values saved.
+- [x] **8 env vars wired to Render `paciolus-api` (deploy live 2026-04-23 12:11 UTC):** `R2_{BACKUPS,EXPORTS}_{BUCKET,ENDPOINT,ACCESS_KEY_ID,SECRET_ACCESS_KEY}`. Env var count 19 → 27. `/health` returned HTTP 200 in <300ms across 9 polls spanning the rolling deploy — zero service disruption. Shared S3 endpoint: `https://8fd7f43a3458f2ec09d400e0b7a7a5e8.r2.cloudflarestorage.com`.
+- **Consumers (no code wired yet — vars sit unused until these land):** Sprint 611 ExportShare migration (unblocked), Phase 4.4 pg_dump cron (unblocked). Both can proceed without further CEO action on R2.
 
 ---
 
