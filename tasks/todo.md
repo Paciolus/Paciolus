@@ -473,7 +473,7 @@ The original plan proposed threading a `branding_context` kwarg through every me
 ---
 
 ### Sprint 689: Hidden backend tools — catalog wire-up (CEO Path B, 2026-04-23)
-**Status:** IN PROGRESS — 689a COMPLETE, 689b IN PROGRESS, 689c–g pending
+**Status:** IN PROGRESS — 689a/b COMPLETE, 689c–g pending
 **Priority:** P2
 **Source:** Completeness agent H-03/H-05 + Claim-reality C-03/C-04 + CEO decision 2026-04-23
 
@@ -544,27 +544,34 @@ Validation:
 
 **689b completion — 2026-04-23:**
 
-**Status:** IN PROGRESS
+**Status:** COMPLETE
 
 Deliverables (Option A — dual CSV upload per CEO 2026-04-23):
-- [ ] `frontend/src/app/tools/sod/page.tsx` — standalone page. State machine: `idle` → `analyzing` → `success` / `error`. Uses `GuestCTA` / `UnverifiedCTA` / a custom Enterprise-only tier check (backend is `require_enterprise_tier`; the standard `UpgradeGate` only blocks Free, so an inline tier check via `FeatureGate`-style pattern is needed for Solo/Professional too). Paid-tier users render the SOD workspace. Includes `DisclaimerBox` (SOC 1 / AICPA segregation of incompatible duties / COSO 2013) + `CitationFooter`.
-- [ ] `frontend/src/hooks/useSOD.ts` — `analyze(payload)`, `loadRules()`, `exportCsv(payload)`. Uses `apiPost` / `apiFetch` / `apiDownload`.
-- [ ] `frontend/src/types/sod.ts` — `SODAnalysisRequest`, `SODAnalysisResponse`, `SODConflict`, `SODUserSummary`, `SODRule` shapes matching `routes/sod.py` Pydantic contracts (incl. `medium_severity_count` field name).
-- [ ] `frontend/src/components/sod/` — four components: `SODFileUpload` (dual CSV drop + client-side parse), `SODConflictsTable`, `SODUserSummaries`, `SODRulesReference` (collapsible).
-- [ ] `frontend/src/lib/commandRegistry.ts` — `tool:sod-checker` entry (`toolName: 'sod_checker'`, matching the feature flag used in the backend 403 payload).
-- [ ] `frontend/src/app/tools/page.tsx` — new `TOOLS` row (`category: 'Advanced'`, reference: SOC 1 / AICPA).
-- [ ] `frontend/src/components/shared/FeatureGate.tsx` — extend `FeatureName` enum to include `sod_checker` (Enterprise-only). This matches the backend 403 `feature: "sod_checker"` payload exactly, and slots cleanly next to `bulk_upload` and `custom_branding` which are already Enterprise-only.
-- [ ] `frontend/src/__tests__/SODPage.test.tsx` — 4 tests modelled on `MultiCurrencyPage.test.tsx` (guest / unverified / non-Enterprise tier gate / Enterprise happy path).
+- [x] `frontend/src/app/tools/sod/page.tsx` — standalone page. State machine: `idle` → `analyzing` → `success` / `error`. Uses `GuestCTA` / `UnverifiedCTA` / `FeatureGate(feature="sod_checker")` for Enterprise-only gating.  Includes `DisclaimerBox` (SOC 1 / AICPA / COSO 2013) + `CitationFooter`.
+- [x] `frontend/src/hooks/useSOD.ts` — `analyze(payload)`, `loadRules()`, `exportCsv(payload)`. Uses `apiPost` / `apiGet` / `apiDownload`.
+- [x] `frontend/src/types/sod.ts` — `SODAnalysisRequest`, `SODAnalysisResponse`, `SODConflict`, `SODUserSummary`, `SODRule` shapes matching `routes/sod.py` Pydantic contracts (incl. `medium_severity_count` field name).
+- [x] `frontend/src/components/sod/` — `SODFileUpload` (dual CSV drop + client-side parse), `SODResults` (counters + per-user table + conflict detail list), `SODRulesReference` (collapsible rule library), `parseCsv.ts` (minimal quoted-field CSV parser).
+- [x] `frontend/src/lib/commandRegistry.ts` — `tool:sod-checker` entry (`toolName: 'sod_checker'`, matching the feature flag used in the backend 403 payload).
+- [x] `frontend/src/app/tools/page.tsx` — new `TOOLS` row (`category: 'Advanced'`, reference: SOC 1 / AICPA / COSO 2013).
+- [x] `frontend/src/components/shared/FeatureGate.tsx` — extended `FeatureName` union to include `sod_checker` (Enterprise-only). Slots next to `bulk_upload` / `custom_branding`.
+- [x] `frontend/src/__tests__/SODPage.test.tsx` — 4 tests modelled on `MultiCurrencyPage.test.tsx` (guest / unverified / non-Enterprise tier gate / Enterprise happy path).
 
 Intentionally NOT touched (per CEO "single-pass flip at 689g"):
 - `backend/shared/entitlements.py:14` `CANONICAL_TOOL_COUNT` comment still reads `12`.
 - "12 tools" marketing surfaces unchanged.
 
-Validation targets:
-- `npx jest` — full suite passing, +4 new tests.
-- `npm run build` — clean; `/tools/sod` renders as `ƒ (Dynamic)`.
+Validation:
+- `npx jest` — 190 suites, **1895 tests pass** (+4 new), 0 failed, 5 snapshots.
+- `npm run build` — clean; `/tools/sod` listed as `ƒ (Dynamic)` alongside all other tool routes (CSP nonce-based rendering intact).
 
-**Commit SHA:** _(to fill after commit)_
+Implementation notes:
+- **Enterprise gating**: the shared `UpgradeGate` only blocks Free tier (`TIER_TOOLS` in `UpgradeGate.tsx`), so Solo/Professional would have rendered the upload surface and hit a backend 403. Extended `FeatureGate` with a `sod_checker` feature keyed to Enterprise — same pattern used for `bulk_upload` and `custom_branding` — so the tier-block CTA is rendered client-side before any network call. This matches the backend 403 payload shape (`{error: "tier_locked", feature: "sod_checker"}`) exactly.
+- **No reusable upload component**: Multi-Currency's 689a delivery leaned on existing `CurrencyRatePanel`; SOD had no counterpart, so this sprint landed ~370 LoC across a fresh component directory (`components/sod/`) plus ~160 LoC for the CSV parser. Larger than the 689 template's 150-200 LoC target, but in-line with the sprint plan's caveat "larger for tools that need a fresh upload surface."
+- **CSV parser**: intentionally minimal (no mid-field newline handling). IAM/HR exports don't contain these; a full RFC 4180 parser would be overkill and harder to test deterministically. Parse errors surface inline with actionable messages ("row 17: user_id and user_name are required").
+- **TypeScript strict gotcha**: `noUncheckedIndexedAccess` flags `rows[0]` as `string | undefined` even after a `rows.length > 0` guard. Guarded with `?? ''` rather than `!` for safety.
+- **Citation fallback**: `SOC 1` and `COSO 2013` aren't in `lib/citations.ts`, so `<Citation />` falls back to plain `<span>` rendering and `<CitationFooter />` renders nothing. Intentional — the standards are named in the hero badge and disclaimer body; the citation-registry entry can land later when the rest of the SOC-era standards get added.
+
+**Commit SHA:** `ad68d0f`
 
 ---
 
