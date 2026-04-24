@@ -118,3 +118,41 @@
 - Replacing Sentry — strictly additive
 
 ---
+
+### Sprint 717: Catalog & Citation Single-Source-of-Truth
+**Status:** COMPLETE 2026-04-24 — `backend/tools_registry.py` + `backend/standards_registry.py` are the canonical sources; frontend ledger expanded 12 → 18; AS 1215 mis-citations corrected on 5 customer-facing surfaces; PR-T12/T13 backfilled in payroll memo; CI tests `test_catalog_consistency.py` (42 cases) + `test_citation_consistency.py` (4 cases) green on first cross-check (caught 4 unregistered standards — ASC 842, IFRS 16, ASC 326, IAS 1 — and added them). Backend pytest 5,478 passed (+50 new from this sprint), frontend Jest 1,915 passed, `npm run build` clean.
+**Priority:** P0 (customer-visible drift on marketing/legal surfaces; blocks Stripe cutover credibility)
+**Source:** 8-agent sweep 2026-04-24. Hallucination Audit C-1/C-2/C-3/C-4 + MarketScout Top-3 launch-blocker + Accounting Methodology Audit Rank-1 (AS 1215). Full plan at `tasks/sprint-plan-agent-sweep-2026-04-24.md` Sprint 717.
+
+**Problem class:** Stated truth in marketing/docs/memos drifts from actual code behavior. Today's symptoms: tool-count drift (12 vs 18 across 11 surfaces), AS 1215 fabricated citation on 5 customer-facing files, PR-T12/T13 missing from `PAYROLL_TEST_DESCRIPTIONS`. Each is a hand-maintained mirror of code state.
+
+**Goal:** Eliminate the mirrors. Every claim in marketing/docs/memos is either (a) generated from code, or (b) verified against code by CI. The 18-tool catalog flips consistently across all surfaces this sprint.
+
+**Scope:**
+- [ ] Create `backend/tools_registry.py` enumerating the 18 audit tools (12 originals + 6 from 689b–g).
+- [ ] Create `backend/standards_registry.py` enumerating cited PCAOB/ISA/ASC/AICPA standards with code-point pointers.
+- [ ] Expand `frontend/src/content/tool-ledger.ts` from 12 → 18 entries; bump `CANONICAL_TOOL_COUNT`.
+- [ ] Sweep marketing surfaces (ToolLedger, BottomProof, ToolShowcase, pricing, terms, demo) so all "Twelve" / "12" tool claims become "Eighteen" / "18".
+- [ ] Update `tools/page.tsx` test counts to actuals (AP 13→14, Rev 16→18, AR 11→12, Pay 11→13, FA 9→11, Inv 9→10).
+- [ ] Replace AS 1215 → AS 2401 in 5 customer-facing surfaces (USER_GUIDE.md, features/status.json, standards-specimen.ts, trust/page.tsx, CLAUDE.md).
+- [ ] Backfill PR-T12 and PR-T13 in `payroll_testing_memo_generator.py::PAYROLL_TEST_DESCRIPTIONS`.
+- [ ] Sync `CLAUDE.md` Key Capabilities + `memory/MEMORY.md` Project Status.
+- [ ] Update Phase 3 checklist in `tasks/ceo-actions.md` to enumerate all 18 tools by name.
+- [ ] CI test `tests/test_catalog_consistency.py` — registry tool_count == ToolName enum count == ledger TS length; every test ID in every engine has a memo description entry.
+- [ ] CI test `tests/test_citation_consistency.py` — every standard cited in customer-facing surfaces appears in `standards_registry.py`.
+- [ ] Verification: `npm run build`, `npm test`, `pytest tests/test_catalog_consistency.py tests/test_citation_consistency.py`.
+- [ ] Lessons.md entry on the prevention pattern.
+
+**Recurrence prevention (the durable artifact this sprint leaves behind):**
+1. Catalog and citation registries become the only place tool/citation truth lives.
+2. CI tests fail if any cited standard is not in `standards_registry.py` (catches future fabrications).
+3. CI tests fail if `tool-ledger.ts` count diverges from registry / ToolName enum (catches future drift).
+4. Pre-commit hook warns if marketing pages or trust page are staged without registry update.
+5. `BANNED_PATTERNS` extended to flag `AS 1215` literal unless explicitly allowed.
+
+**Out of scope:**
+- Generating `tool-ledger.ts` from registry via build script (deferred to Sprint 717.5 if needed; this sprint hand-syncs but adds the CI test that enforces equivalence).
+- Re-counting Multi-Currency as a 19th tool — explicit decision: it's a side-car promoted to its own page, not a new tool. 12 originals + 6 NEW from 689b–g = 18.
+- Refactoring memo generators beyond the PR-T12/T13 backfill (Sprint 721 owns memo phrasing).
+
+---

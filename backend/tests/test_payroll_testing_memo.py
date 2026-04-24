@@ -375,7 +375,10 @@ class TestPayrollTestDescriptions:
             assert len(desc) > 20, f"Description too short for {key}"
 
     def test_total_description_count(self):
-        assert len(PAYROLL_TEST_DESCRIPTIONS) == 11
+        # Sprint 717: PR-T12 and PR-T13 backfilled per Accounting Methodology
+        # Audit (2026-04-24). CLAUDE.md asserts payroll engine ships 13 tests;
+        # the memo dict must enumerate all 13.
+        assert len(PAYROLL_TEST_DESCRIPTIONS) == 13
 
 
 # =============================================================================

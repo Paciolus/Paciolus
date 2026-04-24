@@ -81,6 +81,6 @@ describe('BottomProof', () => {
 
   it('renders description text', () => {
     render(<BottomProof />)
-    expect(screen.getByText(/Twelve audit-focused tools/)).toBeInTheDocument()
+    expect(screen.getByText(/Eighteen audit-focused tools/)).toBeInTheDocument()
   })
 })

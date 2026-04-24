@@ -92,9 +92,9 @@ export const STANDARDS_SPECIMEN: SpecimenEntry[] = [
   // ─── PCAOB Auditing Standards ──────────────────────────────────
   {
     code: 'PCAOB AS 1215',
-    scope: 'Audit documentation — content, completion, and retention requirements.',
+    scope: 'Audit documentation — content, completion, and retention requirements (governs every memo/export, not a procedure standard).',
     body: 'PCAOB',
-    tools: ['trial_balance', 'journal_entry_testing'],
+    tools: [],
   },
   {
     code: 'PCAOB AS 2315',

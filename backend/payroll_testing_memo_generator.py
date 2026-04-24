@@ -36,6 +36,8 @@ PAYROLL_TEST_DESCRIPTIONS = {
     "PR-T9": "Flags employees with ghost employee indicators: no department, single entry, boundary-month-only payments.",
     "PR-T10": "Flags employees sharing the same bank account or similar addresses.",
     "PR-T11": "Flags employees sharing the same tax identification number.",
+    "PR-T12": "Identifies duplicate employee names with distinct IDs — potential ghost-employee or duplicate-record indicator.",
+    "PR-T13": "Reconciles gross pay against net pay plus tax and deduction columns; flags rows where the arithmetic does not tie.",
 }
 
 _PAYROLL_CONFIG = TestingMemoConfig(

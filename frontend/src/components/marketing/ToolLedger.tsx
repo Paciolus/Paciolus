@@ -1,16 +1,17 @@
 'use client'
 
 /**
- * ToolLedger — Sprint 706 bound-ledger grid for the homepage.
+ * ToolLedger — Sprint 706 bound-ledger grid for the homepage; expanded
+ * to 18 entries in Sprint 717.
  *
  * Replaces the pre-Sprint-706 <ToolSlideshow> one-card-at-a-time carousel
- * (users hit "01 / 12 ‹ ›" and bounce on the first card) with the full
+ * (users hit "01 / 18 ‹ ›" and bounce on the first card) with the full
  * catalog rendered as a ledger-style grid: all 18 tools visible at once,
  * rows expand in place on click.
  *
  * Layout:
  *   - md+: 4-column header (№ · Name · Tests · Standards) followed by
- *     12 rows with hairline rules between. Row click expands an
+ *     18 rows with hairline rules between. Row click expands an
  *     accordion body with the one-line summary + standards + a link to
  *     the tool catalog card.
  *   - Below md: simplified vertical list (one row per tool, tap to
@@ -37,6 +38,7 @@ import {
 const ROMAN: Record<number, string> = {
   1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V', 6: 'VI',
   7: 'VII', 8: 'VIII', 9: 'IX', 10: 'X', 11: 'XI', 12: 'XII',
+  13: 'XIII', 14: 'XIV', 15: 'XV', 16: 'XVI', 17: 'XVII', 18: 'XVIII',
 }
 
 export function ToolLedger() {
@@ -58,7 +60,7 @@ export function ToolLedger() {
 
   return (
     <section
-      aria-label="Twelve audit tools — catalog ledger"
+      aria-label="Eighteen audit tools — catalog ledger"
       className="max-w-6xl mx-auto px-6 py-16"
     >
       <Reveal className="text-center mb-8">

@@ -4,6 +4,18 @@
 
 ---
 
+## Pair every "stated truth" with a CI-enforced source-of-truth (Sprint 717)
+
+Sprint 689g flipped `CANONICAL_TOOL_COUNT` 12 → 18 on the backend in one bulk pass that was supposed to also update every marketing/legal/doc surface. The pass missed `frontend/src/content/tool-ledger.ts` (still 12 entries), `BottomProof.tsx` ("Twelve audit-focused tools"), `ToolLedger.tsx` (header said "Eighteen" but aria-label said "Twelve"), the pricing/terms pages, and `tools/page.tsx` test counts. Two days later the agent sweep flagged 11 drift surfaces with three different numbers visible on production simultaneously. The root cause wasn't carelessness in 689g — it was that "stated tool count" had no canonical source; every surface was a hand-typed mirror, so any bulk-edit that missed one stayed silently wrong.
+
+The same shape produced AS 1215 fabrication: the CLAUDE.md "Key Capabilities" line cited PCAOB AS 1215 as a JE-testing standard for over a year, propagating to USER_GUIDE.md, status.json, the Trust page, and the standards-specimen file. AS 1215 governs audit *documentation* — not procedures — but with no mechanical check, the wrong citation traveled wherever the marketing copy did.
+
+**Pattern:** Anything whose "truth" gets quoted in more than one place — counts, citations, version numbers, pricing — needs a single Python/TS source-of-truth module *and* a CI test that fails when human-edited surfaces disagree. In Sprint 717: `backend/tools_registry.py`, `backend/standards_registry.py`, `tests/test_catalog_consistency.py`, `tests/test_citation_consistency.py`. The CI tests caught 4 unregistered standards (ASC 842, IFRS 16, ASC 326, IAS 1) on first run — exactly the kind of slow-drift the registry is designed to surface immediately.
+
+The discipline: **whenever you find yourself updating the same fact in 3+ files, stop and add the registry + test before finishing the edit**. Don't try to be more careful next time — be unable-to-be-wrong next time.
+
+---
+
 ## Verify the code is deployed before debugging "why isn't runtime doing X" (Sprint 716)
 
 During Sprint 716's Grafana Loki rollout, after setting the `LOKI_*` env vars on Render I spent ~15 minutes chasing hypotheses about why Loki showed zero streams: wrong label (`service_name` vs `service`?), cardinality rejections, handler thread dying silently on an unhandled exception. Opened Render's Web Shell, ran `python -c "from config import LOKI_ENABLED"` and got `ImportError: cannot import name 'LOKI_ENABLED' from 'config'`. The deployed image was Sprint 713's commit `2b92b771` — Sprint 716's commit `8e65d30e` was local-only; I'd never pushed to GitHub. Render's env-var-save redeploy rebuilt the OLD main, not the new code. **Pattern:** Before diving into "the app isn't doing X despite the code saying X," spend 30 seconds proving the target code is actually on the running instance. Cheap probes: Render Web Shell `python -c "from <module> import <new_symbol>"`, a `grep -c` on a known new log line in Render's log tail, or a `curl /health` that returns a version SHA. Especially true at the end of a sprint where commits and env-var changes can arrive out of order — the env var set is often what people *remember* as "shipping," but on Render it only redeploys the main branch's current tip. The same failure mode hit the Sprint 551-era Stripe deploy pattern; worth generalising into a sprint-close template step.

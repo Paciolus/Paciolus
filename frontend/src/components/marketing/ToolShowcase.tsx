@@ -60,7 +60,7 @@ const TOOLS: Tool[] = [
     icon: 'document-duplicate',
     tier: 'solo',
     cluster: 'Validate',
-    tests: 13,
+    tests: 14,
   },
   {
     title: 'Revenue Testing',
@@ -69,7 +69,7 @@ const TOOLS: Tool[] = [
     icon: 'currency-circle',
     tier: 'solo',
     cluster: 'Detect',
-    tests: 16,
+    tests: 18,
   },
   {
     title: 'Bank Reconciliation',
@@ -86,7 +86,7 @@ const TOOLS: Tool[] = [
     icon: 'users',
     tier: 'solo',
     cluster: 'Detect',
-    tests: 11,
+    tests: 13,
   },
   {
     title: 'Three-Way Match',
@@ -111,7 +111,7 @@ const TOOLS: Tool[] = [
     icon: 'clock',
     tier: 'solo',
     cluster: 'Assess',
-    tests: 11,
+    tests: 12,
   },
   {
     title: 'Fixed Asset Testing',
@@ -120,7 +120,7 @@ const TOOLS: Tool[] = [
     icon: 'building',
     tier: 'solo',
     cluster: 'Assess',
-    tests: 9,
+    tests: 11,
   },
   {
     title: 'Inventory Testing',
@@ -129,14 +129,63 @@ const TOOLS: Tool[] = [
     icon: 'cube',
     tier: 'solo',
     cluster: 'Assess',
-    tests: 9,
+    tests: 10,
+  },
+  // ─── Sprint 689b–g promoted tools (Sprint 717: surfaced on homepage) ───
+  {
+    title: 'Segregation of Duties',
+    description: 'User-role × role-permission analysis against an SoD rule library — per-user risk ranking with mitigating controls.',
+    href: '/tools/sod',
+    icon: 'padlock',
+    tier: 'solo',
+    cluster: 'Validate',
+  },
+  {
+    title: 'Intercompany Elimination',
+    description: 'Multi-entity TB upload to match reciprocal balances, propose elimination JEs, and render a consolidation worksheet.',
+    href: '/tools/intercompany',
+    icon: 'sliders',
+    tier: 'solo',
+    cluster: 'Validate',
+  },
+  {
+    title: 'W-2 / W-3 Reconciliation',
+    description: 'Reconcile payroll YTD to draft W-2s and Form 941 quarterlies — box mismatches, SS wage-base, 941-to-W-2 tie-out.',
+    href: '/tools/w2-reconciliation',
+    icon: 'clipboard-check',
+    tier: 'solo',
+    cluster: 'Validate',
+  },
+  {
+    title: 'Form 1099 Preparation',
+    description: '1099-NEC / MISC / INT vendor identification with corporate safe-harbor, processor exemptions, and W-9 tracking.',
+    href: '/tools/form-1099',
+    icon: 'document',
+    tier: 'solo',
+    cluster: 'Validate',
+  },
+  {
+    title: 'Book-to-Tax Reconciliation',
+    description: 'Schedule M-1 / M-3 reconciliation with ASC 740 deferred-tax roll and effective-rate reconciliation.',
+    href: '/tools/book-to-tax',
+    icon: 'archive',
+    tier: 'solo',
+    cluster: 'Assess',
+  },
+  {
+    title: 'Cash Flow Projector',
+    description: 'Direct-method 90-day cash projection across base / stress / best scenarios with liquidity-breach flagging.',
+    href: '/tools/cash-flow-projector',
+    icon: 'spreadsheet',
+    tier: 'solo',
+    cluster: 'Analyze',
   },
 ]
 
-const TOTAL_COUNT = TOOLS.length                                  // 12
+const TOTAL_COUNT = TOOLS.length                                  // 18
 
 const FILTER_TABS: { id: ActiveFilter; label: string; sub: string }[] = [
-  { id: 'all',          label: 'All 18 tools',  sub: '' },
+  { id: 'all',          label: `All ${TOTAL_COUNT} tools`, sub: '' },
   { id: 'solo',         label: 'Paid Plans',    sub: `All ${TOTAL_COUNT} tools · from $100/mo` },
 ]
 
@@ -153,7 +202,7 @@ export function ToolShowcase() {
             The Complete Audit Intelligence Suite
           </h2>
           <p className="font-sans text-oatmeal-500 text-sm max-w-lg mx-auto">
-            Twelve purpose-built tools. Start with Solo — upgrade as your practice grows.
+            Eighteen purpose-built tools. Start with Solo — upgrade as your practice grows.
           </p>
         </Reveal>
 
