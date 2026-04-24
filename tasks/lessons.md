@@ -4,6 +4,12 @@
 
 ---
 
+## `logger.exception()` on a user-facing 400 is a Sentry escalation (Sprint 713)
+
+Sentry SDK's default `LoggingIntegration(event_level=ERROR)` promotes every `logger.exception()` call into a Sentry error event — regardless of whether the exception is a 500-class bug or a handled 4xx user-error. Three Sentry issue classes surfaced during Sprint 711's Phase-3 triage turned out to be caught, 400-mapped upload errors that `logger.exception` had promoted from "user sent bad bytes" to "something the app did wrong." The fix: `logger.warning("... rejected [%s]: %s", type(e).__name__, e, exc_info=True)`. Traceback still lands in Render logs via `exc_info=True`; Sentry stays quiet because WARNING is below the event threshold (captured only as a breadcrumb). **Pattern:** Reserve `logger.exception` for code paths where the exception represents an actual app defect the dev team should look at. For caught-and-mapped-to-HTTP-4xx branches in route handlers and the scaffold layer, use `logger.warning(..., exc_info=True)`. Sentry's error-events feed should mean "the app did something wrong," not "a user uploaded a malformed file" — conflating the two makes the real incidents impossible to triage. This is the third sprint in three weeks to touch Sentry log-level semantics (711 added explicit `capture_exception` for a silent swallow, 712 fixed a false-green from a log-level-independent parse bug, 713 downgraded user-error escalations) — worth a lint rule on future route handlers.
+
+---
+
 ## Screenshotting a Render env-var edit form leaks secrets into the tool log (session 2026-04-23)
 
 During R2 provisioning, after pasting the `paciolus-exports-rw` Access Key ID and Secret Access Key into a Render env-var Edit form, I took a screenshot to show the "Save, rebuild, and deploy" button location — and Render's edit mode renders every value as a plain `<textarea>` with the raw text exposed, so both secrets landed in the screenshot and therefore in the tool-result log. The view-mode surface is safe (values are masked as `••••••••••` until the eye icon is explicitly clicked), but the edit-mode surface is not. Mitigation took a full Cloudflare token roll (Roll → re-copy → re-paste) before the compromised values could be saved to Render. The earlier 2026-04-22 DATABASE_URL screenshot leak during the orphan-DB investigation was the same failure mode; this is a recurring class of bug that warrants a standing rule.

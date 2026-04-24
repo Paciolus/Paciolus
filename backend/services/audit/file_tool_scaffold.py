@@ -63,8 +63,18 @@ async def execute_file_tool(
 
             return result
 
-        except (ValueError, KeyError, TypeError) as e:
-            logger.exception("%s failed", tool_name)
+        except (ValueError, KeyError, TypeError, ArithmeticError) as e:
+            # Sprint 713: ArithmeticError catches decimal.InvalidOperation
+            # (incl. ConversionSyntax) raised by unguarded Decimal() calls
+            # on malformed numeric input. Log level is WARNING — these are
+            # user-facing 400s, not Sentry-worthy ERROR events.
+            logger.warning(
+                "%s rejected [%s]: %s",
+                tool_name,
+                type(e).__name__,
+                e,
+                exc_info=True,
+            )
             maybe_record_tool_run(db, engagement_id, user_id, tool_name, False)
             raise HTTPException(
                 status_code=400,

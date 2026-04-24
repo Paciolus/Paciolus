@@ -1637,3 +1637,50 @@ Sprint 675 established the exact fix pattern for `dependency_sentinel.py` (switc
 - Commit SHA: `7c6c92c` (PR #98 squash-merge 2026-04-23).
 
 ---
+
+## P2 Sentry Sweep — 2026-04-23
+
+> **Source:** Sprint 711 "Defer / out-of-scope" list — the three lower-volume exceptions that didn't justify blocking Sprint 711's P1 deploy but were queued for follow-up once Sprint 711 went green. Sprint 711 deployed clean (commit `89f42bb0`, PR #95), so this sprint clears the backlog.
+
+---
+
+### Sprint 713: P2 Sentry backlog sweep — trial-balance noise + preflight ArithmeticError leak + SendGrid ForbiddenError
+**Status:** COMPLETE
+**Priority:** P2
+**Source:** Sprint 711 defer list (Sentry triage 2026-04-22 — three low-volume error classes that remained after Sprint 711 shipped).
+**Why now:** CEO is in Phase 3 functional validation — any real production error surfaced by testing should land in Sentry clean. The three classes below either pollute Sentry with expected 400s (Bug A/C) or leak as actual HTTP 500s (Bug B). All three fixes are narrow: exception-tuple widening + log-level downgrade.
+
+**Bug A — `/audit/trial-balance` [OptionError] + [ValueError] (1 event each, expected 400s over-logged):**
+Both exception classes are already caught by `audit_trial_balance`'s `(ValueError, KeyError, TypeError)` handler (pandas `OptionError` is a `KeyError` subclass — verified via MRO). The issue is `logger.exception("Trial balance analysis failed")` logs at ERROR level with the full traceback, which the Sentry SDK's default `LoggingIntegration(event_level=ERROR)` promotes to a Sentry event. These are user-facing 400s with sanitized response bodies — they should not create error events.
+
+**Bug B — `/audit/preflight` [decimal.InvalidOperation / ConversionSyntax] (3 events, real HTTP 500):**
+`decimal.InvalidOperation` subclasses `ArithmeticError`, not `ValueError`/`KeyError`/`TypeError`. When a malformed numeric value (e.g., `"$1,234..56"` — double decimal, unicode minus, double-negative) flows into an unguarded `Decimal(...)` call in the preflight code path, the exception bypasses `execute_file_tool`'s current catch tuple and leaks as HTTP 500. The `_coerce_to_decimal` / `_to_decimal` helpers in `preflight_engine.py` + `shared/intake_utils.py` have bare `except Exception` guards, but not every path through preflight uses them, and defensive broadening at the scaffold level is the right layer — it also covers population profile, expense category, and accrual completeness which share the same scaffold.
+
+**Bug C — Background `register_verification` exception [ForbiddenError] (count unknown, SendGrid HTTP 403):**
+`python_http_client.exceptions.ForbiddenError` is raised when SendGrid returns HTTP 403 — typically a recipient on the suppression list (bounces/blocks/spamreports), an API key scope issue, or sender verification failure. `send_verification_email` catches `(OSError, ValueError, RuntimeError)` which does not include `HTTPError`, so the exception bubbles up to `safe_background_email`'s `except Exception: logger.exception(...)` and lands in Sentry. The user-facing flow already handles this gracefully (the registration returns success; the email silently fails), so the ERROR-level log is over-escalation. Downstream `log_secure_operation` breadcrumb stays.
+
+**Files:**
+- `backend/routes/audit_pipeline.py` — Bug A log downgrade
+- `backend/services/audit/file_tool_scaffold.py` — Bug B exception-tuple widening + log downgrade
+- `backend/email_service.py` — Bug C catch tuple widens to include SendGrid `HTTPError`
+- `backend/tests/test_sprint_713_sentry_sweep.py` (new) — regression tests for all three
+
+**Changes:**
+- [x] **Bug A fix:** `routes/audit_pipeline.py::audit_trial_balance` exception handler — `logger.exception("Trial balance analysis failed")` → `logger.warning("Trial balance analysis rejected [%s]: %s", type(e).__name__, e, exc_info=True)`. Traceback still visible in Render logs (via `exc_info=True`) but Sentry's `LoggingIntegration(event_level=ERROR)` no longer captures the event.
+- [x] **Bug B fix:** `services/audit/file_tool_scaffold.py::execute_file_tool` — exception tuple widened to `(ValueError, KeyError, TypeError, ArithmeticError)` and log downgraded to WARNING with `exc_info=True`. Fixes `/audit/preflight`, `/audit/population-profile`, `/audit/expense-category-analytics`, `/audit/accrual-completeness` in one touch — all four route through the same scaffold.
+- [x] **Bug C fix:** `email_service.py` — imports `python_http_client.exceptions.HTTPError as SendGridHTTPError` behind the existing `SENDGRID_AVAILABLE` try/except (with a fallback `class SendGridHTTPError(Exception)` when SendGrid isn't installed so the `except` tuples stay importable). New `except SendGridHTTPError` arm added to all four senders (`send_verification_email`, `send_password_reset_email`, `send_contact_form_email`, `send_email_change_notification`) — returns `EmailResult(success=False, message=f"Email delivery failed (SendGrid {status}).")`. `safe_background_email` already handles `success=False` at WARNING level, so Sentry stays quiet while `log_secure_operation("email_error", ...)` preserves the audit trail.
+- [x] **Regression tests:** new `backend/tests/test_sprint_713_sentry_sweep.py` — 9 tests across 3 test classes covering log-level downgrade (Bug A via direct logger call + source-text pin), ArithmeticError catch (Bug B via a ConversionSyntax-raising analyze_fn + ValueError still-catches + RuntimeError still-bubbles), and SendGrid HTTPError catch (Bug C for all three non-contact senders + end-to-end `safe_background_email` routing through WARNING).
+
+**Validation:**
+- New Sprint 713 tests: **9 passed** in 3.95s.
+- Touched-surface regression (`test_email_verification`, `test_audit_pipeline_routes`, `test_audit_preview_routes`, `test_auth_routes_api`, `test_preflight`, `test_preflight_memo`, `test_refactor_2026_04_20`, `test_cleanup_scheduler` + new sprint file): **196 passed** in 80.21s.
+- Full backend sweep: **8,095 passed / 0 failed** in 736.6s. +9 from the new sprint file matches expected delta; no regressions elsewhere.
+
+**Review:**
+- Log-level downgrade over exception-suppression was the right lever here. Sprint 711 added `sentry_sdk.capture_exception` because cleanup-job failures were being silently swallowed; Sprint 713's situation is the opposite — user-facing 400s were being LOUDLY captured. The two sprints together re-align Sentry signal: error events should mean "the app did something wrong," not "a user uploaded a file we rejected."
+- Bug B's fix lands at the scaffold layer rather than plugging unguarded `Decimal(...)` calls in preflight. That choice trades specificity for reach — the scaffold fix also covers population profile, expense category, and accrual completeness, which share the same 500-leaking exception tuple. A targeted source-level fix would have required auditing 50+ Decimal call sites across four engines; the scaffold fix is the defense-in-depth layer that every future engine inherits.
+- Bug C catches the SendGrid error type but does NOT investigate the root 403. The P2 brief treats this as a noise issue (registration flow itself already succeeds; only the out-of-band email silently fails). Root-cause — whether specific recipients are in SendGrid's suppression list, or whether the API key scope is limited — stays open but is now observable via Render `log_secure_operation("email_error", ...)` lines without polluting Sentry. If the recipient-suppression theory needs a future follow-up, the `status_code` in the warn log will identify the specific 403-triggering path.
+- Lesson reinforced: Sentry's default `LoggingIntegration(event_level=ERROR)` makes `logger.exception()` an implicit error-event escalator. Route handlers that map expected 4xx client errors should use `logger.warning(exc_info=True)` — same traceback in app logs, no Sentry event. This is the third sprint in three weeks to touch this pattern (711, 712, 713); worth codifying in a linter / review rule next time someone touches `backend/routes/*.py` at scale.
+- **Commit SHA:** _to be filled after git commit_
+
+---

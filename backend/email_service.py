@@ -22,12 +22,19 @@ logger = logging.getLogger(__name__)
 
 # SendGrid is optional - gracefully handle when not installed
 try:
+    from python_http_client.exceptions import HTTPError as SendGridHTTPError
     from sendgrid import SendGridAPIClient
     from sendgrid.helpers.mail import Content, Email, HtmlContent, Mail, To
 
     SENDGRID_AVAILABLE = True
 except ImportError:
     SENDGRID_AVAILABLE = False
+
+    # Sprint 713: fallback sentinel so the `except` tuples below stay importable
+    # when SendGrid isn't installed (dev / test without the optional dep).
+    class SendGridHTTPError(Exception):  # type: ignore[no-redef]
+        pass
+
 
 from config import FRONTEND_URL
 from security_utils import log_secure_operation
@@ -213,6 +220,14 @@ def send_verification_email(to_email: str, token: str, user_name: Optional[str] 
             log_secure_operation("email_failed", f"SendGrid returned {response.status_code}")
             return EmailResult(success=False, message=f"Failed to send email (status {response.status_code})")
 
+    except SendGridHTTPError as e:
+        # Sprint 713: SendGrid 4xx/5xx (e.g., 403 when recipient is in suppression
+        # list, API key scope missing, sender not verified). Surface as
+        # success=False so safe_background_email logs at WARNING, not ERROR —
+        # Sentry should not treat deliverability failures as app errors.
+        status = getattr(e, "status_code", "unknown")
+        log_secure_operation("email_error", f"SendGrid HTTPError status={status}")
+        return EmailResult(success=False, message=f"Email delivery failed (SendGrid {status}).")
     except (OSError, ValueError, RuntimeError) as e:
         logger.exception("Verification email send failed")
         log_secure_operation("email_error", sanitize_exception(e, context="email delivery"))
@@ -288,6 +303,11 @@ def send_password_reset_email(to_email: str, token: str, user_name: Optional[str
             log_secure_operation("email_failed", f"SendGrid returned {response.status_code}")
             return EmailResult(success=False, message=f"Failed to send email (status {response.status_code})")
 
+    except SendGridHTTPError as e:
+        # Sprint 713: see send_verification_email for rationale.
+        status = getattr(e, "status_code", "unknown")
+        log_secure_operation("email_error", f"SendGrid HTTPError (password reset) status={status}")
+        return EmailResult(success=False, message=f"Email delivery failed (SendGrid {status}).")
     except (OSError, ValueError, RuntimeError) as e:
         logger.exception("Password reset email send failed")
         log_secure_operation("email_error", sanitize_exception(e, context="password reset email"))
@@ -366,6 +386,11 @@ def send_contact_form_email(
             log_secure_operation("contact_email_failed", f"SendGrid returned {response.status_code}")
             return EmailResult(success=False, message=f"Failed to send contact email (status {response.status_code})")
 
+    except SendGridHTTPError as e:
+        # Sprint 713: see send_verification_email for rationale.
+        status = getattr(e, "status_code", "unknown")
+        log_secure_operation("contact_email_error", f"SendGrid HTTPError (contact) status={status}")
+        return EmailResult(success=False, message=f"Email delivery failed (SendGrid {status}).")
     except (OSError, ValueError, RuntimeError) as e:
         logger.exception("Contact email send failed")
         log_secure_operation("contact_email_error", sanitize_exception(e, context="contact email delivery"))
@@ -453,6 +478,14 @@ def send_email_change_notification(
                 message=f"Failed to send notification (status {response.status_code})",
             )
 
+    except SendGridHTTPError as e:
+        # Sprint 713: see send_verification_email for rationale.
+        status = getattr(e, "status_code", "unknown")
+        log_secure_operation("email_change_notification_error", f"SendGrid HTTPError status={status}")
+        return EmailResult(
+            success=False,
+            message=f"Email delivery failed (SendGrid {status}).",
+        )
     except (OSError, ValueError, RuntimeError) as e:
         logger.exception("Email change notification send failed")
         log_secure_operation(
