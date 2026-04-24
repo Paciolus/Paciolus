@@ -26,7 +26,7 @@ These items are **tracked in [`ceo-actions.md`](ceo-actions.md)** — this file 
 
 | Sprint | Item | Status |
 |--------|------|--------|
-| 463 | SIEM / Log Aggregation (Grafana Loki) | Decision made, sprint not yet scheduled |
+| 463 | SIEM / Log Aggregation (Grafana Loki) | **Scheduled 2026-04-24 as Sprint 716** — reframed from SOC 2 SIEM to free-tier ops tooling on Grafana Cloud Free. Tracked in [`tasks/todo.md`](todo.md) Active Phase. CEO blocker: Grafana Cloud signup. |
 | 464 | Cross-Region DB Replication (pgBackRest to S3) | Decision made, sprint not yet scheduled. Note: Phase 4.4's daily `pg_dump` → S3 already covers launch-grade DR; pgBackRest is continuous WAL streaming for enterprise cross-region requirements. |
 | 466 | Secrets Vault Backup (AWS Secrets Manager) | Decision made, sprint not yet scheduled |
 | 467 | External Penetration Test | Deferred — budget not available. **Revisit trigger:** ~Month 2–3 post-launch once subscription revenue establishes the $5K–30K budget line. Council Review 2026-04-16 flagged this as the highest-value SOC 2 precursor once it becomes financeable. |
@@ -35,4 +35,4 @@ These items are **tracked in [`ceo-actions.md`](ceo-actions.md)** — this file 
 
 ---
 
-*Last revised: 2026-04-16 — collapsed Stripe + Legal to `ceo-actions.md` pointers (removing duplicate checklists that would drift); added revenue-milestone revisit trigger to Sprint 467 per Council Review 2026-04-16.*
+*Last revised: 2026-04-24 — Sprint 463 (Grafana Loki) reclassified and scheduled as Sprint 716 per CEO directive (defer SOC 2 + paid items, do anything free). 464/466/467/468/469 remain deferred.*

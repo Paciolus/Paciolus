@@ -455,6 +455,18 @@ def _load_optional_float(var_name: str, default: float) -> float:
 SENTRY_TRACES_SAMPLE_RATE = _load_optional_float("SENTRY_TRACES_SAMPLE_RATE", 0.1)
 
 # =============================================================================
+# LOKI LOG AGGREGATION (Sprint 716 — optional, disabled by default)
+# =============================================================================
+# Forwards structured logs to Grafana Cloud Loki (Free tier) via HTTPS push.
+# Additive to stdout — Render's log tail continues to work identically.
+# All three vars must be set for the handler to attach; otherwise no-op.
+
+LOKI_URL = _load_optional("LOKI_URL", "")
+LOKI_USER = _load_optional("LOKI_USER", "")
+LOKI_TOKEN = _load_optional("LOKI_TOKEN", "")
+LOKI_ENABLED = bool(LOKI_URL and LOKI_USER and LOKI_TOKEN)
+
+# =============================================================================
 # CLEANUP SCHEDULER (Sprint 307 — recurring background cleanup)
 # =============================================================================
 
@@ -597,4 +609,9 @@ def print_config_summary() -> None:
         RATE_LIMIT_STRICT_MODE,
         "enabled" if STRIPE_ENABLED else "disabled",
         ENTITLEMENT_ENFORCEMENT,
+    )
+    _config_logger.info(
+        "Observability: sentry=%s, loki=%s",
+        "enabled" if SENTRY_DSN else "disabled",
+        "enabled" if LOKI_ENABLED else "disabled",
     )

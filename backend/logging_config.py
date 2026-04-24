@@ -25,7 +25,7 @@ import sys
 from contextvars import ContextVar
 from datetime import UTC, datetime
 
-from config import DEBUG, ENV_MODE
+from config import DEBUG, ENV_MODE, LOKI_ENABLED, LOKI_TOKEN, LOKI_URL, LOKI_USER
 
 # Context variable for request ID correlation
 request_id_var: ContextVar[str] = ContextVar("request_id", default="-")
@@ -117,6 +117,10 @@ def setup_logging() -> None:
 
     root_logger.addHandler(handler)
 
+    # Optional Loki HTTPS push handler (Sprint 716) — additive to stdout.
+    if LOKI_ENABLED:
+        _attach_loki_handler(root_logger)
+
     # Quiet noisy third-party loggers
     logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
     logging.getLogger("uvicorn.error").setLevel(logging.INFO)
@@ -127,3 +131,26 @@ def setup_logging() -> None:
     # Confirm logging is active
     logger = logging.getLogger("paciolus.startup")
     logger.info("Logging initialized (env=%s, level=%s)", ENV_MODE, "DEBUG" if DEBUG else "INFO")
+
+
+def _attach_loki_handler(root_logger: logging.Logger) -> None:
+    """Attach a Loki HTTPS push handler alongside the stdout handler.
+
+    Structured JSON body identical to the stdout handler in production so
+    Render's log tail and Loki present the same records.
+    """
+    import os
+
+    from loki_handler import LokiHandler
+
+    handler = LokiHandler(
+        url=LOKI_URL,
+        user=LOKI_USER,
+        token=LOKI_TOKEN,
+        labels={"service": "paciolus-api", "env": ENV_MODE},
+    )
+    handler.addFilter(RequestIdFilter())
+    handler.setFormatter(JSONFormatter())
+    if os.environ.get("REDACT_LOG_TRACEBACKS", "true").lower() != "false":
+        handler.addFilter(TracebackRedactionFilter())
+    root_logger.addHandler(handler)

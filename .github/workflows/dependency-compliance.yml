@@ -22,7 +22,11 @@ jobs:
           pip install -r backend/requirements.txt
           pip install pip-audit pip-licenses
       - name: CVE audit (fail on any known vulnerability)
-        run: pip-audit --desc
+        # CVE-2026-3219 (pip 26.0.1 — concatenated tar+zip archive handling) ignored while upstream
+        # publishes a fixed pip release; not exploitable in our supply chain (we install from
+        # vetted PyPI packages, not user-supplied archives). Re-check weekly; remove ignore once
+        # a Fix Version is published. Owner: ops. Revisit: 2026-05-22.
+        run: pip-audit --desc --ignore-vuln CVE-2026-3219
       - name: Export license inventory
         run: |
           pip-licenses --format=json --output-file=python-licenses.json
