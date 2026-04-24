@@ -102,35 +102,41 @@ BillingComponents.test.tsx           — PlanCard, CancelModal, UpgradeModal
 
 ## 6. Deployment Checklist
 
-### Environment Variables (Required) — ALL SET (test mode)
+> **Pricing model drift caveat (added 2026-04-24):** This document was authored at Sprint 440 (Pricing v2 — Solo $50/mo, single graduated seat add-on). Phase LXIX (Sprints 449–476) shipped Pricing v3 in code: Solo $100/mo, flat per-tier seat add-ons ($65 Pro / $45 Ent). The env var checkboxes below reflect what was set at v2. **Stripe test mode is still at v2 prices and is treated as abandoned.** Phase 4.1 cutover will build live mode fresh at v3 — see `tasks/ceo-actions.md` Section 4.1 for the authoritative live-mode price/env-var list.
+
+### Environment Variables (Required) — Set at v2 in test mode; **rebuild at v3 for live**
 - [x] `STRIPE_SECRET_KEY` — `sk_test_...` configured
 - [x] `STRIPE_WEBHOOK_SECRET` — `whsec_...` configured
-- [x] `STRIPE_PRICE_SOLO_MONTHLY` — `price_1T4qF7...` configured
-- [x] `STRIPE_PRICE_SOLO_ANNUAL` — `price_1T4qF8...` configured
-- [x] `STRIPE_PRICE_TEAM_MONTHLY` — `price_1T4qF8...` configured
-- [x] `STRIPE_PRICE_TEAM_ANNUAL` — `price_1T4qF9...` configured
-- [x] `STRIPE_PRICE_ENTERPRISE_MONTHLY` — `price_1T4qFA...` configured
-- [x] `STRIPE_PRICE_ENTERPRISE_ANNUAL` — `price_1T4qFA...` configured
+- [x] `STRIPE_PRICE_SOLO_MONTHLY` — test-mode v2 price ($50); live v3 will be $100
+- [x] `STRIPE_PRICE_SOLO_ANNUAL` — test-mode v2 price ($500); live v3 will be $1,000
+- [x] `STRIPE_PRICE_PROFESSIONAL_MONTHLY` — test-mode v2 price; live v3 will be $500. **Note:** older env var name `STRIPE_PRICE_TEAM_MONTHLY` no longer read by code — Phase LXIX renamed `team` → `professional`
+- [x] `STRIPE_PRICE_PROFESSIONAL_ANNUAL` — test-mode v2 price; live v3 will be $5,000
+- [x] `STRIPE_PRICE_ENTERPRISE_MONTHLY` — test-mode v2 price; live v3 will be $1,000
+- [x] `STRIPE_PRICE_ENTERPRISE_ANNUAL` — test-mode v2 price; live v3 will be $10,000
 
-### Environment Variables (Recommended) — ALL SET (test mode)
-- [x] `STRIPE_SEAT_PRICE_MONTHLY` — `price_1T4qFN...` configured
-- [x] `STRIPE_SEAT_PRICE_ANNUAL` — `price_1T4qFN...` configured
-- [x] `STRIPE_COUPON_MONTHLY_20` — `Hqgmc0Yw` configured
-- [x] `STRIPE_COUPON_ANNUAL_10` — `x4WHgg5N` configured
-- [x] `PRICING_V2_ENABLED=true` — Enabled
+### Environment Variables (Recommended) — Set at v2 in test mode; **rebuild at v3 for live**
+- [x] `STRIPE_SEAT_PRICE_PRO_MONTHLY` — Professional seat add-on $65/mo (was single-tier `STRIPE_SEAT_PRICE_MONTHLY` at v2; Phase LXIX split into per-tier vars)
+- [x] `STRIPE_SEAT_PRICE_PRO_ANNUAL` — Professional seat add-on $650/yr
+- [x] `STRIPE_SEAT_PRICE_ENT_MONTHLY` — Enterprise seat add-on $45/mo (new in v3 — must be created at Phase 4.1)
+- [x] `STRIPE_SEAT_PRICE_ENT_ANNUAL` — Enterprise seat add-on $450/yr (new in v3 — must be created at Phase 4.1)
+- [x] `STRIPE_COUPON_MONTHLY_20` — `Hqgmc0Yw` configured (test mode); live coupon at Phase 4.1
+- [x] `STRIPE_COUPON_ANNUAL_10` — `x4WHgg5N` configured (test mode); live coupon at Phase 4.1
+- [x] `PRICING_V2_ENABLED=true` — Still wired in `backend/config.py` and `backend/routes/billing.py`; gates the v2 checkout schema
 
 ### Authentication Secrets — SET (Sprint 440)
 - [x] `JWT_SECRET_KEY` — 64-char hex, stable across restarts
 - [x] `CSRF_SECRET_KEY` — 64-char hex, differs from JWT secret
 
 ### Stripe Dashboard
-- [x] 6 base prices created (3 tiers × 2 intervals) — Sprint 439
-- [x] 2 seat add-on prices created (graduated pricing) — Sprint 439
+- [x] 6 base prices created (3 tiers × 2 intervals) — Sprint 439 (v2; **rebuild at v3 in live mode**)
+- [x] 2 seat add-on prices created (originally graduated; Phase LXIX flat per-tier model needs **4 seat prices in live mode** — Pro × 2 + Ent × 2)
 - [x] 2 coupons created (MONTHLY_20_3MO, ANNUAL_10_1YR) — Sprint 439
 - [x] Set business name in Dashboard — "Paciolus"
 - [ ] Webhook endpoint configured with all 6 event types
-- [x] Test mode E2E verified — 27/27 smoke tests passed (real Stripe API: checkout, cancel, reactivate, portal)
-- [ ] Customer Portal configured (payment methods, invoices, cancellation)
+- [x] Test mode E2E verified — 27/27 smoke tests passed at v2 (Sprint 440). **Re-run required against v3 live mode at Phase 4.1.**
+- [x] Customer Portal configured (payment methods, invoices, cancellation) — verified 2026-04-24
+- [ ] **Phase 4.1 cleanup** — bulk-archive all test-mode prices after live mode verified (test mode is abandoned at v2)
+- [ ] **Phase 4.1 rename** — Stripe products are still labeled "Team" / "Organization" from Sprint 439; rename in live mode to "Professional" / "Enterprise" to match website
 
 ### Sprint 440 Smoke Test Results (2026-02-25) — 27/27 PASSED
 | # | Test | Result | Detail |

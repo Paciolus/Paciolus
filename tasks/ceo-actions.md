@@ -68,15 +68,28 @@ The goal is to catch anything broken in normal usage before you start charging r
 
 ### 4.1 Stripe production cutover
 
-- [ ] Stripe Dashboard → Products → confirm `STRIPE_SEAT_PRICE_MONTHLY` uses **graduated pricing**: Tier 1 (qty 1–7) = $80, Tier 2 (qty 8–22) = $70
-- [ ] Stripe Dashboard → Settings → **Customer Portal** → enable: payment method updates, invoice history, cancel at period end
-- [ ] Stripe Dashboard → create production products/prices/coupons using your **live secret key**. Mirror the test-mode structure: 4 products, 8 prices, 2 coupons (Sprint 439 reference). Keep the test-mode price IDs in a safe place for reference.
-- [ ] Render + Vercel env vars → set `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET` (live values), plus any `STRIPE_PRICE_*` IDs used by your frontend
+> **Important context (added 2026-04-24):** Stripe **test mode** is currently at Pricing v2 (Sprint 439 — Solo $50/mo, single graduated seat add-on). The code is at Pricing v3 (Phase LXIX, Sprints 449–476 — Solo $100/mo, flat per-tier seat pricing). Phase 4.1 is therefore **a fresh build of live mode at v3**, not a mirror of test mode. After cutover, all test-mode prices can be archived as cleanup.
+
+- [ ] **Customer Portal** (Stripe Dashboard → Settings → Billing → Customer Portal — works in live or test mode, settings carry over): enable payment-method updates, invoice history, cancel-at-period-end *(may already be configured from Sprint 439)*
+- [ ] **Create live-mode products and prices at Pricing v3.** Build fresh — do not mirror test mode. **4 products, 10 prices, 2 coupons:**
+  - **Paciolus Solo** — 2 prices: `$100/mo`, `$1,000/yr` (both flat)
+  - **Paciolus Professional** *(Stripe currently labels this "Team" — rename when creating live)* — 2 prices: `$500/mo`, `$5,000/yr` (both flat)
+  - **Paciolus Enterprise** *(Stripe currently labels this "Organization" — rename when creating live)* — 2 prices: `$1,000/mo`, `$10,000/yr` (both flat)
+  - **Paciolus Professional Seat Add-On** — 2 prices: `$65/mo`, `$650/yr` (both flat — **not graduated**)
+  - **Paciolus Enterprise Seat Add-On** — 2 prices: `$45/mo`, `$450/yr` (both flat — **not graduated**)
+  - **2 coupons** mirroring test mode: `MONTHLY_20_3MO` (20% off first 3 months), `ANNUAL_10_1YR` (10% off first annual invoice)
+- [ ] **Render env vars** → set the live secret key plus all 10 price IDs (see Appendix A Stripe table for full list):
+  - `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET` (live values)
+  - 6 base plan price IDs: `STRIPE_PRICE_{SOLO,PROFESSIONAL,ENTERPRISE}_{MONTHLY,ANNUAL}`
+  - 4 seat add-on price IDs: `STRIPE_SEAT_PRICE_{PRO,ENT}_{MONTHLY,ANNUAL}`
+  - 2 coupon IDs: `STRIPE_COUPON_MONTHLY_20`, `STRIPE_COUPON_ANNUAL_10`
+- [ ] **Vercel env vars** → set any `NEXT_PUBLIC_STRIPE_*` IDs the frontend reads directly (publishable key, etc.)
 - [ ] Stripe Dashboard → Developers → Webhooks → configure endpoint → `https://api.paciolus.com/billing/webhook` (or the onrender.com URL if you haven't set up custom domain yet) → copy the signing secret into `STRIPE_WEBHOOK_SECRET`
 - [ ] Sign `tasks/pricing-launch-readiness.md` Section 7 (Code Owner + CEO lines) → mark **GO**
 - [ ] Manual test: click "Manage Billing" from `/settings/billing` → confirm it opens the Stripe Customer Portal
-- [ ] Real-money smoke test: subscribe to **Solo monthly** (lowest tier) with a real card → confirm the subscription appears in Stripe Dashboard and in the admin dashboard → cancel → confirm webhook delivery → refund the charge
+- [ ] Real-money smoke test: subscribe to **Solo monthly** (lowest tier — now $100) with a real card → confirm the subscription appears in Stripe Dashboard and in the admin dashboard → cancel → confirm webhook delivery → refund the charge
 - [ ] Monitor Stripe Dashboard → Developers → Webhooks for 24 hours → confirm delivery ≥99%
+- [ ] **Post-cutover cleanup** (after live mode is verified): bulk-archive all test-mode prices in Stripe Dashboard. Test mode is now decoupled from production.
 
 ### 4.2 Legal + policy placeholders
 
@@ -195,13 +208,25 @@ Authoritative list derived from `backend/config.py` hard-fail checks. Every item
 
 ### Stripe — set during Phase 4.1, not Phase 1
 
-| Variable | Notes |
-|---|---|
-| `STRIPE_SECRET_KEY` | Live secret key from Stripe Dashboard |
-| `STRIPE_PUBLISHABLE_KEY` | Live publishable key |
-| `STRIPE_WEBHOOK_SECRET` | From the webhook endpoint you configure in Stripe |
-| `STRIPE_COUPON_MONTHLY_20` | 20%-off-first-3-months coupon ID (if using) |
-| `STRIPE_COUPON_ANNUAL_10` | 10%-off-first-annual-invoice coupon ID (if using) |
+Code reference: `backend/billing/price_config.py` (Pricing v3, Phase LXIX). 13 vars total.
+
+| Variable | Maps to Stripe price | Notes |
+|---|---|---|
+| `STRIPE_SECRET_KEY` | n/a | Live secret key from Stripe Dashboard |
+| `STRIPE_PUBLISHABLE_KEY` | n/a | Live publishable key |
+| `STRIPE_WEBHOOK_SECRET` | n/a | From the webhook endpoint you configure in Stripe |
+| `STRIPE_PRICE_SOLO_MONTHLY` | Solo $100/mo | flat |
+| `STRIPE_PRICE_SOLO_ANNUAL` | Solo $1,000/yr | flat |
+| `STRIPE_PRICE_PROFESSIONAL_MONTHLY` | Professional $500/mo | flat |
+| `STRIPE_PRICE_PROFESSIONAL_ANNUAL` | Professional $5,000/yr | flat |
+| `STRIPE_PRICE_ENTERPRISE_MONTHLY` | Enterprise $1,000/mo | flat |
+| `STRIPE_PRICE_ENTERPRISE_ANNUAL` | Enterprise $10,000/yr | flat |
+| `STRIPE_SEAT_PRICE_PRO_MONTHLY` | Professional Seat Add-On $65/mo | flat (was graduated in Sprint 439 — replaced in Phase LXIX) |
+| `STRIPE_SEAT_PRICE_PRO_ANNUAL` | Professional Seat Add-On $650/yr | flat |
+| `STRIPE_SEAT_PRICE_ENT_MONTHLY` | Enterprise Seat Add-On $45/mo | flat |
+| `STRIPE_SEAT_PRICE_ENT_ANNUAL` | Enterprise Seat Add-On $450/yr | flat |
+| `STRIPE_COUPON_MONTHLY_20` | n/a | 20%-off-first-3-months coupon ID |
+| `STRIPE_COUPON_ANNUAL_10` | n/a | 10%-off-first-annual-invoice coupon ID |
 
 ### Leave alone unless you have a reason
 
