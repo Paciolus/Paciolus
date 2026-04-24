@@ -62,12 +62,16 @@ Create these under **Explore → Loki → Saved queries** in `https://paciolus.g
 
 | # | Name | LogQL |
 |---|------|-------|
-| 1 | Auth failures | `{service="paciolus-api"} \|~ "status=(401\|403)" \|~ "path=/auth/"` |
-| 2 | 5xx errors | `{service="paciolus-api"} \|~ "status=5\\d\\d"` |
+| 1 | Auth failures | `{service="paciolus-api"} \|~ "(401\|403)" \|~ "/auth/"` |
+| 2 | 5xx errors | `{service="paciolus-api"} \|~ "status.{1,3}5[0-9][0-9]"` |
 | 3 | Slow requests (>5s) | `{service="paciolus-api"} \| json \| duration_ms > 5000` |
-| 4 | Scheduler errors | `{service="paciolus-api", logger="cleanup_scheduler", level="ERROR"}` |
-| 5 | SendGrid 403 | `{service="paciolus-api"} \|~ "SendGrid HTTPError status=403"` |
-| 6 | Audit-engine warnings | `{service="paciolus-api", logger="audit_engine", level="WARNING"}` |
+| 4 | Scheduler errors | `{service="paciolus-api"} \|= "cleanup_scheduler" \| json \| level="ERROR"` |
+| 5 | SendGrid 403 | `{service="paciolus-api"} \|= "SendGrid HTTPError status=403"` |
+| 6 | Audit-engine warnings | `{service="paciolus-api"} \|= "audit_engine" \| json \| level="WARNING"` |
+
+**Label note:** our handler emits `level` and `logger` as stream labels, but Grafana Cloud's ingest pipeline keeps only `env`, `service`, and `service_name` as indexed stream labels at our traffic volume. Queries that filter on level/logger therefore use a line-filter (`|=` / `|~`) followed by `| json | level="…"` to parse the JSON body and filter on the parsed field, rather than indexed-label selectors. Same result, slightly heavier query cost, but the index overhead is fine at Free-tier volume.
+
+Query #3 will not match anything today — we don't log `duration_ms` yet. Saved as documentation of intent; it will populate once request-duration logging lands.
 
 Query #5 closes the loop on Sprint 715 — once 24h of post-deploy traffic has flowed, the result histogram shows recipient + path patterns triggering the 403.
 
