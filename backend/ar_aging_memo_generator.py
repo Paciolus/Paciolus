@@ -31,7 +31,7 @@ AR_AGING_TEST_DESCRIPTIONS = {
     "aging_bucket_concentration": "Flags disproportionate concentration of total AR balance in a single aging bucket (e.g., >70% current), which may indicate manual aging overrides or inaccurate aging calculations.",
     "past_due_concentration": "Flags elevated past-due receivables as a proportion of total AR, an indicator of collection risk.",
     "allowance_adequacy": "Compares the allowance-to-AR ratio against expected ranges — an anomaly indicator, not a sufficiency determination.",
-    "allowance_adequacy_ratio": "Computes the allowance for doubtful accounts as a percentage of gross AR and compares to industry benchmarks, flagging ratios below the configured threshold as a potential understatement of credit loss expense per ASC 326.",
+    "allowance_adequacy_ratio": "Computes the allowance for doubtful accounts as a percentage of gross AR and compares to industry benchmarks, flagging ratios below the configured threshold as an allowance-coverage anomaly indicator under ASC 326. Sufficiency of the allowance estimate is an auditor judgment; this test surfaces a quantitative signal only.",
     "customer_concentration": "Flags single customers representing a disproportionate share of total receivables (credit concentration risk).",
     "dso_trend": "Compares current-period DSO to prior-period DSO to identify significant trend changes in collection efficiency.",
     "dso_trend_variance": "Computes days sales outstanding from the AR balance and period revenue, then compares to prior period or industry benchmark; flags material deviations as a collection risk or revenue recognition indicator.",

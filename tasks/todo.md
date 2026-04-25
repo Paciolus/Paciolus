@@ -66,6 +66,37 @@
 > Sprint 611 + Sprints 677–714 archived 2026-04-24 to `tasks/archive/sprints-611-714-details.md` (eight post-Sprint-673 batches: Post-Audit Remediation, Anomaly Framework Hardening, Security Hardening Follow-Ups, Design Refresh, Production Bug Triage, Nightly Agent Remediation, Branding Coverage Completion, P2 Sentry Sweep). Only Sprint 715 remains pending.
 > Sprints 716–720 archived to `tasks/archive/sprints-716-720-details.md`.
 
+### Sprint 721: Memo Output Quality & ISA 265 Boundary
+**Status:** COMPLETE 2026-04-25 — agent-sweep wave 5, the methodology-language fix.
+**Priority:** P1 (boundary-language exposure visible to PCAOB-registered firms; not Stripe-blocking but pre-Phase-3-completion)
+**Source:** 8-agent sweep 2026-04-24. Accounting Methodology Audit Rank-2 (boundary phrasing in three_way_match + ar_aging memos).
+
+**Problem class:** Memo generators contain language that drifts toward auditor-judgment territory (deficiency classification, misstatement conclusions, prescriptive remediation). The hardest cases were already caught by the existing `BANNED_PATTERNS` regex; soft phrases (`systemic review … recommended`, `potential understatement of credit loss expense`) slipped through. Sprint 721 closes the soft-phrase gap and makes the deny list a CI guardrail.
+
+**Scope landed:**
+- [x] `backend/three_way_match_memo_generator.py:113` — "Below 80% threshold — systemic review of procure-to-pay controls recommended" → "match-rate anomaly indicator; auditor judgment required to determine cause".
+- [x] `backend/ar_aging_memo_generator.py:34` — "potential understatement of credit loss expense per ASC 326" → "allowance-coverage anomaly indicator under ASC 326. Sufficiency of the allowance estimate is an auditor judgment; this test surfaces a quantitative signal only."
+- [x] `docs/03-engineering/auditing-lexicon.md` — canonical allow/deny phrase tables organized by ISA/AS reference. Includes inline `# allow-deny-phrase: <reason>` annotation syntax for legitimate exceptions (quoting standards' titles, etc.).
+- [x] CI test `backend/tests/test_memo_boundary_phrasing.py` — parametrized scan over every `*_memo_generator.py` source file. 13 deny patterns from the lexicon; word-boundary regex matching; allowlist annotation respected. 15 cases (1 smoke + 13 generators + 1 lexicon-doc-exists check), all green.
+
+**Recurrence prevention (the durable artifact):**
+1. **Auditing lexicon as canonical reference** — single doc that engineers, models, and reviewers all consult. Adding a new memo generator means reading the lexicon first.
+2. **Per-generator parametrized test** — every `*_memo_generator.py` is automatically scanned; new generators inherit the guardrail without explicit wiring.
+3. **Word-boundary deny patterns** — soft phrases like "systemic review" and "potential understatement" now fail CI. The existing `BANNED_PATTERNS` regex (which catches the hard cases at runtime) is now complemented by a static-source guardrail at PR time.
+4. **Inline allowlist syntax** — legitimate exceptions (e.g., quoting a standard's title) are annotated, not silently allowed. PR review centers on the *reason*, not the existence.
+
+**Out of scope:**
+- Snapshot tests of rendered memo PDFs (would require ReportLab fixtures + golden file management). The source-string scan catches the same phrases without the PDF runtime cost. Sprint 723's coverage-floor work may bring us to a place where this is worth adding.
+- Strengthening the existing runtime `BANNED_PATTERNS` regex — that catches the hardest cases already; the static scan is the new defense layer.
+
+**Validation:**
+- 15/15 boundary-phrasing tests pass (13 memo generators all clean post-fixes)
+- Existing memo tests still pass (smoke-tested on ar_aging + three_way_match)
+
+**Lesson tie-in:** Continues the Sprint 717 "single source of truth" pattern — the lexicon is the canonical phrase taxonomy that the CI test grounds against. Same shape as `tools_registry.py` / `standards_registry.py`: human-readable doc + machine-readable check.
+
+---
+
 ### Sprint 715: SendGrid 403 root-cause investigation (24h post-deploy watch)
 **Status:** PENDING — investigable starting **2026-04-25 ~14:29 UTC** (24h after Sprint 713 merge `2b92b771` on 2026-04-24 14:29 UTC).
 **Priority:** P2 (observability follow-up — no user-facing impact, but worth knowing which recipient/path triggers the 403)
