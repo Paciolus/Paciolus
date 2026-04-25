@@ -483,6 +483,60 @@ STRIPE_ENABLED = bool(STRIPE_SECRET_KEY)
 if ENV_MODE == "production" and not STRIPE_SECRET_KEY:
     _config_logger.warning("STRIPE_SECRET_KEY not set in production. Billing features disabled.")
 
+# Sprint 719 hardening: in production, reject obvious test-mode credentials
+# at startup. Pre-cutover misconfiguration (test secret pasted into live env
+# vars) is silent — every webhook returns 400 in production, customers don't
+# appear in the admin dashboard, dispute events miss SLA. The cheapest
+# detection is a startup format check.
+#
+# Stripe live keys: sk_live_*, pk_live_*, whsec_* (no _test_ infix on whsec).
+# Stripe test keys: sk_test_*, pk_test_*, whsec_test_* are observed but most
+# whsec values from the dashboard for *test* webhook endpoints carry a
+# different prefix shape; we reject the most common test-leak pattern.
+
+
+def _stripe_secret_format_violations(
+    *,
+    env_mode: str,
+    secret_key: str,
+    publishable_key: str,
+    webhook_secret: str,
+) -> list[str]:
+    """Return list of human-readable violations for Stripe secrets in this env.
+
+    Pure function so it's directly unit-testable without subprocess invocation
+    of the full config module. Empty list = OK.
+    """
+    if env_mode != "production":
+        return []
+    violations: list[str] = []
+    if secret_key and secret_key.startswith("sk_test_"):
+        violations.append(
+            "STRIPE_SECRET_KEY is a TEST-mode key (sk_test_*) in production mode.\n"
+            "Live mode must use sk_live_* keys. Either set ENV_MODE=development for "
+            "test-mode work, or rotate STRIPE_SECRET_KEY to a live key from the "
+            "Stripe Dashboard (Developers → API keys → Standard keys → Live mode)."
+        )
+    if publishable_key and publishable_key.startswith("pk_test_"):
+        violations.append("STRIPE_PUBLISHABLE_KEY is a TEST-mode key (pk_test_*) in production mode.")
+    if webhook_secret and "_test_" in webhook_secret:
+        violations.append(
+            "STRIPE_WEBHOOK_SECRET appears to be a test-mode secret in production mode.\n"
+            "Live-mode webhook secrets are minted via Stripe Dashboard → Developers → "
+            "Webhooks → <endpoint> → Signing secret (in Live mode, not Test mode)."
+        )
+    return violations
+
+
+_stripe_format_violations = _stripe_secret_format_violations(
+    env_mode=ENV_MODE,
+    secret_key=STRIPE_SECRET_KEY or "",
+    publishable_key=STRIPE_PUBLISHABLE_KEY or "",
+    webhook_secret=STRIPE_WEBHOOK_SECRET or "",
+)
+if _stripe_format_violations:
+    _hard_fail("\n\n".join(_stripe_format_violations))
+
 # Stripe Coupon IDs for promotional pricing (Phase LIX Sprint C)
 # Create these in Stripe Dashboard, then set the IDs here.
 # MONTHLY_20: 20% off first 3 months (duration=repeating, duration_in_months=3, percent_off=20)

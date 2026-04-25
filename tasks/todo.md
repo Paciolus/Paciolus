@@ -124,6 +124,38 @@
 
 ---
 
+### Sprint 719: Stripe Live-Mode Webhook Resilience
+**Status:** COMPLETE 2026-04-24 — agent-sweep wave 3, the pre-cutover Stripe fixes.
+**Priority:** P0 (real-money traffic about to fly through this code path)
+**Source:** 8-agent sweep 2026-04-24. Guardian audit findings 1.5 (silent webhook secret mismatch) and 1.6 (off-by-one in stale-event guard).
+
+**Problem class:** Stripe live-mode misconfiguration is silent — a test-mode webhook secret pasted into the live env var rejects every event with 400. Customers don't appear in the admin dashboard, dispute events miss SLA, churn doesn't downgrade. Companion problem: equal-second event timestamps bypass the stale-event guard at `webhook_handler.py:978` due to a `<` instead of `<=`.
+
+**Scope landed:**
+- [x] Off-by-one fix at `backend/billing/webhook_handler.py:978` — `event_time < sub_updated` → `event_time <= sub_updated`. Equal-second events are now skipped as stale (they are overwhelmingly Stripe redeliveries of an event we already processed).
+- [x] Production startup format guard — `_stripe_secret_format_violations` pure function in `backend/config.py` checks for `sk_test_*`, `pk_test_*`, `_test_` patterns when `ENV_MODE=production`. Hard-fails at boot with actionable error messages.
+- [x] CI test `tests/test_webhook_event_ordering.py` — proves equal/older/newer events are handled correctly.
+- [x] CI test `tests/test_stripe_secret_format_guard.py` — exercises the format-check function across production/dev/staging modes and live/test secret patterns. 11 cases.
+- [x] `scripts/stripe_live_preflight.sh` — pre-cutover runner that fires every WEBHOOK_HANDLERS event type via Stripe CLI and bails on the first non-200. Now a mandatory step in `tasks/ceo-actions.md` Phase 4.1.
+
+**Recurrence prevention (the durable artifact):**
+1. **Pure-function format check** — `_stripe_secret_format_violations` is unit-testable without spinning up the full config module. Same shape reusable for any future env-var format guard (sentry DSN, sendgrid key, etc.).
+2. **Equal-time fixture** — `test_equal_time_event_is_skipped` is the regression test for the off-by-one. Any future "let's relax the staleness guard" change will need to flip this expected behavior.
+3. **Phase 4.1 checklist gate** — preflight runner is now a checklist requirement, not optional. The script's exit code is the gate, not engineering judgment.
+4. **Startup hard-fail** — misconfiguration is blocked at boot, not surfaced 24h later when the first dispute event fires.
+
+**Out of scope (deferred):**
+- Webhook handler coverage to ≥80% (currently 57.4%). Sprint 723's explicit charter is per-file coverage floors with `coverage_floors.yaml`; that sprint will own this.
+- Sentry alert on "Webhook signature verification failed" + 24h 4xx-rate alert. Sprint 730 (Operational Observability Polish) owns alerting; the format guard makes this less urgent because misconfig now hard-fails at boot.
+
+**Validation:**
+- 14/14 new tests pass (3 event-ordering + 11 secret-format)
+- Existing webhook tests unchanged
+
+**Lesson tie-in:** Continues the Sprint 718 "two-form parity" pattern — equal-time is the third surface form alongside older and newer. Same pattern applied as a parametrized event-time test.
+
+---
+
 ### Sprint 718: Auth Surface Hardening + Cookie/Bearer Parity
 **Status:** COMPLETE 2026-04-24 — agent-sweep wave 2, the pre-Stripe-cutover auth fixes.
 **Priority:** P0 (single High-severity finding from 2026-04-24 security review; blocks Stripe cutover credibility)

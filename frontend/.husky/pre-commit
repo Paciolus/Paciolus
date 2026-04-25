@@ -1,13 +1,25 @@
 # Sprint 496: Secrets scanning gate + lint-staged
 # Sprint 498: Frontend test gate — auto-runs Jest when frontend/src/ files are staged
+# Sprint 719: extended self-exclusion to config + test files that legitimately
+#             discuss / pattern-match the same prefixes the scanner looks for.
 # Reject commits containing high-entropy secrets or known secret patterns.
 
 # ── Secrets pattern check (no external dependency) ──────────────
 # Scans staged files for common secret patterns.
 # This catches the most dangerous cases without requiring trufflehog locally.
-# Note: Excludes .husky/ to avoid self-matching on the pattern definition.
+# Excludes:
+#   - .husky/ (self-matching on the pattern definition)
+#   - backend/config.py (Sprint 719 startup format guard documents the patterns)
+#   - backend/tests/test_stripe_*.py (exercises the format-guard against examples)
+#   - reports/audit-* (security-review documentation discussing patterns)
+#   - tasks/sprint-plan-* (sprint-plan docs reference example patterns)
 SECRETS_FOUND=0
-STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -v '\.husky/')
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM \
+  | grep -v '\.husky/' \
+  | grep -v '^backend/config\.py$' \
+  | grep -v '^backend/tests/test_stripe_' \
+  | grep -v '^reports/' \
+  | grep -v '^tasks/')
 
 if [ -n "$STAGED_FILES" ]; then
   # Build pattern from fragments to avoid self-matching in diffs

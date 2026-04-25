@@ -975,9 +975,18 @@ def process_webhook_event(
                 sub_updated = sub.updated_at
                 if sub_updated.tzinfo is None:
                     sub_updated = sub_updated.replace(tzinfo=UTC)
-                if event_time < sub_updated:
+                # Sprint 719 fix: changed `<` → `<=` so equal-second events
+                # are also treated as stale. event_created is second-resolution
+                # from Stripe; sub.updated_at is millisecond-precision from our
+                # write. event_time == sub_updated overwhelmingly means
+                # "Stripe redelivered the same event we already processed,"
+                # not "a brand-new event landed in the same second" — handlers
+                # are idempotent regardless, but skipping is the safer default
+                # and matches what every other audit-time check in this file
+                # already does.
+                if event_time <= sub_updated:
                     logger.warning(
-                        "Stale %s event (created=%s) arrived after local update (%s) for user %d — skipping",
+                        "Stale %s event (created=%s) arrived at-or-before local update (%s) for user %d — skipping",
                         event_type,
                         event_time.isoformat(),
                         sub_updated.isoformat(),

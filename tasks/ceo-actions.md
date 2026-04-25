@@ -85,6 +85,8 @@ The goal is to catch anything broken in normal usage before you start charging r
   - 2 coupon IDs: `STRIPE_COUPON_MONTHLY_20`, `STRIPE_COUPON_ANNUAL_10`
 - [ ] **Vercel env vars** → set any `NEXT_PUBLIC_STRIPE_*` IDs the frontend reads directly (publishable key, etc.)
 - [ ] Stripe Dashboard → Developers → Webhooks → configure endpoint → `https://api.paciolus.com/billing/webhook` (or the onrender.com URL if you haven't set up custom domain yet) → copy the signing secret into `STRIPE_WEBHOOK_SECRET`
+- [ ] **Run the Sprint 719 preflight runner** before flipping live env vars: `scripts/stripe_live_preflight.sh https://api.paciolus.com/billing/webhook`. Fires every event type the webhook handler supports; bails on the first non-200. **Do NOT proceed if any event fails.** Capture the script output as evidence in the launch dossier.
+- [ ] **Verify the production-mode Stripe-secret format guard**: after setting live env vars on Render, confirm Render boot logs do NOT contain `STRIPE_SECRET_KEY is a TEST-mode key` or any `_test_` rejection. Sprint 719 added a startup hard-fail for this misconfiguration; if the boot succeeds, the format check passed.
 - [ ] Sign `tasks/pricing-launch-readiness.md` Section 7 (Code Owner + CEO lines) → mark **GO**
 - [ ] Manual test: click "Manage Billing" from `/settings/billing` → confirm it opens the Stripe Customer Portal
 - [ ] Real-money smoke test: subscribe to **Solo monthly** (lowest tier — now $100) with a real card → confirm the subscription appears in Stripe Dashboard and in the admin dashboard → cancel → confirm webhook delivery → refund the charge
