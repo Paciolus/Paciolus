@@ -4,6 +4,18 @@
 
 ---
 
+## Two-form code paths need parity tests, not just a one-form test (Sprint 718)
+
+The CSRF middleware's `_extract_user_id_from_auth` was tested against Bearer-header inputs and shipped years ago. The production browser path was later moved to HttpOnly cookies — but the function was never updated to read the cookie. Result: every browser POST/PUT/DELETE/PATCH ran with `expected_user_id=None`, silently disabling the CSRF user-binding check at line 427. The 2026-04-24 security review found it; the test suite didn't because there was no test that asserted "Bearer and cookie produce the same answer."
+
+**Pattern:** Anywhere an interface accepts the same input through two surface forms (Bearer/cookie, query/body, header/cookie, single-event/duplicate-event, single-worker/multi-worker), there must be a parametrized parity test that runs both forms through the same helper and asserts equivalence. Adding a new form without the parity test is the failure mode — it's not "I forgot to write a test for the new form," it's "I ran the existing tests, they passed, I shipped."
+
+The Sprint 718 fixture: `tests/test_auth_parity.py` parametrizes over `(bearer, cookie)` for every auth-extracting helper. The same shape will be used for Sprint 719's webhook idempotency contract (single-event + duplicate-event), Sprint 720's multi-worker bulk upload (single-worker + multi-worker), and any future security-helper that extends to a new input form.
+
+**Companion guardrail:** Sprint 718 also added an AST-scan test (`test_no_process_local_auth_state.py`) that fails if any module-level mutable container is introduced into `auth.py` or `security_middleware.py`. The IP-failure tracker bug class was "in-process state in a request handler"; the fix was a Redis-backed shared module + a scanner that prevents reintroduction. Same shape will repeat in Sprint 720 (no module-global state in `routes/`).
+
+---
+
 ## Pair every "stated truth" with a CI-enforced source-of-truth (Sprint 717)
 
 Sprint 689g flipped `CANONICAL_TOOL_COUNT` 12 → 18 on the backend in one bulk pass that was supposed to also update every marketing/legal/doc surface. The pass missed `frontend/src/content/tool-ledger.ts` (still 12 entries), `BottomProof.tsx` ("Twelve audit-focused tools"), `ToolLedger.tsx` (header said "Eighteen" but aria-label said "Twelve"), the pricing/terms pages, and `tools/page.tsx` test counts. Two days later the agent sweep flagged 11 drift surfaces with three different numbers visible on production simultaneously. The root cause wasn't carelessness in 689g — it was that "stated tool count" had no canonical source; every surface was a hand-typed mirror, so any bulk-edit that missed one stayed silently wrong.

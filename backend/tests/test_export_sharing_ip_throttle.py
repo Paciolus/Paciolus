@@ -20,12 +20,17 @@ from fastapi import HTTPException
 
 @pytest.fixture(autouse=True)
 def _reset_ip_tracker():
-    """Each test starts with a clean IP-failure tracker state."""
-    from security_middleware import _ip_failure_tracker
+    """Each test starts with a clean IP-failure tracker state.
 
-    _ip_failure_tracker.clear()
+    Sprint 718: storage moved to ``shared/ip_failure_tracker.py``. In tests
+    (no REDIS_URL) the underlying ``_memory_store`` dict still functions as
+    the store; ``reset_all_for_admin_unlock()`` clears it.
+    """
+    from shared import ip_failure_tracker
+
+    ip_failure_tracker.reset_all_for_admin_unlock()
     yield
-    _ip_failure_tracker.clear()
+    ip_failure_tracker.reset_all_for_admin_unlock()
 
 
 def _make_share(db_session, passcode_hash: str | None = None):
@@ -67,19 +72,19 @@ class TestPerIpThrottle:
     def test_correct_passcode_does_not_record_ip_failure(self, db_session):
         """Successful verification must not pollute the IP tracker."""
         from routes.export_sharing import _verify_passcode_or_raise
-        from security_middleware import _ip_failure_tracker
+        from shared import ip_failure_tracker
         from shared.passcode_security import hash_passcode
 
         share = _make_share(db_session, passcode_hash=hash_passcode("Correct1!Pass"))
 
         # Call with the correct passcode — no IP record should be made.
         _verify_passcode_or_raise(share, "Correct1!Pass", db_session, client_ip="203.0.113.5")
-        assert "203.0.113.5" not in _ip_failure_tracker
+        assert "203.0.113.5" not in ip_failure_tracker._memory_store
 
     def test_wrong_passcode_records_ip_failure(self, db_session):
         """Every wrong passcode increments the per-IP counter."""
         from routes.export_sharing import _verify_passcode_or_raise
-        from security_middleware import _ip_failure_tracker
+        from shared import ip_failure_tracker
         from shared.passcode_security import hash_passcode
 
         share = _make_share(db_session, passcode_hash=hash_passcode("Correct1!Pass"))
@@ -88,8 +93,8 @@ class TestPerIpThrottle:
             _verify_passcode_or_raise(share, "WrongPassword1!", db_session, client_ip="198.51.100.7")
         assert exc.value.status_code == 403
 
-        assert "198.51.100.7" in _ip_failure_tracker
-        assert len(_ip_failure_tracker["198.51.100.7"]) == 1
+        assert "198.51.100.7" in ip_failure_tracker._memory_store
+        assert len(ip_failure_tracker._memory_store["198.51.100.7"]) == 1
 
     def test_blocked_ip_429_even_with_correct_passcode(self, db_session):
         """Sprint 698 key invariant: once the IP crosses the threshold,
@@ -98,14 +103,16 @@ class TestPerIpThrottle:
         import time
 
         from routes.export_sharing import _verify_passcode_or_raise
-        from security_middleware import IP_FAILURE_THRESHOLD, _ip_failure_tracker
+        from security_middleware import IP_FAILURE_THRESHOLD
+        from shared import ip_failure_tracker
         from shared.passcode_security import hash_passcode
 
         share = _make_share(db_session, passcode_hash=hash_passcode("Correct1!Pass"))
 
-        # Pre-populate the IP tracker past the threshold.
+        # Pre-populate the IP tracker past the threshold (memory store is the
+        # backing in tests; production uses Redis but the API is the same).
         now = time.time()
-        _ip_failure_tracker["192.0.2.99"] = [now] * (IP_FAILURE_THRESHOLD + 1)
+        ip_failure_tracker._memory_store["192.0.2.99"] = [now] * (IP_FAILURE_THRESHOLD + 1)
 
         with pytest.raises(HTTPException) as exc:
             _verify_passcode_or_raise(share, "Correct1!Pass", db_session, client_ip="192.0.2.99")
@@ -121,7 +128,8 @@ class TestPerIpThrottle:
         import time
 
         from routes.export_sharing import _verify_passcode_or_raise
-        from security_middleware import IP_FAILURE_THRESHOLD, _ip_failure_tracker
+        from security_middleware import IP_FAILURE_THRESHOLD
+        from shared import ip_failure_tracker
         from shared.passcode_security import hash_passcode
 
         # Share is locked per-token AND IP is blocked.
@@ -130,7 +138,7 @@ class TestPerIpThrottle:
         db_session.flush()
 
         now = time.time()
-        _ip_failure_tracker["192.0.2.50"] = [now] * (IP_FAILURE_THRESHOLD + 1)
+        ip_failure_tracker._memory_store["192.0.2.50"] = [now] * (IP_FAILURE_THRESHOLD + 1)
 
         with pytest.raises(HTTPException) as exc:
             _verify_passcode_or_raise(share, "Correct1!Pass", db_session, client_ip="192.0.2.50")
@@ -159,7 +167,7 @@ class TestPerIpThrottle:
         """Per-IP tracker is keyed by IP; one bad passcode from A.B.C.D
         doesn't count against E.F.G.H."""
         from routes.export_sharing import _verify_passcode_or_raise
-        from security_middleware import _ip_failure_tracker
+        from shared import ip_failure_tracker
         from shared.passcode_security import hash_passcode
 
         share = _make_share(db_session, passcode_hash=hash_passcode("Correct1!Pass"))
@@ -168,6 +176,6 @@ class TestPerIpThrottle:
             with pytest.raises(HTTPException):
                 _verify_passcode_or_raise(share, "WrongPassword1!", db_session, client_ip=ip)
 
-        assert set(_ip_failure_tracker.keys()) == {"10.0.0.1", "10.0.0.2", "10.0.0.3"}
+        assert set(ip_failure_tracker._memory_store.keys()) == {"10.0.0.1", "10.0.0.2", "10.0.0.3"}
         for ip in ("10.0.0.1", "10.0.0.2", "10.0.0.3"):
-            assert len(_ip_failure_tracker[ip]) == 1
+            assert len(ip_failure_tracker._memory_store[ip]) == 1

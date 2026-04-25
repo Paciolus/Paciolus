@@ -463,3 +463,55 @@ def get_audit_log(
         since=parsed_since,
         until=parsed_until,
     )
+
+
+# ---------------------------------------------------------------------------
+# Security — Lockout Recovery (Sprint 718)
+# ---------------------------------------------------------------------------
+
+
+@router.post("/security/clear-throttle")
+@limiter.limit("1/minute")
+def clear_throttle(
+    request: Request,
+    admin: Annotated[User, Depends(require_superadmin)],
+    ip: str | None = Query(default=None, description="Specific IP to clear; omit to clear all"),
+) -> dict[str, Any]:
+    """Clear the per-IP failure throttle.
+
+    Sprint 718 lockout-recovery surface. The export-share passcode throttle
+    + auth IP failure tracker share the same backing store; if the CEO
+    locks themselves out during Phase 3 testing, this endpoint resets the
+    counter without a deploy.
+
+    - When ``ip`` is provided: clears that one IP's failure history.
+    - When ``ip`` is omitted: clears every IP entry. Use sparingly; this
+      is a break-glass capability.
+
+    Audit-logged via the standard admin-audit chain. Rate-limited 1/min
+    to prevent abuse even by a compromised superadmin token.
+    """
+    from shared import ip_failure_tracker
+
+    if ip:
+        ip_failure_tracker.reset(ip)
+        cleared = 1
+        scope = f"ip={ip}"
+    else:
+        cleared = ip_failure_tracker.reset_all_for_admin_unlock()
+        scope = "all_ips"
+
+    logger.warning(
+        "admin_security_clear_throttle admin_id=%d scope=%s cleared=%d source_ip=%s",
+        admin.id,
+        scope,
+        cleared,
+        get_client_ip(request),
+    )
+
+    return {
+        "success": True,
+        "cleared_count": cleared,
+        "scope": scope,
+        "cleared_at": datetime.now(UTC).isoformat(),
+    }

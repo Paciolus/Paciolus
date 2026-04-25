@@ -461,8 +461,15 @@ async def download_share(
     """Download a non-passcode-protected shared export.
 
     Public endpoint (no auth required).  Passcode-protected shares MUST
-    use the POST /{token}/download endpoint; this endpoint returns a 403
-    with an instructional message when a passcode is required.
+    use the POST /{token}/download endpoint.
+
+    Sprint 718 hardening: passcode-protected shares now return 404 (not
+    a 403 with "passcode required") so the GET endpoint cannot be used
+    to enumerate which random tokens are real and worth concentrated
+    brute-force. The intended POST flow signals the passcode requirement
+    via its own response shape; clients exclusively using the GET
+    endpoint never need to discriminate "exists+passcode" from "doesn't
+    exist."
 
     2026-04-20 hardening: the ``?passcode=`` query-string pattern has been
     REMOVED.  Query-string secrets leak via access logs, browser history,
@@ -472,13 +479,10 @@ async def download_share(
     _enforce_not_expired(share)
 
     if share.passcode_hash:
-        raise HTTPException(
-            status_code=403,
-            detail=(
-                "This share link requires a passcode. POST it as JSON to "
-                "/export-sharing/{token}/download — query-string passcodes are no longer accepted."
-            ),
-        )
+        # Sprint 718: collapse to 404 so this endpoint can't be used to
+        # enumerate which tokens are real — eliminates the existence-leak
+        # surface flagged by the 2026-04-24 security review (M-02).
+        raise HTTPException(status_code=404, detail="Share not found")
 
     return _finalize_download(share, request, db)
 

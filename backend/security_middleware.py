@@ -483,22 +483,37 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         return True
 
     def _extract_user_id_from_auth(self, request: Request) -> Optional[str]:
-        """Decode Bearer token to extract sub (user_id) for CSRF binding check.
+        """Decode access token to extract sub (user_id) for CSRF binding check.
 
-        Auth dependency handles expiry enforcement; we use verify_exp=False here
-        to extract the user_id even for tokens approaching expiry (within the
-        request window). Any decode failure silently returns None.
+        Reads the token from Authorization: Bearer (API clients) OR the
+        ACCESS_COOKIE_NAME HttpOnly cookie (production browser path) — the
+        same precedence used by `auth.resolve_access_token`. Sprint 718
+        fix: pre-Sprint-718 this function read only the Authorization header,
+        which made `expected_user_id=None` for every browser POST/PUT/DELETE/
+        PATCH and silently disabled the CSRF user-binding check.
+
+        Auth dependency handles expiry enforcement; we use verify_exp=False
+        here to extract the user_id even for tokens approaching expiry within
+        the request window. Any decode failure silently returns None.
         """
         import jwt as _jwt
 
-        from config import JWT_ALGORITHM, JWT_SECRET_KEY
+        from config import ACCESS_COOKIE_NAME, JWT_ALGORITHM, JWT_SECRET_KEY
 
+        token: Optional[str] = None
         auth = request.headers.get("Authorization", "")
-        if not auth.startswith("Bearer "):
+        if auth.startswith("Bearer "):
+            token = auth[7:]
+        else:
+            # Sprint 718: production browser path uses HttpOnly cookies.
+            cookie_token = request.cookies.get(ACCESS_COOKIE_NAME)
+            if cookie_token:
+                token = cookie_token
+        if not token:
             return None
         try:
             payload = _jwt.decode(
-                auth[7:],
+                token,
                 JWT_SECRET_KEY or "",
                 algorithms=[JWT_ALGORITHM],
                 options={"verify_exp": False},  # auth dependency handles expiry
@@ -618,60 +633,42 @@ LOCKOUT_DURATION_MINUTES = _load_optional_int("LOCKOUT_DURATION_MINUTES", 15)
 
 # =============================================================================
 # PER-IP FAILURE TRACKING (AUDIT-07 Phase 4: Finding #2)
-# In-memory sliding-window counter. Complements per-account DB lockout.
-# Does not survive restarts; route-level rate limiting (slowapi) is the
-# restart-proof layer.  This catches distributed credential-stuffing across
-# many accounts from a single IP.
+# Sprint 718: backend now lives in `shared/ip_failure_tracker.py` with a
+# Redis-first / memory-fallback storage strategy. Public API preserved for
+# call-site stability — `record_ip_failure`, `check_ip_blocked`,
+# `reset_ip_failures` are the names touched across the codebase.
+#
+# Why the Redis upgrade: pre-Sprint-718 storage was a process-local dict.
+# Multi-worker Render meant attackers could distribute attempts across
+# workers to evade the threshold; every deploy reset the counters. The
+# 2026-04-24 security review (M-03) flagged the gap — this module closes
+# it by delegating to the Redis-backed shared store while preserving the
+# in-memory fallback for local dev / single-worker deploys.
 # =============================================================================
+
+from shared import ip_failure_tracker as _ip_tracker
 
 IP_FAILURE_WINDOW_SECONDS = _load_optional_int("IP_FAILURE_WINDOW_SECONDS", 900)  # 15 min
 IP_FAILURE_THRESHOLD = _load_optional_int("IP_FAILURE_THRESHOLD", 20)
-_IP_TRACKER_MAX_IPS = 10_000  # Cap dict size to bound memory
-
-_ip_failure_tracker: dict[str, list[float]] = {}
 
 
 def record_ip_failure(ip: str) -> None:
     """Record a failed auth attempt from an IP address."""
-    now = time.time()
-    cutoff = now - IP_FAILURE_WINDOW_SECONDS
-
-    if ip not in _ip_failure_tracker:
-        # Evict oldest IPs if at capacity
-        if len(_ip_failure_tracker) >= _IP_TRACKER_MAX_IPS:
-            _evict_stale_ips(cutoff)
-        _ip_failure_tracker[ip] = []
-
-    entries = _ip_failure_tracker[ip]
-    # Prune expired entries
-    _ip_failure_tracker[ip] = [t for t in entries if t > cutoff]
-    _ip_failure_tracker[ip].append(now)
+    _ip_tracker.record_failure(ip, window_seconds=IP_FAILURE_WINDOW_SECONDS)
 
 
 def check_ip_blocked(ip: str) -> bool:
     """Return True if the IP has exceeded the failure threshold within the window."""
-    now = time.time()
-    cutoff = now - IP_FAILURE_WINDOW_SECONDS
-
-    entries = _ip_failure_tracker.get(ip)
-    if not entries:
-        return False
-
-    recent = [t for t in entries if t > cutoff]
-    _ip_failure_tracker[ip] = recent  # Prune while checking
-    return len(recent) >= IP_FAILURE_THRESHOLD
+    return _ip_tracker.is_blocked(
+        ip,
+        window_seconds=IP_FAILURE_WINDOW_SECONDS,
+        threshold=IP_FAILURE_THRESHOLD,
+    )
 
 
 def reset_ip_failures(ip: str) -> None:
     """Clear failure history for an IP (e.g. after successful login)."""
-    _ip_failure_tracker.pop(ip, None)
-
-
-def _evict_stale_ips(cutoff: float) -> None:
-    """Remove IPs whose entries have all expired."""
-    stale = [ip for ip, ts in _ip_failure_tracker.items() if not any(t > cutoff for t in ts)]
-    for ip in stale:
-        del _ip_failure_tracker[ip]
+    _ip_tracker.reset(ip)
 
 
 def record_failed_login(db: Session, user_id: int) -> tuple[int, Optional[datetime]]:

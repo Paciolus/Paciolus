@@ -120,7 +120,40 @@
 ---
 
 ### Sprint 717: Catalog & Citation Single-Source-of-Truth
-**Status:** COMPLETE 2026-04-24 — `backend/tools_registry.py` + `backend/standards_registry.py` are the canonical sources; frontend ledger expanded 12 → 18; AS 1215 mis-citations corrected on 5 customer-facing surfaces; PR-T12/T13 backfilled in payroll memo; CI tests `test_catalog_consistency.py` (42 cases) + `test_citation_consistency.py` (4 cases) green on first cross-check (caught 4 unregistered standards — ASC 842, IFRS 16, ASC 326, IAS 1 — and added them). Backend pytest 5,478 passed (+50 new from this sprint), frontend Jest 1,915 passed, `npm run build` clean.
+**Status:** COMPLETE 2026-04-24 — commit `35c9e709`. `backend/tools_registry.py` + `backend/standards_registry.py` are the canonical sources; frontend ledger expanded 12 → 18; AS 1215 mis-citations corrected on 5 customer-facing surfaces; PR-T12/T13 backfilled in payroll memo; CI tests `test_catalog_consistency.py` (42 cases) + `test_citation_consistency.py` (4 cases) green on first cross-check (caught 4 unregistered standards — ASC 842, IFRS 16, ASC 326, IAS 1 — and added them). Backend pytest 5,478 passed (+50 new from this sprint), frontend Jest 1,915 passed, `npm run build` clean.
+
+---
+
+### Sprint 718: Auth Surface Hardening + Cookie/Bearer Parity
+**Status:** COMPLETE 2026-04-24 — agent-sweep wave 2, the pre-Stripe-cutover auth fixes.
+**Priority:** P0 (single High-severity finding from 2026-04-24 security review; blocks Stripe cutover credibility)
+**Source:** 8-agent sweep 2026-04-24. Security Review H-01/M-02/M-03 + Guardian admin-unlock gap.
+
+**Problem class:** Auth helpers were written assuming Bearer-token clients (CLI/test) and never updated when production browser path moved to HttpOnly cookies. The mismatch silently degrades CSRF user-binding. Companion problem: per-IP throttle was a process-local dict — per-worker, lost on deploy. Sprint 718 closes both bug classes with parity-test infrastructure and shared Redis-backed storage.
+
+**Scope landed:**
+- [x] `_extract_user_id_from_auth` at `security_middleware.py:485` reads ACCESS_COOKIE_NAME cookie when no Bearer header present (H-01 fix). Same precedence as `auth.resolve_access_token`.
+- [x] Per-IP failure tracker migrated from process-local `_ip_failure_tracker` dict to `shared/ip_failure_tracker.py` — Redis backend with in-memory fallback (M-03 fix). Public API (`record_ip_failure`, `check_ip_blocked`, `reset_ip_failures`) preserved for call-site stability.
+- [x] `routes/export_sharing.py:471` GET endpoint now returns 404 for passcode-protected shares (was 403 with "passcode required") — closes the existence-leak / token-enumeration vector (M-02 fix).
+- [x] Admin lockout-recovery endpoint `POST /internal/admin/security/clear-throttle` — superadmin-only, audit-logged, rate-limited 1/min, supports per-IP and reset-all modes (Guardian admin-unlock gap).
+- [x] CI test `tests/test_auth_parity.py` (8 cases) — parametrizes Bearer + cookie inputs through every auth-extracting helper, asserts equivalence. The durable guardrail against the H-01 class.
+- [x] CI test `tests/test_no_process_local_auth_state.py` (2 cases) — AST-scan that fails if any module-level mutable container is added to `auth.py` or `security_middleware.py`. Constants in SCREAMING_SNAKE_CASE exempt.
+- [x] Existing test files updated: `test_security.py` (53 passed), `test_export_sharing_routes.py` (404 expectation), `test_export_sharing_ip_throttle.py` (6 cases reworked to use shared module).
+
+**Recurrence prevention (the durable artifact):**
+1. **Parity test pattern** — `test_auth_parity.py` parametrizes over `(bearer, cookie)` inputs. Adding a new auth-extracting helper without the symmetric path will fail the test.
+2. **AST guardrail** — module-level mutable state in auth modules is mechanically forbidden. Pattern reusable for Sprint 720's `routes/` lint.
+3. **Shared store pattern** — `shared/ip_failure_tracker.py` is the template for any cross-worker counter (mirrors `shared/impersonation_revocation.py`). Sprint 720 will follow same shape for bulk-upload state.
+4. **Sentinel for the H-01 class** — the cookie-path test would have caught the original bug; same shape catches the next variant.
+
+**Validation:**
+- 256/256 impacted backend tests pass (all of Sprint 717 + Sprint 718 surface)
+- Full backend pytest sweep exit code 0 (Windows-only atexit tmpdir cleanup quirk; not a test failure)
+- Frontend Jest 1,915/1,915 (no frontend changes in this sprint)
+
+**Lesson captured:** "Two-form code paths need parity tests, not just a one-form test."
+
+---
 **Priority:** P0 (customer-visible drift on marketing/legal surfaces; blocks Stripe cutover credibility)
 **Source:** 8-agent sweep 2026-04-24. Hallucination Audit C-1/C-2/C-3/C-4 + MarketScout Top-3 launch-blocker + Accounting Methodology Audit Rank-1 (AS 1215). Full plan at `tasks/sprint-plan-agent-sweep-2026-04-24.md` Sprint 717.
 
