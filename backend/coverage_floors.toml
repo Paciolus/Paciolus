@@ -1,0 +1,57 @@
+# Per-file coverage floors for the worst-covered production-critical files.
+# Sprint 723.
+#
+# This file is consumed by ``scripts/check_coverage_floors.py``. The CI step
+# fails if any path here drops below its floor in ``coverage.json`` produced
+# by the standard ``pytest --cov`` run. The global ``--cov-fail-under=80``
+# already in CI catches *aggregate* regressions; these floors catch *targeted*
+# regressions in files where coverage is the highest-risk gap.
+#
+# Floors are set ~1 percentage point below the current observed coverage as
+# of 2026-04-25 (sentinel report). The headroom absorbs noise from per-line
+# branch coverage shifts on Python version updates / new transitive code
+# without false-failing CI; a real regression will exceed the buffer.
+#
+# **How to raise a floor** (the natural cadence):
+#
+#  1. Land backfill tests that lift coverage on a target file.
+#  2. Run ``pytest --cov --cov-report=json:coverage.json`` and read the new
+#     ``percent_covered`` for the target file from ``coverage.json``.
+#  3. Edit the floor in this file to ``floor(new_pct - 1)`` and commit.
+#  4. CI from that commit onward enforces the new floor.
+#
+# **Lowering a floor** requires a CODEOWNERS-approved PR with rationale in
+# the message. Lowering should be rare — the typical case is a deliberate
+# scope reduction, not a coverage regression.
+#
+# **Adding a new floor** is encouraged when a new high-risk module lands
+# (parser, generator, route handler with security implications, billing
+# code path). Add the entry; CI takes care of the rest.
+
+[floors]
+# Tier 1 — the agent-sweep top-uncovered list (Sprint 723 scope).
+# Paths are forward-slash; the checker normalizes Windows backslashes.
+
+"excel_generator.py" = 44                  # current 45.7  — buffer ~1pp
+"billing/webhook_handler.py" = 58          # current 59.91 — Sprint 719 added coverage; floor will rise
+"population_profile_memo.py" = 38          # current 39.72
+"workbook_inspector.py" = 17               # current 18.56 — first-touch on every upload; highest backfill priority
+"pdf/sections/diagnostic.py" = 63          # current 64.92
+"leadsheet_generator.py" = 10              # current 11.43 — lowest production-critical file
+"config.py" = 56                           # current 57.39
+"main.py" = 43                             # current 44.24
+"routes/internal_admin.py" = 54            # current 55.43
+
+# Sprint 723 deliberately ships floors only for files with verified current
+# coverage from the 2026-04-25 sentinel report. ``preflight_engine.py``,
+# ``routes/bulk_upload.py``, and any other "should add a floor" candidates
+# need a fresh ``pytest --cov`` measurement before their floors land — the
+# agent-sweep plan's percentages were aspirational, not observed-current.
+# Adding floors above current coverage would false-fail CI on the next run.
+
+# Adding a new entry?
+#
+#  * Use forward slashes in the path key; the checker normalizes.
+#  * Set the floor at ``floor(current_pct - 1)`` so noise doesn't false-fail.
+#  * Briefly comment the rationale so a future reviewer knows why this file
+#    is on the floor list (vs covered by the global aggregate gate).

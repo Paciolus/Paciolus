@@ -66,6 +66,42 @@
 > Sprint 611 + Sprints 677–714 archived 2026-04-24 to `tasks/archive/sprints-611-714-details.md` (eight post-Sprint-673 batches: Post-Audit Remediation, Anomaly Framework Hardening, Security Hardening Follow-Ups, Design Refresh, Production Bug Triage, Nightly Agent Remediation, Branding Coverage Completion, P2 Sentry Sweep). Only Sprint 715 remains pending.
 > Sprints 716–720 archived to `tasks/archive/sprints-716-720-details.md`.
 
+### Sprint 723: Coverage Floor Enforcement (Foundational)
+**Status:** COMPLETE 2026-04-25 — agent-sweep wave 7, the coverage-discipline foundational sprint.
+**Priority:** P1 (foundational — Sprint 723 is a prerequisite for the architectural cleanup sprints 724–727; floors prevent silent regressions during refactors).
+**Source:** Agent sweep 2026-04-24, punch list 3.5 + Coverage Sentinel report.
+
+**Problem class:** The 10 lowest-coverage files in the codebase are also the most production-critical (parsers, generators, webhook handler, billing). The aggregate `--cov-fail-under=80` gate misses *targeted* regressions because moving coverage between files leaves the average unchanged. Coverage Sentinel surfaces drift nightly but is informational; degradation goes unblocked at PR time.
+
+**Scope landed:**
+- [x] `backend/coverage_floors.toml` — TOML floor declarations for the 9 worst-covered production-critical files (sourced from the 2026-04-25 sentinel report). Floors set ~1pp below current to absorb noise without false-failing CI: `excel_generator.py`=44, `billing/webhook_handler.py`=58, `population_profile_memo.py`=38, `workbook_inspector.py`=17, `pdf/sections/diagnostic.py`=63, `leadsheet_generator.py`=10, `config.py`=56, `main.py`=43, `routes/internal_admin.py`=54.
+- [x] `scripts/check_coverage_floors.py` — TOML loader, path normalization (forward/backslash + lowercase + `./` strip), breach detection, CLI with `--missing-ok` flag for file-rename windows. Exit codes: 0 OK, 1 floor breach, 2 usage error.
+- [x] `backend/tests/test_coverage_floors.py` — 26 tests: path normalization (4), TOML loader well-formed/malformed/range-validated (6), coverage loader with summary edge cases (3), core check logic including at-floor-passes and missing-ok-warns (6), CLI integration with all exit codes (6), repo floors parse cleanly (1). Greenfield, all green.
+- [x] `.github/workflows/ci.yml` — wired into both `backend-tests` (SQLite) and `backend-tests-postgres` jobs as a step after pytest. Reads `coverage.json` produced by the existing `pytest --cov` run; no new CI-job-level cost beyond the floor check itself.
+- [x] `docs/runbooks/coverage-floors.md` — runbook covering: daily failure flow, raise-floor process (the natural cadence — backfill + ratchet up), lower-floor governance (CODEOWNERS-approved, with rationale), add-floor process for new high-risk modules, path matching semantics, common failure modes, why TOML over YAML.
+- [x] `backend/tests/fixtures/adversarial/README.md` — directory + pattern stub for the adversarial fixture corpus that future per-file backfill sprints will populate. No fixtures land in Sprint 723 itself; the boundary is established so subsequent sprints have a recognizable shape.
+
+**Recurrence prevention (the durable artifact):**
+1. **Per-file gate runs at PR time, not nightly** — the existing `coverage_sentinel` is informational. Sprint 723 added the PR-time complement so a coverage regression in a floored file blocks merge. The aggregate gate stays in place; together they catch both shapes of regression.
+2. **Floors are versioned config, not magic numbers** — `coverage_floors.toml` lives in the repo with rationale comments. A reviewer can see why each file is on the list. A PR raising a floor is a self-contained artifact alongside the backfill tests; lowering one requires CODEOWNERS approval per the runbook.
+3. **Path matching is robust to Windows/Linux dev splits** — the normalizer handles backslash and forward-slash equally, so a Windows-authored coverage.json compared against a forward-slash floors.toml does not false-fail.
+4. **`--missing-ok` flag for transition windows** — when a floored file is renamed, the rename PR can use `--missing-ok` to land without a panicked floor edit. The next PR cleans up the floor entry.
+
+**Out of scope:**
+- **Test backfills for the 9 floored files** — that's the multi-sprint work of raising floors. Sprint 723 establishes the gate and locks in current state; backfill sprints (one per file) raise floors as tests land. The runbook documents the process.
+- **AST detection of "new high-risk module without floor entry"** — the agent-sweep plan called for this. Deferred because it requires curating a "high-risk module" classifier (parser/generator/route+billing) and the current curated-floor approach is fine for the 9 known files. Reconsider if the floor list grows past ~20.
+- **Auto-PR for floor raises after a backfill** — possible future enhancement; today the engineer raises the floor manually (3-line edit) which is fine.
+
+**Validation:**
+- 26/26 floor checker tests pass (`pytest tests/test_coverage_floors.py`)
+- TOML parses cleanly (`load_floors(coverage_floors.toml)` returns 9 entries, all in 0..100)
+- Live coverage check against today's pytest run: ✅ all 9 floors met (validated against generated `coverage.json`)
+- CI step lands in both SQLite and Postgres pytest paths so the gate fires on every PR build
+
+**Lesson tie-in:** Continues the Sprint 717/722 "wire it once at the chokepoint" pattern. Coverage already runs in `pytest --cov`; the floor check piggybacks on that same job rather than spawning a parallel coverage job. Adds 1–2s to the CI step, not 10 minutes. Same shape applies to Sprint 731's dependency-cadence gate.
+
+---
+
 ### Sprint 722: Memory Budget for Memo Generation
 **Status:** COMPLETE 2026-04-25 — agent-sweep wave 6, the OOM-mitigation pre-Phase-3-completion sprint.
 **Priority:** P1 (Render Standard 2 GB / worker; CEO running 18 memos back-to-back in Phase 3 was the OOM trigger Guardian flagged).

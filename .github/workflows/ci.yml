@@ -102,7 +102,13 @@ jobs:
           EOF
 
       - name: Run pytest (exclude slow tests on PRs)
-        run: pytest tests/ -v --tb=short -q --cov=. --cov-report=term-missing --cov-fail-under=80 -m "not slow"
+        run: pytest tests/ -v --tb=short -q --cov=. --cov-report=term-missing --cov-report=json:coverage.json --cov-fail-under=80 -m "not slow"
+
+      # Sprint 723 — per-file coverage floor enforcement.
+      # Catches *targeted* regressions in the worst-covered production-critical
+      # files; the global --cov-fail-under=80 above only catches *aggregate* drops.
+      - name: Check per-file coverage floors
+        run: python ../scripts/check_coverage_floors.py coverage.json ../backend/coverage_floors.toml
 
   # ── OpenAPI Schema Drift Check (Sprint 518: DEC F-020) ──────
   # Detects when backend Pydantic models diverge from the committed
@@ -177,7 +183,11 @@ jobs:
       - name: Run pytest
         env:
           TEST_DATABASE_URL: postgresql://paciolus:testpass@localhost:5432/paciolus_test
-        run: pytest tests/ -v --tb=short -q --cov=. --cov-report=term-missing --cov-fail-under=80 -m "not slow"
+        run: pytest tests/ -v --tb=short -q --cov=. --cov-report=term-missing --cov-report=json:coverage.json --cov-fail-under=80 -m "not slow"
+
+      # Sprint 723 — per-file coverage floor enforcement (PG path).
+      - name: Check per-file coverage floors
+        run: python ../scripts/check_coverage_floors.py coverage.json ../backend/coverage_floors.toml
 
   # ── Slow Tests (nightly / main-only) ─────────────────────────
   backend-tests-slow:
