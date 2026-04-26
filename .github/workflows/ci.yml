@@ -133,6 +133,13 @@ jobs:
       - name: Check for OpenAPI drift
         run: python scripts/check_openapi_drift.py
 
+      # Sprint 726 Phase 1 — advisory output, exit 0 on findings.
+      # Promoted to a hard gate by Sprint 727 once the 9 off-pattern testing
+      # engines have been migrated. See docs/03-engineering/adr-013-audit-engine-base.md.
+      - name: AuditEngineBase adoption (advisory)
+        run: python scripts/lint_engine_base_adoption.py
+        continue-on-error: true
+
   # ── Backend Tests (PostgreSQL) ──────────────────────────────
   backend-tests-postgres:
     name: Backend Tests (PostgreSQL 15)

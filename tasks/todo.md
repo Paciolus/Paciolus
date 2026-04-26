@@ -67,6 +67,109 @@
 > Sprints 716–720 archived to `tasks/archive/sprints-716-720-details.md`.
 > Sprints 721–725 archived to `tasks/archive/sprints-721-725-details.md`.
 
+### Sprint 726: AuditEngineBase Migration — Phase 1 (advisory lint + ADR)
+**Status:** COMPLETE 2026-04-25 — agent-sweep wave 12, the engine-pattern foundation.
+**Priority:** P2 (architectural; the migration's prevention story is foundational for all engine work post-Sprint-689).
+**Source:** Agent sweep 2026-04-24, punch list 3.1 + BackendCritic 8/10.
+
+**Problem class:** `engine_framework.py::AuditEngineBase` defines a 10-step pipeline ABC; only 3 of the ~16 testing-shape engines (JE, AP, Payroll) subclass it. The other 13 reimplement equivalent pipelines as top-level `run_*()` procedural functions, with each one's variation being mostly incidental. Sprint 689 added 7 more engines without anyone noticing the drift — the inconsistency compounds without a CI gate.
+
+**Scope landed (Phase 1):**
+- [x] **`scripts/lint_engine_base_adoption.py`** — AST scan that surfaces every `*_engine.py` / `*_testing_engine.py` module not subclassing `AuditEngineBase`. Detects both direct (`class X(AuditEngineBase)`) and aliased (`class X(framework.AuditEngineBase)`) subclass forms. Configurable `NON_TESTING_ENGINES` blocklist for engines that genuinely don't fit the pipeline (top-level orchestrator, indicator engines, tax-form preparers, side-cars). Default exit code: 0 (warning only); `--strict` flag flips to non-zero for Sprint 727's gate validation.
+- [x] **`backend/tests/test_engine_base_lint.py`** — 12 tests: AST detection (5: direct + aliased + non-subclass + unrelated-base + syntax-error), testing-engine filter (4: testing_engine suffix always included, blocklist exclusion, non-blocklisted inclusion, non-engine files), known-migrated state (1: JE/AP/Payroll *not* in findings — catches regression), CLI (2: default exits 0, --strict exits 1 on findings).
+- [x] **`docs/03-engineering/adr-013-audit-engine-base.md`** — ADR documenting the migration approach: Phase 1 (this commit, lint at warning), Phase 2+ (Sprint 727 onwards, one engine per sub-sprint with mandatory behavioral-parity tests), Phase 3 (lint exit-code flips to 1, becomes hard gate). Alternatives-considered section rejects big-bang migration and registry-of-wrappers approaches; mitigations note the parity test as the migration's correctness gate.
+- [x] **CI integration** — wired into `.github/workflows/ci.yml` `openapi-drift-check` job as an advisory step with `continue-on-error: true`. Build log shows the off-pattern engine count without blocking PRs. Pin-promotion to required-status is deferred to Sprint 727.
+
+**Lint findings (16 off-pattern engines as of 2026-04-25):**
+`accrual_completeness_engine`, `ar_aging_engine`, `cash_flow_projector_engine`, `expense_category_engine`, `fixed_asset_testing_engine`, `inventory_testing_engine`, `lease_accounting_engine`, `lease_diagnostic_engine`, `loan_amortization_engine`, `population_profile_engine`, `ratio_engine`, `revenue_testing_engine`, `sampling_engine`, `sod_engine`, `three_way_match_engine`, `w2_reconciliation_engine`. Some of these (lease_*, sod, loan_amortization, ratio, w2_reconciliation, expense_category) may end up in the blocklist after closer review during Sprint 727 — they're surfaced now so the decision is explicit per-engine in a follow-up sprint, not silent drift.
+
+**Recurrence prevention (the durable artifact):**
+1. **Lint surfaces the migration backlog** — the script's output IS the migration roadmap. Engineers don't have to grep the codebase to find the next engine; they run the lint and pick from its output.
+2. **`NON_TESTING_ENGINES` is in code, not config** — every change to the blocklist lands as a PR with the engineer's reasoning. Audit-reviewable.
+3. **Phase progression is explicit** — Sprint 727 promotes exit code from 0 to 1; Sprint 727+sprints land migrations one engine at a time with mandatory parity tests. The ADR pins the schedule so a future sprint can't quietly skip the gate-promotion step.
+4. **Tests pin the known-migrated state** — `test_je_ap_payroll_not_in_findings` would fail if any of the three migrated engines silently de-migrated (e.g., if a refactor removed the subclass declaration). Catches regressions in the other direction too.
+
+**Out of scope (deferred to follow-up sprints):**
+- **The actual engine migrations.** Per the ADR, each migration takes ~1 day of focused work + parity-fixture authoring; doing 9 in one commit concentrates regression risk. Sprint 727 picks up Revenue (the agent-sweep top-priority engine, 2,509 LoC) as the first migration. Subsequent sprints follow the agent-sweep order.
+- **Lint exit-code promotion to error.** Belongs in Sprint 727 once at least one migration has shipped through the new pattern, so the gate has a real example to point at.
+- **Some engines may end up in the blocklist** after Sprint 727's per-engine review concludes they don't fit `AuditEngineBase`'s 10-step pipeline (e.g., loan_amortization is purely a calculator, ratio_engine outputs continuous ratios not flagged-entry tests). Each blocklist add lands as a PR with rationale.
+
+**Validation:**
+- 12/12 lint tests pass
+- Lint surfaces 16 off-pattern engines (audit-reviewable list captured above)
+- ADR committed; references the lint script + tests
+- CI integration is `continue-on-error: true` so builds don't break on the advisory output
+- A synthetic `class X(AuditEngineBase)` source string returns True via AST detection; a synthetic `class X(SomethingElse)` returns False
+
+**Lesson tie-in:** Same prevention pattern as Sprint 723 (per-file coverage floors locked at current state) and Sprint 731 (cadence-window deadlines): the gate ships first at warning level, the migrations land incrementally, and the gate flips to blocking once the backlog is clean. Avoids the "big-bang refactor that takes months and never lands" failure mode.
+
+---
+
+### Sprint 727: AuditEngineBase Migration — Phase 2 + lint promotion
+**Status:** PENDING — sequenced after Sprint 726's lint ships and at least one migration lands.
+**Priority:** P2 (architectural follow-on; gates new engines to the canonical pipeline).
+**Source:** Agent sweep 2026-04-24, punch list 3.1 + Sprint 726 ADR.
+
+**Scope (per ADR-013):**
+- Migrate Revenue (~2,509 LoC) onto `AuditEngineBase`. Generate behavioral-parity fixtures (synthetic TB → run pre/post → assert byte-equal modulo field ordering). Land the parity test as the migration's correctness gate.
+- Optionally migrate AR Aging if Revenue lands cleanly inside the sprint budget.
+- Promote `scripts/lint_engine_base_adoption.py` exit code from 0 to 1 on findings (or update the CI step to drop `continue-on-error: true`).
+
+**Effort estimate:** 1–2 engine migrations per sub-sprint at ~1 day per engine + parity-fixture authoring. The 9-engine queue from Sprint 726's ADR translates to roughly 9 sub-sprints across multiple weeks. Don't try to do them in one commit.
+
+**Why pending:** Engine migrations need synthetic TB fixtures per engine; building those is the bulk of the work and doesn't parallelize cleanly. Sprint 726 ships the lint to make the schedule visible; Sprint 727 starts the per-engine migration cadence.
+
+**Pre-requisites:**
+- Sprint 726 lint script in place (✅ done).
+- Per-engine triage to confirm the 16 lint-flagged engines are the right migration candidates (some likely belong in `NON_TESTING_ENGINES` blocklist instead).
+
+---
+
+### Sprint 728: ISA 520 Expectation-Formation Workflow
+**Status:** PENDING — feature-shaped; CPA retention concern, not a launch blocker.
+**Priority:** P3 (post-launch product gap; differentiator).
+**Source:** Agent sweep 2026-04-24, punch list 4.1 + Accounting Methodology Audit.
+
+**Scope:**
+- New engagement-layer entity `AnalyticalExpectation` with: procedure target (account/balance/ratio), expected value, expected range / precision threshold, corroboration basis (free text + structured tags: industry data, prior period, budget, regression model), CPA notes.
+- Wire into flux, ratio, and multi-period TB tools so the tool prompts (or reads pre-supplied) expectations. Tool output flags variance > precision threshold.
+- New memo generator `analytical_expectation_memo_generator.py` producing the expectation workpaper.
+- Engagement-completion-gate update: any engagement that used analytical procedures as primary substantive evidence requires expectations on file.
+- Documentation: `docs/04-compliance/isa-520-coverage.md`.
+
+**Effort estimate:** Feature-sized — model + migration + 3 tool integrations + memo generator + completion gate update + tests. Realistically 2–3 sub-sprints.
+
+**Why pending:** Not a launch blocker (no current customer is doing primary-substantive analytics). Closes a methodology gap CPAs will hit when completing engagements; the platform can ship without it but loses points on the "complete vs scratch-built" comparison.
+
+**Pre-requisites:**
+- Engagement layer is stable (✅ already shipped).
+- Pattern from Sprint 728 carries forward to Sprint 729 (SUM schedule) — designing the entity API + memo template once benefits both.
+
+---
+
+### Sprint 729: ISA 450 Summary of Uncorrected Misstatements (SUM) Schedule
+**Status:** PENDING — feature-shaped; CPA retention concern, not a launch blocker.
+**Priority:** P3 (post-launch product gap; differentiator).
+**Source:** Agent sweep 2026-04-24, punch list 4.2 + Accounting Methodology Audit.
+
+**Scope:**
+- New engagement-layer entity `UncorrectedMisstatement`: source (adjusting entry passed / sample projection / known error), amount, account(s) affected, classification (factual / judgmental / projected), F/S impact, materiality assessment.
+- SUM schedule view in the engagement layer — auto-aggregates from `AdjustingEntry` (status=passed), `SampleProjection` (UEL > tolerable), and CPA-entered known errors.
+- Materiality comparison surface: SUM aggregate vs engagement materiality (set at planning), with bucket: clearly trivial / immaterial / approaching material / material.
+- New memo generator `sum_schedule_memo_generator.py` producing the SUM workpaper for archival.
+- Engagement completion-gate update: completion requires SUM review on file (CPA marks each item as "auditor proposes correction" or "auditor accepts as immaterial").
+
+**Effort estimate:** Feature-sized — model + migration + aggregation logic + materiality comparison UI + memo generator + completion gate update + tests. Realistically 2–3 sub-sprints, similar to Sprint 728.
+
+**Why pending:** Same shape as Sprint 728 — methodology gap that hurts CPA retention but doesn't block launch. Every engagement-completing CPA reaches for the SUM and finds nothing today; the gap is real but bounded.
+
+**Pre-requisites:**
+- Adjusting entries (status=passed flow) — ✅ already shipped.
+- Sampling UEL output — ✅ already shipped.
+- Engagement-layer entity pattern from Sprint 728 reused.
+
+---
+
 ### Sprint 731: Dependency Hygiene Cadence
 **Status:** COMPLETE 2026-04-25 — agent-sweep wave 11, the dependency-cadence policy + first execution.
 **Priority:** P2 (security-relevant patches available since 2026-04-22; first-execution-of-policy doubles as the policy validation).
