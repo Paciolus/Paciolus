@@ -67,6 +67,49 @@
 > Sprints 716–720 archived to `tasks/archive/sprints-716-720-details.md`.
 > Sprints 721–725 archived to `tasks/archive/sprints-721-725-details.md`.
 
+### Sprint 731: Dependency Hygiene Cadence
+**Status:** COMPLETE 2026-04-25 — agent-sweep wave 11, the dependency-cadence policy + first execution.
+**Priority:** P2 (security-relevant patches available since 2026-04-22; first-execution-of-policy doubles as the policy validation).
+**Source:** Agent sweep 2026-04-24, Tier 5 + Project Auditor security-patch flag.
+
+**Problem class:** Two security-relevant updates (fastapi 0.136.0 → 0.136.1 patch, stripe 15.0.1 → 15.1.0 minor) had been available since 2026-04-22 with no movement. Dependency Sentinel surfaced them as YELLOW; the existing process treated YELLOW as "fyi" rather than "act," so security-relevant updates accumulated without deadline pressure.
+
+**Scope landed:**
+- [x] **Bumped fastapi 0.136.0 → 0.136.1** in `backend/requirements.txt` (the 7-day-deadline patch).
+- [x] **Bumped stripe 15.0.1 → 15.1.0** in `backend/requirements.txt` (the 14-day-deadline minor).
+- [x] **Verified bumps with regression run** — 145/145 billing + health + csv-export tests pass under the new pins.
+- [x] **`docs/03-engineering/dependency-policy.md`** — cadence-window policy with detection sources, sentinel deadline gate, auto-PR (Dependabot) configuration reference, calendar-versioned soak rule, sprint-close hook, and explicit anti-patterns ("It's working in prod, why upgrade?").
+- [x] **Dependency Sentinel deadline gate** in `scripts/overnight/agents/dependency_sentinel.py`:
+  - New `CADENCE_DAYS = {"patch": 7, "minor": 14}` mapping (majors stay deadline-free; scheduled sprint work).
+  - `_load_first_seen()` / `_save_first_seen()` round-trip the `dependency_sentinel.first_seen` map through `BASELINE_FILE`. Preserves other baseline sections (e.g., `coverage_sentinel.history`).
+  - `_update_first_seen()` stamps new entries with today's date, prunes entries for packages no longer outdated, and attaches `first_seen` / `days_outdated` / `past_deadline` metadata to each watchlist package.
+  - `_is_past_deadline(severity, first_seen_iso)` returns True when the cadence window is exceeded for the package's severity class. Invalid dates / missing severities return False (conservative default).
+  - `run()` flips status to RED when any past-deadline watchlist package is detected (alongside the existing major-security RED path).
+- [x] **`scripts/overnight/tests/test_dependency_sentinel_deadline.py`** — 13 tests: 6 cover `_is_past_deadline` (under/over 7d patch, under/over 14d minor, major no-deadline, invalid date), 3 cover the first_seen round-trip (save/load, missing-baseline empty, preserves other sections), 4 cover `_update_first_seen` (new stamping, known reuse, full pruning, partial pruning).
+- [x] **Existing `.github/dependabot.yml` retained** — already configured (Sprint T1) with weekly pip + npm + github-actions schedules and minor-and-patch grouping. Policy doc references it rather than overwriting; Sprint 731 didn't touch the file.
+
+**Recurrence prevention (the durable artifact):**
+1. **`first_seen` state lives in the same baseline.json as coverage history** — same persistence shape, same write-preserves-other-sections discipline. A future sprint that adds a third sentinel (e.g., licence audit) plugs into the same baseline without colliding.
+2. **Deadline gate flips status mechanically** — the moment a watchlist package crosses 7d (patch) or 14d (minor), the nightly job goes RED. No human discretion in the loop; "FYI" cannot persist past the deadline.
+3. **Test fixture pins both windows** — `_is_past_deadline("patch", today-8d) is True` and `_is_past_deadline("minor", today-15d) is True` are committed test cases. A future "let's relax these to 30d" change has to break and update those tests, making the relaxation visible in the PR.
+4. **Dates round-trip through baseline** — re-running the sentinel without a bump preserves the original `first_seen` date, so a deploy that happens to run the script late doesn't reset the clock. The 7d/14d window is real elapsed time, not "since we last looked."
+5. **Auto-PR removes the cold-start cost of patch-bumping** — Dependabot opens the PR; the engineer's role is review + merge. The deadline forces the review to happen.
+
+**Out of scope:**
+- **A `routine` cadence (no-deadline) for non-watchlist deps** — left at the current "FYI on routine, deadline only on watchlist." Watchlist (`fastapi`, `stripe`, `pyjwt`, `cryptography`, `sqlalchemy`, `next`, `react`) covers the security-relevant surface; broadening to all packages would generate noise without adding signal.
+- **Calendar-versioned package soak enforcement** — the policy doc describes the 30-day soak rule but the sentinel doesn't yet implement a soak-window check. Defer until a calendar-versioned package needs soak treatment in production.
+- **Sprint-close hook for past-deadline awareness** — described in the policy doc §7 as a soft warning. Not implemented in Sprint 731; can be a small hotfix when the first warning would have been useful.
+
+**Validation:**
+- 13/13 deadline gate tests pass
+- 145/145 billing + health + export-helper tests pass under the bumped fastapi 0.136.1 + stripe 15.1.0 pins
+- Cadence policy doc committed; references the existing Dependabot config
+- A synthetic past-deadline package (8 days old, patch severity) correctly produces `past_deadline=True` and would flip the sentinel to RED
+
+**Lesson tie-in:** Closes the "this could be a recurring nag" gap that motivated several of the recent sprints. The pattern (state in baseline.json + windowed-comparison helper + AST/integration tests pinning the boundaries) is the same shape Sprint 723 used for coverage floors and Sprint 730 used for the Sprint Shepherd false-positive — once you have the shape, new gates are cheap to add.
+
+---
+
 ### Sprint 730: Operational Observability Polish
 **Status:** COMPLETE 2026-04-25 — agent-sweep wave 10, the operational-monitoring polish.
 **Priority:** P2 (post-launch monitoring; closes the silent-failure gaps Guardian flagged).
