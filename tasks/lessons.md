@@ -4,6 +4,16 @@
 
 ---
 
+## Log-emission tests must inspect message content, not just count records (Sprint 715)
+
+Sprint 713 added a SendGrid-403 warn-path: catch `SendGridHTTPError`, return `EmailResult(success=False, message="Email delivery failed (SendGrid 403).")`, let `safe_background_email` log a `WARNING`. The accompanying test (`test_background_email_logs_warning_not_error_on_failure`) asserted `len(warning_records) >= 1` and `error_records == []` — and stopped there. It never read the warning's `getMessage()`. The wrapper had a typo (`getattr(result, "error", "unknown")` against an `EmailResult` whose attribute is `message`), so every production warning would have read `Background register_verification send failed: unknown` — useless for the very investigation Sprint 715 was scheduled to perform 24h later. The bug only surfaced because Sprint 715 traced the emission chain end-to-end before reading logs; if 403s had been frequent, we'd have stared at "unknown" for weeks.
+
+**Pattern:** When a test asserts "a log line was emitted at level X," it must also assert the message contains the *facts the line exists to communicate*. For an exception-handler warn-path, that's the exception's identifying detail (status code, error class name, masked recipient — whichever the path is supposed to surface). Counting records protects against "ERROR was raised when WARNING was expected" but not against "WARNING fires with empty content" — and the latter is silent in production until someone reaches for the logs.
+
+The Sprint 715 test now asserts the warning came from `shared.background_email`, contains the label, contains `"403"`, and does *not* fall back to `"unknown"`. Apply the same shape to any new log-emission contract: `severity + emitter + identifying detail + absence of fallback sentinel`.
+
+---
+
 ## Two-form code paths need parity tests, not just a one-form test (Sprint 718)
 
 The CSRF middleware's `_extract_user_id_from_auth` was tested against Bearer-header inputs and shipped years ago. The production browser path was later moved to HttpOnly cookies — but the function was never updated to read the cookie. Result: every browser POST/PUT/DELETE/PATCH ran with `expected_user_id=None`, silently disabling the CSRF user-binding check at line 427. The 2026-04-24 security review found it; the test suite didn't because there was no test that asserted "Bearer and cookie produce the same answer."

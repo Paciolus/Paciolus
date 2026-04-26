@@ -114,21 +114,52 @@
 ---
 
 ### Sprint 715: SendGrid 403 root-cause investigation (24h post-deploy watch)
-**Status:** PENDING — investigable starting **2026-04-25 ~14:29 UTC** (24h after Sprint 713 merge `2b92b771` on 2026-04-24 14:29 UTC).
-**Priority:** P2 (observability follow-up — no user-facing impact, but worth knowing which recipient/path triggers the 403)
-**Source:** Sprint 713 Bug C review — the fix caught the exception but did not investigate the root cause. The 403 means SendGrid is refusing a specific send; until we know *why*, users on the affected path silently never receive their email.
+**Status:** COMPLETE 2026-04-26.
+**Priority:** P2 (observability follow-up).
+**Source:** Sprint 713 Bug C review — the fix caught the exception but did not investigate the root cause.
 
-**Why pending (not "now"):** Sprint 713's warn-path (`log_secure_operation("email_error", f"SendGrid HTTPError status=403")`) is what makes the root cause investigable. We need 24h of production traffic with the new logs in place to see *which* send triggers the 403 and *how often*. Pre-deploy, we'd be guessing.
+**Investigation outcome:** Render logs over the 48h post-deploy window (2026-04-24 14:29 UTC → 2026-04-26 21:35 UTC) contain **zero matches** for `SendGrid`, `HTTPError`, `email_error`, `Verification email`, `Background … send failed`, and **zero requests** to `/auth/register`, `/auth/forgot-password`, `/contact`. Phase 3 functional validation hasn't exercised email paths yet, so the 403 trigger condition was never met. No root cause to chase.
 
-**Plan when triggered (CEO signal: if warn log count > 0 after 24h):**
-- Pull Render logs for `"SendGrid HTTPError status=403"` over the post-deploy window. Identify the sender function (verification / password-reset / contact / email-change) and recipient masking pattern.
-- Check SendGrid Dashboard → Suppressions → Blocks / Bounces / Spam Reports for the 403 recipients. Most likely cause: addresses on the global bounce list from the pre-Domain-Authentication era (SendGrid carried the `@gmail.com` bounce history into the paciolus.com domain).
-- Check SendGrid API key scope on the Paciolus production key — `Mail Send: Full Access` is required; a read-only or Marketing-scoped key would 403 on transactional sends.
-- Fix depends on finding: suppression-list cleanup (one-time; then add a `/admin/email-suppressions` endpoint to view current state), API key re-scope, or sender-domain re-verification.
+**Secondary finding (fixed in this sprint):** While tracing the warn-path, discovered `shared/background_email.py` was logging `"Background <label> send failed: unknown"` because it read a non-existent `result.error` attribute. `EmailResult` exposes `success`/`message`/`message_id` — the SendGrid status code lives in `result.message`. Sprint 713's existing test only asserted `len(warning_records) >= 1`, never inspected the message text, so the regression slipped through. **If a 403 had occurred in the past 48h, the log line would not have surfaced the status code** — the warn-path Sprint 713 added was effectively non-investigable.
 
-**Out of scope:**
-- Proactive suppression-list sync (would need a scheduled cron polling SendGrid API; not worth the infrastructure until we see meaningful 403 volume).
-- Email deliverability SLA tracking (a separate observability sprint if Sentry breadcrumbs aren't sufficient).
+**Fix:**
+- `backend/shared/background_email.py`: read `result.message` (the canonical attribute), with `"unknown"` only as the empty-string fallback.
+- `backend/tests/test_sprint_713_sentry_sweep.py::test_background_email_logs_warning_not_error_on_failure`: strengthened to assert the warning is emitted by `shared.background_email`, contains the label, contains `"403"`, and does **not** fall back to `"unknown"`. Future regressions of this shape will fail the test.
+
+**Out of scope (deferred):**
+- Proactive SendGrid suppression-list sync (no infra justification until 403 volume is meaningful).
+- Email deliverability SLA tracking.
+- Cleanup_scheduler `InternalError: scheduled cleanup failed` on `reset_upload_quotas` and `dunning_grace_period`, observed every ~1h during this investigation. Unrelated system, separate signal — captured as a follow-up below.
+
+**Verification:** `pytest tests/test_sprint_713_sentry_sweep.py tests/test_email_verification.py tests/test_contact_api.py tests/test_no_helpers_reexports.py tests/test_refactor_2026_04_20.py tests/test_log_sanitizer.py` — 106 passed.
+
+**Review:** Sprint reframed from "find the 403 root cause" to "verify there *is* a 403 to investigate, then make the warn-path actually surface the status code when one happens". Net delta: 1 LoC fix in production code, +12 LoC of test assertions that prevent the silent-failure shape from re-emerging. Commit SHA recorded at commit time.
+
+---
+
+### Sprint 732: cleanup_scheduler recurring InternalError triage
+**Status:** PENDING — discovered during Sprint 715 log review, not yet investigated.
+**Priority:** P2 (silent recurring failure on production scheduled jobs; no user-facing impact today, but `dunning_grace_period` is the path that auto-cancels delinquent subscriptions, so a sustained outage means dunning escalation never advances).
+**Source:** Sprint 715 Render-log sweep 2026-04-26.
+
+**Observed signal (2026-04-25 to 2026-04-26 in Render logs, srv-d6ie9l56ubrc73c7eq2g):**
+```
+ERROR cleanup_scheduler  Cleanup job failed: {... 'job_name': 'reset_upload_quotas',  'error': 'InternalError: scheduled cleanup failed'}
+ERROR cleanup_scheduler  Cleanup job failed: {... 'job_name': 'dunning_grace_period', 'error': 'InternalError: scheduled cleanup failed'}
+```
+Both jobs fire roughly every hour; each invocation completes in 30–80ms with `records_processed: 0` and the same `InternalError`. The error message itself (`"scheduled cleanup failed"`) is the wrapper's outer string — the actual underlying exception (likely a SQLAlchemy/DB error) is being swallowed before the structured-log emission.
+
+**Scope:**
+- Locate the scheduler's exception handler (`backend/cleanup_scheduler.py` or wherever the wrapper lives) and confirm it catches `Exception` then re-raises a generic `InternalError`. Surface the original exception class + message into the structured log line (mirror the `result.message` lesson from Sprint 715 — never log a sentinel without the underlying detail).
+- Re-pull logs after the observability fix lands, identify the actual root cause for each job, fix.
+- Add coverage so this can't re-surface silently: a test that runs each cleanup job against a SQLite fixture and asserts no `InternalError` is raised.
+- Verify dunning escalation behavior end-to-end on a staging-equivalent fixture (subscription past grace period → cancellation triggered) once the underlying bug is known.
+
+**Effort estimate:** 1 sprint, possibly 2 if the underlying bug is non-trivial (e.g., a missing migration or a connection-pool exhaustion). Step 1 (observability) is mechanical; step 2 (fix) depends on what the unwrapped error reveals.
+
+**Why pending (not "now"):** This is a real production issue but it's been failing silently for at least 48h and has not produced user-visible symptoms. Sprint 728 + 729 are the user-directed work. Slot 732 in after the current directive completes.
+
+**Pre-requisites:** None — diagnosable from logs once the wrapper unmasks the underlying exception.
 
 ---
 
