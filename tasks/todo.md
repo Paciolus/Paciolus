@@ -105,6 +105,36 @@
 
 ---
 
+### Sprint 727a: AuditEngineBase Migration — inventory_testing_engine
+**Status:** COMPLETE 2026-04-26 — first real engine migration; validates the pattern.
+**Priority:** P2 (migration cadence ramp-up).
+**Source:** ADR-013 Phase 2a sub-sprint.
+
+**Why inventory first:** `run_inventory_testing()` was already a clean procedural pipeline with helper functions extracted for each step (detect_inv_columns / parse_inv_entries / assess_inv_data_quality / run_inv_test_battery / calculate_inv_composite_score). The migration was mostly plumbing — adding the subclass that delegates to those helpers — rather than a deep refactor. Picking it as the shake-down validates the pattern before the bigger engines (Revenue 2,509 LoC, AR 2,179 LoC, FA 1,666 LoC) get migrated.
+
+**Scope landed:**
+- [x] **`backend/inventory_testing_engine.py`** — new `InventoryTestingEngine(AuditEngineBase)` class added below the module-level helpers. Abstract methods delegate: `detect_columns` → `detect_inv_columns`, `apply_column_overrides` → loop over `_INV_OVERRIDABLE_COLUMNS`, `parse_data` → `parse_inv_entries`, `run_quality_checks` → `assess_inv_data_quality`, `run_tests` → `run_inv_test_battery(entries, self.config)`, `compute_score` → `calculate_inv_composite_score`, `build_result` → `InvTestingResult(...)`.
+- [x] **`run_inventory_testing()` refactored** — body collapsed from ~38 lines of inline pipeline orchestration to 3 lines: `engine = InventoryTestingEngine(config); result = engine.run_pipeline(...); return result`. Caller-facing signature and behavior unchanged.
+- [x] **`backend/tests/test_engine_base_lint.py` updated** — `TestKnownMigrated` renamed to `test_known_migrated_engines_not_in_findings` and asserts inventory is on-pattern alongside JE/AP/Payroll. `test_sprint_727_migration_targets_still_in_findings` now lists the four remaining targets (ar_aging, fixed_asset, revenue, sod).
+- [x] **ADR-013 updated** with Phase 2a section recording the inventory migration as the pattern-validating shake-down.
+
+**Behavioral parity:** Implicit by construction. The subclass methods call the SAME module-level helpers the procedural function used; no logic moved or changed. The existing 172-test inventory suite (`tests/test_inventory_testing.py` + `tests/test_inventory_testing_memo.py`) is the parity gate — it passes unchanged.
+
+**Recurrence prevention (the durable artifact):**
+1. **Migration pattern documented in ADR-013 Phase 2a** — future migrations follow the same shape: subclass + delegate + refactor entry. The pattern is concrete, not abstract.
+2. **Lint count ratchet** — Sprint 727 set the post-triage finding count to 9; Sprint 727a brings it to 8. Each subsequent migration drops the count by 1. The `test_post_triage_finding_count` 5-12 range still passes (no false-failure on the migration), but the trend is visible.
+3. **`test_known_migrated_engines_not_in_findings`** is now the canonical "engines on-pattern" list. Adding a new migration is a 1-line edit alongside the migration commit.
+
+**Validation:**
+- 172/172 inventory tests pass (parity gate)
+- 16/16 lint tests pass with updated assertions
+- Lint output: 9 → 8 findings (only the 4 remaining migration targets + 4 borderline)
+- Behavioral parity by construction (subclass delegates to unchanged helpers)
+
+**Lesson tie-in:** The "subclass delegating to existing helpers" pattern is the cheapest possible migration — no new logic, no parity-test fixture authoring needed because the existing test suite IS the parity gate. This makes the remaining 4 migrations tractable: each one is "add subclass + refactor entry" rather than "rebuild engine."
+
+---
+
 ### Sprint 727: AuditEngineBase Migration — Phase 1.5 (per-engine triage)
 **Status:** COMPLETE 2026-04-26 — re-scoped from "Phase 2 + lint promotion" to "triage + blocklist" once Sprint 726 surfaced 16 candidates and the per-engine review confirmed many genuinely don't fit `AuditEngineBase`.
 **Priority:** P2 (architectural pre-requisite for actual migrations).

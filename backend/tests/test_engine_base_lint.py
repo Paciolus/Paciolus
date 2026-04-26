@@ -84,13 +84,24 @@ class TestTestingEngineFilter:
 
 
 class TestKnownMigrated:
-    def test_je_ap_payroll_not_in_findings(self):
-        """JE / AP / Payroll subclass AuditEngineBase (Sprint 519). They MUST
-        NOT appear in the off-pattern findings — that would mean either the
-        AST detection broke or the engines were de-migrated."""
+    """Engines that already subclass AuditEngineBase MUST NOT appear in findings.
+
+    Sprint 519: JE / AP / Payroll.
+    Sprint 727a: Inventory (first sub-sprint migration).
+
+    A regression here means either the AST detection broke or the subclass
+    declaration was inadvertently removed from one of the migrated engines.
+    """
+
+    def test_known_migrated_engines_not_in_findings(self):
         findings = find_off_pattern_engines()
         finding_names = {p.name for p in findings}
-        for migrated in ("je_testing_engine.py", "ap_testing_engine.py", "payroll_testing_engine.py"):
+        for migrated in (
+            "je_testing_engine.py",
+            "ap_testing_engine.py",
+            "payroll_testing_engine.py",
+            "inventory_testing_engine.py",  # Sprint 727a
+        ):
             assert migrated not in finding_names, (
                 f"{migrated} appeared in off-pattern findings but should be on-pattern"
             )
@@ -125,16 +136,20 @@ class TestSprint727Triage:
             assert name in NON_TESTING_ENGINES, f"{name} should be in NON_TESTING_ENGINES (Sprint 727 triage)"
 
     def test_sprint_727_migration_targets_still_in_findings(self):
-        # The five A-classified engines are the migration backlog Sprint 727+
-        # actually picks up. They MUST appear in the findings — disappearing
-        # without a corresponding migration commit means the lint regressed
-        # or someone added them to the blocklist without rationale.
+        # The A-classified engines are the migration backlog Sprint 727+
+        # actually picks up. Each remaining one MUST appear in findings —
+        # disappearing without a corresponding migration commit means the
+        # lint regressed or someone added it to the blocklist without
+        # rationale.
+        #
+        # Sprint 727a migrated inventory_testing_engine — it's now on-pattern
+        # and is asserted in TestKnownMigrated above. The four remaining
+        # targets are listed here.
         findings = find_off_pattern_engines()
         finding_names = {p.name for p in findings}
         for migration_target in (
             "ar_aging_engine.py",
             "fixed_asset_testing_engine.py",
-            "inventory_testing_engine.py",
             "revenue_testing_engine.py",
             "sod_engine.py",
         ):

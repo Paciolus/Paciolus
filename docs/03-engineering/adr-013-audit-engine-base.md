@@ -1,7 +1,7 @@
 # ADR-013: AuditEngineBase Adoption
 
-**Status:** Accepted (Sprint 726 Phase 1, Sprint 727 triage)
-**Date:** 2026-04-25 (Phase 1) / 2026-04-26 (triage)
+**Status:** Accepted (Sprint 726 Phase 1, Sprint 727 triage, Sprint 727a inventory migration)
+**Date:** 2026-04-25 (Phase 1) / 2026-04-26 (triage + 727a)
 **Decision-makers:** Engineering team
 
 ## Context
@@ -87,7 +87,25 @@ After triage the lint reports **9 off-pattern engines** (5 migration targets
 + 4 borderline) — down from 16 in Phase 1. The honest migration backlog is
 now visible.
 
-### Phase 2 — Sprint 727 (sub-sprints) and onward
+### Phase 2a — Sprint 727a (this commit): inventory_testing_engine
+
+First real engine migration. `inventory_testing_engine.py` had a clean
+procedural `run_inventory_testing()` with helper functions already extracted
+for each pipeline step (detect / parse / quality / tests / score / build),
+so the migration was mostly plumbing: add `InventoryTestingEngine(AuditEngineBase)`
+with abstract methods that delegate to the existing helpers, then refactor
+`run_inventory_testing()` to construct the engine and call `run_pipeline()`.
+
+Behavioral parity is implicit: the abstract methods call the SAME module-level
+helpers the procedural function used. Existing 172-test inventory suite
+(`tests/test_inventory_testing.py` + `tests/test_inventory_testing_memo.py`)
+passes unchanged — that's the parity gate. Lint count drops from 9 → 8.
+
+The migration validates the pattern. Subsequent migrations (revenue, AR,
+fixed asset) follow the same shape: subclass, delegate, refactor entry,
+verify existing tests still pass.
+
+### Phase 2b — Sprint 727b+ (sub-sprints) and onward
 
 Each subsequent migration sprint:
 
