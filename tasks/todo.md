@@ -66,6 +66,42 @@
 > Sprint 611 + Sprints 677–714 archived 2026-04-24 to `tasks/archive/sprints-611-714-details.md` (eight post-Sprint-673 batches: Post-Audit Remediation, Anomaly Framework Hardening, Security Hardening Follow-Ups, Design Refresh, Production Bug Triage, Nightly Agent Remediation, Branding Coverage Completion, P2 Sentry Sweep). Only Sprint 715 remains pending.
 > Sprints 716–720 archived to `tasks/archive/sprints-716-720-details.md`.
 
+### Sprint 724: shared/helpers.py Shim Removal
+**Status:** COMPLETE 2026-04-25 — agent-sweep wave 8, the import-discipline cleanup.
+**Priority:** P2 (architectural cleanup; reduces forking pattern that motivated the agent-sweep critic flag).
+**Source:** Agent sweep 2026-04-24, punch list 3.2 + BackendCritic 7/10.
+
+**Problem class:** The 2026-04-20 decomposition split `shared/helpers.py` into domain modules but left a 35-symbol re-export shim for back-compat. 60+ call sites went through the shim vs 6 direct — the shim was winning because nothing pressured callers to migrate. Bug fixes routing through the shim missed signal that domain ownership had moved.
+
+**Scope landed:**
+- [x] `scripts/migrate_helpers_imports.py` — one-shot migration script with a symbol→owner map. Parses `from shared.helpers import (...)` blocks (single- and multi-line), splits symbols by owner, rewrites as multiple imports preserving indent and trailing comments. Idempotent; reports unknown symbols. Dry-run + apply modes.
+- [x] **47 files migrated, 56 imports rewritten** across `routes/`, `tests/`, `services/`, `shared/`, `billing/`, `export/`, and engine modules. Native helpers (`try_parse_risk`, `try_parse_risk_band`, `parse_json_list`, `parse_json_mapping`, `is_authorized_for_client`, `get_accessible_client`, `require_client`) stay in `shared/helpers.py` per the deferred-items decision (not enough native callers to justify a `shared/client_access.py` extraction).
+- [x] `backend/shared/helpers.py` — re-export block (~50 lines, 35+ symbols across 4 owning modules) removed. Module docstring rewritten to reflect the post-shim role: a small native-helpers module, not a back-compat facade.
+- [x] `backend/tests/test_no_helpers_reexports.py` — AST-walking guardrail with two complementary tests:
+  1. `test_no_disallowed_imports`: scans every backend `.py` for `from shared.helpers import X`; fails if X is not in `ALLOWED_HELPER_NAMES`. Catches accidental shim resurrection.
+  2. `test_allowlist_matches_helpers_module_publics`: cross-checks the allowlist against `dir(shared.helpers)` so neither side drifts. If a native helper is removed, this test reminds you to drop it from the allowlist.
+- [x] `backend/tests/test_refactor_2026_04_20.py` — class docstring updated to reflect the post-shim contract: symbols resolve at their owning module, not at `shared.helpers`. Auto-migrated imports inside the test verify exactly that.
+
+**Recurrence prevention (the durable artifact):**
+1. **AST guardrail makes shim resurrection impossible to merge** — a PR re-adding `from shared.upload_pipeline import memory_cleanup` to `shared/helpers.py` would not regenerate the re-export shim by itself, but the *moment* a downstream caller imports it via `from shared.helpers import memory_cleanup`, the new test fails CI. The guardrail bites at the import surface, not the helpers module's internals, so any sneaky re-export attempt that someone might use to "smooth a rebase" gets caught.
+2. **Allowlist is a contract** — `ALLOWED_HELPER_NAMES` is the single source of truth for what `shared/helpers.py` exports. Adding a new native helper requires updating the allowlist + adding the helper, in the same PR. Removing a helper requires the same. The two-way check prevents drift.
+3. **Migration script is preserved as historical evidence** — `scripts/migrate_helpers_imports.py` is a one-shot but kept in-repo for: (a) future similar refactors have a template, (b) it documents the symbol→owner mapping that defines the boundary, (c) running it on `main` is a no-op (idempotent), proving the migration is complete.
+
+**Out of scope:**
+- Moving the native client-access helpers (`is_authorized_for_client`, `get_accessible_client`, `require_client`) to a new `shared/client_access.py` module. The deferred-items list (2026-04-20) explicitly decided against this: the three helpers depend on `User`/`Client`/`OrganizationMember`/`require_current_user`, and a dedicated module isn't justified for three functions under the "prefer moving code, avoid new abstractions" guidance. Revisit if a fourth helper joins them.
+- ruff `flake8-tidy-imports` rule — the AST test in `test_no_helpers_reexports.py` is the equivalent guard, runs in the same CI step as other backend tests, and gives better failure messages than ruff. The agent-sweep plan's mention of a ruff rule is satisfied by the AST test.
+
+**Validation:**
+- 56 imports migrated cleanly; zero remaining re-export imports in backend (verified by `grep "from shared.helpers import"` showing only native-helper imports).
+- 318 tests pass on the migrated subset (parser, format, injection, like-escape, refactor, upload_validation).
+- 457 tests pass on the broader smoke set (memo + coverage_floors + memory_budget added).
+- AST guardrail passes (2 tests); a synthetic violation (manually adding `from shared.helpers import memory_cleanup` to a backend file) fails as expected.
+- Coverage floor on `shared/helpers.py` not affected (file shrank, % went up; floor not declared on this file).
+
+**Lesson tie-in:** Same prevention shape as Sprint 717's catalog gate and Sprint 723's coverage floors: an AST/lint check at the import surface that catches the regression class at PR time rather than nightly. Migration scripts that ship in-repo (like `scripts/archive_sprints.sh` from Sprint 661) are part of the codebase's institutional memory — the symbol→owner map in `migrate_helpers_imports.py` is now documentation that survives the migration itself.
+
+---
+
 ### Sprint 723: Coverage Floor Enforcement (Foundational)
 **Status:** COMPLETE 2026-04-25 — agent-sweep wave 7, the coverage-discipline foundational sprint.
 **Priority:** P1 (foundational — Sprint 723 is a prerequisite for the architectural cleanup sprints 724–727; floors prevent silent regressions during refactors).

@@ -26,7 +26,7 @@ from io import StringIO
 from typing import Optional
 
 from shared.column_detector import ColumnFieldConfig, detect_columns
-from shared.helpers import sanitize_csv_value
+from shared.filenames import sanitize_csv_value
 from shared.parsing_helpers import parse_date, safe_decimal, safe_str
 
 # =============================================================================

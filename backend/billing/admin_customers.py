@@ -20,7 +20,7 @@ from billing.price_config import (
 )
 from models import ActivityLog, DiagnosticSummary, RefreshToken, User
 from organization_model import Organization, OrganizationMember
-from shared.helpers import escape_like_wildcards
+from shared.filenames import escape_like_wildcards
 from subscription_model import (
     BillingEvent,
     Subscription,

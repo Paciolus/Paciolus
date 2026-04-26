@@ -58,7 +58,7 @@ class TestMetricsInstrumentation:
 
     def test_successful_csv_parse_increments_counter(self):
         """Parsing a valid CSV should increment parse_total for 'csv'."""
-        from shared.helpers import parse_uploaded_file_by_format
+        from shared.upload_pipeline import parse_uploaded_file_by_format
 
         # Get baseline
         before = _get_counter_value(parse_total, {"format": "csv", "stage": "parse"})
@@ -71,7 +71,7 @@ class TestMetricsInstrumentation:
 
     def test_successful_parse_records_duration(self):
         """Parsing should record a duration histogram sample."""
-        from shared.helpers import parse_uploaded_file_by_format
+        from shared.upload_pipeline import parse_uploaded_file_by_format
 
         content = b"A,B\n1,2\n3,4\n"
         parse_uploaded_file_by_format(content, "timing.csv")
@@ -84,7 +84,7 @@ class TestMetricsInstrumentation:
         """A parse error should increment parse_errors_total."""
         from unittest.mock import patch
 
-        from shared.helpers import parse_uploaded_file_by_format
+        from shared.upload_pipeline import parse_uploaded_file_by_format
 
         # Enable ODS so we reach the parse stage (not the feature flag check)
         with patch("config.FORMAT_ODS_ENABLED", True):
@@ -99,7 +99,7 @@ class TestMetricsInstrumentation:
 
     def test_detect_stage_increments(self):
         """Format detection stage should increment parse_total."""
-        from shared.helpers import parse_uploaded_file_by_format
+        from shared.upload_pipeline import parse_uploaded_file_by_format
 
         before = _get_counter_value(parse_total, {"format": "csv", "stage": "detect"})
 
@@ -111,7 +111,7 @@ class TestMetricsInstrumentation:
 
     def test_active_gauge_returns_to_zero(self):
         """After a parse completes, active_parses gauge should return to 0."""
-        from shared.helpers import parse_uploaded_file_by_format
+        from shared.upload_pipeline import parse_uploaded_file_by_format
 
         content = b"X,Y\n1,2\n"
         parse_uploaded_file_by_format(content, "gauge.csv")
@@ -122,7 +122,7 @@ class TestMetricsInstrumentation:
 
     def test_active_gauge_returns_to_zero_on_error(self):
         """After a failed parse, active_parses gauge should still return to 0."""
-        from shared.helpers import parse_uploaded_file_by_format
+        from shared.upload_pipeline import parse_uploaded_file_by_format
 
         try:
             parse_uploaded_file_by_format(b"A,B\n", "gaugefail.csv")

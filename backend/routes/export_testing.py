@@ -16,7 +16,10 @@ from auth import require_verified_user
 from models import User
 from shared.entitlement_checks import check_export_access
 from shared.error_messages import sanitize_error
-from shared.helpers import safe_download_filename, sanitize_csv_value
+from shared.filenames import (
+    safe_download_filename,
+    sanitize_csv_value,
+)
 from shared.rate_limits import RATE_LIMIT_EXPORT, limiter
 
 logger = logging.getLogger(__name__)

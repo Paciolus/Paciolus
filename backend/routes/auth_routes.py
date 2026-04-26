@@ -62,8 +62,8 @@ from security_middleware import (
     reset_failed_attempts,
     reset_ip_failures,
 )
+from shared.background_email import safe_background_email
 from shared.error_messages import sanitize_error
-from shared.helpers import safe_background_email
 from shared.rate_limits import RATE_LIMIT_AUTH, limiter
 from shared.response_schemas import SuccessResponse
 

@@ -15,8 +15,8 @@ from fastapi import HTTPException
 from prometheus_client import generate_latest
 
 from shared.file_formats import FileFormat, detect_format
-from shared.helpers import parse_uploaded_file_by_format
 from shared.parser_metrics import PARSER_REGISTRY, parse_total
+from shared.upload_pipeline import parse_uploaded_file_by_format
 
 # =============================================================================
 # Helpers

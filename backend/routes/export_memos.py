@@ -60,7 +60,7 @@ from shared.export_schemas import (
     SamplingEvaluationMemoInput,
     ThreeWayMatchExportInput,
 )
-from shared.helpers import safe_download_filename
+from shared.filenames import safe_download_filename
 from shared.rate_limits import RATE_LIMIT_EXPORT, limiter
 from three_way_match_memo_generator import generate_three_way_match_memo
 

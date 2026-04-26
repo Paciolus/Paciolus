@@ -29,9 +29,9 @@ from database import get_db
 from models import User
 from shared import bulk_job_store
 from shared.entitlement_checks import check_bulk_upload_access, check_upload_limit, increment_upload_count
-from shared.helpers import validate_file_size
 from shared.organization_schemas import BulkUploadStartResponse, BulkUploadStatusResponse
 from shared.rate_limits import RATE_LIMIT_WRITE, limiter
+from shared.upload_pipeline import validate_file_size
 
 logger = logging.getLogger(__name__)
 

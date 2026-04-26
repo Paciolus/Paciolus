@@ -112,7 +112,7 @@ class TestPdfParseDispatch:
 
     def test_pdf_dispatch_exists(self):
         """Verify the PDF dispatch branch is wired in parse_uploaded_file_by_format."""
-        from shared.helpers import parse_uploaded_file_by_format
+        from shared.upload_pipeline import parse_uploaded_file_by_format
 
         pdf_bytes = _make_financial_pdf()
         # Should succeed (or raise 422 for quality gate — both indicate dispatch works)
@@ -134,7 +134,7 @@ class TestPdfParseDispatch:
 
         from fastapi import HTTPException
 
-        from shared.helpers import validate_file_size
+        from shared.upload_pipeline import validate_file_size
 
         fake_file = MagicMock()
         fake_file.filename = "test.pdf"

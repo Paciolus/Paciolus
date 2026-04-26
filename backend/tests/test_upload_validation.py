@@ -25,7 +25,8 @@ import pytest
 from fastapi import HTTPException
 
 from shared.error_messages import sanitize_error
-from shared.helpers import (
+from shared.filenames import sanitize_csv_value
+from shared.upload_pipeline import (
     MAX_CELL_LENGTH,
     MAX_COL_COUNT,
     MAX_ZIP_ENTRIES,
@@ -37,7 +38,6 @@ from shared.helpers import (
     _validate_and_convert_df,
     parse_uploaded_file,
     parse_uploaded_file_by_format,
-    sanitize_csv_value,
     validate_file_size,
 )
 

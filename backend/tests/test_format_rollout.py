@@ -16,7 +16,7 @@ from fastapi import HTTPException
 from models import UserTier
 from shared.entitlements import get_entitlements
 from shared.file_formats import FileFormat, is_format_enabled
-from shared.helpers import parse_uploaded_file_by_format
+from shared.upload_pipeline import parse_uploaded_file_by_format
 
 # =============================================================================
 # is_format_enabled()

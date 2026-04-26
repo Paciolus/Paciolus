@@ -32,9 +32,9 @@ from shared.diagnostic_response_schemas import (
 )
 from shared.entitlement_checks import check_export_access
 from shared.error_messages import sanitize_error
-from shared.helpers import maybe_record_tool_run
 from shared.rate_limits import RATE_LIMIT_AUDIT, RATE_LIMIT_EXPORT, limiter
 from shared.testing_route import enforce_tool_access
+from shared.tool_run_recorder import maybe_record_tool_run
 
 router = APIRouter(tags=["multi_period"])
 

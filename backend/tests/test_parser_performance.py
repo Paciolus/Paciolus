@@ -11,7 +11,7 @@ import time
 import pandas as pd
 import pytest
 
-from shared.helpers import parse_uploaded_file_by_format
+from shared.upload_pipeline import parse_uploaded_file_by_format
 
 
 def _build_csv_fixture(rows: int = 1000) -> bytes:

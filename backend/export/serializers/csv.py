@@ -16,7 +16,7 @@ from shared.export_schemas import (
     PopulationProfileCSVInput,
     PreFlightCSVInput,
 )
-from shared.helpers import sanitize_csv_value
+from shared.filenames import sanitize_csv_value
 from shared.schemas import AuditResultInput
 
 

@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from models import Client, EntityType, Industry, ReportingFramework, User
 from security_utils import log_secure_operation
-from shared.helpers import escape_like_wildcards
+from shared.filenames import escape_like_wildcards
 
 
 class ClientManager:

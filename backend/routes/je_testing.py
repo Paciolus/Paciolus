@@ -1,6 +1,7 @@
 """
 Paciolus API — Journal Entry Testing Routes
 """
+
 import asyncio
 import logging
 from typing import Any, Optional
@@ -24,10 +25,18 @@ from models import User
 from security_utils import log_secure_operation
 from shared.account_extractors import extract_je_accounts
 from shared.error_messages import sanitize_error
-from shared.helpers import memory_cleanup, parse_json_list, parse_json_mapping, parse_uploaded_file, validate_file_size
+from shared.helpers import (
+    parse_json_list,
+    parse_json_mapping,
+)
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.testing_response_schemas import JETestingResponse, SamplingResultResponse
 from shared.testing_route import run_single_file_testing
+from shared.upload_pipeline import (
+    memory_cleanup,
+    parse_uploaded_file,
+    validate_file_size,
+)
 
 router = APIRouter(tags=["je_testing"])
 
@@ -51,13 +60,21 @@ async def audit_journal_entries(
 ) -> dict[str, Any]:
     """Run automated journal entry testing on a General Ledger extract."""
     return await run_single_file_testing(
-        file=file, column_mapping=column_mapping,
-        engagement_id=engagement_id, current_user=current_user, db=db,
+        file=file,
+        column_mapping=column_mapping,
+        engagement_id=engagement_id,
+        current_user=current_user,
+        db=db,
         background_tasks=background_tasks,
-        tool_name="journal_entry_testing", mapping_key="je_testing",
-        log_label="GL", error_key="je_testing_error",
+        tool_name="journal_entry_testing",
+        mapping_key="je_testing",
+        log_label="GL",
+        error_key="je_testing_error",
         run_engine=lambda rows, cols, mapping, fn: run_je_testing(
-            rows=rows, column_names=cols, config=None, column_mapping=mapping,
+            rows=rows,
+            column_names=cols,
+            config=None,
+            column_mapping=mapping,
         ),
         extract_accounts=extract_je_accounts,
     )
@@ -86,8 +103,7 @@ async def sample_journal_entries(
     column_mapping_dict = parse_json_mapping(column_mapping, "je_sampling")
 
     log_secure_operation(
-        "je_sampling_upload",
-        f"Sampling GL file: {file.filename}, stratify_by={stratify_list}, rate={sample_rate}"
+        "je_sampling_upload", f"Sampling GL file: {file.filename}, stratify_by={stratify_list}, rate={sample_rate}"
     )
 
     with memory_cleanup():
@@ -118,10 +134,7 @@ async def sample_journal_entries(
 
         except (ValueError, KeyError, TypeError) as e:
             logger.exception("JE sampling failed")
-            raise HTTPException(
-                status_code=400,
-                detail=sanitize_error(e, "analysis", "je_sampling_error")
-            )
+            raise HTTPException(status_code=400, detail=sanitize_error(e, "analysis", "je_sampling_error"))
 
 
 @router.post("/audit/journal-entries/sample/preview", response_model=SamplingPreviewResponse)
@@ -169,7 +182,4 @@ async def preview_sampling(
 
         except (ValueError, KeyError, TypeError) as e:
             logger.exception("JE preview failed")
-            raise HTTPException(
-                status_code=400,
-                detail=sanitize_error(e, "analysis", "je_preview_error")
-            )
+            raise HTTPException(status_code=400, detail=sanitize_error(e, "analysis", "je_preview_error"))

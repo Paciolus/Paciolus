@@ -19,9 +19,9 @@ from shared.diagnostic_response_schemas import (
     PopulationProfileResponse,
     PreFlightReportResponse,
 )
-from shared.helpers import parse_uploaded_file
 from shared.materiality_resolver import resolve_materiality
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
+from shared.upload_pipeline import parse_uploaded_file
 
 logger = logging.getLogger(__name__)
 

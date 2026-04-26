@@ -119,7 +119,7 @@ def export_convergence_csv(
     db: Session = Depends(get_db),
 ) -> StreamingResponse:
     """Export convergence index as CSV."""
-    from shared.helpers import sanitize_csv_value
+    from shared.filenames import sanitize_csv_value
 
     log_secure_operation(
         "convergence_csv_export",

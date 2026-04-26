@@ -10,7 +10,7 @@ from typing import Literal
 from fastapi import APIRouter, BackgroundTasks, Request
 from pydantic import BaseModel, EmailStr, Field
 
-from shared.helpers import safe_background_email
+from shared.background_email import safe_background_email
 from shared.rate_limits import limiter
 
 router = APIRouter(prefix="/contact", tags=["contact"])

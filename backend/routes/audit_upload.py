@@ -16,8 +16,11 @@ from models import User
 from security_utils import log_secure_operation
 from shared.entitlement_checks import enforce_format_access
 from shared.error_messages import sanitize_error
-from shared.helpers import memory_cleanup, validate_file_size
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
+from shared.upload_pipeline import (
+    memory_cleanup,
+    validate_file_size,
+)
 from workbook_inspector import inspect_workbook, is_excel_file
 
 logger = logging.getLogger(__name__)

@@ -13,7 +13,7 @@ import zipfile
 import pytest
 from fastapi import HTTPException
 
-from shared.helpers import (
+from shared.upload_pipeline import (
     _parse_tsv,
     _parse_txt,
     parse_uploaded_file_by_format,
