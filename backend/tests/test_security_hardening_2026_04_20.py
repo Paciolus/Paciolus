@@ -242,8 +242,10 @@ class TestPasscodeRoutePolicy:
 
     @pytest.mark.usefixtures("bypass_csrf")
     @pytest.mark.anyio
-    async def test_get_on_passcode_share_returns_403(self, db_session, make_user):
-        """Passcode-protected shares must reject bare GET with instructional 403."""
+    async def test_get_on_passcode_share_returns_404(self, db_session, make_user):
+        """Sprint 718 collapsed the share-enumeration response: passcode-protected and unknown
+        shares both return 404 with no body that leaks share existence. The original 403-with-
+        instructional-text behaviour was the enumeration vector."""
         _, resp = await _create_share(db_session, make_user, passcode="StrongP@ss1")
         assert resp.status_code == 200
         token = resp.json()["share_token"]
@@ -253,15 +255,18 @@ class TestPasscodeRoutePolicy:
         try:
             async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 r = await client.get(f"/export-sharing/{token}")
-            assert r.status_code == 403
-            assert "POST" in r.text or "passcode" in r.text.lower()
+            assert r.status_code == 404
+            # Body must not reveal that the share exists or that a passcode is required —
+            # that was the leak Sprint 718 closed.
+            assert "passcode" not in r.text.lower()
         finally:
             app.dependency_overrides.clear()
 
     @pytest.mark.usefixtures("bypass_csrf")
     @pytest.mark.anyio
     async def test_query_string_passcode_ignored(self, db_session, make_user):
-        """Old ``?passcode=...`` pattern must not authenticate — routing only."""
+        """Old ``?passcode=...`` pattern must not authenticate — routing only.
+        Sprint 718: response collapsed from 403 to 404 to remove the enumeration signal."""
         _, resp = await _create_share(db_session, make_user, passcode="StrongP@ss1")
         assert resp.status_code == 200
         token = resp.json()["share_token"]
@@ -271,8 +276,8 @@ class TestPasscodeRoutePolicy:
         try:
             async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 r = await client.get(f"/export-sharing/{token}?passcode=StrongP@ss1")
-            # Must NOT serve the file — still 403.
-            assert r.status_code == 403
+            # Must NOT serve the file. 404 (post-Sprint-718 enumeration collapse), not 403.
+            assert r.status_code == 404
         finally:
             app.dependency_overrides.clear()
 

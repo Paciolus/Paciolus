@@ -57,6 +57,9 @@ prometheus_client>=0.25.0
 # Background Scheduler (Sprint 307)
 APScheduler==3.11.2
 
+# Process RSS probe for memo memory budget (Sprint 722)
+psutil>=7.0.0
+
 # NOTE: numpy and chardet are transitive dependencies only (via pandas/pdfplumber).
 # No direct imports exist — pip resolves them automatically. No pin needed.
 

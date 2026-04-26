@@ -66,6 +66,43 @@
 > Sprint 611 + Sprints 677–714 archived 2026-04-24 to `tasks/archive/sprints-611-714-details.md` (eight post-Sprint-673 batches: Post-Audit Remediation, Anomaly Framework Hardening, Security Hardening Follow-Ups, Design Refresh, Production Bug Triage, Nightly Agent Remediation, Branding Coverage Completion, P2 Sentry Sweep). Only Sprint 715 remains pending.
 > Sprints 716–720 archived to `tasks/archive/sprints-716-720-details.md`.
 
+### Sprint 722: Memory Budget for Memo Generation
+**Status:** COMPLETE 2026-04-25 — agent-sweep wave 6, the OOM-mitigation pre-Phase-3-completion sprint.
+**Priority:** P1 (Render Standard 2 GB / worker; CEO running 18 memos back-to-back in Phase 3 was the OOM trigger Guardian flagged).
+**Source:** Agent sweep 2026-04-24, punch list 2.1.
+
+**Problem class:** ReportLab + openpyxl accumulate in RAM. Single-memo footprint is fine, but multiple sequential memo exports on the same worker climb past the soft headroom we keep for request payloads, SQLAlchemy session caches, and OS slab. The pressure is invisible until OOM-kill hits.
+
+**Scope landed:**
+- [x] `backend/shared/memory_budget.py` — `get_rss_mb()` probe + `track_memo_memory(label)` context manager: structured before/after RSS logging, unconditional `gc.collect()`, Sentry warning + breadcrumb when post-RSS > `MEMO_RSS_WARN_MB` (default 1500 MB).
+- [x] `backend/routes/export_memos.py::_memo_export_handler` — wraps `entry.generator(...)` in `track_memo_memory(entry.log_label)`. All 18 memo PDF endpoints inherit the probe automatically; new endpoints registered via `_STANDARD_REGISTRY` get coverage for free.
+- [x] `backend/requirements.txt` — pinned `psutil>=7.0.0` (was a transitive dep, now a direct one).
+- [x] `backend/tests/test_memo_memory_budget.py` — 11 tests (10 fast + 1 `slow`-marked): probe correctness, before/after log contract, unconditional gc on normal-and-exception paths, threshold breach → Sentry capture (with fake sentry_sdk), under-threshold → no emit, env-var fallback on invalid/zero values, bounded RSS across 5 sequential JE memo generations.
+- [x] `docs/runbooks/memory-pressure.md` — symptom-keyed response sequences, LogQL queries for the `memo.memory.*` log lines, configuration reference, rationale for the handler-level wiring.
+- [x] Stale-test cleanup: `tests/test_security_hardening_2026_04_20.py` — two assertions left over from Sprint 718's enumeration-collapse (passcode-protected GET) updated 403 → 404. Pre-existing failures on main; bundled here because they blocked Sprint 722's pytest verification.
+
+**Recurrence prevention (the durable artifact):**
+1. **Wired at the handler chokepoint, not per-generator** — `_memo_export_handler` is the single function all 18 memo PDFs pass through. New memo endpoints registered through `_STANDARD_REGISTRY` inherit RSS probing without explicit per-generator opt-in. There is one path to forget, and it's already wired.
+2. **Slow-marked regression test bites if `gc.collect()` is removed** — `TestRepeatedGenerationStaysBounded::test_je_memo_repeated_generation` fails if RSS grows >100 MB across 5 sequential JE memo invocations. Removing the gc sweep regresses it.
+3. **Sentry warning has a working fake** — `_FakeSentry` in the test gives us confidence the threshold path emits without needing a real DSN at PR time.
+4. **Soft threshold tunable via env** — `MEMO_RSS_WARN_MB` allows per-environment override (lower in staging to flush leaks, higher in prod if instance class changes). Invalid/zero values fall back to 1500 MB rather than disabling the alert.
+
+**Out of scope:**
+- Render `maxRequestsPerWorker` / `gunicorn.max_requests` — Render service config is dashboard-managed, not in repo. Recommended values documented in the runbook (§2). Operator action item, not a code deliverable.
+- Sentry alert rule wiring in the Sentry UI — the `capture_message(level="warning")` is the right code shape; the alert routing rule lives in the Sentry project config and is a separate operator step (also documented in the runbook).
+- `engagement_export.py::generate_zip` instrumentation — that path generates a single anomaly-summary PDF, not 18 memos. Wrapping it would be premature; runbook §5 documents the boundary so a future bundling sprint knows to extend the probe.
+- 18-memo full-fixture parametrized regression test — would require 18 bespoke fixture builders and breaks under any memo schema evolution. The single representative (JE) is enough to catch the gc-removal regression; production monitoring catches per-memo growth.
+
+**Validation:**
+- 10/10 fast tests pass (`pytest tests/test_memo_memory_budget.py -m "not slow"`)
+- 1/1 slow test passes (`pytest tests/test_memo_memory_budget.py -m slow`)
+- 100/100 existing memo tests still green (smoke: `tests/test_je_testing_memo.py`, `tests/test_ap_testing_memo.py`, `tests/test_ar_aging_memo.py`, `tests/test_memo_boundary_phrasing.py`)
+- Full backend pytest: 7231 passed, 1 unrelated pre-existing failure cleared by the bundled stale-test cleanup; 3 remaining failures (`TestCSRFRefreshLogout::test_production_rejects_x_requested_with_only`, `TestRateLimitFailClosed::test_strict_mode_defaults_true_in_production`, `TestRateLimitFailClosed::test_valid_override_allowed`) confirmed pre-existing on main — Stripe-key-validation fixtures need updating; tracked separately, not Sprint 722 scope.
+
+**Lesson tie-in:** Continues the Sprint 717 "wire it once at the chokepoint" pattern — the registry-based memo handler already exists, so the probe lands as a 2-line edit rather than 18 per-generator decorators. This is the pattern to reuse for Sprint 723's coverage floors and Sprint 730's health endpoints.
+
+---
+
 ### Sprint 721: Memo Output Quality & ISA 265 Boundary
 **Status:** COMPLETE 2026-04-25 — agent-sweep wave 5, the methodology-language fix.
 **Priority:** P1 (boundary-language exposure visible to PCAOB-registered firms; not Stripe-blocking but pre-Phase-3-completion)
