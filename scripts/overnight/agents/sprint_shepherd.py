@@ -20,7 +20,17 @@ WORK_CATEGORIES = [
     "bug fix", "report", "audit", "test", "billing", "ui", "api", "refactor", "perf",
 ]
 
+# Sprint 730: word-boundary matching prevents false-positives on substrings
+# like "fix typo in TODO list" or "chore: bump pytodo dep". The regex is
+# applied case-insensitively against each commit message.
 RISK_KEYWORDS = ["WIP", "temp", "TODO", "fixme", "hack", "broken"]
+RISK_KEYWORD_RE = re.compile(r"\b(" + "|".join(re.escape(k) for k in RISK_KEYWORDS) + r")\b", re.IGNORECASE)
+
+# Conventional-commit prefixes that pre-classify the commit; risk keywords
+# inside the *description* of these commits are not load-bearing because the
+# prefix itself signals intent ("fix:" already says it's a fix). Sprint 730
+# false-positive: "fix: archive_sprints.sh number-extraction (TODO list bug)".
+SAFE_PREFIXES = ("fix:", "chore:", "docs:", "style:", "test:", "build:", "ci:", "perf:")
 
 CHECKLIST_LOCATIONS = [
     PROJECT_ROOT / "SPRINT_CHECKLIST.md",
@@ -99,13 +109,24 @@ def _categorize_commit(message: str) -> str:
 
 
 def _find_risk_signals(commits: list[dict]) -> list[dict]:
-    """Flag commits with risk keywords in their messages."""
-    risky = []
+    """Flag commits with risk keywords in their messages.
+
+    Sprint 730: applies word-boundary matching (no false positives on substrings
+    like "TODO list" embedded in larger words) and skips conventional-commit
+    prefixes that pre-classify intent ("fix:", "chore:", etc. already signal
+    that the commit is a non-feature change).
+    """
+    risky: list[dict] = []
     for c in commits:
-        for kw in RISK_KEYWORDS:
-            if kw.lower() in c["message"].lower():
-                risky.append({"hash": c["hash"], "message": c["message"], "keyword": kw})
-                break
+        message = c["message"]
+        # Skip if the commit is conventionally tagged (fix:, chore:, etc.).
+        # The first token before whitespace is the prefix.
+        first_token = message.split(maxsplit=1)[0].lower() if message else ""
+        if first_token in SAFE_PREFIXES:
+            continue
+        match = RISK_KEYWORD_RE.search(message)
+        if match:
+            risky.append({"hash": c["hash"], "message": message, "keyword": match.group(1)})
     return risky
 
 

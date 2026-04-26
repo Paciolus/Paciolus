@@ -67,6 +67,40 @@
 > Sprints 716–720 archived to `tasks/archive/sprints-716-720-details.md`.
 > Sprints 721–725 archived to `tasks/archive/sprints-721-725-details.md`.
 
+### Sprint 730: Operational Observability Polish
+**Status:** COMPLETE 2026-04-25 — agent-sweep wave 10, the operational-monitoring polish.
+**Priority:** P2 (post-launch monitoring; closes the silent-failure gaps Guardian flagged).
+**Source:** Agent sweep 2026-04-24, Tier 5 operational items.
+
+**Problem class:** Several "silent failure" gaps where production state changes are not detectable until users complain. Each is small individually; together they leave gaps in the post-launch monitoring story. Sprint 730 closes the highest-yield 3 (Sprint Shepherd false-positive, Redis health probe, R2 health probe). The remaining 2 (R2 transient-vs-permanent in download(), lessons consolidation) are deferred — see Out of scope.
+
+**Scope landed:**
+- [x] **Sprint Shepherd risk-keyword regex fix** in `scripts/overnight/agents/sprint_shepherd.py`. Was substring match (`"TODO".lower() in c["message"].lower()`) which false-positived on `"fix: archive_sprints.sh ... (TODO list bug)"` (the canonical 2026-04-23 incident). Now uses `\b(WIP|TODO|...)\b` regex with word-boundary matching, AND skips conventional-commit prefixes (`fix:`, `chore:`, `docs:`, `style:`, `test:`, `build:`, `ci:`, `perf:`) since the prefix already pre-classifies intent.
+- [x] **`scripts/overnight/tests/test_sprint_shepherd_regex.py`** — 13 regression tests: word-boundary matching (5 tests including punctuation boundaries + all 6 keywords), conventional-prefix skip (5 tests including the canonical 2026-04-23 commit message), edge cases (3 tests). Pins both the word-boundary fix and the prefix skip so a future "simplification" doesn't reintroduce either failure.
+- [x] **`/health/redis` endpoint** in `backend/routes/health.py`. Soft-imports `redis`, calls `from_url(socket_timeout=2).ping()`. Returns 200 + `details.redis="not_configured"` when REDIS_URL unset (in-memory fallback is the intended degraded mode). Returns 200 + `connected` on success. Returns 503 + `DependencyStatus(status="unhealthy", details={"redis": "<exc_class_name>"})` on connection error. Catches all redis client exceptions broadly (the library raises many subclasses; per-class handling adds noise without value at the probe layer).
+- [x] **`/health/r2` endpoint** — uses `export_share_storage.is_configured()` short-circuit when R2 env vars unset. When configured, calls S3-API `head_bucket` (canonical reachability + auth probe; doesn't list user data). Returns the same `healthy`/`unhealthy` shape as `/health/redis`. Distinguishes 200-with-honest-`unhealthy` (e.g., client init returned None) from 503-with-exception (connectivity failure).
+- [x] **`backend/tests/test_health_redis_r2.py`** — 7 tests: not-configured paths (2), happy ping/head_bucket paths (2), 503 on connection error (2), 200-with-honest-unhealthy when client init returns None (1). Mocks `redis.from_url` and `export_share_storage._get_client` rather than spinning up real services.
+
+**Recurrence prevention (the durable artifact):**
+1. **Word-boundary regex + prefix skip = mechanical fix, not discipline-dependent** — the original substring match was a 1-line bug fixable in 1 line, but the *test* is the durable artifact: pinned commit messages (the canonical 2026-04-23 false-positive is a fixture) make the regression measurable. A future "simplification" back to substring match fails 13 tests at PR time.
+2. **Health probes follow the existing `DependencyStatus` shape** — same response model as `/health/ready` so dashboards and uptime checks built against `/health/ready` work for the new probes without schema work.
+3. **Probes are safe to invoke without auth** (rate-limited via `RATE_LIMIT_HEALTH`) so an external uptime monitor can hit them without managing tokens. The 503-on-failure semantics align with what most uptime providers expect.
+4. **Honest reporting when configuration is incomplete** — the `client_not_initialized` path returns 200 with `details.status="unhealthy"` rather than 503. That distinction matters: a 503 should mean "transient outage, retry later"; an honest "we're misconfigured" should be visible in the dashboard but not page oncall.
+
+**Out of scope (deferred to follow-up sprints):**
+- **R2 transient-vs-permanent distinction in `export_share_storage.download()`** — currently returns `None` on any failure (collapses 404 + 5xx). The fix involves changing the return type to a Result-like or raising typed exceptions, plus updating route handlers to map 404→410 and 5xx→503. Multi-touchpoint refactor; deferred to a sprint that can isolate it. Current behavior is conservative (clients see "missing" rather than "broken") — operationally OK for now.
+- **Lessons consolidation** — `tasks/lessons.md` is 1,063 lines; consolidating the three "verify against the live system" entries into one canonical lesson + a 4-line sprint-close checklist needs a careful read of the existing entries to preserve nuance. Not safely doable in-session under the current budget. Deferred to a hotfix-class commit later.
+
+**Validation:**
+- 13/13 sprint shepherd regex tests pass
+- 7/7 new health probe tests pass
+- 74/74 broader sweep pass (Sprint 722-730 tests + existing health tests)
+- `/health/redis` and `/health/r2` smoke-test imports cleanly (FastAPI route registration succeeds)
+
+**Lesson tie-in:** Same shape as Sprint 722's memo memory probe — the probe lives at the chokepoint (a single endpoint), exception-classes are stringified by class-name (no per-class handling), and the test mocks the dependency rather than spinning up the real one. The Sprint Shepherd fix continues the Sprint 717 SSOT pattern (the test fixture *is* the canonical false-positive commit message).
+
+---
+
 ### Sprint 715: SendGrid 403 root-cause investigation (24h post-deploy watch)
 **Status:** PENDING — investigable starting **2026-04-25 ~14:29 UTC** (24h after Sprint 713 merge `2b92b771` on 2026-04-24 14:29 UTC).
 **Priority:** P2 (observability follow-up — no user-facing impact, but worth knowing which recipient/path triggers the 403)

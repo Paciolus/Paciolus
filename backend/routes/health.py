@@ -2,10 +2,14 @@
 Paciolus API — Health & Waitlist Routes
 
 Endpoints:
-  GET /health       — Legacy shallow/deep probe (backward compat)
-  GET /health/live  — Liveness probe: static, zero I/O (restart decisions)
-  GET /health/ready — Readiness probe: DB + pool stats (traffic routing)
-  POST /waitlist    — Email waitlist signup
+  GET /health         — Legacy shallow/deep probe (backward compat)
+  GET /health/live    — Liveness probe: static, zero I/O (restart decisions)
+  GET /health/ready   — Readiness probe: DB + pool stats (traffic routing)
+  GET /health/redis   — Redis availability probe (Sprint 730; only meaningful
+                        when REDIS_URL is set — slowapi rate-limit storage)
+  GET /health/r2      — R2 export-share-storage probe (Sprint 730; only
+                        meaningful when R2 env vars are configured)
+  POST /waitlist      — Email waitlist signup
 """
 
 import logging
@@ -211,6 +215,138 @@ async def readiness_probe(request: Request) -> ReadinessResponse:
                 timestamp=datetime.now(UTC).isoformat(),
                 version=__version__,
                 dependencies={"database": db_dep},
+            ).model_dump(),
+        )
+
+
+# ---------------------------------------------------------------------------
+# GET /health/redis — Sprint 730 Redis availability probe
+# ---------------------------------------------------------------------------
+
+
+@router.get("/health/redis", response_model=DependencyStatus)
+@limiter.limit(RATE_LIMIT_HEALTH)
+async def redis_probe(request: Request) -> DependencyStatus:
+    """Redis availability probe (Sprint 730).
+
+    When REDIS_URL is set, slowapi uses Redis as its rate-limit storage and a
+    Redis outage degrades the rate limiter to fail-open. This probe makes the
+    Redis health an explicit signal so an oncall alert can fire on probe
+    failures rather than waiting for a credential-stuffing burst to surface
+    the silent fail-open.
+
+    When REDIS_URL is NOT set (single-worker deployments, dev), returns
+    ``healthy`` with ``details.redis="not_configured"`` — the rate limiter is
+    using its in-memory fallback and there's nothing to probe.
+    """
+    import os
+
+    start = time.perf_counter()
+    redis_url = os.environ.get("REDIS_URL", "").strip()
+    if not redis_url:
+        latency_ms = (time.perf_counter() - start) * 1000
+        return DependencyStatus(
+            status="healthy",
+            latency_ms=round(latency_ms, 2),
+            details={"redis": "not_configured"},
+        )
+
+    try:
+        import redis as redis_lib  # noqa: WPS433  — soft import; redis is optional
+    except ImportError:
+        latency_ms = (time.perf_counter() - start) * 1000
+        return DependencyStatus(
+            status="unhealthy",
+            latency_ms=round(latency_ms, 2),
+            details={"redis": "library_missing"},
+        )
+
+    try:
+        client = redis_lib.from_url(redis_url, socket_timeout=2, socket_connect_timeout=2)
+        pong = client.ping()
+        latency_ms = (time.perf_counter() - start) * 1000
+        if pong:
+            return DependencyStatus(
+                status="healthy",
+                latency_ms=round(latency_ms, 2),
+                details={"redis": "connected"},
+            )
+        return DependencyStatus(
+            status="unhealthy",
+            latency_ms=round(latency_ms, 2),
+            details={"redis": "ping_returned_false"},
+        )
+    except Exception as exc:  # noqa: BLE001 — broad on purpose; Redis client raises many subclasses
+        latency_ms = (time.perf_counter() - start) * 1000
+        logger.warning("Redis health probe failed: %s", type(exc).__name__)
+        raise HTTPException(
+            status_code=503,
+            detail=DependencyStatus(
+                status="unhealthy",
+                latency_ms=round(latency_ms, 2),
+                details={"redis": type(exc).__name__},
+            ).model_dump(),
+        )
+
+
+# ---------------------------------------------------------------------------
+# GET /health/r2 — Sprint 730 R2 export-share-storage probe
+# ---------------------------------------------------------------------------
+
+
+@router.get("/health/r2", response_model=DependencyStatus)
+@limiter.limit(RATE_LIMIT_HEALTH)
+async def r2_probe(request: Request) -> DependencyStatus:
+    """R2 export-share-storage availability probe (Sprint 730).
+
+    When R2 is configured (R2_EXPORTS_* env vars set), this lists the bucket
+    head to verify auth + connectivity. When R2 is not configured, returns
+    ``healthy`` with ``details.r2="not_configured"``.
+
+    The probe does NOT touch user data — it only verifies that the bucket is
+    reachable with the configured credentials. The mass-410-vs-503 distinction
+    in ``export_share_storage.download()`` is what handles per-object errors;
+    this endpoint is about whether R2 is reachable at all.
+    """
+    from shared import export_share_storage
+
+    start = time.perf_counter()
+    if not export_share_storage.is_configured():
+        latency_ms = (time.perf_counter() - start) * 1000
+        return DependencyStatus(
+            status="healthy",
+            latency_ms=round(latency_ms, 2),
+            details={"r2": "not_configured"},
+        )
+
+    try:
+        # head_bucket is the canonical "is the bucket reachable + are my creds
+        # valid" probe in S3-compatible APIs. Doesn't list any objects.
+        client = export_share_storage._get_client()  # noqa: SLF001 — module-internal probe
+        bucket = export_share_storage._bucket_name  # noqa: SLF001
+        if client is None or bucket is None:
+            latency_ms = (time.perf_counter() - start) * 1000
+            return DependencyStatus(
+                status="unhealthy",
+                latency_ms=round(latency_ms, 2),
+                details={"r2": "client_not_initialized"},
+            )
+        client.head_bucket(Bucket=bucket)
+        latency_ms = (time.perf_counter() - start) * 1000
+        return DependencyStatus(
+            status="healthy",
+            latency_ms=round(latency_ms, 2),
+            details={"r2": "reachable", "bucket": bucket},
+        )
+    except Exception as exc:  # noqa: BLE001 — botocore raises many subclasses
+        latency_ms = (time.perf_counter() - start) * 1000
+        logger.warning("R2 health probe failed: %s", type(exc).__name__)
+        raise HTTPException(
+            status_code=503,
+            detail=DependencyStatus(
+                status="unhealthy",
+                latency_ms=round(latency_ms, 2),
+                details={"r2": type(exc).__name__},
             ).model_dump(),
         )
 
