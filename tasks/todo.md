@@ -105,23 +105,53 @@
 
 ---
 
-### Sprint 727: AuditEngineBase Migration — Phase 2 + lint promotion
-**Status:** PENDING — sequenced after Sprint 726's lint ships and at least one migration lands.
-**Priority:** P2 (architectural follow-on; gates new engines to the canonical pipeline).
-**Source:** Agent sweep 2026-04-24, punch list 3.1 + Sprint 726 ADR.
+### Sprint 727: AuditEngineBase Migration — Phase 1.5 (per-engine triage)
+**Status:** COMPLETE 2026-04-26 — re-scoped from "Phase 2 + lint promotion" to "triage + blocklist" once Sprint 726 surfaced 16 candidates and the per-engine review confirmed many genuinely don't fit `AuditEngineBase`.
+**Priority:** P2 (architectural pre-requisite for actual migrations).
+**Source:** Agent sweep 2026-04-24 punch list 3.1 + Sprint 726 ADR pre-requisite.
 
-**Scope (per ADR-013):**
-- Migrate Revenue (~2,509 LoC) onto `AuditEngineBase`. Generate behavioral-parity fixtures (synthetic TB → run pre/post → assert byte-equal modulo field ordering). Land the parity test as the migration's correctness gate.
-- Optionally migrate AR Aging if Revenue lands cleanly inside the sprint budget.
-- Promote `scripts/lint_engine_base_adoption.py` exit code from 0 to 1 on findings (or update the CI step to drop `continue-on-error: true`).
+**Why re-scoped:** Sprint 726's ADR called out per-engine triage as a Sprint 727 pre-requisite. Doing the triage in its own sprint (rather than rushed inside the first migration) means each blocklist add lands as an audit-reviewable PR with rationale, and the migration backlog shrinks to its honest size before the per-engine migrations start.
 
-**Effort estimate:** 1–2 engine migrations per sub-sprint at ~1 day per engine + parity-fixture authoring. The 9-engine queue from Sprint 726's ADR translates to roughly 9 sub-sprints across multiple weeks. Don't try to do them in one commit.
+**Scope landed:**
+- [x] **Per-engine review of all 16 lint-flagged engines** against the 10-step `AuditEngineBase` pipeline shape (detect columns → parse → quality → tests → score → result with composite_score + flagged_entries).
+- [x] **`scripts/lint_engine_base_adoption.py::NON_TESTING_ENGINES`** extended with 7 Sprint-727-classified blocklist entries with per-engine rationale comments:
+  - `accrual_completeness_engine.py` — descriptive metrics + run-rate comparison; no test battery
+  - `cash_flow_projector_engine.py` — 30/60/90-day deterministic forecast (calculator)
+  - `expense_category_engine.py` — ISA 520 expense decomposition into ratios; analytical
+  - `lease_accounting_engine.py` — ASC 842 classification + amortization (calculator)
+  - `lease_diagnostic_engine.py` — four presence/absence checks; no scoring or flagging
+  - `loan_amortization_engine.py` — period-by-period schedule generator (pure calculator)
+  - `population_profile_engine.py` — descriptive stats (mean/median/Gini/Benford); aggregator
+- [x] **`scripts/lint_engine_base_adoption.py::BORDERLINE_ENGINES`** new set documenting 4 engines that produce some testing-shaped output but require per-engine design decisions before migration: `ratio_engine.py`, `sampling_engine.py`, `three_way_match_engine.py`, `w2_reconciliation_engine.py`. Surfaced in findings (so they can't be silently forgotten); not in blocklist (so they can't be silently dismissed).
+- [x] **`backend/tests/test_engine_base_lint.py`** — added 4 Sprint 727 triage-outcome tests in new `TestSprint727Triage` class: blocklist additions present, migration targets still in findings, borderline engines in findings but not blocklist, post-triage finding count in expected range (5–12). Tests bite if a future PR removes a blocklist entry without re-classifying or silently adds a new off-pattern engine.
+- [x] **ADR-013 updated** with Phase 1.5 section recording the triage outcome (5 migration targets, 7 blocklist adds, 4 borderline).
 
-**Why pending:** Engine migrations need synthetic TB fixtures per engine; building those is the bulk of the work and doesn't parallelize cleanly. Sprint 726 ships the lint to make the schedule visible; Sprint 727 starts the per-engine migration cadence.
+**Migration backlog after triage (the honest list):**
+1. `revenue_testing_engine.py` (2,509 LoC) — agent-sweep top priority
+2. `ar_aging_engine.py` (2,179 LoC)
+3. `fixed_asset_testing_engine.py` (1,666 LoC)
+4. `inventory_testing_engine.py` (1,534 LoC)
+5. `sod_engine.py` (452 LoC) — smallest, possibly first as a shake-down
 
-**Pre-requisites:**
-- Sprint 726 lint script in place (✅ done).
-- Per-engine triage to confirm the 16 lint-flagged engines are the right migration candidates (some likely belong in `NON_TESTING_ENGINES` blocklist instead).
+Each of these is a follow-up sub-sprint with synthetic-TB parity fixtures + the migration. Numbered as 727a, 727b, ... in the schedule.
+
+**Recurrence prevention (the durable artifact):**
+1. **Triage decisions are tested, not just commented** — `test_sprint_727_blocklist_additions` and `test_borderline_engines_in_findings_not_blocklist` make the classification a contract. A future "let's clean up the blocklist" PR has to update the tests, making the rationale explicit.
+2. **Post-triage count test (5–12 range)** catches drift in either direction: a migration drops the count (good), but a new off-pattern engine bumps it back up (bad without intent). The flexible range absorbs noise without losing visibility.
+3. **`BORDERLINE_ENGINES` set is in code** — visible in the lint output's secondary roadmap. Forces the per-engine decision to land as a code change rather than a Slack thread.
+
+**Out of scope:**
+- **Lint exit-code promotion to error.** Now belongs in a Sprint 727a once the first real migration lands. The pre-triage 16-engine count was too high to flip the gate (would have blocked unrelated PRs); 9 is still too high. Promote when the count gets to ~3 (only borderline engines remain, and those require design discussion not blocking).
+- **Actual engine migrations.** Each is a sub-sprint per the ADR. Sprint 727a (next) picks `sod_engine.py` (smallest at 452 LoC) as a shake-down migration to validate the parity-fixture pattern before the bigger engines land.
+- **w2_reconciliation_engine classification finalization.** Default-classified as borderline; full review deferred to its migration sub-sprint.
+
+**Validation:**
+- Lint output dropped from 16 → 9 findings (5 migration targets + 4 borderline)
+- 16/16 lint-script tests pass (12 from Sprint 726 + 4 new Sprint 727 triage tests)
+- A synthetic blocklist-removal change (manually deleting `accrual_completeness_engine.py` from `NON_TESTING_ENGINES`) fails `test_sprint_727_blocklist_additions` as expected
+- ADR-013 records the triage outcome alongside the original migration plan
+
+**Lesson tie-in:** Same shape as Sprint 723 (foundational sprint that ships the gate before the work) and Sprint 726 (Phase 1 lint before Phase 2 migrations). Establishing the boundary is itself a deliverable; the migration cadence becomes tractable once the boundary exists. Re-scoping a sprint mid-flight (from "do the migration" to "do the triage that the migration needs") is the right call when the originally-planned scope wasn't actually doable in one commit.
 
 ---
 

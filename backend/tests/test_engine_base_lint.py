@@ -16,6 +16,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
 from lint_engine_base_adoption import (  # noqa: E402  (path manipulation above)
+    BORDERLINE_ENGINES,
     NON_TESTING_ENGINES,
     _is_testing_engine,
     _subclasses_audit_engine_base,
@@ -93,6 +94,81 @@ class TestKnownMigrated:
             assert migrated not in finding_names, (
                 f"{migrated} appeared in off-pattern findings but should be on-pattern"
             )
+
+
+# ---------------------------------------------------------------------------
+# Sprint 727 triage outcome — blocklist & borderline classification
+# ---------------------------------------------------------------------------
+
+
+class TestSprint727Triage:
+    """Sprint 727 triaged the 16 lint-flagged engines into migration targets,
+    blocklist additions (calculators / aggregators / indicators that don't
+    fit the testing-tool pipeline), and borderline cases that need design
+    decisions before migration. These tests pin the classification so a
+    future "rip out the blocklist to clean up the lint output" PR has to
+    explain why it's removing a per-engine triage decision."""
+
+    def test_sprint_727_blocklist_additions(self):
+        # Each of these had a Sprint 727 rationale (descriptive stats /
+        # calculator / indicator-only). Removing one without re-classifying
+        # the engine should fail this test as a forcing function.
+        for name in (
+            "accrual_completeness_engine.py",
+            "cash_flow_projector_engine.py",
+            "expense_category_engine.py",
+            "lease_accounting_engine.py",
+            "lease_diagnostic_engine.py",
+            "loan_amortization_engine.py",
+            "population_profile_engine.py",
+        ):
+            assert name in NON_TESTING_ENGINES, f"{name} should be in NON_TESTING_ENGINES (Sprint 727 triage)"
+
+    def test_sprint_727_migration_targets_still_in_findings(self):
+        # The five A-classified engines are the migration backlog Sprint 727+
+        # actually picks up. They MUST appear in the findings — disappearing
+        # without a corresponding migration commit means the lint regressed
+        # or someone added them to the blocklist without rationale.
+        findings = find_off_pattern_engines()
+        finding_names = {p.name for p in findings}
+        for migration_target in (
+            "ar_aging_engine.py",
+            "fixed_asset_testing_engine.py",
+            "inventory_testing_engine.py",
+            "revenue_testing_engine.py",
+            "sod_engine.py",
+        ):
+            assert migration_target in finding_names, (
+                f"{migration_target} (Sprint 727 migration target) should be in findings"
+            )
+
+    def test_borderline_engines_in_findings_not_blocklist(self):
+        # Borderline engines (ratio, sampling, three_way_match, w2_recon) are
+        # surfaced as findings (so they can't be silently forgotten) but NOT
+        # in the blocklist (the per-engine decision hasn't been made yet).
+        findings = find_off_pattern_engines()
+        finding_names = {p.name for p in findings}
+        for borderline in BORDERLINE_ENGINES:
+            assert borderline in finding_names, (
+                f"{borderline} (borderline) should be in findings until per-engine decision lands"
+            )
+            assert borderline not in NON_TESTING_ENGINES, (
+                f"{borderline} (borderline) should NOT be in blocklist; classify per engine first"
+            )
+
+    def test_post_triage_finding_count(self):
+        # Sprint 727 brought the count from 16 → 9 (5 migration targets + 4
+        # borderline). A future migration sprint that lands one engine should
+        # bring this to 8; if a future PR adds another off-pattern engine
+        # without thinking, this test makes the count visible.
+        findings = find_off_pattern_engines()
+        # Allow some flex for new engines added after Sprint 727 — assertion
+        # is a reasonable upper bound, not an exact count.
+        assert 5 <= len(findings) <= 12, (
+            f"Off-pattern engine count {len(findings)} outside expected post-Sprint-727 range. "
+            "Either a migration landed (count down), a new engine was added (count up), "
+            "or the lint script regressed."
+        )
 
 
 # ---------------------------------------------------------------------------

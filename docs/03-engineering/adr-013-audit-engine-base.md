@@ -1,7 +1,7 @@
 # ADR-013: AuditEngineBase Adoption
 
-**Status:** Accepted (Sprint 726, Phase 1)
-**Date:** 2026-04-25
+**Status:** Accepted (Sprint 726 Phase 1, Sprint 727 triage)
+**Date:** 2026-04-25 (Phase 1) / 2026-04-26 (triage)
 **Decision-makers:** Engineering team
 
 ## Context
@@ -58,7 +58,36 @@ prevention guardrail; Phase 2+ ships the migrations.
   takes precedence).
 - This ADR documents the migration approach.
 
-### Phase 2 — Sprint 727 and onward
+### Phase 1.5 — Sprint 727 triage (this commit)
+
+Per-engine review of the 16 lint-flagged engines from Phase 1. Outcome:
+
+**Migration targets (5 engines):** `ar_aging_engine`, `fixed_asset_testing_engine`,
+`inventory_testing_engine`, `revenue_testing_engine`, `sod_engine`. These have
+the testing-tool pipeline shape (test battery → composite_score → flagged
+entries) and are valid Sprint 727+ migration candidates.
+
+**Blocklist additions (7 engines):** `accrual_completeness_engine`,
+`cash_flow_projector_engine`, `expense_category_engine`,
+`lease_accounting_engine`, `lease_diagnostic_engine`,
+`loan_amortization_engine`, `population_profile_engine`. These are
+calculators, descriptive-stats aggregators, or indicator-only engines that
+don't fit the 10-step pipeline. Added to `NON_TESTING_ENGINES` with
+per-engine rationale comments.
+
+**Borderline (4 engines):** `ratio_engine`, `sampling_engine`,
+`three_way_match_engine`, `w2_reconciliation_engine`. These produce some
+testing-shaped output but require design decisions before migration (e.g.,
+"is each ratio threshold band a pass/fail test?"). Surfaced in
+`BORDERLINE_ENGINES` set in the lint script as documentation; remain in the
+findings (so they can't be silently forgotten) but are not migration-target
+sprints' default queue.
+
+After triage the lint reports **9 off-pattern engines** (5 migration targets
++ 4 borderline) — down from 16 in Phase 1. The honest migration backlog is
+now visible.
+
+### Phase 2 — Sprint 727 (sub-sprints) and onward
 
 Each subsequent migration sprint:
 

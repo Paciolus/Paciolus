@@ -35,7 +35,12 @@ BACKEND_ROOT = REPO_ROOT / "backend"
 # fit the AuditEngineBase 10-step pipeline (which is "detect columns → parse
 # → quality → tests → score → result" — the testing-tool shape). Excluded
 # from the lint by name.
+#
+# Sprint 727 added the calculator/aggregator/indicator engines to this set
+# after per-engine triage. Each entry has a one-line rationale; misclassi-
+# fications are recoverable in a future PR.
 NON_TESTING_ENGINES: frozenset[str] = frozenset({
+    # --- Sprint 726 initial blocklist ---
     "audit_engine.py",                  # Top-level orchestrator, not a tool
     "engine_framework.py",              # The base class itself
     "benchmark_engine.py",              # Reference data, not a test battery
@@ -57,6 +62,38 @@ NON_TESTING_ENGINES: frozenset[str] = frozenset({
     "segregation_of_duties_engine.py",  # Different pipeline
     "bank_reconciliation_engine.py",    # Different pipeline (matching, not test battery)
     "multi_period_engine.py",           # Comparison, not a test battery
+
+    # --- Sprint 727 triage additions (per-engine rationale below) ---
+    "accrual_completeness_engine.py",   # Descriptive metrics + run-rate comparison; no test battery, no composite_score
+    "cash_flow_projector_engine.py",    # 30/60/90-day deterministic forecast (calculator); no flagging
+    "expense_category_engine.py",       # ISA 520 expense decomposition into ratios; analytical, not a test battery
+    "lease_accounting_engine.py",       # ASC 842 classification + amortization (calculator)
+    "lease_diagnostic_engine.py",       # Four presence/absence checks; no scoring or flagging
+    "loan_amortization_engine.py",      # Period-by-period schedule generator (pure calculator)
+    "population_profile_engine.py",     # Descriptive stats (mean/median/Gini/Benford); aggregator, not a test battery
+})
+
+# Sprint 727 borderline list — engines that produce some testing-shaped output
+# but don't cleanly fit the 10-step pipeline. Surface as findings (NOT in the
+# blocklist) so a future migration sprint can decide per-engine whether to
+# adapt them or move them to the blocklist. Listed here as documentation for
+# the human picking up Sprint 727's actual migrations.
+#
+#   ratio_engine.py             — Financial ratios with threshold bands (warning/adequate/strong)
+#                                 Could adapt: treat each band as a pass/fail "test"; needs design decision
+#                                 on whether to emit flagged_entries.
+#   sampling_engine.py          — ISA 530 statistical-sampling orchestrator (MUS + Stringer)
+#                                 Different pipeline shape (design → select → evaluate → UEL conclusion)
+#                                 Possibly its own framework or a future Sprint epic.
+#   three_way_match_engine.py   — PO/invoice/receipt matcher with variance flags
+#                                 Hybrid: deterministic matching but flagged-entry-shaped output.
+#                                 Could fit with adaptation; needs alignment on what counts as a "test".
+#   w2_reconciliation_engine.py — Tax-form reconciliation; classification deferred to migration sprint.
+BORDERLINE_ENGINES: frozenset[str] = frozenset({
+    "ratio_engine.py",
+    "sampling_engine.py",
+    "three_way_match_engine.py",
+    "w2_reconciliation_engine.py",
 })
 
 
