@@ -6,6 +6,7 @@ from routes.account_risk_heatmap import router as account_risk_heatmap_router
 from routes.activity import router as activity_router
 from routes.adjustments import router as adjustments_router
 from routes.admin_dashboard import router as admin_dashboard_router
+from routes.analytical_expectations import router as analytical_expectations_router
 from routes.ap_testing import router as ap_testing_router
 from routes.ar_aging import router as ar_aging_router
 from routes.audit import router as audit_router
@@ -83,6 +84,7 @@ all_routers = [
     inventory_testing_router,
     engagements_router,
     follow_up_items_router,
+    analytical_expectations_router,
     contact_router,
     currency_router,
     sampling_router,

@@ -21,6 +21,7 @@ from database import Base
 from shared.soft_delete import SoftDeleteMixin
 
 if TYPE_CHECKING:
+    from analytical_expectations_model import AnalyticalExpectation
     from follow_up_items_model import FollowUpItem
     from models import Client, User
 
@@ -133,7 +134,9 @@ class Engagement(Base):
     # Materiality parameters
     materiality_basis: Mapped[MaterialityBasis | None] = mapped_column(Enum(MaterialityBasis), nullable=True)
     materiality_percentage: Mapped[float | None] = mapped_column(Float, nullable=True)
-    materiality_amount: Mapped[Decimal | None] = mapped_column(Numeric(19, 2), nullable=True)  # Sprint 341: monetary precision
+    materiality_amount: Mapped[Decimal | None] = mapped_column(
+        Numeric(19, 2), nullable=True
+    )  # Sprint 341: monetary precision
     performance_materiality_factor: Mapped[float] = mapped_column(Float, default=0.75, nullable=False)
     trivial_threshold_factor: Mapped[float] = mapped_column(Float, default=0.05, nullable=False)
 
@@ -150,10 +153,19 @@ class Engagement(Base):
     )
 
     # Tool runs (CASCADE: deleting engagement removes its tool runs)
-    tool_runs: Mapped[list["ToolRun"]] = relationship("ToolRun", back_populates="engagement", cascade="all, delete-orphan")
+    tool_runs: Mapped[list["ToolRun"]] = relationship(
+        "ToolRun", back_populates="engagement", cascade="all, delete-orphan"
+    )
 
     # Follow-up items (Sprint 280: backref → back_populates)
-    follow_up_items: Mapped[list["FollowUpItem"]] = relationship("FollowUpItem", back_populates="engagement", passive_deletes=True)
+    follow_up_items: Mapped[list["FollowUpItem"]] = relationship(
+        "FollowUpItem", back_populates="engagement", passive_deletes=True
+    )
+
+    # Analytical expectations (Sprint 728a: ISA 520 workpaper)
+    analytical_expectations: Mapped[list["AnalyticalExpectation"]] = relationship(
+        "AnalyticalExpectation", back_populates="engagement", passive_deletes=True
+    )
 
     def __repr__(self) -> str:
         return f"<Engagement(id={self.id}, client_id={self.client_id}, status={self.status})>"
@@ -207,11 +219,17 @@ class ToolRun(SoftDeleteMixin, Base):
 
     # Outcome
     status: Mapped[ToolRunStatus] = mapped_column(Enum(ToolRunStatus), nullable=False)
-    composite_score: Mapped[float | None] = mapped_column(Float, nullable=True)  # 0-100 for testing tools, None for others
-    flagged_accounts: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON-encoded list of account name strings
+    composite_score: Mapped[float | None] = mapped_column(
+        Float, nullable=True
+    )  # 0-100 for testing tools, None for others
+    flagged_accounts: Mapped[str | None] = mapped_column(
+        Text, nullable=True
+    )  # JSON-encoded list of account name strings
 
     # Timestamp
-    run_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now(), nullable=False, index=True)
+    run_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(UTC), server_default=func.now(), nullable=False, index=True
+    )
 
     # Composite index for efficient run_number queries + uniqueness enforcement
     __table_args__ = (

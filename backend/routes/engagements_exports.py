@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
+from analytical_expectation_memo_generator import AnalyticalExpectationMemoGenerator
 from anomaly_summary_generator import AnomalySummaryGenerator
 from auth import require_current_user, require_verified_user
 from database import get_db
@@ -150,5 +151,46 @@ def export_convergence_csv(
         headers={
             "Content-Disposition": f'attachment; filename="convergence_index_{engagement_id}.csv"',
             "Content-Length": str(len(csv_bytes)),
+        },
+    )
+
+
+@router.post(
+    "/engagements/{engagement_id}/export/analytical-expectations",
+    dependencies=[Depends(check_export_access)],
+)
+@limiter.limit(RATE_LIMIT_EXPORT)
+def export_analytical_expectations(
+    request: Request,
+    engagement_id: int,
+    current_user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
+) -> StreamingResponse:
+    """Sprint 728a (ISA 520): export the analytical-expectations workpaper PDF."""
+    log_secure_operation(
+        "analytical_expectations_export",
+        f"User {current_user.id} exporting ISA 520 workpaper for engagement {engagement_id}",
+    )
+
+    generator = AnalyticalExpectationMemoGenerator(db)
+
+    branding = load_pdf_branding_context(current_user, db)
+    try:
+        with apply_pdf_branding(branding):
+            pdf_bytes = generator.generate_pdf(current_user.id, engagement_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Engagement not found")
+
+    def iter_pdf() -> Iterator[bytes]:
+        chunk_size = 8192
+        for i in range(0, len(pdf_bytes), chunk_size):
+            yield pdf_bytes[i : i + chunk_size]
+
+    return StreamingResponse(
+        iter_pdf(),
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": 'attachment; filename="analytical_expectations.pdf"',
+            "Content-Length": str(len(pdf_bytes)),
         },
     )

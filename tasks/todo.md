@@ -68,48 +68,61 @@
 > Sprints 721–725 archived to `tasks/archive/sprints-721-725-details.md`.
 > Sprints 726–731 archived to `tasks/archive/sprints-726-731-details.md`.
 
-### Sprint 728: ISA 520 Expectation-Formation Workflow
-**Status:** PENDING — feature-shaped; CPA retention concern, not a launch blocker.
+### Sprint 728: ISA 520 Expectation-Formation Workflow (parent — 728a/b/c)
+**Status:** IN PROGRESS — split into 3 sub-sprints per CEO-approved plan `tasks/sprint-plan-728-729.md` (2026-04-26).
 **Priority:** P3 (post-launch product gap; differentiator).
 **Source:** Agent sweep 2026-04-24, punch list 4.1 + Accounting Methodology Audit.
 
-**Scope:**
-- New engagement-layer entity `AnalyticalExpectation` with: procedure target (account/balance/ratio), expected value, expected range / precision threshold, corroboration basis (free text + structured tags: industry data, prior period, budget, regression model), CPA notes.
-- Wire into flux, ratio, and multi-period TB tools so the tool prompts (or reads pre-supplied) expectations. Tool output flags variance > precision threshold.
-- New memo generator `analytical_expectation_memo_generator.py` producing the expectation workpaper.
-- Engagement-completion-gate update: any engagement that used analytical procedures as primary substantive evidence requires expectations on file.
-- Documentation: `docs/04-compliance/isa-520-coverage.md`.
+Architecture decision (CEO-confirmed 2026-04-26): **snapshot model.** New entity holds *audit decisions* (expectation, threshold, corroboration, result, conclusion); flux / ratio / multi-period TB engines stay zero-storage. ISA 520 §A4–A8 frames this as a workpaper of decisions, not a database join.
 
-**Effort estimate:** Feature-sized — model + migration + 3 tool integrations + memo generator + completion gate update + tests. Realistically 2–3 sub-sprints.
+#### Sprint 728a — Backend core
+**Status:** COMPLETE 2026-04-26.
+**Delivered:**
+- `backend/analytical_expectations_model.py` — new `AnalyticalExpectation` entity (FK → engagements, soft-delete, JSON tag list, expected XOR range, threshold XOR percent, result status enum).
+- `backend/analytical_expectations_manager.py` — CRUD manager with engagement-scoped multi-tenant ownership; pure-function `evaluate_status(actual, expected, threshold) → (variance, status)` reused later by 728c tool wiring.
+- `backend/migrations/alembic/versions/f2a8e7d6c5b4_add_analytical_expectations.py` — Alembic migration; chains off prior head `e1a2b3c4d5f6`; upgrade + downgrade exercised end-to-end.
+- `backend/schemas/analytical_expectation_schemas.py` — Pydantic Create/Update/Response.
+- `backend/routes/analytical_expectations.py` — 5 CRUD endpoints (`POST` + `GET` list on `/engagements/{id}/analytical-expectations`, `GET` + `PATCH` + `DELETE` on `/analytical-expectations/{id}`); registered in `routes/__init__.py`.
+- `backend/analytical_expectation_memo_generator.py` — ISA 520 workpaper PDF (cover, engagement overview, expectations table grouped by target type, authoritative references, sign-off block with DRAFT watermark when items remain unevaluated). Enterprise branding via `apply_pdf_branding`.
+- `backend/routes/engagements_exports.py` — added `POST /engagements/{id}/export/analytical-expectations`.
+- `backend/engagement_manager.py` — completion gate updated; engagements with non-archived `NOT_EVALUATED` expectations are blocked from completion (conditional — engagements with no expectations stay un-gated).
+- `docs/04-compliance/isa-520-coverage.md` — methodology coverage doc.
+- 6 test files, +61 tests covering model schema/defaults/soft-delete, manager CRUD/validation/`evaluate_status`, route happy-path + ownership + CSRF, memo PDF render, completion-gate matrix, export route.
 
-**Why pending:** Not a launch blocker (no current customer is doing primary-substantive analytics). Closes a methodology gap CPAs will hit when completing engagements; the platform can ship without it but loses points on the "complete vs scratch-built" comparison.
+**Verification:** Full backend `pytest` 8386 passed; the 4 unrelated failures in `test_security_hardening_2026_04_20.py` are pre-existing (`STRIPE_PUBLISHABLE_KEY` is `pk_test_*` while `IS_PRODUCTION=true` in dev env — clears once Sprint 447 cutover lands). Alembic upgrade head + downgrade -1 verified end-to-end against SQLite.
 
-**Pre-requisites:**
-- Engagement layer is stable (✅ already shipped).
-- Pattern from Sprint 728 carries forward to Sprint 729 (SUM schedule) — designing the entity API + memo template once benefits both.
+**Out of scope (carried to 728b/c):**
+- Frontend section, capture form, hook (728b).
+- Flux / ratio / multi-period TB engine wiring + auto-persist of result on tool run (728c).
+
+#### Sprint 728b — Frontend
+**Status:** PENDING — backend-first done, frontend next per execution order in plan.
+**Scope:** Engagement-page section, capture form (XOR validation: value vs range, amount vs percent), Hook + Types, "Download workpaper" button, Oat & Obsidian tokens enforced, ~15–20 tests.
+
+#### Sprint 728c — Tool wiring
+**Status:** PENDING — last in 728 chain; depends on 728a + 728b shipping.
+**Scope:** flux/ratio/multi-period engines accept pre-supplied expectations parameter, return variance flag inline; route layer auto-persists result back via the `evaluate_status` helper. Frontend tool result pages display "satisfied expectation #N" inline. New `backend/shared/expectation_evaluation.py` helper to keep entity types out of engine internals. ~25–30 tests.
 
 ---
 
-### Sprint 729: ISA 450 Summary of Uncorrected Misstatements (SUM) Schedule
-**Status:** PENDING — feature-shaped; CPA retention concern, not a launch blocker.
+### Sprint 729: ISA 450 SUM Schedule (parent — 729a/b/c)
+**Status:** PENDING — split into 3 sub-sprints per CEO-approved plan `tasks/sprint-plan-728-729.md` (2026-04-26).
 **Priority:** P3 (post-launch product gap; differentiator).
 **Source:** Agent sweep 2026-04-24, punch list 4.2 + Accounting Methodology Audit.
 
-**Scope:**
-- New engagement-layer entity `UncorrectedMisstatement`: source (adjusting entry passed / sample projection / known error), amount, account(s) affected, classification (factual / judgmental / projected), F/S impact, materiality assessment.
-- SUM schedule view in the engagement layer — auto-aggregates from `AdjustingEntry` (status=passed), `SampleProjection` (UEL > tolerable), and CPA-entered known errors.
-- Materiality comparison surface: SUM aggregate vs engagement materiality (set at planning), with bucket: clearly trivial / immaterial / approaching material / material.
-- New memo generator `sum_schedule_memo_generator.py` producing the SUM workpaper for archival.
-- Engagement completion-gate update: completion requires SUM review on file (CPA marks each item as "auditor proposes correction" or "auditor accepts as immaterial").
+Architecture decision: **snapshot model.** Because `AdjustingEntry` is in-memory (zero-storage dataclass per `backend/adjusting_entries.py`) and sampling output is ephemeral, the original "auto-aggregate from passed AJEs / sample projections" plan was infeasible without breaking zero-storage. CEO confirmed 2026-04-26: SUM is a CPA-captured workpaper of decisions, with 729c capture helpers added for ergonomics.
 
-**Effort estimate:** Feature-sized — model + migration + aggregation logic + materiality comparison UI + memo generator + completion gate update + tests. Realistically 2–3 sub-sprints, similar to Sprint 728.
+#### Sprint 729a — Backend core
+**Status:** PENDING — next in queue after 728a (which lands first to validate the entity-pattern shared shape).
+**Scope:** `UncorrectedMisstatement` entity (FK engagement, `source_type` enum: AJE_PASSED / SAMPLE_PROJECTION / KNOWN_ERROR, `classification` enum: FACTUAL / JUDGMENTAL / PROJECTED, `cpa_disposition` enum), Alembic migration, CRUD routes, `GET /engagements/{id}/sum-schedule` aggregation endpoint with materiality-bucket logic (CLEARLY_TRIVIAL / IMMATERIAL / APPROACHING_MATERIAL / MATERIAL based on `|aggregate|` vs trivial / performance / overall materiality), memo PDF, export route, completion gate (NOT_YET_REVIEWED block + override-required-for-MATERIAL), `docs/04-compliance/isa-450-coverage.md`, ~30–40 tests.
 
-**Why pending:** Same shape as Sprint 728 — methodology gap that hurts CPA retention but doesn't block launch. Every engagement-completing CPA reaches for the SUM and finds nothing today; the gap is real but bounded.
+#### Sprint 729b — Frontend
+**Status:** PENDING.
+**Scope:** SUM schedule page in engagement layer, three-variant capture form (AJE-passed / sample-projection / known-error), materiality bucket UI with `clay`/`sage` token treatment ("approaching material" → reduced-opacity `clay` per design-mandate constraint), disposition controls, PDF download, ~20–25 tests.
 
-**Pre-requisites:**
-- Adjusting entries (status=passed flow) — ✅ already shipped.
-- Sampling UEL output — ✅ already shipped.
-- Engagement-layer entity pattern from Sprint 728 reused.
+#### Sprint 729c — Capture helpers
+**Status:** PENDING.
+**Scope:** "Add to SUM" buttons on AJE workflow + sampling tool (UEL > tolerable triggers a prompt) — pre-fills the SUM capture form. ~10 tests.
 
 ---
 

@@ -11,6 +11,7 @@ from sqlalchemy import engine_from_config, pool
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from admin_audit_model import AdminAuditLog  # noqa: F401  # Sprint 590
+from analytical_expectations_model import AnalyticalExpectation  # noqa: F401  # Sprint 728a
 from config import DATABASE_URL
 from database import Base
 from dunning_model import DunningEpisode  # noqa: F401  # Sprint 591

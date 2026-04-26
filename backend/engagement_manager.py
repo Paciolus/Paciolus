@@ -282,6 +282,20 @@ class EngagementManager:
                         f"Cannot complete engagement: {unresolved} follow-up item(s) "
                         f"still have 'not_reviewed' disposition"
                     )
+
+                # Sprint 728a (ISA 520): conditional gate — if any analytical
+                # expectations exist for this engagement, all must be evaluated
+                # (status != NOT_EVALUATED) before the engagement can complete.
+                # Engagements that did no analytical procedures are unaffected.
+                from analytical_expectations_manager import AnalyticalExpectationsManager
+
+                unevaluated = AnalyticalExpectationsManager(self.db).count_unevaluated(engagement_id)
+                if unevaluated > 0:
+                    raise ValueError(
+                        f"Cannot complete engagement: {unevaluated} analytical "
+                        f"expectation(s) remain unevaluated (ISA 520)"
+                    )
+
                 engagement.completed_at = datetime.now(UTC)
                 engagement.completed_by = user_id
 
