@@ -1,11 +1,11 @@
 """
 Paciolus API — Diagnostic Export Routes (PDF, Excel, CSV TB, CSV Anomalies, Lead Sheets, Financial Statements).
 Sprint 155: Extracted from routes/export.py.
+Sprint 725: 6 CSV endpoints collapsed onto shared.csv_export.diagnostic_csv_export.
 """
 
-import csv
 import logging
-from io import StringIO
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
@@ -24,9 +24,10 @@ from leadsheet_generator import generate_leadsheets
 from models import User
 from pdf_generator import generate_audit_report, generate_financial_statements_pdf
 from recon_engine import ReconResult, ReconScore
+from shared.csv_export import diagnostic_csv_export
 from shared.entitlement_checks import check_export_access
 from shared.error_messages import sanitize_error
-from shared.export_helpers import streaming_csv_response, streaming_excel_response, streaming_pdf_response
+from shared.export_helpers import streaming_excel_response, streaming_pdf_response
 from shared.export_schemas import (
     AccrualCompletenessCSVInput,
     ExpenseCategoryCSVInput,
@@ -141,10 +142,7 @@ def export_csv_trial_balance(
     """Export trial balance data as CSV."""
     log_secure_operation("csv_tb_export_start", f"Generating CSV trial balance for: {audit_result.filename}")
 
-    try:
-        output = StringIO()
-        writer = csv.writer(output)
-
+    def _body(writer: Any) -> None:
         writer.writerow(
             ["Reference", "Account", "Debit", "Credit", "Net Balance", "Category", "Classification Confidence"]
         )
@@ -199,18 +197,13 @@ def export_csv_trial_balance(
             ]
         )
 
-        csv_content = output.getvalue()
-        csv_bytes = csv_content.encode("utf-8-sig")
-
-        download_filename = safe_download_filename(audit_result.filename or "TrialBalance", "TB", "csv")
-
-        log_secure_operation("csv_tb_export_complete", f"CSV TB generated: {len(csv_bytes)} bytes")
-
-        return streaming_csv_response(csv_bytes, download_filename)
-
-    except (ValueError, KeyError, TypeError, UnicodeEncodeError) as e:
-        logger.exception("CSV trial balance export failed")
-        raise HTTPException(status_code=500, detail=sanitize_error(e, "export", "csv_tb_export_error"))
+    return diagnostic_csv_export(
+        body_writer=_body,
+        filename_raw=audit_result.filename or "TrialBalance",
+        filename_suffix="TB",
+        error_log_prefix="CSV trial balance",
+        error_code="csv_tb_export_error",
+    )
 
 
 # --- CSV Anomalies ---
@@ -224,10 +217,7 @@ def export_csv_anomalies(
     """Export anomaly list as CSV."""
     log_secure_operation("csv_anomaly_export_start", f"Generating CSV anomalies for: {audit_result.filename}")
 
-    try:
-        output = StringIO()
-        writer = csv.writer(output)
-
+    def _body(writer: Any) -> None:
         writer.writerow(
             [
                 "Reference",
@@ -283,18 +273,13 @@ def export_csv_anomalies(
                 if isinstance(count, int) and count > 0:
                     writer.writerow([risk_type.replace("_", " ").title(), count, "", "", "", "", "", "", ""])
 
-        csv_content = output.getvalue()
-        csv_bytes = csv_content.encode("utf-8-sig")
-
-        download_filename = safe_download_filename(audit_result.filename or "TrialBalance", "Anomalies", "csv")
-
-        log_secure_operation("csv_anomaly_export_complete", f"CSV anomalies generated: {len(csv_bytes)} bytes")
-
-        return streaming_csv_response(csv_bytes, download_filename)
-
-    except (ValueError, KeyError, TypeError, UnicodeEncodeError) as e:
-        logger.exception("CSV anomaly export failed")
-        raise HTTPException(status_code=500, detail=sanitize_error(e, "export", "csv_anomaly_export_error"))
+    return diagnostic_csv_export(
+        body_writer=_body,
+        filename_raw=audit_result.filename or "TrialBalance",
+        filename_suffix="Anomalies",
+        error_log_prefix="CSV anomaly",
+        error_code="csv_anomaly_export_error",
+    )
 
 
 # --- Lead Sheet Export ---
@@ -448,10 +433,8 @@ def export_csv_preflight_issues(
     current_user: User = Depends(require_verified_user),
 ) -> StreamingResponse:
     """Export pre-flight quality issues as CSV."""
-    try:
-        output = StringIO()
-        writer = csv.writer(output)
 
+    def _body(writer: Any) -> None:
         writer.writerow(["Category", "Severity", "Message", "Affected Count", "Remediation"])
 
         for issue in pf_input.issues:
@@ -466,15 +449,13 @@ def export_csv_preflight_issues(
                     ]
                 )
 
-        csv_content = output.getvalue()
-        csv_bytes = csv_content.encode("utf-8-sig")
-
-        download_filename = safe_download_filename(pf_input.filename or "PreFlight", "Issues", "csv")
-        return streaming_csv_response(csv_bytes, download_filename)
-
-    except (ValueError, KeyError, TypeError, UnicodeEncodeError) as e:
-        logger.exception("Pre-flight CSV export failed")
-        raise HTTPException(status_code=500, detail=sanitize_error(e, "export", "preflight_csv_export_error"))
+    return diagnostic_csv_export(
+        body_writer=_body,
+        filename_raw=pf_input.filename or "PreFlight",
+        filename_suffix="Issues",
+        error_log_prefix="Pre-flight",
+        error_code="preflight_csv_export_error",
+    )
 
 
 # --- Population Profile CSV (Sprint 287) ---
@@ -488,10 +469,8 @@ def export_csv_population_profile(
     current_user: User = Depends(require_verified_user),
 ) -> StreamingResponse:
     """Export population profile data as CSV."""
-    try:
-        output = StringIO()
-        writer = csv.writer(output)
 
+    def _body(writer: Any) -> None:
         # Summary section
         writer.writerow(["TB POPULATION PROFILE"])
         writer.writerow([])
@@ -540,15 +519,13 @@ def export_csv_population_profile(
                     ]
                 )
 
-        csv_content = output.getvalue()
-        csv_bytes = csv_content.encode("utf-8-sig")
-
-        download_filename = safe_download_filename(pp_input.filename or "PopProfile", "Profile", "csv")
-        return streaming_csv_response(csv_bytes, download_filename)
-
-    except (ValueError, KeyError, TypeError, UnicodeEncodeError) as e:
-        logger.exception("Population profile CSV export failed")
-        raise HTTPException(status_code=500, detail=sanitize_error(e, "export", "population_profile_csv_export_error"))
+    return diagnostic_csv_export(
+        body_writer=_body,
+        filename_raw=pp_input.filename or "PopProfile",
+        filename_suffix="Profile",
+        error_log_prefix="Population profile",
+        error_code="population_profile_csv_export_error",
+    )
 
 
 # --- Expense Category CSV (Sprint 289) ---
@@ -562,10 +539,8 @@ def export_csv_expense_category(
     current_user: User = Depends(require_verified_user),
 ) -> StreamingResponse:
     """Export expense category analytics data as CSV."""
-    try:
-        output = StringIO()
-        writer = csv.writer(output)
 
+    def _body(writer: Any) -> None:
         # Summary section
         writer.writerow(["EXPENSE CATEGORY ANALYTICAL PROCEDURES"])
         writer.writerow([])
@@ -578,7 +553,6 @@ def export_csv_expense_category(
         writer.writerow(["Active Categories", ec_input.category_count])
         writer.writerow([])
 
-        # Category breakdown
         has_prior = ec_input.prior_available and any(
             isinstance(c, dict) and c.get("prior_amount") is not None for c in ec_input.categories
         )
@@ -621,15 +595,13 @@ def export_csv_expense_category(
                         ]
                     )
 
-        csv_content = output.getvalue()
-        csv_bytes = csv_content.encode("utf-8-sig")
-
-        download_filename = safe_download_filename(ec_input.filename or "ExpenseCategory", "Analytics", "csv")
-        return streaming_csv_response(csv_bytes, download_filename)
-
-    except (ValueError, KeyError, TypeError, UnicodeEncodeError) as e:
-        logger.exception("Expense category CSV export failed")
-        raise HTTPException(status_code=500, detail=sanitize_error(e, "export", "expense_category_csv_export_error"))
+    return diagnostic_csv_export(
+        body_writer=_body,
+        filename_raw=ec_input.filename or "ExpenseCategory",
+        filename_suffix="Analytics",
+        error_log_prefix="Expense category",
+        error_code="expense_category_csv_export_error",
+    )
 
 
 # --- Accrual Completeness CSV (Sprint 290) ---
@@ -643,10 +615,8 @@ def export_csv_accrual_completeness(
     current_user: User = Depends(require_verified_user),
 ) -> StreamingResponse:
     """Export accrual completeness data as CSV."""
-    try:
-        output = StringIO()
-        writer = csv.writer(output)
 
+    def _body(writer: Any) -> None:
         # Summary section
         writer.writerow(["ACCRUAL COMPLETENESS ESTIMATOR"])
         writer.writerow([])
@@ -678,19 +648,14 @@ def export_csv_accrual_completeness(
                 )
         writer.writerow([])
 
-        # Narrative
         if ac_input.narrative:
             writer.writerow(["NARRATIVE"])
             writer.writerow([sanitize_csv_value(ac_input.narrative)])
 
-        csv_content = output.getvalue()
-        csv_bytes = csv_content.encode("utf-8-sig")
-
-        download_filename = safe_download_filename(ac_input.filename or "AccrualCompleteness", "Estimator", "csv")
-        return streaming_csv_response(csv_bytes, download_filename)
-
-    except (ValueError, KeyError, TypeError, UnicodeEncodeError) as e:
-        logger.exception("Accrual completeness CSV export failed")
-        raise HTTPException(
-            status_code=500, detail=sanitize_error(e, "export", "accrual_completeness_csv_export_error")
-        )
+    return diagnostic_csv_export(
+        body_writer=_body,
+        filename_raw=ac_input.filename or "AccrualCompleteness",
+        filename_suffix="Estimator",
+        error_log_prefix="Accrual completeness",
+        error_code="accrual_completeness_csv_export_error",
+    )

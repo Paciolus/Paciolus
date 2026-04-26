@@ -2,28 +2,23 @@
 Paciolus API — Testing CSV Export Routes (JE, AP, Payroll, TWM, Revenue, AR, FA, Inventory).
 Sprint 155: Extracted from routes/export.py.
 Sprint 539: Schema-driven CSV serializer refactor — shared csv_export_handler.
+Sprint 725: csv_export_handler promoted to backend/shared/csv_export.py for cross-module reuse.
 """
 
-import csv
 import logging
-from io import StringIO
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 
 from auth import require_verified_user
 from models import User
+from shared.csv_export import ColumnSpec, csv_export_handler, diagnostic_csv_export
 from shared.entitlement_checks import check_export_access
-from shared.error_messages import sanitize_error
-from shared.filenames import (
-    safe_download_filename,
-    sanitize_csv_value,
-)
+from shared.filenames import sanitize_csv_value
 from shared.rate_limits import RATE_LIMIT_EXPORT, limiter
 
 logger = logging.getLogger(__name__)
-from shared.export_helpers import streaming_csv_response, write_testing_csv_summary
 from shared.export_schemas import (
     APTestingExportInput,
     ARAgingExportInput,
@@ -55,8 +50,7 @@ router = APIRouter(tags=["export"])
 # transparent, auditable, and preserve the exact original formatting logic.
 # ---------------------------------------------------------------------------
 
-# Type alias for a single column schema entry.
-ColumnSpec = tuple[str, Any]  # (header_label, extractor_callable)
+# ColumnSpec is imported from shared.csv_export.
 
 # -- Shared prefix columns (every flagged-entry tool starts with these) ------
 _FLAG_PREFIX: list[ColumnSpec] = [
@@ -186,74 +180,6 @@ INVENTORY_COLUMNS: list[ColumnSpec] = _build_schema(
     ],
     _FLAG_SUFFIX,
 )
-
-
-# ---------------------------------------------------------------------------
-# Shared CSV export pipeline
-# ---------------------------------------------------------------------------
-
-SummaryWriter = Any  # Callable[[csv.writer, dict], None] | None
-
-
-def _write_flagged_rows(writer: Any, test_results: list[dict], schema: list[ColumnSpec]) -> None:
-    """Iterate test_results → flagged_entries and emit one CSV row per entry."""
-    for tr in test_results:
-        for fe in tr.get("flagged_entries", []):
-            entry = fe.get("entry", {})
-            writer.writerow([extractor(fe, entry) for _header, extractor in schema])
-
-
-def csv_export_handler(
-    *,
-    test_results: list[dict],
-    schema: list[ColumnSpec],
-    composite_score: dict[str, Any],
-    filename_raw: str,
-    filename_suffix: str,
-    entry_label: str,
-    error_log_prefix: str,
-    error_code: str,
-    summary_writer: SummaryWriter = None,
-) -> StreamingResponse:
-    """Shared pipeline: header → flagged rows → summary → encode → response.
-
-    Args:
-        test_results: The test_results list from the export input model.
-        schema: Column schema (list of (header, extractor) tuples).
-        composite_score: The composite_score dict for the summary section.
-        filename_raw: Raw filename from client input.
-        filename_suffix: Fallback suffix for safe_download_filename.
-        entry_label: Label for write_testing_csv_summary (e.g. "Entries").
-        error_log_prefix: Prefix for the logger.exception message.
-        error_code: Error code slug for sanitize_error.
-        summary_writer: Optional custom summary writer. If None, uses the
-            standard write_testing_csv_summary. Receives (writer, composite_score).
-    """
-    try:
-        output = StringIO()
-        writer = csv.writer(output)
-
-        # Header row
-        writer.writerow([header for header, _extractor in schema])
-
-        # Data rows
-        _write_flagged_rows(writer, test_results, schema)
-
-        # Summary section
-        if summary_writer is not None:
-            summary_writer(writer, composite_score)
-        else:
-            write_testing_csv_summary(writer, composite_score, entry_label)
-
-        csv_content = output.getvalue()
-        csv_bytes = csv_content.encode("utf-8-sig")
-
-        download_filename = safe_download_filename(filename_raw, filename_suffix, "csv")
-
-        return streaming_csv_response(csv_bytes, download_filename)
-    except (ValueError, KeyError, TypeError, UnicodeEncodeError) as e:
-        logger.exception("%s CSV export failed", error_log_prefix)
-        raise HTTPException(status_code=500, detail=sanitize_error(e, "export", error_code))
 
 
 # ---------------------------------------------------------------------------
@@ -432,10 +358,8 @@ def export_csv_three_way_match(
     current_user: User = Depends(require_verified_user),
 ) -> StreamingResponse:
     """Export three-way match results as CSV."""
-    try:
-        output = StringIO()
-        writer = csv.writer(output)
 
+    def _body(writer: Any) -> None:
         writer.writerow(
             [
                 "Match Type",
@@ -477,7 +401,6 @@ def export_csv_three_way_match(
                 ]
             )
 
-        # Custom summary for TWM
         s = twm_input.summary
         writer.writerow([])
         writer.writerow(["SUMMARY"])
@@ -490,15 +413,13 @@ def export_csv_three_way_match(
         writer.writerow(["Net Variance", f"${s.get('net_variance', 0):,.2f}"])
         writer.writerow(["Risk Assessment", sanitize_csv_value(s.get("risk_assessment", ""))])
 
-        csv_content = output.getvalue()
-        csv_bytes = csv_content.encode("utf-8-sig")
-
-        download_filename = safe_download_filename(twm_input.filename, "TWM_Results", "csv")
-
-        return streaming_csv_response(csv_bytes, download_filename)
-    except (ValueError, KeyError, TypeError, UnicodeEncodeError) as e:
-        logger.exception("TWM CSV export failed")
-        raise HTTPException(status_code=500, detail=sanitize_error(e, "export", "twm_csv_export_error"))
+    return diagnostic_csv_export(
+        body_writer=_body,
+        filename_raw=twm_input.filename,
+        filename_suffix="TWM_Results",
+        error_log_prefix="TWM",
+        error_code="twm_csv_export_error",
+    )
 
 
 @router.post("/export/csv/sampling-selection", dependencies=[Depends(check_export_access)])
@@ -509,10 +430,8 @@ def export_csv_sampling_selection(
     current_user: User = Depends(require_verified_user),
 ) -> StreamingResponse:
     """Export selected sample items as CSV with blank 'Audited Amount' column."""
-    try:
-        output = StringIO()
-        writer = csv.writer(output)
 
+    def _body(writer: Any) -> None:
         writer.writerow(
             [
                 "Row #",
@@ -538,7 +457,6 @@ def export_csv_sampling_selection(
                 ]
             )
 
-        # Summary
         writer.writerow([])
         writer.writerow(["SUMMARY"])
         writer.writerow(["Sampling Method", sampling_input.method.upper()])
@@ -546,12 +464,10 @@ def export_csv_sampling_selection(
         writer.writerow(["Population Value", f"${sampling_input.population_value:,.2f}"])
         writer.writerow(["Items Selected", len(sampling_input.selected_items)])
 
-        csv_content = output.getvalue()
-        csv_bytes = csv_content.encode("utf-8-sig")
-
-        download_filename = safe_download_filename(sampling_input.filename, "SamplingSelection", "csv")
-
-        return streaming_csv_response(csv_bytes, download_filename)
-    except (ValueError, KeyError, TypeError, UnicodeEncodeError) as e:
-        logger.exception("Sampling selection CSV export failed")
-        raise HTTPException(status_code=500, detail=sanitize_error(e, "export", "sampling_csv_export_error"))
+    return diagnostic_csv_export(
+        body_writer=_body,
+        filename_raw=sampling_input.filename,
+        filename_suffix="SamplingSelection",
+        error_log_prefix="Sampling selection",
+        error_code="sampling_csv_export_error",
+    )
