@@ -86,10 +86,11 @@ Both jobs fire roughly every hour; each invocation completes in 30–80ms with `
 - `_run_cleanup_job` populates `error_type_fqn` from `caught_exc` so the structured log carries the disambiguating fingerprint without leaking exception messages.
 - `tests/test_cleanup_scheduler.py::test_failure_log_includes_traceback_exc_info` extended to assert `error_type_fqn` appears with the FQN (`builtins.RuntimeError` for the test's deliberate `RuntimeError`). 28/28 cleanup-scheduler tests passing.
 
-**Step 2 — Root cause investigation (NEXT):**
-- After this commit lands on Render and the next 1–2 cleanup cycles fire, pull Render logs filtered to `error_type_fqn` and read the qualified class name.
-- Cross-check with Sentry (the wrapper already calls `sentry_sdk.capture_exception(exc)`; we should already have the full traceback there for the past 48h's worth of failures).
-- Most likely candidates given the 30–80ms latency + 0 records processed: SQLAlchemy session/connection-pool issue (e.g., `sqlalchemy.exc.InternalError` wrapping a `psycopg2.OperationalError`), or a Postgres SSL handshake failure (Sentry shows recurring `SSLEOFError` on `urllib3.connectionpool` in the same window — possibly the same root).
+**Step 2 — Root cause investigation (IN PROGRESS):**
+- Sub-step 2a (DONE 2026-04-27 17:14 UTC): Pulled Render logs filtered to `error_type_fqn` after Step 1's deploy (`dep-d7nom57avr4c73fgn9ig`, live 16:14:41 UTC). **Result: `sqlalchemy.exc.InternalError` on both jobs** (`reset_upload_quotas` + `dunning_grace_period`, both at 17:14 UTC). This is the SQLAlchemy wrapper — the leaf cause sits one level deeper inside `caught_exc.__cause__` / `caught_exc.orig`. Pre-deploy logs (13:01–16:04 UTC, 6 cleanup cycles) lack the field as expected.
+- Sub-step 2b (DONE 2026-04-27): Extend cleanup_scheduler observability to also capture `__cause__` (raise-from chain), `.orig` (SQLAlchemy DBAPIError attribute holding the wrapped psycopg2 exception), and `orig.pgcode` (Postgres SQLSTATE — standardized 5-char code, no PII). Lands the leaf class + SQL error condition in the next cleanup cycle's logs without another debugging deploy round-trip. `CleanupTelemetry` gains 3 fields (`error_cause_fqn`, `error_orig_fqn`, `error_orig_pgcode`); `_run_cleanup_job` extracts them from `caught_exc`; `test_failure_log_captures_wrapped_cause_and_orig` synthesizes a SQLAlchemy DBAPIError-shaped exception and asserts all three surface. 29/29 cleanup-scheduler tests passing.
+- Sub-step 2c (NEXT, ~30 min post-deploy of Step 2b): Pull cleanup logs after Step 2b lands; read `error_orig_fqn` + `error_orig_pgcode`. Most likely candidates given the 30–80ms latency + 0 records processed and the SQLAlchemy wrapper: `psycopg2.OperationalError` with pgcode `08006` (connection_failure) — matches Sentry's recurring `SSLEOFError` signal — or `psycopg2.errors.SerializationFailure` / `InFailedSqlTransaction`.
+- Sub-step 2d: Cross-check with Sentry (the wrapper already calls `sentry_sdk.capture_exception(exc)`; full tracebacks should be there for the past 48h's worth of failures).
 
 **Step 3 — Fix + coverage (AFTER step 2):**
 - Land the underlying fix per the unwrapped class.

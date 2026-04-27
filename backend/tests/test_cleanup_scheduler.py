@@ -131,6 +131,56 @@ class TestRunCleanupJob:
         assert "error_type_fqn" in caplog.text
         assert "builtins.RuntimeError" in caplog.text
 
+    def test_failure_log_captures_wrapped_cause_and_orig(self, caplog):
+        """Sprint 732 follow-up: ``error_type_fqn`` resolved the bare-class
+        ambiguity to ``sqlalchemy.exc.InternalError`` for the recurring Neon
+        cleanup failures, but that's the SQLAlchemy wrapper. The actual leaf
+        class lives in ``__cause__`` (explicit raise-from chain) and ``.orig``
+        (SQLAlchemy DBAPIError attribute holding the wrapped psycopg2 exc),
+        with ``orig.pgcode`` carrying the Postgres SQLSTATE for psycopg2 errors.
+
+        Without this extension every cleanup failure in Render logs reads
+        ``error_type_fqn: sqlalchemy.exc.InternalError`` and triage stalls;
+        with it, the same line carries the concrete wrapped class + SQLSTATE.
+        """
+        from cleanup_scheduler import _run_cleanup_job
+
+        # Synthesize a SQLAlchemy DBAPIError-shaped exception: has both a
+        # `__cause__` chain and an `.orig` attribute with a `pgcode`.
+        class FakePsycopg2OperationalError(Exception):
+            pgcode = "08006"  # connection_failure
+
+        class FakeSQLAlchemyInternalError(Exception):
+            pass
+
+        def failing_func(db):
+            orig_exc = FakePsycopg2OperationalError("connection lost")
+            wrapper = FakeSQLAlchemyInternalError("scheduled cleanup failed")
+            wrapper.orig = orig_exc  # type: ignore[attr-defined]
+            try:
+                raise orig_exc
+            except FakePsycopg2OperationalError as e:
+                raise wrapper from e
+
+        mock_session = MagicMock()
+
+        with (
+            patch("database.SessionLocal", return_value=mock_session),
+            caplog.at_level(logging.ERROR, logger="cleanup_scheduler"),
+        ):
+            _run_cleanup_job("failing_with_chain", failing_func)
+
+        # Wrapper class is in error_type_fqn (existing field).
+        assert "FakeSQLAlchemyInternalError" in caplog.text
+        # Cause chain (raise X from Y) surfaces in error_cause_fqn.
+        assert "error_cause_fqn" in caplog.text
+        assert "FakePsycopg2OperationalError" in caplog.text
+        # SQLAlchemy `.orig` attribute surfaces in error_orig_fqn.
+        assert "error_orig_fqn" in caplog.text
+        # psycopg2 pgcode (Postgres SQLSTATE) surfaces in error_orig_pgcode.
+        assert "error_orig_pgcode" in caplog.text
+        assert "08006" in caplog.text
+
     def test_session_always_closed_on_success(self):
         """Session is closed even when cleanup returns 0."""
         from cleanup_scheduler import _run_cleanup_job
