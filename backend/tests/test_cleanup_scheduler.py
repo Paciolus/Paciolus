@@ -125,6 +125,11 @@ class TestRunCleanupJob:
         assert "boom-with-traceback" in str(exc_value)
         # Sanitized message preserved in the telemetry payload
         assert "RuntimeError: scheduled cleanup failed" in caplog.text
+        # Sprint 732: error_type_fqn disambiguates bare class names —
+        # SQLAlchemy / psycopg2 / Python all expose `InternalError`. The FQN
+        # is module-path metadata, no PII risk.
+        assert "error_type_fqn" in caplog.text
+        assert "builtins.RuntimeError" in caplog.text
 
     def test_session_always_closed_on_success(self):
         """Session is closed even when cleanup returns 0."""
