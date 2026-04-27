@@ -107,8 +107,18 @@ Architecture decision (CEO-confirmed 2026-04-26): **snapshot model.** New entity
 **Verification:** TypeScript typecheck clean (`npx tsc --noEmit`), 8 component tests passing, `npm run build` succeeds.
 
 #### Sprint 728c — Tool wiring
-**Status:** PENDING — last in 728 chain; depends on 728a + 728b shipping.
-**Scope:** flux/ratio/multi-period engines accept pre-supplied expectations parameter, return variance flag inline; route layer auto-persists result back via the `evaluate_status` helper. Frontend tool result pages display "satisfied expectation #N" inline. New `backend/shared/expectation_evaluation.py` helper to keep entity types out of engine internals. ~25–30 tests.
+**Status:** COMPLETE 2026-04-26.
+**Delivered:**
+- `backend/shared/expectation_evaluation.py` — `evaluate_expectations_against_measurements(...)` matches measurements (typed `[(target_type, target_label, actual)]` triples) to NOT_EVALUATED expectations on the engagement, computes variance + status via the pure `evaluate_status` from 728a, persists the result via the manager (so the audit-trail log fires consistently), and returns evaluation records the route surfaces inline. Three extractors: `extract_flux_measurements` (emits BALANCE+ACCOUNT+FLUX_LINE per item), `extract_multi_period_measurements` (BALANCE+ACCOUNT per movement), `extract_ratio_measurements` (RATIO; accepts dict or list shape).
+- `backend/routes/audit_flux.py` — calls helper after `run_flux_analysis` when `engagement_id` is present; returns `expectations_evaluated` array in the response.
+- `backend/routes/multi_period.py` — same wiring on `/audit/compare-periods` and `/audit/compare-three-way`.
+- `backend/routes/trends.py` — `/clients/{id}/industry-ratios` now accepts optional `engagement_id` query param; auto-evaluates ratio-typed expectations when present.
+- `backend/shared/diagnostic_response_schemas.py` — new `ExpectationEvaluationResponse` Pydantic model added as `expectations_evaluated: list[ExpectationEvaluationResponse] = []` to `FluxAnalysisResponse`, `MovementSummaryResponse`, `ThreeWayMovementSummaryResponse`. `IndustryRatiosResponse` (defined in `routes/trends.py`) extended similarly.
+- 17 tests across 2 new files: `test_expectation_evaluation.py` (15 tests — extractors + evaluator covering match cases, case-insensitive labels, target-type mismatches, already-evaluated no-op, ownership, first-match-wins) + `test_multi_period_expectation_wiring.py` (2 tests — route emits `expectations_evaluated` when `engagement_id` is supplied; field is empty when absent).
+
+**Verification:** Sprint 728c-targeted tests + adjacent — 45 passing.
+
+**Pattern note:** Engines stay zero-storage. The route layer is the only place that knows about engagements + expectations. Adding wiring to a new tool = (a) accept `engagement_id` (already true for the engagement-aware tools); (b) extract measurements via the appropriate helper; (c) call `evaluate_expectations_against_measurements`; (d) embed result in the response. No engine changes required.
 
 ---
 
