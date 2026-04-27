@@ -96,8 +96,15 @@ Architecture decision (CEO-confirmed 2026-04-26): **snapshot model.** New entity
 - Flux / ratio / multi-period TB engine wiring + auto-persist of result on tool run (728c).
 
 #### Sprint 728b — Frontend
-**Status:** PENDING — backend-first done, frontend next per execution order in plan.
-**Scope:** Engagement-page section, capture form (XOR validation: value vs range, amount vs percent), Hook + Types, "Download workpaper" button, Oat & Obsidian tokens enforced, ~15–20 tests.
+**Status:** COMPLETE 2026-04-26.
+**Delivered:**
+- `frontend/src/types/analytical-expectations.ts` — types + label/color maps mirroring backend schemas.
+- `frontend/src/hooks/useAnalyticalExpectations.ts` — fetch / create / update / archive hook (paginated list).
+- `frontend/src/components/engagement/AnalyticalExpectationsPanel.tsx` — full list + create modal + capture-actual inline form + re-evaluate button + archive. Form enforces XOR (value vs range, amount vs percent) with inline validation.
+- `frontend/src/app/(workspace)/portfolio/[clientId]/workspace/[engagementId]/page.tsx` — added `expectations` tab between `follow-up` and `workpaper` in the workspace detail page; wires hook + panel + PDF download via `apiDownload` + `downloadBlob`.
+- `frontend/src/__tests__/AnalyticalExpectationsPanel.test.tsx` — 8 component tests covering empty state, status badges, status counts, capture-actual flow, clear-result, archive, and modal open.
+
+**Verification:** TypeScript typecheck clean (`npx tsc --noEmit`), 8 component tests passing, `npm run build` succeeds.
 
 #### Sprint 728c — Tool wiring
 **Status:** PENDING — last in 728 chain; depends on 728a + 728b shipping.
