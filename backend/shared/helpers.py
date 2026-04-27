@@ -133,8 +133,47 @@ def require_client(
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
 ) -> Client:
-    """FastAPI dependency: resolve a ``Client`` by id or raise 404."""
+    """FastAPI dependency: resolve a ``Client`` by id or raise 404.
+
+    Org-scoped — grants access to the direct owner *and* to any active
+    member of the same organization. Use this for routes where the client
+    is shared across an org (metadata, settings).
+    """
     client = get_accessible_client(current_user, client_id, db)
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    return client
+
+
+def require_client_owner(
+    client_id: int = PathParam(..., description="The ID of the client"),
+    current_user: User = Depends(require_current_user),
+    db: Session = Depends(get_db),
+) -> Client:
+    """FastAPI dependency: resolve a ``Client`` by id with **direct-ownership
+    only** authorization (no organization-scoped sharing). Raises 404 if the
+    caller is not the direct owner, even if they're an active member of the
+    same organization as the owner.
+
+    Sprint 735: introduced for diagnostic / trends / prior-period routes that
+    historically used inline ``db.query(Client).filter(Client.id == ...,
+    Client.user_id == current_user.id).first()`` to enforce direct-only
+    access. Adopting the existing ``require_client`` helper there would have
+    silently broadened authorization to org members (since ``require_client``
+    calls ``get_accessible_client`` → ``is_authorized_for_client`` which
+    OR-checks org membership) — a real behavior change, not a syntax cleanup.
+
+    This helper preserves the existing direct-ownership semantics. If product
+    later decides to open diagnostic outputs to org teammates, migrate routes
+    from ``require_client_owner`` to ``require_client`` explicitly with
+    customer comms — don't merge the two helpers silently.
+
+    Why a fourth helper despite the "prefer moving code, avoid new abstractions"
+    rule (``tasks/todo.md`` 2026-04-20 deferred-items entry): the rule's escape
+    valve is "revisit only if a fourth helper joins them." This is that fourth
+    helper. The alternative was a hidden behavior change in 7 endpoints.
+    """
+    client = db.query(Client).filter(Client.id == client_id, Client.user_id == current_user.id).first()
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
     return client

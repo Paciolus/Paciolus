@@ -134,6 +134,7 @@ class TestHelpersReExports:
             parse_json_list,
             parse_json_mapping,
             require_client,
+            require_client_owner,  # Sprint 735
             try_parse_risk,
             try_parse_risk_band,
         )
@@ -146,6 +147,7 @@ class TestHelpersReExports:
             is_authorized_for_client,
             get_accessible_client,
             require_client,
+            require_client_owner,
             try_parse_risk,
             try_parse_risk_band,
         ):
