@@ -161,8 +161,18 @@ Architecture decision: **snapshot model.** Because `AdjustingEntry` is in-memory
 **Verification:** TypeScript typecheck clean, 8 component tests passing, `npm run build` succeeds.
 
 #### Sprint 729c — Capture helpers
-**Status:** PENDING.
-**Scope:** "Add to SUM" buttons on AJE workflow + sampling tool (UEL > tolerable triggers a prompt) — pre-fills the SUM capture form. ~10 tests.
+**Status:** COMPLETE 2026-04-26.
+**Delivered:**
+- Refactored `frontend/src/components/engagement/SumSchedulePanel.tsx` — extracted the inline `CreateMisstatementModal` to its own file `CreateMisstatementModal.tsx` with an `initialValues` prop so it can be reused with pre-filled data. SumSchedulePanel itself shrank to ~306 LoC (was 553).
+- `frontend/src/components/engagement/CaptureToSumButton.tsx` — new component that takes either `prefillFromAdjustingEntry={…}` or `prefillFromSampleProjection={…}` and opens the modal with computed initial values (largest AJE line becomes the canonical account; sample projection emits `source_type=sample_projection`, `classification=projected`, UEL → account amount). Default labels "Add to SUM" / "Capture as SUM projection" / "Capture to SUM".
+- `frontend/src/components/adjustments/AdjustmentSection.tsx` + `AdjustmentList.tsx` — pass-through `engagementId` prop. When supplied and an AJE is in `rejected` (passed) status, the row renders an "Add to SUM" button next to "Re-open" / "View Details" / "Delete".
+- 7 new component tests (`__tests__/CaptureToSumButton.test.tsx`) — default label, AJE label, projection label, modal pre-fill from AJE (source_reference contains reference + description), largest-line wins, sample-projection pre-fill (source_reference contains UEL).
+
+**Out of scope (deferred):**
+- Sampling-tool wiring at the route level: the sampling tool's frontend doesn't yet have a UI surface that consumes UEL > tolerable; the `CaptureToSumButton` is ready to drop in there once that surface lands. Pattern is the same as AJE wiring — pass `engagementId` + `prefillFromSampleProjection`.
+- Engagement-id propagation into the AJE workflow's parent page: callers of `<AdjustmentSection />` now have an opt-in `engagementId` prop. Wiring it from a specific audit page (`/tools/...` or workspace context) is a one-line change at each call site; deferred until product wires the AJE workflow into engagement-aware pages explicitly.
+
+**Verification:** TypeScript typecheck clean; 30 frontend tests passing across CaptureToSumButton + AdjustmentList + AdjustmentSection + SumSchedulePanel; `npm run build` succeeds.
 
 ---
 
