@@ -22,6 +22,7 @@ from security_utils import log_secure_operation
 from shared.entitlement_checks import check_export_access
 from shared.pdf_branding import apply_pdf_branding, load_pdf_branding_context
 from shared.rate_limits import RATE_LIMIT_EXPORT, limiter
+from sum_schedule_memo_generator import SumScheduleMemoGenerator
 
 router = APIRouter(tags=["engagements"])
 
@@ -191,6 +192,47 @@ def export_analytical_expectations(
         media_type="application/pdf",
         headers={
             "Content-Disposition": 'attachment; filename="analytical_expectations.pdf"',
+            "Content-Length": str(len(pdf_bytes)),
+        },
+    )
+
+
+@router.post(
+    "/engagements/{engagement_id}/export/sum-schedule",
+    dependencies=[Depends(check_export_access)],
+)
+@limiter.limit(RATE_LIMIT_EXPORT)
+def export_sum_schedule(
+    request: Request,
+    engagement_id: int,
+    current_user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
+) -> StreamingResponse:
+    """Sprint 729a (ISA 450): export the SUM-schedule workpaper PDF."""
+    log_secure_operation(
+        "sum_schedule_export",
+        f"User {current_user.id} exporting ISA 450 SUM workpaper for engagement {engagement_id}",
+    )
+
+    generator = SumScheduleMemoGenerator(db)
+
+    branding = load_pdf_branding_context(current_user, db)
+    try:
+        with apply_pdf_branding(branding):
+            pdf_bytes = generator.generate_pdf(current_user.id, engagement_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Engagement not found")
+
+    def iter_pdf() -> Iterator[bytes]:
+        chunk_size = 8192
+        for i in range(0, len(pdf_bytes), chunk_size):
+            yield pdf_bytes[i : i + chunk_size]
+
+    return StreamingResponse(
+        iter_pdf(),
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": 'attachment; filename="sum_schedule.pdf"',
             "Content-Length": str(len(pdf_bytes)),
         },
     )

@@ -49,6 +49,7 @@ from routes.settings import router as settings_router
 from routes.sod import router as sod_router
 from routes.three_way_match import router as three_way_match_router
 from routes.trends import router as trends_router
+from routes.uncorrected_misstatements import router as uncorrected_misstatements_router
 from routes.users import router as users_router
 from routes.w2_reconciliation import router as w2_reconciliation_router
 
@@ -85,6 +86,7 @@ all_routers = [
     engagements_router,
     follow_up_items_router,
     analytical_expectations_router,
+    uncorrected_misstatements_router,
     contact_router,
     currency_router,
     sampling_router,

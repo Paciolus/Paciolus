@@ -42,6 +42,7 @@ from subscription_model import (  # noqa: F401 — needed for FK resolution in c
     Subscription,
 )
 from tool_session_model import ToolSession  # noqa: F401 — needed for FK resolution in create_all
+from uncorrected_misstatements_model import UncorrectedMisstatement  # noqa: F401 — Sprint 729a (ISA 450)
 from upload_dedup_model import UploadDedup  # noqa: F401 — AUDIT-06 FIX 4
 
 # ---------------------------------------------------------------------------

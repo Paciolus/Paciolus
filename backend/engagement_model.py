@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from analytical_expectations_model import AnalyticalExpectation
     from follow_up_items_model import FollowUpItem
     from models import Client, User
+    from uncorrected_misstatements_model import UncorrectedMisstatement
 
 
 class EngagementStatus(str, PyEnum):
@@ -165,6 +166,11 @@ class Engagement(Base):
     # Analytical expectations (Sprint 728a: ISA 520 workpaper)
     analytical_expectations: Mapped[list["AnalyticalExpectation"]] = relationship(
         "AnalyticalExpectation", back_populates="engagement", passive_deletes=True
+    )
+
+    # Uncorrected misstatements (Sprint 729a: ISA 450 SUM schedule)
+    uncorrected_misstatements: Mapped[list["UncorrectedMisstatement"]] = relationship(
+        "UncorrectedMisstatement", back_populates="engagement", passive_deletes=True
     )
 
     def __repr__(self) -> str:

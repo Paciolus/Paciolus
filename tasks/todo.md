@@ -113,8 +113,24 @@ Architecture decision (CEO-confirmed 2026-04-26): **snapshot model.** New entity
 Architecture decision: **snapshot model.** Because `AdjustingEntry` is in-memory (zero-storage dataclass per `backend/adjusting_entries.py`) and sampling output is ephemeral, the original "auto-aggregate from passed AJEs / sample projections" plan was infeasible without breaking zero-storage. CEO confirmed 2026-04-26: SUM is a CPA-captured workpaper of decisions, with 729c capture helpers added for ergonomics.
 
 #### Sprint 729a — Backend core
-**Status:** PENDING — next in queue after 728a (which lands first to validate the entity-pattern shared shape).
-**Scope:** `UncorrectedMisstatement` entity (FK engagement, `source_type` enum: AJE_PASSED / SAMPLE_PROJECTION / KNOWN_ERROR, `classification` enum: FACTUAL / JUDGMENTAL / PROJECTED, `cpa_disposition` enum), Alembic migration, CRUD routes, `GET /engagements/{id}/sum-schedule` aggregation endpoint with materiality-bucket logic (CLEARLY_TRIVIAL / IMMATERIAL / APPROACHING_MATERIAL / MATERIAL based on `|aggregate|` vs trivial / performance / overall materiality), memo PDF, export route, completion gate (NOT_YET_REVIEWED block + override-required-for-MATERIAL), `docs/04-compliance/isa-450-coverage.md`, ~30–40 tests.
+**Status:** COMPLETE 2026-04-26.
+**Delivered:**
+- `backend/uncorrected_misstatements_model.py` — `UncorrectedMisstatement` entity (FK → engagements CASCADE, `MisstatementSourceType` / `MisstatementClassification` / `MisstatementDisposition` enums, signed F/S impacts, `accounts_affected_json`, soft-delete).
+- `backend/uncorrected_misstatements_manager.py` — CRUD manager + pure-function `compute_materiality_bucket(driver, overall, performance, trivial)` returning the four-bucket enum + `compute_sum_schedule(...)` aggregation (factual+judgmental subtotal vs projected subtotal per ISA 450 §A4 grouping; aggregate driver = `max(|net_income|, |net_assets|)`).
+- `backend/migrations/alembic/versions/a3b4c5d6e7f8_add_uncorrected_misstatements.py` — chains off `f2a8e7d6c5b4`. Upgrade + downgrade verified end-to-end.
+- `backend/schemas/uncorrected_misstatement_schemas.py` — Create/Update/Response/SumSchedule schemas with `AccountAffected` row.
+- `backend/routes/uncorrected_misstatements.py` — 6 endpoints (CRUD + `GET /engagements/{id}/sum-schedule` aggregation); registered.
+- `backend/sum_schedule_memo_generator.py` — ISA 450 workpaper PDF (cover, overview, classification-grouped tables, aggregate evaluation with bucket box colored by severity, AU-C/ISA/AS 2810 references, sign-off with DRAFT watermark for unreviewed items).
+- `backend/routes/engagements_exports.py` — added `POST /engagements/{id}/export/sum-schedule`.
+- `backend/engagement_manager.py` — completion gate now also requires (a) all SUM items have non-`NOT_YET_REVIEWED` disposition, (b) if aggregate is in `MATERIAL` bucket, at least one item must carry `cpa_notes` (override documentation per ISA 450 §11). Gate ordering preserved: follow-up → ISA 520 → ISA 450.
+- `docs/04-compliance/isa-450-coverage.md` — coverage doc with bucket-boundary table and architectural-decision rationale.
+- 6 test files, +69 tests covering schema, defaults, soft-delete, manager CRUD/validation, bucket boundaries (parametrized including signed/zero/equal-to), aggregation correctness, gate-helper functions, route happy-path + 404, memo render (empty + 3-classification + MATERIAL warning + cross-tenant), completion-gate matrix (no-items / pending / dispositioned / MATERIAL-no-override / MATERIAL-with-override / archived / 520-before-450 ordering), export route happy-path + 404.
+
+**Verification:** Sprint 729a + memo-boundary scanner + adjacent completion-gate tests — 110 passing.
+
+**Out of scope (carried to 729b/c):**
+- Frontend SUM page + capture form (729b).
+- Capture-helper buttons on AJE workflow + sampling tool (729c).
 
 #### Sprint 729b — Frontend
 **Status:** PENDING.
