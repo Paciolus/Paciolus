@@ -74,6 +74,14 @@ class CleanupTelemetry:
     duration_ms: float
     records_processed: int
     error: str | None = field(default=None)
+    # Sprint 732: fully-qualified exception type (e.g.
+    # ``sqlalchemy.exc.InternalError``) to disambiguate the bare class
+    # name in `error`. ``sanitize_exception`` strips the actual message
+    # to keep PII / secrets out of logs, so the class name alone was
+    # ambiguous — Python, SQLAlchemy, and psycopg2 all expose
+    # ``InternalError`` types. The FQN is module-path metadata, not a
+    # message, so it carries no PII risk.
+    error_type_fqn: str | None = field(default=None)
 
     def to_log_dict(self) -> dict:
         """Return a dict suitable for structured logging."""
@@ -86,6 +94,8 @@ class CleanupTelemetry:
         }
         if self.error is not None:
             d["error"] = self.error
+        if self.error_type_fqn is not None:
+            d["error_type_fqn"] = self.error_type_fqn
         return d
 
 
@@ -221,12 +231,18 @@ def _run_cleanup_job(
     duration_ms = (time.perf_counter() - t0) * 1000
     _last_run_times[job_name] = started_at
 
+    error_type_fqn: str | None = None
+    if caught_exc is not None:
+        # e.g. "sqlalchemy.exc.InternalError" or "psycopg2.errors.SerializationFailure"
+        error_type_fqn = f"{type(caught_exc).__module__}.{type(caught_exc).__name__}"
+
     telemetry = CleanupTelemetry(
         job_name=job_name,
         started_at=started_at.isoformat(),
         duration_ms=duration_ms,
         records_processed=records_processed,
         error=error_msg,
+        error_type_fqn=error_type_fqn,
     )
 
     if error_msg:
