@@ -104,21 +104,27 @@ Both jobs fire roughly every hour; each invocation completes in 30–80ms with `
 ---
 
 ### Sprint 733: Stripe webhook unit-coverage gap fill (pre-cutover)
-**Status:** PENDING — pre-4.1 sequence position 2 (after Sprint 737). Gated only on Sprint 732 Step 2 not stealing capacity (independent code paths).
-**Priority:** P2 → bumps to P1 the moment Phase 4.1 cutover schedule firms up. **Must land BEFORE Phase 4.1 (`sk_live_` keys)** — adds the safety net around the handler about to begin processing live revenue.
+**Status:** COMPLETE 2026-04-27. **Revised scope:** 2 real gaps + 1 bonus, not 4. The pre-flight gap analysis discovered `TestWebhookErrorClassification` in `test_billing_webhooks_routes.py` (Sprint 564) already covered 4 of the 5 boundaries Codex's directive listed — only "missing `stripe-signature` header → 400" and "duplicate event-id (IntegrityError) → 200 without double-processing" needed new coverage. Bonus: `is_stripe_enabled() == False` short-circuit. 8/8 webhook tests passing (5 existing + 3 new). No behavior change on `/billing/webhook`.
+**Priority:** P2 → bumps to P1 the moment Phase 4.1 cutover schedule firms up. **Landed BEFORE Phase 4.1 (`sk_live_` keys)** as planned — adds the safety net around the handler about to begin processing live revenue.
 **Source:** Refactor pass 2026-04-27 (Codex directive, scope-revised after Sprint 710/724 + `## Deferred Items` reconciliation).
 
-Add focused unit tests around `routes/billing.py::stripe_webhook` for the four boundaries currently exercised only at route level:
-- missing `Stripe-Signature` header → 400
-- invalid signature (forged HMAC) → 400
-- duplicate event-id claim path → 200, no double-processing
-- downstream operational failure (DB error mid-processing) → 500
+**What landed (2 new tests + 1 bonus):**
+- `test_missing_signature_header_returns_400` — POST without `stripe-signature` header → 400 + asserts `construct_event` is never called when the header is absent (signature is the gate, not an after-the-fact check).
+- `test_duplicate_event_returns_200_without_double_processing` — IntegrityError on dedup INSERT → 200 + asserts `process_webhook_event.call_count == 0`. **Critical for Stripe retry semantics** — if this regresses, duplicate deliveries cause subscription/payment events to double-run.
+- `test_stripe_disabled_returns_200_short_circuit` (bonus) — when `is_stripe_enabled()` returns False, webhook short-circuits to 200 without any verification or processing.
 
-Existing route-level tests (`test_billing_webhooks_routes.py`, `test_webhook_event_ordering.py`, `test_billing_routes.py`) remain untouched.
+**Already covered (no new tests needed):**
+- Invalid JSON payload → 400 (`test_invalid_json_payload_returns_400`)
+- ValueError from process_webhook_event → 400 (`test_handler_value_error_returns_400`)
+- KeyError from process_webhook_event → 400 (`test_handler_key_error_returns_400`)
+- Generic exception from process_webhook_event → 500 (`test_handler_operational_error_returns_500`)
+- DB error during dedup INSERT → 500 (`test_db_dedup_error_returns_500`)
+- Invalid signature (forged HMAC) → 400 (`test_billing_routes.py::test_webhook_invalid_signature`)
+- Valid signature happy path → 200 (`test_billing_routes.py::test_webhook_valid_signature`)
 
 **Out of scope (per Deferred Items policy, line 54):** No handler decomposition. The signature-verify / dedup-claim / error-mapping triad stays in-route until bundled with the deferred webhook-coverage sprint flagged in Sprint 676.
 
-**Verification:** All new tests green; existing 3 webhook test files unchanged; no behavioral change on `/billing/webhook`.
+**Verification:** 8/8 webhook tests passing in isolation. Existing 3 webhook test files structurally unchanged (only `test_billing_webhooks_routes.py` gained 3 new test methods inside the existing `TestWebhookErrorClassification` class). No behavioral change on `/billing/webhook`.
 
 ---
 
