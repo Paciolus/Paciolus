@@ -14,7 +14,11 @@ from fastapi import BackgroundTasks, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from shared.error_messages import sanitize_error
-from shared.helpers import maybe_record_tool_run, memory_cleanup, validate_file_size
+from shared.tool_run_recorder import maybe_record_tool_run
+from shared.upload_pipeline import (
+    memory_cleanup,
+    validate_file_size,
+)
 
 logger = logging.getLogger(__name__)
 

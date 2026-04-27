@@ -24,7 +24,10 @@ from auth import require_current_user, require_verified_user
 from database import get_db
 from models import ActivityLog, Client, ToolActivity, User
 from shared.audit_chain import GENESIS_HASH, compute_chain_hash, verify_audit_chain
-from shared.helpers import get_filename_display, hash_filename
+from shared.filenames import (
+    get_filename_display,
+    hash_filename,
+)
 from shared.rate_limits import RATE_LIMIT_WRITE, limiter
 from shared.soft_delete import soft_delete_bulk
 

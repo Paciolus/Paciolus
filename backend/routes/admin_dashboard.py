@@ -23,7 +23,7 @@ from database import get_db
 from models import ActivityLog, User
 from organization_model import Organization, OrganizationMember
 from shared.entitlement_checks import check_admin_dashboard_access
-from shared.helpers import sanitize_csv_value
+from shared.filenames import sanitize_csv_value
 from shared.organization_schemas import (
     AdminOverviewResponse,
     TeamActivityEntryResponse,

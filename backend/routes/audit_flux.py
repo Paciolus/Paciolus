@@ -17,9 +17,17 @@ from services.audit.flux_service import run_flux_analysis
 from shared.account_extractors import extract_flux_accounts
 from shared.diagnostic_response_schemas import FluxAnalysisResponse
 from shared.error_messages import sanitize_error
-from shared.helpers import maybe_record_tool_run, memory_cleanup, validate_file_size
+from shared.expectation_evaluation import (
+    evaluate_expectations_against_measurements,
+    extract_flux_measurements,
+)
 from shared.materiality_resolver import resolve_materiality
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
+from shared.tool_run_recorder import maybe_record_tool_run
+from shared.upload_pipeline import (
+    memory_cleanup,
+    validate_file_size,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +87,23 @@ async def flux_analysis(
                 flagged,
             )
 
-            return {"flux": flux_dict, "recon": recon_result.to_dict()}
+            # Sprint 728c: evaluate ISA 520 expectations targeting these
+            # flux outputs. No-op when engagement_id is None.
+            expectations_evaluated: list[dict[str, Any]] = []
+            if engagement_id is not None:
+                measurements = extract_flux_measurements(flux_dict)
+                expectations_evaluated = evaluate_expectations_against_measurements(
+                    db=db,
+                    user_id=current_user.id,
+                    engagement_id=engagement_id,
+                    measurements=measurements,
+                )
+
+            return {
+                "flux": flux_dict,
+                "recon": recon_result.to_dict(),
+                "expectations_evaluated": expectations_evaluated,
+            }
 
         except (ValueError, KeyError, TypeError) as e:
             logger.exception("Flux analysis failed")

@@ -18,6 +18,7 @@ from auth import require_verified_user
 from database import get_db
 from models import User
 from shared.entitlement_checks import check_export_access
+from shared.memory_budget import track_memo_memory
 from shared.pdf_branding import apply_pdf_branding, load_pdf_branding_context
 
 logger = logging.getLogger(__name__)
@@ -59,7 +60,7 @@ from shared.export_schemas import (
     SamplingEvaluationMemoInput,
     ThreeWayMatchExportInput,
 )
-from shared.helpers import safe_download_filename
+from shared.filenames import safe_download_filename
 from shared.rate_limits import RATE_LIMIT_EXPORT, limiter
 from three_way_match_memo_generator import generate_three_way_match_memo
 
@@ -158,7 +159,7 @@ def _memo_export_handler(
         if current_user is not None and db is not None:
             branding = load_pdf_branding_context(current_user, db)
 
-        with apply_pdf_branding(branding):
+        with apply_pdf_branding(branding), track_memo_memory(entry.log_label):
             pdf_bytes: bytes = entry.generator(
                 **{entry.result_kwarg: result_dict},
                 **common_kwargs,

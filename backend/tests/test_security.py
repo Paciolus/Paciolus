@@ -23,7 +23,6 @@ from security_middleware import (
     IP_FAILURE_WINDOW_SECONDS,
     LOCKOUT_DURATION_MINUTES,
     MAX_FAILED_ATTEMPTS,
-    _ip_failure_tracker,
     check_ip_blocked,
     check_lockout_status,
     generate_csrf_token,
@@ -632,11 +631,19 @@ class TestAccountLockoutIntegration:
 
 
 class TestPerIpFailureTracking:
-    """Tests for per-IP brute-force tracking."""
+    """Tests for per-IP brute-force tracking.
+
+    Sprint 718: storage moved to ``shared/ip_failure_tracker.py`` (Redis
+    backend with in-memory fallback). Tests still poke the in-memory store
+    via the module's ``_memory_store`` attribute since no REDIS_URL is set
+    during pytest.
+    """
 
     def setup_method(self):
         """Clear IP tracker state between tests."""
-        _ip_failure_tracker.clear()
+        from shared import ip_failure_tracker
+
+        ip_failure_tracker.reset_all_for_admin_unlock()
 
     def test_ip_not_blocked_initially(self):
         """Fresh IP should not be blocked."""
@@ -667,10 +674,13 @@ class TestPerIpFailureTracking:
 
     def test_expired_entries_pruned(self):
         """Entries older than the window should be pruned."""
+        from shared import ip_failure_tracker
+
         ip = "10.0.0.4"
-        # Insert entries that appear to be old
+        # Insert entries that appear to be old (test-only direct poke at the
+        # in-memory backing; production uses Redis with the same semantics).
         old_time = time.time() - IP_FAILURE_WINDOW_SECONDS - 1
-        _ip_failure_tracker[ip] = [old_time] * IP_FAILURE_THRESHOLD
+        ip_failure_tracker._memory_store[ip] = [old_time] * IP_FAILURE_THRESHOLD
         # Should not be blocked (all entries expired)
         assert check_ip_blocked(ip) is False
 

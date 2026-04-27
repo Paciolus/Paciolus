@@ -316,3 +316,11 @@ class TestSendGridHTTPErrorCatch:
         warning_records = [r for r in caplog.records if r.levelno == logging.WARNING]
         assert error_records == []
         assert len(warning_records) >= 1
+        bg_warnings = [r for r in warning_records if r.name == "shared.background_email"]
+        assert bg_warnings, "expected a warning from shared.background_email"
+        bg_msg = bg_warnings[0].getMessage()
+        assert "register_verification" in bg_msg
+        assert "403" in bg_msg, f"warning must surface SendGrid status, got: {bg_msg!r}"
+        assert "unknown" not in bg_msg, (
+            f"warning must not fall back to 'unknown' when result.message is set, got: {bg_msg!r}"
+        )

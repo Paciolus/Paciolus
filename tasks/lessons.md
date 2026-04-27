@@ -4,6 +4,46 @@
 
 ---
 
+## Log-emission tests must inspect message content, not just count records (Sprint 715)
+
+Sprint 713 added a SendGrid-403 warn-path: catch `SendGridHTTPError`, return `EmailResult(success=False, message="Email delivery failed (SendGrid 403).")`, let `safe_background_email` log a `WARNING`. The accompanying test (`test_background_email_logs_warning_not_error_on_failure`) asserted `len(warning_records) >= 1` and `error_records == []` — and stopped there. It never read the warning's `getMessage()`. The wrapper had a typo (`getattr(result, "error", "unknown")` against an `EmailResult` whose attribute is `message`), so every production warning would have read `Background register_verification send failed: unknown` — useless for the very investigation Sprint 715 was scheduled to perform 24h later. The bug only surfaced because Sprint 715 traced the emission chain end-to-end before reading logs; if 403s had been frequent, we'd have stared at "unknown" for weeks.
+
+**Pattern:** When a test asserts "a log line was emitted at level X," it must also assert the message contains the *facts the line exists to communicate*. For an exception-handler warn-path, that's the exception's identifying detail (status code, error class name, masked recipient — whichever the path is supposed to surface). Counting records protects against "ERROR was raised when WARNING was expected" but not against "WARNING fires with empty content" — and the latter is silent in production until someone reaches for the logs.
+
+The Sprint 715 test now asserts the warning came from `shared.background_email`, contains the label, contains `"403"`, and does *not* fall back to `"unknown"`. Apply the same shape to any new log-emission contract: `severity + emitter + identifying detail + absence of fallback sentinel`.
+
+---
+
+## Two-form code paths need parity tests, not just a one-form test (Sprint 718)
+
+The CSRF middleware's `_extract_user_id_from_auth` was tested against Bearer-header inputs and shipped years ago. The production browser path was later moved to HttpOnly cookies — but the function was never updated to read the cookie. Result: every browser POST/PUT/DELETE/PATCH ran with `expected_user_id=None`, silently disabling the CSRF user-binding check at line 427. The 2026-04-24 security review found it; the test suite didn't because there was no test that asserted "Bearer and cookie produce the same answer."
+
+**Pattern:** Anywhere an interface accepts the same input through two surface forms (Bearer/cookie, query/body, header/cookie, single-event/duplicate-event, single-worker/multi-worker), there must be a parametrized parity test that runs both forms through the same helper and asserts equivalence. Adding a new form without the parity test is the failure mode — it's not "I forgot to write a test for the new form," it's "I ran the existing tests, they passed, I shipped."
+
+The Sprint 718 fixture: `tests/test_auth_parity.py` parametrizes over `(bearer, cookie)` for every auth-extracting helper. The same shape will be used for Sprint 719's webhook idempotency contract (single-event + duplicate-event), Sprint 720's multi-worker bulk upload (single-worker + multi-worker), and any future security-helper that extends to a new input form.
+
+**Companion guardrail:** Sprint 718 also added an AST-scan test (`test_no_process_local_auth_state.py`) that fails if any module-level mutable container is introduced into `auth.py` or `security_middleware.py`. The IP-failure tracker bug class was "in-process state in a request handler"; the fix was a Redis-backed shared module + a scanner that prevents reintroduction. Same shape will repeat in Sprint 720 (no module-global state in `routes/`).
+
+---
+
+## Pair every "stated truth" with a CI-enforced source-of-truth (Sprint 717)
+
+Sprint 689g flipped `CANONICAL_TOOL_COUNT` 12 → 18 on the backend in one bulk pass that was supposed to also update every marketing/legal/doc surface. The pass missed `frontend/src/content/tool-ledger.ts` (still 12 entries), `BottomProof.tsx` ("Twelve audit-focused tools"), `ToolLedger.tsx` (header said "Eighteen" but aria-label said "Twelve"), the pricing/terms pages, and `tools/page.tsx` test counts. Two days later the agent sweep flagged 11 drift surfaces with three different numbers visible on production simultaneously. The root cause wasn't carelessness in 689g — it was that "stated tool count" had no canonical source; every surface was a hand-typed mirror, so any bulk-edit that missed one stayed silently wrong.
+
+The same shape produced AS 1215 fabrication: the CLAUDE.md "Key Capabilities" line cited PCAOB AS 1215 as a JE-testing standard for over a year, propagating to USER_GUIDE.md, status.json, the Trust page, and the standards-specimen file. AS 1215 governs audit *documentation* — not procedures — but with no mechanical check, the wrong citation traveled wherever the marketing copy did.
+
+**Pattern:** Anything whose "truth" gets quoted in more than one place — counts, citations, version numbers, pricing — needs a single Python/TS source-of-truth module *and* a CI test that fails when human-edited surfaces disagree. In Sprint 717: `backend/tools_registry.py`, `backend/standards_registry.py`, `tests/test_catalog_consistency.py`, `tests/test_citation_consistency.py`. The CI tests caught 4 unregistered standards (ASC 842, IFRS 16, ASC 326, IAS 1) on first run — exactly the kind of slow-drift the registry is designed to surface immediately.
+
+The discipline: **whenever you find yourself updating the same fact in 3+ files, stop and add the registry + test before finishing the edit**. Don't try to be more careful next time — be unable-to-be-wrong next time.
+
+---
+
+## Verify the code is deployed before debugging "why isn't runtime doing X" (Sprint 716)
+
+During Sprint 716's Grafana Loki rollout, after setting the `LOKI_*` env vars on Render I spent ~15 minutes chasing hypotheses about why Loki showed zero streams: wrong label (`service_name` vs `service`?), cardinality rejections, handler thread dying silently on an unhandled exception. Opened Render's Web Shell, ran `python -c "from config import LOKI_ENABLED"` and got `ImportError: cannot import name 'LOKI_ENABLED' from 'config'`. The deployed image was Sprint 713's commit `2b92b771` — Sprint 716's commit `8e65d30e` was local-only; I'd never pushed to GitHub. Render's env-var-save redeploy rebuilt the OLD main, not the new code. **Pattern:** Before diving into "the app isn't doing X despite the code saying X," spend 30 seconds proving the target code is actually on the running instance. Cheap probes: Render Web Shell `python -c "from <module> import <new_symbol>"`, a `grep -c` on a known new log line in Render's log tail, or a `curl /health` that returns a version SHA. Especially true at the end of a sprint where commits and env-var changes can arrive out of order — the env var set is often what people *remember* as "shipping," but on Render it only redeploys the main branch's current tip. The same failure mode hit the Sprint 551-era Stripe deploy pattern; worth generalising into a sprint-close template step.
+
+---
+
 ## Render Log Streams ≠ Grafana Cloud Loki — check protocol before scheduling (Sprint 716)
 
 Sprint 716 was initially scoped as "wire Render's built-in HTTPS log drain → Loki." Mid-provisioning, once the Render Add Log Stream form loaded, the `e.g., logs.papertrailapp.com:34302` placeholder revealed Render's integration surface is TCP/syslog only — Datadog, Papertrail, Logtail, LogDNA, Cribl. Grafana Cloud Loki only ingests HTTPS POST at `/loki/api/v1/push`. The two don't bridge without a sidecar. The sprint was re-scoped mid-flight to an in-process Python handler (`backend/loki_handler.py`) that pushes HTTPS directly, which kept the "free + no new infra" constraint intact and required no Render log drain config at all. **Pattern:** Before scheduling any observability sprint that involves "service X forwards to service Y," verify the *protocol* match (TCP/syslog vs. HTTPS push vs. OTLP vs. gRPC) up front, not just that both services exist and are "free." Destinations advertised as "integrations" on one side often require a specific wire format the other side doesn't speak natively. One 2-minute check of the target platform's "Supported destinations" list — or, if that's absent, the example endpoint placeholder — would have caught this before the sprint plan was committed to `todo.md`.

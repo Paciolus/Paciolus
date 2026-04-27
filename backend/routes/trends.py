@@ -1,6 +1,7 @@
 """
 Paciolus API — Trend Analysis & Industry Ratios Routes
 """
+
 from datetime import date as date_type
 from typing import Any, Optional
 
@@ -39,6 +40,7 @@ class IndustryRatiosResponse(BaseModel):
     ratios: dict
     summary_date: Optional[str] = None
     available_industries: list
+    expectations_evaluated: list[dict] = []  # Sprint 728c
 
 
 class RollingAnalysisResponse(BaseModel):
@@ -102,7 +104,9 @@ def _summaries_to_snapshots(summaries: list[Any]) -> list[PeriodSnapshot]:
     return snapshots
 
 
-def _get_client_summaries(db: Session, client_id: int, user_id: int, period_type: str | None = None, limit: int = 36) -> list:
+def _get_client_summaries(
+    db: Session, client_id: int, user_id: int, period_type: str | None = None, limit: int = 36
+) -> list:
     """Query historical summaries for a client (active only — excludes archived)."""
     query = db.query(DiagnosticSummary).filter(
         DiagnosticSummary.client_id == client_id,
@@ -116,14 +120,14 @@ def _get_client_summaries(db: Session, client_id: int, user_id: int, period_type
             query = query.filter(DiagnosticSummary.period_type == pt)
         except ValueError:
             raise HTTPException(
-                status_code=400,
-                detail="Invalid period_type. Must be one of: monthly, quarterly, annual"
+                status_code=400, detail="Invalid period_type. Must be one of: monthly, quarterly, annual"
             )
 
-    return query.order_by(
-        DiagnosticSummary.period_date.asc().nullslast(),
-        DiagnosticSummary.timestamp.asc()
-    ).limit(limit).all()
+    return (
+        query.order_by(DiagnosticSummary.period_date.asc().nullslast(), DiagnosticSummary.timestamp.asc())
+        .limit(limit)
+        .all()
+    )
 
 
 @router.get("/clients/{client_id}/trends", response_model=ClientTrendsResponse)
@@ -132,18 +136,12 @@ def get_client_trends(
     period_type: Optional[str] = Query(default=None, description="Filter by period type: monthly, quarterly, annual"),
     limit: int = Query(default=12, ge=2, le=36, description="Number of periods to analyze"),
     current_user: User = Depends(require_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """Get trend analysis for a client's historical diagnostic data."""
-    log_secure_operation(
-        "trend_analysis_request",
-        f"User {current_user.id} requesting trends for client {client_id}"
-    )
+    log_secure_operation("trend_analysis_request", f"User {current_user.id} requesting trends for client {client_id}")
 
-    client = db.query(Client).filter(
-        Client.id == client_id,
-        Client.user_id == current_user.id
-    ).first()
+    client = db.query(Client).filter(Client.id == client_id, Client.user_id == current_user.id).first()
 
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
@@ -152,18 +150,14 @@ def get_client_trends(
 
     if len(summaries) < 2:
         raise HTTPException(
-            status_code=422,
-            detail=f"Need at least 2 diagnostic summaries for trend analysis, found {len(summaries)}"
+            status_code=422, detail=f"Need at least 2 diagnostic summaries for trend analysis, found {len(summaries)}"
         )
 
     snapshots = _summaries_to_snapshots(summaries)
     analyzer = TrendAnalyzer(snapshots)
     analysis = analyzer.get_full_analysis()
 
-    log_secure_operation(
-        "trend_analysis_complete",
-        f"Analyzed {len(snapshots)} periods for client {client_id}"
-    )
+    log_secure_operation("trend_analysis_complete", f"Analyzed {len(snapshots)} periods for client {client_id}")
 
     return {
         "client_id": client_id,
@@ -177,38 +171,35 @@ def get_client_trends(
 @router.get("/clients/{client_id}/industry-ratios", response_model=IndustryRatiosResponse)
 def get_client_industry_ratios(
     client_id: int,
+    engagement_id: Optional[int] = Query(default=None),
     current_user: User = Depends(require_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """Get industry-specific ratios for a client."""
     from industry_ratios import calculate_industry_ratios, get_available_industries
 
     log_secure_operation(
-        "industry_ratios_request",
-        f"User {current_user.id} requesting industry ratios for client {client_id}"
+        "industry_ratios_request", f"User {current_user.id} requesting industry ratios for client {client_id}"
     )
 
-    client = db.query(Client).filter(
-        Client.id == client_id,
-        Client.user_id == current_user.id
-    ).first()
+    client = db.query(Client).filter(Client.id == client_id, Client.user_id == current_user.id).first()
 
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
 
-    latest_summary = db.query(DiagnosticSummary).filter(
-        DiagnosticSummary.client_id == client_id,
-        DiagnosticSummary.user_id == current_user.id,
-        DiagnosticSummary.archived_at.is_(None),
-    ).order_by(
-        DiagnosticSummary.timestamp.desc()
-    ).first()
+    latest_summary = (
+        db.query(DiagnosticSummary)
+        .filter(
+            DiagnosticSummary.client_id == client_id,
+            DiagnosticSummary.user_id == current_user.id,
+            DiagnosticSummary.archived_at.is_(None),
+        )
+        .order_by(DiagnosticSummary.timestamp.desc())
+        .first()
+    )
 
     if not latest_summary:
-        raise HTTPException(
-            status_code=422,
-            detail="Run a diagnostic assessment first to calculate industry ratios"
-        )
+        raise HTTPException(status_code=422, detail="Run a diagnostic assessment first to calculate industry ratios")
 
     totals_dict = {
         "total_assets": float(latest_summary.total_assets or 0.0),
@@ -227,9 +218,24 @@ def get_client_industry_ratios(
     industry_result = calculate_industry_ratios(industry, totals_dict)
 
     log_secure_operation(
-        "industry_ratios_complete",
-        f"Calculated {industry_result['industry']} ratios for client {client_id}"
+        "industry_ratios_complete", f"Calculated {industry_result['industry']} ratios for client {client_id}"
     )
+
+    # Sprint 728c: ISA 520 evaluation against industry ratios
+    expectations_evaluated: list[dict[str, Any]] = []
+    if engagement_id is not None:
+        from shared.expectation_evaluation import (
+            evaluate_expectations_against_measurements,
+            extract_ratio_measurements,
+        )
+
+        measurements = extract_ratio_measurements(industry_result["ratios"])
+        expectations_evaluated = evaluate_expectations_against_measurements(
+            db=db,
+            user_id=current_user.id,
+            engagement_id=engagement_id,
+            measurements=measurements,
+        )
 
     return {
         "client_id": client_id,
@@ -240,6 +246,7 @@ def get_client_industry_ratios(
         "ratios": industry_result["ratios"],
         "summary_date": latest_summary.timestamp.isoformat() if latest_summary.timestamp else None,
         "available_industries": get_available_industries(),
+        "expectations_evaluated": expectations_evaluated,
     }
 
 
@@ -249,24 +256,17 @@ def get_client_rolling_analysis(
     window: Optional[int] = Query(default=None, description="Specific window size (3, 6, or 12 months)"),
     period_type: Optional[str] = Query(default=None, description="Filter by period type: monthly, quarterly, annual"),
     current_user: User = Depends(require_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """Get rolling window analysis for a client's historical data."""
     log_secure_operation(
-        "rolling_analysis_request",
-        f"User {current_user.id} requesting rolling analysis for client {client_id}"
+        "rolling_analysis_request", f"User {current_user.id} requesting rolling analysis for client {client_id}"
     )
 
     if window is not None and window not in [3, 6, 12]:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid window size. Must be 3, 6, or 12 months."
-        )
+        raise HTTPException(status_code=400, detail="Invalid window size. Must be 3, 6, or 12 months.")
 
-    client = db.query(Client).filter(
-        Client.id == client_id,
-        Client.user_id == current_user.id
-    ).first()
+    client = db.query(Client).filter(Client.id == client_id, Client.user_id == current_user.id).first()
 
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
@@ -275,8 +275,7 @@ def get_client_rolling_analysis(
 
     if len(summaries) < 2:
         raise HTTPException(
-            status_code=422,
-            detail=f"Need at least 2 diagnostic summaries for rolling analysis, found {len(summaries)}"
+            status_code=422, detail=f"Need at least 2 diagnostic summaries for rolling analysis, found {len(summaries)}"
         )
 
     snapshots = _summaries_to_snapshots(summaries)
@@ -296,10 +295,7 @@ def get_client_rolling_analysis(
                 filtered = {k: v for k, v in metric["rolling_averages"].items() if k == str(window)}
                 metric["rolling_averages"] = filtered
 
-    log_secure_operation(
-        "rolling_analysis_complete",
-        f"Analyzed {len(snapshots)} periods for client {client_id}"
-    )
+    log_secure_operation("rolling_analysis_complete", f"Analyzed {len(snapshots)} periods for client {client_id}")
 
     return {
         "client_id": client_id,

@@ -15,7 +15,7 @@ from fastapi.responses import StreamingResponse
 
 from shared.error_messages import sanitize_error
 from shared.export_helpers import streaming_csv_response, streaming_excel_response, streaming_pdf_response
-from shared.helpers import safe_download_filename
+from shared.filenames import safe_download_filename
 
 logger = logging.getLogger(__name__)
 

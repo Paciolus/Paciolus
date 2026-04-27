@@ -295,7 +295,7 @@ Upload a General Ledger export. Required columns: Entry Number, Date, Account, D
 
 ### 5.5 Exporting
 
-- **JE Testing Memo (PDF)** — Professional testing memorandum (PCAOB AS 1215 / ISA 530 references)
+- **JE Testing Memo (PDF)** — Professional testing memorandum (PCAOB AS 2401 + ISA 240 procedure references)
 - **Flagged Entries (CSV)** — All flagged entries with test key, severity, and confidence
 
 ### 5.6 Threshold Configuration
@@ -782,7 +782,7 @@ Each testing tool generates a professional memorandum:
 |------|------|---------------------|
 | TB Diagnostics | Diagnostic Report | — |
 | Multi-Period | Trend Analysis Memo | — |
-| JE Testing | JE Testing Memo | PCAOB AS 1215, ISA 530 |
+| JE Testing | JE Testing Memo | PCAOB AS 2401, ISA 240 |
 | AP Testing | AP Testing Memo | ISA 240, ISA 500, PCAOB AS 2401 |
 | Bank Rec | Bank Rec Memo | — |
 | Payroll Testing | Payroll Testing Memo | ISA 500 |

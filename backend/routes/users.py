@@ -1,6 +1,7 @@
 """
 Paciolus API — User Profile Routes
 """
+
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
@@ -15,8 +16,8 @@ from auth import (
 from database import get_db
 from email_service import send_verification_email
 from models import User
+from shared.background_email import safe_background_email
 from shared.error_messages import sanitize_error
-from shared.helpers import safe_background_email
 from shared.rate_limits import RATE_LIMIT_AUTH, limiter
 from shared.response_schemas import SuccessResponse
 
@@ -47,6 +48,7 @@ def update_profile(
                 user_name=updated_user.name,
             )
             from email_service import send_email_change_notification
+
             background_tasks.add_task(
                 safe_background_email,
                 send_email_change_notification,
@@ -58,9 +60,14 @@ def update_profile(
 
         return UserResponse.model_validate(updated_user)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=sanitize_error(
-            e, log_label="user_profile_validation", allow_passthrough=True,
-        ))
+        raise HTTPException(
+            status_code=400,
+            detail=sanitize_error(
+                e,
+                log_label="user_profile_validation",
+                allow_passthrough=True,
+            ),
+        )
 
 
 @router.put("/users/me/password", response_model=SuccessResponse)
@@ -69,22 +76,20 @@ def change_password(
     request: Request,
     password_data: PasswordChange,
     current_user: User = Depends(require_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ) -> dict[str, object]:
     """Change current user's password."""
     try:
-        success = change_user_password(
-            db, current_user,
-            password_data.current_password,
-            password_data.new_password
-        )
+        success = change_user_password(db, current_user, password_data.current_password, password_data.new_password)
         if not success:
-            raise HTTPException(
-                status_code=400,
-                detail="Current password is incorrect"
-            )
+            raise HTTPException(status_code=400, detail="Current password is incorrect")
         return {"success": True, "message": "Password changed successfully"}
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=sanitize_error(
-            e, log_label="password_change_validation", allow_passthrough=True,
-        ))
+        raise HTTPException(
+            status_code=400,
+            detail=sanitize_error(
+                e,
+                log_label="password_change_validation",
+                allow_passthrough=True,
+            ),
+        )

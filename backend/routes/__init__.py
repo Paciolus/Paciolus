@@ -6,6 +6,7 @@ from routes.account_risk_heatmap import router as account_risk_heatmap_router
 from routes.activity import router as activity_router
 from routes.adjustments import router as adjustments_router
 from routes.admin_dashboard import router as admin_dashboard_router
+from routes.analytical_expectations import router as analytical_expectations_router
 from routes.ap_testing import router as ap_testing_router
 from routes.ar_aging import router as ar_aging_router
 from routes.audit import router as audit_router
@@ -48,6 +49,7 @@ from routes.settings import router as settings_router
 from routes.sod import router as sod_router
 from routes.three_way_match import router as three_way_match_router
 from routes.trends import router as trends_router
+from routes.uncorrected_misstatements import router as uncorrected_misstatements_router
 from routes.users import router as users_router
 from routes.w2_reconciliation import router as w2_reconciliation_router
 
@@ -83,6 +85,8 @@ all_routers = [
     inventory_testing_router,
     engagements_router,
     follow_up_items_router,
+    analytical_expectations_router,
+    uncorrected_misstatements_router,
     contact_router,
     currency_router,
     sampling_router,

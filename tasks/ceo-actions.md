@@ -3,59 +3,23 @@
 > **Single source of truth for every action required to launch Paciolus.**
 > Top-to-bottom execution order. Each phase's exit criteria must be met before the next phase starts.
 
-**Status as of 2026-04-09 (evening):** **Phases 1 and 2 are complete.** `paciolus-api` is running on Render Standard (2 GB / 1 CPU, $25/mo), serving the Sprint 593-era merged backlog at https://paciolus.com. Neon Launch Postgres (us-east-1 pooled) + Upstash Redis + Sentry + SendGrid Domain Authentication on paciolus.com all wired and verified. Register/login/logout/cookie auth and end-to-end email delivery all confirmed working. Full detail archived in `tasks/archive/ceo-phases-1-2-restore-login-and-backlog-merge-2026-04-09.md`.
+**Status as of 2026-04-24:** **Phases 1 and 2 complete.** Production live at https://paciolus.com on Render Standard + Neon Launch Postgres + Upstash Redis + Sentry + SendGrid Domain Authentication. Post-Phase-1 infra hardening has extended the foundation: `DB_TLS_OVERRIDE` cleared 2026-04-23 (Sprint 673), Neon password rotated 2026-04-22, orphan Render Postgres deleted 2026-04-22, SendGrid Single Sender revoked 2026-04-22, R2 buckets provisioned 2026-04-23 (unblocks Phase 4.4 backups and landed Sprint 611 ExportShare migration same day), Sprint 716 Loki log aggregation deployed 2026-04-24. Sentry integration verified by live traffic (Sprint 711 bugs surfaced in the process).
 
-**Your next action:** Phase 3 — Functional Validation. Exercise the 12 testing tools, engagement layer, PDF memos, admin dashboard, and bulk upload on https://paciolus.com and file any bugs found. I'm on standby for bug fixes.
-
-**Launch ETA:** ~3 weeks from today.
+**Your next action:** Phase 3 — Functional Validation. Exercise the 12 testing tools, 18 memo PDFs + 3 report PDFs, engagement layer, export sharing, admin dashboard, and bulk upload on https://paciolus.com. File bugs as you find them; I'm on standby.
 
 **Ongoing monthly cost after launch:** ~$44/mo (Render Standard $25 + Neon Launch ~$19 + free tiers for Redis / Sentry / SendGrid). Stripe transaction fees on actual revenue.
 
 ---
 
-## 📋 This Week's Action Map — Council Review 2026-04-16
+## 📋 Remaining launch path
 
-> **Council verdict:** Code is launch-ready. Gating path is your calendar, not engineering. Ship on ~3-week ETA (Path A). See conversation transcript for the 8-agent breakdown and tradeoff map.
+Three gates left between here and announcement. The code is launch-ready; the gating path is CEO calendar + legal sign-off.
 
-**Recommended order — approximately three focused afternoons:**
+1. **[Phase 3](#phase-3--functional-validation) — Functional Validation (CEO).** Full checklist below. Exit: no open P0/P1 bugs, memory headroom confirmed under bulk load.
+2. **[Phase 4.1](#41-stripe-production-cutover) + [4.2](#42-legal--policy-placeholders) — Stripe live cutover + legal placeholders (CEO + counsel).** Stripe live keys on Render/Vercel, real-money smoke test, legal counsel sign-off on Terms + Privacy.
+3. **[Phase 4.3](#43-custom-domain)–[4.5](#45-go-live-smoke-test) — Domain, backups, go-live (CEO provides creds, I run backups setup).** Custom domain + DNS, pg_dump cron to `paciolus-backups`, 24h go-live monitor, launch announcement.
 
-### Afternoon 1 (tomorrow, 2026-04-17): Phase 3 — Functional Validation
-Open [Phase 3](#phase-3--functional-validation) and work the checklist top-to-bottom on https://paciolus.com. Specifically:
-- [ ] All 12 testing tools against one realistic sample TB (file bugs as you find them, I fix them)
-- [ ] All 18 memo PDFs + 3 report PDFs back-to-back on a single engagement (watch Sentry for memory warnings)
-- [ ] Engagement layer end-to-end (create → materiality → diagnostics → follow-ups → workpaper index → ZIP → completion gate)
-- [ ] Export sharing flow (create share → incognito access → passcode → revoke → verify revocation)
-- [ ] Admin dashboard (orgs, drill-down, impersonation read-only, audit log)
-- [ ] Bulk upload with 5+ TBs (Enterprise tier — watch Render memory graph)
-- [ ] Fire a deliberate broken endpoint to confirm a Sentry event actually lands in the dashboard *(Phase 1 follow-up, folds in here)*
-
-**Exit:** No open P0/P1 bugs. Memory headroom observed under bulk load. Sentry event confirmed visible.
-
-### Afternoon 2 (~next week): Phase 4.1 — Stripe Live Cutover + Legal Placeholders
-- [ ] Generate/confirm Stripe live-mode secret key, publishable key, and webhook signing secret. Set on Render + Vercel env vars.
-- [ ] Stripe Dashboard configuration per [Phase 4.1](#41-stripe-production-cutover) (graduated pricing confirmed, Customer Portal enabled, products/prices/coupons mirrored from test mode)
-- [ ] Sign `tasks/pricing-launch-readiness.md` Section 7 → mark **GO**
-- [ ] Real-money smoke test: Solo monthly with real card → subscribe → webhook delivered → cancel → refund
-- [ ] Legal placeholders in [Phase 4.2](#42-legal--policy-placeholders) — fill business address, registered agent, DPO/EU-rep decision, effective dates, security emergency phone. Counsel sign-off on Terms + Privacy before go-live.
-
-### Afternoon 3 (~week 3): Phase 4.3–4.5 — Domain, Backups, Go-Live
-- [x] ~~Provision R2/S3 bucket~~ — buckets provisioned 2026-04-23 and Sprint 611 ExportShare migration landed against `paciolus-exports` the same day. Phase 4.4 pg_dump backups are the only remaining consumer (tracked in [Phase 4.4](#44-backups)).
-- [ ] Custom domain + DNS per [Phase 4.3](#43-custom-domain)
-- [ ] I run the pg_dump restore round-trip on your bucket ([Phase 4.4](#44-backups))
-- [ ] Go-live smoke test from custom domain ([Phase 4.5](#45-go-live-smoke-test)) — 24h monitor of Sentry + Render logs + Stripe webhook delivery ≥99%
-- [ ] **Launch announcement**
-
-### Parallel Engineering Track (I own — no CEO action)
-- **Sprint 673:** `DB_TLS_OVERRIDE` proper fix (pooler-aware `pg_stat_ssl` skip). 23-day fuse before 2026-05-09 override expiry. Lands before your Phase 4.3 work starts so it doesn't collide with launch week. Tracked in [`tasks/todo.md`](todo.md) Active Phase.
-- **DMARC tightening:** I'll flag when to move `_dmarc.paciolus.com` from `p=none` to `p=quarantine` (~2 weeks after your first real-money transaction confirms deliverability holds).
-
-### Guardian's Production-Behavior Verification Checklist
-Already embedded in the phases above — listed here explicitly so nothing slips:
-1. Stripe real-card E2E (Phase 4.1) ✅ in map
-2. Sentry verify event lands in dashboard (Afternoon 1) ✅ in map
-3. pg_dump restore round-trip (Phase 4.4) ✅ in map
-4. Bulk upload 5+ TBs (Phase 3) ✅ in map
-5. 24h webhook delivery ≥99% (Phase 4.5) ✅ in map
+**DMARC tightening** (non-blocking): move `_dmarc.paciolus.com` from `p=none` to `p=quarantine` ~2 weeks after the first real-money Stripe transaction confirms deliverability holds. I'll flag.
 
 ---
 
@@ -65,14 +29,11 @@ Render Standard deploy live. Neon (us-east-1 pooled) + Upstash Redis + Sentry wi
 
 **Full detail, operational learnings, and exact commands archived in [`tasks/archive/ceo-phases-1-2-restore-login-and-backlog-merge-2026-04-09.md`](archive/ceo-phases-1-2-restore-login-and-backlog-merge-2026-04-09.md).**
 
-### Phase 1 open follow-ups (non-blocking, scheduled during later phases)
+### Phase 1 open follow-ups
 
-- [x] **`DB_TLS_OVERRIDE` removed 2026-04-23.** Sprint 673 pooler-aware pg_stat_ssl skip shipped via the 2026-04-22 password-rotation redeploy; CEO-initiated env-var delete at 10:26 UTC 2026-04-23 went live at 10:28 UTC. Fresh worker startup logs on instance `csfxr` all show `tls=pooler-skip`; zero `DB_TLS_OVERRIDE` warnings in post-deploy logs; 2026-05-09 fuse cleared. Full chain of custody in Sprint 673 Review.
-- [ ] **Upgrade DMARC policy** — currently `p=none` (monitoring only). After ~2 weeks of successful delivery to Gmail and other major providers, tighten to `p=quarantine` or eventually `p=reject` for stronger spoofing protection. Update the `_dmarc.paciolus.com` TXT record in Vercel DNS.
-- [x] **Sentry test event** — verified 2026-04-22. Production was already capturing real events (9+ unresolved issues in dashboard from `cleanup_scheduler`, `/auth/verification-status`, `/audit/trial-balance`, `/audit/preflight`). No deliberate test event needed; the integration is fully validated by live traffic. **Bonus finding:** Two P1 bugs surfaced (verification-status datetime TypeError + cleanup_scheduler failures, ~670 events combined). Captured as Sprint 711 in `tasks/todo.md`.
-- [x] **Revoke SendGrid Single Sender Verification for `comcgee89@gmail.com`** — done 2026-04-22. Domain Authentication on `paciolus.com` is now the sole sending path.
-- [x] **Delete old Render Postgres `paciolus-db`** — done 2026-04-22. Was actually a Basic-1gb paid plan (not free tier as the original note claimed), holding 85 MB of orphaned pre-Neon data with 0 open connections and a separate `paciolus_user` credential. Verified `paciolus-api` `DATABASE_URL` points to Neon (`neondb_owner@ep-crimson-smoke-an4uy1gh-pooler...`) before deletion. Stops a ~$7-19/mo Basic-1gb bill that was burning on a DB the backend doesn't use.
-- [x] **Neon DB password rotation** — done 2026-04-22. The DATABASE_URL plaintext rendered in a screenshot tool result during the orphan-DB investigation; rotated `neondb_owner` password in Neon, updated Render `DATABASE_URL` env var, deploy `937997a` went green at 4:49 PM, login on paciolus.com smoke-tested clean. (Side effect: this redeploy also shipped PR #93 — Sprints 703–709 typography + design refresh — to production for the first time, since "Environment updated" deploys always pull latest main.)
+- [x] **DMARC tightened to `p=quarantine` 2026-04-24.** `_dmarc.paciolus.com` updated in Vercel DNS; verified propagated on both Google (8.8.8.8) and Cloudflare (1.1.1.1) resolvers within seconds (TTL 60). Next step: ~30 days of observation; if no deliverability complaints, escalate to `p=reject` around 2026-05-24. Optional: add `rua=mailto:dmarc@paciolus.com` once a reporting mailbox exists.
+
+> Other Phase 1 follow-ups (DB_TLS_OVERRIDE removal, Sentry verification, SendGrid Single Sender cleanup, orphan Render Postgres deletion, Neon password rotation) all landed 2026-04-22/23 — see the Completed table below.
 
 ---
 
@@ -107,15 +68,30 @@ The goal is to catch anything broken in normal usage before you start charging r
 
 ### 4.1 Stripe production cutover
 
-- [ ] Stripe Dashboard → Products → confirm `STRIPE_SEAT_PRICE_MONTHLY` uses **graduated pricing**: Tier 1 (qty 1–7) = $80, Tier 2 (qty 8–22) = $70
-- [ ] Stripe Dashboard → Settings → **Customer Portal** → enable: payment method updates, invoice history, cancel at period end
-- [ ] Stripe Dashboard → create production products/prices/coupons using your **live secret key**. Mirror the test-mode structure: 4 products, 8 prices, 2 coupons (Sprint 439 reference). Keep the test-mode price IDs in a safe place for reference.
-- [ ] Render + Vercel env vars → set `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET` (live values), plus any `STRIPE_PRICE_*` IDs used by your frontend
+> **Important context (added 2026-04-24):** Stripe **test mode** is currently at Pricing v2 (Sprint 439 — Solo $50/mo, single graduated seat add-on). The code is at Pricing v3 (Phase LXIX, Sprints 449–476 — Solo $100/mo, flat per-tier seat pricing). Phase 4.1 is therefore **a fresh build of live mode at v3**, not a mirror of test mode. After cutover, all test-mode prices can be archived as cleanup.
+
+- [ ] **Customer Portal** (Stripe Dashboard → Settings → Billing → Customer Portal — works in live or test mode, settings carry over): enable payment-method updates, invoice history, cancel-at-period-end *(may already be configured from Sprint 439)*
+- [ ] **Create live-mode products and prices at Pricing v3.** Build fresh — do not mirror test mode. **4 products, 10 prices, 2 coupons:**
+  - **Paciolus Solo** — 2 prices: `$100/mo`, `$1,000/yr` (both flat)
+  - **Paciolus Professional** *(Stripe currently labels this "Team" — rename when creating live)* — 2 prices: `$500/mo`, `$5,000/yr` (both flat)
+  - **Paciolus Enterprise** *(Stripe currently labels this "Organization" — rename when creating live)* — 2 prices: `$1,000/mo`, `$10,000/yr` (both flat)
+  - **Paciolus Professional Seat Add-On** — 2 prices: `$65/mo`, `$650/yr` (both flat — **not graduated**)
+  - **Paciolus Enterprise Seat Add-On** — 2 prices: `$45/mo`, `$450/yr` (both flat — **not graduated**)
+  - **2 coupons** mirroring test mode: `MONTHLY_20_3MO` (20% off first 3 months), `ANNUAL_10_1YR` (10% off first annual invoice)
+- [ ] **Render env vars** → set the live secret key plus all 10 price IDs (see Appendix A Stripe table for full list):
+  - `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET` (live values)
+  - 6 base plan price IDs: `STRIPE_PRICE_{SOLO,PROFESSIONAL,ENTERPRISE}_{MONTHLY,ANNUAL}`
+  - 4 seat add-on price IDs: `STRIPE_SEAT_PRICE_{PRO,ENT}_{MONTHLY,ANNUAL}`
+  - 2 coupon IDs: `STRIPE_COUPON_MONTHLY_20`, `STRIPE_COUPON_ANNUAL_10`
+- [ ] **Vercel env vars** → set any `NEXT_PUBLIC_STRIPE_*` IDs the frontend reads directly (publishable key, etc.)
 - [ ] Stripe Dashboard → Developers → Webhooks → configure endpoint → `https://api.paciolus.com/billing/webhook` (or the onrender.com URL if you haven't set up custom domain yet) → copy the signing secret into `STRIPE_WEBHOOK_SECRET`
+- [ ] **Run the Sprint 719 preflight runner** before flipping live env vars: `scripts/stripe_live_preflight.sh https://api.paciolus.com/billing/webhook`. Fires every event type the webhook handler supports; bails on the first non-200. **Do NOT proceed if any event fails.** Capture the script output as evidence in the launch dossier.
+- [ ] **Verify the production-mode Stripe-secret format guard**: after setting live env vars on Render, confirm Render boot logs do NOT contain `STRIPE_SECRET_KEY is a TEST-mode key` or any `_test_` rejection. Sprint 719 added a startup hard-fail for this misconfiguration; if the boot succeeds, the format check passed.
 - [ ] Sign `tasks/pricing-launch-readiness.md` Section 7 (Code Owner + CEO lines) → mark **GO**
 - [ ] Manual test: click "Manage Billing" from `/settings/billing` → confirm it opens the Stripe Customer Portal
-- [ ] Real-money smoke test: subscribe to **Solo monthly** (lowest tier) with a real card → confirm the subscription appears in Stripe Dashboard and in the admin dashboard → cancel → confirm webhook delivery → refund the charge
+- [ ] Real-money smoke test: subscribe to **Solo monthly** (lowest tier — now $100) with a real card → confirm the subscription appears in Stripe Dashboard and in the admin dashboard → cancel → confirm webhook delivery → refund the charge
 - [ ] Monitor Stripe Dashboard → Developers → Webhooks for 24 hours → confirm delivery ≥99%
+- [ ] **Post-cutover cleanup** (after live mode is verified): bulk-archive all test-mode prices in Stripe Dashboard. Test mode is now decoupled from production.
 
 ### 4.2 Legal + policy placeholders
 
@@ -170,14 +146,9 @@ These items unblock backlog sprints that cannot proceed without infra you must
 provision. Not launch-blocking, but each one is a sprint that's been started or
 is queued and is held until the resource exists.
 
-### Object store bucket (R2 or S3) — PROVISIONED 2026-04-23
+### Object store bucket (R2 or S3) — RESOLVED 2026-04-23
 
-- [x] **Provisioned 2026-04-23 on Cloudflare R2.** Two buckets (for least-privilege isolation between the two consumers), both ENAM (us-east-1-adjacent), Standard storage class, public access disabled:
-  1. `paciolus-backups` — will back the **Phase 4.4** daily `pg_dump` target.
-  2. `paciolus-exports` — will back the **Sprint 611 ExportShare object store migration** (removes up-to-50-MB blobs from `backend/export_share_model.py:43` / Neon Postgres).
-- [x] **Two scoped Account API tokens, each Object Read & Write on exactly one bucket.** `paciolus-backups-rw` and `paciolus-exports-rw` (the latter rolled mid-provisioning after a screenshot-leak of its initial secret — see `tasks/lessons.md` for the pattern, fix, and prevention rule). The original secrets never reached Render's persistent store; only the rolled values saved.
-- [x] **8 env vars wired to Render `paciolus-api` (deploy live 2026-04-23 12:11 UTC):** `R2_{BACKUPS,EXPORTS}_{BUCKET,ENDPOINT,ACCESS_KEY_ID,SECRET_ACCESS_KEY}`. Env var count 19 → 27. `/health` returned HTTP 200 in <300ms across 9 polls spanning the rolling deploy — zero service disruption. Shared S3 endpoint: `https://8fd7f43a3458f2ec09d400e0b7a7a5e8.r2.cloudflarestorage.com`.
-- **Consumers:** Sprint 611 ExportShare migration **landed 2026-04-23** — route now uploads shared-export bytes to `paciolus-exports` at `shares/<share_token_hash>` and the cleanup scheduler deletes the R2 object on expiry/revoke. Phase 4.4 pg_dump cron still pending and is the remaining `paciolus-backups` consumer.
+Cloudflare R2 provisioned with two scoped buckets (`paciolus-backups`, `paciolus-exports`), two Object R&W Account API tokens, and 8 env vars wired to Render `paciolus-api` (zero downtime across rolling deploy). Sprint 611 ExportShare migration landed same-day against `paciolus-exports` (route writes to `shares/<share_token_hash>`, cleanup scheduler deletes on expiry/revoke). **Only remaining consumer: [Phase 4.4](#44-backups) daily `pg_dump` cron against `paciolus-backups`.** Full provisioning record in the 2026-04-23 Completed entry; screenshot-leak lesson in `tasks/lessons.md`.
 
 ---
 
@@ -186,8 +157,7 @@ is queued and is held until the resource exists.
 These are important but should not delay launch. Schedule them in the first 2 weeks after going live.
 
 ### GitHub branch protection
-- [ ] Settings → Branches → `main` protection rule → Enable "Require review from Code Owners"
-- [ ] Add required status checks: `secrets-scan`, `frontend-tests`, `mypy-check` (in addition to existing gates: `backend-tests`, `frontend-build`, `backend-lint`, `lint-baseline-gate`, `pip-audit-blocking`, `npm-audit-blocking`, `bandit`)
+- [x] **Applied 2026-04-24** via `gh api` PUT on `repos/Paciolus/Paciolus/branches/main/protection`. Required Code Owner review (1 approval, dismiss stale on push). Required linear history. Force-push and deletion blocked. Required conversation resolution. `enforce_admins: false` preserved as admin break-glass. Required status checks (12, all matched against the actual job display names from the latest green main run): Secrets Scan, Backend Tests (Python 3.11 + 3.12 + PostgreSQL 15), Frontend Build + Lint, Frontend Tests (Jest), Backend Lint (ruff), Backend Type Check (mypy), Lint Baseline Gate, Python Dependency Audit (blocking), Node Dependency Audit (blocking), Security SAST (Bandit). Optional/deferred: OpenAPI Schema Drift, Documentation Consistency, Accounting Policy, Report Standards (all run + green on main but not added to required set per Phase 5 spec).
 
 ### Observability polish
 - [ ] Set up Sentry alert rules: notify on 5xx spike, notify on new issue type
@@ -240,13 +210,25 @@ Authoritative list derived from `backend/config.py` hard-fail checks. Every item
 
 ### Stripe — set during Phase 4.1, not Phase 1
 
-| Variable | Notes |
-|---|---|
-| `STRIPE_SECRET_KEY` | Live secret key from Stripe Dashboard |
-| `STRIPE_PUBLISHABLE_KEY` | Live publishable key |
-| `STRIPE_WEBHOOK_SECRET` | From the webhook endpoint you configure in Stripe |
-| `STRIPE_COUPON_MONTHLY_20` | 20%-off-first-3-months coupon ID (if using) |
-| `STRIPE_COUPON_ANNUAL_10` | 10%-off-first-annual-invoice coupon ID (if using) |
+Code reference: `backend/billing/price_config.py` (Pricing v3, Phase LXIX). 13 vars total.
+
+| Variable | Maps to Stripe price | Notes |
+|---|---|---|
+| `STRIPE_SECRET_KEY` | n/a | Live secret key from Stripe Dashboard |
+| `STRIPE_PUBLISHABLE_KEY` | n/a | Live publishable key |
+| `STRIPE_WEBHOOK_SECRET` | n/a | From the webhook endpoint you configure in Stripe |
+| `STRIPE_PRICE_SOLO_MONTHLY` | Solo $100/mo | flat |
+| `STRIPE_PRICE_SOLO_ANNUAL` | Solo $1,000/yr | flat |
+| `STRIPE_PRICE_PROFESSIONAL_MONTHLY` | Professional $500/mo | flat |
+| `STRIPE_PRICE_PROFESSIONAL_ANNUAL` | Professional $5,000/yr | flat |
+| `STRIPE_PRICE_ENTERPRISE_MONTHLY` | Enterprise $1,000/mo | flat |
+| `STRIPE_PRICE_ENTERPRISE_ANNUAL` | Enterprise $10,000/yr | flat |
+| `STRIPE_SEAT_PRICE_PRO_MONTHLY` | Professional Seat Add-On $65/mo | flat (was graduated in Sprint 439 — replaced in Phase LXIX) |
+| `STRIPE_SEAT_PRICE_PRO_ANNUAL` | Professional Seat Add-On $650/yr | flat |
+| `STRIPE_SEAT_PRICE_ENT_MONTHLY` | Enterprise Seat Add-On $45/mo | flat |
+| `STRIPE_SEAT_PRICE_ENT_ANNUAL` | Enterprise Seat Add-On $450/yr | flat |
+| `STRIPE_COUPON_MONTHLY_20` | n/a | 20%-off-first-3-months coupon ID |
+| `STRIPE_COUPON_ANNUAL_10` | n/a | 10%-off-first-annual-invoice coupon ID |
 
 ### Leave alone unless you have a reason
 
@@ -260,6 +242,15 @@ Authoritative list derived from `backend/config.py` hard-fail checks. Every item
 
 | Date | Milestone |
 |---|---|
+| 2026-04-24 | **Branch protection on `main` applied** (Phase 5) — `gh api` PUT with 12 required status checks (matched to actual job display names), required Code Owner review, linear history, force-push + deletion blocked, conversation resolution required, admin break-glass preserved (`enforce_admins: false`). Closed the gap where commit-msg hook + CODEOWNERS were both advisory at the remote |
+| 2026-04-24 | **DMARC tightened to `p=quarantine`** — `_dmarc.paciolus.com` TXT record updated in Vercel DNS (TTL 60); propagation verified on Google + Cloudflare resolvers within seconds; 30-day observation window then escalate to `p=reject` |
+| 2026-04-24 | **Sprint 716 complete** — Grafana Loki log aggregation (in-process handler) deployed to production; 40 ingested lines verified in Logs Explorer with correct labels; 6 saved queries authored; runbook `docs/runbooks/observability-loki.md` §4 LogQL corrected for actual ingest-layer indexing |
+| 2026-04-23 | **R2 buckets provisioned + Sprint 611 ExportShare migration landed** — `paciolus-backups` and `paciolus-exports` on Cloudflare R2 (ENAM, private, per-bucket scoped tokens); 8 env vars wired to Render (19→27 vars, zero downtime across 9× /health 200 polls); Sprint 611 route now writes share bytes to `paciolus-exports` keyed by `shares/<share_token_hash>` |
+| 2026-04-23 | **`DB_TLS_OVERRIDE` cleared** (Sprint 673) — pooler-aware `pg_stat_ssl` skip shipped 2026-04-22; CEO env-var delete 10:26 UTC went live 10:28 UTC; post-deploy logs show `tls=pooler-skip` with zero override warnings; 2026-05-09 fuse cleared |
+| 2026-04-22 | **Neon password rotation** — `neondb_owner` rotated after plaintext DATABASE_URL rendered in a screenshot tool result during orphan-DB investigation; Render env var updated, deploy `937997a` green, paciolus.com login smoke-tested clean. Side effect: this redeploy also shipped PR #93 (Sprints 703–709 typography + design refresh) to prod for the first time |
+| 2026-04-22 | **Orphan Render Postgres `paciolus-db` deleted** — was a Basic-1gb paid plan (~$7-19/mo) holding 85 MB of orphaned pre-Neon data, 0 open connections; verified `paciolus-api` DATABASE_URL points to Neon before deletion |
+| 2026-04-22 | **SendGrid Single Sender Verification revoked** for `comcgee89@gmail.com` — Domain Authentication on `paciolus.com` is now the sole sending path |
+| 2026-04-22 | **Sentry integration verified via live traffic** — 9+ unresolved prod issues already in dashboard (`cleanup_scheduler`, `/auth/verification-status`, `/audit/trial-balance`, `/audit/preflight`); no deliberate test event needed. Bonus: surfaced two P1 bugs (~670 events combined) captured as Sprint 711 |
 | 2026-04-09 | **Phase 1 complete** — Render Standard deploy, full env-var set, smoke test green, email delivery verified end-to-end via SendGrid Domain Authentication on paciolus.com, first Neon user landed |
 | 2026-04-09 | **Phase 2 complete** — PR #67 merged (45 commits, Sprints 570–593 + hotfixes + 5 pre-flight fixes), all 21 CI checks green, merge commit `84fbc90` |
 | 2026-04-09 | SendGrid Domain Authentication for `paciolus.com` verified — 4 DNS records added to Vercel (em8369 CNAME, s1/s2 DKIM CNAMEs, _dmarc TXT with `p=none`), propagated in under 2 min, SendGrid verify succeeded on first click |
@@ -274,4 +265,4 @@ Authoritative list derived from `backend/config.py` hard-fail checks. Every item
 
 ---
 
-*Last revised: 2026-04-09 (evening). Phases 1 and 2 collapsed to brief summaries after full archival to `tasks/archive/ceo-phases-1-2-restore-login-and-backlog-merge-2026-04-09.md`. Phase 3 (Functional Validation) is now the active phase. Phase 1 open follow-ups (DB_TLS_OVERRIDE, DMARC tightening, Sentry test event, SendGrid single-sender cleanup, old Postgres delete) preserved inline for tracking.*
+*Last revised: 2026-04-24. Stale action-map dates replaced with a compact "Remaining launch path" block. Phase 1 follow-ups collapsed to DMARC only (other five landed 2026-04-22/23 and are recorded in the Completed table). R2 Backlog Blocker collapsed to a resolved summary — only Phase 4.4 pg_dump remains as a consumer.*

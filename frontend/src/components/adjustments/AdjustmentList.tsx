@@ -16,6 +16,7 @@
 
 import { useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { CaptureToSumButton } from '@/components/engagement/CaptureToSumButton'
 import type { AdjustingEntry, AdjustmentStatus } from '@/types/adjustment'
 import {
   ADJUSTMENT_STATUS_COLORS,
@@ -40,6 +41,11 @@ interface AdjustmentListProps {
   isLoading?: boolean
   /** Empty state message */
   emptyMessage?: string
+  /**
+   * Sprint 729c: engagement context for "Add to SUM" capture button on
+   * rejected (passed) AJEs. When null, the capture button is hidden.
+   */
+  engagementId?: number | null
 }
 
 /**
@@ -53,6 +59,7 @@ function EntryCard({
   onSelect,
   onUpdateStatus,
   onDelete,
+  engagementId,
 }: {
   entry: AdjustingEntry
   isSelected: boolean
@@ -61,6 +68,7 @@ function EntryCard({
   onSelect?: () => void
   onUpdateStatus?: (status: AdjustmentStatus) => Promise<void>
   onDelete?: () => Promise<void>
+  engagementId?: number | null
 }) {
   const [isUpdating, setIsUpdating] = useState(false)
 
@@ -276,6 +284,24 @@ function EntryCard({
                     Re-open
                   </button>
                 )}
+                {/* Sprint 729c: capture passed AJEs onto the SUM schedule */}
+                {entry.status === 'rejected' && engagementId && (
+                  <CaptureToSumButton
+                    engagementId={engagementId}
+                    prefillFromAdjustingEntry={{
+                      reference: entry.reference,
+                      description: entry.description,
+                      lines: entry.lines.map(l => ({
+                        account: l.account_name,
+                        debit: l.debit,
+                        credit: l.credit,
+                      })),
+                      notes: entry.notes,
+                    }}
+                    label="Add to SUM"
+                    className="px-3 py-1.5 bg-sage-600/10 border border-sage-300/40 rounded-sm text-sage-700 text-sm hover:bg-sage-600/20 transition-colors"
+                  />
+                )}
                 {onSelect && (
                   <button
                     onClick={onSelect}
@@ -310,6 +336,7 @@ export function AdjustmentList({
   onDelete,
   isLoading = false,
   emptyMessage = 'No adjusting entries yet.',
+  engagementId = null,
 }: AdjustmentListProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState<AdjustmentStatus | 'all'>('all')
@@ -396,6 +423,7 @@ export function AdjustmentList({
               isExpanded={expandedId === entry.id}
               onToggle={() => toggleExpanded(entry.id)}
               onSelect={onSelect ? () => onSelect(entry) : undefined}
+              engagementId={engagementId}
               onUpdateStatus={
                 onUpdateStatus
                   ? (status) => onUpdateStatus(entry.id, status)

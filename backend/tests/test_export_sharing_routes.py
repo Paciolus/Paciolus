@@ -417,8 +417,15 @@ class TestExportSharingPasscode:
 
     @pytest.mark.usefixtures("bypass_csrf")
     @pytest.mark.anyio
-    async def test_download_without_passcode_when_required_returns_403(self, db_session, make_user):
-        """GET returns 403 with instructional message when passcode is required."""
+    async def test_download_without_passcode_when_required_returns_404(self, db_session, make_user):
+        """GET returns 404 (not 403) for passcode-protected shares — Sprint 718.
+
+        Pre-Sprint-718 the GET path returned 403 with "passcode required"
+        for protected tokens, leaking existence and giving brute-force
+        targeting. Post-Sprint-718 the GET path responds 404 for both
+        unknown and passcode-protected tokens; the POST passcode flow is
+        the only existence-disclosure path. Security review M-02.
+        """
         from auth import require_verified_user
         from database import get_db
         from main import app
@@ -445,8 +452,10 @@ class TestExportSharingPasscode:
                 token = resp.json()["share_token"]
 
                 dl_resp = await client.get(f"/export-sharing/{token}")
-                assert dl_resp.status_code == 403
-                assert "passcode" in dl_resp.json()["detail"].lower()
+                assert dl_resp.status_code == 404, (
+                    "Sprint 718: passcode-protected shares must 404 on GET so the "
+                    "endpoint can't be used to enumerate which tokens are real."
+                )
         finally:
             app.dependency_overrides.clear()
 

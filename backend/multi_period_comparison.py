@@ -31,7 +31,7 @@ from lead_sheet_mapping import (
     LEAD_SHEET_NAMES,
     assign_lead_sheet,
 )
-from shared.helpers import sanitize_csv_value
+from shared.filenames import sanitize_csv_value
 from shared.parsing_helpers import safe_decimal
 
 # =============================================================================

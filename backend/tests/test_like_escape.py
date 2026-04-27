@@ -17,7 +17,7 @@ from sqlalchemy.orm import sessionmaker
 from client_manager import ClientManager
 from database import Base
 from models import Client, User
-from shared.helpers import escape_like_wildcards
+from shared.filenames import escape_like_wildcards
 
 
 class TestEscapeLikeWildcards:

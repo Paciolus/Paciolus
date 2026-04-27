@@ -16,6 +16,7 @@
 > new features or architectural changes. Each entry is one line.
 > Format: `- [date] commit-sha: description (files touched)`
 
+- [2026-04-24] record Sprint 716 COMPLETE — PR #103 merged as `6802bd63`, Render auto-deploy landed 12:51 UTC, Loki Logs Explorer confirmed 40 ingested lines with correct labels, all 6 saved queries authored. Runbook (`docs/runbooks/observability-loki.md`) §4 LogQL corrected to reflect what actually works against our ingested streams (line-filter + `| json | level="…"` instead of indexed-label selectors for level/logger, since Grafana Cloud's ingest layer doesn't index those at our volume). Lesson captured in `tasks/lessons.md` about verifying deployed code before debugging runtime (I burned ~15 min on label hypotheses before discovering the commit was local-only and Render was still running Sprint 713's image). Files: `tasks/todo.md`, `tasks/lessons.md`, `docs/runbooks/observability-loki.md`.
 - [2026-04-23] archive_sprints.sh number-extraction fix + archive of Sprints 673–677 — replaced broken grep-pipeline (which filtered to Status lines first, losing the Sprint number on the preceding header) with an awk block that pairs each `### Sprint NNN` header to its Status body and emits the number when COMPLETE. Dry-run confirmed extraction (673, 674, 675, 676, 677); archival produced `tasks/archive/sprints-673-677-details.md` (142 lines, 5 sprint bodies) and reduced Active Phase to just Sprint 611 (PENDING). Unblocks Sprint 689a's `Sprint 689a:` commit under the archival gate. Files: `scripts/archive_sprints.sh`, `tasks/todo.md`, `tasks/archive/sprints-673-677-details.md`.
 - [2026-04-23] Sprint 689 Path B decision — CEO chose full expansion (all 6 hidden backend tools + Multi-Currency standalone → 18-tool catalog). Execution split into 689a–g (one tool per session, single marketing-flip at 689g). Defaults rejected on evidence that the 6 routes carry ~4,500 LoC of real engine code + tests. Plan + deliverables template captured in Sprint 689 entry. Pre-requisite flagged: `scripts/archive_sprints.sh` grep-pipeline bug must be fixed (or sprints 673–677 manually archived) before the first `Sprint 689a:` commit can clear the archival gate.
 - [2026-04-23] R2 provisioning — Cloudflare R2 buckets `paciolus-backups` + `paciolus-exports` (ENAM, Standard, private), two Account API tokens (Object R&W, per-bucket scoped). 8 env vars wired on Render `paciolus-api` (`R2_{BACKUPS,EXPORTS}_{BUCKET,ENDPOINT,ACCESS_KEY_ID,SECRET_ACCESS_KEY}`) — 19→27 vars, deploy live in 1 min, zero service disruption (9× /health all 200 <300ms). Unblocks Sprint 611 ExportShare migration + Phase 4.4 pg_dump cron. Mid-provisioning incident: screenshotted Render edit form while EXPORTS credentials were unmasked → rolled `paciolus-exports-rw` token before saving, only uncompromised values persisted. Full pattern captured in `tasks/lessons.md` (2026-04-23 entry). Details in `tasks/ceo-actions.md` "Backlog Blockers" section.
@@ -63,57 +64,165 @@
 > **CEO remediation brief 2026-04-15** — Sprints 665–671 cleared the blocking TB-intake issues from the six-file test sweep. Sprints 668–671 remaining pending items archived alongside — no longer blocking launch.
 > Sprints 673–677 archived to `tasks/archive/sprints-673-677-details.md`.
 > Sprint 611 + Sprints 677–714 archived 2026-04-24 to `tasks/archive/sprints-611-714-details.md` (eight post-Sprint-673 batches: Post-Audit Remediation, Anomaly Framework Hardening, Security Hardening Follow-Ups, Design Refresh, Production Bug Triage, Nightly Agent Remediation, Branding Coverage Completion, P2 Sentry Sweep). Only Sprint 715 remains pending.
+> Sprints 716–720 archived to `tasks/archive/sprints-716-720-details.md`.
+> Sprints 721–725 archived to `tasks/archive/sprints-721-725-details.md`.
+> Sprints 726–731 archived to `tasks/archive/sprints-726-731-details.md`.
+
+### Sprint 728: ISA 520 Expectation-Formation Workflow (parent — 728a/b/c)
+**Status:** COMPLETE 2026-04-26 — all three sub-sprints landed atomically per the CEO-approved plan `tasks/sprint-plan-728-729.md`.
+**Priority:** P3 (post-launch product gap; differentiator).
+**Source:** Agent sweep 2026-04-24, punch list 4.1 + Accounting Methodology Audit.
+
+Architecture decision (CEO-confirmed 2026-04-26): **snapshot model.** New entity holds *audit decisions* (expectation, threshold, corroboration, result, conclusion); flux / ratio / multi-period TB engines stay zero-storage. ISA 520 §A4–A8 frames this as a workpaper of decisions, not a database join.
+
+#### Sprint 728a — Backend core
+**Status:** COMPLETE 2026-04-26.
+**Delivered:**
+- `backend/analytical_expectations_model.py` — new `AnalyticalExpectation` entity (FK → engagements, soft-delete, JSON tag list, expected XOR range, threshold XOR percent, result status enum).
+- `backend/analytical_expectations_manager.py` — CRUD manager with engagement-scoped multi-tenant ownership; pure-function `evaluate_status(actual, expected, threshold) → (variance, status)` reused later by 728c tool wiring.
+- `backend/migrations/alembic/versions/f2a8e7d6c5b4_add_analytical_expectations.py` — Alembic migration; chains off prior head `e1a2b3c4d5f6`; upgrade + downgrade exercised end-to-end.
+- `backend/schemas/analytical_expectation_schemas.py` — Pydantic Create/Update/Response.
+- `backend/routes/analytical_expectations.py` — 5 CRUD endpoints (`POST` + `GET` list on `/engagements/{id}/analytical-expectations`, `GET` + `PATCH` + `DELETE` on `/analytical-expectations/{id}`); registered in `routes/__init__.py`.
+- `backend/analytical_expectation_memo_generator.py` — ISA 520 workpaper PDF (cover, engagement overview, expectations table grouped by target type, authoritative references, sign-off block with DRAFT watermark when items remain unevaluated). Enterprise branding via `apply_pdf_branding`.
+- `backend/routes/engagements_exports.py` — added `POST /engagements/{id}/export/analytical-expectations`.
+- `backend/engagement_manager.py` — completion gate updated; engagements with non-archived `NOT_EVALUATED` expectations are blocked from completion (conditional — engagements with no expectations stay un-gated).
+- `docs/04-compliance/isa-520-coverage.md` — methodology coverage doc.
+- 6 test files, +61 tests covering model schema/defaults/soft-delete, manager CRUD/validation/`evaluate_status`, route happy-path + ownership + CSRF, memo PDF render, completion-gate matrix, export route.
+
+**Verification:** Full backend `pytest` 8386 passed; the 4 unrelated failures in `test_security_hardening_2026_04_20.py` are pre-existing (`STRIPE_PUBLISHABLE_KEY` is `pk_test_*` while `IS_PRODUCTION=true` in dev env — clears once Sprint 447 cutover lands). Alembic upgrade head + downgrade -1 verified end-to-end against SQLite.
+
+**Out of scope (carried to 728b/c):**
+- Frontend section, capture form, hook (728b).
+- Flux / ratio / multi-period TB engine wiring + auto-persist of result on tool run (728c).
+
+#### Sprint 728b — Frontend
+**Status:** COMPLETE 2026-04-26.
+**Delivered:**
+- `frontend/src/types/analytical-expectations.ts` — types + label/color maps mirroring backend schemas.
+- `frontend/src/hooks/useAnalyticalExpectations.ts` — fetch / create / update / archive hook (paginated list).
+- `frontend/src/components/engagement/AnalyticalExpectationsPanel.tsx` — full list + create modal + capture-actual inline form + re-evaluate button + archive. Form enforces XOR (value vs range, amount vs percent) with inline validation.
+- `frontend/src/app/(workspace)/portfolio/[clientId]/workspace/[engagementId]/page.tsx` — added `expectations` tab between `follow-up` and `workpaper` in the workspace detail page; wires hook + panel + PDF download via `apiDownload` + `downloadBlob`.
+- `frontend/src/__tests__/AnalyticalExpectationsPanel.test.tsx` — 8 component tests covering empty state, status badges, status counts, capture-actual flow, clear-result, archive, and modal open.
+
+**Verification:** TypeScript typecheck clean (`npx tsc --noEmit`), 8 component tests passing, `npm run build` succeeds.
+
+#### Sprint 728c — Tool wiring
+**Status:** COMPLETE 2026-04-26.
+**Delivered:**
+- `backend/shared/expectation_evaluation.py` — `evaluate_expectations_against_measurements(...)` matches measurements (typed `[(target_type, target_label, actual)]` triples) to NOT_EVALUATED expectations on the engagement, computes variance + status via the pure `evaluate_status` from 728a, persists the result via the manager (so the audit-trail log fires consistently), and returns evaluation records the route surfaces inline. Three extractors: `extract_flux_measurements` (emits BALANCE+ACCOUNT+FLUX_LINE per item), `extract_multi_period_measurements` (BALANCE+ACCOUNT per movement), `extract_ratio_measurements` (RATIO; accepts dict or list shape).
+- `backend/routes/audit_flux.py` — calls helper after `run_flux_analysis` when `engagement_id` is present; returns `expectations_evaluated` array in the response.
+- `backend/routes/multi_period.py` — same wiring on `/audit/compare-periods` and `/audit/compare-three-way`.
+- `backend/routes/trends.py` — `/clients/{id}/industry-ratios` now accepts optional `engagement_id` query param; auto-evaluates ratio-typed expectations when present.
+- `backend/shared/diagnostic_response_schemas.py` — new `ExpectationEvaluationResponse` Pydantic model added as `expectations_evaluated: list[ExpectationEvaluationResponse] = []` to `FluxAnalysisResponse`, `MovementSummaryResponse`, `ThreeWayMovementSummaryResponse`. `IndustryRatiosResponse` (defined in `routes/trends.py`) extended similarly.
+- 17 tests across 2 new files: `test_expectation_evaluation.py` (15 tests — extractors + evaluator covering match cases, case-insensitive labels, target-type mismatches, already-evaluated no-op, ownership, first-match-wins) + `test_multi_period_expectation_wiring.py` (2 tests — route emits `expectations_evaluated` when `engagement_id` is supplied; field is empty when absent).
+
+**Verification:** Sprint 728c-targeted tests + adjacent — 45 passing.
+
+**Pattern note:** Engines stay zero-storage. The route layer is the only place that knows about engagements + expectations. Adding wiring to a new tool = (a) accept `engagement_id` (already true for the engagement-aware tools); (b) extract measurements via the appropriate helper; (c) call `evaluate_expectations_against_measurements`; (d) embed result in the response. No engine changes required.
+
+---
+
+### Sprint 729: ISA 450 SUM Schedule (parent — 729a/b/c)
+**Status:** COMPLETE 2026-04-26 — all three sub-sprints landed atomically per the CEO-approved plan `tasks/sprint-plan-728-729.md`.
+**Priority:** P3 (post-launch product gap; differentiator).
+**Source:** Agent sweep 2026-04-24, punch list 4.2 + Accounting Methodology Audit.
+
+Architecture decision: **snapshot model.** Because `AdjustingEntry` is in-memory (zero-storage dataclass per `backend/adjusting_entries.py`) and sampling output is ephemeral, the original "auto-aggregate from passed AJEs / sample projections" plan was infeasible without breaking zero-storage. CEO confirmed 2026-04-26: SUM is a CPA-captured workpaper of decisions, with 729c capture helpers added for ergonomics.
+
+#### Sprint 729a — Backend core
+**Status:** COMPLETE 2026-04-26.
+**Delivered:**
+- `backend/uncorrected_misstatements_model.py` — `UncorrectedMisstatement` entity (FK → engagements CASCADE, `MisstatementSourceType` / `MisstatementClassification` / `MisstatementDisposition` enums, signed F/S impacts, `accounts_affected_json`, soft-delete).
+- `backend/uncorrected_misstatements_manager.py` — CRUD manager + pure-function `compute_materiality_bucket(driver, overall, performance, trivial)` returning the four-bucket enum + `compute_sum_schedule(...)` aggregation (factual+judgmental subtotal vs projected subtotal per ISA 450 §A4 grouping; aggregate driver = `max(|net_income|, |net_assets|)`).
+- `backend/migrations/alembic/versions/a3b4c5d6e7f8_add_uncorrected_misstatements.py` — chains off `f2a8e7d6c5b4`. Upgrade + downgrade verified end-to-end.
+- `backend/schemas/uncorrected_misstatement_schemas.py` — Create/Update/Response/SumSchedule schemas with `AccountAffected` row.
+- `backend/routes/uncorrected_misstatements.py` — 6 endpoints (CRUD + `GET /engagements/{id}/sum-schedule` aggregation); registered.
+- `backend/sum_schedule_memo_generator.py` — ISA 450 workpaper PDF (cover, overview, classification-grouped tables, aggregate evaluation with bucket box colored by severity, AU-C/ISA/AS 2810 references, sign-off with DRAFT watermark for unreviewed items).
+- `backend/routes/engagements_exports.py` — added `POST /engagements/{id}/export/sum-schedule`.
+- `backend/engagement_manager.py` — completion gate now also requires (a) all SUM items have non-`NOT_YET_REVIEWED` disposition, (b) if aggregate is in `MATERIAL` bucket, at least one item must carry `cpa_notes` (override documentation per ISA 450 §11). Gate ordering preserved: follow-up → ISA 520 → ISA 450.
+- `docs/04-compliance/isa-450-coverage.md` — coverage doc with bucket-boundary table and architectural-decision rationale.
+- 6 test files, +69 tests covering schema, defaults, soft-delete, manager CRUD/validation, bucket boundaries (parametrized including signed/zero/equal-to), aggregation correctness, gate-helper functions, route happy-path + 404, memo render (empty + 3-classification + MATERIAL warning + cross-tenant), completion-gate matrix (no-items / pending / dispositioned / MATERIAL-no-override / MATERIAL-with-override / archived / 520-before-450 ordering), export route happy-path + 404.
+
+**Verification:** Sprint 729a + memo-boundary scanner + adjacent completion-gate tests — 110 passing.
+
+**Out of scope (carried to 729b/c):**
+- Frontend SUM page + capture form (729b).
+- Capture-helper buttons on AJE workflow + sampling tool (729c).
+
+#### Sprint 729b — Frontend
+**Status:** COMPLETE 2026-04-26.
+**Delivered:**
+- `frontend/src/types/uncorrected-misstatements.ts` — types + label maps + `BUCKET_TONE` mapping (sage / clay-soft / clay).
+- `frontend/src/hooks/useUncorrectedMisstatements.ts` — fetch SUM schedule + create/update/archive (mutations re-fetch the schedule so aggregate/bucket update live).
+- `frontend/src/components/engagement/SumSchedulePanel.tsx` — bucket box (color from `BUCKET_TONE`; MATERIAL warning copy when bucket is `material`), materiality cascade reference, per-row classification/source/description/F-S-impact display, disposition select, archive action, three-variant capture form with auto-classification helper (sample-projection → projected, AJE-passed → judgmental).
+- Workspace detail page now exposes a `sum` tab between `expectations` and `workpaper`; wires the hook + panel + PDF download.
+- `frontend/src/__tests__/SumSchedulePanel.test.tsx` — 8 component tests covering empty state, bucket-box label, MATERIAL warning, item rows, disposition mutation, archive, modal open, download disabled state.
+
+**Verification:** TypeScript typecheck clean, 8 component tests passing, `npm run build` succeeds.
+
+#### Sprint 729c — Capture helpers
+**Status:** COMPLETE 2026-04-26.
+**Delivered:**
+- Refactored `frontend/src/components/engagement/SumSchedulePanel.tsx` — extracted the inline `CreateMisstatementModal` to its own file `CreateMisstatementModal.tsx` with an `initialValues` prop so it can be reused with pre-filled data. SumSchedulePanel itself shrank to ~306 LoC (was 553).
+- `frontend/src/components/engagement/CaptureToSumButton.tsx` — new component that takes either `prefillFromAdjustingEntry={…}` or `prefillFromSampleProjection={…}` and opens the modal with computed initial values (largest AJE line becomes the canonical account; sample projection emits `source_type=sample_projection`, `classification=projected`, UEL → account amount). Default labels "Add to SUM" / "Capture as SUM projection" / "Capture to SUM".
+- `frontend/src/components/adjustments/AdjustmentSection.tsx` + `AdjustmentList.tsx` — pass-through `engagementId` prop. When supplied and an AJE is in `rejected` (passed) status, the row renders an "Add to SUM" button next to "Re-open" / "View Details" / "Delete".
+- 7 new component tests (`__tests__/CaptureToSumButton.test.tsx`) — default label, AJE label, projection label, modal pre-fill from AJE (source_reference contains reference + description), largest-line wins, sample-projection pre-fill (source_reference contains UEL).
+
+**Out of scope (deferred):**
+- Sampling-tool wiring at the route level: the sampling tool's frontend doesn't yet have a UI surface that consumes UEL > tolerable; the `CaptureToSumButton` is ready to drop in there once that surface lands. Pattern is the same as AJE wiring — pass `engagementId` + `prefillFromSampleProjection`.
+- Engagement-id propagation into the AJE workflow's parent page: callers of `<AdjustmentSection />` now have an opt-in `engagementId` prop. Wiring it from a specific audit page (`/tools/...` or workspace context) is a one-line change at each call site; deferred until product wires the AJE workflow into engagement-aware pages explicitly.
+
+**Verification:** TypeScript typecheck clean; 30 frontend tests passing across CaptureToSumButton + AdjustmentList + AdjustmentSection + SumSchedulePanel; `npm run build` succeeds.
+
+---
 
 ### Sprint 715: SendGrid 403 root-cause investigation (24h post-deploy watch)
-**Status:** PENDING — investigable starting **2026-04-25 ~14:29 UTC** (24h after Sprint 713 merge `2b92b771` on 2026-04-24 14:29 UTC).
-**Priority:** P2 (observability follow-up — no user-facing impact, but worth knowing which recipient/path triggers the 403)
-**Source:** Sprint 713 Bug C review — the fix caught the exception but did not investigate the root cause. The 403 means SendGrid is refusing a specific send; until we know *why*, users on the affected path silently never receive their email.
+**Status:** COMPLETE 2026-04-26.
+**Priority:** P2 (observability follow-up).
+**Source:** Sprint 713 Bug C review — the fix caught the exception but did not investigate the root cause.
 
-**Why pending (not "now"):** Sprint 713's warn-path (`log_secure_operation("email_error", f"SendGrid HTTPError status=403")`) is what makes the root cause investigable. We need 24h of production traffic with the new logs in place to see *which* send triggers the 403 and *how often*. Pre-deploy, we'd be guessing.
+**Investigation outcome:** Render logs over the 48h post-deploy window (2026-04-24 14:29 UTC → 2026-04-26 21:35 UTC) contain **zero matches** for `SendGrid`, `HTTPError`, `email_error`, `Verification email`, `Background … send failed`, and **zero requests** to `/auth/register`, `/auth/forgot-password`, `/contact`. Phase 3 functional validation hasn't exercised email paths yet, so the 403 trigger condition was never met. No root cause to chase.
 
-**Plan when triggered (CEO signal: if warn log count > 0 after 24h):**
-- Pull Render logs for `"SendGrid HTTPError status=403"` over the post-deploy window. Identify the sender function (verification / password-reset / contact / email-change) and recipient masking pattern.
-- Check SendGrid Dashboard → Suppressions → Blocks / Bounces / Spam Reports for the 403 recipients. Most likely cause: addresses on the global bounce list from the pre-Domain-Authentication era (SendGrid carried the `@gmail.com` bounce history into the paciolus.com domain).
-- Check SendGrid API key scope on the Paciolus production key — `Mail Send: Full Access` is required; a read-only or Marketing-scoped key would 403 on transactional sends.
-- Fix depends on finding: suppression-list cleanup (one-time; then add a `/admin/email-suppressions` endpoint to view current state), API key re-scope, or sender-domain re-verification.
+**Secondary finding (fixed in this sprint):** While tracing the warn-path, discovered `shared/background_email.py` was logging `"Background <label> send failed: unknown"` because it read a non-existent `result.error` attribute. `EmailResult` exposes `success`/`message`/`message_id` — the SendGrid status code lives in `result.message`. Sprint 713's existing test only asserted `len(warning_records) >= 1`, never inspected the message text, so the regression slipped through. **If a 403 had occurred in the past 48h, the log line would not have surfaced the status code** — the warn-path Sprint 713 added was effectively non-investigable.
 
-**Out of scope:**
-- Proactive suppression-list sync (would need a scheduled cron polling SendGrid API; not worth the infrastructure until we see meaningful 403 volume).
-- Email deliverability SLA tracking (a separate observability sprint if Sentry breadcrumbs aren't sufficient).
+**Fix:**
+- `backend/shared/background_email.py`: read `result.message` (the canonical attribute), with `"unknown"` only as the empty-string fallback.
+- `backend/tests/test_sprint_713_sentry_sweep.py::test_background_email_logs_warning_not_error_on_failure`: strengthened to assert the warning is emitted by `shared.background_email`, contains the label, contains `"403"`, and does **not** fall back to `"unknown"`. Future regressions of this shape will fail the test.
+
+**Out of scope (deferred):**
+- Proactive SendGrid suppression-list sync (no infra justification until 403 volume is meaningful).
+- Email deliverability SLA tracking.
+- Cleanup_scheduler `InternalError: scheduled cleanup failed` on `reset_upload_quotas` and `dunning_grace_period`, observed every ~1h during this investigation. Unrelated system, separate signal — captured as a follow-up below.
+
+**Verification:** `pytest tests/test_sprint_713_sentry_sweep.py tests/test_email_verification.py tests/test_contact_api.py tests/test_no_helpers_reexports.py tests/test_refactor_2026_04_20.py tests/test_log_sanitizer.py` — 106 passed.
+
+**Review:** Sprint reframed from "find the 403 root cause" to "verify there *is* a 403 to investigate, then make the warn-path actually surface the status code when one happens". Net delta: 1 LoC fix in production code, +12 LoC of test assertions that prevent the silent-failure shape from re-emerging. Commit SHA recorded at commit time.
+
+---
+
+### Sprint 732: cleanup_scheduler recurring InternalError triage
+**Status:** PENDING — discovered during Sprint 715 log review, not yet investigated.
+**Priority:** P2 (silent recurring failure on production scheduled jobs; no user-facing impact today, but `dunning_grace_period` is the path that auto-cancels delinquent subscriptions, so a sustained outage means dunning escalation never advances).
+**Source:** Sprint 715 Render-log sweep 2026-04-26.
+
+**Observed signal (2026-04-25 to 2026-04-26 in Render logs, srv-d6ie9l56ubrc73c7eq2g):**
+```
+ERROR cleanup_scheduler  Cleanup job failed: {... 'job_name': 'reset_upload_quotas',  'error': 'InternalError: scheduled cleanup failed'}
+ERROR cleanup_scheduler  Cleanup job failed: {... 'job_name': 'dunning_grace_period', 'error': 'InternalError: scheduled cleanup failed'}
+```
+Both jobs fire roughly every hour; each invocation completes in 30–80ms with `records_processed: 0` and the same `InternalError`. The error message itself (`"scheduled cleanup failed"`) is the wrapper's outer string — the actual underlying exception (likely a SQLAlchemy/DB error) is being swallowed before the structured-log emission.
+
+**Scope:**
+- Locate the scheduler's exception handler (`backend/cleanup_scheduler.py` or wherever the wrapper lives) and confirm it catches `Exception` then re-raises a generic `InternalError`. Surface the original exception class + message into the structured log line (mirror the `result.message` lesson from Sprint 715 — never log a sentinel without the underlying detail).
+- Re-pull logs after the observability fix lands, identify the actual root cause for each job, fix.
+- Add coverage so this can't re-surface silently: a test that runs each cleanup job against a SQLite fixture and asserts no `InternalError` is raised.
+- Verify dunning escalation behavior end-to-end on a staging-equivalent fixture (subscription past grace period → cancellation triggered) once the underlying bug is known.
+
+**Effort estimate:** 1 sprint, possibly 2 if the underlying bug is non-trivial (e.g., a missing migration or a connection-pool exhaustion). Step 1 (observability) is mechanical; step 2 (fix) depends on what the unwrapped error reveals.
+
+**Why pending (not "now"):** This is a real production issue but it's been failing silently for at least 48h and has not produced user-visible symptoms. Sprint 728 + 729 are the user-directed work. Slot 732 in after the current directive completes.
+
+**Pre-requisites:** None — diagnosable from logs once the wrapper unmasks the underlying exception.
 
 ---
 
-### Sprint 716: Observability — Grafana Loki log aggregation (free tier)
-**Status:** IN PROGRESS — Grafana Cloud provisioning + app-side handler landed 2026-04-24. Remaining: CEO sets 3 Render env vars (`LOKI_URL`, `LOKI_USER`, `LOKI_TOKEN`), post-restart ingest verification, and six saved queries authored in Grafana Logs Explorer. Runbook live at `docs/runbooks/observability-loki.md`.
-**Priority:** P3 (operational quality-of-life; additive to Sentry; not launch-blocking)
-**Source:** Executive Blocker Sprint 463 reclassified 2026-04-24 — CEO directive 2026-04-24 to schedule any deferred items that are free. Reframed from "SOC 2 SIEM" to "free-tier production log search" — same engineering, different framing. The remaining SOC 2 deferrals (464 pgBackRest, 466 Secrets Manager, 467 pen test, 468 paid bounty, 469 SOC 2 auditor) all incur cost and stay deferred.
-
-**Why this matters now:** Render's log tail is live-only with no search, no filters, no retention, and no saved-query workflow. Sentry catches exceptions but misses quiet anomalies (elevated 4xx rates, scheduler delays, slow audit endpoints). Phase 3 functional validation will surface bugs that are easier to triage with searchable historical logs than with `grep` over a tail buffer.
-
-**Integration approach — revised 2026-04-24 mid-provisioning:** Render's native Log Streams integration expects TCP/syslog destinations (Papertrail/Datadog/Logtail pattern). Grafana Cloud Loki only accepts HTTPS push at `/loki/api/v1/push`. Rather than introduce a protocol-bridging sidecar (Alloy/Cribl) that adds infra, we ship an in-process Python handler on FastAPI that pushes to Loki HTTPS directly. Logs continue to flow to Render stdout exactly as today — this is purely additive.
-
-**Plan when implemented:**
-- Add `python-logging-loki` (or equivalent thin handler — pick the maintained one at implementation time) to `backend/requirements.txt`.
-- Extend `backend/logging_setup.py` with a `LokiHandler` attached alongside the existing stdout handler. Wire it behind a config flag so the app still runs locally with no Loki config. Labels: `service="paciolus-api"`, `env=ENV_MODE`, `logger=<record.name>`, `level=<record.levelname>`. Batch push (default ~1 s flush) to avoid per-log HTTPS overhead.
-- Three new env vars on Render `paciolus-api` (CEO action):
-  - `LOKI_URL=https://logs-prod-042.grafana.net/loki/api/v1/push`
-  - `LOKI_USER=1566612`
-  - `LOKI_TOKEN=<glc_… token from password manager>`
-- Add 6 saved queries under a "Paciolus Production" Grafana folder:
-  1. Auth failures (`{service="paciolus-api"} |~ "status=(401|403)" |~ "path=/auth/"`)
-  2. 5xx errors (`{service="paciolus-api"} |~ "status=5\\d\\d"`)
-  3. Slow requests (`{service="paciolus-api"} | json | duration_ms > 5000`)
-  4. Scheduler errors (`{service="paciolus-api", logger="cleanup_scheduler", level="ERROR"}`)
-  5. SendGrid HTTPError 403 (folds into Sprint 715 investigation — gives us the recipient/path histogram immediately rather than 24h after the fact)
-  6. Audit-engine warnings (`{service="paciolus-api", logger="audit_engine", level="WARNING"}`)
-- Add `docs/05-runbooks/observability-loki.md` documenting: handler config, env var set, saved queries with copy-paste LogQL, current free-tier limits (verify at implementation time — Grafana Cloud Free is roughly 50 GB ingest / 14-day retention as of last check, may have changed), escalation path if limits are hit (downgrade volume by tightening log levels, or upgrade to Pro at ~$0.50/GB ingested).
-- Verification: deploy, tail Render logs to confirm no regression, open Grafana Logs explorer to confirm ingest, run each saved query against real traffic.
-
-**Out of scope:**
-- Custom dashboards (saved queries only — promote a query to a dashboard panel if it gets reused enough to warrant)
-- Alerting rules (separate sprint if Sentry alerts prove insufficient)
-- Bridging Render's native Log Streams to Loki via sidecar — not worth the moving part for Phase 3
-- pgBackRest (Sprint 464), Secrets Manager (Sprint 466), or any cost-bearing observability work — still deferred per CEO directive 2026-04-24
-- Replacing Sentry — strictly additive
-
----

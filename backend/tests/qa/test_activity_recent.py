@@ -53,7 +53,7 @@ def user_b(db_session):
 
 def _create_activity(db_session, user, filename_display, *, anomaly_count=0):
     """Helper to create an activity log entry."""
-    from shared.helpers import hash_filename
+    from shared.filenames import hash_filename
 
     activity = ActivityLog(
         user_id=user.id,

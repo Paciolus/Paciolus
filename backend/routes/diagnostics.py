@@ -18,7 +18,10 @@ logger = logging.getLogger(__name__)
 from auth import require_current_user, require_verified_user
 from database import get_db
 from models import Client, DiagnosticSummary, PeriodType, User
-from shared.helpers import get_filename_display, hash_filename
+from shared.filenames import (
+    get_filename_display,
+    hash_filename,
+)
 from shared.monetary import quantize_monetary
 from shared.rate_limits import RATE_LIMIT_WRITE, limiter
 

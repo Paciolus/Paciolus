@@ -9,7 +9,7 @@ from openpyxl.styles import Alignment, Border, Font, NamedStyle, PatternFill, Si
 from openpyxl.worksheet.worksheet import Worksheet
 
 from security_utils import log_secure_operation
-from shared.helpers import sanitize_csv_value
+from shared.filenames import sanitize_csv_value
 
 
 class ExcelColors:

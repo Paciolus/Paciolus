@@ -35,6 +35,12 @@ interface AdjustmentSectionProps {
   onAdjustedTBGenerated?: (adjustedTB: unknown) => void
   /** Whether the section is disabled */
   disabled?: boolean
+  /**
+   * Sprint 729c: when this AJE workflow is associated with an engagement,
+   * show "Add to SUM" buttons on rejected (passed) AJEs that pre-fill the
+   * SUM capture form. Pass `null` (default) to hide the SUM capture flow.
+   */
+  engagementId?: number | null
 }
 
 export function AdjustmentSection({
@@ -42,6 +48,7 @@ export function AdjustmentSection({
   trialBalance = [],
   onAdjustedTBGenerated,
   disabled = false,
+  engagementId = null,
 }: AdjustmentSectionProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [showForm, setShowForm] = useState(false)
@@ -365,6 +372,7 @@ export function AdjustmentSection({
                 onDelete={handleDelete}
                 isLoading={isLoading}
                 emptyMessage="No adjusting entries yet. Click 'New Entry' to create one."
+                engagementId={engagementId}
               />
 
               {/* Zero-Storage Notice */}

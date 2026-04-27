@@ -1750,6 +1750,36 @@
         "title": "AbnormalBalanceSuggestionResponse",
         "type": "object"
       },
+      "AccountAffected": {
+        "properties": {
+          "account": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Account",
+            "type": "string"
+          },
+          "amount": {
+            "exclusiveMinimum": 0.0,
+            "title": "Amount",
+            "type": "number"
+          },
+          "debit_credit": {
+            "enum": [
+              "DR",
+              "CR"
+            ],
+            "title": "Debit Credit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account",
+          "debit_credit",
+          "amount"
+        ],
+        "title": "AccountAffected",
+        "type": "object"
+      },
       "AccountMovementResponse": {
         "description": "Account movement between two periods.",
         "properties": {
@@ -3579,6 +3609,415 @@
           "journal_entry_templates"
         ],
         "title": "AmortizationScheduleResponse",
+        "type": "object"
+      },
+      "AnalyticalExpectationCreate": {
+        "properties": {
+          "corroboration_basis_text": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Corroboration Basis Text",
+            "type": "string"
+          },
+          "corroboration_tags": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Corroboration Tags",
+            "type": "array"
+          },
+          "cpa_notes": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cpa Notes"
+          },
+          "expected_range_high": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Range High"
+          },
+          "expected_range_low": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Range Low"
+          },
+          "expected_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Value"
+          },
+          "precision_threshold_amount": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Precision Threshold Amount"
+          },
+          "precision_threshold_percent": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 10000.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Precision Threshold Percent"
+          },
+          "procedure_target_label": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Procedure Target Label",
+            "type": "string"
+          },
+          "procedure_target_type": {
+            "$ref": "#/components/schemas/ExpectationTargetType"
+          }
+        },
+        "required": [
+          "procedure_target_type",
+          "procedure_target_label",
+          "corroboration_basis_text",
+          "corroboration_tags"
+        ],
+        "title": "AnalyticalExpectationCreate",
+        "type": "object"
+      },
+      "AnalyticalExpectationResponse": {
+        "properties": {
+          "corroboration_basis_text": {
+            "title": "Corroboration Basis Text",
+            "type": "string"
+          },
+          "corroboration_tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Corroboration Tags",
+            "type": "array"
+          },
+          "cpa_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cpa Notes"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by": {
+            "title": "Created By",
+            "type": "integer"
+          },
+          "engagement_id": {
+            "title": "Engagement Id",
+            "type": "integer"
+          },
+          "expected_range_high": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Range High"
+          },
+          "expected_range_low": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Range Low"
+          },
+          "expected_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Value"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "precision_threshold_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Precision Threshold Amount"
+          },
+          "precision_threshold_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Precision Threshold Percent"
+          },
+          "procedure_target_label": {
+            "title": "Procedure Target Label",
+            "type": "string"
+          },
+          "procedure_target_type": {
+            "enum": [
+              "account",
+              "balance",
+              "ratio",
+              "flux_line"
+            ],
+            "title": "Procedure Target Type",
+            "type": "string"
+          },
+          "result_actual_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result Actual Value"
+          },
+          "result_status": {
+            "enum": [
+              "not_evaluated",
+              "within_threshold",
+              "exceeds_threshold"
+            ],
+            "title": "Result Status",
+            "type": "string"
+          },
+          "result_variance_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result Variance Amount"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          },
+          "updated_by": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated By"
+          }
+        },
+        "required": [
+          "id",
+          "engagement_id",
+          "procedure_target_type",
+          "procedure_target_label",
+          "corroboration_basis_text",
+          "corroboration_tags",
+          "result_status",
+          "created_by",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "AnalyticalExpectationResponse",
+        "type": "object"
+      },
+      "AnalyticalExpectationUpdate": {
+        "properties": {
+          "clear_result": {
+            "default": false,
+            "title": "Clear Result",
+            "type": "boolean"
+          },
+          "corroboration_basis_text": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Corroboration Basis Text"
+          },
+          "corroboration_tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Corroboration Tags"
+          },
+          "cpa_notes": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cpa Notes"
+          },
+          "expected_range_high": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Range High"
+          },
+          "expected_range_low": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Range Low"
+          },
+          "expected_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Value"
+          },
+          "precision_threshold_amount": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Precision Threshold Amount"
+          },
+          "precision_threshold_percent": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 10000.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Precision Threshold Percent"
+          },
+          "procedure_target_label": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Procedure Target Label"
+          },
+          "result_actual_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result Actual Value"
+          }
+        },
+        "title": "AnalyticalExpectationUpdate",
         "type": "object"
       },
       "ApplyAdjustmentsRequest": {
@@ -10289,6 +10728,56 @@
         "title": "ExpectationEntry",
         "type": "object"
       },
+      "ExpectationEvaluationResponse": {
+        "description": "Sprint 728c: per-evaluation record returned alongside tool output.\n\nSurfaces ISA 520 analytical expectations that were auto-evaluated\nagainst the tool's output (matched by target_type + target_label).",
+        "properties": {
+          "actual": {
+            "title": "Actual",
+            "type": "number"
+          },
+          "expectation_id": {
+            "title": "Expectation Id",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "target_label": {
+            "title": "Target Label",
+            "type": "string"
+          },
+          "target_type": {
+            "title": "Target Type",
+            "type": "string"
+          },
+          "variance": {
+            "title": "Variance",
+            "type": "number"
+          }
+        },
+        "required": [
+          "expectation_id",
+          "target_type",
+          "target_label",
+          "actual",
+          "variance",
+          "status"
+        ],
+        "title": "ExpectationEvaluationResponse",
+        "type": "object"
+      },
+      "ExpectationTargetType": {
+        "description": "What the analytical procedure targets.",
+        "enum": [
+          "account",
+          "balance",
+          "ratio",
+          "flux_line"
+        ],
+        "title": "ExpectationTargetType",
+        "type": "string"
+      },
       "ExpectedAccrualCheckResponse": {
         "description": "One row in the expected accrual checklist.",
         "properties": {
@@ -11669,6 +12158,14 @@
       "FluxAnalysisResponse": {
         "description": "Complete flux analysis response: flux + recon.",
         "properties": {
+          "expectations_evaluated": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ExpectationEvaluationResponse"
+            },
+            "title": "Expectations Evaluated",
+            "type": "array"
+          },
           "flux": {
             "$ref": "#/components/schemas/FluxDataResponse"
           },
@@ -12959,6 +13456,15 @@
           "client_name": {
             "title": "Client Name",
             "type": "string"
+          },
+          "expectations_evaluated": {
+            "default": [],
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Expectations Evaluated",
+            "type": "array"
           },
           "industry": {
             "title": "Industry",
@@ -15087,6 +15593,36 @@
         "title": "MemberInfo",
         "type": "object"
       },
+      "MisstatementClassification": {
+        "description": "ISA 450 §A6 classification.",
+        "enum": [
+          "factual",
+          "judgmental",
+          "projected"
+        ],
+        "title": "MisstatementClassification",
+        "type": "string"
+      },
+      "MisstatementDisposition": {
+        "description": "ISA 450 §A12-A15 auditor disposition.",
+        "enum": [
+          "not_yet_reviewed",
+          "auditor_proposes_correction",
+          "auditor_accepts_as_immaterial"
+        ],
+        "title": "MisstatementDisposition",
+        "type": "string"
+      },
+      "MisstatementSourceType": {
+        "description": "Where the misstatement was identified (ISA 450 §A4 sources).",
+        "enum": [
+          "adjusting_entry_passed",
+          "sample_projection",
+          "known_error"
+        ],
+        "title": "MisstatementSourceType",
+        "type": "string"
+      },
       "MovementExportRequest": {
         "description": "Request to export movement comparison as CSV.",
         "properties": {
@@ -15222,6 +15758,14 @@
               "type": "string"
             },
             "title": "Dormant Accounts",
+            "type": "array"
+          },
+          "expectations_evaluated": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ExpectationEvaluationResponse"
+            },
+            "title": "Expectations Evaluated",
             "type": "array"
           },
           "framework_note": {
@@ -16076,6 +16620,37 @@
         "title": "PaginatedResponse[ActivityLogResponse]",
         "type": "object"
       },
+      "PaginatedResponse_AnalyticalExpectationResponse_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AnalyticalExpectationResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "total_count": {
+            "title": "Total Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total_count",
+          "page",
+          "page_size"
+        ],
+        "title": "PaginatedResponse[AnalyticalExpectationResponse]",
+        "type": "object"
+      },
       "PaginatedResponse_ClientResponse_": {
         "properties": {
           "items": {
@@ -16198,6 +16773,37 @@
           "page_size"
         ],
         "title": "PaginatedResponse[FollowUpItemResponse]",
+        "type": "object"
+      },
+      "PaginatedResponse_UncorrectedMisstatementResponse_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/UncorrectedMisstatementResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "total_count": {
+            "title": "Total Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total_count",
+          "page",
+          "page_size"
+        ],
+        "title": "PaginatedResponse[UncorrectedMisstatementResponse]",
         "type": "object"
       },
       "PasswordChange": {
@@ -22467,6 +23073,129 @@
         "title": "SuccessResponse",
         "type": "object"
       },
+      "SumScheduleAggregate": {
+        "properties": {
+          "driver": {
+            "title": "Driver",
+            "type": "number"
+          },
+          "net_assets": {
+            "title": "Net Assets",
+            "type": "number"
+          },
+          "net_income": {
+            "title": "Net Income",
+            "type": "number"
+          }
+        },
+        "required": [
+          "net_income",
+          "net_assets",
+          "driver"
+        ],
+        "title": "SumScheduleAggregate",
+        "type": "object"
+      },
+      "SumScheduleMateriality": {
+        "properties": {
+          "overall": {
+            "title": "Overall",
+            "type": "number"
+          },
+          "performance": {
+            "title": "Performance",
+            "type": "number"
+          },
+          "trivial": {
+            "title": "Trivial",
+            "type": "number"
+          }
+        },
+        "required": [
+          "overall",
+          "performance",
+          "trivial"
+        ],
+        "title": "SumScheduleMateriality",
+        "type": "object"
+      },
+      "SumScheduleResponse": {
+        "properties": {
+          "aggregate": {
+            "$ref": "#/components/schemas/SumScheduleAggregate"
+          },
+          "bucket": {
+            "enum": [
+              "clearly_trivial",
+              "immaterial",
+              "approaching_material",
+              "material"
+            ],
+            "title": "Bucket",
+            "type": "string"
+          },
+          "engagement_id": {
+            "title": "Engagement Id",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/UncorrectedMisstatementResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "materiality": {
+            "$ref": "#/components/schemas/SumScheduleMateriality"
+          },
+          "subtotals": {
+            "$ref": "#/components/schemas/SumScheduleSubtotals"
+          },
+          "unreviewed_count": {
+            "title": "Unreviewed Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "engagement_id",
+          "items",
+          "subtotals",
+          "aggregate",
+          "materiality",
+          "bucket",
+          "unreviewed_count"
+        ],
+        "title": "SumScheduleResponse",
+        "type": "object"
+      },
+      "SumScheduleSubtotals": {
+        "properties": {
+          "factual_judgmental_net_assets": {
+            "title": "Factual Judgmental Net Assets",
+            "type": "number"
+          },
+          "factual_judgmental_net_income": {
+            "title": "Factual Judgmental Net Income",
+            "type": "number"
+          },
+          "projected_net_assets": {
+            "title": "Projected Net Assets",
+            "type": "number"
+          },
+          "projected_net_income": {
+            "title": "Projected Net Income",
+            "type": "number"
+          }
+        },
+        "required": [
+          "factual_judgmental_net_income",
+          "factual_judgmental_net_assets",
+          "projected_net_income",
+          "projected_net_assets"
+        ],
+        "title": "SumScheduleSubtotals",
+        "type": "object"
+      },
       "TWMColumnDetectionResponse": {
         "description": "Typed column detection for all three document types.",
         "properties": {
@@ -23336,6 +24065,14 @@
             "title": "Dormant Accounts",
             "type": "array"
           },
+          "expectations_evaluated": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ExpectationEvaluationResponse"
+            },
+            "title": "Expectations Evaluated",
+            "type": "array"
+          },
           "lead_sheet_summaries": {
             "items": {
               "$ref": "#/components/schemas/ThreeWayLeadSheetSummaryResponse"
@@ -24138,6 +24875,286 @@
           "conversion_rate"
         ],
         "title": "TrialFunnelResponse",
+        "type": "object"
+      },
+      "UncorrectedMisstatementCreate": {
+        "properties": {
+          "accounts_affected": {
+            "items": {
+              "$ref": "#/components/schemas/AccountAffected"
+            },
+            "minItems": 1,
+            "title": "Accounts Affected",
+            "type": "array"
+          },
+          "classification": {
+            "$ref": "#/components/schemas/MisstatementClassification"
+          },
+          "cpa_disposition": {
+            "$ref": "#/components/schemas/MisstatementDisposition",
+            "default": "not_yet_reviewed"
+          },
+          "cpa_notes": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cpa Notes"
+          },
+          "description": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Description",
+            "type": "string"
+          },
+          "fs_impact_net_assets": {
+            "title": "Fs Impact Net Assets",
+            "type": "number"
+          },
+          "fs_impact_net_income": {
+            "title": "Fs Impact Net Income",
+            "type": "number"
+          },
+          "source_reference": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Source Reference",
+            "type": "string"
+          },
+          "source_type": {
+            "$ref": "#/components/schemas/MisstatementSourceType"
+          }
+        },
+        "required": [
+          "source_type",
+          "source_reference",
+          "description",
+          "accounts_affected",
+          "classification",
+          "fs_impact_net_income",
+          "fs_impact_net_assets"
+        ],
+        "title": "UncorrectedMisstatementCreate",
+        "type": "object"
+      },
+      "UncorrectedMisstatementResponse": {
+        "properties": {
+          "accounts_affected": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Accounts Affected",
+            "type": "array"
+          },
+          "classification": {
+            "enum": [
+              "factual",
+              "judgmental",
+              "projected"
+            ],
+            "title": "Classification",
+            "type": "string"
+          },
+          "cpa_disposition": {
+            "enum": [
+              "not_yet_reviewed",
+              "auditor_proposes_correction",
+              "auditor_accepts_as_immaterial"
+            ],
+            "title": "Cpa Disposition",
+            "type": "string"
+          },
+          "cpa_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cpa Notes"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by": {
+            "title": "Created By",
+            "type": "integer"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "engagement_id": {
+            "title": "Engagement Id",
+            "type": "integer"
+          },
+          "fs_impact_net_assets": {
+            "title": "Fs Impact Net Assets",
+            "type": "number"
+          },
+          "fs_impact_net_income": {
+            "title": "Fs Impact Net Income",
+            "type": "number"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "source_reference": {
+            "title": "Source Reference",
+            "type": "string"
+          },
+          "source_type": {
+            "enum": [
+              "adjusting_entry_passed",
+              "sample_projection",
+              "known_error"
+            ],
+            "title": "Source Type",
+            "type": "string"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          },
+          "updated_by": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated By"
+          }
+        },
+        "required": [
+          "id",
+          "engagement_id",
+          "source_type",
+          "source_reference",
+          "description",
+          "accounts_affected",
+          "classification",
+          "fs_impact_net_income",
+          "fs_impact_net_assets",
+          "cpa_disposition",
+          "created_by",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "UncorrectedMisstatementResponse",
+        "type": "object"
+      },
+      "UncorrectedMisstatementUpdate": {
+        "properties": {
+          "accounts_affected": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/AccountAffected"
+                },
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accounts Affected"
+          },
+          "classification": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MisstatementClassification"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cpa_disposition": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MisstatementDisposition"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cpa_notes": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cpa Notes"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "fs_impact_net_assets": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fs Impact Net Assets"
+          },
+          "fs_impact_net_income": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fs Impact Net Income"
+          },
+          "source_reference": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Reference"
+          }
+        },
+        "title": "UncorrectedMisstatementUpdate",
         "type": "object"
       },
       "UnmatchedDocumentResponse": {
@@ -25658,6 +26675,149 @@
         "summary": "Get Usage By Member",
         "tags": [
           "admin"
+        ]
+      }
+    },
+    "/analytical-expectations/{expectation_id}": {
+      "delete": {
+        "description": "Soft-delete (archive) an analytical expectation.",
+        "operationId": "archive_expectation_analytical_expectations__expectation_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "expectation_id",
+            "required": true,
+            "schema": {
+              "title": "Expectation Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Archive Expectation",
+        "tags": [
+          "analytical_expectations"
+        ]
+      },
+      "get": {
+        "description": "Fetch a single analytical expectation.",
+        "operationId": "get_expectation_analytical_expectations__expectation_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "expectation_id",
+            "required": true,
+            "schema": {
+              "title": "Expectation Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyticalExpectationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Expectation",
+        "tags": [
+          "analytical_expectations"
+        ]
+      },
+      "patch": {
+        "description": "Update an analytical expectation. Captures result_actual_value triggers status recompute.",
+        "operationId": "update_expectation_analytical_expectations__expectation_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "expectation_id",
+            "required": true,
+            "schema": {
+              "title": "Expectation Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalyticalExpectationUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyticalExpectationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Update Expectation",
+        "tags": [
+          "analytical_expectations"
         ]
       }
     },
@@ -30022,6 +31182,22 @@
               "title": "Client Id",
               "type": "integer"
             }
+          },
+          {
+            "in": "query",
+            "name": "engagement_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Engagement Id"
+            }
           }
         ],
         "responses": {
@@ -31161,6 +32337,169 @@
         ]
       }
     },
+    "/engagements/{engagement_id}/analytical-expectations": {
+      "get": {
+        "description": "List analytical expectations for an engagement.",
+        "operationId": "list_expectations_engagements__engagement_id__analytical_expectations_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "engagement_id",
+            "required": true,
+            "schema": {
+              "title": "Engagement Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "result_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Result Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "target_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Target Type"
+            }
+          },
+          {
+            "description": "Page number (1-indexed)",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "description": "Page number (1-indexed)",
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Items per page",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "description": "Items per page",
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_AnalyticalExpectationResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List Expectations",
+        "tags": [
+          "analytical_expectations"
+        ]
+      },
+      "post": {
+        "description": "Create an analytical expectation for an engagement.",
+        "operationId": "create_expectation_engagements__engagement_id__analytical_expectations_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "engagement_id",
+            "required": true,
+            "schema": {
+              "title": "Engagement Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalyticalExpectationCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyticalExpectationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Create Expectation",
+        "tags": [
+          "analytical_expectations"
+        ]
+      }
+    },
     "/engagements/{engagement_id}/convergence": {
       "get": {
         "description": "Get cross-tool account convergence index for an engagement.",
@@ -31204,6 +32543,53 @@
           }
         ],
         "summary": "Get Convergence Index",
+        "tags": [
+          "engagements",
+          "engagements"
+        ]
+      }
+    },
+    "/engagements/{engagement_id}/export/analytical-expectations": {
+      "post": {
+        "description": "Sprint 728a (ISA 520): export the analytical-expectations workpaper PDF.",
+        "operationId": "export_analytical_expectations_engagements__engagement_id__export_analytical_expectations_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "engagement_id",
+            "required": true,
+            "schema": {
+              "title": "Engagement Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Export Analytical Expectations",
         "tags": [
           "engagements",
           "engagements"
@@ -31345,6 +32731,53 @@
           }
         ],
         "summary": "Export Engagement Package",
+        "tags": [
+          "engagements",
+          "engagements"
+        ]
+      }
+    },
+    "/engagements/{engagement_id}/export/sum-schedule": {
+      "post": {
+        "description": "Sprint 729a (ISA 450): export the SUM-schedule workpaper PDF.",
+        "operationId": "export_sum_schedule_engagements__engagement_id__export_sum_schedule_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "engagement_id",
+            "required": true,
+            "schema": {
+              "title": "Engagement Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Export Sum Schedule",
         "tags": [
           "engagements",
           "engagements"
@@ -31731,6 +33164,54 @@
         ]
       }
     },
+    "/engagements/{engagement_id}/sum-schedule": {
+      "get": {
+        "description": "SUM aggregation: subtotals + aggregate + materiality bucket.",
+        "operationId": "get_sum_schedule_engagements__engagement_id__sum_schedule_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "engagement_id",
+            "required": true,
+            "schema": {
+              "title": "Engagement Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SumScheduleResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Sum Schedule",
+        "tags": [
+          "uncorrected_misstatements"
+        ]
+      }
+    },
     "/engagements/{engagement_id}/tool-run-trends": {
       "get": {
         "description": "Get per-tool score trends for an engagement.",
@@ -31834,6 +33315,185 @@
         "tags": [
           "engagements",
           "engagements"
+        ]
+      }
+    },
+    "/engagements/{engagement_id}/uncorrected-misstatements": {
+      "get": {
+        "description": "List uncorrected misstatements for an engagement.",
+        "operationId": "list_misstatements_engagements__engagement_id__uncorrected_misstatements_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "engagement_id",
+            "required": true,
+            "schema": {
+              "title": "Engagement Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "classification",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Classification"
+            }
+          },
+          {
+            "in": "query",
+            "name": "source_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "disposition",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Disposition"
+            }
+          },
+          {
+            "description": "Page number (1-indexed)",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "description": "Page number (1-indexed)",
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Items per page",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "description": "Items per page",
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_UncorrectedMisstatementResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List Misstatements",
+        "tags": [
+          "uncorrected_misstatements"
+        ]
+      },
+      "post": {
+        "description": "Create an uncorrected-misstatement row on the SUM schedule.",
+        "operationId": "create_misstatement_engagements__engagement_id__uncorrected_misstatements_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "engagement_id",
+            "required": true,
+            "schema": {
+              "title": "Engagement Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UncorrectedMisstatementCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UncorrectedMisstatementResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Create Misstatement",
+        "tags": [
+          "uncorrected_misstatements"
         ]
       }
     },
@@ -32030,7 +33690,7 @@
         ]
       },
       "get": {
-        "description": "Download a non-passcode-protected shared export.\n\nPublic endpoint (no auth required).  Passcode-protected shares MUST\nuse the POST /{token}/download endpoint; this endpoint returns a 403\nwith an instructional message when a passcode is required.\n\n2026-04-20 hardening: the ``?passcode=`` query-string pattern has been\nREMOVED.  Query-string secrets leak via access logs, browser history,\nand transparent proxies.  Callers must migrate to the POST variant.",
+        "description": "Download a non-passcode-protected shared export.\n\nPublic endpoint (no auth required).  Passcode-protected shares MUST\nuse the POST /{token}/download endpoint.\n\nSprint 718 hardening: passcode-protected shares now return 404 (not\na 403 with \"passcode required\") so the GET endpoint cannot be used\nto enumerate which random tokens are real and worth concentrated\nbrute-force. The intended POST flow signals the passcode requirement\nvia its own response shape; clients exclusively using the GET\nendpoint never need to discriminate \"exists+passcode\" from \"doesn't\nexist.\"\n\n2026-04-20 hardening: the ``?passcode=`` query-string pattern has been\nREMOVED.  Query-string secrets leak via access logs, browser history,\nand transparent proxies.  Callers must migrate to the POST variant.",
         "operationId": "download_share_export_sharing__token__get",
         "parameters": [
           {
@@ -34214,6 +35874,28 @@
         ]
       }
     },
+    "/health/r2": {
+      "get": {
+        "description": "R2 export-share-storage availability probe (Sprint 730).\n\nWhen R2 is configured (R2_EXPORTS_* env vars set), this lists the bucket\nhead to verify auth + connectivity. When R2 is not configured, returns\n``healthy`` with ``details.r2=\"not_configured\"``.\n\nThe probe does NOT touch user data — it only verifies that the bucket is\nreachable with the configured credentials. The mass-410-vs-503 distinction\nin ``export_share_storage.download()`` is what handles per-object errors;\nthis endpoint is about whether R2 is reachable at all.",
+        "operationId": "r2_probe_health_r2_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DependencyStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "R2 Probe",
+        "tags": [
+          "health"
+        ]
+      }
+    },
     "/health/ready": {
       "get": {
         "description": "Readiness probe — load balancer should use this for traffic routing.\n\nChecks database connectivity with SELECT 1, measures latency, and\nreports connection pool statistics when available (PostgreSQL).\n\nNote: No Redis, Celery, or cache dependencies exist — database is\nthe only dependency.",
@@ -34231,6 +35913,28 @@
           }
         },
         "summary": "Readiness Probe",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/health/redis": {
+      "get": {
+        "description": "Redis availability probe (Sprint 730).\n\nWhen REDIS_URL is set, slowapi uses Redis as its rate-limit storage and a\nRedis outage degrades the rate limiter to fail-open. This probe makes the\nRedis health an explicit signal so an oncall alert can fire on probe\nfailures rather than waiting for a credential-stuffing burst to surface\nthe silent fail-open.\n\nWhen REDIS_URL is NOT set (single-worker deployments, dev), returns\n``healthy`` with ``details.redis=\"not_configured\"`` — the rate limiter is\nusing its in-memory fallback and there's nothing to probe.",
+        "operationId": "redis_probe_health_redis_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DependencyStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Redis Probe",
         "tags": [
           "health"
         ]
@@ -35060,6 +36764,65 @@
           }
         ],
         "summary": "Stop Impersonation",
+        "tags": [
+          "internal-admin"
+        ]
+      }
+    },
+    "/internal/admin/security/clear-throttle": {
+      "post": {
+        "description": "Clear the per-IP failure throttle.\n\nSprint 718 lockout-recovery surface. The export-share passcode throttle\n+ auth IP failure tracker share the same backing store; if the CEO\nlocks themselves out during Phase 3 testing, this endpoint resets the\ncounter without a deploy.\n\n- When ``ip`` is provided: clears that one IP's failure history.\n- When ``ip`` is omitted: clears every IP entry. Use sparingly; this\n  is a break-glass capability.\n\nAudit-logged via the standard admin-audit chain. Rate-limited 1/min\nto prevent abuse even by a compromised superadmin token.",
+        "operationId": "clear_throttle_internal_admin_security_clear_throttle_post",
+        "parameters": [
+          {
+            "description": "Specific IP to clear; omit to clear all",
+            "in": "query",
+            "name": "ip",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Specific IP to clear; omit to clear all",
+              "title": "Ip"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Clear Throttle Internal Admin Security Clear Throttle Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Clear Throttle",
         "tags": [
           "internal-admin"
         ]
@@ -35985,6 +37748,146 @@
         "summary": "Update User Preferences",
         "tags": [
           "activity"
+        ]
+      }
+    },
+    "/uncorrected-misstatements/{misstatement_id}": {
+      "delete": {
+        "operationId": "archive_misstatement_uncorrected_misstatements__misstatement_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "misstatement_id",
+            "required": true,
+            "schema": {
+              "title": "Misstatement Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Archive Misstatement",
+        "tags": [
+          "uncorrected_misstatements"
+        ]
+      },
+      "get": {
+        "operationId": "get_misstatement_uncorrected_misstatements__misstatement_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "misstatement_id",
+            "required": true,
+            "schema": {
+              "title": "Misstatement Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UncorrectedMisstatementResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Misstatement",
+        "tags": [
+          "uncorrected_misstatements"
+        ]
+      },
+      "patch": {
+        "operationId": "update_misstatement_uncorrected_misstatements__misstatement_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "misstatement_id",
+            "required": true,
+            "schema": {
+              "title": "Misstatement Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UncorrectedMisstatementUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UncorrectedMisstatementResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Update Misstatement",
+        "tags": [
+          "uncorrected_misstatements"
         ]
       }
     },

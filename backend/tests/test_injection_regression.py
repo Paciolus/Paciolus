@@ -28,7 +28,10 @@ from auth import UserCreate, create_user, require_current_user
 from database import get_db
 from main import app
 from models import User, UserTier
-from shared.helpers import safe_download_filename, sanitize_csv_value
+from shared.filenames import (
+    safe_download_filename,
+    sanitize_csv_value,
+)
 
 # =============================================================================
 # FIXTURES
@@ -346,7 +349,7 @@ class TestPathTraversalRegression:
         """
         from unittest.mock import AsyncMock
 
-        from shared.helpers import validate_file_size
+        from shared.upload_pipeline import validate_file_size
 
         mock_file = AsyncMock()
         mock_file.filename = "../../etc/passwd"

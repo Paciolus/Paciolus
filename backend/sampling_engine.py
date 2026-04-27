@@ -25,8 +25,8 @@ from shared.column_detector import (
     DetectionResult,
     detect_columns,
 )
-from shared.helpers import parse_uploaded_file
 from shared.parsing_helpers import safe_decimal
+from shared.upload_pipeline import parse_uploaded_file
 
 logger = logging.getLogger(__name__)
 

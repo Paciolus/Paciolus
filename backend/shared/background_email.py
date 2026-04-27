@@ -18,14 +18,11 @@ def safe_background_email(send_func: Callable[..., Any], *, label: str = "email"
     try:
         result = send_func(**kwargs)
         if not result.success:
-            logger.warning(
-                "Background %s send failed: %s",
-                label,
-                getattr(result, "error", "unknown"),
-            )
+            detail = getattr(result, "message", None) or "unknown"
+            logger.warning("Background %s send failed: %s", label, detail)
             log_secure_operation(
                 f"background_{label}_failed",
-                f"Background email send failed: {getattr(result, 'error', 'unknown')}",
+                f"Background email send failed: {detail}",
             )
     except Exception as e:
         logger.exception("Background %s exception", label)

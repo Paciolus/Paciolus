@@ -433,11 +433,11 @@
   {
     "id": "report-je-testing-memo",
     "category": "audit-report",
-    "description": "A user can export a JE Testing Memo PDF (PCAOB AS 1215)",
+    "description": "A user can export a JE Testing Memo PDF (PCAOB AS 2401, ISA 240)",
     "verification_steps": [
       "POST /export/je-testing-memo with JE test results",
       "Verify PDF contains all test results and standards references",
-      "Verify PCAOB AS 1215 citation"
+      "Verify PCAOB AS 2401 and ISA 240 citations"
     ],
     "status": "complete",
     "last_verified": "2026-03-18",

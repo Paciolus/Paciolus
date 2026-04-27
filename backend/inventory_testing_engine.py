@@ -25,8 +25,9 @@ import statistics
 from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
-from typing import Optional
+from typing import Any, Optional
 
+from engine_framework import AuditEngineBase
 from shared.column_detector import ColumnFieldConfig, detect_columns
 from shared.data_quality import FieldQualityConfig
 from shared.data_quality import assess_data_quality as _shared_assess_dq
@@ -1442,6 +1443,71 @@ def calculate_inv_composite_score(
 # =============================================================================
 
 
+_INV_OVERRIDABLE_COLUMNS: tuple[str, ...] = (
+    "item_id_column",
+    "description_column",
+    "quantity_column",
+    "unit_cost_column",
+    "extended_value_column",
+    "location_column",
+    "last_movement_date_column",
+    "category_column",
+)
+
+
+class InventoryTestingEngine(AuditEngineBase):
+    """Inventory testing engine — Sprint 727a migration onto AuditEngineBase.
+
+    Behavioral parity with the pre-migration ``run_inventory_testing`` is
+    guaranteed by the fact that each abstract method delegates to the same
+    module-level helpers the procedural function used. The subclass adds no
+    new logic; it only conforms the call sequence to the shared 10-step
+    pipeline so the engine inherits future framework improvements (e.g.,
+    instrumentation hooks, error semantics) without per-engine plumbing.
+    """
+
+    def __init__(self, config: Optional[InventoryTestingConfig] = None):
+        super().__init__(config or InventoryTestingConfig())
+
+    def detect_columns(self, column_names: list[str]) -> Any:
+        return detect_inv_columns(column_names)
+
+    def apply_column_overrides(self, detection: Any, column_mapping: dict) -> Any:
+        for attr in _INV_OVERRIDABLE_COLUMNS:
+            if attr in column_mapping:
+                setattr(detection, attr, column_mapping[attr])
+        detection.overall_confidence = 1.0
+        return detection
+
+    def parse_data(self, rows: list[dict], detection: Any) -> list:
+        return parse_inv_entries(rows, detection)
+
+    def run_quality_checks(self, entries: list, detection: Any) -> Any:
+        return assess_inv_data_quality(entries, detection)
+
+    def run_tests(self, entries: list) -> Any:
+        return run_inv_test_battery(entries, self.config)
+
+    def compute_score(self, test_results: list, entry_count: int) -> Any:
+        return calculate_inv_composite_score(test_results, entry_count)
+
+    def build_result(
+        self,
+        composite: Any,
+        test_output: Any,
+        data_quality: Any,
+        detection: Any,
+        entries: list,
+        enrichment: Any,
+    ) -> Any:
+        return InvTestingResult(
+            composite_score=composite,
+            test_results=test_output,
+            data_quality=data_quality,
+            column_detection=detection,
+        )
+
+
 def run_inventory_testing(
     rows: list[dict],
     column_names: list[str],
@@ -1450,55 +1516,13 @@ def run_inventory_testing(
 ) -> InvTestingResult:
     """Run the complete inventory testing pipeline.
 
-    Args:
-        rows: List of dicts (raw inventory register rows)
-        column_names: List of column header names
-        config: Optional testing configuration
-        column_mapping: Optional manual column mapping override
-
-    Returns:
-        InvTestingResult with composite score, test results, data quality.
+    Sprint 727a: refactored to construct ``InventoryTestingEngine`` and call
+    ``run_pipeline()``. Caller-facing signature and behavior unchanged — the
+    procedural body became the engine's abstract-method delegations.
     """
-    if config is None:
-        config = InventoryTestingConfig()
-
-    # 1. Detect columns
-    detection = detect_inv_columns(column_names)
-
-    # Apply manual overrides
-    if column_mapping:
-        for attr in (
-            "item_id_column",
-            "description_column",
-            "quantity_column",
-            "unit_cost_column",
-            "extended_value_column",
-            "location_column",
-            "last_movement_date_column",
-            "category_column",
-        ):
-            if attr in column_mapping:
-                setattr(detection, attr, column_mapping[attr])
-        detection.overall_confidence = 1.0
-
-    # 2. Parse entries
-    entries = parse_inv_entries(rows, detection)
-
-    # 3. Assess data quality
-    data_quality = assess_inv_data_quality(entries, detection)
-
-    # 4. Run test battery
-    test_results = run_inv_test_battery(entries, config)
-
-    # 5. Calculate composite score
-    composite = calculate_inv_composite_score(test_results, len(entries))
-
-    return InvTestingResult(
-        composite_score=composite,
-        test_results=test_results,
-        data_quality=data_quality,
-        column_detection=detection,
-    )
+    engine = InventoryTestingEngine(config)
+    result: InvTestingResult = engine.run_pipeline(rows, column_names, column_mapping)
+    return result
 
 
 # =============================================================================

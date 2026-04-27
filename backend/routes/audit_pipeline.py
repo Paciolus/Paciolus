@@ -26,15 +26,17 @@ from shared.diagnostic_response_schemas import TrialBalanceResponse
 from shared.entitlement_checks import check_diagnostic_limit, enforce_format_access
 from shared.error_messages import sanitize_error
 from shared.helpers import (
-    maybe_record_tool_run,
-    memory_cleanup,
     parse_json_list,
     parse_json_mapping,
-    validate_file_size,
 )
 from shared.materiality_resolver import resolve_materiality
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.tb_post_processor import apply_currency_conversion, apply_lead_sheet_grouping
+from shared.tool_run_recorder import maybe_record_tool_run
+from shared.upload_pipeline import (
+    memory_cleanup,
+    validate_file_size,
+)
 
 logger = logging.getLogger(__name__)
 

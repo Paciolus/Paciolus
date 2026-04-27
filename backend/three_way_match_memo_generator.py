@@ -110,7 +110,7 @@ _MATCH_RATE_THRESHOLDS = [
     (0.90, "Within best practice \u2014 no concern"),
     (0.85, "Acceptable \u2014 monitor"),
     (0.80, "Below best practice \u2014 investigate patterns"),
-    (0.00, "Below 80% threshold \u2014 systemic review of procure-to-pay controls recommended"),
+    (0.00, "Below 80% threshold \u2014 match-rate anomaly indicator; auditor judgment required to determine cause"),
 ]
 
 # Conclusion text by risk tier (4-tier scale) — BUG-002: score-aware

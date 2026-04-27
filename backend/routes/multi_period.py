@@ -32,9 +32,13 @@ from shared.diagnostic_response_schemas import (
 )
 from shared.entitlement_checks import check_export_access
 from shared.error_messages import sanitize_error
-from shared.helpers import maybe_record_tool_run
+from shared.expectation_evaluation import (
+    evaluate_expectations_against_measurements,
+    extract_multi_period_measurements,
+)
 from shared.rate_limits import RATE_LIMIT_AUDIT, RATE_LIMIT_EXPORT, limiter
 from shared.testing_route import enforce_tool_access
+from shared.tool_run_recorder import maybe_record_tool_run
 
 router = APIRouter(tags=["multi_period"])
 
@@ -165,6 +169,16 @@ def compare_period_trial_balances(
         maybe_record_tool_run, db, payload.engagement_id, current_user.id, "multi_period", True, None, flagged
     )
 
+    # Sprint 728c: evaluate ISA 520 expectations targeting these movements.
+    if payload.engagement_id is not None:
+        measurements = extract_multi_period_measurements(result_dict)
+        result_dict["expectations_evaluated"] = evaluate_expectations_against_measurements(
+            db=db,
+            user_id=current_user.id,
+            engagement_id=payload.engagement_id,
+            measurements=measurements,
+        )
+
     return result_dict
 
 
@@ -202,6 +216,16 @@ def compare_three_way_trial_balances(
     background_tasks.add_task(
         maybe_record_tool_run, db, payload.engagement_id, current_user.id, "multi_period", True, None, flagged
     )
+
+    # Sprint 728c: ISA 520 evaluation against current-period balances
+    if payload.engagement_id is not None:
+        measurements = extract_multi_period_measurements(result_dict)
+        result_dict["expectations_evaluated"] = evaluate_expectations_against_measurements(
+            db=db,
+            user_id=current_user.id,
+            engagement_id=payload.engagement_id,
+            measurements=measurements,
+        )
 
     return result_dict
 

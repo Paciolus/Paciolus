@@ -1,16 +1,23 @@
 """
-Bulk Upload Routes — Phase LXIX: Pricing v3 (Phase 9).
+Bulk Upload Routes — Phase LXIX: Pricing v3 (Phase 9); Sprint 720 cross-worker.
 
 Accept up to 5 files for parallel processing. Enterprise only.
 
 Route group prefix: /upload/bulk
+
+Sprint 720 (2026-04-25): job state migrated from process-local
+``OrderedDict`` to ``shared/bulk_job_store.py`` (Redis-backed with
+in-memory fallback). Cross-worker visibility for status polls is now
+provided by the shared store; processing tasks themselves still have
+single-worker affinity via ``asyncio.create_task`` (a true queue-
+driven processor is a future sprint when Enterprise volume warrants
+the infra).
 """
 
 import asyncio
 import hashlib
 import logging
 import uuid
-from collections import OrderedDict
 from datetime import UTC, datetime
 from typing import Any
 
@@ -20,21 +27,18 @@ from sqlalchemy.orm import Session
 from auth import require_verified_user
 from database import get_db
 from models import User
+from shared import bulk_job_store
 from shared.entitlement_checks import check_bulk_upload_access, check_upload_limit, increment_upload_count
-from shared.helpers import validate_file_size
 from shared.organization_schemas import BulkUploadStartResponse, BulkUploadStatusResponse
 from shared.rate_limits import RATE_LIMIT_WRITE, limiter
+from shared.upload_pipeline import validate_file_size
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/upload/bulk", tags=["bulk-upload"])
 
 MAX_FILES = 5
-MAX_BULK_JOBS = 100  # Eviction threshold to prevent unbounded memory growth
 _JOB_TTL_HOURS = 2
-
-# In-memory job store with LRU eviction (OrderedDict for insertion-order)
-_bulk_jobs: OrderedDict[str, dict] = OrderedDict()
 
 
 @router.post("", response_model=BulkUploadStartResponse)
@@ -66,8 +70,8 @@ async def start_bulk_upload(
     for _ in files:
         check_upload_limit(user, db)
 
-    # Evict stale jobs before creating a new one (prevent unbounded memory growth)
-    _evict_stale_jobs()
+    # Sprint 720: bulk_job_store handles eviction itself (Redis TTL or
+    # in-memory LRU+age cap); no explicit _evict_stale_jobs call needed.
 
     # Build file descriptors from already-validated bytes (UploadFile objects
     # may be closed after the response completes, so we must NOT pass them
@@ -91,15 +95,19 @@ async def start_bulk_upload(
         )
         file_descriptors.append({"filename": f.filename, "content": content})
 
-    _bulk_jobs[job_id] = {
-        "job_id": job_id,
-        "user_id": user.id,
-        "created_at": datetime.now(UTC).isoformat(),
-        "status": "processing",
-        "files": file_statuses,
-        "completed_count": 0,
-        "total_count": len(files),
-    }
+    bulk_job_store.put(
+        job_id,
+        {
+            "job_id": job_id,
+            "user_id": user.id,
+            "created_at": datetime.now(UTC).isoformat(),
+            "status": "processing",
+            "files": file_statuses,
+            "completed_count": 0,
+            "total_count": len(files),
+        },
+        ttl_seconds=_JOB_TTL_HOURS * 3600,
+    )
 
     # Process files asynchronously using pre-read bytes (not UploadFile objects)
     asyncio.create_task(_process_bulk_files(job_id, file_descriptors, user.id))
@@ -121,14 +129,19 @@ async def _process_bulk_files(
     Args:
         file_descriptors: List of {"filename": str, "content": bytes} dicts.
             Content is pre-read from UploadFile before the response completes.
+
+    Sprint 720 note: each mutation re-fetches the job from the shared
+    store and persists the mutated copy back. This is what gives status
+    polls on a different worker visibility into in-flight progress.
     """
-    job = _bulk_jobs.get(job_id)
+    job = bulk_job_store.get(job_id)
     if not job:
         return
 
     for idx, fd in enumerate(file_descriptors):
         try:
             job["files"][idx]["status"] = "processing"
+            bulk_job_store.put(job_id, job, ttl_seconds=_JOB_TTL_HOURS * 3600)
 
             content = fd["content"]
 
@@ -161,8 +174,10 @@ async def _process_bulk_files(
             logger.warning("Bulk upload file %d failed for job %s: %s", idx, job_id, type(exc).__name__)
 
         job["completed_count"] = sum(1 for fs in job["files"] if fs["status"] in ("complete", "error"))
+        bulk_job_store.put(job_id, job, ttl_seconds=_JOB_TTL_HOURS * 3600)
 
     job["status"] = "complete"
+    bulk_job_store.put(job_id, job, ttl_seconds=_JOB_TTL_HOURS * 3600)
 
 
 @router.get("/{job_id}/status", response_model=BulkUploadStatusResponse)
@@ -171,7 +186,7 @@ async def get_bulk_status(
     user: User = Depends(require_verified_user),
 ) -> dict[str, Any]:
     """Poll bulk upload job progress."""
-    job = _bulk_jobs.get(job_id)
+    job = bulk_job_store.get(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found.")
 
@@ -192,22 +207,3 @@ async def get_bulk_status(
             for fs in job["files"]
         ],
     }
-
-
-def _evict_stale_jobs() -> None:
-    """Remove expired jobs and enforce max job count to prevent memory exhaustion."""
-    now = datetime.now(UTC)
-    stale_keys = []
-    for key, job in _bulk_jobs.items():
-        try:
-            created = datetime.fromisoformat(job["created_at"])
-            if (now - created).total_seconds() > _JOB_TTL_HOURS * 3600:
-                stale_keys.append(key)
-        except (ValueError, KeyError):
-            stale_keys.append(key)
-    for key in stale_keys:
-        del _bulk_jobs[key]
-
-    # Hard cap: evict oldest jobs if over limit
-    while len(_bulk_jobs) > MAX_BULK_JOBS:
-        _bulk_jobs.popitem(last=False)

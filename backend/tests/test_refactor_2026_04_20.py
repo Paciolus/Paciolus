@@ -59,15 +59,18 @@ def _make_sub(db, user: User, tier: str = "professional") -> Subscription:
 
 
 # ---------------------------------------------------------------------------
-# helpers.py compatibility shim
+# Decomposition outcome — symbols live at their owning module
+# (Sprint 2026-04-20 split + Sprint 724 shim removal)
 # ---------------------------------------------------------------------------
 
 
 class TestHelpersReExports:
-    """Every previously-public symbol is still importable from shared.helpers."""
+    """Every previously-public symbol resolves at its owning module post-Sprint-724.
+    ``shared.helpers`` retains only the small native helpers, asserted in
+    ``test_json_form_and_client_access_symbols``."""
 
     def test_upload_pipeline_symbols(self) -> None:
-        from shared.helpers import (
+        from shared.upload_pipeline import (
             _XLS_MAGIC,
             _XLSX_MAGIC,
             MAX_CELL_LENGTH,
@@ -99,7 +102,7 @@ class TestHelpersReExports:
         assert MAX_COL_COUNT > 0
 
     def test_filename_and_sanitizer_symbols(self) -> None:
-        from shared.helpers import (
+        from shared.filenames import (
             escape_like_wildcards,
             get_filename_display,
             hash_filename,
@@ -114,10 +117,10 @@ class TestHelpersReExports:
         assert ".csv" in safe_download_filename("Client", "TB", "csv")
 
     def test_background_email_and_tool_recorder_symbols(self) -> None:
-        from shared.helpers import (
+        from shared.background_email import safe_background_email
+        from shared.tool_run_recorder import (
             _log_tool_activity,
             maybe_record_tool_run,
-            safe_background_email,
         )
 
         assert callable(safe_background_email)

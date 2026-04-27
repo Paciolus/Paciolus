@@ -35,7 +35,7 @@ const CLOSING_METRICS: ClosingMetric[] = [
     sub: 'Across all 18 diagnostic tools',
   },
   {
-    target: 12,
+    target: 18,
     suffix: '',
     label: 'Audit Tools',
     sub: 'TB · JE · AP · Revenue · Payroll + more',
@@ -66,7 +66,7 @@ export function BottomProof() {
             Every Test Cites Its Standard
           </h2>
           <p className="font-sans text-oatmeal-400 mt-3 max-w-xl mx-auto mb-4">
-            Twelve audit-focused tools. Every result traceable to a published accounting or auditing standard.
+            Eighteen audit-focused tools. Every result traceable to a published accounting or auditing standard.
           </p>
           <div className="w-12 h-[2px] bg-sage-500 rounded-full mx-auto" />
         </Reveal>

@@ -17,6 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 from scripts.overnight.config import (
     ANTHROPIC_API_KEY,
     BACKEND_ROOT,
+    BASELINE_FILE,
     CLAUDE_MODEL,
     FRONTEND_ROOT,
     PYTHON_BIN,
@@ -28,6 +29,16 @@ from scripts.overnight.config import (
 # Always report these packages regardless of version gap
 BACKEND_WATCHLIST = {"stripe", "fastapi", "pyjwt", "cryptography", "sqlalchemy"}
 FRONTEND_WATCHLIST = {"next", "react", "stripe"}
+
+# Sprint 731: cadence-window deadlines per severity for watchlist packages.
+# When a watchlist package has an outdated patch/minor for longer than the
+# configured window, the Sentinel flips to RED (CI-blocking nightly job).
+# See docs/03-engineering/dependency-policy.md for the full policy.
+CADENCE_DAYS: dict[str, int] = {
+    "patch": 7,    # security-relevant patch (e.g., fastapi 0.136.0 → 0.136.1)
+    "minor": 14,   # security-relevant minor (e.g., stripe 15.0.1 → 15.1.0)
+    # Majors get no deadline pressure — scheduled sprint work, not auto-PR.
+}
 
 # Deferrals file: packages intentionally held back (waiting on ecosystem, etc.)
 DEFERRALS_FILE = Path(__file__).resolve().parent.parent / "dependency_deferrals.json"
@@ -107,6 +118,97 @@ def _severity(current: str, latest: str) -> str:
     if len(lat) > 1 and len(cur) > 1 and lat[1] > cur[1]:
         return "minor"
     return "patch"
+
+
+# ---------------------------------------------------------------------------
+# Sprint 731 — first-seen tracking + cadence-window deadline gate
+# ---------------------------------------------------------------------------
+
+
+def _load_first_seen() -> dict[str, str]:
+    """Read the {package_key: ISO_date} map from baseline.json.
+
+    Keys are ``"<ecosystem>:<package>"`` (e.g., ``"backend:fastapi"``) so a
+    backend and frontend package with the same name don't collide.
+    """
+    if not BASELINE_FILE.exists():
+        return {}
+    try:
+        baseline = json.loads(BASELINE_FILE.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {}
+    section = baseline.get("dependency_sentinel", {})
+    first_seen = section.get("first_seen", {}) if isinstance(section, dict) else {}
+    return first_seen if isinstance(first_seen, dict) else {}
+
+
+def _save_first_seen(first_seen: dict[str, str]) -> None:
+    """Persist the first_seen map back to baseline.json under dependency_sentinel.first_seen."""
+    baseline: dict = {}
+    if BASELINE_FILE.exists():
+        try:
+            baseline = json.loads(BASELINE_FILE.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            baseline = {}
+    section = baseline.setdefault("dependency_sentinel", {})
+    if not isinstance(section, dict):
+        section = {}
+        baseline["dependency_sentinel"] = section
+    section["first_seen"] = first_seen
+    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+    BASELINE_FILE.write_text(json.dumps(baseline, indent=2), encoding="utf-8")
+
+
+def _days_since(iso_date: str) -> int | None:
+    """Days between ``iso_date`` and today. Returns None on parse failure."""
+    try:
+        seen = datetime.date.fromisoformat(iso_date)
+    except (ValueError, TypeError):
+        return None
+    return (datetime.date.today() - seen).days
+
+
+def _is_past_deadline(severity: str, first_seen_iso: str) -> bool:
+    """True when the package has been outdated longer than its cadence window."""
+    days = _days_since(first_seen_iso)
+    deadline = CADENCE_DAYS.get(severity)
+    if days is None or deadline is None:
+        return False
+    return days > deadline
+
+
+def _update_first_seen(
+    actionable_watchlist: list[dict],
+    first_seen: dict[str, str],
+) -> tuple[list[dict], dict[str, str]]:
+    """Stamp first-seen on new entries, drop stale ones, attach deadline metadata.
+
+    Returns ``(packages_with_deadline_metadata, updated_first_seen_map)``.
+
+    ``packages_with_deadline_metadata`` mutates the input list, adding
+    ``first_seen`` and ``past_deadline`` keys per package. Callers can then use
+    those to decide on RED status.
+    """
+    today_iso = datetime.date.today().isoformat()
+    seen_keys_this_run: set[str] = set()
+
+    for p in actionable_watchlist:
+        ecosystem = "backend" if p.get("watchlist") and p["package"] in BACKEND_WATCHLIST else "frontend"
+        key = f"{ecosystem}:{p['package']}@{p['latest']}"
+        seen_keys_this_run.add(key)
+        if key not in first_seen:
+            first_seen[key] = today_iso
+        p["first_seen"] = first_seen[key]
+        p["days_outdated"] = _days_since(first_seen[key]) or 0
+        p["past_deadline"] = _is_past_deadline(p["severity"], first_seen[key])
+
+    # Garbage-collect entries for packages that are no longer in the
+    # actionable-watchlist set (they were bumped, deferred, or dropped).
+    stale_keys = set(first_seen) - seen_keys_this_run
+    for key in stale_keys:
+        del first_seen[key]
+
+    return actionable_watchlist, first_seen
 
 
 def _check_backend() -> list[dict]:
@@ -244,21 +346,36 @@ def run() -> dict:
     # Security-flagged: watchlist packages with available updates (only actionable)
     security_flagged = [p for p in actionable if p.get("watchlist")]
 
+    # Sprint 731: first-seen tracking + deadline gate. Stamps a date on each
+    # currently-outdated security-relevant package; flips to RED when the
+    # cadence window (CADENCE_DAYS) is exceeded.
+    first_seen = _load_first_seen()
+    security_flagged, first_seen = _update_first_seen(security_flagged, first_seen)
+    _save_first_seen(first_seen)
+    past_deadline_pkgs = [p for p in security_flagged if p.get("past_deadline")]
+
     # Top 5 with notes (from actionable packages only)
     top5 = _get_update_notes(actionable)
 
-    # Determine status based on actionable packages only
-    major_security = any(
-        p["severity"] == "major" for p in security_flagged
-    )
+    # Determine status:
+    #   - past_deadline_pkgs   → red (Sprint 731: deadline gate)
+    #   - major_security       → red
+    #   - has_major or any security_flagged → yellow
+    #   - otherwise            → green
+    major_security = any(p["severity"] == "major" for p in security_flagged)
     has_major = any(p["severity"] == "major" for p in actionable)
 
-    if major_security:
+    if past_deadline_pkgs or major_security:
         status = "red"
     elif has_major or security_flagged:
         status = "yellow"
     else:
         status = "green"
+
+    deadline_summary = ""
+    if past_deadline_pkgs:
+        names = ", ".join(p["package"] for p in past_deadline_pkgs)
+        deadline_summary = f" PAST DEADLINE: {names}."
 
     result = {
         "agent": "dependency_sentinel",
@@ -266,6 +383,7 @@ def run() -> dict:
         "backend_outdated": backend_outdated,
         "frontend_outdated": frontend_outdated,
         "security_flagged": security_flagged,
+        "past_deadline": past_deadline_pkgs,
         "deferred": deferred_pkgs,
         "top5_updates": top5,
         "summary": (
@@ -273,6 +391,7 @@ def run() -> dict:
             f"Frontend: {len(frontend_outdated)} outdated. "
             f"{len(security_flagged)} security-relevant packages have updates."
             + (f" {len(deferred_pkgs)} deferred." if deferred_pkgs else "")
+            + deadline_summary
         ),
     }
 

@@ -89,11 +89,27 @@ class ReconDataResponse(BaseModel):
     stats: ReconStatsResponse
 
 
+class ExpectationEvaluationResponse(BaseModel):
+    """Sprint 728c: per-evaluation record returned alongside tool output.
+
+    Surfaces ISA 520 analytical expectations that were auto-evaluated
+    against the tool's output (matched by target_type + target_label).
+    """
+
+    expectation_id: int
+    target_type: str
+    target_label: str
+    actual: float
+    variance: float
+    status: str
+
+
 class FluxAnalysisResponse(BaseModel):
     """Complete flux analysis response: flux + recon."""
 
     flux: FluxDataResponse
     recon: ReconDataResponse
+    expectations_evaluated: list[ExpectationEvaluationResponse] = []
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -216,6 +232,7 @@ class MovementSummaryResponse(BaseModel):
     current_total_debits: float
     current_total_credits: float
     framework_note: Optional[str] = None
+    expectations_evaluated: list[ExpectationEvaluationResponse] = []
 
 
 class BudgetVarianceResponse(BaseModel):
@@ -277,6 +294,7 @@ class ThreeWayMovementSummaryResponse(BaseModel):
     accounts_over_budget: int
     accounts_under_budget: int
     accounts_on_budget: int
+    expectations_evaluated: list[ExpectationEvaluationResponse] = []
 
 
 # ═══════════════════════════════════════════════════════════════

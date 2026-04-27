@@ -16,11 +16,20 @@ import { useParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useAuthSession } from '@/contexts/AuthSessionContext';
 import { useWorkspaceContext } from '@/contexts/WorkspaceContext';
-import { ToolStatusGrid, FollowUpItemsTable, WorkpaperIndex, ConvergenceTable } from '@/components/engagement';
+import {
+  ToolStatusGrid,
+  FollowUpItemsTable,
+  WorkpaperIndex,
+  ConvergenceTable,
+  AnalyticalExpectationsPanel,
+  SumSchedulePanel,
+} from '@/components/engagement';
+import { useAnalyticalExpectations } from '@/hooks/useAnalyticalExpectations';
 import { useFollowUpItems } from '@/hooks/useFollowUpItems';
+import { useUncorrectedMisstatements } from '@/hooks/useUncorrectedMisstatements';
 import type { Engagement, ToolRun, MaterialityCascade, WorkpaperIndex as WorkpaperIndexType, ConvergenceResponse } from '@/types/engagement';
 import { formatCurrency } from '@/utils/formatting';
-import { apiGet } from '@/utils';
+import { apiDownload, downloadBlob , apiGet } from '@/utils';
 import { fadeUp } from '@/lib/motion';
 
 const DISCLAIMER_TEXT =
@@ -52,6 +61,24 @@ export default function WorkspaceDetailPage() {
     deleteItem: deleteFollowUpItem,
   } = useFollowUpItems();
 
+  const {
+    items: expectations,
+    isLoading: expectationsLoading,
+    fetchItems: fetchExpectations,
+    createItem: createExpectation,
+    updateItem: updateExpectation,
+    archiveItem: archiveExpectation,
+  } = useAnalyticalExpectations();
+
+  const {
+    schedule: sumSchedule,
+    isLoading: sumLoading,
+    fetchSchedule: fetchSumSchedule,
+    createItem: createMisstatement,
+    updateItem: updateMisstatement,
+    archiveItem: archiveMisstatement,
+  } = useUncorrectedMisstatements();
+
   const [engagement, setEngagement] = useState<Engagement | null>(null);
   const [toolRuns, setToolRuns] = useState<ToolRun[]>([]);
   const [materiality, setMateriality] = useState<MaterialityCascade | null>(null);
@@ -59,7 +86,9 @@ export default function WorkspaceDetailPage() {
   const [convergenceData, setConvergenceData] = useState<ConvergenceResponse | null>(null);
   const [convergenceExporting, setConvergenceExporting] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'tools' | 'follow-up' | 'workpaper' | 'convergence'>('tools');
+  const [activeTab, setActiveTab] = useState<
+    'tools' | 'follow-up' | 'workpaper' | 'convergence' | 'expectations' | 'sum'
+  >('tools');
 
   // Load engagement data
   useEffect(() => {
@@ -84,8 +113,10 @@ export default function WorkspaceDetailPage() {
         setToolRuns(runs);
         setMateriality(mat);
 
-        // Background: follow-ups, workpapers, convergence
+        // Background: follow-ups, workpapers, convergence, expectations, SUM schedule
         fetchFollowUpItems(engagementId);
+        fetchExpectations(engagementId);
+        fetchSumSchedule(engagementId);
         getConvergence(engagementId).then(conv => { if (conv) setConvergenceData(conv); });
         apiGet<WorkpaperIndexType>(
           `/engagements/${engagementId}/workpaper-index`,
@@ -230,8 +261,16 @@ export default function WorkspaceDetailPage() {
 
         {/* Tab navigation */}
         <div className="flex gap-1 border-b border-theme">
-          {(['tools', 'follow-up', 'workpaper', 'convergence'] as const).map(tab => {
-            const labels = { tools: 'Status', 'follow-up': 'Follow-Up', workpaper: 'Workpapers', convergence: 'Convergence' };
+          {(['tools', 'follow-up', 'expectations', 'sum', 'workpaper', 'convergence'] as const).map(
+            tab => {
+              const labels = {
+                tools: 'Status',
+                'follow-up': 'Follow-Up',
+                expectations: 'Expectations',
+                sum: 'SUM',
+                workpaper: 'Workpapers',
+                convergence: 'Convergence',
+              };
             const isActive = activeTab === tab;
             return (
               <button
@@ -277,6 +316,50 @@ export default function WorkspaceDetailPage() {
               currentUserId={user?.id ?? null}
             />
           </div>
+        )}
+
+        {activeTab === 'expectations' && (
+          <AnalyticalExpectationsPanel
+            engagementId={engagementId}
+            items={expectations}
+            isLoading={expectationsLoading}
+            onCreate={createExpectation}
+            onUpdate={updateExpectation}
+            onArchive={archiveExpectation}
+            onDownload={async () => {
+              if (!token) return;
+              const { blob, filename, ok } = await apiDownload(
+                `/engagements/${engagementId}/export/analytical-expectations`,
+                token,
+                { method: 'POST' },
+              );
+              if (ok && blob) {
+                downloadBlob(blob, filename ?? 'analytical_expectations.pdf');
+              }
+            }}
+          />
+        )}
+
+        {activeTab === 'sum' && (
+          <SumSchedulePanel
+            engagementId={engagementId}
+            schedule={sumSchedule}
+            isLoading={sumLoading}
+            onCreate={createMisstatement}
+            onUpdate={updateMisstatement}
+            onArchive={archiveMisstatement}
+            onDownload={async () => {
+              if (!token) return;
+              const { blob, filename, ok } = await apiDownload(
+                `/engagements/${engagementId}/export/sum-schedule`,
+                token,
+                { method: 'POST' },
+              );
+              if (ok && blob) {
+                downloadBlob(blob, filename ?? 'sum_schedule.pdf');
+              }
+            }}
+          />
         )}
 
         {activeTab === 'workpaper' && workpaperIndex && (

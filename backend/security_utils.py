@@ -254,7 +254,7 @@ def process_tb_chunked(
     if filename_lower.endswith(_NON_TABULAR_EXTS):
         # Lazy import to avoid a circular dependency between
         # security_utils and shared.helpers.
-        from shared.helpers import parse_uploaded_file_by_format
+        from shared.upload_pipeline import parse_uploaded_file_by_format
 
         try:
             columns, rows = parse_uploaded_file_by_format(file_bytes, filename)

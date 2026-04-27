@@ -282,6 +282,49 @@ class EngagementManager:
                         f"Cannot complete engagement: {unresolved} follow-up item(s) "
                         f"still have 'not_reviewed' disposition"
                     )
+
+                # Sprint 728a (ISA 520): conditional gate — if any analytical
+                # expectations exist for this engagement, all must be evaluated
+                # (status != NOT_EVALUATED) before the engagement can complete.
+                # Engagements that did no analytical procedures are unaffected.
+                from analytical_expectations_manager import AnalyticalExpectationsManager
+
+                unevaluated = AnalyticalExpectationsManager(self.db).count_unevaluated(engagement_id)
+                if unevaluated > 0:
+                    raise ValueError(
+                        f"Cannot complete engagement: {unevaluated} analytical "
+                        f"expectation(s) remain unevaluated (ISA 520)"
+                    )
+
+                # Sprint 729a (ISA 450): SUM gate — if any uncorrected
+                # misstatements exist, all must have a non-NOT_YET_REVIEWED
+                # disposition. Additionally, if the aggregate is in the
+                # MATERIAL bucket, completion requires a documented override
+                # (any item with cpa_notes set serves as the override record;
+                # the auditor decides which row carries the rationale).
+                from uncorrected_misstatements_manager import (
+                    UncorrectedMisstatementsManager,
+                )
+
+                um_mgr = UncorrectedMisstatementsManager(self.db)
+                unreviewed_sum = um_mgr.count_unreviewed(engagement_id)
+                if unreviewed_sum > 0:
+                    raise ValueError(
+                        f"Cannot complete engagement: {unreviewed_sum} "
+                        f"uncorrected misstatement(s) still have "
+                        f"'not_yet_reviewed' disposition (ISA 450)"
+                    )
+
+                if um_mgr.has_material_aggregate(engagement_id, user_id) and not um_mgr.has_documented_override(
+                    engagement_id
+                ):
+                    raise ValueError(
+                        "Cannot complete engagement: SUM aggregate exceeds "
+                        "overall materiality (MATERIAL bucket) and no item "
+                        "carries cpa_notes documenting the override rationale "
+                        "(ISA 450 §11)"
+                    )
+
                 engagement.completed_at = datetime.now(UTC)
                 engagement.completed_by = user_id
 
