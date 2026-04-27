@@ -387,12 +387,17 @@ class _FakeHeaders(dict):
 
 
 class _FakeRequest:
-    def __init__(self, method: str, path: str, headers: dict):
+    def __init__(self, method: str, path: str, headers: dict, cookies: dict | None = None):
         self.method = method
         self.headers = _FakeHeaders(headers)
         from types import SimpleNamespace
 
         self.url = SimpleNamespace(path=path)
+        # Sprint 718 added cookie-aware CSRF — the middleware reads
+        # request.cookies on the cookie-auth dispatch path. Default to an
+        # empty dict so existing call sites exercise the
+        # no-Authorization, no-cookie branch (no user_id binding required).
+        self.cookies = cookies or {}
 
 
 class TestCSRFOriginPolicy:
