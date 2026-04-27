@@ -179,7 +179,7 @@ Read-only inventory of `backend/database.py::init_db()` branches. Classify each 
 ---
 
 ### Sprint 737: `init_db()` Alembic consolidation (pre-4.1)
-**Status:** PENDING — pre-4.1 sequence position 1 (first of pre-4.1 batch). Gated only on Sprint 732 Step 2 not stealing capacity (independent code paths).
+**Status:** COMPLETE 2026-04-27. Verification gate passed (9-of-9 last deploys ran `alembic upgrade head`); 7 patch blocks deleted (`backend/database.py` 360→234 lines); CI drift test added at `backend/tests/test_alembic_models_parity.py`; CONTRIBUTING.md gained "Database Migrations" section. Drift test surfaced **pre-existing tech debt** (4 model-defined tables + 6 model-defined columns with no Alembic migration) — allow-listed in the test with explicit reasons + filed as Sprint 738 below for resolution. Allow-list is the *test passing today, full parity enforced as Sprint 738 closes each item out*.
 **Priority:** P3 (dead-code removal + drift detection). No customer-visible behavior change.
 **Source:** Sprint 736 inventory recommendation (b). Reverses the conservative (c) framing once Sprint 544c + Dockerfile evidence confirmed the in-process patches are dead code in production.
 
@@ -216,6 +216,39 @@ Consolidate database bootstrap behind Alembic-as-single-authority. Remove the 7 
 - New CI drift test passes on current main.
 - Production deploy after Sprint 737 lands shows the Dockerfile alembic step still runs (regression check on the verification gate's premise).
 - `init_db()` size drops to ~230 lines.
+
+---
+
+### Sprint 738: Alembic migration drift cleanup
+**Status:** PENDING — pre-4.1 sequence position 1.5 (immediately after Sprint 737, before Sprint 733). Could slip post-4.1 if priority shifts; not customer-visible either way.
+**Priority:** P3. Catches up on dormant tech debt surfaced by Sprint 737's drift test. Does not block any sprint.
+**Source:** Sprint 737's parity test (`backend/tests/test_alembic_models_parity.py`) discovered 4 tables and 6 columns defined on models with no corresponding Alembic migration. Filed as a follow-up sprint so Sprint 737 itself stayed in scope (delete dead code + add drift detection).
+
+Write Alembic migrations for the documented drift in `PRE_EXISTING_DRIFT_TABLES` and `PRE_EXISTING_DRIFT_COLUMNS`. As each migration lands, remove the corresponding entry from the allow-list. When both allow-lists are empty, the parity test enforces full Alembic-models equivalence going forward.
+
+**Tables needing CREATE TABLE migrations (4):**
+- `password_reset_tokens` — defined in `backend/models.py`
+- `processed_webhook_events` — defined in `backend/subscription_model.py`
+- `tool_activities` — defined in `backend/models.py`
+- `waitlist_signups` — defined in `backend/models.py`
+
+**Columns needing ADD COLUMN migrations (6):**
+- `engagements.completed_at` + `engagements.completed_by` — defined in `backend/engagement_model.py`
+- `diagnostic_summaries.ccc` + `dio` + `dpo` + `dso` (cash-conversion-cycle ratios) — defined in `backend/models.py`
+
+**Step 1 — production verification gate (FIRST, DO NOT SKIP):** Before writing any migration, query production Postgres via Render MCP `query_render_postgres` (or `psql` against `paciolus-api-db`) to confirm whether each of these 10 schema objects already exists in production. Three possible outcomes per object:
+1. **Object exists in production but not in Alembic** → write a migration whose `op.create_table` / `op.add_column` is wrapped in an existence check (or use Alembic's `op.execute` with `IF NOT EXISTS`) so it's idempotent on re-run. The migration's job is to bring Alembic's recorded history into sync with production reality, not to actually mutate production schema.
+2. **Object missing in production** → write a normal `op.create_table` / `op.add_column` migration; production gains the column on next deploy.
+3. **Object never accessed in production** (model is dead code) → consider removing the model definition instead of writing the migration. Verify via grep + Render request-log analysis.
+
+**Out of scope:**
+- No model-side changes (the models are the source of truth; Alembic catches up to them).
+- No removal of `Base.metadata.create_all()` from `init_db()` — it currently creates the 4 orphan tables on fresh DBs, and removing it before the migrations exist would break local dev / CI fixtures.
+
+**Verification:**
+- After Sprint 738 lands, `PRE_EXISTING_DRIFT_TABLES` and `PRE_EXISTING_DRIFT_COLUMNS` are both empty in `test_alembic_models_parity.py`.
+- Test still passes (full parity now enforced).
+- Production deploy logs after the migrations run show the relevant `op.create_table` / `op.add_column` log lines (or `already exists, skipping` for outcome (1) cases).
 
 ---
 
