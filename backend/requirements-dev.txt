@@ -10,7 +10,7 @@ psutil>=5.9.0
 httpx>=0.28.0
 
 # Linting
-ruff>=0.15.10
+ruff>=0.15.12
 
 # Type checking
 mypy>=1.20.1
