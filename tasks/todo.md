@@ -140,8 +140,15 @@ Architecture decision: **snapshot model.** Because `AdjustingEntry` is in-memory
 - Capture-helper buttons on AJE workflow + sampling tool (729c).
 
 #### Sprint 729b — Frontend
-**Status:** PENDING.
-**Scope:** SUM schedule page in engagement layer, three-variant capture form (AJE-passed / sample-projection / known-error), materiality bucket UI with `clay`/`sage` token treatment ("approaching material" → reduced-opacity `clay` per design-mandate constraint), disposition controls, PDF download, ~20–25 tests.
+**Status:** COMPLETE 2026-04-26.
+**Delivered:**
+- `frontend/src/types/uncorrected-misstatements.ts` — types + label maps + `BUCKET_TONE` mapping (sage / clay-soft / clay).
+- `frontend/src/hooks/useUncorrectedMisstatements.ts` — fetch SUM schedule + create/update/archive (mutations re-fetch the schedule so aggregate/bucket update live).
+- `frontend/src/components/engagement/SumSchedulePanel.tsx` — bucket box (color from `BUCKET_TONE`; MATERIAL warning copy when bucket is `material`), materiality cascade reference, per-row classification/source/description/F-S-impact display, disposition select, archive action, three-variant capture form with auto-classification helper (sample-projection → projected, AJE-passed → judgmental).
+- Workspace detail page now exposes a `sum` tab between `expectations` and `workpaper`; wires the hook + panel + PDF download.
+- `frontend/src/__tests__/SumSchedulePanel.test.tsx` — 8 component tests covering empty state, bucket-box label, MATERIAL warning, item rows, disposition mutation, archive, modal open, download disabled state.
+
+**Verification:** TypeScript typecheck clean, 8 component tests passing, `npm run build` succeeds.
 
 #### Sprint 729c — Capture helpers
 **Status:** PENDING.

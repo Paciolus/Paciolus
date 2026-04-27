@@ -10,3 +10,4 @@ export { EngagementBanner } from './EngagementBanner';
 export { ToolLinkToast } from './ToolLinkToast';
 export { ConvergenceTable } from './ConvergenceTable';
 export { AnalyticalExpectationsPanel } from './AnalyticalExpectationsPanel';
+export { SumSchedulePanel } from './SumSchedulePanel';
