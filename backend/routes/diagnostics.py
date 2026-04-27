@@ -22,6 +22,7 @@ from shared.filenames import (
     get_filename_display,
     hash_filename,
 )
+from shared.helpers import require_client_owner
 from shared.monetary import quantize_monetary
 from shared.rate_limits import RATE_LIMIT_WRITE, limiter
 
@@ -287,14 +288,12 @@ async def save_diagnostic_summary(
 
 @router.get("/diagnostics/summary/{client_id}/previous", response_model=Optional[DiagnosticSummaryResponse])
 async def get_previous_diagnostic_summary(
-    client_id: int, current_user: User = Depends(require_current_user), db: Session = Depends(get_db)
+    client_id: int,
+    current_user: User = Depends(require_current_user),
+    db: Session = Depends(get_db),
+    _client: Client = Depends(require_client_owner),
 ) -> DiagnosticSummaryResponse | None:
     """Get the most recent diagnostic summary for a client."""
-    client = db.query(Client).filter(Client.id == client_id, Client.user_id == current_user.id).first()
-
-    if not client:
-        raise HTTPException(status_code=404, detail="Client not found")
-
     summary = (
         db.query(DiagnosticSummary)
         .filter(
@@ -318,13 +317,9 @@ async def get_diagnostic_history(
     limit: int = Query(default=10, ge=1, le=50),
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
+    client: Client = Depends(require_client_owner),
 ) -> dict[str, object]:
     """Get diagnostic summary history for a client."""
-    client = db.query(Client).filter(Client.id == client_id, Client.user_id == current_user.id).first()
-
-    if not client:
-        raise HTTPException(status_code=404, detail="Client not found")
-
     summaries = (
         db.query(DiagnosticSummary)
         .filter(

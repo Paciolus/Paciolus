@@ -148,18 +148,45 @@ Cover:
 
 ---
 
-### Sprint 735: `require_client` adoption in diagnostics + trends routes
-**Status:** PENDING — pre-4.1 sequence position 3 (after Sprint 733). Gated only on Sprint 732 Step 2 not stealing capacity. Originally gated post-cutover; CEO blocker audit 2026-04-27 reclassified the "muddier incident triage during cutover window" concern as soft (change-management hygiene, not a technical dependency) and accepted the tradeoff. Diagnostics + trends are read-only endpoints — no money flows through them, so a latent issue is recoverable.
+### Sprint 735: `require_client_owner` adoption in diagnostics + trends + prior_period routes
+**Status:** COMPLETE 2026-04-27. **Path B chosen:** added stricter `require_client_owner` dependency that enforces direct-ownership only (no org-scoped sharing) and adopted it across 7 endpoints. Path A would have silently broadened authorization to org members on diagnostic outputs — a real behavior change Codex's "syntax cleanup" framing assumed away. Path B preserves current semantics exactly and pins the contract with new tests so a future "let's just merge the helpers" attempt fails loudly.
 **Priority:** P3.
-**Source:** Refactor pass 2026-04-27.
+**Source:** Refactor pass 2026-04-27. Path B decision documented in conversation transcript and `shared/helpers.py::require_client_owner` docstring.
 
-Adopt the existing `require_client` dependency at call sites in `backend/routes/diagnostics.py` and `backend/routes/trends.py` (and any sibling routes with the same `Client.id == ... user_id == ...` boilerplate). Reduces duplicated query-then-404 patterns at call sites only.
+**Pre-flight call-site map (gap analysis, 2026-04-27):**
+8 candidate endpoints surfaced across 3 files via `Client.id == ... user_id == ...` grep. 7 are GET/POST path-parameter endpoints fitting `require_client_owner`'s `PathParam` shape. The 8th (`diagnostics.py:213::save_diagnostic_summary`) takes `client_id` from request body — out of scope until/unless the request signature is reshaped.
 
-**Constraint:** Use the existing helper in-place. Do **not** move `require_client` / `get_accessible_client` / `is_authorized_for_client` out of `backend/shared/helpers.py` — that move is explicitly rejected in Deferred Items (line 56), and remains rejected unless module scope grows beyond three helpers.
+**Critical decision point surfaced:** `require_client` calls `get_accessible_client` → `is_authorized_for_client` which OR-checks org membership. `clients.py` and `settings.py` already use `require_client` (org-scoped). The 7 candidate endpoints currently use direct-only inline queries. Adopting `require_client` uniformly = behavior change (org members gain access to teammate diagnostic outputs). CEO chose **Path B**: add `require_client_owner` that preserves direct-only behavior. Rationale: behavior change in production should not be an accidental side effect of a refactor sprint; if org-scope policy is later opened to diagnostic outputs, it should be a separate sprint with explicit customer comms.
 
-Add regression tests for tenant isolation + 404 vs 403 response shape parity.
+**What landed:**
 
-**Verification:** No change to any response code, header, or body shape; tenant-isolation tests still pass.
+1. **New helper** `backend/shared/helpers.py::require_client_owner` — direct-ownership-only FastAPI dependency. Docstring documents the Sprint 735 decision and the explicit boundary against `require_client`.
+
+2. **Adopted in 7 endpoints across 3 files:**
+   - `backend/routes/diagnostics.py` — `get_previous_diagnostic_summary` (GET), `get_diagnostic_history` (GET).
+   - `backend/routes/trends.py` — `get_client_trends` (GET), `get_client_industry_ratios` (GET), `get_client_rolling_analysis` (GET).
+   - `backend/routes/prior_period.py` — `save_prior_period` (POST), `list_prior_periods` (GET).
+   - Each endpoint replaced its inline `db.query(Client).filter(Client.id == ..., Client.user_id == current_user.id).first() / if not client: raise 404` block with a `Depends(require_client_owner)` parameter. Endpoints that consumed the `client` object downstream (e.g., for `client.name` in responses) keep the named binding; endpoints that only needed the existence check use `_client` to mark intent.
+
+3. **Contract test** `backend/tests/test_sprint_735_require_client_owner.py` (4 tests):
+   - Direct owner gets the client.
+   - Unrelated user → 404.
+   - **Org teammate of owner → 404** (the key Sprint 735 contract; pinned so a future helper merge fails loudly).
+   - Companion: `require_client` (the existing helper) DOES grant org teammate access, confirming the behavioral split is intentional.
+
+4. **Sprint 724 helper-count tracking** updated in `test_refactor_2026_04_20.py::test_json_form_and_client_access_symbols` to include `require_client_owner`.
+
+**Why a fourth helper despite the "prefer moving code, avoid new abstractions" rule:** The rule's escape valve (`tasks/todo.md` 2026-04-20 deferred-items entry) is "revisit only if a fourth helper joins them." This is that fourth helper. The alternative was a hidden behavior change in 7 endpoints. Documented in the helper's docstring so the next reviewer doesn't try to consolidate it back.
+
+**Verification:**
+- 386 existing tests passing across diagnostic / trend / prior_period / industry test selection (no regression).
+- 4/4 new contract tests passing.
+- No change to any response code, header, or body shape.
+- Authorization semantics preserved exactly: direct owner gets 200, all other users (including org teammates) get 404, identical to the inline-query behavior the endpoints had before.
+
+**Out of scope:**
+- `diagnostics.py:213::save_diagnostic_summary` (client_id from body) — out of scope; would require reshaping the request payload to put client_id in the path. File a separate sprint if appetite emerges.
+- Org-scope policy decision for diagnostic outputs — explicitly NOT decided in Sprint 735. If product wants teammates to see each other's diagnostic outputs, file a separate sprint with explicit framing + customer comms.
 
 ---
 

@@ -20,6 +20,7 @@ from database import get_db
 from models import Client, DiagnosticSummary, PeriodType, User
 from prior_period_comparison import compare_periods
 from shared.diagnostic_response_schemas import PeriodComparisonResponse
+from shared.helpers import require_client_owner
 from shared.rate_limits import RATE_LIMIT_AUDIT, RATE_LIMIT_WRITE, limiter
 
 router = APIRouter(tags=["prior_period"])
@@ -125,14 +126,10 @@ async def save_prior_period(
     period_data: PeriodSaveRequest,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
+    _client: Client = Depends(require_client_owner),
 ) -> dict[str, object]:
     """Save current audit data as a prior period for future comparison."""
     log_secure_operation("save_period", f"User {current_user.id} saving period for client {client_id}")
-
-    client = db.query(Client).filter(Client.id == client_id, Client.user_id == current_user.id).first()
-
-    if not client:
-        raise HTTPException(status_code=404, detail="Client not found")
 
     db_summary = DiagnosticSummary(
         client_id=client_id,
@@ -193,14 +190,10 @@ async def list_prior_periods(
     limit: int = Query(default=20, ge=1, le=100),
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
+    _client: Client = Depends(require_client_owner),
 ) -> list[PeriodListItemResponse]:
     """List saved prior periods for a client."""
     log_secure_operation("list_periods", f"User {current_user.id} listing periods for client {client_id}")
-
-    client = db.query(Client).filter(Client.id == client_id, Client.user_id == current_user.id).first()
-
-    if not client:
-        raise HTTPException(status_code=404, detail="Client not found")
 
     periods = (
         db.query(DiagnosticSummary)
