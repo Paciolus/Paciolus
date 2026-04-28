@@ -574,8 +574,14 @@ def _prod_env(**extra: str) -> dict:
         # import guard; no outbound call is made from this subprocess
         # boot. Use a non-Stripe-prefix placeholder so the pre-commit
         # secrets scanner (which flags any Stripe-prefix string) doesn't
-        # false-positive on this test fixture.
+        # false-positive on this test fixture. The publishable / webhook
+        # placeholders must also be set explicitly: when the subprocess
+        # env is missing them, python-dotenv backfills from backend/.env
+        # (which holds developer test-mode Stripe keys), tripping the
+        # Sprint 719 production format guard in config.py.
         "STRIPE_SECRET_KEY": "placeholder-non-stripe-format",
+        "STRIPE_PUBLISHABLE_KEY": "placeholder-non-stripe-format",
+        "STRIPE_WEBHOOK_SECRET": "placeholder-non-whsec-format",
         "SENDGRID_API_KEY": "SG.test",
         "SEAT_ENFORCEMENT_MODE": "hard",
         "ENTITLEMENT_ENFORCEMENT": "hard",
