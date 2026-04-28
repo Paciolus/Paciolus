@@ -86,10 +86,11 @@ Both jobs fire roughly every hour; each invocation completes in 30–80ms with `
 - `_run_cleanup_job` populates `error_type_fqn` from `caught_exc` so the structured log carries the disambiguating fingerprint without leaking exception messages.
 - `tests/test_cleanup_scheduler.py::test_failure_log_includes_traceback_exc_info` extended to assert `error_type_fqn` appears with the FQN (`builtins.RuntimeError` for the test's deliberate `RuntimeError`). 28/28 cleanup-scheduler tests passing.
 
-**Step 2 — Root cause investigation (NEXT):**
-- After this commit lands on Render and the next 1–2 cleanup cycles fire, pull Render logs filtered to `error_type_fqn` and read the qualified class name.
-- Cross-check with Sentry (the wrapper already calls `sentry_sdk.capture_exception(exc)`; we should already have the full traceback there for the past 48h's worth of failures).
-- Most likely candidates given the 30–80ms latency + 0 records processed: SQLAlchemy session/connection-pool issue (e.g., `sqlalchemy.exc.InternalError` wrapping a `psycopg2.OperationalError`), or a Postgres SSL handshake failure (Sentry shows recurring `SSLEOFError` on `urllib3.connectionpool` in the same window — possibly the same root).
+**Step 2 — Root cause investigation (IN PROGRESS):**
+- Sub-step 2a (DONE 2026-04-27 17:14 UTC): Pulled Render logs filtered to `error_type_fqn` after Step 1's deploy (`dep-d7nom57avr4c73fgn9ig`, live 16:14:41 UTC). **Result: `sqlalchemy.exc.InternalError` on both jobs** (`reset_upload_quotas` + `dunning_grace_period`, both at 17:14 UTC). This is the SQLAlchemy wrapper — the leaf cause sits one level deeper inside `caught_exc.__cause__` / `caught_exc.orig`. Pre-deploy logs (13:01–16:04 UTC, 6 cleanup cycles) lack the field as expected.
+- Sub-step 2b (DONE 2026-04-27): Extend cleanup_scheduler observability to also capture `__cause__` (raise-from chain), `.orig` (SQLAlchemy DBAPIError attribute holding the wrapped psycopg2 exception), and `orig.pgcode` (Postgres SQLSTATE — standardized 5-char code, no PII). Lands the leaf class + SQL error condition in the next cleanup cycle's logs without another debugging deploy round-trip. `CleanupTelemetry` gains 3 fields (`error_cause_fqn`, `error_orig_fqn`, `error_orig_pgcode`); `_run_cleanup_job` extracts them from `caught_exc`; `test_failure_log_captures_wrapped_cause_and_orig` synthesizes a SQLAlchemy DBAPIError-shaped exception and asserts all three surface. 29/29 cleanup-scheduler tests passing.
+- Sub-step 2c (NEXT, ~30 min post-deploy of Step 2b): Pull cleanup logs after Step 2b lands; read `error_orig_fqn` + `error_orig_pgcode`. Most likely candidates given the 30–80ms latency + 0 records processed and the SQLAlchemy wrapper: `psycopg2.OperationalError` with pgcode `08006` (connection_failure) — matches Sentry's recurring `SSLEOFError` signal — or `psycopg2.errors.SerializationFailure` / `InFailedSqlTransaction`.
+- Sub-step 2d: Cross-check with Sentry (the wrapper already calls `sentry_sdk.capture_exception(exc)`; full tracebacks should be there for the past 48h's worth of failures).
 
 **Step 3 — Fix + coverage (AFTER step 2):**
 - Land the underlying fix per the unwrapped class.
@@ -99,6 +100,155 @@ Both jobs fire roughly every hour; each invocation completes in 30–80ms with `
 **Effort estimate:** 0.5 sprint for step 1 (DONE), 0.5–1 sprint for step 2+3 depending on what the unwrapped error reveals. Total ≤1.5 sprints.
 
 **Pre-requisites:** Step 1 deployed to Render — triggers automatically on PR merge to main.
+
+---
+
+### Sprint 733: Stripe webhook unit-coverage gap fill (pre-cutover)
+**Status:** PENDING — pre-4.1 sequence position 2 (after Sprint 737). Gated only on Sprint 732 Step 2 not stealing capacity (independent code paths).
+**Priority:** P2 → bumps to P1 the moment Phase 4.1 cutover schedule firms up. **Must land BEFORE Phase 4.1 (`sk_live_` keys)** — adds the safety net around the handler about to begin processing live revenue.
+**Source:** Refactor pass 2026-04-27 (Codex directive, scope-revised after Sprint 710/724 + `## Deferred Items` reconciliation).
+
+Add focused unit tests around `routes/billing.py::stripe_webhook` for the four boundaries currently exercised only at route level:
+- missing `Stripe-Signature` header → 400
+- invalid signature (forged HMAC) → 400
+- duplicate event-id claim path → 200, no double-processing
+- downstream operational failure (DB error mid-processing) → 500
+
+Existing route-level tests (`test_billing_webhooks_routes.py`, `test_webhook_event_ordering.py`, `test_billing_routes.py`) remain untouched.
+
+**Out of scope (per Deferred Items policy, line 54):** No handler decomposition. The signature-verify / dedup-claim / error-mapping triad stays in-route until bundled with the deferred webhook-coverage sprint flagged in Sprint 676.
+
+**Verification:** All new tests green; existing 3 webhook test files unchanged; no behavioral change on `/billing/webhook`.
+
+---
+
+### Sprint 734: Playwright mapping-required upload flow coverage
+**Status:** PENDING — pre-4.1 sequence position 4 (last of pre-4.1 batch). Gated only on Sprint 732 Step 2 not stealing capacity. Originally gated post-cutover by analogy with Codex's grouping; CEO blocker audit 2026-04-27 found no real dependency on 732/4.1 close (pure additive frontend test, zero production code change, Playwright already configured).
+**Priority:** P3.
+**Source:** Refactor pass 2026-04-27. Prerequisite for the deferred `useTrialBalanceUpload` decomposition (Deferred Items, line 55).
+
+Add E2E coverage for the mapping-required preflight handoff in Trial Balance upload. **Playwright already configured** (`frontend/playwright.config.ts`, `@playwright/test ^1.59.0`, existing `frontend/e2e/smoke.spec.ts`) — this sprint writes the spec, not the harness.
+
+Cover:
+- mapping-required preflight detection (incomplete header set)
+- mapping modal render + user mapping submission
+- handoff back to upload pipeline + rerun behavior
+- success path assertions (recalc fires once, not twice; no debounce-induced duplicate runs)
+- no regression in existing debounce/recalc UX contract
+
+**Out of scope (per Deferred Items policy, line 55):** No decomposition of `useTrialBalanceUpload`. This sprint exists to *enable* a future decomposition sprint by closing the coverage gap that currently makes the split unsafe.
+
+**Verification:** New Playwright spec passes locally + in CI; existing `smoke.spec.ts` unaffected.
+
+---
+
+### Sprint 735: `require_client` adoption in diagnostics + trends routes
+**Status:** PENDING — pre-4.1 sequence position 3 (after Sprint 733). Gated only on Sprint 732 Step 2 not stealing capacity. Originally gated post-cutover; CEO blocker audit 2026-04-27 reclassified the "muddier incident triage during cutover window" concern as soft (change-management hygiene, not a technical dependency) and accepted the tradeoff. Diagnostics + trends are read-only endpoints — no money flows through them, so a latent issue is recoverable.
+**Priority:** P3.
+**Source:** Refactor pass 2026-04-27.
+
+Adopt the existing `require_client` dependency at call sites in `backend/routes/diagnostics.py` and `backend/routes/trends.py` (and any sibling routes with the same `Client.id == ... user_id == ...` boilerplate). Reduces duplicated query-then-404 patterns at call sites only.
+
+**Constraint:** Use the existing helper in-place. Do **not** move `require_client` / `get_accessible_client` / `is_authorized_for_client` out of `backend/shared/helpers.py` — that move is explicitly rejected in Deferred Items (line 56), and remains rejected unless module scope grows beyond three helpers.
+
+Add regression tests for tenant isolation + 404 vs 403 response shape parity.
+
+**Verification:** No change to any response code, header, or body shape; tenant-isolation tests still pass.
+
+---
+
+### Sprint 736: `init_db()` schema-patch inventory (read-only research)
+**Status:** COMPLETE 2026-04-27 — deliverable landed at `docs/03-engineering/init-db-inventory.md`. Recommendation: **(b) consolidate behind Alembic-only**, executed via Sprint 737 below. 7 of 10 branches classified `migration-disguised-as-init`; all are dead code in production today (Sprint 544c wired `alembic upgrade head` into Dockerfile CMD) and in CI (`conftest.py` uses `create_all()`). Patches only fire on a stale local dev SQLite path that bypasses both. CEO authorized pre-4.1 execution after blocker audit found no legitimate technical dependencies.
+**Priority:** P3 (research-only).
+**Source:** Refactor pass 2026-04-27, scope-narrowed from Codex's "startup-path safety hardening" directive after evidence the directive was overscoped.
+
+Read-only inventory of `backend/database.py::init_db()` branches. Classify each as:
+- `idempotent-init` (legitimate startup)
+- `schema-patch` (ALTER TABLE / ADD COLUMN against existing tables)
+- `migration-disguised-as-init` (schema-patch that references a specific Alembic revision and exists because Alembic isn't running on startup)
+
+**Deliverable:** `docs/03-engineering/init-db-inventory.md` — classification table, references to the Alembic revisions involved, cost/risk profile, and a recommendation choosing exactly one of:
+- (a) keep current dual-path (Alembic + in-process patcher),
+- (b) consolidate behind Alembic-only with a startup migration-version assertion,
+- (c) leave alone with documented rationale.
+
+**Out of scope (per "prefer moving code, avoid new abstractions" rule):** No code changes. No structural rewrite of DB bootstrap. No migration-policy decision in this sprint — the inventory is the deliverable; the policy decision is a follow-up sprint if appetite emerges.
+
+**Verification:** Doc exists, classification covers every branch in `init_db()`, recommendation is one of (a)/(b)/(c) with explicit reopen criteria.
+
+---
+
+### Sprint 737: `init_db()` Alembic consolidation (pre-4.1)
+**Status:** COMPLETE 2026-04-27. Verification gate passed (9-of-9 last deploys ran `alembic upgrade head`); 7 patch blocks deleted (`backend/database.py` 360→234 lines); CI drift test added at `backend/tests/test_alembic_models_parity.py`; CONTRIBUTING.md gained "Database Migrations" section. Drift test surfaced **pre-existing tech debt** (4 model-defined tables + 6 model-defined columns with no Alembic migration) — allow-listed in the test with explicit reasons + filed as Sprint 738 below for resolution. Allow-list is the *test passing today, full parity enforced as Sprint 738 closes each item out*.
+**Priority:** P3 (dead-code removal + drift detection). No customer-visible behavior change.
+**Source:** Sprint 736 inventory recommendation (b). Reverses the conservative (c) framing once Sprint 544c + Dockerfile evidence confirmed the in-process patches are dead code in production.
+
+Consolidate database bootstrap behind Alembic-as-single-authority. Remove the 7 schema-patch blocks at `backend/database.py:148–278` that exist as a stale-dev-DB safety net but are dead code in production (Dockerfile CMD runs `alembic upgrade head` on every deploy per Sprint 544c) and in tests (`conftest.py` uses `Base.metadata.create_all()`).
+
+**Step 1 (verification gate, FIRST — DO NOT SKIP):**
+- Pull last 3 Render deploys' startup logs (service `srv-d6ie9l56ubrc73c7eq2g`).
+- Confirm each shows the Dockerfile CMD's `Running: alembic upgrade head` (or `Running: alembic stamp head` for fresh DBs) before gunicorn starts.
+- If yes → proceed to Step 2.
+- If no → STOP. Sprint 737 pivots to "restore alembic-on-deploy" before any deletion.
+
+**Step 2 (deletion):**
+- Delete the 7 patch blocks in `init_db()` (lines 148–278 of `backend/database.py`, ~130 lines).
+- Keep model imports + `Base.metadata.create_all()` (idempotent table creation for fresh DBs — still legitimate).
+- Keep TLS verification + version logging (load-bearing startup health check).
+- Keep completion log marker.
+- Post-deletion `database.py` size estimate: ~230 lines (down from 360).
+
+**Step 3 (drift detection):**
+- Add CI test: `alembic upgrade head` against fresh in-memory SQLite produces a schema matching `Base.metadata.create_all()` against the same fresh in-memory SQLite. Compare table set + column set per table via `sqlalchemy.inspect()`.
+- Catches "developer added a model column without an Alembic migration" — the only real future risk this consolidation creates.
+
+**Step 4 (documentation):**
+- Add note to `CONTRIBUTING.md` (or equivalent dev setup doc): "After pulling, run `python -m alembic upgrade head` if you have a local SQLite file from before the pulled changes. The in-process auto-patch was removed in Sprint 737."
+- Update `docs/03-engineering/init-db-inventory.md` to record Sprint 737 outcome (which subset shipped, any deviations from plan).
+
+**Out of scope:**
+- No startup migration-version assertion. Dockerfile already fail-closes on alembic failure (emergency-playbook §4); a runtime assertion would duplicate that mode and add operational complexity for marginal benefit.
+- No changes to existing Alembic migrations.
+- No changes to `conftest.py`. The new CI drift test guarantees Alembic-vs-models parity.
+
+**Verification:**
+- All existing tests green (backend `pytest` + frontend `jest`).
+- New CI drift test passes on current main.
+- Production deploy after Sprint 737 lands shows the Dockerfile alembic step still runs (regression check on the verification gate's premise).
+- `init_db()` size drops to ~230 lines.
+
+---
+
+### Sprint 738: Alembic migration drift cleanup
+**Status:** PENDING — pre-4.1 sequence position 1.5 (immediately after Sprint 737, before Sprint 733). Could slip post-4.1 if priority shifts; not customer-visible either way.
+**Priority:** P3. Catches up on dormant tech debt surfaced by Sprint 737's drift test. Does not block any sprint.
+**Source:** Sprint 737's parity test (`backend/tests/test_alembic_models_parity.py`) discovered 4 tables and 6 columns defined on models with no corresponding Alembic migration. Filed as a follow-up sprint so Sprint 737 itself stayed in scope (delete dead code + add drift detection).
+
+Write Alembic migrations for the documented drift in `PRE_EXISTING_DRIFT_TABLES` and `PRE_EXISTING_DRIFT_COLUMNS`. As each migration lands, remove the corresponding entry from the allow-list. When both allow-lists are empty, the parity test enforces full Alembic-models equivalence going forward.
+
+**Tables needing CREATE TABLE migrations (4):**
+- `password_reset_tokens` — defined in `backend/models.py`
+- `processed_webhook_events` — defined in `backend/subscription_model.py`
+- `tool_activities` — defined in `backend/models.py`
+- `waitlist_signups` — defined in `backend/models.py`
+
+**Columns needing ADD COLUMN migrations (6):**
+- `engagements.completed_at` + `engagements.completed_by` — defined in `backend/engagement_model.py`
+- `diagnostic_summaries.ccc` + `dio` + `dpo` + `dso` (cash-conversion-cycle ratios) — defined in `backend/models.py`
+
+**Step 1 — production verification gate (FIRST, DO NOT SKIP):** Before writing any migration, query production Postgres via Render MCP `query_render_postgres` (or `psql` against `paciolus-api-db`) to confirm whether each of these 10 schema objects already exists in production. Three possible outcomes per object:
+1. **Object exists in production but not in Alembic** → write a migration whose `op.create_table` / `op.add_column` is wrapped in an existence check (or use Alembic's `op.execute` with `IF NOT EXISTS`) so it's idempotent on re-run. The migration's job is to bring Alembic's recorded history into sync with production reality, not to actually mutate production schema.
+2. **Object missing in production** → write a normal `op.create_table` / `op.add_column` migration; production gains the column on next deploy.
+3. **Object never accessed in production** (model is dead code) → consider removing the model definition instead of writing the migration. Verify via grep + Render request-log analysis.
+
+**Out of scope:**
+- No model-side changes (the models are the source of truth; Alembic catches up to them).
+- No removal of `Base.metadata.create_all()` from `init_db()` — it currently creates the 4 orphan tables on fresh DBs, and removing it before the migrations exist would break local dev / CI fixtures.
+
+**Verification:**
+- After Sprint 738 lands, `PRE_EXISTING_DRIFT_TABLES` and `PRE_EXISTING_DRIFT_COLUMNS` are both empty in `test_alembic_models_parity.py`.
+- Test still passes (full parity now enforced).
+- Production deploy logs after the migrations run show the relevant `op.create_table` / `op.add_column` log lines (or `already exists, skipping` for outcome (1) cases).
 
 ---
 

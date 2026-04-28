@@ -4,6 +4,20 @@
 
 ---
 
+## Verify the safety net is actually firing before recommending "leave alone" (Sprint 736)
+
+CEO asked for a comprehensive backend/frontend refactor pass authored by Codex. I correctly surfaced the directive's conflicts with the Deferred Items table (Sprint 710 had already done much of it; four targets were explicitly deferred or rejected with reasons). For the one piece I scoped into a research sprint — `init_db()`'s 7 in-process schema-patch blocks — I produced an inventory and recommended option **(c) "leave alone, document the contract"**. My rationale leaned on "consolidating to Alembic-only would create a new fail-closed mode that needs runbook coverage" — i.e., the patches are a real safety net we'd be removing.
+
+CEO pushed back with one sentence: "what do you mean cost vs pain, I'd rather just do this right and have it fixed." That forced me to verify the premise instead of paraphrase it. One grep for `alembic upgrade` and one read of `backend/Dockerfile` later, the picture flipped: Sprint 544c had already wired `alembic upgrade head` into the Dockerfile CMD. By the time `init_db()` runs in production, schema is at head. `conftest.py` uses `Base.metadata.create_all()` against current models, which produces current schema directly. The patches don't fire on the production path or the test path. They are not a safety net I was about to remove — they are ~130 lines of dead code I was about to recommend keeping. The "operational coverage for a new fail-closed mode" cost I cited was for a fail-closed mode that already existed and was already documented in `docs/runbooks/emergency-playbook.md` §4.
+
+The recommendation flipped from (c) to (b) and Sprint 737 was added to execute the consolidation pre-4.1. CEO's pushback wasn't preference — it was correct on the merits, and I would not have caught it without being asked.
+
+**Pattern:** Whenever a recommendation reduces to "leave the safety net in place," the *next sentence* in the analysis must be evidence that the safety net is currently firing — not "it's there if needed" but actually *firing*, in the actual deploy or test path, on the current schedule. Cheap probes: `grep` for the invocation in Dockerfile/Procfile/start scripts; check `conftest.py` for which init path tests use; read the last N production startup logs for the safety net's signature. If the safety net hasn't fired in months and would only fire on a hypothetical, it isn't a safety net — it's dead code wearing a costume, and "leave alone" defaults to keeping the costume.
+
+**Companion pattern:** When the CEO pushes back on a defensive framing ("cost vs pain", "blast radius", "muddier triage"), treat it as a request to re-derive the cost from evidence rather than restate the framing. The pushback is doing free QA on the rigor of the recommendation; either the recommendation survives the rederivation (and gets stronger), or it flips (and the team avoids a wrong call). The 2026-04-27 Codex-directive triage is the cleanest in-repo example: pushback caught both the framing weakness AND a years-old dead-code path that would otherwise have shipped Sprint 737 too late or not at all.
+
+---
+
 ## Log-emission tests must inspect message content, not just count records (Sprint 715)
 
 Sprint 713 added a SendGrid-403 warn-path: catch `SendGridHTTPError`, return `EmailResult(success=False, message="Email delivery failed (SendGrid 403).")`, let `safe_background_email` log a `WARNING`. The accompanying test (`test_background_email_logs_warning_not_error_on_failure`) asserted `len(warning_records) >= 1` and `error_records == []` — and stopped there. It never read the warning's `getMessage()`. The wrapper had a typo (`getattr(result, "error", "unknown")` against an `EmailResult` whose attribute is `message`), so every production warning would have read `Background register_verification send failed: unknown` — useless for the very investigation Sprint 715 was scheduled to perform 24h later. The bug only surfaced because Sprint 715 traced the emission chain end-to-end before reading logs; if 403s had been frequent, we'd have stared at "unknown" for weeks.

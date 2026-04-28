@@ -82,6 +82,17 @@ class CleanupTelemetry:
     # ``InternalError`` types. The FQN is module-path metadata, not a
     # message, so it carries no PII risk.
     error_type_fqn: str | None = field(default=None)
+    # Sprint 732 follow-up: ``error_type_fqn`` resolved the ambiguity to
+    # ``sqlalchemy.exc.InternalError`` but that's the SQLAlchemy wrapper.
+    # The actual leaf cause lives in ``caught_exc.__cause__`` (explicit
+    # ``raise X from Y`` chain) and ``caught_exc.orig`` (SQLAlchemy
+    # DBAPIError attribute holding the wrapped psycopg2 exception). For
+    # psycopg2 errors, ``orig.pgcode`` is the Postgres SQLSTATE
+    # (e.g. ``08006`` connection_failure, ``57P01`` admin_shutdown) —
+    # standardized error codes, no PII.
+    error_cause_fqn: str | None = field(default=None)
+    error_orig_fqn: str | None = field(default=None)
+    error_orig_pgcode: str | None = field(default=None)
 
     def to_log_dict(self) -> dict:
         """Return a dict suitable for structured logging."""
@@ -96,6 +107,12 @@ class CleanupTelemetry:
             d["error"] = self.error
         if self.error_type_fqn is not None:
             d["error_type_fqn"] = self.error_type_fqn
+        if self.error_cause_fqn is not None:
+            d["error_cause_fqn"] = self.error_cause_fqn
+        if self.error_orig_fqn is not None:
+            d["error_orig_fqn"] = self.error_orig_fqn
+        if self.error_orig_pgcode is not None:
+            d["error_orig_pgcode"] = self.error_orig_pgcode
         return d
 
 
@@ -232,9 +249,25 @@ def _run_cleanup_job(
     _last_run_times[job_name] = started_at
 
     error_type_fqn: str | None = None
+    error_cause_fqn: str | None = None
+    error_orig_fqn: str | None = None
+    error_orig_pgcode: str | None = None
     if caught_exc is not None:
         # e.g. "sqlalchemy.exc.InternalError" or "psycopg2.errors.SerializationFailure"
         error_type_fqn = f"{type(caught_exc).__module__}.{type(caught_exc).__name__}"
+        cause = caught_exc.__cause__
+        if cause is not None:
+            error_cause_fqn = f"{type(cause).__module__}.{type(cause).__name__}"
+        # SQLAlchemy DBAPIError exposes `.orig` with the wrapped DBAPI exception
+        # (typically a psycopg2 error). For our Neon pooler failures this is the
+        # leaf class — the most diagnostic single field we can capture without
+        # leaking the exception message.
+        orig = getattr(caught_exc, "orig", None)
+        if orig is not None:
+            error_orig_fqn = f"{type(orig).__module__}.{type(orig).__name__}"
+            pgcode = getattr(orig, "pgcode", None)
+            if pgcode:
+                error_orig_pgcode = str(pgcode)
 
     telemetry = CleanupTelemetry(
         job_name=job_name,
@@ -243,6 +276,9 @@ def _run_cleanup_job(
         records_processed=records_processed,
         error=error_msg,
         error_type_fqn=error_type_fqn,
+        error_cause_fqn=error_cause_fqn,
+        error_orig_fqn=error_orig_fqn,
+        error_orig_pgcode=error_orig_pgcode,
     )
 
     if error_msg:

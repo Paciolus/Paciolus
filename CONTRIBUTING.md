@@ -165,6 +165,46 @@ Once all committers have registered their GPG keys, **"Require signed commits"**
 
 ---
 
+## Database Migrations (Sprint 737)
+
+Alembic is the **single authority** for schema evolution. Sprint 737
+removed the in-process `init_db()` schema-patch fallback that previously
+auto-healed missing columns. Production deploys still run
+`alembic upgrade head` via the Dockerfile `CMD` before gunicorn starts,
+but local development now requires the migration step explicitly.
+
+**After pulling changes:** if you have a local SQLite file (e.g.,
+`backend/dev.db`), run:
+
+```bash
+cd backend
+python -m alembic upgrade head
+```
+
+If you skip this, your local database may lack columns that newer code
+expects, producing confusing "no such column" errors at request time.
+
+**When adding a new column to a model:**
+
+1. Add the column to the SQLAlchemy model.
+2. Generate a migration: `python -m alembic revision --autogenerate -m "<description>"`.
+3. Read the generated migration carefully — autogenerate is a hint, not
+   a guarantee, and SQLite's `render_as_batch=True` mode generates
+   different DDL than vanilla Postgres `ALTER TABLE`.
+4. Run `python -m alembic upgrade head` to apply it locally.
+5. The CI test `tests/test_alembic_models_parity.py` will fail if you
+   skip step 2 — it asserts that `alembic upgrade head` produces the
+   same schema as `Base.metadata.create_all()`.
+
+**Drift exceptions:** A small number of tables and columns are
+documented as pre-existing drift (model exists, no migration). See
+`PRE_EXISTING_DRIFT_TABLES` and `PRE_EXISTING_DRIFT_COLUMNS` in
+`backend/tests/test_alembic_models_parity.py`. Sprint 738 will close
+these out; new drift should be fixed at write time, not added to the
+allow-list.
+
+---
+
 ## Anomaly-Framework Generator ↔ Engine Contracts (Sprint 700)
 
 The testing-tool anomaly framework (`backend/tests/anomaly_framework/`)
