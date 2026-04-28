@@ -57,6 +57,16 @@ def _alembic_upgrade_head(db_url: str) -> None:
         # /app == backend/). Tests run from the repo root, so resolve the
         # script_location to an absolute path so the test is cwd-independent.
         cfg.set_main_option("script_location", str(_BACKEND_ROOT / "migrations" / "alembic"))
+        # CRITICAL: skip env.py's `fileConfig(config.config_file_name)` call —
+        # it has `disable_existing_loggers=True` by default and wipes pytest's
+        # caplog handler for every subsequent test in the same process. Setting
+        # `config_file_name = None` makes env.py's `if config.config_file_name
+        # is not None: fileConfig(...)` branch a no-op while preserving everything
+        # else loaded from alembic.ini at Config init time (sections, etc.).
+        # Without this guard, ~16 tests across 7 files fail with empty caplog
+        # text after this drift test runs — see the CI failures on the original
+        # Sprint 737 commit (af00a7ce) for the full list.
+        cfg.config_file_name = None
         # env.py is reloaded by alembic on each command invocation, so the
         # monkeypatch above will be visible to the `from config import
         # DATABASE_URL` line in env.py.
