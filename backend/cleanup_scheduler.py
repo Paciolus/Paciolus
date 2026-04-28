@@ -387,30 +387,6 @@ def _job_expired_export_shares() -> None:
     _run_cleanup_job("expired_export_shares", purge_expired_export_shares)
 
 
-def _job_bulk_upload_cleanup() -> None:
-    """Evict stale in-memory bulk upload jobs (2h TTL + hard cap).
-
-    AUDIT-06 FIX 3: DB-locked to prevent multi-worker duplication.
-    """
-    from database import SessionLocal
-
-    db = SessionLocal()
-    try:
-        with with_scheduler_lock("bulk_upload_cleanup", db) as acquired:
-            if not acquired:
-                return
-
-            from routes.bulk_upload import _evict_stale_jobs
-
-            _evict_stale_jobs()
-    except Exception as exc:
-        from shared.log_sanitizer import sanitize_exception
-
-        logger.error("Bulk upload cleanup failed: %s", sanitize_exception(exc, context="bulk upload cleanup"))
-    finally:
-        db.close()
-
-
 def _job_team_activity_cleanup() -> None:
     """Purge team activity logs older than 90 days."""
 
@@ -632,13 +608,6 @@ def init_scheduler() -> None:
         hours=24,
         id="team_activity_cleanup",
         jitter=120,
-    )
-    _scheduler.add_job(
-        _job_bulk_upload_cleanup,
-        "interval",
-        minutes=30,
-        id="bulk_upload_cleanup",
-        jitter=30,
     )
     _scheduler.add_job(
         _job_expired_upload_dedup,
