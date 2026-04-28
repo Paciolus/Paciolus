@@ -1,0 +1,25 @@
+{
+  "agent": "qa_warden",
+  "status": "yellow",
+  "backend": {
+    "passed": 8472,
+    "failed": 4,
+    "errors": 0,
+    "duration_s": 745.9,
+    "failing_tests": [
+      "tests/test_security_hardening_2026_04_20.py::TestCSRFRefreshLogout::test_production_rejects_x_requested_with_only[asyncio]",
+      "tests/test_security_hardening_2026_04_20.py::TestCSRFRefreshLogout::test_dev_still_accepts_x_requested_with[asyncio]",
+      "tests/test_security_hardening_2026_04_20.py::TestRateLimitFailClosed::test_strict_mode_defaults_true_in_production",
+      "tests/test_security_hardening_2026_04_20.py::TestRateLimitFailClosed::test_valid_override_allowed"
+    ],
+    "collection_error": null,
+    "new_failures": [],
+    "resolved": []
+  },
+  "frontend": {
+    "passed": 1937,
+    "failed": 0,
+    "duration_s": 21.9
+  },
+  "summary": "Backend: 8472 passed / 4 failed in 745.9s. Frontend: 1937 passed / 0 failed in 21.9s."
+}

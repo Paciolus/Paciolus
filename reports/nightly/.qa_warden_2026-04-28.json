@@ -1,0 +1,30 @@
+{
+  "agent": "qa_warden",
+  "status": "red",
+  "backend": {
+    "passed": 8481,
+    "failed": 4,
+    "errors": 0,
+    "duration_s": 750.2,
+    "failing_tests": [
+      "tests/test_no_helpers_reexports.py::TestNoHelpersReexports::test_no_disallowed_imports",
+      "tests/test_no_helpers_reexports.py::TestNoHelpersReexports::test_allowlist_matches_helpers_module_publics",
+      "tests/test_security_hardening_2026_04_20.py::TestRateLimitFailClosed::test_strict_mode_defaults_true_in_production",
+      "tests/test_security_hardening_2026_04_20.py::TestRateLimitFailClosed::test_valid_override_allowed"
+    ],
+    "collection_error": null,
+    "new_failures": [
+      "tests/test_no_helpers_reexports.py::TestNoHelpersReexports::test_allowlist_matches_helpers_module_publics",
+      "tests/test_no_helpers_reexports.py::TestNoHelpersReexports::test_no_disallowed_imports",
+      "tests/test_security_hardening_2026_04_20.py::TestRateLimitFailClosed::test_strict_mode_defaults_true_in_production",
+      "tests/test_security_hardening_2026_04_20.py::TestRateLimitFailClosed::test_valid_override_allowed"
+    ],
+    "resolved": []
+  },
+  "frontend": {
+    "passed": 1957,
+    "failed": 0,
+    "duration_s": 49.8
+  },
+  "summary": "Backend: 8481 passed / 4 failed in 750.2s. Frontend: 1957 passed / 0 failed in 49.8s. 4 new failure(s) since yesterday."
+}
