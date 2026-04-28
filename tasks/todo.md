@@ -72,7 +72,7 @@
 > Sprints 733–737 archived to `tasks/archive/sprints-733-737-details.md`.
 
 ### Sprint 732: cleanup_scheduler recurring InternalError triage
-**Status:** **STEP 2 COMPLETE 2026-04-28 16:08 UTC — root cause identified, Step 3 fix pending.** Initial post-Sprint-737-deploy silence (13:00–16:08 UTC, ~3h) was deployment-churn artifact: each merged PR (#117 13:00, #120 13:47, #119 14:13, #121 15:08) reset the cleanup_scheduler's 60-min interval timer, and the first post-deploy cycle on Sprint 739's deploy at 15:08 UTC fired at 16:08 UTC and **hit the failure with the new `error_orig_fqn` field populated**. The verification-window approach paid off — silence was coincidental (deploy churn, not structural fix), pattern resumed once a deploy had a clean 60-min window. Sprint 737 was NOT the fix.
+**Status:** **STEPS 1-3 COMPLETE 2026-04-28 — Sprint 740 ships the structural fix; awaits next post-deploy cycle to surface the actual root psycopg2 class for Sprint 741.** Initial post-Sprint-737-deploy silence (13:00–16:08 UTC, ~3h) was deployment-churn artifact: each merged PR (#117 13:00, #120 13:47, #119 14:13, #121 15:08) reset the cleanup_scheduler's 60-min interval timer, and the first post-deploy cycle on Sprint 739's deploy at 15:08 UTC fired at 16:08 UTC and **hit the failure with the new `error_orig_fqn` field populated**. The verification-window approach paid off — silence was coincidental (deploy churn, not structural fix), pattern resumed once a deploy had a clean 60-min window. Sprint 737 was NOT the fix. Sprint 740 (immediately below) addresses the cascade-masking that hid the real root class; Sprint 741 will address whatever Sprint 740 unmasks.
 
 **Leaf class identified (16:08:55 UTC `reset_upload_quotas` + 16:09:28 UTC `dunning_grace_period`):**
 ```
@@ -171,6 +171,30 @@ Write Alembic migrations for the documented drift in `PRE_EXISTING_DRIFT_TABLES`
 **Verification:**
 - 29/29 `test_cleanup_scheduler.py` tests passing.
 - Production deploy after Sprint 739 lands: zero `Bulk upload cleanup failed` log entries on the next 30-min cycle window.
+
+---
+
+### Sprint 740: rollback before lock release in `_run_cleanup_job` (Sprint 732 Step 3 fix)
+**Status:** COMPLETE 2026-04-28. 3-line fix added to `_run_cleanup_job` + 1 new contract test pinning the rollback-ordering invariant. 30/30 cleanup_scheduler tests passing locally. Ships the structural fix Sprint 732 Step 3 was waiting on.
+**Priority:** P2 (cleanup-scheduler is failing every ~60 min in production with masked-symptom 25P02; Sprint 740 unmasks the real root cause for the next investigation sprint).
+**Source:** Sprint 732 Step 2c (2026-04-28 16:08 UTC) identified the leaf class as `psycopg2.errors.InFailedSqlTransaction` (SQLSTATE 25P02). Investigation revealed this was a cascade symptom — the cleanup_func body fails first (real root, masked), session enters aborted state, `with_scheduler_lock`'s finally executes `DELETE FROM scheduler_locks` on the same aborted session, that DELETE fails with 25P02, and the 25P02 propagates out as the visible exception.
+
+**The fix:** wrap `cleanup_func(db)` in a try/except inside the `with with_scheduler_lock(...)` block. On any exception, call `db.rollback()` BEFORE re-raising. The lock-release DELETE in `with_scheduler_lock`'s finally then runs on a clean session, the DELETE succeeds, and the original `cleanup_func` exception class propagates out unmasked.
+
+**Side benefit beyond stability:** Sprint 732 step 2b's leaf-class observability fields (`error_orig_fqn`, `error_cause_fqn`, `error_orig_pgcode`) now capture the ACTUAL root psycopg2 class instead of the cascade symptom. Sprint 740's first post-deploy cleanup cycle will reveal what's truly failing inside the cleanup_func body — the data Sprint 732 was originally chasing.
+
+**What landed:**
+- `backend/cleanup_scheduler.py::_run_cleanup_job` — inner try/except around `cleanup_func(db)` invocation; rollback-then-raise on exception. ~10 lines added (mostly comment explaining the cascade and why this ordering matters).
+- `backend/tests/test_cleanup_scheduler.py::test_session_rollback_runs_before_lock_release_on_cleanup_failure` — new contract test mocks the session and asserts the FIRST rollback call's index < the DELETE FROM scheduler_locks call's index. A regression that moves rollback after the lock release fails this test loudly.
+- Existing `test_session_rollback_before_close_on_failure` updated: it asserted `rollback.assert_called_once()`; Sprint 740 makes rollback called twice (Sprint 740's inner + Sprint 711's outer-finally). Test now asserts `call_count >= 1` — the original "rollback before close" semantic intent is preserved.
+
+**Verification:**
+- 30/30 cleanup_scheduler tests passing locally.
+- Post-Sprint-740 production deploy + 1h: pull `error_orig_fqn` from the next cleanup cycle's failure log. Expected: a non-cascade psycopg2 class (likely `psycopg2.errors.SerializationFailure`, `psycopg2.OperationalError` with pgcode `08006` matching Sentry's SSLEOFError signal, or something genuinely surprising). That class names the real root for **Sprint 741** — the actual structural fix to the cleanup_func body's failing statement.
+
+**Out of scope:**
+- The actual root-cause fix for whatever cleanup_func is doing wrong — that's Sprint 741, contingent on Sprint 740's first post-deploy log read.
+- Approach 2 from the close-out doc (separate session for lock vs cleanup) — not adopted; Approach 1 (inner rollback) is sufficient and 1/3 the diff.
 
 ---
 

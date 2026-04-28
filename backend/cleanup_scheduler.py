@@ -211,11 +211,29 @@ def _run_cleanup_job(
             if not acquired:
                 return  # Another worker holds the lock
 
-            result = cleanup_func(db)
-            if is_retention and isinstance(result, dict):
-                records_processed = sum(result.values())
-            else:
-                records_processed = int(str(result))
+            try:
+                result = cleanup_func(db)
+                if is_retention and isinstance(result, dict):
+                    records_processed = sum(result.values())
+                else:
+                    records_processed = int(str(result))
+            except Exception:
+                # Sprint 740: rollback BEFORE the with_scheduler_lock finally
+                # block executes its `DELETE FROM scheduler_locks`. If the
+                # cleanup_func body left the session in an aborted-transaction
+                # state (Postgres SQLSTATE 25P02, in_failed_sql_transaction),
+                # the lock-release DELETE on that same session fails too — and
+                # the 25P02 cascade propagates out, masking the original
+                # exception class in `caught_exc.orig` / `__cause__`.
+                #
+                # Pre-Sprint-740 this masked all real cleanup failures behind
+                # the generic `psycopg2.errors.InFailedSqlTransaction` cascade
+                # symptom, defeating Sprint 732's leaf-class observability.
+                # The rollback here resets the session so the lock release
+                # runs cleanly and the original exception's class surfaces in
+                # `error_orig_fqn` for triage.
+                db.rollback()
+                raise
     except Exception as exc:
         from shared.log_sanitizer import sanitize_exception
 

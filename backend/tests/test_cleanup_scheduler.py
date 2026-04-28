@@ -240,7 +240,13 @@ class TestRunCleanupJob:
             _run_cleanup_job("failing_job", failing_func)
 
         # Both rollback and close must run, with rollback first.
-        mock_session.rollback.assert_called_once()
+        # Sprint 740: rollback is now called twice on the cleanup-failure path —
+        # once inside the with-block before the lock-release DELETE (Sprint 740,
+        # to break the Postgres SQLSTATE 25P02 cascade), and once again in the
+        # outer finally before close (Sprint 711, defensive cleanup hygiene).
+        # The Sprint 711 invariant tested here is "ANY rollback must precede
+        # close" — the FIRST rollback call (Sprint 740's) satisfies that.
+        assert mock_session.rollback.call_count >= 1, "rollback must run on failure"
         mock_session.close.assert_called_once()
         rollback_call_index = mock_session.method_calls.index(
             next(c for c in mock_session.method_calls if c[0] == "rollback")
@@ -265,6 +271,71 @@ class TestRunCleanupJob:
             _run_cleanup_job("failing_job", failing_func)
 
         mock_session.close.assert_called_once()
+
+    def test_session_rollback_runs_before_lock_release_on_cleanup_failure(self, caplog):
+        """Sprint 740: when ``cleanup_func`` raises, ``db.rollback()`` MUST run
+        BEFORE ``with_scheduler_lock``'s finally block executes
+        ``DELETE FROM scheduler_locks``. This ordering pins the Sprint 740 fix.
+
+        Pre-Sprint-740 behavior (the bug Sprint 732 step 2c surfaced):
+        a ``cleanup_func`` body that left the session in an aborted-transaction
+        state (Postgres SQLSTATE 25P02 — ``in_failed_sql_transaction``)
+        cascaded into the lock-release DELETE failing on the same aborted
+        session. The resulting ``psycopg2.errors.InFailedSqlTransaction``
+        propagated out as the visible exception, **masking the original
+        cleanup_func exception class** in ``caught_exc.orig`` and
+        ``error_orig_fqn``. Sprint 732 step 2b's leaf-class observability
+        was capturing the cascade symptom, not the actual root failure.
+
+        Sprint 740 fixes this by adding an inner try/except inside the
+        with-block in ``_run_cleanup_job``: any cleanup_func exception
+        triggers ``db.rollback()`` before the with_scheduler_lock finally
+        runs, so the lock-release DELETE executes on a clean session and
+        the original exception class surfaces in the log.
+
+        This test mocks the session and asserts the call ordering. A
+        regression that moves the rollback after the lock release (or
+        removes it entirely) fails here loudly.
+        """
+        from cleanup_scheduler import _run_cleanup_job
+
+        def failing_func(db):
+            raise RuntimeError("sprint-740-original-cleanup-failure")
+
+        mock_session = MagicMock()
+
+        with (
+            patch("database.SessionLocal", return_value=mock_session),
+            caplog.at_level(logging.ERROR, logger="cleanup_scheduler"),
+        ):
+            _run_cleanup_job("ordering_test_job", failing_func)
+
+        # Find the index of the FIRST rollback call — should be Sprint 740's
+        # rollback inside the with-block (Sprint 711's outer-finally rollback
+        # also fires later, but the FIRST one must precede the DELETE).
+        rollback_indices = [i for i, c in enumerate(mock_session.method_calls) if c[0] == "rollback"]
+        assert rollback_indices, "Sprint 740: rollback must be called when cleanup_func raises"
+        first_rollback_idx = rollback_indices[0]
+
+        # Find the index of the DELETE FROM scheduler_locks call (lock release
+        # in with_scheduler_lock's finally block).
+        delete_idx = None
+        for i, c in enumerate(mock_session.method_calls):
+            if c[0] == "execute" and c.args and "DELETE FROM scheduler_locks" in str(c.args[0]):
+                delete_idx = i
+                break
+        assert delete_idx is not None, "lock-release DELETE must still execute even on cleanup failure"
+
+        assert first_rollback_idx < delete_idx, (
+            f"Sprint 740 contract violation: rollback (idx={first_rollback_idx}) must run BEFORE "
+            f"the with_scheduler_lock finally's DELETE FROM scheduler_locks (idx={delete_idx}). "
+            "If this assertion fails, the Postgres SQLSTATE 25P02 cascade returns and the "
+            "original cleanup exception class gets masked behind InFailedSqlTransaction."
+        )
+
+        # The original RuntimeError class must surface in the log (post-fix the
+        # log line carries the actual root exception, not the cascade symptom).
+        assert "RuntimeError" in caplog.text
 
     def test_retention_dict_summing(self):
         """is_retention=True sums dict values for records_deleted."""
