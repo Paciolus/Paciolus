@@ -24,6 +24,31 @@ Two surprises blew up that plan in different ways.
 
 ---
 
+## Keep github in sync with local so Claude and Codex don't disagree (2026-04-28)
+
+CEO uses two AI roles in this project:
+
+- **Claude** (this assistant) — main brain + coder, has full local filesystem access and runs locally
+- **Codex** — code reviewer, has github-only access
+
+When local audit artifacts, todo.md updates, lessons.md updates, or doc changes accumulate locally without being pushed, **Codex's recommendations are based on stale state while Claude is reasoning from ground truth.** The CEO has reported asking Codex for input and getting back recommendations Claude flagged as outdated. The asymmetry isn't a Codex bug — it's a workflow gap.
+
+Surfaced concretely on 2026-04-28 when 6 days of nightly audit artifacts (`reports/nightly/2026-04-{23..28}.md` + 36 sentinel JSONs + run logs + agent sweep reports) had accumulated locally but never pushed. Codex reviewing the project at any point in that window would have been advising on a 6-day-stale audit picture. Cleared via `fix:` batch commit (PR #124, ~5,800 lines / 59 files).
+
+**Pattern:** Operational artifacts that the project's audit trail depends on — `reports/nightly/*`, `reports/audit-*.md`, `tasks/sprint-plan-*.md`, `tasks/lessons.md`, `tasks/todo.md`, `docs/03-engineering/*` — are decision-state, not just file-state. They MUST get to github promptly. Local-only retention is a sync hazard.
+
+**Discipline (Claude side):**
+
+1. **At session-end OR any natural checkpoint** (between merges, while CI runs, when waiting on a deploy), run `git status` and check for untracked or modified files in `reports/`, `tasks/`, `docs/`. Surface them to the CEO with "want to commit?" — even if the CEO didn't explicitly ask. Don't accumulate.
+2. **The hotfix batch-commit pattern is the right shape** (`fix: nightly audit artifacts <date> batch + agent sweep reports`). Match the precedent (`9820bb2`, `7915d77`, `22e16dc`).
+3. **Ephemerals (`.hypothesis/`, `frontend/playwright-report/`, scratch like `tmp_report.py`) stay out** — those aren't decision-state, they're just noise. Don't commit them; consider proposing `.gitignore` additions if they keep showing up.
+
+**Why this matters more than it seems:** the CEO's prompt that produced this lesson was about a 2-hour log-off window. The workflow gap is an everyday tax — every time he asks Codex for input on something Claude has already worked through locally, the recommendations either contradict or miss the load-bearing context. Closing the gap is cheaper than reconciling the recommendations after.
+
+**Companion to the Sprint 716 lesson** ("Verify the code is deployed before debugging 'why isn't runtime doing X'"): same shape, different surface. Sprint 716's version is "deployed code lags local code"; this one is "github code lags local code"; both produce the same class of failure mode where the AI is reasoning from one state and reality is a different state. Default to: state = github = local = production, in that order of canonicalness, and any divergence is a smell.
+
+---
+
 ## Verify the safety net is actually firing before recommending "leave alone" (Sprint 736)
 
 CEO asked for a comprehensive backend/frontend refactor pass authored by Codex. I correctly surfaced the directive's conflicts with the Deferred Items table (Sprint 710 had already done much of it; four targets were explicitly deferred or rejected with reasons). For the one piece I scoped into a research sprint — `init_db()`'s 7 in-process schema-patch blocks — I produced an inventory and recommended option **(c) "leave alone, document the contract"**. My rationale leaned on "consolidating to Alembic-only would create a new fail-closed mode that needs runbook coverage" — i.e., the patches are a real safety net we'd be removing.
