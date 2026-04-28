@@ -1,0 +1,34 @@
+{
+  "agent": "qa_warden",
+  "status": "red",
+  "backend": {
+    "passed": 8175,
+    "failed": 6,
+    "errors": 0,
+    "duration_s": 592.8,
+    "failing_tests": [
+      "tests/test_security_hardening_2026_04_20.py::TestPasscodeRoutePolicy::test_get_on_passcode_share_returns_403[asyncio]",
+      "tests/test_security_hardening_2026_04_20.py::TestPasscodeRoutePolicy::test_query_string_passcode_ignored[asyncio]",
+      "tests/test_security_hardening_2026_04_20.py::TestCSRFRefreshLogout::test_production_rejects_x_requested_with_only[asyncio]",
+      "tests/test_security_hardening_2026_04_20.py::TestCSRFRefreshLogout::test_dev_still_accepts_x_requested_with[asyncio]",
+      "tests/test_security_hardening_2026_04_20.py::TestRateLimitFailClosed::test_strict_mode_defaults_true_in_production",
+      "tests/test_security_hardening_2026_04_20.py::TestRateLimitFailClosed::test_valid_override_allowed"
+    ],
+    "collection_error": null,
+    "new_failures": [
+      "tests/test_security_hardening_2026_04_20.py::TestCSRFRefreshLogout::test_dev_still_accepts_x_requested_with[asyncio]",
+      "tests/test_security_hardening_2026_04_20.py::TestCSRFRefreshLogout::test_production_rejects_x_requested_with_only[asyncio]",
+      "tests/test_security_hardening_2026_04_20.py::TestPasscodeRoutePolicy::test_get_on_passcode_share_returns_403[asyncio]",
+      "tests/test_security_hardening_2026_04_20.py::TestPasscodeRoutePolicy::test_query_string_passcode_ignored[asyncio]",
+      "tests/test_security_hardening_2026_04_20.py::TestRateLimitFailClosed::test_strict_mode_defaults_true_in_production",
+      "tests/test_security_hardening_2026_04_20.py::TestRateLimitFailClosed::test_valid_override_allowed"
+    ],
+    "resolved": []
+  },
+  "frontend": {
+    "passed": 1915,
+    "failed": 0,
+    "duration_s": 46.5
+  },
+  "summary": "Backend: 8175 passed / 6 failed in 592.8s. Frontend: 1915 passed / 0 failed in 46.5s. 6 new failure(s) since yesterday."
+}

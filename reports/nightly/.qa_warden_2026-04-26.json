@@ -1,0 +1,28 @@
+{
+  "agent": "qa_warden",
+  "status": "yellow",
+  "backend": {
+    "passed": 8316,
+    "failed": 4,
+    "errors": 0,
+    "duration_s": 632.7,
+    "failing_tests": [
+      "tests/test_security_hardening_2026_04_20.py::TestCSRFRefreshLogout::test_production_rejects_x_requested_with_only[asyncio]",
+      "tests/test_security_hardening_2026_04_20.py::TestCSRFRefreshLogout::test_dev_still_accepts_x_requested_with[asyncio]",
+      "tests/test_security_hardening_2026_04_20.py::TestRateLimitFailClosed::test_strict_mode_defaults_true_in_production",
+      "tests/test_security_hardening_2026_04_20.py::TestRateLimitFailClosed::test_valid_override_allowed"
+    ],
+    "collection_error": null,
+    "new_failures": [],
+    "resolved": [
+      "tests/test_security_hardening_2026_04_20.py::TestPasscodeRoutePolicy::test_get_on_passcode_share_returns_403[asyncio]",
+      "tests/test_security_hardening_2026_04_20.py::TestPasscodeRoutePolicy::test_query_string_passcode_ignored[asyncio]"
+    ]
+  },
+  "frontend": {
+    "passed": 1915,
+    "failed": 0,
+    "duration_s": 54.9
+  },
+  "summary": "Backend: 8316 passed / 4 failed in 632.7s. Frontend: 1915 passed / 0 failed in 54.9s. 2 failure(s) resolved."
+}

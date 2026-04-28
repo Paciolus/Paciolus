@@ -1,24 +1,29 @@
 {
   "qa_warden": {
-    "date": "2026-04-22",
+    "date": "2026-04-27",
     "backend": {
-      "passed": 8046,
-      "failed": 0,
+      "passed": 8472,
+      "failed": 4,
       "errors": 0,
-      "duration_s": 607.7,
-      "failing_tests": [],
+      "duration_s": 745.9,
+      "failing_tests": [
+        "tests/test_security_hardening_2026_04_20.py::TestCSRFRefreshLogout::test_production_rejects_x_requested_with_only[asyncio]",
+        "tests/test_security_hardening_2026_04_20.py::TestCSRFRefreshLogout::test_dev_still_accepts_x_requested_with[asyncio]",
+        "tests/test_security_hardening_2026_04_20.py::TestRateLimitFailClosed::test_strict_mode_defaults_true_in_production",
+        "tests/test_security_hardening_2026_04_20.py::TestRateLimitFailClosed::test_valid_override_allowed"
+      ],
       "collection_error": null,
       "new_failures": [],
       "resolved": []
     },
     "frontend": {
-      "passed": 1887,
+      "passed": 1937,
       "failed": 0,
-      "duration_s": 47.1
+      "duration_s": 21.9
     }
   },
   "report_auditor": {
-    "date": "2026-04-22",
+    "date": "2026-04-27",
     "bug_tracker": {
       "BUG-001": {
         "description": "Suggested procedures rotation bug \u2014 procedures repeat rather than rotate across reports",
@@ -58,7 +63,7 @@
     }
   },
   "coverage_sentinel": {
-    "date": "2026-04-22",
+    "date": "2026-04-27",
     "history": [
       {
         "date": "2026-04-14",
@@ -87,7 +92,26 @@
       {
         "date": "2026-04-22",
         "percent_covered": 92.71
+      },
+      {
+        "date": "2026-04-25",
+        "percent_covered": 92.83
+      },
+      {
+        "date": "2026-04-26",
+        "percent_covered": 92.82
+      },
+      {
+        "date": "2026-04-27",
+        "percent_covered": 92.85
       }
     ]
+  },
+  "dependency_sentinel": {
+    "first_seen": {
+      "backend:cryptography@47.0.0": "2026-04-26",
+      "backend:fastapi@0.136.1": "2026-04-26",
+      "backend:stripe@15.1.0": "2026-04-26"
+    }
   }
 }

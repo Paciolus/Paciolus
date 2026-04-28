@@ -1,0 +1,273 @@
+{
+  "agent": "dependency_sentinel",
+  "status": "red",
+  "backend_outdated": [
+    {
+      "package": "anthropic",
+      "current": "0.96.0",
+      "latest": "0.97.0",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "certifi",
+      "current": "2026.2.25",
+      "latest": "2026.4.22",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "click",
+      "current": "8.3.2",
+      "latest": "8.3.3",
+      "severity": "patch",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "cryptography",
+      "current": "46.0.7",
+      "latest": "47.0.0",
+      "severity": "major",
+      "watchlist": true,
+      "deferred": false,
+      "first_seen": "2026-04-28",
+      "days_outdated": 0,
+      "past_deadline": false
+    },
+    {
+      "package": "fastapi",
+      "current": "0.136.0",
+      "latest": "0.136.1",
+      "severity": "patch",
+      "watchlist": true,
+      "deferred": false,
+      "first_seen": "2026-04-28",
+      "days_outdated": 0,
+      "past_deadline": false
+    },
+    {
+      "package": "greenlet",
+      "current": "3.4.0",
+      "latest": "3.5.0",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "hypothesis",
+      "current": "6.152.1",
+      "latest": "6.152.4",
+      "severity": "patch",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "packaging",
+      "current": "26.1",
+      "latest": "26.2",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "pathspec",
+      "current": "1.0.4",
+      "latest": "1.1.1",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "pdfminer.six",
+      "current": "20251230",
+      "latest": "20260107",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": true,
+      "deferral_reason": "Calendar-versioned release; waiting on downstream compatibility confirmation",
+      "deferral_review_by": "2026-04-30"
+    },
+    {
+      "package": "pip",
+      "current": "26.0.1",
+      "latest": "26.1",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "python-multipart",
+      "current": "0.0.26",
+      "latest": "0.0.27",
+      "severity": "patch",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "ruff",
+      "current": "0.15.11",
+      "latest": "0.15.12",
+      "severity": "patch",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "stripe",
+      "current": "15.0.1",
+      "latest": "15.1.0",
+      "severity": "minor",
+      "watchlist": true,
+      "deferred": false,
+      "first_seen": "2026-04-28",
+      "days_outdated": 0,
+      "past_deadline": false
+    },
+    {
+      "package": "tzdata",
+      "current": "2026.1",
+      "latest": "2026.2",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "uvicorn",
+      "current": "0.45.0",
+      "latest": "0.46.0",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": false
+    }
+  ],
+  "frontend_outdated": [
+    {
+      "package": "@sentry/nextjs",
+      "current": "10.49.0",
+      "latest": "10.50.0",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "@typescript-eslint/eslint-plugin",
+      "current": "8.59.0",
+      "latest": "8.59.1",
+      "severity": "patch",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "@typescript-eslint/parser",
+      "current": "8.59.0",
+      "latest": "8.59.1",
+      "severity": "patch",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "postcss",
+      "current": "8.5.10",
+      "latest": "8.5.12",
+      "severity": "patch",
+      "watchlist": false,
+      "deferred": false
+    }
+  ],
+  "security_flagged": [
+    {
+      "package": "cryptography",
+      "current": "46.0.7",
+      "latest": "47.0.0",
+      "severity": "major",
+      "watchlist": true,
+      "deferred": false,
+      "first_seen": "2026-04-28",
+      "days_outdated": 0,
+      "past_deadline": false
+    },
+    {
+      "package": "fastapi",
+      "current": "0.136.0",
+      "latest": "0.136.1",
+      "severity": "patch",
+      "watchlist": true,
+      "deferred": false,
+      "first_seen": "2026-04-28",
+      "days_outdated": 0,
+      "past_deadline": false
+    },
+    {
+      "package": "stripe",
+      "current": "15.0.1",
+      "latest": "15.1.0",
+      "severity": "minor",
+      "watchlist": true,
+      "deferred": false,
+      "first_seen": "2026-04-28",
+      "days_outdated": 0,
+      "past_deadline": false
+    }
+  ],
+  "past_deadline": [],
+  "deferred": [
+    {
+      "package": "pdfminer.six",
+      "current": "20251230",
+      "latest": "20260107",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": true,
+      "deferral_reason": "Calendar-versioned release; waiting on downstream compatibility confirmation",
+      "deferral_review_by": "2026-04-30"
+    }
+  ],
+  "top5_updates": [
+    {
+      "package": "cryptography",
+      "current": "46.0.7",
+      "latest": "47.0.0",
+      "severity": "major",
+      "watchlist": true,
+      "deferred": false,
+      "first_seen": "2026-04-28",
+      "days_outdated": 0,
+      "past_deadline": false
+    },
+    {
+      "package": "anthropic",
+      "current": "0.96.0",
+      "latest": "0.97.0",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "certifi",
+      "current": "2026.2.25",
+      "latest": "2026.4.22",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "greenlet",
+      "current": "3.4.0",
+      "latest": "3.5.0",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": false
+    },
+    {
+      "package": "packaging",
+      "current": "26.1",
+      "latest": "26.2",
+      "severity": "minor",
+      "watchlist": false,
+      "deferred": false
+    }
+  ],
+  "summary": "Backend: 16 outdated. Frontend: 4 outdated. 3 security-relevant packages have updates. 1 deferred."
+}
