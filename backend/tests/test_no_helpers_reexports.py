@@ -40,6 +40,7 @@ ALLOWED_HELPER_NAMES: frozenset[str] = frozenset(
         "is_authorized_for_client",
         "get_accessible_client",
         "require_client",
+        "require_client_owner",  # Sprint 735 — direct-only client access dependency
     }
 )
 

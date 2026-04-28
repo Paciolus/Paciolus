@@ -31175,10 +31175,12 @@
         "operationId": "get_client_industry_ratios_clients__client_id__industry_ratios_get",
         "parameters": [
           {
+            "description": "The ID of the client",
             "in": "path",
             "name": "client_id",
             "required": true,
             "schema": {
+              "description": "The ID of the client",
               "title": "Client Id",
               "type": "integer"
             }
@@ -31239,10 +31241,12 @@
         "operationId": "list_prior_periods_clients__client_id__periods_get",
         "parameters": [
           {
+            "description": "The ID of the client",
             "in": "path",
             "name": "client_id",
             "required": true,
             "schema": {
+              "description": "The ID of the client",
               "title": "Client Id",
               "type": "integer"
             }
@@ -31301,10 +31305,12 @@
         "operationId": "save_prior_period_clients__client_id__periods_post",
         "parameters": [
           {
+            "description": "The ID of the client",
             "in": "path",
             "name": "client_id",
             "required": true,
             "schema": {
+              "description": "The ID of the client",
               "title": "Client Id",
               "type": "integer"
             }
@@ -31409,10 +31415,12 @@
         "operationId": "get_client_rolling_analysis_clients__client_id__rolling_analysis_get",
         "parameters": [
           {
+            "description": "The ID of the client",
             "in": "path",
             "name": "client_id",
             "required": true,
             "schema": {
+              "description": "The ID of the client",
               "title": "Client Id",
               "type": "integer"
             }
@@ -31601,10 +31609,12 @@
         "operationId": "get_client_trends_clients__client_id__trends_get",
         "parameters": [
           {
+            "description": "The ID of the client",
             "in": "path",
             "name": "client_id",
             "required": true,
             "schema": {
+              "description": "The ID of the client",
               "title": "Client Id",
               "type": "integer"
             }
@@ -31941,10 +31951,12 @@
         "operationId": "get_diagnostic_history_diagnostics_summary__client_id__history_get",
         "parameters": [
           {
+            "description": "The ID of the client",
             "in": "path",
             "name": "client_id",
             "required": true,
             "schema": {
+              "description": "The ID of the client",
               "title": "Client Id",
               "type": "integer"
             }
@@ -32001,10 +32013,12 @@
         "operationId": "get_previous_diagnostic_summary_diagnostics_summary__client_id__previous_get",
         "parameters": [
           {
+            "description": "The ID of the client",
             "in": "path",
             "name": "client_id",
             "required": true,
             "schema": {
+              "description": "The ID of the client",
               "title": "Client Id",
               "type": "integer"
             }

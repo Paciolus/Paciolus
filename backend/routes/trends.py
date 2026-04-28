@@ -19,6 +19,7 @@ from ratio_engine import (
     TrendAnalyzer,
 )
 from security_utils import log_secure_operation
+from shared.helpers import require_client_owner
 
 router = APIRouter(tags=["trends"])
 
@@ -137,14 +138,10 @@ def get_client_trends(
     limit: int = Query(default=12, ge=2, le=36, description="Number of periods to analyze"),
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
+    client: Client = Depends(require_client_owner),
 ) -> dict[str, Any]:
     """Get trend analysis for a client's historical diagnostic data."""
     log_secure_operation("trend_analysis_request", f"User {current_user.id} requesting trends for client {client_id}")
-
-    client = db.query(Client).filter(Client.id == client_id, Client.user_id == current_user.id).first()
-
-    if not client:
-        raise HTTPException(status_code=404, detail="Client not found")
 
     summaries = _get_client_summaries(db, client_id, current_user.id, period_type, limit)
 
@@ -174,6 +171,7 @@ def get_client_industry_ratios(
     engagement_id: Optional[int] = Query(default=None),
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
+    client: Client = Depends(require_client_owner),
 ) -> dict[str, Any]:
     """Get industry-specific ratios for a client."""
     from industry_ratios import calculate_industry_ratios, get_available_industries
@@ -181,11 +179,6 @@ def get_client_industry_ratios(
     log_secure_operation(
         "industry_ratios_request", f"User {current_user.id} requesting industry ratios for client {client_id}"
     )
-
-    client = db.query(Client).filter(Client.id == client_id, Client.user_id == current_user.id).first()
-
-    if not client:
-        raise HTTPException(status_code=404, detail="Client not found")
 
     latest_summary = (
         db.query(DiagnosticSummary)
@@ -257,6 +250,7 @@ def get_client_rolling_analysis(
     period_type: Optional[str] = Query(default=None, description="Filter by period type: monthly, quarterly, annual"),
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
+    client: Client = Depends(require_client_owner),
 ) -> dict[str, Any]:
     """Get rolling window analysis for a client's historical data."""
     log_secure_operation(
@@ -265,11 +259,6 @@ def get_client_rolling_analysis(
 
     if window is not None and window not in [3, 6, 12]:
         raise HTTPException(status_code=400, detail="Invalid window size. Must be 3, 6, or 12 months.")
-
-    client = db.query(Client).filter(Client.id == client_id, Client.user_id == current_user.id).first()
-
-    if not client:
-        raise HTTPException(status_code=404, detail="Client not found")
 
     summaries = _get_client_summaries(db, client_id, current_user.id, period_type, 36)
 

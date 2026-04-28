@@ -104,21 +104,27 @@ Both jobs fire roughly every hour; each invocation completes in 30–80ms with `
 ---
 
 ### Sprint 733: Stripe webhook unit-coverage gap fill (pre-cutover)
-**Status:** PENDING — pre-4.1 sequence position 2 (after Sprint 737). Gated only on Sprint 732 Step 2 not stealing capacity (independent code paths).
-**Priority:** P2 → bumps to P1 the moment Phase 4.1 cutover schedule firms up. **Must land BEFORE Phase 4.1 (`sk_live_` keys)** — adds the safety net around the handler about to begin processing live revenue.
+**Status:** COMPLETE 2026-04-27. **Revised scope:** 2 real gaps + 1 bonus, not 4. The pre-flight gap analysis discovered `TestWebhookErrorClassification` in `test_billing_webhooks_routes.py` (Sprint 564) already covered 4 of the 5 boundaries Codex's directive listed — only "missing `stripe-signature` header → 400" and "duplicate event-id (IntegrityError) → 200 without double-processing" needed new coverage. Bonus: `is_stripe_enabled() == False` short-circuit. 8/8 webhook tests passing (5 existing + 3 new). No behavior change on `/billing/webhook`.
+**Priority:** P2 → bumps to P1 the moment Phase 4.1 cutover schedule firms up. **Landed BEFORE Phase 4.1 (`sk_live_` keys)** as planned — adds the safety net around the handler about to begin processing live revenue.
 **Source:** Refactor pass 2026-04-27 (Codex directive, scope-revised after Sprint 710/724 + `## Deferred Items` reconciliation).
 
-Add focused unit tests around `routes/billing.py::stripe_webhook` for the four boundaries currently exercised only at route level:
-- missing `Stripe-Signature` header → 400
-- invalid signature (forged HMAC) → 400
-- duplicate event-id claim path → 200, no double-processing
-- downstream operational failure (DB error mid-processing) → 500
+**What landed (2 new tests + 1 bonus):**
+- `test_missing_signature_header_returns_400` — POST without `stripe-signature` header → 400 + asserts `construct_event` is never called when the header is absent (signature is the gate, not an after-the-fact check).
+- `test_duplicate_event_returns_200_without_double_processing` — IntegrityError on dedup INSERT → 200 + asserts `process_webhook_event.call_count == 0`. **Critical for Stripe retry semantics** — if this regresses, duplicate deliveries cause subscription/payment events to double-run.
+- `test_stripe_disabled_returns_200_short_circuit` (bonus) — when `is_stripe_enabled()` returns False, webhook short-circuits to 200 without any verification or processing.
 
-Existing route-level tests (`test_billing_webhooks_routes.py`, `test_webhook_event_ordering.py`, `test_billing_routes.py`) remain untouched.
+**Already covered (no new tests needed):**
+- Invalid JSON payload → 400 (`test_invalid_json_payload_returns_400`)
+- ValueError from process_webhook_event → 400 (`test_handler_value_error_returns_400`)
+- KeyError from process_webhook_event → 400 (`test_handler_key_error_returns_400`)
+- Generic exception from process_webhook_event → 500 (`test_handler_operational_error_returns_500`)
+- DB error during dedup INSERT → 500 (`test_db_dedup_error_returns_500`)
+- Invalid signature (forged HMAC) → 400 (`test_billing_routes.py::test_webhook_invalid_signature`)
+- Valid signature happy path → 200 (`test_billing_routes.py::test_webhook_valid_signature`)
 
 **Out of scope (per Deferred Items policy, line 54):** No handler decomposition. The signature-verify / dedup-claim / error-mapping triad stays in-route until bundled with the deferred webhook-coverage sprint flagged in Sprint 676.
 
-**Verification:** All new tests green; existing 3 webhook test files unchanged; no behavioral change on `/billing/webhook`.
+**Verification:** 8/8 webhook tests passing in isolation. Existing 3 webhook test files structurally unchanged (only `test_billing_webhooks_routes.py` gained 3 new test methods inside the existing `TestWebhookErrorClassification` class). No behavioral change on `/billing/webhook`.
 
 ---
 
@@ -142,18 +148,45 @@ Cover:
 
 ---
 
-### Sprint 735: `require_client` adoption in diagnostics + trends routes
-**Status:** PENDING — pre-4.1 sequence position 3 (after Sprint 733). Gated only on Sprint 732 Step 2 not stealing capacity. Originally gated post-cutover; CEO blocker audit 2026-04-27 reclassified the "muddier incident triage during cutover window" concern as soft (change-management hygiene, not a technical dependency) and accepted the tradeoff. Diagnostics + trends are read-only endpoints — no money flows through them, so a latent issue is recoverable.
+### Sprint 735: `require_client_owner` adoption in diagnostics + trends + prior_period routes
+**Status:** COMPLETE 2026-04-27. **Path B chosen:** added stricter `require_client_owner` dependency that enforces direct-ownership only (no org-scoped sharing) and adopted it across 7 endpoints. Path A would have silently broadened authorization to org members on diagnostic outputs — a real behavior change Codex's "syntax cleanup" framing assumed away. Path B preserves current semantics exactly and pins the contract with new tests so a future "let's just merge the helpers" attempt fails loudly.
 **Priority:** P3.
-**Source:** Refactor pass 2026-04-27.
+**Source:** Refactor pass 2026-04-27. Path B decision documented in conversation transcript and `shared/helpers.py::require_client_owner` docstring.
 
-Adopt the existing `require_client` dependency at call sites in `backend/routes/diagnostics.py` and `backend/routes/trends.py` (and any sibling routes with the same `Client.id == ... user_id == ...` boilerplate). Reduces duplicated query-then-404 patterns at call sites only.
+**Pre-flight call-site map (gap analysis, 2026-04-27):**
+8 candidate endpoints surfaced across 3 files via `Client.id == ... user_id == ...` grep. 7 are GET/POST path-parameter endpoints fitting `require_client_owner`'s `PathParam` shape. The 8th (`diagnostics.py:213::save_diagnostic_summary`) takes `client_id` from request body — out of scope until/unless the request signature is reshaped.
 
-**Constraint:** Use the existing helper in-place. Do **not** move `require_client` / `get_accessible_client` / `is_authorized_for_client` out of `backend/shared/helpers.py` — that move is explicitly rejected in Deferred Items (line 56), and remains rejected unless module scope grows beyond three helpers.
+**Critical decision point surfaced:** `require_client` calls `get_accessible_client` → `is_authorized_for_client` which OR-checks org membership. `clients.py` and `settings.py` already use `require_client` (org-scoped). The 7 candidate endpoints currently use direct-only inline queries. Adopting `require_client` uniformly = behavior change (org members gain access to teammate diagnostic outputs). CEO chose **Path B**: add `require_client_owner` that preserves direct-only behavior. Rationale: behavior change in production should not be an accidental side effect of a refactor sprint; if org-scope policy is later opened to diagnostic outputs, it should be a separate sprint with explicit customer comms.
 
-Add regression tests for tenant isolation + 404 vs 403 response shape parity.
+**What landed:**
 
-**Verification:** No change to any response code, header, or body shape; tenant-isolation tests still pass.
+1. **New helper** `backend/shared/helpers.py::require_client_owner` — direct-ownership-only FastAPI dependency. Docstring documents the Sprint 735 decision and the explicit boundary against `require_client`.
+
+2. **Adopted in 7 endpoints across 3 files:**
+   - `backend/routes/diagnostics.py` — `get_previous_diagnostic_summary` (GET), `get_diagnostic_history` (GET).
+   - `backend/routes/trends.py` — `get_client_trends` (GET), `get_client_industry_ratios` (GET), `get_client_rolling_analysis` (GET).
+   - `backend/routes/prior_period.py` — `save_prior_period` (POST), `list_prior_periods` (GET).
+   - Each endpoint replaced its inline `db.query(Client).filter(Client.id == ..., Client.user_id == current_user.id).first() / if not client: raise 404` block with a `Depends(require_client_owner)` parameter. Endpoints that consumed the `client` object downstream (e.g., for `client.name` in responses) keep the named binding; endpoints that only needed the existence check use `_client` to mark intent.
+
+3. **Contract test** `backend/tests/test_sprint_735_require_client_owner.py` (4 tests):
+   - Direct owner gets the client.
+   - Unrelated user → 404.
+   - **Org teammate of owner → 404** (the key Sprint 735 contract; pinned so a future helper merge fails loudly).
+   - Companion: `require_client` (the existing helper) DOES grant org teammate access, confirming the behavioral split is intentional.
+
+4. **Sprint 724 helper-count tracking** updated in `test_refactor_2026_04_20.py::test_json_form_and_client_access_symbols` to include `require_client_owner`.
+
+**Why a fourth helper despite the "prefer moving code, avoid new abstractions" rule:** The rule's escape valve (`tasks/todo.md` 2026-04-20 deferred-items entry) is "revisit only if a fourth helper joins them." This is that fourth helper. The alternative was a hidden behavior change in 7 endpoints. Documented in the helper's docstring so the next reviewer doesn't try to consolidate it back.
+
+**Verification:**
+- 386 existing tests passing across diagnostic / trend / prior_period / industry test selection (no regression).
+- 4/4 new contract tests passing.
+- No change to any response code, header, or body shape.
+- Authorization semantics preserved exactly: direct owner gets 200, all other users (including org teammates) get 404, identical to the inline-query behavior the endpoints had before.
+
+**Out of scope:**
+- `diagnostics.py:213::save_diagnostic_summary` (client_id from body) — out of scope; would require reshaping the request payload to put client_id in the path. File a separate sprint if appetite emerges.
+- Org-scope policy decision for diagnostic outputs — explicitly NOT decided in Sprint 735. If product wants teammates to see each other's diagnostic outputs, file a separate sprint with explicit framing + customer comms.
 
 ---
 
