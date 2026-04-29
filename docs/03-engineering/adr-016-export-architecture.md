@@ -1,6 +1,6 @@
 # ADR-016: Export Architecture (Mapper / Generator Separation)
 
-**Status:** Proposed (target for Sprint 748 + Sprint 749)
+**Status:** Accepted (Sprint 748a + 749 — see `tasks/todo.md`)
 **Date:** 2026-04-29
 **Decision-makers:** Engineering team
 
@@ -12,20 +12,20 @@ Two existing patterns govern exports today:
    `streaming_csv_export` for testing-tool flagged-entry shape and freeform
    sectioned shape, respectively. Documented in `docs/03-engineering/export-pattern.md`.
 2. **Inline transformation in route handlers** — `routes/export_diagnostics.py`
-   and `routes/export_memos.py` carry 800+ lines of per-endpoint inline
-   loops, formatting, and PDF/Excel section assembly. The same domain
-   transformation is repeated in 2–3 forms (CSV row, PDF cell, Excel cell)
-   across siblings.
+   carried 800+ lines of per-endpoint inline loops, formatting, and PDF/Excel
+   section assembly. Sprint 748a migrated 6 of 10 routes to the existing
+   `backend/export/` pipeline (303 lines of inline CSV building eliminated).
 
-Drift symptoms:
+Drift symptoms (all resolved or pinned to a sprint):
 
-- **Inconsistent endpoint shape.** Some export routes validate first, some
-  authorize first, some check entitlement mid-handler. No common skeleton.
-- **`export_memos.py` ambiguity.** Routes are registered partly via dynamic
-  loops, partly via explicit decorators. Future-readers can't tell which
-  strategy is canonical.
-- **No contract tests.** Schema changes (e.g., a renamed column) propagate
-  silently to clients downloading the export.
+- **Inconsistent endpoint shape.** Some export routes validated first, some
+  authorized first, some checked entitlement mid-handler. Sprint 748a's
+  pipeline-delegation pattern collapses 6 CSV routes to a 2-line skeleton.
+  Sprint 748b will extend this to PDF/Excel/Leadsheets/FinStmts (which need
+  user/branding context to flow through the pipeline first).
+- **`export_memos.py` strategy.** Settled — see decision below.
+- **Contract tests.** Sprint 749 demonstrates the pattern via a memo PDF
+  section-presence assertion; further memos extend the pattern incrementally.
 - **Domain logic embedded in HTTP handlers.** A test that exercises the
   CSV export's column ordering needs the full FastAPI request fixture
   instead of just calling a mapper function with a dataclass input.
@@ -106,15 +106,13 @@ def export_<tool>_<format>(
 
 ### `export_memos.py` registration strategy
 
-Pick **one** of the following and document it as the canonical strategy:
+**Decision (Sprint 749):** registry-driven dispatch with explicit exceptions for non-standard preprocessing. The existing pattern in `routes/export_memos.py` is canonical:
 
-- **Fully declarative:** all memo routes registered via a single loop over a
-  manifest. Document any explicit exceptions inline next to the manifest.
-- **Fully explicit:** each memo route is a separate decorator + handler.
-  Shared logic lives in factory helpers (`build_memo_response(...)`).
+- **Standard memos** are entries in `_STANDARD_REGISTRY` (16 today). `_register_standard_routes()` factory-loops the list, generating one handler per `MemoRegistryEntry` and registering it via `router.post(...)`. New standard memos add a single `MemoRegistryEntry` row — no decorator boilerplate.
+- **Non-standard memos** that need custom Pydantic-payload preprocessing (e.g., the sampling-evaluation memo's `design_result` pop, the flux-expectations memo's nested sub-model serialization) get an explicit `@router.post(...)` decorator that calls the shared `_memo_export_handler` with a `CustomPreprocessor`. Today: 2 such routes.
+- Both branches converge on `_memo_export_handler` for: input-model dump, common workpaper kwargs (`filename`, `client_name`, `period_tested`, etc.), Sprint 679 PDF branding ContextVar, `track_memo_memory` instrumentation, error sanitization, and `streaming_pdf_response`.
 
-Sprint 749 picks one and converts the other style to match. The mixed style
-is forbidden going forward.
+When does a memo get the registry vs the explicit treatment? **Default to registry.** Use the explicit branch only when the Pydantic input requires preprocessing that cannot be expressed as `payload.model_dump()` — i.e., the registry's standard preprocessor is insufficient. The mixed-style pattern is intentional, not drift.
 
 ### Contract tests
 

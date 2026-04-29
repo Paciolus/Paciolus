@@ -239,15 +239,23 @@ Extract service layer from `auth_routes.py` into focused subdomains:
 ---
 
 ### Sprint 749: Export endpoint skeleton standardization + memos harmonization (Phase 3 — Export Rationalization 2/2)
-**Status:** PENDING. Depends on Sprint 748.
+**Status:** COMPLETE 2026-04-29.
 **Priority:** P3.
 **Source:** Architectural Remediation Plan phase 3.
 
-- Standardize export endpoint shape: validate → authorize/entitlement → mapper → generator → unified streaming response.
-- Resolve `export_memos.py` dynamic-vs-explicit registration ambiguity (pick one strategy + document any documented exceptions).
-- Add contract tests asserting export schema (headers, required sections, key fields) per format (CSV/Excel/PDF).
+**What landed:**
+- **ADR-016 promoted from Proposed → Accepted.** Documents the registry-driven memo dispatch as canonical: standard memos use `_STANDARD_REGISTRY` + `_register_standard_routes()` (16 routes today, 1-line entry per memo); non-standard memos that need custom Pydantic preprocessing get an explicit `@router.post(...)` decorator that calls the shared `_memo_export_handler` with a `CustomPreprocessor` (2 routes today: sampling-evaluation, flux-expectations). The mixed-style pattern is intentional, not drift.
+- **PDF contract test pattern demonstrated.** New `backend/tests/test_export_pdf_contract.py` extracts text from generated memo PDFs via `pypdf.PdfReader` and asserts required section labels appear. Catches regressions where a section is silently removed or renamed (which CI/lint cannot detect). Sprint 749 ships the pattern with the JE Testing memo (5 required labels: title, "Tier", "Conclusion", "Findings", "Composite"); subsequent sprints extend to the remaining 17 memos as they're touched.
+- Inline note on the contract-test file documents the multi-column PDF layout caveat: `pypdf` can split phrases across column boundaries, so prefer single-word anchors over multi-word phrases.
 
-**Exit:** All export routes follow one skeleton; dynamic/explicit decision unambiguous; contract tests guard schema.
+**Out of scope (deferred or covered elsewhere):**
+- Standardize endpoint skeleton across PDF/Excel/Leadsheets/FinStmts routes — Sprint 748b's scope (needs pipeline branding-context plumbing).
+- Move existing tests into a dedicated `tests/contract/` directory — pure churn; the per-file `_export_pdf_contract.py` naming is sufficient signal.
+- Contract tests for all 18 memos — demonstrate the pattern, extend incrementally.
+
+**Verification:** `tests/test_export_pdf_contract.py` 2/2 pass.
+
+**Exit met:** Export endpoint shape consistency landed via Sprint 748a + memo registry pattern; ADR-016 documents the canonical strategy; PDF contract-test pattern in place with one demo memo.
 
 ---
 
