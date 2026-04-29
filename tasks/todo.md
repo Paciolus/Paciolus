@@ -511,11 +511,11 @@ Extract service layer from `auth_routes.py` into focused subdomains:
 
 | Item | Reason | Source |
 |------|--------|--------|
-| Sprint 748b — PDF/Excel/Leadsheets/FinStmts routes migrate to `export.pipeline` | Pipeline signatures need branding-context plumbing first; 4 routes left inline | Sprint 748a review |
-| Sprint 754b — shared analysis interfaces (input contract / result envelope / error semantics) | Depends on 2+ tools relocated under ADR-018 to compare shapes | Sprint 754 review |
-| Backend `db_transaction` adoption beyond `activity.py` | ~11 route modules still have inline `try/except SQLAlchemyError` triads; pattern is established | Sprint 745 review |
-| Memo PDF contract tests for the remaining 17 memos | Pattern shipped on JE Testing in Sprint 749; extend incrementally | Sprint 749 review |
-| ~30 engines awaiting per-tool relocation per ADR-018 | One engine per sub-sprint; default keep flat | `lint_domain_relocation.py` (advisory CI) |
+| ~~Sprint 748b — PDF/Excel/Leadsheets/FinStmts routes migrate to `export.pipeline`~~ | ✅ Resolved 2026-04-29 (post-initiative). Pipeline now accepts optional `branding`; all 4 routes are 1-3 line delegates. `routes/export_diagnostics.py` 358→218 lines (661→218 across 748a+748b). | commit `66e4ae2f` |
+| Sprint 754b — shared analysis interfaces (input contract / result envelope / error semantics) | Was waiting on 2+ tools relocated under ADR-018. Now: 3 tools relocated (recon, flux, cutoff_risk). Unblocked but design work still needs a dedicated sprint. | Sprint 754 review |
+| ~~Backend `db_transaction` adoption beyond `activity.py`~~ | ✅ Resolved 2026-04-29 (post-initiative). 4 remaining route sites migrated; **zero `except SQLAlchemyError` blocks remain in `routes/*.py`**. | commit `3e967f17` |
+| Memo PDF contract tests for the remaining memos | Coverage advanced 1/18 → 4/18 (JE, AP, Payroll, Revenue). Pattern documented inline. Remaining 14 follow same shape when generator gets touched. | commit `9fdfba46` |
+| ~30 engines awaiting per-tool relocation per ADR-018 | Now 28 (recon, flux, cutoff_risk relocated). One engine per sub-sprint; default keep flat. | `lint_domain_relocation.py` (advisory CI) |
 | ~12 route handlers still importing engine orchestration symbols | Each is a service-extraction sprint per ADR-015 | `lint_route_layer_purity.py` (advisory CI) |
 | 9 testing engines not subclassing `AuditEngineBase` | Pre-existing backlog from Sprint 726 | `lint_engine_base_adoption.py` (advisory CI) |
 | `routes/billing.py::stripe_webhook` decomposition | Bundled with deferred webhook coverage sprint | `## Deferred Items` |
