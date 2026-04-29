@@ -34822,7 +34822,7 @@
     },
     "/export/excel": {
       "post": {
-        "description": "Generate and stream an Excel workpaper.",
+        "description": "Generate and stream an Excel workpaper.\n\nSprint 748b: delegates to ``export.pipeline``. No branding —\nExcel exports don't apply Enterprise PDF branding.",
         "operationId": "export_excel_workpaper_export_excel_post",
         "requestBody": {
           "content": {
@@ -34914,7 +34914,7 @@
     },
     "/export/financial-statements": {
       "post": {
-        "description": "Generate and download financial statements as PDF or Excel.\n\nSprint 679 (completion): PDF path applies Enterprise branding via\nContextVar. Excel path is unaffected — branding lives in PDF chrome.",
+        "description": "Generate and download financial statements as PDF or Excel.\n\nSprint 679: PDF path applies Enterprise branding via ContextVar.\nSprint 748b: delegates to ``export.pipeline``. PDF path passes the\nbranding context through; Excel path ignores it.",
         "operationId": "export_financial_statements_export_financial_statements_post",
         "parameters": [
           {
@@ -35157,7 +35157,7 @@
     },
     "/export/leadsheets": {
       "post": {
-        "description": "Generate Excel Lead Sheets from analysis result.",
+        "description": "Generate Excel Lead Sheets from analysis result.\n\nSprint 748b: delegates to ``export.pipeline``. The flux/recon\ndomain-object assembly previously inline here lives in\n``export.serializers.excel.serialize_leadsheets_excel``.",
         "operationId": "export_leadsheets_export_leadsheets_post",
         "requestBody": {
           "content": {
@@ -35295,7 +35295,7 @@
     },
     "/export/pdf": {
       "post": {
-        "description": "Generate and stream a PDF audit report.\n\nSprint 679 (completion): Enterprise branding layered on via ContextVar.",
+        "description": "Generate and stream a PDF audit report.\n\nSprint 679: Enterprise branding via ContextVar.\nSprint 748b: delegates to ``export.pipeline`` with branding plumbed through.",
         "operationId": "export_pdf_report_export_pdf_post",
         "requestBody": {
           "content": {
