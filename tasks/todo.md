@@ -335,18 +335,23 @@ Extract service layer from `auth_routes.py` into focused subdomains:
 ---
 
 ### Sprint 753: Domain package relocation (Phase 5 — Domain Consolidation 1/2)
-**Status:** PENDING. Depends on Sprint 745 (route patterns landed first).
+**Status:** COMPLETE 2026-04-29 — pilot only; full migration is incremental per ADR-018.
 **Priority:** P3.
 **Source:** Architectural Remediation Plan phase 5.
 
-Per-tool layout:
-- `services/<domain>/analysis.py`
-- `services/<domain>/schemas.py`
-- `services/<domain>/export.py`
+**What landed:**
+- **ADR-018** (`docs/03-engineering/adr-018-domain-package-relocation.md`) — documents the per-tool target layout (`services/audit/<tool>/{analysis,schemas,export}.py`), references `audit_engine.py` shim + `services/audit/flux_service.py` as existing precedents, and adopts ADR-013's incremental-migration discipline. Default: keep flat unless reorganization adds clear value.
+- **Pilot relocation** — `recon_engine.py` (193 lines, 4 public symbols) moved to `backend/services/audit/flux/recon.py`. Selected because it's small, self-contained (only depends on `flux_engine.FluxResult` + `security_utils`), and pairs with the existing `flux_service.py` orchestrator.
+- **Backward-compat shim** at `backend/recon_engine.py` (~25 lines) re-exports the 4 public symbols. All 6 existing callers (`routes/export_diagnostics.py`, `shared/helpers.py`, `leadsheet_generator.py`, `export/serializers/excel.py`, `services/audit/flux_service.py`, `tests/test_recon_engine.py`) work without modification.
+- **Shim contract test** (`tests/test_recon_engine_shim.py`, 3 tests) asserts shim symbols are identical to canonical objects + `__all__` matches. A future edit that drops a symbol surfaces here loudly.
 
-Relocate large top-level engines (e.g., `audit_engine.py`, tool-specific engines) into consistent domain modules. Routes update imports only — no behavior changes.
+**Verification:** 60/60 tests across `test_recon_engine`, `test_recon_engine_shim`, `test_audit_flux_routes`, `test_export_routes` all pass.
 
-**Exit:** Domain logic consistently organized; top-level `backend/*.py` engine files emptied or shrunk to thin re-exports.
+**Out of scope (deferred):**
+- Lint scan for top-level engines not in `services/audit/<tool>/` — folded into Sprint 756 (architecture conformance CI). Mirrors `scripts/lint_engine_base_adoption.py`.
+- The remaining ~33 top-level `*_engine.py` files. Each is a separate sub-sprint per ADR-018's incremental discipline.
+
+**Exit met:** Per-tool layout pattern documented (ADR-018) + proven (recon pilot). Top-level `recon_engine.py` is now a thin shim. Subsequent engines migrate one at a time without coordinated PRs across consumers.
 
 ---
 
