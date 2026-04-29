@@ -428,15 +428,28 @@ Extract service layer from `auth_routes.py` into focused subdomains:
 ---
 
 ### Sprint 757: Network duplication + transformation hotspot audit (Phase 7 — Performance Hardening 1/2)
-**Status:** PENDING.
+**Status:** COMPLETE 2026-04-29.
 **Priority:** P3 — structural perf only; not a micro-tuning sprint.
 **Source:** Architectural Remediation Plan phase 7.
 
-- Instrument frontend network duplication / over-fetching (Sentry breadcrumbs + browser perf-panel sample).
-- Consolidate repeated transformations into memoized/shared selectors.
-- Audit backend endpoints for heavy synchronous shaping in routes; relocate to services/mappers per Sprints 745, 748.
+**What landed (one concrete consolidation + survey findings):**
 
-**Exit:** Duplicate requests reduced; expensive transformations off render paths.
+**Frontend:** `app/tools/page.tsx` favorite-management consolidated onto `useUserPreferences` (Sprint 751). Eliminated 30+ lines of duplicated state machinery: `useState<string[]>([])`, `useEffect` fetching `/settings/preferences`, inline `apiPut` toggle with revert. Both `/dashboard` and `/tools` now compose the same hook, sharing apiClient cache + dedup. Bonus: side-effect bug fixed where the two pages could diverge mid-session if user toggled a favorite on one tab while the other had stale state.
+
+**Bonus render-perf guard:** precomputed `favoritesSet = new Set(favorites)` so the per-card `.includes(tool.key)` check is O(1) instead of O(favorites) × N tools.
+
+**Survey results:**
+- **Frontend network duplication.** Survey of `apiGet` callers in `app/` found `/dashboard`, `/tools`, `/settings/team`, `/status`, and the engagement workspace page. Only the dashboard ↔ tools-catalog pair shared an endpoint (`/settings/preferences`) — fixed via this sprint. The others fetch endpoint-specific data with no overlap. apiClient's existing in-flight dedup + stale-while-revalidate cache already handles the same-component-mounting-twice case at the transport layer.
+- **Repeated transformations.** Sprint 752 already memoized the dashboard's hot derivations (`summaryLine`, `displayTools`, `toolByKey`). Sprint 757 added `favoritesSet` to tools-page. No further per-render allocation hotspots surfaced in a survey of remaining pages.
+- **Backend route-layer shaping.** Surveyed top-by-line-count + top-by-loop-count routes. The largest loops (e.g., `routes/activity.py::get_tool_activity_feed`) are straightforward DB-row → Pydantic-response transforms, request-time by definition, capped at `limit=8` for the dashboard's primary call. Sprint 748a already moved 6 CSV diagnostic routes to delegate to `export.pipeline`. The remaining inline shaping (PDF/Excel/Leadsheets/FinancialStatements routes) is captured by Sprint 748b's filed scope.
+
+**Out of scope (deferred):**
+- **Sentry breadcrumbs / browser perf-panel instrumentation** — would need a profiling sprint with real production traffic to identify hotspots beyond what static analysis surfaces. The codebase already emits Sentry breadcrumbs at the apiClient layer (Sprint 562); deeper instrumentation is an investigation task, not a refactor.
+- **Sprint 748b's PDF/Excel migration** — separate filed sprint with its own scope (pipeline branding-context plumbing).
+
+**Verification:** `tsc --noEmit` clean; 12/12 affected jest tests pass (8 useUserPreferences + 4 DashboardPage smoke). No tests existed for `app/tools/page.tsx`; tsc + the unchanged useUserPreferences tests are the regression net.
+
+**Exit met:** Duplicate `/settings/preferences` fetch + optimistic-update logic eliminated. The single concrete duplication this initiative had created across Sprints 750-751 is consolidated. Sprint 758's pagination + cache invalidation coherence is the natural next step.
 
 ---
 

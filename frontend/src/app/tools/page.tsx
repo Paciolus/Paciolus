@@ -3,24 +3,25 @@
 /**
  * Tools Catalog Page — Sprint 579
  *
- * Browsable catalog of all 12+ diagnostic tools grouped by category.
+ * Browsable catalog of all diagnostic tools grouped by category.
  * Shows descriptions, ISA/PCAOB references, tier badges, and
  * favorite/pin controls. Serves as the central tool discovery page.
+ *
+ * Sprint 757: favorite-management consolidated onto `useUserPreferences`
+ * (Sprint 751's hook). Eliminates the duplicate apiGet('/settings/preferences')
+ * + optimistic-update logic that lived inline here. Both this page and
+ * the dashboard now compose the same hook, sharing apiClient cache + dedup.
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useMemo } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { Reveal } from '@/components/ui/Reveal'
-import { apiGet, apiPut } from '@/utils/apiClient'
+import { useUserPreferences } from '@/hooks'
 import { fadeUp, staggerContainerTight } from '@/lib/motion'
 
 /* ─── Types ─────────────────────────────────────────────────────────── */
-
-interface UserPreferences {
-  favorite_tools: string[]
-}
 
 type Category = 'Core Analysis' | 'Testing Suite' | 'Advanced'
 
@@ -72,35 +73,18 @@ const CATEGORIES: Category[] = ['Core Analysis', 'Testing Suite', 'Advanced']
 
 export default function ToolsCatalogPage() {
   const { token } = useAuthSession()
-  const [favorites, setFavorites] = useState<string[]>([])
-
-  useEffect(() => {
-    if (!token) return
-    apiGet<UserPreferences>('/settings/preferences', token)
-      .then(res => { if (res.data?.favorite_tools) setFavorites(res.data.favorite_tools) })
-      .catch(err => {
-        // Sprint 693: preference load failures were swallowed silently;
-        // log as a warning so regressions surface in the console and
-        // downstream Sentry breadcrumbs without breaking the page.
-        console.warn('[tools] preference load failed', err)
-      })
-  }, [token])
-
-  const toggleFavorite = useCallback(
-    async (toolKey: string) => {
-      if (!token) return
-      const next = favorites.includes(toolKey)
-        ? favorites.filter(k => k !== toolKey)
-        : [...favorites, toolKey]
-      setFavorites(next)
-      try {
-        await apiPut('/settings/preferences', token, { favorite_tools: next })
-      } catch {
-        setFavorites(favorites)
-      }
+  const { favorites, toggleFavorite } = useUserPreferences(token, {
+    onError: msg => {
+      // Sprint 693: preference load failures were swallowed silently;
+      // log as a warning so regressions surface in the console + Sentry
+      // breadcrumbs without breaking the page.
+      console.warn('[tools] %s', msg)
     },
-    [token, favorites]
-  )
+  })
+
+  // Sprint 757: precompute favorites Set so the per-card inclusion check
+  // is O(1) instead of O(favorites.length) × N tools per render.
+  const favoritesSet = useMemo(() => new Set(favorites), [favorites])
 
   return (
     <main id="main-content" className="min-h-screen bg-surface-page">
@@ -154,12 +138,12 @@ export default function ToolsCatalogPage() {
                       <button
                         onClick={(e) => { e.preventDefault(); toggleFavorite(tool.key) }}
                         className="absolute top-3 right-3 w-7 h-7 flex items-center justify-center rounded-lg opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity hover:bg-oatmeal-100"
-                        aria-label={favorites.includes(tool.key) ? 'Remove from favorites' : 'Pin to dashboard'}
-                        title={favorites.includes(tool.key) ? 'Remove from favorites' : 'Pin to dashboard'}
+                        aria-label={favoritesSet.has(tool.key) ? 'Remove from favorites' : 'Pin to dashboard'}
+                        title={favoritesSet.has(tool.key) ? 'Remove from favorites' : 'Pin to dashboard'}
                       >
                         <svg
-                          className={`w-4 h-4 ${favorites.includes(tool.key) ? 'text-sage-600 fill-sage-600' : 'text-content-tertiary'}`}
-                          fill={favorites.includes(tool.key) ? 'currentColor' : 'none'}
+                          className={`w-4 h-4 ${favoritesSet.has(tool.key) ? 'text-sage-600 fill-sage-600' : 'text-content-tertiary'}`}
+                          fill={favoritesSet.has(tool.key) ? 'currentColor' : 'none'}
                           stroke="currentColor"
                           viewBox="0 0 24 24"
                         >
