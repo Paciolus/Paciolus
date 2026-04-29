@@ -15,8 +15,13 @@ jest.mock('@/contexts/AuthSessionContext', () => ({
   })),
 }))
 
+const mockApiDownload = jest.fn()
+const mockDownloadBlob = jest.fn()
+
 jest.mock('@/utils/apiClient', () => ({
   apiPost: jest.fn(),
+  apiDownload: (...args: unknown[]) => mockApiDownload(...args),
+  downloadBlob: (...args: unknown[]) => mockDownloadBlob(...args),
 }))
 
 jest.mock('@/components/ui/Reveal', () => ({
@@ -138,32 +143,21 @@ describe('DepreciationPage', () => {
     expect(screen.queryByText('Book Schedule')).not.toBeInTheDocument()
   })
 
-  it('invokes fetch with Bearer token when downloading CSV', async () => {
-    const fetchMock = jest.fn().mockResolvedValue({
-      ok: true,
-      blob: async () => new Blob(['csv'], { type: 'text/csv' }),
-    })
-    global.fetch = fetchMock as unknown as typeof fetch
-    // jsdom doesn't implement URL.createObjectURL
-    const createUrl = jest.fn(() => 'blob:mock')
-    const revokeUrl = jest.fn()
-    Object.defineProperty(URL, 'createObjectURL', { value: createUrl, configurable: true })
-    Object.defineProperty(URL, 'revokeObjectURL', { value: revokeUrl, configurable: true })
+  it('delegates CSV download to apiDownload + downloadBlob', async () => {
+    const blob = new Blob(['csv'], { type: 'text/csv' })
+    mockApiDownload.mockResolvedValue({ ok: true, blob, filename: 'depreciation_Office_Equipment.csv' })
 
     render(<DepreciationPage />)
     fireEvent.click(screen.getByRole('button', { name: /Calculate Schedule/i }))
     await waitFor(() => expect(screen.getByRole('button', { name: /Download CSV/i })).toBeInTheDocument())
     fireEvent.click(screen.getByRole('button', { name: /Download CSV/i }))
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalled())
-    const [url, init] = fetchMock.mock.calls[0]
-    expect(String(url)).toContain('/audit/depreciation/export.csv')
-    expect((init as RequestInit).method).toBe('POST')
-    expect((init as RequestInit).headers).toMatchObject({
-      Authorization: 'Bearer test-token',
-      'X-Requested-With': 'XMLHttpRequest',
-    })
-    expect(createUrl).toHaveBeenCalled()
-    expect(revokeUrl).toHaveBeenCalled()
+    await waitFor(() => expect(mockApiDownload).toHaveBeenCalled())
+    expect(mockApiDownload).toHaveBeenCalledWith(
+      '/audit/depreciation/export.csv',
+      'test-token',
+      expect.objectContaining({ method: 'POST' }),
+    )
+    expect(mockDownloadBlob).toHaveBeenCalledWith(blob, 'depreciation_Office_Equipment.csv')
   })
 })

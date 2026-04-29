@@ -13,7 +13,7 @@ import type {
   HeatmapRequest,
   HeatmapResponse,
 } from '@/types/accountRiskHeatmap'
-import { apiPost } from '@/utils/apiClient'
+import { apiDownload, apiPost, downloadBlob } from '@/utils/apiClient'
 
 export type HeatmapStatus = 'idle' | 'loading' | 'success' | 'error'
 
@@ -63,32 +63,16 @@ export function useAccountRiskHeatmap(): UseAccountRiskHeatmapReturn {
       }
       setExporting(true)
       try {
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || ''}/audit/account-risk-heatmap/export.csv`,
-          {
-            method: 'POST',
-            credentials: 'include',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
-              'X-Requested-With': 'XMLHttpRequest',
-            },
-            body: JSON.stringify(payload),
-          },
+        const result = await apiDownload(
+          '/audit/account-risk-heatmap/export.csv',
+          token,
+          { method: 'POST', body: payload },
         )
-        if (!response.ok) {
-          setError('CSV export failed')
+        if (!result.ok || !result.blob) {
+          setError(result.error ?? 'CSV export failed')
           return false
         }
-        const blob = await response.blob()
-        const url = URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        link.href = url
-        link.download = 'account_risk_heatmap.csv'
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        URL.revokeObjectURL(url)
+        downloadBlob(result.blob, result.filename ?? 'account_risk_heatmap.csv')
         return true
       } catch (e) {
         setError(e instanceof Error ? e.message : 'CSV export failed')

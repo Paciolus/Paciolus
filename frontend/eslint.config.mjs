@@ -65,6 +65,14 @@ const eslintConfig = [
           selector: 'AssignmentExpression[left.property.name="innerHTML"]',
           message: 'Direct innerHTML assignment is an XSS sink. Use textContent or DOM APIs.',
         },
+        {
+          // Sprint 744: ban direct fetch() outside the canonical transport allowlist.
+          // Use apiClient (apiGet/apiPost/apiPut/apiDelete), apiDownload, or uploadFetch.
+          // Allowlist: utils/transport.ts, utils/authMiddleware.ts, utils/downloadAdapter.ts,
+          // utils/uploadTransport.ts, contexts/AuthSessionContext.tsx, app/shared/[token]/page.tsx.
+          selector: 'CallExpression[callee.type="Identifier"][callee.name="fetch"]',
+          message: 'Direct fetch() is banned. Use apiClient (apiGet/apiPost/etc.), apiDownload, or uploadFetch from @/utils/apiClient. Low-level transport modules are allowlisted via per-file override.',
+        },
       ],
 
       // Accessibility
@@ -186,6 +194,32 @@ const eslintConfig = [
           alwaysTryTypes: true,
         },
       },
+    },
+  },
+  {
+    // Sprint 744: allowlist for direct fetch() — low-level transport / auth / public share modules.
+    files: [
+      'src/utils/transport.ts',
+      'src/utils/authMiddleware.ts',
+      'src/utils/downloadAdapter.ts',
+      'src/utils/uploadTransport.ts',
+      'src/contexts/AuthSessionContext.tsx',
+      // Literal `[token]` in path — escape brackets for minimatch.
+      'src/app/shared/\\[token\\]/page.tsx',
+    ],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        // Preserve XSS-sink rules; only the fetch() ban is relaxed for these files.
+        {
+          selector: 'JSXAttribute[name.name="dangerouslySetInnerHTML"]',
+          message: 'dangerouslySetInnerHTML bypasses React XSS protections. Use safe alternatives or get security review.',
+        },
+        {
+          selector: 'AssignmentExpression[left.property.name="innerHTML"]',
+          message: 'Direct innerHTML assignment is an XSS sink. Use textContent or DOM APIs.',
+        },
+      ],
     },
   },
   {

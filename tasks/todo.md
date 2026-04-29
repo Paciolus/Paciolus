@@ -59,6 +59,277 @@
 
 ---
 
+## Architectural Remediation Initiative
+
+> **Source:** 8-phase remediation strategy (transcript 2026-04-29) translated into Paciolus sprint format. Stays in this backlog section until launch-readiness work clears (post Phase 4.1 Stripe cutover). Sprints are numbered + reserved but not in `## Active Phase` until promoted one batch at a time.
+> **Guiding principle:** stabilize → standardize → modularize → deepen. Phases 0–1 are non-negotiable prerequisites; Phases 2–7 can re-order based on incident pressure; Phase 8 is the convergence audit.
+> **Sprint 741 reserved** for cleanup-scheduler root-cause work (Sprint 740 follow-up — see Active Phase). Initiative starts at 742.
+> **Cross-cutting deferred-items honored:** Sprint 746 must respect the auth cookie/CSRF helper deferral (don't touch security primitives without an audit finding); Sprint 750 coordinates with the deferred `useTrialBalanceUpload` decomposition; Sprint 745/Phase 2 spirit covers the deferred `stripe_webhook` decomposition; Sprint 754 absorbs the deferred client-access helper relocation.
+
+### Sprint 742: ADRs + quality thresholds (Phase 0 — Baseline & Guardrails 1/2)
+**Status:** PENDING. Foundation work; unlocks Sprints 743–759.
+**Priority:** P3.
+**Source:** Architectural Remediation Plan phase 0.
+
+Three ADRs in `docs/adr/` (or equivalent location):
+1. **Canonical frontend network layer** — `apiClient` is the single entrypoint; direct `fetch` banned in `app/`, `hooks/`, `components/` (allowlist for transport/auth modules).
+2. **Backend route/service boundaries** — routes are orchestration-only; analysis/transform logic lives in services.
+3. **Export architecture** — route validates + authorizes, mapper transforms, generator emits. No inline shaping in handlers.
+
+Quality threshold definitions: max file LoC band, max function complexity, max hook size — captured as ADR + linter config target (enforcement comes in Sprints 744 + 756).
+
+**Exit:** ADRs merged; threshold defaults documented; Sprints 743–759 reference these as authority.
+
+---
+
+### Sprint 743: Characterization test gap analysis (Phase 0 — Baseline & Guardrails 2/2)
+**Status:** PENDING. Pre-requisite regression net for Phase 1+.
+**Priority:** P3. Effort largely offset by existing 7,363 backend / 1,751 frontend coverage.
+**Source:** Architectural Remediation Plan phase 0.
+
+Audit existing coverage against refactor surfaces; only file gap-fills where genuinely missing:
+- Auth flows: login/register/refresh/logout/password reset/verification/session revoke (pre-req for Sprints 746–747).
+- Export endpoints: payload acceptance + output shape per format (pre-req for Sprints 748–749).
+- Dashboard + tool page critical interactions (pre-req for Sprints 750–752).
+- API error envelope + status code contract snapshots.
+
+**Exit:** Gap report filed; targeted gap-fill PRs merged; pre-refactor regression net acknowledged sufficient. No bloat for already-covered paths.
+
+---
+
+### Sprint 744: Frontend canonical `apiClient` enforcement (Phase 1 — Cross-Cutting 1/2)
+**Status:** COMPLETE 2026-04-29. Phase 0 ADR skipped per CEO directive — proceeded directly to enforcement.
+**Priority:** P3.
+**Source:** Architectural Remediation Plan phase 1.
+
+**What landed:**
+- Migrated 4 direct-`fetch` outliers to canonical layers:
+  - `hooks/useAccountRiskHeatmap.ts` `downloadCsv` → `apiDownload` + `downloadBlob` (was 27 lines of manual blob-anchor handling).
+  - `app/tools/depreciation/page.tsx` `onDownloadCsv` → `apiDownload` + `downloadBlob`.
+  - `app/tools/loan-amortization/page.tsx` `downloadExport` → `apiDownload` + `downloadBlob`.
+  - `hooks/useStatisticalSampling.ts` `executeSamplingUpload` → `uploadFetch` from `uploadTransport`.
+- Renamed shadowed local `fetch` in `hooks/useRollingWindow.ts` → `fetchRollingData` (was destructured from `useFetchData`, tripping the new lint rule).
+- ESLint rule (`no-restricted-syntax` `CallExpression[callee.name="fetch"]`) banning direct `fetch()` outside the allowlist. Per-file override block exempts the canonical transport/auth modules.
+- Allowlist (escaped `[token]` for minimatch): `utils/transport.ts`, `utils/authMiddleware.ts`, `utils/downloadAdapter.ts`, `utils/uploadTransport.ts`, `contexts/AuthSessionContext.tsx`, `app/shared/[token]/page.tsx` (public passcode-flow share page — intentionally low-level for 429 Retry-After parsing).
+- Updated 4 affected test files to mock at the `apiDownload`/`downloadBlob` boundary instead of `global.fetch` (the old assertions checked `Authorization: Bearer` headers, but the canonical pattern uses HttpOnly cookie auth via `credentials: 'include'` — tests were pinning obsolete behavior).
+
+**Verification:**
+- `npx eslint src/**/*.{ts,tsx}` → exit 0 (clean).
+- `npx tsc --noEmit` → exit 0.
+- 4 affected jest suites: 26/26 passing (`useAccountRiskHeatmap`, `useStatisticalSampling`, `DepreciationPage`, `AccountRiskHeatmapPage`); `LoanAmortizationPage`: 8/8.
+
+**Out of scope (deferred):**
+- Unify user-facing error normalization through one path — partially achieved (the canonical `apiDownload`/`uploadFetch`/`apiPost` already return structured `{ ok, error }`), but consumer-side error UX is still per-page. Full unification is bundled into Sprint 752 (render-perf + decomposition pass).
+- ADR document (Phase 0 deliverable) — skipped. The lint rule + allowlist comments serve as the canonical record.
+
+**Exit met:** Single fetch pattern; CI enforces it via ESLint rule.
+
+---
+
+### Sprint 745: Backend transaction + route-error standardization (Phase 1 — Cross-Cutting 2/2)
+**Status:** PENDING. Depends on Sprint 742 ADR.
+**Priority:** P3.
+**Source:** Architectural Remediation Plan phase 1.
+
+- Transaction helper / unit-of-work wrapper for route handlers (commit/rollback/error conversion in one place).
+- Shared route error response utility (uniform `HTTPException` mapping + structured-log metadata).
+- Pilot migration on 3–5 high-traffic routes; verify behavior parity via Sprint 743 regression net.
+
+Inherits the spirit of the deferred `routes/billing.py::stripe_webhook` decomposition — webhook signature-verify / dedup / error-mapping triad benefits from this pattern; revisit that deferred item once the pattern lands.
+
+**Exit:** One transaction + one route-error pattern; pilot demonstrates parity; pattern documented for incremental adoption.
+
+---
+
+### Sprint 746: Auth service-layer extraction (Phase 2 — Auth Decomposition 1/2)
+**Status:** PENDING. Depends on Sprint 743 (auth flow regression net).
+**Priority:** **P2** — security-sensitive surface; highest-risk refactor in plan.
+**Source:** Architectural Remediation Plan phase 2.
+
+Extract service layer from `auth_routes.py` into focused subdomains:
+- `services/auth/identity.py` — login/logout/refresh/me + token issuance/rotation.
+- `services/auth/registration.py` — registration + verification lifecycle.
+- `services/auth/recovery.py` — password reset lifecycle.
+- `services/auth/sessions.py` — session inventory + revocation.
+
+**Honors deferred-items boundary:** do **not** touch cookie/CSRF primitives (`_set_refresh_cookie`, `_set_access_cookie`, etc.) without a specific audit finding. Sprint 746 moves business logic, not security primitives.
+
+**Exit:** Service layer is the SoT for auth workflows; route file delegates only.
+
+---
+
+### Sprint 747: Auth route thinning + security response normalization (Phase 2 — Auth Decomposition 2/2)
+**Status:** PENDING. Depends on Sprint 746.
+**Priority:** P2.
+**Source:** Architectural Remediation Plan phase 2.
+
+- Refactor handlers to: validate input → call service → return typed response.
+- Normalize duplicated security response behavior (brute-force/lockout, enumeration-safe responses for password reset / login).
+- Add per-submodule targeted tests where Sprint 743 found gaps.
+
+**Exit:** Route handlers orchestration-only; security-critical behaviors covered by focused service-level tests; no monolithic-route assumptions remain.
+
+---
+
+### Sprint 748: Export mapper layer + diagnostics refactor (Phase 3 — Export Rationalization 1/2)
+**Status:** PENDING. Depends on Sprint 743 (export contract regression net).
+**Priority:** P3.
+**Source:** Architectural Remediation Plan phase 3.
+
+- New layer: `export/mappers/` — DTO normalization, row/section builders for CSV, domain→renderable transforms for PDF/Excel.
+- Refactor `routes/export_diagnostics.py` handlers to invoke mappers; remove inline loops/formatting.
+
+**Exit:** `export_diagnostics` routes are slim; transformation logic owned by mapper layer.
+
+---
+
+### Sprint 749: Export endpoint skeleton standardization + memos harmonization (Phase 3 — Export Rationalization 2/2)
+**Status:** PENDING. Depends on Sprint 748.
+**Priority:** P3.
+**Source:** Architectural Remediation Plan phase 3.
+
+- Standardize export endpoint shape: validate → authorize/entitlement → mapper → generator → unified streaming response.
+- Resolve `export_memos.py` dynamic-vs-explicit registration ambiguity (pick one strategy + document any documented exceptions).
+- Add contract tests asserting export schema (headers, required sections, key fields) per format (CSV/Excel/PDF).
+
+**Exit:** All export routes follow one skeleton; dynamic/explicit decision unambiguous; contract tests guard schema.
+
+---
+
+### Sprint 750: Tool page architecture template + multi-period refactor (Phase 4 — Frontend Decomposition 1/3)
+**Status:** PENDING. Depends on Sprint 743.
+**Priority:** P3.
+**Source:** Architectural Remediation Plan phase 4.
+
+- Template: `useToolWorkflow` (data/process orchestration) + `useToolUIState` (filters/tabs/views) + presentational components only.
+- Apply to multi-period page: upload state machine, compare execution, export/memo, metadata/form hooks.
+
+**Coordination with deferred items:** the deferred `useTrialBalanceUpload` decomposition is in scope for the upload state-machine extraction. Pre-requisite is Playwright coverage of the mapping-required flow (file as part of Sprint 743 if missing).
+
+**Exit:** Multi-period page is composition-only; template documented; replicable on other tool pages.
+
+---
+
+### Sprint 751: Dashboard decomposition (Phase 4 — Frontend Decomposition 2/3)
+**Status:** PENDING. Depends on Sprint 750.
+**Priority:** P3.
+**Source:** Architectural Remediation Plan phase 4.
+
+- Extract tool catalog + icon registry as single SoT for tool metadata (eliminates the metadata-drift class that Sprint 717's catalog reconciliation closed for backend).
+- Extract data-fetching hooks: `useDashboardStats`, `useActivityFeed`, `usePreferences`.
+- Dashboard page becomes composition root.
+
+**Exit:** Dashboard logic in narrow hooks; tool metadata cannot drift between dashboard and other surfaces.
+
+---
+
+### Sprint 752: Oversized hook decomposition + render-perf guards (Phase 4 — Frontend Decomposition 3/3)
+**Status:** PENDING. Depends on Sprint 750.
+**Priority:** P3.
+**Source:** Architectural Remediation Plan phase 4.
+
+- Decompose large generic hooks (form validation candidate): pure validation engine + React adapter hook + optional helpers module.
+- Add render-performance guards: memoized selectors / callback boundaries; eliminate mega-state objects causing unrelated rerenders.
+
+**Exit:** Hook responsibilities narrow + testable; rerender-storm hotspots mitigated.
+
+---
+
+### Sprint 753: Domain package relocation (Phase 5 — Domain Consolidation 1/2)
+**Status:** PENDING. Depends on Sprint 745 (route patterns landed first).
+**Priority:** P3.
+**Source:** Architectural Remediation Plan phase 5.
+
+Per-tool layout:
+- `services/<domain>/analysis.py`
+- `services/<domain>/schemas.py`
+- `services/<domain>/export.py`
+
+Relocate large top-level engines (e.g., `audit_engine.py`, tool-specific engines) into consistent domain modules. Routes update imports only — no behavior changes.
+
+**Exit:** Domain logic consistently organized; top-level `backend/*.py` engine files emptied or shrunk to thin re-exports.
+
+---
+
+### Sprint 754: Common analysis interfaces + helper dedup (Phase 5 — Domain Consolidation 2/2)
+**Status:** PENDING. Depends on Sprint 753.
+**Priority:** P3.
+**Source:** Architectural Remediation Plan phase 5.
+
+- Shared interfaces: input contract, result envelope, error semantics for tool services.
+- Consolidate duplicated helpers (numeric normalization, risk-band parsing, threshold handling) into one module.
+- Module-boundary tests: routes don't bypass domain contracts (e.g., importing engine internals directly).
+
+**Absorbs deferred item:** the deferred move of client-access helpers (`is_authorized_for_client`, `get_accessible_client`, `require_client`) out of `shared/helpers.py` is in scope here if a fourth helper has joined them by the time this sprint runs.
+
+**Exit:** Tool services follow shared contracts; cross-tool duplication materially reduced; boundary discipline test-enforced.
+
+---
+
+### Sprint 755: Dead code + duplicate type cleanup (Phase 6 — Drift Elimination 1/2)
+**Status:** PENDING. Depends on Sprints 744, 745, 750–754 (so we know what's actually obsolete).
+**Priority:** P3.
+**Source:** Architectural Remediation Plan phase 6.
+
+- Audit dead utilities, duplicate DTOs/types, commented legacy code paths.
+- Remove deprecated adapters and one-off helpers superseded by Phase 1–5 standard layers.
+- Consolidate duplicated constants/magic strings into typed config modules.
+
+**Exit:** Legacy parallel patterns removed; the standard layer is the only path.
+
+---
+
+### Sprint 756: Architecture conformance CI + docs refresh (Phase 6 — Drift Elimination 2/2)
+**Status:** PENDING. Depends on Sprint 755.
+**Priority:** P3.
+**Source:** Architectural Remediation Plan phase 6.
+
+- CI checks: forbidden imports/layers (route → engine internals), duplicate route patterns, banned direct network calls (extends Sprint 744's lint rule to repo-wide coverage).
+- Update `CONTRIBUTING.md` + `CLAUDE.md` architecture sections + relevant runbooks to reflect new structure.
+
+**Exit:** Drift detectors enforced in CI; contributor docs match reality.
+
+---
+
+### Sprint 757: Network duplication + transformation hotspot audit (Phase 7 — Performance Hardening 1/2)
+**Status:** PENDING.
+**Priority:** P3 — structural perf only; not a micro-tuning sprint.
+**Source:** Architectural Remediation Plan phase 7.
+
+- Instrument frontend network duplication / over-fetching (Sentry breadcrumbs + browser perf-panel sample).
+- Consolidate repeated transformations into memoized/shared selectors.
+- Audit backend endpoints for heavy synchronous shaping in routes; relocate to services/mappers per Sprints 745, 748.
+
+**Exit:** Duplicate requests reduced; expensive transformations off render paths.
+
+---
+
+### Sprint 758: Pagination + cache invalidation coherence (Phase 7 — Performance Hardening 2/2)
+**Status:** PENDING.
+**Priority:** P3.
+**Source:** Architectural Remediation Plan phase 7.
+
+- Standardize pagination/limit conventions for activity/history feeds and other high-volume endpoints.
+- Audit cache invalidation across mutation endpoints; ensure no stale reads after mutations.
+
+**Exit:** Pagination + cache-invalidation patterns predictable and bounded.
+
+---
+
+### Sprint 759: Convergence scorecard + governance lane (Phase 8 — Convergence)
+**Status:** PENDING. Final sprint of Architectural Remediation Initiative.
+**Priority:** P3.
+**Source:** Architectural Remediation Plan phase 8.
+
+- Repo-wide consistency review against the original 8-phase weakness list.
+- Scorecard each weakness: resolved / partial / open with rationale → file in `reports/architectural-remediation-scorecard-YYYY-MM-DD.md`.
+- Define ongoing governance cadence: periodic architecture health review, complexity-budget checks, "no new god files" policy.
+- Establish refactor intake lane in backlog so debt remains visible and prioritized.
+
+**Exit:** Every weakness in the original plan has a mapped outcome; governance prevents relapse.
+
+---
+
 ## Active Phase
 > **Launch-readiness Council Review — 2026-04-16.** 8-agent consensus: code is launch-ready; gating path is CEO calendar (Phase 3 validation → Phase 4.1 Stripe cutover → legal sign-off). **Recommended path: ship on ~3-week ETA** with two engineering amendments — Sprint 673 below removes the 2026-05-09 TLS-override fuse before it collides with launch week, and Guardian's 5-item production-behavior checklist runs in parallel with Phase 3/4.1 (tracked in [`ceo-actions.md`](ceo-actions.md) "This Week's Action Map"). Full verdict tradeoff map in conversation transcript.
 > **Prior sprint detail:** All pre-Sprint-673 work archived under `tasks/archive/`. See [`tasks/COMPLETED_ERAS.md`](COMPLETED_ERAS.md) for the era index and archive file pointers.

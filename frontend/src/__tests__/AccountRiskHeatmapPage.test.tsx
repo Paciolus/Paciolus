@@ -16,9 +16,13 @@ jest.mock('@/contexts/AuthSessionContext', () => ({
   })),
 }))
 
-jest.mock('@/utils/apiClient', () => ({
-  apiPost: (...args: unknown[]) => mockApiPost(...args),
-}))
+jest.mock('@/utils/apiClient', () => {
+  const actual = jest.requireActual('@/utils/apiClient')
+  return {
+    ...actual,
+    apiPost: (...args: unknown[]) => mockApiPost(...args),
+  }
+})
 
 jest.mock('@/components/ui/Reveal', () => ({
   Reveal: ({ children }: { children: React.ReactNode }) => <>{children}</>,

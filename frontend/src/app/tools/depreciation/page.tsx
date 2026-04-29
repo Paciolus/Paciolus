@@ -10,7 +10,7 @@
 import { useState, useCallback, useMemo } from 'react'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { Reveal } from '@/components/ui/Reveal'
-import { apiPost } from '@/utils/apiClient'
+import { apiDownload, apiPost, downloadBlob } from '@/utils/apiClient'
 
 type BookMethod = 'straight_line' | 'declining_balance' | 'sum_of_years_digits' | 'units_of_production'
 type MacrsSystem = '' | 'gds_200db' | 'gds_150db' | 'gds_sl'
@@ -135,29 +135,16 @@ export default function DepreciationPage() {
   const onDownloadCsv = useCallback(async () => {
     if (!token) return
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || ''}/audit/depreciation/export.csv`,
-        {
-          method: 'POST',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-            'X-Requested-With': 'XMLHttpRequest',
-          },
-          body: JSON.stringify(buildPayload()),
-        }
+      const result = await apiDownload(
+        '/audit/depreciation/export.csv',
+        token,
+        { method: 'POST', body: buildPayload() },
       )
-      if (!res.ok) throw new Error('Failed to download CSV.')
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `depreciation_${assetName.replace(/\W+/g, '_')}.csv`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
+      if (!result.ok || !result.blob) {
+        throw new Error(result.error ?? 'Failed to download CSV.')
+      }
+      const filename = result.filename ?? `depreciation_${assetName.replace(/\W+/g, '_')}.csv`
+      downloadBlob(result.blob, filename)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to download CSV.')
     }

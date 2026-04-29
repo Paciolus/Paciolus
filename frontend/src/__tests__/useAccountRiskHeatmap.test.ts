@@ -12,8 +12,8 @@ import type {
 } from '@/types/accountRiskHeatmap'
 
 const mockApiPost = jest.fn()
-const mockFetch = jest.fn()
-global.fetch = mockFetch as unknown as typeof fetch
+const mockApiDownload = jest.fn()
+const mockDownloadBlob = jest.fn()
 
 jest.mock('@/contexts/AuthSessionContext', () => ({
   useAuthSession: () => ({ token: 'tok-heat' }),
@@ -21,6 +21,8 @@ jest.mock('@/contexts/AuthSessionContext', () => ({
 
 jest.mock('@/utils/apiClient', () => ({
   apiPost: (...args: unknown[]) => mockApiPost(...args),
+  apiDownload: (...args: unknown[]) => mockApiDownload(...args),
+  downloadBlob: (...args: unknown[]) => mockDownloadBlob(...args),
 }))
 
 const sampleRequest: HeatmapRequest = {
@@ -101,19 +103,9 @@ describe('useAccountRiskHeatmap', () => {
     expect(result.current.error).toBe('Rate limited')
   })
 
-  it('downloadCsv: success triggers blob download and returns true', async () => {
-    const createObjectUrl = jest.fn(() => 'blob:fake')
-    const revokeObjectUrl = jest.fn()
-    Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: createObjectUrl })
-    Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: revokeObjectUrl })
-
-    mockFetch.mockResolvedValue({
-      ok: true,
-      blob: () => Promise.resolve(new Blob(['rank,account'], { type: 'text/csv' })),
-    })
-
-    const appendSpy = jest.spyOn(document.body, 'appendChild')
-    const removeSpy = jest.spyOn(document.body, 'removeChild')
+  it('downloadCsv: success delegates to apiDownload + downloadBlob and returns true', async () => {
+    const blob = new Blob(['rank,account'], { type: 'text/csv' })
+    mockApiDownload.mockResolvedValue({ ok: true, blob, filename: 'account_risk_heatmap.csv' })
 
     const { result } = renderHook(() => useAccountRiskHeatmap())
 
@@ -123,24 +115,16 @@ describe('useAccountRiskHeatmap', () => {
     })
 
     expect(success).toBe(true)
-    expect(mockFetch).toHaveBeenCalledWith(
-      expect.stringContaining('/audit/account-risk-heatmap/export.csv'),
-      expect.objectContaining({
-        method: 'POST',
-        body: JSON.stringify(sampleRequest),
-      }),
+    expect(mockApiDownload).toHaveBeenCalledWith(
+      '/audit/account-risk-heatmap/export.csv',
+      'tok-heat',
+      expect.objectContaining({ method: 'POST', body: sampleRequest }),
     )
-    expect(createObjectUrl).toHaveBeenCalled()
-    expect(appendSpy).toHaveBeenCalled()
-    expect(removeSpy).toHaveBeenCalled()
-    expect(revokeObjectUrl).toHaveBeenCalledWith('blob:fake')
-
-    appendSpy.mockRestore()
-    removeSpy.mockRestore()
+    expect(mockDownloadBlob).toHaveBeenCalledWith(blob, 'account_risk_heatmap.csv')
   })
 
   it('downloadCsv: failure returns false and surfaces error', async () => {
-    mockFetch.mockResolvedValue({ ok: false })
+    mockApiDownload.mockResolvedValue({ ok: false, error: 'CSV export failed' })
 
     const { result } = renderHook(() => useAccountRiskHeatmap())
 
@@ -151,6 +135,7 @@ describe('useAccountRiskHeatmap', () => {
 
     expect(success).toBe(false)
     expect(result.current.error).toBe('CSV export failed')
+    expect(mockDownloadBlob).not.toHaveBeenCalled()
   })
 
   it('reset clears state', async () => {
