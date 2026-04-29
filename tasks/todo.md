@@ -260,16 +260,26 @@ Extract service layer from `auth_routes.py` into focused subdomains:
 ---
 
 ### Sprint 750: Tool page architecture template + multi-period refactor (Phase 4 — Frontend Decomposition 1/3)
-**Status:** PENDING. Depends on Sprint 743.
+**Status:** COMPLETE 2026-04-29.
 **Priority:** P3.
 **Source:** Architectural Remediation Plan phase 4.
 
-- Template: `useToolWorkflow` (data/process orchestration) + `useToolUIState` (filters/tabs/views) + presentational components only.
-- Apply to multi-period page: upload state machine, compare execution, export/memo, metadata/form hooks.
+**What landed:**
+- **ADR-017** (`docs/03-engineering/adr-017-tool-page-architecture-template.md`) — documents the canonical tool-page composition pattern: domain workflow hooks (uploads / comparison / export) + local UI/form state + thin orchestration callbacks + render-only JSX. Defines the local-state-vs-hook decision criteria (>15 lines, reused, async op, must be unit-testable).
+- **`frontend/src/hooks/usePeriodUploads.ts`** (142 lines) — owns the three-slot `PeriodState` upload state machine for multi-period: prior / current / budget. Exposes derived `canCompare` / `anyLoading`, `toggleBudget` (clears stale state on OFF), `reset`, and an optional `onBeforeUpload` callback so consumers can clear stale comparison results when a new file lands.
+- **`frontend/src/hooks/useMultiPeriodMemoExport.ts`** (81 lines) — owns the memo PDF export workflow: lead-sheet field stripping, metadata fallback to "Not specified", `apiDownload` invocation, `downloadBlob` trigger. Tracks `exporting` for button disabling.
+- **Multi-period page refactored to composition root** — 501 → 423 lines. Inline 30-line `auditFile` machine, three `setPeriod` state buckets, `showBudget` toggle, and 44-line memo export gone. Page is now: auth + 3 hook calls + form state + thin orchestration callbacks + JSX.
+- **8 hook tests for `usePeriodUploads`** (`__tests__/usePeriodUploads.test.ts`) covering: idle init, success transition, error transition, canCompare without/with budget, toggleBudget OFF clears state, reset, onBeforeUpload callback hook.
+- **8 hook tests for `useMultiPeriodMemoExport`** (`__tests__/useMultiPeriodMemoExport.test.ts`) covering: starts idle, no-op on null token, lead-sheet stripping, metadata fallback, server filename use, default filename fallback, ok=false skip, error reset.
+- Existing 8 multi-period page tests updated to mock the two new hooks. All 24 tests pass.
 
-**Coordination with deferred items:** the deferred `useTrialBalanceUpload` decomposition is in scope for the upload state-machine extraction. Pre-requisite is Playwright coverage of the mapping-required flow (file as part of Sprint 743 if missing).
+**Out of scope (deferred):**
+- The deferred `useTrialBalanceUpload` decomposition — Sprint 750 didn't touch it. Multi-period uses the `uploadTrialBalance` utility function, not the `useTrialBalanceUpload` hook. The deferred-items entry remains valid as separate scope.
+- Filter/metadata state extraction. Per ADR-017's local-state criteria, simple `useState` for filter strings and form labels stays inline — wrapping in a hook would be aesthetic-only.
 
-**Exit:** Multi-period page is composition-only; template documented; replicable on other tool pages.
+**Verification:** `tsc --noEmit` clean, ESLint clean, 24/24 affected jest tests pass.
+
+**Exit met:** Multi-period page is composition-only; ADR-017 documents the template; both pilot hooks have direct unit tests. Sprint 751 (dashboard decomposition) replicates the pattern next.
 
 ---
 

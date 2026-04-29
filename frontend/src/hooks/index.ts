@@ -70,6 +70,16 @@ export {
   type UseMultiPeriodComparisonReturn,
 } from './useMultiPeriodComparison';
 export {
+  usePeriodUploads,
+  type UsePeriodUploadsOptions,
+  type UsePeriodUploadsReturn,
+} from './usePeriodUploads';
+export {
+  useMultiPeriodMemoExport,
+  type MemoMetadata,
+  type UseMultiPeriodMemoExportReturn,
+} from './useMultiPeriodMemoExport';
+export {
   useJETesting,
   type UseJETestingReturn,
 } from './useJETesting';
