@@ -127,17 +127,25 @@ Audit existing coverage against refactor surfaces; only file gap-fills where gen
 ---
 
 ### Sprint 745: Backend transaction + route-error standardization (Phase 1 — Cross-Cutting 2/2)
-**Status:** PENDING. Depends on Sprint 742 ADR.
+**Status:** COMPLETE 2026-04-29.
 **Priority:** P3.
 **Source:** Architectural Remediation Plan phase 1.
 
-- Transaction helper / unit-of-work wrapper for route handlers (commit/rollback/error conversion in one place).
-- Shared route error response utility (uniform `HTTPException` mapping + structured-log metadata).
-- Pilot migration on 3–5 high-traffic routes; verify behavior parity via Sprint 743 regression net.
+**What landed:**
+- `backend/shared/db_unit_of_work.py` — `db_transaction(db, *, log_label, log_message=None)` context manager. Replaces the `try: db.commit(); except SQLAlchemyError as e: db.rollback(); logger.exception(...); raise HTTPException(500, detail=sanitize_error(e, log_label=...))` triad copy-pasted across ~12 route modules.
+- `backend/shared/route_errors.py` — `raise_http_error(status_code, *, label, user_message, exception, operation, allow_passthrough)` helper. Centralizes 4xx + non-DB 5xx error responses with sanitized detail + structured-log metadata. Complements `db_transaction` (DB) with the non-DB error path.
+- Pilot migration on `routes/activity.py` — 4 sites (`db_activity_create`, `db_activity_clear`, `db_tool_activity`, `db_prefs_update`) converted to `with db_transaction(...)`. Removed unused `SQLAlchemyError` + `sanitize_error` imports. Net `-30` lines on activity.py.
 
-Inherits the spirit of the deferred `routes/billing.py::stripe_webhook` decomposition — webhook signature-verify / dedup / error-mapping triad benefits from this pattern; revisit that deferred item once the pattern lands.
+**Verification:**
+- `tests/test_db_unit_of_work.py` — 7 tests covering: clean commit, SQLAlchemyError rollback+500, non-SQLAlchemy propagation (no rollback), IntegrityError handling, sanitization (no SQL/PII leak), log message override, default log message.
+- `tests/test_route_errors.py` — 7 tests covering: user_message wins, default fallback, exception-only path uses `sanitize_error`, passthrough returns safe original message, passthrough blocks internal-detail leakage, status code propagation across 9 codes.
+- `tests/test_activity_api.py` (13) + `tests/qa/test_activity_recent.py` (5) — all 18 pre-existing route tests still pass post-migration. 32/32 total.
 
-**Exit:** One transaction + one route-error pattern; pilot demonstrates parity; pattern documented for incremental adoption.
+**Out of scope (deferred to Sprint 755 or later):**
+- Migrating the remaining ~11 route modules (`auth_routes.py`, `billing.py`, `diagnostics.py`, etc.) to `db_transaction`. Sprint 745 ships the pattern + pilot; broad adoption is incremental and naturally folds into Sprints 746–747 (auth) and follow-up cleanup work.
+- The deferred `routes/billing.py::stripe_webhook` decomposition can now use both helpers — re-evaluate that deferred item once the auth refactor (Sprint 746) lands.
+
+**Exit met:** One transaction pattern + one route-error pattern; pilot on `activity.py` demonstrates parity (18/18 pre-existing tests pass); pattern documented for incremental adoption via module docstrings.
 
 ---
 
