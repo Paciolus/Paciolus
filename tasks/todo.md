@@ -67,18 +67,22 @@
 > **Cross-cutting deferred-items honored:** Sprint 746 must respect the auth cookie/CSRF helper deferral (don't touch security primitives without an audit finding); Sprint 750 coordinates with the deferred `useTrialBalanceUpload` decomposition; Sprint 745/Phase 2 spirit covers the deferred `stripe_webhook` decomposition; Sprint 754 absorbs the deferred client-access helper relocation.
 
 ### Sprint 742: ADRs + quality thresholds (Phase 0 — Baseline & Guardrails 1/2)
-**Status:** PENDING. Foundation work; unlocks Sprints 743–759.
+**Status:** COMPLETE 2026-04-29. Documents patterns Sprint 744–746a already established (ADR-014, 015) + sets target for Sprint 748–749 (ADR-016).
 **Priority:** P3.
 **Source:** Architectural Remediation Plan phase 0.
 
-Three ADRs in `docs/adr/` (or equivalent location):
-1. **Canonical frontend network layer** — `apiClient` is the single entrypoint; direct `fetch` banned in `app/`, `hooks/`, `components/` (allowlist for transport/auth modules).
-2. **Backend route/service boundaries** — routes are orchestration-only; analysis/transform logic lives in services.
-3. **Export architecture** — route validates + authorizes, mapper transforms, generator emits. No inline shaping in handlers.
+**What landed:**
+- `docs/03-engineering/adr-014-canonical-frontend-network-layer.md` — Accepted (Sprint 744). Direct `fetch()` banned outside the 6-file allowlist; ESLint rule enforces. Documents the canonical entrypoints (`apiGet`/`apiPost`/`apiDownload`/`uploadFetch`) and the rationale for each allowlist entry.
+- `docs/03-engineering/adr-015-backend-route-service-boundaries.md` — Accepted (Sprint 745 + 746a). Three patterns: `db_transaction` for DB writes, `raise_http_error` for non-DB error paths, `services/<domain>/<workflow>.py` for multi-step business logic. Honors the cookie/CSRF boundary deferral.
+- `docs/03-engineering/adr-016-export-architecture.md` — Proposed (target for Sprint 748+749). Mapper / generator separation. Routes become slim controllers. `export_memos.py` dynamic-vs-explicit ambiguity must be resolved (pick one strategy).
+- `docs/03-engineering/quality-thresholds.md` — Module size targets (route 500/800, service 300/500, page 400/700, hook 200/400), function complexity (cyclomatic 8/12), hook surface (4/8 useState declarations), advisory until Sprint 756 wires CI.
+- `CONTRIBUTING.md` — new "Architectural Patterns" section linking to all 4 docs.
 
-Quality threshold definitions: max file LoC band, max function complexity, max hook size — captured as ADR + linter config target (enforcement comes in Sprints 744 + 756).
+**Out of scope:**
+- Numbering — only ADR-013 existed previously, so the new 014/015/016 sit naturally next to it. No retroactive numbering of pre-existing implicit decisions.
+- CI enforcement — quality thresholds remain advisory until Sprint 756.
 
-**Exit:** ADRs merged; threshold defaults documented; Sprints 743–759 reference these as authority.
+**Exit met:** ADRs merged; threshold defaults documented; Sprints 743–759 can reference these as authority.
 
 ---
 

@@ -33,6 +33,16 @@ All PRs must pass the following CI checks before merging. The authoritative sour
 
 **E2E smoke tests:** Run on push to main and PRs targeting main. Requires `SMOKE_USER` and `SMOKE_PASS` repository secrets. When secrets are unavailable (external PRs), the job skips gracefully with a notice.
 
+## Architectural Patterns
+
+PRs touching frontend network code, backend route/service boundaries, or
+export endpoints should follow the patterns in:
+
+- [ADR-014: Canonical Frontend Network Layer](docs/03-engineering/adr-014-canonical-frontend-network-layer.md) — direct `fetch()` is banned outside the allowlist (CI-enforced via ESLint).
+- [ADR-015: Backend Route / Service Boundaries](docs/03-engineering/adr-015-backend-route-service-boundaries.md) — use `shared.db_unit_of_work.db_transaction` for DB writes; extract multi-step business logic to `services/<domain>/<workflow>.py`.
+- [ADR-016: Export Architecture](docs/03-engineering/adr-016-export-architecture.md) — proposed mapper/generator separation for `routes/export_*.py`.
+- [Quality Thresholds](docs/03-engineering/quality-thresholds.md) — module size, function complexity, hook size targets (advisory until Sprint 756).
+
 ## Commit Messages
 
 Use the format: `Sprint N: Brief description of change`
