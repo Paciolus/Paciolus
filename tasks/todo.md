@@ -661,3 +661,79 @@ Write Alembic migrations for the documented drift in `PRE_EXISTING_DRIFT_TABLES`
 
 ---
 
+### Sprint 760: Dependency hygiene — patches + safe minors (2026-04-29 nightly)
+**Status:** PENDING. Sourced from 2026-04-29 nightly Dependency Sentinel (RED only signal — all other agents GREEN).
+**Priority:** P3. Routine maintenance batch; no security urgency at the patch/minor level.
+**Source:** `reports/nightly/2026-04-29.md` Dependency Sentinel section.
+
+Bundle the 19 patch + safe-minor updates into one commit, mirroring the 2026-04-19/2026-04-22 hygiene-batch pattern.
+
+**Backend (15):**
+- Patches: `click` 8.3.2→8.3.3, `fastapi` 0.136.0→0.136.1 (security-relevant, but patch-level), `hypothesis` 6.152.1→6.152.4, `Mako` 1.3.11→1.3.12, `python-multipart` 0.0.26→0.0.27, `ruff` 0.15.11→0.15.12.
+- Minors: `anthropic` 0.96.0→0.97.0, `certifi` 2026.2.25→2026.4.22, `greenlet` 3.4.0→3.5.0, `packaging` 26.1→26.2, `pathspec` 1.0.4→1.1.1, `pip` 26.0.1→26.1, `stripe` 15.0.1→15.1.0 (security-relevant), `tzdata` 2026.1→2026.2, `uvicorn` 0.45.0→0.46.0.
+
+**Frontend (4):** `@sentry/nextjs` 10.49.0→10.50.0, `@typescript-eslint/eslint-plugin` 8.59.0→8.59.1, `@typescript-eslint/parser` 8.59.0→8.59.1, `postcss` 8.5.10→8.5.12.
+
+**Excluded from this sprint:**
+- `cryptography` 46.0.7→47.0.0 (MAJOR — own sprint, see 761).
+- `pdfminer.six` 20251230→20260107 (deferred, calendar version, review by 2026-04-30).
+
+**Verification:**
+- `pip install -r backend/requirements.txt && cd backend && pytest -q` clean.
+- `cd frontend && npm install && npm run build && npm test` clean.
+- Stripe SDK upgrade: confirm no breaking change in 15.1.0 vs 15.0.1 (CHANGELOG sweep + smoke-test billing webhook fixture).
+- FastAPI patch: confirm no behavior change in `Depends`/middleware semantics (regression-suite covers this implicitly).
+- Render deploy logs after merge: zero new ImportErrors, /health 200 within 60s.
+
+**Out of scope:**
+- Major upgrades (cryptography 47).
+- Frontend `next` / `react` major sweeps (no action needed in this nightly).
+
+---
+
+### Sprint 761: cryptography 47.0.0 major upgrade (security-relevant)
+**Status:** PENDING. Standalone sprint per dep-hygiene policy: majors get isolated risk + verification windows.
+**Priority:** P2 (security-relevant; pyca/cryptography ships CVE fixes via majors and the lib underpins JWT signing, password hashing, TLS evidence chain).
+**Source:** `reports/nightly/2026-04-29.md` Dependency Sentinel — flagged as security-relevant + major.
+
+**Pre-flight:**
+1. Pull pyca/cryptography 47.0.0 release notes; flag any signature on `cryptography.hazmat.primitives.*` we depend on (JWT library, audit_chain TLS evidence, password reset token signing).
+2. Audit direct imports: `Grep -r "from cryptography" backend/`. Cross-reference each call site against the 47.0.0 deprecation/removal list.
+3. Identify transitive consumers (PyJWT, pyOpenSSL, requests-toolbelt, etc.) and confirm each is compatible with cryptography 47.x — pin floor in `requirements.txt` if any consumer requires <47.
+
+**What lands:**
+- `backend/requirements.txt` — `cryptography==47.0.0` (pin exact, not floor; Paciolus convention).
+- Any compatibility shims for hazmat primitives that changed signature (unlikely for a properly-maintained version-bump, but possible).
+- New regression test if a hazmat surface we depend on changed shape.
+
+**Verification:**
+- Backend `pytest` clean (especially: `tests/test_auth*.py`, `tests/test_password_reset*.py`, `tests/test_audit_chain*.py`, `tests/test_csrf*.py`, `tests/test_security_hardening*.py`).
+- Manual: register → verify-email → login → logout → refresh-token → password-reset round-trip on a local instance.
+- Render preview deploy: 24h soak before promoting to prod (per Paciolus prod-cutover policy for security-critical deps — same caution we used for the FastAPI 0.135.x bump in Sprint 263 era).
+
+**Out of scope:**
+- Bundling with the patch/minor batch (Sprint 760). Majors get their own sprint so a regression doesn't taint a 19-package roll-back.
+- Migrating to `joserfc` or another JWT library — out of scope; we're upgrading the underlying primitive, not the wrapper.
+
+---
+
+### Sprint 762: flux_expectations memo PDF contract test (close 17/18 → 18/18)
+**Status:** PENDING. Closes the lone gap from the post-initiative finishing pass memo-coverage push.
+**Priority:** P3.
+**Source:** Post-Sprint-754b memo contract test sweep (commit `60946271`). 17/18 memos covered; flux_expectations skipped because its dataclass nests `FluxExpectationLine` Pydantic sub-models that need a non-trivial fixture.
+
+**What lands:**
+- `backend/tests/test_export_pdf_contract.py::test_flux_expectations_memo_pdf_contract` — single test mirroring the established memo-contract pattern (asserts: PDF bytes returned, `%PDF-` magic header, ReportLab Story renders without exception, branded variant with logo+colors works).
+- Inline fixture for `FluxExpectationsResult` with at least one `FluxExpectationLine` entry; reuse existing `_make_flux_result` helper if shape-compatible.
+- Update `tasks/lessons.md` with the nested-Pydantic-fixture pattern if a generalizable lesson emerges.
+
+**Verification:**
+- `pytest backend/tests/test_export_pdf_contract.py -v` — 18/18 memo contract tests pass (was 17/18).
+- No coverage regression in `flux_expectations_memo_generator.py`.
+
+**Out of scope:**
+- Refactoring the memo generator — pure test addition.
+- Adding contract tests for the 3 non-memo report PDFs (combined audit, financial statements, anomaly summary) — separate filing if needed.
+
+---
+
