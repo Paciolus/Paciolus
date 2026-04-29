@@ -37,10 +37,9 @@ ALLOWED_HELPER_NAMES: frozenset[str] = frozenset(
         "try_parse_risk_band",
         "parse_json_list",
         "parse_json_mapping",
-        "is_authorized_for_client",
-        "get_accessible_client",
-        "require_client",
-        "require_client_owner",  # Sprint 735 — direct-only client access dependency
+        # Sprint 754: client-access helpers (is_authorized_for_client,
+        # get_accessible_client, require_client, require_client_owner)
+        # moved to `shared.client_access`. All 6 callers migrated.
     }
 )
 

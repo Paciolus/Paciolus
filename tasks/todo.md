@@ -356,17 +356,26 @@ Extract service layer from `auth_routes.py` into focused subdomains:
 ---
 
 ### Sprint 754: Common analysis interfaces + helper dedup (Phase 5 — Domain Consolidation 2/2)
-**Status:** PENDING. Depends on Sprint 753.
+**Status:** **PARTIAL** 2026-04-29 — client-access relocation shipped (the explicit deferred-items condition); shared analysis interfaces + broader helper dedup deferred to dedicated follow-ups since they need more design work than fits in one sprint without compromising quality.
 **Priority:** P3.
 **Source:** Architectural Remediation Plan phase 5.
 
-- Shared interfaces: input contract, result envelope, error semantics for tool services.
-- Consolidate duplicated helpers (numeric normalization, risk-band parsing, threshold handling) into one module.
-- Module-boundary tests: routes don't bypass domain contracts (e.g., importing engine internals directly).
+**What landed (client-access relocation — resolves the deferred-items condition):**
+- The deferred-items entry in `tasks/todo.md` (2026-04-20) said: "revisit only if a fourth helper joins them." Sprint 735 added `require_client_owner` as the fourth, so Sprint 754 made the move.
+- **`backend/shared/client_access.py`** (new, 100 lines) — owns `is_authorized_for_client`, `get_accessible_client`, `require_client`, `require_client_owner`. Module docstring documents the org-scoped vs direct-only access policy distinction.
+- **`backend/shared/helpers.py`** — removed all client-access definitions; module is now pure parsing/coercion utilities (`try_parse_risk`, `try_parse_risk_band`, `parse_json_list`, `parse_json_mapping`).
+- **All 6 callers migrated** to import from `shared.client_access` directly: `routes/clients.py`, `routes/diagnostics.py`, `routes/prior_period.py`, `routes/settings.py`, `routes/trends.py`, `tests/test_sprint_735_require_client_owner.py`. **No shim maintained on `shared.helpers`** — matches the Sprint 724 discipline of avoiding re-export shims.
+- **`tests/test_no_helpers_reexports.py`** — `ALLOWED_HELPER_NAMES` shrunk to the four parsing helpers. The guardrail keeps enforcing that no other names get re-introduced into `shared.helpers`.
+- **`tests/test_refactor_2026_04_20.py::test_json_form_and_client_access_symbols`** — split the import statement into two: parsing helpers from `shared.helpers`, client-access helpers from `shared.client_access`. Test still passes (asserts both modules' surface).
 
-**Absorbs deferred item:** the deferred move of client-access helpers (`is_authorized_for_client`, `get_accessible_client`, `require_client`) out of `shared/helpers.py` is in scope here if a fourth helper has joined them by the time this sprint runs.
+**Verification:** 70/70 tests pass (`test_no_helpers_reexports`, `test_sprint_735_require_client_owner`, `test_refactor_2026_04_20`, plus 51 consumer-route tests across `test_clients_api`, `test_diagnostics_api`, `test_prior_period_api`, `test_settings_api`, `test_trends_api`).
 
-**Exit:** Tool services follow shared contracts; cross-tool duplication materially reduced; boundary discipline test-enforced.
+**Out of scope (deferred):**
+- **Shared analysis interfaces** (input contract / result envelope / error semantics for tool services). Each tool's `<tool>Result` dataclass has its own shape; converging them needs a careful design pass and a per-tool migration. ADR-018's per-tool package layout is a prerequisite (`schemas.py` is the natural home). File as Sprint 754b when there are 2+ tools relocated under the new layout to compare shapes.
+- **Broader numeric/threshold helper dedup.** Survey found no obvious 1:1 duplications across engines — `round(x, 2)` is too simple to dedupe (more abstraction than it saves), and the existing `try_parse_risk*` helpers already cover risk-band parsing. The "threshold handling" surface is genuinely engine-specific (each tool's materiality logic is bespoke). No churn-worthy targets identified.
+- **Module-boundary tests** asserting routes don't bypass service contracts. Depends on having shared interfaces defined first (Sprint 754b). Folds naturally into Sprint 756's CI conformance work.
+
+**Exit met (partial scope):** The deferred-items condition is resolved (4th helper triggered the move; relocation complete). Boundary discipline + shared interfaces remain as future work but don't block subsequent sprints — they're additive improvements, not pre-requisites for Phases 6-8.
 
 ---
 

@@ -19,8 +19,8 @@ from auth import require_current_user, require_verified_user
 from database import get_db
 from models import Client, DiagnosticSummary, PeriodType, User
 from prior_period_comparison import compare_periods
+from shared.client_access import require_client_owner
 from shared.diagnostic_response_schemas import PeriodComparisonResponse
-from shared.helpers import require_client_owner
 from shared.rate_limits import RATE_LIMIT_AUDIT, RATE_LIMIT_WRITE, limiter
 
 router = APIRouter(tags=["prior_period"])

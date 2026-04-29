@@ -35,14 +35,16 @@ from schemas.settings_schemas import (  # noqa: F401 — backward compat re-expo
     PracticeSettingsInput,
     PracticeSettingsResponse,
 )
-from shared.helpers import require_client
+from shared.client_access import require_client
 from shared.rate_limits import RATE_LIMIT_WRITE, limiter
 
 router = APIRouter(tags=["settings"])
 
 
 @router.get("/settings/practice", response_model=PracticeSettingsResponse)
-def get_practice_settings(current_user: User = Depends(require_current_user), db: Session = Depends(get_db)) -> PracticeSettingsResponse:
+def get_practice_settings(
+    current_user: User = Depends(require_current_user), db: Session = Depends(get_db)
+) -> PracticeSettingsResponse:
     """Get the current user's practice settings."""
     log_secure_operation("get_practice_settings", f"User {current_user.id} fetching practice settings")
 

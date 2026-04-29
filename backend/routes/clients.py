@@ -22,9 +22,9 @@ from schemas.client_schemas import (  # noqa: F401 — backward compat re-export
     ResolvedFrameworkResponse,
 )
 from security_utils import log_secure_operation
+from shared.client_access import require_client
 from shared.error_messages import sanitize_error
 from shared.framework_resolution import resolve_reporting_framework
-from shared.helpers import require_client
 from shared.pagination import PaginatedResponse, PaginationParams
 from shared.rate_limits import RATE_LIMIT_WRITE, limiter
 
