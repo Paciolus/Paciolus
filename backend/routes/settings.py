@@ -5,12 +5,11 @@ Paciolus API — Practice & Client Settings Routes
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from sqlalchemy.exc import SQLAlchemyError
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.orm import Session
 
 from security_utils import log_secure_operation
-from shared.error_messages import sanitize_error
+from shared.db_unit_of_work import db_transaction
 
 logger = logging.getLogger(__name__)
 from auth import require_current_user
@@ -97,13 +96,12 @@ def update_practice_settings(
     if settings_input.auto_save_summaries is not None:
         current_settings.auto_save_summaries = settings_input.auto_save_summaries
 
-    current_user.settings = current_settings.to_json()
-    try:
-        db.commit()
-    except SQLAlchemyError as e:
-        db.rollback()
-        logger.exception("Database error saving practice settings")
-        raise HTTPException(status_code=500, detail=sanitize_error(e, log_label="db_practice_settings"))
+    with db_transaction(
+        db,
+        log_label="db_practice_settings",
+        log_message="Database error saving practice settings",
+    ):
+        current_user.settings = current_settings.to_json()
 
     log_secure_operation("practice_settings_updated", f"User {current_user.id} practice settings saved")
 
@@ -165,13 +163,12 @@ def update_client_settings(
     if settings_input.diagnostic_frequency is not None:
         current_settings.diagnostic_frequency = settings_input.diagnostic_frequency
 
-    client.settings = current_settings.to_json()
-    try:
-        db.commit()
-    except SQLAlchemyError as e:
-        db.rollback()
-        logger.exception("Database error saving client settings")
-        raise HTTPException(status_code=500, detail=sanitize_error(e, log_label="db_client_settings"))
+    with db_transaction(
+        db,
+        log_label="db_client_settings",
+        log_message="Database error saving client settings",
+    ):
+        client.settings = current_settings.to_json()
 
     log_secure_operation("client_settings_updated", f"Client {client.id} settings saved for user {client.user_id}")
 
