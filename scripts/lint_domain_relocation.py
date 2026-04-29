@@ -62,16 +62,32 @@ def _is_relocation_candidate(path: Path) -> bool:
 
 
 def _is_shim(source: str) -> bool:
-    """Return True if the module body is essentially just import + __all__.
+    """Return True if the module body is recognizably a shim.
 
-    A shim's source contains imports (Import / ImportFrom), assignments
-    that target `__all__`, and nothing else of substance. Function /
-    class definitions disqualify the module.
+    Two shim patterns are accepted:
+
+    1. **Static re-export** — body is imports (Import / ImportFrom),
+       dunder assignments (``__all__ = [...]``), and docstrings only.
+       Used by `recon_engine.py`, `flux_engine.py`, `cutoff_risk_engine.py`.
+
+    2. **Dynamic namespace copy** — body imports the canonical module
+       as ``_impl``, then loops ``for _name in dir(_impl):`` to re-export
+       every non-dunder name (handles 35+ public symbols + private test
+       helpers without per-symbol maintenance). Used by the testing
+       engine relocations (`ap_testing_engine`, `je_testing_engine`,
+       etc.). Detected by presence of a ``for`` loop targeting ``_name``
+       with a ``setattr`` call inside.
+
+    Function / class definitions disqualify the module either way —
+    those mean the engine still hosts implementation code.
     """
     try:
         tree = ast.parse(source)
     except SyntaxError:
         return False
+
+    has_dynamic_reexport = _has_dynamic_namespace_copy(tree)
+
     for node in tree.body:
         if isinstance(node, (ast.Import, ast.ImportFrom)):
             continue
@@ -79,16 +95,62 @@ def _is_shim(source: str) -> bool:
             # Module / docstring expression
             continue
         if isinstance(node, ast.Assign):
-            # Allow `__all__ = [...]` and similar simple assignments
+            # Allow `__all__ = [...]` and similar dunder assignments
             if all(
                 isinstance(target, ast.Name) and target.id.startswith("__")
                 for target in node.targets
             ):
                 continue
+            # Within a dynamic-namespace shim, allow private (single-
+            # underscore) loop-local bindings like `_module = sys.modules[__name__]`.
+            if has_dynamic_reexport and all(
+                isinstance(target, ast.Name) and target.id.startswith("_")
+                for target in node.targets
+            ):
+                continue
             return False
+        if isinstance(node, ast.For) and has_dynamic_reexport:
+            # The dynamic namespace copy loop is allowed.
+            continue
+        if isinstance(node, ast.Delete) and has_dynamic_reexport:
+            # The cleanup `del _sys, _module, _name, _impl` after the loop is allowed.
+            continue
         # Function or class definition — module owns implementation
         return False
     return True
+
+
+def _has_dynamic_namespace_copy(tree: ast.Module) -> bool:
+    """Detect the dynamic-namespace shim pattern.
+
+    Looks for a ``for _name in dir(<something>):`` loop whose body
+    contains a ``setattr(...)`` call. That signature uniquely identifies
+    the testing-engine shim pattern; we don't false-positive on regular
+    business loops.
+    """
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.For):
+            continue
+        # Loop variable named ``_name``
+        if not (isinstance(node.target, ast.Name) and node.target.id == "_name"):
+            continue
+        # Iterating ``dir(...)``
+        iter_call = node.iter
+        if not (
+            isinstance(iter_call, ast.Call)
+            and isinstance(iter_call.func, ast.Name)
+            and iter_call.func.id == "dir"
+        ):
+            continue
+        # Body contains ``setattr(...)``
+        for child in ast.walk(node):
+            if (
+                isinstance(child, ast.Call)
+                and isinstance(child.func, ast.Name)
+                and child.func.id == "setattr"
+            ):
+                return True
+    return False
 
 
 def find_unrelocated_engines() -> list[Path]:

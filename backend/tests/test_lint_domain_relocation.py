@@ -85,6 +85,43 @@ TABLE = {"a": 1}
     def test_syntax_error_returns_false(self):
         assert not _is_shim("def : invalid")
 
+    def test_dynamic_namespace_shim_pattern_recognized(self):
+        """Post-initiative testing-engine relocations use a dynamic
+        ``for _name in dir(_impl): setattr(...)`` pattern instead of an
+        explicit ``__all__``. _is_shim must recognize it."""
+        source = '''"""Backward-compat shim."""
+import sys as _sys
+from services.audit.foo import analysis as _impl
+
+_module = _sys.modules[__name__]
+for _name in dir(_impl):
+    if _name.startswith("__"):
+        continue
+    setattr(_module, _name, getattr(_impl, _name))
+
+del _sys, _module, _name, _impl
+'''
+        assert _is_shim(source)
+
+
+@pytest.mark.parametrize(
+    "engine_name",
+    [
+        "ap_testing_engine.py",
+        "ar_aging_engine.py",
+        "fixed_asset_testing_engine.py",
+        "inventory_testing_engine.py",
+        "je_testing_engine.py",
+        "payroll_testing_engine.py",
+        "revenue_testing_engine.py",
+    ],
+)
+def test_relocated_testing_engines_register_as_shims(engine_name):
+    """Post-initiative testing engine relocations are recognized as shims."""
+    engine = REPO_ROOT / "backend" / engine_name
+    assert engine.exists()
+    assert _is_shim(engine.read_text(encoding="utf-8"))
+
 
 # ---------------------------------------------------------------------------
 # find_unrelocated_engines
