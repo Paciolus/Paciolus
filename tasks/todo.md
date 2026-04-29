@@ -306,14 +306,31 @@ Extract service layer from `auth_routes.py` into focused subdomains:
 ---
 
 ### Sprint 752: Oversized hook decomposition + render-perf guards (Phase 4 — Frontend Decomposition 3/3)
-**Status:** PENDING. Depends on Sprint 750.
+**Status:** COMPLETE 2026-04-29.
 **Priority:** P3.
 **Source:** Architectural Remediation Plan phase 4.
 
-- Decompose large generic hooks (form validation candidate): pure validation engine + React adapter hook + optional helpers module.
-- Add render-performance guards: memoized selectors / callback boundaries; eliminate mega-state objects causing unrelated rerenders.
+**Hook decomposition (`useFormValidation` 516 → 280 lines):**
+- **`frontend/src/lib/validation/engine.ts`** (95 lines) — pure validation engine. No React imports. `validateFieldValue`, `validateAllFields`, `isFormValid`, `isFormDirty` + the type union (`ValidationRule`, `ValidationRules`, `FormErrors`, `TouchedFields`, `FormValues`). Deterministic, side-effect-free, reusable outside React (CLI scripts, server-side validation).
+- **`frontend/src/lib/validation/validators.ts`** (87 lines) — `commonValidators` factory exports (8 reusable rules: required, minLength, maxLength, email, matches, min, max, pattern). Decoupled from the hook so they're unit-testable as plain function calls.
+- **`frontend/src/hooks/useFormValidation.ts`** (280 lines, was 516) — React adapter. Owns `useState` slots + event handlers + render-stable getters. Delegates all validation to the pure engine. Re-exports types + `commonValidators` for backward compatibility (existing call sites unchanged).
+- **Bug fix bundled in:** the legacy `setValue`'s `setTimeout(() => ..., 0)` for `validateOnChange` captured stale `values` in closure. The adapter now validates inside the `setValuesState` callback against the post-update values — eliminates the stale-closure race the timer was masking.
+- **19 new pure-engine tests** (`__tests__/validationEngine.test.ts`) covering each pure function + every commonValidator. Existing 47 useFormValidation tests still pass without rewrites.
 
-**Exit:** Hook responsibilities narrow + testable; rerender-storm hotspots mitigated.
+**Render-perf guards (dashboard hot path):**
+- **`app/dashboard/page.tsx`** — memoized 3 derivations that previously reallocated on every render:
+  - `summaryLine` (depends on `stats`)
+  - `displayTools` (depends on `favorites`)
+  - `toolByKey` Map for activity-feed lookup (constant — was O(n) `DASHBOARD_TOOLS.find` per row, now O(1) `toolByKey.get`)
+- The activity feed renders up to 8 rows; the find-per-row pattern was negligible alone but compounded with mega-component rerenders. Memoized once at composition root.
+- Hooks declared BEFORE the `if (!authenticated) return …` early return per `react-hooks/rules-of-hooks` (caught by ESLint).
+
+**Verification:** `tsc --noEmit` clean, ESLint clean (3 violations caught + fixed during the sprint), 112/112 affected jest tests pass (47 useFormValidation + 19 validationEngine + 4 DashboardPage smoke + 42 consumer tests across LoginPage / RegisterPage / CreateClientModal / EditClientModal).
+
+**Out of scope (deferred):**
+- `getFieldProps(field)` allocates a new options object per call — child components rerender even when nothing relevant changed because the prop object identity changes. Per-field memoization via a Map is non-trivial because `field` is a runtime parameter; defer until profiling actually surfaces it as a hotspot.
+
+**Exit met:** Form validation engine is testable without React; commonValidators are independently importable; dashboard derivations no longer reallocate per render. Hook responsibilities are narrow.
 
 ---
 

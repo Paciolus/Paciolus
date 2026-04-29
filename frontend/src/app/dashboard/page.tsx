@@ -9,7 +9,7 @@
  * `content/dashboard-tools.ts`; SVG paths moved to `components/dashboard/ToolIcon.tsx`.
  */
 
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
@@ -57,6 +57,30 @@ export default function DashboardPage() {
     }
   }, [authLoading, isAuthenticated, router])
 
+  // Sprint 752 render-perf guards: memoize derivations so unrelated renders
+  // (e.g., a stats retry mid-session) don't reallocate these arrays/strings.
+  // Hooks must run in the same order on every render \u2014 declared BEFORE the
+  // early return below.
+  const summaryLine = useMemo(() => {
+    const parts: string[] = []
+    if (stats && stats.total_clients > 0) parts.push(`${stats.total_clients} client${stats.total_clients === 1 ? '' : 's'}`)
+    if (stats && stats.tools_used > 0) parts.push(`${stats.tools_used} tool${stats.tools_used === 1 ? '' : 's'} used`)
+    if (stats && stats.active_workspaces > 0) parts.push(`${stats.active_workspaces} active workspace${stats.active_workspaces === 1 ? '' : 's'}`)
+    return parts.length > 0 ? parts.join(' \u00B7 ') : 'Get started by launching any diagnostic tool below'
+  }, [stats])
+
+  const displayTools = useMemo(() => {
+    const favoritedTools = DASHBOARD_TOOLS.filter(t => favorites.includes(t.key))
+    return favoritedTools.length > 0 ? favoritedTools : DASHBOARD_TOOLS.slice(0, 6)
+  }, [favorites])
+
+  // Precompute the tool-by-key map so the activity-feed lookup is O(1) per
+  // row instead of O(n) on every render.
+  const toolByKey = useMemo(
+    () => new Map(DASHBOARD_TOOLS.map(t => [t.key, t])),
+    [],
+  )
+
   if (authLoading || !isAuthenticated) {
     return (
       <div className="min-h-screen bg-surface-page flex items-center justify-center">
@@ -73,16 +97,6 @@ export default function DashboardPage() {
   })
 
   const displayName = user?.name || user?.email?.split('@')[0] || 'there'
-
-  // Contextual summary line — platform-wide
-  const summaryParts: string[] = []
-  if (stats && stats.total_clients > 0) summaryParts.push(`${stats.total_clients} client${stats.total_clients === 1 ? '' : 's'}`)
-  if (stats && stats.tools_used > 0) summaryParts.push(`${stats.tools_used} tool${stats.tools_used === 1 ? '' : 's'} used`)
-  if (stats && stats.active_workspaces > 0) summaryParts.push(`${stats.active_workspaces} active workspace${stats.active_workspaces === 1 ? '' : 's'}`)
-  const summaryLine = summaryParts.length > 0 ? summaryParts.join(' \u00B7 ') : 'Get started by launching any diagnostic tool below'
-
-  const favoritedTools = DASHBOARD_TOOLS.filter(t => favorites.includes(t.key))
-  const displayTools = favoritedTools.length > 0 ? favoritedTools : DASHBOARD_TOOLS.slice(0, 6)
 
   return (
     <main id="main-content" className="min-h-screen bg-surface-page">
@@ -325,7 +339,7 @@ export default function DashboardPage() {
             ) : (
               <div className="space-y-2">
                 {activity.map(item => {
-                  const tool = DASHBOARD_TOOLS.find(t => t.key === item.tool_name)
+                  const tool = toolByKey.get(item.tool_name)
                   const anomalyCount = typeof item.summary?.anomaly_count === 'number' ? (item.summary.anomaly_count as number) : 0
                   const rowLabel = item.record_count != null ? `${item.record_count.toLocaleString()} rows` : null
 
