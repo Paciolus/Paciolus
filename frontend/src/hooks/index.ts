@@ -80,6 +80,23 @@ export {
   type UseMultiPeriodMemoExportReturn,
 } from './useMultiPeriodMemoExport';
 export {
+  useDashboardStats,
+  type DashboardStats,
+  type UseDashboardStatsOptions,
+  type UseDashboardStatsReturn,
+} from './useDashboardStats';
+export {
+  useActivityFeed,
+  type ToolActivityItem,
+  type UseActivityFeedOptions,
+  type UseActivityFeedReturn,
+} from './useActivityFeed';
+export {
+  useUserPreferences,
+  type UseUserPreferencesOptions,
+  type UseUserPreferencesReturn,
+} from './useUserPreferences';
+export {
   useJETesting,
   type UseJETestingReturn,
 } from './useJETesting';

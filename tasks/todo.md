@@ -284,15 +284,24 @@ Extract service layer from `auth_routes.py` into focused subdomains:
 ---
 
 ### Sprint 751: Dashboard decomposition (Phase 4 — Frontend Decomposition 2/3)
-**Status:** PENDING. Depends on Sprint 750.
+**Status:** COMPLETE 2026-04-29. Applies the ADR-017 template to `app/dashboard/page.tsx`.
 **Priority:** P3.
 **Source:** Architectural Remediation Plan phase 4.
 
-- Extract tool catalog + icon registry as single SoT for tool metadata (eliminates the metadata-drift class that Sprint 717's catalog reconciliation closed for backend).
-- Extract data-fetching hooks: `useDashboardStats`, `useActivityFeed`, `usePreferences`.
-- Dashboard page becomes composition root.
+**What landed:**
+- **`frontend/src/content/dashboard-tools.ts`** — `DASHBOARD_TOOLS` (13 entries) + `DEFAULT_FAVORITES` + types. Single SoT for the dashboard's view of the catalog (decoupled from marketing `tool-ledger.ts`).
+- **`frontend/src/components/dashboard/ToolIcon.tsx`** — `<ToolIcon iconKey={...} />` presentational component wrapping `TOOL_ICON_PATHS`. The 14 SVG path strings live here instead of inline in the page. Unknown keys fall back to `cube`.
+- **3 new hooks** (`frontend/src/hooks/`):
+  - `useDashboardStats(token, { onError })` → `{ stats, loading, error, retry }`. Auto-fetches `/dashboard/stats` on mount.
+  - `useActivityFeed(token, { limit?, onError })` → `{ activity, loading, error, retry }`. Default `limit=8`.
+  - `useUserPreferences(token, { onError })` → `{ favorites, toggleFavorite }`. Optimistic update + revert on PUT failure.
+- **`app/dashboard/page.tsx` refactored to composition root** — 519 → 383 lines (-26%). Inline 78-line `TOOLS` catalog, 22-line `getToolIcon` SVG dump, two retry callbacks, three-fetch `useEffect`, and `toggleFavorite` machine all gone.
+- **17 new hook tests** (4 + 5 + 8) covering happy path, null-token no-op, error → onError, retry, custom limit, optimistic-add/remove, revert on PUT failure.
+- **DashboardPage smoke test (Sprint 743) still passes 4/4** — test mocks `apiGet`/`apiPut` directly, so the new hooks work transparently.
 
-**Exit:** Dashboard logic in narrow hooks; tool metadata cannot drift between dashboard and other surfaces.
+**Verification:** `tsc --noEmit` clean, ESLint clean, 21/21 affected jest tests pass.
+
+**Exit met:** Dashboard logic in 3 narrow workflow hooks + presentational icon component + content-layer catalog. Tool metadata cannot drift across surfaces.
 
 ---
 
