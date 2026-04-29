@@ -8,6 +8,7 @@ The pipeline owns all try/except handling via transport.handle_export_error.
 """
 
 import logging
+from typing import Optional
 
 from fastapi.responses import StreamingResponse
 
@@ -37,16 +38,30 @@ from shared.export_schemas import (
     PopulationProfileCSVInput,
     PreFlightCSVInput,
 )
+from shared.pdf_branding import PDFBrandingContext, apply_pdf_branding
 from shared.schemas import AuditResultInput
 
 logger = logging.getLogger(__name__)
 
 
-def export_diagnostic_pdf(audit_result: AuditResultInput) -> StreamingResponse:
-    """Full pipeline: audit result -> PDF bytes -> streaming response."""
+def export_diagnostic_pdf(
+    audit_result: AuditResultInput,
+    *,
+    branding: Optional[PDFBrandingContext] = None,
+) -> StreamingResponse:
+    """Full pipeline: audit result -> PDF bytes -> streaming response.
+
+    Sprint 748b: optional ``branding`` parameter scopes
+    ``apply_pdf_branding`` around the serializer call so Enterprise
+    custom logos / headers / footers flow through the ContextVar to
+    the underlying ``generate_audit_report`` template. Routes resolve
+    ``branding`` via ``load_pdf_branding_context(user, db)`` and pass
+    it through.
+    """
     log_secure_operation("pdf_export_start", f"Generating PDF report for: {audit_result.filename}")
     try:
-        pdf_bytes = serialize_audit_pdf(audit_result)
+        with apply_pdf_branding(branding):
+            pdf_bytes = serialize_audit_pdf(audit_result)
         response = build_streaming_response(
             pdf_bytes,
             source_filename=audit_result.filename or "TrialBalance",
@@ -60,7 +75,11 @@ def export_diagnostic_pdf(audit_result: AuditResultInput) -> StreamingResponse:
 
 
 def export_diagnostic_excel(audit_result: AuditResultInput) -> StreamingResponse:
-    """Full pipeline: audit result -> Excel bytes -> streaming response."""
+    """Full pipeline: audit result -> Excel bytes -> streaming response.
+
+    Excel exports don't apply PDF branding (logo / header / footer live
+    in PDF chrome only) — no ``branding`` parameter is needed.
+    """
     log_secure_operation("excel_export_start", f"Generating Excel workpaper for: {audit_result.filename}")
     try:
         excel_bytes = serialize_audit_excel(audit_result)
@@ -127,12 +146,20 @@ def export_leadsheets(payload: LeadSheetInput) -> StreamingResponse:
         handle_export_error(e, log_prefix="Lead sheet export", error_code="leadsheet_error")
 
 
-def export_financial_statements(payload: FinancialStatementsInput, fmt: str = "pdf") -> StreamingResponse:
+def export_financial_statements(
+    payload: FinancialStatementsInput,
+    fmt: str = "pdf",
+    *,
+    branding: Optional[PDFBrandingContext] = None,
+) -> StreamingResponse:
     """Full pipeline: financial statements input -> PDF or Excel bytes -> streaming response.
 
     Args:
         payload: Validated FinancialStatementsInput with lead_sheet_grouping.
         fmt: Output format — "pdf" (default) or "excel".
+        branding: Optional Enterprise branding context, applied via
+            ``apply_pdf_branding`` for the PDF path. Excel ignores it.
+            Sprint 748b extension.
     """
     log_secure_operation(
         "financial_statements_export_start", f"Generating {fmt} financial statements for: {payload.filename}"
@@ -157,7 +184,8 @@ def export_financial_statements(payload: FinancialStatementsInput, fmt: str = "p
                 fmt="xlsx",
             )
         else:
-            file_bytes = serialize_financial_statements_pdf(payload, statements)
+            with apply_pdf_branding(branding):
+                file_bytes = serialize_financial_statements_pdf(payload, statements)
             response = build_streaming_response(
                 file_bytes,
                 source_filename=payload.filename or "FinancialStatements",
