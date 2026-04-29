@@ -87,17 +87,30 @@
 ---
 
 ### Sprint 743: Characterization test gap analysis (Phase 0 — Baseline & Guardrails 2/2)
-**Status:** PENDING. Pre-requisite regression net for Phase 1+.
-**Priority:** P3. Effort largely offset by existing 7,363 backend / 1,751 frontend coverage.
+**Status:** COMPLETE 2026-04-29. One filed gap-fill (DashboardPage smoke test); all other surfaces sufficiently covered.
+**Priority:** P3.
 **Source:** Architectural Remediation Plan phase 0.
 
-Audit existing coverage against refactor surfaces; only file gap-fills where genuinely missing:
-- Auth flows: login/register/refresh/logout/password reset/verification/session revoke (pre-req for Sprints 746–747).
-- Export endpoints: payload acceptance + output shape per format (pre-req for Sprints 748–749).
-- Dashboard + tool page critical interactions (pre-req for Sprints 750–752).
-- API error envelope + status code contract snapshots.
+**What landed:**
+- `reports/test-coverage-gap-analysis-2026-04-29.md` — full gap report. Inventoried 199 frontend test files + relevant backend modules against surfaces named in Sprints 747–752.
+- `frontend/src/__tests__/DashboardPage.test.tsx` — smoke test for `app/dashboard/page.tsx` (519 lines, target of Sprint 751 decomposition). Pins: three GET requests on mount, welcome header + Quick Launch render, unauthenticated → `/login` redirect, stats-failure toast handling. 4/4 tests pass.
 
-**Exit:** Gap report filed; targeted gap-fill PRs merged; pre-refactor regression net acknowledged sufficient. No bloat for already-covered paths.
+**Coverage findings:**
+- **Auth (Sprints 746b/c/d, 747):** 214 backend tests across 13 routes + frontend `AuthContext.test.tsx`, `useAuthSession.test.ts`, `LoginPage.test.tsx`, `ForgotPasswordPage.test.tsx`. Strong regression net.
+- **Exports (Sprints 748, 749):** 173 backend tests + per-page interaction tests. Sprint 749's contract tests are not pre-existing gaps (Sprint 749 produces them).
+- **Dashboard + tool pages (Sprints 750, 751):** 18 tool-page tests cover Sprint 750's surface; **dashboard frontend was the one genuine gap** — backed up by 30 backend dashboard/activity tests but no targeted `app/dashboard/page.tsx` test until this sprint.
+- **API error envelope:** Sprint 745's `test_route_errors.py` + `test_db_unit_of_work.py` (14 tests) + `test_log_sanitizer.py`. Covered.
+- **Hooks for Sprint 752:** all named candidates (`useStatisticalSampling`, `useAccountRiskHeatmap`, `useUncorrectedMisstatements`, `useAnalyticalExpectations`) have direct tests.
+
+**Non-gaps (rejected as pre-existing):**
+- Memo PDF schema contract tests (Sprint 749 produces them).
+- Export endpoint contract tests (same).
+- API error envelope snapshot test (existing route tests exercise the envelope).
+- `useFetchData` decomposition coverage (Sprint 752 hasn't picked the candidate yet).
+
+**Methodology note:** the Sprint 744 test churn (4 test files pinning pre-Sprint-661 Bearer-header behavior) was a separate class of issue — outdated assertions, not missing coverage. That class self-corrects when migrations run (assertions fail loudly, get fixed). Sprint 743 does not address it.
+
+**Exit met:** Gap report filed; one gap-fill landed; pre-refactor regression net acknowledged sufficient.
 
 ---
 
