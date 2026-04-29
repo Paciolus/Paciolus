@@ -7,7 +7,6 @@ from datetime import UTC, datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field, field_validator
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from security_utils import log_secure_operation
@@ -21,32 +20,24 @@ from auth import (
     UserResponse,
     _check_password_complexity,
     _revoke_all_user_tokens,
-    create_access_token,
-    create_refresh_token,
-    create_user,
-    get_user_by_email,
-    hash_token,
     require_current_user,
 )
 from config import (
     ACCESS_COOKIE_NAME,
     COOKIE_SECURE,
-    ENV_MODE,
     JWT_EXPIRATION_MINUTES,
     REFRESH_COOKIE_NAME,
     REFRESH_TOKEN_EXPIRATION_DAYS,
 )
 from database import get_db
-from disposable_email import is_disposable_email
 from email_service import (
     RESEND_COOLDOWN_MINUTES,
     can_resend_verification,
-    generate_verification_token,
     is_email_service_configured,
     send_password_reset_email,
     send_verification_email,
 )
-from models import EmailVerificationToken, RefreshToken, User
+from models import RefreshToken, User
 from security_middleware import (
     generate_csrf_token,
     get_client_ip,
@@ -61,8 +52,16 @@ from services.auth.recovery import (
     complete_password_reset,
     initiate_password_reset,
 )
+from services.auth.registration import (
+    EmailAlreadyVerifiedError,
+    EmailVerificationError,
+    RegistrationError,
+    VerificationCooldownError,
+    complete_email_verification,
+    register_user,
+    resend_verification_email,
+)
 from shared.background_email import safe_background_email
-from shared.error_messages import sanitize_error
 from shared.rate_limits import RATE_LIMIT_AUTH, limiter
 from shared.response_schemas import SuccessResponse
 
@@ -175,84 +174,36 @@ def register(
     logger.info("Registration attempt: %s", masked)
     log_secure_operation("auth_register_attempt", f"Registration attempt: {masked}")
 
-    if is_disposable_email(user_data.email):
-        logger.warning("Registration blocked — disposable email: %s", masked)
-        log_secure_operation("auth_register_blocked", f"Disposable email blocked: {masked}")
-        raise HTTPException(
-            status_code=400,
-            detail="Temporary or disposable email addresses are not allowed. Please use a permanent email address.",
-        )
-
-    existing_user = get_user_by_email(db, user_data.email)
-    if existing_user:
-        # Generic message prevents account enumeration (attacker cannot distinguish
-        # "email taken" from other registration failures).
-        raise HTTPException(
-            status_code=400,
-            detail="Unable to create account. Please check your information or try logging in.",
-        )
-
-    user = create_user(db, user_data)
-
-    # Auto-verify when email service is not configured (no SendGrid API key)
-    # AND we are in development mode. In production, a missing email service
-    # must never silently bypass verification.
-    if not is_email_service_configured():
-        if ENV_MODE == "development":
-            user.is_verified = True
-            user.email_verified_at = datetime.now(UTC)
-            log_secure_operation("auto_verified", f"Email service unavailable — auto-verified {masked}")
-        else:
-            log_secure_operation(
-                "auto_verify_skipped", f"Email service unavailable in {ENV_MODE} — user left unverified: {masked}"
-            )
-    else:
-        token_result = generate_verification_token()
-        verification_token = EmailVerificationToken(
-            user_id=user.id,
-            token_hash=hash_token(token_result.token),
-            expires_at=token_result.expires_at,
-        )
-        db.add(verification_token)
-        user.email_verification_sent_at = datetime.now(UTC)
-
     try:
-        db.commit()
-    except SQLAlchemyError as e:
-        db.rollback()
-        logger.exception("Database error during user registration commit")
-        raise HTTPException(status_code=500, detail=sanitize_error(e, log_label="db_register"))
+        result = register_user(
+            db,
+            user_data=user_data,
+            user_agent=request.headers.get("User-Agent"),
+            request_host=request.client.host if request.client else None,
+        )
+    except RegistrationError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
-    if is_email_service_configured():
+    if result.verification_token is not None:
         background_tasks.add_task(
             safe_background_email,
             send_verification_email,
             label="register_verification",
-            to_email=user.email,
-            token=token_result.token,
-            user_name=user.name,
+            to_email=result.user.email,
+            token=result.verification_token,
+            user_name=result.user.name,
         )
 
-    jwt_token, expires = create_access_token(user.id, user.email, user.password_changed_at, tier=user.tier.value)
-    expires_in = int((expires - datetime.now(UTC)).total_seconds())
-
-    raw_refresh_token, _ = create_refresh_token(
-        db,
-        user.id,
-        user_agent=request.headers.get("User-Agent"),
-        ip_address=request.client.host if request.client else None,
-    )
     # Registration is always session-only (no "Remember Me" option)
-    _set_refresh_cookie(response, raw_refresh_token, remember_me=False)
-    _set_access_cookie(response, jwt_token)
+    _set_refresh_cookie(response, result.issuance.raw_refresh_token, remember_me=False)
+    _set_access_cookie(response, result.issuance.access_token)
 
-    csrf_token_value = generate_csrf_token(user_id=str(user.id))
     return AuthResponse(
-        access_token=jwt_token,
+        access_token=result.issuance.access_token,
         token_type="bearer",
-        expires_in=expires_in,
-        user=UserResponse.model_validate(user),
-        csrf_token=csrf_token_value,
+        expires_in=result.issuance.expires_in,
+        user=UserResponse.model_validate(result.user),
+        csrf_token=result.issuance.csrf_token,
     )
 
 
@@ -302,42 +253,10 @@ def verify_email(
     request: Request, request_data: VerifyEmailRequest, db: Session = Depends(get_db)
 ) -> dict[str, object]:
     """Verify email address with token."""
-    token = request_data.token
-
-    verification = (
-        db.query(EmailVerificationToken).filter(EmailVerificationToken.token_hash == hash_token(token)).first()
-    )
-
-    if verification is None:
-        raise HTTPException(status_code=400, detail="Invalid verification token")
-
-    if verification.is_used:
-        raise HTTPException(status_code=400, detail="This verification link has already been used")
-
-    if verification.is_expired:
-        raise HTTPException(status_code=400, detail="This verification link has expired. Please request a new one.")
-
-    verification.used_at = datetime.now(UTC)
-
-    user = verification.user
-
-    # Sprint 203: If pending_email is set, swap it to be the new email
-    if user.pending_email:
-        user.email = user.pending_email
-        user.pending_email = None
-        log_secure_operation("email_changed", f"User {user.id} email swapped from pending")
-
-    user.is_verified = True
-    user.email_verified_at = datetime.now(UTC)
-
     try:
-        db.commit()
-    except SQLAlchemyError as e:
-        db.rollback()
-        logger.exception("Database error during email verification commit")
-        raise HTTPException(status_code=500, detail=sanitize_error(e, log_label="db_verify_email"))
-
-    log_secure_operation("email_verified", f"User {user.id} email verified")
+        user = complete_email_verification(db, request_data.token)
+    except EmailVerificationError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
     return {"message": "Email verified successfully", "user": UserResponse.model_validate(user)}
 
@@ -431,50 +350,26 @@ def resend_verification(
     db: Session = Depends(get_db),
 ) -> dict[str, object]:
     """Resend verification email."""
-    # Sprint 203: Allow resend if verified user has a pending email change
-    if current_user.is_verified and not current_user.pending_email:
-        raise HTTPException(status_code=400, detail="Email is already verified")
-
-    can_resend, seconds_remaining = can_resend_verification(current_user.email_verification_sent_at)
-
-    if not can_resend:
+    try:
+        result = resend_verification_email(db, current_user)
+    except EmailAlreadyVerifiedError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except VerificationCooldownError as e:
         raise HTTPException(
             status_code=429,
             detail={
-                "message": "Please wait before requesting another verification email",
-                "seconds_remaining": seconds_remaining,
+                "message": str(e),
+                "seconds_remaining": e.seconds_remaining,
                 "cooldown_minutes": RESEND_COOLDOWN_MINUTES,
             },
-        )
+        ) from e
 
-    db.query(EmailVerificationToken).filter(
-        EmailVerificationToken.user_id == current_user.id, EmailVerificationToken.used_at == None
-    ).update({"used_at": datetime.now(UTC)})
-
-    token_result = generate_verification_token()
-    verification_token = EmailVerificationToken(
-        user_id=current_user.id,
-        token_hash=hash_token(token_result.token),
-        expires_at=token_result.expires_at,
-    )
-    db.add(verification_token)
-
-    current_user.email_verification_sent_at = datetime.now(UTC)
-    try:
-        db.commit()
-    except SQLAlchemyError as e:
-        db.rollback()
-        logger.exception("Database error during resend verification commit")
-        raise HTTPException(status_code=500, detail=sanitize_error(e, log_label="db_resend_verify"))
-
-    # Sprint 203: Send to pending email if set, otherwise current email
-    target_email = current_user.pending_email or current_user.email
     background_tasks.add_task(
         safe_background_email,
         send_verification_email,
         label="resend_verification",
-        to_email=target_email,
-        token=token_result.token,
+        to_email=result.target_email,
+        token=result.token,
         user_name=current_user.name,
     )
 
@@ -617,8 +512,6 @@ def revoke_session(
 
     if token is None:
         raise HTTPException(status_code=404, detail="Session not found")
-
-    from datetime import UTC, datetime
 
     token.revoked_at = datetime.now(UTC)
     db.commit()
