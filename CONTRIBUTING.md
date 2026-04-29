@@ -43,6 +43,7 @@ export endpoints should follow the patterns in:
 - [ADR-016: Export Architecture](docs/03-engineering/adr-016-export-architecture.md) — accepted mapper/generator separation for `routes/export_*.py`; `routes/export_memos.py` registry-driven dispatch is the canonical strategy for memo PDFs.
 - [ADR-017: Tool Page Architecture Template](docs/03-engineering/adr-017-tool-page-architecture-template.md) — frontend tool pages compose a `useToolUploads` + `useToolAnalysis` + `useToolMemoExport` hook stack; pages stay render-only.
 - [ADR-018: Backend Domain Package Relocation](docs/03-engineering/adr-018-domain-package-relocation.md) — top-level `*_engine.py` modules migrate to `services/audit/<tool>/{analysis,schemas,export}.py` incrementally with backward-compat shims.
+- [ADR-019: Shared Tool-Result Contracts](docs/03-engineering/adr-019-shared-tool-result-contracts.md) — Protocols (`IndicatorResult`, `TestingBatteryResult`, `CompositeScoreLike`, `TestResultLike`) document the shapes every tool result already follows. New tools pick a shape; existing tools satisfy them without code changes.
 - [Quality Thresholds](docs/03-engineering/quality-thresholds.md) — module size, function complexity, hook size targets (advisory; advanced via the lint scans below).
 
 ### Architecture conformance lints (advisory)
