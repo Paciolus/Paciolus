@@ -3,7 +3,6 @@ Paciolus API — Authentication Routes
 """
 
 import logging
-from datetime import UTC, datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field, field_validator
@@ -19,7 +18,6 @@ from auth import (
     UserLogin,
     UserResponse,
     _check_password_complexity,
-    _revoke_all_user_tokens,
     require_current_user,
 )
 from config import (
@@ -37,7 +35,7 @@ from email_service import (
     send_password_reset_email,
     send_verification_email,
 )
-from models import RefreshToken, User
+from models import User
 from security_middleware import (
     generate_csrf_token,
     get_client_ip,
@@ -60,6 +58,12 @@ from services.auth.registration import (
     complete_email_verification,
     register_user,
     resend_verification_email,
+)
+from services.auth.sessions import (
+    SessionNotFoundError,
+    list_user_sessions,
+    revoke_all_user_sessions,
+    revoke_session_by_id,
 )
 from shared.background_email import safe_background_email
 from shared.rate_limits import RATE_LIMIT_AUTH, limiter
@@ -463,28 +467,19 @@ def list_sessions(
     AUDIT-02 FIX 2: Provides session inventory visibility.
     Never returns the token hash.
     """
-    tokens = (
-        db.query(RefreshToken)
-        .filter(
-            RefreshToken.user_id == current_user.id,
-            RefreshToken.revoked_at.is_(None),
-        )
-        .order_by(RefreshToken.created_at.desc())
-        .all()
+    entries = list_user_sessions(db, current_user)
+    return SessionListResponse(
+        sessions=[
+            SessionInfo(
+                session_id=e.session_id,
+                last_used_at=e.last_used_at,
+                user_agent=e.user_agent,
+                ip_address=e.ip_address,
+                created_at=e.created_at,
+            )
+            for e in entries
+        ]
     )
-
-    sessions = [
-        SessionInfo(
-            session_id=t.id,
-            last_used_at=t.last_used_at.isoformat() if t.last_used_at else None,
-            user_agent=t.user_agent,
-            ip_address=t.ip_address,
-            created_at=t.created_at.isoformat() if t.created_at else None,
-        )
-        for t in tokens
-    ]
-
-    return SessionListResponse(sessions=sessions)
 
 
 @router.delete("/auth/sessions/{session_id}", status_code=204)
@@ -500,27 +495,10 @@ def revoke_session(
     AUDIT-02 FIX 2: Per-session revocation endpoint.
     Returns 204 on success, 404 if not found or not owned by caller.
     """
-    token = (
-        db.query(RefreshToken)
-        .filter(
-            RefreshToken.id == session_id,
-            RefreshToken.user_id == current_user.id,
-            RefreshToken.revoked_at.is_(None),
-        )
-        .first()
-    )
-
-    if token is None:
-        raise HTTPException(status_code=404, detail="Session not found")
-
-    token.revoked_at = datetime.now(UTC)
-    db.commit()
-
-    log_secure_operation(
-        "session_revoked",
-        f"Session {session_id} revoked by user {current_user.id}",
-    )
-
+    try:
+        revoke_session_by_id(db, current_user, session_id)
+    except SessionNotFoundError as e:
+        raise HTTPException(status_code=404, detail="Session not found") from e
     return Response(status_code=204)
 
 
@@ -536,11 +514,5 @@ def revoke_all_sessions(
     AUDIT-02 FIX 2: Bulk session revocation endpoint.
     Returns 204 on success.
     """
-    count = _revoke_all_user_tokens(db, current_user.id)
-
-    log_secure_operation(
-        "all_sessions_revoked",
-        f"User {current_user.id} revoked all {count} sessions",
-    )
-
+    revoke_all_user_sessions(db, current_user)
     return Response(status_code=204)

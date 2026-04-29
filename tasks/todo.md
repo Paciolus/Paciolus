@@ -167,7 +167,7 @@
 ---
 
 ### Sprint 746: Auth service-layer extraction (Phase 2 — Auth Decomposition 1/2)
-**Status:** **PARTIAL** 2026-04-29 — Sprint 746a (recovery) shipped. Identity / registration / sessions extractions deferred to Sprint 746b/c/d (filed below).
+**Status:** **COMPLETE** 2026-04-29 — All four sub-sprints (746a recovery, 746b identity, 746c registration, 746d sessions) shipped this session.
 **Priority:** **P2** — security-sensitive surface; highest-risk refactor in plan.
 **Source:** Architectural Remediation Plan phase 2.
 
@@ -175,7 +175,7 @@ Extract service layer from `auth_routes.py` into focused subdomains:
 - ✅ **Sprint 746a — `services/auth/recovery.py`** (password reset lifecycle). Shipped 2026-04-29. `forgot_password` and `reset_password` routes are now ~10 lines each (validate → call service → return response). Service exposes `initiate_password_reset(db, email) → PasswordResetInitiation` and `complete_password_reset(db, token, new_password) → User` (raises `PasswordResetError` for invalid/used/expired/inactive — route maps to `HTTPException(400)`). Both 41 pre-existing password tests pass.
 - ✅ **Sprint 746b — `services/auth/identity.py`** (login/logout/refresh + token issuance/rotation). Shipped 2026-04-29. `IdentityIssuance` dataclass + `authenticate_login`, `refresh_session`, `revoke_session_token`. login route shrunk 60 → 22 lines; refresh ~30 → ~22 lines. `/auth/me` already thin (no extraction needed). Cookie writes stay in route. 10 unused imports removed from `auth_routes.py`. 219 auth tests pass (172 + 47 verification).
 - ✅ **Sprint 746c — `services/auth/registration.py`** (registration + verification lifecycle). Shipped 2026-04-29. `register_user`, `complete_email_verification`, `resend_verification_email` + 4 domain exception classes (`RegistrationError`, `EmailVerificationError`, `EmailAlreadyVerifiedError`, `VerificationCooldownError`). register route shrunk 86 → 33 lines; verify-email 40 → 9 lines; resend-verification 53 → 27 lines. 11 unused imports removed (`EmailVerificationToken`, `is_disposable_email`, `generate_verification_token`, `ENV_MODE`, `hash_token`, `create_user`, `create_access_token`, `create_refresh_token`, `sanitize_error`, `SQLAlchemyError`, `get_user_by_email`). Two test patches updated to point at `services.auth.registration` instead of `routes.auth_routes`. 189/189 auth tests pass.
-- ⏳ **Sprint 746d — `services/auth/sessions.py`** (session inventory + revocation). Deferred.
+- ✅ **Sprint 746d — `services/auth/sessions.py`** (session inventory + revocation). Shipped 2026-04-29. `list_user_sessions` (returns `SessionEntry` list), `revoke_session_by_id` (raises `SessionNotFoundError` for unknown / cross-user / already-revoked), `revoke_all_user_sessions`. list_sessions route 32 → 16 lines; revoke_session 22 → 12 lines; revoke_all_sessions 12 → 7 lines. Removed 4 unused imports (`datetime`, `UTC`, `_revoke_all_user_tokens`, `RefreshToken`). 233/233 auth + helper tests pass.
 
 **Honors deferred-items boundary:** Sprint 746a moves only business logic. Cookie/CSRF primitives (`_set_refresh_cookie`, `_set_access_cookie`, etc.) remain in the route layer per the deferred-items guidance. Token issuance + cookie writes will need careful handling in Sprint 746b.
 
