@@ -190,7 +190,7 @@ Extract service layer from `auth_routes.py` into focused subdomains:
 ---
 
 ### Sprint 747: Auth route thinning + security response normalization (Phase 2 — Auth Decomposition 2/2)
-**Status:** **PARTIAL** 2026-04-29 — Sprint 747a (enumeration-safe response normalization) shipped. Full handler thinning depends on Sprint 746b/c/d completing first.
+**Status:** **COMPLETE** 2026-04-29. Sprint 747a (enumeration-safe helper) + Sprints 746b/c/d (which fully thinned login/refresh/logout/register/verify-email/resend/sessions handlers as a side effect of service extraction) collectively delivered the sprint's scope.
 **Priority:** P2.
 **Source:** Architectural Remediation Plan phase 2.
 
@@ -199,23 +199,42 @@ Extract service layer from `auth_routes.py` into focused subdomains:
 - `routes/auth_routes.py::login` — three duplicated `HTTPException(401, ...)` raises (lines 276/289/301) collapsed to `raise_invalid_credentials()` calls. Behavior preserved verbatim.
 - `backend/tests/test_auth_security_responses.py` — 3 tests pinning the stable body, header, and inter-call-shape consistency. Plus 36 pre-existing auth route + parity tests still pass (39/39).
 
-**Deferred to follow-up Sprint 747b:**
-- Full handler thinning. Pre-requisite is Sprint 746b/c/d (identity / registration / sessions service extractions). Until those land, "validate → service → return" can't apply to handlers whose business logic is still inline.
-- Brute-force / lockout pre-auth gate consolidation (`check_ip_blocked` + `check_lockout_status` called separately in `login`). Would benefit from a single `pre_auth_check_or_raise()` helper — deferred so the security-middleware contract stays verbatim until the full extraction.
+**Final state (after 746b/c/d):**
+- All 13 auth route handlers are now orchestration-only (~10–25 lines each). Cookie writes + HTTP plumbing in routes; business logic + DB persistence in services.
+- AUDIT-07 F4 enumeration-safe 401 response is a single helper (`raise_invalid_credentials`) called from inside the identity service.
+- 4 service modules in `backend/services/auth/`: `recovery`, `identity`, `registration`, `sessions` (+ `security_responses` shared helper).
+- 233/233 auth + helper tests pass after the full Phase 2 sweep.
 
-**Exit (partial):** Enumeration-safe 401 response is now a single helper; AUDIT-07 F4 contract pinned by 3 dedicated tests. Full handler thinning awaits Sprint 746b/c/d.
+**Out of scope (deferred to a future cleanup sprint, low priority):**
+- `check_ip_blocked` + `check_lockout_status` consolidation into a single `pre_auth_check_or_raise()` helper. Sequential calls in `authenticate_login` are clear in context; consolidation would be cosmetic, and the two calls have distinct logging + recording semantics (only the lockout-failure branch calls `record_ip_failure`). Revisit only if a fifth pre-auth check joins them.
+
+**Exit met:** All auth handlers are thin orchestration layers; security-critical behaviors covered by focused service-level tests; no monolithic-route assumptions remain.
 
 ---
 
 ### Sprint 748: Export mapper layer + diagnostics refactor (Phase 3 — Export Rationalization 1/2)
-**Status:** PENDING. Depends on Sprint 743 (export contract regression net).
+**Status:** **PARTIAL** 2026-04-29 — 6/10 routes migrated. PDF/Excel/Leadsheets/FinancialStatements (4 routes) deferred to Sprint 748b because they need user/branding context to flow through the pipeline (the existing `export.pipeline` functions don't yet accept `User`/`Session` for `apply_pdf_branding`).
 **Priority:** P3.
 **Source:** Architectural Remediation Plan phase 3.
 
-- New layer: `export/mappers/` — DTO normalization, row/section builders for CSV, domain→renderable transforms for PDF/Excel.
-- Refactor `routes/export_diagnostics.py` handlers to invoke mappers; remove inline loops/formatting.
+**Discovery:** `backend/export/` package already exists (Sprint 539+) with `pipeline.py` + `serializers/` implementing the mapper/generator separation per ADR-016. Routes had drifted into a parallel inline implementation. Sprint 748 is therefore a delegation migration, not a new layer build.
 
-**Exit:** `export_diagnostics` routes are slim; transformation logic owned by mapper layer.
+**What landed in 748a:**
+- 6 CSV routes in `routes/export_diagnostics.py` migrated to delegate to `export.pipeline`:
+  - `export_csv_trial_balance` (66 lines → 2)
+  - `export_csv_anomalies` (71 lines → 2)
+  - `export_csv_preflight_issues` (24 lines → 2)
+  - `export_csv_population_profile` (58 lines → 2)
+  - `export_csv_expense_category` (64 lines → 2)
+  - `export_csv_accrual_completeness` (45 lines → 2)
+- Net `export_diagnostics.py` shrunk 661 → 358 lines (~46% reduction).
+- Removed unused `sanitize_csv_value` import (no longer referenced after migration).
+- 119/119 export tests pass (`test_export_diagnostics_routes`, `test_export_routes`, `test_export_csv_serializers`).
+
+**Deferred to Sprint 748b:**
+- PDF, Excel, Leadsheets, Financial Statements routes (4 endpoints). The pipeline's `export_diagnostic_pdf` / `export_diagnostic_excel` don't accept `User`/`Session` — they can't apply Sprint 679's Enterprise PDF branding via `apply_pdf_branding(load_pdf_branding_context(current_user, db))`. Sprint 748b extends the pipeline signatures to accept optional branding context, then completes the migration.
+
+**Exit (partial):** 6 of 10 diagnostic routes are slim controllers delegating to the existing pipeline. Transformation logic is consistently owned by `export.serializers.*`. Branding-aware routes await pipeline signature extension.
 
 ---
 
