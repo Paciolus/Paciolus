@@ -380,15 +380,26 @@ Extract service layer from `auth_routes.py` into focused subdomains:
 ---
 
 ### Sprint 755: Dead code + duplicate type cleanup (Phase 6 — Drift Elimination 1/2)
-**Status:** PENDING. Depends on Sprints 744, 745, 750–754 (so we know what's actually obsolete).
+**Status:** COMPLETE 2026-04-29. Survey-driven sprint — found a single dead alias to remove and confirmed the rest of the codebase is already clean from Sprint 724's prior helpers-shim removal + ruff-F401 enforcement in CI.
 **Priority:** P3.
 **Source:** Architectural Remediation Plan phase 6.
 
-- Audit dead utilities, duplicate DTOs/types, commented legacy code paths.
-- Remove deprecated adapters and one-off helpers superseded by Phase 1–5 standard layers.
-- Consolidate duplicated constants/magic strings into typed config modules.
+**What landed:**
+- **Removed `_build_risk_summary` legacy alias from `audit_engine.py`.** It was a deprecated alias for the renamed `build_risk_summary` function — zero callers remained anywhere in the codebase. ~3 lines + the `__all__` entry. 69/69 audit-core + audit-anomalies tests still pass.
 
-**Exit:** Legacy parallel patterns removed; the standard layer is the only path.
+**Survey results (most of Sprint 755's planned scope was already clean):**
+- **`ruff check --select F401` passes cleanly.** No unused Python imports anywhere. CI's lint-baseline gate enforces this — Sprint 724's helpers-shim removal already drove the codebase to F401-clean.
+- **No duplicate frontend types.** Sprint 752's `lib/validation/engine.ts` exports each type once; `useFormValidation.ts` re-exports them. Verified with grep — `ValidationRule`, `FormErrors`, `TouchedFields`, `FormValues` all defined in exactly one place.
+- **Deprecated markers surveyed:** 4 hits in backend (`audit_engine.py` legacy alias — removed; `routes/activity.py` "Legacy TB-only stats" — backward-compat for client API contract; `shared/parsing_helpers.py` DEPRECATED note for `safe_decimal` — has explicit transition rationale; `shared/passcode_security.py` legacy bcrypt path — explicit transition window note). Only the first was safe to remove without coordination.
+- **Frontend `motionTokens.DISTANCE` `@deprecated`** — survey confirmed `subtle`/`standard`/`dramatic` are unused externally, but `state` is still used internally by `STATE_CROSSFADE` in the same file. Removing the deprecated keys would force a rename of the constant and a test update — too cosmetic to justify the churn this sprint.
+
+**Out of scope (deferred):**
+- Broader sweep across 800+ files needs tool-assisted analysis (e.g., per-symbol reachability across the import graph). The cheap wins from `ruff F401` are already gone. Sprint 756's CI conformance work is the natural place to add stronger drift detectors (forbidden imports, banned re-export shims) that catch dead code at PR time rather than retrospectively.
+- Constant/magic-string dedup — survey didn't surface a critical mass of duplicate magic strings worth a dedicated typed-config module. The existing `shared/csv_export.py`, `tools_registry.py`, `standards_registry.py` already centralize the high-traffic constants. Defer to Sprint 759's convergence scorecard, which will revisit this from the catalog-consistency angle.
+
+**Verification:** `ruff check` clean; 69/69 affected pytest tests pass.
+
+**Exit met (within survey scope):** Confirmed dead code removed. The "broader cleanup" this sprint was originally scoped for turns out to already be done — credit to Sprints 519, 539, 661, 717, 720, 724, and the F401 baseline gate that's been running in CI through this initiative.
 
 ---
 

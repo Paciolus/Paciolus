@@ -32,9 +32,6 @@ from audit import (  # noqa: F401
     validate_balance_sheet_equation,
 )
 
-# Legacy alias: _build_risk_summary was the original name
-_build_risk_summary = build_risk_summary
-
 __all__ = [
     "ASSET_KEYWORDS",
     "BS_IMBALANCE_THRESHOLD_HIGH",
@@ -44,7 +41,6 @@ __all__ = [
     "DEFAULT_CHUNK_SIZE",
     "LIABILITY_KEYWORDS",
     "StreamingAuditor",
-    "_build_risk_summary",
     "_merge_anomalies",
     "audit_trial_balance_multi_sheet",
     "audit_trial_balance_streaming",
