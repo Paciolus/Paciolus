@@ -40,8 +40,24 @@ export endpoints should follow the patterns in:
 
 - [ADR-014: Canonical Frontend Network Layer](docs/03-engineering/adr-014-canonical-frontend-network-layer.md) — direct `fetch()` is banned outside the allowlist (CI-enforced via ESLint).
 - [ADR-015: Backend Route / Service Boundaries](docs/03-engineering/adr-015-backend-route-service-boundaries.md) — use `shared.db_unit_of_work.db_transaction` for DB writes; extract multi-step business logic to `services/<domain>/<workflow>.py`.
-- [ADR-016: Export Architecture](docs/03-engineering/adr-016-export-architecture.md) — proposed mapper/generator separation for `routes/export_*.py`.
-- [Quality Thresholds](docs/03-engineering/quality-thresholds.md) — module size, function complexity, hook size targets (advisory until Sprint 756).
+- [ADR-016: Export Architecture](docs/03-engineering/adr-016-export-architecture.md) — accepted mapper/generator separation for `routes/export_*.py`; `routes/export_memos.py` registry-driven dispatch is the canonical strategy for memo PDFs.
+- [ADR-017: Tool Page Architecture Template](docs/03-engineering/adr-017-tool-page-architecture-template.md) — frontend tool pages compose a `useToolUploads` + `useToolAnalysis` + `useToolMemoExport` hook stack; pages stay render-only.
+- [ADR-018: Backend Domain Package Relocation](docs/03-engineering/adr-018-domain-package-relocation.md) — top-level `*_engine.py` modules migrate to `services/audit/<tool>/{analysis,schemas,export}.py` incrementally with backward-compat shims.
+- [Quality Thresholds](docs/03-engineering/quality-thresholds.md) — module size, function complexity, hook size targets (advisory; advanced via the lint scans below).
+
+### Architecture conformance lints (advisory)
+
+Three CI-wired scans surface the migration backlog without blocking PRs.
+Each script accepts `--strict` to flip to non-zero exit (used to verify
+the gate manually before promoting to a hard CI gate):
+
+- [`scripts/lint_engine_base_adoption.py`](scripts/lint_engine_base_adoption.py) (Sprint 726, ADR-013) — testing engines that don't subclass `AuditEngineBase`.
+- [`scripts/lint_domain_relocation.py`](scripts/lint_domain_relocation.py) (Sprint 756, ADR-018) — top-level `*_engine.py` modules not yet relocated to `services/audit/<tool>/`.
+- [`scripts/lint_route_layer_purity.py`](scripts/lint_route_layer_purity.py) (Sprint 756, ADR-015) — route handlers importing engine orchestration symbols (`run_*`, `*Engine` classes), bypassing the service layer.
+
+When you migrate a finding from one of these lints, also remove the
+corresponding entry from any allowlist / blocklist in the script — the
+backlog visibility is the script's whole point.
 
 ## Commit Messages
 

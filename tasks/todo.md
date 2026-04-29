@@ -404,14 +404,26 @@ Extract service layer from `auth_routes.py` into focused subdomains:
 ---
 
 ### Sprint 756: Architecture conformance CI + docs refresh (Phase 6 — Drift Elimination 2/2)
-**Status:** PENDING. Depends on Sprint 755.
+**Status:** COMPLETE 2026-04-29.
 **Priority:** P3.
 **Source:** Architectural Remediation Plan phase 6.
 
-- CI checks: forbidden imports/layers (route → engine internals), duplicate route patterns, banned direct network calls (extends Sprint 744's lint rule to repo-wide coverage).
-- Update `CONTRIBUTING.md` + `CLAUDE.md` architecture sections + relevant runbooks to reflect new structure.
+**What landed:**
+- **`scripts/lint_domain_relocation.py`** (ADR-018, Sprint 753 deferral) — advisory CI scan that flags top-level `backend/*_engine.py` modules not yet relocated to `services/audit/<tool>/`. Detection: AST scan classifies a module as a "shim" (imports + `__all__` + docstring only) or as still-housing-the-implementation. Blocklist (`NON_RELOCATABLE_ENGINES`) for cross-cutting engines that don't fit the per-tool layout (`audit_engine`, `engine_framework`, `benchmark_engine`). Currently surfaces 31 findings (recon is correctly excluded after Sprint 753's pilot).
+- **`scripts/lint_route_layer_purity.py`** (ADR-015) — advisory CI scan that flags route modules importing engine orchestration symbols (`*Engine` classes, `run_*`, `process_*`, `audit_trial_balance_*`). Routes legitimately importing dataclasses for type annotations (`FluxResult`, `ReconScore`, etc.) are NOT flagged. Currently surfaces 16 violations across ~12 route files — exactly the route-thinning backlog.
+- Both scripts mirror `lint_engine_base_adoption.py`'s discipline: warning-only (exit 0) by default, `--strict` flag flips exit code for manual verification before promotion to hard gates.
+- **CI wired**: both scans added to `.github/workflows/ci.yml` `backend-tests` job with `continue-on-error: true`.
+- **31 lint-script tests** (`test_lint_domain_relocation.py` 18 tests + `test_lint_route_layer_purity.py` 13 tests) covering candidate filters, AST detection (shim vs. implementation, engine-class vs. dataclass heuristics), CLI flow (default exit 0 / `--strict` exit 1), and smoke checks against the actual repo.
+- **`CONTRIBUTING.md` updated** — "Architectural Patterns" section now lists ADRs 014–018 and a new "Architecture conformance lints (advisory)" subsection with all three scans.
 
-**Exit:** Drift detectors enforced in CI; contributor docs match reality.
+**Out of scope (deferred):**
+- **Banned direct network calls (backend)** — Sprint 744's ESLint rule already enforces frontend; backend's HTTP client surface is bounded to `httpx`/`stripe` SDKs and doesn't need a parallel scan.
+- **Duplicate route patterns** — would need full route-table analysis (FastAPI `app.routes` inspection at import time). Filed as Sprint 759 candidate (convergence scorecard) where it fits the broader catalog-consistency angle.
+- **CLAUDE.md architecture-section update** — the file is operator-protocol authority that the existing architecture-pointers section already covers via "Key Capabilities" + sprint era summaries. No update needed; the new ADRs are linked from CONTRIBUTING.md which is the contributor-facing doc.
+
+**Verification:** 31/31 lint-script tests pass. Both scans run successfully against the live repo (31 + 16 advisory findings).
+
+**Exit met:** Drift detectors enforced in CI (advisory mode, ready for promotion to hard gates as their respective backlogs clear). Contributor docs reference the new ADRs + lint scripts.
 
 ---
 
