@@ -24,8 +24,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
-from flux_engine import FluxResult
 from security_utils import log_secure_operation
+from services.audit.flux.analysis import FluxResult
 
 
 class RiskBand(str, Enum):
