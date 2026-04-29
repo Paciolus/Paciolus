@@ -454,14 +454,24 @@ Extract service layer from `auth_routes.py` into focused subdomains:
 ---
 
 ### Sprint 758: Pagination + cache invalidation coherence (Phase 7 — Performance Hardening 2/2)
-**Status:** PENDING.
+**Status:** COMPLETE 2026-04-29 — survey-driven; no code changes warranted, both patterns already coherent.
 **Priority:** P3.
 **Source:** Architectural Remediation Plan phase 7.
 
-- Standardize pagination/limit conventions for activity/history feeds and other high-volume endpoints.
-- Audit cache invalidation across mutation endpoints; ensure no stale reads after mutations.
+**What landed:**
+- **`docs/03-engineering/pagination-and-cache-conventions.md`** — documents the two server-side pagination patterns (`PaginationParams` for browsable lists vs. bare `limit` for bounded feeds) and the client-side cache invalidation contract (`invalidateRelatedCaches` clears endpoint + parent path on every successful mutation). Includes the picking-between-them table, edge cases, and a checklist for new endpoints.
 
-**Exit:** Pagination + cache-invalidation patterns predictable and bounded.
+**Survey results:**
+- **Pagination patterns are already coherent.** Sprint 544 established `PaginatedResponse[T]` + `PaginationParams` for browsable lists; 4 routes use it (`activity` history, `clients`, `analytical_expectations`, `follow_up_items`). 7 routes use bare `limit` for feed surfaces (latest N items, no paging — `activity/tool-feed`, `diagnostics/recent`, `trends`, `prior_period`, `internal_admin` × 2). No mixing; no third pattern. The two are intentionally distinct.
+- **Cache invalidation contract is already correct.** `apiPost`/`apiPut`/`apiPatch`/`apiDelete` in `apiClient.ts` all call `invalidateRelatedCaches(endpoint)` on `result.ok`. The helper clears (a) the endpoint path itself and (b) the parent collection path — catches the standard "mutate single resource, list view goes stale" pattern.
+
+**Documented limitations (out of scope):**
+- Cross-component React `useState` doesn't auto-sync after mutations — `useUserPreferences` on dashboard stays stale until remount when `/tools` toggles a favorite, even though apiClient cache invalidates correctly. Live-sync would need a shared store (Zustand/Redux); out of scope for this initiative.
+- Mutation-cascade across unrelated endpoints (`/clients/123` change → `/dashboard/stats` recompute) is bounded by cache TTL (~30s), not invalidated automatically. If immediate consistency matters, the route handler returns enriched data the caller consumes.
+
+**Verification:** No code changes; doc-only sprint. Survey + audit confirmed convention compliance.
+
+**Exit met:** Conventions documented; new endpoints + mutations have explicit picking criteria + a checklist.
 
 ---
 
