@@ -173,7 +173,7 @@
 
 Extract service layer from `auth_routes.py` into focused subdomains:
 - ✅ **Sprint 746a — `services/auth/recovery.py`** (password reset lifecycle). Shipped 2026-04-29. `forgot_password` and `reset_password` routes are now ~10 lines each (validate → call service → return response). Service exposes `initiate_password_reset(db, email) → PasswordResetInitiation` and `complete_password_reset(db, token, new_password) → User` (raises `PasswordResetError` for invalid/used/expired/inactive — route maps to `HTTPException(400)`). Both 41 pre-existing password tests pass.
-- ⏳ **Sprint 746b — `services/auth/identity.py`** (login/logout/refresh/me + token issuance/rotation). Deferred.
+- ✅ **Sprint 746b — `services/auth/identity.py`** (login/logout/refresh + token issuance/rotation). Shipped 2026-04-29. `IdentityIssuance` dataclass + `authenticate_login`, `refresh_session`, `revoke_session_token`. login route shrunk 60 → 22 lines; refresh ~30 → ~22 lines. `/auth/me` already thin (no extraction needed). Cookie writes stay in route. 10 unused imports removed from `auth_routes.py`. 219 auth tests pass (172 + 47 verification).
 - ⏳ **Sprint 746c — `services/auth/registration.py`** (registration + verification lifecycle). Deferred.
 - ⏳ **Sprint 746d — `services/auth/sessions.py`** (session inventory + revocation). Deferred.
 

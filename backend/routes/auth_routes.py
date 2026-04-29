@@ -21,15 +21,12 @@ from auth import (
     UserResponse,
     _check_password_complexity,
     _revoke_all_user_tokens,
-    authenticate_user,
     create_access_token,
     create_refresh_token,
     create_user,
     get_user_by_email,
     hash_token,
     require_current_user,
-    revoke_refresh_token,
-    rotate_refresh_token,
 )
 from config import (
     ACCESS_COOKIE_NAME,
@@ -51,22 +48,19 @@ from email_service import (
 )
 from models import EmailVerificationToken, RefreshToken, User
 from security_middleware import (
-    check_ip_blocked,
-    check_lockout_status,
     generate_csrf_token,
     get_client_ip,
-    hash_ip_address,
-    record_failed_login,
-    record_ip_failure,
-    reset_failed_attempts,
-    reset_ip_failures,
+)
+from services.auth.identity import (
+    authenticate_login,
+    refresh_session,
+    revoke_session_token,
 )
 from services.auth.recovery import (
     PasswordResetError,
     complete_password_reset,
     initiate_password_reset,
 )
-from services.auth.security_responses import raise_invalid_credentials
 from shared.background_email import safe_background_email
 from shared.error_messages import sanitize_error
 from shared.rate_limits import RATE_LIMIT_AUTH, limiter
@@ -266,55 +260,26 @@ def register(
 @limiter.limit(RATE_LIMIT_AUTH)
 def login(request: Request, credentials: UserLogin, response: Response, db: Session = Depends(get_db)) -> AuthResponse:
     """Authenticate user and return JWT token."""
-    masked = mask_email(credentials.email)
-    logger.info("Login attempt: %s", masked)
-    log_secure_operation("auth_login_attempt", f"Login attempt: {masked}")
+    log_secure_operation("auth_login_attempt", f"Login attempt: {mask_email(credentials.email)}")
 
-    # AUDIT-07 F2: Per-IP brute-force gate
-    client_ip = get_client_ip(request)
-    if check_ip_blocked(client_ip):
-        log_secure_operation("ip_blocked", f"IP {hash_ip_address(client_ip)} blocked: threshold exceeded")
-        raise_invalid_credentials()
-
-    existing_user = get_user_by_email(db, credentials.email)
-
-    # AUDIT-07 F4: Locked accounts return same 401 as any other failure
-    if existing_user:
-        is_locked, _locked_until, _remaining = check_lockout_status(db, existing_user.id)
-        if is_locked:
-            record_ip_failure(client_ip)
-            raise_invalid_credentials()
-
-    user = authenticate_user(db, credentials.email, credentials.password)
-    if user is None:
-        # AUDIT-07 F4: Identical response for existing-wrong-password and non-existent
-        if existing_user:
-            record_failed_login(db, existing_user.id)
-        record_ip_failure(client_ip)
-        raise_invalid_credentials()
-
-    reset_failed_attempts(db, user.id)
-    reset_ip_failures(client_ip)
-
-    token, expires = create_access_token(user.id, user.email, user.password_changed_at, tier=user.tier.value)
-    expires_in = int((expires - datetime.now(UTC)).total_seconds())
-
-    raw_refresh_token, _ = create_refresh_token(
+    issuance = authenticate_login(
         db,
-        user.id,
+        email=credentials.email,
+        password=credentials.password,
+        client_ip=get_client_ip(request),
         user_agent=request.headers.get("User-Agent"),
-        ip_address=request.client.host if request.client else None,
+        request_host=request.client.host if request.client else None,
     )
-    _set_refresh_cookie(response, raw_refresh_token, credentials.remember_me)
-    _set_access_cookie(response, token)
 
-    csrf_token_value = generate_csrf_token(user_id=str(user.id))
+    _set_refresh_cookie(response, issuance.raw_refresh_token, credentials.remember_me)
+    _set_access_cookie(response, issuance.access_token)
+
     return AuthResponse(
-        access_token=token,
+        access_token=issuance.access_token,
         token_type="bearer",
-        expires_in=expires_in,
-        user=UserResponse.model_validate(user),
-        csrf_token=csrf_token_value,
+        expires_in=issuance.expires_in,
+        user=UserResponse.model_validate(issuance.user),
+        csrf_token=issuance.csrf_token,
     )
 
 
@@ -537,8 +502,7 @@ def refresh(request: Request, response: Response, db: Session = Depends(get_db))
     """Exchange the HttpOnly refresh cookie for a new access + refresh token pair."""
     # Defense-in-depth: require X-Requested-With header to mitigate cross-origin
     # form POSTs. Browsers never auto-attach custom headers on simple requests.
-    xrw = request.headers.get("X-Requested-With")
-    if xrw != "XMLHttpRequest":
+    if request.headers.get("X-Requested-With") != "XMLHttpRequest":
         raise HTTPException(status_code=403, detail="Missing or invalid X-Requested-With header")
 
     logger.debug("Token refresh requested")
@@ -546,19 +510,18 @@ def refresh(request: Request, response: Response, db: Session = Depends(get_db))
     if not raw_token:
         raise HTTPException(status_code=401, detail="No refresh token")
 
-    access_token, new_refresh_token, user = rotate_refresh_token(db, raw_token)
-    # Always issue a session cookie on rotation (security best-practice)
-    _set_refresh_cookie(response, new_refresh_token, remember_me=False)
-    _set_access_cookie(response, access_token)
-    expires_in = JWT_EXPIRATION_MINUTES * 60
+    issuance = refresh_session(db, raw_refresh_token=raw_token)
 
-    csrf_token_value = generate_csrf_token(user_id=str(user.id))
+    # Always issue a session cookie on rotation (security best-practice)
+    _set_refresh_cookie(response, issuance.raw_refresh_token, remember_me=False)
+    _set_access_cookie(response, issuance.access_token)
+
     return AuthResponse(
-        access_token=access_token,
+        access_token=issuance.access_token,
         token_type="bearer",
-        expires_in=expires_in,
-        user=UserResponse.model_validate(user),
-        csrf_token=csrf_token_value,
+        expires_in=issuance.expires_in,
+        user=UserResponse.model_validate(issuance.user),
+        csrf_token=issuance.csrf_token,
     )
 
 
@@ -568,7 +531,7 @@ def logout(request: Request, response: Response, db: Session = Depends(get_db)) 
     """Revoke the HttpOnly refresh cookie (logout)."""
     raw_token = request.cookies.get(REFRESH_COOKIE_NAME)
     if raw_token:
-        revoke_refresh_token(db, raw_token)
+        revoke_session_token(db, raw_token)
     _clear_refresh_cookie(response)
     _clear_access_cookie(response)
     return SuccessResponse(success=True, message="Logged out successfully")
