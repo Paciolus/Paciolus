@@ -190,15 +190,20 @@ Extract service layer from `auth_routes.py` into focused subdomains:
 ---
 
 ### Sprint 747: Auth route thinning + security response normalization (Phase 2 — Auth Decomposition 2/2)
-**Status:** PENDING. Depends on Sprint 746.
+**Status:** **PARTIAL** 2026-04-29 — Sprint 747a (enumeration-safe response normalization) shipped. Full handler thinning depends on Sprint 746b/c/d completing first.
 **Priority:** P2.
 **Source:** Architectural Remediation Plan phase 2.
 
-- Refactor handlers to: validate input → call service → return typed response.
-- Normalize duplicated security response behavior (brute-force/lockout, enumeration-safe responses for password reset / login).
-- Add per-submodule targeted tests where Sprint 743 found gaps.
+**What landed in 747a:**
+- `backend/services/auth/security_responses.py` — `raise_invalid_credentials()` helper. Single source of truth for the AUDIT-07 F4 enumeration-safe 401 response (same body + `WWW-Authenticate: Bearer` header for wrong-password / unknown-email / locked-account / IP-blocked).
+- `routes/auth_routes.py::login` — three duplicated `HTTPException(401, ...)` raises (lines 276/289/301) collapsed to `raise_invalid_credentials()` calls. Behavior preserved verbatim.
+- `backend/tests/test_auth_security_responses.py` — 3 tests pinning the stable body, header, and inter-call-shape consistency. Plus 36 pre-existing auth route + parity tests still pass (39/39).
 
-**Exit:** Route handlers orchestration-only; security-critical behaviors covered by focused service-level tests; no monolithic-route assumptions remain.
+**Deferred to follow-up Sprint 747b:**
+- Full handler thinning. Pre-requisite is Sprint 746b/c/d (identity / registration / sessions service extractions). Until those land, "validate → service → return" can't apply to handlers whose business logic is still inline.
+- Brute-force / lockout pre-auth gate consolidation (`check_ip_blocked` + `check_lockout_status` called separately in `login`). Would benefit from a single `pre_auth_check_or_raise()` helper — deferred so the security-middleware contract stays verbatim until the full extraction.
+
+**Exit (partial):** Enumeration-safe 401 response is now a single helper; AUDIT-07 F4 contract pinned by 3 dedicated tests. Full handler thinning awaits Sprint 746b/c/d.
 
 ---
 

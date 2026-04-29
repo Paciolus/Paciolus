@@ -66,6 +66,7 @@ from services.auth.recovery import (
     complete_password_reset,
     initiate_password_reset,
 )
+from services.auth.security_responses import raise_invalid_credentials
 from shared.background_email import safe_background_email
 from shared.error_messages import sanitize_error
 from shared.rate_limits import RATE_LIMIT_AUTH, limiter
@@ -273,11 +274,7 @@ def login(request: Request, credentials: UserLogin, response: Response, db: Sess
     client_ip = get_client_ip(request)
     if check_ip_blocked(client_ip):
         log_secure_operation("ip_blocked", f"IP {hash_ip_address(client_ip)} blocked: threshold exceeded")
-        raise HTTPException(
-            status_code=401,
-            detail={"message": "Invalid email or password"},
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        raise_invalid_credentials()
 
     existing_user = get_user_by_email(db, credentials.email)
 
@@ -286,11 +283,7 @@ def login(request: Request, credentials: UserLogin, response: Response, db: Sess
         is_locked, _locked_until, _remaining = check_lockout_status(db, existing_user.id)
         if is_locked:
             record_ip_failure(client_ip)
-            raise HTTPException(
-                status_code=401,
-                detail={"message": "Invalid email or password"},
-                headers={"WWW-Authenticate": "Bearer"},
-            )
+            raise_invalid_credentials()
 
     user = authenticate_user(db, credentials.email, credentials.password)
     if user is None:
@@ -298,11 +291,7 @@ def login(request: Request, credentials: UserLogin, response: Response, db: Sess
         if existing_user:
             record_failed_login(db, existing_user.id)
         record_ip_failure(client_ip)
-        raise HTTPException(
-            status_code=401,
-            detail={"message": "Invalid email or password"},
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        raise_invalid_credentials()
 
     reset_failed_attempts(db, user.id)
     reset_ip_failures(client_ip)
