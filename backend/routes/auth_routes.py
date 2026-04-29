@@ -44,13 +44,12 @@ from disposable_email import is_disposable_email
 from email_service import (
     RESEND_COOLDOWN_MINUTES,
     can_resend_verification,
-    generate_password_reset_token,
     generate_verification_token,
     is_email_service_configured,
     send_password_reset_email,
     send_verification_email,
 )
-from models import EmailVerificationToken, PasswordResetToken, RefreshToken, User
+from models import EmailVerificationToken, RefreshToken, User
 from security_middleware import (
     check_ip_blocked,
     check_lockout_status,
@@ -61,6 +60,11 @@ from security_middleware import (
     record_ip_failure,
     reset_failed_attempts,
     reset_ip_failures,
+)
+from services.auth.recovery import (
+    PasswordResetError,
+    complete_password_reset,
+    initiate_password_reset,
 )
 from shared.background_email import safe_background_email
 from shared.error_messages import sanitize_error
@@ -428,63 +432,22 @@ def forgot_password(
     db: Session = Depends(get_db),
 ) -> ForgotPasswordResponse:
     """Initiate password reset. Always returns 200 to prevent account enumeration."""
-    masked = mask_email(body.email)
-    log_secure_operation("password_reset_request", f"Password reset requested for {masked}")
+    log_secure_operation("password_reset_request", f"Password reset requested for {mask_email(body.email)}")
 
-    # Generic success message — returned whether or not the email exists
     generic_response = ForgotPasswordResponse(
         message="If an account with that email exists, a password reset link has been sent."
     )
 
-    user = get_user_by_email(db, body.email)
-    if not user:
-        # Don't reveal whether the email is registered.
-        # Temporary diagnostic (Sprint 594/595 incident): when the lookup
-        # fails, log the total user row count so we can distinguish
-        # "DB was wiped" (count=0) from "stored email does not match typed
-        # email" (count>0). No PII is leaked — we never log other users'
-        # addresses. Remove this instrumentation once the post-incident
-        # root cause is fully understood.
-        try:
-            total_users = db.query(User).count()
-        except Exception:  # pragma: no cover — diagnostic must never block the response
-            total_users = -1
-        logger.info(
-            "Password reset requested for unknown email: %s (total_users=%d)",
-            masked,
-            total_users,
+    initiation = initiate_password_reset(db, body.email)
+    if initiation.user is not None and initiation.token_result is not None:
+        background_tasks.add_task(
+            safe_background_email,
+            send_password_reset_email,
+            label="password_reset",
+            to_email=initiation.user.email,
+            token=initiation.token_result.token,
+            user_name=initiation.user.name,
         )
-        return generic_response
-
-    if not user.is_active:
-        logger.info("Password reset requested for inactive account: %s", masked)
-        return generic_response
-
-    # Generate token
-    token_result = generate_password_reset_token()
-    reset_token = PasswordResetToken(
-        user_id=user.id,
-        token_hash=hash_token(token_result.token),
-        expires_at=token_result.expires_at,
-    )
-    db.add(reset_token)
-
-    try:
-        db.commit()
-    except SQLAlchemyError as e:
-        db.rollback()
-        logger.exception("Database error creating password reset token")
-        raise HTTPException(status_code=500, detail=sanitize_error(e, log_label="db_password_reset"))
-
-    # Send email in background (don't block the response)
-    background_tasks.add_task(
-        safe_background_email,
-        send_password_reset_email,
-        label="password_reset",
-        to_email=user.email,
-        token=token_result.token,
-        user_name=user.name,
-    )
 
     return generic_response
 
@@ -497,50 +460,10 @@ def reset_password(
     db: Session = Depends(get_db),
 ) -> ResetPasswordResponse:
     """Consume a password reset token and set a new password."""
-    token_hash = hash_token(body.token)
-
-    reset_token = db.query(PasswordResetToken).filter(PasswordResetToken.token_hash == token_hash).first()
-
-    if not reset_token:
-        log_secure_operation("password_reset_invalid", "Invalid password reset token submitted")
-        raise HTTPException(status_code=400, detail="Invalid or expired reset link. Please request a new one.")
-
-    if reset_token.is_used:
-        log_secure_operation("password_reset_reused", f"Attempt to reuse password reset token id={reset_token.id}")
-        raise HTTPException(status_code=400, detail="This reset link has already been used. Please request a new one.")
-
-    if reset_token.is_expired:
-        log_secure_operation("password_reset_expired", f"Expired password reset token id={reset_token.id}")
-        raise HTTPException(status_code=400, detail="This reset link has expired. Please request a new one.")
-
-    user = reset_token.user
-    if not user or not user.is_active:
-        raise HTTPException(status_code=400, detail="Invalid or expired reset link. Please request a new one.")
-
-    # Update password
-    from auth import hash_password
-
-    user.hashed_password = hash_password(body.new_password)
-    user.password_changed_at = datetime.now(UTC)
-
-    # Mark token as used
-    reset_token.used_at = datetime.now(UTC)
-
-    # Revoke all existing refresh tokens (force re-login on all devices)
-    _revoke_all_user_tokens(db, user.id)
-
-    # Reset lockout state
-    user.failed_login_attempts = 0
-    user.locked_until = None
-
     try:
-        db.commit()
-    except SQLAlchemyError as e:
-        db.rollback()
-        logger.exception("Database error during password reset")
-        raise HTTPException(status_code=500, detail=sanitize_error(e, log_label="db_reset_password"))
-
-    log_secure_operation("password_reset_success", f"Password reset completed for user {user.id}")
+        complete_password_reset(db, body.token, body.new_password)
+    except PasswordResetError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
     return ResetPasswordResponse(message="Your password has been reset successfully. You can now log in.")
 

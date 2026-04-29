@@ -150,19 +150,25 @@ Audit existing coverage against refactor surfaces; only file gap-fills where gen
 ---
 
 ### Sprint 746: Auth service-layer extraction (Phase 2 — Auth Decomposition 1/2)
-**Status:** PENDING. Depends on Sprint 743 (auth flow regression net).
+**Status:** **PARTIAL** 2026-04-29 — Sprint 746a (recovery) shipped. Identity / registration / sessions extractions deferred to Sprint 746b/c/d (filed below).
 **Priority:** **P2** — security-sensitive surface; highest-risk refactor in plan.
 **Source:** Architectural Remediation Plan phase 2.
 
 Extract service layer from `auth_routes.py` into focused subdomains:
-- `services/auth/identity.py` — login/logout/refresh/me + token issuance/rotation.
-- `services/auth/registration.py` — registration + verification lifecycle.
-- `services/auth/recovery.py` — password reset lifecycle.
-- `services/auth/sessions.py` — session inventory + revocation.
+- ✅ **Sprint 746a — `services/auth/recovery.py`** (password reset lifecycle). Shipped 2026-04-29. `forgot_password` and `reset_password` routes are now ~10 lines each (validate → call service → return response). Service exposes `initiate_password_reset(db, email) → PasswordResetInitiation` and `complete_password_reset(db, token, new_password) → User` (raises `PasswordResetError` for invalid/used/expired/inactive — route maps to `HTTPException(400)`). Both 41 pre-existing password tests pass.
+- ⏳ **Sprint 746b — `services/auth/identity.py`** (login/logout/refresh/me + token issuance/rotation). Deferred.
+- ⏳ **Sprint 746c — `services/auth/registration.py`** (registration + verification lifecycle). Deferred.
+- ⏳ **Sprint 746d — `services/auth/sessions.py`** (session inventory + revocation). Deferred.
 
-**Honors deferred-items boundary:** do **not** touch cookie/CSRF primitives (`_set_refresh_cookie`, `_set_access_cookie`, etc.) without a specific audit finding. Sprint 746 moves business logic, not security primitives.
+**Honors deferred-items boundary:** Sprint 746a moves only business logic. Cookie/CSRF primitives (`_set_refresh_cookie`, `_set_access_cookie`, etc.) remain in the route layer per the deferred-items guidance. Token issuance + cookie writes will need careful handling in Sprint 746b.
 
-**Exit:** Service layer is the SoT for auth workflows; route file delegates only.
+**What landed in 746a:**
+- `backend/services/auth/__init__.py` — package marker + roadmap docstring.
+- `backend/services/auth/recovery.py` — 156 lines. `PasswordResetError` (subclass of `ValueError`), `PasswordResetInitiation` dataclass, `initiate_password_reset`, `complete_password_reset`. Uses `db_transaction` from Sprint 745 for the commit/rollback path. Preserves Sprint 594/595 diagnostic (total-user-count log on unknown-email lookup).
+- `backend/routes/auth_routes.py` — `forgot_password` shrunk from 60 → 19 lines; `reset_password` from 50 → 14 lines. Removed unused imports (`generate_password_reset_token`).
+- 41/41 pre-existing password tests still pass.
+
+**Exit (partial):** One auth subdomain (recovery) extracted as proof-of-pattern. Identity / registration / sessions remaining.
 
 ---
 
