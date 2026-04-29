@@ -59,12 +59,15 @@
 
 ---
 
-## Architectural Remediation Initiative
+## Architectural Remediation Initiative — COMPLETE 2026-04-29
 
-> **Source:** 8-phase remediation strategy (transcript 2026-04-29) translated into Paciolus sprint format. Stays in this backlog section until launch-readiness work clears (post Phase 4.1 Stripe cutover). Sprints are numbered + reserved but not in `## Active Phase` until promoted one batch at a time.
-> **Guiding principle:** stabilize → standardize → modularize → deepen. Phases 0–1 are non-negotiable prerequisites; Phases 2–7 can re-order based on incident pressure; Phase 8 is the convergence audit.
-> **Sprint 741 reserved** for cleanup-scheduler root-cause work (Sprint 740 follow-up — see Active Phase). Initiative starts at 742.
-> **Cross-cutting deferred-items honored:** Sprint 746 must respect the auth cookie/CSRF helper deferral (don't touch security primitives without an audit finding); Sprint 750 coordinates with the deferred `useTrialBalanceUpload` decomposition; Sprint 745/Phase 2 spirit covers the deferred `stripe_webhook` decomposition; Sprint 754 absorbs the deferred client-access helper relocation.
+> **Source:** 8-phase remediation strategy (transcript 2026-04-29) translated into Paciolus sprint format. **All 18 sprints (742-759) shipped.** Initiative scorecard at `reports/architectural-remediation-scorecard-2026-04-29.md`.
+>
+> **Outcome (TL;DR):** Phases 0/1/4/6/7/8 fully resolved; Phases 2/3/5 partial with explicit follow-up scope filed in `## Refactor Intake` below. 6 ADRs (014-018 + quality thresholds), 3 advisory CI lint scans, ~150 new pytest + ~50 new jest tests. Net code shrinkage: `auth_routes.py` 778 → ~270; `routes/export_diagnostics.py` 661 → 358; multi-period page 501 → 423; dashboard page 519 → 383; `useFormValidation.ts` 516 → 280.
+>
+> **Governance going forward:** quarterly architecture health review (run the 3 advisory lints, check deferred-items triggers, file ≤2 follow-up sprints if warranted); "no new god files" policy (code-review enforced); refactor intake lane visible in `## Refactor Intake` section below. Subsequent sprints should be product-driven, not architecture-driven.
+>
+> **Sprint 741 was reserved** for cleanup-scheduler root-cause work (Sprint 740 follow-up — see Active Phase). Initiative ran 742-759.
 
 ### Sprint 742: ADRs + quality thresholds (Phase 0 — Baseline & Guardrails 1/2)
 **Status:** COMPLETE 2026-04-29. Documents patterns Sprint 744–746a already established (ADR-014, 015) + sets target for Sprint 748–749 (ADR-016).
@@ -475,17 +478,47 @@ Extract service layer from `auth_routes.py` into focused subdomains:
 
 ---
 
-### Sprint 759: Convergence scorecard + governance lane (Phase 8 — Convergence)
-**Status:** PENDING. Final sprint of Architectural Remediation Initiative.
+### Sprint 759: Convergence scorecard + governance lane (Phase 8 — Convergence) — INITIATIVE END
+**Status:** COMPLETE 2026-04-29. Final sprint.
 **Priority:** P3.
 **Source:** Architectural Remediation Plan phase 8.
 
-- Repo-wide consistency review against the original 8-phase weakness list.
-- Scorecard each weakness: resolved / partial / open with rationale → file in `reports/architectural-remediation-scorecard-YYYY-MM-DD.md`.
-- Define ongoing governance cadence: periodic architecture health review, complexity-budget checks, "no new god files" policy.
-- Establish refactor intake lane in backlog so debt remains visible and prioritized.
+**What landed:**
+- **`reports/architectural-remediation-scorecard-2026-04-29.md`** — full scorecard mapping each phase + each original weakness to RESOLVED / PARTIAL / OPEN status with explicit follow-up scope. TL;DR: 18 sprints planned, 18 shipped; phases 0/1/4/6/7/8 fully resolved; phases 2/3/5 partial with explicit follow-up sprints filed. 6 ADRs landed (014-018 + quality thresholds + pagination/cache conventions); 3 advisory CI lints; ~150 new pytest + ~50 new jest tests.
+- **Governance cadence** documented in the scorecard:
+  - Quarterly architecture health review — runs 3 advisory lints, checks deferred-items triggers, reviews quality-threshold deviations, files ≤2 follow-up sprints if warranted. Output: one-page `reports/arch-health-YYYY-QN.md`.
+  - "No new god files" policy — new files exceeding hard caps need either a follow-up sprint reference OR an explicit decomposition-not-applicable docstring. Code-review enforced.
+  - Refactor intake lane — new findings filed in `## Refactor Intake` section below; surface via the existing lint scans + quarterly review.
 
-**Exit:** Every weakness in the original plan has a mapped outcome; governance prevents relapse.
+**Refactor intake lane established** — see new section below this initiative block.
+
+**Exit met:** Every weakness in the original plan has a mapped outcome with explicit follow-up scope where work remains. Governance cadence + intake lane prevent relapse without spawning a Phase II.
+
+**Initiative end.** Subsequent sprints should be product-driven, not architecture-driven. The remaining items in the scorecard's "Open follow-up scope" table are incremental hygiene visible through CI lints + the deferred-items list.
+
+---
+
+## Refactor Intake
+
+> Visible landing zone for new architectural-debt findings between
+> initiatives. Surface via the advisory CI lints, the quarterly arch
+> health review, or organic discovery during product work. Reviewed
+> quarterly; items reaching critical mass (e.g., 5+ targeting the same
+> surface) roll up into a sprint entry under `## Active Phase`.
+>
+> Same shape as the `## Deferred Items` table above — the discipline
+> is that intake is visible and gets reviewed.
+
+| Item | Reason | Source |
+|------|--------|--------|
+| Sprint 748b — PDF/Excel/Leadsheets/FinStmts routes migrate to `export.pipeline` | Pipeline signatures need branding-context plumbing first; 4 routes left inline | Sprint 748a review |
+| Sprint 754b — shared analysis interfaces (input contract / result envelope / error semantics) | Depends on 2+ tools relocated under ADR-018 to compare shapes | Sprint 754 review |
+| Backend `db_transaction` adoption beyond `activity.py` | ~11 route modules still have inline `try/except SQLAlchemyError` triads; pattern is established | Sprint 745 review |
+| Memo PDF contract tests for the remaining 17 memos | Pattern shipped on JE Testing in Sprint 749; extend incrementally | Sprint 749 review |
+| ~30 engines awaiting per-tool relocation per ADR-018 | One engine per sub-sprint; default keep flat | `lint_domain_relocation.py` (advisory CI) |
+| ~12 route handlers still importing engine orchestration symbols | Each is a service-extraction sprint per ADR-015 | `lint_route_layer_purity.py` (advisory CI) |
+| 9 testing engines not subclassing `AuditEngineBase` | Pre-existing backlog from Sprint 726 | `lint_engine_base_adoption.py` (advisory CI) |
+| `routes/billing.py::stripe_webhook` decomposition | Bundled with deferred webhook coverage sprint | `## Deferred Items` |
 
 ---
 
