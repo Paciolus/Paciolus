@@ -27,7 +27,22 @@ from typing import Optional
 
 from shared.column_detector import ColumnFieldConfig, detect_columns
 from shared.filenames import sanitize_csv_value
+from shared.monetary import quantize_monetary
 from shared.parsing_helpers import parse_date, safe_decimal, safe_str
+
+
+def _money(value: Decimal | float | int | None) -> float:
+    """Sprint 766: serialize a monetary value at the response boundary.
+
+    Quantizes to 2dp ROUND_HALF_UP via ``quantize_monetary`` and returns a
+    Python float so JSON wire format is unchanged.  Replaces the
+    pre-existing ``round(value, 2)`` patterns which used Python's
+    banker's rounding (HALF_EVEN) at the boundary.
+    """
+    if value is None:
+        return 0.0
+    return float(quantize_monetary(value))
+
 
 # =============================================================================
 # ENUMS & CONFIG
@@ -56,14 +71,45 @@ class SuggestedJEKind(str, Enum):
     OTHER = "other"
 
 
+# Documented defaults for bank-rec thresholds.  Sprint 763: kept in module
+# scope so callers can introspect what the engine treats as "no caller
+# override supplied".  Values mirror the historical hard-codes — the
+# remediation is exposing them, not changing them.
+DEFAULT_AMOUNT_TOLERANCE: Decimal = Decimal("0.01")
+DEFAULT_BANK_REC_MATERIALITY: Decimal = Decimal("50000.00")
+DEFAULT_BANK_REC_PERFORMANCE_MATERIALITY: Decimal = Decimal("50000.00")
+
+
 @dataclass
 class BankRecConfig:
-    """Configurable thresholds for bank reconciliation."""
+    """Configurable thresholds for bank reconciliation.
 
-    amount_tolerance: float = 0.01  # Match tolerance in dollars
-    date_tolerance_days: int = 0  # Days of date tolerance for matching
-    materiality: float = 50_000.0  # Materiality for high-value transaction testing
-    performance_materiality: float = 50_000.0  # Performance materiality for risk scoring
+    Sprint 763 (RPT-10 finish): monetary fields are stored as ``Decimal``
+    for precision-safe comparison.  The route layer still passes
+    ``float`` from form fields; ``__post_init__`` coerces via
+    ``safe_decimal`` for backward compatibility.
+    """
+
+    amount_tolerance: Decimal = field(default_factory=lambda: DEFAULT_AMOUNT_TOLERANCE)
+    date_tolerance_days: int = 0
+    materiality: Decimal = field(default_factory=lambda: DEFAULT_BANK_REC_MATERIALITY)
+    performance_materiality: Decimal = field(default_factory=lambda: DEFAULT_BANK_REC_PERFORMANCE_MATERIALITY)
+
+    def __post_init__(self) -> None:
+        # Coerce float / int / str inputs to Decimal so monetary
+        # comparisons downstream stay in Decimal space.  Negative
+        # thresholds are rejected explicitly — they would invert the
+        # high-value test.
+        self.amount_tolerance = safe_decimal(self.amount_tolerance)
+        self.materiality = safe_decimal(self.materiality)
+        self.performance_materiality = safe_decimal(self.performance_materiality)
+        if self.amount_tolerance < 0 or self.materiality < 0 or self.performance_materiality < 0:
+            raise ValueError(
+                "BankRecConfig thresholds must be non-negative; got "
+                f"amount_tolerance={self.amount_tolerance}, "
+                f"materiality={self.materiality}, "
+                f"performance_materiality={self.performance_materiality}"
+            )
 
 
 # =============================================================================
@@ -321,9 +367,14 @@ class SuggestedJE:
     kind: SuggestedJEKind
     debit_account: str
     credit_account: str
-    amount: float
+    amount: Decimal
     description: str
-    confidence: float  # 0.0–1.0
+    confidence: float  # 0.0–1.0; non-monetary, stays float
+
+    def __post_init__(self) -> None:
+        # Sprint 766: coerce amount to Decimal (engine generators may
+        # construct with float for legacy reasons).
+        self.amount = safe_decimal(self.amount)
 
     def to_dict(self) -> dict:
         return {
@@ -331,7 +382,7 @@ class SuggestedJE:
             "kind": self.kind.value,
             "debit_account": self.debit_account,
             "credit_account": self.credit_account,
-            "amount": round(self.amount, 2),
+            "amount": _money(self.amount),
             "description": self.description,
             "confidence": round(self.confidence, 2),
         }
@@ -339,30 +390,49 @@ class SuggestedJE:
 
 @dataclass
 class ReconciliationSummary:
-    """Summary of reconciliation results."""
+    """Summary of reconciliation results.
+
+    Sprint 766: monetary fields are stored as ``Decimal`` for
+    precision-safe arithmetic.  ``__post_init__`` coerces float / int /
+    str inputs via ``safe_decimal`` for backward compatibility with
+    callers that still pass floats (e.g., the CSV-export route that
+    rebuilds the summary from a JSON request body).
+    """
 
     matched_count: int = 0
-    matched_amount: float = 0.0
+    matched_amount: Decimal = field(default_factory=lambda: Decimal("0"))
     bank_only_count: int = 0
-    bank_only_amount: float = 0.0
+    bank_only_amount: Decimal = field(default_factory=lambda: Decimal("0"))
     ledger_only_count: int = 0
-    ledger_only_amount: float = 0.0
-    reconciling_difference: float = 0.0
-    total_bank: float = 0.0
-    total_ledger: float = 0.0
+    ledger_only_amount: Decimal = field(default_factory=lambda: Decimal("0"))
+    reconciling_difference: Decimal = field(default_factory=lambda: Decimal("0"))
+    total_bank: Decimal = field(default_factory=lambda: Decimal("0"))
+    total_ledger: Decimal = field(default_factory=lambda: Decimal("0"))
     matches: list[ReconciliationMatch] = field(default_factory=list)
 
+    def __post_init__(self) -> None:
+        # Coerce any float / int / str inputs to Decimal so arithmetic
+        # downstream (diagnostic score, CSV export) stays in Decimal space.
+        self.matched_amount = safe_decimal(self.matched_amount)
+        self.bank_only_amount = safe_decimal(self.bank_only_amount)
+        self.ledger_only_amount = safe_decimal(self.ledger_only_amount)
+        self.reconciling_difference = safe_decimal(self.reconciling_difference)
+        self.total_bank = safe_decimal(self.total_bank)
+        self.total_ledger = safe_decimal(self.total_ledger)
+
     def to_dict(self) -> dict:
+        # Sprint 766: HALF_UP quantization at the wire boundary (was
+        # round(x, 2) which is HALF_EVEN under Python's default).
         return {
             "matched_count": self.matched_count,
-            "matched_amount": round(self.matched_amount, 2),
+            "matched_amount": _money(self.matched_amount),
             "bank_only_count": self.bank_only_count,
-            "bank_only_amount": round(self.bank_only_amount, 2),
+            "bank_only_amount": _money(self.bank_only_amount),
             "ledger_only_count": self.ledger_only_count,
-            "ledger_only_amount": round(self.ledger_only_amount, 2),
-            "reconciling_difference": round(self.reconciling_difference, 2),
-            "total_bank": round(self.total_bank, 2),
-            "total_ledger": round(self.total_ledger, 2),
+            "ledger_only_amount": _money(self.ledger_only_amount),
+            "reconciling_difference": _money(self.reconciling_difference),
+            "total_bank": _money(self.total_bank),
+            "total_ledger": _money(self.total_ledger),
             "matches": [m.to_dict() for m in self.matches],
         }
 
@@ -378,6 +448,11 @@ class BankRecResult:
     outstanding_aging: list["OutstandingItemsAging"] = field(default_factory=list)
     composite_score: Optional[dict] = None
     suggested_journal_entries: list[SuggestedJE] = field(default_factory=list)  # Sprint 639
+    # Sprint 763 (RPT-10 finish): the materiality / performance materiality
+    # / amount tolerance the engine actually applied, plus a source tag
+    # ("caller" | "default") so memos, PDFs, and audit workpapers can
+    # disclose what shaped the high-value test and the diagnostic score.
+    active_thresholds: Optional[dict] = None
 
     def to_dict(self) -> dict:
         result: dict = {
@@ -393,6 +468,8 @@ class BankRecResult:
             result["composite_score"] = self.composite_score
         if self.suggested_journal_entries:
             result["suggested_journal_entries"] = [je.to_dict() for je in self.suggested_journal_entries]
+        if self.active_thresholds is not None:
+            result["active_thresholds"] = self.active_thresholds
         return result
 
 
@@ -844,16 +921,19 @@ def calculate_summary(matches: list[ReconciliationMatch]) -> ReconciliationSumma
 
     reconciling_difference = total_bank - total_ledger
 
+    # Sprint 766: keep aggregates in Decimal end-to-end.  Quantization to
+    # 2dp HALF_UP happens at the response boundary (``to_dict``) — no more
+    # float round-trip eroding precision before storage.
     return ReconciliationSummary(
         matched_count=matched_count,
-        matched_amount=float(round(matched_amount, 2)),
+        matched_amount=matched_amount,
         bank_only_count=bank_only_count,
-        bank_only_amount=float(round(bank_only_amount, 2)),
+        bank_only_amount=bank_only_amount,
         ledger_only_count=ledger_only_count,
-        ledger_only_amount=float(round(ledger_only_amount, 2)),
-        reconciling_difference=float(round(reconciling_difference, 2)),
-        total_bank=float(round(total_bank, 2)),
-        total_ledger=float(round(total_ledger, 2)),
+        ledger_only_amount=ledger_only_amount,
+        reconciling_difference=reconciling_difference,
+        total_bank=total_bank,
+        total_ledger=total_ledger,
         matches=matches,
     )
 
@@ -972,17 +1052,21 @@ class RecFlaggedItem:
 
     test_name: str
     description: str
-    amount: float = 0.0
+    amount: Decimal = field(default_factory=lambda: Decimal("0"))
     date: Optional[str] = None
     reference: Optional[str] = None
     severity: str = "medium"
     details: Optional[dict] = None
 
+    def __post_init__(self) -> None:
+        # Sprint 766: coerce float / int / str amount inputs to Decimal.
+        self.amount = safe_decimal(self.amount)
+
     def to_dict(self) -> dict:
         result: dict = {
             "test_name": self.test_name,
             "description": self.description,
-            "amount": round(self.amount, 2),
+            "amount": _money(self.amount),
             "severity": self.severity,
         }
         if self.date:
@@ -1022,7 +1106,11 @@ class OutstandingItemsAging:
     over_30_days: int = 0
     oldest_item_days: Optional[int] = None
     oldest_item_date: Optional[str] = None
-    oldest_item_amount: float = 0.0
+    oldest_item_amount: Decimal = field(default_factory=lambda: Decimal("0"))
+
+    def __post_init__(self) -> None:
+        # Sprint 766: coerce float / int / str inputs to Decimal.
+        self.oldest_item_amount = safe_decimal(self.oldest_item_amount)
 
     def to_dict(self) -> dict:
         return {
@@ -1032,7 +1120,7 @@ class OutstandingItemsAging:
             "over_30_days": self.over_30_days,
             "oldest_item_days": self.oldest_item_days,
             "oldest_item_date": self.oldest_item_date,
-            "oldest_item_amount": round(self.oldest_item_amount, 2),
+            "oldest_item_amount": _money(self.oldest_item_amount),
         }
 
 
@@ -1209,15 +1297,16 @@ def _test_interbank_transfers(
 
 def _test_high_value_transactions(
     all_items: list[ReconciliationMatch],
-    materiality: float = 50_000.0,
+    materiality: Decimal = DEFAULT_BANK_REC_MATERIALITY,
 ) -> RecTestResult:
     """Flag single transactions exceeding the materiality threshold."""
+    materiality_d = safe_decimal(materiality)
     flagged: list[RecFlaggedItem] = []
     for m in all_items:
         for source, txn in [("bank", m.bank_txn), ("ledger", m.ledger_txn)]:
             if not txn:
                 continue
-            if abs(txn.amount) >= materiality:
+            if abs(txn.amount) >= materiality_d:
                 flagged.append(
                     RecFlaggedItem(
                         test_name="High Value Transactions",
@@ -1226,7 +1315,7 @@ def _test_high_value_transactions(
                         date=txn.date,
                         reference=txn.reference,
                         severity="medium",
-                        details={"source": source, "materiality": materiality},
+                        details={"source": source, "materiality": float(materiality_d)},
                     )
                 )
 
@@ -1241,7 +1330,7 @@ def _test_high_value_transactions(
 
 def run_reconciliation_tests(
     matches: list[ReconciliationMatch],
-    materiality: float = 50_000.0,
+    materiality: Decimal = DEFAULT_BANK_REC_MATERIALITY,
     reference_date: Optional[date] = None,
 ) -> list[RecTestResult]:
     """Run all 5 reconciliation tests on the match results."""
@@ -1302,7 +1391,7 @@ def compute_outstanding_items_aging(
 def compute_bank_rec_diagnostic_score(
     rec_tests: list[RecTestResult],
     summary: ReconciliationSummary,
-    performance_materiality: float = 50_000.0,
+    performance_materiality: Decimal = DEFAULT_BANK_REC_PERFORMANCE_MATERIALITY,
 ) -> dict:
     """Compute composite diagnostic score for bank reconciliation.
 
@@ -1310,11 +1399,16 @@ def compute_bank_rec_diagnostic_score(
     flag_rate, tests_run, and top_findings.
     """
     score = 0.0
+    pm_d = safe_decimal(performance_materiality)
+    # Sprint 766: ``summary.reconciling_difference`` is now Decimal end
+    # to end — no coercion needed (kept ``safe_decimal`` for legacy
+    # float-typed callers that bypass ``calculate_summary``).
+    reconciling_diff = safe_decimal(summary.reconciling_difference)
 
-    has_diff = abs(summary.reconciling_difference) > 0.01
+    has_diff = abs(reconciling_diff) > Decimal("0.01")
     if has_diff:
         score += 15
-        if abs(summary.reconciling_difference) > performance_materiality:
+        if abs(reconciling_diff) > pm_d:
             score += 10
 
     total_outstanding = summary.bank_only_count + summary.ledger_only_count
@@ -1417,6 +1511,7 @@ def reconcile_bank_statement(
     config: Optional[BankRecConfig] = None,
     bank_mapping: Optional[dict] = None,
     ledger_mapping: Optional[dict] = None,
+    materiality_source: str = "default",
 ) -> BankRecResult:
     """Run the complete bank reconciliation pipeline.
 
@@ -1428,12 +1523,18 @@ def reconcile_bank_statement(
         config: Optional reconciliation configuration
         bank_mapping: Optional manual column mapping for bank file
         ledger_mapping: Optional manual column mapping for ledger file
+        materiality_source: ``"caller"`` when materiality / performance
+            materiality were supplied by the request layer, ``"default"``
+            when the engine fell back to documented defaults.  Surfaced in
+            ``BankRecResult.active_thresholds`` for auditability.
 
     Returns:
         BankRecResult with summary, column detection results
     """
     if config is None:
         config = BankRecConfig()
+    if materiality_source not in ("caller", "default"):
+        raise ValueError(f"materiality_source must be 'caller' or 'default'; got {materiality_source!r}")
 
     # 1. Detect columns for both files
     bank_detection = detect_bank_columns(bank_columns)
@@ -1490,6 +1591,17 @@ def reconcile_bank_statement(
     # 8. Sprint 639: Propose JEs for common BANK_ONLY items (fees, interest, NSF)
     suggested_jes = generate_suggested_journal_entries(matches)
 
+    # Sprint 763: emit the thresholds the engine actually applied so memos
+    # and PDFs can disclose them.  Decimals serialize to strings to
+    # preserve precision through JSON.
+    active_thresholds = {
+        "materiality": str(config.materiality),
+        "performance_materiality": str(config.performance_materiality),
+        "amount_tolerance": str(config.amount_tolerance),
+        "date_tolerance_days": config.date_tolerance_days,
+        "materiality_source": materiality_source,
+    }
+
     return BankRecResult(
         summary=summary,
         bank_column_detection=bank_detection,
@@ -1498,4 +1610,5 @@ def reconcile_bank_statement(
         outstanding_aging=outstanding_aging,
         composite_score=composite_score,
         suggested_journal_entries=suggested_jes,
+        active_thresholds=active_thresholds,
     )

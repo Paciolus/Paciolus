@@ -4792,6 +4792,18 @@
       "BankRecResponse": {
         "description": "Complete bank reconciliation response.",
         "properties": {
+          "active_thresholds": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Thresholds"
+          },
           "bank_column_detection": {
             "$ref": "#/components/schemas/BankColumnDetectionResponse"
           },
@@ -15727,6 +15739,18 @@
       "MovementSummaryResponse": {
         "description": "2-way period comparison response.",
         "properties": {
+          "active_thresholds": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Thresholds"
+          },
           "all_movements": {
             "items": {
               "$ref": "#/components/schemas/AccountMovementResponse"
@@ -15758,6 +15782,15 @@
               "type": "string"
             },
             "title": "Dormant Accounts",
+            "type": "array"
+          },
+          "duplicate_account_warnings": {
+            "default": [],
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Duplicate Account Warnings",
             "type": "array"
           },
           "expectations_evaluated": {
@@ -15829,6 +15862,28 @@
           "total_accounts": {
             "title": "Total Accounts",
             "type": "integer"
+          },
+          "variance_basis": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Variance Basis"
+          },
+          "variance_formula": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Variance Formula"
           }
         },
         "required": [
@@ -17797,6 +17852,28 @@
           "total_categories_compared": {
             "title": "Total Categories Compared",
             "type": "integer"
+          },
+          "variance_basis": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Variance Basis"
+          },
+          "variance_formula": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Variance Formula"
           }
         },
         "required": [
@@ -24012,6 +24089,18 @@
             "title": "Accounts Under Budget",
             "type": "integer"
           },
+          "active_thresholds": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Thresholds"
+          },
           "all_movements": {
             "items": {
               "additionalProperties": true,
@@ -24065,6 +24154,15 @@
             "title": "Dormant Accounts",
             "type": "array"
           },
+          "duplicate_account_warnings": {
+            "default": [],
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Duplicate Account Warnings",
+            "type": "array"
+          },
           "expectations_evaluated": {
             "default": [],
             "items": {
@@ -24072,6 +24170,17 @@
             },
             "title": "Expectations Evaluated",
             "type": "array"
+          },
+          "framework_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Framework Note"
           },
           "lead_sheet_summaries": {
             "items": {
@@ -24124,6 +24233,28 @@
           "total_accounts": {
             "title": "Total Accounts",
             "type": "integer"
+          },
+          "variance_basis": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Variance Basis"
+          },
+          "variance_formula": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Variance Formula"
           }
         },
         "required": [

@@ -27,19 +27,20 @@ from enum import Enum
 from typing import Any, Optional
 
 from shared.column_detector import ColumnFieldConfig, detect_columns
+from shared.monetary import MONETARY_NEAR_ZERO
 from shared.parsing_helpers import parse_date, safe_decimal, safe_float, safe_str
 
-# Monetary epsilon for denominator guards — values whose absolute magnitude
-# is below this are considered "near zero" and cannot be used as a divisor.
-# 0.005 is half a cent: below any presentation-rounded currency amount yet
-# large enough to avoid false near-zero triggers from floating-point noise.
+# Sprint 766: monetary epsilon consolidated to ``shared.monetary.MONETARY_NEAR_ZERO``
+# (Decimal("0.005")).  ``MONETARY_EPSILON`` retained as a backwards-compatible
+# alias so call sites within this engine and any downstream importers keep
+# working without churn.
 #
 # IMPORTANT: this is separate from ``price_variance_threshold`` (which is a
 # *decision* threshold — "what variance % is material?").  Conflating the two
 # produced RPT-11: a 5% decision threshold being used as a "$0.05 is close
 # enough to zero" denominator guard, which mis-classified any unit_price
 # below $0.05 as a 100% variance.
-MONETARY_EPSILON: Decimal = Decimal("0.005")
+MONETARY_EPSILON: Decimal = MONETARY_NEAR_ZERO
 
 # =============================================================================
 # ENUMS
