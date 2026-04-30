@@ -32,13 +32,36 @@ from lead_sheet_mapping import (
     assign_lead_sheet,
 )
 from shared.filenames import sanitize_csv_value
+from shared.monetary import quantize_monetary
 from shared.parsing_helpers import safe_decimal
+
+
+def _money(value: float | Decimal | None) -> Optional[float]:
+    """Sprint 767: serialize a monetary value at the response boundary.
+
+    Quantizes to 2dp ROUND_HALF_UP via ``quantize_monetary`` and returns
+    a Python float so JSON wire format is unchanged.  ``None`` is
+    preserved (e.g., percent_variance when prior is near-zero — but
+    that's percent, not money; this helper only touches dollar fields).
+    """
+    if value is None:
+        return None
+    return float(quantize_monetary(value))
+
 
 # =============================================================================
 # CONSTANTS
 # =============================================================================
 
 NEAR_ZERO = 0.005  # Below any meaningful financial balance; guards division-by-near-zero
+
+# Sprint 765 (RPT-02/RPT-14 variance basis declaration): the denominator
+# used to compute change_percent (and budget variance_percent) is
+# ``abs(prior)``.  Emitted on every comparison response so memos / PDFs /
+# downstream consumers can disclose the formula. See
+# ``docs/04-compliance/variance-formula-policy.md``.
+VARIANCE_BASIS = "absolute_prior"
+VARIANCE_FORMULA = "(current - prior) / abs(prior) * 100"
 
 # Significance thresholds — DEFAULTS.  These constants preserve the historical
 # behaviour (10% / $10,000) and are used when no override is supplied.  Callers
@@ -185,11 +208,13 @@ class AccountMovement:
         return {
             "account_name": self.account_name,
             "account_type": self.account_type,
-            "prior_balance": self.prior_balance,
-            "current_balance": self.current_balance,
-            "change_amount": self.change_amount,
+            # Sprint 767: monetary outputs quantized 2dp HALF_UP at the
+            # response boundary.  Percent fields stay float (non-monetary).
+            "prior_balance": _money(self.prior_balance),
+            "current_balance": _money(self.current_balance),
+            "change_amount": _money(self.change_amount),
             "change_percent": self.change_percent,
-            "display_change_amount": display_change,
+            "display_change_amount": _money(display_change),
             "display_change_percent": display_pct,
             "movement_type": self.movement_type.value,
             "significance": self.significance.value,
@@ -231,11 +256,12 @@ class LeadSheetMovementSummary:
             "lead_sheet": self.lead_sheet,
             "lead_sheet_name": self.lead_sheet_name,
             "lead_sheet_category": self.lead_sheet_category,
-            "prior_total": self.prior_total,
-            "current_total": self.current_total,
-            "net_change": self.net_change,
+            # Sprint 767: monetary aggregates quantized 2dp HALF_UP.
+            "prior_total": _money(self.prior_total),
+            "current_total": _money(self.current_total),
+            "net_change": _money(self.net_change),
             "change_percent": self.change_percent,
-            "display_net_change": display_change,
+            "display_net_change": _money(display_change),
             "display_change_percent": display_pct,
             "is_credit_normal": self._is_credit_normal,
             "account_count": self.account_count,
@@ -287,13 +313,17 @@ class MovementSummary:
             "new_accounts": self.new_accounts,
             "closed_accounts": self.closed_accounts,
             "dormant_accounts": self.dormant_accounts,
-            "prior_total_debits": self.prior_total_debits,
-            "prior_total_credits": self.prior_total_credits,
-            "current_total_debits": self.current_total_debits,
-            "current_total_credits": self.current_total_credits,
+            # Sprint 767: TB total quantization at the boundary.
+            "prior_total_debits": _money(self.prior_total_debits),
+            "prior_total_credits": _money(self.prior_total_credits),
+            "current_total_debits": _money(self.current_total_debits),
+            "current_total_credits": _money(self.current_total_credits),
             "framework_note": self.framework_note,
             "duplicate_account_warnings": self.duplicate_account_warnings,
             "active_thresholds": self.active_thresholds,
+            # Sprint 765: declarative variance basis on the response.
+            "variance_basis": VARIANCE_BASIS,
+            "variance_formula": VARIANCE_FORMULA,
         }
 
 
@@ -774,8 +804,10 @@ class BudgetVariance:
 
     def to_dict(self) -> dict[str, Any]:
         d = {
-            "budget_balance": self.budget_balance,
-            "variance_amount": self.variance_amount,
+            # Sprint 767: budget variance dollar fields quantized at the
+            # boundary; variance_percent is non-monetary and stays raw.
+            "budget_balance": _money(self.budget_balance),
+            "variance_amount": _money(self.variance_amount),
             "variance_percent": self.variance_percent,
             "variance_significance": self.variance_significance.value,
             "variance_direction": self.variance_direction,
@@ -869,12 +901,13 @@ class ThreeWayLeadSheetSummary:
             "lead_sheet": self.lead_sheet,
             "lead_sheet_name": self.lead_sheet_name,
             "lead_sheet_category": self.lead_sheet_category,
-            "prior_total": self.prior_total,
-            "current_total": self.current_total,
-            "net_change": self.net_change,
+            # Sprint 767: monetary aggregates quantized; percent stays raw.
+            "prior_total": _money(self.prior_total),
+            "current_total": _money(self.current_total),
+            "net_change": _money(self.net_change),
             "change_percent": self.change_percent,
-            "budget_total": self.budget_total,
-            "budget_variance": self.budget_variance,
+            "budget_total": _money(self.budget_total),
+            "budget_variance": _money(self.budget_variance),
             "budget_variance_percent": self.budget_variance_percent,
             "account_count": self.account_count,
             "movements": self.movements,
@@ -938,12 +971,13 @@ class ThreeWayMovementSummary:
             "new_accounts": self.new_accounts,
             "closed_accounts": self.closed_accounts,
             "dormant_accounts": self.dormant_accounts,
-            "prior_total_debits": self.prior_total_debits,
-            "prior_total_credits": self.prior_total_credits,
-            "current_total_debits": self.current_total_debits,
-            "current_total_credits": self.current_total_credits,
-            "budget_total_debits": self.budget_total_debits,
-            "budget_total_credits": self.budget_total_credits,
+            # Sprint 767: TB-total aggregates quantized at the boundary.
+            "prior_total_debits": _money(self.prior_total_debits),
+            "prior_total_credits": _money(self.prior_total_credits),
+            "current_total_debits": _money(self.current_total_debits),
+            "current_total_credits": _money(self.current_total_credits),
+            "budget_total_debits": _money(self.budget_total_debits),
+            "budget_total_credits": _money(self.budget_total_credits),
             "budget_variances_by_significance": self.budget_variances_by_significance,
             "accounts_over_budget": self.accounts_over_budget,
             "accounts_under_budget": self.accounts_under_budget,
@@ -951,6 +985,10 @@ class ThreeWayMovementSummary:
             "framework_note": self.framework_note,
             "duplicate_account_warnings": self.duplicate_account_warnings,
             "active_thresholds": self.active_thresholds,
+            # Sprint 765: declarative variance basis (applies to both
+            # prior↔current and current↔budget comparisons).
+            "variance_basis": VARIANCE_BASIS,
+            "variance_formula": VARIANCE_FORMULA,
         }
 
 

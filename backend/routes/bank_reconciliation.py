@@ -82,12 +82,17 @@ async def audit_bank_reconciliation(
             bank_filename = bank_file.filename or ""
             ledger_filename = ledger_file.filename or ""
 
-            config_kwargs = {}
+            config_kwargs: dict[str, Any] = {}
             if materiality is not None:
                 config_kwargs["materiality"] = materiality
             if performance_materiality is not None:
                 config_kwargs["performance_materiality"] = performance_materiality
-            rec_config = BankRecConfig(**config_kwargs) if config_kwargs else None  # type: ignore[arg-type]
+            rec_config = BankRecConfig(**config_kwargs) if config_kwargs else None
+            # Sprint 763 (RPT-10 finish): tag the materiality source so
+            # ``BankRecResult.active_thresholds`` discloses whether the
+            # request supplied thresholds or fell back to documented
+            # defaults.  Memos / PDFs render this in the workpaper.
+            materiality_source = "caller" if config_kwargs else "default"
 
             def _analyze() -> Any:
                 bank_columns, bank_rows = parse_uploaded_file(bank_bytes, bank_filename)
@@ -100,6 +105,7 @@ async def audit_bank_reconciliation(
                     config=rec_config,
                     bank_mapping=bank_mapping_dict,
                     ledger_mapping=ledger_mapping_dict,
+                    materiality_source=materiality_source,
                 )
 
             result = await asyncio.to_thread(_analyze)

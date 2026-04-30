@@ -145,6 +145,18 @@ class Engagement(Base):
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     completed_by: Mapped[int | None] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
 
+    # Sprint 764 (Intercompany layered detection): engagement-scoped
+    # counterparty mapping for ISA 550 related-party identification.
+    # JSON-encoded ``{"<account_name>": "<counterparty>", ...}`` — both
+    # sides case-folded by the resolver before lookup.  Null when the
+    # auditor has not yet recorded an explicit mapping; in that case the
+    # detection layer falls back to the heuristic separator parser.
+    # Per-run mappings (passed on the diagnostic request body) override
+    # this engagement-level default — see ``shared.intercompany_resolver``.
+    # Same Text+JSON pattern as ``ToolRun.flagged_accounts`` for cross-DB
+    # portability (SQLite + Postgres).
+    intercompany_counterparties: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     # Audit trail
     created_by: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
     creator: Mapped["User"] = relationship("User", back_populates="engagements", foreign_keys=[created_by])
@@ -191,6 +203,11 @@ class Engagement(Base):
             "trivial_threshold_factor": self.trivial_threshold_factor,
             "completed_at": self.completed_at.isoformat() if self.completed_at else None,
             "completed_by": self.completed_by,
+            # Sprint 764: surface counterparty mapping (JSON-decoded) so
+            # callers can pre-fill the form when planning the next run.
+            "intercompany_counterparties": (
+                json.loads(self.intercompany_counterparties) if self.intercompany_counterparties else None
+            ),
             "created_by": self.created_by,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,

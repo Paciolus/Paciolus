@@ -168,6 +168,9 @@ class PeriodComparisonResponse(BaseModel):
     significant_variance_count: int
     total_categories_compared: int
     framework_note: Optional[str] = None
+    # Sprint 765: declarative variance basis on the response.
+    variance_basis: Optional[str] = None
+    variance_formula: Optional[str] = None
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -233,6 +236,13 @@ class MovementSummaryResponse(BaseModel):
     current_total_credits: float
     framework_note: Optional[str] = None
     expectations_evaluated: list[ExpectationEvaluationResponse] = []
+    # Sprint 763: bank-rec materiality emission pattern; for multi-period,
+    # ``active_thresholds`` carries the significance thresholds applied.
+    active_thresholds: Optional[dict[str, Any]] = None
+    duplicate_account_warnings: list[dict[str, Any]] = []
+    # Sprint 765: declarative variance basis on the response.
+    variance_basis: Optional[str] = None
+    variance_formula: Optional[str] = None
 
 
 class BudgetVarianceResponse(BaseModel):
@@ -294,7 +304,14 @@ class ThreeWayMovementSummaryResponse(BaseModel):
     accounts_over_budget: int
     accounts_under_budget: int
     accounts_on_budget: int
+    framework_note: Optional[str] = None
+    duplicate_account_warnings: list[dict[str, Any]] = []
     expectations_evaluated: list[ExpectationEvaluationResponse] = []
+    # Sprint 763: active thresholds emission.
+    active_thresholds: Optional[dict[str, Any]] = None
+    # Sprint 765: declarative variance basis on the response.
+    variance_basis: Optional[str] = None
+    variance_formula: Optional[str] = None
 
 
 # ═══════════════════════════════════════════════════════════════

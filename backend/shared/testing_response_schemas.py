@@ -327,6 +327,11 @@ class BankRecResponse(BaseModel):
     rec_tests: Optional[list[dict]] = None
     outstanding_aging: Optional[list[dict]] = None
     composite_score: Optional[dict] = None
+    # Sprint 763 (RPT-10 finish): the thresholds the engine actually
+    # applied (materiality / performance materiality / amount tolerance /
+    # date tolerance) plus a ``materiality_source`` tag of "caller" or
+    # "default".  Decimal values are stringified to preserve precision.
+    active_thresholds: Optional[dict] = None
 
 
 # ═══════════════════════════════════════════════════════════════

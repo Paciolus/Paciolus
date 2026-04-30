@@ -29,6 +29,13 @@ NEAR_ZERO = 0.005  # Below any meaningful financial balance; guards division-by-
 SIGNIFICANT_VARIANCE_PERCENT = 10.0  # Flag variances > 10%
 SIGNIFICANT_VARIANCE_AMOUNT = 10000.0  # Flag variances > $10,000
 
+# Sprint 765 (RPT-02/RPT-14 variance basis declaration): the denominator
+# used to compute percent_variance is ``abs(prior)``.  Surfaced in every
+# variance-emitting response so memos / PDFs / downstream consumers can
+# disclose the formula.  See ``docs/04-compliance/variance-formula-policy.md``.
+VARIANCE_BASIS = "absolute_prior"
+VARIANCE_FORMULA = "(current - prior) / abs(prior) * 100"
+
 # Categories for comparison
 BALANCE_SHEET_CATEGORIES = [
     ("total_assets", "Total Assets"),
@@ -178,6 +185,10 @@ class PeriodComparison:
             "significant_variance_count": self.significant_variance_count,
             "total_categories_compared": self.total_categories_compared,
             "framework_note": self.framework_note,
+            # Sprint 765: declarative variance basis so consumers can
+            # render the formula alongside the numbers.
+            "variance_basis": VARIANCE_BASIS,
+            "variance_formula": VARIANCE_FORMULA,
         }
 
 

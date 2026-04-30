@@ -21,8 +21,18 @@ MONETARY_PRECISION = Decimal("0.01")
 # Canonical zero for monetary comparisons
 MONETARY_ZERO = Decimal("0.00")
 
-# Balance tolerance — replaces the float literal 0.01 in audit_engine.py
+# Balance tolerance — replaces the float literal 0.01 in audit_engine.py.
+# Use this for "are two amounts equal within rounding error" checks.
 BALANCE_TOLERANCE = MONETARY_PRECISION
+
+# Sprint 766: half-a-cent denominator guard for percent-variance calculations.
+# Use this for "is the prior balance large enough that dividing by it yields
+# a meaningful percent" checks.  Distinct from BALANCE_TOLERANCE: this is
+# the lower bound for division, not an equality tolerance.  Several engines
+# previously redefined this locally (three_way_match_engine.MONETARY_EPSILON,
+# scattered ``NEAR_ZERO = 0.005`` floats in multi_period_comparison /
+# prior_period_comparison) — consolidate to the canonical Decimal here.
+MONETARY_NEAR_ZERO = Decimal("0.005")
 
 
 def quantize_monetary(value: float | Decimal | str | int | None) -> Decimal:
@@ -63,8 +73,7 @@ def quantize_monetary(value: float | Decimal | str | int | None) -> Decimal:
     return dec.quantize(MONETARY_PRECISION, rounding=ROUND_HALF_UP)
 
 
-def monetary_equal(a: float | Decimal | str | int | None,
-                   b: float | Decimal | str | int | None) -> bool:
+def monetary_equal(a: float | Decimal | str | int | None, b: float | Decimal | str | int | None) -> bool:
     """Compare two monetary values for equality after quantization.
 
     Both values are quantized to 2dp ROUND_HALF_UP before comparison,

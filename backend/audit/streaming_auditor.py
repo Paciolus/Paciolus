@@ -419,14 +419,26 @@ class StreamingAuditor:
             self.provided_account_names,
         )
 
-    def detect_intercompany_imbalances(self) -> list[dict[str, Any]]:
-        """Detect intercompany accounts with elimination gaps."""
+    def detect_intercompany_imbalances(
+        self,
+        counterparty_mapping: dict[str, str] | None = None,
+        mapping_source: str = "none",
+    ) -> list[dict[str, Any]]:
+        """Detect intercompany accounts with elimination gaps.
+
+        Sprint 764: forwards the resolved counterparty mapping + source
+        tag through to the layered detection layer.  Defaults preserve
+        the legacy heuristic-only behavior for callers that have not
+        been wired to the resolver yet.
+        """
         return _detect_intercompany_imbalances(
             self.account_balances,
             self.materiality_threshold,
             self.classifier,
             self.provided_account_types,
             self.provided_account_names,
+            counterparty_mapping=counterparty_mapping,
+            mapping_source=mapping_source,
         )
 
     def detect_equity_signals(self) -> list[dict[str, Any]]:
