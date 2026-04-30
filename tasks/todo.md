@@ -260,7 +260,7 @@ Bundle the 19 patch + safe-minor updates into one commit, mirroring the 2026-04-
 - Server-side gating of the `X-Token-Response: bearer` opt-in to non-browser User-Agents — out of minimal-change scope; cookie remains authoritative regardless.
 - Full slowapi migration — entry criteria documented in the runbook; defer until trigger fires.
 
-**Commit SHA:** _to be recorded post-commit._
+**Commit SHA:** `fbec7a61` (branch `sprint-768-security-remediation-auth-config-health-rl`).
 
 ---
 
