@@ -96,7 +96,12 @@ describe('useAuth', () => {
       expect(result.current.isAuthenticated).toBe(true)
     })
 
-    expect(result.current.token).toBeNull()
+    // Security remediation: browser cookie-auth uses a non-null sentinel
+    // so 56 hooks gating on `!token` and the apiClient 401-retry path
+    // (which checks truthy `newToken`) keep working unchanged. The actual
+    // JWT travels via the HttpOnly cookie. Treat the sentinel as opaque.
+    expect(result.current.token).toBeTruthy()
+    expect(typeof result.current.token).toBe('string')
     expect(result.current.user?.email).toBe('test@example.com')
 
     // Verify X-Requested-With header was sent with refresh request

@@ -38,6 +38,16 @@ import { API_URL } from '@/utils/constants'
 import { apiPost, apiGet, isAuthError, setTokenRefreshCallback, setCsrfToken, getCsrfToken } from '@/utils'
 
 /**
+ * Sentinel `state.token` value used in browser cookie-auth mode where the
+ * real JWT is delivered via the HttpOnly paciolus_access cookie and is not
+ * readable from JS. Hooks and the apiClient 401-retry path only need a
+ * truthy token to know the user is authenticated; the actual JWT is sent
+ * automatically by the browser via `credentials: 'include'`. The literal
+ * value is opaque — never inspect it.
+ */
+const COOKIE_AUTH_SENTINEL = 'cookie'
+
+/**
  * Clear session data on logout/auth failure.
  * User state is in-memory only — no browser storage to clear.
  */
@@ -116,16 +126,18 @@ export function AuthSessionProvider({ children }: { children: ReactNode }): Reac
 
         // Browser default: access_token is delivered via HttpOnly cookie.
         // Body access_token is undefined unless the client sent the
-        // X-Token-Response: bearer opt-in header (used only by non-browser
-        // API clients).
-        tokenRef.current = data.access_token ?? null
+        // X-Token-Response: bearer opt-in header. Fall back to the
+        // sentinel so hooks and the apiClient 401-retry path see a truthy
+        // token; the actual JWT travels via the cookie.
+        const resolvedToken = data.access_token ?? COOKIE_AUTH_SENTINEL
+        tokenRef.current = resolvedToken
 
         // Security Sprint: Read user-bound CSRF token from auth response
         if (data.csrf_token) setCsrfToken(data.csrf_token)
 
         setState({
           user: data.user,
-          token: data.access_token ?? null,
+          token: resolvedToken,
           isAuthenticated: true,
           isLoading: false,
         })
@@ -185,16 +197,16 @@ export function AuthSessionProvider({ children }: { children: ReactNode }): Reac
 
     if (ok && data?.user) {
       // Browser default: access_token comes via HttpOnly cookie, not body.
-      // The presence of `data.user` is the success marker; tokenRef stays
-      // null for browser clients (cookie auth via credentials: 'include').
-      tokenRef.current = data.access_token ?? null
+      // Fall back to the sentinel so token consumers see a truthy value.
+      const resolvedToken = data.access_token ?? COOKIE_AUTH_SENTINEL
+      tokenRef.current = resolvedToken
 
       // Security Sprint: Read user-bound CSRF token from login response
       if (data.csrf_token) setCsrfToken(data.csrf_token)
 
       setState({
         user: data.user,
-        token: data.access_token ?? null,
+        token: resolvedToken,
         isAuthenticated: true,
         isLoading: false,
       })
@@ -215,14 +227,15 @@ export function AuthSessionProvider({ children }: { children: ReactNode }): Reac
 
     if (ok && data?.user) {
       // Browser default: access_token comes via HttpOnly cookie, not body.
-      tokenRef.current = data.access_token ?? null
+      const resolvedToken = data.access_token ?? COOKIE_AUTH_SENTINEL
+      tokenRef.current = resolvedToken
 
       // Security Sprint: Read user-bound CSRF token from register response
       if (data.csrf_token) setCsrfToken(data.csrf_token)
 
       setState({
         user: data.user,
-        token: data.access_token ?? null,
+        token: resolvedToken,
         isAuthenticated: true,
         isLoading: false,
       })
