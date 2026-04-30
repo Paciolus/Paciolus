@@ -128,8 +128,45 @@ def _subclasses_audit_engine_base(source: str) -> bool:
     return False
 
 
+def _resolve_shim_canonical(source: str) -> Path | None:
+    """If ``source`` re-exports from ``services.audit.<tool>``, return the
+    canonical ``analysis.py`` path. Otherwise return None.
+
+    Handles both shim shapes used post-ADR-018:
+
+    - Dynamic namespace copy (testing-engine batch fae3e3e9):
+      ``from services.audit.<tool> import analysis as _impl``
+    - Static re-export (Sprint 753 pattern, e.g. ``recon_engine.py``):
+      ``from services.audit.<tool>.analysis import *``
+    """
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return None
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.ImportFrom) or not node.module:
+            continue
+        parts = node.module.split(".")
+        if len(parts) >= 3 and parts[0] == "services" and parts[1] == "audit":
+            tool = parts[2]
+            # Form 1: from services.audit.<tool>.analysis import *
+            if len(parts) == 4 and parts[3] == "analysis":
+                return BACKEND_ROOT / "services" / "audit" / tool / "analysis.py"
+            # Form 2: from services.audit.<tool> import analysis [as _impl]
+            if len(parts) == 3 and any(a.name == "analysis" for a in node.names):
+                return BACKEND_ROOT / "services" / "audit" / tool / "analysis.py"
+    return None
+
+
 def find_off_pattern_engines() -> list[Path]:
-    """Return testing-engine modules that don't subclass AuditEngineBase."""
+    """Return testing-engine modules that don't subclass AuditEngineBase.
+
+    Engines relocated to ``services/audit/<tool>/analysis.py`` per ADR-018
+    leave a re-export shim at the legacy path. When the top-level file is a
+    shim, the canonical analysis module is checked instead — an engine is
+    on-pattern if either the legacy file or its shim target subclasses
+    AuditEngineBase.
+    """
     findings: list[Path] = []
     for path in sorted(BACKEND_ROOT.glob("*_engine.py")):
         if not _is_testing_engine(path):
@@ -138,8 +175,18 @@ def find_off_pattern_engines() -> list[Path]:
             source = path.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
             continue
-        if not _subclasses_audit_engine_base(source):
-            findings.append(path)
+        if _subclasses_audit_engine_base(source):
+            continue
+        canonical = _resolve_shim_canonical(source)
+        if canonical is not None and canonical.exists():
+            try:
+                canonical_source = canonical.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):
+                pass
+            else:
+                if _subclasses_audit_engine_base(canonical_source):
+                    continue
+        findings.append(path)
     return findings
 
 
