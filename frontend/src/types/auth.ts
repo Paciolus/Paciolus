@@ -67,10 +67,14 @@ export interface RegisterCredentials {
 /**
  * Response from login/register/refresh API endpoints.
  * refresh_token removed — now an HttpOnly cookie set server-side.
+ * access_token is omitted from the body for browser clients; it is
+ * delivered via the HttpOnly paciolus_access cookie. Non-browser API
+ * clients can opt in to a bearer token in the body via the
+ * `X-Token-Response: bearer` request header.
  * csrf_token: user-bound CSRF token (Security Sprint).
  */
 export interface AuthResponse {
-  access_token: string;
+  access_token?: string | null;
   token_type: string;
   expires_in: number;
   user: User;

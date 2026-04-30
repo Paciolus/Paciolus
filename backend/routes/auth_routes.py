@@ -74,6 +74,19 @@ router = APIRouter(tags=["auth"])
 
 from typing import Optional
 
+# Opt-in header for non-browser API clients to receive the access token in
+# the JSON body. Browser clients omit this header and rely solely on the
+# HttpOnly paciolus_access cookie. Default OFF — bodies omit access_token
+# unless the client explicitly opts in.
+_BEARER_RESPONSE_HEADER = "X-Token-Response"
+_BEARER_RESPONSE_VALUE = "bearer"
+
+
+def _wants_bearer_in_body(request: Request) -> bool:
+    """Return True iff the caller explicitly opted in to a bearer token in the body."""
+    raw = request.headers.get(_BEARER_RESPONSE_HEADER)
+    return bool(raw) and raw.strip().lower() == _BEARER_RESPONSE_VALUE
+
 
 def _set_refresh_cookie(response: Response, token: str, remember_me: bool) -> None:
     """Set the HttpOnly refresh token cookie.
@@ -203,7 +216,7 @@ def register(
     _set_access_cookie(response, result.issuance.access_token)
 
     return AuthResponse(
-        access_token=result.issuance.access_token,
+        access_token=result.issuance.access_token if _wants_bearer_in_body(request) else None,
         token_type="bearer",
         expires_in=result.issuance.expires_in,
         user=UserResponse.model_validate(result.user),
@@ -230,7 +243,7 @@ def login(request: Request, credentials: UserLogin, response: Response, db: Sess
     _set_access_cookie(response, issuance.access_token)
 
     return AuthResponse(
-        access_token=issuance.access_token,
+        access_token=issuance.access_token if _wants_bearer_in_body(request) else None,
         token_type="bearer",
         expires_in=issuance.expires_in,
         user=UserResponse.model_validate(issuance.user),
@@ -416,7 +429,7 @@ def refresh(request: Request, response: Response, db: Session = Depends(get_db))
     _set_access_cookie(response, issuance.access_token)
 
     return AuthResponse(
-        access_token=issuance.access_token,
+        access_token=issuance.access_token if _wants_bearer_in_body(request) else None,
         token_type="bearer",
         expires_in=issuance.expires_in,
         user=UserResponse.model_validate(issuance.user),

@@ -58,7 +58,11 @@ class WaitlistResponse(BaseModel):
 class LivenessResponse(BaseModel):
     status: Literal["healthy"]
     timestamp: str
-    version: str
+    # Exact version intentionally omitted from the public liveness response.
+    # External fingerprinting via /health/live let scanners pin exploit
+    # attempts to a known build; the orchestrator only needs status to
+    # decide whether to restart. /health/ready (operationally scoped)
+    # continues to expose version for internal readiness reporting.
 
 
 class DependencyStatus(BaseModel):
@@ -139,7 +143,6 @@ async def liveness_probe(request: Request) -> LivenessResponse:
     return LivenessResponse(
         status="healthy",
         timestamp=datetime.now(UTC).isoformat(),
-        version=__version__,
     )
 
 

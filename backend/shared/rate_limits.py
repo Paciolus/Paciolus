@@ -251,6 +251,37 @@ def _resolve_storage_uri() -> str:
 
 _storage_uri = _resolve_storage_uri()
 
+
+def _emit_slowapi_unmaintained_warning() -> None:
+    """Emit an explicit startup banner about slowapi's unmaintained status.
+
+    Surfaced at module import so the risk is visible in operator logs even
+    when no canary test fails. Severity differs by environment:
+    - Production: WARNING (operational visibility — investigate during planned
+      maintenance, not an incident).
+    - Non-production: INFO (developer awareness).
+
+    Migration plan: docs/runbooks/rate-limiter-modernization.md.
+    """
+    try:
+        from config import ENV_MODE as _env_mode
+    except Exception:  # noqa: BLE001 — config import must never break startup
+        _env_mode = "development"
+
+    message = (
+        "rate-limiter dependency notice: slowapi is unmaintained "
+        "(last release Oct 2022); the underlying `limits` library is actively "
+        "maintained and pinned at >=3.0.0. Migration plan: "
+        "docs/runbooks/rate-limiter-modernization.md."
+    )
+    if _env_mode == "production":
+        _logger.warning("PRODUCTION %s", message)
+    else:
+        _logger.info(message)
+
+
+_emit_slowapi_unmaintained_warning()
+
 # ---------------------------------------------------------------------------
 # Limiter instance + category constants
 # ---------------------------------------------------------------------------

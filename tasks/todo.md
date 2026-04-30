@@ -214,3 +214,53 @@ Bundle the 19 patch + safe-minor updates into one commit, mirroring the 2026-04-
 
 ---
 
+### Sprint 768: Targeted security remediation — auth body-token, audit-chain key separation, /health/live fingerprinting, slowapi posture
+**Status:** COMPLETE — landed on branch `sprint-768-security-remediation-auth-config-health-rl`.
+**Priority:** P1 (security).
+**Source:** External targeted security remediation brief (2026-04-30) — four findings flagged for immediate fix with minimal-change discipline.
+
+**What landed:**
+
+1. **Browser-default auth responses no longer carry `access_token` in JSON.**
+   - `AuthResponse.access_token` → `Optional[str] = None` (`backend/auth.py`).
+   - `/auth/register`, `/auth/login`, `/auth/refresh` only emit a JSON `access_token` when the caller sends `X-Token-Response: bearer` (default OFF; explicit non-browser API-client opt-in). Cookie issuance (`_set_access_cookie`, `_set_refresh_cookie`) unchanged — the HttpOnly cookie remains the browser carrier.
+   - Frontend (`AuthSessionContext`) now uses `data.user` as the success marker instead of `data.access_token`; cookie auth via `credentials: 'include'` is the load-bearing path. `AuthResponse` TypeScript type marks `access_token` optional.
+   - 4 new pytest tests pin the opt-in contract; existing register/login/refresh assertions updated.
+
+2. **`AUDIT_CHAIN_SECRET_KEY` cryptographic separation enforced in production.**
+   - `backend/config.py` hard-fails when the key is missing/blank in production, *and* when it equals `JWT_SECRET_KEY` (sharing collapses the SOC 2 CC7.4 boundary and ties audit-chain integrity to JWT rotation cadence).
+   - Non-production keeps the dev fallback but emits an explicit `WARNING` per boot.
+   - 4 new subprocess-based tests in `test_security_hardening_2026_04_20.py::TestAuditChainKeySeparation` cover both failure modes plus the happy path.
+
+3. **Public `/health/live` no longer exposes exact platform version.**
+   - `LivenessResponse` no longer includes `version`; `/health/ready` (operationally scoped) continues to expose it.
+   - Reduces external fingerprinting surface — orchestrator restart decisions don't need version, scanners no longer pin exploit attempts to a known build.
+
+4. **slowapi unmaintained-status surfaced explicitly + fail-closed coverage strengthened.**
+   - `shared/rate_limits.py` emits a startup banner on import: `WARNING` in production, `INFO` in non-production. Substring `"slowapi is unmaintained"` is intentionally pinned for monitoring rules.
+   - New `test_rate_limit_strict_mode.py::TestStrictModeFailClosedRedisStorageInit` covers the `RedisStorage` constructor-raises path under strict mode.
+   - New `TestSlowApiUnmaintainedWarning` asserts severity-by-env semantics.
+   - `docs/runbooks/rate-limiter-modernization.md` adds an "Operator Posture" section documenting the temporary acceptance posture and the entry criteria for the deferred migration sprint (canary failure on green main, slowapi CVE ≥ 7.0, or Starlette major-version incompat).
+   - Full slowapi → custom-Starlette migration explicitly **deferred** in this patch (123 decorator sites, no CVE, `limits` engine is actively maintained and pinned `>=3.0.0`).
+
+**Files touched (13):**
+- `backend/auth.py`, `backend/routes/auth_routes.py`, `backend/config.py`, `backend/routes/health.py`, `backend/shared/rate_limits.py`
+- `backend/tests/test_auth_routes_api.py`, `backend/tests/test_health_api.py`, `backend/tests/test_rate_limit_strict_mode.py`, `backend/tests/test_security_hardening_2026_04_20.py`
+- `frontend/src/types/auth.ts`, `frontend/src/contexts/AuthSessionContext.tsx`, `frontend/src/__tests__/AuthContext.test.tsx`
+- `docs/runbooks/rate-limiter-modernization.md`
+
+**Verification:**
+- `cd backend && python -m pytest -q` → **8,685 passed, 0 failed** (829s).
+- `cd backend && python -m pytest tests/test_auth_routes_api.py tests/test_auth_parity.py tests/test_auth_security_responses.py tests/test_health_api.py tests/test_health_redis_r2.py tests/test_rate_limit_*.py tests/test_security_hardening_2026_04_20.py tests/test_audit_chain.py -q` → **216 passed, 0 failed**.
+- `cd frontend && npm test -- --watch=false` → **207 suites, 2,013 tests, 0 failed**.
+- `cd frontend && npx tsc --noEmit` → exit 0.
+- `cd frontend && npm run build` → exit 0; routes correctly dynamic (`ƒ`).
+
+**Out of scope / deferred:**
+- Server-side gating of the `X-Token-Response: bearer` opt-in to non-browser User-Agents — out of minimal-change scope; cookie remains authoritative regardless.
+- Full slowapi migration — entry criteria documented in the runbook; defer until trigger fires.
+
+**Commit SHA:** `fbec7a61` (branch `sprint-768-security-remediation-auth-config-health-rl`).
+
+---
+

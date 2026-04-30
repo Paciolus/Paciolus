@@ -4381,11 +4381,18 @@
         "type": "object"
       },
       "AuthResponse": {
-        "description": "Schema for successful authentication response.",
+        "description": "Schema for successful authentication response.\n\nBrowser clients receive the access token via HttpOnly ``paciolus_access``\ncookie only — ``access_token`` is omitted from the JSON body to eliminate\nthe JS-readable copy. Non-browser API clients can opt in to a bearer\ntoken in the body by sending header ``X-Token-Response: bearer`` on\n/auth/login, /auth/register, or /auth/refresh.",
         "properties": {
           "access_token": {
-            "title": "Access Token",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Access Token"
           },
           "csrf_token": {
             "anyOf": [
@@ -4412,7 +4419,6 @@
           }
         },
         "required": [
-          "access_token",
           "expires_in",
           "user"
         ],
@@ -15110,16 +15116,11 @@
           "timestamp": {
             "title": "Timestamp",
             "type": "string"
-          },
-          "version": {
-            "title": "Version",
-            "type": "string"
           }
         },
         "required": [
           "status",
-          "timestamp",
-          "version"
+          "timestamp"
         ],
         "title": "LivenessResponse",
         "type": "object"
