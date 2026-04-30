@@ -1,26 +1,28 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useCallback, useEffect, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useCanvasAccent } from '@/contexts/CanvasAccentContext'
 import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
 import {
-  PeriodFileDropZone,
-  type PeriodState,
-  MovementSummaryCards,
-  BudgetSummaryCards,
   AccountMovementTable,
+  BudgetSummaryCards,
   CategoryMovementSection,
-  MOVEMENT_TYPE_LABELS,
   fadeIn,
+  MOVEMENT_TYPE_LABELS,
+  MovementSummaryCards,
+  PeriodFileDropZone,
   stagger,
 } from '@/components/multiPeriod'
-import { GuestCTA, ZeroStorageNotice, DisclaimerBox } from '@/components/shared'
+import { DisclaimerBox, GuestCTA, ZeroStorageNotice } from '@/components/shared'
 import { Reveal } from '@/components/ui/Reveal'
-import { useMultiPeriodComparison, type MovementSummaryResponse } from '@/hooks'
-import { uploadTrialBalance } from '@/utils/trialBalanceUpload'
-import { apiDownload, downloadBlob } from '@/utils'
+import {
+  type MovementSummaryResponse,
+  useMultiPeriodComparison,
+  useMultiPeriodMemoExport,
+  usePeriodUploads,
+} from '@/hooks'
 
 export default function MultiPeriodPage() {
   const { user, isAuthenticated, isLoading: authLoading, token } = useAuthSession()
@@ -36,16 +38,13 @@ export default function MultiPeriodPage() {
     else setAccentState('idle')
   }, [isComparing, isExporting, comparison, setAccentState])
 
-  const [exportingMemo, setExportingMemo] = useState(false)
-
   const isVerified = user?.is_verified !== false
 
-  // Period state
+  // Period labels + materiality
   const [priorLabel, setPriorLabel] = useState('Prior Period')
   const [currentLabel, setCurrentLabel] = useState('Current Period')
   const [budgetLabel, setBudgetLabel] = useState('Budget')
   const [materialityThreshold, setMaterialityThreshold] = useState(500)
-  const [showBudget, setShowBudget] = useState(false)
 
   // Engagement metadata for PDF memo
   const [clientName, setClientName] = useState('')
@@ -53,54 +52,22 @@ export default function MultiPeriodPage() {
   const [practitioner, setPractitioner] = useState('')
   const [reviewer, setReviewer] = useState('')
 
-  const [prior, setPrior] = useState<PeriodState>({ file: null, status: 'idle', result: null, error: null })
-  const [current, setCurrent] = useState<PeriodState>({ file: null, status: 'idle', result: null, error: null })
-  const [budget, setBudget] = useState<PeriodState>({ file: null, status: 'idle', result: null, error: null })
-
   // Filters
   const [filterType, setFilterType] = useState('all')
   const [filterSignificance, setFilterSignificance] = useState('all')
   const [filterSearch, setFilterSearch] = useState('')
 
-  const auditFile = useCallback(async (file: File, setPeriod: React.Dispatch<React.SetStateAction<PeriodState>>) => {
-    setPeriod(prev => ({ ...prev, file, status: 'loading', result: null, error: null }))
+  const uploads = usePeriodUploads({
+    token,
+    materialityThreshold,
+    engagementId,
+    onBeforeUpload: clear,
+  })
+  const { prior, current, budget, showBudget, anyLoading: anyZoneLoading, canCompare } = uploads
 
-    const outcome = await uploadTrialBalance(
-      {
-        file,
-        materialityThreshold,
-        engagementId,
-      },
-      token,
-    )
+  const { exporting: exportingMemo, exportMemo } = useMultiPeriodMemoExport(token)
 
-    if (outcome.kind === 'success') {
-      setPeriod(prev => ({ ...prev, status: 'success', result: outcome.result }))
-      return
-    }
-    setPeriod(prev => ({ ...prev, status: 'error', error: outcome.message }))
-  }, [token, materialityThreshold, engagementId])
-
-  const handlePriorFile = useCallback((file: File) => {
-    clear()
-    auditFile(file, setPrior)
-  }, [auditFile, clear])
-
-  const handleCurrentFile = useCallback((file: File) => {
-    clear()
-    auditFile(file, setCurrent)
-  }, [auditFile, clear])
-
-  const handleBudgetFile = useCallback((file: File) => {
-    clear()
-    auditFile(file, setBudget)
-  }, [auditFile, clear])
-
-  const canCompare = prior.status === 'success' && current.status === 'success' && prior.result && current.result
-    && (!showBudget || (budget.status === 'success' && budget.result))
-  const anyZoneLoading = prior.status === 'loading' || current.status === 'loading' || budget.status === 'loading'
   const isProcessing = anyZoneLoading || isComparing
-
   const hasBudgetData = !!comparison?.budget_label
 
   const handleCompare = useCallback(async () => {
@@ -137,59 +104,17 @@ export default function MultiPeriodPage() {
   }, [prior.result, current.result, budget.result, priorLabel, currentLabel, budgetLabel, materialityThreshold, token, showBudget, exportCsv])
 
   const handleExportMemo = useCallback(async () => {
-    if (!comparison || !token) return
-    setExportingMemo(true)
-    try {
-      const strippedSummaries = comparison.lead_sheet_summaries.map(ls => ({
-        lead_sheet: ls.lead_sheet,
-        lead_sheet_name: ls.lead_sheet_name,
-        account_count: ls.account_count,
-        prior_total: ls.prior_total,
-        current_total: ls.current_total,
-        net_change: ls.net_change,
-      }))
-
-      const { blob, filename, ok } = await apiDownload(
-        '/export/multi-period-memo',
-        token,
-        {
-          method: 'POST',
-          body: {
-            prior_label: comparison.prior_label,
-            current_label: comparison.current_label,
-            budget_label: comparison.budget_label || null,
-            total_accounts: comparison.total_accounts,
-            movements_by_type: comparison.movements_by_type,
-            movements_by_significance: comparison.movements_by_significance,
-            significant_movements: comparison.significant_movements,
-            lead_sheet_summaries: strippedSummaries,
-            dormant_account_count: comparison.dormant_accounts.length,
-            client_name: clientName || 'Not specified',
-            period_tested: fiscalYearEnd || 'Not specified',
-            prepared_by: practitioner || 'Not specified',
-            reviewed_by: reviewer || 'Not specified',
-          },
-        },
-      )
-      if (ok && blob) {
-        downloadBlob(blob, filename || 'MultiPeriod_Memo.pdf')
-      }
-    } catch {
-      // Silent failure — user sees button reset
-    } finally {
-      setExportingMemo(false)
-    }
-  }, [comparison, token, clientName, fiscalYearEnd, practitioner, reviewer])
+    if (!comparison) return
+    await exportMemo(comparison, { clientName, fiscalYearEnd, practitioner, reviewer })
+  }, [comparison, exportMemo, clientName, fiscalYearEnd, practitioner, reviewer])
 
   const handleReset = useCallback(() => {
-    setPrior({ file: null, status: 'idle', result: null, error: null })
-    setCurrent({ file: null, status: 'idle', result: null, error: null })
-    setBudget({ file: null, status: 'idle', result: null, error: null })
+    uploads.reset()
     clear()
     setFilterType('all')
     setFilterSignificance('all')
     setFilterSearch('')
-  }, [clear])
+  }, [uploads, clear])
 
   return (
     <main id="main-content" className="min-h-screen bg-surface-page">
@@ -324,10 +249,10 @@ export default function MultiPeriodPage() {
 
               {/* File Upload — each zone operates independently */}
               <div className={`grid gap-4 mb-4 ${showBudget ? 'grid-cols-3' : 'grid-cols-2'}`}>
-                <PeriodFileDropZone label="Prior Period" period={prior} onFileSelect={handlePriorFile} disabled={isComparing || prior.status === 'loading'} />
-                <PeriodFileDropZone label="Current Period" period={current} onFileSelect={handleCurrentFile} disabled={isComparing || current.status === 'loading'} />
+                <PeriodFileDropZone label="Prior Period" period={prior} onFileSelect={uploads.handlePriorFile} disabled={isComparing || prior.status === 'loading'} />
+                <PeriodFileDropZone label="Current Period" period={current} onFileSelect={uploads.handleCurrentFile} disabled={isComparing || current.status === 'loading'} />
                 {showBudget && (
-                  <PeriodFileDropZone label="Budget / Forecast" period={budget} onFileSelect={handleBudgetFile} disabled={isComparing || budget.status === 'loading'} />
+                  <PeriodFileDropZone label="Budget / Forecast" period={budget} onFileSelect={uploads.handleBudgetFile} disabled={isComparing || budget.status === 'loading'} />
                 )}
               </div>
 
@@ -346,10 +271,7 @@ export default function MultiPeriodPage() {
                     />
                   </div>
                   <button
-                    onClick={() => {
-                      setShowBudget(!showBudget)
-                      if (showBudget) setBudget({ file: null, status: 'idle', result: null, error: null })
-                    }}
+                    onClick={uploads.toggleBudget}
                     className={`px-3 py-1.5 text-xs font-sans rounded-xl border transition-colors ${
                       showBudget
                         ? 'bg-sage-50 border-sage-500/30 text-sage-600'

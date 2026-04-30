@@ -20,8 +20,7 @@ import type {
   SamplingEvaluationResult,
   SamplingEvaluationConfig,
 } from '@/types/statisticalSampling'
-import { getCsrfToken } from '@/utils/apiClient'
-import { API_URL } from '@/utils/constants'
+import { uploadFetch } from '@/utils/uploadTransport'
 
 interface PhaseState<T> {
   status: UploadStatus
@@ -74,34 +73,26 @@ async function executeSamplingUpload<T>(
     }
   }
 
-  try {
-    const csrfToken = getCsrfToken()
-    const response = await fetch(`${API_URL}${endpoint}`, {
-      method: 'POST',
-      headers: {
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-        ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
-      },
-      body: formData,
-    })
+  const result = await uploadFetch<T>(endpoint, formData, token)
 
-    if (response.status === 401) {
-      setState({ status: 'error', result: null, error: `Please sign in to run ${errorPrefix}.` })
-      return
-    }
-
-    const data = await response.json()
-
-    if (!response.ok) {
-      const detail = data?.detail || `${errorPrefix} failed. Please check your parameters.`
-      setState({ status: 'error', result: null, error: detail })
-      return
-    }
-
-    setState({ status: 'success', result: data as T, error: '' })
-  } catch {
-    setState({ status: 'error', result: null, error: 'Network error. Please try again.' })
+  if (result.ok && result.data !== undefined) {
+    setState({ status: 'success', result: result.data, error: '' })
+    return
   }
+
+  if (result.status === 401) {
+    setState({ status: 'error', result: null, error: `Please sign in to run ${errorPrefix}.` })
+    return
+  }
+  if (result.status === 0) {
+    setState({ status: 'error', result: null, error: 'Network error. Please try again.' })
+    return
+  }
+  setState({
+    status: 'error',
+    result: null,
+    error: result.error || `${errorPrefix} failed. Please check your parameters.`,
+  })
 }
 
 export function useStatisticalSampling(): UseStatisticalSamplingReturn {

@@ -75,7 +75,7 @@ class TestExportPdf:
     async def test_happy_path_returns_pdf(self, override_auth_verified):
         from main import app
 
-        with patch("routes.export_diagnostics.generate_audit_report", return_value=b"%PDF-1.4 fake"):
+        with patch("export.serializers.pdf.generate_audit_report", return_value=b"%PDF-1.4 fake"):
             async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 response = await client.post("/export/pdf", json=BASE_AUDIT)
 
@@ -86,7 +86,7 @@ class TestExportPdf:
     async def test_download_filename_uses_input_filename(self, override_auth_verified):
         from main import app
 
-        with patch("routes.export_diagnostics.generate_audit_report", return_value=b"%PDF-1.4 fake"):
+        with patch("export.serializers.pdf.generate_audit_report", return_value=b"%PDF-1.4 fake"):
             async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 response = await client.post("/export/pdf", json={**BASE_AUDIT, "filename": "ClientABC"})
 
@@ -113,7 +113,7 @@ class TestExportPdf:
             ],
             "immaterial_count": 1,
         }
-        with patch("routes.export_diagnostics.generate_audit_report", return_value=b"%PDF-1.4 ok"):
+        with patch("export.serializers.pdf.generate_audit_report", return_value=b"%PDF-1.4 ok"):
             async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 response = await client.post("/export/pdf", json=payload)
 
@@ -140,7 +140,7 @@ class TestExportExcel:
     async def test_happy_path_returns_xlsx(self, override_auth_verified):
         from main import app
 
-        with patch("routes.export_diagnostics.generate_workpaper", return_value=b"PK\x03\x04 fake xlsx"):
+        with patch("export.serializers.excel.generate_workpaper", return_value=b"PK\x03\x04 fake xlsx"):
             async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 response = await client.post("/export/excel", json=BASE_AUDIT)
 
@@ -152,7 +152,7 @@ class TestExportExcel:
     async def test_download_header_contains_filename(self, override_auth_verified):
         from main import app
 
-        with patch("routes.export_diagnostics.generate_workpaper", return_value=b"PK fake"):
+        with patch("export.serializers.excel.generate_workpaper", return_value=b"PK fake"):
             async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 response = await client.post("/export/excel", json={**BASE_AUDIT, "filename": "CorpClient"})
 
@@ -364,7 +364,7 @@ class TestExportLeadSheets:
     async def test_empty_flux_returns_xlsx(self, override_auth_verified):
         from main import app
 
-        with patch("routes.export_diagnostics.generate_leadsheets", return_value=b"PK fake xlsx"):
+        with patch("export.serializers.excel.generate_leadsheets", return_value=b"PK fake xlsx"):
             async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 response = await client.post("/export/leadsheets", json=LEAD_SHEET_PAYLOAD)
 
@@ -402,7 +402,7 @@ class TestExportLeadSheets:
                 },
             },
         }
-        with patch("routes.export_diagnostics.generate_leadsheets", return_value=b"PK xlsx ok") as mock_gen:
+        with patch("export.serializers.excel.generate_leadsheets", return_value=b"PK xlsx ok") as mock_gen:
             async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 response = await client.post("/export/leadsheets", json=payload)
 
@@ -432,8 +432,8 @@ class TestExportFinancialStatements:
 
         mock_builder = MagicMock()
         mock_builder.build.return_value = {}
-        with patch("routes.export_diagnostics.FinancialStatementBuilder", return_value=mock_builder):
-            with patch("routes.export_diagnostics.generate_financial_statements_pdf", return_value=b"%PDF-1.4 ok"):
+        with patch("export.pipeline.FinancialStatementBuilder", return_value=mock_builder):
+            with patch("export.serializers.pdf.generate_financial_statements_pdf", return_value=b"%PDF-1.4 ok"):
                 async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                     response = await client.post("/export/financial-statements", json=FIN_STMT_PAYLOAD)
 
@@ -446,9 +446,9 @@ class TestExportFinancialStatements:
 
         mock_builder = MagicMock()
         mock_builder.build.return_value = {}
-        with patch("routes.export_diagnostics.FinancialStatementBuilder", return_value=mock_builder):
+        with patch("export.pipeline.FinancialStatementBuilder", return_value=mock_builder):
             with patch(
-                "routes.export_diagnostics.generate_financial_statements_excel", return_value=b"PK xlsx"
+                "export.serializers.excel.generate_financial_statements_excel", return_value=b"PK xlsx"
             ) as mock_excel:
                 async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                     response = await client.post("/export/financial-statements?format=excel", json=FIN_STMT_PAYLOAD)

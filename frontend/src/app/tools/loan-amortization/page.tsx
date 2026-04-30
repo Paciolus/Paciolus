@@ -10,7 +10,7 @@
 import { useState, useCallback, useMemo } from 'react'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { Reveal } from '@/components/ui/Reveal'
-import { apiPost } from '@/utils/apiClient'
+import { apiDownload, apiPost, downloadBlob } from '@/utils/apiClient'
 
 type Frequency = 'monthly' | 'quarterly' | 'semi-annual' | 'annual'
 type Method = 'standard' | 'interest_only' | 'balloon'
@@ -133,32 +133,16 @@ export default function LoanAmortizationPage() {
   const downloadExport = useCallback(
     async (format: 'csv' | 'xlsx' | 'pdf') => {
       if (!token) return
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || ''}/audit/loan-amortization/export.${format}`,
-        {
-          method: 'POST',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-            'X-Requested-With': 'XMLHttpRequest',
-          },
-          body: JSON.stringify(buildPayload()),
-        }
+      const result = await apiDownload(
+        `/audit/loan-amortization/export.${format}`,
+        token,
+        { method: 'POST', body: buildPayload() },
       )
-      if (!response.ok) {
-        setError(`${format.toUpperCase()} export failed`)
+      if (!result.ok || !result.blob) {
+        setError(result.error ?? `${format.toUpperCase()} export failed`)
         return
       }
-      const blob = await response.blob()
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `loan_amortization_schedule.${format}`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      URL.revokeObjectURL(url)
+      downloadBlob(result.blob, result.filename ?? `loan_amortization_schedule.${format}`)
     },
     [token, buildPayload]
   )

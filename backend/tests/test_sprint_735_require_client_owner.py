@@ -20,7 +20,7 @@ from fastapi import HTTPException
 
 from models import Client
 from organization_model import OrganizationMember, OrgRole
-from shared.helpers import require_client, require_client_owner
+from shared.client_access import require_client, require_client_owner
 
 
 def _make_org(db, owner, name: str = "Sprint 735 Org"):

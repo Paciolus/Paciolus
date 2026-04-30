@@ -467,8 +467,8 @@ class TestAutoVerificationGate:
         from unittest.mock import patch
 
         with (
-            patch("routes.auth_routes.is_email_service_configured", return_value=False),
-            patch("routes.auth_routes.ENV_MODE", "development"),
+            patch("services.auth.registration.is_email_service_configured", return_value=False),
+            patch("services.auth.registration.ENV_MODE", "development"),
         ):
             async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 response = await client.post(
@@ -485,8 +485,8 @@ class TestAutoVerificationGate:
         from unittest.mock import patch
 
         with (
-            patch("routes.auth_routes.is_email_service_configured", return_value=False),
-            patch("routes.auth_routes.ENV_MODE", "production"),
+            patch("services.auth.registration.is_email_service_configured", return_value=False),
+            patch("services.auth.registration.ENV_MODE", "production"),
         ):
             async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 response = await client.post(

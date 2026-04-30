@@ -8,21 +8,20 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field, model_validator
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from security_utils import log_secure_operation
-from shared.error_messages import sanitize_error
+from shared.db_unit_of_work import db_transaction
 
 logger = logging.getLogger(__name__)
 from auth import require_current_user, require_verified_user
 from database import get_db
 from models import Client, DiagnosticSummary, PeriodType, User
+from shared.client_access import require_client_owner
 from shared.filenames import (
     get_filename_display,
     hash_filename,
 )
-from shared.helpers import require_client_owner
 from shared.monetary import quantize_monetary
 from shared.rate_limits import RATE_LIMIT_WRITE, limiter
 
@@ -274,14 +273,13 @@ async def save_diagnostic_summary(
         row_count=summary_data.row_count,
     )
 
-    try:
+    with db_transaction(
+        db,
+        log_label="db_diagnostic_save",
+        log_message="Database error saving diagnostic summary",
+    ):
         db.add(db_summary)
-        db.commit()
-        db.refresh(db_summary)
-    except SQLAlchemyError as e:
-        db.rollback()
-        logger.exception("Database error saving diagnostic summary")
-        raise HTTPException(status_code=500, detail=sanitize_error(e, log_label="db_diagnostic_save"))
+    db.refresh(db_summary)
 
     return _summary_to_response(db_summary)
 

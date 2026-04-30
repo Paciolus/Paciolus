@@ -1,39 +1,31 @@
 """Paciolus shared helpers — small native utilities.
 
-This module owns a handful of small cross-cutting helpers that don't justify
-a dedicated module of their own:
-
+Owns:
     - ``try_parse_risk`` / ``try_parse_risk_band``: defaulted enum coercion
     - ``parse_json_list`` / ``parse_json_mapping``: defensive JSON parsing
-    - ``is_authorized_for_client`` / ``get_accessible_client`` / ``require_client``:
-      direct-ownership + organization-scoped client access policy
 
-Sprint 724 removed the re-export shim that previously re-published symbols from
-``shared.upload_pipeline``, ``shared.filenames``, ``shared.background_email``,
-and ``shared.tool_run_recorder``. Those symbols now live only at their owning
-module. The deferred-items decision (see ``tasks/todo.md`` 2026-04-20 entry)
-keeps the small client-access helpers here rather than spawning a new module
-for three functions — revisit only if a fourth helper joins them.
+Sprint 754 (per ADR-018-style relocation): client-access helpers
+(``is_authorized_for_client`` / ``get_accessible_client`` /
+``require_client`` / ``require_client_owner``) moved to
+``shared.client_access`` and all 6 callers migrated. The deferred-items
+entry in ``tasks/todo.md`` (2026-04-20) said "revisit only if a fourth
+helper joins them"; Sprint 735's ``require_client_owner`` was the
+fourth, and Sprint 754 made the move.
+
+Sprint 724 removed re-export shims for ``shared.upload_pipeline``,
+``shared.filenames``, ``shared.background_email``, and
+``shared.tool_run_recorder``. Those symbols live only at their owning
+module. Don't extend this module casually — the
+``test_no_helpers_reexports`` guardrail is the contract.
 """
 
 from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import Depends, HTTPException
-from fastapi import Path as PathParam
-from sqlalchemy.orm import Session
-
-from auth import require_current_user
-from database import get_db
 from flux_engine import FluxRisk
-from models import Client, User
 from recon_engine import RiskBand
 from security_utils import log_secure_operation
-
-# ---------------------------------------------------------------------------
-# Native helpers (do not extend this module casually — see Sprint 724 docstring)
-# ---------------------------------------------------------------------------
 
 
 def try_parse_risk(risk_str: str) -> FluxRisk:
@@ -85,95 +77,9 @@ def parse_json_mapping(raw_json: Optional[str], log_label: str) -> Optional[dict
         return None
 
 
-# ---------------------------------------------------------------------------
-# Client access policy (direct ownership + organization membership)
-# ---------------------------------------------------------------------------
-
-
-def is_authorized_for_client(user: User, client: Client, db: Session) -> bool:
-    """Check whether ``user`` may access ``client``.
-
-    Returns True if:
-      (a) ``client.user_id == user.id`` (direct ownership), or
-      (b) both ``user`` and the client's owner are active members of the
-          same organization (organization-scoped sharing).
-    """
-    if client.user_id == user.id:
-        return True
-
-    if user.organization_id:
-        from organization_model import OrganizationMember
-
-        owner_membership = (
-            db.query(OrganizationMember)
-            .filter(
-                OrganizationMember.user_id == client.user_id,
-                OrganizationMember.organization_id == user.organization_id,
-            )
-            .first()
-        )
-        if owner_membership:
-            return True
-
-    return False
-
-
-def get_accessible_client(user: User, client_id: int, db: Session) -> Client | None:
-    """Return ``Client`` if ``user`` may access it, else None."""
-    client = db.query(Client).filter(Client.id == client_id).first()
-    if not client:
-        return None
-    if is_authorized_for_client(user, client, db):
-        return client
-    return None
-
-
-def require_client(
-    client_id: int = PathParam(..., description="The ID of the client"),
-    current_user: User = Depends(require_current_user),
-    db: Session = Depends(get_db),
-) -> Client:
-    """FastAPI dependency: resolve a ``Client`` by id or raise 404.
-
-    Org-scoped — grants access to the direct owner *and* to any active
-    member of the same organization. Use this for routes where the client
-    is shared across an org (metadata, settings).
-    """
-    client = get_accessible_client(current_user, client_id, db)
-    if not client:
-        raise HTTPException(status_code=404, detail="Client not found")
-    return client
-
-
-def require_client_owner(
-    client_id: int = PathParam(..., description="The ID of the client"),
-    current_user: User = Depends(require_current_user),
-    db: Session = Depends(get_db),
-) -> Client:
-    """FastAPI dependency: resolve a ``Client`` by id with **direct-ownership
-    only** authorization (no organization-scoped sharing). Raises 404 if the
-    caller is not the direct owner, even if they're an active member of the
-    same organization as the owner.
-
-    Sprint 735: introduced for diagnostic / trends / prior-period routes that
-    historically used inline ``db.query(Client).filter(Client.id == ...,
-    Client.user_id == current_user.id).first()`` to enforce direct-only
-    access. Adopting the existing ``require_client`` helper there would have
-    silently broadened authorization to org members (since ``require_client``
-    calls ``get_accessible_client`` → ``is_authorized_for_client`` which
-    OR-checks org membership) — a real behavior change, not a syntax cleanup.
-
-    This helper preserves the existing direct-ownership semantics. If product
-    later decides to open diagnostic outputs to org teammates, migrate routes
-    from ``require_client_owner`` to ``require_client`` explicitly with
-    customer comms — don't merge the two helpers silently.
-
-    Why a fourth helper despite the "prefer moving code, avoid new abstractions"
-    rule (``tasks/todo.md`` 2026-04-20 deferred-items entry): the rule's escape
-    valve is "revisit only if a fourth helper joins them." This is that fourth
-    helper. The alternative was a hidden behavior change in 7 endpoints.
-    """
-    client = db.query(Client).filter(Client.id == client_id, Client.user_id == current_user.id).first()
-    if not client:
-        raise HTTPException(status_code=404, detail="Client not found")
-    return client
+__all__ = [
+    "try_parse_risk",
+    "try_parse_risk_band",
+    "parse_json_list",
+    "parse_json_mapping",
+]

@@ -8,19 +8,18 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from security_utils import log_secure_operation
-from shared.error_messages import sanitize_error
+from shared.db_unit_of_work import db_transaction
 
 logger = logging.getLogger(__name__)
 from auth import require_current_user, require_verified_user
 from database import get_db
 from models import Client, DiagnosticSummary, PeriodType, User
 from prior_period_comparison import compare_periods
+from shared.client_access import require_client_owner
 from shared.diagnostic_response_schemas import PeriodComparisonResponse
-from shared.helpers import require_client_owner
 from shared.rate_limits import RATE_LIMIT_AUDIT, RATE_LIMIT_WRITE, limiter
 
 router = APIRouter(tags=["prior_period"])
@@ -167,14 +166,13 @@ async def save_prior_period(
         row_count=period_data.row_count,
     )
 
-    try:
+    with db_transaction(
+        db,
+        log_label="db_prior_period_save",
+        log_message="Database error saving prior period",
+    ):
         db.add(db_summary)
-        db.commit()
-        db.refresh(db_summary)
-    except SQLAlchemyError as e:
-        db.rollback()
-        logger.exception("Database error saving prior period")
-        raise HTTPException(status_code=500, detail=sanitize_error(e, log_label="db_prior_period_save"))
+    db.refresh(db_summary)
 
     return {
         "status": "success",

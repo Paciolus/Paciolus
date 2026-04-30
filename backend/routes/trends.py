@@ -19,7 +19,7 @@ from ratio_engine import (
     TrendAnalyzer,
 )
 from security_utils import log_secure_operation
-from shared.helpers import require_client_owner
+from shared.client_access import require_client_owner
 
 router = APIRouter(tags=["trends"])
 

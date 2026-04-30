@@ -1,8 +1,9 @@
 /**
  * Sprint 129: Multi-Period Comparison page tests (10 tests)
  *
- * Special pattern: no domain hook for file uploads — uses custom fetch + inline state.
- * The useMultiPeriodComparison hook handles comparison/export only.
+ * Sprint 750: page is now a composition root over usePeriodUploads +
+ * useMultiPeriodComparison + useMultiPeriodMemoExport. Tests mock all
+ * three hooks to keep this suite fast and focused on render/interaction.
  */
 import MultiPeriodPage from '@/app/tools/multi-period/page'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
@@ -12,6 +13,14 @@ import { render, screen } from '@/test-utils'
 const mockCompareResults = jest.fn()
 const mockExportCsv = jest.fn()
 const mockClear = jest.fn()
+const mockHandlePriorFile = jest.fn()
+const mockHandleCurrentFile = jest.fn()
+const mockHandleBudgetFile = jest.fn()
+const mockToggleBudget = jest.fn()
+const mockUploadsReset = jest.fn()
+const mockExportMemo = jest.fn()
+
+const idlePeriod = { file: null, status: 'idle' as const, result: null, error: null }
 
 jest.mock('@/contexts/AuthSessionContext', () => ({
   useAuthSession: jest.fn(() => ({
@@ -28,12 +37,24 @@ jest.mock('@/hooks', () => ({
     comparison: null, isComparing: false, isExporting: false, error: null,
     compareResults: mockCompareResults, exportCsv: mockExportCsv, clear: mockClear,
   })),
+  usePeriodUploads: jest.fn(() => ({
+    prior: idlePeriod,
+    current: idlePeriod,
+    budget: idlePeriod,
+    showBudget: false,
+    anyLoading: false,
+    canCompare: false,
+    handlePriorFile: mockHandlePriorFile,
+    handleCurrentFile: mockHandleCurrentFile,
+    handleBudgetFile: mockHandleBudgetFile,
+    toggleBudget: mockToggleBudget,
+    reset: mockUploadsReset,
+  })),
+  useMultiPeriodMemoExport: jest.fn(() => ({
+    exporting: false,
+    exportMemo: mockExportMemo,
+  })),
 }))
-
-jest.mock('@/utils', () => {
-  const actual = jest.requireActual('@/utils')
-  return { ...actual, apiDownload: jest.fn().mockResolvedValue({ ok: true, blob: new Blob(), filename: 'test.pdf' }), downloadBlob: jest.fn() }
-})
 
 jest.mock('framer-motion', () => ({
   motion: {

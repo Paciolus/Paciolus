@@ -70,6 +70,33 @@ export {
   type UseMultiPeriodComparisonReturn,
 } from './useMultiPeriodComparison';
 export {
+  usePeriodUploads,
+  type UsePeriodUploadsOptions,
+  type UsePeriodUploadsReturn,
+} from './usePeriodUploads';
+export {
+  useMultiPeriodMemoExport,
+  type MemoMetadata,
+  type UseMultiPeriodMemoExportReturn,
+} from './useMultiPeriodMemoExport';
+export {
+  useDashboardStats,
+  type DashboardStats,
+  type UseDashboardStatsOptions,
+  type UseDashboardStatsReturn,
+} from './useDashboardStats';
+export {
+  useActivityFeed,
+  type ToolActivityItem,
+  type UseActivityFeedOptions,
+  type UseActivityFeedReturn,
+} from './useActivityFeed';
+export {
+  useUserPreferences,
+  type UseUserPreferencesOptions,
+  type UseUserPreferencesReturn,
+} from './useUserPreferences';
+export {
   useJETesting,
   type UseJETestingReturn,
 } from './useJETesting';

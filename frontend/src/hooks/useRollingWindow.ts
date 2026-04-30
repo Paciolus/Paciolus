@@ -122,7 +122,7 @@ export function useRollingWindow(options: UseRollingWindowOptions = {}): UseRoll
     isLoading,
     error,
     hasData,
-    fetch,
+    fetch: fetchRollingData,
     clear,
   } = useFetchData<RollingWindowResponse, RollingWindowResponse, RollingWindowParams>({
     buildUrl: (id, params) => {
@@ -151,11 +151,11 @@ export function useRollingWindow(options: UseRollingWindowOptions = {}): UseRoll
     fetchWindow?: number,
     fetchPeriodType?: string
   ) => {
-    await fetch(fetchClientId, {
+    await fetchRollingData(fetchClientId, {
       window: fetchWindow,
       period_type: fetchPeriodType,
     });
-  }, [fetch]);
+  }, [fetchRollingData]);
 
   return {
     data,

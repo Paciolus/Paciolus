@@ -128,13 +128,18 @@ class TestHelpersReExports:
         assert callable(_log_tool_activity)
 
     def test_json_form_and_client_access_symbols(self) -> None:
-        from shared.helpers import (
+        # Native helpers stay in shared.helpers.
+        # Sprint 754: client-access helpers relocated to shared.client_access.
+        # All callers (5 routes + this test) migrated; no shim on shared.helpers.
+        from shared.client_access import (
             get_accessible_client,
             is_authorized_for_client,
-            parse_json_list,
-            parse_json_mapping,
             require_client,
             require_client_owner,  # Sprint 735
+        )
+        from shared.helpers import (
+            parse_json_list,
+            parse_json_mapping,
             try_parse_risk,
             try_parse_risk_band,
         )

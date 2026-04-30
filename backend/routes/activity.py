@@ -13,17 +13,16 @@ from typing import Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import case, func
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from security_utils import log_secure_operation
-from shared.error_messages import sanitize_error
 
 logger = logging.getLogger(__name__)
 from auth import require_current_user, require_verified_user
 from database import get_db
 from models import ActivityLog, Client, ToolActivity, User
 from shared.audit_chain import GENESIS_HASH, compute_chain_hash, verify_audit_chain
+from shared.db_unit_of_work import db_transaction
 from shared.filenames import (
     get_filename_display,
     hash_filename,
@@ -142,7 +141,11 @@ def log_activity(
         sheet_count=activity.sheet_count,
     )
 
-    try:
+    with db_transaction(
+        db,
+        log_label="db_activity_create",
+        log_message="Database error creating activity log",
+    ):
         db.add(db_activity)
         db.flush()  # Assigns ID + timestamp before chain hash computation
 
@@ -160,12 +163,7 @@ def log_activity(
         previous_hash = previous_record.chain_hash if previous_record else GENESIS_HASH
         db_activity.chain_hash = compute_chain_hash(previous_hash or GENESIS_HASH, db_activity)
 
-        db.commit()
-        db.refresh(db_activity)
-    except SQLAlchemyError as e:
-        db.rollback()
-        logger.exception("Database error creating activity log")
-        raise HTTPException(status_code=500, detail=sanitize_error(e, log_label="db_activity_create"))
+    db.refresh(db_activity)
 
     log_secure_operation("activity_log_created", f"Activity {db_activity.id} created for user {current_user.id}")
 
@@ -303,7 +301,11 @@ def clear_activity_history(
     """Clear all activity history for the user (soft-delete: sets archived_at)."""
     log_secure_operation("activity_clear_request", f"User {current_user.id} requesting activity history archival")
 
-    try:
+    with db_transaction(
+        db,
+        log_label="db_activity_clear",
+        log_message="Database error archiving activity history",
+    ):
         archived_count = soft_delete_bulk(
             db,
             db.query(ActivityLog).filter(
@@ -313,10 +315,6 @@ def clear_activity_history(
             user_id=current_user.id,
             reason="user_clear_history",
         )
-    except SQLAlchemyError as e:
-        db.rollback()
-        logger.exception("Database error archiving activity history")
-        raise HTTPException(status_code=500, detail=sanitize_error(e, log_label="db_activity_clear"))
 
     log_secure_operation(
         "activity_clear_complete", f"Archived {archived_count} activity entries for user {current_user.id}"
@@ -482,14 +480,13 @@ def log_tool_activity(
         engagement_id=engagement_id,
     )
 
-    try:
+    with db_transaction(
+        db,
+        log_label="db_tool_activity",
+        log_message="Database error creating tool activity",
+    ):
         db.add(db_activity)
-        db.commit()
-        db.refresh(db_activity)
-    except SQLAlchemyError as e:
-        db.rollback()
-        logger.exception("Database error creating tool activity")
-        raise HTTPException(status_code=500, detail=sanitize_error(e, log_label="db_tool_activity"))
+    db.refresh(db_activity)
 
     parsed_summary = None
     if db_activity.summary_json:
@@ -546,13 +543,12 @@ def update_user_preferences(
 
     settings["favorite_tools"] = prefs.favorite_tools
 
-    try:
+    with db_transaction(
+        db,
+        log_label="db_prefs_update",
+        log_message="Database error updating user preferences",
+    ):
         current_user.settings = json.dumps(settings)
-        db.commit()
-    except SQLAlchemyError as e:
-        db.rollback()
-        logger.exception("Database error updating user preferences")
-        raise HTTPException(status_code=500, detail=sanitize_error(e, log_label="db_prefs_update"))
 
     return UserPreferencesResponse(favorite_tools=prefs.favorite_tools)
 

@@ -15,8 +15,13 @@ jest.mock('@/contexts/AuthSessionContext', () => ({
   })),
 }))
 
+const mockApiDownload = jest.fn()
+const mockDownloadBlob = jest.fn()
+
 jest.mock('@/utils/apiClient', () => ({
   apiPost: jest.fn(),
+  apiDownload: (...args: unknown[]) => mockApiDownload(...args),
+  downloadBlob: (...args: unknown[]) => mockDownloadBlob(...args),
 }))
 
 jest.mock('@/components/ui/Reveal', () => ({
@@ -75,16 +80,9 @@ const sampleResponse = {
 }
 
 describe('LoanAmortizationPage', () => {
-  let createUrlSpy: jest.Mock
-  let revokeUrlSpy: jest.Mock
-
   beforeEach(() => {
     jest.clearAllMocks()
     mockApiPost.mockResolvedValue({ ok: true, status: 200, data: sampleResponse })
-    createUrlSpy = jest.fn(() => 'blob:mock')
-    revokeUrlSpy = jest.fn()
-    Object.defineProperty(URL, 'createObjectURL', { value: createUrlSpy, configurable: true })
-    Object.defineProperty(URL, 'revokeObjectURL', { value: revokeUrlSpy, configurable: true })
   })
 
   it('renders hero header with default form values', () => {
@@ -162,42 +160,39 @@ describe('LoanAmortizationPage', () => {
     expect(screen.queryByText('Summary')).not.toBeInTheDocument()
   })
 
-  it('downloads CSV, XLSX, and PDF with the correct endpoints and bearer token', async () => {
-    const fetchMock = jest.fn().mockResolvedValue({
+  it('delegates CSV/XLSX/PDF export to apiDownload + downloadBlob', async () => {
+    mockApiDownload.mockResolvedValue({
       ok: true,
-      blob: async () => new Blob(['bytes']),
+      blob: new Blob(['bytes']),
+      filename: 'loan_amortization_schedule.csv',
     })
-    global.fetch = fetchMock as unknown as typeof fetch
 
     render(<LoanAmortizationPage />)
     fireEvent.click(screen.getByRole('button', { name: /Generate Schedule/i }))
     await waitFor(() => expect(screen.getByRole('button', { name: /Download CSV/i })).toBeInTheDocument())
 
     fireEvent.click(screen.getByRole('button', { name: /Download CSV/i }))
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(mockApiDownload).toHaveBeenCalledTimes(1))
 
     fireEvent.click(screen.getByRole('button', { name: /Download XLSX/i }))
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(mockApiDownload).toHaveBeenCalledTimes(2))
 
     fireEvent.click(screen.getByRole('button', { name: /Download PDF/i }))
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3))
+    await waitFor(() => expect(mockApiDownload).toHaveBeenCalledTimes(3))
 
-    const urls = fetchMock.mock.calls.map((call) => String(call[0]))
-    expect(urls[0]).toContain('/audit/loan-amortization/export.csv')
-    expect(urls[1]).toContain('/audit/loan-amortization/export.xlsx')
-    expect(urls[2]).toContain('/audit/loan-amortization/export.pdf')
+    const endpoints = mockApiDownload.mock.calls.map((call) => String(call[0]))
+    expect(endpoints[0]).toBe('/audit/loan-amortization/export.csv')
+    expect(endpoints[1]).toBe('/audit/loan-amortization/export.xlsx')
+    expect(endpoints[2]).toBe('/audit/loan-amortization/export.pdf')
 
-    const headers = fetchMock.mock.calls[0][1].headers
-    expect(headers).toMatchObject({
-      Authorization: 'Bearer test-token',
-      'X-Requested-With': 'XMLHttpRequest',
-    })
-    expect(createUrlSpy).toHaveBeenCalledTimes(3)
+    expect(mockApiDownload.mock.calls[0][1]).toBe('test-token')
+    expect(mockApiDownload.mock.calls[0][2]).toEqual(expect.objectContaining({ method: 'POST' }))
+
+    expect(mockDownloadBlob).toHaveBeenCalledTimes(3)
   })
 
   it('shows an error when an export response is not ok', async () => {
-    const fetchMock = jest.fn().mockResolvedValue({ ok: false, blob: async () => new Blob() })
-    global.fetch = fetchMock as unknown as typeof fetch
+    mockApiDownload.mockResolvedValue({ ok: false, error: 'CSV export failed' })
 
     render(<LoanAmortizationPage />)
     fireEvent.click(screen.getByRole('button', { name: /Generate Schedule/i }))
@@ -205,5 +200,6 @@ describe('LoanAmortizationPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Download CSV/i }))
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('CSV export failed'))
+    expect(mockDownloadBlob).not.toHaveBeenCalled()
   })
 })

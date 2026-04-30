@@ -38,7 +38,7 @@ exclude_patterns = ["tests/", "shared/soft_delete.py", "client_manager.py"]
 [rules.revenue_contract_fields]
 enabled = true
 description = "Contract field retention for ASC 606 / IFRS 15 (Phase XLVII invariant)"
-file = "revenue_testing_engine.py"
+file = "services/audit/revenue_testing/analysis.py"
 required_fields = [
     "contract_id",
     "performance_obligation_id",

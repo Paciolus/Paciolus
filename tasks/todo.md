@@ -12,10 +12,12 @@
 
 ## Hotfixes
 
-> For non-sprint commits that fix accuracy, typos, or copy issues without
-> new features or architectural changes. Each entry is one line.
-> Format: `- [date] commit-sha: description (files touched)`
+> Non-sprint commits that fix accuracy, typos, or copy issues without new features or architectural changes. One line per entry: `- [date] commit-sha: description (files touched)`.
+>
+> Pre-April 2026 entries archived to [`tasks/archive/hotfix-log-pre-april-2026.md`](archive/hotfix-log-pre-april-2026.md).
 
+- [2026-04-29] PR #126 follow-up — `lint_engine_base_adoption.py` taught to follow ADR-018 shims to `services/audit/<tool>/analysis.py`. After `fae3e3e9` relocated 7 engines to dynamic-namespace shims, the AST-only check found no classes at the legacy path and false-flagged the 4 already-migrated engines (JE/AP/Payroll/Inventory) as off-pattern, breaking `test_engine_base_lint.py::TestKnownMigrated` on both Python 3.11 and Postgres 15 jobs. New `_resolve_shim_canonical()` helper detects both shim shapes (static `from services.audit.<tool>.analysis import *` and dynamic `from services.audit.<tool> import analysis as _impl`) and re-checks the canonical file. Findings drop 12→8 — the 4 unmigrated targets (AR Aging, FA, Revenue, SoD) and 4 borderline engines remain, matching `test_post_triage_finding_count` expectations. File: `scripts/lint_engine_base_adoption.py`.
+- [2026-04-29] 016aafed: PR #126 CI gate alignment — `accounting_policy.toml` `[rules.revenue_contract_fields].file` repointed `revenue_testing_engine.py` → `services/audit/revenue_testing/analysis.py` (the legacy path is now a dynamic-namespace shim after `fae3e3e9` ADR-018 batch, so AST-based class detection found nothing and false-flagged ASC 606/IFRS 15 regression). OpenAPI snapshot regenerated to absorb 4 operation-description refreshes (`/export/{excel,pdf,leadsheets,financial-statements}` Sprint 748b pipeline-delegation docstrings); paths/schemas counts unchanged at 220/422. Files: `backend/guards/accounting_policy.toml`, `scripts/openapi-snapshot.json`.
 - [2026-04-28] nightly QA Warden green-restore — `test_security_hardening_2026_04_20.py::TestRateLimitFailClosed` `_prod_env()` fixture now sets `STRIPE_PUBLISHABLE_KEY` and `STRIPE_WEBHOOK_SECRET` placeholders alongside `STRIPE_SECRET_KEY`. Without them, the subprocess env was missing those vars, python-dotenv backfilled from `backend/.env` (developer's test-mode Stripe key), and Sprint 719's production format guard hard-failed config import — surfacing as 2 test failures in the 2026-04-28 nightly. Companion to `e6627567` (helpers-allowlist) — together both nightly RED items resolved. File: `backend/tests/test_security_hardening_2026_04_20.py`.
 - [2026-04-24] record Sprint 716 COMPLETE — PR #103 merged as `6802bd63`, Render auto-deploy landed 12:51 UTC, Loki Logs Explorer confirmed 40 ingested lines with correct labels, all 6 saved queries authored. Runbook (`docs/runbooks/observability-loki.md`) §4 LogQL corrected to reflect what actually works against our ingested streams (line-filter + `| json | level="…"` instead of indexed-label selectors for level/logger, since Grafana Cloud's ingest layer doesn't index those at our volume). Lesson captured in `tasks/lessons.md` about verifying deployed code before debugging runtime (I burned ~15 min on label hypotheses before discovering the commit was local-only and Render was still running Sprint 713's image). Files: `tasks/todo.md`, `tasks/lessons.md`, `docs/runbooks/observability-loki.md`.
 - [2026-04-23] archive_sprints.sh number-extraction fix + archive of Sprints 673–677 — replaced broken grep-pipeline (which filtered to Status lines first, losing the Sprint number on the preceding header) with an awk block that pairs each `### Sprint NNN` header to its Status body and emits the number when COMPLETE. Dry-run confirmed extraction (673, 674, 675, 676, 677); archival produced `tasks/archive/sprints-673-677-details.md` (142 lines, 5 sprint bodies) and reduced Active Phase to just Sprint 611 (PENDING). Unblocks Sprint 689a's `Sprint 689a:` commit under the archival gate. Files: `scripts/archive_sprints.sh`, `tasks/todo.md`, `tasks/archive/sprints-673-677-details.md`.
@@ -33,16 +35,6 @@
 - [2026-04-07] 73aaa51: dependency patch — uvicorn 0.44.0, python-multipart 0.0.24 (nightly report remediation)
 - [2026-04-06] 39791ec: secret domain separation — AUDIT_CHAIN_SECRET_KEY independent from JWT, backward-compat verification fallback, TLS evidence signing updated
 - [2026-04-04] 29f768e: dependency upgrades — 14 packages updated, 3 security-relevant (fastapi 0.135.3, SQLAlchemy 2.0.49, stripe 15.0.1), tzdata 2026.1, uvicorn 0.43.0, pillow 12.2.0, next watchlist patch
-- [2026-03-26] e04e63e: full sweep remediation — sessionStorage financial data removal, CSRF on /auth/refresh, billing interval base-plan fix, Decimal float-cast elimination (13 files, 16 tests added)
-- [2026-03-21] 8b3f76d: resolve 25 test failures (4 root causes: StyleSheet1 iteration, Decimal returns, IIF int IDs, ActivityLog defaults), 5 report bugs (procedure rotation, risk tier labels, PDF overflow, population profile, empty drill-downs), dependency updates (Next.js 16.2.1, Sentry, Tailwind, psycopg2, ruff)
-- [2026-03-21] 8372073: resolve all 1,013 mypy type errors — Mapped annotations, Decimal/float casts, return types, stale ignores (#49)
-- [2026-03-20] AUDIT-07-F5: rate-limit 5 unprotected endpoints — webhook (10/min), health (60/min), metrics (30/min); remove webhook exemption from coverage test
-- [2026-03-19] CI fix: 8 test failures — CircularDependencyError (use_alter), scheduler_locks mock, async event loop, rate limit decorators, seat enforcement assertion, perf budget, PG boolean literals
-- [2026-03-18] 7fa8a21: AUDIT-07-F1 bind Docker ports to loopback only (docker-compose.yml)
-- [2026-03-18] 52ddfe0: AUDIT-07-F2 replace curl healthcheck with python-native probe (backend/Dockerfile)
-- [2026-03-18] 5fc0453: AUDIT-07-F3 create /app/data with correct ownership before USER switch (backend/Dockerfile)
-- [2026-03-07] fb8a1fa: accuracy remediation — test count, storage claims, performance copy (16 frontend files)
-- [2026-02-28] e3d6c88: Sprint 481 — undocumented (retroactive entry per DEC F-019)
 
 ---
 
@@ -54,76 +46,50 @@
 | `PeriodFileDropZone.tsx` deferred type migration | TODO open for 3+ consecutive audit cycles. Benign incomplete type migration, not a hack. Revisit when touching the upload surface for another reason. | Project-Auditor Audit 35 (2026-04-14) |
 | `routes/billing.py::stripe_webhook` decomposition (signature-verify / dedup / error-mapping triad) | Already touched lightly in the 2026-04-20 refactor pass; full extraction pairs better with the deferred webhook-coverage sprint flagged in Sprint 676 review (handler is currently exercised by 6 route-test files but lacks unit coverage). Bundle both then. | Refactor Pass 2026-04-20 |
 | `useTrialBalanceUpload` decomposition into composable hooks | Hook's state machine (progress indicator, recalc debounce, mapping-required preflight handoff) is tightly coupled to consumer semantics. Not a drop-in extraction — needs Playwright coverage of the mapping-required flow before a split is safe. | Refactor Pass 2026-04-20 |
-| Move client-access helpers (`is_authorized_for_client`, `get_accessible_client`, `require_client`) out of `shared/helpers.py` shim | Three helpers depend on `User` / `Client` / `OrganizationMember` / `require_current_user`; a dedicated `shared/client_access.py` module isn't justified under the "prefer moving code, avoid new abstractions" guidance. Revisit if a fourth helper joins them, or if the shim grows another responsibility. | Refactor Pass 2026-04-20 |
 | `routes/auth_routes.py` cookie/CSRF helper extraction | Module is already reasonably thin; cookie/token primitives (`_set_refresh_cookie`, `_set_access_cookie`, etc.) are security-critical. Touching them without a specific bug or audit finding is net-negative. Revisit only if a follow-up auth/CSRF audit produces an actionable finding. | Refactor Pass 2026-04-20 |
 
 ---
 
-## Active Phase
-> **Launch-readiness Council Review — 2026-04-16.** 8-agent consensus: code is launch-ready; gating path is CEO calendar (Phase 3 validation → Phase 4.1 Stripe cutover → legal sign-off). **Recommended path: ship on ~3-week ETA** with two engineering amendments — Sprint 673 below removes the 2026-05-09 TLS-override fuse before it collides with launch week, and Guardian's 5-item production-behavior checklist runs in parallel with Phase 3/4.1 (tracked in [`ceo-actions.md`](ceo-actions.md) "This Week's Action Map"). Full verdict tradeoff map in conversation transcript.
-> **Prior sprint detail:** All pre-Sprint-673 work archived under `tasks/archive/`. See [`tasks/COMPLETED_ERAS.md`](COMPLETED_ERAS.md) for the era index and archive file pointers.
-> **CEO remediation brief 2026-04-15** — Sprints 665–671 cleared the blocking TB-intake issues from the six-file test sweep. Sprints 668–671 remaining pending items archived alongside — no longer blocking launch.
-> Sprints 673–677 archived to `tasks/archive/sprints-673-677-details.md`.
-> Sprint 611 + Sprints 677–714 archived 2026-04-24 to `tasks/archive/sprints-611-714-details.md` (eight post-Sprint-673 batches: Post-Audit Remediation, Anomaly Framework Hardening, Security Hardening Follow-Ups, Design Refresh, Production Bug Triage, Nightly Agent Remediation, Branding Coverage Completion, P2 Sentry Sweep). Only Sprint 715 remains pending.
-> Sprints 716–720 archived to `tasks/archive/sprints-716-720-details.md`.
-> Sprints 721–725 archived to `tasks/archive/sprints-721-725-details.md`.
-> Sprints 726–731 archived to `tasks/archive/sprints-726-731-details.md`.
-> Sprints 715–729 archived to `tasks/archive/sprints-715-729-details.md`.
-> Sprints 733–737 archived to `tasks/archive/sprints-733-737-details.md`.
+## Architectural Remediation Initiative — COMPLETE 2026-04-29
 
-### Sprint 732: cleanup_scheduler recurring InternalError triage
-**Status:** **STEPS 1-3 COMPLETE 2026-04-28 — Sprint 740 ships the structural fix; awaits next post-deploy cycle to surface the actual root psycopg2 class for Sprint 741.** Initial post-Sprint-737-deploy silence (13:00–16:08 UTC, ~3h) was deployment-churn artifact: each merged PR (#117 13:00, #120 13:47, #119 14:13, #121 15:08) reset the cleanup_scheduler's 60-min interval timer, and the first post-deploy cycle on Sprint 739's deploy at 15:08 UTC fired at 16:08 UTC and **hit the failure with the new `error_orig_fqn` field populated**. The verification-window approach paid off — silence was coincidental (deploy churn, not structural fix), pattern resumed once a deploy had a clean 60-min window. Sprint 737 was NOT the fix. Sprint 740 (immediately below) addresses the cascade-masking that hid the real root class; Sprint 741 will address whatever Sprint 740 unmasks.
-
-**Leaf class identified (16:08:55 UTC `reset_upload_quotas` + 16:09:28 UTC `dunning_grace_period`):**
-```
-error_type_fqn:    sqlalchemy.exc.InternalError    (SQLAlchemy wrapper)
-error_cause_fqn:   psycopg2.errors.InFailedSqlTransaction
-error_orig_fqn:    psycopg2.errors.InFailedSqlTransaction
-error_orig_pgcode: 25P02                            ← SQLSTATE: in_failed_sql_transaction
-```
-
-**SQLSTATE 25P02** ("current transaction is aborted, commands ignored until end of transaction block") means a prior statement in the cleanup job's session/transaction failed, and subsequent statements are rejected until rollback. **The real failing statement is masked by this cascade** — likely the lock-release `DELETE FROM scheduler_locks` in `with_scheduler_lock`'s finally block (`backend/cleanup_scheduler.py:154-157`) firing on a session whose actual cleanup work already failed silently. Step 3's fix needs to rollback the session BEFORE the lock release tries to use it.
-**Priority:** P2 → P1 once Phase 4.1 lands (silent recurring failure on `dunning_grace_period` blocks delinquent-subscription auto-cancellation, which becomes customer-visible the moment real money flows).
-**Source:** Sprint 715 Render-log sweep 2026-04-26.
-
-**Observed signal (2026-04-25 to 2026-04-26 in Render logs, srv-d6ie9l56ubrc73c7eq2g):**
-```
-ERROR cleanup_scheduler  Cleanup job failed: {... 'job_name': 'reset_upload_quotas',  'error': 'InternalError: scheduled cleanup failed'}
-ERROR cleanup_scheduler  Cleanup job failed: {... 'job_name': 'dunning_grace_period', 'error': 'InternalError: scheduled cleanup failed'}
-```
-Both jobs fire roughly every hour; each invocation completes in 30–80ms with `records_processed: 0` and the same `InternalError`. **Diagnosis (2026-04-27):** the bare class name `InternalError` is ambiguous — Python's `builtins`, `sqlalchemy.exc`, and `psycopg2` all expose it. `cleanup_scheduler._run_cleanup_job` was using `sanitize_exception(exc, context="scheduled cleanup")` (correct PII-safe choice) but that strips both the message and the module path, leaving the log fingerprint useless for triage.
-
-**Step 1 — Observability fix (DONE):**
-- `backend/cleanup_scheduler.py::CleanupTelemetry` — added `error_type_fqn` field (e.g. `sqlalchemy.exc.InternalError`, `psycopg2.errors.SerializationFailure`). Module-path metadata only; no PII risk.
-- `_run_cleanup_job` populates `error_type_fqn` from `caught_exc` so the structured log carries the disambiguating fingerprint without leaking exception messages.
-- `tests/test_cleanup_scheduler.py::test_failure_log_includes_traceback_exc_info` extended to assert `error_type_fqn` appears with the FQN (`builtins.RuntimeError` for the test's deliberate `RuntimeError`). 28/28 cleanup-scheduler tests passing.
-
-**Step 2 — Root cause investigation (DONE 2026-04-28):**
-- Sub-step 2a (DONE 2026-04-27 17:14 UTC): Pulled Render logs filtered to `error_type_fqn` after Step 1's deploy (`dep-d7nom57avr4c73fgn9ig`, live 16:14:41 UTC). **Result: `sqlalchemy.exc.InternalError` on both jobs** (`reset_upload_quotas` + `dunning_grace_period`, both at 17:14 UTC). This is the SQLAlchemy wrapper — the leaf cause sits one level deeper inside `caught_exc.__cause__` / `caught_exc.orig`.
-- Sub-step 2b (DONE 2026-04-27 via PR #117): Extended cleanup_scheduler observability to also capture `__cause__` (raise-from chain), `.orig` (SQLAlchemy DBAPIError attribute holding the wrapped psycopg2 exception), and `orig.pgcode` (Postgres SQLSTATE — standardized 5-char code, no PII). 29/29 cleanup-scheduler tests passing.
-- **Sub-step 2c (DONE 2026-04-28 16:08 UTC): leaf class identified via the new fields.** First post-deploy cycle on Sprint 739's deploy (15:08 UTC) fired at 16:08 UTC for `reset_upload_quotas` and 16:09 UTC for `dunning_grace_period` — both with full new-field population. Leaf: `psycopg2.errors.InFailedSqlTransaction` (SQLSTATE 25P02). The intervening 13:00–16:08 UTC silence was deploy-churn artifact (4 successive PR merges each reset the cleanup_scheduler's 60-min interval timer; first uninterrupted 60-min window was Sprint 739's deploy → 16:08 cycle).
-- Sub-step 2d (Sentry cross-check — NO LONGER NEEDED): root cause now identified directly from Render logs via the Sprint 732 step 2b new fields. Sentry tracebacks for past 48h would corroborate if needed, but the SQLSTATE + class-name pair is unambiguous.
-
-**Step 3 — Fix + coverage (REQUIRED, file as Sprint 740):**
-
-The InFailedSqlTransaction error is a **cascade symptom**, not the root failure. SQLSTATE 25P02 means "the prior statement in this transaction failed; subsequent statements are rejected." The visible failure is whatever statement fired AFTER the actual root failure on the same session — most likely the lock-release `DELETE FROM scheduler_locks` in `backend/cleanup_scheduler.py::with_scheduler_lock`'s finally block (line 154–157). The real first failure (in `cleanup_func` body) is masked.
-
-Sprint 740 fix outline:
-1. **Save & rollback:** wrap the `cleanup_func(db)` invocation inside `_run_cleanup_job` in its own `try/except` that calls `db.rollback()` on any exception BEFORE the `with_scheduler_lock` finally block runs. That way the lock release runs on a clean session, the InFailedSqlTransaction cascade is broken, and the original exception (with its real class + traceback) surfaces in the log + Sentry instead of the generic 25P02.
-2. **Or:** use a separate `SessionLocal()` for the lock acquire/release vs. the cleanup work. Two sessions = lock-release session is unaffected by cleanup-session aborts. Slightly heavier infra change but eliminates the failure mode entirely.
-3. **Either way, add an integration test** (`tests/test_cleanup_scheduler_session_isolation.py` or extend the existing file) that injects a deliberate IntegrityError mid-cleanup and asserts: (a) the original exception class surfaces in logs (not InFailedSqlTransaction), (b) the lock is still released, (c) subsequent cleanup cycles run normally.
-4. **Verify dunning escalation end-to-end** on a staging-equivalent fixture once the cascade is fixed — was originally blocked by the masked failure; now actionable.
-
-**Effort estimate:** Step 3 work as Sprint 740 = 0.5–1 sprint. Total Sprint 732 = ~1 sprint (Steps 1–2 done) + Sprint 740's 0.5–1 sprint for the structural fix.
-
-**Pre-requisites for Sprint 740:** None — observability is already shipped, root cause is named, fix path is mechanical.
+> **All 18 sprints (742-759) shipped + post-initiative finishing pass closed 4 partial follow-ups.** Detail archived to [`tasks/archive/sprints-742-759-details.md`](archive/sprints-742-759-details.md). Scorecard at `reports/architectural-remediation-scorecard-2026-04-29.md`.
+>
+> **Outcome (TL;DR):** Phases 0/1/4/6/7/8 fully resolved; Phases 2/3/5 partial with explicit follow-up scope filed in `## Refactor Intake` below. 6 ADRs (014-019 + quality thresholds), 3 advisory CI lints, ~150 new pytest + ~50 new jest tests. Net code shrinkage: `auth_routes.py` 778 → ~270; `routes/export_diagnostics.py` 661 → 218; multi-period page 501 → 423; dashboard page 519 → 383; `useFormValidation.ts` 516 → 280.
+>
+> **Governance going forward:** quarterly architecture health review (run the 3 advisory lints, check deferred-items triggers, file ≤2 follow-up sprints if warranted); "no new god files" policy (code-review enforced); refactor intake lane visible in `## Refactor Intake` below. Subsequent sprints should be product-driven, not architecture-driven.
 
 ---
 
+## Refactor Intake
+
+> Visible landing zone for new architectural-debt findings between
+> initiatives. Surface via the advisory CI lints, the quarterly arch
+> health review, or organic discovery during product work. Reviewed
+> quarterly; items reaching critical mass (e.g., 5+ targeting the same
+> surface) roll up into a sprint entry under `## Active Phase`.
+>
+> Same shape as the `## Deferred Items` table above — the discipline
+> is that intake is visible and gets reviewed.
+
+| Item | Reason | Source |
+|------|--------|--------|
+| ~22 engines awaiting per-tool relocation per ADR-018 | 10 relocated total (recon + flux + cutoff_risk + 7 testing engines AP/AR/FA/Inv/JE/Payroll/Revenue). Remaining are mostly calculators/indicators where ADR-018 says "default keep flat" — per-tool relocation justified only when reorganization adds clear value beyond a shim. | `lint_domain_relocation.py` (advisory CI) — count 22 |
+| 16 route handlers still importing engine orchestration symbols | Engine relocations alone don't fix this. Each route needs a service-layer extraction (`services/audit/<tool>/service.py` with orchestrator + thin route delegate) per ADR-015. Heavier per-tool refactor work; pattern is established by Sprint 745 (`activity.py`) + Sprint 746 (auth services). | `lint_route_layer_purity.py` (advisory CI) — count 16 |
+| 9 testing engines not subclassing `AuditEngineBase` | Pre-existing backlog from Sprint 726 | `lint_engine_base_adoption.py` (advisory CI) |
+| `routes/billing.py::stripe_webhook` decomposition | Bundled with deferred webhook coverage sprint | `## Deferred Items` |
+
+---
+
+## Active Phase
+
+> **Launch-readiness Council Review — 2026-04-16.** 8-agent consensus: code is launch-ready; gating path is CEO calendar (Phase 3 validation → Phase 4.1 Stripe cutover → legal sign-off). Full verdict tradeoff map in conversation transcript.
+>
+> **Prior sprint detail:** All pre-Sprint-738 work archived under `tasks/archive/`. See [`tasks/COMPLETED_ERAS.md`](COMPLETED_ERAS.md) for the era index and archive file pointers. Sprints 732/739/740 archived to [`tasks/archive/sprints-732-740-details.md`](archive/sprints-732-740-details.md). Sprints 742–759 (architectural remediation) archived to [`tasks/archive/sprints-742-759-details.md`](archive/sprints-742-759-details.md).
+
 ### Sprint 738: Alembic migration drift cleanup
-**Status:** PENDING — pre-4.1 sequence position 1.5 (immediately after Sprint 737, before Sprint 733). Could slip post-4.1 if priority shifts; not customer-visible either way.
-**Priority:** P3. Catches up on dormant tech debt surfaced by Sprint 737's drift test. Does not block any sprint.
-**Source:** Sprint 737's parity test (`backend/tests/test_alembic_models_parity.py`) discovered 4 tables and 6 columns defined on models with no corresponding Alembic migration. Filed as a follow-up sprint so Sprint 737 itself stayed in scope (delete dead code + add drift detection).
+**Status:** PENDING — pre-4.1 sequence position 1.5. Could slip post-4.1 if priority shifts; not customer-visible either way.
+**Priority:** P3. Catches up on dormant tech debt surfaced by Sprint 737's drift test.
+**Source:** Sprint 737's parity test (`backend/tests/test_alembic_models_parity.py`) discovered 4 tables and 6 columns defined on models with no corresponding Alembic migration.
 
 Write Alembic migrations for the documented drift in `PRE_EXISTING_DRIFT_TABLES` and `PRE_EXISTING_DRIFT_COLUMNS`. As each migration lands, remove the corresponding entry from the allow-list. When both allow-lists are empty, the parity test enforces full Alembic-models equivalence going forward.
 
@@ -153,48 +119,94 @@ Write Alembic migrations for the documented drift in `PRE_EXISTING_DRIFT_TABLES`
 
 ---
 
-### Sprint 739: Remove orphaned `bulk_upload_cleanup` job (post-Sprint-720 dead code)
-**Status:** COMPLETE 2026-04-28. Deleted `_job_bulk_upload_cleanup` (~22 lines) + its scheduler registration (~7 lines) from `backend/cleanup_scheduler.py`. 29/29 cleanup_scheduler tests passing post-deletion. Production verification post-deploy: `Bulk upload cleanup failed: ImportError` log pattern should drop to zero firings.
-**Priority:** P3 (production noise; not customer-facing). Surfaced during Sprint 732 Step 2c log analysis 2026-04-28.
-**Source:** Sprint 720's `bulk_job_store` refactor removed `_evict_stale_jobs` from `routes/bulk_upload.py` (the new store handles eviction internally — `routes/bulk_upload.py:74` comment: *"bulk_job_store handles eviction itself (Redis TTL or in-memory LRU+age cap); no explicit _evict_stale_jobs call needed"*). The cleanup_scheduler call site at `cleanup_scheduler.py:403` was orphaned with `from routes.bulk_upload import _evict_stale_jobs`, raising `ImportError` on every scheduled run since Sprint 720's deploy. Render logs confirm firings going back at least 11:54 UTC 2026-04-28 today (and through Sprint 732 Step 2c's window).
+### Sprint 741: cleanup_scheduler real-root structural fix (post-Sprint-740 follow-up)
+**Status:** PENDING — depends on Sprint 740 post-deploy log read to identify the actual cleanup_func failure.
+**Priority:** P2 → P1 once Phase 4.1 lands.
+**Source:** Sprint 732 / 740 (archived to [`tasks/archive/sprints-732-740-details.md`](archive/sprints-732-740-details.md)).
 
-**What landed:**
-- Deleted `_job_bulk_upload_cleanup` function from `backend/cleanup_scheduler.py:390-411`.
-- Removed scheduler registration block at `cleanup_scheduler.py:636-642` (the `_scheduler.add_job(_job_bulk_upload_cleanup, ...)` entry).
-- Net: ~30 lines removed; no replacement needed (per Sprint 720's own design).
+Sprint 740 unmasked the cascade — `psycopg2.errors.InFailedSqlTransaction` (SQLSTATE 25P02) was the visible symptom; the real first failure inside `cleanup_func(db)` was hidden behind it. After Sprint 740's deploy + 1h, pull `error_orig_fqn` from the next cleanup-cycle failure log. Expected leaf class: probably `psycopg2.errors.SerializationFailure`, `psycopg2.OperationalError` with pgcode `08006` (matches Sentry's SSLEOFError signal), or something genuinely surprising. **That class names the structural fix.**
 
-**Why it took 8 sprints to surface:** the failure log message starts with "Bulk upload cleanup failed", not "Cleanup job failed" — Sprint 732's investigation queries filtered for the latter. Sprint 732 Step 2c's broader cleanup_scheduler-logger query caught it.
+**Pre-requisite:** Sprint 740 production deploy completed + at least one post-deploy cleanup cycle observed with the new field populated.
 
-**Out of scope:**
-- No regression test added — the absence of the schedule registration *is* the test. Adding `_scheduler.add_job(_job_bulk_upload_cleanup, ...)` back would fail because the function doesn't exist.
-
-**Verification:**
-- 29/29 `test_cleanup_scheduler.py` tests passing.
-- Production deploy after Sprint 739 lands: zero `Bulk upload cleanup failed` log entries on the next 30-min cycle window.
+**Once root class is known, scope is:**
+1. Fix the actual failing statement in the cleanup_func body for whichever job (`reset_upload_quotas`, `dunning_grace_period`, or both).
+2. Add a regression test that reproduces the underlying root cause and asserts the cleanup cycle completes without raising.
+3. Verify dunning escalation end-to-end on a staging-equivalent fixture once the cascade is fixed.
 
 ---
 
-### Sprint 740: rollback before lock release in `_run_cleanup_job` (Sprint 732 Step 3 fix)
-**Status:** COMPLETE 2026-04-28. 3-line fix added to `_run_cleanup_job` + 1 new contract test pinning the rollback-ordering invariant. 30/30 cleanup_scheduler tests passing locally. Ships the structural fix Sprint 732 Step 3 was waiting on.
-**Priority:** P2 (cleanup-scheduler is failing every ~60 min in production with masked-symptom 25P02; Sprint 740 unmasks the real root cause for the next investigation sprint).
-**Source:** Sprint 732 Step 2c (2026-04-28 16:08 UTC) identified the leaf class as `psycopg2.errors.InFailedSqlTransaction` (SQLSTATE 25P02). Investigation revealed this was a cascade symptom — the cleanup_func body fails first (real root, masked), session enters aborted state, `with_scheduler_lock`'s finally executes `DELETE FROM scheduler_locks` on the same aborted session, that DELETE fails with 25P02, and the 25P02 propagates out as the visible exception.
+### Sprint 760: Dependency hygiene — patches + safe minors (2026-04-29 nightly)
+**Status:** PENDING. Sourced from 2026-04-29 nightly Dependency Sentinel (RED only signal — all other agents GREEN).
+**Priority:** P3. Routine maintenance batch; no security urgency at the patch/minor level.
+**Source:** `reports/nightly/2026-04-29.md` Dependency Sentinel section.
 
-**The fix:** wrap `cleanup_func(db)` in a try/except inside the `with with_scheduler_lock(...)` block. On any exception, call `db.rollback()` BEFORE re-raising. The lock-release DELETE in `with_scheduler_lock`'s finally then runs on a clean session, the DELETE succeeds, and the original `cleanup_func` exception class propagates out unmasked.
+Bundle the 19 patch + safe-minor updates into one commit, mirroring the 2026-04-19/2026-04-22 hygiene-batch pattern.
 
-**Side benefit beyond stability:** Sprint 732 step 2b's leaf-class observability fields (`error_orig_fqn`, `error_cause_fqn`, `error_orig_pgcode`) now capture the ACTUAL root psycopg2 class instead of the cascade symptom. Sprint 740's first post-deploy cleanup cycle will reveal what's truly failing inside the cleanup_func body — the data Sprint 732 was originally chasing.
+**Backend (15):**
+- Patches: `click` 8.3.2→8.3.3, `fastapi` 0.136.0→0.136.1 (security-relevant, but patch-level), `hypothesis` 6.152.1→6.152.4, `Mako` 1.3.11→1.3.12, `python-multipart` 0.0.26→0.0.27, `ruff` 0.15.11→0.15.12.
+- Minors: `anthropic` 0.96.0→0.97.0, `certifi` 2026.2.25→2026.4.22, `greenlet` 3.4.0→3.5.0, `packaging` 26.1→26.2, `pathspec` 1.0.4→1.1.1, `pip` 26.0.1→26.1, `stripe` 15.0.1→15.1.0 (security-relevant), `tzdata` 2026.1→2026.2, `uvicorn` 0.45.0→0.46.0.
 
-**What landed:**
-- `backend/cleanup_scheduler.py::_run_cleanup_job` — inner try/except around `cleanup_func(db)` invocation; rollback-then-raise on exception. ~10 lines added (mostly comment explaining the cascade and why this ordering matters).
-- `backend/tests/test_cleanup_scheduler.py::test_session_rollback_runs_before_lock_release_on_cleanup_failure` — new contract test mocks the session and asserts the FIRST rollback call's index < the DELETE FROM scheduler_locks call's index. A regression that moves rollback after the lock release fails this test loudly.
-- Existing `test_session_rollback_before_close_on_failure` updated: it asserted `rollback.assert_called_once()`; Sprint 740 makes rollback called twice (Sprint 740's inner + Sprint 711's outer-finally). Test now asserts `call_count >= 1` — the original "rollback before close" semantic intent is preserved.
+**Frontend (4):** `@sentry/nextjs` 10.49.0→10.50.0, `@typescript-eslint/eslint-plugin` 8.59.0→8.59.1, `@typescript-eslint/parser` 8.59.0→8.59.1, `postcss` 8.5.10→8.5.12.
+
+**Excluded from this sprint:**
+- `cryptography` 46.0.7→47.0.0 (MAJOR — own sprint, see 761).
+- `pdfminer.six` 20251230→20260107 (deferred, calendar version, review by 2026-04-30).
 
 **Verification:**
-- 30/30 cleanup_scheduler tests passing locally.
-- Post-Sprint-740 production deploy + 1h: pull `error_orig_fqn` from the next cleanup cycle's failure log. Expected: a non-cascade psycopg2 class (likely `psycopg2.errors.SerializationFailure`, `psycopg2.OperationalError` with pgcode `08006` matching Sentry's SSLEOFError signal, or something genuinely surprising). That class names the real root for **Sprint 741** — the actual structural fix to the cleanup_func body's failing statement.
+- `pip install -r backend/requirements.txt && cd backend && pytest -q` clean.
+- `cd frontend && npm install && npm run build && npm test` clean.
+- Stripe SDK upgrade: confirm no breaking change in 15.1.0 vs 15.0.1 (CHANGELOG sweep + smoke-test billing webhook fixture).
+- FastAPI patch: confirm no behavior change in `Depends`/middleware semantics (regression-suite covers this implicitly).
+- Render deploy logs after merge: zero new ImportErrors, /health 200 within 60s.
 
 **Out of scope:**
-- The actual root-cause fix for whatever cleanup_func is doing wrong — that's Sprint 741, contingent on Sprint 740's first post-deploy log read.
-- Approach 2 from the close-out doc (separate session for lock vs cleanup) — not adopted; Approach 1 (inner rollback) is sufficient and 1/3 the diff.
+- Major upgrades (cryptography 47).
+- Frontend `next` / `react` major sweeps (no action needed in this nightly).
 
 ---
 
+### Sprint 761: cryptography 47.0.0 major upgrade (security-relevant)
+**Status:** PENDING. Standalone sprint per dep-hygiene policy: majors get isolated risk + verification windows.
+**Priority:** P2 (security-relevant; pyca/cryptography ships CVE fixes via majors and the lib underpins JWT signing, password hashing, TLS evidence chain).
+**Source:** `reports/nightly/2026-04-29.md` Dependency Sentinel — flagged as security-relevant + major.
+
+**Pre-flight:**
+1. Pull pyca/cryptography 47.0.0 release notes; flag any signature on `cryptography.hazmat.primitives.*` we depend on (JWT library, audit_chain TLS evidence, password reset token signing).
+2. Audit direct imports: `Grep -r "from cryptography" backend/`. Cross-reference each call site against the 47.0.0 deprecation/removal list.
+3. Identify transitive consumers (PyJWT, pyOpenSSL, requests-toolbelt, etc.) and confirm each is compatible with cryptography 47.x — pin floor in `requirements.txt` if any consumer requires <47.
+
+**What lands:**
+- `backend/requirements.txt` — `cryptography==47.0.0` (pin exact, not floor; Paciolus convention).
+- Any compatibility shims for hazmat primitives that changed signature (unlikely for a properly-maintained version-bump, but possible).
+- New regression test if a hazmat surface we depend on changed shape.
+
+**Verification:**
+- Backend `pytest` clean (especially: `tests/test_auth*.py`, `tests/test_password_reset*.py`, `tests/test_audit_chain*.py`, `tests/test_csrf*.py`, `tests/test_security_hardening*.py`).
+- Manual: register → verify-email → login → logout → refresh-token → password-reset round-trip on a local instance.
+- Render preview deploy: 24h soak before promoting to prod (per Paciolus prod-cutover policy for security-critical deps — same caution we used for the FastAPI 0.135.x bump in Sprint 263 era).
+
+**Out of scope:**
+- Bundling with the patch/minor batch (Sprint 760). Majors get their own sprint so a regression doesn't taint a 19-package roll-back.
+- Migrating to `joserfc` or another JWT library — out of scope; we're upgrading the underlying primitive, not the wrapper.
+
+---
+
+### Sprint 762: flux_expectations memo PDF contract test (close 17/18 → 18/18)
+**Status:** PENDING. Closes the lone gap from the post-initiative finishing pass memo-coverage push.
+**Priority:** P3.
+**Source:** Post-Sprint-754b memo contract test sweep (commit `60946271`). 17/18 memos covered; flux_expectations skipped because its dataclass nests `FluxExpectationLine` Pydantic sub-models that need a non-trivial fixture.
+
+**What lands:**
+- `backend/tests/test_export_pdf_contract.py::test_flux_expectations_memo_pdf_contract` — single test mirroring the established memo-contract pattern (asserts: PDF bytes returned, `%PDF-` magic header, ReportLab Story renders without exception, branded variant with logo+colors works).
+- Inline fixture for `FluxExpectationsResult` with at least one `FluxExpectationLine` entry; reuse existing `_make_flux_result` helper if shape-compatible.
+- Update `tasks/lessons.md` with the nested-Pydantic-fixture pattern if a generalizable lesson emerges.
+
+**Verification:**
+- `pytest backend/tests/test_export_pdf_contract.py -v` — 18/18 memo contract tests pass (was 17/18).
+- No coverage regression in `flux_expectations_memo_generator.py`.
+
+**Out of scope:**
+- Refactoring the memo generator — pure test addition.
+- Adding contract tests for the 3 non-memo report PDFs (combined audit, financial statements, anomaly summary) — separate filing if needed.
+
+---

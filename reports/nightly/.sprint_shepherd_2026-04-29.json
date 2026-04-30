@@ -1,0 +1,22 @@
+{
+  "agent": "sprint_shepherd",
+  "status": "green",
+  "commits_last_24h": 19,
+  "commits_last_7d": 75,
+  "work_categories_24h": {
+    "other": 7,
+    "audit": 1,
+    "bug fix": 6,
+    "report": 3,
+    "ui": 2
+  },
+  "risk_commits": [],
+  "sprint_checklist": {
+    "found": false,
+    "total": 0,
+    "completed": 0,
+    "pct": 0
+  },
+  "open_items": [],
+  "summary": "19 commits in last 24h, 75 in last 7d."
+}

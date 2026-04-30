@@ -140,6 +140,22 @@ jobs:
         run: python scripts/lint_engine_base_adoption.py
         continue-on-error: true
 
+      # Sprint 756 — domain relocation lint (advisory). Surfaces the engines
+      # not yet relocated to services/audit/<tool>/ per ADR-018. Migrates
+      # incrementally per sub-sprint; flips to a hard gate when the migration
+      # backlog reaches a critical mass.
+      - name: Domain package relocation (advisory)
+        run: python scripts/lint_domain_relocation.py
+        continue-on-error: true
+
+      # Sprint 756 — route layer purity lint (advisory). Surfaces routes that
+      # import engine orchestration symbols (run_*, *Engine classes), bypassing
+      # the service layer per ADR-015. Flips to a hard gate when the route
+      # thinning backlog clears.
+      - name: Route layer purity (advisory)
+        run: python scripts/lint_route_layer_purity.py
+        continue-on-error: true
+
   # ── Backend Tests (PostgreSQL) ──────────────────────────────
   backend-tests-postgres:
     name: Backend Tests (PostgreSQL 15)
