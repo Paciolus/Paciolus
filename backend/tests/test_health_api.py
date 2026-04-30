@@ -130,14 +130,16 @@ class TestLivenessProbe:
 
     @pytest.mark.asyncio
     async def test_returns_200_healthy(self):
-        """GET /health/live returns 200 with status=healthy."""
+        """GET /health/live returns 200 with status=healthy and no version field."""
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/health/live")
             assert response.status_code == 200
             data = response.json()
             assert data["status"] == "healthy"
             assert "timestamp" in data
-            assert "version" in data
+            # Security remediation: exact version is no longer leaked from the
+            # public liveness probe (fingerprinting reduction).
+            assert "version" not in data
 
     @pytest.mark.asyncio
     async def test_no_auth_required(self):
@@ -149,12 +151,14 @@ class TestLivenessProbe:
 
     @pytest.mark.asyncio
     async def test_no_dependencies_field(self):
-        """GET /health/live response has no dependencies or database field."""
+        """GET /health/live response has no dependencies, database, or version field."""
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/health/live")
             data = response.json()
             assert "dependencies" not in data
             assert "database" not in data
+            # Security remediation: exact version is not exposed publicly.
+            assert "version" not in data
 
     @pytest.mark.asyncio
     async def test_healthy_even_when_db_down(self):

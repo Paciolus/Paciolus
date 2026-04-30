@@ -660,6 +660,63 @@ class TestRateLimitFailClosed:
 
 
 # ---------------------------------------------------------------------------
+# Cryptographic key separation — AUDIT_CHAIN_SECRET_KEY (security remediation)
+# ---------------------------------------------------------------------------
+
+
+class TestAuditChainKeySeparation:
+    """Production must hard-fail when AUDIT_CHAIN_SECRET_KEY is missing or
+    equal to JWT_SECRET_KEY. Sharing the JWT key collapses the cryptographic
+    domain boundary and silently breaks audit-chain verification on JWT
+    rotation (SOC 2 CC7.4)."""
+
+    def _run_config_import(self, env: dict) -> "tuple[int, str]":
+        import subprocess
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                "import sys; sys.path.insert(0, '.'); "
+                "import config; "
+                "print('AUDIT_KEY_SET=', bool(config.AUDIT_CHAIN_SECRET_KEY)); "
+                "print('AUDIT_EQ_JWT=', config.AUDIT_CHAIN_SECRET_KEY == config.JWT_SECRET_KEY)",
+            ],
+            capture_output=True,
+            text=True,
+            env=env,
+            cwd=str(Path(__file__).parent.parent),
+        )
+        return result.returncode, result.stdout + result.stderr
+
+    def test_production_distinct_key_allowed(self):
+        rc, out = self._run_config_import(_prod_env())
+        assert rc == 0, out
+        assert "AUDIT_KEY_SET= True" in out
+        assert "AUDIT_EQ_JWT= False" in out
+
+    def test_production_missing_audit_chain_key_hard_fails(self):
+        env = _prod_env()
+        env.pop("AUDIT_CHAIN_SECRET_KEY", None)
+        rc, out = self._run_config_import(env)
+        assert rc != 0, out
+        assert "AUDIT_CHAIN_SECRET_KEY" in out
+
+    def test_production_blank_audit_chain_key_hard_fails(self):
+        rc, out = self._run_config_import(_prod_env(AUDIT_CHAIN_SECRET_KEY=""))
+        assert rc != 0, out
+        assert "AUDIT_CHAIN_SECRET_KEY" in out
+
+    def test_production_audit_key_equal_to_jwt_hard_fails(self):
+        # Both keys identical — a recently-discovered foot-gun.
+        shared = "a" * 64
+        rc, out = self._run_config_import(_prod_env(JWT_SECRET_KEY=shared, AUDIT_CHAIN_SECRET_KEY=shared))
+        assert rc != 0, out
+        assert "AUDIT_CHAIN_SECRET_KEY" in out
+        assert "JWT_SECRET_KEY" in out
+
+
+# ---------------------------------------------------------------------------
 # Objective 6 — dev-credential script safety
 # ---------------------------------------------------------------------------
 

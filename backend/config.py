@@ -213,19 +213,46 @@ if (
 # =============================================================================
 
 # Audit Chain Secret Key — HMAC key for audit log chain integrity (SOC 2 CC7.4).
-# Falls back to JWT_SECRET_KEY if unset for backward compatibility.
-# In production, set a dedicated key so JWT rotation doesn't break audit chains.
+# In production, hard-fail when missing or equal to JWT_SECRET_KEY: sharing the
+# JWT key destroys the cryptographic boundary, and a JWT secret rotation would
+# silently break audit-chain verification. In non-production, fall back to the
+# JWT key for dev ergonomics, but emit an explicit warning each time.
 _audit_chain_secret = _resolve_secret("AUDIT_CHAIN_SECRET_KEY")
+_audit_chain_secret_provided = _audit_chain_secret is not None and _audit_chain_secret.strip() != ""
 
-if _audit_chain_secret is None or _audit_chain_secret.strip() == "":
-    _audit_chain_secret = JWT_SECRET_KEY
-    if ENV_MODE == "production" and not _using_generated_jwt:
-        _config_logger.warning(
-            "AUDIT_CHAIN_SECRET_KEY not set — falling back to JWT_SECRET_KEY. "
-            "Set a dedicated key for independent rotation."
+if not _audit_chain_secret_provided:
+    if ENV_MODE == "production":
+        _hard_fail(
+            "AUDIT_CHAIN_SECRET_KEY is required in production mode.\n"
+            "Sharing JWT_SECRET_KEY would let JWT rotation silently break audit-chain\n"
+            "verification (SOC 2 CC7.4) and weakens cryptographic domain separation.\n"
+            'Generate a dedicated key with: python -c "import secrets; print(secrets.token_hex(32))"'
         )
+    _config_logger.warning(
+        "AUDIT_CHAIN_SECRET_KEY not set — falling back to JWT_SECRET_KEY for development. "
+        "Set a dedicated key in production."
+    )
+    _audit_chain_secret = JWT_SECRET_KEY
+else:
+    _audit_chain_secret = _audit_chain_secret.strip()
 
 AUDIT_CHAIN_SECRET_KEY = _audit_chain_secret
+
+# Production guardrail: AUDIT_CHAIN_SECRET_KEY must not equal JWT_SECRET_KEY.
+# Reusing the JWT key collapses the secret boundary (CC7.4) and lets a JWT
+# rotation invalidate every prior audit-log chain entry without warning.
+if (
+    ENV_MODE == "production"
+    and AUDIT_CHAIN_SECRET_KEY is not None
+    and JWT_SECRET_KEY is not None
+    and AUDIT_CHAIN_SECRET_KEY == JWT_SECRET_KEY
+):
+    _hard_fail(
+        "AUDIT_CHAIN_SECRET_KEY must differ from JWT_SECRET_KEY in production.\n"
+        "Sharing the JWT key destroys cryptographic domain separation and ties\n"
+        "audit-chain integrity to JWT rotation cadence.\n"
+        'Generate a dedicated key with: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
 
 # Validate strength when explicitly set (not falling back to JWT)
 if AUDIT_CHAIN_SECRET_KEY != JWT_SECRET_KEY and AUDIT_CHAIN_SECRET_KEY is not None and len(AUDIT_CHAIN_SECRET_KEY) < 32:

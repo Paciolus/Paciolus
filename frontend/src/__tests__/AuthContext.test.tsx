@@ -76,11 +76,13 @@ describe('useAuth', () => {
     // Auth is restored on mount by calling /auth/refresh; the HttpOnly cookie is
     // sent automatically by the browser (credentials: 'include').
     // Security Sprint: X-Requested-With header is required by the refresh endpoint.
+    // Security remediation: browser refresh responses no longer include
+    // access_token in the JSON body — the cookie alone is the carrier.
     const originalFetch = global.fetch
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({
-        access_token: 'refreshed-token',
+        // access_token deliberately omitted — browser default contract.
         user: {
           id: 1, email: 'test@example.com', name: 'Test User',
           is_verified: true, is_active: true, created_at: '2024-01-01',
@@ -94,7 +96,7 @@ describe('useAuth', () => {
       expect(result.current.isAuthenticated).toBe(true)
     })
 
-    expect(result.current.token).toBe('refreshed-token')
+    expect(result.current.token).toBeNull()
     expect(result.current.user?.email).toBe('test@example.com')
 
     // Verify X-Requested-With header was sent with refresh request

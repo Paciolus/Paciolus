@@ -116,3 +116,75 @@ class TestStrictModeConfigDefault:
         env_mode = "development"
         default = "true" if env_mode == "production" else "false"
         assert default == "false"
+
+
+class TestStrictModeFailClosedRedisStorageInit:
+    """Strict-mode boot should refuse to start when Redis init itself raises."""
+
+    def test_strict_mode_redis_storage_constructor_raises(self):
+        """RedisStorage() blowing up at construction time still hard-fails."""
+
+        class _BoomStorage:
+            def __init__(self, *_a, **_kw):
+                raise ConnectionError("DNS resolution failed")
+
+        with (
+            patch("config.REDIS_URL", "redis://nonsense.invalid:6379/0"),
+            patch("config.RATE_LIMIT_STRICT_MODE", True),
+            patch("limits.storage.RedisStorage", _BoomStorage),
+        ):
+            from shared.rate_limits import _resolve_storage_uri
+
+            with pytest.raises(RuntimeError, match="strict mode"):
+                _resolve_storage_uri()
+
+
+class TestSlowApiUnmaintainedWarning:
+    """Module import emits an explicit notice that slowapi is unmaintained.
+
+    Severity differs by ENV_MODE: production -> WARNING (visible in oncall
+    logs), non-production -> INFO. The substring "slowapi is unmaintained"
+    is intentionally pinned so monitoring rules and runbook references can
+    match against the literal text.
+    """
+
+    def _invoke_emit(self, env_mode: str) -> list[tuple[int, str]]:
+        import logging
+
+        from shared import rate_limits
+
+        captured: list[tuple[int, str]] = []
+
+        class _Capture(logging.Handler):
+            def emit(self, record: logging.LogRecord) -> None:
+                captured.append((record.levelno, record.getMessage()))
+
+        handler = _Capture()
+        # Capture at the lowest level so INFO is observed even when the
+        # logger's effective level is WARNING in pytest's default config.
+        handler.setLevel(logging.DEBUG)
+        previous_level = rate_limits._logger.level
+        rate_limits._logger.setLevel(logging.DEBUG)
+        rate_limits._logger.addHandler(handler)
+        try:
+            # Patch only ENV_MODE; do NOT reload the module — reloading
+            # severs object identity for limiter / TieredLimit and breaks
+            # other tests that resolve those singletons.
+            with patch("config.ENV_MODE", env_mode):
+                rate_limits._emit_slowapi_unmaintained_warning()
+        finally:
+            rate_limits._logger.removeHandler(handler)
+            rate_limits._logger.setLevel(previous_level)
+        return captured
+
+    def test_production_emits_warning_severity(self):
+        import logging
+
+        captured = self._invoke_emit("production")
+        assert any(level == logging.WARNING and "slowapi is unmaintained" in msg for level, msg in captured), captured
+
+    def test_non_production_emits_info_severity(self):
+        import logging
+
+        captured = self._invoke_emit("development")
+        assert any(level == logging.INFO and "slowapi is unmaintained" in msg for level, msg in captured), captured

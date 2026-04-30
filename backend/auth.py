@@ -462,9 +462,16 @@ class PasswordChange(BaseModel):
 
 
 class AuthResponse(BaseModel):
-    """Schema for successful authentication response."""
+    """Schema for successful authentication response.
 
-    access_token: str
+    Browser clients receive the access token via HttpOnly ``paciolus_access``
+    cookie only — ``access_token`` is omitted from the JSON body to eliminate
+    the JS-readable copy. Non-browser API clients can opt in to a bearer
+    token in the body by sending header ``X-Token-Response: bearer`` on
+    /auth/login, /auth/register, or /auth/refresh.
+    """
+
+    access_token: Optional[str] = None
     # refresh_token removed — now an HttpOnly cookie set server-side
     token_type: str = "bearer"  # nosec B105 — OAuth2 token type, not a password
     expires_in: int

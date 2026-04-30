@@ -22,6 +22,37 @@ lives entirely in `limits`. slowapi adds ~200 lines of Starlette integration glu
 
 **Risk:** Future Starlette major versions may break slowapi's middleware registration.
 
+## Operator Posture (security remediation note)
+
+`shared/rate_limits.py` emits a startup banner on import:
+
+- **Production:** `WARNING` log line `"PRODUCTION rate-limiter dependency
+  notice: slowapi is unmaintained ..."` — intended for oncall log
+  visibility, not an incident alert.
+- **Non-production:** `INFO` line of the same form.
+
+This is **temporary** posture. The framework is not replaced in this
+remediation patch — full migration is deferred until one of the
+`Trigger Conditions` below fires. Until then, the supporting `limits`
+library is the security-critical dependency (it is actively maintained
+and pinned `>=3.0.0`); slowapi is a thin glue layer with no known CVEs.
+
+Entry criteria for the deferred migration sprint:
+
+1. Any canary test in `test_rate_limit_slowapi_health.py` fails on a
+   green main branch (i.e., a real regression, not a flake).
+2. A CVE with CVSS ≥ 7.0 is published against slowapi.
+3. Starlette major-version upgrade renders slowapi's middleware
+   registration incompatible.
+
+Production rate-limit fail-closed posture is enforced by:
+
+- `config.RATE_LIMIT_STRICT_MODE=true` (production default; hard-fail
+  override gated by `RATE_LIMIT_STRICT_OVERRIDE=TICKET:YYYY-MM-DD`).
+- `shared/rate_limits._resolve_storage_uri()` raises `RuntimeError`
+  when Redis is unreachable under strict mode (covered by
+  `test_rate_limit_strict_mode.py::TestStrictModeFailClosed*`).
+
 ## Canary Tests
 
 `backend/tests/test_rate_limit_slowapi_health.py` runs 5 checks in CI:

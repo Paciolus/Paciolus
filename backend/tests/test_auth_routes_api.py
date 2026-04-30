@@ -76,7 +76,7 @@ class TestRegister:
 
     @pytest.mark.asyncio
     async def test_register_success(self, override_db):
-        """POST /auth/register with valid data returns 201 with access token and sets refresh cookie."""
+        """POST /auth/register (browser default) returns 201 with HttpOnly cookies and no JSON access_token."""
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.post(
                 "/auth/register",
@@ -87,11 +87,15 @@ class TestRegister:
             )
             assert response.status_code == 201
             data = response.json()
-            assert "access_token" in data
+            # Browser default: access_token is omitted from the JSON body so JS
+            # code cannot read it. The server set it via the HttpOnly access
+            # cookie instead.
+            assert data.get("access_token") is None
             assert "refresh_token" not in data
             assert data["user"]["email"] == "newuser@example.com"
-            # Refresh token set as HttpOnly cookie
+            # Refresh + access tokens set as HttpOnly cookies
             assert "paciolus_refresh" in response.cookies
+            assert "paciolus_access" in response.cookies
 
     @pytest.mark.asyncio
     async def test_register_duplicate_email(self, override_db, registered_user):
@@ -133,7 +137,7 @@ class TestLogin:
 
     @pytest.mark.asyncio
     async def test_login_success(self, override_db, registered_user):
-        """POST /auth/login with correct credentials returns 200 with access token and sets refresh cookie."""
+        """POST /auth/login (browser default) returns 200 with HttpOnly cookies and no JSON access_token."""
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.post(
                 "/auth/login",
@@ -144,11 +148,13 @@ class TestLogin:
             )
             assert response.status_code == 200
             data = response.json()
-            assert "access_token" in data
+            # Browser default: access_token omitted from JSON; cookie is the carrier.
+            assert data.get("access_token") is None
             assert "refresh_token" not in data
             assert data["token_type"] == "bearer"
-            # Refresh token set as HttpOnly cookie
+            # Both auth cookies are set as HttpOnly server-side
             assert "paciolus_refresh" in response.cookies
+            assert "paciolus_access" in response.cookies
 
     @pytest.mark.asyncio
     async def test_login_invalid_password(self, override_db, registered_user):
@@ -524,7 +530,9 @@ class TestRefreshXRequestedWith:
                 headers={"X-Requested-With": "XMLHttpRequest"},
             )
             assert refresh_resp.status_code == 200
-            assert "access_token" in refresh_resp.json()
+            # Browser default: access_token omitted from JSON; cookie carries it.
+            assert refresh_resp.json().get("access_token") is None
+            assert "paciolus_access" in refresh_resp.cookies
 
     @pytest.mark.asyncio
     async def test_refresh_without_header_rejected(self, override_db, registered_user):
@@ -555,3 +563,77 @@ class TestRefreshXRequestedWith:
                 headers={"X-Requested-With": "WrongValue"},
             )
             assert refresh_resp.status_code == 403
+
+
+# =============================================================================
+# Bearer token opt-in for non-browser API clients (security remediation)
+# =============================================================================
+
+
+@pytest.mark.usefixtures("bypass_csrf")
+class TestBearerOptIn:
+    """Verify that ``X-Token-Response: bearer`` opts in to JSON access_token.
+
+    Browser clients receive the access token via HttpOnly cookie only.
+    Non-browser API clients (CLI tools, server-to-server, integration
+    tests) can opt in by sending ``X-Token-Response: bearer``.
+    """
+
+    @pytest.mark.asyncio
+    async def test_register_with_optin_returns_access_token(self, override_db):
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.post(
+                "/auth/register",
+                json={"email": "apiclient_register@example.com", "password": TEST_PASSWORD},
+                headers={"X-Token-Response": "bearer"},
+            )
+            assert response.status_code == 201
+            data = response.json()
+            assert isinstance(data.get("access_token"), str)
+            assert len(data["access_token"]) > 0
+            # Cookie is still set even when bearer is returned in body
+            assert "paciolus_access" in response.cookies
+
+    @pytest.mark.asyncio
+    async def test_login_with_optin_returns_access_token(self, override_db, registered_user):
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.post(
+                "/auth/login",
+                json={"email": registered_user.email, "password": TEST_PASSWORD},
+                headers={"X-Token-Response": "bearer"},
+            )
+            assert response.status_code == 200
+            data = response.json()
+            assert isinstance(data.get("access_token"), str)
+            assert len(data["access_token"]) > 0
+
+    @pytest.mark.asyncio
+    async def test_refresh_with_optin_returns_access_token(self, override_db, registered_user):
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            login_resp = await client.post(
+                "/auth/login",
+                json={"email": registered_user.email, "password": TEST_PASSWORD},
+            )
+            assert login_resp.status_code == 200
+
+            refresh_resp = await client.post(
+                "/auth/refresh",
+                headers={
+                    "X-Requested-With": "XMLHttpRequest",
+                    "X-Token-Response": "bearer",
+                },
+            )
+            assert refresh_resp.status_code == 200
+            assert isinstance(refresh_resp.json().get("access_token"), str)
+
+    @pytest.mark.asyncio
+    async def test_optin_with_unrecognized_value_does_not_leak_token(self, override_db, registered_user):
+        """Unrecognized header value must not opt in (default-deny)."""
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.post(
+                "/auth/login",
+                json={"email": registered_user.email, "password": TEST_PASSWORD},
+                headers={"X-Token-Response": "yes-please"},
+            )
+            assert response.status_code == 200
+            assert response.json().get("access_token") is None

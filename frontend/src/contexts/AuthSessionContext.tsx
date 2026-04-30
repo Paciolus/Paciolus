@@ -114,15 +114,18 @@ export function AuthSessionProvider({ children }: { children: ReactNode }): Reac
 
         const data: AuthResponse = await response.json()
 
-        // Store access token in-memory only
-        tokenRef.current = data.access_token
+        // Browser default: access_token is delivered via HttpOnly cookie.
+        // Body access_token is undefined unless the client sent the
+        // X-Token-Response: bearer opt-in header (used only by non-browser
+        // API clients).
+        tokenRef.current = data.access_token ?? null
 
         // Security Sprint: Read user-bound CSRF token from auth response
         if (data.csrf_token) setCsrfToken(data.csrf_token)
 
         setState({
           user: data.user,
-          token: data.access_token,
+          token: data.access_token ?? null,
           isAuthenticated: true,
           isLoading: false,
         })
@@ -180,16 +183,18 @@ export function AuthSessionProvider({ children }: { children: ReactNode }): Reac
       { email: credentials.email, password: credentials.password, remember_me: credentials.rememberMe ?? false }
     )
 
-    if (ok && data?.access_token) {
-      // Store access token in-memory only; refresh token is set as HttpOnly cookie by server
-      tokenRef.current = data.access_token
+    if (ok && data?.user) {
+      // Browser default: access_token comes via HttpOnly cookie, not body.
+      // The presence of `data.user` is the success marker; tokenRef stays
+      // null for browser clients (cookie auth via credentials: 'include').
+      tokenRef.current = data.access_token ?? null
 
       // Security Sprint: Read user-bound CSRF token from login response
       if (data.csrf_token) setCsrfToken(data.csrf_token)
 
       setState({
         user: data.user,
-        token: data.access_token,
+        token: data.access_token ?? null,
         isAuthenticated: true,
         isLoading: false,
       })
@@ -208,16 +213,16 @@ export function AuthSessionProvider({ children }: { children: ReactNode }): Reac
       { email: credentials.email, password: credentials.password }
     )
 
-    if (ok && data?.access_token) {
-      // Store access token in-memory only; refresh token is set as HttpOnly cookie by server
-      tokenRef.current = data.access_token
+    if (ok && data?.user) {
+      // Browser default: access_token comes via HttpOnly cookie, not body.
+      tokenRef.current = data.access_token ?? null
 
       // Security Sprint: Read user-bound CSRF token from register response
       if (data.csrf_token) setCsrfToken(data.csrf_token)
 
       setState({
         user: data.user,
-        token: data.access_token,
+        token: data.access_token ?? null,
         isAuthenticated: true,
         isLoading: false,
       })
