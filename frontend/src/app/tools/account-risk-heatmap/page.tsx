@@ -11,7 +11,7 @@
  * from upstream diagnostic engines. CSV export downloads the same aggregation.
  */
 
-import { useCallback, useMemo, useState } from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { DisclaimerBox, GuestCTA, UnverifiedCTA, CitationFooter } from '@/components/shared'
 import { UpgradeGate } from '@/components/shared/UpgradeGate'
@@ -394,7 +394,7 @@ export default function AccountRiskHeatmapPage() {
 
 /* ─── Results ──────────────────────────────────────────────────────── */
 
-function HeatmapResults({ result }: { result: import('@/types/accountRiskHeatmap').HeatmapResponse }) {
+const HeatmapResults = memo(function HeatmapResults({ result }: { result: import('@/types/accountRiskHeatmap').HeatmapResponse }) {
   return (
     <div className="space-y-6">
       <section className="theme-card p-6">
@@ -527,7 +527,7 @@ function HeatmapResults({ result }: { result: import('@/types/accountRiskHeatmap
       <CitationFooter standards={['ISA 315', 'ISA 520']} />
     </div>
   )
-}
+})
 
 function TierPill({ tier }: { tier: PriorityTier }) {
   return (
