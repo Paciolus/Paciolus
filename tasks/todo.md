@@ -197,22 +197,23 @@ Bundle the 19 patch + safe-minor updates into one commit, mirroring the 2026-04-
 ---
 
 ### Sprint 762: flux_expectations memo PDF contract test (close 17/18 → 18/18)
-**Status:** PENDING. Closes the lone gap from the post-initiative finishing pass memo-coverage push.
+**Status:** COMPLETE — landed on branch `sprint-773c-render-perf-finishers` (current branch carries 762 + 773c finishers).
 **Priority:** P3.
 **Source:** Post-Sprint-754b memo contract test sweep (commit `60946271`). 17/18 memos covered; flux_expectations skipped because its dataclass nests `FluxExpectationLine` Pydantic sub-models that need a non-trivial fixture.
 
-**What lands:**
-- `backend/tests/test_export_pdf_contract.py::test_flux_expectations_memo_pdf_contract` — single test mirroring the established memo-contract pattern (asserts: PDF bytes returned, `%PDF-` magic header, ReportLab Story renders without exception, branded variant with logo+colors works).
-- Inline fixture for `FluxExpectationsResult` with at least one `FluxExpectationLine` entry; reuse existing `_make_flux_result` helper if shape-compatible.
-- Update `tasks/lessons.md` with the nested-Pydantic-fixture pattern if a generalizable lesson emerges.
+**What landed:**
+- `backend/tests/test_export_pdf_contract.py::test_flux_expectations_memo_pdf_contains_all_required_section_labels` — single test mirroring the established memo-contract pattern, plus inline `_FLUX_EXPECTATIONS_FLUX_FIXTURE` and `_FLUX_EXPECTATIONS_EXPECTATIONS_FIXTURE` and a `FLUX_EXPECTATIONS_MEMO_REQUIRED_SECTIONS` tuple covering ISA, Scope, Variance, Conclusion, Sign-Off, Disclaimer anchors.
+- Discovery: `generate_flux_expectations_memo` accepts plain dicts for both inputs (the route's Pydantic input is unwrapped before the call), so the worry about nested-Pydantic fixtures was misplaced — the fixture is flat like every other memo. Comment in the test file updated to record this finding for future maintainers.
+- Coverage banner updated from "Sprint 754b finishing pass: 17/18 memos" to "Sprint 762: 18/18 memos covered."
 
 **Verification:**
-- `pytest backend/tests/test_export_pdf_contract.py -v` — 18/18 memo contract tests pass (was 17/18).
-- No coverage regression in `flux_expectations_memo_generator.py`.
+- `python -m pytest tests/test_export_pdf_contract.py -v` — **19 passed, 0 failed** (18 contract tests + 1 smoke check; was 18, now +1 with flux_expectations).
 
 **Out of scope:**
 - Refactoring the memo generator — pure test addition.
 - Adding contract tests for the 3 non-memo report PDFs (combined audit, financial statements, anomaly summary) — separate filing if needed.
+
+**Commit SHA:** filled at commit time.
 
 ---
 
