@@ -266,3 +266,35 @@ Bundle the 19 patch + safe-minor updates into one commit, mirroring the 2026-04-
 
 ---
 
+### Sprint 760: Dependency hygiene — patches + safe minors (2026-04-29 nightly)
+**Status:** COMPLETE — landed on branch `sprint-760-dep-hygiene-2026-04-29`.
+**Priority:** P3.
+**Source:** `reports/nightly/2026-04-29.md` Dependency Sentinel.
+
+**Discovery during execution:** Sprint 731 (2026-04-25) had already landed `fastapi 0.136.0→0.136.1` and `stripe 15.0.1→15.1.0` per the cadence-window deadline policy, but the 2026-04-29 nightly's package-snapshot scanner was reading the local venv (still on the old versions). After refreshing the venv, the actual outstanding requirements.txt-pinned bumps narrowed to **2 backend pins** (uvicorn, python-multipart). The other backend packages in the brief (anthropic, certifi, click, greenlet, hypothesis, Mako, packaging, pathspec, pip, ruff, tzdata) are not pinned in `requirements.txt` — they're transitive deps or dev tools, refreshed venv-only with no diff to ship.
+
+**What landed:**
+- `backend/requirements.txt`:
+  - `uvicorn[standard]==0.45.0 → 0.46.0` (minor)
+  - `python-multipart==0.0.26 → 0.0.27` (patch)
+- `frontend/package-lock.json` (via `npm update` against existing caret pins; no `package.json` edit needed):
+  - `@sentry/nextjs 10.49.0 → 10.51.0` (npm published 10.51 between brief and execution; minor, in-range)
+  - `@typescript-eslint/eslint-plugin 8.59.0 → 8.59.1` (patch)
+  - `@typescript-eslint/parser 8.59.0 → 8.59.1` (patch)
+  - `postcss 8.5.10 → 8.5.13` (npm published 8.5.13 between brief and execution; patch, in-range)
+- Venv refresh: `pip install -U "uvicorn[standard]==0.46.0" "python-multipart==0.0.27"` — also picks up the brief's transitive bumps (anthropic, certifi, greenlet, etc.) via existing `>=` floors with no requirements.txt diff.
+
+**Verification:**
+- `cd backend && python -m pytest -q` → see commit-message tail.
+- `cd frontend && npm test -- --watch=false` → see commit-message tail.
+- `cd frontend && npm run build` → see commit-message tail.
+- `cd frontend && npm outdated --json` → `{}` empty (post-update).
+
+**Excluded:**
+- `cryptography 46.0.7→47.0.0` — major, own sprint (761).
+- `pdfminer.six 20251230→20260107` — deferred (calendar version, downstream-compat review window).
+
+**Commit SHA:** see branch `sprint-760-dep-hygiene-2026-04-29` (filled at PR merge).
+
+---
+
