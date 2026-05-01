@@ -5,6 +5,7 @@ import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { RevenueScoreCard, RevenueTestResultGrid, RevenueDataQualityBadge, FlaggedRevenueTable } from '@/components/revenueTesting'
 import { GuestCTA, UnverifiedCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, UpgradeGate, Citation, CitationFooter } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractRevenueProof } from '@/components/shared/proof'
+import { Button } from '@/components/ui/Button'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
 import { useFileUpload } from '@/hooks/useFileUpload'
 import { useRevenueTesting } from '@/hooks/useRevenueTesting'
@@ -184,12 +185,9 @@ export default function RevenueTestingPage() {
               >
                 <h3 className="font-serif text-sm text-theme-error-text mb-1">Analysis Failed</h3>
                 <p className="font-sans text-sm text-content-secondary">{error}</p>
-                <button
-                  onClick={handleNewTest}
-                  className="mt-3 px-4 py-2 bg-surface-card border border-oatmeal-300 rounded-lg text-content-primary font-sans text-sm hover:bg-surface-card-secondary transition-colors"
-                >
+                <Button variant="secondary" onClick={handleNewTest} className="mt-3">
                   Try Again
-                </button>
+                </Button>
               </div>
             )}
 
@@ -204,26 +202,23 @@ export default function RevenueTestingPage() {
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <button
+                    <Button
+                      variant="primary"
                       onClick={() => exportBody && handleExportMemo(exportBody)}
                       disabled={exporting !== null || !result}
-                      className="px-4 py-2 bg-sage-600 border border-sage-600 rounded-lg text-oatmeal-50 font-sans text-sm hover:bg-sage-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {exporting === 'pdf' ? 'Generating...' : 'Download Testing Memo'}
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="secondary"
                       onClick={() => exportBody && handleExportCSV(exportBody)}
                       disabled={exporting !== null || !result}
-                      className="px-4 py-2 bg-surface-card border border-oatmeal-300 rounded-lg text-content-primary font-sans text-sm hover:bg-surface-card-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {exporting === 'csv' ? 'Exporting...' : 'Export Flagged CSV'}
-                    </button>
-                    <button
-                      onClick={handleNewTest}
-                      className="px-4 py-2 bg-surface-card border border-oatmeal-300 rounded-lg text-content-primary font-sans text-sm hover:bg-surface-card-secondary transition-colors"
-                    >
+                    </Button>
+                    <Button variant="secondary" onClick={handleNewTest}>
                       New Test
-                    </button>
+                    </Button>
                   </div>
                 </div>
 
