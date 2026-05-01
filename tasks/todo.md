@@ -266,3 +266,39 @@ Bundle the 19 patch + safe-minor updates into one commit, mirroring the 2026-04-
 
 ---
 
+### Sprint 771a: Button primitive (subset of Sprint 771)
+**Status:** COMPLETE — landed on branch `sprint-771a-button-primitive`.
+**Priority:** P3.
+**Source:** Frontend efficiency audit (2026-05-01) finding 2.2.
+
+Splitting Sprint 771 into 771a (Button primitive — this sprint) and 771b (the three Tool* primitives — `ToolHeroHeader` / `ToolLoadingState` / `ToolErrorState`, deferred to a follow-up). 771a is the lowest-risk, highest-leverage subset: ~30 hand-rolled `bg-sage-600 …` and `bg-surface-card border border-oatmeal-300 …` button class-string copies are the most common offender, and a centralized primitive removes that drift point ahead of the hero/loading/error rollup.
+
+**What landed:**
+- `frontend/src/components/ui/Button.tsx` (new, ~60 lines) — `forwardRef` button with `variant: 'primary' | 'secondary' | 'ghost'` and `size: 'sm' | 'md' | 'lg'`. Single base class string covers font, transition, disabled state, focus ring; variant/size class maps compose on top. Inline doc-comment explains each variant's intended use (primary = page-commit action, secondary = tertiary alongside primary, ghost = inline toolbar).
+- 5 tool pages migrated from inline class strings to `<Button>`:
+  - `app/tools/ap-testing/page.tsx`
+  - `app/tools/fixed-assets/page.tsx`
+  - `app/tools/inventory-testing/page.tsx`
+  - `app/tools/payroll-testing/page.tsx`
+  - `app/tools/revenue-testing/page.tsx`
+- Each of the 5 pages had the same 4-button shape: 1 secondary "Try Again" in the error state + 3 buttons in the success-state action bar (primary "Download Testing Memo", secondary "Export Flagged CSV", secondary "New Test"). 20 total buttons replaced.
+
+**What did NOT change (deferred):**
+- AR aging (`px-8 py-3 rounded-xl` "Run AR Aging Analysis" hero CTA) — different size variant; needs `size="lg"` migration in 771b alongside the dual-FileDropZone landing of Sprint 770.
+- Statistical sampling — its primary button differs slightly (no `disabled:opacity-50` suffix); migrate alongside 771b.
+- `account-risk-heatmap`, `composite-risk` — buttons embedded in row-editor mini-components flagged for `React.memo` extraction in Sprint 773 follow-up; migrate when those subtrees are touched.
+- `ToolSettingsDrawer` — full-width primary button; migrate alongside 771b.
+- The other Sprint 771 primitives (ToolHeroHeader, ToolLoadingState, ToolErrorState) — deferred to 771b.
+
+**Verification:**
+- `cd frontend && npx tsc --noEmit` → exit 0.
+- `cd frontend && npx jest --watch=false` → see commit-message tail.
+- `cd frontend && npm run build` → see commit-message tail.
+
+**Out of scope:**
+- ESLint rule banning the inline class strings the new primitive replaces — useful future fence, not this sprint.
+
+**Commit SHA:** see branch `sprint-771a-button-primitive` (filled at PR merge).
+
+---
+
