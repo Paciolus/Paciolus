@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react';
 import type {
   DiagnosticResult,
   DiagnosticContextType,
@@ -27,16 +27,21 @@ export function DiagnosticProvider({ children }: { children: ReactNode }): React
   // We'll stick to React State (memory) to be strictly aligned with "No Storage".
   // Note: Tab refresh will clear data, which is acceptable/desired for security.
 
-  const setResult = (data: DiagnosticResult | null) => {
+  const setResult = useCallback((data: DiagnosticResult | null) => {
     setResultState(data);
-  };
+  }, []);
 
-  const clearResult = () => {
+  const clearResult = useCallback(() => {
     setResultState(null);
-  };
+  }, []);
+
+  const value = useMemo<DiagnosticContextType>(
+    () => ({ result, setResult, clearResult, isLoading, setIsLoading }),
+    [result, isLoading, setResult, clearResult],
+  );
 
   return (
-    <DiagnosticContext.Provider value={{ result, setResult, clearResult, isLoading, setIsLoading }}>
+    <DiagnosticContext.Provider value={value}>
       {children}
     </DiagnosticContext.Provider>
   );
