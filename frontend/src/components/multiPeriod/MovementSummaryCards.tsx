@@ -1,29 +1,30 @@
+import { memo } from 'react'
 import { motion } from 'framer-motion'
 import type { MovementSummaryResponse } from '@/hooks'
 import { fadeIn, stagger } from './constants'
 
-export function MovementSummaryCards({ comparison }: { comparison: MovementSummaryResponse }) {
-  const cards = [
-    { key: 'new_account', label: 'New Accounts', icon: '+', color: 'sage' },
-    { key: 'closed_account', label: 'Closed Accounts', icon: '-', color: 'clay' },
-    { key: 'sign_change', label: 'Sign Changes', icon: '~', color: 'clay' },
-    { key: 'increase', label: 'Increases', icon: '\u2191', color: 'sage' },
-    { key: 'decrease', label: 'Decreases', icon: '\u2193', color: 'clay' },
-    { key: 'unchanged', label: 'Unchanged', icon: '=', color: 'oatmeal' },
-  ]
+const CARDS = [
+  { key: 'new_account', label: 'New Accounts', icon: '+', color: 'sage' },
+  { key: 'closed_account', label: 'Closed Accounts', icon: '-', color: 'clay' },
+  { key: 'sign_change', label: 'Sign Changes', icon: '~', color: 'clay' },
+  { key: 'increase', label: 'Increases', icon: '\u2191', color: 'sage' },
+  { key: 'decrease', label: 'Decreases', icon: '\u2193', color: 'clay' },
+  { key: 'unchanged', label: 'Unchanged', icon: '=', color: 'oatmeal' },
+] as const
 
-  const borderAccentMap: Record<string, string> = {
-    sage: 'border-l-4 border-l-sage-500',
-    clay: 'border-l-4 border-l-clay-500',
-    oatmeal: 'border-l-4 border-l-oatmeal-400',
-  }
+const BORDER_ACCENT_MAP: Record<string, string> = {
+  sage: 'border-l-4 border-l-sage-500',
+  clay: 'border-l-4 border-l-clay-500',
+  oatmeal: 'border-l-4 border-l-oatmeal-400',
+}
 
+export const MovementSummaryCards = memo(function MovementSummaryCards({ comparison }: { comparison: MovementSummaryResponse }) {
   return (
     <motion.div className="grid grid-cols-3 md:grid-cols-6 gap-3" variants={stagger} initial="hidden" animate="visible">
-      {cards.map(({ key, label, icon, color }) => (
+      {CARDS.map(({ key, label, icon, color }) => (
         <motion.div
           key={key}
-          className={`theme-card p-3 text-center ${borderAccentMap[color]}`}
+          className={`theme-card p-3 text-center ${BORDER_ACCENT_MAP[color]}`}
           variants={fadeIn}
         >
           <div className="text-content-tertiary text-xs font-mono mb-1">{icon}</div>
@@ -35,4 +36,4 @@ export function MovementSummaryCards({ comparison }: { comparison: MovementSumma
       ))}
     </motion.div>
   )
-}
+})

@@ -11,7 +11,7 @@
  * Form input only — no file upload, no data persisted (Zero-Storage).
  */
 
-import { useCallback, useMemo, useState } from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { DisclaimerBox, GuestCTA, UnverifiedCTA, CitationFooter } from '@/components/shared'
 import { UpgradeGate } from '@/components/shared/UpgradeGate'
@@ -351,7 +351,7 @@ export default function CompositeRiskPage() {
 
 /* ─── Results sub-component ───────────────────────────────────────── */
 
-function CompositeRiskResults({ data }: { data: import('@/types/compositeRisk').CompositeRiskProfileResponse }) {
+const CompositeRiskResults = memo(function CompositeRiskResults({ data }: { data: import('@/types/compositeRisk').CompositeRiskProfileResponse }) {
   const overall = data.overall_risk_tier ?? 'low'
   return (
     <div className="space-y-6">
@@ -447,7 +447,7 @@ function CompositeRiskResults({ data }: { data: import('@/types/compositeRisk').
       <CitationFooter standards={['ISA 315', 'ISA 330']} />
     </div>
   )
-}
+})
 
 function RiskPill({ level }: { level: RiskLevel }) {
   return (
