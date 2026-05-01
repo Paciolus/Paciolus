@@ -5,6 +5,23 @@ import type { AccountMovement } from '@/hooks'
 import { formatCurrency, SIGNIFICANCE_COLORS } from './constants'
 import { MovementBadge } from './MovementBadge'
 
+// Sprint 773c: hoisted out of the useMemo body so it's not recreated
+// on every memo run. Returns a string for `account_name` (locale-aware
+// sort) and a number for the abs-value columns.
+function getSortValue(m: AccountMovement, sortKey: string): string | number {
+  switch (sortKey) {
+    case 'account_name':
+      return m.account_name.toLowerCase()
+    case 'change_percent':
+      return Math.abs(m.change_percent || 0)
+    case 'budget_variance':
+      return Math.abs(m.budget_variance?.variance_amount || 0)
+    case 'change_amount':
+    default:
+      return Math.abs(m.change_amount)
+  }
+}
+
 export function AccountMovementTable({ movements, filter, hasBudget }: {
   movements: AccountMovement[]
   filter: { type: string; significance: string; search: string }
@@ -22,16 +39,8 @@ export function AccountMovementTable({ movements, filter, hasBudget }: {
       result = result.filter(m => m.account_name.toLowerCase().includes(q))
     }
     return [...result].sort((a, b) => {
-      const aVal = sortKey === 'change_amount' ? Math.abs(a.change_amount) :
-                   sortKey === 'account_name' ? a.account_name.toLowerCase() :
-                   sortKey === 'change_percent' ? Math.abs(a.change_percent || 0) :
-                   sortKey === 'budget_variance' ? Math.abs(a.budget_variance?.variance_amount || 0) :
-                   Math.abs(a.change_amount)
-      const bVal = sortKey === 'change_amount' ? Math.abs(b.change_amount) :
-                   sortKey === 'account_name' ? b.account_name.toLowerCase() :
-                   sortKey === 'change_percent' ? Math.abs(b.change_percent || 0) :
-                   sortKey === 'budget_variance' ? Math.abs(b.budget_variance?.variance_amount || 0) :
-                   Math.abs(b.change_amount)
+      const aVal = getSortValue(a, sortKey)
+      const bVal = getSortValue(b, sortKey)
       if (typeof aVal === 'string' && typeof bVal === 'string') {
         return sortDesc ? bVal.localeCompare(aVal) : aVal.localeCompare(bVal)
       }
