@@ -6,6 +6,7 @@ import {
   useState,
   useCallback,
   useEffect,
+  useMemo,
   ReactNode,
   ReactElement,
 } from 'react';
@@ -101,7 +102,20 @@ export function EngagementProvider({ children }: { children: ReactNode }): React
     setToolRuns(runs);
   }, [activeEngagement, getToolRuns]);
 
-  // Read ?engagement=X from URL on mount
+  // Read ?engagement=X from URL on mount.
+  //
+  // Intentional one-shot pattern: deps are limited to the auth gate so this
+  // effect only fires when the user becomes authenticated. The omitted deps
+  // (`searchParams`, `selectEngagement`, `activeEngagement`) are read inside
+  // but should NOT re-trigger the effect:
+  //   • `searchParams` changes on every URL update (including selectEngagement's
+  //     own router.replace) — including it would loop.
+  //   • `selectEngagement` re-creates whenever searchParams change — same loop.
+  //   • `activeEngagement` is the guard that prevents re-execution once a
+  //     selection has been made; including it would re-run the effect on every
+  //     selection change (defeating the "mount-once" intent).
+  // The activeEngagement-guard inside the body is the load-bearing mechanism
+  // that prevents over-firing.
   useEffect(() => {
     if (!isAuthenticated || !token) return;
 
@@ -114,18 +128,32 @@ export function EngagementProvider({ children }: { children: ReactNode }): React
     }
   }, [isAuthenticated, token]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const contextValue: EngagementContextType = {
-    activeEngagement,
-    toolRuns,
-    materiality,
-    isLoading,
-    toastMessage,
-    selectEngagement,
-    clearEngagement,
-    refreshToolRuns,
-    triggerLinkToast,
-    dismissToast,
-  };
+  const contextValue = useMemo<EngagementContextType>(
+    () => ({
+      activeEngagement,
+      toolRuns,
+      materiality,
+      isLoading,
+      toastMessage,
+      selectEngagement,
+      clearEngagement,
+      refreshToolRuns,
+      triggerLinkToast,
+      dismissToast,
+    }),
+    [
+      activeEngagement,
+      toolRuns,
+      materiality,
+      isLoading,
+      toastMessage,
+      selectEngagement,
+      clearEngagement,
+      refreshToolRuns,
+      triggerLinkToast,
+      dismissToast,
+    ],
+  );
 
   return (
     <EngagementContext.Provider value={contextValue}>
