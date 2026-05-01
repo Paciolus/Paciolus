@@ -183,12 +183,22 @@ export function getBadgeClasses(variant: BadgeVariant): string {
 // RISK LEVEL CLASSES
 // =============================================================================
 
-export type RiskLevel = 'high' | 'medium' | 'low' | 'none';
+/**
+ * Threshold-style risk level used by per-row diagnostic visualizations
+ * (flux, recon) where signals collapse into a 3-level present/absent
+ * scale plus the explicit `none`.
+ *
+ * Distinct from `CompositeRiskLevel` (`types/compositeRisk.ts` —
+ * 'low' | 'moderate' | 'elevated' | 'high', the ISA 315 RMM matrix
+ * scale) and from `DiagnosticRiskLevel` (`types/diagnostic.ts` enum,
+ * the streaming-auditor finding tier).
+ */
+export type ThresholdRiskLevel = 'high' | 'medium' | 'low' | 'none';
 
 /**
  * Risk level badge classes.
  */
-export const RISK_LEVEL_CLASSES: Record<RiskLevel, string> = {
+export const RISK_LEVEL_CLASSES: Record<ThresholdRiskLevel, string> = {
   high: 'bg-clay-50 text-clay-700 border-clay-200',
   medium: 'bg-oatmeal-100 text-oatmeal-700 border-oatmeal-300',
   low: 'bg-sage-50 text-sage-700 border-sage-200',
@@ -198,7 +208,7 @@ export const RISK_LEVEL_CLASSES: Record<RiskLevel, string> = {
 /**
  * Get risk level badge classes.
  */
-export function getRiskLevelClasses(level: RiskLevel): string {
+export function getRiskLevelClasses(level: ThresholdRiskLevel): string {
   return RISK_LEVEL_CLASSES[level] || RISK_LEVEL_CLASSES.none;
 }
 

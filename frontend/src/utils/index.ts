@@ -86,7 +86,7 @@ export type {
   VarianceDirection,
   InputState,
   BadgeVariant,
-  RiskLevel,
+  ThresholdRiskLevel,
 } from './themeUtils';
 
 // Marketing motion presets (Sprint 337)
