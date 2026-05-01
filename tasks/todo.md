@@ -197,22 +197,25 @@ Bundle the 19 patch + safe-minor updates into one commit, mirroring the 2026-04-
 ---
 
 ### Sprint 762: flux_expectations memo PDF contract test (close 17/18 → 18/18)
-**Status:** PENDING. Closes the lone gap from the post-initiative finishing pass memo-coverage push.
+**Status:** COMPLETE — landed on branch `sprint-762-flux-expectations-memo-contract-test`.
 **Priority:** P3.
-**Source:** Post-Sprint-754b memo contract test sweep (commit `60946271`). 17/18 memos covered; flux_expectations skipped because its dataclass nests `FluxExpectationLine` Pydantic sub-models that need a non-trivial fixture.
+**Source:** Post-Sprint-754b memo contract test sweep (commit `60946271`). 17/18 memos covered; flux_expectations skipped because its dataclass was thought to nest typed Pydantic sub-models needing a non-trivial fixture. **Reality check during execution:** `generate_flux_expectations_memo` takes plain dicts (`flux_result` + `expectations`), so the fixture is the same shape as every other memo contract test. No nested Pydantic build needed.
 
-**What lands:**
-- `backend/tests/test_export_pdf_contract.py::test_flux_expectations_memo_pdf_contract` — single test mirroring the established memo-contract pattern (asserts: PDF bytes returned, `%PDF-` magic header, ReportLab Story renders without exception, branded variant with logo+colors works).
-- Inline fixture for `FluxExpectationsResult` with at least one `FluxExpectationLine` entry; reuse existing `_make_flux_result` helper if shape-compatible.
-- Update `tasks/lessons.md` with the nested-Pydantic-fixture pattern if a generalizable lesson emerges.
+**What landed:**
+- `backend/tests/test_export_pdf_contract.py::test_flux_expectations_memo_pdf_contains_all_required_section_labels` — single test mirroring the established memo-contract pattern (extract PDF text, assert required section labels present).
+- `_FLUX_EXPECTATIONS_FIXTURE` inline dict fixture with one high-risk flagged item + one practitioner expectation block, exercising the full template path (cover, scope, expectation/variance block with conclusion checkboxes, sign-off, disclaimer).
+- `FLUX_EXPECTATIONS_MEMO_REQUIRED_SECTIONS` covers the six section anchors verified via pypdf extraction: `Flux`, `Expectation`, `Scope`, `Variance`, `Conclusion`, `Practitioner` (single-word anchors per the file's own pypdf-column-split guidance).
+- Coverage-status comment block updated from "17/18 — flux_expectations skipped" to "18/18 (Sprint 762 closed the gap)".
 
 **Verification:**
-- `pytest backend/tests/test_export_pdf_contract.py -v` — 18/18 memo contract tests pass (was 17/18).
-- No coverage regression in `flux_expectations_memo_generator.py`.
+- `cd backend && python -m pytest tests/test_export_pdf_contract.py -v` → **19 passed, 0 failed** (3.56s) — was 18 tests, now 19; flux_expectations is the new one.
+- No production code touched — pure test addition.
 
 **Out of scope:**
-- Refactoring the memo generator — pure test addition.
-- Adding contract tests for the 3 non-memo report PDFs (combined audit, financial statements, anomaly summary) — separate filing if needed.
+- Refactoring the memo generator.
+- Adding contract tests for the 3 non-memo report PDFs (combined audit, financial statements, anomaly summary) — separate filing if motivated.
+
+**Commit SHA:** see branch `sprint-762-flux-expectations-memo-contract-test` (filled at PR merge).
 
 ---
 
@@ -263,6 +266,162 @@ Bundle the 19 patch + safe-minor updates into one commit, mirroring the 2026-04-
 - Full slowapi migration — entry criteria documented in the runbook; defer until trigger fires.
 
 **Commit SHA:** `fbec7a61` (branch `sprint-768-security-remediation-auth-config-health-rl`).
+
+---
+
+### Sprint 769: Frontend context memoization (render-perf hotfix)
+**Status:** PENDING
+**Priority:** P2. No user-visible bug, but cascade re-renders measurably affect interactive latency in tools that mount under DiagnosticProvider/EngagementProvider.
+**Source:** Frontend efficiency audit (2026-05-01) findings 1.1 + 1.2.
+
+`DiagnosticContext` (`frontend/src/contexts/DiagnosticContext.tsx:39`) and `EngagementContext` (`frontend/src/contexts/EngagementContext.tsx:117–128`) build a fresh `value` object literal on every provider render. With `setResult`/`clearResult` also fresh closures (lines 30, 34), every consumer re-renders whenever the provider's parent re-renders, regardless of whether the carried state actually changed.
+
+**What lands:**
+- `DiagnosticContext.tsx:30, 34` — wrap `setResult` / `clearResult` in `useCallback`.
+- `DiagnosticContext.tsx:39` — wrap `value` in `useMemo`, deps `[result, isLoading]`.
+- `EngagementContext.tsx:117–128` — wrap `contextValue` in `useMemo` with full dep array (`activeEngagement, toolRuns, materiality, isLoading, toastMessage, selectEngagement, clearEngagement, refreshToolRuns, triggerLinkToast, dismissToast`).
+- Investigate the `// eslint-disable-line react-hooks/exhaustive-deps` at `EngagementContext.tsx:115` — the suppressed deps (`searchParams`, `router`, `pathname`, `selectEngagement`) hide a stale-closure risk; either fix properly or document why the suppression is intentional.
+
+**Verification:**
+- `npm run build` and `npm test` clean — value shape unchanged, existing context tests should still pass.
+- React DevTools Profiler: open `/tools/journal-entry-testing`, trigger an unrelated re-render (e.g. theme toggle); confirm `<DiagnosticProvider>` consumers no longer fire.
+- Optional: dev-only render-counter test asserting consumer renders track only state changes, not parent renders.
+
+**Out of scope:**
+- Splitting either context into state-vs-dispatch halves — bigger refactor, not warranted by current symptoms.
+- The other render-perf findings (row mappings, table memoization, result-subtree wraps) — bundled in Sprint 773.
+
+---
+
+### Sprint 770: FileDropZone consolidation across testing tool pages
+**Status:** PENDING
+**Priority:** P3. No functional bug — pure DRY win + drift prevention as upload requirements evolve.
+**Source:** Frontend efficiency audit (2026-05-01) finding 2.1.
+
+The shared primitive at `frontend/src/components/shared/FileDropZone.tsx` is consumed by `bank-rec`, `three-way-match`, and `multi-period`. Seven other tool pages still inline the same ~30-line `border-2 border-dashed rounded-2xl p-12 cursor-pointer` block with hand-rolled `onDrop`/`onDragOver`/`onDragLeave`/hidden file input + duplicate SVG. Diverging upload-format support (e.g. when adding a new accepted extension or sub-ledger optional-pairing) means seven separate edits today.
+
+**Migration targets:**
+- `app/tools/ap-testing/page.tsx:101–139`
+- `app/tools/journal-entry-testing/page.tsx:107–153`
+- `app/tools/payroll-testing/page.tsx:108–159`
+- `app/tools/revenue-testing/page.tsx:130–185`
+- `app/tools/fixed-assets/page.tsx:93–139`
+- `app/tools/inventory-testing/page.tsx:93–139`
+- `app/tools/ar-aging/page.tsx:110–207` (dual zone — TB required + sub-ledger optional)
+
+**What lands:**
+- AR aging requires a `dual-zone` variant of `FileDropZone` (or a small `<DualFileDropZone>` composing two instances). Pick whichever shape fits existing prop conventions; document the choice in the component file.
+- All seven pages refactored to render `<FileDropZone>` instead of inline markup. Hidden `<input type="file">` behavior, drag-state styling, accept-string, click-to-browse all preserved 1:1.
+
+**Verification:**
+- `npm test` — existing tests for each tool page pass with the same drop/click/upload semantics.
+- Manual smoke: drop a file into each of the seven migrated pages; confirm drop-state border transitions, file selection, and downstream `runTests` invocation behave identically.
+- Net line delta target: ~−400 lines across the seven page.tsx files.
+
+**Out of scope:**
+- Touching the existing three consumers (`bank-rec`, `three-way-match`, `multi-period`) — already correct.
+- Refactoring `useFileUpload` itself.
+
+---
+
+### Sprint 771: UI primitives — Button, ToolHeroHeader, ToolLoadingState, ToolErrorState
+**Status:** PENDING
+**Priority:** P3.
+**Source:** Frontend efficiency audit (2026-05-01) findings 2.2, 2.3, 2.4.
+
+Three Tailwind class-string patterns are copy-pasted across the tool-page suite, plus the hero-header markup. None of these primitives exist in `components/ui/` (only `Reveal.tsx` lives there today). Without primitives, brand-token migrations or hover-state changes require touching ~20 files.
+
+**What lands (`components/ui/`):**
+- `Button.tsx` — `variant: 'primary' | 'secondary' | 'ghost'`, `size: 'sm' | 'md'`, with disabled-state classes baked in. Replace 7 primary-button copies (e.g. `ap-testing/page.tsx:185`, `ar-aging/page.tsx:276`, `fixed-assets/page.tsx:173`, `inventory-testing/page.tsx:173`, `payroll-testing/page.tsx:188`, `revenue-testing/page.tsx:210`, `statistical-sampling/page.tsx:241`) and ~20 secondary-button copies.
+- `ToolHeroHeader.tsx` — props `{ standard, title, description, actions? }`. Render the inline-flex pill + `h1.type-tool-title` + description-p block. Replace in ~19 tool pages.
+- `ToolLoadingState.tsx` — props `{ message }`. Render the `text-center py-16 → spinner → message` block. Replace in 9 tool pages (incl. `ap-testing:144`, `ar-aging:231`, `fixed-assets:150`, `inventory-testing:150`, `journal-entry-testing:161`, `payroll-testing:167`, `revenue-testing:189`).
+- `ToolErrorState.tsx` — props `{ message, onRetry? }`. Render the `bg-theme-error-bg border-l-clay-500` alert with optional retry button. Replace in 10 pages (incl. `account-risk-heatmap/page.tsx:373`, `composite-risk/page.tsx:330`).
+
+**What does NOT change:**
+- `ToolStatePresence` orchestrator stays — it composes the new primitives instead of inlining markup.
+- `GuestCTA` / `UnverifiedCTA` / `UpgradeGate` already abstracted; left alone.
+
+**Verification:**
+- `npm run build` and `npm test` clean.
+- Visual diff: page-snapshot at least one tool page per state (idle/loading/error/success) before and after; confirm pixel-equivalence under both Vault themes.
+- Net line delta target: ~−700 lines across page.tsx files; ~+250 in `components/ui/`. Bundle size should drop slightly from class-string deduplication.
+
+**Out of scope:**
+- Page-private `RiskPill` / `Stat` / `TierPill` / `StatBox` mini-components in `composite-risk` and `account-risk-heatmap` — flagged separately in Sprint 773.
+- A full design-system rewrite — primitives are surgical, brand-token semantic only.
+
+---
+
+### Sprint 772: Bundle wins — lazy-load Recharts, CommandPalette + LazyMotion evaluation
+**Status:** PENDING
+**Priority:** P2. Each chunk is ≥30 kB gzipped; cumulative is meaningful for first-paint on tool pages.
+**Source:** Frontend efficiency audit (2026-05-01) findings 3.1, 3.2, 3.3.
+
+Three bundle-bloat issues with measurable user-visible cost:
+
+1. **Recharts loaded eagerly in JE-testing and dashboard.** `app/tools/journal-entry-testing/page.tsx:5` synchronously imports `BenfordChart` (which pulls `recharts` ~90 kB gzipped) even though the chart only renders inside the success branch (`page.tsx:227`). Same shape for `analytics/TrendSparkline.tsx` consumers (dashboard, multi-period).
+2. **GlobalCommandPalette mounted on every route.** `app/providers.tsx:9, 32` ships the palette to marketing, auth, error, and every tool page; users invoke it via ⌘K only on workspace pages.
+3. **framer-motion imported in 139 files with no LazyMotion.** Each `'use client'` page that does any reveal pulls the full `motion` runtime (~30 kB).
+
+**What lands:**
+- `BenfordChart` and `TrendSparkline` converted to `next/dynamic` with `{ ssr: false, loading: () => <ChartSkeleton /> }`. Add `ChartSkeleton` to `components/shared/skeletons/`.
+- `GlobalCommandPalette` converted to `next/dynamic({ ssr: false })` in `app/providers.tsx`. Confirm the ⌘K listener is registered eagerly (lightweight) and only the palette UI is deferred. If the listener lives inside the palette today, hoist it.
+- LazyMotion evaluation: prototype `<LazyMotion features={domAnimation}>` at `app/providers.tsx`, migrate one page (e.g. `/tools/ap-testing`) to `m.div` instead of `motion.div`, measure bundle delta with `next build` size report. **Decision in this sprint:** ship LazyMotion app-wide if savings >20 kB first-paint *and* SSR/animation parity holds; otherwise defer with documented findings.
+
+**Verification:**
+- `next build` analyze report before/after. Target: ~−90 kB on `/tools/journal-entry-testing` first-load JS, similar on dashboard, ~−20 kB on every page (palette).
+- Sentry RUM (if available): no regression in `LCP` or `CLS`.
+- Manual: `/tools/journal-entry-testing` upload→success path renders the chart with the skeleton flash; ⌘K still opens the palette on first invocation; reduced-motion preference still respected.
+
+**Out of scope:**
+- Replacing recharts with a lighter chart library — the lazy-load is sufficient win.
+- Migrating all 139 framer call sites to `m.*` — only `app/providers.tsx` and one validation page in this sprint; broader migration becomes a follow-up if LazyMotion ships.
+
+---
+
+### Sprint 773: Type disambiguation, dead-code cleanup, residual render-perf
+**Status:** PENDING
+**Priority:** P3.
+**Source:** Frontend efficiency audit (2026-05-01) findings 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 2.5, 2.6, 4.1.
+
+Grab-bag of smaller maintainability fixes that pair naturally — none warrant a standalone sprint, but together they close out the remaining audit findings.
+
+**What lands:**
+
+- **Type disambiguation —**
+  - `types/accountRiskHeatmap.ts:9` `Severity` (3-value) collides with the canonical `types/shared.ts:16` (4-value). Rename local to `HeatmapSeverity` or import the canonical and constrain at the consumer.
+  - `RiskLevel` is defined three times with different shapes:
+    - `utils/themeUtils.ts:186` (`high | medium | low | none`) → rename to `ThresholdRiskLevel`.
+    - `types/compositeRisk.ts:10` (`low | moderate | elevated | high`) → rename to `CompositeRiskLevel`.
+    - `contexts/DiagnosticContext.tsx:10` re-export from `types/diagnostic` → rename to `DiagnosticRiskLevel`.
+  - Update all importers; eslint catches missed references.
+
+- **Dead-code —**
+  - `utils/motionTokens.ts:60` deprecated `DISTANCE` map: inline `DISTANCE.state = 8` into `STATE_CROSSFADE` / `EMPHASIS_SETTLE` and delete the export.
+
+- **Residual render-perf —**
+  - `app/tools/multi-period/page.tsx:358–359` — wrap `<MovementSummaryCards>` and `<BudgetSummaryCards>` with `React.memo` so dashboard filter/sort interactions don't cascade through the result tree.
+  - `app/tools/account-risk-heatmap/page.tsx:397` `HeatmapResults` and `app/tools/composite-risk/page.tsx:354` `CompositeRiskResults` — same `React.memo` treatment; these subtrees don't need to re-render on filter inputs.
+  - `app/tools/composite-risk/page.tsx:180–212` and `app/tools/account-risk-heatmap/page.tsx:198–290` — extract `<RowEditor>` / `<SignalRow>` as `React.memo` children receiving `(row, idx, updateRow)`. Today, every keystroke in any input on the page re-renders all rows and rebuilds option JSX `n×3` per render.
+  - `components/shared/testing/FlaggedEntriesTable.tsx:263–296` — extract `<FlaggedRow>` as `React.memo`, hoist motion `initial`/`animate`/`transition` literals to module scope.
+  - `components/multiPeriod/AccountMovementTable.tsx:24–39` — hoist the sort comparator factory outside the `useMemo` body (currently re-created on every memo run).
+  - `components/multiPeriod/MovementSummaryCards.tsx:15–19` — hoist `borderAccentMap` to module scope `as const`.
+  - `Reveal` placement (composite-risk + heatmap pages) — move `Reveal` inside the memoized result subtree so reveal-state work doesn't redo on parent state changes.
+
+- **Inline mini-component extraction (optional in this sprint, defer if scope creeps) —**
+  - `RiskPill` (`composite-risk/page.tsx:452`) + `TierPill` (`account-risk-heatmap/page.tsx:532`) → unified `<RiskBadge level=…>` in `components/shared`.
+  - `Stat` (`composite-risk/page.tsx:462`) + `StatBox` (`account-risk-heatmap/page.tsx:542`) → `<StatTile>` in `components/shared`.
+
+**Verification:**
+- `npm run build`, `npm test`, `npm run lint` all clean.
+- Type-rename diff stays in `types/`, `utils/`, importers; no logic changes.
+- Render-perf wins confirmed via React DevTools Profiler on `/tools/multi-period`, `/tools/account-risk-heatmap`, `/tools/composite-risk` — sibling-state changes no longer re-render the result subtree; row keystrokes only re-render the active row.
+
+**Out of scope:**
+- The 4 `eslint-disable react-hooks/exhaustive-deps` suppressions — not all are bugs; leave for a separate audit pass unless one is confirmed stale-closure.
+- Inline-SVG icon consolidation (audit finding 3.4, ~459 occurrences) — separate sprint if/when motivated by a token migration.
+- Barrel-export reorganization (audit finding 3.5) — production tree-shakes correctly today; intervention only if a dev/test perf issue surfaces.
+- Per-tool ScoreCard / DataQualityBadge wrappers (audit finding 2.7) — verified healthy adapter pattern; no action.
 
 ---
 

@@ -33,6 +33,7 @@ from bank_reconciliation_memo_generator import generate_bank_rec_memo
 from currency_memo_generator import generate_currency_conversion_memo
 from expense_category_memo import generate_expense_category_memo
 from fixed_asset_testing_memo_generator import generate_fixed_asset_testing_memo
+from flux_expectations_memo import generate_flux_expectations_memo
 from inventory_testing_memo_generator import generate_inventory_testing_memo
 from je_testing_memo_generator import generate_je_testing_memo
 from multi_period_memo_generator import generate_multi_period_memo
@@ -542,17 +543,75 @@ def test_currency_memo_pdf_contains_all_required_section_labels() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Flux Expectations Memo (ISA 520 / AU-C 520 — analytical procedures)
+# ---------------------------------------------------------------------------
+
+# Inline fixture: the generator takes plain dicts (`flux_result` + `expectations`),
+# not nested Pydantic sub-models. One high-risk flagged item with practitioner
+# expectation text exercises the full template path (cover, scope, expectations
+# block with conclusion checkboxes, sign-off, disclaimer).
+_FLUX_EXPECTATIONS_FIXTURE = {
+    "flux_result": {
+        "items": [
+            {
+                "account": "Revenue",
+                "type": "Revenue",
+                "current": 500000,
+                "prior": 300000,
+                "delta_amount": 200000,
+                "delta_percent": 66.67,
+                "display_percent": "66.7%",
+                "is_new": False,
+                "is_removed": False,
+                "sign_flip": False,
+                "risk_level": "high",
+                "variance_indicators": ["Large % Variance"],
+            },
+        ],
+        "summary": {
+            "total_items": 1,
+            "high_risk_count": 1,
+            "medium_risk_count": 0,
+            "new_accounts": 0,
+            "removed_accounts": 0,
+            "threshold": 10000,
+        },
+    },
+    "expectations": {
+        "Revenue": {
+            "auditor_expectation": "Expected 15% growth based on industry trend",
+            "auditor_explanation": "Actual growth exceeded due to new contract",
+        },
+    },
+}
+
+FLUX_EXPECTATIONS_MEMO_REQUIRED_SECTIONS: tuple[str, ...] = (
+    "Flux",  # title prefix ("ISA 520 Flux & Expectation Documentation")
+    "Expectation",  # core concept; appears in title + section II
+    "Scope",  # section I header
+    "Variance",  # observed-variance block label
+    "Conclusion",  # per-item conclusion checkbox block
+    "Practitioner",  # ISA 520 disclaimer + section II header
+)
+
+
+def test_flux_expectations_memo_pdf_contains_all_required_section_labels() -> None:
+    pdf_bytes = generate_flux_expectations_memo(
+        flux_result=_FLUX_EXPECTATIONS_FIXTURE["flux_result"],
+        expectations=_FLUX_EXPECTATIONS_FIXTURE["expectations"],
+        client_name="Acme",
+        period_tested="FY2025",
+    )
+    _assert_labels_present(pdf_bytes, FLUX_EXPECTATIONS_MEMO_REQUIRED_SECTIONS, "Flux Expectations")
+
+
+# ---------------------------------------------------------------------------
 # Shared utilities + coverage status
 # ---------------------------------------------------------------------------
 
-# Coverage post-Sprint-754b finishing pass: 17/18 memos.
-# Skipped: flux_expectations memo — requires nested Pydantic sub-model
-# serialization (FluxExpectationsMemoInput with .flux + .expectations
-# typed sub-models, not a flat dict like the others). Adding it is a
-# follow-up that builds the typed input fixture; the route handler is
-# already exercised end-to-end by `tests/test_flux_expectations.py`.
+# Coverage: 18/18 memos (Sprint 762 closed the flux_expectations gap).
 #
-# When extending to flux_expectations or new memos:
+# When extending to new memos:
 #   1. Create a `<MEMO>_REQUIRED_SECTIONS: tuple[str, ...]` constant
 #      with verified labels (run the generator + extract text first).
 #   2. Add a test_<memo>_pdf_contains_all_required_section_labels using
