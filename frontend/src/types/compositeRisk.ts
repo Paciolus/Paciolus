@@ -7,7 +7,13 @@
  * data (TB anomaly score, tool scores, going concern indicators).
  */
 
-export type RiskLevel = 'low' | 'moderate' | 'elevated' | 'high'
+/**
+ * Composite (RMM-matrix) risk level used by the ISA 315 risk-scoring tool.
+ * Distinct from `ThresholdRiskLevel` (`utils/themeUtils.ts` — 4-value with
+ * `'none'`, used by per-row diagnostic visualizations) and from `RiskLevel`
+ * (`types/diagnostic.ts` enum — streaming-auditor finding tier).
+ */
+export type CompositeRiskLevel = 'low' | 'moderate' | 'elevated' | 'high'
 
 export type Assertion =
   | 'existence'
@@ -16,7 +22,7 @@ export type Assertion =
   | 'rights'
   | 'presentation'
 
-export const RISK_LEVELS: RiskLevel[] = ['low', 'moderate', 'elevated', 'high']
+export const RISK_LEVELS: CompositeRiskLevel[] = ['low', 'moderate', 'elevated', 'high']
 export const ASSERTIONS: Assertion[] = [
   'existence',
   'completeness',
@@ -25,7 +31,7 @@ export const ASSERTIONS: Assertion[] = [
   'presentation',
 ]
 
-export const RISK_LEVEL_LABELS: Record<RiskLevel, string> = {
+export const RISK_LEVEL_LABELS: Record<CompositeRiskLevel, string> = {
   low: 'Low',
   moderate: 'Moderate',
   elevated: 'Elevated',
@@ -40,7 +46,7 @@ export const ASSERTION_LABELS: Record<Assertion, string> = {
   presentation: 'Presentation',
 }
 
-export const RISK_BADGE_STYLES: Record<RiskLevel, string> = {
+export const RISK_BADGE_STYLES: Record<CompositeRiskLevel, string> = {
   low: 'bg-sage-50 text-sage-700 border-sage-200',
   moderate: 'bg-oatmeal-100 text-obsidian-700 border-oatmeal-300',
   elevated: 'bg-clay-50 text-clay-700 border-clay-200',
@@ -50,8 +56,8 @@ export const RISK_BADGE_STYLES: Record<RiskLevel, string> = {
 export interface AccountRiskAssessmentInput {
   account_name: string
   assertion: Assertion
-  inherent_risk: RiskLevel
-  control_risk: RiskLevel
+  inherent_risk: CompositeRiskLevel
+  control_risk: CompositeRiskLevel
   fraud_risk_factor: boolean
   auditor_notes: string
 }
@@ -67,9 +73,9 @@ export interface CompositeRiskProfileRequest {
 export interface AccountRiskAssessmentResponse {
   account_name: string
   assertion: Assertion
-  inherent_risk: RiskLevel
-  control_risk: RiskLevel
-  combined_risk: RiskLevel
+  inherent_risk: CompositeRiskLevel
+  control_risk: CompositeRiskLevel
+  combined_risk: CompositeRiskLevel
   fraud_risk_factor: boolean
   auditor_notes?: string | null
 }
@@ -83,7 +89,7 @@ export interface CompositeRiskProfileResponse {
   high_risk_accounts: number
   fraud_risk_accounts: number
   total_assessments: number
-  risk_distribution: Record<RiskLevel, number>
-  overall_risk_tier?: RiskLevel | null
+  risk_distribution: Record<CompositeRiskLevel, number>
+  overall_risk_tier?: CompositeRiskLevel | null
   disclaimer: string
 }

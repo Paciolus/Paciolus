@@ -7,7 +7,6 @@
 import {
   TIMING,
   EASE,
-  DISTANCE,
   STATE_CROSSFADE,
   RESOLVE_ENTER,
   EMPHASIS_SETTLE,
@@ -80,15 +79,6 @@ describe('EASE', () => {
         ],
       }
     `)
-  })
-})
-
-describe('DISTANCE', () => {
-  it('has inlined distance values', () => {
-    expect(DISTANCE.subtle).toBe(12)
-    expect(DISTANCE.standard).toBe(24)
-    expect(DISTANCE.dramatic).toBe(40)
-    expect(DISTANCE.state).toBe(8)
   })
 })
 

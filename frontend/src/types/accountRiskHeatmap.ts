@@ -6,7 +6,15 @@
  */
 
 export type PriorityTier = 'high' | 'moderate' | 'low'
-export type Severity = 'high' | 'medium' | 'low'
+
+/**
+ * 3-value severity scale used by the Account Risk Heatmap aggregator.
+ *
+ * Distinct from the canonical 4-value `Severity` in `types/shared.ts`
+ * (which adds `'critical'`); the heatmap input is stricter because the
+ * backend aggregator only emits 3 buckets.
+ */
+export type HeatmapSeverity = 'high' | 'medium' | 'low'
 
 export const PRIORITY_TIER_STYLES: Record<PriorityTier, string> = {
   high: 'bg-clay-100 text-clay-800 border-clay-300',
@@ -24,7 +32,7 @@ export interface RawSignalInput {
   account_number?: string
   account_name: string
   source: string
-  severity?: Severity | string
+  severity?: HeatmapSeverity | string
   issue: string
   materiality?: string
   confidence?: number

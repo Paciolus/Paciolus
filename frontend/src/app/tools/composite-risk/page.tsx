@@ -25,7 +25,7 @@ import {
   RISK_LEVEL_LABELS,
   type AccountRiskAssessmentInput,
   type Assertion,
-  type RiskLevel,
+  type CompositeRiskLevel,
 } from '@/types/compositeRisk'
 
 const EMPTY_ROW = (): AccountRiskAssessmentInput => ({
@@ -187,7 +187,7 @@ export default function CompositeRiskPage() {
                           <td className="py-2 pr-3">
                             <select
                               value={row.inherent_risk}
-                              onChange={e => updateRow(idx, 'inherent_risk', e.target.value as RiskLevel)}
+                              onChange={e => updateRow(idx, 'inherent_risk', e.target.value as CompositeRiskLevel)}
                               className="w-full px-2 py-1.5 rounded-md bg-surface-input border border-theme text-content-primary font-sans text-sm focus:outline-hidden focus:ring-2 focus:ring-sage-500"
                               aria-label={`Inherent risk row ${idx + 1}`}
                             >
@@ -201,7 +201,7 @@ export default function CompositeRiskPage() {
                           <td className="py-2 pr-3">
                             <select
                               value={row.control_risk}
-                              onChange={e => updateRow(idx, 'control_risk', e.target.value as RiskLevel)}
+                              onChange={e => updateRow(idx, 'control_risk', e.target.value as CompositeRiskLevel)}
                               className="w-full px-2 py-1.5 rounded-md bg-surface-input border border-theme text-content-primary font-sans text-sm focus:outline-hidden focus:ring-2 focus:ring-sage-500"
                               aria-label={`Control risk row ${idx + 1}`}
                             >
@@ -361,9 +361,9 @@ function CompositeRiskResults({ data }: { data: import('@/types/compositeRisk').
             Composite Risk Profile
           </h2>
           <span
-            className={`inline-flex items-center px-3 py-1 rounded-full border text-xs font-sans font-semibold uppercase tracking-wider ${RISK_BADGE_STYLES[overall as RiskLevel]}`}
+            className={`inline-flex items-center px-3 py-1 rounded-full border text-xs font-sans font-semibold uppercase tracking-wider ${RISK_BADGE_STYLES[overall as CompositeRiskLevel]}`}
           >
-            Overall Tier: {RISK_LEVEL_LABELS[overall as RiskLevel]}
+            Overall Tier: {RISK_LEVEL_LABELS[overall as CompositeRiskLevel]}
           </span>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
@@ -449,7 +449,7 @@ function CompositeRiskResults({ data }: { data: import('@/types/compositeRisk').
   )
 }
 
-function RiskPill({ level }: { level: RiskLevel }) {
+function RiskPill({ level }: { level: CompositeRiskLevel }) {
   return (
     <span
       className={`inline-flex items-center px-2 py-0.5 rounded-md border text-xs font-sans font-medium ${RISK_BADGE_STYLES[level]}`}

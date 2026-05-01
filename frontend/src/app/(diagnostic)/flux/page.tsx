@@ -7,7 +7,7 @@ import { useDiagnostic } from '@/contexts/DiagnosticContext';
 import { GuestCTA } from '@/components/shared';
 import type { FluxItem, FluxSummary, ReconScore, ReconStats } from '@/types/diagnostic';
 import { ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fileFormats';
-import { getRiskLevelClasses, type RiskLevel } from '@/utils/themeUtils';
+import { getRiskLevelClasses, type ThresholdRiskLevel } from '@/utils/themeUtils';
 import { formatCurrency, downloadBlob, apiDownload, apiPost } from '@/utils';
 
 /** Browser-only expectation state for ISA 520 documentation */
@@ -280,7 +280,7 @@ export default function FluxPage() {
                                             </td>
                                             <td className="p-4 text-right font-mono">{item.display_percent}</td>
                                             <td className="p-4 text-center">
-                                                <RiskBadge level={item.risk_level as RiskLevel} />
+                                                <RiskBadge level={item.risk_level as ThresholdRiskLevel} />
                                             </td>
                                             <td className="p-4 text-content-tertiary text-xs">
                                                 {item.variance_indicators.join(", ")}
@@ -328,7 +328,7 @@ export default function FluxPage() {
                                                     <div key={item.account} className="px-6 py-4">
                                                         <div className="flex items-center gap-2 mb-2">
                                                             <span className="font-sans text-sm font-medium text-content-primary">{item.account}</span>
-                                                            <RiskBadge level={item.risk_level as RiskLevel} />
+                                                            <RiskBadge level={item.risk_level as ThresholdRiskLevel} />
                                                             <span className="font-mono text-xs text-content-tertiary">
                                                                 {formatCurrency(item.delta_amount, true)} ({item.display_percent})
                                                             </span>
@@ -400,7 +400,7 @@ function SummaryCard({ label, value, variant = "default" }: { label: string, val
     );
 }
 
-function RiskBadge({ level }: { level: RiskLevel }) {
+function RiskBadge({ level }: { level: ThresholdRiskLevel }) {
     const classes = getRiskLevelClasses(level);
     return (
         <span className={`px-2 py-1 rounded-sm text-xs font-sans font-medium border ${classes}`}>
