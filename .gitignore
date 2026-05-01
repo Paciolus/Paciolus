@@ -62,9 +62,12 @@ htmlcov/
 .pytest_cache/
 coverage/
 coverage.json
+.hypothesis/
 backend/.hypothesis/
 backend/_pytest_tmp/
 tests/evaluatingfiles/
+.claude/worktrees/
+frontend/playwright-report/
 
 # =============================================================================
 # ZERO-STORAGE POLICY - Accounting Data Protection
