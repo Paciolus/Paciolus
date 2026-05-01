@@ -23,7 +23,7 @@ import {
   type HeatmapRequest,
   type PriorityTier,
   type RawSignalInput,
-  type Severity,
+  type HeatmapSeverity,
 } from '@/types/accountRiskHeatmap'
 
 const EMPTY_SIGNAL = (): RawSignalInput => ({
@@ -36,7 +36,7 @@ const EMPTY_SIGNAL = (): RawSignalInput => ({
   confidence: 1.0,
 })
 
-const SEVERITIES: Severity[] = ['high', 'medium', 'low']
+const SEVERITIES: HeatmapSeverity[] = ['high', 'medium', 'low']
 
 export default function AccountRiskHeatmapPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuthSession()
@@ -229,8 +229,8 @@ export default function AccountRiskHeatmapPage() {
                           </td>
                           <td className="py-2 pr-3">
                             <select
-                              value={s.severity as Severity}
-                              onChange={e => updateSignal(idx, 'severity', e.target.value as Severity)}
+                              value={s.severity as HeatmapSeverity}
+                              onChange={e => updateSignal(idx, 'severity', e.target.value as HeatmapSeverity)}
                               className="px-2 py-1.5 rounded-md bg-surface-input border border-theme text-content-primary font-sans text-sm focus:outline-hidden focus:ring-2 focus:ring-sage-500"
                               aria-label={`Severity signal ${idx + 1}`}
                             >

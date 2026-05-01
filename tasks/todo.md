@@ -266,3 +266,32 @@ Bundle the 19 patch + safe-minor updates into one commit, mirroring the 2026-04-
 
 ---
 
+### Sprint 773: Type disambiguation + dead-code (subset)
+**Status:** COMPLETE — landed on branch `sprint-773-type-disambig-dead-code-subset`.
+**Priority:** P3.
+**Source:** Frontend efficiency audit (2026-05-01) findings 1.3, 1.4, 1.8.
+
+Scoped down from the original Sprint 773 grab-bag to the three lowest-risk sub-items: type-collision disambiguation (`Severity`, `RiskLevel`) and one dead-code removal (`DISTANCE` map). Render-perf wraps and inline mini-component extraction deferred to a follow-up filing — the audit's findings 1.5/1.6/1.7/2.5/2.6 + 4.1 remain on the table.
+
+**What landed:**
+- `types/accountRiskHeatmap.ts` — `Severity` (3-value `'high' | 'medium' | 'low'`) renamed to `HeatmapSeverity` to remove the collision with the canonical 4-value `Severity` in `types/shared.ts`. Disambiguating doc-comment added explaining why the heatmap input is stricter (backend aggregator only emits 3 buckets).
+- `utils/themeUtils.ts` — `RiskLevel` (4-value `'high' | 'medium' | 'low' | 'none'`) renamed to `ThresholdRiskLevel`. Disambiguating doc-comment cross-references the other two `RiskLevel` definitions in the codebase.
+- `types/compositeRisk.ts` — `RiskLevel` (4-value `'low' | 'moderate' | 'elevated' | 'high'`) renamed to `CompositeRiskLevel`. Same disambiguating doc-comment pattern.
+- `utils/motionTokens.ts` — deprecated `DISTANCE` map deleted. `DISTANCE.state` was the only entry referenced (twice, both inside the file itself in `STATE_CROSSFADE`); inlined as the literal `8` at the call sites. The other entries (`subtle`, `standard`, `dramatic`) were already unused — entrance distances moved to `lib/motion`'s `lift` per the deprecation note. Companion test block in `__tests__/motionTokens.test.ts` removed.
+- Consumers updated: `app/(diagnostic)/recon/page.tsx`, `app/(diagnostic)/flux/page.tsx`, `app/tools/account-risk-heatmap/page.tsx`, `app/tools/composite-risk/page.tsx`, `utils/index.ts` (re-export rename).
+
+**What did NOT change (deferred):**
+- `contexts/DiagnosticContext.tsx:10` re-export of `RiskLevel` from `types/diagnostic.ts` (the third `RiskLevel` definition — an enum). Renaming the source enum would ripple across more consumers than this surgical sprint warrants — bundle with a future engagement-tooling cleanup if/when one arises.
+- `MechanicalGauge.tsx`'s local `RiskLevel` (file-scoped, no leak).
+- `useWorkspaceInsights.ts`'s local `RiskLevel` (hook-scoped, separate domain).
+- All Sprint 773 audit-finding render-perf wraps (`React.memo` for `MovementSummaryCards`, `BudgetSummaryCards`, `HeatmapResults`, `CompositeRiskResults`, row editors), motion-literal hoists, and inline mini-component extraction.
+
+**Verification:**
+- `cd frontend && npx tsc --noEmit` → exit 0.
+- `cd frontend && npx jest --watch=false` → see commit-message tail.
+- `cd frontend && npm run build` → see commit-message tail.
+
+**Commit SHA:** see branch `sprint-773-type-disambig-dead-code-subset` (filled at PR merge).
+
+---
+
