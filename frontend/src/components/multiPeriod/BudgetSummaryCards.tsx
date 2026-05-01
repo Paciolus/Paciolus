@@ -1,6 +1,7 @@
+import { memo } from 'react'
 import type { MovementSummaryResponse } from '@/hooks'
 
-export function BudgetSummaryCards({ comparison }: { comparison: MovementSummaryResponse }) {
+export const BudgetSummaryCards = memo(function BudgetSummaryCards({ comparison }: { comparison: MovementSummaryResponse }) {
   if (!comparison.budget_label) return null
   return (
     <div className="theme-card p-4">
@@ -23,4 +24,4 @@ export function BudgetSummaryCards({ comparison }: { comparison: MovementSummary
       </div>
     </div>
   )
-}
+})
