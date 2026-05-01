@@ -6,6 +6,7 @@
 
 export { SkeletonPage } from './SkeletonPage'
 export { CardGridSkeleton } from './CardGridSkeleton'
+export { ChartSkeleton } from './ChartSkeleton'
 export { FormSkeleton } from './FormSkeleton'
 export { ListSkeleton } from './ListSkeleton'
 export { UploadZoneSkeleton } from './UploadZoneSkeleton'

@@ -1,15 +1,25 @@
 'use client'
 
 import { useState, useCallback } from 'react'
+import dynamic from 'next/dynamic'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
-import { JEScoreCard, TestResultGrid, GLDataQualityBadge, BenfordChart, FlaggedEntryTable, SamplingPanel } from '@/components/jeTesting'
+import { JEScoreCard, TestResultGrid, GLDataQualityBadge, FlaggedEntryTable, SamplingPanel } from '@/components/jeTesting'
 import { GuestCTA, UnverifiedCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, ToolSettingsDrawer, Citation, CitationFooter } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractJEProof } from '@/components/shared/proof'
+import { ChartSkeleton } from '@/components/shared/skeletons'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
 import { useFileUpload } from '@/hooks/useFileUpload'
 import { useJETesting } from '@/hooks/useJETesting'
 import { useTestingExport } from '@/hooks/useTestingExport'
 import { isAcceptedFileType, ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fileFormats'
+
+// Sprint 772a: BenfordChart pulls recharts (~90 kB gzipped). Defer until
+// the success branch actually renders it so first-load JS for the upload
+// flow stays light.
+const BenfordChart = dynamic(
+  () => import('@/components/jeTesting/BenfordChart').then(m => ({ default: m.BenfordChart })),
+  { ssr: false, loading: () => <ChartSkeleton /> },
+)
 
 /**
  * Journal Entry Testing — Full Tool (Sprint 66)
