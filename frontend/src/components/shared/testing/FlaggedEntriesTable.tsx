@@ -10,6 +10,12 @@ const ITEMS_PER_PAGE = 25
 
 const SEVERITY_ORDER: Record<TestingSeverity, number> = { high: 3, medium: 2, low: 1, informational: 0 }
 
+// Sprint 773c: hoisted from inline literals on motion.tr so the row
+// renderer doesn't allocate three fresh objects per row per render.
+const ROW_INITIAL = { opacity: 0, x: -2 } as const
+const ROW_ANIMATE = { opacity: 1, x: 0 } as const
+const ROW_TRANSITION = { duration: TIMING.settle, ease: EASE.emphasis } as const
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export type ColumnDef<TEntry extends Record<string, unknown> = Record<string, unknown>> = {
@@ -269,9 +275,9 @@ export function FlaggedEntriesTable<TEntry extends Record<string, unknown>>({
               return (
                 <motion.tr
                   key={`${fe.test_key}-${String(fe.entry['row_number'] ?? fe.entry['row_index'] ?? i)}-${i}`}
-                  initial={{ opacity: 0, x: -2 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: TIMING.settle, ease: EASE.emphasis }}
+                  initial={ROW_INITIAL}
+                  animate={ROW_ANIMATE}
+                  transition={ROW_TRANSITION}
                   className={`border-b border-theme-divider cursor-pointer transition-colors ${borderClass}
                     ${isExpanded ? 'bg-sage-50/30' : 'even:bg-oatmeal-50/50 hover:bg-sage-50/40'}`}
                   onClick={() => setExpandedRow(isExpanded ? null : globalIdx)}

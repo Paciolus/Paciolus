@@ -266,3 +266,28 @@ Bundle the 19 patch + safe-minor updates into one commit, mirroring the 2026-04-
 
 ---
 
+### Sprint 773c: Render-perf finishers (sort comparator + motion literal hoists)
+**Status:** COMPLETE — landed on branch `sprint-773c-render-perf-finishers`.
+**Priority:** P3.
+**Source:** Frontend efficiency audit (2026-05-01) findings 1.7 + 1.8 sub-items remaining after Sprint 773 + 773b.
+
+Two surgical hoists. Pure perf wins, zero behavior change.
+
+**What landed:**
+- `components/multiPeriod/AccountMovementTable.tsx` — sort comparator hoisted from inside the `useMemo` body to a module-scope `getSortValue(m, sortKey)` function. Each memo run was previously rebuilding two parallel ternary chains per row. Now the sort callback is a thin wrapper around the hoisted helper. Audit finding 1.8 sub-item.
+- `components/shared/testing/FlaggedEntriesTable.tsx` — `motion.tr` `initial`/`animate`/`transition` literals hoisted to module-scope `ROW_INITIAL` / `ROW_ANIMATE` / `ROW_TRANSITION` (`as const`). Each rendered row was previously allocating three fresh objects; with `ITEMS_PER_PAGE = 25`, that's ~75 object allocations per render → 0. Audit finding 1.7 sub-item.
+
+**Verification:**
+- `cd frontend && npx tsc --noEmit` → exit 0.
+- `cd frontend && npx jest --watch=false --testPathPatterns="(FlaggedEntries|AccountMovement|multiPeriod)"` → **32 passed, 0 failed** (4 suites).
+- `cd frontend && npm run build` → exit 0; routes correctly dynamic (`ƒ`).
+
+**Out of scope (deferred):**
+- `<RowEditor>` / `<SignalRow>` extraction in composite-risk + heatmap pages — bigger surgery, separate filing.
+- `Reveal` placement inside memoized result subtrees — requires careful reasoning about scroll-trigger interaction with memo stability.
+- `RiskBadge` / `StatTile` mini-component unification (audit 2.5/2.6).
+
+**Commit SHA:** see branch `sprint-773c-render-perf-finishers` (filled at PR merge).
+
+---
+
