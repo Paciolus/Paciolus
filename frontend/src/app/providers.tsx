@@ -1,14 +1,25 @@
 'use client'
 
 import type { ReactElement } from 'react'
+import dynamic from 'next/dynamic'
 import { MotionConfig } from 'framer-motion'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { CommandPaletteProvider } from '@/contexts/CommandPaletteContext'
 import { ToastProvider } from '@/contexts/ToastContext'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
-import { GlobalCommandPalette, ToastContainer } from '@/components/shared'
+import { ToastContainer } from '@/components/shared'
 import { ImpersonationBanner } from '@/components/shared/ImpersonationBanner'
 import { ThemeProvider } from '@/components/ThemeProvider'
+
+// Sprint 772a: GlobalCommandPalette mounts on every route but only
+// renders when isOpen + isAuthenticated. The Cmd+K listener lives in
+// CommandPaletteContext (eagerly mounted) so the palette UI itself can
+// be split into a separate chunk — loaded async on every page, not
+// blocking first paint of marketing/auth/error routes.
+const GlobalCommandPalette = dynamic(
+  () => import('@/components/shared/CommandPalette/GlobalCommandPalette').then(m => ({ default: m.GlobalCommandPalette })),
+  { ssr: false },
+)
 
 /**
  * Providers — Client-side provider chain for Next.js App Router.
