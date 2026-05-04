@@ -29,7 +29,7 @@
     ]
   },
   "dependencies": {
-    "@sentry/nextjs": "^10.47.0",
+    "@sentry/nextjs": "^10.51.0",
     "@testing-library/dom": "^10.4.1",
     "framer-motion": "^12.37.0",
     "next": "^16.2.4",
@@ -48,7 +48,7 @@
     "@types/node": "^25.5.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "@typescript-eslint/eslint-plugin": "^8.59.0",
+    "@typescript-eslint/eslint-plugin": "^8.59.1",
     "@typescript-eslint/parser": "^8.59.0",
     "eslint-import-resolver-typescript": "^4.4.4",
     "eslint-plugin-import": "^2.32.0",
