@@ -211,7 +211,7 @@ class ContractEvidenceLevel:
 """
         tree = ast.parse(source)
         violations = check_contract_fields_ast(
-            tree, "revenue_testing_engine.py",
+            tree, "services/audit/revenue_testing/analysis.py",
             self.REQUIRED, "RevenueColumnDetection", "RevenueEntry",
             "ContractEvidenceLevel", 6,
         )
@@ -243,7 +243,7 @@ class ContractEvidenceLevel:
 """
         tree = ast.parse(source)
         violations = check_contract_fields_ast(
-            tree, "revenue_testing_engine.py",
+            tree, "services/audit/revenue_testing/analysis.py",
             self.REQUIRED, "RevenueColumnDetection", "RevenueEntry",
             "ContractEvidenceLevel", 6,
         )
@@ -280,7 +280,7 @@ class ContractEvidenceLevel:
 """
         tree = ast.parse(source)
         violations = check_contract_fields_ast(
-            tree, "revenue_testing_engine.py",
+            tree, "services/audit/revenue_testing/analysis.py",
             self.REQUIRED, "RevenueColumnDetection", "RevenueEntry",
             "ContractEvidenceLevel", 6,
         )
@@ -298,7 +298,7 @@ class SomeOtherClass:
 """
         tree = ast.parse(source)
         violations = check_contract_fields_ast(
-            tree, "revenue_testing_engine.py",
+            tree, "services/audit/revenue_testing/analysis.py",
             self.REQUIRED, "RevenueColumnDetection", "RevenueEntry",
             "ContractEvidenceLevel", 6,
         )
