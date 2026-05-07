@@ -113,7 +113,7 @@ def check_contract_fields_ast(
 
 def check_contract_fields(config: dict, backend_root: Path) -> list[Violation]:
     """Run revenue_contract_fields check."""
-    filename = config.get("file", "revenue_testing_engine.py")
+    filename = config.get("file", "services/audit/revenue_testing/analysis.py")
     filepath = backend_root / filename
     if not filepath.exists():
         return [Violation(
