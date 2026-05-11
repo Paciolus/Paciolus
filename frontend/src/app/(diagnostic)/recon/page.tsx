@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { useAuthSession } from '@/contexts/AuthSessionContext';
 import { useDiagnostic } from '@/contexts/DiagnosticContext';
 import { GuestCTA , DisclaimerBox, CitationFooter } from '@/components/shared';
-import { getRiskLevelClasses, type RiskLevel } from '@/utils/themeUtils';
+import { getRiskLevelClasses, type ThresholdRiskLevel } from '@/utils/themeUtils';
 
 export default function ReconPage() {
     const { isAuthenticated } = useAuthSession();
@@ -89,7 +89,7 @@ export default function ReconPage() {
                                     <td className="p-4 font-medium text-content-primary">{item.account}</td>
                                     <td className="p-4 text-center font-mono font-bold text-content-primary">{item.score}</td>
                                     <td className="p-4 text-center">
-                                        <RiskBadge level={item.band as RiskLevel} />
+                                        <RiskBadge level={item.band as ThresholdRiskLevel} />
                                     </td>
                                     <td className="p-4">
                                         <div className="flex flex-wrap gap-2">
@@ -121,7 +121,7 @@ export default function ReconPage() {
     );
 }
 
-function RiskBadge({ level }: { level: RiskLevel }) {
+function RiskBadge({ level }: { level: ThresholdRiskLevel }) {
     const classes = getRiskLevelClasses(level);
     return (
         <span className={`px-2 py-1 rounded-sm text-xs font-sans font-medium border ${classes}`}>

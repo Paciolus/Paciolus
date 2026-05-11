@@ -53,22 +53,6 @@ export const EASE = {
 } as const
 
 // =============================================================================
-// DISTANCE — extends OFFSET with state-transition shifts
-// =============================================================================
-
-/** @deprecated Entrance distances now use lift from '@/lib/motion'. Internal tool-state usage within this file is expected */
-export const DISTANCE = {
-  /** Labels, badges, lightweight items */
-  subtle: 12,
-  /** Section headers, cards, default entrance */
-  standard: 24,
-  /** Hero features, timeline steps */
-  dramatic: 40,
-  /** Crossfade Y-offset between tool upload states */
-  state: 8,
-} as const
-
-// =============================================================================
 // STATE_CROSSFADE — Variants for UploadStatus transitions
 // =============================================================================
 
@@ -80,7 +64,7 @@ export const DISTANCE = {
 export const STATE_CROSSFADE = {
   initial: {
     opacity: 0,
-    y: DISTANCE.state,
+    y: 8,
   },
   animate: {
     opacity: 1,
@@ -92,7 +76,7 @@ export const STATE_CROSSFADE = {
   },
   exit: {
     opacity: 0,
-    y: -DISTANCE.state,
+    y: -8,
     transition: {
       duration: TIMING.fast,
       ease: EASE.exit,
