@@ -66,6 +66,7 @@ AGENT_SCHEDULE = [
 DEFAULT_AGENT_TIMEOUT_S = 900
 AGENT_TIMEOUT_OVERRIDES = {
     "coverage_sentinel": 1700,  # 28 min — pytest --cov + margin
+    "qa_warden": 1700,  # 28 min — internal budget is 1200s pytest + 300s jest + margin
 }
 
 BRIEFING_COMPILER = ("briefing_compiler", "scripts/overnight/briefing_compiler.py", 4, 0)
