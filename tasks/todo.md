@@ -266,3 +266,32 @@ Bundle the 19 patch + safe-minor updates into one commit, mirroring the 2026-04-
 
 ---
 
+### Sprint 773b: React.memo wraps for result subtrees
+**Status:** COMPLETE — landed on branch `sprint-773b-react-memo-result-subtrees`.
+**Priority:** P3.
+**Source:** Frontend efficiency audit (2026-05-01) findings 1.5 + 1.6 — render-perf wraps deferred from Sprint 773's grab-bag scope reduction.
+
+Wraps four post-result subtrees with `React.memo` so dashboard filter/sort interactions and other parent state changes don't cascade through them. None change behavior — pure render-perf.
+
+**What landed:**
+- `components/multiPeriod/MovementSummaryCards.tsx` — wrapped in `memo(…)`. Hoisted the `cards` array and `borderAccentMap` to module-scope `CARDS` / `BORDER_ACCENT_MAP` (`as const`) so they're not re-created per render. Audit finding 1.5 + finding hoist sub-item.
+- `components/multiPeriod/BudgetSummaryCards.tsx` — wrapped in `memo(…)`.
+- `app/tools/account-risk-heatmap/page.tsx` — page-private `HeatmapResults` (line 397) wrapped in `memo(…)`. Imports `memo` from `react`.
+- `app/tools/composite-risk/page.tsx` — page-private `CompositeRiskResults` (line 354) wrapped in `memo(…)`. Imports `memo` from `react`.
+
+**Verification:**
+- `cd frontend && npx tsc --noEmit` → exit 0.
+- `cd frontend && npx jest --watch=false --testPathPatterns="(multiPeriod|MovementSummary|BudgetSummary|composite|heatmap)"` → **43 passed, 0 failed** (7 suites).
+- `cd frontend && npm run build` → exit 0; routes correctly dynamic (`ƒ`).
+
+**Out of scope (deferred):**
+- Row-editor `<RowEditor>` / `<SignalRow>` extraction in composite-risk + heatmap (audit 1.6 sub-item) — bigger surgery, separate filing.
+- `FlaggedRow` / `FlaggedEntriesTable` motion-literal hoists (audit 1.7) — separate filing.
+- `AccountMovementTable` sort-comparator hoist (audit 1.8 sub-item).
+- `Reveal` placement inside memoized subtrees (audit 1.7).
+- `RiskBadge` / `StatTile` mini-component unification (audit 2.5/2.6).
+
+**Commit SHA:** see branch `sprint-773b-react-memo-result-subtrees` (filled at PR merge).
+
+---
+
