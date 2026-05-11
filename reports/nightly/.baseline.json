@@ -1,29 +1,24 @@
 {
   "qa_warden": {
-    "date": "2026-04-29",
+    "date": "2026-05-01",
     "backend": {
-      "passed": 8486,
+      "passed": 8685,
       "failed": 0,
       "errors": 0,
-      "duration_s": 748.6,
+      "duration_s": 763.6,
       "failing_tests": [],
       "collection_error": null,
       "new_failures": [],
-      "resolved": [
-        "tests/test_security_hardening_2026_04_20.py::TestCSRFRefreshLogout::test_dev_still_accepts_x_requested_with[asyncio]",
-        "tests/test_security_hardening_2026_04_20.py::TestCSRFRefreshLogout::test_production_rejects_x_requested_with_only[asyncio]",
-        "tests/test_security_hardening_2026_04_20.py::TestRateLimitFailClosed::test_strict_mode_defaults_true_in_production",
-        "tests/test_security_hardening_2026_04_20.py::TestRateLimitFailClosed::test_valid_override_allowed"
-      ]
+      "resolved": []
     },
     "frontend": {
-      "passed": 1957,
+      "passed": 2013,
       "failed": 0,
-      "duration_s": 56.6
+      "duration_s": 70.5
     }
   },
   "report_auditor": {
-    "date": "2026-04-29",
+    "date": "2026-05-01",
     "bug_tracker": {
       "BUG-001": {
         "description": "Suggested procedures rotation bug \u2014 procedures repeat rather than rotate across reports",
@@ -63,7 +58,7 @@
     }
   },
   "coverage_sentinel": {
-    "date": "2026-04-29",
+    "date": "2026-05-01",
     "history": [
       {
         "date": "2026-04-14",
@@ -108,6 +103,10 @@
       {
         "date": "2026-04-29",
         "percent_covered": 93.13
+      },
+      {
+        "date": "2026-05-01",
+        "percent_covered": 93.33
       }
     ]
   },
