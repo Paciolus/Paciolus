@@ -266,3 +266,31 @@ Bundle the 19 patch + safe-minor updates into one commit, mirroring the 2026-04-
 
 ---
 
+### Sprint 772a: Lazy-load Recharts + GlobalCommandPalette
+**Status:** COMPLETE — landed on branch `sprint-772a-lazy-recharts-cmdk`.
+**Priority:** P2.
+**Source:** Frontend efficiency audit (2026-05-01) findings 3.1 + 3.2.
+
+Splits Sprint 772 into 772a (this commit — Recharts + CommandPalette lazy-loads) and 772b (LazyMotion evaluation, deferred to a follow-up so the framer-motion footprint can be measured against this baseline). Audit's claim that `TrendSparkline` was eagerly loaded by dashboard/multi-period turned out to be stale (`grep` confirmed zero page-level consumers of `TrendSparkline` / `TrendSummaryCard` / `TrendSection` outside of test files); `BenfordChart` is the only real recharts entry point.
+
+**What landed:**
+- `frontend/src/components/shared/skeletons/ChartSkeleton.tsx` (new) — lightweight 200px shimmer placeholder; matches BenfordChart's render footprint closely enough that there's no visible layout shift on swap-in. Re-exported from `skeletons/index.ts`.
+- `app/tools/journal-entry-testing/page.tsx` — `BenfordChart` removed from the eager barrel import; replaced with `next/dynamic({ ssr: false, loading: () => <ChartSkeleton /> })` against the direct `@/components/jeTesting/BenfordChart` path. The chart only loads its recharts chunk when the success branch actually renders it.
+- `app/providers.tsx` — `GlobalCommandPalette` removed from the eager barrel import; replaced with `next/dynamic({ ssr: false })` against the direct path. The Cmd+K listener already lives in `CommandPaletteContext` (verified at `CommandPaletteContext.tsx:107`) so the eager event-handler registration is preserved while the palette UI itself code-splits.
+- `__tests__/JournalEntryTestingPage.test.tsx` — added `jest.mock('@/components/jeTesting/BenfordChart', …)` direct-path stub to mirror the barrel mock. Without it, the dynamic import bypasses the barrel mock under jsdom and renders the real component, which crashes on `benford.total_count.toLocaleString()` against the test fixture.
+
+**Verification:**
+- `cd frontend && npx tsc --noEmit` → exit 0.
+- `cd frontend && npx jest --watch=false --testPathPatterns="JournalEntryTesting"` → **8 passed, 0 failed**.
+- `cd frontend && npx jest --watch=false` (full suite) → see commit-message tail.
+- `cd frontend && npm run build` → see commit-message tail.
+
+**Out of scope / deferred:**
+- LazyMotion evaluation (audit 3.3) — deferred to 772b; needs `next build --analyze` baseline against this lazy-load baseline to measure actual bundle delta.
+- Hoisting CommandPalette mount to be conditional on `isOpen` — would save the chunk fetch entirely for users who never press Cmd+K, but adds complexity and the dynamic-import path already keeps the chunk off the main bundle.
+- Removing the `GlobalCommandPalette` re-export from `components/shared/index.ts` — currently unused-via-barrel after this change, but removing the re-export risks breaking unrelated consumers we haven't enumerated.
+
+**Commit SHA:** see branch `sprint-772a-lazy-recharts-cmdk` (filled at PR merge).
+
+---
+

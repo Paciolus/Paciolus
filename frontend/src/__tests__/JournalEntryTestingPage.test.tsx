@@ -36,6 +36,13 @@ jest.mock('@/components/jeTesting', () => ({
   SamplingPanel: () => <div data-testid="sampling-panel">Sampling</div>,
 }))
 
+// Sprint 772a: page.tsx now imports BenfordChart via next/dynamic from
+// the direct path, bypassing the barrel mock above. Re-mock the direct
+// path so the chart still renders as a stub under jsdom.
+jest.mock('@/components/jeTesting/BenfordChart', () => ({
+  BenfordChart: () => <div data-testid="benford-chart">Benford</div>,
+}))
+
 jest.mock('@/hooks/useCanvasAccentSync', () => ({ useCanvasAccentSync: jest.fn() }))
 jest.mock('@/components/shared/proof', () => ({
   ProofSummaryBar: () => <div data-testid="proof-summary-bar">Proof</div>,
