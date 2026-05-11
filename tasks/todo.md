@@ -266,3 +266,28 @@ Bundle the 19 patch + safe-minor updates into one commit, mirroring the 2026-04-
 
 ---
 
+### Sprint 769: Frontend context memoization (render-perf hotfix)
+**Status:** COMPLETE — landed on branch `sprint-769-frontend-context-memoization`.
+**Priority:** P2. No user-visible bug, but cascade re-renders measurably affect interactive latency in tools mounted under DiagnosticProvider/EngagementProvider.
+**Source:** Frontend efficiency audit (2026-05-01) findings 1.1 + 1.2.
+
+`DiagnosticContext` and `EngagementContext` were building a fresh `value` object literal on every provider render. With `setResult` / `clearResult` also fresh closures, every consumer re-rendered whenever the provider's parent re-rendered, regardless of whether the carried state actually changed.
+
+**What landed:**
+- `DiagnosticContext.tsx` — `setResult` / `clearResult` wrapped in `useCallback([])`; provider `value` wrapped in `useMemo([result, isLoading, setResult, clearResult])`. (`setIsLoading` is the React-stable `useState` setter, omitted from deps per React semantics.)
+- `EngagementContext.tsx` — `contextValue` wrapped in `useMemo` with the full 10-key dep array (5 state values + 5 already-memoized handlers).
+- Inline rationale block added above the URL-sync `useEffect` (`EngagementContext.tsx:115`) documenting why `searchParams` / `selectEngagement` / `activeEngagement` are deliberately excluded from deps: including `searchParams` would loop because `selectEngagement`'s own `router.replace` rotates the value; `selectEngagement` itself re-creates whenever `searchParams` change (same loop); and `activeEngagement` is the load-bearing one-shot guard inside the body. The eslint-disable is intentional, not a stale-closure bug.
+
+**Verification:**
+- `cd frontend && npx tsc --noEmit` → exit 0.
+- `cd frontend && npx jest --watch=false --testPathPatterns="(Diagnostic|Engagement)"` → **52 passed, 0 failed** (7 suites). Pre-existing `act()` warnings on `EngagementBanner.tsx:35` are not regressions and originate from `useEffect`-triggered `setClientName` in test renders unrelated to Sprint 769's surface.
+- `cd frontend && npm run build` → exit 0; all routes correctly dynamic (`ƒ`).
+
+**Out of scope:**
+- Splitting either context into state-vs-dispatch halves — bigger refactor, not warranted by current symptoms.
+- Other render-perf findings (row mappings, table memoization, result-subtree wraps) — bundled in Sprint 773.
+
+**Commit SHA:** see branch `sprint-769-frontend-context-memoization` (filled at PR merge).
+
+---
+
