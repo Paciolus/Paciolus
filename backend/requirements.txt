@@ -34,7 +34,7 @@ limits>=5.8.0
 
 # Redis — shared rate-limit storage across workers/instances (optional)
 # Required only when REDIS_URL is set; in-memory fallback otherwise.
-redis>=5.0.0
+redis>=7.4.0
 
 # APM / Error Tracking (Sprint 275)
 sentry-sdk[fastapi]==2.58.0
