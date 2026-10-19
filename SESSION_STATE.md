@@ -5,7 +5,7 @@ _Updated at the end of every Claude Code session. Overwrite the previous state �
 ## Last Session
 
 **Date:** 2026-10-19
-**Branch:** `sprint-774-rate-limit-outage-resilience` — 5 commits, based cleanly on `main` (`51906004`), **not yet pushed**.
+**Branch:** merged. PR **#165** landed on `main` as `54f1963d` and **is deployed** (Render `dep-dbb4feavcj2c738cga90`, status `live`). 9 commits.
 
 **Context:** First session after ~5.5 months of repo dormancy (previous commit 2026-05-01). Began as a status review, became a P0 incident response.
 
@@ -47,21 +47,39 @@ Every backend endpoint had been returning HTTP 500 since roughly 2026-05. Two in
 **Note on environments:** `backend/venv` (what the nightly cron and I used) and system Python 3.12 had drifted apart, and neither matched `requirements.txt`. The nightly runs `backend\venv\Scripts\python.exe`. Both now carry the new pins.
 
 **Open blockers:**
-- **Branch is unpushed.** Production is restored but still runs `51906004`, so the Sprint 774 resilience fix itself is **not yet deployed**. Needs push → PR → merge → then verify the live deploy SHA equals `main`.
-- **Nothing alerted for 5.5 months.** Filed as **Sprint 775** (external uptime monitoring + deploy-failure alerting). Highest-value follow-up. Alert on `/health/ready` returning `status != "healthy"`, not just on non-200.
-- **Scheduled GitHub Actions are disabled** — GitHub switches cron workflows off after ~60 days of repo inactivity; last scheduled run ~2026-09-01. Re-enabling needs a repo-settings action.
-- **Dependency pinning strategy unresolved** — filed as **Sprint 777**. The only two CVE-flagged packages were the only two with exact `==` pins; everything else uses `>=` floors and self-heals. This also changes how Sprint 761 should pin `cryptography`.
+- ~~Branch unpushed / resilience fix undeployed~~ — **RESOLVED.** Merged and verified live (see above).
+- **Nothing alerted for 5.5 months.** Sprint 775's in-repo half is **done and CI-verified**; an **external** monitor is still required (see Next Priority).
+- ~~Scheduled GitHub Actions disabled~~ — **RESOLVED.** All five workflows re-enabled 2026-10-19 via the Actions API. But see Sprint 778: two of them cannot pass as written.
+- ~~Dependency pinning strategy unresolved~~ — **RESOLVED.** Sprint 777 chose option 3 (explicit split), rule written into `backend/requirements.txt`. It explicitly **rejects** Sprint 761's premise: `cryptography` stays a floor.
 - 21 dev-only npm advisories remain (babel-jest chain); they don't gate CI (`--omit=dev`) and clearing them needs `npm audit fix --force`.
 - 25 open PRs: 10 real work (#134, #137–#145), 15 Dependabot. All `MERGEABLE`; the 12 older Dependabot ones are `BEHIND` and need updating.
 - Phase 4.1 Stripe cutover, 4.2 legal sign-off, 4.3 custom domain (`api.paciolus.com` still 404s) — all still CEO-gated.
 
+## Merge + deploy verification (2026-10-19)
+
+PR #165 merged after **all 24 CI checks passed, 0 failures** — including the three matrices that cannot be reproduced locally (Python 3.11, PostgreSQL 15, Playwright E2E) and all four CVE/audit gates.
+
+Merged with `--admin`. Branch protection on `main` requires 1 approving review, and GitHub blocks self-approval of your own PR, so that requirement is unsatisfiable for a solo developer; `enforce_admins` is `false`, so admin merge is the available path. **CI was green first** — the bypass covered only the review requirement, not the checks.
+
+**"Merged" was then actually verified as "deployed"** — the explicit lesson of this session:
+- Render auto-deploy `dep-dbb4feavcj2c738cga90` reached status `live`.
+- Live deploy SHA `54f1963d` **==** `origin/main`.
+- `/health/ready` now reports the new `rate_limit_storage` dependency (`configured_backend: redis`, `active_backend: redis`, `degraded: false`, `reachable_at_boot: true`) — proof Sprint 774's code is genuinely running, not merely merged.
+- Post-deploy sanity: `/auth/csrf` unauth 401, bad-credential login 401, `/health/live` 200, `/health/redis` 200, `paciolus.com` 200.
+
+Note: a GitHub Actions incident ("Degraded availability for Actions, Pages and Webhooks", 15:49 UTC) held every check in `queued` for ~45 minutes first. It cleared on its own.
+
+**Sprint 775 monitoring verified in CI, not just locally.** Manually dispatched `uptime-check.yml` on `main`: run `39287982893` succeeded with `api=PASS site=PASS drift=SKIP`. The drift probe correctly SKIPs rather than false-alarming while `RENDER_API_KEY` is unset, and the failure-issue step correctly skipped.
+
 ## Next Priority
 
-1. **Push the branch, open a PR, merge — then confirm the live deploy SHA equals `main`.** The lesson of this session is that "merged" is not "deployed."
-2. **Sprint 775** — external uptime monitoring + deploy-failure alerting.
-3. Merge **PR #145** (2 lines, qa_warden timeout). Only 43 of 109 dormant nights produced a qa_warden sentinel because the orchestrator timeout sat below the ~715–780s suite runtime — so the one agent that would have reported a red suite was the one most likely to time out.
-4. **Sprint 777** — settle the pinning rule before Sprint 761.
+1. **Sprint 778 (P1)** — DR + backup workflows are structurally broken, and there is **no off-provider database backup**. Neon PITR is the only thing behind production data. `backup-integrity-check` is re-enabled and will file a `dr-failure` issue on the 1st of each month until this lands; the signal is true but its stated reason ("RENDER_API_KEY is not set") is misleading.
+2. **Add an external uptime monitor** (Better Stack / Healthchecks.io / UptimeRobot). The in-repo `uptime-check.yml` cannot be the durable primary: GitHub disables cron workflows after ~60 days of inactivity, so it switches itself off during exactly the quiet period it guards. Alert on `status != "healthy"`, not just non-200.
+3. **Add the `RENDER_API_KEY` secret** (read-only) to activate the deploy-drift probe. The repo currently has **no secrets at all**, which is also why the DR/backup workflows fail.
+4. **Triage the remaining open PRs** — now unblocked by the CVE fix. All report `MERGEABLE`; the 12 older Dependabot ones are `BEHIND` and need updating.
 5. Archive Active Phase when it next reaches 5 completed sprints (`sh scripts/archive_sprints.sh`; the commit-msg hook rejects at 5).
+6. Copy decision: the API description still reads "12-Tool Audit Intelligence Suite" though the canonical catalog has been 18 since Sprint 689.
+7. Still CEO-gated: Phase 4.1 Stripe cutover, 4.2 legal sign-off, 4.3 custom domain (`api.paciolus.com` still 404s).
 
 ## Recent Git Context
 
