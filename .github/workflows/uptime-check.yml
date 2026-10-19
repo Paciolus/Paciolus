@@ -1,0 +1,241 @@
+# Uptime + Deploy-Drift Check — Sprint 775 (2026-10-19)
+#
+# WHY THIS EXISTS
+# Production returned HTTP 500 on every endpoint from roughly 2026-05 until
+# 2026-10-19 and nothing alerted. Render showed the service healthy and
+# unsuspended the whole time, because the process was alive — it was the
+# rate-limit storage that had died, and every rate-limited route (which is
+# essentially the whole API, health probes included) raised a 500. Nothing
+# external was watching, so the outage was indistinguishable from a quiet
+# period.
+#
+# WHAT IT CHECKS
+#   1. GET /health/ready returns 200 AND body.status == "healthy".
+#      Checking the BODY matters: Sprint 774 made a degraded rate-limit
+#      backend report status="degraded" while still returning 200, precisely
+#      so a healthy instance is not evicted from the load balancer over a
+#      cache outage. A status-code-only monitor would sail straight past it.
+#   2. The marketing site returns 200. Vercel is a separate failure domain
+#      from the Render API — paciolus.com stayed up through the entire
+#      backend outage, which is part of why the outage looked like nothing.
+#   3. Deploy drift: the live Render deploy SHA equals origin/main. This
+#      catches "merged but not deployed" — the Sprint 768 security fixes sat
+#      undeployed for ~5.5 months because that deploy exited 1 at startup,
+#      Render kept serving the previous image, and from outside nothing had
+#      changed. Requires the RENDER_API_KEY secret; SKIPPED (not failed)
+#      when absent, so a missing credential never raises a false alarm.
+#
+# ⚠️ LIMITATION — READ THIS
+# GitHub disables scheduled workflows after ~60 days with no repo activity.
+# That is exactly what happened to dependency-compliance, dr-test-monthly
+# and backup-integrity-check during the 2026 dormancy. So this workflow
+# CANNOT be the durable primary monitor: during a long quiet period it
+# switches itself off, which is precisely the period you most need it.
+# Treat it as defence in depth, and put a real external monitor in front of
+# /health/ready — Better Stack, Healthchecks.io and UptimeRobot all have
+# free tiers sufficient at this scale — configured to alert on
+# status != "healthy", not merely on a non-200.
+#
+# Cost: the repo is public, so Actions minutes are free.
+
+name: Uptime Check
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"   # every 15 minutes
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: uptime-check
+  cancel-in-progress: false
+
+env:
+  API_BASE: https://paciolus-api.onrender.com
+  SITE_URL: https://paciolus.com
+  RENDER_SERVICE_ID: srv-d6ie9l56ubrc73c7eq2g
+  ISSUE_TITLE: Production uptime check FAILING
+
+jobs:
+  uptime:
+    name: Probe production
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # pin: v6
+
+      - name: Probe /health/ready (status code AND body status)
+        id: api
+        run: |
+          set -uo pipefail
+          # Render instances can cold-start; allow a generous timeout so a
+          # slow wake is not reported as an outage.
+          RESP=$(curl -sS --max-time 60 -w '\n%{http_code}' "$API_BASE/health/ready" || printf '\n000')
+          CODE="${RESP##*$'\n'}"
+          JSON="${RESP%$'\n'*}"
+
+          {
+            echo "## API readiness"
+            echo ""
+            echo "- **Endpoint:** \`$API_BASE/health/ready\`"
+            echo "- **HTTP:** $CODE"
+          } > report.md
+
+          if [ "$CODE" != "200" ]; then
+            echo "result=FAIL" >> "$GITHUB_OUTPUT"
+            echo "- **Verdict:** FAIL — expected HTTP 200" >> report.md
+            printf '\n```\n%s\n```\n' "$JSON" >> report.md
+            exit 0
+          fi
+
+          STATUS=$(printf '%s' "$JSON" | python3 -c 'import sys,json;print(json.load(sys.stdin).get("status","<missing>"))' 2>/dev/null || echo "<unparseable>")
+          echo "- **Reported status:** \`$STATUS\`" >> report.md
+
+          if [ "$STATUS" = "healthy" ]; then
+            echo "result=PASS" >> "$GITHUB_OUTPUT"
+            echo "- **Verdict:** PASS" >> report.md
+          else
+            # "degraded" is a real signal, not a blip: a dependency is down
+            # while the service keeps serving. Alert on it.
+            echo "result=FAIL" >> "$GITHUB_OUTPUT"
+            echo "- **Verdict:** FAIL — status is not \"healthy\"" >> report.md
+            printf '\n```json\n%s\n```\n' "$JSON" >> report.md
+          fi
+
+      - name: Probe marketing site
+        id: site
+        run: |
+          set -uo pipefail
+          CODE=$(curl -sS -o /dev/null --max-time 45 -w '%{http_code}' "$SITE_URL" || echo "000")
+          {
+            echo ""
+            echo "## Marketing site"
+            echo ""
+            echo "- **URL:** $SITE_URL"
+            echo "- **HTTP:** $CODE"
+          } >> report.md
+          if [ "$CODE" = "200" ]; then
+            echo "result=PASS" >> "$GITHUB_OUTPUT"
+          else
+            echo "result=FAIL" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Deploy-drift check (live SHA vs origin/main)
+        id: drift
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+        run: |
+          set -uo pipefail
+          {
+            echo ""
+            echo "## Deploy drift"
+            echo ""
+          } >> report.md
+
+          if [ -z "${RENDER_API_KEY:-}" ]; then
+            # Absent credential is a configuration gap, not an outage.
+            echo "result=SKIP" >> "$GITHUB_OUTPUT"
+            echo "- SKIPPED — the \`RENDER_API_KEY\` secret is not set." >> report.md
+            exit 0
+          fi
+
+          LIVE=$(curl -sS --max-time 45 -H "Authorization: Bearer $RENDER_API_KEY" "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys?limit=20" | python3 scripts/latest_live_deploy_sha.py 2>/dev/null || echo "")
+          MAIN=$(git rev-parse origin/main)
+
+          echo "- **origin/main:** \`$MAIN\`" >> report.md
+          echo "- **live deploy:** \`${LIVE:-<unknown>}\`" >> report.md
+
+          if [ -z "$LIVE" ]; then
+            echo "result=FAIL" >> "$GITHUB_OUTPUT"
+            echo "- **Verdict:** FAIL — no deploy in state \`live\` was found." >> report.md
+          elif [ "$LIVE" = "$MAIN" ]; then
+            echo "result=PASS" >> "$GITHUB_OUTPUT"
+            echo "- **Verdict:** PASS — production matches main." >> report.md
+          else
+            echo "result=FAIL" >> "$GITHUB_OUTPUT"
+            echo "- **Verdict:** FAIL — production is NOT running main. Something was merged but never landed." >> report.md
+          fi
+
+      - name: Decide overall
+        id: final
+        run: |
+          set -uo pipefail
+          API="${{ steps.api.outputs.result }}"
+          SITE="${{ steps.site.outputs.result }}"
+          DRIFT="${{ steps.drift.outputs.result }}"
+          echo "api=$API site=$SITE drift=$DRIFT"
+          if [ "$API" = "FAIL" ] || [ "$SITE" = "FAIL" ] || [ "$DRIFT" = "FAIL" ]; then
+            echo "overall=FAIL" >> "$GITHUB_OUTPUT"
+          else
+            echo "overall=PASS" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open or update failure issue
+        if: steps.final.outputs.overall == 'FAIL'
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd  # pin: v8.0.0
+        env:
+          ISSUE_TITLE: ${{ env.ISSUE_TITLE }}
+        with:
+          script: |
+            const fs = require('fs');
+            const title = process.env.ISSUE_TITLE;
+            const report = fs.readFileSync('report.md', 'utf8');
+            const run = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = `${report}\n\n[Workflow run](${run})`;
+
+            // Reuse one issue rather than filing a new one every 15 minutes.
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'uptime-failure',
+            });
+            const hit = existing.data.find(i => i.title === title);
+
+            if (hit) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: hit.number, body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner, repo: context.repo.repo,
+                title, body, labels: ['uptime-failure'],
+              });
+            }
+
+      - name: Close failure issue on recovery
+        if: steps.final.outputs.overall == 'PASS'
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd  # pin: v8.0.0
+        env:
+          ISSUE_TITLE: ${{ env.ISSUE_TITLE }}
+        with:
+          script: |
+            const title = process.env.ISSUE_TITLE;
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'uptime-failure',
+            });
+            const hit = existing.data.find(i => i.title === title);
+            if (hit) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: hit.number,
+                body: 'Recovered — all probes passing. Closing.',
+              });
+              await github.rest.issues.update({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: hit.number, state: 'closed',
+              });
+            }
+
+      - name: Fail the run so GitHub notifies
+        if: steps.final.outputs.overall == 'FAIL'
+        run: |
+          echo "::error::Production uptime check FAILED — see the uptime-failure issue."
+          exit 1

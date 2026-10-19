@@ -271,7 +271,7 @@ Bundle the 19 patch + safe-minor updates into one commit, mirroring the 2026-04-
 ---
 
 ### Sprint 774: Rate-limit storage outage resilience (P0 production restore)
-**Status:** COMPLETE — commit `e848d3c2` on branch `sprint-774-rate-limit-outage-resilience` (not yet pushed/merged; production is restored but still runs `51906004`, so the resilience fix itself is not yet deployed).
+**Status:** COMPLETE — commit `8601c4ef` on branch `sprint-774-rate-limit-outage-resilience` (was `e848d3c2` before the branch was rebased onto `main`) (not yet pushed/merged; production is restored but still runs `51906004`, so the resilience fix itself is not yet deployed).
 **Priority:** P0 (production was down).
 **Source:** Production outage discovered 2026-10-19 during a status review after ~5.5 months of repo dormancy (last commit 2026-05-01).
 
@@ -329,7 +329,7 @@ Bundle the 19 patch + safe-minor updates into one commit, mirroring the 2026-04-
 ---
 
 ### Sprint 775: External uptime monitoring + deploy-failure alerting
-**Status:** PENDING.
+**Status:** COMPLETE (in-repo half). The external-monitor signup remains a CEO action — see "Residual" below.
 **Priority:** P1. The Sprint 774 outage was not caused by missing monitoring, but it lasted 5.5 months because of it.
 **Source:** Sprint 774 post-incident.
 
@@ -342,8 +342,45 @@ Also worth filing: the Sprint 768 security fixes sat undeployed for 5.5 months b
 
 ---
 
-### Sprint 777: Dependency pinning strategy — decide the `==` vs `>=` rule
+**What landed:** `.github/workflows/uptime-check.yml` + `scripts/latest_live_deploy_sha.py`.
+
+Runs every 15 minutes (and on `workflow_dispatch`). Three probes:
+
+1. **`GET /health/ready` must return 200 AND `body.status == "healthy"`.** Checking the body is the whole point: Sprint 774 deliberately made a degraded rate-limit backend report `status: "degraded"` while still returning **200**, so that a cache outage does not evict a healthy instance from the load balancer. A status-code-only monitor would sail straight past exactly the condition we just spent a sprint making visible. Verified against live prod (200/`healthy` → PASS) and against synthetic `degraded`/`unhealthy` bodies (→ FAIL).
+2. **Marketing site returns 200.** Vercel is a separate failure domain from the Render API; `paciolus.com` served 200 throughout the entire 5.5-month backend outage, which is part of why the outage looked like nothing was wrong.
+3. **Deploy drift — live Render deploy SHA vs `origin/main`.** This is the check that would have caught Sprint 768: its deploy exited 1 at startup, Render correctly kept the previous image serving, and from outside nothing had changed, so P1 security fixes sat undeployed for 5.5 months. Needs the `RENDER_API_KEY` secret and **SKIPs rather than FAILs** when it is absent, so a missing credential never raises a false alarm.
+
+Failure handling reuses a single `uptime-failure`-labelled issue (commenting on it rather than filing a new one every 15 minutes) and closes it automatically on recovery, then fails the run so GitHub's own notifications fire.
+
+`scripts/latest_live_deploy_sha.py` parses the Render deploys payload and prints the SHA of the first `live` deploy. It tolerates both response shapes (`{"deploy": {...}}` wrappers and bare objects) and prints an empty line for unparseable input, so an API hiccup stays distinguishable from genuine drift. Checked against live/failed/missing/unparseable/bare-shape inputs; ruff clean.
+
+**Residual — still needs the CEO:**
+- ⚠️ **An external monitor is still required, and this workflow cannot replace it.** GitHub disables scheduled workflows after ~60 days of repo inactivity — exactly what happened to `dependency-compliance`, `dr-test-monthly` and `backup-integrity-check` during the dormancy. A cron-based self-check therefore switches itself off during precisely the quiet period it is meant to guard. Put Better Stack / Healthchecks.io / UptimeRobot (free tiers are ample at this scale) in front of `/health/ready`, alerting on `status != "healthy"` rather than on a non-200.
+- Add the `RENDER_API_KEY` secret (read-only scope) to activate probe 3. **The repo currently has no secrets at all** (`gh secret list` is empty), which is also why `backup-integrity-check` and `dr-test-monthly` fail — see Sprint 778.
+- Confirm where Render's `notifyOnFail` notifications land, and that the address is actually monitored. A failed deploy on `main` should page.
+
+---
+
+### Sprint 778: DR + backup workflows are structurally broken (wrong provider, no secrets)
 **Status:** PENDING.
+**Priority:** P1. Concerns whether production data is recoverable — and the checks that should answer that question cannot run.
+**Source:** 2026-10-19, while re-enabling the inactivity-disabled scheduled workflows (Sprint 775 work).
+
+Re-enabling the three auto-disabled workflows surfaced that two of them cannot pass as written:
+
+- **No repo secrets exist at all.** `gh secret list` returns empty, so `RENDER_API_KEY` and `RENDER_POSTGRES_ID` are unset. `scripts/verify_backup_integrity.py` exits 2 on `RENDER_API_KEY is not set`, which is why `backup-integrity-check` failed every month before being disabled.
+- **They point at the wrong provider.** Both `verify_backup_integrity.py` and `dr-test-monthly.yml` query `api.render.com/v1/postgres/$RENDER_POSTGRES_ID`. Production Postgres is on **Neon** (since Phase 1, 2026-04-09) and the orphan Render Postgres was deleted 2026-04-22, so even with secrets these checks interrogate a database that does not exist.
+- **`DR Test (Monthly)` is a false-green.** Its last scheduled run (2026-09-01) reported workflow-level **success**, yet its internal `render-check` step resolves `api_error` → `result=FAIL`; the overall verdict only gates issue creation, not the job's exit status. Same class of defect as the 2026-04-22 false-green incident that motivated Sprint 712.
+- **Phase 4.4 was never implemented**, so the `paciolus-backups` R2 bucket holds no `pg_dump` artifacts. Neon's own PITR is the only thing standing behind production data; there is no off-provider copy and no restore-drill evidence.
+
+**Scope:** decide whether off-provider backups are required for launch (Neon PITR may be judged sufficient — that is a CEO call, and it should be *written down* either way). If yes, implement the Phase 4.4 `pg_dump` → R2 cron, then rewrite both workflows against Neon + R2 instead of the Render Postgres API. Regardless of that decision: fix the false-green so a job's exit status reflects its own verdict, and make the missing-credential case report "unverified" explicitly instead of dying with an opaque error.
+
+**Note:** all three workflows were re-enabled on 2026-10-19. `dependency-compliance` now passes (its CVEs were fixed the same day), but **`backup-integrity-check` will fail on the 1st of each month and file a `dr-failure` issue** until this sprint lands. That signal is substantively true — backups genuinely are unverified — but its stated reason will be the misleading "RENDER_API_KEY is not set". Either accept it as a forcing function or disable that one workflow until the rewrite.
+
+---
+
+### Sprint 777: Dependency pinning strategy — decide the `==` vs `>=` rule
+**Status:** COMPLETE — **option 3 chosen** (explicit split with a written rule). The rule is now documented in-file at the top of `backend/requirements.txt`.
 **Priority:** P2. Not urgent, but it is the upstream cause of the 2026-10-19 CVE gate failure and it also changes how Sprint 761 should be executed.
 **Source:** 2026-10-19 CVE sweep (see Hotfixes).
 
@@ -360,7 +397,23 @@ Evidence both halves of the tradeoff are live: a `pip-audit` of the long-lived `
 2. **Floors everywhere, with `pip freeze` captured per deploy as the evidence record.** Keeps CVE currency; needs a recorded resolution so "what shipped" is answerable after the fact.
 3. **Explicit split with a written rule** — e.g. exact-pin the framework/runtime surface where a silent major is dangerous (`fastapi`, `pydantic`, `sqlalchemy`, `pandas`), floor the leaf security libraries where currency matters more (`cryptography`, `pillow`, `pypdf`). This is roughly what exists today; the work is to state it, justify each classification in-file, and add the missing piece: a scheduled job that re-audits the exact-pinned set, since that is the half that cannot self-heal.
 
-**Blocks/alters:** Sprint 761 proposes pinning `cryptography==47.0.0` exactly, on the stated convention that "majors get pinned exact." Under option 2 or 3 that is the wrong move — it would convert a self-healing floor into a rotting pin on the single most security-critical dependency in the tree (it underpins JWT signing, password hashing, and the TLS evidence chain). Settle this sprint first.
+**Decision (2026-10-19): option 3 — explicit split, written down.**
+
+Why not the others. Option 1 (exact-pin everything + lockfile) generalises the exact-pin rot problem to all 32 requirements and makes CVE currency entirely dependent on Dependabot PRs actually being merged on a cadence — and the current state of that cadence is 15 open Dependabot PRs, the oldest from 2026-04-13. Option 2 (floors everywhere) would let an unreviewed upstream major land straight in the production Docker build for `fastapi`, `pydantic`, `sqlalchemy` and `pandas`, where a silent behavioural change costs far more than a late CVE patch.
+
+**The rule, as written into `backend/requirements.txt`:**
+- `==` **exact pin** for the framework/runtime surface, where an unreviewed upstream change is more dangerous than a late CVE patch: web framework, data layer, migrations, money, document generation, scheduler, APM. 17 entries.
+- `>=` **floor** for leaf libraries consumed through a narrow, stable API, plus the security block at the bottom of the file, where CVE currency matters more than byte-for-byte reproducibility. 15 entries.
+
+**The load-bearing clause** — and the actual lesson of the incident — is recorded alongside it: exact pins **cannot self-heal**, so they are only safe while the weekly `dependency-compliance` pip-audit is enabled **and** green. That job is the sole mechanism able to catch rot in the `==` half of the file. It had been failing for months and was then auto-disabled by GitHub after 60 days of repo inactivity, which is exactly how PyJWT and python-multipart rotted into two red blocking gates that held up all 13 real PRs. The workflow was re-enabled 2026-10-19.
+
+Also recorded in-file: `starlette` deliberately carries **no** constraint, even though it is the HTTP core beneath FastAPI. Because `fastapi` is exact-pinned its permitted `starlette` range is already fixed, so a second constraint would add no reproducibility while risking resolution conflicts on every FastAPI bump.
+
+**Verified:** `requirements.txt` still parses (32 requirement lines, none unparseable) and `pip install --dry-run -r requirements.txt` resolves clean.
+
+**Consequence for Sprint 761 (cryptography 47 major):** its premise — "majors get pinned exact" — is now explicitly **rejected** for this dependency. `cryptography` is a security leaf and stays a floor; converting it to `==` would make the single most security-critical package in the tree (JWT signing, password hashing, TLS evidence chain) rot exactly the way PyJWT did. Sprint 761 should be rescoped to "verify the floor still resolves to a supported, CVE-free major, and raise the floor if not" rather than pinning it.
+
+**Blocks/alters (now resolved — see Decision above):** Sprint 761 proposes pinning `cryptography==47.0.0` exactly, on the stated convention that "majors get pinned exact." Under option 2 or 3 that is the wrong move — it would convert a self-healing floor into a rotting pin on the single most security-critical dependency in the tree (it underpins JWT signing, password hashing, and the TLS evidence chain). Settle this sprint first.
 
 **Also fix while here:** `requirements.txt` has no `starlette` constraint at all, yet it is the HTTP core underneath FastAPI and the long-lived venv shows 5 advisories against `starlette` 1.0.0. It is currently whatever `fastapi==0.136.1` happens to allow. Decide whether the HTTP layer should be constrained explicitly.
 
