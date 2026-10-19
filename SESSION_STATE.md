@@ -4,43 +4,58 @@ _Updated at the end of every Claude Code session. Overwrite the previous state �
 
 ## Last Session
 
-**Date:** 2026-04-10
-**Branch:** main
-**What was completed:**
-Housekeeping pass — reviewed 4 days of nightly reports, todo.md, ceo-actions.md, executive blockers, and session state:
+**Date:** 2026-10-19
+**Branch:** `sprint-774-rate-limit-outage-resilience` (off `main` @ `51906004`)
 
-- **Dependency update:** cryptography pin bumped to >=46.0.7 (security patch). Frontend `npm update` — 140 packages updated: next 16.2.3, react 19.2.5, @sentry/nextjs 10.48.0, postcss 8.5.9, @typescript-eslint/* 8.58.1, @types/node 25.6.0. 0 vulnerabilities.
-- **Todo cleanup:** 3 PENDING hotfix entries resolved — all had commits already merged to main (73aaa51, 39791ec, 29f768e). Resolved ~~Password reset flow~~ removed from Deferred Items table.
-- **Verified:** All 7 report bugs remain CLOSED, QA Warden GREEN (7,363 backend + 1,751 frontend tests passing), Report Auditor GREEN (2/2 meridian tests).
+**Context:** First session after ~5.5 months of repo dormancy (previous commit 2026-05-01). Started as a status review; became a P0 incident response.
 
-**Sprints 596–597 completed in prior sessions:**
-- Sprint 596: UnverifiedCTA — explicit "Verify Your Email" card on all 11 tool pages
-- Sprint 597: DOCX file format support — 11th supported file type (29 backend tests)
+### 🔴 Production was DOWN and is now RESTORED
 
-**What was left in progress:** None
+Every backend endpoint had been returning HTTP 500 since roughly 2026-05. Two independent faults, both fixed:
+
+1. **`AUDIT_CHAIN_SECRET_KEY` was never set on Render.** Sprint 768 turned the silent dev fallback into a production hard-fail (correctly), but the variable was never added, so the Sprint 768 deploy (`c58cbbb5`) exited 1 at startup. Render kept the prior image serving, making the failure invisible — **Sprint 768's P1 security fixes had never reached production.** Now set; deploy `dep-dbb2glcs728c73a67s5g` is live on `51906004`.
+2. **The Upstash Redis host stopped resolving.** Every rate-limited route (i.e. the whole API, health probes included) raised out of slowapi's limit check. Replaced with Render Key Value `paciolus-ratelimit` (`red-dbb2gdqjnfac739l4p5g`, free, virginia, same region as the service) and repointed `REDIS_URL` at its internal URL.
+
+**Production verified:** all four health probes 200, `/health/redis` connected (5.76ms), DB 9.96ms, and a full auth round-trip green against live prod (register → `/auth/me` → login → wrong-password 401 → uppercase-email login → logout → post-logout 401).
+
+### Sprint 774 — code work (COMPLETE, uncommitted at time of writing)
+
+So a dead cache can never take the API down again:
+
+- `in_memory_fallback_enabled=True` on the Limiter — storage errors degrade to in-process counters (same limit values, still enforced) and self-heal when Redis returns.
+- New `RATE_LIMIT_STORAGE_FAILURE_POLICY` (`degrade` default | `fail_closed`), split out from `RATE_LIMIT_STRICT_MODE` which keeps its original "Redis must be configured" meaning.
+- **Found: the old fail-closed guarantee never worked.** `limits`' `Storage.check()` returns `False` instead of raising; the code only caught exceptions. The Sprint 696 tests passed only because they mocked `check()` to raise — which real `RedisStorage` never does.
+- **Found: `scripts/smoke_test_render.sh` could never pass.** It used `@paciolus.test`, which `email-validator` rejects as a reserved TLD, so `/auth/register` always 422'd. Fixed, plus the stale Sprint 768 `access_token` assertions.
+- `/health/ready` now reports a `rate_limit_storage` dependency and `status: "degraded"` (still 200).
+- 13 new tests; 4 pre-existing tests updated to the new posture.
 
 ## Current Environment State
 
-**App status:** Working
-**Last passing smoke test:** 2026-04-10 (7,363 backend + 1,751 frontend tests, build OK)
+**App status:** Working — production live and verified.
+**Last passing smoke test:** 2026-10-19 (14/14 prod auth checks).
+**Test counts:** 8,685 backend + 2,013 frontend as of the 2026-10-14 nightly; Sprint 774 adds 13 backend tests.
+
 **Open blockers:**
-- Phase 3 (Functional Validation) — CEO is exercising the app on https://paciolus.com, on standby for bug fixes
-- Sprint 447 (Stripe production cutover) — waiting on CEO production Stripe keys
-- Pending legal sign-off on Terms of Service v2.0 and Privacy Policy v2.0
-- DB_TLS_OVERRIDE expires 2026-05-09 — proper fix needed before then
+- **Nothing alerted for 5.5 months.** Filed as Sprint 775 (external uptime monitoring + deploy-failure alerting). Highest-value follow-up.
+- 1 known-failing backend test: `test_inventory_testing.py::TestCompositeScore::test_clean_data_low_score` — a **wall-clock time bomb, not a regression.** Its fixture hardcodes `Last Movement Date` values in late 2025 which crossed the slow-moving threshold around 2026-05-31. Needs frozen or relative dates.
+- **Dependency drift is now large:** 70 backend + 25 frontend outdated; 7 security-relevant (`PyJWT` flagged PAST DEADLINE, plus `cryptography` 46→50, `stripe` 15→16, `fastapi`, `SQLAlchemy`, `next`, `react`).
+- **Scheduled GitHub Actions are disabled** — GitHub switches cron workflows off after ~60 days of repo inactivity; last scheduled run was ~2026-09-01. `dependency-compliance` and `Backup Integrity Check (Monthly)` were also failing before they stopped.
+- 25 open PRs: 10 real work (#134, #137–#145), 15 Dependabot. None merged since #129; all ~6 months behind `main`.
+- Phase 4.1 Stripe cutover, 4.2 legal sign-off, 4.3 custom domain (`api.paciolus.com` still 404s) — all still CEO-gated.
 
 ## Next Priority
 
-Standby for Phase 3 bug reports from CEO functional validation. If no bugs filed, consider:
-- DB_TLS_OVERRIDE proper fix (skip pg_stat_ssl when hostname contains `-pooler`)
-- Remaining dependency drift (tzdata 2025.3→2026.1, pdfminer.six deferred review by 2026-04-30)
+1. Commit + PR Sprint 774, and **verify the live deploy SHA equals `main` afterwards** — the lesson of this session is that "merged" is not "deployed."
+2. Sprint 775 — external uptime monitoring. Alert on `/health/ready` returning `status != "healthy"`, not just on non-200.
+3. Security dependency updates, `PyJWT` first.
+4. Archive Active Phase (now at 4 completed sprints; the commit-msg hook rejects at 5).
 
 ## Recent Git Context
 
 ```
-a838686 Merge pull request #75 from Paciolus/fix/preflight-decimal-crash
-727977f fix: preflight engine crash on currency-formatted numbers
-bc276f4 Sprint 597: DOCX file format support — 11th supported file type
-7235f79 Merge pull request #73 from Paciolus/sprint-596-unverified-cta
-9ad3eb3 Sprint 596: UnverifiedCTA — explicit verification prompt on all tool pages
+90740910 fix: nightly audit artifacts (2026-04-30 + 2026-05-01) + tmp_report cleanup
+a1449c41 Sprint 762: flux_expectations memo PDF contract test (close 17/18 → 18/18)
+42cedfbf Sprint 773c: hoist sort comparator + row motion literals
+51906004 Merge pull request #129 (main HEAD — what production now runs)
+c58cbbb5 Merge pull request #128 (Sprint 768 — the deploy that failed on 2026-04-30)
 ```

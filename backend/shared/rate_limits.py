@@ -30,6 +30,21 @@ Storage Backend:
     counter reset on worker restart and ensures consistent enforcement under
     horizontal scaling.  When REDIS_URL is empty (default), in-memory counters
     are used — suitable for single-instance development.
+
+Storage Outage Behavior (Sprint 774):
+    A Redis outage must never take the API down.  The limiter is built with
+    ``in_memory_fallback_enabled=True``, so a storage failure degrades to
+    in-process counters (same limit values) and self-heals when Redis
+    returns.  Before Sprint 774 a storage error propagated out of the limit
+    check as HTTP 500 on every rate-limited route — i.e. the entire API,
+    health probes included — and strict mode additionally refused to boot,
+    leaving no recovery path without operator action.  That combination took
+    production down for ~5.5 months in 2026.
+
+    ``RATE_LIMIT_STORAGE_FAILURE_POLICY`` (config.py) selects the boot
+    posture: ``degrade`` (default) or ``fail_closed`` (old behavior).
+    Live state is reported by get_storage_health() and surfaced on
+    /health/ready.
 """
 
 import logging
@@ -204,49 +219,109 @@ def _get_client_ip(request: Request) -> str:
 # ---------------------------------------------------------------------------
 
 
+# Records whether the configured backend answered at boot.  Informational
+# only — live degradation is read off the limiter itself (see
+# get_storage_health), because slowapi recovers without a restart.
+_storage_reachable_at_boot: bool = True
+
+
 def _resolve_storage_uri() -> str:
     """Return the storage URI for the rate limiter.
 
     When REDIS_URL is configured, returns a ``redis://`` URI so that
     counters are shared across all workers and survive restarts.
 
-    Behavior depends on RATE_LIMIT_STRICT_MODE:
-    - **Strict (production default):** If Redis is configured but unreachable,
-      raise RuntimeError to prevent the app from starting with weakened
-      rate-limit enforcement.
-    - **Permissive (dev/test default):** Fall back to ``memory://``
-      (per-process, ephemeral).
+    Two failure classes are handled differently, because only one of them
+    can ever self-heal:
+
+    - **Unreachable backend** (DNS failure, refused connection, timeout):
+      the URI is kept.  slowapi is configured with
+      ``in_memory_fallback_enabled=True``, so the first failed request flips
+      it to in-process counters and its periodic re-probe restores shared
+      Redis counters automatically — no redeploy needed.  Returning
+      ``memory://`` here instead would strand the process on per-process
+      counters until an operator intervened.
+    - **Unusable URI** (malformed, unsupported scheme): slowapi would raise
+      the same error while constructing its own storage, crashing the
+      process at import.  Degrade to ``memory://`` so the app still serves;
+      a bad URI cannot recover on its own anyway.
+
+    Under ``RATE_LIMIT_STORAGE_FAILURE_POLICY=fail_closed`` an unreachable
+    backend raises RuntimeError instead (pre-Sprint-774 behavior).
     """
-    from config import RATE_LIMIT_STRICT_MODE, REDIS_URL
+    global _storage_reachable_at_boot
+
+    from config import RATE_LIMIT_STORAGE_FAILURE_POLICY, RATE_LIMIT_STRICT_MODE, REDIS_URL
 
     if not REDIS_URL:
         # config.py already hard-fails if strict + no URL, so this is dev/test only
         return "memory://"
 
-    # Validate connectivity eagerly so misconfigurations surface at startup
-    try:
-        from limits.storage import RedisStorage
+    from limits.storage import RedisStorage
 
+    # Construct first.  Only a successfully-constructed storage proves that
+    # slowapi can build its own from the same URI without crashing.
+    try:
         storage = RedisStorage(REDIS_URL)
-        storage.check()
-        _logger.info("Rate-limit storage: Redis (%s)", REDIS_URL.split("@")[-1])
-        return REDIS_URL
     except Exception as exc:  # noqa: BLE001
-        if RATE_LIMIT_STRICT_MODE:
+        _storage_reachable_at_boot = False
+        if RATE_LIMIT_STORAGE_FAILURE_POLICY == "fail_closed":
             _logger.critical(
-                "FAIL-CLOSED: Redis configured but unreachable (%s). "
-                "Refusing to start — RATE_LIMIT_STRICT_MODE is enabled. "
-                "Rate limits would not be shared across workers.",
+                "FAIL-CLOSED: rate-limit storage could not be constructed (%s). "
+                "Refusing to start — RATE_LIMIT_STORAGE_FAILURE_POLICY=fail_closed.",
                 exc,
             )
-            raise RuntimeError(f"Rate-limit storage backend unavailable (strict mode): {exc}") from exc
-
-        _logger.warning(
-            "Redis configured but unreachable (%s) — falling back to in-memory storage. "
-            "Rate limits will NOT be shared across workers.",
+            raise RuntimeError(f"Rate-limit storage backend unavailable (fail_closed): {exc}") from exc
+        _logger.critical(
+            "Rate-limit storage URI could not be used (%s) — falling back to "
+            "in-memory counters for this process. This will NOT self-heal; "
+            "fix REDIS_URL. strict_mode=%s",
             exc,
+            RATE_LIMIT_STRICT_MODE,
         )
         return "memory://"
+
+    # Probe reachability so a dead backend is visible at startup rather than
+    # on the first user request.
+    #
+    # IMPORTANT: limits' Storage.check() signals failure by RETURNING False,
+    # not by raising — its body is `try: return ping() except: return False`.
+    # Code that only catches exceptions therefore treats a dead backend as
+    # healthy. The pre-Sprint-774 implementation made exactly that mistake,
+    # so its "fail-closed" guarantee never actually fired: the app booted
+    # against a dead Redis and then raised on the first incr(), surfacing as
+    # HTTP 500 on every rate-limited route. The old tests passed only because
+    # they mocked check() to raise, which real RedisStorage never does.
+    try:
+        reachable = bool(storage.check())
+        probe_error: str = "" if reachable else "storage.check() returned False (ping failed)"
+    except Exception as exc:  # noqa: BLE001 — defensive: check() is not supposed to raise
+        reachable = False
+        probe_error = str(exc)
+
+    if not reachable:
+        _storage_reachable_at_boot = False
+        if RATE_LIMIT_STORAGE_FAILURE_POLICY == "fail_closed":
+            _logger.critical(
+                "FAIL-CLOSED: Redis configured but unreachable (%s). "
+                "Refusing to start — RATE_LIMIT_STORAGE_FAILURE_POLICY=fail_closed. "
+                "Rate limits would not be shared across workers.",
+                probe_error,
+            )
+            raise RuntimeError(f"Rate-limit storage backend unavailable (fail_closed): {probe_error}")
+        _logger.critical(
+            "DEGRADED: Redis configured but unreachable at boot (%s). Serving with "
+            "in-process rate-limit counters; limit VALUES are unchanged but are no "
+            "longer shared across workers. slowapi will restore shared counters "
+            "automatically once Redis answers. Watch /health/ready "
+            "rate_limit_storage. strict_mode=%s",
+            probe_error,
+            RATE_LIMIT_STRICT_MODE,
+        )
+        return REDIS_URL
+
+    _logger.info("Rate-limit storage: Redis (%s)", REDIS_URL.split("@")[-1])
+    return REDIS_URL
 
 
 _storage_uri = _resolve_storage_uri()
@@ -293,14 +368,49 @@ limiter = Limiter(
     # Note: headers_enabled=True requires every rate-limited endpoint to
     # accept a Response parameter. Enabling it would require updating all
     # ~100 endpoint signatures. Left as False for now.
+    #
+    # Sprint 774: without this, ANY storage-layer error propagates out of the
+    # limit check and surfaces as HTTP 500 — on every rate-limited route,
+    # which is effectively the whole API including the health probes. With it
+    # enabled, slowapi flips to an in-process MemoryStorage on the first
+    # failure (same limit values), then re-probes the primary and restores
+    # shared counters on its own. Note this is NOT swallow_errors: limits are
+    # still enforced while degraded, just not shared across workers.
+    in_memory_fallback_enabled=True,
 )
 
 
 def get_storage_backend() -> str:
-    """Return the active storage backend identifier ('redis' or 'memory')."""
+    """Return the *configured* storage backend identifier ('redis' or 'memory').
+
+    Reflects configuration, not live health — see get_storage_health() for
+    whether the limiter is currently running on its fallback.
+    """
     if _storage_uri.startswith("redis"):
         return "redis"
     return "memory"
+
+
+def get_storage_health() -> dict[str, object]:
+    """Report configured vs. live rate-limit storage state.
+
+    ``degraded`` is true only when Redis is the configured backend and the
+    limiter has flipped to its in-memory fallback.  It is read live off
+    slowapi's ``_storage_dead`` flag so it clears by itself once slowapi's
+    re-probe succeeds, rather than staying stuck on a boot-time observation.
+    """
+    configured = get_storage_backend()
+    # Private attribute by necessity: slowapi exposes no public accessor for
+    # fallback state. Guarded with getattr so a slowapi upgrade that renames
+    # it degrades to "not degraded" rather than breaking the health probe.
+    storage_dead = bool(getattr(limiter, "_storage_dead", False))
+    degraded = configured == "redis" and storage_dead
+    return {
+        "configured_backend": configured,
+        "active_backend": "memory" if (configured == "memory" or storage_dead) else "redis",
+        "degraded": degraded,
+        "reachable_at_boot": _storage_reachable_at_boot,
+    }
 
 
 RATE_LIMIT_AUDIT = TieredLimit("audit", "10/minute")

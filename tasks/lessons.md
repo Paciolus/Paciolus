@@ -4,6 +4,58 @@
 
 ---
 
+## Verify a dependency's failure contract; never let a mock define it (Sprint 774, 2026-10-19)
+
+A ~5.5-month total production outage came down to three compounding mistakes, each of which looked like diligence at the time.
+
+**1. A mock encoded a false model of the library, and the test validated the fiction.**
+
+Sprint 696 added a fail-closed guarantee: in production, refuse to start if the configured Redis is unreachable. The implementation was:
+
+```python
+try:
+    storage = RedisStorage(REDIS_URL)
+    storage.check()
+    return REDIS_URL
+except Exception as exc:
+    if RATE_LIMIT_STRICT_MODE:
+        raise RuntimeError(...)
+```
+
+But `limits`' `Storage.check()` is literally `try: return self.get_connection().ping() except: return False`. **It never raises.** It signals failure by returning `False`, which the code discarded. So the fail-closed guarantee never once fired; a dead backend was silently classified as healthy at boot.
+
+The tests passed — because they asserted against a mock built from the same wrong assumption:
+
+```python
+mock_storage_cls.return_value.check.side_effect = ConnectionError("Connection refused")
+```
+
+Real `RedisStorage` cannot produce that behavior. The test proved the code handled an impossible event while the actual failure mode went unhandled. Two tests, one for each failure path, both green, both meaningless.
+
+**Pattern: when you mock a third-party boundary, the mock is a claim about someone else's code — and claims need evidence.** Before writing `side_effect = SomeError`, read the function. Cheapest possible check here was three lines in a REPL: construct the real storage against a refused port and print what `check()` actually returns. That would have taken under a minute and would have invalidated the whole design. The regression test now does exactly this — exercises a *genuinely* dead Redis (`redis://127.0.0.1:1`, connection-refused with no DNS wait) rather than a mock, with a control case asserting the failure path still fails without the fix, so the test cannot quietly stop proving anything.
+
+**2. Fail-closed on a non-integrity control, with no self-heal path, is an availability bug.**
+
+Even had the guarantee fired, the behavior was `sys.exit`/`raise` at import. The orchestrator then restart-loops forever. There is no path back without a human who already knows to look. Rate limiting is an *abuse* control, not an *integrity* control: brief under-enforcement is strictly less harmful than total unavailability. The fix (slowapi's `in_memory_fallback_enabled`) keeps enforcing the same limit values in-process and auto-restores shared counters when Redis returns — and at `numInstances: 1` the enforcement delta is exactly zero, so fail-closed was buying literally nothing while risking everything.
+
+**Ask of any fail-closed decision: what restores service, and who has to be awake for it?** If the answer is "a human notices," the blast radius is however long it takes someone to notice. Here that was 5.5 months.
+
+**3. A probe that shares a failure domain with its subject is not a probe.**
+
+`/health/live` is documented as "zero I/O... if the process can serve this, it is alive." It was also decorated with `@limiter.limit(...)`, so it went through Redis. When Redis died, liveness returned 500 — indistinguishable from a wedged process. Every diagnostic surface (`/health`, `/health/live`, `/health/ready`, `/metrics`) failed in the same way for the same reason, so the system could not report its own illness. Render's dashboard showed the service healthy and unsuspended throughout.
+
+**Check what a health endpoint actually touches, including via decorators and middleware — not just what its body does.** The docstring described the body; the decorator was the dependency.
+
+**4. A failed deploy where the old instance keeps serving is indistinguishable from success.**
+
+The Sprint 768 deploy exited 1 at startup (an unset `AUDIT_CHAIN_SECRET_KEY` that Sprint 768 itself had just promoted from a silent fallback to a hard-fail). Render correctly kept the previous image serving — so from outside, nothing changed. Sprint 768's P1 security fixes sat undeployed for 5.5 months while `tasks/todo.md` recorded the sprint as COMPLETE with a commit SHA. The sprint *was* complete; it just was not in production. The following PR then never deployed at all, because its files fell outside Render's `backend` rootDir and the commit was ignored.
+
+**"Merged" is not "deployed," and "CI green" is not "running."** Post-merge verification must assert the live deploy SHA equals `main` and that the deploy status is live. Also note that a hard-fail guard added for good reasons is a deploy-breaking change if the corresponding env var is not set *first* — introduce the variable, then the guard.
+
+**Meta-lesson.** All three of the first items were introduced by a security-hardening sprint doing the right thing in the abstract. Hardening changes the failure mode of a system, and the new failure mode needs the same scrutiny as the vulnerability it replaced. The question is never just "is this stricter?" but "what happens on the day this strictness triggers, and how do we find out?"
+
+---
+
 ## Broaden your search before declaring victory; treat silence as a hypothesis (Sprint 732 Step 2c, 2026-04-28)
 
 Sprint 732 chased a recurring `Cleanup job failed: InternalError` cleanup_scheduler bug for two days. Step 1 added `error_type_fqn` (resolved bare-class ambiguity to `sqlalchemy.exc.InternalError`); Step 2b added `error_orig_fqn` + `error_orig_pgcode` to surface the wrapped psycopg2 leaf class. Step 2c was supposed to read the leaf-class field on the next post-deploy cleanup cycle.

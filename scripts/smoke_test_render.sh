@@ -15,6 +15,9 @@
 #   2.  /auth/csrf without auth returns 401 (proves auth middleware wired)
 #   3.  /auth/register succeeds and sets paciolus_access + paciolus_refresh HttpOnly cookies
 #   4.  Register response includes access_token + csrf_token + user object
+#       (register/login send "X-Token-Response: bearer" — Sprint 768 made the
+#        JSON access_token opt-in for non-browser API clients, so this both
+#        keeps the assertion meaningful and exercises the opt-in contract)
 #   5.  /auth/me with the register cookies returns 200 and the same user
 #   6.  /auth/login with the CORRECT password returns 200 (proves login works)
 #   7.  /auth/login with a known-bad password returns 401 (proves wrong creds rejected)
@@ -30,6 +33,12 @@
 # Dependencies: curl, jq, mktemp
 # Zero-Storage: the test account is registered, exercised, and then left alone.
 # The dunning cleanup scheduler will retire unused accounts per retention policy.
+#
+# Test account domain: @example.com (RFC 2606 documentation domain — no MX
+# record, so the verification email bounces rather than reaching anyone).
+# It must NOT be @paciolus.test: email-validator rejects special-use/reserved
+# TLDs outright, so /auth/register answered 422 and this script could never
+# get past step 3. Fixed in Sprint 774.
 
 set -euo pipefail
 
@@ -38,7 +47,7 @@ COOKIE_JAR="$(mktemp -t paciolus-smoke.XXXXXX)"
 trap 'rm -f "$COOKIE_JAR"' EXIT
 
 TIMESTAMP="$(date +%s)"
-TEST_EMAIL="smoke-test-${TIMESTAMP}@paciolus.test"
+TEST_EMAIL="smoke-test-${TIMESTAMP}@example.com"
 TEST_PASSWORD="SmokeTest!${TIMESTAMP}"
 
 # Colors for readable output
@@ -86,6 +95,7 @@ REGISTER_RESPONSE=$(curl --silent --show-error --max-time 30 \
     --cookie-jar "$COOKIE_JAR" \
     -H "Content-Type: application/json" \
     -H "X-Requested-With: XMLHttpRequest" \
+    -H "X-Token-Response: bearer" \
     -d "$REGISTER_BODY" \
     -w "\n%{http_code}" \
     "$BASE_URL/auth/register")
@@ -147,6 +157,7 @@ GOOD_LOGIN=$(jq -n --arg email "$TEST_EMAIL" --arg pw "$TEST_PASSWORD" \
 GOOD_LOGIN_RESPONSE=$(curl --silent --show-error --max-time 15 \
     -H "Content-Type: application/json" \
     -H "X-Requested-With: XMLHttpRequest" \
+    -H "X-Token-Response: bearer" \
     -d "$GOOD_LOGIN" \
     -w "\n%{http_code}" \
     "$BASE_URL/auth/login")

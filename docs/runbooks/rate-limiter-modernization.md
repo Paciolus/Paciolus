@@ -128,7 +128,89 @@ Only the middleware integration layer changes.
 
 ---
 
+## Storage Outage Posture (Sprint 774, 2026-10-19)
+
+> **Read this before the Sprint 696 section below.** Sprint 774 narrowed what
+> strict mode controls. Strict mode is now purely a *configuration* guardrail;
+> runtime unreachability is governed by a separate setting.
+
+### The incident this came from
+
+The configured Upstash Redis host stopped resolving in DNS some time after
+2026-05-01. Consequences, in order:
+
+1. Every rate-limited route raised out of slowapi's limit check. That is
+   essentially the whole API — **including `/health`, `/health/live`,
+   `/health/ready`, and `/metrics`** — so every request returned HTTP 500.
+2. Because the probes themselves 500'd, nothing reported *why*. Render showed
+   the service as healthy and unsuspended the entire time.
+3. The outage ran roughly 5.5 months.
+
+Two latent bugs made it worse than it had to be:
+
+- **The fail-closed check never fired.** `limits`' `Storage.check()` signals
+  failure by *returning False*, not by raising (`try: return ping() except:
+  return False`). The old code only caught exceptions, so a dead backend was
+  silently treated as healthy at boot. The tests passed only because they
+  mocked `check()` to raise — something real `RedisStorage` never does.
+- **There was no self-heal path.** Even had fail-closed fired, the process
+  would have exited and the orchestrator would have restart-looped until a
+  human intervened.
+
+### What the posture is now
+
+`RATE_LIMIT_STORAGE_FAILURE_POLICY` controls behavior when `REDIS_URL` is
+configured but the backend is **unreachable**:
+
+| Value | Behavior |
+|-------|----------|
+| `degrade` (default) | Serve using slowapi's in-memory fallback. Limit **values** are unchanged and still enforced; they are just no longer shared across workers. slowapi re-probes the primary and restores shared counters automatically, with no restart. |
+| `fail_closed` | Refuse to start (pre-Sprint-774 behavior). Choose only where under-enforcement is worse than being offline. |
+
+This is **not** slowapi's `swallow_errors`. Limits remain enforced while
+degraded; `swallow_errors` would let unlimited traffic through.
+
+Rationale: rate limiting is an abuse control, not an integrity control.
+Losing cross-worker sharing briefly is strictly less harmful than total
+unavailability — provided the degradation is loud and self-healing. At
+`numInstances: 1` the enforcement difference is zero.
+
+### How to detect degradation
+
+- **`GET /health/ready`** → overall `status: "degraded"` (still HTTP 200, so a
+  healthy instance is not pulled from the load balancer over a cache outage)
+  with a `rate_limit_storage` dependency reporting `degraded: true` plus
+  `configured_backend` / `active_backend`.
+- **Logs** → `CRITICAL` containing `DEGRADED: Redis configured but
+  unreachable`, and slowapi's own `Rate limit storage unreachable - falling
+  back to in-memory storage`. Recovery logs `Rate limit storage recovered`.
+- **`GET /health/redis`** → direct backend probe.
+
+**Alert on `/health/ready` returning `status: "degraded"`.** The whole point
+of this design is that the signal survives the outage it describes.
+
+### Restoring Redis
+
+Rate-limit counters are disposable, so replacing the instance is safe:
+
+1. Provision a Key Value instance in the **same region** as `paciolus-api`
+   (currently `virginia`) — an in-provider private hostname removes the
+   cross-provider DNS dependency that caused this incident.
+2. Set `REDIS_URL` to its internal URL (`redis://red-<id>:6379`).
+3. No redeploy is needed for slowapi to pick it up — its re-probe restores
+   shared counters within a few requests. Changing the env var on Render
+   triggers a deploy anyway.
+4. Confirm `/health/ready` reports `status: "healthy"`.
+
+---
+
 ## Strict-Mode Production Fail-Closed (Sprint 696, 2026-04-20)
+
+> **Superseded in part by Sprint 774 (above).** `RATE_LIMIT_STRICT_MODE` still
+> governs whether Redis must be **configured**, and the break-glass override
+> below still applies to that. It no longer decides what happens when a
+> configured backend is **unreachable** — that is
+> `RATE_LIMIT_STORAGE_FAILURE_POLICY`.
 
 ### What it does
 

@@ -26,19 +26,28 @@ class TestResolveStorageUri:
             result = _resolve_storage_uri()
         assert result == "memory://"
 
-    def test_redis_url_with_unreachable_host_falls_back(self):
-        """When Redis is configured but unreachable, fall back to memory."""
+    def test_redis_url_with_unreachable_host_keeps_uri(self):
+        """Unreachable Redis keeps the URI so the limiter can self-heal.
+
+        Sprint 774 changed this from the former memory:// fallback. The
+        limiter is built with in_memory_fallback_enabled=True, so slowapi
+        degrades to in-process counters on its own AND re-probes the primary
+        to restore shared counters. Swapping in memory:// here would discard
+        the URI and strand the process on per-process counters until an
+        operator redeployed.
+        """
         mock_storage_cls = MagicMock()
         mock_storage_cls.return_value.check.side_effect = ConnectionError("Connection refused")
 
         with (
             patch("config.REDIS_URL", "redis://unreachable:6379/0"),
+            patch("config.RATE_LIMIT_STORAGE_FAILURE_POLICY", "degrade"),
             patch("limits.storage.RedisStorage", mock_storage_cls),
         ):
             from shared.rate_limits import _resolve_storage_uri
 
             result = _resolve_storage_uri()
-        assert result == "memory://"
+        assert result == "redis://unreachable:6379/0"
 
     def test_redis_url_with_reachable_host_returns_url(self):
         """When Redis is configured and reachable, return the Redis URI."""

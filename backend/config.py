@@ -345,6 +345,35 @@ if RATE_LIMIT_STRICT_MODE and not REDIS_URL:
         "Either set REDIS_URL or disable strict mode: RATE_LIMIT_STRICT_MODE=false"
     )
 
+# Storage-failure policy (Sprint 774): what happens when REDIS_URL is
+# configured but the backend is UNREACHABLE.
+#
+# Deliberately separate from RATE_LIMIT_STRICT_MODE above, which governs
+# whether Redis must be *configured* at all.  Conflating the two turned a
+# transient cache outage into an unrecoverable startup failure: the process
+# exits, the orchestrator restart-loops, and nothing self-heals until an
+# operator intervenes.  Observed in production 2026-05 → 2026-10 (the
+# Upstash host stopped resolving; every endpoint 500'd for ~5.5 months).
+#
+#   degrade      (default) — serve using slowapi's in-memory fallback.  Same
+#                limit values, enforced per-process.  slowapi re-probes the
+#                primary and restores shared counters automatically with no
+#                restart.  Degradation is logged CRITICAL and reported on
+#                /health/ready as a "degraded" rate_limit_storage dependency.
+#   fail_closed  — refuse to start (pre-Sprint-774 behavior).  Choose this
+#                only where under-enforcement is worse than being offline.
+#
+# Rationale for the default: rate limiting is an abuse control, not an
+# integrity control.  Losing it briefly is strictly less harmful than total
+# unavailability, provided the degradation is loud and self-healing.
+RATE_LIMIT_STORAGE_FAILURE_POLICY = _load_optional("RATE_LIMIT_STORAGE_FAILURE_POLICY", "degrade").strip().lower()
+
+if RATE_LIMIT_STORAGE_FAILURE_POLICY not in ("degrade", "fail_closed"):
+    _hard_fail(
+        "RATE_LIMIT_STORAGE_FAILURE_POLICY must be 'degrade' or 'fail_closed' "
+        f"(got {RATE_LIMIT_STORAGE_FAILURE_POLICY!r})."
+    )
+
 # =============================================================================
 # RATE LIMIT TIER OVERRIDES (Sprint 306 — tiered rate limiting)
 # =============================================================================

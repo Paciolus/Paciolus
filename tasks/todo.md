@@ -266,3 +266,74 @@ Bundle the 19 patch + safe-minor updates into one commit, mirroring the 2026-04-
 
 ---
 
+### Sprint 774: Rate-limit storage outage resilience (P0 production restore)
+**Status:** COMPLETE — landed on branch `sprint-774-rate-limit-outage-resilience`.
+**Priority:** P0 (production was down).
+**Source:** Production outage discovered 2026-10-19 during a status review after ~5.5 months of repo dormancy (last commit 2026-05-01).
+
+#### What was actually wrong (two independent faults)
+
+1. **`AUDIT_CHAIN_SECRET_KEY` was never set on Render.** The 2026-04-06 hotfix introduced the variable with a silent dev fallback to `JWT_SECRET_KEY`; Sprint 768 correctly turned that fallback into a production hard-fail — but nobody set the variable. The Sprint 768 deploy (`c58cbbb5`, 2026-04-30 22:45 UTC) therefore exited 1 at startup. Render kept the previous instance (Sprint 763, `89ab7902`) serving, so the failure was invisible, and **Sprint 768's P1 security fixes never reached production.** PR #129, merged 80 minutes later, never deployed at all — its files were outside Render's `backend` rootDir, so the commit was ignored.
+2. **The Upstash Redis host stopped resolving** (`Error -2 ... Name or service not known`). Every rate-limited route — i.e. the whole API including `/health`, `/health/live`, `/health/ready`, `/metrics` — returned HTTP 500. Because the probes 500'd too, nothing reported why; Render showed the service healthy and unsuspended throughout.
+
+#### Two latent bugs found while fixing it
+
+- **The fail-closed guarantee never worked.** `limits`' `Storage.check()` signals failure by *returning False*, not raising (its body is `try: return ping() except: return False`). `_resolve_storage_uri` only caught exceptions, so a dead backend was silently treated as healthy at boot. The Sprint 696 tests passed only because they mocked `check()` to raise — something real `RedisStorage` never does. The tests encoded a false model of the library.
+- **`scripts/smoke_test_render.sh` could never pass.** It registers `smoke-test-<ts>@paciolus.test`, and `email-validator` rejects `.test` as a special-use/reserved TLD, so `/auth/register` returned 422 every time. The post-deploy verification gate had been non-functional. It also still asserted `access_token` in the register/login JSON, which Sprint 768 made opt-in behind `X-Token-Response: bearer`.
+
+#### Conflict Loop — the posture tension
+
+**Tension:** Sprint 696 (2026-04-20) deliberately chose fail-closed — refuse to start rather than under-enforce rate limits — and built a dated break-glass override to go with it. This sprint makes degradation the default, which reverses that decision.
+
+**Steel man for fail-closed:** rate limiting is the only thing between the public internet and expensive audit/export endpoints. Degrading to per-process counters on a multi-worker deployment gives each worker its own bucket — effectively N-times the intended limit. Refusing to boot forces an operator to fix the real problem instead of running indefinitely degraded, and the override exists precisely so degradation is a *deliberate, logged, time-boxed* choice.
+
+**Why degrade still wins:** the incident is the counter-evidence. Fail-closed converted a cache outage into a 5.5-month total outage of a paid product, with no alarm and — critically — **no self-heal path**: the process exits and the orchestrator restart-loops forever. The override requires a human who already knows to look. Meanwhile slowapi's fallback enforces the *same limit values* in-process and restores Redis automatically within a few requests, and at `numInstances: 1` the enforcement delta is exactly zero. Fail-closed bought nothing here and cost everything.
+
+**Synthesis (what shipped):** keep both postures, make the choice explicit rather than implicit in strict mode, default to `degrade`, and make degradation impossible to miss. Rate limiting is an abuse control, not an integrity control; brief under-enforcement beats unavailability *provided* it is loud and self-healing.
+
+#### What landed
+
+- **`backend/config.py`** — new `RATE_LIMIT_STORAGE_FAILURE_POLICY` (`degrade` default, or `fail_closed`), validated with a hard-fail on a bad value. Deliberately separate from `RATE_LIMIT_STRICT_MODE`, which keeps its original meaning: Redis must be *configured* (still a production hard-fail when `REDIS_URL` is unset).
+- **`backend/shared/rate_limits.py`**
+  - `Limiter(..., in_memory_fallback_enabled=True)` — the core fix. A storage error now degrades to in-process counters instead of raising. This is not `swallow_errors`: limits stay enforced while degraded.
+  - `_resolve_storage_uri()` now inspects the **return value** of `check()`, not just exceptions.
+  - Distinguishes *unreachable* (keep the Redis URI so slowapi's re-probe can self-heal) from *unusable URI* (degrade to `memory://`, since slowapi would crash at import on the same URI and a bad URI cannot recover anyway).
+  - New `get_storage_health()` reporting configured vs. live backend, reading slowapi's `_storage_dead` live so it clears on recovery.
+- **`backend/routes/health.py`** — `/health/ready` reports a `rate_limit_storage` soft dependency; degradation downgrades overall status to `degraded` but still returns **200** (503 would evict a healthy instance from the load balancer over a cache outage). Corrected the `/health/live` "zero I/O" docstring, which was false — it passes through the limiter.
+- **`scripts/smoke_test_render.sh`** — `@paciolus.test` to `@example.com` (RFC 2606, no MX, so it bounces rather than reaching anyone); register and login now send `X-Token-Response: bearer`.
+- **`docs/runbooks/rate-limiter-modernization.md`** — new "Storage Outage Posture" section (incident, policy table, detection, Redis restore procedure); Sprint 696 section marked partially superseded.
+
+#### Production actions taken (2026-10-19)
+
+- Set `AUDIT_CHAIN_SECRET_KEY` on Render (fresh 64-hex key). Safe to introduce: `verify_audit_chain` already tries the audit-chain key first and falls back to `JWT_SECRET_KEY` for pre-rotation records, so existing entries still verify while new ones get real domain separation.
+- Provisioned Render Key Value `paciolus-ratelimit` (`red-dbb2gdqjnfac739l4p5g`, free plan, **virginia** — same region as the service, `allkeys_lru`) and repointed `REDIS_URL` at its internal URL. A same-provider private hostname removes the cross-provider DNS dependency that caused the outage.
+- Deploy `dep-dbb2glcs728c73a67s5g` went **live**; production now runs `51906004`, which includes Sprint 768 at last.
+
+**Verification:**
+- Production: all four health probes 200; `/health/redis` connected (5.76ms); DB 9.96ms. Full auth round-trip green against live prod — register, `/auth/me`, login, wrong-password 401, uppercase-email login, logout, post-logout 401 (14/14 checks).
+- `tests/test_rate_limit_storage_outage.py` — **10 new tests.** Proves a rate-limited route served through a genuinely dead Redis returns 200, with a control asserting the same setup fails hard *without* the fallback (so the test cannot silently stop proving anything), plus a test that limits are still enforced while degraded.
+- `tests/test_health_api.py` — 3 new tests for the `rate_limit_storage` dependency and degraded-status reporting.
+- 4 pre-existing tests updated to the new posture (they asserted the old fail-closed behavior); intent preserved and documented in each.
+- Targeted runs: 38 rate-limit, 24 health, 116 security/auth passed.
+
+**Out of scope / follow-ups:**
+- Replacing slowapi entirely — unchanged; triggers still documented in the runbook.
+- `jq` is unavailable on the Windows dev box, so `smoke_test_render.sh` still cannot run there. The fixes are correct but were verified via an equivalent Python harness. Consider a `jq`-free rewrite.
+- Free-plan Key Value has no persistence, so `impersonation_revocation` JTI sets are lost on restart (they already were — it falls back to in-memory). Worth a paid plan if cross-restart revocation durability matters.
+- **External uptime monitoring** — nothing alerted for 5.5 months. This is the single highest-value follow-up; see Sprint 775.
+
+---
+
+### Sprint 775: External uptime monitoring + deploy-failure alerting
+**Status:** PENDING.
+**Priority:** P1. The Sprint 774 outage was not caused by missing monitoring, but it lasted 5.5 months because of it.
+**Source:** Sprint 774 post-incident.
+
+Two separate blind spots, both of which must close:
+
+1. **Nothing watched the service.** No external probe, so a total API outage was indistinguishable from a quiet period. Add an external HTTP monitor against `/health/ready` that alerts on non-200 **and** on `status != "healthy"` (Sprint 774 made degradation visible in the body; an uptime check that only looks at the status code will miss it). Free options sufficient at this scale: Better Stack, Healthchecks.io, UptimeRobot.
+2. **Nothing watched deploys.** The Sprint 768 deploy failed and Render kept serving the old image, so a failed deploy looked identical to a successful one from outside. Render has `notifyOnFail: "default"` on the service — confirm where those notifications actually land and that the address is monitored. A failed deploy on `main` should page.
+
+Also worth filing: the Sprint 768 security fixes sat undeployed for 5.5 months because nobody verified the deploy landed. Post-merge verification should assert that the live deploy SHA equals `main`, not merely that CI was green.
+
+---
