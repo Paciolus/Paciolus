@@ -1,16 +1,68 @@
+# =============================================================================
+# PINNING RULE (Sprint 777, 2026-10-19) — read before changing any pin
+# =============================================================================
+# Two pin styles are used deliberately. Pick the right one for a new dep.
+#
+#   ==  EXACT PIN — the framework/runtime surface, where an unreviewed
+#       upstream change is more dangerous than a late CVE patch: web
+#       framework, data layer, migrations, money, document generation,
+#       scheduler, APM. Reproducible builds; a human reviews every bump.
+#
+#   >=  FLOOR — leaf libraries consumed through a narrow, stable API, and
+#       the security block at the bottom of this file, where CVE currency
+#       matters more than byte-for-byte reproducibility. Every fresh
+#       `pip install -r requirements.txt` (CI and the production Docker
+#       build) resolves these to latest, so they self-heal.
+#
+# THE TRADEOFF, AND WHY IT BIT US (2026-10-19):
+# Exact pins do not self-heal. They rot silently — a CVE published against
+# the pinned version just sits there. When the repo went dormant from
+# 2026-05-01 to 2026-10-19, `pip-audit` flagged exactly two packages:
+# PyJWT and python-multipart. Those were the ONLY two CVE-carrying
+# dependencies pinned with `==`. Every floor-pinned package self-healed on
+# each fresh resolve. Two red blocking CI gates, and the entire 13-PR
+# backlog sat at mergeStateStatus=BLOCKED behind them.
+#
+# THEREFORE: exact pins are only safe while the weekly
+# `.github/workflows/dependency-compliance.yml` pip-audit is ENABLED and
+# GREEN. That job is the sole mechanism that can catch rot in the `==` half
+# of this file. It had been failing for months and was then auto-disabled by
+# GitHub after 60 days of repo inactivity, which is precisely how the rot
+# went unnoticed. If that job is ever red or disabled, this file is
+# unmaintained regardless of what the pins say.
+#
+# NOT DONE DELIBERATELY: `starlette` carries no constraint here even though
+# it is the HTTP core beneath FastAPI. `fastapi`'s own range governs it, and
+# adding a second constraint would risk resolution conflicts on every
+# FastAPI bump for no reproducibility gain (fastapi is exact-pinned, so its
+# allowed starlette range is already fixed).
+# =============================================================================
+
 fastapi==0.136.1
 uvicorn[standard]==0.45.0
 pydantic[email]==2.13.3
 pandas==3.0.2
 openpyxl==3.1.5
-python-multipart==0.0.26
+# Sprint-774-era CVE sweep (2026-10-19): 0.0.26 carried 4 advisories --
+# PYSEC-2026-3039 (unbounded multipart part-header count/size -> CPU DoS),
+# PYSEC-2026-3040 (parse_form did not validate Content-Length; a negative
+# value turned the bounded chunked read into read-until-EOF, loading the
+# whole body into memory at once), PYSEC-2026-3036/3037 (QuerystringParser
+# ";" separator differential + quadratic rescan). All four land by 0.0.31.
+python-multipart==0.0.32
 python-dotenv==1.2.2
 
 # PDF Generation (Day 12)
 reportlab==4.4.10
 
 # Authentication (Day 13)
-PyJWT[crypto]==2.12.1
+# Sprint-774-era CVE sweep (2026-10-19): 2.12.1 carried 5 advisories
+# (PYSEC-2026-175..179), all fixed in 2.13.0. Paciolus was not exploitable
+# -- decode() always passes algorithms=["HS256"] (a single symmetric alg,
+# so the asymmetric/HMAC confusion in PYSEC-2026-179 cannot trigger) and
+# PyJWKClient/jku are unused (PYSEC-2026-175 SSRF) -- but pip-audit gates
+# the dependency-compliance CI job on them.
+PyJWT[crypto]==2.15.1
 bcrypt>=5.0.0
 # Sprint 697: export-share passcode hashing upgraded from bcrypt → Argon2id
 # (OWASP 2024 recommendation). bcrypt retained for legacy-hash verification
@@ -63,7 +115,10 @@ psutil>=7.0.0
 # NOTE: numpy and chardet are transitive dependencies only (via pandas/pdfplumber).
 # No direct imports exist — pip resolves them automatically. No pin needed.
 
-# SECURITY: Pinned transitive dependency patches (pip-audit CVEs)
+# SECURITY FLOORS: transitive deps raised past a specific CVE.
+# Floors by rule (see PINNING RULE above) — these self-heal to latest on
+# every fresh resolve, which is the point. Do NOT convert to == without
+# reading the tradeoff note; that would make them rot like PyJWT did.
 cryptography>=46.0.7  # CVE-2026-26007
 pillow>=12.2.0  # CVE-2026-25990
 werkzeug>=3.1.8  # CVE-2026-27199

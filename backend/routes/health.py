@@ -137,8 +137,14 @@ async def health_check(
 async def liveness_probe(request: Request) -> LivenessResponse:
     """Liveness probe — orchestrator should use this for restart decisions.
 
-    Pure static response with zero I/O. If the process can serve this,
-    it is alive and should NOT be restarted.
+    Static response with zero *application* I/O (no DB, no cache reads). If
+    the process can serve this, it is alive and should NOT be restarted.
+
+    The handler is still rate-limited (AUDIT-07), so it touches the limiter's
+    storage. Sprint 774 made that non-fatal: a Redis outage degrades the
+    limiter to in-process counters instead of raising, so this probe keeps
+    answering 200. Before that fix, a dead Redis made liveness return 500 and
+    the orchestrator had no way to tell a wedged process from a dead cache.
     """
     return LivenessResponse(
         status="healthy",
@@ -159,10 +165,25 @@ async def readiness_probe(request: Request) -> ReadinessResponse:
     Checks database connectivity with SELECT 1, measures latency, and
     reports connection pool statistics when available (PostgreSQL).
 
-    Note: No Redis, Celery, or cache dependencies exist — database is
-    the only dependency.
+    Dependencies reported:
+      - ``database`` — hard dependency; unreachable DB returns 503.
+      - ``rate_limit_storage`` — soft dependency (Sprint 774).  Reports
+        "unhealthy" when the limiter has fallen back to in-process counters,
+        which downgrades overall status to "degraded" but still returns 200:
+        the service is serving correctly, just enforcing limits per-process.
+        This exists so a Redis outage is never silent again.
     """
     from database import SessionLocal, engine
+    from shared.rate_limits import get_storage_health
+
+    # --- Rate-limit storage (soft dependency; never fails the probe) ---
+    rl_health = get_storage_health()
+    rl_degraded = bool(rl_health["degraded"])
+    rl_dep = DependencyStatus(
+        status="unhealthy" if rl_degraded else "healthy",
+        latency_ms=0.0,  # read off an in-process flag; no I/O performed
+        details=rl_health,
+    )
 
     # --- Database check ---
     start = time.perf_counter()
@@ -198,10 +219,10 @@ async def readiness_probe(request: Request) -> ReadinessResponse:
             details=pool_details,
         )
         return ReadinessResponse(
-            status="healthy",
+            status="degraded" if rl_degraded else "healthy",
             timestamp=datetime.now(UTC).isoformat(),
             version=__version__,
-            dependencies={"database": db_dep},
+            dependencies={"database": db_dep, "rate_limit_storage": rl_dep},
         )
 
     except (SQLAlchemyError, OSError):
@@ -217,7 +238,7 @@ async def readiness_probe(request: Request) -> ReadinessResponse:
                 status="unhealthy",
                 timestamp=datetime.now(UTC).isoformat(),
                 version=__version__,
-                dependencies={"database": db_dep},
+                dependencies={"database": db_dep, "rate_limit_storage": rl_dep},
             ).model_dump(),
         )
 

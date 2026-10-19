@@ -16,6 +16,10 @@
 >
 > Pre-April 2026 entries archived to [`tasks/archive/hotfix-log-pre-april-2026.md`](archive/hotfix-log-pre-april-2026.md).
 
+- [2026-10-19] frontend CVE sweep clearing the red Node CI gates — `npm audit fix` (no `--force`, so every change stayed inside the existing semver ranges and **`package.json` was not touched**; lockfile only). Production dependency vulnerabilities went **22 → 0** (was 1 critical, 7 high, 13 moderate, 1 low). The critical was **Next.js itself**: 16.2.4 sat inside the `9.3.4-canary.0 – 16.3.7` advisory range. Also moved: `postcss` 8.5.10→8.5.31 (three advisories for arbitrary file read / path traversal via attacker-controlled `sourceMappingURL` in CSS comments), `sharp` 0.34.5→0.35.5 (inherited libvips CVE-2026-33327/33328/35590/35591, libheif GHSA-g89c-p67h-r497 + GHSA-2jg2-4ch7-h545, librsvg CVE-2026-96889), `source-map-js` 1.2.1→1.2.2 (event-loop DoS via indexed source-map section offsets), `nanoid` 3.3.11→3.3.20, `browserslist` 4.28.2→4.29.4, `fast-uri` 3.1.0→3.1.8. Net lockfile churn −622 lines (dedup). **Why this mattered beyond hygiene:** `ci.yml` runs `Node Dependency Audit (blocking)` as `npm audit --omit=dev --audit-level=high`, and it had been failing — so together with the PyJWT/python-multipart bump above, all six red dependency/CVE jobs now pass, which is what had every one of the 13 non-dependabot PRs sitting at `mergeStateStatus: BLOCKED`. Verified: `npm audit --omit=dev --audit-level=high` → 0 vulnerabilities (exit 0); `npx tsc --noEmit` → exit 0; `npm run build` → clean, and every route still renders `ƒ (Dynamic)` with `ƒ Proxy (Middleware)` active, so the nonce-based CSP contract is intact across the Next.js minor bump; `npm test` → 207 suites / 2,013 tests / 5 snapshots, 0 failures. 21 dev-only advisories remain (20 moderate + 1 high, the `babel-jest` → `@jest/transform` → `babel-plugin-istanbul` chain); all three CI audit gates pass `--omit=dev`, so they do not gate, and clearing them needs `npm audit fix --force` (breaking major bumps) — deliberately left. Final confirmation of the Next.js bump should be a Vercel preview deploy, since build output cannot prove runtime nonce propagation. Files: `frontend/package-lock.json`.
+- [2026-10-19] nightly audit artifacts — 109-day backlog (2026-05-02 → 2026-10-19) committed in one batch: 795 files, 3.3 MB (109 daily `.md` briefs + 109 `.run_log` + 109 coverage, 108 sprint_shepherd, 108 scout, 105 dependency_sentinel, 104 report_auditor, 43 qa_warden sentinels), plus `.baseline.json` refreshed to the 2026-10-14 QA Warden / 2026-10-19 Report Auditor values. The overnight cron kept running through the entire 2026-05-01 → 2026-10-19 repo dormancy; nobody committed its output. Scanned for secrets before staging (no `sk_live`/`sk_test`/private-key/credentialed-URL matches). **Notable asymmetry:** only 43 of 109 nights produced a `qa_warden` sentinel, i.e. the test-suite agent failed to run on ~66 nights — which is exactly what PR #145 (`fix: raise qa_warden orchestrator timeout to 1700s`, opened 2026-05-11) was written to fix and never merged. The backend suite takes ~715–780s and the orchestrator's timeout sat below that, so the one agent that would have reported a red suite was the one most likely to time out. A concrete, measurable cost of the unmerged-PR backlog. Also confirms the nightly runs against `backend/venv` (`run_log` shows `backend\venv\Scripts\python.exe`), not system Python — relevant because the two environments have drifted apart. Files: `reports/nightly/*`.
+- [2026-10-19] security dep bumps clearing the red `dependency-compliance` CI gate — `PyJWT[crypto]` 2.12.1→2.15.1 and `python-multipart` 0.0.26→0.0.32. The weekly `dependency-compliance` job ("Python CVE & License Audit", `pip-audit --desc --ignore-vuln CVE-2026-3219`) had been failing every run through 2026-08-24 (then stopped only because GitHub disables cron workflows after ~60 days of repo inactivity) with **12 known vulnerabilities in 2 packages** — and those were the *only* two packages flagged. PyJWT 2.12.1 carried PYSEC-2026-175..179, all fixed in 2.13.0; python-multipart 0.0.26 carried PYSEC-2026-3036/3037 (QuerystringParser treated `;` as a separator contrary to WHATWG, plus a quadratic rescan), PYSEC-2026-3039 (unbounded multipart part-header count/size → CPU DoS) and PYSEC-2026-3040 (`parse_form()` did not validate `Content-Length`; a negative value turned the bounded chunked read into read-until-EOF, loading the whole body into memory in one read) — all four land by 0.0.31. **Paciolus was not exploitable on the PyJWT advisories:** `decode()` always passes `algorithms=["HS256"]`, a single symmetric algorithm, so the asymmetric/HMAC key-confusion in PYSEC-2026-179 cannot trigger, and `PyJWKClient`/`jku` are unused so the PYSEC-2026-175 SSRF surface does not exist. **Nor, on closer inspection, was it exploitable on most of the python-multipart advisories.** PYSEC-2026-3040 is fully mitigated by our own `MaxBodySizeMiddleware`, which rejects a negative `Content-Length` with 400 *before* any body bytes are read (`security_middleware.py:162`) and independently caps streamed bytes in a second layer, so the read-until-EOF path is unreachable. PYSEC-2026-3036/3037 target `QuerystringParser` (`application/x-www-form-urlencoded`); Paciolus's `Form()` parameters are all paired with `UploadFile`, i.e. `multipart/form-data` handled by `MultipartParser`, and those endpoints require auth — reachable only if a client deliberately posts urlencoded, and the impact (field-separator differential on column mappings and IDs) is immaterial. The one genuinely relevant advisory is **PYSEC-2026-3039** (unbounded multipart part-header count/size): reachable across the ~50 `UploadFile` endpoints and only *partially* mitigated — the global body cap bounds total bytes, so it bounds how many headers fit, but does not eliminate CPU cost within that budget. Net: no historical compromise window; the bump is correct hygiene and unblocks the gate. **Root-cause insight worth keeping:** these were the only two CVE-flagged packages because they were the only two pinned with exact `==`. Every other CVE-carrying dependency (`cryptography`, `pillow`, `pypdf`, `pyasn1`, `werkzeug`) is pinned with a `>=` floor, and the transitives (`starlette`, `urllib3`, `anyio`, `idna`, `mako`) are unpinned, so a fresh `pip install -r requirements.txt` — which is what CI and the production Docker build both do — resolves them to latest and they self-heal. Exact pins buy reproducibility and rot; floors buy CVE currency and unreviewed upstream churn. requirements.txt currently mixes both without a stated rule; see Sprint 777 for the deliberate decision. Verified: venv auth suite 116/116, upload suite 223/223, and `pip-audit` no longer reports pyjwt or python-multipart. Files: `backend/requirements.txt`.
+- [2026-10-19] inventory fixture date time-bomb — `test_inventory_testing.py::TestCompositeScore::test_clean_data_low_score` had been RED in every nightly since 2026-05-31 with no commit behind it. `sample_inv_rows()` hardcoded `Last Movement Date` literals in late 2025; IN-06 (slow-moving) compares against `date.today()` with a 180-day default threshold, so as wall-clock time advanced all 5 "clean" rows crossed it, flagged 100% slow-moving, and escalated `risk_tier` LOW→MODERATE (the `score < 25` assertion still passed at 10.5 — only the tier assertion caught it). Replaced the literals with a `_days_ago(n)` helper, matching the relative-date pattern the dedicated `TestSlowMovingInventory` cases already used; offsets 30/31/46/72/121 preserve the original fixture's relative ordering and spread while staying well inside the threshold. Also fixed the same latent bug in `make_large_dataset()` (all 20 rows shared `2025-11-01`; not yet tripped). Root cause of the *delay* in noticing: `TestSlowMovingInventory::test_recent_movement_no_flags` never asserted `entries_flagged == 0` despite its name, so fixture staleness stayed invisible there — assertion added with a diagnostic message. Backend: 134/134 inventory tests pass (was 133/134). Files: `backend/tests/test_inventory_testing.py`.
 - [2026-04-30] post-PR-128 cleanup — closed 4 stale Apr-22 PRs (#94 superseded, #96 already on main, #97 partially superseded, #99 slot stale) + their remote/local branches. Captured the still-relevant gaps as one `fix:` commit: `.gitignore` adds `.hypothesis/` (root), `.claude/worktrees/`, `frontend/playwright-report/` (the PR #97 leftovers); `tasks/todo.md` adds Refactor Intake row for the Postgres enum-case drift bug originally filed as PR #99 (Sprint 715 slot was already taken by the SendGrid 403 investigation). Files: `.gitignore`, `tasks/todo.md`.
 - [2026-04-29] PR #126 follow-up — `lint_engine_base_adoption.py` taught to follow ADR-018 shims to `services/audit/<tool>/analysis.py`. After `fae3e3e9` relocated 7 engines to dynamic-namespace shims, the AST-only check found no classes at the legacy path and false-flagged the 4 already-migrated engines (JE/AP/Payroll/Inventory) as off-pattern, breaking `test_engine_base_lint.py::TestKnownMigrated` on both Python 3.11 and Postgres 15 jobs. New `_resolve_shim_canonical()` helper detects both shim shapes (static `from services.audit.<tool>.analysis import *` and dynamic `from services.audit.<tool> import analysis as _impl`) and re-checks the canonical file. Findings drop 12→8 — the 4 unmigrated targets (AR Aging, FA, Revenue, SoD) and 4 borderline engines remain, matching `test_post_triage_finding_count` expectations. File: `scripts/lint_engine_base_adoption.py`.
 - [2026-04-29] 016aafed: PR #126 CI gate alignment — `accounting_policy.toml` `[rules.revenue_contract_fields].file` repointed `revenue_testing_engine.py` → `services/audit/revenue_testing/analysis.py` (the legacy path is now a dynamic-namespace shim after `fae3e3e9` ADR-018 batch, so AST-based class detection found nothing and false-flagged ASC 606/IFRS 15 regression). OpenAPI snapshot regenerated to absorb 4 operation-description refreshes (`/export/{excel,pdf,leadsheets,financial-statements}` Sprint 748b pipeline-delegation docstrings); paths/schemas counts unchanged at 220/422. Files: `backend/guards/accounting_policy.toml`, `scripts/openapi-snapshot.json`.
@@ -266,3 +270,151 @@ Bundle the 19 patch + safe-minor updates into one commit, mirroring the 2026-04-
 
 ---
 
+### Sprint 774: Rate-limit storage outage resilience (P0 production restore)
+**Status:** COMPLETE — commit `8601c4ef` on branch `sprint-774-rate-limit-outage-resilience` (was `e848d3c2` before the branch was rebased onto `main`) (not yet pushed/merged; production is restored but still runs `51906004`, so the resilience fix itself is not yet deployed).
+**Priority:** P0 (production was down).
+**Source:** Production outage discovered 2026-10-19 during a status review after ~5.5 months of repo dormancy (last commit 2026-05-01).
+
+#### What was actually wrong (two independent faults)
+
+1. **`AUDIT_CHAIN_SECRET_KEY` was never set on Render.** The 2026-04-06 hotfix introduced the variable with a silent dev fallback to `JWT_SECRET_KEY`; Sprint 768 correctly turned that fallback into a production hard-fail — but nobody set the variable. The Sprint 768 deploy (`c58cbbb5`, 2026-04-30 22:45 UTC) therefore exited 1 at startup. Render kept the previous instance (Sprint 763, `89ab7902`) serving, so the failure was invisible, and **Sprint 768's P1 security fixes never reached production.** PR #129, merged 80 minutes later, never deployed at all — its files were outside Render's `backend` rootDir, so the commit was ignored.
+2. **The Upstash Redis host stopped resolving** (`Error -2 ... Name or service not known`). Every rate-limited route — i.e. the whole API including `/health`, `/health/live`, `/health/ready`, `/metrics` — returned HTTP 500. Because the probes 500'd too, nothing reported why; Render showed the service healthy and unsuspended throughout.
+
+#### Two latent bugs found while fixing it
+
+- **The fail-closed guarantee never worked.** `limits`' `Storage.check()` signals failure by *returning False*, not raising (its body is `try: return ping() except: return False`). `_resolve_storage_uri` only caught exceptions, so a dead backend was silently treated as healthy at boot. The Sprint 696 tests passed only because they mocked `check()` to raise — something real `RedisStorage` never does. The tests encoded a false model of the library.
+- **`scripts/smoke_test_render.sh` could never pass.** It registers `smoke-test-<ts>@paciolus.test`, and `email-validator` rejects `.test` as a special-use/reserved TLD, so `/auth/register` returned 422 every time. The post-deploy verification gate had been non-functional. It also still asserted `access_token` in the register/login JSON, which Sprint 768 made opt-in behind `X-Token-Response: bearer`.
+
+#### Conflict Loop — the posture tension
+
+**Tension:** Sprint 696 (2026-04-20) deliberately chose fail-closed — refuse to start rather than under-enforce rate limits — and built a dated break-glass override to go with it. This sprint makes degradation the default, which reverses that decision.
+
+**Steel man for fail-closed:** rate limiting is the only thing between the public internet and expensive audit/export endpoints. Degrading to per-process counters on a multi-worker deployment gives each worker its own bucket — effectively N-times the intended limit. Refusing to boot forces an operator to fix the real problem instead of running indefinitely degraded, and the override exists precisely so degradation is a *deliberate, logged, time-boxed* choice.
+
+**Why degrade still wins:** the incident is the counter-evidence. Fail-closed converted a cache outage into a 5.5-month total outage of a paid product, with no alarm and — critically — **no self-heal path**: the process exits and the orchestrator restart-loops forever. The override requires a human who already knows to look. Meanwhile slowapi's fallback enforces the *same limit values* in-process and restores Redis automatically within a few requests, and at `numInstances: 1` the enforcement delta is exactly zero. Fail-closed bought nothing here and cost everything.
+
+**Synthesis (what shipped):** keep both postures, make the choice explicit rather than implicit in strict mode, default to `degrade`, and make degradation impossible to miss. Rate limiting is an abuse control, not an integrity control; brief under-enforcement beats unavailability *provided* it is loud and self-healing.
+
+#### What landed
+
+- **`backend/config.py`** — new `RATE_LIMIT_STORAGE_FAILURE_POLICY` (`degrade` default, or `fail_closed`), validated with a hard-fail on a bad value. Deliberately separate from `RATE_LIMIT_STRICT_MODE`, which keeps its original meaning: Redis must be *configured* (still a production hard-fail when `REDIS_URL` is unset).
+- **`backend/shared/rate_limits.py`**
+  - `Limiter(..., in_memory_fallback_enabled=True)` — the core fix. A storage error now degrades to in-process counters instead of raising. This is not `swallow_errors`: limits stay enforced while degraded.
+  - `_resolve_storage_uri()` now inspects the **return value** of `check()`, not just exceptions.
+  - Distinguishes *unreachable* (keep the Redis URI so slowapi's re-probe can self-heal) from *unusable URI* (degrade to `memory://`, since slowapi would crash at import on the same URI and a bad URI cannot recover anyway).
+  - New `get_storage_health()` reporting configured vs. live backend, reading slowapi's `_storage_dead` live so it clears on recovery.
+- **`backend/routes/health.py`** — `/health/ready` reports a `rate_limit_storage` soft dependency; degradation downgrades overall status to `degraded` but still returns **200** (503 would evict a healthy instance from the load balancer over a cache outage). Corrected the `/health/live` "zero I/O" docstring, which was false — it passes through the limiter.
+- **`scripts/smoke_test_render.sh`** — `@paciolus.test` to `@example.com` (RFC 2606, no MX, so it bounces rather than reaching anyone); register and login now send `X-Token-Response: bearer`.
+- **`docs/runbooks/rate-limiter-modernization.md`** — new "Storage Outage Posture" section (incident, policy table, detection, Redis restore procedure); Sprint 696 section marked partially superseded.
+
+#### Production actions taken (2026-10-19)
+
+- Set `AUDIT_CHAIN_SECRET_KEY` on Render (fresh 64-hex key). Safe to introduce: `verify_audit_chain` already tries the audit-chain key first and falls back to `JWT_SECRET_KEY` for pre-rotation records, so existing entries still verify while new ones get real domain separation.
+- Provisioned Render Key Value `paciolus-ratelimit` (`red-dbb2gdqjnfac739l4p5g`, free plan, **virginia** — same region as the service, `allkeys_lru`) and repointed `REDIS_URL` at its internal URL. A same-provider private hostname removes the cross-provider DNS dependency that caused the outage.
+- Deploy `dep-dbb2glcs728c73a67s5g` went **live**; production now runs `51906004`, which includes Sprint 768 at last.
+
+**Verification:**
+- Production: all four health probes 200; `/health/redis` connected (5.76ms); DB 9.96ms. Full auth round-trip green against live prod — register, `/auth/me`, login, wrong-password 401, uppercase-email login, logout, post-logout 401 (14/14 checks).
+- `tests/test_rate_limit_storage_outage.py` — **10 new tests.** Proves a rate-limited route served through a genuinely dead Redis returns 200, with a control asserting the same setup fails hard *without* the fallback (so the test cannot silently stop proving anything), plus a test that limits are still enforced while degraded.
+- `tests/test_health_api.py` — 3 new tests for the `rate_limit_storage` dependency and degraded-status reporting.
+- 4 pre-existing tests updated to the new posture (they asserted the old fail-closed behavior); intent preserved and documented in each.
+- Targeted runs: 38 rate-limit, 24 health, 116 security/auth passed.
+
+**Out of scope / follow-ups:**
+- Replacing slowapi entirely — unchanged; triggers still documented in the runbook.
+- `jq` is unavailable on the Windows dev box, so `smoke_test_render.sh` still cannot run there. The fixes are correct but were verified via an equivalent Python harness. Consider a `jq`-free rewrite.
+- Free-plan Key Value has no persistence, so `impersonation_revocation` JTI sets are lost on restart (they already were — it falls back to in-memory). Worth a paid plan if cross-restart revocation durability matters.
+- **External uptime monitoring** — nothing alerted for 5.5 months. This is the single highest-value follow-up; see Sprint 775.
+
+---
+
+### Sprint 775: External uptime monitoring + deploy-failure alerting
+**Status:** COMPLETE (in-repo half). The external-monitor signup remains a CEO action — see "Residual" below.
+**Priority:** P1. The Sprint 774 outage was not caused by missing monitoring, but it lasted 5.5 months because of it.
+**Source:** Sprint 774 post-incident.
+
+Two separate blind spots, both of which must close:
+
+1. **Nothing watched the service.** No external probe, so a total API outage was indistinguishable from a quiet period. Add an external HTTP monitor against `/health/ready` that alerts on non-200 **and** on `status != "healthy"` (Sprint 774 made degradation visible in the body; an uptime check that only looks at the status code will miss it). Free options sufficient at this scale: Better Stack, Healthchecks.io, UptimeRobot.
+2. **Nothing watched deploys.** The Sprint 768 deploy failed and Render kept serving the old image, so a failed deploy looked identical to a successful one from outside. Render has `notifyOnFail: "default"` on the service — confirm where those notifications actually land and that the address is monitored. A failed deploy on `main` should page.
+
+Also worth filing: the Sprint 768 security fixes sat undeployed for 5.5 months because nobody verified the deploy landed. Post-merge verification should assert that the live deploy SHA equals `main`, not merely that CI was green.
+
+---
+
+**What landed:** `.github/workflows/uptime-check.yml` + `scripts/latest_live_deploy_sha.py`.
+
+Runs every 15 minutes (and on `workflow_dispatch`). Three probes:
+
+1. **`GET /health/ready` must return 200 AND `body.status == "healthy"`.** Checking the body is the whole point: Sprint 774 deliberately made a degraded rate-limit backend report `status: "degraded"` while still returning **200**, so that a cache outage does not evict a healthy instance from the load balancer. A status-code-only monitor would sail straight past exactly the condition we just spent a sprint making visible. Verified against live prod (200/`healthy` → PASS) and against synthetic `degraded`/`unhealthy` bodies (→ FAIL).
+2. **Marketing site returns 200.** Vercel is a separate failure domain from the Render API; `paciolus.com` served 200 throughout the entire 5.5-month backend outage, which is part of why the outage looked like nothing was wrong.
+3. **Deploy drift — live Render deploy SHA vs `origin/main`.** This is the check that would have caught Sprint 768: its deploy exited 1 at startup, Render correctly kept the previous image serving, and from outside nothing had changed, so P1 security fixes sat undeployed for 5.5 months. Needs the `RENDER_API_KEY` secret and **SKIPs rather than FAILs** when it is absent, so a missing credential never raises a false alarm.
+
+Failure handling reuses a single `uptime-failure`-labelled issue (commenting on it rather than filing a new one every 15 minutes) and closes it automatically on recovery, then fails the run so GitHub's own notifications fire.
+
+`scripts/latest_live_deploy_sha.py` parses the Render deploys payload and prints the SHA of the first `live` deploy. It tolerates both response shapes (`{"deploy": {...}}` wrappers and bare objects) and prints an empty line for unparseable input, so an API hiccup stays distinguishable from genuine drift. Checked against live/failed/missing/unparseable/bare-shape inputs; ruff clean.
+
+**Residual — still needs the CEO:**
+- ⚠️ **An external monitor is still required, and this workflow cannot replace it.** GitHub disables scheduled workflows after ~60 days of repo inactivity — exactly what happened to `dependency-compliance`, `dr-test-monthly` and `backup-integrity-check` during the dormancy. A cron-based self-check therefore switches itself off during precisely the quiet period it is meant to guard. Put Better Stack / Healthchecks.io / UptimeRobot (free tiers are ample at this scale) in front of `/health/ready`, alerting on `status != "healthy"` rather than on a non-200.
+- Add the `RENDER_API_KEY` secret (read-only scope) to activate probe 3. **The repo currently has no secrets at all** (`gh secret list` is empty), which is also why `backup-integrity-check` and `dr-test-monthly` fail — see Sprint 778.
+- Confirm where Render's `notifyOnFail` notifications land, and that the address is actually monitored. A failed deploy on `main` should page.
+
+---
+
+### Sprint 778: DR + backup workflows are structurally broken (wrong provider, no secrets)
+**Status:** PENDING.
+**Priority:** P1. Concerns whether production data is recoverable — and the checks that should answer that question cannot run.
+**Source:** 2026-10-19, while re-enabling the inactivity-disabled scheduled workflows (Sprint 775 work).
+
+Re-enabling the three auto-disabled workflows surfaced that two of them cannot pass as written:
+
+- **No repo secrets exist at all.** `gh secret list` returns empty, so `RENDER_API_KEY` and `RENDER_POSTGRES_ID` are unset. `scripts/verify_backup_integrity.py` exits 2 on `RENDER_API_KEY is not set`, which is why `backup-integrity-check` failed every month before being disabled.
+- **They point at the wrong provider.** Both `verify_backup_integrity.py` and `dr-test-monthly.yml` query `api.render.com/v1/postgres/$RENDER_POSTGRES_ID`. Production Postgres is on **Neon** (since Phase 1, 2026-04-09) and the orphan Render Postgres was deleted 2026-04-22, so even with secrets these checks interrogate a database that does not exist.
+- **`DR Test (Monthly)` is a false-green.** Its last scheduled run (2026-09-01) reported workflow-level **success**, yet its internal `render-check` step resolves `api_error` → `result=FAIL`; the overall verdict only gates issue creation, not the job's exit status. Same class of defect as the 2026-04-22 false-green incident that motivated Sprint 712.
+- **Phase 4.4 was never implemented**, so the `paciolus-backups` R2 bucket holds no `pg_dump` artifacts. Neon's own PITR is the only thing standing behind production data; there is no off-provider copy and no restore-drill evidence.
+
+**Scope:** decide whether off-provider backups are required for launch (Neon PITR may be judged sufficient — that is a CEO call, and it should be *written down* either way). If yes, implement the Phase 4.4 `pg_dump` → R2 cron, then rewrite both workflows against Neon + R2 instead of the Render Postgres API. Regardless of that decision: fix the false-green so a job's exit status reflects its own verdict, and make the missing-credential case report "unverified" explicitly instead of dying with an opaque error.
+
+**Note:** all three workflows were re-enabled on 2026-10-19. `dependency-compliance` now passes (its CVEs were fixed the same day), but **`backup-integrity-check` will fail on the 1st of each month and file a `dr-failure` issue** until this sprint lands. That signal is substantively true — backups genuinely are unverified — but its stated reason will be the misleading "RENDER_API_KEY is not set". Either accept it as a forcing function or disable that one workflow until the rewrite.
+
+---
+
+### Sprint 777: Dependency pinning strategy — decide the `==` vs `>=` rule
+**Status:** COMPLETE — **option 3 chosen** (explicit split with a written rule). The rule is now documented in-file at the top of `backend/requirements.txt`.
+**Priority:** P2. Not urgent, but it is the upstream cause of the 2026-10-19 CVE gate failure and it also changes how Sprint 761 should be executed.
+**Source:** 2026-10-19 CVE sweep (see Hotfixes).
+
+`backend/requirements.txt` mixes two incompatible pinning philosophies with no stated rule, and the mix is why the CI compliance gate went red:
+
+- **Exact pins (`==`)** — `fastapi`, `PyJWT`, `python-multipart`, `sqlalchemy`, `stripe`, `pydantic`, `pandas`, `reportlab`, `uvicorn`, … Reproducible, but they rot silently: a CVE published against the pinned version sits there until a human bumps it. PyJWT and python-multipart were the **only** two packages `pip-audit` flagged in CI, and they were exact pins.
+- **`>=` floors** — `cryptography>=46.0.7`, `pillow>=12.2.0`, `pypdf>=6.10.0`, `pyasn1>=0.6.3`, `werkzeug>=3.1.8`, `bcrypt>=5.0.0`, `argon2-cffi>=23.1.0`. Each floor's trailing comment names the CVE it was raised for. These self-heal, because every fresh `pip install -r requirements.txt` (CI and the production Docker build) resolves to the latest release — but that also means **production can take an unreviewed upstream major at any time**, with no lockfile and no record of what actually shipped.
+
+Evidence both halves of the tradeoff are live: a `pip-audit` of the long-lived `backend/venv` (pinned-in-place at the floor versions) reports advisories against `cryptography` 46.0.7, `pillow` 12.2.0, `pypdf` 6.10.2, `pyasn1` 0.6.3 and `werkzeug` 3.1.8 — i.e. every floor value is now itself vulnerable. A fresh resolve almost certainly avoids all of them. So the floors are protecting CI/prod while leaving no evidence of what was tested.
+
+**Decide one of:**
+
+1. **Exact pins everywhere + a lockfile + automated bump PRs.** Fully reproducible; requires Dependabot (already configured, 15 PRs open) to actually be merged on a cadence, or the rot problem generalizes to every package.
+2. **Floors everywhere, with `pip freeze` captured per deploy as the evidence record.** Keeps CVE currency; needs a recorded resolution so "what shipped" is answerable after the fact.
+3. **Explicit split with a written rule** — e.g. exact-pin the framework/runtime surface where a silent major is dangerous (`fastapi`, `pydantic`, `sqlalchemy`, `pandas`), floor the leaf security libraries where currency matters more (`cryptography`, `pillow`, `pypdf`). This is roughly what exists today; the work is to state it, justify each classification in-file, and add the missing piece: a scheduled job that re-audits the exact-pinned set, since that is the half that cannot self-heal.
+
+**Decision (2026-10-19): option 3 — explicit split, written down.**
+
+Why not the others. Option 1 (exact-pin everything + lockfile) generalises the exact-pin rot problem to all 32 requirements and makes CVE currency entirely dependent on Dependabot PRs actually being merged on a cadence — and the current state of that cadence is 15 open Dependabot PRs, the oldest from 2026-04-13. Option 2 (floors everywhere) would let an unreviewed upstream major land straight in the production Docker build for `fastapi`, `pydantic`, `sqlalchemy` and `pandas`, where a silent behavioural change costs far more than a late CVE patch.
+
+**The rule, as written into `backend/requirements.txt`:**
+- `==` **exact pin** for the framework/runtime surface, where an unreviewed upstream change is more dangerous than a late CVE patch: web framework, data layer, migrations, money, document generation, scheduler, APM. 17 entries.
+- `>=` **floor** for leaf libraries consumed through a narrow, stable API, plus the security block at the bottom of the file, where CVE currency matters more than byte-for-byte reproducibility. 15 entries.
+
+**The load-bearing clause** — and the actual lesson of the incident — is recorded alongside it: exact pins **cannot self-heal**, so they are only safe while the weekly `dependency-compliance` pip-audit is enabled **and** green. That job is the sole mechanism able to catch rot in the `==` half of the file. It had been failing for months and was then auto-disabled by GitHub after 60 days of repo inactivity, which is exactly how PyJWT and python-multipart rotted into two red blocking gates that held up all 13 real PRs. The workflow was re-enabled 2026-10-19.
+
+Also recorded in-file: `starlette` deliberately carries **no** constraint, even though it is the HTTP core beneath FastAPI. Because `fastapi` is exact-pinned its permitted `starlette` range is already fixed, so a second constraint would add no reproducibility while risking resolution conflicts on every FastAPI bump.
+
+**Verified:** `requirements.txt` still parses (32 requirement lines, none unparseable) and `pip install --dry-run -r requirements.txt` resolves clean.
+
+**Consequence for Sprint 761 (cryptography 47 major):** its premise — "majors get pinned exact" — is now explicitly **rejected** for this dependency. `cryptography` is a security leaf and stays a floor; converting it to `==` would make the single most security-critical package in the tree (JWT signing, password hashing, TLS evidence chain) rot exactly the way PyJWT did. Sprint 761 should be rescoped to "verify the floor still resolves to a supported, CVE-free major, and raise the floor if not" rather than pinning it.
+
+**Blocks/alters (now resolved — see Decision above):** Sprint 761 proposes pinning `cryptography==47.0.0` exactly, on the stated convention that "majors get pinned exact." Under option 2 or 3 that is the wrong move — it would convert a self-healing floor into a rotting pin on the single most security-critical dependency in the tree (it underpins JWT signing, password hashing, and the TLS evidence chain). Settle this sprint first.
+
+**Also fix while here:** `requirements.txt` has no `starlette` constraint at all, yet it is the HTTP core underneath FastAPI and the long-lived venv shows 5 advisories against `starlette` 1.0.0. It is currently whatever `fastapi==0.136.1` happens to allow. Decide whether the HTTP layer should be constrained explicitly.
+
+---

@@ -36000,7 +36000,7 @@
     },
     "/health/live": {
       "get": {
-        "description": "Liveness probe — orchestrator should use this for restart decisions.\n\nPure static response with zero I/O. If the process can serve this,\nit is alive and should NOT be restarted.",
+        "description": "Liveness probe — orchestrator should use this for restart decisions.\n\nStatic response with zero *application* I/O (no DB, no cache reads). If\nthe process can serve this, it is alive and should NOT be restarted.\n\nThe handler is still rate-limited (AUDIT-07), so it touches the limiter's\nstorage. Sprint 774 made that non-fatal: a Redis outage degrades the\nlimiter to in-process counters instead of raising, so this probe keeps\nanswering 200. Before that fix, a dead Redis made liveness return 500 and\nthe orchestrator had no way to tell a wedged process from a dead cache.",
         "operationId": "liveness_probe_health_live_get",
         "responses": {
           "200": {
@@ -36044,7 +36044,7 @@
     },
     "/health/ready": {
       "get": {
-        "description": "Readiness probe — load balancer should use this for traffic routing.\n\nChecks database connectivity with SELECT 1, measures latency, and\nreports connection pool statistics when available (PostgreSQL).\n\nNote: No Redis, Celery, or cache dependencies exist — database is\nthe only dependency.",
+        "description": "Readiness probe — load balancer should use this for traffic routing.\n\nChecks database connectivity with SELECT 1, measures latency, and\nreports connection pool statistics when available (PostgreSQL).\n\nDependencies reported:\n  - ``database`` — hard dependency; unreachable DB returns 503.\n  - ``rate_limit_storage`` — soft dependency (Sprint 774).  Reports\n    \"unhealthy\" when the limiter has fallen back to in-process counters,\n    which downgrades overall status to \"degraded\" but still returns 200:\n    the service is serving correctly, just enforcing limits per-process.\n    This exists so a Redis outage is never silent again.",
         "operationId": "readiness_probe_health_ready_get",
         "responses": {
           "200": {

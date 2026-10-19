@@ -18,21 +18,57 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 
 class TestStrictModeFailClosed:
-    """When RATE_LIMIT_STRICT_MODE=true, Redis failure must prevent startup."""
+    """RATE_LIMIT_STRICT_MODE governs whether Redis must be CONFIGURED.
 
-    def test_strict_mode_redis_unreachable_raises(self):
-        """Strict mode + configured but unreachable Redis → RuntimeError."""
+    Sprint 774 split the two concerns this class originally conflated:
+
+    - ``RATE_LIMIT_STRICT_MODE`` — Redis must be configured at all. Still a
+      production hard-fail when REDIS_URL is unset (see
+      test_strict_mode_no_redis_url_config_hard_fails).
+    - ``RATE_LIMIT_STORAGE_FAILURE_POLICY`` — what to do when a configured
+      backend is UNREACHABLE. Covered by
+      tests/test_rate_limit_storage_outage.py.
+
+    Conflating them meant a transient cache outage was treated as a
+    configuration error, which is how a dead Redis became a 5.5-month
+    production outage with no self-heal path.
+    """
+
+    def test_strict_mode_unreachable_redis_does_not_block_startup(self):
+        """Strict mode alone no longer refuses to start on an unreachable backend.
+
+        Under the default ``degrade`` policy the URI is retained so slowapi's
+        in-memory fallback can serve traffic and later restore Redis. Opting
+        back into the old behavior requires an explicit
+        RATE_LIMIT_STORAGE_FAILURE_POLICY=fail_closed.
+        """
         mock_storage_cls = MagicMock()
         mock_storage_cls.return_value.check.side_effect = ConnectionError("Connection refused")
 
         with (
             patch("config.REDIS_URL", "redis://unreachable:6379/0"),
             patch("config.RATE_LIMIT_STRICT_MODE", True),
+            patch("config.RATE_LIMIT_STORAGE_FAILURE_POLICY", "degrade"),
             patch("limits.storage.RedisStorage", mock_storage_cls),
         ):
             from shared.rate_limits import _resolve_storage_uri
 
-            with pytest.raises(RuntimeError, match="strict mode"):
+            assert _resolve_storage_uri() == "redis://unreachable:6379/0"
+
+    def test_fail_closed_policy_raises_on_unreachable_redis(self):
+        """The old fail-closed posture is still reachable, now explicitly."""
+        mock_storage_cls = MagicMock()
+        mock_storage_cls.return_value.check.side_effect = ConnectionError("Connection refused")
+
+        with (
+            patch("config.REDIS_URL", "redis://unreachable:6379/0"),
+            patch("config.RATE_LIMIT_STRICT_MODE", True),
+            patch("config.RATE_LIMIT_STORAGE_FAILURE_POLICY", "fail_closed"),
+            patch("limits.storage.RedisStorage", mock_storage_cls),
+        ):
+            from shared.rate_limits import _resolve_storage_uri
+
+            with pytest.raises(RuntimeError, match="fail_closed"):
                 _resolve_storage_uri()
 
     def test_strict_mode_redis_reachable_returns_url(self):
@@ -74,20 +110,26 @@ class TestStrictModeFailClosed:
 class TestPermissiveModePreservesFallback:
     """When RATE_LIMIT_STRICT_MODE=false, the existing fallback behavior is preserved."""
 
-    def test_permissive_mode_redis_unreachable_falls_back(self):
-        """Non-strict + unreachable Redis → graceful fallback to memory://."""
+    def test_permissive_mode_redis_unreachable_does_not_raise(self):
+        """Non-strict + unreachable Redis → startup proceeds, no exception.
+
+        The resolved URI is now the Redis URI rather than memory:// (Sprint
+        774) so slowapi's fallback can self-heal. The property this test
+        actually guards — permissive mode never blocks startup — is unchanged.
+        """
         mock_storage_cls = MagicMock()
         mock_storage_cls.return_value.check.side_effect = ConnectionError("Connection refused")
 
         with (
             patch("config.REDIS_URL", "redis://unreachable:6379/0"),
             patch("config.RATE_LIMIT_STRICT_MODE", False),
+            patch("config.RATE_LIMIT_STORAGE_FAILURE_POLICY", "degrade"),
             patch("limits.storage.RedisStorage", mock_storage_cls),
         ):
             from shared.rate_limits import _resolve_storage_uri
 
             result = _resolve_storage_uri()
-        assert result == "memory://"
+        assert result == "redis://unreachable:6379/0"
 
     def test_permissive_mode_no_redis_returns_memory(self):
         """Non-strict + no REDIS_URL → memory:// (dev/test default)."""
@@ -118,11 +160,16 @@ class TestStrictModeConfigDefault:
         assert default == "false"
 
 
-class TestStrictModeFailClosedRedisStorageInit:
-    """Strict-mode boot should refuse to start when Redis init itself raises."""
+class TestStorageConstructionFailure:
+    """A storage object that cannot even be constructed is handled separately.
 
-    def test_strict_mode_redis_storage_constructor_raises(self):
-        """RedisStorage() blowing up at construction time still hard-fails."""
+    slowapi would raise the same error building its own storage from the same
+    URI, crashing the process at import — so this case degrades to memory://
+    under the default policy rather than retaining an unusable URI.
+    """
+
+    def test_constructor_failure_degrades_to_memory(self):
+        """Default policy: unusable URI → memory://, process still serves."""
 
         class _BoomStorage:
             def __init__(self, *_a, **_kw):
@@ -131,11 +178,29 @@ class TestStrictModeFailClosedRedisStorageInit:
         with (
             patch("config.REDIS_URL", "redis://nonsense.invalid:6379/0"),
             patch("config.RATE_LIMIT_STRICT_MODE", True),
+            patch("config.RATE_LIMIT_STORAGE_FAILURE_POLICY", "degrade"),
             patch("limits.storage.RedisStorage", _BoomStorage),
         ):
             from shared.rate_limits import _resolve_storage_uri
 
-            with pytest.raises(RuntimeError, match="strict mode"):
+            assert _resolve_storage_uri() == "memory://"
+
+    def test_constructor_failure_fail_closed_raises(self):
+        """fail_closed policy: construction failure still refuses to start."""
+
+        class _BoomStorage:
+            def __init__(self, *_a, **_kw):
+                raise ConnectionError("DNS resolution failed")
+
+        with (
+            patch("config.REDIS_URL", "redis://nonsense.invalid:6379/0"),
+            patch("config.RATE_LIMIT_STRICT_MODE", True),
+            patch("config.RATE_LIMIT_STORAGE_FAILURE_POLICY", "fail_closed"),
+            patch("limits.storage.RedisStorage", _BoomStorage),
+        ):
+            from shared.rate_limits import _resolve_storage_uri
+
+            with pytest.raises(RuntimeError, match="fail_closed"):
                 _resolve_storage_uri()
 
 

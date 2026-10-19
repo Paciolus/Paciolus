@@ -312,3 +312,70 @@ class TestWaitlist:
                 },
             )
             assert response.status_code == 422
+
+
+# =============================================================================
+# GET /health/ready — rate_limit_storage dependency (Sprint 774)
+# =============================================================================
+
+
+class TestReadinessRateLimitStorage:
+    """Readiness reports limiter storage health so an outage is never silent.
+
+    The 2026-05 → 2026-10 incident was invisible precisely because every
+    probe returned 500 with no indication of the cause. Reporting the
+    limiter's live fallback state gives operators a signal that survives the
+    outage it describes.
+    """
+
+    @pytest.mark.asyncio
+    async def test_readiness_includes_rate_limit_storage_dependency(self):
+        """GET /health/ready always reports a rate_limit_storage dependency."""
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.get("/health/ready")
+            assert response.status_code == 200
+            deps = response.json()["dependencies"]
+            assert "rate_limit_storage" in deps
+            details = deps["rate_limit_storage"]["details"]
+            assert details["configured_backend"] in ("redis", "memory")
+            assert details["active_backend"] in ("redis", "memory")
+
+    @pytest.mark.asyncio
+    async def test_degraded_storage_downgrades_status_but_still_200(self):
+        """A limiter on its fallback reports degraded — without failing the probe.
+
+        Still 200 because the service is serving correctly; only cross-worker
+        limit sharing is lost. Returning 503 here would pull a healthy
+        instance out of the load balancer over a cache outage, turning a
+        soft degradation back into the hard outage this sprint removed.
+        """
+        degraded = {
+            "configured_backend": "redis",
+            "active_backend": "memory",
+            "degraded": True,
+            "reachable_at_boot": False,
+        }
+        with patch("shared.rate_limits.get_storage_health", return_value=degraded):
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                response = await client.get("/health/ready")
+                assert response.status_code == 200
+                body = response.json()
+                assert body["status"] == "degraded"
+                assert body["dependencies"]["rate_limit_storage"]["status"] == "unhealthy"
+                assert body["dependencies"]["database"]["status"] == "healthy"
+
+    @pytest.mark.asyncio
+    async def test_healthy_storage_keeps_overall_status_healthy(self):
+        """Non-degraded limiter storage leaves overall status healthy."""
+        healthy = {
+            "configured_backend": "redis",
+            "active_backend": "redis",
+            "degraded": False,
+            "reachable_at_boot": True,
+        }
+        with patch("shared.rate_limits.get_storage_health", return_value=healthy):
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                response = await client.get("/health/ready")
+                assert response.status_code == 200
+                assert response.json()["status"] == "healthy"
+                assert response.json()["dependencies"]["rate_limit_storage"]["status"] == "healthy"
