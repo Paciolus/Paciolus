@@ -71,8 +71,27 @@ def make_entries(rows: list[dict], columns: list[str] | None = None) -> list[Inv
     return parse_inv_entries(rows, detection)
 
 
+def _days_ago(n: int) -> str:
+    """Movement date n days before today, as the engine expects (%Y-%m-%d).
+
+    Movement dates in fixtures MUST be relative to today, never hardcoded.
+    IN-06 (slow-moving) compares against `date.today()` with a 180-day default
+    threshold, so a literal date silently becomes stale: these fixtures used
+    hardcoded late-2025 dates and began flagging 5/5 "clean" rows as
+    slow-moving on 2026-05-31, turning the baseline suite red for ~4.5 months
+    with no code change behind it. Keep offsets well inside
+    InventoryTestingConfig.slow_moving_days.
+    """
+    return (date.today() - timedelta(days=n)).strftime("%Y-%m-%d")
+
+
 def sample_inv_rows() -> list[dict]:
-    """5 clean inventory entries for baseline tests."""
+    """5 clean inventory entries for baseline tests.
+
+    Movement dates are spread across ~4 months but all well within the
+    180-day slow-moving threshold, preserving the relative ordering of the
+    original fixture while keeping "clean" data genuinely clean.
+    """
     return [
         {
             "Item ID": "INV-001",
@@ -81,7 +100,7 @@ def sample_inv_rows() -> list[dict]:
             "Unit Cost": 25.00,
             "Extended Value": 2500.00,
             "Location": "Warehouse A",
-            "Last Movement Date": "2025-11-15",
+            "Last Movement Date": _days_ago(46),
             "Category": "Raw Materials",
         },
         {
@@ -91,7 +110,7 @@ def sample_inv_rows() -> list[dict]:
             "Unit Cost": 75.00,
             "Extended Value": 3750.00,
             "Location": "Warehouse B",
-            "Last Movement Date": "2025-12-01",
+            "Last Movement Date": _days_ago(30),
             "Category": "Finished Goods",
         },
         {
@@ -101,7 +120,7 @@ def sample_inv_rows() -> list[dict]:
             "Unit Cost": 10.00,
             "Extended Value": 2000.00,
             "Location": "Warehouse A",
-            "Last Movement Date": "2025-10-20",
+            "Last Movement Date": _days_ago(72),
             "Category": "Raw Materials",
         },
         {
@@ -111,7 +130,7 @@ def sample_inv_rows() -> list[dict]:
             "Unit Cost": 150.00,
             "Extended Value": 4500.00,
             "Location": "Production Floor",
-            "Last Movement Date": "2025-09-01",
+            "Last Movement Date": _days_ago(121),
             "Category": "Work in Progress",
         },
         {
@@ -121,7 +140,7 @@ def sample_inv_rows() -> list[dict]:
             "Unit Cost": 2.00,
             "Extended Value": 1000.00,
             "Location": "Warehouse C",
-            "Last Movement Date": "2025-11-30",
+            "Last Movement Date": _days_ago(31),
             "Category": "Supplies",
         },
     ]
@@ -139,7 +158,7 @@ def make_large_dataset(n: int = 20) -> list[dict]:
                 "Unit Cost": 50.0 + i * 5,
                 "Extended Value": (100.0 + i * 10) * (50.0 + i * 5),
                 "Location": f"Loc-{i % 3}",
-                "Last Movement Date": "2025-11-01",
+                "Last Movement Date": _days_ago(60),
                 "Category": f"Cat-{i % 4}",
             }
         )
@@ -761,11 +780,24 @@ class TestSlowMovingInventory:
     """IN-06: Slow-Moving Inventory."""
 
     def test_recent_movement_no_flags(self):
+        """The baseline fixture must produce ZERO slow-moving flags.
+
+        The entries_flagged assertion is the point of this test, but was
+        missing until 2026-10-19: without it the test name promised something
+        it never checked, so when the hardcoded fixture dates went stale on
+        2026-05-31 this test stayed green and only the composite-score test
+        turned red. Asserting here keeps fixture staleness from hiding again.
+        """
         entries = make_entries(sample_inv_rows())
         config = InventoryTestingConfig(slow_moving_days=180)
         result = run_slow_moving_test(entries, config)
         assert result.test_key == "slow_moving"
         assert result.test_tier == TestTier.STATISTICAL
+        assert result.entries_flagged == 0, (
+            f"baseline fixture is stale — {result.entries_flagged}/{result.total_entries} "
+            f"rows flagged slow-moving; movement dates must stay inside "
+            f"slow_moving_days ({config.slow_moving_days})"
+        )
 
     def test_old_movement_flagged(self):
         old_date = (date.today() - timedelta(days=250)).strftime("%Y-%m-%d")
