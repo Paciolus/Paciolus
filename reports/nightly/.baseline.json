@@ -1,29 +1,26 @@
 {
   "qa_warden": {
-    "date": "2026-04-29",
+    "date": "2026-10-14",
     "backend": {
-      "passed": 8486,
-      "failed": 0,
+      "passed": 8685,
+      "failed": 1,
       "errors": 0,
-      "duration_s": 748.6,
-      "failing_tests": [],
+      "duration_s": 776.4,
+      "failing_tests": [
+        "tests/test_inventory_testing.py::TestCompositeScore::test_clean_data_low_score"
+      ],
       "collection_error": null,
       "new_failures": [],
-      "resolved": [
-        "tests/test_security_hardening_2026_04_20.py::TestCSRFRefreshLogout::test_dev_still_accepts_x_requested_with[asyncio]",
-        "tests/test_security_hardening_2026_04_20.py::TestCSRFRefreshLogout::test_production_rejects_x_requested_with_only[asyncio]",
-        "tests/test_security_hardening_2026_04_20.py::TestRateLimitFailClosed::test_strict_mode_defaults_true_in_production",
-        "tests/test_security_hardening_2026_04_20.py::TestRateLimitFailClosed::test_valid_override_allowed"
-      ]
+      "resolved": []
     },
     "frontend": {
-      "passed": 1957,
+      "passed": 2013,
       "failed": 0,
-      "duration_s": 56.6
+      "duration_s": 58.1
     }
   },
   "report_auditor": {
-    "date": "2026-04-29",
+    "date": "2026-10-19",
     "bug_tracker": {
       "BUG-001": {
         "description": "Suggested procedures rotation bug \u2014 procedures repeat rather than rotate across reports",
@@ -63,59 +60,75 @@
     }
   },
   "coverage_sentinel": {
-    "date": "2026-04-29",
+    "date": "2026-10-19",
     "history": [
       {
-        "date": "2026-04-14",
-        "percent_covered": 92.09
+        "date": "2026-09-25",
+        "percent_covered": 93.33
       },
       {
-        "date": "2026-04-15",
-        "percent_covered": 92.1
+        "date": "2026-09-30",
+        "percent_covered": 93.33
       },
       {
-        "date": "2026-04-17",
-        "percent_covered": 92.23
+        "date": "2026-10-03",
+        "percent_covered": 93.34
       },
       {
-        "date": "2026-04-19",
-        "percent_covered": 92.66
+        "date": "2026-10-04",
+        "percent_covered": 93.33
       },
       {
-        "date": "2026-04-20",
-        "percent_covered": 92.66
+        "date": "2026-10-05",
+        "percent_covered": 93.33
       },
       {
-        "date": "2026-04-21",
-        "percent_covered": 92.8
+        "date": "2026-10-07",
+        "percent_covered": 93.34
       },
       {
-        "date": "2026-04-22",
-        "percent_covered": 92.71
+        "date": "2026-10-08",
+        "percent_covered": 93.33
       },
       {
-        "date": "2026-04-25",
-        "percent_covered": 92.83
+        "date": "2026-10-09",
+        "percent_covered": 93.33
       },
       {
-        "date": "2026-04-26",
-        "percent_covered": 92.82
+        "date": "2026-10-10",
+        "percent_covered": 93.33
       },
       {
-        "date": "2026-04-27",
-        "percent_covered": 92.85
+        "date": "2026-10-11",
+        "percent_covered": 93.33
       },
       {
-        "date": "2026-04-29",
-        "percent_covered": 93.13
+        "date": "2026-10-12",
+        "percent_covered": 93.33
+      },
+      {
+        "date": "2026-10-13",
+        "percent_covered": 93.33
+      },
+      {
+        "date": "2026-10-14",
+        "percent_covered": 93.33
+      },
+      {
+        "date": "2026-10-19",
+        "percent_covered": 93.33
       }
     ]
   },
   "dependency_sentinel": {
     "first_seen": {
-      "backend:cryptography@47.0.0": "2026-04-26",
-      "backend:fastapi@0.136.1": "2026-04-26",
-      "backend:stripe@15.1.0": "2026-04-26"
+      "frontend:PyJWT@2.15.1": "2026-09-30",
+      "backend:cryptography@50.0.2": "2026-10-03",
+      "backend:stripe@16.0.0": "2026-10-03",
+      "backend:fastapi@0.148.0": "2026-10-19",
+      "frontend:SQLAlchemy@2.1.5": "2026-10-19",
+      "frontend:next@16.4.2": "2026-10-19",
+      "frontend:react@19.3.1": "2026-10-19"
     }
   }
 }

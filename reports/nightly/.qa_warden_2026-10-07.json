@@ -1,0 +1,22 @@
+{
+  "agent": "qa_warden",
+  "status": "yellow",
+  "backend": {
+    "passed": 8685,
+    "failed": 1,
+    "errors": 0,
+    "duration_s": 757.8,
+    "failing_tests": [
+      "tests/test_inventory_testing.py::TestCompositeScore::test_clean_data_low_score"
+    ],
+    "collection_error": null,
+    "new_failures": [],
+    "resolved": []
+  },
+  "frontend": {
+    "passed": 2013,
+    "failed": 0,
+    "duration_s": 60.4
+  },
+  "summary": "Backend: 8685 passed / 1 failed in 757.8s. Frontend: 2013 passed / 0 failed in 60.4s."
+}

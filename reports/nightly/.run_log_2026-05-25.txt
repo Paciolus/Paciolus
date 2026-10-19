@@ -1,0 +1,66 @@
+[02:00:01] === Paciolus Overnight Run — 2026-05-25 ===
+[02:00:01] Start time: 2026-05-25T02:00:01.308061
+[02:00:01]   Target 02:00 already passed — starting immediately.
+[02:00:01] --- Agent: qa_warden ---
+[02:00:01]   Executing: D:\Dev\Paciolus\backend\venv\Scripts\python.exe D:\Dev\Paciolus\scripts\overnight\agents\qa_warden.py
+[02:15:01]   TIMEOUT after 900s — killed subprocess
+[02:15:06]   Target 02:15 already passed — starting immediately.
+[02:15:06] --- Agent: report_auditor ---
+[02:15:06]   Executing: D:\Dev\Paciolus\backend\venv\Scripts\python.exe D:\Dev\Paciolus\scripts\overnight\agents\report_auditor.py
+[02:25:09]   FAILED (exit code 1) after 602.9s
+[02:25:09]   stderr:              ^^^^^^^^^^^^^^^
+[02:25:09]   stderr:   File "C:\Python312\Lib\subprocess.py", line 550, in run
+[02:25:09]   stderr:     stdout, stderr = process.communicate(input, timeout=timeout)
+[02:25:09]   stderr:                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[02:25:09]   stderr:   File "C:\Python312\Lib\subprocess.py", line 1209, in communicate
+[02:25:09]   stderr:     stdout, stderr = self._communicate(input, endtime, timeout)
+[02:25:09]   stderr:                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[02:25:09]   stderr:   File "C:\Python312\Lib\subprocess.py", line 1630, in _communicate
+[02:25:09]   stderr:     raise TimeoutExpired(self.args, orig_timeout)
+[02:25:09]   stderr: subprocess.TimeoutExpired: Command '['C:\\Python312\\python.exe', '-m', 'pytest', 'tests/', '-k', 'meridian or Meridian', '--tb=short', '-q']' timed out after 600 seconds
+[02:25:14]   Sleeping 1186s until 02:45...
+[02:45:00] --- Agent: scout ---
+[02:45:00]   Executing: D:\Dev\Paciolus\backend\venv\Scripts\python.exe D:\Dev\Paciolus\scripts\overnight\agents\scout.py
+[02:55:19]   stdout:   "status": "green",
+[02:55:19]   stdout:   "total_leads": 0,
+[02:55:19]   stdout:   "leads": [],
+[02:55:19]   stdout:   "summary": "Found 0 leads across 5 themes. Top platform: none. Highest urgency: "
+[02:55:19]   stdout: }
+[02:55:19]   Completed successfully in 619.0s
+[02:55:24]   Sleeping 276s until 03:00...
+[03:00:00] --- Agent: coverage_sentinel ---
+[03:00:00]   Executing: D:\Dev\Paciolus\backend\venv\Scripts\python.exe D:\Dev\Paciolus\scripts\overnight\agents\coverage_sentinel.py
+[03:21:45]   stdout:   ],
+[03:21:45]   stdout:   "non_production_excluded": 3,
+[03:21:45]   stdout:   "reasons": [],
+[03:21:45]   stdout:   "summary": "Backend coverage: 93.33% (95,555/102,379 statements, 6,824 uncovered). 7-day mean: 93.33% (+0.00pp). Non-production excluded: 3 file(s)."
+[03:21:45]   stdout: }
+[03:21:45]   Completed successfully in 1305.0s
+[03:21:50]   Sleeping 490s until 03:30...
+[03:30:00] --- Agent: sprint_shepherd ---
+[03:30:00]   Executing: D:\Dev\Paciolus\backend\venv\Scripts\python.exe D:\Dev\Paciolus\scripts\overnight\agents\sprint_shepherd.py
+[03:30:00]   stdout:     "pct": 0
+[03:30:00]   stdout:   },
+[03:30:00]   stdout:   "open_items": [],
+[03:30:00]   stdout:   "summary": "0 commits in last 24h, 0 in last 7d."
+[03:30:00]   stdout: }
+[03:30:00]   Completed successfully in 0.4s
+[03:30:05]   Sleeping 895s until 03:45...
+[03:45:00] --- Agent: dependency_sentinel ---
+[03:45:00]   Executing: D:\Dev\Paciolus\backend\venv\Scripts\python.exe D:\Dev\Paciolus\scripts\overnight\agents\dependency_sentinel.py
+[03:45:32]   stdout:       "deferred": false
+[03:45:32]   stdout:     }
+[03:45:32]   stdout:   ],
+[03:45:32]   stdout:   "summary": "Backend: 39 outdated. Frontend: 16 outdated. 7 security-relevant packages have updates. PAST DEADLINE: stripe, next, react."
+[03:45:32]   stdout: }
+[03:45:32]   Completed successfully in 32.2s
+[03:45:37]   Sleeping 863s until 04:00...
+[04:00:00] --- Agent: briefing_compiler ---
+[04:00:00]   Executing: D:\Dev\Paciolus\backend\venv\Scripts\python.exe D:\Dev\Paciolus\scripts\overnight\briefing_compiler.py
+[04:00:01]   stdout:   "agent": "briefing_compiler",
+[04:00:01]   stdout:   "status": "red",
+[04:00:01]   stdout:   "agents_run": 4,
+[04:00:01]   stdout:   "report_path": "D:\\Dev\\Paciolus\\reports\\nightly\\2026-05-25.md"
+[04:00:01]   stdout: }
+[04:00:01]   Completed successfully in 1.7s
+[04:00:01] === Run complete: 5/7 agents succeeded in 7200.4s ===
