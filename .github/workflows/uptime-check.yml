@@ -143,12 +143,22 @@ jobs:
           fi
 
           LIVE=$(curl -sS --max-time 45 -H "Authorization: Bearer $RENDER_API_KEY" "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys?limit=20" | python3 scripts/latest_live_deploy_sha.py 2>/dev/null || echo "")
-          MAIN=$(git rev-parse origin/main)
+          # Ask the remote rather than `git rev-parse origin/main`:
+          # actions/checkout does a shallow single-ref clone, so local
+          # remote-tracking refs are not guaranteed to exist, and this must
+          # compare against main specifically no matter which ref triggered
+          # the run.
+          MAIN=$(git ls-remote origin refs/heads/main | cut -f1)
 
           echo "- **origin/main:** \`$MAIN\`" >> report.md
           echo "- **live deploy:** \`${LIVE:-<unknown>}\`" >> report.md
 
-          if [ -z "$LIVE" ]; then
+          if [ -z "$MAIN" ]; then
+            # Could not resolve main. That is our own tooling failing, not a
+            # production problem — do not cry outage over it.
+            echo "result=SKIP" >> "$GITHUB_OUTPUT"
+            echo "- SKIPPED — could not resolve \`refs/heads/main\` from the remote." >> report.md
+          elif [ -z "$LIVE" ]; then
             echo "result=FAIL" >> "$GITHUB_OUTPUT"
             echo "- **Verdict:** FAIL — no deploy in state \`live\` was found." >> report.md
           elif [ "$LIVE" = "$MAIN" ]; then
