@@ -16,6 +16,7 @@
 >
 > Pre-April 2026 entries archived to [`tasks/archive/hotfix-log-pre-april-2026.md`](archive/hotfix-log-pre-april-2026.md).
 
+- [2026-10-19] review gate removed + two CEO-delegated decisions recorded — CEO confirmed a soft launch date and delegated the open decisions (`reports/launch-readiness-assessment-2026-10-19.md` §I). **(a) Branch protection:** `required_pull_request_reviews` removed from `main` via the Actions API; all 12 required status checks retained with `strict: true`. Rationale: GitHub forbids self-approving your own PR, so a 1-review requirement is unsatisfiable solo and every merge was clearing it with `gh pr merge --admin` — which, because `enforce_admins` is `false`, bypasses **the status checks too**, not just the review. The bypass was strictly more dangerous than the gate was useful. With reviews removed, merges take the normal path and CI genuinely blocks; `--admin` should no longer be needed, and needing it is now a signal. Note `required_linear_history` remains `true`, so merges must be **squash or rebase** — merge commits were only ever possible via the bypass. `enforce_admins` left `false` deliberately as a break-glass for a solo operator. **(b) Neon backup posture:** decided — see Sprint 778 and `tasks/EXECUTIVE_BLOCKERS.md`. No code changed.
 - [2026-10-19] frontend CVE sweep clearing the red Node CI gates — `npm audit fix` (no `--force`, so every change stayed inside the existing semver ranges and **`package.json` was not touched**; lockfile only). Production dependency vulnerabilities went **22 → 0** (was 1 critical, 7 high, 13 moderate, 1 low). The critical was **Next.js itself**: 16.2.4 sat inside the `9.3.4-canary.0 – 16.3.7` advisory range. Also moved: `postcss` 8.5.10→8.5.31 (three advisories for arbitrary file read / path traversal via attacker-controlled `sourceMappingURL` in CSS comments), `sharp` 0.34.5→0.35.5 (inherited libvips CVE-2026-33327/33328/35590/35591, libheif GHSA-g89c-p67h-r497 + GHSA-2jg2-4ch7-h545, librsvg CVE-2026-96889), `source-map-js` 1.2.1→1.2.2 (event-loop DoS via indexed source-map section offsets), `nanoid` 3.3.11→3.3.20, `browserslist` 4.28.2→4.29.4, `fast-uri` 3.1.0→3.1.8. Net lockfile churn −622 lines (dedup). **Why this mattered beyond hygiene:** `ci.yml` runs `Node Dependency Audit (blocking)` as `npm audit --omit=dev --audit-level=high`, and it had been failing — so together with the PyJWT/python-multipart bump above, all six red dependency/CVE jobs now pass, which is what had every one of the 13 non-dependabot PRs sitting at `mergeStateStatus: BLOCKED`. Verified: `npm audit --omit=dev --audit-level=high` → 0 vulnerabilities (exit 0); `npx tsc --noEmit` → exit 0; `npm run build` → clean, and every route still renders `ƒ (Dynamic)` with `ƒ Proxy (Middleware)` active, so the nonce-based CSP contract is intact across the Next.js minor bump; `npm test` → 207 suites / 2,013 tests / 5 snapshots, 0 failures. 21 dev-only advisories remain (20 moderate + 1 high, the `babel-jest` → `@jest/transform` → `babel-plugin-istanbul` chain); all three CI audit gates pass `--omit=dev`, so they do not gate, and clearing them needs `npm audit fix --force` (breaking major bumps) — deliberately left. Final confirmation of the Next.js bump should be a Vercel preview deploy, since build output cannot prove runtime nonce propagation. Files: `frontend/package-lock.json`.
 - [2026-10-19] nightly audit artifacts — 109-day backlog (2026-05-02 → 2026-10-19) committed in one batch: 795 files, 3.3 MB (109 daily `.md` briefs + 109 `.run_log` + 109 coverage, 108 sprint_shepherd, 108 scout, 105 dependency_sentinel, 104 report_auditor, 43 qa_warden sentinels), plus `.baseline.json` refreshed to the 2026-10-14 QA Warden / 2026-10-19 Report Auditor values. The overnight cron kept running through the entire 2026-05-01 → 2026-10-19 repo dormancy; nobody committed its output. Scanned for secrets before staging (no `sk_live`/`sk_test`/private-key/credentialed-URL matches). **Notable asymmetry:** only 43 of 109 nights produced a `qa_warden` sentinel, i.e. the test-suite agent failed to run on ~66 nights — which is exactly what PR #145 (`fix: raise qa_warden orchestrator timeout to 1700s`, opened 2026-05-11) was written to fix and never merged. The backend suite takes ~715–780s and the orchestrator's timeout sat below that, so the one agent that would have reported a red suite was the one most likely to time out. A concrete, measurable cost of the unmerged-PR backlog. Also confirms the nightly runs against `backend/venv` (`run_log` shows `backend\venv\Scripts\python.exe`), not system Python — relevant because the two environments have drifted apart. Files: `reports/nightly/*`.
 - [2026-10-19] security dep bumps clearing the red `dependency-compliance` CI gate — `PyJWT[crypto]` 2.12.1→2.15.1 and `python-multipart` 0.0.26→0.0.32. The weekly `dependency-compliance` job ("Python CVE & License Audit", `pip-audit --desc --ignore-vuln CVE-2026-3219`) had been failing every run through 2026-08-24 (then stopped only because GitHub disables cron workflows after ~60 days of repo inactivity) with **12 known vulnerabilities in 2 packages** — and those were the *only* two packages flagged. PyJWT 2.12.1 carried PYSEC-2026-175..179, all fixed in 2.13.0; python-multipart 0.0.26 carried PYSEC-2026-3036/3037 (QuerystringParser treated `;` as a separator contrary to WHATWG, plus a quadratic rescan), PYSEC-2026-3039 (unbounded multipart part-header count/size → CPU DoS) and PYSEC-2026-3040 (`parse_form()` did not validate `Content-Length`; a negative value turned the bounded chunked read into read-until-EOF, loading the whole body into memory in one read) — all four land by 0.0.31. **Paciolus was not exploitable on the PyJWT advisories:** `decode()` always passes `algorithms=["HS256"]`, a single symmetric algorithm, so the asymmetric/HMAC key-confusion in PYSEC-2026-179 cannot trigger, and `PyJWKClient`/`jku` are unused so the PYSEC-2026-175 SSRF surface does not exist. **Nor, on closer inspection, was it exploitable on most of the python-multipart advisories.** PYSEC-2026-3040 is fully mitigated by our own `MaxBodySizeMiddleware`, which rejects a negative `Content-Length` with 400 *before* any body bytes are read (`security_middleware.py:162`) and independently caps streamed bytes in a second layer, so the read-until-EOF path is unreachable. PYSEC-2026-3036/3037 target `QuerystringParser` (`application/x-www-form-urlencoded`); Paciolus's `Form()` parameters are all paired with `UploadFile`, i.e. `multipart/form-data` handled by `MultipartParser`, and those endpoints require auth — reachable only if a client deliberately posts urlencoded, and the impact (field-separator differential on column mappings and IDs) is immaterial. The one genuinely relevant advisory is **PYSEC-2026-3039** (unbounded multipart part-header count/size): reachable across the ~50 `UploadFile` endpoints and only *partially* mitigated — the global body cap bounds total bytes, so it bounds how many headers fit, but does not eliminate CPU cost within that budget. Net: no historical compromise window; the bump is correct hygiene and unblocks the gate. **Root-cause insight worth keeping:** these were the only two CVE-flagged packages because they were the only two pinned with exact `==`. Every other CVE-carrying dependency (`cryptography`, `pillow`, `pypdf`, `pyasn1`, `werkzeug`) is pinned with a `>=` floor, and the transitives (`starlette`, `urllib3`, `anyio`, `idna`, `mako`) are unpinned, so a fresh `pip install -r requirements.txt` — which is what CI and the production Docker build both do — resolves them to latest and they self-heal. Exact pins buy reproducibility and rot; floors buy CVE currency and unreviewed upstream churn. requirements.txt currently mixes both without a stated rule; see Sprint 777 for the deliberate decision. Verified: venv auth suite 116/116, upload suite 223/223, and `pip-audit` no longer reports pyjwt or python-multipart. Files: `backend/requirements.txt`.
@@ -364,9 +365,18 @@ Failure handling reuses a single `uptime-failure`-labelled issue (commenting on 
 
 ---
 
-### Sprint 778: DR + backup workflows are structurally broken (wrong provider, no secrets)
+### Sprint 778: Prove recovery works (rescoped 2026-10-19 — off-provider backup deferred)
 **Status:** PENDING.
-**Priority:** P1. Concerns whether production data is recoverable — and the checks that should answer that question cannot run.
+**Priority:** P1 — but the scope is now *verify the backup we have*, not *build a second one*.
+
+> **DECISION (2026-10-19, CEO-delegated).** Neon's own point-in-time recovery is **sufficient for launch**. The Phase 4.4 `pg_dump` → R2 cron is **deferred** until the first paying customer.
+>
+> Rationale, in order of weight:
+> 1. **Zero-Storage means the blast radius is small.** None of the 30 persisted tables holds client financial data — trial balances are never written to disk. Total database loss costs user accounts, engagement scaffolding and billing linkage. It is painful, but it is not a client-confidentiality or client-records event, which is the scenario that normally forces off-provider backups for an audit product.
+> 2. **There are no paying customers**, so nothing irreplaceable exists yet.
+> 3. **The real risk was never "only one backup."** It is that *recovery has never been tested and the checks that would have told us are lying.* Building a second backup mechanism does not fix that; exercising the first one does.
+>
+> **Revisit trigger (binding):** implement the `pg_dump` → R2 cron **before the second paying customer**. Once real customer data exists, a single provider stops being enough. The R2 bucket is already provisioned and empty, so this is a half-day when triggered.
 **Source:** 2026-10-19, while re-enabling the inactivity-disabled scheduled workflows (Sprint 775 work).
 
 Re-enabling the three auto-disabled workflows surfaced that two of them cannot pass as written:
@@ -379,6 +389,63 @@ Re-enabling the three auto-disabled workflows surfaced that two of them cannot p
 **Scope:** decide whether off-provider backups are required for launch (Neon PITR may be judged sufficient — that is a CEO call, and it should be *written down* either way). If yes, implement the Phase 4.4 `pg_dump` → R2 cron, then rewrite both workflows against Neon + R2 instead of the Render Postgres API. Regardless of that decision: fix the false-green so a job's exit status reflects its own verdict, and make the missing-credential case report "unverified" explicitly instead of dying with an opaque error.
 
 **Note:** all three workflows were re-enabled on 2026-10-19. `dependency-compliance` now passes (its CVEs were fixed the same day), but **`backup-integrity-check` will fail on the 1st of each month and file a `dr-failure` issue** until this sprint lands. That signal is substantively true — backups genuinely are unverified — but its stated reason will be the misleading "RENDER_API_KEY is not set". Either accept it as a forcing function or disable that one workflow until the rewrite.
+
+---
+
+### Sprint 779: Boundary-language and citation residue (liability pass)
+**Status:** PENDING.
+**Priority:** P1 — pure liability reduction, roughly an hour, no dependencies.
+**Source:** `reports/launch-readiness-assessment-2026-10-19.md` B-1 and B-3.
+
+The highest-consequence category of defect in this product is language that edges from *diagnostic indicator* toward *audit conclusion*, because that is the boundary the whole liability posture rests on. Three pieces of residue survive:
+
+1. **`generate_sample_reports.py:2266`** still emits "systemic review of procure-to-pay controls recommended". The production memo generator was fixed; the sample generator was not — and it produces the sample output a prospect may well see first. Rephrase to match the shipped wording ("engagement team should evaluate whether procure-to-pay procedures warrant expansion").
+2. **Risk-tier labels are unqualified.** Every testing memo auto-assigns low/elevated/moderate/high from flag density, and the label is visually prominent enough for a practitioner to read it as an ISA 315 risk-assessment conclusion. Append the qualifier the April audit asked for: "(automated flag density — auditor judgment required per ISA 315)".
+3. **AS 1215 is still miscited as a JE Testing standard in three internal docs** — `docs/03-product/REPORT_STANDARDS_SPEC.md:440`, `docs/01-product/USER_PERSONAS.md:273`, `docs/02-technical/ARCHITECTURE.md:380`. Customer-facing surfaces are already correct and CI-guarded; this is the leftover. AS 1215 is *Audit Documentation*; the JE fraud standard is AS 2401. Ten-minute fix, worth doing because the customer-facing version of this exact error was ranked the single most dangerous finding in the system.
+
+**Verification:** extend `test_memo_boundary_phrasing.py` to assert the sample generator is held to the same banned-phrase rules as the shipped generators — otherwise this recurs. Extend `test_citation_consistency.py` to cover `docs/` so the citation cannot drift back.
+
+---
+
+### Sprint 780: Stripe price-parity preflight + webhook coverage (money path)
+**Status:** PENDING.
+**Priority:** P1 — must land before the first live charge. Independent of pricing decisions, so it is safe to build now.
+**Source:** `reports/launch-readiness-assessment-2026-10-19.md` §F and §C.
+
+1. **Price-parity preflight.** `billing/price_config.py` holds the canonical amounts and `test_pricing_launch_validation.py` carries ~20 assertions — but they only check the table *against itself*. Nothing fetches the Stripe Price object to confirm the amount a customer is actually charged matches the amount the product intends and the page displays. Test mode is documented as still sitting at the previous price list, so displayed and charged price **already disagree** in the only environment where billing has ever run. Add a script that reads every `STRIPE_PRICE_*` / `STRIPE_SEAT_PRICE_*` env var, retrieves the Price object, and asserts `unit_amount == TIER_PRICES[tier][interval]` and `currency == "usd"`, failing loudly and naming every mismatch. Wire it into the Phase 4.1 checklist ahead of the webhook preflight.
+2. **Webhook handler coverage.** `billing/webhook_handler.py` is the least-covered critical path at **59.9% / 174 uncovered statements** — and it is the one that moves money. This is the webhook-coverage sprint deferred in Sprint 676 and again in the 2026-04-20 refactor pass. Target 85%+ on the handler, prioritising signature verification, event dedup (`processed_webhook_events`), and the subscription state transitions that drive entitlements.
+
+**Out of scope:** building live-mode prices. That waits on pricing feedback from Sprint 781.
+
+---
+
+### Sprint 781: Demand validation (CEO-led, engineering-supported)
+**Status:** PENDING — the gating item for all remaining product work.
+**Priority:** P0 by expected value, even though it ships no code.
+**Source:** `reports/launch-readiness-assessment-2026-10-19.md` §G.
+
+No artifact in 770+ sprints records an unaffiliated practising CPA being asked whether they would pay $100–$1,000/mo. The nightly lead scout returns zero across five themes; Phase 3 is the CEO self-testing. This is the largest unvalidated assumption in the system, and with a soft launch date there is no reason to keep deferring it behind engineering work.
+
+**Sequence:**
+1. Read the `waitlist_signups` count. It decides whether outreach is warm or cold and is the single most informative number not currently in any report.
+2. Get 5–10 practising CPAs through the marketing demo and then the free tier on **their own** trial balance. Watch where they stall; do not guide them.
+3. Ask the price question directly and early.
+
+**Engineering support:** none required up front — the demo path (`DemoZone.tsx`, `demoData.ts`) and the free tier (TB + flux, view-only, 10 uploads, 3 clients) already support exactly this motion.
+
+**What it decides:** B-6 through B-9 (service-invoice two-way match, impairment screen, judgmental sampling, assertion-coverage worksheet) are currently ranked by internal priority scores, which are guesses about user behaviour. Five CPAs replace four guesses with observations. **Do not build any of the four until this sprint reports.**
+
+---
+
+### Sprint 782: Lock in what has already been won
+**Status:** PENDING.
+**Priority:** P2 — cheap regression insurance on two hard-won zero states.
+**Source:** `reports/launch-readiness-assessment-2026-10-19.md` §D, plus the lesson of the AS 1215 drift.
+
+Two properties reached zero and have no guard, which is precisely how the citation error drifted back into docs after being fixed in code:
+
+1. **Design system at 0 generic Tailwind colour tokens** (down from 150 across 777 files). Add a CI check rejecting any `slate-|gray|zinc|neutral|stone|blue|green|red|yellow|indigo|purple|pink|orange|teal|cyan|amber|lime|emerald|violet|fuchsia|rose|sky` + numeric-scale class in `frontend/src`, with an allowlist file if a genuine exception ever appears. The Oat & Obsidian mandate in `CLAUDE.md` carries an audit penalty for deviation; it should be mechanically enforced rather than discipline-dependent.
+2. **External uptime monitor.** `uptime-check.yml` is live and CI-verified, but GitHub disables scheduled workflows after ~60 days idle — so it switches itself off during exactly the quiet period it guards. Stand up Better Stack / Healthchecks.io / UptimeRobot (free tiers are ample) against `/health/ready`, alerting on `status != "healthy"` and **not** merely on a non-200, since Sprint 774 deliberately reports `degraded` behind a 200. Also add the `RENDER_API_KEY` secret so the deploy-drift probe arms — the repo currently has no secrets at all.
 
 ---
 
