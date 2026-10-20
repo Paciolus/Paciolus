@@ -255,6 +255,16 @@ _TOOL_COUNT_PATTERNS: tuple[re.Pattern[str], ...] = (
     ),
 )
 
+# A table cell can say just "All 12" while the row label or column header supplies the
+# word "Tools" — which is how the tier table in USER_GUIDE.md and the public pricing
+# comparison in frontend/src/domain/pricing.ts both survived the first sweep. Matched
+# only on lines that also mention tools somewhere, so "All 10 formats" is untouched.
+_BARE_ALL_IN_TOOLS_ROW = re.compile(
+    r"\ball\s+(?P<n>\d{1,2}|" + "|".join(_NUMBER_WORDS) + r")\b(?!\s+(?:formats?|file))",
+    re.IGNORECASE,
+)
+_ROW_MENTIONS_TOOLS = re.compile(r"\btools?\b", re.IGNORECASE)
+
 # Lines carrying this marker record what was true at a past version (changelogs,
 # revision histories, era tables) and keep their numbers.
 _HISTORICAL_MARKER = re.compile(r"doc-consistency:\s*historical")
@@ -289,12 +299,18 @@ def _check_tool_count_in_doc(
         if re.match(r"\s*\|\s*\d+\.\d+\s*\|\s*\d{4}-\d{2}-\d{2}\s*\|", raw_line):
             continue
         line = _strip_noise(raw_line)
-        seen_spans: set[tuple[int, int]] = set()
-        for pattern in _TOOL_COUNT_PATTERNS:
+        # Patterns overlap by design — "All 12 tools" matches both the qualified-plural
+        # form and the bare "All N" form — so suppress any match that overlaps one
+        # already reported on this line, rather than deduping on an exact span.
+        reported_spans: list[tuple[int, int]] = []
+        patterns = list(_TOOL_COUNT_PATTERNS)
+        if _ROW_MENTIONS_TOOLS.search(line):
+            patterns.append(_BARE_ALL_IN_TOOLS_ROW)
+        for pattern in patterns:
             for m in pattern.finditer(line):
-                if m.span() in seen_spans:
+                start, stop = m.span()
+                if any(start < prev_stop and prev_start < stop for prev_start, prev_stop in reported_spans):
                     continue
-                seen_spans.add(m.span())
                 raw = m.group("n").lower()
                 claimed = _NUMBER_WORDS.get(raw)
                 if claimed is None:
@@ -306,6 +322,7 @@ def _check_tool_count_in_doc(
                 # never a catalog claim — the catalog has never been that small.
                 if claimed < 5 or claimed == code_count:
                     continue
+                reported_spans.append((start, stop))
                 violations.append(
                     Violation(
                         rule="tool_count_consistency",
@@ -315,6 +332,53 @@ def _check_tool_count_in_doc(
                             f"Doc claims {m.group(0).strip()!r}, registry has {code_count} "
                             f"(tools_registry.MARKETING_AUDIT_TOOL_COUNT). Update the prose, or mark the "
                             f"line `<!-- doc-consistency: historical -->` if it records a past version."
+                        ),
+                    )
+                )
+    return violations
+
+
+# Customer-visible code surfaces carrying a tool count. The first version of this
+# check covered backend/main.py only, which left the public pricing comparison and the
+# demo route's page metadata stale while the gate reported success.
+#
+# Each entry: (repo-relative path, compiled pattern with an `n` group, why it matters).
+CODE_SURFACE_CHECKS: tuple[tuple[str, re.Pattern[str], str], ...] = (
+    (
+        "frontend/src/domain/pricing.ts",
+        re.compile(r"'All (?P<n>\d{1,2})'"),
+        "the pricing page's plan-comparison table — what a prospect reads before paying",
+    ),
+    (
+        "frontend/src/app/(marketing)/demo/layout.tsx",
+        re.compile(r"all (?P<n>\d{1,2}) audit diagnostic tools", re.IGNORECASE),
+        "the /demo route's page metadata (search results and social share cards)",
+    ),
+)
+
+
+def _check_code_surfaces(code_count: int, project_root: Path) -> list[Violation]:
+    """Check customer-visible tool counts outside the documentation tree."""
+    violations: list[Violation] = []
+    for rel, pattern, why in CODE_SURFACE_CHECKS:
+        path = project_root / rel
+        if not path.exists():
+            continue
+        for i, line in enumerate(path.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
+            if _HISTORICAL_MARKER.search(line):
+                continue
+            for m in pattern.finditer(line):
+                claimed = int(m.group("n"))
+                if claimed < 5 or claimed == code_count:
+                    continue
+                violations.append(
+                    Violation(
+                        rule="tool_count_consistency",
+                        file=rel,
+                        line=i,
+                        message=(
+                            f"Claims {m.group(0).strip()!r} but the registry has {code_count} "
+                            f"(tools_registry.MARKETING_AUDIT_TOOL_COUNT). This is {why}."
                         ),
                     )
                 )
@@ -497,6 +561,7 @@ def run_checks(backend_root: Path) -> list[Violation]:
     # 4. Aggregate tool-count consistency (Sprint 784)
     if tool_count is not None:
         violations.extend(_check_api_description(tool_count, backend_root))
+        violations.extend(_check_code_surfaces(tool_count, project_root))
         for rel in TOOL_COUNT_DOCS:
             doc = project_root / rel
             if doc.exists():

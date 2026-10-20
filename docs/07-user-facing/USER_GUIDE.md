@@ -614,7 +614,7 @@ Paciolus offers three purchasable plans plus a Free tier for evaluation.
 | **Seats** | 1 | 1 | 7 included (up to 20) | 20 included (up to 100) |
 | **Uploads/month** | 10 | 100 | 500 | Unlimited |
 | **Clients** | 3 | Unlimited | Unlimited | Unlimited |
-| **Tools** | 2 (TB + Flux) | All 12 | All 12 | All 12 |
+| **Tools** | 2 (TB + Flux) | All 18 | All 18 | All 18 |
 | **File formats** | 5 basic | All 10 | All 10 | All 10 |
 | **PDF export** | — | Yes | Yes | Yes |
 | **Excel export** | — | Yes | Yes | Yes |

@@ -10,8 +10,10 @@ from __future__ import annotations
 from pathlib import Path
 
 from guards.doc_consistency_guard import (
+    CODE_SURFACE_CHECKS,
     Violation,
     _check_api_description,
+    _check_code_surfaces,
     _check_jwt_expiry_in_doc,
     _check_pricing_in_doc,
     _check_tier_names_in_doc,
@@ -392,3 +394,101 @@ def test_api_description_check_passes_when_correct(tmp_path):
 
 def test_api_description_check_safe_when_main_missing(tmp_path):
     assert _check_api_description(18, tmp_path) == []
+
+
+# ---------------------------------------------------------------------------
+# Table cells whose header supplies the word "Tools" (PR #172 review)
+# ---------------------------------------------------------------------------
+
+
+def test_bare_all_n_is_flagged_when_the_row_mentions_tools(tmp_path):
+    """`| **Tools** | 2 (TB + Flux) | All 12 | ... |` — the count and the word
+    "Tools" sit in different cells, which is how this row survived the first sweep."""
+    doc = tmp_path / "GUIDE.md"
+    doc.write_text("| **Tools** | 2 (TB + Flux) | All 12 | All 12 | All 12 |\n", encoding="utf-8")
+    violations = _check_tool_count_in_doc(18, doc, "GUIDE.md")
+    assert violations
+    assert all(v.rule == "tool_count_consistency" for v in violations)
+
+
+def test_bare_all_n_is_ignored_when_the_row_is_about_something_else(tmp_path):
+    """`All 10 formats` must not be read as a tool count."""
+    doc = tmp_path / "GUIDE.md"
+    doc.write_text("| **Formats** | 5 basic | All 10 | All 10 | All 10 |\n", encoding="utf-8")
+    assert _check_tool_count_in_doc(18, doc, "GUIDE.md") == []
+
+
+def test_bare_all_n_passes_when_correct(tmp_path):
+    doc = tmp_path / "GUIDE.md"
+    doc.write_text("| **Tools** | 2 (TB + Flux) | All 18 | All 18 | All 18 |\n", encoding="utf-8")
+    assert _check_tool_count_in_doc(18, doc, "GUIDE.md") == []
+
+
+def test_all_n_formats_in_a_tools_row_is_not_flagged(tmp_path):
+    """A row that mentions tools can still mention formats; only the tool count counts."""
+    doc = tmp_path / "GUIDE.md"
+    doc.write_text("| Paid tiers | All 18 tools | All 10 formats |\n", encoding="utf-8")
+    assert _check_tool_count_in_doc(18, doc, "GUIDE.md") == []
+
+
+# ---------------------------------------------------------------------------
+# Customer-visible code surfaces (PR #172 review)
+# ---------------------------------------------------------------------------
+
+
+def test_code_surface_checks_name_real_files():
+    """Each configured surface must exist, or the check silently covers nothing."""
+    repo_root = Path(__file__).resolve().parents[2]
+    missing = [rel for rel, _, _ in CODE_SURFACE_CHECKS if not (repo_root / rel).exists()]
+    assert not missing, f"CODE_SURFACE_CHECKS references missing files: {missing}"
+
+
+def test_pricing_comparison_mismatch_is_flagged(tmp_path):
+    target = tmp_path / "frontend" / "src" / "domain"
+    target.mkdir(parents=True)
+    (target / "pricing.ts").write_text(
+        "  { feature: 'Diagnostic Tools', free: '2 (TB + Flux)', solo: 'All 12' },\n",
+        encoding="utf-8",
+    )
+    violations = _check_code_surfaces(18, tmp_path)
+    assert len(violations) == 1
+    assert violations[0].file == "frontend/src/domain/pricing.ts"
+    assert "what a prospect reads before paying" in violations[0].message
+
+
+def test_demo_metadata_mismatch_is_flagged(tmp_path):
+    target = tmp_path / "frontend" / "src" / "app" / "(marketing)" / "demo"
+    target.mkdir(parents=True)
+    (target / "layout.tsx").write_text(
+        "  description: 'Interactive demo of all 12 audit diagnostic tools.',\n",
+        encoding="utf-8",
+    )
+    violations = _check_code_surfaces(18, tmp_path)
+    assert len(violations) == 1
+    assert "social share cards" in violations[0].message
+
+
+def test_code_surfaces_pass_when_correct(tmp_path):
+    target = tmp_path / "frontend" / "src" / "domain"
+    target.mkdir(parents=True)
+    (target / "pricing.ts").write_text("  { solo: 'All 18', professional: 'All 18' },\n", encoding="utf-8")
+    assert _check_code_surfaces(18, tmp_path) == []
+
+
+def test_code_surfaces_skip_missing_files(tmp_path):
+    assert _check_code_surfaces(18, tmp_path) == []
+
+
+def test_code_surfaces_honour_historical_marker(tmp_path):
+    target = tmp_path / "frontend" / "src" / "domain"
+    target.mkdir(parents=True)
+    (target / "pricing.ts").write_text("  { solo: 'All 12' }, // doc-consistency: historical\n", encoding="utf-8")
+    assert _check_code_surfaces(18, tmp_path) == []
+
+
+def test_real_code_surfaces_agree_with_the_registry():
+    """End-to-end: the shipped pricing table and demo metadata must be current."""
+    import tools_registry
+
+    repo_root = Path(__file__).resolve().parents[2]
+    assert _check_code_surfaces(tools_registry.MARKETING_AUDIT_TOOL_COUNT, repo_root) == []

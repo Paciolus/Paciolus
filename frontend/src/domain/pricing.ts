@@ -239,7 +239,7 @@ export interface ComparisonRow {
 
 export const comparisonRows: ComparisonRow[] = [
   { feature: 'Monthly uploads', free: '10', solo: '100', professional: '500', enterprise: 'Unlimited' },
-  { feature: 'Diagnostic Tools', free: '2 (TB + Flux)', solo: 'All 12', professional: 'All 12', enterprise: 'All 12' },
+  { feature: 'Diagnostic Tools', free: '2 (TB + Flux)', solo: 'All 18', professional: 'All 18', enterprise: 'All 18' },
   { feature: 'Clients', free: '3', solo: 'Unlimited', professional: 'Unlimited', enterprise: 'Unlimited' },
   { feature: 'Export Formats', free: false, solo: 'PDF, Excel & CSV', professional: 'All formats', enterprise: 'All formats' },
   { feature: 'Diagnostic Workspace', free: false, solo: true, professional: true, enterprise: true },
