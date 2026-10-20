@@ -13,6 +13,8 @@
 #   - backend/tests/test_stripe_*.py (exercises the format-guard against examples)
 #   - reports/audit-* (security-review documentation discussing patterns)
 #   - tasks/sprint-plan-* (sprint-plan docs reference example patterns)
+#   - scripts/stripe_price_parity_preflight.py (Sprint 780: compares the
+#     sk_live_ prefix to detect live vs test mode, same as backend/config.py)
 SECRETS_FOUND=0
 # Sprint 727a-archival hotfix: trailing ``|| true`` so the pipeline returns 0
 # when every staged file matches an exclusion filter (e.g. tasks/-only or
@@ -24,6 +26,7 @@ STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM \
   | grep -v '\.husky/' \
   | grep -v '^backend/config\.py$' \
   | grep -v '^backend/tests/test_stripe_' \
+  | grep -v '^scripts/stripe_price_parity_preflight\.py$' \
   | grep -v '^reports/' \
   | grep -v '^tasks/' || true)
 

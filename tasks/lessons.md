@@ -4,6 +4,63 @@
 
 ---
 
+## A test that only checks a table against itself proves nothing (Sprint 780, 2026-10-20)
+
+`tests/test_pricing_launch_validation.py` carried ~20 assertions over the pricing table and
+had been green for months. It asserted that `PRICE_TABLE["solo"]["monthly"] == 10000` — that
+the table equals the number written in the test. No assertion in the codebase had ever
+touched Stripe, so nothing connected *intent* to *what a customer is charged*.
+
+The gap was not hypothetical. Stripe test mode sat at the v2 price list (Solo $50) while the
+code and the pricing page said $100, and the documented plan was to build live mode fresh —
+so the first real card would also have been the first end-to-end test of current pricing.
+
+**Pattern: a self-referential assertion is a tautology wearing a test's clothes.** Ask what
+external system the value has to agree with, and assert against *that*. The new preflight
+imports the canonical tables rather than restating any amount, then retrieves the Price
+objects, so the assertion crosses the boundary that matters.
+
+**Two findings on its first run**, neither of which any existing test could have produced:
+the local test-mode secret key is **expired**, and only 4 of 10 price IDs resolve because
+`backend/.env` still carries v2 variable names (`STRIPE_PRICE_TEAM_*`) that `price_config.py`
+no longer reads. Writing the check was worth it before it ever ran in anger.
+
+**Check the property that actually breaks money, not just the number.** The amount is the
+obvious assertion. The one I nearly left out is `recurring.interval`: a correct $100 on a
+yearly cadence bills right once and then wrongly forever, and no amount comparison catches
+it. Same reasoning added `livemode` agreement, which is the specific accident that wires a
+live deployment to test prices.
+
+## Dead code found by trying to test it (same sprint)
+
+Both access-restoration handlers wrap `UserTier(sub.tier)` in `except ValueError`. Writing a
+test for that branch is how I learned it **cannot fire**: `Subscription.tier` is a
+constrained DB enum, so a value outside `UserTier` never survives a round-trip — SQLAlchemy's
+Enum raises on *result processing*, before the handler reads the row — and both handlers flush
+after the conversion anyway.
+
+The right response was not to contort the test until it reached the branch. It was to assert
+the constraint that makes the branch redundant, so the test fails and names the cause if
+`subscription_tier` and `UserTier` ever diverge. **When a defensive branch is unreachable,
+test the thing making it unreachable.**
+
+## Run a tool from the directory its config lives in (same sprint, twice)
+
+`ruff.toml` lives in `backend/` and sets `line-length = 120`. CI runs ruff with
+`working-directory: backend`, and the pre-commit hook does `cd ../backend && ruff format`. I
+ran it from the repo root instead, where no config is found, so it silently used ruff's
+default **88** — and reformatted files to a width the hook would immediately undo.
+
+This bit me twice in one day. In Sprint 779 it exploded a three-element tuple across four
+lines, which moved an `# allow-deny-phrase` annotation off the line it was annotating and
+made the boundary guard fail; I diagnosed that as a line-length problem without noticing the
+limit I was reasoning about was not the project's. Running `ruff check backend/ scripts/`
+from the root also reported **92 errors** that CI does not see, because the root has no rule
+configuration either.
+
+**Before trusting a formatter or linter result, confirm it loaded the project's config** —
+`ruff check --show-settings` prints it. A tool run from the wrong directory does not fail; it
+quietly answers a different question.
 ## A `>=` floor is a standing decision to accept majors you never see (Sprint 786a, 2026-10-20)
 
 `backend/requirements.txt` splits deliberately (Sprint 777): `==` for the framework surface,
