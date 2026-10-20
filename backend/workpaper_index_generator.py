@@ -36,22 +36,36 @@ TOOL_LABELS = {
     ToolName.INVENTORY_TESTING: "Inventory Testing",
     ToolName.STATISTICAL_SAMPLING: "Statistical Sampling",
     ToolName.FLUX_ANALYSIS: "Flux Analysis",
+    # Sprint 787 — the Sprint 689 tools
+    ToolName.SOD_CHECKER: "Segregation of Duties",
+    ToolName.INTERCOMPANY_ELIMINATION: "Intercompany Elimination",
+    ToolName.W2_RECONCILIATION: "W-2 / W-3 Reconciliation",
+    ToolName.FORM_1099: "Form 1099 Preparation",
+    ToolName.BOOK_TO_TAX: "Book-to-Tax Reconciliation",
+    ToolName.CASH_FLOW_PROJECTOR: "Cash Flow Projector",
 }
 
 TOOL_LEAD_SHEET_REFS = {
     ToolName.TRIAL_BALANCE: ["A-Z (all lead sheets)"],
     ToolName.MULTI_PERIOD: ["Comparative analysis", "A-Z (all lead sheets)"],
-    ToolName.JOURNAL_ENTRY_TESTING: ["JE-1 through JE-18", "A-Z (spans entire GL)"],
-    ToolName.AP_TESTING: ["AP-1 through AP-13", "G (Accounts Payable)"],
+    ToolName.JOURNAL_ENTRY_TESTING: ["JE-1 through JE-19", "A-Z (spans entire GL)"],
+    ToolName.AP_TESTING: ["AP-1 through AP-14", "G (Accounts Payable)"],
     ToolName.BANK_RECONCILIATION: ["C (Cash & equivalents)", "A (Cash)"],
-    ToolName.PAYROLL_TESTING: ["PR-1 through PR-11", "N (Payroll Expenses)", "G (Accrued Liabilities)"],
+    ToolName.PAYROLL_TESTING: ["PR-1 through PR-13", "N (Payroll Expenses)", "G (Accrued Liabilities)"],
     ToolName.THREE_WAY_MATCH: ["TWM-1 (PO/Invoice/Receipt)", "C (Inventory)", "G (Accounts Payable)"],
-    ToolName.REVENUE_TESTING: ["RT-1 through RT-12", "L (Revenue)"],
-    ToolName.AR_AGING: ["AR-1 through AR-11", "B (Receivables)"],
-    ToolName.FIXED_ASSET_TESTING: ["FA-1 through FA-9", "E (Property, Plant & Equipment)"],
-    ToolName.INVENTORY_TESTING: ["IN-1 through IN-9", "C (Inventory)"],
+    ToolName.REVENUE_TESTING: ["RT-1 through RT-18", "L (Revenue)"],
+    ToolName.AR_AGING: ["AR-1 through AR-12", "B (Receivables)"],
+    ToolName.FIXED_ASSET_TESTING: ["FA-1 through FA-11", "E (Property, Plant & Equipment)"],
+    ToolName.INVENTORY_TESTING: ["IN-1 through IN-10", "C (Inventory)"],
     ToolName.STATISTICAL_SAMPLING: ["SSM (Sampling Design & Evaluation)"],
     ToolName.FLUX_ANALYSIS: ["Flux (Period-over-Period)", "A-Z (all lead sheets)"],
+    # Sprint 787 — the Sprint 689 tools
+    ToolName.SOD_CHECKER: ["SOD (Role/Permission Matrix)", "A-Z (access-control scope)"],
+    ToolName.INTERCOMPANY_ELIMINATION: ["ICE (Elimination Worksheet)", "A-Z (consolidation scope)"],
+    ToolName.W2_RECONCILIATION: ["W23 (Payroll YTD to W-2/W-3)", "N (Payroll Expenses)"],
+    ToolName.FORM_1099: ["1099 (Vendor Threshold Analysis)", "G (Accounts Payable)"],
+    ToolName.BOOK_TO_TAX: ["BTT (Schedule M-1 / M-3 Bridge)", "A-Z (book-to-tax scope)"],
+    ToolName.CASH_FLOW_PROJECTOR: ["CFP (90-Day Projection)", "C (Cash & equivalents)"],
 }
 
 

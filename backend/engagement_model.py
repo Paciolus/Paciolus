@@ -89,6 +89,14 @@ class ToolName(str, PyEnum):
     INVENTORY_TESTING = "inventory_testing"
     STATISTICAL_SAMPLING = "statistical_sampling"
     FLUX_ANALYSIS = "flux_analysis"
+    # Sprint 787: the six tools added by Sprint 689 (689b-g). Values match
+    # tools_registry.py slugs, which is what shared/tool_run_recorder.py passes in.
+    SOD_CHECKER = "sod_checker"
+    INTERCOMPANY_ELIMINATION = "intercompany_elimination"
+    W2_RECONCILIATION = "w2_reconciliation"
+    FORM_1099 = "form_1099"
+    BOOK_TO_TAX = "book_to_tax"
+    CASH_FLOW_PROJECTOR = "cash_flow_projector"
 
 
 class ToolRunStatus(str, PyEnum):

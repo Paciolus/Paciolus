@@ -44,23 +44,23 @@ class TestEngagementSchema:
         assert MaterialityBasis.MANUAL.value == "manual"
 
     def test_tool_name_has_all_tools(self):
-        expected = {
-            "trial_balance",
-            "multi_period",
-            "journal_entry_testing",
-            "ap_testing",
-            "bank_reconciliation",
-            "payroll_testing",
-            "three_way_match",
-            "revenue_testing",
-            "ar_aging",
-            "fixed_asset_testing",
-            "inventory_testing",
-            "statistical_sampling",
-            "flux_analysis",
-        }
+        """Every tool in the registry must be trackable on an engagement.
+
+        This used to hardcode the 13 values that existed in early 2026. Sprint 689 took
+        the catalog to 18 and this assertion would have failed the correct enum
+        expansion, which is part of why the drift survived six months. Derived from
+        tools_registry.py now, plus the one deliberate non-catalog member.
+        """
+        import tools_registry
+
+        catalog = {t.slug for t in tools_registry.TOOLS if t.is_marketing_audit_tool}
         actual = {t.value for t in ToolName}
-        assert actual == expected
+
+        assert catalog <= actual, f"not trackable on an engagement: {sorted(catalog - actual)}"
+        # flux_analysis is a free-tier diagnostic surface tracked like a tool run but
+        # not one of the sold tools — see NON_CATALOG_TOOLNAMES in
+        # tests/test_toolname_catalog_parity.py.
+        assert actual - catalog == {"flux_analysis"}
 
     def test_tool_run_status_values(self):
         assert ToolRunStatus.COMPLETED.value == "completed"

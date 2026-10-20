@@ -215,8 +215,8 @@ tracks 13 of 18 tools), **788** (nav bar lists 12 of 18), **784b** (user guide d
 ---
 
 ### Sprint 787: Engagement layer tracks 13 of 18 tools
-**Status:** PENDING.
-**Priority:** P1 — one symptom is customer-visible in a shipped PDF.
+**Status:** COMPLETE.
+**Priority:** P1 — one symptom was customer-visible in a shipped PDF.
 **Source:** Sprint 784 discovery, 2026-10-20.
 
 `ToolName` in `backend/engagement_model.py` has **13 members** — the original 12 tools plus `flux_analysis`.
@@ -238,6 +238,94 @@ Anomaly Summary PDF and workpaper index both render the full catalog.
 
 **Note:** `flux_analysis` is in this enum but is not one of the 18 marketing tools, so `len(ToolName)` was
 never the right denominator even at 12 tools. Use `tools_registry.MARKETING_AUDIT_TOOL_COUNT`.
+
+#### What landed
+
+**The enum.** Six members added to `ToolName`, values matching `tools_registry.py` slugs
+because `shared/tool_run_recorder.py` constructs `ToolName(slug)` from the route. Plus the
+Alembic migration (`d8b945d0b4e5`) adding those values to the Postgres `toolname` type —
+PostgreSQL rejects an unlisted enum value on insert while SQLite accepts anything, so
+without the migration every local and CI test would pass and production would fail.
+
+**The customer-visible count.** Three strings in the anomaly summary read
+`len(ToolName)` and now read `tools_registry.MARKETING_AUDIT_TOOL_COUNT`.
+
+Worth being precise about why `len(ToolName)` was *never* correct, not merely stale: the
+enum includes `flux_analysis`, which is not one of the 18 sold tools. It counts **trackable
+run types**, a different quantity from **tools a customer buys**. At 12 catalog tools it
+would have printed 13; at 18 it printed 13 as well, for a different reason.
+
+**Label and reference tables** extended for all six: `TOOL_LABELS`,
+`TOOL_LEAD_SHEET_REFS`, `TOOL_CROSS_REFERENCES`, `TOOL_DISPLAY_LABELS`. A missing entry
+degrades silently to a raw slug in a filed workpaper.
+
+**Stale per-tool ranges in the same tables, fixed while there:** `JE-1 through JE-18` → 19,
+`AP-1 through AP-13` → 14, `PR-1 through PR-11` → 13, `RT-1 through RT-12` → 18,
+`AR-1 through AR-11` → 12, `FA-1 through FA-9` → 11, `IN-1 through IN-9` → 10. These print
+in the workpaper index a practitioner files, so a short range understates work performed.
+
+#### The convergence taxonomy — a real decision, not a formality
+
+The full suite surfaced that `domain_config/tool_taxonomy.py` classifies every tool as
+convergence-capable or convergence-excluded, and six were unclassified. An unclassified tool
+drops out of the Convergence Index silently rather than raising.
+
+The rule turned out to be mechanical: **`CONVERGENCE_TOOLS` is exactly the key set of
+`shared/account_extractors.ACCOUNT_EXTRACTORS`.** A tool can contribute to convergence only
+if something can pull GL account identifiers out of its result. None of the six has an
+extractor, and none produces GL-account-level output — role matrices, vendor thresholds,
+entity balances, forward projections — so all six are excluded. Intercompany Elimination is
+the one plausible future candidate, but that needs an extractor written; classification
+cannot substitute for one. That equivalence is now asserted rather than maintained by hand.
+
+#### Five stale literals that were *defending* the drift
+
+`assert len(ToolName) == 13` existed in **four** test files — `test_ar_aging`,
+`test_engagement`, `test_fixed_asset_testing`, `test_inventory_testing` — plus
+`len(CONVERGENCE_EXCLUDED) == 6` in `test_convergence`.
+
+These did not merely fail to catch the Sprint 689 drift. They **defended** it: the correct
+enum expansion turns all five red, so whoever attempted it saw failing tests and had reason
+to conclude the expansion was wrong. That is the most likely explanation for why a six-month
+gap in a core enum went unfixed. All five now derive from the registry.
+
+#### The guard
+
+`tests/test_toolname_catalog_parity.py` — 12 tests closing the third edge of a triangle
+whose other two edges already existed. `test_catalog_consistency.py` ties the registry to the
+frontend ledger; nothing tied either to `ToolName`. It asserts: every catalog tool is
+trackable; every enum member is a catalog tool or a declared non-catalog exception; the
+taxonomy covers the enum; `CONVERGENCE_TOOLS` equals the extractor key set; every label table
+is complete; workpaper references are unique; **a Python enum member added without an
+`ALTER TYPE` migration fails here** rather than in production; and no test may hardcode a
+`len(ToolName)` literal again.
+
+That last detector was wrong on its first draft — it flagged four lines, all false: three of
+my own docstrings *quoting* the old assertion to explain its removal, and one
+`assert len(not_started) == len(ToolName) - 2`, which is the correct derived form. Substring
+matching again. Now a regex requiring an actual `assert` against a numeric literal,
+regression-proved by re-introducing the real thing.
+
+#### Verification
+
+- Full backend suite **8,728 passed / 0 failed** on an untouched tree.
+- **Recovery note.** The parity test was briefly committed to the wrong branch. An early
+  `git stash push` omitted `-u`, so the then-untracked `test_toolname_catalog_parity.py`
+  followed me across two branch switches and was swept into Sprint 780's coupon-fix commit
+  by a `git add -A backend/tests`. Caught while rebasing: Sprint 787's own PR did not
+  contain its headline test. Moved back, 12/12 passing here. **A stash without `-u` is not
+  a clean tree** — new files stay behind and get attributed to whatever is committed next.
+- `ruff check` and `ruff format` clean under `backend/ruff.toml`.
+- `alembic heads` reports a single head (`d8b945d0b4e5`); the models/migration parity test
+  passes.
+- Note: `ruff format` also collapsed two unrelated dict literals in `test_convergence.py`
+  that had been formatted at a narrower width — the pre-commit hook would have done the same.
+
+#### Not in scope
+
+Writing an account extractor for Intercompany Elimination, which would move it into
+`CONVERGENCE_TOOLS`. That is a feature with its own design question (which balances count as
+GL accounts in a consolidation), not part of a catalog reconciliation.
 
 ---
 

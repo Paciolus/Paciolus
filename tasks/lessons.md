@@ -4,6 +4,49 @@
 
 ---
 
+## A test that hardcodes a count defends the drift it was meant to catch (Sprint 787, 2026-10-20)
+
+Sprint 689 expanded the tool catalog 12 → 18. `engagement_model.ToolName` was never
+updated, and the gap survived six months — long enough that the Anomaly Summary PDF was
+telling practitioners there were "13 available tools" while every marketing surface said
+18, and long enough that a run of any of the six newer tools could not be recorded against
+an engagement at all.
+
+The interesting question is not how the enum was missed. It is **why nobody fixed it.**
+
+`assert len(ToolName) == 13` existed in four separate test files, plus
+`len(CONVERGENCE_EXCLUDED) == 6` in a fifth. Expanding the enum correctly turns all five
+red. So anyone who started the right fix was met with five failing tests and a reasonable
+inference: *I must be wrong.* The tests did not fail to catch the drift — they **defended**
+it, and they would have defended it against the next person too.
+
+**Pattern: a test may only hardcode a value it owns.** A count that belongs to another
+module is that module's to state; asserting a literal copy of it converts every future
+correct change into an apparent regression. Five tests now derive from
+`tools_registry.MARKETING_AUDIT_TOOL_COUNT`, and one new test bans the literal outright so
+the next copy cannot be added quietly.
+
+**The denominator was never right, not merely stale.** `len(ToolName)` includes
+`flux_analysis`, which is not a sold tool. It counts *trackable run types*, not *tools a
+customer buys* — so it printed 13 when the catalog held 12, and 13 again when it held 18.
+A number being wrong in a new way after a change is worth a second look: it often means the
+quantity was mismeasured from the start.
+
+**Classification needed a rule, not a judgement call.** Six tools were unclassified in the
+convergence taxonomy, and "pick one" was tempting. The honest answer was already in the
+code: `CONVERGENCE_TOOLS` is exactly the key set of `ACCOUNT_EXTRACTORS`, because a tool can
+only contribute to a convergence index if something can extract GL accounts from its
+result. All six lack extractors, so all six are excluded — and the equivalence is now
+asserted, so the next tool cannot be classified without the extractor that justifies it.
+**Where two lists have been kept in step by hand, the invariant is worth writing down as a
+test; it is usually simpler than the maintenance it replaces.**
+
+**Native enums hide behind SQLite.** `tool_runs.tool_name` is a Postgres enum type. Adding a
+Python member without an `ALTER TYPE` migration passes every local and CI test — SQLite
+stores enums as VARCHAR with no constraint — and fails on insert in production. The parity
+suite now checks that every value added after the type's creation appears in some migration.
+When a schema object exists only in the production dialect, tests on the dev dialect cannot
+see it; the guard has to read the migrations.
 ## Dead code with a stale copy of real data misdirects the next reader (Sprint 788, 2026-10-20)
 
 I filed Sprint 788 as "tool navigation bar lists 12 of 18 tools" and named

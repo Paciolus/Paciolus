@@ -1262,9 +1262,18 @@ class TestToolNameEnum:
         assert ToolName.AR_AGING.value == "ar_aging"
 
     def test_enum_has_all_tools(self):
+        """ToolName must cover the whole catalog, not a snapshot of it.
+
+        This previously asserted `len(ToolName) == 13`, which went stale when Sprint
+        689 took the catalog to 18 — and worse, it would have failed the correct fix,
+        so it defended the drift rather than catching it. Derived from the registry
+        now; the exhaustive checks are in tests/test_toolname_catalog_parity.py.
+        """
+        import tools_registry
         from engagement_model import ToolName
 
-        assert len(ToolName) == 13
+        catalog = {t.slug for t in tools_registry.TOOLS if t.is_marketing_audit_tool}
+        assert catalog <= {t.value for t in ToolName}
 
     def test_workpaper_labels_has_ar(self):
         from engagement_model import ToolName
