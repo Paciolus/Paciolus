@@ -16,6 +16,8 @@
 >
 > Pre-April 2026 entries archived to [`tasks/archive/hotfix-log-pre-april-2026.md`](archive/hotfix-log-pre-april-2026.md).
 
+- [2026-10-20] nightly audit artifacts — 2026-10-20 batch (daily brief + 6 sentinel JSONs + run_log) plus `.baseline.json` refreshed to the new QA Warden values (8,700 backend / 2,013 frontend, 0 failures — the first all-green baseline since 2026-05-31). Overall verdict RED on **Dependency Sentinel alone**: 68 backend / 22 frontend outdated, 5 security-relevant. Scanned for secrets before staging (no `sk_live`/`sk_test`/private-key/credentialed-URL matches). Files: `reports/nightly/*`.
+- [2026-10-20] worklist consolidation — assessed `reports/launch-readiness-assessment-2026-10-19.md` and the 2026-10-20 worklist in `SESSION_STATE.md`, re-verified every load-bearing claim against current source (all still true, including the three Sprint 779 liability targets, the 59.9% webhook coverage, the empty secret store and the 404 on `api.paciolus.com`), and filed the result as `reports/next-actions-2026-10-20.md` — seven tracks, ten findings neither document covered. **Three documents disagreed about the backup decision:** `SESSION_STATE.md` still carried the version deferred "before the second paying customer", justified by the premise Sprint 783 had just disproved, while `EXECUTIVE_BLOCKERS.md`, this file's DECISION block and the assessment addendum all said pre-launch. Since `AGENTS.md` makes `SESSION_STATE.md` the first file a session reads, the stale copy was the one being acted on — corrected, along with Sprint 778's heading, which contradicted its own scope item 1. Also filed Sprints **784** (tool-count cohesion 12 → 18; `backend/main.py:243` ships "12-Tool Audit Intelligence Suite" in the public OpenAPI description against a canonical 18), **785** (nine real-work PRs went `MERGEABLE` → `CONFLICTING` when the 10-19/20 merges rewrote this file; seven finished sprints stranded) and **786** (dependency currency, superseding 760/761 — both written in April and wrong in their specifics; includes reconciling `backend/venv`, which matches neither `requirements.txt` nor production yet is what the nightly measures). Sprint 741 marked unblocked: its prerequisite log read was impossible while prod returned 500 for 5.5 months. No code changed. Files: `reports/next-actions-2026-10-20.md`, `tasks/todo.md`, `SESSION_STATE.md`, `tasks/ceo-actions.md`.
 - [2026-10-19] review gate removed + two CEO-delegated decisions recorded — CEO confirmed a soft launch date and delegated the open decisions (`reports/launch-readiness-assessment-2026-10-19.md` §I). **(a) Branch protection:** `required_pull_request_reviews` removed from `main` via the Actions API; all 12 required status checks retained with `strict: true`. Rationale: GitHub forbids self-approving your own PR, so a 1-review requirement is unsatisfiable solo and every merge was clearing it with `gh pr merge --admin` — which, because `enforce_admins` is `false`, bypasses **the status checks too**, not just the review. The bypass was strictly more dangerous than the gate was useful. With reviews removed, merges take the normal path and CI genuinely blocks; `--admin` should no longer be needed, and needing it is now a signal. Note `required_linear_history` remains `true`, so merges must be **squash or rebase** — merge commits were only ever possible via the bypass. `enforce_admins` left `false` deliberately as a break-glass for a solo operator. **(b) Neon backup posture:** decided — see Sprint 778 and `tasks/EXECUTIVE_BLOCKERS.md`. No code changed.
 - [2026-10-19] frontend CVE sweep clearing the red Node CI gates — `npm audit fix` (no `--force`, so every change stayed inside the existing semver ranges and **`package.json` was not touched**; lockfile only). Production dependency vulnerabilities went **22 → 0** (was 1 critical, 7 high, 13 moderate, 1 low). The critical was **Next.js itself**: 16.2.4 sat inside the `9.3.4-canary.0 – 16.3.7` advisory range. Also moved: `postcss` 8.5.10→8.5.31 (three advisories for arbitrary file read / path traversal via attacker-controlled `sourceMappingURL` in CSS comments), `sharp` 0.34.5→0.35.5 (inherited libvips CVE-2026-33327/33328/35590/35591, libheif GHSA-g89c-p67h-r497 + GHSA-2jg2-4ch7-h545, librsvg CVE-2026-96889), `source-map-js` 1.2.1→1.2.2 (event-loop DoS via indexed source-map section offsets), `nanoid` 3.3.11→3.3.20, `browserslist` 4.28.2→4.29.4, `fast-uri` 3.1.0→3.1.8. Net lockfile churn −622 lines (dedup). **Why this mattered beyond hygiene:** `ci.yml` runs `Node Dependency Audit (blocking)` as `npm audit --omit=dev --audit-level=high`, and it had been failing — so together with the PyJWT/python-multipart bump above, all six red dependency/CVE jobs now pass, which is what had every one of the 13 non-dependabot PRs sitting at `mergeStateStatus: BLOCKED`. Verified: `npm audit --omit=dev --audit-level=high` → 0 vulnerabilities (exit 0); `npx tsc --noEmit` → exit 0; `npm run build` → clean, and every route still renders `ƒ (Dynamic)` with `ƒ Proxy (Middleware)` active, so the nonce-based CSP contract is intact across the Next.js minor bump; `npm test` → 207 suites / 2,013 tests / 5 snapshots, 0 failures. 21 dev-only advisories remain (20 moderate + 1 high, the `babel-jest` → `@jest/transform` → `babel-plugin-istanbul` chain); all three CI audit gates pass `--omit=dev`, so they do not gate, and clearing them needs `npm audit fix --force` (breaking major bumps) — deliberately left. Final confirmation of the Next.js bump should be a Vercel preview deploy, since build output cannot prove runtime nonce propagation. Files: `frontend/package-lock.json`.
 - [2026-10-19] nightly audit artifacts — 109-day backlog (2026-05-02 → 2026-10-19) committed in one batch: 795 files, 3.3 MB (109 daily `.md` briefs + 109 `.run_log` + 109 coverage, 108 sprint_shepherd, 108 scout, 105 dependency_sentinel, 104 report_auditor, 43 qa_warden sentinels), plus `.baseline.json` refreshed to the 2026-10-14 QA Warden / 2026-10-19 Report Auditor values. The overnight cron kept running through the entire 2026-05-01 → 2026-10-19 repo dormancy; nobody committed its output. Scanned for secrets before staging (no `sk_live`/`sk_test`/private-key/credentialed-URL matches). **Notable asymmetry:** only 43 of 109 nights produced a `qa_warden` sentinel, i.e. the test-suite agent failed to run on ~66 nights — which is exactly what PR #145 (`fix: raise qa_warden orchestrator timeout to 1700s`, opened 2026-05-11) was written to fix and never merged. The backend suite takes ~715–780s and the orchestrator's timeout sat below that, so the one agent that would have reported a red suite was the one most likely to time out. A concrete, measurable cost of the unmerged-PR backlog. Also confirms the nightly runs against `backend/venv` (`run_log` shows `backend\venv\Scripts\python.exe`), not system Python — relevant because the two environments have drifted apart. Files: `reports/nightly/*`.
@@ -89,6 +91,21 @@
 ---
 
 ## Active Phase
+> **WORKLIST — 2026-10-20 (authoritative order).** Consolidated in [`reports/next-actions-2026-10-20.md`](../reports/next-actions-2026-10-20.md) (readable: https://claude.ai/code/artifact/cdbdd9eb-3039-44cf-a97b-23bc5c598543), which re-verified the 2026-10-19 launch-readiness assessment against current source and found ten items neither that doc nor the 2026-10-20 worklist covered.
+>
+> | Track | Scope | Sprints | Owner |
+> |-------|-------|---------|-------|
+> | 0 | In-flight ledger truth: PR #169 merged, decision contradictions fixed, `ceo-actions.md` refreshed, nightly artifacts committed | — (hotfix) | Claude |
+> | 1 | Liability + self-truth | 779, **784** | Claude, ~3h |
+> | 2 | Money path | 780 | Claude, ~1d |
+> | 3 | Survive losing the database | 778 | Claude + CEO console, ~½d |
+> | 4 | Lock in the zero states | 782 | Claude + one CEO signup, ~2h |
+> | 5 | Legal to counsel, waitlist count, CPA validation, custom domain | 781 + Phase 4.2/4.3 | **CEO — starts today, parallel** |
+> | 6 | Backlog debt | **785**, **786**, 741, 738, 762 | Claude |
+>
+> **Parked deliberately:** B-6…B-9 until Sprint 781 reports · the live Stripe build until pricing is validated · the 22-engine relocation · the mypy baseline · dev-only npm advisories · the deferred SOC 2 set.
+>
+> **Open asks on the CEO** (each blocks a track): Neon read-only connection string (waitlist count + Sprint 738 schema read) · `RENDER_API_KEY` repo secret (deploy-drift probe + DR workflows) · confirmation the R2 `paciolus-backups` token still works · registered address / agent / EU-rep + DPO decisions (the critical path to launch) · rebase-or-redo call on the 7 stranded sprint branches.
 > **Launch-readiness Council Review — 2026-04-16.** 8-agent consensus: code is launch-ready; gating path is CEO calendar (Phase 3 validation → Phase 4.1 Stripe cutover → legal sign-off). Full verdict tradeoff map in conversation transcript.
 >
 > **Prior sprint detail:** All pre-Sprint-738 work archived under `tasks/archive/`. See [`tasks/COMPLETED_ERAS.md`](COMPLETED_ERAS.md) for the era index and archive file pointers. Sprints 732/739/740 archived to [`tasks/archive/sprints-732-740-details.md`](archive/sprints-732-740-details.md). Sprints 742–759 (architectural remediation) archived to [`tasks/archive/sprints-742-759-details.md`](archive/sprints-742-759-details.md).
@@ -109,6 +126,69 @@
 >
 > What remains true from the first analysis: the *other* half of the risk is that **recovery has never been tested and the checks that would have said so are lying**. A second backup mechanism does not fix that. Both halves are in scope below.
 > Sprints 768–783 archived to `tasks/archive/sprints-768-783-details.md`.
+
+### Sprint 784: Tool-count cohesion sweep — 12 → 18
+**Status:** PENDING.
+**Priority:** P2 — one instance is public-facing; the rest is internal cohesion. ~1h.
+**Source:** `reports/next-actions-2026-10-20.md` B-e. Supersedes the narrower copy question raised as `reports/launch-readiness-assessment-2026-10-19.md` §I item 4.
+
+`backend/tools_registry.py` is the canonical catalog at **18** tools (Sprint 689 expanded 12 → 18; Sprint 717 reconciled the frontend ledger). The prose did not follow. `tests/test_catalog_consistency.py` guards the registry against the frontend ledger — it does not read documentation, so none of this was caught.
+
+**Confirmed stale surfaces:**
+- `backend/main.py:243` — FastAPI `description="12-Tool Audit Intelligence Suite for Financial Professionals"`. **This is public**: it renders in the OpenAPI schema and on the docs page.
+- `AGENTS.md:5` — "a 12-tool zero-storage AI audit intelligence SaaS". The agent entry point, so every session starts from a wrong number.
+- `docs/01-product/PRODUCT_VISION.md` — 6 occurrences including the executive-summary hero line and the footer.
+- `docs/02-technical/ARCHITECTURE.md:13` and `:178`.
+- `docs/07-user-facing/USER_GUIDE.md` — "Twelve specialized tools".
+- `tasks/ceo-actions.md` Phase 3 — the validation checklist the CEO is meant to work through lists 12 tools with their old test counts.
+
+**Out of scope:** `COHESION_REMEDIATION.md` and `tasks/archive/**` are historical records of the 12-tool era and keep their numbers. `CLAUDE.md`'s era table line for Sprints 255–278 is also historical and correct as written.
+
+**Verification:** extend the documentation-consistency gate so a prose tool count that disagrees with `tools_registry.MARKETING_AUDIT_TOOL_COUNT` fails CI. **Use that name** — it is the backend constant (`tools_registry.py:248`, computed from the `is_marketing_audit_tool` flag). `CANONICAL_TOOL_COUNT` is the *frontend* ledger's literal (`tool-ledger.ts:221`), already tied to the backend value by `tests/test_catalog_consistency.py`; a backend gate importing it would fail. Without the guard this recurs — exactly as the AS 1215 citation did after being fixed in code (Sprint 779 item 3).
+
+---
+
+### Sprint 785: Dispose of the PR backlog
+**Status:** PENDING.
+**Priority:** P2 — seven finished sprints are rotting on branches, and every day on `main` widens the conflict.
+**Source:** `reports/next-actions-2026-10-20.md` B-a / B-b.
+
+`SESSION_STATE.md` recorded on 2026-10-19 that all 25 open PRs were `MERGEABLE` and that the only thing blocking them was six red CVE gates. The gates were fixed that day — but the 2026-10-19/20 merges then rewrote `tasks/todo.md` wholesale, and **all nine real-work PRs now report `DIRTY` / `CONFLICTING`**: #134, #137, #138, #139, #140, #141, #142, #143, #144.
+
+**Stranded work:** Sprint 769 (context memoization), 771a (Button primitive), 772a (lazy Recharts + command palette), 773 (type disambiguation + dead code), 773b (React.memo subtrees), 773c (perf finishers), 762 (flux_expectations memo contract test, closing 17/18 → 18/18), plus #134 (ADR-018 shim awareness in lint/policy scripts) and #144 (the 2026-04-30 + 2026-05-01 nightly briefs, still absent from the tree, plus a `tmp_report` cleanup).
+
+**Approach:** rebase each branch onto current `main` — do not cherry-pick or re-do from the diff. #144's diff against current `main` reads as ~125k deletions purely because the branch is based on pre-dormancy `main`; the same distortion affects every branch in the set, so a diff-driven redo would delete live work. Expect conflicts to be concentrated in `tasks/todo.md` and `reports/nightly/`, i.e. ledger files, not code.
+
+**Also in scope:** triage the 15 Dependabot PRs (#77, #78, #90, #106–#114, #156, #157, #158). The oldest is from 2026-04-13 and most target versions that are themselves now stale; close them as superseded and let Sprint 786 take the current releases, rather than merging six-month-old bumps.
+
+**Verification:** each rebased branch passes CI on its own merge; after the sweep, open non-Dependabot PR count is 0 and the frontend suite still reports 2,013 tests (the 7 stranded sprints are refactors and should not change behaviour).
+
+---
+
+### Sprint 786: Dependency currency (replaces Sprints 760 and 761)
+**Status:** PENDING.
+**Priority:** P2 — the only RED agent in the 2026-10-20 nightly, and 5 of the outdated packages are security-relevant.
+**Source:** `reports/next-actions-2026-10-20.md` B-c / B-d. Supersedes Sprints 760 and 761, both written in April and now wrong in their specifics.
+
+**Current drift (2026-10-20 nightly):** 68 backend / 22 frontend packages outdated. Security-relevant: `cryptography` 46.0.7 → 50.0.2 (major), `stripe` 15.0.1 → 16.0.0 (major), `fastapi` 0.136.0 → 0.150.0, `SQLAlchemy` 2.0.49 → 2.1.5, `react` 19.2.5 → 19.3.1.
+
+**Read the numbers through Sprint 777's rule before acting.** `requirements.txt` splits deliberately: `==` for the framework/runtime surface, `>=` floors for the security leaves. The two halves need opposite treatment and the nightly does not distinguish them:
+- **Floors self-heal.** `cryptography>=46.0.7` means CI and the production Docker build already resolve to 50.0.2 on every fresh install. There is nothing to bump — the finding is about the venv, not about production.
+- **Exact pins cannot self-heal.** `fastapi==0.136.1`, `sqlalchemy==2.0.49`, `stripe==15.1.0` are genuinely what production runs, and each needs a reviewed bump.
+
+**Sub-item that is not a version bump at all (B-d):** `backend/venv` matches neither `requirements.txt` nor production. It holds `fastapi` 0.136.0 and `stripe` 15.0.1 against pins of `==0.136.1` / `==15.1.0`, and sits at the literal floor values (`cryptography` 46.0.7, `pillow` 12.2.0, `pypdf` 6.10.2, `werkzeug` 3.1.8, `pyasn1` 0.6.3) that a fresh resolve passes. The nightly runs `backend/venv/Scripts/python.exe`, so **the daily health signal is measured against an environment that ships nowhere**, and `SESSION_STATE.md` wrongly calls it "the CI-representative env, with the new pins". Reconcile the venv to a fresh resolve and capture `pip freeze` as the evidence record — that recorded resolution is the missing half of Sprint 777's rule, which otherwise leaves "what actually shipped" unanswerable.
+
+**Sequence:**
+1. Reconcile `backend/venv` + record the resolution. Re-run the nightly afterwards so the RED is measured against something real.
+2. Patches and safe minors in one batch, mirroring the 2026-04-19/22 hygiene pattern.
+3. One major per commit, each with its own verification window: `cryptography` 50 (JWT signing, audit chain, password reset), `stripe` 16 (billing — pair with Sprint 780's webhook work), then the frontend majors (`typescript` 7, `framer-motion` 14, `@testing-library/jest-dom` 7) individually.
+4. `fastapi` 0.150 and `SQLAlchemy` 2.1 are minor by version number but large by surface; treat each as a major for verification purposes.
+
+**Verification per step:** `pip install -r backend/requirements.txt && pytest -q` clean; `npm install && npm run build && npm test` clean with every route still `ƒ (Dynamic)` and `ƒ Proxy (Middleware)` active; `pip-audit` clean; Render deploy logs show no new ImportError and `/health/ready` 200 with `status: "healthy"` within 60s.
+
+**Out of scope:** the 21 dev-only npm advisories (need `npm audit fix --force`; all three CI audit gates pass `--omit=dev`, so they do not gate).
+
+---
 
 ### Sprint 738: Alembic migration drift cleanup
 **Status:** PENDING — pre-4.1 sequence position 1.5. Could slip post-4.1 if priority shifts; not customer-visible either way.
@@ -144,7 +224,7 @@ Write Alembic migrations for the documented drift in `PRE_EXISTING_DRIFT_TABLES`
 ---
 
 ### Sprint 741: cleanup_scheduler real-root structural fix (post-Sprint-740 follow-up)
-**Status:** PENDING — depends on Sprint 740 post-deploy log read to identify the actual cleanup_func failure.
+**Status:** PENDING — **unblocked 2026-10-20.** The prerequisite was a post-deploy read of a real cleanup-cycle failure, which was impossible while every endpoint returned 500 from ~2026-05 to 2026-10-19. Production has been live since 2026-10-19, so the scheduler has been running and the log read can now happen.
 **Priority:** P2 → P1 once Phase 4.1 lands.
 **Source:** Sprint 732 / 740 (archived to [`tasks/archive/sprints-732-740-details.md`](archive/sprints-732-740-details.md)).
 
@@ -160,7 +240,7 @@ Sprint 740 unmasked the cascade — `psycopg2.errors.InFailedSqlTransaction` (SQ
 ---
 
 ### Sprint 760: Dependency hygiene — patches + safe minors (2026-04-29 nightly)
-**Status:** PENDING. Sourced from 2026-04-29 nightly Dependency Sentinel (RED only signal — all other agents GREEN).
+**Status:** SUPERSEDED 2026-10-20 by **Sprint 786**. The 19-package list is six months stale — today's nightly reports 68 backend / 22 frontend outdated, so this batch no longer describes the work. Kept for the per-package rationale and the verification pattern.
 **Priority:** P3. Routine maintenance batch; no security urgency at the patch/minor level.
 **Source:** `reports/nightly/2026-04-29.md` Dependency Sentinel section.
 
@@ -190,7 +270,7 @@ Bundle the 19 patch + safe-minor updates into one commit, mirroring the 2026-04-
 ---
 
 ### Sprint 761: cryptography 47.0.0 major upgrade (security-relevant)
-**Status:** PENDING. Standalone sprint per dep-hygiene policy: majors get isolated risk + verification windows.
+**Status:** SUPERSEDED 2026-10-20 by **Sprint 786**. The target version is wrong by two majors — `cryptography` is at 50.0.2, not 47.0.0 — and Sprint 777 rejected this sprint's premise outright: `cryptography` stays a `>=` floor, so a fresh resolve already takes the current release. The isolated-major verification pattern below is still the policy and carries into 786.
 **Priority:** P2 (security-relevant; pyca/cryptography ships CVE fixes via majors and the lib underpins JWT signing, password hashing, TLS evidence chain).
 **Source:** `reports/nightly/2026-04-29.md` Dependency Sentinel — flagged as security-relevant + major.
 
@@ -235,9 +315,11 @@ Bundle the 19 patch + safe-minor updates into one commit, mirroring the 2026-04-
 
 ---
 
-### Sprint 778: Prove recovery works (rescoped 2026-10-19 — off-provider backup deferred)
+### Sprint 778: Build the off-provider backup, then prove recovery works
 **Status:** PENDING.
-**Priority:** P1 — but the scope is now *verify the backup we have*, not *build a second one*.
+**Priority:** P1 — both halves in scope: build the backup that does not exist **and** verify that recovery works.
+
+> **Heading corrected 2026-10-20.** This sprint was briefly titled "off-provider backup deferred", which contradicted its own scope item 1. The deferral was withdrawn the same day it was made (see the DECISION block above and `tasks/EXECUTIVE_BLOCKERS.md` → Resolved Decisions). The backup ships pre-launch.
 
 **Source:** 2026-10-19, while re-enabling the inactivity-disabled scheduled workflows (Sprint 775 work).
 

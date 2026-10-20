@@ -35,16 +35,17 @@ Every backend endpoint had been returning HTTP 500 since roughly 2026-05. Two in
 1. **The fail-closed rate-limit guarantee never worked.** `limits`' `Storage.check()` returns `False` instead of raising; the code only caught exceptions, so a dead backend was silently treated as healthy at boot. The Sprint 696 tests passed only because they mocked `check()` to raise — which real `RedisStorage` never does. The tests validated a false model of the library.
 2. **`scripts/smoke_test_render.sh` could never pass.** It registered `@paciolus.test`, which `email-validator` rejects as a special-use TLD, so `/auth/register` always 422'd. The post-deploy verification gate had been non-functional. Also fixed its stale Sprint 768 `access_token` assertions (now sends `X-Token-Response: bearer`).
 3. **The inventory test was a wall-clock time bomb**, not a regression — fixture dates hardcoded in late 2025 crossed the 180-day slow-moving threshold on 2026-05-31. Now relative via `_days_ago(n)`. The test built to catch exactly this (`test_recent_movement_no_flags`) never asserted `entries_flagged == 0` despite its name; it does now.
-4. **All 13 non-dependabot PRs were BLOCKED by six failing CVE/audit jobs**, not by merge conflicts — all 25 open PRs report `MERGEABLE`. Backend tests, mypy, ruff, the accounting-policy gate and the secrets scan were all green on PR #145; only the audit jobs were red. Both backend and frontend CVEs are now cleared, so those gates should pass.
+4. **All 13 non-dependabot PRs were BLOCKED by six failing CVE/audit jobs**, not by merge conflicts — all 25 open PRs reported `MERGEABLE` *on 2026-10-19* (no longer true; see Open blockers). Backend tests, mypy, ruff, the accounting-policy gate and the secrets scan were all green on PR #145; only the audit jobs were red. Both backend and frontend CVEs are now cleared, so those gates should pass.
 
 ## Current Environment State
 
 **App status:** Working — production live and verified.
-**Backend tests:** **8,700 collected, 8,700 passed, 0 failed** (14m24s, `backend/venv` — the CI-representative env, with the new pins). `main` collects 8,685 with 1 failing, so this branch is +15 tests and removes the last red test.
+**Backend tests:** **8,700 collected, 8,700 passed, 0 failed** (14m24s, `backend/venv`). Re-confirmed by the 2026-10-20 nightly: 8,700 passed / 0 failed, coverage 93.34%.
+> **Correction (2026-10-20):** `backend/venv` is **not** "the CI-representative env, with the new pins". It holds `fastapi` 0.136.0 and `stripe` 15.0.1 against pins of `==0.136.1` / `==15.1.0`, and sits at the literal `>=` floor values that CI and the production Docker build resolve past on every fresh install. The two exact pins bumped on 10-19 (PyJWT, python-multipart) did land in it; the rest did not. CI is the authority and is green. Reconciling the venv and recording the resolution is scoped in **Sprint 786**.
 **Frontend:** 207 suites / 2,013 tests / 5 snapshots, 0 failures; `tsc --noEmit` exit 0; `npm run build` clean with every route `ƒ (Dynamic)` and `ƒ Proxy (Middleware)` active (nonce-based CSP contract intact across the Next.js bump).
 **Dependency CVEs:** backend `pip-audit` no longer flags pyjwt or python-multipart; frontend production vulnerabilities 22 → **0**.
 
-**Note on environments:** `backend/venv` (what the nightly cron and I used) and system Python 3.12 had drifted apart, and neither matched `requirements.txt`. The nightly runs `backend\venv\Scripts\python.exe`. Both now carry the new pins.
+**Note on environments:** `backend/venv` (what the nightly cron uses) and system Python 3.12 had drifted apart, and neither matched `requirements.txt`. The nightly runs `backend/venv/Scripts/python.exe`. **Still true as of 2026-10-20** — see the correction above; only the two 10-19 security pins were reconciled.
 
 **Open blockers:**
 - ~~Branch unpushed / resilience fix undeployed~~ — **RESOLVED.** Merged and verified live (see above).
@@ -52,7 +53,7 @@ Every backend endpoint had been returning HTTP 500 since roughly 2026-05. Two in
 - ~~Scheduled GitHub Actions disabled~~ — **RESOLVED.** All five workflows re-enabled 2026-10-19 via the Actions API. But see Sprint 778: two of them cannot pass as written.
 - ~~Dependency pinning strategy unresolved~~ — **RESOLVED.** Sprint 777 chose option 3 (explicit split), rule written into `backend/requirements.txt`. It explicitly **rejects** Sprint 761's premise: `cryptography` stays a floor.
 - 21 dev-only npm advisories remain (babel-jest chain); they don't gate CI (`--omit=dev`) and clearing them needs `npm audit fix --force`.
-- 25 open PRs: 10 real work (#134, #137–#145), 15 Dependabot. All `MERGEABLE`; the 12 older Dependabot ones are `BEHIND` and need updating.
+- **25 open PRs, and the 9 real-work ones now all CONFLICT** (#134, #137–#144 report `DIRTY`/`CONFLICTING` as of 2026-10-20 — the 10-19/20 merges rewrote `tasks/todo.md` wholesale). They were `MERGEABLE` on 10-19; the red CVE gates that blocked them are fixed, so the only thing left between them and `main` is a rebase. Seven finished sprints are stranded. Filed as **Sprint 785**. The 15 Dependabot PRs are mostly superseded by newer releases.
 - Phase 4.1 Stripe cutover, 4.2 legal sign-off, 4.3 custom domain (`api.paciolus.com` still 404s) — all still CEO-gated.
 
 ## Merge + deploy verification (2026-10-19)
@@ -73,14 +74,14 @@ Note: a GitHub Actions incident ("Degraded availability for Actions, Pages and W
 
 ## Next Priority
 
-**Start here: the worklist for 2026-10-20** — https://claude.ai/code/artifact/03c5fdc7-21d6-4f5a-ad3e-75e54170a2b5
-Full assessment behind it — https://claude.ai/code/artifact/694c6f26-1673-48ee-88d6-4f18c2803b82 (also `reports/launch-readiness-assessment-2026-10-19.md`)
+**Start here: the consolidated worklist** — `reports/next-actions-2026-10-20.md` (readable: https://claude.ai/code/artifact/cdbdd9eb-3039-44cf-a97b-23bc5c598543). It re-verified the 2026-10-19 assessment against current source — every load-bearing claim still held — and adds ten items neither earlier document covered. **It supersedes the 7-row order below**, which is kept for continuity.
+Earlier artifacts: worklist https://claude.ai/code/artifact/03c5fdc7-21d6-4f5a-ad3e-75e54170a2b5 · assessment https://claude.ai/code/artifact/694c6f26-1673-48ee-88d6-4f18c2803b82 (also `reports/launch-readiness-assessment-2026-10-19.md`)
 
 **CEO set a soft launch date (no fixed date) on 2026-10-19 and delegated the open decisions.** That reordered the plan: demand validation now leads and gates the four open accounting gaps; billing waits. Engineering is deliberately limited to work that is worth doing regardless of what CPAs say — liability, the money path, and making the system tell the truth about itself.
 
 Two decisions are settled and recorded in `tasks/EXECUTIVE_BLOCKERS.md` → Resolved Decisions. **Do not re-open them:**
 1. **Review gate removed from `main`** (all 12 required status checks kept, strict). Merges now take the normal path and CI genuinely blocks — `--admin` should no longer be needed, and needing it is a signal. Linear history is on, so **merges must squash or rebase**.
-2. **Neon PITR is sufficient for launch.** Off-provider `pg_dump` → R2 deferred, binding trigger: *before the second paying customer*. Zero-Storage means no client financial data is persisted, so DB loss costs accounts and engagement scaffolding, not client records.
+2. **The off-provider `pg_dump` → R2 backup ships BEFORE launch.** Neon PITR alone is not sufficient. *(This bullet previously recorded the opposite — deferred until before the second paying customer, on the premise that Zero-Storage meant no client financial data was persisted. That premise is false and the decision was reversed the same day it was made; `tasks/EXECUTIVE_BLOCKERS.md`, the `tasks/todo.md` DECISION block and the assessment addendum all carried the reversal, this file did not. Corrected 2026-10-20.)* The database persists auditor workpaper content: `diagnostic_summaries` (aggregate F/S totals), `uncorrected_misstatements` (`accounts_affected_json` — account names with DR/CR and amounts) and `analytical_expectations` (expected and actual values). Scope is Sprint 778; the policy contradiction this exposed was Sprint 783.
 
 Order of work (detail in the worklist, sprints filed in `tasks/todo.md`):
 
@@ -90,11 +91,11 @@ Order of work (detail in the worklist, sprints filed in `tasks/todo.md`):
 | 02 | Send Terms + Privacy to counsel; Security Policy §12 phone | CEO — **blocks launch, longest lead** |
 | 03 | 5–10 practising CPAs through demo + free tier on their own TB | CEO — **gates B-6…B-9** |
 | 04 | **Sprint 779** — boundary-language + AS 1215 residue (liability) | Claude, ~1h |
-| 05 | **Sprint 778** — Neon restore drill + fix DR false-green | Claude + CEO console, ½d |
+| 05 | **Sprint 778** — build the `pg_dump` → R2 backup, verify Neon PITR retention, one restore drill per mechanism, fix the DR false-green | Claude + CEO console, ½d |
 | 06 | **Sprint 780** — Stripe price-parity preflight + webhook coverage 59.9%→85% | Claude, ~1d |
 | 07 | **Sprint 782** — design-system regression lint + external uptime monitor | Claude + CEO signup, ~2h |
 
-Parked deliberately: B-6…B-9 (until 03 reports), Phase 4.1 live Stripe build (until pricing validated), 22-engine relocation, mypy baseline, 23 open PRs, dev-only npm advisories, off-provider backup.
+Parked deliberately: B-6…B-9 (until 03 reports), Phase 4.1 live Stripe build (until pricing validated), 22-engine relocation, mypy baseline, dev-only npm advisories. **No longer parked:** the off-provider backup (ships pre-launch, Sprint 778) and the open-PR backlog (Sprint 785 — all nine real-work PRs now conflict, so leaving them costs more every day).
 
 ## Recent Git Context
 

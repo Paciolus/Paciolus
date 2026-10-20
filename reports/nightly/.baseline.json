@@ -1,26 +1,26 @@
 {
   "qa_warden": {
-    "date": "2026-10-14",
+    "date": "2026-10-20",
     "backend": {
-      "passed": 8685,
-      "failed": 1,
+      "passed": 8700,
+      "failed": 0,
       "errors": 0,
-      "duration_s": 776.4,
-      "failing_tests": [
-        "tests/test_inventory_testing.py::TestCompositeScore::test_clean_data_low_score"
-      ],
+      "duration_s": 717.4,
+      "failing_tests": [],
       "collection_error": null,
       "new_failures": [],
-      "resolved": []
+      "resolved": [
+        "tests/test_inventory_testing.py::TestCompositeScore::test_clean_data_low_score"
+      ]
     },
     "frontend": {
       "passed": 2013,
       "failed": 0,
-      "duration_s": 58.1
+      "duration_s": 45.5
     }
   },
   "report_auditor": {
-    "date": "2026-10-19",
+    "date": "2026-10-20",
     "bug_tracker": {
       "BUG-001": {
         "description": "Suggested procedures rotation bug \u2014 procedures repeat rather than rotate across reports",
@@ -60,12 +60,8 @@
     }
   },
   "coverage_sentinel": {
-    "date": "2026-10-19",
+    "date": "2026-10-20",
     "history": [
-      {
-        "date": "2026-09-25",
-        "percent_covered": 93.33
-      },
       {
         "date": "2026-09-30",
         "percent_covered": 93.33
@@ -117,18 +113,20 @@
       {
         "date": "2026-10-19",
         "percent_covered": 93.33
+      },
+      {
+        "date": "2026-10-20",
+        "percent_covered": 93.34
       }
     ]
   },
   "dependency_sentinel": {
     "first_seen": {
-      "frontend:PyJWT@2.15.1": "2026-09-30",
       "backend:cryptography@50.0.2": "2026-10-03",
       "backend:stripe@16.0.0": "2026-10-03",
-      "backend:fastapi@0.148.0": "2026-10-19",
       "frontend:SQLAlchemy@2.1.5": "2026-10-19",
-      "frontend:next@16.4.2": "2026-10-19",
-      "frontend:react@19.3.1": "2026-10-19"
+      "frontend:react@19.3.1": "2026-10-19",
+      "backend:fastapi@0.150.0": "2026-10-20"
     }
   }
 }
