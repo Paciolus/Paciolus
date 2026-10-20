@@ -369,14 +369,18 @@ Failure handling reuses a single `uptime-failure`-labelled issue (commenting on 
 **Status:** PENDING.
 **Priority:** P1 — but the scope is now *verify the backup we have*, not *build a second one*.
 
-> **DECISION (2026-10-19, CEO-delegated).** Neon's own point-in-time recovery is **sufficient for launch**. The Phase 4.4 `pg_dump` → R2 cron is **deferred** until the first paying customer.
+> **DECISION (2026-10-19, CEO-delegated — REVISED same day after review).** Build the Phase 4.4 `pg_dump` → R2 cron **before launch**. Neon PITR alone is not sufficient.
 >
-> Rationale, in order of weight:
-> 1. **Zero-Storage means the blast radius is small.** None of the 30 persisted tables holds client financial data — trial balances are never written to disk. Total database loss costs user accounts, engagement scaffolding and billing linkage. It is painful, but it is not a client-confidentiality or client-records event, which is the scenario that normally forces off-provider backups for an audit product.
-> 2. **There are no paying customers**, so nothing irreplaceable exists yet.
-> 3. **The real risk was never "only one backup."** It is that *recovery has never been tested and the checks that would have told us are lying.* Building a second backup mechanism does not fix that; exercising the first one does.
+> **The first version of this decision deferred the off-provider backup, on the premise that Zero-Storage meant no client financial data was persisted. That premise was wrong**, and an automated review caught it. The database does persist client financial content:
+> - `diagnostic_summaries` — aggregate balance-sheet and income-statement totals as `Numeric(19,2)` (`models.py:353-360`).
+> - `uncorrected_misstatements` — `accounts_affected_json` holding account names with DR/CR and amounts, plus signed F/S impact on net income and net assets (`uncorrected_misstatements_model.py:102-121`).
+> - `analytical_expectations` — expected values, precision thresholds, and `result_actual_value` / `result_variance_amount` (`analytical_expectations_model.py:103-124`).
 >
-> **Revisit trigger (binding):** implement the `pg_dump` → R2 cron **before the second paying customer**. Once real customer data exists, a single provider stops being enough. The R2 bucket is already provisioned and empty, so this is a half-day when triggered.
+> That is **auditor workpaper content**, not account scaffolding. A CPA who loses their SUM schedule or expectation documentation mid-engagement has a professional problem, not an inconvenience. With no launch-date pressure, the R2 bucket already provisioned and empty since April, and the work costing roughly half a day, deferring it is not defensible once the blast radius is stated correctly.
+>
+> **Superseded:** the earlier "revisit before the second paying customer" trigger is withdrawn. The backup ships pre-launch.
+>
+> What remains true from the first analysis: the *other* half of the risk is that **recovery has never been tested and the checks that would have said so are lying**. A second backup mechanism does not fix that. Both halves are in scope below.
 **Source:** 2026-10-19, while re-enabling the inactivity-disabled scheduled workflows (Sprint 775 work).
 
 Re-enabling the three auto-disabled workflows surfaced that two of them cannot pass as written:
@@ -386,7 +390,12 @@ Re-enabling the three auto-disabled workflows surfaced that two of them cannot p
 - **`DR Test (Monthly)` is a false-green.** Its last scheduled run (2026-09-01) reported workflow-level **success**, yet its internal `render-check` step resolves `api_error` → `result=FAIL`; the overall verdict only gates issue creation, not the job's exit status. Same class of defect as the 2026-04-22 false-green incident that motivated Sprint 712.
 - **Phase 4.4 was never implemented**, so the `paciolus-backups` R2 bucket holds no `pg_dump` artifacts. Neon's own PITR is the only thing standing behind production data; there is no off-provider copy and no restore-drill evidence.
 
-**Scope:** decide whether off-provider backups are required for launch (Neon PITR may be judged sufficient — that is a CEO call, and it should be *written down* either way). If yes, implement the Phase 4.4 `pg_dump` → R2 cron, then rewrite both workflows against Neon + R2 instead of the Render Postgres API. Regardless of that decision: fix the false-green so a job's exit status reflects its own verdict, and make the missing-credential case report "unverified" explicitly instead of dying with an opaque error.
+**Scope** (the decision above is settled — do not reopen it):
+1. **Implement the `pg_dump` → R2 cron** into the already-provisioned `paciolus-backups` bucket. Options costed in `ceo-actions.md` §4.4: Render Cron Job (~$1/mo), GitHub Action (free), Upstash Scheduled Function.
+2. **Verify Neon PITR too** — confirm the actual retention window on the current plan rather than trusting the 7-day/30-day figure in `DEPLOYMENT_ARCHITECTURE.md:724`.
+3. **Perform one real restore drill against each mechanism** and record the evidence. Verify schema parity and row counts against production. An untested backup is not a backup — this is the half of the risk a second mechanism does not address.
+4. **Rewrite both DR workflows against Neon + R2** instead of the Render Postgres API, which queries a database deleted on 2026-04-22.
+5. **Fix the false-green** so a job's exit status reflects its own verdict, and make the missing-credential case report "unverified" explicitly rather than dying on an opaque error.
 
 **Note:** all three workflows were re-enabled on 2026-10-19. `dependency-compliance` now passes (its CVEs were fixed the same day), but **`backup-integrity-check` will fail on the 1st of each month and file a `dr-failure` issue** until this sprint lands. That signal is substantively true — backups genuinely are unverified — but its stated reason will be the misleading "RENDER_API_KEY is not set". Either accept it as a forcing function or disable that one workflow until the rewrite.
 
@@ -412,7 +421,7 @@ The highest-consequence category of defect in this product is language that edge
 **Priority:** P1 — must land before the first live charge. Independent of pricing decisions, so it is safe to build now.
 **Source:** `reports/launch-readiness-assessment-2026-10-19.md` §F and §C.
 
-1. **Price-parity preflight.** `billing/price_config.py` holds the canonical amounts and `test_pricing_launch_validation.py` carries ~20 assertions — but they only check the table *against itself*. Nothing fetches the Stripe Price object to confirm the amount a customer is actually charged matches the amount the product intends and the page displays. Test mode is documented as still sitting at the previous price list, so displayed and charged price **already disagree** in the only environment where billing has ever run. Add a script that reads every `STRIPE_PRICE_*` / `STRIPE_SEAT_PRICE_*` env var, retrieves the Price object, and asserts `unit_amount == TIER_PRICES[tier][interval]` and `currency == "usd"`, failing loudly and naming every mismatch. Wire it into the Phase 4.1 checklist ahead of the webhook preflight.
+1. **Price-parity preflight.** `billing/price_config.py` holds the canonical amounts and `test_pricing_launch_validation.py` carries ~20 assertions — but they only check the table *against itself*. Nothing fetches the Stripe Price object to confirm the amount a customer is actually charged matches the amount the product intends and the page displays. Test mode is documented as still sitting at the previous price list, so displayed and charged price **already disagree** in the only environment where billing has ever run. Add a script that reads every `STRIPE_PRICE_*` and `STRIPE_SEAT_PRICE_*` env var, retrieves the Price object, and asserts `currency == "usd"` plus the correct expected amount, failing loudly and naming every mismatch. **Use the real constant names** — the canonical base amounts are `PRICE_TABLE[tier][interval]` (not `TIER_PRICES`, which does not exist), and the four seat amounts live separately in `PROFESSIONAL_SEAT_PRICE[interval]` and `ENTERPRISE_SEAT_PRICE[interval]`. All six base prices and all four seat prices must be covered; mapping only the base table would silently skip the seat add-ons the same requirement calls for. Wire it into the Phase 4.1 checklist ahead of the webhook preflight.
 2. **Webhook handler coverage.** `billing/webhook_handler.py` is the least-covered critical path at **59.9% / 174 uncovered statements** — and it is the one that moves money. This is the webhook-coverage sprint deferred in Sprint 676 and again in the 2026-04-20 refactor pass. Target 85%+ on the handler, prioritising signature verification, event dedup (`processed_webhook_events`), and the subscription state transitions that drive entitlements.
 
 **Out of scope:** building live-mode prices. That waits on pricing feedback from Sprint 781.
@@ -446,6 +455,38 @@ Two properties reached zero and have no guard, which is precisely how the citati
 
 1. **Design system at 0 generic Tailwind colour tokens** (down from 150 across 777 files). Add a CI check rejecting any `slate-|gray|zinc|neutral|stone|blue|green|red|yellow|indigo|purple|pink|orange|teal|cyan|amber|lime|emerald|violet|fuchsia|rose|sky` + numeric-scale class in `frontend/src`, with an allowlist file if a genuine exception ever appears. The Oat & Obsidian mandate in `CLAUDE.md` carries an audit penalty for deviation; it should be mechanically enforced rather than discipline-dependent.
 2. **External uptime monitor.** `uptime-check.yml` is live and CI-verified, but GitHub disables scheduled workflows after ~60 days idle — so it switches itself off during exactly the quiet period it guards. Stand up Better Stack / Healthchecks.io / UptimeRobot (free tiers are ample) against `/health/ready`, alerting on `status != "healthy"` and **not** merely on a non-200, since Sprint 774 deliberately reports `degraded` behind a 200. Also add the `RENDER_API_KEY` secret so the deploy-drift probe arms — the repo currently has no secrets at all.
+
+---
+
+### Sprint 783: Zero-Storage policy says less is stored than the code stores
+**Status:** PENDING.
+**Priority:** P1 — a published compliance representation that the code contradicts. Must reach counsel **before** Privacy/ToS sign-off.
+**Source:** Discovered 2026-10-19 while verifying the backup blast radius (see Sprint 778).
+
+`docs/04-compliance/ZERO_STORAGE_ARCHITECTURE.md` §2.2 enumerates exactly **ten** controlled-storage exceptions: Users, Clients, Activity Logs, Diagnostic Summaries, Tool Sessions, Engagements, Tool Runs, Follow-Up Items, Subscriptions, Billing Events.
+
+Two tables persist client financial content and are **not** among the ten:
+- **`uncorrected_misstatements`** — `accounts_affected_json` holds a JSON list of `{account, debit_credit, amount}`, plus `fs_impact_net_income` / `fs_impact_net_assets` as `Numeric(19,2)`.
+- **`analytical_expectations`** — `expected_value`, `expected_range_low/high`, `precision_threshold_amount`, `result_actual_value`, `result_variance_amount`.
+
+The same document states, without qualification:
+- §2.1: *"What Is Never Stored: Raw uploaded files, **line-level account balances**, individual transaction details"*
+- Glossary: *"No persistence of line-level financial data — raw uploaded files, **individual account balances**, and transaction details are never written to disk or database"*
+- Data-class table: *"**Individual Account Names** | ❌ Never Stored | Ephemeral | 'Accounts Receivable'"*
+
+`accounts_affected_json` stores individual account names with amounts. That is a direct contradiction of the published table.
+
+**The design position is defensible; the documentation is not.** `uncorrected_misstatements_model.py:9` declares a deliberate "ZERO-STORAGE EXCEPTION" reasoned as *"persists only the auditor's documented decisions… a snapshot workpaper of audit decisions, not a database join over raw tool output."* That is a reasonable distinction — auditor-entered conclusions are a different data class from parsed client uploads. The problem is that no public document records the distinction, so a CPA reading the policy would reasonably conclude their client's account names never touch the database.
+
+**One caveat weakens the defence for the second table:** `analytical_expectations.result_actual_value` is documented as populated *"manually or via 728c tool-wiring auto-persist"*. An auto-persisted actual is upload-derived, not auditor-entered, so the "auditor's own decisions" rationale does not fully cover it.
+
+**Scope:**
+1. Decide the canonical position: either (a) document both tables as controlled-storage exceptions with the auditor-entered rationale stated explicitly and the data classes enumerated, or (b) stop persisting the account-level detail and hold the SUM/expectations in session only.
+2. If (a): update `ZERO_STORAGE_ARCHITECTURE.md` §2.2 and its data-class table, the Privacy Policy retention table, the DPA, and the Trust page. Qualify "Individual Account Names — Never Stored" to distinguish parsed uploads from auditor-entered workpaper entries.
+3. Audit `result_actual_value` auto-persist specifically and decide whether upload-derived actuals may be written at all.
+4. Add a test asserting every model with a monetary column is listed in the compliance doc's exception table, so this cannot drift again — the same class of guard that now protects the AS 1215 citation.
+
+**Why this is P1 rather than a doc chore:** Zero-Storage is the central trust claim of the product, made to customers who are themselves bound by professional confidentiality obligations. Counsel is being engaged tomorrow on Privacy and ToS; they should assess this before signing, not after.
 
 ---
 

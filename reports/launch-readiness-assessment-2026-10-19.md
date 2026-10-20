@@ -168,3 +168,33 @@ B-6 through B-9; the 22-engine relocation; the mypy baseline; the remaining 23 o
 ---
 
 *Prepared by Claude Opus 5 · 2026-10-19 · basis: direct code and production verification.*
+
+---
+
+## Addendum — added 2026-10-19, after the CEO decisions
+
+Two corrections and one new P1, all arising from verifying the backup blast radius.
+
+### Correction: the database does hold client financial content
+
+In deciding the backup question I asserted that none of the 30 persisted tables holds client financial data, reasoning from table names and the Zero-Storage principle. **That was wrong**, and an automated reviewer on PR #168 caught it. Verified against the models:
+
+- `diagnostic_summaries` — aggregate balance-sheet and income-statement totals as `Numeric(19,2)` (`models.py:353-360`)
+- `uncorrected_misstatements` — `accounts_affected_json` holding `{account, debit_credit, amount}`, plus signed F/S impact (`uncorrected_misstatements_model.py:102-121`)
+- `analytical_expectations` — expected values, precision thresholds, actuals and variances (`analytical_expectations_model.py:103-124`)
+
+That is auditor workpaper content. The lesson is the one already recorded in `tasks/lessons.md` this same session: I reasoned from names instead of reading the columns.
+
+### Consequence: the backup decision is reversed
+
+**The off-provider `pg_dump` → R2 backup now ships before launch**, not deferred. With no date pressure, a bucket provisioned since April, and roughly half a day of work, deferral is indefensible once the blast radius is stated correctly. Recorded in `tasks/EXECUTIVE_BLOCKERS.md`; scope is Sprint 778.
+
+### New P1: the Zero-Storage policy understates what is stored — Sprint 783
+
+`docs/04-compliance/ZERO_STORAGE_ARCHITECTURE.md` §2.2 enumerates **ten** controlled-storage exceptions. `uncorrected_misstatements` and `analytical_expectations` are not among them, while the same document states without qualification that **"Individual Account Names"** are *"❌ Never Stored"* and that *"individual account balances … are never written to disk or database"*. `accounts_affected_json` stores exactly that.
+
+The **design position is defensible** — `uncorrected_misstatements_model.py:9` declares a deliberate exception reasoned as persisting "only the auditor's documented decisions… not a database join over raw tool output," and auditor-entered conclusions are genuinely a different data class from parsed uploads. **The documentation is not defensible**, because no public document records that distinction.
+
+One caveat weakens the defence for the second table: `analytical_expectations.result_actual_value` is documented as populated "manually or via 728c tool-wiring auto-persist", and an auto-persisted actual is upload-derived rather than auditor-entered.
+
+**This must reach counsel before Privacy/ToS sign-off** — which is step 02 of the 2026-10-20 worklist. Zero-Storage is the product's central trust claim, made to customers who themselves carry professional confidentiality obligations.

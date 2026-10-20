@@ -23,7 +23,7 @@ These items are **tracked in [`ceo-actions.md`](ceo-actions.md)** — this file 
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
-| 2026-10-19 | **Neon PITR is sufficient for launch.** Off-provider `pg_dump` → R2 backup deferred until the first paying customer; binding revisit trigger is *before the second*. | Zero-Storage means no client financial data is persisted, so total DB loss costs accounts and engagement scaffolding rather than client records. No paying customers yet. The real gap was untested recovery, not single-provider backup — addressed by Sprint 778 as rescoped. |
+| 2026-10-19 | **Off-provider `pg_dump` → R2 backup ships before launch.** Neon PITR alone is not sufficient. *(Revised the same day — the first version deferred it.)* | The initial rationale claimed Zero-Storage meant no client financial data was persisted. **That was wrong.** `diagnostic_summaries` holds aggregate F/S totals, `uncorrected_misstatements` holds account names with DR/CR and amounts, and `analytical_expectations` holds expected and actual values — i.e. auditor workpaper content, not scaffolding. With no date pressure, a provisioned bucket and ~half a day of work, deferral is indefensible. See Sprint 778; the related policy contradiction is Sprint 783. |
 | 2026-10-19 | **Review gate removed from `main`.** All 12 required status checks retained. | GitHub forbids self-approval, so a 1-review rule is unsatisfiable solo and was being cleared with `--admin`, which also bypasses the status checks. Removing it makes CI the real, unbypassed gate. |
 
 ---
