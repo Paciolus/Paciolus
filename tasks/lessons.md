@@ -4,6 +4,34 @@
 
 ---
 
+## A `>=` floor is a standing decision to accept majors you never see (Sprint 786a, 2026-10-20)
+
+`backend/requirements.txt` splits deliberately (Sprint 777): `==` for the framework surface,
+`>=` floors for security leaves. The floors exist so a CVE fix lands without waiting for a
+human, which is correct and worth keeping.
+
+Reconciling the long-lived `backend/venv` to a fresh resolve made the other half of that
+trade concrete. Twelve packages moved, and three of the moves were majors already live in
+production: **`cryptography` 46 → 50**, **`pillow` 12 → 13**, **`redis` 7 → 8**. CI and the
+production Docker build each do a fresh `pip install`, so those have been running for months.
+Nothing broke. Nobody chose them either.
+
+Sprint 777 wrote that risk down in plain words — *"production can take an unreviewed upstream
+major at any time, with no lockfile and no record of what actually shipped"* — and then the
+project kept no record, so the prediction came true invisibly. **Writing a risk down is not
+the same as instrumenting it.** The follow-through was one CI step capturing `pip freeze`.
+
+**A stale virtualenv makes a test suite lie in the safest-looking direction.** The nightly ran
+against a venv pinned at every floor's *minimum*, so for months it was validating versions
+that ship nowhere: green, reassuring, and about the wrong software. That is worse than a red
+signal, because a red signal gets investigated.
+
+**Ask whether a floor suits the package, not just the policy.** `cryptography` is the ideal
+floor candidate: narrow API, currency is the entire point. `pillow` and `redis` are image
+decoding and a cache client — majors there change behaviour, and the CVE argument is weaker.
+A uniform rule applied to a non-uniform set produces exactly this: the right answer for some
+packages and an unreviewed behaviour change for others. Raised with the CEO rather than
+decided unilaterally, since it revises a decision rather than applying one.
 ## A guard firing is not the same as a guard being right (Sprint 782a, 2026-10-20)
 
 The design-token lint flags Tailwind's generic colour classes. Its scale pattern was
