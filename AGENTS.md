@@ -2,7 +2,7 @@
 
 ## What This Repo Is
 
-Paciolus is a 12-tool zero-storage AI audit intelligence SaaS for financial professionals. The backend is FastAPI/Python with PostgreSQL (SQLite for dev), ReportLab PDF generation, and pandas-based in-memory processing. The frontend is Next.js 16 / React 19 / TypeScript with Tailwind CSS 4 and the Oat & Obsidian design system.
+Paciolus is an 18-tool zero-storage AI audit intelligence SaaS for financial professionals (canonical count: `backend/tools_registry.py` `MARKETING_AUDIT_TOOL_COUNT`). The backend is FastAPI/Python with PostgreSQL (SQLite for dev), ReportLab PDF generation, and pandas-based in-memory processing. The frontend is Next.js 16 / React 19 / TypeScript with Tailwind CSS 4 and the Oat & Obsidian design system.
 
 ## Startup Sequence (run at the beginning of every session)
 

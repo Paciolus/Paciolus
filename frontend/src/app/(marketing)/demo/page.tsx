@@ -11,7 +11,7 @@ import { fadeUp } from '@/lib/motion'
  * Platform Demo Page
  *
  * Marketing-grade interactive exploration hub. No account required.
- * Shows the 5-tab DemoTabExplorer, all-12-tools grid, and a final
+ * Shows the 5-tab DemoTabExplorer, the full tool grid, and a final
  * conversion CTA toward /register.
  *
  * Guardian requirement: persistent synthetic-data disclaimer (rendered

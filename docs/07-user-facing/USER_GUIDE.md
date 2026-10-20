@@ -10,11 +10,12 @@
 
 ## Welcome to Paciolus
 
-Paciolus is a diagnostic intelligence platform for financial professionals. Twelve specialized tools. Ten supported file formats. Zero data retention. Upload your financial data, receive structured diagnostics and report-ready exports — your client's files are processed in-memory and never written to disk.
+Paciolus is a diagnostic intelligence platform for financial professionals. Eighteen specialized tools. Ten supported file formats. Zero data retention. Upload your financial data, receive structured diagnostics and report-ready exports — your client's files are processed in-memory and never written to disk.
 
 **What makes Paciolus different:**
 - **Zero-Storage Architecture:** Client data is processed in-memory and immediately discarded. Nothing written to disk. Nothing retained between sessions.
-- **12 Diagnostic Tools:** Trial Balance Diagnostics, Multi-Period Comparison, Journal Entry Testing, AP Payment Testing, Bank Reconciliation, Payroll Testing, Three-Way Match, Revenue Testing, AR Aging, Fixed Asset Testing, Inventory Testing, and Statistical Sampling
+- **18 Audit Tools:** Trial Balance Diagnostics, Multi-Period Comparison, Bank Reconciliation, Three-Way Match, Journal Entry Testing, AP Payment Testing, Revenue Testing, AR Aging, Payroll Testing, Fixed Assets, Inventory Testing, Statistical Sampling, Segregation of Duties, Intercompany Elimination, W-2 / W-3 Reconciliation, Form 1099 Preparation, Book-to-Tax Reconciliation, and the Cash Flow Projector. Multi-Currency Conversion runs alongside them as a validation layer rather than a tool of its own.
+  - Sections 3–14 below walk through the first twelve in detail. The six tax and controls tools (Segregation of Duties, Intercompany Elimination, W-2 / W-3, Form 1099, Book-to-Tax, Cash Flow Projector) are not yet written up here — each has a working page reachable from the Tools index and the command palette
 - **10 File Formats:** CSV, Excel (.xlsx/.xls), TSV, TXT, OFX, QBO, IIF, PDF, and ODS
 - **Professional Reports:** Client-ready PDF memos, Excel workpapers, and CSV exports with workpaper signoff
 
@@ -72,7 +73,7 @@ All diagnostic tools require a verified email address. Without verification, you
 
 ### 1.3 Navigating the Platform
 
-The tool navigation bar appears at the top of every tool page. The first six tools are shown inline; the remaining six are accessible from the "More" dropdown menu.
+The tool navigation bar appears at the top of every tool page. Six tools are shown inline and the rest sit under the "More" dropdown. The navigation bar carries the twelve core diagnostic and testing tools; the full catalogue of eighteen — including Segregation of Duties, Intercompany Elimination, W-2 / W-3 Reconciliation, Form 1099 Preparation, Book-to-Tax Reconciliation and the Cash Flow Projector — is on the Tools index page and in the command palette (Cmd+K).
 
 ```
 [Logo] | TB Diagnostics | Multi-Period | JE Testing | AP Testing | Bank Rec | Payroll | More ▾ | [Cmd+K] | [Profile]

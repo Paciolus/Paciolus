@@ -11,10 +11,13 @@ from pathlib import Path
 
 from guards.doc_consistency_guard import (
     Violation,
+    _check_api_description,
     _check_jwt_expiry_in_doc,
     _check_pricing_in_doc,
     _check_tier_names_in_doc,
+    _check_tool_count_in_doc,
     _parse_jwt_default,
+    _parse_marketing_tool_count,
     _parse_price_table,
     _parse_share_ttl,
     _parse_user_tier_enum,
@@ -262,3 +265,130 @@ def test_format_github_annotations_emits_error_lines():
     violations = [Violation(rule="r", file="f.md", line=7, message="m")]
     out = format_github_annotations(violations)
     assert out == "::error file=f.md,line=7::[r] m"
+
+
+# ---------------------------------------------------------------------------
+# Tool count consistency (Sprint 784)
+# ---------------------------------------------------------------------------
+
+_REGISTRY_STUB = """
+Tool(slug="a", is_marketing_audit_tool=True),
+Tool(slug="b", is_marketing_audit_tool=True),
+Tool(slug="c", is_marketing_audit_tool=False),
+"""
+
+
+def test_parse_marketing_tool_count_counts_only_flagged(tmp_path):
+    (tmp_path / "tools_registry.py").write_text(_REGISTRY_STUB, encoding="utf-8")
+    assert _parse_marketing_tool_count(tmp_path) == 2
+
+
+def test_parse_marketing_tool_count_none_when_registry_missing(tmp_path):
+    assert _parse_marketing_tool_count(tmp_path) is None
+
+
+def test_parse_marketing_tool_count_matches_real_registry():
+    """The parser must agree with the registry's own computed constant."""
+    import tools_registry
+
+    backend_root = Path(tools_registry.__file__).resolve().parent
+    assert _parse_marketing_tool_count(backend_root) == tools_registry.MARKETING_AUDIT_TOOL_COUNT
+
+
+def test_tool_count_check_flags_compound_adjective(tmp_path):
+    doc = tmp_path / "README.md"
+    doc.write_text("**12-Tool Audit Intelligence Suite**\n", encoding="utf-8")
+    violations = _check_tool_count_in_doc(18, doc, "README.md")
+    assert len(violations) == 1
+    assert violations[0].rule == "tool_count_consistency"
+    assert "18" in violations[0].message
+
+
+def test_tool_count_check_flags_qualified_plural(tmp_path):
+    doc = tmp_path / "GUIDE.md"
+    doc.write_text("Twelve specialized tools. Ten file formats.\n", encoding="utf-8")
+    assert len(_check_tool_count_in_doc(18, doc, "GUIDE.md")) == 1
+
+
+def test_tool_count_check_flags_all_n_tools(tmp_path):
+    doc = tmp_path / "POLICY.md"
+    doc.write_text("| Solo | All 12 tools |\n", encoding="utf-8")
+    assert len(_check_tool_count_in_doc(18, doc, "POLICY.md")) == 1
+
+
+def test_tool_count_check_passes_when_correct(tmp_path):
+    doc = tmp_path / "README.md"
+    doc.write_text(
+        "An 18-tool suite. All 18 tools included. Eighteen specialized tools.\n",
+        encoding="utf-8",
+    )
+    assert _check_tool_count_in_doc(18, doc, "README.md") == []
+
+
+def test_tool_count_check_ignores_markdown_anchors(tmp_path):
+    """Heading anchors repeat the heading text, so a TOC looks like '5-tool'.
+
+    This was 9 of the 13 false positives in the check's first draft.
+    """
+    doc = tmp_path / "GUIDE.md"
+    doc.write_text(
+        "5. [Tool 3: Journal Entry Testing](#5-tool-3-journal-entry-testing)\n"
+        "12. [Tool 10: Fixed Asset Testing](#12-tool-10-fixed-asset-testing)\n",
+        encoding="utf-8",
+    )
+    assert _check_tool_count_in_doc(18, doc, "GUIDE.md") == []
+
+
+def test_tool_count_check_ignores_bare_subset_counts(tmp_path):
+    """'six tools are shown inline' is a true statement about the nav bar."""
+    doc = tmp_path / "GUIDE.md"
+    doc.write_text("Six tools are shown inline; the rest sit under More.\n", encoding="utf-8")
+    assert _check_tool_count_in_doc(18, doc, "GUIDE.md") == []
+
+
+def test_tool_count_check_ignores_version_history_rows(tmp_path):
+    doc = tmp_path / "ARCH.md"
+    doc.write_text(
+        "| 3.0 | 2026-02-16 | CTO | Updated for Phase XXXIV (11-tool suite, 30 routers) |\n",
+        encoding="utf-8",
+    )
+    assert _check_tool_count_in_doc(18, doc, "ARCH.md") == []
+
+
+def test_tool_count_check_honours_historical_marker(tmp_path):
+    doc = tmp_path / "VISION.md"
+    doc.write_text(
+        "Launched the 12-tool suite in v1.5.0 <!-- doc-consistency: historical -->\n",
+        encoding="utf-8",
+    )
+    assert _check_tool_count_in_doc(18, doc, "VISION.md") == []
+
+
+def test_tool_count_check_ignores_small_tier_allowances(tmp_path):
+    """'2 tools (TB + Flux)' is a free-tier allowance, not a catalog claim."""
+    doc = tmp_path / "POLICY.md"
+    doc.write_text("| **Free** | 10/month | 3 | 2 tools (TB + Flux) |\n", encoding="utf-8")
+    assert _check_tool_count_in_doc(18, doc, "POLICY.md") == []
+
+
+def test_api_description_check_flags_mismatch(tmp_path):
+    (tmp_path / "main.py").write_text(
+        '    description="12-Tool Audit Intelligence Suite for Financial Professionals",\n',
+        encoding="utf-8",
+    )
+    violations = _check_api_description(18, tmp_path)
+    assert len(violations) == 1
+    assert violations[0].file == "backend/main.py"
+    assert "openapi-snapshot" in violations[0].message
+
+
+def test_api_description_check_passes_when_correct(tmp_path):
+    (tmp_path / "main.py").write_text(
+        '    description="18-Tool Audit Intelligence Suite for Financial Professionals",\n',
+        encoding="utf-8",
+    )
+    assert _check_api_description(18, tmp_path) == []
+
+
+def test_api_description_check_safe_when_main_missing(tmp_path):
+    assert _check_api_description(18, tmp_path) == []

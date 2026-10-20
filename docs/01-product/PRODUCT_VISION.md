@@ -10,8 +10,8 @@
 
 ## Executive Summary
 
-Paciolus is a **12-tool AI-powered audit intelligence suite** for financial professionals, built on a Zero-Storage architecture. Our vision is to become the industry-standard diagnostic platform for fractional CFOs, accountants, and financial professionals who need surgical precision in their work—without compromising client data privacy.
-<!-- Updated: product now described as 12-tool suite per 2025 cohesion remediation -->
+Paciolus is an **18-tool AI-powered audit intelligence suite** for financial professionals, built on a Zero-Storage architecture. Our vision is to become the industry-standard diagnostic platform for fractional CFOs, accountants, and financial professionals who need surgical precision in their work—without compromising client data privacy.
+<!-- Tool count: canonical source is backend/tools_registry.py MARKETING_AUDIT_TOOL_COUNT (18). Enforced by backend/guards/doc_consistency_guard.py since Sprint 784. -->
 
 **Mission Statement:**
 > "Empower financial professionals with intelligent diagnostics that respect privacy, accelerate insight, and maintain the highest standards of data security."
@@ -106,24 +106,34 @@ By 2029, Paciolus will be the go-to diagnostic platform for 50,000+ financial pr
 3. **Professional Output** — Client-ready PDF/Excel reports with Oat & Obsidian branding
 
 ### 3.2 Key Features (Current — v2.1.0)
-<!-- Updated: product now described as 12-tool suite per 2025 cohesion remediation -->
+<!-- Tool count: canonical source is backend/tools_registry.py MARKETING_AUDIT_TOOL_COUNT (18). Enforced by backend/guards/doc_consistency_guard.py since Sprint 784. -->
 
-**12-Tool Audit Intelligence Suite:**
+**18-Tool Audit Intelligence Suite:**
+
+> Rows mirror `backend/tools_registry.py` — display names, test counts and cited standards
+> come from the registry, which is the single source of truth. Multi-Currency Conversion is a
+> side-car validation layer and is deliberately not one of the 18.
 
 | Tool | Description |
 |------|-------------|
-| **TB Diagnostics** | Trial balance upload, anomaly detection, ratio analysis, lead sheets, financial statements |
-| **Multi-Period Comparison** | 2-way and 3-way period comparison with budget variance analysis |
-| **Journal Entry Testing** | 19-test battery with Benford's Law, stratified sampling (PCAOB AS 2315) |
-| **AP Payment Testing** | 13-test duplicate detection battery with fraud indicators |
-| **Bank Reconciliation** | Automated bank-to-GL matching with reconciliation bridge |
-| **Payroll Testing** | 11-test payroll register integrity verification (ISA 500) |
-| **Three-Way Match** | PO → Invoice → Receipt reconciliation |
-| **Revenue Testing** | 16-test ASC 606/IFRS 15 revenue recognition battery |
-| **AR Aging Analysis** | 11-test receivables valuation and aging analysis (ISA 540) |
-| **Fixed Asset Testing** | 9-test PP&E depreciation and impairment testing (IAS 16/ASC 360) |
-| **Inventory Testing** | 9-test inventory valuation and obsolescence testing (IAS 2/ASC 330) |
-| **Statistical Sampling** | ISA 530 / PCAOB AS 2315 sample design and evaluation |
+| **Trial Balance Diagnostics** | Ratio analysis, anomaly detection, lead-sheet mapping and financial statements from a single TB upload (ISA 520, ISA 315) |
+| **Multi-Period Comparison** | Variance analysis across up to three periods with reclassification detection (ISA 520) |
+| **Bank Reconciliation** | Bank-to-book matching surfacing reconciling items and unexplained discrepancies (ISA 505, ISA 500) |
+| **Three-Way Match** | PO / receiving report / vendor invoice reconciliation (ISA 500) |
+| **Journal Entry Testing** | 19-test battery — Benford's Law, structural validation, weekend/holiday posting, round-dollar, reversal window (ISA 240, PCAOB AS 2401; sampling per AS 2315) |
+| **AP Payment Testing** | 14-test battery — duplicate payments, vendor anomalies, ghost vendors, invoice-without-PO (ISA 240, ISA 500, ACFE 2024) |
+| **Revenue Testing** | 18-test contract-aware battery — cut-off, prior-period timing, contract validity (ASC 606, IFRS 15, ISA 240) |
+| **AR Aging** | 12-test battery — collectibility risk, concentration, sign anomalies (ISA 540, ISA 500, AS 2310) |
+| **Payroll Testing** | 13-test battery — ghost employees, rate anomalies, overtime spikes, gross-to-net reconciliation (ISA 240) |
+| **Fixed Assets** | 11-test battery — depreciation recalculation, impairment indicators, disposals, lease classification (ISA 500, IAS 16, ASC 360) |
+| **Inventory Testing** | 10-test battery — valuation anomalies, LCM/NRV, obsolescence, cutoff (ISA 501, IAS 2, ASC 330) |
+| **Statistical Sampling** | MUS, classical variables and attribute sampling with projection and evaluation (ISA 530, AS 2315, AICPA Audit Sampling Guide Table A-1) |
+| **Segregation of Duties** | User-role and role-permission matrices against an SoD rule library, with per-user risk ranking (SOC 1, COSO 2013) |
+| **Intercompany Elimination** | Reciprocal balance matching across entities, proposed elimination entries, consolidation worksheet (ASC 810, IFRS 10, ISA 600) |
+| **W-2 / W-3 Reconciliation** | Payroll YTD reconciled to draft W-2s and Form 941 quarterlies before year-end filing (IRC §6051) |
+| **Form 1099 Preparation** | Vendors meeting 1099-NEC / MISC / INT thresholds, with corporate safe-harbour and processor-exemption logic (IRC §6041, Pub 1220) |
+| **Book-to-Tax Reconciliation** | Book pretax income bridged to taxable income with Schedule M-1 / M-3 and an ASC 740 deferred-tax roll |
+| **Cash Flow Projector** | 90-day cash position across base / stress / best scenarios with liquidity-breach flagging (ASC 230) |
 
 **Platform Capabilities:**
 
@@ -219,8 +229,8 @@ Competitors can't easily replicate this because their entire infrastructure is b
 ### 2026: Foundation & PMF (Product-Market Fit)
 
 **Q1 (Complete):**
-- Launched 12-tool audit intelligence suite (v2.1.0)
-<!-- Updated: product now described as 12-tool suite per 2025 cohesion remediation -->
+- Launched 18-tool audit intelligence suite (v2.1.0; 12 → 18 in Sprint 689)
+<!-- Tool count: canonical source is backend/tools_registry.py MARKETING_AUDIT_TOOL_COUNT (18). Enforced by backend/guards/doc_consistency_guard.py since Sprint 784. -->
 - 546+ sprints delivered across 69 phases
 - 6,531 backend tests + 1,357 frontend tests
 - Zero-Storage architecture validated across all tools
@@ -356,4 +366,4 @@ Paciolus is not just another SaaS tool—it's a **trust platform** for financial
 
 ---
 
-*Paciolus v2.1.0 — 12-Tool Professional Audit Intelligence Suite*
+*Paciolus v2.1.0 — 18-Tool Professional Audit Intelligence Suite*

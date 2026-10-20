@@ -8,7 +8,8 @@ import { Reveal } from '@/components/ui/Reveal'
 /**
  * ToolShowcase — Redesigned
  *
- * Full 12-tool grid with tier-gating visualization.
+ * Full tool grid with tier-gating visualization. Count comes from TOOL_LEDGER
+ * (18 tools), never a literal — see content/tool-ledger.ts.
  * Filter tabs let visitors scope by pricing plan so they immediately
  * understand what's included — and what's available with an upgrade.
  */
@@ -243,7 +244,7 @@ export function ToolShowcase() {
           </div>
         </Reveal>
 
-        {/* ── 12-Tool Grid (>8 items — single fadeUp, no stagger) ── */}
+        {/* ── Tool grid (>8 items — single fadeUp, no stagger) ── */}
         <Reveal>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {TOOLS.map((tool) => {
