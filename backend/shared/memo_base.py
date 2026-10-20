@@ -105,8 +105,30 @@ RISK_TIER_DISPLAY = {
     "high": ("HIGH", ClassicalColors.CLAY),
 }
 
-RISK_SCALE_LEGEND = (
+# Sprint 779: the diagnostic tier label is prominent enough that a practitioner could
+# read it as an ISA 315 risk-assessment conclusion. It is not one — it is a function of
+# automated flag density. The qualifier is composed into the scale legend so that every
+# surface rendering a tier also renders its basis, including surfaces added later.
+RISK_TIER_BASIS_NOTE = (
+    "Basis: automated flag density \u2014 auditor judgment required per ISA 315. "
+    "The diagnostic tier is an indicator, not a risk assessment or a conclusion on internal control."
+)
+
+_RISK_SCORE_SCALE = (
     "Diagnostic Score Scale: 0\u201310 = Low  |  11\u201325 = Moderate  |  26\u201350 = Elevated  |  51\u2013100 = High"
+)
+
+# Rendered through ReportLab Paragraph markup, so <br/> is the line break.
+RISK_SCALE_LEGEND = f"{_RISK_SCORE_SCALE}<br/>{RISK_TIER_BASIS_NOTE}"
+
+# The engagement-level indicator in anomaly_summary_generator.py is NOT flag density
+# alone: _compute_engagement_risk adds int(tools_not_run * 1.5), so an engagement with
+# no anomalies at all can still show a higher tier purely from incomplete coverage.
+# Saying "basis: flag density" there would misdescribe the number on the page.
+RISK_TIER_BASIS_NOTE_ENGAGEMENT = (
+    "Basis: automated flag density <b>and</b> tool-coverage completeness \u2014 auditor judgment required "
+    "per ISA 315. Tools not yet run add to the score, so an engagement with no anomalies can still "
+    "show a higher tier. The indicator is not a risk assessment or a conclusion on internal control."
 )
 
 

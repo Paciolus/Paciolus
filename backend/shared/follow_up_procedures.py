@@ -150,7 +150,7 @@ FOLLOW_UP_PROCEDURES: dict[str, str] = {
     "sign_anomalies": (
         "Investigate debit balances in revenue accounts. Confirm whether each debit "
         "represents a legitimate return, allowance, or contra-revenue entry, or a "
-        "misposting that requires correction. Obtain supporting documentation for each."
+        "misposting that warrants further review. Obtain supporting documentation for each."
     ),
     "trend_variance": (
         "Obtain management explanations for significant period-over-period revenue "

@@ -44,6 +44,31 @@ SCANNED_GLOBS: tuple[str, ...] = (
     "CLAUDE.md",
 )
 
+# Sprint 779: the AS 1215 / JE Testing miscitation was swept from every
+# customer-facing surface in Sprint 717 and then survived for six months in
+# three internal docs, because only customer-facing surfaces were scanned.
+# The adjacency check below therefore runs over a wider scope than the
+# registration check: documentation is where the citation drifted back.
+#
+# Deliberately NOT applied to the registration check — internal docs legitimately
+# discuss standards that have no entry in the registry (historical notes,
+# incident write-ups, lexicon examples), and failing on those would make the
+# guard noisy enough to be disabled.
+DOC_SCANNED_GLOBS: tuple[str, ...] = (
+    "docs/01-product/**/*.md",
+    "docs/02-technical/**/*.md",
+    "docs/03-product/**/*.md",
+    "docs/03-engineering/**/*.md",
+    "docs/04-compliance/**/*.md",
+    "docs/07-user-facing/**/*.md",
+    "AGENTS.md",
+)
+
+# Files whose AS 1215 / JE adjacency is a deliberate record of the historical
+# error rather than a live citation (post-mortems, lessons, this guard's own
+# documentation). Keep this list short and justified.
+AS_1215_CONTEXT_ALLOWLIST: frozenset[str] = frozenset()
+
 # Regex catches the citation forms we actually use in copy.
 # Order matters: longest-match preferred.
 CITATION_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
@@ -80,12 +105,31 @@ EXCLUDE_CONTEXT_PATTERNS: tuple[re.Pattern[str], ...] = (
 )
 
 
-def _gather_files() -> list[Path]:
-    """Resolve scan globs against the repo root."""
+def _resolve(globs: tuple[str, ...]) -> list[Path]:
+    """Resolve glob patterns against the repo root, keeping only real files."""
     files: list[Path] = []
-    for glob_pat in SCANNED_GLOBS:
+    for glob_pat in globs:
         files.extend(sorted(REPO_ROOT.glob(glob_pat)))
     return [f for f in files if f.is_file()]
+
+
+def _gather_files() -> list[Path]:
+    """Customer-facing surfaces — the scope of the registration check."""
+    return _resolve(SCANNED_GLOBS)
+
+
+def _gather_citation_context_files() -> list[Path]:
+    """Customer-facing surfaces plus internal documentation.
+
+    Scope of the AS 1215 adjacency check only. See DOC_SCANNED_GLOBS.
+    """
+    seen: set[Path] = set()
+    ordered: list[Path] = []
+    for path in _gather_files() + _resolve(DOC_SCANNED_GLOBS):
+        if path not in seen:
+            seen.add(path)
+            ordered.append(path)
+    return ordered
 
 
 def _extract_citations(text: str) -> set[str]:
@@ -110,6 +154,12 @@ def test_scan_surfaces_exist():
     """The scanned surface paths exist (catches glob breakage)."""
     files = _gather_files()
     assert files, f"Citation scan produced zero files — globs may be broken. Patterns: {SCANNED_GLOBS}"
+
+
+def test_doc_scan_surfaces_exist():
+    """The documentation globs resolve (catches a docs/ reorganisation)."""
+    files = _resolve(DOC_SCANNED_GLOBS)
+    assert files, f"Doc citation scan produced zero files — globs may be broken. Patterns: {DOC_SCANNED_GLOBS}"
 
 
 def test_every_cited_standard_is_registered():
@@ -149,8 +199,17 @@ def test_as_1215_only_in_allowed_contexts():
     AS 1215 is *Audit Documentation* — it governs workpaper retention, not
     fraud-detection procedures. Sprint 717 swept the 5 customer-facing
     surfaces that misattributed it; this test is the durable guardrail.
+
+    Sprint 779 extended the scope to internal documentation after three docs
+    were found still carrying the error — `REPORT_STANDARDS_SPEC.md`,
+    `USER_PERSONAS.md` and `ARCHITECTURE.md`. The customer-facing fix had
+    been guarded; the docs had not, so they drifted.
     """
-    files = _gather_files()
+    files = [
+        path
+        for path in _gather_citation_context_files()
+        if path.relative_to(REPO_ROOT).as_posix() not in AS_1215_CONTEXT_ALLOWLIST
+    ]
     bad_contexts: list[tuple[str, str]] = []
 
     je_pattern = re.compile(

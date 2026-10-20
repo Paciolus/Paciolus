@@ -8,13 +8,20 @@ remediation) exposes Paciolus to the ISA 265 boundary line.
 This test scans every memo generator's source for patterns from the
 deny list in `docs/03-engineering/auditing-lexicon.md`. Hits fail the
 build unless explicitly annotated `# allow-deny-phrase: <reason>` on
-the same line.
+the same line, or located inside the module docstring (maintainer
+documentation, which never reaches a rendered PDF).
 
-Coverage scope: backend/*_memo_generator.py (file glob match). The
-test scans Python source (which is what reviewers and the model both
-edit). It does NOT render the PDF; that's a more expensive integration
-test and the source-string check catches the same phrases without
-the PDF runtime.
+Coverage scope: backend/*_memo_generator.py plus the explicitly named
+content producers in EXTRA_SCANNED_FILES. The test scans Python source
+(which is what reviewers and the model both edit). It does NOT render
+the PDF; that's a more expensive integration test and the source-string
+check catches the same phrases without the PDF runtime.
+
+Sprint 779 widened the scope. The glob-only version is why
+``generate_sample_reports.py`` still emitted "systemic review of
+procure-to-pay controls recommended" months after the shipped generators
+were cleaned of it: the sample generator produces the output a prospect
+is most likely to read first, and nothing held it to the same rules.
 
 Pattern selection: deny patterns are word-boundary regex matches against
 the lexicon table. Adding/removing a pattern requires updating both this
@@ -23,6 +30,7 @@ file and the lexicon doc.
 
 from __future__ import annotations
 
+import ast
 import re
 from pathlib import Path
 
@@ -76,19 +84,59 @@ DENY_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
 ALLOW_ANNOTATION: re.Pattern[str] = re.compile(r"#\s*allow-deny-phrase\s*:")
 
 
+# Content producers that do not match the *_memo_generator.py glob but emit the
+# same practitioner-facing narrative text. Paths are relative to backend/.
+EXTRA_SCANNED_FILES: tuple[str, ...] = (
+    "generate_sample_reports.py",
+    "anomaly_summary_generator.py",
+    "engagement_dashboard_memo.py",
+    "shared/follow_up_procedures.py",
+    "shared/memo_base.py",
+    "shared/memo_template.py",
+)
+
+
 def _memo_generator_files() -> list[Path]:
-    """Every backend/*_memo_generator.py."""
-    return sorted(BACKEND_DIR.glob("*_memo_generator.py"))
+    """Every backend/*_memo_generator.py, plus the named extra producers."""
+    files = sorted(BACKEND_DIR.glob("*_memo_generator.py"))
+    files.extend(BACKEND_DIR / rel for rel in EXTRA_SCANNED_FILES if (BACKEND_DIR / rel).is_file())
+    return files
+
+
+def _module_docstring_lines(source: str) -> set[int]:
+    """Line numbers occupied by the module docstring, if there is one.
+
+    A module docstring is documentation for maintainers and never reaches a
+    rendered PDF, so deny-list phrasing in it is not a boundary problem. The
+    guardrail docstring in ``anomaly_summary_generator.py`` names the ISA 265
+    sections the template deliberately refuses to produce — naming them is
+    the whole point of the note.
+    """
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return set()
+    body = tree.body
+    if not body or not isinstance(body[0], ast.Expr) or not isinstance(body[0].value, ast.Constant):
+        return set()
+    if not isinstance(body[0].value.value, str):
+        return set()
+    node = body[0]
+    end = node.end_lineno or node.lineno
+    return set(range(node.lineno, end + 1))
 
 
 def _scan_source(path: Path) -> list[tuple[int, str, str, str]]:
     """Return list of (lineno, line_text, pattern_desc, matched_text).
 
-    Skip any line carrying the # allow-deny-phrase: annotation.
+    Skip any line carrying the # allow-deny-phrase: annotation, and any line
+    inside the module docstring.
     """
     findings: list[tuple[int, str, str, str]] = []
-    for lineno, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
-        if ALLOW_ANNOTATION.search(raw):
+    source = path.read_text(encoding="utf-8")
+    skip_lines = _module_docstring_lines(source)
+    for lineno, raw in enumerate(source.splitlines(), start=1):
+        if lineno in skip_lines or ALLOW_ANNOTATION.search(raw):
             continue
         for pattern, desc in DENY_PATTERNS:
             match = pattern.search(raw)
@@ -127,6 +175,19 @@ def test_memo_generator_uses_allowed_phrasing(path: Path):
             "(e.g., quoting a standard's title)."
         )
         pytest.fail("\n".join(lines))
+
+
+def test_extra_scanned_files_all_exist():
+    """Every path in EXTRA_SCANNED_FILES must resolve.
+
+    A renamed or moved producer would otherwise drop out of the scan
+    silently, which is the failure mode Sprint 779 was fixing.
+    """
+    missing = [rel for rel in EXTRA_SCANNED_FILES if not (BACKEND_DIR / rel).is_file()]
+    assert not missing, (
+        f"EXTRA_SCANNED_FILES references files that no longer exist: {missing}. "
+        "Update the tuple so the boundary scan keeps its coverage."
+    )
 
 
 def test_lexicon_doc_exists():

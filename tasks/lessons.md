@@ -4,6 +4,66 @@
 
 ---
 
+## A guard scoped to the shipped path lets the demo path drift (Sprint 779, 2026-10-20)
+
+`test_memo_boundary_phrasing.py` has protected memo wording since Sprint 721. Its scope
+was `backend/*_memo_generator.py` — a glob. `generate_sample_reports.py` does not match
+that glob, and for months it emitted *"systemic review of procure-to-pay controls
+recommended"*: a root-cause conclusion the shipped generators had already been cleaned
+of, in the one file whose output a prospect is most likely to read first.
+
+The deny pattern that catches the phrase (`\bsystemic\s+review.*recommended\b`) was
+already in the test. Nothing was missing from the rules. Only the file list.
+
+**Pattern: when a guard's scope is a glob, ask what produces the same class of output
+and does not match it.** Here the answer was six files — the sample generator, the
+anomaly-summary generator, the engagement dashboard, and three shared text modules.
+Widening the scope surfaced nine more hits immediately:
+
+- **Eight were legitimate** — ISA 265 *negative* use. Phrases like "does not constitute
+  an audit opinion" and "classification … is a matter of auditor judgment" contain
+  deny-list words precisely because they disclaim them, plus the literal title of PCAOB
+  AS 1305. Those carry `# allow-deny-phrase: <reason>`, matching the existing precedent.
+- **One was real** — `shared/follow_up_procedures.py` told the auditor a misposting
+  "requires correction", which is a conclusion about the entity's records rather than an
+  indicator. Reworded to "warrants further review".
+
+A 9-to-1 signal-to-noise ratio is the shape to expect when widening a mature guard, and
+it is worth it: the one real hit was in shared procedure text reused across tools.
+
+**Corollary — exempt by category, not by annotation.** The widened scan also flagged
+`anomaly_summary_generator.py`'s module docstring, where a `GUARDRAIL` note names the
+ISA 265 sections the template deliberately refuses to produce. Naming them is the entire
+point of the note. Annotating that line put a pseudo-comment inside docstring prose, so
+the scanner now skips the module-docstring line range via `ast` instead: a module
+docstring is maintainer documentation and never reaches a rendered PDF. When a guard
+fires on something structurally incapable of causing the harm, fix the scope, not the
+source.
+
+**Correction to the sprint brief.** The brief said to rephrase the sample line to match
+"the shipped wording", quoted as *"engagement team should evaluate whether procure-to-pay
+procedures warrant expansion"*. That wording exists nowhere in the codebase — the brief
+described a fix that had never landed. The actual shipped tier commentary in
+`three_way_match_memo_generator.py:112` is *"Below best practice — investigate
+patterns"*, and `tests/test_twm_memo.py:166` asserts the shipped finding text carries no
+recommendation clause at all. Aligned to what ships, not to what the brief remembered.
+**Verify the target wording exists before copying it; a brief is a memory, not a source.**
+
+**The same scoping lesson, in a second guard.** `test_citation_consistency.py` scanned
+customer-facing surfaces only. Sprint 717 swept the AS 1215 / JE Testing miscitation from
+all five of them — and it then sat untouched for six months in
+`docs/03-product/REPORT_STANDARDS_SPEC.md`, `docs/01-product/USER_PERSONAS.md` and
+`docs/02-technical/ARCHITECTURE.md`. The AS-1215 adjacency check now runs over internal
+docs too, on a **wider scope than the registration check**, which stays customer-facing
+deliberately: internal docs legitimately discuss unregistered standards in post-mortems
+and lexicon examples, and failing on those would make the guard noisy enough to get
+disabled. Scope each assertion to the drift it is actually preventing.
+
+Both guards were regression-proved before commit: the defects were re-introduced, each
+test was confirmed to fail naming the offending file, then restored to green.
+
+---
+
 ## Verify a dependency's failure contract; never let a mock define it (Sprint 774, 2026-10-19)
 
 A ~5.5-month total production outage came down to three compounding mistakes, each of which looked like diligence at the time.
