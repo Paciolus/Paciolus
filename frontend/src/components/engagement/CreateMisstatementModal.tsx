@@ -275,6 +275,15 @@ export function CreateMisstatementModal({
             <p className="text-xs font-sans text-clay-600">{submitError}</p>
           )}
 
+          {/* Zero-Storage notice — this workpaper IS persisted, unlike uploaded
+              trial balances. Stated at the point of entry because users read the
+              UI, not docs/04-compliance. See ZERO_STORAGE_ARCHITECTURE.md §2.2. */}
+          <div className="text-xs font-sans text-content-disabled">
+            Saved to this engagement. The account names and amounts you enter here are
+            stored; uploaded trial balances are not. Deleting a line archives it rather
+            than erasing it, so it stays in the audit trail.
+          </div>
+
           <div className="flex justify-end gap-2">
             <button
               type="button"
