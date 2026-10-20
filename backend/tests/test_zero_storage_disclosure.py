@@ -53,22 +53,49 @@ def _documented_tables() -> set[str]:
     return {_normalize(h) for h in re.findall(r"^####\s+(.+?)\s*$", section.group(1), re.MULTILINE)}
 
 
+# Serialized (JSON/Text) columns known to carry money or account identifiers
+# inside them. Static analysis cannot see through a Text column, so this is the
+# one part of the check that must be maintained by hand. Both entries were found
+# by code review, not by the type-based scan — which is exactly why the list
+# exists.
+SERIALIZED_MONEY_COLUMNS: dict[str, str] = {
+    "admin_audit_logs": "details_json carries amount_cents for credits and refunds "
+    "(backend/billing/admin_customers.py)",
+    "tool_activities": "summary_json is a caller-supplied free-form blob (2000 chars), "
+    "so its contents are bounded by length but not by type",
+    "uncorrected_misstatements": "accounts_affected_json carries {account, debit_credit, amount}",
+}
+
+
+def _import_all_model_modules() -> None:
+    """Import every module that could define a mapped model.
+
+    Discovered by glob rather than hardcoded. An earlier revision of this test
+    listed five modules by hand and silently missed ``admin_audit_model``, so a
+    table holding monetary amounts escaped a check that claimed full coverage.
+    Globbing means a new model file is swept in automatically.
+    """
+    import importlib
+
+    import database  # noqa: F401  — registers the declarative Base
+
+    for path in sorted(BACKEND.glob("*model*.py")) + sorted(BACKEND.glob("models.py")):
+        importlib.import_module(path.stem)
+    for package in ("billing", "engagement", "shared"):
+        for path in sorted((BACKEND / package).glob("*model*.py")):
+            importlib.import_module(f"{package}.{path.stem}")
+
+
 def _models_holding_money() -> dict[str, list[str]]:
     """Map __tablename__ -> offending column names for every mapped model.
 
-    "Offending" means a Numeric column (money) or a column whose name implies an
-    account identifier or an amount — the two things the Zero-Storage claim is
-    read as excluding.
+    "Offending" means any of:
+      - a Numeric column (money);
+      - a column whose name implies an account identifier or an amount;
+      - a serialized column listed in SERIALIZED_MONEY_COLUMNS, because money
+        hidden inside a Text/JSON payload is invisible to the type check.
     """
-    # Import the model modules so their mappers are registered. Kept explicit
-    # rather than globbed so a new model file fails loudly here instead of
-    # silently escaping the check.
-    import analytical_expectations_model  # noqa: F401
-    import database  # noqa: F401  — registers the declarative Base
-    import engagement_model  # noqa: F401
-    import models  # noqa: F401
-    import subscription_model  # noqa: F401
-    import uncorrected_misstatements_model  # noqa: F401
+    _import_all_model_modules()
     from database import Base
 
     found: dict[str, list[str]] = {}
@@ -81,6 +108,8 @@ def _models_holding_money() -> dict[str, list[str]]:
             for col in mapper.persist_selectable.columns
             if isinstance(col.type, Numeric) or "account" in col.name.lower() or "amount" in col.name.lower()
         ]
+        if table in SERIALIZED_MONEY_COLUMNS:
+            offending.append(SERIALIZED_MONEY_COLUMNS[table].split()[0])
         if offending:
             found[table] = sorted(set(offending))
     return found
@@ -127,11 +156,38 @@ class TestZeroStorageDisclosure:
             f"KNOWN_UNDISCLOSED is non-empty, so some model storing money is undisclosed: {KNOWN_UNDISCLOSED}"
         )
 
-    def test_the_two_sprint_783_tables_are_disclosed(self):
-        """Regression pin for the specific pair that drifted for ~6 months."""
+    def test_the_sprint_783_tables_are_disclosed(self):
+        """Regression pin for every table this sprint had to add to §2.2."""
         documented = _documented_tables()
-        for table in ("uncorrected_misstatements", "analytical_expectations"):
+        for table in (
+            "uncorrected_misstatements",
+            "analytical_expectations",
+            "admin_audit_logs",
+            "tool_activities",
+        ):
             assert _normalize(table) in documented, f"{table} missing from §2.2 — Sprint 783 regression"
+
+    def test_serialized_money_columns_are_all_disclosed(self):
+        """Every hand-maintained serialized-money entry must be documented."""
+        documented = _documented_tables()
+        missing = [t for t in SERIALIZED_MONEY_COLUMNS if _normalize(t) not in documented]
+        assert not missing, f"serialized-money tables absent from §2.2: {missing}"
+
+    def test_flagged_accounts_disclosure_is_honest(self):
+        """`tool_runs.flagged_accounts` stores account NAMES, not a count.
+
+        The §2.1 example originally read "3 flagged accounts", which reads as a
+        tally. It is a JSON list of account-name strings extracted from uploaded
+        tool output, so the row must not imply otherwise — this was the specific
+        claim that made the rewritten §1.1 definition false on first attempt.
+        """
+        text = ZERO_STORAGE_DOC.read_text(encoding="utf-8")
+        row = re.search(r"^\|\s*\*\*Tool Run Records\*\*\s*\|(.+)$", text, re.MULTILINE)
+        assert row, "Tool Run Records row missing from the §2.1 matrix"
+        assert "flagged account name" in row.group(1).lower(), (
+            "The Tool Run Records row must state that flagged account NAMES are stored. "
+            f"Got: {row.group(1).strip()[:120]}"
+        )
 
     def test_no_unqualified_never_stored_account_names_claim(self):
         """The absolute claim that caused the contradiction must not come back.

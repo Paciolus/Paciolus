@@ -241,3 +241,26 @@ Also recorded in-file: `starlette` deliberately carries **no** constraint, even 
 
 ---
 
+#### Round 2 — three further review findings on PR #169
+
+The automated reviewer caught three more, all verified correct before acting. The first is the important one.
+
+**P1 — the rewritten definition was *still* false.** The first fix replaced one absolute ("no account name is ever stored") with a narrower absolute ("no account name **parsed from an upload** is ever stored"). That is also untrue:
+- `tool_runs.flagged_accounts` is a `Text` column holding `json.dumps(list[str])` of **account names extracted from uploaded tool output** (`engagement_manager.py:421,449`).
+- `analytical_expectations.result_actual_value` can be auto-captured from tool output, so it is an upload-derived balance.
+
+Worse, §2.1 already disclosed the flagged-account storage, so the new definition contradicted the matrix two sections below it — the same self-contradiction the sprint existed to remove, reintroduced one layer down.
+
+**The lesson, and the reason the final wording is shaped the way it is:** an absolute exclusion cannot survive feature work. Every time a feature persists one more derived value, an absolute becomes a false statement and nobody notices because the feature's own docs are correct. §1.1 is therefore now a **positive enumeration** — it states the four classes that *are* retained and points at §2.1/§2.2 for the exhaustive list — rather than asserting what never is. A new feature that persists something new breaks the test, not the truth of the sentence.
+
+The guarantee is also now stated in one plain line, because that is what a CPA actually needs: *your client's ledger is never warehoused.* A breach exposes diagnostic metadata and the practitioner's own conclusions, not the trial balance.
+
+**P2 — the UI notices implied deletion erases.** `soft_delete` only sets `archived_at` / `archived_by` / `archived_reason`; the row and its amounts remain. Both notices said "kept until you delete it". Reworded to "Deleting a line archives it rather than erasing it, so it stays in the audit trail", and the §2.1 retention cells now read "archived, not erased, on delete (§2.3)".
+
+**P2 — the guard had two holes and its "full enforcement" claim was overstated.**
+1. *Hardcoded module list.* It imported five model modules by name and missed `admin_audit_model` entirely, so `admin_audit_logs` — which carries `amount_cents` in `details_json` — escaped a check that claimed full coverage. Module discovery is now a glob over `*model*.py` plus the `billing`/`engagement`/`shared` packages.
+2. *Blind to money inside serialized columns.* A `Text`/`JSON` column cannot be type-inspected, so `details_json` and `summary_json` were invisible. Added a hand-maintained `SERIALIZED_MONEY_COLUMNS` registry — explicitly the one part of the check that cannot be automated — covering `admin_audit_logs.details_json`, `tool_activities.summary_json` and `uncorrected_misstatements.accounts_affected_json`.
+
+Dynamic discovery then surfaced two more undisclosed tables, both now documented: **§2.2 is 12 → 14 subsections** (Admin Audit Logs, Tool Activities). Note `admin_audit_logs` monetary amounts describe *our own* billing actions against a subscription, not client data — stated in the subsection so the distinction is on the record.
+
+**Round-2 verification:** guard 8/8 (was 6). Regression-tested both new holes by removing the Admin Audit Logs subsection and reverting the flagged-accounts wording — three tests failed naming `admin_audit_logs: details_json` and the honesty assertion fired, then all 8 passed on restore. `ruff` clean, `tsc --noEmit` exit 0, 4 suites / 36 tests on the touched components.

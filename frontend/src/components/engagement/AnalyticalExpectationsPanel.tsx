@@ -593,8 +593,9 @@ function CreateExpectationModal({ engagementId, onClose, onCreate }: ModalProps)
               persisted, unlike the flux/ratio inputs behind the actual. Stated at
               the point of entry. See ZERO_STORAGE_ARCHITECTURE.md §2.2. */}
           <div className="text-xs font-sans text-content-disabled">
-            Saved to this engagement and kept until you delete it. Your expectation and the
-            comparison result are stored; the underlying trial balance rows are not.
+            Saved to this engagement. Your expectation and the comparison result are
+            stored; the underlying trial balance rows are not. Deleting an expectation
+            archives it rather than erasing it, so it stays in the audit trail.
           </div>
 
           <div className="flex justify-end gap-2">

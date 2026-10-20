@@ -44,17 +44,22 @@ This document explains the technical implementation, security advantages, and co
 
 ### 1.1 Definition
 
-**Zero-Storage** means that Paciolus **never persists raw uploaded files, nor any account name, balance, or transaction detail parsed out of one**, to any disk, database, or cloud storage system. All trial balance processing occurs in ephemeral memory and is destroyed immediately after analysis completes.
+**Zero-Storage** means that Paciolus **never persists the uploaded file, nor the trial balance itself** — no complete row set, and no line-level balance-by-account ledger — to any disk, database, or cloud storage system. Parsing happens in ephemeral memory and the parsed data is destroyed when analysis completes.
 
-Two classes of data are deliberately retained, and the distinction is the whole of the term's scope:
+What the term guarantees, stated plainly: **your client's ledger is never warehoused.** A breach of our database exposes diagnostic metadata and the practitioner's own conclusions — not the underlying trial balance.
 
-| | Origin | Persisted? |
+What the term does **not** guarantee is that no account name or figure ever reaches the database. Four narrow classes are deliberately retained, and §2.1 and §2.2 below enumerate them exhaustively:
+
+| Retained class | Example | Where |
 |---|---|---|
-| **Upload-derived detail** | parsed from a file the user uploaded | **Never.** Ephemeral, memory-only. |
-| **Aggregate metadata** | computed from an upload, then reduced | Yes — category totals, ratios, row counts (§2.2) |
-| **Practitioner-entered workpaper entries** | typed by the auditor as their own documented conclusion | Yes — engagement lifecycle (§2.2) |
+| **Aggregate metadata** | category totals, financial ratios, row counts | `diagnostic_summaries`, `activity_logs` |
+| **Flagged account identifiers** | the account *names* a tool flagged — identifiers only, never their balances | `tool_runs.flagged_accounts` |
+| **Single computed figures** | one ISA 520 comparison actual and its variance, not the population behind it | `analytical_expectations` |
+| **Practitioner-entered workpaper entries** | an ISA 450 misstatement line the auditor typed themselves | `uncorrected_misstatements` |
 
-The third class exists because ISA 450 and ISA 520 workpapers *are* the auditor's own record of decisions, not a derivative of tool output. Where such an entry happens to contain an account name and an amount, those characters were typed by the practitioner, not extracted from their client's file. Zero-Storage has never claimed otherwise, but earlier revisions of this document stated the exclusion in absolute terms that did not survive those features shipping; §2.1 and §2.2 below are now exhaustive.
+The fourth class exists because ISA 450 and ISA 520 workpapers *are* the auditor's own record of decisions rather than a derivative of tool output; where such an entry contains an account name and an amount, the practitioner typed those characters.
+
+The second and third classes are upload-derived and are the reason this section is worded as a positive enumeration rather than an absolute exclusion. Earlier revisions of this document claimed that no account name parsed from an upload was ever stored. That was not true once tool-run flagging and ISA 520 actual-capture shipped, and the surrounding sections contradicted it. Stating what is retained — rather than asserting what never is — is the only version of this claim that stays true as features ship.
 
 ### 1.2 Philosophy
 
@@ -114,9 +119,11 @@ Zero-Storage does **not** apply to:
 | **Client Metadata** | ✅ Stored | Until deletion | "Acme Corp, Technology, 12-31 FYE" |
 | **Diagnostic Summaries** | ✅ Stored (aggregates) | 365 days (1 year) | "47 rows, balanced, 3 anomalies, total_assets: $1.2M" |
 | **Engagement Metadata** | ✅ Stored (metadata only) | Until account deletion | "Period: Q4 2025, materiality: $50K, status: active" |
-| **Tool Run Records** | ✅ Stored (metadata only) | Until account deletion | "Revenue Testing, score: 85, 3 flagged accounts" |
-| **Uncorrected Misstatements (ISA 450)** | ✅ Stored (practitioner-entered) | Engagement lifecycle (soft-delete) | "Accrued Payroll CR 12,400; judgmental; net income impact (12,400)" |
-| **Analytical Expectations (ISA 520)** | ✅ Stored (practitioner-entered) | Engagement lifecycle (soft-delete) | "Expected revenue 4.2M ±5%; actual 4.47M; variance 270K" |
+| **Tool Run Records** | ✅ Stored (metadata + flagged account names) | Until account deletion | "Revenue Testing, score: 85, flagged: ['Accrued Payroll', 'Deferred Revenue']" — identifiers only, no balances |
+| **Uncorrected Misstatements (ISA 450)** | ✅ Stored (practitioner-entered) | Engagement lifecycle — **archived, not erased**, on delete (§2.3) | "Accrued Payroll CR 12,400; judgmental; net income impact (12,400)" |
+| **Analytical Expectations (ISA 520)** | ✅ Stored (expectation + single actual) | Engagement lifecycle — **archived, not erased**, on delete (§2.3) | "Expected revenue 4.2M ±5%; actual 4.47M; variance 270K" |
+| **Admin Audit Log Details** | ✅ Stored | Append-only | "credit issued, amount_cents: 5000" — our billing actions, never client data |
+| **Activity Feed Summaries** | ✅ Stored (caller-supplied) | Until account deletion | Free-form blob, capped at 2,000 characters |
 | **Follow-Up Items** | ✅ Stored (narratives only) | Until account deletion | "Investigate revenue timing — no amounts or account numbers" |
 | **Subscription Records** | ✅ Stored | Until account deletion | "Tier: team, Stripe ref: sub_xxx" |
 | **Billing Events** | ✅ Stored (append-only) | Until account deletion | "subscription_created, tier: team" |
@@ -337,6 +344,31 @@ Paciolus maintains a **minimal metadata database** for essential business functi
 
 **What Is NOT Stored:**
 - The flux line items, ratio inputs, or trial balance rows the actual was derived from
+
+#### Admin Audit Logs Table
+**Purpose:** Append-only record of internal administrative actions (impersonation, tier changes, credits, refunds)
+**Fields Stored:**
+- Admin user ID, action type, target org / target user IDs
+- Timestamp, IP address
+- `details_json` — action-specific payload. **For billing actions this includes monetary amounts** (e.g. `{"amount_cents": 5000, "reason": "..."}` for a credit or refund).
+
+**Why this is outside the Zero-Storage exclusion:** the amounts describe *our own* billing actions against a customer's subscription, not the customer's client data. No trial balance figure reaches this table.
+
+**What Is NOT Stored:**
+- Card details or any payment instrument (Stripe holds these)
+- Any client financial data from an upload
+
+#### Tool Activities Table
+**Purpose:** Unified activity feed for the workspace timeline
+**Fields Stored:**
+- User ID, tool name, engagement ID, record count
+- Display-truncated filename (not the file)
+- `summary_json` — a caller-supplied summary blob, capped at 2,000 characters
+
+**Why this is called out:** `summary_json` is free-form and supplied by the client application rather than fixed by a schema, so its contents are bounded by length but not by type. It is listed here so the exception is disclosed rather than implied.
+
+**What Is NOT Stored:**
+- The uploaded file or any row set from it
 
 ### 2.3 Soft-Delete Archival Model
 
