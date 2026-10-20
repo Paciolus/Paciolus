@@ -342,8 +342,8 @@ Re-enabling the three auto-disabled workflows surfaced that two of them cannot p
 ---
 
 ### Sprint 779: Boundary-language and citation residue (liability pass)
-**Status:** PENDING.
-**Priority:** P1 — pure liability reduction, roughly an hour, no dependencies.
+**Status:** COMPLETE.
+**Priority:** P1 — pure liability reduction, no dependencies.
 **Source:** `reports/launch-readiness-assessment-2026-10-19.md` B-1 and B-3.
 
 The highest-consequence category of defect in this product is language that edges from *diagnostic indicator* toward *audit conclusion*, because that is the boundary the whole liability posture rests on. Three pieces of residue survive:
@@ -353,6 +353,75 @@ The highest-consequence category of defect in this product is language that edge
 3. **AS 1215 is still miscited as a JE Testing standard in three internal docs** — `docs/03-product/REPORT_STANDARDS_SPEC.md:440`, `docs/01-product/USER_PERSONAS.md:273`, `docs/02-technical/ARCHITECTURE.md:380`. Customer-facing surfaces are already correct and CI-guarded; this is the leftover. AS 1215 is *Audit Documentation*; the JE fraud standard is AS 2401. Ten-minute fix, worth doing because the customer-facing version of this exact error was ranked the single most dangerous finding in the system.
 
 **Verification:** extend `test_memo_boundary_phrasing.py` to assert the sample generator is held to the same banned-phrase rules as the shipped generators — otherwise this recurs. Extend `test_citation_consistency.py` to cover `docs/` so the citation cannot drift back.
+
+#### What landed
+
+**1. Sample-report phrasing (`generate_sample_reports.py:2266`).** The root-cause clause is gone.
+
+**Correction to this brief:** it instructed rephrasing to match "the shipped wording", quoted as
+*"engagement team should evaluate whether procure-to-pay procedures warrant expansion"*. **That wording
+exists nowhere in the codebase** — the brief described a fix that never landed. The shipped tier
+commentary is `three_way_match_memo_generator.py:112` *"Below best practice — investigate patterns"*, and
+`tests/test_twm_memo.py:166` asserts the shipped finding text carries no recommendation clause at all.
+Aligned to what ships: *"Below 80% best practice threshold; investigate matching patterns (auditor
+judgment required to determine cause)"*.
+
+**2. Risk-tier qualifier — one constant, not eight edits.** `RISK_TIER_BASIS_NOTE` in `shared/memo_base.py`
+reads *"Basis: automated flag density — auditor judgment required per ISA 315. The diagnostic tier is an
+indicator, not a risk assessment or a conclusion on internal control."* It is **composed into
+`RISK_SCALE_LEGEND`**, which is already rendered on every surface that prints a tier — the shared
+`build_results_summary_section` path plus bank rec, engagement dashboard, multi-period, three-way match and
+the TB diagnostic PDF. So surfaces added later inherit the qualifier without a code change.
+
+`anomaly_summary_generator.py` was the one gap: it builds its label straight from `RISK_TIER_DISPLAY` and
+never rendered the legend, so its §I summary line and its prominent §IV "ENGAGEMENT RISK INDICATOR" box
+now render the note explicitly.
+
+**3. AS 1215 → AS 2401 / ISA 240** in `docs/03-product/REPORT_STANDARDS_SPEC.md:440`,
+`docs/01-product/USER_PERSONAS.md:273` and `docs/02-technical/ARCHITECTURE.md:380`. Matched to
+`tools_registry.py`, whose canonical JE standards are `("ISA 240", "AS 2401", "Nigrini 2012")` — note the
+docs also claimed ISA 530, which is sampling, not the fraud standard. Fixed an adjacent count drift in the
+same line while there: JE is a 19-test battery, not 18.
+
+#### The two guards, and what widening them found
+
+**Boundary scan scope was the actual defect.** `test_memo_boundary_phrasing.py` has protected memo wording
+since Sprint 721, and the pattern that catches this exact phrase (`\bsystemic\s+review.*recommended\b`)
+was already in it. Nothing was missing from the rules — only from the file list, which was the glob
+`backend/*_memo_generator.py`. Added `EXTRA_SCANNED_FILES`: the sample generator, anomaly summary,
+engagement dashboard, and three shared text modules, with a test asserting every path in it still resolves
+so a rename cannot silently drop coverage.
+
+Widening surfaced nine more hits — **eight legitimate, one real**:
+- Eight are ISA 265 *negative* use: "does not constitute an audit opinion", "classification … is a matter
+  of auditor judgment", and the literal title of PCAOB AS 1305. Annotated `# allow-deny-phrase: <reason>`,
+  matching the precedent at `analytical_expectation_memo_generator.py:58`.
+- One was real: `shared/follow_up_procedures.py:153` told the auditor a misposting "requires correction" —
+  a conclusion about the entity's records, in text reused across tools. Now "warrants further review".
+
+**Scanner refinement:** the scan also fired on `anomaly_summary_generator.py`'s module docstring, where a
+`GUARDRAIL` note names the ISA 265 sections the template deliberately refuses to produce. Naming them is
+the point, and annotating it put a pseudo-comment inside docstring prose. `_scan_source` now skips the
+module-docstring line range via `ast` — a module docstring is maintainer documentation and never reaches a
+rendered PDF.
+
+**Citation scan scope, same lesson.** `test_citation_consistency.py` covered customer-facing surfaces only,
+which is exactly why Sprint 717's sweep held on all five of those and then drifted back in three internal
+docs for six months. The AS-1215 adjacency check now runs over `DOC_SCANNED_GLOBS` as well. The
+**registration** check deliberately stays customer-facing: internal docs legitimately cite unregistered
+standards in post-mortems and lexicon examples, and failing on those would make the guard noisy enough to
+get disabled.
+
+#### Verification
+
+- Both guards **regression-proved**: each defect re-introduced, the corresponding test confirmed to fail
+  naming the offending file, then restored to green. 29/29 on the two guard suites.
+- Targeted sweep over every memo / report / citation / boundary / PDF-contract suite: **1,197 passed**.
+  The 18 memo PDF contract tests render through ReportLab, which is what validates the `<br/>` in the
+  recomposed legend.
+- Full backend suite green; `ruff check` clean, `ruff format` applied; `mypy` reports no new errors in the
+  touched modules.
+- No frontend files touched.
 
 ---
 

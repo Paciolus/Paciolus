@@ -377,7 +377,7 @@ backend/
 ├── # Export
 ├── pdf_generator.py              # PDF report generation (ReportLab)
 ├── excel_generator.py            # Excel workpaper generation (openpyxl)
-├── je_testing_memo_generator.py  # JE Testing Memo PDF (PCAOB AS 1215)
+├── je_testing_memo_generator.py  # JE Testing Memo PDF (PCAOB AS 2401 / ISA 240)
 ├── ap_testing_memo_generator.py  # AP Testing Memo PDF (ISA 240 / PCAOB AS 2401)
 │
 ├── # Infrastructure

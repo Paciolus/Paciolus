@@ -437,7 +437,7 @@ Where both ISA and PCAOB/US GAAP standards apply, cite both with a slash:
 |--------|------------------------------|
 | TB Diagnostic | ISA 520, ISA 315 |
 | Financial Statements | ASC 230 / IAS 7 (Cash Flow), IAS 1 (Presentation) |
-| JE Testing | PCAOB AS 1215, ISA 530 |
+| JE Testing | PCAOB AS 2401, ISA 240 |
 | AP Testing | ISA 240, ISA 500, PCAOB AS 2401 |
 | Payroll Testing | ISA 240, ISA 500, PCAOB AS 2401 |
 | Revenue Testing | ISA 240, ISA 500, ASC 606 / IFRS 15 |

@@ -268,9 +268,9 @@ This document defines the core user personas for Paciolus. Understanding our use
 - ⏳ Mobile app (roadmap)
 
 **For Mike (CPA Firm):**
-- ✅ JE Testing — 18-test battery with Benford's Law, stratified sampling (Phase VI)
+- ✅ JE Testing — 19-test battery with Benford's Law, stratified sampling (Phase VI)
 - ✅ AP Testing Memo — ISA 240 / PCAOB AS 2401 references (Phase VII)
-- ✅ JE Testing Memo — PCAOB AS 1215 / ISA 530 references (Phase VI)
+- ✅ JE Testing Memo — PCAOB AS 2401 / ISA 240 references (Phase VI)
 - ⏳ Team accounts (multi-user)
 - ⏳ White-label branding
 - ⏳ Workflow templates

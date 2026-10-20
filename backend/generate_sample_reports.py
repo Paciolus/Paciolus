@@ -2263,7 +2263,8 @@ def gen_three_way_match() -> None:
             "flags_by_severity": {"high": 18, "medium": 38, "low": 6},
             "top_findings": [
                 "7 Material Variances — Net Overbilling $23,450.00 (invoice amounts exceed PO-authorized amounts)",
-                "75.6% Full Match Rate — Below 80% best practice threshold; systemic review of procure-to-pay controls recommended",
+                "75.6% Full Match Rate — Below 80% best practice threshold; investigate matching patterns "
+                "(auditor judgment required to determine cause)",
                 "5 Unmatched Invoices — Unauthorized payment risk; do not release payment until PO authorization is confirmed",
                 "66-Day Date Gap — Potential backdating on PO-2025-0847 (PO date 2025-10-15, invoice 2025-12-20)",
             ],
@@ -4105,9 +4106,9 @@ def gen_anomaly_summary() -> None:
     DISCLAIMER_TEXT = (
         "DATA ANALYTICS REPORT \u2014 NOT AN AUDIT COMMUNICATION. "
         "This report lists data anomalies detected through automated testing. It does not "
-        "constitute an audit opinion, internal control assessment, or management letter per "
+        "constitute an audit opinion, internal control assessment, or management letter per "  # allow-deny-phrase: disclaiming what the report is NOT (ISA 265 negative use)
         "ISA 265/PCAOB AS 1305. The auditor must perform additional procedures and provide "
-        "all deficiency classifications in the blank section below."
+        "all deficiency classifications in the blank section below."  # allow-deny-phrase: instructs the auditor that classification is theirs (ISA 265 negative use)
     )
 
     AUDITOR_INSTRUCTIONS = (

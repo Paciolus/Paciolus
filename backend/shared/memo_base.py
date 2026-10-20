@@ -105,9 +105,21 @@ RISK_TIER_DISPLAY = {
     "high": ("HIGH", ClassicalColors.CLAY),
 }
 
-RISK_SCALE_LEGEND = (
+# Sprint 779: the diagnostic tier label is prominent enough that a practitioner could
+# read it as an ISA 315 risk-assessment conclusion. It is not one — it is a function of
+# automated flag density. The qualifier is composed into the scale legend so that every
+# surface rendering a tier also renders its basis, including surfaces added later.
+RISK_TIER_BASIS_NOTE = (
+    "Basis: automated flag density \u2014 auditor judgment required per ISA 315. "
+    "The diagnostic tier is an indicator, not a risk assessment or a conclusion on internal control."
+)
+
+_RISK_SCORE_SCALE = (
     "Diagnostic Score Scale: 0\u201310 = Low  |  11\u201325 = Moderate  |  26\u201350 = Elevated  |  51\u2013100 = High"
 )
+
+# Rendered through ReportLab Paragraph markup, so <br/> is the line break.
+RISK_SCALE_LEGEND = f"{_RISK_SCORE_SCALE}<br/>{RISK_TIER_BASIS_NOTE}"
 
 
 def validate_risk_tier_coverage(known_tiers: set[str]) -> list[str]:

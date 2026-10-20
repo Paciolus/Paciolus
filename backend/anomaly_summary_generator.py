@@ -44,7 +44,7 @@ from follow_up_items_model import FollowUpItem
 from models import Client
 from pdf_generator import ClassicalColors, LedgerRule, generate_reference_number
 from shared.framework_resolution import ResolvedFramework
-from shared.memo_base import RISK_TIER_DISPLAY, create_memo_styles
+from shared.memo_base import RISK_TIER_BASIS_NOTE, RISK_TIER_DISPLAY, create_memo_styles
 from shared.report_chrome import (
     ReportMetadata,
     build_cover_page,
@@ -64,9 +64,9 @@ from workpaper_index_generator import TOOL_LABELS
 DISCLAIMER_TEXT = (
     "DATA ANALYTICS REPORT \u2014 NOT AN AUDIT COMMUNICATION. "
     "This report lists data anomalies detected through automated testing. It does not "
-    "constitute an audit opinion, internal control assessment, or management letter per "
-    "ISA 265/PCAOB AS 1305. Classification of findings as deficiencies, significant "
-    "deficiencies, or material weaknesses is a matter of auditor judgment and is "
+    "constitute an audit opinion, internal control assessment, or management letter per "  # allow-deny-phrase: disclaiming what the report is NOT (ISA 265 negative use)
+    "ISA 265/PCAOB AS 1305. Classification of findings as deficiencies, significant "  # allow-deny-phrase: disclaimer reserving classification to the auditor (ISA 265 negative use)
+    "deficiencies, or material weaknesses is a matter of auditor judgment and is "  # allow-deny-phrase: disclaimer reserving classification to the auditor (ISA 265 negative use)
     "outside the scope of this report."
 )
 
@@ -98,7 +98,7 @@ AUTHORITATIVE_REFERENCES = [
     ("AICPA", "AU-C \u00a7 265", "Communicating Internal Control Related Matters"),
     ("AICPA", "AU-C \u00a7 330", "Performing Audit Procedures in Response to Assessed Risks"),
     ("AICPA", "AU-C \u00a7 520", "Analytical Procedures"),
-    ("PCAOB", "AS 1305", "Communications About Control Deficiencies"),
+    ("PCAOB", "AS 1305", "Communications About Control Deficiencies"),  # allow-deny-phrase: AS 1305 title
     ("PCAOB", "AS 2305", "Substantive Analytical Procedures"),
 ]
 
@@ -352,6 +352,7 @@ class AnomalySummaryGenerator:
                 styles["MemoBody"],
             )
         )
+        story.append(Paragraph(RISK_TIER_BASIS_NOTE, styles["MemoBodySmall"]))
         story.append(Spacer(1, 6))
 
         # Executed tools table
@@ -663,7 +664,7 @@ class AnomalySummaryGenerator:
                             Paragraph("Practitioner Classification Notes", styles["MemoTableCell"]),
                             Paragraph(
                                 "[PRACTITIONER TO COMPLETE]<br/>"
-                                "<i>Classification of findings (e.g., deficiency, exception, inquiry) "
+                                "<i>Classification of findings (e.g., deficiency, exception, inquiry) "  # allow-deny-phrase: disclaimer reserving classification to the auditor (ISA 265 negative use)
                                 "is a matter of auditor judgment and is outside the scope of this report.</i>",
                                 styles["MemoTableCell"],
                             ),
@@ -743,6 +744,7 @@ class AnomalySummaryGenerator:
             )
         )
         story.append(risk_box)
+        story.append(Paragraph(RISK_TIER_BASIS_NOTE, styles["MemoBodySmall"]))
         story.append(Spacer(1, 8))
 
         # Risk details
