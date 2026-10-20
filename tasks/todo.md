@@ -144,7 +144,7 @@
 
 **Out of scope:** `COHESION_REMEDIATION.md` and `tasks/archive/**` are historical records of the 12-tool era and keep their numbers. `CLAUDE.md`'s era table line for Sprints 255–278 is also historical and correct as written.
 
-**Verification:** extend the documentation-consistency gate so a prose tool count that disagrees with `tools_registry.CANONICAL_TOOL_COUNT` fails CI. Without the guard this recurs — exactly as the AS 1215 citation did after being fixed in code (Sprint 779 item 3).
+**Verification:** extend the documentation-consistency gate so a prose tool count that disagrees with `tools_registry.MARKETING_AUDIT_TOOL_COUNT` fails CI. **Use that name** — it is the backend constant (`tools_registry.py:248`, computed from the `is_marketing_audit_tool` flag). `CANONICAL_TOOL_COUNT` is the *frontend* ledger's literal (`tool-ledger.ts:221`), already tied to the backend value by `tests/test_catalog_consistency.py`; a backend gate importing it would fail. Without the guard this recurs — exactly as the AS 1215 citation did after being fixed in code (Sprint 779 item 3).
 
 ---
 
