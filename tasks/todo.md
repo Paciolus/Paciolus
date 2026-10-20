@@ -242,8 +242,8 @@ never the right denominator even at 12 tools. Use `tools_registry.MARKETING_AUDI
 ---
 
 ### Sprint 788: Tool navigation bar lists 12 of 18 tools
-**Status:** PENDING.
-**Priority:** P2 — the tools are reachable, just not from the bar that sits on every tool page.
+**Status:** COMPLETE — **but filed against the wrong file.** See the correction below.
+**Priority:** P2 — the tools were reachable elsewhere, just not from the bar on every tool page.
 **Source:** Sprint 784 discovery, 2026-10-20.
 
 `frontend/src/components/shared/ToolNav.tsx` hardcodes a 12-entry `TOOLS` array and a 12-member `ToolKey`
@@ -258,6 +258,66 @@ tool sees a bar that silently omits a third of what they are paying for.
 stay fixed, since `test_catalog_consistency.py` already ties the ledger to the registry. Decide the overflow
 treatment: `INLINE_COUNT = 6` leaves twelve items in the More dropdown, which likely wants grouping
 (diagnostics / testing / tax & controls) rather than a flat list.
+
+#### Correction: this sprint named a dead component
+
+As filed, the sprint targeted `frontend/src/components/shared/ToolNav.tsx`. **That component
+was replaced by `AuthenticatedShell` in Sprint 475** and was referenced only by its own test
+file — it rendered on no page at all. Its hardcoded 12-tool list is exactly what produced the
+wrong filing: I read the list, correctly concluded that six tools were missing from tool
+navigation, and incorrectly concluded that this was the file responsible.
+
+The live surface is `UnifiedToolbar` → `MegaDropdown` → `TOOL_COLUMNS` in
+`UnifiedToolbar/toolbarConfig.ts`. The defect was real there: twelve audit tools plus Flux and
+Reconciliation Intel, with all six Sprint-689 tools absent from every column.
+
+#### What landed
+
+**A fourth column.** `TOOL_COLUMNS` gained **Tax & Filings** (W-2/W-3, Form 1099, Book-to-Tax),
+Segregation of Duties joined **Testing Suite** as controls testing, and Intercompany
+Elimination + Cash Flow Projector joined **Advanced**. Grouping follows what each tool does,
+not where there was room.
+
+**The grid is derived, not hardcoded.** `MegaDropdown` had `grid-cols-4` — three tool columns
+plus Account — so adding a column would have silently overflowed the row. It now computes
+`repeat(TOOL_COLUMNS.length + 1, minmax(0, 1fr))`, and the panel widened 64rem → 76rem to
+carry the fifth column.
+
+**Two `toolKey` values corrected.** `journal_entry` → `journal_entry_testing` and
+`fixed_assets` → `fixed_asset_testing`. The field's own comment promises it matches backend
+entitlement names; both were wrong. It is currently vestigial — `MegaDropdown` renders only
+`label` and `href` — so this fixes nothing today and prevents a future gating change from
+inheriting two wrong keys.
+
+**Dead `ToolNav` deleted** along with its test, its re-export from `components/shared/index.ts`,
+and two docblocks in `lib/commandRegistry.ts` that still described it as the model for tool
+commands. Dead code carrying a stale copy of real data is worse than dead code: it reads as
+authoritative, and it misdirected this sprint's own filing.
+
+#### The guard
+
+Four tests in `__tests__/MegaDropdown.test.tsx` close the last open edge of the catalog chain:
+
+- every tool in `TOOL_LEDGER` appears in the navigation;
+- the navigation offers no tool outside the ledger, except two explicitly named non-ledger
+  destinations (`/flux`, `/recon`) — so an href typo cannot pass as an intentional extra;
+- each tool appears exactly once across all columns;
+- `toolKey` matches the ledger id for every ledger-backed item.
+
+`backend/tests/test_catalog_consistency.py` already tied the registry to the ledger, so the
+chain is now **registry → ledger → navigation**, closed end to end. Regression-proved by
+removing Book-to-Tax from the nav: the coverage test failed naming it, then passed on restore.
+
+#### Verification
+
+- Frontend suite **206 suites / 2,010 tests, 0 failures** (was 207/2,013 — `ToolNav`'s 7 tests
+  removed, 4 added to MegaDropdown).
+- `npx tsc --noEmit` exit 0. `npm run build` clean, every app route still `ƒ (Dynamic)` with
+  `ƒ Proxy (Middleware)` active, so the nonce-based CSP contract is intact.
+- **Not verified in a browser.** The five-column layout is checked by test and by arithmetic —
+  the longest label is 24 characters at `text-sm` in a ~219px column — but the toolbar lives
+  behind authentication and I did not render it. The derived grid means a future column cannot
+  overflow silently; column *width* at five columns is the part that rests on that arithmetic.
 
 ---
 

@@ -4,6 +4,37 @@
 
 ---
 
+## Dead code with a stale copy of real data misdirects the next reader (Sprint 788, 2026-10-20)
+
+I filed Sprint 788 as "tool navigation bar lists 12 of 18 tools" and named
+`components/shared/ToolNav.tsx`. The symptom was real. The file was wrong: `ToolNav` had been
+superseded by `AuthenticatedShell` in **Sprint 475** and rendered on no page — its only
+remaining reference was its own test.
+
+What misled me was not absence of information but presence of *plausible* information. A
+component named `ToolNav`, holding a tidy `TOOLS` array with twelve entries and an
+`INLINE_COUNT` constant, reads as the authoritative nav definition. I confirmed the count was
+wrong and stopped looking. The live surface — `UnifiedToolbar/toolbarConfig.ts` — had the same
+defect, so the sprint's conclusion survived its false premise, which is luck rather than
+method.
+
+**Pattern: before fixing a component, confirm something renders it.** One grep for imports,
+excluding its own test, would have cost seconds and redirected the whole sprint. The cheap
+check is not "does this file contain the bug" but "does this file reach a user".
+
+**And delete dead code that duplicates live data.** Unused code is ordinary debt; unused code
+holding a stale copy of a list that exists elsewhere is a trap, because it looks like a source
+of truth and ages invisibly. `ToolNav` is gone, along with two docblocks elsewhere that still
+cited it as the model for the command palette's tool entries.
+
+**Hardcoded layout constants have the same failure mode.** `MegaDropdown` used
+`grid-cols-4` for "three tool columns plus Account". Adding a fourth tool column would have
+pushed Account onto a second row with no error anywhere — a silent visual break. The grid now
+derives from `TOOL_COLUMNS.length + 1`. Where a constant encodes a count of something that can
+change, derive it or it will be wrong exactly once, quietly.
+
+---
+
 ## A guard that cannot fail on the surface that matters is decoration (Sprint 784, 2026-10-20)
 
 Sprint 784 added a `tool_count_consistency` rule to the documentation guard, because Sprint 689

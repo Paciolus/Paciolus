@@ -2,7 +2,8 @@
  * Command Registry
  *
  * Static command definitions + scoring algorithm for the universal command palette.
- * Tool commands mirror ToolNav's TOOLS array; guards mirror UpgradeGate's TIER_TOOLS.
+ * Tool commands mirror UnifiedToolbar's TOOL_COLUMNS (toolbarConfig.ts), which is
+ * itself checked against content/tool-ledger.ts; guards mirror UpgradeGate's TIER_TOOLS.
  */
 
 import type {
@@ -105,7 +106,7 @@ const NAV_COMMANDS: PaletteCommand[] = [
   },
 ]
 
-// Tool entries built from ToolNav's structure
+// Tool entries built from UnifiedToolbar's structure (toolbarConfig.ts)
 const TOOL_ENTRIES: { id: string; label: string; href: string; toolName: string; keywords: string[] }[] = [
   { id: 'tool:tb-diagnostics', label: 'TB Diagnostics', href: '/tools/trial-balance', toolName: 'trial_balance', keywords: ['trial', 'balance', 'diagnostics', 'tb'] },
   { id: 'tool:multi-period', label: 'Multi-Period Comparison', href: '/tools/multi-period', toolName: 'multi_period', keywords: ['multi', 'period', 'comparison', 'trend'] },

@@ -4,6 +4,10 @@
  * Contains reusable components used across multiple feature areas.
  * Sprint 41: Performance Quick Wins - Shared Component Extraction
  * Sprint 81: ToolNav extraction (eliminates 5 duplicated navbars)
+ * Sprint 475: ToolNav superseded by AuthenticatedShell / UnifiedToolbar.
+ * Sprint 788: ToolNav deleted — it rendered nowhere but carried a stale
+ *   12-tool list that read as authoritative. Tool navigation now derives
+ *   from UnifiedToolbar/toolbarConfig.ts, checked against content/tool-ledger.ts.
  */
 
 export { SectionHeader, default as SectionHeaderDefault } from './SectionHeader'
@@ -22,7 +26,6 @@ export {
   default as EmptyStateCardDefault,
 } from './EmptyStateCard'
 
-export { ToolNav, type ToolKey } from './ToolNav'
 
 export { FileDropZone } from './FileDropZone'
 

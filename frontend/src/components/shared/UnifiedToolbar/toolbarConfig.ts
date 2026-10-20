@@ -43,13 +43,24 @@ const CORE_ANALYSIS: ToolColumn = {
 const TESTING_SUITE: ToolColumn = {
   heading: 'Testing Suite',
   items: [
-    { label: 'Journal Entry Testing', href: '/tools/journal-entry-testing', toolKey: 'journal_entry' },
+    { label: 'Journal Entry Testing', href: '/tools/journal-entry-testing', toolKey: 'journal_entry_testing' },
     { label: 'AP Testing', href: '/tools/ap-testing', toolKey: 'ap_testing' },
     { label: 'Revenue Testing', href: '/tools/revenue-testing', toolKey: 'revenue_testing' },
     { label: 'AR Aging', href: '/tools/ar-aging', toolKey: 'ar_aging' },
     { label: 'Payroll Testing', href: '/tools/payroll-testing', toolKey: 'payroll_testing' },
-    { label: 'Fixed Assets', href: '/tools/fixed-assets', toolKey: 'fixed_assets' },
+    { label: 'Fixed Assets', href: '/tools/fixed-assets', toolKey: 'fixed_asset_testing' },
     { label: 'Inventory Testing', href: '/tools/inventory-testing', toolKey: 'inventory_testing' },
+    { label: 'Segregation of Duties', href: '/tools/sod', toolKey: 'sod_checker' },
+  ],
+}
+
+/** Tax & Filings column — Sprint 788 (the 689d-f tools, previously unreachable here) */
+const TAX_AND_FILINGS: ToolColumn = {
+  heading: 'Tax & Filings',
+  items: [
+    { label: 'W-2 / W-3 Reconciliation', href: '/tools/w2-reconciliation', toolKey: 'w2_reconciliation' },
+    { label: 'Form 1099 Preparation', href: '/tools/form-1099', toolKey: 'form_1099' },
+    { label: 'Book-to-Tax', href: '/tools/book-to-tax', toolKey: 'book_to_tax' },
   ],
 }
 
@@ -58,6 +69,8 @@ const ADVANCED: ToolColumn = {
   heading: 'Advanced',
   items: [
     { label: 'Statistical Sampling', href: '/tools/statistical-sampling', toolKey: 'statistical_sampling' },
+    { label: 'Intercompany Elimination', href: '/tools/intercompany', toolKey: 'intercompany_elimination' },
+    { label: 'Cash Flow Projector', href: '/tools/cash-flow-projector', toolKey: 'cash_flow_projector' },
     { label: 'Flux Analysis', href: '/flux', toolKey: 'flux_analysis' },
     { label: 'Reconciliation Intel', href: '/recon', toolKey: 'reconciliation_intel' },
   ],
@@ -73,8 +86,14 @@ export const ACCOUNT_NAV: NavItem[] = [
   { label: 'Billing', href: '/settings/billing' },
 ]
 
-/** All 3 tool columns for the mega-dropdown */
-export const TOOL_COLUMNS: ToolColumn[] = [CORE_ANALYSIS, TESTING_SUITE, ADVANCED]
+/** All tool columns for the mega-dropdown.
+ *
+ * Every tool in `content/tool-ledger.ts` must appear in exactly one column —
+ * enforced by `__tests__/MegaDropdown.test.tsx`. The ledger is itself tied to
+ * `backend/tools_registry.py` by `tests/test_catalog_consistency.py`, so the
+ * chain registry -> ledger -> navigation is now closed end to end.
+ */
+export const TOOL_COLUMNS: ToolColumn[] = [CORE_ANALYSIS, TESTING_SUITE, TAX_AND_FILINGS, ADVANCED]
 
 /** Primary nav links shown in the toolbar center zone (ordered by frequency of use) */
 export const TOOLBAR_NAV: NavItem[] = [
