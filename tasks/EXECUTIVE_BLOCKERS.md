@@ -19,6 +19,15 @@ These items are **tracked in [`ceo-actions.md`](ceo-actions.md)** — this file 
 
 ---
 
+## Resolved Decisions
+
+| Date | Decision | Rationale |
+|------|----------|-----------|
+| 2026-10-19 | **Off-provider `pg_dump` → R2 backup ships before launch.** Neon PITR alone is not sufficient. *(Revised the same day — the first version deferred it.)* | The initial rationale claimed Zero-Storage meant no client financial data was persisted. **That was wrong.** `diagnostic_summaries` holds aggregate F/S totals, `uncorrected_misstatements` holds account names with DR/CR and amounts, and `analytical_expectations` holds expected and actual values — i.e. auditor workpaper content, not scaffolding. With no date pressure, a provisioned bucket and ~half a day of work, deferral is indefensible. See Sprint 778; the related policy contradiction is Sprint 783. |
+| 2026-10-19 | **Review gate removed from `main`.** All 12 required status checks retained. | GitHub forbids self-approval, so a 1-review rule is unsatisfiable solo and was being cleared with `--admin`, which also bypasses the status checks. Removing it makes CI the real, unbypassed gate. |
+
+---
+
 ## 🗄️ Deferred — SOC 2 (Revisit When Needed)
 
 > All items below deferred per CEO directive (2026-03-23). Not legally required for launch.

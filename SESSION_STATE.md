@@ -73,21 +73,40 @@ Note: a GitHub Actions incident ("Degraded availability for Actions, Pages and W
 
 ## Next Priority
 
-1. **Sprint 778 (P1)** — DR + backup workflows are structurally broken, and there is **no off-provider database backup**. Neon PITR is the only thing behind production data. `backup-integrity-check` is re-enabled and will file a `dr-failure` issue on the 1st of each month until this lands; the signal is true but its stated reason ("RENDER_API_KEY is not set") is misleading.
-2. **Add an external uptime monitor** (Better Stack / Healthchecks.io / UptimeRobot). The in-repo `uptime-check.yml` cannot be the durable primary: GitHub disables cron workflows after ~60 days of inactivity, so it switches itself off during exactly the quiet period it guards. Alert on `status != "healthy"`, not just non-200.
-3. **Add the `RENDER_API_KEY` secret** (read-only) to activate the deploy-drift probe. The repo currently has **no secrets at all**, which is also why the DR/backup workflows fail.
-4. **Triage the remaining open PRs** — now unblocked by the CVE fix. All report `MERGEABLE`; the 12 older Dependabot ones are `BEHIND` and need updating.
-5. Archive Active Phase when it next reaches 5 completed sprints (`sh scripts/archive_sprints.sh`; the commit-msg hook rejects at 5).
-6. Copy decision: the API description still reads "12-Tool Audit Intelligence Suite" though the canonical catalog has been 18 since Sprint 689.
-7. Still CEO-gated: Phase 4.1 Stripe cutover, 4.2 legal sign-off, 4.3 custom domain (`api.paciolus.com` still 404s).
+**Start here: the worklist for 2026-10-20** — https://claude.ai/code/artifact/03c5fdc7-21d6-4f5a-ad3e-75e54170a2b5
+Full assessment behind it — https://claude.ai/code/artifact/694c6f26-1673-48ee-88d6-4f18c2803b82 (also `reports/launch-readiness-assessment-2026-10-19.md`)
+
+**CEO set a soft launch date (no fixed date) on 2026-10-19 and delegated the open decisions.** That reordered the plan: demand validation now leads and gates the four open accounting gaps; billing waits. Engineering is deliberately limited to work that is worth doing regardless of what CPAs say — liability, the money path, and making the system tell the truth about itself.
+
+Two decisions are settled and recorded in `tasks/EXECUTIVE_BLOCKERS.md` → Resolved Decisions. **Do not re-open them:**
+1. **Review gate removed from `main`** (all 12 required status checks kept, strict). Merges now take the normal path and CI genuinely blocks — `--admin` should no longer be needed, and needing it is a signal. Linear history is on, so **merges must squash or rebase**.
+2. **Neon PITR is sufficient for launch.** Off-provider `pg_dump` → R2 deferred, binding trigger: *before the second paying customer*. Zero-Storage means no client financial data is persisted, so DB loss costs accounts and engagement scaffolding, not client records.
+
+Order of work (detail in the worklist, sprints filed in `tasks/todo.md`):
+
+| # | Item | Owner |
+|---|------|-------|
+| 01 | Read the `waitlist_signups` count — decides whether 03 is warm or cold | CEO |
+| 02 | Send Terms + Privacy to counsel; Security Policy §12 phone | CEO — **blocks launch, longest lead** |
+| 03 | 5–10 practising CPAs through demo + free tier on their own TB | CEO — **gates B-6…B-9** |
+| 04 | **Sprint 779** — boundary-language + AS 1215 residue (liability) | Claude, ~1h |
+| 05 | **Sprint 778** — Neon restore drill + fix DR false-green | Claude + CEO console, ½d |
+| 06 | **Sprint 780** — Stripe price-parity preflight + webhook coverage 59.9%→85% | Claude, ~1d |
+| 07 | **Sprint 782** — design-system regression lint + external uptime monitor | Claude + CEO signup, ~2h |
+
+Parked deliberately: B-6…B-9 (until 03 reports), Phase 4.1 live Stripe build (until pricing validated), 22-engine relocation, mypy baseline, 23 open PRs, dev-only npm advisories, off-provider backup.
 
 ## Recent Git Context
 
 ```
-edfceef3 fix: sync next-env.d.ts for the Next.js 16.4.2 upgrade
-3b7fe76e fix: clear all six red CVE/dependency CI gates (backend + frontend)
-f3d5ae46 fix: nightly audit artifacts — 109-day backlog (2026-05-02 to 2026-10-19)
-acb00510 fix: inventory fixture date time-bomb (nightly RED since 2026-05-31)
-8601c4ef Sprint 774: rate-limit storage outage resilience (P0 production restore)
-51906004 Merge pull request #129  (main — what production currently runs)
+cfaaf7b2  main HEAD
+          └─ #167 launch readiness assessment      (docs)
+          └─ #166 deploy-drift: compare trees      (docs/CI)
+          └─ #145 qa_warden timeout 1700s          (tooling)
+54f1963d  ← what production actually runs
+          └─ #165 Sprint 774 outage recovery       (last backend change)
 ```
+
+`main` is 3 merges ahead of the live deploy and all three touch nothing under `backend/`, so Render
+correctly has not redeployed. The tree-based drift check from #166 reads this as PASS — which is the
+exact false positive the original SHA comparison would have alarmed on every 15 minutes.
