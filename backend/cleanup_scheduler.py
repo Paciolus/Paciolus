@@ -336,35 +336,50 @@ def _job_retention_cleanup() -> None:
     _run_cleanup_job("retention_cleanup", run_retention_cleanup, is_retention=True)
 
 
-def _job_reset_upload_quotas() -> None:
-    """Reset upload counters for subscriptions past their billing period end.
+def reset_upload_quotas(db: Any) -> int:
+    """Zero the upload counter for ACTIVE subscriptions past their billing period end.
 
-    AUDIT-06 FIX 3: Uses atomic UPDATE instead of read-then-write to prevent
-    race conditions with concurrent upload increments.
+    Returns the number of rows updated.
+
+    AUDIT-06 FIX 3: a single atomic UPDATE rather than read-then-write, so a concurrent
+    upload increment cannot be lost.
+
+    Sprint 741a: this was raw SQL filtering `WHERE status = 'active'`, and it failed in
+    production **every hour** with `22P02 InvalidTextRepresentation`.
+    `Subscription.status` is mapped as `Enum(SubscriptionStatus)` with no
+    `values_callable`, so SQLAlchemy persists the enum member *name*: the Postgres type's
+    labels are `ACTIVE`, `PAST_DUE`, … and the lowercase `.value` is not among them.
+    Binding the enum member through the ORM emits whatever representation the mapping
+    actually uses, so the comparison cannot drift from the mapping again.
+
+    It is also the only place `uploads_used_current_period` is ever reset
+    (`shared/entitlement_checks.py` holds the only increment and the only read), so while
+    this was failing, any subscriber reaching their monthly cap would have stayed capped.
     """
+    from sqlalchemy import update
 
-    def _reset(db: Any) -> int:
-        from sqlalchemy import text
+    from subscription_model import Subscription, SubscriptionStatus
 
-        now = datetime.now(UTC)
-        # Atomic UPDATE — no read→write race with concurrent upload increments
-        result = db.execute(
-            text(
-                "UPDATE subscriptions "
-                "SET uploads_used_current_period = 0 "
-                "WHERE status = 'active' "
-                "AND current_period_end IS NOT NULL "
-                "AND current_period_end <= :now "
-                "AND uploads_used_current_period > 0"
-            ),
-            {"now": now},
+    now = datetime.now(UTC)
+    result = db.execute(
+        update(Subscription)
+        .where(
+            Subscription.status == SubscriptionStatus.ACTIVE,
+            Subscription.current_period_end.is_not(None),
+            Subscription.current_period_end <= now,
+            Subscription.uploads_used_current_period > 0,
         )
-        count = int(result.rowcount)
-        if count > 0:
-            db.commit()
-        return count
+        .values(uploads_used_current_period=0)
+    )
+    count = int(result.rowcount)
+    if count > 0:
+        db.commit()
+    return count
 
-    _run_cleanup_job("reset_upload_quotas", _reset)
+
+def _job_reset_upload_quotas() -> None:
+    """Scheduler entry point for :func:`reset_upload_quotas`."""
+    _run_cleanup_job("reset_upload_quotas", reset_upload_quotas)
 
 
 def purge_expired_export_shares(db: Any) -> int:
