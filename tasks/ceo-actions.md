@@ -3,9 +3,19 @@
 > **Single source of truth for every action required to launch Paciolus.**
 > Top-to-bottom execution order. Each phase's exit criteria must be met before the next phase starts.
 
-**Status as of 2026-04-24:** **Phases 1 and 2 complete.** Production live at https://paciolus.com on Render Standard + Neon Launch Postgres + Upstash Redis + Sentry + SendGrid Domain Authentication. Post-Phase-1 infra hardening has extended the foundation: `DB_TLS_OVERRIDE` cleared 2026-04-23 (Sprint 673), Neon password rotated 2026-04-22, orphan Render Postgres deleted 2026-04-22, SendGrid Single Sender revoked 2026-04-22, R2 buckets provisioned 2026-04-23 (unblocks Phase 4.4 backups and landed Sprint 611 ExportShare migration same day), Sprint 716 Loki log aggregation deployed 2026-04-24. Sentry integration verified by live traffic (Sprint 711 bugs surfaced in the process).
+**Status as of 2026-10-20.** Your next actions are items 1–4 under "Remaining launch path" below, and the full sequencing lives in [`reports/next-actions-2026-10-20.md`](../reports/next-actions-2026-10-20.md) (readable: https://claude.ai/code/artifact/cdbdd9eb-3039-44cf-a97b-23bc5c598543).
 
-**Your next action:** Phase 3 — Functional Validation. Exercise the 12 testing tools, 18 memo PDFs + 3 report PDFs, engagement layer, export sharing, admin dashboard, and bulk upload on https://paciolus.com. File bugs as you find them; I'm on standby.
+**What changed between 2026-04-24 and now — read this before working the checklists below.**
+
+- **The repo was dormant 2026-05-01 → 2026-10-19, and production was down for most of it.** Every backend endpoint returned HTTP 500 from roughly 2026-05 because two faults compounded: `AUDIT_CHAIN_SECRET_KEY` was never set on Render (so Sprint 768's deploy exited 1 at startup while Render kept serving the old image, hiding it), and the Upstash Redis host stopped resolving (500ing every rate-limited route, health probes included). Both fixed 2026-10-19; Redis moved to Render Key Value in the same region. Production is live and verified.
+- **The lesson that cost five months: a failed Render deploy is invisible from outside.** After any merge, confirm the live deploy SHA equals `main`. `scripts/latest_live_deploy_sha.py` and `.github/workflows/uptime-check.yml` now automate it — the drift probe needs a `RENDER_API_KEY` repo secret, which does not exist yet (the repo has **no secrets at all**).
+- **Two decisions are settled — do not re-open them.** (a) The review gate was removed from `main`; all 12 required status checks stay, so CI is now the real unbypassed gate. (b) The off-provider `pg_dump` → R2 backup **ships before launch** — Neon PITR alone is not sufficient, because the database does persist auditor workpaper content. See [`EXECUTIVE_BLOCKERS.md`](EXECUTIVE_BLOCKERS.md) → Resolved Decisions.
+- **Order correction to Phase 4:** do **4.3 (custom domain) before 4.1 (Stripe)**, or point the Stripe webhook at the `onrender.com` URL. Phase 4.1 below tells you to configure the webhook at `https://api.paciolus.com/billing/webhook`, and that host currently 404s — a signing secret configured against a dead endpoint breaks every webhook silently.
+- **The catalog is 18 tools, not 12.** Phase 3's checklist below still lists 12 with their old per-tool test counts; Sprint 784 corrects the count across the docs. Exercise all 18.
+
+**Historical status (2026-04-24):** **Phases 1 and 2 complete.** Production live at https://paciolus.com on Render Standard + Neon Launch Postgres + Upstash Redis + Sentry + SendGrid Domain Authentication. Post-Phase-1 infra hardening has extended the foundation: `DB_TLS_OVERRIDE` cleared 2026-04-23 (Sprint 673), Neon password rotated 2026-04-22, orphan Render Postgres deleted 2026-04-22, SendGrid Single Sender revoked 2026-04-22, R2 buckets provisioned 2026-04-23 (unblocks Phase 4.4 backups and landed Sprint 611 ExportShare migration same day), Sprint 716 Loki log aggregation deployed 2026-04-24. Sentry integration verified by live traffic (Sprint 711 bugs surfaced in the process).
+
+**Your next action (2026-10-20):** send Terms + Privacy to counsel — it is the longest lead item and a hard launch blocker — and get 5–10 practising CPAs through the demo and free tier (Sprint 781), which is what ranks the four remaining accounting gaps. Phase 3 self-validation continues in parallel against all **18** tools, 18 memo PDFs + 3 report PDFs, the engagement layer, export sharing, admin dashboard and bulk upload on https://paciolus.com. File bugs as you find them; I'm on standby.
 
 **Ongoing monthly cost after launch:** ~$44/mo (Render Standard $25 + Neon Launch ~$19 + free tiers for Redis / Sentry / SendGrid). Stripe transaction fees on actual revenue.
 
@@ -15,6 +25,7 @@
 
 Three gates left between here and announcement. The code is launch-ready; the gating path is CEO calendar + legal sign-off.
 
+0. **Start today, in parallel, because they have the longest lead and no engineering dependency:** send Terms + Privacy to counsel ([4.2](#42-legal--policy-placeholders)), add the Security Policy §12 phone, read the `waitlist_signups` count, and start Sprint 781 CPA validation. Nothing in the engineering tracks is waiting on them, and launch is.
 1. **[Phase 3](#phase-3--functional-validation) — Functional Validation (CEO).** Full checklist below. Exit: no open P0/P1 bugs, memory headroom confirmed under bulk load.
 2. **[Phase 4.1](#41-stripe-production-cutover) + [4.2](#42-legal--policy-placeholders) — Stripe live cutover + legal placeholders (CEO + counsel).** Stripe live keys on Render/Vercel, real-money smoke test, legal counsel sign-off on Terms + Privacy.
 3. **[Phase 4.3](#43-custom-domain)–[4.5](#45-go-live-smoke-test) — Domain, backups, go-live (CEO provides creds, I run backups setup).** Custom domain + DNS, pg_dump cron to `paciolus-backups`, 24h go-live monitor, launch announcement.
@@ -51,8 +62,9 @@ PR #67 merged as one consolidated batch (merge commit `84fbc90`) rather than 5 s
 
 The goal is to catch anything broken in normal usage before you start charging real money.
 
-- [ ] Run all **12 testing tools** against a realistic sample trial balance. File bugs for any abnormal output.
-  - JE (19 tests), AP (13), Payroll (11), Revenue (16, ASC 606), AR Aging (11), Fixed Assets (9), Inventory (9), Bank Rec, 3-Way Match, Multi-Period TB, Statistical Sampling, Multi-Currency
+- [ ] Run all **18 audit tools** against a realistic sample trial balance. File bugs for any abnormal output. Canonical list: [`backend/tools_registry.py`](../backend/tools_registry.py).
+  - JE (19 tests), AP (14), Payroll (13), Revenue (18), AR Aging (12), Fixed Assets (11), Inventory (10), Bank Rec, Three-Way Match, Multi-Period TB, TB Diagnostics, Statistical Sampling, Segregation of Duties, Intercompany Elimination, W-2/W-3 Reconciliation, Form 1099 Preparation, Book-to-Tax Reconciliation, Cash Flow Projector
+  - Multi-Currency Conversion is a side-car validation layer, **not** one of the 18 — exercise it, but it has no tool page of its own
 - [ ] Generate all **18 memo PDFs + 3 report PDFs** back-to-back on a single engagement. Watch Sentry for memory warnings or request-duration spikes >10s.
 - [ ] Exercise the **engagement layer** end-to-end: create engagement → set materiality → run diagnostics → add follow-up items → build workpaper index → export diagnostic package ZIP → hit the completion gate.
 - [ ] Exercise **export sharing**: create a shared link, access it from an incognito window, confirm passcode protection works, revoke it, confirm revocation is enforced.
@@ -84,7 +96,7 @@ The goal is to catch anything broken in normal usage before you start charging r
   - 4 seat add-on price IDs: `STRIPE_SEAT_PRICE_{PRO,ENT}_{MONTHLY,ANNUAL}`
   - 2 coupon IDs: `STRIPE_COUPON_MONTHLY_20`, `STRIPE_COUPON_ANNUAL_10`
 - [ ] **Vercel env vars** → set any `NEXT_PUBLIC_STRIPE_*` IDs the frontend reads directly (publishable key, etc.)
-- [ ] Stripe Dashboard → Developers → Webhooks → configure endpoint → `https://api.paciolus.com/billing/webhook` (or the onrender.com URL if you haven't set up custom domain yet) → copy the signing secret into `STRIPE_WEBHOOK_SECRET`
+- [ ] Stripe Dashboard → Developers → Webhooks → configure endpoint → copy the signing secret into `STRIPE_WEBHOOK_SECRET`. **`api.paciolus.com` 404s as of 2026-10-20** (Phase 4.3 has not run), so either do 4.3 first and use `https://api.paciolus.com/billing/webhook`, or use `https://paciolus-api.onrender.com/billing/webhook` now and re-point the endpoint after the domain exists. Do not configure it against the custom domain before that domain resolves — the webhook will fail silently.
 - [ ] **Run the Sprint 719 preflight runner** before flipping live env vars: `scripts/stripe_live_preflight.sh https://api.paciolus.com/billing/webhook`. Fires every event type the webhook handler supports; bails on the first non-200. **Do NOT proceed if any event fails.** Capture the script output as evidence in the launch dossier.
 - [ ] **Verify the production-mode Stripe-secret format guard**: after setting live env vars on Render, confirm Render boot logs do NOT contain `STRIPE_SECRET_KEY is a TEST-mode key` or any `_test_` rejection. Sprint 719 added a startup hard-fail for this misconfiguration; if the boot succeeds, the format check passed.
 - [ ] Sign `tasks/pricing-launch-readiness.md` Section 7 (Code Owner + CEO lines) → mark **GO**
@@ -121,8 +133,13 @@ Legal counsel sign-off is required on Terms and Privacy before launch.
 
 ### 4.4 Backups
 
-- [ ] *(I set this up; you provide credentials)* Daily `pg_dump` → S3/R2 cron as belt-and-suspenders on top of Neon's built-in PITR. Options: Render Cron Job (~$1/mo), GitHub Action (free), or Upstash Scheduled Functions. You'll need to provision an S3/R2 bucket and create an IAM key or R2 token.
-- [ ] *(I do this once you provide creds)* Test restore from one backup to confirm the chain works end-to-end
+> **Reclassified 2026-10-19: this is a pre-launch blocker, not belt-and-suspenders.** The first version of the decision deferred it on the premise that Zero-Storage meant no client financial data was persisted. That premise was wrong — `diagnostic_summaries` holds aggregate F/S totals, `uncorrected_misstatements` holds account names with DR/CR and amounts, and `analytical_expectations` holds expected and actual values. That is auditor workpaper content. Scope is **Sprint 778**; the `paciolus-backups` R2 bucket has been provisioned and empty since 2026-04-23.
+
+- [ ] *(I set this up; you confirm the R2 token still works)* Daily `pg_dump` → R2 cron into `paciolus-backups`. Options: Render Cron Job (~$1/mo), GitHub Action (free), or Upstash Scheduled Functions.
+- [ ] *(I do this)* Verify the **actual** Neon PITR retention window on the current plan, rather than the figure recorded in `DEPLOYMENT_ARCHITECTURE.md:724`
+- [ ] *(I do this)* One real restore drill **per mechanism** — R2 dump and Neon PITR — with schema parity and row counts recorded as evidence. An untested backup is not a backup.
+- [ ] *(I do this; needs `RENDER_API_KEY`)* Rewrite `verify_backup_integrity.py` and `dr-test-monthly.yml` against Neon + R2. Both currently query the Render Postgres API for a database deleted on 2026-04-22, and the monthly DR test reports workflow **success** while its own internal verdict is FAIL.
+- [ ] **Heads up:** `backup-integrity-check` will fail on the 1st of each month and file a `dr-failure` issue until the rewrite lands. The signal is substantively true — backups genuinely are unverified — but its stated reason ("RENDER_API_KEY is not set") is misleading.
 
 ### 4.5 Go-live smoke test
 
