@@ -15,9 +15,9 @@
 Paciolus operates under a **Zero-Storage security model** that fundamentally differentiates it from traditional cloud accounting platforms. While competitors store client financial data on their servers, Paciolus processes trial balance data entirely in-memory and immediately discards it after analysis.
 
 **Key Points:**
-- ✅ **What Is Stored:** User credentials, client metadata, aggregate diagnostic metadata (category totals, ratios, row counts)
-- ❌ **What Is Never Stored:** Raw uploaded files, line-level account balances, individual transaction details
-- 🔒 **Security Benefit:** Zero exposure of line-level financial data in the event of a breach
+- ✅ **What Is Stored:** User credentials, client metadata, aggregate diagnostic metadata (category totals, ratios, row counts), and workpaper conclusions the practitioner types in themselves (see §2.2)
+- ❌ **What Is Never Stored:** Raw uploaded files, and any line-level account balance, account name, or transaction detail **parsed from an upload**
+- 🔒 **Security Benefit:** A breach exposes no client trial balance — the line-level data was never written to disk
 - ⚖️ **Compliance Impact:** Simplified GDPR, CCPA, SOC 2 requirements
 - 💼 **Business Value:** Competitive differentiator for privacy-conscious financial professionals
 
@@ -44,7 +44,17 @@ This document explains the technical implementation, security advantages, and co
 
 ### 1.1 Definition
 
-**Zero-Storage** means that Paciolus **never persists raw uploaded files or line-level financial transaction data** to any disk, database, or cloud storage system. All trial balance processing occurs in ephemeral memory and is destroyed immediately after analysis completes. Aggregate metadata (category totals, financial ratios, row counts) may be retained for diagnostic history.
+**Zero-Storage** means that Paciolus **never persists raw uploaded files, nor any account name, balance, or transaction detail parsed out of one**, to any disk, database, or cloud storage system. All trial balance processing occurs in ephemeral memory and is destroyed immediately after analysis completes.
+
+Two classes of data are deliberately retained, and the distinction is the whole of the term's scope:
+
+| | Origin | Persisted? |
+|---|---|---|
+| **Upload-derived detail** | parsed from a file the user uploaded | **Never.** Ephemeral, memory-only. |
+| **Aggregate metadata** | computed from an upload, then reduced | Yes — category totals, ratios, row counts (§2.2) |
+| **Practitioner-entered workpaper entries** | typed by the auditor as their own documented conclusion | Yes — engagement lifecycle (§2.2) |
+
+The third class exists because ISA 450 and ISA 520 workpapers *are* the auditor's own record of decisions, not a derivative of tool output. Where such an entry happens to contain an account name and an amount, those characters were typed by the practitioner, not extracted from their client's file. Zero-Storage has never claimed otherwise, but earlier revisions of this document stated the exclusion in absolute terms that did not survive those features shipping; §2.1 and §2.2 below are now exhaustive.
 
 ### 1.2 Philosophy
 
@@ -63,7 +73,9 @@ Traditional accounting platforms operate on a "store first, process later" model
 
 | Term | Meaning |
 |------|---------|
-| **Zero-storage** | No persistence of line-level financial data — raw uploaded files, individual account balances, and transaction details are never written to disk or database |
+| **Zero-storage** | No persistence of upload-derived financial detail — raw uploaded files, and the individual account names, balances and transaction details parsed from them, are never written to disk or database |
+
+| **Practitioner-entered workpaper entry** | A conclusion the auditor types themselves (ISA 450 misstatement, ISA 520 expectation). Persisted for the engagement lifecycle, soft-deletable, and outside the Zero-Storage exclusion because it is the auditor's own record rather than extracted client data |
 | **Aggregate metadata retention** | Separate and controlled persistence of computed summaries (category totals, ratios, row counts) subject to configurable retention windows (see Section 2.4) |
 
 Paciolus maintains a minimal metadata database for authentication, client organization, diagnostic history (aggregates only), engagement workflow, and billing. These operational data classes are governed by the retention schedule in Section 2.4 and the canonical retention table in the Privacy Policy (Section 4.1).
@@ -95,13 +107,16 @@ Zero-Storage does **not** apply to:
 | Data Type | Storage Status | Retention | Example |
 |-----------|----------------|-----------|---------|
 | **Raw Trial Balance Rows** | ❌ Never Stored | Ephemeral (seconds) | "Cash: $50,000 DR" |
-| **Individual Account Names** | ❌ Never Stored | Ephemeral | "Accounts Receivable" |
+| **Account Names Parsed From an Upload** | ❌ Never Stored | Ephemeral | "Accounts Receivable", read out of a TB file |
 | **Raw Uploaded Files** | ❌ Never Stored | Ephemeral | "ClientXYZ_Q4_2024.xlsx" |
+| **Account Names Typed by the Practitioner** | ✅ Stored | Engagement lifecycle (soft-delete) | An ISA 450 misstatement line naming "Accrued Payroll, CR 12,400" |
 | **User Credentials** | ✅ Stored | Until account deletion | "user@example.com, bcrypt hash" |
 | **Client Metadata** | ✅ Stored | Until deletion | "Acme Corp, Technology, 12-31 FYE" |
 | **Diagnostic Summaries** | ✅ Stored (aggregates) | 365 days (1 year) | "47 rows, balanced, 3 anomalies, total_assets: $1.2M" |
 | **Engagement Metadata** | ✅ Stored (metadata only) | Until account deletion | "Period: Q4 2025, materiality: $50K, status: active" |
 | **Tool Run Records** | ✅ Stored (metadata only) | Until account deletion | "Revenue Testing, score: 85, 3 flagged accounts" |
+| **Uncorrected Misstatements (ISA 450)** | ✅ Stored (practitioner-entered) | Engagement lifecycle (soft-delete) | "Accrued Payroll CR 12,400; judgmental; net income impact (12,400)" |
+| **Analytical Expectations (ISA 520)** | ✅ Stored (practitioner-entered) | Engagement lifecycle (soft-delete) | "Expected revenue 4.2M ±5%; actual 4.47M; variance 270K" |
 | **Follow-Up Items** | ✅ Stored (narratives only) | Until account deletion | "Investigate revenue timing — no amounts or account numbers" |
 | **Subscription Records** | ✅ Stored | Until account deletion | "Tier: team, Stripe ref: sub_xxx" |
 | **Billing Events** | ✅ Stored (append-only) | Until account deletion | "subscription_created, tier: team" |
@@ -291,6 +306,37 @@ Paciolus maintains a **minimal metadata database** for essential business functi
 
 **What Is NOT Stored:**
 - Payment amounts, card details, invoice line items (Stripe handles all of these)
+
+#### Uncorrected Misstatements Table
+**Purpose:** The practitioner's Summary of Uncorrected Misstatements workpaper (ISA 450 / AU-C 450)
+**Fields Stored:**
+- Engagement ID (foreign key), source type and narrative source reference
+- Description of the misstatement (practitioner-authored)
+- Accounts affected — JSON list of `{account, debit_credit, amount}` **as typed by the practitioner**
+- ISA 450 §A6 classification (factual / judgmental / projected) and §A12–A15 disposition
+- Signed financial-statement impact on net income and net assets
+- Created/updated timestamps, soft-delete marker
+
+**Why this is outside the Zero-Storage exclusion:** every value is the auditor's own documented conclusion, entered by hand. Nothing here is parsed from an uploaded file. Adjusting entries (`backend/adjusting_entries.py`) and sample projections remain in-memory and are never persisted. Architectural decision and ISA mapping: [`isa-450-coverage.md`](isa-450-coverage.md).
+
+**What Is NOT Stored:**
+- The trial balance the misstatement was identified from
+- Any automatic aggregation of tool output into this table
+
+#### Analytical Expectations Table
+**Purpose:** The practitioner's independent expectation and its comparison result (ISA 520 / AS 2305)
+**Fields Stored:**
+- Engagement ID (foreign key), procedure target type and identifier
+- Expected value **or** expected range, precision threshold (amount or percent)
+- Corroboration basis text and tags (ISA 520 §A12–A13)
+- Practitioner notes
+- Comparison result: actual value, variance amount, within-threshold indicator
+- Created/updated timestamps, soft-delete marker
+
+**Why this is outside the Zero-Storage exclusion:** the expectation is the auditor's own judgement, and the stored result is a single comparison figure, not the population it was computed over. Underlying flux line items and ratio inputs remain ephemeral. ISA mapping: [`isa-520-coverage.md`](isa-520-coverage.md).
+
+**What Is NOT Stored:**
+- The flux line items, ratio inputs, or trial balance rows the actual was derived from
 
 ### 2.3 Soft-Delete Archival Model
 
