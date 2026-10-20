@@ -80,6 +80,34 @@ def _price(cents: int, interval: str = "month", currency: str = "usd", active: b
     }
 
 
+def _coupon(
+    percent: int | None = 20,
+    duration: str = "repeating",
+    months: int | None = 3,
+    valid: bool = True,
+    amount_off: int | None = None,
+) -> dict[str, Any]:
+    return {
+        "percent_off": percent,
+        "amount_off": amount_off,
+        "duration": duration,
+        "duration_in_months": months,
+        "valid": valid,
+    }
+
+
+def _good_coupons() -> dict[str, dict[str, Any]]:
+    """Coupons matching both COUPON_EXPECTATIONS entries."""
+    return {
+        "cpn_m": _coupon(20, "repeating", 3),
+        "cpn_a": _coupon(10, "once", None),
+    }
+
+
+def _coupon_env() -> dict[str, str]:
+    return _full_env() | {"STRIPE_COUPON_MONTHLY_20": "cpn_m", "STRIPE_COUPON_ANNUAL_10": "cpn_a"}
+
+
 def _full_env() -> dict[str, str]:
     """A test-mode environment with all ten price IDs set."""
     env = {"STRIPE_SECRET_KEY": "sk_test_abc"}
@@ -258,29 +286,116 @@ def test_every_mismatch_is_listed_not_just_the_first():
 # ---------------------------------------------------------------------------
 
 
+def test_matching_coupons_pass():
+    code, report = preflight.run(
+        require_all=False, stripe_module=_FakeStripe(_matching_prices(), _good_coupons()), env=_coupon_env()
+    )
+    assert code == 0, "\n".join(report)
+
+
 def test_coupon_percent_mismatch_is_caught():
-    env = _full_env() | {"STRIPE_COUPON_MONTHLY_20": "cpn_m", "STRIPE_COUPON_ANNUAL_10": "cpn_a"}
-    coupons = {
-        "cpn_m": {"percent_off": 25, "valid": True},
-        "cpn_a": {"percent_off": 10, "valid": True},
-    }
-    code, report = preflight.run(require_all=False, stripe_module=_FakeStripe(_matching_prices(), coupons), env=env)
+    coupons = _good_coupons()
+    coupons["cpn_m"] = _coupon(25, "repeating", 3)
+    code, report = preflight.run(
+        require_all=False, stripe_module=_FakeStripe(_matching_prices(), coupons), env=_coupon_env()
+    )
+    assert code == 1
+    assert "percent_off is 25, expected 20" in "\n".join(report)
+
+
+def test_amount_off_coupon_is_a_mismatch_not_a_skip():
+    """percent_off=None means an amount-off coupon. Checkout would apply a fixed
+    discount instead of the advertised percentage, so it must fail rather than
+    be treated as nothing to compare."""
+    coupons = _good_coupons()
+    coupons["cpn_a"] = _coupon(None, "once", None, amount_off=500)
+    code, report = preflight.run(
+        require_all=False, stripe_module=_FakeStripe(_matching_prices(), coupons), env=_coupon_env()
+    )
     text = "\n".join(report)
     assert code == 1
-    assert "percent_off is 25, expected 20" in text
+    assert "has no percent_off" in text
+    assert "amount_off=500" in text
+    assert "fixed discount" in text
+
+
+def test_repeating_coupon_without_month_cap_is_caught():
+    """The expensive one: 20% off that never stops. duration_in_months=None on a
+    repeating coupon discounts every renewal for the life of the subscription."""
+    coupons = _good_coupons()
+    coupons["cpn_m"] = _coupon(20, "repeating", None)
+    code, report = preflight.run(
+        require_all=False, stripe_module=_FakeStripe(_matching_prices(), coupons), env=_coupon_env()
+    )
+    text = "\n".join(report)
+    assert code == 1
+    assert "duration_in_months is None, expected 3" in text
+
+
+def test_repeating_coupon_with_wrong_month_count_is_caught():
+    coupons = _good_coupons()
+    coupons["cpn_m"] = _coupon(20, "repeating", 12)
+    code, report = preflight.run(
+        require_all=False, stripe_module=_FakeStripe(_matching_prices(), coupons), env=_coupon_env()
+    )
+    assert code == 1
+    assert "duration_in_months is 12, expected 3" in "\n".join(report)
+
+
+def test_forever_coupon_where_once_expected_is_caught():
+    """ANNUAL10 is "first invoice only"; forever would discount every annual renewal."""
+    coupons = _good_coupons()
+    coupons["cpn_a"] = _coupon(10, "forever", None)
+    code, report = preflight.run(
+        require_all=False, stripe_module=_FakeStripe(_matching_prices(), coupons), env=_coupon_env()
+    )
+    text = "\n".join(report)
+    assert code == 1
+    assert "duration is 'forever', expected 'once'" in text
+    assert "every renewal, forever" in text
+
+
+def test_once_coupon_where_repeating_expected_is_caught():
+    coupons = _good_coupons()
+    coupons["cpn_m"] = _coupon(20, "once", None)
+    code, report = preflight.run(
+        require_all=False, stripe_module=_FakeStripe(_matching_prices(), coupons), env=_coupon_env()
+    )
+    assert code == 1
+    assert "duration is 'once', expected 'repeating'" in "\n".join(report)
 
 
 def test_invalid_coupon_is_caught():
-    env = _full_env() | {"STRIPE_COUPON_ANNUAL_10": "cpn_a"}
-    coupons = {"cpn_a": {"percent_off": 10, "valid": False}}
-    code, report = preflight.run(require_all=False, stripe_module=_FakeStripe(_matching_prices(), coupons), env=env)
+    coupons = _good_coupons()
+    coupons["cpn_a"] = _coupon(10, "once", None, valid=False)
+    code, report = preflight.run(
+        require_all=False, stripe_module=_FakeStripe(_matching_prices(), coupons), env=_coupon_env()
+    )
     assert code == 1
     assert "no longer valid" in "\n".join(report)
+
+
+def test_unretrievable_coupon_is_reported():
+    code, report = preflight.run(
+        require_all=False, stripe_module=_FakeStripe(_matching_prices(), {}), env=_coupon_env()
+    )
+    assert code == 1
+    assert "could not retrieve" in "\n".join(report)
 
 
 def test_coupons_are_optional():
     code, _ = preflight.run(require_all=True, stripe_module=_FakeStripe(_matching_prices()), env=_full_env())
     assert code == 0
+
+
+def test_coupon_expectations_match_the_documented_promotions():
+    """The promo copy says 20% off the first 3 months and 10% off the first annual
+    invoice. Those two promises are the whole reason duration is checked."""
+    by_var = {c.env_var: c for c in preflight.COUPON_EXPECTATIONS}
+    monthly = by_var["STRIPE_COUPON_MONTHLY_20"]
+    assert (monthly.percent_off, monthly.duration, monthly.duration_in_months) == (20, "repeating", 3)
+    annual = by_var["STRIPE_COUPON_ANNUAL_10"]
+    assert (annual.percent_off, annual.duration) == (10, "once")
 
 
 # ---------------------------------------------------------------------------
