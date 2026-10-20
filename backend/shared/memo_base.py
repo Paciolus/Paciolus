@@ -121,6 +121,16 @@ _RISK_SCORE_SCALE = (
 # Rendered through ReportLab Paragraph markup, so <br/> is the line break.
 RISK_SCALE_LEGEND = f"{_RISK_SCORE_SCALE}<br/>{RISK_TIER_BASIS_NOTE}"
 
+# The engagement-level indicator in anomaly_summary_generator.py is NOT flag density
+# alone: _compute_engagement_risk adds int(tools_not_run * 1.5), so an engagement with
+# no anomalies at all can still show a higher tier purely from incomplete coverage.
+# Saying "basis: flag density" there would misdescribe the number on the page.
+RISK_TIER_BASIS_NOTE_ENGAGEMENT = (
+    "Basis: automated flag density <b>and</b> tool-coverage completeness \u2014 auditor judgment required "
+    "per ISA 315. Tools not yet run add to the score, so an engagement with no anomalies can still "
+    "show a higher tier. The indicator is not a risk assessment or a conclusion on internal control."
+)
+
 
 def validate_risk_tier_coverage(known_tiers: set[str]) -> list[str]:
     """Validate that RISK_TIER_DISPLAY contains a label for every known tier key.

@@ -44,7 +44,7 @@ from follow_up_items_model import FollowUpItem
 from models import Client
 from pdf_generator import ClassicalColors, LedgerRule, generate_reference_number
 from shared.framework_resolution import ResolvedFramework
-from shared.memo_base import RISK_TIER_BASIS_NOTE, RISK_TIER_DISPLAY, create_memo_styles
+from shared.memo_base import RISK_TIER_BASIS_NOTE_ENGAGEMENT, RISK_TIER_DISPLAY, create_memo_styles
 from shared.report_chrome import (
     ReportMetadata,
     build_cover_page,
@@ -352,7 +352,7 @@ class AnomalySummaryGenerator:
                 styles["MemoBody"],
             )
         )
-        story.append(Paragraph(RISK_TIER_BASIS_NOTE, styles["MemoBodySmall"]))
+        story.append(Paragraph(RISK_TIER_BASIS_NOTE_ENGAGEMENT, styles["MemoBodySmall"]))
         story.append(Spacer(1, 6))
 
         # Executed tools table
@@ -744,7 +744,7 @@ class AnomalySummaryGenerator:
             )
         )
         story.append(risk_box)
-        story.append(Paragraph(RISK_TIER_BASIS_NOTE, styles["MemoBodySmall"]))
+        story.append(Paragraph(RISK_TIER_BASIS_NOTE_ENGAGEMENT, styles["MemoBodySmall"]))
         story.append(Spacer(1, 8))
 
         # Risk details
