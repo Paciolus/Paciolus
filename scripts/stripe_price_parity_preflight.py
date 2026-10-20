@@ -25,8 +25,12 @@ pricing.
 6. Live/test mode agrees with the secret key's mode, so a test price can never be wired
    into a live deployment.
 
-Coupons named by `STRIPE_COUPON_MONTHLY_20` / `STRIPE_COUPON_ANNUAL_10` are checked for
-existence and percent-off value when set.
+Coupons named by `STRIPE_COUPON_MONTHLY_20` / `STRIPE_COUPON_ANNUAL_10` are checked, when
+set, for existence, percent-off value **and duration**. Duration is not cosmetic: a
+"20% off first 3 months" coupon created as plain `repeating` with no month cap discounts
+every renewal for the life of the subscription. A missing `percent_off` means an
+amount-off coupon that would apply a fixed discount rather than the advertised
+percentage. Both are mismatches, not skips.
 
 **Coverage is all ten price objects**: six base (3 tiers x 2 intervals) and four seat
 add-ons (Professional and Enterprise x 2 intervals). Mapping only the base table would
@@ -122,9 +126,36 @@ def build_expectations() -> list[ExpectedPrice]:
     return expected
 
 
-COUPON_EXPECTATIONS: tuple[tuple[str, str, int], ...] = (
-    ("STRIPE_COUPON_MONTHLY_20", "monthly 20% off first 3 months", 20),
-    ("STRIPE_COUPON_ANNUAL_10", "annual 10% off first invoice", 10),
+@dataclass(frozen=True)
+class ExpectedCoupon:
+    """One promotional coupon, including how long it is supposed to last.
+
+    Duration is not a detail. A "20% off first 3 months" coupon created as plain
+    `repeating` with no month cap discounts every renewal for the life of the
+    subscription: correct on the first invoice, wrong on every one after it.
+    """
+
+    env_var: str
+    label: str
+    percent_off: int
+    duration: str  # Stripe: "once" | "repeating" | "forever"
+    duration_in_months: int | None = None
+
+
+COUPON_EXPECTATIONS: tuple[ExpectedCoupon, ...] = (
+    ExpectedCoupon(
+        env_var="STRIPE_COUPON_MONTHLY_20",
+        label="monthly 20% off first 3 months",
+        percent_off=20,
+        duration="repeating",
+        duration_in_months=3,
+    ),
+    ExpectedCoupon(
+        env_var="STRIPE_COUPON_ANNUAL_10",
+        label="annual 10% off first invoice",
+        percent_off=10,
+        duration="once",
+    ),
 )
 
 
@@ -174,19 +205,51 @@ def check_price(stripe_module, expected: ExpectedPrice, price_id: str, key_is_li
     return problems
 
 
-def check_coupon(stripe_module, env_var: str, label: str, expected_percent: int, coupon_id: str) -> list[str]:
+def check_coupon(stripe_module, expected: ExpectedCoupon, coupon_id: str) -> list[str]:
     """Retrieve one Coupon and return problem descriptions (empty = pass)."""
+    label = expected.label
     try:
         coupon = stripe_module.Coupon.retrieve(coupon_id)
     except Exception as exc:  # noqa: BLE001
         return [f"coupon {label}: could not retrieve {coupon_id} — {type(exc).__name__}: {exc}"]
 
     problems: list[str] = []
+
+    # A missing percent_off means an amount-off coupon. Treat it as a mismatch, never
+    # as "nothing to compare": checkout would apply a fixed discount instead of the
+    # advertised percentage.
     percent = coupon.get("percent_off")
-    if percent is not None and int(percent) != expected_percent:
-        problems.append(f"coupon {label}: percent_off is {percent}, expected {expected_percent} ({coupon_id})")
+    if percent is None:
+        problems.append(
+            f"coupon {label}: has no percent_off (amount_off={coupon.get('amount_off')}), but the product "
+            f"advertises {expected.percent_off}% — checkout would apply a fixed discount ({coupon_id})"
+        )
+    elif int(percent) != expected.percent_off:
+        problems.append(f"coupon {label}: percent_off is {percent}, expected {expected.percent_off} ({coupon_id})")
+
+    # Duration decides whether the discount ever stops.
+    duration = coupon.get("duration")
+    if duration != expected.duration:
+        suffix = (
+            " — this discounts every renewal, forever"
+            if duration in {"repeating", "forever"} and expected.duration == "once"
+            else ""
+        )
+        problems.append(
+            f"coupon {label}: duration is {duration!r}, expected {expected.duration!r} ({coupon_id}){suffix}"
+        )
+
+    if expected.duration == "repeating":
+        months = coupon.get("duration_in_months")
+        if months != expected.duration_in_months:
+            problems.append(
+                f"coupon {label}: duration_in_months is {months}, expected {expected.duration_in_months} "
+                f"({coupon_id}) — the discount would apply for the wrong number of billing periods"
+            )
+
     if coupon.get("valid") is False:
         problems.append(f"coupon {label}: coupon is no longer valid ({coupon_id})")
+
     return problems
 
 
@@ -232,15 +295,22 @@ def run(require_all: bool, stripe_module=None, env: dict[str, str] | None = None
                 f"{expected.stripe_interval:<5} {price_id}"
             )
 
-    for env_var, label, expected_percent in COUPON_EXPECTATIONS:
-        coupon_id = env.get(env_var, "").strip()
+    for expected_coupon in COUPON_EXPECTATIONS:
+        coupon_id = env.get(expected_coupon.env_var, "").strip()
         if not coupon_id:
             continue
-        found = check_coupon(stripe_module, env_var, label, expected_percent, coupon_id)
+        found = check_coupon(stripe_module, expected_coupon, coupon_id)
         if found:
             problems.extend(found)
         else:
-            report.append(f"  PASS  coupon {label:<33} {expected_percent}% off      {coupon_id}")
+            span = (
+                f"{expected_coupon.duration_in_months} months"
+                if expected_coupon.duration == "repeating"
+                else expected_coupon.duration
+            )
+            report.append(
+                f"  PASS  coupon {expected_coupon.label:<33} {expected_coupon.percent_off}% / {span:<10} {coupon_id}"
+            )
 
     report.append("")
     report.append(f"Checked {checked} of {len(expectations)} price objects.")
