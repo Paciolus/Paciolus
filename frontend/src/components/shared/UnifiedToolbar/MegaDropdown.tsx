@@ -160,10 +160,12 @@ export function MegaDropdown({ isOpen, onClose }: MegaDropdownProps) {
           animate="visible"
           exit="exit"
           onKeyDown={handleKeyDown}
-          className="fixed left-1/2 -translate-x-1/2 w-[min(calc(100vw-2rem),64rem)] bg-oatmeal-50 border border-oatmeal-200 rounded-2xl shadow-theme-elevated z-50 overflow-hidden"
+          className="fixed left-1/2 -translate-x-1/2 w-[min(calc(100vw-2rem),76rem)] bg-oatmeal-50 border border-oatmeal-200 rounded-2xl shadow-theme-elevated z-50 overflow-hidden"
           style={{ transformOrigin: 'top center', top: 'calc(var(--toolbar-height, 56px) + 4px)' }}
         >
-          <div className="grid grid-cols-4 gap-0 p-5">
+          {/* Sprint 788: one column per tool group plus Account. Derived rather than
+              hardcoded so adding a tool column cannot silently overflow the grid. */}
+          <div className="grid gap-0 p-5" style={{ gridTemplateColumns: `repeat(${TOOL_COLUMNS.length + 1}, minmax(0, 1fr))` }}>
             {/* Tool columns */}
             {TOOL_COLUMNS.map((col, colIdx) => (
               <div
