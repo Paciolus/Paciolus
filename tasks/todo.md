@@ -128,8 +128,8 @@
 > Sprints 768–783 archived to `tasks/archive/sprints-768-783-details.md`.
 
 ### Sprint 784: Tool-count cohesion sweep — 12 → 18
-**Status:** PENDING.
-**Priority:** P2 — one instance is public-facing; the rest is internal cohesion. ~1h.
+**Status:** COMPLETE.
+**Priority:** P2 — one instance was public-facing; the rest internal cohesion.
 **Source:** `reports/next-actions-2026-10-20.md` B-e. Supersedes the narrower copy question raised as `reports/launch-readiness-assessment-2026-10-19.md` §I item 4.
 
 `backend/tools_registry.py` is the canonical catalog at **18** tools (Sprint 689 expanded 12 → 18; Sprint 717 reconciled the frontend ledger). The prose did not follow. `tests/test_catalog_consistency.py` guards the registry against the frontend ledger — it does not read documentation, so none of this was caught.
@@ -145,6 +145,136 @@
 **Out of scope:** `COHESION_REMEDIATION.md` and `tasks/archive/**` are historical records of the 12-tool era and keep their numbers. `CLAUDE.md`'s era table line for Sprints 255–278 is also historical and correct as written.
 
 **Verification:** extend the documentation-consistency gate so a prose tool count that disagrees with `tools_registry.MARKETING_AUDIT_TOOL_COUNT` fails CI. **Use that name** — it is the backend constant (`tools_registry.py:248`, computed from the `is_marketing_audit_tool` flag). `CANONICAL_TOOL_COUNT` is the *frontend* ledger's literal (`tool-ledger.ts:221`), already tied to the backend value by `tests/test_catalog_consistency.py`; a backend gate importing it would fail. Without the guard this recurs — exactly as the AS 1215 citation did after being fixed in code (Sprint 779 item 3).
+
+#### What landed
+
+**The public surface.** `backend/main.py:243` now reads `18-Tool Audit Intelligence Suite`, and
+`scripts/openapi-snapshot.json` was regenerated in the same change (the OpenAPI Schema Drift Check gate
+compares against it; `check_openapi_drift.py` reports no drift, paths 220 / schemas 422 unchanged).
+
+**Prose counts** in `AGENTS.md`, `README.md` (hero line + feature bullet), `docs/01-product/PRODUCT_VISION.md`
+(5 sites), `docs/02-technical/ARCHITECTURE.md` (5 sites) and `docs/07-user-facing/USER_GUIDE.md` (3 sites).
+
+**Two prose *lists*, not just counts — wider than the brief anticipated.** `PRODUCT_VISION.md`'s feature table
+and `README.md`'s feature bullet each enumerated twelve tools, and the table's per-tool test counts had drifted
+independently of the registry: **AP 13→14, Payroll 11→13, Revenue 16→18, AR 11→12, Fixed Assets 9→11,
+Inventory 9→10.** Both now mirror `tools_registry.py` — display names, test counts, standards and summaries all
+derived from it. Also corrected the JE row, which cited only AS 2315 (Audit Sampling) where the fraud standard
+is AS 2401; it now cites both, with AS 2315 scoped to the sampling aspect.
+
+**Ordinals dropped from `ARCHITECTURE.md`.** Its directory tree and route table labelled tools "Tool 1" …
+"Tool 11" — an ordering the registry does not guarantee and which has to be renumbered on every catalog
+change. Both lists now carry names in registry order, expanded to the real 23 tool routes (18 audit tools +
+Multi-Currency side-car + composite-risk, account-risk-heatmap, depreciation, loan-amortization). This also
+fixed a wrong route: the doc claimed `/tools/fixed-asset-testing`; the directory is `fixed-assets`.
+
+**Stale frontend comments** in `demo/page.tsx`, `(marketing)/page.tsx`, `ToolShowcase.tsx` (×2) and
+`ToolSlideshow.tsx` said "12-tool" while the components render from `TOOL_LEDGER` (18). Comments now point at
+the ledger instead of carrying a literal.
+
+**Historical records deliberately left alone:** `COHESION_REMEDIATION.md`, `docs/archive/**`,
+`tasks/archive/**`, `CLAUDE.md`'s era table, and every revision-history row. Each describes what was true at a
+past version.
+
+#### The guard
+
+`backend/guards/doc_consistency_guard.py` gained a fourth rule, `tool_count_consistency`, parsing
+`tools_registry.py` as text (the guard is stdlib-only and runs without project deps) and counting
+`is_marketing_audit_tool=True` — i.e. it mirrors `MARKETING_AUDIT_TOOL_COUNT` rather than trusting a literal.
+
+**Two things the first draft got wrong, both caught by running it:**
+
+1. **13 false positives out of 14.** The patterns were too loose: every markdown TOC anchor of the form
+   `](#5-tool-3-journal-entry-testing)` matched "5-tool", and a true subset statement ("six tools are shown
+   inline") matched a bare count. Now link targets and inline code are stripped first, and only three narrow
+   catalog-claim forms match — `N-tool` compound adjective, `all N tools`, and `N {audit|diagnostic|specialized|testing} tools`.
+2. **It did not guard the one surface that matters most.** Regression-proving it by reverting `main.py` to
+   "12-Tool" left the guard **green** — it covered documentation only. A `_check_api_description` rule now
+   covers the FastAPI description and its failure message names the snapshot that must be regenerated with it.
+   Guarding the docs but not the shipped API string would have protected the least important copy and missed
+   the public one.
+
+Escape hatch for genuine history: `<!-- doc-consistency: historical -->` on the line.
+
+#### Verification
+
+- Guard: `ALL CHECKS PASSED`. **Regression-proved twice** — reverting `main.py` and reverting a
+  `PRODUCT_VISION.md` line each produced exactly one violation naming the file and line, then restored.
+- `tests/test_doc_consistency_guard.py`: **35 passed** (was 21). The 14 new tests pin both the true positives
+  and every false-positive class above, plus a test asserting the text parser agrees with
+  `tools_registry.MARKETING_AUDIT_TOOL_COUNT` — so the two can never disagree silently.
+- `tests/test_catalog_consistency.py` + `tests/test_citation_consistency.py`: 50 passed.
+- `check_openapi_drift.py`: no drift. `npx tsc --noEmit`: exit 0. `ruff check backend/guards/`: clean.
+
+#### Three gaps this sweep uncovered — filed, not silently fixed
+
+Each is a product gap rather than a copy fix, so none belongs in a cohesion sprint: **787** (engagement layer
+tracks 13 of 18 tools), **788** (nav bar lists 12 of 18), **784b** (user guide documents 12 of 18).
+
+
+---
+
+### Sprint 787: Engagement layer tracks 13 of 18 tools
+**Status:** PENDING.
+**Priority:** P1 — one symptom is customer-visible in a shipped PDF.
+**Source:** Sprint 784 discovery, 2026-10-20.
+
+`ToolName` in `backend/engagement_model.py` has **13 members** — the original 12 tools plus `flux_analysis`.
+Sprint 689 expanded the catalog to 18 and Sprint 717 reconciled the frontend ledger, but this enum was never
+touched. Consequences:
+
+- **Customer-visible:** `anomaly_summary_generator.py:329` renders `Tools Executed: {n} of {len(ToolName)}
+  available tools` — so the Anomaly Summary PDF tells a practitioner there are **13** available tools while
+  every marketing surface, the pricing page and now the API description say 18.
+- `workpaper_index_generator.TOOL_LABELS` likewise has 13 entries, so the six newer tools cannot appear in a
+  workpaper index.
+- Engagement tool-run tracking, the completion gate and the diagnostic package ZIP are all keyed on
+  `ToolName`, so a run of any Sprint-689 tool cannot be recorded against an engagement at all.
+
+**Scope:** expand the enum, add the Alembic migration for the Postgres enum type (check how
+`tool_runs.tool_name` is stored first — a native enum needs `ALTER TYPE`, a varchar does not), extend
+`TOOL_LABELS`, and replace `len(ToolName)` with the registry count so the count has one source. Verify the
+Anomaly Summary PDF and workpaper index both render the full catalog.
+
+**Note:** `flux_analysis` is in this enum but is not one of the 18 marketing tools, so `len(ToolName)` was
+never the right denominator even at 12 tools. Use `tools_registry.MARKETING_AUDIT_TOOL_COUNT`.
+
+---
+
+### Sprint 788: Tool navigation bar lists 12 of 18 tools
+**Status:** PENDING.
+**Priority:** P2 — the tools are reachable, just not from the bar that sits on every tool page.
+**Source:** Sprint 784 discovery, 2026-10-20.
+
+`frontend/src/components/shared/ToolNav.tsx` hardcodes a 12-entry `TOOLS` array and a 12-member `ToolKey`
+union. The six Sprint-689 tools (Segregation of Duties, Intercompany Elimination, W-2/W-3, Form 1099,
+Book-to-Tax, Cash Flow Projector) are absent.
+
+They are **not** unreachable — `app/tools/page.tsx` (23 routes), `lib/commandRegistry.ts` (21 routes),
+`content/tool-ledger.ts` (18) and `ToolShowcase.tsx` all include them. But a practitioner working inside one
+tool sees a bar that silently omits a third of what they are paying for.
+
+**Scope:** drive `TOOLS` from `tool-ledger.ts` instead of a second hardcoded list — that is what makes this
+stay fixed, since `test_catalog_consistency.py` already ties the ledger to the registry. Decide the overflow
+treatment: `INLINE_COUNT = 6` leaves twelve items in the More dropdown, which likely wants grouping
+(diagnostics / testing / tax & controls) rather than a flat list.
+
+---
+
+### Sprint 784b: User guide chapters for the six newer tools
+**Status:** PENDING.
+**Priority:** P3 — documentation completeness; the guide is now accurate about what it does not cover.
+**Source:** Sprint 784, 2026-10-20.
+
+`docs/07-user-facing/USER_GUIDE.md` sections 3–14 document twelve tools, one chapter each. Sprint 784 corrected
+its counts and added an explicit note that the six tax and controls tools are not yet written up, rather than
+leaving the guide claiming eighteen while documenting twelve. Writing those six chapters is content authoring
+against each tool's actual UI, not a count fix, so it is filed separately.
+
+**Scope:** one chapter per tool following the established pattern (what it does, required columns, how to read
+the output, what the memo contains), for Segregation of Duties, Intercompany Elimination, W-2/W-3
+Reconciliation, Form 1099 Preparation, Book-to-Tax Reconciliation and Cash Flow Projector. Renumber the TOC
+and remove the interim note.
 
 ---
 

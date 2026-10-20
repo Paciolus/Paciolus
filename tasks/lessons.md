@@ -4,6 +4,55 @@
 
 ---
 
+## A guard that cannot fail on the surface that matters is decoration (Sprint 784, 2026-10-20)
+
+Sprint 784 added a `tool_count_consistency` rule to the documentation guard, because Sprint 689
+expanded the catalog 12 → 18 and the prose never followed — including, for six months, the
+**public** OpenAPI description served at `/docs`.
+
+Writing the rule was easy. Two things about validating it were not.
+
+**1. Running a guard is not the same as proving it.** The first draft passed on the fixed tree,
+which looked like success. Then I re-introduced the defect to prove it would catch it — reverted
+`backend/main.py` to `"12-Tool Audit Intelligence Suite"` — and the guard stayed **green**. It
+scanned a list of documentation files and nothing else. I had guarded five internal docs and
+missed the one string customers actually see.
+
+**Pattern: regression-prove a guard against the surface you most care about, not a convenient
+one.** If the proof case is the cheap one, a passing proof means very little. A
+`_check_api_description` rule now covers `main.py`, and its failure message names
+`scripts/openapi-snapshot.json`, because changing that string also moves the snapshot the
+OpenAPI drift gate compares against — a guard should tell you about the second edit it forces
+rather than letting CI discover it.
+
+**2. A loose pattern is worse than no pattern, because it gets disabled.** The first pattern set
+fired **14 times, 13 of them false.** Markdown heading anchors were the bulk: `## 5. Tool 3:
+Journal Entry Testing` becomes `](#5-tool-3-journal-entry-testing)` in every link to it, so a
+table of contents reads as a dozen different tool counts. One more false hit was a sentence I had
+just written myself — "six tools are shown inline" — a true statement about the nav bar, not a
+catalog claim.
+
+A 14-violation wall of noise on a first run is how a gate gets commented out. The fix was to strip
+link targets and inline code first, then match only three narrow catalog-claim forms. The 14 unit
+tests added with it pin the **false-positive classes**, not just the true positives — anchors,
+subset counts, version-history rows, per-tier allowances — so the next person to widen the
+pattern finds out immediately.
+
+**Corollary: parse the derived constant, never a literal.** The guard counts
+`is_marketing_audit_tool=True` in `tools_registry.py` rather than hardcoding 18, and one test
+asserts the text parser agrees with `MARKETING_AUDIT_TOOL_COUNT` itself. A guard carrying its own
+copy of the number is just a fourth place for the number to drift.
+
+**And ordinals are drift waiting to happen.** `ARCHITECTURE.md` labelled tools "Tool 1" … "Tool
+11", an ordering the registry never promised and which must be renumbered on every catalog change.
+Those labels are gone; the lists now carry names in registry order. Where a structural device
+encodes something the data does not guarantee, the device is the bug.
+
+**What the sweep found by looking.** Chasing counts surfaced three gaps that are not copy at all,
+each filed rather than quietly fixed: the engagement layer's `ToolName` enum still has 13 members,
+so the Anomaly Summary PDF tells practitioners there are 13 available tools (Sprint 787); the tool
+navigation bar on every tool page lists 12 (Sprint 788); and the user guide documents 12 chapters
+(Sprint 784b). A stale number is often a marker for a stale system, not just stale prose.
 ## A guard scoped to the shipped path lets the demo path drift (Sprint 779, 2026-10-20)
 
 `test_memo_boundary_phrasing.py` has protected memo wording since Sprint 721. Its scope

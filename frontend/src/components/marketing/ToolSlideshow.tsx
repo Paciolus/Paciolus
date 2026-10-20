@@ -11,7 +11,7 @@ import { VIEWPORT } from '@/utils/marketingMotion'
 /**
  * ToolSlideshow — Centered Hero Layout
  *
- * Full-screen animated slideshow for the 12-tool suite.
+ * Full-screen animated slideshow for the tool suite (driven by TOOL_LEDGER).
  * Each tool gets a dedicated centered slide with:
  * - Dominant tool name (large serif heading)
  * - Extended value proposition

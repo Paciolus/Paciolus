@@ -1,12 +1,12 @@
 # Paciolus
 
-**12-Tool AI-Powered Audit Intelligence Suite for Financial Professionals**
+**18-Tool AI-Powered Audit Intelligence Suite for Financial Professionals**
 
-Paciolus is a 12-tool AI-powered audit intelligence suite for financial professionals, built on a Zero-Storage architecture. Upload a trial balance, general ledger, payment register, or bank statement. Get structured, standards-referenced diagnostics and report-ready exports that hold up under professional review — your uploaded financial data is never stored.
+Paciolus is an 18-tool AI-powered audit intelligence suite for financial professionals, built on a Zero-Storage architecture. Upload a trial balance, general ledger, payment register, or bank statement. Get structured, standards-referenced diagnostics and report-ready exports that hold up under professional review — your uploaded financial data is never stored.
 
 ## Key Features
 
-- **12 Diagnostic Tools** — TB Diagnostics, Multi-Period Comparison, Journal Entry Testing, AP Payment Testing, Bank Reconciliation, Payroll Testing, Three-Way Match, Revenue Testing, AR Aging, Fixed Asset Testing, Inventory Testing, and Statistical Sampling
+- **18 Audit Tools** — Trial Balance Diagnostics, Multi-Period Comparison, Bank Reconciliation, Three-Way Match, Journal Entry Testing, AP Payment Testing, Revenue Testing, AR Aging, Payroll Testing, Fixed Assets, Inventory Testing, Statistical Sampling, Segregation of Duties, Intercompany Elimination, W-2 / W-3 Reconciliation, Form 1099 Preparation, Book-to-Tax Reconciliation and Cash Flow Projector. Canonical list: [`backend/tools_registry.py`](./backend/tools_registry.py)
 - **Zero-Storage Architecture** — Your uploaded financial data is never stored. Only aggregate, non-attributable usage metadata is retained
 - **Intelligent Classification** — 80+ keyword rules automatically categorize accounts (Assets, Liabilities, Equity, Revenue, Expenses)
 - **Anomaly Detection** — Identifies sign errors, unusual balances, and classification mismatches

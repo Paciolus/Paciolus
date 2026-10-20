@@ -31,7 +31,7 @@ export default function HomePage() {
       {/* Hero Section — Scroll-Linked Product Film */}
       <HeroScrollSection />
 
-      {/* Sprint 706 — Tool ledger. Full 12-tool catalog rendered in place
+      {/* Sprint 706 — Tool ledger. Full tool catalog rendered in place
           of the one-card-at-a-time slideshow. Respects the auditor's
           scan-the-index reading pattern. ToolSlideshow retained in-tree
           for other consumers / potential future use. */}

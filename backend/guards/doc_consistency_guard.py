@@ -1,7 +1,15 @@
 """Documentation Consistency Guard — Sprint 593.
 
 Stdlib-only static analysis verifying documentation claims match code truth.
-Checks tier names, pricing, JWT expiration, and share TTL across docs and code.
+Checks tier names, pricing, JWT expiration, share TTL, and aggregate tool counts
+across docs and code.
+
+Sprint 784 added the tool-count check. Sprint 689 expanded the catalog 12 -> 18 and
+Sprint 717 reconciled the frontend ledger, but the prose did not follow: the FastAPI
+description shipped "12-Tool Audit Intelligence Suite" in the **public** OpenAPI
+schema for six months, and AGENTS.md, README.md, PRODUCT_VISION.md, ARCHITECTURE.md
+and USER_GUIDE.md all still said twelve. `test_catalog_consistency.py` guards the
+registry against the frontend ledger; nothing read documentation.
 
 Usage:
     python -m guards.doc_consistency_guard          # from backend/
@@ -18,6 +26,18 @@ import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+
+# Documents whose aggregate tool counts must match the registry (Sprint 784).
+# Deliberately excluded: COHESION_REMEDIATION.md, docs/archive/**, tasks/archive/**
+# and CLAUDE.md's era table — all historical records of the 12-tool era.
+TOOL_COUNT_DOCS: tuple[str, ...] = (
+    "README.md",
+    "AGENTS.md",
+    "docs/01-product/PRODUCT_VISION.md",
+    "docs/02-technical/ARCHITECTURE.md",
+    "docs/03-product/REPORT_STANDARDS_SPEC.md",
+    "docs/07-user-facing/USER_GUIDE.md",
+)
 
 
 @dataclass
@@ -79,6 +99,25 @@ def _parse_price_table(backend_root: Path) -> dict[str, dict[str, int]]:
         tier = m.group(1)
         prices[tier] = {"monthly": int(m.group(2)), "annual": int(m.group(3))}
     return prices
+
+
+def _parse_marketing_tool_count(backend_root: Path) -> int | None:
+    """Count tools flagged is_marketing_audit_tool in tools_registry.py.
+
+    Mirrors `tools_registry.MARKETING_AUDIT_TOOL_COUNT`, which is itself computed
+    from that flag. Parsed as text, not imported, because this guard is stdlib-only
+    and must run without the project's dependencies installed.
+
+    Note the registry holds 19 entries: 18 audit tools plus Multi-Currency
+    Conversion, which carries `is_marketing_audit_tool=False` because it is a
+    side-car validation layer rather than a tool in the catalog.
+    """
+    registry_path = backend_root / "tools_registry.py"
+    if not registry_path.exists():
+        return None
+    text = registry_path.read_text(encoding="utf-8")
+    count = len(re.findall(r"is_marketing_audit_tool\s*=\s*True", text))
+    return count or None
 
 
 def _parse_share_ttl(backend_root: Path) -> dict[str, int]:
@@ -172,6 +211,210 @@ def _check_jwt_expiry_in_doc(
                             message=f"Doc claims {claimed}-minute JWT expiry, code defaults to {code_default} minutes",
                         )
                     )
+    return violations
+
+
+# Spelled-out numerals that appear in prose tool counts ("Twelve specialized tools").
+_NUMBER_WORDS: dict[str, int] = {
+    "five": 5,
+    "six": 6,
+    "seven": 7,
+    "eight": 8,
+    "nine": 9,
+    "ten": 10,
+    "eleven": 11,
+    "twelve": 12,
+    "thirteen": 13,
+    "fourteen": 14,
+    "fifteen": 15,
+    "sixteen": 16,
+    "seventeen": 17,
+    "eighteen": 18,
+    "nineteen": 19,
+    "twenty": 20,
+}
+
+# Catalog-claim phrasings only. Three narrow forms, each verified against the real
+# occurrences in TOOL_COUNT_DOCS. A bare "six tools" is NOT a catalog claim — the
+# first draft of this check matched "six tools are shown inline" (a true statement
+# about the nav bar) and every markdown TOC anchor of the form
+# `](#5-tool-3-journal-entry-testing)`, for 13 false positives out of 14.
+_TOOL_COUNT_PATTERNS: tuple[re.Pattern[str], ...] = (
+    # Compound adjective: "12-tool suite", "18-Tool Audit Intelligence Suite"
+    re.compile(r"\b(?P<n>\d{1,2})[-\u2013]tool\b", re.IGNORECASE),
+    # "all 18 tools", "all twelve tools"
+    re.compile(
+        r"\ball\s+(?P<n>\d{1,2}|" + "|".join(_NUMBER_WORDS) + r")\s+tools?\b",
+        re.IGNORECASE,
+    ),
+    # Qualified plural: "18 audit tools", "Twelve specialized tools"
+    re.compile(
+        r"\b(?P<n>\d{1,2}|" + "|".join(_NUMBER_WORDS) + r")\s+"
+        r"(?:audit|diagnostic|specialized|specialised|testing)\s+tools?\b",
+        re.IGNORECASE,
+    ),
+)
+
+# A table cell can say just "All 12" while the row label or column header supplies the
+# word "Tools" — which is how the tier table in USER_GUIDE.md and the public pricing
+# comparison in frontend/src/domain/pricing.ts both survived the first sweep. Matched
+# only on lines that also mention tools somewhere, so "All 10 formats" is untouched.
+_BARE_ALL_IN_TOOLS_ROW = re.compile(
+    r"\ball\s+(?P<n>\d{1,2}|" + "|".join(_NUMBER_WORDS) + r")\b(?!\s+(?:formats?|file))",
+    re.IGNORECASE,
+)
+_ROW_MENTIONS_TOOLS = re.compile(r"\btools?\b", re.IGNORECASE)
+
+# Lines carrying this marker record what was true at a past version (changelogs,
+# revision histories, era tables) and keep their numbers.
+_HISTORICAL_MARKER = re.compile(r"doc-consistency:\s*historical")
+
+# Markdown link targets and inline code are stripped before matching: a heading
+# anchor repeats the heading text, so "## 5. Tool 3: JE Testing" turns into
+# "#5-tool-3-je-testing" in every link to it.
+_LINK_TARGET = re.compile(r"\]\([^)]*\)")
+_INLINE_CODE = re.compile(r"`[^`]*`")
+
+
+def _strip_noise(line: str) -> str:
+    """Remove markdown link targets and inline code spans from a line."""
+    return _INLINE_CODE.sub(" ", _LINK_TARGET.sub(" ", line))
+
+
+def _check_tool_count_in_doc(
+    code_count: int,
+    doc_path: Path,
+    doc_rel: str,
+) -> list[Violation]:
+    """Check catalog tool-count claims against the registry.
+
+    Skips version-history rows, which describe a past state by design.
+    """
+    violations: list[Violation] = []
+    text = doc_path.read_text(encoding="utf-8", errors="replace")
+    for i, raw_line in enumerate(text.splitlines(), 1):
+        if _HISTORICAL_MARKER.search(raw_line):
+            continue
+        # Revision-history rows: "| 3.0 | 2026-02-16 | CTO | Updated for ... 11-tool suite |"
+        if re.match(r"\s*\|\s*\d+\.\d+\s*\|\s*\d{4}-\d{2}-\d{2}\s*\|", raw_line):
+            continue
+        line = _strip_noise(raw_line)
+        # Patterns overlap by design — "All 12 tools" matches both the qualified-plural
+        # form and the bare "All N" form — so suppress any match that overlaps one
+        # already reported on this line, rather than deduping on an exact span.
+        reported_spans: list[tuple[int, int]] = []
+        patterns = list(_TOOL_COUNT_PATTERNS)
+        if _ROW_MENTIONS_TOOLS.search(line):
+            patterns.append(_BARE_ALL_IN_TOOLS_ROW)
+        for pattern in patterns:
+            for m in pattern.finditer(line):
+                start, stop = m.span()
+                if any(start < prev_stop and prev_start < stop for prev_start, prev_stop in reported_spans):
+                    continue
+                raw = m.group("n").lower()
+                claimed = _NUMBER_WORDS.get(raw)
+                if claimed is None:
+                    try:
+                        claimed = int(raw)
+                    except ValueError:
+                        continue
+                # Below five is a per-tier allowance ("2 tools (TB + Flux)"),
+                # never a catalog claim — the catalog has never been that small.
+                if claimed < 5 or claimed == code_count:
+                    continue
+                reported_spans.append((start, stop))
+                violations.append(
+                    Violation(
+                        rule="tool_count_consistency",
+                        file=doc_rel,
+                        line=i,
+                        message=(
+                            f"Doc claims {m.group(0).strip()!r}, registry has {code_count} "
+                            f"(tools_registry.MARKETING_AUDIT_TOOL_COUNT). Update the prose, or mark the "
+                            f"line `<!-- doc-consistency: historical -->` if it records a past version."
+                        ),
+                    )
+                )
+    return violations
+
+
+# Customer-visible code surfaces carrying a tool count. The first version of this
+# check covered backend/main.py only, which left the public pricing comparison and the
+# demo route's page metadata stale while the gate reported success.
+#
+# Each entry: (repo-relative path, compiled pattern with an `n` group, why it matters).
+CODE_SURFACE_CHECKS: tuple[tuple[str, re.Pattern[str], str], ...] = (
+    (
+        "frontend/src/domain/pricing.ts",
+        re.compile(r"'All (?P<n>\d{1,2})'"),
+        "the pricing page's plan-comparison table — what a prospect reads before paying",
+    ),
+    (
+        "frontend/src/app/(marketing)/demo/layout.tsx",
+        re.compile(r"all (?P<n>\d{1,2}) audit diagnostic tools", re.IGNORECASE),
+        "the /demo route's page metadata (search results and social share cards)",
+    ),
+)
+
+
+def _check_code_surfaces(code_count: int, project_root: Path) -> list[Violation]:
+    """Check customer-visible tool counts outside the documentation tree."""
+    violations: list[Violation] = []
+    for rel, pattern, why in CODE_SURFACE_CHECKS:
+        path = project_root / rel
+        if not path.exists():
+            continue
+        for i, line in enumerate(path.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
+            if _HISTORICAL_MARKER.search(line):
+                continue
+            for m in pattern.finditer(line):
+                claimed = int(m.group("n"))
+                if claimed < 5 or claimed == code_count:
+                    continue
+                violations.append(
+                    Violation(
+                        rule="tool_count_consistency",
+                        file=rel,
+                        line=i,
+                        message=(
+                            f"Claims {m.group(0).strip()!r} but the registry has {code_count} "
+                            f"(tools_registry.MARKETING_AUDIT_TOOL_COUNT). This is {why}."
+                        ),
+                    )
+                )
+    return violations
+
+
+def _check_api_description(code_count: int, backend_root: Path) -> list[Violation]:
+    """Check the FastAPI app description's tool count against the registry.
+
+    This is the only *public* tool-count claim in the codebase: it is served in the
+    OpenAPI schema and rendered on /docs. Changing it also moves
+    scripts/openapi-snapshot.json, which the OpenAPI Schema Drift Check gate
+    compares — so regenerate the snapshot in the same commit.
+    """
+    main_path = backend_root / "main.py"
+    if not main_path.exists():
+        return []
+    violations: list[Violation] = []
+    for i, line in enumerate(main_path.read_text(encoding="utf-8").splitlines(), 1):
+        m = re.search(r'description\s*=\s*"(?P<n>\d{1,2})-Tool\b', line)
+        if not m:
+            continue
+        claimed = int(m.group("n"))
+        if claimed != code_count:
+            violations.append(
+                Violation(
+                    rule="tool_count_consistency",
+                    file="backend/main.py",
+                    line=i,
+                    message=(
+                        f"FastAPI description claims {claimed} tools, registry has {code_count} "
+                        f"(tools_registry.MARKETING_AUDIT_TOOL_COUNT). This string is public — it ships in "
+                        f"the OpenAPI schema. Fix it and regenerate scripts/openapi-snapshot.json."
+                    ),
+                )
+            )
     return violations
 
 
@@ -271,6 +514,7 @@ def run_checks(backend_root: Path) -> list[Violation]:
     code_tiers = _parse_user_tier_enum(backend_root)
     jwt_default = _parse_jwt_default(backend_root)
     code_prices = _parse_price_table(backend_root)
+    tool_count = _parse_marketing_tool_count(backend_root)
 
     # Doc files to check
     security_policy = project_root / "docs" / "04-compliance" / "SECURITY_POLICY.md"
@@ -313,6 +557,15 @@ def run_checks(backend_root: Path) -> list[Violation]:
                 "docs/04-compliance/TERMS_OF_SERVICE.md",
             )
         )
+
+    # 4. Aggregate tool-count consistency (Sprint 784)
+    if tool_count is not None:
+        violations.extend(_check_api_description(tool_count, backend_root))
+        violations.extend(_check_code_surfaces(tool_count, project_root))
+        for rel in TOOL_COUNT_DOCS:
+            doc = project_root / rel
+            if doc.exists():
+                violations.extend(_check_tool_count_in_doc(tool_count, doc, rel))
 
     return violations
 

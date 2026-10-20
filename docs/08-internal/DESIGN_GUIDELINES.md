@@ -371,7 +371,7 @@ Mobile: particle count reduced ~40% on screens < 768px.
 
 ### Accent State System
 
-The canvas responds to application state via `CanvasAccentContext`, wired to all 12 tool pages:
+The canvas responds to application state via `CanvasAccentContext`, wired to every tool page:
 
 | State | Glow Color | Opacity | Speed | Effect |
 |---|---|---|---|---|
@@ -443,7 +443,7 @@ All variants disable `box-shadow` under `prefers-reduced-motion`.
 
 **Skeleton shimmer** — Loading state shimmer with translateX animation across placeholder elements. All skeletons (ToolPageSkeleton, CardGridSkeleton, UploadZoneSkeleton) use a unified shimmer overlay pattern: `absolute inset-0` div with `via-white/10` gradient sweep at 1.5s interval. Reusable `.shimmer-overlay` CSS class also available.
 
-**Tool page loading skeletons** — `ToolPageSkeleton` component with table/card variants used by all 12 tool `loading.tsx` files. Provides consistent loading states across the tool suite.
+**Tool page loading skeletons** — `ToolPageSkeleton` component with table/card variants used by every tool's `loading.tsx` file. Provides consistent loading states across the tool suite.
 
 **Maker's mark** (`.makers-mark`) — Small caps serif text in oatmeal-500, tracking-widest. Used for signature/attribution flourishes.
 

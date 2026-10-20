@@ -10,7 +10,7 @@
 
 ## Executive Summary
 
-Paciolus is a modern, cloud-native audit intelligence platform built on a **Zero-Storage architecture** with a 12-tool diagnostic suite. This document provides a comprehensive technical overview of the system design, technology stack, and architectural patterns.
+Paciolus is a modern, cloud-native audit intelligence platform built on a **Zero-Storage architecture** with an 18-tool diagnostic suite. This document provides a comprehensive technical overview of the system design, technology stack, and architectural patterns.
 
 **Current Version:** 2.1.0 (Phase LXIX Complete)
 
@@ -175,24 +175,36 @@ The term "Diagnostic Workspace" is retired. Use "Workspace" throughout.
 frontend/
 ├── src/
 │   ├── app/                    # Next.js App Router (22 routes)
-│   │   ├── page.tsx            # Platform homepage (12-tool showcase)
+│   │   ├── page.tsx            # Platform homepage (18-tool showcase)
 │   │   ├── login/page.tsx      # Login page
 │   │   ├── register/page.tsx   # Registration
 │   │   ├── portfolio/page.tsx  # Client portfolio
 │   │   ├── history/page.tsx    # Activity history
 │   │   ├── settings/           # Settings (general + practice + profile)
-│   │   ├── tools/
-│   │   │   ├── trial-balance/  # Tool 1: TB Diagnostics + Financial Statements
-│   │   │   ├── multi-period/   # Tool 2: Multi-Period Comparison
-│   │   │   ├── journal-entry-testing/ # Tool 3: JE Testing
-│   │   │   ├── ap-testing/     # Tool 4: AP Payment Testing
-│   │   │   ├── bank-rec/       # Tool 5: Bank Reconciliation
-│   │   │   ├── payroll-testing/ # Tool 6: Payroll & Employee Testing
-│   │   │   ├── three-way-match/ # Tool 7: Three-Way Match Validator
-│   │   │   ├── revenue-testing/ # Tool 8: Revenue Testing
-│   │   │   ├── ar-aging/       # Tool 9: AR Aging Analysis
-│   │   │   ├── fixed-asset-testing/ # Tool 10: Fixed Asset Testing
-│   │   │   └── inventory-testing/ # Tool 11: Inventory Testing
+│   │   ├── tools/              # 18 audit tools + side-cars; canonical list in backend/tools_registry.py
+│   │   │   ├── trial-balance/  # TB Diagnostics + Financial Statements
+│   │   │   ├── multi-period/   # Multi-Period Comparison
+│   │   │   ├── bank-rec/       # Bank Reconciliation
+│   │   │   ├── three-way-match/ # Three-Way Match
+│   │   │   ├── journal-entry-testing/ # JE Testing
+│   │   │   ├── ap-testing/     # AP Payment Testing
+│   │   │   ├── revenue-testing/ # Revenue Testing
+│   │   │   ├── ar-aging/       # AR Aging
+│   │   │   ├── payroll-testing/ # Payroll Testing
+│   │   │   ├── fixed-assets/   # Fixed Assets
+│   │   │   ├── inventory-testing/ # Inventory Testing
+│   │   │   ├── statistical-sampling/ # Statistical Sampling (ISA 530)
+│   │   │   ├── sod/            # Segregation of Duties
+│   │   │   ├── intercompany/   # Intercompany Elimination
+│   │   │   ├── w2-reconciliation/ # W-2 / W-3 Reconciliation
+│   │   │   ├── form-1099/      # Form 1099 Preparation
+│   │   │   ├── book-to-tax/    # Book-to-Tax Reconciliation
+│   │   │   ├── cash-flow-projector/ # Cash Flow Projector
+│   │   │   ├── multi-currency/ # Multi-Currency Conversion (side-car, not one of the 18)
+│   │   │   ├── composite-risk/ # Composite Risk Scoring (ISA 315 workflow)
+│   │   │   ├── account-risk-heatmap/ # Account Risk Heatmap
+│   │   │   ├── depreciation/   # Depreciation schedules
+│   │   │   └── loan-amortization/ # Loan Amortization
 │   │   ├── verify-email/       # Email verification
 │   │   └── layout.tsx          # Root layout (global providers)
 │   │
@@ -272,7 +284,7 @@ const MappingContext = createContext<MappingContextType>({
 
 | Route | Component | Auth Required | Description |
 |-------|-----------|---------------|-------------|
-| `/` | `page.tsx` | No | Platform homepage (12-tool showcase) |
+| `/` | `page.tsx` | No | Platform homepage (18-tool showcase) |
 | `/login` | `login/page.tsx` | No | Login page |
 | `/register` | `register/page.tsx` | No | Registration |
 | `/verify-email` | `verify-email/page.tsx` | No | Email verification |
@@ -281,17 +293,29 @@ const MappingContext = createContext<MappingContextType>({
 | `/settings` | `settings/page.tsx` | Yes | User preferences |
 | `/settings/practice` | `settings/practice/page.tsx` | Yes | Practice settings + thresholds |
 | `/settings/profile` | `settings/profile/page.tsx` | Yes | User profile |
-| `/tools/trial-balance` | `tools/trial-balance/page.tsx` | Verified | TB Diagnostics (Tool 1) |
-| `/tools/multi-period` | `tools/multi-period/page.tsx` | Verified | Multi-Period Comparison (Tool 2) |
-| `/tools/journal-entry-testing` | `tools/journal-entry-testing/page.tsx` | Verified | JE Testing (Tool 3) |
-| `/tools/ap-testing` | `tools/ap-testing/page.tsx` | Verified | AP Payment Testing (Tool 4) |
-| `/tools/bank-rec` | `tools/bank-rec/page.tsx` | Verified | Bank Reconciliation (Tool 5) |
-| `/tools/payroll-testing` | `tools/payroll-testing/page.tsx` | Verified | Payroll & Employee Testing (Tool 6) |
-| `/tools/three-way-match` | `tools/three-way-match/page.tsx` | Verified | Three-Way Match Validator (Tool 7) |
-| `/tools/revenue-testing` | `tools/revenue-testing/page.tsx` | Verified | Revenue Testing (Tool 8) |
-| `/tools/ar-aging` | `tools/ar-aging/page.tsx` | Verified | AR Aging Analysis (Tool 9) |
-| `/tools/fixed-asset-testing` | `tools/fixed-asset-testing/page.tsx` | Verified | Fixed Asset Testing (Tool 10) |
-| `/tools/inventory-testing` | `tools/inventory-testing/page.tsx` | Verified | Inventory Testing (Tool 11) |
+| `/tools/trial-balance` | `tools/trial-balance/page.tsx` | Verified | TB Diagnostics + Financial Statements |
+| `/tools/multi-period` | `tools/multi-period/page.tsx` | Verified | Multi-Period Comparison |
+| `/tools/bank-rec` | `tools/bank-rec/page.tsx` | Verified | Bank Reconciliation |
+| `/tools/three-way-match` | `tools/three-way-match/page.tsx` | Verified | Three-Way Match |
+| `/tools/journal-entry-testing` | `tools/journal-entry-testing/page.tsx` | Verified | JE Testing |
+| `/tools/ap-testing` | `tools/ap-testing/page.tsx` | Verified | AP Payment Testing |
+| `/tools/revenue-testing` | `tools/revenue-testing/page.tsx` | Verified | Revenue Testing |
+| `/tools/ar-aging` | `tools/ar-aging/page.tsx` | Verified | AR Aging |
+| `/tools/payroll-testing` | `tools/payroll-testing/page.tsx` | Verified | Payroll Testing |
+| `/tools/fixed-assets` | `tools/fixed-assets/page.tsx` | Verified | Fixed Assets |
+| `/tools/inventory-testing` | `tools/inventory-testing/page.tsx` | Verified | Inventory Testing |
+| `/tools/statistical-sampling` | `tools/statistical-sampling/page.tsx` | Verified | Statistical Sampling (ISA 530) |
+| `/tools/sod` | `tools/sod/page.tsx` | Verified | Segregation of Duties |
+| `/tools/intercompany` | `tools/intercompany/page.tsx` | Verified | Intercompany Elimination |
+| `/tools/w2-reconciliation` | `tools/w2-reconciliation/page.tsx` | Verified | W-2 / W-3 Reconciliation |
+| `/tools/form-1099` | `tools/form-1099/page.tsx` | Verified | Form 1099 Preparation |
+| `/tools/book-to-tax` | `tools/book-to-tax/page.tsx` | Verified | Book-to-Tax Reconciliation |
+| `/tools/cash-flow-projector` | `tools/cash-flow-projector/page.tsx` | Verified | Cash Flow Projector |
+| `/tools/multi-currency` | `tools/multi-currency/page.tsx` | Verified | Multi-Currency Conversion (side-car) |
+| `/tools/composite-risk` | `tools/composite-risk/page.tsx` | Verified | Composite Risk Scoring (ISA 315) |
+| `/tools/account-risk-heatmap` | `tools/account-risk-heatmap/page.tsx` | Verified | Account Risk Heatmap |
+| `/tools/depreciation` | `tools/depreciation/page.tsx` | Verified | Depreciation schedules |
+| `/tools/loan-amortization` | `tools/loan-amortization/page.tsx` | Verified | Loan Amortization |
 
 **Protected routes** use `AuthContext` to redirect unauthenticated users to `/login`.
 **Verified routes** require email-verified users (3-state: guest → sign in CTA, unverified → verification banner, verified → full access).
@@ -926,7 +950,7 @@ jobs:
 
 ### 10.2 Architectural Evolution
 
-**Phase 1 (Current):** Monolithic backend, 12-tool suite, CI pipeline, structured logging
+**Phase 1 (Current):** Monolithic backend, 18-tool suite, CI pipeline, structured logging
 **Phase 2 (Q3 2026):** Multi-region, Redis caching
 **Phase 3 (2027):** Microservices (audit engine, user service, client service)
 
@@ -968,4 +992,4 @@ jobs:
 
 ---
 
-*Paciolus v2.1.0 — 12-Tool Professional Audit Intelligence Suite*
+*Paciolus v2.1.0 — 18-Tool Professional Audit Intelligence Suite*
