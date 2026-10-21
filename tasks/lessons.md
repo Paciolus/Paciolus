@@ -4,6 +4,39 @@
 
 ---
 
+## "No references in the file" is evidence of delegation, not of a defect (Sprint 791, 2026-10-21)
+
+Twice in one session I grepped a file for a symbol, found nothing, and concluded the
+behaviour was missing.
+
+The first time it was a test: my guard asserting "every route accepting `engagement_id`
+must record the run" flagged nine false positives, because the testing routes delegate to
+`run_single_file_testing` and the diagnostics routes to `execute_file_tool`. I fixed the
+guard and wrote up the lesson.
+
+Hours later I did it again in prose. I wrote that **`createTestingHook.ts` has zero
+engagement references** and concluded the nine tools behind it were as broken as the six
+I was fixing — put it in a sprint filing *and* in a reply to the reviewer. It delegates to
+`useAuditUpload`, which has auto-injected `engagement_id` since Sprint 103 and calls
+`refreshToolRuns()` afterwards. The nine tools were fine. I had just fixed a guard for
+exactly this and then reasoned the same way by hand.
+
+**Pattern: before concluding a file lacks a behaviour, follow what it calls.** A thin
+wrapper is *supposed* to have no references to the thing its callee handles — absence
+there is the design working. The check is one level down, and it takes one grep.
+
+The correction cost: a `CORRECTION` block in the sprint entry and a public follow-up on the
+review thread. Cheap, and much cheaper than the sprint I nearly scoped at fifteen hooks
+instead of six.
+
+**Why the second instance is the more interesting one.** The guard version failed loudly —
+nine findings I had to investigate. The prose version would have failed silently: I would
+have "fixed" nine working hooks, the tests would have passed, and the sprint record would
+have carried a false account of what was broken. **A wrong belief encoded in a test gets
+caught by the test. The same belief written in prose gets believed.**
+
+---
+
 ## A declared contract nobody implements is a bug with documentation (Sprint 787b review, 2026-10-21)
 
 `shared/tool_run_recorder.py` opened with a confident statement of intent:

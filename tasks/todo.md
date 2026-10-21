@@ -549,44 +549,122 @@ expensive later.
 
 ---
 
-### Sprint 791: The engagement link exists in every API and in almost no UI
-**Status:** PENDING.
-**Priority:** P2 — the engagement layer's workpaper trail is largely empty in practice, and three
-sprints have now claimed engagement tracking that a browser user cannot actually produce.
+### Sprint 791: The six promoted tools' hooks never send `engagement_id`
+**Status:** COMPLETE.
+**Priority:** P2 — six of eighteen tools cannot file a workpaper entry from the UI, and two
+sprints in a row have claimed engagement tracking for them.
 **Source:** PR #182 review finding, verified 2026-10-21.
 
-Backends accept `engagement_id` on roughly every analysis endpoint. The browser almost never
-sends it. Only **four hooks** — `useAuditUpload`, `usePreflight`, `useStatisticalSampling`,
-`useTrialBalanceUpload` — plus the multi-period page call `useOptionalEngagementContext`.
+The six tools wired in Sprint 787b now accept `engagement_id` in the request body, and nothing in
+the product ever puts it there. None of `useSOD`, `useIntercompany`, `useW2Reconciliation`,
+`useForm1099`, `useBookToTax` or `useCashFlowProjector` contains the string `engagement` at all.
 
-Most consequential: **`hooks/createTestingHook.ts` has zero engagement references**, and it backs
-nine tools (JE, AP, Payroll, Revenue, AR Aging, Fixed Assets, Inventory, Bank Rec, Three-Way
-Match). Their routes have accepted `engagement_id` as a `Form` field for sprints. The six
-promoted tools wired in Sprint 787b are in the same position.
+So a practitioner who opens one of these tools from inside an active engagement — the `/tools/*`
+layout does supply `EngagementProvider`, and the workspace URL does carry `?engagement=…` —
+produces a run that is filed nowhere. For those six, the workpaper index, the Anomaly Summary
+coverage fraction and the completion gate are counting a population the UI cannot populate.
 
-So a practitioner who opens a tool from inside an active engagement — the `/tools/*` layout does
-supply `EngagementProvider`, and the workspace URL does carry `?engagement=…` — produces a run
-that is filed nowhere. The workpaper index, the Anomaly Summary coverage fraction and the
-completion gate are all counting a population the UI cannot populate.
+> **CORRECTION (2026-10-21, before any code was written).** The first version of this entry said
+> the gap was app-wide and singled out **`hooks/createTestingHook.ts`** for having "zero
+> engagement references", concluding that the nine testing tools behind it were equally broken.
+> **That was wrong.** `createTestingHook` delegates to `useAuditUpload`, and
+> `useAuditUpload.ts:102` has auto-injected `engagement_id` into the FormData since **Sprint
+> 103** (`// Auto-inject engagement_id when linked to a workspace`), then calls
+> `refreshToolRuns()` and `triggerLinkToast()` afterwards. The nine testing tools inherit all of
+> that and work correctly. "No engagement references in the file" was evidence of delegation, not
+> of a defect — the same mistake, in the same session, as the Sprint 787b guard that resolved
+> delegation badly. I reported the overclaim on PR #182 rather than leave it standing.
+>
+> The scope is therefore **the six JSON-body hooks only**, which genuinely do not use
+> `useAuditUpload` — they post via `apiPost` with their own fetch logic.
 
-**This is the third sprint in a row to claim engagement tracking without the whole path.** Sprint
-787 added the enum and claimed the tools were trackable; the PR #174 review caught it. Sprint 787b
-wired the routes and claimed the tools were tracked; the PR #182 review caught it. The pattern is
-that each sprint verified its own layer and inferred the rest, so the fix has to include a test
-that spans the layers rather than another layer-local one.
+**Reference pattern: `useStatisticalSampling`**, a JSON-body hook that already does this properly
+— `useOptionalEngagementContext()` → `engagementId` → `engagement_id: engagementId` in the
+payload, with `engagementId` in the `useCallback` dependency array.
+
+**Two sprints have now claimed this path without building all of it.** Sprint 787 added the enum
+and called the tools trackable; the PR #174 review caught it. Sprint 787b wired the routes and
+called the runs tracked; the PR #182 review caught it. Each verified its own layer and inferred
+the rest, so this sprint's tests have to span the layers rather than add a third layer-local set.
 
 **Scope:**
-1. `createTestingHook.ts` — read `useOptionalEngagementContext` and append `engagement_id` to the
-   FormData when an engagement is active. One change covers nine tools.
-2. The six promoted tools' hooks — add it to the JSON payload.
-3. An end-to-end test per tool family, from a rendered page with an active engagement to a
-   `ToolRun` row. Layer-local tests are what let this through twice.
-4. Audit the remaining tools for the same gap and record which deliberately have none.
+1. The six hooks — read `useOptionalEngagementContext` and include `engagement_id` in the
+   payload, following `useStatisticalSampling`. Add `engagementId` to the dependency arrays.
+2. Decide per hook whether the CSV-export call also carries it. Leaning no: Sprint 787b
+   deliberately did not wire the `export.csv` endpoints, since a re-render of an analysis the
+   caller already ran is not a second run.
+3. Match `useAuditUpload`'s follow-through — `refreshToolRuns()` and `triggerLinkToast()` after a
+   successful linked run — so the workspace reflects the new entry instead of going stale.
+4. A test per hook asserting the posted payload carries `engagement_id` when an engagement is
+   active and omits it when none is, driven through the hook rather than by hand-building the
+   body. **The tell that Sprint 787b was incomplete was that its tests had to supply
+   `engagement_id` themselves**; a test that constructs the thing the product should construct
+   proves nothing about the product.
 
-**Acceptance bar:** with an active engagement selected, running any tool from its page produces a
-`ToolRun` row — asserted through the UI, not by constructing the payload in a test.
+**Acceptance bar:** with an active engagement selected, running any of the six from its page
+produces a `ToolRun` row — asserted through the hook, not by constructing the payload.
 
-**Commit SHA:** TBD.
+**Also worth checking while here:** `usePreflight`, `useTrialBalanceUpload` and the multi-period
+page are the other `useOptionalEngagementContext` callers. Confirm no *other* JSON-body hook has
+the same gap, and record the result so the next reader does not have to re-derive it.
+
+#### What landed
+
+All six hooks now read `useOptionalEngagementContext` and spread
+`engagement_id: engagementId ?? undefined` into the posted payload, with `engagement_id` dropping
+out of the JSON entirely when there is no engagement — `undefined` does not survive
+`JSON.stringify`, and an explicit `null` would be a different thing on the wire that
+`Optional[int]` rejects.
+
+`engagementId` and `engagement` were added to each `useCallback` dependency array, and each hook
+now mirrors `useAuditUpload`'s follow-through on a successful **linked** run:
+`refreshToolRuns()` + `triggerLinkToast(<tool name>)`. Without that the workpaper list the
+practitioner is looking at still shows the pre-run state, so the run would be filed and invisible
+— a quieter version of the same bug.
+
+**The `export.csv` calls deliberately do not carry it**, matching Sprint 787b's decision not to
+wire the export endpoints: a CSV re-render of an analysis the caller already ran is not a second
+run.
+
+**The engagement link stays off the request types.** `SODAnalysisRequest` and friends describe
+what the *page* supplies; the hook owns the workspace link. Same split as `useAuditUpload`, which
+appends to FormData without the type mentioning it, and `useStatisticalSampling`, which passes
+`engagement_id` in a separate params object. A comment in each hook says so, because the natural
+next question on reading the spread is "why isn't this on the type?".
+
+#### Tests — `promotedToolEngagementLink.test.ts`, 25 tests
+
+Four cases per tool, asserting **what reached `fetch`** rather than what the hook was given:
+sends `engagement_id` when an engagement is active; omits the key entirely when not; refreshes the
+workspace after a linked run; does *not* refresh when there is none. Plus one coverage guard
+pinning the endpoint set to the six Sprint 787b wired, so a seventh cannot be added without a case
+here.
+
+Asserting through `fetch` is the point, not an implementation detail. **The tell that Sprint 787b
+was incomplete is that its backend tests constructed `engagement_id` in the payload themselves** —
+a test that supplies the thing the product is supposed to supply proves nothing about the product.
+
+Regression-proved: against the un-wired hooks, **12 of 25 fail** — the six "sends it" and six
+"refreshes" cases. The other 13 pass, correctly: the negative cases ("omits when absent", "does not
+refresh") hold trivially on code that never sends it, which is exactly why a suite of only negative
+assertions would have looked green.
+
+One snag worth recording: `jest.mock('@/utils/constants', ...)` with a bare object broke the whole
+suite with `(0, _constants.hours) is not a function` — `cachePlugin.ts` imports `hours()`/
+`minutes()` from that module and `apiClient` imports `cachePlugin`. Fixed with
+`...jest.requireActual`. A wholesale module mock is a bigger hammer than it looks when the module
+is a utility grab-bag.
+
+**Verification:** 25 new tests; frontend suite **2,011 → 2,036 passed** (207 suites), 0 failures;
+`tsc --noEmit` exit 0; `npx eslint src/hooks` clean; `npm run build` clean with every route
+`ƒ (Dynamic)` and `ƒ Proxy (Middleware)` active.
+
+**Audit of the other JSON-body hooks, recorded so it is not re-derived:** `useAuditUpload` (and
+therefore `createTestingHook` and the nine testing tools behind it), `usePreflight`,
+`useTrialBalanceUpload` and `useStatisticalSampling` all already send `engagement_id`. The six
+fixed here were the only gap.
+
+**Commit SHA:** filled at merge.
 
 ---
 

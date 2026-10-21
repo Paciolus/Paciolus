@@ -11,6 +11,7 @@
 
 import { useCallback, useState } from 'react'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
+import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
 import type {
   SODAnalysisRequest,
   SODAnalysisResponse,
@@ -34,6 +35,12 @@ export interface UseSODReturn {
 
 export function useSOD(): UseSODReturn {
   const { token } = useAuthSession()
+  // Sprint 791: the engagement link is injected by the hook, not declared on
+  // the request type — the page supplies the analysis inputs and the hook owns
+  // the workspace link. Same split as useAuditUpload (which appends
+  // engagement_id to FormData) and useStatisticalSampling.
+  const engagement = useOptionalEngagementContext()
+  const engagementId = engagement?.engagementId
   const [status, setStatus] = useState<SODStatus>('idle')
   const [result, setResult] = useState<SODAnalysisResponse | null>(null)
   const [rules, setRules] = useState<SODRule[]>([])
@@ -49,16 +56,26 @@ export function useSOD(): UseSODReturn {
   const analyze = useCallback(async (payload: SODAnalysisRequest): Promise<boolean> => {
     setStatus('loading')
     setError('')
-    const response = await apiPost<SODAnalysisResponse>('/audit/sod/analyze', token, payload)
+    const response = await apiPost<SODAnalysisResponse>(
+      '/audit/sod/analyze',
+      token,
+      { ...payload, engagement_id: engagementId ?? undefined },
+    )
     if (response.ok && response.data) {
       setResult(response.data)
       setStatus('success')
+      // Sprint 791: mirror useAuditUpload's follow-through so the
+      // workspace reflects the new workpaper entry instead of going stale.
+      if (engagement && engagementId) {
+        engagement.refreshToolRuns()
+        engagement.triggerLinkToast('Segregation of Duties')
+      }
       return true
     }
     setStatus('error')
     setError(response.error || 'Failed to run SoD analysis')
     return false
-  }, [token])
+  }, [token, engagement, engagementId])
 
   const exportCsv = useCallback(async (payload: SODAnalysisRequest): Promise<boolean> => {
     const response = await apiDownload('/audit/sod/analyze.csv', token, {
