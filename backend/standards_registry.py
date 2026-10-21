@@ -230,6 +230,15 @@ STANDARDS: Final[tuple[Standard, ...]] = (
     # ── AICPA / AU-C ─────────────────────────────────────────
     Standard(
         body="AICPA",
+        code="AU-C 265",
+        title="Communicating Internal Control Related Matters Identified in an Audit",
+        usage=(
+            "Boundary reference for memo language — what we do NOT classify",
+            "SoD tool page disclaimer, paired with ISA 265",
+        ),
+    ),
+    Standard(
+        body="AICPA",
         code="AU-C 450",
         title="Evaluation of Misstatements Identified During the Audit",
         usage=("(future Sprint 729 — SUM schedule)",),

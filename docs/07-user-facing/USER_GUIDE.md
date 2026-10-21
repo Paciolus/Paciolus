@@ -15,7 +15,7 @@ Paciolus is a diagnostic intelligence platform for financial professionals. Eigh
 **What makes Paciolus different:**
 - **Zero-Storage Architecture:** Client data is processed in-memory and immediately discarded. Nothing written to disk. Nothing retained between sessions.
 - **18 Audit Tools:** Trial Balance Diagnostics, Multi-Period Comparison, Bank Reconciliation, Three-Way Match, Journal Entry Testing, AP Payment Testing, Revenue Testing, AR Aging, Payroll Testing, Fixed Assets, Inventory Testing, Statistical Sampling, Segregation of Duties, Intercompany Elimination, W-2 / W-3 Reconciliation, Form 1099 Preparation, Book-to-Tax Reconciliation, and the Cash Flow Projector. Multi-Currency Conversion runs alongside them as a validation layer rather than a tool of its own.
-  - Sections 3–14 below walk through the first twelve in detail. The six tax and controls tools (Segregation of Duties, Intercompany Elimination, W-2 / W-3, Form 1099, Book-to-Tax, Cash Flow Projector) are not yet written up here — each has a working page reachable from the Tools index and the command palette
+  - Sections 3–20 below walk through all eighteen in detail, one chapter each.
 - **10 File Formats:** CSV, Excel (.xlsx/.xls), TSV, TXT, OFX, QBO, IIF, PDF, and ODS
 - **Professional Reports:** Client-ready PDF memos, Excel workpapers, and CSV exports with workpaper signoff
 
@@ -39,16 +39,22 @@ Paciolus is a diagnostic intelligence platform for financial professionals. Eigh
 12. [Tool 10: Fixed Asset Testing](#12-tool-10-fixed-asset-testing)
 13. [Tool 11: Inventory Testing](#13-tool-11-inventory-testing)
 14. [Tool 12: Statistical Sampling](#14-tool-12-statistical-sampling)
-15. [Billing & Plans](#15-billing--plans)
-16. [Data Handling Guarantees](#16-data-handling-guarantees)
-17. [Engagement Workspaces](#17-engagement-workspaces)
-18. [Managing Clients](#18-managing-clients)
-19. [Exports & Reports](#19-exports--reports)
-20. [Customizing Settings](#20-customizing-settings)
-21. [Command Palette](#21-command-palette)
-22. [Activity History](#22-activity-history)
-23. [Troubleshooting](#23-troubleshooting)
-24. [FAQ](#24-faq)
+15. [Tool 13: Segregation of Duties](#15-tool-13-segregation-of-duties)
+16. [Tool 14: Intercompany Elimination](#16-tool-14-intercompany-elimination)
+17. [Tool 15: W-2 / W-3 Reconciliation](#17-tool-15-w-2--w-3-reconciliation)
+18. [Tool 16: Form 1099 Preparation](#18-tool-16-form-1099-preparation)
+19. [Tool 17: Book-to-Tax Reconciliation](#19-tool-17-book-to-tax-reconciliation)
+20. [Tool 18: Cash Flow Projector](#20-tool-18-cash-flow-projector)
+21. [Billing & Plans](#21-billing--plans)
+22. [Data Handling Guarantees](#22-data-handling-guarantees)
+23. [Engagement Workspaces](#23-engagement-workspaces)
+24. [Managing Clients](#24-managing-clients)
+25. [Exports & Reports](#25-exports--reports)
+26. [Customizing Settings](#26-customizing-settings)
+27. [Command Palette](#27-command-palette)
+28. [Activity History](#28-activity-history)
+29. [Troubleshooting](#29-troubleshooting)
+30. [FAQ](#30-faq)
 
 ---
 
@@ -316,14 +322,18 @@ Go to Settings > Practice to configure test thresholds:
 
 Upload an AP payment register. Key columns: Vendor, Invoice Number, Amount, Payment Date. Optional: Check Number, Description, Payment Method.
 
-### 6.2 Test Battery (13 Tests)
+### 6.2 Test Battery (14 Tests)
 
-**Tier 1 — Structural (5 tests):**
+**Tier 1 — Structural (6 tests):**
 - **AP-T1:** Exact duplicate payments (same vendor + invoice + amount + date)
 - **AP-T2:** Missing critical fields (blank vendor, zero amount)
 - **AP-T3:** Check number gaps (sequential gap detection)
 - **AP-T4:** Round dollar amounts ($10K+ thresholds)
 - **AP-T5:** Payment before invoice date
+- **AP-T14:** Invoice without PO — payments above materiality with a blank purchase-order
+  reference. Per the ACFE 2024 *Report to the Nations*, billing schemes account for roughly
+  19% of occupational fraud cases, and missing PO linkage is the canonical indicator.
+  Requires a PO-number column; skipped with a reason when absent.
 
 **Tier 2 — Statistical (5 tests):**
 - **AP-T6:** Fuzzy duplicate payments (same vendor, similar amount, different dates)
@@ -413,13 +423,33 @@ Paciolus uses exact matching:
 
 Upload a payroll register. Key columns: Employee Name/ID, Gross Pay, Pay Date. Optional: Department, Hours, Rate, Net Pay, Deductions.
 
-### 8.2 Test Battery (11 Tests)
+### 8.2 Test Battery (13 Tests)
 
-**Structural tests:** Missing fields, duplicate records, pay frequency anomalies, termination-date checks.
+**Tier 1 — Structural (7 tests):**
+- **PR-T1:** Duplicate employee IDs (same ID, different names)
+- **PR-T2:** Missing critical fields (blank name, zero pay, blank date)
+- **PR-T3:** Round salary amounts ($100K / $50K / $25K / $10K patterns)
+- **PR-T4:** Pay after termination date — *requires a termination-date column*
+- **PR-T5:** Check number gaps — *requires a check-number column*
+- **PR-T12:** Duplicate employee names (same name, different IDs). Paired with PR-T1 this
+  completes the employee-identity check: same ID with different names points at ID reuse,
+  same name with different IDs is the classic ghost-employee pattern.
+- **PR-T13:** Gross-to-net reconciliation — flags rows where gross pay − deductions ≠ net pay.
+  Named in the AICPA *Employee Benefit Plan Audit Guide* Ch. 5 as a first-line integrity check:
+  if the three columns do not reconcile, at least one of them is wrong.
 
-**Statistical tests:** Gross pay outliers, overtime concentration, departmental variance.
+**Tier 2 — Statistical (3 tests):**
+- **PR-T6:** Unusual pay amounts (per-department z-score outliers)
+- **PR-T7:** Pay frequency anomalies (irregular pay spacing per employee)
+- **PR-T8:** Benford's Law on gross pay (first-digit distribution)
 
-**Fraud indicators:** Ghost employee detection (terminated employees still receiving pay), split-payroll patterns, round-amount concentration.
+**Tier 3 — Fraud Indicators (3 tests):**
+- **PR-T9:** Ghost employee indicators (employees matching multiple fraud signals)
+- **PR-T10:** Duplicate bank accounts or addresses — *requires a bank-account or address column*
+- **PR-T11:** Duplicate tax IDs — *requires a tax-ID column*
+
+Tests marked *requires* emit a skipped result with a reason when the column is absent, rather
+than failing the run.
 
 ### 8.3 Results
 
@@ -472,16 +502,32 @@ Paciolus performs exact PO# linkage first, then falls back to fuzzy matching (ve
 
 Upload a revenue register or sales journal. Key columns: Transaction ID, Date, Amount, Customer/Account. Optional: Contract ID, Obligation ID, Product/Service.
 
-### 10.2 Test Battery (16 Tests)
+### 10.2 Test Battery (18 Tests)
 
 **Tier 1 — Structural (5 tests):**
-- Missing fields, duplicate transactions, negative revenue, date gaps, unusual customers
+- **RT-01:** Large manual entries
+- **RT-02:** Year-end concentration
+- **RT-03:** Round revenue amounts
+- **RT-04:** Sign anomalies (credit-balance revenue accounts)
+- **RT-05:** Unclassified entries
 
-**Tier 2 — Statistical (4 tests):**
-- Amount outliers, concentration risk, Benford's analysis, seasonality deviation
+**Tier 2 — Statistical (5 tests):**
+- **RT-06:** Amount z-score outliers
+- **RT-07:** Revenue trend variance
+- **RT-08:** Customer concentration risk
+- **RT-09:** Period-end cut-off risk (early-recognition exposure)
+- **RT-09b:** Prior-period timing — entries dated near the *period start*. Split from RT-09,
+  because an entry just after the opening is a different assertion from one just before the
+  close: the first suggests revenue held back from the prior period, the second suggests
+  revenue pulled forward into this one.
 
-**Tier 3 — Advanced (3 tests):**
-- Revenue recognition timing, period-end spikes, reversal patterns
+**Tier 3 — Advanced (4 tests):**
+- **RT-10:** Benford's Law first-digit analysis
+- **RT-11:** Duplicate entries
+- **RT-12:** Contra-revenue anomalies
+- **RT-17:** Contract validity (ASC 606 Step 1) — a blank customer on an entry claiming
+  recognition means there is no identified counterparty, and therefore no contract per
+  ASC 606-10-25-1.
 
 **Tier 4 — Contract-Aware (4 tests, optional):**
 - **RT-13:** Recognition timing (ASC 606 Step 5)
@@ -509,13 +555,30 @@ Contract-aware tests activate when contract columns are detected. If columns are
 - **Required:** Trial Balance with AR accounts
 - **Optional:** AR Sub-Ledger detail for deeper analysis
 
-### 11.2 Test Battery (11 Tests)
+### 11.2 Test Battery (12 Tests)
 
-**Structural (4 tests):** Missing data, duplicate accounts, negative balances, aging bucket validation.
+**Tier 1 — Structural (5 tests):**
+- **AR-01:** AR sign anomalies — a credit balance on the trial-balance AR account
+- **AR-01b:** Sub-ledger negative invoices. A different assertion from AR-01: the trial
+  balance can still net to a debit while an individual invoice is a credit memo, a reversal
+  or a data-entry error that the account-level check cannot see.
+- **AR-02:** Missing allowance for doubtful accounts
+- **AR-03:** Negative aging buckets
+- **AR-04:** Unreconciled sub-ledger detail against the trial-balance account
 
-**Statistical (5 tests):** Concentration risk, aging distribution outliers, DSO calculation, allowance adequacy, trend deviation.
+**Tier 2 — Statistical (5 tests):**
+- **AR-05:** Aging bucket concentration
+- **AR-06:** Past-due concentration
+- **AR-07:** Allowance adequacy against the aging profile
+- **AR-08:** Customer concentration
+- **AR-09:** DSO trend deviation
 
-**Advanced (2 tests):** Subsequent collection analysis, credit limit assessment.
+**Tier 3 — Advanced (2 tests):**
+- **AR-10:** AR rollforward reconciliation
+- **AR-11:** Credit limit breaches
+
+AR-01b, AR-03, AR-04, AR-05, AR-06, AR-08, AR-10 and AR-11 need the sub-ledger file. Without
+it each emits a skipped result with a reason, so the test-slot count stays stable.
 
 ### 11.3 Exporting
 
@@ -533,13 +596,28 @@ Contract-aware tests activate when contract columns are detected. If columns are
 
 Upload a fixed asset register. Key columns: Asset Description, Cost, Accumulated Depreciation, Useful Life, Date Placed in Service.
 
-### 12.2 Test Battery (9 Tests)
+### 12.2 Test Battery (11 Tests)
 
-**Structural (4 tests):** Missing data, duplicate assets, negative values, classification anomalies.
+**Tier 1 — Structural (4 tests):**
+- **FA-01:** Fully depreciated assets still on the register
+- **FA-02:** Missing required fields
+- **FA-03:** Negative cost or accumulated depreciation
+- **FA-04:** Accumulated depreciation exceeding cost
 
-**Statistical (3 tests):** Depreciation outliers, useful life deviation, capitalization threshold analysis.
+**Tier 2 — Statistical (4 tests):**
+- **FA-05:** Useful life outliers
+- **FA-06:** Cost z-score outliers
+- **FA-07:** Asset age concentration
+- **FA-T11:** Depreciation recalculation (IAS 16 / ASC 360) — where cost, residual value,
+  useful life and method are all present, recomputes expected annual depreciation and flags
+  material deviation from the reported accumulated figure. Supports straight-line and
+  double-declining balance.
 
-**Advanced (2 tests):** Impairment indicators, disposal pattern analysis.
+**Tier 3 — Advanced (3 tests):**
+- **FA-08:** Duplicate asset detection
+- **FA-09:** Residual value anomalies
+- **FA-10:** Lease asset indicators — scans descriptions for lease language and flags for
+  confirmation of ASC 842 treatment (right-of-use recognition, classification, amortization).
 
 ### 12.3 Exporting
 
@@ -557,13 +635,26 @@ Upload a fixed asset register. Key columns: Asset Description, Cost, Accumulated
 
 Upload an inventory listing. Key columns: Item Description, Quantity, Unit Cost. Optional: Category, Last Movement Date, Location.
 
-### 13.2 Test Battery (9 Tests)
+### 13.2 Test Battery (10 Tests)
 
-**Structural (3 tests):** Missing data, duplicate items, negative quantities.
+**Tier 1 — Structural (3 tests):**
+- **IN-01:** Missing required fields
+- **IN-02:** Negative quantities or costs
+- **IN-03:** Extended value mismatch (quantity × unit cost ≠ reported extended value)
 
-**Statistical (4 tests):** Cost outliers, slow-moving inventory, concentration by category, valuation anomalies.
+**Tier 2 — Statistical (4 tests):**
+- **IN-04:** Unit cost outliers (z-score)
+- **IN-05:** Quantity outliers (z-score)
+- **IN-06:** Slow-moving inventory (default 180-day threshold against last movement date)
+- **IN-07:** Category concentration
 
-**Advanced (2 tests):** Obsolescence indicators, NRV (net realizable value) assessment.
+**Tier 3 — Advanced (3 tests):**
+- **IN-08:** Duplicate item detection
+- **IN-09:** Zero-value items carrying quantity
+- **IN-T10:** Lower-of-cost-or-market / NRV indicator. IAS 2 ¶9 and ASC 330-10 cap inventory
+  at the lower of cost and net realizable value; where a selling-price column is present,
+  flags items whose unit cost exceeds selling price after an expected margin floor. Runs only
+  when selling price is populated on at least one row.
 
 ### 13.3 Exporting
 
@@ -601,9 +692,286 @@ Upload an inventory listing. Key columns: Item Description, Quantity, Unit Cost.
 
 ---
 
-## 15. Billing & Plans
+## 15. Tool 13: Segregation of Duties
 
-### 15.1 Plan Overview
+**Purpose:** Detect incompatible access combinations — one person who can both create a vendor and approve its invoice, or post a journal entry and close the period. Built for SOC 1 and internal-audit engagements.
+
+**Standards:** SOC 1, COSO 2013 Principle 10 (selects and develops control activities), AICPA segregation-of-incompatible-duties guidance.
+
+**Availability:** every paid plan.
+
+### 15.1 Input
+
+Two matrices, uploaded as CSV and parsed in your browser:
+
+| Matrix | Columns |
+|--------|---------|
+| User-to-role | User ID, User Name, Role Codes (one role per row, or a delimited list) |
+| Role-to-permission | Role Code, Permissions (one per row, or a delimited list) |
+
+Permission names are normalised before matching — case, surrounding whitespace and spaces-versus-underscores are all treated the same, so `JE Create`, `je_create` and `JE_CREATE` are one permission.
+
+Custom rules can be supplied with the request. They are **additive** to the built-in library, not a replacement.
+
+### 15.2 Rule Library (11 Rules)
+
+| Code | Conflict |
+|------|----------|
+| **AP-01** | Vendor master maintenance + invoice creation |
+| **AP-02** | Invoice creation + payment release |
+| **AP-03** | Payment execution + bank reconciliation |
+| **JE-01** | Journal entry creation + posting |
+| **JE-02** | Journal entry posting + period close |
+| **PR-01** | Payroll master maintenance + payment |
+| **PR-02** | Pay rate change + payment |
+| **REV-01** | Customer creation + credit memo issuance |
+| **REV-02** | Invoicing + cash receipt application |
+| **INV-01** | Physical inventory custody + accounting records |
+| **ADM-01** | User administration + transactional access |
+
+Each rule carries a severity (high / medium / low), a mitigation suggestion and a rationale, all returned with the result so they can be pasted into a workpaper.
+
+### 15.3 Reading the Output
+
+- **Conflict matrix** — one row per (user, rule) hit, with the permissions that triggered it.
+- **Per-user risk ranking** — score = `3 × high + 2 × medium + 1 × low`. Tiers: **high** at ≥ 6, **moderate** at ≥ 3, otherwise **low**.
+- **Counts** — rules evaluated, users evaluated, users with at least one conflict, high-risk users.
+
+A detected conflict is a **candidate for review**, not a deficiency. Whether a compensating control is adequate, and whether any gap rises to a significant deficiency or material weakness, is auditor judgment under ISA 265 / AU-C 265 and is deliberately not automated.
+
+### 15.4 Exporting
+
+- **SoD Analysis (CSV)** — conflict matrix plus the per-user ranking.
+
+**Scope limits:** one matrix set per run. Bridging roles across multiple systems is out of scope, and the rule library covers common AICPA / SOX 404 patterns rather than every entity-specific conflict.
+
+---
+
+## 16. Tool 14: Intercompany Elimination
+
+**Purpose:** Match reciprocal intercompany balances across entity trial balances, propose the elimination entries that zero them, and show the consolidation worksheet before and after.
+
+**Standards:** ASC 810, IFRS 10, ISA 600.
+
+**Availability:** every paid plan.
+
+### 16.1 Input
+
+Two or more entity trial balances in one request (maximum 50 entities, 5,000 accounts each):
+
+| Field | Notes |
+|-------|-------|
+| Entity ID, Entity Name | Entity ID must be unique across the request |
+| Account | Account name or number |
+| Debit, Credit | Decimal strings |
+| Counterparty Entity | **The field that makes matching possible** — which entity the balance is due from or to |
+| Tolerance | Reconciliation tolerance, default `1.00` |
+
+Without a counterparty entity on at least one side, a balance cannot be paired and appears as an unmatched intercompany line.
+
+### 16.2 Reading the Output
+
+- **Intercompany lines** — every account identified as intercompany.
+- **Matched pairs** — reciprocal balances found, each marked reconciling or mismatched against the tolerance.
+- **Mismatches** — pairs that do not agree. These are the ones that matter: a mismatch is the signature of a timing difference, a currency difference or a booking error, and it has to be reconciled manually before consolidation can complete.
+- **Elimination journal entries** — proposed entries to zero out the reconciling pairs.
+- **Consolidation worksheet** — pre-elimination totals by entity, the eliminations, and post-elimination consolidated totals.
+
+**The engine does not assert that elimination is complete.** It shows the gaps so you can close them. A clean mismatch report is evidence; an empty one on incomplete data is not.
+
+### 16.3 Exporting
+
+- **Consolidation Worksheet (CSV)** — the full worksheet including proposed eliminations.
+
+---
+
+## 17. Tool 15: W-2 / W-3 Reconciliation
+
+**Purpose:** Reconcile payroll system year-to-date totals against draft W-2s and the four quarterly Forms 941 — before filing, rather than after an IRS notice.
+
+**Standards:** IRC §6051, Form W-2, Form W-3, Form 941.
+
+**Availability:** every paid plan.
+
+### 17.1 Input
+
+| Input | Required | Columns |
+|-------|----------|---------|
+| Payroll YTD | Yes | Employee ID, Employee Name, Federal Wages, Federal Withholding, SS Wages, SS Tax Withheld, Medicare Wages, Medicare Tax Withheld |
+| Draft W-2 list | Optional | Same per-employee amounts as drafted for filing |
+| Form 941 quarters | Optional | Up to four quarters: total wages, federal withholding, SS wages, Medicare wages |
+
+Also supply the tax year and a tolerance (default `1.00`). Supplying only payroll YTD still produces internal-consistency checks; adding the W-2 drafts and 941s is what enables the cross-form reconciliation.
+
+### 17.2 What It Catches
+
+- Mismatched Social Security and Medicare wages between payroll and the draft W-2
+- Mis-applied Social Security wage base caps
+- Over-contributions to HSAs and retirement plans
+- Quarterly 941 totals that do not sum to the W-3 summary
+
+### 17.3 Reading the Output
+
+- **Employee discrepancies** — per-employee differences between payroll and the draft W-2.
+- **Form 941 mismatches** — per-quarter differences against the aggregated payroll totals.
+- **W-3 totals** — the computed summary the four 941s should agree to.
+
+**The engine flags discrepancies; it does not decide which number is right.** When payroll and the draft W-2 disagree, determining the correct figure is a practitioner judgment about the underlying facts.
+
+### 17.4 Exporting
+
+- **Reconciliation (CSV)** — employee discrepancies and 941 mismatches.
+
+A PDF memo for this tool is not yet available.
+
+---
+
+## 18. Tool 16: Form 1099 Preparation
+
+**Purpose:** Aggregate vendor payments across a tax year, apply the common 1099 reporting thresholds, and produce a candidate filing list with a data-quality report.
+
+**Standards:** IRC §6041, IRC §6041A, IRS Publication 1220.
+
+**Availability:** every paid plan.
+
+### 18.1 Input
+
+| Input | Columns |
+|-------|---------|
+| Vendors (max 5,000) | Vendor ID, Vendor Name, TIN (EIN or SSN, formatted or not), Entity Type, Address, City, State, Postal Code |
+| Payments (max 50,000) | Vendor ID, Amount, Payment Category, Payment Method |
+
+Plus the tax year. Entity type drives the corporate safe harbour, and payment method drives the processor exemption, so both affect whether a vendor becomes a candidate.
+
+### 18.2 Thresholds
+
+| Form | Threshold (aggregate per vendor) |
+|------|----------------------------------|
+| 1099-NEC — nonemployee compensation | $600 |
+| 1099-MISC — rents, royalties, medical, legal | $600 |
+| 1099-INT — interest | $10 |
+
+### 18.3 Reading the Output
+
+- **Candidates** — vendors meeting a threshold, with per-box amounts.
+- **Data quality** — vendors missing a TIN or address, or with inconsistent records. Fix these before filing; a missing TIN is the most common cause of a rejected submission.
+- **W-9 collection list** — vendors you need a W-9 from, derived from the data-quality findings.
+
+**The engine is deliberately conservative: it identifies candidates for review rather than asserting a filing obligation.** 1099 rules are IRS-defined and sit outside platform judgment — corporate status, payment categorisation and exemptions all require the practitioner's read of the facts.
+
+### 18.4 Exporting
+
+- **1099 Candidates (CSV)** — candidate listing with box amounts and the data-quality flags.
+
+A PDF memo for this tool is not yet available.
+
+---
+
+## 19. Tool 17: Book-to-Tax Reconciliation
+
+**Purpose:** Bridge book pretax income to taxable income, lay the adjustments out as Schedule M-1 or M-3, and roll the timing differences into a deferred tax summary.
+
+**Standards:** Form 1120 Schedule M-1, Form 1120 Schedule M-3, ASC 740.
+
+**Availability:** every paid plan.
+
+### 19.1 Input
+
+| Field | Notes |
+|-------|-------|
+| Tax year | |
+| Book pretax income | Per GAAP |
+| Total assets | **Drives the M-1 vs M-3 output** |
+| Federal tax rate, state tax rate | Decimal strings, e.g. `0.21` |
+| Adjustments (max 500) | Label, Amount, Difference Type (`permanent` / `temporary`), Direction (`add` / `subtract`) |
+| Rollforward | Beginning deferred tax asset and liability |
+
+### 19.2 M-1 or M-3
+
+The entity-size heuristic follows the IRS Schedule M-3 threshold for corporations:
+
+| Total assets | Output |
+|--------------|--------|
+| Under $10M | Schedule M-1 |
+| $10M and above | Schedule M-3 |
+
+Both layouts are computed and returned; the `entity_size` field tells you which one applies.
+
+### 19.3 Reading the Output
+
+- **Schedule M-1 / M-3** — the reconciliation from book income to taxable income, adjustments classified permanent or temporary.
+- **Deferred tax rollforward** — beginning balances, the movement from this year's temporary differences, and ending deferred tax asset / liability.
+- **Tax provision** — current and deferred components at the supplied rates.
+
+**The engine is a calculator, not a tax opinion.** Whether a given adjustment is permanent or temporary for the entity's facts is the practitioner's determination, and the classification you supply is the classification it uses.
+
+### 19.4 Exporting
+
+- **Book-to-Tax (CSV)** — the reconciliation, deferred rollforward and provision summary.
+
+A PDF memo for this tool is not yet available.
+
+---
+
+## 20. Tool 18: Cash Flow Projector
+
+**Purpose:** Project the forward 30 / 60 / 90-day cash position from AR aging, AP aging, opening cash and recurring flows, across three scenarios, and flag where the balance breaches a minimum safe level.
+
+**Standards:** ASC 230.
+
+**Availability:** every paid plan.
+
+**Not the same thing as the Cash Flow Statement.** Trial Balance Diagnostics produces an indirect-method cash flow *statement* from historical trial balance data (§3). This tool is its forward-looking counterpart, aimed at operational finance rather than financial reporting.
+
+### 20.1 Input
+
+| Field | Notes |
+|-------|-------|
+| Opening balance | Cash on hand at the start date |
+| Start date | The projection origin |
+| AR aging | Current, 1–30, 31–60, 61–90, over 90 |
+| AP aging | Same five buckets |
+| Recurring flows (max 100) | Label, Amount (negative for outflow), Frequency, First Date |
+| Minimum safe cash | Optional — the threshold whose breach gets flagged |
+
+### 20.2 Scenarios
+
+Three scenarios apply different collection and payment assumptions to the same deterministic weekly grid. AR collection rates by bucket:
+
+| Bucket | Stress | Base | Best |
+|--------|--------|------|------|
+| Current | 80% | 95% | 100% |
+| 1–30 | 65% | 85% | 95% |
+| 31–60 | 50% | 70% | 85% |
+| 61–90 | 30% | 50% | 70% |
+| Over 90 | 10% | 20% | 40% |
+
+The AP side moves with it, and that is what makes stress bite. Under **base**, payables aged past 30 days are partly deferred (95% / 90% / 80% paid). Under **stress** every bucket pays at 100% — receipts slow while payables go out on time, which is the combination that actually causes a squeeze. Under **best**, AP defers across the board (90% down to 70%) while collections improve.
+
+Run stress first. It is the scenario that tells you whether you have a problem; base tells you what you expect, and best tells you very little.
+
+### 20.3 Reading the Output
+
+Per scenario, at each of the 30 / 60 / 90-day horizons:
+
+- **Cumulative inflow and outflow**
+- **Ending balance**
+- **Lowest balance and the day it occurs** — the number that matters most. A healthy 90-day ending balance can sit on top of a mid-period trough that breaches your minimum.
+- **Liquidity breach flags** where the minimum safe cash level is crossed
+
+AR buckets are also ranked by their expected contribution to collections under the base scenario, which is the practical collections priority list.
+
+### 20.4 Exporting
+
+- **Projection (CSV)** — per-scenario horizon summaries and the weekly grid.
+
+PDF and Excel exports for this tool are not yet available.
+
+---
+
+## 21. Billing & Plans
+
+### 21.1 Plan Overview
 
 Paciolus offers three purchasable plans plus a Free tier for evaluation.
 
@@ -626,7 +994,7 @@ Paciolus offers three purchasable plans plus a Free tier for evaluation.
 | **Bulk upload** | — | — | — | Yes |
 | **Priority support** | — | — | Yes | Yes |
 
-### 15.2 Tool Access by Plan
+### 21.2 Tool Access by Plan
 
 All paid tiers (Solo, Professional, Enterprise) have access to all 18 tools.
 
@@ -644,8 +1012,16 @@ All paid tiers (Solo, Professional, Enterprise) have access to all 18 tools.
 | Fixed Asset Testing | — | Yes | Yes | Yes |
 | Inventory Testing | — | Yes | Yes | Yes |
 | Statistical Sampling | — | Yes | Yes | Yes |
+| Segregation of Duties | — | Yes | Yes | Yes |
+| Intercompany Elimination | — | Yes | Yes | Yes |
+| W-2 / W-3 Reconciliation | — | Yes | Yes | Yes |
+| Form 1099 Preparation | — | Yes | Yes | Yes |
+| Book-to-Tax Reconciliation | — | Yes | Yes | Yes |
+| Cash Flow Projector | — | Yes | Yes | Yes |
 
-### 15.3 Seat-Based Pricing
+Free tier is limited to TB Diagnostics and Flux Analysis.
+
+### 21.3 Seat-Based Pricing
 
 Professional and Enterprise plans include a base number of seats. Additional seats can be added:
 
@@ -654,7 +1030,7 @@ Professional and Enterprise plans include a base number of seats. Additional sea
 
 Manage seats from **Settings > Billing > Manage Seats**.
 
-### 15.4 Upgrading and Managing Your Plan
+### 21.4 Upgrading and Managing Your Plan
 
 1. Go to **Settings > Billing** or use the command palette (Cmd+K > "Billing")
 2. Click "Upgrade" on the desired plan
@@ -667,9 +1043,9 @@ To manage payment methods, view invoices, or cancel, click **"Manage Billing"** 
 
 ---
 
-## 16. Data Handling Guarantees
+## 22. Data Handling Guarantees
 
-### 16.1 Zero-Storage Architecture
+### 22.1 Zero-Storage Architecture
 
 Your uploaded financial data is never stored.
 
@@ -682,7 +1058,7 @@ Paciolus operates under a Zero-Storage security model:
 - **Only aggregate metadata is retained.** Category totals, financial ratios, row counts, and diagnostic metadata are stored for your activity history and workspace continuity
 - **Server breach exposure is minimal.** Even in the event of a server compromise, no client financial data exists to be stolen
 
-### 16.2 What Is Stored vs. What Is Not
+### 22.2 What Is Stored vs. What Is Not
 
 | Stored (Aggregate Metadata) | Never Stored (Financial Data) |
 |-----------------------------|-------------------------------|
@@ -693,7 +1069,7 @@ Paciolus operates under a Zero-Storage security model:
 | Billing and subscription records | Bank statement line items |
 | Activity log (filename prefix, timestamp) | Vendor names or employee names |
 
-### 16.3 Implications for You
+### 22.3 Implications for You
 
 "Ephemeral" refers specifically to your uploaded financial data. Workspace metadata — including analysis results, findings summaries, and report history — is retained so you can return to your work.
 
@@ -705,20 +1081,20 @@ For the complete technical specification, see the [Zero-Storage Architecture](ht
 
 ---
 
-## 17. Engagement Workspaces
+## 23. Engagement Workspaces
 
 **Available on Solo, Professional, and Enterprise plans.**
 
 Engagement Workspaces let you organize diagnostic work by client engagement, track follow-up items, and export a complete diagnostic package.
 
-### 17.1 Creating a Workspace
+### 23.1 Creating a Workspace
 
 1. Go to **Workspace** (Cmd+K > "Workspace" or navigate via sidebar)
 2. Click "New Workspace"
 3. Select a client and reporting period
 4. Set the materiality threshold (or inherit from client/practice defaults)
 
-### 17.2 Working in a Workspace
+### 23.2 Working in a Workspace
 
 When a workspace is active, tool runs are automatically linked to the engagement:
 - Tool results appear in the **Workpaper Index**
@@ -726,14 +1102,14 @@ When a workspace is active, tool runs are automatically linked to the engagement
 - **Follow-Up Items** can be created for flagged issues (narratives only — no financial data stored)
 - The **Cross-Tool Convergence Index** shows which accounts were flagged across multiple tools
 
-### 17.3 Engagement Lifecycle
+### 23.3 Engagement Lifecycle
 
 Workspaces follow a three-state workflow:
 - **Active** → Running diagnostics, adding follow-up items
 - **Completed** → All follow-up items must be resolved before completion
 - **Archived** → Terminal state, read-only
 
-### 17.4 Exporting
+### 23.4 Exporting
 
 - **Anomaly Summary Report** — Aggregated diagnostic results with disclaimer
 - **Diagnostic Package (ZIP)** — Contains anomaly summary + all tool memos generated during the engagement
@@ -743,16 +1119,16 @@ Workspaces follow a three-state workflow:
 
 ---
 
-## 18. Managing Clients
+## 24. Managing Clients
 
-### 18.1 Adding a Client
+### 24.1 Adding a Client
 
 1. Click "Portfolio" in navigation (or Cmd+K > "Portfolio")
 2. Click "+ New Client"
 3. Enter: Client Name, Industry, Fiscal Year End
 4. Click "Save Client"
 
-### 18.2 Client Settings
+### 24.2 Client Settings
 
 Each client can have custom settings:
 - Materiality threshold override
@@ -762,9 +1138,9 @@ Each client can have custom settings:
 
 ---
 
-## 19. Exports & Reports
+## 25. Exports & Reports
 
-### 19.1 Export Formats
+### 25.1 Export Formats
 
 | Format | Description | Availability |
 |--------|-------------|--------------|
@@ -775,7 +1151,7 @@ Each client can have custom settings:
 | **Financial Statements** | Balance Sheet + Income Statement + Cash Flow Statement | Solo and above |
 | **Diagnostic Package (ZIP)** | Complete engagement export with all memos | Professional and above |
 
-### 19.2 Available PDF Memos
+### 25.2 Available PDF Memos
 
 Each testing tool generates a professional memorandum:
 
@@ -796,15 +1172,15 @@ Each testing tool generates a professional memorandum:
 
 Additional memos: Currency Conversion Memo, Pre-Flight Memo, Population Profile Memo.
 
-### 19.3 Proof Summary
+### 25.3 Proof Summary
 
 Each testing tool page includes a **Proof Summary Bar** showing evidence quality across three dimensions: population coverage, test completeness, and data quality. These metrics also appear in the Engagement Workspace's **Proof Readiness** meter.
 
 ---
 
-## 20. Customizing Settings
+## 26. Customizing Settings
 
-### 20.1 Practice Settings
+### 26.1 Practice Settings
 
 **Settings > Practice** provides firm-wide defaults:
 
@@ -820,40 +1196,40 @@ Each testing tool page includes a **Proof Summary Bar** showing evidence quality
 - Same preset system with configurable fields
 - Toggle individual tests on/off
 
-### 20.2 User Profile
+### 26.2 User Profile
 
 **Settings > Profile:** Update display name, email, password.
 
 Email changes require re-verification. A security notification is sent to your previous email address.
 
-### 20.3 Billing Settings
+### 26.3 Billing Settings
 
 **Settings > Billing:** View current plan, usage metrics, upgrade/downgrade, manage seats, access Stripe portal.
 
 ---
 
-## 21. Command Palette
+## 27. Command Palette
 
 Press **Cmd+K** (Mac) or **Ctrl+K** (Windows) to open the command palette from anywhere in the platform.
 
-### 21.1 What You Can Do
+### 27.1 What You Can Do
 
 - **Navigate** — Jump to any page (Home, Portfolio, Workspace, Settings, Billing, Practice Settings)
 - **Open Tools** — Type a tool name to go directly to it
 - **Create** — Start a new workspace
 - **Search** — Fuzzy search across all commands with keyword matching
 
-### 21.2 Tier Gating
+### 27.2 Tier Gating
 
 Commands for tools outside your current plan are visible but will show an upgrade prompt when selected.
 
-### 21.3 Recency
+### 27.3 Recency
 
 Recently used commands appear higher in results. Recency data is stored in your browser session (Zero-Storage compliant — nothing sent to the server).
 
 ---
 
-## 22. Activity History
+## 28. Activity History
 
 **Route:** `/history`
 
@@ -866,7 +1242,7 @@ Shows a chronological list of all diagnostics run:
 
 ---
 
-## 23. Troubleshooting
+## 29. Troubleshooting
 
 ### "Columns Not Detected"
 
@@ -901,7 +1277,7 @@ Free plans allow 10 uploads per month; Solo allows 100. Professional and Enterpr
 
 ---
 
-## 24. FAQ
+## 30. FAQ
 
 **Q: Is my data safe?**
 A: Yes. Zero-Storage architecture means your financial data is processed in-memory and never stored. See Section 16 and our [Trust page](https://paciolus.com/trust) for details.

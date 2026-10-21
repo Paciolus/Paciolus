@@ -38,6 +38,14 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 SCANNED_GLOBS: tuple[str, ...] = (
     "frontend/src/app/(marketing)/**/*.tsx",
+    # Sprint 784c: the tool pages were missing. Every one carries a
+    # DisclaimerBox and a CitationFooter that a signed-in customer reads on each
+    # run, which is as customer-facing as the marketing routes — and the gap was
+    # not hypothetical: `tools/sod/page.tsx` had cited **AU-C 265** since Sprint
+    # 689b with no registry entry, and nothing failed. Widening the glob
+    # surfaced exactly that one citation across all tool pages, so the cost of
+    # the coverage is a single registry row.
+    "frontend/src/app/tools/**/*.tsx",
     "frontend/src/content/standards-specimen.ts",
     "frontend/src/components/marketing/**/*.tsx",
     "docs/07-user-facing/USER_GUIDE.md",

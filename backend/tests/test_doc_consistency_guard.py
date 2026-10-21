@@ -7,11 +7,13 @@ don't depend on the live repo contents.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from guards.doc_consistency_guard import (
     CODE_SURFACE_CHECKS,
     CUSTOMER_COPY_GLOBS,
+    GUIDE_TOOL_HEADINGS,
     Violation,
     _check_api_description,
     _check_code_surfaces,
@@ -20,11 +22,13 @@ from guards.doc_consistency_guard import (
     _check_pricing_in_doc,
     _check_tier_names_in_doc,
     _check_tool_count_in_doc,
+    _check_tool_test_counts_in_guide,
     _claimed_count,
     _parse_jwt_default,
     _parse_marketing_tool_count,
     _parse_price_table,
     _parse_share_ttl,
+    _parse_tool_test_counts,
     _parse_user_tier_enum,
     format_github_annotations,
     format_summary,
@@ -713,3 +717,248 @@ def test_customer_copy_still_reports_one_violation_per_line_with_several_stale_m
         "      A 12-tool suite with all twelve diagnostic tools and 11 audit tools.\n",
     )
     assert len(_check_customer_copy(18, tmp_path)) == 1
+
+
+# ---------------------------------------------------------------------------
+# Sprint 784c — per-tool test counts in the user guide
+# ---------------------------------------------------------------------------
+#
+# USER_GUIDE.md was already in TOOL_COUNT_DOCS, but that check only reads
+# *aggregate* catalog claims ("18 diagnostic tools"). The per-tool numbers in
+# each chapter heading drifted underneath a gate reading the same file: six of
+# the seven were stale, two of them by four tests. Registry values at the time:
+# JE 19, AP 14, Revenue 18, AR 12, Payroll 13, Fixed Assets 11, Inventory 10;
+# the guide said 19 / 13 / 16 / 11 / 11 / 9 / 9.
+
+
+def _guide(tmp_path, body: str):
+    path = tmp_path / "USER_GUIDE.md"
+    path.write_text(body, encoding="utf-8")
+    return path
+
+
+def test_parse_tool_test_counts_matches_the_registry():
+    """The parser must agree with the registry it claims to read."""
+    import tools_registry
+
+    backend_root = Path(tools_registry.__file__).resolve().parent
+    parsed = _parse_tool_test_counts(backend_root)
+    expected = {t.slug: t.test_count for t in tools_registry.TOOLS if t.test_count}
+    assert parsed == expected
+
+
+def test_parse_tool_test_counts_safe_when_registry_missing(tmp_path):
+    assert _parse_tool_test_counts(tmp_path) == {}
+
+
+def test_guide_heading_mismatch_is_flagged(tmp_path):
+    guide = _guide(
+        tmp_path,
+        "## 6. Tool 4: AP Payment Testing\n\n"
+        "### 6.2 Test Battery (13 Tests)\n\n"
+        "**Tier 1 — Structural (13 tests):**\n- stuff\n",
+    )
+    violations = _check_tool_test_counts_in_guide({"ap_testing": 14}, guide, "USER_GUIDE.md")
+    assert len(violations) == 1
+    assert violations[0].rule == "tool_test_count_consistency"
+    assert "claims 13 tests, the engine has 14" in violations[0].message
+    assert violations[0].line == 3
+
+
+def test_guide_heading_matching_the_registry_passes(tmp_path):
+    guide = _guide(
+        tmp_path,
+        "## 6. Tool 4: AP Payment Testing\n\n"
+        "### 6.2 Test Battery (14 Tests)\n\n"
+        "**Tier 1 — Structural (6 tests):**\n- a\n\n"
+        "**Tier 2 — Statistical (5 tests):**\n- b\n\n"
+        "**Tier 3 — Fraud Indicators (3 tests):**\n- c\n",
+    )
+    assert _check_tool_test_counts_in_guide({"ap_testing": 14}, guide, "USER_GUIDE.md") == []
+
+
+def test_tier_subcounts_that_disagree_with_the_heading_are_flagged(tmp_path):
+    """The failure the heading check alone cannot see.
+
+    A corrected number above an unchanged list is exactly what the heading
+    check's own message warns about, and summing the tier sub-counts is the
+    only part of this guard that catches it.
+    """
+    guide = _guide(
+        tmp_path,
+        "## 6. Tool 4: AP Payment Testing\n\n"
+        "### 6.2 Test Battery (14 Tests)\n\n"
+        "**Tier 1 — Structural (5 tests):**\n- a\n\n"
+        "**Tier 2 — Statistical (5 tests):**\n- b\n\n"
+        "**Tier 3 — Fraud Indicators (3 tests):**\n- c\n",
+    )
+    violations = _check_tool_test_counts_in_guide({"ap_testing": 14}, guide, "USER_GUIDE.md")
+    assert len(violations) == 1
+    assert "tier sub-counts total 13 (5 + 5 + 3)" in violations[0].message
+
+
+def test_tier_subcounts_read_the_unnumbered_style_too(tmp_path):
+    """The guide uses both `**Tier 1 — Structural (4 tests):**` and the bare
+    `**Structural (4 tests):**`. Missing the second style would make the sum
+    check silently inapplicable to whichever chapters use it."""
+    guide = _guide(
+        tmp_path,
+        "## 12. Tool 10: Fixed Asset Testing\n\n"
+        "### 12.2 Test Battery (11 Tests)\n\n"
+        "**Structural (4 tests):**\n- a\n\n"
+        "**Statistical (4 tests):**\n- b\n\n"
+        "**Advanced (2 tests):**\n- c\n",
+    )
+    violations = _check_tool_test_counts_in_guide({"fixed_asset_testing": 11}, guide, "USER_GUIDE.md")
+    assert len(violations) == 1
+    assert "total 10 (4 + 4 + 2)" in violations[0].message
+
+
+def test_tier_subcounts_tolerate_a_qualifier_in_the_parenthetical(tmp_path):
+    """Revenue's contract-aware tier is written `(4 tests, optional)`."""
+    guide = _guide(
+        tmp_path,
+        "## 10. Tool 8: Revenue Testing\n\n"
+        "### 10.2 Test Battery (18 Tests)\n\n"
+        "**Tier 1 — Structural (5 tests):**\n- a\n\n"
+        "**Tier 2 — Statistical (5 tests):**\n- b\n\n"
+        "**Tier 3 — Advanced (4 tests):**\n- c\n\n"
+        "**Tier 4 — Contract-Aware (4 tests, optional):**\n- d\n",
+    )
+    assert _check_tool_test_counts_in_guide({"revenue_testing": 18}, guide, "USER_GUIDE.md") == []
+
+
+def test_section_with_no_tier_subheadings_makes_no_claim_to_check(tmp_path):
+    """A battery section written as prose has no arithmetic to verify. It must
+    not be treated as summing to zero."""
+    guide = _guide(
+        tmp_path,
+        "## 6. Tool 4: AP Payment Testing\n\n"
+        "### 6.2 Test Battery (14 Tests)\n\n"
+        "Fourteen tests across structural, statistical and fraud tiers.\n",
+    )
+    assert _check_tool_test_counts_in_guide({"ap_testing": 14}, guide, "USER_GUIDE.md") == []
+
+
+def test_tier_subcounts_stop_at_the_next_section(tmp_path):
+    """A tier heading belonging to a later section must not be summed into this
+    one — the Results section that follows carries its own bolded lines."""
+    guide = _guide(
+        tmp_path,
+        "## 6. Tool 4: AP Payment Testing\n\n"
+        "### 6.2 Test Battery (14 Tests)\n\n"
+        "**Tier 1 — Structural (6 tests):**\n- a\n\n"
+        "**Tier 2 — Statistical (5 tests):**\n- b\n\n"
+        "**Tier 3 — Fraud Indicators (3 tests):**\n- c\n\n"
+        "### 6.3 Results\n\n"
+        "**Something Else (99 tests):**\n- noise\n",
+    )
+    assert _check_tool_test_counts_in_guide({"ap_testing": 14}, guide, "USER_GUIDE.md") == []
+
+
+def test_guide_check_honours_the_historical_marker(tmp_path):
+    guide = _guide(
+        tmp_path,
+        "## 6. Tool 4: AP Payment Testing\n\n### 6.2 Test Battery (13 Tests) <!-- doc-consistency: historical -->\n",
+    )
+    assert _check_tool_test_counts_in_guide({"ap_testing": 14}, guide, "USER_GUIDE.md") == []
+
+
+def test_guide_check_ignores_chapters_it_has_no_mapping_for(tmp_path):
+    guide = _guide(
+        tmp_path,
+        "## 7. Tool 5: Bank Reconciliation\n\n### 7.2 Test Battery (99 Tests)\n",
+    )
+    assert _check_tool_test_counts_in_guide({"ap_testing": 14}, guide, "USER_GUIDE.md") == []
+
+
+def test_guide_check_safe_when_guide_missing(tmp_path):
+    assert _check_tool_test_counts_in_guide({"ap_testing": 14}, tmp_path / "nope.md", "nope.md") == []
+
+
+def test_guide_tool_headings_all_resolve():
+    """Every entry must match a real chapter title, exactly.
+
+    The first draft of GUIDE_TOOL_HEADINGS mapped `ar_aging` to "AR Aging"
+    against a chapter titled "AR Aging Analysis". That tool silently dropped out
+    and the guard reported five of the six genuine stale counts — a
+    hand-maintained mapping needs a test that it still maps, which is the whole
+    lesson of the per-file allowlist the Sprint 789b change replaced.
+    """
+    repo_root = Path(__file__).resolve().parents[2]
+    guide = repo_root / "docs" / "07-user-facing" / "USER_GUIDE.md"
+    text = guide.read_text(encoding="utf-8")
+    titles = set(re.findall(r"^##\s+\d+\.\s+Tool\s+\d+:\s+(.+?)\s*$", text, re.M))
+    missing = [name for _, name in GUIDE_TOOL_HEADINGS if name not in titles]
+    assert not missing, f"GUIDE_TOOL_HEADINGS entries match no chapter title: {missing}"
+
+
+def test_guide_tool_headings_cover_every_tool_with_a_test_count():
+    """A tool whose engine reports a test count but which has no mapping here is
+    undocumented *and* unguarded."""
+    import tools_registry
+
+    counted = {t.slug for t in tools_registry.TOOLS if t.test_count}
+    mapped = {slug for slug, _ in GUIDE_TOOL_HEADINGS}
+    assert counted == mapped, (
+        f"registry has test counts for {sorted(counted - mapped)} with no guide mapping, "
+        f"and mappings for {sorted(mapped - counted)} with no registry count"
+    )
+
+
+def test_real_user_guide_test_counts_agree_with_the_registry():
+    """End-to-end against the shipped guide."""
+    import tools_registry
+
+    repo_root = Path(__file__).resolve().parents[2]
+    backend_root = Path(tools_registry.__file__).resolve().parent
+    violations = _check_tool_test_counts_in_guide(
+        _parse_tool_test_counts(backend_root),
+        repo_root / "docs" / "07-user-facing" / "USER_GUIDE.md",
+        "docs/07-user-facing/USER_GUIDE.md",
+    )
+    assert violations == [], [f"{v.file}:{v.line} {v.message}" for v in violations]
+
+
+def test_user_guide_tier_table_lists_every_catalog_tool():
+    """Sprint 784c: the tier table said "all 18 tools" above twelve rows.
+
+    The aggregate-count check passed, because "all 18 tools" agrees with the
+    registry — and the table underneath it listed only the pre-Sprint-689
+    catalog. A reader comparing the sentence to the table would have found the
+    six promoted tools missing and concluded the sentence was the error.
+
+    Matched on display names rather than slugs, since the guide writes prose
+    names; the mapping below is checked against the registry so a renamed tool
+    fails here instead of dropping out of the table silently.
+    """
+    import tools_registry
+
+    repo_root = Path(__file__).resolve().parents[2]
+    guide = (repo_root / "docs" / "07-user-facing" / "USER_GUIDE.md").read_text(encoding="utf-8")
+
+    # Matched on the title, not the number. Sprint 784b inserted six chapters
+    # and renumbered everything after section 14, which broke the first draft of
+    # this test — a hardcoded "### 15.2" is a dependency on the table of
+    # contents rather than on the thing being tested.
+    heading = re.search(r"^### [\d.]+ Tool Access by Plan\s*$", guide, re.M)
+    assert heading, "the Tool Access by Plan section has moved or been renamed"
+    rest = guide[heading.end() :]
+    table = re.split(r"^### ", rest, maxsplit=1, flags=re.M)[0]
+    rows = {
+        line.split("|")[1].strip()
+        for line in table.splitlines()
+        if line.startswith("|") and "---" not in line and not line.startswith("| Tool ")
+    }
+
+    # Guide prose name -> registry display name, where they differ.
+    ALIASES = {
+        "TB Diagnostics": "Trial Balance Diagnostics",
+        "AR Aging Analysis": "AR Aging",
+        "Fixed Asset Testing": "Fixed Assets",
+    }
+    normalised = {ALIASES.get(r, r) for r in rows}
+
+    catalog = {t.display_name for t in tools_registry.TOOLS if t.is_marketing_audit_tool}
+    missing = catalog - normalised
+    assert not missing, f"the tier table is missing {len(missing)} of {len(catalog)} catalog tools: {sorted(missing)}"
