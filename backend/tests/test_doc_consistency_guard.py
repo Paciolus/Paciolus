@@ -11,13 +11,16 @@ from pathlib import Path
 
 from guards.doc_consistency_guard import (
     CODE_SURFACE_CHECKS,
+    CUSTOMER_COPY_GLOBS,
     Violation,
     _check_api_description,
     _check_code_surfaces,
+    _check_customer_copy,
     _check_jwt_expiry_in_doc,
     _check_pricing_in_doc,
     _check_tier_names_in_doc,
     _check_tool_count_in_doc,
+    _claimed_count,
     _parse_jwt_default,
     _parse_marketing_tool_count,
     _parse_price_table,
@@ -492,3 +495,193 @@ def test_real_code_surfaces_agree_with_the_registry():
 
     repo_root = Path(__file__).resolve().parents[2]
     assert _check_code_surfaces(tools_registry.MARKETING_AUDIT_TOOL_COUNT, repo_root) == []
+
+
+# ---------------------------------------------------------------------------
+# Sprint 789b — the gate now reads customer-facing frontend copy
+# ---------------------------------------------------------------------------
+#
+# Why this exists: CODE_SURFACE_CHECKS is a hand-maintained per-file list, and a
+# per-file allowlist only guards the files someone remembered to add. Sprint 784
+# added `(marketing)/demo/layout.tsx` and stopped there, so the /demo route's
+# page *metadata* was corrected to 18 while the visible page body in the sibling
+# `demo/page.tsx` still read "Explore all twelve audit diagnostic tools" — and
+# this guard reported ALL CHECKS PASSED. Two more lived on the homepage hero
+# ("12 testing tools") and in the tool slideshow ("Twelve purpose-built tools").
+
+
+def _copy_file(root: Path, rel: str, text: str) -> None:
+    path = root / rel
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+
+
+def test_customer_copy_flags_spelled_out_count_with_stacked_adjectives(tmp_path):
+    """The exact string that sat live on /demo. Two adjectives between the count
+    and the noun, which the single-adjective pattern could not reach."""
+    _copy_file(
+        tmp_path,
+        "frontend/src/app/(marketing)/demo/page.tsx",
+        "            Explore all twelve audit diagnostic tools using synthetic data.\n",
+    )
+    violations = _check_customer_copy(18, tmp_path)
+    assert len(violations) == 1
+    assert violations[0].file == "frontend/src/app/(marketing)/demo/page.tsx"
+    assert violations[0].line == 1
+    assert "twelve audit diagnostic tools" in violations[0].message
+
+
+def test_customer_copy_flags_hyphenated_adjective(tmp_path):
+    """The exact string from ToolSlideshow — 'purpose-built' was not in the
+    closed adjective list."""
+    _copy_file(
+        tmp_path,
+        "frontend/src/components/marketing/ToolSlideshow.tsx",
+        "            Twelve purpose-built tools. Explore each one.\n",
+    )
+    assert len(_check_customer_copy(18, tmp_path)) == 1
+
+
+def test_customer_copy_flags_numeric_count_on_the_homepage_hero(tmp_path):
+    """The exact string from HeroProductFilm, which renders on the homepage."""
+    _copy_file(
+        tmp_path,
+        "frontend/src/components/marketing/hero/HeroProductFilm.tsx",
+        "        Professional-grade analysis across 12 testing tools. Zero data retained.\n",
+    )
+    assert len(_check_customer_copy(18, tmp_path)) == 1
+
+
+def test_customer_copy_flags_the_upgrade_modal_shown_at_checkout(tmp_path):
+    _copy_file(
+        tmp_path,
+        "frontend/src/components/billing/UpgradeModal.tsx",
+        "    features: ['100 uploads/mo', 'All 12 tools', 'PDF, Excel & CSV exports'],\n",
+    )
+    assert len(_check_customer_copy(18, tmp_path)) == 1
+
+
+def test_customer_copy_reports_one_violation_per_line(tmp_path):
+    """Several patterns can match the same claim; the reader should see it once."""
+    _copy_file(
+        tmp_path,
+        "frontend/src/components/marketing/Both.tsx",
+        "      A 12-tool suite with all twelve diagnostic tools.\n",
+    )
+    assert len(_check_customer_copy(18, tmp_path)) == 1
+
+
+def test_customer_copy_passes_when_counts_are_current(tmp_path):
+    _copy_file(
+        tmp_path,
+        "frontend/src/app/(marketing)/pricing/page.tsx",
+        "      { text: 'All 18 diagnostic tools' },\n"
+        "      An 18-tool suite. Eighteen purpose-built tools. All eighteen tools.\n",
+    )
+    assert _check_customer_copy(18, tmp_path) == []
+
+
+def test_customer_copy_honours_the_historical_marker(tmp_path):
+    _copy_file(
+        tmp_path,
+        "frontend/src/components/marketing/History.tsx",
+        "      {/* Launched with all twelve tools */} // doc-consistency: historical\n",
+    )
+    assert _check_customer_copy(18, tmp_path) == []
+
+
+def test_customer_copy_is_silent_on_an_empty_tree(tmp_path):
+    assert _check_customer_copy(18, tmp_path) == []
+
+
+# --- the false-positive set --------------------------------------------------
+#
+# The Sprint 789b pattern widening (stacked adjectives, hyphenated adjectives)
+# is only safe because the adjective list stays closed. The first draft of the
+# original tool-count check used an open class and produced 13 false positives
+# out of 14.
+#
+# The first draft of *this* fixture did not actually test that. It contained only
+# cases with no adjective at all ("18 tools", "six tools"), which the pattern
+# rejects whether the adjective class is open or closed — so loosening the class
+# to `[a-z-]+` left all 58 tests green while the comment here claimed they would
+# go red. ARBITRARY_ADJECTIVES is the part that discriminates: each line puts a
+# non-catalog word between a wrong count and "tools", so an open class flags it
+# and the closed list does not.
+
+
+# Flagged if the adjective class is ever opened to `[a-z-]+`. Counts are kept
+# away from the registry value so a match would be a real violation rather than
+# one that silently passes the equality check.
+ARBITRARY_ADJECTIVES = (
+    "      // the 6 remaining tools are queued for a later sprint\n"
+    "      We shipped 7 new tools last quarter.\n"
+    "      Compared against 9 competing tools.\n"
+)
+
+
+def test_customer_copy_ignores_non_catalog_claims(tmp_path):
+    rendered_count = "              {toolRuns.length}/18 tools\n"
+    bare_plural = "      // six tools are shown inline in the nav bar\n"
+    formats = "      { text: 'All 10 file formats' },\n"
+    tailwind = '      className="z-50 duration-500 leading-500"\n'
+    ledger_index = "    number: 13,\n"
+    other_noun = "      Eighteen specialized reports and 12 export endpoints.\n"
+    _copy_file(
+        tmp_path,
+        "frontend/src/components/marketing/Noise.tsx",
+        rendered_count + bare_plural + formats + tailwind + ledger_index + other_noun + ARBITRARY_ADJECTIVES,
+    )
+    violations = _check_customer_copy(18, tmp_path)
+    assert violations == [], [f"{v.file}:{v.line} {v.message}" for v in violations]
+
+
+def test_arbitrary_adjectives_would_be_flagged_by_an_open_adjective_class():
+    """Pins that the closed adjective list is load-bearing, not decoration.
+
+    Without this, loosening the list to `[a-z-]+` passes the whole suite — which
+    is exactly what the first draft of the fixture above did. Builds the open
+    variant of the pattern directly and asserts it matches all three lines, so
+    the discriminating power of ARBITRARY_ADJECTIVES is verified rather than
+    assumed.
+    """
+    import re
+
+    from guards.doc_consistency_guard import _NUMBER_WORDS
+
+    open_class = re.compile(
+        r"\b(?P<n>\d{1,2}|" + "|".join(_NUMBER_WORDS) + r")\s+(?:[a-z][a-z-]*\s+){1,2}tools?\b",
+        re.IGNORECASE,
+    )
+    lines = [ln for ln in ARBITRARY_ADJECTIVES.splitlines() if ln.strip()]
+    matched = [ln for ln in lines if open_class.search(ln)]
+    assert len(matched) == len(lines) == 3, (
+        "ARBITRARY_ADJECTIVES no longer discriminates between an open and a closed "
+        f"adjective class, so the false-positive test above proves nothing. "
+        f"Matched {len(matched)} of {len(lines)}: {matched}"
+    )
+
+
+def test_customer_copy_globs_match_real_directories():
+    """A glob that matches nothing covers nothing, silently — the same failure
+    mode as the per-file allowlist this check replaced."""
+    repo_root = Path(__file__).resolve().parents[2]
+    empty = [g for g in CUSTOMER_COPY_GLOBS if not list(repo_root.glob(g))]
+    assert not empty, f"CUSTOMER_COPY_GLOBS match no files: {empty}"
+
+
+def test_real_customer_copy_agrees_with_the_registry():
+    """End-to-end against the live tree: every tool count a customer can read
+    must match the registry."""
+    import tools_registry
+
+    repo_root = Path(__file__).resolve().parents[2]
+    violations = _check_customer_copy(tools_registry.MARKETING_AUDIT_TOOL_COUNT, repo_root)
+    assert violations == [], [f"{v.file}:{v.line} {v.message}" for v in violations]
+
+
+def test_number_word_resolution_covers_both_spellings_and_digits():
+    assert _claimed_count("twelve") == 12
+    assert _claimed_count("Eighteen") == 18
+    assert _claimed_count("18") == 18
+    assert _claimed_count("notanumber") is None

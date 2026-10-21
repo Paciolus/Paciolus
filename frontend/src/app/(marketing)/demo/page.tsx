@@ -76,7 +76,7 @@ export default function DemoPage() {
             See Paciolus in Action
           </h1>
           <p className="font-sans text-oatmeal-400 text-base leading-relaxed max-w-xl mx-auto">
-            Explore all twelve audit diagnostic tools using synthetic data.
+            Explore all eighteen audit diagnostic tools using synthetic data.
             Every output cites the governing accounting or auditing standard.
           </p>
         </motion.div>

@@ -97,6 +97,72 @@ not a fixture detail.**
 
 ---
 
+## Dry-run a new guard across the real tree, and read the passes too (Sprint 789b, 2026-10-21)
+
+Before wiring a widened tool-count pattern into `doc_consistency_guard.py`, I ran it as a
+read-only probe across the candidate file globs and printed **both** lists: claims that
+disagreed with the registry, and claims that agreed.
+
+The disagreement list had three entries. I had only known about two. The third —
+`HeroProductFilm.tsx:105`, "analysis across 12 testing tools" — renders on the
+**homepage**, and my original grep had missed it because I searched for the strings I
+expected ("twelve", "18 tools") rather than for the *shape of a claim*.
+
+The agreement list mattered just as much: 36 hits, every one a genuine and correct catalog
+claim, zero false positives. That is what made it safe to ship a widened pattern at all.
+A guard validated only against the cases you wrote by hand tells you nothing about the
+tree it will actually run on.
+
+**Pattern: a new static check is three steps, not one — probe the real tree, review the
+passes as carefully as the failures, then wire it in.** The probe costs one throwaway
+script and it is the only step that can find what you did not know to look for.
+
+**Corollary on per-file allowlists.** The guard already covered two frontend files, one of
+them `(marketing)/demo/layout.tsx` — the page *metadata* for the very route whose page
+*body* was stale. Metadata correct at 18, body beside it saying twelve, gate green. A
+hand-maintained per-file list only ever guards the files someone remembered to add, and
+it fails silently and indefinitely. Prefer a glob plus a test asserting the glob matches
+something; a glob that matches nothing covers nothing, which is the same failure wearing
+different clothes.
+
+---
+
+## A fixture can be orthogonal to the property it claims to protect (Sprint 789b, 2026-10-21)
+
+I widened a regex and justified the widening with "the adjective list stays closed, and
+`test_customer_copy_ignores_non_catalog_claims` pins that — loosen it to `[a-z-]+` and
+several of these go red."
+
+Then I loosened it to `[a-z-]+`. **All 58 tests passed.**
+
+Every string in the fixture had *no adjective at all*: "18 tools", "six tools", "All 10
+file formats", `{toolRuns.length}/18 tools`. The pattern rejects all of those whether the
+adjective class is open or closed. The fixture was a perfectly good false-positive test
+and completely orthogonal to the property the comment said it guarded.
+
+The fix needed cases that *discriminate* — "the 6 remaining tools", "7 new tools", "9
+competing tools" — an arbitrary word between a wrong count and the noun. Plus a second
+test asserting those three really are matched by the open variant, so the discriminator is
+verified rather than assumed. (Without that, someone later edits the fixture, the
+discriminating power quietly evaporates, and we are back here.)
+
+**Pattern: when a test is cited as the reason a risky choice is safe, break the choice and
+watch that specific test fail.** Not the suite — that test. "The suite passes" and "this
+test protects this property" are different claims, and only the second one is load-bearing
+when someone later wants to relax the constraint.
+
+This is the second time in one session that regression-proving caught a guard that was
+green and vacuous (Sprint 787b's delegation check was the first), and in both cases the
+code comment confidently asserted the protection it did not provide. **The comment is not
+evidence. The failing run is.**
+
+Related, same sprint: I added `core` to the adjective list speculatively. `grep` found
+only "Core tools & exports", which carries no count — so the alternative was inert and
+widened the pattern for nothing. Dropped. Every alternative in a pattern should be
+traceable to a real occurrence.
+
+---
+
 ## Counting the catalog twice is not the same as checking it works (Sprint 789, 2026-10-21)
 
 `test_catalog_consistency.py` ties `tools_registry.py` to the frontend tool ledger.

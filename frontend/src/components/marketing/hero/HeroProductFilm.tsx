@@ -102,7 +102,7 @@ function LeftColumn({ trackCtaClick }: { trackCtaClick: (cta: string) => void })
         className="font-sans text-sm text-oatmeal-500 max-w-lg mb-6 text-center lg:text-left"
         variants={fadeUp}
       >
-        Professional-grade analysis across 12 testing tools. Zero data retained.
+        Professional-grade analysis across 18 testing tools. Zero data retained.
       </motion.p>
 
       {/* Introductory pricing callout */}
