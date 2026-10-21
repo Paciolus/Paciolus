@@ -18,7 +18,7 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -161,7 +161,6 @@ def list_default_rules(
 def analyze_sod(
     request: Request,
     payload: SodAnalysisRequest,
-    background_tasks: BackgroundTasks,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
 ) -> SodAnalysisResponse:
@@ -185,9 +184,16 @@ def analyze_sod(
     # role-permission matrix yields a per-user risk ranking, not a single
     # composite, and its findings are users and permissions rather than GL
     # accounts — so shared/account_extractors.py has no extractor for it.
-    background_tasks.add_task(
-        maybe_record_tool_run, db, payload.engagement_id, current_user.id, "sod_checker", True, None, None
-    )
+    # PR #183 review: recorded synchronously, not via background_tasks.
+    # Starlette sends the response body (responses.py:167) *before* awaiting the
+    # background task (:170), so the client already has the result while the
+    # insert is still pending. Sprint 791's hooks call refreshToolRuns() as soon
+    # as the POST resolves, which would GET the workpaper list before the row
+    # existed, replace the context state with the stale list, and never refresh
+    # again — the new entry invisible until a manual reload. The write is one
+    # INSERT plus a commit after an analysis that already ran in-process, so the
+    # latency it buys back is not worth the race.
+    maybe_record_tool_run(db, payload.engagement_id, current_user.id, "sod_checker", True, None, None)
     return SodAnalysisResponse(**result.to_dict())
 
 

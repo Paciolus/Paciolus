@@ -4,6 +4,64 @@
 
 ---
 
+## A background task finishes after the client is already acting on the response (Sprint 791 review, 2026-10-21)
+
+I added `refreshToolRuns()` after a successful tool run so the workpaper list the
+practitioner is looking at would reflect it. The route recorded the run via
+`background_tasks.add_task`. Those two facts do not compose.
+
+Starlette sends the response body at `responses.py:167` and awaits the background task at
+`:170`. The client holding the 200 is *ahead* of the insert. So the refresh GET could
+return the list as it was before the run, replace the context state with it, and never fire
+again — the new entry invisible until a manual reload. The row was written. Nobody looked
+again.
+
+Earlier in the same session I had measured the ordering of background tasks against
+`yield`-dependency teardown and concluded the pattern was safe. That was the right answer
+to a different question. **"The task runs before teardown" and "the task runs before the
+client sees the response" are two orderings, and I checked the one that happened to be
+favourable.**
+
+**Pattern: if the client reads a value back immediately, writing it in a background task is
+a race the client usually loses.** Either write it synchronously, or do not promise the
+reader it is there. Here synchronous was obviously right — one INSERT and a commit, after an
+analysis that already ran in-process. The background task was buying back latency that
+nothing needed and paying for it with a correctness bug.
+
+**And the test shape that works for this.** A timing test against an in-process ASGI
+transport passes either way, because the background task runs almost immediately — just not
+before the response. So the durable assertion is **structural**: no route may reintroduce
+`background_tasks.add_task(maybe_record_tool_run, …)` on the success path. Paired with a
+behavioural test that queries with no `await` in between, which documents the intent even
+though it cannot fail on its own.
+
+---
+
+## `search()` means "is there a match", not "are the matches all fine" (Sprint 789b review, 2026-10-21)
+
+My new copy checker looped over patterns calling `pattern.search(line)`, took the first
+match, compared it to the registry and `break`'d. The older checker in the very same
+module used `finditer`.
+
+A line reading `An 18-tool suite — formerly a 12-tool suite` passed cleanly. The first match
+is 18, which is correct, so the loop moved to the next pattern and the stale 12 beside it was
+never examined.
+
+I had intended "one violation per line" — a real and reasonable choice, since the reader
+needs the line rather than every phrasing on it. But `search` implements "one *candidate* per
+line", which is a different thing and strictly worse: it decides whether to look at all based
+on whichever occurrence happens to come first.
+
+**Pattern: when scanning a line for violations, enumerate the matches and dedupe the
+findings. Never dedupe by only looking once.** The two collapse into the same code only when
+a line can hold at most one match, which for prose is never a safe assumption.
+
+Worth noting where the correct version already lived: fifty lines up, in the function this
+one was modelled on. **The strongest reviewer of a new checker is the old checker beside it** —
+diffing mine against `_check_tool_count_in_doc` would have surfaced this before CI did.
+
+---
+
 ## "No references in the file" is evidence of delegation, not of a defect (Sprint 791, 2026-10-21)
 
 Twice in one session I grepped a file for a symbol, found nothing, and concluded the

@@ -14,7 +14,7 @@ import logging
 from decimal import Decimal, InvalidOperation
 from typing import Literal, Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy.orm import Session
@@ -130,7 +130,6 @@ def _build_config(payload: Form1099Request) -> Form1099Config:
 def prepare_1099_candidates(
     request: Request,
     payload: Form1099Request,
-    background_tasks: BackgroundTasks,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
@@ -155,9 +154,16 @@ def prepare_1099_candidates(
     # composite_score and flagged_accounts are None by design, not omission:
     # this engine produces no composite score, and shared/account_extractors.py
     # has no extractor for it because its output is not GL-account-level.
-    background_tasks.add_task(
-        maybe_record_tool_run, db, payload.engagement_id, current_user.id, "form_1099", True, None, None
-    )
+    # PR #183 review: recorded synchronously, not via background_tasks.
+    # Starlette sends the response body (responses.py:167) *before* awaiting the
+    # background task (:170), so the client already has the result while the
+    # insert is still pending. Sprint 791's hooks call refreshToolRuns() as soon
+    # as the POST resolves, which would GET the workpaper list before the row
+    # existed, replace the context state with the stale list, and never refresh
+    # again — the new entry invisible until a manual reload. The write is one
+    # INSERT plus a commit after an analysis that already ran in-process, so the
+    # latency it buys back is not worth the race.
+    maybe_record_tool_run(db, payload.engagement_id, current_user.id, "form_1099", True, None, None)
     return result.to_dict()
 
 
