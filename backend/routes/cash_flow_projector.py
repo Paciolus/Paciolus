@@ -16,7 +16,7 @@ from datetime import date
 from decimal import Decimal, InvalidOperation
 from typing import Literal, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy.orm import Session
@@ -34,6 +34,7 @@ from shared.entitlement_checks import check_upload_limit
 from shared.error_messages import sanitize_error
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.testing_route import enforce_tool_access
+from shared.tool_run_recorder import maybe_record_tool_run
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +63,8 @@ class CashFlowProjectionRequest(BaseModel):
     ap_aging: AgingBucketsRequest = Field(default_factory=AgingBucketsRequest)
     recurring_flows: list[RecurringFlowRequest] = Field(default_factory=list, max_length=100)
     min_safe_cash: Optional[str] = Field(default=None, max_length=24)
+    # Sprint 787b: optional engagement link so a run lands in the workpaper trail.
+    engagement_id: Optional[int] = Field(None, description="Optional engagement to link this run to")
 
 
 def _to_decimal(field_name: str, raw: str) -> Decimal:
@@ -105,6 +108,7 @@ def _build_config(payload: CashFlowProjectionRequest) -> CashFlowConfig:
 def run_projection(
     request: Request,
     payload: CashFlowProjectionRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
@@ -116,13 +120,23 @@ def run_projection(
         config = _build_config(payload)
         result = project_cash_flow(config)
     except CashFlowInputError as e:
+        maybe_record_tool_run(db, payload.engagement_id, current_user.id, "cash_flow_projector", False)
         raise HTTPException(status_code=400, detail=str(e))
     except (ValueError, ValidationError) as e:
         logger.exception("Cash flow projection computation failed")
+        maybe_record_tool_run(db, payload.engagement_id, current_user.id, "cash_flow_projector", False)
         raise HTTPException(
             status_code=400,
             detail=sanitize_error(e, "audit", "cash_flow_projector_error"),
         )
+
+    # Sprint 787b: record the run on the engagement workpaper trail. Both
+    # composite_score and flagged_accounts are None by design, not omission:
+    # this engine produces no composite score, and shared/account_extractors.py
+    # has no extractor for it because its output is not GL-account-level.
+    background_tasks.add_task(
+        maybe_record_tool_run, db, payload.engagement_id, current_user.id, "cash_flow_projector", True, None, None
+    )
     return result.to_dict()
 
 

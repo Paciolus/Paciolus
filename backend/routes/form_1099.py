@@ -12,9 +12,9 @@ import csv
 import io
 import logging
 from decimal import Decimal, InvalidOperation
-from typing import Literal
+from typing import Literal, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy.orm import Session
@@ -35,6 +35,7 @@ from shared.entitlement_checks import check_upload_limit
 from shared.error_messages import sanitize_error
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.testing_route import enforce_tool_access
+from shared.tool_run_recorder import maybe_record_tool_run
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +82,8 @@ class Form1099Request(BaseModel):
     tax_year: int = Field(..., ge=2000, le=2099)
     vendors: list[VendorRequest] = Field(default_factory=list, max_length=5000)
     payments: list[PaymentRequest] = Field(default_factory=list, max_length=50000)
+    # Sprint 787b: optional engagement link so a run lands in the workpaper trail.
+    engagement_id: Optional[int] = Field(None, description="Optional engagement to link this run to")
 
 
 def _to_decimal(field_name: str, raw: str) -> Decimal:
@@ -127,6 +130,7 @@ def _build_config(payload: Form1099Request) -> Form1099Config:
 def prepare_1099_candidates(
     request: Request,
     payload: Form1099Request,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
@@ -137,13 +141,23 @@ def prepare_1099_candidates(
     try:
         result = prepare_1099s(_build_config(payload))
     except Form1099InputError as e:
+        maybe_record_tool_run(db, payload.engagement_id, current_user.id, "form_1099", False)
         raise HTTPException(status_code=400, detail=str(e))
     except (ValueError, ValidationError) as e:
         logger.exception("1099 preparation failed")
+        maybe_record_tool_run(db, payload.engagement_id, current_user.id, "form_1099", False)
         raise HTTPException(
             status_code=400,
             detail=sanitize_error(e, "audit", "form_1099_error"),
         )
+
+    # Sprint 787b: record the run on the engagement workpaper trail. Both
+    # composite_score and flagged_accounts are None by design, not omission:
+    # this engine produces no composite score, and shared/account_extractors.py
+    # has no extractor for it because its output is not GL-account-level.
+    background_tasks.add_task(
+        maybe_record_tool_run, db, payload.engagement_id, current_user.id, "form_1099", True, None, None
+    )
     return result.to_dict()
 
 

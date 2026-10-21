@@ -325,7 +325,9 @@ policy, citation consistency) all pass.
 **Not in scope, deliberately:** the two stale "twelve tools" strings on live marketing pages that
 this sprint's grep uncovered, and the reason nothing caught them. Filed as **Sprint 789b**.
 
-**Commit SHA:** filled at merge.
+**Commit SHA:** `d21542a3`. Note that `routes/sod.py` carries both this sprint's gating change
+and Sprint 787b's engagement wiring in the same function signature, so the whole file landed in
+this commit; 787b's other five routes are the commit after.
 
 ---
 
