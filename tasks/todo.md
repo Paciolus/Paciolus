@@ -565,7 +565,7 @@ and remove the interim note.
 ---
 
 ### Sprint 786: Dependency currency (replaces Sprints 760 and 761)
-**Status:** PENDING.
+**Status:** SPLIT — **786a COMPLETE** (venv reconciled, resolution now recorded in CI), **786b PENDING** (the reviewed major bumps).
 **Priority:** P2 — the only RED agent in the 2026-10-20 nightly, and 5 of the outdated packages are security-relevant.
 **Source:** `reports/next-actions-2026-10-20.md` B-c / B-d. Supersedes Sprints 760 and 761, both written in April and now wrong in their specifics.
 
@@ -586,6 +586,81 @@ and remove the interim note.
 **Verification per step:** `pip install -r backend/requirements.txt && pytest -q` clean; `npm install && npm run build && npm test` clean with every route still `ƒ (Dynamic)` and `ƒ Proxy (Middleware)` active; `pip-audit` clean; Render deploy logs show no new ImportError and `/health/ready` 200 with `status: "healthy"` within 60s.
 
 **Out of scope:** the 21 dev-only npm advisories (need `npm audit fix --force`; all three CI audit gates pass `--omit=dev`, so they do not gate).
+
+#### 786a — the venv, and what the reconcile proved: COMPLETE
+
+**The finding is bigger than the hygiene.** Reconciling `backend/venv` to a fresh
+`pip install -r requirements.txt --upgrade` moved **12 packages**:
+
+| Package | venv had | fresh resolve | Pin style |
+|---------|----------|---------------|-----------|
+| `cryptography` | 46.0.7 | **50.0.2** | `>=` floor |
+| `pillow` | 12.2.0 | **13.0.0** | `>=` floor |
+| `redis` | 7.4.0 | **8.1.0** | `>=` floor |
+| `pypdf` | 6.10.2 | 6.21.1 | `>=` floor |
+| `pyasn1` | 0.6.3 | 0.6.4 | `>=` floor |
+| `Werkzeug` | 3.1.8 | 3.1.9 | `>=` floor |
+| `fastapi` | 0.136.0 | 0.136.1 | `==` pin (venv was behind) |
+| `stripe` | 15.0.1 | 15.1.0 | `==` pin (venv was behind) |
+| `pdfminer.six`, `pdfplumber`, `pypdfium2`, `prometheus_client` | — | — | transitive / floor |
+
+**Sprint 777 named this risk and it has already happened, twice.** That sprint chose the
+`==`/`>=` split and wrote down the cost of the floor half: *"production can take an
+unreviewed upstream major at any time, with no lockfile and no record of what actually
+shipped."* Production has since taken **`pillow` 12 → 13** and **`redis` 7 → 8** — two major
+upgrades, neither reviewed, both already live, because CI and the production Docker build
+each do a fresh resolve. `cryptography` has moved **four** majors (46 → 50) the same way.
+
+Nothing is broken by them: CI has been green throughout, and the full suite passes on the
+reconciled versions. The problem is that nobody chose them.
+
+**So the deliverable is the evidence record, not a version bump.** `ci.yml`'s 3.12 matrix leg
+now captures `pip freeze` after install, prints the floor-pinned set into the build log
+behind a collapsible group, and uploads the full resolution as a 90-day artifact
+(`resolved-requirements-py312`). Sprint 777's rule depended on exactly this and it had never
+been built — "what did we test on" was unanswerable after the fact. Retention is 90 days
+rather than the 30 used for lint reports, because a CVE disclosure can land months after the
+build it concerns.
+
+**What was reconciled, and what deliberately was not.** The venv now matches a fresh resolve,
+so the nightly measures something that ships. `requirements.txt` itself is **unchanged** —
+the two `==` pins the venv was behind on (`fastapi`, `stripe`) were already correct in the
+file, and no floor was raised. Nothing about what production resolves has changed; only the
+local environment's agreement with it, and the record of it.
+
+**Correction to `SESSION_STATE.md`.** It called `backend/venv` "the CI-representative env,
+with the new pins". It was neither, as the table above shows. Now it genuinely is.
+
+**Also verified while here:** CI's backend-tests job installs `requirements-dev.txt`, whose
+first line is `-r requirements.txt`, so CI really does resolve the same production floors —
+the "CI is representative on versions" claim holds.
+
+**Verification:** full backend suite green on the reconciled versions — i.e. on what
+production actually runs, including `cryptography` 50, `pillow` 13 and `redis` 8, which no
+local run had previously exercised. `ci.yml` parses and the two new steps land in the right
+job, in the right order, scoped to the 3.12 leg so only one artifact is produced.
+`backend/resolved-requirements.txt` is gitignored — it is build output, not source.
+
+#### 786b — the reviewed bumps: PENDING
+
+Unchanged in substance, but now better informed, because the floors have already delivered
+`cryptography` 50, `pillow` 13 and `redis` 8 without review. What remains is the **exact-pin**
+half, which cannot self-heal and is genuinely stale:
+
+1. `fastapi` 0.136.1 → 0.150.0 and `SQLAlchemy` 2.0.49 → 2.1.5 — minor by version number,
+   large by surface; treat each as a major for verification purposes.
+2. `stripe` 15.1.0 → 16.0.0 — pair with the Sprint 780 webhook work rather than bumping it
+   under a handler that was at 59.9% coverage a day ago.
+3. Frontend majors individually: `typescript` 6 → 7, `framer-motion` 12 → 14,
+   `@testing-library/jest-dom` 6 → 7.
+4. Patches and safe minors in one batch, mirroring the 2026-04-19/22 hygiene pattern.
+
+**Retrospective question worth putting to the CEO, not answering unilaterally:** the floors
+are doing their job on CVE currency and have now shipped three unreviewed majors. Sprint 777
+accepted that trade deliberately. Whether `pillow` and `redis` in particular should move to
+`==` with Dependabot responsibility — they are image and cache libraries whose majors change
+behaviour, unlike `cryptography` where currency is the whole point — is a revision of that
+decision rather than an application of it.
 
 ---
 

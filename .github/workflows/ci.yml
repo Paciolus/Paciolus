@@ -91,6 +91,42 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements-dev.txt
 
+      # Sprint 786a — record the resolution.
+      #
+      # requirements.txt deliberately mixes `==` pins with `>=` floors (Sprint 777). The
+      # floors self-heal against CVEs, which is why they exist, but they also mean a fresh
+      # resolve can take an unreviewed upstream major at any time — pillow 12 -> 13 and
+      # redis 7 -> 8 have both already happened this way. Without a recorded resolution,
+      # "what did this build actually test on" is unanswerable after the fact.
+      #
+      # Printed for the floor-pinned set so a reviewer sees the moving parts in the log,
+      # and uploaded in full as an artifact for later forensics.
+      - name: Record resolved dependency versions
+        if: matrix.python-version == '3.12'
+        run: |
+          pip freeze > resolved-requirements.txt
+          # Derive the floor-pinned set from requirements.txt rather than restating it.
+          # The first draft hardcoded 10 names when the file has 15, and included two
+          # packages that are not floors at all (PR #178 review).
+          FLOORS=$(grep -oE '^[a-zA-Z0-9_.-]+>=' requirements.txt | sed 's/>=$//' | paste -sd'|' -)
+          echo "::group::Resolved versions for the $(echo "$FLOORS" | tr "|" "\n" | wc -l) floor-pinned (>=) packages"
+          grep -iE "^(${FLOORS})==" resolved-requirements.txt \
+            || echo "(no floor-pinned packages matched — check the FLOORS pattern)"
+          echo "::endgroup::"
+
+      - name: Upload resolved dependency versions
+        if: matrix.python-version == '3.12'
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # pin: v7.0.0
+        with:
+          name: resolved-requirements-py312
+          path: backend/resolved-requirements.txt
+          retention-days: 90
+          # upload-artifact defaults overwrite:false and fails if the name already
+          # exists in the run. Rerunning only the failed Backend Tests job reuses the
+          # run, so without this a rerun dies at the upload instead of at the real
+          # failure (PR #178 review).
+          overwrite: true
+
       - name: Create test .env
         run: |
           cat > .env << 'EOF'
