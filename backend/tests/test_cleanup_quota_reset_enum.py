@@ -219,6 +219,57 @@ def test_resets_many_subscriptions_in_one_pass(db_session, make_sub):
     assert untouched.uploads_used_current_period == 11
 
 
+def test_reset_does_not_null_the_updated_at_column(db_session, make_sub):
+    """An ORM `update()` includes columns carrying `onupdate`, unlike the raw SQL it
+    replaced — so check the timestamp is refreshed rather than wiped.
+
+    `Subscription.updated_at` has a callable `onupdate`, which SQLAlchemy evaluates at
+    execution time. Compiling the statement shows `updated_at=None` in the parameter dict,
+    which looks alarming and is only an artefact of compile-time inspection. Asserting the
+    runtime value is the way to tell the difference, and a NULL here would be silent data
+    damage on every hourly run.
+    """
+    before = datetime(2020, 1, 1, tzinfo=UTC).replace(tzinfo=None)
+    sub = make_sub(period_end=datetime.now(UTC) - timedelta(days=1), uploads_used=5)
+    sub.updated_at = before
+    db_session.flush()
+
+    _run_reset(db_session)
+    db_session.refresh(sub)
+
+    assert sub.uploads_used_current_period == 0
+    assert sub.updated_at is not None, "onupdate wrote NULL — the reset would corrupt the row"
+    assert sub.updated_at > before
+
+
+def test_reset_matches_either_enum_label_convention(db_session, make_sub):
+    """The predicate must not depend on how the schema was built.
+
+    PR #177 review: production's `subscriptionstatus` holds member names (`ACTIVE`),
+    because it was created by `create_all`; the documented Alembic chain creates the same
+    type with lowercase labels (`active`). A predicate bound to either representation is
+    correct on one database and broken on the other. The job compares
+    `lower(status::text)`, which matches both — asserted here by checking the emitted SQL
+    folds case rather than binding a literal label.
+    """
+    import inspect
+
+    from cleanup_scheduler import reset_upload_quotas
+
+    source = inspect.getsource(reset_upload_quotas)
+    assert "func.lower" in source and "cast(" in source, (
+        "the status predicate no longer case-folds; it will be correct on only one of "
+        "production (member-name labels) and a chain-built database (lowercase labels). "
+        "See Sprint 741c."
+    )
+
+    # And it still works.
+    sub = make_sub(period_end=datetime.now(UTC) - timedelta(days=1), uploads_used=2)
+    _run_reset(db_session)
+    db_session.refresh(sub)
+    assert sub.uploads_used_current_period == 0
+
+
 def test_trialing_subscription_is_not_reset(db_session, make_sub):
     """Documents the current scope: only ACTIVE is reset.
 

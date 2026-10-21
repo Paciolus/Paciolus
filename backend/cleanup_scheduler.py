@@ -356,15 +356,33 @@ def reset_upload_quotas(db: Any) -> int:
     (`shared/entitlement_checks.py` holds the only increment and the only read), so while
     this was failing, any subscriber reaching their monthly cap would have stayed capped.
     """
-    from sqlalchemy import update
+    from sqlalchemy import String, cast, func, update
 
     from subscription_model import Subscription, SubscriptionStatus
 
     now = datetime.now(UTC)
+
+    # Match the status by case-folded text rather than by bound enum member.
+    #
+    # PR #177 review: binding SubscriptionStatus.ACTIVE serialises to the member name
+    # 'ACTIVE', which is what production's type contains (the 22P02 this sprint fixed
+    # proves production has no 'active' label, i.e. it was built by create_all). But the
+    # documented Alembic chain creates `subscriptionstatus` with LOWERCASE labels
+    # (d5e6f7a8b9c0:27, extended by f0a1b2c3d4e5), so a chain-built database — a restore,
+    # a fresh staging environment — would fail on the bound name exactly where the old
+    # lowercase literal worked.
+    #
+    # lower(status::text) is 'active' under either convention, and on SQLite the VARCHAR
+    # holds the member name and folds the same way. Not index-friendly, which does not
+    # matter for an hourly maintenance UPDATE already narrowed by period end and a
+    # non-zero upload count.
+    #
+    # The underlying disagreement between the models and the migration chain is Sprint
+    # 741c; it needs a read of the live schema before anything can be reconciled.
     result = db.execute(
         update(Subscription)
         .where(
-            Subscription.status == SubscriptionStatus.ACTIVE,
+            func.lower(cast(Subscription.status, String)) == SubscriptionStatus.ACTIVE.value,
             Subscription.current_period_end.is_not(None),
             Subscription.current_period_end <= now,
             Subscription.uploads_used_current_period > 0,
