@@ -4,6 +4,46 @@
 
 ---
 
+## When two passes over the same data disagree, the quiet one wins (Sprint 785, 2026-10-21)
+
+`scripts/archive_sprints.sh` is mandated by `CLAUDE.md` and enforced by a commit-msg hook, so
+it runs on roughly every sprint. It makes three passes over the Active Phase of
+`tasks/todo.md`: one **counts** completed sprints, one **extracts** them into an archive file,
+one **removes** them from `todo.md`. Counting and removal both handled a `### Sprint` heading
+arriving while a block was still open. Extraction did not — awk's first matching rule reset
+the accumulator without emitting it, which also made a whole branch of the next rule
+unreachable. It reported "Archiving sprints 762–788", wrote 10 of 13, and deleted all 13.
+Three finished sprint records were destroyed and only survived because the run was diffed
+before committing.
+
+**The failure was not the awk bug. It was that nothing compared the two numbers.** The script
+already knew the right answer — the counting pass computed 13 and printed it on the first line
+of output. The extraction pass produced 10. Both numbers were in the same process, one line of
+shell apart, and no one subtracted them. A destructive step ran downstream of an undetected
+shortfall.
+
+**Pattern: when a pipeline computes the same quantity twice by different means, assert they
+agree, and put the assert *before* the irreversible step.** This is cheaper than making either
+pass correct and it catches the next bug too, not just this one. The fix adds exactly that
+gate: extract, compare archived-section count against the counted count, exit 1 with both
+numbers before `todo.md` is touched. The awk fix alone would have closed this instance; the
+gate closes the class.
+
+**Corollary on predicates.** The same script's three passes used two different definitions of
+"complete" — extraction accepted `— COMPLETE` or `**Status:** COMPLETE`, removal accepted only
+the second. That asymmetry silently duplicates records in the other direction. If two passes
+must agree on a count, they must first agree on what they are counting; the predicate belongs
+in one place.
+
+**What exposed it** was a self-inflicted trigger: resolving eight `tasks/todo.md` rebase
+conflicts as unions dropped the `---` separators between consecutive sprint blocks, which is
+the exact shape the extraction bug needed. The lesson there is narrower but real — **a union
+merge of two markdown sections is not safe just because no text is lost.** Section delimiters
+are content. Structure that other tooling parses must be re-validated after a mechanical
+merge, not assumed intact because the prose survived.
+
+---
+
 ## A test that only checks a table against itself proves nothing (Sprint 780, 2026-10-20)
 
 `tests/test_pricing_launch_validation.py` carried ~20 assertions over the pricing table and
