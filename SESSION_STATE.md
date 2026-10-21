@@ -24,7 +24,9 @@ _Updated at the end of every Claude Code session. Overwrite the previous state �
 
 **Fourteen review findings across #182–#185 were acted on. Every one was real.** Six became code fixes, four corrected documentation, three falsified claims I had written into sprint records, and one found that the guard written to prevent a defect class was itself a member of it. All recorded as corrections rather than quietly amended.
 
-**Production:** healthy throughout. Live deploy SHA **==** `origin/main`; `/health/ready` reports `status: "healthy"`, DB ~7–9 ms, `rate_limit_storage` redis not degraded. Checked the **body**, not just the 200 — Sprint 774 puts `degraded` behind a 200.
+**Production:** healthy throughout. The live deploy's **`backend/` tree matches `main`**, and `/health/ready` reports `status: "healthy"`, DB ~7–9 ms, `rate_limit_storage` redis not degraded. Checked the **body**, not just the 200 — Sprint 774 puts `degraded` behind a 200.
+
+> **Do not assert raw SHA equality here.** Render's root dir is `backend/`, so a commit touching only docs or `tasks/**` — including the one that writes this file — correctly does **not** trigger a deploy, and the live SHA then trails `main` while the deployment is entirely current. PR #166 replaced the drift probe's SHA comparison with a tree comparison for exactly this reason; `uptime-check.yml:28-31` documents it. The live SHA at the time of writing was `acdcb900`.
 
 ### The pattern — read this before adding or trusting a gate
 
@@ -91,7 +93,7 @@ The 2026-10-20 worklist (`reports/next-actions-2026-10-20.md`) is largely discha
 ## Recent Git Context
 
 ```
-main HEAD == live deploy
+main HEAD — live deploy's backend/ tree matches (SHA trails on docs-only commits)
  ├─ #185  792  — preventive gate-scope audit (no production code)
  ├─ #184  784b + 784c — user guide; 6 review findings, 2 filed as 793
  ├─ #183  789b + 791 — customer-copy gate, engagement hooks; 2 review fixes
