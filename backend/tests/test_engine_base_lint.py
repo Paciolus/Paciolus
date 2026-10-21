@@ -215,3 +215,56 @@ class TestCli:
             assert rc == 1
         else:
             assert rc == 0
+
+
+# ---------------------------------------------------------------------------
+# Sprint 784c follow-on — the enumeration premise both engine linters rest on
+# ---------------------------------------------------------------------------
+#
+# `lint_engine_base_adoption.py` and `lint_domain_relocation.py` both enumerate
+# their targets as `BACKEND_ROOT.glob("*_engine.py")`. After ADR-018 relocated
+# engines to `services/audit/<tool>/analysis.py`, the real implementations moved
+# — and the linters still find them only because every relocated engine left a
+# root-level shim behind, which PR #126 taught the adoption lint to follow.
+#
+# Nothing asserted that the shims exist. An engine created directly at
+# `services/audit/<tool>/analysis.py` with no root shim would be scanned by
+# neither linter, and both would report success. That is the same failure mode
+# that produced seven separate findings on 2026-10-21 — a gate whose *file list*
+# silently stops covering the thing it is named after. Caught here before it had
+# a chance to happen rather than after.
+
+
+def test_every_relocated_engine_has_a_root_shim():
+    """Each `services/audit/<tool>/analysis.py` must have `<tool>_engine.py`.
+
+    The shim is what makes the relocated implementation visible to
+    `BACKEND_ROOT.glob("*_engine.py")`. Without it the engine is unlinted and
+    the linters say nothing, because there is nothing for them to enumerate.
+    """
+    backend_root = Path(__file__).resolve().parent.parent
+    audit_dir = backend_root / "services" / "audit"
+    assert audit_dir.is_dir(), "services/audit is missing — the relocation target moved"
+
+    unshimmed: list[str] = []
+    found_any = False
+    for tool_dir in sorted(audit_dir.iterdir()):
+        if not tool_dir.is_dir() or tool_dir.name == "__pycache__":
+            continue
+        if not (tool_dir / "analysis.py").is_file():
+            continue
+        found_any = True
+        if not (backend_root / f"{tool_dir.name}_engine.py").is_file():
+            unshimmed.append(tool_dir.name)
+
+    # A glob that matches nothing covers nothing — assert the scan found work.
+    assert found_any, "no services/audit/*/analysis.py found; this check now covers nothing"
+
+    assert unshimmed == [], (
+        "These relocated engines have no root-level shim, so "
+        "lint_engine_base_adoption.py and lint_domain_relocation.py — which both "
+        "enumerate BACKEND_ROOT.glob('*_engine.py') — cannot see them and will "
+        f"report success while scanning nothing: {unshimmed}. Add "
+        "<tool>_engine.py re-exporting from services/audit/<tool>/analysis.py, or "
+        "teach both linters to enumerate the relocated path directly."
+    )

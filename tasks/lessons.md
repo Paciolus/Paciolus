@@ -101,6 +101,45 @@ bar for "complete" has to include *which year's figures it applies*. Both downgr
 
 ---
 
+## Audit the class once you have seen the instance three times (Sprint 792, 2026-10-21)
+
+By the seventh finding of the same shape in one day — a gate scoped by a file list
+that silently stops covering what it is named after — fixing the eighth was clearly
+worth less than enumerating the class.
+
+So every gate in the repo got inspected rather than waiting for the next one to
+surface. The result was mostly reassuring, and that is itself the finding worth
+keeping: four gates are structurally immune or genuinely comprehensive, and knowing
+*which* ones is what stops the next reader re-deriving it.
+
+The distinction that predicted everything:
+
+- **Immune** — `check_openapi_drift.py` derives its target set from the running app.
+  There is no list to rot.
+- **Comprehensive** — `lint_design_tokens.py` rglobs all of `frontend/src`. A glob over
+  a tree has no gaps, only a suffix filter.
+- **Fragile** — anything with an explicit tuple of paths or names. All seven of the
+  day's findings were in this category, every one of them.
+
+**Pattern: prefer deriving the scan set from the system over listing it; failing that,
+a glob; failing that, a hand-maintained list *with a test that it still matches
+something*.** The ranking is about how the thing fails when the codebase moves
+underneath it, not about how it reads.
+
+**The one real find was a trap rather than a defect**, which is the whole value of
+looking early. Both engine linters enumerate `BACKEND_ROOT.glob("*_engine.py")`, and
+ADR-018 moved the implementations to `services/audit/<tool>/analysis.py`. They still
+reach them only because every relocated engine left a root shim behind — and nothing
+asserted the shims exist. All ten currently do, so there was no bug; an engine created
+directly at the relocated path would simply have been unlinted, with both linters
+reporting success on an empty scan.
+
+**Corollary worth more than the fix: "the gate is green" and "the gate scanned
+something" are different claims.** Every new scan now asserts it found work, because a
+glob that matches nothing is indistinguishable from a glob that matches nothing wrong.
+
+---
+
 ## Do not edit the tree while a suite runs against it (2026-10-21)
 
 I started a full backend suite in the background, then kept working — switched
