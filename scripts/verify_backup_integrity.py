@@ -5,6 +5,21 @@ Backup Integrity Verification — Sprint 457 (S1.5 / CC4.2)
 Verifies that the Render PostgreSQL backup infrastructure is healthy and
 the database instance is reachable and accepting connections.
 
+.. warning::
+
+   **This script targets the wrong provider and cannot currently pass.**
+   Production PostgreSQL moved to **Neon** in Phase 1 (2026-04-09) and the
+   orphan Render instance was deleted on 2026-04-22, so every Render API call
+   below addresses a database that no longer exists. Supplying
+   ``RENDER_API_KEY`` would turn a misleading failure into a differently
+   misleading one.
+
+   Rewriting it against Neon + the R2 backup bucket is **Sprint 778** scope
+   item 4, and needs the Neon connection string (CEO ask D-1). Until then the
+   monthly ``backup-integrity-check`` run failing is *substantively correct* —
+   backups genuinely are unverified, because the off-provider ``pg_dump`` → R2
+   job (Phase 4.4) was never implemented.
+
 Checks performed:
   1. Render API health  — service status = "available" via GET /v1/postgres/{id}
   2. Render backup info — attempts GET /v1/postgres/{id}/backup for metadata
@@ -359,11 +374,27 @@ def main() -> None:
     postgres_id = os.environ.get("RENDER_POSTGRES_ID", "").strip()
     database_url = os.environ.get("DATABASE_URL", "").strip()
 
-    if not api_key:
-        print("ERROR: RENDER_API_KEY is not set.", file=sys.stderr)
-        sys.exit(2)
-    if not postgres_id:
-        print("ERROR: RENDER_POSTGRES_ID is not set.", file=sys.stderr)
+    if not api_key or not postgres_id:
+        missing = " and ".join(
+            n for n, v in (("RENDER_API_KEY", api_key), ("RENDER_POSTGRES_ID", postgres_id)) if not v
+        )
+        # Sprint 778a: say what is actually wrong. "RENDER_API_KEY is not set"
+        # reads as a missing-secret problem a maintainer could fix in a minute,
+        # and sent at least one reader looking for the wrong fix.
+        print(
+            f"UNVERIFIED: {missing} not set — backup integrity was not checked.\n"
+            "\n"
+            "  Setting it would not make this check pass. This script queries the\n"
+            "  Render PostgreSQL API, and production moved to Neon in Phase 1\n"
+            "  (2026-04-09); the orphan Render instance was deleted 2026-04-22.\n"
+            "\n"
+            "  The underlying posture is the real finding: the off-provider\n"
+            "  pg_dump -> R2 backup (Phase 4.4) was never implemented, so Neon PITR\n"
+            "  is the only copy of production data and no restore drill has been run.\n"
+            "\n"
+            "  Rewriting this against Neon + R2 is Sprint 778 scope item 4.",
+            file=sys.stderr,
+        )
         sys.exit(2)
 
     run_ts = datetime.now(timezone.utc)

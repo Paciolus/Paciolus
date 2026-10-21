@@ -35,21 +35,43 @@ jobs:
           echo "**Instance:** $RENDER_POSTGRES_ID" >> report.md
           echo "" >> report.md
 
-          # Check instance status
-          STATUS=$(curl -sf -H "Authorization: Bearer $RENDER_API_KEY" \
-            "$RENDER_API_BASE/postgres/$RENDER_POSTGRES_ID" \
-            | python3 -c "import sys,json; print(json.load(sys.stdin).get('status','unknown'))" 2>/dev/null || echo "api_error")
-
-          echo "**Instance Status:** $STATUS" >> report.md
-
-          if [ "$STATUS" = "available" ]; then
-            echo "result=PASS" >> "$GITHUB_OUTPUT"
+          # Sprint 778: three outcomes, not two. A missing credential is not
+          # an outage, and this check cannot pass as written regardless —
+          # production Postgres moved to Neon in Phase 1 and the orphan Render
+          # instance was deleted on 2026-04-22. Saying "status: api_error
+          # (expected: available)" reads as a database problem when the real
+          # problem is that the check interrogates a database that no longer
+          # exists. Rewriting it against Neon is Sprint 778 scope item 4 and
+          # needs the connection string (CEO ask D-1).
+          if [ -z "$RENDER_API_KEY" ] || [ -z "$RENDER_POSTGRES_ID" ]; then
+            echo "result=UNVERIFIED" >> "$GITHUB_OUTPUT"
+            echo "**Instance Status:** not checked — credentials unset" >> report.md
             echo "" >> report.md
-            echo "✅ Instance is available and responsive." >> report.md
+            echo "⚠️ \`RENDER_API_KEY\` / \`RENDER_POSTGRES_ID\` are unset, so this check did not run." >> report.md
+            echo "" >> report.md
+            echo "> Note: this check targets the **Render** Postgres API. Production runs on" >> report.md
+            echo "> **Neon**, and the orphan Render instance was deleted on 2026-04-22, so this" >> report.md
+            echo "> check cannot pass even with credentials. Rewriting it against Neon is" >> report.md
+            echo "> Sprint 778 scope item 4." >> report.md
           else
-            echo "result=FAIL" >> "$GITHUB_OUTPUT"
+            STATUS=$(curl -sf -H "Authorization: Bearer $RENDER_API_KEY" \
+              "$RENDER_API_BASE/postgres/$RENDER_POSTGRES_ID" \
+              | python3 -c "import sys,json; print(json.load(sys.stdin).get('status','unknown'))" 2>/dev/null || echo "api_error")
+
+            echo "**Instance Status:** $STATUS" >> report.md
             echo "" >> report.md
-            echo "❌ Instance status: $STATUS (expected: available)" >> report.md
+
+            if [ "$STATUS" = "available" ]; then
+              echo "result=PASS" >> "$GITHUB_OUTPUT"
+              echo "✅ Instance is available and responsive." >> report.md
+            elif [ "$STATUS" = "api_error" ]; then
+              echo "result=UNVERIFIED" >> "$GITHUB_OUTPUT"
+              echo "⚠️ Render API did not answer. Expected while this check still points at a" >> report.md
+              echo "deleted Render instance — see Sprint 778 scope item 4." >> report.md
+            else
+              echo "result=FAIL" >> "$GITHUB_OUTPUT"
+              echo "❌ Instance status: $STATUS (expected: available)" >> report.md
+            fi
           fi
 
       - name: Check backup availability
@@ -61,6 +83,16 @@ jobs:
           echo "" >> report.md
           echo "## Backup Availability" >> report.md
           echo "" >> report.md
+
+          if [ -z "$RENDER_API_KEY" ] || [ -z "$RENDER_POSTGRES_ID" ]; then
+            echo "⚠️ Credentials unset — backup availability not checked." >> report.md
+            echo "" >> report.md
+            echo "> The off-provider \`pg_dump\` → R2 backup does not exist yet (Phase 4.4 was" >> report.md
+            echo "> never implemented), so Neon PITR is the only thing behind production data." >> report.md
+            echo "> Building it is Sprint 778 scope item 1." >> report.md
+            echo "backup_available=UNVERIFIED" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
 
           BACKUP_RESP=$(curl -sf -w "\n%{http_code}" -H "Authorization: Bearer $RENDER_API_KEY" \
             "$RENDER_API_BASE/postgres/$RENDER_POSTGRES_ID/backup" 2>/dev/null || echo -e "\n000")
@@ -81,13 +113,22 @@ jobs:
 
       - name: DB liveness probe
         id: db-probe
-        if: env.DATABASE_URL_READONLY != ''
+        # Sprint 778: the previous `if: env.DATABASE_URL_READONLY != ''` read the
+        # job env context, where this variable is never defined — it is set in
+        # this step's own `env:` below. The condition was always false, so this
+        # probe had never run once. The empty case is handled in the script.
         env:
           DATABASE_URL_READONLY: ${{ secrets.DATABASE_URL_READONLY }}
         run: |
           echo "" >> report.md
           echo "## Database Liveness Probe" >> report.md
           echo "" >> report.md
+
+          if [ -z "$DATABASE_URL_READONLY" ]; then
+            echo "⚠️ \`DATABASE_URL_READONLY\` is unset — liveness probe not run." >> report.md
+            echo "probe=UNVERIFIED" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
 
           pip install -q psycopg2-binary 2>/dev/null
 
@@ -132,13 +173,39 @@ jobs:
           BACKUP_RESULT="${{ steps.backup-check.outputs.backup_available }}"
           PROBE_RESULT="${{ steps.db-probe.outputs.probe }}"
 
-          if [ "$RENDER_RESULT" = "PASS" ]; then
+          echo "| Check | Result |" >> report.md
+          echo "|-------|--------|" >> report.md
+          echo "| Render Postgres status | ${RENDER_RESULT:-UNVERIFIED} |" >> report.md
+          echo "| Backup availability | ${BACKUP_RESULT:-UNVERIFIED} |" >> report.md
+          echo "| DB liveness probe | ${PROBE_RESULT:-UNVERIFIED} |" >> report.md
+          echo "" >> report.md
+
+          # Sprint 778: the verdict used to read all three of these and branch on
+          # RENDER_RESULT alone, so a failed backup check or a dead database could
+          # not affect the outcome. All three now count. An empty value means the
+          # step was skipped, which is UNVERIFIED rather than a pass.
+          OVERALL=PASS
+          for R in "${RENDER_RESULT:-UNVERIFIED}" "${BACKUP_RESULT:-UNVERIFIED}" "${PROBE_RESULT:-UNVERIFIED}"; do
+            case "$R" in
+              PASS|true|compensating) ;;
+              FAIL|false)             OVERALL=FAIL ;;
+              *)                      [ "$OVERALL" = "FAIL" ] || OVERALL=UNVERIFIED ;;
+            esac
+          done
+
+          if [ "$OVERALL" = "PASS" ]; then
             echo "## Overall: ✅ PASS" >> report.md
-            echo "overall=PASS" >> "$GITHUB_OUTPUT"
-          else
+          elif [ "$OVERALL" = "FAIL" ]; then
             echo "## Overall: ❌ FAIL" >> report.md
-            echo "overall=FAIL" >> "$GITHUB_OUTPUT"
+          else
+            echo "## Overall: ⚠️ UNVERIFIED" >> report.md
+            echo "" >> report.md
+            echo "Nothing is known to be broken — and nothing has been verified either." >> report.md
+            echo "An unverified disaster-recovery posture is not a passing one, so this run" >> report.md
+            echo "is reported as a failure until Sprint 778 lands the backup and the Neon" >> report.md
+            echo "rewrite." >> report.md
           fi
+          echo "overall=$OVERALL" >> "$GITHUB_OUTPUT"
 
           echo "" >> report.md
           echo "*Generated by DR Test workflow — Sprint 465*" >> report.md
@@ -151,8 +218,10 @@ jobs:
           retention-days: 365
 
       - name: Create failure issue
-        if: steps.final.outputs.overall == 'FAIL'
+        if: steps.final.outputs.overall != 'PASS'
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd  # pin: v8.0.0
+        env:
+          DR_VERDICT: ${{ steps.final.outputs.overall }}
         with:
           script: |
             const fs = require('fs');
@@ -160,10 +229,21 @@ jobs:
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `DR Test FAILED — ${new Date().toISOString().slice(0,7)}`,
+              title: `DR Test ${process.env.DR_VERDICT} — ${new Date().toISOString().slice(0,7)}`,
               body: report,
               labels: ['dr-failure']
             });
+
+      # Sprint 778: THE false-green fix. `overall` previously only gated the
+      # issue above, so the job exited 0 no matter what its own report said —
+      # three consecutive scheduled runs (2026-07-01, 08-01, 09-01) reported
+      # workflow success while the render check resolved to FAIL. A verdict that
+      # cannot fail the job is a comment, not a check.
+      - name: Fail the job when the verdict is not PASS
+        if: steps.final.outputs.overall != 'PASS'
+        run: |
+          echo "::error::DR Test verdict: ${{ steps.final.outputs.overall }} — see the report artifact and the filed issue."
+          exit 1
 
   # MANUAL TRIGGER ONLY: This job provisions an isolated Postgres instance
   # and executes a real pg_restore. It is intentionally excluded from the

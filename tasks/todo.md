@@ -748,7 +748,8 @@ Bundle the 19 patch + safe-minor updates into one commit, mirroring the 2026-04-
 ---
 
 ### Sprint 778: Build the off-provider backup, then prove recovery works
-**Status:** PENDING.
+**Status:** SPLIT — **778a COMPLETE** (the DR workflow now reports its own verdict), **778b
+PENDING** (the backup itself, the Neon rewrite and the restore drills — all need credentials).
 **Priority:** P1 — both halves in scope: build the backup that does not exist **and** verify that recovery works.
 
 
@@ -769,6 +770,63 @@ Re-enabling the three auto-disabled workflows surfaced that two of them cannot p
 5. **Fix the false-green** so a job's exit status reflects its own verdict, and make the missing-credential case report "unverified" explicitly rather than dying on an opaque error.
 
 **Note:** all three workflows were re-enabled on 2026-10-19. `dependency-compliance` now passes (its CVEs were fixed the same day), but **`backup-integrity-check` will fail on the 1st of each month and file a `dr-failure` issue** until this sprint lands. That signal is substantively true — backups genuinely are unverified — but its stated reason will be the misleading "RENDER_API_KEY is not set". Either accept it as a forcing function or disable that one workflow until the rewrite.
+
+#### 778a — the DR workflow was reporting success while its own report said FAIL: COMPLETE
+
+Scope item 5, which needed no credentials. **Five defects in one workflow**, all verified before
+changing anything, and the last two were not in the original filing.
+
+1. **The false-green itself.** `steps.final.outputs.overall` gated only the "Create failure issue"
+   step. Nothing made the *job* fail, so it exited 0 whatever its report said. Three consecutive
+   scheduled runs — **2026-07-01, 08-01 and 09-01** — reported workflow success while the Render
+   check resolved to FAIL. A verdict that cannot fail the job is a comment, not a check.
+2. **The verdict read three signals and branched on one.** `BACKUP_RESULT` and `PROBE_RESULT` were
+   assigned and never used; only `RENDER_RESULT` decided the outcome. A failed backup check or a
+   dead database could not affect the verdict. Demonstrated: `render=PASS, backup=false,
+   probe=false` → old verdict **PASS, exit 0**; new verdict **FAIL, exit 1**.
+3. **No UNVERIFIED state.** A missing credential produced `api_error` → `FAIL` → the report line
+   *"Instance status: api_error (expected: available)"*, which reads as a database outage. Three
+   outcomes now: PASS, FAIL, UNVERIFIED.
+4. **The liveness probe had never executed — not once.** Its guard was
+   `if: env.DATABASE_URL_READONLY != ''`, but that variable is defined only in the *step's own*
+   `env:` block. A step-level `if` is evaluated against the job and workflow env contexts, where
+   it does not exist, so the condition was permanently false. Nobody noticed because the verdict
+   ignored the probe's output anyway — defect 2 concealed defect 4. The empty case is now handled
+   inside the script, which also lets it report UNVERIFIED.
+5. **The failure text blamed the wrong thing.** The check targets the **Render** Postgres API;
+   production moved to **Neon** in Phase 1 and the orphan Render instance was deleted
+   2026-04-22. The report now says so explicitly, so `api_error` is not mistaken for an outage.
+
+**An unverified DR posture is not a passing one.** The job now exits non-zero for FAIL *and* for
+UNVERIFIED, and files an issue for both with the verdict in the title. That makes the monthly run
+go red until 778b lands — which is correct and is the forcing function the 2026-10-19 note
+anticipated. Nothing is known to be broken; nothing has been verified either, and the report says
+exactly that.
+
+**Also corrected: `scripts/verify_backup_integrity.py`'s error message.** It exited with
+*"ERROR: RENDER_API_KEY is not set"* — which reads as a missing secret a maintainer could fix in
+a minute. Setting it would not help: the script queries a deleted Render database. The message now
+names the real cause and the real finding (no off-provider backup exists at all), and the exit code
+is unchanged at 2.
+
+**Checked and found sound:** `backup-integrity-check.yml` does *not* share the false-green. It uses
+`continue-on-error: true` on the check step plus a Summary step that exits 1 — so its job status
+has always been honest. Only `dr-test-monthly.yml` was lying. Worth recording so 778b does not
+re-audit it.
+
+**Verification:** the verdict logic was extracted and exercised against **12 cases** — all-green,
+each signal failing independently, FAIL dominating an earlier UNVERIFIED, skipped steps counting as
+UNVERIFIED rather than PASS, and the specific regression where a passing Render check used to mask
+two failures. All 12 behave as intended. YAML parses and the job's 9 steps resolve in order.
+`verify_backup_integrity.py` compiles and still exits 2. Its 4 ruff findings are pre-existing
+import-ordering (identical count before the change) and outside CI's lint scope, which runs from
+`backend/`.
+
+**Still blocked, and unchanged:** scope items 1–4 — building the `pg_dump` → R2 cron, confirming
+Neon's real PITR retention, the restore drills, and rewriting both workflows against Neon. All need
+the Neon connection string (**CEO ask D-1**) and R2 token confirmation.
+
+**Commit SHA:** filled at merge.
 
 ---
 

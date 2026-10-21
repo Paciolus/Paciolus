@@ -130,6 +130,42 @@ covered. Here that was the pilot, and it would have taken thirty seconds.
 
 ---
 
+## One broken check can hide another indefinitely (Sprint 778a, 2026-10-21)
+
+`DR Test (Monthly)` had five defects. Two of them were load-bearing for the rest.
+
+The verdict read three signals and branched on one, so the backup check and the
+liveness probe could not affect the outcome. Separately, the liveness probe's guard
+was `if: env.DATABASE_URL_READONLY != ''` against a variable defined only in that
+step's own `env:` block — a step-level `if` is evaluated against the job and workflow
+contexts, so the condition was permanently false and **the probe had never run once**.
+
+Those two compose into something worse than either. A step that never executes
+produces no output; an output nobody reads produces no symptom. Each defect made the
+other invisible, and three consecutive monthly runs reported success while the report
+they generated said FAIL.
+
+**Pattern: when a check aggregates several signals, assert that each signal can
+independently change the outcome.** A verdict function with an unused input is not a
+style problem — it is a silent coverage hole, and it conceals whatever is wrong with
+the input it ignores. The regression case that proves it here is one line:
+`render=PASS, backup=false, probe=false` used to return PASS.
+
+**Corollary on "unverified".** The old logic had two outcomes, so a missing credential
+had to be reported as either a pass or a failure. It chose failure and wrote *"Instance
+status: api_error (expected: available)"*, which reads as a database outage and sends
+the reader after the wrong fix. **Three outcomes — PASS, FAIL, UNVERIFIED — is the
+honest shape for any check that depends on credentials or external systems**, and the
+job should still exit non-zero for UNVERIFIED, because an unverified disaster-recovery
+posture is not a passing one.
+
+**And the one that generalises furthest:** a verdict that cannot fail its job is a
+comment. `overall=FAIL` gated only the issue-creation step. Whenever a workflow computes
+a result, check what consumes it — if the answer is "a notification", the check is
+advisory no matter how it reads.
+
+---
+
 ## Audit the class once you have seen the instance three times (Sprint 792, 2026-10-21)
 
 By the seventh finding of the same shape in one day — a gate scoped by a file list
