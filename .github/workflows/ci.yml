@@ -105,9 +105,13 @@ jobs:
         if: matrix.python-version == '3.12'
         run: |
           pip freeze > resolved-requirements.txt
-          echo "::group::Resolved versions for floor-pinned (>=) packages"
-          grep -iE '^(cryptography|pillow|pypdf|pyasn1|werkzeug|bcrypt|argon2-cffi|redis|requests|urllib3)==' \
-            resolved-requirements.txt || echo "(no floor-pinned packages matched)"
+          # Derive the floor-pinned set from requirements.txt rather than restating it.
+          # The first draft hardcoded 10 names when the file has 15, and included two
+          # packages that are not floors at all (PR #178 review).
+          FLOORS=$(grep -oE '^[a-zA-Z0-9_.-]+>=' requirements.txt | sed 's/>=$//' | paste -sd'|' -)
+          echo "::group::Resolved versions for the $(echo "$FLOORS" | tr "|" "\n" | wc -l) floor-pinned (>=) packages"
+          grep -iE "^(${FLOORS})==" resolved-requirements.txt \
+            || echo "(no floor-pinned packages matched — check the FLOORS pattern)"
           echo "::endgroup::"
 
       - name: Upload resolved dependency versions
@@ -117,6 +121,11 @@ jobs:
           name: resolved-requirements-py312
           path: backend/resolved-requirements.txt
           retention-days: 90
+          # upload-artifact defaults overwrite:false and fails if the name already
+          # exists in the run. Rerunning only the failed Backend Tests job reuses the
+          # run, so without this a rerun dies at the upload instead of at the real
+          # failure (PR #178 review).
+          overwrite: true
 
       - name: Create test .env
         run: |
