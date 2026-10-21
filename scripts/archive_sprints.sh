@@ -123,37 +123,63 @@ mkdir -p "$ARCHIVE_DIR"
 # A sprint section starts with "### Sprint NNN" and ends at the next "### " or "---" divider.
 ACTIVE_CONTENT=$(sed -n "${ACTIVE_START},${ACTIVE_END}p" "$TODO")
 
-# Use awk to extract completed sprint blocks
+# Use awk to extract completed sprint blocks.
+#
+# Sprint 785 fix: the previous version reset `block` in the `/^### Sprint/` rule
+# WITHOUT first emitting the block it was discarding, and the `if (/^### Sprint/)`
+# branch inside the terminator rule was therefore unreachable dead code. Any
+# completed sprint whose block ran straight into the next `### Sprint` heading
+# with no `---` between them was dropped on the floor -- while Part 3 below
+# (which handles that same transition correctly) still deleted it from todo.md.
+# Silent data loss: three sprint records vanished in a single run. Emit before
+# reset, exactly as the SPRINT_NUMBERS pass above already does.
 echo "$ACTIVE_CONTENT" | awk '
+  function emit_if_complete() {
+    if (in_sprint && block ~ /(— COMPLETE|\*\*Status:\*\* COMPLETE)/) {
+      printf "%s\n---\n\n", block
+    }
+  }
   /^### Sprint [0-9]+/ {
+    emit_if_complete()
     in_sprint = 1
     block = $0 "\n"
     next
   }
   in_sprint && /^### |^---$/ {
-    # Check if this block is COMPLETE
-    if (block ~ /(— COMPLETE|\*\*Status:\*\* COMPLETE)/) {
-      printf "%s\n---\n\n", block
-    }
-    if (/^### Sprint [0-9]+/) {
-      block = $0 "\n"
-    } else {
-      in_sprint = 0
-      block = ""
-    }
+    emit_if_complete()
+    in_sprint = 0
+    block = ""
     next
   }
   in_sprint {
     block = block $0 "\n"
   }
-  END {
-    if (in_sprint && block ~ /(— COMPLETE|\*\*Status:\*\* COMPLETE)/) {
-      printf "%s\n---\n\n", block
-    }
-  }
+  END { emit_if_complete() }
 ' >> "$ARCHIVE_FILE"
 
-echo "Archive written: $ARCHIVE_FILE"
+# -- Integrity gate ----------------------------------------------------
+# The counting pass and the extraction pass must agree. If they do not, the
+# archive is missing records that Part 3 is about to delete from todo.md, so
+# stop before touching todo.md rather than losing them.
+EXPECTED_COUNT=$(echo "$SPRINT_NUMBERS" | grep -c .)
+ARCHIVED_COUNT=$(grep -cE '^### Sprint [0-9]+' "$ARCHIVE_FILE" 2>/dev/null || echo 0)
+
+if [ "$ARCHIVED_COUNT" -ne "$EXPECTED_COUNT" ]; then
+  echo ""
+  echo "ERROR: archive integrity check failed."
+  echo "  Completed sprints counted in Active Phase: $EXPECTED_COUNT"
+  echo "  Sprint sections written to the archive:    $ARCHIVED_COUNT"
+  echo ""
+  echo "$TODO has NOT been modified. $ARCHIVE_FILE was written and is incomplete;"
+  echo "inspect it, then delete it before retrying."
+  echo ""
+  echo "Most likely cause: a completed sprint block is not terminated by a '---'"
+  echo "line before the next '### Sprint' heading. Check the section boundaries."
+  echo ""
+  exit 1
+fi
+
+echo "Archive written: $ARCHIVE_FILE ($ARCHIVED_COUNT sprint sections, matches count)"
 
 # ── Remove completed sprint sections from todo.md ─────────────────────
 # Build a new todo.md with completed sprint sections removed from Active Phase.
@@ -179,7 +205,7 @@ echo "$ACTIVE_CONTENT" | awk '
   /^$/ && !in_sprint { next }  # Skip blank lines between sections when not in a sprint
 
   /^### Sprint [0-9]+/ || /^### Pending/ {
-    if (in_sprint && block !~ /\*\*Status:\*\* COMPLETE/) {
+    if (in_sprint && block !~ /(— COMPLETE|\*\*Status:\*\* COMPLETE)/) {
       printf "%s", block
     }
     in_sprint = 1
@@ -189,7 +215,7 @@ echo "$ACTIVE_CONTENT" | awk '
   /^---$/ {
     if (in_sprint) {
       block = block $0 "\n\n"
-      if (block !~ /\*\*Status:\*\* COMPLETE/) {
+      if (block !~ /(— COMPLETE|\*\*Status:\*\* COMPLETE)/) {
         printf "%s", block
       }
       in_sprint = 0
@@ -201,7 +227,7 @@ echo "$ACTIVE_CONTENT" | awk '
     block = block $0 "\n"
   }
   END {
-    if (in_sprint && block !~ /\*\*Status:\*\* COMPLETE/) {
+    if (in_sprint && block !~ /(— COMPLETE|\*\*Status:\*\* COMPLETE)/) {
       printf "%s", block
     }
   }
