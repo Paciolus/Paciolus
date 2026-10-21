@@ -237,6 +237,67 @@ year and naming what is and is not affected, and both `status.json` entries were
 
 ---
 
+### Sprint 792: Audit every gate for the scope gap that produced seven findings
+**Status:** COMPLETE.
+**Priority:** P2 — preventive. Fixing instance #8 is worth less than enumerating the class.
+**Source:** 2026-10-21. Seven separate findings that day were the same defect.
+
+**The class.** A consistency gate scoped by a *file list* silently stops covering what it is named
+after, and reports success. Seven instances in one day:
+
+| Gate | What it read | What it missed |
+|------|-------------|----------------|
+| `doc_consistency_guard` `CODE_SURFACE_CHECKS` | `(marketing)/demo/layout.tsx` | `demo/page.tsx` beside it — metadata correct at 18, visible body saying *twelve* |
+| `doc_consistency_guard` `TOOL_COUNT_DOCS` | `USER_GUIDE.md`, aggregate claims only | six of seven per-tool test counts in the same file |
+| `test_citation_consistency` `SCANNED_GLOBS` | `app/(marketing)/**` | `app/tools/**` — AU-C 265 unregistered since Sprint 689b |
+| `test_catalog_consistency` | registry↔ledger, registry↔standards | `features/status.json`, missing all six promoted tools |
+| `test_catalog_consistency` + friends | descriptions of the catalog | what the API actually allows — SoD 403'd two paying tiers |
+| `scripts/archive_sprints.sh` | counted 13, extracted 10 | nothing compared the two numbers; three records destroyed |
+| Sprint 787b's own new guard | imports of a module | the function actually called — went vacuously green |
+
+**So instead of waiting for the eighth, every gate in the repo was inspected.** Result: the two
+with real gaps were already fixed (789b, 784c/784b). The rest are genuinely comprehensive, and the
+finding is worth recording so the next reader does not re-derive it:
+
+| Gate | Enumeration | Verdict |
+|------|-------------|---------|
+| `scripts/lint_design_tokens.py` | `frontend/src` full `rglob` + suffix filter | **comprehensive** — no path list to rot |
+| `scripts/lint_route_layer_purity.py` | `routes/*.py` | comprehensive; no `APIRouter` lives outside `routes/` (checked) |
+| `scripts/check_route_wiring.py` | `routes/*.py` + known aggregators | comprehensive; handles the aggregator indirection |
+| `scripts/check_openapi_drift.py` | the live app's own schema | **structurally immune** — derived from the app, not a path list |
+| `scripts/lint_engine_base_adoption.py` | `BACKEND_ROOT.glob("*_engine.py")` | **latent gap — closed here** |
+| `scripts/lint_domain_relocation.py` | same | same gap, same fix |
+
+**The one real find, closed preemptively.** Both engine linters enumerate `*_engine.py` at the
+backend root. ADR-018 moved the implementations to `services/audit/<tool>/analysis.py`, and the
+linters still reach them only because every relocated engine left a root shim behind — which
+PR #126 taught the adoption lint to follow. **Nothing asserted the shims exist.** An engine created
+directly at `services/audit/<tool>/analysis.py` with no shim would be scanned by neither linter,
+and both would report success on an empty scan.
+
+All ten relocated engines currently have their shim, so this is a trap rather than a defect.
+`test_every_relocated_engine_has_a_root_shim` now fails if one is ever missing, names the tool, and
+states both remedies (add the shim, or teach both linters the relocated path). It also asserts the
+scan found work at all — a glob that matches nothing covers nothing, which is the same failure
+wearing different clothes.
+
+Regression-proved: moving `flux_engine.py` aside fails with
+`report success while scanning nothing: ['flux']`; restoring passes.
+
+**The operating rule, written down where the next reader will find it:** when inheriting a
+consistency gate, do not read its file list as its scope — **the scope is the patterns**, and the
+file list is a separate thing that can be wrong on its own. A gate whose coverage you cannot state
+in one sentence is a gate you will over-trust. Prefer a glob plus a test that the glob matches
+something; prefer deriving the target set from the app (as `check_openapi_drift.py` does) over
+listing it.
+
+**Verification:** 17 passed in `test_engine_base_lint.py`; `ruff check .` clean. No production code
+changed.
+
+**Commit SHA:** filled at merge.
+
+---
+
 ### Sprint 790: The monthly upload allowance is not enforced on any paid tier
 **Status:** PENDING.
 **Priority:** **P1** — revenue-relevant and advertised. Every paid tier's headline quota is
