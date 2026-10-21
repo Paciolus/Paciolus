@@ -664,19 +664,27 @@ class TestRecorderDurabilityAndForeignKeys:
 
 
 class TestBackgroundTaskOrderingContract:
-    """The framework assumption every wired route depends on.
+    """The framework assumption the *other* wired routes still depend on.
 
-    `maybe_record_tool_run` is handed a request-scoped `Session` through
-    `background_tasks.add_task`. That is only correct while FastAPI runs
+    Where `maybe_record_tool_run` is handed a request-scoped `Session` through
+    `background_tasks.add_task`, that is only correct while FastAPI runs
     background tasks *before* tearing down `yield` dependencies — otherwise
     `get_db`'s `finally: db.close()` has already fired and the recorder writes
     through a closed session.
 
+    Scope note (PR #183 review): the six routes in this file no longer use a
+    background task at all. They record synchronously, because the task also
+    runs *after* the response body is sent, which raced the UI's refresh — see
+    `TestRecordingIsSynchronousOnTheSuccessPath`. So this contract now protects
+    the seven previously-wired routes (ar_aging, audit_flux, audit_pipeline,
+    bank_reconciliation, multi_period, sampling, three_way_match) plus the two
+    shared helpers, not thirteen.
+
     Verified on FastAPI 0.136.1: the task runs first. This test keeps it
     verified. **Sprint 786b plans FastAPI 0.136 → 0.150**, and if a release in
-    that range flips the ordering, 13 routes silently stop recording tool runs
-    while every other test in this file still passes — they all override
-    `get_db` with a non-generator, so none of them exercises teardown at all.
+    that range flips the ordering, those routes silently stop recording while
+    every other test here still passes — they all override `get_db` with a
+    non-generator, so none of them exercises teardown at all.
 
     Deliberately built on a throwaway app rather than `main.app`: the property
     under test belongs to FastAPI's dependency/background-task machinery, and
