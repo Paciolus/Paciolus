@@ -986,14 +986,91 @@ get disabled.
 ---
 
 ### Sprint 780: Stripe price-parity preflight + webhook coverage (money path)
-**Status:** PENDING.
-**Priority:** P1 — must land before the first live charge. Independent of pricing decisions, so it is safe to build now.
+**Status:** COMPLETE.
+**Priority:** P1 — had to land before the first live charge. Independent of pricing decisions, so it was safe to build before Sprint 781 reports.
 **Source:** `reports/launch-readiness-assessment-2026-10-19.md` §F and §C.
 
 1. **Price-parity preflight.** `billing/price_config.py` holds the canonical amounts and `test_pricing_launch_validation.py` carries ~20 assertions — but they only check the table *against itself*. Nothing fetches the Stripe Price object to confirm the amount a customer is actually charged matches the amount the product intends and the page displays. Test mode is documented as still sitting at the previous price list, so displayed and charged price **already disagree** in the only environment where billing has ever run. Add a script that reads every `STRIPE_PRICE_*` and `STRIPE_SEAT_PRICE_*` env var, retrieves the Price object, and asserts `currency == "usd"` plus the correct expected amount, failing loudly and naming every mismatch. **Use the real constant names** — the canonical base amounts are `PRICE_TABLE[tier][interval]` (not `TIER_PRICES`, which does not exist), and the four seat amounts live separately in `PROFESSIONAL_SEAT_PRICE[interval]` and `ENTERPRISE_SEAT_PRICE[interval]`. All six base prices and all four seat prices must be covered; mapping only the base table would silently skip the seat add-ons the same requirement calls for. Wire it into the Phase 4.1 checklist ahead of the webhook preflight.
 2. **Webhook handler coverage.** `billing/webhook_handler.py` is the least-covered critical path at **59.9% / 174 uncovered statements** — and it is the one that moves money. This is the webhook-coverage sprint deferred in Sprint 676 and again in the 2026-04-20 refactor pass. Target 85%+ on the handler, prioritising signature verification, event dedup (`processed_webhook_events`), and the subscription state transitions that drive entitlements.
 
 **Out of scope:** building live-mode prices. That waits on pricing feedback from Sprint 781.
+
+#### What landed
+
+**1. `scripts/stripe_price_parity_preflight.py`** — the first thing in this codebase that
+compares intent against Stripe. It imports `PRICE_TABLE`, `PROFESSIONAL_SEAT_PRICE` and
+`ENTERPRISE_SEAT_PRICE` (never restates an amount), retrieves each Price object, and checks
+six properties per price:
+
+| Check | Why it is there |
+|-------|-----------------|
+| `unit_amount` equals the canonical cents | the v2-vs-v3 case: Solo at $50 against a $100 table |
+| `currency == "usd"` | a non-USD price charges a plausible-looking wrong number |
+| `recurring.interval` matches the env var | **a correct amount on the wrong cadence bills right once and wrong forever** |
+| `active is not False` | an archived price fails checkout at the worst moment |
+| `livemode` agrees with the key's mode | stops a live deployment wired to test prices |
+| retrievable at all | an expired or wrong-account key is a cutover blocker |
+
+Coverage is **all ten** price objects (6 base + 4 seat) plus both coupons. `--require-all`
+turns unset IDs into a failure for use immediately before cutover. Exit codes separate
+mismatch (1) from misconfiguration (2), and a mismatch outranks unset IDs so a real defect
+is never masked.
+
+**Two facts it surfaced on its first run** against `backend/.env`:
+- The local test-mode secret key is **expired** (`AuthenticationError: Expired API Key`), so
+  the abandoned test mode is doubly dead — it is at v2 prices *and* unreachable.
+- Only 4 of 10 price IDs resolve locally, because `backend/.env` still carries the v2 names
+  (`STRIPE_PRICE_TEAM_*`, `STRIPE_SEAT_PRICE_MONTHLY`) that `price_config.py` no longer
+  reads. Running the preflight is now the cheapest way to detect that class of drift.
+
+**2. Webhook handler coverage: 55% → 88%** on the billing-focused subset (target was 85%).
+Five handlers and four helpers had **no** coverage at all; 43 new tests in
+`tests/test_webhook_handler_coverage.py` cover `handle_subscription_created`,
+`handle_invoice_payment_succeeded`, `handle_dispute_created`, `handle_dispute_closed`,
+`handle_invoice_created`, `_downgrade_org_members_to_free`, `_apply_dpa_from_metadata`,
+`_portal_url_for_user`.
+
+The tests are written around money-relevant invariants rather than line coverage:
+- **Entitlement state after every event** — status *and* `user.tier`, since those are two
+  separate writes and only the pair is the entitlement.
+- **Org blast radius.** A dispute or a lost dispute must downgrade every org member, not just
+  the subscription owner; two tests assert colleagues lose access too.
+- **Idempotency.** Stripe retries, so `invoice.payment_succeeded` on an already-ACTIVE
+  subscription must record nothing, and `customer.subscription.created` arriving after
+  `checkout.session.completed` must not double-count the creation in analytics.
+- **Refusal to guess.** `customer.subscription.created` with an unresolvable tier aborts
+  without syncing — better to do nothing than to sync a subscription to the wrong tier.
+- **Dispute resolution is three paths, not two.** `won` restores, `lost` cancels, and
+  anything else (e.g. `warning_closed`) must leave the subscription suspended rather than
+  silently restoring access.
+
+**A dead branch found while testing.** Both restore paths wrap `UserTier(sub.tier)` in
+`except ValueError`, but that branch is **unreachable**: `Subscription.tier` is a constrained
+DB enum, so a value outside `UserTier` cannot survive a round-trip (the Enum type raises on
+*result processing*, before any handler reads it), and both handlers flush after the
+conversion. Rather than contort a test to reach dead code, there is now one test pinning the
+constraint that makes the defence redundant — it fails and names the cause if the
+`subscription_tier` enum and `UserTier` ever diverge.
+
+**Still uncovered** (deliberately, and recorded rather than left implicit):
+`_auto_create_organization` internals (lines 40–67), branches inside
+`handle_checkout_completed` (237–259) and `handle_subscription_updated` (305–377), and three
+single lines in `trial_will_end`. Those paths are exercised end-to-end by the existing route
+tests; the remaining gap is branch-level, and 88% already clears the sprint's bar.
+
+#### Verification
+
+- `tests/test_stripe_price_parity_preflight.py` — **25 tests**, every one driving a fake
+  `stripe` module, so no network and no keys. Each failure mode is asserted independently,
+  plus a test that the preflight's expectations equal `price_config`'s tables, so the two
+  cannot drift apart.
+- `tests/test_webhook_handler_coverage.py` — 43 tests.
+- Full backend suite green; `ruff check` and `ruff format` clean under `backend/ruff.toml`.
+
+#### Out of scope, unchanged
+
+Building the live-mode products and prices. That still waits on Sprint 781 — there is no
+point creating prices for a number no practising CPA has agreed to.
 
 ---
 

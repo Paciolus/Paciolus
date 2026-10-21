@@ -97,7 +97,21 @@ The goal is to catch anything broken in normal usage before you start charging r
   - 2 coupon IDs: `STRIPE_COUPON_MONTHLY_20`, `STRIPE_COUPON_ANNUAL_10`
 - [ ] **Vercel env vars** → set any `NEXT_PUBLIC_STRIPE_*` IDs the frontend reads directly (publishable key, etc.)
 - [ ] Stripe Dashboard → Developers → Webhooks → configure endpoint → copy the signing secret into `STRIPE_WEBHOOK_SECRET`. **`api.paciolus.com` 404s as of 2026-10-20** (Phase 4.3 has not run), so either do 4.3 first and use `https://api.paciolus.com/billing/webhook`, or use `https://paciolus-api.onrender.com/billing/webhook` now and re-point the endpoint after the domain exists. Do not configure it against the custom domain before that domain resolves — the webhook will fail silently.
-- [ ] **Run the Sprint 719 preflight runner** before flipping live env vars, against **the same endpoint you configured above** — `scripts/stripe_live_preflight.sh https://api.paciolus.com/billing/webhook` once 4.3 has run, or `scripts/stripe_live_preflight.sh https://paciolus-api.onrender.com/billing/webhook` if you took the onrender path. The runner bails on the first non-200, so pointing it at the custom domain before that domain resolves fails the gate for a reason unrelated to Stripe. Fires every event type the webhook handler supports; bails on the first non-200. **Do NOT proceed if any event fails.** Capture the script output as evidence in the launch dossier.
+- [ ] **Run the Sprint 780 price-parity preflight FIRST**, as soon as the live price IDs are set on Render and before any real card is used.
+
+  It reads the ten `STRIPE_PRICE_*` / `STRIPE_SEAT_PRICE_*` env vars, so it has to run **where those variables exist**. Setting them on Render does not put them in your local shell — run it locally with only the secret key exported and it will report every price ID as unset, and `--require-all` will then fail for the wrong reason.
+
+  **Either** run it on the instance, where the live env is already present:
+  ```
+  ssh srv-d6ie9l56ubrc73c7eq2g@ssh.virginia.render.com
+  cd /app && python ../scripts/stripe_price_parity_preflight.py --require-all
+  ```
+  **or** export the same ten values locally first (copy them from Render → paciolus-api → Environment), then:
+  ```
+  STRIPE_SECRET_KEY=sk_live_... python scripts/stripe_price_parity_preflight.py --require-all
+  ```
+  It retrieves every one of the ten Price objects and asserts the amount Stripe will charge equals the amount `billing/price_config.py` intends and the pricing page displays — plus currency, billing cadence, active state, and that no test-mode price is wired into live. **Exit 0 or do not continue.** Capture the output as launch-dossier evidence. This is the check that did not exist when test mode drifted to v2 prices while the page said v3.
+- [ ] **Run the Sprint 719 preflight runner** second, before flipping live env vars, against **the same endpoint you configured above** — `scripts/stripe_live_preflight.sh https://api.paciolus.com/billing/webhook` once 4.3 has run, or `scripts/stripe_live_preflight.sh https://paciolus-api.onrender.com/billing/webhook` if you took the onrender path. The runner bails on the first non-200, so pointing it at the custom domain before that domain resolves fails the gate for a reason unrelated to Stripe. Fires every event type the webhook handler supports; bails on the first non-200. **Do NOT proceed if any event fails.** Capture the script output as evidence in the launch dossier.
 - [ ] **Verify the production-mode Stripe-secret format guard**: after setting live env vars on Render, confirm Render boot logs do NOT contain `STRIPE_SECRET_KEY is a TEST-mode key` or any `_test_` rejection. Sprint 719 added a startup hard-fail for this misconfiguration; if the boot succeeds, the format check passed.
 - [ ] Sign `tasks/pricing-launch-readiness.md` Section 7 (Code Owner + CEO lines) → mark **GO**
 - [ ] Manual test: click "Manage Billing" from `/settings/billing` → confirm it opens the Stripe Customer Portal
