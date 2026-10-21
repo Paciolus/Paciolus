@@ -175,7 +175,10 @@ findings); 1,336 passed across every recorder-dependent suite; full backend suit
 `scripts/check_openapi_drift.py` reported exactly the six intended `engagement_id` additions and
 nothing else, snapshot regenerated (paths 220, schemas 422, both unchanged).
 
-**Commit SHA:** `682507a2`
+**Commit SHAs:** `682507a2` (route wiring + 37 tests) · `856fe857` (the background-task
+ordering contract) · `ad5ed5a5` (the two recorder fixes + 9 regression tests) · `e2cf0f63`
+(scoping that contract to the seven routes it still covers). The review fixes are the
+larger half of what this entry describes, so the first SHA alone does not reach them.
 
 
 ---
@@ -268,7 +271,7 @@ policy, citation consistency) all pass.
 **Not in scope, deliberately:** the two stale "twelve tools" strings on live marketing pages that
 this sprint's grep uncovered, and the reason nothing caught them. Filed as **Sprint 789b**.
 
-**Commit SHA:** `88ec6d3c`. (Recorded pre-merge as `d21542a3`, which never existed on `main` — PR #182 was rebase-merged and the rebase rewrote it.) Note that `routes/sod.py` carries both this sprint's gating change
+**Commit SHA:** `88ec6d3c` — all of this sprint's code. The quota correction above landed separately in `ad5ed5a5`, which changed this record rather than the implementation. (Recorded pre-merge as `d21542a3`, which never existed on `main` — PR #182 was rebase-merged and the rebase rewrote it.) Note that `routes/sod.py` carries both this sprint's gating change
 and Sprint 787b's engagement wiring in the same function signature, so the whole file landed in
 this commit; 787b's other five routes are the commit after.
 
@@ -381,7 +384,8 @@ the live tree is clean. Frontend 2,011 passed, `tsc --noEmit` exit 0. `ruff chec
 also asserts every glob matches at least one real file, since a glob matching nothing covers
 nothing — the same silent failure as the allowlist it replaced.
 
-**Commit SHA:** `71f47bb5`
+**Commit SHAs:** `71f47bb5` (the three stale strings + the customer-copy gate) · `5daa3d6f`
+(the `search` → `finditer` fix in `_check_customer_copy`, from the PR #183 review).
 
 
 ---
@@ -531,7 +535,9 @@ therefore `createTestingHook` and the nine testing tools behind it), `usePreflig
 `useTrialBalanceUpload` and `useStatisticalSampling` all already send `engagement_id`. The six
 fixed here were the only gap.
 
-**Commit SHA:** `77f58aee`
+**Commit SHAs:** `77f58aee` (the six hooks + 25 tests) · `5daa3d6f` (making all six routes
+record synchronously, which is the fix for the `refreshToolRuns()` race this entry
+describes).
 
 
 ---
@@ -643,7 +649,9 @@ and the violation message corrected, and `_check_api_description` now points the
 list shows seven bullets and then "And additional pattern-based tests". The arithmetic is right,
 so the guard is satisfied; completing that enumeration belongs with Sprint 784b's authoring pass.
 
-**Commit SHA:** `18dc0303` — 784b and 784c landed in one commit (both rewrite `USER_GUIDE.md`).
+**Commit SHAs:** `18dc0303` (784b and 784c landed in one commit — both rewrite
+`USER_GUIDE.md`) · `5736f382` (the six PR #184 review findings: four documentation
+corrections, the two `status.json` downgrades, and Sprint 793's filing).
 
 
 ---
@@ -752,7 +760,9 @@ side-car rather than one of the eighteen tools, which the Welcome section alread
 alone: the `last_verified: 2026-03-18` on the other 79 entries. Stamping today's date on features
 I have not re-verified would be worse than a stale date that is honest about itself.
 
-**Commit SHA:** `18dc0303` — 784b and 784c landed in one commit (both rewrite `USER_GUIDE.md`).
+**Commit SHAs:** `18dc0303` (784b and 784c landed in one commit — both rewrite
+`USER_GUIDE.md`) · `5736f382` (the six PR #184 review findings: four documentation
+corrections, the two `status.json` downgrades, and Sprint 793's filing).
 
 
 ---
