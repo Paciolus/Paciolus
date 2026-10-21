@@ -414,7 +414,7 @@ Write Alembic migrations for the documented drift in `PRE_EXISTING_DRIFT_TABLES`
 ---
 
 ### Sprint 741: cleanup_scheduler real-root structural fix (post-Sprint-740 follow-up)
-**Status:** PENDING — **unblocked 2026-10-20.** The prerequisite was a post-deploy read of a real cleanup-cycle failure, which was impossible while every endpoint returned 500 from ~2026-05 to 2026-10-19. Production has been live since 2026-10-19, so the scheduler has been running and the log read can now happen.
+**Status:** SPLIT after the log read — **741a COMPLETE** (`reset_upload_quotas`), **741b PENDING** (`dunning_grace_period`, needs DB access).
 **Priority:** P2 → P1 once Phase 4.1 lands.
 **Source:** Sprint 732 / 740 (archived to [`tasks/archive/sprints-732-740-details.md`](archive/sprints-732-740-details.md)).
 
@@ -426,6 +426,92 @@ Sprint 740 unmasked the cascade — `psycopg2.errors.InFailedSqlTransaction` (SQ
 1. Fix the actual failing statement in the cleanup_func body for whichever job (`reset_upload_quotas`, `dunning_grace_period`, or both).
 2. Add a regression test that reproduces the underlying root cause and asserts the cleanup cycle completes without raising.
 3. Verify dunning escalation end-to-end on a staging-equivalent fixture once the cascade is fixed.
+
+#### The log read: two bugs, not one
+
+Render logs for `srv-d6ie9l56ubrc73c7eq2g` on 2026-10-20 show the scheduler failing **every
+hour**, with two distinct and unrelated errors. Sprint 740 predicted a single root class;
+there are two.
+
+| Job | Error | pgcode | Meaning |
+|-----|-------|--------|---------|
+| `reset_upload_quotas` | `psycopg2.errors.InvalidTextRepresentation` | **22P02** | a literal cannot be cast to its column type |
+| `dunning_grace_period` | `psycopg2.errors.UndefinedTable` | **42P01** | a relation in the query does not exist |
+
+Sprint 740's `error_orig_fqn` field is what made this readable — the prediction was
+`SerializationFailure` or an `OperationalError`, and it was neither.
+
+#### 741a — `reset_upload_quotas`: COMPLETE
+
+**Root cause, proven offline.** `Subscription.status` is mapped as `Enum(SubscriptionStatus)`
+with **no `values_callable`**, so SQLAlchemy persists the enum *member name*. The Postgres
+type `subscriptionstatus` therefore carries labels
+`['ACTIVE', 'PAST_DUE', 'CANCELED', 'TRIALING', 'INCOMPLETE', 'INCOMPLETE_EXPIRED', 'UNPAID', 'PAUSED']`.
+The job's raw SQL filtered `WHERE status = 'active'` — the lowercase `.value`, which is not a
+label for that type. Postgres refused the cast: 22P02, hourly, since the job was written.
+
+**This job had never once succeeded in production.** And
+`uploads_used_current_period` is reset **nowhere else** — `shared/entitlement_checks.py:153`
+holds the only increment and `:113` the only read for quota enforcement. So any subscriber
+who reached their monthly upload cap would have stayed capped permanently. No realized
+customer impact (there are no paying subscribers yet), which is precisely why it was worth
+finding before there are.
+
+**Why 8,728 passing tests missed it.** On SQLite the column is a VARCHAR with no type
+constraint, so `WHERE status = 'active'` does not error — it matches **zero rows**, and the
+job logs success with `records_processed: 0`. Same shape as the missing `ALTER TYPE`
+migration in Sprint 787: when a constraint exists only in the production dialect, the dev
+dialect cannot see the defect.
+
+**The fix** binds the enum member through the ORM (`update(Subscription).where(Subscription.status
+== SubscriptionStatus.ACTIVE, ...)`), so SQLAlchemy emits whatever representation the mapping
+actually uses and the comparison cannot drift from the mapping again. Still one atomic UPDATE,
+so the AUDIT-06 read-then-write race fix is unaffected.
+
+**Also extracted** `reset_upload_quotas(db)` to module level, matching
+`purge_expired_export_shares(db)` directly below it. The logic had been a closure inside the
+job, reachable only through `_run_cleanup_job` — which opens its own session, takes a DB lock,
+commits and rolls back. A test that patches all of that is testing the wrapper, not the query.
+
+**Checked for the same bug elsewhere.** `grep` surfaced two more `WHERE status IN ('active',
+'trialing')` in `billing/analytics.py` — both inside **docstrings** illustrating "Dashboard
+SQL", with the real code using ORM-bound enum members. Not defects, verified by reading the
+context rather than trusting the grep.
+
+**Verification:** 9 tests. Behaviour tests rather than SQL-text assertions, so they fail on
+the old implementation *under SQLite* — regression-proved by restoring the raw-SQL form: the
+two reset-actually-happens tests failed, then passed on restore. One test pins the mapping
+invariant (labels are member names) so a future `values_callable` change fails loudly, and one
+guards the literal — after its own first draft flagged the function's docstring, which quotes
+`WHERE status = 'active'` to explain the bug. It now strips the docstring via `ast`.
+
+#### 741b — `dunning_grace_period`: PENDING, needs the Neon connection string
+
+`process_grace_period_expirations` queries `dunning_episodes`, and production says 42P01:
+that relation does not exist. But:
+
+- the table's migration **is** in the chain — `591a_add_dunning_episodes`, reachable from head
+  through the `a848ac91d39a` mergepoint;
+- `alembic upgrade head` runs on every boot, and the 2026-10-20 startup logs show it applying
+  **nothing** ("Context impl PostgresqlImpl", "Will assume transactional DDL", no "Running
+  upgrade" lines).
+
+So production's `alembic_version` already claims head while the schema lacks a table that a
+chain migration would have created. That is a **stamped-but-not-applied** condition — most
+likely the Phase 1 Neon cutover (2026-04-09) created the schema with
+`Base.metadata.create_all()` and stamped head, and `dunning_model` was not in the imported
+metadata at that moment.
+
+**This cannot be fixed or even confirmed from here** — it needs a read of
+`information_schema.tables` and `alembic_version` against Neon, which is CEO ask **D-1**. It
+also raises the stakes on **Sprint 738**: that sprint treats the four orphan tables as P3
+dormant debt, but if production is stamped ahead of its real schema then the same condition
+may affect `password_reset_tokens`, `processed_webhook_events`, `tool_activities` and
+`waitlist_signups` — and `waitlist_signups` is the table CEO ask **D-1** wants to count.
+
+**Scope when unblocked:** compare `information_schema.tables` against `Base.metadata`, create
+whatever is genuinely missing, and decide whether `alembic_version` needs correcting or the
+missing objects need idempotent catch-up migrations (Sprint 738's outcome-1 path).
 
 ---
 

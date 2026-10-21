@@ -35,6 +35,47 @@ change, derive it or it will be wrong exactly once, quietly.
 
 ---
 
+## A constraint that exists only in production is invisible to the test suite (Sprint 741a, 2026-10-20)
+
+`reset_upload_quotas` had failed in production **every hour since it was written**, with
+`22P02 InvalidTextRepresentation`. Its raw SQL filtered `WHERE status = 'active'`, but
+`Subscription.status` is mapped `Enum(SubscriptionStatus)` with no `values_callable`, so
+SQLAlchemy persists the enum member *name* — the Postgres type's labels are `ACTIVE`,
+`PAST_DUE`, … and the lowercase `.value` is not among them.
+
+8,728 tests passed throughout. On SQLite that column is a VARCHAR with no type constraint,
+so the comparison does not raise — it matches **zero rows**, and the job logs success with
+`records_processed: 0`. A test suite on the dev dialect cannot see a defect that only a
+production-dialect constraint can produce.
+
+This is the second instance today of the same shape. Sprint 787's missing `ALTER TYPE`
+migration had the identical property: adding a Python enum member without it passes every
+SQLite test and fails on insert in Postgres.
+
+**Pattern: when behaviour depends on a dialect-specific constraint — native enums, check
+constraints, collations, strict types — the test must assert the mapping, not the
+behaviour.** `assert Subscription.__table__.c.status.type.enums == [...]` runs identically
+on both dialects and states the fact the raw SQL depended on. Behaviour tests on SQLite can
+only show that *something* happened, and "zero rows matched" looks like success.
+
+**Corollary: `records_processed: 0` is not evidence of success.** The job reported a clean
+run with zero rows for months. A cleanup job that is *always* a no-op is indistinguishable
+from a healthy one unless something asserts it has work to do and does it.
+
+**The other half of the diagnosis cost nothing because Sprint 740 built it.** That sprint
+added `error_orig_fqn` / `error_orig_pgcode` to the failure log specifically so the next
+failure would name its own root class. It did — and it named **two** unrelated classes
+across the two jobs (22P02 and 42P01), where Sprint 740 had predicted one. Instrumentation
+designed to answer a question answered a different, better question.
+
+**And extract the closure.** The query lived inside the job function, reachable only through
+`_run_cleanup_job` — own session, DB lock, commit, rollback, close. Patching all of that to
+reach the query produces a test about the wrapper. Moving it to a module-level
+`reset_upload_quotas(db)` (matching the function directly below it, which was already shaped
+that way) made the regression test three lines long.
+
+---
+
 ## A guard that cannot fail on the surface that matters is decoration (Sprint 784, 2026-10-20)
 
 Sprint 784 added a `tool_count_consistency` rule to the documentation guard, because Sprint 689
