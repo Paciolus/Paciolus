@@ -145,6 +145,98 @@
 > `useAuditUpload` — they post via `apiPost` with their own fetch logic.
 > Sprints 784–791 archived to `tasks/archive/sprints-784-791-details.md`.
 
+### Sprint 793: Both tax tools apply one fixed set of statutory limits to every year
+**Status:** PENDING.
+**Priority:** **P1** — the two tools that touch IRS filings produce materially wrong output for any
+year whose figures differ from the hardcoded set, and both were documented and inventoried as
+complete until the PR #184 review.
+**Source:** PR #184 review, 2026-10-21. Two P1 findings, both verified against the code.
+
+Both tools accept `tax_year` as a validated field (`ge=2000, le=2099`), pass it through to the
+config, and then **never use it to select anything**.
+
+#### W-2 / W-3 Reconciliation
+
+`w2_reconciliation_engine.py:40-51` holds one block of constants, headed
+`# --- 2026 reference values (caller override via Form941ComparisonConfig) ---`:
+
+| Constant | Engine value |
+|----------|--------------|
+| `DEFAULT_SS_WAGE_BASE` | 176,100 |
+| `DEFAULT_HSA_SELF_ONLY` / `_FAMILY` | 4,300 / 8,550 |
+| `DEFAULT_401K_ELECTIVE_LIMIT` | 23,500 |
+| `DEFAULT_SIMPLE_IRA_LIMIT` | 16,500 |
+
+**Three layered problems, in increasing order of how verifiable they are:**
+
+1. **The values do not match the year they are labelled.** The reviewer puts the 2026 figures at
+   SS wage base 184,500, HSA 4,400 / 8,750, 401(k) 24,500, SIMPLE 17,000 — citing SSA and IRS
+   — and identifies the engine's set as the **2025** figures. That matches my own understanding,
+   but it is an external fact about current tax law and should be confirmed by a practitioner
+   before the corrected numbers ship. **Sprint 781's CPA validation is the natural place.**
+2. **The route exposes no override.** `tasks/archive/sprints-636-640-details.md` states "All
+   thresholds are caller-overridable via `W2ReconciliationConfig`" — true at the engine layer and
+   **unreachable through the API**: `grep` for `ss_wage_base|hsa_self_only_limit|elective_limit`
+   in `routes/w2_reconciliation.py` returns **0**. A customer who knows the right number cannot
+   supply it.
+3. **This one needs no tax knowledge at all.** The tool accepts any year from 2000 to 2099 and
+   applies one fixed set of limits to all of them. That is wrong independent of which year the
+   constants represent, and it is the framing to build the fix around.
+
+**Unaffected, and worth saying so:** the per-employee wage comparisons and the 941 reconciliation
+compare the customer's own numbers to each other. Only the wage-base cap and the HSA / retirement
+over-limit findings depend on the constants.
+
+#### Form 1099 Preparation
+
+`form_1099_engine.py:94-98` — `FORM_THRESHOLDS` is static: NEC 600, MISC 600, INT 10, applied to
+any `tax_year` and not varied by sub-category.
+
+The reviewer reports that for 2026 the §6041 / §6041A threshold for NEC and most MISC payments
+rose to **$2,000** while royalties remain reportable at **$10**, citing the IRS 1099-MISC/NEC
+instructions. Again consistent with my understanding — the 2025 reconciliation act raised the
+information-return threshold effective for payments after 2025 — and again an external fact to
+confirm before shipping numbers.
+
+**The failure is bidirectional**, which is what makes it P1 rather than P2: vendors paid between
+the old and new thresholds are listed as candidates when they are not reportable, **and** a
+category whose threshold is *lower* than the flat rate is omitted entirely. A practitioner
+filing from the candidate list would both over-report and under-report.
+
+**Unaffected:** vendor aggregation, the corporate safe harbour, the processor exemption and the
+data-quality report.
+
+#### Scope
+
+1. **Get the figures confirmed first.** Both sets are customer-facing tax amounts; neither should
+   be changed on my reading of the law. Confirm with a practitioner, ideally inside Sprint 781.
+2. Replace both constant blocks with a **year-keyed table** — `TAX_YEAR_LIMITS: dict[int, Limits]`
+   — selected by the `tax_year` already being passed in.
+3. **Decide and implement the unknown-year behaviour explicitly.** A year with no entry must not
+   silently fall back to the nearest one. Preferred: return a skipped result naming the missing
+   year, the same way the contract-aware and column-dependent tests already degrade. Silent
+   fallback is how this defect would recur.
+4. Expose the overrides the Sprint 636 record already promised, so a practitioner can correct a
+   figure without waiting for a release.
+5. Vary the 1099 thresholds **by sub-category**, not just by year — royalties are the case that
+   proves a single per-form number is the wrong shape.
+6. **A guard for the class:** no engine may hold a bare statutory constant without a year key. The
+   broader version is a test that any module naming a tax year in a comment has a year-selected
+   table rather than a flat constant.
+
+**Acceptance bar:** a 2025 and a 2026 reconciliation of the same payroll produce different
+wage-base findings; a year outside the table is reported as unsupported rather than computed; and
+both `features/status.json` entries can honestly return to `complete`.
+
+**Interim state shipped in #184, so the documentation does not overclaim while this is pending:**
+both chapters carry an explicit caveat telling the reader to confirm the limits for their filing
+year and naming what is and is not affected, and both `status.json` entries were downgraded from
+`complete` to `partial`.
+
+**Commit SHA:** TBD.
+
+---
+
 ### Sprint 790: The monthly upload allowance is not enforced on any paid tier
 **Status:** PENDING.
 **Priority:** **P1** — revenue-relevant and advertised. Every paid tier's headline quota is
