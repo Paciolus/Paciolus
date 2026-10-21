@@ -941,7 +941,7 @@ No artifact in 770+ sprints records an unaffiliated practising CPA being asked w
 ---
 
 ### Sprint 782: Lock in what has already been won
-**Status:** PENDING.
+**Status:** SPLIT — **782a COMPLETE** (design-token gate), **782b PENDING** (external monitor, needs CEO signup).
 **Priority:** P2 — cheap regression insurance on two hard-won zero states.
 **Source:** `reports/launch-readiness-assessment-2026-10-19.md` §D, plus the lesson of the AS 1215 drift.
 
@@ -949,6 +949,59 @@ Two properties reached zero and have no guard, which is precisely how the citati
 
 1. **Design system at 0 generic Tailwind colour tokens** (down from 150 across 777 files). Add a CI check rejecting any `slate-|gray|zinc|neutral|stone|blue|green|red|yellow|indigo|purple|pink|orange|teal|cyan|amber|lime|emerald|violet|fuchsia|rose|sky` + numeric-scale class in `frontend/src`, with an allowlist file if a genuine exception ever appears. The Oat & Obsidian mandate in `CLAUDE.md` carries an audit penalty for deviation; it should be mechanically enforced rather than discipline-dependent.
 2. **External uptime monitor.** `uptime-check.yml` is live and CI-verified, but GitHub disables scheduled workflows after ~60 days idle — so it switches itself off during exactly the quiet period it guards. Stand up Better Stack / Healthchecks.io / UptimeRobot (free tiers are ample) against `/health/ready`, alerting on `status != "healthy"` and **not** merely on a non-200, since Sprint 774 deliberately reports `degraded` behind a 200. Also add the `RENDER_API_KEY` secret so the deploy-drift probe arms — the repo currently has no secrets at all.
+
+#### 782a — design-token gate: COMPLETE
+
+**Hard gate from day one.** `lint_engine_base_adoption.py` runs advisory because a
+migration is outstanding; here there is nothing to migrate — the codebase is already at
+zero across 777 files — so the lint exits 1 on any finding.
+
+**Where it runs, and why not a new CI job.** `scripts/lint_design_tokens.py` plus
+`backend/tests/test_design_token_lint.py`. The Backend Tests gate is already required on
+`main` across Python 3.11, 3.12 and PostgreSQL 15, so wiring the check through a test
+enforces it on every PR without touching `ci.yml`. The lint is pure stdlib and only reads
+files, so it needs nothing from the backend runtime.
+
+**Matching is syntax, not substring.** The pattern requires a colour **utility prefix**
+(`bg-`, `text-`, `border-`, `ring-`, `from-`, `fill-`, …) optionally preceded by variant
+prefixes (`hover:`, `dark:`, `md:`, `group-hover:`). So `text-blue-500` is a finding while
+a comment mentioning `red-500`, a vendor named "Blue-500 Industries", a fixture asserting
+`"sky-500"`, and `z-50` / `duration-500` / `leading-500` are not. Commented-out *classes*
+are still findings — a bare palette word in prose is a note, `// className="bg-slate-800"`
+is a class on its way back in.
+
+**Error messages name the replacement**, because a gate that says "wrong" without saying
+"use this" gets suppressed: `bg-red-500` → *use clay-\* (errors, expenses, abnormal
+balances)*, `text-emerald-600` → *use sage-\**, `bg-slate-900` → *use obsidian-\**.
+Semantic colour is explicitly not an exception — the palette already supplies `sage-*` for
+success/income and `clay-*` for error/expense, so "but it's an error state" is not a reason
+to reach for `red-500`.
+
+**Allowlist** at `scripts/design_token_allowlist.txt`, `path:class` or bare `path`, ships
+**empty** — and a test asserts it stays empty, so any entry has to argue for itself in
+review rather than appearing quietly.
+
+**A bug worth recording, found by its own unit tests.** The scale alternation was
+`(?:50|[1-9]00|950)`. Regex alternation is leftmost-first, so against `bg-red-500` it
+matched `50` and stopped — the file was still flagged, but the finding was *reported* as
+`bg-red-50`, a class that does not exist. An error message naming a non-existent class
+sends the reader hunting for the wrong thing. Fixed by ordering longest-first and asserting
+a trailing boundary so `bg-blue-5000` cannot read as `bg-blue-500`. **The gate firing is
+not the same as the gate being right.**
+
+**Verification:** 39 tests, of which 12 pin the false-positive set and 14 the true
+positives. Regression-proved end to end by injecting `bg-slate-800 text-blue-500` into a
+real frontend file: exit 1, both classes named correctly with correct line number, then
+exit 0 on restore.
+
+#### 782b — external uptime monitor: PENDING, needs CEO
+
+Unchanged and still blocked on a signup: stand up Better Stack / Healthchecks.io /
+UptimeRobot against `/health/ready`, alerting on `status != "healthy"` in the **body**
+rather than on a non-200, since Sprint 774 deliberately reports `degraded` behind a 200.
+Plus the `RENDER_API_KEY` secret so the deploy-drift probe arms. The in-repo check cannot
+substitute: GitHub disables scheduled workflows after ~60 days idle, so it switches itself
+off during exactly the quiet period it guards.
 
 ---
 

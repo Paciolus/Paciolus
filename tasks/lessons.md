@@ -4,6 +4,35 @@
 
 ---
 
+## A guard firing is not the same as a guard being right (Sprint 782a, 2026-10-20)
+
+The design-token lint flags Tailwind's generic colour classes. Its scale pattern was
+`(?:50|[1-9]00|950)`. Regex alternation is leftmost-first, so against `bg-red-500` it
+matched `50` and stopped: the file was correctly flagged, the exit code was correctly 1,
+and the reported finding was **`bg-red-50`** — a class that appears nowhere in the file.
+
+Every end-to-end check passed. The gate caught the violation. Only a unit test asserting
+the exact `match` string caught that the message named the wrong thing, which would have
+sent whoever hit it searching for a class that does not exist.
+
+**Pattern: assert the content of a finding, not just its existence.** `assert findings` is
+satisfied by a guard that is right for the wrong reason. The cheap habit is one test per
+guard pinning file, line and matched text — those three are what a human acts on.
+
+**Order alternations longest-first, and assert boundaries.** `(?:950|[1-9]00|50)` with a
+trailing `(?!\d)` is the correct form; it also stops `bg-blue-5000` reading as
+`bg-blue-500`. Any alternation of overlapping literals has this failure mode, and it
+degrades the message rather than the verdict, so it survives casual testing.
+
+**Error messages are part of the guard.** This lint names the replacement token for every
+palette it rejects — `red` → `clay-*`, `emerald` → `sage-*`, `slate` → `obsidian-*` — and
+says outright that semantic states are already covered, because "but it's an error state"
+is the most plausible reason someone would reach for `red-500`. A gate that says "wrong"
+without saying "use this instead" gets suppressed, and a suppressed gate is worse than no
+gate: it still costs CI time and now also lies about coverage.
+
+---
+
 ## A test that hardcodes a count defends the drift it was meant to catch (Sprint 787, 2026-10-20)
 
 Sprint 689 expanded the tool catalog 12 → 18. `engagement_model.ToolName` was never

@@ -1,0 +1,19 @@
+# Design-token lint allowlist — Sprint 782a
+#
+# Exceptions to the Oat & Obsidian palette mandate in CLAUDE.md, checked by
+# scripts/lint_design_tokens.py.
+#
+# Format, one per line:
+#   path/fragment:exact-class    # reason (required)
+#   path/fragment                # reason (required) — allows any generic colour in that file
+#
+# Prefer the narrow form. A bare path fragment exempts a whole file and should be rare.
+#
+# Before adding an entry, check the palette actually lacks what you need:
+#   - success / income / positive  -> sage-*
+#   - error / expense / abnormal   -> clay-*
+#   - dark surfaces and text       -> obsidian-*
+#   - light surfaces and text      -> oatmeal-*
+#
+# The file is intentionally empty. The codebase reached zero generic colour classes
+# across 777 files; every exception should have to argue for itself.
