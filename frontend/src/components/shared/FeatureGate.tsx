@@ -12,6 +12,12 @@
  *   admin_dashboard   — Professional+
  *   bulk_upload       — Enterprise
  *   custom_branding   — Enterprise
+ *
+ * Sprint 789 removed 'sod_checker' from this list. Segregation of Duties is a
+ * tool, not a feature, so it belongs to UpgradeGate — and the Enterprise-only
+ * minimum it carried here contradicted the Terms of Service tier table, the
+ * pricing page and the backend entitlements table, all of which sell all 18
+ * tools to every paid tier.
  */
 
 import { useEffect } from 'react'
@@ -25,7 +31,6 @@ type FeatureName =
   | 'admin_dashboard'
   | 'bulk_upload'
   | 'custom_branding'
-  | 'sod_checker'
 
 const TIER_ORDER = ['free', 'solo', 'professional', 'enterprise'] as const
 
@@ -35,7 +40,6 @@ const FEATURE_MIN_TIER: Record<FeatureName, typeof TIER_ORDER[number]> = {
   admin_dashboard: 'professional',
   bulk_upload: 'enterprise',
   custom_branding: 'enterprise',
-  sod_checker: 'enterprise',
 }
 
 const FEATURE_DISPLAY_NAMES: Record<FeatureName, string> = {
@@ -44,7 +48,6 @@ const FEATURE_DISPLAY_NAMES: Record<FeatureName, string> = {
   admin_dashboard: 'Admin Dashboard',
   bulk_upload: 'Bulk Upload',
   custom_branding: 'Custom PDF Branding',
-  sod_checker: 'Segregation of Duties Checker',
 }
 
 const TIER_DISPLAY_NAMES: Record<string, string> = {

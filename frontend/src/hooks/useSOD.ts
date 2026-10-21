@@ -4,8 +4,9 @@
  * Segregation of Duties hook — Sprint 689b.
  *
  * Wraps the three SoD endpoints: GET /audit/sod/rules, POST /audit/sod/analyze,
- * POST /audit/sod/analyze.csv. All endpoints are Enterprise-only
- * (backend returns 403 with {feature: 'sod_checker'} for lower tiers).
+ * POST /audit/sod/analyze.csv. Available on every paid tier as of Sprint 789
+ * (previously Enterprise-only, which contradicted the pricing page and Terms);
+ * Free tier still gets a 403 from the standard entitlement check.
  */
 
 import { useCallback, useState } from 'react'

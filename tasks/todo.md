@@ -132,8 +132,8 @@
 > Sprints 762–788 archived to `tasks/archive/sprints-762-788-details.md`.
 
 ### Sprint 787b: Wire the six Sprint-689 tools into engagement tracking
-**Status:** PENDING.
-**Priority:** P2 — the catalog counts are honest after Sprint 787; the runs still are not recorded.
+**Status:** COMPLETE.
+**Priority:** P2 — the catalog counts are honest after Sprint 787; the runs were still not recorded.
 **Source:** PR #174 review, 2026-10-21.
 
 Sprint 787 made the six tools *representable* in `ToolName` and classified them in the
@@ -164,6 +164,211 @@ default until a tool earns one.
 **Verification:** a run of each tool against an engagement produces a `ToolRun` row; the
 workpaper index and Anomaly Summary both show the tool as executed; the completion gate
 counts it.
+
+#### What landed
+
+All six routes now take `engagement_id` in the request body and record through
+`maybe_record_tool_run`. These are JSON-body routes, so the reference pattern is
+`multi_period.py` (`payload.engagement_id`) rather than `ar_aging.py`'s multipart
+`Form(default=None)` — otherwise identical: `background_tasks.add_task(...)` on the success
+path, a synchronous `success=False` call in each error arm.
+
+| Route | Endpoint wired | Error arms recorded |
+|-------|----------------|---------------------|
+| `sod.py` | `/audit/sod/analyze` | 1 (new `try`, see below) |
+| `intercompany_elimination.py` | `/audit/intercompany-elimination` | 2 |
+| `w2_reconciliation.py` | `/audit/w2-reconciliation` | 2 |
+| `form_1099.py` | `/audit/form-1099` | 2 |
+| `book_to_tax.py` | `/audit/book-to-tax` | 2 |
+| `cash_flow_projector.py` | `/audit/cash-flow-projector` | 2 |
+
+The `export.csv` endpoints are deliberately **not** wired. A CSV re-render of an analysis the
+caller already ran is not a second run, and 689c–g already made the same split for
+`check_upload_limit`.
+
+**The design question, answered: `None` for both parameters on all six.** Not an omission —
+none of the six engines computes a composite score (verified: zero occurrences of
+`composite_score` across all six `*_engine.py` files), and `shared/account_extractors.py` has
+no extractor for any of them because none produces GL-account-level output. Sprint 787 already
+established that equivalence mechanically: `CONVERGENCE_TOOLS` is exactly the key set of
+`ACCOUNT_EXTRACTORS`. A test pins both as `None` so a later change cannot start writing a
+fabricated score into a workpaper quietly.
+
+**`sod.py` needed a `try` the other five already had.** Its engine does not raise on bad
+input; `_build_extra_rule` does, as a 400 for an unrecognised severity. That is still a failed
+run from the engagement's point of view, so the call is wrapped and the failure recorded
+rather than dropped.
+
+#### Tests — `tests/test_promoted_tool_engagement_wiring.py`, 36 tests
+
+Four parametrized cases per tool (24) plus failure-path, activity-feed and guard coverage:
+run-creates-ToolRun, omitting `engagement_id` records nothing, repeat runs increment
+`run_number`, and **a foreign `engagement_id` is ignored rather than recorded** — worth its own
+case on all six because the wiring passes an attacker-chosen integer straight from the request
+body into the recorder, which resolves it through `EngagementManager.get_engagement(user_id, …)`.
+Also covered: `ToolActivity` rows are written even with no engagement link, which is what makes
+these six appear on the multi-tool dashboard at all.
+
+**Two guards, both of which failed to work on their first draft.** Recording this because it is
+now the fifth instance of the same class in this repo:
+
+1. *"Every route that accepts an `engagement_id` on a run must record it."* First draft flagged
+   **nine false positives** — it required a direct `maybe_record_tool_run` call, but the six
+   testing routes delegate to `shared/testing_route.py::run_single_file_testing` and the
+   diagnostics routes to `services/audit/file_tool_scaffold.py::execute_file_tool`, both of
+   which record. It also counted `engagement_id` arriving as `Query(...)` — a filter on a read
+   in `activity.py` and `trends.py`, where nothing should be recorded.
+2. Fixing it by resolving imports one hop made it **vacuous**. `shared/testing_route.py` holds
+   both `enforce_tool_access`, which nearly every route imports, and `run_single_file_testing`
+   — so "imports from a module that calls the recorder" was true for almost every route. The
+   guard went green and tested nothing. **Regression-proving caught it**: stripping the recorder
+   out of `routes/form_1099.py` left the guard passing. The check is now on the called function
+   from an explicit two-name allowlist, and a second test asserts those two helpers really do
+   record, so the allowlist cannot rot into a lie.
+
+Both guards were then regression-proved in both directions — injected violation fails and names
+the right file, restore passes.
+
+**What these tests do not prove.** `_override` installs `get_db` as `lambda: db_session`, a
+plain callable rather than a generator, so FastAPI performs no dependency teardown. Since
+FastAPI 0.106 a `yield` dependency is torn down *before* background tasks run, so whether the
+real request-scoped session is still usable inside `background_tasks.add_task(..., db, ...)` is
+an open question about the house pattern — shared by all seven previously-wired routes, not
+introduced here. It cannot be answered by any test while `get_db` is overridden this way.
+Stated in the test module docstring rather than assumed away; a candidate sprint of its own.
+
+**Verification:** 36 new tests; 237 passed across the SoD, promoted-tool, engagement, catalog
+and convergence suites; `ruff check .` clean; no new mypy findings in the six changed modules;
+`scripts/check_openapi_drift.py` reported exactly the six intended `engagement_id` additions
+and nothing else, snapshot regenerated (paths 220, schemas 422, both unchanged).
+
+**Commit SHA:** filled at merge.
+
+---
+
+### Sprint 789: Two paying tiers were sold a tool the API refused to run
+**Status:** COMPLETE.
+**Priority:** **P1** — a contractual surface promised a tool the backend 403'd. Revenue-relevant
+and liability-relevant, not cosmetic.
+**Source:** found while surveying `routes/sod.py` for Sprint 787b, which had flagged it only as
+"no `db: Session`". CEO decision 2026-10-21: remove the gate.
+
+`routes/sod.py` carried a bespoke `require_enterprise_tier` dependency that returned 403 to
+every tier below Enterprise — **the only hardcoded tier comparison in any route module.**
+Meanwhile every other surface sold Segregation of Duties to Solo and Professional:
+
+| Surface | What it said | File |
+|---------|--------------|------|
+| **Terms of Service** tier table | "All 18 tools" for Solo *and* Professional | `(marketing)/terms/page.tsx:616,621` |
+| Pricing page tier features | "All 18 diagnostic tools" on both paid tiers | `(marketing)/pricing/page.tsx:381,401` |
+| Pricing page **FAQ** | "Both Solo and Professional include all 18 diagnostic tools" | `(marketing)/pricing/page.tsx:482` |
+| Pricing page SEO metadata | "All paid tiers include all 18 diagnostic tools" | `(marketing)/pricing/layout.tsx:5,8` |
+| `UpgradeModal` — shown at purchase | "All 18 tools" on Solo and Professional | `billing/UpgradeModal.tsx:27,35` |
+| Backend entitlements table | `tools_allowed=_ALL_TOOLS` (empty = all) for every paid tier | `shared/entitlements.py:88,107` |
+| Tool catalog (SSOT) | `sod_checker`, `is_marketing_audit_tool=True` | `tools_registry.py:170` |
+| `UpgradeGate` docstring | "All paid tiers … have access to all 18 tools" | `shared/UpgradeGate.tsx:10` |
+
+**Why it survived.** Sprint 689b's own filing says "Already Enterprise-gated" — the gate was
+known and carried forward when the tool was promoted into the marketed catalog. Sprint 717 then
+added it to `tools_registry.py`, and Sprints 784/788 swept the prose from 12 → 18. Every one of
+those made the count correct and the *access* wrong, because nothing cross-checked a tier gate
+against the entitlements table. `test_catalog_consistency.py` ties the registry to the frontend
+ledger; nothing tied either to what the routes actually allow. The frontend even documented the
+discrepancy without resolving it: `tools/sod/page.tsx` layered `FeatureGate` on top of
+`UpgradeGate` with the comment "the standard UpgradeGate only blocks Free tier, so this page
+layers … to block Solo/Professional as well."
+
+**What landed.**
+- `routes/sod.py` — `require_enterprise_tier` deleted; `require_verified_user` + `db: Session`
+  with the standard `enforce_tool_access(current_user, "sod_checker", db)`. This also closed a
+  second, independent defect: SoD was the only one of the six promoted tools calling **neither**
+  `enforce_tool_access` **nor** `check_upload_limit`, so its runs never counted against the
+  monthly upload quota. Harmless while the tool was Enterprise-only (unlimited uploads); live
+  the moment the gate came off, so both had to land together.
+- `/audit/sod/rules` → `require_verified_user`, no entitlement check. It exposes the rule
+  library, not an analysis of customer data — mirrors `/audit/book-to-tax/standard-adjustments`.
+- `/audit/sod/analyze.csv` → `enforce_tool_access` without `check_upload_limit`, the same split
+  689c–g use for their exports.
+- Frontend: `FeatureGate` → `UpgradeGate(toolName="sod_checker")`; `sod_checker` removed from
+  `FeatureGate`'s union, tier map and display-name map entirely, since that component's own
+  docstring says it gates features and that tools belong to `UpgradeGate`; `GuestCTA` copy
+  "verified Enterprise account" → "verified account on a paid plan"; the "Enterprise plan."
+  suffix dropped from the `/tools` catalog description; the `useSOD` header comment corrected.
+
+**A second defect the tests found.** `tools/sod/page.tsx` claimed "**Twelve** standards-backed
+SoD rules". `DEFAULT_SOD_RULES` has **11** (AP-01…03, JE-01/02, PR-01/02, REV-01/02, INV-01,
+ADM-01). Corrected to Eleven, and the test now pins the count *exactly* with the full code set
+rather than `>= 12` — a `>=` assertion would not have caught this and, for the months the claim
+was live, nothing did.
+
+**Tests — `tests/test_sod_routes.py`, 10 tests.** Free blocked on analyze and on CSV export with
+the standard `TIER_LIMIT_EXCEEDED` shape (not the old bespoke `{"error": "tier_locked"}`
+payload); **Solo, Professional and Enterprise all pass**, parametrized — Enterprise is included
+so a future change cannot narrow the gate back to a single tier and still go green; the rule
+library readable by Free as reference data.
+
+Plus an AST guard: **no route module may compare `<...>.tier` against a `UserTier` member.** The
+defect was not that SoD was Enterprise-only, it was that one route decided tier access for
+itself instead of asking `enforce_tool_access`, which let the entitlements table, the catalog
+and a contract page disagree with it indefinitely with nothing failing. `routes/sod.py` was the
+only offender; this keeps it that way. Regression-proved by injecting a comparison into
+`routes/book_to_tax.py` — the guard failed and named `book_to_tax.py:143` exactly, then passed
+on restore. (Firing is not the same as being right; Sprint 782a's gate named a class that
+existed nowhere on its first draft.)
+
+**Verification:** 10 new backend tests; 237 passed across the affected backend suites; frontend
+`SODPage.test.tsx` 4 → 6 tests, full suite 2,009 → **2,011** passed, 0 failures; `tsc --noEmit`
+exit 0; `npm run build` clean with every route `ƒ (Dynamic)` and `ƒ Proxy (Middleware)` active;
+`ruff check .` clean; the 120 CI-gate tests (design-token lint, doc consistency, accounting
+policy, citation consistency) all pass.
+
+**Not in scope, deliberately:** the two stale "twelve tools" strings on live marketing pages that
+this sprint's grep uncovered, and the reason nothing caught them. Filed as **Sprint 789b**.
+
+**Commit SHA:** filled at merge.
+
+---
+
+### Sprint 789b: The doc-consistency gate does not read the website
+**Status:** PENDING.
+**Priority:** **P1 for the two strings** (live, customer-facing, wrong), P2 for the guard
+extension.
+**Source:** Sprint 789. A grep for spelled-out tool counts turned up three stale "twelve"s, two
+of them on public marketing pages.
+
+| File | Current text | Should be |
+|------|--------------|-----------|
+| `(marketing)/demo/page.tsx:79` | "Explore all **twelve** audit diagnostic tools using synthetic data." | eighteen |
+| `marketing/ToolSlideshow.tsx:514` | "**Twelve** purpose-built tools. Explore each one to see exactly what you get." | eighteen |
+| ~~`tools/sod/page.tsx:93`~~ | ~~"Twelve standards-backed SoD rules"~~ | fixed in Sprint 789 (the library has 11) |
+
+**The interesting part is why these survived three separate sweeps.**
+`backend/guards/doc_consistency_guard.py` exists precisely for this — its own docstring says
+AGENTS.md, README.md, PRODUCT_VISION.md, ARCHITECTURE.md and USER_GUIDE.md "all still said
+twelve" — and it already carries a spelled-out numeral map including `"twelve": 12`. But its
+`GUARDED_DOCS` list is **six markdown files plus two compliance documents**. It never looks at
+`frontend/src/**/*.tsx`.
+
+So the gate guards the documentation and ignores the thing customers actually read. Sprint 784
+(tool-count cohesion, 12 → 18) and Sprint 788 (tool navigation) both ran and both missed these,
+because both were scoped by what the guard measures.
+
+**Scope:**
+1. Fix the two strings.
+2. Extend the guard to a customer-facing frontend copy set — the marketing route group, the
+   pricing/terms pages, `components/marketing/**`, `components/billing/UpgradeModal.tsx` — using
+   the numeral map that already exists. Keep JSX out of scope for the *digit* patterns where it
+   would false-positive (`toolRuns.length}/18`, `number: 13` in the ledger) and prove the
+   false-positive set with tests, as Sprint 782a's design-token lint does.
+3. Decide the boundary explicitly and write it down: the guard should read copy a customer can
+   see, and skip code comments and historical records. A `/* 12-tool era */` comment is a note;
+   "Explore all twelve tools" is a claim.
+
+**Acceptance bar:** the two strings corrected; the extended guard, run against the tree *before*
+the fix, reports exactly those two and no false positives; a test pins the false-positive set so
+the next count change cannot be waved through.
+
+**Commit SHA:** TBD.
 
 ---
 

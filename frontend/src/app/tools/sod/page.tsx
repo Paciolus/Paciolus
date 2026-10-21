@@ -3,14 +3,15 @@
 /**
  * Segregation of Duties Checker — Sprint 689b.
  *
- * Standalone Enterprise-only tool page. Accepts a dual CSV upload
- * (user-to-role + role-to-permission matrices), parses client-side,
- * and posts JSON to /audit/sod/analyze. Results render inline with an
- * optional CSV export.
+ * Standalone tool page. Accepts a dual CSV upload (user-to-role +
+ * role-to-permission matrices), parses client-side, and posts JSON to
+ * /audit/sod/analyze. Results render inline with an optional CSV export.
  *
- * Enterprise gating: the standard UpgradeGate only blocks Free tier, so
- * this page layers FeatureGate(feature="sod_checker") on top to block
- * Solo/Professional as well — matching the backend 403 payload.
+ * Tier gating (Sprint 789): the standard UpgradeGate, same as every other
+ * paid tool. This page previously layered FeatureGate(feature="sod_checker")
+ * on top to block Solo and Professional as well, mirroring a backend 403 that
+ * contradicted the Terms of Service tier table, the pricing page and the
+ * entitlements table — all three of which sell this tool to both.
  */
 
 import { useEffect } from 'react'
@@ -22,7 +23,7 @@ import {
   GuestCTA,
   UnverifiedCTA,
 } from '@/components/shared'
-import { FeatureGate } from '@/components/shared/FeatureGate'
+import { UpgradeGate } from '@/components/shared/UpgradeGate'
 import { SODFileUpload } from '@/components/sod/SODFileUpload'
 import { SODResults } from '@/components/sod/SODResults'
 import { SODRulesReference } from '@/components/sod/SODRulesReference'
@@ -31,14 +32,13 @@ import { useSOD } from '@/hooks/useSOD'
 export default function SODPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuthSession()
   const isVerified = user?.is_verified !== false
-  const isEnterprise = user?.tier === 'enterprise'
   const { status, result, rules, error, analyze, exportCsv, loadRules } = useSOD()
 
   useEffect(() => {
-    if (isAuthenticated && isVerified && isEnterprise) {
+    if (isAuthenticated && isVerified) {
       loadRules()
     }
-  }, [isAuthenticated, isVerified, isEnterprise, loadRules])
+  }, [isAuthenticated, isVerified, loadRules])
 
   return (
     <main id="main-content" className="min-h-screen bg-surface-page">
@@ -59,15 +59,15 @@ export default function SODPage() {
         </div>
 
         {!authLoading && !isAuthenticated && (
-          <GuestCTA description="The SoD Checker requires a verified Enterprise account. Sign in or create an account to continue." />
+          <GuestCTA description="The SoD Checker requires a verified account on a paid plan. Sign in or create an account to continue." />
         )}
 
         {!authLoading && isAuthenticated && !isVerified && <UnverifiedCTA />}
 
         {isAuthenticated && isVerified && (
-          <FeatureGate
-            feature="sod_checker"
-            message="The Segregation of Duties Checker is available on the Enterprise plan. Upgrade to analyze user-role matrices against the hardcoded SoD rule library with per-user risk ranking."
+          <UpgradeGate
+            toolName="sod_checker"
+            message="The Segregation of Duties Checker is available on all paid plans. Upgrade to analyze user-role matrices against the hardcoded SoD rule library with per-user risk ranking."
           >
             <div className="max-w-5xl mx-auto space-y-6">
               <SODFileUpload
@@ -90,7 +90,7 @@ export default function SODPage() {
                 <div className="theme-card p-6">
                   <h3 className="font-serif text-content-primary text-sm mb-2">Hardcoded Rule Library</h3>
                   <p className="font-sans text-content-tertiary text-xs">
-                    Twelve standards-backed SoD rules spanning AP, journal entry, payroll, revenue, inventory,
+                    Eleven standards-backed SoD rules spanning AP, journal entry, payroll, revenue, inventory,
                     and system administration. Custom rules supplied at request time are additive.
                   </p>
                 </div>
@@ -121,7 +121,7 @@ export default function SODPage() {
               </DisclaimerBox>
               <CitationFooter standards={['SOC 1', 'COSO 2013']} />
             </div>
-          </FeatureGate>
+          </UpgradeGate>
         )}
       </div>
     </main>
