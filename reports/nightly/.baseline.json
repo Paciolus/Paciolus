@@ -1,26 +1,24 @@
 {
   "qa_warden": {
-    "date": "2026-10-20",
+    "date": "2026-10-21",
     "backend": {
-      "passed": 8700,
+      "passed": 8818,
       "failed": 0,
       "errors": 0,
-      "duration_s": 717.4,
+      "duration_s": 736.7,
       "failing_tests": [],
       "collection_error": null,
       "new_failures": [],
-      "resolved": [
-        "tests/test_inventory_testing.py::TestCompositeScore::test_clean_data_low_score"
-      ]
+      "resolved": []
     },
     "frontend": {
-      "passed": 2013,
+      "passed": 2010,
       "failed": 0,
-      "duration_s": 45.5
+      "duration_s": 47.2
     }
   },
   "report_auditor": {
-    "date": "2026-10-20",
+    "date": "2026-10-21",
     "bug_tracker": {
       "BUG-001": {
         "description": "Suggested procedures rotation bug \u2014 procedures repeat rather than rotate across reports",
@@ -60,12 +58,8 @@
     }
   },
   "coverage_sentinel": {
-    "date": "2026-10-20",
+    "date": "2026-10-21",
     "history": [
-      {
-        "date": "2026-09-30",
-        "percent_covered": 93.33
-      },
       {
         "date": "2026-10-03",
         "percent_covered": 93.34
@@ -117,16 +111,19 @@
       {
         "date": "2026-10-20",
         "percent_covered": 93.34
+      },
+      {
+        "date": "2026-10-21",
+        "percent_covered": 93.5
       }
     ]
   },
   "dependency_sentinel": {
     "first_seen": {
-      "backend:cryptography@50.0.2": "2026-10-03",
       "backend:stripe@16.0.0": "2026-10-03",
       "frontend:SQLAlchemy@2.1.5": "2026-10-19",
       "frontend:react@19.3.1": "2026-10-19",
-      "backend:fastapi@0.150.0": "2026-10-20"
+      "backend:fastapi@0.156.5": "2026-10-21"
     }
   }
 }
