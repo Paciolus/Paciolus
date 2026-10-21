@@ -1,5 +1,10 @@
 /**
  * Sprint 689b: SODPage gating + happy-path render tests.
+ *
+ * Sprint 789 retargeted the gating cases. SoD is no longer Enterprise-only, so
+ * the boundary moved from Enterprise/below to paid/Free — the same boundary
+ * every other paid tool has. Professional and Solo now get the upload surface;
+ * only Free sees the gate.
  */
 import SODPage from '@/app/tools/sod/page'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
@@ -49,7 +54,7 @@ describe('SODPage', () => {
     render(<SODPage />)
 
     expect(screen.getByText('Segregation of Duties Checker')).toBeInTheDocument()
-    expect(screen.getByText(/requires a verified Enterprise account/i)).toBeInTheDocument()
+    expect(screen.getByText(/requires a verified account on a paid plan/i)).toBeInTheDocument()
   })
 
   it('renders UnverifiedCTA for authenticated but unverified users', () => {
@@ -65,9 +70,9 @@ describe('SODPage', () => {
     expect(screen.getByText(/verify your email/i)).toBeInTheDocument()
   })
 
-  it('renders Enterprise upgrade gate for sub-Enterprise tiers', () => {
+  it('renders the upgrade gate for Free tier only', () => {
     mockUseAuthSession.mockReturnValue({
-      user: { is_verified: true, tier: 'professional' },
+      user: { is_verified: true, tier: 'free' },
       isAuthenticated: true,
       isLoading: false,
       token: 'test-token',
@@ -75,11 +80,31 @@ describe('SODPage', () => {
 
     render(<SODPage />)
 
-    // FeatureGate renders the feature display name as its heading
-    expect(screen.getByRole('heading', { name: /Segregation of Duties Checker/i, level: 3 })).toBeInTheDocument()
+    // UpgradeGate renders a generic "Upgrade Required" heading
+    expect(screen.getByRole('heading', { name: /Upgrade Required/i, level: 3 })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /view plans/i })).toHaveAttribute('href', '/pricing')
-    // Upload surface is NOT rendered for non-Enterprise tiers
     expect(screen.queryByText(/Upload Matrices/i)).not.toBeInTheDocument()
+  })
+
+  // Sprint 789: the regression this sprint fixed. SoD 403'd Solo and
+  // Professional while the Terms of Service tier table, the pricing page and
+  // the entitlements table all sold it to both. Both tiers are asserted
+  // because the old gate was a single tier comparison — blocking either one
+  // again should fail here.
+  it.each(['solo', 'professional'])('renders the upload surface for %s tier', (tier) => {
+    mockUseAuthSession.mockReturnValue({
+      user: { is_verified: true, tier },
+      isAuthenticated: true,
+      isLoading: false,
+      token: 'test-token',
+    })
+
+    render(<SODPage />)
+
+    expect(screen.getByText('Upload Matrices')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Run SoD Analysis/i })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: /Upgrade Required/i })).not.toBeInTheDocument()
+    expect(defaultHookReturn.loadRules).toHaveBeenCalled()
   })
 
   it('renders upload surface, info cards, and disclaimer for Enterprise tier', () => {
@@ -95,7 +120,7 @@ describe('SODPage', () => {
     // Hero
     expect(screen.getAllByText('Segregation of Duties Checker').length).toBeGreaterThanOrEqual(1)
 
-    // loadRules fires on mount for Enterprise
+    // loadRules fires on mount for any verified, authenticated user
     expect(defaultHookReturn.loadRules).toHaveBeenCalled()
 
     // Upload surface

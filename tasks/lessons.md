@@ -4,6 +4,87 @@
 
 ---
 
+## Counting the catalog twice is not the same as checking it works (Sprint 789, 2026-10-21)
+
+`test_catalog_consistency.py` ties `tools_registry.py` to the frontend tool ledger.
+`test_citation_consistency.py` ties the standards registry to the cited standards.
+`doc_consistency_guard.py` ties six markdown documents to the canonical tool count.
+Sprint 717 built the SSOT, Sprint 784 swept the prose 12 → 18, Sprint 788 fixed the
+navigation, Sprint 787 fixed the enum. Four sprints and three CI gates, all green.
+
+Segregation of Duties returned **403 to Solo and Professional the whole time**, while the
+Terms of Service tier table, the pricing page, the pricing FAQ, the page's own SEO
+metadata and the upgrade modal shown at checkout all promised "all 18 tools" to both.
+
+Every one of those gates compares **one description of the system to another description
+of the system**. The registry agreed with the ledger; the ledger agreed with the docs; the
+docs agreed with the count. Nothing compared any of them to *what a request actually
+does*. The count was correct and the access was wrong, and correctness of the count is
+what was being measured.
+
+**Pattern: for anything sold, assert against the behaviour, not against a second
+description of it.** The test that finally caught this is four lines — POST the endpoint
+as each paid tier and assert 200. The same shape as Sprint 780's lesson about
+self-referential pricing assertions, one layer out: there the table was compared to
+itself, here the catalog was compared to its own reflection.
+
+**The structural fix is cheaper than the test.** `routes/sod.py` held the only hardcoded
+`user.tier != UserTier.X` comparison in any route module. One route deciding entitlement
+for itself is what made indefinite disagreement possible — every other route asks
+`enforce_tool_access`, so for them the entitlements table cannot be contradicted. An AST
+guard banning route-local tier comparisons closes the class; the per-tier HTTP tests close
+the instance. Both are worth having, but the guard is what stops the next one.
+
+**Corollary on sprint handoffs.** Sprint 689b's filing noted "Already Enterprise-gated" as
+a convenience — one less thing to build. That sentence is where the defect entered: it
+recorded the gate as a fact rather than as a question about whether the gate still matched
+the pricing model it was about to be sold under. When promoting something into a catalog,
+the inherited constraints need re-deciding, not just noting.
+
+---
+
+## A guard that cannot fail is worse than no guard (Sprint 787b, 2026-10-21)
+
+I wrote a test asserting that every route accepting an `engagement_id` on a run actually
+records that run. First draft: nine false positives, because most routes delegate to
+`run_single_file_testing` or `execute_file_tool` rather than calling the recorder
+themselves, and because `engagement_id` arriving as `Query(...)` is a filter on a read,
+not a run.
+
+So I resolved imports one hop: does the route import from a module that calls the
+recorder? Green. All 35 tests passed.
+
+**It was testing nothing.** `shared/testing_route.py` contains both
+`run_single_file_testing` *and* `enforce_tool_access` — which nearly every route in the
+codebase imports. "Imports from a module that calls the recorder" was therefore true for
+almost every route, unconditionally. The guard had become a tautology, and it looked
+exactly like a guard that works.
+
+What caught it was **regression-proving**: strip `maybe_record_tool_run` out of
+`routes/form_1099.py`, leave `engagement_id` accepted, re-run. The guard passed. A guard
+that stays green while you break the thing it guards is not a slow guard or a lenient
+guard — it is not a guard.
+
+**Pattern: a new guard is not done when it passes. It is done when you have watched it
+fail on an injected violation and then pass on restore.** Cheap — two file edits and two
+test runs. It has now caught two distinct bugs in two consecutive sprints: Sprint 782a's
+design-token lint named a class that existed nowhere (`bg-red-50` for `bg-red-500`), and
+this one passed vacuously. Those are opposite failures and both invisible from a green run.
+
+**Second pattern: resolve delegation by the function called, not the module imported.**
+Module-level resolution is too coarse whenever one module holds both a widely-imported
+utility and the thing being looked for — which is common, because utilities cluster. The
+fix is an explicit allowlist of delegating functions plus a second test asserting those
+functions really do what the allowlist claims, so the allowlist cannot rot into a lie
+while the first guard keeps passing on its authority.
+
+This is the fifth first-draft detector in this repository to match the wrong thing. The
+previous four all matched prose *describing* the defect — a docstring quoting the bad SQL,
+a comment naming the old assertion. This one is a new failure mode and a worse one: the
+earlier four were loud and wrong, this one was quiet and wrong.
+
+---
+
 ## When two passes over the same data disagree, the quiet one wins (Sprint 785, 2026-10-21)
 
 `scripts/archive_sprints.sh` is mandated by `CLAUDE.md` and enforced by a commit-msg hook, so
