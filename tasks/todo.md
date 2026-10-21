@@ -132,7 +132,8 @@
 > Sprints 762–788 archived to `tasks/archive/sprints-762-788-details.md`.
 
 ### Sprint 787b: Wire the six Sprint-689 tools into engagement tracking
-**Status:** COMPLETE.
+**Status:** COMPLETE for the backend half. **The UI half does not exist** — see the correction at
+the end of this entry, and **Sprint 791**.
 **Priority:** P2 — the catalog counts are honest after Sprint 787; the runs were still not recorded.
 **Source:** PR #174 review, 2026-10-21.
 
@@ -248,10 +249,58 @@ message that names the consequence and points at 786b. Built on a throwaway app 
 `main.app` deliberately — the property belongs to FastAPI's dependency machinery, and routing it
 through the real app would drag in auth, rate limiting and the database for no added signal.
 
-**Verification:** 37 new tests; 238 passed across the SoD, promoted-tool, engagement, catalog
-and convergence suites; `ruff check .` clean; no new mypy findings in the six changed modules;
-`scripts/check_openapi_drift.py` reported exactly the six intended `engagement_id` additions
-and nothing else, snapshot regenerated (paths 220, schemas 422, both unchanged).
+#### Four review findings on PR #182 — all four real, two fixed here
+
+An automated reviewer raised three P1s and a P2. Every one was verified against the code or
+empirically before acting; **all four hold**, and two of them falsify claims made above.
+
+**Fixed in this PR**, because both live in `shared/tool_run_recorder.py` — the module six new
+callers were just added to — and both made assertions in this sprint's own test file untrue:
+
+1. **The `ToolActivity` row was never durable for an engagement-less run.** The module docstring
+   declared the recorder "is deliberately never the transactional boundary… letting the route
+   handler own the commit." **No route handler has ever committed it.** `get_db` ends in a bare
+   `db.close()`, so the pending insert was discarded — measured at **zero rows surviving**
+   through a real `get_db` generator. Runs *with* a resolving engagement persisted only because
+   `EngagementManager.record_tool_run` commits and flushed the activity row along with it. So the
+   multi-tool dashboard feed has been losing every engagement-less run across **all thirteen**
+   wired routes, not just the six added here. The recorder now owns that commit, consistent with
+   `record_tool_run` on the same session.
+
+2. **A stale `engagement_id` returned 500 from every wired route.** The recorder wrote
+   `ToolActivity` carrying the caller-supplied id *first*, then queried for the engagement — and
+   that query's autoflush pushed the insert into a `tool_activity.engagement_id` foreign-key
+   violation. Confirmed empirically to raise `IntegrityError` on **both** the success and the
+   failure path, which is worse than reported: on the failure path it replaced an intended 400
+   about malformed input with a server error. Resolution now happens before the write, and an
+   unresolvable id degrades to an *unlinked* activity row — the same "skip the workpaper trail"
+   semantics already applied to an engagement owned by someone else.
+
+   Nine new tests cover both, all nine regression-proved: they fail against the old recorder
+   (`FOREIGN KEY constraint failed`, zero surviving rows) and pass with the fix.
+
+**Corrected, not fixed — filed instead:**
+
+3. **The quota claim in Sprint 789 was false.** See the correction in that entry. `check_upload_limit`
+   only reads; nothing increments the counter outside bulk upload. Filed as **Sprint 790**.
+
+4. **Nothing in the UI ever sends `engagement_id` for these six tools.** None of the six hooks
+   references engagement at all. This sprint delivered the backend precondition and the tests
+   construct `engagement_id` directly, so **a browser user still cannot produce a `ToolRun`** —
+   the exact shape of overclaim the PR #174 review caught in Sprint 787, repeated one layer out.
+   Status above corrected accordingly.
+
+   The gap is app-wide and pre-existing rather than introduced here: only four hooks
+   (`useAuditUpload`, `usePreflight`, `useStatisticalSampling`, `useTrialBalanceUpload`) plus the
+   multi-period page call `useOptionalEngagementContext`, and `createTestingHook.ts` — which
+   backs the nine testing tools — has **zero** engagement references, even though those backends
+   have accepted `engagement_id` as a `Form` field for sprints. Filed as **Sprint 791**.
+
+**Verification:** 46 tests in `test_promoted_tool_engagement_wiring.py` (37 + 9 for the review
+findings); 1,336 passed across every recorder-dependent suite; full backend suite green;
+`ruff check .` clean; no new mypy findings in the six changed modules;
+`scripts/check_openapi_drift.py` reported exactly the six intended `engagement_id` additions and
+nothing else, snapshot regenerated (paths 220, schemas 422, both unchanged).
 
 **Commit SHA:** filled at merge.
 
@@ -291,11 +340,20 @@ layers … to block Solo/Professional as well."
 
 **What landed.**
 - `routes/sod.py` — `require_enterprise_tier` deleted; `require_verified_user` + `db: Session`
-  with the standard `enforce_tool_access(current_user, "sod_checker", db)`. This also closed a
-  second, independent defect: SoD was the only one of the six promoted tools calling **neither**
-  `enforce_tool_access` **nor** `check_upload_limit`, so its runs never counted against the
-  monthly upload quota. Harmless while the tool was Enterprise-only (unlimited uploads); live
-  the moment the gate came off, so both had to land together.
+  with the standard `enforce_tool_access(current_user, "sod_checker", db)` and
+  `check_upload_limit(current_user, db)`. SoD was the only one of the six promoted tools calling
+  neither, so it is now consistent with its five siblings.
+
+  > **CORRECTION (PR #182 review).** This bullet first claimed the `check_upload_limit` addition
+  > "closed a second, independent defect: its runs never counted against the monthly upload
+  > quota." **That is wrong, and the real defect is larger.** `check_upload_limit` only *reads*
+  > the counter — `increment_upload_count` is the only thing that writes it, and its sole caller
+  > in the entire repository is `routes/bulk_upload.py:154`. So **no single-tool run anywhere
+  > increments `Subscription.uploads_used_current_period`**, and the advertised 100/500 monthly
+  > allowances are not enforced for any paid tier. Free tier *is* metered, because it falls back
+  > to counting `ActivityLog` rows. Adding the check to SoD makes it consistent, not enforced.
+  > Filed as **Sprint 790**. This also explains why Sprint 741a found "no realized impact" from
+  > the broken `reset_upload_quotas` job: the counter it resets is almost never incremented.
 - `/audit/sod/rules` → `require_verified_user`, no entitlement check. It exposes the rule
   library, not an analysis of customer data — mirrors `/audit/book-to-tax/standard-adjustments`.
 - `/audit/sod/analyze.csv` → `enforce_tool_access` without `check_upload_limit`, the same split
@@ -380,6 +438,102 @@ because both were scoped by what the guard measures.
 **Acceptance bar:** the two strings corrected; the extended guard, run against the tree *before*
 the fix, reports exactly those two and no false positives; a test pins the false-positive set so
 the next count change cannot be waved through.
+
+**Commit SHA:** TBD.
+
+---
+
+### Sprint 790: The monthly upload allowance is not enforced on any paid tier
+**Status:** PENDING.
+**Priority:** **P1** — revenue-relevant and advertised. Every paid tier's headline quota is
+unenforced.
+**Source:** PR #182 review finding, verified 2026-10-21. It falsified a claim in Sprint 789.
+
+`check_upload_limit` **reads** `Subscription.uploads_used_current_period` and raises 403 when it
+is at the cap. `increment_upload_count` is the only thing that writes it, and its sole caller in
+the repository is `routes/bulk_upload.py:154`.
+
+So a Solo, Professional or Enterprise subscriber's counter never moves on normal tool use, and
+the advertised allowances — **100/mo (Solo), 500/mo (Professional)**, stated on the pricing page,
+in the Terms of Service tier table and in `UpgradeModal` — are not enforced at all. The gate
+exists on roughly fifty upload endpoints and is inert on every one of them for paying users.
+
+**Free tier is the exception, and the asymmetry is the giveaway.** With no `Subscription` row the
+check falls back to counting `ActivityLog` rows for the current month, which genuinely grows. So
+the 10-upload free cap works while the paid caps do not — the tier that generates no revenue is
+the only one being metered.
+
+**Two consequences worth stating:**
+- This is why Sprint 741a concluded its `reset_upload_quotas` fix had "no realized impact beyond
+  there being no paying subscribers yet." The deeper reason is that the counter it resets is
+  almost never incremented, so a subscriber would never have hit the cap for the reset to matter.
+- Enforcement has never been exercised end to end for a paid tier, so turning it on is a
+  behaviour change for existing accounts, not just a bug fix.
+
+**Scope:**
+1. Decide the metering unit first, and write it down. "Upload" currently means different things:
+   one file, one analysis run, or one bulk-upload member file (the only path that counts today).
+   A tool accepting two files in one request — AR aging TB + sub-ledger, three-way match — must
+   not silently cost two.
+2. Increment on **success**, not on request. A 400 from malformed input should not consume
+   allowance. That argues for the same position as the tool-run recorder, which already runs
+   there.
+3. Preferred shape: fold the increment into `maybe_record_tool_run`'s success path rather than
+   adding a call to fifty routes. The recorder already knows the user, the tool and whether the
+   run succeeded, already owns a commit after Sprint 787b, and is already called from every
+   metered surface. Verify that mapping covers every endpoint that calls `check_upload_limit`
+   before relying on it — a route that checks the limit but never records a run would stay
+   unmetered and the asymmetry would be invisible again.
+4. A test asserting check-and-increment are symmetric: every endpoint depending on
+   `check_upload_limit` must reach an increment on its success path. Mechanical, and it is the
+   guard whose absence let this sit.
+
+**CEO decision needed before step 2 ships:** existing accounts have arbitrary counter values.
+Enforcing from today risks locking out an account whose counter was left high by bulk upload.
+Options: reset all counters at deploy; enforce from the next billing period; or enforce
+immediately and handle exceptions manually. No paying subscribers yet, so this is cheap now and
+expensive later.
+
+**Commit SHA:** TBD.
+
+---
+
+### Sprint 791: The engagement link exists in every API and in almost no UI
+**Status:** PENDING.
+**Priority:** P2 — the engagement layer's workpaper trail is largely empty in practice, and three
+sprints have now claimed engagement tracking that a browser user cannot actually produce.
+**Source:** PR #182 review finding, verified 2026-10-21.
+
+Backends accept `engagement_id` on roughly every analysis endpoint. The browser almost never
+sends it. Only **four hooks** — `useAuditUpload`, `usePreflight`, `useStatisticalSampling`,
+`useTrialBalanceUpload` — plus the multi-period page call `useOptionalEngagementContext`.
+
+Most consequential: **`hooks/createTestingHook.ts` has zero engagement references**, and it backs
+nine tools (JE, AP, Payroll, Revenue, AR Aging, Fixed Assets, Inventory, Bank Rec, Three-Way
+Match). Their routes have accepted `engagement_id` as a `Form` field for sprints. The six
+promoted tools wired in Sprint 787b are in the same position.
+
+So a practitioner who opens a tool from inside an active engagement — the `/tools/*` layout does
+supply `EngagementProvider`, and the workspace URL does carry `?engagement=…` — produces a run
+that is filed nowhere. The workpaper index, the Anomaly Summary coverage fraction and the
+completion gate are all counting a population the UI cannot populate.
+
+**This is the third sprint in a row to claim engagement tracking without the whole path.** Sprint
+787 added the enum and claimed the tools were trackable; the PR #174 review caught it. Sprint 787b
+wired the routes and claimed the tools were tracked; the PR #182 review caught it. The pattern is
+that each sprint verified its own layer and inferred the rest, so the fix has to include a test
+that spans the layers rather than another layer-local one.
+
+**Scope:**
+1. `createTestingHook.ts` — read `useOptionalEngagementContext` and append `engagement_id` to the
+   FormData when an engagement is active. One change covers nine tools.
+2. The six promoted tools' hooks — add it to the JSON payload.
+3. An end-to-end test per tool family, from a rendered page with an active engagement to a
+   `ToolRun` row. Layer-local tests are what let this through twice.
+4. Audit the remaining tools for the same gap and record which deliberately have none.
+
+**Acceptance bar:** with an active engagement selected, running any tool from its page produces a
+`ToolRun` row — asserted through the UI, not by constructing the payload in a test.
 
 **Commit SHA:** TBD.
 

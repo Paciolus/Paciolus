@@ -471,10 +471,16 @@ class TestFailurePathRecording:
 
 
 class TestToolActivityFeed:
-    """`maybe_record_tool_run` has two surfaces; the engagement-linked ToolRun
+    """`maybe_record_tool_run` has two surfaces: the engagement-linked ToolRun
     and the always-written cross-engagement `ToolActivity` feed that powers the
     multi-tool dashboard. Before Sprint 787b these six tools appeared in
     neither, so a customer who ran only promoted tools saw an empty dashboard.
+
+    These cases prove the recorder is *called*, not that the row is durable —
+    `_override` reuses one session whose autoflush makes a pending insert
+    visible to the follow-up query, so they passed even while every row was
+    being discarded at `db.close()`. Durability is covered by
+    `TestRecorderDurabilityAndForeignKeys` below, through the real `get_db`.
     """
 
     @pytest.mark.asyncio
@@ -509,6 +515,152 @@ def test_flagged_accounts_is_json_when_present_sanity():
     otherwise, so `flagged_accounts is None` genuinely means "nothing filed"
     rather than "an empty list was filed"."""
     assert json.dumps(["1000", "2000"]) == '["1000", "2000"]'
+
+
+class TestRecorderDurabilityAndForeignKeys:
+    """Two defects the PR #182 review found in `shared/tool_run_recorder.py`.
+
+    Both were pre-existing and shared by all thirteen wired routes, and both
+    made claims elsewhere in this file untrue. Exercised here through the real
+    `get_db` generator where durability is the point, so the session actually
+    closes.
+    """
+
+    def test_activity_row_survives_the_session_closing(self, make_user):
+        """Review finding: the pending ToolActivity row was discarded.
+
+        `get_db` ends in a bare `db.close()` and not one of the thirteen callers
+        committed, so for a run with no `engagement_id` the row never reached
+        the database. Measured at zero rows surviving before the fix.
+        """
+        from database import SessionLocal, get_db
+        from models import ToolActivity, User, UserTier
+        from shared.tool_run_recorder import maybe_record_tool_run
+
+        setup = SessionLocal()
+        try:
+            user = User(
+                email="durability_probe@example.com",
+                name="Durability Probe",
+                hashed_password="$2b$12$fakehashvalue",
+                tier=UserTier.PROFESSIONAL,
+                is_active=True,
+                is_verified=True,
+            )
+            setup.add(user)
+            setup.commit()
+            uid = user.id
+        finally:
+            setup.close()
+
+        try:
+            # The exact get_db lifecycle: yield, use, then run its finally block.
+            gen = get_db()
+            db = next(gen)
+            maybe_record_tool_run(db, None, uid, "sod_checker", True, None, None)
+            try:
+                next(gen)
+            except StopIteration:
+                pass
+
+            verify = SessionLocal()
+            try:
+                rows = verify.query(ToolActivity).filter(ToolActivity.user_id == uid).all()
+                assert len(rows) == 1, (
+                    "The ToolActivity row did not survive get_db's db.close(), so every "
+                    "engagement-less tool run across all thirteen wired routes is missing "
+                    "from the multi-tool dashboard feed."
+                )
+                assert rows[0].tool_name == "sod_checker"
+                assert rows[0].engagement_id is None
+            finally:
+                verify.close()
+        finally:
+            cleanup = SessionLocal()
+            try:
+                cleanup.query(ToolActivity).filter(ToolActivity.user_id == uid).delete()
+                cleanup.query(User).filter(User.id == uid).delete()
+                cleanup.commit()
+            finally:
+                cleanup.close()
+
+    @pytest.mark.asyncio
+    @pytest.mark.usefixtures("bypass_csrf")
+    @pytest.mark.parametrize(("endpoint", "payload_fn", "tool"), PROMOTED_TOOLS, ids=IDS)
+    async def test_nonexistent_engagement_id_does_not_500(self, db_session, make_user, endpoint, payload_fn, tool):
+        """Review finding: a stale engagement id produced an IntegrityError.
+
+        The recorder wrote `ToolActivity` carrying the caller-supplied id first
+        and then queried for the engagement; that query's autoflush pushed the
+        insert and violated the foreign key. Confirmed to raise on both the
+        success and the failure path of every wired route, so any client holding
+        a stale engagement id got a 500.
+
+        The analysis itself is not privileged, so the correct behaviour is 200
+        with nothing filed — matching the foreign-engagement case above.
+        """
+        user = make_user(email=f"stale_eng_{tool.value}@example.com")
+        _override(user, db_session)
+        try:
+            payload = {**payload_fn(), "engagement_id": 999_999}
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                response = await client.post(endpoint, json=payload)
+            assert response.status_code == 200, response.text
+        finally:
+            app.dependency_overrides.clear()
+
+    @pytest.mark.asyncio
+    @pytest.mark.usefixtures("bypass_csrf")
+    async def test_nonexistent_engagement_id_on_the_failure_path_still_returns_400(self, db_session, make_user):
+        """The sharper half of the same defect: bad input *and* a stale id.
+
+        The intended answer is a 400 about the malformed severity. The
+        foreign-key violation replaced it with a 500 — input validation turned
+        into a server error by a recording side effect.
+        """
+        user = make_user(email="stale_eng_failpath@example.com")
+        _override(user, db_session)
+        try:
+            payload = {
+                **_sod_payload(),
+                "engagement_id": 999_999,
+                "extra_rules": [
+                    {
+                        "code": "X-01",
+                        "title": "Bad severity",
+                        "severity": "catastrophic",
+                        "permissions_required": ["a"],
+                        "permissions_alternate": ["b"],
+                        "mitigation": "",
+                        "rationale": "",
+                    }
+                ],
+            }
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                response = await client.post("/audit/sod/analyze", json=payload)
+            assert response.status_code == 400, response.text
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_activity_row_is_not_written_with_an_invalid_foreign_key(self, db_session, make_user):
+        """Pins the ordering, not merely the absence of a crash.
+
+        A future refactor could suppress the IntegrityError and still write a
+        row pointing at a nonexistent engagement. The row must exist and be
+        unlinked.
+        """
+        from models import ToolActivity
+        from shared.tool_run_recorder import maybe_record_tool_run
+
+        user = make_user(email="invalid_fk_probe@example.com")
+        maybe_record_tool_run(db_session, 999_999, user.id, "sod_checker", True, None, None)
+
+        rows = db_session.query(ToolActivity).filter(ToolActivity.user_id == user.id).all()
+        assert len(rows) == 1
+        assert rows[0].engagement_id is None, (
+            "The activity row kept an engagement_id that does not resolve, which is an "
+            "invalid foreign key waiting to fail on the next flush."
+        )
 
 
 class TestBackgroundTaskOrderingContract:

@@ -8,9 +8,22 @@ A tool run has two observability surfaces:
    when the caller supplies ``engagement_id`` and the engagement resolves
    for the current user.
 
-``maybe_record_tool_run`` is deliberately never the transactional boundary:
-it calls ``db.add`` but does not commit, letting the route handler own the
-commit (and any rollback semantics).
+**Transaction ownership (corrected in Sprint 787b).** This module previously
+declared that it "is deliberately never the transactional boundary: it calls
+``db.add`` but does not commit, letting the route handler own the commit."
+
+That contract was never honoured by a single one of the thirteen call sites.
+``get_db`` ends with ``finally: db.close()`` and nothing else, so for any run
+**without** an ``engagement_id`` the pending ``ToolActivity`` insert was
+discarded when the session closed — measured, not inferred: zero rows survive.
+Every engagement-less tool run across all thirteen routes was therefore missing
+from the multi-tool dashboard feed. Runs *with* a resolving engagement happened
+to persist only because ``EngagementManager.record_tool_run`` commits, which
+flushed the activity row along with it.
+
+Rather than add a commit to thirteen route handlers for a row none of them knows
+about, the recorder now owns the commit for the activity row — consistent with
+``record_tool_run``, which already commits on the same session.
 """
 
 from __future__ import annotations
@@ -39,32 +52,50 @@ def maybe_record_tool_run(
     record_count: Optional[int] = None,
     summary: Optional[dict] = None,
 ) -> None:
-    """Write a ToolActivity row, and (if engagement_id resolves) a ToolRun row."""
+    """Write a ToolActivity row, and (if engagement_id resolves) a ToolRun row.
+
+    Resolution happens **before** the activity row is written (Sprint 787b). The
+    previous order wrote ``ToolActivity`` carrying the caller-supplied
+    ``engagement_id`` first, then queried for the engagement — and that query's
+    autoflush pushed the pending insert, so a nonexistent or stale id violated
+    the ``tool_activity.engagement_id`` foreign key and surfaced as an unhandled
+    ``IntegrityError``. A client posting a stale engagement id got a 500 from
+    every one of the thirteen wired routes, on both the success and the failure
+    path, including the failure path where the intended answer was a 400.
+
+    An id that does not resolve now degrades to an **unlinked** activity row,
+    which is the same "skip the workpaper trail" semantics the function already
+    applied to an engagement belonging to another user.
+    """
+    from engagement_manager import EngagementManager
+
+    engagement = None
+    manager = None
+    if engagement_id is not None:
+        manager = EngagementManager(db)
+        engagement = manager.get_engagement(user_id, engagement_id)
+        if not engagement:
+            log_secure_operation(
+                "tool_run_skip",
+                f"Engagement {engagement_id} not found for user {user_id}; skipping tool run",
+            )
+
     _log_tool_activity(
         db,
         user_id=user_id,
         tool_name=tool_name,
-        engagement_id=engagement_id,
+        # Only a resolved engagement is attached; an unresolved id would be an
+        # invalid foreign key, and the activity row is still worth keeping.
+        engagement_id=engagement_id if engagement else None,
         filename=filename,
         record_count=record_count,
         summary=summary,
     )
 
-    if engagement_id is None:
+    if engagement is None or manager is None:
         return
 
-    from engagement_manager import EngagementManager
     from engagement_model import ToolName, ToolRunStatus
-
-    manager = EngagementManager(db)
-
-    engagement = manager.get_engagement(user_id, engagement_id)
-    if not engagement:
-        log_secure_operation(
-            "tool_run_skip",
-            f"Engagement {engagement_id} not found for user {user_id}; skipping tool run",
-        )
-        return
 
     manager.record_tool_run(
         engagement_id=engagement_id,
@@ -100,6 +131,13 @@ def _log_tool_activity(
             engagement_id=engagement_id,
         )
         db.add(activity)
-        # No commit here — the route handler owns the transaction boundary.
+        # Sprint 787b: commit here. The comment this replaces said "No commit
+        # here — the route handler owns the transaction boundary", but none of
+        # the thirteen callers commits, and get_db's teardown is a bare
+        # db.close(), so every engagement-less run silently lost its row. The
+        # session carries nothing else pending at this point: the entitlement
+        # and tier checks that run before the recorder are read-only.
+        db.commit()
     except Exception:
         logger.exception("Failed to log tool activity for user %d, tool %s", user_id, tool_name)
+        db.rollback()
