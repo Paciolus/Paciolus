@@ -13,6 +13,7 @@
 
 import { useCallback, useState } from 'react'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
+import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
 import type {
   IntercompanyEliminationRequest,
   IntercompanyEliminationResponse,
@@ -32,6 +33,12 @@ export interface UseIntercompanyEliminationReturn {
 
 export function useIntercompanyElimination(): UseIntercompanyEliminationReturn {
   const { token } = useAuthSession()
+  // Sprint 791: the engagement link is injected by the hook, not declared on
+  // the request type — the page supplies the analysis inputs and the hook owns
+  // the workspace link. Same split as useAuditUpload (which appends
+  // engagement_id to FormData) and useStatisticalSampling.
+  const engagement = useOptionalEngagementContext()
+  const engagementId = engagement?.engagementId
   const [status, setStatus] = useState<IntercompanyStatus>('idle')
   const [result, setResult] = useState<IntercompanyEliminationResponse | null>(null)
   const [error, setError] = useState('')
@@ -42,17 +49,23 @@ export function useIntercompanyElimination(): UseIntercompanyEliminationReturn {
     const response = await apiPost<IntercompanyEliminationResponse>(
       '/audit/intercompany-elimination',
       token,
-      payload,
+      { ...payload, engagement_id: engagementId ?? undefined },
     )
     if (response.ok && response.data) {
       setResult(response.data)
       setStatus('success')
+      // Sprint 791: mirror useAuditUpload's follow-through so the
+      // workspace reflects the new workpaper entry instead of going stale.
+      if (engagement && engagementId) {
+        engagement.refreshToolRuns()
+        engagement.triggerLinkToast('Intercompany Elimination')
+      }
       return true
     }
     setStatus('error')
     setError(response.error || 'Failed to run intercompany elimination')
     return false
-  }, [token])
+  }, [token, engagement, engagementId])
 
   const exportCsv = useCallback(async (payload: IntercompanyEliminationRequest): Promise<boolean> => {
     const response = await apiDownload('/audit/intercompany-elimination/export.csv', token, {
