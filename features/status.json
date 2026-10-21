@@ -274,6 +274,88 @@
     "notes": null
   },
   {
+    "id": "segregation-of-duties",
+    "category": "audit-report",
+    "description": "A user on any paid tier can analyse user-role and role-permission matrices against an 11-rule SoD library and receive a per-user risk ranking (Tool 13)",
+    "verification_steps": [
+      "GET /audit/sod/rules returns the 11-rule library",
+      "POST /audit/sod/analyze with user and role matrices returns the conflict matrix",
+      "POST /audit/sod/analyze.csv returns a CSV export",
+      "Verify Solo and Professional receive 200, Free receives 403 TIER_LIMIT_EXCEEDED"
+    ],
+    "status": "complete",
+    "last_verified": "2026-10-21",
+    "notes": "Sprint 789 removed a bespoke Enterprise-only gate that contradicted the Terms of Service tier table, the pricing page and the entitlements table."
+  },
+  {
+    "id": "intercompany-elimination",
+    "category": "audit-report",
+    "description": "A user can upload multiple entity trial balances and receive matched intercompany pairs, mismatches, proposed elimination entries and a consolidation worksheet (Tool 14)",
+    "verification_steps": [
+      "POST /audit/intercompany-elimination with two or more entity TBs",
+      "Verify reciprocal pairs match and non-reconciling pairs appear as mismatches",
+      "POST /audit/intercompany-elimination/export.csv returns the worksheet"
+    ],
+    "status": "complete",
+    "last_verified": "2026-10-21",
+    "notes": "ASC 810 / IFRS 10 / ISA 600. Requires counterparty_entity to pair balances."
+  },
+  {
+    "id": "w2-w3-reconciliation",
+    "category": "audit-report",
+    "description": "A user can reconcile payroll YTD totals against draft W-2s and quarterly Forms 941 and receive per-employee discrepancies plus W-3 totals (Tool 15)",
+    "verification_steps": [
+      "POST /audit/w2-reconciliation with payroll YTD, optional W-2 drafts and 941 quarters",
+      "Verify employee discrepancies and Form 941 mismatches are returned",
+      "POST /audit/w2-reconciliation/export.csv returns a CSV export"
+    ],
+    "status": "complete",
+    "last_verified": "2026-10-21",
+    "notes": "IRC §6051. CSV export only — no PDF memo yet."
+  },
+  {
+    "id": "form-1099-preparation",
+    "category": "audit-report",
+    "description": "A user can aggregate vendor payments across a tax year and receive 1099-NEC / MISC / INT filing candidates with a data-quality and W-9 collection report (Tool 16)",
+    "verification_steps": [
+      "POST /audit/form-1099 with vendor and payment lists",
+      "Verify $600 NEC/MISC and $10 INT thresholds are applied per vendor",
+      "Verify vendors missing a TIN appear on the W-9 collection list",
+      "POST /audit/form-1099/export.csv returns a CSV export"
+    ],
+    "status": "complete",
+    "last_verified": "2026-10-21",
+    "notes": "IRC §6041 / §6041A / Pub 1220. CSV export only — no PDF memo yet."
+  },
+  {
+    "id": "book-to-tax-reconciliation",
+    "category": "audit-report",
+    "description": "A user can bridge book pretax income to taxable income with a Schedule M-1 or M-3 layout and an ASC 740 deferred-tax rollforward (Tool 17)",
+    "verification_steps": [
+      "POST /audit/book-to-tax with adjustments classified permanent or temporary",
+      "Verify total assets under $10M yields M-1 and $10M or above yields M-3",
+      "Verify the deferred tax rollforward and provision summary are returned",
+      "POST /audit/book-to-tax/export.csv returns a CSV export"
+    ],
+    "status": "complete",
+    "last_verified": "2026-10-21",
+    "notes": "Schedule M-1 / M-3, ASC 740. CSV export only — no PDF memo yet."
+  },
+  {
+    "id": "cash-flow-projector",
+    "category": "audit-report",
+    "description": "A user can project a 30/60/90-day forward cash position from AR/AP aging and recurring flows across base, stress and best scenarios with liquidity-breach flagging (Tool 18)",
+    "verification_steps": [
+      "POST /audit/cash-flow-projector with opening balance, AR/AP aging and recurring flows",
+      "Verify all three scenarios return horizon summaries at 30, 60 and 90 days",
+      "Verify lowest balance and its day are reported per scenario",
+      "POST /audit/cash-flow-projector/export.csv returns a CSV export"
+    ],
+    "status": "complete",
+    "last_verified": "2026-10-21",
+    "notes": "ASC 230. Forward-looking counterpart to the historical indirect-method cash flow statement, which is a separate feature. CSV export only."
+  },
+  {
     "id": "multi-currency-conversion",
     "category": "audit-report",
     "description": "A user can convert trial balance amounts between currencies for multi-currency engagements",

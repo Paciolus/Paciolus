@@ -62,6 +62,63 @@ diffing mine against `_check_tool_count_in_doc` would have surfaced this before 
 
 ---
 
+## Do not edit the tree while a suite runs against it (2026-10-21)
+
+I started a full backend suite in the background, then kept working — switched
+branches, inserted six user-guide chapters, edited the standards registry. The run
+came back **1 failed, 8969 passed** on `test_every_cited_standard_is_registered`.
+
+Nothing was broken. The suite read `USER_GUIDE.md` after I had added chapters citing
+`AU-C 265`, while still on the branch where that standard was not yet registered. A
+state that existed on no branch and in no commit — only on disk, for about a minute.
+
+Diagnosing it cost more than the run was worth, and the dangerous version of this is
+the opposite outcome: a mid-run edit that makes a real failure *pass*. A green
+background run against a tree you are still editing is not evidence of anything.
+
+**Pattern: a long verification run is the last thing before committing, not something
+to do while you keep working.** If a run and an edit must overlap, run from a clean
+worktree (`git worktree add`) so the suite has a tree nobody is touching.
+
+---
+
+## A gate on a file is not a gate on the file's claims (Sprint 784c, 2026-10-21)
+
+`doc_consistency_guard.py` has read `USER_GUIDE.md` on every CI run since Sprint 784. Six
+of the seven per-tool test counts in that file were stale anyway, two of them by four
+tests, and several tier breakdowns described tests the engines do not have.
+
+The guard was not broken. It checks *aggregate* catalog claims — "18 diagnostic tools",
+"12-tool suite" — and the per-tool numbers are a different kind of claim living in the same
+document. "This file is guarded" felt like coverage and was not.
+
+This is the third instance of the same shape in one session:
+
+- Sprint 789b: the guard read `(marketing)/demo/layout.tsx` and not `demo/page.tsx` beside
+  it. Metadata current, visible page body stale.
+- Sprint 789: the catalog registry, the frontend ledger and the docs all agreed with each
+  other, and none of them agreed with what the API actually allowed.
+- Here: the right file, the wrong claim.
+
+**Pattern: when adding a consistency gate, write down which claims it covers — and when
+inheriting one, do not read its file list as its scope.** The scope is the patterns, not the
+paths. A gate whose coverage you cannot state in a sentence is a gate you will over-trust.
+
+**Corollary — a guard's error message is a specification, so implement it.** This one's
+message told the reader to "update the heading **and** the test list beneath it", and
+nothing checked the list. A corrected number above an unchanged list would have passed
+cleanly. If the message names two things, check two things; summing the tier sub-counts is
+four lines and it closes exactly the gap the sentence admits.
+
+**And the mapping bug worth remembering.** My first draft reported five of six, because
+`GUIDE_TOOL_HEADINGS` said `"AR Aging"` against a chapter titled `"AR Aging Analysis"`. A
+hand-maintained mapping needs a test that it still maps — the same lesson as the per-file
+allowlist I had replaced in this very module hours earlier. **Replacing one hand-maintained
+list with a glob does not stop you from introducing a different hand-maintained list two
+functions down.**
+
+---
+
 ## "No references in the file" is evidence of delegation, not of a defect (Sprint 791, 2026-10-21)
 
 Twice in one session I grepped a file for a symbol, found nothing, and concluded the

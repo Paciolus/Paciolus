@@ -6,10 +6,17 @@ across docs and code.
 
 Sprint 784 added the tool-count check. Sprint 689 expanded the catalog 12 -> 18 and
 Sprint 717 reconciled the frontend ledger, but the prose did not follow: the FastAPI
-description shipped "12-Tool Audit Intelligence Suite" in the **public** OpenAPI
-schema for six months, and AGENTS.md, README.md, PRODUCT_VISION.md, ARCHITECTURE.md
-and USER_GUIDE.md all still said twelve. `test_catalog_consistency.py` guards the
-registry against the frontend ledger; nothing read documentation.
+description shipped "12-Tool Audit Intelligence Suite" for six months, and AGENTS.md,
+README.md, PRODUCT_VISION.md, ARCHITECTURE.md and USER_GUIDE.md all still said twelve.
+`test_catalog_consistency.py` guards the registry against the frontend ledger; nothing
+read documentation.
+
+Correction (Sprint 784c): the Sprint 784 note called that description part of the
+**public** OpenAPI schema. It is not. `main.py:250` sets `openapi_url=None` when
+`ENV_MODE == "production"`, and `https://paciolus-api.onrender.com/openapi.json` returns
+404 — verified against the live service. The description is still worth keeping accurate,
+because it ships in the image and is served by every non-production deploy and by /docs
+locally, but it was never reachable by a customer.
 
 Usage:
     python -m guards.doc_consistency_guard          # from backend/
@@ -354,6 +361,140 @@ def _check_tool_count_in_doc(
     return violations
 
 
+# The user guide's chapter headings carry each tool's test count, in the form
+# "### 6.2 Test Battery (13 Tests)". Mapped to registry slugs by the chapter's
+# own tool name, which the heading above it supplies — matching on the slug
+# would be wrong, because the guide uses prose names ("AP Payment Testing").
+#
+# Sprint 784c: six of the seven counts were stale, some by four tests. The
+# guide is in TOOL_COUNT_DOCS already, but that check only reads *aggregate*
+# catalog claims ("18 diagnostic tools"), so the per-tool numbers drifted
+# underneath a gate that was reading the same file.
+# Chapter title as written in the guide, exactly. A near-match is not enough:
+# the first draft of this table used "AR Aging" against a chapter titled "AR
+# Aging Analysis", so that tool silently dropped out and the guard reported five
+# of the six genuine stale counts. `test_guide_tool_headings_all_resolve` now
+# fails if any entry stops matching a real chapter — a hand-maintained mapping
+# needs a test that it still maps, which is the lesson of the per-file allowlist
+# this module's Sprint 789b change replaced.
+GUIDE_TOOL_HEADINGS: tuple[tuple[str, str], ...] = (
+    ("journal_entry_testing", "Journal Entry Testing"),
+    ("ap_testing", "AP Payment Testing"),
+    ("payroll_testing", "Payroll Testing"),
+    ("revenue_testing", "Revenue Testing"),
+    ("ar_aging", "AR Aging Analysis"),
+    ("fixed_asset_testing", "Fixed Asset Testing"),
+    ("inventory_testing", "Inventory Testing"),
+)
+
+_GUIDE_CHAPTER = re.compile(r"^##\s+\d+\.\s+Tool\s+\d+:\s+(?P<name>.+?)\s*$")
+_GUIDE_BATTERY = re.compile(r"^###\s+[\d.]+\s+Test Battery\s+\((?P<n>\d+)\s+Tests?\)", re.IGNORECASE)
+_GUIDE_SECTION = re.compile(r"^###\s")
+# Tier sub-headings inside a battery section, in either style the guide uses:
+#   **Tier 1 — Structural (6 tests):**
+#   **Structural (4 tests):**
+#   **Tier 4 — Contract-Aware (4 tests, optional):**
+_GUIDE_TIER = re.compile(r"^\*\*(?:Tier\s*\d+\s*[—-]\s*)?[^*(]+\((?P<n>\d+)\s+tests?\b[^)]*\):\*\*", re.IGNORECASE)
+
+
+def _check_tool_test_counts_in_guide(
+    registry_counts: dict[str, int],
+    guide_path: Path,
+    guide_rel: str,
+) -> list[Violation]:
+    """Check each chapter's "Test Battery (N Tests)" against the registry.
+
+    Walks the guide in order, tracking which tool chapter is open, so a battery
+    heading is attributed to the chapter it sits under rather than to a
+    hand-maintained line number.
+    """
+    if not guide_path.exists() or not registry_counts:
+        return []
+
+    by_name = {name.lower(): slug for slug, name in GUIDE_TOOL_HEADINGS}
+    violations: list[Violation] = []
+    current_slug: str | None = None
+    current_name: str | None = None
+
+    # Open battery section, awaiting its tier sub-counts.
+    pending: dict[str, object] | None = None
+
+    def close_pending() -> None:
+        """Compare the tier sub-counts of the section just ended to its heading.
+
+        Sprint 784c: the heading check alone cannot catch the failure its own
+        message warns about — a corrected number above an unchanged list. The
+        tier sub-counts are the list's own arithmetic, so summing them catches
+        exactly that, and it is the number a reader actually counts against.
+        """
+        if pending is None:
+            return
+        tiers: list[int] = pending["tiers"]  # type: ignore[assignment]
+        if not tiers:
+            return  # a section with no tier sub-headings makes no claim to check
+        total = sum(tiers)
+        if total == pending["claimed"]:
+            return
+        violations.append(
+            Violation(
+                rule="tool_test_count_consistency",
+                file=guide_rel,
+                line=pending["line"],  # type: ignore[arg-type]
+                message=(
+                    f"{pending['name']} chapter heading says {pending['claimed']} tests but its tier "
+                    f"sub-counts total {total} ({' + '.join(str(t) for t in tiers)}). The heading and "
+                    f"the list disagree, so at least one is wrong."
+                ),
+            )
+        )
+
+    for i, line in enumerate(guide_path.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
+        if _HISTORICAL_MARKER.search(line):
+            continue
+
+        chapter = _GUIDE_CHAPTER.match(line)
+        if chapter:
+            close_pending()
+            pending = None
+            current_name = chapter.group("name").strip()
+            current_slug = by_name.get(current_name.lower())
+            continue
+
+        battery = _GUIDE_BATTERY.match(line)
+        if battery and current_slug is not None:
+            close_pending()
+            claimed = int(battery.group("n"))
+            pending = {"claimed": claimed, "line": i, "name": current_name, "tiers": []}
+
+            expected = registry_counts.get(current_slug)
+            if expected is not None and claimed != expected:
+                violations.append(
+                    Violation(
+                        rule="tool_test_count_consistency",
+                        file=guide_rel,
+                        line=i,
+                        message=(
+                            f"{current_name} chapter claims {claimed} tests, the engine has {expected} "
+                            f"(tools_registry test_count for {current_slug!r}). Update the heading **and** "
+                            f"the test list beneath it — a corrected number above a short list is still wrong."
+                        ),
+                    )
+                )
+            continue
+
+        if pending is not None:
+            if _GUIDE_SECTION.match(line):
+                close_pending()
+                pending = None
+                continue
+            tier = _GUIDE_TIER.match(line.strip())
+            if tier:
+                pending["tiers"].append(int(tier.group("n")))  # type: ignore[union-attr]
+
+    close_pending()
+    return violations
+
+
 # Customer-visible code surfaces carrying a tool count. The first version of this
 # check covered backend/main.py only, which left the public pricing comparison and the
 # demo route's page metadata stale while the gate reported success.
@@ -494,13 +635,39 @@ def _check_customer_copy(code_count: int, project_root: Path) -> list[Violation]
     return violations
 
 
+def _parse_tool_test_counts(backend_root: Path) -> dict[str, int]:
+    """Extract per-tool automated-test counts from the registry.
+
+    `tools_registry.Tool.test_count` is the single source of truth, already tied
+    to the frontend ledger's `testCount` by `tests/test_catalog_consistency.py`.
+    Nothing tied it to the user guide — see `_check_tool_test_counts_in_guide`.
+    """
+    registry = backend_root / "tools_registry.py"
+    if not registry.exists():
+        return {}
+
+    text = registry.read_text(encoding="utf-8")
+    counts: dict[str, int] = {}
+    # Each Tool(...) literal spans several lines; pair slug with test_count
+    # within the same block.
+    for block in re.finditer(r"Tool\(\s*\n(.*?)\n\s*\)", text, re.S):
+        body = block.group(1)
+        slug = re.search(r'slug="([a-z_0-9]+)"', body)
+        count = re.search(r"test_count=(\d+)", body)
+        if slug and count:
+            counts[slug.group(1)] = int(count.group(1))
+    return counts
+
+
 def _check_api_description(code_count: int, backend_root: Path) -> list[Violation]:
     """Check the FastAPI app description's tool count against the registry.
 
-    This is the only *public* tool-count claim in the codebase: it is served in the
-    OpenAPI schema and rendered on /docs. Changing it also moves
-    scripts/openapi-snapshot.json, which the OpenAPI Schema Drift Check gate
-    compares — so regenerate the snapshot in the same commit.
+    Served in the OpenAPI schema and rendered on /docs — but **not** in production,
+    where `main.py` sets `openapi_url`, `docs_url` and `redoc_url` to None. So this
+    string reaches developers and non-production deploys, not customers; the
+    genuinely customer-facing counts are in CUSTOMER_COPY_GLOBS above. Changing it
+    also moves scripts/openapi-snapshot.json, which the OpenAPI Schema Drift Check
+    gate compares — so regenerate the snapshot in the same commit.
     """
     main_path = backend_root / "main.py"
     if not main_path.exists():
@@ -519,7 +686,7 @@ def _check_api_description(code_count: int, backend_root: Path) -> list[Violatio
                     line=i,
                     message=(
                         f"FastAPI description claims {claimed} tools, registry has {code_count} "
-                        f"(tools_registry.MARKETING_AUDIT_TOOL_COUNT). This string is public — it ships in "
+                        f"(tools_registry.MARKETING_AUDIT_TOOL_COUNT). This string ships in "
                         f"the OpenAPI schema. Fix it and regenerate scripts/openapi-snapshot.json."
                     ),
                 )
@@ -672,6 +839,15 @@ def run_checks(backend_root: Path) -> list[Violation]:
         violations.extend(_check_api_description(tool_count, backend_root))
         violations.extend(_check_code_surfaces(tool_count, project_root))
         violations.extend(_check_customer_copy(tool_count, project_root))
+        # Sprint 784c: per-tool test counts in the user guide.
+        registry_counts = _parse_tool_test_counts(backend_root)
+        violations.extend(
+            _check_tool_test_counts_in_guide(
+                registry_counts,
+                project_root / "docs" / "07-user-facing" / "USER_GUIDE.md",
+                "docs/07-user-facing/USER_GUIDE.md",
+            )
+        )
         for rel in TOOL_COUNT_DOCS:
             doc = project_root / rel
             if doc.exists():

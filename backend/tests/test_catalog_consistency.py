@@ -157,3 +157,84 @@ def test_tool_summary_nonempty(tool: tools_registry.Tool):
 def test_tool_display_name_nonempty(tool: tools_registry.Tool):
     """Every registry tool has a non-empty display name."""
     assert tool.display_name.strip(), f"Tool {tool.slug} has empty display_name"
+
+
+# ---------------------------------------------------------------------------
+# Sprint 784b — features/status.json is the fourth edge of the catalog contract
+# ---------------------------------------------------------------------------
+#
+# `AGENTS.md` makes `features/status.json` step 3 of every session's startup —
+# "full feature inventory, what is built and what is not". It covered the
+# pre-Sprint-689 catalog, so for six months a third of the tools were invisible
+# in the file a new session is told to read first, and nothing guarded it. The
+# registry↔ledger edge was tested, the registry↔standards edge was tested; this
+# one was not.
+
+# status.json uses prose ids; the registry uses slugs. Only the genuinely
+# different ones are listed, and test_status_json_alias_map_is_minimal keeps
+# this honest rather than letting it absorb drift.
+_STATUS_ID_ALIASES: dict[str, str] = {
+    "trial_balance": "tb-diagnostics",
+    "multi_period": "multi-period-comparison",
+    "ap_testing": "ap-payment-testing",
+    "sod_checker": "segregation-of-duties",
+    "w2_reconciliation": "w2-w3-reconciliation",
+    "form_1099": "form-1099-preparation",
+    "book_to_tax": "book-to-tax-reconciliation",
+}
+
+
+def _status_entries() -> list[dict]:
+    import json
+
+    path = Path(__file__).resolve().parents[2] / "features" / "status.json"
+    assert path.exists(), "features/status.json is missing"
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _expected_status_id(slug: str) -> str:
+    return _STATUS_ID_ALIASES.get(slug, slug.replace("_", "-"))
+
+
+def test_every_marketing_tool_has_a_status_json_entry():
+    """A tool absent from the feature inventory is invisible to the next session."""
+    ids = {e["id"] for e in _status_entries()}
+    missing = [
+        f"{t.slug} (expected id {_expected_status_id(t.slug)!r})"
+        for t in tools_registry.TOOLS
+        if t.is_marketing_audit_tool and _expected_status_id(t.slug) not in ids
+    ]
+    assert not missing, f"features/status.json has no entry for: {missing}"
+
+
+def test_status_json_alias_map_is_minimal():
+    """Every alias must still be needed.
+
+    An alias whose slug-derived id would already match is dead weight that hides
+    the next rename — the same failure as the GUIDE_TOOL_HEADINGS entry that
+    silently stopped matching a chapter title in Sprint 784c.
+    """
+    redundant = [slug for slug, alias in _STATUS_ID_ALIASES.items() if slug.replace("_", "-") == alias]
+    assert not redundant, f"these aliases are redundant and should be removed: {redundant}"
+
+    slugs = {t.slug for t in tools_registry.TOOLS}
+    unknown = [slug for slug in _STATUS_ID_ALIASES if slug not in slugs]
+    assert not unknown, f"these aliases reference slugs that no longer exist: {unknown}"
+
+
+def test_status_json_entries_are_well_formed():
+    """Catches a half-written entry, which reads as coverage without being it."""
+    required = {"id", "category", "description", "verification_steps", "status"}
+    problems: list[str] = []
+    for e in _status_entries():
+        missing = required - set(e)
+        if missing:
+            problems.append(f"{e.get('id', '<no id>')}: missing {sorted(missing)}")
+            continue
+        if not e["description"].strip():
+            problems.append(f"{e['id']}: empty description")
+        if not e["verification_steps"]:
+            problems.append(f"{e['id']}: no verification steps")
+        if e["status"] not in {"complete", "partial", "not-started"}:
+            problems.append(f"{e['id']}: unexpected status {e['status']!r}")
+    assert not problems, problems
