@@ -235,36 +235,89 @@ class TestCli:
 # a chance to happen rather than after.
 
 
+def _relocated_engine_modules(backend_root):
+    """Every per-tool engine module under services/audit, with its expected shim.
+
+    Yields `(module_path, expected_shim_name)`.
+
+    The shim name comes from the **module stem**, except for the conventional
+    `analysis.py`, which takes its directory's name:
+
+        services/audit/ap_testing/analysis.py  ->  ap_testing_engine.py
+        services/audit/flux/recon.py           ->  recon_engine.py
+
+    Top-level modules directly under `services/audit/` (`contracts.py`,
+    `file_tool_scaffold.py`, `flux_service.py`) are shared infrastructure rather
+    than per-tool engines and are deliberately excluded.
+    """
+    audit_dir = backend_root / "services" / "audit"
+    for tool_dir in sorted(audit_dir.iterdir()):
+        if not tool_dir.is_dir() or tool_dir.name == "__pycache__":
+            continue
+        for module in sorted(tool_dir.glob("*.py")):
+            if module.name == "__init__.py":
+                continue
+            stem = tool_dir.name if module.stem == "analysis" else module.stem
+            yield module, f"{stem}_engine.py"
+
+
 def test_every_relocated_engine_has_a_root_shim():
-    """Each `services/audit/<tool>/analysis.py` must have `<tool>_engine.py`.
+    """Each relocated engine module must have its root-level shim.
 
     The shim is what makes the relocated implementation visible to
     `BACKEND_ROOT.glob("*_engine.py")`. Without it the engine is unlinted and
     the linters say nothing, because there is nothing for them to enumerate.
+
+    PR #185 review: the first draft filtered for `analysis.py` only, which
+    excluded `services/audit/flux/recon.py` — the **ADR-018 pilot relocation**,
+    and the one module that does not follow the later naming convention.
+    Deleting `recon_engine.py` left the test green while
+    `lint_domain_relocation.py` lost the ability to enumerate that engine: the
+    exact regression this test exists to catch, missed by the test's own filter.
+
+    That is the same defect Sprint 792 is about — a scan whose scope silently
+    excludes the thing it was written for — reproduced inside the guard written
+    to prevent it. Enumeration is now by directory, not by filename.
     """
     backend_root = Path(__file__).resolve().parent.parent
-    audit_dir = backend_root / "services" / "audit"
-    assert audit_dir.is_dir(), "services/audit is missing — the relocation target moved"
+    assert (backend_root / "services" / "audit").is_dir(), "services/audit is missing — the relocation target moved"
 
-    unshimmed: list[str] = []
-    found_any = False
-    for tool_dir in sorted(audit_dir.iterdir()):
-        if not tool_dir.is_dir() or tool_dir.name == "__pycache__":
-            continue
-        if not (tool_dir / "analysis.py").is_file():
-            continue
-        found_any = True
-        if not (backend_root / f"{tool_dir.name}_engine.py").is_file():
-            unshimmed.append(tool_dir.name)
+    modules = list(_relocated_engine_modules(backend_root))
 
     # A glob that matches nothing covers nothing — assert the scan found work.
-    assert found_any, "no services/audit/*/analysis.py found; this check now covers nothing"
+    assert modules, "no per-tool engine modules found; this check now covers nothing"
+
+    unshimmed = [
+        f"{module.relative_to(backend_root).as_posix()} (expected {shim})"
+        for module, shim in modules
+        if not (backend_root / shim).is_file()
+    ]
 
     assert unshimmed == [], (
         "These relocated engines have no root-level shim, so "
         "lint_engine_base_adoption.py and lint_domain_relocation.py — which both "
         "enumerate BACKEND_ROOT.glob('*_engine.py') — cannot see them and will "
-        f"report success while scanning nothing: {unshimmed}. Add "
-        "<tool>_engine.py re-exporting from services/audit/<tool>/analysis.py, or "
-        "teach both linters to enumerate the relocated path directly."
+        f"report success while scanning nothing: {unshimmed}. Add the shim "
+        "re-exporting from the relocated module, or teach both linters to "
+        "enumerate services/audit directly."
     )
+
+
+def test_shim_check_covers_the_adr_018_pilot():
+    """Pins the specific case the first draft missed.
+
+    `flux/recon.py` is the only relocated module not named `analysis.py`. If the
+    enumeration ever narrows back to a filename filter, the pilot drops out
+    silently and the test above keeps passing — so assert it is in scope by name
+    rather than trusting the glob to keep including it.
+    """
+    backend_root = Path(__file__).resolve().parent.parent
+    covered = {
+        module.relative_to(backend_root).as_posix(): shim for module, shim in _relocated_engine_modules(backend_root)
+    }
+    assert covered.get("services/audit/flux/recon.py") == "recon_engine.py", (
+        "the ADR-018 pilot relocation (services/audit/flux/recon.py -> "
+        f"recon_engine.py) is not covered by the shim check. Covered: {sorted(covered)}"
+    )
+    # And the conventional case still resolves to the directory name.
+    assert covered.get("services/audit/flux/analysis.py") == "flux_engine.py"
