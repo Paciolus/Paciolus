@@ -199,7 +199,7 @@ input; `_build_extra_rule` does, as a 400 for an unrecognised severity. That is 
 run from the engagement's point of view, so the call is wrapped and the failure recorded
 rather than dropped.
 
-#### Tests — `tests/test_promoted_tool_engagement_wiring.py`, 36 tests
+#### Tests — `tests/test_promoted_tool_engagement_wiring.py`, 37 tests
 
 Four parametrized cases per tool (24) plus failure-path, activity-feed and guard coverage:
 run-creates-ToolRun, omitting `engagement_id` records nothing, repeat runs increment
@@ -229,15 +229,26 @@ now the fifth instance of the same class in this repo:
 Both guards were then regression-proved in both directions — injected violation fails and names
 the right file, restore passes.
 
-**What these tests do not prove.** `_override` installs `get_db` as `lambda: db_session`, a
-plain callable rather than a generator, so FastAPI performs no dependency teardown. Since
-FastAPI 0.106 a `yield` dependency is torn down *before* background tasks run, so whether the
-real request-scoped session is still usable inside `background_tasks.add_task(..., db, ...)` is
-an open question about the house pattern — shared by all seven previously-wired routes, not
-introduced here. It cannot be answered by any test while `get_db` is overridden this way.
-Stated in the test module docstring rather than assumed away; a candidate sprint of its own.
+**The open question about the background-task session — resolved, then pinned.** The success
+path hands a request-scoped `Session` to `background_tasks.add_task(maybe_record_tool_run, db, …)`,
+which is only safe if the task runs *before* `get_db`'s `finally: db.close()`. These tests cannot
+settle it: `_override` installs `get_db` as `lambda: db_session`, a plain callable rather than a
+generator, so no teardown happens at all.
 
-**Verification:** 36 new tests; 237 passed across the SoD, promoted-tool, engagement, catalog
+Settled empirically against the installed FastAPI 0.136.1 with a throwaway app carrying a real
+`yield` dependency. Observed order: `handler body` → `task ran` → `teardown`. **Background tasks
+run first, so the session is still open.** The house pattern is correct, not accidentally
+surviving — my initial read of the FastAPI 0.106 change was wrong.
+
+Worth more than a note, because **Sprint 786b plans FastAPI 0.136 → 0.150.** If a release in that
+range flips the ordering, all 13 wired routes stop filing success-path tool runs and *every other
+test in this file still passes*, since they all override `get_db` with a non-generator.
+`TestBackgroundTaskOrderingContract` therefore asserts the ordering directly, with a failure
+message that names the consequence and points at 786b. Built on a throwaway app rather than
+`main.app` deliberately — the property belongs to FastAPI's dependency machinery, and routing it
+through the real app would drag in auth, rate limiting and the database for no added signal.
+
+**Verification:** 37 new tests; 238 passed across the SoD, promoted-tool, engagement, catalog
 and convergence suites; `ruff check .` clean; no new mypy findings in the six changed modules;
 `scripts/check_openapi_drift.py` reported exactly the six intended `engagement_id` additions
 and nothing else, snapshot regenerated (paths 220, schemas 422, both unchanged).
