@@ -511,7 +511,7 @@ export function ToolSlideshow() {
             Eighteen Tools. One Platform.
           </h2>
           <p className="font-sans text-oatmeal-500 text-sm max-w-lg mx-auto mb-4">
-            Twelve purpose-built tools. Explore each one to see exactly what you get.
+            Eighteen purpose-built tools. Explore each one to see exactly what you get.
           </p>
           <div className="w-12 h-[2px] bg-sage-500 rounded-full mx-auto" />
         </Reveal>

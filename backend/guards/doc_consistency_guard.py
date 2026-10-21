@@ -247,10 +247,26 @@ _TOOL_COUNT_PATTERNS: tuple[re.Pattern[str], ...] = (
         r"\ball\s+(?P<n>\d{1,2}|" + "|".join(_NUMBER_WORDS) + r")\s+tools?\b",
         re.IGNORECASE,
     ),
-    # Qualified plural: "18 audit tools", "Twelve specialized tools"
+    # Qualified plural: "18 audit tools", "Twelve specialized tools",
+    # "twelve audit diagnostic tools", "Twelve purpose-built tools".
+    #
+    # Sprint 789b widened this twice, each change driven by a string that was
+    # live on a marketing page: the group now repeats `{1,2}` so a stacked pair
+    # of adjectives cannot slip between the count and the noun ("all twelve
+    # audit diagnostic tools" on /demo), and `purpose-built` joined the list
+    # ("Twelve purpose-built tools" in the slideshow).
+    #
+    # The list stays closed rather than becoming `[a-z-]+`. An open adjective
+    # class would flag "the 6 remaining tools" and "7 new tools" — which is the
+    # 13-of-14 false-positive rate the original draft of this check had, and is
+    # pinned by test_customer_copy_ignores_non_catalog_claims. Only add an
+    # adjective here when a real occurrence needs it; `core` was tried and
+    # dropped, because "Core tools & exports" carries no count and the
+    # alternative would have widened the pattern for nothing.
     re.compile(
         r"\b(?P<n>\d{1,2}|" + "|".join(_NUMBER_WORDS) + r")\s+"
-        r"(?:audit|diagnostic|specialized|specialised|testing)\s+tools?\b",
+        r"(?:(?:audit|diagnostic|specialized|specialised|testing|purpose-built)\s+){1,2}"
+        r"tools?\b",
         re.IGNORECASE,
     ),
 )
@@ -343,6 +359,15 @@ def _check_tool_count_in_doc(
 # demo route's page metadata stale while the gate reported success.
 #
 # Each entry: (repo-relative path, compiled pattern with an `n` group, why it matters).
+#
+# Sprint 789b: these two remain because each needs a *bespoke* pattern — a bare
+# `'All 18'` table cell, and the digit-only metadata string. Everything else moved to
+# the glob scan below, because this hand-maintained list is what let three stale
+# strings sit on live pages. Sprint 784 added `demo/layout.tsx` and stopped there, so
+# the /demo route's **metadata** was corrected to 18 while the visible page body in
+# the sibling `demo/page.tsx` still said "all twelve audit diagnostic tools" — and
+# the gate reported ALL CHECKS PASSED. A per-file allowlist only ever guards the files
+# someone remembered to add.
 CODE_SURFACE_CHECKS: tuple[tuple[str, re.Pattern[str], str], ...] = (
     (
         "frontend/src/domain/pricing.ts",
@@ -355,6 +380,35 @@ CODE_SURFACE_CHECKS: tuple[tuple[str, re.Pattern[str], str], ...] = (
         "the /demo route's page metadata (search results and social share cards)",
     ),
 )
+
+
+# Globs covering copy a customer can actually read: the marketing route group, the
+# marketing components rendered inside it, the upgrade modal shown at checkout, and the
+# two shared gates whose prose states the entitlement. Scanned with the same
+# numeral-aware _TOOL_COUNT_PATTERNS the documentation uses, rather than a bespoke
+# per-file regex.
+#
+# The boundary is deliberate and worth stating: **the gate reads what a customer sees.**
+# Workspace and tool pages are excluded — they render counts from `tool-ledger.ts` and
+# from live `toolRuns.length`, both already tied to the registry by
+# `test_catalog_consistency.py`, so scanning them would only add false-positive surface
+# (`{toolRuns.length}/18 tools`). Code comments inside the scanned files are *not*
+# excluded: a comment saying "all 18 tools" is a claim a future editor will trust.
+CUSTOMER_COPY_GLOBS: tuple[str, ...] = (
+    "frontend/src/app/(marketing)/**/*.tsx",
+    "frontend/src/components/marketing/**/*.tsx",
+    "frontend/src/components/billing/UpgradeModal.tsx",
+    "frontend/src/components/shared/UpgradeGate.tsx",
+    "frontend/src/components/shared/GuestCTA.tsx",
+)
+
+
+def _claimed_count(raw: str) -> int | None:
+    """Resolve a matched count, spelled-out or numeric. None if unparseable."""
+    lowered = raw.lower()
+    if lowered in _NUMBER_WORDS:
+        return _NUMBER_WORDS[lowered]
+    return int(lowered) if lowered.isdigit() else None
 
 
 def _check_code_surfaces(code_count: int, project_root: Path) -> list[Violation]:
@@ -382,6 +436,50 @@ def _check_code_surfaces(code_count: int, project_root: Path) -> list[Violation]
                         ),
                     )
                 )
+    return violations
+
+
+def _check_customer_copy(code_count: int, project_root: Path) -> list[Violation]:
+    """Check tool-count claims in customer-facing frontend copy (Sprint 789b).
+
+    Same patterns as the documentation check, so a claim phrased in prose is caught
+    wherever it is written. One finding per line, since several patterns can match the
+    same claim.
+    """
+    violations: list[Violation] = []
+    seen: set[tuple[str, int]] = set()
+
+    for glob in CUSTOMER_COPY_GLOBS:
+        for path in sorted(project_root.glob(glob)):
+            rel = path.relative_to(project_root).as_posix()
+            for i, raw_line in enumerate(path.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
+                if _HISTORICAL_MARKER.search(raw_line):
+                    continue
+                if (rel, i) in seen:
+                    continue
+                line = _strip_noise(raw_line)
+                for pattern in _TOOL_COUNT_PATTERNS:
+                    match = pattern.search(line)
+                    if not match:
+                        continue
+                    claimed = _claimed_count(match.group("n"))
+                    if claimed is None or claimed < 5 or claimed == code_count:
+                        continue
+                    seen.add((rel, i))
+                    violations.append(
+                        Violation(
+                            rule="tool_count_consistency",
+                            file=rel,
+                            line=i,
+                            message=(
+                                f"Customer-facing copy claims {match.group(0).strip()!r} but the registry "
+                                f"has {code_count} (tools_registry.MARKETING_AUDIT_TOOL_COUNT). Update the "
+                                f"copy, or mark the line `doc-consistency: historical` if it records a "
+                                f"past version."
+                            ),
+                        )
+                    )
+                    break
     return violations
 
 
@@ -558,10 +656,11 @@ def run_checks(backend_root: Path) -> list[Violation]:
             )
         )
 
-    # 4. Aggregate tool-count consistency (Sprint 784)
+    # 4. Aggregate tool-count consistency (Sprint 784; customer copy added 789b)
     if tool_count is not None:
         violations.extend(_check_api_description(tool_count, backend_root))
         violations.extend(_check_code_surfaces(tool_count, project_root))
+        violations.extend(_check_customer_copy(tool_count, project_root))
         for rel in TOOL_COUNT_DOCS:
             doc = project_root / rel
             if doc.exists():

@@ -400,46 +400,97 @@ this commit; 787b's other five routes are the commit after.
 
 ---
 
-### Sprint 789b: The doc-consistency gate does not read the website
-**Status:** PENDING.
-**Priority:** **P1 for the two strings** (live, customer-facing, wrong), P2 for the guard
-extension.
-**Source:** Sprint 789. A grep for spelled-out tool counts turned up three stale "twelve"s, two
-of them on public marketing pages.
+### Sprint 789b: The tool-count gate guarded the docs and not the website
+**Status:** COMPLETE.
+**Priority:** **P1 for the three strings** — all live, all customer-facing, one on the homepage.
+P2 for the guard extension.
+**Source:** Sprint 789. A grep for spelled-out tool counts turned up stale "twelve"s; the dry-run
+of the fix then found a third the grep had missed.
 
-| File | Current text | Should be |
-|------|--------------|-----------|
-| `(marketing)/demo/page.tsx:79` | "Explore all **twelve** audit diagnostic tools using synthetic data." | eighteen |
-| `marketing/ToolSlideshow.tsx:514` | "**Twelve** purpose-built tools. Explore each one to see exactly what you get." | eighteen |
-| ~~`tools/sod/page.tsx:93`~~ | ~~"Twelve standards-backed SoD rules"~~ | fixed in Sprint 789 (the library has 11) |
+| File | Was | Now | Where a customer sees it |
+|------|-----|-----|--------------------------|
+| `marketing/hero/HeroProductFilm.tsx:105` | "analysis across **12** testing tools" | 18 | **the homepage** — renders via `HeroScrollSection` in `(marketing)/page.tsx:32` |
+| `(marketing)/demo/page.tsx:79` | "Explore all **twelve** audit diagnostic tools" | eighteen | the /demo page body |
+| `marketing/ToolSlideshow.tsx:514` | "**Twelve** purpose-built tools." | Eighteen | the tool slideshow |
+| ~~`tools/sod/page.tsx:93`~~ | ~~"Twelve standards-backed SoD rules"~~ | Eleven | fixed in Sprint 789 — the library has 11 |
 
-**The interesting part is why these survived three separate sweeps.**
-`backend/guards/doc_consistency_guard.py` exists precisely for this — its own docstring says
-AGENTS.md, README.md, PRODUCT_VISION.md, ARCHITECTURE.md and USER_GUIDE.md "all still said
-twelve" — and it already carries a spelled-out numeral map including `"twelve": 12`. But its
-`GUARDED_DOCS` list is **six markdown files plus two compliance documents**. It never looks at
-`frontend/src/**/*.tsx`.
+The homepage one is the worst of the three: it understates the catalog by a third, and the
+pricing page one click away says eighteen.
 
-So the gate guards the documentation and ignores the thing customers actually read. Sprint 784
-(tool-count cohesion, 12 → 18) and Sprint 788 (tool navigation) both ran and both missed these,
-because both were scoped by what the guard measures.
+#### Why three sprints and a dedicated CI gate all missed them
 
-**Scope:**
-1. Fix the two strings.
-2. Extend the guard to a customer-facing frontend copy set — the marketing route group, the
-   pricing/terms pages, `components/marketing/**`, `components/billing/UpgradeModal.tsx` — using
-   the numeral map that already exists. Keep JSX out of scope for the *digit* patterns where it
-   would false-positive (`toolRuns.length}/18`, `number: 13` in the ledger) and prove the
-   false-positive set with tests, as Sprint 782a's design-token lint does.
-3. Decide the boundary explicitly and write it down: the guard should read copy a customer can
-   see, and skip code comments and historical records. A `/* 12-tool era */` comment is a note;
-   "Explore all twelve tools" is a claim.
+The filing assumed `doc_consistency_guard.py` simply never reads the frontend. **That was wrong,
+and the truth is sharper.** The guard has a `CODE_SURFACE_CHECKS` list that already covers two
+frontend files — and one of them is `(marketing)/demo/layout.tsx`, with the pattern
+`all (?P<n>\d{1,2}) audit diagnostic tools`.
 
-**Acceptance bar:** the two strings corrected; the extended guard, run against the tree *before*
-the fix, reports exactly those two and no false positives; a test pins the false-positive set so
-the next count change cannot be waved through.
+So the guard author had already thought about this exact phrase, in this exact route. The result:
 
-**Commit SHA:** TBD.
+- `demo/layout.tsx` — **guarded**, and correct at 18.
+- `demo/page.tsx` — **unguarded**, the adjacent file in the same route, saying *twelve*.
+
+The metadata was kept current because something checked it. The visible page body beside it was
+not. And the gate reported `ALL CHECKS PASSED` throughout.
+
+Two root causes, both structural:
+
+1. **`CODE_SURFACE_CHECKS` is a hand-maintained per-file list with per-file patterns.** A per-file
+   allowlist only ever guards the files someone remembered to add. Sprint 784 added
+   `demo/layout.tsx` and stopped.
+2. **Its patterns are digit-only.** `\d{1,2}` never matches "twelve", even though the *documentation*
+   half of the same module has had a `_NUMBER_WORDS` map since Sprint 784. The two halves of one
+   guard had different capabilities.
+
+#### What landed
+
+- The three strings corrected.
+- **`CUSTOMER_COPY_GLOBS` + `_check_customer_copy`** — a glob scan over copy a customer can read
+  (the marketing route group, `components/marketing/**`, `UpgradeModal`, `UpgradeGate`,
+  `GuestCTA`), using the same numeral-aware `_TOOL_COUNT_PATTERNS` as the docs instead of bespoke
+  per-file regexes. One violation per line, since several patterns can match one claim.
+- The two `CODE_SURFACE_CHECKS` entries stay: each needs a genuinely bespoke pattern (a bare
+  `'All 18'` table cell; the digit-only metadata string).
+- **The boundary, written down.** The gate reads what a customer sees. Workspace and tool pages are
+  excluded — they render counts from `tool-ledger.ts` and from live `toolRuns.length`, both already
+  tied to the registry by `test_catalog_consistency.py`, so scanning them adds false-positive
+  surface (`{toolRuns.length}/18 tools`) and no coverage. Code comments inside scanned files are
+  **not** excluded: a comment saying "all 18 tools" is a claim a future editor will trust.
+- Pattern widening, each change traceable to a real miss: the adjective group now repeats `{1,2}`
+  so a stacked pair cannot slip between count and noun ("all twelve **audit diagnostic** tools"),
+  and `purpose-built` joined the list. The list stays **closed** rather than becoming `[a-z-]+`.
+
+#### Two things the dry-run and the tests caught in my own work
+
+**The dry-run found a third stale string.** Before changing the guard, the proposed patterns were
+run across the candidate globs as a read-only probe. It reported 3 disagreements and 36 agreements
+— and the third disagreement, `HeroProductFilm.tsx:105` ("12 testing tools"), was one my original
+grep had missed entirely, because I had searched for "twelve" and for "18 tools" rather than for
+the shape of a claim. Worth repeating as a habit: **dry-run a new guard across the real tree before
+wiring it in, and read the agreements too** — 36 correct hits with zero false positives is what
+made the widened pattern safe to ship.
+
+**The false-positive test did not test what its comment claimed.** I wrote a fixture of
+non-catalog strings and a comment saying that loosening the adjective class to `[a-z-]+` would
+turn several of them red. Then I actually loosened it: **all 58 tests still passed.** Every case in
+the fixture had *no adjective at all* ("18 tools", "six tools", "All 10 file formats"), and the
+pattern rejects those whether the class is open or closed — so the fixture was orthogonal to the
+property it was supposed to protect. Fixed by adding `ARBITRARY_ADJECTIVES` — "the 6 remaining
+tools", "7 new tools", "9 competing tools" — plus a test asserting those three *are* matched by the
+open variant, so the discriminator is itself verified rather than assumed. Re-proved: loosening the
+class now fails `test_customer_copy_ignores_non_catalog_claims`; restoring passes.
+
+Also dropped `core` from the adjective list. I had added it speculatively; `grep` found only
+"Core tools & exports", which carries no count, so the alternative was inert and widened the
+pattern for nothing.
+
+**Verification:** 13 new tests (46 → 59 in `test_doc_consistency_guard.py`). Regression-proved in
+both directions — reverting all three strings produces exactly 3 violations with correct file, line
+and quoted text and exit code 1; restoring gives 0 and exit 0. `_check_customer_copy` run against
+the live tree is clean. Frontend 2,011 passed, `tsc --noEmit` exit 0. `ruff check .` clean. A test
+also asserts every glob matches at least one real file, since a glob matching nothing covers
+nothing — the same silent failure as the allowlist it replaced.
+
+**Commit SHA:** filled at merge.
 
 ---
 
