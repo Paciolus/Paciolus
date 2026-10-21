@@ -685,3 +685,31 @@ def test_number_word_resolution_covers_both_spellings_and_digits():
     assert _claimed_count("Eighteen") == 18
     assert _claimed_count("18") == 18
     assert _claimed_count("notanumber") is None
+
+
+def test_customer_copy_examines_every_match_on_a_line(tmp_path):
+    """PR #183 review: `search` stopped at the first match per pattern.
+
+    A line holding a correct count *followed by* a stale one of the same form
+    passed cleanly — the first match equalled the registry count, the loop moved
+    on to the next pattern, and the stale claim beside it was never examined.
+    `_check_tool_count_in_doc` had always iterated; this checker did not.
+    """
+    _copy_file(
+        tmp_path,
+        "frontend/src/components/marketing/Mixed.tsx",
+        "      An 18-tool suite — formerly a 12-tool suite.\n",
+    )
+    violations = _check_customer_copy(18, tmp_path)
+    assert len(violations) == 1, "the stale 12-tool claim after a correct 18 was not flagged"
+    assert "12-tool" in violations[0].message
+
+
+def test_customer_copy_still_reports_one_violation_per_line_with_several_stale_matches(tmp_path):
+    """The iteration fix must not turn one bad line into three findings."""
+    _copy_file(
+        tmp_path,
+        "frontend/src/components/marketing/Noisy.tsx",
+        "      A 12-tool suite with all twelve diagnostic tools and 11 audit tools.\n",
+    )
+    assert len(_check_customer_copy(18, tmp_path)) == 1

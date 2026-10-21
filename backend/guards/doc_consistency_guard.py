@@ -458,28 +458,39 @@ def _check_customer_copy(code_count: int, project_root: Path) -> list[Violation]
                 if (rel, i) in seen:
                     continue
                 line = _strip_noise(raw_line)
+                # PR #183 review: `finditer`, not `search`. With `search` only the
+                # first match per pattern was examined, so a line reading
+                # "An 18-tool suite — formerly a 12-tool suite" passed: the first
+                # match equalled the registry count, the loop moved to the next
+                # pattern, and the stale claim beside it was never checked.
+                # `_check_tool_count_in_doc` already iterated; this one did not.
+                flagged = False
                 for pattern in _TOOL_COUNT_PATTERNS:
-                    match = pattern.search(line)
-                    if not match:
-                        continue
-                    claimed = _claimed_count(match.group("n"))
-                    if claimed is None or claimed < 5 or claimed == code_count:
-                        continue
-                    seen.add((rel, i))
-                    violations.append(
-                        Violation(
-                            rule="tool_count_consistency",
-                            file=rel,
-                            line=i,
-                            message=(
-                                f"Customer-facing copy claims {match.group(0).strip()!r} but the registry "
-                                f"has {code_count} (tools_registry.MARKETING_AUDIT_TOOL_COUNT). Update the "
-                                f"copy, or mark the line `doc-consistency: historical` if it records a "
-                                f"past version."
-                            ),
+                    if flagged:
+                        break
+                    for match in pattern.finditer(line):
+                        claimed = _claimed_count(match.group("n"))
+                        if claimed is None or claimed < 5 or claimed == code_count:
+                            continue
+                        seen.add((rel, i))
+                        violations.append(
+                            Violation(
+                                rule="tool_count_consistency",
+                                file=rel,
+                                line=i,
+                                message=(
+                                    f"Customer-facing copy claims {match.group(0).strip()!r} but the "
+                                    f"registry has {code_count} "
+                                    f"(tools_registry.MARKETING_AUDIT_TOOL_COUNT). Update the copy, or "
+                                    f"mark the line `doc-consistency: historical` if it records a past "
+                                    f"version."
+                                ),
+                            )
                         )
-                    )
-                    break
+                        # One violation per line still: the reader needs the line,
+                        # not every phrasing on it.
+                        flagged = True
+                        break
     return violations
 
 

@@ -715,3 +715,65 @@ class TestBackgroundTaskOrderingContract:
             "recorder a CLOSED session, so success-path tool runs are no longer filed. "
             "Fix the routes before taking this FastAPI version — see Sprint 786b."
         )
+
+
+class TestRecordingIsSynchronousOnTheSuccessPath:
+    """PR #183 review: the UI refresh raced the recording.
+
+    Sprint 791's hooks call `refreshToolRuns()` as soon as the POST resolves.
+    While the six routes recorded via `background_tasks.add_task`, that was a
+    race the client lost more often than not: Starlette sends the response body
+    (`responses.py:167`) *before* awaiting the background task (`:170`), so the
+    GET could return a workpaper list that predated the row, replace the context
+    state with it, and never refresh again — leaving the new entry invisible
+    until a manual reload.
+
+    Recording is now synchronous on the success path. These tests pin that,
+    because the symptom is invisible from the server side: the row does appear,
+    just a few milliseconds after the client stopped looking.
+    """
+
+    def test_no_promoted_route_defers_the_success_path_recording(self):
+        """Structural: the six must not reintroduce a background task here.
+
+        Asserted on the source rather than by timing, because a timing test
+        against an in-process ASGI transport would pass either way — the task
+        runs almost immediately, just not before the response.
+        """
+        import pathlib
+        import re
+
+        routes_dir = pathlib.Path(__file__).resolve().parent.parent / "routes"
+        offenders: list[str] = []
+        for _, _, tool in PROMOTED_TOOLS:
+            # route module name differs from the slug for sod only
+            name = "sod" if tool is ToolName.SOD_CHECKER else tool.value
+            src = (routes_dir / f"{name}.py").read_text(encoding="utf-8")
+            if re.search(r"background_tasks\.add_task\(\s*\n?\s*maybe_record_tool_run", src):
+                offenders.append(f"{name}.py")
+
+        assert offenders == [], (
+            "These routes defer the success-path tool-run recording to a background task, "
+            "which runs after the response body is sent. The Sprint 791 hooks refresh the "
+            f"workpaper list the moment the POST resolves, so the new row is missed: {offenders}"
+        )
+
+    @pytest.mark.asyncio
+    @pytest.mark.usefixtures("bypass_csrf")
+    @pytest.mark.parametrize(("endpoint", "payload_fn", "tool"), PROMOTED_TOOLS, ids=IDS)
+    async def test_tool_run_exists_by_the_time_the_response_returns(
+        self, db_session, make_user, make_engagement, endpoint, payload_fn, tool
+    ):
+        """Behavioural counterpart: query immediately, with no await in between."""
+        user = make_user(email=f"sync_{tool.value}@example.com")
+        engagement = make_engagement(user=user)
+        _override(user, db_session)
+        try:
+            payload = {**payload_fn(), "engagement_id": engagement.id}
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                response = await client.post(endpoint, json=payload)
+            assert response.status_code == 200, response.text
+            # The very next thing a client does is re-read the list.
+            assert len(_tool_runs(db_session, engagement.id, tool)) == 1
+        finally:
+            app.dependency_overrides.clear()

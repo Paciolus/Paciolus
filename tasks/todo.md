@@ -483,8 +483,24 @@ Also dropped `core` from the adjective list. I had added it speculatively; `grep
 "Core tools & exports", which carries no count, so the alternative was inert and widened the
 pattern for nothing.
 
-**Verification:** 13 new tests (46 → 59 in `test_doc_consistency_guard.py`). Regression-proved in
-both directions — reverting all three strings produces exactly 3 violations with correct file, line
+#### PR #183 review: `search()` examined only the first match per line
+
+Correct, and it is a false negative in the half of the check that matters. `_check_customer_copy`
+used `pattern.search(line)`, so a line holding a **correct** count followed by a **stale** one of
+the same form passed cleanly: the first match equalled the registry count, the loop moved on to
+the next pattern, and the stale claim beside it was never examined. Verified directly —
+`"An 18-tool suite — formerly a 12-tool suite"` yields `search → 18` and
+`finditer → ['18', '12']`.
+
+`_check_tool_count_in_doc`, the older sibling in the same module, had always iterated. I wrote the
+newer checker with `search` and a `break`, which reads as "one violation per line" and silently
+also meant "one *candidate* per line". Now `finditer` with the one-violation-per-line
+deduplication kept deliberately — the reader needs the line, not every phrasing on it. Two tests:
+the mixed-count line is flagged, and a line with three stale phrasings still yields exactly one
+finding.
+
+**Verification:** 15 new tests (46 → **61** in `test_doc_consistency_guard.py`). Regression-proved
+in both directions — reverting all three strings produces exactly 3 violations with correct file, line
 and quoted text and exit code 1; restoring gives 0 and exit 0. `_check_customer_copy` run against
 the live tree is clean. Frontend 2,011 passed, `tsc --noEmit` exit 0. `ruff check .` clean. A test
 also asserts every glob matches at least one real file, since a glob matching nothing covers
@@ -655,9 +671,39 @@ suite with `(0, _constants.hours) is not a function` — `cachePlugin.ts` import
 `...jest.requireActual`. A wholesale module mock is a bigger hammer than it looks when the module
 is a utility grab-bag.
 
-**Verification:** 25 new tests; frontend suite **2,011 → 2,036 passed** (207 suites), 0 failures;
-`tsc --noEmit` exit 0; `npx eslint src/hooks` clean; `npm run build` clean with every route
-`ƒ (Dynamic)` and `ƒ Proxy (Middleware)` active.
+#### PR #183 review: `refreshToolRuns()` raced the recording
+
+Correct finding, and the race was real rather than theoretical. Starlette sends the response
+body at `responses.py:167` and awaits the background task at `:170` — so a client holding the
+200 is ahead of the pending insert. The hooks added above call `refreshToolRuns()` the moment
+the POST resolves, which meant the GET could return a workpaper list that predated the row,
+replace the context state with that stale list, and never refresh again. The new entry would
+stay invisible until a manual reload.
+
+**Fixed by recording synchronously on the success path** in all six routes:
+`background_tasks.add_task(maybe_record_tool_run, …)` → a direct call, with the
+`background_tasks` parameter and its import dropped. The write is one INSERT plus a commit,
+after an analysis that already ran in-process, so the latency the background task bought back
+was never worth the race.
+
+Pinned two ways, because the symptom is invisible server-side — the row *does* appear, just
+after the client stopped looking. A structural test asserts none of the six reintroduces
+`background_tasks.add_task(maybe_record_tool_run, …)`, since a timing test against an
+in-process ASGI transport would pass either way; and a behavioural test queries immediately
+after the response with no `await` between. Regression-proved: reverting `form_1099.py` to a
+background task fails the structural test by name.
+
+**The same race exists in `useAuditUpload`**, which calls `refreshToolRuns()` after an upload
+whose route records via `background_tasks`. That covers the nine testing tools and several
+diagnostics endpoints. Pre-existing, not introduced here, and the fix is the same one-line
+change per route — folded into **Sprint 790**'s sweep, which already has to touch every
+`check_upload_limit` caller.
+
+**Verification:** 25 frontend tests + 8 backend (53 in
+`test_promoted_tool_engagement_wiring.py`); frontend suite **2,011 → 2,036 passed** (207
+suites), 0 failures; `tsc --noEmit` exit 0; `npx eslint src/hooks` clean; `npm run build` clean
+with every route `ƒ (Dynamic)` and `ƒ Proxy (Middleware)` active; `check_openapi_drift.py`
+reports no drift (paths 220, schemas 422 — dropping `BackgroundTasks` is not a schema change).
 
 **Audit of the other JSON-body hooks, recorded so it is not re-derived:** `useAuditUpload` (and
 therefore `createTestingHook` and the nine testing tools behind it), `usePreflight`,
