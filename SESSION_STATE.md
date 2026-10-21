@@ -4,110 +4,98 @@ _Updated at the end of every Claude Code session. Overwrite the previous state �
 
 ## Last Session
 
-**Date:** 2026-10-19
-**Branch:** merged. PR **#165** landed on `main` as `54f1963d` and **is deployed** (Render `dep-dbb4feavcj2c738cga90`, status `live`). 9 commits.
+**Date:** 2026-10-21
+**Branch:** merged. **Six PRs landed on `main`** — #179, #181, #182, #183, #184, #185 — every one rebase-or-squash per `required_linear_history`, and every backend merge verified deployed.
 
-**Context:** First session after ~5.5 months of repo dormancy (previous commit 2026-05-01). Began as a status review, became a P0 incident response.
+**Context:** a continuation session. Began by landing the Sprint 780 PR already in flight, then worked the 2026-10-20 worklist. The through-line turned out to be a single defect class, found seven times before it was worth auditing for rather than reacting to.
 
-### 🔴 Production was DOWN and is now RESTORED
+### What landed
 
-Every backend endpoint had been returning HTTP 500 since roughly 2026-05. Two independent faults, both fixed in production:
+| PR | Sprint | What |
+|----|--------|------|
+| #179 | **780** | Stripe price-parity preflight + webhook coverage 55% → 88% |
+| #181 | **785** | Nine stranded branches recovered — **open PR count 25 → 0** |
+| #182 | **789** | **P1:** SoD was 403ing Solo and Professional while Terms, pricing, the FAQ and the checkout modal all promised it |
+| #182 | **787b** | Six promoted tools wired into engagement tracking (backend) |
+| #183 | **789b** | Three stale tool counts on live marketing pages, one on the homepage; the gate extended to customer copy |
+| #183 | **791** | The six promoted tools' hooks now send `engagement_id` |
+| #184 | **784b + 784c** | Six new user-guide chapters; six stale per-tool test counts corrected |
+| #185 | **792** | Preventive audit of every gate for the scope gap — the guard itself had the defect, caught in review |
 
-1. **`AUDIT_CHAIN_SECRET_KEY` was never set on Render.** Sprint 768 correctly promoted the silent dev fallback to a production hard-fail, but the variable was never added, so the Sprint 768 deploy (`c58cbbb5`) exited 1 at startup. Render kept the prior image serving, so the failure was invisible — **Sprint 768's P1 security fixes had never reached production.** PR #129, merged 80 minutes later, never deployed at all: its files were outside Render's `backend` rootDir, so the commit was ignored.
-2. **The Upstash Redis host stopped resolving.** Every rate-limited route (the whole API, health probes included) raised out of slowapi's limit check.
+**Fourteen review findings across #182–#185 were acted on. Every one was real.** Six became code fixes, four corrected documentation, three falsified claims I had written into sprint records, and one found that the guard written to prevent a defect class was itself a member of it. All recorded as corrections rather than quietly amended.
 
-**Production actions taken:** set `AUDIT_CHAIN_SECRET_KEY` (fresh 64-hex key; safe because `verify_audit_chain` falls back to `JWT_SECRET_KEY` for pre-rotation records); provisioned Render Key Value `paciolus-ratelimit` (`red-dbb2gdqjnfac739l4p5g`, free, **virginia** — same region, so no cross-provider DNS dependency) and repointed `REDIS_URL` at its internal URL. Deploy `dep-dbb2glcs728c73a67s5g` is live on `51906004`.
+**Production:** healthy throughout. Live deploy SHA **==** `origin/main`; `/health/ready` reports `status: "healthy"`, DB ~7–9 ms, `rate_limit_storage` redis not degraded. Checked the **body**, not just the 200 — Sprint 774 puts `degraded` behind a 200.
 
-**Verified against live prod:** all four health probes 200, `/health/redis` connected, DB ~9.6ms, and a full auth round-trip (register → `/auth/me` → login → wrong-password 401 → uppercase-email login → logout → post-logout 401).
+### The pattern — read this before adding or trusting a gate
 
-### Commits on the branch
+**Seven findings were the same defect: a consistency gate scoped by a file list silently stops covering what it is named after, and reports success.** Sprint 792 stopped fixing instances and audited the class. The ranking that predicted every outcome:
 
-| Commit | What |
-|---|---|
-| `8601c4ef` | **Sprint 774** — rate-limit storage outage resilience |
-| `acb00510` | inventory fixture date time-bomb (nightly RED since 2026-05-31) |
-| `f3d5ae46` | nightly audit artifacts — 109-day backlog (795 files) |
-| `3b7fe76e` | clear all six red CVE/dependency CI gates (backend + frontend) |
-| `edfceef3` | sync `next-env.d.ts` for the Next.js 16.4.2 upgrade |
+- **Immune** — `check_openapi_drift.py` derives its targets from the running app. No list to rot.
+- **Comprehensive** — `lint_design_tokens.py` rglobs all of `frontend/src`; the route linters cover `routes/*.py` including aggregator indirection.
+- **Fragile** — an explicit tuple of paths. **All seven findings were here, without exception.**
 
-### Four latent bugs found and fixed
+The operating rules, now in `tasks/lessons.md`:
+- Prefer deriving the scan set from the system; failing that a glob; failing that a hand-maintained list **with a test that it still matches something**.
+- "The gate is green" and "the gate scanned something" are different claims.
+- For anything sold, assert against **behaviour**, not a second description of it.
+- When inheriting a gate, do not read its *file list* as its *scope* — the scope is the patterns.
 
-1. **The fail-closed rate-limit guarantee never worked.** `limits`' `Storage.check()` returns `False` instead of raising; the code only caught exceptions, so a dead backend was silently treated as healthy at boot. The Sprint 696 tests passed only because they mocked `check()` to raise — which real `RedisStorage` never does. The tests validated a false model of the library.
-2. **`scripts/smoke_test_render.sh` could never pass.** It registered `@paciolus.test`, which `email-validator` rejects as a special-use TLD, so `/auth/register` always 422'd. The post-deploy verification gate had been non-functional. Also fixed its stale Sprint 768 `access_token` assertions (now sends `X-Token-Response: bearer`).
-3. **The inventory test was a wall-clock time bomb**, not a regression — fixture dates hardcoded in late 2025 crossed the 180-day slow-moving threshold on 2026-05-31. Now relative via `_days_ago(n)`. The test built to catch exactly this (`test_recent_movement_no_flags`) never asserted `entries_flagged == 0` despite its name; it does now.
-4. **All 13 non-dependabot PRs were BLOCKED by six failing CVE/audit jobs**, not by merge conflicts — all 25 open PRs reported `MERGEABLE` *on 2026-10-19* (no longer true; see Open blockers). Backend tests, mypy, ruff, the accounting-policy gate and the secrets scan were all green on PR #145; only the audit jobs were red. Both backend and frontend CVEs are now cleared, so those gates should pass.
+### Open P1s that need a decision, not more engineering
+
+**Sprint 793 — both tax tools apply one fixed set of statutory limits to every year.** Found by the #184 review and the most serious thing in the session.
+
+`w2_reconciliation_engine.py:40-51` and `form_1099_engine.py:94-98` both accept `tax_year` (validated 2000–2099), pass it into the config, and **never use it to select anything**. The W-2 constants are headed "2026 reference values" and are the 2025 figures; the 1099 thresholds are static at $600/$600/$10 and do not vary by sub-category.
+
+**No numbers were changed.** These are customer-facing tax amounts driving filing decisions, and I should not adjudicate current law from a code review — Sprint 793 makes practitioner confirmation step 1, and **Sprint 781's CPA validation is the natural place**. The framing needing no tax knowledge: one fixed set across a hundred-year range is wrong regardless of which year it represents.
+
+Interim honesty shipped: both chapters carry caveats naming what is and is not affected (the wage comparisons and 941 reconciliation are sound — they compare the customer's own numbers to each other), and both `features/status.json` entries went `complete` → `partial`.
+
+**Sprint 790 — the advertised 100/500 monthly upload allowances are unenforced on every paid tier.** `check_upload_limit` only *reads*; `increment_upload_count`'s sole caller is `routes/bulk_upload.py:154`. Free tier *is* metered via its `ActivityLog` fallback — the only metered tier is the one making no money. Needs two CEO decisions: what counts as one upload when a tool takes two files, and what happens to existing accounts whose counters bulk upload left non-zero.
 
 ## Current Environment State
 
-**App status:** Working — production live and verified.
-**Backend tests:** **8,700 collected, 8,700 passed, 0 failed** (14m24s, `backend/venv`). Re-confirmed by the 2026-10-20 nightly: 8,700 passed / 0 failed, coverage 93.34%.
-> **Correction (2026-10-20):** `backend/venv` is **not** "the CI-representative env, with the new pins". It holds `fastapi` 0.136.0 and `stripe` 15.0.1 against pins of `==0.136.1` / `==15.1.0`, and sits at the literal `>=` floor values that CI and the production Docker build resolve past on every fresh install. The two exact pins bumped on 10-19 (PyJWT, python-multipart) did land in it; the rest did not. CI is the authority and is green. **Resolved 2026-10-20 by Sprint 786a:** the venv now matches a fresh resolve, so it genuinely is CI-representative, and `ci.yml` records the resolution as a build artifact. The reconcile also showed that the `>=` floors have already shipped three unreviewed majors to production — `cryptography` 46→50, `pillow` 12→13, `redis` 7→8 — which is the risk Sprint 777 documented, now realised.
-**Frontend:** 207 suites / 2,013 tests / 5 snapshots, 0 failures; `tsc --noEmit` exit 0; `npm run build` clean with every route `ƒ (Dynamic)` and `ƒ Proxy (Middleware)` active (nonce-based CSP contract intact across the Next.js bump).
-**Dependency CVEs:** backend `pip-audit` no longer flags pyjwt or python-multipart; frontend production vulnerabilities 22 → **0**.
+**App status:** working — production live and verified.
+**Backend tests:** **8,989 passed / 0 failed** (11m26s, `backend/venv`, clean tree), up from 8,700 at session start.
+**Frontend:** 207 suites / **2,036 tests** / 5 snapshots, 0 failures; `tsc --noEmit` exit 0; `npm run build` clean with every route `ƒ (Dynamic)` and `ƒ Proxy (Middleware)` active.
+**Lint:** `ruff check .` clean; `eslint src/hooks` clean.
+**Open PRs:** **0**, down from 25. All 15 Dependabot PRs closed as superseded — the nine pip ones are churn (every package is a `>=` floor that self-heals per Sprint 777); the four Actions ones are real work those PRs cannot do, refiled as **Sprint 786c** with current SHAs.
 
-**Note on environments:** `backend/venv` (what the nightly cron uses) and system Python 3.12 had drifted apart, and neither matched `requirements.txt`. The nightly runs `backend/venv/Scripts/python.exe`. **Still true as of 2026-10-20** — see the correction above; only the two 10-19 security pins were reconciled.
+> **Two process traps hit this session, both now in `lessons.md`:**
+> - A background full-suite run returned `1 failed` purely because the tree was edited mid-run. Nothing was broken. The inverse makes a real failure pass — treat a long verification run as the last thing before committing, or run it from a separate `git worktree`.
+> - The union-resolution helper for markdown conflicts silently dropped `---` separators three times. The first instance let `scripts/archive_sprints.sh` destroy three sprint records. The helper is hardened; the archiver now has an integrity gate that aborts before touching `todo.md` if the counted and extracted totals disagree. It reported `6 sprint sections, matches count` on its first real use.
 
 **Open blockers:**
-- ~~Branch unpushed / resilience fix undeployed~~ — **RESOLVED.** Merged and verified live (see above).
-- **Nothing alerted for 5.5 months.** Sprint 775's in-repo half is **done and CI-verified**; an **external** monitor is still required (see Next Priority).
-- ~~Scheduled GitHub Actions disabled~~ — **RESOLVED.** All five workflows re-enabled 2026-10-19 via the Actions API. But see Sprint 778: two of them cannot pass as written.
-- ~~Dependency pinning strategy unresolved~~ — **RESOLVED.** Sprint 777 chose option 3 (explicit split), rule written into `backend/requirements.txt`. It explicitly **rejects** Sprint 761's premise: `cryptography` stays a floor.
-- 21 dev-only npm advisories remain (babel-jest chain); they don't gate CI (`--omit=dev`) and clearing them needs `npm audit fix --force`.
-- **25 open PRs, and the 9 real-work ones now all CONFLICT** (#134, #137–#144 report `DIRTY`/`CONFLICTING` as of 2026-10-20 — the 10-19/20 merges rewrote `tasks/todo.md` wholesale). They were `MERGEABLE` on 10-19; the red CVE gates that blocked them are fixed, so the only thing left between them and `main` is a rebase. Seven finished sprints are stranded. Filed as **Sprint 785**. The 15 Dependabot PRs are mostly superseded by newer releases.
-- Phase 4.1 Stripe cutover, 4.2 legal sign-off, 4.3 custom domain (`api.paciolus.com` still 404s) — all still CEO-gated.
-
-## Merge + deploy verification (2026-10-19)
-
-PR #165 merged after **all 24 CI checks passed, 0 failures** — including the three matrices that cannot be reproduced locally (Python 3.11, PostgreSQL 15, Playwright E2E) and all four CVE/audit gates.
-
-Merged with `--admin`. Branch protection on `main` requires 1 approving review, and GitHub blocks self-approval of your own PR, so that requirement is unsatisfiable for a solo developer; `enforce_admins` is `false`, so admin merge is the available path. **CI was green first** — the bypass covered only the review requirement, not the checks.
-
-**"Merged" was then actually verified as "deployed"** — the explicit lesson of this session:
-- Render auto-deploy `dep-dbb4feavcj2c738cga90` reached status `live`.
-- Live deploy SHA `54f1963d` **==** `origin/main`.
-- `/health/ready` now reports the new `rate_limit_storage` dependency (`configured_backend: redis`, `active_backend: redis`, `degraded: false`, `reachable_at_boot: true`) — proof Sprint 774's code is genuinely running, not merely merged.
-- Post-deploy sanity: `/auth/csrf` unauth 401, bad-credential login 401, `/health/live` 200, `/health/redis` 200, `paciolus.com` 200.
-
-Note: a GitHub Actions incident ("Degraded availability for Actions, Pages and Webhooks", 15:49 UTC) held every check in `queued` for ~45 minutes first. It cleared on its own.
-
-**Sprint 775 monitoring verified in CI, not just locally.** Manually dispatched `uptime-check.yml` on `main`: run `39287982893` succeeded with `api=PASS site=PASS drift=SKIP`. The drift probe correctly SKIPs rather than false-alarming while `RENDER_API_KEY` is unset, and the failure-issue step correctly skipped.
+- **Sprint 793 (P1)** and **Sprint 790 (P1)** — both need a decision, described above.
+- **Sprint 778** — the off-provider `pg_dump` → R2 backup still does not exist; Neon PITR is the only thing behind production data. Ships pre-launch per the 2026-10-19 decision.
+- Phase 4.1 Stripe cutover, 4.2 legal sign-off, 4.3 custom domain (`api.paciolus.com` still 404s) — CEO-gated.
+- `RENDER_API_KEY` repo secret still unset, so the deploy-drift probe SKIPs rather than alarms.
+- **Sprint 741c / 738** need the Neon connection string (CEO ask D-1); both are restore-drill blockers for 778.
+- 21 dev-only npm advisories (babel-jest chain); they do not gate CI (`--omit=dev`).
 
 ## Next Priority
 
-**Start here: the consolidated worklist** — `reports/next-actions-2026-10-20.md` (readable: https://claude.ai/code/artifact/cdbdd9eb-3039-44cf-a97b-23bc5c598543). It re-verified the 2026-10-19 assessment against current source — every load-bearing claim still held — and adds ten items neither earlier document covered. **It supersedes the 7-row order below**, which is kept for continuity.
-Earlier artifacts: worklist https://claude.ai/code/artifact/03c5fdc7-21d6-4f5a-ad3e-75e54170a2b5 · assessment https://claude.ai/code/artifact/694c6f26-1673-48ee-88d6-4f18c2803b82 (also `reports/launch-readiness-assessment-2026-10-19.md`)
-
-**CEO set a soft launch date (no fixed date) on 2026-10-19 and delegated the open decisions.** That reordered the plan: demand validation now leads and gates the four open accounting gaps; billing waits. Engineering is deliberately limited to work that is worth doing regardless of what CPAs say — liability, the money path, and making the system tell the truth about itself.
-
-Two decisions are settled and recorded in `tasks/EXECUTIVE_BLOCKERS.md` → Resolved Decisions. **Do not re-open them:**
-1. **Review gate removed from `main`** (all 12 required status checks kept, strict). Merges now take the normal path and CI genuinely blocks — `--admin` should no longer be needed, and needing it is a signal. Linear history is on, so **merges must squash or rebase**.
-2. **The off-provider `pg_dump` → R2 backup ships BEFORE launch.** Neon PITR alone is not sufficient. *(This bullet previously recorded the opposite — deferred until before the second paying customer, on the premise that Zero-Storage meant no client financial data was persisted. That premise is false and the decision was reversed the same day it was made; `tasks/EXECUTIVE_BLOCKERS.md`, the `tasks/todo.md` DECISION block and the assessment addendum all carried the reversal, this file did not. Corrected 2026-10-20.)* The database persists auditor workpaper content: `diagnostic_summaries` (aggregate F/S totals), `uncorrected_misstatements` (`accounts_affected_json` — account names with DR/CR and amounts) and `analytical_expectations` (expected and actual values). Scope is Sprint 778; the policy contradiction this exposed was Sprint 783.
-
-Order of work (detail in the worklist, sprints filed in `tasks/todo.md`):
+The 2026-10-20 worklist (`reports/next-actions-2026-10-20.md`) is largely discharged — tracks 1, 2, 4 and 6 are done.
 
 | # | Item | Owner |
 |---|------|-------|
-| 01 | Read the `waitlist_signups` count — decides whether 03 is warm or cold | CEO |
-| 02 | Send Terms + Privacy to counsel; Security Policy §12 phone | CEO — **blocks launch, longest lead** |
-| 03 | 5–10 practising CPAs through demo + free tier on their own TB | CEO — **gates B-6…B-9** |
-| 04 | **Sprint 779** — boundary-language + AS 1215 residue (liability) | Claude, ~1h |
-| 05 | **Sprint 778** — build the `pg_dump` → R2 backup, verify Neon PITR retention, one restore drill per mechanism, fix the DR false-green | Claude + CEO console, ½d |
-| 06 | **Sprint 780** — Stripe price-parity preflight + webhook coverage 59.9%→85% | Claude, ~1d |
-| 07 | **Sprint 782** — design-system regression lint + external uptime monitor | Claude + CEO signup, ~2h |
+| 01 | **Sprint 793 (P1)** — confirm the statutory figures with a practitioner, then year-key both tables | CEO/CPA confirms, Claude implements |
+| 02 | **Sprint 790 (P1)** — decide the metering unit and the existing-account question, then enforce | CEO decides, Claude implements |
+| 03 | **Sprint 778** — build the `pg_dump` → R2 backup, one restore drill per mechanism, fix the DR false-green | Claude + CEO console, ½d |
+| 04 | Legal to counsel; waitlist count; 5–10 CPAs through the demo (**Sprint 781**) — also the natural home for 793's figures | **CEO — longest lead** |
+| 05 | **Sprint 786b / 786c** — the reviewed major bumps, and the six Actions SHA pins | Claude |
+| 06 | **Sprint 782b** — external uptime monitor | Claude + one CEO signup |
+| 07 | **Sprint 741c / 738** — Alembic ↔ ORM enum drift, migration drift | Blocked on CEO ask D-1 |
 
-Parked deliberately: B-6…B-9 (until 03 reports), Phase 4.1 live Stripe build (until pricing validated), 22-engine relocation, mypy baseline, dev-only npm advisories. **No longer parked:** the off-provider backup (ships pre-launch, Sprint 778) and the open-PR backlog (Sprint 785 — all nine real-work PRs now conflict, so leaving them costs more every day).
+**Still parked:** B-6…B-9 until Sprint 781 reports · the live Stripe build until pricing is validated · the 22-engine relocation · the mypy baseline · dev-only npm advisories · the deferred SOC 2 set.
 
 ## Recent Git Context
 
 ```
-cfaaf7b2  main HEAD
-          └─ #167 launch readiness assessment      (docs)
-          └─ #166 deploy-drift: compare trees      (docs/CI)
-          └─ #145 qa_warden timeout 1700s          (tooling)
-54f1963d  ← what production actually runs
-          └─ #165 Sprint 774 outage recovery       (last backend change)
+main HEAD == live deploy
+ ├─ #185  792  — preventive gate-scope audit (no production code)
+ ├─ #184  784b + 784c — user guide; 6 review findings, 2 filed as 793
+ ├─ #183  789b + 791 — customer-copy gate, engagement hooks; 2 review fixes
+ ├─ #182  789 + 787b — SoD tier parity (P1), engagement wiring; 4 review fixes
+ ├─ #181  785  — nine stranded branches recovered, backlog 25 -> 0
+ └─ #179  780  — Stripe preflight + webhook coverage
 ```
-
-`main` is 3 merges ahead of the live deploy and all three touch nothing under `backend/`, so Render
-correctly has not redeployed. The tree-based drift check from #166 reads this as PASS — which is the
-exact false positive the original SHA comparison would have alarmed on every 15 minutes.
