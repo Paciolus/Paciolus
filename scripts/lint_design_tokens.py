@@ -98,7 +98,25 @@ GENERIC_PALETTES = (
 COLOUR_UTILITIES = (
     "bg",
     "text",
+    # Directional and axis variants are separate utilities in Tailwind:
+    # `border-l-red-500`, `divide-x-blue-200`, `border-t-slate-700`. The first draft
+    # listed only the base names, so every directional colour slipped through — caught
+    # in review on PR #176.
     "border",
+    "border-x",
+    "border-y",
+    "border-s",
+    "border-e",
+    "border-t",
+    "border-r",
+    "border-b",
+    "border-l",
+    "divide-x",
+    "divide-y",
+    "outline-t",
+    "outline-r",
+    "outline-b",
+    "outline-l",
     "ring",
     "ring-offset",
     "divide",

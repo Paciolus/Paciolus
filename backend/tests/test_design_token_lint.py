@@ -100,6 +100,14 @@ def test_allowlist_ships_empty():
         'className="shadow-lg shadow-indigo-500/50"',
         'className="placeholder-stone-400"',
         'className="fill-rose-600"',
+        # Directional and axis border/divide utilities — PR #176 review: the first
+        # pattern set listed only the base names, so every one of these slipped through.
+        'className="border-l-red-500"',
+        'className="hover:border-t-blue-200"',
+        'className="border-x-slate-700"',
+        'className="divide-x-gray-200"',
+        'className="md:divide-y-zinc-300"',
+        'className="border-b-2 border-b-emerald-500"',
         "const cls = `text-${x} bg-amber-200`",
         ".foo { @apply bg-teal-600; }",
     ],
@@ -149,6 +157,8 @@ def test_multiple_violations_on_one_line_all_reported(tmp_path: Path):
         'className="bg-blue-250"',
         # Hyphen-joined words that are not utility-palette-scale
         'className="group-data-[state=open]:bg-sage-500"',
+        # Directional utilities on theme tokens stay clean
+        'className="border-l-clay-500 divide-y-oatmeal-300"',
     ],
 )
 def test_non_violations_are_not_flagged(tmp_path: Path, snippet: str):
