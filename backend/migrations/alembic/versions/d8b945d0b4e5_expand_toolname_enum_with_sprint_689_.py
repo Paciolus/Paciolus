@@ -4,7 +4,12 @@ Revision ID: d8b945d0b4e5
 Revises: b5c6d7e8f9a0
 Create Date: 2026-10-20 13:43:51.667032
 
-Sprint 787. Sprint 689 expanded the tool catalog 12 -> 18 and Sprint 717 reconciled the
+Sprint 787. Adds the six Sprint-689 tool labels, plus two older members whose labels were
+never added at all: STATISTICAL_SAMPLING (missed by the Sprint 278-era tool) and
+FLUX_ANALYSIS (added as the lowercase slug by Sprint 308's f8a3d1c09b72 rather than the
+member name SQLAlchemy binds).
+
+Sprint 689 expanded the tool catalog 12 -> 18 and Sprint 717 reconciled the
 frontend ledger, but `ToolName` was never touched — so `tool_runs.tool_name` could not
 hold a run of any of the six newer tools. On PostgreSQL that column is a native enum
 type, so the type needs the values added before any insert can succeed; on SQLite the
@@ -29,15 +34,38 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
-# Values must match tools_registry.py slugs, which is what
-# shared/tool_run_recorder.py passes to ToolName(...).
+# Labels must be the enum MEMBER NAMES, not the slugs.
+#
+# `ToolRun.tool_name` is `Enum(ToolName)` with no `values_callable`, so SQLAlchemy binds
+# `.name` — it sends 'SOD_CHECKER', never 'sod_checker'. The baseline migration got this
+# right (`sa.Enum('TRIAL_BALANCE', 'MULTI_PERIOD', ...)`), and the first draft of this
+# migration got it wrong by copying the slug list from tools_registry.
+#
+# Sprint 308's f8a3d1c09b72 made the same mistake and it is still live: it added
+# 'flux_analysis' lowercase, so on any PostgreSQL database with that label a flux_analysis
+# tool run cannot be inserted — the ORM sends 'FLUX_ANALYSIS', which is not a label. That
+# is filed separately as Sprint 741c; this migration does not repair it, because repairing
+# an enum label requires knowing which labels the target database actually has.
 NEW_TOOL_NAMES: tuple[str, ...] = (
-    "sod_checker",
-    "intercompany_elimination",
-    "w2_reconciliation",
-    "form_1099",
-    "book_to_tax",
-    "cash_flow_projector",
+    # Sprint 689's six tools — the reason this migration exists.
+    "SOD_CHECKER",
+    "INTERCOMPANY_ELIMINATION",
+    "W2_RECONCILIATION",
+    "FORM_1099",
+    "BOOK_TO_TAX",
+    "CASH_FLOW_PROJECTOR",
+    # Two older members whose labels were never added, found by
+    # tests/test_toolname_catalog_parity.py. Both are reachable today —
+    # routes/sampling.py and routes/audit_flux.py each call maybe_record_tool_run — so on
+    # a PostgreSQL database built from this chain, recording either run fails with 22P02.
+    #
+    # STATISTICAL_SAMPLING: the baseline created `toolname` with eleven labels and the
+    #   Sprint 278-era sampling tool never added its own.
+    # FLUX_ANALYSIS: Sprint 308's f8a3d1c09b72 added the *slug* 'flux_analysis' instead of
+    #   the member name. The stale lowercase label stays behind unused; dropping it means
+    #   recreating the type, which is Sprint 741c and needs a read of the live schema.
+    "STATISTICAL_SAMPLING",
+    "FLUX_ANALYSIS",
 )
 
 

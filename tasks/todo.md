@@ -206,6 +206,41 @@ Escape hatch for genuine history: `<!-- doc-consistency: historical -->` on the 
 - `tests/test_catalog_consistency.py` + `tests/test_citation_consistency.py`: 50 passed.
 - `check_openapi_drift.py`: no drift. `npx tsc --noEmit`: exit 0. `ruff check backend/guards/`: clean.
 
+#### Scope correction (PR #174 review) — the enum is necessary, not sufficient
+
+The sprint said a run of any of the six tools "could not be recorded against an engagement
+at all". True, and the enum was a hard blocker. But **the enum alone does not make them
+trackable**, and the review caught me implying it did.
+
+None of `routes/sod.py`, `intercompany_elimination.py`, `w2_reconciliation.py`,
+`form_1099.py`, `book_to_tax.py` or `cash_flow_projector.py` calls
+`maybe_record_tool_run` — and none of them even accepts an `engagement_id`
+parameter (`sod.py` has no `db: Session` dependency either). Compare `ar_aging.py`,
+`bank_reconciliation.py`, `multi_period.py`, `sampling.py`, `three_way_match.py` and
+`audit_flux.py`, which all do.
+
+So what Sprint 787 delivered is the **precondition**: the enum, the migration, the label
+tables and the taxonomy classification, so that a recorded run *can* exist and the catalog
+counts are honest. Wiring the fourteen endpoints is **Sprint 787b** — it changes API
+signatures across six routes and needs a per-tool decision about what a composite score
+means for a role matrix or a cash projection, which is design work rather than a fix.
+
+#### Two further migration findings from the same review
+
+**My migration's labels were wrong.** `d8b945d0b4e5` added lowercase slugs
+(`sod_checker`, …) copied from `tools_registry`. `ToolRun.tool_name` is `Enum(ToolName)`
+with no `values_callable`, so SQLAlchemy binds the **member name** — it sends
+`SOD_CHECKER`. The baseline migration gets this right
+(`sa.Enum('TRIAL_BALANCE', 'MULTI_PERIOD', …)`); I copied the wrong list. Corrected to
+member names.
+
+**The coverage fraction counted 19 against 18.** Changing the denominator to
+`MARKETING_AUDIT_TOOL_COUNT` while leaving the numerator over every `ToolName` member meant
+an engagement that ran every catalog tool plus flux analysis would print "Tools Executed:
+19 of 18", and the not-executed coverage penalty counted a tool the sentence does not
+describe. Both sides are now scoped to `CATALOG_TOOL_SLUGS`; non-catalog runs still appear
+in "Total Tool Runs".
+
 #### Three gaps this sweep uncovered — filed, not silently fixed
 
 Each is a product gap rather than a copy fix, so none belongs in a cohesion sprint: **787** (engagement layer
@@ -406,6 +441,92 @@ removing Book-to-Tax from the nav: the coverage test failed naming it, then pass
   the longest label is 24 characters at `text-sm` in a ~219px column — but the toolbar lives
   behind authentication and I did not render it. The derived grid means a future column cannot
   overflow silently; column *width* at five columns is the part that rests on that arithmetic.
+
+---
+
+### Sprint 787b: Wire the six Sprint-689 tools into engagement tracking
+**Status:** PENDING.
+**Priority:** P2 — the catalog counts are honest after Sprint 787; the runs still are not recorded.
+**Source:** PR #174 review, 2026-10-21.
+
+Sprint 787 made the six tools *representable* in `ToolName` and classified them in the
+taxonomy. It did not wire them up. None of the six routes calls `maybe_record_tool_run`, and
+none accepts an `engagement_id`:
+
+| Route | Endpoints | Has `engagement_id` | Has `db: Session` |
+|-------|-----------|---------------------|-------------------|
+| `sod.py` | 3 | no | **no** |
+| `intercompany_elimination.py` | 2 | no | yes |
+| `w2_reconciliation.py` | 2 | no | yes |
+| `form_1099.py` | 2 | no | yes |
+| `book_to_tax.py` | 3 | no | yes |
+| `cash_flow_projector.py` | 2 | no | yes |
+
+**Scope:** follow the `ar_aging.py` pattern — optional `engagement_id`, `background_tasks`,
+`maybe_record_tool_run(db, engagement_id, user_id, slug, success, score, flagged)` on the
+success path and a `success=False` call in the error handler.
+
+**The part that is design, not mechanics:** what `composite_score` and `flagged_accounts`
+mean for each tool. A role-permission matrix and a 90-day cash projection do not produce
+"flagged accounts" in the sense AR aging does. Decide per tool whether to pass `None`, a
+domain-appropriate score, or to extend the recorder — do not invent a score to fill the
+parameter. `shared/account_extractors.py` deliberately has no extractor for any of the six
+(see Sprint 787's convergence classification), so `flagged_accounts=None` is the honest
+default until a tool earns one.
+
+**Verification:** a run of each tool against an engagement produces a `ToolRun` row; the
+workpaper index and Anomaly Summary both show the tool as executed; the completion gate
+counts it.
+
+---
+
+### Sprint 741c: Enum labels disagree between the Alembic chain and the ORM
+**Status:** PENDING.
+**Priority:** P1 — one instance is a live production defect; the rest is a schema-truth problem.
+**Source:** PR #177 review + PR #174 review, 2026-10-21.
+
+`Enum(PyEnum)` with no `values_callable` makes SQLAlchemy bind the **member name**. Some
+migrations in the chain follow that and some do not, so the labels a database ends up with
+depend on *how it was built*:
+
+| Type | Migration labels | ORM binds | Agree? |
+|------|------------------|-----------|--------|
+| `usertier` (baseline `e2f21cb79a61`) | `FREE`, `PROFESSIONAL`, … | names | yes |
+| `toolname` (baseline) | `TRIAL_BALANCE`, … | names | yes |
+| `toolname` + flux (`f8a3d1c09b72`, Sprint 308) | `flux_analysis` | `FLUX_ANALYSIS` | **no — live defect** |
+| `subscriptionstatus` (`d5e6f7a8b9c0`) | `active`, `past_due`, … | `ACTIVE`, … | **no** |
+| `subscriptionstatus` + 4 (`f0a1b2c3d4e5`) | lowercase | uppercase | **no** |
+
+**The live defect:** on any PostgreSQL database carrying Sprint 308's lowercase
+`flux_analysis` label, a flux-analysis tool run **cannot be inserted** — the ORM sends
+`FLUX_ANALYSIS`, which is not a label. `routes/audit_flux.py` does call the recorder, so
+this is reachable today.
+
+**Why production still works, and why that is the uncomfortable part.** The 22P02 that
+Sprint 741a fixed proves production's `subscriptionstatus` does **not** contain the label
+`active` — so production's labels are the *names*, which is what `create_all` produces, not
+what the migration chain produces. Combined with the 42P01 on `dunning_episodes` (Sprint
+741b), the evidence is that production's schema was built by `Base.metadata.create_all()`
+and then stamped, so it agrees with the ORM and disagrees with its own migration history.
+
+**Consequence worth stating plainly:** a database rebuilt from the documented Alembic chain
+— a disaster-recovery restore, a fresh staging environment — would **not** match production,
+and subscription writes through the ORM would fail on it. That makes this a restore-drill
+blocker, so it belongs with Sprint 778.
+
+**Scope (needs CEO ask D-1, a Neon read, before any change):**
+1. Read `information_schema.enum_range` for `subscriptionstatus`, `toolname`, `usertier`,
+   `billinginterval` and the billing-event types; record the actual labels.
+2. Decide the canonical direction — almost certainly *names*, since that is what production
+   has and what the ORM binds with no `values_callable` — and correct the migrations that
+   disagree so a fresh chain build matches production.
+3. Add the missing uppercase `FLUX_ANALYSIS` label (and any others) to the affected types.
+4. Add a test that compares every `sa.Enum(..., name=...)` label set in the migrations
+   against the ORM's `.enums` for the same type, so the chain cannot drift from the mapping
+   again. **This is the check that would have caught all five rows above.**
+
+**Do not** "fix" this by adding `values_callable` to the models: that would flip every
+binding to lowercase and break the current production database, which holds name labels.
 
 ---
 

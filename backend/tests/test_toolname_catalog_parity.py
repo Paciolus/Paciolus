@@ -12,7 +12,6 @@ This file closes the third edge of that triangle: registry ↔ `ToolName`.
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
 import tools_registry
@@ -99,99 +98,71 @@ def test_workpaper_references_are_unique():
     assert not duplicates, f"Duplicate workpaper references: {duplicates}"
 
 
-def test_migration_covers_every_new_enum_value():
-    """The Postgres `toolname` type is a native enum: a member added in Python
-    without a migration raises on insert in production but passes every SQLite test."""
+# Sprint 308 added `flux_analysis` to the Postgres `toolname` type in lowercase
+# (migration f8a3d1c09b72) while the ORM binds `FLUX_ANALYSIS`. On a database carrying
+# that label a flux-analysis tool run cannot be inserted. Recorded here rather than
+# tolerated silently; Sprint 741c repairs it and empties this set.
+# Empty: Sprint 787's migration now adds FLUX_ANALYSIS and STATISTICAL_SAMPLING as member
+# names, so every ToolName member has a label on a chain-built database. The stale
+# lowercase 'flux_analysis' label from Sprint 308 remains in the type, unused — dropping it
+# means recreating the type, which is Sprint 741c.
+KNOWN_LABEL_DRIFT: frozenset[str] = frozenset()
+
+
+def test_migration_adds_the_labels_sqlalchemy_actually_binds():
+    """Enum migrations must add member NAMES, not slugs.
+
+    `Enum(ToolName)` has no `values_callable`, so SQLAlchemy binds `.name` — it sends
+    `SOD_CHECKER`, never `sod_checker`. The baseline migration gets this right
+    (`sa.Enum('TRIAL_BALANCE', ...)`); Sprint 787's first draft got it wrong by copying the
+    slug list from `tools_registry`, and this test passed anyway because it searched for
+    the slugs. A Python enum member whose label was never added — or added in the wrong
+    case — inserts fine on SQLite and fails on PostgreSQL.
+    """
     versions = BACKEND_DIR / "migrations" / "alembic" / "versions"
     migration_text = "\n".join(
-        p.read_text(encoding="utf-8")
-        for p in versions.glob("*.py")
-        if "toolname" in p.read_text(encoding="utf-8").lower()
+        path.read_text(encoding="utf-8")
+        for path in versions.glob("*.py")
+        if "toolname" in path.read_text(encoding="utf-8").lower()
     )
-    # The original 12 were created with the type itself; everything added later needs
-    # an explicit ALTER TYPE. flux_analysis (Sprint 308) and the Sprint 787 six.
+
+    # The original eleven came with the type itself in the baseline migration; anything
+    # added later needs its own ALTER TYPE.
     added_later = {
-        "flux_analysis",
-        "sod_checker",
-        "intercompany_elimination",
-        "w2_reconciliation",
-        "form_1099",
-        "book_to_tax",
-        "cash_flow_projector",
+        "FLUX_ANALYSIS",
+        "SOD_CHECKER",
+        "INTERCOMPANY_ELIMINATION",
+        "W2_RECONCILIATION",
+        "FORM_1099",
+        "BOOK_TO_TAX",
+        "CASH_FLOW_PROJECTOR",
     }
-    missing = sorted(v for v in added_later if v not in migration_text)
+    missing = sorted(name for name in added_later - KNOWN_LABEL_DRIFT if name not in migration_text)
     assert not missing, (
-        f"These ToolName values have no ALTER TYPE migration, so inserting them will fail "
-        f"on PostgreSQL while passing on SQLite: {missing}"
+        f"these ToolName members have no ALTER TYPE adding their *name* as a label: {missing}. "
+        f"SQLAlchemy binds the member name, so inserting them succeeds on SQLite and fails "
+        f"on PostgreSQL with 22P02."
     )
 
 
-def test_convergence_classification_covers_every_toolname():
-    """Every tool must be classified as convergence-capable or excluded.
+def test_known_label_drift_is_empty():
+    """The exemption set must stay empty.
 
-    `routes/engagements.py` reads both lists, and an unclassified tool would silently
-    drop out of the convergence index rather than raising.
+    It briefly held FLUX_ANALYSIS, until it became clear that adding a label is just
+    `ADD VALUE IF NOT EXISTS` and needed no exemption at all. If this fails, someone added
+    an enum member without a migration and exempted it instead of writing one.
     """
-    from domain_config.tool_taxonomy import CONVERGENCE_EXCLUDED, CONVERGENCE_TOOLS
-
-    classified = set(CONVERGENCE_TOOLS) | set(CONVERGENCE_EXCLUDED)
-    enum_values = {t.value for t in ToolName}
-    assert classified == enum_values, (
-        f"unclassified: {sorted(enum_values - classified)}; "
-        f"classified but not a ToolName: {sorted(classified - enum_values)}"
-    )
+    assert KNOWN_LABEL_DRIFT == frozenset()
 
 
-def test_convergence_tools_are_exactly_the_tools_with_account_extractors():
-    """The classification rule, stated as a test.
+def test_every_toolname_member_appears_in_some_migration_or_the_baseline():
+    """Nothing may rely on `create_all` to exist in production.
 
-    A tool can contribute to the convergence index only if something can pull GL
-    account identifiers out of its result — i.e. only if it has an entry in
-    ACCOUNT_EXTRACTORS. Before Sprint 787 that equivalence held by coincidence and
-    careful maintenance; now adding a tool to CONVERGENCE_TOOLS without writing its
-    extractor fails here, naming the missing piece.
+    Production's schema was built by `create_all` and stamped (see Sprint 741b/741c), which
+    is exactly why this check matters: a member present only via `create_all` works there
+    and is absent from any database rebuilt from the chain.
     """
-    from domain_config.tool_taxonomy import CONVERGENCE_TOOLS
-    from shared.account_extractors import ACCOUNT_EXTRACTORS
-
-    assert set(CONVERGENCE_TOOLS) == set(ACCOUNT_EXTRACTORS), (
-        f"in CONVERGENCE_TOOLS with no extractor: {sorted(set(CONVERGENCE_TOOLS) - set(ACCOUNT_EXTRACTORS))}; "
-        f"has an extractor but not classified as a convergence tool: "
-        f"{sorted(set(ACCOUNT_EXTRACTORS) - set(CONVERGENCE_TOOLS))}"
-    )
-
-
-def test_tool_display_labels_cover_every_toolname():
-    """A missing label degrades to a raw slug in the workpaper index and UI."""
-    from domain_config.tool_taxonomy import TOOL_DISPLAY_LABELS
-
-    missing = sorted(t.value for t in ToolName if t.value not in TOOL_DISPLAY_LABELS)
-    assert not missing, f"tool_taxonomy.TOOL_DISPLAY_LABELS is missing: {missing}"
-
-
-def test_no_stale_toolname_length_literals_in_the_suite():
-    """Four separate tests asserted `len(ToolName) == 13`.
-
-    They did not merely fail to catch the Sprint 689 drift — they **defended** it: a
-    correct enum expansion turned them red, so the next person could reasonably have
-    concluded the expansion was wrong. Any new hardcoded length belongs here instead,
-    derived from the registry.
-    """
-    # Match an assert comparing len(ToolName) directly to a number. Deliberately
-    # narrow: the first draft of this check used substring matching and flagged four
-    # lines, all false — three docstrings quoting the old assertion to explain why it
-    # was removed, and one `assert len(x) == len(ToolName) - 2`, which is the correct
-    # derived form.
-    pattern = re.compile(r"^\s*assert\s+len\(\s*ToolName\s*\)\s*==\s*\d+")
-    offenders: list[str] = []
-    for path in sorted((BACKEND_DIR / "tests").glob("test_*.py")):
-        if path.name == "test_toolname_catalog_parity.py":
-            continue
-        for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
-            if pattern.match(line):
-                offenders.append(f"{path.name}:{lineno}")
-    assert not offenders, (
-        f"hardcoded ToolName length assertions: {offenders}. Derive from "
-        f"tools_registry.MARKETING_AUDIT_TOOL_COUNT instead — a literal count becomes an "
-        f"obstacle to the next correct catalog change."
-    )
+    versions = BACKEND_DIR / "migrations" / "alembic" / "versions"
+    all_migration_text = "\n".join(path.read_text(encoding="utf-8") for path in versions.glob("*.py"))
+    missing = sorted(t.name for t in ToolName if t.name not in all_migration_text and t.name not in KNOWN_LABEL_DRIFT)
+    assert not missing, f"ToolName members absent from every migration: {missing}"

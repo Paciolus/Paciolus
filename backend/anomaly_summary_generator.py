@@ -55,7 +55,11 @@ from shared.scope_methodology import (
     build_methodology_statement,
     build_scope_statement,
 )
-from tools_registry import MARKETING_AUDIT_TOOL_COUNT
+from tools_registry import MARKETING_AUDIT_TOOL_COUNT, TOOLS
+
+# Slugs of the tools the catalog is sold as, i.e. the set MARKETING_AUDIT_TOOL_COUNT
+# counts. Used to keep the coverage numerator and denominator over the same set.
+CATALOG_TOOL_SLUGS: frozenset[str] = frozenset(t.slug for t in TOOLS if t.is_marketing_audit_tool)
 from workpaper_index_generator import TOOL_LABELS
 
 # ---------------------------------------------------------------------------
@@ -304,8 +308,17 @@ class AnomalySummaryGenerator:
             tool_val = run.tool_name.value if run.tool_name else "unknown"
             runs_by_tool.setdefault(tool_val, []).append(run)
 
-        executed_tools = {ToolName(k) for k in runs_by_tool if k in [t.value for t in ToolName]}
-        not_executed_tools = [t for t in ToolName if t not in executed_tools]
+        # Sprint 787 / PR #174 review: scope BOTH sides of the coverage fraction to the
+        # marketing catalog. `ToolName` carries `flux_analysis`, which is a free-tier
+        # diagnostic surface and not one of the 18 sold tools — counting it in the
+        # numerator against a catalog denominator could print "19 of 18", and it inflated
+        # the not-executed coverage penalty with a tool the sentence does not describe.
+        #
+        # Runs of non-catalog surfaces are still counted in "Total Tool Runs" below; they
+        # are simply not part of the catalog-coverage fraction.
+        catalog_tools = [t for t in ToolName if t.value in CATALOG_TOOL_SLUGS]
+        executed_tools = {ToolName(k) for k in runs_by_tool if k in CATALOG_TOOL_SLUGS}
+        not_executed_tools = [t for t in catalog_tools if t not in executed_tools]
 
         tools_run_count = len(executed_tools)
         total_runs = len(tool_runs)
