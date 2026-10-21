@@ -382,7 +382,7 @@ The trigger here was self-inflicted: the eight `tasks/todo.md` union resolutions
 
 Re-run after the fix: `13 sprint sections, matches count`; 13 archived + 12 remaining = 25, the pre-archival heading count.
 
-**Commit SHA:** filled at merge.
+**Commit SHA:** `6955a411`.
 
 
 ---
