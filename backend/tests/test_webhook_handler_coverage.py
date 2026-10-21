@@ -23,6 +23,7 @@ from datetime import UTC, datetime
 from unittest.mock import patch
 
 import pytest
+from sqlalchemy.exc import StatementError
 
 from billing.webhook_handler import (
     _apply_dpa_from_metadata,
@@ -153,13 +154,22 @@ class TestInvoicePaymentSucceeded:
             stripe_subscription_id="sub_bad_tier",
         )
         db_session.add(sub)
-        db_session.flush()
-        db_session.expire_all()
 
-        # The Enum type raises on result processing, so the bad value is unreadable:
-        # any handler that loads this row raises before reaching its own ValueError guard.
-        with pytest.raises(LookupError, match="platinum"):
+        # Both dialects reject the value, at different moments and with different
+        # exceptions — so assert the property, not one dialect's way of reporting it:
+        #
+        #   PostgreSQL: native enum type, the INSERT fails with
+        #               DataError / InvalidTextRepresentation.
+        #   SQLite:     no type constraint, the insert succeeds and SQLAlchemy's Enum
+        #               raises LookupError on READ-BACK during result processing.
+        #
+        # The first draft asserted only the SQLite shape and the PostgreSQL 15 matrix
+        # caught it — the same dialect-visibility trap Sprint 741a is about.
+        with pytest.raises((LookupError, StatementError), match="platinum"):
+            db_session.flush()
+            db_session.expire_all()
             db_session.query(Subscription).filter(Subscription.user_id == user.id).first()
+
         db_session.rollback()
 
     def test_missing_customer_is_ignored(self, db_session):
