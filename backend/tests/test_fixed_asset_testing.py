@@ -1287,9 +1287,18 @@ class TestFixedAssetTestingRoute:
         assert ToolName.FIXED_ASSET_TESTING.value == "fixed_asset_testing"
 
     def test_tool_name_count(self):
+        """Every catalog tool must be trackable on an engagement.
+
+        Previously `assert len(ToolName) == 13`. Sprint 689 took the catalog to 18 and
+        this assertion would have failed the correct enum expansion — the fourth copy
+        of the same stale literal in the suite. Derived from the registry now; the
+        exhaustive checks live in tests/test_toolname_catalog_parity.py.
+        """
+        import tools_registry
         from engagement_model import ToolName
 
-        assert len(ToolName) == 13
+        catalog = {t.slug for t in tools_registry.TOOLS if t.is_marketing_audit_tool}
+        assert catalog <= {t.value for t in ToolName}
 
     def test_workpaper_index_labels(self):
         from engagement_model import ToolName

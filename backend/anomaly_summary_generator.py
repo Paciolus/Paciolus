@@ -55,6 +55,11 @@ from shared.scope_methodology import (
     build_methodology_statement,
     build_scope_statement,
 )
+from tools_registry import MARKETING_AUDIT_TOOL_COUNT, TOOLS
+
+# Slugs of the tools the catalog is sold as, i.e. the set MARKETING_AUDIT_TOOL_COUNT
+# counts. Used to keep the coverage numerator and denominator over the same set.
+CATALOG_TOOL_SLUGS: frozenset[str] = frozenset(t.slug for t in TOOLS if t.is_marketing_audit_tool)
 from workpaper_index_generator import TOOL_LABELS
 
 # ---------------------------------------------------------------------------
@@ -91,6 +96,13 @@ TOOL_CROSS_REFERENCES: dict[ToolName, str] = {
     ToolName.INVENTORY_TESTING: "WP-INV-001",
     ToolName.STATISTICAL_SAMPLING: "WP-SSM-001",
     ToolName.FLUX_ANALYSIS: "WP-FEA-001",
+    # Sprint 787 — the Sprint 689 tools
+    ToolName.SOD_CHECKER: "WP-SOD-001",
+    ToolName.INTERCOMPANY_ELIMINATION: "WP-ICE-001",
+    ToolName.W2_RECONCILIATION: "WP-W23-001",
+    ToolName.FORM_1099: "WP-T99-001",
+    ToolName.BOOK_TO_TAX: "WP-BTT-001",
+    ToolName.CASH_FLOW_PROJECTOR: "WP-CFP-001",
 }
 
 # Auditing standards references (not FASB codification — these are audit procedure standards)
@@ -119,6 +131,13 @@ def _compute_engagement_risk(
     Returns (risk_label, total_score).
     """
     score = (high_count * 3) + (medium_count * 2) + (low_count * 1)
+    # Sprint 787: `tools_not_run` counts ToolName members with no run on this
+    # engagement, which is the number of *trackable* run types — not the 18-tool
+    # customer-facing catalog (ToolName also carries flux_analysis). Expanding the
+    # enum therefore raises the ceiling on this penalty, which is correct: more
+    # untouched tools genuinely is broader uncovered scope. But note the tier can
+    # reach ELEVATED on coverage alone, with zero anomalies — which is why the
+    # memo's basis note names coverage as well as flag density.
     coverage_penalty = int(tools_not_run * 1.5)
     total_score = score + coverage_penalty
 
@@ -289,8 +308,17 @@ class AnomalySummaryGenerator:
             tool_val = run.tool_name.value if run.tool_name else "unknown"
             runs_by_tool.setdefault(tool_val, []).append(run)
 
-        executed_tools = {ToolName(k) for k in runs_by_tool if k in [t.value for t in ToolName]}
-        not_executed_tools = [t for t in ToolName if t not in executed_tools]
+        # Sprint 787 / PR #174 review: scope BOTH sides of the coverage fraction to the
+        # marketing catalog. `ToolName` carries `flux_analysis`, which is a free-tier
+        # diagnostic surface and not one of the 18 sold tools — counting it in the
+        # numerator against a catalog denominator could print "19 of 18", and it inflated
+        # the not-executed coverage penalty with a tool the sentence does not describe.
+        #
+        # Runs of non-catalog surfaces are still counted in "Total Tool Runs" below; they
+        # are simply not part of the catalog-coverage fraction.
+        catalog_tools = [t for t in ToolName if t.value in CATALOG_TOOL_SLUGS]
+        executed_tools = {ToolName(k) for k in runs_by_tool if k in CATALOG_TOOL_SLUGS}
+        not_executed_tools = [t for t in catalog_tools if t not in executed_tools]
 
         tools_run_count = len(executed_tools)
         total_runs = len(tool_runs)
@@ -324,7 +352,7 @@ class AnomalySummaryGenerator:
         # Engagement-level summary metrics
         story.append(
             Paragraph(
-                f"<b>Tools Executed:</b> {tools_run_count} of {len(ToolName)} available tools",
+                f"<b>Tools Executed:</b> {tools_run_count} of {MARKETING_AUDIT_TOOL_COUNT} available tools",
                 styles["MemoBody"],
             )
         )
@@ -755,7 +783,7 @@ class AnomalySummaryGenerator:
         if high_count > 0:
             risk_details.append(f"{high_count} High-severity anomalies identified")
         if not_run_count > 0:
-            risk_details.append(f"{not_run_count} of {len(ToolName)} tools not executed")
+            risk_details.append(f"{not_run_count} of {MARKETING_AUDIT_TOOL_COUNT} tools not executed")
         if len(follow_up_items) > 0:
             risk_details.append(f"{len(follow_up_items)} total anomalies across {len(items_by_tool)} tools")
 
@@ -774,7 +802,7 @@ class AnomalySummaryGenerator:
                 if high_count > 0:
                     narrative_parts.append("and ")
                 narrative_parts.append(
-                    f"incomplete tool coverage ({not_run_count} of {len(ToolName)} tools not executed). "
+                    f"incomplete tool coverage ({not_run_count} of {MARKETING_AUDIT_TOOL_COUNT} tools not executed). "
                 )
             elif high_count > 0:
                 narrative_parts.append("identified across the executed tool suite. ")

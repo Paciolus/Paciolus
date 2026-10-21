@@ -107,15 +107,7 @@ class TestExtractJeAccounts:
         assert extract_je_accounts({}) == []
 
     def test_single_flagged_entry(self):
-        result = {
-            "test_results": [
-                {
-                    "flagged_entries": [
-                        {"entry": {"account": "Office Supplies"}}
-                    ]
-                }
-            ]
-        }
+        result = {"test_results": [{"flagged_entries": [{"entry": {"account": "Office Supplies"}}]}]}
         assert extract_je_accounts(result) == ["Office Supplies"]
 
     def test_multiple_tests_deduped(self):
@@ -137,11 +129,7 @@ class TestExtractJeAccounts:
         assert extract_je_accounts(result) == ["Cash", "Revenue"]
 
     def test_missing_entry_key(self):
-        result = {
-            "test_results": [
-                {"flagged_entries": [{"issue": "bad"}]}
-            ]
-        }
+        result = {"test_results": [{"flagged_entries": [{"issue": "bad"}]}]}
         assert extract_je_accounts(result) == []
 
 
@@ -600,11 +588,20 @@ class TestConvergenceResponseCoverage:
 
         assert "flux_analysis" in CONVERGENCE_TOOLS
         assert "trial_balance" in CONVERGENCE_TOOLS
-        assert len(CONVERGENCE_TOOLS) == 7
 
         assert "bank_reconciliation" in CONVERGENCE_EXCLUDED
         assert "statistical_sampling" in CONVERGENCE_EXCLUDED
-        assert len(CONVERGENCE_EXCLUDED) == 6
+
+        # Sizes are derived, not asserted as literals: this test previously pinned
+        # 7 and 6, and the 6 went stale the moment Sprint 787 classified the six
+        # tools Sprint 689 had added. A convergence tool is exactly a tool with an
+        # account extractor, and the two lists must together cover the enum —
+        # both relationships are asserted in tests/test_toolname_catalog_parity.py.
+        from engagement_model import ToolName
+        from shared.account_extractors import ACCOUNT_EXTRACTORS
+
+        assert len(CONVERGENCE_TOOLS) == len(ACCOUNT_EXTRACTORS)
+        assert len(CONVERGENCE_TOOLS) + len(CONVERGENCE_EXCLUDED) == len(ToolName)
 
     def test_no_overlap_between_covered_and_excluded(self):
         from routes.engagements import CONVERGENCE_EXCLUDED, CONVERGENCE_TOOLS
