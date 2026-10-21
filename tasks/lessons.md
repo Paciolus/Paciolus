@@ -62,6 +62,45 @@ diffing mine against `_check_tool_count_in_doc` would have surfaced this before 
 
 ---
 
+## Writing docs "from the engine" means from the implementation, not the docstring (PR #184 review, 2026-10-21)
+
+I wrote six user-guide chapters and said, in the sprint record and the PR, that each was
+written **from the engine** rather than from the UI. Four of them described behaviour the
+code does not have, and the review caught all four:
+
+- RT-17 "flags a blank customer" — `RevenueEntry` has **no customer field**. I had copied
+  the first bullet of the function's docstring; the docstring's own closing note says
+  "currently the model doesn't have a separate customer_id column". The implementation
+  checks three entirely different predicates.
+- The 941 comparison "per-quarter differences" — it sums every supplied quarter and
+  compares against *annual* payroll, emitting each finding with `quarter=None`.
+- The 1099 CSV "with the data-quality flags" — `export_1099_csv` writes `result.candidates`
+  and never touches `data_quality` or `w9_collection_list`.
+- The cash-flow CSV "horizon summaries and the weekly grid" — it writes 90 **daily** rows
+  per scenario and no horizon rows at all.
+
+Three of the four came from reading a docstring or a route description and trusting it. The
+fourth came from assuming an export serialises the whole result object.
+
+**Pattern: for a claim about what a function does, read the function. For a claim about
+what an export contains, read the writer.** A docstring is a statement of intent by someone
+who may have shipped less than they intended — which is the same reason this repo's sprint
+records keep turning out to overclaim. I spent the session correcting exactly that failure
+in other people's prose and then imported it wholesale into mine.
+
+**Corollary that would have caught all four cheaply:** for an export, the ground truth is
+the `writer.writerow` header list. It is one grep and it is unambiguous.
+
+**And the harder lesson about "complete".** The same review found that both tax tools apply
+one fixed set of statutory limits to any `tax_year` from 2000 to 2099. I had documented
+them and marked them `complete` in `features/status.json` on the strength of the endpoints
+working. Working is not correct. A tool that computes confidently against the wrong
+constants is worse than one that errors — and for the two tools that touch IRS filings, the
+bar for "complete" has to include *which year's figures it applies*. Both downgraded to
+`partial` with the reason recorded, and filed as Sprint 793.
+
+---
+
 ## Do not edit the tree while a suite runs against it (2026-10-21)
 
 I started a full backend suite in the background, then kept working — switched

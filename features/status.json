@@ -309,9 +309,9 @@
       "Verify employee discrepancies and Form 941 mismatches are returned",
       "POST /audit/w2-reconciliation/export.csv returns a CSV export"
     ],
-    "status": "complete",
+    "status": "partial",
     "last_verified": "2026-10-21",
-    "notes": "IRC §6051. CSV export only — no PDF memo yet."
+    "notes": "PARTIAL (Sprint 793): the engine holds one fixed set of statutory limits — SS wage base, HSA self-only/family, 401(k) and SIMPLE elective deferrals — and applies them to any tax_year from 2000 to 2099 without selecting by year. The route exposes no override, despite the Sprint 636 record claiming the thresholds are caller-overridable. The wage comparisons and the 941 reconciliation are sound; the cap and over-limit findings are only as current as the hardcoded constants. CSV export only."
   },
   {
     "id": "form-1099-preparation",
@@ -323,9 +323,9 @@
       "Verify vendors missing a TIN appear on the W-9 collection list",
       "POST /audit/form-1099/export.csv returns a CSV export"
     ],
-    "status": "complete",
+    "status": "partial",
     "last_verified": "2026-10-21",
-    "notes": "IRC §6041 / §6041A / Pub 1220. CSV export only — no PDF memo yet."
+    "notes": "PARTIAL (Sprint 793): the reporting thresholds are static ($600 NEC / $600 MISC / $10 INT) and applied to any tax_year without varying by year or sub-category, so for a year in which a threshold has moved the candidate list errs in both directions. Vendor aggregation, the corporate safe harbour, the processor exemption and the data-quality report are sound. CSV export carries candidates only — not the data-quality report or the W-9 collection list."
   },
   {
     "id": "book-to-tax-reconciliation",
@@ -353,7 +353,7 @@
     ],
     "status": "complete",
     "last_verified": "2026-10-21",
-    "notes": "ASC 230. Forward-looking counterpart to the historical indirect-method cash flow statement, which is a separate feature. CSV export only."
+    "notes": "ASC 230. Forward-looking counterpart to the historical indirect-method cash flow statement, which is a separate feature. CSV export carries the 90 daily points per scenario — not the 30/60/90 horizon summaries, which are API/screen only."
   },
   {
     "id": "multi-currency-conversion",

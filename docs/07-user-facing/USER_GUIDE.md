@@ -525,9 +525,13 @@ Upload a revenue register or sales journal. Key columns: Transaction ID, Date, A
 - **RT-10:** Benford's Law first-digit analysis
 - **RT-11:** Duplicate entries
 - **RT-12:** Contra-revenue anomalies
-- **RT-17:** Contract validity (ASC 606 Step 1) — a blank customer on an entry claiming
-  recognition means there is no identified counterparty, and therefore no contract per
-  ASC 606-10-25-1.
+- **RT-17:** Contract validity (ASC 606 Step 1). Flags three combinations, any of which means
+  revenue is recognised without the contract structure ASC 606 requires:
+  a `contract_id` with no `performance_obligation_id` (Step 2 requires identified obligations);
+  a `recognition_method` with no `contract_id` (no underlying contract to support recognition);
+  and point-in-time recognition with no `obligation_satisfaction_date` (ASC 606-10-25-30 requires
+  the transfer-of-control moment to be identified). Two or more issues on one entry raise it to
+  high severity. Skipped entirely when no contract-aware columns are detected.
 
 **Tier 4 — Contract-Aware (4 tests, optional):**
 - **RT-13:** Recognition timing (ASC 606 Step 5)
@@ -799,7 +803,7 @@ Without a counterparty entity on at least one side, a balance cannot be paired a
 |-------|----------|---------|
 | Payroll YTD | Yes | Employee ID, Employee Name, Federal Wages, Federal Withholding, SS Wages, SS Tax Withheld, Medicare Wages, Medicare Tax Withheld |
 | Draft W-2 list | Optional | Same per-employee amounts as drafted for filing |
-| Form 941 quarters | Optional | Up to four quarters: total wages, federal withholding, SS wages, Medicare wages |
+| Form 941 quarters | Optional — but see below | Up to four quarters: total wages, federal withholding, SS wages, Medicare wages |
 
 Also supply the tax year and a tolerance (default `1.00`). Supplying only payroll YTD still produces internal-consistency checks; adding the W-2 drafts and 941s is what enables the cross-form reconciliation.
 
@@ -810,10 +814,26 @@ Also supply the tax year and a tolerance (default `1.00`). Supplying only payrol
 - Over-contributions to HSAs and retirement plans
 - Quarterly 941 totals that do not sum to the W-3 summary
 
+> **Check the statutory limits before relying on the cap and over-limit findings.** The engine
+> holds **one fixed set** of limits — Social Security wage base, HSA self-only and family,
+> 401(k) and SIMPLE elective deferrals — and applies them to whatever `tax_year` you supply,
+> anywhere from 2000 to 2099. It does not select limits by year, and the API exposes no way to
+> override them. Treat every wage-base and over-limit finding as "check this against the figures
+> for your tax year" rather than as a conclusion. Tracked as **Sprint 793**; the wage
+> comparisons and the 941 reconciliation are unaffected, since those compare your own numbers to
+> each other.
+
 ### 17.3 Reading the Output
 
 - **Employee discrepancies** — per-employee differences between payroll and the draft W-2.
-- **Form 941 mismatches** — per-quarter differences against the aggregated payroll totals.
+- **Form 941 mismatches** — an **annual aggregate** comparison. The engine sums every quarter
+  you supply and compares that sum against the full-year payroll totals; it does not compute
+  per-quarter differences, and each finding is reported without a quarter attached.
+
+  > **Supply all four quarters or none.** Because the comparison is against *annual* payroll,
+  > supplying only Q1 compares one quarter's totals to the whole year and reports a large
+  > mismatch that means nothing. This is a limitation of the current implementation, not a
+  > finding about your data.
 - **W-3 totals** — the computed summary the four 941s should agree to.
 
 **The engine flags discrepancies; it does not decide which number is right.** When payroll and the draft W-2 disagree, determining the correct figure is a practitioner judgment about the underlying facts.
@@ -845,11 +865,19 @@ Plus the tax year. Entity type drives the corporate safe harbour, and payment me
 
 ### 18.2 Thresholds
 
-| Form | Threshold (aggregate per vendor) |
-|------|----------------------------------|
+| Form | Threshold the engine applies (aggregate per vendor) |
+|------|------------------------------------------------------|
 | 1099-NEC — nonemployee compensation | $600 |
 | 1099-MISC — rents, royalties, medical, legal | $600 |
 | 1099-INT — interest | $10 |
+
+> **These are fixed, and the reporting thresholds are not.** The engine applies the table above
+> to whatever `tax_year` you supply and does not vary by year or sub-category — so for a year in
+> which a threshold has moved, the candidate list will be wrong in both directions: vendors below
+> the current threshold included, and vendors above a *lowered* one omitted. Confirm the
+> thresholds for your filing year before treating the candidate list as complete. Tracked as
+> **Sprint 793**. The vendor aggregation, the corporate safe harbour, the processor exemption and
+> the data-quality report are unaffected.
 
 ### 18.3 Reading the Output
 
@@ -861,7 +889,13 @@ Plus the tax year. Entity type drives the corporate safe harbour, and payment me
 
 ### 18.4 Exporting
 
-- **1099 Candidates (CSV)** — candidate listing with box amounts and the data-quality flags.
+- **1099 Candidates (CSV)** — the candidate listing only: form type, vendor, total reportable,
+  per-box categories, payment count, excluded amount, and the per-candidate review flag with its
+  reasons.
+
+  The **data-quality report and the W-9 collection list are not in the CSV** — they are returned
+  by the API and shown on screen, but the export does not carry them. Work through those on
+  screen before exporting, or capture them separately.
 
 A PDF memo for this tool is not yet available.
 
@@ -963,7 +997,12 @@ AR buckets are also ranked by their expected contribution to collections under t
 
 ### 20.4 Exporting
 
-- **Projection (CSV)** — per-scenario horizon summaries and the weekly grid.
+- **Projection (CSV)** — a **daily** row per scenario: day index, date, AR inflow, AP outflow,
+  recurring net, net change and ending balance, for all 90 days of each of the three scenarios.
+
+  The **30 / 60 / 90-day horizon summaries are not in the CSV** — including the lowest balance
+  and the day it occurs. Those are returned by the API and shown on screen. If you need them in
+  a workpaper, read them off the screen or derive them from the daily rows.
 
 PDF and Excel exports for this tool are not yet available.
 
