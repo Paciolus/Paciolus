@@ -284,6 +284,26 @@ wearing different clothes.
 Regression-proved: moving `flux_engine.py` aside fails with
 `report success while scanning nothing: ['flux']`; restoring passes.
 
+> **PR #185 review — the guard had the defect it was written to prevent.** The first draft
+> enumerated `services/audit/*/analysis.py`, which excluded
+> `services/audit/flux/recon.py` — the **ADR-018 pilot relocation**, and the one module that
+> predates the `analysis.py` convention. Deleting its shim `recon_engine.py` left the test
+> green while `lint_domain_relocation.py` lost the ability to enumerate that engine: precisely
+> the regression the test exists to catch, missed by the test's own filename filter.
+>
+> That is this sprint's thesis reproduced inside the sprint's own deliverable — a scan whose
+> scope silently excludes the thing it was written for. Enumeration is now by **directory**:
+> every non-`__init__` module under a per-tool subdirectory, with the shim name taken from the
+> module stem (`recon.py` → `recon_engine.py`) except for the conventional `analysis.py`, which
+> takes its directory's (`ap_testing/analysis.py` → `ap_testing_engine.py`). The rule resolves
+> correctly for all 11 modules. Top-level `services/audit/*.py` — `contracts.py`,
+> `file_tool_scaffold.py`, `flux_service.py` — are shared infrastructure, not per-tool engines,
+> and stay excluded.
+>
+> A second test pins the pilot **by name**, so a future narrowing of the glob cannot drop it
+> silently again. Re-proved: removing `recon_engine.py` now fails with
+> `scanning nothing: ['services/audit/flux/recon.py (expected recon_engine.py)']`.
+
 **The operating rule, written down where the next reader will find it:** when inheriting a
 consistency gate, do not read its file list as its scope — **the scope is the patterns**, and the
 file list is a separate thing that can be wrong on its own. A gate whose coverage you cannot state

@@ -101,6 +101,35 @@ bar for "complete" has to include *which year's figures it applies*. Both downgr
 
 ---
 
+## The guard I wrote to prevent a defect had the defect (Sprint 792 review, 2026-10-21)
+
+Sprint 792's thesis: a scan scoped by a filename or path list silently stops covering
+the thing it was written for. Its deliverable was one test asserting every relocated
+engine has the root shim both linters depend on.
+
+My test enumerated `services/audit/*/analysis.py`. The **ADR-018 pilot relocation** is
+`services/audit/flux/recon.py` — the one module that predates the `analysis.py`
+convention. So deleting its shim left my test green while `lint_domain_relocation.py`
+lost the ability to see that engine: exactly the regression the test exists to catch,
+missed by the test's own filter.
+
+I had regression-proved it, too — by removing `flux_engine.py`, which *is* an
+`analysis.py` case. The proof confirmed the test worked on the shape I had thought of
+and said nothing about the shape I had not.
+
+**Pattern: when you write a guard against a class of defect, the first thing to check is
+whether the guard is a member of that class.** It usually is, because the same habit of
+mind produced both. Enumerate by the structural fact (a directory of per-tool modules),
+not by the naming convention (`analysis.py`) — conventions have exceptions and the
+exception is nearly always the oldest thing, which is nearly always the thing with the
+least test coverage.
+
+**And on regression-proving specifically: injecting the violation you expected proves
+less than it feels like.** Pick the injection case you consider *least* likely to be
+covered. Here that was the pilot, and it would have taken thirty seconds.
+
+---
+
 ## Audit the class once you have seen the instance three times (Sprint 792, 2026-10-21)
 
 By the seventh finding of the same shape in one day — a gate scoped by a file list
