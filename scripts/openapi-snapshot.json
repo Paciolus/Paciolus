@@ -6589,6 +6589,18 @@
             "title": "Book Pretax Income",
             "type": "string"
           },
+          "engagement_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional engagement to link this run to",
+            "title": "Engagement Id"
+          },
           "federal_tax_rate": {
             "maxLength": 12,
             "minLength": 1,
@@ -6883,6 +6895,18 @@
           },
           "ar_aging": {
             "$ref": "#/components/schemas/AgingBucketsRequest"
+          },
+          "engagement_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional engagement to link this run to",
+            "title": "Engagement Id"
           },
           "min_safe_cash": {
             "anyOf": [
@@ -12911,6 +12935,18 @@
       },
       "Form1099Request": {
         "properties": {
+          "engagement_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional engagement to link this run to",
+            "title": "Engagement Id"
+          },
           "payments": {
             "items": {
               "$ref": "#/components/schemas/PaymentRequest"
@@ -13527,6 +13563,18 @@
       },
       "IntercompanyEliminationRequest": {
         "properties": {
+          "engagement_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional engagement to link this run to",
+            "title": "Engagement Id"
+          },
           "entities": {
             "items": {
               "$ref": "#/components/schemas/EntityTBRequest"
@@ -22816,6 +22864,18 @@
       },
       "SodAnalysisRequest": {
         "properties": {
+          "engagement_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional engagement to link this run to",
+            "title": "Engagement Id"
+          },
           "extra_rules": {
             "items": {
               "$ref": "#/components/schemas/CustomRuleRequest"
@@ -25863,6 +25923,18 @@
             "maxItems": 10000,
             "title": "Employees",
             "type": "array"
+          },
+          "engagement_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional engagement to link this run to",
+            "title": "Engagement Id"
           },
           "form_941_quarters": {
             "items": {
@@ -29589,7 +29661,7 @@
     },
     "/audit/sod/rules": {
       "get": {
-        "description": "Return the hardcoded SoD rule library so the frontend can render a\nrule reference card.",
+        "description": "Return the hardcoded SoD rule library so the frontend can render a\nrule reference card.\n\nReference data, so no entitlement check — it exposes the rule library, not\nan analysis of customer data. Mirrors ``/audit/book-to-tax/standard-adjustments``.",
         "operationId": "list_default_rules_audit_sod_rules_get",
         "responses": {
           "200": {

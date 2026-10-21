@@ -12,9 +12,9 @@ import csv
 import io
 import logging
 from decimal import Decimal, InvalidOperation
-from typing import Literal
+from typing import Literal, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy.orm import Session
@@ -25,6 +25,7 @@ from shared.entitlement_checks import check_upload_limit
 from shared.error_messages import sanitize_error
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.testing_route import enforce_tool_access
+from shared.tool_run_recorder import maybe_record_tool_run
 from w2_reconciliation_engine import (
     EmployeePayroll,
     EmployeeW2Draft,
@@ -88,6 +89,8 @@ class W2ReconciliationRequest(BaseModel):
     w2_drafts: list[EmployeeW2DraftRequest] = Field(default_factory=list, max_length=10000)
     form_941_quarters: list[Form941QuarterRequest] = Field(default_factory=list, max_length=4)
     tolerance: str = Field(default="1.00", max_length=12)
+    # Sprint 787b: optional engagement link so a run lands in the workpaper trail.
+    engagement_id: Optional[int] = Field(None, description="Optional engagement to link this run to")
 
 
 def _to_decimal(field_name: str, raw: str) -> Decimal:
@@ -156,6 +159,7 @@ def _build_config(payload: W2ReconciliationRequest) -> W2ReconciliationConfig:
 def run_reconciliation(
     request: Request,
     payload: W2ReconciliationRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
@@ -166,13 +170,23 @@ def run_reconciliation(
     try:
         result = reconcile_w2(_build_config(payload))
     except W2ReconciliationInputError as e:
+        maybe_record_tool_run(db, payload.engagement_id, current_user.id, "w2_reconciliation", False)
         raise HTTPException(status_code=400, detail=str(e))
     except (ValueError, ValidationError) as e:
         logger.exception("W-2 reconciliation failed")
+        maybe_record_tool_run(db, payload.engagement_id, current_user.id, "w2_reconciliation", False)
         raise HTTPException(
             status_code=400,
             detail=sanitize_error(e, "audit", "w2_reconciliation_error"),
         )
+
+    # Sprint 787b: record the run on the engagement workpaper trail. Both
+    # composite_score and flagged_accounts are None by design, not omission:
+    # this engine produces no composite score, and shared/account_extractors.py
+    # has no extractor for it because its output is not GL-account-level.
+    background_tasks.add_task(
+        maybe_record_tool_run, db, payload.engagement_id, current_user.id, "w2_reconciliation", True, None, None
+    )
     return result.to_dict()
 
 

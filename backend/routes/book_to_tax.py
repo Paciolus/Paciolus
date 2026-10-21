@@ -13,9 +13,9 @@ import csv
 import io
 import logging
 from decimal import Decimal, InvalidOperation
-from typing import Literal
+from typing import Literal, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy.orm import Session
@@ -36,6 +36,7 @@ from shared.entitlement_checks import check_upload_limit
 from shared.error_messages import sanitize_error
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.testing_route import enforce_tool_access
+from shared.tool_run_recorder import maybe_record_tool_run
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +68,8 @@ class BookToTaxRequest(BaseModel):
     state_tax_rate: str = Field(default="0", max_length=12)
     adjustments: list[AdjustmentRequest] = Field(default_factory=list, max_length=500)
     rollforward: RollforwardRequest = Field(default_factory=RollforwardRequest)
+    # Sprint 787b: optional engagement link so a run lands in the workpaper trail.
+    engagement_id: Optional[int] = Field(None, description="Optional engagement to link this run to")
 
 
 def _to_decimal(field_name: str, raw: str) -> Decimal:
@@ -131,6 +134,7 @@ def list_standard_adjustments(
 def calculate(
     request: Request,
     payload: BookToTaxRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
@@ -141,13 +145,23 @@ def calculate(
     try:
         result = calculate_book_to_tax(_build_config(payload))
     except BookToTaxInputError as e:
+        maybe_record_tool_run(db, payload.engagement_id, current_user.id, "book_to_tax", False)
         raise HTTPException(status_code=400, detail=str(e))
     except (ValueError, ValidationError) as e:
         logger.exception("Book-to-tax calculation failed")
+        maybe_record_tool_run(db, payload.engagement_id, current_user.id, "book_to_tax", False)
         raise HTTPException(
             status_code=400,
             detail=sanitize_error(e, "audit", "book_to_tax_error"),
         )
+
+    # Sprint 787b: record the run on the engagement workpaper trail. Both
+    # composite_score and flagged_accounts are None by design, not omission:
+    # this engine produces no composite score, and shared/account_extractors.py
+    # has no extractor for it because its output is not GL-account-level.
+    background_tasks.add_task(
+        maybe_record_tool_run, db, payload.engagement_id, current_user.id, "book_to_tax", True, None, None
+    )
     return result.to_dict()
 
 
