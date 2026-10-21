@@ -4,6 +4,99 @@
 
 ---
 
+## A declared contract nobody implements is a bug with documentation (Sprint 787b review, 2026-10-21)
+
+`shared/tool_run_recorder.py` opened with a confident statement of intent:
+
+> `maybe_record_tool_run` is deliberately never the transactional boundary: it calls
+> `db.add` but does not commit, letting the route handler own the commit.
+
+**Not one of the thirteen call sites ever committed it.** `get_db` ends in a bare
+`db.close()`, so for every run without an `engagement_id` the pending `ToolActivity`
+insert was discarded. Measured through a real `get_db` generator: zero rows survive. The
+multi-tool dashboard feed has been silently losing engagement-less runs for as long as the
+feed has existed.
+
+The reason nobody noticed is almost worse than the bug. Runs *with* a resolving engagement
+did persist — because `EngagementManager.record_tool_run` commits, and that commit flushed
+the activity row along with it. So the feature worked in exactly the case anyone would
+test and failed in the default case.
+
+**Pattern: a docstring that assigns a responsibility to callers is a claim about thirteen
+other files, and it should be tested like one.** Either enforce it (a test asserting every
+caller commits) or do not make it — put the commit where the knowledge is. The comment
+cost nothing to write and bought a defect that outlived every sprint that touched the
+module.
+
+**Corollary on test-session overrides.** Our route tests install `get_db` as
+`lambda: db_session` — a plain callable, so FastAPI never runs teardown, and the
+`db_session` fixture's savepoint plus autoflush makes pending inserts visible to the next
+query in the same session. That is the right fixture for route behaviour and the *wrong*
+one for durability: it cannot distinguish "written" from "committed". **When the property
+under test is that data survives the request, the test has to drive the real dependency
+generator and read back from an independent session.** My own
+`test_activity_row_written_even_without_engagement` asserted exactly the thing that was
+broken and passed.
+
+---
+
+## Ordering a write before its validation turns bad input into a 500 (Sprint 787b review, 2026-10-21)
+
+`maybe_record_tool_run` wrote the `ToolActivity` row carrying the caller-supplied
+`engagement_id`, *then* queried for that engagement to decide whether to file a workpaper
+entry. The query's autoflush pushed the pending insert, and a nonexistent id violated the
+`tool_activity.engagement_id` foreign key.
+
+Consequences, both confirmed empirically rather than reasoned about:
+
+- Every one of the thirteen wired routes returned **500** to any client holding a stale
+  engagement id, on the success path *and* the failure path.
+- On the failure path it was worse than a 500 in the abstract: the intended response was a
+  **400 about malformed input**, and a side effect of *recording* the failure replaced it
+  with a server error. The error handler broke the error handling.
+
+**Pattern: resolve before you write, especially when the value came from the request
+body.** The fix is pure reordering — look the engagement up first, attach it only if it
+resolved, and let an unresolvable id degrade to an unlinked row. That matched semantics the
+function already had for an engagement owned by a different user; the two cases differed
+only in which one happened to crash.
+
+**And the near-miss worth keeping.** My test for this surface used an engagement that
+*existed but belonged to someone else* — which exercises the ownership branch and never
+reaches the foreign-key constraint. "Not authorized" and "does not exist" look like one
+test and are two. A guard on attacker-supplied identifiers needs both: the valid-but-not-
+yours case and the not-a-real-row case.
+
+---
+
+## Three sprints in a row claimed a path they had each only half-built (Sprint 787b review, 2026-10-21)
+
+- **Sprint 787** added the six tools to `ToolName` and said they were trackable. The PR #174
+  review caught it: no route called the recorder.
+- **Sprint 787b** wired the six routes and said the runs were tracked. The PR #182 review
+  caught it: no frontend hook sends `engagement_id`, so a browser user still produces
+  nothing. `createTestingHook.ts`, which backs nine *other* tools, has zero engagement
+  references either.
+- Both sprints wrote tests that passed, and both sets of tests were scoped to the layer the
+  sprint had changed.
+
+Each sprint verified its own layer and inferred the rest. The inference was reasonable each
+time and wrong each time, and the tests could not catch it because a layer-local test is
+exactly what you write when you believe the other layers are fine.
+
+**Pattern: when a feature spans layers, the acceptance test has to span them too — and
+until it does, say "the backend half" rather than "complete."** The cost of the honest
+status line is one sentence. The cost of the optimistic one is that the next sprint builds
+on a precondition it believes is a conclusion.
+
+I was fixing exactly this mistake when I made it again, in the same shape, one layer out.
+The tell was available: my tests constructed `engagement_id` in the payload by hand, which
+is precisely the step a real caller has to perform and that nothing in the product performs.
+**When a test has to supply the input the product is supposed to supply, that is the gap,
+not a fixture detail.**
+
+---
+
 ## Counting the catalog twice is not the same as checking it works (Sprint 789, 2026-10-21)
 
 `test_catalog_consistency.py` ties `tools_registry.py` to the frontend tool ledger.
