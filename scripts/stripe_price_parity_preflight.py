@@ -192,6 +192,17 @@ def check_price(stripe_module, expected: ExpectedPrice, price_id: str, key_is_li
             f"{expected.stripe_interval!r} ({price_id}) — this bills correctly once, then wrongly forever"
         )
 
+    # The unit alone is not the cadence. interval="month" with interval_count=3 bills
+    # quarterly, and interval="year" with interval_count=2 bills biennially — both would
+    # have passed the check above while charging the right amount on the wrong schedule.
+    # Stripe omits interval_count when it is 1, so treat a missing value as 1.
+    actual_count = recurring.get("interval_count", 1)
+    if actual_count not in (1, None):
+        problems.append(
+            f"{expected.label}: interval_count is {actual_count}, expected 1 ({price_id}) — "
+            f"this charges every {actual_count} {actual_interval}s, not every {actual_interval}"
+        )
+
     if price.get("active") is False:
         problems.append(f"{expected.label}: price is archived/inactive ({price_id})")
 
@@ -224,7 +235,9 @@ def check_coupon(stripe_module, expected: ExpectedCoupon, coupon_id: str) -> lis
             f"coupon {label}: has no percent_off (amount_off={coupon.get('amount_off')}), but the product "
             f"advertises {expected.percent_off}% — checkout would apply a fixed discount ({coupon_id})"
         )
-    elif int(percent) != expected.percent_off:
+    elif float(percent) != float(expected.percent_off):
+        # Stripe types percent_off as a float. int() truncation made 20.5 compare equal to
+        # 20, passing the check while checkout granted a larger discount than advertised.
         problems.append(f"coupon {label}: percent_off is {percent}, expected {expected.percent_off} ({coupon_id})")
 
     # Duration decides whether the discount ever stops.

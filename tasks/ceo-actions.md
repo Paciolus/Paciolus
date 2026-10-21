@@ -97,7 +97,16 @@ The goal is to catch anything broken in normal usage before you start charging r
   - 2 coupon IDs: `STRIPE_COUPON_MONTHLY_20`, `STRIPE_COUPON_ANNUAL_10`
 - [ ] **Vercel env vars** → set any `NEXT_PUBLIC_STRIPE_*` IDs the frontend reads directly (publishable key, etc.)
 - [ ] Stripe Dashboard → Developers → Webhooks → configure endpoint → copy the signing secret into `STRIPE_WEBHOOK_SECRET`. **`api.paciolus.com` 404s as of 2026-10-20** (Phase 4.3 has not run), so either do 4.3 first and use `https://api.paciolus.com/billing/webhook`, or use `https://paciolus-api.onrender.com/billing/webhook` now and re-point the endpoint after the domain exists. Do not configure it against the custom domain before that domain resolves — the webhook will fail silently.
-- [ ] **Run the Sprint 780 price-parity preflight FIRST**, as soon as the live price IDs are set on Render and before any real card is used:
+- [ ] **Run the Sprint 780 price-parity preflight FIRST**, as soon as the live price IDs are set on Render and before any real card is used.
+
+  It reads the ten `STRIPE_PRICE_*` / `STRIPE_SEAT_PRICE_*` env vars, so it has to run **where those variables exist**. Setting them on Render does not put them in your local shell — run it locally with only the secret key exported and it will report every price ID as unset, and `--require-all` will then fail for the wrong reason.
+
+  **Either** run it on the instance, where the live env is already present:
+  ```
+  ssh srv-d6ie9l56ubrc73c7eq2g@ssh.virginia.render.com
+  cd /app && python ../scripts/stripe_price_parity_preflight.py --require-all
+  ```
+  **or** export the same ten values locally first (copy them from Render → paciolus-api → Environment), then:
   ```
   STRIPE_SECRET_KEY=sk_live_... python scripts/stripe_price_parity_preflight.py --require-all
   ```

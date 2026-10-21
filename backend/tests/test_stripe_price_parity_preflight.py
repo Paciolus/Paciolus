@@ -70,18 +70,29 @@ class _FakeStripe:
         self.Coupon = Coupon
 
 
-def _price(cents: int, interval: str = "month", currency: str = "usd", active: bool = True, livemode: bool = False):
+def _price(
+    cents: int,
+    interval: str = "month",
+    currency: str = "usd",
+    active: bool = True,
+    livemode: bool = False,
+    interval_count: int | None = None,
+):
+    recurring: dict[str, Any] = {"interval": interval}
+    # Stripe omits interval_count when it is 1, so default to omitting it here too.
+    if interval_count is not None:
+        recurring["interval_count"] = interval_count
     return {
         "unit_amount": cents,
         "currency": currency,
-        "recurring": {"interval": interval},
+        "recurring": recurring,
         "active": active,
         "livemode": livemode,
     }
 
 
 def _coupon(
-    percent: int | None = 20,
+    percent: float | None = 20,
     duration: str = "repeating",
     months: int | None = 3,
     valid: bool = True,
@@ -234,6 +245,45 @@ def test_wrong_interval_is_caught():
     assert "wrongly forever" in text
 
 
+def test_quarterly_interval_count_is_caught():
+    """interval="month" with interval_count=3 bills quarterly.
+
+    PR #179 review: the cadence check validated the unit and ignored the multiplier, so a
+    quarterly price charging the monthly amount passed — the same defect the interval check
+    was added to prevent.
+    """
+    prices = _matching_prices()
+    prices["price_stripe_price_solo_monthly"] = _price(10000, interval="month", interval_count=3)
+    code, report = preflight.run(require_all=False, stripe_module=_FakeStripe(prices), env=_full_env())
+    text = "\n".join(report)
+    assert code == 1
+    assert "interval_count is 3" in text
+    assert "every 3 months" in text
+
+
+def test_biennial_annual_price_is_caught():
+    prices = _matching_prices()
+    prices["price_stripe_price_enterprise_annual"] = _price(1000000, interval="year", interval_count=2)
+    code, report = preflight.run(require_all=False, stripe_module=_FakeStripe(prices), env=_full_env())
+    assert code == 1
+    assert "interval_count is 2" in "\n".join(report)
+
+
+def test_omitted_interval_count_is_treated_as_one():
+    """Stripe omits interval_count when it is 1; that must not read as a mismatch."""
+    prices = _matching_prices()
+    assert "interval_count" not in prices["price_stripe_price_solo_monthly"]["recurring"]
+    code, _ = preflight.run(require_all=True, stripe_module=_FakeStripe(prices), env=_full_env())
+    assert code == 0
+
+
+def test_explicit_interval_count_of_one_passes():
+    prices = _matching_prices()
+    prices["price_stripe_price_solo_monthly"] = _price(10000, interval="month", interval_count=1)
+    code, _ = preflight.run(require_all=False, stripe_module=_FakeStripe(prices), env=_full_env())
+    assert code == 0
+
+
 def test_archived_price_is_caught():
     prices = _matching_prices()
     prices["price_stripe_price_solo_monthly"] = _price(10000, active=False)
@@ -291,6 +341,29 @@ def test_matching_coupons_pass():
         require_all=False, stripe_module=_FakeStripe(_matching_prices(), _good_coupons()), env=_coupon_env()
     )
     assert code == 0, "\n".join(report)
+
+
+def test_fractional_coupon_percent_is_not_truncated():
+    """percent_off is a float in Stripe. int() made 20.5 compare equal to 20, passing while
+    checkout granted a larger discount than advertised (PR #179 review)."""
+    coupons = _good_coupons()
+    coupons["cpn_m"] = _coupon(20.5, "repeating", 3)
+    code, report = preflight.run(
+        require_all=False, stripe_module=_FakeStripe(_matching_prices(), coupons), env=_coupon_env()
+    )
+    text = "\n".join(report)
+    assert code == 1
+    assert "percent_off is 20.5, expected 20" in text
+
+
+def test_integer_valued_float_percent_still_passes():
+    """20.0 is the advertised 20% — it must not be reported as a mismatch."""
+    coupons = _good_coupons()
+    coupons["cpn_m"] = _coupon(20.0, "repeating", 3)
+    code, _ = preflight.run(
+        require_all=False, stripe_module=_FakeStripe(_matching_prices(), coupons), env=_coupon_env()
+    )
+    assert code == 0
 
 
 def test_coupon_percent_mismatch_is_caught():
