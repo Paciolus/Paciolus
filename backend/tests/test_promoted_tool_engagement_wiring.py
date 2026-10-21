@@ -26,16 +26,22 @@ Two deliberate design decisions are pinned here rather than left implicit:
    A role-permission matrix and a 90-day cash projection do not produce
    GL-account-level output.
 
-**What this file does NOT prove.** `override_auth_verified` and the local
-`_override` helper both install `get_db` as `lambda: db_session` — a plain
-callable, not a generator — so FastAPI performs no dependency teardown. The
-success path records through `background_tasks.add_task(..., db, ...)`, which is
-the house pattern across all seven previously-wired routes, and since FastAPI
-0.106 `yield`-dependency teardown runs *before* background tasks. Whether the
-real `get_db` session is still usable at that point is a pre-existing question
-about the shared pattern, not about these six routes, and no test in this
-repository can answer it while `get_db` is overridden with a non-generator.
-Recorded in the Sprint 787b notes rather than silently assumed away.
+**On the session passed into the background task.** The success path records via
+`background_tasks.add_task(maybe_record_tool_run, db, ...)`, handing a
+request-scoped `Session` to a callable that runs after the handler returns. That
+is the house pattern across all seven previously-wired routes, but it is only
+safe if the task runs *before* `get_db`'s `finally: db.close()`. These tests
+cannot settle it — `_override` installs `get_db` as `lambda: db_session`, a plain
+callable rather than a generator, so no teardown happens at all.
+
+It was settled separately, against the installed FastAPI, and the answer is that
+the ordering is favourable: background tasks run **before** `yield`-dependency
+teardown, so the session is still open. `TestBackgroundTaskOrderingContract`
+below pins that as a contract test rather than leaving it as a verified-once
+fact, because **Sprint 786b plans to bump FastAPI 0.136 → 0.150**. If a release
+in that range flips the ordering, 13 routes stop recording tool runs on their
+success path and every test in this file still passes, since they all override
+`get_db` with a non-generator.
 """
 
 import json
@@ -503,3 +509,57 @@ def test_flagged_accounts_is_json_when_present_sanity():
     otherwise, so `flagged_accounts is None` genuinely means "nothing filed"
     rather than "an empty list was filed"."""
     assert json.dumps(["1000", "2000"]) == '["1000", "2000"]'
+
+
+class TestBackgroundTaskOrderingContract:
+    """The framework assumption every wired route depends on.
+
+    `maybe_record_tool_run` is handed a request-scoped `Session` through
+    `background_tasks.add_task`. That is only correct while FastAPI runs
+    background tasks *before* tearing down `yield` dependencies — otherwise
+    `get_db`'s `finally: db.close()` has already fired and the recorder writes
+    through a closed session.
+
+    Verified on FastAPI 0.136.1: the task runs first. This test keeps it
+    verified. **Sprint 786b plans FastAPI 0.136 → 0.150**, and if a release in
+    that range flips the ordering, 13 routes silently stop recording tool runs
+    while every other test in this file still passes — they all override
+    `get_db` with a non-generator, so none of them exercises teardown at all.
+
+    Deliberately built on a throwaway app rather than `main.app`: the property
+    under test belongs to FastAPI's dependency/background-task machinery, and
+    probing it through the real app would drag in auth, rate limiting and the
+    database for no added signal.
+    """
+
+    @pytest.mark.asyncio
+    async def test_background_tasks_run_before_yield_dependency_teardown(self):
+        from fastapi import BackgroundTasks, Depends, FastAPI
+
+        order: list[str] = []
+        probe = FastAPI()
+
+        def dependency_with_yield():
+            try:
+                yield "session"
+            finally:
+                order.append("teardown")
+
+        def record(value: str) -> None:
+            order.append(f"task:{value}")
+
+        @probe.get("/probe")
+        def endpoint(background_tasks: BackgroundTasks, dep=Depends(dependency_with_yield)):
+            background_tasks.add_task(record, dep)
+            return {"ok": True}
+
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=probe), base_url="http://t") as client:
+            assert (await client.get("/probe")).status_code == 200
+
+        assert order == ["task:session", "teardown"], (
+            "FastAPI's ordering of background tasks vs yield-dependency teardown has "
+            f"changed (observed {order}). Every route using "
+            "background_tasks.add_task(maybe_record_tool_run, db, ...) now hands the "
+            "recorder a CLOSED session, so success-path tool runs are no longer filed. "
+            "Fix the routes before taking this FastAPI version — see Sprint 786b."
+        )
