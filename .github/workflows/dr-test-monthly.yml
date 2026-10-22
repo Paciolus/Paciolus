@@ -151,15 +151,25 @@ jobs:
           conn.close()
 
           print(json.dumps({'counts': counts, 'archiver_last_archived': str(archiver[1]) if archiver else 'N/A'}))
-          " > probe_result.json 2>/dev/null && echo "probe=PASS" >> "$GITHUB_OUTPUT" || echo "probe=FAIL" >> "$GITHUB_OUTPUT"
+          " > probe_result.json 2>/dev/null
+          PROBE_STATUS=$?
 
-          if [ -f probe_result.json ]; then
+          # Sprint 778a (PR #187 review): branch on the command's exit status and
+          # a NON-EMPTY result, not on the file existing. Shell redirection
+          # creates probe_result.json before python starts, so a failed probe
+          # leaves an empty file behind — the old `[ -f ... ]` check then wrote
+          # "✅ Database responded" into the same report that carried probe=FAIL.
+          # One branch now decides both the output and the report line, so they
+          # cannot disagree.
+          if [ "$PROBE_STATUS" -eq 0 ] && [ -s probe_result.json ]; then
+            echo "probe=PASS" >> "$GITHUB_OUTPUT"
             echo "✅ Database responded to probe." >> report.md
             echo '```json' >> report.md
             cat probe_result.json >> report.md
             echo '```' >> report.md
           else
-            echo "❌ Database probe failed." >> report.md
+            echo "probe=FAIL" >> "$GITHUB_OUTPUT"
+            echo "❌ Database probe failed (exit $PROBE_STATUS)." >> report.md
           fi
 
       - name: Generate final report
@@ -253,7 +263,18 @@ jobs:
     name: Restore Validation (Manual Only)
     runs-on: ubuntu-latest
     needs: dr-test
-    if: github.event_name == 'workflow_dispatch'
+    # `always()` is load-bearing (Sprint 778a, PR #187 review). `needs:` implies
+    # the prerequisite succeeded, so once dr-test started failing on a non-PASS
+    # verdict this job silently stopped running — and the verdict is expected to
+    # be UNVERIFIED until 778b lands the Neon rewrite. That would have made the
+    # manual restore drill unrunnable precisely while it is most needed: an
+    # untested backup is not a backup, and the drill is the half of the risk a
+    # second backup mechanism does not address.
+    #
+    # The drill does not depend on dr-test's verdict — it provisions its own
+    # isolated instance and runs its own pg_restore — so gating it on that
+    # verdict was never meaningful, only accidental.
+    if: always() && github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # pin: v6.0.2
 
