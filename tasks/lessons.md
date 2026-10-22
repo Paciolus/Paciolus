@@ -2457,3 +2457,46 @@ derived from the system beats any number of careful hand-updates.
 2026-06-13)"` glues a live value to a stale one the instant upstream ships again. A dated
 historical claim is fine on its own; interpolated next to a live value it reads as one fact and is
 two.
+
+---
+
+## Sprint 786b (PR #196 review) — the same prefix-replacement bug, one PR after fixing it
+
+The #194 review caught a string replacement that matched the **prefix** of a sentence, leaving the
+superseded text attached to its replacement. I fixed it, wrote the rule ("match to the terminating
+punctuation, then assert the superseded tokens are gone"), and **did it again in the very next PR**
+to the very same file. The #196 review caught `27.72 ms` and `DB ~9 ms` both presented as current.
+
+My post-fix assertion covered test counts and PR counts. It did not cover latency figures, because
+I wrote the assertion against the instance rather than the class.
+
+**So the recurrence rate, not the severity, is what justified a guard.** Twice in consecutive PRs,
+both caught by review, in the file `AGENTS.md` names as the first thing a new session reads. A
+resolution to be careful had already been tried and had already failed.
+
+### The guard argued with me twice, and was right both times
+
+**It needed two rules, not one.** Measured against the two real defect lines: the duplicate-figure
+rule catches #196 and misses #194; the duplicate-clause rule catches #194 and misses #196. Two
+instances of one defect class with **disjoint mechanical signatures**. A single rule would have
+felt like coverage and provided half.
+
+**Its first regression proof failed to fail.** The figures rule was line-scoped, and reintroducing
+the #196 defect produced a *green* run — because fixing the file had moved the two latency figures
+onto separate lines. The defect was never a property of a line. *A regression proof that passes is
+not a proof; it is the thing you were trying to detect, happening to your test.*
+
+**Then it caught me overreaching.** Rescoped file-wide, the rule fired on `11m25s` vs `11m26s` —
+two suite runtimes I had deliberately measured and reported. That was the rule being wrong, not the
+file: a runtime is a property of a run, not a fact about the project, while a latency or a test
+count is. `runtime` came out of the checked set.
+
+**And its own self-check caught a stale claim in its own docstring.** With runtimes included the
+two rules stopped being disjoint, so the test asserting disjointness failed and said *"update the
+docstring rather than leaving a claim that measurement no longer supports."* Exactly the behaviour
+asked of it.
+
+**The transferable part:** when a guard disagrees with you, the first question is which of you is
+wrong. Three of the four arguments above were the guard being right about the code; one was the
+guard being wrong about the world. Finding out which costs a measurement and is never skippable —
+and a guard built this way ends up narrower and more trustworthy than one built to the first idea.
