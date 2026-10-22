@@ -106,6 +106,6 @@ intent is awareness, not friction.
 - `scripts/overnight/agents/dependency_sentinel.py` — the detection script.
 - `.github/dependabot.yml` — auto-PR config (Sprint 731).
 - `docs/compliance/DEPENDENCY_DECISIONS.md` — decisions on individual deps
-  (e.g., why slowapi is pinned at 0.1.9, why redis is optional).
+  (e.g., why slowapi is pinned at 0.1.10, why redis is optional).
 - Sprint 731 entry in `tasks/archive/sprints-*.md` — the policy's first
   execution (fastapi 0.136.0 → 0.136.1, stripe 15.0.1 → 15.1.0).

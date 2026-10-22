@@ -4,7 +4,7 @@
 
 | Component | Version | Status |
 |-----------|---------|--------|
-| slowapi | 0.1.9 | Unmaintained (last release Oct 2022) |
+| slowapi | 0.1.10 | Low-frequency upstream (0.1.10 released 2026-06-13, after a two-year gap) |
 | limits | >=3.0.0 | Actively maintained |
 
 slowapi is a thin Starlette middleware wrapper around the `limits` library.
