@@ -5,7 +5,7 @@ _Updated at the end of every Claude Code session. Overwrite the previous state �
 ## Last Session
 
 **Date:** 2026-10-22
-**Branch:** merged. **Five PRs landed on `main`** — #187, #188, #189, #190, #191 — every one rebase-merged per `required_linear_history`.
+**Branch:** merged. **Seven PRs landed on `main`** — #187, #188, #189, #190, #191, #192, #193 — every one rebase-merged per `required_linear_history`.
 
 **Context:** a continuation session, picking up with three PRs in flight and working down the unblocked backlog. The through-line continued from the previous session and sharpened: **a check that cannot distinguish "no problem" from "I did not look".**
 
@@ -18,8 +18,11 @@ _Updated at the end of every Claude Code session. Overwrite the previous state �
 | #189 | **793a** | The statutory-limit overrides the W-2 API never exposed |
 | #190 | **794a** | A registry outage was reporting itself as a vulnerability |
 | #191 | **741d** | 19 drifting enum types frozen so the set cannot grow |
+| #193 | **794b** | pip-audit had the same conflation, and three more call sites |
 
-**Six review findings across #187–#191 were acted on. Every one was real** — continuing the previous session's fourteen-for-fourteen. Counted from the PRs themselves rather than from memory: #187 two, #188 one, #189 two, #190 none, #191 one. Two changed the *result* rather than the wording — #188's pin guard was inspecting 23% of its target, and #191's enum guard reported drift on a type that agrees.
+**Seven review findings across #187–#193 were acted on. Every one was real** — continuing the previous session's fourteen-for-fourteen. Counted from the PRs themselves rather than from memory: #187 two, #188 one, #189 two, #190 none, #191 one, #192 none, #193 one. **Three changed behaviour rather than wording:** #188's pin guard was inspecting 23% of its target, #191's enum guard reported drift on a type that agrees, and #193's pip classifier turned a normal exit-0 run into a blocked gate.
+
+> Worth stating plainly: the self-written regression proofs keep passing, because they test cases I chose. The review findings keep landing on cases I did not think to choose. That is the argument for the review step, not a reason to write fewer proofs.
 
 **Production:** healthy throughout. `/health/ready` reports `status: "healthy"`, DB ~9 ms, `rate_limit_storage` redis not degraded; `paciolus.com` returns 200. Checked the **body**, not just the 200 — Sprint 774 puts `degraded` behind a 200.
 
@@ -66,7 +69,7 @@ Five defects in that one guard, four of them the same shape. The four found befo
 ## Current Environment State
 
 **App status:** working — production live and verified.
-**Backend tests:** **9,055 passed / 0 failed** (11m23s, `backend/venv`, clean tree, run after the last merge with nothing else touching the tree — an earlier run was discarded for exactly that reason). Up from 8,989 at session start; +42 from the two new guards.
+**Backend tests:** **9,094 passed / 0 failed** (11m29s, `backend/venv`, clean tree, measured after the last merge). Up from 8,989 at session start; +105 across the four new guard suites. (11m23s, `backend/venv`, clean tree, run after the last merge with nothing else touching the tree — an earlier run was discarded for exactly that reason). Up from 8,989 at session start; +42 from the two new guards.
 **Lint:** `ruff check` clean on everything touched; `ruff format` applied.
 **Open PRs:** **0**.
 
@@ -74,7 +77,6 @@ Five defects in that one guard, four of them the same shape. The four found befo
 - **Sprint 793b (P1)** and **Sprint 790 (P1)** — both need a decision, described above.
 - **Sprint 778b** — the off-provider `pg_dump` → R2 backup still does not exist; Neon PITR is the only thing behind production data. Ships pre-launch per the 2026-10-19 decision. Sprint 741d just added a second reason to care: a chain-built restore does not match production.
 - **Sprint 741c steps 1-3 / 738** — need the Neon connection string (CEO ask D-1). Step 4 is done (741d) and needed no database after all.
-- **Sprint 794b** — `pip-audit` has the identical conflation to npm's, confirmed empirically (exit 1, no JSON, three more call sites). Unblocked, small.
 - **Sprint 786b** — the reviewed dependency majors. Unblocked but large.
 - Phase 4.1 Stripe cutover, 4.2 legal sign-off, 4.3 custom domain (`api.paciolus.com` still 404s) — CEO-gated.
 - `RENDER_API_KEY` repo secret still unset, so the deploy-drift probe SKIPs rather than alarms — and there is no fallback, per the note above.
@@ -87,10 +89,10 @@ Five defects in that one guard, four of them the same shape. The four found befo
 | 02 | **Sprint 790 (P1)** — decide the metering unit and the existing-account question, then enforce | CEO decides, Claude implements |
 | 03 | **Sprint 778b** — build the `pg_dump` → R2 backup, one restore drill per mechanism | Claude + CEO console, ½d |
 | 04 | Legal to counsel; waitlist count; 5–10 CPAs through the demo (**Sprint 781**) — also the natural home for 793b's figures | **CEO — longest lead** |
-| 05 | **Sprint 794b** — give `pip-audit` the same three-outcome treatment | Claude, small |
-| 06 | **Sprint 786b** — the reviewed major bumps | Claude |
-| 07 | **Sprint 741c steps 1-3** — now has a measured target instead of a hand-assembled one | Blocked on CEO ask D-1 |
-| 08 | **Sprint 782b** — external uptime monitor | Claude + one CEO signup |
+| 05 | **Sprint 786b** — the reviewed major bumps | Claude |
+| 06 | **Sprint 741c steps 1-3** — now has a measured target instead of a hand-assembled one | Blocked on CEO ask D-1 |
+| 07 | **Sprint 782b** — external uptime monitor | Claude + one CEO signup |
+| 08 | **Sprint 794 step 3** — should an npm/PyPI outage block every PR? Both gates fail closed today | **CEO decides** |
 
 **Still parked:** B-6…B-9 until Sprint 781 reports · the live Stripe build until pricing is validated · the 22-engine relocation · the mypy baseline · dev-only npm advisories · the deferred SOC 2 set.
 
@@ -98,6 +100,8 @@ Five defects in that one guard, four of them the same shape. The four found befo
 
 ```
 main HEAD
+ ├─ #193  794b — pip-audit gate; 1 review fix (skipped deps read as malformed)
+ ├─ #192  docs — session state + Sprint 741d SHAs
  ├─ #191  741d — enum label drift frozen at 19 types; 1 review fix (phantom drift)
  ├─ #190  794a — npm audit gate: CLEAN / VULNERABLE / UNVERIFIED
  ├─ #189  793a — W-2 statutory-limit overrides; 2 review fixes
