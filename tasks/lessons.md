@@ -130,6 +130,59 @@ covered. Here that was the pilot, and it would have taken thirty seconds.
 
 ---
 
+## Un-suppressing a code path means shipping code that has never run (Sprint 778a review, 2026-10-21)
+
+`DR Test (Monthly)`'s liveness probe was guarded by `if: env.DATABASE_URL_READONLY != ''`
+against a variable defined only in that step's own `env:` block. A step-level `if` is
+evaluated against the job and workflow contexts, so the condition was permanently false
+and **the probe had never executed once**. I fixed the guard and treated it as a one-line
+correction.
+
+It was not. The step's body had never run in production, and it contained a bug: `>
+probe_result.json` creates the file before python starts, so a failed probe leaves an
+empty file, and `if [ -f probe_result.json ]` then wrote *"Database responded to probe"*
+into the same report that carried `probe=FAIL`. My fix made that contradiction reachable
+for the first time, and the review caught it.
+
+**Pattern: re-enabling a suppressed path is not a fix, it is a deployment.** Code behind a
+dead guard has the test coverage of code that does not exist — nobody has ever seen its
+output, and whatever is wrong with it has had no opportunity to surface. Read the whole
+body with the scrutiny you would give new code, because to production it *is* new code.
+
+**The tell was available and I walked past it.** I wrote in the same commit message that
+"defect 2 concealed defect 4" — the verdict ignoring the probe's output is why nobody
+noticed the probe never ran. Having said out loud that two defects were hiding each other,
+I should have asked what *else* that silence had been hiding. Suppression is rarely
+load-bearing for exactly one bug.
+
+---
+
+## Making a check honest can disable what the honesty protects (Sprint 778a review, 2026-10-21)
+
+The point of Sprint 778a was to stop `DR Test (Monthly)` reporting success while its own
+report said FAIL. I added a step that fails the job on any non-PASS verdict.
+
+`restore-validation` declares `needs: dr-test`. A `needs:` dependency implies the
+prerequisite **succeeded** unless the condition uses a status function like `always()`. So
+the moment the job started failing — which is the expected state until the backup work
+lands — GitHub silently stopped running the manual restore drill.
+
+Sprint 778's own text calls that drill "the half of the risk a second mechanism does not
+address". I made the reporting honest and, in the same commit, disabled the thing the
+honesty exists to protect. **A false-green at least left the drill runnable.**
+
+**Pattern: when you change a job from always-passing to sometimes-failing, enumerate what
+depends on it.** The dependents were written against a job that could not fail, so none of
+them needed a status function, and none of them will tell you when they stop running — a
+skipped job is not a failed job and shows up as a quiet grey tick.
+
+**And the narrower trap:** the drill never consumed `dr-test`'s output at all. It
+provisions its own instance and runs its own `pg_restore`. The coupling was accidental,
+inherited from `needs:` being the easy way to express ordering — which is precisely the
+kind of dependency that breaks without anyone having decided it should matter.
+
+---
+
 ## One broken check can hide another indefinitely (Sprint 778a, 2026-10-21)
 
 `DR Test (Monthly)` had five defects. Two of them were load-bearing for the rest.
