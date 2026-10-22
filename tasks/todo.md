@@ -508,7 +508,37 @@ Deliberately no YAML parse: `pyyaml` is only transitively installed here, not de
 `requirements.txt` or `requirements-dev.txt`, and a guard should not acquire a dependency that CI
 is not guaranteed to have.
 
-#### Tests — `backend/tests/test_pip_audit_gate.py`, 33
+#### A sixth record shape, found in review
+
+The PR #193 review caught that pip-audit has a **fourth** output shape nobody had accounted for.
+When it cannot resolve a dependency — an editable install, a URL requirement, a package absent
+from PyPI — its JSON formatter emits
+
+```json
+{"name": "mylib", "skip_reason": "Dependency not found on PyPI and could not be audited"}
+```
+
+with **no `version` and no `vulns`**, and pip-audit still exits 0. Only `--strict` turns a skip
+into a failure. Verified against the installed `pip_audit/_format/json.py` rather than taken on
+trust.
+
+The classifier read the missing `vulns` key as a broken schema, so every such run became
+`UNVERIFIED`, was retried three times, and failed the blocking gates. **That is `--strict`
+smuggled in under a change whose whole claim was that the gating policy did not move** — the
+worst kind of defect to ship in this particular sprint.
+
+**The fix keys off `skip_reason` being present**, not off `vulns` being absent, so a future
+pip-audit that adds `"vulns": []` to skipped records stays correct. Skips are reported in the
+verdict reason — naming the package and the reason — but do not change it.
+
+**One narrow exception, and it is deliberate.** If *every* dependency in the report was skipped,
+nothing was audited, and calling that CLEAN would be exactly the failure this sprint exists to
+prevent: reporting safety that was never established. That returns `UNVERIFIED`. It is not
+`--strict` — a single audited package restores the normal verdict.
+
+Regression-proved: removing the `skip_reason` branch fails six tests.
+
+#### Tests — `backend/tests/test_pip_audit_gate.py`, 39
 
 The three real payloads · the dedup count · eight unreadable shapes that must all be `UNVERIFIED` ·
 the exit/report disagreement case · no workflow invokes `pip-audit` directly · the detector's own
@@ -517,7 +547,8 @@ paths, and **argument passthrough** (so `--ignore-vuln` cannot be silently dropp
 
 Plus `test_both_audit_gates_use_the_same_verdict_vocabulary`: the npm and pip gates are separate
 scripts on purpose, which makes their shared verdict names a convention — and a convention without
-a test is a coincidence.
+a test is a coincidence. And six covering the skip record above, including an end-to-end run
+proving a skipped dependency neither retries nor blocks.
 
 **Regression-proved:** injecting `run: pip-audit -r requirements.txt` into `ci.yml` fails the guard
 and names `ci.yml:607`.
