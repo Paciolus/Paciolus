@@ -324,7 +324,7 @@ believes is right. The W-2 limits have no equivalent trap — each is a single s
 meaning — which is why the hatch is safe there and not here. Thresholds keyed by *year and
 sub-category* are 793b's table work, and they need the confirmed figures regardless.
 
-**Commit SHA:** filled at merge.
+**Commit SHA:** `519f2b2b` (793a; PR #189, plus review fixes `103d7e5e` and `ba76100c`).
 
 ---
 
@@ -465,7 +465,7 @@ the behaviour is now verified end to end. Bundling it would have made one review
 two unreviewable ones. The discrimination should work the same way — `--format json` produces a
 parseable report when the audit ran and nothing when it did not.
 
-**Commit SHA:** filled at merge.
+**Commit SHA:** `a764a31a` (794a; PR #190). Filed as `f279cb55`.
 
 ---
 
@@ -546,7 +546,7 @@ listing it.
 **Verification:** 17 passed in `test_engine_base_lint.py`; `ruff check .` clean. No production code
 changed.
 
-**Commit SHA:** filled at merge.
+**Commit SHA:** `392d471e` (PR #185), plus the review fix `acdcb900` — the guard itself had the defect it was written to prevent.
 
 ---
 
@@ -605,6 +605,107 @@ expensive later.
 
 ---
 
+### Sprint 741d: Freeze the enum label drift so it cannot grow
+**Status:** COMPLETE.
+**Priority:** P2 — preventive. It fixes nothing; it stops the problem spreading while
+[Sprint 741c](#sprint-741c-enum-labels-disagree-between-the-alembic-chain-and-the-orm) waits on
+CEO ask D-1.
+**Source:** Sprint 741c step 4, pulled forward on realising it needs no database.
+
+Step 4 of 741c was filed behind the Neon read. It does not belong there: comparing the migration
+chain's enum labels against the ORM's is a comparison of **two things already in this repository**.
+No production connection is involved. So it was done first.
+
+#### What it found: 20 drifting types, not 3
+
+The hand-written table in 741c lists three types across five rows. The mechanical comparison finds
+**twenty**, out of 26 enum types that exist in both places.
+
+**Sixteen are case-only** — the chain spells labels lowercase, the ORM binds member NAMES:
+`adminactiontype`, `billingeventtype`, `billinginterval`, `dunningresolution`, `dunningstate`,
+`entitytype`, `expectationresultstatus`, `expectationtargettype`, `invitestatus`,
+`misstatementclassification`, `misstatementdisposition`, `misstatementsourcetype`, `orgrole`,
+`reportingframework`, `subscriptionstatus`, `teamactiontype`.
+
+"Case-only" sounds cosmetic and is not: `ACTIVE` is simply not a label of a type whose labels are
+`active`, and PostgreSQL rejects the write with 22P02. That is the exact error Sprint 741a chased.
+
+**Four are membership differences** — labels genuinely absent rather than misspelled, so no
+`values_callable` decision could resolve them:
+
+| Type | Column | The gap |
+|------|--------|---------|
+| `engagementstatus` | `engagements.status` | the ORM binds **`COMPLETED`** and **no migration ever adds it** |
+| `toolname` | `tool_runs.tool_name` | chain carries lowercase `flux_analysis`; the ORM binds `FLUX_ANALYSIS` |
+| `usertier` | `users.tier` | chain has `starter`/`team`/`organization`/`solo`; the ORM binds `SOLO` |
+| `subscription_tier` | `subscriptions.tier` | chain has `starter`/`team`/`organization`; the ORM binds `solo` |
+
+**`engagementstatus` is a new finding and the most interesting one.** Nothing in 741c or its
+source reviews mentions it. The engagement completion gate is a shipped feature, so on any
+database built from the documented chain, completing an engagement fails. Production is fine
+because production was built by `create_all()` — which is precisely what makes this a
+**restore-drill blocker** rather than a live incident, and why it belongs with Sprint 778.
+
+`toolname` and `usertier` confirm 741c's live-defect rows mechanically.
+
+#### Why no test could have caught this
+
+SQLite has no enum types. The column is a plain VARCHAR, every label is accepted, and ~9,000
+passing tests say precisely nothing about whether the chain and the ORM agree. Same shape as the
+missing `ALTER TYPE` in Sprint 787 and the 22P02 in 741a: **when a constraint exists only in the
+production dialect, the dev dialect cannot see the defect.** A static comparison is the only
+thing that can, short of a PostgreSQL connection.
+
+#### What landed
+
+`backend/guards/enum_label_drift.py` assembles each type's label set from the three constructs
+this chain actually uses — inline literals, `sa.Enum(*_CONSTANT, name=...)`, and
+`for v in _CONSTANT: op.execute(f"ALTER TYPE t ADD VALUE '{v}'")` — and compares them against
+`Base.metadata`. The 20 known-bad types are a `KNOWN_DRIFT` baseline. Anything drifting that is
+not on the list fails; anything on the list that stops drifting **also** fails, so 741c's fixes
+must shrink it. A baseline that is never tightened is just an allowlist.
+
+#### The guard was wrong three times before it was right
+
+Worth recording, because every one was the failure this session keeps producing — a scan that
+silently covers less than it claims and reports success anyway.
+
+1. **It read 5 of 26 ORM types.** `import models` registers only the models in `models.py`; the
+   rest live in sibling `*_model.py` modules and are absent from `Base.metadata` until imported.
+   Caught only because 5-vs-21 looked implausible.
+2. **It could not read `NEW_TOOL_NAMES`.** Declared `NEW_TOOL_NAMES: tuple[str, ...] = (...)` —
+   an `AnnAssign`, not an `Assign`. Handling only `Assign` made Sprint 689's six tool labels
+   invisible. One type annotation was the difference between reading that migration and not.
+3. **It invented a label called `{value}`.** The literal `ALTER TYPE` regex runs over raw source,
+   so it matched an f-string's own placeholder text — manufacturing drift on two types while
+   hiding their real labels behind it.
+
+Each was found by the module reporting what it could *not* resolve instead of skipping it, which
+is why `unresolved` fails the run loudly. **If the first draft had shipped it would have passed
+CI**, printed a confident verdict, and compared a fifth of the schema.
+
+#### Tests — `backend/tests/test_enum_label_drift.py`, 15
+
+The verdict matches the baseline; the baseline must be tightened when drift is fixed; the parser
+resolved everything it found; **every named enum in every migration is accounted for, with no
+exemptions** (an earlier draft carved out downgrade-only `Enum(name=...).drop()` calls — measuring
+showed the carve-out was dead code, and a dead escape hatch in a coverage check is exactly what
+hides the first real miss); no phantom placeholder labels; the AnnAssign constant resolves; the
+ORM scan sees models outside `models.py`. Plus both failure directions regression-proved by
+monkeypatching the baseline.
+
+**Not given its own CI job.** It runs inside `backend-tests`, which already installs the
+dependencies it needs; the `doc-consistency` job runs without them, so a separate job would mean
+a redundant full install for no extra signal.
+
+**Does not fix anything.** 741c steps 1-3 still need the Neon read, and the canonical direction is
+still almost certainly *names* — do **not** "fix" this by adding `values_callable`, which would
+flip every binding to lowercase and break the live database.
+
+**Commit SHA:** filled at merge.
+
+---
+
 ### Sprint 741c: Enum labels disagree between the Alembic chain and the ORM
 **Status:** PENDING.
 **Priority:** P1 — one instance is a live production defect; the rest is a schema-truth problem.
@@ -613,6 +714,13 @@ expensive later.
 `Enum(PyEnum)` with no `values_callable` makes SQLAlchemy bind the **member name**. Some
 migrations in the chain follow that and some do not, so the labels a database ends up with
 depend on *how it was built*:
+
+> **The table below understates the problem by a factor of six.** It was assembled by hand from
+> two PR reviews. Sprint 741d built the comparison mechanically and found **20 drifting enum
+> types, not 3** — see that sprint for the measured list. The rows here are correct; they are
+> simply the ones that happened to be noticed. Kept as written because the reasoning that
+> follows them is still the right reasoning, and because the gap between a hand-read sample and
+> a measured population is the point.
 
 | Type | Migration labels | ORM binds | Agree? |
 |------|------------------|-----------|--------|
@@ -646,9 +754,14 @@ blocker, so it belongs with Sprint 778.
    has and what the ORM binds with no `values_callable` — and correct the migrations that
    disagree so a fresh chain build matches production.
 3. Add the missing uppercase `FLUX_ANALYSIS` label (and any others) to the affected types.
-4. Add a test that compares every `sa.Enum(..., name=...)` label set in the migrations
-   against the ORM's `.enums` for the same type, so the chain cannot drift from the mapping
-   again. **This is the check that would have caught all five rows above.**
+4. ~~Add a test that compares every `sa.Enum(..., name=...)` label set in the migrations
+   against the ORM's `.enums` for the same type.~~ **DONE — Sprint 741d.** It needed no database
+   after all, being a comparison of two things already in the repo, so it was pulled forward
+   ahead of steps 1-3. It confirmed every row above and found 15 more types besides.
+
+   Steps 1-3 still need the Neon read. What 741d changes is that the list can no longer grow
+   while that ask is outstanding, and that steps 1-3 now have a measured target instead of a
+   hand-assembled one.
 
 **Do not** "fix" this by adding `values_callable` to the models: that would flip every
 binding to lowercase and break the current production database, which holds name labels.
@@ -871,7 +984,7 @@ It would work — the verdict is UNVERIFIED after Sprint 778a, so the issue-crea
 but it files a real `dr-failure` issue in the repository, which is an outward-facing side effect
 and the CEO's call rather than a verification step to take unprompted.
 
-**Commit SHA:** filled at merge.
+**Commit SHA:** `9992c6c8` (PR #188), plus the review fix `423ea080` — the pin guard was inspecting 23% of the file.
 
 ---
 
@@ -1168,7 +1281,7 @@ import-ordering (identical count before the change) and outside CI's lint scope,
 Neon's real PITR retention, the restore drills, and rewriting both workflows against Neon. All need
 the Neon connection string (**CEO ask D-1**) and R2 token confirmation.
 
-**Commit SHA:** filled at merge.
+**Commit SHA:** `f0d7d6ec` (778a; PR #187). 778b remains pending.
 
 ---
 
