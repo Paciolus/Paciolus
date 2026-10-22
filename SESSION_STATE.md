@@ -5,7 +5,7 @@ _Updated at the end of every Claude Code session. Overwrite the previous state �
 ## Last Session
 
 **Date:** 2026-10-22
-**Branch:** merged. **Seven PRs landed on `main`** — #187, #188, #189, #190, #191, #192, #193 — every one rebase-merged per `required_linear_history`.
+**Branch:** merged. **Nine PRs landed on `main`** — #187 through #195 — every one rebase-merged per `required_linear_history`.
 
 **Context:** a continuation session, picking up with three PRs in flight and working down the unblocked backlog. The through-line continued from the previous session and sharpened: **a check that cannot distinguish "no problem" from "I did not look".**
 
@@ -19,12 +19,13 @@ _Updated at the end of every Claude Code session. Overwrite the previous state �
 | #190 | **794a** | A registry outage was reporting itself as a vulnerability |
 | #191 | **741d** | 19 drifting enum types frozen so the set cannot grow |
 | #193 | **794b** | pip-audit had the same conflation, and three more call sites |
+| #195 | **786b step 2** | Five patch pins — and the three layers of stale claims they exposed |
 
-**Seven review findings across #187–#193 were acted on. Every one was real** — continuing the previous session's fourteen-for-fourteen. Counted from the PRs themselves rather than from memory: #187 two, #188 one, #189 two, #190 none, #191 one, #192 none, #193 one. **Three changed behaviour rather than wording:** #188's pin guard was inspecting 23% of its target, #191's enum guard reported drift on a type that agrees, and #193's pip classifier turned a normal exit-0 run into a blocked gate.
+**Ten review findings across #187–#195 were acted on. Every one was real** — continuing the previous session's fourteen-for-fourteen. Counted from the PRs themselves rather than from memory: #187 two, #188 one, #189 two, #190 none, #191 one, #192 one, #193 one, #194 one, #195 one. **Four changed behaviour rather than wording:** #188's pin guard was inspecting 23% of its target, #191's enum guard reported drift on a type that agrees, #193's pip classifier turned a normal exit-0 run into a blocked gate, and #195's stale maintenance claim was being logged as a production WARNING to on-call engineers.
 
 > Worth stating plainly: the self-written regression proofs keep passing, because they test cases I chose. The review findings keep landing on cases I did not think to choose. That is the argument for the review step, not a reason to write fewer proofs.
 
-**Production:** healthy throughout. `/health/ready` reports `status: "healthy"`, DB ~9 ms, `rate_limit_storage` redis not degraded; `paciolus.com` returns 200. Checked the **body**, not just the 200 — Sprint 774 puts `degraded` behind a 200.
+**Production:** healthy throughout, including after the Sprint 786b dependency deploy — `status: "healthy"`, `rate_limit_storage` redis not degraded with `reachable_at_boot: true`, three consecutive hits on a rate-limited route all 200 (so slowapi 0.1.10 is serving, not merely importing), site 200. DB latency moved 9.35 → 27.72 ms, consistent with a fresh container and a cold pool — **indirect** evidence the deploy landed, which is the best available given the gap below. `/health/ready` reports `status: "healthy"`, DB ~9 ms, `rate_limit_storage` redis not degraded; `paciolus.com` returns 200. Checked the **body**, not just the 200 — Sprint 774 puts `degraded` behind a 200.
 
 > **Deploy verification has a hole, and it is worth knowing about.** There is no way to confirm from outside that a merge actually deployed: the Render MCP requires selecting a workspace (not Claude's call to make), `/openapi.json` and `/docs` are correctly disabled in production, and **no endpoint exposes a build commit**. The `RENDER_API_KEY` gap is already tracked (`ceo-actions.md:11`), so it was not re-filed. Exposing the commit SHA on `/health` was considered and **deliberately not shipped**: `routes/health.py:61-65` documents a decision to *remove* version from `/health/live` to stop scanners fingerprinting the build, and a commit SHA is strictly more precise. With a public repo and auto-deploy, it would tell an attacker exactly which published fixes are live — and the window where that matters is precisely the silent-failed-deploy case. That tradeoff deserves a decision, not a quiet commit.
 
@@ -41,6 +42,15 @@ Every check that depends on something outside the commit has **three** possible 
 The third row is the one to copy: the only one built knowing the answer has three states, and the only one that never lied.
 
 **Deciding the third state's policy is separate from exposing it, and much easier once a retry is in.** Sprint 794a kept the existing fail-closed behaviour and changed only the words, so no policy decision gated the fix.
+
+### The third pattern — the environment that runs the check is part of the check
+
+The 2026-10-22 nightly went RED with **14 failures that CI structurally could not produce.** Both causes lived in the gap between environments:
+
+- `shutil.which("bash")` found this host's inert `WindowsApps` launcher, which **exists and exits 1**. The skip guard asked about presence and reported it as capability — the same confusion the audit gates were written to fix, shipped on the same day the lesson was written three times.
+- A spawned Git Bash needs `Git\usr\bin` for `dirname` and `sed`. **Impossible on Linux CI**, where coreutils are always present.
+
+Fixed by probing (`usable_bash()` runs `bash -c "exit 0"`) and by having the tests supply the environment the shell needs rather than inheriting the host's. **Read the nightly: a green CI is evidence about CI.**
 
 ### The other pattern — coverage of a construct family is not coverage of the subject
 
@@ -69,7 +79,7 @@ Five defects in that one guard, four of them the same shape. The four found befo
 ## Current Environment State
 
 **App status:** working — production live and verified.
-**Backend tests:** **9,094 passed / 0 failed** (11m29s, `backend/venv`, clean tree, measured after the last merge, with nothing else touching the tree — an earlier run was discarded for exactly that reason). Up from 8,989 at session start; +105 across the four new guard suites.
+**Backend tests:** **9,103 passed / 0 failed**, measured three ways on the final tree: `-p no:randomly` (11m26s), the nightly's own invocation with default basetemp and random ordering (11m25s), and — the only mode that would have caught the defect the nightly found — the gate suites under a hostile PATH, 60/60. Up from 8,989 at session start; +114 across six new guard suites.
 **Lint:** `ruff check` clean on everything touched; `ruff format` applied.
 **Open PRs:** **0**.
 
@@ -89,7 +99,7 @@ Five defects in that one guard, four of them the same shape. The four found befo
 | 02 | **Sprint 790 (P1)** — decide the metering unit and the existing-account question, then enforce | CEO decides, Claude implements |
 | 03 | **Sprint 778b** — build the `pg_dump` → R2 backup, one restore drill per mechanism | Claude + CEO console, ½d |
 | 04 | Legal to counsel; waitlist count; 5–10 CPAs through the demo (**Sprint 781**) — also the natural home for 793b's figures | **CEO — longest lead** |
-| 05 | **Sprint 786b** — the reviewed major bumps | Claude |
+| 05 | **Sprint 786b steps 3-4** — `alembic` 1.20, `fastapi` 0.159, `SQLAlchemy` 2.1, `reportlab` 5, `stripe` 16. One per commit. **`reportlab` 5 renders all 21 PDFs and `stripe` 16 is billing, so these want deploy verification that does not currently exist** — see the `RENDER_API_KEY` note | Claude, but gated on the key |
 | 06 | **Sprint 741c steps 1-3** — now has a measured target instead of a hand-assembled one | Blocked on CEO ask D-1 |
 | 07 | **Sprint 782b** — external uptime monitor | Claude + one CEO signup |
 | 08 | **Sprint 794 step 3** — should an npm/PyPI outage block every PR? Both gates fail closed today | **CEO decides** |
@@ -100,6 +110,7 @@ Five defects in that one guard, four of them the same shape. The four found befo
 
 ```
 main HEAD
+ ├─ #195  786b/2 — patch batch; 1 nightly fix (bash probe) + 1 review fix (prod banner)
  ├─ #193  794b — pip-audit gate; 1 review fix (skipped deps read as malformed)
  ├─ #192  docs — session state + Sprint 741d SHAs
  ├─ #191  741d — enum label drift frozen at 19 types; 1 review fix (phantom drift)
