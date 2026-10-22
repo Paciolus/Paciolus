@@ -2292,3 +2292,41 @@ because the module reports what it cannot parse; the one found in review was in 
 parsed *successfully* and simply never looked. **Reporting unparseable input protects against
 constructs you half-handle, not against constructs you never considered.** Only enumerating the
 input space does that.
+
+---
+
+## Sprint 794b — run the real tool against a real failure before writing the check
+
+Two defects in the pip-audit gate were found by *using* the thing rather than reasoning about it,
+and neither was predictable from the documentation.
+
+**pip-audit double-counts.** It emits each advisory once per vulnerability source, so auditing
+`jinja2==2.11.3` returns **eight entries for four distinct advisories**. A summary that counts raw
+entries reports double the real number in the single line a human reads to decide how alarmed to
+be. Visible only by pointing it at a genuinely vulnerable package — a clean run and a crafted
+fixture both look fine.
+
+**The anti-drift check's substring match produced four false positives.** `pip-audit` appears in a
+job key (`pip-audit-blocking:`), in two step names ("Install pip-audit and project dependencies")
+and in an install line (`pip install pip-audit`). None of them run the tool.
+
+The npm version of the same check got away with substring matching **by luck**: its job keys are
+spelled `npm-audit-blocking` with a hyphen while the command has a space. Same code shape, same
+latent flaw, and it passed only because of an unrelated naming convention. That is worth noticing
+on its own — *a check that works for a reason you did not design is not yet a check you
+understand.*
+
+The fix finds the **command position**: strip `run:`, split on `&&`/`||`/`;`/`|`, and require the
+tool at the start of a command. Eight cases now pin the detector itself, because the tempting
+alternative — adding one exclusion per false positive — converges on a check that excludes the
+thing it was looking for.
+
+**And resist acquiring a dependency to do it.** Parsing the workflows with `pyyaml` would have
+been cleaner, but `pyyaml` is only transitively installed here; it is in neither
+`requirements.txt` nor `requirements-dev.txt`. A guard that depends on a package CI is not
+guaranteed to have is a guard that can vanish on an unrelated upgrade — which is, once again,
+"the check stopped running and nothing said so".
+
+**Reject unsupported arguments instead of ignoring them.** The gate forces `--format json`, so a
+caller passing `--format columns` would otherwise get a pass computed from output the classifier
+never saw. Exit 2 and say why. An argument silently dropped is a lie told quietly.
