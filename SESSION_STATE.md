@@ -69,7 +69,7 @@ Five defects in that one guard, four of them the same shape. The four found befo
 ## Current Environment State
 
 **App status:** working — production live and verified.
-**Backend tests:** **9,094 passed / 0 failed** (11m29s, `backend/venv`, clean tree, measured after the last merge). Up from 8,989 at session start; +105 across the four new guard suites. (11m23s, `backend/venv`, clean tree, run after the last merge with nothing else touching the tree — an earlier run was discarded for exactly that reason). Up from 8,989 at session start; +42 from the two new guards.
+**Backend tests:** **9,094 passed / 0 failed** (11m29s, `backend/venv`, clean tree, measured after the last merge, with nothing else touching the tree — an earlier run was discarded for exactly that reason). Up from 8,989 at session start; +105 across the four new guard suites.
 **Lint:** `ruff check` clean on everything touched; `ruff format` applied.
 **Open PRs:** **0**.
 
