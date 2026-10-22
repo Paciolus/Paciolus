@@ -26,10 +26,16 @@ lives entirely in `limits`. slowapi adds ~200 lines of Starlette integration glu
 
 `shared/rate_limits.py` emits a startup banner on import:
 
-- **Production:** `WARNING` log line `"PRODUCTION rate-limiter dependency
-  notice: slowapi is unmaintained ..."` — intended for oncall log
-  visibility, not an incident alert.
+- **Production:** `WARNING` log line beginning `"rate-limiter dependency
+  notice: slowapi <version> is maintained at low frequency ..."` — intended
+  for oncall log visibility, not an incident alert.
 - **Non-production:** `INFO` line of the same form.
+
+> **Sprint 786b corrected this banner.** It used to say "slowapi is
+> unmaintained (last release Oct 2022)", which was wrong by two releases when
+> written and by three once `0.1.10` shipped on 2026-06-13. The version in the
+> message is now read from installed package metadata rather than hardcoded,
+> so it cannot drift again.
 
 This is **temporary** posture. The framework is not replaced in this
 remediation patch — full migration is deferred until one of the
