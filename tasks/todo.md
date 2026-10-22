@@ -274,8 +274,20 @@ reported exactly the two intended additions (`StatutoryLimitOverrides` schema an
 which values, and both are the practitioner's call. Shipping a table keyed to a year I cannot
 verify would assert the tax fact this sprint explicitly declines to assert.
 
-**Form 1099 has no equivalent escape hatch yet** — `FORM_THRESHOLDS` is a module constant rather
-than a config field, so exposing it is a larger change and belongs with 793b's table work.
+**Form 1099 deliberately gets no equivalent hatch, and the reason is sharper than "larger
+change".** Mechanically it would be small — `prepare_1099s(config)` encloses the one
+`FORM_THRESHOLDS[form_type]` read, so a `form_thresholds` config field is a three-line change.
+The problem is that a **per-form** override cannot express the shape the thresholds actually have.
+
+The PR #184 review's point was that for 2026 the §6041 threshold rose for NEC and most MISC
+payments while **royalties remained reportable at $10** — a sub-category distinction inside a
+single form. A practitioner handed a per-form knob would set MISC to the new figure, believe they
+had corrected the tool, and silently stop reporting every royalty between $10 and that figure.
+
+**That is worse than no hatch at all**, because it converts a known-wrong tool into one the user
+believes is right. The W-2 limits have no equivalent trap — each is a single scalar with one
+meaning — which is why the hatch is safe there and not here. Thresholds keyed by *year and
+sub-category* are 793b's table work, and they need the confirmed figures regardless.
 
 **Commit SHA:** filled at merge.
 
