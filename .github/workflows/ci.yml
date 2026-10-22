@@ -604,7 +604,11 @@ jobs:
           pip install -r requirements.txt
 
       - name: Audit for HIGH/CRITICAL vulnerabilities
-        run: pip-audit -r requirements.txt
+        # Sprint 794b: via the gate script, which retries and then
+        # distinguishes "vulnerable" from "could not reach the service".
+        # pip-audit exits 1 for both, so an index outage looked exactly like a
+        # real finding — the same defect 794a fixed on the npm side.
+        run: bash ../scripts/pip_audit_gate.sh --mode blocking -- -r requirements.txt
 
   # ── Dependency Audit: pip (advisory — all severities) ────────
   pip-audit-advisory:
@@ -630,7 +634,10 @@ jobs:
           pip install -r requirements.txt
 
       - name: Audit all vulnerabilities (advisory)
-        run: pip-audit -r requirements.txt --desc
+        # Sprint 794b: `--desc` is dropped deliberately — it does nothing
+        # alongside `--format json`, which the gate requires, and the readable
+        # summary is built from the JSON instead.
+        run: bash ../scripts/pip_audit_gate.sh --mode advisory -- -r requirements.txt
 
   # ── Dependency Audit: npm (blocking on HIGH/CRITICAL) ────────
   npm-audit-blocking:

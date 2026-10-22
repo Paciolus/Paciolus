@@ -26,7 +26,11 @@ jobs:
         # publishes a fixed pip release; not exploitable in our supply chain (we install from
         # vetted PyPI packages, not user-supplied archives). Re-check weekly; remove ignore once
         # a Fix Version is published. Owner: ops. Revisit: 2026-05-22.
-        run: pip-audit --desc --ignore-vuln CVE-2026-3219
+        # Sprint 794b: through the gate so an advisory-service outage is not
+        # reported as a CVE. Runs from the repo root and audits the installed
+        # environment, so no `-r` is passed. `--desc` dropped: the gate needs
+        # `--format json` and builds its own summary from it.
+        run: bash scripts/pip_audit_gate.sh --mode blocking -- --ignore-vuln CVE-2026-3219
       - name: Export license inventory
         run: |
           pip-licenses --format=json --output-file=python-licenses.json

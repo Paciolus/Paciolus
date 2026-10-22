@@ -329,8 +329,8 @@ sub-category* are 793b's table work, and they need the confirmed figures regardl
 ---
 
 ### Sprint 794: A registry outage makes the CVE gate report "vulnerable"
-**Status:** SPLIT — **794a COMPLETE** (the three npm call sites), **794b PENDING** (the three
-pip-audit call sites, which the step-4 check confirmed have the identical defect).
+**Status:** COMPLETE — **794a** (the three npm call sites) and **794b** (the three pip-audit
+call sites). Step 3, the gating-policy question, remains open and is a CEO call.
 **Priority:** P3 — no security exposure, but it is a blocking gate that cannot distinguish two very
 different answers, and it produces a scary-sounding failure for an upstream hiccup.
 **Source:** observed live on PR #189, 2026-10-22.
@@ -462,10 +462,67 @@ what npm did. **Three call sites**, none of them wrapped:
 Not folded into 794a on purpose: it is a different tool with a different output contract, it needs
 its own classifier and its own tests, and the incident that prompted this was on the npm side where
 the behaviour is now verified end to end. Bundling it would have made one reviewable change into
-two unreviewable ones. The discrimination should work the same way — `--format json` produces a
-parseable report when the audit ran and nothing when it did not.
+two unreviewable ones.
 
-**Commit SHA:** `a764a31a` (794a; PR #190). Filed as `f279cb55`.
+#### 794b — what landed
+
+**All three shapes captured from pip-audit 2.10.1 rather than assumed:**
+
+| Situation | pip-audit exit | stdout |
+|-----------|----------------|--------|
+| Nothing vulnerable | **0** | `{"dependencies": [{…, "vulns": []}], "fixes": []}` |
+| Real vulnerability | **1** | same shape, `vulns` non-empty |
+| Index/service unreachable | **1** | **nothing at all** |
+
+Same conclusion as npm: the exit code cannot separate the last two, the payload separates them
+cleanly.
+
+`scripts/classify_pip_audit.py` returns the same three verdicts, and `scripts/pip_audit_gate.sh`
+wraps it with 3 attempts and doubling backoff. All three call sites go through it — `ci.yml:611`
+(blocking), `ci.yml:640` (advisory), `dependency-compliance.yml:33` (blocking, keeps its
+`--ignore-vuln CVE-2026-3219`).
+
+**Gating policy unchanged**, as in 794a: an unreachable service still fails a blocking gate, it
+just says `THIS IS NOT A VULNERABILITY FINDING` first.
+
+**`--desc` was dropped from two call sites** — it does nothing alongside `--format json`, which the
+gate requires. The gate rejects `--desc` and `--format` with exit 2 rather than ignoring them: a
+caller who passes `--format columns` and gets a pass has been told something untrue.
+
+#### Two things found by using the real output
+
+**pip-audit double-counts.** It emits each advisory once per vulnerability source, so auditing
+`jinja2==2.11.3` returns **eight entries for four distinct advisories**. The summary deduplicates
+by id; without that the gate would report double the real number in the one line a human reads to
+decide how alarmed to be. Only visible by running it against a genuinely vulnerable package.
+
+**Substring matching was not good enough for the anti-drift check.** The first draft flagged four
+false positives — the job key `pip-audit-blocking:`, two step names containing "Install pip-audit",
+and `pip install pip-audit`. npm got away with the same approach only because its job keys are
+spelled `npm-audit-blocking` with a hyphen while the command has a space. The fix finds the
+**command position**: strip `run:`, split on `&&`/`||`/`;`/`|`, and require the tool at the start
+of a command. Eight cases pin the detector itself, because *a check tuned by adding exclusions
+until the noise stops eventually excludes the thing it was looking for*.
+
+Deliberately no YAML parse: `pyyaml` is only transitively installed here, not declared in
+`requirements.txt` or `requirements-dev.txt`, and a guard should not acquire a dependency that CI
+is not guaranteed to have.
+
+#### Tests — `backend/tests/test_pip_audit_gate.py`, 33
+
+The three real payloads · the dedup count · eight unreadable shapes that must all be `UNVERIFIED` ·
+the exit/report disagreement case · no workflow invokes `pip-audit` directly · the detector's own
+eight cases · end-to-end runs against a stubbed `pip-audit` covering both modes, the bad-argument
+paths, and **argument passthrough** (so `--ignore-vuln` cannot be silently dropped).
+
+Plus `test_both_audit_gates_use_the_same_verdict_vocabulary`: the npm and pip gates are separate
+scripts on purpose, which makes their shared verdict names a convention — and a convention without
+a test is a coincidence.
+
+**Regression-proved:** injecting `run: pip-audit -r requirements.txt` into `ci.yml` fails the guard
+and names `ci.yml:607`.
+
+**Commit SHA:** `a764a31a` (794a; PR #190), 794b filled at merge. Filed as `f279cb55`.
 
 ---
 
