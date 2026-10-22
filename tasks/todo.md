@@ -146,7 +146,8 @@
 > Sprints 784–791 archived to `tasks/archive/sprints-784-791-details.md`.
 
 ### Sprint 793: Both tax tools apply one fixed set of statutory limits to every year
-**Status:** PENDING.
+**Status:** SPLIT — **793a COMPLETE** (the W-2 overrides the API never exposed), **793b PENDING**
+(the year-keyed tables, which need practitioner-confirmed figures).
 **Priority:** **P1** — the two tools that touch IRS filings produce materially wrong output for any
 year whose figures differ from the hardcoded set, and both were documented and inventoried as
 complete until the PR #184 review.
@@ -233,7 +234,50 @@ both chapters carry an explicit caveat telling the reader to confirm the limits 
 year and naming what is and is not affected, and both `status.json` entries were downgraded from
 `complete` to `partial`.
 
-**Commit SHA:** TBD.
+#### 793a — the overrides Sprint 636 promised and the API never exposed: COMPLETE
+
+Scope item 4, and it needs no tax knowledge at all. `W2ReconciliationConfig` has carried a field
+for every statutory limit since Sprint 636, whose record states *"All thresholds are
+caller-overridable via `W2ReconciliationConfig`"*. True in the engine, and unreachable through the
+API — `grep` for the limit fields in `routes/w2_reconciliation.py` returned **0**. A practitioner
+who knew the correct figure for their filing year had no way to supply it.
+
+New optional `statutory_limits` object on the request, covering all eleven engine limits as
+decimal strings. **No default changes.** Only fields the caller actually sets are forwarded, so an
+omitted field keeps the engine's dataclass default rather than being overwritten with `None` — a
+naive `**model_dump()` would have nulled the other ten.
+
+This is the escape hatch while 793b waits on confirmed figures: a practitioner can now correct the
+wage base for their year per request instead of waiting for a release.
+
+**Six tests, and they exist because of how the original claim failed.** A capability that is real
+one layer down and absent at the layer a customer touches is this repo's recurring defect, so:
+
+- the baseline (wages over the built-in base are flagged);
+- an override **raises** the base and the finding disappears;
+- an override **lowers** it and a finding appears, with `expected` echoing the supplied value —
+  both directions, so the test cannot pass by the override being ignored in a way that happens to
+  match;
+- supplying one limit does not blank the other ten;
+- a malformed override is a 400, not a 500;
+- and a structural guard asserting **every** engine limit field is reachable from the request, so
+  a new limit cannot reopen the same gap silently.
+
+Regression-proved: against the pre-793a route, **four of the ten fail**, including the structural
+guard.
+
+**Verification:** 10 passed in `test_w2_reconciliation_routes.py`; `ruff` clean; OpenAPI drift
+reported exactly the two intended additions (`StatutoryLimitOverrides` schema and the
+`statutory_limits` field), snapshot regenerated — schemas 422 → 423, paths unchanged at 220.
+
+**Deliberately not done here:** the year-keyed table. Its shape depends on how many years and
+which values, and both are the practitioner's call. Shipping a table keyed to a year I cannot
+verify would assert the tax fact this sprint explicitly declines to assert.
+
+**Form 1099 has no equivalent escape hatch yet** — `FORM_THRESHOLDS` is a module constant rather
+than a config field, so exposing it is a larger change and belongs with 793b's table work.
+
+**Commit SHA:** filled at merge.
 
 ---
 

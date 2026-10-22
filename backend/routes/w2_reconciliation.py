@@ -83,12 +83,54 @@ class Form941QuarterRequest(BaseModel):
     total_medicare_wages: str = Field(default="0", max_length=24)
 
 
+class StatutoryLimitOverrides(BaseModel):
+    """Per-request overrides for the statutory limits (Sprint 793a).
+
+    The engine has carried a field for each of these since Sprint 636, and that
+    sprint's record states the thresholds are "caller-overridable via
+    `W2ReconciliationConfig`" — true in the engine and, until now, unreachable
+    through the API. A practitioner who knew the correct figure for their filing
+    year had no way to supply it.
+
+    They matter because the engine holds **one fixed set** of limits and applies
+    it to any ``tax_year`` from 2000 to 2099 without selecting by year; the
+    PR #184 review also disputes which year the current set belongs to. Until
+    Sprint 793 lands a year-keyed table with practitioner-confirmed figures,
+    this is the escape hatch. Every field is optional and omitting it keeps the
+    engine default, so the request shape is unchanged for existing callers.
+
+    Decimal strings rather than floats, matching every other monetary field on
+    this route.
+    """
+
+    ss_wage_base: Optional[str] = Field(default=None, max_length=24)
+    ss_rate: Optional[str] = Field(default=None, max_length=12)
+    medicare_rate: Optional[str] = Field(default=None, max_length=12)
+    additional_medicare_rate: Optional[str] = Field(default=None, max_length=12)
+    additional_medicare_threshold: Optional[str] = Field(default=None, max_length=24)
+    hsa_self_only_limit: Optional[str] = Field(default=None, max_length=24)
+    hsa_family_limit: Optional[str] = Field(default=None, max_length=24)
+    limit_401k_elective: Optional[str] = Field(default=None, max_length=24)
+    limit_401k_catchup_50: Optional[str] = Field(default=None, max_length=24)
+    limit_401k_catchup_60_63: Optional[str] = Field(default=None, max_length=24)
+    limit_simple_ira: Optional[str] = Field(default=None, max_length=24)
+
+
 class W2ReconciliationRequest(BaseModel):
     tax_year: int = Field(..., ge=2000, le=2099)
     employees: list[EmployeePayrollRequest] = Field(default_factory=list, max_length=10000)
     w2_drafts: list[EmployeeW2DraftRequest] = Field(default_factory=list, max_length=10000)
     form_941_quarters: list[Form941QuarterRequest] = Field(default_factory=list, max_length=4)
     tolerance: str = Field(default="1.00", max_length=12)
+    # Sprint 793a: optional per-request statutory limits. Omit for engine defaults.
+    statutory_limits: Optional[StatutoryLimitOverrides] = Field(
+        default=None,
+        description=(
+            "Override the statutory limits for this run. The engine applies one fixed set to "
+            "every tax year; supply the figures for your filing year to correct the wage-base "
+            "and over-limit findings. Omitted fields keep the engine default."
+        ),
+    )
     # Sprint 787b: optional engagement link so a run lands in the workpaper trail.
     engagement_id: Optional[int] = Field(None, description="Optional engagement to link this run to")
 
@@ -145,12 +187,22 @@ def _build_config(payload: W2ReconciliationRequest) -> W2ReconciliationConfig:
         )
         for q in payload.form_941_quarters
     ]
+    # Sprint 793a: forward only the limits the caller actually supplied, so an
+    # omitted field keeps the engine's dataclass default rather than being
+    # overwritten with None.
+    overrides: dict[str, Decimal] = {}
+    if payload.statutory_limits is not None:
+        for field_name, raw in payload.statutory_limits.model_dump().items():
+            if raw is not None:
+                overrides[field_name] = _to_decimal(field_name, raw)
+
     return W2ReconciliationConfig(
         tax_year=payload.tax_year,
         employees=employees,
         w2_drafts=w2_drafts,
         form_941_quarters=form_941,
         tolerance=_to_decimal("tolerance", payload.tolerance),
+        **overrides,
     )
 
 
