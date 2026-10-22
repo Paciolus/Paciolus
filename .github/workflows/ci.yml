@@ -37,7 +37,7 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # pin: v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # pin: v7.0.1
         with:
           fetch-depth: 0
 
@@ -80,9 +80,9 @@ jobs:
         working-directory: backend
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # pin: v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # pin: v7.0.1
 
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # pin: v6
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # pin: v7.0.0
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
@@ -116,7 +116,7 @@ jobs:
 
       - name: Upload resolved dependency versions
         if: matrix.python-version == '3.12'
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # pin: v7.0.0
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # pin: v7.0.2
         with:
           name: resolved-requirements-py312
           path: backend/resolved-requirements.txt
@@ -155,9 +155,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # pin: v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # pin: v7.0.1
 
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # pin: v6
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # pin: v7.0.0
         with:
           python-version: "3.12"
           cache: pip
@@ -216,9 +216,9 @@ jobs:
           --health-retries 5
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # pin: v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # pin: v7.0.1
 
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # pin: v6
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # pin: v7.0.0
         with:
           python-version: "3.12"
           cache: pip
@@ -258,9 +258,9 @@ jobs:
         working-directory: backend
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # pin: v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # pin: v7.0.1
 
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # pin: v6
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # pin: v7.0.0
         with:
           python-version: "3.12"
           cache: pip
@@ -294,9 +294,9 @@ jobs:
         working-directory: frontend
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # pin: v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # pin: v7.0.1
 
-      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f  # pin: v6
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1  # pin: v7.1.0
         with:
           node-version: "22"
           cache: npm
@@ -333,7 +333,7 @@ jobs:
 
       - name: Upload eslint report
         if: always()
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # pin: v7.0.0
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # pin: v7.0.2
         with:
           name: eslint-lint-report
           path: frontend/eslint-full-report.txt
@@ -349,9 +349,9 @@ jobs:
         working-directory: frontend
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # pin: v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # pin: v7.0.1
 
-      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f  # pin: v6
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1  # pin: v7.1.0
         with:
           node-version: "22"
           cache: npm
@@ -374,9 +374,9 @@ jobs:
         working-directory: backend
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # pin: v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # pin: v7.0.1
 
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # pin: v6
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # pin: v7.0.0
         with:
           python-version: "3.12"
           cache: pip
@@ -403,7 +403,7 @@ jobs:
 
       - name: Upload ruff reports
         if: always()
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # pin: v7.0.0
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # pin: v7.0.2
         with:
           name: ruff-lint-report
           path: |
@@ -422,9 +422,9 @@ jobs:
         working-directory: backend
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # pin: v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # pin: v7.0.1
 
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # pin: v6
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # pin: v7.0.0
         with:
           python-version: "3.12"
           cache: pip
@@ -453,7 +453,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # pin: v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # pin: v7.0.1
 
       - name: Check ruff baseline
         env:
@@ -503,9 +503,9 @@ jobs:
         working-directory: backend
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # pin: v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # pin: v7.0.1
 
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # pin: v6
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # pin: v7.0.0
         with:
           python-version: "3.12"
 
@@ -540,8 +540,8 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # pin: v6
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # pin: v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # pin: v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # pin: v7.0.0
         with:
           python-version: "3.12"
       - name: Run accounting policy guard
@@ -555,8 +555,8 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # pin: v6
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # pin: v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # pin: v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # pin: v7.0.0
         with:
           python-version: "3.12"
           cache: pip
@@ -574,8 +574,8 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # pin: v6
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # pin: v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # pin: v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # pin: v7.0.0
         with:
           python-version: "3.12"
       - name: Run documentation consistency guard
@@ -590,9 +590,9 @@ jobs:
         working-directory: backend
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # pin: v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # pin: v7.0.1
 
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # pin: v6
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # pin: v7.0.0
         with:
           python-version: "3.12"
           cache: pip
@@ -616,9 +616,9 @@ jobs:
         working-directory: backend
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # pin: v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # pin: v7.0.1
 
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # pin: v6
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # pin: v7.0.0
         with:
           python-version: "3.12"
           cache: pip
@@ -641,9 +641,9 @@ jobs:
         working-directory: frontend
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # pin: v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # pin: v7.0.1
 
-      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f  # pin: v6
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1  # pin: v7.1.0
         with:
           node-version: "22"
           cache: npm
@@ -663,11 +663,11 @@ jobs:
     continue-on-error: true
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # pin: v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # pin: v7.0.1
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # pin: v6
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # pin: v7.0.0
         with:
           python-version: "3.12"
 
@@ -684,9 +684,9 @@ jobs:
         working-directory: frontend
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # pin: v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # pin: v7.0.1
 
-      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f  # pin: v6
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1  # pin: v7.1.0
         with:
           node-version: "22"
           cache: npm
@@ -710,15 +710,15 @@ jobs:
         working-directory: frontend
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # pin: v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # pin: v7.0.1
 
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # pin: v6
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # pin: v7.0.0
         with:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: backend/requirements.txt
 
-      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f  # pin: v6
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1  # pin: v7.1.0
         with:
           node-version: "22"
           cache: npm
@@ -774,7 +774,7 @@ jobs:
 
       - name: Upload Playwright report on failure
         if: failure()
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # pin: v7.0.0
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # pin: v7.0.2
         with:
           name: playwright-report
           path: frontend/playwright-report/
