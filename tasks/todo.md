@@ -524,7 +524,7 @@ decision rather than an application of it.
 ---
 
 ### Sprint 786c: Refresh the six GitHub Actions SHA pins
-**Status:** PENDING.
+**Status:** COMPLETE.
 **Priority:** P3 — CI-only. No production surface, but action pins are the one dependency class in this repo that **cannot self-heal**, so they rot silently.
 **Source:** Sprint 785 Dependabot triage. Replaces the four stale Dependabot action PRs (#77, #78, #90, #156), all closed as superseded.
 
@@ -552,7 +552,66 @@ Four of the six are **major** bumps. `upload-artifact` and `download-artifact` a
 
 **Out of scope:** switching from SHA pins to tags. The pins are deliberate and stay.
 
-**Commit SHA:** TBD.
+#### What landed — 64 pins across 5 workflow files
+
+| Action | Was | Now | Occurrences |
+|--------|-----|-----|-------------|
+| `actions/checkout` | v6.0.2 | **v7.0.1** | 27 |
+| `actions/setup-python` | v6.2.0 | **v7.0.0** | 17 |
+| `actions/upload-artifact` | v7.0.0 | **v7.0.2** | 8 |
+| `actions/setup-node` | v6.3.0 | **v7.1.0** | 6 |
+| `actions/github-script` | v8.0.0 | **v9.0.0** | 4 |
+| `actions/download-artifact` | v8.0.1 | **v8.0.2** | 2 |
+
+Done in one commit rather than the filed one-major-per-commit, because a single CI run exercises
+every job at once and gives the same signal — the sprint's "verification window" per major is a
+sequencing idea that buys nothing when one run covers all 27 jobs. If something breaks, the failing
+job names the action.
+
+**Every breaking change was checked against our actual usage before bumping, not assumed away:**
+
+- **github-script v9** is the only one with real breaking changes: `require('@actions/github')`
+  stops working, and `getOctokit` becomes an injected parameter so a script declaring
+  `const getOctokit` now raises `SyntaxError`. Our four usages touch `github.rest.issues.create`,
+  `github.rest.issues.listForRepo`, `context.repo` and `require('fs')` — a Node builtin. None of
+  the breaking patterns appear.
+- **checkout v7** blocks checking out fork PRs under `pull_request_target` and `workflow_run`. We
+  use neither trigger anywhere.
+- **setup-python v7** removes the `pip-install` input. We never passed it.
+- **setup-node v7** removes the dummy `NODE_AUTH_TOKEN` export. We do not reference it.
+- The remaining v7 majors are ESM migrations plus dependency upgrades.
+
+**Each SHA was verified against GitHub's tag API** rather than trusted from the release lookup —
+`repos/<action>/tags` confirms all six resolve to the claimed version, and each also carries the
+floating major tag, which is the expected shape for a release commit.
+
+#### The guard — `tests/test_workflow_action_pins.py`, 5 tests
+
+SHA pinning is the highest-leverage supply-chain control in the repo and **nothing was checking
+it.** A tag is mutable: whoever controls an action's repository can repoint `v7` at new code, which
+then runs here with this repository's credentials and `GITHUB_TOKEN`.
+
+1. Every external `uses:` is pinned to a 40-character SHA — no tags, no branches.
+2. Every pin carries a `# pin: vX.Y.Z` comment. **This is the one that would have prevented the
+   sprint.** A bare SHA is unreadable; you cannot tell a six-month-old pin from a current one
+   without an API call, which is exactly how all six drifted a full major behind unnoticed.
+3. `checkout` and `setup-python` — 27 and 17 occurrences — each resolve to a single SHA, so a
+   partial bump cannot leave some jobs behind. The difference would be invisible at a glance,
+   being a hex string.
+4. Plus the now-standard assertion that the scan found work at all.
+
+Deliberately **not** checked: whether the pins are *current*. That needs a network call and would
+fail CI for reasons outside the commit. Currency is Dependabot's job; immutability and readability
+are the test's.
+
+Regression-proved in all three directions: replacing one pin with `@v7` fails three tests and names
+`uptime-check.yml:73`; dropping a `# pin:` comment fails one; and pointing one `checkout` back at
+the old SHA fails with "pinned to 2 different SHAs".
+
+**Verification:** all five workflow files parse, 27 jobs resolve, every `uses:` in the repo is one
+of the six and all are SHA-pinned. 5 tests pass; `ruff` clean.
+
+**Commit SHA:** filled at merge.
 
 ---
 

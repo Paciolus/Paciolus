@@ -70,7 +70,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # pin: v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # pin: v7.0.1
         with:
           # Full history: the deploy-drift check diffs the deployed commit's
           # backend/ tree against main's, and the deployed commit can be many
@@ -221,7 +221,7 @@ jobs:
 
       - name: Open or update failure issue
         if: steps.final.outputs.overall == 'FAIL'
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd  # pin: v8.0.0
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3  # pin: v9.0.0
         env:
           ISSUE_TITLE: ${{ env.ISSUE_TITLE }}
         with:
@@ -255,7 +255,7 @@ jobs:
 
       - name: Close failure issue on recovery
         if: steps.final.outputs.overall == 'PASS'
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd  # pin: v8.0.0
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3  # pin: v9.0.0
         env:
           ISSUE_TITLE: ${{ env.ISSUE_TITLE }}
         with:
