@@ -268,3 +268,95 @@ class TestStatutoryLimitOverrides:
             "the engine's statutory limits and the request's overrides have diverged — "
             f"engine-only: {sorted(engine_limits - exposed)}, request-only: {sorted(exposed - engine_limits)}"
         )
+
+
+# ---------------------------------------------------------------------------
+# PR #189 review — non-finite decimals reached the engine as a 500
+# ---------------------------------------------------------------------------
+#
+# `Decimal("NaN")`, `"sNaN"`, `"Infinity"` and `"-Infinity"` all construct
+# without raising, so `_to_decimal`'s try/except — which only guarded
+# *construction* — let them through. The engine then raised InvalidOperation on
+# the first comparison or quantisation, uncaught, as a 500 where the helper's
+# entire purpose is to produce a 400.
+#
+# Found via the Sprint 793a overrides, but the hole is in `_to_decimal` itself
+# and predates them: 48 call sites across five promoted routes, every monetary
+# field on each. The fix is in the helper, so these cases cover any field.
+
+_NON_FINITE = ["NaN", "sNaN", "Infinity", "-Infinity"]
+
+
+@pytest.mark.usefixtures("bypass_csrf")
+class TestNonFiniteDecimalsAreRejected:
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("bad", _NON_FINITE)
+    async def test_non_finite_override_is_a_400(self, professional_user, db_session, bad):
+        _override(professional_user, db_session)
+        try:
+            payload = _payload_over_ss_base("180000.00")
+            payload["statutory_limits"] = {"ss_wage_base": bad}
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                response = await client.post("/audit/w2-reconciliation", json=payload)
+            assert response.status_code == 400, f"{bad!r} produced {response.status_code}: {response.text[:200]}"
+        finally:
+            app.dependency_overrides.clear()
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("bad", _NON_FINITE)
+    async def test_non_finite_payroll_amount_is_a_400(self, professional_user, db_session, bad):
+        """The pre-existing half. These fields had the same hole before Sprint
+        793a existed, which is why the fix belongs in `_to_decimal` rather than
+        in the override loop."""
+        _override(professional_user, db_session)
+        try:
+            payload = _payload_over_ss_base("180000.00")
+            payload["employees"][0]["ss_wages"] = bad
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                response = await client.post("/audit/w2-reconciliation", json=payload)
+            assert response.status_code == 400, f"{bad!r} produced {response.status_code}: {response.text[:200]}"
+        finally:
+            app.dependency_overrides.clear()
+
+    @pytest.mark.asyncio
+    async def test_a_very_large_but_finite_value_is_still_accepted(self, professional_user, db_session):
+        """The guard rejects non-finite, not merely large. `1e999999` parses to
+        a finite Decimal and must not be swept up by the fix."""
+        _override(professional_user, db_session)
+        try:
+            payload = _payload_over_ss_base("180000.00")
+            payload["statutory_limits"] = {"ss_wage_base": "1e30"}
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                response = await client.post("/audit/w2-reconciliation", json=payload)
+            assert response.status_code == 200, response.text
+            # A base that large means nothing can exceed it.
+            assert _ss_base_findings(response.json()) == []
+        finally:
+            app.dependency_overrides.clear()
+
+
+def test_every_promoted_route_guards_non_finite_decimals():
+    """All five routes carry their own `_to_decimal`; all five had the hole.
+
+    A new route copying the old three-line helper would reintroduce it, and
+    nothing else in the suite would notice — the failure is a 500 on an input
+    no existing test sends.
+    """
+    import pathlib
+
+    routes_dir = pathlib.Path(__file__).resolve().parent.parent / "routes"
+    unguarded: list[str] = []
+    checked = 0
+    for path in sorted(routes_dir.glob("*.py")):
+        src = path.read_text(encoding="utf-8")
+        if "def _to_decimal(" not in src:
+            continue
+        checked += 1
+        if "is_finite()" not in src:
+            unguarded.append(path.name)
+
+    assert checked > 0, "no route defines _to_decimal — this check now covers nothing"
+    assert unguarded == [], (
+        "These routes parse decimals without rejecting NaN/Infinity, so a syntactically "
+        f"valid non-finite value reaches the engine and surfaces as a 500: {unguarded}"
+    )

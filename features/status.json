@@ -307,11 +307,12 @@
     "verification_steps": [
       "POST /audit/w2-reconciliation with payroll YTD, optional W-2 drafts and 941 quarters",
       "Verify employee discrepancies and Form 941 mismatches are returned",
-      "POST /audit/w2-reconciliation/export.csv returns a CSV export"
+      "POST /audit/w2-reconciliation/export.csv returns a CSV export",
+      "POST /audit/w2-reconciliation with statutory_limits.ss_wage_base set and verify the ss_wage_base_exceeded finding changes accordingly"
     ],
     "status": "partial",
     "last_verified": "2026-10-21",
-    "notes": "PARTIAL (Sprint 793): the engine holds one fixed set of statutory limits — SS wage base, HSA self-only/family, 401(k) and SIMPLE elective deferrals — and applies them to any tax_year from 2000 to 2099 without selecting by year. The route exposes no override, despite the Sprint 636 record claiming the thresholds are caller-overridable. The wage comparisons and the 941 reconciliation are sound; the cap and over-limit findings are only as current as the hardcoded constants. CSV export only."
+    "notes": "PARTIAL (Sprint 793b): the engine holds one fixed set of statutory limits — SS wage base, HSA self-only/family, 401(k) and SIMPLE elective deferrals — and applies them to any tax_year from 2000 to 2099 without selecting by year. The wage comparisons and the 941 reconciliation are sound; the cap and over-limit findings are only as current as the configured constants. Sprint 793a DID close the override half: the route now accepts a statutory_limits object covering all eleven limits, so a practitioner can supply the correct figures for their filing year per request. What remains for 793b is the year-keyed table and practitioner-confirmed defaults. CSV export only."
   },
   {
     "id": "form-1099-preparation",
