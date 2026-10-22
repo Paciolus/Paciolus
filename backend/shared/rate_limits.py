@@ -11,18 +11,28 @@ Sprint 306: User-aware rate limiting with tiered policies.
   comparisons while also being callable for slowapi dynamic resolution
 - Tier policies: anonymous/free/solo/professional/team/organization x 5 categories
 
-Maintenance Status (Sprint 444):
-    slowapi (0.1.9) is unmaintained — last release Oct 2022. However, it is a
-    thin wrapper around the `limits` library which IS actively maintained
-    (https://github.com/alisaifee/limits). The actual rate-limiting logic
-    (token bucket, sliding window, storage backends) lives in `limits`, not
-    slowapi. We pin `limits>=3.0.0` explicitly and run canary tests
+Maintenance Status (Sprint 444, revised Sprint 786b):
+    slowapi (0.1.10) is maintained at low frequency, not unmaintained. The
+    Sprint 444 note here read "last release Oct 2022", which was wrong when
+    written: 0.1.8 shipped 2023-04-07 and 0.1.9 on 2024-02-05. Verified
+    against PyPI's release history on 2026-10-22, which also shows 0.1.10 on
+    2026-06-13 — during this repository's dormancy, after a two-year gap. The
+    wheel now declares support through Python 3.13.
+
+    The structural argument is unchanged and is what actually carries the
+    risk: slowapi is a thin wrapper around the `limits` library, which IS
+    actively maintained (https://github.com/alisaifee/limits, v5.8.0). The
+    rate-limiting logic — token bucket, sliding window, storage backends —
+    lives in `limits`, not slowapi, which adds ~200 lines of Starlette glue.
+    We pin `limits>=3.0.0` explicitly and run canary tests
     (test_rate_limit_slowapi_health.py) in CI.
 
-    Decision: Keep slowapi pinned at 0.1.9. A full migration to a custom
+    Decision: stay on slowapi, now pinned at 0.1.10. A migration to custom
     Starlette middleware wrapping `limits` directly is documented in
-    docs/runbooks/rate-limiter-modernization.md but deferred until slowapi
-    becomes incompatible with a future Starlette version.
+    docs/runbooks/rate-limiter-modernization.md but remains deferred until
+    slowapi becomes incompatible with a future Starlette version. The 2026
+    release makes that deadline less likely to arrive unannounced, but does
+    not change the plan.
 
 Storage Backend:
     When REDIS_URL is configured, rate-limit counters are persisted in Redis

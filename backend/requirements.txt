@@ -41,7 +41,7 @@
 fastapi==0.136.1
 uvicorn[standard]==0.45.0
 pydantic[email]==2.13.3
-pandas==3.0.2
+pandas==3.0.6
 openpyxl==3.1.5
 # Sprint-774-era CVE sweep (2026-10-19): 0.0.26 carried 4 advisories --
 # PYSEC-2026-3039 (unbounded multipart part-header count/size -> CPU DoS),
@@ -50,7 +50,7 @@ openpyxl==3.1.5
 # whole body into memory at once), PYSEC-2026-3036/3037 (QuerystringParser
 # ";" separator differential + quadratic rescan). All four land by 0.0.31.
 python-multipart==0.0.32
-python-dotenv==1.2.2
+python-dotenv==1.2.4
 
 # PDF Generation (Day 12)
 reportlab==4.4.10
@@ -70,7 +70,7 @@ bcrypt>=5.0.0
 # dep for new passcode hashes.
 argon2-cffi>=23.1.0
 sqlalchemy==2.0.49
-psycopg2-binary==2.9.12
+psycopg2-binary==2.9.13
 alembic==1.18.4
 
 # Billing (Sprint 362)
@@ -81,7 +81,7 @@ sendgrid==6.12.5
 
 # Rate Limiting (Sprint 25)
 # See docs/compliance/DEPENDENCY_DECISIONS.md for maintenance status
-slowapi==0.1.9
+slowapi==0.1.10
 limits>=5.8.0
 
 # Redis — shared rate-limit storage across workers/instances (optional)
@@ -107,7 +107,7 @@ defusedxml>=0.7.1
 prometheus_client>=0.25.0
 
 # Background Scheduler (Sprint 307)
-APScheduler==3.11.2
+APScheduler==3.11.3
 
 # Process RSS probe for memo memory budget (Sprint 722)
 psutil>=7.0.0

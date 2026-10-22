@@ -902,11 +902,33 @@ binding to lowercase and break the current production database, which holds name
 ---
 
 ### Sprint 786: Dependency currency (replaces Sprints 760 and 761)
-**Status:** SPLIT — **786a COMPLETE** (venv reconciled, resolution now recorded in CI), **786b PENDING** (the reviewed major bumps).
+**Status:** SPLIT — **786a COMPLETE** (venv reconciled, resolution now recorded in CI),
+**786b step 2 COMPLETE** (the patch batch), **786b steps 3-4 PENDING** (the reviewed minors and majors).
 **Priority:** P2 — the only RED agent in the 2026-10-20 nightly, and 5 of the outdated packages are security-relevant.
 **Source:** `reports/next-actions-2026-10-20.md` B-c / B-d. Supersedes Sprints 760 and 761, both written in April and now wrong in their specifics.
 
 **Current drift (2026-10-20 nightly):** 68 backend / 22 frontend packages outdated. Security-relevant: `cryptography` 46.0.7 → 50.0.2 (major), `stripe` 15.0.1 → 16.0.0 (major), `fastapi` 0.136.0 → 0.150.0, `SQLAlchemy` 2.0.49 → 2.1.5, `react` 19.2.5 → 19.3.1.
+
+> **Re-measured 2026-10-22, against the reconciled venv.** The figures above are two days stale and
+> one is wrong by nine minor versions: `fastapi` is at **0.159.1**, not 0.150.0. Measured state is
+> **60 outdated**, of which only **10 are exact-pinned** and therefore actionable — the rest are
+> floors that self-heal (1) or transitive (49). The actionable set:
+>
+> | Package | Pinned | Latest | Kind |
+> |---------|--------|--------|------|
+> | `APScheduler` | 3.11.2 | 3.11.3 | patch |
+> | `pandas` | 3.0.2 | 3.0.6 | patch |
+> | `psycopg2-binary` | 2.9.12 | 2.9.13 | patch |
+> | `python-dotenv` | 1.2.2 | 1.2.4 | patch |
+> | `slowapi` | 0.1.9 | 0.1.10 | patch |
+> | `alembic` | 1.18.4 | 1.20.1 | minor |
+> | `fastapi` | 0.136.1 | 0.159.1 | minor (large surface) |
+> | `SQLAlchemy` | 2.0.49 | 2.1.6 | minor (large surface) |
+> | `reportlab` | 4.4.10 | 5.1.0 | **MAJOR** |
+> | `stripe` | 15.1.0 | 16.0.0 | **MAJOR** |
+>
+> `reportlab` 5 was not on the original list at all and is the highest-risk item here: it renders
+> all 18 memo PDFs and 3 report PDFs.
 
 **Read the numbers through Sprint 777's rule before acting.** `requirements.txt` splits deliberately: `==` for the framework/runtime surface, `>=` floors for the security leaves. The two halves need opposite treatment and the nightly does not distinguish them:
 - **Floors self-heal.** `cryptography>=46.0.7` means CI and the production Docker build already resolve to 50.0.2 on every fresh install. There is nothing to bump — the finding is about the venv, not about production.
@@ -923,6 +945,73 @@ binding to lowercase and break the current production database, which holds name
 **Verification per step:** `pip install -r backend/requirements.txt && pytest -q` clean; `npm install && npm run build && npm test` clean with every route still `ƒ (Dynamic)` and `ƒ Proxy (Middleware)` active; `pip-audit` clean; Render deploy logs show no new ImportError and `/health/ready` 200 with `status: "healthy"` within 60s.
 
 **Out of scope:** the 21 dev-only npm advisories (need `npm audit fix --force`; all three CI audit gates pass `--omit=dev`, so they do not gate).
+
+#### 786b step 2 — the patch batch: COMPLETE
+
+Five patch-level pins raised in one commit, as the sequence prescribes: `APScheduler` 3.11.3,
+`pandas` 3.0.6, `psycopg2-binary` 2.9.13, `python-dotenv` 1.2.4, `slowapi` 0.1.10.
+
+**Verification:** full backend suite **9,094 passed / 0 failed** on the bumped versions, with the
+sensitive areas run first and separately — 135 tests across all seven `test_rate_limit_*` files
+plus `test_cleanup_scheduler.py` (APScheduler) and `test_float_precision.py` (pandas). `pip-audit`
+CLEAN across 71 packages, run through the Sprint 794b gate, which is its first real use.
+
+**Warnings dropped 31 → 29.** `slowapi` 0.1.10 fixes `logger.warn` → `logger.warning`, which was
+the deprecation `test_rate_limit_storage_outage.py` had been emitting on every run.
+
+#### The one-character bump that falsified five documents
+
+`slowapi` 0.1.9 → 0.1.10 is one character in `requirements.txt`. The version is **hardcoded in
+five other places**, none of them mechanically tied to the pin, and three carry maintenance claims
+that the bump falsifies:
+
+| File | Said |
+|------|------|
+| `docs/compliance/DEPENDENCY_DECISIONS.md` | `Version: 0.1.9` · `Decision: Accept risk. Keep slowapi 0.1.9` |
+| `backend/shared/rate_limits.py` | "slowapi (0.1.9) is unmaintained — last release Oct 2022" |
+| `docs/runbooks/rate-limiter-modernization.md` | "Unmaintained (last release Oct 2022)" |
+| `backend/tests/test_rate_limit_slowapi_health.py` | "slowapi (0.1.9) is unmaintained" |
+| `docs/03-engineering/dependency-policy.md` | "why slowapi is pinned at 0.1.9" |
+
+**Verified against PyPI's release history rather than taken from the comments:**
+`0.1.7` 2022-11-28 · `0.1.8` 2023-04-07 · `0.1.9` 2024-02-05 · **`0.1.10` 2026-06-13**.
+
+So "last release Oct 2022" was **already wrong by two releases when Sprint 444 wrote it**, and the
+figure propagated into a runbook. More usefully: 0.1.10 shipped during this repository's dormancy,
+after a two-year gap, and declares support through Python 3.13. **The "unmaintained" premise of the
+accepted-risk decision is materially weaker than recorded** — not *responsive*, but not abandoned.
+The register now says low-frequency, dates every claim, and keeps the structural argument (the
+logic lives in `limits`, not in slowapi's ~200 lines of glue) as what the acceptance really rests
+on. The migration plan is unchanged and still deferred.
+
+#### The guard, and the measurement that decided its scope
+
+The obvious guard is "every version mentioned in prose must match its pin". **It was measured
+before being written, and the numbers killed it:** across 938 files and the 13 exact pins there are
+**54 disagreements, and every one inspected was a false positive** — a section heading
+(`### 18.4 Stripe Webhook Re-Registration`), a CVSS score (`CVSS ≥ 7.0`), another package's floor
+(`limits >= 3.0.0`). Version-shaped strings are simply common in prose, and a guard over that needs
+one exclusion per false positive, which is how a check gets tuned until it checks nothing
+(Sprint 794b).
+
+`backend/tests/test_dependency_decision_versions.py` (4 tests) therefore covers the one place the
+version is **structured data** rather than prose: the register's `- **Version:**` field. Zero
+exclusions, and it is the claim carrying compliance weight — a signed-off risk acceptance naming a
+version nobody runs is a decision nobody made. Regression-proved: reverting the register to 0.1.9
+fails two tests.
+
+**The four prose mentions were corrected by hand and are deliberately left unguarded.** Written
+down in the test's docstring so the next reader sees a decision rather than an oversight.
+
+**Not done here:** steps 3 and 4 — `alembic` 1.20, `fastapi` 0.159, `SQLAlchemy` 2.1, `reportlab` 5,
+`stripe` 16. One per commit with its own verification window, per the sequence. Note also that the
+sprint's deploy-verification criterion ("Render deploy logs show no new ImportError") **cannot be
+checked from here** — there is no `RENDER_API_KEY` and no build marker on any endpoint. That half
+of the verification is a CEO action, and it matters more for the majors than it did for patches.
+
+**Commit SHA:** filled at merge.
+
+---
 
 #### 786a — the venv, and what the reconcile proved: COMPLETE
 

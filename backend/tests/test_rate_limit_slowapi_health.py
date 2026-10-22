@@ -1,7 +1,7 @@
 """
 Canary tests for slowapi / limits library health.
 
-Sprint 444: slowapi (0.1.9) is unmaintained but wraps the actively-maintained
+Sprint 444: slowapi (0.1.10) is maintained at low frequency and wraps the actively-maintained
 `limits` package. These tests detect breakage early — if any fail, consult
 docs/runbooks/rate-limiter-modernization.md for the migration playbook.
 """

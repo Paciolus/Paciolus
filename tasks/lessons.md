@@ -2330,3 +2330,46 @@ guaranteed to have is a guard that can vanish on an unrelated upgrade — which 
 **Reject unsupported arguments instead of ignoring them.** The gate forces `--format json`, so a
 caller passing `--format columns` would otherwise get a pass computed from output the classifier
 never saw. Exit 2 and say why. An argument silently dropped is a lie told quietly.
+
+---
+
+## Sprint 786b — a version number in prose is a claim, and claims expire
+
+Raising `slowapi` from 0.1.9 to 0.1.10 is one character in `requirements.txt`. The version was
+hardcoded in **five** other places, and three of them carried a maintenance *claim* rather than
+just a number: "unmaintained — last release Oct 2022."
+
+Checked against PyPI: `0.1.7` 2022-11-28, `0.1.8` 2023-04-07, `0.1.9` 2024-02-05, `0.1.10`
+2026-06-13. **The "Oct 2022" figure was already wrong by two releases when it was written**, and it
+had since been copied into a runbook and a compliance register. The register's own entry read
+"Decision: Accept risk. Keep slowapi 0.1.9" — a signed-off risk acceptance for a version that was
+no longer installed the moment the pin moved.
+
+**The rule.** A pinned version appearing in prose is a claim with an expiry date, and an
+*assessment* of a dependency ("unmaintained", "last release X") expires faster than the version
+does. Date every such claim at the point of writing, and when a pin moves, grep for the old number
+before assuming the change was one line.
+
+**The useful half of the finding was the correction, not the bump.** 0.1.10 landed during the
+repository's dormancy after a two-year gap and declares Python 3.13 support, so the accepted risk
+is materially better than recorded — low-frequency maintenance, not abandonment. Nobody would have
+learned that from bumping the pin and moving on; it came from checking why the documents disagreed
+with each other.
+
+### Measure before building the guard — the measurement is allowed to say "don't"
+
+The obvious follow-up guard is "every version mentioned in prose must match its pin". Measuring it
+first across 938 files and 13 exact pins returned **54 disagreements, and every one inspected was a
+false positive**: a section heading (`### 18.4 Stripe Webhook Re-Registration`), a CVSS threshold
+(`CVSS ≥ 7.0`), another package's floor (`limits >= 3.0.0`). Version-shaped strings are ordinary
+prose.
+
+Building it would have meant one exclusion per false positive — the exact path to a check that
+passes while verifying nothing (Sprint 794b). **So the measurement's answer was "do not build
+this", and that is a legitimate outcome, not a failure to deliver.**
+
+What did get built reads the one place the version is *structured data*: the register's
+`- **Version:**` field. No exclusions, no ambiguity, and it covers the claim that carries
+compliance weight. The four prose mentions are fixed by hand and **deliberately unguarded, with
+that stated in the test's docstring** — an unguarded gap that is written down is a decision; the
+same gap unmentioned is an oversight, and the next reader cannot tell them apart from the code.
