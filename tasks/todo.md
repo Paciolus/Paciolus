@@ -266,7 +266,42 @@ one layer down and absent at the layer a customer touches is this repo's recurri
 Regression-proved: against the pre-793a route, **four of the ten fail**, including the structural
 guard.
 
-**Verification:** 10 passed in `test_w2_reconciliation_routes.py`; `ruff` clean; OpenAPI drift
+#### A wider hole the PR #189 review surfaced through this sprint
+
+`_to_decimal` only caught failures at **construction** — and `Decimal` accepts `"NaN"`, `"sNaN"`,
+`"Infinity"` and `"-Infinity"` without raising. A syntactically valid non-finite value therefore
+passed straight through to the engine and raised `InvalidOperation` on the first comparison or
+quantisation: an uncaught **500**, from a helper whose entire purpose is to produce a 400.
+
+The reviewer found it through the new overrides, but **the hole is in the helper and predates
+them**. That three-line helper is copy-pasted into **nine route modules**, so every monetary
+field on all nine was affected — `{"federal_wages": "NaN"}` would have 500'd long before this
+sprint existed. The fix belongs in the helper, not the override loop.
+
+Fixed in all nine. The five promoted routes came from reading the review; **the other four —
+`account_risk_heatmap`, `depreciation`, `lease_accounting`, `loan_amortization` — were found by
+the guard written alongside the fix**, on its first run. The review named five; there were nine.
+
+`test_every_promoted_route_guards_non_finite_decimals` now fails if any module defining
+`_to_decimal` lacks the finiteness check, so a tenth route copying the old helper reintroduces
+nothing silently. Regression-proved against **`loan_amortization`** — deliberately one of the four
+the reviewer did *not* name, rather than one of the five he did, which is the lesson from earlier
+today applied instead of merely recorded.
+
+Nine test cases: all four non-finite spellings rejected on an override **and** on a plain payroll
+amount (the pre-existing half, which is why the fix sits in the helper), plus one asserting that
+`1e30` — large but finite — is still accepted, so the guard rejects non-finite rather than big.
+
+#### The inventory contradicted the API this sprint shipped
+
+Second PR #189 finding, and squarely this session's theme: the 793a record in this file said the
+overrides now exist while `features/status.json` still read *"The route exposes no override"* —
+the canonical feature inventory directly contradicting the API, one commit after I corrected the
+same file for a different reason. Updated, keeping `partial` for 793b and adding a verification
+step that exercises the override path.
+
+**Verification:** 20 passed in `test_w2_reconciliation_routes.py`; **full backend suite 9,013
+passed / 0 failed** across all nine touched modules; `ruff` clean; OpenAPI drift
 reported exactly the two intended additions (`StatutoryLimitOverrides` schema and the
 `statutory_limits` field), snapshot regenerated — schemas 422 → 423, paths unchanged at 220.
 
