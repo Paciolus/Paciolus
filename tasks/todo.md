@@ -1090,7 +1090,8 @@ sprint's deploy-verification criterion ("Render deploy logs show no new ImportEr
 checked from here** — there is no `RENDER_API_KEY` and no build marker on any endpoint. That half
 of the verification is a CEO action, and it matters more for the majors than it did for patches.
 
-**Commit SHA:** filled at merge.
+**Commit SHA:** `e4f3c1cb` (786b step 2; PR #195), plus `494cf6d8` — the nightly's bash-probe fix —
+and `508ee136`, the PR #195 review finding that the stale claim was also running in production.
 
 ---
 
