@@ -553,7 +553,7 @@ proving a skipped dependency neither retries nor blocks.
 **Regression-proved:** injecting `run: pip-audit -r requirements.txt` into `ci.yml` fails the guard
 and names `ci.yml:607`.
 
-**Commit SHA:** `a764a31a` (794a; PR #190), 794b filled at merge. Filed as `f279cb55`.
+**Commit SHA:** `a764a31a` (794a; PR #190) and `5e6a0b7a` (794b; PR #193), plus the 794b review fix `083a2f8b` — a skipped dependency was being read as a broken schema. Filed as `f279cb55`.
 
 ---
 
