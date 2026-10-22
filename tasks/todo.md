@@ -609,7 +609,35 @@ Regression-proved in all three directions: replacing one pin with `@v7` fails th
 the old SHA fails with "pinned to 2 different SHAs".
 
 **Verification:** all five workflow files parse, 27 jobs resolve, every `uses:` in the repo is one
-of the six and all are SHA-pinned. 5 tests pass; `ruff` clean.
+of the six and all are SHA-pinned. 5 tests pass; `ruff` clean. Re-verified after rebasing onto
+#187, which rewrote `dr-test-monthly.yml` — no stale pin survived the merge.
+
+**What a green CI run does *not* verify, and what does.** `checkout`, `setup-python`,
+`setup-node`, `upload-artifact` and `download-artifact` run on every job, so the PR's own CI is a
+genuine test of those five. **`github-script` is different: all four usages are conditional**, and
+three of them only fire on failure —
+
+| Workflow | Condition |
+|----------|-----------|
+| `backup-integrity-check.yml:78` | `steps.check.outcome == 'failure'` |
+| `dr-test-monthly.yml:221` | `steps.final.outputs.overall != 'PASS'` |
+| `uptime-check.yml:223` | `steps.final.outputs.overall == 'FAIL'` |
+| `uptime-check.yml:257` | `steps.final.outputs.overall == 'PASS'` ← **runs on success** |
+
+So the v8 → v9 major — the only bump with real breaking changes — is exercised by none of the
+PR's checks. The static analysis stands (none of our scripts uses `require('@actions/github')` or
+declares `getOctokit`), but static analysis is not execution.
+
+The last row is the answer: `uptime-check.yml` is scheduled **every 15 minutes**, and its
+recovery step runs `github-script` on the PASS path. So v9 gets genuinely exercised within a
+quarter-hour of this merging, against real GitHub API calls. **Confirm that run is green before
+treating this sprint as verified** — today's lesson about un-suppressing untested paths applies
+directly, and a conditional step is a path nobody has run.
+
+**Not done deliberately:** manually dispatching `dr-test-monthly` to exercise the failure path.
+It would work — the verdict is UNVERIFIED after Sprint 778a, so the issue-creation step fires —
+but it files a real `dr-failure` issue in the repository, which is an outward-facing side effect
+and the CEO's call rather than a verification step to take unprompted.
 
 **Commit SHA:** filled at merge.
 
