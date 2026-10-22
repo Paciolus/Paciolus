@@ -124,8 +124,12 @@ def test_anything_unreadable_is_unverified_never_clean(payload):
 
     Defaulting the other way would let a change in pip-audit's output format
     silently disarm the gate — the Sprint 792 defect class through a different
-    door. Note `{"dependencies": [{...no vulns key}]}` is included: the schema
-    always emits `vulns`, so its absence means this is not the shape we think.
+    door.
+
+    `{"name": "x", "version": "1"}` with no `vulns` **and** no `skip_reason`
+    is genuinely malformed: the formatter always emits one or the other. A
+    record carrying `skip_reason` is a different matter entirely — see
+    `test_a_skipped_dependency_is_not_a_broken_schema`.
     """
     verdict, _ = classify(payload, pip_exit=1)
     assert verdict == "UNVERIFIED"
@@ -381,3 +385,109 @@ def test_gate_passes_caller_arguments_through(tmp_path):
     passed = seen.read_text(encoding="utf-8").split()
     assert "--ignore-vuln" in passed and "CVE-2026-3219" in passed, f"arguments were dropped: {passed}"
     assert "--format" in passed and "json" in passed, "the gate must force JSON output"
+
+
+# ---------------------------------------------------------------------------
+# Skipped dependencies — added after the PR #193 review
+#
+# pip-audit's JSON formatter emits `{"name", "skip_reason"}` with no `version`
+# and no `vulns` when it cannot resolve a package: an editable install, a URL
+# requirement, something absent from PyPI. It still exits 0 — only `--strict`
+# turns a skip into a failure.
+#
+# The first draft treated the missing `vulns` key as a broken schema, which
+# made every such run UNVERIFIED, retried it three times and failed the
+# blocking gates. That is `--strict` smuggled in under a change whose whole
+# claim was that the gating policy did not move.
+# ---------------------------------------------------------------------------
+
+SKIP_AND_AUDIT = """
+{"dependencies": [
+  {"name": "packaging", "version": "24.1", "vulns": []},
+  {"name": "mylib", "skip_reason": "Dependency not found on PyPI and could not be audited"}
+], "fixes": []}
+"""
+
+ALL_SKIPPED = """
+{"dependencies": [
+  {"name": "mylib", "skip_reason": "Dependency not found on PyPI and could not be audited"}
+], "fixes": []}
+"""
+
+SKIP_AND_VULN = """
+{"dependencies": [
+  {"name": "jinja2", "version": "2.11.3", "vulns": [{"id": "PYSEC-2026-1473"}]},
+  {"name": "mylib", "skip_reason": "Dependency is editable"}
+], "fixes": []}
+"""
+
+
+def test_a_skipped_dependency_is_not_a_broken_schema():
+    """A skip beside a real audit is CLEAN — pip-audit itself exits 0 here."""
+    verdict, reason = classify(SKIP_AND_AUDIT, pip_exit=0)
+    assert verdict == "CLEAN", reason
+
+
+def test_skipped_dependencies_are_named_in_the_reason():
+    """Non-blocking, but not invisible.
+
+    The gate's whole purpose is to distinguish what was checked from what was
+    not. A package pip-audit could not resolve was not checked, and the reader
+    should be told which one and why — without the build failing over it.
+    """
+    _verdict, reason = classify(SKIP_AND_AUDIT, pip_exit=0)
+    assert "skipped" in reason
+    assert "mylib" in reason
+    assert "not found on PyPI" in reason
+
+
+def test_a_skip_does_not_mask_a_real_finding():
+    verdict, reason = classify(SKIP_AND_VULN, pip_exit=1)
+    assert verdict == "VULNERABLE", reason
+    assert "jinja2" in reason
+    assert "mylib" in reason, "the skip should still be reported alongside the finding"
+
+
+def test_a_report_where_everything_was_skipped_is_not_clean():
+    """The narrow exception, and the one place this differs from pip-audit.
+
+    Skips do not fail the gate. But a report in which *nothing* was audited
+    establishes nothing, and calling it CLEAN would be precisely the failure
+    this sprint exists to prevent — reporting safety that was never checked.
+
+    This is not `--strict`: a single audited package is enough to restore the
+    normal verdict, as the tests above show.
+    """
+    verdict, reason = classify(ALL_SKIPPED, pip_exit=0)
+    assert verdict == "UNVERIFIED", reason
+    assert "nothing was actually audited" in reason
+
+
+def test_the_skip_record_shape_matches_pip_audits_formatter():
+    """Pinned to the real structure, not a guess.
+
+    `pip_audit/_format/json.py` builds a skipped entry as exactly
+    `{"name": ..., "skip_reason": ...}` — no `version`, no `vulns`. If a
+    future version adds `vulns: []` to skipped records this test still
+    passes, which is correct: the classifier keys off `skip_reason` being
+    present, not off `vulns` being absent.
+    """
+    import json
+
+    record = json.loads(SKIP_AND_AUDIT)["dependencies"][1]
+    assert set(record) == {"name", "skip_reason"}
+    verdict, _ = classify(SKIP_AND_AUDIT, pip_exit=0)
+    assert verdict == "CLEAN"
+
+
+@pytest.mark.skipif(not BASH, reason=NEEDS_BASH)
+def test_gate_does_not_retry_or_block_on_a_skipped_dependency(tmp_path):
+    """End-to-end: the symptom the review described.
+
+    Before the fix this run produced three attempts and exit 1 on a perfectly
+    normal exit-0 audit.
+    """
+    result = _run_gate(tmp_path, SKIP_AND_AUDIT, 0, "--mode", "blocking")
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "CLEAN" in result.stdout
+    assert "attempt 1/" not in result.stdout, "a skipped dependency must not trigger a retry"
