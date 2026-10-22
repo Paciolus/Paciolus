@@ -951,13 +951,64 @@ binding to lowercase and break the current production database, which holds name
 Five patch-level pins raised in one commit, as the sequence prescribes: `APScheduler` 3.11.3,
 `pandas` 3.0.6, `psycopg2-binary` 2.9.13, `python-dotenv` 1.2.4, `slowapi` 0.1.10.
 
-**Verification:** full backend suite **9,094 passed / 0 failed** on the bumped versions, with the
-sensitive areas run first and separately — 135 tests across all seven `test_rate_limit_*` files
-plus `test_cleanup_scheduler.py` (APScheduler) and `test_float_precision.py` (pandas). `pip-audit`
+**Verification:** full backend suite **9,103 passed / 0 failed** (9,094 on the bumped versions,
+plus the 4 register-guard and 5 bash-probe tests added below), with the sensitive areas run first
+and separately — 135 tests across all seven `test_rate_limit_*` files plus
+`test_cleanup_scheduler.py` (APScheduler) and `test_float_precision.py` (pandas). `pip-audit`
 CLEAN across 71 packages, run through the Sprint 794b gate, which is its first real use.
 
 **Warnings dropped 31 → 29.** `slowapi` 0.1.10 fixes `logger.warn` → `logger.warning`, which was
 the deprecation `test_rate_limit_storage_outage.py` had been emitting on every run.
+
+#### The nightly caught what CI could not — 14 failures, no bug in the code under test
+
+The 2026-10-22 nightly went **RED with 14 new failures**, all in the two audit-gate suites from
+Sprints 794a/794b. CI was green on both PRs, and the full suite passes locally. The failure set was
+the diagnosis: **every test that spawns `bash` failed, and every test that does not spawn bash
+passed** — including `test_the_gate_script_and_classifier_exist_and_are_wired_to_each_other`.
+
+Two independent causes, both reproduced rather than inferred.
+
+**1. `skipif(not shutil.which("bash"))` asks whether bash exists, not whether it works.**
+This host carries two:
+
+| Path | `bash -c "exit 0"` |
+|------|--------------------|
+| `C:\Program Files\Git\usr\bin\bash.exe` | returns **0** |
+| `C:\Users\...\Local\Microsoft\WindowsApps\bash.exe` | returns **1** |
+
+The second is the Store/WSL launcher, inert without a WSL distribution. `shutil.which` returns
+whichever comes first on PATH, and the nightly cron's session orders PATH differently from an
+interactive shell. So the skip guard passed and every invocation afterwards returned garbage.
+
+**This is precisely the confusion the audit gates were written to fix.** A check that establishes
+*presence* and reports it as *capability* — `which` answering is not the tool answering. The lesson
+was written up three times today (778a, 794a, 741d) before being shipped as an instance of itself.
+
+**2. A spawned Git Bash needs `Git\usr\bin` on PATH.** Under a minimal PATH the gate dies with
+`dirname: command not found`, because `dirname` and `sed` live beside the binary rather than inside
+it. **Invisible on Linux CI**, where coreutils are always present — which is exactly why five green
+CI runs said nothing about this.
+
+**The fix: `backend/tests/helpers/shell_support.py`.** `usable_bash()` probes candidates with
+`bash -c "exit 0"` and returns the first that actually runs, searching PATH order and then known
+Git-for-Windows locations; `bash_support_path()` hands the spawned shell the directories it needs
+plus the directory of the interpreter pytest is running under, so the gate's own
+`command -v python3 || command -v python` resolves to the same Python rather than to whatever the
+ambient environment offers. The suites are now hermetic.
+
+**Regression-proved against the nightly's actual conditions** — broken bash first on PATH, no Git
+coreutils, no python on PATH: **60 pass**. The same command gave 12 failures with only fix 1 applied
+and 14 in the nightly with neither.
+
+**Plus 5 tests on the probe itself** (`backend/tests/test_shell_support.py`), including a stub
+`bash` that exits 1 which it must reject, and a broken-bash-shadowing-a-working-one case. A probe
+that silently stopped discriminating would restore the original bug while looking fixed — and the
+probe is now the thing 14 tests depend on.
+
+**Worth keeping in view:** the nightly found this and CI structurally could not, because the defect
+lives in the difference between the two environments. That is an argument for reading the nightly
+rather than treating a green CI as sufficient.
 
 #### The one-character bump that falsified five documents
 

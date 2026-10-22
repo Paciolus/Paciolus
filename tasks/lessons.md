@@ -2373,3 +2373,52 @@ What did get built reads the one place the version is *structured data*: the reg
 compliance weight. The four prose mentions are fixed by hand and **deliberately unguarded, with
 that stated in the test's docstring** — an unguarded gap that is written down is a decision; the
 same gap unmentioned is an oversight, and the next reader cannot tell them apart from the code.
+
+---
+
+## Sprint 786b (nightly) — `which` answering is not the tool answering
+
+The 2026-10-22 nightly went RED with 14 failures in the two audit-gate suites. CI was green on
+both PRs that introduced them. The failing set was the diagnosis: **every test that spawned `bash`
+failed; every test that did not, passed** — including the one asserting the gate scripts exist.
+
+Cause: the suites guarded themselves with
+
+```python
+BASH = shutil.which("bash")
+@pytest.mark.skipif(not BASH, reason=...)
+```
+
+This host has two bash binaries. Git's works. `WindowsApps\bash.exe` — the Store/WSL launcher with
+no WSL distribution behind it — **exists and returns 1** on `bash -c "exit 0"`. `which` returns
+whichever PATH lists first, and the cron session's PATH order differs from an interactive shell's.
+So the skip guard passed, and then every invocation returned garbage.
+
+**The rule: a skip guard must test the capability it is standing in for, not the existence of
+something associated with it.** `shutil.which(x)` is not "x works" — it is "a file called x is
+reachable". For an interpreter, a compiler, a shell, a CLI: *run it* and check. The probe is cheap
+and it is the only thing that answers the actual question.
+
+This is the same defect as the three written up earlier the same day — a check with two outcomes
+where reality has three, a parser that half-reads its input, a gate that cannot tell "clean" from
+"did not look". **I wrote that lesson three times and then shipped an instance of it**, which is
+worth recording honestly: knowing the shape is not the same as recognising it in your own new code.
+The recognisable trigger is narrow and checkable — *am I inferring that something works from the
+fact that it is present?*
+
+### The second cause, and why CI could never have found it
+
+A spawned Git Bash needs `Git\usr\bin` on PATH: `dirname` and `sed` live beside the binary, not
+inside it. Under a minimal PATH the gate script died with `dirname: command not found`.
+
+**On Linux CI this cannot happen** — coreutils are always present. So five green CI runs said
+nothing about it, and the defect lived entirely in the difference between the two environments.
+
+**When a test shells out, it must supply the environment the shell needs rather than inheriting
+whatever the host happens to have.** The tests now set PATH explicitly: the stub, then the bash
+binary's own directory, then the directory of the interpreter pytest is running under (so the
+script's own `command -v python3 || command -v python` resolves to the same Python). Hermetic, and
+proved by running the suites under the nightly's hostile PATH.
+
+**And: read the nightly.** It found something CI structurally could not, because the failure lives
+in the gap between environments. A green CI is evidence about CI.

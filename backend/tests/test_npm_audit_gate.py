@@ -26,11 +26,12 @@ from __future__ import annotations
 
 import importlib.util
 import os
-import shutil
 import subprocess
 from pathlib import Path
 
 import pytest
+
+from tests.helpers.shell_support import NEEDS_BASH, bash_support_path, usable_bash
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 WORKFLOWS_DIR = REPO_ROOT / ".github" / "workflows"
@@ -194,8 +195,13 @@ def test_the_gate_script_and_classifier_exist_and_are_wired_to_each_other():
 # End-to-end: the gate's exit codes, with npm stubbed
 # ---------------------------------------------------------------------------
 
-BASH = shutil.which("bash")
-NEEDS_BASH = "bash is required to exercise the gate script"
+# Sprint 786b: a bash that EXISTS is not a bash that WORKS. `shutil.which`
+# finds the inert WindowsApps/WSL launcher on this host, which exits 1 on
+# `bash -c "exit 0"` — so the original `skipif(not shutil.which("bash"))`
+# passed and then every subprocess here returned garbage. That is how the
+# 2026-10-22 nightly went RED on 14 tests with nothing wrong in the code
+# under test. `usable_bash()` probes instead of asking.
+BASH = usable_bash()
 
 
 def _run_gate(tmp_path: Path, stub_stdout: str, stub_exit: int, *args: str):
@@ -218,7 +224,9 @@ def _run_gate(tmp_path: Path, stub_stdout: str, stub_exit: int, *args: str):
     stub.chmod(0o755)
 
     env = dict(os.environ)
-    env["PATH"] = f"{bin_dir}{os.pathsep}" + env.get("PATH", "")
+    # The stub first, then the directories bash itself needs (see
+    # bash_support_path), then whatever the host already had.
+    env["PATH"] = os.pathsep.join([str(bin_dir), *bash_support_path(), env.get("PATH", "")])
     env["NPM_AUDIT_ATTEMPTS"] = "2"
     env["NPM_AUDIT_BACKOFF_SECONDS"] = "0"
 
