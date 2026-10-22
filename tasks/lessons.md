@@ -2224,3 +2224,43 @@ because three jobs each ran `npm audit` directly; a fourth added by copy-paste w
 and stay green until the next outage. After PR #188 (a guard that inspected 23% of its target) and
 Sprint 792, writing the anti-drift test up front is cheaper than discovering in review that the fix
 quietly stopped applying.
+
+---
+
+## Sprint 741d — a hand-read sample is not a measurement
+
+**What happened.** Sprint 741c's record carries a table of enum label drift between the Alembic
+chain and the ORM: three types, five rows, assembled by hand from two PR reviews. Building the
+same comparison mechanically found **twenty** drifting types out of twenty-six.
+
+Every row in the hand-written table was correct. It was simply the subset that happened to get
+noticed, presented in a format that reads like an inventory. Nothing marked it as a sample.
+
+**The rule.** When a record enumerates instances of a defect, say whether the list is *everything*
+or *what was found so far*. They look identical on the page and they support completely different
+decisions — "fix these three" versus "there is a systemic problem here." Sprint 741c's step 2
+("correct the migrations that disagree") was scoped against three types.
+
+**The corollary that actually saves time:** if a defect class is mechanically detectable, measure
+it before scoping the fix. The measurement here took about twenty minutes and moved the estimate
+by a factor of six — and surfaced `engagementstatus.COMPLETED`, a label the ORM binds that **no
+migration ever adds**, which nobody had noticed at all. It is the same instinct as Sprint 792:
+stop fixing instances, go find the population.
+
+**And the reason it had to be static.** SQLite has no enum types, so every label is accepted and
+~9,000 passing tests say nothing about this. Third time this shape has appeared — Sprint 787's
+missing `ALTER TYPE`, Sprint 741a's 22P02, now this. **When a constraint exists only in the
+production dialect, no amount of green test suite is evidence about it.** Worth asking of any
+schema-level claim: which dialect would have to be running for this test to be able to fail?
+
+**The guard was wrong three times before it was right**, each time by silently covering less than
+it claimed: it read 5 of 26 ORM types (`import models` misses sibling `*_model.py` modules), it
+could not read a constant declared with a type annotation (`AnnAssign`, not `Assign`), and it
+recorded an f-string's `{value}` placeholder as a real label. All three were caught only because
+the module reports what it *cannot* resolve rather than skipping it. If the first draft had
+shipped it would have passed CI and printed a confident verdict over a fifth of the schema.
+
+**So: make unparseable input an error, not a skip.** This is the operational form of the rule from
+Sprint 794 — the parse and the check are two different claims, and a parser that degrades quietly
+converts a guard into a rubber stamp. Every guard written this session that lacked this had the
+defect; every one that had it caught its own bugs before review did.
