@@ -2264,3 +2264,31 @@ shipped it would have passed CI and printed a confident verdict over a fifth of 
 Sprint 794 — the parse and the check are two different claims, and a parser that degrades quietly
 converts a guard into a rubber stamp. Every guard written this session that lacked this had the
 defect; every one that had it caught its own bugs before review did.
+
+### The addendum the PR #191 review forced, which is the sharper version
+
+The guard shipped with a coverage self-check, and it passed. It counted `Enum(..., name=...)` AST
+calls and confirmed the parser saw all 26. The review then found that the parser had **no handler
+for `CREATE TYPE ... AS ENUM`** — raw SQL inside `op.execute()`, which that check cannot see. One
+migration rebuilds two enum types that way, so one reported drift was a phantom and any future
+drift introduced by a rebuild would have been invisible.
+
+**Coverage of one construct family reads exactly like coverage of the subject.** "I verified the
+parser sees every `Enum()` call" and "I verified the parser sees every way this chain defines an
+enum" are different sentences, and only the first was true. The fix was a second coverage check
+over the SQL path — but the generalisable move is: *before writing the coverage test, enumerate
+the construct families the input can use, and check the list is complete.* Here they were inline
+literals, starred constants, `ALTER TYPE` loops, and raw `CREATE TYPE`. Three were covered.
+
+**And model the thing, not the text.** A migration chain is a *sequence of operations*, not a bag
+of labels. Unioning everything mentioned in the files answers "what labels appear anywhere",
+which is not the question. A fifth defect fell straight out of the same mistake: scanning raw file
+text replayed `downgrade()` too, and that migration's downgrade recreates the types with the old
+labels — so the guard was describing a database nobody has. Replaying `upgrade()` bodies in
+revision order fixed both at once.
+
+Five defects in one guard, four of them the same shape. The ones found before review were found
+because the module reports what it cannot parse; the one found in review was in the part that
+parsed *successfully* and simply never looked. **Reporting unparseable input protects against
+constructs you half-handle, not against constructs you never considered.** Only enumerating the
+input space does that.
