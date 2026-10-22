@@ -35,7 +35,14 @@ WORKFLOWS_DIR = Path(__file__).resolve().parents[2] / ".github" / "workflows"
 # `uses:` lines come in three shapes: a pinned external action, a local action
 # path (`./.github/actions/...`), and a reusable workflow. Only the first is in
 # scope here.
-_USES = re.compile(r"^\s*uses:\s*(?P<ref>\S+)(?P<rest>.*)$")
+#
+# The `(?:-\s+)?` is load-bearing (PR #188 review). The first draft was
+# `^\s*uses:` and YAML list items are written `- uses: actions/checkout@...`,
+# so it matched only the 15 entries where a `- name:` came first and skipped
+# **49 of the 64** references in these workflows — every `setup-node` and
+# `download-artifact` use, and 25 of 27 `checkout` uses. All five tests were
+# green while covering 23% of the file.
+_USES = re.compile(r"^\s*(?:-\s+)?uses:\s*(?P<ref>\S+)(?P<rest>.*)$")
 _SHA40 = re.compile(r"^[0-9a-f]{40}$")
 _PIN_COMMENT = re.compile(r"#\s*pin:\s*v?\d+\.\d+\.\d+", re.IGNORECASE)
 
@@ -63,6 +70,42 @@ def test_workflow_directory_is_where_we_think_it_is():
     """A glob that matches nothing covers nothing."""
     assert WORKFLOWS_DIR.is_dir(), f"no workflows directory at {WORKFLOWS_DIR}"
     assert _workflow_files(), "no workflow files found — this check now covers nothing"
+
+
+def test_the_parser_sees_every_uses_line_in_every_workflow():
+    """The guard against this guard silently shrinking.
+
+    PR #188 review: the first `_USES` pattern required `uses:` after only
+    whitespace, so it skipped every YAML list item (`- uses: ...`) — 49 of 64
+    references. The four checks below all passed while inspecting 23% of the
+    file, and the regression proof happened to pick a line inside that 23%.
+
+    A parser-based scan can narrow without any test noticing, because the cases
+    it stops seeing stop being asserted. So count the `uses:` lines the naive
+    way and require the parser to account for all of them. This test does not
+    care *what* the references are — only that none became invisible.
+    """
+    naive_total = 0
+    for path in _workflow_files():
+        for line in path.read_text(encoding="utf-8").splitlines():
+            stripped = line.strip()
+            if stripped.startswith("uses:") or stripped.startswith("- uses:"):
+                naive_total += 1
+
+    parsed = _external_uses()
+    local = sum(
+        1
+        for path in _workflow_files()
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if (st := line.strip()).startswith(("uses:", "- uses:")) and "uses: ." in st
+    )
+
+    assert naive_total > 0, "no `uses:` lines found at all — this check now covers nothing"
+    assert len(parsed) + local == naive_total, (
+        f"the parser accounts for {len(parsed)} external + {local} local = "
+        f"{len(parsed) + local} of {naive_total} `uses:` lines. The ones it no longer "
+        "sees are no longer checked by anything in this file."
+    )
 
 
 def test_every_external_action_is_pinned_to_a_commit_sha():
