@@ -616,29 +616,30 @@ Step 4 of 741c was filed behind the Neon read. It does not belong there: compari
 chain's enum labels against the ORM's is a comparison of **two things already in this repository**.
 No production connection is involved. So it was done first.
 
-#### What it found: 20 drifting types, not 3
+#### What it found: 19 drifting types, not 3
 
 The hand-written table in 741c lists three types across five rows. The mechanical comparison finds
-**twenty**, out of 26 enum types that exist in both places.
+**nineteen**, out of 26 enum types that exist in both places.
 
-**Sixteen are case-only** — the chain spells labels lowercase, the ORM binds member NAMES:
+> **Corrected after the PR #191 review** — the first measurement said twenty, and `subscription_tier`
+> was a phantom. See "A fourth parser defect, found in review" below.
+
+**Seventeen are case-only** — the chain spells labels lowercase, the ORM binds member NAMES:
 `adminactiontype`, `billingeventtype`, `billinginterval`, `dunningresolution`, `dunningstate`,
 `entitytype`, `expectationresultstatus`, `expectationtargettype`, `invitestatus`,
 `misstatementclassification`, `misstatementdisposition`, `misstatementsourcetype`, `orgrole`,
-`reportingframework`, `subscriptionstatus`, `teamactiontype`.
+`reportingframework`, `subscriptionstatus`, `teamactiontype`, `usertier`.
 
 "Case-only" sounds cosmetic and is not: `ACTIVE` is simply not a label of a type whose labels are
 `active`, and PostgreSQL rejects the write with 22P02. That is the exact error Sprint 741a chased.
 
-**Four are membership differences** — labels genuinely absent rather than misspelled, so no
+**Two are membership differences** — labels genuinely absent rather than misspelled, so no
 `values_callable` decision could resolve them:
 
 | Type | Column | The gap |
 |------|--------|---------|
 | `engagementstatus` | `engagements.status` | the ORM binds **`COMPLETED`** and **no migration ever adds it** |
 | `toolname` | `tool_runs.tool_name` | chain carries lowercase `flux_analysis`; the ORM binds `FLUX_ANALYSIS` |
-| `usertier` | `users.tier` | chain has `starter`/`team`/`organization`/`solo`; the ORM binds `SOLO` |
-| `subscription_tier` | `subscriptions.tier` | chain has `starter`/`team`/`organization`; the ORM binds `solo` |
 
 **`engagementstatus` is a new finding and the most interesting one.** Nothing in 741c or its
 source reviews mentions it. The engagement completion gate is a shipped feature, so on any
@@ -646,7 +647,12 @@ database built from the documented chain, completing an engagement fails. Produc
 because production was built by `create_all()` — which is precisely what makes this a
 **restore-drill blocker** rather than a live incident, and why it belongs with Sprint 778.
 
-`toolname` and `usertier` confirm 741c's live-defect rows mechanically.
+`toolname` confirms 741c's live-defect row mechanically.
+
+**One genuinely useful side-finding for 741c's step 2.** `subscription_tier` and `usertier` hold the
+same four tiers one table apart, and the ORM binds them **differently** — `subscription_tier`
+lowercase, `usertier` as NAMES. So "pick the canonical direction" is not purely a migration edit;
+the models disagree with each other first.
 
 #### Why no test could have caught this
 
@@ -684,7 +690,45 @@ Each was found by the module reporting what it could *not* resolve instead of sk
 is why `unresolved` fails the run loudly. **If the first draft had shipped it would have passed
 CI**, printed a confident verdict, and compared a fifth of the schema.
 
-#### Tests — `backend/tests/test_enum_label_drift.py`, 15
+#### A fourth parser defect, found in review
+
+The PR #191 review caught what the three self-inflicted bugs below did not: the first version
+**unioned every label it saw anywhere in the file**, and that is the wrong model of what a
+migration chain does.
+
+`e3f4a5b6c7d8_pricing_v3_enum_restructure` rebuilds both tier enums:
+
+```sql
+ALTER TYPE usertier RENAME TO usertier_old
+CREATE TYPE usertier AS ENUM ('free', 'solo', 'professional', 'enterprise')
+DROP TYPE usertier_old
+```
+
+`starter`, `team` and `organization` are **retired**. Unioning keeps them forever — so
+`subscription_tier` was reported as drifting when it actually agrees, and any drift a *future*
+rebuild introduced would have been invisible. There was no handler for `CREATE TYPE ... AS ENUM`
+at all.
+
+**A fifth defect surfaced while fixing it:** the scan read raw file text, so it also replayed
+`downgrade()` — and that same migration's downgrade recreates both types with the *old* labels.
+The guard was reading a schema nobody has.
+
+Both are fixed by **replaying the chain in revision order** — topological sort on
+`revision`/`down_revision`, then `upgrade()` bodies only, operations sorted by line number because
+the rebuild is a three-step RENAME/CREATE/DROP dance and `ast.walk` is breadth-first. `CREATE TYPE`
+replaces, `ADD VALUE` adds, `RENAME` moves, `DROP` removes, and `sa.Enum(name=...)` inside
+`create_table` defines only if absent so it cannot clobber an earlier rebuild.
+
+**Why the coverage test did not catch this, which is the real lesson.** There *was* a coverage
+self-check, and it passed: it counted `Enum(..., name=...)` AST calls and confirmed the parser saw
+every one. But `CREATE TYPE` is raw SQL inside `op.execute()`, so the check proved nothing about
+it. **Coverage of one construct family reads exactly like coverage of the subject.** The new
+`test_every_enum_sql_statement_in_every_upgrade_is_accounted_for` counts enum-affecting SQL
+statements in each `upgrade()` body and requires a parsed operation for each.
+
+Regression-proved: deleting the `CREATE TYPE` handler fails six tests, including that one.
+
+#### Tests — `backend/tests/test_enum_label_drift.py`, 21
 
 The verdict matches the baseline; the baseline must be tightened when drift is fixed; the parser
 resolved everything it found; **every named enum in every migration is accounted for, with no

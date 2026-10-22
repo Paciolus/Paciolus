@@ -104,7 +104,10 @@ def test_every_named_enum_in_every_migration_is_accounted_for():
     naive: set[str] = set()
     for path in sorted(VERSIONS.glob("*.py")):
         tree = ast.parse(path.read_text(encoding="utf-8"))
-        for node in ast.walk(tree):
+        upgrade = guard._upgrade_node(tree)
+        if upgrade is None:
+            continue
+        for node in ast.walk(upgrade):
             if not isinstance(node, ast.Call):
                 continue
             fname = getattr(node.func, "attr", None) or getattr(node.func, "id", None)
@@ -112,7 +115,7 @@ def test_every_named_enum_in_every_migration_is_accounted_for():
                 continue
             for kw in node.keywords or []:
                 if kw.arg == "name" and isinstance(kw.value, ast.Constant):
-                    naive.add(str(kw.value.value))
+                    naive.add(guard._norm(str(kw.value.value)))
 
     declared, _where, _unresolved, _files = guard.scan_migrations()
     assert naive, "no named Enum(...) calls found at all — this check covers nothing"
@@ -199,3 +202,128 @@ def test_guard_passes_as_configured():
 )
 def test_module_constant_resolution(source, expected):
     assert guard._module_constants(ast.parse(source)) == expected
+
+
+# ---------------------------------------------------------------------------
+# Replay semantics — added after the PR #191 review
+#
+# The first version of this guard unioned every label it saw anywhere in the
+# file. Two consequences, both found in review rather than by these tests,
+# which is why the coverage check below now covers the SQL path as well as the
+# AST one:
+#
+#   * `e3f4a5b6c7d8` REBUILDS usertier and subscription_tier with
+#     `CREATE TYPE ... AS ENUM`, retiring starter/team/organization. A union
+#     keeps them forever — reporting drift that does not exist, and being
+#     blind to drift a future rebuild introduces.
+#   * The same migration's `downgrade()` recreates both types with the OLD
+#     labels. Scanning raw file text picks those up and reverses the answer.
+# ---------------------------------------------------------------------------
+
+
+def test_a_type_rebuild_replaces_its_labels_rather_than_unioning():
+    """`CREATE TYPE ... AS ENUM` after a RENAME is a replacement, not an addition.
+
+    `e3f4a5b6c7d8_pricing_v3_enum_restructure` retires starter/team/organization
+    from both tier enums. A reading that keeps them reports phantom drift —
+    which is exactly what the PR #191 review caught.
+    """
+    declared, _where, _unresolved, _files = guard.scan_migrations()
+    for type_name in ("usertier", "subscription_tier"):
+        labels = declared.get(type_name, set())
+        assert labels, f"{type_name} resolved to no labels at all"
+        retired = {"starter", "team", "organization"} & labels
+        assert not retired, (
+            f"{type_name} still carries retired labels {sorted(retired)} — the rebuild in "
+            "e3f4a5b6c7d8 was treated as additive instead of as a replacement"
+        )
+        assert labels == {"free", "solo", "professional", "enterprise"}, (
+            f"{type_name} resolved to {sorted(labels)}; the pricing-v3 rebuild defines exactly "
+            "free/solo/professional/enterprise"
+        )
+
+
+def test_downgrade_bodies_are_not_replayed():
+    """Only `upgrade()` describes the schema a fresh database gets.
+
+    The downgrade in `e3f4a5b6c7d8` recreates both tier enums with
+    team/organization. If those leak in, the guard silently describes a
+    database nobody has.
+    """
+    declared, _where, _unresolved, _files = guard.scan_migrations()
+    assert "team" not in declared.get("usertier", set())
+    assert "organization" not in declared.get("usertier", set())
+
+
+def test_dropped_helper_types_do_not_survive_the_replay():
+    """`usertier_old` exists only between a RENAME and a DROP."""
+    declared, _where, _unresolved, _files = guard.scan_migrations()
+    leftovers = sorted(t for t in declared if t.endswith("_old"))
+    assert not leftovers, f"temporary rename targets survived the replay: {leftovers}"
+
+
+def test_every_enum_sql_statement_in_every_upgrade_is_accounted_for():
+    """The coverage check for the raw-SQL path — the one that was missing.
+
+    The existing coverage test counted `Enum(..., name=...)` AST calls, so it
+    proved nothing about `op.execute("CREATE TYPE ...")`. The first version of
+    the guard had **no handler for CREATE TYPE at all** and that test stayed
+    green. Coverage of one construct family is not coverage of the chain.
+
+    So: count enum-affecting SQL statements the naive way, and require the
+    operation collector to produce an op for each one.
+    """
+    total_statements = 0
+    total_ops = 0
+    gaps = []
+
+    for path, tree in guard.ordered_migrations():
+        upgrade = guard._upgrade_node(tree)
+        if upgrade is None:
+            continue
+        constants = guard._module_constants(tree)
+        ops, _unresolved = guard.collect_operations(upgrade, constants, path.name)
+        sql_ops = [o for o in ops if o[1] in {"create", "add", "rename", "drop"}]
+
+        # Count statements in the upgrade() source only.
+        segment = ast.get_source_segment(path.read_text(encoding="utf-8"), upgrade) or ""
+        statements = guard.RE_ANY_ENUM_SQL.findall(segment)
+
+        total_statements += len(statements)
+        total_ops += len(sql_ops)
+        if statements and not sql_ops:
+            gaps.append(f"{path.name}: {len(statements)} enum SQL statement(s), 0 parsed")
+
+    assert total_statements > 0, "no enum SQL statements found at all — this check covers nothing"
+    assert not gaps, "enum SQL present but unparsed:\n  " + "\n  ".join(gaps)
+    assert total_ops >= total_statements, (
+        f"parsed {total_ops} enum operations from {total_statements} SQL statements — "
+        "some statement form is not handled"
+    )
+
+
+def test_migrations_are_replayed_in_revision_order():
+    """Order is load-bearing: a rebuild must not be overtaken by an earlier CREATE."""
+    ordered = guard.ordered_migrations()
+    assert len(ordered) > 30, f"only {len(ordered)} migrations ordered"
+
+    names = [p.name for p, _t in ordered]
+    baseline = "e2f21cb79a61_baseline_full_schema_as_of_v1_2_0.py"
+    rebuild = "e3f4a5b6c7d8_pricing_v3_enum_restructure.py"
+    assert names.index(baseline) < names.index(rebuild), (
+        "the v1.2.0 baseline must be replayed before the pricing-v3 rebuild; "
+        "filename order happens to agree here, but revision order is what is required"
+    )
+
+
+def test_subscription_tier_agrees_and_is_not_in_the_baseline():
+    """Regression proof for the phantom the PR #191 review found.
+
+    It must stay out of KNOWN_DRIFT: listing a type that does not drift is
+    just as wrong as omitting one that does, and `test_the_baseline_is_
+    tightened_when_drift_is_fixed` enforces that in general. This pins the
+    specific case.
+    """
+    drifting, _details, _unresolved, _stats = guard.compute_drift()
+    assert "subscription_tier" not in drifting
+    assert "subscription_tier" not in guard.KNOWN_DRIFT
