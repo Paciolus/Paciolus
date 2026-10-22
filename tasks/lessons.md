@@ -2177,3 +2177,50 @@ Extract version to `backend/version.py` with `__version__`. Import everywhere. F
 
 ### Subagent findings must be verified against live code before acting (Sprint 598)
 - **During the 2026-04-14 weekly weakness hunt, a parallel `Explore` subagent tasked with finding test coverage gaps reported that `ratio_engine.py`, `accrual_completeness_engine.py`, and `three_way_match_engine.py` had "no test suite" or "no dedicated test file." All three claims were wrong** — each module has 1–3 dedicated test files (`test_ratio_core.py`, `test_ratio_analysis.py`, `test_ratio_trends.py`, `test_accrual_completeness.py`, `test_three_way_match.py`, `test_three_way_comparison.py`). The same agent also reported fake line counts ("44,081 lines", "55,283 lines") which were actually byte counts. A sibling security-hunt agent produced verifiable findings with correct line:line references; the coverage agent hallucinated structure. **Pattern:** Any subagent claim of the form "file X does not exist", "function Y is untested", or "N lines/rows/items" MUST be verified against live code (Glob/Grep/wc) before being acted on or surfaced to the user. If the claim can be invalidated by a single shell command, run that command before repeating the claim. Line-level findings with specific `file:line` references are higher-trust than structural ("no test file exists") claims — the specific ones are visible in the agent's context window, the structural ones require accurate mental model of a repo the agent only partially read. **Systemic fix:** replace LLM-introspected coverage analysis with `pytest --cov --cov-report=json` piped into the nightly brief so the coverage pillar stands on machine-checkable data rather than model output. Sprint 599 wires this in.
+
+---
+
+## Sprint 794 — "pass / fail" is the wrong shape for any check that can be prevented from running
+
+**What happened.** `Node CVE & License Audit` failed on PR #189. The log said
+`npm error audit endpoint returned an error` after a 503 from registry.npmjs.org. No vulnerability
+existed. `npm audit` exits 1 both when it finds something and when it cannot look, and the red X is
+the same X, so the signal a reader receives is "this PR ships a high-severity vulnerability."
+
+**This is the third instance of one shape in a single day.**
+
+| Sprint | The check | What it could not say |
+|--------|-----------|-----------------------|
+| 778a | Monthly DR test | "I detected a failure" — the job exited 0 regardless |
+| 794 | npm CVE gate | "I could not check" — a 503 is reported as a finding |
+| 775 (by design) | Deploy-drift probe | correctly says `SKIP` when `RENDER_API_KEY` is absent |
+
+The third row is the one to copy. It is the only one of the three that was built knowing the
+answer has three states, and it is the only one that never lied.
+
+**The rule.** *Any check that depends on something outside the commit has three outcomes, not two:
+pass, fail, and did-not-run.* If the implementation has only two exit codes, one of those three
+truths is being reported as a different one — and it is almost always "did not run" being reported
+as fail (noisy, erodes trust in the gate) or as pass (silent, much worse).
+
+**Spotting it before it bites:** ask "what does this check do when the thing it calls is down?"
+Network calls, external APIs, and anything reading a credential that might be unset are the whole
+population. If the answer is "the same as a real failure", the check cannot be read.
+
+**Deciding the third state's policy is separate from exposing it** — and much easier once the retry
+is in. Sprint 794a deliberately kept the existing fail-closed behaviour and changed only the words,
+so no policy decision gated the fix. Retrying first removed most of the occurrences; the remaining
+policy question ("should an npm outage block every PR?") is now rare enough to be answered calmly
+rather than during an incident.
+
+**Also:** discriminate on the payload, never on the exit code, when the exit code is the thing that
+cannot tell the cases apart. And default the unrecognised case to "did not run", never to "clean" —
+a format change upstream must not silently disarm a security gate. That is Sprint 792's defect
+class arriving through a different door.
+
+**And the now-standard second test.** The fix needs two claims proved, not one: that the classifier
+discriminates, *and* that no workflow still calls the bare command. Three call sites had this bug
+because three jobs each ran `npm audit` directly; a fourth added by copy-paste would reintroduce it
+and stay green until the next outage. After PR #188 (a guard that inspected 23% of its target) and
+Sprint 792, writing the anti-drift test up front is cheaper than discovering in review that the fix
+quietly stopped applying.

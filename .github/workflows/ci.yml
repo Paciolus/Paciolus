@@ -653,7 +653,10 @@ jobs:
         run: npm ci
 
       - name: Audit for HIGH/CRITICAL vulnerabilities
-        run: npm audit --omit=dev --audit-level=high
+        # Sprint 794: via the gate script, which retries and then distinguishes
+        # "vulnerable" from "could not reach the registry". The bare command
+        # exits 1 for both, so a 503 used to look exactly like a CRITICAL.
+        run: bash ../scripts/npm_audit_gate.sh --audit-level high --mode blocking
 
   # ── Merge Revert Guard (advisory) ────────────────────────────
   merge-revert-guard:
@@ -696,7 +699,10 @@ jobs:
         run: npm ci
 
       - name: Audit all vulnerabilities (advisory)
-        run: npm audit --omit=dev
+        # Sprint 794: advisory mode always exits 0; the job already carries
+        # continue-on-error, but going through the gate means the log says
+        # whether the audit actually ran rather than leaving it ambiguous.
+        run: bash ../scripts/npm_audit_gate.sh --audit-level low --mode advisory
 
   # ── E2E Smoke Tests (Playwright) ────────────────────────────
   # Requires SMOKE_USER and SMOKE_PASS secrets in GitHub Actions.

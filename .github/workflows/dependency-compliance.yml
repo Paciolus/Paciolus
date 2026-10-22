@@ -53,7 +53,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: CVE audit (fail on HIGH or CRITICAL)
-        run: npm audit --omit=dev --audit-level=high
+        # Sprint 794: this is the job that went red on a 503 on 2026-10-22
+        # (PR #189) with no vulnerability present. Still fails closed when the
+        # audit cannot be completed, but now says which of the two happened.
+        run: bash ../scripts/npm_audit_gate.sh --audit-level high --mode blocking
       - name: Export license inventory
         run: npx license-checker --production --json --out node-licenses.json
       - name: Upload license artifact

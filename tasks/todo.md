@@ -329,7 +329,8 @@ sub-category* are 793b's table work, and they need the confirmed figures regardl
 ---
 
 ### Sprint 794: A registry outage makes the CVE gate report "vulnerable"
-**Status:** PENDING.
+**Status:** SPLIT — **794a COMPLETE** (the three npm call sites), **794b PENDING** (the three
+pip-audit call sites, which the step-4 check confirmed have the identical defect).
 **Priority:** P3 — no security exposure, but it is a blocking gate that cannot distinguish two very
 different answers, and it produces a scary-sounding failure for an upstream hiccup.
 **Source:** observed live on PR #189, 2026-10-22.
@@ -376,7 +377,95 @@ outcomes where the reality has three: pass, fail, and **unverified**.
 **Not urgent:** the immediate incident was cleared by re-running the job, and the underlying
 posture is unaffected either way — the audit was green on the previous run and on the re-run.
 
-**Commit SHA:** TBD.
+---
+
+#### 794a — what landed (npm side)
+
+**The conflation was confirmed against npm 10.9.0 rather than assumed.** Pointing `npm audit` at a
+closed port reproduces it exactly:
+
+| Situation | npm exit | Payload |
+|-----------|----------|---------|
+| Nothing vulnerable | **0** | `auditReportVersion` + `metadata.vulnerabilities`, all zero |
+| Real HIGH/CRITICAL findings | **1** | `auditReportVersion` + `metadata.vulnerabilities`, non-zero |
+| Registry unreachable | **1** | `message` + empty `error`, **neither** of those keys |
+
+So the exit code genuinely cannot separate rows 2 and 3 — but the **payload** separates them
+cleanly. That is why the classifier reads the body and uses the exit code only as a cross-check.
+
+**`scripts/classify_npm_audit.py`** returns three verdicts where there were two:
+
+- `CLEAN` — a report came back, nothing at or above the threshold
+- `VULNERABLE` — a report came back and it has findings
+- `UNVERIFIED` — no usable report came back; the audit did not happen
+
+Anything unrecognised lands on `UNVERIFIED`, never `CLEAN`. Defaulting the other way would mean a
+future change to npm's output format silently disarms the gate — the Sprint 792 defect class
+arriving through a different door.
+
+**`scripts/npm_audit_gate.sh`** wraps it: up to 3 attempts with doubling backoff, then reports.
+
+**All three call sites now go through it** — `ci.yml:656` (blocking), `ci.yml:699` (advisory) and
+`dependency-compliance.yml:56` (blocking, the job that actually went red).
+
+**The gating policy is deliberately unchanged.** An unreachable registry still fails a blocking
+gate: a security gate that opens when it cannot see is worse than one that blocks, and keeping the
+existing behaviour means this needed no policy decision. What changed is that the job now says
+
+> `THIS IS NOT A VULNERABILITY FINDING.`
+> `The audit could not be completed after 3 attempts...`
+
+so the reader re-runs instead of hunting a CVE that was never there. **Step 3 of the original scope
+— whether "unverified" *should* block every PR — therefore remains genuinely open**, and is a CEO
+call rather than an engineering one: failing closed matches the Sprint 778a precedent, but 778a
+gates a monthly report while this gates every PR, so a long npm incident would stop all work. The
+retry in step 1 makes that decision much less pressing, which was the point of ordering it first.
+
+#### The test that keeps the fix applied — `backend/tests/test_npm_audit_gate.py`, 21 tests
+
+Two separate claims, because the fix needs both and only one is about the classifier:
+
+1. **The classifier discriminates.** Real captured payloads for all three outcomes, threshold
+   handling, seven unreadable shapes that must all be `UNVERIFIED`, and the disagreement case
+   (non-zero exit alongside an empty report → not trusted).
+2. **No workflow calls `npm audit` directly.** Three call sites had this bug because three jobs
+   each ran the bare command; a fourth added by copy-paste would reintroduce it and be green until
+   the day the registry hiccupped. This is the lesson from PR #188 and Sprint 792 applied up front
+   rather than after review: *the fix and the fix staying applied are two different claims.*
+
+Plus end-to-end runs of the real gate script against a stubbed `npm`, covering both modes and the
+bad-argument path.
+
+**Regression-proved**, not assumed: injecting a bare `npm audit --omit=dev --audit-level=high` into
+`ci.yml` fails `test_no_workflow_calls_npm_audit_directly` and names `ci.yml:656`. The live run
+against the real registry returns `CLEAN`; forcing a closed port produces two retries, then
+`UNVERIFIED` with exit 1 in blocking mode and exit 0 in advisory mode.
+
+#### 794b — the Python side has the same hole (step 4 answered)
+
+**Checked empirically, and the answer is yes.** `pip-audit` 2.10.1 against an unreachable index:
+
+```
+ERROR:pip_audit._cli:Failed to install packages: [...]
+exit=1
+```
+
+Exit 1, no JSON on stdout — identical in shape to a real vulnerability finding, and identical to
+what npm did. **Three call sites**, none of them wrapped:
+
+| File | Step | Gating |
+|------|------|--------|
+| `ci.yml:607` | `pip-audit -r requirements.txt` | **blocking** |
+| `dependency-compliance.yml:29` | `pip-audit --desc --ignore-vuln CVE-2026-3219` | **blocking** |
+| `ci.yml:633` | `pip-audit -r requirements.txt --desc` | advisory |
+
+Not folded into 794a on purpose: it is a different tool with a different output contract, it needs
+its own classifier and its own tests, and the incident that prompted this was on the npm side where
+the behaviour is now verified end to end. Bundling it would have made one reviewable change into
+two unreviewable ones. The discrimination should work the same way — `--format json` produces a
+parseable report when the audit ran and nothing when it did not.
+
+**Commit SHA:** filled at merge.
 
 ---
 
