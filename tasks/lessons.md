@@ -219,6 +219,39 @@ advisory no matter how it reads.
 
 ---
 
+## A parser-based guard can shrink without any test noticing (Sprint 786c review, 2026-10-21)
+
+Third time in one session, and the first two were already written up directly above.
+
+I added a guard asserting every GitHub Action is pinned to an immutable SHA. Its
+parser was `^\s*uses:` — and YAML list items are written `- uses: actions/checkout@…`.
+So it matched **15 of 64** references. Every `setup-node` and `download-artifact` use
+and 25 of 27 `checkout` uses were invisible. Five tests, all green, inspecting 23% of
+the file.
+
+I regression-proved it. The line I picked happened to be one of the 15.
+
+**And I had already written the lesson.** Sprint 792's entry says: *"injecting the
+violation you expected proves less than it feels like. Pick the injection case you
+consider least likely to be covered."* I wrote that, shipped it, and then picked a
+convenient line a few hours later.
+
+**The new thing here, beyond "pick a hostile case": a parser-based scan can narrow
+silently, because the cases it stops seeing stop being asserted.** A file-list guard at
+least fails loudly when a path disappears. A regex that quietly matches less produces
+no signal at all — every downstream assertion keeps passing, on less.
+
+So the durable fix is not a better regex. It is a **coverage self-check**: count the
+candidates the naive way, require the parser to account for all of them, and assert
+nothing about what they contain. Narrowing the regex back now fails with *"accounts for
+15 external + 0 local = 15 of 64"*.
+
+**The general rule: any guard that parses before it checks needs a test that it parsed
+everything.** The check and the parse are two separate claims, and only one of them was
+ever being tested.
+
+---
+
 ## Audit the class once you have seen the instance three times (Sprint 792, 2026-10-21)
 
 By the seventh finding of the same shape in one day — a gate scoped by a file list
