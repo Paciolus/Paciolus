@@ -2422,3 +2422,38 @@ proved by running the suites under the nightly's hostile PATH.
 
 **And: read the nightly.** It found something CI structurally could not, because the failure lives
 in the gap between environments. A green CI is evidence about CI.
+
+---
+
+## Sprint 786b (PR #195 review) — grep for the claim, not just for the number
+
+Bumping `slowapi` 0.1.9 → 0.1.10, I grepped for `0.1.9`, found five places, fixed all five, and
+wrote a lesson about exactly this. The review then found a **sixth**: a startup banner in
+`shared/rate_limits.py` that logs on every import — WARNING in production — saying *"slowapi is
+unmaintained (last release Oct 2022)"*. It never names a version, so the grep could not see it.
+Two tests asserted that wording and a runbook quoted it, so four locations in total were still
+enforcing the false claim.
+
+**The rule: a version bump falsifies assertions *about* a dependency, not just occurrences of its
+number.** Grep for the claim — "unmaintained", "deprecated", "last release", "no longer", the
+package name alone — not only for the digits. The digits are the easy half and the half that
+already has a guard.
+
+**The worst part was where it lived.** Documentation being stale is a nuisance; a production
+WARNING being stale actively misinforms an on-call engineer at the moment they are looking at that
+subsystem. When auditing a claim, rank the locations by *who reads them under pressure*.
+
+**Two tests had pinned the claim for two years**, which is how a false statement acquires
+enforcement. The fix was to assert the stable *prefix* (`"rate-limiter dependency notice"`) rather
+than the maintenance verdict: assert that the notice is emitted at the right severity, not what it
+concludes. **Tests should pin the contract, not the editorial content** — otherwise correcting
+prose requires changing tests, and the friction quietly argues for leaving the prose wrong.
+
+**Remove a hardcoded value rather than updating it, where you can.** The banner now reads its
+version from `importlib.metadata`, so it cannot become a seventh copy. Sprint 792's ranking again:
+derived from the system beats any number of careful hand-updates.
+
+**And keep the live and historical halves separable.** `"slowapi 0.1.11 (0.1.10 released
+2026-06-13)"` glues a live value to a stale one the instant upstream ships again. A dated
+historical claim is fine on its own; interpolated next to a live value it reads as one fact and is
+two.
