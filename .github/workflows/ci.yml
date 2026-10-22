@@ -365,7 +365,23 @@ jobs:
         run: npm ci
 
       - name: Build
-        run: npm run build
+        # `set -o pipefail` is load-bearing. Actions runs `bash -e` WITHOUT
+        # pipefail, so `npm run build | tee ...` would exit with tee's status
+        # and a failed build would pass this step silently — a false green
+        # introduced by the act of capturing the output.
+        run: |
+          set -euo pipefail
+          npm run build | tee build-output.txt
+
+      - name: Check every page route is still dynamic
+        # Sprint 786b. Nonce-based CSP needs HTML generated per request: a
+        # prerendered page carries a build-time nonce that will not match the
+        # header the proxy sends, and every inline script on it is blocked.
+        # CLAUDE.md and the project memory both state this invariant and
+        # nothing enforced it — it held only because `await headers()` in the
+        # root layout forces dynamic rendering, one line away from removal by
+        # someone who does not know why it is there.
+        run: python3 ../scripts/check_route_rendering.py build-output.txt
 
       - name: Lint (full report)
         run: |
