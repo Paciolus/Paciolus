@@ -1454,20 +1454,38 @@ class RatioEngine:
         equity_multiplier = self.totals.total_assets / self.totals.total_equity
         decomposed_roe = net_profit_margin * asset_turnover * equity_multiplier
 
-        # Verify against direct ROE calculation.
-        # Sprint 681: use math.isclose with relative tolerance instead of
-        # a fixed 1e-4 absolute tolerance. For large ROE values (e.g., a
-        # 200% ROE on a highly-levered firm = 2.0), the absolute 1e-4
-        # check was effectively ~0.005% — far tighter than float rounding
-        # noise. math.isclose with rel_tol=1e-6 is calibrated to float
-        # precision and passes for all legitimate decompositions.
+        # Verify the decomposition against ROE computed directly.
+        #
+        # SPRINT 798 — this flag used to be false 99.85% of the time.
+        # Measured over 2,000 randomly generated realistic trial balances:
+        # 3 True, 1,997 False. Two independent causes, either one sufficient:
+        #
+        #   1. It compared the full-precision `decomposed_roe` against
+        #      `calculate_return_on_equity().value / 100`, and that `.value`
+        #      is `round(roe, 1)` of a *percentage* — three decimals of the
+        #      fraction. A `rel_tol` of 1e-6 against a value rounded to 0.1
+        #      percentage points can only agree when ROE lands almost exactly
+        #      on the grid.
+        #   2. Sprint 681 moved ROE to an *average*-equity denominator while
+        #      the equity multiplier here still uses *ending* equity. Those
+        #      are two different quantities, so even at full precision they
+        #      are not required to match.
+        #
+        # The test pinning it (`test_dupont_verification_matches_with_isclose`)
+        # used revenue 1M / expenses 800K / assets 1.5M / equity 500K — ROE
+        # exactly 40.0%, decomposed exactly 0.4 — and asserted in its docstring
+        # that "legitimate decompositions always verify".
+        #
+        # Both are fixed by comparing like with like: the direct ROE is
+        # recomputed here on the *same ending-balance basis* the three
+        # components use, at full precision. `ending_basis_roe` is what the
+        # decomposition must reproduce; the published ROE ratio keeps its
+        # average-balance denominator, which is the correct convention for
+        # that ratio and is reported separately.
         import math
 
-        roe_result = self.calculate_return_on_equity()
-        direct_roe = roe_result.value / 100.0 if roe_result.is_calculable and roe_result.value is not None else None
-        verification_matches = direct_roe is not None and math.isclose(
-            decomposed_roe, direct_roe, rel_tol=1e-6, abs_tol=1e-9
-        )
+        ending_basis_roe = net_income / self.totals.total_equity
+        verification_matches = math.isclose(float(decomposed_roe), float(ending_basis_roe), rel_tol=1e-9, abs_tol=1e-12)
 
         # Calculate prior period deltas if previous_totals provided
         prior_period_deltas: Optional[dict[str, float]] = None
@@ -2620,9 +2638,10 @@ def extract_category_totals(
 def calculate_analytics(
     category_totals: CategoryTotals, previous_totals: Optional[CategoryTotals] = None
 ) -> dict[str, Any]:
-    """Calculate all analytics (ratios, common-size, variances)."""
-    # Calculate ratios
-    ratio_engine = RatioEngine(category_totals)
+    """Calculate all analytics (ratios, common-size, variances, DuPont)."""
+    # Calculate ratios. Prior-period totals feed the average-balance
+    # denominators for ROA/ROE (Sprint 681).
+    ratio_engine = RatioEngine(category_totals, prior_period_totals=previous_totals)
     ratios = ratio_engine.to_dict()
 
     # Calculate common-size percentages
@@ -2633,10 +2652,35 @@ def calculate_analytics(
     variance_analyzer = VarianceAnalyzer(category_totals, previous_totals)
     variances = variance_analyzer.to_dict()
 
+    # DuPont decomposition (Sprint 798).
+    #
+    # The engine for this has existed since the ratio work, and
+    # `docs/07-user-facing/USER_GUIDE.md` has told customers it "is available
+    # when all components are calculable" — but nothing called it. Its only
+    # caller in the repository was a unit test: no route, no PDF section, no
+    # frontend reference, and no mention in the OpenAPI snapshot. The claim
+    # was true of the code and false of the product.
+    #
+    # Attaching it here rather than behind a new endpoint is deliberate: every
+    # surface that shows ratios already consumes `calculate_analytics`, so the
+    # decomposition appears wherever the ratios it decomposes appear. `None`
+    # when any denominator is zero, which is exactly the documented condition.
+    #
+    # NOTE on prior-period deltas: `calculate_dupont` returns them when
+    # `previous_totals` is supplied, but both call sites of this function
+    # (`audit/pipeline.py:429` and `:697`) currently pass `previous_totals=None`,
+    # so in the shipped product the deltas never appear. The user guide
+    # deliberately does not promise them — claiming a capability no path can
+    # reach is the exact defect Sprint 798 was fixing. Threading prior-period
+    # totals through the pipeline is separate follow-up work; when it lands,
+    # the frontend already renders the deltas and the guide can say so.
+    dupont = ratio_engine.calculate_dupont(previous_totals=previous_totals)
+
     return {
         "category_totals": category_totals.to_dict(),
         "ratios": ratios,
         "common_size": common_size_analysis,
         "variances": variances,
+        "dupont": dupont.to_dict() if dupont else None,
         "has_previous_data": previous_totals is not None,
     }

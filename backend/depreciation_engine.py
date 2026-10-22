@@ -10,14 +10,32 @@ Book methods supported:
 - Sum-of-the-years' digits (SYD)
 - Units of production (UOP)
 
-Tax (MACRS) methods supported:
-- GDS 200% / 150% / SL declining balance
-- Conventions: half-year (HY), mid-quarter (MQ), mid-month (MM)
-- Property classes: 3, 5, 7, 10, 15, 20-year personal property
-- 27.5-year residential real, 39-year nonresidential real (mid-month)
+Tax (MACRS) methods supported — this list is exhaustive, and every
+combination outside it raises ``DepreciationInputError`` rather than falling
+back to a different system (Sprint 795):
 
-MACRS percentages are reproduced from IRS Publication 946 Tables A-1 (HY),
-A-2/A-3/A-4/A-5 (MQ Q1-Q4), and A-6 (residential real / mid-month).
+===========================  ===========  ==================================
+System                       Convention   Property classes
+===========================  ===========  ==================================
+GDS 200% declining balance   half-year    3, 5, 7, 10
+GDS 150% declining balance   half-year    15, 20
+GDS 200% declining balance   mid-quarter  5 (quarters 1-4)
+===========================  ===========  ==================================
+
+MACRS percentages are reproduced from IRS Publication 946 Table A-1 (half-year,
+200% and 150% DB) and Tables A-2/A-3/A-4/A-5 (mid-quarter, 5-year property).
+
+**Not available in this release**, and rejected with a named error rather than
+approximated: the GDS straight-line election; the 150% DB election for 3/5/7/10-
+year property; mid-quarter for classes other than 5; and the mid-month
+convention, which applies to 27.5-year residential rental and 39-year
+nonresidential real property. Those need practitioner-confirmed tables —
+Sprint 795 Step 0.
+
+Before 2026-10-22 this docstring claimed mid-month, 27.5/39-year real property
+and "Table A-6" support. None existed: ``validate()`` rejects both classes, and
+the mid-month path computed straight line over the asset's *book* life. The
+list above is written from the dispatch table rather than from intent.
 
 All monetary math uses Decimal with HALF_UP rounding at the schedule output.
 """
@@ -204,7 +222,10 @@ class AssetConfig:
     units_per_year: list[Decimal] = field(default_factory=list)
     # MACRS / tax inputs
     macrs_system: Optional[MacrsSystem] = None  # If None, no tax schedule
-    macrs_property_class: Optional[int] = None  # 3, 5, 7, 10, 15, 20, 27.5, 39
+    # 3, 5, 7, 10, 15, 20 — enforced by validate(). Real-property classes
+    # (27.5 / 39) are NOT supported; the comment here used to list them while
+    # the validator three lines below rejected them.
+    macrs_property_class: Optional[int] = None
     macrs_convention: MacrsConvention = MacrsConvention.HALF_YEAR
     tax_rate: Decimal = Decimal("0.21")  # Federal corporate
 
@@ -405,33 +426,50 @@ def _units_of_production_schedule(config: AssetConfig) -> list[YearEntry]:
 
 
 def _emit_year_entries(config: AssetConfig, charges: list[Decimal]) -> list[YearEntry]:
-    """Build YearEntry list from a list of annual charges. Final year clamps
-    to ensure the ending book value matches salvage value exactly.
+    """Build YearEntry list from a list of annual charges.
+
+    ROUNDING COMPOSITION — the schedule must foot (Sprint 795)
+    ----------------------------------------------------------
+    The schedule runs on **cent-quantized book values**. Previously the running
+    book value was carried at full precision while each column was rounded
+    independently at output, so the depreciation column did not sum to the
+    depreciable base even though the final book value landed exactly on
+    salvage: a $123,456.78 asset reported $123,456.77 of total depreciation
+    against an ending book value of 0.00.
+
+    Rounding the charge first and deriving the book value from it makes every
+    row foot (``beginning - depreciation == ending``), makes the column
+    reconcile down the page, and makes the total equal the base.
     """
     schedule: list[YearEntry] = []
-    book_value = config.cost
+    book_value = _q(config.cost)
+    salvage = _q(config.salvage_value)
     accumulated = ZERO
     for idx, raw_charge in enumerate(charges, start=1):
-        charge = raw_charge
         is_final = idx == len(charges)
         if is_final:
-            # Force ending book value to exactly salvage to absorb rounding drift
-            charge = book_value - config.salvage_value
-            if charge < 0:
+            # Final year absorbs all rounding drift so the asset lands exactly
+            # on salvage value.
+            charge = book_value - salvage
+            if charge < ZERO:
                 charge = ZERO
-        elif book_value - charge < config.salvage_value:
-            charge = book_value - config.salvage_value
+        else:
+            charge = _q(raw_charge)
+            if book_value - charge < salvage:
+                charge = book_value - salvage
+            if charge < ZERO:
+                charge = ZERO
         beginning_bv = book_value
-        book_value = book_value - charge
+        book_value = beginning_bv - charge
         accumulated += charge
         schedule.append(
             YearEntry(
                 year_index=idx,
                 calendar_year=_calendar_year(config.placed_in_service_year, idx),
-                beginning_book_value=_q(beginning_bv),
-                depreciation=_q(charge),
-                accumulated_depreciation=_q(accumulated),
-                ending_book_value=_q(book_value),
+                beginning_book_value=beginning_bv,
+                depreciation=charge,
+                accumulated_depreciation=accumulated,
+                ending_book_value=book_value,
             )
         )
     return schedule
@@ -454,54 +492,103 @@ def _book_schedule(config: AssetConfig) -> list[YearEntry]:
 # =============================================================================
 
 
+# Which (system, convention) pairs this module holds a published table for,
+# and which property classes each covers.
+#
+# THE SELECTED SYSTEM MUST REACH THIS LOOKUP (Sprint 795)
+# -------------------------------------------------------
+# Until 2026-10-22 ``_macrs_percentages`` dispatched on **convention and class
+# only**. ``macrs_system`` was declared on the config, validated for non-null,
+# echoed back in the API response, and used to decide whether a tax schedule
+# existed at all — and never read by the percentage lookup. So a $100,000
+# 5-year asset returned $20,000 of year-one tax depreciation whether the caller
+# selected ``gds_200db``, ``gds_150db`` or ``gds_sl``, and the frontend offered
+# all three in a dropdown. A practitioner electing straight-line received 200%
+# declining-balance figures labelled as their election.
+#
+# The fix refuses rather than substitutes. Combinations without a published
+# table in this module raise a named error saying exactly what is missing. That
+# is deliberate: inventing statutory percentages from a code change is how the
+# original defect became dangerous, and the tables below are reproduced from
+# IRS Pub 946 rather than derived. Adding GDS straight-line and the 150% DB
+# election for 3/5/7/10-year property needs practitioner-confirmed figures —
+# tracked as Sprint 795 Step 0.
+
+
 def _macrs_percentages(config: AssetConfig) -> list[Decimal]:
     """Return the year-by-year MACRS depreciation percentages (whole numbers).
 
-    Example: a 5-year property HY-200%DB returns
+    Dispatches on ``(macrs_system, macrs_convention, macrs_property_class)``.
+    Every combination this module cannot serve raises
+    :class:`DepreciationInputError` naming the gap — it never falls back to a
+    different depreciation system.
+
+    Example: a 5-year property, GDS 200% DB, half-year returns
         [20.00, 32.00, 19.20, 11.52, 11.52, 5.76].
     """
     cls = config.macrs_property_class
+    system = config.macrs_system
     assert cls is not None
+    assert system is not None
+
     if config.macrs_convention == MacrsConvention.HALF_YEAR:
-        if cls in MACRS_HY_200DB:
-            return list(MACRS_HY_200DB[cls])
-        if cls in MACRS_HY_150DB:
-            return list(MACRS_HY_150DB[cls])
-        raise DepreciationInputError(f"Half-year MACRS table not supported for class {cls}.")
+        if system == MacrsSystem.GDS_200:
+            if cls in MACRS_HY_200DB:
+                return list(MACRS_HY_200DB[cls])
+            if cls in MACRS_HY_150DB:
+                raise DepreciationInputError(
+                    f"{cls}-year property is depreciated under GDS using the 150% declining-balance "
+                    f"method, not 200%. Select 'gds_150db' for this property class."
+                )
+            raise DepreciationInputError(f"Half-year GDS 200% DB table not available for class {cls}.")
+
+        if system == MacrsSystem.GDS_150:
+            if cls in MACRS_HY_150DB:
+                return list(MACRS_HY_150DB[cls])
+            raise DepreciationInputError(
+                f"The GDS 150% declining-balance election for {cls}-year property is not available "
+                f"in this release. Published 150% DB tables are provided for 15- and 20-year "
+                f"property only. Supply the schedule manually or select 'gds_200db', which is the "
+                f"GDS default for {cls}-year property."
+            )
+
+        if system == MacrsSystem.GDS_SL:
+            raise DepreciationInputError(
+                "The GDS straight-line election is not available in this release — no published "
+                "straight-line table is provided, and substituting a declining-balance table would "
+                "misstate the deduction. Use the book straight-line schedule, or supply the tax "
+                "schedule manually."
+            )
+
+        raise DepreciationInputError(f"Unsupported MACRS system: {system}")
+
     if config.macrs_convention == MacrsConvention.MID_QUARTER:
+        if system != MacrsSystem.GDS_200:
+            raise DepreciationInputError(
+                f"Mid-quarter tables in this release cover GDS 200% DB only, not {system.value}."
+            )
         if cls != 5:
             raise DepreciationInputError("Mid-quarter MACRS limited to 5-year property in this implementation.")
         return list(MACRS_MQ_5YR_200DB[config.placed_in_service_quarter])
+
     if config.macrs_convention == MacrsConvention.MID_MONTH:
-        return _macrs_real_property_percentages(config)
+        # The mid-month convention applies to 27.5-year residential rental and
+        # 39-year nonresidential real property. No table for either exists in
+        # this module, and ``AssetConfig.validate`` rejects both classes.
+        #
+        # The previous implementation reached a helper that computed mid-month
+        # straight line over the asset's **book** ``useful_life_years`` — a
+        # number with no MACRS meaning. For a 5-year asset it returned
+        # [19166.67, 20000, 20000, 20000, 20000, 833.33] on $100,000: it summed
+        # to cost and looked entirely plausible. Rejecting is the only honest
+        # answer until real-property tables are added (Sprint 795 Step 0).
+        raise DepreciationInputError(
+            "The mid-month convention applies to 27.5-year residential rental and 39-year "
+            "nonresidential real property, for which this release provides no MACRS table. "
+            "Use the half-year or mid-quarter convention for personal property."
+        )
+
     raise DepreciationInputError(f"Unsupported MACRS convention: {config.macrs_convention}")
-
-
-def _macrs_real_property_percentages(config: AssetConfig) -> list[Decimal]:
-    """Mid-month convention straight-line for 27.5- and 39-year real property.
-
-    Each full year depreciates 1/N of the basis. The first and last years are
-    pro-rated based on the placed-in-service month (mid-month convention).
-    Returns N or N+1 years of percentages.
-    """
-    cls = config.macrs_property_class
-    if cls not in (15, 20):  # We have HY tables for 15/20 — MM is for real property
-        # Reuse this path for 27.5 and 39 by passing the integer life rounded
-        pass
-    life = Decimal(str(config.useful_life_years))
-    # For real property MACRS, the "useful life" maps to 27.5 or 39
-    annual = HUNDRED / life
-    # First year fraction = (12.5 - month + 1) / 12 under MM
-    # Standard MM formula: months in service in first year = 12 - placed_month + 0.5
-    first_year_months = Decimal("12") - Decimal(config.placed_in_service_month) + Decimal("0.5")
-    first_year_pct = annual * first_year_months / Decimal("12")
-    last_year_pct = annual - first_year_pct + (annual * (life - Decimal(int(life))))
-    # Build full schedule
-    full_years = int(life)
-    pcts = [first_year_pct]
-    pcts.extend([annual] * (full_years - 1))
-    pcts.append(last_year_pct)
-    return pcts
 
 
 def _macrs_schedule(config: AssetConfig) -> list[YearEntry]:
@@ -512,28 +599,33 @@ def _macrs_schedule(config: AssetConfig) -> list[YearEntry]:
         return []
     pcts = _macrs_percentages(config)
     schedule: list[YearEntry] = []
-    book_value = config.cost
+    # Cent-quantized basis, for the same reason as _emit_year_entries: the
+    # depreciation column has to sum to the basis it recovers (Sprint 795).
+    basis = _q(config.cost)
+    book_value = basis
     accumulated = ZERO
     n = len(pcts)
     for idx, pct in enumerate(pcts, start=1):
         is_final = idx == n
         if is_final:
+            # The final year takes whatever remains, so the published table's
+            # rounding never leaves a stub of basis undepreciated.
             charge = book_value
         else:
-            charge = config.cost * pct / HUNDRED
+            charge = _q(basis * pct / HUNDRED)
             if charge > book_value:
                 charge = book_value
         beginning_bv = book_value
-        book_value = book_value - charge
+        book_value = beginning_bv - charge
         accumulated += charge
         schedule.append(
             YearEntry(
                 year_index=idx,
                 calendar_year=_calendar_year(config.placed_in_service_year, idx),
-                beginning_book_value=_q(beginning_bv),
-                depreciation=_q(charge),
-                accumulated_depreciation=_q(accumulated),
-                ending_book_value=_q(book_value),
+                beginning_book_value=beginning_bv,
+                depreciation=charge,
+                accumulated_depreciation=accumulated,
+                ending_book_value=book_value,
             )
         )
     return schedule
@@ -558,16 +650,23 @@ def _book_tax_comparison(
         book_dep = book[idx - 1].depreciation if idx <= len(book) else ZERO
         tax_dep = tax[idx - 1].depreciation if idx <= len(tax) else ZERO
         timing = tax_dep - book_dep
-        deferred_change = timing * tax_rate
-        cumulative_deferred += deferred_change
+        # Accumulate the *rounded* per-year change, so the cumulative column
+        # equals the sum of the column printed beside it (Sprint 795).
+        #
+        # Accumulating at full precision and rounding only for display made the
+        # two disagree by a cent: measured at 17 of 48 asset configurations
+        # before this change. A practitioner footing the deferred-tax column
+        # against its own running total should always get the running total.
+        q_deferred_change = _q(timing * tax_rate)
+        cumulative_deferred += q_deferred_change
         rows.append(
             BookTaxComparisonEntry(
                 year_index=idx,
                 book_depreciation=_q(book_dep),
                 tax_depreciation=_q(tax_dep),
                 timing_difference=_q(timing),
-                deferred_tax_change=_q(deferred_change),
-                cumulative_deferred_tax=_q(cumulative_deferred),
+                deferred_tax_change=q_deferred_change,
+                cumulative_deferred_tax=cumulative_deferred,
             )
         )
     return rows

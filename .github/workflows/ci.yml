@@ -1,13 +1,57 @@
-# Paciolus CI Pipeline — Sprint 210 (updated Sprint 555)
+# Paciolus CI Pipeline — Sprint 210 (updated Sprint 800)
 # Runs on every push to main and every PR targeting main.
 #
-# Jobs that MUST pass before merge (required status checks):
-#   backend-tests, frontend-build, frontend-tests, backend-lint,
-#   lint-baseline-gate, pip-audit-blocking, npm-audit-blocking,
-#   bandit, secrets-scan, mypy-check, openapi-drift-check
+# ─────────────────────────────────────────────────────────────────────────────
+# GATE MANIFEST — every job below must appear in exactly one section.
 #
-# Advisory jobs (do not block merge):
-#   pip-audit-advisory, npm-audit-advisory, merge-revert-guard, e2e-smoke
+# `backend/tests/test_ci_gate_manifest.py` parses this block and the job keys
+# and fails if they disagree, so a new job cannot be added without someone
+# deciding whether it blocks a merge. Keep the job-key spelling exact.
+#
+# This header was wrong until 2026-10-22: it claimed `openapi-drift-check` was
+# a required status check (it is not) and omitted `backend-tests-postgres`
+# (which is). Four gates were neither listed nor required, including the
+# accounting-invariant gate — while CLAUDE.md's authority hierarchy calls
+# ci.yml "mechanically enforced and final". A job that produces a red X and
+# merges anyway is advisory no matter how it reads.
+#
+# REQUIRED — in GitHub branch protection for `main`.
+# Verified against the API on 2026-10-22; `required_status_checks.contexts`
+# matches the display names of exactly these jobs.
+#   secrets-scan
+#   backend-tests
+#   backend-tests-postgres
+#   frontend-build
+#   frontend-tests
+#   backend-lint
+#   mypy-check
+#   lint-baseline-gate
+#   pip-audit-blocking
+#   npm-audit-blocking
+#   bandit
+#
+# ADVISORY — run on every PR, do not block merge. Each needs a reason.
+#   openapi-drift-check   — SHOULD BE REQUIRED. Not yet added to branch
+#                           protection; tracked in Sprint 800. A PR can change
+#                           the public API surface without regenerating
+#                           scripts/openapi-snapshot.json and still merge.
+#   accounting-policy     — SHOULD BE REQUIRED. The five AST invariant
+#                           checkers (monetary precision, audit immutability,
+#                           ASC 606 contract fields, adjustment gating,
+#                           framework metadata).
+#   doc-consistency       — SHOULD BE REQUIRED. Catalog/tool-count claims
+#                           across docs and the public OpenAPI description.
+#   report-standards      — SHOULD BE REQUIRED. Report standards validator.
+#   backend-tests-slow    — Long-running suite; advisory by design.
+#   pip-audit-advisory    — Informational counterpart to the blocking gate.
+#   npm-audit-advisory    — Informational counterpart to the blocking gate.
+#   merge-revert-guard    — Advisory by design.
+#   e2e-smoke             — Playwright; advisory by design (flake tolerance).
+#
+# The four marked SHOULD BE REQUIRED need one `gh api` call against branch
+# protection, which is a repository-settings change rather than a code change.
+# Until it is made, this manifest is the honest description.
+# ─────────────────────────────────────────────────────────────────────────────
 #
 # See .github/DEPLOYMENT_GOVERNANCE.md for branch protection and deployment details.
 
@@ -145,6 +189,20 @@ jobs:
       # files; the global --cov-fail-under=80 above only catches *aggregate* drops.
       - name: Check per-file coverage floors
         run: python ../scripts/check_coverage_floors.py coverage.json ../backend/coverage_floors.toml
+
+      # Sprint 802: the overnight agents' own test suite ran nowhere.
+      #
+      # `scripts/overnight/tests/` holds the regression tests for the nightly
+      # agents — including the Sprint 712 false-green guard, which exists
+      # because a nightly once reported 0 passed / 0 failed as GREEN. It was
+      # referenced by no workflow, so the tests protecting the thing that
+      # watches the build were themselves unwatched.
+      #
+      # Run from the repo root, not backend/: these import the `scripts`
+      # namespace package, and `backend/scripts/` would shadow it.
+      - name: Run overnight agent tests
+        working-directory: .
+        run: python -m pytest scripts/overnight/tests/ -q --tb=short
 
   # ── OpenAPI Schema Drift Check (Sprint 518: DEC F-020) ──────
   # Detects when backend Pydantic models diverge from the committed

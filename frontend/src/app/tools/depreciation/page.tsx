@@ -13,8 +13,31 @@ import { Reveal } from '@/components/ui/Reveal'
 import { apiDownload, apiPost, downloadBlob } from '@/utils/apiClient'
 
 type BookMethod = 'straight_line' | 'declining_balance' | 'sum_of_years_digits' | 'units_of_production'
-type MacrsSystem = '' | 'gds_200db' | 'gds_150db' | 'gds_sl'
-type MacrsConvention = 'half_year' | 'mid_quarter' | 'mid_month'
+type MacrsSystem = '' | 'gds_200db' | 'gds_150db'
+type MacrsConvention = 'half_year' | 'mid_quarter'
+
+/**
+ * Property classes each MACRS system can actually be computed for.
+ *
+ * Sprint 795: the backend used to accept `gds_sl` and `gds_150db` for any
+ * class and return the 200% declining-balance table regardless — the selected
+ * system never reached the percentage lookup. It now rejects combinations it
+ * has no published table for, so this form must not offer them. The lists
+ * below mirror `backend/depreciation_engine.py::_macrs_percentages`; adding a
+ * table there is what unlocks an option here.
+ */
+const MACRS_CLASSES: Record<Exclude<MacrsSystem, ''>, { value: string; label: string }[]> = {
+  gds_200db: [
+    { value: '3', label: '3-year (rents, tractors)' },
+    { value: '5', label: '5-year (computers, autos)' },
+    { value: '7', label: '7-year (office furniture)' },
+    { value: '10', label: '10-year (vessels, fruit trees)' },
+  ],
+  gds_150db: [
+    { value: '15', label: '15-year (land improvements)' },
+    { value: '20', label: '20-year (farm buildings)' },
+  ],
+}
 
 interface YearEntry {
   year_index: number
@@ -72,6 +95,33 @@ export default function DepreciationPage() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<DepreciationResponse | null>(null)
+
+  /**
+   * Keep the three MACRS selects mutually consistent.
+   *
+   * Sprint 795: the backend now rejects combinations it has no table for, so
+   * the form must never be able to assemble one. Switching system resets the
+   * class to that system's first valid option; mid-quarter is only reachable
+   * for 200% DB 5-year property and resets otherwise.
+   */
+  const handleMacrsSystemChange = useCallback((next: MacrsSystem) => {
+    setMacrsSystem(next)
+    if (next === '') return
+    const classes = MACRS_CLASSES[next]
+    const first = classes[0]
+    // `noUncheckedIndexedAccess` is on, and a system with no classes would be
+    // a configuration error rather than a runtime state worth rendering.
+    if (!first) return
+    const stillValid = classes.some((c) => c.value === macrsPropertyClass)
+    const nextClass = stillValid ? macrsPropertyClass : first.value
+    setMacrsPropertyClass(nextClass)
+    if (!(next === 'gds_200db' && nextClass === '5')) setMacrsConvention('half_year')
+  }, [macrsPropertyClass])
+
+  const handleMacrsClassChange = useCallback((next: string) => {
+    setMacrsPropertyClass(next)
+    if (!(macrsSystem === 'gds_200db' && next === '5')) setMacrsConvention('half_year')
+  }, [macrsSystem])
 
   const buildPayload = useCallback(() => {
     return {
@@ -284,14 +334,17 @@ export default function DepreciationPage() {
               <span className="block text-xs font-sans text-obsidian-700 uppercase tracking-wide mb-1">MACRS System</span>
               <select
                 value={macrsSystem}
-                onChange={(e) => setMacrsSystem(e.target.value as MacrsSystem)}
+                onChange={(e) => handleMacrsSystemChange(e.target.value as MacrsSystem)}
                 className="w-full border border-obsidian-300 rounded px-3 py-2 font-sans"
               >
                 <option value="">No MACRS (book only)</option>
-                <option value="gds_200db">GDS 200% DB</option>
-                <option value="gds_150db">GDS 150% DB</option>
-                <option value="gds_sl">GDS Straight-Line</option>
+                <option value="gds_200db">GDS 200% DB (3, 5, 7, 10-year)</option>
+                <option value="gds_150db">GDS 150% DB (15, 20-year)</option>
               </select>
+              <span className="block mt-1 text-xs font-sans text-obsidian-600">
+                The GDS straight-line election and the mid-month convention for real property
+                are not available — see the note below the schedule.
+              </span>
             </label>
             {macrsSystem && (
               <>
@@ -299,15 +352,12 @@ export default function DepreciationPage() {
                   <span className="block text-xs font-sans text-obsidian-700 uppercase tracking-wide mb-1">MACRS Property Class</span>
                   <select
                     value={macrsPropertyClass}
-                    onChange={(e) => setMacrsPropertyClass(e.target.value)}
+                    onChange={(e) => handleMacrsClassChange(e.target.value)}
                     className="w-full border border-obsidian-300 rounded px-3 py-2 font-sans"
                   >
-                    <option value="3">3-year (rents, tractors)</option>
-                    <option value="5">5-year (computers, autos)</option>
-                    <option value="7">7-year (office furniture)</option>
-                    <option value="10">10-year (vessels, fruit trees)</option>
-                    <option value="15">15-year (land improvements)</option>
-                    <option value="20">20-year (farm buildings)</option>
+                    {MACRS_CLASSES[macrsSystem].map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
                   </select>
                 </label>
                 <label className="block">
@@ -318,7 +368,9 @@ export default function DepreciationPage() {
                     className="w-full border border-obsidian-300 rounded px-3 py-2 font-sans"
                   >
                     <option value="half_year">Half-Year</option>
-                    <option value="mid_quarter">Mid-Quarter (5-yr only)</option>
+                    {macrsSystem === 'gds_200db' && macrsPropertyClass === '5' && (
+                      <option value="mid_quarter">Mid-Quarter (5-yr only)</option>
+                    )}
                   </select>
                 </label>
                 <label className="block">

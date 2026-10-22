@@ -509,6 +509,70 @@ copy does not, so tests of the domain module test code that never renders.
 **Commit SHA:** TBD.
 
 ---
+> **DIGITAL EXCELLENCE COUNCIL REVIEW — 2026-10-22.** Full report:
+> [`reports/council-audit-2026-10-22.md`](../reports/council-audit-2026-10-22.md). 14 findings
+> (4 P1 / 4 P2 / 4 P3 / 2 Info), all CONFIRMED by measurement or injection; 27 measurements
+> recorded. Sprints 795–802 below are its actionable output, ranked by what breaks for a paying
+> customer or an auditor relying on an output — **not** by how interesting the defect is.
+>
+> **Before any of them:** run the one query in §6 item 1 of the report. It decides whether
+> Sprint 797 is a rebuild hazard or a live production incident, and it costs a minute.
+>
+> Three measurements argued *against* work and are recorded as results rather than sprints:
+> widening the Float-column guard scope (2 of 17 columns outside it, both non-monetary),
+> rewriting `hard_delete` to AST (0 current instances of its blind spot), and fixing the 50
+> chain-vs-ORM nullability drifts (all benign; a 50-row failure wall is how a gate gets disabled).
+> `THIS IS NOT A VULNERABILITY FINDING.`
+> `The audit could not be completed after 3 attempts...`
+> **PR #185 review — the guard had the defect it was written to prevent.** The first draft
+> enumerated `services/audit/*/analysis.py`, which excluded
+> `services/audit/flux/recon.py` — the **ADR-018 pilot relocation**, and the one module that
+> predates the `analysis.py` convention. Deleting its shim `recon_engine.py` left the test
+> green while `lint_domain_relocation.py` lost the ability to enumerate that engine: precisely
+> the regression the test exists to catch, missed by the test's own filename filter.
+>
+> That is this sprint's thesis reproduced inside the sprint's own deliverable — a scan whose
+> scope silently excludes the thing it was written for. Enumeration is now by **directory**:
+> every non-`__init__` module under a per-tool subdirectory, with the shim name taken from the
+> module stem (`recon.py` → `recon_engine.py`) except for the conventional `analysis.py`, which
+> takes its directory's (`ap_testing/analysis.py` → `ap_testing_engine.py`). The rule resolves
+> correctly for all 11 modules. Top-level `services/audit/*.py` — `contracts.py`,
+> `file_tool_scaffold.py`, `flux_service.py` — are shared infrastructure, not per-tool engines,
+> and stay excluded.
+>
+> A second test pins the pilot **by name**, so a future narrowing of the glob cannot drop it
+> silently again. Re-proved: removing `recon_engine.py` now fails with
+> `scanning nothing: ['services/audit/flux/recon.py (expected recon_engine.py)']`.
+> **Corrected after the PR #191 review** — the first measurement said twenty, and `subscription_tier`
+> was a phantom. See "A fourth parser defect, found in review" below.
+> **The table below understates the problem by a factor of six.** It was assembled by hand from
+> two PR reviews. Sprint 741d built the comparison mechanically and found **20 drifting enum
+> types, not 3** — see that sprint for the measured list. The rows here are correct; they are
+> simply the ones that happened to be noticed. Kept as written because the reasoning that
+> follows them is still the right reasoning, and because the gap between a hand-read sample and
+> a measured population is the point.
+> **Re-measured 2026-10-22, against the reconciled venv.** The figures above are two days stale and
+> one is wrong by nine minor versions: `fastapi` is at **0.159.1**, not 0.150.0. Measured state is
+> **60 outdated**, of which only **10 are exact-pinned** and therefore actionable — the rest are
+> floors that self-heal (1) or transitive (49). The actionable set:
+>
+> | Package | Pinned | Latest | Kind |
+> |---------|--------|--------|------|
+> | `APScheduler` | 3.11.2 | 3.11.3 | patch |
+> | `pandas` | 3.0.2 | 3.0.6 | patch |
+> | `psycopg2-binary` | 2.9.12 | 2.9.13 | patch |
+> | `python-dotenv` | 1.2.2 | 1.2.4 | patch |
+> | `slowapi` | 0.1.9 | 0.1.10 | patch |
+> | `alembic` | 1.18.4 | 1.20.1 | minor |
+> | `fastapi` | 0.136.1 | 0.159.1 | minor (large surface) |
+> | `SQLAlchemy` | 2.0.49 | 2.1.6 | minor (large surface) |
+> | `reportlab` | 4.4.10 | 5.1.0 | **MAJOR** |
+> | `stripe` | 15.1.0 | 16.0.0 | **MAJOR** |
+>
+> `reportlab` 5 was not on the original list at all and is the highest-risk item here: it renders
+> all 18 memo PDFs and 3 report PDFs.
+> `rate-limiter dependency notice: slowapi is unmaintained (last release Oct 2022)`
+> Sprints 741–802 archived to `tasks/archive/sprints-741-802-details.md`.
 
 ### Sprint 793: Both tax tools apply one fixed set of statutory limits to every year
 **Status:** SPLIT — **793a COMPLETE** (the W-2 overrides the API never exposed), **793b PENDING**
@@ -693,316 +757,6 @@ sub-category* are 793b's table work, and they need the confirmed figures regardl
 
 ---
 
-### Sprint 794: A registry outage makes the CVE gate report "vulnerable"
-**Status:** COMPLETE — **794a** (the three npm call sites) and **794b** (the three pip-audit
-call sites). Step 3, the gating-policy question, remains open and is a CEO call.
-**Priority:** P3 — no security exposure, but it is a blocking gate that cannot distinguish two very
-different answers, and it produces a scary-sounding failure for an upstream hiccup.
-**Source:** observed live on PR #189, 2026-10-22.
-
-`Node CVE & License Audit` failed with:
-
-```
-npm warn audit 503 Service Unavailable - POST https://registry.npmjs.org/-/npm/v1/security/audits/quick
-npm error audit endpoint returned an error
-##[error]Process completed with exit code 1.
-```
-
-No vulnerability. npm's audit endpoint was down for seven minutes. The job name says "CVE &
-License Audit" and the red X says the same thing it says for a genuine CRITICAL, so the signal
-a reader gets is "this PR has a high-severity vulnerability" when the truth is "we could not
-check."
-
-**Same shape as Sprint 778a's false-green, inverted.** There the job could not report a failure
-it had detected; here it reports a failure it has not detected. Both come from a check with two
-outcomes where the reality has three: pass, fail, and **unverified**.
-
-**Two blocking instances**, plus one advisory:
-
-| File | Step | Gating |
-|------|------|--------|
-| `ci.yml:656` | `npm audit --omit=dev --audit-level=high` | **blocking** |
-| `dependency-compliance.yml:56` | same | **blocking** |
-| `ci.yml:699` | `npm audit --omit=dev` | advisory |
-
-**Scope:**
-1. **Retry first.** A 503 is usually seconds long; two or three attempts with backoff removes most
-   of the problem and needs no policy decision. This alone is probably 80% of the value.
-2. Distinguish the outcomes. `npm audit --json` returns a parseable report on success and an
-   error object on failure; branch on which arrived rather than on the exit code alone.
-3. **Decide the gating policy for "unverified", and write the reason down.** This is the part
-   that is genuinely a judgement call rather than a bug fix: should an npm outage block a merge?
-   Failing closed is the safe default for a security gate and matches the 778a precedent — but
-   778a gates a monthly report, and this gates every PR, so an hour-long npm incident would stop
-   all work. A bounded compromise: fail closed, but say *"registry unavailable — not a
-   vulnerability finding"* in the error so the reader knows to re-run rather than hunt a CVE.
-4. Check whether the Python side has the same hole — `pip-audit` also calls out to an advisory
-   service.
-
-**Not urgent:** the immediate incident was cleared by re-running the job, and the underlying
-posture is unaffected either way — the audit was green on the previous run and on the re-run.
-
----
-
-#### 794a — what landed (npm side)
-
-**The conflation was confirmed against npm 10.9.0 rather than assumed.** Pointing `npm audit` at a
-closed port reproduces it exactly:
-
-| Situation | npm exit | Payload |
-|-----------|----------|---------|
-| Nothing vulnerable | **0** | `auditReportVersion` + `metadata.vulnerabilities`, all zero |
-| Real HIGH/CRITICAL findings | **1** | `auditReportVersion` + `metadata.vulnerabilities`, non-zero |
-| Registry unreachable | **1** | `message` + empty `error`, **neither** of those keys |
-
-So the exit code genuinely cannot separate rows 2 and 3 — but the **payload** separates them
-cleanly. That is why the classifier reads the body and uses the exit code only as a cross-check.
-
-**`scripts/classify_npm_audit.py`** returns three verdicts where there were two:
-
-- `CLEAN` — a report came back, nothing at or above the threshold
-- `VULNERABLE` — a report came back and it has findings
-- `UNVERIFIED` — no usable report came back; the audit did not happen
-
-Anything unrecognised lands on `UNVERIFIED`, never `CLEAN`. Defaulting the other way would mean a
-future change to npm's output format silently disarms the gate — the Sprint 792 defect class
-arriving through a different door.
-
-**`scripts/npm_audit_gate.sh`** wraps it: up to 3 attempts with doubling backoff, then reports.
-
-**All three call sites now go through it** — `ci.yml:656` (blocking), `ci.yml:699` (advisory) and
-`dependency-compliance.yml:56` (blocking, the job that actually went red).
-
-**The gating policy is deliberately unchanged.** An unreachable registry still fails a blocking
-gate: a security gate that opens when it cannot see is worse than one that blocks, and keeping the
-existing behaviour means this needed no policy decision. What changed is that the job now says
-
-> `THIS IS NOT A VULNERABILITY FINDING.`
-> `The audit could not be completed after 3 attempts...`
-
-so the reader re-runs instead of hunting a CVE that was never there. **Step 3 of the original scope
-— whether "unverified" *should* block every PR — therefore remains genuinely open**, and is a CEO
-call rather than an engineering one: failing closed matches the Sprint 778a precedent, but 778a
-gates a monthly report while this gates every PR, so a long npm incident would stop all work. The
-retry in step 1 makes that decision much less pressing, which was the point of ordering it first.
-
-#### The test that keeps the fix applied — `backend/tests/test_npm_audit_gate.py`, 21 tests
-
-Two separate claims, because the fix needs both and only one is about the classifier:
-
-1. **The classifier discriminates.** Real captured payloads for all three outcomes, threshold
-   handling, seven unreadable shapes that must all be `UNVERIFIED`, and the disagreement case
-   (non-zero exit alongside an empty report → not trusted).
-2. **No workflow calls `npm audit` directly.** Three call sites had this bug because three jobs
-   each ran the bare command; a fourth added by copy-paste would reintroduce it and be green until
-   the day the registry hiccupped. This is the lesson from PR #188 and Sprint 792 applied up front
-   rather than after review: *the fix and the fix staying applied are two different claims.*
-
-Plus end-to-end runs of the real gate script against a stubbed `npm`, covering both modes and the
-bad-argument path.
-
-**Regression-proved**, not assumed: injecting a bare `npm audit --omit=dev --audit-level=high` into
-`ci.yml` fails `test_no_workflow_calls_npm_audit_directly` and names `ci.yml:656`. The live run
-against the real registry returns `CLEAN`; forcing a closed port produces two retries, then
-`UNVERIFIED` with exit 1 in blocking mode and exit 0 in advisory mode.
-
-#### 794b — the Python side has the same hole (step 4 answered)
-
-**Checked empirically, and the answer is yes.** `pip-audit` 2.10.1 against an unreachable index:
-
-```
-ERROR:pip_audit._cli:Failed to install packages: [...]
-exit=1
-```
-
-Exit 1, no JSON on stdout — identical in shape to a real vulnerability finding, and identical to
-what npm did. **Three call sites**, none of them wrapped:
-
-| File | Step | Gating |
-|------|------|--------|
-| `ci.yml:607` | `pip-audit -r requirements.txt` | **blocking** |
-| `dependency-compliance.yml:29` | `pip-audit --desc --ignore-vuln CVE-2026-3219` | **blocking** |
-| `ci.yml:633` | `pip-audit -r requirements.txt --desc` | advisory |
-
-Not folded into 794a on purpose: it is a different tool with a different output contract, it needs
-its own classifier and its own tests, and the incident that prompted this was on the npm side where
-the behaviour is now verified end to end. Bundling it would have made one reviewable change into
-two unreviewable ones.
-
-#### 794b — what landed
-
-**All three shapes captured from pip-audit 2.10.1 rather than assumed:**
-
-| Situation | pip-audit exit | stdout |
-|-----------|----------------|--------|
-| Nothing vulnerable | **0** | `{"dependencies": [{…, "vulns": []}], "fixes": []}` |
-| Real vulnerability | **1** | same shape, `vulns` non-empty |
-| Index/service unreachable | **1** | **nothing at all** |
-
-Same conclusion as npm: the exit code cannot separate the last two, the payload separates them
-cleanly.
-
-`scripts/classify_pip_audit.py` returns the same three verdicts, and `scripts/pip_audit_gate.sh`
-wraps it with 3 attempts and doubling backoff. All three call sites go through it — `ci.yml:611`
-(blocking), `ci.yml:640` (advisory), `dependency-compliance.yml:33` (blocking, keeps its
-`--ignore-vuln CVE-2026-3219`).
-
-**Gating policy unchanged**, as in 794a: an unreachable service still fails a blocking gate, it
-just says `THIS IS NOT A VULNERABILITY FINDING` first.
-
-**`--desc` was dropped from two call sites** — it does nothing alongside `--format json`, which the
-gate requires. The gate rejects `--desc` and `--format` with exit 2 rather than ignoring them: a
-caller who passes `--format columns` and gets a pass has been told something untrue.
-
-#### Two things found by using the real output
-
-**pip-audit double-counts.** It emits each advisory once per vulnerability source, so auditing
-`jinja2==2.11.3` returns **eight entries for four distinct advisories**. The summary deduplicates
-by id; without that the gate would report double the real number in the one line a human reads to
-decide how alarmed to be. Only visible by running it against a genuinely vulnerable package.
-
-**Substring matching was not good enough for the anti-drift check.** The first draft flagged four
-false positives — the job key `pip-audit-blocking:`, two step names containing "Install pip-audit",
-and `pip install pip-audit`. npm got away with the same approach only because its job keys are
-spelled `npm-audit-blocking` with a hyphen while the command has a space. The fix finds the
-**command position**: strip `run:`, split on `&&`/`||`/`;`/`|`, and require the tool at the start
-of a command. Eight cases pin the detector itself, because *a check tuned by adding exclusions
-until the noise stops eventually excludes the thing it was looking for*.
-
-Deliberately no YAML parse: `pyyaml` is only transitively installed here, not declared in
-`requirements.txt` or `requirements-dev.txt`, and a guard should not acquire a dependency that CI
-is not guaranteed to have.
-
-#### A sixth record shape, found in review
-
-The PR #193 review caught that pip-audit has a **fourth** output shape nobody had accounted for.
-When it cannot resolve a dependency — an editable install, a URL requirement, a package absent
-from PyPI — its JSON formatter emits
-
-```json
-{"name": "mylib", "skip_reason": "Dependency not found on PyPI and could not be audited"}
-```
-
-with **no `version` and no `vulns`**, and pip-audit still exits 0. Only `--strict` turns a skip
-into a failure. Verified against the installed `pip_audit/_format/json.py` rather than taken on
-trust.
-
-The classifier read the missing `vulns` key as a broken schema, so every such run became
-`UNVERIFIED`, was retried three times, and failed the blocking gates. **That is `--strict`
-smuggled in under a change whose whole claim was that the gating policy did not move** — the
-worst kind of defect to ship in this particular sprint.
-
-**The fix keys off `skip_reason` being present**, not off `vulns` being absent, so a future
-pip-audit that adds `"vulns": []` to skipped records stays correct. Skips are reported in the
-verdict reason — naming the package and the reason — but do not change it.
-
-**One narrow exception, and it is deliberate.** If *every* dependency in the report was skipped,
-nothing was audited, and calling that CLEAN would be exactly the failure this sprint exists to
-prevent: reporting safety that was never established. That returns `UNVERIFIED`. It is not
-`--strict` — a single audited package restores the normal verdict.
-
-Regression-proved: removing the `skip_reason` branch fails six tests.
-
-#### Tests — `backend/tests/test_pip_audit_gate.py`, 39
-
-The three real payloads · the dedup count · eight unreadable shapes that must all be `UNVERIFIED` ·
-the exit/report disagreement case · no workflow invokes `pip-audit` directly · the detector's own
-eight cases · end-to-end runs against a stubbed `pip-audit` covering both modes, the bad-argument
-paths, and **argument passthrough** (so `--ignore-vuln` cannot be silently dropped).
-
-Plus `test_both_audit_gates_use_the_same_verdict_vocabulary`: the npm and pip gates are separate
-scripts on purpose, which makes their shared verdict names a convention — and a convention without
-a test is a coincidence. And six covering the skip record above, including an end-to-end run
-proving a skipped dependency neither retries nor blocks.
-
-**Regression-proved:** injecting `run: pip-audit -r requirements.txt` into `ci.yml` fails the guard
-and names `ci.yml:607`.
-
-**Commit SHA:** `a764a31a` (794a; PR #190) and `5e6a0b7a` (794b; PR #193), plus the 794b review fix `083a2f8b` — a skipped dependency was being read as a broken schema. Filed as `f279cb55`.
-
----
-
-### Sprint 792: Audit every gate for the scope gap that produced seven findings
-**Status:** COMPLETE.
-**Priority:** P2 — preventive. Fixing instance #8 is worth less than enumerating the class.
-**Source:** 2026-10-21. Seven separate findings that day were the same defect.
-
-**The class.** A consistency gate scoped by a *file list* silently stops covering what it is named
-after, and reports success. Seven instances in one day:
-
-| Gate | What it read | What it missed |
-|------|-------------|----------------|
-| `doc_consistency_guard` `CODE_SURFACE_CHECKS` | `(marketing)/demo/layout.tsx` | `demo/page.tsx` beside it — metadata correct at 18, visible body saying *twelve* |
-| `doc_consistency_guard` `TOOL_COUNT_DOCS` | `USER_GUIDE.md`, aggregate claims only | six of seven per-tool test counts in the same file |
-| `test_citation_consistency` `SCANNED_GLOBS` | `app/(marketing)/**` | `app/tools/**` — AU-C 265 unregistered since Sprint 689b |
-| `test_catalog_consistency` | registry↔ledger, registry↔standards | `features/status.json`, missing all six promoted tools |
-| `test_catalog_consistency` + friends | descriptions of the catalog | what the API actually allows — SoD 403'd two paying tiers |
-| `scripts/archive_sprints.sh` | counted 13, extracted 10 | nothing compared the two numbers; three records destroyed |
-| Sprint 787b's own new guard | imports of a module | the function actually called — went vacuously green |
-
-**So instead of waiting for the eighth, every gate in the repo was inspected.** Result: the two
-with real gaps were already fixed (789b, 784c/784b). The rest are genuinely comprehensive, and the
-finding is worth recording so the next reader does not re-derive it:
-
-| Gate | Enumeration | Verdict |
-|------|-------------|---------|
-| `scripts/lint_design_tokens.py` | `frontend/src` full `rglob` + suffix filter | **comprehensive** — no path list to rot |
-| `scripts/lint_route_layer_purity.py` | `routes/*.py` | comprehensive; no `APIRouter` lives outside `routes/` (checked) |
-| `scripts/check_route_wiring.py` | `routes/*.py` + known aggregators | comprehensive; handles the aggregator indirection |
-| `scripts/check_openapi_drift.py` | the live app's own schema | **structurally immune** — derived from the app, not a path list |
-| `scripts/lint_engine_base_adoption.py` | `BACKEND_ROOT.glob("*_engine.py")` | **latent gap — closed here** |
-| `scripts/lint_domain_relocation.py` | same | same gap, same fix |
-
-**The one real find, closed preemptively.** Both engine linters enumerate `*_engine.py` at the
-backend root. ADR-018 moved the implementations to `services/audit/<tool>/analysis.py`, and the
-linters still reach them only because every relocated engine left a root shim behind — which
-PR #126 taught the adoption lint to follow. **Nothing asserted the shims exist.** An engine created
-directly at `services/audit/<tool>/analysis.py` with no shim would be scanned by neither linter,
-and both would report success on an empty scan.
-
-All ten relocated engines currently have their shim, so this is a trap rather than a defect.
-`test_every_relocated_engine_has_a_root_shim` now fails if one is ever missing, names the tool, and
-states both remedies (add the shim, or teach both linters the relocated path). It also asserts the
-scan found work at all — a glob that matches nothing covers nothing, which is the same failure
-wearing different clothes.
-
-Regression-proved: moving `flux_engine.py` aside fails with
-`report success while scanning nothing: ['flux']`; restoring passes.
-
-> **PR #185 review — the guard had the defect it was written to prevent.** The first draft
-> enumerated `services/audit/*/analysis.py`, which excluded
-> `services/audit/flux/recon.py` — the **ADR-018 pilot relocation**, and the one module that
-> predates the `analysis.py` convention. Deleting its shim `recon_engine.py` left the test
-> green while `lint_domain_relocation.py` lost the ability to enumerate that engine: precisely
-> the regression the test exists to catch, missed by the test's own filename filter.
->
-> That is this sprint's thesis reproduced inside the sprint's own deliverable — a scan whose
-> scope silently excludes the thing it was written for. Enumeration is now by **directory**:
-> every non-`__init__` module under a per-tool subdirectory, with the shim name taken from the
-> module stem (`recon.py` → `recon_engine.py`) except for the conventional `analysis.py`, which
-> takes its directory's (`ap_testing/analysis.py` → `ap_testing_engine.py`). The rule resolves
-> correctly for all 11 modules. Top-level `services/audit/*.py` — `contracts.py`,
-> `file_tool_scaffold.py`, `flux_service.py` — are shared infrastructure, not per-tool engines,
-> and stay excluded.
->
-> A second test pins the pilot **by name**, so a future narrowing of the glob cannot drop it
-> silently again. Re-proved: removing `recon_engine.py` now fails with
-> `scanning nothing: ['services/audit/flux/recon.py (expected recon_engine.py)']`.
-
-**The operating rule, written down where the next reader will find it:** when inheriting a
-consistency gate, do not read its file list as its scope — **the scope is the patterns**, and the
-file list is a separate thing that can be wrong on its own. A gate whose coverage you cannot state
-in one sentence is a gate you will over-trust. Prefer a glob plus a test that the glob matches
-something; prefer deriving the target set from the app (as `check_openapi_drift.py` does) over
-listing it.
-
-**Verification:** 17 passed in `test_engine_base_lint.py`; `ruff check .` clean. No production code
-changed.
-
-**Commit SHA:** `392d471e` (PR #185), plus the review fix `acdcb900` — the guard itself had the defect it was written to prevent.
-
----
-
 ### Sprint 790: The monthly upload allowance is not enforced on any paid tier
 **Status:** PENDING.
 **Priority:** **P1** — revenue-relevant and advertised. Every paid tier's headline quota is
@@ -1058,152 +812,6 @@ expensive later.
 
 ---
 
-### Sprint 741d: Freeze the enum label drift so it cannot grow
-**Status:** COMPLETE.
-**Priority:** P2 — preventive. It fixes nothing; it stops the problem spreading while
-[Sprint 741c](#sprint-741c-enum-labels-disagree-between-the-alembic-chain-and-the-orm) waits on
-CEO ask D-1.
-**Source:** Sprint 741c step 4, pulled forward on realising it needs no database.
-
-Step 4 of 741c was filed behind the Neon read. It does not belong there: comparing the migration
-chain's enum labels against the ORM's is a comparison of **two things already in this repository**.
-No production connection is involved. So it was done first.
-
-#### What it found: 19 drifting types, not 3
-
-The hand-written table in 741c lists three types across five rows. The mechanical comparison finds
-**nineteen**, out of 26 enum types that exist in both places.
-
-> **Corrected after the PR #191 review** — the first measurement said twenty, and `subscription_tier`
-> was a phantom. See "A fourth parser defect, found in review" below.
-
-**Seventeen are case-only** — the chain spells labels lowercase, the ORM binds member NAMES:
-`adminactiontype`, `billingeventtype`, `billinginterval`, `dunningresolution`, `dunningstate`,
-`entitytype`, `expectationresultstatus`, `expectationtargettype`, `invitestatus`,
-`misstatementclassification`, `misstatementdisposition`, `misstatementsourcetype`, `orgrole`,
-`reportingframework`, `subscriptionstatus`, `teamactiontype`, `usertier`.
-
-"Case-only" sounds cosmetic and is not: `ACTIVE` is simply not a label of a type whose labels are
-`active`, and PostgreSQL rejects the write with 22P02. That is the exact error Sprint 741a chased.
-
-**Two are membership differences** — labels genuinely absent rather than misspelled, so no
-`values_callable` decision could resolve them:
-
-| Type | Column | The gap |
-|------|--------|---------|
-| `engagementstatus` | `engagements.status` | the ORM binds **`COMPLETED`** and **no migration ever adds it** |
-| `toolname` | `tool_runs.tool_name` | chain carries lowercase `flux_analysis`; the ORM binds `FLUX_ANALYSIS` |
-
-**`engagementstatus` is a new finding and the most interesting one.** Nothing in 741c or its
-source reviews mentions it. The engagement completion gate is a shipped feature, so on any
-database built from the documented chain, completing an engagement fails. Production is fine
-because production was built by `create_all()` — which is precisely what makes this a
-**restore-drill blocker** rather than a live incident, and why it belongs with Sprint 778.
-
-`toolname` confirms 741c's live-defect row mechanically.
-
-**One genuinely useful side-finding for 741c's step 2.** `subscription_tier` and `usertier` hold the
-same four tiers one table apart, and the ORM binds them **differently** — `subscription_tier`
-lowercase, `usertier` as NAMES. So "pick the canonical direction" is not purely a migration edit;
-the models disagree with each other first.
-
-#### Why no test could have caught this
-
-SQLite has no enum types. The column is a plain VARCHAR, every label is accepted, and ~9,000
-passing tests say precisely nothing about whether the chain and the ORM agree. Same shape as the
-missing `ALTER TYPE` in Sprint 787 and the 22P02 in 741a: **when a constraint exists only in the
-production dialect, the dev dialect cannot see the defect.** A static comparison is the only
-thing that can, short of a PostgreSQL connection.
-
-#### What landed
-
-`backend/guards/enum_label_drift.py` assembles each type's label set from the three constructs
-this chain actually uses — inline literals, `sa.Enum(*_CONSTANT, name=...)`, and
-`for v in _CONSTANT: op.execute(f"ALTER TYPE t ADD VALUE '{v}'")` — and compares them against
-`Base.metadata`. The 20 known-bad types are a `KNOWN_DRIFT` baseline. Anything drifting that is
-not on the list fails; anything on the list that stops drifting **also** fails, so 741c's fixes
-must shrink it. A baseline that is never tightened is just an allowlist.
-
-#### The guard was wrong three times before it was right
-
-Worth recording, because every one was the failure this session keeps producing — a scan that
-silently covers less than it claims and reports success anyway.
-
-1. **It read 5 of 26 ORM types.** `import models` registers only the models in `models.py`; the
-   rest live in sibling `*_model.py` modules and are absent from `Base.metadata` until imported.
-   Caught only because 5-vs-21 looked implausible.
-2. **It could not read `NEW_TOOL_NAMES`.** Declared `NEW_TOOL_NAMES: tuple[str, ...] = (...)` —
-   an `AnnAssign`, not an `Assign`. Handling only `Assign` made Sprint 689's six tool labels
-   invisible. One type annotation was the difference between reading that migration and not.
-3. **It invented a label called `{value}`.** The literal `ALTER TYPE` regex runs over raw source,
-   so it matched an f-string's own placeholder text — manufacturing drift on two types while
-   hiding their real labels behind it.
-
-Each was found by the module reporting what it could *not* resolve instead of skipping it, which
-is why `unresolved` fails the run loudly. **If the first draft had shipped it would have passed
-CI**, printed a confident verdict, and compared a fifth of the schema.
-
-#### A fourth parser defect, found in review
-
-The PR #191 review caught what the three self-inflicted bugs below did not: the first version
-**unioned every label it saw anywhere in the file**, and that is the wrong model of what a
-migration chain does.
-
-`e3f4a5b6c7d8_pricing_v3_enum_restructure` rebuilds both tier enums:
-
-```sql
-ALTER TYPE usertier RENAME TO usertier_old
-CREATE TYPE usertier AS ENUM ('free', 'solo', 'professional', 'enterprise')
-DROP TYPE usertier_old
-```
-
-`starter`, `team` and `organization` are **retired**. Unioning keeps them forever — so
-`subscription_tier` was reported as drifting when it actually agrees, and any drift a *future*
-rebuild introduced would have been invisible. There was no handler for `CREATE TYPE ... AS ENUM`
-at all.
-
-**A fifth defect surfaced while fixing it:** the scan read raw file text, so it also replayed
-`downgrade()` — and that same migration's downgrade recreates both types with the *old* labels.
-The guard was reading a schema nobody has.
-
-Both are fixed by **replaying the chain in revision order** — topological sort on
-`revision`/`down_revision`, then `upgrade()` bodies only, operations sorted by line number because
-the rebuild is a three-step RENAME/CREATE/DROP dance and `ast.walk` is breadth-first. `CREATE TYPE`
-replaces, `ADD VALUE` adds, `RENAME` moves, `DROP` removes, and `sa.Enum(name=...)` inside
-`create_table` defines only if absent so it cannot clobber an earlier rebuild.
-
-**Why the coverage test did not catch this, which is the real lesson.** There *was* a coverage
-self-check, and it passed: it counted `Enum(..., name=...)` AST calls and confirmed the parser saw
-every one. But `CREATE TYPE` is raw SQL inside `op.execute()`, so the check proved nothing about
-it. **Coverage of one construct family reads exactly like coverage of the subject.** The new
-`test_every_enum_sql_statement_in_every_upgrade_is_accounted_for` counts enum-affecting SQL
-statements in each `upgrade()` body and requires a parsed operation for each.
-
-Regression-proved: deleting the `CREATE TYPE` handler fails six tests, including that one.
-
-#### Tests — `backend/tests/test_enum_label_drift.py`, 21
-
-The verdict matches the baseline; the baseline must be tightened when drift is fixed; the parser
-resolved everything it found; **every named enum in every migration is accounted for, with no
-exemptions** (an earlier draft carved out downgrade-only `Enum(name=...).drop()` calls — measuring
-showed the carve-out was dead code, and a dead escape hatch in a coverage check is exactly what
-hides the first real miss); no phantom placeholder labels; the AnnAssign constant resolves; the
-ORM scan sees models outside `models.py`. Plus both failure directions regression-proved by
-monkeypatching the baseline.
-
-**Not given its own CI job.** It runs inside `backend-tests`, which already installs the
-dependencies it needs; the `doc-consistency` job runs without them, so a separate job would mean
-a redundant full install for no extra signal.
-
-**Does not fix anything.** 741c steps 1-3 still need the Neon read, and the canonical direction is
-still almost certainly *names* — do **not** "fix" this by adding `values_callable`, which would
-flip every binding to lowercase and break the live database.
-
-**Commit SHA:** `9b5eddd8` (PR #191), plus the review fix `3e129853` — the guard unioned labels a
-rebuild had retired.
-
----
-
 ### Sprint 741c: Enum labels disagree between the Alembic chain and the ORM
 **Status:** PENDING.
 **Priority:** P1 — one instance is a live production defect; the rest is a schema-truth problem.
@@ -1213,12 +821,6 @@ rebuild had retired.
 migrations in the chain follow that and some do not, so the labels a database ends up with
 depend on *how it was built*:
 
-> **The table below understates the problem by a factor of six.** It was assembled by hand from
-> two PR reviews. Sprint 741d built the comparison mechanically and found **20 drifting enum
-> types, not 3** — see that sprint for the measured list. The rows here are correct; they are
-> simply the ones that happened to be noticed. Kept as written because the reasoning that
-> follows them is still the right reasoning, and because the gap between a hand-read sample and
-> a measured population is the point.
 
 | Type | Migration labels | ORM binds | Agree? |
 |------|------------------|-----------|--------|
@@ -1274,26 +876,6 @@ binding to lowercase and break the current production database, which holds name
 
 **Current drift (2026-10-20 nightly):** 68 backend / 22 frontend packages outdated. Security-relevant: `cryptography` 46.0.7 → 50.0.2 (major), `stripe` 15.0.1 → 16.0.0 (major), `fastapi` 0.136.0 → 0.150.0, `SQLAlchemy` 2.0.49 → 2.1.5, `react` 19.2.5 → 19.3.1.
 
-> **Re-measured 2026-10-22, against the reconciled venv.** The figures above are two days stale and
-> one is wrong by nine minor versions: `fastapi` is at **0.159.1**, not 0.150.0. Measured state is
-> **60 outdated**, of which only **10 are exact-pinned** and therefore actionable — the rest are
-> floors that self-heal (1) or transitive (49). The actionable set:
->
-> | Package | Pinned | Latest | Kind |
-> |---------|--------|--------|------|
-> | `APScheduler` | 3.11.2 | 3.11.3 | patch |
-> | `pandas` | 3.0.2 | 3.0.6 | patch |
-> | `psycopg2-binary` | 2.9.12 | 2.9.13 | patch |
-> | `python-dotenv` | 1.2.2 | 1.2.4 | patch |
-> | `slowapi` | 0.1.9 | 0.1.10 | patch |
-> | `alembic` | 1.18.4 | 1.20.1 | minor |
-> | `fastapi` | 0.136.1 | 0.159.1 | minor (large surface) |
-> | `SQLAlchemy` | 2.0.49 | 2.1.6 | minor (large surface) |
-> | `reportlab` | 4.4.10 | 5.1.0 | **MAJOR** |
-> | `stripe` | 15.1.0 | 16.0.0 | **MAJOR** |
->
-> `reportlab` 5 was not on the original list at all and is the highest-risk item here: it renders
-> all 18 memo PDFs and 3 report PDFs.
 
 **Read the numbers through Sprint 777's rule before acting.** `requirements.txt` splits deliberately: `==` for the framework/runtime surface, `>=` floors for the security leaves. The two halves need opposite treatment and the nightly does not distinguish them:
 - **Floors self-heal.** `cryptography>=46.0.7` means CI and the production Docker build already resolve to 50.0.2 on every fresh install. There is nothing to bump — the finding is about the venv, not about production.
@@ -1406,7 +988,6 @@ The PR #195 review caught that the grep missed `shared/rate_limits.py`'s **runti
 `_emit_slowapi_unmaintained_warning()` logs on every module import — WARNING in production, INFO
 elsewhere — and said:
 
-> `rate-limiter dependency notice: slowapi is unmaintained (last release Oct 2022)`
 
 So an on-call engineer paged anywhere near rate limiting was being told something false about the
 dependency. Two tests **asserted** that wording, and the runbook's Operator Posture section quoted
@@ -1460,205 +1041,21 @@ and `508ee136`, the PR #195 review finding that the stale claim was also running
 
 ---
 
-#### 786a — the venv, and what the reconcile proved: COMPLETE
-
-**The finding is bigger than the hygiene.** Reconciling `backend/venv` to a fresh
-`pip install -r requirements.txt --upgrade` moved **12 packages**:
-
-| Package | venv had | fresh resolve | Pin style |
-|---------|----------|---------------|-----------|
-| `cryptography` | 46.0.7 | **50.0.2** | `>=` floor |
-| `pillow` | 12.2.0 | **13.0.0** | `>=` floor |
-| `redis` | 7.4.0 | **8.1.0** | `>=` floor |
-| `pypdf` | 6.10.2 | 6.21.1 | `>=` floor |
-| `pyasn1` | 0.6.3 | 0.6.4 | `>=` floor |
-| `Werkzeug` | 3.1.8 | 3.1.9 | `>=` floor |
-| `fastapi` | 0.136.0 | 0.136.1 | `==` pin (venv was behind) |
-| `stripe` | 15.0.1 | 15.1.0 | `==` pin (venv was behind) |
-| `pdfminer.six`, `pdfplumber`, `pypdfium2`, `prometheus_client` | — | — | transitive / floor |
-
-**Sprint 777 named this risk and it has already happened, twice.** That sprint chose the
-`==`/`>=` split and wrote down the cost of the floor half: *"production can take an
-unreviewed upstream major at any time, with no lockfile and no record of what actually
-shipped."* Production has since taken **`pillow` 12 → 13** and **`redis` 7 → 8** — two major
-upgrades, neither reviewed, both already live, because CI and the production Docker build
-each do a fresh resolve. `cryptography` has moved **four** majors (46 → 50) the same way.
-
-Nothing is broken by them: CI has been green throughout, and the full suite passes on the
-reconciled versions. The problem is that nobody chose them.
-
-**So the deliverable is the evidence record, not a version bump.** `ci.yml`'s 3.12 matrix leg
-now captures `pip freeze` after install, prints the floor-pinned set into the build log
-behind a collapsible group, and uploads the full resolution as a 90-day artifact
-(`resolved-requirements-py312`). Sprint 777's rule depended on exactly this and it had never
-been built — "what did we test on" was unanswerable after the fact. Retention is 90 days
-rather than the 30 used for lint reports, because a CVE disclosure can land months after the
-build it concerns.
-
-**What was reconciled, and what deliberately was not.** The venv now matches a fresh resolve,
-so the nightly measures something that ships. `requirements.txt` itself is **unchanged** —
-the two `==` pins the venv was behind on (`fastapi`, `stripe`) were already correct in the
-file, and no floor was raised. Nothing about what production resolves has changed; only the
-local environment's agreement with it, and the record of it.
-
-**Correction to `SESSION_STATE.md`.** It called `backend/venv` "the CI-representative env,
-with the new pins". It was neither, as the table above shows. Now it genuinely is.
-
-**Also verified while here:** CI's backend-tests job installs `requirements-dev.txt`, whose
-first line is `-r requirements.txt`, so CI really does resolve the same production floors —
-the "CI is representative on versions" claim holds.
-
-**Verification:** full backend suite green on the reconciled versions — i.e. on what
-production actually runs, including `cryptography` 50, `pillow` 13 and `redis` 8, which no
-local run had previously exercised. `ci.yml` parses and the two new steps land in the right
-job, in the right order, scoped to the 3.12 leg so only one artifact is produced.
-`backend/resolved-requirements.txt` is gitignored — it is build output, not source.
-
-#### 786b — the reviewed bumps: PENDING
-
-Unchanged in substance, but now better informed, because the floors have already delivered
-`cryptography` 50, `pillow` 13 and `redis` 8 without review. What remains is the **exact-pin**
-half, which cannot self-heal and is genuinely stale:
-
-1. `fastapi` 0.136.1 → 0.150.0 and `SQLAlchemy` 2.0.49 → 2.1.5 — minor by version number,
-   large by surface; treat each as a major for verification purposes.
-2. `stripe` 15.1.0 → 16.0.0 — pair with the Sprint 780 webhook work rather than bumping it
-   under a handler that was at 59.9% coverage a day ago.
-3. Frontend majors individually: `typescript` 6 → 7, `framer-motion` 12 → 14,
-   `@testing-library/jest-dom` 6 → 7.
-4. Patches and safe minors in one batch, mirroring the 2026-04-19/22 hygiene pattern.
-
-**Retrospective question worth putting to the CEO, not answering unilaterally:** the floors
-are doing their job on CVE currency and have now shipped three unreviewed majors. Sprint 777
-accepted that trade deliberately. Whether `pillow` and `redis` in particular should move to
-`==` with Dependabot responsibility — they are image and cache libraries whose majors change
-behaviour, unlike `cryptography` where currency is the whole point — is a revision of that
-decision rather than an application of it.
-
----
-
-### Sprint 786c: Refresh the six GitHub Actions SHA pins
-**Status:** COMPLETE.
-**Priority:** P3 — CI-only. No production surface, but action pins are the one dependency class in this repo that **cannot self-heal**, so they rot silently.
-**Source:** Sprint 785 Dependabot triage. Replaces the four stale Dependabot action PRs (#77, #78, #90, #156), all closed as superseded.
-
-`ci.yml` and the other workflows pin every action by commit SHA rather than tag — correct practice, since a tag is mutable and a compromised action runs with repository credentials. The cost is that nothing updates them automatically, and Dependabot's own PRs for them sat unmerged for six months until their targets went stale too.
-
-**Current pins and current releases (measured 2026-10-21):**
-
-| Action | Pinned | = tag | Latest |
-|--------|--------|-------|--------|
-| `actions/checkout` | `de0fac2e4500dabe0009e67214ff5f5447ce83dd` | v6.0.2 | **v7.0.1** |
-| `actions/github-script` | `ed597411d8f924073f98dfc5c65a23a2325f34cd` | v8.0.0 | **v9.0.0** |
-| `actions/setup-node` | `53b83947a5a98c8d113130e565377fae1a50d02f` | v6.3.0 | **v7.1.0** |
-| `actions/setup-python` | `a309ff8b426b58ec0e2a45f0f869d46889d02405` | v6.2.0 | **v7.0.0** |
-| `actions/upload-artifact` | `bbbca2ddaa5d8feaa63e36b76fdaad77386f024f` | v7.0.0 | **v7.0.2** |
-| `actions/download-artifact` | `3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c` | v8.0.1 | **v8.0.2** |
-
-Four of the six are **major** bumps. `upload-artifact` and `download-artifact` are patch-level and safe to batch.
-
-**Approach:**
-1. Batch the two patch bumps (`upload-artifact` 7.0.0 → 7.0.2, `download-artifact` 8.0.1 → 8.0.2) in one commit.
-2. One major per commit, each resolved to its release SHA (not the tag) with the tag recorded in a trailing comment so the next reader can tell what the SHA is without an API call. `checkout` v7 first (every job uses it, so a break is immediate and obvious), then `setup-python` v7, `setup-node` v7, `github-script` v9 last — it is used in the failure-issue step of `uptime-check.yml`, which is the hardest to exercise on a PR.
-3. Read each major's release notes for runner-version and Node-runtime requirements before bumping; the v6 → v7 wave across the `actions/*` org is largely a Node runtime move.
-
-**Verification:** every workflow that references the bumped action runs green on the PR. `github-script` cannot be proven by a normal PR run (its only use is in a failure path), so dispatch `uptime-check.yml` manually on the branch and confirm the failure-issue step still *skips* correctly rather than erroring.
-
-**Out of scope:** switching from SHA pins to tags. The pins are deliberate and stay.
-
-#### What landed — 64 pins across 5 workflow files
-
-| Action | Was | Now | Occurrences |
-|--------|-----|-----|-------------|
-| `actions/checkout` | v6.0.2 | **v7.0.1** | 27 |
-| `actions/setup-python` | v6.2.0 | **v7.0.0** | 17 |
-| `actions/upload-artifact` | v7.0.0 | **v7.0.2** | 8 |
-| `actions/setup-node` | v6.3.0 | **v7.1.0** | 6 |
-| `actions/github-script` | v8.0.0 | **v9.0.0** | 4 |
-| `actions/download-artifact` | v8.0.1 | **v8.0.2** | 2 |
-
-Done in one commit rather than the filed one-major-per-commit, because a single CI run exercises
-every job at once and gives the same signal — the sprint's "verification window" per major is a
-sequencing idea that buys nothing when one run covers all 27 jobs. If something breaks, the failing
-job names the action.
-
-**Every breaking change was checked against our actual usage before bumping, not assumed away:**
-
-- **github-script v9** is the only one with real breaking changes: `require('@actions/github')`
-  stops working, and `getOctokit` becomes an injected parameter so a script declaring
-  `const getOctokit` now raises `SyntaxError`. Our four usages touch `github.rest.issues.create`,
-  `github.rest.issues.listForRepo`, `context.repo` and `require('fs')` — a Node builtin. None of
-  the breaking patterns appear.
-- **checkout v7** blocks checking out fork PRs under `pull_request_target` and `workflow_run`. We
-  use neither trigger anywhere.
-- **setup-python v7** removes the `pip-install` input. We never passed it.
-- **setup-node v7** removes the dummy `NODE_AUTH_TOKEN` export. We do not reference it.
-- The remaining v7 majors are ESM migrations plus dependency upgrades.
-
-**Each SHA was verified against GitHub's tag API** rather than trusted from the release lookup —
-`repos/<action>/tags` confirms all six resolve to the claimed version, and each also carries the
-floating major tag, which is the expected shape for a release commit.
-
-#### The guard — `tests/test_workflow_action_pins.py`, 5 tests
-
-SHA pinning is the highest-leverage supply-chain control in the repo and **nothing was checking
-it.** A tag is mutable: whoever controls an action's repository can repoint `v7` at new code, which
-then runs here with this repository's credentials and `GITHUB_TOKEN`.
-
-1. Every external `uses:` is pinned to a 40-character SHA — no tags, no branches.
-2. Every pin carries a `# pin: vX.Y.Z` comment. **This is the one that would have prevented the
-   sprint.** A bare SHA is unreadable; you cannot tell a six-month-old pin from a current one
-   without an API call, which is exactly how all six drifted a full major behind unnoticed.
-3. `checkout` and `setup-python` — 27 and 17 occurrences — each resolve to a single SHA, so a
-   partial bump cannot leave some jobs behind. The difference would be invisible at a glance,
-   being a hex string.
-4. Plus the now-standard assertion that the scan found work at all.
-
-Deliberately **not** checked: whether the pins are *current*. That needs a network call and would
-fail CI for reasons outside the commit. Currency is Dependabot's job; immutability and readability
-are the test's.
-
-Regression-proved in all three directions: replacing one pin with `@v7` fails three tests and names
-`uptime-check.yml:73`; dropping a `# pin:` comment fails one; and pointing one `checkout` back at
-the old SHA fails with "pinned to 2 different SHAs".
-
-**Verification:** all five workflow files parse, 27 jobs resolve, every `uses:` in the repo is one
-of the six and all are SHA-pinned. 5 tests pass; `ruff` clean. Re-verified after rebasing onto
-#187, which rewrote `dr-test-monthly.yml` — no stale pin survived the merge.
-
-**What a green CI run does *not* verify, and what does.** `checkout`, `setup-python`,
-`setup-node`, `upload-artifact` and `download-artifact` run on every job, so the PR's own CI is a
-genuine test of those five. **`github-script` is different: all four usages are conditional**, and
-three of them only fire on failure —
-
-| Workflow | Condition |
-|----------|-----------|
-| `backup-integrity-check.yml:78` | `steps.check.outcome == 'failure'` |
-| `dr-test-monthly.yml:221` | `steps.final.outputs.overall != 'PASS'` |
-| `uptime-check.yml:223` | `steps.final.outputs.overall == 'FAIL'` |
-| `uptime-check.yml:257` | `steps.final.outputs.overall == 'PASS'` ← **runs on success** |
-
-So the v8 → v9 major — the only bump with real breaking changes — is exercised by none of the
-PR's checks. The static analysis stands (none of our scripts uses `require('@actions/github')` or
-declares `getOctokit`), but static analysis is not execution.
-
-The last row is the answer: `uptime-check.yml` is scheduled **every 15 minutes**, and its
-recovery step runs `github-script` on the PASS path. So v9 gets genuinely exercised within a
-quarter-hour of this merging, against real GitHub API calls. **Confirm that run is green before
-treating this sprint as verified** — today's lesson about un-suppressing untested paths applies
-directly, and a conditional step is a path nobody has run.
-
-**Not done deliberately:** manually dispatching `dr-test-monthly` to exercise the failure path.
-It would work — the verdict is UNVERIFIED after Sprint 778a, so the issue-creation step fires —
-but it files a real `dr-failure` issue in the repository, which is an outward-facing side effect
-and the CEO's call rather than a verification step to take unprompted.
-
-**Commit SHA:** `9992c6c8` (PR #188), plus the review fix `423ea080` — the pin guard was inspecting 23% of the file.
-
----
-
 ### Sprint 738: Alembic migration drift cleanup
-**Status:** PENDING — pre-4.1 sequence position 1.5. Could slip post-4.1 if priority shifts; not customer-visible either way.
+**Status:** **SUPERSEDED by Sprint 797 (2026-10-22)** — delivered in full. Migration
+`c9e4a1b73f20` creates all 4 tables, 6 columns and 3 FKs; both allow-lists in
+`test_alembic_models_parity.py` are empty and pinned empty by
+`test_drift_allowlists_stay_empty`. A chain-built database now reaches 29 of 29 tables
+with zero column and zero foreign-key drift.
+
+> **The blocker was misattributed, and that is the part worth keeping.** This sprint sat
+> recorded as blocked on the Neon read-only connection string (CEO ask D-1) for a year.
+> It never needed one: production was built by `create_all()` from `Base.metadata`, so it
+> already held every object in question, and writing the DDL required no database read —
+> only the migrations had to be *guarded* so they no-op against production. Sprint 741d
+> had already demonstrated the same thing about its own "needs a database" step.
+> **Before accepting an inherited blocker, check what the work actually reads.**
+
 **Priority:** P3. Catches up on dormant tech debt surfaced by Sprint 737's drift test.
 **Source:** Sprint 737's parity test (`backend/tests/test_alembic_models_parity.py`) discovered 4 tables and 6 columns defined on models with no corresponding Alembic migration.
 

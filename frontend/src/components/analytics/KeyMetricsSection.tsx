@@ -25,6 +25,29 @@ interface VarianceData {
   display_text: string
 }
 
+/**
+ * Three-component DuPont decomposition (Sprint 798).
+ *
+ * The engine has existed since the original ratio work and the user guide has
+ * told customers it "is available when all components are calculable" — but
+ * nothing rendered it. Its only caller was a unit test. `null` from the
+ * backend whenever revenue, assets or equity is zero, which is exactly the
+ * documented condition.
+ */
+interface DupontData {
+  net_profit_margin: number
+  asset_turnover: number
+  equity_multiplier: number
+  decomposed_roe: number
+  verification_matches: boolean
+  prior_period_deltas?: {
+    net_profit_margin_delta: number
+    asset_turnover_delta: number
+    equity_multiplier_delta: number
+    decomposed_roe_delta: number
+  }
+}
+
 interface Analytics {
   ratios: {
     current_ratio: RatioData
@@ -37,6 +60,7 @@ interface Analytics {
     return_on_equity?: RatioData
     dso?: RatioData  // Sprint 53: Days Sales Outstanding
   }
+  dupont?: DupontData | null
   variances: Record<string, VarianceData>
   has_previous_data: boolean
   category_totals: {
@@ -90,11 +114,27 @@ const RATIO_TO_VARIANCE_MAP: Record<string, string> = {
  * KeyMetricsSection wrapped with React.memo() to prevent unnecessary re-renders.
  * Only re-renders when analytics data or disabled state changes.
  */
+/** Format a DuPont component. Margins read as percentages, the turnover and
+ *  multiplier as multiples — the conventional presentation of each. */
+const formatDupont = (key: string, value: number): string => {
+  if (key === 'net_profit_margin' || key === 'decomposed_roe') {
+    return `${(value * 100).toFixed(2)}%`
+  }
+  return `${value.toFixed(4)}x`
+}
+
+const DUPONT_COMPONENTS = [
+  { key: 'net_profit_margin', label: 'Net Profit Margin', formula: 'Net Income / Revenue' },
+  { key: 'asset_turnover', label: 'Asset Turnover', formula: 'Revenue / Total Assets' },
+  { key: 'equity_multiplier', label: 'Equity Multiplier', formula: 'Total Assets / Total Equity' },
+] as const
+
 export const KeyMetricsSection = memo(function KeyMetricsSection({
   analytics,
   disabled = false,
 }: KeyMetricsSectionProps) {
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const [showDupont, setShowDupont] = useState(false)
 
   // Check if we have any calculable ratios
   const hasCalculableRatios = Object.values(analytics.ratios).some(r => r?.is_calculable)
@@ -210,6 +250,76 @@ export const KeyMetricsSection = memo(function KeyMetricsSection({
                   />
                 ))}
               </motion.div>
+            </CollapsibleSection>
+          )}
+
+          {/* DuPont Decomposition (Sprint 798) */}
+          {analytics.dupont && (
+            <CollapsibleSection
+              label="DuPont Decomposition"
+              itemCount={DUPONT_COMPONENTS.length}
+              isExpanded={showDupont}
+              onToggle={() => setShowDupont(!showDupont)}
+            >
+              <div className="space-y-3">
+                <p className="font-sans text-xs text-obsidian-600 dark:text-oatmeal-400">
+                  Return on Equity separated into its operating, efficiency and leverage
+                  components: Net Profit Margin &times; Asset Turnover &times; Equity Multiplier.
+                  Computed on ending balances.
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {DUPONT_COMPONENTS.map(({ key, label, formula }) => (
+                    <div
+                      key={key}
+                      className="rounded border border-obsidian-200 dark:border-obsidian-700 p-3"
+                    >
+                      <div className="font-sans text-xs uppercase tracking-wide text-obsidian-600 dark:text-oatmeal-400">
+                        {label}
+                      </div>
+                      <div className="font-mono text-lg text-obsidian-900 dark:text-oatmeal-100 mt-1">
+                        {formatDupont(key, analytics.dupont![key])}
+                      </div>
+                      <div className="font-sans text-xs text-obsidian-500 dark:text-oatmeal-500 mt-1">
+                        {formula}
+                      </div>
+                      {analytics.dupont!.prior_period_deltas && (
+                        <div className="font-mono text-xs text-obsidian-600 dark:text-oatmeal-400 mt-2">
+                          vs prior:{' '}
+                          {analytics.dupont!.prior_period_deltas[
+                            `${key}_delta` as keyof NonNullable<DupontData['prior_period_deltas']>
+                          ] >= 0
+                            ? '+'
+                            : ''}
+                          {analytics.dupont!.prior_period_deltas[
+                            `${key}_delta` as keyof NonNullable<DupontData['prior_period_deltas']>
+                          ].toFixed(4)}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex items-baseline justify-between rounded border border-sage-500/30 bg-sage-500/5 p-3">
+                  <span className="font-sans text-xs uppercase tracking-wide text-obsidian-700 dark:text-oatmeal-300">
+                    Decomposed Return on Equity
+                  </span>
+                  <span className="font-mono text-lg text-obsidian-900 dark:text-oatmeal-100">
+                    {formatDupont('decomposed_roe', analytics.dupont.decomposed_roe)}
+                  </span>
+                </div>
+
+                {/* The decomposition is only evidence if it reconciles. Say so
+                    either way rather than showing three numbers that may not
+                    multiply out — before Sprint 798 this flag was false on
+                    99.85% of real trial balances and nothing displayed it. */}
+                {!analytics.dupont.verification_matches && (
+                  <p className="font-sans text-xs text-clay-600 dark:text-clay-400">
+                    These components do not reconcile to Return on Equity computed directly.
+                    Treat the decomposition as indicative and re-check the underlying totals.
+                  </p>
+                )}
+              </div>
             </CollapsibleSection>
           )}
         </>

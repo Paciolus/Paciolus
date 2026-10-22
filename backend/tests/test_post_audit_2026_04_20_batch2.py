@@ -24,7 +24,11 @@ Sprint 678: Tier entitlement enforcement wire-up
 
 from __future__ import annotations
 
+from unittest.mock import patch
+
 import pytest
+
+from models import UserTier
 
 # =============================================================================
 # Sprint 677a: Concentration overflow SUSPICION REJECTED
@@ -259,88 +263,438 @@ class TestLogoUploadDBIntegrity:
 
 # =============================================================================
 # Sprint 678: Tier entitlement enforcement wire-up
+#
+# SPRINT 800 — these four classes used to assert presence, not enforcement.
+#
+#   TestEntitlementHelpersExist          -> callable(check_export_access) x3
+#   TestExportRoutesAreGated             -> >=1 gated route per module, 4 of 6 modules
+#   TestFormatAccessWiredOnUploadRoutes  -> callable(check_format_access("qbo"))
+#   TestToolRoutesCheckUploadLimit       -> hasattr(testing_route, "enforce_tool_access")
+#
+# `hasattr(x, "enforce_tool_access")` is `shutil.which` wearing a different
+# hat: it answers "is a thing with this name reachable", not "does the thing
+# work". The last class was the sharpest case — it was named for a property
+# Sprint 790 already records as FALSE (the advertised 100/500 monthly upload
+# allowances are unenforced on every paid tier; `check_upload_limit` only
+# reads, and `increment_upload_count`'s sole caller is bulk upload). A green
+# test class named after a known-broken property is worse than no test,
+# because the next reader greps for coverage, finds it, and stops looking.
+#
+# The behaviour was in fact fine — 79 of 84 export routes carry
+# `check_export_access`, and the five that do not gate in-body. So these were
+# tests that could not fail, protecting code that happened to be right.
+# Replaced with assertions that state the whole property.
+#
+# One thing the rewrite turned up: the format gate these tests named,
+# `check_format_access`, has **no production caller at all**. The real gate is
+# `enforce_format_access`, because the format is only known once the file
+# arrives — which `enforce_format_access`'s own docstring explains. Four test
+# files assert against the unused factory. See
+# `TestUploadFormatGateIsWiredNotMerelyImportable` below.
 # =============================================================================
 
 
-class TestEntitlementHelpersExist:
-    """Smoke test: the helpers wired by Sprint 678 exist and return the
-    expected dependency factory shape."""
+class TestEveryExportRouteIsGated:
+    """Every export route must be gated, not at least one per module.
 
-    def test_check_export_access_is_a_dependency(self):
+    The previous version asserted ``>=1`` gated route per module across 4 of
+    the 6 export modules. ``routes/export_memos.py`` alone has 18 endpoints,
+    so seventeen of them could lose their gate with the test still green.
+
+    The gate is accepted in either of the two forms the codebase uses: a
+    route-level ``Depends(check_export_access)``, or an in-body call
+    (``routes/export_sharing.py`` resolves a tier-configurable TTL itself and
+    calls ``check_export_sharing_access``). Both are real enforcement;
+    recognising only the first would flag five correct routes.
+    """
+
+    EXPORT_MODULES = [
+        "routes.export_memos",
+        "routes.export_diagnostics",
+        "routes.export_testing",
+        "routes.engagements_exports",
+        "routes.export",
+        "routes.export_sharing",
+    ]
+
+    # In-body gate functions treated as equivalent to the dependency.
+    # `test_in_body_gate_allowlist_still_names_real_functions` asserts each
+    # still resolves, so this allowlist cannot rot into a lie while the first
+    # test keeps passing on its authority.
+    IN_BODY_GATES = {
+        "shared.entitlement_checks": ["check_export_access", "check_export_sharing_access"],
+    }
+
+    # Routes that deliberately carry no *export-access* gate, each with the
+    # reason. An unguarded gap that is written down is a decision; the same
+    # gap unmentioned is an oversight, and the next reader cannot tell them
+    # apart from the code.
+    #
+    # All four are on the share-link surface, and gating them on export access
+    # would be actively wrong rather than merely redundant:
+    EXEMPT = {
+        # A share link is for a recipient who has no account. Requiring a tier
+        # would defeat the entire feature. Protected instead by an unguessable
+        # token, an Argon2id passcode, per-IP and per-token brute-force
+        # throttling, and expiry.
+        ("GET", "/export-sharing/{token}"),
+        ("POST", "/export-sharing/{token}/download"),
+        # Owner-management of shares that already exist. These require
+        # `require_verified_user` and operate only on the caller's own rows.
+        # A user who downgrades must still be able to list and revoke what
+        # they previously shared — gating revocation behind a paid tier would
+        # trap data in a link they can no longer cancel.
+        ("DELETE", "/export-sharing/{token}"),
+        ("GET", "/export-sharing/"),
+    }
+
+    @classmethod
+    def _gate_names(cls) -> set[str]:
+        return {name for names in cls.IN_BODY_GATES.values() for name in names}
+
+    def _route_is_gated(self, route) -> bool:
+        import inspect as _inspect
+
         from shared.entitlement_checks import check_export_access
 
-        assert callable(check_export_access)
+        for dep in getattr(route, "dependencies", []) or []:
+            if getattr(dep, "dependency", None) is check_export_access:
+                return True
+        try:
+            sig = _inspect.signature(route.endpoint)
+        except (TypeError, ValueError):
+            sig = None
+        if sig is not None:
+            for param in sig.parameters.values():
+                if getattr(param.default, "dependency", None) is check_export_access:
+                    return True
+        try:
+            source = _inspect.getsource(route.endpoint)
+        except (OSError, TypeError):
+            # Report rather than assume: an endpoint whose source cannot be
+            # read is unverified, not clean.
+            return False
+        return any(f"{name}(" in source for name in self._gate_names())
 
-    def test_check_format_access_factory_returns_dependency(self):
-        from shared.entitlement_checks import check_format_access
-
-        dep = check_format_access("ofx")
-        assert callable(dep)
-
-    def test_check_upload_limit_is_a_dependency(self):
-        from shared.entitlement_checks import check_upload_limit
-
-        assert callable(check_upload_limit)
-
-
-class TestExportRoutesAreGated:
-    """Each module listed in Sprint 678 wires ``check_export_access`` on at
-    least one export endpoint. This is a structural guard that will catch
-    accidental gate removals during future refactors."""
-
-    def _router_has_export_access_dependency(self, module_name: str) -> bool:
+    def test_every_export_route_carries_a_tier_gate(self):
         import importlib
 
-        mod = importlib.import_module(module_name)
-        router = getattr(mod, "router", None)
-        if router is None:
-            return False
-        from shared.entitlement_checks import check_export_access
+        ungated: list[str] = []
+        exempt_seen: set[tuple[str, str]] = set()
+        total = 0
+        for module_name in self.EXPORT_MODULES:
+            module = importlib.import_module(module_name)
+            router = getattr(module, "router", None)
+            assert router is not None, f"{module_name} has no router"
+            for route in router.routes:
+                if not hasattr(route, "methods"):
+                    continue
+                total += 1
+                for method in route.methods:
+                    if (method, route.path) in self.EXEMPT:
+                        exempt_seen.add((method, route.path))
+                        break
+                else:
+                    if not self._route_is_gated(route):
+                        ungated.append(f"{module_name} {sorted(route.methods)} {route.path}")
 
-        for route in router.routes:
-            for dep in getattr(route, "dependencies", []) or []:
-                if getattr(dep, "dependency", None) is check_export_access:
-                    return True
-        return False
-
-    @pytest.mark.parametrize(
-        "module_name",
-        [
-            "routes.export_memos",
-            "routes.export_diagnostics",
-            "routes.export_testing",
-            "routes.engagements_exports",
-        ],
-    )
-    def test_export_module_has_export_access_gate(self, module_name):
-        assert self._router_has_export_access_dependency(module_name), (
-            f"{module_name} has no route gated by check_export_access"
+        assert total > 70, (
+            f"only {total} export routes discovered — the module list has stopped matching "
+            f"the tree, which is the same failure as a route losing its gate"
+        )
+        assert not ungated, f"{len(ungated)} of {total} export routes have no tier gate:\n  " + "\n  ".join(ungated)
+        # A stale exemption is an ungated route nobody is looking at.
+        stale = self.EXEMPT - exempt_seen
+        assert not stale, (
+            f"EXEMPT names {sorted(stale)}, which no longer exist. Remove them — an exemption "
+            f"for a route that has moved silently stops excusing anything and starts hiding "
+            f"whatever took its place."
         )
 
+    def test_in_body_gate_allowlist_still_names_real_functions(self):
+        import importlib
 
-class TestFormatAccessWiredOnUploadRoutes:
-    """``check_format_access`` should be invoked (directly or via a helper) on
-    the TB/bulk upload entry points so Free tier can't post OFX/QBO/PDF/ODS."""
-
-    def test_format_access_factory_is_importable_from_upload_paths(self):
-        # Minimal smoke — full runtime test would require posting a QBO file
-        # as a Free user, which belongs in the upload-pipeline integration
-        # suite. This test just confirms Sprint 678's helper is reachable from
-        # the module where it must be wired.
-        from shared.entitlement_checks import check_format_access
-
-        assert callable(check_format_access("qbo"))
-        assert callable(check_format_access("ofx"))
-        assert callable(check_format_access("pdf"))
-        assert callable(check_format_access("ods"))
+        for module_name, names in self.IN_BODY_GATES.items():
+            module = importlib.import_module(module_name)
+            for name in names:
+                assert callable(getattr(module, name, None)), (
+                    f"{module_name}.{name} is no longer a callable gate — "
+                    f"test_every_export_route_carries_a_tier_gate is passing on its authority"
+                )
 
 
-class TestToolRoutesCheckUploadLimit:
-    """The 11 testing-tool routes should enforce upload limits. Existing
-    ``shared/testing_route.py::enforce_tool_access`` is the canonical site."""
+class TestUploadFormatGateIsWiredNotMerelyImportable:
+    """The format gate must be called by the upload entry points.
 
-    def test_enforce_tool_access_exists(self):
-        from shared import testing_route
+    The previous class was named "FormatAccessWiredOnUploadRoutes", claimed in
+    its docstring that ``check_format_access`` "should be invoked ... on the
+    TB/bulk upload entry points", and then asserted only
+    ``callable(check_format_access("qbo"))`` — admitting in a comment that it
+    was "minimal smoke".
 
-        assert hasattr(testing_route, "enforce_tool_access")
-        assert callable(testing_route.enforce_tool_access)
+    It also named the wrong function. ``check_format_access`` is a dependency
+    factory that needs the format at route-definition time, which does not fit
+    an upload where the format is only known once the file arrives. Its own
+    sibling ``enforce_format_access`` says so in its docstring, and that is
+    what the routes actually call. ``check_format_access`` has **no production
+    caller**; it is retained for now because four test files reference it, and
+    removing it is a separate decision from fixing this test.
+    """
+
+    # The entry points that accept a user-supplied file and must therefore
+    # check the format against the tier. Bulk upload is deliberately absent:
+    # it is Enterprise-gated by `check_bulk_upload_access`, and Enterprise has
+    # an empty `formats_allowed` (= all formats), so there is nothing for a
+    # format gate to decide. If bulk upload is ever opened below Enterprise
+    # this list must grow — which `test_format_gated_entry_points_still_exist`
+    # will not tell you, so it is written down here instead.
+    FORMAT_GATED_ENTRY_POINTS = ("routes.audit_upload", "routes.audit_pipeline")
+
+    def test_each_upload_entry_point_calls_the_format_gate(self):
+        import importlib
+        import inspect as _inspect
+
+        missing = []
+        for module_name in self.FORMAT_GATED_ENTRY_POINTS:
+            module = importlib.import_module(module_name)
+            source = _inspect.getsource(module)
+            if "enforce_format_access(" not in source:
+                missing.append(module_name)
+        assert not missing, (
+            f"{missing} accept file uploads but never call enforce_format_access — "
+            f"Free tier could post premium formats through them"
+        )
+
+    def test_the_gate_actually_rejects_a_premium_format_for_free_tier(self):
+        """Behaviour, not presence: drive the function with a Free-tier user."""
+        from unittest.mock import MagicMock
+
+        from fastapi import HTTPException
+
+        from shared.entitlement_checks import enforce_format_access
+
+        user = MagicMock()
+        user.id = 1
+        user.tier = UserTier.FREE
+
+        with patch("shared.entitlement_checks.get_effective_entitlements") as mock_ent:
+            mock_ent.return_value = MagicMock(formats_allowed={"csv", "xlsx"})
+            # An allowed format passes.
+            enforce_format_access(user, MagicMock(), "trial_balance.csv")
+            # A premium one does not.
+            with pytest.raises(HTTPException) as exc:
+                enforce_format_access(user, MagicMock(), "bank.qbo")
+            assert exc.value.status_code in (402, 403)
+
+    def test_an_empty_allowed_set_means_all_formats(self):
+        """Paid tiers carry an empty `formats_allowed`, meaning unrestricted.
+
+        Asserted explicitly because an empty collection is exactly the value a
+        broken entitlement lookup would also produce, and the two must not be
+        confused by a future change.
+        """
+        from unittest.mock import MagicMock
+
+        from shared.entitlement_checks import enforce_format_access
+
+        user = MagicMock()
+        user.id = 1
+        user.tier = UserTier.PROFESSIONAL
+        with patch("shared.entitlement_checks.get_effective_entitlements") as mock_ent:
+            mock_ent.return_value = MagicMock(formats_allowed=set())
+            for name in ("x.qbo", "x.ofx", "x.pdf", "x.ods", "x.iif"):
+                enforce_format_access(user, MagicMock(), name)
+
+
+class TestUploadAllowanceEnforcementIsHonestlyReported:
+    """Sprint 790 is open: paid-tier upload allowances are not enforced.
+
+    The class this replaces was called ``TestToolRoutesCheckUploadLimit``,
+    said "The 11 testing-tool routes should enforce upload limits", and
+    asserted ``hasattr(testing_route, "enforce_tool_access")``. The property
+    in its name is **false** and has been recorded as false since Sprint 790.
+
+    Rather than delete the coverage or assert something vacuous, this pins the
+    situation as it actually is, so that:
+
+      * the gap stays visible in the test suite rather than only in a sprint
+        file nobody greps, and
+      * whoever implements Sprint 790 gets a failing test telling them to
+        update this class, instead of a green suite implying it was already
+        done.
+    """
+
+    def test_increment_upload_count_is_still_only_called_by_bulk_upload(self):
+        """When this fails, Sprint 790 has been implemented — update the class."""
+        import pathlib
+
+        backend_root = pathlib.Path(__file__).resolve().parent.parent
+        callers = []
+        for path in backend_root.rglob("*.py"):
+            if any(p in path.parts for p in ("venv", "tests", "__pycache__", "migrations")):
+                continue
+            text = path.read_text(encoding="utf-8", errors="ignore")
+            if "increment_upload_count(" in text and "def increment_upload_count" not in text:
+                callers.append(str(path.relative_to(backend_root)).replace("\\", "/"))
+
+        assert callers == ["routes/bulk_upload.py"], (
+            f"increment_upload_count callers changed to {callers}. If paid-tier upload metering "
+            f"has been implemented (Sprint 790), update this class to assert the new behaviour "
+            f"rather than the gap."
+        )
+
+    # Functions that call `enforce_tool_access` on a route's behalf. A route
+    # that calls one of these is gated just as surely as one that calls the
+    # gate directly — "no reference in the file" is evidence of delegation,
+    # not of a defect (Sprint 791). Verified by
+    # `test_delegating_functions_really_do_enforce` so this list cannot rot
+    # into a lie while the test above keeps passing on its authority.
+    #
+    # `services.audit.file_tool_scaffold.execute_file_tool` was in this list
+    # in a first draft and is deliberately not: it is a file-handling
+    # scaffold (size validation, threading, run recording) and does **not**
+    # call the gate. `test_delegating_functions_really_do_enforce` caught
+    # that, which is the whole reason the second test exists.
+    DELEGATING_GATES = {
+        "shared.testing_route": ["run_single_file_testing"],
+    }
+
+    def test_enforce_tool_access_is_the_canonical_gate_and_is_actually_called(self):
+        """What the old `hasattr` check should have asserted.
+
+        My first version of this asserted ">= 20 route modules call
+        enforce_tool_access" and failed at 12 — because most tool routes
+        delegate through `run_single_file_testing` rather than calling the
+        gate themselves. The floor was a guess, and resolving delegation by
+        the *module imported* rather than the *function called* is exactly
+        what made Sprint 787b's guard a tautology. Counting both forms, and
+        verifying the delegates below.
+        """
+        import pathlib
+
+        routes_dir = pathlib.Path(__file__).resolve().parent.parent / "routes"
+        delegate_names = [n for names in self.DELEGATING_GATES.values() for n in names]
+
+        direct, delegated = [], []
+        for path in sorted(routes_dir.glob("*.py")):
+            text = path.read_text(encoding="utf-8", errors="ignore")
+            if "enforce_tool_access(" in text:
+                direct.append(path.name)
+            elif any(f"{n}(" in text for n in delegate_names):
+                delegated.append(path.name)
+
+        # Measured inventory, not a guessed floor.
+        #
+        # The first version of this assertion said ">= 20" and failed at 18,
+        # because the number was invented rather than measured. A count is
+        # also the weaker assertion: it cannot say *which* route stopped
+        # gating, and a module added elsewhere masks one that regressed.
+        #
+        # So the property is **no shrinkage, by name**. Adding a tool route
+        # does not fail this; a route dropping its gate fails it and says
+        # which. When you add a tool, add it here — that edit is the point at
+        # which someone confirms the new route gates at all.
+        EXPECTED_GATED = {
+            # direct — call enforce_tool_access themselves
+            "ar_aging.py",
+            "bank_reconciliation.py",
+            "book_to_tax.py",
+            "cash_flow_projector.py",
+            "currency.py",
+            "form_1099.py",
+            "intercompany_elimination.py",
+            "multi_period.py",
+            "sampling.py",
+            "sod.py",
+            "three_way_match.py",
+            "w2_reconciliation.py",
+            # delegated — via shared.testing_route.run_single_file_testing
+            "ap_testing.py",
+            "fixed_asset_testing.py",
+            "inventory_testing.py",
+            "je_testing.py",
+            "payroll_testing.py",
+            "revenue_testing.py",
+        }
+        gated = set(direct) | set(delegated)
+        lost = sorted(EXPECTED_GATED - gated)
+        assert not lost, (
+            f"{len(lost)} route module(s) no longer gate tool access: {lost}. "
+            f"Entitlement is supposed to be decided in one place "
+            f"(shared/entitlements.py via enforce_tool_access); a route that stops asking "
+            f"can contradict the entitlements table indefinitely — see Sprint 789, where "
+            f"Solo and Professional were sold a tool the API refused to run for six months."
+        )
+        # Trial Balance Diagnostics is the 18th catalog tool and is gated by a
+        # different family (`check_diagnostic_limit` + `enforce_format_access`
+        # in routes/audit_pipeline.py), so it is deliberately absent above.
+        # `depreciation.py`, `loan_amortization.py`, `lease_accounting.py`,
+        # `composite_risk.py` and `account_risk_heatmap.py` are supporting
+        # calculators, not entries in `tools_registry`'s marketing catalog,
+        # and carry `require_verified_user` only.
+
+    def test_delegating_functions_really_do_enforce(self):
+        """The allowlist above claims these gate. Check that they do."""
+        import importlib
+        import inspect as _inspect
+
+        for module_name, names in self.DELEGATING_GATES.items():
+            try:
+                module = importlib.import_module(module_name)
+            except ModuleNotFoundError:
+                pytest.fail(
+                    f"{module_name} is named as a delegating gate but no longer exists — "
+                    f"remove it from DELEGATING_GATES or the count above is inflated"
+                )
+            for name in names:
+                fn = getattr(module, name, None)
+                assert fn is not None, f"{module_name}.{name} no longer exists"
+                source = _inspect.getsource(fn)
+                assert "enforce_tool_access(" in source, (
+                    f"{module_name}.{name} is listed as delegating to enforce_tool_access "
+                    f"but does not call it — every route relying on it is now ungated"
+                )
+
+    def test_no_route_module_compares_a_tier_directly(self):
+        """The structural fix Sprint 789 called for and nobody built.
+
+        `routes/sod.py` once held the only hardcoded `user.tier != UserTier.X`
+        comparison in any route module, and it contradicted the entitlements
+        table for six months — Solo and Professional were sold a tool the API
+        refused to run. One route deciding entitlement for itself is what made
+        indefinite disagreement possible.
+
+        Reading `.tier` is fine (billing and admin surfaces display it); what
+        is banned is *comparing* it to a `UserTier` member inside a route.
+        """
+        import ast
+        import pathlib
+
+        routes_dir = pathlib.Path(__file__).resolve().parent.parent / "routes"
+
+        def _is_tier_attr(node: ast.AST) -> bool:
+            return isinstance(node, ast.Attribute) and node.attr == "tier"
+
+        def _is_usertier_member(node: ast.AST) -> bool:
+            return isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name) and node.value.id == "UserTier"
+
+        violations: list[str] = []
+        scanned = 0
+        for path in sorted(routes_dir.glob("*.py")):
+            scanned += 1
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Compare):
+                    operands = [node.left, *node.comparators]
+                    has_tier = any(_is_tier_attr(o) for o in operands)
+                    has_member = any(_is_usertier_member(o) for o in operands)
+                    if has_tier and has_member:
+                        violations.append(f"{path.name}:{node.lineno}")
+
+        assert scanned > 50, f"only scanned {scanned} route modules — the glob has broken"
+        assert not violations, (
+            "Route-local tier comparison(s) found at "
+            + ", ".join(violations)
+            + ". Entitlement belongs to shared/entitlements.py via enforce_tool_access, so the "
+            "entitlements table cannot be contradicted by one route. See Sprint 789."
+        )

@@ -125,8 +125,8 @@ Zero-Storage does **not** apply to:
 | **Admin Audit Log Details** | ✅ Stored | Append-only | "credit issued, amount_cents: 5000" — our billing actions, never client data |
 | **Activity Feed Summaries** | ✅ Stored (caller-supplied) | Until account deletion | Free-form blob, capped at 2,000 characters |
 | **Follow-Up Items** | ✅ Stored (narratives only) | Until account deletion | "Investigate revenue timing — no amounts or account numbers" |
-| **Subscription Records** | ✅ Stored | Until account deletion | "Tier: team, Stripe ref: sub_xxx" |
-| **Billing Events** | ✅ Stored (append-only) | Until account deletion | "subscription_created, tier: team" |
+| **Subscription Records** | ✅ Stored | Until account deletion | "Tier: professional, Stripe ref: sub_xxx" |
+| **Billing Events** | ✅ Stored (append-only) | Until account deletion | "subscription_created, tier: professional" |
 | **User Settings** | ✅ Stored | Until account deletion | "Materiality: $500, Theme: Dark" |
 
 ### 2.2 Controlled Storage Exceptions

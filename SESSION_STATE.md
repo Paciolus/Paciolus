@@ -2,122 +2,137 @@
 
 _Updated at the end of every Claude Code session. Overwrite the previous state — this is not a history log._
 
-## Last Session
+## START HERE — what the next session should pick up
+
+**1. Two branches are open and neither is merged.**
+- **PR #197** — `sprint-786b-frontend-devtype-majors`, three commits (`@types/node` 26, the
+  dynamic-route invariant, the jest-dom blocker). Unchanged by this session; verify and merge.
+- **`dec-review-2026-10-22-remediation`** — this session's work. Branched off `main`, so it is
+  independent of #197 and touches `ci.yml` and `tasks/todo.md` in regions #197 does not.
+  Needs a PR, review and merge.
+
+**2. One CEO action, and it is the only thing left from the review.** Four CI gates produce a
+red X and merge anyway — **Accounting Policy**, **Documentation Consistency**, **Report
+Standards** and **OpenAPI Schema Drift**. Making them block is a repository-settings change,
+so it was not made unilaterally. The exact `gh api` call is in
+`reports/council-audit-2026-10-22.md` under "Still outstanding". All four pass on this branch.
+
+**3. The Digital Excellence Council review is done and so is its remediation.**
+`reports/council-audit-2026-10-22.md` — 14 findings, 27 measurements, all CONFIRMED by
+running the code. Sprints 795–802 fixed every one (F-006 partially; see item 2) and are
+archived to `tasks/archive/sprints-741-802-details.md`.
+
+**4. Still blocked on a decision, not on engineering** — unchanged from the previous session:
+**Sprint 793b** (statutory tax limits — needs a practitioner) and **Sprint 790** (upload
+allowances unenforced on paid tiers — needs a metering-unit decision). Sprint 800 did add an
+honest test that *pins the 790 gap* rather than papering over it: when
+`increment_upload_count` gains a second caller, the test fails and tells you to update it.
+
+**5. Sprint 738 is no longer blocked — it is done.** It sat for a year recorded as waiting on
+the Neon connection string. It never needed one. Sprint 797 delivered it. **Worth reading the
+entry before trusting any other inherited blocker.**
+
+**6. `jest-dom` 7 still blocked by the npm arborist bug**, and `reportlab` 5 / `stripe` 16
+still want `RENDER_API_KEY` before deploying. Unchanged.
+
+## This Session — Digital Excellence Council review, then remediation
 
 **Date:** 2026-10-22
-**Branch:** merged. **Nine PRs landed on `main`** — #187 through #195 — every one rebase-merged per `required_linear_history`.
+**Branch:** `dec-review-2026-10-22-remediation` (off `main` at `a946de8e`)
 
-**Context:** a continuation session, picking up with three PRs in flight and working down the unblocked backlog. The through-line continued from the previous session and sharpened: **a check that cannot distinguish "no problem" from "I did not look".**
+A full-spectrum review followed by a same-day instruction to fix everything it found.
 
-### What landed
+### What the review found
 
-| PR | Sprint | What |
-|----|--------|------|
-| #187 | **778a** | The monthly DR workflow reported success while its own verdict said FAIL |
-| #188 | **786c** | Six GitHub Actions SHA pins refreshed; a guard so they cannot rot unnoticed |
-| #189 | **793a** | The statutory-limit overrides the W-2 API never exposed |
-| #190 | **794a** | A registry outage was reporting itself as a vulnerability |
-| #191 | **741d** | 19 drifting enum types frozen so the set cannot grow |
-| #193 | **794b** | pip-audit had the same conflation, and three more call sites |
-| #195 | **786b step 2** | Five patch pins — and the three layers of stale claims they exposed |
+14 findings — 4 P1, 4 P2, 4 P3, 2 informational — every one confirmed by running the code or
+by injecting a violation, with 27 measurements recorded. The four that mattered:
 
-**Ten review findings across #187–#195 were acted on. Every one was real** — continuing the previous session's fourteen-for-fourteen. Counted from the PRs themselves rather than from memory: #187 two, #188 one, #189 two, #190 none, #191 one, #192 one, #193 one, #194 one, #195 one. **Four changed behaviour rather than wording:** #188's pin guard was inspecting 23% of its target, #191's enum guard reported drift on a type that agrees, #193's pip classifier turned a normal exit-0 run into a blocked gate, and #195's stale maintenance claim was being logged as a production WARNING to on-call engineers.
+| # | Finding | Measurement |
+|---|---------|-------------|
+| F-001 | The depreciation tool **ignored the MACRS system the customer selected** | `gds_200db` / `gds_150db` / `gds_sl` all returned $20k year-one on a $100k 5-year asset. The dropdown offered all three |
+| F-002 | The loan amortization schedule **did not foot** | 21.51% of 6912 schedule rows; 10.0% of 420 configurations produced a **journal entry whose debits did not equal its credits** |
+| F-003 | **No database build path produced a correct schema** | Chain: 25 of 29 tables. Dockerfile on an empty DB: 27 of 29, permanently |
+| F-004 | The monetary-precision gate **inspected 0% of its target** | 0 `Column(` vs 169 `mapped_column(`; 0 of 87 in its own protected classes |
 
-> Worth stating plainly: the self-written regression proofs keep passing, because they test cases I chose. The review findings keep landing on cases I did not think to choose. That is the argument for the review step, not a reason to write fewer proofs.
+### The through-line
 
-**Production:** healthy throughout, including after the Sprint 786b dependency deploy. `/health/ready` reports `status: "healthy"`, `rate_limit_storage` redis not degraded with `reachable_at_boot: true`, and `paciolus.com` returns 200. Three consecutive hits on a rate-limited route all returned 200, so slowapi 0.1.10 is serving rather than merely importing. Checked the **body**, not just the 200 — Sprint 774 puts `degraded` behind a 200.
+The previous session's was *a check that cannot distinguish "no problem" from "I did not
+look"*. This one narrowed it: **three populations that were supposed to be the same thing and
+were not** — the guard, its tests, and its target. `monetary_float.py` matched `Column(`; the
+codebase had migrated to `mapped_column(`; the unit tests were written in `Column(`. All three
+green, inspecting nothing. The SQLAlchemy 2.0 migration moved every declaration and the guard
+watching them was not in the diff.
 
-**Last measured DB latency: 27.72 ms**, up from 9.35 ms before the deploy. The rise is consistent with a fresh container and a cold connection pool, and is **indirect** evidence the deploy landed — the best available, for the reason in the next paragraph. Treat 27.72 ms as a post-deploy cold reading, not a steady-state baseline.
+Same shape elsewhere: three model-import lists holding 11 / 15 / 15 entries under comments
+instructing the reader to keep them in sync; `ci.yml`'s header claiming eleven required checks
+against a live twelve that were not the same twelve.
 
-> **Deploy verification has a hole, and it is worth knowing about.** There is no way to confirm from outside that a merge actually deployed: the Render MCP requires selecting a workspace (not Claude's call to make), `/openapi.json` and `/docs` are correctly disabled in production, and **no endpoint exposes a build commit**. The `RENDER_API_KEY` gap is already tracked (`ceo-actions.md:11`), so it was not re-filed. Exposing the commit SHA on `/health` was considered and **deliberately not shipped**: `routes/health.py:61-65` documents a decision to *remove* version from `/health/live` to stop scanners fingerprinting the build, and a commit SHA is strictly more precise. With a public repo and auto-deploy, it would tell an attacker exactly which published fixes are live — and the window where that matters is precisely the silent-failed-deploy case. That tradeoff deserves a decision, not a quiet commit.
+### What I got wrong, and what caught it
 
-### The pattern — three outcomes, not two
+**Four of my own regression proofs came back green on code I had deliberately broken**, for
+four different reasons — process-global `Base.metadata` hiding an import gap, a premise about
+cwd that was never true, a guessed `>= 20` floor (reality 18), and a fixture that varied the
+property class alongside the system so it could not isolate either. None meant the fix was
+wrong; all four meant the proof measured something else.
 
-Every check that depends on something outside the commit has **three** possible answers: pass, fail, and **did-not-run**. An implementation with two exit codes is reporting one of those three as a different one.
+**And my first coverage self-check had the bug it was written to catch** — it counted
+candidates using the parser's own factory list, so narrowing the parser would have dropped both
+counts to zero and reported full coverage of nothing. The working oracle is the `Mapped[...]`
+annotation, which belongs to the ORM contract rather than to any factory name.
 
-| Sprint | The check | What it could not say |
-|--------|-----------|-----------------------|
-| 778a | Monthly DR test | "I detected a failure" — the job exited 0 regardless |
-| 794a | npm CVE gate | "I could not check" — a 503 is reported as a finding |
-| 775 (by design) | Deploy-drift probe | correctly reports `SKIP` when `RENDER_API_KEY` is absent |
+**Two guards argued with me and were right**: one caught an allowlist claiming
+`execute_file_tool` enforces entitlement (it is a file-handling scaffold and does not), and
+the export-gate test flagged four routes that are *correctly* ungated — a share link is for a
+recipient with no account, and gating revocation behind a paid tier would trap data in a link
+the user can no longer cancel. Both became reasoned exemptions rather than silent passes.
 
-The third row is the one to copy: the only one built knowing the answer has three states, and the only one that never lied.
+**One review finding was half wrong and is corrected in the report**: `weekly_security_digest.py`
+is not unwired — it is a documented manual tool referenced by `SECURITY_POLICY.md` and the
+review template. The grep behind that claim timed out and I reported a partial result as a
+complete one.
 
-**Deciding the third state's policy is separate from exposing it, and much easier once a retry is in.** Sprint 794a kept the existing fail-closed behaviour and changed only the words, so no policy decision gated the fix.
+### Found while fixing, not while reviewing
 
-### The third pattern — the environment that runs the check is part of the check
-
-The 2026-10-22 nightly went RED with **14 failures that CI structurally could not produce.** Both causes lived in the gap between environments:
-
-- `shutil.which("bash")` found this host's inert `WindowsApps` launcher, which **exists and exits 1**. The skip guard asked about presence and reported it as capability — the same confusion the audit gates were written to fix, shipped on the same day the lesson was written three times.
-- A spawned Git Bash needs `Git\usr\bin` for `dirname` and `sed`. **Impossible on Linux CI**, where coreutils are always present.
-
-Fixed by probing (`usable_bash()` runs `bash -c "exit 0"`) and by having the tests supply the environment the shell needs rather than inheriting the host's. **Read the nightly: a green CI is evidence about CI.**
-
-### The other pattern — coverage of a construct family is not coverage of the subject
-
-Both guards written this session shipped with a coverage self-check, and the enum guard's **passed while the parser had no handler for an entire construct family**. It counted `Enum(..., name=...)` AST calls and confirmed all 26 were seen; `CREATE TYPE ... AS ENUM` is raw SQL inside `op.execute()`, which that check cannot see. The PR #191 review found it.
-
-Five defects in that one guard, four of them the same shape. The four found before review were caught because the module **reports what it cannot parse** rather than skipping it. The fifth was in the part that parsed *successfully* and simply never looked.
-
-> **Reporting unparseable input protects against constructs you half-handle, not against constructs you never considered.** Before writing a coverage test, enumerate the construct families the input can use and check the list is complete. Here they were inline literals, starred constants, `ALTER TYPE` loops, and raw `CREATE TYPE`. Three were covered.
-
-**And model the thing, not the text.** A migration chain is a sequence of operations, not a bag of labels. Unioning every label mentioned answers "what appears anywhere", which is not the question — and the same mistake meant `downgrade()` bodies were replayed too, describing a database nobody has.
-
-### Findings worth the CEO's attention
-
-**`engagementstatus.COMPLETED` is bound by the ORM and added by no migration** (Sprint 741d). The engagement completion gate is a shipped feature, so on any database built from the documented chain — a DR restore, a fresh staging environment — completing an engagement fails. Production is fine because production was built by `create_all()` and stamped. **That is what makes it a restore-drill blocker for Sprint 778 rather than a live incident**, and it is a new finding: nothing in Sprint 741c or its source reviews mentions it.
-
-**Sprint 741c's drift table understated the problem six-fold** — three types by hand, nineteen measured. Every hand-written row was correct; it was simply the subset that got noticed, formatted like an inventory. The fix scope in 741c step 2 was written against three.
-
-**The ORM is internally inconsistent about two parallel tier enums.** `subscription_tier` and `usertier` hold the same four tiers one table apart, and the ORM binds one lowercase and the other as NAMES. So 741c's "pick the canonical direction" is not purely a migration edit — the models disagree with each other first.
-
-### Open P1s that need a decision, not more engineering
-
-**Sprint 793b** — both tax tools apply one fixed set of statutory limits to every year from 2000 to 2099. No numbers were changed: these are customer-facing tax amounts driving filing decisions, and current law should not be adjudicated from a code review. Practitioner confirmation is step 1, and **Sprint 781's CPA validation is the natural home**. Sprint 793a shipped the escape hatch in the meantime — the W-2 API now accepts per-request `statutory_limits` overrides, so a practitioner who knows the right figure can supply it.
-
-**Sprint 790** — the advertised 100/500 monthly upload allowances are unenforced on every paid tier. `check_upload_limit` only *reads*; `increment_upload_count`'s sole caller is `routes/bulk_upload.py:154`. Free tier *is* metered via its `ActivityLog` fallback — the only metered tier is the one making no money. Needs two decisions: what counts as one upload when a tool takes two files, and what happens to existing accounts whose counters bulk upload left non-zero.
+- The **depreciation engine had the loan engine's rounding defect too** — a $123,456.78 asset
+  reporting $123,456.77 of total depreciation against a 0.00 ending book value. Found by a new
+  test.
+- **`scripts/overnight/tests/` ran in no workflow.** The regression tests for the nightly
+  agents, including the Sprint 712 false-green guard, were themselves unwatched.
+- **Prior-period DuPont deltas are unreachable** (both call sites pass `previous_totals=None`)
+  — caught before it reached the user guide, where it would have reproduced F-007 exactly.
 
 ## Current Environment State
 
-**App status:** working — production live and verified.
-**Backend tests:** **9,103 passed / 0 failed**, measured three ways on the final tree: `-p no:randomly` (11m26s), the nightly's own invocation with default basetemp and random ordering (11m25s), and — the only mode that would have caught the defect the nightly found — the gate suites under a hostile PATH, 60/60. Up from 8,989 at session start; +114 across six new guard suites.
-**Lint:** `ruff check` clean on everything touched; `ruff format` applied.
-**Open PRs:** **0**.
+**App status:** working. Production untouched by this session — no deploy, no settings change.
+**Backend tests:** **9,209 passed / 0 failed** in 821.8s, up from 9,126 collected at session
+start (+83). Measured on the final tree with `-p no:randomly`.
+**Frontend tests:** **2041 passed / 0 failed**, 207 suites. `npm run build` clean and emitting
+`f (Dynamic)`, which CSP nonce injection requires. `tsc --noEmit` exit 0.
+**Lint:** `ruff check` clean. `ruff format` applied to the six files I had regressed from clean
+and to every file I created; the 84 pre-existing unformatted files were left alone, since
+formatting is not a CI gate here and restyling them is churn.
+**Gates:** all eight green — accounting policy, doc consistency, enum label drift, report
+standards, route wiring, design tokens, OpenAPI drift, overnight agent tests.
+**Migrations:** chain replays to 29 of 29 tables with zero column and zero FK drift, proved
+up/down/up on both a chain-built and a `create_all()`-built database.
 
-**Open blockers:**
-- **Sprint 793b (P1)** and **Sprint 790 (P1)** — both need a decision, described above.
-- **Sprint 778b** — the off-provider `pg_dump` → R2 backup still does not exist; Neon PITR is the only thing behind production data. Ships pre-launch per the 2026-10-19 decision. Sprint 741d just added a second reason to care: a chain-built restore does not match production.
-- **Sprint 741c steps 1-3 / 738** — need the Neon connection string (CEO ask D-1). Step 4 is done (741d) and needed no database after all.
-- **Sprint 786b** — the reviewed dependency majors. Unblocked but large.
-- Phase 4.1 Stripe cutover, 4.2 legal sign-off, 4.3 custom domain (`api.paciolus.com` still 404s) — CEO-gated.
-- `RENDER_API_KEY` repo secret still unset, so the deploy-drift probe SKIPs rather than alarms — and there is no fallback, per the note above.
+**Open blockers:** unchanged — 793b and 790 need decisions; 778b (off-provider backup) still
+unbuilt; 741c steps 1-3 still want the Neon string; Phase 4.1/4.2/4.3 CEO-gated;
+`RENDER_API_KEY` still unset.
 
 ## Next Priority
 
 | # | Item | Owner |
 |---|------|-------|
-| 01 | **Sprint 793b (P1)** — confirm the statutory figures with a practitioner, then year-key both tables | CEO/CPA confirms, Claude implements |
-| 02 | **Sprint 790 (P1)** — decide the metering unit and the existing-account question, then enforce | CEO decides, Claude implements |
-| 03 | **Sprint 778b** — build the `pg_dump` → R2 backup, one restore drill per mechanism | Claude + CEO console, ½d |
-| 04 | Legal to counsel; waitlist count; 5–10 CPAs through the demo (**Sprint 781**) — also the natural home for 793b's figures | **CEO — longest lead** |
-| 05 | **Sprint 786b steps 3-4**, one per commit. Backend: `alembic` 1.20, `fastapi` 0.159, `SQLAlchemy` 2.1, `reportlab` 5, `stripe` 16. **Frontend majors, from the canonical sequence and easy to lose: `typescript` 7, `framer-motion` 14, `@testing-library/jest-dom` 7.** `cryptography` 50 appears in the sequence but is already satisfied — it is a `>=` floor and production resolves to 50.0.2 (Sprint 786a). **`reportlab` 5 renders all 21 PDFs and `stripe` 16 is billing, so those two want deploy verification that does not currently exist** — see the `RENDER_API_KEY` note. The frontend three are Vercel-deployed and verifiable by `npm run build` output, so they are **not** gated on the key | Claude; the two risky backend ones gated on the key |
-| 06 | **Sprint 741c steps 1-3** — now has a measured target instead of a hand-assembled one | Blocked on CEO ask D-1 |
-| 07 | **Sprint 782b** — external uptime monitor | Claude + one CEO signup |
-| 08 | **Sprint 794 step 3** — should an npm/PyPI outage block every PR? Both gates fail closed today | **CEO decides** |
+| 01 | Merge PR #197, then open and merge the remediation branch | Claude |
+| 02 | **Make the four advisory gates required** — one `gh api` call, command in the report | **CEO** |
+| 03 | **Sprint 793b (P1)** — practitioner-confirmed statutory figures | CEO/CPA, then Claude |
+| 04 | **Sprint 790 (P1)** — decide the metering unit, then enforce | CEO decides |
+| 05 | **Sprint 778b** — `pg_dump` to R2 backup plus one restore drill. Sprint 797 makes a chain-built restore sound for the first time, so the drill will now mean something | Claude + CEO console |
+| 06 | Legal to counsel; waitlist count; 5-10 CPAs through the demo (**Sprint 781**) | **CEO — longest lead** |
+| 07 | **Sprint 786b steps 3-4** — remaining dependency majors | Claude |
+| 08 | **Sprint 794 step 3** — should an npm/PyPI outage block every PR? | **CEO decides** |
 
-**Still parked:** B-6…B-9 until Sprint 781 reports · the live Stripe build until pricing is validated · the 22-engine relocation · the mypy baseline · dev-only npm advisories · the deferred SOC 2 set.
-
-## Recent Git Context
-
-```
-main HEAD
- ├─ #195  786b/2 — patch batch; 1 nightly fix (bash probe) + 1 review fix (prod banner)
- ├─ #193  794b — pip-audit gate; 1 review fix (skipped deps read as malformed)
- ├─ #192  docs — session state + Sprint 741d SHAs
- ├─ #191  741d — enum label drift frozen at 19 types; 1 review fix (phantom drift)
- ├─ #190  794a — npm audit gate: CLEAN / VULNERABLE / UNVERIFIED
- ├─ #189  793a — W-2 statutory-limit overrides; 2 review fixes
- ├─ #188  786c — six Actions SHA pins refreshed; 1 review fix (guard saw 23%)
- └─ #187  778a — DR workflow reports its own verdict; 2 review fixes
-```
+**Still parked:** B-6...B-9 until Sprint 781 reports, the live Stripe build until pricing is
+validated, the 22-engine relocation, the mypy baseline, dev-only npm advisories, the
+deferred SOC 2 set.

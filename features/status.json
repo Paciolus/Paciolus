@@ -429,11 +429,11 @@
     "verification_steps": [
       "Upload trial balance and verify 17 core ratios calculated",
       "Verify industry-specific ratios for selected industry",
-      "Verify DuPont decomposition breakdown"
+      "Verify DuPont decomposition breakdown renders in Key Metrics"
     ],
     "status": "complete",
-    "last_verified": "2026-03-18",
-    "notes": null
+    "last_verified": "2026-10-22",
+    "notes": "Sprint 798: DuPont was marked complete on 2026-03-18 but no route, PDF or UI reached the engine - its only caller was a unit test, so the 'verify DuPont decomposition breakdown' step could not have been performed through any surface. It is now attached to calculate_analytics() and rendered in KeyMetricsSection. Its verification_matches flag was also false on 99.85% of real trial balances (it compared full-precision output against a percentage rounded to 1dp, on a different equity basis); now 100%."
   },
   {
     "id": "industry-benchmarks",

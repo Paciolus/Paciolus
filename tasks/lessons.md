@@ -4,6 +4,243 @@
 
 ---
 
+## The guard, the test and the target were three different things (DEC review remediation, 2026-10-22)
+
+`guards/checkers/monetary_float.py` enforced the Phase XLV invariant — no `Float`
+for monetary columns — by matching one AST node:
+
+```python
+if isinstance(func, ast.Name) and func.id == "Column":
+```
+
+Every model in this repository is SQLAlchemy 2.0 style. **Across the three files
+the rule scans: 0 `Column(...)` declarations, 169 `mapped_column(...)`. Within its
+four named protected classes: 0 and 87.** A `Float` monetary column injected
+straight into `DiagnosticSummary` produced `ALL 5 RULES PASSED`, exit 0.
+
+Its unit tests were green throughout, because they build synthetic sources using
+`Column(` — **10 occurrences, and `mapped_column(` zero**. The fixtures and the
+production target were disjoint sets. The tests exercised a syntax the codebase
+does not contain; the codebase used a syntax the checker could not see; and
+nothing compared the two populations.
+
+**Pattern: when a codebase migrates a convention, every parser-based guard
+pointed at it silently stops covering anything — and its unit tests, written in
+the old convention, keep passing.** The SQLAlchemy 1.x → 2.0 migration moved every
+column declaration, and the guard watching those declarations was not in the
+diff. The tell is cheap and mechanical: *count what the parser sees against what
+is there.* It was 0 of 87.
+
+**So the durable fix is not the better matcher.** It is a coverage self-check,
+and the same sweep found the 2.0 `db.execute(delete(Model))` form invisible to
+`no_hard_delete` (latent — measured 0 call sites today, so the fix is the pattern
+and not an AST rewrite).
+
+### The oracle must not share the parser's blind spot — I nearly shipped that
+
+My first coverage self-check counted candidates with `_call_factory_name`, the
+same helper the parser uses. Removing `mapped_column` from `COLUMN_FACTORIES`
+would have dropped **both** counts to zero and the check would have reported full
+coverage of nothing — Sprint 786c's defect reproduced inside the fix for it.
+
+The working oracle is the `Mapped[...]` **type annotation**, which is a property
+of the ORM contract rather than of any factory name, with non-column factories
+(`relationship` and friends) subtracted by an explicit exclusion list. The
+asymmetry is deliberate: a new *column* factory produces a loud coverage failure,
+a new *non-column* factory produces a loud false positive. Neither degrades to
+silence. `test_coverage_oracle_does_not_depend_on_the_parsers_factory_list`
+monkeypatches the parser narrow and asserts the oracle still sees 2 of 2.
+
+**Rule: a coverage check written in terms of the thing being checked is not a
+coverage check.** Ask what the oracle would report if the parser were deleted. If
+the answer is "full coverage", start again.
+
+---
+
+## Four regression proofs failed to fail, and each one taught me something different (2026-10-22)
+
+Eight sprints of remediation, every claim regression-proved. Four proofs came
+back green on code I had deliberately broken. None of the four meant the fix was
+wrong; all four meant **the proof was measuring something else**, and the reasons
+were not interchangeable:
+
+1. **Process-global state.** `test_init_db_alone_creates_every_table` passed with
+   `init_db()` reverted to its broken 11-module import list — because
+   `Base.metadata` is process-global and conftest had already registered all 29
+   tables. It was measuring import order, not the function. Only a **subprocess**
+   importing `database` alone can observe what `init_db()` guarantees by itself.
+   *Any test of "what does this module see" is a lie inside a shared interpreter.*
+
+2. **A premise that was never true.** I asserted `check_route_wiring.py` exits 2
+   when run from another directory; it exited 0, because `ROUTES_DIR` resolves
+   from `__file__` and is correctly cwd-independent. The script was right and my
+   test was wrong. Reaching the branch needed the script *copied* into a tree with
+   no `backend/routes`.
+
+3. **A guessed number.** `assert len(callers) >= 20` for route modules calling
+   `enforce_tool_access` failed at 18 — the floor was invented, not measured. And
+   a count is the weaker assertion anyway: it cannot name which route stopped
+   gating, and a module added elsewhere masks one that regressed. Replaced with a
+   **no-shrink inventory by name**.
+
+4. **A fixture orthogonal to the property.** My "no two MACRS systems silently
+   agree" test paired each system with the classes it serves, so the outputs
+   differed because the *classes* differed. It could not have detected
+   system-blindness at all. Holding the class fixed and varying only the system,
+   all six parametrizations catch the original defect.
+
+**The transferable part: when a proof passes, the question is never "is the fix
+good?" — it is "what did I actually just measure?"** Four different answers here,
+and only the first would have been caught by being more careful. The others
+needed the measurement.
+
+### And one guard argued with me and was right
+
+I listed `services.audit.file_tool_scaffold.execute_file_tool` as a function that
+delegates entitlement enforcement. It does not — it is a file-handling scaffold
+and never calls the gate. My own
+`test_delegating_functions_really_do_enforce` caught it, which is exactly why an
+allowlist of delegating functions needs a second test asserting the delegates
+really delegate. Without it the first test keeps passing on the authority of a
+list that has become fiction (Sprint 787b, one layer out).
+
+---
+
+## Rounding each column independently means the row never foots (Sprints 795/796, 2026-10-22)
+
+Two engines, same defect, found by the same question: *does this add up?*
+
+`loan_amortization_engine` carried the running balance at full `Decimal`
+precision and quantized each column at output. That compares `_q(a) + _q(b)`
+against `_q(a + b)`, which differ by a cent whenever both halves round the same
+way. Measured over 48 loans / 6,912 rows: **21.51% of rows** had
+`interest + principal != scheduled_payment`, **24.90%** had
+`beginning - principal != ending`, and across 420 configurations **10.0%**
+produced a suggested journal entry whose **debits did not equal its credits**.
+
+`depreciation_engine` had it too, found by a new test rather than by looking: a
+$123,456.78 asset reported $123,456.77 of total depreciation against an ending
+book value of exactly 0.00.
+
+**Fix shape: round the independent quantities, derive the dependent ones.** For
+the loan, quantize interest and payment, then `principal = payment - interest`
+and `ending = beginning - principal - extra`, carrying cent-quantized balances
+forward so the column reconciles down the page as well as across the row. Both
+engines now foot at 0.00%.
+
+**Why 18 existing engine tests missed it:** every one used a single tidy loan,
+and `test_journal_entry_templates_balance` — which *does* assert
+`total_dr == total_cr` — happened to pick $50,000 / 5% / 12 months, one of the
+90% that balance. **A hand-picked case against a 10%-defect rate has a
+better-than-even chance of looking clean.** The replacement sweeps 420
+configurations across all three loan methods plus extra payments and rate
+changes, and asserts the row identity rather than a remembered figure.
+
+**The generalisable question for any schedule a practitioner reads: does each row
+foot, does each column reconcile to its total, and does the balance column tie
+period to period?** Three assertions, mechanical, and they found defects in two
+of the two engines they were pointed at.
+
+---
+
+## An input accepted, echoed back, and never read (Sprint 795, 2026-10-22)
+
+`depreciation_engine._macrs_percentages` dispatched on convention and property
+class only. `macrs_system` was declared on the config, validated for non-null,
+echoed into the API response's `inputs` block, and used to decide *whether* a tax
+schedule existed — and never reached the percentage lookup. A $100,000 5-year
+asset returned $20,000 of year-one tax depreciation whether the caller selected
+`gds_200db`, `gds_150db` or `gds_sl`, and the **frontend offered all three in a
+dropdown**.
+
+The one test touching `GDS_150` used property class 15, where the 150% table is
+the only one available. It passed for a reason unrelated to the field under test
+— the same shape as Sprint 794b's substring check that worked by luck.
+
+**Pattern: a request field that is validated and echoed looks wired. Trace it to
+the branch that consumes it.** "Accepted" and "honoured" are different claims,
+and the echo in the response actively reinforces the wrong one, because the API
+confirms your selection back to you.
+
+**And the fix refuses rather than substitutes.** The combinations without a
+published table now raise a named error saying exactly what is missing. Inventing
+statutory percentages from a code change is how the original defect became
+dangerous; a practitioner who gets "the GDS straight-line election is not
+available in this release" goes elsewhere, while one who gets 200% DB labelled as
+their election files a wrong return. **Where a wrong number and no number are the
+options, no number wins — and the error message has to name the gap, not just
+decline.**
+
+---
+
+## A feature can be correct, documented, and reachable by nobody (Sprint 798, 2026-10-22)
+
+`calculate_dupont` had exactly one caller in the repository: a unit test. No
+route, no PDF section, no frontend reference, zero occurrences in the OpenAPI
+snapshot. Meanwhile `USER_GUIDE.md` told customers it "is available when all
+components are calculable", and `features/status.json` marked it `complete` with
+the verification step *"Verify DuPont decomposition breakdown"*, last verified
+2026-03-18 — a step that could not have been performed through any surface.
+
+Its self-verification flag was also broken in a way nobody could see, for two
+independent reasons: it compared full-precision output against `round(roe, 1)` of
+a **percentage**, and Sprint 681 had moved ROE to an average-equity denominator
+while the equity multiplier still used ending equity. **Measured over 2,000
+random realistic trial balances: true 3 times, 0.15%.** The test pinning it used
+ROE of exactly 40.0%.
+
+**Pattern: "the engine is correct" and "the product does this" are separate
+claims, and `features/status.json` is where they get conflated.** A verification
+step that names a UI element nobody can reach should fail its own review. The
+cheap check is one grep for callers excluding tests — the same check Sprint 788
+needed for `ToolNav`, and Sprint 791 for delegation.
+
+**The unreachable code hid a second defect.** Nothing rendered the flag, so a
+decomposition that did not reconcile would have been presented as three numbers
+that simply do not multiply out. Wiring it up was what forced the arithmetic to
+be made honest — and the panel now says so explicitly when verification fails,
+rather than staying silent.
+
+---
+
+## The tests that watch the build were themselves unwatched (Sprint 802, 2026-10-22)
+
+`scripts/overnight/tests/` holds the regression tests for the nightly agents —
+including the Sprint 712 false-green guard, which exists *because* a nightly once
+reported 0 passed / 0 failed as GREEN. Grepping `ci.yml` for "overnight" returned
+nothing. The suite ran nowhere.
+
+Separately, `scripts/check_route_wiring.py` — the dead-route guardrail, and one of
+the few checks in this repo built knowing its answer has three states — was
+referenced by no workflow, no hook and no test.
+
+**Pattern: enumerate every executable guard and ask what invokes it.** Thirteen
+`scripts/*.py` guards; eleven wired, two not. That is a five-minute sweep and it
+is not implied by any amount of green CI, because an unwired guard contributes no
+signal in either direction.
+
+**Where to wire it matters as much as that you do.** A new CI job would have been
+*advisory* here — four existing gates, including the accounting-invariant gate,
+produce a red X and merge anyway. Putting the check inside `backend-tests`, which
+is a required status check, is the stronger placement and costs nothing.
+
+### The manifest, and why it does not call the API
+
+`ci.yml`'s header claimed eleven required status checks. Branch protection had
+twelve, and not the same twelve: `openapi-drift-check` was **claimed required and
+is not**, `backend-tests-postgres` was required and unclaimed, and four gates were
+neither. `CLAUDE.md` opens by calling `ci.yml` "mechanically enforced and final".
+
+The obvious guard — compare the header to the live API — would need a token, and
+**a check that needs a credential has three outcomes, not two.** On a runner
+without one it degrades to "could not look", which is the failure this whole
+class of lesson is about. So the test compares the manifest to the *workflow
+file* (every job classified, no phantom entries), and the live contexts are
+recorded in the header as a dated claim a human can re-verify. **Guard the half
+you can guard offline; date the half you cannot.**
+
+---
+
 ## A background task finishes after the client is already acting on the response (Sprint 791 review, 2026-10-21)
 
 I added `refreshToolRuns()` after a successful tool run so the workpaper list the

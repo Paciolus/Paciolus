@@ -125,19 +125,19 @@ def init_db() -> None:
 
     log_secure_operation("database_init", f"Initializing database: {DATABASE_URL[:30]}...")
 
-    # Ensure ALL model modules are imported so Base.metadata sees every table
-    # before create_all() — prevents NoReferencedTableError for cross-model FKs.
-    import engagement_model  # noqa: F401
-    import export_share_model  # noqa: F401
-    import firm_branding_model  # noqa: F401
-    import follow_up_items_model  # noqa: F401
-    import models  # noqa: F401
-    import organization_model  # noqa: F401
-    import scheduler_lock_model  # noqa: F401
-    import subscription_model  # noqa: F401
-    import team_activity_model  # noqa: F401
-    import tool_session_model  # noqa: F401
-    import upload_dedup_model  # noqa: F401
+    # Import every ORM model module so Base.metadata sees every table before
+    # create_all() — prevents NoReferencedTableError for cross-model FKs, and
+    # (Sprint 797) prevents a table from being skipped entirely.
+    #
+    # This used to be a hand-written list of 11 imports under a comment that
+    # claimed to name them all. It named 11 of 15, so a fresh environment got
+    # 27 of 29 tables — `admin_audit_logs` and `dunning_episodes` were missing,
+    # permanently, because the Dockerfile stamps rather than upgrades on an
+    # empty database. `model_registry` derives the set instead; see its module
+    # docstring and `tests/test_model_registry.py`.
+    from model_registry import import_all_models
+
+    import_all_models()
 
     Base.metadata.create_all(bind=engine)
 
