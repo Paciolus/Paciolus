@@ -746,7 +746,8 @@ a redundant full install for no extra signal.
 still almost certainly *names* — do **not** "fix" this by adding `values_callable`, which would
 flip every binding to lowercase and break the live database.
 
-**Commit SHA:** filled at merge.
+**Commit SHA:** `9b5eddd8` (PR #191), plus the review fix `3e129853` — the guard unioned labels a
+rebuild had retired.
 
 ---
 
