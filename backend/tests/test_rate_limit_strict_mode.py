@@ -204,11 +204,11 @@ class TestStorageConstructionFailure:
                 _resolve_storage_uri()
 
 
-class TestSlowApiUnmaintainedWarning:
-    """Module import emits an explicit notice that slowapi is unmaintained.
+class TestSlowApiDependencyNotice:
+    """Module import emits an explicit notice about the slowapi dependency.
 
     Severity differs by ENV_MODE: production -> WARNING (visible in oncall
-    logs), non-production -> INFO. The substring "slowapi is unmaintained"
+    logs), non-production -> INFO. The substring "rate-limiter dependency notice"
     is intentionally pinned so monitoring rules and runbook references can
     match against the literal text.
     """
@@ -236,7 +236,7 @@ class TestSlowApiUnmaintainedWarning:
             # severs object identity for limiter / TieredLimit and breaks
             # other tests that resolve those singletons.
             with patch("config.ENV_MODE", env_mode):
-                rate_limits._emit_slowapi_unmaintained_warning()
+                rate_limits._emit_slowapi_dependency_notice()
         finally:
             rate_limits._logger.removeHandler(handler)
             rate_limits._logger.setLevel(previous_level)
@@ -246,10 +246,14 @@ class TestSlowApiUnmaintainedWarning:
         import logging
 
         captured = self._invoke_emit("production")
-        assert any(level == logging.WARNING and "slowapi is unmaintained" in msg for level, msg in captured), captured
+        assert any(level == logging.WARNING and "rate-limiter dependency notice" in msg for level, msg in captured), (
+            captured
+        )
 
     def test_non_production_emits_info_severity(self):
         import logging
 
         captured = self._invoke_emit("development")
-        assert any(level == logging.INFO and "slowapi is unmaintained" in msg for level, msg in captured), captured
+        assert any(level == logging.INFO and "rate-limiter dependency notice" in msg for level, msg in captured), (
+            captured
+        )

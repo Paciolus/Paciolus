@@ -1035,6 +1035,36 @@ The register now says low-frequency, dates every claim, and keeps the structural
 logic lives in `limits`, not in slowapi's ~200 lines of glue) as what the acceptance really rests
 on. The migration plan is unchanged and still deferred.
 
+#### A sixth location, found in review — and this one ran in production
+
+The PR #195 review caught that the grep missed `shared/rate_limits.py`'s **runtime banner**.
+`_emit_slowapi_unmaintained_warning()` logs on every module import — WARNING in production, INFO
+elsewhere — and said:
+
+> `rate-limiter dependency notice: slowapi is unmaintained (last release Oct 2022)`
+
+So an on-call engineer paged anywhere near rate limiting was being told something false about the
+dependency. Two tests **asserted** that wording, and the runbook's Operator Posture section quoted
+it, which is three more places enforcing the claim.
+
+**It was missed because the grep was for `0.1.9` and this message never names a version.** The
+search was for the thing that changed rather than for the claim that changed — a version bump
+falsifies *assertions about* the dependency, not just occurrences of its number.
+
+Fixed across all four: the banner is renamed `_emit_slowapi_dependency_notice()`, says "maintained
+at low frequency", points at the accepted-risk record, and **reads its version from
+`importlib.metadata` rather than hardcoding a seventh copy**. The tests now assert the stable
+prefix `"rate-limiter dependency notice"` instead of the maintenance claim — pinning the claim is
+exactly what made two tests enforce a false statement for two years.
+
+The live version and the historical cadence are deliberately kept separable in the wording: a
+message reading *"slowapi 0.1.11 (0.1.10 released 2026-06-13)"* would glue a live value to a stale
+one the moment upstream ships again.
+
+**The notice is kept, not removed.** The accepted risk is real, just smaller than stated, and
+operator visibility of an accepted risk is a deliberate control. Verified by capturing what it
+actually emits, and regression-proved by breaking the prefix — two tests fail.
+
 #### The guard, and the measurement that decided its scope
 
 The obvious guard is "every version mentioned in prose must match its pin". **It was measured

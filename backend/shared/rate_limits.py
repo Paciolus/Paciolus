@@ -337,14 +337,43 @@ def _resolve_storage_uri() -> str:
 _storage_uri = _resolve_storage_uri()
 
 
-def _emit_slowapi_unmaintained_warning() -> None:
-    """Emit an explicit startup banner about slowapi's unmaintained status.
+def _installed_slowapi_version() -> str:
+    """The slowapi version actually installed, or "unknown".
+
+    Read from package metadata rather than hardcoded. Sprint 786b found the
+    version written out by hand in six places, every one of which the 0.1.9 ->
+    0.1.10 bump falsified. A banner that states a version should not become a
+    seventh.
+    """
+    try:
+        from importlib.metadata import version as _pkg_version
+
+        return _pkg_version("slowapi")
+    except Exception:  # noqa: BLE001 — a missing dist must never break startup
+        return "unknown"
+
+
+def _emit_slowapi_dependency_notice() -> None:
+    """Emit a startup banner about the accepted slowapi dependency risk.
 
     Surfaced at module import so the risk is visible in operator logs even
     when no canary test fails. Severity differs by environment:
     - Production: WARNING (operational visibility — investigate during planned
       maintenance, not an incident).
     - Non-production: INFO (developer awareness).
+
+    Sprint 786b corrected the wording. This previously told operators slowapi
+    was "unmaintained (last release Oct 2022)", which was wrong by two
+    releases when it was written (0.1.8 2023-04-07, 0.1.9 2024-02-05) and is
+    now wrong by three: 0.1.10 shipped 2026-06-13. Verified against PyPI's
+    release history. An on-call engineer reading the old banner was being told
+    something false about the dependency they had just been paged near.
+
+    The notice is kept rather than removed — the accepted risk is real, just
+    smaller than stated. Low-frequency maintenance after a two-year gap is not
+    abandonment, and the load-bearing mitigation is structural: the
+    rate-limiting logic lives in `limits`, not in slowapi's thin Starlette
+    wrapper.
 
     Migration plan: docs/runbooks/rate-limiter-modernization.md.
     """
@@ -353,10 +382,16 @@ def _emit_slowapi_unmaintained_warning() -> None:
     except Exception:  # noqa: BLE001 — config import must never break startup
         _env_mode = "development"
 
+    # The version is live; the release cadence is a dated historical claim.
+    # Keep them separable — "slowapi 0.1.11 (0.1.10 released 2026-06-13)"
+    # would read as a live value glued to a stale one the moment upstream
+    # ships again, which is the drift this sprint spent its time undoing.
     message = (
-        "rate-limiter dependency notice: slowapi is unmaintained "
-        "(last release Oct 2022); the underlying `limits` library is actively "
-        "maintained and pinned at >=3.0.0. Migration plan: "
+        f"rate-limiter dependency notice: slowapi {_installed_slowapi_version()} is maintained at "
+        "low frequency — upstream went two years between releases as of 2026-06-13. The "
+        "rate-limiting logic lives in the actively-maintained `limits` library, pinned at "
+        ">=3.0.0; slowapi is a thin Starlette wrapper. Accepted risk, with the full release "
+        "history, in docs/compliance/DEPENDENCY_DECISIONS.md. Migration plan: "
         "docs/runbooks/rate-limiter-modernization.md."
     )
     if _env_mode == "production":
@@ -365,7 +400,7 @@ def _emit_slowapi_unmaintained_warning() -> None:
         _logger.info(message)
 
 
-_emit_slowapi_unmaintained_warning()
+_emit_slowapi_dependency_notice()
 
 # ---------------------------------------------------------------------------
 # Limiter instance + category constants
