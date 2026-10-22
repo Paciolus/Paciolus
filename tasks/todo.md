@@ -328,6 +328,58 @@ sub-category* are 793b's table work, and they need the confirmed figures regardl
 
 ---
 
+### Sprint 794: A registry outage makes the CVE gate report "vulnerable"
+**Status:** PENDING.
+**Priority:** P3 — no security exposure, but it is a blocking gate that cannot distinguish two very
+different answers, and it produces a scary-sounding failure for an upstream hiccup.
+**Source:** observed live on PR #189, 2026-10-22.
+
+`Node CVE & License Audit` failed with:
+
+```
+npm warn audit 503 Service Unavailable - POST https://registry.npmjs.org/-/npm/v1/security/audits/quick
+npm error audit endpoint returned an error
+##[error]Process completed with exit code 1.
+```
+
+No vulnerability. npm's audit endpoint was down for seven minutes. The job name says "CVE &
+License Audit" and the red X says the same thing it says for a genuine CRITICAL, so the signal
+a reader gets is "this PR has a high-severity vulnerability" when the truth is "we could not
+check."
+
+**Same shape as Sprint 778a's false-green, inverted.** There the job could not report a failure
+it had detected; here it reports a failure it has not detected. Both come from a check with two
+outcomes where the reality has three: pass, fail, and **unverified**.
+
+**Two blocking instances**, plus one advisory:
+
+| File | Step | Gating |
+|------|------|--------|
+| `ci.yml:656` | `npm audit --omit=dev --audit-level=high` | **blocking** |
+| `dependency-compliance.yml:56` | same | **blocking** |
+| `ci.yml:699` | `npm audit --omit=dev` | advisory |
+
+**Scope:**
+1. **Retry first.** A 503 is usually seconds long; two or three attempts with backoff removes most
+   of the problem and needs no policy decision. This alone is probably 80% of the value.
+2. Distinguish the outcomes. `npm audit --json` returns a parseable report on success and an
+   error object on failure; branch on which arrived rather than on the exit code alone.
+3. **Decide the gating policy for "unverified", and write the reason down.** This is the part
+   that is genuinely a judgement call rather than a bug fix: should an npm outage block a merge?
+   Failing closed is the safe default for a security gate and matches the 778a precedent — but
+   778a gates a monthly report, and this gates every PR, so an hour-long npm incident would stop
+   all work. A bounded compromise: fail closed, but say *"registry unavailable — not a
+   vulnerability finding"* in the error so the reader knows to re-run rather than hunt a CVE.
+4. Check whether the Python side has the same hole — `pip-audit` also calls out to an advisory
+   service.
+
+**Not urgent:** the immediate incident was cleared by re-running the job, and the underlying
+posture is unaffected either way — the audit was green on the previous run and on the re-run.
+
+**Commit SHA:** TBD.
+
+---
+
 ### Sprint 792: Audit every gate for the scope gap that produced seven findings
 **Status:** COMPLETE.
 **Priority:** P2 — preventive. Fixing instance #8 is worth less than enumerating the class.
