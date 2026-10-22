@@ -822,6 +822,29 @@ two failures. All 12 behave as intended. YAML parses and the job's 9 steps resol
 import-ordering (identical count before the change) and outside CI's lint scope, which runs from
 `backend/`.
 
+**Two more found by the PR #187 review, and the causal chain is the interesting part.**
+
+6. **Fixing defect 4 activated a dormant defect 6.** With the probe finally running, its result
+   rendering turned out to be wrong: `> probe_result.json` creates the file *before* python
+   starts, so a failed probe leaves an empty file, and the old `if [ -f probe_result.json ]`
+   check then wrote *"✅ Database responded to probe"* into the same report that carried
+   `probe=FAIL`. The contradiction had been unreachable for as long as the step never executed.
+   Now one branch decides both the output and the report line, keyed on the exit status **and** a
+   non-empty result, so they cannot disagree. Exercised against all three outcomes: python
+   succeeded, python died leaving an empty file, redirection itself failed — the middle one is
+   the case the old check got backwards.
+
+7. **Making the job fail silently disabled the restore drill — a regression I introduced.**
+   `restore-validation` declares `needs: dr-test` with `if: github.event_name ==
+   'workflow_dispatch'`. A `needs:` dependency implies the prerequisite *succeeded* unless the
+   condition uses a status function, so the moment `dr-test` began failing on a non-PASS verdict,
+   the manual restore drill stopped running — in exactly the UNVERIFIED state the workflow is
+   expected to hold until 778b. That is the worst possible timing: **an untested backup is not a
+   backup**, and scope item 3 calls the drill the half of the risk a second mechanism cannot
+   address. Fixed with `always() && github.event_name == 'workflow_dispatch'`. The drill never
+   depended on the verdict anyway — it provisions its own isolated instance and runs its own
+   `pg_restore` — so the gate was accidental rather than intended.
+
 **Still blocked, and unchanged:** scope items 1–4 — building the `pg_dump` → R2 cron, confirming
 Neon's real PITR retention, the restore drills, and rewriting both workflows against Neon. All need
 the Neon connection string (**CEO ask D-1**) and R2 token confirmation.
