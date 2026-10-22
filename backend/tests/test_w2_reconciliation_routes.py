@@ -123,3 +123,148 @@ class TestW2ReconciliationTierGate:
             assert response.headers["content-type"].startswith("text/csv")
         finally:
             app.dependency_overrides.clear()
+
+
+# ---------------------------------------------------------------------------
+# Sprint 793a — the statutory-limit overrides the API never exposed
+# ---------------------------------------------------------------------------
+#
+# `W2ReconciliationConfig` has had a field for every limit since Sprint 636, and
+# that sprint's record states "All thresholds are caller-overridable via
+# `W2ReconciliationConfig`". True in the engine and unreachable through the API
+# — the request model exposed none of them, so the claim was false where it
+# mattered and nothing tested it. These tests exist because that is exactly the
+# shape of claim this repo keeps getting wrong: a capability that is real one
+# layer down and absent at the layer a customer touches.
+
+
+def _payload_over_ss_base(ss_wages: str) -> dict:
+    """One employee whose SS wages sit between two candidate wage bases."""
+    return {
+        "tax_year": 2026,
+        "employees": [
+            {
+                "employee_id": "E001",
+                "employee_name": "Alice",
+                "federal_wages": ss_wages,
+                "federal_withholding": "0.00",
+                "ss_wages": ss_wages,
+                "ss_tax_withheld": "0.00",
+                "medicare_wages": ss_wages,
+                "medicare_tax_withheld": "0.00",
+            }
+        ],
+        "w2_drafts": [],
+        "form_941_quarters": [],
+        "tolerance": "1.00",
+    }
+
+
+def _ss_base_findings(body: dict) -> list[dict]:
+    return [d for d in body["employee_discrepancies"] if d["kind"] == "ss_wage_base_exceeded"]
+
+
+@pytest.mark.usefixtures("bypass_csrf")
+class TestStatutoryLimitOverrides:
+    @pytest.mark.asyncio
+    async def test_wages_above_the_default_base_are_flagged_without_an_override(self, professional_user, db_session):
+        """Baseline: $180,000 exceeds the engine's built-in $176,100 base."""
+        _override(professional_user, db_session)
+        try:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                response = await client.post("/audit/w2-reconciliation", json=_payload_over_ss_base("180000.00"))
+            assert response.status_code == 200, response.text
+            assert len(_ss_base_findings(response.json())) == 1
+        finally:
+            app.dependency_overrides.clear()
+
+    @pytest.mark.asyncio
+    async def test_an_override_reaches_the_engine_and_changes_the_finding(self, professional_user, db_session):
+        """The whole point: a caller-supplied base must actually be applied.
+
+        $180,000 is over the built-in $176,100 and under $184,500, so raising
+        the base has to make the finding disappear. If the override were
+        silently dropped — the pre-Sprint-793a behaviour — this still returns
+        one finding and the test fails.
+        """
+        _override(professional_user, db_session)
+        try:
+            payload = _payload_over_ss_base("180000.00")
+            payload["statutory_limits"] = {"ss_wage_base": "184500.00"}
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                response = await client.post("/audit/w2-reconciliation", json=payload)
+            assert response.status_code == 200, response.text
+            assert _ss_base_findings(response.json()) == []
+        finally:
+            app.dependency_overrides.clear()
+
+    @pytest.mark.asyncio
+    async def test_lowering_the_base_creates_a_finding(self, professional_user, db_session):
+        """Both directions, so the test cannot pass by the override being ignored
+        in a way that happens to match the expectation."""
+        _override(professional_user, db_session)
+        try:
+            payload = _payload_over_ss_base("150000.00")  # under the default base
+            payload["statutory_limits"] = {"ss_wage_base": "140000.00"}
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                response = await client.post("/audit/w2-reconciliation", json=payload)
+            assert response.status_code == 200, response.text
+            findings = _ss_base_findings(response.json())
+            assert len(findings) == 1
+            assert findings[0]["expected"] == "140000.00"
+        finally:
+            app.dependency_overrides.clear()
+
+    @pytest.mark.asyncio
+    async def test_omitted_fields_keep_the_engine_default(self, professional_user, db_session):
+        """Supplying one limit must not blank the other ten.
+
+        The construction forwards only the fields the caller set; a naive
+        `**model_dump()` would pass `None` for everything else and override the
+        dataclass defaults with nulls.
+        """
+        _override(professional_user, db_session)
+        try:
+            payload = _payload_over_ss_base("180000.00")
+            payload["statutory_limits"] = {"hsa_family_limit": "8750.00"}
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                response = await client.post("/audit/w2-reconciliation", json=payload)
+            assert response.status_code == 200, response.text
+            # ss_wage_base was not supplied, so the default still applies and
+            # $180,000 is still over it.
+            assert len(_ss_base_findings(response.json())) == 1
+        finally:
+            app.dependency_overrides.clear()
+
+    @pytest.mark.asyncio
+    async def test_a_malformed_override_is_a_400_not_a_500(self, professional_user, db_session):
+        _override(professional_user, db_session)
+        try:
+            payload = _payload_over_ss_base("180000.00")
+            payload["statutory_limits"] = {"ss_wage_base": "not-a-number"}
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                response = await client.post("/audit/w2-reconciliation", json=payload)
+            assert response.status_code == 400, response.text
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_every_engine_limit_is_reachable_from_the_request(self):
+        """The guard for the original defect.
+
+        Sprint 636 claimed the thresholds were caller-overridable and the API
+        exposed none of them. If the engine gains a limit field, it must become
+        settable here too — otherwise the same gap reopens silently.
+        """
+        import dataclasses
+
+        from routes.w2_reconciliation import StatutoryLimitOverrides
+        from w2_reconciliation_engine import W2ReconciliationConfig
+
+        structural = {"tax_year", "employees", "w2_drafts", "form_941_quarters", "tolerance"}
+        engine_limits = {f.name for f in dataclasses.fields(W2ReconciliationConfig)} - structural
+        exposed = set(StatutoryLimitOverrides.model_fields)
+
+        assert engine_limits == exposed, (
+            "the engine's statutory limits and the request's overrides have diverged — "
+            f"engine-only: {sorted(engine_limits - exposed)}, request-only: {sorted(exposed - engine_limits)}"
+        )

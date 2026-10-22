@@ -22954,6 +22954,145 @@
         "title": "SodAnalysisResponse",
         "type": "object"
       },
+      "StatutoryLimitOverrides": {
+        "description": "Per-request overrides for the statutory limits (Sprint 793a).\n\nThe engine has carried a field for each of these since Sprint 636, and that\nsprint's record states the thresholds are \"caller-overridable via\n`W2ReconciliationConfig`\" — true in the engine and, until now, unreachable\nthrough the API. A practitioner who knew the correct figure for their filing\nyear had no way to supply it.\n\nThey matter because the engine holds **one fixed set** of limits and applies\nit to any ``tax_year`` from 2000 to 2099 without selecting by year; the\nPR #184 review also disputes which year the current set belongs to. Until\nSprint 793 lands a year-keyed table with practitioner-confirmed figures,\nthis is the escape hatch. Every field is optional and omitting it keeps the\nengine default, so the request shape is unchanged for existing callers.\n\nDecimal strings rather than floats, matching every other monetary field on\nthis route.",
+        "properties": {
+          "additional_medicare_rate": {
+            "anyOf": [
+              {
+                "maxLength": 12,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Additional Medicare Rate"
+          },
+          "additional_medicare_threshold": {
+            "anyOf": [
+              {
+                "maxLength": 24,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Additional Medicare Threshold"
+          },
+          "hsa_family_limit": {
+            "anyOf": [
+              {
+                "maxLength": 24,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hsa Family Limit"
+          },
+          "hsa_self_only_limit": {
+            "anyOf": [
+              {
+                "maxLength": 24,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hsa Self Only Limit"
+          },
+          "limit_401k_catchup_50": {
+            "anyOf": [
+              {
+                "maxLength": 24,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit 401K Catchup 50"
+          },
+          "limit_401k_catchup_60_63": {
+            "anyOf": [
+              {
+                "maxLength": 24,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit 401K Catchup 60 63"
+          },
+          "limit_401k_elective": {
+            "anyOf": [
+              {
+                "maxLength": 24,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit 401K Elective"
+          },
+          "limit_simple_ira": {
+            "anyOf": [
+              {
+                "maxLength": 24,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit Simple Ira"
+          },
+          "medicare_rate": {
+            "anyOf": [
+              {
+                "maxLength": 12,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Medicare Rate"
+          },
+          "ss_rate": {
+            "anyOf": [
+              {
+                "maxLength": 12,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ss Rate"
+          },
+          "ss_wage_base": {
+            "anyOf": [
+              {
+                "maxLength": 24,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ss Wage Base"
+          }
+        },
+        "title": "StatutoryLimitOverrides",
+        "type": "object"
+      },
       "SubscriberCounts": {
         "properties": {
           "past_due": {
@@ -25943,6 +26082,17 @@
             "maxItems": 4,
             "title": "Form 941 Quarters",
             "type": "array"
+          },
+          "statutory_limits": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StatutoryLimitOverrides"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Override the statutory limits for this run. The engine applies one fixed set to every tax year; supply the figures for your filing year to correct the wage-base and over-limit findings. Omitted fields keep the engine default."
           },
           "tax_year": {
             "maximum": 2099.0,
