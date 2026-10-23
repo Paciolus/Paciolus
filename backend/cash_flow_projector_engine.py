@@ -16,6 +16,7 @@ teams rather than financial reporting.
 
 from __future__ import annotations
 
+import calendar
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal
@@ -328,22 +329,42 @@ def _ap_outflow_schedule(ap: AgingBuckets, assumptions: ScenarioAssumptions) -> 
     return schedule
 
 
+def _add_months(anchor: date, months: int) -> date:
+    """``anchor`` moved by whole calendar months, day clamped to month end."""
+    month_index = anchor.month - 1 + months
+    year, month = anchor.year + month_index // 12, month_index % 12 + 1
+    return date(year, month, min(anchor.day, calendar.monthrange(year, month)[1]))
+
+
 def _recurring_schedule(flows: list[RecurringFlow], start: date) -> dict[int, Decimal]:
     """Flatten recurring flows into per-day amounts over the 90-day horizon."""
     schedule: dict[int, Decimal] = {d: ZERO for d in range(FORECAST_DAYS)}
 
-    step_days = {
-        "weekly": 7,
-        "biweekly": 14,
-        "monthly": 30,  # Approximation for the 90-day forecast
-        "quarterly": 90,
-    }
+    step_days = {"weekly": 7, "biweekly": 14}
+    # Sprint 827 (C1): calendar months, not 30-day steps. Rent due Jan 31 fell
+    # on Mar 2 and a whole payment dropped out of the horizon; a Feb 1 start in
+    # 2028 landed on Mar 2 instead of Mar 1. Each occurrence is computed from
+    # the first date, so a month-end anchor does not drift (Jan 31 -> Feb 28 ->
+    # Mar 31).
+    step_months = {"monthly": 1, "quarterly": 3}
 
     for flow in flows:
+        if flow.frequency in step_months:
+            months = step_months[flow.frequency]
+            n = 0
+            while True:
+                occurrence = _add_months(flow.first_date, n * months)
+                day = (occurrence - start).days
+                if day >= FORECAST_DAYS:
+                    break
+                if day >= 0:
+                    schedule[day] += flow.amount
+                n += 1
+            continue
+
         step = step_days[flow.frequency]
         # First hit day relative to the forecast start.
-        delta = (flow.first_date - start).days
-        day = delta
+        day = (flow.first_date - start).days
         while day < 0:
             day += step
         while day < FORECAST_DAYS:

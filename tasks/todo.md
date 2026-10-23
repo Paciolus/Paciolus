@@ -406,7 +406,13 @@ every IC revenue/expense pair.
 - [x] **A6** — FA-T11 compares magnitudes, so contra-negative accumulated depreciation no longer
       flags every row. FA-03 still flags negative accumulated depreciation; whether a contra
       presentation is "negative" there is a product call.
-- [ ] A4, A5, A8 (FA conventions/units), D1–D2 (SoD), C1–C6 (cash flow), I4, P-3.
+- [x] **D1** — SoD role rows are unioned per role and user rows merged per user ID, so a
+      long-format matrix no longer hides conflicts split across rows.
+- [x] **C1** — monthly/quarterly recurring flows step by calendar month from the first date,
+      clamped to month-end without drift.
+- [ ] Open: A4, A5, A8 (FA conventions/units), D2 (SoD tiering and unmatched permissions),
+      C2–C6 (cash flow scenario deferral, footing, edge cases), I4 (IC keyword false positives),
+      P-3 (non-USD / EU number formats — needs a locale decision).
 
 **Commit SHA:** TBD.
 

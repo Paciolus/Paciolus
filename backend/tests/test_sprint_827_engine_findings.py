@@ -213,3 +213,59 @@ def test_contra_negative_accumulated_depreciation_compares_magnitudes():
 def test_planted_under_depreciation_is_still_flagged():
     accum = round(100_000 * _years("2021-01-01") / 10 * 0.6, 2)
     assert _fa_recalc([_asset(1, 100_000.0, accum, "2021-01-01", 10, "Straight-Line")])["entries_flagged"] == 1
+
+
+# --- SoD: long-format matrices (D1) -------------------------------------------
+
+
+def _sod(users, roles):
+    from sod_engine import RolePermission, UserRoleAssignment, analyze_segregation_of_duties
+
+    return analyze_segregation_of_duties(
+        [UserRoleAssignment(*u) for u in users], [RolePermission(*r) for r in roles]
+    ).to_dict()
+
+
+def test_role_split_across_rows_keeps_every_permission():
+    """D1: the second row overwrote the first, so AP-02 never fired."""
+    result = _sod(
+        [("u1", "Pat", ["AP_SUPER"])],
+        [("AP_SUPER", ["ap_invoice_create"]), ("AP_SUPER", ["ap_payment_release"])],
+    )
+    assert "AP-02" in {c["rule_code"] for c in result["conflicts"]}
+
+
+def test_user_split_across_rows_is_one_user_with_all_roles():
+    """D1: two rows for one user were evaluated as two conflict-free users."""
+    result = _sod(
+        [("x1", "Sam", ["AP_CLERK"]), ("x1", "Sam", ["AP_MANAGER"])],
+        [("AP_CLERK", ["ap_invoice_create"]), ("AP_MANAGER", ["ap_payment_release"])],
+    )
+    assert result["users_evaluated"] == 1
+    assert "AP-02" in {c["rule_code"] for c in result["conflicts"]}
+
+
+# --- Cash flow projector: calendar-month recurrence (C1) ---------------------
+
+
+@pytest.mark.parametrize(
+    "start, first, expected",
+    [
+        ("2027-01-01", "2027-01-31", ["2027-01-31", "2027-02-28", "2027-03-31"]),
+        ("2028-02-01", "2028-02-01", ["2028-02-01", "2028-03-01", "2028-04-01"]),
+        ("2027-12-01", "2027-12-15", ["2027-12-15", "2028-01-15", "2028-02-15"]),
+    ],
+)
+def test_monthly_flows_land_on_calendar_months(start, first, expected):
+    """C1: 30-day steps put Jan 31 rent on Mar 2 and dropped a payment from the horizon."""
+    from datetime import date, timedelta
+
+    from cash_flow_projector_engine import RecurringFlow, _recurring_schedule
+
+    start_date = date.fromisoformat(start)
+    flow = RecurringFlow(
+        label="Rent", amount=Decimal("-1000"), frequency="monthly", first_date=date.fromisoformat(first)
+    )
+    schedule = _recurring_schedule([flow], start_date)
+    hit_dates = [(start_date + timedelta(days=d)).isoformat() for d, amount in sorted(schedule.items()) if amount]
+    assert hit_dates == expected

@@ -69,7 +69,7 @@ Status column: **Fixed (824)** = remediated in Sprint 824; otherwise the sprint 
 | A5 | P2 | Half-year convention not absorbed despite the comment claiming it is (5% tolerance vs exact-day proration). | 827 |
 | A6 | P1/P2 | Contra-negative accumulated depreciation (`(5,000.00)`) flags 100% of rows in FA-03 and FA-T11; FA-01/04 use `abs()`. | FA-T11 fixed (827); FA-03 still flags contra balances by design — needs a call |
 | A8 | P2 | `Useful Life (Months)` auto-detected as years. | 827 |
-| D1 | P1 | SoD long-format input drops conflicts: a role on two rows is overwritten (`sod_engine.py:281`); a user on two rows is two users. | 827 |
+| D1 | P1 | SoD long-format input drops conflicts: a role on two rows is overwritten (`sod_engine.py:281`); a user on two rows is two users. | Fixed (827) |
 | D2 | P2 | One HIGH SoD conflict scores tier "moderate"; unrecognised permission spellings give a clean result with no warning; degenerate custom rules flag everyone. | 827 |
 | I1 | P1 | Intercompany revenue/expense elimination JE is **reversed** (Dr expense / Cr revenue); booking it doubles both sides, and the worksheet disagrees with the JEs. `intercompany_elimination_engine.py:604`. | Fixed (827) |
 | I2 | P1 | Multiple IC accounts between the same two entities are cartesian-matched: 2 × $500 balances → 4 pairs, $2,000 eliminated, consolidation "complete". | Fixed (827) |
@@ -82,7 +82,7 @@ Status column: **Fixed (824)** = remediated in Sprint 824; otherwise the sprint 
 
 | ID | Sev | Finding | Status |
 |---|---|---|---|
-| C1 | P2 | "Monthly" recurring flows recur every 30 days, not on calendar months: Jan 31 rent lands Mar 2 and a whole payment drops out of the 90-day horizon. `cash_flow_projector_engine.py:338`. | 827 |
+| C1 | P2 | "Monthly" recurring flows recur every 30 days, not on calendar months: Jan 31 rent lands Mar 2 and a whole payment drops out of the 90-day horizon. `cash_flow_projector_engine.py:338`. | Fixed (827) |
 | C2 | P2 | AP not paid in a scenario is never paid within the horizon, inflating ending cash (the scenario table drops the unpaid share instead of deferring it). | 827 |
 | C3–C6 | P3 | Displayed rows don't foot by cents (per-field rounding); `lowest_balance_day` defaults to day 0 at the opening balance; negative aging buckets netted in `ar_total` but ignored in the projection; overdrawn opening balance rejected. | 827 |
 | — | ok | Verified correct: roll-forward holds at full precision; lowest balance, first negative day and min-cash breach trigger on the right day in every scenario; dates contiguous across Feb 29 2028; route rejects nan/inf. | — |

@@ -275,11 +275,31 @@ def _normalize(value: str) -> str:
 
 
 def _build_role_map(role_permissions: Iterable[RolePermission]) -> dict[str, frozenset[str]]:
-    result: dict[str, frozenset[str]] = {}
+    # Sprint 827 (D1): union, not overwrite. A long-format matrix lists one
+    # role per row per permission; overwriting kept only the last row, so a
+    # role holding both halves of a conflict across two rows showed none.
+    result: dict[str, set[str]] = {}
     for rp in role_permissions:
-        normalized = frozenset(_normalize(p) for p in rp.permissions if p.strip())
-        result[_normalize(rp.role_code)] = normalized
-    return result
+        result.setdefault(_normalize(rp.role_code), set()).update(_normalize(p) for p in rp.permissions if p.strip())
+    return {role: frozenset(perms) for role, perms in result.items()}
+
+
+def _merge_users(user_assignments: Iterable[UserRoleAssignment]) -> list[UserRoleAssignment]:
+    """One assignment per user (Sprint 827, D1).
+
+    A user listed on several rows — one role each — is one person holding all
+    of those roles. Evaluated row by row, AP_CLERK on one row and AP_MANAGER on
+    the next were two conflict-free "users" instead of one with a conflict.
+    """
+    merged: dict[str, UserRoleAssignment] = {}
+    for user in user_assignments:
+        key = user.user_id.strip().lower()
+        if key in merged:
+            existing = merged[key]
+            existing.role_codes = [*existing.role_codes, *(r for r in user.role_codes if r not in existing.role_codes)]
+        else:
+            merged[key] = UserRoleAssignment(user.user_id, user.user_name, list(user.role_codes))
+    return list(merged.values())
 
 
 def _effective_permissions(
@@ -332,7 +352,7 @@ def analyze_segregation_of_duties(
     users_with_conflicts = 0
     high_risk_users = 0
 
-    for user in user_assignments:
+    for user in _merge_users(user_assignments):
         users_evaluated += 1
         permissions, perm_to_roles = _effective_permissions(user, role_map)
         user_conflicts: list[SodConflict] = []
