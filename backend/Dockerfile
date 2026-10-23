@@ -70,6 +70,31 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
 
 # Production command: run Alembic migrations (once, before workers) then start Gunicorn.
 # Alembic runs exactly once per deploy — eliminates multi-worker migration races.
+#
+# SPRINT 797 — `alembic upgrade head` now runs on an empty database too.
+#
+# This branch used to be `stamp head` when no `alembic_version` table existed,
+# on the reasoning that a brand-new database is already at head because
+# `init_db()`'s `create_all()` builds it from `Base.metadata`. That was wrong
+# in two compounding ways:
+#
+#   1. `create_all()` only sees the model modules that have been imported, and
+#      `init_db()` imported 11 of 15. A fresh environment got 27 of 29 tables.
+#   2. `stamp head` then marked all 45 migrations applied without running
+#      them, so the two missing tables — `admin_audit_logs` and
+#      `dunning_episodes` — could never be created by any later deploy.
+#
+# A new region, a fresh staging environment or a DR rebuild into an empty
+# database therefore booted healthy and 500'd the first time an admin action
+# was logged or a payment failed. Both causes are fixed (model_registry, and
+# migration c9e4a1b73f20 for the four tables the chain never created), and
+# with the chain complete, running it is strictly better than asserting it has
+# already been run: it exercises the documented build path instead of leaving
+# it permanently untested.
+#
+# Production is unaffected — it has an `alembic_version` table and has always
+# taken the `upgrade head` branch.
+#
 # Tuning parameters (all configurable via environment variables):
 #   WEB_CONCURRENCY:          Worker count. Default 4. Formula: (2 * CPU cores) + 1
 #   GUNICORN_TIMEOUT:         Worker timeout for large file processing. Default 120s
@@ -85,9 +110,8 @@ has_version = 'alembic_version' in inspect(e).get_table_names(); \
 e.dispose(); \
 print('alembic_version exists:', has_version); \
 import subprocess, sys; \
-cmd = ['alembic', 'upgrade', 'head'] if has_version else ['alembic', 'stamp', 'head']; \
-print('Running:', ' '.join(cmd)); \
-sys.exit(subprocess.call(cmd))\" && \
+print('Running: alembic upgrade head'); \
+sys.exit(subprocess.call(['alembic', 'upgrade', 'head']))\" && \
      gunicorn main:app \
      --bind 0.0.0.0:8000 \
      --workers ${WEB_CONCURRENCY:-4} \

@@ -12,6 +12,7 @@ from ratio_engine import (
     RatioEngine,
     RatioResult,
     VarianceAnalyzer,
+    calculate_analytics,
 )
 
 # =============================================================================
@@ -765,9 +766,16 @@ class TestSprint681AverageBalance:
         assert "ending equity" in result.interpretation
 
     def test_dupont_verification_matches_with_isclose(self):
-        """Sprint 681: DuPont verification_matches must use math.isclose,
-        not a fixed 1e-4 absolute tolerance. Under realistic conditions
-        the decomposition should always verify."""
+        """Sprint 681: DuPont verification_matches must use math.isclose.
+
+        **This fixture cannot prove the claim its docstring used to make.**
+        Revenue 1M / expenses 800K / assets 1.5M / equity 500K gives ROE of
+        exactly 40.0% and a decomposition of exactly 0.4, so it verified under
+        the broken comparison too — which was true on 0.15% of real trial
+        balances. The load-bearing assertion now lives in
+        ``TestDupontVerificationFlagIsMeaningful``, which sweeps 500 randomly
+        generated trial balances. This one is kept as a readable smoke case.
+        """
         current = CategoryTotals(
             total_revenue=1_000_000.0,
             total_expenses=800_000.0,
@@ -1586,3 +1594,139 @@ class TestSprint806NegativeEquity:
         assert result.value is not None
         assert result.value > 0
         assert "negative equity" not in result.interpretation.lower()
+# DuPont decomposition — Sprint 798
+# =============================================================================
+
+
+class TestDupontIsReachable:
+    """The decomposition has to appear in a payload a customer can receive.
+
+    Before Sprint 798 the engine was correct and unreachable: `calculate_dupont`
+    had exactly one caller in the repository — a unit test. No route, no PDF
+    section, no frontend reference, and no occurrence in the OpenAPI snapshot.
+    `USER_GUIDE.md` nonetheless told customers it "is available", and
+    `features/status.json` marked it complete with a verification step that
+    could not be performed through any surface.
+
+    Asserting against the engine would reproduce exactly that mistake, so
+    these go through `calculate_analytics` — the function every analytics
+    surface actually consumes.
+    """
+
+    @staticmethod
+    def _totals(**kw):
+        base = dict(
+            total_revenue=4_250_000.0,
+            total_expenses=3_612_500.0,
+            total_assets=5_100_000.0,
+            total_equity=1_870_000.0,
+        )
+        base.update(kw)
+        return CategoryTotals(**base)
+
+    def test_analytics_payload_carries_the_decomposition(self):
+        payload = calculate_analytics(self._totals())
+        assert "dupont" in payload, "calculate_analytics must expose the decomposition"
+        dupont = payload["dupont"]
+        assert dupont is not None
+        for key in (
+            "net_profit_margin",
+            "asset_turnover",
+            "equity_multiplier",
+            "decomposed_roe",
+            "verification_matches",
+        ):
+            assert key in dupont, f"missing {key}"
+
+    def test_decomposition_is_none_when_a_denominator_is_zero(self):
+        """`USER_GUIDE.md` promises it "when revenue, total assets and total
+        equity are all non-zero". Each of the three, individually."""
+        for field in ("total_revenue", "total_assets", "total_equity"):
+            payload = calculate_analytics(self._totals(**{field: 0.0}))
+            assert payload["dupont"] is None, f"{field}=0 should suppress the decomposition"
+
+    def test_prior_period_deltas_appear_only_with_prior_data(self):
+        without = calculate_analytics(self._totals())
+        assert "prior_period_deltas" not in without["dupont"]
+
+        prior = self._totals(
+            total_revenue=3_900_000.0,
+            total_expenses=3_400_000.0,
+            total_assets=4_800_000.0,
+            total_equity=1_700_000.0,
+        )
+        with_prior = calculate_analytics(self._totals(), prior)
+        assert "prior_period_deltas" in with_prior["dupont"]
+
+
+class TestDupontVerificationFlagIsMeaningful:
+    """`verification_matches` was true 0.15% of the time.
+
+    Measured over 2,000 randomly generated realistic trial balances before
+    Sprint 798: 3 True, 1,997 False. Two independent causes — it compared
+    full-precision output against `round(roe, 1)` of a *percentage*, and
+    Sprint 681 had moved ROE to an average-equity denominator while the
+    equity multiplier still used ending equity.
+
+    The test that pinned it used revenue 1M / expenses 800K / assets 1.5M /
+    equity 500K — ROE exactly 40.0%, decomposed exactly 0.4 — and asserted in
+    its docstring that "legitimate decompositions always verify".
+    """
+
+    def test_verifies_across_a_sweep_not_one_tidy_fixture(self):
+        import random
+
+        rng = random.Random(7)
+        failures = []
+        for _ in range(500):
+            revenue = round(rng.uniform(50_000, 50_000_000), 2)
+            expenses = round(revenue * rng.uniform(0.5, 1.2), 2)
+            assets = round(rng.uniform(revenue * 0.3, revenue * 3), 2)
+            equity = round(assets * rng.uniform(0.1, 0.9), 2)
+            totals = CategoryTotals(
+                total_revenue=revenue,
+                total_expenses=expenses,
+                total_assets=assets,
+                total_equity=equity,
+            )
+            dupont = RatioEngine(totals).calculate_dupont()
+            if dupont and not dupont.verification_matches:
+                failures.append((revenue, expenses, assets, equity))
+        assert not failures, f"{len(failures)} of 500 random trial balances failed verification; first: {failures[:3]}"
+
+    def test_the_components_actually_multiply_out(self):
+        """The property the flag claims, asserted independently of the flag."""
+        totals = CategoryTotals(
+            total_revenue=4_250_000.0,
+            total_expenses=3_612_500.0,
+            total_assets=5_100_000.0,
+            total_equity=1_870_000.0,
+        )
+        d = RatioEngine(totals).calculate_dupont()
+        assert d is not None
+        product = d.net_profit_margin * d.asset_turnover * d.equity_multiplier
+        assert abs(float(product) - float(d.decomposed_roe)) < 1e-3
+
+    def test_flag_is_false_when_the_decomposition_really_does_not_reconcile(self):
+        """A flag that cannot be false is not a flag.
+
+        Forces a mismatch by perturbing one component after construction, and
+        re-running the same comparison the engine performs.
+        """
+        import math
+
+        totals = CategoryTotals(
+            total_revenue=4_250_000.0,
+            total_expenses=3_612_500.0,
+            total_assets=5_100_000.0,
+            total_equity=1_870_000.0,
+        )
+        d = RatioEngine(totals).calculate_dupont()
+        assert d is not None and d.verification_matches
+
+        net_income = totals.total_revenue - totals.total_expenses
+        ending_basis_roe = net_income / totals.total_equity
+        tampered = float(d.decomposed_roe) * 1.01
+        assert not math.isclose(tampered, float(ending_basis_roe), rel_tol=1e-9, abs_tol=1e-12), (
+            "a 1% perturbation must not satisfy the engine's tolerance"
+        )

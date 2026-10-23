@@ -10,25 +10,17 @@ from sqlalchemy import engine_from_config, pool
 # Ensure backend root is on the path so we can import our modules
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from admin_audit_model import AdminAuditLog  # noqa: F401  # Sprint 590
-from analytical_expectations_model import AnalyticalExpectation  # noqa: F401  # Sprint 728a
 from config import DATABASE_URL
 from database import Base
-from dunning_model import DunningEpisode  # noqa: F401  # Sprint 591
-from engagement_model import Engagement, ToolRun  # noqa: F401  # Phase X
-from export_share_model import ExportShare  # noqa: F401  # Phase LXIX (Phase 6)
-from firm_branding_model import FirmBranding  # noqa: F401  # Phase LXIX (Phase 8)
-from follow_up_items_model import FollowUpItem, FollowUpItemComment  # noqa: F401  # Phase X
+from model_registry import import_all_models
 
-# Import all models so Base.metadata knows about them
-from models import ActivityLog, Client, DiagnosticSummary, EmailVerificationToken, RefreshToken, User  # noqa: F401
-from organization_model import Organization, OrganizationInvite, OrganizationMember  # noqa: F401  # Phase LXIX
-from scheduler_lock_model import SchedulerLock  # noqa: F401  # AUDIT-06 FIX 3
-from subscription_model import BillingEvent, Subscription  # noqa: F401  # Sprint 363 + Sprint 439
-from team_activity_model import TeamActivityLog  # noqa: F401  # Phase LXIX (Phase 7)
-from tool_session_model import ToolSession  # noqa: F401  # Sprint 262
-from uncorrected_misstatements_model import UncorrectedMisstatement  # noqa: F401  # Sprint 729a
-from upload_dedup_model import UploadDedup  # noqa: F401  # AUDIT-06 FIX 4
+# Import every ORM model module so Base.metadata knows about them.
+#
+# Sprint 797: this was a hand-written list of 15 imports, while the equivalent
+# list in `database.init_db()` held 11 and the one in the parity test held 15.
+# Three copies, two of them disagreeing. The set is now derived — see
+# `backend/model_registry.py`.
+import_all_models()
 
 # Alembic Config object
 config = context.config

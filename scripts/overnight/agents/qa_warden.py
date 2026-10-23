@@ -25,6 +25,17 @@ from scripts.overnight.config import (
     TODAY,
 )
 
+# Budget for the backend pytest subprocess, in seconds.
+#
+# MUST stay below `orchestrator.AGENT_TIMEOUT_OVERRIDES["qa_warden"]` (1700s),
+# which also has to cover the Jest run (300s) and process overhead — otherwise
+# the outer timeout kills the agent before the inner one can report *why* it
+# was slow. `tests/test_overnight_timeouts.py` asserts that ordering.
+PYTEST_TIMEOUT_S = 1200
+
+# Budget for the frontend Jest subprocess.
+JEST_TIMEOUT_S = 300
+
 
 def _run_backend_tests() -> dict:
     """Run pytest and capture summary."""
@@ -43,9 +54,35 @@ def _run_backend_tests() -> dict:
         "--tb=no", "-q",
         "--json-report", f"--json-report-file={json_report}",
     ]
-    result = subprocess.run(
-        cmd_json, cwd=str(BACKEND_ROOT), capture_output=True, text=True, timeout=1200,
-    )
+    # Sprint 802: catch the timeout rather than letting it propagate.
+    #
+    # The agent crashing is already reported honestly — the orchestrator logs
+    # the failure and `briefing_compiler` renders a missing agent as RED with
+    # `status: "DID_NOT_RUN"`. But the brief could only say *that* the agent
+    # died, not *why*. A suite that has outgrown its budget and a suite that
+    # hangs on a deadlock want very different responses at 02:00.
+    #
+    # Headroom at the time of writing: 690.7s observed against this 1200s
+    # budget (1.74x) at 9,126 collected tests, i.e. ~76ms/test. The cap is
+    # reached somewhere near 15,800 tests. That is not close, but the suite
+    # grew by 114 in a single session, so it is a clock rather than a
+    # non-issue (lessons.md, Sprint 674).
+    try:
+        result = subprocess.run(
+            cmd_json, cwd=str(BACKEND_ROOT), capture_output=True, text=True, timeout=PYTEST_TIMEOUT_S,
+        )
+    except subprocess.TimeoutExpired:
+        return {
+            "passed": 0, "failed": 0, "errors": 0, "duration_s": float(PYTEST_TIMEOUT_S),
+            "failing_tests": [],
+            "collection_error": (
+                f"Backend pytest exceeded its {PYTEST_TIMEOUT_S}s budget and was killed. "
+                f"This is a 'did not run', not a pass: no result was produced. Either the "
+                f"suite has outgrown the budget (raise PYTEST_TIMEOUT_S here and the "
+                f"matching qa_warden entry in orchestrator.AGENT_TIMEOUT_OVERRIDES, which "
+                f"must stay larger) or a test is hanging."
+            ),
+        }
 
     passed = failed = errors = 0
     duration = 0.0
@@ -74,9 +111,20 @@ def _run_backend_tests() -> dict:
     # json-report plugin not installed or failed — retry without it
     if "unrecognized arguments" in result.stderr or result.returncode == 4:
         cmd_plain = [str(python_bin), "-m", "pytest", "--tb=no", "-q"]
-        result = subprocess.run(
-            cmd_plain, cwd=str(BACKEND_ROOT), capture_output=True, text=True, timeout=1200,
-        )
+        try:
+            result = subprocess.run(
+                cmd_plain, cwd=str(BACKEND_ROOT), capture_output=True, text=True,
+                timeout=PYTEST_TIMEOUT_S,
+            )
+        except subprocess.TimeoutExpired:
+            return {
+                "passed": 0, "failed": 0, "errors": 0, "duration_s": float(PYTEST_TIMEOUT_S),
+                "failing_tests": [],
+                "collection_error": (
+                    f"Backend pytest (no-json-report fallback) exceeded its "
+                    f"{PYTEST_TIMEOUT_S}s budget and was killed."
+                ),
+            }
 
     # Parse stdout summary line
     output = result.stdout + "\n" + result.stderr
@@ -124,7 +172,7 @@ def _run_frontend_tests() -> dict:
     cmd = ["npm", "test", "--", "--watchAll=false", "--json"]
     result = subprocess.run(
         cmd, cwd=str(FRONTEND_ROOT), capture_output=True, text=True,
-        timeout=300, shell=True,
+        timeout=JEST_TIMEOUT_S, shell=True,
     )
 
     passed = failed = 0

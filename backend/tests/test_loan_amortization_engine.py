@@ -315,3 +315,183 @@ class TestSerialization:
         assert "journal_entry_templates" in payload
         assert payload["total_interest"] == str(result.total_interest)
         assert len(payload["schedule"]) == 6
+
+
+# =============================================================================
+# Schedule integrity (Sprint 796)
+# =============================================================================
+
+
+def _loan_matrix() -> list[tuple[str, LoanConfig]]:
+    """A sweep, not a hand-picked loan.
+
+    The defect this class exists to prevent survived 18 engine tests because
+    every one of them used a single tidy loan. The pre-fix measurement was
+    21.51% of rows failing to foot and 10.0% of loans producing an unbalanced
+    journal entry — so a hand-picked case had a better-than-even chance of
+    looking clean, and the one in ``test_journal_entry_templates_balance``
+    ($50,000 / 5% / 12 monthly) did.
+    """
+    cases: list[tuple[str, LoanConfig]] = []
+    for principal in ("100000", "250000", "37500.55", "999999.99"):
+        for rate in ("0", "0.0375", "0.055", "0.0699", "0.12"):
+            for term in (12, 60, 360):
+                for freq in ("monthly", "quarterly"):
+                    cases.append(
+                        (
+                            f"standard-{principal}-{rate}-{term}-{freq}",
+                            LoanConfig(
+                                principal=Decimal(principal),
+                                annual_rate=Decimal(rate),
+                                term_periods=term,
+                                frequency=freq,
+                            ),
+                        )
+                    )
+    # Every method, plus the two features that mutate the balance mid-schedule.
+    cases.append(
+        (
+            "interest-only",
+            LoanConfig(
+                principal=Decimal("180000"),
+                annual_rate=Decimal("0.0725"),
+                term_periods=60,
+                method=LoanMethod.INTEREST_ONLY,
+            ),
+        )
+    )
+    cases.append(
+        (
+            "balloon",
+            LoanConfig(
+                principal=Decimal("425000"),
+                annual_rate=Decimal("0.0633"),
+                term_periods=84,
+                method=LoanMethod.BALLOON,
+                balloon_amount=Decimal("300000"),
+            ),
+        )
+    )
+    cases.append(
+        (
+            "extra-payments",
+            LoanConfig(
+                principal=Decimal("222222.22"),
+                annual_rate=Decimal("0.0599"),
+                term_periods=120,
+                extra_payments=[
+                    ExtraPayment(period_number=7, amount=Decimal("5000")),
+                    ExtraPayment(period_number=7, amount=Decimal("1234.56")),
+                    ExtraPayment(period_number=40, amount=Decimal("17500.01")),
+                ],
+            ),
+        )
+    )
+    cases.append(
+        (
+            "rate-changes",
+            LoanConfig(
+                principal=Decimal("310000"),
+                annual_rate=Decimal("0.0425"),
+                term_periods=180,
+                rate_changes=[
+                    RateChange(period_number=61, new_annual_rate=Decimal("0.0775")),
+                    RateChange(period_number=121, new_annual_rate=Decimal("0.0325")),
+                ],
+            ),
+        )
+    )
+    return cases
+
+
+class TestScheduleIntegrity:
+    """Every row foots, the balance column reconciles, and the JE balances."""
+
+    def test_every_row_foots_across(self):
+        failures: list[str] = []
+        rows = 0
+        for label, config in _loan_matrix():
+            for entry in generate_amortization_schedule(config).schedule:
+                rows += 1
+                if entry.interest + entry.principal != entry.scheduled_payment:
+                    failures.append(
+                        f"{label} p{entry.period_number}: "
+                        f"{entry.interest} + {entry.principal} != {entry.scheduled_payment}"
+                    )
+        assert rows > 5000, f"matrix shrank to {rows} rows — it is the coverage"
+        assert not failures, f"{len(failures)} of {rows} rows do not foot:\n" + "\n".join(failures[:10])
+
+    def test_balance_column_reconciles_down_the_page(self):
+        failures: list[str] = []
+        for label, config in _loan_matrix():
+            schedule = generate_amortization_schedule(config).schedule
+            for entry in schedule:
+                expected = entry.beginning_balance - entry.principal - entry.extra_principal
+                if expected != entry.ending_balance:
+                    failures.append(
+                        f"{label} p{entry.period_number}: {entry.beginning_balance} - "
+                        f"{entry.principal} - {entry.extra_principal} != {entry.ending_balance}"
+                    )
+            # Each period must open where the previous one closed.
+            for prev, nxt in zip(schedule, schedule[1:]):
+                if prev.ending_balance != nxt.beginning_balance:
+                    failures.append(
+                        f"{label} p{prev.period_number}/{nxt.period_number}: "
+                        f"{prev.ending_balance} != {nxt.beginning_balance}"
+                    )
+        assert not failures, f"{len(failures)} balance breaks:\n" + "\n".join(failures[:10])
+
+    def test_schedule_opens_at_principal_and_closes_at_zero(self):
+        for label, config in _loan_matrix():
+            schedule = generate_amortization_schedule(config).schedule
+            assert schedule[0].beginning_balance == config.principal.quantize(Decimal("0.01")), label
+            assert schedule[-1].ending_balance == Decimal("0.00"), label
+
+    def test_totals_equal_their_columns(self):
+        for label, config in _loan_matrix():
+            result = generate_amortization_schedule(config)
+            assert result.total_interest == sum(e.interest for e in result.schedule), label
+            assert result.total_payments == sum(e.scheduled_payment + e.extra_principal for e in result.schedule), label
+
+    def test_annual_summary_ties_to_the_periods_it_aggregates(self):
+        for label, config in _loan_matrix():
+            result = generate_amortization_schedule(config)
+            assert sum(s.total_interest for s in result.annual_summary) == result.total_interest, label
+            assert sum(s.total_payments for s in result.annual_summary) == result.total_payments, label
+
+    def test_every_journal_entry_balances(self):
+        """An unbalanced journal entry is unusable, not untidy.
+
+        10.0% of 420 loan configurations produced one before Sprint 796.
+        """
+        failures: list[str] = []
+        for label, config in _loan_matrix():
+            for tmpl in generate_amortization_schedule(config).journal_entry_templates:
+                dr = sum(amt for _, amt in tmpl.debits)
+                cr = sum(amt for _, amt in tmpl.credits)
+                if dr != cr:
+                    failures.append(f"{label} [{tmpl.description}]: Dr {dr} != Cr {cr}")
+        assert not failures, f"{len(failures)} unbalanced JEs:\n" + "\n".join(failures[:10])
+
+    def test_principal_never_exceeds_the_opening_balance(self):
+        for label, config in _loan_matrix():
+            for entry in generate_amortization_schedule(config).schedule:
+                assert entry.principal + entry.extra_principal <= entry.beginning_balance, (
+                    f"{label} p{entry.period_number} over-amortizes"
+                )
+
+    def test_known_thirty_year_payment_is_unchanged_by_the_rounding_fix(self):
+        """Guard against the fix moving the headline number.
+
+        $300,000 at 6% over 360 months is $1,798.65 by the standard formula.
+        Deriving principal from the rounded payment must not disturb it.
+        """
+        config = LoanConfig(
+            principal=Decimal("300000"),
+            annual_rate=Decimal("0.06"),
+            term_periods=360,
+        )
+        result = generate_amortization_schedule(config)
+        assert result.schedule[0].scheduled_payment == Decimal("1798.65")
+        assert result.schedule[0].interest == Decimal("1500.00")
+        assert result.schedule[0].principal == Decimal("298.65")

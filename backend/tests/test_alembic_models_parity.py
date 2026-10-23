@@ -1,4 +1,24 @@
-"""Sprint 737: Alembic head schema must match `Base.metadata`.
+"""Sprint 737: Alembic head tables/columns/FKs must match `Base.metadata`.
+
+WHAT THIS COVERS, AND WHAT IT DOES NOT
+--------------------------------------
+Covered: the **table set**, the **column-name set** per table, and (since
+Sprint 797) **foreign keys**, primary keys and unique constraints.
+
+**Not covered: nullability, column types, and server defaults.** That is a
+decision, not an oversight, and it is written here because the previous
+docstring said "schema must match `Base.metadata`" while comparing only names
+— so "this schema is guarded" read as more coverage than it was.
+
+* *Nullability* — 50 columns disagree. Every one is a column the ORM declares
+  NOT NULL via a non-Optional ``Mapped[...]`` annotation while its migration
+  created it nullable, and every one has a Python-side default, so no code
+  path can emit NULL. Fifty migrations of churn for no behaviour change, and a
+  fifty-row failure wall is how a gate gets switched off.
+* *Types* — SQLite has no enum type, so a chain-built SQLite database reports
+  VARCHAR where PostgreSQL has a native enum. Comparing types on this dialect
+  would compare an artifact. Enum **labels** are covered separately and
+  properly by ``guards/enum_label_drift.py`` / ``tests/test_enum_label_drift``.
 
 After Sprint 737 deleted the in-process schema-patch blocks from
 `init_db()`, Alembic is the single authority for schema evolution. This
@@ -14,12 +34,17 @@ Failure mode it catches:
   blows up. Pre-Sprint-737, the in-process patcher would have papered over
   this in some environments; post-Sprint-737, this test is the safety net.
 
-The test compares fresh SQLite databases built two ways and asserts the
-table set + per-table column set match.
+The tests compare fresh SQLite databases built two ways and assert the table
+set, the per-table column set and the foreign keys match. Sprint 797 added a
+third check that drives ``init_db()`` itself, because the Dockerfile stamps
+rather than upgrades on an empty database — so on a brand-new environment
+``create_all()`` is the whole schema, and comparing two *other* builds says
+nothing about it.
 """
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -78,66 +103,41 @@ def _alembic_upgrade_head(db_url: str) -> None:
 def _create_all_against(engine: Engine) -> None:
     """Run ``Base.metadata.create_all()`` after importing every model module.
 
-    Mirrors the model-import set in ``database.init_db()`` and
-    ``backend/migrations/alembic/env.py`` so Base.metadata is fully
-    populated before create_all fires.
+    Uses the same derived import as ``database.init_db()`` and
+    ``migrations/alembic/env.py``. Sprint 797: this used to be a third
+    hand-written copy of the module list, with a comment instructing the
+    reader to keep it in sync with the other two — which held 11 and 15
+    entries respectively while this one held 15. The instruction to stay in
+    sync is what a shared function is for.
     """
-    # Order doesn't matter; what matters is that every model module is
-    # imported so its tables register on Base.metadata. Keep this list in
-    # sync with `init_db()` and `migrations/alembic/env.py`.
-    import admin_audit_model  # noqa: F401
-    import analytical_expectations_model  # noqa: F401
-    import dunning_model  # noqa: F401
-    import engagement_model  # noqa: F401
-    import export_share_model  # noqa: F401
-    import firm_branding_model  # noqa: F401
-    import follow_up_items_model  # noqa: F401
-    import models  # noqa: F401
-    import organization_model  # noqa: F401
-    import scheduler_lock_model  # noqa: F401
-    import subscription_model  # noqa: F401
-    import team_activity_model  # noqa: F401
-    import tool_session_model  # noqa: F401
-    import uncorrected_misstatements_model  # noqa: F401
-    import upload_dedup_model  # noqa: F401
     from database import Base
+    from model_registry import import_all_models
 
+    import_all_models()
     Base.metadata.create_all(bind=engine)
 
 
-# Tables defined in models but with NO corresponding Alembic migration.
-# Created today by `init_db()`'s `Base.metadata.create_all()` call —
-# Sprint 737 did not change that, the in-process schema patches it removed
-# only ever touched columns on existing tables, not whole table creation.
-# These four tables represent pre-existing tech debt discovered during
-# Sprint 737's drift-test build-out, filed for cleanup in Sprint 738.
+# EMPTIED BY SPRINT 797 — keep them empty.
 #
-# Until Sprint 738 lands migrations for each, this test treats them as
-# documented exceptions: skipped from the table-set comparison, but
-# everything else must match exactly.
-PRE_EXISTING_DRIFT_TABLES = frozenset(
-    {
-        "password_reset_tokens",  # backend/models.py
-        "processed_webhook_events",  # backend/subscription_model.py
-        "tool_activities",  # backend/models.py
-        "waitlist_signups",  # backend/models.py
-    }
-)
+# These held four tables and six columns that the ORM defined and no migration
+# created. They were recorded as documented exceptions in Sprint 737 and filed
+# for Sprint 738, which then sat for a year recorded as blocked on a production
+# connection string. It was not blocked: production was built by `create_all()`
+# from `Base.metadata`, so it already held every one of those objects, and
+# writing the DDL needed no database read.
+#
+# Migration `c9e4a1b73f20` creates all ten, guarded by an inspector so it is a
+# no-op against production and a catch-up against a chain-built database.
+#
+# An allow-list is the weakest form of a guard: it fails silently and
+# indefinitely, and it cannot tell you when the thing it excuses has been
+# fixed. If you are about to add an entry here, write the migration instead —
+# and if you genuinely cannot, `test_drift_allowlists_stay_empty` below says
+# so out loud rather than letting the exception disappear into a constant.
+PRE_EXISTING_DRIFT_TABLES: frozenset[str] = frozenset()
 
-# Columns defined on a model but with NO Alembic migration adding them.
-# Same Sprint 737 → Sprint 738 logic as the table allow-list above:
-# Sprint 737's scope was the in-process patch-block deletion, which never
-# touched these columns (the patcher's hardcoded set was just users +
-# refresh_tokens). These columns are pre-existing drift surfaced by the
-# new parity test. Sprint 738 will write the missing migrations.
-#
 # Format: {table_name: frozenset({column_name, ...}, ...)}
-PRE_EXISTING_DRIFT_COLUMNS: dict[str, frozenset[str]] = {
-    # backend/engagement_model.py — Engagement.completed_at / completed_by
-    "engagements": frozenset({"completed_at", "completed_by"}),
-    # backend/models.py — DiagnosticSummary cash-conversion-cycle ratios
-    "diagnostic_summaries": frozenset({"ccc", "dio", "dpo", "dso"}),
-}
+PRE_EXISTING_DRIFT_COLUMNS: dict[str, frozenset[str]] = {}
 
 
 def _table_columns(engine: Engine) -> dict[str, set[str]]:
@@ -214,3 +214,232 @@ def test_alembic_head_matches_base_metadata(tmp_path):
         "schema-patch fallback in `init_db()`, so production deploys will now "
         "lack the column instead of self-healing."
     )
+
+
+# =============================================================================
+# Sprint 797 additions
+# =============================================================================
+
+
+def _foreign_keys(engine: Engine) -> dict[str, set[tuple[str, str, str]]]:
+    """``{table: {(local_col, referred_table, referred_col), ...}}``."""
+    inspector = inspect(engine)
+    out: dict[str, set[tuple[str, str, str]]] = {}
+    for table in inspector.get_table_names():
+        if table == "alembic_version":
+            continue
+        keys: set[tuple[str, str, str]] = set()
+        for fk in inspector.get_foreign_keys(table):
+            for local, referred in zip(fk["constrained_columns"], fk["referred_columns"]):
+                keys.add((local, fk["referred_table"], referred))
+        out[table] = keys
+    return out
+
+
+def test_drift_allowlists_stay_empty():
+    """An allow-list is the weakest guard: it fails silently and forever.
+
+    Sprint 737 recorded four tables and six columns here as documented
+    exceptions pending Sprint 738. Sprint 738 then sat for a year, recorded as
+    blocked on a production connection string it did not need. Migration
+    ``c9e4a1b73f20`` created all ten.
+
+    If you are adding an entry, write the migration instead. If you truly
+    cannot, this test failing is the point — the exception has to be argued
+    for in review rather than disappearing into a constant.
+    """
+    assert PRE_EXISTING_DRIFT_TABLES == frozenset(), (
+        f"Tables re-added to the drift allow-list: {sorted(PRE_EXISTING_DRIFT_TABLES)}. "
+        f"Write an Alembic migration instead — see c9e4a1b73f20 for the guarded pattern "
+        f"that is a no-op against a create_all()-built production database."
+    )
+    assert PRE_EXISTING_DRIFT_COLUMNS == {}, (
+        f"Columns re-added to the drift allow-list: {PRE_EXISTING_DRIFT_COLUMNS}. Write an Alembic migration instead."
+    )
+
+
+def test_alembic_head_matches_base_metadata_foreign_keys(tmp_path):
+    """Foreign keys, which the name/column comparison above cannot see.
+
+    Three were missing before Sprint 797 — ``engagements.completed_by`` and
+    the two ``archived_by`` columns — and nothing reported it, because the
+    test next door compares column *names* under a docstring that claimed to
+    compare the schema.
+
+    **This has to run in a subprocess, for the same reason
+    ``test_init_db_alone_creates_every_table`` below does, and the first
+    version did not.** Sprint 797 learned that lesson for that test and not
+    for this one, and CI caught it the first time this branch was pushed:
+    green on both SQLite jobs, red on PostgreSQL 15, reporting
+    ``organizations.subscription_id``, ``tool_activities.engagement_id`` and
+    ``users.organization_id`` as "in Alembic but not in model".
+
+    Those three are exactly the ORM's ``use_alter=True`` foreign keys — the
+    ones that exist to break the ``organizations -> users -> subscriptions``
+    cycle. ``use_alter`` changes *how* ``create_all()`` emits a constraint,
+    per dialect:
+
+    * SQLite cannot ``ALTER TABLE ADD CONSTRAINT``, so it emits them inline
+      in ``CREATE TABLE``.
+    * PostgreSQL emits them as three separate ``ALTER TABLE ... ADD
+      CONSTRAINT`` statements.
+
+    And ``Base.metadata`` is process-global. The session-scoped ``db_engine``
+    fixture calls ``create_all()`` on the test database before this test runs;
+    on the PostgreSQL job that pass takes the ALTER path and leaves the shared
+    metadata in a state where a *subsequent* ``create_all()`` against SQLite no
+    longer emits the three constraints at all. Both halves of this test use
+    SQLite temp files, so the models half silently lost three foreign keys that
+    the ORM does declare and the chain does create.
+
+    The drift was never real. The measurement was contaminated by another
+    fixture's dialect, which is precisely the failure mode the test below
+    documents — and it is unobservable in the SQLite jobs, because there the
+    earlier ``create_all()`` takes the inline path and changes nothing.
+    """
+    import json
+    import subprocess
+
+    alembic_db = (tmp_path / "alembic_fk.db").as_posix()
+    models_db = (tmp_path / "models_fk.db").as_posix()
+
+    program = (
+        "import json, sys\n"
+        "sys.path.insert(0, %r)\n"
+        "from tests.test_alembic_models_parity import (\n"
+        "    _alembic_upgrade_head, _create_all_against, _foreign_keys,\n"
+        ")\n"
+        "from sqlalchemy import create_engine\n"
+        "_alembic_upgrade_head('sqlite:///%s')\n"
+        "models_engine = create_engine('sqlite:///%s')\n"
+        "_create_all_against(models_engine)\n"
+        "alembic_fks = _foreign_keys(create_engine('sqlite:///%s'))\n"
+        "models_fks = _foreign_keys(models_engine)\n"
+        "payload = {\n"
+        "    'alembic': {t: sorted(v) for t, v in alembic_fks.items()},\n"
+        "    'models': {t: sorted(v) for t, v in models_fks.items()},\n"
+        "}\n"
+        "sys.stdout.write('@@' + json.dumps(payload))\n"
+    ) % (str(_BACKEND_ROOT), alembic_db, models_db, alembic_db)
+
+    env = {**os.environ, "PYTHONPATH": str(_BACKEND_ROOT)}
+    # A clean interpreter means no other fixture has touched Base.metadata.
+    # Deliberately does NOT inherit TEST_DATABASE_URL's dialect: both halves
+    # must be measured against the same dialect or the comparison is meaningless.
+    env.pop("TEST_DATABASE_URL", None)
+    proc = subprocess.run(
+        [sys.executable, "-c", program],
+        capture_output=True,
+        text=True,
+        cwd=str(_BACKEND_ROOT),
+        env=env,
+        timeout=180,
+    )
+    assert proc.returncode == 0, f"probe subprocess failed:\n{proc.stdout}\n{proc.stderr}"
+    assert "@@" in proc.stdout, f"probe produced no result marker:\n{proc.stdout}\n{proc.stderr}"
+
+    payload = json.loads(proc.stdout.split("@@", 1)[1])
+    alembic_fks = {t: {tuple(k) for k in v} for t, v in payload["alembic"].items()}
+    models_fks = {t: {tuple(k) for k in v} for t, v in payload["models"].items()}
+
+    # Guard the guard: a probe that measured nothing would make the comparison
+    # below vacuous, which is how this class of test stops testing.
+    assert models_fks, "the models probe reported no tables at all"
+    assert alembic_fks, "the alembic probe reported no tables at all"
+    assert any(("organization_id", "organizations", "id") in fks for fks in models_fks.values()), (
+        "the models probe lost the use_alter foreign keys — the contamination is back"
+    )
+
+    drift: list[str] = []
+    for table in sorted(set(alembic_fks) & set(models_fks)):
+        only_alembic = alembic_fks[table] - models_fks[table]
+        only_models = models_fks[table] - alembic_fks[table]
+        if only_models:
+            drift.append(f"  {table}: in model but not in Alembic: {sorted(only_models)}")
+        if only_alembic:
+            drift.append(f"  {table}: in Alembic but not in model: {sorted(only_alembic)}")
+
+    assert not drift, "Foreign-key drift between Alembic head and Base.metadata:\n" + "\n".join(drift)
+
+
+def test_init_db_alone_creates_every_table(tmp_path):
+    """The assertion none of the three import lists could ever fail.
+
+    ``Dockerfile`` runs ``alembic stamp head`` — not ``upgrade`` — on a
+    database with no ``alembic_version`` table, so a brand-new environment
+    gets its schema entirely from ``init_db()``'s ``create_all()``. Before
+    Sprint 797 that call imported 11 of 15 model modules, and measured
+    results were 25 of 29 tables alone and **27 of 29** even through
+    ``import main`` (which loads every route module). The two that never
+    appeared were ``admin_audit_logs`` and ``dunning_episodes`` — and since
+    ``stamp head`` had already marked their migrations applied, no later
+    deploy would create them either.
+
+    **This has to run in a subprocess, and the first version did not.**
+    ``Base.metadata`` is process-global, so by the time any in-process test
+    calls ``init_db()`` the conftest and every previously-imported test module
+    have already registered all 29 tables. Reverting ``init_db()`` to its
+    11-module hand list left the in-process version of this test **green** —
+    it was measuring import order, not the function. A clean interpreter that
+    imports only ``database`` is the only way to observe what ``init_db()``
+    guarantees on its own.
+    """
+    import json
+    import subprocess
+
+    db_url = f"sqlite:///{(tmp_path / 'init_db.db').as_posix()}"
+    program = (
+        "import json, sys\n"
+        "import database\n"
+        "from sqlalchemy import inspect\n"
+        "database.init_db()\n"
+        "created = sorted(t for t in inspect(database.engine).get_table_names()\n"
+        "                 if t != 'alembic_version')\n"
+        "from model_registry import import_all_models\n"
+        "import_all_models()\n"
+        "from database import Base\n"
+        "expected = sorted(Base.metadata.tables)\n"
+        "sys.stdout.write('@@' + json.dumps({'created': created, 'expected': expected}))\n"
+    )
+    env = {**os.environ, "DATABASE_URL": db_url, "PYTHONPATH": str(_BACKEND_ROOT)}
+    proc = subprocess.run(
+        [sys.executable, "-c", program],
+        capture_output=True,
+        text=True,
+        cwd=str(_BACKEND_ROOT),
+        env=env,
+        timeout=180,
+    )
+    assert proc.returncode == 0, f"probe subprocess failed:\n{proc.stdout}\n{proc.stderr}"
+    assert "@@" in proc.stdout, f"probe produced no result marker:\n{proc.stdout}\n{proc.stderr}"
+    payload = json.loads(proc.stdout.split("@@", 1)[1])
+
+    missing = sorted(set(payload["expected"]) - set(payload["created"]))
+    assert not missing, (
+        f"init_db() did not create {len(missing)} table(s): {missing}. On a fresh deployment "
+        f"the Dockerfile stamps rather than upgrades, so these tables would never exist. "
+        f"Check backend/model_registry.py."
+    )
+
+
+def test_model_registry_is_what_init_db_and_env_py_both_use():
+    """One list, not three.
+
+    The three copies previously held 11, 15 and 15 entries. This asserts the
+    single derived source is non-empty and sees every module that defines an
+    ORM model — the AST cross-check lives in ``tests/test_model_registry.py``.
+    """
+    from model_registry import model_module_names
+
+    names = model_module_names()
+    assert len(names) >= 15, f"model registry found only {len(names)} modules: {names}"
+    assert "models" in names
+    # The four that init_db() used to omit. Named explicitly because they are
+    # the ones whose absence was invisible for a year.
+    for omitted in (
+        "admin_audit_model",
+        "dunning_model",
+        "analytical_expectations_model",
+        "uncorrected_misstatements_model",
+    ):
+        assert omitted in names, f"{omitted} missing from the derived model set"
