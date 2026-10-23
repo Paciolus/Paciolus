@@ -487,10 +487,18 @@ payroll, revenue, AR, inventory, bank rec, three-way match) against realistic sy
 - [x] **T1** — currency-formatted debit/credit cells ("$1,234.00", "(500)") in a CSV/Excel TB are
       parsed instead of coerced to zero.
 - [x] **T6** — DuPont and common-size values serialize as JSON numbers, not strings.
-- [ ] Open P1s: JE reciprocal pairs an entry's own lines; JE just-below-threshold double counts;
-      JE composite LOW on an unbalanced GL; JE after-hours flags every xlsx date cell; payroll
-      xlsx pay dates; payroll PR-T9 on a single-period register; AP-T14 PO column unmapped;
-      JE numbering gaps with year-prefixed IDs; revenue RT-04 sign convention; TB T2–T5;
+- [x] **JE-1** — reciprocal entries no longer pair an entry's own debit and credit lines
+      (61% of a clean GL was flagged HIGH).
+- [x] **JE-2** — just-below-threshold counts rows, not flags (flag rate reached 2.0), and its
+      split pass sums debits and credits separately.
+- [x] **JE-3** — unbalanced entries floor the composite: any → Moderate, any over $1,000 →
+      Elevated. A GL with a $250K out-of-balance entry was rated LOW.
+- [x] **JE-4** — after-hours treats a file whose every timestamp is exactly midnight as
+      date-only (100% of an .xlsx GL was flagged as 00:00 postings).
+- [x] **JE-5** — numbering gaps read the trailing sequence per series, so year-prefixed IDs
+      ("JE-2025-0001") are tested.
+- [ ] Open P1s: payroll xlsx pay dates; payroll PR-T9 on a single-period register; AP-T14 PO
+      column unmapped; JE date formats skipped silently; revenue RT-04 sign convention; TB T2–T5;
       bank rec B1/B3; three-way match W1/W2.
 
 **Commit SHA:** TBD.
