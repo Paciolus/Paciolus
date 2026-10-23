@@ -49,17 +49,24 @@ def safe_decimal(value: object, default: Decimal = Decimal("0")) -> Decimal:
         cleaned = str(value).strip()
         if not cleaned or cleaned.lower() in ("nan", "none", "inf", "-inf"):
             return default
-        # Detect accounting-style parenthetical negatives: (1,234.56)
-        is_negative = cleaned.startswith("(") and cleaned.endswith(")")
+        # Detect accounting-style parenthetical negatives: (1,234.56).
+        # Sprint 824: test after dropping currency signs and spaces — checking
+        # the raw string missed "$(2,000.00)", which parsed as +2,000.
+        bare = re.sub(r"[$\s]", "", cleaned)
+        is_negative = bare.startswith("(") and bare.endswith(")")
         cleaned = re.sub(r"[,$\s()%]", "", cleaned)
         if cleaned.startswith("-") or cleaned.endswith("-"):
             cleaned = "-" + cleaned.strip("-")
             is_negative = True
         elif is_negative and not cleaned.startswith("-"):
             cleaned = "-" + cleaned
-        return Decimal(cleaned)
+        result = Decimal(cleaned)
     except (InvalidOperation, ValueError, TypeError):
         return default
+    # Sprint 824: "Infinity", "-Infinity", "sNaN" etc. parse as non-finite
+    # Decimals — the string check above only knew "inf". A non-finite amount is
+    # never a monetary value; treat it like any other unparseable cell.
+    return result if result.is_finite() else default
 
 
 def safe_float(value: object) -> float:
@@ -101,8 +108,10 @@ def safe_float(value: object) -> float:
         s = value.strip()
         if not s:
             return 0.0
-        # Detect accounting-style parenthetical negatives: (1,234.56)
-        is_negative = s.startswith("(") and s.endswith(")")
+        # Detect accounting-style parenthetical negatives: (1,234.56) — after
+        # dropping currency signs, so "$(2,000.00)" stays negative (Sprint 824).
+        bare = re.sub(r"[$\s]", "", s)
+        is_negative = bare.startswith("(") and bare.endswith(")")
         cleaned = re.sub(r"[,$\s()%]", "", s)
         if cleaned.startswith("-") or cleaned.endswith("-"):
             cleaned = "-" + cleaned.strip("-")
@@ -110,9 +119,10 @@ def safe_float(value: object) -> float:
         elif is_negative and not cleaned.startswith("-"):
             cleaned = "-" + cleaned
         try:
-            return float(cleaned)
+            f = float(cleaned)
         except (ValueError, TypeError):
             return 0.0
+        return f if math.isfinite(f) else 0.0
 
     return 0.0
 

@@ -8,6 +8,7 @@ Two-phase workflow:
 
 import asyncio
 import logging
+import math
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
@@ -173,6 +174,18 @@ def _run_evaluation(
     }
 
 
+def _require_finite(**values: Optional[float]) -> None:
+    """Reject nan/inf form values (Sprint 824).
+
+    FastAPI accepts "nan" and "inf" for float fields. They either flowed into
+    the result and broke JSON serialisation (a 500 after the handler returned)
+    or silently became 0 — neither is an answer an auditor should get.
+    """
+    bad = [name for name, value in values.items() if value is not None and not math.isfinite(value)]
+    if bad:
+        raise HTTPException(status_code=422, detail=f"Must be a finite number: {', '.join(sorted(bad))}")
+
+
 @router.post("/audit/sampling/design", response_model=SamplingDesignResponse)
 @limiter.limit(RATE_LIMIT_AUDIT)
 async def sampling_design(
@@ -203,6 +216,12 @@ async def sampling_design(
     # Sprint 678: count sampling uploads toward the monthly quota.
     check_upload_limit(current_user, db)
 
+    _require_finite(
+        confidence_level=confidence_level,
+        tolerable_misstatement=tolerable_misstatement,
+        expected_misstatement=expected_misstatement,
+        stratification_threshold=stratification_threshold,
+    )
     if method not in ("mus", "random"):
         raise HTTPException(status_code=422, detail="Method must be 'mus' or 'random'")
     if confidence_level < 0.50 or confidence_level > 0.99:
@@ -286,6 +305,13 @@ async def sampling_evaluate(
     Phase 2 of 2: Upload completed sample with audited amounts.
     Returns projected misstatement, upper error limit, and conclusion.
     """
+    _require_finite(
+        confidence_level=confidence_level,
+        tolerable_misstatement=tolerable_misstatement,
+        expected_misstatement=expected_misstatement,
+        population_value=population_value,
+        sampling_interval=sampling_interval,
+    )
     if method not in ("mus", "random"):
         raise HTTPException(status_code=422, detail="Method must be 'mus' or 'random'")
     if population_value <= 0:

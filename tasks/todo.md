@@ -265,7 +265,9 @@
 > whole-project mypy run is possible. Harmless in CI (Linux). Delete when convenient.
 
 ### Sprint 823: Seven of the eighteen tools have never been exercised against realistic input
-**Status:** PENDING.
+**Status:** PARTIAL — discovery done 2026-10-23 (**58 findings, 21 P1**, register in
+[`reports/sprint-823-discovery-2026-10-23.md`](../reports/sprint-823-discovery-2026-10-23.md));
+remediation split into Sprints 824–827. Generator registration (items 3 and 5) not yet done.
 **Priority:** **P1 for discovery** — not a known defect, but the highest-yield unexamined
 surface in the product. The full-spectrum review found three P1s in its first hour of doing
 exactly this, on fewer than 70 synthetic accounts.
@@ -304,18 +306,87 @@ The synthetic framework predates that expansion and was never extended to it. So
 the framework has never looked at are the *newest* ones — the least-exercised code in the
 product, reached through a UI that presents them identically to the mature eleven.
 
-- [ ] Build a realistic fixture per uncovered tool, from each engine's own input dataclass
+- [x] Build a realistic fixture per uncovered tool, from each engine's own input dataclass
       (the pattern used for `W2ReconciliationConfig` in Sprint 811)
-- [ ] Drive each of the seven engines end-to-end and record the output, not just the absence
+- [x] Drive each of the seven engines end-to-end and record the output, not just the absence
       of an exception — A-5 returned `0.0` happily for the life of the product
 - [ ] Register each generator in `tests/anomaly_framework/registry.py` and add its row to
       `COVERAGE_MAP.md`, which `test_coverage_map.py` already enforces
-- [ ] File each abnormal output as a finding with its measurement, in the A-1…A-6 style
+- [x] File each abnormal output as a finding with its measurement, in the A-1…A-6 style
 - [ ] Then the remaining eleven, which have generators but whose *application* was never
       exercised end-to-end either
 - [ ] **CEO, after the engineering half:** judge whether the output is professionally useful
       to a practitioner. That part is not mechanisable and is the half the action item was
       really asking for.
+
+**What the discovery found, in one paragraph.** The review's premise held: the least-exercised
+code had the most defects. Statistical sampling — which *had* generators — could flip an audit
+conclusion from fail to pass (S1). Fixed-asset depreciation recalculation flags every correct
+declining-balance asset (A1). The intercompany elimination entry for revenue/expense is
+reversed (I1). Three 1099 rules are wrong in ways that change whether a form is due (F1–F3). A
+shared-parser bug read `$(2,000.00)` as +2,000 in every engine (P-1). The full register, with
+reproductions, actual vs expected values and code locations, is in the report.
+
+
+
+### Sprint 824: Statistical sampling evaluation and the shared amount parser
+**Status:** IN REVIEW — 2026-10-23. Sprint 823 findings P-1, P-2, S1, S2, S4, S5, S7, S8, S9.
+**Priority:** **P1** — S1 changed an audit conclusion.
+
+- [x] **S1 — top stratum.** An item at or above the sampling interval is examined with certainty,
+      so its actual misstatement enters the projection with no tainting projection and no
+      allowance. Reproduced and fixed: the review case now reports UEL **$260,000 "fail"**
+      (was $234,500 "pass"). Five existing fixtures placed their errors on items *exactly equal*
+      to the interval — top-stratum items under the corrected rule — and were rescaled to
+      sub-interval items with identical taintings, so every figure they assert is unchanged.
+- [x] **S2/S7 — sample value.** `_parse_evaluation_errors` now totals every evaluated item; MUS
+      reports it as sample value and the random ratio estimate uses it as its denominator.
+- [x] **S4/S5 — unreadable audited amounts** are unassessed (counted in
+      `skipped_missing_audited`), not a 100% misstatement or an infinite one.
+- [x] **S8** — MUS echoes the expected misstatement it was given.
+- [x] **S9** — both sampling routes reject non-finite form values with a 422.
+- [x] **P-1/P-2 — shared parser.** `safe_decimal` and `safe_float` test for parentheses after
+      dropping `$` and spaces, and return the default for any non-finite result.
+- Tests: 6 engine tests (all fail on the old code), 4 route tests, `test_safe_decimal.py`.
+
+**Not done here — methodology decisions (Sprint 825):** S3 (zero-error random evaluation always
+passes) and S6 (understatements evaluated as overstatements) need a chosen method — e.g. a
+classical-variables evaluation with a sample standard deviation, and a separate understatement
+bound — not a patch.
+
+**Commit SHA:** TBD.
+
+---
+
+### Sprint 825: Sampling methodology decisions (S3, S6)
+**Status:** PENDING — needs a practitioner's choice of method. See the Sprint 823 report.
+
+**Commit SHA:** TBD.
+
+---
+
+### Sprint 826: Tax tools — 1099 rules, W-2 coverage, book-to-tax loss years
+**Status:** PENDING. Sprint 823 findings F0–F8, W1–W10, B1–B6.
+**Priority:** **P1** — F1–F3 change whether a 1099 is due; W2 flags a correct HSA contribution
+HIGH with an excise-tax message.
+
+Engineering-only items first (F0, F2, F3, F6, F7, W3–W10, B2–B5). Statutory figures (F1's $10
+royalty threshold, W1's SIMPLE catch-up, W2's HSA catch-up, F5's possible 2026 threshold change)
+go through Sprint 793b's practitioner confirmation like the rest of the tables. B1 (NOL and
+valuation allowance) needs a scope call.
+
+**Commit SHA:** TBD.
+
+---
+
+### Sprint 827: Fixed assets, intercompany, SoD, cash flow projector
+**Status:** PENDING. Sprint 823 findings A1–A8, I1–I5, D1–D2, C1–C6, P-3.
+**Priority:** **P1** — A1 and I1 produce wrong output on correct input for every DDB register and
+every IC revenue/expense pair.
+
+**Commit SHA:** TBD.
+
+---
 
 ### Sprint 812: Nineteen rate-limited routes 500 on every call
 **Status:** IN REVIEW — code complete 2026-10-23; post-deploy verification pending.

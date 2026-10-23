@@ -438,6 +438,9 @@ def evaluate_mus_sample_stringer(
     population_value: float,
     sample_size: int,
     sample_items: list[SelectedSample] | None = None,
+    *,
+    expected_misstatement: float = 0.0,
+    sample_value: float | None = None,
 ) -> SampleEvaluationResult:
     """Evaluate MUS sample using the Stringer bound method.
 
@@ -461,19 +464,25 @@ def evaluate_mus_sample_stringer(
     # Basic precision (even with zero errors)
     basic_precision = sampling_interval * confidence_factor
 
-    # Calculate taintings
-    taintings: list[float] = []
-    total_misstatement = 0.0
+    # Sprint 824: an item whose recorded amount is at or above the sampling
+    # interval is selected with certainty — it is examined, not sampled. Its
+    # actual misstatement enters the projection as-is, with no tainting
+    # projection and no sampling-risk allowance (AICPA Audit Sampling Guide).
+    # Projecting it as tainting x interval understated a $50,000 error on a
+    # $250,000 item at a $70,000 interval as $14,000 — enough to turn a "fail"
+    # into a "pass".
+    sampled_errors = [e for e in errors if abs(e.recorded_amount) < sampling_interval]
+    top_stratum_errors = [e for e in errors if abs(e.recorded_amount) >= sampling_interval]
 
-    for error in errors:
-        total_misstatement += error.misstatement
-        taintings.append(error.tainting)
+    total_misstatement = math.fsum(e.misstatement for e in errors)
 
     # Rank taintings from largest to smallest (Stringer method)
-    taintings_ranked = sorted(taintings, reverse=True)
+    taintings_ranked = sorted((e.tainting for e in sampled_errors), reverse=True)
 
-    # Projected misstatement
-    projected_misstatement = math.fsum(t * sampling_interval for t in taintings_ranked)
+    # Projected misstatement: sampled errors projected over the interval, plus
+    # the top stratum's actual misstatement.
+    top_stratum_misstatement = math.fsum(abs(e.misstatement) for e in top_stratum_errors)
+    projected_misstatement = math.fsum(t * sampling_interval for t in taintings_ranked) + top_stratum_misstatement
 
     # Incremental allowance.
     #
@@ -510,9 +519,12 @@ def evaluate_mus_sample_stringer(
     upper_error_limit = basic_precision + projected_misstatement + incremental_allowance
 
     # Sample value — Sprint 684: prefer the full selected-sample sum when
-    # supplied. Falls back to the error-only sum for backward compatibility
-    # with callers that haven't yet threaded ``sample_items`` through.
-    if sample_items is not None:
+    # supplied. Sprint 824: ``evaluate_sample`` now passes the evaluated
+    # sample's total directly; the error-only fallback remains for callers
+    # that supply neither.
+    if sample_value is not None:
+        pass
+    elif sample_items is not None:
         sample_value = math.fsum(abs(s.recorded_amount) for s in sample_items)
     else:
         sample_value = math.fsum(e.recorded_amount for e in errors) if errors else 0.0
@@ -541,7 +553,7 @@ def evaluate_mus_sample_stringer(
         method="mus",
         confidence_level=confidence_level,
         tolerable_misstatement=tolerable_misstatement,
-        expected_misstatement=0.0,
+        expected_misstatement=expected_misstatement,
         population_value=population_value,
         sample_size=sample_size,
         sample_value=sample_value,
@@ -798,6 +810,7 @@ def _parse_evaluation_errors(
     errors: list[SampleError] = []
     evaluated_count = 0
     skipped_missing_audited = 0
+    evaluated_recorded_total = Decimal("0")
 
     for i, row in enumerate(rows):
         try:
@@ -816,12 +829,21 @@ def _parse_evaluation_errors(
                 skipped_missing_audited += 1
                 continue
 
-            recorded = safe_decimal(raw_recorded)
-            audited = safe_decimal(raw_audited)
+            # Sprint 824: parse with no default. An audited value that is not a
+            # number ("see note", "Infinity") used to become 0 and be scored as a
+            # 100% misstatement; it is an unassessed item, not an error.
+            recorded = safe_decimal(raw_recorded, default=None)
+            audited = safe_decimal(raw_audited, default=None)
         except (ValueError, TypeError):
+            continue
+        if recorded is None:
+            continue
+        if audited is None:
+            skipped_missing_audited += 1
             continue
 
         evaluated_count += 1
+        evaluated_recorded_total += abs(recorded)
 
         misstatement = recorded - audited
         if abs(misstatement) < 0.005:  # Tolerance for rounding
@@ -846,7 +868,7 @@ def _parse_evaluation_errors(
             )
         )
 
-    return errors, evaluated_count, skipped_missing_audited
+    return errors, evaluated_count, skipped_missing_audited, float(evaluated_recorded_total)
 
 
 def evaluate_sample(
@@ -866,7 +888,19 @@ def evaluate_sample(
     4. Determine Pass/Fail vs tolerable misstatement
     """
     column_names, rows = parse_uploaded_file(file_bytes, filename)
-    errors, evaluated_count, skipped_missing_audited = _parse_evaluation_errors(rows, column_names, column_mapping)
+    errors, evaluated_count, skipped_missing_audited, evaluated_value = _parse_evaluation_errors(
+        rows, column_names, column_mapping
+    )
+
+    # A conclusion needs at least one assessed item. Since unreadable audited
+    # amounts became "unassessed" rather than 100% misstatements, a file in
+    # which none could be read would otherwise evaluate an empty sample and
+    # report "pass" (PR #205 review).
+    if evaluated_count == 0:
+        raise ValueError(
+            "No sample item could be evaluated: every row is missing a readable recorded or audited "
+            "amount. Check the audited amount column before drawing a conclusion."
+        )
 
     # Build missing audited amount warning if threshold exceeded
     MISSING_AUDITED_THRESHOLD = 0.10  # 10% of evaluated population
@@ -902,6 +936,8 @@ def evaluate_sample(
             tolerable_misstatement=config.tolerable_misstatement,
             population_value=population_value,
             sample_size=sample_size,
+            expected_misstatement=config.expected_misstatement,
+            sample_value=evaluated_value,
         )
         result.skipped_missing_audited = skipped_missing_audited
         result.evaluated_count = evaluated_count
@@ -913,7 +949,10 @@ def evaluate_sample(
         confidence_factor = get_confidence_factor(config.confidence_level)
 
         total_misstatement = math.fsum(e.misstatement for e in errors)
-        sample_value = math.fsum(abs(e.recorded_amount) for e in errors) if errors else 0.0
+        # Sprint 824: the ratio estimate's denominator is the whole evaluated
+        # sample, not the error rows — one $1,000 error on an $8,372 item in a
+        # $1.03M sample projected to $597,198 instead of ~$4,868.
+        sample_value = evaluated_value
 
         # Ratio projection: projected = (total_misstatement / sample_value) * population_value
         if sample_value > 0:
