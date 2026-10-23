@@ -39,13 +39,13 @@ Status column: **Fixed (824)** = remediated in Sprint 824; otherwise the sprint 
 | ID | Sev | Finding | Status |
 |---|---|---|---|
 | F0 | P2 | `"1e400"` amounts 500 on W-2, 1099 and book-to-tax: finite for `_to_decimal`, then `quantize` raises `InvalidOperation` (an `ArithmeticError`, uncaught). | Fixed (827) |
-| F1 | P1 | 1099 royalties use the $600 threshold; the 1099-MISC box 2 threshold is **$10**. `form_1099_engine.py:96-100`. | 826 |
-| F2 | P1 | 1099 `payment_date` is never used: payments from 2024-12 and 2026-01 count toward TY2025. | 826 |
-| F3 | P1 | No aggregation by TIN: two vendor IDs sharing a TIN with $400 each → no 1099 (should be one $800 NEC). | 826 |
+| F1 | P1 | 1099 royalties use the $600 threshold; the 1099-MISC box 2 threshold is **$10**. `form_1099_engine.py:96-100`. | Fixed (826) |
+| F2 | P1 | 1099 `payment_date` is never used: payments from 2024-12 and 2026-01 count toward TY2025. | Fixed (826) |
+| F3 | P1 | No aggregation by TIN: two vendor IDs sharing a TIN with $400 each → no 1099 (should be one $800 NEC). | Fixed (826) |
 | F4 | P1 | Attorney fees have no correct path: `legal` lands on MISC box 10 (gross proceeds), and NEC + corporation is excluded entirely. | 826 |
 | F5 | P1* | TY2026 still uses $600 for NEC/MISC; the agent believes P.L. 119-21 raised it to $2,000 for payments after 2025-12-31. **Unconfirmed — practitioner.** | 793b |
-| F6 | P2 | MISC thresholds applied to the combined total, not per box (rents 400 + medical 300 → a 700 MISC). | 826 |
-| F7 | P2 | Category `other` → MISC "box 0" (does not exist; other income is box 3). | 826 |
+| F6 | P2 | MISC thresholds applied to the combined total, not per box (rents 400 + medical 300 → a 700 MISC). | Fixed (826) |
+| F7 | P2 | Category `other` → MISC "box 0" (does not exist; other income is box 3). | Fixed (826) |
 | F8 | P2 | Payments to governments and tax-exempt entities reported as NEC. | 826 |
 | W1 | P1 | SIMPLE IRA catch-up uses the 401(k) figures ($7,500 instead of $3,500; age 60–63 $5,250). `w2_reconciliation_engine.py:531-534`. | 826 (figures via 793b) |
 | W2 | P1 | HSA limit ignores the age-55 $1,000 catch-up — a correct contribution is flagged HIGH with an excise-tax message. | 826 |

@@ -156,7 +156,10 @@ class TestAggregation:
             tax_year=2026,
             vendors=[_vendor()],
             payments=[
-                _payment(amount="500", category=PaymentCategory.RENTS),
+                # Sprint 826 (F6): rents must reach $600 on their own — this test
+                # used $500 + $400, which is not a filing at all under per-box
+                # thresholds. Once one box qualifies, every box is reported.
+                _payment(amount="700", category=PaymentCategory.RENTS),
                 _payment(amount="400", category=PaymentCategory.LEGAL),
             ],
         )
@@ -164,7 +167,7 @@ class TestAggregation:
         assert len(result.candidates) == 1
         candidate = result.candidates[0]
         assert candidate.form_type == "1099-MISC"
-        assert candidate.total_reportable == Decimal("900.00")
+        assert candidate.total_reportable == Decimal("1100.00")
         boxes = {b.category: b for b in candidate.box_amounts}
         assert boxes["rents"].box == 1
         assert boxes["legal"].box == 10
@@ -222,7 +225,9 @@ class TestSummary:
             tax_year=2026,
             vendors=[
                 _vendor(vendor_id="V1", name="Vendor A"),
-                _vendor(vendor_id="V2", name="Vendor B"),
+                # Distinct TIN: with the shared default these are one payee
+                # (Sprint 826, F3 — filing is per TIN, not per vendor record).
+                _vendor(vendor_id="V2", name="Vendor B", tin="98-7654321"),
             ],
             payments=[
                 _payment(vendor_id="V1", amount="1000"),
@@ -264,3 +269,63 @@ class TestThresholdConstants:
         assert FORM_THRESHOLDS[FormType.NEC] == Decimal("600")
         assert FORM_THRESHOLDS[FormType.MISC] == Decimal("600")
         assert FORM_THRESHOLDS[FormType.INT] == Decimal("10")
+
+
+class TestSprint826:
+    """Sprint 823 discovery findings F1, F2, F3, F6, F7."""
+
+    def test_royalties_report_at_ten_dollars(self):
+        """F1: a $450 royalty produced no 1099-MISC (it used the $600 threshold)."""
+        cfg = Form1099Config(
+            tax_year=2025, vendors=[_vendor()], payments=[_payment(amount="450", category=PaymentCategory.ROYALTIES)]
+        )
+        (candidate,) = prepare_1099s(cfg).candidates
+        assert candidate.form_type == "1099-MISC"
+        assert candidate.box_amounts[0].box == 2
+
+    def test_misc_threshold_is_per_box_not_combined(self):
+        """F6: rents $400 + medical $300 is not a $700 filing."""
+        cfg = Form1099Config(
+            tax_year=2025,
+            vendors=[_vendor()],
+            payments=[
+                _payment(amount="400", category=PaymentCategory.RENTS),
+                _payment(amount="300", category=PaymentCategory.MEDICAL),
+            ],
+        )
+        assert prepare_1099s(cfg).candidates == []
+
+    def test_other_income_is_misc_box_3(self):
+        """F7: it was reported in box 0, which does not exist."""
+        cfg = Form1099Config(
+            tax_year=2025, vendors=[_vendor()], payments=[_payment(amount="900", category=PaymentCategory.OTHER)]
+        )
+        (candidate,) = prepare_1099s(cfg).candidates
+        assert candidate.box_amounts[0].box == 3
+
+    def test_payments_dated_outside_the_tax_year_are_excluded(self):
+        """F2: payment_date was never read; Dec 2024 and Jan 2026 counted toward 2025."""
+        cfg = Form1099Config(
+            tax_year=2025,
+            vendors=[_vendor()],
+            payments=[
+                VendorPayment(vendor_id="V1", amount=Decimal("400"), payment_date="2024-12-20"),
+                VendorPayment(vendor_id="V1", amount=Decimal("400"), payment_date="2025-03-01"),
+                VendorPayment(vendor_id="V1", amount=Decimal("400"), payment_date="2026-01-05"),
+            ],
+        )
+        result = prepare_1099s(cfg)
+        assert result.candidates == []
+        assert result.summary["payments_outside_tax_year"] == 2
+
+    def test_vendor_records_sharing_a_tin_are_one_payee(self):
+        """F3: $400 + $400 under two vendor IDs with one TIN produced no 1099."""
+        cfg = Form1099Config(
+            tax_year=2025,
+            vendors=[_vendor(vendor_id="V1"), _vendor(vendor_id="V1-OLD", name="Test Vendor (old record)")],
+            payments=[_payment(vendor_id="V1", amount="400"), _payment(vendor_id="V1-OLD", amount="400")],
+        )
+        (candidate,) = prepare_1099s(cfg).candidates
+        assert candidate.total_reportable == Decimal("800.00")
+        assert candidate.payment_count == 2
+        assert any("V1, V1-OLD" in reason for reason in candidate.review_reasons)

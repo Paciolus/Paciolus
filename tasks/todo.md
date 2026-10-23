@@ -375,6 +375,25 @@ royalty threshold, W1's SIMPLE catch-up, W2's HSA catch-up, F5's possible 2026 t
 go through Sprint 793b's practitioner confirmation like the rest of the tables. B1 (NOL and
 valuation allowance) needs a scope call.
 
+- [x] **F0** — done in Sprint 827 (huge-but-finite amounts → 400 on all promoted tools).
+- [x] **F2** — dated payments outside the tax year are excluded and counted
+      (`summary.payments_outside_tax_year`); undated payments still count, as before.
+- [x] **F3** — payments aggregate per payee TIN; the candidate names every vendor record it
+      combined. Two existing tests changed for a stated reason: one fixture gave two "different"
+      vendors the same TIN (they are one payee), and one asserted a $500 rents + $400 legal MISC
+      filing — the F6 defect itself.
+- [x] **F6 + F1** — 1099-MISC thresholds are per box (rents/other/medical/attorney $600,
+      royalties $10); a MISC is due when any box qualifies. The $10 royalty figure is
+      long-standing and not indexed, but goes on the 793b confirmation list with the rest.
+- [x] **F7** — `other` → 1099-MISC box 3.
+- [ ] **W1/W2 — design question first.** Both need new statutory fields (SIMPLE catch-up 50+ and
+      60–63; HSA age-55 catch-up). Adding them to `StatutoryLimits` means a 2026 request that
+      today fully overrides the 11 existing fields would be refused (the new fields would be
+      "missing", and Sprint 811 deliberately refuses rather than falls back). Decide with 793b:
+      optional fields that disable only their own check when absent, or a breaking change to
+      the override contract.
+- [ ] F4, F5, F8, F9, W3–W10, B1–B6.
+
 **Commit SHA:** TBD.
 
 ---
