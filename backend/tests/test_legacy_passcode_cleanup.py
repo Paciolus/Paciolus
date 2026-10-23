@@ -23,6 +23,7 @@ from scripts.invalidate_legacy_passcode_shares import (
     find_legacy_shares,
     invalidate_legacy_shares,
 )
+from tests.helpers.contract_assertions import assert_signature
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -213,11 +214,14 @@ class TestRetentionCleanupIntegration:
 
 
 class TestScriptEntrypoint:
-    def test_script_module_is_importable(self):
+    def test_script_module_contract(self):
+        """Sprint 810 (T-3): signatures, not `callable`."""
         import scripts.invalidate_legacy_passcode_shares as mod
 
-        assert callable(mod.find_legacy_shares)
-        assert callable(mod.invalidate_legacy_shares)
+        assert_signature(mod.find_legacy_shares, ["db"], allow_extra=True)
+        assert_signature(mod.invalidate_legacy_shares, ["db"], allow_extra=True)
+        # T-3 exemption: a no-argument CLI entrypoint. There is no signature to
+        # pin, and its behaviour is covered by the tests above it in this file.
         assert callable(mod.main)
 
     @pytest.mark.parametrize(

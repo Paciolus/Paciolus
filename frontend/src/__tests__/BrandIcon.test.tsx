@@ -14,7 +14,7 @@ describe('BrandIcon', () => {
   })
 
   it('applies className prop', () => {
-    const { container } = render(<BrandIcon name="padlock" className="w-4 h-4 text-sage-500" />)
+    const { container } = render(<BrandIcon name="padlock" className="w-4 h-4 text-theme-success-text" />)
     const svg = container.querySelector('svg')
     expect(svg).toHaveClass('w-4')
     expect(svg).toHaveClass('h-4')

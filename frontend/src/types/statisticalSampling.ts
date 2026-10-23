@@ -21,8 +21,8 @@ export const SAMPLING_METHOD_LABELS: Record<SamplingMethod, string> = {
 } as const
 
 export const SAMPLING_CONCLUSION_COLORS: Record<SamplingConclusion, string> = {
-  pass: 'text-sage-500',
-  fail: 'text-clay-500',
+  pass: 'text-theme-success-text',
+  fail: 'text-theme-error-text',
 } as const
 
 export const SAMPLING_CONCLUSION_BG: Record<SamplingConclusion, string> = {

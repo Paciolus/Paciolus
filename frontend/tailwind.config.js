@@ -101,10 +101,14 @@ const config = {
         },
       },
       fontFamily: {
-        // Oat & Obsidian Typography
-        serif: ['Merriweather', 'Georgia', 'serif'],
-        sans: ['Lato', 'system-ui', '-apple-system', 'sans-serif'],
-        mono: ['JetBrains Mono', 'Menlo', 'Monaco', 'monospace'],
+        // Oat & Obsidian Typography.
+        // Sprint 807: the families come from `next/font/google` in the root
+        // layout, which self-hosts them and sets these custom properties. The
+        // literal names stay in the stack as a fallback for any surface that
+        // renders outside the layout (e.g. an email preview).
+        serif: ['var(--font-serif)', 'Merriweather', 'Georgia', 'serif'],
+        sans: ['var(--font-sans)', 'Lato', 'system-ui', '-apple-system', 'sans-serif'],
+        mono: ['var(--font-mono)', 'JetBrains Mono', 'Menlo', 'Monaco', 'monospace'],
       },
       borderColor: {
         theme: {

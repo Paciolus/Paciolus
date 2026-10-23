@@ -161,9 +161,9 @@ export function LeadSheetSection({
             </h3>
             <p className="text-xs text-content-tertiary">
               {data.total_accounts} accounts • {data.summaries.length} lead sheets
-              {data.unmapped_count > 0 && (
+              {data.unclassified_count > 0 && (
                 <span className="text-clay-400">
-                  {' '}• {data.unmapped_count} unclassified
+                  {' '}• {data.unclassified_count} unclassified
                 </span>
               )}
             </p>

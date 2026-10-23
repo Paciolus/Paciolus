@@ -38,12 +38,25 @@ export default function GlobalError({
 }) {
   return (
     <html lang="en" data-theme="dark">
-      <head>
-        <link
-          href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=Lato:wght@400;700&display=swap"
-          rel="stylesheet"
-        />
-      </head>
+      {/*
+        Sprint 807 (findings C-1 / C-2): the `<link>` to
+        `fonts.googleapis.com` that used to sit here is gone.
+
+        It was missed by the review and by the first pass of this sprint,
+        because both looked at `globals.css` and the CSP and this is neither —
+        a `<link>` tag inside a component. `scripts/lint_subprocessors.py` now
+        scans TSX for third-party `<link href>` as well, so the class is closed
+        rather than this instance.
+
+        No webfont replaces it, deliberately. This component renders when the
+        root layout itself has thrown, which means it replaces that layout
+        entirely and never receives the `next/font` CSS variables. Reaching for
+        a remote stylesheet on the one page whose job is to render instantly —
+        in the state where the application has already failed — is the wrong
+        trade even setting the privacy problem aside. The `fontFamily` values
+        below name the brand families first and fall through to the system
+        stack, which is what a visitor sees here now.
+      */}
       <body
         style={{
           margin: 0,

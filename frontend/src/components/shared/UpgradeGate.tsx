@@ -73,7 +73,7 @@ export function UpgradeGate({ toolName, children, message }: UpgradeGateProps) {
         >
           View Plans
         </Link>
-        <p className="text-content-muted text-sm mt-4">
+        <p className="text-content-tertiary text-sm mt-4">
           Current plan: <span className="font-medium">{TIER_DISPLAY_NAMES[tier] ?? tier}</span>
         </p>
       </div>

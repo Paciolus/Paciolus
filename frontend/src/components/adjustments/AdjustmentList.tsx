@@ -314,7 +314,7 @@ function EntryCard({
                   <button
                     onClick={handleDelete}
                     disabled={isUpdating}
-                    className="px-3 py-1.5 bg-clay-500/10 border border-clay-500/20 rounded-sm text-clay-500 text-sm hover:bg-clay-500/20 transition-colors disabled:opacity-50 ml-auto"
+                    className="px-3 py-1.5 bg-clay-500/10 border border-clay-500/20 rounded-sm text-theme-error-text text-sm hover:bg-clay-500/20 transition-colors disabled:opacity-50 ml-auto"
                   >
                     Delete
                   </button>

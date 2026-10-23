@@ -17,6 +17,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from tests.helpers.contract_assertions import assert_signature
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from models import UserTier
@@ -1395,26 +1397,35 @@ class TestEntitlementEnforcement:
 
     # --- check_tool_access returns callable ---
 
-    def test_check_tool_access_returns_callable(self):
+    def test_check_tool_access_returns_a_usable_dependency(self):
+        """
+        Sprint 810 (T-3): `check_tool_access` is a factory returning a FastAPI
+        dependency, so `callable(dep)` is a *legitimate* thing to care about —
+        but on its own it does not distinguish a working dependency from
+        `lambda: None`. Pin the dependency's own signature, since that is what
+        FastAPI resolves against.
+        """
         from shared.entitlement_checks import check_tool_access
 
         dep = check_tool_access("journal_entry_testing")
-        assert callable(dep)
+        assert_signature(dep, ["user", "db"], allow_extra=True)
 
     # --- check_format_access returns callable ---
 
-    def test_check_format_access_returns_callable(self):
+    def test_check_format_access_returns_a_usable_dependency(self):
+        """Sprint 810 (T-3): as above — the returned dependency's signature is the contract."""
         from shared.entitlement_checks import check_format_access
 
         dep = check_format_access("ods")
-        assert callable(dep)
+        assert_signature(dep, ["user", "db"], allow_extra=True)
 
     # --- check_workspace_access is callable ---
 
-    def test_check_workspace_access_callable(self):
+    def test_check_workspace_access_contract(self):
+        """Sprint 810 (T-3): signature, not presence."""
         from shared.entitlement_checks import check_workspace_access
 
-        assert callable(check_workspace_access)
+        assert_signature(check_workspace_access, ["user", "db"])
 
     # --- Error response structure (hard mode raises HTTPException) ---
 

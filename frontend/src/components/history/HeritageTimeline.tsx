@@ -187,7 +187,7 @@ export function HeritageTimeline({ activities, onReRun }: HeritageTimelineProps)
                   <ul className="space-y-1">
                     {STORED_METADATA.map((item) => (
                       <li key={item} className="text-content-tertiary text-xs font-sans flex items-start gap-1.5">
-                        <span className="text-sage-500/50 mt-0.5">-</span>
+                        <span className="text-theme-success-text/50 mt-0.5">-</span>
                         {item}
                       </li>
                     ))}
@@ -205,7 +205,7 @@ export function HeritageTimeline({ activities, onReRun }: HeritageTimelineProps)
                   <ul className="space-y-1">
                     {NOT_STORED.map((item) => (
                       <li key={item} className="text-content-tertiary text-xs font-sans flex items-start gap-1.5">
-                        <span className="text-clay-500/50 mt-0.5">-</span>
+                        <span className="text-theme-error-text/50 mt-0.5">-</span>
                         {item}
                       </li>
                     ))}

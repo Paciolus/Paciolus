@@ -334,7 +334,7 @@ export function ToolShowcase() {
                 All 18 tools · 100 uploads/mo · PDF + Excel + CSV
               </p>
             </div>
-            <div className="flex items-center gap-1 text-sage-500 group-hover:text-sage-400 shrink-0 transition-colors">
+            <div className="flex items-center gap-1 text-theme-success-text group-hover:text-sage-400 shrink-0 transition-colors">
               <span className="font-sans text-xs whitespace-nowrap">Start 7-day trial</span>
               <BrandIcon name="chevron-right" className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
             </div>

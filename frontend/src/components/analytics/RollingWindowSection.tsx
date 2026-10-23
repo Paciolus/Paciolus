@@ -52,8 +52,8 @@ const MOMENTUM_CONFIG: Record<MomentumType, { icon: string; label: string; color
 
 // Trend direction icons
 const TREND_CONFIG: Record<TrendDirection, { icon: string; colorClass: string }> = {
-  positive: { icon: '↑', colorClass: 'text-sage-500' },
-  negative: { icon: '↓', colorClass: 'text-clay-500' },
+  positive: { icon: '↑', colorClass: 'text-theme-success-text' },
+  negative: { icon: '↓', colorClass: 'text-theme-error-text' },
   neutral: { icon: '→', colorClass: 'text-content-tertiary' },
 }
 

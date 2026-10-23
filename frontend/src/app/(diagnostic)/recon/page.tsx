@@ -73,6 +73,7 @@ export default function ReconPage() {
 
                 {/* Grid */}
  <div className="theme-card overflow-hidden">
+                    <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm font-sans">
                         <thead className="bg-surface-card-secondary text-content-secondary">
                             <tr>
@@ -107,6 +108,7 @@ export default function ReconPage() {
                             ))}
                         </tbody>
                     </table>
+                    </div>
                 </div>
 
                 <DisclaimerBox>

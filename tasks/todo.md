@@ -144,6 +144,371 @@
 > The scope is therefore **the six JSON-body hooks only**, which genuinely do not use
 > `useAuditUpload` — they post via `apiPost` with their own fetch logic.
 > Sprints 784–791 archived to `tasks/archive/sprints-784-791-details.md`.
+> **FULL-SPECTRUM IMPROVEMENT REVIEW — 2026-10-22.** Full report:
+> [`reports/full-spectrum-review-2026-10-22.md`](../reports/full-spectrum-review-2026-10-22.md).
+> 22 findings (7 P1 / 8 P2 / 7 P3-or-product-gap), every one produced by **running** the code
+> rather than reading it, against `c12a6dcb`. It deliberately targeted the gaps the DEC review
+> named as uncovered the same day — above all the one the DEC stated plainly: *"no tool was
+> exercised against a real trial balance end-to-end."*
+>
+> Sprints 803–811 below are its actionable output. Order follows the report's own sequencing:
+> **what reaches a customer or an auditor relying on an output**, not what is most interesting.
+>
+> **Out of scope for these sprints, and why:**
+> - **A-7 (2026 statutory figures)** and **A-8 (§179, §168(k), real property, ADS)** need a
+>   practitioner to confirm the numbers and a roadmap call on scope. Sprint 793b still owns the
+>   figures; **Sprint 811 takes the structural half** (year-keyed tables, refuse rather than
+>   fall back), which needs no confirmation.
+> - **T-1 (mypy baseline)** — parked deliberately by the 2026-10-20 worklist. Unchanged.
+> - **T-5 (dependency drift)** — Sprint 786 owns it. Unchanged.
+> - **T-2 (generator coverage floors)** and **D-6 (route loading/error states)** — real, but
+>   they are test/UX volume rather than defects. Left in the backlog rather than padding a
+>   correctness sprint with them.
+> Sprints 803–811 archived to `tasks/archive/sprints-803-811-details.md`.
+>
+> **CODE HEALTH REVIEW — 2026-10-23.** Four parallel read-only passes (backend engines,
+> memos/PDF/exports, routes/data layer, frontend) plus repo hygiene, against
+> `dec-review-2026-10-22-remediation`. Asked for cleanup and efficiency; it also turned up
+> **live defects**, which come first. Sprints 812–822 below are its output, ordered by what a
+> paying customer hits, then by measured cost, then by lines removed.
+>
+> **Verified by direct re-check, not just reported:** 812 (19 routes enumerated on the live
+> `main.app`), 813 item 1 (five `doc.build` calls without `onLaterPages`), 814 item 1 (no
+> `UpgradeGate` in AP/JE pages), 818 (`PricingEstimator`/`PricingCard` imported nowhere),
+> 817 item 6 (`background4.jpg` referenced nowhere). Performance figures in 815 were measured
+> on synthetic data; benchmark scripts were kept in the session scratchpad only.
+>
+> **CEO decisions this review needs** (each blocks the named item, nothing else):
+> 1. **Bulk upload — wire it or remove it** (blocks 817 item 4). ~2,000 frontend lines are
+>    unmounted and the backend route is a stub, yet Enterprise is sold on it. **Interacts with
+>    Sprint 790:** `routes/bulk_upload.py:154` is the *only* caller of `increment_upload_count`,
+>    so removing the route without 790's recorder-based increment leaves quota counting nowhere.
+> 2. **Bank-rec split-match bound** (blocks 815 item 2) — any bound changes which matches can be found.
+> 3. **Round-amount cap ordering** (blocks 819 item 3) — JE/AP/Revenue cap-then-sort, Payroll
+>    sort-then-cap; under the cap they flag different rows.
+> 4. **`engagement_dashboard_memo.py` and `shared/intercompany_resolver.py`** — ship or delete (817 item 3).
+> 5. **`reports/nightly/`** — 1,149 of 3,261 tracked files. Keep committing, or move to CI artifacts?
+
+### Sprint 812: Nineteen rate-limited routes 500 on every call
+**Status:** PENDING.
+**Priority:** **P0** — every Professional/Enterprise org feature is down in production.
+**Source:** Code health review 2026-10-23, routes pass. Re-verified on the live app object.
+
+The handlers declare `request: Any = None` under `@limiter.limit`. FastAPI therefore treats
+`request` as a **query parameter**, slowapi receives `None`, and raises
+`parameter 'request' must be an instance of starlette.requests.Request` → 500. Reproduced on
+`GET /admin/overview`. Introduced by `8372073a` (2026-03-21 mypy cleanup). Tests never saw it
+because `tests/conftest.py:166` sets `limiter.enabled = False`.
+
+Affected (19): `routes/organization.py:86,134,156,233,262,364,395`,
+`routes/admin_dashboard.py:81,140,179,215`, `routes/branding.py:83,103,161`,
+`routes/bulk_upload.py:47`, `routes/export_sharing.py:312,458,495,522`.
+
+**Scope:**
+- [ ] Change each to `request: Request`.
+- [ ] Guard test: for every `APIRoute` whose endpoint is wrapped by `@limiter.limit`, assert
+      `route.dependant.request_param_name` is set and no query param is named `request`.
+      Mechanical — it is the absence of exactly this check that let it sit seven months.
+- [ ] At least one route test per affected router with the limiter **enabled**.
+- [ ] After deploy: confirm live SHA = `main`, then hit `/organization` and `/branding/` on prod.
+
+**Commit SHA:** TBD.
+
+---
+
+### Sprint 813: Memo PDFs — missing footers, ignored branding, and the hand-built skeleton behind both
+**Status:** PENDING.
+**Priority:** **P1** — items 1–2 ship defective PDFs today.
+**Source:** Code health review 2026-10-23, memos/PDF pass.
+
+Only 6 of 20 memo modules use `shared/memo_template.generate_testing_memo`; the other 14 build
+page setup, cover, footer and `doc.build` by hand. Both defects below come from that.
+
+**Scope:**
+1. [ ] **Footer missing after page 1** (S). `currency_memo_generator.py:514`,
+   `expense_category_memo.py:863`, `flux_expectations_memo.py:515`,
+   `population_profile_memo.py:765`, `sampling_memo_generator.py:1276` pass only `onFirstPage`.
+   The cover always ends in a page break, so **every** content page lacks the page number and
+   disclaimer. Confirmed on committed `sample-reports/` 13, 14, 15, 17, 18, 20. Add `onLaterPages`.
+2. [ ] **Enterprise branding ignored by 11 memos** although `routes/export_memos.py:162` sets
+   the ContextVar for all: bank rec, currency, multi-period, preflight, both sampling,
+   three-way match, accrual, expense, flux, population profile. Reproduced with
+   `apply_pdf_branding(footer_text=...)`: JE memo carries it, preflight does not.
+3. [ ] Extract `render_memo(title, ref_prefix, body_builder, *, running_header=None, margins=...)`
+   in `shared/memo_base.py`; route the 14 hand-built memos **and** `generate_testing_memo`
+   through it. Keep each memo's current margins as parameters (they drift 0.75in/1.0in today)
+   so output does not move. ~500–700 lines; closes 1 and 2 permanently.
+4. [ ] `ledger_table_style()` is copied inline 47× — add `font_size`/`extra` params, replace copies.
+5. [ ] `source_line(...)` helper for the 6-line Source block repeated in 10 memos; keep
+   "Source File" vs "Source" as a parameter (no wording change).
+6. [ ] `tests/test_memo_boundary_phrasing.py:101` matches only `*_memo_generator.py`, so
+   accrual/expense/flux/population-profile `*_memo.py` are never scanned. Widen the glob.
+7. [ ] `tests/test_citation_consistency.py` never scans backend PDF producers. Add them; register
+   the unregistered codes cited in customer PDFs (AS 1305, AS 1105, AS 2810, AU-C 320/330/520/570,
+   IFRS 9, ASC 275, ASC 450, 14 ASC codes in the FASB YAML). `anomaly_summary_generator.py:109-115`
+   hard-codes its list — read the registry. No wording changes.
+8. [ ] Engagement ZIP (`engagements_exports.py` ~`:85-110`) ships the anomaly summary **unbranded**
+   while the standalone route brands it; also passes neither engagement nor client, so access
+   check + client lookup run twice.
+9. [ ] Small: cache `create_memo_styles()`; module-constant fonts/fills in `excel_generator.py:327,401`;
+   prefix arg on `generate_reference_number` (replaces 21 `.replace("PAC-", ...)`);
+   point the ~30 `pdf_generator` shim importers at `pdf` directly.
+10. [ ] `generate_sample_reports.py:4076-~4325` `gen_anomaly_summary` re-implements the production
+   PDF with a **drifted** disclaimer. Call `AnomalySummaryGenerator._build_story(...)` instead (~230 lines).
+
+**Commit SHA:** TBD.
+
+---
+
+### Sprint 814: Upload routes — one scaffold, gating in one place
+**Status:** PENDING.
+**Priority:** **P1** — item 1 is a paywall gap; items 2–3 are live inconsistencies.
+**Source:** Code health review 2026-10-23, routes + frontend passes.
+
+Two upload scaffolds exist and have drifted — `services/audit/file_tool_scaffold.py:26`
+(TB + diagnostics only) and `shared/testing_route.py:66` (the six single-file testing tools) —
+and nine routes use neither (`ar_aging`, `bank_reconciliation`, `three_way_match`, `sampling` ×2,
+`audit_flux`, `audit_pipeline`, `audit_preview`, `audit_upload`, `currency`).
+
+**Scope:**
+1. [ ] **`UpgradeGate` missing** on `app/tools/ap-testing/page.tsx` and
+   `journal-entry-testing/page.tsx` (verified). Free users get the full upload UI and a 403
+   after uploading. Confirm whether depreciation/loan-amortization omit it intentionally.
+2. [ ] `testing_route.py:139` never received the Sprint 713 `ArithmeticError` handling → a
+   malformed decimal can still 500 and log at ERROR. `sampling.py:249` doesn't catch `ValueError`.
+3. [ ] Tool-run recording still uses `background_tasks.add_task` in `testing_route.py:124`,
+   `file_tool_scaffold.py:56` and ~7 hand-written routes — the race PR #183 fixed elsewhere
+   (`useAuditUpload.ts:137` refreshes the run list immediately). Record synchronously.
+   *Code-read, not reproduced.*
+4. [ ] Verify then fix: `audit_flux.py:39` has no quota, tool-access or format check — a Free
+   user can likely send PDF/OFX/QBO through flux. Only `audit_pipeline`/`audit_upload` call
+   `enforce_format_access`.
+5. [ ] One scaffold taking `(files, gates, analyze_fn, record_policy)`; migrate all upload routes.
+   **Coordinate with Sprint 790**, whose increment-on-success belongs in the same recorder path.
+
+**Commit SHA:** TBD.
+
+---
+
+### Sprint 815: Engine performance — parse once, prune pairs
+**Status:** PENDING.
+**Priority:** **P1** — a 100k-row GL takes up to 113s today.
+**Source:** Code health review 2026-10-23, engines pass. Measured on synthetic data.
+
+**Scope:**
+1. [ ] **Dates re-parsed 11× per JE entry.** `shared/parsing_helpers.py:141` `parse_date` tries
+   up to 9 formats; `je_testing/analysis.py:1513` `_extract_hour` up to 6. Profile: 1.19M
+   `parse_date` / 8.4M `strptime` = 283 of 302s. Parse once per entry (or a per-run memo):
+   **31s → 6.0s** date-only, **113s → 6.1s** date+time, identical score and flag count.
+   **No process-wide `lru_cache`** — it would retain uploaded values across requests (Zero-Storage).
+   Preserve both existing spellings: `parse_date(a) or parse_date(b)` vs `parse_date(a or b)`
+   treat an unparseable posting date differently. Apply the same to AP (7 sites), Revenue (7),
+   Payroll (4), Three-Way Match, Bank Rec.
+2. [ ] **Bank-rec split match** (`bank_reconciliation.py:668-690`) brute-forces 2–4-row combos;
+   the date filter (`:735`) is skipped at the default tolerance 0, which the route never
+   changes. 2.05s per bank-only txn at 80 unmatched rows; 64.7M combos at 200.
+   **Blocked on CEO decision 2** (cap the pool / date window when tolerance is 0 / meet-in-the-middle).
+3. [ ] Fuzzy name loops (`ap_testing/analysis.py:1463`, `payroll_testing/analysis.py:1877`,
+   `three_way_match_engine.py:1314-1350`): early-exit on `2*min/(la+lb)` and
+   `real_quick_ratio()`/`quick_ratio()` upper bounds. **88.1s → 14.2s** on 2,000 vendors,
+   identical 670 hits. Keep `SequenceMatcher(a, b)` order — swapping gave 668. In 3WM compute
+   vendor score first and skip amount/date work below threshold.
+4. [ ] Hoist date parsing and tolerance `Decimal` out of inner loops: AP fuzzy duplicates
+   `ap_testing/analysis.py:1060-1068`, JE reciprocal `je_testing/analysis.py:2184`.
+5. [ ] Benchmark test (marked `slow`) pinning the 100k-row JE run under a ceiling, so it can't regress.
+
+**Commit SHA:** TBD.
+
+---
+
+### Sprint 816: Engine correctness follow-ups surfaced by the performance pass
+**Status:** PENDING — each item **unverified**; verify before fixing.
+**Priority:** P2.
+**Source:** Code health review 2026-10-23, engines pass.
+
+- [ ] JE reciprocal entries (`je_testing/analysis.py:2217`): `entries_flagged=len(flagged)` counts
+      flags, so a row matched to several partners is counted several times → inflated flag rate.
+      Composite score dedupes by row, so it is unaffected.
+- [ ] JE `apply_column_overrides` (`:2857`) never sets `has_dual_dates` when both dates are
+      mapped by hand.
+- [ ] `currency_engine.py:942`: NaN amount becomes `Decimal("NaN")` instead of going through `safe_decimal`.
+- [ ] FA (`fixed_asset_testing/analysis.py:522,1416`) and Inventory (`inventory_testing/analysis.py:503`)
+      use today's date as reference — same reproducibility defect fixed for AR in RPT-07.
+
+**Commit SHA:** TBD.
+
+---
+
+### Sprint 817: Dead-code sweep
+**Status:** PENDING.
+**Priority:** P2 — ~7,000 lines with no runtime effect except bundle size and reader cost.
+**Source:** Code health review 2026-10-23. Every item grep-verified repo-wide; re-grep before deleting.
+
+1. [ ] **Frontend (~6,000 lines), delete with their tests:**
+   analytics `TrendSection`, `TrendSummaryCard`, `TrendSparkline`, `IndustryMetricsSection`,
+   `RollingWindowSection` + `hooks/useTrends`, `useRollingWindow`, `useIndustryRatios`;
+   marketing `ToolSlideshow`, `ToolShowcase`, `ProductPreview`, `ProofStrip` (fix the stale
+   comment at `app/(marketing)/page.tsx:34`); workspace `QuickSwitcher`, `CommandBar`,
+   `WorkspaceHeader`, `QuickActionsBar`, `RecentHistoryMini` + `quickSwitcherOpen` in
+   `WorkspaceContext.tsx:133,166`; `comparison/ComparisonSection`, `adjustments/AdjustmentSection`
+   + `hooks/useAdjustments`, `trialBalance/GuestMarketingView`, `shared/ShareExportModal`,
+   `hooks/usePriorPeriod`, `engagement/EngagementList`, `shared/PageEmptyState`,
+   `auth/ProtectedRoute`, `utils/animations`.
+2. [ ] **Backend modules:** `shared/derived_metrics.py`, `shared/concentration_metrics.py` (no
+   importers, no tests); test-only `shared/alert_checker.py`, `shared/route_errors.py`,
+   `shared/report_layout.py` (`wrap_cell`), `shared/tier_display.py`, `billing/guards.py`;
+   `shared/round_amounts.detect_round_amount` (unless 819 item 3 adopts it).
+3. [ ] **Product decision 4:** `engagement_dashboard_memo.py` (298 lines, no route since Sprint 564)
+   and `shared/intercompany_resolver.py` (Sprint 764, never called — `Engagement.intercompany_counterparties`
+   is stored and exposed but unused).
+4. [ ] **Product decision 1 (bulk upload):** `components/batch/*`, `contexts/BatchUploadContext.tsx`,
+   `hooks/useBatchUpload.ts`, `routes/bulk_upload.py`, `shared/bulk_job_store.py` — wire or delete,
+   and fix the pricing/UpgradeModal claim to match. **Do not delete the route before Sprint 790 lands.**
+5. [ ] **Unused helpers/constants:** entitlement `check_client_limit`, `check_tool_access`,
+   `check_workspace_access`, `check_activity_log_access` (routes re-implement them inline — keep
+   one implementation each); `auth.get_current_user` (unreferenced and skips the password-change
+   check — unsafe to adopt); `ratio_engine.calculate_dupont_decomposition`;
+   `compute_bank_rec_risk_score` alias; `PAYROLL_SUSPICIOUS_KEYWORDS`; `SOURCE_LEASE`,
+   `SOURCE_GOING_CONCERN`, `PREPAID_KEYWORDS`, `STANDARD_ADJUSTMENTS_BY_CODE`,
+   `CURRENT_RATIO_THRESHOLD`, `LOW_CONFIDENCE_THRESHOLD`; `export/transport.py:41` no-op and
+   unused `"excel"` branch at `:46`; the 10 unused `DEFAULT_*` aliases in
+   `w2_reconciliation_engine.py:160-172` and their stale comment (**fix in the current branch before merge**).
+6. [ ] **Assets/deps:** delete `frontend/public/backgrounds/background4.jpg` (22 MB, unreferenced);
+   compress `background5.jpg` (7.1 MB raw CSS background on `pricing/page.tsx:774`);
+   remove `ts-jest`, `@eslint/eslintrc`; move `@testing-library/dom` to devDependencies; declare
+   `eslint` explicitly; fix or drop `npm run generate:types` (`openapi-typescript` not installed).
+
+**Commit SHA:** TBD.
+
+---
+
+### Sprint 818: Pricing has one source of truth
+**Status:** PENDING.
+**Priority:** P2 — the copies have already drifted.
+**Source:** Code health review 2026-10-23, frontend pass.
+
+`app/(marketing)/pricing/page.tsx:13-133,354-512,544` redefines everything `domain/pricing.ts`
+exports, and `components/pricing/PricingEstimator.tsx` + `PricingCard.tsx` — built on the domain
+module — are imported nowhere (verified). Drift: the page has `badge: 'Most Popular'`, the domain
+copy does not, so tests of the domain module test code that never renders.
+
+- [ ] Page renders `PricingEstimator` + `PricingCard` from `domain/pricing` (~450 lines out).
+- [ ] Point `app/(auth)/checkout/page.tsx:23-27`, `components/billing/UpgradeModal.tsx:20-45` and
+      the terms tier table (`terms/page.tsx:616-626`) at the same module.
+- [ ] Consolidate the "what we store / never store" lists (`trust/page.tsx:239-254` vs
+      `approach/page.tsx:94-109`, worded differently) into one `content/` source — it is
+      Zero-Storage compliance copy.
+
+**Commit SHA:** TBD.
+
+---
+
+### Sprint 819: Backend deduplication
+**Status:** PENDING.
+**Priority:** P2.
+**Source:** Code health review 2026-10-23, engines + routes + exports passes.
+
+1. [ ] Generic result base classes in `shared/` for the per-tool `FlaggedEntry` / `TestResult` /
+   `DataQuality` / `CompositeScore` (~650 lines across 7 tools; e.g. `je_testing/analysis.py:546-665`).
+   **JSON output must not change**: Payroll stores severity/tier as strings and rounds
+   `completeness_score` to 2 dp; AR adds `skipped`/`skip_reason`; Payroll `top_findings` is list-of-dicts.
+   Snapshot-test every tool's response before and after.
+2. [ ] `.empty(...)` / `.from_flags(...)` constructors replacing 76 zero-result blocks (~800 lines)
+   and ~110 hand-computed `flag_rate`s. AR's `_skipped_result` (`ar_aging/analysis.py:1801`) is the model.
+3. [ ] Round-amount test copied 4× (JE `:1087`, AP `:904`, Revenue `:922`, Payroll `:1163`) — adopt
+   one Decimal-safe helper. **Ordering blocked on CEO decision 3.**
+4. [ ] Optional `formats=` on `parse_date`; AR (`:862,873`), FA (`:1429`), currency (`:567`) pass
+   their **current** lists — do not widen what they accept.
+5. [ ] Default `apply_column_overrides` driven by a class-level column list (JE `:2857`, AP `:1996`
+   hand-written); keep Payroll's suffix-less keys (API contract). Finish `AuditEngineBase`
+   adoption for FA, Revenue, AR (feeds the Refactor Intake item).
+6. [ ] `_to_decimal` copied verbatim into 9 route files → one `shared/` helper; a `run_json_tool(...)`
+   wrapper for the 6 promoted-tool routes' enforce → quota → record sequence.
+7. [ ] ~20 export endpoints hand-roll `StreamingResponse`/`Content-Disposition` (list in the review:
+   `engagements_exports.py`, `loan_amortization.py`, `bank_reconciliation.py:193`,
+   `multi_period.py:281`, `depreciation.py:243`, `lease_accounting.py:216`, …) → use
+   `shared/export_helpers`. Decide `Cache-Control: no-store` for all financial exports (only
+   `export_sharing.py:222` sets it). In-memory PDFs: plain `Response`, not 8 KB chunking.
+8. [ ] `export/pipeline.py:47-262` — 11 near-identical functions → one `_run_export(...)` (~120 lines).
+9. [ ] **Env reads through `config.py` only.** Latent bug: `email_service.py:48-50` reads
+   `SENDGRID_API_KEY` via `os.getenv` while `config.py:647` validates via `_resolve_secret` —
+   a Docker/cloud-secret key passes the startup check and email silently does not send. Also
+   `entitlement_checks.py:69,388`, `health.py:269`, `logging_config.py:113,154`,
+   `memory_budget.py:40`, `storage_client.py:26`, `export_share_storage.py:47-50`, `retention_cleanup.py:27`.
+10. [ ] Split long functions: `three_way_match_engine.py:1210` (268 lines, 64 branches),
+   `currency_engine.py:821` (254 lines; lookup copied 3×, per-cell `df.at` loop under a
+   "Vectorized" comment), `payroll_testing/analysis.py:1659` (145 lines).
+
+**Commit SHA:** TBD.
+
+---
+
+### Sprint 820: Frontend consolidation and bundle weight
+**Status:** PENDING.
+**Priority:** P2.
+**Source:** Code health review 2026-10-23, frontend pass.
+
+1. [ ] `TestingToolPage` shell for the six single-file testing pages (ap, payroll, revenue,
+   fixed-assets, inventory, journal-entry — 70–80% identical, ~1,650 lines). Use the existing
+   `components/shared/FileDropZone`; build `UpgradeGate` in so 814 item 1 cannot recur. ~1,100 lines out.
+   Collapse the ~20 pass-through `*ScoreCard`/`*DataQualityBadge` wrappers.
+2. [ ] `createJsonAnalysisHook({...})` for `useSOD`, `useForm1099`, `useW2Reconciliation`,
+   `useBookToTax`, `useIntercompanyElimination`, `useCashFlowProjector` (~530 → ~90 lines).
+3. [ ] `terms` and `privacy` pages: drop `'use client'` (no hooks; ~2,000 lines of legal text in
+   the JS bundle), wrap the 4 animated sections in `components/ui/Reveal`. Same for `about`,
+   `approach`, and `app/(marketing)/layout.tsx`. Compatible with the `headers()`-dynamic root.
+4. [ ] `trust/page.tsx`: static data → `content/trust.ts`, 4 interactive blocks → `components/trust/*`, page becomes a server component.
+5. [ ] `ToastContext.tsx:73` — split stable actions from state so 8 consumers stop re-rendering on
+   every toast. Memoize `CanvasAccent`/`AuthSession`/`UserProfile`/`Verification`/`Mapping` values
+   only if profiling shows cost.
+6. [ ] `BaseColumnDetection` type; `ARDataQuality` extends `BaseDataQuality`.
+7. [ ] Measure first: bundle analyzer on framer-motion (139 importers, no `LazyMotion`); 5 local
+   `fadeUp` copies → `lib/motion.ts:71`.
+
+**Commit SHA:** TBD.
+
+---
+
+### Sprint 821: Database and event-loop efficiency
+**Status:** PENDING.
+**Priority:** P3 — low traffic today; cheap now, expensive at scale.
+**Source:** Code health review 2026-10-23, routes pass.
+
+- [ ] ~30 `async def` handlers with no `await` that make sync DB calls (organization ×10,
+      admin_dashboard ×4, branding ×3, diagnostics ×3, prior_period ×3, …) → plain `def`.
+      Offload the blocking part of `branding.py:102` (S3 upload), `billing.py:347` (Stripe
+      retrieve + DB), `export_sharing.py` passcode verify (Argon2id).
+- [ ] Subscription row queried 3× per testing upload (`enforce_tool_access` →
+      `get_effective_entitlements`, then `check_upload_limit` twice incl. `entitlement_checks.py:111`) — load once per request.
+- [ ] `billing/internal_metrics.py:601-663` per-day snapshot loop with per-user queries; cap the
+      range in `routes/internal_metrics.py:129`; batch dunning lookups (`:365,384,402,538`,
+      `dunning_engine.py:162,168`).
+- [ ] One Alembic migration dropping the 26 `primary_key=True, index=True` duplicate indexes and
+      the single-column indexes covered by composites (`ToolActivity.user_id`, `TeamActivityLog.organization_id`).
+      Mind Sprint 741c/797 chain-vs-ORM guards.
+- [ ] Convert `RequestId`, `SecurityHeaders`, `Impersonation` middleware from `BaseHTTPMiddleware`
+      to pure ASGI — **benchmark first**; impact unmeasured.
+
+**Commit SHA:** TBD.
+
+---
+
+### Sprint 822: CI and repository weight
+**Status:** PENDING.
+**Priority:** P3.
+**Source:** Code health review 2026-10-23, repo pass.
+
+- [ ] `reports/nightly/` is 1,149 of 3,261 tracked files — **CEO decision 5**.
+- [ ] `ci.yml` runs pip-audit twice (`pip-audit-blocking` `:660`, `pip-audit-advisory` `:690`), each
+      installing the full `requirements.txt`: one job, two invocations of `scripts/pip_audit_gate.sh`.
+- [ ] Root clutter: `PHASE_III_QUICK_REFERENCE.txt`, `README_PHASE_III_DELIVERY.txt`,
+      `SECURITY_CHANGES.md`, `SECURITY_HARDENING_SUMMARY.md`, `COHESION_REMEDIATION.md`,
+      `EXECUTIVE_SUMMARY_NONTECH.md`, root `MEMORY.md` — check each for live references, then move to
+      `docs/` or `tasks/archive/`.
+
+**Commit SHA:** TBD.
+
+---
 
 ### Sprint 793: Both tax tools apply one fixed set of statutory limits to every year
 **Status:** SPLIT — **793a COMPLETE** (the W-2 overrides the API never exposed), **793b PENDING**

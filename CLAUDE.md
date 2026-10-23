@@ -105,7 +105,7 @@ Both are mechanically enforced — not discipline-dependent. Hotfix commits (`fi
 | 1–55 (I–IV) | Core Platform | Zero-Storage TB analysis, streaming, auth, PDF/Excel export, 9 ratios, anomaly detection, lead sheets, adjusting entries |
 | 56–96 (V–IX) | Tool Expansion | Email verification, Multi-Period TB, Journal Entry Testing (19 tests), Financial Statements, AP Testing (13 tests), Cash Flow, Payroll Testing (11 tests), Three-Way Match, Classification Validator — **7 tools** |
 | 96.5–130 (X–XII) | Engagement & Growth | Engagement layer + materiality cascade, Revenue Testing (16 tests), AR Aging (11 tests), Fixed Assets (9 tests), Inventory (9 tests) — **11 tools, v1.1.0** |
-| 121–147 (XIII–XVI) | Polish & Hardening | Dual-theme "The Vault", WCAG AAA, 11 PDF memos, 24 export endpoints, marketing/legal pages, code dedup (~4,750 lines removed), API hygiene — **v1.2.0** |
+| 121–147 (XIII–XVI) | Polish & Hardening | Dual-theme "The Vault", WCAG 2.1 AA, 11 PDF memos, 24 export endpoints, marketing/legal pages, code dedup (~4,750 lines removed), API hygiene — **v1.2.0** |
 | 151–209 (XVII–XXVII) | Architecture & Security | 7 backend shared modules, async remediation, API contract hardening, rate limits, Pydantic hardening, Pandas precision, upload/export security, JWT hardening, email verification hardening, Next.js App Router |
 | 210–254 (XXVIII–XXXIII) | Production Readiness | CI pipeline, structured logging, type safety, frontend test expansion (389→520 tests), backend test hardening (3,050 tests), error handling, Docker tuning |
 | 255–278 (XXXIV–XXXVII) | v1.3–v1.5 | Multi-Currency Conversion, in-memory state fix, Statistical Sampling (Tool 12, ISA 530), deployment hardening, Sentry APM — **12 tools, v1.5.0** |

@@ -85,6 +85,7 @@ export function MappingTraceTable({ entries }: MappingTraceTableProps) {
                   {/* Expanded account detail */}
                   {isExpanded && entry.accountCount > 0 && (
                     <div className="border-t border-theme px-3 py-2 bg-surface-elevated/30">
+                      <div className="overflow-x-auto">
                       <table className="w-full text-xs">
                         <thead>
                           <tr className="text-content-secondary font-sans">
@@ -128,6 +129,7 @@ export function MappingTraceTable({ entries }: MappingTraceTableProps) {
                           </tr>
                         </tfoot>
                       </table>
+                      </div>
                     </div>
                   )}
 

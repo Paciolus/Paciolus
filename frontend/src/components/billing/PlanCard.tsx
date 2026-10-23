@@ -88,7 +88,7 @@ export function PlanCard({ tier, status, interval, periodEnd, cancelAtPeriodEnd 
 
       {/* Next billing date (active, not canceling, not trialing — trialing has its own block) */}
       {periodEnd && !cancelAtPeriodEnd && status !== 'trialing' && (
-        <p className="text-sm text-content-muted font-sans">
+        <p className="text-sm text-content-tertiary font-sans">
           Next billing date:{' '}
           <span className="font-mono text-content-secondary">
             {formatDate(periodEnd)}

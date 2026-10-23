@@ -257,6 +257,7 @@ export default function FluxPage() {
                         </div>
 
  <div className="theme-card overflow-hidden max-h-[600px] overflow-y-auto">
+                            <div className="overflow-x-auto">
                             <table className="w-full text-left text-sm font-sans">
                                 <thead className="bg-surface-card-secondary text-content-secondary sticky top-0">
                                     <tr>
@@ -289,6 +290,7 @@ export default function FluxPage() {
                                     ))}
                                 </tbody>
                             </table>
+                            </div>
                         </div>
                         {/* ISA 520 Expectation Documentation */}
                         {flaggedItems.length > 0 && (

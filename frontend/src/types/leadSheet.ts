@@ -60,7 +60,19 @@ export interface LeadSheetSummary {
  */
 export interface LeadSheetGrouping {
   summaries: LeadSheetSummary[]
-  unmapped_count: number
+  /**
+   * How many accounts the classifier could not place.
+   *
+   * Sprint 808: renamed from `unmapped_count`, which the API has never sent —
+   * `lead_sheet_grouping_to_dict` emits `unclassified_count`. The mismatch was
+   * silent and load-bearing: `LeadSheetSection.tsx` guarded its unclassified
+   * badge on `data.unmapped_count > 0`, i.e. `undefined > 0`, so the badge had
+   * never rendered for any upload. `total_accounts` was not sent either, so the
+   * header printed an empty count ("` accounts`"); the backend now sends both.
+   */
+  unclassified_count: number
+  /** Names of the unclassified accounts, so the UI can say which (finding D-7). */
+  unclassified_accounts: string[]
   total_accounts: number
 }
 

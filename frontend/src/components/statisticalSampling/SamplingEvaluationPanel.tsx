@@ -152,7 +152,7 @@ export function SamplingEvaluationPanel({ status, error, designResult, onRun, is
         {selectedFile ? (
           <div>
             <p className="font-sans text-content-primary text-sm">
-              Selected: <span className="font-mono text-sage-500">{selectedFile.name}</span>
+              Selected: <span className="font-mono text-theme-success-text">{selectedFile.name}</span>
             </p>
             <p className="font-sans text-content-tertiary text-xs mt-1">Click or drag to replace</p>
           </div>
@@ -175,7 +175,7 @@ export function SamplingEvaluationPanel({ status, error, designResult, onRun, is
       {/* Errors */}
       {(validationError || error) && (
         <div className="bg-clay-500/10 border border-clay-500/30 rounded-xl p-4" role="alert">
-          <p className="font-sans text-sm text-clay-500">{validationError || error}</p>
+          <p className="font-sans text-sm text-theme-error-text">{validationError || error}</p>
         </div>
       )}
 

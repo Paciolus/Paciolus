@@ -224,6 +224,7 @@ export function ComparisonTable({
 
       {/* Balance Sheet Comparison */}
       <CollapsibleSection title="Balance Sheet" icon="📊">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-surface-card-secondary">
             <tr className="text-content-secondary font-serif uppercase tracking-wider text-xs">
@@ -240,10 +241,12 @@ export function ComparisonTable({
             ))}
           </tbody>
         </table>
+        </div>
       </CollapsibleSection>
 
       {/* Income Statement Comparison */}
       <CollapsibleSection title="Income Statement" icon="📈">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-surface-card-secondary">
             <tr className="text-content-secondary font-serif uppercase tracking-wider text-xs">
@@ -260,10 +263,12 @@ export function ComparisonTable({
             ))}
           </tbody>
         </table>
+        </div>
       </CollapsibleSection>
 
       {/* Ratios Comparison */}
       <CollapsibleSection title="Financial Ratios" icon="📐" defaultOpen={false}>
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-surface-card-secondary">
             <tr className="text-content-secondary font-serif uppercase tracking-wider text-xs">
@@ -279,6 +284,7 @@ export function ComparisonTable({
             ))}
           </tbody>
         </table>
+        </div>
       </CollapsibleSection>
     </motion.div>
   )

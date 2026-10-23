@@ -197,7 +197,7 @@ export const FileQueueItem = memo(function FileQueueItem({
             <div className="mt-2 text-xs text-clay-400">
               {file.error.message}
               {process.env.NODE_ENV === 'development' && file.error.details && (
-                <span className="text-clay-500"> - {file.error.details}</span>
+                <span className="text-theme-error-text"> - {file.error.details}</span>
               )}
             </div>
           )}

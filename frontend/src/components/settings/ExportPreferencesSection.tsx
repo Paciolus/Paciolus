@@ -45,7 +45,7 @@ export function ExportPreferencesSection({
               type="checkbox"
               checked={showImmaterial}
               onChange={(e) => onShowImmaterialChange(e.target.checked)}
-              className="w-5 h-5 rounded-sm border-theme bg-surface-input text-sage-500 focus:ring-sage-500/20"
+              className="w-5 h-5 rounded-sm border-theme bg-surface-input text-theme-success-text focus:ring-sage-500/20"
             />
             <div>
               <span className="text-content-primary font-sans font-medium">Show immaterial items by default</span>
@@ -59,7 +59,7 @@ export function ExportPreferencesSection({
               type="checkbox"
               checked={autoSaveSummaries}
               onChange={(e) => onAutoSaveSummariesChange(e.target.checked)}
-              className="w-5 h-5 rounded-sm border-theme bg-surface-input text-sage-500 focus:ring-sage-500/20"
+              className="w-5 h-5 rounded-sm border-theme bg-surface-input text-theme-success-text focus:ring-sage-500/20"
             />
             <div>
               <span className="text-content-primary font-sans font-medium">Auto-save diagnostic summaries</span>

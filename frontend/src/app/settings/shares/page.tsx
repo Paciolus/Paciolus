@@ -95,15 +95,16 @@ export default function ExportSharingPage() {
             <Reveal>
               <div className="bg-surface-card border border-theme rounded-xl overflow-hidden">
                 {isLoading && !shares.length ? (
-                  <div className="px-4 py-12 text-center text-content-muted text-sm font-sans">Loading...</div>
+                  <div className="px-4 py-12 text-center text-content-tertiary text-sm font-sans">Loading...</div>
                 ) : shares.length === 0 ? (
                   <div className="px-4 py-12 text-center">
-                    <p className="text-content-muted text-sm font-sans mb-2">No active share links.</p>
+                    <p className="text-content-tertiary text-sm font-sans mb-2">No active share links.</p>
                     <p className="text-content-tertiary text-xs font-sans">
                       Share links are created from the export toolbar on any tool page.
                     </p>
                   </div>
                 ) : (
+                  <div className="overflow-x-auto">
                   <table className="w-full text-sm font-sans">
                     <thead>
                       <tr className="border-b border-theme bg-surface-input/50">
@@ -135,7 +136,7 @@ export default function ExportSharingPage() {
                                   </span>
                                 )}
                                 {!share.has_passcode && !share.single_use && (
-                                  <span className="text-content-muted text-xs">—</span>
+                                  <span className="text-content-tertiary text-xs">—</span>
                                 )}
                               </span>
                             </td>
@@ -161,6 +162,7 @@ export default function ExportSharingPage() {
                       })}
                     </tbody>
                   </table>
+                  </div>
                 )}
               </div>
             </Reveal>

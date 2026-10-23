@@ -215,7 +215,7 @@ export default function TeamPage() {
               {/* Org Info */}
               <div className="bg-surface-card border border-theme rounded-lg p-6 mb-6">
                 <h2 className="font-serif text-lg text-content-primary mb-2">{org.name}</h2>
-                <p className="text-sm text-content-muted font-sans">
+                <p className="text-sm text-content-tertiary font-sans">
                   {org.member_count} member{org.member_count !== 1 ? 's' : ''}
                 </p>
               </div>
@@ -230,10 +230,10 @@ export default function TeamPage() {
                         <p className="font-sans text-sm text-content-primary font-medium">
                           {member.user_name}
                           {member.user_id === user?.id && (
-                            <span className="ml-2 text-xs text-content-muted">(you)</span>
+                            <span className="ml-2 text-xs text-content-tertiary">(you)</span>
                           )}
                         </p>
-                        <p className="font-sans text-xs text-content-muted">{member.user_email}</p>
+                        <p className="font-sans text-xs text-content-tertiary">{member.user_email}</p>
                       </div>
                       <div className="flex items-center gap-3">
                         <span className={`text-xs font-sans font-medium px-2 py-0.5 rounded-full border ${
@@ -241,7 +241,7 @@ export default function TeamPage() {
                             ? 'bg-sage-50 text-sage-700 border-sage-200'
                             : member.role === 'admin'
                               ? 'bg-oatmeal-200 text-content-secondary border-theme'
-                              : 'bg-surface-input text-content-muted border-theme'
+                              : 'bg-surface-input text-content-tertiary border-theme'
                         }`}>
                           {member.role}
                         </span>
@@ -283,7 +283,7 @@ export default function TeamPage() {
                       value={inviteEmail}
                       onChange={(e) => setInviteEmail(e.target.value)}
                       placeholder="Email address"
-                      className="flex-1 px-3 py-2 border border-theme rounded-sm bg-surface-page text-content-primary font-sans text-sm placeholder:text-content-muted focus:outline-hidden focus:ring-1 focus:ring-sage-500"
+                      className="flex-1 px-3 py-2 border border-theme rounded-sm bg-surface-page text-content-primary font-sans text-sm placeholder:text-content-tertiary focus:outline-hidden focus:ring-1 focus:ring-sage-500"
                     />
                     <select
                       value={inviteRole}
@@ -313,7 +313,7 @@ export default function TeamPage() {
                       <div key={invite.id} className="flex items-center justify-between py-2 border-b border-theme last:border-b-0">
                         <div>
                           <p className="font-sans text-sm text-content-primary">{invite.invitee_email}</p>
-                          <p className="font-sans text-xs text-content-muted">
+                          <p className="font-sans text-xs text-content-tertiary">
                             Expires {new Date(invite.expires_at).toLocaleDateString()}
                           </p>
                         </div>

@@ -11,7 +11,7 @@ import { ProofTraceBar } from './ProofTraceBar'
 // =============================================================================
 
 const STATUS_INDICATOR: Record<ProofTestDetail['status'], { icon: string; color: string; label: string }> = {
-  clear: { icon: '\u25CF', color: 'text-sage-500', label: 'clear' },
+  clear: { icon: '\u25CF', color: 'text-theme-success-text', label: 'clear' },
   flagged: { icon: '\u25B2', color: 'text-oatmeal-600', label: 'flagged' },
   skipped: { icon: '\u2014', color: 'text-oatmeal-400', label: 'skipped' },
 }

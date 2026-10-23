@@ -1468,3 +1468,121 @@ class TestReciprocalMetricZeroCases:
         engine = RatioEngine(totals)
         assert engine.calculate_dio().is_calculable is False
         assert engine.calculate_inventory_turnover().is_calculable is False
+
+
+# =============================================================================
+# Sprint 806 — finding A-6: negative equity across every ratio
+# =============================================================================
+
+
+@pytest.fixture
+def insolvent_company_totals():
+    """
+    The entity measured by the full-spectrum review of 2026-10-22: assets
+    $500k, liabilities $700k, equity −$200k, current ratio 0.25, operating at
+    a loss. Liabilities exceeding assets is balance-sheet insolvency and a
+    going-concern indicator under ISA 570.
+    """
+    return CategoryTotals(
+        total_assets=500000.0,
+        current_assets=50000.0,
+        inventory=20000.0,
+        accounts_receivable=15000.0,
+        accounts_payable=90000.0,
+        total_liabilities=700000.0,
+        current_liabilities=200000.0,
+        total_equity=-200000.0,
+        total_revenue=300000.0,
+        cost_of_goods_sold=250000.0,
+        total_expenses=450000.0,
+        operating_expenses=200000.0,
+        interest_expense=60000.0,
+    )
+
+
+class TestSprint806NegativeEquity:
+    """
+    A-6: `debt_to_equity` tested `ratio <= DTE_CONSERVATIVE` with no sign guard.
+    A negative ratio satisfies that trivially, so an insolvent entity was
+    reported as "Conservative leverage position" with
+    `threshold_status: "above_threshold"` — which the frontend renders in sage,
+    the positive colour. `return_on_equity` and `interest_coverage` carried the
+    guard; `debt_to_equity` and `equity_ratio` did not.
+    """
+
+    # Every ratio whose meaning depends on the sign of equity.
+    EQUITY_DEPENDENT = ("debt_to_equity", "equity_ratio", "return_on_equity")
+
+    def test_debt_to_equity_does_not_call_insolvency_conservative(self, insolvent_company_totals):
+        result = RatioEngine(insolvent_company_totals).calculate_debt_to_equity()
+
+        assert result.value == pytest.approx(-3.5)
+        assert "conservative" not in result.interpretation.lower()
+        assert result.threshold_status == "below_threshold"
+        assert "negative equity" in result.interpretation.lower()
+        assert "ISA 570" in result.interpretation
+
+    def test_equity_ratio_names_insolvency_rather_than_reliance_on_debt(self, insolvent_company_totals):
+        """
+        The old text — "Low equity ratio - high reliance on debt financing" —
+        was sign-correct but materially understated: a negative equity ratio
+        means liabilities exceed assets, which is a different statement.
+        """
+        result = RatioEngine(insolvent_company_totals).calculate_equity_ratio()
+
+        assert result.value == pytest.approx(-0.4)
+        assert result.threshold_status == "below_threshold"
+        assert "negative equity" in result.interpretation.lower()
+        assert "ISA 570" in result.interpretation
+
+    @pytest.mark.parametrize("ratio_key", EQUITY_DEPENDENT)
+    def test_no_equity_dependent_ratio_reads_favourably(self, insolvent_company_totals, ratio_key):
+        results = RatioEngine(insolvent_company_totals).calculate_all_ratios()
+        result = results[ratio_key]
+
+        assert result.threshold_status != "above_threshold", (
+            f"{ratio_key} reports above_threshold on an insolvent entity: {result.interpretation}"
+        )
+        assert result.threshold_status != "at_threshold", (
+            f"{ratio_key} reports at_threshold on an insolvent entity: {result.interpretation}"
+        )
+
+    def test_every_ratio_survives_negative_equity(self, insolvent_company_totals):
+        """
+        The whole surface, not just the two that were wrong. Nothing may raise,
+        and every result must carry an interpretation a practitioner can read.
+        """
+        results = RatioEngine(insolvent_company_totals).calculate_all_ratios()
+
+        assert len(results) >= 17
+        for key, result in results.items():
+            assert isinstance(result, RatioResult), key
+            assert result.interpretation, f"{key} has no interpretation"
+            assert result.threshold_status in (
+                "above_threshold",
+                "at_threshold",
+                "below_threshold",
+                "neutral",
+            ), f"{key}: {result.threshold_status}"
+
+    def test_the_favourably_reading_ratios_are_only_the_equity_independent_ones(self, insolvent_company_totals):
+        """
+        Recorded as a result, not a defect. Four ratios still read favourably on
+        this entity — DSO, DIO, inventory turnover and receivables turnover —
+        and that is correct: they are efficiency measures that do not depend on
+        the sign of equity, and a distressed entity genuinely can collect and
+        turn inventory quickly. This test pins the set, so if a *leverage* or
+        *return* ratio ever joins it, the suite says so.
+        """
+        results = RatioEngine(insolvent_company_totals).calculate_all_ratios()
+        favourable = {key for key, r in results.items() if r.threshold_status == "above_threshold"}
+
+        assert favourable == {"dso", "dio", "inventory_turnover", "receivables_turnover"}
+
+    def test_positive_equity_still_reaches_the_threshold_ladder(self, healthy_company_totals):
+        """The guard must not swallow the ordinary case."""
+        result = RatioEngine(healthy_company_totals).calculate_debt_to_equity()
+
+        assert result.value is not None
+        assert result.value > 0
+        assert "negative equity" not in result.interpretation.lower()

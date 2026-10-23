@@ -20,7 +20,7 @@ export default function SettingsError({
     <main id="main-content" className="min-h-screen bg-surface-page">
       <div className="pt-24 pb-16 px-6 max-w-2xl mx-auto flex flex-col items-center justify-center min-h-[60vh]">
         <div className="w-16 h-16 mb-6 rounded-full bg-clay-50 border border-clay-200 flex items-center justify-center">
-          <svg className="w-8 h-8 text-clay-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg className="w-8 h-8 text-theme-error-text" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
         </div>
@@ -34,7 +34,7 @@ export default function SettingsError({
 
         {process.env.NODE_ENV === 'development' && (
           <div className="mb-6 p-4 w-full bg-surface-card rounded-lg border border-clay-200/30 text-left">
-            <p className="text-xs font-mono text-clay-500 break-all">{error.message}</p>
+            <p className="text-xs font-mono text-theme-error-text break-all">{error.message}</p>
           </div>
         )}
 

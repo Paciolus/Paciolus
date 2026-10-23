@@ -199,7 +199,7 @@ export default function BillingSettingsPage() {
                 />
               </div>
             ) : (
-              <p className="text-sm text-content-muted font-sans">Usage data unavailable.</p>
+              <p className="text-sm text-content-tertiary font-sans">Usage data unavailable.</p>
             )}
           </Reveal>
 
@@ -274,7 +274,7 @@ export default function BillingSettingsPage() {
                   </p>
                 </div>
               ) : (
-                <p className="text-sm text-content-muted font-sans">
+                <p className="text-sm text-content-tertiary font-sans">
                   DPA acceptance not yet recorded. Acceptance is captured at checkout for Professional and Enterprise plans.
                 </p>
               )}

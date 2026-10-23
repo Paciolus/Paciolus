@@ -118,7 +118,7 @@ export function ShareExportModal({
                     value={passcode}
                     onChange={(e) => setPasscode(e.target.value)}
                     placeholder="Enter a passcode..."
-                    className="w-full bg-surface-input border border-theme rounded-lg px-3 py-2 text-sm font-sans text-content-primary placeholder:text-content-muted"
+                    className="w-full bg-surface-input border border-theme rounded-lg px-3 py-2 text-sm font-sans text-content-primary placeholder:text-content-tertiary"
                   />
                 </div>
 

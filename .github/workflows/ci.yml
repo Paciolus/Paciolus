@@ -581,6 +581,23 @@ jobs:
       - name: Run documentation consistency guard
         run: python -m guards.doc_consistency_guard
 
+      # Sprint 807 (finding C-1): every external host in the CSP allowlist and
+      # every configured storage bucket must map to an entry in
+      # SUBPROCESSOR_LIST.md. Cloudflare R2 held customer export bytes for six
+      # months without appearing on that list, while the DPA committed in
+      # writing to maintaining it — because nothing was checking.
+      - name: Run subprocessor coverage gate
+        working-directory: .
+        run: python scripts/lint_subprocessors.py
+
+      # Sprint 809 (findings D-2 / D-3): extends the design-token gate beyond
+      # "is this a generic Tailwind colour" to "does this brand token exist"
+      # and "is this shade legible". `text-content-muted` had 36 live usages and
+      # emitted zero CSS; `sage-500` fails WCAG AA on both page surfaces.
+      - name: Run design token gate
+        working-directory: .
+        run: python scripts/lint_design_tokens.py
+
   # ── Dependency Audit: pip (blocking on HIGH/CRITICAL) ────────
   pip-audit-blocking:
     name: Python Dependency Audit (blocking)

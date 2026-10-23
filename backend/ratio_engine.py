@@ -452,7 +452,39 @@ class RatioEngine:
                 threshold_status="neutral",
             )
 
+        # Sprint 806 (finding A-6): sign guard ahead of the threshold ladder.
+        # With negative equity the ratio is negative, and a negative number
+        # satisfies `ratio <= DTE_CONSERVATIVE` trivially — so an entity with
+        # balance-sheet insolvency was reported as "Conservative leverage
+        # position" with `threshold_status: "above_threshold"`, which the
+        # frontend renders in sage (the positive colour). Measured at assets
+        # $500k / liabilities $700k / equity −$200k: debt_to_equity −3.5,
+        # "Conservative leverage position", in green.
+        #
+        # Liabilities exceeding assets is a going-concern indicator under
+        # ISA 570. `return_on_equity` and `interest_coverage` already guard the
+        # sign; this ratio and `equity_ratio` did not.
         ratio = self.totals.total_liabilities / self.totals.total_equity
+
+        if self.totals.total_equity < 0:
+            return RatioResult(
+                # `float(...)` unlike the neighbouring calls below, which pass a
+                # Decimal into a field declared `float | None`. That mismatch is
+                # the "Decimal/float boundary" the mypy baseline names, and there
+                # are 16 instances of it in this file. Sprint 806 is not the
+                # place to migrate them, but it is not the place to add two more
+                # either.
+                name="Debt-to-Equity",
+                value=float(round(ratio, 2)),
+                display_value=f"{ratio:.2f}",
+                is_calculable=True,
+                interpretation=(
+                    "Negative equity: liabilities exceed assets (balance-sheet insolvency). "
+                    "The ratio is not meaningful as a leverage measure and is a going-concern "
+                    "indicator under ISA 570."
+                ),
+                threshold_status="below_threshold",
+            )
 
         # Interpretation (varies by industry, using general guidelines)
         if ratio <= DTE_CONSERVATIVE:
@@ -1176,6 +1208,25 @@ class RatioEngine:
             )
 
         ratio = self.totals.total_equity / self.totals.total_assets
+
+        # Sprint 806 (finding A-6): the threshold ladder below is sign-correct
+        # for negative equity — a negative ratio does land in `below_threshold` —
+        # but "high reliance on debt financing" materially understates it. A
+        # negative equity ratio means liabilities exceed assets, which is a
+        # different statement about the entity, and a going-concern indicator.
+        if self.totals.total_equity < 0:
+            return RatioResult(
+                name="Equity Ratio",
+                value=float(round(ratio, 2)),  # see the note in calculate_debt_to_equity
+                display_value=f"{ratio:.2f}",
+                is_calculable=True,
+                interpretation=(
+                    "Negative equity: liabilities exceed assets (balance-sheet insolvency), "
+                    "not merely a high reliance on debt financing. Going-concern indicator "
+                    "under ISA 570."
+                ),
+                threshold_status="below_threshold",
+            )
 
         if ratio >= EQUITY_RATIO_STRONG:
             health = "above_threshold"

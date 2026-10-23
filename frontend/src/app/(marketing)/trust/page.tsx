@@ -483,7 +483,7 @@ function ArchitectureDiagram() {
                       variants={lineGrow}
                       className="w-full h-0.5 bg-gradient-to-r from-sage-500/40 to-sage-500/30"
                     />
-                    <svg className="w-3 h-3 text-sage-500/50 -ml-1 shrink-0" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <svg className="w-3 h-3 text-theme-success-text/50 -ml-1 shrink-0" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                       <path d="M10 6l6 6-6 6V6z" />
                     </svg>
                   </div>

@@ -2500,3 +2500,108 @@ asked of it.
 wrong. Three of the four arguments above were the guard being right about the code; one was the
 guard being wrong about the world. Finding out which costs a measurement and is never skippable —
 and a guard built this way ends up narrower and more trustworthy than one built to the first idea.
+
+---
+
+## Sprints 803–811 — remediating the full-spectrum review (2026-10-23)
+
+Nine sprints against the 2026-10-22 full-spectrum review's 22 findings. Four lessons, each of
+which cost a measurement to learn.
+
+### The report's recommended fix was wrong twice, in opposite directions
+
+Both times the report was right about the **defect** and wrong about the **remedy**, and both
+times the code would have been worse if the instruction had been followed literally.
+
+**A-1: "drop the `max(factor - 1.0, 0)` clamp once the values are right."** The `max(…, 0)` part
+was right to drop. The `- 1.0` was not, and removing it inflated every upper error limit by
+roughly 35%. What settles it is an identity, not a preference: for a fully-tainted sample the
+Stringer bound must equal `interval × RF(k)`, and that only holds if the allowance term
+contributes `(ΔRF_i − 1.0)`, because the projected-misstatement term already contributes
+`tainting × interval` per misstatement. I caught it because the probe reproduced the review's
+own "correct UEL" column and my numbers were 35% higher — the measurement disagreed with the
+measurement, so one of us was wrong about the method.
+
+**D-3: "reassign the 61 unqualified usages to 600/700 on light and 400/300 on dark."** That
+prescribes `dark:` variants. **This codebase has no `dark:` mechanism at all** — no `darkMode`
+in `tailwind.config.js`, not one `dark:` variant in 778 source files. Theming is entirely
+`data-theme` plus CSS custom properties, so a `dark:` variant binds to the viewer's *OS
+preference* rather than the app's route-derived theme: it would have looked right in review and
+been wrong in production. The architecture's own answer was the semantic tokens, which already
+flip with `data-theme` and already pass AA in both themes.
+
+**The transferable part:** a finding and its fix are separate claims with separate evidence. A
+review that measured the defect carefully has earned belief about the defect. It has not thereby
+earned belief about the remedy, and the remedy is the part that ships. Re-derive it.
+
+### Measuring against a population finds what a list of known-bad names cannot
+
+Finding A-3/A-4 named 13 unclassified accounts and 4 misfiles. Building a 95-account reference
+chart to verify them reproduced all 17 — and surfaced an **18th nobody had looked for**:
+`Notes Payable - Bank` classified to lead sheet A (Cash) at confidence 0.90, because the
+single-word `bank` rule outweighed the `notes payable` phrase. Long-term debt filed as cash.
+
+The rule table had been spot-checked for years. The fixture now lives in the repo
+(`tests/reference_chart_of_accounts.py`) with a ≥98% floor, so the next gap shows up as a
+number rather than as a report finding months later.
+
+**The transferable part:** when a review hands you N instances of a defect class, the cheapest
+real test is not N assertions — it is one population the class would show up in. The population
+is also the thing that stays useful after the sprint.
+
+### A green test can be evidence of nothing, and the fixture is where to look
+
+Finding A-5 — the depreciation add-back that returned 0.0 for every trial balance ever
+uploaded — had a **passing test asserting the correct value**. Its fixture keys the depreciation
+account `"name"` while both of its siblings are keyed `"account"`. The one account the
+depreciation test reads was the only one in the whole fixture keyed the way production never
+emits. The test passed against a dict shape that does not exist.
+
+The same shape, twice more in the same review: the `text-content-muted` class with 36 live
+usages emitted **zero CSS** and the design-token gate passed every one; and
+`LeadSheetSection.tsx` guarded its unclassified badge on `data.unmapped_count > 0`, where the
+API sends `unclassified_count`, so `undefined > 0` meant the badge had **never rendered for any
+upload**.
+
+**The transferable part:** a hand-written fixture is an assertion about the contract, and it is
+the least-reviewed assertion in any test file. Where a test could go through the real
+serialiser, it should — the six new A-5 tests all run
+`group_by_lead_sheet` → `lead_sheet_grouping_to_dict` for exactly this reason. And a test that
+has never failed has never been shown to be connected to anything.
+
+### Fixing instances is cheaper than fixing the class, and that is why the class comes back
+
+The DEC review's F-005 corrected four `assert callable(...)` tests. Four months later the
+full-spectrum review found **27 still standing**. Same story one finding over: the AS 1215
+citation was swept from every customer-facing surface in Sprint 717 and drifted back into three
+internal docs within months.
+
+Three findings in this review are the *same defect* wearing different clothes — a list that
+nothing checks. C-1: a subprocessor list the DPA promises to maintain, missing a processor
+holding customer export bytes for six months. D-4: a route→theme array missing four shipped
+routes, one of them the payment page. T-3: a test pattern fixed once and back to 27 occurrences.
+
+So four of these nine sprints shipped a gate rather than only edits:
+`lint_subprocessors.py` (every CSP host and storage bucket maps to a listed subprocessor),
+`theme-routes.test.ts` (walks `src/app` and asserts the dark set *is* the dark route groups),
+`test_presence_as_capability_gate.py` (every remaining `assert callable` documented with a
+reason), and the contrast/undefined-token checks added to `lint_design_tokens.py`.
+
+Four details that made those gates trustworthy rather than decorative:
+
+- **An unmapped thing must fail, not pass.** Defaulting to "allowed" for an unrecognised CSP
+  host would reproduce the exact failure being fixed.
+- **Key an allowlist by content, not by line number.** A line-number allowlist silently re-arms
+  when someone edits the file above it.
+- **Assert the reverse too.** An exemption whose assertion has been deleted is dead permission
+  waiting to excuse something it was never argued for.
+- **Assert the scan finds something.** A regex that silently matches nothing makes every
+  downstream assertion pass vacuously — which is how PR #185's guard lost the ability to see the
+  one module it was written for — the PR #185 review found it.
+
+And one thing a gate must not do: launder a design decision. Deriving contrast from the palette
+surfaced 48 usages of `text-oatmeal-700` that reach AA on neither surface. Migrating them blind
+would have been a design decision disguised as a lint fix, because no oatmeal shade reaches AA
+on the light page and each usage needs to know its surface. It is recorded as a **non-permanent**
+exemption, printed on every run, and blocked on the route→theme map — rather than quietly
+excluded, or quietly "fixed".

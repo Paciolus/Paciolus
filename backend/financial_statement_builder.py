@@ -406,14 +406,9 @@ class FinancialStatementBuilder:
             for summary in self.prior_grouping.get("summaries", []):
                 letter = summary.get("lead_sheet", "")
                 self._prior_balance_map[letter] = summary.get("net_balance", 0.0)
-        # Index account descriptions for depreciation detection
-        self._account_descriptions: dict[str, list[str]] = {}
-        for summary in self.grouping.get("summaries", []):
-            letter = summary.get("lead_sheet", "")
-            accounts = summary.get("accounts", [])
-            self._account_descriptions[letter] = [
-                a.get("name", "") if isinstance(a, dict) else str(a) for a in accounts
-            ]
+        # Sprint 803: `_account_descriptions` was built here from the same wrong
+        # account-name key as `_extract_depreciation`, and never read by anything.
+        # Removed rather than corrected — dead code carrying a live bug.
 
     def _get_lead_sheet_balance(self, letter: str) -> float:
         """Get net_balance for a lead sheet letter, 0.0 if missing."""
@@ -947,41 +942,57 @@ class FinancialStatementBuilder:
 
     # ─── Cash Flow Statement (Sprint 83) ─────────────────────────────
 
+    # Lead sheets scanned for the depreciation add-back, in precedence order.
+    # Sprint 803: expense sheets first. A period expense is what the ASC 230 add-back
+    # wants; E/F are scanned only as a fallback for charts that park an amortization
+    # line on an asset sheet.
+    DEPRECIATION_SCAN_ORDER: tuple[tuple[str, ...], ...] = (("N", "O"), ("E", "F"))
+
     def _extract_depreciation(self) -> float:
         """
-        Detect depreciation/amortization from account descriptions in OpEx (N)
-        and Non-Current Assets (E, F).
+        Detect depreciation/amortization from account names in OpEx (N), Other (O),
+        and — only if neither carries one — Non-Current Assets (E, F).
 
-        Returns the estimated depreciation amount as a positive number.
-        Searches for depreciation keywords in account names across lead sheets
-        E, F, and N. If found in expense accounts (N), uses the debit balance.
-        If not separately identifiable, returns 0.0.
+        Returns the period depreciation and amortization expense as a positive number,
+        summed across every matching account, or 0.0 if none is separately identifiable.
+
+        Sprint 803 (finding A-5) fixed three defects here:
+        - The account name was read from the key ``name``, which the serialized grouping
+          never carries — it carries ``account`` (``lead_sheet_mapping.lead_sheet_grouping_to_dict``).
+          Every keyword was therefore compared against the empty string and this method
+          returned 0.0 for every trial balance ever uploaded. The sibling
+          ``_extract_interest_expense`` had already been corrected; this one had not.
+        - With the key fixed, lead sheet E matches ``accumulated depreciation`` — a
+          *cumulative* contra-asset. Adding that back would be a worse number than 0.0,
+          so accumulated accounts are skipped and expense sheets are scanned first.
+        - The first match won and returned. A trial balance carrying separate
+          depreciation and amortization lines now adds back both.
         """
-        # Look for depreciation in operating expenses (N) accounts
-        # In the lead sheet grouping, accounts may have amount detail
-        for summary in self.grouping.get("summaries", []):
-            letter = summary.get("lead_sheet", "")
-            if letter not in ("E", "F", "N"):
-                continue
-            accounts = summary.get("accounts", [])
-            for acct in accounts:
-                if not isinstance(acct, dict):
+        for letters in self.DEPRECIATION_SCAN_ORDER:
+            total = 0.0
+            for summary in self.grouping.get("summaries", []):
+                if summary.get("lead_sheet", "") not in letters:
                     continue
-                name = acct.get("name", "").lower()
-                for keyword, is_phrase in DEPRECIATION_KEYWORDS:
-                    if is_phrase:
-                        if keyword in name:
-                            # Found depreciation — return its balance as positive
-                            balance = acct.get("net_balance", 0.0)
-                            if balance == 0.0:
-                                balance = acct.get("debit", 0.0) - acct.get("credit", 0.0)
-                            return float(abs(balance))
-                    else:
-                        if keyword in name.split() or keyword in name:
-                            balance = acct.get("net_balance", 0.0)
-                            if balance == 0.0:
-                                balance = acct.get("debit", 0.0) - acct.get("credit", 0.0)
-                            return float(abs(balance))
+                for acct in summary.get("accounts", []):
+                    if not isinstance(acct, dict):
+                        continue
+                    # Serialized groupings key the name as "account"; some callers
+                    # (and older fixtures) pass "name". Accept either, as the
+                    # interest-expense sibling does.
+                    name = (acct.get("name", "") or acct.get("account", "")).lower()
+                    if not name:
+                        continue
+                    # "Accumulated Depreciation" / "Accum Amort" are contra-asset
+                    # balances, not period expense. Never add them back.
+                    if "accum" in name:
+                        continue
+                    if any(keyword in name for keyword, _is_phrase in DEPRECIATION_KEYWORDS):
+                        balance = acct.get("net_balance", 0.0)
+                        if balance == 0.0:
+                            balance = acct.get("debit", 0.0) - acct.get("credit", 0.0)
+                        total += abs(float(balance))
+            if total > 0.0:
+                return total
         return 0.0
 
     def _extract_interest_expense(self) -> float:

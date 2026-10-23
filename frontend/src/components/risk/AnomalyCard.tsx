@@ -169,7 +169,7 @@ export const AnomalyCard = memo(function AnomalyCard({
               ${anomaly.amount.toLocaleString()}
             </span>
             {isHighSeverity && (
-              <span className="block text-xs text-clay-500 font-sans mt-0.5">
+              <span className="block text-xs text-theme-error-text font-sans mt-0.5">
                 Material
               </span>
             )}

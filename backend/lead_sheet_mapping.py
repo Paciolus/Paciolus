@@ -106,6 +106,52 @@ LEAD_SHEET_CATEGORY: dict[LeadSheet, str] = {
 }
 
 
+# =============================================================================
+# STATEMENT-CLASS ARBITRATION (Sprint 804, finding A-4)
+# =============================================================================
+
+# Lead sheets that sit on the balance sheet. An expense filed to one of these
+# overstates net income and overstates an asset or a liability at the same time.
+BALANCE_SHEET_LETTERS: frozenset[str] = frozenset("ABCDEFGHIJK")
+
+# The terminal word of an account name is a far stronger statement-class signal
+# than a keyword matched anywhere inside it. "Software Expense" is an expense
+# that happens to mention software; it is not an intangible asset.
+# Maps terminal token -> (normalised stem, lead sheet to fall back to).
+TERMINAL_TOKEN_SHEETS: dict[str, tuple[str, LeadSheet]] = {
+    "expense": ("expense", LeadSheet.N),
+    "expenses": ("expense", LeadSheet.N),
+    "income": ("income", LeadSheet.L),
+    "revenue": ("revenue", LeadSheet.L),
+    "revenues": ("revenue", LeadSheet.L),
+}
+
+# Confidence assigned when the terminal token is the only signal available.
+# Deliberately below every keyword rule: it is a structural backstop, not a
+# substitute for naming the account.
+TERMINAL_TOKEN_CONFIDENCE: float = 0.70
+
+# Words that make an account a balance-sheet account no matter what trails them.
+# "Accrued Payroll Expense" is a liability; "Prepaid Expense" is an asset. These
+# are what keep the arbitration below from promoting a real balance-sheet account
+# into the income statement.
+BALANCE_SHEET_MARKER_TOKENS: frozenset[str] = frozenset(
+    {
+        "accrued",
+        "prepaid",
+        "payable",
+        "receivable",
+        "unearned",
+        "deferred",
+        "reserve",
+        "allowance",
+        "deposit",
+        "deposits",
+        "accumulated",
+    }
+)
+
+
 @dataclass
 class LeadSheetRule:
     """A keyword rule for lead sheet assignment."""
@@ -271,11 +317,19 @@ LEAD_SHEET_RULES: list[LeadSheetRule] = [
     LeadSheetRule("dividends payable", LeadSheet.H, 0.95, is_phrase=True),  # Sprint 535 P2-2
     LeadSheetRule("short-term", LeadSheet.H, 0.70, is_phrase=True),
     LeadSheetRule("lease liability current", LeadSheet.H, 0.95, is_phrase=True),
+    # Sprint 804 (A-3): a bare "Lease Liability" matched nothing — in a product
+    # that ships a lease-accounting engine. Weighted below the current/long-term
+    # variants above and below, so a qualified name still wins its own sheet.
+    LeadSheetRule("lease liability", LeadSheet.H, 0.85, is_phrase=True),
     # -------------------------------------------------------------------------
     # I: Long-term Debt
     # -------------------------------------------------------------------------
     LeadSheetRule("long-term debt", LeadSheet.I, 1.0, is_phrase=True),
-    LeadSheetRule("notes payable", LeadSheet.I, 0.85, is_phrase=True),
+    # Sprint 804: raised from 0.85. "Notes Payable - Bank" was classified to
+    # lead sheet A (Cash) at confidence 0.90, because the single-word "bank"
+    # rule outweighed this phrase — long-term debt filed as cash. Found by the
+    # reference-chart measurement, not by the review that prompted this sprint.
+    LeadSheetRule("notes payable", LeadSheet.I, 0.95, is_phrase=True),
     LeadSheetRule("loan", LeadSheet.I, 0.80),
     LeadSheetRule("mortgage", LeadSheet.I, 0.95),
     LeadSheetRule("bonds payable", LeadSheet.I, 0.95, is_phrase=True),
@@ -288,12 +342,14 @@ LEAD_SHEET_RULES: list[LeadSheetRule] = [
     LeadSheetRule("senior notes", LeadSheet.I, 0.95, is_phrase=True),
     LeadSheetRule("revolver", LeadSheet.I, 0.85),
     LeadSheetRule("capital lease", LeadSheet.I, 0.90, is_phrase=True),
-    LeadSheetRule("note payable", LeadSheet.I, 0.85, is_phrase=True),
+    LeadSheetRule("note payable", LeadSheet.I, 0.95, is_phrase=True),
     # -------------------------------------------------------------------------
     # J: Other Long-term Liabilities / Deferred Items
     # -------------------------------------------------------------------------
     LeadSheetRule("deferred tax liability", LeadSheet.J, 0.95, is_phrase=True),
     LeadSheetRule("pension liability", LeadSheet.J, 0.95, is_phrase=True),
+    # Sprint 804: outranks the new single-word "compensation" rule (0.80).
+    LeadSheetRule("deferred compensation", LeadSheet.J, 0.90, is_phrase=True),
     LeadSheetRule("post-retirement", LeadSheet.J, 0.90, is_phrase=True),
     LeadSheetRule("other long-term", LeadSheet.J, 0.90, is_phrase=True),
     LeadSheetRule("lease liability long", LeadSheet.J, 0.95, is_phrase=True),
@@ -322,6 +378,12 @@ LEAD_SHEET_RULES: list[LeadSheetRule] = [
     LeadSheetRule("partner capital", LeadSheet.K, 0.95, is_phrase=True),
     LeadSheetRule("member equity", LeadSheet.K, 0.95, is_phrase=True),
     LeadSheetRule("drawing", LeadSheet.K, 0.85),
+    # Sprint 804 (A-3): "Owner's Draw" exists in every S-corp and partnership
+    # and matched nothing — "drawing" does not contain "draw" as a substring
+    # of the account name, it is the other way round.
+    LeadSheetRule("owner's draw", LeadSheet.K, 0.95, is_phrase=True),
+    LeadSheetRule("owner draw", LeadSheet.K, 0.95, is_phrase=True),
+    LeadSheetRule("draw", LeadSheet.K, 0.80),
     LeadSheetRule("distribution", LeadSheet.K, 0.80),
     LeadSheetRule("dividend", LeadSheet.K, 0.85),
     LeadSheetRule("accumulated other comprehensive", LeadSheet.K, 0.95, is_phrase=True),
@@ -335,6 +397,11 @@ LEAD_SHEET_RULES: list[LeadSheetRule] = [
     LeadSheetRule("product revenue", LeadSheet.L, 0.95, is_phrase=True),
     LeadSheetRule("fee income", LeadSheet.L, 0.90, is_phrase=True),
     LeadSheetRule("commission income", LeadSheet.L, 0.90, is_phrase=True),
+    # Sprint 804 (A-3): outranks the new single-word "commission" rule (0.80, N).
+    LeadSheetRule("commissions income", LeadSheet.L, 0.90, is_phrase=True),
+    LeadSheetRule("consulting income", LeadSheet.L, 0.90, is_phrase=True),
+    LeadSheetRule("consulting revenue", LeadSheet.L, 0.90, is_phrase=True),
+    LeadSheetRule("consulting fee", LeadSheet.L, 0.85, is_phrase=True),
     LeadSheetRule("sales discount", LeadSheet.L, 0.85, is_phrase=True),
     LeadSheetRule("sales return", LeadSheet.L, 0.85, is_phrase=True),
     LeadSheetRule("sales allowance", LeadSheet.L, 0.85, is_phrase=True),
@@ -365,6 +432,42 @@ LEAD_SHEET_RULES: list[LeadSheetRule] = [
     LeadSheetRule("salary expense", LeadSheet.N, 0.90, is_phrase=True),
     LeadSheetRule("wage expense", LeadSheet.N, 0.90, is_phrase=True),
     LeadSheetRule("payroll expense", LeadSheet.N, 0.90, is_phrase=True),
+    # Sprint 804 (finding A-3): the compensation block. The two rules above were
+    # registered in the *singular* — "salary expense", "wage expense" — and real
+    # charts of accounts overwhelmingly use the plural, so the largest expense
+    # line in a service business fell to lead sheet Z and dropped out of both
+    # statements. "payroll expense" did match, which is why the gap stayed
+    # invisible. The bare "salaries"/"wages"/"compensation" rules sit *below*
+    # "accrued" (0.85) on purpose, so "Accrued Wages" stays a liability.
+    LeadSheetRule("salaries expense", LeadSheet.N, 0.90, is_phrase=True),
+    LeadSheetRule("wages expense", LeadSheet.N, 0.90, is_phrase=True),
+    LeadSheetRule("salaries and wages", LeadSheet.N, 0.90, is_phrase=True),
+    LeadSheetRule("officer compensation", LeadSheet.N, 0.90, is_phrase=True),
+    LeadSheetRule("employee benefit", LeadSheet.N, 0.85, is_phrase=True),
+    LeadSheetRule("benefits expense", LeadSheet.N, 0.85, is_phrase=True),
+    LeadSheetRule("contract labor", LeadSheet.N, 0.90, is_phrase=True),
+    LeadSheetRule("salaries", LeadSheet.N, 0.80),
+    LeadSheetRule("wages", LeadSheet.N, 0.80),
+    LeadSheetRule("compensation", LeadSheet.N, 0.80),
+    LeadSheetRule("commission", LeadSheet.N, 0.80),
+    # Sprint 804 (A-3): the remaining ordinary operating-expense names measured
+    # as unclassified against a 95-account reference chart.
+    LeadSheetRule("legal and accounting", LeadSheet.N, 0.90, is_phrase=True),
+    LeadSheetRule("charitable contribution", LeadSheet.N, 0.90, is_phrase=True),
+    LeadSheetRule("postage and delivery", LeadSheet.N, 0.90, is_phrase=True),
+    LeadSheetRule("postage", LeadSheet.N, 0.85),
+    LeadSheetRule("donation", LeadSheet.N, 0.80),
+    # Sprint 804 (finding A-4): explicit rules for the four names measured onto
+    # a balance-sheet lead sheet at confidence 0.80-0.90. The statement-class
+    # arbitration in `assign_lead_sheet` is the structural backstop; these are
+    # the named cases, so the backstop is not the only thing standing between an
+    # expense and the balance sheet.
+    LeadSheetRule("payroll tax expense", LeadSheet.N, 0.95, is_phrase=True),
+    LeadSheetRule("payroll taxes expense", LeadSheet.N, 0.95, is_phrase=True),
+    LeadSheetRule("software expense", LeadSheet.N, 0.90, is_phrase=True),
+    LeadSheetRule("vehicle expense", LeadSheet.N, 0.90, is_phrase=True),
+    LeadSheetRule("bank service charge", LeadSheet.N, 0.95, is_phrase=True),
+    LeadSheetRule("service charge", LeadSheet.N, 0.85, is_phrase=True),
     LeadSheetRule("rent expense", LeadSheet.N, 0.90, is_phrase=True),
     LeadSheetRule("utilities", LeadSheet.N, 0.85),
     LeadSheetRule("insurance expense", LeadSheet.N, 0.90, is_phrase=True),
@@ -439,6 +542,102 @@ CATEGORY_FALLBACK_MAP: dict[AccountCategory, LeadSheet] = {
 # =============================================================================
 
 
+def _terminal_token(account_lower: str) -> str:
+    """
+    Return the last alphabetic word of an account name, lowercased.
+
+    Punctuation and trailing qualifiers are stripped so that "Vehicle Expense -
+    Delivery" and "Vehicle Expense" both read as terminating in a word.
+    """
+    words = [w.strip("()[]{}-–—:;,.*#&/\\'\"") for w in account_lower.split()]
+    for word in reversed(words):
+        if word.isalpha():
+            return word
+    return ""
+
+
+def _statement_class_arbitration(
+    account_lower: str,
+    best_match: Optional[LeadSheetRule],
+) -> Optional[tuple[LeadSheet, float, list[str]]]:
+    """
+    Let an income-statement terminal token outrank a balance-sheet keyword.
+
+    Sprint 804, finding A-4. Four accounts on an ordinary chart were filed to the
+    balance sheet *with confidence 0.80-0.90* because a substring keyword beat the
+    word "Expense" in the same account name: `Payroll Tax Expense` → H,
+    `Bank Service Charges` → A, `Software Expense` → F, `Vehicle Expense` → E.
+    Each is an expense posted to the balance sheet — net income overstated, an
+    asset or liability overstated, and no signal to the user, because
+    `unclassified_count` does not count a confident wrong answer.
+
+    Returns `(lead_sheet, confidence, matched_keywords)` when the terminal token
+    should decide, or None to leave the keyword result standing.
+
+    Three things stop this from doing harm:
+    - It only fires when the keyword result is a *balance-sheet* lead sheet.
+    - It never fires when the account name carries a balance-sheet marker word
+      (`BALANCE_SHEET_MARKER_TOKENS`), which is what keeps `Prepaid Expense` → D,
+      `Accrued Expenses` → G and `Unearned Revenue` → H correct.
+    - It never fires when the winning rule's own keyword already contains the
+      terminal stem, so a rule written *about* an expense-named balance-sheet
+      account keeps its answer.
+    """
+    terminal = _terminal_token(account_lower)
+    if terminal not in TERMINAL_TOKEN_SHEETS:
+        return None
+
+    stem, fallback_sheet = TERMINAL_TOKEN_SHEETS[terminal]
+
+    # A balance-sheet marker anywhere in the name settles it: this is a
+    # balance-sheet account that merely ends in an income-statement word.
+    words = [w.strip("()[]{}-–—:;,.*#&/\\'\"") for w in account_lower.split()]
+    name_words = set(words)
+    if name_words & BALANCE_SHEET_MARKER_TOKENS:
+        # Applied symmetrically. An account whose name *leads* with a marker —
+        # "Accrued Payroll Expense", "Accrued Interest Expense" — is a liability,
+        # even when a trailing expense phrase outweighs the marker's own rule
+        # ("payroll expense" 0.90 beats "accrued" 0.85). Only re-arbitrate when a
+        # balance-sheet rule actually matches the name: "Deferred Tax Expense"
+        # has no balance-sheet rule that fits and is correctly an expense.
+        leads_with_marker = bool(words) and words[0] in BALANCE_SHEET_MARKER_TOKENS
+        if leads_with_marker and best_match is not None and best_match.lead_sheet.value not in BALANCE_SHEET_LETTERS:
+            bs_match: Optional[LeadSheetRule] = None
+            bs_weight = 0.0
+            for rule in LEAD_SHEET_RULES:
+                if rule.lead_sheet.value not in BALANCE_SHEET_LETTERS:
+                    continue
+                if rule.keyword in account_lower and rule.weight > bs_weight:
+                    bs_match = rule
+                    bs_weight = rule.weight
+            if bs_match is not None:
+                return bs_match.lead_sheet, bs_weight, [bs_match.keyword]
+        return None
+
+    if best_match is not None:
+        if best_match.lead_sheet.value not in BALANCE_SHEET_LETTERS:
+            return None  # already on the right side of the statements
+        if stem in best_match.keyword:
+            return None  # the rule is about this kind of account on purpose
+
+    # Re-scan, restricted to the income-statement lead sheets, and take the best.
+    rescan_match: Optional[LeadSheetRule] = None
+    rescan_weight = 0.0
+    for rule in LEAD_SHEET_RULES:
+        if rule.lead_sheet.value in BALANCE_SHEET_LETTERS or rule.lead_sheet is LeadSheet.Z:
+            continue
+        if rule.keyword in account_lower and rule.weight > rescan_weight:
+            rescan_match = rule
+            rescan_weight = rule.weight
+    if rescan_match is not None:
+        return rescan_match.lead_sheet, rescan_weight, [rescan_match.keyword]
+
+    # Nothing named it. The terminal token is still a real signal, so use it at
+    # reduced confidence rather than filing an expense to the balance sheet or
+    # dropping it out of the statements altogether.
+    return fallback_sheet, TERMINAL_TOKEN_CONFIDENCE, [terminal]
+
+
 def assign_lead_sheet(
     account_name: str, account_category: Optional[AccountCategory] = None, override: Optional[LeadSheet] = None
 ) -> LeadSheetAssignment:
@@ -488,6 +687,27 @@ def assign_lead_sheet(
                     matched_keywords = [rule.keyword]
                 elif rule.weight == best_weight and rule.keyword not in matched_keywords:
                     matched_keywords.append(rule.keyword)
+
+    # Sprint 804 (A-4): an income-statement terminal token outranks a
+    # balance-sheet keyword matched anywhere inside the name.
+    arbitrated = _statement_class_arbitration(account_lower, best_match)
+    if arbitrated is not None and (
+        # When nothing matched, only let the terminal token decide if the parsed
+        # account category does not already say this is a balance-sheet account.
+        # If the file says asset, trust the file.
+        best_match is not None
+        or account_category is None
+        or CATEGORY_FALLBACK_MAP.get(account_category, LeadSheet.Z).value not in BALANCE_SHEET_LETTERS
+    ):
+        sheet, confidence, keywords = arbitrated
+        return LeadSheetAssignment(
+            account_name=account_name,
+            lead_sheet=sheet,
+            lead_sheet_name=LEAD_SHEET_NAMES[sheet],
+            confidence=confidence,
+            matched_keywords=keywords,
+            is_override=False,
+        )
 
     # If we found a match, use it
     if best_match is not None:
@@ -631,7 +851,36 @@ def get_lead_sheet_options() -> list[dict]:
 
 
 def lead_sheet_grouping_to_dict(grouping: LeadSheetGrouping) -> dict:
-    """Convert LeadSheetGrouping to JSON-serializable dict."""
+    """
+    Convert LeadSheetGrouping to JSON-serializable dict.
+
+    Sprint 808 added `total_accounts` and `unclassified_accounts`.
+
+    `total_accounts` closes a live contract mismatch found while implementing
+    finding D-7: `frontend/src/types/leadSheet.ts` declared `total_accounts` and
+    `unmapped_count`, and this serializer sent **neither**. `LeadSheetSection.tsx`
+    rendered `{data.total_accounts} accounts` — which printed nothing, because
+    `undefined` renders as empty in JSX — and guarded its unclassified badge on
+    `data.unmapped_count > 0`, which is `undefined > 0`, i.e. always false. So the
+    one place in the UI that tried to surface the unclassified count had never
+    once rendered. That is why the hedging out-of-balance warning was the only
+    signal a practitioner ever got.
+
+    `unclassified_accounts` names them. The Z summary already carries the
+    accounts, but a practitioner-facing count is useless without the list, and
+    making the contract explicit is cheaper than asking every consumer to dig
+    through `summaries` for the right letter.
+    """
+    unclassified_accounts: list[str] = []
+    for summary in grouping.summaries:
+        if summary.lead_sheet is not LeadSheet.Z:
+            continue
+        for account in summary.accounts:
+            if isinstance(account, dict):
+                name = account.get("account") or account.get("name") or ""
+                if name:
+                    unclassified_accounts.append(str(name))
+
     return {
         "summaries": [
             {
@@ -648,5 +897,7 @@ def lead_sheet_grouping_to_dict(grouping: LeadSheetGrouping) -> dict:
         ],
         "total_debits": float(grouping.total_debits),
         "total_credits": float(grouping.total_credits),
+        "total_accounts": sum(s.account_count for s in grouping.summaries),
         "unclassified_count": grouping.unclassified_count,
+        "unclassified_accounts": unclassified_accounts,
     }

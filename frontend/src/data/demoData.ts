@@ -315,7 +315,8 @@ export const DEMO_LEAD_SHEETS: LeadSheetGrouping = {
       account_count: 3,
     },
   ],
-  unmapped_count: 0,
+  unclassified_count: 0,
+  unclassified_accounts: [],
   total_accounts: 42,
 }
 

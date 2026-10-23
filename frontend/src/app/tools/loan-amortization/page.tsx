@@ -418,6 +418,7 @@ export default function LoanAmortizationPage() {
                 {result.journal_entry_templates.map((tmpl, idx) => (
                   <div key={idx} className="border border-theme rounded-lg p-4">
                     <p className="font-sans font-medium text-content-primary mb-2">{tmpl.description}</p>
+                    <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <tbody>
                         {tmpl.debits.map((d, i) => (
@@ -436,6 +437,7 @@ export default function LoanAmortizationPage() {
                         ))}
                       </tbody>
                     </table>
+                    </div>
                   </div>
                 ))}
               </div>

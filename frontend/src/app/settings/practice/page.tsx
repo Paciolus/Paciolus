@@ -365,7 +365,7 @@ export default function PracticeSettingsPage() {
                     setTwmConfig({ ...twmConfig, enable_fuzzy_matching: e.target.checked })
                     setTwmPreset('custom')
                   }}
-                  className="w-4 h-4 rounded-sm border-theme bg-surface-input text-sage-500 focus:ring-sage-500/20"
+                  className="w-4 h-4 rounded-sm border-theme bg-surface-input text-theme-success-text focus:ring-sage-500/20"
                 />
                 <span className="text-content-secondary text-sm font-sans">Enable Fuzzy Vendor Matching</span>
               </label>

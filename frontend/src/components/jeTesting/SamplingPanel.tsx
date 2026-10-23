@@ -255,6 +255,7 @@ export function SamplingPanel({ file, token }: SamplingPanelProps) {
 
               {/* Strata table */}
               <div className="max-h-60 overflow-y-auto rounded-lg border border-theme">
+                <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-surface-card-secondary sticky top-0">
                     <tr>
@@ -278,6 +279,7 @@ export function SamplingPanel({ file, token }: SamplingPanelProps) {
                     })}
                   </tbody>
                 </table>
+                </div>
                 {preview.strata.length > 25 && (
                   <p className="text-center text-content-tertiary text-xs py-2">
                     + {preview.strata.length - 25} more strata
@@ -332,6 +334,7 @@ export function SamplingPanel({ file, token }: SamplingPanelProps) {
 
               {/* Strata results */}
               <div className="max-h-60 overflow-y-auto rounded-lg border border-theme">
+                <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-surface-card-secondary sticky top-0">
                     <tr>
@@ -354,6 +357,7 @@ export function SamplingPanel({ file, token }: SamplingPanelProps) {
                     ))}
                   </tbody>
                 </table>
+                </div>
               </div>
 
               <div className="flex gap-3">

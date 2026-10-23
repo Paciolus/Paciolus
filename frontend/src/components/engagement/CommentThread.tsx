@@ -65,7 +65,7 @@ function CommentBubble({
             {currentUserId === comment.user_id && (
               <button
                 onClick={() => onDelete(comment.id)}
-                className="text-xs font-sans text-clay-500/70 hover:text-clay-600 transition-colors"
+                className="text-xs font-sans text-theme-error-text/70 hover:text-clay-600 transition-colors"
               >
                 Delete
               </button>
