@@ -23,6 +23,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from auth import require_verified_user
@@ -420,15 +421,25 @@ def _finalize_download(share: ExportShare, request: Any, db: Session) -> Respons
     """Shared tail logic for both GET and POST download paths."""
     now = _enforce_not_expired(share)
 
-    # Update access counter
-    share.access_count = (share.access_count or 0) + 1
-    share.last_accessed_at = now
-
-    # Single-use auto-revoke (Sprint 593): revoke after serving
+    # Sprint 821 (PR #217 review): one conditional UPDATE, so the counter and a
+    # single-use link's consumption are atomic. As a read-then-write, two
+    # requests could both pass the revocation check before either committed and
+    # a single-use link served its export twice — across workers always, and
+    # within one worker once download handlers left the event loop. Whichever
+    # request updates no row lost the race.
+    values: dict[Any, Any] = {
+        ExportShare.access_count: func.coalesce(ExportShare.access_count, 0) + 1,
+        ExportShare.last_accessed_at: now,
+    }
+    query = db.query(ExportShare).filter(ExportShare.id == share.id)
     if share.single_use:
-        share.revoked_at = now
-
+        values[ExportShare.revoked_at] = now  # Sprint 593: revoke after serving
+        query = query.filter(ExportShare.revoked_at.is_(None))
+    claimed = query.update(values, synchronize_session=False)
     db.commit()
+    if claimed == 0:
+        raise HTTPException(status_code=404, detail="Share link not found or revoked.")
+    db.refresh(share)
 
     masked_ip, ua_hash = _log_access(share, request)
 

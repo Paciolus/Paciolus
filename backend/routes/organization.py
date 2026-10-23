@@ -149,6 +149,17 @@ def update_organization(
 # ---------------------------------------------------------------------------
 
 
+def _lock_org_for_seat_check(db: Session, org_id: int) -> Organization | None:
+    """Take a row lock on the organization before a seat-limit check.
+
+    The seat check counts members + pending invites, then the caller inserts.
+    Without a lock two concurrent requests both see a free seat and both
+    insert. ``SELECT ... FOR UPDATE`` holds the lock until the caller commits,
+    so a second request blocks and then counts the first one's row.
+    """
+    return db.query(Organization).filter(Organization.id == org_id).with_for_update().first()
+
+
 @router.post("/invite", response_model=OrganizationInviteCreateResponse)
 @limiter.limit(RATE_LIMIT_WRITE)
 def create_invite(
@@ -161,7 +172,11 @@ def create_invite(
     org = get_user_org(db, user)
     require_admin(db, user, org)
 
-    # Check seat limit against org subscription (not the inviter's personal subscription)
+    # Check seat limit against org subscription (not the inviter's personal subscription).
+    # Sprint 821: this handler now runs in the threadpool, so two invites can
+    # race between the seat count and the insert. Lock the organization row
+    # first so seat reservations serialize (Postgres; a no-op on SQLite).
+    _lock_org_for_seat_check(db, org.id)
     check_seat_limit_for_org(db, org.id)
 
     # Check for duplicate pending invite
@@ -291,7 +306,7 @@ def accept_invite(
         raise HTTPException(status_code=410, detail="This invite has expired.")
 
     # Check seat limit for the org (uses org subscription, not inviter's)
-    org = db.query(Organization).filter(Organization.id == invite.organization_id).first()
+    org = _lock_org_for_seat_check(db, invite.organization_id)
     if not org:
         raise HTTPException(status_code=404, detail="Organization not found.")
 
