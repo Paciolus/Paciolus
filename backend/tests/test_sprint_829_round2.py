@@ -114,3 +114,26 @@ def test_formatted_csv_amounts_are_read_not_zeroed(csv_text):
     assert float(result["total_debits"]) == pytest.approx(1234.56)
     assert float(result["total_credits"]) == pytest.approx(1234.56)
     assert result["balanced"] is True
+
+
+def test_dupont_and_common_size_reach_the_client_as_numbers():
+    """Round 2, T6: through TrialBalanceResponse (analytics: dict[str, Any]) these
+    serialised as JSON strings, and the frontend's formatDupont called
+    "1.0000".toFixed(4) — a TypeError on every TB with a DuPont breakdown."""
+    import json
+
+    from audit.pipeline import audit_trial_balance_streaming
+    from shared.diagnostic_response_schemas import TrialBalanceResponse
+
+    csv = (
+        "Account,Account Type,Debit,Credit\nCash,Asset,500000,\nAccounts Receivable,Asset,300000,\n"
+        "Inventory,Asset,200000,\nAccounts Payable,Liability,,250000\nCommon Stock,Equity,,400000\n"
+        "Retained Earnings,Equity,,200000\nSales Revenue,Revenue,,1000000\nCost of Goods Sold,Expense,600000,\n"
+        "Rent Expense,Expense,250000,\n"
+    )
+    body = json.loads(TrialBalanceResponse(**audit_trial_balance_streaming(csv.encode(), "tb.csv")).model_dump_json())
+    analytics = body["analytics"]
+    dupont = {k: v for k, v in analytics["dupont"].items() if k not in ("verification_matches", "prior_period_deltas")}
+    assert dupont and all(isinstance(v, float) for v in dupont.values()), dupont
+    for section in analytics["common_size"].values():
+        assert all(isinstance(v, (int, float)) for v in section.values()), section

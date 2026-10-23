@@ -473,6 +473,30 @@ every IC revenue/expense pair.
 
 ---
 
+### Sprint 829: Discovery round 2 — the eleven tools Sprint 823 did not cover
+**Status:** IN PROGRESS. A second round of discovery agents ran the original tools (TB, JE, AP,
+payroll, revenue, AR, inventory, bank rec, three-way match) against realistic synthetic input.
+**Priority:** **P1** — several findings produce wrong output on correct input.
+
+- [x] **AR-1** — aging uses the shared `parse_date`, so Excel date cells are aged (a whole
+      .xlsx sub-ledger was landing in Current).
+- [x] **AR-2** — a sub-ledger with only an invoice date is aged from it, with a note.
+- [x] **AR-3** — non-trade receivables (notes, loans, officers, related party, tax, …) and
+      non-earned revenue (deferred, unearned, cost of) are no longer classified as trade AR/revenue.
+- [x] **IN-5** — `selling_price_column` is detected and overridable, so IN-T10 (LCM/NRV) can run.
+- [x] **T1** — currency-formatted debit/credit cells ("$1,234.00", "(500)") in a CSV/Excel TB are
+      parsed instead of coerced to zero.
+- [x] **T6** — DuPont and common-size values serialize as JSON numbers, not strings.
+- [ ] Open P1s: JE reciprocal pairs an entry's own lines; JE just-below-threshold double counts;
+      JE composite LOW on an unbalanced GL; JE after-hours flags every xlsx date cell; payroll
+      xlsx pay dates; payroll PR-T9 on a single-period register; AP-T14 PO column unmapped;
+      JE numbering gaps with year-prefixed IDs; revenue RT-04 sign convention; TB T2–T5;
+      bank rec B1/B3; three-way match W1/W2.
+
+**Commit SHA:** TBD.
+
+---
+
 ### Sprint 812: Nineteen rate-limited routes 500 on every call
 **Status:** IN REVIEW — code complete 2026-10-23; post-deploy verification pending.
 **Priority:** **P0** — every Professional/Enterprise org feature is down in production.

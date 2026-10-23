@@ -284,15 +284,19 @@ class DupontDecomposition:
     prior_period_deltas: Optional[dict[str, float]] = None
 
     def to_dict(self) -> dict[str, Any]:
+        # Sprint 829 (round 2, T6): float at the boundary. round(Decimal) is a
+        # Decimal, which the TB response's `analytics: dict[str, Any]` serialises
+        # as a JSON *string* — and the frontend's formatDupont calls
+        # value.toFixed(4) on it, throwing a TypeError for every TB with DuPont.
         result: dict[str, Any] = {
-            "net_profit_margin": round(self.net_profit_margin, 4),
-            "asset_turnover": round(self.asset_turnover, 4),
-            "equity_multiplier": round(self.equity_multiplier, 4),
-            "decomposed_roe": round(self.decomposed_roe, 4),
+            "net_profit_margin": float(round(self.net_profit_margin, 4)),
+            "asset_turnover": float(round(self.asset_turnover, 4)),
+            "equity_multiplier": float(round(self.equity_multiplier, 4)),
+            "decomposed_roe": float(round(self.decomposed_roe, 4)),
             "verification_matches": self.verification_matches,
         }
         if self.prior_period_deltas is not None:
-            result["prior_period_deltas"] = {k: round(v, 4) for k, v in self.prior_period_deltas.items()}
+            result["prior_period_deltas"] = {k: float(round(v, 4)) for k, v in self.prior_period_deltas.items()}
         return result
 
 
@@ -1572,14 +1576,14 @@ class CommonSizeAnalyzer:
         non_current_assets = self.totals.total_assets - self.totals.current_assets
 
         return {
-            "current_assets_pct": round((self.totals.current_assets / base) * 100, 1),
-            "inventory_pct": round((self.totals.inventory / base) * 100, 1),
-            "accounts_receivable_pct": round((self.totals.accounts_receivable / base) * 100, 1),
-            "non_current_assets_pct": round((non_current_assets / base) * 100, 1),
-            "total_liabilities_pct": round((self.totals.total_liabilities / base) * 100, 1),
-            "current_liabilities_pct": round((self.totals.current_liabilities / base) * 100, 1),
-            "accounts_payable_pct": round((self.totals.accounts_payable / base) * 100, 1),
-            "total_equity_pct": round((self.totals.total_equity / base) * 100, 1),
+            "current_assets_pct": float(round((self.totals.current_assets / base) * 100, 1)),
+            "inventory_pct": float(round((self.totals.inventory / base) * 100, 1)),
+            "accounts_receivable_pct": float(round((self.totals.accounts_receivable / base) * 100, 1)),
+            "non_current_assets_pct": float(round((non_current_assets / base) * 100, 1)),
+            "total_liabilities_pct": float(round((self.totals.total_liabilities / base) * 100, 1)),
+            "current_liabilities_pct": float(round((self.totals.current_liabilities / base) * 100, 1)),
+            "accounts_payable_pct": float(round((self.totals.accounts_payable / base) * 100, 1)),
+            "total_equity_pct": float(round((self.totals.total_equity / base) * 100, 1)),
         }
 
     def income_statement_percentages(self) -> dict[str, float]:
@@ -1593,12 +1597,12 @@ class CommonSizeAnalyzer:
         operating_income = base - self.totals.cost_of_goods_sold - self.totals.operating_expenses
 
         return {
-            "cogs_pct": round((self.totals.cost_of_goods_sold / base) * 100, 1),
-            "gross_profit_pct": round((gross_profit / base) * 100, 1),
-            "operating_expenses_pct": round((self.totals.operating_expenses / base) * 100, 1),
-            "operating_income_pct": round((operating_income / base) * 100, 1),
-            "total_expenses_pct": round((self.totals.total_expenses / base) * 100, 1),
-            "net_income_pct": round((net_income / base) * 100, 1),
+            "cogs_pct": float(round((self.totals.cost_of_goods_sold / base) * 100, 1)),
+            "gross_profit_pct": float(round((gross_profit / base) * 100, 1)),
+            "operating_expenses_pct": float(round((self.totals.operating_expenses / base) * 100, 1)),
+            "operating_income_pct": float(round((operating_income / base) * 100, 1)),
+            "total_expenses_pct": float(round((self.totals.total_expenses / base) * 100, 1)),
+            "net_income_pct": float(round((net_income / base) * 100, 1)),
         }
 
     def to_dict(self) -> dict[str, dict[str, float]]:
