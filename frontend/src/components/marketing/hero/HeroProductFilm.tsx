@@ -277,7 +277,7 @@ function TimelineScrubber({
               {/* Inline subtitle — visible on active step */}
               <span className={`
                 font-sans text-[10px] leading-snug text-center transition-all duration-300 hidden sm:block
-                ${isActive ? 'text-oatmeal-400 opacity-100' : 'text-oatmeal-700 opacity-0'}
+                ${isActive ? 'text-oatmeal-400 opacity-100' : 'text-oatmeal-600 opacity-0'}
               `}>
                 {STEP_SUBTITLES[step]}
               </span>

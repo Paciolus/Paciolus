@@ -53,7 +53,7 @@ export function VarianceDetailCard({ variances }: VarianceDetailCardProps) {
             </span>
           )}
           {countBySeverity.medium > 0 && (
-            <span className="px-2 py-0.5 rounded-sm text-xs font-sans bg-oatmeal-100 text-oatmeal-700 border border-oatmeal-300">
+            <span className="px-2 py-0.5 rounded-sm text-xs font-sans bg-oatmeal-100 text-obsidian-500 border border-oatmeal-300">
               {countBySeverity.medium} Medium
             </span>
           )}

@@ -232,6 +232,10 @@
 >   place.
 >
 > **Now unblocked by work that just landed — worth doing early:**
+> - **DONE 2026-10-23 (Sprint 828):** every `text-oatmeal-700` migrated by surface —
+>   `obsidian-500` (5.63:1) on the light badge/page surfaces, `oatmeal-600` (5.33:1) on dark
+>   marketing routes, `oatmeal-500` for the error digest on `global-error`'s #303030 panel — and
+>   the lint exemption deleted, so the gate now enforces it. The text below is the original note.
 > - **48 × `text-oatmeal-700` fail WCAG AA on both page surfaces** (4.38:1 dark /
 >   3.89:1 light). No oatmeal shade reaches AA on the light page — oatmeal *is* the light
 >   palette — so each usage needs to know its surface. That was blocked on the route→theme

@@ -41,8 +41,8 @@ export const THRESHOLD_STATUS_CLASSES: Record<ThresholdStatus, ThresholdClasses>
   at_threshold: {
     border: 'border-oatmeal-300',
     bg: 'bg-oatmeal-50',
-    badge: 'bg-oatmeal-100 text-oatmeal-700',
-    icon: 'text-oatmeal-700',
+    badge: 'bg-oatmeal-100 text-obsidian-500',
+    icon: 'text-obsidian-500',
     borderAccent: 'border-l-oatmeal-500',
   },
   below_threshold: {
@@ -167,7 +167,7 @@ export type BadgeVariant = 'success' | 'error' | 'warning' | 'neutral' | 'info';
 export const BADGE_CLASSES: Record<BadgeVariant, string> = {
   success: 'bg-sage-50 text-sage-700 border border-sage-200',
   error: 'bg-clay-50 text-clay-700 border border-clay-200',
-  warning: 'bg-oatmeal-100 text-oatmeal-700 border border-oatmeal-300',
+  warning: 'bg-oatmeal-100 text-obsidian-500 border border-oatmeal-300',
   neutral: 'bg-oatmeal-50 text-content-secondary border border-theme',
   info: 'bg-surface-card-secondary text-content-secondary border border-theme',
 };
@@ -200,7 +200,7 @@ export type ThresholdRiskLevel = 'high' | 'medium' | 'low' | 'none';
  */
 export const RISK_LEVEL_CLASSES: Record<ThresholdRiskLevel, string> = {
   high: 'bg-clay-50 text-clay-700 border-clay-200',
-  medium: 'bg-oatmeal-100 text-oatmeal-700 border-oatmeal-300',
+  medium: 'bg-oatmeal-100 text-obsidian-500 border-oatmeal-300',
   low: 'bg-sage-50 text-sage-700 border-sage-200',
   none: 'bg-oatmeal-50 text-content-secondary border-theme',
 };

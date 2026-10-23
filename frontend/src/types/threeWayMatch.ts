@@ -22,20 +22,20 @@ export const MATCH_TYPE_LABELS: Record<TWMMatchType, string> = {
 
 export const MATCH_TYPE_COLORS: Record<TWMMatchType, string> = {
   exact_po: 'bg-sage-50 text-sage-700 border-sage-200',
-  fuzzy: 'bg-oatmeal-100 text-oatmeal-700 border-oatmeal-300',
+  fuzzy: 'bg-oatmeal-100 text-obsidian-500 border-oatmeal-300',
   partial: 'bg-clay-50 text-clay-700 border-clay-200',
 }
 
 export const VARIANCE_SEVERITY_COLORS: Record<Severity, string> = {
   high: 'bg-clay-50 text-clay-700 border-clay-200',
-  medium: 'bg-oatmeal-100 text-oatmeal-700 border-oatmeal-300',
+  medium: 'bg-oatmeal-100 text-obsidian-500 border-oatmeal-300',
   low: 'bg-sage-50 text-sage-700 border-sage-200',
   informational: 'bg-oatmeal-50/50 text-content-tertiary border-oatmeal-200/50',
 }
 
 export const RISK_COLORS: Record<TWMRiskLevel, string> = {
   low: 'text-sage-600',
-  medium: 'text-oatmeal-700',
+  medium: 'text-obsidian-500',
   high: 'text-clay-600',
 }
 

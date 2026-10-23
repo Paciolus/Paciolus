@@ -168,7 +168,7 @@ export function MatchResultsTable({ fullMatches, partialMatches }: MatchResultsT
                   </td>
                   <td className={`px-4 py-3 font-mono text-right ${
                     maxSeverity === 'high' ? 'text-clay-600' :
-                    maxSeverity === 'medium' ? 'text-oatmeal-700' :
+                    maxSeverity === 'medium' ? 'text-obsidian-500' :
                     'text-sage-600'
                   }`}>
                     {totalVariance > 0 ? `$${fmt(totalVariance)}` : '—'}

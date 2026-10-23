@@ -11,14 +11,14 @@ import { EASE } from '@/utils/motionTokens'
 const LEVEL_STYLES: Record<ProofConfidenceLevel, { bg: string; text: string; border: string }> = {
   strong: { bg: 'bg-sage-50', text: 'text-sage-700', border: 'border-sage-200' },
   adequate: { bg: 'bg-sage-50/60', text: 'text-sage-600', border: 'border-sage-200/60' },
-  limited: { bg: 'bg-oatmeal-100', text: 'text-oatmeal-700', border: 'border-oatmeal-300' },
+  limited: { bg: 'bg-oatmeal-100', text: 'text-obsidian-500', border: 'border-oatmeal-300' },
   insufficient: { bg: 'bg-clay-50', text: 'text-clay-700', border: 'border-clay-200' },
 }
 
 const METRIC_TEXT_COLOR: Record<ProofConfidenceLevel, string> = {
   strong: 'text-sage-700',
   adequate: 'text-sage-600',
-  limited: 'text-oatmeal-700',
+  limited: 'text-obsidian-500',
   insufficient: 'text-clay-700',
 }
 

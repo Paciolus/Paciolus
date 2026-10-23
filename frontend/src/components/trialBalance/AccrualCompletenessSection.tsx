@@ -35,7 +35,7 @@ export function AccrualCompletenessSection({ data, onExportPDF, onExportCSV }: A
           {data.prior_available && (
             <span className={`px-2 py-0.5 rounded-full border text-xs font-sans ${
               data.below_threshold
-                ? 'bg-oatmeal-100 text-oatmeal-700 border-oatmeal-300'
+                ? 'bg-oatmeal-100 text-obsidian-500 border-oatmeal-300'
                 : 'bg-sage-50 text-sage-700 border-sage-200'
             }`}>
               Ratio: {ratioLabel}

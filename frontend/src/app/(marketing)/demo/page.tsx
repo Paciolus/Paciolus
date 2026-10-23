@@ -143,13 +143,13 @@ export default function DemoPage() {
                       </p>
 
                       <div className="flex items-center gap-1.5 mt-3 pt-2.5 border-t border-obsidian-600/25">
-                        <span className="font-sans text-[9px] uppercase tracking-widest text-oatmeal-700">
+                        <span className="font-sans text-[9px] uppercase tracking-widest text-oatmeal-600">
                           {tool.cluster}
                         </span>
                         {tool.tests && (
                           <>
                             <span className="text-obsidian-600 text-[9px]">·</span>
-                            <span className="font-mono text-[9px] text-oatmeal-700">{tool.tests} tests</span>
+                            <span className="font-mono text-[9px] text-oatmeal-600">{tool.tests} tests</span>
                           </>
                         )}
                       </div>
@@ -189,7 +189,7 @@ export default function DemoPage() {
             </Link>
           </div>
 
-          <p className="font-sans text-xs text-oatmeal-700 mt-6">
+          <p className="font-sans text-xs text-oatmeal-600 mt-6">
             All data shown on this page is synthetic. No client information is used or stored.
           </p>
         </Reveal>

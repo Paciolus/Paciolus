@@ -9,7 +9,7 @@ import type { ProofConfidenceLevel } from '@/types/proof'
 const BADGE_STYLES: Record<ProofConfidenceLevel, { bg: string; text: string; border: string; label: string }> = {
   strong: { bg: 'bg-sage-50', text: 'text-sage-700', border: 'border-sage-200', label: 'Strong' },
   adequate: { bg: 'bg-sage-50/60', text: 'text-sage-600', border: 'border-sage-200/60', label: 'Adequate' },
-  limited: { bg: 'bg-oatmeal-100', text: 'text-oatmeal-700', border: 'border-oatmeal-300', label: 'Limited' },
+  limited: { bg: 'bg-oatmeal-100', text: 'text-obsidian-500', border: 'border-oatmeal-300', label: 'Limited' },
   insufficient: { bg: 'bg-clay-50', text: 'text-clay-700', border: 'border-clay-200', label: 'Insufficient' },
 }
 

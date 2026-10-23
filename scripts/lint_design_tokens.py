@@ -241,19 +241,11 @@ CONTRAST_EXEMPT_SHADES: dict[str, str] = {
     "obsidian-400": (
         "the --text-disabled value; WCAG 2.1 SC 1.4.3 exempts inactive UI components"
     ),
-    # #7F7A6E, 4.38:1 dark / 3.89:1 light — 48 live usages. Not a permanent
-    # exemption and not defensible as one: oatmeal is the *light* palette and no
-    # oatmeal shade reaches AA on the light page surface (700 is the best at
-    # 3.89:1), so every one of those usages that renders on a light page is a
-    # genuine defect. Which ones those are cannot be determined here, because
-    # this gate has no route->theme map — that map is finding D-4. Recorded,
-    # printed on every run, and blocked on D-4 rather than migrated blind:
-    # picking a replacement shade per usage is a design decision about a surface
-    # whose theme is currently unknowable from source.
-    "oatmeal-700": (
-        "48 usages whose correct replacement depends on each route's theme; "
-        "blocked on the route->theme map (finding D-4). NOT a permanent exemption"
-    ),
+    # oatmeal-700 (#7F7A6E, 4.38:1 dark / 3.89:1 light) was exempted here while
+    # its 48 usages waited on a route->theme map. Sprint 809 built the map and
+    # Sprint 828 migrated every usage by surface: obsidian-500 (5.63:1) on the
+    # light badge/page surfaces, oatmeal-600 (5.33:1) on dark marketing routes.
+    # The exemption is gone, so any new oatmeal-700 text fails this gate.
 }
 
 

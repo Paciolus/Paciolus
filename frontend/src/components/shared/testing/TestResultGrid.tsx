@@ -14,7 +14,7 @@ const TIER_LABELS: Record<TestingTestTier, string> = {
 }
 
 const TIER_BADGE: Record<TestingTestTier, string> = {
-  structural: 'bg-oatmeal-100 text-oatmeal-700',
+  structural: 'bg-oatmeal-100 text-obsidian-500',
   statistical: 'bg-sage-50 text-sage-700',
   advanced: 'bg-clay-50 text-clay-700',
   contract: 'bg-oatmeal-50 text-obsidian-600',

@@ -64,7 +64,7 @@ export interface BaseDataQuality {
 /** Risk tier color mapping — Oat & Obsidian light theme (standardized -700 palette). */
 export const TESTING_RISK_TIER_COLORS: Record<TestingRiskTier, { bg: string; border: string; text: string }> = {
   low: { bg: 'bg-sage-50', border: 'border-sage-200', text: 'text-sage-700' },
-  elevated: { bg: 'bg-oatmeal-100', border: 'border-oatmeal-300', text: 'text-oatmeal-700' },
+  elevated: { bg: 'bg-oatmeal-100', border: 'border-oatmeal-300', text: 'text-obsidian-500' },
   moderate: { bg: 'bg-clay-50', border: 'border-clay-200', text: 'text-clay-700' },
   high: { bg: 'bg-clay-100', border: 'border-clay-300', text: 'text-clay-700' },
 }

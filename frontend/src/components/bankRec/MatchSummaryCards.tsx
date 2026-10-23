@@ -45,7 +45,7 @@ export function MatchSummaryCards({ summary }: MatchSummaryCardsProps) {
   const colorMap = {
     sage: 'text-sage-600',
     clay: 'text-clay-600',
-    oatmeal: 'text-oatmeal-700',
+    oatmeal: 'text-obsidian-500',
   }
 
   const borderMap = {

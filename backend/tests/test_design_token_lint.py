@@ -387,13 +387,20 @@ def test_every_exemption_carries_a_reason():
 def test_exemptions_are_printed_on_every_run():
     """
     Including the clean run. An exemption visible only in source is an exemption
-    nobody reviews — and `oatmeal-700` is explicitly not a permanent one.
+    nobody reviews.
     """
     clean = linter.format_report([])
 
     assert "Standing contrast exemptions" in clean
     for shade in linter.CONTRAST_EXEMPT_SHADES:
         assert shade in clean
+
+
+def test_oatmeal_700_is_no_longer_exempt():
+    """Sprint 828 migrated its 48 usages by surface once the route->theme map
+    existed. The exemption was always described as temporary; it is gone, so a
+    new oatmeal-700 text usage fails the repo-level check below."""
+    assert "oatmeal-700" not in linter.CONTRAST_EXEMPT_SHADES
 
 
 def test_the_frontend_has_no_illegible_text_shades():

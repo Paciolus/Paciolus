@@ -55,7 +55,7 @@ jest.mock('@/utils/formatting', () => ({
 jest.mock('@/types/engagement', () => ({
   ENGAGEMENT_STATUS_COLORS: {
     active: { bg: 'bg-sage-50', text: 'text-sage-700', border: 'border-sage-200' },
-    archived: { bg: 'bg-oatmeal-100', text: 'text-oatmeal-700', border: 'border-oatmeal-300' },
+    archived: { bg: 'bg-oatmeal-100', text: 'text-obsidian-500', border: 'border-oatmeal-300' },
   },
 }))
 
