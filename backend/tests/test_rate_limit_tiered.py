@@ -77,9 +77,23 @@ class TestTieredLimitBackwardCompat:
         ]
         assert tiers == sorted(tiers)
 
-    def test_callable(self):
-        """TieredLimit must be callable (slowapi dynamic limit contract)."""
+    def test_resolves_a_limit_string_when_called(self):
+        """
+        `TieredLimit.__call__` is what slowapi invokes per request to resolve a
+        dynamic limit, so being callable is a real requirement here — but
+        Sprint 810 (T-3) strengthened this from `assert callable(...)`, which
+        `lambda: None` would also satisfy, to actually calling it and checking
+        the result is a usable limit string. A dynamic limit that returns
+        nothing usable disables rate limiting on the auth endpoints silently.
+        """
         assert callable(RATE_LIMIT_AUTH)
+
+        resolved = RATE_LIMIT_AUTH()
+        assert isinstance(resolved, str)
+        # slowapi limit grammar: "<count>/<period>"
+        count, _, period = resolved.partition("/")
+        assert count.isdigit() and int(count) > 0, resolved
+        assert period, resolved
 
     def test_call_returns_string(self):
         """Calling TieredLimit returns the resolved limit string."""

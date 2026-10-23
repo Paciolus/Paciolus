@@ -43,7 +43,7 @@ const STYLES: Record<Severity, {
 }> = {
   high: {
     border: 'border-clay-500',
-    caret: 'text-clay-500',
+    caret: 'text-theme-error-text',
     body: 'text-clay-100',
   },
   moderate: {

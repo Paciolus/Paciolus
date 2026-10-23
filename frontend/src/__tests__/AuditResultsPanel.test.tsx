@@ -139,7 +139,7 @@ const resultWithAnalytics: AuditResult = {
 
 const resultWithLeadSheet: AuditResult = {
   ...baseResult,
-  lead_sheet_grouping: { summaries: [], unmapped_count: 0, total_accounts: 0 } satisfies LeadSheetGrouping,
+  lead_sheet_grouping: { summaries: [], unclassified_count: 0, unclassified_accounts: [], total_accounts: 0 } satisfies LeadSheetGrouping,
 }
 
 const resultWithClassification: AuditResult = {

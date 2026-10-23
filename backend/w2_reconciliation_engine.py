@@ -12,17 +12,14 @@ Zero-storage: form-input only. The engine is a diagnostic tool that
 flags discrepancies for practitioner review — it does not determine
 the "correct" value when payroll and W-2 disagree.
 
-Reference limits (tax year 2026):
-  * Social Security wage base: $176,100
-  * SS employee rate: 6.2%
-  * Medicare employee rate: 1.45%
-  * Additional Medicare (employee): 0.9% above $200,000
-  * HSA self-only: $4,300
-  * HSA family: $8,550
-  * 401(k) elective deferral: $23,500
-  * 401(k) catch-up (age 50+): $7,500
-  * 401(k) secure 2.0 catch-up (age 60-63): $11,250
-  * SIMPLE IRA elective: $16,500
+Statutory limits are keyed by tax year in ``STATUTORY_LIMITS_BY_YEAR`` and
+resolved per run by ``statutory_limits_for_year()``, which **refuses** a year it
+has no table for rather than substituting another year's figures. See the
+comment on that table for why (Sprint 811, finding A-7).
+
+Currently tabulated: **tax year 2025 only**. A 2026 engagement must supply the
+figures via the per-request ``statutory_limits`` override (Sprint 793a) until the
+2026 table lands with practitioner-confirmed values (Sprint 793b).
 """
 
 from __future__ import annotations
@@ -31,23 +28,149 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from decimal import ROUND_HALF_UP, Decimal
 from enum import Enum
-from typing import Any
+from typing import Any, ClassVar
 
 CENT = Decimal("0.01")
 ZERO = Decimal("0")
 
-# --- 2026 reference values (caller override via Form941ComparisonConfig) ---
-DEFAULT_SS_WAGE_BASE = Decimal("176100")
-DEFAULT_SS_RATE = Decimal("0.062")
-DEFAULT_MEDICARE_RATE = Decimal("0.0145")
-DEFAULT_ADDITIONAL_MEDICARE_RATE = Decimal("0.009")
-DEFAULT_ADDITIONAL_MEDICARE_THRESHOLD = Decimal("200000")
-DEFAULT_HSA_SELF_ONLY = Decimal("4300")
-DEFAULT_HSA_FAMILY = Decimal("8550")
-DEFAULT_401K_ELECTIVE_LIMIT = Decimal("23500")
-DEFAULT_401K_CATCHUP_50 = Decimal("7500")
-DEFAULT_401K_CATCHUP_60_63 = Decimal("11250")
-DEFAULT_SIMPLE_IRA_LIMIT = Decimal("16500")
+
+class W2ReconciliationInputError(ValueError):
+    """Raised for invalid reconciliation inputs."""
+
+
+class StatutoryLimitsUnavailableError(W2ReconciliationInputError):
+    """
+    Raised when no statutory limit table exists for the requested tax year and
+    the caller did not supply the figures.
+
+    An input error by design: the fix is in the caller's hands — supply the
+    year's limits, or use a year that has a table.
+    """
+
+
+# =============================================================================
+# Statutory limits, keyed by tax year
+# =============================================================================
+#
+# Sprint 811 (finding A-7, structural half). This block used to be headed
+# `# --- 2026 reference values ---` and every figure in it was the **2025**
+# statutory set. A mislabelled block is worse than a stale one, because the
+# comment defeats the next reader's check.
+#
+# The structural defect was larger than the label: `tax_year` is a *required*
+# input accepted for any year from 2000 to 2099 (`routes/w2_reconciliation.py`),
+# and **no statutory constant was keyed by it**. Every tax year got one fixed
+# set of limits, so the tool answered a 2026 question with 2025 law and said
+# nothing about it. The route's own docstring admitted as much.
+#
+# What this sprint changes: the figures are year-keyed, the 2025 set is labelled
+# 2025, and `statutory_limits_for_year()` **refuses** a year it has no table for
+# rather than falling back. Sprint 793a's per-request overrides are the
+# documented escape hatch and are unchanged.
+#
+# What this sprint deliberately does not change: the 2026 figures. Those need a
+# practitioner, and they stay with Sprint 793b. Adding an unconfirmed 2026 row
+# here would recreate exactly the defect being fixed — a figure that reads as
+# authoritative because it is sitting in an authoritative-looking table.
+
+
+@dataclass(frozen=True)
+class StatutoryLimits:
+    """One tax year's federal payroll limits, with its own provenance."""
+
+    tax_year: int
+    ss_wage_base: Decimal
+    ss_rate: Decimal
+    medicare_rate: Decimal
+    additional_medicare_rate: Decimal
+    additional_medicare_threshold: Decimal
+    hsa_self_only: Decimal
+    hsa_family: Decimal
+    limit_401k_elective: Decimal
+    limit_401k_catchup_50: Decimal
+    limit_401k_catchup_60_63: Decimal
+    limit_simple_ira: Decimal
+    source: str
+    verified_by: str
+
+
+STATUTORY_LIMITS_BY_YEAR: dict[int, StatutoryLimits] = {
+    2025: StatutoryLimits(
+        tax_year=2025,
+        ss_wage_base=Decimal("176100"),
+        ss_rate=Decimal("0.062"),
+        medicare_rate=Decimal("0.0145"),
+        additional_medicare_rate=Decimal("0.009"),
+        additional_medicare_threshold=Decimal("200000"),
+        hsa_self_only=Decimal("4300"),
+        hsa_family=Decimal("8550"),
+        limit_401k_elective=Decimal("23500"),
+        limit_401k_catchup_50=Decimal("7500"),
+        limit_401k_catchup_60_63=Decimal("11250"),
+        limit_simple_ira=Decimal("16500"),
+        source="IRS Notice 2024-80 (retirement limits); SSA 2025 wage base; Rev. Proc. 2024-25 (HSA)",
+        verified_by=(
+            "These are the figures that shipped under a '2026' heading. The 2026-10-22 "
+            "full-spectrum review identified them as the 2025 set, which is how they are "
+            "now labelled. Not independently re-verified against the notices — Sprint 793b "
+            "owns practitioner confirmation of both 2025 and 2026."
+        ),
+    ),
+}
+
+# The year whose limits the engine uses when a caller does not say. Kept
+# explicit rather than "the newest row", so adding a row cannot silently move
+# every existing caller onto a different statutory set.
+DEFAULT_STATUTORY_YEAR = 2025
+
+
+def statutory_limits_for_year(tax_year: int) -> StatutoryLimits:
+    """
+    Return the statutory limits for `tax_year`, or raise.
+
+    Sprint 811: refuses rather than falling back. Answering a 2026 engagement
+    with 2025 law and no disclosure is worse than declining to answer, because
+    the W-2 and 941 findings it produces — wage-base exceeded, over-limit
+    deferral — are wrong in a direction the practitioner cannot see.
+
+    Callers that need a year with no table can supply the figures per request
+    via `statutory_limits` (Sprint 793a), which is the documented escape hatch.
+    """
+    limits = STATUTORY_LIMITS_BY_YEAR.get(tax_year)
+    if limits is None:
+        available = ", ".join(str(year) for year in sorted(STATUTORY_LIMITS_BY_YEAR))
+        # A `W2ReconciliationInputError`, not a bare ValueError: both routes
+        # already map that to a verbatim 400, so the practitioner is told what
+        # to do. A bare ValueError reaches the analyze route's `sanitize_error`
+        # path, which would strip the actionable half, and the CSV export route
+        # does not catch it at all — it would 500.
+        raise StatutoryLimitsUnavailableError(
+            f"No statutory limit table for tax year {tax_year}. "
+            f"Tables available: {available}. "
+            f"Supply the figures for your filing year via the `statutory_limits` "
+            f"override, or wait for the {tax_year} table to be added with "
+            f"practitioner-confirmed figures. Substituting another year's limits "
+            f"would misstate the wage-base and over-limit findings without saying so."
+        )
+    return limits
+
+
+_DEFAULTS = STATUTORY_LIMITS_BY_YEAR[DEFAULT_STATUTORY_YEAR]
+
+# Module-level aliases. Retained because `W2ReconciliationConfig` uses them as
+# dataclass field defaults and tests import them by name; they now resolve
+# through the year-keyed table rather than being the only copy of the figures.
+DEFAULT_SS_WAGE_BASE = _DEFAULTS.ss_wage_base
+DEFAULT_SS_RATE = _DEFAULTS.ss_rate
+DEFAULT_MEDICARE_RATE = _DEFAULTS.medicare_rate
+DEFAULT_ADDITIONAL_MEDICARE_RATE = _DEFAULTS.additional_medicare_rate
+DEFAULT_ADDITIONAL_MEDICARE_THRESHOLD = _DEFAULTS.additional_medicare_threshold
+DEFAULT_HSA_SELF_ONLY = _DEFAULTS.hsa_self_only
+DEFAULT_HSA_FAMILY = _DEFAULTS.hsa_family
+DEFAULT_401K_ELECTIVE_LIMIT = _DEFAULTS.limit_401k_elective
+DEFAULT_401K_CATCHUP_50 = _DEFAULTS.limit_401k_catchup_50
+DEFAULT_401K_CATCHUP_60_63 = _DEFAULTS.limit_401k_catchup_60_63
+DEFAULT_SIMPLE_IRA_LIMIT = _DEFAULTS.limit_simple_ira
 
 # Tolerance for rounding-only differences — $1.00 per line per side.
 DEFAULT_TOLERANCE = Decimal("1.00")
@@ -77,10 +200,6 @@ class DiscrepancyKind(str, Enum):
     HSA_OVER_LIMIT = "hsa_over_limit"
     RETIREMENT_OVER_LIMIT = "retirement_over_limit"
     FORM_941_MISMATCH = "form_941_mismatch"
-
-
-class W2ReconciliationInputError(ValueError):
-    """Raised for invalid reconciliation inputs."""
 
 
 # =============================================================================
@@ -187,22 +306,83 @@ class Form941Quarter:
 
 @dataclass
 class W2ReconciliationConfig:
+    """
+    One reconciliation run.
+
+    Sprint 811 (A-7): every statutory field defaults to ``None`` and is resolved
+    from ``tax_year`` in ``__post_init__``. A field the caller supplies wins —
+    that is Sprint 793a's per-request override, and it is the escape hatch for a
+    year with no table. A field left ``None`` for a year with no table raises,
+    rather than quietly receiving some other year's law.
+
+    ``statutory_year`` records which table was actually applied, so the memo can
+    print the statutory set's effective year and the workpaper carries its own
+    provenance.
+    """
+
     tax_year: int
     employees: list[EmployeePayroll]
     w2_drafts: list[EmployeeW2Draft] = field(default_factory=list)
     form_941_quarters: list[Form941Quarter] = field(default_factory=list)
     tolerance: Decimal = DEFAULT_TOLERANCE
-    ss_wage_base: Decimal = DEFAULT_SS_WAGE_BASE
-    ss_rate: Decimal = DEFAULT_SS_RATE
-    medicare_rate: Decimal = DEFAULT_MEDICARE_RATE
-    additional_medicare_rate: Decimal = DEFAULT_ADDITIONAL_MEDICARE_RATE
-    additional_medicare_threshold: Decimal = DEFAULT_ADDITIONAL_MEDICARE_THRESHOLD
-    hsa_self_only_limit: Decimal = DEFAULT_HSA_SELF_ONLY
-    hsa_family_limit: Decimal = DEFAULT_HSA_FAMILY
-    limit_401k_elective: Decimal = DEFAULT_401K_ELECTIVE_LIMIT
-    limit_401k_catchup_50: Decimal = DEFAULT_401K_CATCHUP_50
-    limit_401k_catchup_60_63: Decimal = DEFAULT_401K_CATCHUP_60_63
-    limit_simple_ira: Decimal = DEFAULT_SIMPLE_IRA_LIMIT
+
+    # Annotated `Decimal`, defaulted to None, resolved in __post_init__.
+    #
+    # The `type: ignore[assignment]` on each is deliberate and is the narrow
+    # version of the lie. `None` is only ever the *pre-init* value: by the time
+    # any caller can observe these attributes, __post_init__ has either filled
+    # them from the tax year's table or raised. Annotating them `Decimal | None`
+    # instead would be honest about the default and dishonest about the type
+    # every one of the ~30 downstream arithmetic sites actually sees — it added
+    # 33 mypy errors of the form `Unsupported operand types for * ("Decimal"
+    # and "None")` for a None that cannot reach them. Eleven local, explained
+    # suppressions beat thirty-three false positives.
+    ss_wage_base: Decimal = None  # type: ignore[assignment]
+    ss_rate: Decimal = None  # type: ignore[assignment]
+    medicare_rate: Decimal = None  # type: ignore[assignment]
+    additional_medicare_rate: Decimal = None  # type: ignore[assignment]
+    additional_medicare_threshold: Decimal = None  # type: ignore[assignment]
+    hsa_self_only_limit: Decimal = None  # type: ignore[assignment]
+    hsa_family_limit: Decimal = None  # type: ignore[assignment]
+    limit_401k_elective: Decimal = None  # type: ignore[assignment]
+    limit_401k_catchup_50: Decimal = None  # type: ignore[assignment]
+    limit_401k_catchup_60_63: Decimal = None  # type: ignore[assignment]
+    limit_simple_ira: Decimal = None  # type: ignore[assignment]
+
+    # Populated by __post_init__: the tax year whose table supplied any figure
+    # the caller did not override, or None when the caller supplied them all.
+    statutory_year: int | None = field(default=None, init=False)
+    statutory_source: str | None = field(default=None, init=False)
+
+    # (config attribute, StatutoryLimits attribute)
+    _STATUTORY_FIELDS: ClassVar[tuple[tuple[str, str], ...]] = (
+        ("ss_wage_base", "ss_wage_base"),
+        ("ss_rate", "ss_rate"),
+        ("medicare_rate", "medicare_rate"),
+        ("additional_medicare_rate", "additional_medicare_rate"),
+        ("additional_medicare_threshold", "additional_medicare_threshold"),
+        ("hsa_self_only_limit", "hsa_self_only"),
+        ("hsa_family_limit", "hsa_family"),
+        ("limit_401k_elective", "limit_401k_elective"),
+        ("limit_401k_catchup_50", "limit_401k_catchup_50"),
+        ("limit_401k_catchup_60_63", "limit_401k_catchup_60_63"),
+        ("limit_simple_ira", "limit_simple_ira"),
+    )
+
+    def __post_init__(self) -> None:
+        missing = [attr for attr, _ in self._STATUTORY_FIELDS if getattr(self, attr) is None]
+        if not missing:
+            # Fully overridden: no table is consulted, so no year is claimed.
+            return
+
+        # Raises for a year with no table. Deliberately not caught: a run that
+        # cannot name its statutory basis must not produce findings.
+        limits = statutory_limits_for_year(self.tax_year)
+        for attr, source_attr in self._STATUTORY_FIELDS:
+            if getattr(self, attr) is None:
+                object.__setattr__(self, attr, getattr(limits, source_attr))
+        object.__setattr__(self, "statutory_year", limits.tax_year)
+        object.__setattr__(self, "statutory_source", limits.source)
 
 
 # =============================================================================
@@ -287,6 +467,14 @@ class W2ReconciliationResult:
     form_941_mismatches: list[Form941Mismatch]
     w3_totals: W3Totals
     summary: dict[str, Any]
+    # Sprint 811 (A-7): which statutory set actually produced these findings.
+    # `statutory_basis` is the year whose table was used, or None when the
+    # caller supplied every figure. It travels into the response and onto the
+    # memo so the workpaper carries its own provenance — a reader can tell
+    # whether a wage-base finding was computed under the right year's law
+    # without having to go and read the engine.
+    statutory_basis: int | None = None
+    statutory_basis_source: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -295,6 +483,13 @@ class W2ReconciliationResult:
             "form_941_mismatches": [m.to_dict() for m in self.form_941_mismatches],
             "w3_totals": self.w3_totals.to_dict(),
             "summary": self.summary,
+            "statutory_basis": self.statutory_basis,
+            "statutory_basis_source": self.statutory_basis_source,
+            "statutory_basis_note": (
+                f"Statutory limits applied: tax year {self.statutory_basis}."
+                if self.statutory_basis is not None
+                else "Statutory limits applied: supplied by the caller for this run."
+            ),
         }
 
 
@@ -699,4 +894,6 @@ def reconcile_w2(config: W2ReconciliationConfig) -> W2ReconciliationResult:
         form_941_mismatches=form_941_mismatches,
         w3_totals=w3,
         summary=summary,
+        statutory_basis=config.statutory_year,
+        statutory_basis_source=config.statutory_source,
     )

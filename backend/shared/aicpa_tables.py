@@ -1,133 +1,65 @@
-"""Sprint 684: AICPA Audit Sampling Guide — Table A-1 / A-2 lookup helpers.
+"""
+AICPA Audit Sampling Guide lookups.
 
-The MUS sample-size formula in ``sampling_engine.py`` previously used a
-homemade expansion-factor approximation:
+**Sprint 805 (finding A-2) rewrote this module.** It is now a thin, compatible
+surface over `shared/audit_figure_registry.py`, which holds the published figures
+with their provenance. Nothing here tabulates a number.
 
-    expansion_factor = 1.0 + (expected / tolerable)
+What was wrong, and why it is worth recording:
 
-This systematically understated sample sizes vs. AICPA Audit Sampling
-Guide Table A-1 (expansion factors for expected misstatement, 95% and
-90% confidence). The table gives expansion factors at discrete
-expected/tolerable ratios — e.g., at e/TM = 0.25 and 95% confidence,
-the published expansion factor is ~1.75, but the homemade formula
-returned 1.25. That ~40% under-factor flows through to a ~4.6% smaller
-sample at e/TM = 0.25, and a linearly larger gap as e/TM grows.
+Sprint 684 replaced a homemade `1 + e/TM` approximation with a *two-dimensional*
+expansion-factor table keyed by `(confidence_level, expected/tolerable)`, rising
+to 3.00, cited to "Appendix A Table A-1", and multiplied it into the reliability
+factor. The published AICPA expansion factor is one-dimensional — it depends only
+on the **risk of incorrect acceptance** (1.9 / 1.6 / 1.5 / 1.4 / 1.3 / 1.25 / 1.2
+/ 1.15 / 1.0 for 1%…50%) — and it enters the sample-size formula in the
+denominator, scaling expected misstatement:
 
-Table A-1 is defined at discrete buckets; ``expansion_factor()``
-interpolates linearly between them so callers can pass any e/TM ratio
-without hitting a lookup gap.
+    n = BV x RF / (TM - EM x EF)
+
+Measured consequence at BV $10M, TM $500k, 95%: sample sizes ran 1.06x to
+**1.40x** the size the standard requires. The direction is conservative, so no
+audit conclusion was endangered — but the client was billed for up to 40% more
+items than the method calls for, under a citation that does not support the
+figure. And Sprint 684's own commit message argued that the *previous*
+approximation under-sized samples; at e/TM = 0.25 that approximation reproduced
+the AICPA formula exactly, so Sprint 684 replaced a correct result with an
+incorrect one on the strength of a table that does not exist in the form
+described.
+
+That is the pattern finding A-9 is about, and the registry is the response to it.
 
 References
 ----------
-AICPA Audit Sampling Guide (2019 edition; values unchanged in 2023
-revision), Appendix A Table A-1 — Expansion Factors for Expected
-Misstatement, and Table A-2 — Confidence Factors for Sample Planning.
+AICPA Audit Sampling Guide (2019 edition; values unchanged in the 2023 revision).
+ISA 530 / PCAOB AS 2315 govern the method.
 """
 
 from __future__ import annotations
 
-# ---------------------------------------------------------------------------
-# Table A-1: Expansion factors for expected misstatement
-# ---------------------------------------------------------------------------
-#
-# Keyed by ``(confidence_level, e_over_tm_bucket)``. Values are the
-# expansion factors from the published table. ``e_over_tm_bucket`` is the
-# nearest bucket at or above the caller's ratio; intermediate ratios are
-# linearly interpolated by ``expansion_factor()``.
-#
-# Only the 95% and 90% rows are tabulated in the AICPA guide; other
-# confidence levels fall back to the nearest tabulated row with a
-# calibration factor. Paciolus' MUS flow defaults to 95%; lower
-# confidence audits should call the helper explicitly.
+from shared.audit_figure_registry import expansion_factor as _registry_expansion_factor
+from shared.audit_figure_registry import reliability_factor as _registry_reliability_factor
 
-_EXPANSION_FACTORS: dict[tuple[float, float], float] = {
-    # 95% confidence
-    (0.95, 0.00): 1.00,
-    (0.95, 0.05): 1.10,
-    (0.95, 0.10): 1.25,
-    (0.95, 0.15): 1.40,
-    (0.95, 0.20): 1.55,
-    (0.95, 0.25): 1.75,
-    (0.95, 0.30): 1.95,
-    (0.95, 0.40): 2.40,
-    (0.95, 0.50): 3.00,
-    # 90% confidence
-    (0.90, 0.00): 1.00,
-    (0.90, 0.05): 1.10,
-    (0.90, 0.10): 1.20,
-    (0.90, 0.15): 1.35,
-    (0.90, 0.20): 1.50,
-    (0.90, 0.25): 1.65,
-    (0.90, 0.30): 1.80,
-    (0.90, 0.40): 2.20,
-    (0.90, 0.50): 2.75,
-}
-
-_BUCKETS: tuple[float, ...] = (0.00, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.40, 0.50)
+__all__ = ["expansion_factor", "reliability_factor"]
 
 
-def _nearest_confidence_row(confidence_level: float) -> float:
-    """Map any confidence level to the nearest tabulated row.
-
-    Only 95% and 90% rows exist in the AICPA table; callers passing
-    other confidence levels snap to the nearest published row. The
-    confidence-factor path (Poisson CF) handles the continuous lookup;
-    this helper is just for expansion-factor bucket selection.
+def expansion_factor(confidence_level: float) -> float:
     """
-    return 0.95 if confidence_level >= 0.925 else 0.90
+    Published expansion factor for expected misstatement.
 
+    Depends on the risk of incorrect acceptance alone. Applied to **expected
+    misstatement** in the denominator of the sample-size formula, not to the
+    reliability factor.
 
-def expansion_factor(
-    confidence_level: float,
-    expected_misstatement: float,
-    tolerable_misstatement: float,
-) -> float:
-    """Sprint 684: return the AICPA Table A-1 expansion factor.
-
-    ``e/TM`` ratio is linearly interpolated between published buckets.
-    Ratios ≥ 0.50 clamp to the 0.50 row (beyond which MUS becomes
-    ill-advised — the sample size explodes and the auditor should
-    consider substantive testing instead).
-
-    Raises ``ValueError`` for negative or zero tolerable misstatement
-    (matches ``sampling_engine`` validation).
+    Note the signature change from Sprint 684's
+    `expansion_factor(confidence_level, expected_misstatement,
+    tolerable_misstatement)`: the expected/tolerable ratio is not an input to the
+    published table, so accepting it invited exactly the two-dimensional
+    tabulation that was wrong.
     """
-    if tolerable_misstatement <= 0:
-        raise ValueError("Tolerable misstatement must be positive")
-    if expected_misstatement < 0:
-        raise ValueError("Expected misstatement cannot be negative")
-
-    ratio = expected_misstatement / tolerable_misstatement
-    # Clamp to the tabulated range.
-    ratio = min(max(ratio, 0.0), 0.50)
-
-    row = _nearest_confidence_row(confidence_level)
-
-    # Find bracketing buckets
-    lo_bucket = _BUCKETS[0]
-    hi_bucket = _BUCKETS[-1]
-    for i in range(len(_BUCKETS) - 1):
-        if _BUCKETS[i] <= ratio <= _BUCKETS[i + 1]:
-            lo_bucket = _BUCKETS[i]
-            hi_bucket = _BUCKETS[i + 1]
-            break
-
-    lo_factor = _EXPANSION_FACTORS[(row, lo_bucket)]
-    hi_factor = _EXPANSION_FACTORS[(row, hi_bucket)]
-
-    if hi_bucket == lo_bucket:
-        return lo_factor
-
-    # Linear interpolation.
-    frac = (ratio - lo_bucket) / (hi_bucket - lo_bucket)
-    return lo_factor + frac * (hi_factor - lo_factor)
+    return _registry_expansion_factor(confidence_level)
 
 
-# ---------------------------------------------------------------------------
-# Table A-2: Poisson confidence factors (µ) for sample planning
-# ---------------------------------------------------------------------------
-#
-# The sampling engine's existing ``get_confidence_factor`` already handles
-# this lookup via a hardcoded table in ``sampling_engine.py``. We don't
-# duplicate it here — Sprint 684's surgical change is confined to the
-# expansion-factor path.
+def reliability_factor(confidence_level: float, overstatements: int = 0) -> float:
+    """Poisson reliability factor for monetary unit sampling."""
+    return _registry_reliability_factor(confidence_level, overstatements)

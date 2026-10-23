@@ -140,7 +140,7 @@ export default function BrandingSettingsPage() {
                       value={header}
                       onChange={e => setHeader(e.target.value)}
                       placeholder="e.g., Smith & Associates CPA"
-                      className="w-full bg-surface-input border border-theme rounded-lg px-3 py-2 text-sm font-sans text-content-primary placeholder:text-content-muted"
+                      className="w-full bg-surface-input border border-theme rounded-lg px-3 py-2 text-sm font-sans text-content-primary placeholder:text-content-tertiary"
                     />
                     <p className="text-xs text-content-tertiary font-sans mt-1">{header.length}/200</p>
                   </div>
@@ -155,7 +155,7 @@ export default function BrandingSettingsPage() {
                       onChange={e => setFooter(e.target.value)}
                       placeholder="e.g., Confidential — Prepared for client use only"
                       rows={3}
-                      className="w-full bg-surface-input border border-theme rounded-lg px-3 py-2 text-sm font-sans text-content-primary placeholder:text-content-muted resize-none"
+                      className="w-full bg-surface-input border border-theme rounded-lg px-3 py-2 text-sm font-sans text-content-primary placeholder:text-content-tertiary resize-none"
                     />
                     <p className="text-xs text-content-tertiary font-sans mt-1">{footer.length}/300</p>
                   </div>
@@ -194,7 +194,7 @@ export default function BrandingSettingsPage() {
                     </button>
                   </div>
                 ) : (
-                  <p className="text-sm text-content-muted font-sans mb-4">No logo uploaded.</p>
+                  <p className="text-sm text-content-tertiary font-sans mb-4">No logo uploaded.</p>
                 )}
 
                 <div>

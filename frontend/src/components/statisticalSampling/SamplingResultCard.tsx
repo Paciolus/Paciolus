@@ -87,7 +87,7 @@ export function SamplingResultCard({ result, onExportMemo, exporting }: Sampling
                     <td className="py-1.5 font-mono text-content-primary text-xs text-right">
                       ${err.audited_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </td>
-                    <td className="py-1.5 font-mono text-clay-500 text-xs text-right">
+                    <td className="py-1.5 font-mono text-theme-error-text text-xs text-right">
                       ${err.misstatement.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </td>
                     <td className="py-1.5 font-mono text-content-secondary text-xs text-right">
@@ -108,7 +108,7 @@ function MetricCard({ label, value, highlight = false }: { label: string; value:
   return (
     <div className={`card-inset p-3 border-l-4 ${highlight ? 'border-l-clay-500' : 'border-l-oatmeal-300'}`}>
       <p className="font-sans text-xs text-content-tertiary mb-1">{label}</p>
-      <p className={`font-mono text-sm font-medium text-right ${highlight ? 'text-clay-500' : 'text-content-primary'}`}>
+      <p className={`font-mono text-sm font-medium text-right ${highlight ? 'text-theme-error-text' : 'text-content-primary'}`}>
         {value}
       </p>
     </div>

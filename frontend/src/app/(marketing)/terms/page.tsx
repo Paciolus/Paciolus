@@ -596,6 +596,7 @@ export default function TermsPage() {
             <h3 className="font-serif text-xl text-oatmeal-200 mb-3">
               8.1 Subscription Tiers
             </h3>
+            <div className="overflow-x-auto">
             <table className="w-full border-collapse mb-6">
               <thead>
                 <tr className="bg-obsidian-800 border-b border-obsidian-700">
@@ -627,6 +628,7 @@ export default function TermsPage() {
                 </tr>
               </tbody>
             </table>
+            </div>
 
             <h3 className="font-serif text-xl text-oatmeal-200 mb-3">
               8.2 Payment Terms

@@ -155,7 +155,7 @@ export default function ApproachPage() {
                 {/* Arrow between steps (desktop only) */}
                 {idx > 0 && (
                   <div className="hidden md:block absolute -left-4 top-1/2 -translate-y-1/2 -translate-x-1/2 z-10">
-                    <svg className="w-6 h-6 text-sage-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-6 h-6 text-theme-success-text" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </div>
@@ -163,7 +163,7 @@ export default function ApproachPage() {
                 {/* Mobile arrow (between rows) */}
                 {idx > 0 && (
                   <div className="md:hidden mb-3">
-                    <svg className="w-6 h-6 text-sage-500 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-6 h-6 text-theme-success-text mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
                     </svg>
                   </div>

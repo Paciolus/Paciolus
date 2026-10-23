@@ -14,6 +14,8 @@ import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+from tests.helpers.contract_assertions import assert_signature
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from models import ActivityLog, DiagnosticSummary
@@ -44,11 +46,7 @@ def _make_activity_log(db_session, user, *, timestamp=None):
     db_session.flush()
     if timestamp is not None:
         # Direct UPDATE to bypass default timestamp
-        db_session.execute(
-            ActivityLog.__table__.update()
-            .where(ActivityLog.id == log.id)
-            .values(timestamp=timestamp)
-        )
+        db_session.execute(ActivityLog.__table__.update().where(ActivityLog.id == log.id).values(timestamp=timestamp))
         db_session.flush()
         db_session.expire(log)
     return log
@@ -64,9 +62,7 @@ def _make_diagnostic_summary(db_session, user, client, *, timestamp=None):
     db_session.flush()
     if timestamp is not None:
         db_session.execute(
-            DiagnosticSummary.__table__.update()
-            .where(DiagnosticSummary.id == ds.id)
-            .values(timestamp=timestamp)
+            DiagnosticSummary.__table__.update().where(DiagnosticSummary.id == ds.id).values(timestamp=timestamp)
         )
         db_session.flush()
         db_session.expire(ds)
@@ -96,7 +92,9 @@ class TestActivityLogCleanup:
         assert refreshed.archived_at is not None
         assert refreshed.archive_reason == "retention_policy"
         # Active-only query excludes it
-        active_count = db_session.query(ActivityLog).filter_by(user_id=user.id).filter(ActivityLog.archived_at.is_(None)).count()
+        active_count = (
+            db_session.query(ActivityLog).filter_by(user_id=user.id).filter(ActivityLog.archived_at.is_(None)).count()
+        )
         assert active_count == 0
 
     def test_keeps_recent_records(self, db_session, make_user):
@@ -144,7 +142,9 @@ class TestActivityLogCleanup:
         # Total rows: 2 (one archived, one active)
         assert db_session.query(ActivityLog).filter_by(user_id=user.id).count() == 2
         # Active-only: 1
-        active_count = db_session.query(ActivityLog).filter_by(user_id=user.id).filter(ActivityLog.archived_at.is_(None)).count()
+        active_count = (
+            db_session.query(ActivityLog).filter_by(user_id=user.id).filter(ActivityLog.archived_at.is_(None)).count()
+        )
         assert active_count == 1
 
 
@@ -270,14 +270,20 @@ class TestRetentionConfig:
 class TestStartupIntegration:
     """Verify retention cleanup is wired into app lifespan."""
 
-    def test_run_retention_cleanup_importable_from_module(self):
-        """The function must be importable for main.py to use it."""
+    def test_run_retention_cleanup_contract(self):
+        """
+        Sprint 810 (T-3): `main.py`'s lifespan calls this with a session, so the
+        parameter it is called with is the contract that matters — not whether
+        the symbol happens to be callable.
+        """
         from retention_cleanup import run_retention_cleanup
-        assert callable(run_retention_cleanup)
+
+        assert_signature(run_retention_cleanup, ["db"])
 
     def test_main_imports_retention_cleanup(self):
         """main.py must import and call run_retention_cleanup in lifespan."""
         import ast
+
         main_path = Path(__file__).parent.parent / "main.py"
         source = main_path.read_text()
         assert "run_retention_cleanup" in source

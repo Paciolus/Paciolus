@@ -37,6 +37,7 @@ export function CashFlowTable({ cashFlow }: { cashFlow: CashFlowStatement }) {
 
       {/* Net Change */}
       <div className="border-t-2 border-double border-obsidian-500 pt-2">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <tbody>
             <tr>
@@ -47,11 +48,13 @@ export function CashFlowTable({ cashFlow }: { cashFlow: CashFlowStatement }) {
             </tr>
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Reconciliation */}
       {cashFlow.hasPriorPeriod && (
         <div className="pt-2">
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <tbody>
               <tr>
@@ -68,6 +71,7 @@ export function CashFlowTable({ cashFlow }: { cashFlow: CashFlowStatement }) {
               </tr>
             </tbody>
           </table>
+          </div>
 
           <div className="mt-3 flex justify-center">
             {cashFlow.isReconciled ? (

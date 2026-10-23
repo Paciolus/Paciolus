@@ -1,5 +1,17 @@
-/* Oat & Obsidian Theme - Google Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=Lato:wght@400;700&family=JetBrains+Mono:wght@400;500&display=swap');
+/* Oat & Obsidian Theme — fonts.
+ *
+ * Sprint 807 (C-1 / C-2): the Google Fonts `@import` that used to sit here is
+ * gone. The three families are loaded by `next/font/google` in
+ * `src/app/layout.tsx`, which self-hosts them at build time and exposes them as
+ * the `--font-serif` / `--font-sans` / `--font-mono` custom properties that
+ * `tailwind.config.js` reads. That removed Google LLC as a processor of every
+ * visitor's IP and User-Agent, removed two hosts from the CSP allowlist, and
+ * removed a blocking cross-origin request from first paint.
+ *
+ * Do not reintroduce an `@import url(...)` here: `scripts/lint_subprocessors.py`
+ * fails the build if a CSP host has no subprocessor entry, and a third-party
+ * font host would need one.
+ */
 
 @import "tailwindcss";
 @config "../../tailwind.config.js";

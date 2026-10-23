@@ -115,7 +115,7 @@ export function SampleSelectionTable({ result, onExportCSV, onExportMemo, export
                   <td className="py-1.5">
                     <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-sans ${
                       item.selection_method === 'high_value_100pct'
-                        ? 'bg-sage-500/10 text-sage-500'
+                        ? 'bg-sage-500/10 text-theme-success-text'
                         : 'bg-oatmeal-300/20 text-content-secondary'
                     }`}>
                       {item.selection_method === 'high_value_100pct' ? '100%' :

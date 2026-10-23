@@ -520,7 +520,22 @@ Each section separated by `.lobby-divider` with centered sage dot.
 
 ### Standards
 
-- **WCAG 2.1 AA** baseline, AAA in several areas
+- **WCAG 2.1 AA** baseline.
+  Corrected in Sprint 809 (finding D-3) from "AA baseline, AAA in several areas".
+  Measured against the real page surfaces (`#121212` dark, `#F5F4F2` light), AAA is
+  reached by `text-primary` (15.44:1 dark / 14.65:1 light) and the 700-shades
+  (`sage-700` 8.18:1 light, `clay-700` 7.65:1 light) — and nothing else. The base
+  accent shades named by the design mandate did not even reach AA: `sage-500` is
+  3.85:1 on dark and 4.42:1 on light, and 61 usages of `text-sage-500` /
+  `text-clay-500` carried no theme qualifier. Those were migrated to the
+  theme-flipping semantic tokens, and `scripts/lint_design_tokens.py` now computes
+  contrast from the palette so the claim is checked rather than asserted.
+
+  One known gap, recorded rather than papered over: 48 usages of `text-oatmeal-700`
+  (4.38:1 dark / 3.89:1 light) reach AA on neither surface. No oatmeal shade reaches
+  AA on the light page — oatmeal is the light palette — so each usage needs a
+  per-surface decision, which requires the route→theme map that finding D-4 is about.
+  The lint gate prints this exemption on every run.
 - **Color contrast:** 4.5:1 for body text, 3:1 for large text and UI components
 - **Touch targets:** minimum 48px x 48px on mobile
 - **No color-only indicators:** always pair color with text or icon

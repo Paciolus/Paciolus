@@ -27,8 +27,49 @@
  */
 
 import { useState } from 'react'
+import { Lora, Playfair_Display, Source_Serif_4 } from 'next/font/google'
 import Link from 'next/link'
 import { Reveal } from '@/components/ui/Reveal'
+
+/**
+ * Sprint 807 (findings C-1 / C-2): the three candidate serifs, self-hosted.
+ *
+ * This page used to load them with `<link rel="stylesheet">` from
+ * `fonts.googleapis.com`, plus two `preconnect` hints. That made Google LLC a
+ * processor of every visitor's IP address and User-Agent on this route — and
+ * `/internal/typography-preview` has no auth gate, by its own design note
+ * below, so "internal" describes the intent and not the access.
+ *
+ * Both the review and the first pass of Sprint 807 missed it, because both
+ * looked at `globals.css` and the CSP, and this is neither.
+ * `scripts/lint_subprocessors.py` now scans TSX for third-party `<link href>`
+ * too, so the next one fails the build instead of shipping.
+ *
+ * `next/font` downloads these at build time and serves them from our own
+ * origin, which keeps the page doing its job — comparing candidate typefaces
+ * side by side — without a third-party request. No `weight` is passed: all
+ * three are variable fonts, and next/font serves the full axis.
+ */
+const sourceSerif4 = Source_Serif_4({
+  subsets: ['latin'],
+  style: ['normal', 'italic'],
+  variable: '--font-candidate-source-serif-4',
+  display: 'swap',
+})
+
+const lora = Lora({
+  subsets: ['latin'],
+  style: ['normal', 'italic'],
+  variable: '--font-candidate-lora',
+  display: 'swap',
+})
+
+const playfairDisplay = Playfair_Display({
+  subsets: ['latin'],
+  style: ['normal', 'italic'],
+  variable: '--font-candidate-playfair-display',
+  display: 'swap',
+})
 
 type CandidateKey = 'merriweather' | 'source-serif-4' | 'lora' | 'playfair-display'
 
@@ -45,7 +86,8 @@ const CANDIDATES: {
   {
     key: 'merriweather',
     label: 'Merriweather',
-    cssFamily: "'Merriweather', 'Source Serif 4', Georgia, serif",
+    // `--font-serif` is Merriweather, loaded by the root layout.
+    cssFamily: 'var(--font-serif), Georgia, serif',
     license: 'current',
     note:
       'Currently shipping on all Paciolus surfaces. Baseline — everything else is compared against this.',
@@ -53,7 +95,7 @@ const CANDIDATES: {
   {
     key: 'source-serif-4',
     label: 'Source Serif 4',
-    cssFamily: "'Source Serif 4', Georgia, serif",
+    cssFamily: 'var(--font-candidate-source-serif-4), Georgia, serif',
     license: 'free',
     note:
       'Adobe open-source. Neutral, editorial, optical-sized. Safe default if licensing is a blocker.',
@@ -61,7 +103,7 @@ const CANDIDATES: {
   {
     key: 'lora',
     label: 'Lora',
-    cssFamily: "'Lora', 'Tiempos Text', Georgia, serif",
+    cssFamily: 'var(--font-candidate-lora), Georgia, serif',
     license: 'paid-proxy',
     proxyFor: 'Tiempos Text',
     vendor: 'Typotheque',
@@ -72,7 +114,7 @@ const CANDIDATES: {
   {
     key: 'playfair-display',
     label: 'Playfair Display',
-    cssFamily: "'Playfair Display', 'GT Sectra', Georgia, serif",
+    cssFamily: 'var(--font-candidate-playfair-display), Georgia, serif',
     license: 'paid-proxy',
     proxyFor: 'GT Sectra',
     vendor: 'Grilli Type',
@@ -120,21 +162,22 @@ export default function TypographyPreviewPage() {
 
   return (
     <>
-      {/* Google Fonts — React 19 hoists <link> into <head> automatically. */}
-      <link rel="preconnect" href="https://fonts.googleapis.com" />
-      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-      <link
-        rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Lora:ital,wght@0,400;0,600;1,400&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap"
-      />
-
-      <main id="main-content" className="min-h-screen bg-surface-page">
+      {/*
+        Sprint 807: the three remote <link> tags that used to be here — a
+        stylesheet plus two preconnect hints to Google — are gone. The
+        candidates are self-hosted; the class names below expose their CSS
+        variables to the `cssFamily` values in CANDIDATES.
+      */}
+      <main
+        id="main-content"
+        className={`min-h-screen bg-surface-page ${sourceSerif4.variable} ${lora.variable} ${playfairDisplay.variable}`}
+      >
         <div className="max-w-7xl mx-auto px-6 py-10">
           <Reveal>
             <header className="mb-8">
               <div className="flex items-center gap-2 text-xs font-sans uppercase tracking-wider text-content-tertiary mb-2">
                 <span>Sprint 703</span>
-                <span className="text-content-muted">·</span>
+                <span className="text-content-tertiary">·</span>
                 <span>Internal decision aid</span>
               </div>
               <h1 className="text-3xl md:text-4xl font-serif font-bold text-content-primary mb-2">

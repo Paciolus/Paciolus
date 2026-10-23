@@ -141,7 +141,10 @@ class TestW2ReconciliationTierGate:
 def _payload_over_ss_base(ss_wages: str) -> dict:
     """One employee whose SS wages sit between two candidate wage bases."""
     return {
-        "tax_year": 2026,
+        # Sprint 811: 2025, because that is the only year with a statutory table.
+        # A 2026 run is now refused unless the caller supplies the figures —
+        # which is what `TestStatutoryLimitOverrides` below exercises.
+        "tax_year": 2025,
         "employees": [
             {
                 "employee_id": "E001",
@@ -261,7 +264,11 @@ class TestStatutoryLimitOverrides:
         from w2_reconciliation_engine import W2ReconciliationConfig
 
         structural = {"tax_year", "employees", "w2_drafts", "form_941_quarters", "tolerance"}
-        engine_limits = {f.name for f in dataclasses.fields(W2ReconciliationConfig)} - structural
+        # Sprint 811: `f.init` only. `statutory_year` and `statutory_source` are
+        # init=False — they record which table was applied, so they are outputs
+        # of the config, not limits a caller can set. Including them would make
+        # this guard demand request fields that must not exist.
+        engine_limits = {f.name for f in dataclasses.fields(W2ReconciliationConfig) if f.init} - structural
         exposed = set(StatutoryLimitOverrides.model_fields)
 
         assert engine_limits == exposed, (

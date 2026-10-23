@@ -34,7 +34,9 @@ from pdf_generator import (
     create_leader_dots,
     generate_reference_number,
 )
+from sampling_engine import _get_incremental_factors
 from security_utils import log_secure_operation
+from shared import audit_figure_registry as _registry
 from shared.framework_resolution import ResolvedFramework
 from shared.memo_base import (
     build_disclaimer,
@@ -70,21 +72,20 @@ CONFIDENCE_FACTOR_NOTES: dict[float, str] = {
     0.99: "4.6052 (-ln(0.01)) — 99% confidence level",
 }
 
-# Incremental change factors for Stringer bound (95% confidence)
-# Used in UEL derivation display — must match sampling_engine.py
-_INCREMENTAL_FACTORS_95: list[float] = [
-    1.58,
-    1.30,
-    1.15,
-    1.06,
-    1.00,
-    0.95,
-    0.92,
-    0.89,
-    0.87,
-    0.85,
-    0.83,
-]
+# The authority the incremental factors are printed under. Sourced from the
+# figure registry so the memo cannot cite an edition the engine is not using.
+_FIGURE_SOURCE: str = (
+    f"the {_registry.POISSON_RELIABILITY_FACTORS[0.05].source.split(' — ')[0]}, "
+    f"{_registry.POISSON_RELIABILITY_FACTORS[0.05].edition} edition"
+)
+
+# Sprint 805 (finding A-1): this module used to hold a third copy of the
+# incremental-factor table — hardcoded to 95% regardless of the engagement's
+# actual confidence level, and carrying the same mistabulated literals as the
+# engine. The memo is the artifact that reaches the workpaper, citing a Poisson
+# table to the practitioner, so a wrong factor here is a wrong figure under a
+# citation. Both the values and the confidence level now come from the engine's
+# own accessor, so the memo cannot disagree with the computation it documents.
 
 # Error nature options for practitioners
 ERROR_NATURE_OPTIONS: list[str] = [
@@ -1474,6 +1475,10 @@ def _build_uel_derivation(
 ) -> None:
     """BUG-03: UEL derivation block showing Stringer bound computation."""
     errors = evaluation_result.get("errors", [])
+    # Sprint 805 (A-1): the engagement's own confidence level. This block used to
+    # print factors from a hardcoded 95% table no matter what the engagement had
+    # selected.
+    confidence_level = evaluation_result.get("confidence_level", 0.95) or 0.95
     bp = evaluation_result.get("basic_precision", 0)
     projected = evaluation_result.get("projected_misstatement", 0)
     incremental = evaluation_result.get("incremental_allowance", 0)
@@ -1562,15 +1567,19 @@ def _build_uel_derivation(
             )
             story.append(
                 Paragraph(
-                    "<i>Per Poisson table (95% confidence), incremental factors decrease "
-                    "with each successive error, reflecting the diminishing marginal impact "
-                    "on the upper error limit.</i>",
+                    f"<i>Per the Poisson reliability-factor series at "
+                    f"{confidence_level:.0%} confidence, each successive error contributes a "
+                    f"smaller incremental allowance, reflecting the diminishing marginal "
+                    f"impact on the upper error limit. The factors are the first differences "
+                    f"of that series, per {_FIGURE_SOURCE}).</i>",
                     styles["MemoBodySmall"],
                 )
             )
             sorted_errors = sorted(errors, key=lambda e: e.get("tainting", 0), reverse=True)
             inc_sum = 0.0
-            factors = _INCREMENTAL_FACTORS_95
+            # Sprint 805: the engagement's own confidence level, and the engine's
+            # own increments — not a hardcoded 95% table.
+            factors = _get_incremental_factors(confidence_level)
             for i, err in enumerate(sorted_errors):
                 tainting = err.get("tainting", 0)
                 item_id = err.get("item_id", f"Error {i + 1}")

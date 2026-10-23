@@ -23,7 +23,7 @@ export default function ToolsError({
         {/* Error icon */}
         <div className="w-16 h-16 mb-6 rounded-full bg-clay-50 border border-clay-200 flex items-center justify-center">
           <svg
-            className="w-8 h-8 text-clay-500"
+            className="w-8 h-8 text-theme-error-text"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -48,7 +48,7 @@ export default function ToolsError({
 
         {process.env.NODE_ENV === 'development' && (
           <div className="mb-6 p-4 w-full bg-surface-card rounded-lg border border-clay-200/30 text-left">
-            <p className="text-xs font-mono text-clay-500 break-all">
+            <p className="text-xs font-mono text-theme-error-text break-all">
               {error.message}
             </p>
             {error.digest && (

@@ -181,7 +181,7 @@ function CheckoutContent() {
             {interval === 'annual' ? 'Billed annually' : 'Billed monthly'}.
             {' '}Cancel anytime.
           </p>
-          <p className="text-sm text-content-muted mt-1">
+          <p className="text-sm text-content-tertiary mt-1">
             {baseSeats} seat{baseSeats > 1 ? 's' : ''} included
           </p>
         </div>
@@ -218,7 +218,7 @@ function CheckoutContent() {
                 <p>
                   <span className="font-mono tabular-nums">{additionalSeats}</span> seat{additionalSeats > 1 ? 's' : ''} @ {formatPerUnit(seatPriceCents(1, interval, plan), interval)}
                 </p>
-                <p className="text-content-muted pt-1">
+                <p className="text-content-tertiary pt-1">
                   Total: <span className="font-mono tabular-nums">{totalSeats}</span> seats ({baseSeats} included + {additionalSeats} add-on)
                 </p>
               </div>
@@ -236,7 +236,7 @@ function CheckoutContent() {
               <span className="text-sm text-sage-600 font-mono">{promoCode.trim().toUpperCase()}</span>
               <button
                 onClick={handleClearPromo}
-                className="text-sm text-content-muted hover:text-content-secondary transition-colors"
+                className="text-sm text-content-tertiary hover:text-content-secondary transition-colors"
               >
                 Remove
               </button>
@@ -250,7 +250,7 @@ function CheckoutContent() {
                 onChange={e => setPromoCode(e.target.value)}
                 placeholder="Enter code"
                 maxLength={50}
-                className="flex-1 px-3 py-2 border border-theme rounded-sm bg-surface-page text-content-primary font-mono text-sm placeholder:text-content-muted focus:outline-hidden focus:ring-1 focus:ring-sage-500"
+                className="flex-1 px-3 py-2 border border-theme rounded-sm bg-surface-page text-content-primary font-mono text-sm placeholder:text-content-tertiary focus:outline-hidden focus:ring-1 focus:ring-sage-500"
               />
               <button
                 onClick={handleApplyPromo}
@@ -294,7 +294,7 @@ function CheckoutContent() {
             </div>
           </div>
           {interval === 'annual' && (
-            <p className="text-xs text-content-muted mt-2">
+            <p className="text-xs text-content-tertiary mt-2">
               Annual billing saves ~17% compared to monthly.
             </p>
           )}
@@ -343,7 +343,7 @@ function CheckoutContent() {
           {isLoading ? 'Redirecting to payment...' : 'Continue to Checkout'}
         </button>
 
-        <p className="text-xs text-content-muted text-center mt-4">
+        <p className="text-xs text-content-tertiary text-center mt-4">
           You will be redirected to our secure payment partner, Stripe.
         </p>
 

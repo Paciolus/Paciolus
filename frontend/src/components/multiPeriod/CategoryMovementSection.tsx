@@ -57,6 +57,7 @@ export function CategoryMovementSection({ comparison, hasBudget }: { comparison:
                 className="overflow-hidden"
               >
                 <div className="px-4 pb-3 border-t border-theme-divider">
+                  <div className="overflow-x-auto">
                   <table className="w-full text-xs mt-2">
                     <thead>
                       <tr className="text-content-secondary font-serif">
@@ -91,6 +92,7 @@ export function CategoryMovementSection({ comparison, hasBudget }: { comparison:
                       ))}
                     </tbody>
                   </table>
+                  </div>
                 </div>
               </motion.div>
             )}

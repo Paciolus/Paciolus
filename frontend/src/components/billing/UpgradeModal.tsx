@@ -100,7 +100,7 @@ export function UpgradeModal({ currentTier, isOpen, onClose }: UpgradeModalProps
           <h2 className="font-serif text-xl text-content-primary">Choose a Plan</h2>
           <button
             onClick={onClose}
-            className="text-content-muted hover:text-content-secondary transition-colors"
+            className="text-content-tertiary hover:text-content-secondary transition-colors"
             aria-label="Close"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -166,7 +166,7 @@ export function UpgradeModal({ currentTier, isOpen, onClose }: UpgradeModalProps
                     <ul className="mt-3 space-y-1">
                       {tier.features.map((f) => (
                         <li key={f} className="text-sm text-content-secondary font-sans flex items-center gap-2">
-                          <svg className="w-4 h-4 text-sage-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <svg className="w-4 h-4 text-theme-success-text shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                           </svg>
                           {f}
@@ -176,9 +176,9 @@ export function UpgradeModal({ currentTier, isOpen, onClose }: UpgradeModalProps
                   </div>
                   <div className="shrink-0 ml-4">
                     {isCurrent ? (
-                      <span className="text-sm text-content-muted font-sans">Active</span>
+                      <span className="text-sm text-content-tertiary font-sans">Active</span>
                     ) : isDowngrade ? (
-                      <span className="text-sm text-content-muted font-sans">—</span>
+                      <span className="text-sm text-content-tertiary font-sans">—</span>
                     ) : (
                       <Link
                         href={`/checkout?plan=${tier.id}&interval=${interval}${tier.hasSeats && additionalSeats > 0 ? `&seats=${additionalSeats}` : ''}`}
@@ -224,7 +224,7 @@ export function UpgradeModal({ currentTier, isOpen, onClose }: UpgradeModalProps
                         {baseSeatsForTier(tier.id) + additionalSeats} total seats ({baseSeatsForTier(tier.id)} included + {additionalSeats} additional)
                       </p>
                     )}
-                    <p className="text-xs text-content-muted font-sans mt-1">
+                    <p className="text-xs text-content-tertiary font-sans mt-1">
                       Additional seats: {tier.id === 'enterprise'
                         ? ENT_SEAT_PRICE_INFO[interval]
                         : PRO_SEAT_PRICE_INFO[interval]

@@ -242,7 +242,7 @@ export function AdjustmentEntryForm({
                 type="checkbox"
                 checked={isReversing}
                 onChange={(e) => setIsReversing(e.target.checked)}
-                className="w-4 h-4 rounded-sm border-theme bg-surface-input text-sage-500 focus:ring-sage-500/50"
+                className="w-4 h-4 rounded-sm border-theme bg-surface-input text-theme-success-text focus:ring-sage-500/50"
               />
               <span className="text-sm text-content-secondary">Auto-Reversing</span>
             </label>

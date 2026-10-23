@@ -1,18 +1,38 @@
-"""Sprint 636 — W-2 / W-3 Reconciliation engine tests."""
+"""
+Sprint 636 — W-2 / W-3 Reconciliation engine tests.
+
+Sprint 811 (finding A-7) changed every `tax_year=2025` below to `tax_year=2025`.
+That is not a cosmetic edit. These tests asserted against the statutory figures
+that shipped under a `# --- 2026 reference values ---` heading, and every one of
+those figures is the **2025** set (SS wage base 176,100; 401(k) 23,500; catch-up
+7,500; HSA 4,300/8,550; SIMPLE 16,500). The tests were green because the engine
+applied one fixed set of limits to every tax year — so passing 2026 and asserting
+2025 law agreed with itself.
+
+`tax_year` is now the key the limits are resolved by, and a year with no table is
+refused rather than answered with another year's law. The 2026 table needs a
+practitioner and stays with Sprint 793b; `TestSprint811StatutoryYearKeying` below
+covers the refusal and the override path that unblocks a 2026 engagement today.
+"""
 
 from decimal import Decimal
 
+import pytest
+
 from w2_reconciliation_engine import (
     DEFAULT_SS_WAGE_BASE,
+    STATUTORY_LIMITS_BY_YEAR,
     DiscrepancyKind,
     DiscrepancySeverity,
     EmployeePayroll,
     EmployeeW2Draft,
     Form941Quarter,
     HsaCoverage,
+    StatutoryLimitsUnavailableError,
     W2ReconciliationConfig,
     W2ReconciliationInputError,
     reconcile_w2,
+    statutory_limits_for_year,
 )
 
 
@@ -57,7 +77,7 @@ class TestHappyPath:
     def test_clean_payroll_and_matching_w2_produce_no_discrepancies(self):
         emp = _clean_employee()
         cfg = W2ReconciliationConfig(
-            tax_year=2026,
+            tax_year=2025,
             employees=[emp],
             w2_drafts=[_matching_w2(emp)],
         )
@@ -70,7 +90,7 @@ class TestSSWageBase:
     def test_ss_wages_above_base_flags_exceeded(self):
         emp = _clean_employee(ss_wages="200000")
         cfg = W2ReconciliationConfig(
-            tax_year=2026,
+            tax_year=2025,
             employees=[emp],
             w2_drafts=[_matching_w2(emp)],
         )
@@ -90,7 +110,7 @@ class TestSSWageBase:
             box_6_medicare_tax_withheld=Decimal("60000") * Decimal("0.0145"),
         )
         cfg = W2ReconciliationConfig(
-            tax_year=2026,
+            tax_year=2025,
             employees=[emp],
             w2_drafts=[bad_w2],
         )
@@ -104,7 +124,7 @@ class TestMedicareWithholding:
     def test_standard_medicare_matches_expected(self):
         emp = _clean_employee(medicare_wages="100000")
         cfg = W2ReconciliationConfig(
-            tax_year=2026,
+            tax_year=2025,
             employees=[emp],
             w2_drafts=[_matching_w2(emp)],
         )
@@ -118,7 +138,7 @@ class TestMedicareWithholding:
         bad_w2 = _matching_w2(emp)
         bad_w2.box_6_medicare_tax_withheld = (Decimal("250000") * Decimal("0.0145")).quantize(Decimal("0.01"))
         cfg = W2ReconciliationConfig(
-            tax_year=2026,
+            tax_year=2025,
             employees=[emp],
             w2_drafts=[bad_w2],
         )
@@ -135,7 +155,7 @@ class TestHSA:
             hsa_coverage=HsaCoverage.SELF_ONLY,
         )
         cfg = W2ReconciliationConfig(
-            tax_year=2026,
+            tax_year=2025,
             employees=[emp],
             w2_drafts=[_matching_w2(emp)],
         )
@@ -151,7 +171,7 @@ class TestHSA:
             hsa_coverage=HsaCoverage.FAMILY,
         )
         cfg = W2ReconciliationConfig(
-            tax_year=2026,
+            tax_year=2025,
             employees=[emp],
             w2_drafts=[_matching_w2(emp)],
         )
@@ -165,7 +185,7 @@ class TestHSA:
             hsa_coverage=HsaCoverage.NONE,
         )
         cfg = W2ReconciliationConfig(
-            tax_year=2026,
+            tax_year=2025,
             employees=[emp],
             w2_drafts=[_matching_w2(emp)],
         )
@@ -182,7 +202,7 @@ class TestRetirementLimits:
             age=35,
         )
         cfg = W2ReconciliationConfig(
-            tax_year=2026,
+            tax_year=2025,
             employees=[emp],
             w2_drafts=[_matching_w2(emp)],
         )
@@ -199,7 +219,7 @@ class TestRetirementLimits:
             age=55,
         )
         cfg = W2ReconciliationConfig(
-            tax_year=2026,
+            tax_year=2025,
             employees=[emp],
             w2_drafts=[_matching_w2(emp)],
         )
@@ -215,7 +235,7 @@ class TestRetirementLimits:
             age=62,
         )
         cfg = W2ReconciliationConfig(
-            tax_year=2026,
+            tax_year=2025,
             employees=[emp],
             w2_drafts=[_matching_w2(emp)],
         )
@@ -230,7 +250,7 @@ class TestRetirementLimits:
             age=35,
         )
         cfg = W2ReconciliationConfig(
-            tax_year=2026,
+            tax_year=2025,
             employees=[emp],
             w2_drafts=[_matching_w2(emp)],
         )
@@ -255,7 +275,7 @@ class TestForm941:
             for i in range(1, 5)
         ]
         cfg = W2ReconciliationConfig(
-            tax_year=2026,
+            tax_year=2025,
             employees=[emp],
             w2_drafts=[_matching_w2(emp)],
             form_941_quarters=quarters,
@@ -275,7 +295,7 @@ class TestForm941:
             ),
         ]
         cfg = W2ReconciliationConfig(
-            tax_year=2026,
+            tax_year=2025,
             employees=[emp],
             w2_drafts=[_matching_w2(emp)],
             form_941_quarters=quarters,
@@ -292,7 +312,7 @@ class TestW3Totals:
         e1 = _clean_employee(employee_id="E1", name="A", federal_wages="50000")
         e2 = _clean_employee(employee_id="E2", name="B", federal_wages="70000")
         cfg = W2ReconciliationConfig(
-            tax_year=2026,
+            tax_year=2025,
             employees=[e1, e2],
             w2_drafts=[_matching_w2(e1), _matching_w2(e2)],
         )
@@ -325,7 +345,7 @@ class TestMissingW2Draft:
             hsa_coverage=HsaCoverage.SELF_ONLY,
         )
         cfg = W2ReconciliationConfig(
-            tax_year=2026,
+            tax_year=2025,
             employees=[emp],
             w2_drafts=[],
         )
@@ -339,11 +359,133 @@ class TestSerialisation:
     def test_to_dict_roundtrip(self):
         emp = _clean_employee()
         cfg = W2ReconciliationConfig(
-            tax_year=2026,
+            tax_year=2025,
             employees=[emp],
             w2_drafts=[_matching_w2(emp)],
         )
         result = reconcile_w2(cfg)
         d = result.to_dict()
-        assert d["tax_year"] == 2026
+        assert d["tax_year"] == 2025
         assert set(d).issuperset({"employee_discrepancies", "form_941_mismatches", "w3_totals", "summary"})
+
+
+class TestSprint811StatutoryYearKeying:
+    """
+    Finding A-7, structural half. `tax_year` is a required input accepted for any
+    year 2000-2099, and no statutory constant was keyed by it: every tax year got
+    one fixed set of limits. A 2026 engagement was answered with 2025 law, and the
+    block holding those figures was headed "2026 reference values", so the comment
+    defeated the next reader's check.
+    """
+
+    def test_a_tabulated_year_resolves_its_own_limits_and_records_which(self):
+        config = W2ReconciliationConfig(tax_year=2025, employees=[])
+
+        assert config.ss_wage_base == Decimal("176100")
+        assert config.limit_401k_elective == Decimal("23500")
+        assert config.statutory_year == 2025
+        assert config.statutory_source  # provenance travels with the figures
+
+    def test_a_year_with_no_table_is_refused_not_answered_with_another_years_law(self):
+        """
+        The behaviour change. Refusing is the honest answer: the wage-base and
+        over-limit findings this tool produces are wrong in a direction the
+        practitioner cannot see if they are computed from the wrong year.
+        """
+        with pytest.raises(StatutoryLimitsUnavailableError) as excinfo:
+            W2ReconciliationConfig(tax_year=2026, employees=[])
+
+        message = str(excinfo.value)
+        assert "2026" in message
+        assert "2025" in message  # names what *is* available
+        assert "statutory_limits" in message  # names the way forward
+
+    def test_the_refusal_is_an_input_error_so_the_routes_return_400(self):
+        """
+        Both routes map `W2ReconciliationInputError` to a verbatim 400. A bare
+        ValueError would be sanitised by the analyze route and uncaught by the
+        CSV export route, which would 500.
+        """
+        assert issubclass(StatutoryLimitsUnavailableError, W2ReconciliationInputError)
+
+    def test_a_fully_overridden_run_needs_no_table(self):
+        """
+        Sprint 793a's per-request overrides are the escape hatch, and they must
+        keep working for a year the engine has no table for — that is what
+        unblocks a 2026 engagement before Sprint 793b lands.
+        """
+        config = W2ReconciliationConfig(
+            tax_year=2026,
+            employees=[],
+            ss_wage_base=Decimal("184500"),
+            ss_rate=Decimal("0.062"),
+            medicare_rate=Decimal("0.0145"),
+            additional_medicare_rate=Decimal("0.009"),
+            additional_medicare_threshold=Decimal("200000"),
+            hsa_self_only_limit=Decimal("4400"),
+            hsa_family_limit=Decimal("8750"),
+            limit_401k_elective=Decimal("24500"),
+            limit_401k_catchup_50=Decimal("8000"),
+            limit_401k_catchup_60_63=Decimal("11250"),
+            limit_simple_ira=Decimal("17000"),
+        )
+
+        assert config.ss_wage_base == Decimal("184500")
+        # No table was consulted, so no statutory year is claimed. The memo must
+        # not be able to print "2025" over a run that used the caller's figures.
+        assert config.statutory_year is None
+        assert config.statutory_source is None
+
+    def test_a_partial_override_still_needs_a_table_for_the_rest(self):
+        """
+        Supplying one figure must not be read as supplying them all — the
+        unsupplied ones would silently come from somewhere.
+        """
+        with pytest.raises(StatutoryLimitsUnavailableError):
+            W2ReconciliationConfig(
+                tax_year=2026,
+                employees=[],
+                ss_wage_base=Decimal("184500"),
+            )
+
+    def test_an_override_wins_over_a_tabulated_year(self):
+        config = W2ReconciliationConfig(
+            tax_year=2025,
+            employees=[],
+            ss_wage_base=Decimal("999999"),
+        )
+
+        assert config.ss_wage_base == Decimal("999999")
+        # The rest came from the 2025 table, and that is recorded.
+        assert config.limit_401k_elective == Decimal("23500")
+        assert config.statutory_year == 2025
+
+    def test_the_tabulated_figures_are_the_2025_set_and_are_labelled_so(self):
+        """
+        The mislabelling, asserted. Every figure that shipped under a "2026"
+        heading is here under 2025.
+        """
+        limits = statutory_limits_for_year(2025)
+
+        assert limits.tax_year == 2025
+        assert limits.ss_wage_base == Decimal("176100")
+        assert limits.limit_401k_elective == Decimal("23500")
+        assert limits.limit_401k_catchup_50 == Decimal("7500")
+        assert limits.hsa_self_only == Decimal("4300")
+        assert limits.hsa_family == Decimal("8550")
+        assert limits.limit_simple_ira == Decimal("16500")
+
+    def test_no_table_claims_to_be_2026_until_sprint_793b(self):
+        """
+        Guards against someone adding a 2026 row with unconfirmed figures, which
+        would recreate the defect: a number that reads as authoritative because
+        it sits in an authoritative-looking table. When 793b lands with
+        practitioner-confirmed figures, delete this test in the same commit.
+        """
+        assert 2026 not in STATUTORY_LIMITS_BY_YEAR
+
+    def test_every_tabulated_year_carries_provenance(self):
+        for year, limits in STATUTORY_LIMITS_BY_YEAR.items():
+            assert limits.tax_year == year
+            assert limits.source, year
+            assert limits.verified_by, year

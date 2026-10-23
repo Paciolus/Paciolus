@@ -41,6 +41,23 @@ export function FinancialStatementsPreview({
     priorLeadSheetGrouping,
   )
 
+  // Sprint 808 (finding D-7). The payload has always carried the exact answer:
+  // how many accounts the classifier could not place, and — on the lead sheet Z
+  // summary — their names. The warning below still said the imbalance "may
+  // indicate unclassified accounts or mapping gaps", which is a diagnostic
+  // product hedging about information it is holding.
+  //
+  // Prefer the explicit fields; fall back to the Z summary so an older cached
+  // payload still names the accounts rather than silently showing none.
+  const unclassifiedAccounts: string[] =
+    leadSheetGrouping.unclassified_accounts?.length
+      ? leadSheetGrouping.unclassified_accounts
+      : (leadSheetGrouping.summaries.find(summary => summary.lead_sheet === 'Z')?.accounts ?? []).map(
+          account => account.account
+        )
+  const unclassifiedCount = leadSheetGrouping.unclassified_count ?? unclassifiedAccounts.length
+  const hasUnclassified = unclassifiedCount > 0
+
   const handleExport = async (format: ExportFormat) => {
     if (isExporting || disabled) return
     setIsExporting(format)
@@ -109,12 +126,26 @@ export function FinancialStatementsPreview({
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Sprint 808 (D-7): statements built over unclassified accounts are
+                provisional, and that has to be visible on the collapsed header —
+                the practitioner may never expand it. An unclassified account is
+                excluded from both statements, so net income is wrong by its
+                amount whether or not the balance sheet happens to foot. */}
+            {hasUnclassified && (
+              <span
+                className="text-xs font-mono px-2 py-1 rounded-full bg-clay-500/20 text-theme-error-text border border-clay-500/30"
+                title={`${unclassifiedCount} account${unclassifiedCount === 1 ? '' : 's'} could not be classified and are excluded from these statements`}
+              >
+                PROVISIONAL
+              </span>
+            )}
+
             {totals.isBalanced ? (
               <span className="text-xs font-mono px-2 py-1 rounded-full bg-sage-500/20 text-sage-400 border border-sage-500/30">
                 BALANCED
               </span>
             ) : (
-              <span className="text-xs font-mono px-2 py-1 rounded-full bg-clay-500/20 text-clay-400 border border-clay-500/30">
+              <span className="text-xs font-mono px-2 py-1 rounded-full bg-clay-500/20 text-theme-error-text border border-clay-500/30">
                 OUT OF BALANCE
               </span>
             )}
@@ -174,18 +205,68 @@ export function FinancialStatementsPreview({
                   )}
                 </div>
 
+                {/*
+                  Sprint 808 (finding D-7): name the accounts.
+
+                  This block used to say the imbalance "may indicate
+                  unclassified accounts or mapping gaps" — while the payload it
+                  was rendering already carried `unclassified_count` and, on the
+                  lead sheet Z summary, the account names. A diagnostic product
+                  telling the practitioner something *may* be wrong while
+                  holding the exact answer is the whole of the finding.
+
+                  Two separate conditions, deliberately not merged:
+                  - Unclassified accounts are excluded from **both** statements,
+                    so net income is understated or overstated by their sum
+                    regardless of whether the balance sheet foots. The review
+                    measured net income of $460,000 against a true $160,000 from
+                    a single dropped salary line. This must warn even when
+                    BALANCED.
+                  - An imbalance with nothing unclassified is a different
+                    problem and gets different words.
+                */}
+                {hasUnclassified && (
+                  <div className="p-3 bg-clay-500/10 border border-clay-500/30 rounded-lg space-y-2">
+                    <div className="flex items-start gap-2">
+                      <svg className="w-4 h-4 text-theme-error-text shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
+                        />
+                      </svg>
+                      <p className="text-xs text-theme-error-text font-sans">
+                        <span className="font-medium">
+                          {unclassifiedCount} account{unclassifiedCount === 1 ? '' : 's'} could not be classified
+                        </span>{' '}
+                        and {unclassifiedCount === 1 ? 'is' : 'are'} excluded from these statements, so
+                        Net Income is wrong by {unclassifiedCount === 1 ? 'its' : 'their'} amount.
+                        Assign {unclassifiedCount === 1 ? 'it' : 'them'} in the Classification Validator
+                        above, then re-run.
+                      </p>
+                    </div>
+                    <ul className="pl-6 space-y-0.5" data-testid="unclassified-account-list">
+                      {unclassifiedAccounts.map(account => (
+                        <li key={account} className="font-mono text-[11px] text-content-secondary">
+                          {account}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
                 {/* Balance difference warning */}
                 {!totals.isBalanced && (
                   <div className="flex items-center gap-2 p-3 bg-clay-500/10 border border-clay-500/30 rounded-lg">
-                    <svg className="w-4 h-4 text-clay-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 text-theme-error-text shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                         d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
                       />
                     </svg>
-                    <p className="text-xs text-clay-400 font-sans">
+                    <p className="text-xs text-theme-error-text font-sans">
                       Balance Sheet is out of balance by{' '}
                       <span className="font-mono font-medium">{formatCurrency(totals.balanceDifference)}</span>.
-                      This may indicate unclassified accounts or mapping gaps.
+                      {hasUnclassified
+                        ? ' The unclassified accounts listed above are the first thing to resolve.'
+                        : ' Every account was classified, so this is a mapping or sign issue rather than a coverage gap — check the Mapping Trace tab.'}
                     </p>
                   </div>
                 )}

@@ -15,6 +15,8 @@ from unittest.mock import ANY, MagicMock, patch
 import httpx
 import pytest
 
+from tests.helpers.contract_assertions import assert_signature
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from models import UserTier
@@ -138,17 +140,39 @@ class TestWebhookHandler:
 class TestCheckoutModule:
     """Test checkout session creation logic."""
 
-    def test_checkout_module_imports(self):
+    def test_checkout_module_contract(self):
+        """
+        Sprint 810 (T-3): was `assert callable(...)` on both, which the import
+        statement above had already proved and which any function satisfies.
+        Pinning the signatures instead means a renamed, reordered or dropped
+        parameter fails here — and these two sit on the money path, where a
+        silently renamed keyword argument becomes a 500 on checkout.
+        """
         from billing.checkout import create_checkout_session, create_or_get_stripe_customer
 
-        assert callable(create_checkout_session)
-        assert callable(create_or_get_stripe_customer)
+        assert_signature(
+            create_checkout_session,
+            [
+                "customer_id",
+                "plan_price_id",
+                "user_id",
+                "trial_period_days",
+                "stripe_coupon_id",
+                "seat_price_id",
+                "additional_seats",
+                "dpa_accepted_at",
+                "dpa_version",
+                "idempotency_key",
+            ],
+        )
+        assert_signature(create_or_get_stripe_customer, ["user_id", "email", "stripe_customer_id"])
 
 
 class TestSubscriptionManager:
     """Test subscription manager functions."""
 
-    def test_manager_module_imports(self):
+    def test_manager_module_contract(self):
+        """Sprint 810 (T-3): signatures, not `callable`. See the checkout test above."""
         from billing.subscription_manager import (
             cancel_subscription,
             create_portal_session,
@@ -157,11 +181,14 @@ class TestSubscriptionManager:
             sync_subscription_from_stripe,
         )
 
-        assert callable(get_subscription)
-        assert callable(sync_subscription_from_stripe)
-        assert callable(cancel_subscription)
-        assert callable(reactivate_subscription)
-        assert callable(create_portal_session)
+        assert_signature(get_subscription, ["db", "user_id"])
+        assert_signature(
+            sync_subscription_from_stripe,
+            ["db", "user_id", "stripe_subscription", "stripe_customer_id", "tier"],
+        )
+        assert_signature(cancel_subscription, ["db", "user_id"])
+        assert_signature(reactivate_subscription, ["db", "user_id"])
+        assert_signature(create_portal_session, ["stripe_customer_id", "return_url"])
 
 
 class TestStripeClient:

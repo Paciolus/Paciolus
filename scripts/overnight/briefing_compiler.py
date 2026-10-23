@@ -3,6 +3,7 @@
 import datetime
 import io
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -31,6 +32,61 @@ AGENTS = [
 ]
 
 STATUS_EMOJI = {"green": "\U0001f7e2", "yellow": "\U0001f7e1", "red": "\U0001f534"}
+
+
+def _head_sha() -> str | None:
+    """
+    The repository's current HEAD, or None if git cannot be read.
+
+    Sprint 810 (finding T-4). The brief published a headline verdict with no
+    record of what it was a verdict *about*. `reports/nightly/2026-10-22.md`
+    reported RED with 14 failures across the two audit-gate test files; re-run
+    on the tree later the same day, those same files were 60 passed / 0 failed.
+    The suite runs at 02:00 and the fixes landed during the day. The DEC report
+    records the identical artifact for the prior day — **two consecutive days
+    where the headline verdict was wrong by clock.**
+
+    That is worse than a stale number. A RED that is routinely a timing artifact
+    trains its reader to discount RED, which is how a real one gets missed.
+    """
+    try:
+        completed = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=True,
+            cwd=Path(__file__).resolve().parent.parent.parent,
+        )
+    except (subprocess.CalledProcessError, OSError):
+        return None
+    return completed.stdout.strip() or None
+
+
+def _supersession_notice(tested_sha: str | None, current_sha: str | None) -> str:
+    """
+    One line stating whether this verdict still describes the tree.
+
+    `_overall_status` already carries the three-outcome shape (green / yellow /
+    red). This adds the fourth thing a reader needs: whether the verdict is
+    still *about* anything.
+    """
+    if tested_sha is None:
+        return (
+            "> **Tested commit unknown.** This brief cannot say which tree it describes, "
+            "so its verdict cannot be confirmed to still apply."
+        )
+
+    short = tested_sha[:8]
+    if current_sha is None:
+        return f"> **Tested commit:** `{short}` (current HEAD could not be read)."
+    if current_sha == tested_sha:
+        return f"> **Tested commit:** `{short}` — still HEAD, so this verdict describes the current tree."
+    return (
+        f"> **SUPERSEDED.** This brief tested `{short}`; HEAD is now `{current_sha[:8]}`. "
+        f"Any failure below may already be fixed — re-run before acting on the verdict. "
+        f"(Finding T-4: two consecutive briefs published a RED that was a timing artifact, "
+        f"because the suite runs at 02:00 and fixes land during the day.)"
+    )
 
 
 def _load_agent_data(agent_name: str) -> dict | None:
@@ -384,11 +440,21 @@ def run() -> dict:
     # Compute tomorrow's date
     tomorrow = (datetime.date.today() + datetime.timedelta(days=1)).isoformat()
 
+    # Sprint 810 (T-4): record the commit this verdict is about, and state
+    # plainly whether it still describes the tree. At compile time the tested
+    # SHA *is* HEAD; the value of recording it is that a later reader — or the
+    # report auditor — can tell that it no longer is.
+    tested_sha = _head_sha()
+    supersession = _supersession_notice(tested_sha, _head_sha())
+
     # Build the report
     total_agents = len(AGENTS)
     report = f"""# \U0001f305 Paciolus Overnight Brief — {TODAY}
 **Overall Status:** {overall_emoji} {overall.upper()}
 **Report generated:** {datetime.datetime.now().strftime('%I:%M %p')} | **Agents run:** {agents_run}/{total_agents}
+**Tested commit:** `{tested_sha or "unknown"}`
+
+{supersession}
 
 {exec_summary}
 
@@ -427,6 +493,9 @@ def run() -> dict:
     return {
         "agent": "briefing_compiler",
         "status": overall,
+        # Sprint 810 (T-4): so a consumer of this payload — the report auditor
+        # above all — can tell whether the verdict still describes the tree.
+        "tested_sha": tested_sha,
         "agents_run": agents_run,
         "report_path": str(REPORT_PATH),
     }

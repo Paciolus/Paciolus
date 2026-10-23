@@ -52,9 +52,13 @@ export function proxy(request: NextRequest) {
   const csp = [
     "default-src 'self'",
     scriptSrc,
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    // Sprint 807 (C-2): `https://fonts.googleapis.com` and
+    // `https://fonts.gstatic.com` removed. The fonts are self-hosted by
+    // `next/font/google`, so no third-party font origin is reachable at all.
+    // `'unsafe-inline'` stays for style-src — React style props need it.
+    "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https:",
-    "font-src 'self' https://fonts.gstatic.com",
+    "font-src 'self'",
     `connect-src 'self' ${apiUrl} https://*.sentry.io`,
     "frame-src 'none'",
     "frame-ancestors 'none'",
@@ -68,6 +72,11 @@ export function proxy(request: NextRequest) {
   const requestHeaders = new Headers(request.headers)
   requestHeaders.set('x-nonce', nonce)
   requestHeaders.set('Content-Security-Policy', csp)
+  // Sprint 809 (finding D-1): the root layout needs the pathname to resolve the
+  // route's theme *server-side*. Without it the layout had to emit a fixed
+  // `data-theme="dark"` and let a client effect correct it after hydration, so
+  // all 49 light routes were painted dark and then flipped.
+  requestHeaders.set('x-pathname', request.nextUrl.pathname)
 
   const response = NextResponse.next({
     request: { headers: requestHeaders },

@@ -125,6 +125,7 @@ export default function AdminDashboardPage() {
                 Usage by Member
               </h2>
               <div className="bg-surface-card border border-theme rounded-xl overflow-hidden">
+                <div className="overflow-x-auto">
                 <table className="w-full text-sm font-sans">
                   <thead>
                     <tr className="border-b border-theme bg-surface-input/50">
@@ -136,9 +137,9 @@ export default function AdminDashboardPage() {
                   </thead>
                   <tbody>
                     {isLoading && !memberUsage.length ? (
-                      <tr><td colSpan={4} className="px-4 py-8 text-center text-content-muted">Loading...</td></tr>
+                      <tr><td colSpan={4} className="px-4 py-8 text-center text-content-tertiary">Loading...</td></tr>
                     ) : memberUsage.length === 0 ? (
-                      <tr><td colSpan={4} className="px-4 py-8 text-center text-content-muted">No usage data yet.</td></tr>
+                      <tr><td colSpan={4} className="px-4 py-8 text-center text-content-tertiary">No usage data yet.</td></tr>
                     ) : (
                       memberUsage.map(m => (
                         <tr key={m.user_id} className="border-b border-theme last:border-0">
@@ -153,6 +154,7 @@ export default function AdminDashboardPage() {
                     )}
                   </tbody>
                 </table>
+                </div>
               </div>
             </Reveal>
 
@@ -187,14 +189,14 @@ export default function AdminDashboardPage() {
                   placeholder="Filter by tool..."
                   value={toolFilter}
                   onChange={e => setToolFilter(e.target.value)}
-                  className="bg-surface-input border border-theme rounded-lg px-3 py-2 text-sm font-sans text-content-primary placeholder:text-content-muted"
+                  className="bg-surface-input border border-theme rounded-lg px-3 py-2 text-sm font-sans text-content-primary placeholder:text-content-tertiary"
                 />
                 <input
                   type="text"
                   placeholder="Filter by member..."
                   value={memberFilter}
                   onChange={e => setMemberFilter(e.target.value)}
-                  className="bg-surface-input border border-theme rounded-lg px-3 py-2 text-sm font-sans text-content-primary placeholder:text-content-muted"
+                  className="bg-surface-input border border-theme rounded-lg px-3 py-2 text-sm font-sans text-content-primary placeholder:text-content-tertiary"
                 />
                 <button
                   onClick={handleApplyFilters}
@@ -206,6 +208,7 @@ export default function AdminDashboardPage() {
 
               {/* Activity Table */}
               <div className="bg-surface-card border border-theme rounded-xl overflow-hidden">
+                <div className="overflow-x-auto">
                 <table className="w-full text-sm font-sans">
                   <thead>
                     <tr className="border-b border-theme bg-surface-input/50">
@@ -217,9 +220,9 @@ export default function AdminDashboardPage() {
                   </thead>
                   <tbody>
                     {isLoading && !teamActivity.length ? (
-                      <tr><td colSpan={4} className="px-4 py-8 text-center text-content-muted">Loading...</td></tr>
+                      <tr><td colSpan={4} className="px-4 py-8 text-center text-content-tertiary">Loading...</td></tr>
                     ) : teamActivity.length === 0 ? (
-                      <tr><td colSpan={4} className="px-4 py-8 text-center text-content-muted">No activity in this period.</td></tr>
+                      <tr><td colSpan={4} className="px-4 py-8 text-center text-content-tertiary">No activity in this period.</td></tr>
                     ) : (
                       teamActivity.map(a => (
                         <tr key={a.id} className="border-b border-theme last:border-0">
@@ -234,6 +237,7 @@ export default function AdminDashboardPage() {
                     )}
                   </tbody>
                 </table>
+                </div>
               </div>
             </Reveal>
           </FeatureGate>

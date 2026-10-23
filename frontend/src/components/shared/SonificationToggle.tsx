@@ -25,7 +25,7 @@ export function SonificationToggle() {
         transition-colors duration-150
         ${isMuted
           ? 'text-content-tertiary hover:text-content-secondary'
-          : 'text-sage-500 hover:text-sage-600'
+          : 'text-theme-success-text hover:text-sage-600'
         }
         bg-surface-card/80 backdrop-blur-xs border border-theme
         hover:bg-surface-card

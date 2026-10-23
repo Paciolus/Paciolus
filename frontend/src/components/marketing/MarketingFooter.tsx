@@ -91,7 +91,7 @@ export function MarketingFooter() {
               </p>
               {/* Zero-Storage badge */}
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-obsidian-800/60 border border-obsidian-500/20">
-                <BrandIcon name="padlock" className="w-3.5 h-3.5 text-sage-500" />
+                <BrandIcon name="padlock" className="w-3.5 h-3.5 text-theme-success-text" />
                 <span className="font-sans text-xs text-oatmeal-400">Zero-Storage Architecture</span>
               </div>
             </div>

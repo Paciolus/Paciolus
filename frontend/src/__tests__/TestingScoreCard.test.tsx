@@ -31,7 +31,7 @@ jest.mock('@/types/testingShared', () => ({
   TESTING_RISK_TIER_COLORS: {
     low: { text: 'text-sage-600', bg: 'bg-sage-50', border: 'border-sage-200' },
     elevated: { text: 'text-oatmeal-600', bg: 'bg-oatmeal-50', border: 'border-oatmeal-200' },
-    moderate: { text: 'text-clay-500', bg: 'bg-clay-50', border: 'border-clay-200' },
+    moderate: { text: 'text-theme-error-text', bg: 'bg-clay-50', border: 'border-clay-200' },
     high: { text: 'text-clay-600', bg: 'bg-clay-50', border: 'border-clay-200' },
   },
   TESTING_RISK_TIER_LABELS: {

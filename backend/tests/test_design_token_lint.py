@@ -227,3 +227,189 @@ def test_report_mentions_the_allowlist_route(tmp_path: Path):
 
 def test_clean_report_states_the_zero():
     assert "0 generic colour classes" in linter.format_report([])
+
+
+# ---------------------------------------------------------------------------
+# Sprint 809 — D-2: brand tokens that do not exist
+# ---------------------------------------------------------------------------
+#
+# `text-content-muted` had 36 live usages across checkout, billing, team,
+# shares, branding, admin-dashboard and internal/admin. `content-muted` is not a
+# token — the config defines primary/secondary/tertiary/disabled — so the class
+# emitted zero CSS and every one of those elements silently inherited colour.
+# This gate passed all 36, because it only ever asked whether a colour came from
+# a *generic Tailwind* palette, never whether a brand token existed.
+
+
+def test_the_config_token_groups_are_parsed():
+    groups = linter._parse_token_groups()
+
+    assert "content" in groups
+    assert {"primary", "secondary", "tertiary", "disabled"} <= groups["content"]
+    assert "muted" not in groups["content"]
+
+
+def test_an_undefined_content_token_is_flagged(tmp_path: Path):
+    path = _write(tmp_path, "Card.tsx", '<p className="text-content-muted">x</p>')
+    findings = linter.scan_file(path, [])
+
+    assert len(findings) == 1
+    assert findings[0].kind == "undefined_token"
+    assert findings[0].match == "text-content-muted"
+    assert "no member `muted`" in findings[0].detail
+
+
+def test_a_defined_content_token_is_not_flagged(tmp_path: Path):
+    path = _write(tmp_path, "Card.tsx", '<p className="text-content-tertiary">x</p>')
+    assert linter.scan_file(path, []) == []
+
+
+def test_undefined_tokens_in_other_groups_are_flagged(tmp_path: Path):
+    path = _write(
+        tmp_path,
+        "Card.tsx",
+        '<div className="bg-surface-nonexistent text-theme-success-nope">x</div>',
+    )
+    findings = linter.scan_file(path, [])
+
+    assert {f.match for f in findings} == {"bg-surface-nonexistent", "text-theme-success-nope"}
+    assert all(f.kind == "undefined_token" for f in findings)
+
+
+def test_a_variant_prefixed_undefined_token_is_flagged(tmp_path: Path):
+    path = _write(tmp_path, "Card.tsx", '<p className="hover:text-content-muted">x</p>')
+    findings = linter.scan_file(path, [])
+
+    assert len(findings) == 1
+    assert findings[0].kind == "undefined_token"
+
+
+def test_an_unknown_group_is_not_guessed_at(tmp_path: Path):
+    """
+    Only groups the config actually defines are resolved. A class naming some
+    other group is left to the generic-palette rule, rather than this check
+    inventing an opinion about it.
+    """
+    path = _write(tmp_path, "Card.tsx", '<p className="text-whatever-muted">x</p>')
+    assert linter.scan_file(path, []) == []
+
+
+def test_the_frontend_has_no_undefined_brand_tokens():
+    """The repo-level assertion. 36 usages existed before Sprint 809."""
+    findings = [f for f in linter.scan() if f.kind == "undefined_token"]
+    assert findings == [], f"{len(findings)} undefined brand tokens: {[f.match for f in findings]}"
+
+
+# ---------------------------------------------------------------------------
+# Sprint 809 — D-3: shades that cannot be legible on either surface
+# ---------------------------------------------------------------------------
+
+
+def test_contrast_ratio_matches_published_wcag_values():
+    """Anchors: pure black on white is 21:1, and a colour against itself is 1:1."""
+    assert linter.contrast_ratio("#000000", "#FFFFFF") == pytest.approx(21.0, rel=1e-3)
+    assert linter.contrast_ratio("#121212", "#121212") == pytest.approx(1.0, rel=1e-6)
+
+
+def test_the_measured_sage_and_clay_ratios_reproduce_the_review():
+    """
+    The review measured `sage-500` at 3.85:1 on the dark page and 4.42:1 on the
+    light page, and `clay-500` at 3.69:1 dark. Both below the 4.5:1 AA threshold
+    for normal text where they were used unqualified.
+    """
+    palette = linter._parse_palette()
+
+    assert linter.contrast_ratio(palette["sage"]["500"], "#121212") == pytest.approx(3.85, abs=0.02)
+    assert linter.contrast_ratio(palette["sage"]["500"], "#F5F4F2") == pytest.approx(4.42, abs=0.02)
+    assert linter.contrast_ratio(palette["clay"]["500"], "#121212") == pytest.approx(3.69, abs=0.02)
+    # And the shades the 61 usages were migrated to do pass.
+    assert linter.contrast_ratio(palette["sage"]["700"], "#F5F4F2") == pytest.approx(8.18, abs=0.02)
+    assert linter.contrast_ratio(palette["clay"]["700"], "#F5F4F2") == pytest.approx(7.65, abs=0.02)
+
+
+def test_sage_500_is_derived_as_illegible():
+    illegible = linter.illegible_text_shades()
+
+    assert "sage-500" in illegible
+    assert illegible["sage-500"] < linter.AA_TEXT_RATIO
+
+
+def test_clay_500_is_not_claimed_to_be_illegible_everywhere():
+    """
+    Honesty about the measurement: `clay-500` reaches 4.62:1 on the light page,
+    which passes AA. It fails on dark (3.69:1), but this gate has no route→theme
+    map, so it cannot say whether a given usage renders there. Claiming otherwise
+    would be the false-positive failure mode that gets a gate switched off.
+    """
+    assert "clay-500" not in linter.illegible_text_shades()
+
+
+def test_an_illegible_text_shade_is_flagged(tmp_path: Path):
+    path = _write(tmp_path, "Card.tsx", '<p className="text-sage-500">x</p>')
+    findings = linter.scan_file(path, [])
+
+    assert len(findings) == 1
+    assert findings[0].kind == "illegible_shade"
+    assert "4.42:1" in findings[0].detail
+
+
+def test_a_legible_shade_on_its_own_theme_is_not_flagged(tmp_path: Path):
+    """
+    `text-sage-700` is 8.18:1 on the light surface, where it is in fact used.
+    Flagging it would require knowing the route's theme — finding D-4.
+    """
+    path = _write(tmp_path, "Card.tsx", '<p className="text-sage-700">x</p>')
+    assert linter.scan_file(path, []) == []
+
+
+def test_a_non_text_utility_is_not_contrast_checked(tmp_path: Path):
+    """
+    WCAG 2.1 scopes 4.5:1 to text (SC 1.4.3); non-text graphics need 3:1
+    (SC 1.4.11), which sage-500 meets. Only `text-` utilities are checked.
+    """
+    path = _write(tmp_path, "Card.tsx", '<div className="bg-sage-500 border-sage-500" />')
+    assert linter.scan_file(path, []) == []
+
+
+def test_exempt_shades_are_not_flagged(tmp_path: Path):
+    path = _write(tmp_path, "Card.tsx", '<p className="text-obsidian-400">disabled</p>')
+    assert linter.scan_file(path, []) == []
+
+
+def test_every_exemption_carries_a_reason():
+    """An exemption without an argument is just permission."""
+    assert linter.CONTRAST_EXEMPT_SHADES
+    for shade, reason in linter.CONTRAST_EXEMPT_SHADES.items():
+        assert reason.strip(), shade
+        assert len(reason) > 30, f"{shade}: reason is too thin to review"
+
+
+def test_exemptions_are_printed_on_every_run():
+    """
+    Including the clean run. An exemption visible only in source is an exemption
+    nobody reviews — and `oatmeal-700` is explicitly not a permanent one.
+    """
+    clean = linter.format_report([])
+
+    assert "Standing contrast exemptions" in clean
+    for shade in linter.CONTRAST_EXEMPT_SHADES:
+        assert shade in clean
+
+
+def test_the_frontend_has_no_illegible_text_shades():
+    """The repo-level assertion. 61 unqualified usages existed before Sprint 809."""
+    findings = [f for f in linter.scan() if f.kind == "illegible_shade"]
+    assert findings == [], f"{len(findings)} illegible text shades: {[f.match for f in findings]}"
+
+
+def test_the_report_distinguishes_the_three_kinds(tmp_path: Path):
+    path = _write(
+        tmp_path,
+        "Card.tsx",
+        '<p className="text-content-muted text-sage-500 bg-slate-800">x</p>',
+    )
+    report = linter.format_report(linter.scan_file(path, []))
+
+    assert "generic colour class" in report
+    assert "undefined brand token" in report
+    assert "illegible text shade" in report

@@ -3,6 +3,7 @@ Tests for Financial Statement Builder, PDF, and Excel export.
 Sprint 71: Financial Statements — Backend Builder + Export
 """
 
+from decimal import Decimal
 from io import BytesIO
 
 import pytest
@@ -710,7 +711,12 @@ def grouping_with_accounts():
                         "matched_keywords": ["rent"],
                     },
                     {
-                        "name": "Depreciation Expense",
+                        # Sprint 803: was keyed "name" — the only account in this
+                        # fixture keyed differently from its siblings, and the one
+                        # account the depreciation test reads. That mismatch is why
+                        # finding A-5 passed its own test while returning 0.0 in
+                        # production, where the key is always "account".
+                        "account": "Depreciation Expense",
                         "debit": 10000.0,
                         "credit": 0.0,
                         "confidence": 0.95,
@@ -975,3 +981,142 @@ class TestMappingTraceExcel:
         excel_bytes = generate_financial_statements_excel(statements)
         wb = load_workbook(BytesIO(excel_bytes))
         assert "Mapping Trace" in wb.sheetnames
+
+
+# =============================================================================
+# Sprint 803 — finding A-5: the depreciation add-back and EBITDA
+# =============================================================================
+
+
+def _production_grouping(accounts: list[dict]) -> dict:
+    """
+    Build a grouping dict the way production does.
+
+    Every test below goes through `group_by_lead_sheet` →
+    `lead_sheet_grouping_to_dict` rather than hand-writing the dict, because
+    finding A-5 survived for the life of the product behind a hand-written
+    fixture: `grouping_with_accounts` keys its depreciation account `name`
+    while both of its siblings are keyed `account`, so the one account the
+    old depreciation test read was the only one in the fixture keyed the way
+    production never emits. The test passed; the product returned 0.0.
+    """
+    from lead_sheet_mapping import group_by_lead_sheet, lead_sheet_grouping_to_dict
+
+    return lead_sheet_grouping_to_dict(group_by_lead_sheet(accounts))
+
+
+def _tb(*rows: tuple[str, float, float]) -> list[dict]:
+    return [{"account": name, "debit": Decimal(str(dr)), "credit": Decimal(str(cr))} for name, dr, cr in rows]
+
+
+class TestSprint803DepreciationAddBack:
+    """A-5: `_extract_depreciation` read a key the serialized grouping never carries."""
+
+    def test_add_back_appears_on_a_production_shaped_grouping(self):
+        """The regression pin: a TB with a depreciation account produces an add-back."""
+        grouping = _production_grouping(
+            _tb(
+                ("Cash - Operating", 120000, 0),
+                ("Equipment", 200000, 0),
+                ("Common Stock", 0, 100000),
+                ("Sales Revenue", 0, 500000),
+                ("Rent Expense", 90000, 0),
+                ("Depreciation Expense", 30000, 0),
+            )
+        )
+        builder = FinancialStatementBuilder(grouping)
+
+        assert builder._extract_depreciation() == 30000.0
+
+        statements = builder.build()
+        assert statements.depreciation_amount == 30000.0
+
+        labels = [item.label for item in statements.cash_flow_statement.operating.items]
+        assert "Depreciation & Amortization" in labels
+        # The hedging note must not fire when the add-back was found.
+        assert "Depreciation not separately identified in trial balance" not in statements.cash_flow_statement.notes
+
+    def test_ebitda_exceeds_operating_income_when_depreciation_is_present(self):
+        """
+        `pdf/sections/ratios.py` computes `ebitda = operating_income + depreciation_amount`.
+        While A-5 was live that term was always 0.0, so every exported ratio PDF
+        reported EBITDA equal to operating income.
+        """
+        grouping = _production_grouping(
+            _tb(
+                ("Cash - Operating", 120000, 0),
+                ("Common Stock", 0, 100000),
+                ("Sales Revenue", 0, 500000),
+                ("Rent Expense", 90000, 0),
+                ("Depreciation Expense", 30000, 0),
+            )
+        )
+        statements = FinancialStatementBuilder(grouping).build()
+
+        ebitda = statements.operating_income + statements.depreciation_amount
+        assert statements.depreciation_amount == 30000.0
+        assert ebitda > statements.operating_income
+        assert ebitda == pytest.approx(statements.operating_income + 30000.0)
+
+    def test_accumulated_depreciation_alone_adds_back_nothing(self):
+        """
+        Pins the contra guard. With the key fixed, lead sheet E matches
+        `accumulated depreciation` — a cumulative contra-asset. Adding that
+        back would be a worse number than the 0.0 the defect produced.
+        """
+        grouping = _production_grouping(
+            _tb(
+                ("Cash - Operating", 120000, 0),
+                ("Equipment", 200000, 0),
+                ("Accumulated Depreciation", 0, 60000),
+                ("Common Stock", 0, 100000),
+                ("Sales Revenue", 0, 500000),
+                ("Rent Expense", 90000, 0),
+            )
+        )
+        builder = FinancialStatementBuilder(grouping)
+
+        assert builder._extract_depreciation() == 0.0
+        statements = builder.build()
+        assert statements.depreciation_amount == 0.0
+        # With nothing to add back, the data-quality note is now a truthful
+        # observation about the input rather than a disguised defect.
+        assert "Depreciation not separately identified in trial balance" in statements.cash_flow_statement.notes
+
+    def test_accumulated_is_excluded_while_the_expense_line_is_added_back(self):
+        """Both present: the expense is added back, the contra-asset is not."""
+        grouping = _production_grouping(
+            _tb(
+                ("Equipment", 200000, 0),
+                ("Accumulated Depreciation", 0, 60000),
+                ("Sales Revenue", 0, 500000),
+                ("Depreciation Expense", 30000, 0),
+            )
+        )
+        assert FinancialStatementBuilder(grouping)._extract_depreciation() == 30000.0
+
+    def test_depreciation_and_amortization_are_both_added_back(self):
+        """
+        The defect returned on first match. A trial balance carrying separate
+        depreciation and amortization lines must add back both.
+        """
+        grouping = _production_grouping(
+            _tb(
+                ("Sales Revenue", 0, 500000),
+                ("Depreciation Expense", 30000, 0),
+                ("Amortization Expense", 10000, 0),
+            )
+        )
+        assert FinancialStatementBuilder(grouping)._extract_depreciation() == 40000.0
+
+    def test_the_serialized_grouping_carries_account_and_not_name(self):
+        """
+        The root cause, asserted directly. If a future change to
+        `lead_sheet_grouping_to_dict` renames this key, this test says so
+        rather than letting the add-back silently return to 0.0.
+        """
+        grouping = _production_grouping(_tb(("Depreciation Expense", 30000, 0)))
+        account = grouping["summaries"][0]["accounts"][0]
+
+        assert "account" in account
+        assert "name" not in account

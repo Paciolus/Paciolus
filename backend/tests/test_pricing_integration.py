@@ -15,6 +15,8 @@ import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+from tests.helpers.contract_assertions import assert_signature
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from models import UserTier
@@ -529,7 +531,8 @@ class TestSeatEnforcementConfig:
 
         assert SEAT_ENFORCEMENT_MODE in ("soft", "hard")
 
-    def test_check_seat_limit_exists(self):
+    def test_check_seat_limit_contract(self):
+        """Sprint 810 (T-3): was `assert callable`, which proved nothing the import did not."""
         from shared.entitlement_checks import check_seat_limit
 
-        assert callable(check_seat_limit)
+        assert_signature(check_seat_limit, ["user", "db"])

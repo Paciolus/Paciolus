@@ -233,7 +233,7 @@ export function AdjustmentSection({
                   <button
                     onClick={handleClearAll}
                     disabled={isSaving}
-                    className="px-4 py-2 bg-clay-500/10 border border-clay-500/20 rounded-lg text-clay-500 text-sm hover:bg-clay-500/20 transition-colors disabled:opacity-50 ml-auto"
+                    className="px-4 py-2 bg-clay-500/10 border border-clay-500/20 rounded-lg text-theme-error-text text-sm hover:bg-clay-500/20 transition-colors disabled:opacity-50 ml-auto"
                   >
                     Clear All
                   </button>
@@ -319,7 +319,7 @@ export function AdjustmentSection({
                     </h4>
                     <button
                       onClick={clearAdjustedTB}
-                      className="text-sage-500 hover:text-sage-400 text-sm"
+                      className="text-theme-success-text hover:text-sage-400 text-sm"
                     >
                       Clear
                     </button>

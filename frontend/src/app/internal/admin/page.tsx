@@ -90,7 +90,7 @@ export default function InternalAdminPage() {
                     placeholder="Email or org name..."
                     value={search}
                     onChange={e => setSearch(e.target.value)}
-                    className="w-full px-3 py-2 bg-surface-input border border-theme rounded-lg text-sm font-sans text-content-primary placeholder:text-content-muted"
+                    className="w-full px-3 py-2 bg-surface-input border border-theme rounded-lg text-sm font-sans text-content-primary placeholder:text-content-tertiary"
                   />
                 </div>
                 <div>

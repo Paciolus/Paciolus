@@ -85,7 +85,8 @@ function makeFullGrouping(overrides?: Partial<Record<string, number>>): LeadShee
 
   return {
     summaries,
-    unmapped_count: 0,
+    unclassified_count: 0,
+    unclassified_accounts: [],
     total_accounts: summaries.reduce((s, su) => s + su.account_count, 0),
   }
 }
@@ -786,7 +787,8 @@ describe('useStatementBuilder', () => {
           makeSummary('A', 'Cash', 50000),
           makeSummary('L', 'Revenue', -100000, undefined, 'revenue'),
         ],
-        unmapped_count: 0,
+        unclassified_count: 0,
+    unclassified_accounts: [],
         total_accounts: 2,
       }
 
@@ -856,7 +858,8 @@ describe('useStatementBuilder', () => {
     it('handles empty summaries array', () => {
       const grouping: LeadSheetGrouping = {
         summaries: [],
-        unmapped_count: 0,
+        unclassified_count: 0,
+    unclassified_accounts: [],
         total_accounts: 0,
       }
       const { result } = renderHook(() => useStatementBuilder(grouping))

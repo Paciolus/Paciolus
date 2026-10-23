@@ -322,7 +322,7 @@ export default function StatisticalSamplingPage() {
             {designStatus === 'idle' && activeTab === 'design' && isVerified && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
                 <div className="theme-card p-6">
-                  <div className="text-2xl mb-3 font-serif text-sage-500">MUS</div>
+                  <div className="text-2xl mb-3 font-serif text-theme-success-text">MUS</div>
                   <h3 className="font-serif text-content-primary text-sm mb-2">Monetary Unit Sampling</h3>
                   <p className="font-sans text-content-secondary text-xs">
                     Probability-proportional-to-size selection. Each dollar is a sampling unit.
@@ -330,7 +330,7 @@ export default function StatisticalSamplingPage() {
                   </p>
                 </div>
                 <div className="theme-card p-6">
-                  <div className="text-2xl mb-3 font-serif text-sage-500">SRS</div>
+                  <div className="text-2xl mb-3 font-serif text-theme-success-text">SRS</div>
                   <h3 className="font-serif text-content-primary text-sm mb-2">Simple Random Sampling</h3>
                   <p className="font-sans text-content-secondary text-xs">
                     Equal probability selection using CSPRNG. Optional sample size override
@@ -338,7 +338,7 @@ export default function StatisticalSamplingPage() {
                   </p>
                 </div>
                 <div className="theme-card p-6">
-                  <div className="text-2xl mb-3 font-serif text-sage-500">Eval</div>
+                  <div className="text-2xl mb-3 font-serif text-theme-success-text">Eval</div>
                   <h3 className="font-serif text-content-primary text-sm mb-2">Stringer Bound Evaluation</h3>
                   <p className="font-sans text-content-secondary text-xs">
                     Upper Error Limit calculation: basic precision + projected misstatement +

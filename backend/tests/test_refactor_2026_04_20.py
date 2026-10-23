@@ -18,6 +18,8 @@ from pathlib import Path
 import pytest
 from fastapi import HTTPException
 
+from tests.helpers.contract_assertions import assert_signature
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from models import User, UserTier
@@ -89,13 +91,17 @@ class TestHelpersReExports:
         # Memory cleanup is an @contextmanager — confirm it yields without error.
         with memory_cleanup():
             pass
-        for sym in (
-            validate_file_size,
-            parse_uploaded_file,
+        # Sprint 810 (T-3): was a `callable` loop over four symbols, which the
+        # imports above had already proved. These four are the upload pipeline —
+        # every tool's entry point — so a renamed parameter here breaks all of
+        # them, and `callable` would not have noticed.
+        assert_signature(validate_file_size, ["file"])
+        assert_signature(parse_uploaded_file, ["file_bytes", "filename", "max_rows"])
+        assert_signature(
             parse_uploaded_file_by_format,
-            _validate_and_convert_df,
-        ):
-            assert callable(sym)
+            ["file_bytes", "filename", "content_type", "max_rows"],
+        )
+        assert_signature(_validate_and_convert_df, ["df", "max_rows"])
         assert _XLSX_MAGIC
         assert _XLS_MAGIC
         assert MAX_CELL_LENGTH > 0
@@ -123,9 +129,27 @@ class TestHelpersReExports:
             maybe_record_tool_run,
         )
 
-        assert callable(safe_background_email)
-        assert callable(maybe_record_tool_run)
-        assert callable(_log_tool_activity)
+        # Sprint 810 (T-3): signatures, not presence.
+        assert_signature(safe_background_email, ["send_func", "label", "kwargs"])
+        assert_signature(
+            maybe_record_tool_run,
+            [
+                "db",
+                "engagement_id",
+                "user_id",
+                "tool_name",
+                "success",
+                "composite_score",
+                "flagged_accounts",
+                "filename",
+                "record_count",
+                "summary",
+            ],
+        )
+        assert_signature(
+            _log_tool_activity,
+            ["db", "user_id", "tool_name", "engagement_id", "filename", "record_count", "summary"],
+        )
 
     def test_json_form_and_client_access_symbols(self) -> None:
         # Native helpers stay in shared.helpers.
@@ -148,15 +172,32 @@ class TestHelpersReExports:
         assert parse_json_list("not-json", "nums") is None
         assert parse_json_mapping('{"a":"b"}', "m") == {"a": "b"}
         assert parse_json_mapping("not-json", "m") is None
-        for sym in (
-            is_authorized_for_client,
-            get_accessible_client,
-            require_client,
-            require_client_owner,
-            try_parse_risk,
-            try_parse_risk_band,
-        ):
-            assert callable(sym)
+        # Sprint 810 (T-3): was a `callable` loop over six symbols. These are the
+        # client-access guards — the functions that decide whether a user may
+        # read another user's client — so their parameter contract is exactly
+        # what must not drift silently.
+        assert_signature(is_authorized_for_client, ["user", "client", "db"])
+        assert_signature(get_accessible_client, ["user", "client_id", "db"])
+        assert_signature(require_client, ["client_id", "current_user", "db"])
+        assert_signature(require_client_owner, ["client_id", "current_user", "db"])
+        assert_signature(try_parse_risk, ["risk_str"])
+        assert_signature(try_parse_risk_band, ["band_str"])
+
+        # And behaviour, since these two are pure and cheap to exercise. Both
+        # coerce an unknown value to LOW rather than returning None — worth
+        # pinning, because "unknown risk reads as low risk" is a decision a
+        # reader should have to change deliberately.
+        #
+        # Imported from their owning engines, not from `shared.helpers`. The
+        # helpers module does re-export both, and `test_no_helpers_reexports.py`
+        # exists precisely to stop callers depending on that — which is what the
+        # first draft of this assertion did, and what the guard caught.
+        from flux_engine import FluxRisk
+        from recon_engine import RiskBand
+
+        assert try_parse_risk("not-a-risk") is FluxRisk.LOW
+        assert try_parse_risk_band("not-a-band") is RiskBand.LOW
+        assert try_parse_risk("high") is FluxRisk.HIGH
 
 
 # ---------------------------------------------------------------------------

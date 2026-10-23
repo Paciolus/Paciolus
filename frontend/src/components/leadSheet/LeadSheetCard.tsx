@@ -163,6 +163,7 @@ export function LeadSheetCard({ summary, index = 0 }: LeadSheetCardProps) {
             className="border-t border-theme overflow-hidden"
           >
             <div className="max-h-64 overflow-y-auto">
+              <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead className="sticky top-0 bg-surface-elevated">
                   <tr className="text-content-tertiary uppercase tracking-wider">
@@ -190,6 +191,7 @@ export function LeadSheetCard({ summary, index = 0 }: LeadSheetCardProps) {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           </motion.div>
         )}

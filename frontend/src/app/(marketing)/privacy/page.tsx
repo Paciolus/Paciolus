@@ -83,6 +83,7 @@ export default function PrivacyPolicy() {
             <h3 className="font-serif text-xl text-oatmeal-200 mb-4">
               1.1 Information You Provide Directly
             </h3>
+            <div className="overflow-x-auto">
             <table className="w-full border-collapse mb-6">
               <thead>
                 <tr className="bg-obsidian-800 border-b border-obsidian-600">
@@ -114,11 +115,13 @@ export default function PrivacyPolicy() {
                 </tr>
               </tbody>
             </table>
+            </div>
 
             {/* 1.2 Information We Collect Automatically */}
             <h3 className="font-serif text-xl text-oatmeal-200 mb-4">
               1.2 Information We Collect Automatically
             </h3>
+            <div className="overflow-x-auto">
             <table className="w-full border-collapse mb-6">
               <thead>
                 <tr className="bg-obsidian-800 border-b border-obsidian-600">
@@ -150,6 +153,7 @@ export default function PrivacyPolicy() {
                 </tr>
               </tbody>
             </table>
+            </div>
 
             {/* 1.3 Information We DO NOT Collect */}
             <h3 className="font-serif text-xl text-oatmeal-200 mb-4">
@@ -159,6 +163,7 @@ export default function PrivacyPolicy() {
               <p className="font-sans text-oatmeal-300 mb-4">
                 <strong className="text-oatmeal-100">Critical Distinction:</strong> We do NOT store financial data uploaded to our platform.
               </p>
+              <div className="overflow-x-auto">
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="bg-obsidian-900 border-b border-obsidian-700">
@@ -215,6 +220,7 @@ export default function PrivacyPolicy() {
                   </tr>
                 </tbody>
               </table>
+              </div>
             </div>
           </article>
 
@@ -228,6 +234,7 @@ export default function PrivacyPolicy() {
               We use the information we collect for the following purposes:
             </p>
 
+            <div className="overflow-x-auto">
             <table className="w-full border-collapse mb-6">
               <thead>
                 <tr className="bg-obsidian-800 border-b border-obsidian-600">
@@ -262,6 +269,7 @@ export default function PrivacyPolicy() {
                 </tr>
               </tbody>
             </table>
+            </div>
 
             <div className="bg-sage-500/10 border-l-4 border-sage-500 p-6 rounded-r-lg mb-6">
               <h4 className="font-serif text-lg text-oatmeal-100 mb-3">Aggregate Statistics</h4>
@@ -364,6 +372,7 @@ export default function PrivacyPolicy() {
               We share limited personal information with the following third-party service providers:
             </p>
 
+            <div className="overflow-x-auto">
             <table className="w-full border-collapse mb-6">
               <thead>
                 <tr className="bg-obsidian-800 border-b border-obsidian-600">
@@ -400,6 +409,7 @@ export default function PrivacyPolicy() {
                 </tr>
               </tbody>
             </table>
+            </div>
 
             <div className="bg-clay-500/10 border-l-4 border-clay-500 p-6 rounded-r-lg mb-6">
               <h4 className="font-serif text-lg text-oatmeal-100 mb-3">Legal Requirements</h4>
@@ -546,6 +556,7 @@ export default function PrivacyPolicy() {
               Paciolus operates globally. Your personal information may be transferred to and processed in the following jurisdictions:
             </p>
 
+            <div className="overflow-x-auto">
             <table className="w-full border-collapse mb-6">
               <thead>
                 <tr className="bg-obsidian-800 border-b border-obsidian-600">
@@ -572,6 +583,7 @@ export default function PrivacyPolicy() {
                 </tr>
               </tbody>
             </table>
+            </div>
 
             <div className="bg-obsidian-800 border border-obsidian-600 rounded-lg p-6">
               <h4 className="font-serif text-lg text-oatmeal-100 mb-3">EEA Users</h4>
@@ -635,6 +647,7 @@ export default function PrivacyPolicy() {
               For privacy-related inquiries, data requests, or security concerns, contact us at:
             </p>
 
+            <div className="overflow-x-auto">
             <table className="w-full border-collapse mb-6">
               <thead>
                 <tr className="bg-obsidian-800 border-b border-obsidian-600">
@@ -685,6 +698,7 @@ export default function PrivacyPolicy() {
                 </tr>
               </tbody>
             </table>
+            </div>
 
             <div className="bg-obsidian-800 border border-obsidian-600 rounded-lg p-6">
               <h4 className="font-serif text-lg text-oatmeal-100 mb-3">Response Time</h4>
@@ -714,6 +728,7 @@ export default function PrivacyPolicy() {
 
             {/* Lawful Basis */}
             <h4 className="font-serif text-xl text-oatmeal-200 mb-4">Lawful Basis for Processing</h4>
+            <div className="overflow-x-auto">
             <table className="w-full border-collapse mb-6">
               <thead>
                 <tr className="bg-obsidian-800 border-b border-obsidian-600">
@@ -744,6 +759,7 @@ export default function PrivacyPolicy() {
                 </tr>
               </tbody>
             </table>
+            </div>
 
             {/* DPO */}
             <div className="bg-obsidian-800 border border-obsidian-600 rounded-lg p-6 mb-6">
@@ -774,6 +790,7 @@ export default function PrivacyPolicy() {
 
             {/* Categories of PI */}
             <h4 className="font-serif text-xl text-oatmeal-200 mb-4">Categories of Personal Information Collected</h4>
+            <div className="overflow-x-auto">
             <table className="w-full border-collapse mb-6">
               <thead>
                 <tr className="bg-obsidian-800 border-b border-obsidian-600">
@@ -848,6 +865,7 @@ export default function PrivacyPolicy() {
                 </tr>
               </tbody>
             </table>
+            </div>
 
             {/* Business Purposes */}
             <div className="bg-obsidian-800 border border-obsidian-600 rounded-lg p-6 mb-6">
@@ -896,6 +914,7 @@ export default function PrivacyPolicy() {
               Summary: What We Collect vs. Store
             </h2>
 
+            <div className="overflow-x-auto">
             <table className="w-full border-collapse">
               <thead>
                 <tr className="bg-obsidian-800 border-b border-obsidian-600">
@@ -1006,6 +1025,7 @@ export default function PrivacyPolicy() {
                 </tr>
               </tbody>
             </table>
+            </div>
           </article>
 
           {/* Footer CTA */}

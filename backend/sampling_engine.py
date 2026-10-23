@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Optional
 
+from shared import audit_figure_registry as _registry
 from shared.column_detector import (
     ColumnFieldConfig,
     DetectionResult,
@@ -34,60 +35,44 @@ logger = logging.getLogger(__name__)
 # Constants — ISA 530 / PCAOB AS 2315 Confidence Factors
 # ═══════════════════════════════════════════════════════════════
 
-# Poisson confidence factors for zero expected misstatements
-# Source: AICPA Audit Sampling Guide, Table A-1
-CONFIDENCE_FACTORS: dict[float, float] = {
-    0.80: 1.61,
-    0.85: 1.90,
-    0.90: 2.31,
-    0.95: 3.00,
-    0.97: 3.51,
-    0.99: 4.61,
-}
-
-# Incremental change factors for Stringer bound calculation
-# Used when sample contains misstatements — each successive error
-# contributes a decreasing incremental allowance.
-# Index 0 = factor for 1st largest tainting, etc.
-# Source: AICPA Audit Sampling Guide, Table C-1 (95% confidence)
-INCREMENTAL_FACTORS_95: list[float] = [
-    1.58,
-    1.30,
-    1.15,
-    1.06,
-    1.00,
-    0.95,
-    0.92,
-    0.89,
-    0.87,
-    0.85,
-    0.83,
-]
-
-# Incremental factors for 90% confidence
+# Sprint 805 (findings A-1, A-2, A-9): every published figure below now comes
+# from `shared/audit_figure_registry.py`, which carries the source, edition and
+# verification stamp with the value and derives the Stringer increments from the
+# reliability-factor series instead of tabulating them separately.
+#
+# What was here before, and why it mattered:
+# - `INCREMENTAL_FACTORS_95` / `_90` were cited to "AICPA Audit Sampling Guide,
+#   Table C-1" and matched neither the published 95% nor the 90% series. The
+#   Stringer incremental allowance is the set of *first differences of the
+#   Poisson reliability factors*, which is arithmetic and therefore checkable
+#   exactly. Applied as `max(factor - 1.0, 0.0)`, every shipped literal from
+#   rank 5 onward was <= 1.00, so the 5th and every later misstatement
+#   contributed exactly zero allowance. The error understated the upper error
+#   limit — the unconservative direction — and the tool reported `pass` where
+#   the Stringer bound reported `fail` at 22, 24 and 26 misstatements on the
+#   review's measured engagement.
+# - `_get_incremental_factors` returned the 95% table for any confidence level
+#   >= 0.95, so 97% and 99% engagements silently used 95% factors.
+#
 # Minimum non-zero population size for a statistically meaningful sample
 MIN_POPULATION_SIZE = 5
 
-INCREMENTAL_FACTORS_90: list[float] = [
-    1.10,
-    0.92,
-    0.82,
-    0.76,
-    0.71,
-    0.68,
-    0.65,
-    0.63,
-    0.61,
-    0.60,
-    0.58,
-]
+# Poisson confidence factors for zero expected misstatements, by confidence
+# level. Derived from the registry so there is one series, not two.
+CONFIDENCE_FACTORS: dict[float, float] = {
+    level: _registry.reliability_factor(level) for level in _registry.supported_confidence_levels()
+}
 
 
 def _get_incremental_factors(confidence_level: float) -> list[float]:
-    """Return the appropriate incremental factor table for the confidence level."""
-    if confidence_level >= 0.95:
-        return INCREMENTAL_FACTORS_95
-    return INCREMENTAL_FACTORS_90
+    """
+    Return the Stringer incremental allowances for this confidence level.
+
+    These are increments, not factors: the caller applies them directly rather
+    than as `factor - 1.0`. Refuses an untabulated confidence level instead of
+    substituting the nearest series.
+    """
+    return list(_registry.stringer_increments(confidence_level))
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -257,17 +242,14 @@ POPULATION_COLUMN_CONFIGS: list[ColumnFieldConfig] = [
 
 
 def get_confidence_factor(confidence_level: float) -> float:
-    """Look up the Poisson confidence factor for the given confidence level.
-
-    Falls back to nearest available level if exact match not found.
     """
-    if confidence_level in CONFIDENCE_FACTORS:
-        return CONFIDENCE_FACTORS[confidence_level]
+    Poisson reliability factor for zero expected misstatements.
 
-    # Find nearest
-    available = sorted(CONFIDENCE_FACTORS.keys())
-    nearest = min(available, key=lambda x: abs(x - confidence_level))
-    return CONFIDENCE_FACTORS[nearest]
+    Sprint 805 (A-1): refuses an untabulated confidence level rather than
+    snapping to the nearest one. Silent substitution is how a 99% engagement
+    came to be planned and evaluated on 95% figures.
+    """
+    return _registry.reliability_factor(confidence_level)
 
 
 def calculate_mus_sample_size(
@@ -294,29 +276,37 @@ def calculate_mus_sample_size(
 
     confidence_factor = get_confidence_factor(confidence_level)
 
-    # Sprint 684: expansion factor sourced from AICPA Audit Sampling
-    # Guide Table A-1 (interpolated between tabulated e/TM buckets).
-    # Previously a homemade 1 + (e/TM) approximation systematically
-    # under-sized samples vs. the published table — e.g., at e/TM=0.25
-    # the published factor is 1.75 but the approximation gave 1.25,
-    # yielding ~4.6% fewer sample items.
+    # Sprint 805 (finding A-2): the published expansion factor depends on the
+    # risk of incorrect acceptance *alone*, and it scales **expected
+    # misstatement** in the denominator:
+    #
+    #     n = BV x RF / (TM - EM x EF)
+    #
+    # Sprint 684 had tabulated it two-dimensionally by (confidence level,
+    # expected/tolerable), rising to 3.00, and multiplied it into the
+    # reliability factor. That oversized samples by up to 1.40x — the
+    # conservative direction, so no audit conclusion was endangered, but the
+    # client was billed for up to 40% more items than the standard requires,
+    # under a citation that does not support the figure. Sprint 684's own commit
+    # message argued the *previous* `1 + e/TM` approximation under-sized
+    # samples; at e/TM = 0.25 that approximation reproduced the AICPA formula
+    # exactly, so 684 replaced a correct result with an incorrect one.
     if expected_misstatement > 0:
-        from shared.aicpa_tables import expansion_factor as aicpa_expansion
-
-        adjusted_factor = confidence_factor * aicpa_expansion(
-            confidence_level=confidence_level,
-            expected_misstatement=expected_misstatement,
-            tolerable_misstatement=tolerable_misstatement,
-        )
+        net_tolerable = tolerable_misstatement - expected_misstatement * _registry.expansion_factor(confidence_level)
     else:
-        adjusted_factor = confidence_factor
+        net_tolerable = tolerable_misstatement
 
-    net_tolerable = tolerable_misstatement - expected_misstatement
     if net_tolerable <= 0:
-        raise ValueError("Net tolerable misstatement must be positive")
+        raise ValueError(
+            "Expected misstatement, expanded by the AICPA expansion factor, "
+            "equals or exceeds tolerable misstatement. Monetary unit sampling "
+            "cannot produce a meaningful sample at this ratio; consider "
+            "substantive testing of the population instead."
+        )
 
-    # Standard MUS formula: interval = (Tolerable - Expected) / Confidence Factor
-    sampling_interval = net_tolerable / adjusted_factor
+    # Standard MUS formula, AICPA Audit Sampling Guide:
+    #   interval = (TM - EM x EF) / RF
+    sampling_interval = net_tolerable / confidence_factor
 
     sample_size = math.ceil(population_value / sampling_interval)
 
@@ -455,7 +445,7 @@ def evaluate_mus_sample_stringer(
 
     Basic Precision = Sampling Interval × Confidence Factor
     Projected Misstatement = sum(tainting_i × sampling_interval) for each error
-    Incremental Allowance = sum(tainting_i × interval × (incremental_factor_i - 1))
+    Incremental Allowance = sum(tainting_i × interval × increment_i)
         where taintings are ranked largest to smallest
 
     Sprint 684: ``sample_items`` is the new optional full selected-sample
@@ -485,15 +475,36 @@ def evaluate_mus_sample_stringer(
     # Projected misstatement
     projected_misstatement = math.fsum(t * sampling_interval for t in taintings_ranked)
 
-    # Incremental allowance
+    # Incremental allowance.
+    #
+    # Sprint 805 (A-1): `incremental_factors` now holds the first differences of
+    # the Poisson reliability-factor series, derived in the figure registry. The
+    # `- 1.0` stays, and it is not cosmetic: the projected-misstatement term
+    # above already contributes `tainting x interval` per misstatement, so the
+    # allowance contributes only the excess. The identity that pins it is that a
+    # fully-tainted sample must satisfy `UEL = interval x RF(k)`:
+    #
+    #   BP        = interval x RF(0)
+    #   projected = k x interval
+    #   allowance = interval x sum(dRF_i - 1) = interval x (RF(k) - RF(0) - k)
+    #   total     = interval x RF(k)                                  (exactly)
+    #
+    # What *is* gone is the `max(..., 0.0)` clamp. With the correct series every
+    # increment exceeds 1.0 (they approach it from above as the rank grows), so
+    # the clamp can never bind — it existed only to stop the mistabulated
+    # literals from subtracting, and in doing so it was the mechanism by which
+    # the 5th and every later misstatement contributed *exactly zero* allowance,
+    # since every shipped literal from rank 5 onward was <= 1.00.
     incremental_allowance = 0.0
     for i, tainting in enumerate(taintings_ranked):
         if i < len(incremental_factors):
-            factor = incremental_factors[i]
+            increment = incremental_factors[i]
         else:
-            # Beyond table — use the last factor
-            factor = incremental_factors[-1] if incremental_factors else 0.0
-        incremental_allowance += tainting * sampling_interval * max(factor - 1.0, 0.0)
+            # Beyond the published series, hold the smallest published increment.
+            # The increments decrease monotonically toward 1.0, so this is the
+            # conservative choice available without extrapolating a published table.
+            increment = incremental_factors[-1] if incremental_factors else 1.0
+        incremental_allowance += tainting * sampling_interval * (increment - 1.0)
 
     # Upper Error Limit
     upper_error_limit = basic_precision + projected_misstatement + incremental_allowance

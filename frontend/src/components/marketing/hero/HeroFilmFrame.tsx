@@ -71,7 +71,7 @@ export function UploadLayer({ opacity, isActive }: { opacity: MotionValue<number
             <div className={`flex items-center gap-2 px-3 py-2 rounded-lg bg-oatmeal-50 border shadow-sm whitespace-nowrap transition-shadow duration-200 ${
               phase >= 2 ? 'border-sage-400/40 shadow-md' : 'border-obsidian-200'
             }`}>
-              <BrandIcon name="file-plus" className="w-4 h-4 text-sage-500 flex-shrink-0" />
+              <BrandIcon name="file-plus" className="w-4 h-4 text-theme-success-text flex-shrink-0" />
               <span className="font-mono text-[10px] text-obsidian-700">FY2025.xlsx</span>
             </div>
           </motion.div>
@@ -128,7 +128,7 @@ export function UploadLayer({ opacity, isActive }: { opacity: MotionValue<number
               animate={{ scale: 1, opacity: 1, y: 0 }}
               transition={SPRING.bouncy}
             >
-              <BrandIcon name="file-plus" className="w-6 h-6 text-sage-500 flex-shrink-0" />
+              <BrandIcon name="file-plus" className="w-6 h-6 text-theme-success-text flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="font-mono text-xs text-obsidian-800 font-medium truncate">
                   Your_Company_FY2025.xlsx
@@ -140,7 +140,7 @@ export function UploadLayer({ opacity, isActive }: { opacity: MotionValue<number
                 animate={{ scale: 1 }}
                 transition={{ delay: 0.2, ...SPRING.bouncy }}
               >
-                <BrandIcon name="checkmark" className="w-4 h-4 text-sage-500" />
+                <BrandIcon name="checkmark" className="w-4 h-4 text-theme-success-text" />
               </motion.div>
             </motion.div>
           )}
@@ -173,7 +173,7 @@ export function UploadLayer({ opacity, isActive }: { opacity: MotionValue<number
                 animate={{ rotate: 0 }}
                 transition={{ duration: 0.3, ease: 'easeOut' as const }}
               >
-                <BrandIcon name="file-plus" className="w-4 h-4 text-sage-500 flex-shrink-0" />
+                <BrandIcon name="file-plus" className="w-4 h-4 text-theme-success-text flex-shrink-0" />
                 <span className="font-mono text-[10px] text-obsidian-700">FY2025.xlsx</span>
               </motion.div>
             )}
@@ -299,7 +299,7 @@ export function AnalyzeLayer({ opacity, isActive }: { opacity: MotionValue<numbe
                         animate={{ scale: 1 }}
                         transition={{ delay: tileDelay + 0.1, ...SPRING.bouncy }}
                       >
-                        <BrandIcon name="checkmark" className="w-3 h-3 text-sage-500" />
+                        <BrandIcon name="checkmark" className="w-3 h-3 text-theme-success-text" />
                       </motion.div>
                     )}
                   </div>
@@ -347,7 +347,7 @@ export function AnalyzeLayer({ opacity, isActive }: { opacity: MotionValue<numbe
           animate={phase >= 4 ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.8 }}
           transition={SPRING.snappy}
         >
-          <BrandIcon name="warning-triangle" className="w-3 h-3 text-clay-500" />
+          <BrandIcon name="warning-triangle" className="w-3 h-3 text-theme-error-text" />
           <span className="font-sans text-[10px] font-medium text-clay-600">3 findings</span>
         </motion.span>
       </div>
@@ -388,11 +388,11 @@ export function ExportLayer({ opacity, isActive }: { opacity: MotionValue<number
           }
           transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
         >
-          <BrandIcon name="spreadsheet" className="w-5 h-5 text-sage-500 flex-shrink-0" />
+          <BrandIcon name="spreadsheet" className="w-5 h-5 text-theme-success-text flex-shrink-0" />
           <span className="font-sans text-sm text-obsidian-800 font-medium flex-1 min-w-0 truncate">
             Your_Company_Workpapers.xlsx
           </span>
-          <BrandIcon name="download-arrow" className="w-4 h-4 text-sage-500 flex-shrink-0" />
+          <BrandIcon name="download-arrow" className="w-4 h-4 text-theme-success-text flex-shrink-0" />
         </motion.div>
 
         {/* PDF memos row — slides in from right (staggered) */}
@@ -414,7 +414,7 @@ export function ExportLayer({ opacity, isActive }: { opacity: MotionValue<number
               JE Testing &middot; Revenue &middot; AP &middot; Sampling &middot; ...
             </p>
           </div>
-          <BrandIcon name="download-arrow" className="w-4 h-4 text-sage-500 flex-shrink-0" />
+          <BrandIcon name="download-arrow" className="w-4 h-4 text-theme-success-text flex-shrink-0" />
         </motion.div>
       </div>
 

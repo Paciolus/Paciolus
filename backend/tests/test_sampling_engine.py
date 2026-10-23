@@ -71,11 +71,23 @@ class TestConfidenceFactors:
     def test_exact_lookup_99(self):
         assert get_confidence_factor(0.99) == 4.61
 
-    def test_nearest_fallback(self):
-        """Non-standard level falls back to nearest."""
-        factor = get_confidence_factor(0.93)
-        # 0.93 is nearest to 0.95 (diff 0.02) vs 0.90 (diff 0.03)
-        assert factor == CONFIDENCE_FACTORS[0.95]
+    def test_untabulated_level_is_refused_not_snapped(self):
+        """
+        Sprint 805 (finding A-1). This used to snap to the nearest tabulated
+        level, which is how a 97% or 99% engagement came to be planned and
+        evaluated on 95% figures — the published 99% rank-1 increment is 2.03
+        against 95%'s 1.75. Substituting the nearest table misstates the upper
+        error limit, so the engine now refuses.
+        """
+        with pytest.raises(ValueError, match="No published reliability-factor series"):
+            get_confidence_factor(0.93)
+
+    def test_every_tabulated_level_keeps_its_own_factor(self):
+        """97% and 99% must not resolve to the 95% factor."""
+        assert get_confidence_factor(0.97) == 3.51
+        assert get_confidence_factor(0.99) == 4.61
+        assert get_confidence_factor(0.95) == 3.00
+        assert len({get_confidence_factor(lvl) for lvl in (0.90, 0.95, 0.97, 0.99)}) == 4
 
     def test_all_factors_positive(self):
         for level, factor in CONFIDENCE_FACTORS.items():
@@ -168,52 +180,96 @@ class TestMUSSampleSize:
 # ═══════════════════════════════════════════════════════════════
 
 
-class TestSprint684AICPATableA1:
-    """Sprint 684: MUS sample-size calculation uses AICPA Audit Sampling
-    Guide Table A-1 expansion factors instead of the homemade
-    1 + (e/TM) approximation, which systematically under-sized samples."""
+class TestSprint805ExpansionFactor:
+    """
+    Sprint 805 (finding A-2) replaced Sprint 684's two-dimensional expansion
+    factor table.
 
-    def test_expansion_factor_matches_table_at_published_buckets(self):
-        """Spot-check two published Table A-1 values (95% confidence)."""
+    The published AICPA expansion factor depends on the **risk of incorrect
+    acceptance alone** — 1.9 / 1.6 / 1.5 / 1.4 / 1.3 / 1.25 / 1.2 / 1.15 / 1.0
+    for 1%…50% — and it scales *expected misstatement* in the denominator:
+
+        n = BV x RF / (TM - EM x EF)
+
+    Sprint 684 had tabulated it by `(confidence_level, expected/tolerable)`,
+    rising to 3.00, and multiplied it into the reliability factor. Sample sizes
+    ran up to 1.40x the size the standard requires. Conservative, so no audit
+    conclusion was endangered — but the client paid for up to 40% more items
+    than the method calls for, under a citation that does not support the figure.
+
+    The tests this class replaces asserted the two-dimensional values, so they
+    are not adjusted: they were pinning the defect.
+    """
+
+    def test_expansion_factor_depends_only_on_risk_of_incorrect_acceptance(self):
         from shared.aicpa_tables import expansion_factor
 
-        # Table A-1 @ 95% / e/TM = 0.25 → 1.75
-        assert expansion_factor(0.95, 25_000, 100_000) == pytest.approx(1.75, rel=0.01)
-        # Table A-1 @ 95% / e/TM = 0.50 → 3.00
-        assert expansion_factor(0.95, 50_000, 100_000) == pytest.approx(3.00, rel=0.01)
+        assert expansion_factor(0.99) == pytest.approx(1.9)
+        assert expansion_factor(0.95) == pytest.approx(1.6)
+        assert expansion_factor(0.90) == pytest.approx(1.5)
+        assert expansion_factor(0.85) == pytest.approx(1.4)
+        assert expansion_factor(0.80) == pytest.approx(1.3)
 
-    def test_expansion_factor_interpolates_between_buckets(self):
-        """Ratios between tabulated buckets are linearly interpolated."""
+    def test_expansion_factor_does_not_vary_with_expected_over_tolerable(self):
+        """
+        The defect, asserted directly: the expected/tolerable ratio is not an
+        input to the published table. The signature no longer accepts it.
+        """
+        import inspect
+
         from shared.aicpa_tables import expansion_factor
 
-        # e/TM = 0.175 is halfway between 0.15 (1.40) and 0.20 (1.55) at
-        # 95% → expected ~1.475.
-        assert expansion_factor(0.95, 17_500, 100_000) == pytest.approx(1.475, rel=0.01)
+        params = inspect.signature(expansion_factor).parameters
+        assert list(params) == ["confidence_level"]
 
-    def test_zero_expected_returns_unity(self):
-        from shared.aicpa_tables import expansion_factor
+    def test_sample_size_matches_the_published_aicpa_formula(self):
+        """
+        Reproduces the review's measured table. Pre-fix, the product returned
+        70 / 84 / 140 / 360 against the AICPA formula's 66 / 72 / 100 / 300.
+        """
+        import math
 
-        assert expansion_factor(0.95, 0, 100_000) == pytest.approx(1.0)
+        from shared.audit_figure_registry import expansion_factor, reliability_factor
 
-    def test_sample_size_uses_table_not_homemade_factor(self):
-        """Sprint 684 regression: prior code used 1 + e/TM = 1.25 at
-        e/TM=0.25; Table A-1 gives 1.75. The resulting sample size
-        must reflect the table (larger than the homemade estimate)."""
-        size, interval, _cf = calculate_mus_sample_size(
+        population, tolerable = 10_000_000.0, 500_000.0
+        for ratio, expected_n in ((0.05, 66), (0.10, 72), (0.25, 100), (0.50, 300)):
+            expected_misstatement = tolerable * ratio
+            size, _interval, _cf = calculate_mus_sample_size(
+                confidence_level=0.95,
+                tolerable_misstatement=tolerable,
+                expected_misstatement=expected_misstatement,
+                population_value=population,
+            )
+            formula_n = math.ceil(
+                population * reliability_factor(0.95) / (tolerable - expected_misstatement * expansion_factor(0.95))
+            )
+            assert size == formula_n == expected_n, f"e/TM={ratio}: got {size}, AICPA {formula_n}"
+
+    def test_the_expansion_factor_scales_expected_misstatement_not_the_reliability_factor(self):
+        """
+        Structural. The interval must be `(TM - EM x EF) / RF`. Under Sprint
+        684's placement it was `(TM - EM) / (RF x EF)`, which is a different
+        number for every non-zero expected misstatement.
+        """
+        _size, interval, cf = calculate_mus_sample_size(
             confidence_level=0.95,
-            tolerable_misstatement=100_000,
-            expected_misstatement=25_000,
+            tolerable_misstatement=500_000,
+            expected_misstatement=100_000,
             population_value=10_000_000,
         )
-        # Under the homemade formula the interval was ~63,500.
-        # With Table A-1 (factor 1.75) the interval shrinks to ~53,571.
-        # That drives a larger sample size.
-        assert interval == pytest.approx(
-            75_000 / (3.0 * 1.75),  # CF @ 95% = 3.0
-            rel=0.05,
+        assert interval == pytest.approx((500_000 - 100_000 * 1.6) / 3.0)
+        # And emphatically not the Sprint 684 placement.
+        assert interval != pytest.approx((500_000 - 100_000) / (3.0 * 1.6))
+        assert cf == 3.0
+
+    def test_zero_expected_misstatement_leaves_tolerable_untouched(self):
+        _size, interval, _cf = calculate_mus_sample_size(
+            confidence_level=0.95,
+            tolerable_misstatement=100_000,
+            expected_misstatement=0,
+            population_value=1_000_000,
         )
-        # And the size scales accordingly.
-        assert size >= 180  # Previous (homemade) would have been ~155.
+        assert interval == pytest.approx(100_000 / 3.0)
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -432,11 +488,14 @@ class TestStringerBound:
         assert result.errors_found == 1
         # Projected = 0.5 * 10000 = 5000
         assert abs(result.projected_misstatement - 5_000) < 1
-        # Incremental = 0.5 * 10000 * (1.58 - 1.0) = 2900
-        assert abs(result.incremental_allowance - 2_900) < 1
-        # UEL = 30000 + 5000 + 2900 = 37900
-        assert abs(result.upper_error_limit - 37_900) < 1
-        assert result.conclusion == "pass"  # 37900 < 50000
+        # Sprint 805 (A-1): the rank-1 increment is the first difference of the
+        # published 95% Poisson series, 4.75 - 3.00 = 1.75 — not the 1.58 that
+        # was tabulated here, which is the *90%* rank-1 increment.
+        # Incremental = 0.5 * 10000 * (1.75 - 1.0) = 3750
+        assert abs(result.incremental_allowance - 3_750) < 1
+        # UEL = 30000 + 5000 + 3750 = 38750
+        assert abs(result.upper_error_limit - 38_750) < 1
+        assert result.conclusion == "pass"  # 38750 < 50000
 
     def test_multiple_errors_fail(self):
         """Multiple errors push UEL above tolerable."""
