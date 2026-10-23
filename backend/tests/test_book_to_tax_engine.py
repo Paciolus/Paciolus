@@ -2,6 +2,8 @@
 
 from decimal import Decimal
 
+import pytest
+
 from book_to_tax_engine import (
     M3_THRESHOLD_TOTAL_ASSETS,
     STANDARD_ADJUSTMENTS,
@@ -217,3 +219,31 @@ class TestSerialisation:
         assert d["tax_year"] == 2026
         assert set(d).issuperset({"schedule_m1", "schedule_m3", "deferred_tax", "tax_provision"})
         assert "permanent_additions" in d["schedule_m1"]
+
+
+@pytest.mark.parametrize("rate", ["5", "-0.01"])
+def test_state_rate_outside_zero_to_one_is_rejected(rate):
+    """Sprint 826 (B3): "5" meant 5% and produced 500% state tax."""
+    with pytest.raises(BookToTaxInputError, match="State tax rate"):
+        calculate_book_to_tax(_config(state_tax_rate=Decimal(rate)))
+
+
+def test_temporary_reversal_reduces_the_beginning_dtl():
+    """Sprint 826 (B4): a $50,000 reversal of a $30,000 beginning DTL left the DTL
+    untouched and booked a $10,500 DTA instead of reducing the DTL to $19,500."""
+    from book_to_tax_engine import DeferredTaxRollforwardInput
+
+    config = _config(
+        adjustments=[
+            AdjustmentEntry(
+                label="Depreciation reversal",
+                amount=Decimal("50000"),
+                difference_type=DifferenceType.TEMPORARY,
+                direction=AdjustmentDirection.ADD,
+            )
+        ],
+        rollforward=DeferredTaxRollforwardInput(beginning_dtl=Decimal("30000")),
+    )
+    deferred = calculate_book_to_tax(config).deferred_tax
+    assert deferred.ending_dtl == Decimal("19500.00")
+    assert deferred.ending_dta == Decimal("0")

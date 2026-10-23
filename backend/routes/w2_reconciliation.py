@@ -235,7 +235,7 @@ def run_reconciliation(
     except W2ReconciliationInputError as e:
         maybe_record_tool_run(db, payload.engagement_id, current_user.id, "w2_reconciliation", False)
         raise HTTPException(status_code=400, detail=str(e))
-    except (ValueError, ValidationError) as e:
+    except (ValueError, ValidationError, ArithmeticError) as e:
         logger.exception("W-2 reconciliation failed")
         maybe_record_tool_run(db, payload.engagement_id, current_user.id, "w2_reconciliation", False)
         raise HTTPException(
@@ -275,6 +275,10 @@ def export_reconciliation_csv(
         result = reconcile_w2(_build_config(payload))
     except W2ReconciliationInputError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except ArithmeticError:
+        # Sprint 827: a huge-but-finite amount ("1e400") passes parsing, then
+        # quantize() raises InvalidOperation — an input problem, not a 500.
+        raise HTTPException(status_code=400, detail="An amount is too large to process.")
 
     buffer = io.StringIO()
     writer = csv.writer(buffer)

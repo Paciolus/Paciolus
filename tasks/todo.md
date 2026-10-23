@@ -375,14 +375,80 @@ royalty threshold, W1's SIMPLE catch-up, W2's HSA catch-up, F5's possible 2026 t
 go through Sprint 793b's practitioner confirmation like the rest of the tables. B1 (NOL and
 valuation allowance) needs a scope call.
 
+- [x] **F0** — done in Sprint 827 (huge-but-finite amounts → 400 on all promoted tools).
+- [x] **F2** — dated payments outside the tax year are excluded and counted
+      (`summary.payments_outside_tax_year`); undated payments still count, as before.
+- [x] **F3** — payments aggregate per payee TIN; the candidate names every vendor record it
+      combined. Two existing tests changed for a stated reason: one fixture gave two "different"
+      vendors the same TIN (they are one payee), and one asserted a $500 rents + $400 legal MISC
+      filing — the F6 defect itself.
+- [x] **F6 + F1** — 1099-MISC thresholds are per box (rents/other/medical/attorney $600,
+      royalties $10); a MISC is due when any box qualifies. The $10 royalty figure is
+      long-standing and not indexed, but goes on the 793b confirmation list with the rest.
+- [x] **F7** — `other` → 1099-MISC box 3.
+- [ ] **W1/W2 — design question first.** Both need new statutory fields (SIMPLE catch-up 50+ and
+      60–63; HSA age-55 catch-up). Adding them to `StatutoryLimits` means a 2026 request that
+      today fully overrides the 11 existing fields would be refused (the new fields would be
+      "missing", and Sprint 811 deliberately refuses rather than falls back). Decide with 793b:
+      optional fields that disable only their own check when absent, or a breaking change to
+      the override contract.
+- [x] **W3** — Boxes 4 and 6 are compared with what payroll actually withheld (when supplied),
+      and Box 12 codes D/W/S with payroll deferrals and HSA contributions.
+- [x] **W4 (part)** — duplicate and orphan W-2 drafts are reported in the summary, IDs match
+      whitespace-normalised, and the first of a duplicate pair is kept. The W-3 ↔ 941 comparison
+      the module docstring promises is still missing.
+- [x] **W5** — with no plan type, the plan is inferred from which deferral field is populated.
+- [x] **F8** — governments and tax-exempt organisations are exempt payees (no medical/legal
+      carve-back, unlike corporations).
+- [x] **B3** — state rate validated to 0–1 like the federal rate. **B4** — a positive temporary
+      movement reverses any DTL before building a DTA (gross balances were wrong; net was right).
+- [ ] F4, F5, F9, W4 (W-3 vs 941), W6–W10, B1, B2, B5, B6.
+
 **Commit SHA:** TBD.
 
 ---
 
 ### Sprint 827: Fixed assets, intercompany, SoD, cash flow projector
-**Status:** PENDING. Sprint 823 findings A1–A8, I1–I5, D1–D2, C1–C6, P-3.
+**Status:** IN PROGRESS. Sprint 823 findings A1–A8, I1–I5, D1–D2, C1–C6, P-3.
 **Priority:** **P1** — A1 and I1 produce wrong output on correct input for every DDB register and
 every IC revenue/expense pair.
+
+- [x] **I1** — eliminations now credit the debit-natural side (receivable, expense, investment)
+      and debit the credit-natural side (payable, revenue). Revenue/expense was reversed in both
+      entity orders; none of the 51 existing intercompany tests pinned that direction.
+- [x] **I2** — matching is one-to-one per entity pair: amount-reconciling matches first, then
+      compatible-direction mismatches, no line used twice. 2 × $500 each side now eliminates
+      $1,000 (was $2,000 across 4 pairs, "complete"); 600/400 vs 400/600 pairs by amount.
+      **Known limitation:** one side split across accounts (600 + 400 against 1,000) still
+      reports mismatches — it fails safe (incomplete, flagged) rather than over-eliminating.
+- [x] **I3** — an explicit counterparty marks a line intercompany regardless of account name.
+- [x] **I5 (500 + double count)** and **F0** — `ArithmeticError` (huge-but-finite amounts
+      overflowing `quantize`) is a 400 on the analyze and export routes of W-2, 1099,
+      book-to-tax, intercompany and cash-flow. The double-reported direction mismatch is gone
+      with the one-to-one matcher.
+- [x] **A1** — declining balance computed as compounding, `cost × (1 − (1 − r)^t)` with
+      r = 2/life (or 1.5/life for 150% DB), floored at salvage. Correct DDB and 150% DB registers
+      now produce 0 flags (every asset was flagged HIGH).
+- [x] **A2** — expected accumulation capped at the depreciable base.
+- [x] **A3** — FA-T11 uses the shared `parse_date`, so Excel date cells and `YYYY/MM/DD` are
+      tested rather than silently skipped. (`01-Jan-2019` is still outside the shared parser.)
+- [x] **A6** — FA-T11 compares magnitudes, so contra-negative accumulated depreciation no longer
+      flags every row. FA-03 still flags negative accumulated depreciation; whether a contra
+      presentation is "negative" there is a product call.
+- [x] **D1** — SoD role rows are unioned per role and user rows merged per user ID, so a
+      long-format matrix no longer hides conflicts split across rows.
+- [x] **C1** — monthly/quarterly recurring flows step by calendar month from the first date,
+      clamped to month-end without drift.
+- [x] **I4** — IC phrases match whole words; generic phrases ("due to", "receivable from") count
+      only when they name an entity in the consolidation; counterparty parsing no longer reads
+      "Dublin Ltd" as "Ltd", and resolves dash forms ("IC AR - Beta").
+- [x] **D2 (part)** — SoD results now list matrix permissions that no rule recognises (engine,
+      API field `unmatched_permissions`, and a notice in the results view). **Policy call open:**
+      a user with a single HIGH conflict scores 3 and tiers "moderate"; whether one HIGH conflict
+      should make a user high-risk is a scoring decision, not a bug fix.
+- [ ] Open: A4, A5, A8 (FA conventions/units), D2 (tiering; degenerate custom rules),
+      C2–C6 (cash flow scenario deferral, footing, edge cases), I4's investment/payable pairing,
+      P-3 (non-USD / EU number formats — needs a locale decision).
 
 **Commit SHA:** TBD.
 

@@ -25,7 +25,7 @@ from __future__ import annotations
 import csv
 import io
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
 
@@ -253,9 +253,14 @@ class SodResult:
     users_evaluated: int
     users_with_conflicts: int
     high_risk_users: int
+    # Sprint 827 (D2): permissions in the matrix that no rule mentions. A
+    # matrix written "AP-INVOICE-CREATE" or "ap.invoice.create" matched nothing
+    # and produced a clean result indistinguishable from a genuinely clean one.
+    unmatched_permissions: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return {
+            "unmatched_permissions": list(self.unmatched_permissions),
             "conflicts": [c.to_dict() for c in self.conflicts],
             "user_summaries": [u.to_dict() for u in self.user_summaries],
             "rules_evaluated": self.rules_evaluated,
@@ -275,11 +280,31 @@ def _normalize(value: str) -> str:
 
 
 def _build_role_map(role_permissions: Iterable[RolePermission]) -> dict[str, frozenset[str]]:
-    result: dict[str, frozenset[str]] = {}
+    # Sprint 827 (D1): union, not overwrite. A long-format matrix lists one
+    # role per row per permission; overwriting kept only the last row, so a
+    # role holding both halves of a conflict across two rows showed none.
+    result: dict[str, set[str]] = {}
     for rp in role_permissions:
-        normalized = frozenset(_normalize(p) for p in rp.permissions if p.strip())
-        result[_normalize(rp.role_code)] = normalized
-    return result
+        result.setdefault(_normalize(rp.role_code), set()).update(_normalize(p) for p in rp.permissions if p.strip())
+    return {role: frozenset(perms) for role, perms in result.items()}
+
+
+def _merge_users(user_assignments: Iterable[UserRoleAssignment]) -> list[UserRoleAssignment]:
+    """One assignment per user (Sprint 827, D1).
+
+    A user listed on several rows — one role each — is one person holding all
+    of those roles. Evaluated row by row, AP_CLERK on one row and AP_MANAGER on
+    the next were two conflict-free "users" instead of one with a conflict.
+    """
+    merged: dict[str, UserRoleAssignment] = {}
+    for user in user_assignments:
+        key = user.user_id.strip().lower()
+        if key in merged:
+            existing = merged[key]
+            existing.role_codes = [*existing.role_codes, *(r for r in user.role_codes if r not in existing.role_codes)]
+        else:
+            merged[key] = UserRoleAssignment(user.user_id, user.user_name, list(user.role_codes))
+    return list(merged.values())
 
 
 def _effective_permissions(
@@ -332,7 +357,7 @@ def analyze_segregation_of_duties(
     users_with_conflicts = 0
     high_risk_users = 0
 
-    for user in user_assignments:
+    for user in _merge_users(user_assignments):
         users_evaluated += 1
         permissions, perm_to_roles = _effective_permissions(user, role_map)
         user_conflicts: list[SodConflict] = []
@@ -387,6 +412,9 @@ def analyze_segregation_of_duties(
 
     summaries.sort(key=lambda s: (s.risk_score, s.conflict_count), reverse=True)
 
+    rule_permissions = {p for rule in rules for p in (*rule.permissions_required, *rule.permissions_alternate)}
+    matrix_permissions = {p for perms in role_map.values() for p in perms}
+
     return SodResult(
         conflicts=conflicts,
         user_summaries=summaries,
@@ -394,6 +422,7 @@ def analyze_segregation_of_duties(
         users_evaluated=users_evaluated,
         users_with_conflicts=users_with_conflicts,
         high_risk_users=high_risk_users,
+        unmatched_permissions=sorted(matrix_permissions - rule_permissions),
     )
 
 

@@ -29,6 +29,8 @@ from decimal import ROUND_HALF_UP, Decimal
 from enum import Enum
 from typing import Any
 
+from shared.parsing_helpers import parse_date
+
 CENT = Decimal("0.01")
 ZERO = Decimal("0")
 
@@ -87,6 +89,9 @@ CATEGORY_TO_FORM_BOX: dict[PaymentCategory, tuple[FormType, int]] = {
     PaymentCategory.MEDICAL: (FormType.MISC, 6),
     PaymentCategory.LEGAL: (FormType.MISC, 10),
     PaymentCategory.INTEREST: (FormType.INT, 1),
+    # Sprint 826 (F7): "other income" is 1099-MISC box 3. Unmapped, it was
+    # reported in a box 0 that does not exist.
+    PaymentCategory.OTHER: (FormType.MISC, 3),
 }
 
 # Filing thresholds in dollars. Each form type aggregates per-vendor
@@ -95,6 +100,19 @@ FORM_THRESHOLDS: dict[FormType, Decimal] = {
     FormType.NEC: Decimal("600"),
     FormType.MISC: Decimal("600"),
     FormType.INT: Decimal("10"),
+}
+
+# Sprint 826 (F1, F6): 1099-MISC thresholds apply per box, not to the form's
+# combined total — rents $400 plus medical $300 is not a $700 filing, and a
+# $450 royalty *is* one, because royalties (box 2) report at $10. A MISC is
+# due when any box reaches its own threshold. Figures pending the Sprint 793b
+# practitioner confirmation along with the rest of the statutory tables.
+MISC_BOX_THRESHOLDS: dict[int, Decimal] = {
+    1: Decimal("600"),  # rents
+    2: Decimal("10"),  # royalties
+    3: Decimal("600"),  # other income
+    6: Decimal("600"),  # medical and health care payments
+    10: Decimal("600"),  # gross proceeds paid to an attorney
 }
 
 
@@ -287,6 +305,12 @@ def _vendor_is_corporation(entity: EntityType) -> bool:
     return entity in (EntityType.CORPORATION, EntityType.S_CORPORATION)
 
 
+# Sprint 826 (F8): payments to tax-exempt organisations and to governments are
+# listed exceptions to 1099-NEC/MISC reporting — without the medical and legal
+# carve-back that applies to corporations. They were reported as NEC.
+EXEMPT_PAYEE_ENTITIES: frozenset[EntityType] = frozenset({EntityType.GOVERNMENT, EntityType.TAX_EXEMPT})
+
+
 # =============================================================================
 # Core engine
 # =============================================================================
@@ -329,10 +353,24 @@ def prepare_1099s(config: Form1099Config) -> Form1099Result:
 
     vendors_by_id: dict[str, VendorRecord] = {v.vendor_id: v for v in config.vendors}
 
-    # Bucket: (vendor_id, form_type) -> list[VendorPayment]
+    # Sprint 826 (F3): the filing threshold applies per payee, and a payee is
+    # a TIN. Two vendor records sharing a TIN with $400 each are one $800
+    # payee; keyed by vendor ID they were two sub-threshold vendors and no form.
+    def _payee_key(vendor: VendorRecord) -> str:
+        digits = _digits(vendor.tin)
+        return f"tin:{digits}" if len(digits) == 9 else f"vendor:{vendor.vendor_id}"
+
+    payee_vendor_ids: dict[str, list[str]] = defaultdict(list)
+    for vendor in config.vendors:
+        ids = payee_vendor_ids[_payee_key(vendor)]
+        if vendor.vendor_id not in ids:
+            ids.append(vendor.vendor_id)
+
+    # Bucket: (payee_key, form_type) -> list[VendorPayment]
     grouped: dict[tuple[str, FormType], list[VendorPayment]] = defaultdict(list)
     excluded_dollars: dict[tuple[str, FormType], Decimal] = defaultdict(lambda: ZERO)
     payments_without_vendor: list[str] = []
+    payments_outside_tax_year = 0
 
     for payment in config.payments:
         vendor = vendors_by_id.get(payment.vendor_id)
@@ -340,40 +378,66 @@ def prepare_1099s(config: Form1099Config) -> Form1099Result:
             payments_without_vendor.append(payment.vendor_id)
             continue
 
+        # Sprint 826 (F2): a dated payment counts toward the year it was paid.
+        # payment_date was accepted and never read, so December and January
+        # payments either side of the year all landed in it. Undated payments
+        # are kept, as before — the practitioner supplied them for this year.
+        paid_on = parse_date(payment.payment_date) if payment.payment_date else None
+        if paid_on is not None and paid_on.year != config.tax_year:
+            payments_outside_tax_year += 1
+            continue
+
+        payee = _payee_key(vendor)
+
         form_type = _resolve_form_type(payment.payment_category)
 
         # Processor-reported methods excluded from payer filing.
         if payment.payment_method in PROCESSOR_REPORTED_METHODS:
-            excluded_dollars[(vendor.vendor_id, form_type)] += payment.amount
+            excluded_dollars[(payee, form_type)] += payment.amount
+            continue
+
+        # Exempt payees: governments and tax-exempt organisations.
+        if vendor.entity_type in EXEMPT_PAYEE_ENTITIES:
+            excluded_dollars[(payee, form_type)] += payment.amount
             continue
 
         # Corporation exemption unless medical/legal.
         if _vendor_is_corporation(vendor.entity_type) and (
             payment.payment_category not in NON_EXEMPT_CORPORATION_CATEGORIES
         ):
-            excluded_dollars[(vendor.vendor_id, form_type)] += payment.amount
+            excluded_dollars[(payee, form_type)] += payment.amount
             continue
 
-        grouped[(vendor.vendor_id, form_type)].append(payment)
+        grouped[(payee, form_type)].append(payment)
 
     candidates: list[Form1099Candidate] = []
     summary_totals: dict[str, Decimal] = defaultdict(lambda: ZERO)
     summary_counts: dict[str, int] = defaultdict(int)
 
-    for (vendor_id, form_type), payments in grouped.items():
-        vendor = vendors_by_id[vendor_id]
+    for (payee, form_type), payments in grouped.items():
+        payee_ids = [vid for vid in payee_vendor_ids[payee] if any(p.vendor_id == vid for p in payments)]
+        vendor = vendors_by_id[payee_ids[0]]
+        vendor_id = vendor.vendor_id
         # Sum by payment category.
         by_category: dict[PaymentCategory, Decimal] = defaultdict(lambda: ZERO)
         for p in payments:
             by_category[p.payment_category] += p.amount
         total = sum(by_category.values(), ZERO)
 
-        threshold = FORM_THRESHOLDS[form_type]
-        if total < threshold:
+        if form_type == FormType.MISC:
+            by_box: dict[int, Decimal] = defaultdict(lambda: ZERO)
+            for category, amount in by_category.items():
+                by_box[_resolve_box(category)] += amount
+            meets_threshold = any(
+                amount >= MISC_BOX_THRESHOLDS.get(box, FORM_THRESHOLDS[FormType.MISC]) for box, amount in by_box.items()
+            )
+        else:
+            meets_threshold = total >= FORM_THRESHOLDS[form_type]
+        if not meets_threshold:
             # Below threshold — still report for audit, but clearly marked
             # as below-threshold so the candidate list stays focused on
             # filings the practitioner actually needs to make.
-            excluded_dollars[(vendor_id, form_type)] += total
+            excluded_dollars[(payee, form_type)] += total
             continue
 
         box_amounts = [
@@ -388,6 +452,8 @@ def prepare_1099s(config: Form1099Config) -> Form1099Result:
 
         dq = _assess_vendor(vendor)
         review_reasons: list[str] = []
+        if len(payee_ids) > 1:
+            review_reasons.append("Aggregated by TIN across vendor records " + ", ".join(payee_ids))
         if dq.missing_tin:
             review_reasons.append("TIN missing — W-9 required")
         if dq.invalid_tin_format:
@@ -405,7 +471,7 @@ def prepare_1099s(config: Form1099Config) -> Form1099Result:
                 total_reportable=_quantise(total),
                 box_amounts=box_amounts,
                 payment_count=len(payments),
-                excluded_amount=_quantise(excluded_dollars[(vendor_id, form_type)]),
+                excluded_amount=_quantise(excluded_dollars[(payee, form_type)]),
                 flagged_for_review=bool(review_reasons),
                 review_reasons=review_reasons,
             )
@@ -449,6 +515,7 @@ def prepare_1099s(config: Form1099Config) -> Form1099Result:
         "w9_collection_count": len(w9_list),
         "data_quality_issue_count": sum(1 for dq in assessed.values() if dq.has_issue),
         "payments_without_vendor": len(payments_without_vendor),
+        "payments_outside_tax_year": payments_outside_tax_year,
     }
 
     # Deterministic output ordering — form type then vendor name.

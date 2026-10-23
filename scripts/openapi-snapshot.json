@@ -22948,6 +22948,14 @@
             "title": "Rules Evaluated",
             "type": "integer"
           },
+          "unmatched_permissions": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Unmatched Permissions",
+            "type": "array"
+          },
           "user_summaries": {
             "items": {
               "additionalProperties": true,
