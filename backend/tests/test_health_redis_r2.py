@@ -25,7 +25,7 @@ from main import app
 class TestHealthRedis:
     @pytest.mark.asyncio
     async def test_returns_healthy_when_redis_url_unset(self, monkeypatch: pytest.MonkeyPatch):
-        monkeypatch.delenv("REDIS_URL", raising=False)
+        monkeypatch.setattr("config.REDIS_URL", "")  # Sprint 819: the probe reads resolved config
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             r = await client.get("/health/redis")
         assert r.status_code == 200
@@ -35,7 +35,7 @@ class TestHealthRedis:
 
     @pytest.mark.asyncio
     async def test_returns_healthy_on_successful_ping(self, monkeypatch: pytest.MonkeyPatch):
-        monkeypatch.setenv("REDIS_URL", "redis://fake-host:6379/0")
+        monkeypatch.setattr("config.REDIS_URL", "redis://fake-host:6379/0")
 
         fake_client = MagicMock()
         fake_client.ping.return_value = True
@@ -51,7 +51,7 @@ class TestHealthRedis:
 
     @pytest.mark.asyncio
     async def test_returns_503_on_connection_error(self, monkeypatch: pytest.MonkeyPatch):
-        monkeypatch.setenv("REDIS_URL", "redis://fake-host:6379/0")
+        monkeypatch.setattr("config.REDIS_URL", "redis://fake-host:6379/0")
 
         with patch("redis.from_url", side_effect=ConnectionError("refused")):
             async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:

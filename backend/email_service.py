@@ -11,7 +11,6 @@ All emails use Oat & Obsidian branding.
 """
 
 import logging
-import os
 import secrets
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -37,6 +36,7 @@ except ImportError:
 
 
 from config import FRONTEND_URL
+from secrets_manager import get_secret
 from security_utils import log_secure_operation
 from shared.log_sanitizer import mask_email, sanitize_exception, token_fingerprint
 
@@ -44,10 +44,13 @@ from shared.log_sanitizer import mask_email, sanitize_exception, token_fingerpri
 # CONFIGURATION
 # =============================================================================
 
-# Environment variables
-SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
-SENDGRID_FROM_EMAIL = os.getenv("SENDGRID_FROM_EMAIL", "noreply@paciolus.com")
-SENDGRID_FROM_NAME = os.getenv("SENDGRID_FROM_NAME", "Paciolus")
+# Sprint 819: resolved through the same chain config.py validates with
+# (environment, then Docker secrets, then the cloud provider). Reading
+# os.getenv here meant a key supplied as a secrets file passed the production
+# startup check in config.py and then sent no email at all.
+SENDGRID_API_KEY = get_secret("SENDGRID_API_KEY")
+SENDGRID_FROM_EMAIL = get_secret("SENDGRID_FROM_EMAIL", "noreply@paciolus.com")
+SENDGRID_FROM_NAME = get_secret("SENDGRID_FROM_NAME", "Paciolus")
 
 # Token configuration
 VERIFICATION_TOKEN_LENGTH = 64  # Characters (32 bytes hex encoded)
@@ -318,7 +321,7 @@ def send_password_reset_email(to_email: str, token: str, user_name: Optional[str
 # CONTACT FORM
 # =============================================================================
 
-CONTACT_EMAIL = os.getenv("CONTACT_EMAIL", "contact@paciolus.com")
+CONTACT_EMAIL = get_secret("CONTACT_EMAIL", "contact@paciolus.com")
 
 
 def send_contact_form_email(

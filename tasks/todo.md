@@ -985,11 +985,19 @@ totals). That is a question for the CEO and counsel before anyone edits the copy
    `shared/export_helpers`. Decide `Cache-Control: no-store` for all financial exports (only
    `export_sharing.py:222` sets it). In-memory PDFs: plain `Response`, not 8 KB chunking.
 8. [ ] `export/pipeline.py:47-262` — 11 near-identical functions → one `_run_export(...)` (~120 lines).
-9. [ ] **Env reads through `config.py` only.** Latent bug: `email_service.py:48-50` reads
+9. [x] **Env reads through `config.py` only.** *(Done 2026-10-23 for the secret-bearing reads —
+   see below.)* Latent bug: `email_service.py:48-50` reads
    `SENDGRID_API_KEY` via `os.getenv` while `config.py:647` validates via `_resolve_secret` —
    a Docker/cloud-secret key passes the startup check and email silently does not send. Also
    `entitlement_checks.py:69,388`, `health.py:269`, `logging_config.py:113,154`,
    `memory_budget.py:40`, `storage_client.py:26`, `export_share_storage.py:47-50`, `retention_cleanup.py:27`.
+   **Delivered:** `email_service` now resolves `SENDGRID_API_KEY`, the from-address/name and
+   `CONTACT_EMAIL` through `secrets_manager.get_secret` — the chain config validates with — and a
+   test proves a key supplied only as a Docker secret reaches it (fails on the old module).
+   `/health/redis` reads `config.REDIS_URL`: with the URL in a secrets file, the limiter used Redis
+   while the probe reported "not_configured" and healthy. Re-checked the rest of the list:
+   `export_share_storage` already reads through `_load_optional`, and the remaining direct reads
+   (`REDACT_LOG_TRACEBACKS`, `MEMO_RSS_WARN_MB`) are non-secret tuning flags — left as they are.
 10. [ ] Split long functions: `three_way_match_engine.py:1210` (268 lines, 64 branches),
    `currency_engine.py:821` (254 lines; lookup copied 3×, per-cell `df.at` loop under a
    "Vectorized" comment), `payroll_testing/analysis.py:1659` (145 lines).
