@@ -34,7 +34,7 @@ from shared.memo_base import (
 from shared.report_chrome import (
     ReportMetadata,
     build_cover_page,
-    draw_page_footer,
+    current_page_footer,
     find_logo,
 )
 from shared.scope_methodology import (
@@ -762,7 +762,9 @@ def generate_population_profile_memo(
         isa_reference="AU-C Section 520 (Analytical Procedures), AU-C Section 530 (Audit Sampling), and AS 2305 (Substantive Analytical Procedures)",
     )
 
-    doc.build(story, onFirstPage=draw_page_footer)
+    page_footer = current_page_footer()
+
+    doc.build(story, onFirstPage=page_footer, onLaterPages=page_footer)
     pdf_bytes = buffer.getvalue()
     buffer.close()
     return pdf_bytes

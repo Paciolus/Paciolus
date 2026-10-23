@@ -1,0 +1,15 @@
+# Binary assets: never line-ending-convert (core.autocrlf=true on Windows checkouts
+# would otherwise rewrite LF bytes inside these files).
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.xlsx binary
+*.xls binary
+*.ods binary
+*.zip binary

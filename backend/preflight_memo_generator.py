@@ -28,7 +28,7 @@ from shared.memo_base import (
     wrap_table_strings,
 )
 from shared.memo_template import _roman
-from shared.report_chrome import ReportMetadata, build_cover_page, draw_page_footer, find_logo
+from shared.report_chrome import ReportMetadata, build_cover_page, current_page_footer, find_logo
 from shared.scope_methodology import (
     build_authoritative_reference_block,
     build_methodology_statement,
@@ -426,7 +426,9 @@ def generate_preflight_memo(
         isa_reference="ISA 500 (Audit Evidence), ISA 330 (Auditor's Responses), and ISA 315 (Risk Assessment)",
     )
 
-    doc.build(story, onFirstPage=draw_page_footer, onLaterPages=draw_page_footer)
+    page_footer = current_page_footer()
+
+    doc.build(story, onFirstPage=page_footer, onLaterPages=page_footer)
     pdf_bytes = buffer.getvalue()
     buffer.close()
     return pdf_bytes

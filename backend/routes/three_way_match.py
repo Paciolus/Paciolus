@@ -8,7 +8,7 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from sqlalchemy.orm import Session
 
 from auth import require_verified_user
@@ -103,7 +103,6 @@ def _build_twm_config(
 @limiter.limit(RATE_LIMIT_AUDIT)
 async def audit_three_way_match(
     request: Request,
-    background_tasks: BackgroundTasks,
     po_file: UploadFile = File(...),
     invoice_file: UploadFile = File(...),
     receipt_file: UploadFile = File(...),
@@ -193,9 +192,7 @@ async def audit_three_way_match(
 
             result = await asyncio.to_thread(_analyze)
 
-            background_tasks.add_task(
-                maybe_record_tool_run, db, engagement_id, current_user.id, "three_way_match", True
-            )
+            maybe_record_tool_run(db, engagement_id, current_user.id, "three_way_match", True)
 
             return result.to_dict()  # type: ignore[no-any-return]
 

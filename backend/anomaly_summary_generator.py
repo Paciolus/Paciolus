@@ -186,26 +186,30 @@ class AnomalySummaryGenerator:
         on the cover and their header/footer on every non-cover page.
         Route handlers wrap this call in ``apply_pdf_branding(...)``.
         """
-        # Sprint 679: resolve branding at the top of generate, read once,
-        # pass the resolved context down so _build_story + the footer
-        # callback see consistent values even if the ContextVar resets
-        # mid-build for some reason.
-        from shared.pdf_branding import current_pdf_branding
-
-        branding = current_pdf_branding()
-
         engagement = self._verify_engagement_access(user_id, engagement_id)
         if not engagement:
             raise ValueError("Engagement not found or access denied")
 
         client = self.db.query(Client).filter(Client.id == engagement.client_id).first()
         client_name = client.name if client else f"Client #{engagement.client_id}"
+        return self.generate_pdf_for_engagement(engagement, client_name, resolved_framework)
 
+    def generate_pdf_for_engagement(
+        self,
+        engagement: Engagement,
+        client_name: str,
+        resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
+    ) -> bytes:
+        """Render for an engagement the caller has **already** access-checked.
+
+        Sprint 813: the engagement ZIP export verified access and loaded the
+        client, then called ``generate_pdf``, which did both again.
+        """
         # Gather data (active only — exclude archived records)
         tool_runs = (
             self.db.query(ToolRun)
             .filter(
-                ToolRun.engagement_id == engagement_id,
+                ToolRun.engagement_id == engagement.id,
                 ToolRun.archived_at.is_(None),
             )
             .order_by(ToolRun.run_at.desc())
@@ -215,48 +219,19 @@ class AnomalySummaryGenerator:
         follow_up_items = (
             self.db.query(FollowUpItem)
             .filter(
-                FollowUpItem.engagement_id == engagement_id,
+                FollowUpItem.engagement_id == engagement.id,
                 FollowUpItem.archived_at.is_(None),
             )
             .order_by(FollowUpItem.created_at.asc())
             .all()
         )
 
-        # Build PDF
-        buffer = BytesIO()
-        doc = SimpleDocTemplate(
-            buffer,
-            pagesize=letter,
-            leftMargin=0.75 * inch,
-            rightMargin=0.75 * inch,
-            topMargin=0.75 * inch,
-            bottomMargin=0.75 * inch,
-        )
-        doc_width = letter[0] - 1.5 * inch
-
-        styles = create_memo_styles()
-        story = self._build_story(
-            styles,
-            doc_width,
-            client_name,
-            engagement,
-            tool_runs,
-            follow_up_items,
-            resolved_framework=resolved_framework,
-            custom_logo_bytes=branding.effective_logo_bytes(),
+        return render_anomaly_summary_pdf(
+            client_name, engagement, tool_runs, follow_up_items, resolved_framework=resolved_framework
         )
 
-        footer_cb = make_branded_page_footer(
-            header_text=branding.effective_header_text(),
-            footer_text=branding.effective_footer_text(),
-        )
-        doc.build(story, onFirstPage=footer_cb, onLaterPages=footer_cb)
-        pdf_bytes = buffer.getvalue()
-        buffer.close()
-        return pdf_bytes
-
+    @staticmethod
     def _build_story(
-        self,
         styles: dict,
         doc_width: float,
         client_name: str,
@@ -853,3 +828,54 @@ class AnomalySummaryGenerator:
         # and via the banner at the top of page 1.
 
         return story
+
+
+def render_anomaly_summary_pdf(
+    client_name: str,
+    engagement: Engagement,
+    tool_runs: list,
+    follow_up_items: list,
+    resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
+) -> bytes:
+    """Render the anomaly summary from already-loaded engagement data.
+
+    Sprint 813: split out of ``generate_pdf`` so ``generate_sample_reports``
+    renders through the production path rather than a hand-copied story
+    whose disclaimer had drifted. Reads the active ``PDFBrandingContext``
+    once, so the cover logo and every page footer see the same values.
+    """
+    from shared.pdf_branding import current_pdf_branding
+
+    branding = current_pdf_branding()
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=letter,
+        leftMargin=0.75 * inch,
+        rightMargin=0.75 * inch,
+        topMargin=0.75 * inch,
+        bottomMargin=0.75 * inch,
+    )
+    doc_width = letter[0] - 1.5 * inch
+
+    styles = create_memo_styles()
+    story = AnomalySummaryGenerator._build_story(
+        styles,
+        doc_width,
+        client_name,
+        engagement,
+        tool_runs,
+        follow_up_items,
+        resolved_framework=resolved_framework,
+        custom_logo_bytes=branding.effective_logo_bytes(),
+    )
+
+    footer_cb = make_branded_page_footer(
+        header_text=branding.effective_header_text(),
+        footer_text=branding.effective_footer_text(),
+    )
+    doc.build(story, onFirstPage=footer_cb, onLaterPages=footer_cb)
+    pdf_bytes = buffer.getvalue()
+    buffer.close()
+    return pdf_bytes

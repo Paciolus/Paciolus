@@ -298,6 +298,13 @@ def build_cover_page(
     # Sprint 679: Enterprise custom logo wins over the default Paciolus
     # dark-BG logo. If the custom bytes are corrupt, fall back to
     # defaults so the PDF still ships.
+    # Sprint 813: callers that do not pass logo bytes (the hand-built memos)
+    # still honour the branding the route scoped via ``apply_pdf_branding``.
+    if custom_logo_bytes is None:
+        from shared.pdf_branding import current_pdf_branding
+
+        custom_logo_bytes = current_pdf_branding().effective_logo_bytes()
+
     rendered_logo = False
     if custom_logo_bytes:
         try:
@@ -566,8 +573,10 @@ def _draw_footer_impl(
         if custom_header:
             canvas.setFont(FONT_BODY, SIZE_FOOTER)
             canvas.setFillColor(ClassicalColors.OBSIDIAN_500)
-            # Header sits in the top margin (page height - 0.5in from top).
-            canvas.drawCentredString(page_width / 2, letter[1] - 0.5 * inch, custom_header[:200])
+            # Header sits in the top margin, 0.35in from the top edge — above
+            # the 0.5in gold rule ``draw_page_header`` draws, which struck
+            # through it on memos that use both (Sprint 813).
+            canvas.drawCentredString(page_width / 2, letter[1] - 0.35 * inch, custom_header[:200])
 
         # Page number — classical style: — N —
         canvas.setFont(FONT_BODY, SIZE_FOOTER + 1)
@@ -591,6 +600,21 @@ def _draw_footer_impl(
             canvas.drawCentredString(page_width / 2, SPACE_FOOTER_Y - 12, _DISCLAIMER_LINE)
 
     canvas.restoreState()
+
+
+def current_page_footer() -> Any:
+    """Sprint 813: page callback honouring the active Enterprise branding.
+
+    Reads the ``PDFBrandingContext`` the route scoped with
+    ``apply_pdf_branding`` and returns ``draw_page_footer`` when none is
+    active. Pass the result as **both** ``onFirstPage`` and ``onLaterPages``
+    — a memo that passes only ``onFirstPage`` ships every content page
+    without its page number and disclaimer.
+    """
+    from shared.pdf_branding import current_pdf_branding
+
+    branding = current_pdf_branding()
+    return make_branded_page_footer(branding.effective_header_text(), branding.effective_footer_text())
 
 
 def make_branded_page_footer(

@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import io
 import logging
+import math
 import os
 import zipfile
 import zlib
@@ -672,9 +673,13 @@ def _validate_and_convert_df(
         col_lower = str(col).lower().strip()
         if any(hint in col_lower for hint in _IDENTIFIER_HINTS):
             if pd.api.types.is_numeric_dtype(df[col]):
+                # Sprint 814: guard on isfinite — int(inf) raised OverflowError,
+                # 500ing any upload with "Infinity" or "1e999999" in an ID column.
                 df[col] = df[col].apply(
                     lambda x: (
-                        str(int(x)) if pd.notna(x) and float(x) == int(float(x)) else (str(x) if pd.notna(x) else "")
+                        str(int(x))
+                        if pd.notna(x) and math.isfinite(float(x)) and float(x) == int(float(x))
+                        else (str(x) if pd.notna(x) else "")
                     )
                 )
 

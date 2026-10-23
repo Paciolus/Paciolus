@@ -121,9 +121,12 @@ class EngagementExporter:
         client = self.db.query(Client).filter(Client.id == engagement.client_id).first()
         client_name = client.name if client else f"Client_{engagement.client_id}"
 
-        # Generate component files
+        # Generate component files. Access is already verified above; the PDF
+        # keeps the generator's own "Client #N" fallback for its display name.
         summary_gen = AnomalySummaryGenerator(self.db)
-        anomaly_pdf = summary_gen.generate_pdf(user_id, engagement_id)
+        anomaly_pdf = summary_gen.generate_pdf_for_engagement(
+            engagement, client.name if client else f"Client #{engagement.client_id}"
+        )
 
         index_gen = WorkpaperIndexGenerator(self.db)
         index_data = index_gen.generate(user_id, engagement_id)

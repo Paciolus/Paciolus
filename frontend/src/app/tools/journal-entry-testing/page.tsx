@@ -4,7 +4,7 @@ import { useState, useCallback } from 'react'
 import dynamic from 'next/dynamic'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { JEScoreCard, TestResultGrid, GLDataQualityBadge, FlaggedEntryTable, SamplingPanel } from '@/components/jeTesting'
-import { GuestCTA, UnverifiedCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, ToolSettingsDrawer, Citation, CitationFooter } from '@/components/shared'
+import { GuestCTA, UnverifiedCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, ToolSettingsDrawer, Citation, CitationFooter, UpgradeGate } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractJEProof } from '@/components/shared/proof'
 import { ChartSkeleton } from '@/components/shared/skeletons'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
@@ -106,6 +106,7 @@ export default function JournalEntryTestingPage() {
 
         {/* State Choreography — Upload/Loading/Error/Results */}
         {isAuthenticated && isVerified && (
+          <UpgradeGate toolName="journal_entry_testing">
           <ToolStatePresence status={status}>
             {/* Upload Zone */}
             {status === 'idle' && (
@@ -267,6 +268,7 @@ export default function JournalEntryTestingPage() {
               </div>
             )}
           </ToolStatePresence>
+          </UpgradeGate>
         )}
 
         {/* Info cards for idle state */}

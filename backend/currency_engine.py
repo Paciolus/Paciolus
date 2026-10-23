@@ -20,6 +20,7 @@ from typing import Optional
 import pandas as pd
 
 from shared.column_detector import ColumnFieldConfig, ColumnPattern, detect_columns
+from shared.parsing_helpers import safe_decimal
 
 # ISO 4217 currency codes (common subset for validation)
 ISO_4217_CODES: set[str] = {
@@ -938,11 +939,11 @@ def convert_trial_balance(
         row_currency = df.at[idx, "_currency_normalized"]
         raw_amount = df.at[idx, amount_column] if amount_column in df.columns else None
 
-        # Parse amount
-        try:
-            amount = Decimal(str(raw_amount)) if raw_amount is not None and str(raw_amount).strip() else Decimal("0")
-        except (InvalidOperation, ValueError):
-            amount = Decimal("0")
+        # Parse amount. Sprint 816: through safe_decimal — ``Decimal(str(x))``
+        # turned an empty cell (float NaN) into Decimal("NaN"), which raised
+        # InvalidOperation in the severity pass whenever that row was also
+        # unconvertible, and turned "$1,234.56" / "(1,234.56)" into a silent 0.
+        amount = safe_decimal(raw_amount)
 
         if not row_currency or len(row_currency) != 3:
             # Missing currency code

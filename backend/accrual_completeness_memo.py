@@ -38,7 +38,7 @@ from shared.memo_base import (
 from shared.report_chrome import (
     ReportMetadata,
     build_cover_page,
-    draw_page_footer,
+    current_page_footer,
     draw_page_header,
     find_logo,
 )
@@ -603,11 +603,13 @@ def generate_accrual_completeness_memo(
         isa_reference="ISA 520 (Analytical Procedures)",
     )
 
+    page_footer = current_page_footer()
+
     def _on_later_pages(canvas: object, doc: object) -> None:
         draw_page_header(canvas, doc, title="Accrual Completeness Estimator", reference=reference)
-        draw_page_footer(canvas, doc)
+        page_footer(canvas, doc)
 
-    doc.build(story, onFirstPage=draw_page_footer, onLaterPages=_on_later_pages)
+    doc.build(story, onFirstPage=page_footer, onLaterPages=_on_later_pages)
     pdf_bytes = buffer.getvalue()
     buffer.close()
     return pdf_bytes

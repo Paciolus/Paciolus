@@ -313,6 +313,37 @@ class TestConvertTrialBalance:
         assert result.converted_count == 2
         assert result.conversion_summary.startswith("No currency column detected")
 
+    @pytest.mark.parametrize("currency", ["", "CHF"], ids=["missing_currency_code", "missing_rate"])
+    def test_empty_amount_on_unconvertible_row_does_not_raise(self, currency):
+        """Sprint 816: an empty cell arrives as float NaN, became Decimal("NaN"),
+        and raised InvalidOperation in the severity pass for any row that was
+        also unconvertible — an ArithmeticError the TB post-processor did not catch."""
+        rates = [ExchangeRate(date(2026, 1, 31), "EUR", "USD", Decimal("1.05"))]
+        rows = [
+            {"Account": "1000", "Name": "Cash", "Currency": "USD", "Amount": 1000},
+            {"Account": "1100", "Name": "AR", "Currency": currency, "Amount": float("nan")},
+            {"Account": "1200", "Name": "AR EUR", "Currency": "EUR", "Amount": 500},
+        ]
+        result = convert_trial_balance(
+            rows, self._make_rate_table(rates, "USD"), "Amount", currency_column="Currency"
+        )
+        assert result.conversion_performed is True
+        assert all(item.original_amount.is_finite() for item in result.unconverted_items)
+
+    def test_currency_formatted_amounts_convert_rather_than_zero(self):
+        """Sprint 816: "$1,234.56" and "(500.00)" failed Decimal(str(x)) and
+        were silently converted as 0."""
+        rates = [ExchangeRate(date(2026, 1, 31), "EUR", "USD", Decimal("2"))]
+        rows = [
+            {"Account": "1100", "Currency": "EUR", "Amount": "$1,234.56"},
+            {"Account": "1200", "Currency": "EUR", "Amount": "(500.00)"},
+        ]
+        result = convert_trial_balance(
+            rows, self._make_rate_table(rates, "USD"), "Amount", currency_column="Currency"
+        )
+        converted = [row["converted_amount_usd"] for row in result.converted_rows]
+        assert converted == [Decimal("2469.12"), Decimal("-1000.00")]
+
     def test_single_currency_no_conversion_needed(self):
         rates = [ExchangeRate(date(2026, 1, 31), "EUR", "USD", Decimal("1.05"))]
         rate_table = self._make_rate_table(rates, "USD")

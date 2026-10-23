@@ -84,12 +84,11 @@ DENY_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
 ALLOW_ANNOTATION: re.Pattern[str] = re.compile(r"#\s*allow-deny-phrase\s*:")
 
 
-# Content producers that do not match the *_memo_generator.py glob but emit the
+# Content producers that match neither memo glob but emit the
 # same practitioner-facing narrative text. Paths are relative to backend/.
 EXTRA_SCANNED_FILES: tuple[str, ...] = (
     "generate_sample_reports.py",
     "anomaly_summary_generator.py",
-    "engagement_dashboard_memo.py",
     "shared/follow_up_procedures.py",
     "shared/memo_base.py",
     "shared/memo_template.py",
@@ -97,8 +96,12 @@ EXTRA_SCANNED_FILES: tuple[str, ...] = (
 
 
 def _memo_generator_files() -> list[Path]:
-    """Every backend/*_memo_generator.py, plus the named extra producers."""
-    files = sorted(BACKEND_DIR.glob("*_memo_generator.py"))
+    """Every backend/*_memo_generator.py and *_memo.py, plus the named extra producers.
+
+    Sprint 813: the ``*_memo.py`` half was missing, so the accrual, expense,
+    flux and population-profile memos were never scanned.
+    """
+    files = sorted({*BACKEND_DIR.glob("*_memo_generator.py"), *BACKEND_DIR.glob("*_memo.py")})
     files.extend(BACKEND_DIR / rel for rel in EXTRA_SCANNED_FILES if (BACKEND_DIR / rel).is_file())
     return files
 

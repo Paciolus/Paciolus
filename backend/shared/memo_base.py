@@ -172,6 +172,9 @@ def create_memo_styles() -> dict:
             "MemoTitle",
             fontName="Times-Bold",
             fontSize=24,
+            # Sprint 813: without an explicit leading ReportLab uses 12pt, so the
+            # subtitle overprinted this 24pt title in every memo that uses it.
+            leading=29,
             textColor=ClassicalColors.OBSIDIAN_DEEP,
             alignment=TA_CENTER,
             spaceAfter=6,

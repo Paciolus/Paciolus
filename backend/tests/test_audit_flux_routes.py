@@ -240,3 +240,91 @@ class TestFluxValidation:
             app.dependency_overrides.pop(get_db, None)
 
         assert response.status_code == 500
+
+
+class TestFluxGates:
+    """Sprint 814: flux was the one Free-tier upload route that ran no gates —
+    no monthly quota, and no format check, so a Free user could analyse
+    PDF/OFX/QBO here though every TB route refuses them."""
+
+    async def _post(self, db_session, tier, prior_name="prior.xlsx", activity_logs=0):
+        from datetime import UTC, datetime
+
+        from database import get_db
+        from main import app
+        from models import ActivityLog, User
+
+        user = User(email=f"flux-{tier.value}@test.com", hashed_password="$2b$12$fakehash", is_verified=True, tier=tier)
+        db_session.add(user)
+        db_session.commit()
+        for _ in range(activity_logs):
+            db_session.add(
+                ActivityLog(
+                    user_id=user.id,
+                    filename_hash="c" * 64,
+                    filename_display="tb.csv",
+                    timestamp=datetime.now(UTC),
+                    record_count=1,
+                    total_debits=1,
+                    total_credits=1,
+                    materiality_threshold=1,
+                    was_balanced=True,
+                )
+            )
+        db_session.commit()
+
+        xlsx = _make_xlsx_bytes()
+        with (
+            patch("auth.decode_access_token") as mock_decode,
+            patch("routes.audit_flux.run_flux_analysis") as mock_flux,
+            patch("routes.audit_flux.resolve_materiality", return_value=(0.0, "default")),
+            patch("routes.audit_flux.extract_flux_accounts", return_value=[]),
+            patch("routes.audit_flux.maybe_record_tool_run"),
+        ):
+            mock_decode.return_value = MagicMock(user_id=user.id, email=user.email, tier=tier.value, pwd_at=None)
+            mock_flux.return_value = (_FakeFluxResult(), _FakeReconResult())
+            app.dependency_overrides[get_db] = lambda: db_session
+            try:
+                async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                    return await client.post(
+                        "/audit/flux",
+                        files={
+                            "current_file": ("curr.xlsx", xlsx, "application/octet-stream"),
+                            "prior_file": (prior_name, xlsx, "application/octet-stream"),
+                        },
+                        headers=_auth_headers(),
+                    ), mock_flux
+            finally:
+                app.dependency_overrides.pop(get_db, None)
+
+    @pytest.mark.asyncio
+    @pytest.mark.usefixtures("bypass_csrf")
+    async def test_free_tier_cannot_send_a_paid_format(self, db_session):
+        from models import UserTier
+
+        response, engine = await self._post(db_session, UserTier.FREE, prior_name="prior.pdf")
+
+        assert response.status_code == 403, response.text
+        engine.assert_not_called()
+
+    @pytest.mark.asyncio
+    @pytest.mark.usefixtures("bypass_csrf")
+    async def test_free_tier_over_monthly_quota_is_refused(self, db_session):
+        from models import UserTier
+        from shared.entitlements import TIER_ENTITLEMENTS
+
+        quota = TIER_ENTITLEMENTS[UserTier.FREE].uploads_per_month
+        response, engine = await self._post(db_session, UserTier.FREE, activity_logs=quota)
+
+        assert response.status_code == 403, response.text
+        engine.assert_not_called()
+
+    @pytest.mark.asyncio
+    @pytest.mark.usefixtures("bypass_csrf")
+    async def test_free_tier_within_quota_and_formats_is_served(self, db_session):
+        from models import UserTier
+
+        response, engine = await self._post(db_session, UserTier.FREE)
+
+        assert response.status_code == 200, response.text
+        engine.assert_called_once()

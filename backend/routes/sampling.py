@@ -10,7 +10,7 @@ import asyncio
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from sqlalchemy.orm import Session
 
 from auth import require_verified_user
@@ -177,7 +177,6 @@ def _run_evaluation(
 @limiter.limit(RATE_LIMIT_AUDIT)
 async def sampling_design(
     request: Request,
-    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     method: str = Form(default="mus"),
     confidence_level: float = Form(default=0.95),
@@ -227,8 +226,7 @@ async def sampling_design(
                 mapping,
             )
 
-        background_tasks.add_task(
-            maybe_record_tool_run,
+        maybe_record_tool_run(
             db,
             engagement_id,
             current_user.id,
@@ -244,6 +242,15 @@ async def sampling_design(
             status_code=422,
             detail=sanitize_error(e, "analysis", "sampling_design_validation", allow_passthrough=True),
         )
+    except ArithmeticError as e:
+        # Sprint 814: a malformed amount in the uploaded sample raises
+        # decimal.InvalidOperation, which fell through to an unhandled 500.
+        # Not passthrough — the decimal module's message is not user copy.
+        logger.warning("Sampling input rejected [%s]: %s", type(e).__name__, e, exc_info=True)
+        raise HTTPException(
+            status_code=422,
+            detail=sanitize_error(e, "analysis", "sampling_design_validation"),
+        )
     except HTTPException:
         raise
     except (TypeError, KeyError, OSError) as e:
@@ -258,7 +265,6 @@ async def sampling_design(
 @limiter.limit(RATE_LIMIT_AUDIT)
 async def sampling_evaluate(
     request: Request,
-    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     method: str = Form(default="mus"),
     confidence_level: float = Form(default=0.95),
@@ -306,8 +312,7 @@ async def sampling_evaluate(
                 mapping,
             )
 
-        background_tasks.add_task(
-            maybe_record_tool_run,
+        maybe_record_tool_run(
             db,
             engagement_id,
             current_user.id,
@@ -322,6 +327,15 @@ async def sampling_evaluate(
         raise HTTPException(
             status_code=422,
             detail=sanitize_error(e, "analysis", "sampling_evaluate_validation", allow_passthrough=True),
+        )
+    except ArithmeticError as e:
+        # Sprint 814: a malformed amount in the uploaded sample raises
+        # decimal.InvalidOperation, which fell through to an unhandled 500.
+        # Not passthrough — the decimal module's message is not user copy.
+        logger.warning("Sampling input rejected [%s]: %s", type(e).__name__, e, exc_info=True)
+        raise HTTPException(
+            status_code=422,
+            detail=sanitize_error(e, "analysis", "sampling_evaluate_validation"),
         )
     except HTTPException:
         raise

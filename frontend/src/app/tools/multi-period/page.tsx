@@ -15,7 +15,7 @@ import {
   PeriodFileDropZone,
   stagger,
 } from '@/components/multiPeriod'
-import { DisclaimerBox, GuestCTA, ZeroStorageNotice } from '@/components/shared'
+import { DisclaimerBox, GuestCTA, UpgradeGate, ZeroStorageNotice } from '@/components/shared'
 import { Reveal } from '@/components/ui/Reveal'
 import {
   type MovementSummaryResponse,
@@ -154,7 +154,7 @@ export default function MultiPeriodPage() {
             </p>
           </div>
         ) : (
-          <>
+          <UpgradeGate toolName="multi_period">
             {/* Upload Section */}
             <Reveal>
             <section
@@ -415,7 +415,7 @@ export default function MultiPeriodPage() {
                 </motion.div>
               )}
             </AnimatePresence>
-          </>
+          </UpgradeGate>
         )}
       </div>
     </main>

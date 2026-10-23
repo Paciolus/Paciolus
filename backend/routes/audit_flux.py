@@ -6,7 +6,7 @@ import asyncio
 import logging
 from typing import Any, Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from sqlalchemy.orm import Session
 
 from auth import require_verified_user
@@ -16,6 +16,7 @@ from security_utils import log_secure_operation
 from services.audit.flux_service import run_flux_analysis
 from shared.account_extractors import extract_flux_accounts
 from shared.diagnostic_response_schemas import FluxAnalysisResponse
+from shared.entitlement_checks import check_upload_limit, enforce_format_access
 from shared.error_messages import sanitize_error
 from shared.expectation_evaluation import (
     evaluate_expectations_against_measurements,
@@ -23,6 +24,7 @@ from shared.expectation_evaluation import (
 )
 from shared.materiality_resolver import resolve_materiality
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
+from shared.testing_route import enforce_tool_access
 from shared.tool_run_recorder import maybe_record_tool_run
 from shared.upload_pipeline import (
     memory_cleanup,
@@ -38,7 +40,6 @@ router = APIRouter(tags=["audit"])
 @limiter.limit(RATE_LIMIT_AUDIT)
 async def flux_analysis(
     request: Request,
-    background_tasks: BackgroundTasks,
     current_file: UploadFile = File(...),
     prior_file: UploadFile = File(...),
     materiality: float = Form(0.0),
@@ -47,6 +48,14 @@ async def flux_analysis(
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """Perform a Flux (Period-over-Period) Analysis."""
+    # Sprint 814: flux is the one Free-tier upload route that ran none of the
+    # gates. Free may use the tool, but within its monthly quota and its
+    # formats — without these a Free user could analyse PDF/OFX/QBO here.
+    enforce_tool_access(current_user, "flux_analysis", db)
+    check_upload_limit(current_user, db)
+    enforce_format_access(current_user, db, current_file.filename)
+    enforce_format_access(current_user, db, prior_file.filename)
+
     # Sprint 310: Resolve materiality from engagement cascade if not explicitly set
     materiality, _flux_mat_source = resolve_materiality(
         materiality,
@@ -76,8 +85,7 @@ async def flux_analysis(
 
             flux_dict = flux_result.to_dict()
             flagged = extract_flux_accounts({"items": flux_dict.get("items", [])})
-            background_tasks.add_task(
-                maybe_record_tool_run,
+            maybe_record_tool_run(
                 db,
                 engagement_id,
                 current_user.id,

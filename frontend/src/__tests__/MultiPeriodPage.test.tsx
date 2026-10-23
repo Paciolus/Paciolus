@@ -24,7 +24,7 @@ const idlePeriod = { file: null, status: 'idle' as const, result: null, error: n
 
 jest.mock('@/contexts/AuthSessionContext', () => ({
   useAuthSession: jest.fn(() => ({
-    user: { is_verified: true }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token',
+    user: { is_verified: true, tier: 'professional' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token',
   })),
 }))
 
@@ -76,7 +76,7 @@ const mockUseMultiPeriod = useMultiPeriodComparison as jest.Mock
 describe('MultiPeriodPage', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockUseAuthSession.mockReturnValue({ user: { is_verified: true }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token' })
+    mockUseAuthSession.mockReturnValue({ user: { is_verified: true, tier: 'professional' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token' })
     mockUseMultiPeriod.mockReturnValue({
       comparison: null, isComparing: false, isExporting: false, error: null,
       compareResults: mockCompareResults, exportCsv: mockExportCsv, clear: mockClear,
@@ -92,6 +92,13 @@ describe('MultiPeriodPage', () => {
     render(<MultiPeriodPage />)
     expect(screen.getByText('Prior Period')).toBeInTheDocument()
     expect(screen.getByText('Current Period')).toBeInTheDocument()
+  })
+
+  it('shows upgrade gate instead of the upload zone for free tier user', () => {
+    mockUseAuthSession.mockReturnValue({ user: { is_verified: true, tier: 'free' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token' })
+    render(<MultiPeriodPage />)
+    expect(screen.getByText('Upgrade Required')).toBeInTheDocument()
+    expect(screen.queryByText('Prior Period')).not.toBeInTheDocument()
   })
 
   it('shows sign-in CTA for unauthenticated user', () => {

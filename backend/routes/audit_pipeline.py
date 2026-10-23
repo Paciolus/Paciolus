@@ -9,7 +9,7 @@ import logging
 from datetime import UTC, datetime, timedelta
 from typing import Any, Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from sqlalchemy.orm import Session
 
 from audit_engine import (
@@ -47,7 +47,6 @@ router = APIRouter(tags=["audit"])
 @limiter.limit(RATE_LIMIT_AUDIT)
 async def audit_trial_balance(
     request: Request,
-    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     materiality_threshold: float = Form(default=0.0, ge=0.0),
     account_type_overrides: Optional[str] = Form(default=None),
@@ -214,8 +213,7 @@ async def audit_trial_balance(
                 "was_balanced": analysis_result.get("was_balanced"),
                 "anomaly_count": analysis_result.get("anomaly_count", 0),
             }
-            background_tasks.add_task(
-                maybe_record_tool_run,
+            maybe_record_tool_run(
                 db,
                 engagement_id,
                 current_user.id,

@@ -89,8 +89,12 @@ def export_engagement_package(
 
     exporter = EngagementExporter(db)
 
+    # Sprint 813: the ZIP carries the same anomaly summary PDF the standalone
+    # route brands, so it gets the same branding scope.
+    branding = load_pdf_branding_context(current_user, db)
     try:
-        zip_bytes, filename = exporter.generate_zip(current_user.id, engagement_id)
+        with apply_pdf_branding(branding):
+            zip_bytes, filename = exporter.generate_zip(current_user.id, engagement_id)
     except ValueError:
         raise HTTPException(status_code=404, detail="Engagement not found")
 

@@ -14,6 +14,21 @@ import pytest
 # =============================================================================
 
 
+def _assert_counts_are_rows(label, result_dict):
+    """Sprint 816: every test result — not only the one a generator targets —
+    must count flagged *rows*. JE reciprocal entries counted flags, so a row
+    matched to three partners counted three times: 6 entries reported 18
+    flagged, a 300% flag rate in the customer's memo."""
+    for tr in result_dict.get("test_results", []):
+        total = tr.get("total_entries")
+        if total is None:
+            continue
+        assert tr["entries_flagged"] <= total, (
+            f"[{label}] {tr['test_key']}: {tr['entries_flagged']} flagged of {total} entries"
+        )
+        assert 0 <= tr["flag_rate"] <= 1, f"[{label}] {tr['test_key']}: flag_rate {tr['flag_rate']}"
+
+
 def _run_tool_test(generator, factory_rows, engine_fn, *, factory_cols=None):
     """Run a single generator against a tool engine and verify detection."""
     rows = factory_rows() if callable(factory_rows) else factory_rows
@@ -22,6 +37,8 @@ def _run_tool_test(generator, factory_rows, engine_fn, *, factory_cols=None):
     result = engine_fn(mutated_rows, cols)
 
     result_dict = result.to_dict()
+
+    _assert_counts_are_rows(generator.name, result_dict)
     for record in records:
         target_key = record.expected_field
         test_result = next(
@@ -117,6 +134,8 @@ def test_payroll_anomaly_detected(generator):
     result = run_payroll_testing(cols, mutated_rows)
 
     result_dict = result.to_dict()
+
+    _assert_counts_are_rows(generator.name, result_dict)
     for record in records:
         target_key = record.expected_field
         test_result = next(
@@ -158,6 +177,8 @@ def test_ar_anomaly_detected(generator):
     result = run_ar_aging(mutated_tb, tb_cols, mutated_sl, sl_cols)
 
     result_dict = result.to_dict()
+
+    _assert_counts_are_rows(generator.name, result_dict)
     for record in records:
         target_key = record.expected_field
         test_result = next(
@@ -242,6 +263,8 @@ def test_bank_rec_anomaly_detected(generator):
     result = reconcile_bank_statement(mutated_bank, mutated_gl, bank_cols, gl_cols)
 
     result_dict = result.to_dict()
+
+    _assert_counts_are_rows(generator.name, result_dict)
     summary = result_dict["summary"]
     rec_tests = result_dict.get("rec_tests", [])
     for record in records:
@@ -293,6 +316,8 @@ def test_twm_anomaly_detected(generator):
     result = run_three_way_match(pos, invoices, receipts)
 
     result_dict = result.to_dict()
+
+    _assert_counts_are_rows(generator.name, result_dict)
     for record in records:
         target_key = record.expected_field
         detected = False
@@ -338,6 +363,8 @@ def test_multi_period_anomaly_detected(generator):
     result = compare_trial_balances(mutated_prior, mutated_current)
 
     result_dict = result.to_dict() if hasattr(result, "to_dict") else result
+
+    _assert_counts_are_rows(generator.name, result_dict)
     for record in records:
         # Multi-period results have movement_summary or account_movements
         assert result_dict is not None, f"[{generator.name}] No result returned"
@@ -441,6 +468,8 @@ def test_currency_anomaly_detected(generator):
     result = convert_trial_balance(mutated_tb, rate_table, amount_column="Debit")
 
     result_dict = result.to_dict()
+
+    _assert_counts_are_rows(generator.name, result_dict)
     assert result_dict is not None, f"[{generator.name}] No result returned"
     for record in records:
         target_key = record.expected_field

@@ -50,7 +50,7 @@ from shared.memo_base import (
 from shared.report_chrome import (
     ReportMetadata,
     build_cover_page,
-    draw_page_footer,
+    current_page_footer,
     find_logo,
 )
 from shared.scope_methodology import (
@@ -1404,7 +1404,8 @@ def generate_multi_period_memo(
     )
 
     # Build PDF (page footer on all pages)
-    doc.build(story, onFirstPage=draw_page_footer, onLaterPages=draw_page_footer)
+    page_footer = current_page_footer()
+    doc.build(story, onFirstPage=page_footer, onLaterPages=page_footer)
     pdf_bytes = buffer.getvalue()
     buffer.close()
 

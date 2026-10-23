@@ -57,6 +57,7 @@ jest.mock('framer-motion', () => ({
 runStandardToolPageScenarios({
   name: 'JournalEntryTestingPage',
   Component: JournalEntryTestingPage,
+  hasTierGating: true,
   getToolHookMock: () => useJETesting as jest.Mock,
   heroText: 'Journal Entry Testing',
   uploadPromptPattern: /Upload General Ledger Extract/,

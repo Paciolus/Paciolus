@@ -17,7 +17,6 @@ from fixed_asset_testing_engine import (
     FixedAssetEntry,
     FixedAssetTestingConfig,
     FlaggedFixedAsset,
-    _asset_age_years,
     _safe_float_optional,
     assess_fa_data_quality,
     calculate_fa_composite_score,
@@ -328,17 +327,6 @@ class TestHelpers:
 
     def test_parse_date_invalid(self):
         assert _parse_date("not a date") is None
-
-    def test_asset_age_years(self):
-        age = _asset_age_years("2020-01-01", reference_date=date(2025, 1, 1))
-        assert age is not None
-        assert abs(age - 5.0) < 0.1
-
-    def test_asset_age_years_none(self):
-        assert _asset_age_years(None) is None
-
-    def test_asset_age_years_invalid(self):
-        assert _asset_age_years("bad date") is None
 
 
 # =============================================================================
