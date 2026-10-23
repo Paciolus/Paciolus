@@ -4,20 +4,29 @@ _Updated at the end of every Claude Code session. Overwrite the previous state �
 
 ## START HERE — what the next session should pick up
 
-**1. Land the open stack, bottom-up.** Branch protection requires up-to-date branches
-(`strict: true`) and linear history, so each merge forces the next PR to rebase and re-run CI.
-Stacked PRs only get a 5-check CI subset until they target `main`.
+**1. Land the open PRs one at a time.** Branch protection requires up-to-date branches
+(`strict: true`), linear history and **resolved review conversations** — an automated Codex
+reviewer comments on every PR, and a green PR stays `BLOCKED` until its threads are resolved.
+Each merge makes the rest `BEHIND`, so: `gh pr update-branch N --rebase`, wait for CI, merge.
 
-| PR | Sprints | Base | State at session end |
-|----|---------|------|----------------------|
-| #203 | 815 engine performance | `main` | CI re-running after rebase; merge when green |
-| #205 | 823 discovery + 824 sampling/parser fixes | #203's branch | rebase onto `main` after #203 merges, retarget, close/reopen to trigger full CI |
-| #206 | 826 (1099) + 827 (IC, FA-T11, SoD, cash flow) | #205's branch | same, after #205 |
-| #207 | 817 dead-code sweep (+ this file) | `main` | independent of the stack |
-| #197 | 786b frontend dev-type majors | `main` | unchanged from the previous session |
+Merged this session: #201 (812), #202 (813/814/816), #203 (815), #204 (818), #205 (823/824),
+#206 (826/827). Open, all independent of each other and based on `main`:
 
-After a squash-merge below a stacked PR: `git rebase --onto origin/main <old-parent-tip>`,
-force-push, `gh pr edit N --base main`, then `gh pr close N && gh pr reopen N`.
+| PR | Content |
+|----|---------|
+| #207 | 817 dead-code sweep + this file |
+| #208 | oatmeal-700 → AA shades; lint exemption removed |
+| #209 | 819 item 9 — secrets resolved through the secrets chain |
+| #210 | 822 — one pip-audit job |
+| #211 | 820 — Terms/Privacy as server components |
+| #212 | 813 item 7 — citation guard scans memo PDFs |
+| #213 | 826 F4 attorney fees + 827 C4 |
+| #214 | 826 W6/W7/W10 |
+| #215 | 826 B5 |
+| #197 | 786b frontend dev-type majors (previous session; two open bot threads) |
+
+#208 edits `ToolShowcase.tsx`, which #207 deletes — keep the deletion. #213 and #214 touch the
+same todo/report lines — trivial conflict for whichever lands second.
 
 **2. Production.** Sprint 812 (19 rate-limited org/admin/branding/sharing/bulk routes 500'd on
 every call) is **live and verified**: the public `GET /export-sharing/{token}` probe flipped
@@ -55,23 +64,28 @@ code.
   tools 500'd on `Infinity` in an ID column (root cause in the shared parser); flux ran no
   gates (quota/format); 11 tool-run recordings raced the client refresh.
 - **815** — run-scoped parse memo (not a process-wide cache — Zero-Storage): 100k-row JE
-  65.6s → 9.6s; gated fuzzy matching: AP on 2,000 vendors 65.4s → 13.9s; identical results.
+  65.6s → 9.6s; gated fuzzy matching: AP with 2k vendors 65.4s → 13.9s; identical results.
 - **816** — JE reciprocal entries reported a 300% flag rate; **FA-T11 measured to today, not
   period end — 6 of 6 correct assets flagged ten months after year-end**; currency NaN raised.
-- **817** — ~9,700 lines and 22 MB of dead code removed, incl. an unreferenced
+- **817** — dead code removed (one 22 MB image among it), incl. an unreferenced
   `auth.get_current_user` that skipped the password-change revocation check.
 - **818** — pricing page, checkout and upgrade modal read one domain module; the ToS table is
   pinned to it by a test.
 - **823** — drove the under-exercised tools with realistic data: **58 findings, 21 P1**, register
   in `reports/sprint-823-discovery-2026-10-23.md`. Worst: MUS sampling could turn a "fail" into
   a "pass"; FA-T11 flagged every correct DDB asset; intercompany revenue/expense eliminations
-  were reversed; 1099 ignored payment dates and TIN aggregation; `$(2,000.00)` parsed as +2,000
+  were reversed; 1099 ignored payment dates and TIN aggregation; a parenthetical negative after a `$` sign parsed as positive
   in every engine.
 - **824/826/827** — fixed the unambiguous ones (see the register's status column).
 
+## Verification
+
+**Backend tests:** **9,437 passed / 0 failed** — full suite on the Sprint 824 branch, 13.6 min locally.
+**Frontend tests:** **2114 passed / 0 failed**, 211 suites. `npm run build` clean.
+
 ## Environment notes
 
-- The backend suite takes ~14 min locally (9,437 passed on the 824 branch). Worktrees were used
+- The backend suite takes ~14 min locally. Worktrees were used
   for parallel branches; they need a copied `backend/.env` and a `node_modules` junction, and
   Turbopack cannot build through the junction (build from the main checkout instead).
 - `generate_sample_reports.py` rewrites `sample-reports/` — run it deliberately, not by accident.
