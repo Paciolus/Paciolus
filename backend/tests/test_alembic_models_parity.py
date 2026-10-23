@@ -265,16 +265,90 @@ def test_alembic_head_matches_base_metadata_foreign_keys(tmp_path):
     the two ``archived_by`` columns — and nothing reported it, because the
     test next door compares column *names* under a docstring that claimed to
     compare the schema.
+
+    **This has to run in a subprocess, for the same reason
+    ``test_init_db_alone_creates_every_table`` below does, and the first
+    version did not.** Sprint 797 learned that lesson for that test and not
+    for this one, and CI caught it the first time this branch was pushed:
+    green on both SQLite jobs, red on PostgreSQL 15, reporting
+    ``organizations.subscription_id``, ``tool_activities.engagement_id`` and
+    ``users.organization_id`` as "in Alembic but not in model".
+
+    Those three are exactly the ORM's ``use_alter=True`` foreign keys — the
+    ones that exist to break the ``organizations -> users -> subscriptions``
+    cycle. ``use_alter`` changes *how* ``create_all()`` emits a constraint,
+    per dialect:
+
+    * SQLite cannot ``ALTER TABLE ADD CONSTRAINT``, so it emits them inline
+      in ``CREATE TABLE``.
+    * PostgreSQL emits them as three separate ``ALTER TABLE ... ADD
+      CONSTRAINT`` statements.
+
+    And ``Base.metadata`` is process-global. The session-scoped ``db_engine``
+    fixture calls ``create_all()`` on the test database before this test runs;
+    on the PostgreSQL job that pass takes the ALTER path and leaves the shared
+    metadata in a state where a *subsequent* ``create_all()`` against SQLite no
+    longer emits the three constraints at all. Both halves of this test use
+    SQLite temp files, so the models half silently lost three foreign keys that
+    the ORM does declare and the chain does create.
+
+    The drift was never real. The measurement was contaminated by another
+    fixture's dialect, which is precisely the failure mode the test below
+    documents — and it is unobservable in the SQLite jobs, because there the
+    earlier ``create_all()`` takes the inline path and changes nothing.
     """
-    alembic_url = f"sqlite:///{tmp_path / 'alembic_fk.db'}"
-    models_url = f"sqlite:///{tmp_path / 'models_fk.db'}"
+    import json
+    import subprocess
 
-    _alembic_upgrade_head(alembic_url)
-    models_engine = create_engine(models_url)
-    _create_all_against(models_engine)
+    alembic_db = (tmp_path / "alembic_fk.db").as_posix()
+    models_db = (tmp_path / "models_fk.db").as_posix()
 
-    alembic_fks = _foreign_keys(create_engine(alembic_url))
-    models_fks = _foreign_keys(models_engine)
+    program = (
+        "import json, sys\n"
+        "sys.path.insert(0, %r)\n"
+        "from tests.test_alembic_models_parity import (\n"
+        "    _alembic_upgrade_head, _create_all_against, _foreign_keys,\n"
+        ")\n"
+        "from sqlalchemy import create_engine\n"
+        "_alembic_upgrade_head('sqlite:///%s')\n"
+        "models_engine = create_engine('sqlite:///%s')\n"
+        "_create_all_against(models_engine)\n"
+        "alembic_fks = _foreign_keys(create_engine('sqlite:///%s'))\n"
+        "models_fks = _foreign_keys(models_engine)\n"
+        "payload = {\n"
+        "    'alembic': {t: sorted(v) for t, v in alembic_fks.items()},\n"
+        "    'models': {t: sorted(v) for t, v in models_fks.items()},\n"
+        "}\n"
+        "sys.stdout.write('@@' + json.dumps(payload))\n"
+    ) % (str(_BACKEND_ROOT), alembic_db, models_db, alembic_db)
+
+    env = {**os.environ, "PYTHONPATH": str(_BACKEND_ROOT)}
+    # A clean interpreter means no other fixture has touched Base.metadata.
+    # Deliberately does NOT inherit TEST_DATABASE_URL's dialect: both halves
+    # must be measured against the same dialect or the comparison is meaningless.
+    env.pop("TEST_DATABASE_URL", None)
+    proc = subprocess.run(
+        [sys.executable, "-c", program],
+        capture_output=True,
+        text=True,
+        cwd=str(_BACKEND_ROOT),
+        env=env,
+        timeout=180,
+    )
+    assert proc.returncode == 0, f"probe subprocess failed:\n{proc.stdout}\n{proc.stderr}"
+    assert "@@" in proc.stdout, f"probe produced no result marker:\n{proc.stdout}\n{proc.stderr}"
+
+    payload = json.loads(proc.stdout.split("@@", 1)[1])
+    alembic_fks = {t: {tuple(k) for k in v} for t, v in payload["alembic"].items()}
+    models_fks = {t: {tuple(k) for k in v} for t, v in payload["models"].items()}
+
+    # Guard the guard: a probe that measured nothing would make the comparison
+    # below vacuous, which is how this class of test stops testing.
+    assert models_fks, "the models probe reported no tables at all"
+    assert alembic_fks, "the alembic probe reported no tables at all"
+    assert any(("organization_id", "organizations", "id") in fks for fks in models_fks.values()), (
+        "the models probe lost the use_alter foreign keys — the contamination is back"
+    )
 
     drift: list[str] = []
     for table in sorted(set(alembic_fks) & set(models_fks)):

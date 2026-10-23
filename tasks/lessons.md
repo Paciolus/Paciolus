@@ -2842,3 +2842,43 @@ would have been a design decision disguised as a lint fix, because no oatmeal sh
 on the light page and each usage needs to know its surface. It is recorded as a **non-permanent**
 exemption, printed on every run, and blocked on the route→theme map — rather than quietly
 excluded, or quietly "fixed".
+## `Base.metadata` is process-global, and a schema test that forgets it measures the wrong database (2026-10-23)
+
+Sprint 797 added a foreign-key parity test comparing the Alembic chain against
+`Base.metadata`. It passed on both SQLite CI jobs and failed on PostgreSQL 15, reporting three
+foreign keys as "in Alembic but not in model". **No such drift existed.**
+
+The three were exactly the ORM's `use_alter=True` foreign keys — the ones that exist to break the
+`organizations → users → subscriptions` cycle. `use_alter` does not change *whether* a constraint
+is created, it changes *how* `create_all()` emits it, and that is dialect-dependent: SQLite cannot
+`ALTER TABLE ADD CONSTRAINT`, so it inlines them in `CREATE TABLE`; PostgreSQL emits three
+separate `ALTER` statements.
+
+`Base.metadata` is process-global. On the PostgreSQL job the session-scoped `db_engine` fixture
+calls `create_all()` before this test runs, that pass takes the ALTER path, and it leaves the
+shared metadata in a state where a *subsequent* `create_all()` — against SQLite, inside the test —
+emits none of the three. Both halves of the test use SQLite temp files, so only the models half
+lost them. On the SQLite jobs the earlier `create_all()` takes the inline path and changes
+nothing, which is why it is invisible there.
+
+**The lesson was already written down, one function away.** The sibling test in the same file
+opens with *"**This has to run in a subprocess, and the first version did not.** `Base.metadata`
+is process-global, so by the time any in-process test calls `init_db()` the conftest and every
+previously-imported test module have already registered all 29 tables"* — and notes that the
+in-process version "was measuring import order, not the function." Same disease, same file, same
+sprint, fixed in one test and not its neighbour.
+
+**The transferable parts:**
+
+- A test that reads process-global state is measuring the whole session's history, not its
+  subject. If one test in a file needed a subprocess for that reason, ask which of its neighbours
+  does too — the answer is rarely "none".
+- **A dialect-dependent behaviour needs the dialects compared, not assumed.** This was
+  reproducible locally with `sqlalchemy.create_mock_engine("postgresql://", …)` and no server at
+  all: capture the DDL, diff it against the SQLite DDL, and the asymmetry is right there. I spent
+  far longer reasoning about which side was wrong than the measurement took.
+- **A green test on one dialect is not evidence about another.** The matrix existed precisely to
+  catch this, and it did — on the first push, because the branch had never been pushed before.
+  Five months of local green said nothing about it.
+- And the first instinct — "my changes didn't touch models, so this isn't mine" — was correct
+  about attribution and useless as an action. The failure was in the PR; the PR needed it fixed.
