@@ -62,12 +62,12 @@ Status column: **Fixed (824)** = remediated in Sprint 824; otherwise the sprint 
 
 | ID | Sev | Finding | Status |
 |---|---|---|---|
-| A1 | P1 | FA-T11 flags **every correct declining-balance asset** HIGH (66–304% variance): it applies 2/life to *current* NBV × years elapsed, which is not compound DDB; 150% DB goes down the same 2× path. `fixed_asset_testing/analysis.py:1457,1464`. | 827 |
-| A2 | P1 | FA-T11 never caps expected accumulated depreciation at the depreciable base: assets between 1.0× and 1.5× life are mis-flagged (3 of 30 in a clean register). | 827 |
-| A3 | P1 | FA-T11 silently skips every row when dates come from Excel date cells (`"2019-01-01 00:00:00"`) or `2019/01/01`, `01-Jan-2019`: it tries 3 formats instead of the shared `parse_date`. | 827 |
+| A1 | P1 | FA-T11 flags **every correct declining-balance asset** HIGH (66–304% variance): it applies 2/life to *current* NBV × years elapsed, which is not compound DDB; 150% DB goes down the same 2× path. `fixed_asset_testing/analysis.py:1457,1464`. | Fixed (827) |
+| A2 | P1 | FA-T11 never caps expected accumulated depreciation at the depreciable base: assets between 1.0× and 1.5× life are mis-flagged (3 of 30 in a clean register). | Fixed (827) |
+| A3 | P1 | FA-T11 silently skips every row when dates come from Excel date cells (`"2019-01-01 00:00:00"`) or `2019/01/01`, `01-Jan-2019`: it tries 3 formats instead of the shared `parse_date`. | Excel datetime + `YYYY/MM/DD` fixed (827); `01-Jan-2019` style still unparsed (shared `parse_date`) |
 | A4 | P2 | DD/MM/YYYY registers get false flags (ambiguous dates read MM/DD first). | 827 |
 | A5 | P2 | Half-year convention not absorbed despite the comment claiming it is (5% tolerance vs exact-day proration). | 827 |
-| A6 | P1/P2 | Contra-negative accumulated depreciation (`(5,000.00)`) flags 100% of rows in FA-03 and FA-T11; FA-01/04 use `abs()`. | 827 |
+| A6 | P1/P2 | Contra-negative accumulated depreciation (`(5,000.00)`) flags 100% of rows in FA-03 and FA-T11; FA-01/04 use `abs()`. | FA-T11 fixed (827); FA-03 still flags contra balances by design — needs a call |
 | A8 | P2 | `Useful Life (Months)` auto-detected as years. | 827 |
 | D1 | P1 | SoD long-format input drops conflicts: a role on two rows is overwritten (`sod_engine.py:281`); a user on two rows is two users. | 827 |
 | D2 | P2 | One HIGH SoD conflict scores tier "moderate"; unrecognised permission spellings give a clean result with no warning; degenerate custom rules flag everyone. | 827 |

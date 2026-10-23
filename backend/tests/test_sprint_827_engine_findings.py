@@ -137,3 +137,79 @@ async def test_huge_but_finite_amount_is_a_400_not_a_500(override_auth_verified,
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
         response = await client.post(path, json=payload)
     assert response.status_code == 400, f"{path}: {response.status_code} {response.text[:200]}"
+
+
+# --- Fixed assets: FA-T11 depreciation recalculation (A1, A2, A3, A6) -------
+
+_PERIOD_END = __import__("datetime").date(2025, 12, 31)
+_FA_COLUMNS = [
+    "Asset ID",
+    "Description",
+    "Cost",
+    "Accumulated Depreciation",
+    "Acquisition Date",
+    "Useful Life",
+    "Depreciation Method",
+    "Residual Value",
+]
+
+
+def _fa_recalc(rows: list[dict]) -> dict:
+    from fixed_asset_testing_engine import FixedAssetTestingConfig, run_fixed_asset_testing
+
+    config = FixedAssetTestingConfig(reference_date=_PERIOD_END, reference_date_source="as_of_date")
+    result = run_fixed_asset_testing(rows=rows, column_names=_FA_COLUMNS, config=config, column_mapping=None).to_dict()
+    return next(t for t in result["test_results"] if t["test_key"] == "depreciation_recalc")
+
+
+def _asset(n, cost, accum, acquired, life, method, residual=0.0):
+    return {
+        "Asset ID": f"FA{n}",
+        "Description": "Equipment",
+        "Cost": cost,
+        "Accumulated Depreciation": accum,
+        "Acquisition Date": acquired,
+        "Useful Life": life,
+        "Depreciation Method": method,
+        "Residual Value": residual,
+    }
+
+
+def _years(acquired: str) -> float:
+    from datetime import date
+
+    return (_PERIOD_END - date.fromisoformat(acquired)).days / 365.25
+
+
+@pytest.mark.parametrize("method, factor", [("Double-Declining Balance", 2.0), ("150% Declining Balance", 1.5)])
+def test_correct_declining_balance_assets_are_not_flagged(method, factor):
+    """A1: every correct DDB asset was flagged HIGH (66-304% variance)."""
+    rows = [
+        _asset(n, 10_000.0, round(10_000 * (1 - (1 - factor / life) ** _years(acq)), 2), acq, life, method)
+        for n, (acq, life) in enumerate([("2024-01-01", 5), ("2022-07-01", 8), ("2021-01-01", 10)], 1)
+    ]
+    assert _fa_recalc(rows)["entries_flagged"] == 0
+
+
+def test_fully_depreciated_asset_inside_the_skip_window_is_not_flagged():
+    """A2: between 1.0x and 1.5x life the uncapped expectation exceeded cost."""
+    row = _asset(1, 9_180.51, 7_803.43, "2019-01-04", 5, "Straight-Line", residual=1_377.08)
+    assert _fa_recalc([row])["entries_flagged"] == 0
+
+
+@pytest.mark.parametrize("acquired", ["2021-01-01 00:00:00", "2021/01/01"])
+def test_excel_and_slash_dates_are_tested_not_skipped(acquired):
+    """A3: these were silently skipped — a planted 40% under-depreciation went unflagged."""
+    under = round(100_000 * _years("2021-01-01") / 10 * 0.6, 2)
+    assert _fa_recalc([_asset(1, 100_000.0, under, acquired, 10, "Straight-Line")])["entries_flagged"] == 1
+
+
+def test_contra_negative_accumulated_depreciation_compares_magnitudes():
+    """A6: a register carrying accumulated depreciation as (5,000.00) flagged every row."""
+    accum = round(100_000 * _years("2021-01-01") / 10, 2)
+    assert _fa_recalc([_asset(1, 100_000.0, -accum, "2021-01-01", 10, "Straight-Line")])["entries_flagged"] == 0
+
+
+def test_planted_under_depreciation_is_still_flagged():
+    accum = round(100_000 * _years("2021-01-01") / 10 * 0.6, 2)
+    assert _fa_recalc([_asset(1, 100_000.0, accum, "2021-01-01", 10, "Straight-Line")])["entries_flagged"] == 1

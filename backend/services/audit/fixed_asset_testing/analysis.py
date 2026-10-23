@@ -1408,7 +1408,7 @@ def test_depreciation_recalculation(
     # based recalcs (10-15%) but loose enough to absorb depreciation-
     # convention noise (half-year, mid-quarter, etc.).
     SL_TOLERANCE = Decimal("0.05")
-    DDB_TOLERANCE = Decimal("0.15")  # wider to absorb compound vs. linear approx
+    DDB_TOLERANCE = Decimal("0.15")  # wider: switch-to-SL and partial-year conventions vary
 
     flagged: list[FlaggedFixedAsset] = []
     as_of = config.reference_date or _dt.now(_UTC).date()
@@ -1422,14 +1422,11 @@ def test_depreciation_recalculation(
             continue
         if not e.depreciation_method:
             continue
-        # Parse acquisition date
-        acq_date = None
-        for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y"):
-            try:
-                acq_date = _dt.strptime(e.acquisition_date.strip(), fmt).date()
-                break
-            except (ValueError, AttributeError):
-                continue
+        # Sprint 827 (A3): the shared parser. Three hand-listed formats silently
+        # skipped every row whose date came from an Excel date cell
+        # ("2019-01-01 00:00:00") or was written 2019/01/01 — the test then
+        # reported itself as run with nothing flagged.
+        acq_date = parse_date(e.acquisition_date)
         if acq_date is None:
             continue
 
@@ -1441,30 +1438,42 @@ def test_depreciation_recalculation(
             continue
 
         method = (e.depreciation_method or "").lower()
-        expected_annual = Decimal("0")
         tolerance = SL_TOLERANCE
         method_used = ""
+        # Sprint 827 (A2): accumulated depreciation never exceeds the depreciable
+        # base. Uncapped, an asset between 1.0x and 1.5x its life "expected"
+        # more depreciation than its cost and was flagged HIGH.
+        depreciable_base = e.cost - e.residual_value
+        if depreciable_base <= 0:
+            continue
         if "straight" in method or method in ("sl", "s/l", "s-l"):
-            depreciable_base = e.cost - e.residual_value
-            expected_annual = depreciable_base / Decimal(str(e.useful_life))
+            expected_accum = depreciable_base / Decimal(str(e.useful_life)) * Decimal(str(years_elapsed))
             method_used = "Straight-Line"
         elif "declining" in method or "ddb" in method or "double" in method:
-            # DDB approximation: 2/useful_life × (cost − accum_depr).
-            # Use the CURRENT NBV as the DDB basis for one-year charge.
-            nbv = e.cost - e.accumulated_depreciation
-            if nbv <= 0:
-                continue
-            expected_annual = (Decimal("2") / Decimal(str(e.useful_life))) * nbv
-            method_used = "Double-Declining Balance"
+            # Sprint 827 (A1): compound declining balance. The previous form took
+            # rate x the *current* NBV x years elapsed, which is not DDB at all —
+            # every correctly depreciated DDB asset was flagged HIGH (66-304%).
+            # Accumulated after t years at rate r is cost x (1 - (1 - r)^t),
+            # floored at salvage. "150" in the method selects 150% DB.
+            factor = Decimal("1.5") if "150" in method else Decimal("2")
+            rate = factor / Decimal(str(e.useful_life))
+            if rate >= 1:
+                continue  # a life under 2 years fully depreciates in year one
+            remaining = Decimal(str(float(1 - rate) ** years_elapsed))
+            expected_accum = e.cost * (1 - remaining)
+            method_used = "150% Declining Balance" if factor == Decimal("1.5") else "Double-Declining Balance"
             tolerance = DDB_TOLERANCE
         else:
             # Unknown method — skip rather than mis-flag.
             continue
 
-        expected_accum = expected_annual * Decimal(str(years_elapsed))
+        expected_accum = min(expected_accum, depreciable_base)
         if expected_accum <= 0:
             continue
-        variance = abs(e.accumulated_depreciation - expected_accum) / expected_accum
+        # Sprint 827 (A6): registers that carry accumulated depreciation as a
+        # contra (negative) balance are comparing magnitudes, not signs.
+        reported_accum = abs(e.accumulated_depreciation)
+        variance = abs(reported_accum - expected_accum) / expected_accum
         if variance <= tolerance:
             continue
 
@@ -1479,14 +1488,14 @@ def test_depreciation_recalculation(
                 issue=(
                     f"{method_used}: expected ~${expected_accum:,.2f} accumulated "
                     f"after {years_elapsed:.1f}y, but reported "
-                    f"${e.accumulated_depreciation:,.2f} (variance {variance:.1%}). "
+                    f"${reported_accum:,.2f} (variance {variance:.1%}). "
                     "IAS 16 / ASC 360 — review useful life, method, or salvage value."
                 ),
                 confidence=0.80,
                 details={
                     "method": method_used,
                     "expected_accum": float(expected_accum),
-                    "reported_accum": float(e.accumulated_depreciation),
+                    "reported_accum": float(reported_accum),
                     "years_elapsed": round(years_elapsed, 2),
                     "variance_pct": round(float(variance), 4),
                     "tolerance": float(tolerance),

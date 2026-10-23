@@ -397,7 +397,16 @@ every IC revenue/expense pair.
       overflowing `quantize`) is a 400 on the analyze and export routes of W-2, 1099,
       book-to-tax, intercompany and cash-flow. The double-reported direction mismatch is gone
       with the one-to-one matcher.
-- [ ] A1–A8 (FA-T11 and FA parsing), D1–D2 (SoD), C1–C6 (cash flow), I4, P-3.
+- [x] **A1** — declining balance computed as compounding, `cost × (1 − (1 − r)^t)` with
+      r = 2/life (or 1.5/life for 150% DB), floored at salvage. Correct DDB and 150% DB registers
+      now produce 0 flags (every asset was flagged HIGH).
+- [x] **A2** — expected accumulation capped at the depreciable base.
+- [x] **A3** — FA-T11 uses the shared `parse_date`, so Excel date cells and `YYYY/MM/DD` are
+      tested rather than silently skipped. (`01-Jan-2019` is still outside the shared parser.)
+- [x] **A6** — FA-T11 compares magnitudes, so contra-negative accumulated depreciation no longer
+      flags every row. FA-03 still flags negative accumulated depreciation; whether a contra
+      presentation is "negative" there is a product call.
+- [ ] A4, A5, A8 (FA conventions/units), D1–D2 (SoD), C1–C6 (cash flow), I4, P-3.
 
 **Commit SHA:** TBD.
 
