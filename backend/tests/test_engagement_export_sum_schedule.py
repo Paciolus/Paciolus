@@ -74,3 +74,37 @@ class TestExport:
         async with await _client() as ac:
             r = await ac.post("/engagements/9999999/export/sum-schedule")
         assert r.status_code == 404
+
+
+@pytest.mark.usefixtures("bypass_csrf")
+class TestPackageExportBranding:
+    """Sprint 813: the diagnostic-package ZIP embeds the anomaly summary PDF,
+    which the standalone route brands — the ZIP route did not, so an
+    Enterprise firm's package carried an unbranded copy of the same PDF."""
+
+    async def test_package_zip_is_built_under_the_firms_branding(
+        self, db_session, override_auth_verified, make_client, monkeypatch
+    ):
+        import engagement_export
+        from routes import engagements_exports
+        from shared.pdf_branding import PDFBrandingContext, current_pdf_branding
+
+        user = override_auth_verified
+        eng = _setup(db_session, user, make_client)
+        branded = PDFBrandingContext(tier_has_branding=True, footer_text="ACME LLP")
+        monkeypatch.setattr(engagements_exports, "load_pdf_branding_context", lambda *_: branded)
+
+        seen = []
+        real_generate_zip = engagement_export.EngagementExporter.generate_zip
+
+        def _spy(self, *args, **kwargs):
+            seen.append(current_pdf_branding())
+            return real_generate_zip(self, *args, **kwargs)
+
+        monkeypatch.setattr(engagement_export.EngagementExporter, "generate_zip", _spy)
+
+        async with await _client() as ac:
+            r = await ac.post(f"/engagements/{eng.id}/export/package")
+
+        assert r.status_code == 200, r.text
+        assert seen == [branded]

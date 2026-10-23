@@ -4074,225 +4074,76 @@ def gen_flux_expectations() -> None:
 # 21. ANOMALY SUMMARY REPORT
 # ─────────────────────────────────────────────────────────────────────
 def gen_anomaly_summary() -> None:
-    """Build anomaly summary PDF from scratch using shared report primitives.
+    """Render the anomaly summary through the production generator.
 
-    The real AnomalySummaryGenerator requires a DB session + ORM objects,
-    so we replicate the same PDF structure with fictional data here.
+    Sprint 813: this used to rebuild the PDF by hand (~230 lines) because the
+    real ``AnomalySummaryGenerator`` loads its inputs from the database. The
+    copy drifted — its disclaimer no longer matched production, and it
+    ignored Enterprise branding. ``render_anomaly_summary_pdf`` is the
+    database-free half of the real generator, so the sample now shows exactly
+    what a customer receives.
     """
-    from io import BytesIO
+    from datetime import date, datetime
+    from types import SimpleNamespace
 
-    from reportlab.lib.enums import TA_CENTER
-    from reportlab.lib.pagesizes import letter
-    from reportlab.lib.styles import ParagraphStyle
-    from reportlab.lib.units import inch
-    from reportlab.platypus import (
-        PageBreak,
-        Paragraph,
-        SimpleDocTemplate,
-        Spacer,
-        Table,
-        TableStyle,
-    )
+    from anomaly_summary_generator import render_anomaly_summary_pdf
+    from engagement_model import ToolName
+    from follow_up_items_model import FollowUpSeverity
 
-    from pdf_generator import ClassicalColors, LedgerRule
-    from shared.memo_base import create_memo_styles
-    from shared.report_chrome import (
-        ReportMetadata,
-        build_cover_page,
-        draw_page_footer,
-        find_logo,
-    )
+    engagement = SimpleNamespace(period_start=date(2025, 1, 1), period_end=date(2025, 12, 31))
 
-    DISCLAIMER_TEXT = (
-        "DATA ANALYTICS REPORT \u2014 NOT AN AUDIT COMMUNICATION. "
-        "This report lists data anomalies detected through automated testing. It does not "
-        "constitute an audit opinion, internal control assessment, or management letter per "  # allow-deny-phrase: disclaiming what the report is NOT (ISA 265 negative use)
-        "ISA 265/PCAOB AS 1305. The auditor must perform additional procedures and provide "
-        "all deficiency classifications in the blank section below."  # allow-deny-phrase: instructs the auditor that classification is theirs (ISA 265 negative use)
-    )
-
-    AUDITOR_INSTRUCTIONS = (
-        "The auditor should document their assessment of the data anomalies above, "
-        "including any implications for the audit approach, control testing, or "
-        "substantive procedures."
-    )
-
-    styles = create_memo_styles()
-    buffer = BytesIO()
-    doc = SimpleDocTemplate(
-        buffer,
-        pagesize=letter,
-        leftMargin=0.75 * inch,
-        rightMargin=0.75 * inch,
-        topMargin=0.75 * inch,
-        bottomMargin=0.75 * inch,
-    )
-    doc_width = letter[0] - 1.5 * inch
-    story = []
-
-    # --- Disclaimer banner ---
-    disclaimer_style = ParagraphStyle(
-        "DisclaimerBanner",
-        fontName="Times-Bold",
-        fontSize=10,
-        textColor=ClassicalColors.CLAY,
-        alignment=TA_CENTER,
-        leading=13,
-        spaceAfter=12,
-        spaceBefore=4,
-        backColor=ClassicalColors.OATMEAL_PAPER,
-        borderPadding=8,
-    )
-    story.append(Paragraph(DISCLAIMER_TEXT, disclaimer_style))
-    story.append(Spacer(1, 8))
-
-    # --- Cover Page ---
-    logo_path = find_logo()
-    metadata = ReportMetadata(
-        title="Anomaly Summary Report",
-        client_name=CLIENT,
-        engagement_period=PERIOD,
-    )
-    build_cover_page(story, styles, metadata, doc_width, logo_path)
-
-    # --- Section I: Scope ---
-    story.append(Paragraph("I. Scope", styles["MemoSection"]))
-    story.append(LedgerRule(doc_width))
-
-    story.append(Paragraph("<b>Tools Executed:</b> 8 of 12 available tools", styles["MemoBody"]))
-    story.append(Paragraph("<b>Total Tool Runs:</b> 14", styles["MemoBody"]))
-
-    scope_data = [
-        ["Tool", "Runs", "Last Run"],
-        ["Trial Balance Diagnostics", "2", "Feb 10, 2026 14:32"],
-        ["Journal Entry Testing", "2", "Feb 11, 2026 09:15"],
-        ["AP Payment Testing", "1", "Feb 11, 2026 10:48"],
-        ["Payroll & Employee Testing", "1", "Feb 11, 2026 11:22"],
-        ["Revenue Testing", "2", "Feb 12, 2026 08:45"],
-        ["AR Aging Analysis", "1", "Feb 12, 2026 10:30"],
-        ["Fixed Asset Testing", "3", "Feb 13, 2026 14:05"],
-        ["Bank Reconciliation", "2", "Feb 14, 2026 09:00"],
+    run_log = [
+        (ToolName.TRIAL_BALANCE, ["2026-02-09 16:05", "2026-02-10 14:32"]),
+        (ToolName.JOURNAL_ENTRY_TESTING, ["2026-02-10 17:40", "2026-02-11 09:15"]),
+        (ToolName.AP_TESTING, ["2026-02-11 10:48"]),
+        (ToolName.PAYROLL_TESTING, ["2026-02-11 11:22"]),
+        (ToolName.REVENUE_TESTING, ["2026-02-11 15:10", "2026-02-12 08:45"]),
+        (ToolName.AR_AGING, ["2026-02-12 10:30"]),
+        (ToolName.FIXED_ASSET_TESTING, ["2026-02-12 16:20", "2026-02-13 09:40", "2026-02-13 14:05"]),
+        (ToolName.BANK_RECONCILIATION, ["2026-02-13 16:55", "2026-02-14 09:00"]),
     ]
-    scope_table = Table(scope_data, colWidths=[3.0 * inch, 0.8 * inch, 2.5 * inch])
-    scope_table.setStyle(
-        TableStyle(
-            [
-                ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-                ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
-                ("FONTSIZE", (0, 0), (-1, -1), 9),
-                ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-                ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-                ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-                ("ALIGN", (1, 0), (1, -1), "CENTER"),
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("TOPPADDING", (0, 0), (-1, -1), 3),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-                ("LEFTPADDING", (0, 0), (0, -1), 0),
-            ]
-        )
-    )
-    story.append(Spacer(1, 6))
-    story.append(scope_table)
-    story.append(Spacer(1, 12))
-
-    # --- Section II: Data Anomalies by Tool ---
-    story.append(Paragraph("II. Data Anomalies by Tool", styles["MemoSection"]))
-    story.append(LedgerRule(doc_width))
-
-    story.append(
-        Paragraph(
-            "<b>Total Anomalies:</b> 12 &nbsp;&nbsp;|&nbsp;&nbsp; "
-            "High: 4 &nbsp;&nbsp;|&nbsp;&nbsp; Medium: 5 &nbsp;&nbsp;|&nbsp;&nbsp; Low: 3",
-            styles["MemoBody"],
-        )
-    )
-    story.append(Spacer(1, 8))
-
-    # Per-tool anomaly sections
-    anomaly_groups = [
-        (
-            "Journal Entry Testing",
-            [
-                ("HIGH", "3 unbalanced journal entries where debits do not equal credits"),
-                ("HIGH", "4 journal entries posted on US federal holidays (Thanksgiving, Christmas)"),
-                ("MEDIUM", "156 entries clustered in last 3 days of each month (10.4% flag rate)"),
-            ],
-        ),
-        (
-            "AP Payment Testing",
-            [
-                ("HIGH", "2 exact duplicate payments totaling $14,200 to vendor 'Apex Office Solutions'"),
-                ("HIGH", "3 payments processed before invoice date \u2014 potential prepayment anomaly"),
-                ("MEDIUM", "5 payments just below $10,000 approval threshold on consecutive dates"),
-            ],
-        ),
-        (
-            "Revenue Testing",
-            [
-                ("MEDIUM", "7 entries with potential cut-off risk \u2014 revenue recorded within 3 days of period end"),
-                ("MEDIUM", "Single customer represents 38% of total revenue \u2014 concentration risk"),
-            ],
-        ),
-        (
-            "Fixed Asset Testing",
-            [
-                ("MEDIUM", "2 assets with accumulated depreciation exceeding original cost"),
-                ("LOW", "12 fully depreciated assets still in use \u2014 potential impairment indicator"),
-            ],
-        ),
-        (
-            "AR Aging Analysis",
-            [
-                ("LOW", "Allowance-to-receivable ratio of 2.1% \u2014 below industry benchmark of 3\u20135%"),
-                ("LOW", "3 customers exceeding credit limits totaling $142,000 over-limit"),
-            ],
-        ),
+    tool_runs = [
+        SimpleNamespace(id=n, tool_name=tool, run_at=datetime.strptime(stamp, "%Y-%m-%d %H:%M"))
+        for n, (tool, stamp) in enumerate(((t, ts) for t, stamps in run_log for ts in stamps), 1)
     ]
 
-    for tool_label, items in anomaly_groups:
-        story.append(Paragraph(f"<b>{tool_label}</b> ({len(items)} items)", styles["MemoBody"]))
-        table_data = [["#", "Severity", "Description"]]
-        for idx, (sev, desc) in enumerate(items, 1):
-            table_data.append([str(idx), sev, Paragraph(desc, styles["MemoTableCell"])])
-        anomaly_table = Table(table_data, colWidths=[0.4 * inch, 0.8 * inch, 5.2 * inch])
-        anomaly_table.setStyle(
-            TableStyle(
-                [
-                    ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-                    ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
-                    ("FONTSIZE", (0, 0), (-1, -1), 9),
-                    ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-                    ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-                    ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-                    ("ALIGN", (0, 0), (0, -1), "CENTER"),
-                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                    ("TOPPADDING", (0, 0), (-1, -1), 3),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-                    ("LEFTPADDING", (0, 0), (0, -1), 0),
-                ]
-            )
-        )
-        story.append(anomaly_table)
-        story.append(Spacer(1, 10))
+    high, medium, low = FollowUpSeverity.HIGH, FollowUpSeverity.MEDIUM, FollowUpSeverity.LOW
+    anomalies = [
+        (ToolName.JOURNAL_ENTRY_TESTING, high, "3 unbalanced journal entries where debits do not equal credits"),
+        (
+            ToolName.JOURNAL_ENTRY_TESTING,
+            high,
+            "4 journal entries posted on US federal holidays (Thanksgiving, Christmas)",
+        ),
+        (
+            ToolName.JOURNAL_ENTRY_TESTING,
+            medium,
+            "156 entries clustered in last 3 days of each month (10.4% flag rate)",
+        ),
+        (ToolName.AP_TESTING, high, "2 exact duplicate payments totaling $14,200 to vendor 'Apex Office Solutions'"),
+        (ToolName.AP_TESTING, high, "3 payments processed before invoice date — potential prepayment anomaly"),
+        (ToolName.AP_TESTING, medium, "5 payments just below $10,000 approval threshold on consecutive dates"),
+        (
+            ToolName.REVENUE_TESTING,
+            medium,
+            "7 entries with potential cut-off risk — revenue recorded within 3 days of period end",
+        ),
+        (ToolName.REVENUE_TESTING, medium, "Single customer represents 38% of total revenue — concentration risk"),
+        (ToolName.FIXED_ASSET_TESTING, medium, "2 assets with accumulated depreciation exceeding original cost"),
+        (
+            ToolName.FIXED_ASSET_TESTING,
+            low,
+            "12 fully depreciated assets still in use — potential impairment indicator",
+        ),
+        (ToolName.AR_AGING, low, "Allowance-to-receivable ratio of 2.1% — below industry benchmark of 3–5%"),
+        (ToolName.AR_AGING, low, "3 customers exceeding credit limits totaling $142,000 over-limit"),
+    ]
+    follow_up_items = [
+        SimpleNamespace(tool_source=tool.value, severity=severity, description=description)
+        for tool, severity, description in anomalies
+    ]
 
-    # --- Section III: For Practitioner Assessment (blank page) ---
-    story.append(PageBreak())
-    story.append(Paragraph("III. For Practitioner Assessment", styles["MemoSection"]))
-    story.append(LedgerRule(doc_width))
-    story.append(Paragraph("<i>" + AUDITOR_INSTRUCTIONS + "</i>", styles["MemoBody"]))
-    story.append(Spacer(1, 24))
-
-    for _ in range(20):
-        story.append(LedgerRule(doc_width))
-        story.append(Spacer(1, 18))
-
-    # --- Disclaimer footer (repeated) ---
-    story.append(Spacer(1, 16))
-    story.append(Paragraph(DISCLAIMER_TEXT, styles["MemoDisclaimer"]))
-
-    doc.build(story, onFirstPage=draw_page_footer, onLaterPages=draw_page_footer)
-    pdf_bytes = buffer.getvalue()
-    buffer.close()
+    pdf_bytes = render_anomaly_summary_pdf(CLIENT, engagement, tool_runs, follow_up_items)
     save_pdf("21_anomaly_summary.pdf", pdf_bytes)
 
 

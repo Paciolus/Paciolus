@@ -33,7 +33,7 @@ from shared.memo_base import build_disclaimer, build_intelligence_stamp, create_
 from shared.report_chrome import (
     ReportMetadata,
     build_cover_page,
-    draw_page_footer,
+    current_page_footer,
     find_logo,
 )
 from shared.scope_methodology import (
@@ -512,7 +512,9 @@ def generate_flux_expectations_memo(
         isa_reference="ISA 520 (Analytical Procedures) and ISA 330 (Auditor's Responses to Assessed Risks)",
     )
 
-    doc.build(story, onFirstPage=draw_page_footer)
+    page_footer = current_page_footer()
+
+    doc.build(story, onFirstPage=page_footer, onLaterPages=page_footer)
     pdf_bytes = buffer.getvalue()
     buffer.close()
     return pdf_bytes
