@@ -385,7 +385,26 @@ def calculate_book_to_tax(config: BookToTaxConfig) -> BookToTaxResult:
     temporary_net = ZERO
     signed_total = ZERO
 
+    catalog = {s.code: s for s in STANDARD_ADJUSTMENTS}
     for entry in config.adjustments:
+        # Sprint 826 (B5): a coded adjustment must keep its catalog nature.
+        # "fines_penalties" entered as temporary/subtract reduced taxable income
+        # and created a DTL. Difference type is a property of the item; direction
+        # is checked for permanent items only — temporary ones legitimately
+        # reverse, which is why the catalog calls it the *typical* direction.
+        standard = catalog.get(entry.code) if entry.code else None
+        if standard is not None:
+            if entry.difference_type != standard.difference_type:
+                raise BookToTaxInputError(
+                    f"Adjustment '{entry.label}' uses code '{entry.code}', which is a "
+                    f"{standard.difference_type.value} difference, but was entered as {entry.difference_type.value}."
+                )
+            if standard.difference_type == DifferenceType.PERMANENT and entry.direction != standard.typical_direction:
+                always = "added to" if standard.typical_direction == AdjustmentDirection.ADD else "subtracted from"
+                raise BookToTaxInputError(
+                    f"Adjustment '{entry.label}' uses code '{entry.code}', which is always {always} "
+                    f"taxable income, but was entered as {entry.direction.value}."
+                )
         line = _to_line(entry)
         signed = _signed(entry)
         signed_total += signed
