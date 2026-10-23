@@ -4,135 +4,74 @@ _Updated at the end of every Claude Code session. Overwrite the previous state �
 
 ## START HERE — what the next session should pick up
 
-**1. Two branches are open and neither is merged.**
-- **PR #197** — `sprint-786b-frontend-devtype-majors`, three commits (`@types/node` 26, the
-  dynamic-route invariant, the jest-dom blocker). Unchanged by this session; verify and merge.
-- **`dec-review-2026-10-22-remediation`** — this session's work. Branched off `main`, so it is
-  independent of #197 and touches `ci.yml` and `tasks/todo.md` in regions #197 does not.
-  Needs a PR, review and merge.
+**1. Land the open stack, bottom-up.** Branch protection requires up-to-date branches
+(`strict: true`) and linear history, so each merge forces the next PR to rebase and re-run CI.
+Stacked PRs only get a 5-check CI subset until they target `main`.
 
-**2. One CEO action, and it is the only thing left from the review.** Four CI gates produce a
-red X and merge anyway — **Accounting Policy**, **Documentation Consistency**, **Report
-Standards** and **OpenAPI Schema Drift**. Making them block is a repository-settings change,
-so it was not made unilaterally. The exact `gh api` call is in
-`reports/council-audit-2026-10-22.md` under "Still outstanding". All four pass on this branch.
+| PR | Sprints | Base | State at session end |
+|----|---------|------|----------------------|
+| #203 | 815 engine performance | `main` | CI re-running after rebase; merge when green |
+| #205 | 823 discovery + 824 sampling/parser fixes | #203's branch | rebase onto `main` after #203 merges, retarget, close/reopen to trigger full CI |
+| #206 | 826 (1099) + 827 (IC, FA-T11, SoD, cash flow) | #205's branch | same, after #205 |
+| #207 | 817 dead-code sweep (+ this file) | `main` | independent of the stack |
+| #197 | 786b frontend dev-type majors | `main` | unchanged from the previous session |
 
-**3. The Digital Excellence Council review is done and so is its remediation.**
-`reports/council-audit-2026-10-22.md` — 14 findings, 27 measurements, all CONFIRMED by
-running the code. Sprints 795–802 fixed every one (F-006 partially; see item 2) and are
-archived to `tasks/archive/sprints-741-802-details.md`.
+After a squash-merge below a stacked PR: `git rebase --onto origin/main <old-parent-tip>`,
+force-push, `gh pr edit N --base main`, then `gh pr close N && gh pr reopen N`.
 
-**4. Still blocked on a decision, not on engineering** — unchanged from the previous session:
-**Sprint 793b** (statutory tax limits — needs a practitioner) and **Sprint 790** (upload
-allowances unenforced on paid tiers — needs a metering-unit decision). Sprint 800 did add an
-honest test that *pins the 790 gap* rather than papering over it: when
-`increment_upload_count` gains a second caller, the test fails and tells you to update it.
+**2. Production.** Sprint 812 (19 rate-limited org/admin/branding/sharing/bulk routes 500'd on
+every call) is **live and verified**: the public `GET /export-sharing/{token}` probe flipped
+500 → 404 three minutes after merge. #202 (memo PDFs, upload routes, engine correctness) and
+#204 (pricing) also merged; Vercel deployed #202's frontend. **The Render deploy of #202 was
+not verified** — the Render MCP needs a workspace selected, which is the CEO's call.
 
-**5. Sprint 738 is no longer blocked — it is done.** It sat for a year recorded as waiting on
-the Neon connection string. It never needed one. Sprint 797 delivered it. **Worth reading the
-entry before trusting any other inherited blocker.**
+**3. Decisions this session surfaced** (each blocks only its own item):
+- **Sprint 790** — reset paid-tier upload counters at deploy, or enforce from next period?
+- **Sprint 825** — sampling methodology: zero-error random evaluation always "passes" (S3);
+  understatements evaluated as overstatements (S6).
+- **Sprint 826 W1/W2** — adding SIMPLE and HSA catch-up fields to the statutory table would make
+  today's fully-overridden 2026 requests fail (Sprint 811 refuses rather than falls back). Choose:
+  optional fields that disable only their own check, or a contract change. Belongs with 793b.
+- **Sprint 818 item 3** — the Trust and Approach pages promise Paciolus never stores
+  "individual account balances" or "anomaly details tied to specific accounts or amounts", while
+  `uncorrected_misstatements` persists account names with amounts. CEO + counsel.
+- **SoD tiering** — one HIGH conflict scores "moderate". Policy, not a bug.
+- **Sprint 817** — two unused keyword lists (`PAYROLL_SUSPICIOUS_KEYWORDS`, `PREPAID_KEYWORDS`) may
+  be checks that were never wired in. Look before deleting.
 
-**6. `jest-dom` 7 still blocked by the npm arborist bug**, and `reportlab` 5 / `stripe` 16
-still want `RENDER_API_KEY` before deploying. Unchanged.
+## This Session — 2026-10-23, todo burn-down
 
-## This Session — Digital Excellence Council review, then remediation
+Worked the code-health backlog (Sprints 812–822) and Sprint 823's discovery, highest customer
+impact first. Every fix was reproduced before it was made and has a test that fails on the old
+code.
 
-**Date:** 2026-10-22
-**Branch:** `dec-review-2026-10-22-remediation` (off `main` at `a946de8e`)
+- **812 (P0)** — `request: Any = None` under `@limiter.limit` made FastAPI treat `request` as a
+  query param; slowapi got `None` → 500. Tests never saw it because conftest disables the
+  limiter. Guard test + the five routers' suites now run with the limiter on.
+- **813** — six memos shipped every content page without page number/disclaimer; eleven ignored
+  Enterprise branding. Output-level test over all 21 sample PDFs: 6/12 → 0/0. Also fixed a
+  24pt title overprinted by its subtitle.
+- **814** — `UpgradeGate` missing on AP, JE **and multi-period**; fuzzing found 5 of 6 testing
+  tools 500'd on `Infinity` in an ID column (root cause in the shared parser); flux ran no
+  gates (quota/format); 11 tool-run recordings raced the client refresh.
+- **815** — run-scoped parse memo (not a process-wide cache — Zero-Storage): 100k-row JE
+  65.6s → 9.6s; gated fuzzy matching: AP on 2,000 vendors 65.4s → 13.9s; identical results.
+- **816** — JE reciprocal entries reported a 300% flag rate; **FA-T11 measured to today, not
+  period end — 6 of 6 correct assets flagged ten months after year-end**; currency NaN raised.
+- **817** — ~9,700 lines and 22 MB of dead code removed, incl. an unreferenced
+  `auth.get_current_user` that skipped the password-change revocation check.
+- **818** — pricing page, checkout and upgrade modal read one domain module; the ToS table is
+  pinned to it by a test.
+- **823** — drove the under-exercised tools with realistic data: **58 findings, 21 P1**, register
+  in `reports/sprint-823-discovery-2026-10-23.md`. Worst: MUS sampling could turn a "fail" into
+  a "pass"; FA-T11 flagged every correct DDB asset; intercompany revenue/expense eliminations
+  were reversed; 1099 ignored payment dates and TIN aggregation; `$(2,000.00)` parsed as +2,000
+  in every engine.
+- **824/826/827** — fixed the unambiguous ones (see the register's status column).
 
-A full-spectrum review followed by a same-day instruction to fix everything it found.
+## Environment notes
 
-### What the review found
-
-14 findings — 4 P1, 4 P2, 4 P3, 2 informational — every one confirmed by running the code or
-by injecting a violation, with 27 measurements recorded. The four that mattered:
-
-| # | Finding | Measurement |
-|---|---------|-------------|
-| F-001 | The depreciation tool **ignored the MACRS system the customer selected** | `gds_200db` / `gds_150db` / `gds_sl` all returned $20k year-one on a $100k 5-year asset. The dropdown offered all three |
-| F-002 | The loan amortization schedule **did not foot** | 21.51% of 6912 schedule rows; 10.0% of 420 configurations produced a **journal entry whose debits did not equal its credits** |
-| F-003 | **No database build path produced a correct schema** | Chain: 25 of 29 tables. Dockerfile on an empty DB: 27 of 29, permanently |
-| F-004 | The monetary-precision gate **inspected 0% of its target** | 0 `Column(` vs 169 `mapped_column(`; 0 of 87 in its own protected classes |
-
-### The through-line
-
-The previous session's was *a check that cannot distinguish "no problem" from "I did not
-look"*. This one narrowed it: **three populations that were supposed to be the same thing and
-were not** — the guard, its tests, and its target. `monetary_float.py` matched `Column(`; the
-codebase had migrated to `mapped_column(`; the unit tests were written in `Column(`. All three
-green, inspecting nothing. The SQLAlchemy 2.0 migration moved every declaration and the guard
-watching them was not in the diff.
-
-Same shape elsewhere: three model-import lists holding 11 / 15 / 15 entries under comments
-instructing the reader to keep them in sync; `ci.yml`'s header claiming eleven required checks
-against a live twelve that were not the same twelve.
-
-### What I got wrong, and what caught it
-
-**Four of my own regression proofs came back green on code I had deliberately broken**, for
-four different reasons — process-global `Base.metadata` hiding an import gap, a premise about
-cwd that was never true, a guessed `>= 20` floor (reality 18), and a fixture that varied the
-property class alongside the system so it could not isolate either. None meant the fix was
-wrong; all four meant the proof measured something else.
-
-**And my first coverage self-check had the bug it was written to catch** — it counted
-candidates using the parser's own factory list, so narrowing the parser would have dropped both
-counts to zero and reported full coverage of nothing. The working oracle is the `Mapped[...]`
-annotation, which belongs to the ORM contract rather than to any factory name.
-
-**Two guards argued with me and were right**: one caught an allowlist claiming
-`execute_file_tool` enforces entitlement (it is a file-handling scaffold and does not), and
-the export-gate test flagged four routes that are *correctly* ungated — a share link is for a
-recipient with no account, and gating revocation behind a paid tier would trap data in a link
-the user can no longer cancel. Both became reasoned exemptions rather than silent passes.
-
-**One review finding was half wrong and is corrected in the report**: `weekly_security_digest.py`
-is not unwired — it is a documented manual tool referenced by `SECURITY_POLICY.md` and the
-review template. The grep behind that claim timed out and I reported a partial result as a
-complete one.
-
-### Found while fixing, not while reviewing
-
-- The **depreciation engine had the loan engine's rounding defect too** — a $123,456.78 asset
-  reporting $123,456.77 of total depreciation against a 0.00 ending book value. Found by a new
-  test.
-- **`scripts/overnight/tests/` ran in no workflow.** The regression tests for the nightly
-  agents, including the Sprint 712 false-green guard, were themselves unwatched.
-- **Prior-period DuPont deltas are unreachable** (both call sites pass `previous_totals=None`)
-  — caught before it reached the user guide, where it would have reproduced F-007 exactly.
-
-## Current Environment State
-
-**App status:** working. Production untouched by this session — no deploy, no settings change.
-**Backend tests:** **9,209 passed / 0 failed** in 821.8s, up from 9,126 collected at session
-start (+83). Measured on the final tree with `-p no:randomly`.
-**Frontend tests:** **2041 passed / 0 failed**, 207 suites. `npm run build` clean and emitting
-`f (Dynamic)`, which CSP nonce injection requires. `tsc --noEmit` exit 0.
-**Lint:** `ruff check` clean. `ruff format` applied to the six files I had regressed from clean
-and to every file I created; the 84 pre-existing unformatted files were left alone, since
-formatting is not a CI gate here and restyling them is churn.
-**Gates:** all eight green — accounting policy, doc consistency, enum label drift, report
-standards, route wiring, design tokens, OpenAPI drift, overnight agent tests.
-**Migrations:** chain replays to 29 of 29 tables with zero column and zero FK drift, proved
-up/down/up on both a chain-built and a `create_all()`-built database.
-
-**Open blockers:** unchanged — 793b and 790 need decisions; 778b (off-provider backup) still
-unbuilt; 741c steps 1-3 still want the Neon string; Phase 4.1/4.2/4.3 CEO-gated;
-`RENDER_API_KEY` still unset.
-
-## Next Priority
-
-| # | Item | Owner |
-|---|------|-------|
-| 01 | Merge PR #197, then open and merge the remediation branch | Claude |
-| 02 | **Make the four advisory gates required** — one `gh api` call, command in the report | **CEO** |
-| 03 | **Sprint 793b (P1)** — practitioner-confirmed statutory figures | CEO/CPA, then Claude |
-| 04 | **Sprint 790 (P1)** — decide the metering unit, then enforce | CEO decides |
-| 05 | **Sprint 778b** — `pg_dump` to R2 backup plus one restore drill. Sprint 797 makes a chain-built restore sound for the first time, so the drill will now mean something | Claude + CEO console |
-| 06 | Legal to counsel; waitlist count; 5-10 CPAs through the demo (**Sprint 781**) | **CEO — longest lead** |
-| 07 | **Sprint 786b steps 3-4** — remaining dependency majors | Claude |
-| 08 | **Sprint 794 step 3** — should an npm/PyPI outage block every PR? | **CEO decides** |
-
-**Still parked:** B-6...B-9 until Sprint 781 reports, the live Stripe build until pricing is
-validated, the 22-engine relocation, the mypy baseline, dev-only npm advisories, the
-deferred SOC 2 set.
+- The backend suite takes ~14 min locally (9,437 passed on the 824 branch). Worktrees were used
+  for parallel branches; they need a copied `backend/.env` and a `node_modules` junction, and
+  Turbopack cannot build through the junction (build from the main checkout instead).
+- `generate_sample_reports.py` rewrites `sample-reports/` — run it deliberately, not by accident.
