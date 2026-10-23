@@ -67,7 +67,7 @@ def _get_branding(db: Session, user: User) -> tuple[FirmBranding, int]:
 
 
 @router.get("/", response_model=BrandingResponse)
-async def get_branding(
+def get_branding(
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
@@ -78,7 +78,7 @@ async def get_branding(
 
 @router.put("/", response_model=BrandingResponse)
 @limiter.limit(RATE_LIMIT_WRITE)
-async def update_branding(
+def update_branding(
     body: UpdateBrandingRequest,
     request: Request,
     user: User = Depends(require_current_user),
@@ -157,7 +157,7 @@ async def upload_logo(
 
 @router.delete("/logo", response_model=DetailResponse)
 @limiter.limit(RATE_LIMIT_WRITE)
-async def delete_logo(
+def delete_logo(
     request: Request,
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),

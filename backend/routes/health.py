@@ -85,7 +85,7 @@ class ReadinessResponse(BaseModel):
 
 @router.get("/health", response_model=HealthResponse)
 @limiter.limit(RATE_LIMIT_HEALTH)
-async def health_check(
+def health_check(
     request: Request, response: Response, deep: bool = Query(False, description="Include database connectivity check")
 ) -> HealthResponse:
     """Legacy health probe. Prefer /health/live (liveness) and /health/ready (readiness)."""
@@ -134,7 +134,7 @@ async def health_check(
 
 @router.get("/health/live", response_model=LivenessResponse)
 @limiter.limit(RATE_LIMIT_HEALTH)
-async def liveness_probe(request: Request) -> LivenessResponse:
+def liveness_probe(request: Request) -> LivenessResponse:
     """Liveness probe — orchestrator should use this for restart decisions.
 
     Static response with zero *application* I/O (no DB, no cache reads). If
@@ -159,7 +159,7 @@ async def liveness_probe(request: Request) -> LivenessResponse:
 
 @router.get("/health/ready", response_model=ReadinessResponse)
 @limiter.limit(RATE_LIMIT_HEALTH)
-async def readiness_probe(request: Request) -> ReadinessResponse:
+def readiness_probe(request: Request) -> ReadinessResponse:
     """Readiness probe — load balancer should use this for traffic routing.
 
     Checks database connectivity with SELECT 1, measures latency, and
@@ -250,7 +250,7 @@ async def readiness_probe(request: Request) -> ReadinessResponse:
 
 @router.get("/health/redis", response_model=DependencyStatus)
 @limiter.limit(RATE_LIMIT_HEALTH)
-async def redis_probe(request: Request) -> DependencyStatus:
+def redis_probe(request: Request) -> DependencyStatus:
     """Redis availability probe (Sprint 730).
 
     When REDIS_URL is set, slowapi uses Redis as its rate-limit storage and a
@@ -320,7 +320,7 @@ async def redis_probe(request: Request) -> DependencyStatus:
 
 @router.get("/health/r2", response_model=DependencyStatus)
 @limiter.limit(RATE_LIMIT_HEALTH)
-async def r2_probe(request: Request) -> DependencyStatus:
+def r2_probe(request: Request) -> DependencyStatus:
     """R2 export-share-storage availability probe (Sprint 730).
 
     When R2 is configured (R2_EXPORTS_* env vars set), this lists the bucket
@@ -377,7 +377,7 @@ async def r2_probe(request: Request) -> DependencyStatus:
 
 @router.post("/waitlist", response_model=WaitlistResponse, status_code=201)
 @limiter.limit("3/minute")
-async def join_waitlist(request: Request, entry: WaitlistRequest, db: Session = Depends(get_db)) -> WaitlistResponse:
+def join_waitlist(request: Request, entry: WaitlistRequest, db: Session = Depends(get_db)) -> WaitlistResponse:
     """Add email to waitlist (database-backed with dedup)."""
     try:
         signup = WaitlistSignup(email=entry.email)

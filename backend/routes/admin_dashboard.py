@@ -77,7 +77,7 @@ def _org_member_ids(db: Session, org_id: int) -> list[int]:
 
 @router.get("/overview", response_model=AdminOverviewResponse)
 @limiter.limit(RATE_LIMIT_DEFAULT)
-async def get_overview(
+def get_overview(
     request: Request,
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
@@ -136,7 +136,7 @@ async def get_overview(
 
 @router.get("/team-activity", response_model=list[TeamActivityEntryResponse])
 @limiter.limit(RATE_LIMIT_DEFAULT)
-async def get_team_activity(
+def get_team_activity(
     request: Request,
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
@@ -175,7 +175,7 @@ async def get_team_activity(
 
 @router.get("/usage-by-member", response_model=list[UsageByMemberResponse])
 @limiter.limit(RATE_LIMIT_DEFAULT)
-async def get_usage_by_member(
+def get_usage_by_member(
     request: Request,
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
@@ -211,7 +211,7 @@ async def get_usage_by_member(
 
 @router.get("/export-activity-csv")
 @limiter.limit(RATE_LIMIT_EXPORT)
-async def export_activity_csv(
+def export_activity_csv(
     request: Request,
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),

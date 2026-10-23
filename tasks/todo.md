@@ -933,7 +933,9 @@ totals). That is a question for the CEO and counsel before anyone edits the copy
 **Priority:** P3 — low traffic today; cheap now, expensive at scale.
 **Source:** Code health review 2026-10-23, routes pass.
 
-- [ ] ~30 `async def` handlers with no `await` that make sync DB calls (organization ×10,
+- [x] *(Done 2026-10-23: 41 found by AST scan, 31 touching the DB, all converted; AST guard added.
+      One test had relied on the blocking — see its docstring. The three offloading cases below remain.)*
+      ~30 `async def` handlers with no `await` that make sync DB calls (organization ×10,
       admin_dashboard ×4, branding ×3, diagnostics ×3, prior_period ×3, …) → plain `def`.
       Offload the blocking part of `branding.py:102` (S3 upload), `billing.py:347` (Stripe
       retrieve + DB), `export_sharing.py` passcode verify (Argon2id).

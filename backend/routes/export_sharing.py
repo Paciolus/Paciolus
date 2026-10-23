@@ -307,7 +307,7 @@ def _verify_passcode_or_raise(
 
 @router.post("/create", response_model=ExportShareCreateResponse)
 @limiter.limit(RATE_LIMIT_WRITE)
-async def create_share(
+def create_share(
     body: CreateShareRequest,
     request: Request,
     user: User = Depends(require_verified_user),
@@ -453,7 +453,7 @@ def _finalize_download(share: ExportShare, request: Any, db: Session) -> Respons
 
 @router.get("/{token}")
 @limiter.limit(RATE_LIMIT_EXPORT)
-async def download_share(
+def download_share(
     token: str,
     request: Request,
     db: Session = Depends(get_db),
@@ -489,7 +489,7 @@ async def download_share(
 
 @router.post("/{token}/download")
 @limiter.limit(RATE_LIMIT_EXPORT)
-async def download_share_with_passcode(
+def download_share_with_passcode(
     token: str,
     body: DownloadRequest,
     request: Request,
@@ -517,7 +517,7 @@ async def download_share_with_passcode(
 
 @router.delete("/{token}", response_model=DetailResponse)
 @limiter.limit(RATE_LIMIT_WRITE)
-async def revoke_share(
+def revoke_share(
     token: str,
     request: Request,
     user: User = Depends(require_verified_user),
@@ -548,7 +548,7 @@ async def revoke_share(
 
 
 @router.get("/", response_model=list[ExportShareResponse])
-async def list_shares(
+def list_shares(
     user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
 ) -> list[dict[str, Any]]:

@@ -97,14 +97,14 @@ class BenchmarkSourcesResponse(BaseModel):
 
 
 @router.get("/benchmarks/industries", response_model=list[str])
-async def get_benchmark_industries() -> list[str]:
+def get_benchmark_industries() -> list[str]:
     """Get list of industries with available benchmark data."""
     industries = get_available_industries()
     return [ind.value for ind in industries]
 
 
 @router.get("/benchmarks/sources", response_model=BenchmarkSourcesResponse)
-async def get_benchmarks_sources() -> BenchmarkSourcesResponse:
+def get_benchmarks_sources() -> BenchmarkSourcesResponse:
     """Get benchmark data source attribution information."""
     sources = get_benchmark_sources()
 
@@ -122,7 +122,7 @@ async def get_benchmarks_sources() -> BenchmarkSourcesResponse:
 
 
 @router.get("/benchmarks/{industry}", response_model=BenchmarkSetResponse)
-async def get_industry_benchmarks(
+def get_industry_benchmarks(
     industry: str = PathParam(..., description="Industry type (e.g., 'retail', 'manufacturing')"),
     fiscal_year: int = Query(2025, description="Fiscal year for benchmarks"),
 ) -> BenchmarkSetResponse:
@@ -171,7 +171,7 @@ async def get_industry_benchmarks(
 
 @router.post("/benchmarks/compare", response_model=BenchmarkComparisonResponse)
 @limiter.limit(RATE_LIMIT_DEFAULT)
-async def compare_to_benchmarks(
+def compare_to_benchmarks(
     request: Request, payload: BenchmarkComparisonRequest, current_user: User = Depends(require_verified_user)
 ) -> BenchmarkComparisonResponse:
     """Compare client ratios to industry benchmarks."""

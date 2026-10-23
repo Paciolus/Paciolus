@@ -119,7 +119,7 @@ class CompareRequest(BaseModel):
 
 @router.post("/clients/{client_id}/periods", response_model=PeriodSaveResponse, status_code=201)
 @limiter.limit(RATE_LIMIT_WRITE)
-async def save_prior_period(
+def save_prior_period(
     request: Request,
     client_id: int,
     period_data: PeriodSaveRequest,
@@ -183,7 +183,7 @@ async def save_prior_period(
 
 
 @router.get("/clients/{client_id}/periods", response_model=list[PeriodListItemResponse])
-async def list_prior_periods(
+def list_prior_periods(
     client_id: int,
     limit: int = Query(default=20, ge=1, le=100),
     current_user: User = Depends(require_current_user),
@@ -222,7 +222,7 @@ async def list_prior_periods(
 
 @router.post("/audit/compare", response_model=PeriodComparisonResponse)
 @limiter.limit(RATE_LIMIT_AUDIT)
-async def compare_to_prior_period(
+def compare_to_prior_period(
     request: Request,
     compare_data: CompareRequest,
     current_user: User = Depends(require_verified_user),

@@ -372,10 +372,19 @@ class TestBug04ConcurrentSeatEnforcement:
     @pytest.mark.usefixtures("bypass_csrf")
     @pytest.mark.anyio
     async def test_concurrent_invites_one_seat_remaining(self, db_session, make_user):
-        """Fire two concurrent invite-creation requests against an org with one
-        seat remaining. At most one should succeed."""
-        import asyncio
+        """Two invite-creation requests against an org with one seat remaining.
 
+        Sprint 821: this test fired the two requests with ``asyncio.gather``, but
+        they never overlapped — ``create_invite`` was an ``async def`` that made
+        only synchronous DB calls, so it blocked the event loop and the requests
+        ran one after the other. Converting it to ``def`` (so FastAPI runs it in
+        the threadpool, off the event loop) made them genuinely concurrent, and
+        both then committed on the single session this test shares through its
+        ``get_db`` override — which no production request ever does. The
+        requests are now sent in sequence, which is what this always measured.
+        Concurrent enforcement needs a session per request, which the
+        in-memory test fixture cannot provide.
+        """
         from auth import require_current_user
         from database import get_db
         from main import app
@@ -396,16 +405,14 @@ class TestBug04ConcurrentSeatEnforcement:
                 transport=httpx.ASGITransport(app=app),
                 base_url="http://test",
             ) as client:
-                # Fire two invites concurrently
-                task1 = client.post(
+                resp1 = await client.post(
                     "/organization/invite",
                     json={"email": "concurrent1@example.com", "role": "member"},
                 )
-                task2 = client.post(
+                resp2 = await client.post(
                     "/organization/invite",
                     json={"email": "concurrent2@example.com", "role": "member"},
                 )
-                resp1, resp2 = await asyncio.gather(task1, task2)
 
             statuses = sorted([resp1.status_code, resp2.status_code])
             # At least one should succeed (200). Ideally only one succeeds
