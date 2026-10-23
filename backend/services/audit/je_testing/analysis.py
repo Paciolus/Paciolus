@@ -56,7 +56,7 @@ from shared.column_detector import ColumnFieldConfig, detect_columns  # noqa: E4
 from shared.data_quality import FieldQualityConfig  # noqa: E402
 from shared.data_quality import assess_data_quality as _shared_assess_dq
 from shared.holiday_calendar import get_holiday_dates  # noqa: E402
-from shared.parsing_helpers import parse_date, safe_decimal, safe_str  # noqa: E402
+from shared.parsing_helpers import memoized_parse, parse_date, safe_decimal, safe_str, with_parse_memo  # noqa: E402
 from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
 
 # =============================================================================
@@ -1514,6 +1514,10 @@ def _extract_hour(date_str: Optional[str]) -> Optional[int]:
     """Extract hour from a datetime string. Returns None if no time component."""
     if not date_str:
         return None
+    return memoized_parse("hour", date_str, _extract_hour_uncached)
+
+
+def _extract_hour_uncached(date_str: str) -> Optional[int]:
     for fmt in (
         "%Y-%m-%d %H:%M:%S",
         "%m/%d/%Y %H:%M:%S",
@@ -2775,6 +2779,7 @@ def run_stratified_sampling(
 # =============================================================================
 
 
+@with_parse_memo
 def run_test_battery(
     entries: list[JournalEntry],
     config: Optional[JETestingConfig] = None,
@@ -2939,6 +2944,7 @@ class JETestingEngine(AuditEngineBase):
 # =============================================================================
 
 
+@with_parse_memo
 def run_je_testing(
     rows: list[dict],
     column_names: list[str],

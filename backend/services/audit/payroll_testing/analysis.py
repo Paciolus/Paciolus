@@ -27,7 +27,6 @@ from collections import Counter
 from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
-from difflib import SequenceMatcher
 from typing import Any, Optional
 
 from engine_framework import AuditEngineBase
@@ -35,7 +34,8 @@ from shared.benford import BENFORD_EXPECTED, analyze_benford, get_first_digit  #
 from shared.column_detector import ColumnFieldConfig, detect_columns
 from shared.data_quality import FieldQualityConfig
 from shared.data_quality import assess_data_quality as _shared_assess_dq
-from shared.parsing_helpers import parse_date, safe_decimal, safe_float, safe_str
+from shared.fuzzy_match import similarity_at_least
+from shared.parsing_helpers import parse_date, safe_decimal, safe_float, safe_str, with_parse_memo
 from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
 
 # =============================================================================
@@ -1881,8 +1881,8 @@ def _test_duplicate_bank_accounts(
                 addr_a = emp_addresses[name_a]
                 addr_b = emp_addresses[name_b]
 
-                ratio = SequenceMatcher(None, addr_a, addr_b).ratio()
-                if ratio >= config.address_similarity_threshold:
+                ratio = similarity_at_least(addr_a, addr_b, config.address_similarity_threshold)
+                if ratio is not None:
                     for entry in emp_entries[name_a] + emp_entries[name_b]:
                         if entry._row_index not in flagged_rows:
                             flagged_rows.add(entry._row_index)
@@ -2000,6 +2000,7 @@ def _test_duplicate_tax_ids(
 # =============================================================================
 
 
+@with_parse_memo
 def run_payroll_test_battery(
     entries: list[PayrollEntry],
     config: PayrollTestingConfig,
@@ -2274,6 +2275,7 @@ class PayrollTestingEngine(AuditEngineBase):
 # =============================================================================
 
 
+@with_parse_memo
 def run_payroll_testing(
     headers: list[str],
     rows: list[dict],

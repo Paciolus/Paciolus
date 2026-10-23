@@ -503,12 +503,12 @@ return a result rather than a 422 — e.g. `sampling_interval=nan`. Same family 
 ---
 
 ### Sprint 815: Engine performance — parse once, prune pairs
-**Status:** PENDING.
+**Status:** PARTIAL — items 1, 3, 4, 5 done with identical outputs; item 2 still blocked on CEO decision 2.
 **Priority:** **P1** — a 100k-row GL takes up to 113s today.
 **Source:** Code health review 2026-10-23, engines pass. Measured on synthetic data.
 
 **Scope:**
-1. [ ] **Dates re-parsed 11× per JE entry.** `shared/parsing_helpers.py:141` `parse_date` tries
+1. [x] **Dates re-parsed 11× per JE entry.** `shared/parsing_helpers.py:141` `parse_date` tries
    up to 9 formats; `je_testing/analysis.py:1513` `_extract_hour` up to 6. Profile: 1.19M
    `parse_date` / 8.4M `strptime` = 283 of 302s. Parse once per entry (or a per-run memo):
    **31s → 6.0s** date-only, **113s → 6.1s** date+time, identical score and flag count.
@@ -520,14 +520,36 @@ return a result rather than a 422 — e.g. `sampling_interval=nan`. Same family 
    the date filter (`:735`) is skipped at the default tolerance 0, which the route never
    changes. 2.05s per bank-only txn at 80 unmatched rows; 64.7M combos at 200.
    **Blocked on CEO decision 2** (cap the pool / date window when tolerance is 0 / meet-in-the-middle).
-3. [ ] Fuzzy name loops (`ap_testing/analysis.py:1463`, `payroll_testing/analysis.py:1877`,
+3. [x] Fuzzy name loops (`ap_testing/analysis.py:1463`, `payroll_testing/analysis.py:1877`,
    `three_way_match_engine.py:1314-1350`): early-exit on `2*min/(la+lb)` and
    `real_quick_ratio()`/`quick_ratio()` upper bounds. **88.1s → 14.2s** on 2,000 vendors,
    identical 670 hits. Keep `SequenceMatcher(a, b)` order — swapping gave 668. In 3WM compute
    vendor score first and skip amount/date work below threshold.
-4. [ ] Hoist date parsing and tolerance `Decimal` out of inner loops: AP fuzzy duplicates
+4. [x] Hoist date parsing and tolerance `Decimal` out of inner loops: AP fuzzy duplicates
    `ap_testing/analysis.py:1060-1068`, JE reciprocal `je_testing/analysis.py:2184`.
-5. [ ] Benchmark test (marked `slow`) pinning the 100k-row JE run under a ceiling, so it can't regress.
+5. [x] Benchmark test (marked `slow`) pinning the 100k-row JE run under a ceiling, so it can't regress.
+
+**Delivered 2026-10-23 (items 1, 3, 4, 5) — every change result-identical, measured old vs new:**
+- **Item 1 — one memo instead of ~30 call-site rewrites.** `shared/parsing_helpers.parse_memo()`
+  holds a dict in a `ContextVar` for the duration of one engine run; `parse_date` and JE's
+  `_extract_hour` consult it via `memoized_parse`. Every engine entry point and battery
+  (JE, AP, Payroll, Revenue, AR, FA, Inventory, Bank Rec, Three-Way Match — 17 functions) is
+  decorated `@with_parse_memo`. Keyed by the raw string, so `parse_date(a) or parse_date(b)` vs
+  `parse_date(a or b)` keep their different semantics untouched. **Zero-Storage:** the memo
+  exists only inside the run and is dropped on exit, including on exceptions — tested; it is not
+  a process-wide cache. Measured on JE: **100k rows with timestamps 65.6s → 9.6s**, 20k rows
+  4.7s → 1.1s (date-only) and 13.1s → 1.8s (datetime); identical score and identical per-test
+  flag counts (hashed).
+- **Item 3** — `shared/fuzzy_match.similarity_at_least` checks `real_quick_ratio()` and
+  `quick_ratio()` (documented upper bounds) before `ratio()`; argument order preserved. Used in AP
+  vendor variations, payroll address matching and both 3WM fuzzy loops (where a sub-threshold
+  candidate can never be selected, so its amount/date work is skipped too). **AP on 2,000
+  vendors: 65.4s → 13.9s, identical flagged set.** A 3,000-case randomized property test proves
+  the gated function equals the plain ratio-and-compare.
+- **Item 4** — AP fuzzy-duplicate tolerance `Decimal` hoisted out of the pair loop; the date
+  parses in that loop and in JE reciprocal are now memo hits.
+- **Item 5** — `@pytest.mark.slow` test pins a 100k-row JE run under 30s (runs in the nightly
+  slow job, not PR CI); AST guard asserts every engine entry point carries the memo.
 
 **Commit SHA:** TBD.
 

@@ -26,14 +26,14 @@ import statistics
 from collections import Counter
 from dataclasses import dataclass, field
 from decimal import Decimal
-from difflib import SequenceMatcher
 from typing import Any, Optional
 
 from engine_framework import AuditEngineBase
 from shared.column_detector import ColumnFieldConfig, detect_columns
 from shared.data_quality import FieldQualityConfig
 from shared.data_quality import assess_data_quality as _shared_assess_dq
-from shared.parsing_helpers import parse_date, safe_decimal, safe_str
+from shared.fuzzy_match import similarity_at_least
+from shared.parsing_helpers import parse_date, safe_decimal, safe_str, with_parse_memo
 from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
 
 # =============================================================================
@@ -1053,6 +1053,8 @@ def test_fuzzy_duplicate_payments(
         if key:
             vendor_groups.setdefault(key, []).append(p)
 
+    tolerance = Decimal(str(config.duplicate_tolerance))  # Sprint 815: once, not per pair
+
     for vendor, group in vendor_groups.items():
         if len(group) < 2:
             continue
@@ -1061,7 +1063,7 @@ def test_fuzzy_duplicate_payments(
             for j in range(i + 1, len(group)):
                 a, b = group[i], group[j]
                 # Amount match within tolerance
-                if abs(a.amount - b.amount) > Decimal(str(config.duplicate_tolerance)):
+                if abs(a.amount - b.amount) > tolerance:
                     continue
                 # Must be different dates
                 date_a = parse_date(a.payment_date)
@@ -1466,8 +1468,8 @@ def test_vendor_name_variations(
             name_b = unique_vendors[j]
             if name_a == name_b:
                 continue
-            ratio = SequenceMatcher(None, name_a, name_b).ratio()
-            if ratio < config.vendor_variation_threshold:
+            ratio = similarity_at_least(name_a, name_b, config.vendor_variation_threshold)
+            if ratio is None:
                 continue
 
             combined_amount = vendor_totals[name_a] + vendor_totals[name_b]
@@ -1791,6 +1793,7 @@ def test_invoice_without_po(
 # =============================================================================
 
 
+@with_parse_memo
 def run_ap_test_battery(
     payments: list[APPayment],
     config: Optional[APTestingConfig] = None,
@@ -2059,6 +2062,7 @@ class APTestingEngine(AuditEngineBase):
 # =============================================================================
 
 
+@with_parse_memo
 def run_ap_testing(
     rows: list[dict],
     column_names: list[str],

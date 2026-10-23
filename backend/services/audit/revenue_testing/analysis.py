@@ -26,7 +26,7 @@ from typing import Optional
 from shared.column_detector import ColumnFieldConfig, detect_columns
 from shared.data_quality import FieldQualityConfig
 from shared.data_quality import assess_data_quality as _shared_assess_dq
-from shared.parsing_helpers import parse_date, safe_decimal, safe_str
+from shared.parsing_helpers import parse_date, safe_decimal, safe_str, with_parse_memo
 from shared.round_amounts import ROUND_AMOUNT_PATTERNS_4TIER
 from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
 from shared.testing_enums import (
@@ -2331,6 +2331,7 @@ def test_allocation_inconsistency(
 # =============================================================================
 
 
+@with_parse_memo
 def run_revenue_test_battery(
     entries: list[RevenueEntry],
     config: Optional[RevenueTestingConfig] = None,
@@ -2402,6 +2403,7 @@ def calculate_revenue_composite_score(
 # =============================================================================
 
 
+@with_parse_memo
 def run_revenue_testing(
     rows: list[dict],
     column_names: list[str],
