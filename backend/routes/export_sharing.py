@@ -20,7 +20,7 @@ import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -309,7 +309,7 @@ def _verify_passcode_or_raise(
 @limiter.limit(RATE_LIMIT_WRITE)
 async def create_share(
     body: CreateShareRequest,
-    request: Any = None,
+    request: Request,
     user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
@@ -455,7 +455,7 @@ def _finalize_download(share: ExportShare, request: Any, db: Session) -> Respons
 @limiter.limit(RATE_LIMIT_EXPORT)
 async def download_share(
     token: str,
-    request: Any = None,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> Response:
     """Download a non-passcode-protected shared export.
@@ -492,7 +492,7 @@ async def download_share(
 async def download_share_with_passcode(
     token: str,
     body: DownloadRequest,
-    request: Any = None,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> Response:
     """POST-body download: accepts the passcode in JSON instead of query string.
@@ -519,7 +519,7 @@ async def download_share_with_passcode(
 @limiter.limit(RATE_LIMIT_WRITE)
 async def revoke_share(
     token: str,
-    request: Any = None,
+    request: Request,
     user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
 ) -> dict[str, str]:

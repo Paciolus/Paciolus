@@ -21,7 +21,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from sqlalchemy.orm import Session
 
 from auth import require_verified_user
@@ -44,7 +44,7 @@ _JOB_TTL_HOURS = 2
 @router.post("", response_model=BulkUploadStartResponse)
 @limiter.limit(RATE_LIMIT_WRITE)
 async def start_bulk_upload(
-    request: Any = None,
+    request: Request,
     files: list[UploadFile] = File(...),
     user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),

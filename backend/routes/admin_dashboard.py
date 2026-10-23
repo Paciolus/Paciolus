@@ -13,7 +13,7 @@ import logging
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -78,7 +78,7 @@ def _org_member_ids(db: Session, org_id: int) -> list[int]:
 @router.get("/overview", response_model=AdminOverviewResponse)
 @limiter.limit(RATE_LIMIT_DEFAULT)
 async def get_overview(
-    request: Any = None,
+    request: Request,
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
@@ -137,7 +137,7 @@ async def get_overview(
 @router.get("/team-activity", response_model=list[TeamActivityEntryResponse])
 @limiter.limit(RATE_LIMIT_DEFAULT)
 async def get_team_activity(
-    request: Any = None,
+    request: Request,
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
     days: int = Query(default=30, ge=1, le=90),
@@ -176,7 +176,7 @@ async def get_team_activity(
 @router.get("/usage-by-member", response_model=list[UsageByMemberResponse])
 @limiter.limit(RATE_LIMIT_DEFAULT)
 async def get_usage_by_member(
-    request: Any = None,
+    request: Request,
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
 ) -> list[dict[str, Any]]:
@@ -212,7 +212,7 @@ async def get_usage_by_member(
 @router.get("/export-activity-csv")
 @limiter.limit(RATE_LIMIT_EXPORT)
 async def export_activity_csv(
-    request: Any = None,
+    request: Request,
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
     days: int = Query(default=90, ge=1, le=90),

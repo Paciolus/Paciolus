@@ -168,6 +168,25 @@ def _disable_rate_limiter():
     limiter.enabled = True
 
 
+@pytest.fixture
+def limiter_enabled(_disable_rate_limiter):
+    """Run a test with the rate limiter ON, starting from zero recorded hits.
+
+    Sprint 812: the global disable above hid 19 routes that 500'd on every
+    call — slowapi only inspects the ``request`` argument when enabled, so a
+    handler declaring ``request: Any = None`` passed every test while failing
+    every production request. Route modules opt in with
+    ``pytestmark = pytest.mark.usefixtures("limiter_enabled")``.
+    """
+    from shared.rate_limits import limiter
+
+    limiter.reset()
+    limiter.enabled = True
+    yield
+    limiter.enabled = False
+    limiter.reset()
+
+
 @pytest.fixture(autouse=True)
 def _disable_cleanup_scheduler():
     """Disable the APScheduler cleanup scheduler during tests.

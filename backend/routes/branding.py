@@ -9,7 +9,7 @@ Route group prefix: /branding
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -80,7 +80,7 @@ async def get_branding(
 @limiter.limit(RATE_LIMIT_WRITE)
 async def update_branding(
     body: UpdateBrandingRequest,
-    request: Any = None,
+    request: Request,
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
@@ -100,7 +100,7 @@ async def update_branding(
 @router.post("/logo", response_model=BrandingResponse)
 @limiter.limit(RATE_LIMIT_WRITE)
 async def upload_logo(
-    request: Any = None,
+    request: Request,
     file: UploadFile = File(...),
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
@@ -158,7 +158,7 @@ async def upload_logo(
 @router.delete("/logo", response_model=DetailResponse)
 @limiter.limit(RATE_LIMIT_WRITE)
 async def delete_logo(
-    request: Any = None,
+    request: Request,
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
 ) -> dict[str, str]:

@@ -26789,14 +26789,6 @@
         "parameters": [
           {
             "in": "query",
-            "name": "request",
-            "required": false,
-            "schema": {
-              "title": "Request"
-            }
-          },
-          {
-            "in": "query",
             "name": "days",
             "required": false,
             "schema": {
@@ -26843,16 +26835,6 @@
       "get": {
         "description": "Overview: seats, uploads this month, active members.",
         "operationId": "get_overview_admin_overview_get",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "request",
-            "required": false,
-            "schema": {
-              "title": "Request"
-            }
-          }
-        ],
         "responses": {
           "200": {
             "content": {
@@ -26863,16 +26845,6 @@
               }
             },
             "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           }
         },
         "security": [
@@ -26891,14 +26863,6 @@
         "description": "Filterable team activity log.",
         "operationId": "get_team_activity_admin_team_activity_get",
         "parameters": [
-          {
-            "in": "query",
-            "name": "request",
-            "required": false,
-            "schema": {
-              "title": "Request"
-            }
-          },
           {
             "in": "query",
             "name": "days",
@@ -26985,16 +26949,6 @@
       "get": {
         "description": "Per-member upload counts for the current month.",
         "operationId": "get_usage_by_member_admin_usage_by_member_get",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "request",
-            "required": false,
-            "schema": {
-              "title": "Request"
-            }
-          }
-        ],
         "responses": {
           "200": {
             "content": {
@@ -27009,16 +26963,6 @@
               }
             },
             "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           }
         },
         "security": [
@@ -31004,16 +30948,6 @@
       "put": {
         "description": "Update header/footer text.",
         "operationId": "update_branding_branding__put",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "request",
-            "required": false,
-            "schema": {
-              "title": "Request"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -31061,16 +30995,6 @@
       "delete": {
         "description": "Remove the logo.",
         "operationId": "delete_logo_branding_logo_delete",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "request",
-            "required": false,
-            "schema": {
-              "title": "Request"
-            }
-          }
-        ],
         "responses": {
           "200": {
             "content": {
@@ -31081,16 +31005,6 @@
               }
             },
             "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           }
         },
         "security": [
@@ -31106,16 +31020,6 @@
       "post": {
         "description": "Upload a logo image. Enterprise only. Max 500KB, PNG/JPG.",
         "operationId": "upload_logo_branding_logo_post",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "request",
-            "required": false,
-            "schema": {
-              "title": "Request"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "multipart/form-data": {
@@ -33949,16 +33853,6 @@
       "post": {
         "description": "Create a shareable export link. Professional+ only.",
         "operationId": "create_share_export_sharing_create_post",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "request",
-            "required": false,
-            "schema": {
-              "title": "Request"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -34015,14 +33909,6 @@
               "title": "Token",
               "type": "string"
             }
-          },
-          {
-            "in": "query",
-            "name": "request",
-            "required": false,
-            "schema": {
-              "title": "Request"
-            }
           }
         ],
         "responses": {
@@ -34069,14 +33955,6 @@
               "title": "Token",
               "type": "string"
             }
-          },
-          {
-            "in": "query",
-            "name": "request",
-            "required": false,
-            "schema": {
-              "title": "Request"
-            }
           }
         ],
         "responses": {
@@ -34117,14 +33995,6 @@
             "schema": {
               "title": "Token",
               "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "request",
-            "required": false,
-            "schema": {
-              "title": "Request"
             }
           }
         ],
@@ -37396,16 +37266,6 @@
       "post": {
         "description": "Create an organization. User becomes the owner.",
         "operationId": "create_organization_organization_post",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "request",
-            "required": false,
-            "schema": {
-              "title": "Request"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -37451,16 +37311,6 @@
       "put": {
         "description": "Update organization name. Owner or admin only.",
         "operationId": "update_organization_organization_put",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "request",
-            "required": false,
-            "schema": {
-              "title": "Request"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -37508,16 +37358,6 @@
       "post": {
         "description": "Send an organization invite. Owner/admin only. Checks seat limit.",
         "operationId": "create_invite_organization_invite_post",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "request",
-            "required": false,
-            "schema": {
-              "title": "Request"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -37573,14 +37413,6 @@
             "schema": {
               "title": "Token",
               "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "request",
-            "required": false,
-            "schema": {
-              "title": "Request"
             }
           }
         ],
@@ -37661,14 +37493,6 @@
               "title": "Invite Id",
               "type": "integer"
             }
-          },
-          {
-            "in": "query",
-            "name": "request",
-            "required": false,
-            "schema": {
-              "title": "Request"
-            }
           }
         ],
         "responses": {
@@ -37748,14 +37572,6 @@
               "title": "Member Id",
               "type": "integer"
             }
-          },
-          {
-            "in": "query",
-            "name": "request",
-            "required": false,
-            "schema": {
-              "title": "Request"
-            }
           }
         ],
         "responses": {
@@ -37803,14 +37619,6 @@
             "schema": {
               "title": "Member Id",
               "type": "integer"
-            }
-          },
-          {
-            "in": "query",
-            "name": "request",
-            "required": false,
-            "schema": {
-              "title": "Request"
             }
           }
         ],
@@ -38263,16 +38071,6 @@
       "post": {
         "description": "Accept up to 5 files for bulk processing. Enterprise only.",
         "operationId": "start_bulk_upload_upload_bulk_post",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "request",
-            "required": false,
-            "schema": {
-              "title": "Request"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "multipart/form-data": {

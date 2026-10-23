@@ -28,6 +28,9 @@ from main import app
 from models import User, UserTier
 from organization_model import Organization, OrganizationMember, OrgRole
 
+# Sprint 812: exercise these routes with the rate limiter ON (see conftest.limiter_enabled).
+pytestmark = pytest.mark.usefixtures("limiter_enabled")
+
 # =============================================================================
 # Fixtures
 # =============================================================================
