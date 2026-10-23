@@ -135,3 +135,34 @@ def test_no_tool_run_is_recorded_in_a_background_task():
             ):
                 offenders.append(f"{path.relative_to(backend)}:{node.lineno}")
     assert not offenders, f"tool runs recorded after the response is sent: {offenders}"
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("bypass_csrf")
+@pytest.mark.parametrize(
+    "path, form",
+    [
+        ("/audit/sampling/design", {"method": "mus", "tolerable_misstatement": "1000", "expected_misstatement": "nan"}),
+        ("/audit/sampling/design", {"method": "random", "tolerable_misstatement": "inf"}),
+        (
+            "/audit/sampling/evaluate",
+            {"method": "mus", "population_value": "10000", "sample_size": "5", "sampling_interval": "nan"},
+        ),
+        (
+            "/audit/sampling/evaluate",
+            {"method": "mus", "population_value": "10000", "sample_size": "5", "tolerable_misstatement": "inf"},
+        ),
+    ],
+)
+async def test_sampling_rejects_non_finite_form_values(override_auth_verified, path, form):
+    """Sprint 824: these were accepted, and most then 500'd serialising nan/inf."""
+    import httpx
+
+    from main import app
+
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post(
+            path, data=form, files={"file": ("s.csv", b"item_id,recorded_amount,audited_amount\nA,1,1\n", "text/csv")}
+        )
+    assert response.status_code == 422, response.text
+    assert "finite" in response.text

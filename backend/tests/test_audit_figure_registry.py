@@ -188,9 +188,12 @@ class TestStringerBoundIdentity:
             SampleError(
                 row_index=i,
                 item_id=str(i),
-                recorded_amount=interval,
+                # Below the interval, so these are sampled items. An item at or
+                # above it is examined with certainty and carries no Stringer
+                # projection or allowance (Sprint 824).
+                recorded_amount=interval / 2,
                 audited_amount=0.0,
-                misstatement=interval,
+                misstatement=interval / 2,
                 tainting=1.0,
             )
             for i in range(count)

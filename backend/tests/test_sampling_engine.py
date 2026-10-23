@@ -471,9 +471,9 @@ class TestStringerBound:
             SampleError(
                 row_index=1,
                 item_id="1",
-                recorded_amount=10_000,
-                audited_amount=5_000,
-                misstatement=5_000,
+                recorded_amount=5_000,  # below the interval: a sampled item (Sprint 824)
+                audited_amount=2_500,
+                misstatement=2_500,
                 tainting=0.5,
             )
         ]
@@ -500,9 +500,9 @@ class TestStringerBound:
     def test_multiple_errors_fail(self):
         """Multiple errors push UEL above tolerable."""
         errors = [
-            SampleError(1, "1", 10_000, 2_000, 8_000, 0.8),
-            SampleError(2, "2", 10_000, 3_000, 7_000, 0.7),
-            SampleError(3, "3", 10_000, 5_000, 5_000, 0.5),
+            SampleError(1, "1", 5_000, 1_000, 4_000, 0.8),
+            SampleError(2, "2", 5_000, 1_500, 3_500, 0.7),
+            SampleError(3, "3", 5_000, 2_500, 2_500, 0.5),
         ]
         result = evaluate_mus_sample_stringer(
             errors=errors,
@@ -519,9 +519,9 @@ class TestStringerBound:
     def test_taintings_ranked_descending(self):
         """Taintings should be sorted largest first."""
         errors = [
-            SampleError(1, "1", 10_000, 8_000, 2_000, 0.2),
-            SampleError(2, "2", 10_000, 2_000, 8_000, 0.8),
-            SampleError(3, "3", 10_000, 5_000, 5_000, 0.5),
+            SampleError(1, "1", 5_000, 4_000, 1_000, 0.2),
+            SampleError(2, "2", 5_000, 1_000, 4_000, 0.8),
+            SampleError(3, "3", 5_000, 2_500, 2_500, 0.5),
         ]
         result = evaluate_mus_sample_stringer(
             errors=errors,
@@ -539,9 +539,9 @@ class TestStringerBound:
             SampleError(
                 row_index=1,
                 item_id="1",
-                recorded_amount=10_000,
+                recorded_amount=5_000,
                 audited_amount=0,
-                misstatement=10_000,
+                misstatement=5_000,
                 tainting=1.0,
             )
         ]
@@ -792,3 +792,67 @@ class TestEvaluateSample:
             sampling_interval=10_000,
         )
         assert result.errors_found == 0
+
+
+class TestSprint824Evaluation:
+    """Sprint 823 discovery findings S1, S2, S4, S5, S7, S8."""
+
+    def test_top_stratum_error_counts_its_actual_misstatement(self):
+        """S1: a $250,000 item at a $70,000 interval is examined, not sampled.
+        Its $50,000 error is added as-is — projecting it as tainting x interval
+        ($14,000 + allowance) reported $234,500 "pass" against $250,000 TM."""
+        errors = [SampleError(1, "BIG", 250_000, 200_000, 50_000, 0.2)]
+        result = evaluate_mus_sample_stringer(
+            errors=errors,
+            sampling_interval=70_000,
+            confidence_level=0.95,
+            tolerable_misstatement=250_000,
+            population_value=5_000_000,
+            sample_size=72,
+        )
+        assert result.basic_precision == pytest.approx(210_000)
+        assert result.projected_misstatement == pytest.approx(50_000)
+        assert result.incremental_allowance == 0.0
+        assert result.upper_error_limit == pytest.approx(260_000)
+        assert result.conclusion == "fail"
+        assert result.taintings_ranked == []
+
+    def test_mus_echoes_the_expected_misstatement_it_was_given(self):
+        """S8: the MUS result always reported expected_misstatement 0.0."""
+        result = evaluate_mus_sample_stringer(
+            errors=[],
+            sampling_interval=70_000,
+            confidence_level=0.95,
+            tolerable_misstatement=250_000,
+            population_value=5_000_000,
+            sample_size=72,
+            expected_misstatement=25_000,
+        )
+        assert result.expected_misstatement == 25_000
+
+    @staticmethod
+    def _evaluate(csv: str, method: str = "mus"):
+        from sampling_engine import evaluate_sample
+
+        config = SamplingConfig(method=method, confidence_level=0.95, tolerable_misstatement=250_000)
+        return evaluate_sample(csv.encode(), "sample.csv", config, 5_000_000, 4, sampling_interval=70_000)
+
+    def test_sample_value_covers_the_whole_evaluated_sample(self):
+        """S2/S7: sample value and the random ratio used only the error rows."""
+        csv = "item_id,recorded_amount,audited_amount\nA,8372,7372\nB,50000,50000\nC,40000,40000\nD,1628,1628\n"
+        mus = self._evaluate(csv)
+        assert mus.sample_value == pytest.approx(100_000)
+
+        random_result = self._evaluate(csv, method="random")
+        assert random_result.sample_value == pytest.approx(100_000)
+        # 1,000 / 100,000 of a $5M population — not 1,000 / 8,372 of it.
+        assert random_result.projected_misstatement == pytest.approx(50_000)
+
+    @pytest.mark.parametrize("audited", ["see note", "Infinity", "-infinity"])
+    def test_unreadable_audited_amount_is_unassessed_not_a_full_misstatement(self, audited):
+        """S4/S5: these became $0 (a 100% misstatement) or Decimal('Infinity')."""
+        csv = f'item_id,recorded_amount,audited_amount\nA,4000,{audited}\nB,"$5,000.00",5000\n'
+        result = self._evaluate(csv)
+        assert result.errors_found == 0
+        assert result.skipped_missing_audited == 1
+        assert result.evaluated_count == 1
