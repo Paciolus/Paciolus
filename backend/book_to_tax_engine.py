@@ -370,6 +370,12 @@ def calculate_book_to_tax(config: BookToTaxConfig) -> BookToTaxResult:
         raise BookToTaxInputError(f"Tax year must be 4-digit year between 2000 and 2099 ({config.tax_year})")
     if config.federal_tax_rate < ZERO or config.federal_tax_rate > Decimal("1"):
         raise BookToTaxInputError(f"Federal tax rate must be between 0 and 1 ({config.federal_tax_rate})")
+    # Sprint 826 (B3): the state rate had no check, so "5" (meaning 5%) produced
+    # 500% state tax and a 500% effective rate.
+    if config.state_tax_rate < ZERO or config.state_tax_rate > Decimal("1"):
+        raise BookToTaxInputError(
+            f"State tax rate must be a decimal between 0 and 1, e.g. 0.05 for 5% ({config.state_tax_rate})"
+        )
 
     # ── Schedule M-1 composition ──
     permanent_adds: list[AdjustmentLine] = []
@@ -455,7 +461,16 @@ def calculate_book_to_tax(config: BookToTaxConfig) -> BookToTaxResult:
     ending_dta = config.rollforward.beginning_dta
     ending_dtl = config.rollforward.beginning_dtl
     if temporary_net >= ZERO:
-        ending_dta = _quantise(ending_dta + movement)
+        # Sprint 826 (B4): a positive movement first reverses any DTL, then
+        # builds a DTA — the mirror of the branch below. Adding it straight to
+        # the DTA left a beginning $30,000 DTL untouched by a $50,000 reversal
+        # (DTA $10,500 / DTL $30,000 instead of DTL $19,500). Net was right;
+        # the gross balances were not.
+        if ending_dtl >= movement:
+            ending_dtl = _quantise(ending_dtl - movement)
+        else:
+            ending_dta = _quantise(ending_dta + movement - ending_dtl)
+            ending_dtl = ZERO
     else:
         # Negative movement reduces DTA first; any residual builds DTL.
         residual = movement.copy_abs()

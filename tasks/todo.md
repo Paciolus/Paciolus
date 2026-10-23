@@ -400,7 +400,9 @@ valuation allowance) needs a scope call.
 - [x] **W5** — with no plan type, the plan is inferred from which deferral field is populated.
 - [x] **F8** — governments and tax-exempt organisations are exempt payees (no medical/legal
       carve-back, unlike corporations).
-- [ ] F4, F5, F9, W4 (W-3 vs 941), W6–W10, B1–B6.
+- [x] **B3** — state rate validated to 0–1 like the federal rate. **B4** — a positive temporary
+      movement reverses any DTL before building a DTA (gross balances were wrong; net was right).
+- [ ] F4, F5, F9, W4 (W-3 vs 941), W6–W10, B1, B2, B5, B6.
 
 **Commit SHA:** TBD.
 
