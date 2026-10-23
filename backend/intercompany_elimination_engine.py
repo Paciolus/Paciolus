@@ -130,6 +130,9 @@ class EliminationPair:
     amount_b: Decimal
     net_residual: Decimal  # A's receivable - B's payable (Decimal-precise)
     reconciles: bool
+    # Whether A carries a debit balance. Used to orient the elimination when
+    # neither account name states a direction (not serialised).
+    a_has_debit_balance: bool = True
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -459,6 +462,7 @@ def _match_pairs(
                 amount_b=abs(b.net_balance),
                 net_residual=_quantise(residual),
                 reconciles=reconciles,
+                a_has_debit_balance=a.net_balance >= 0,
             )
         )
         if not reconciles:
@@ -673,6 +677,16 @@ def _elimination_journal_entries(pairs: list[EliminationPair]) -> list[Eliminati
         # revenue/expense entry came out Dr expense / Cr revenue — booking it
         # would have doubled both sides instead of removing them.
         if pair.direction_a in _DEBIT_NATURAL or pair.direction_b in _CREDIT_NATURAL:
+            credit_a = True
+        elif pair.direction_a in _CREDIT_NATURAL or pair.direction_b in _DEBIT_NATURAL:
+            credit_a = False
+        else:
+            # Neither name states a direction — lines admitted on an explicit
+            # counterparty alone (Sprint 827, I3). Orient by balance: credit
+            # whichever side carries the debit. Entity order put Dr receivable /
+            # Cr payable here, doubling both (PR #206 review).
+            credit_a = pair.a_has_debit_balance
+        if credit_a:
             debit_entity = pair.entity_b
             debit_account = pair.account_b
             credit_entity = pair.entity_a

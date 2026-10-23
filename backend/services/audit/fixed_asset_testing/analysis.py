@@ -1458,9 +1458,13 @@ def test_depreciation_recalculation(
             factor = Decimal("1.5") if "150" in method else Decimal("2")
             rate = factor / Decimal(str(e.useful_life))
             if rate >= 1:
-                continue  # a life under 2 years fully depreciates in year one
-            remaining = Decimal(str(float(1 - rate) ** years_elapsed))
-            expected_accum = e.cost * (1 - remaining)
+                # The whole base goes in year one (life <= 2y for DDB, <= 1.5y
+                # for 150% DB); the cap below brings it to cost - salvage. It was
+                # skipped, hiding under-depreciation (PR #206 review).
+                expected_accum = e.cost
+            else:
+                remaining = Decimal(str(float(1 - rate) ** years_elapsed))
+                expected_accum = e.cost * (1 - remaining)
             method_used = "150% Declining Balance" if factor == Decimal("1.5") else "Double-Declining Balance"
             tolerance = DDB_TOLERANCE
         else:

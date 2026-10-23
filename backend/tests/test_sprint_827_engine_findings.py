@@ -314,3 +314,25 @@ def test_permissions_no_rule_recognises_are_reported():
         [("AP_SUPER", ["AP-INVOICE-CREATE", "ap.payment.release", "ap_invoice_create"])],
     )
     assert result["unmatched_permissions"] == ["ap-invoice-create", "ap.payment.release"]
+
+
+def test_direction_less_pair_is_oriented_by_balance():
+    """PR #206 review: with no direction in either name the JE followed entity
+    order — Dr receivable / Cr payable, doubling both balances."""
+    for sub_first in (False, True):
+        result = _consolidate(
+            [EntityAccount("Loan receivable - related party", debit=Decimal("50000"), counterparty_entity="S")],
+            [EntityAccount("Loan payable - related party", credit=Decimal("50000"), counterparty_entity="P")],
+            sub_first=sub_first,
+        )
+        (je,) = result["elimination_journal_entries"]
+        assert (je["debit_entity"], je["debit_account"]) == ("S", "Loan payable - related party")
+        assert (je["credit_entity"], je["credit_account"]) == ("P", "Loan receivable - related party")
+
+
+def test_short_life_declining_balance_asset_is_recalculated_not_skipped():
+    """PR #206 review: a 2-year DDB asset (rate 1.0) with nothing depreciated was skipped."""
+    test = _fa_recalc([_asset(1, 10_000.0, 0.0, "2024-01-01", 2, "Double-Declining Balance")])
+    assert test["entries_flagged"] == 1
+    fully = _fa_recalc([_asset(1, 10_000.0, 10_000.0, "2024-01-01", 2, "Double-Declining Balance")])
+    assert fully["entries_flagged"] == 0
