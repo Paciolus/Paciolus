@@ -8,11 +8,15 @@ three_way_match/bank_rec parenthetical-negative handling).
 """
 
 import decimal
+import functools
 import math
 import re
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
-from typing import Optional
+from typing import Any, Optional, TypeVar
 
 # Set sufficient precision for monetary arithmetic
 decimal.getcontext().prec = 28
@@ -138,13 +142,79 @@ def safe_int(value: object) -> Optional[int]:
         return None
 
 
+# ---------------------------------------------------------------------------
+# Sprint 815: run-scoped parse memo
+# ---------------------------------------------------------------------------
+# The JE engine parsed each entry's dates ~11 times (once per date-based test),
+# and each parse tries up to nine strptime formats: on a 100k-row GL that was
+# ~1.2M parses / 8.4M strptime calls — 283 of 302 seconds. A memo keyed by the
+# raw string removes the repetition without changing any result.
+#
+# It is deliberately NOT a process-wide ``lru_cache``: that would retain values
+# from uploaded files across requests, which Zero-Storage forbids. The memo
+# exists only inside ``parse_memo()`` — entered around one engine run — and is
+# dropped when that run exits. Outside it, every call parses as before.
+
+_PARSE_MEMO: ContextVar[Optional[dict[tuple[str, str], Any]]] = ContextVar("paciolus_parse_memo", default=None)
+
+_T = TypeVar("_T")
+
+
+@contextmanager
+def parse_memo() -> Iterator[None]:
+    """Memoise string parsing for the duration of one engine run.
+
+    Re-entrant: a nested ``parse_memo()`` reuses the outer run's memo.
+    """
+    if _PARSE_MEMO.get() is not None:
+        yield
+        return
+    token = _PARSE_MEMO.set({})
+    try:
+        yield
+    finally:
+        _PARSE_MEMO.reset(token)
+
+
+def with_parse_memo(fn: Callable[..., _T]) -> Callable[..., _T]:
+    """Decorator form of :func:`parse_memo` for engine entry points."""
+
+    @functools.wraps(fn)
+    def wrapper(*args: Any, **kwargs: Any) -> _T:
+        with parse_memo():
+            return fn(*args, **kwargs)
+
+    return wrapper
+
+
+def memoized_parse(kind: str, value: object, parse: Callable[[Any], _T]) -> _T:
+    """Return ``parse(value)``, memoised by ``(kind, value)`` inside a run.
+
+    Only ``str`` values are memoised — they are what uploads produce, and they
+    are hashable with value semantics. Anything else is parsed directly.
+    """
+    memo = _PARSE_MEMO.get()
+    if memo is None or not isinstance(value, str):
+        return parse(value)
+    key = (kind, value)
+    try:
+        return memo[key]  # type: ignore[no-any-return]
+    except KeyError:
+        result = memo[key] = parse(value)
+        return result
+
+
 def parse_date(date_str: Optional[str]) -> Optional[date]:
     """Try to parse a date string into a :class:`date` object.
 
-    Supports ISO, US, EU, and datetime formats.
+    Supports ISO, US, EU, and datetime formats. Memoised inside ``parse_memo()``.
     """
     if not date_str:
         return None
+    return memoized_parse("date", date_str, _parse_date_uncached)
+
+
+def _parse_date_uncached(date_str: str) -> Optional[date]:
     for fmt in (
         "%Y-%m-%d",
         "%m/%d/%Y",

@@ -27,8 +27,9 @@ from enum import Enum
 from typing import Any, Optional
 
 from shared.column_detector import ColumnFieldConfig, detect_columns
+from shared.fuzzy_match import similarity_at_least
 from shared.monetary import MONETARY_NEAR_ZERO
-from shared.parsing_helpers import parse_date, safe_decimal, safe_float, safe_str
+from shared.parsing_helpers import parse_date, safe_decimal, safe_float, safe_str, with_parse_memo
 
 # Sprint 766: monetary epsilon consolidated to ``shared.monetary.MONETARY_NEAR_ZERO``
 # (Decimal("0.005")).  ``MONETARY_EPSILON`` retained as a backwards-compatible
@@ -1207,6 +1208,14 @@ def _vendor_similarity(a: str, b: str) -> float:
     return SequenceMatcher(None, a.lower().strip(), b.lower().strip()).ratio()
 
 
+def _vendor_similarity_at_least(a: str, b: str, threshold: float) -> Optional[float]:
+    """``_vendor_similarity`` when it clears ``threshold``, else None (Sprint 815)."""
+    if not a or not b:
+        return 0.0 if threshold <= 0 else None
+    return similarity_at_least(a.lower().strip(), b.lower().strip(), threshold)
+
+
+@with_parse_memo
 def run_three_way_match(
     pos: list[PurchaseOrder],
     invoices: list[Invoice],
@@ -1319,8 +1328,12 @@ def run_three_way_match(
             for inv in unmatched_inv_list:
                 if inv.row_number in matched_inv_ids:
                     continue
-                # Compute composite score: vendor 40% + amount 30% + date 30%
-                vendor_score = _vendor_similarity(po.vendor, inv.vendor)
+                # Compute composite score: vendor 40% + amount 30% + date 30%.
+                # Sprint 815: a candidate below the vendor threshold can never be
+                # selected (see the guard below), so skip its amount/date work.
+                vendor_score = _vendor_similarity_at_least(po.vendor, inv.vendor, config.fuzzy_vendor_threshold)
+                if vendor_score is None:
+                    continue
                 amt_diff = abs(po.total_amount - inv.total_amount)
                 amount_score = (
                     1.0
@@ -1347,8 +1360,8 @@ def run_three_way_match(
             for rec in unmatched_rec_list:
                 if rec.row_number in matched_rec_ids:
                     continue
-                vendor_score = _vendor_similarity(po.vendor, rec.vendor)
-                if vendor_score < config.fuzzy_vendor_threshold:
+                vendor_score = _vendor_similarity_at_least(po.vendor, rec.vendor, config.fuzzy_vendor_threshold)
+                if vendor_score is None:
                     continue
                 qty_score = (
                     1.0

@@ -31,7 +31,7 @@ from engine_framework import AuditEngineBase
 from shared.column_detector import ColumnFieldConfig, detect_columns
 from shared.data_quality import FieldQualityConfig
 from shared.data_quality import assess_data_quality as _shared_assess_dq
-from shared.parsing_helpers import parse_date, safe_decimal, safe_float, safe_str
+from shared.parsing_helpers import parse_date, safe_decimal, safe_float, safe_str, with_parse_memo
 from shared.reference_date import reference_date_label
 from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
 from shared.testing_enums import (
@@ -1399,6 +1399,7 @@ def test_lcm_nrv_indicator(
     )
 
 
+@with_parse_memo
 def run_inv_test_battery(
     entries: list[InventoryEntry],
     config: Optional[InventoryTestingConfig] = None,
@@ -1520,6 +1521,7 @@ class InventoryTestingEngine(AuditEngineBase):
         )
 
 
+@with_parse_memo
 def run_inventory_testing(
     rows: list[dict],
     column_names: list[str],

@@ -28,7 +28,7 @@ from typing import Optional
 from shared.column_detector import ColumnFieldConfig, detect_columns
 from shared.filenames import sanitize_csv_value
 from shared.monetary import quantize_monetary
-from shared.parsing_helpers import parse_date, safe_decimal, safe_str
+from shared.parsing_helpers import parse_date, safe_decimal, safe_str, with_parse_memo
 
 
 def _money(value: Decimal | float | int | None) -> float:
@@ -1328,6 +1328,7 @@ def _test_high_value_transactions(
     )
 
 
+@with_parse_memo
 def run_reconciliation_tests(
     matches: list[ReconciliationMatch],
     materiality: Decimal = DEFAULT_BANK_REC_MATERIALITY,
@@ -1503,6 +1504,7 @@ compute_bank_rec_risk_score = compute_bank_rec_diagnostic_score
 # =============================================================================
 
 
+@with_parse_memo
 def reconcile_bank_statement(
     bank_rows: list[dict],
     ledger_rows: list[dict],

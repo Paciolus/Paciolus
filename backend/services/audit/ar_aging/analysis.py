@@ -29,7 +29,7 @@ from decimal import Decimal
 from typing import Optional
 
 from shared.column_detector import ColumnFieldConfig, detect_columns, match_column
-from shared.parsing_helpers import safe_decimal, safe_int
+from shared.parsing_helpers import safe_decimal, safe_int, with_parse_memo
 from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
 from shared.testing_enums import (
     SEVERITY_WEIGHTS,
@@ -1825,6 +1825,7 @@ def _skipped_result(
 # =============================================================================
 
 
+@with_parse_memo
 def run_ar_test_battery(
     accounts: list[TBAccount],
     sl_entries: list[ARSubledgerEntry],
@@ -2065,6 +2066,7 @@ def calculate_ar_composite_score(
 # =============================================================================
 
 
+@with_parse_memo
 def run_ar_aging(
     tb_rows: list[dict],
     tb_columns: list[str],
