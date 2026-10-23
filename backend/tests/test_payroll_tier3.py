@@ -127,16 +127,52 @@ class TestGhostEmployeeIndicators:
         result = _test_ghost_employee_indicators(entries, config, detection_with_dept)
         assert result.entries_flagged >= 1
 
+    @staticmethod
+    def _regulars(start_row: int, department: str = "") -> list:
+        """Two employees paid every month — the norm a one-time payee stands out against."""
+        rows = []
+        for i, emp in enumerate(("E101", "E102")):
+            for m in (1, 2, 3, 4):
+                rows.append(
+                    PayrollEntry(
+                        employee_id=emp,
+                        employee_name=f"Regular {emp}",
+                        department=department,
+                        pay_date=date(2025, m, 15),
+                        gross_pay=5000,
+                        _row_index=start_row + i * 4 + m,
+                    )
+                )
+        return rows
+
     def test_single_entry(self, detection_no_dept):
-        """Single pay entry is a ghost indicator."""
+        """A single pay entry in a multi-period register is a ghost indicator."""
         entries = [
             PayrollEntry(
                 employee_id="E001", employee_name="OneTime", pay_date=date(2025, 3, 15), gross_pay=50000, _row_index=1
             ),
+            *self._regulars(10),
         ]
         config = PayrollTestingConfig(ghost_min_indicators=1)
         result = _test_ghost_employee_indicators(entries, config, detection_no_dept)
         assert result.entries_flagged == 1
+        assert result.flagged_entries[0].entry.employee_id == "E001"
+
+    def test_single_period_register_is_not_flagged_wholesale(self, detection_no_dept):
+        """Sprint 829: one pay run means one entry per employee — not a ghost signal."""
+        entries = [
+            PayrollEntry(
+                employee_id=f"E{i:03d}",
+                employee_name=f"Emp {i}",
+                pay_date=date(2025, 3, 15),
+                gross_pay=5000,
+                _row_index=i,
+            )
+            for i in range(1, 21)
+        ]
+        config = PayrollTestingConfig(ghost_min_indicators=1)
+        result = _test_ghost_employee_indicators(entries, config, detection_no_dept)
+        assert result.entries_flagged == 0
 
     def test_boundary_months_only(self, detection_no_dept):
         """Entries only in first and last month should trigger."""
@@ -172,6 +208,7 @@ class TestGhostEmployeeIndicators:
                 _row_index=1,
             ),
             # Only one entry + no department = 2 indicators
+            *self._regulars(10, department="Ops"),
         ]
         config = PayrollTestingConfig(ghost_min_indicators=1)
         result = _test_ghost_employee_indicators(entries, config, detection_with_dept)

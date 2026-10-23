@@ -990,10 +990,18 @@ def test_sign_anomalies(
             flagged_entries=[],
         )
 
+    # Sprint 829: a revenue register has one amount column, and its sign
+    # convention is the exporter's choice. A sales register that lists sales as
+    # positive numbers had 100% of its rows flagged as "debit balances". The
+    # file's own dominant sign is the normal side; the anomalies are the
+    # opposite sign. Ledger convention (credits negative) is unchanged.
+    nonzero = [e.amount for e in entries if e.amount != 0]
+    positive_is_normal = bool(nonzero) and sum(1 for a in nonzero if a > 0) > len(nonzero) / 2
+
     flagged: list[FlaggedRevenue] = []
     for e in entries:
-        if e.amount <= 0:
-            continue  # Credit/zero — normal for revenue
+        if e.amount == 0 or (e.amount > 0) == positive_is_normal:
+            continue  # Normal side for this file
 
         # Check if it's clearly a contra-revenue entry
         if _is_contra_revenue(e.description, e.account_name, config.contra_keywords):
@@ -1009,9 +1017,16 @@ def test_sign_anomalies(
                 test_key="sign_anomalies",
                 test_tier=TestTier.STRUCTURAL,
                 severity=severity,
-                issue=f"Debit balance in revenue: ${amt:,.2f} — {e.account_name or e.account_number or 'unknown account'}",
+                issue=(
+                    f"{'Negative' if positive_is_normal else 'Debit'} amount in revenue: ${amt:,.2f} — "
+                    f"{e.account_name or e.account_number or 'unknown account'}"
+                ),
                 confidence=0.85,
-                details={"amount": e.amount, "account": e.account_name or e.account_number},
+                details={
+                    "amount": e.amount,
+                    "account": e.account_name or e.account_number,
+                    "sign_convention": "sales_positive" if positive_is_normal else "credit_negative",
+                },
             )
         )
 
@@ -1024,7 +1039,10 @@ def test_sign_anomalies(
         total_entries=len(entries),
         flag_rate=flag_rate,
         severity=Severity.MEDIUM,
-        description="Flags debit balances in revenue accounts (normally credit).",
+        description=(
+            "Flags revenue entries on the opposite side to the file's normal sign "
+            f"({'sales recorded as positive' if positive_is_normal else 'credits recorded as negative'})."
+        ),
         flagged_entries=flagged,
     )
 

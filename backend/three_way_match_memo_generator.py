@@ -411,6 +411,13 @@ def _build_results_summary(
         story.append(Spacer(1, 8))
 
 
+_VARIANCE_FIELD_LABELS = {"quantity": "Qty", "billed_quantity": "Billed Qty"}
+
+
+def _fmt_qty(value: Any, suffix: str = "") -> str:
+    return f"{value:,.2f}{suffix}" if value is not None else "—"
+
+
 def _build_material_variances(
     story: list,
     styles: dict,
@@ -439,11 +446,20 @@ def _build_material_variances(
         field = v.get("field", "amount")
         po_val = v.get("po_value")
         inv_val = v.get("invoice_value")
+        rec_val = v.get("receipt_value")
 
         if field == "date":
             po_str = str(po_val) if po_val is not None else "\u2014"
             inv_str = str(inv_val) if inv_val is not None else "\u2014"
             var_str = f"{v.get('variance_amount', 0):.0f} days"
+        elif field in ("quantity", "billed_quantity"):
+            # Sprint 829: quantities are counts compared against the receipt \u2014
+            # they were printed as dollars with the received figure missing.
+            if field == "quantity":
+                po_str, inv_str = _fmt_qty(po_val), _fmt_qty(rec_val, " rcvd")
+            else:
+                po_str, inv_str = _fmt_qty(rec_val, " rcvd"), _fmt_qty(inv_val)
+            var_str = f"{v.get('variance_amount', 0):,.2f} units"
         else:
             po_str = f"${po_val:,.2f}" if po_val is not None else "\u2014"
             inv_str = f"${inv_val:,.2f}" if inv_val is not None else "\u2014"
@@ -454,7 +470,7 @@ def _build_material_variances(
                 Paragraph(v.get("vendor", "\u2014"), styles["MemoTableCell"]),
                 v.get("po_number", "\u2014"),
                 v.get("invoice_number", "\u2014"),
-                field.title(),
+                _VARIANCE_FIELD_LABELS.get(field, field.title()),
                 po_str,
                 inv_str,
                 var_str,

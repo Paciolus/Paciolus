@@ -543,13 +543,23 @@ class TestSignAnomalies:
     """RT-04: Revenue sign anomalies."""
 
     def test_debit_in_revenue_flagged(self):
-        """Positive amounts in revenue accounts are anomalous."""
+        """Positive amounts in a credit-negative revenue ledger are anomalous."""
         entries = [
             RevenueEntry(amount=5000, row_number=1, account_name="Product Revenue"),
+            RevenueEntry(amount=-8000, row_number=2, account_name="Product Revenue"),
+            RevenueEntry(amount=-9000, row_number=3, account_name="Product Revenue"),
         ]
         config = RevenueTestingConfig()
         result = run_sign_anomalies_test(entries, config)
         assert result.entries_flagged == 1
+        assert result.flagged_entries[0].entry.row_number == 1
+
+    def test_sales_positive_register_flags_only_the_negatives(self):
+        """Sprint 829: a register listing sales as positive flagged every row."""
+        entries = [RevenueEntry(amount=1000 + i, row_number=i, account_name="Sales") for i in range(1, 10)]
+        entries.append(RevenueEntry(amount=-750, row_number=10, account_name="Sales"))
+        result = run_sign_anomalies_test(entries, RevenueTestingConfig())
+        assert [f.entry.row_number for f in result.flagged_entries] == [10]
 
     def test_credit_not_flagged(self):
         """Negative amounts (credits) are normal for revenue."""
@@ -581,6 +591,7 @@ class TestSignAnomalies:
             RevenueEntry(amount=60000, row_number=1, account_name="Revenue"),  # HIGH
             RevenueEntry(amount=20000, row_number=2, account_name="Revenue"),  # MEDIUM
             RevenueEntry(amount=500, row_number=3, account_name="Revenue"),  # LOW
+            *[RevenueEntry(amount=-1000, row_number=10 + i, account_name="Revenue") for i in range(5)],
         ]
         result = run_sign_anomalies_test(entries, RevenueTestingConfig())
         severities = [f.severity for f in result.flagged_entries]

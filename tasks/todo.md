@@ -497,9 +497,30 @@ payroll, revenue, AR, inventory, bank rec, three-way match) against realistic sy
       date-only (100% of an .xlsx GL was flagged as 00:00 postings).
 - [x] **JE-5** — numbering gaps read the trailing sequence per series, so year-prefixed IDs
       ("JE-2025-0001") are tested.
-- [ ] Open P1s: payroll xlsx pay dates; payroll PR-T9 on a single-period register; AP-T14 PO
-      column unmapped; JE date formats skipped silently; revenue RT-04 sign convention; TB T2–T5;
-      bank rec B1/B3; three-way match W1/W2.
+- [x] **Dates** — the shared `parse_date` accepts datetime/Timestamp cells (every payroll pay
+      date from an .xlsx register was None) and `01-Jan-2025`, `Jan 5, 2025`, `20250105` and
+      fractional-second forms that JE and others skipped silently.
+- [x] **PR-T9** — "single pay entry" is a ghost indicator only in a multi-period register where
+      most employees were paid more than once; a single pay run flagged the whole payroll.
+- [x] **AP-T14** — `po_number_column` is copied onto the detection result, serialized and
+      overridable; Invoice-Without-PO always reported "skipped".
+- [x] **RT-04** — the file's dominant sign is the normal side; a register listing sales as
+      positive had 100% of rows flagged as debit balances.
+- [x] **T2 (equation)** — A = L + E includes current-period earnings, so a pre-closing TB is not
+      a "significant imbalance" of its net income.
+- [x] **B1** — bank split matches take only same-sign ledger rows, and a zero date tolerance
+      means the same date (it disabled the date filter).
+- [x] **B3** — deposits in transit are ledger-only receipts (the test read bank-only items),
+      outstanding checks are ledger-only payments, and both age to the statement's last date.
+- [x] **W1** — a multi-line PO's lines pair with the closest invoice/receipt line (description,
+      quantity, price) instead of file order.
+- [x] **W2** — invoice quantity is compared with quantity received (`billed_quantity`
+      variance); the memo and results card show quantities as units against the receipt.
+- [ ] Open: **T2 (ratios)** — ROE / D-E / equity multiplier use equity without current-period
+      earnings on an unclosed TB; `CategoryTotals` is a public input shape, so the fix needs a
+      decision on where "effective equity" is derived. T3 (current/non-current by keyword), T4
+      (unknown accounts dropped from ratios silently), T5 (lead sheets ignore the supplied
+      type), and the P2 list in the discovery notes.
 
 **Commit SHA:** TBD.
 

@@ -1721,6 +1721,13 @@ def _test_ghost_employee_indicators(
 
     flagged_rows: set[int] = set()
 
+    # Sprint 829: in a single-period register every employee has exactly one
+    # entry, so "single pay entry" flagged the whole payroll. It is an outlier
+    # signal only when the register spans several pay dates and most employees
+    # were paid more than once.
+    single_entry_share = sum(1 for g in emp_groups.values() if len(g) == 1) / max(len(emp_groups), 1)
+    single_entry_is_unusual = len(set(all_dates)) > 1 and single_entry_share < 0.5
+
     for emp_key, group in emp_groups.items():
         indicators: list[str] = []
 
@@ -1731,7 +1738,7 @@ def _test_ghost_employee_indicators(
                 indicators.append("No department assignment")
 
         # Indicator 2: Single pay entry
-        if len(group) == 1:
+        if len(group) == 1 and single_entry_is_unusual:
             indicators.append("Single pay entry in period")
 
         # Indicator 3: Payments only in first/last month

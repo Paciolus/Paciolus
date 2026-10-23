@@ -232,3 +232,206 @@ def test_an_unbalanced_ledger_is_never_rated_low():
     results, _ = run_test_battery(entries)
     composite = calculate_composite_score(results, len(entries))
     assert composite.risk_tier in (RiskTier.ELEVATED, RiskTier.HIGH)
+
+
+# ── Shared date parser, AP-T14 ─────────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    "value, expected",
+    [
+        ("01-Jan-2025", "2025-01-01"),
+        ("5 Jan 2025", "2025-01-05"),
+        ("Jan 5, 2025", "2025-01-05"),
+        ("January 5, 2025", "2025-01-05"),
+        ("20250105", "2025-01-05"),
+        ("2025-01-05 00:00:00.000", "2025-01-05"),
+    ],
+)
+def test_exported_ledger_date_forms_are_parsed(value, expected):
+    from shared.parsing_helpers import parse_date
+
+    assert parse_date(value).isoformat() == expected
+
+
+def test_excel_datetime_cells_parse_and_nat_does_not():
+    """Payroll pay dates from an .xlsx register arrive as Timestamps; all were None."""
+    import pandas as pd
+
+    from shared.parsing_helpers import parse_date
+
+    assert parse_date(pd.Timestamp("2025-03-15 00:00:00")).isoformat() == "2025-03-15"
+    assert parse_date(pd.NaT) is None
+
+
+def test_invoice_without_po_runs_when_a_po_column_is_present():
+    from services.audit.ap_testing.analysis import APTestingEngine, detect_ap_columns
+
+    cols = ["Vendor Name", "Amount", "Payment Date", "Invoice Number", "PO Number"]
+    assert detect_ap_columns(cols).po_number_column == "PO Number"
+    assert "po_number_column" in detect_ap_columns(cols).to_dict()
+
+    overridden = APTestingEngine().apply_column_overrides(
+        detect_ap_columns(["Vendor Name", "Amount", "Payment Date", "Req"]), {"po_number_column": "Req"}
+    )
+    assert overridden.po_number_column == "Req"
+
+
+def test_an_unclosed_trial_balance_satisfies_the_accounting_equation():
+    """T2: revenue/expense not yet closed to retained earnings are equity; the
+    pre-closing TB was reported as a significant imbalance of its net income."""
+    from audit.classification import validate_balance_sheet_equation
+    from ratio_engine import CategoryTotals
+
+    unclosed = CategoryTotals(
+        total_assets=150000, total_liabilities=70000, total_equity=30000, total_revenue=200000, total_expenses=150000
+    )
+    result = validate_balance_sheet_equation(unclosed)
+    assert result["is_balanced"] is True
+    assert result["current_period_earnings"] == 50000
+
+    # A genuinely broken one still fails.
+    broken = CategoryTotals(total_assets=150000, total_liabilities=70000, total_equity=30000)
+    assert validate_balance_sheet_equation(broken)["status"] == "significant_imbalance"
+
+
+# ── Bank reconciliation ────────────────────────────────────────────────
+
+
+def test_bank_split_never_mixes_signs_or_ignores_a_zero_date_tolerance():
+    from bank_reconciliation import BankRecConfig, BankTransaction, LedgerTransaction, MatchType, match_transactions
+
+    bank = [BankTransaction(date="2025-12-10", description="Deposit", amount=1000.0)]
+    mixed = [
+        LedgerTransaction(date="2025-12-10", description="Receipt", amount=1500.0),
+        LedgerTransaction(date="2025-12-10", description="Cheque 101", amount=-500.0),
+    ]
+    matches = match_transactions(bank, mixed, BankRecConfig())
+    assert not any(m.match_type == MatchType.SPLIT for m in matches)
+
+    far_apart = [
+        LedgerTransaction(date="2025-12-10", description="Receipt A", amount=600.0),
+        LedgerTransaction(date="2025-12-28", description="Receipt B", amount=400.0),
+    ]
+    matches = match_transactions(bank, far_apart, BankRecConfig(date_tolerance_days=0))
+    assert not any(m.match_type == MatchType.SPLIT for m in matches)
+
+    same_day = [
+        LedgerTransaction(date="2025-12-10", description="Receipt A", amount=600.0),
+        LedgerTransaction(date="2025-12-10", description="Receipt B", amount=400.0),
+    ]
+    matches = match_transactions(bank, same_day, BankRecConfig(date_tolerance_days=0))
+    assert [m.match_type for m in matches] == [MatchType.SPLIT]
+
+
+def test_stale_items_use_the_right_population_and_the_statement_date():
+    from datetime import date
+
+    from bank_reconciliation import (
+        BankTransaction,
+        LedgerTransaction,
+        MatchType,
+        ReconciliationMatch,
+        run_reconciliation_tests,
+    )
+
+    ref = date(2025, 12, 31)
+    matches = [
+        # Bank credit missing from the books — not a deposit in transit.
+        ReconciliationMatch(
+            bank_txn=BankTransaction(date="2025-11-01", description="Interest", amount=12.0),
+            match_type=MatchType.BANK_ONLY,
+        ),
+        # Receipt in the books, not yet on the statement — a deposit in transit.
+        ReconciliationMatch(
+            ledger_txn=LedgerTransaction(date="2025-12-01", description="Deposit", amount=5000.0),
+            match_type=MatchType.LEDGER_ONLY,
+        ),
+        # Old outstanding cheque.
+        ReconciliationMatch(
+            ledger_txn=LedgerTransaction(date="2025-08-01", description="Cheque 88", amount=-900.0),
+            match_type=MatchType.LEDGER_ONLY,
+        ),
+    ]
+    deposits, checks = run_reconciliation_tests(matches, reference_date=ref)[:2]
+    assert [i.description for i in deposits.flagged_items] == ["Deposit outstanding 30 days: Deposit"]
+    assert [i.amount for i in checks.flagged_items] == [-900.0]
+
+
+# ── Three-way match ────────────────────────────────────────────────────
+
+
+def test_multi_line_po_lines_pair_by_content_not_file_order():
+    from three_way_match_engine import Invoice, PurchaseOrder, Receipt, run_three_way_match
+
+    pos = [
+        PurchaseOrder(
+            po_number="PO-1",
+            vendor="Acme",
+            description="Widget A",
+            quantity=10,
+            unit_price=5,
+            total_amount=50,
+            row_number=1,
+        ),
+        PurchaseOrder(
+            po_number="PO-1",
+            vendor="Acme",
+            description="Widget B",
+            quantity=2,
+            unit_price=200,
+            total_amount=400,
+            row_number=2,
+        ),
+    ]
+    invoices = [  # billed correctly, listed in the other order
+        Invoice(
+            invoice_number="INV-9",
+            po_reference="PO-1",
+            vendor="Acme",
+            description="Widget B",
+            quantity=2,
+            unit_price=200,
+            total_amount=400,
+            row_number=1,
+        ),
+        Invoice(
+            invoice_number="INV-9",
+            po_reference="PO-1",
+            vendor="Acme",
+            description="Widget A",
+            quantity=10,
+            unit_price=5,
+            total_amount=50,
+            row_number=2,
+        ),
+    ]
+    receipts = [
+        Receipt(po_reference="PO-1", vendor="Acme", description="Widget B", quantity_received=2, row_number=1),
+        Receipt(po_reference="PO-1", vendor="Acme", description="Widget A", quantity_received=10, row_number=2),
+    ]
+    result = run_three_way_match(pos, invoices, receipts)
+    assert len(result.full_matches) == 2
+    assert result.variances == []
+
+
+def test_invoice_quantity_is_compared_with_the_quantity_received():
+    from three_way_match_engine import Invoice, PurchaseOrder, Receipt, run_three_way_match
+
+    pos = [PurchaseOrder(po_number="PO-2", vendor="Acme", quantity=100, unit_price=10, total_amount=1000, row_number=1)]
+    invoices = [
+        Invoice(
+            invoice_number="INV-2",
+            po_reference="PO-2",
+            vendor="Acme",
+            quantity=100,
+            unit_price=10,
+            total_amount=1000,
+            row_number=1,
+        )
+    ]
+    receipts = [Receipt(po_reference="PO-2", vendor="Acme", quantity_received=60, row_number=1)]
+    result = run_three_way_match(pos, invoices, receipts)
+    billed = [v for v in result.variances if v.field == "billed_quantity"]
+    assert len(billed) == 1
+    assert (billed[0].invoice_value, billed[0].receipt_value, billed[0].severity) == (100, 60, "high")

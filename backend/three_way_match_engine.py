@@ -944,7 +944,7 @@ def assess_three_way_data_quality(
 class MatchVariance:
     """A variance detected between matched documents."""
 
-    field: str  # quantity, amount, price, date
+    field: str  # quantity, billed_quantity, amount, price, date
     po_value: Optional[float] = None
     invoice_value: Optional[float] = None
     receipt_value: Optional[float] = None
@@ -1151,6 +1151,33 @@ def _compute_variances(
                     )
                 )
 
+    # Sprint 829: billed quantity — invoice qty vs received qty. This is the
+    # control a three-way match exists for (do not pay for goods not received)
+    # and it was never compared: an invoice billing 100 units against a receipt
+    # of 60 matched cleanly whenever the PO also said 100.
+    if invoice and receipt and invoice.quantity != 0:
+        inv_qty = invoice.quantity
+        rec_qty = receipt.quantity_received
+        diff_qty = abs(inv_qty - rec_qty)
+        if diff_qty > config.quantity_tolerance:
+            pct = diff_qty / abs(inv_qty)
+            # Billing more than was received is the payment risk; billing less
+            # (a partial invoice) is still a difference but a lower one.
+            if inv_qty > rec_qty:
+                sev = "high" if pct > 0.05 else "medium"
+            else:
+                sev = "medium" if pct > 0.10 else "low"
+            variances.append(
+                MatchVariance(
+                    field="billed_quantity",
+                    invoice_value=inv_qty,
+                    receipt_value=rec_qty,
+                    variance_amount=diff_qty,
+                    variance_pct=pct,
+                    severity=sev,
+                )
+            )
+
     # Price variance: PO unit_price vs Invoice unit_price
     # The denominator guard is MONETARY_EPSILON (half a cent).  The decision
     # threshold remains ``price_variance_threshold`` (default 5%).  Prior
@@ -1215,6 +1242,32 @@ def _vendor_similarity_at_least(a: str, b: str, threshold: float) -> Optional[fl
     return similarity_at_least(a.lower().strip(), b.lower().strip(), threshold)
 
 
+def _norm_desc(text: str) -> str:
+    return " ".join(text.lower().split())
+
+
+def _line_distance(po: PurchaseOrder, doc: Invoice | Receipt) -> tuple[int, float, float]:
+    """Sort key: how unlike ``po`` the invoice/receipt line is (lower = closer).
+
+    Description agreement dominates, then quantity, then unit price; the
+    first available line wins ties, which keeps single-line POs unchanged.
+    """
+    po_desc, doc_desc = _norm_desc(po.description), _norm_desc(doc.description)
+    desc_rank = 0 if po_desc and po_desc == doc_desc else (1 if not po_desc or not doc_desc else 2)
+    doc_qty = doc.quantity if isinstance(doc, Invoice) else doc.quantity_received
+    qty_gap = abs(po.quantity - doc_qty)
+    price_gap = float(abs(po.unit_price - doc.unit_price)) if isinstance(doc, Invoice) else 0.0
+    return desc_rank, qty_gap, price_gap
+
+
+def _closest_line(po: PurchaseOrder, candidates: list[Any]) -> Any:
+    if not candidates:
+        return None
+    if len(candidates) == 1:
+        return candidates[0]
+    return min(candidates, key=lambda doc: _line_distance(po, doc))
+
+
 @with_parse_memo
 def run_three_way_match(
     pos: list[PurchaseOrder],
@@ -1266,21 +1319,19 @@ def run_three_way_match(
             if po.row_number in matched_po_ids:
                 continue
 
-            # Find invoice(s) with this PO reference
-            linked_invoices = inv_by_po_ref.get(po_num, [])
-            linked_invoice = None
-            for inv in linked_invoices:
-                if inv.row_number not in matched_inv_ids:
-                    linked_invoice = inv
-                    break
+            # Find invoice(s) with this PO reference.
+            # Sprint 829: a multi-line PO shares one number across its lines,
+            # and lines were paired in file order — invoice lines listed in a
+            # different order produced price and quantity "variances" on a
+            # correctly billed PO. Each PO line now takes its closest line.
+            linked_invoice = _closest_line(
+                po, [inv for inv in inv_by_po_ref.get(po_num, []) if inv.row_number not in matched_inv_ids]
+            )
 
             # Find receipt(s) with this PO reference
-            linked_receipts = rec_by_po_ref.get(po_num, [])
-            linked_receipt = None
-            for rec in linked_receipts:
-                if rec.row_number not in matched_rec_ids:
-                    linked_receipt = rec
-                    break
+            linked_receipt = _closest_line(
+                po, [rec for rec in rec_by_po_ref.get(po_num, []) if rec.row_number not in matched_rec_ids]
+            )
 
             # Also try linking receipt via invoice reference
             if not linked_receipt and linked_invoice and linked_invoice.invoice_number:

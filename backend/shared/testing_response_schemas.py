@@ -243,6 +243,7 @@ class APColumnDetectionResponse(BaseModel):
     description_column: Optional[str] = None
     gl_account_column: Optional[str] = None
     payment_method_column: Optional[str] = None
+    po_number_column: Optional[str] = None
     has_dual_dates: bool
     has_check_numbers: bool
     overall_confidence: float

@@ -13,6 +13,7 @@ const pct = (n: number) => `${(n * 100).toFixed(1)}%`
 const FIELD_LABELS: Record<string, string> = {
   amount: 'Amount Variance',
   quantity: 'Quantity Variance',
+  billed_quantity: 'Billed vs Received',
   price: 'Price Variance',
   date: 'Date Variance',
 }
@@ -20,6 +21,7 @@ const FIELD_LABELS: Record<string, string> = {
 const FIELD_ICONS: Record<string, string> = {
   amount: '$',
   quantity: '#',
+  billed_quantity: '#',
   price: '¢',
   date: '📅',
 }
@@ -85,7 +87,11 @@ export function VarianceDetailCard({ variances }: VarianceDetailCardProps) {
                     <span className="font-sans text-content-secondary">
                       {field === 'date'
                         ? `${v.variance_amount.toFixed(0)} days late`
-                        : `PO: $${fmt(v.po_value || 0)} → Inv: $${fmt(v.invoice_value || 0)}`
+                        : field === 'quantity'
+                          ? `PO: ${fmt(v.po_value || 0)} → Rcvd: ${fmt(v.receipt_value || 0)}`
+                          : field === 'billed_quantity'
+                            ? `Inv: ${fmt(v.invoice_value || 0)} → Rcvd: ${fmt(v.receipt_value || 0)}`
+                            : `PO: $${fmt(v.po_value || 0)} → Inv: $${fmt(v.invoice_value || 0)}`
                       }
                     </span>
                   </div>
@@ -93,7 +99,9 @@ export function VarianceDetailCard({ variances }: VarianceDetailCardProps) {
                     <span className="font-mono text-content-primary">
                       {field === 'date'
                         ? `${v.variance_amount.toFixed(0)} days`
-                        : `$${fmt(v.variance_amount)}`
+                        : field === 'quantity' || field === 'billed_quantity'
+                          ? `${fmt(v.variance_amount)} units`
+                          : `$${fmt(v.variance_amount)}`
                       }
                     </span>
                     {v.variance_pct > 0 && field !== 'date' && (

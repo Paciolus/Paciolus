@@ -296,6 +296,7 @@ class APColumnDetectionResult:
             "description_column": self.description_column,
             "gl_account_column": self.gl_account_column,
             "payment_method_column": self.payment_method_column,
+            "po_number_column": self.po_number_column,
             "has_dual_dates": self.has_dual_dates,
             "has_check_numbers": self.has_check_numbers,
             "overall_confidence": round(self.overall_confidence, 2),
@@ -367,6 +368,9 @@ def detect_ap_columns(column_names: list[str]) -> APColumnDetectionResult:
     result.description_column = detection.get_column("description_column")
     result.gl_account_column = detection.get_column("gl_account_column")
     result.payment_method_column = detection.get_column("payment_method_column")
+    # Sprint 829: detected by AP_COLUMN_CONFIGS since Sprint 682 but never copied
+    # onto the result, so AP-T14 (Invoice Without PO) always reported "skipped".
+    result.po_number_column = detection.get_column("po_number_column")
 
     # Dual-date flag
     if result.invoice_date_column and result.payment_date_column:
@@ -2020,6 +2024,8 @@ class APTestingEngine(AuditEngineBase):
             detection.gl_account_column = column_mapping["gl_account_column"]
         if "payment_method_column" in column_mapping:
             detection.payment_method_column = column_mapping["payment_method_column"]
+        if "po_number_column" in column_mapping:
+            detection.po_number_column = column_mapping["po_number_column"]
         detection.overall_confidence = 1.0
         return detection
 
