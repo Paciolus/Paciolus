@@ -93,3 +93,24 @@ def test_lcm_nrv_runs_when_a_selling_price_column_is_present():
     )
     lcm = next(t for t in result.to_dict()["test_results"] if t["test_key"] == "lcm_nrv_indicator")
     assert lcm["entries_flagged"] == 2
+
+
+@pytest.mark.parametrize(
+    "csv_text",
+    [
+        'Account,Debit,Credit\nCash,"1,234.56",\nSales Revenue,,"1,234.56"\n',
+        'Account,Debit,Credit\nCash,"$1,234.56",\nSales Revenue,,1234.56\n',
+    ],
+    ids=["thousands-separators", "mixed-formatting"],
+)
+def test_formatted_csv_amounts_are_read_not_zeroed(csv_text):
+    """Round 2, T1 (core TB): formatted amounts in a CSV coerced to NaN -> 0, so
+    a TB written as "1,234.56" reported balanced with totals of 0.00 — and a
+    partly formatted one reported a false out-of-balance. Sprint 671 fixed this
+    for PDF/ODS/TXT only; CSV and Excel take a different read path."""
+    from audit.pipeline import audit_trial_balance_streaming
+
+    result = audit_trial_balance_streaming(csv_text.encode(), "tb.csv")
+    assert float(result["total_debits"]) == pytest.approx(1234.56)
+    assert float(result["total_credits"]) == pytest.approx(1234.56)
+    assert result["balanced"] is True
