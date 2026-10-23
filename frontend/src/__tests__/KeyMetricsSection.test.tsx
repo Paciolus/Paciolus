@@ -37,6 +37,25 @@ describe('KeyMetricsSection', () => {
     })
   })
 
+  describe('excluded accounts', () => {
+    it('states how many unclassified accounts the ratios leave out', () => {
+      render(
+        <KeyMetricsSection
+          analytics={{ ...sampleAnalytics, excluded_accounts: { count: 59, total_abs_balance: 12500 } }}
+        />
+      )
+      expect(screen.getByText(/59 unclassified accounts/)).toBeInTheDocument()
+      expect(screen.getByText(/are excluded from these ratios/)).toBeInTheDocument()
+    })
+
+    it('says nothing when every account is classified', () => {
+      render(
+        <KeyMetricsSection analytics={{ ...sampleAnalytics, excluded_accounts: { count: 0, total_abs_balance: 0 } }} />
+      )
+      expect(screen.queryByText(/excluded from these ratios/)).not.toBeInTheDocument()
+    })
+  })
+
   describe('variance badge', () => {
     it('shows variance active badge when previous data exists', () => {
       render(<KeyMetricsSection analytics={sampleAnalytics} />)

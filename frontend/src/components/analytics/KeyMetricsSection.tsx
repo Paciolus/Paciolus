@@ -61,6 +61,8 @@ interface Analytics {
     dso?: RatioData  // Sprint 53: Days Sales Outstanding
   }
   dupont?: DupontData | null
+  /** Sprint 829: accounts with no category, left out of every ratio. */
+  excluded_accounts?: { count: number; total_abs_balance: number } | null
   variances: Record<string, VarianceData>
   has_previous_data: boolean
   category_totals: {
@@ -360,6 +362,14 @@ export const KeyMetricsSection = memo(function KeyMetricsSection({
               </span>
             )}
           </div>
+          {analytics.excluded_accounts && analytics.excluded_accounts.count > 0 && (
+            <p className="mt-3 text-center font-sans text-xs text-clay-600 dark:text-clay-400">
+              {analytics.excluded_accounts.count} unclassified account
+              {analytics.excluded_accounts.count === 1 ? '' : 's'} (
+              <span className="font-mono">${analytics.excluded_accounts.total_abs_balance.toLocaleString()}</span>
+              {' '}absolute balance) {analytics.excluded_accounts.count === 1 ? 'is' : 'are'} excluded from these ratios.
+            </p>
+          )}
         </motion.div>
       )}
     </div>

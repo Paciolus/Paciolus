@@ -2619,6 +2619,30 @@ def extract_category_totals(
     return totals
 
 
+def summarize_unclassified(
+    account_balances: dict[str, dict[str, Any]],
+    classified_accounts: dict[str, str],
+) -> dict[str, Any]:
+    """Accounts ``extract_category_totals`` leaves out because their category is unknown.
+
+    Sprint 829: the ratios were computed without them and said nothing — a TB
+    with 59 unclassified accounts produced a confident current ratio. The
+    count and absolute balance travel with the analytics so every surface can
+    state what the ratios exclude.
+    """
+    count = 0
+    total = Decimal("0")
+    for name, balances in account_balances.items():
+        if classified_accounts.get(name, "unknown") != "unknown":
+            continue
+        net = Decimal(str(balances.get("debit", 0))) - Decimal(str(balances.get("credit", 0)))
+        if net == 0:
+            continue
+        count += 1
+        total += abs(net)
+    return {"count": count, "total_abs_balance": float(quantize_monetary(total))}
+
+
 def calculate_analytics(
     category_totals: CategoryTotals, previous_totals: Optional[CategoryTotals] = None
 ) -> dict[str, Any]:

@@ -638,7 +638,67 @@ def _statement_class_arbitration(
     return fallback_sheet, TERMINAL_TOKEN_CONFIDENCE, [terminal]
 
 
+# Sprint 829: which account categories each lead sheet may hold. "Other" (O)
+# is other income/expense, so it sits on either income-statement side.
+_SHEET_CATEGORIES: dict[LeadSheet, frozenset[AccountCategory]] = {
+    **{
+        ls: frozenset({AccountCategory.ASSET})
+        for ls in (LeadSheet.A, LeadSheet.B, LeadSheet.C, LeadSheet.D, LeadSheet.E, LeadSheet.F)
+    },
+    **{ls: frozenset({AccountCategory.LIABILITY}) for ls in (LeadSheet.G, LeadSheet.H, LeadSheet.I, LeadSheet.J)},
+    LeadSheet.K: frozenset({AccountCategory.EQUITY}),
+    LeadSheet.L: frozenset({AccountCategory.REVENUE}),
+    LeadSheet.M: frozenset({AccountCategory.EXPENSE}),
+    LeadSheet.N: frozenset({AccountCategory.EXPENSE}),
+    LeadSheet.O: frozenset({AccountCategory.REVENUE, AccountCategory.EXPENSE}),
+}
+
+
 def assign_lead_sheet(
+    account_name: str,
+    account_category: Optional[AccountCategory] = None,
+    override: Optional[LeadSheet] = None,
+    trust_category: bool = False,
+) -> LeadSheetAssignment:
+    """Assign a lead sheet; see ``_assign_by_keywords``.
+
+    Sprint 829: when the file itself supplied the account's type
+    (``trust_category``), a keyword match on a sheet of a different category
+    loses to the type — "Deferred Revenue" typed as a liability went to the
+    Revenue lead sheet because "revenue" outweighed the type column. Keyword
+    rules for compatible sheets still refine the placement.
+    """
+    assignment = _assign_by_keywords(account_name, account_category, override)
+    if (
+        not trust_category
+        or assignment.is_override
+        or account_category is None
+        or account_category == AccountCategory.UNKNOWN
+        or account_category in _SHEET_CATEGORIES.get(assignment.lead_sheet, frozenset({account_category}))
+    ):
+        return assignment
+
+    account_lower = account_name.lower().strip()
+    allowed = [r for r in LEAD_SHEET_RULES if account_category in _SHEET_CATEGORIES.get(r.lead_sheet, frozenset())]
+    phrase = [r for r in allowed if r.is_phrase and r.keyword in account_lower]
+    word = [r for r in allowed if not r.is_phrase and r.keyword in account_lower]
+    best = max(phrase or word, key=lambda r: r.weight, default=None)
+    if best is not None:
+        sheet, confidence, keywords = best.lead_sheet, best.weight, [best.keyword]
+    else:
+        sheet = CATEGORY_FALLBACK_MAP.get(account_category, LeadSheet.Z)
+        confidence, keywords = 0.5, []
+    return LeadSheetAssignment(
+        account_name=account_name,
+        lead_sheet=sheet,
+        lead_sheet_name=LEAD_SHEET_NAMES[sheet],
+        confidence=confidence,
+        matched_keywords=keywords,
+        is_override=False,
+    )
+
+
+def _assign_by_keywords(
     account_name: str, account_category: Optional[AccountCategory] = None, override: Optional[LeadSheet] = None
 ) -> LeadSheetAssignment:
     """
@@ -790,8 +850,10 @@ def group_by_lead_sheet(accounts: list[dict], overrides: Optional[dict[str, Lead
         # Check for override
         override = overrides.get(account_name)
 
-        # Assign lead sheet
-        assignment = assign_lead_sheet(account_name, category, override)
+        # Assign lead sheet (Sprint 829: a file-supplied type is authoritative)
+        assignment = assign_lead_sheet(
+            account_name, category, override, trust_category=bool(account.get("type_supplied"))
+        )
 
         # Update summary
         summary = summaries_dict[assignment.lead_sheet]

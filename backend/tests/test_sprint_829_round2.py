@@ -435,3 +435,41 @@ def test_invoice_quantity_is_compared_with_the_quantity_received():
     billed = [v for v in result.variances if v.field == "billed_quantity"]
     assert len(billed) == 1
     assert (billed[0].invoice_value, billed[0].receipt_value, billed[0].severity) == (100, 60, "high")
+
+
+def test_ratios_state_how_many_unclassified_accounts_they_exclude():
+    """T4: unknown-category accounts were dropped from every ratio without a word."""
+    from ratio_engine import summarize_unclassified
+
+    balances = {
+        "Cash": {"debit": 1000, "credit": 0},
+        "Zxq 1": {"debit": 250, "credit": 0},
+        "Zxq 2": {"debit": 0, "credit": 400.5},
+        "Zxq 3": {"debit": 10, "credit": 10},  # nets to zero — nothing excluded
+    }
+    classified = {"Cash": "asset", "Zxq 1": "unknown", "Zxq 3": "unknown"}
+    assert summarize_unclassified(balances, classified) == {"count": 2, "total_abs_balance": 650.5}
+
+
+def test_a_file_supplied_account_type_outranks_a_contradicting_keyword():
+    """T5: the file's type column was only a fallback — "Revenue Share Payable"
+    typed Liability went to the Revenue lead sheet, "Inventory Reserve Expense"
+    typed Expense to Inventory."""
+    from classification_rules import AccountCategory
+    from lead_sheet_mapping import LeadSheet, assign_lead_sheet, group_by_lead_sheet
+
+    assert assign_lead_sheet("Revenue Share Payable", AccountCategory.LIABILITY, trust_category=True).lead_sheet == (
+        LeadSheet.G
+    )
+    assert assign_lead_sheet("Inventory Reserve Expense", AccountCategory.EXPENSE, trust_category=True).lead_sheet == (
+        LeadSheet.N
+    )
+    # A compatible keyword still refines placement within the type.
+    assert assign_lead_sheet("Prepaid Insurance", AccountCategory.ASSET, trust_category=True).lead_sheet == LeadSheet.D
+    # Without a supplied type the keyword placement is unchanged.
+    assert assign_lead_sheet("Revenue Share Payable", AccountCategory.LIABILITY).lead_sheet == LeadSheet.L
+
+    grouping = group_by_lead_sheet(
+        [{"account": "Revenue Share Payable", "debit": 0, "credit": 900, "type": "liability", "type_supplied": True}]
+    )
+    assert {s.lead_sheet for s in grouping.summaries if s.account_count} == {LeadSheet.G}

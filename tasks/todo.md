@@ -518,9 +518,12 @@ payroll, revenue, AR, inventory, bank rec, three-way match) against realistic sy
       variance); the memo and results card show quantities as units against the receipt.
 - [ ] Open: **T2 (ratios)** — ROE / D-E / equity multiplier use equity without current-period
       earnings on an unclosed TB; `CategoryTotals` is a public input shape, so the fix needs a
-      decision on where "effective equity" is derived. T3 (current/non-current by keyword), T4
-      (unknown accounts dropped from ratios silently), T5 (lead sheets ignore the supplied
-      type), and the P2 list in the discovery notes.
+      decision on where "effective equity" is derived. T3 (current/non-current by keyword), and
+      the P2 list in the discovery notes.
+- [x] **T4** — analytics carry `excluded_accounts` (count + absolute balance of unclassified
+      accounts), and Key Metrics states what the ratios leave out.
+- [x] **T5** — a type the file supplied (and we could read) outranks a lead-sheet keyword of a
+      different category; compatible keywords still refine placement within the type.
 
 **Commit SHA:** TBD.
 

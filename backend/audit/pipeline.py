@@ -17,6 +17,7 @@ from typing import Any, Optional
 
 from account_classifier import create_classifier
 from audit.classification import (
+    resolve_csv_type,
     validate_balance_sheet_equation,
 )
 from audit.risk_summary import build_risk_summary
@@ -24,7 +25,7 @@ from audit.rules.merger import _merge_anomalies
 from audit.streaming_auditor import StreamingAuditor
 from classification_validator import run_classification_validation
 from column_detector import ColumnMapping
-from ratio_engine import CategoryTotals, calculate_analytics
+from ratio_engine import CategoryTotals, calculate_analytics, summarize_unclassified
 from security_utils import (
     DEFAULT_CHUNK_SIZE,
     clear_memory,
@@ -328,11 +329,15 @@ def audit_trial_balance_streaming(
         display_classifications: dict[str, str] = {}
         display_subtypes: dict[str, str] = {}
         subtype_source = auditor.provided_account_subtypes or auditor.provided_account_types
+        type_supplied: set[str] = set()
         for acct_key in auditor.account_balances:
             display = auditor._display_name(acct_key)
             display_balances[display] = auditor.account_balances[acct_key]
             display_classifications[display] = account_classifications.get(acct_key, "unknown")
             display_subtypes[display] = subtype_source.get(acct_key, "")
+            # Only a type the file supplied *and* we could read counts.
+            if resolve_csv_type(auditor.provided_account_types.get(acct_key, ""))[0] is not None:
+                type_supplied.add(display)
 
         # Population Profile
         from population_profile_engine import compute_population_profile
@@ -427,6 +432,7 @@ def audit_trial_balance_streaming(
         # Category totals and analytics (reuse cached totals from earlier)
         category_totals = category_totals_pre
         analytics = calculate_analytics(category_totals, previous_totals=None)
+        analytics["excluded_accounts"] = summarize_unclassified(auditor.account_balances, account_classifications)
         result["analytics"] = analytics
         result["category_totals"] = category_totals.to_dict()
 
@@ -452,6 +458,7 @@ def audit_trial_balance_streaming(
                 "debit": bals["debit"],
                 "credit": bals["credit"],
                 "type": display_classifications.get(acct, "unknown"),
+                "type_supplied": acct in type_supplied,
             }
             for acct, bals in display_balances.items()
         ]
@@ -514,6 +521,7 @@ def audit_trial_balance_multi_sheet(
     column_order_warnings: list[str] = []
     first_sheet_columns: Optional[tuple[str, str, str]] = None
     consolidated_category_totals = CategoryTotals()
+    consolidated_excluded: dict[str, Any] = {"count": 0, "total_abs_balance": 0.0}
     consolidated_account_balances: dict[str, dict[str, Any]] = {}
     consolidated_missing_names = 0
     consolidated_missing_balances = 0
@@ -598,6 +606,9 @@ def audit_trial_balance_multi_sheet(
 
             sheet_classifications = auditor.get_classified_accounts()
             sheet_category_totals = auditor.get_category_totals(sheet_classifications)
+            sheet_excluded = summarize_unclassified(auditor.account_balances, sheet_classifications)
+            consolidated_excluded["count"] += sheet_excluded["count"]
+            consolidated_excluded["total_abs_balance"] += sheet_excluded["total_abs_balance"]
             consolidated_category_totals.total_assets += sheet_category_totals.total_assets
             consolidated_category_totals.current_assets += sheet_category_totals.current_assets
             consolidated_category_totals.inventory += sheet_category_totals.inventory
@@ -695,6 +706,8 @@ def audit_trial_balance_multi_sheet(
 
         # Analytics
         analytics = calculate_analytics(consolidated_category_totals, previous_totals=None)
+        consolidated_excluded["total_abs_balance"] = round(consolidated_excluded["total_abs_balance"], 2)
+        analytics["excluded_accounts"] = consolidated_excluded
         result["analytics"] = analytics
         result["category_totals"] = consolidated_category_totals.to_dict()
 
