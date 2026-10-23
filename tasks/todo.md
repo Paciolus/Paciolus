@@ -1064,7 +1064,9 @@ totals). That is a question for the CEO and counsel before anyone edits the copy
 **Source:** Code health review 2026-10-23, repo pass.
 
 - [ ] `reports/nightly/` is 1,149 of 3,261 tracked files — **CEO decision 5**.
-- [ ] `ci.yml` runs pip-audit twice (`pip-audit-blocking` `:660`, `pip-audit-advisory` `:690`), each
+- [x] *(Done 2026-10-23: the advisory audit is now a non-failing `if: always()` step inside the
+      required `Python Dependency Audit (blocking)` job; that job's name is unchanged.)*
+      `ci.yml` runs pip-audit twice (`pip-audit-blocking` `:660`, `pip-audit-advisory` `:690`), each
       installing the full `requirements.txt`: one job, two invocations of `scripts/pip_audit_gate.sh`.
 - [ ] Root clutter: `PHASE_III_QUICK_REFERENCE.txt`, `README_PHASE_III_DELIVERY.txt`,
       `SECURITY_CHANGES.md`, `SECURITY_HARDENING_SUMMARY.md`, `COHESION_REMEDIATION.md`,
