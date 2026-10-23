@@ -550,6 +550,8 @@ def _check_employee(
     employee: EmployeePayroll,
     w2: EmployeeW2Draft,
     config: W2ReconciliationConfig,
+    *,
+    draft_supplied: bool = True,
 ) -> list[Discrepancy]:
     """Run every per-employee check, return the discrepancies found."""
     issues: list[Discrepancy] = []
@@ -557,7 +559,13 @@ def _check_employee(
 
     # --- SS wages ---
     expected_ss = min(employee.ss_wages, config.ss_wage_base)
-    if employee.ss_wages > config.ss_wage_base:
+    # Sprint 826 (W6): with a supplied draft, what matters is whether *Box 3*
+    # exceeds the base. Payroll routinely reports uncapped SS wages, so a draft
+    # correctly capped at the base drew a HIGH "must be capped" finding. With no
+    # draft, the engine builds a capped one itself and this finding is the only
+    # reminder to cap the real W-2 — so it stays.
+    box_3_over_base = w2.box_3_ss_wages > config.ss_wage_base + tolerance
+    if employee.ss_wages > config.ss_wage_base and (box_3_over_base or not draft_supplied):
         issues.append(
             Discrepancy(
                 employee_id=employee.employee_id,
@@ -893,6 +901,10 @@ def reconcile_w2(config: W2ReconciliationConfig) -> W2ReconciliationResult:
     """Run the full W-2 / W-3 / 941 reconciliation."""
     if config.tax_year < 2000 or config.tax_year > 2099:
         raise W2ReconciliationInputError(f"Tax year must be a 4-digit year between 2000 and 2099 ({config.tax_year})")
+    # Sprint 826 (W10): a negative tolerance flagged every line HIGH with a
+    # difference of zero.
+    if config.tolerance < ZERO:
+        raise W2ReconciliationInputError(f"Tolerance cannot be negative ({config.tolerance})")
 
     # Sprint 826 (W4): IDs compared stripped ("B1 " is B1), and duplicate or
     # orphan drafts are reported. Keyed naively, a duplicate silently replaced
@@ -937,7 +949,9 @@ def reconcile_w2(config: W2ReconciliationConfig) -> W2ReconciliationResult:
                 box_12_code_s_simple=employee.retirement_simple_ira,
             )
             employees_missing_w2.append(employee.employee_id)
-        employee_discrepancies.extend(_check_employee(employee, w2, config))
+        employee_discrepancies.extend(
+            _check_employee(employee, w2, config, draft_supplied=employee.employee_id not in employees_missing_w2)
+        )
 
     # --- W-3 totals (sum of every W-2) ---
     w3 = W3Totals(
@@ -965,7 +979,16 @@ def reconcile_w2(config: W2ReconciliationConfig) -> W2ReconciliationResult:
         "employees_missing_w2_draft": employees_missing_w2,
         "duplicate_w2_drafts": duplicate_w2_drafts,
         "orphan_w2_drafts": orphan_w2_drafts,
-        "total_employee_discrepancies": len(employee_discrepancies),
+        # Sprint 826 (W7): the Additional Medicare threshold notice is
+        # informational — its amount is already inside the box 6 expectation —
+        # so it is counted on its own rather than as a discrepancy. A clean
+        # dataset with one high earner reported "1 discrepancy".
+        "total_employee_discrepancies": sum(
+            1 for d in employee_discrepancies if d.kind != DiscrepancyKind.ADDITIONAL_MEDICARE
+        ),
+        "informational_notices": sum(
+            1 for d in employee_discrepancies if d.kind == DiscrepancyKind.ADDITIONAL_MEDICARE
+        ),
         "total_form_941_mismatches": len(form_941_mismatches),
         "discrepancies_by_kind": dict(by_kind),
     }

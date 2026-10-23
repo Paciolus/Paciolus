@@ -52,8 +52,8 @@ Status column: **Fixed (824)** = remediated in Sprint 824; otherwise the sprint 
 | W3 | P1 | Box 12 codes D/W/S and payroll SS/Medicare **withheld** are read but never compared. | Fixed (826) |
 | W4 | P1 | W-3 never checked against the 941s; duplicate and orphan W-2 drafts unflagged (W-3 sums every draft, lookup keeps the last). | Duplicates/orphans/padded IDs fixed (826); W-3 vs 941 still open |
 | W5 | P2 | Deferrals not checked when `retirement_plan_type` is absent. | Fixed (826) |
-| W6 | P2 | A correctly capped box 3 still draws HIGH `ss_wage_base_exceeded` when payroll reports uncapped SS wages. | 826 |
-| W7–W10 | P3 | Informational item counted as a discrepancy; W-3 zeros with no drafts; duplicate/missing 941 quarters undetected; negative tolerance flags everything. | 826 |
+| W6 | P2 | A correctly capped box 3 still draws HIGH `ss_wage_base_exceeded` when payroll reports uncapped SS wages. | Fixed (826c) |
+| W7–W10 | P3 | Informational item counted as a discrepancy; W-3 zeros with no drafts; duplicate/missing 941 quarters undetected; negative tolerance flags everything. | W7 + W10 fixed (826c); W8, W9 open |
 | B1 | P1 | Book-to-tax loss years ignore the NOL: book −$200k → tax **expense** +$11,550 instead of a ~$39k benefit. | 826 — needs a scope call (NOL/valuation allowance) |
 | B2–B5 | P2 | State tax excluded from deferred; state rate unvalidated (`"5"` → 500%); gross DTA/DTL wrong on DTL reversal; `code` not checked against its catalog direction. | B3 + B4 fixed (826); B2, B5 open |
 | — | ok | Verified correct: 2025 SS base $176,100, 6.2%/1.45%, Additional Medicare over $200k per employee, HSA $4,300/$8,550, 401(k) $23,500 + $7,500 + age 60–63 $11,250, SIMPLE base $16,500; 1099 exactly-$600 boundary, corporate exemption, W-9 list; book-to-tax clean case matches by hand (taxable income $958,000, total tax $212,730). | — |

@@ -92,3 +92,36 @@ def test_duplicate_orphan_and_padded_ids_are_reported():
     assert summary["duplicate_w2_drafts"] == ["A1"]
     assert summary["orphan_w2_drafts"] == ["ZZ"]
     assert summary["employees_missing_w2_draft"] == []
+
+
+def test_additional_medicare_notice_is_not_counted_as_a_discrepancy():
+    """W7: a clean high earner reported one "discrepancy" — the informational notice."""
+    employee = _employee(
+        federal_wages=D("250000"),
+        ss_wages=D("250000"),
+        ss_tax_withheld=D("0"),
+        medicare_wages=D("250000"),
+        medicare_tax_withheld=D("0"),
+    )
+    draft = _draft(
+        employee,
+        box_3_ss_wages=D("176100"),
+        box_4_ss_tax_withheld=D("10918.20"),
+        box_6_medicare_tax_withheld=D("4075.00"),
+    )
+    summary = reconcile_w2(W2ReconciliationConfig(tax_year=2025, employees=[employee], w2_drafts=[draft])).summary
+    assert summary["total_employee_discrepancies"] == 0
+    assert summary["informational_notices"] == 1
+
+
+def test_negative_tolerance_is_rejected():
+    """W10: tolerance -1 flagged every line HIGH with a zero difference."""
+    import pytest
+
+    from w2_reconciliation_engine import W2ReconciliationInputError
+
+    employee = _employee()
+    with pytest.raises(W2ReconciliationInputError, match="Tolerance"):
+        reconcile_w2(
+            W2ReconciliationConfig(tax_year=2025, employees=[employee], w2_drafts=[_draft(employee)], tolerance=D("-1"))
+        )
