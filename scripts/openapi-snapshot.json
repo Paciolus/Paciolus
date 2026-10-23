@@ -16983,6 +16983,7 @@
             "default": "nonemployee_comp",
             "enum": [
               "nonemployee_comp",
+              "attorney_fees",
               "rents",
               "royalties",
               "medical",

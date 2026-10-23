@@ -403,7 +403,11 @@ def _run_scenario(
         net_change = ar_in - ap_out + rec_net
         balance += net_change
 
-        if balance < lowest_balance:
+        # Sprint 827 (C4): day 0's ending balance seeds the minimum. Seeding from
+        # the opening balance reported "lowest $100,000 on day 0" when day 0
+        # actually ended at $100,950 — a balance that never occurred in the
+        # projection.
+        if d == 0 or balance < lowest_balance:
             lowest_balance = balance
             lowest_balance_day = d
 

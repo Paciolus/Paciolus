@@ -221,6 +221,11 @@
 >   `leadsheet_generator.py` 11.3%, `workbook_inspector.py` 18.6%,
 >   `population_profile_memo.py` 39.7%, `pdf/sections/diagnostic.py` 64.9%. Finding A-5
 >   was a defect in exactly this layer that a test would have caught.
+> - **D-6 — re-measured 2026-10-23, much smaller than recorded.** Counting boundaries the App
+>   Router *inherits* from parent segments: all 62 pages have an error boundary (root `error.tsx` +
+>   `global-error.tsx`), and all 18 tool routes have a loading skeleton via `tools/loading.tsx`.
+>   The 23 without one are marketing, auth, internal admin, `dashboard` and `shared/[token]`;
+>   only the last two plausibly earn one. Original note follows.
 > - **D-6 — route-level loading and error states.** 62 pages, 20 `loading.tsx`, 9
 >   `error.tsx`, 1 `not-found.tsx`. 42 routes have no streaming skeleton. Prioritise the
 >   18 tool routes, where a long upload-and-analyse cycle is where a skeleton earns its
@@ -402,7 +407,10 @@ valuation allowance) needs a scope call.
       carve-back, unlike corporations).
 - [x] **B3** — state rate validated to 0–1 like the federal rate. **B4** — a positive temporary
       movement reverses any DTL before building a DTA (gross balances were wrong; net was right).
-- [ ] F4, F5, F9, W4 (W-3 vs 941), W6–W10, B1, B2, B5, B6.
+- [x] **F4** — new `attorney_fees` category → 1099-NEC box 1, reportable for corporate law firms;
+      `legal` remains gross proceeds paid to an attorney (MISC box 10). Backend, route literal,
+      frontend type, CSV parser and help text.
+- [ ] F5, F9, W4 (W-3 vs 941), W6–W10, B1, B2, B5, B6.
 
 **Commit SHA:** TBD.
 

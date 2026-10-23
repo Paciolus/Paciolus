@@ -46,7 +46,13 @@ class PaymentCategory(str, Enum):
     RENTS = "rents"  # → 1099-MISC box 1
     ROYALTIES = "royalties"  # → 1099-MISC box 2
     MEDICAL = "medical"  # → 1099-MISC box 6
-    LEGAL = "legal"  # → 1099-MISC box 10
+    LEGAL = "legal"  # Gross proceeds paid to an attorney → 1099-MISC box 10
+    # Sprint 826 (F4): fees paid to an attorney for legal services are
+    # nonemployee compensation (1099-NEC box 1), reportable even when the firm
+    # is a corporation. With only "legal" available they landed on MISC box 10,
+    # which is for gross proceeds, and "nonemployee_comp" excluded corporate
+    # law firms entirely.
+    ATTORNEY_FEES = "attorney_fees"  # → 1099-NEC box 1
     INTEREST = "interest"  # → 1099-INT box 1
     OTHER = "other"
 
@@ -78,12 +84,13 @@ PROCESSOR_REPORTED_METHODS: frozenset[PaymentMethod] = frozenset({PaymentMethod.
 # Corporation-exempt categories — payments to corporations generally do
 # not require 1099 filing except in these two categories.
 NON_EXEMPT_CORPORATION_CATEGORIES: frozenset[PaymentCategory] = frozenset(
-    {PaymentCategory.MEDICAL, PaymentCategory.LEGAL}
+    {PaymentCategory.MEDICAL, PaymentCategory.LEGAL, PaymentCategory.ATTORNEY_FEES}
 )
 
 
 CATEGORY_TO_FORM_BOX: dict[PaymentCategory, tuple[FormType, int]] = {
     PaymentCategory.NONEMPLOYEE_COMP: (FormType.NEC, 1),
+    PaymentCategory.ATTORNEY_FEES: (FormType.NEC, 1),
     PaymentCategory.RENTS: (FormType.MISC, 1),
     PaymentCategory.ROYALTIES: (FormType.MISC, 2),
     PaymentCategory.MEDICAL: (FormType.MISC, 6),
