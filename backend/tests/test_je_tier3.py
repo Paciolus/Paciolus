@@ -70,6 +70,22 @@ class TestReciprocalEntries:
         assert result.flagged_entries[0].severity == Severity.HIGH
         assert result.flagged_entries[0].details["cross_account"] is True
 
+    def test_row_matched_to_several_partners_counts_once(self):
+        """Sprint 816: 3 debits x 3 credits of one amount form 9 pairs. The count
+        and rate are of rows — it reported 18 of 6 entries, a 300% flag rate.
+        Each pair keeps its own flag in ``flagged_entries``."""
+        entries = [
+            JournalEntry(account="Expense", debit=5000, credit=0, posting_date="2025-06-10", row_number=n)
+            for n in (1, 2, 3)
+        ] + [
+            JournalEntry(account="Cash", debit=0, credit=5000, posting_date="2025-06-11", row_number=n)
+            for n in (4, 5, 6)
+        ]
+        result = run_reciprocal_test(entries, JETestingConfig())
+        assert result.entries_flagged == 6
+        assert result.flag_rate == 1.0
+        assert len(result.flagged_entries) == 18
+
     def test_same_account_pair_medium_severity(self):
         """Same-account reciprocal pair gets MEDIUM severity."""
         entries = [

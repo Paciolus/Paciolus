@@ -534,18 +534,45 @@ return a result rather than a 422 — e.g. `sampling_interval=nan`. Same family 
 ---
 
 ### Sprint 816: Engine correctness follow-ups surfaced by the performance pass
-**Status:** PENDING — each item **unverified**; verify before fixing.
-**Priority:** P2.
+**Status:** COMPLETE 2026-10-23 — all four verified by measurement before fixing; three were real
+as described, one (item 3) was worse than described, and item 4 turned out to be an **accuracy**
+defect, not only a reproducibility one.
+**Priority:** P2 → item 4 is effectively **P1** (see below).
 **Source:** Code health review 2026-10-23, engines pass.
 
-- [ ] JE reciprocal entries (`je_testing/analysis.py:2217`): `entries_flagged=len(flagged)` counts
-      flags, so a row matched to several partners is counted several times → inflated flag rate.
-      Composite score dedupes by row, so it is unaffected.
-- [ ] JE `apply_column_overrides` (`:2857`) never sets `has_dual_dates` when both dates are
-      mapped by hand.
-- [ ] `currency_engine.py:942`: NaN amount becomes `Decimal("NaN")` instead of going through `safe_decimal`.
-- [ ] FA (`fixed_asset_testing/analysis.py:522,1416`) and Inventory (`inventory_testing/analysis.py:503`)
-      use today's date as reference — same reproducibility defect fixed for AR in RPT-07.
+- [x] **JE reciprocal entries counted flags, not rows.** Measured: 3 debits × 3 credits of one
+      amount → `entries_flagged` **18 of 6 entries, `flag_rate` 3.0 (300%)** in the customer's
+      output. Now counts distinct rows; the per-pair flags stay in `flagged_entries`. Regression
+      test in `test_je_tier3.py`. `test_tool_anomaly_detection.py` now asserts
+      `entries_flagged ≤ total_entries` and `0 ≤ flag_rate ≤ 1` for **every** test result of every
+      generator run, not just the targeted one — no generator builds a multi-partner case, so
+      that invariant would not have caught this one, but it now covers the whole population.
+- [x] **JE `apply_column_overrides` never set `has_dual_dates`.** Confirmed. Impact is limited to
+      the reported column detection (parsing reads the explicit columns), but it was wrong. Fixed
+      the AP way; test added.
+- [x] **Currency NaN — worse than described.** An empty amount cell (float NaN) became
+      `Decimal("NaN")`; when that row was *also* unconvertible (missing currency code or missing
+      rate) the severity pass raised **`InvalidOperation`** — an `ArithmeticError` the TB
+      post-processor's fallback did not catch. And `Decimal(str(x))` turned `$1,234.56` and
+      `(500.00)` into a **silent 0**. Now parsed through `safe_decimal` (NaN/inf → 0, currency and
+      parenthetical formats parsed); the post-processor fallback also catches `ArithmeticError`.
+      3 tests, all failing on the old code.
+- [x] **FA/Inventory reference date — an accuracy defect.** No caller ever passed
+      `reference_date`, so FA-T11 divided accumulated depreciation (stated **as of period end**)
+      by years elapsed **to today**. Measured: a register depreciated exactly on schedule to
+      2025-12-31, tested on 2026-10-23, had **6 of 6 assets flagged**. Audit fieldwork happens
+      after year-end, so on real engagements this test was a false-positive generator. IN-06
+      (slow-moving) had the same dependency. Fix: `shared/reference_date.resolve_reference_date`
+      — explicit `as_of_date` form field > linked engagement's `period_end` > processing date,
+      the same cascade shape as materiality — threaded into both configs, and the date used plus
+      its source is now stated in each test's description (so it reaches the UI and the memo with
+      no schema change). Engagement-linked uploads get period end automatically, because
+      `useAuditUpload` already injects `engagement_id`. Unparseable `as_of_date` → 400, never a
+      silent fallback. `_asset_age_years` was never called outside its own tests — deleted with them.
+
+**Follow-up (frontend, not done):** the FA and inventory pages do not yet offer an as-of date
+input, so an upload **not** linked to an engagement still measures to the processing date —
+now disclosed in the test description rather than silent.
 
 **Commit SHA:** TBD.
 

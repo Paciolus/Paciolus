@@ -624,6 +624,23 @@ class TestRunJETesting:
         result = run_je_testing(rows, ["d", "a", "dr", "cr"], column_mapping=mapping)
         assert result.column_detection.overall_confidence == 1.0
 
+    def test_hand_mapped_entry_and_posting_dates_report_dual_dates(self):
+        """Sprint 816: auto-detection reported has_dual_dates; a hand mapping
+        of the same two columns did not."""
+        rows = [
+            {"ed": "2025-01-14", "pd": "2025-01-15", "a": "Cash", "dr": 100, "cr": 0},
+            {"ed": "2025-01-14", "pd": "2025-01-15", "a": "Revenue", "dr": 0, "cr": 100},
+        ]
+        mapping = {
+            "entry_date_column": "ed",
+            "posting_date_column": "pd",
+            "account_column": "a",
+            "debit_column": "dr",
+            "credit_column": "cr",
+        }
+        result = run_je_testing(rows, ["ed", "pd", "a", "dr", "cr"], column_mapping=mapping)
+        assert result.column_detection.has_dual_dates is True
+
     def test_full_pipeline_multi_currency(self):
         rows = [
             {"Date": "2025-01-15", "Account": "Cash", "Debit": 100, "Credit": 0, "Currency": "USD"},

@@ -11,6 +11,7 @@ from database import get_db
 from inventory_testing_engine import InventoryTestingConfig, run_inventory_testing
 from models import User
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
+from shared.reference_date import resolve_reference_date
 from shared.testing_response_schemas import InvTestingResponse
 from shared.testing_route import run_single_file_testing
 
@@ -25,6 +26,7 @@ async def audit_inventory(
     file: UploadFile = File(...),
     column_mapping: Optional[str] = Form(default=None),
     engagement_id: Optional[int] = Form(default=None),
+    as_of_date: Optional[str] = Form(default=None),
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
 ) -> dict[str, object]:
@@ -34,6 +36,10 @@ async def audit_inventory(
     ISA 501: Audit Evidence — Inventory.
     ISA 540: Auditing accounting estimates (NRV indicators).
     """
+    # Sprint 816: measure elapsed time to period end, not to the processing date.
+    reference_date, reference_date_source = resolve_reference_date(as_of_date, engagement_id, current_user.id, db)
+    config = InventoryTestingConfig(reference_date=reference_date, reference_date_source=reference_date_source)
+
     return await run_single_file_testing(
         file=file, column_mapping=column_mapping,
         engagement_id=engagement_id, current_user=current_user, db=db,
@@ -42,6 +48,6 @@ async def audit_inventory(
         log_label="inventory", error_key="inventory_testing_error",
         run_engine=lambda rows, cols, mapping, fn: run_inventory_testing(
             rows=rows, column_names=cols,
-            config=InventoryTestingConfig(), column_mapping=mapping,
+            config=config, column_mapping=mapping,
         ),
     )

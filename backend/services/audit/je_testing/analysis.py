@@ -2215,12 +2215,16 @@ def test_reciprocal_entries(
                             )
                         )
 
-    flag_rate = len(flagged) / max(len(entries), 1)
+    # Sprint 816: a row matched to several partners carries one flag per pair,
+    # so count rows, not flags — 3 debits x 3 credits reported 18 of 6 (300%).
+    # The per-pair flags stay in ``flagged_entries``; each names its partner.
+    rows_flagged = len({f.entry.row_number for f in flagged})
+    flag_rate = rows_flagged / max(len(entries), 1)
     return TestResult(
         test_name="Reciprocal Entries",
         test_key="reciprocal_entries",
         test_tier=TestTier.ADVANCED,
-        entries_flagged=len(flagged),
+        entries_flagged=rows_flagged,
         total_entries=len(entries),
         flag_rate=flag_rate,
         severity=Severity.HIGH,
@@ -2884,6 +2888,10 @@ class JETestingEngine(AuditEngineBase):
             detection.entry_date_column = column_mapping["entry_date_column"]
         if "posting_date_column" in column_mapping:
             detection.posting_date_column = column_mapping["posting_date_column"]
+        # Sprint 816: auto-detection sets this when it finds both dates; a hand
+        # mapping of both left it False in the reported column detection.
+        if detection.entry_date_column and detection.posting_date_column:
+            detection.has_dual_dates = True
         detection.overall_confidence = 1.0
         return detection
 

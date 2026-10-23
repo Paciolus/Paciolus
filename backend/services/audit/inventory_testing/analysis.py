@@ -32,6 +32,7 @@ from shared.column_detector import ColumnFieldConfig, detect_columns
 from shared.data_quality import FieldQualityConfig
 from shared.data_quality import assess_data_quality as _shared_assess_dq
 from shared.parsing_helpers import parse_date, safe_decimal, safe_float, safe_str
+from shared.reference_date import reference_date_label
 from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
 from shared.testing_enums import (
     RiskTier,
@@ -79,6 +80,13 @@ class InventoryTestingConfig:
 
     # IN-09: Zero-value items
     zero_value_enabled: bool = True
+
+    # Sprint 816: the as-of date ages are measured to — the period end, not the
+    # day the file is processed. Last-movement dates are stated as of period
+    # end, so measuring to "today" drifts the result as fieldwork moves past
+    # year-end. None = processing date.
+    reference_date: Optional[date] = None
+    reference_date_source: str = "processing_date"  # "as_of_date" | "engagement_period_end"
 
 
 # =============================================================================
@@ -994,7 +1002,7 @@ def test_slow_moving_inventory(
 
     flagged: list[FlaggedInventoryItem] = []
     for e in entries_with_dates:
-        days = _days_since(e.last_movement_date)
+        days = _days_since(e.last_movement_date, config.reference_date)
         if days is None or days <= config.slow_moving_days:
             continue
 
@@ -1034,7 +1042,11 @@ def test_slow_moving_inventory(
         total_entries=len(entries),
         flag_rate=flag_rate,
         severity=Severity.MEDIUM,
-        description=f"Flags items with no movement for >{config.slow_moving_days} days — an obsolescence anomaly indicator.",
+        description=(
+            f"Flags items with no movement for >{config.slow_moving_days} days — an obsolescence anomaly indicator. "
+            f"Days measured to {(config.reference_date or date.today()).isoformat()} "
+            f"({reference_date_label(config.reference_date_source)})."
+        ),
         flagged_entries=flagged,
     )
 

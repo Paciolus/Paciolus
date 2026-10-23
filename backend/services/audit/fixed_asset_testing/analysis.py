@@ -30,6 +30,7 @@ from shared.column_detector import ColumnFieldConfig, detect_columns
 from shared.data_quality import FieldQualityConfig
 from shared.data_quality import assess_data_quality as _shared_assess_dq
 from shared.parsing_helpers import parse_date, safe_decimal, safe_str
+from shared.reference_date import reference_date_label
 from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
 from shared.testing_enums import (
     RiskTier,
@@ -77,6 +78,13 @@ class FixedAssetTestingConfig:
     # FA-09: Residual value anomalies
     residual_max_pct: float = 0.30
     residual_enabled: bool = True
+
+    # Sprint 816: the as-of date ages are measured to — the period end, not the
+    # day the file is processed. Accumulated depreciation and last-movement
+    # dates are stated as of period end, so measuring to "today" drifts every
+    # result as fieldwork moves past year-end. None = processing date.
+    reference_date: Optional[date] = None
+    reference_date_source: str = "processing_date"  # "as_of_date" | "engagement_period_end"
 
 
 # =============================================================================
@@ -512,16 +520,6 @@ def _safe_float_optional(value: object) -> Optional[float]:
             except (ValueError, TypeError):
                 return None
         return None
-
-
-def _asset_age_years(acquisition_date_str: Optional[str], reference_date: Optional[date] = None) -> Optional[float]:
-    """Calculate age of an asset in years from acquisition date."""
-    d = parse_date(acquisition_date_str)
-    if d is None:
-        return None
-    ref = reference_date or date.today()
-    delta = ref - d
-    return delta.days / 365.25
 
 
 # =============================================================================
@@ -1413,7 +1411,7 @@ def test_depreciation_recalculation(
     DDB_TOLERANCE = Decimal("0.15")  # wider to absorb compound vs. linear approx
 
     flagged: list[FlaggedFixedAsset] = []
-    today = _dt.now(_UTC).date()
+    as_of = config.reference_date or _dt.now(_UTC).date()
 
     for e in entries:
         if not e.useful_life or e.useful_life <= 0:
@@ -1435,7 +1433,7 @@ def test_depreciation_recalculation(
         if acq_date is None:
             continue
 
-        years_elapsed = (today - acq_date).days / 365.25
+        years_elapsed = (as_of - acq_date).days / 365.25
         if years_elapsed <= 0 or years_elapsed > e.useful_life * 1.5:
             # Asset is either future-dated or already beyond 1.5× life;
             # FA-T01 (fully-depreciated) and FA-T03 (over-depreciation)
@@ -1508,7 +1506,8 @@ def test_depreciation_recalculation(
         description=(
             "Recalculates expected depreciation (IAS 16 / ASC 360) when "
             "cost, useful life, method, and acquisition date are present; "
-            "flags variance >5% (SL) or >15% (DDB)."
+            "flags variance >5% (SL) or >15% (DDB). "
+            f"Elapsed years measured to {as_of.isoformat()} ({reference_date_label(config.reference_date_source)})."
         ),
         flagged_entries=flagged,
     )

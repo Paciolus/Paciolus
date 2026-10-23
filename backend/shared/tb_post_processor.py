@@ -92,5 +92,5 @@ def apply_currency_conversion(
             else "amount",
         )
         result["currency_conversion"] = conversion.to_dict()
-    except (ValueError, KeyError, TypeError, AttributeError):
+    except (ValueError, KeyError, TypeError, AttributeError, ArithmeticError):
         logger.warning("Currency conversion failed — returning unconverted results", exc_info=True)
