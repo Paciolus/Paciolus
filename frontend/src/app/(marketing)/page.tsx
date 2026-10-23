@@ -33,8 +33,7 @@ export default function HomePage() {
 
       {/* Sprint 706 — Tool ledger. Full tool catalog rendered in place
           of the one-card-at-a-time slideshow. Respects the auditor's
-          scan-the-index reading pattern. ToolSlideshow retained in-tree
-          for other consumers / potential future use. */}
+          scan-the-index reading pattern. */}
       <div className="lobby-surface-recessed lobby-atmosphere-modern relative z-10">
         <ToolLedger />
       </div>

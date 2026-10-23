@@ -1,7 +1,8 @@
 # Parser Alert Thresholds — Sprint 437
 #
 # Defines per-format alert thresholds for Prometheus-based monitoring.
-# Used by shared/alert_checker.py to evaluate metric health.
+# Thresholds for format-rollout alerting (docs/runbooks/format-rollout.md). The
+# in-repo checker that read this file was never wired in and was removed in Sprint 817.
 #
 # Each format section overrides [alert_defaults] where specified.
 # Missing keys fall back to [alert_defaults].

@@ -5,4 +5,3 @@
  */
 
 export { ComparisonTable } from './ComparisonTable'
-export { ComparisonSection } from './ComparisonSection'

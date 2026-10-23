@@ -71,8 +71,6 @@ export interface WorkspaceLayoutContextType {
   toggleContextPane: () => void;
   insightRailCollapsed: boolean;
   toggleInsightRail: () => void;
-  quickSwitcherOpen: boolean;
-  setQuickSwitcherOpen: (open: boolean) => void;
 }
 
 // Combined type (backward compatibility)
@@ -130,7 +128,6 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [currentView, setCurrentView] = useState<WorkspaceView>('portfolio');
   const [contextPaneCollapsed, setContextPaneCollapsed] = useState(true);
   const [insightRailCollapsed, setInsightRailCollapsed] = useState(true);
-  const [quickSwitcherOpen, setQuickSwitcherOpen] = useState(false);
 
   const toggleContextPane = useCallback(() => {
     setContextPaneCollapsed(prev => !prev);
@@ -163,9 +160,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     currentView, setCurrentView,
     contextPaneCollapsed, toggleContextPane,
     insightRailCollapsed, toggleInsightRail,
-    quickSwitcherOpen, setQuickSwitcherOpen,
-  }), [currentView, contextPaneCollapsed, insightRailCollapsed, quickSwitcherOpen,
-    toggleContextPane, toggleInsightRail]);
+  }), [currentView, contextPaneCollapsed, insightRailCollapsed, toggleContextPane, toggleInsightRail]);
 
   return (
     <WorkspaceDataContext.Provider value={dataValue}>

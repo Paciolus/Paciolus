@@ -47,8 +47,6 @@ jest.mock('@/contexts/WorkspaceContext', () => ({
     toggleContextPane: jest.fn(),
     insightRailCollapsed: true,
     toggleInsightRail: jest.fn(),
-    quickSwitcherOpen: false,
-    setQuickSwitcherOpen: jest.fn(),
   })),
 }))
 
@@ -115,8 +113,6 @@ const defaultContext = {
   toggleContextPane: jest.fn(),
   insightRailCollapsed: true,
   toggleInsightRail: jest.fn(),
-  quickSwitcherOpen: false,
-  setQuickSwitcherOpen: jest.fn(),
 }
 
 const sampleClients = [

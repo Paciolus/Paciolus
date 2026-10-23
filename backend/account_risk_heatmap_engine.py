@@ -43,8 +43,6 @@ SOURCE_CLASSIFICATION = "classification_validator"
 SOURCE_CUTOFF = "cutoff_risk"
 SOURCE_ACCRUAL = "accrual_completeness"
 SOURCE_COMPOSITE_RISK = "composite_risk"
-SOURCE_LEASE = "lease_indicator"
-SOURCE_GOING_CONCERN = "going_concern"
 
 # Priority tier thresholds (percentile cutoffs)
 HIGH_TIER_PERCENTILE = 0.10  # Top 10%

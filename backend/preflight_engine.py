@@ -287,9 +287,6 @@ _SEVERITY_MULTIPLIER = {
     "low": 0.25,
 }
 
-# Low-confidence threshold for column detection remediation notes
-LOW_CONFIDENCE_THRESHOLD = 0.80
-
 
 # ═══════════════════════════════════════════════════════════════
 # Non-ASCII detection pattern (compiled once)

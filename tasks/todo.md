@@ -750,11 +750,12 @@ now disclosed in the test description rather than silent.
 ---
 
 ### Sprint 817: Dead-code sweep
-**Status:** PENDING.
+**Status:** PARTIAL — items 1, 2, 6 done and most of 5; items 3–4 await CEO decisions; the
+`package.json` half of item 6 waits for PR #197 (it rewrites the same lockfile).
 **Priority:** P2 — ~7,000 lines with no runtime effect except bundle size and reader cost.
 **Source:** Code health review 2026-10-23. Every item grep-verified repo-wide; re-grep before deleting.
 
-1. [ ] **Frontend (~6,000 lines), delete with their tests:**
+1. [x] **Frontend (~6,000 lines), delete with their tests:**
    analytics `TrendSection`, `TrendSummaryCard`, `TrendSparkline`, `IndustryMetricsSection`,
    `RollingWindowSection` + `hooks/useTrends`, `useRollingWindow`, `useIndustryRatios`;
    marketing `ToolSlideshow`, `ToolShowcase`, `ProductPreview`, `ProofStrip` (fix the stale
@@ -764,7 +765,7 @@ now disclosed in the test description rather than silent.
    + `hooks/useAdjustments`, `trialBalance/GuestMarketingView`, `shared/ShareExportModal`,
    `hooks/usePriorPeriod`, `engagement/EngagementList`, `shared/PageEmptyState`,
    `auth/ProtectedRoute`, `utils/animations`.
-2. [ ] **Backend modules:** `shared/derived_metrics.py`, `shared/concentration_metrics.py` (no
+2. [x] **Backend modules:** `shared/derived_metrics.py`, `shared/concentration_metrics.py` (no
    importers, no tests); test-only `shared/alert_checker.py`, `shared/route_errors.py`,
    `shared/report_layout.py` (`wrap_cell`), `shared/tier_display.py`, `billing/guards.py`;
    `shared/round_amounts.detect_round_amount` (unless 819 item 3 adopts it).
@@ -787,6 +788,29 @@ now disclosed in the test description rather than silent.
    compress `background5.jpg` (7.1 MB raw CSS background on `pricing/page.tsx:774`);
    remove `ts-jest`, `@eslint/eslintrc`; move `@testing-library/dom` to devDependencies; declare
    `eslint` explicitly; fix or drop `npm run generate:types` (`openapi-typescript` not installed).
+
+**Delivered 2026-10-23:**
+- **Item 1:** 26 frontend modules and their 14 test suites deleted (−8,315 lines), each re-verified
+  first — every remaining reference was a comment or a barrel re-export. Barrels pruned,
+  `quickSwitcherOpen` removed from `WorkspaceContext`, the stale `ToolSlideshow` comment fixed.
+  `tsc`, lint, 196 suites / 1,991 tests and `npm run build` all clean.
+- **Item 2:** deleted `derived_metrics`, `concentration_metrics`, `billing/guards` (no importers at
+  all) and the test-only `alert_checker`, `route_errors`, `report_layout` with their tests.
+  **Kept `tier_display`:** test-only, but the pricing-launch validation tests use it as their
+  reference for purchasable tiers. `guards/parser_alerts.toml` kept (the format-rollout runbook
+  points operators at it); its header no longer claims a checker reads it.
+- **Item 5 (most):** removed the `compute_bank_rec_risk_score` alias, `SOURCE_LEASE`,
+  `SOURCE_GOING_CONCERN`, `STANDARD_ADJUSTMENTS_BY_CODE`, `CURRENT_RATIO_THRESHOLD`,
+  `LOW_CONFIDENCE_THRESHOLD`, the module-level `calculate_dupont_decomposition` wrapper (DuPont
+  itself lives on `RatioEngine.calculate_dupont`) and ten of the eleven W-2 `DEFAULT_*` aliases.
+  **Removed `auth.get_current_user`**: unreferenced, and it skipped the Sprint 199 `pwd_at`
+  revocation check, so adopting it would have accepted tokens revoked by a password change.
+  **Not deleted, and flagged instead:** `PAYROLL_SUSPICIOUS_KEYWORDS` and `PREPAID_KEYWORDS`. An
+  unused *keyword list* can mean a check that was designed and never wired in — a possible
+  detection gap, not dead code. Worth a look before deleting. The four duplicated entitlement
+  checks and `export/transport.py` remain.
+- **Item 6:** `background4.jpg` (22 MB, unreferenced) deleted; `background5.jpg` 7.1 MB → 140 KB
+  (1920px, q72 progressive — it renders at 6% opacity).
 
 **Commit SHA:** TBD.
 
