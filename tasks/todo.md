@@ -221,6 +221,11 @@
 >   `leadsheet_generator.py` 11.3%, `workbook_inspector.py` 18.6%,
 >   `population_profile_memo.py` 39.7%, `pdf/sections/diagnostic.py` 64.9%. Finding A-5
 >   was a defect in exactly this layer that a test would have caught.
+> - **D-6 — re-measured 2026-10-23, much smaller than recorded.** Counting boundaries the App
+>   Router *inherits* from parent segments: all 62 pages have an error boundary (root `error.tsx` +
+>   `global-error.tsx`), and all 18 tool routes have a loading skeleton via `tools/loading.tsx`.
+>   The 23 without one are marketing, auth, internal admin, `dashboard` and `shared/[token]`;
+>   only the last two plausibly earn one. Original note follows.
 > - **D-6 — route-level loading and error states.** 62 pages, 20 `loading.tsx`, 9
 >   `error.tsx`, 1 `not-found.tsx`. 42 routes have no streaming skeleton. Prioritise the
 >   18 tool routes, where a long upload-and-analyse cycle is where a skeleton earns its
