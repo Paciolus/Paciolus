@@ -50,6 +50,16 @@ SCANNED_GLOBS: tuple[str, ...] = (
     "frontend/src/components/marketing/**/*.tsx",
     "docs/07-user-facing/USER_GUIDE.md",
     "CLAUDE.md",
+    # Sprint 813 (item 7): the backend PDF producers. Every memo and report a
+    # customer downloads cites standards, and none of them were scanned — the
+    # widest customer-facing surface in the product was outside the guard.
+    "backend/*_memo_generator.py",
+    "backend/*_memo.py",
+    "backend/anomaly_summary_generator.py",
+    "backend/pdf/**/*.py",
+    "backend/shared/memo_*.py",
+    "backend/shared/scope_methodology.py",
+    "backend/shared/follow_up_procedures.py",
 )
 
 # Sprint 779: the AS 1215 / JE Testing miscitation was swept from every
@@ -85,7 +95,9 @@ CITATION_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     # ISA 240, ISA 315, etc.
     ("ISA", re.compile(r"\bISA\s+(\d{3})\b")),
     # AU-C 450, AU-C 500
-    ("AU-C", re.compile(r"\bAU-?C\s+(\d{3})\b")),
+    # Sprint 813: also "AU-C § 330" and its Python-source escape "AU-C § 330".
+    # Without the section sign, AU-C 330 sat in two memo PDFs unregistered.
+    ("AU-C", re.compile(r"\bAU-?C\s+(?:(?:§|\\u00a7)\s*)?(\d{3})\b")),
     # ASC 606, ASC 230, etc.
     ("ASC", re.compile(r"\bASC\s+(\d{3,4})\b")),
     # IFRS 10, IFRS 15

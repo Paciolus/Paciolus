@@ -82,6 +82,20 @@ STANDARDS: Final[tuple[Standard, ...]] = (
         title="Auditing Accounting Estimates, Including Fair Value Measurements",
         usage=("AR aging memo", "fixed asset memo", "inventory memo"),
     ),
+    # Sprint 813 (item 7): cited in memo PDFs, which the citation guard did not
+    # scan until now.
+    Standard(
+        body="PCAOB",
+        code="AS 1105",
+        title="Audit Evidence",
+        usage=("three-way match memo",),
+    ),
+    Standard(
+        body="PCAOB",
+        code="AS 1305",
+        title="Communications About Control Deficiencies in an Audit of Financial Statements",
+        usage=("anomaly summary report — cited only to disclaim deficiency classification",),
+    ),
     # ── ISA / IAASB ──────────────────────────────────────────
     Standard(
         body="ISA",
@@ -191,6 +205,25 @@ STANDARDS: Final[tuple[Standard, ...]] = (
         title="Credit Losses (CECL)",
         usage=("AR aging — collectibility risk references in marketing copy",),
     ),
+    # Sprint 813 (item 7): memo PDF citations.
+    Standard(
+        body="ASC",
+        code="ASC 205",
+        title="Presentation of Financial Statements (205-40 Going Concern)",
+        usage=("follow-up procedures in memo PDFs",),
+    ),
+    Standard(
+        body="ASC",
+        code="ASC 275",
+        title="Risks and Uncertainties",
+        usage=("revenue testing memo", "follow-up procedures in memo PDFs"),
+    ),
+    Standard(
+        body="ASC",
+        code="ASC 450",
+        title="Contingencies (450-20 Loss Contingencies)",
+        usage=("sampling memo footnote",),
+    ),
     # ── IFRS / IAS ───────────────────────────────────────────
     Standard(
         body="IFRS", code="IFRS 10", title="Consolidated Financial Statements", usage=("intercompany elimination tool",)
@@ -227,6 +260,13 @@ STANDARDS: Final[tuple[Standard, ...]] = (
         title="The Effects of Changes in Foreign Exchange Rates",
         usage=("multi-currency conversion tool",),
     ),
+    # Sprint 813 (item 7): memo PDF citation.
+    Standard(
+        body="IFRS",
+        code="IFRS 9",
+        title="Financial Instruments (expected credit losses)",
+        usage=("AR aging memo", "follow-up procedures in memo PDFs"),
+    ),
     # ── AICPA / AU-C ─────────────────────────────────────────
     Standard(
         body="AICPA",
@@ -248,6 +288,32 @@ STANDARDS: Final[tuple[Standard, ...]] = (
         code="AICPA Audit Sampling Guide Table A-1",
         title="Confidence factor / expansion factor table",
         usage=("sampling engine — `shared/aicpa_tables.py`", "sampling memo"),
+    ),
+    # Sprint 813 (item 7): memo PDF citations. AU-C 320 and 330 surfaced only once
+    # the scanner learned the "AU-C § 330" spelling the memos use.
+    Standard(
+        body="AICPA",
+        code="AU-C 320",
+        title="Materiality in Planning and Performing an Audit",
+        usage=("summary of uncorrected misstatements memo",),
+    ),
+    Standard(
+        body="AICPA",
+        code="AU-C 330",
+        title="Performing Audit Procedures in Response to Assessed Risks and Evaluating the Audit Evidence Obtained",
+        usage=("analytical expectations memo", "anomaly summary report"),
+    ),
+    Standard(
+        body="AICPA",
+        code="AU-C 520",
+        title="Analytical Procedures",
+        usage=("analytical expectations memo",),
+    ),
+    Standard(
+        body="AICPA",
+        code="AU-C 570",
+        title="The Auditor's Consideration of an Entity's Ability to Continue as a Going Concern",
+        usage=("going concern section of the diagnostic PDF",),
     ),
     # ── IRS / Tax / Forms ────────────────────────────────────
     Standard(
