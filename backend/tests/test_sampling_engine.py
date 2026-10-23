@@ -856,3 +856,10 @@ class TestSprint824Evaluation:
         assert result.errors_found == 0
         assert result.skipped_missing_audited == 1
         assert result.evaluated_count == 1
+
+    @pytest.mark.parametrize("method", ["mus", "random"])
+    def test_a_sample_with_nothing_assessable_is_refused_not_passed(self, method):
+        """PR #205 review: with every audited amount unreadable, both methods
+        evaluated an empty sample and concluded "pass"."""
+        with pytest.raises(ValueError, match="No sample item could be evaluated"):
+            self._evaluate("item_id,recorded_amount,audited_amount\nA,50000,see note\n", method=method)

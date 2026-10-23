@@ -892,6 +892,16 @@ def evaluate_sample(
         rows, column_names, column_mapping
     )
 
+    # A conclusion needs at least one assessed item. Since unreadable audited
+    # amounts became "unassessed" rather than 100% misstatements, a file in
+    # which none could be read would otherwise evaluate an empty sample and
+    # report "pass" (PR #205 review).
+    if evaluated_count == 0:
+        raise ValueError(
+            "No sample item could be evaluated: every row is missing a readable recorded or audited "
+            "amount. Check the audited amount column before drawing a conclusion."
+        )
+
     # Build missing audited amount warning if threshold exceeded
     MISSING_AUDITED_THRESHOLD = 0.10  # 10% of evaluated population
     missing_audited_warning: Optional[str] = None
