@@ -410,7 +410,11 @@ valuation allowance) needs a scope call.
 - [x] **F4** — new `attorney_fees` category → 1099-NEC box 1, reportable for corporate law firms;
       `legal` remains gross proceeds paid to an attorney (MISC box 10). Backend, route literal,
       frontend type, CSV parser and help text.
-- [ ] F5, F9, W4 (W-3 vs 941), W6–W10, B1, B2, B5, B6.
+- [x] **W6** — `ss_wage_base_exceeded` fires on a supplied draft only when Box 3 itself exceeds the
+      base (a correctly capped draft no longer draws HIGH); with no draft it stays as the reminder.
+      One test changed: it asserted the false alarm. **W7** — the Additional Medicare notice is
+      counted as `informational_notices`, not as a discrepancy. **W10** — negative tolerance refused.
+- [ ] F5, F9, W4 (W-3 vs 941), W8, W9, B1, B2, B5, B6.
 
 **Commit SHA:** TBD.
 

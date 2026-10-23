@@ -87,7 +87,10 @@ class TestHappyPath:
 
 
 class TestSSWageBase:
-    def test_ss_wages_above_base_flags_exceeded(self):
+    def test_correctly_capped_draft_is_not_flagged_for_uncapped_payroll(self):
+        """Sprint 826 (W6): payroll routinely reports uncapped SS wages. A draft
+        whose box 3 is correctly capped drew a HIGH "must be capped" finding —
+        this test used to assert exactly that."""
         emp = _clean_employee(ss_wages="200000")
         cfg = W2ReconciliationConfig(
             tax_year=2025,
@@ -95,6 +98,12 @@ class TestSSWageBase:
             w2_drafts=[_matching_w2(emp)],
         )
         result = reconcile_w2(cfg)
+        kinds = {d.kind for d in result.employee_discrepancies}
+        assert DiscrepancyKind.SS_WAGE_BASE_EXCEEDED not in kinds
+
+    def test_without_a_draft_uncapped_payroll_still_gets_the_reminder(self):
+        emp = _clean_employee(ss_wages="200000")
+        result = reconcile_w2(W2ReconciliationConfig(tax_year=2025, employees=[emp], w2_drafts=[]))
         kinds = {d.kind for d in result.employee_discrepancies}
         assert DiscrepancyKind.SS_WAGE_BASE_EXCEEDED in kinds
 
