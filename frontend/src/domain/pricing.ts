@@ -200,6 +200,7 @@ export const tiers: Tier[] = [
     ctaHref: (interval) => `/register?plan=professional&interval=${interval}`,
     ctaFilled: true,
     hasSeats: true,
+    badge: 'Most Popular',
   },
   {
     name: 'Enterprise',
@@ -347,4 +348,41 @@ export function getSeatCalculatorDescription(): string {
   const pro = SEAT_CONFIGS[0]!
   const ent = SEAT_CONFIGS[1]!
   return `Professional includes ${pro.baseSeats} seats (up to ${pro.maxSeats}). Enterprise includes ${ent.baseSeats} seats (up to ${ent.maxSeats}).`
+}
+
+/* ────────────────────────────────────────────────
+   Id-keyed lookups (Sprint 818)
+   Checkout and the upgrade modal key plans by backend id ('solo',
+   'professional', 'enterprise'). They used to hard-code prices, base seats,
+   seat limits and per-seat rates; they now read them from here.
+   ──────────────────────────────────────────────── */
+
+export function getTier(id: string): Tier | undefined {
+  return tiers.find((t) => t.internalId === id)
+}
+
+function seatConfig(id: string): SeatCalcConfig | undefined {
+  const tier = getTier(id)
+  return tier?.hasSeats ? SEAT_CONFIGS.find((c) => c.label === tier.name) : undefined
+}
+
+export function tierPriceDollars(id: string, interval: BillingInterval): number | undefined {
+  const tier = getTier(id)
+  if (!tier) return undefined
+  return interval === 'annual' ? tier.annualPrice : tier.monthlyPrice
+}
+
+export function baseSeats(id: string): number {
+  return seatConfig(id)?.baseSeats ?? 1
+}
+
+export function maxAdditionalSeats(id: string): number {
+  const config = seatConfig(id)
+  return config ? config.maxSeats - config.baseSeats : 0
+}
+
+export function seatPriceDollars(id: string, interval: BillingInterval): number {
+  const config = seatConfig(id)
+  if (!config) return 0
+  return interval === 'annual' ? config.seatAnnual : config.seatMonthly
 }

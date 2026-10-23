@@ -10,6 +10,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
+import { type BillingInterval, baseSeats, formatPrice, getTier, maxAdditionalSeats, seatPriceDollars } from '@/domain/pricing'
 import { fadeScale } from '@/lib/motion'
 
 interface UpgradeModalProps {
@@ -18,59 +19,33 @@ interface UpgradeModalProps {
   onClose: () => void
 }
 
+// Sprint 818: prices, seat counts and seat rates come from `@/domain/pricing`;
+// only these short feature blurbs are modal-specific copy.
 const TIERS = [
   {
     id: 'solo',
     name: 'Solo',
-    monthly: '$100/mo',
-    annual: '$1,000/yr',
     features: ['100 uploads/mo', 'Unlimited clients', 'All 18 tools', 'PDF, Excel & CSV exports', '7-day free trial'],
-    hasSeats: false,
   },
   {
     id: 'professional',
     name: 'Professional',
-    monthly: '$500/mo',
-    annual: '$5,000/yr',
     features: ['500 uploads/mo', 'Unlimited clients', 'All 18 tools', 'All exports', '7 seats (up to 20)', 'Export sharing', 'Admin dashboard', '7-day free trial'],
-    hasSeats: true,
   },
   {
     id: 'enterprise',
     name: 'Enterprise',
-    monthly: '$1,000/mo',
-    annual: '$10,000/yr',
     features: ['Unlimited uploads', 'Unlimited clients', 'All 18 tools', 'All exports', '20 seats (up to 100)', 'Export sharing', 'Admin dashboard', 'Bulk upload', 'Custom PDF branding', '7-day free trial'],
-    hasSeats: true,
   },
 ]
 
-/** Per-seat pricing, matching price_config.py. */
-const PRO_SEAT_PRICE_INFO = {
-  monthly: '$65/seat/mo',
-  annual: '$650/seat/yr',
-} as const
-
-const ENT_SEAT_PRICE_INFO = {
-  monthly: '$45/seat/mo',
-  annual: '$450/seat/yr',
-} as const
-
-/** Maximum additional seats available via self-serve checkout. */
-function maxAdditionalSeats(tierId: string): number {
-  if (tierId === 'enterprise') return 80 // 100 - 20
-  if (tierId === 'professional') return 13 // 20 - 7
-  return 0
-}
-
-function baseSeatsForTier(tierId: string): number {
-  if (tierId === 'enterprise') return 20
-  if (tierId === 'professional') return 7
-  return 1
+function priceLabel(tierId: string, interval: BillingInterval): string {
+  const tier = getTier(tierId)
+  return tier ? `${formatPrice(tier, interval)}/${interval === 'annual' ? 'yr' : 'mo'}` : ''
 }
 
 export function UpgradeModal({ currentTier, isOpen, onClose }: UpgradeModalProps) {
-  const [interval, setInterval] = useState<'monthly' | 'annual'>('monthly')
+  const [interval, setInterval] = useState<BillingInterval>('monthly')
   const [additionalSeats, setAdditionalSeats] = useState(0)
 
   const tierOrder = ['free', 'solo', 'professional', 'enterprise']
@@ -161,7 +136,7 @@ export function UpgradeModal({ currentTier, isOpen, onClose }: UpgradeModalProps
                       )}
                     </div>
                     <p className="font-mono text-lg text-sage-600 mt-1">
-                      {interval === 'annual' ? tier.annual : tier.monthly}
+                      {priceLabel(tier.id, interval)}
                     </p>
                     <ul className="mt-3 space-y-1">
                       {tier.features.map((f) => (
@@ -181,7 +156,7 @@ export function UpgradeModal({ currentTier, isOpen, onClose }: UpgradeModalProps
                       <span className="text-sm text-content-tertiary font-sans">—</span>
                     ) : (
                       <Link
-                        href={`/checkout?plan=${tier.id}&interval=${interval}${tier.hasSeats && additionalSeats > 0 ? `&seats=${additionalSeats}` : ''}`}
+                        href={`/checkout?plan=${tier.id}&interval=${interval}${maxAdditionalSeats(tier.id) > 0 && additionalSeats > 0 ? `&seats=${additionalSeats}` : ''}`}
                         className="inline-block px-4 py-2 bg-sage-600 text-oatmeal-50 rounded-lg text-sm font-sans font-medium hover:bg-sage-700 transition-colors"
                         onClick={onClose}
                       >
@@ -191,7 +166,7 @@ export function UpgradeModal({ currentTier, isOpen, onClose }: UpgradeModalProps
                   </div>
                 </div>
                 {/* Seat selector for multi-seat tiers */}
-                {tier.hasSeats && !isCurrent && !isDowngrade && (
+                {maxAdditionalSeats(tier.id) > 0 && !isCurrent && !isDowngrade && (
                   <div className="mt-3 pt-3 border-t border-theme">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-content-secondary font-sans">
@@ -221,14 +196,11 @@ export function UpgradeModal({ currentTier, isOpen, onClose }: UpgradeModalProps
                     </div>
                     {additionalSeats > 0 && (
                       <p className="text-xs text-content-tertiary font-sans mt-1">
-                        {baseSeatsForTier(tier.id) + additionalSeats} total seats ({baseSeatsForTier(tier.id)} included + {additionalSeats} additional)
+                        {baseSeats(tier.id) + additionalSeats} total seats ({baseSeats(tier.id)} included + {additionalSeats} additional)
                       </p>
                     )}
                     <p className="text-xs text-content-tertiary font-sans mt-1">
-                      Additional seats: {tier.id === 'enterprise'
-                        ? ENT_SEAT_PRICE_INFO[interval]
-                        : PRO_SEAT_PRICE_INFO[interval]
-                      }
+                      Additional seats: ${seatPriceDollars(tier.id, interval)}/seat/{interval === 'annual' ? 'yr' : 'mo'}
                     </p>
                   </div>
                 )}
