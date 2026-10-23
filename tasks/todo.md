@@ -398,7 +398,9 @@ valuation allowance) needs a scope call.
       whitespace-normalised, and the first of a duplicate pair is kept. The W-3 ↔ 941 comparison
       the module docstring promises is still missing.
 - [x] **W5** — with no plan type, the plan is inferred from which deferral field is populated.
-- [ ] F4, F5, F8, F9, W4 (W-3 vs 941), W6–W10, B1–B6.
+- [x] **F8** — governments and tax-exempt organisations are exempt payees (no medical/legal
+      carve-back, unlike corporations).
+- [ ] F4, F5, F9, W4 (W-3 vs 941), W6–W10, B1–B6.
 
 **Commit SHA:** TBD.
 

@@ -2,6 +2,8 @@
 
 from decimal import Decimal
 
+import pytest
+
 from form_1099_engine import (
     FORM_THRESHOLDS,
     EntityType,
@@ -329,3 +331,9 @@ class TestSprint826:
         assert candidate.total_reportable == Decimal("800.00")
         assert candidate.payment_count == 2
         assert any("V1, V1-OLD" in reason for reason in candidate.review_reasons)
+
+    @pytest.mark.parametrize("entity", [EntityType.GOVERNMENT, EntityType.TAX_EXEMPT])
+    def test_governments_and_tax_exempt_payees_are_not_reported(self, entity):
+        """F8: $5,000 to each was reported as 1099-NEC."""
+        cfg = Form1099Config(tax_year=2025, vendors=[_vendor(entity=entity)], payments=[_payment(amount="5000")])
+        assert prepare_1099s(cfg).candidates == []

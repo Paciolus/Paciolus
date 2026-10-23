@@ -46,7 +46,7 @@ Status column: **Fixed (824)** = remediated in Sprint 824; otherwise the sprint 
 | F5 | P1* | TY2026 still uses $600 for NEC/MISC; the agent believes P.L. 119-21 raised it to $2,000 for payments after 2025-12-31. **Unconfirmed — practitioner.** | 793b |
 | F6 | P2 | MISC thresholds applied to the combined total, not per box (rents 400 + medical 300 → a 700 MISC). | Fixed (826) |
 | F7 | P2 | Category `other` → MISC "box 0" (does not exist; other income is box 3). | Fixed (826) |
-| F8 | P2 | Payments to governments and tax-exempt entities reported as NEC. | 826 |
+| F8 | P2 | Payments to governments and tax-exempt entities reported as NEC. | Fixed (826) |
 | W1 | P1 | SIMPLE IRA catch-up uses the 401(k) figures ($7,500 instead of $3,500; age 60–63 $5,250). `w2_reconciliation_engine.py:531-534`. | 826 (figures via 793b) |
 | W2 | P1 | HSA limit ignores the age-55 $1,000 catch-up — a correct contribution is flagged HIGH with an excise-tax message. | 826 |
 | W3 | P1 | Box 12 codes D/W/S and payroll SS/Medicare **withheld** are read but never compared. | Fixed (826) |

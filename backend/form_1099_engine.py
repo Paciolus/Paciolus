@@ -305,6 +305,12 @@ def _vendor_is_corporation(entity: EntityType) -> bool:
     return entity in (EntityType.CORPORATION, EntityType.S_CORPORATION)
 
 
+# Sprint 826 (F8): payments to tax-exempt organisations and to governments are
+# listed exceptions to 1099-NEC/MISC reporting — without the medical and legal
+# carve-back that applies to corporations. They were reported as NEC.
+EXEMPT_PAYEE_ENTITIES: frozenset[EntityType] = frozenset({EntityType.GOVERNMENT, EntityType.TAX_EXEMPT})
+
+
 # =============================================================================
 # Core engine
 # =============================================================================
@@ -387,6 +393,11 @@ def prepare_1099s(config: Form1099Config) -> Form1099Result:
 
         # Processor-reported methods excluded from payer filing.
         if payment.payment_method in PROCESSOR_REPORTED_METHODS:
+            excluded_dollars[(payee, form_type)] += payment.amount
+            continue
+
+        # Exempt payees: governments and tax-exempt organisations.
+        if vendor.entity_type in EXEMPT_PAYEE_ENTITIES:
             excluded_dollars[(payee, form_type)] += payment.amount
             continue
 
