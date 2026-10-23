@@ -92,6 +92,10 @@ AS_1215_CONTEXT_ALLOWLIST: frozenset[str] = frozenset()
 CITATION_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     # PCAOB AS 1215, AS 2401, etc.
     ("PCAOB", re.compile(r"\bPCAOB\s+AS\s+(\d{3,5})\b")),
+    # The memo reference tables: ("PCAOB", "AS 2810", "Evaluating Audit Results").
+    # Contiguous "PCAOB AS" never appears there, so these were invisible to the
+    # guard once the PDF producers were scanned (PR #212 review).
+    ("PCAOB", re.compile(r"""["']PCAOB["']\s*,\s*["']AS\s+(\d{3,5})["']""")),
     # ISA 240, ISA 315, etc.
     ("ISA", re.compile(r"\bISA\s+(\d{3})\b")),
     # AU-C 450, AU-C 500

@@ -92,6 +92,12 @@ STANDARDS: Final[tuple[Standard, ...]] = (
     ),
     Standard(
         body="PCAOB",
+        code="AS 2810",
+        title="Evaluating Audit Results",
+        usage=("summary of uncorrected misstatements memo",),
+    ),
+    Standard(
+        body="PCAOB",
         code="AS 1305",
         title="Communications About Control Deficiencies in an Audit of Financial Statements",
         usage=("anomaly summary report — cited only to disclaim deficiency classification",),
