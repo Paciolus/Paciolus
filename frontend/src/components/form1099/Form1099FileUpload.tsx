@@ -112,7 +112,7 @@ export function Form1099FileUpload({ onAnalyze, onExport, loading }: Form1099Fil
           />
           <p className="text-xs font-sans text-content-tertiary mt-2">
             Columns: vendor_id, amount, payment_category
-            (nonemployee_comp / rents / royalties / medical / legal / interest / other), payment_method
+            (nonemployee_comp / attorney_fees / rents / royalties / medical / legal = gross proceeds to an attorney / interest / other), payment_method
             (check / ach / wire / cash / credit_card / paypal), payment_date, invoice_number.
             {parsed.payments.length > 0 && (
               <span className="text-sage-700 font-medium"> &middot; {parsed.payments.length.toLocaleString()} payments parsed.</span>

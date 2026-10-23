@@ -42,7 +42,7 @@ Status column: **Fixed (824)** = remediated in Sprint 824; otherwise the sprint 
 | F1 | P1 | 1099 royalties use the $600 threshold; the 1099-MISC box 2 threshold is **$10**. `form_1099_engine.py:96-100`. | Fixed (826) |
 | F2 | P1 | 1099 `payment_date` is never used: payments from 2024-12 and 2026-01 count toward TY2025. | Fixed (826) |
 | F3 | P1 | No aggregation by TIN: two vendor IDs sharing a TIN with $400 each → no 1099 (should be one $800 NEC). | Fixed (826) |
-| F4 | P1 | Attorney fees have no correct path: `legal` lands on MISC box 10 (gross proceeds), and NEC + corporation is excluded entirely. | 826 |
+| F4 | P1 | Attorney fees have no correct path: `legal` lands on MISC box 10 (gross proceeds), and NEC + corporation is excluded entirely. | Fixed (826b) |
 | F5 | P1* | TY2026 still uses $600 for NEC/MISC; the agent believes P.L. 119-21 raised it to $2,000 for payments after 2025-12-31. **Unconfirmed — practitioner.** | 793b |
 | F6 | P2 | MISC thresholds applied to the combined total, not per box (rents 400 + medical 300 → a 700 MISC). | Fixed (826) |
 | F7 | P2 | Category `other` → MISC "box 0" (does not exist; other income is box 3). | Fixed (826) |

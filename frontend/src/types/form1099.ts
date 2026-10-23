@@ -26,6 +26,7 @@ export type PaymentMethod1099 =
 
 export type PaymentCategory1099 =
   | 'nonemployee_comp'
+  | 'attorney_fees'
   | 'rents'
   | 'royalties'
   | 'medical'

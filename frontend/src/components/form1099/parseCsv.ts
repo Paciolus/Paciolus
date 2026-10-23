@@ -42,6 +42,7 @@ const VALID_METHODS = new Set<PaymentMethod1099>([
 
 const VALID_CATEGORIES = new Set<PaymentCategory1099>([
   'nonemployee_comp',
+  'attorney_fees',
   'rents',
   'royalties',
   'medical',

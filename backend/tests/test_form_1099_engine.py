@@ -337,3 +337,24 @@ class TestSprint826:
         """F8: $5,000 to each was reported as 1099-NEC."""
         cfg = Form1099Config(tax_year=2025, vendors=[_vendor(entity=entity)], payments=[_payment(amount="5000")])
         assert prepare_1099s(cfg).candidates == []
+
+    def test_attorney_fees_are_nec_even_for_a_corporate_law_firm(self):
+        """F4: fees for legal services had no correct path — "legal" went to MISC
+        box 10 (gross proceeds) and "nonemployee_comp" excluded the corporation."""
+        cfg = Form1099Config(
+            tax_year=2025,
+            vendors=[_vendor(entity=EntityType.CORPORATION)],
+            payments=[_payment(amount="5000", category=PaymentCategory.ATTORNEY_FEES)],
+        )
+        (candidate,) = prepare_1099s(cfg).candidates
+        assert candidate.form_type == "1099-NEC"
+        assert candidate.box_amounts[0].box == 1
+
+    def test_gross_proceeds_to_an_attorney_stay_misc_box_10(self):
+        cfg = Form1099Config(
+            tax_year=2025,
+            vendors=[_vendor(entity=EntityType.CORPORATION)],
+            payments=[_payment(amount="5000", category=PaymentCategory.LEGAL)],
+        )
+        (candidate,) = prepare_1099s(cfg).candidates
+        assert (candidate.form_type, candidate.box_amounts[0].box) == ("1099-MISC", 10)

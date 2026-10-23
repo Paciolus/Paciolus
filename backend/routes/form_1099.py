@@ -55,7 +55,9 @@ VendorEntity = Literal[
 
 PaymentMethodLiteral = Literal["check", "ach", "wire", "cash", "credit_card", "paypal", "unknown"]
 
-PaymentCategoryLiteral = Literal["nonemployee_comp", "rents", "royalties", "medical", "legal", "interest", "other"]
+PaymentCategoryLiteral = Literal[
+    "nonemployee_comp", "attorney_fees", "rents", "royalties", "medical", "legal", "interest", "other"
+]
 
 
 class VendorRequest(BaseModel):

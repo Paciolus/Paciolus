@@ -402,7 +402,10 @@ valuation allowance) needs a scope call.
       carve-back, unlike corporations).
 - [x] **B3** — state rate validated to 0–1 like the federal rate. **B4** — a positive temporary
       movement reverses any DTL before building a DTA (gross balances were wrong; net was right).
-- [ ] F4, F5, F9, W4 (W-3 vs 941), W6–W10, B1, B2, B5, B6.
+- [x] **F4** — new `attorney_fees` category → 1099-NEC box 1, reportable for corporate law firms;
+      `legal` remains gross proceeds paid to an attorney (MISC box 10). Backend, route literal,
+      frontend type, CSV parser and help text.
+- [ ] F5, F9, W4 (W-3 vs 941), W6–W10, B1, B2, B5, B6.
 
 **Commit SHA:** TBD.
 
