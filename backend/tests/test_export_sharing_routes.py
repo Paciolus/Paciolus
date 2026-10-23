@@ -16,6 +16,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from models import UserTier
 
+# Sprint 812: exercise these routes with the rate limiter ON (see conftest.limiter_enabled).
+pytestmark = pytest.mark.usefixtures("limiter_enabled")
+
 # ---------------------------------------------------------------------------
 # Test data: valid and invalid payloads by format
 # ---------------------------------------------------------------------------

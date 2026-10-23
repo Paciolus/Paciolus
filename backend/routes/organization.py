@@ -13,7 +13,7 @@ import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -83,7 +83,7 @@ class UpdateMemberRoleRequest(BaseModel):
 @limiter.limit(RATE_LIMIT_WRITE)
 async def create_organization(
     body: CreateOrgRequest,
-    request: Any = None,
+    request: Request,
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
@@ -131,7 +131,7 @@ async def get_organization(
 @limiter.limit(RATE_LIMIT_WRITE)
 async def update_organization(
     body: UpdateOrgRequest,
-    request: Any = None,
+    request: Request,
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
@@ -153,7 +153,7 @@ async def update_organization(
 @limiter.limit(RATE_LIMIT_WRITE)
 async def create_invite(
     body: InviteRequest,
-    request: Any = None,
+    request: Request,
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
@@ -230,7 +230,7 @@ async def list_invites(
 @limiter.limit(RATE_LIMIT_WRITE)
 async def revoke_invite(
     invite_id: int,
-    request: Any = None,
+    request: Request,
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
 ) -> dict[str, str]:
@@ -259,7 +259,7 @@ async def revoke_invite(
 @limiter.limit(RATE_LIMIT_WRITE)
 async def accept_invite(
     token: str,
-    request: Any = None,
+    request: Request,
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
 ) -> dict[str, str]:
@@ -361,7 +361,7 @@ async def list_members(
 async def update_member_role(
     member_id: int,
     body: UpdateMemberRoleRequest,
-    request: Any = None,
+    request: Request,
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
@@ -392,7 +392,7 @@ async def update_member_role(
 @limiter.limit(RATE_LIMIT_WRITE)
 async def remove_member(
     member_id: int,
-    request: Any = None,
+    request: Request,
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
 ) -> dict[str, str]:

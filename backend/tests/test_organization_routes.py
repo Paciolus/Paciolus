@@ -29,6 +29,9 @@ from organization_model import (
 )
 from subscription_model import BillingInterval, Subscription, SubscriptionStatus
 
+# Sprint 812: exercise these routes with the rate limiter ON (see conftest.limiter_enabled).
+pytestmark = pytest.mark.usefixtures("limiter_enabled")
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

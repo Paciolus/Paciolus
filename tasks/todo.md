@@ -318,7 +318,7 @@ product, reached through a UI that presents them identically to the mature eleve
       really asking for.
 
 ### Sprint 812: Nineteen rate-limited routes 500 on every call
-**Status:** PENDING.
+**Status:** IN REVIEW — code complete 2026-10-23; post-deploy verification pending.
 **Priority:** **P0** — every Professional/Enterprise org feature is down in production.
 **Source:** Code health review 2026-10-23, routes pass. Re-verified on the live app object.
 
@@ -333,12 +333,23 @@ Affected (19): `routes/organization.py:86,134,156,233,262,364,395`,
 `routes/bulk_upload.py:47`, `routes/export_sharing.py:312,458,495,522`.
 
 **Scope:**
-- [ ] Change each to `request: Request`.
-- [ ] Guard test: for every `APIRoute` whose endpoint is wrapped by `@limiter.limit`, assert
-      `route.dependant.request_param_name` is set and no query param is named `request`.
-      Mechanical — it is the absence of exactly this check that let it sit seven months.
-- [ ] At least one route test per affected router with the limiter **enabled**.
+- [x] Change each to `request: Request`. Enumerated on the live app object first: exactly 19
+      `APIRoute`s carried `request` as a query param, matching the list above one-for-one.
+- [x] Guard test `tests/test_rate_limited_request_param.py`: every route in slowapi's
+      decorated-endpoint registry must have `dependant.request_param_name` set, and no route may
+      expose `request` as a query/body param. Includes a vacuity check (≥150 limited routes
+      resolved; 201 today) so a drift in slowapi internals cannot turn it into a scan of nothing.
+- [x] Limiter **enabled** for the whole of the five affected routers' existing suites via a new
+      opt-in `limiter_enabled` conftest fixture (`pytestmark` in each module) — stronger than one
+      test per router. **Proved:** with the route fix reverted, 43 of those 71 tests fail; with it, 71/71.
+- [x] OpenAPI snapshot regenerated — the diff is exactly the 19 bogus `?request=` params (−202 lines).
+      Note the drift check did **not** flag their removal (it reports only metadata drift), so the
+      snapshot gate would never have caught this either.
 - [ ] After deploy: confirm live SHA = `main`, then hit `/organization` and `/branding/` on prod.
+
+**Side effect worth knowing:** `export_sharing.py:511` threads `request.client.host` into the
+Sprint 698 per-IP passcode throttle. With `request=None` that branch could never run — though
+the route 500'd before reaching it anyway, so the throttle was not bypassed, merely unreachable.
 
 **Commit SHA:** TBD.
 

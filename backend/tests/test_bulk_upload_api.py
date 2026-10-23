@@ -25,6 +25,9 @@ from database import get_db
 from main import app
 from models import User, UserTier
 
+# Sprint 812: exercise these routes with the rate limiter ON (see conftest.limiter_enabled).
+pytestmark = pytest.mark.usefixtures("limiter_enabled")
+
 # =============================================================================
 # Fixtures
 # =============================================================================
