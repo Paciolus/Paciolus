@@ -121,8 +121,7 @@ async def run_single_file_testing(
                 result.composite_score.score if hasattr(result, "composite_score") and result.composite_score else None
             )
             flagged = extract_accounts(result_dict) if extract_accounts else None
-            background_tasks.add_task(
-                maybe_record_tool_run,
+            maybe_record_tool_run(
                 db,
                 engagement_id,
                 current_user.id,
@@ -136,7 +135,11 @@ async def run_single_file_testing(
 
             return dict(result_dict)
 
-        except (ValueError, KeyError, TypeError) as e:
-            logger.exception("%s analysis failed", tool_name)
+        except (ValueError, KeyError, TypeError, ArithmeticError) as e:
+            # Sprint 814: the Sprint 713 treatment, which only ever reached
+            # file_tool_scaffold. ArithmeticError covers decimal.InvalidOperation
+            # from a malformed amount cell — a user-facing 400, so WARNING, not
+            # a Sentry-paging ERROR.
+            logger.warning("%s rejected [%s]: %s", tool_name, type(e).__name__, e, exc_info=True)
             maybe_record_tool_run(db, engagement_id, current_user.id, tool_name, False)
             raise HTTPException(status_code=400, detail=sanitize_error(e, "analysis", error_key))

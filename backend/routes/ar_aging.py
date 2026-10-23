@@ -11,7 +11,7 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from sqlalchemy.orm import Session
 
 from ar_aging_engine import ARAgingConfig, run_ar_aging
@@ -38,7 +38,6 @@ router = APIRouter(tags=["ar_aging"])
 @limiter.limit(RATE_LIMIT_AUDIT)
 async def audit_ar_aging(
     request: Request,
-    background_tasks: BackgroundTasks,
     tb_file: UploadFile = File(...),
     subledger_file: Optional[UploadFile] = File(default=None),
     tb_column_mapping: Optional[str] = Form(default=None),
@@ -132,9 +131,7 @@ async def audit_ar_aging(
                 result.composite_score.score if hasattr(result, "composite_score") and result.composite_score else None
             )
             flagged = extract_ar_aging_accounts(result_dict)
-            background_tasks.add_task(
-                maybe_record_tool_run, db, engagement_id, current_user.id, "ar_aging", True, score, flagged
-            )
+            maybe_record_tool_run(db, engagement_id, current_user.id, "ar_aging", True, score, flagged)
 
             return result_dict  # type: ignore[no-any-return]
 

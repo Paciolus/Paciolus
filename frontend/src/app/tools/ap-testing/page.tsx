@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { APScoreCard, APTestResultGrid, APDataQualityBadge, FlaggedPaymentTable } from '@/components/apTesting'
-import { GuestCTA, UnverifiedCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, ToolSettingsDrawer, CitationFooter } from '@/components/shared'
+import { GuestCTA, UnverifiedCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, ToolSettingsDrawer, CitationFooter, UpgradeGate } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractAPProof } from '@/components/shared/proof'
 import { Button } from '@/components/ui/Button'
 import { useAPTesting } from '@/hooks/useAPTesting'
@@ -95,6 +95,7 @@ export default function APTestingPage() {
 
         {/* State Choreography — Upload/Loading/Error/Results */}
         {isAuthenticated && isVerified && (
+          <UpgradeGate toolName="ap_testing">
           <ToolStatePresence status={status}>
             {/* Upload Zone */}
             {status === 'idle' && (
@@ -230,6 +231,7 @@ export default function APTestingPage() {
               </div>
             )}
           </ToolStatePresence>
+          </UpgradeGate>
         )}
 
         {/* Info cards for idle state */}

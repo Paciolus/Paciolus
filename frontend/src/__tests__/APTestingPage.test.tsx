@@ -48,6 +48,7 @@ jest.mock('framer-motion', () => ({
 runStandardToolPageScenarios({
   name: 'APTestingPage',
   Component: APTestingPage,
+  hasTierGating: true,
   getToolHookMock: () => useAPTesting as jest.Mock,
   heroText: 'AP Payment Testing',
   uploadPromptPattern: /Upload AP Payment Register/,

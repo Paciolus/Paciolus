@@ -431,7 +431,9 @@ page setup, cover, footer and `doc.build` by hand. Both defects below come from 
 ---
 
 ### Sprint 814: Upload routes — one scaffold, gating in one place
-**Status:** PENDING.
+**Status:** PARTIAL — items 1–4 fixed (each reproduced or measured first; item 1 had a third
+case the review missed, item 2 a root cause in the shared parser). Item 5 (one scaffold) remains,
+and belongs with Sprint 790.
 **Priority:** **P1** — item 1 is a paywall gap; items 2–3 are live inconsistencies.
 **Source:** Code health review 2026-10-23, routes + frontend passes.
 
@@ -441,20 +443,60 @@ and nine routes use neither (`ar_aging`, `bank_reconciliation`, `three_way_match
 `audit_flux`, `audit_pipeline`, `audit_preview`, `audit_upload`, `currency`).
 
 **Scope:**
-1. [ ] **`UpgradeGate` missing** on `app/tools/ap-testing/page.tsx` and
+1. [x] **`UpgradeGate` missing** on `app/tools/ap-testing/page.tsx` and
    `journal-entry-testing/page.tsx` (verified). Free users get the full upload UI and a 403
    after uploading. Confirm whether depreciation/loan-amortization omit it intentionally.
-2. [ ] `testing_route.py:139` never received the Sprint 713 `ArithmeticError` handling → a
+2. [x] `testing_route.py:139` never received the Sprint 713 `ArithmeticError` handling → a
    malformed decimal can still 500 and log at ERROR. `sampling.py:249` doesn't catch `ValueError`.
-3. [ ] Tool-run recording still uses `background_tasks.add_task` in `testing_route.py:124`,
+3. [x] Tool-run recording still uses `background_tasks.add_task` in `testing_route.py:124`,
    `file_tool_scaffold.py:56` and ~7 hand-written routes — the race PR #183 fixed elsewhere
    (`useAuditUpload.ts:137` refreshes the run list immediately). Record synchronously.
    *Code-read, not reproduced.*
-4. [ ] Verify then fix: `audit_flux.py:39` has no quota, tool-access or format check — a Free
+4. [x] Verify then fix: `audit_flux.py:39` has no quota, tool-access or format check — a Free
    user can likely send PDF/OFX/QBO through flux. Only `audit_pipeline`/`audit_upload` call
    `enforce_format_access`.
 5. [ ] One scaffold taking `(files, gates, analyze_fn, record_policy)`; migrate all upload routes.
    **Coordinate with Sprint 790**, whose increment-on-success belongs in the same recorder path.
+
+**Delivered 2026-10-23 (items 1–4):**
+- **Item 1 — three pages, not two.** Checked every tool page against the backend gates:
+  depreciation and loan-amortization have no backend tool check (free calculators outside the
+  18), so their omission is correct; **multi-period** enforces `multi_period` server-side but
+  had no `UpgradeGate` either. All three wrapped. `src/__tests__/ToolPageGating.test.ts` derives
+  the page list from `TOOL_LEDGER` and the Free set from `UpgradeGate.tsx`, and asserts every
+  paid tool page renders `<UpgradeGate toolName="<ledger id>">` — 3 of 18 fail on the old pages.
+  AP/JE page tests now opt into the shared helper's existing `hasTierGating` scenario (they never
+  had); MultiPeriod gets a Free-tier test and paid-tier default mocks.
+- **Item 2 — reproduced by fuzzing, root cause in the shared parser.** Injected 13 malformed
+  numerics into every cell of the AP/JE/Payroll/Revenue/FA/Inventory base fixtures (663 cases):
+  **5 of 6 tools 500'd** on `Infinity`/`-inf`/`1e999999` in an identifier column.
+  `upload_pipeline.py:677` strips a trailing `.0` from ID columns with `int(float(x))`, which
+  raises `OverflowError` on a non-finite float — in `parse_uploaded_file`, so every upload
+  route was exposed, not just these six. Guarded with `math.isfinite`; 663/663 clean after.
+  `testing_route` now also catches `ArithmeticError` at WARNING (it had the Sprint 713 gap
+  exactly as described). The sampling `ValueError` claim was **wrong** — both handlers already
+  map it to 422; their real gap was `ArithmeticError`, which I could not reproduce from input
+  (the engine parses through `safe_decimal`), so that handler is recorded as defensive only.
+- **Item 3 — 11 call sites, not ~9.** Every `background_tasks.add_task(maybe_record_tool_run, …)`
+  is now a direct call (the PR #183 fix, extended): `testing_route`, `file_tool_scaffold`, flux,
+  pipeline, AR, bank rec, TWM, multi-period ×2, sampling ×2. Unused `BackgroundTasks` params
+  dropped from seven handlers. An AST guard fails any reintroduction.
+- **Item 4 — verified, then fixed.** Flux ran no gates at all. It now enforces tool access,
+  the monthly quota and the format allow-list on both files, before reading any bytes. Tests:
+  Free + `.pdf` → 403, Free at quota → 403 (engine never called), Free within limits → 200.
+  The other non-TB upload routes are paid-only, and paid tiers allow every format, so flux was
+  the only route where the missing format check was reachable.
+
+**Found while fuzzing — filed, not fixed (needs its own measurement):** the identifier heuristic
+at `upload_pipeline.py:670` matches by **substring**, so `"id"` catches *Res**id**ual Value*,
+*Pa**id** Amount*, *Div**id**end*, and `"no"` catches *Notes*, *Nominal*. Those monetary columns
+are converted to strings before the engines see them. The engines re-parse through
+`safe_decimal`, so no wrong number has been demonstrated — but NaN becomes `""` on the way,
+which changes "missing" semantics for any check that tests `isinstance(x, float)`. Word-boundary
+matching is the likely fix; it needs a sweep of real column names first.
+
+**Also observed:** both sampling routes accept `nan`/`inf` form floats (Pydantic's default) and
+return a result rather than a 422 — e.g. `sampling_interval=nan`. Same family as above; filed here.
 
 **Commit SHA:** TBD.
 

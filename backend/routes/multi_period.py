@@ -8,7 +8,7 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -141,7 +141,6 @@ class MovementExportRequest(BaseModel):
 def compare_period_trial_balances(
     request: Request,
     payload: ComparePeriodAccountsRequest,
-    background_tasks: BackgroundTasks,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
 ) -> dict[str, object]:
@@ -165,9 +164,7 @@ def compare_period_trial_balances(
 
     result_dict = result.to_dict()
     flagged = extract_multi_period_accounts(result_dict)
-    background_tasks.add_task(
-        maybe_record_tool_run, db, payload.engagement_id, current_user.id, "multi_period", True, None, flagged
-    )
+    maybe_record_tool_run(db, payload.engagement_id, current_user.id, "multi_period", True, None, flagged)
 
     # Sprint 728c: evaluate ISA 520 expectations targeting these movements.
     if payload.engagement_id is not None:
@@ -187,7 +184,6 @@ def compare_period_trial_balances(
 def compare_three_way_trial_balances(
     request: Request,
     payload: ThreeWayComparisonRequest,
-    background_tasks: BackgroundTasks,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
 ) -> dict[str, object]:
@@ -213,9 +209,7 @@ def compare_three_way_trial_balances(
 
     result_dict = result.to_dict()
     flagged = extract_multi_period_accounts(result_dict)
-    background_tasks.add_task(
-        maybe_record_tool_run, db, payload.engagement_id, current_user.id, "multi_period", True, None, flagged
-    )
+    maybe_record_tool_run(db, payload.engagement_id, current_user.id, "multi_period", True, None, flagged)
 
     # Sprint 728c: ISA 520 evaluation against current-period balances
     if payload.engagement_id is not None:

@@ -53,8 +53,7 @@ async def execute_file_tool(
             if composite_score_key and composite_score_key in result:
                 kwargs["composite_score"] = result[composite_score_key]
 
-            background_tasks.add_task(
-                maybe_record_tool_run,
+            maybe_record_tool_run(
                 db,
                 engagement_id,
                 user_id,
