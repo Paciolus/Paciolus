@@ -68,13 +68,6 @@ DOCUMENTED_EXEMPTIONS: dict[str, dict[str, str]] = {
             "still exists is the point of the test."
         ),
     },
-    "test_post_audit_2026_04_20_batch2.py": {
-        "callable(getattr(module, name, None))": (
-            "The assertion is that an in-body-gate allowlist names functions that "
-            "actually exist. 'This name resolves to something callable' is precisely "
-            "the property under test."
-        ),
-    },
     "test_legacy_passcode_cleanup.py": {
         "callable(mod.main)": (
             "A no-argument CLI entrypoint: there is no signature to pin, and its "
@@ -82,6 +75,28 @@ DOCUMENTED_EXEMPTIONS: dict[str, dict[str, str]] = {
         ),
     },
 }
+
+# ---------------------------------------------------------------------------
+# Pre-existing baseline, owned by a different in-flight change.
+#
+# NOT an exemption. These are genuine presence-as-capability assertions and they
+# are wrong for exactly the reasons above — they are simply not this sprint's to
+# fix. They are the DEC review's finding **F-005**, and the DEC remediation
+# branch (Sprints 795-802) converts them. Fixing them here as well would
+# duplicate that work and guarantee a conflict in the one file both touch.
+#
+# So they are recorded, counted, and allowed not to grow — the same treatment
+# Sprint 809 gave the 48 `text-oatmeal-700` usages it could not responsibly
+# migrate. The count is asserted *exactly*, not as a ceiling, so this entry
+# cannot quietly absorb a new violation in the same file.
+#
+# When the DEC remediation lands, this count goes to 0 and
+# `test_the_pending_baseline_is_still_needed` fails, which is the signal to
+# delete this block. It is designed to expire.
+PENDING_BASELINE: dict[str, int] = {
+    "test_post_audit_2026_04_20_batch2.py": 8,
+}
+
 
 ASSERT_CALLABLE_RE = re.compile(r"^\s*assert callable\(")
 
@@ -121,7 +136,7 @@ def test_no_undocumented_presence_as_capability_assertions():
     offenders = [
         f"{filename}:{lineno}  {text}"
         for filename, lineno, text in _find_assertions()
-        if not _is_exempt(filename, text)
+        if not _is_exempt(filename, text) and filename not in PENDING_BASELINE
     ]
     assert offenders == [], (
         f"{len(offenders)} undocumented `assert callable(...)` assertion(s):\n  " + "\n  ".join(offenders) + GUIDANCE
@@ -170,3 +185,42 @@ def test_the_scan_finds_something(tmp_path: Path):
     # Not a bare presence assertion: a comment, or callable used in an expression.
     assert not ASSERT_CALLABLE_RE.match("# assert callable(foo)")
     assert not ASSERT_CALLABLE_RE.match("    assert x and callable(foo)")
+
+
+
+def test_the_pending_baseline_does_not_grow():
+    """
+    The baselined files are allowed their recorded count and not one more.
+
+    Asserted exactly rather than as a ceiling: a ceiling would let a new
+    violation slip in behind a number nobody re-reads, which is the failure mode
+    this whole gate exists to prevent.
+    """
+    counts: dict[str, int] = {}
+    for filename, _lineno, _text in _find_assertions():
+        if filename in PENDING_BASELINE:
+            counts[filename] = counts.get(filename, 0) + 1
+
+    for filename, expected in PENDING_BASELINE.items():
+        actual = counts.get(filename, 0)
+        assert actual == expected, (
+            f"{filename}: baseline records {expected} presence-as-capability "
+            f"assertion(s), found {actual}.\n"
+            f"If this went UP, the new one is a regression — fix it, do not raise the number.\n"
+            f"If it went DOWN, the DEC remediation (F-005) has landed: delete the entry "
+            f"from PENDING_BASELINE in this file."
+        )
+
+
+def test_the_pending_baseline_is_still_needed():
+    """
+    A baseline whose violations are gone is dead weight that would silence a
+    future regression in the same file. It must be deleted, not left to rot —
+    the same argument as `test_every_exemption_still_corresponds_to_a_real_assertion`.
+    """
+    present = {filename for filename, _lineno, _text in _find_assertions()}
+    stale = [f for f in PENDING_BASELINE if f not in present]
+    assert stale == [], (
+        "PENDING_BASELINE names files with no remaining presence-as-capability "
+        f"assertions: {stale}. The other change has landed — delete these entries."
+    )
