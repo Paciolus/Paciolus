@@ -117,7 +117,7 @@ def run_consolidation(
     except IntercompanyInputError as e:
         maybe_record_tool_run(db, payload.engagement_id, current_user.id, "intercompany_elimination", False)
         raise HTTPException(status_code=400, detail=str(e))
-    except (ValueError, ValidationError) as e:
+    except (ValueError, ValidationError, ArithmeticError) as e:
         logger.exception("Intercompany elimination failed")
         maybe_record_tool_run(db, payload.engagement_id, current_user.id, "intercompany_elimination", False)
         raise HTTPException(
@@ -157,6 +157,10 @@ def export_consolidation_csv(
         result = run_intercompany_elimination(_build_config(payload))
     except IntercompanyInputError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except ArithmeticError:
+        # Sprint 827: a huge-but-finite amount ("1e400") passes parsing, then
+        # quantize() raises InvalidOperation — an input problem, not a 500.
+        raise HTTPException(status_code=400, detail="An amount is too large to process.")
 
     buffer = io.StringIO()
     writer = csv.writer(buffer)

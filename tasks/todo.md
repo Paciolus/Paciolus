@@ -380,9 +380,24 @@ valuation allowance) needs a scope call.
 ---
 
 ### Sprint 827: Fixed assets, intercompany, SoD, cash flow projector
-**Status:** PENDING. Sprint 823 findings A1–A8, I1–I5, D1–D2, C1–C6, P-3.
+**Status:** IN PROGRESS. Sprint 823 findings A1–A8, I1–I5, D1–D2, C1–C6, P-3.
 **Priority:** **P1** — A1 and I1 produce wrong output on correct input for every DDB register and
 every IC revenue/expense pair.
+
+- [x] **I1** — eliminations now credit the debit-natural side (receivable, expense, investment)
+      and debit the credit-natural side (payable, revenue). Revenue/expense was reversed in both
+      entity orders; none of the 51 existing intercompany tests pinned that direction.
+- [x] **I2** — matching is one-to-one per entity pair: amount-reconciling matches first, then
+      compatible-direction mismatches, no line used twice. 2 × $500 each side now eliminates
+      $1,000 (was $2,000 across 4 pairs, "complete"); 600/400 vs 400/600 pairs by amount.
+      **Known limitation:** one side split across accounts (600 + 400 against 1,000) still
+      reports mismatches — it fails safe (incomplete, flagged) rather than over-eliminating.
+- [x] **I3** — an explicit counterparty marks a line intercompany regardless of account name.
+- [x] **I5 (500 + double count)** and **F0** — `ArithmeticError` (huge-but-finite amounts
+      overflowing `quantize`) is a 400 on the analyze and export routes of W-2, 1099,
+      book-to-tax, intercompany and cash-flow. The double-reported direction mismatch is gone
+      with the one-to-one matcher.
+- [ ] A1–A8 (FA-T11 and FA parsing), D1–D2 (SoD), C1–C6 (cash flow), I4, P-3.
 
 **Commit SHA:** TBD.
 

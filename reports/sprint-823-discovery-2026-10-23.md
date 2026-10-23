@@ -38,7 +38,7 @@ Status column: **Fixed (824)** = remediated in Sprint 824; otherwise the sprint 
 
 | ID | Sev | Finding | Status |
 |---|---|---|---|
-| F0 | P2 | `"1e400"` amounts 500 on W-2, 1099 and book-to-tax: finite for `_to_decimal`, then `quantize` raises `InvalidOperation` (an `ArithmeticError`, uncaught). | 826 |
+| F0 | P2 | `"1e400"` amounts 500 on W-2, 1099 and book-to-tax: finite for `_to_decimal`, then `quantize` raises `InvalidOperation` (an `ArithmeticError`, uncaught). | Fixed (827) |
 | F1 | P1 | 1099 royalties use the $600 threshold; the 1099-MISC box 2 threshold is **$10**. `form_1099_engine.py:96-100`. | 826 |
 | F2 | P1 | 1099 `payment_date` is never used: payments from 2024-12 and 2026-01 count toward TY2025. | 826 |
 | F3 | P1 | No aggregation by TIN: two vendor IDs sharing a TIN with $400 each → no 1099 (should be one $800 NEC). | 826 |
@@ -71,11 +71,11 @@ Status column: **Fixed (824)** = remediated in Sprint 824; otherwise the sprint 
 | A8 | P2 | `Useful Life (Months)` auto-detected as years. | 827 |
 | D1 | P1 | SoD long-format input drops conflicts: a role on two rows is overwritten (`sod_engine.py:281`); a user on two rows is two users. | 827 |
 | D2 | P2 | One HIGH SoD conflict scores tier "moderate"; unrecognised permission spellings give a clean result with no warning; degenerate custom rules flag everyone. | 827 |
-| I1 | P1 | Intercompany revenue/expense elimination JE is **reversed** (Dr expense / Cr revenue); booking it doubles both sides, and the worksheet disagrees with the JEs. `intercompany_elimination_engine.py:604`. | 827 |
-| I2 | P1 | Multiple IC accounts between the same two entities are cartesian-matched: 2 × $500 balances → 4 pairs, $2,000 eliminated, consolidation "complete". | 827 |
-| I3 | P1 | An explicit counterparty is ignored unless the account name contains an IC keyword → nothing eliminated, "complete". | 827 |
+| I1 | P1 | Intercompany revenue/expense elimination JE is **reversed** (Dr expense / Cr revenue); booking it doubles both sides, and the worksheet disagrees with the JEs. `intercompany_elimination_engine.py:604`. | Fixed (827) |
+| I2 | P1 | Multiple IC accounts between the same two entities are cartesian-matched: 2 × $500 balances → 4 pairs, $2,000 eliminated, consolidation "complete". | Fixed (827) |
+| I3 | P1 | An explicit counterparty is ignored unless the account name contains an IC keyword → nothing eliminated, "complete". | Fixed (827) |
 | I4 | P2 | Keyword substring false positives ("Electric expense", "Clinic revenue", "Due to officers") block completion; counterparty regex takes "Ltd" from "… - Dublin Ltd". | 827 |
-| I5 | P3 | `"1e26"` → 500 (uncaught `InvalidOperation`); direction mismatch reported twice; `(1000.00)` rejected; negative debits pass through. | 827 |
+| I5 | P3 | `"1e26"` → 500 (uncaught `InvalidOperation`); direction mismatch reported twice; `(1000.00)` rejected; negative debits pass through. | 500 and double-count fixed (827); formats + negative debits open |
 | — | ok | Verified correct: a clean in-life straight-line register gives 0 flags; planted under-depreciation flagged exactly; SoD rules fire correctly on a 15-user matrix; IC receivable/payable pairs reconcile with the right JE direction and tolerance boundary. | — |
 
 ## Cash flow projector

@@ -133,7 +133,7 @@ def run_projection(
     except CashFlowInputError as e:
         maybe_record_tool_run(db, payload.engagement_id, current_user.id, "cash_flow_projector", False)
         raise HTTPException(status_code=400, detail=str(e))
-    except (ValueError, ValidationError) as e:
+    except (ValueError, ValidationError, ArithmeticError) as e:
         logger.exception("Cash flow projection computation failed")
         maybe_record_tool_run(db, payload.engagement_id, current_user.id, "cash_flow_projector", False)
         raise HTTPException(
@@ -174,6 +174,10 @@ def export_projection_csv(
         result = project_cash_flow(config)
     except CashFlowInputError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except ArithmeticError:
+        # Sprint 827: a huge-but-finite amount ("1e400") passes parsing, then
+        # quantize() raises InvalidOperation — an input problem, not a 500.
+        raise HTTPException(status_code=400, detail="An amount is too large to process.")
 
     buffer = io.StringIO()
     writer = csv.writer(buffer)

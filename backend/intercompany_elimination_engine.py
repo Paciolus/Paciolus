@@ -358,7 +358,11 @@ def _extract_lines(config: IntercompanyConfig) -> list[IntercompanyLine]:
     lines: list[IntercompanyLine] = []
     for entity in config.entities:
         for account in entity.accounts:
-            if not _is_intercompany(account.account):
+            # Sprint 827 (I3): an explicit counterparty is the strongest signal
+            # there is. Requiring an IC keyword in the account name as well
+            # dropped "Loan receivable - related party" with counterparty S, and
+            # the consolidation then reported itself complete.
+            if not account.counterparty_entity and not _is_intercompany(account.account):
                 continue
             direction = _parse_direction(account.account)
             counterparty = account.counterparty_entity or _parse_counterparty(account.account)
@@ -404,114 +408,140 @@ def _match_pairs(
 
     pairs: list[EliminationPair] = []
     mismatches: list[Mismatch] = []
-    seen: set[tuple[str, str, str, str]] = set()
 
+    def _record_pair(a: IntercompanyLine, b: IntercompanyLine) -> None:
+        # Net residual: A's receivable (positive net) should equal B's payable
+        # (negative net). So A.net + B.net should ~= 0.
+        residual = a.net_balance + b.net_balance
+        reconciles = abs(residual) <= tolerance
+        pairs.append(
+            EliminationPair(
+                entity_a=a.entity_id,
+                entity_b=b.entity_id,
+                account_a=a.account,
+                account_b=b.account,
+                direction_a=a.direction.value,
+                direction_b=b.direction.value,
+                amount_a=abs(a.net_balance),
+                amount_b=abs(b.net_balance),
+                net_residual=_quantise(residual),
+                reconciles=reconciles,
+            )
+        )
+        if not reconciles:
+            mismatches.append(
+                Mismatch(
+                    kind=MismatchKind.AMOUNT_MISMATCH,
+                    entity=a.entity_id,
+                    counterparty=b.entity_id,
+                    account=a.account,
+                    direction=a.direction.value,
+                    amount=_quantise(residual),
+                    message=(
+                        f"Intercompany residual of ${residual:,.2f} between "
+                        f"{a.entity_id}.{a.account} and "
+                        f"{b.entity_id}.{b.account} exceeds the "
+                        f"${tolerance:,.2f} tolerance."
+                    ),
+                )
+            )
+
+    def _no_reciprocal(line: IntercompanyLine) -> None:
+        mismatches.append(
+            Mismatch(
+                kind=MismatchKind.NO_RECIPROCAL,
+                entity=line.entity_id,
+                counterparty=line.counterparty_entity,
+                account=line.account,
+                direction=line.direction.value,
+                amount=line.net_balance,
+                message=(
+                    f"{line.entity_id} booked {line.direction.value} "
+                    f"of ${abs(line.net_balance):,.2f} against "
+                    f"{line.counterparty_entity} but no reciprocal "
+                    "entry was found."
+                ),
+            )
+        )
+
+    def _compatible(a: IntercompanyLine, b: IntercompanyLine) -> bool:
+        expected = RECIPROCAL_DIRECTIONS.get(a.direction)
+        if expected is not None:
+            return b.direction == expected
+        # UNKNOWN on side A: accept anything not itself claimed by a known
+        # reciprocal of a different kind.
+        return RECIPROCAL_DIRECTIONS.get(b.direction) in (None, a.direction)
+
+    # Sprint 827 (I2): match one-to-one. The previous loop paired every A line
+    # with every compatible B line, so two $500 balances on each side became
+    # four pairs and $2,000 of eliminations against $1,000 of balances, while
+    # reporting the consolidation complete. Each entity pair is processed once
+    # (in canonical order), amount-reconciling matches are taken first, and no
+    # line is used twice.
+    processed: set[tuple[str, str]] = set()
     for (entity_a, entity_b), a_lines in grouped.items():
+        canonical = (min(entity_a, entity_b), max(entity_a, entity_b))
+        if canonical in processed:
+            continue
+        processed.add(canonical)
         b_lines = grouped.get((entity_b, entity_a), [])
         if not b_lines:
-            # No reciprocal side booked.
             for line in a_lines:
+                _no_reciprocal(line)
+            continue
+
+        unused_b = list(b_lines)
+        leftover_a: list[IntercompanyLine] = []
+        # Pass 1: compatible direction and amounts that reconcile.
+        for a_line in a_lines:
+            match = next(
+                (
+                    b_line
+                    for b_line in unused_b
+                    if _compatible(a_line, b_line) and abs(a_line.net_balance + b_line.net_balance) <= tolerance
+                ),
+                None,
+            )
+            if match is None:
+                leftover_a.append(a_line)
+                continue
+            unused_b.remove(match)
+            _record_pair(a_line, match)
+
+        # Pass 2: compatible direction, amounts differ — a real mismatch.
+        still_left: list[IntercompanyLine] = []
+        for a_line in leftover_a:
+            match = next((b_line for b_line in unused_b if _compatible(a_line, b_line)), None)
+            if match is None:
+                still_left.append(a_line)
+                continue
+            unused_b.remove(match)
+            _record_pair(a_line, match)
+
+        # Pass 3: anything left has no compatible counterpart.
+        for a_line in still_left:
+            if unused_b:
+                b_line = unused_b[0]
                 mismatches.append(
                     Mismatch(
-                        kind=MismatchKind.NO_RECIPROCAL,
-                        entity=line.entity_id,
-                        counterparty=line.counterparty_entity,
-                        account=line.account,
-                        direction=line.direction.value,
-                        amount=line.net_balance,
+                        kind=MismatchKind.DIRECTION_MISMATCH,
+                        entity=a_line.entity_id,
+                        counterparty=a_line.counterparty_entity,
+                        account=a_line.account,
+                        direction=a_line.direction.value,
+                        amount=a_line.net_balance,
                         message=(
-                            f"{line.entity_id} booked {line.direction.value} "
-                            f"of ${abs(line.net_balance):,.2f} against "
-                            f"{line.counterparty_entity} but no reciprocal "
-                            "entry was found."
+                            f"{a_line.entity_id}.{a_line.account} is "
+                            f"{a_line.direction.value} but {b_line.entity_id}."
+                            f"{b_line.account} is {b_line.direction.value} — "
+                            "expected reciprocal direction."
                         ),
                     )
                 )
-            continue
-
-        # Match by reciprocal direction where possible.
-        for a in a_lines:
-            expected_b_direction = RECIPROCAL_DIRECTIONS.get(a.direction)
-            matches = [b for b in b_lines if b.direction == expected_b_direction]
-            if not matches and expected_b_direction is None:
-                matches = b_lines  # UNKNOWN direction — match any
-            if not matches:
-                for b in b_lines:
-                    pair_key = tuple(sorted([entity_a, entity_b]) + [a.account, b.account])
-                    key = (pair_key[0], pair_key[1], pair_key[2], pair_key[3])
-                    if key in seen:
-                        continue
-                    seen.add(key)
-                    mismatches.append(
-                        Mismatch(
-                            kind=MismatchKind.DIRECTION_MISMATCH,
-                            entity=a.entity_id,
-                            counterparty=a.counterparty_entity,
-                            account=a.account,
-                            direction=a.direction.value,
-                            amount=a.net_balance,
-                            message=(
-                                f"{a.entity_id}.{a.account} is "
-                                f"{a.direction.value} but {b.entity_id}."
-                                f"{b.account} is {b.direction.value} — "
-                                "expected reciprocal direction."
-                            ),
-                        )
-                    )
-                continue
-
-            for b in matches:
-                # Sort the entity+account pairs together so we collapse
-                # (A, B, acctA, acctB) and (B, A, acctB, acctA) to the
-                # same key — otherwise both directions of the group
-                # iteration create duplicate pairs.
-                key_pair = tuple(
-                    sorted(
-                        [
-                            (a.entity_id, a.account),
-                            (b.entity_id, b.account),
-                        ]
-                    )
-                )
-                key = (key_pair[0][0], key_pair[0][1], key_pair[1][0], key_pair[1][1])
-                if key in seen:
-                    continue
-                seen.add(key)
-                # Net residual: A's receivable (positive net) should equal
-                # B's payable (negative net). So A.net + B.net should ~= 0.
-                residual = a.net_balance + b.net_balance
-                reconciles = abs(residual) <= tolerance
-                pairs.append(
-                    EliminationPair(
-                        entity_a=a.entity_id,
-                        entity_b=b.entity_id,
-                        account_a=a.account,
-                        account_b=b.account,
-                        direction_a=a.direction.value,
-                        direction_b=b.direction.value,
-                        amount_a=abs(a.net_balance),
-                        amount_b=abs(b.net_balance),
-                        net_residual=_quantise(residual),
-                        reconciles=reconciles,
-                    )
-                )
-                if not reconciles:
-                    mismatches.append(
-                        Mismatch(
-                            kind=MismatchKind.AMOUNT_MISMATCH,
-                            entity=a.entity_id,
-                            counterparty=b.entity_id,
-                            account=a.account,
-                            direction=a.direction.value,
-                            amount=_quantise(residual),
-                            message=(
-                                f"Intercompany residual of ${residual:,.2f} between "
-                                f"{a.entity_id}.{a.account} and "
-                                f"{b.entity_id}.{b.account} exceeds the "
-                                f"${tolerance:,.2f} tolerance."
-                            ),
-                        )
-                    )
+            else:
+                _no_reciprocal(a_line)
+        for b_line in unused_b:
+            _no_reciprocal(b_line)
 
     # Unresolved counterparty — counterparty name didn't match any entity.
     for line in unresolved_counterparty:
@@ -592,6 +622,10 @@ def _consolidation_worksheet(
     )
 
 
+_DEBIT_NATURAL = frozenset({"receivable", "expense", "investment"})
+_CREDIT_NATURAL = frozenset({"payable", "revenue"})
+
+
 def _elimination_journal_entries(pairs: list[EliminationPair]) -> list[EliminationJE]:
     """Produce one elimination JE per reconciling pair."""
     jes: list[EliminationJE] = []
@@ -599,9 +633,13 @@ def _elimination_journal_entries(pairs: list[EliminationPair]) -> list[Eliminati
         if not pair.reconciles:
             continue
         amount = min(pair.amount_a, pair.amount_b)
-        # The receivable side is debit; the payable side is credit.
-        # Determine which is which from the directions.
-        if pair.direction_a in ("receivable", "revenue"):
+        # An elimination reverses each side's natural balance: it credits the
+        # side that carries a debit balance (receivable, expense, investment)
+        # and debits the side that carries a credit balance (payable, revenue).
+        # Sprint 827 (I1): revenue was grouped with receivable, so the
+        # revenue/expense entry came out Dr expense / Cr revenue — booking it
+        # would have doubled both sides instead of removing them.
+        if pair.direction_a in _DEBIT_NATURAL or pair.direction_b in _CREDIT_NATURAL:
             debit_entity = pair.entity_b
             debit_account = pair.account_b
             credit_entity = pair.entity_a

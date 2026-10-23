@@ -154,7 +154,7 @@ def prepare_1099_candidates(
     except Form1099InputError as e:
         maybe_record_tool_run(db, payload.engagement_id, current_user.id, "form_1099", False)
         raise HTTPException(status_code=400, detail=str(e))
-    except (ValueError, ValidationError) as e:
+    except (ValueError, ValidationError, ArithmeticError) as e:
         logger.exception("1099 preparation failed")
         maybe_record_tool_run(db, payload.engagement_id, current_user.id, "form_1099", False)
         raise HTTPException(
@@ -194,6 +194,10 @@ def export_1099_csv(
         result = prepare_1099s(_build_config(payload))
     except Form1099InputError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except ArithmeticError:
+        # Sprint 827: a huge-but-finite amount ("1e400") passes parsing, then
+        # quantize() raises InvalidOperation — an input problem, not a 500.
+        raise HTTPException(status_code=400, detail="An amount is too large to process.")
 
     buffer = io.StringIO()
     writer = csv.writer(buffer)
