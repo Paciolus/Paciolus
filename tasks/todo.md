@@ -622,7 +622,7 @@ now disclosed in the test description rather than silent.
 ---
 
 ### Sprint 818: Pricing has one source of truth
-**Status:** PENDING.
+**Status:** PARTIAL — items 1–2 done; item 3 held for a CEO/counsel decision (see below).
 **Priority:** P2 — the copies have already drifted.
 **Source:** Code health review 2026-10-23, frontend pass.
 
@@ -631,12 +631,37 @@ exports, and `components/pricing/PricingEstimator.tsx` + `PricingCard.tsx` — b
 module — are imported nowhere (verified). Drift: the page has `badge: 'Most Popular'`, the domain
 copy does not, so tests of the domain module test code that never renders.
 
-- [ ] Page renders `PricingEstimator` + `PricingCard` from `domain/pricing` (~450 lines out).
-- [ ] Point `app/(auth)/checkout/page.tsx:23-27`, `components/billing/UpgradeModal.tsx:20-45` and
+- [x] Page renders `PricingEstimator` + `PricingCard` from `domain/pricing` (~450 lines out).
+- [x] Point `app/(auth)/checkout/page.tsx:23-27`, `components/billing/UpgradeModal.tsx:20-45` and
       the terms tier table (`terms/page.tsx:616-626`) at the same module.
 - [ ] Consolidate the "what we store / never store" lists (`trust/page.tsx:239-254` vs
       `approach/page.tsx:94-109`, worded differently) into one `content/` source — it is
       Zero-Storage compliance copy.
+
+**Delivered 2026-10-23 (items 1–2):**
+- The review's direction had to be **reversed** for the card: `PricingCard` was the stale copy
+  (no badge, pre-Sprint-703/708 typography), so rendering it would have regressed the live page.
+  The page's live markup moved *into* `PricingCard`; `PricingEstimator` was already equivalent
+  (and derives its seat description instead of hard-coding it). The page now renders both and
+  imports tiers, FAQ, promo copy and types from `domain/pricing` — **935 → 289 lines**. The
+  `'Most Popular'` badge now lives in the domain tier, which was the drift.
+- New id-keyed lookups in `domain/pricing` (`getTier`, `tierPriceDollars`, `baseSeats`,
+  `maxAdditionalSeats`, `seatPriceDollars`). Checkout and `UpgradeModal` read every price, seat
+  count, seat limit and seat rate from them; the modal keeps only its short feature blurbs as
+  modal-specific copy.
+- **Terms of Service kept literal on purpose** — it is a versioned legal document, so a price
+  change should force a deliberate edit to it. `PricingSingleSource.test.ts` fails when its tier
+  table disagrees with the domain, and fails if any of the three surfaces re-declares a price,
+  seat or tier literal (2 of its 6 tests fail on the pre-change files).
+
+**Item 3 — not done, and it needs a decision rather than a refactor.** Consolidating the two
+"we store / we never store" lists means choosing one wording for Zero-Storage compliance copy.
+More importantly, **both lists may be inaccurate**: they promise Paciolus never stores
+"individual account balances" or "anomaly details tied to specific accounts or amounts", while
+the 2026-10-19 DECISION block above records that the database persists
+`uncorrected_misstatements.accounts_affected_json` (account names with DR/CR amounts),
+`analytical_expectations` (expected and actual values) and `diagnostic_summaries` (aggregate
+totals). That is a question for the CEO and counsel before anyone edits the copy.
 
 **Commit SHA:** TBD.
 
