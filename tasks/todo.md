@@ -242,6 +242,9 @@
 >   map, and **Sprint 809 built it** (`frontend/src/lib/theme-routes.ts`, asserted against
 >   the filesystem). The blocker is gone; `scripts/lint_design_tokens.py` prints this
 >   exemption on every run and says in terms that it is **not permanent**.
+> - **CHECKED 2026-10-23 — no change needed:** there are no `text-clay-500` usages left, and all
+>   nine `hover:text-sage-600` usages render on routes the theme map resolves to light (settings,
+>   workspace, portfolio, and `tools/layout.tsx`), where it passes. Original note follows.
 > - **`clay-500` on dark surfaces** (3.69:1) and `hover:text-sage-600` (2.85:1 on dark)
 >   are the same class and the same unblocking. The contrast gate deliberately does not
 >   flag either, because both pass on light and it had no theme map to decide with.
