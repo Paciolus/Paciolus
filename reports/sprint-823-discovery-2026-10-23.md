@@ -74,7 +74,7 @@ Status column: **Fixed (824)** = remediated in Sprint 824; otherwise the sprint 
 | I1 | P1 | Intercompany revenue/expense elimination JE is **reversed** (Dr expense / Cr revenue); booking it doubles both sides, and the worksheet disagrees with the JEs. `intercompany_elimination_engine.py:604`. | Fixed (827) |
 | I2 | P1 | Multiple IC accounts between the same two entities are cartesian-matched: 2 × $500 balances → 4 pairs, $2,000 eliminated, consolidation "complete". | Fixed (827) |
 | I3 | P1 | An explicit counterparty is ignored unless the account name contains an IC keyword → nothing eliminated, "complete". | Fixed (827) |
-| I4 | P2 | Keyword substring false positives ("Electric expense", "Clinic revenue", "Due to officers") block completion; counterparty regex takes "Ltd" from "… - Dublin Ltd". | 827 |
+| I4 | P2 | Keyword substring false positives ("Electric expense", "Clinic revenue", "Due to officers") block completion; counterparty regex takes "Ltd" from "… - Dublin Ltd". | Fixed (827) — except investment/payable pairing |
 | I5 | P3 | `"1e26"` → 500 (uncaught `InvalidOperation`); direction mismatch reported twice; `(1000.00)` rejected; negative debits pass through. | 500 and double-count fixed (827); formats + negative debits open |
 | — | ok | Verified correct: a clean in-life straight-line register gives 0 flags; planted under-depreciation flagged exactly; SoD rules fire correctly on a 15-user matrix; IC receivable/payable pairs reconcile with the right JE direction and tolerance boundary. | — |
 

@@ -429,8 +429,11 @@ every IC revenue/expense pair.
       long-format matrix no longer hides conflicts split across rows.
 - [x] **C1** — monthly/quarterly recurring flows step by calendar month from the first date,
       clamped to month-end without drift.
+- [x] **I4** — IC phrases match whole words; generic phrases ("due to", "receivable from") count
+      only when they name an entity in the consolidation; counterparty parsing no longer reads
+      "Dublin Ltd" as "Ltd", and resolves dash forms ("IC AR - Beta").
 - [ ] Open: A4, A5, A8 (FA conventions/units), D2 (SoD tiering and unmatched permissions),
-      C2–C6 (cash flow scenario deferral, footing, edge cases), I4 (IC keyword false positives),
+      C2–C6 (cash flow scenario deferral, footing, edge cases), I4's investment/payable pairing,
       P-3 (non-USD / EU number formats — needs a locale decision).
 
 **Commit SHA:** TBD.

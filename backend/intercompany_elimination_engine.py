@@ -289,26 +289,42 @@ _INVESTMENT_PATTERNS = (
 )
 
 
+def _phrase_pattern(phrases: tuple[str, ...]) -> re.Pattern[str]:
+    # Sprint 827 (I4): whole words only. Substring matching read "Electric
+    # expense" as "ic expense", "Clinic revenue" as "ic revenue" and "Basic
+    # apparel" as "ic ap".
+    return re.compile(r"\b(?:" + "|".join(re.escape(p) for p in phrases) + r")\b")
+
+
+_DIRECTION_PATTERNS: tuple[tuple[re.Pattern[str], IntercompanyDirection], ...] = (
+    (_phrase_pattern(_DUE_FROM_PATTERNS), IntercompanyDirection.RECEIVABLE),
+    (_phrase_pattern(_DUE_TO_PATTERNS), IntercompanyDirection.PAYABLE),
+    (_phrase_pattern(_IC_REVENUE_PATTERNS), IntercompanyDirection.REVENUE),
+    (_phrase_pattern(_IC_EXPENSE_PATTERNS), IntercompanyDirection.EXPENSE),
+    (_phrase_pattern(_INVESTMENT_PATTERNS), IntercompanyDirection.INVESTMENT),
+)
+
+# Phrases that say "intercompany" on their own. The generic ones — "due to",
+# "receivable from", "payable to" — describe officers, banks and tax
+# authorities just as often, so they count only when the counterparty they
+# name is an entity in this consolidation (see ``_extract_lines``).
+_STRONG_IC = re.compile(
+    r"\b(?:intercompany|inter-company|ic|management fee|investment in subsidiary|investment in affiliate)\b"
+)
+
+
 def _parse_direction(account: str) -> IntercompanyDirection:
     lower = account.lower()
-    if any(p in lower for p in _DUE_FROM_PATTERNS):
-        return IntercompanyDirection.RECEIVABLE
-    if any(p in lower for p in _DUE_TO_PATTERNS):
-        return IntercompanyDirection.PAYABLE
-    if any(p in lower for p in _IC_REVENUE_PATTERNS):
-        return IntercompanyDirection.REVENUE
-    if any(p in lower for p in _IC_EXPENSE_PATTERNS):
-        return IntercompanyDirection.EXPENSE
-    if any(p in lower for p in _INVESTMENT_PATTERNS):
-        return IntercompanyDirection.INVESTMENT
-    # Still recognised as IC but unknown direction.
-    if "intercompany" in lower or " ic " in f" {lower} " or " ic-" in lower:
-        return IntercompanyDirection.UNKNOWN
+    for pattern, direction in _DIRECTION_PATTERNS:
+        if pattern.search(lower):
+            return direction
     return IntercompanyDirection.UNKNOWN
 
 
 _COUNTERPARTY_SUFFIX = re.compile(
-    r"(?:from|to|with|in)\s+([A-Za-z0-9&._\- ]+?)\s*$",
+    # \b: without it "in" matched inside "Dublin", so "Intercompany receivable -
+    # Dublin Ltd" named its counterparty "Ltd" (Sprint 827, I4).
+    r"\b(?:from|to|with|in)\s+([A-Za-z0-9&._\- ]+?)\s*$",
     re.IGNORECASE,
 )
 
@@ -328,17 +344,23 @@ def _parse_counterparty(account: str) -> str | None:
         if low in {"customer", "customers", "vendor", "vendors", "employees"}:
             return None
         return candidate
-    # Dash-separated counterparty: "Intercompany - Subsidiary Beta"
+    # Dash-separated counterparty: "Intercompany - Subsidiary Beta", "IC AR - Beta",
+    # "Management fee revenue - Sub A".
     for sep in (" - ", " — ", " – "):
         if sep in account:
             parts = account.split(sep)
-            if len(parts) >= 2 and any(ic in parts[0].lower() for ic in ("intercompany", " ic ", "ic-")):
+            head = parts[0].lower()
+            if len(parts) >= 2 and (_STRONG_IC.search(head) or _parse_direction(head) != IntercompanyDirection.UNKNOWN):
                 return parts[-1].strip()
     return None
 
 
 def _is_intercompany(account: str) -> bool:
-    return _parse_direction(account) != IntercompanyDirection.UNKNOWN or "intercompany" in account.lower()
+    return _parse_direction(account) != IntercompanyDirection.UNKNOWN or bool(_STRONG_IC.search(account.lower()))
+
+
+def _is_strongly_intercompany(account: str) -> bool:
+    return bool(_STRONG_IC.search(account.lower()))
 
 
 # =============================================================================
@@ -356,6 +378,7 @@ RECIPROCAL_DIRECTIONS: dict[IntercompanyDirection, IntercompanyDirection] = {
 
 def _extract_lines(config: IntercompanyConfig) -> list[IntercompanyLine]:
     lines: list[IntercompanyLine] = []
+    known_entities = {e.entity_id.lower() for e in config.entities} | {e.entity_name.lower() for e in config.entities}
     for entity in config.entities:
         for account in entity.accounts:
             # Sprint 827 (I3): an explicit counterparty is the strongest signal
@@ -366,6 +389,16 @@ def _extract_lines(config: IntercompanyConfig) -> list[IntercompanyLine]:
                 continue
             direction = _parse_direction(account.account)
             counterparty = account.counterparty_entity or _parse_counterparty(account.account)
+            # Sprint 827 (I4): a generic phrase ("Due to officers", "Interest
+            # receivable from bank") is intercompany only if it names an entity
+            # in this consolidation; otherwise it is an ordinary balance, not a
+            # one-sided intercompany line blocking completion.
+            if (
+                not account.counterparty_entity
+                and not _is_strongly_intercompany(account.account)
+                and (counterparty is None or counterparty.lower() not in known_entities)
+            ):
+                continue
             net = account.debit - account.credit
             lines.append(
                 IntercompanyLine(

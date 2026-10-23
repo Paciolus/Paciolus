@@ -269,3 +269,39 @@ def test_monthly_flows_land_on_calendar_months(start, first, expected):
     schedule = _recurring_schedule([flow], start_date)
     hit_dates = [(start_date + timedelta(days=d)).isoformat() for d, amount in sorted(schedule.items()) if amount]
     assert hit_dates == expected
+
+
+# --- Intercompany keyword false positives (I4) --------------------------------
+
+
+def test_ordinary_accounts_are_not_intercompany():
+    """I4: substring matching made these one-sided IC lines that blocked completion."""
+    result = _consolidate(
+        [
+            EntityAccount("Electric expense", debit=Decimal("900")),
+            EntityAccount("Clinic revenue", credit=Decimal("5000")),
+            EntityAccount("Basic apparel", debit=Decimal("200")),
+            EntityAccount("Due to officers", credit=Decimal("1500")),
+            EntityAccount("Interest receivable from bank", debit=Decimal("75")),
+        ],
+        [EntityAccount("Cash", debit=Decimal("10"))],
+    )
+    assert result["summary"]["intercompany_line_count"] == 0
+    assert result["summary"]["consolidation_complete"] is True
+
+
+def test_counterparty_names_resolve_from_dash_and_suffix_forms():
+    """I4: "- Dublin Ltd" yielded "Ltd" (the "in" inside "Dublin"); "IC AR - Beta" yielded none."""
+    from intercompany_elimination_engine import _parse_counterparty
+
+    assert _parse_counterparty("Intercompany receivable - Dublin Ltd") == "Dublin Ltd"
+    assert _parse_counterparty("IC AR - Beta") == "Beta"
+    assert _parse_counterparty("Management fee revenue - Sub A") == "Sub A"
+
+
+def test_generic_phrase_naming_a_consolidated_entity_is_still_intercompany():
+    result = _consolidate(
+        [EntityAccount("Due from Sub", debit=Decimal("700"))],
+        [EntityAccount("Due to Parent", credit=Decimal("700"))],
+    )
+    assert result["summary"]["elimination_je_count"] == 1
