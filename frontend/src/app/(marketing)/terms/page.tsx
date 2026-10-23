@@ -1,19 +1,12 @@
-'use client'
-
 import Link from 'next/link'
-import { motion } from 'framer-motion'
+import { Reveal } from '@/components/ui/Reveal'
 
 export default function TermsPage() {
   return (
     <div className="relative z-10 min-h-screen bg-gradient-obsidian">
       <main className="max-w-4xl mx-auto px-6 py-16">
         {/* Hero */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: 'easeOut' as const }}
-          className="mb-12"
-        >
+        <Reveal className="mb-12">
           <h1 className="font-serif text-4xl md:text-5xl text-oatmeal-100 mb-4">
             Terms of Service
           </h1>
@@ -25,15 +18,10 @@ export default function TermsPage() {
               This is a legal agreement between you and Paciolus, Inc. Please read it carefully.
             </p>
           </div>
-        </motion.div>
+        </Reveal>
 
         {/* Table of Contents */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.1, ease: 'easeOut' as const }}
-          className="bg-obsidian-800 border border-obsidian-700 rounded-lg p-6 mb-12"
-        >
+        <Reveal delay={0.1} className="bg-obsidian-800 border border-obsidian-700 rounded-lg p-6 mb-12">
           <h2 className="font-serif text-2xl text-oatmeal-100 mb-4">Table of Contents</h2>
           <nav aria-label="Table of contents" className="grid grid-cols-1 md:grid-cols-2 gap-2">
             <Link href="#section-1" className="text-sage-400 hover:text-sage-300 underline font-sans">
@@ -85,15 +73,10 @@ export default function TermsPage() {
               16. Contact Information
             </Link>
           </nav>
-        </motion.div>
+        </Reveal>
 
         {/* Content */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2, ease: 'easeOut' as const }}
-          className="prose prose-invert max-w-none"
-        >
+        <Reveal delay={0.2} className="prose prose-invert max-w-none">
           {/* Section 1: Service Description */}
           <section id="section-1">
             <h2 className="font-serif text-2xl text-oatmeal-100 mb-4 pt-8">
@@ -1015,7 +998,7 @@ export default function TermsPage() {
               </div>
             </div>
           </section>
-        </motion.div>
+        </Reveal>
       </main>
 
     </div>

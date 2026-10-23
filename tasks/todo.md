@@ -1017,7 +1017,9 @@ totals). That is a question for the CEO and counsel before anyone edits the copy
    Collapse the ~20 pass-through `*ScoreCard`/`*DataQualityBadge` wrappers.
 2. [ ] `createJsonAnalysisHook({...})` for `useSOD`, `useForm1099`, `useW2Reconciliation`,
    `useBookToTax`, `useIntercompanyElimination`, `useCashFlowProjector` (~530 → ~90 lines).
-3. [ ] `terms` and `privacy` pages: drop `'use client'` (no hooks; ~2,000 lines of legal text in
+3. [x] *(Terms + Privacy done 2026-10-23: server components with `Reveal` wrappers; measured,
+   each page's text went from 1 client JS chunk to 0. About, Approach and the marketing layout are
+   still client — they use ~30 motion elements each.)* `terms` and `privacy` pages: drop `'use client'` (no hooks; ~2,000 lines of legal text in
    the JS bundle), wrap the 4 animated sections in `components/ui/Reveal`. Same for `about`,
    `approach`, and `app/(marketing)/layout.tsx`. Compatible with the `headers()`-dynamic root.
 4. [ ] `trust/page.tsx`: static data → `content/trust.ts`, 4 interactive blocks → `components/trust/*`, page becomes a server component.
