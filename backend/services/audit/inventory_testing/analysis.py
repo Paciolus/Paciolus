@@ -306,6 +306,9 @@ def detect_inv_columns(column_names: list[str]) -> InvColumnDetection:
         "location_column",
         "last_movement_date_column",
         "category_column",
+        # Sprint 829: without this, IN-T10 (LCM/NRV) could never run — a column
+        # literally named "Selling Price" was detected and then dropped here.
+        "selling_price_column",
     ]
     for field_name in field_names:
         col = detection.get_column(field_name)
@@ -1465,6 +1468,7 @@ _INV_OVERRIDABLE_COLUMNS: tuple[str, ...] = (
     "location_column",
     "last_movement_date_column",
     "category_column",
+    "selling_price_column",  # Sprint 829: IN-T10 was not overridable either
 )
 
 

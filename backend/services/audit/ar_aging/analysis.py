@@ -29,7 +29,7 @@ from decimal import Decimal
 from typing import Optional
 
 from shared.column_detector import ColumnFieldConfig, detect_columns, match_column
-from shared.parsing_helpers import safe_decimal, safe_int, with_parse_memo
+from shared.parsing_helpers import parse_date, safe_decimal, safe_int, with_parse_memo
 from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
 from shared.testing_enums import (
     SEVERITY_WEIGHTS,
@@ -741,6 +741,13 @@ def detect_sl_columns(column_names: list[str]) -> SLColumnDetection:
 # =============================================================================
 
 
+_NON_TRADE_RECEIVABLE = re.compile(
+    r"\b(notes?|loans?|officers?|employees?|shareholders?|stockholders?|related|intercompany|"
+    r"interest|tax(es)?|vat|gst|insurance)\b"
+)
+_NOT_EARNED_REVENUE = re.compile(r"\b(deferred|unearned|payable|tax(es)?|cost\s+of)\b")
+
+
 def _classify_account(account_name: str) -> tuple[str, float]:
     """Classify a TB account based on name. Returns (classification, confidence)."""
     if not account_name:
@@ -752,6 +759,15 @@ def _classify_account(account_name: str) -> tuple[str, float]:
     allowance_score = match_column(name_lower, ALLOWANCE_PATTERNS)
     ar_score = match_column(name_lower, AR_ACCOUNT_PATTERNS)
     revenue_score = match_column(name_lower, REVENUE_ACCOUNT_PATTERNS)
+    # Sprint 829: the unanchored "receivable" / "revenue" / leading "sales"
+    # patterns also matched balances that are not trade AR or earned revenue.
+    # "Notes Receivable - Officer" counted as trade AR and "Deferred Revenue" /
+    # "Sales Tax Payable" as revenue — on an otherwise clean TB that read a 5%
+    # allowance as 0.91% (HIGH) and a 36.5-day DSO as 118 (HIGH).
+    if _NON_TRADE_RECEIVABLE.search(name_lower):
+        ar_score = 0.0
+    if _NOT_EARNED_REVENUE.search(name_lower):
+        revenue_score = 0.0
 
     best_class = "other"
     best_score = 0.0
@@ -858,14 +874,13 @@ def _compute_aging_days(due_date_str: Optional[str], reference_date_str: Optiona
     from datetime import datetime
 
     try:
-        # Try common date formats
-        for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y", "%Y/%m/%d", "%m-%d-%Y", "%d-%m-%Y"):
-            try:
-                due = datetime.strptime(due_date_str.strip(), fmt).date()
-                break
-            except ValueError:
-                continue
-        else:
+        # Sprint 829: the shared parser. It tries the same six date formats in
+        # the same order, then the datetime forms — so an Excel date cell
+        # ("2025-06-01 00:00:00") is aged instead of falling through to None,
+        # which the schedule treated as 0 days: a whole .xlsx sub-ledger landed
+        # in Current.
+        due = parse_date(due_date_str)
+        if due is None:
             return None
 
         ref = None
@@ -925,6 +940,7 @@ def parse_sl_entries(
 ) -> list[ARSubledgerEntry]:
     """Parse sub-ledger rows into entry objects."""
     entries: list[ARSubledgerEntry] = []
+    aged_from_invoice_date = 0
 
     for i, row in enumerate(rows):
         customer_name = None
@@ -972,6 +988,13 @@ def parse_sl_entries(
         # Compute aging_days if not provided
         if aging_days is None and due_date:
             aging_days = _compute_aging_days(due_date, reference_date_str)
+        # Sprint 829: a sub-ledger with only an invoice date was never aged —
+        # every invoice sat in Current with no warning. Age it from the invoice
+        # date instead, and say so (age since invoice is not days past due).
+        if aging_days is None and not due_date and not aging_bucket and invoice_date:
+            aging_days = _compute_aging_days(invoice_date, reference_date_str)
+            if aging_days is not None:
+                aged_from_invoice_date += 1
         if aging_days is None and aging_bucket:
             aging_days = _parse_aging_bucket_to_days(aging_bucket)
 
@@ -998,6 +1021,11 @@ def parse_sl_entries(
             )
         )
 
+    if aged_from_invoice_date:
+        detection.detection_notes.append(
+            f"No due date column: {aged_from_invoice_date} invoice(s) aged from the invoice date, so the "
+            "buckets show age since invoice rather than days past due."
+        )
     return entries
 
 
