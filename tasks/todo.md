@@ -392,7 +392,13 @@ valuation allowance) needs a scope call.
       "missing", and Sprint 811 deliberately refuses rather than falls back). Decide with 793b:
       optional fields that disable only their own check when absent, or a breaking change to
       the override contract.
-- [ ] F4, F5, F8, F9, W3–W10, B1–B6.
+- [x] **W3** — Boxes 4 and 6 are compared with what payroll actually withheld (when supplied),
+      and Box 12 codes D/W/S with payroll deferrals and HSA contributions.
+- [x] **W4 (part)** — duplicate and orphan W-2 drafts are reported in the summary, IDs match
+      whitespace-normalised, and the first of a duplicate pair is kept. The W-3 ↔ 941 comparison
+      the module docstring promises is still missing.
+- [x] **W5** — with no plan type, the plan is inferred from which deferral field is populated.
+- [ ] F4, F5, F8, F9, W4 (W-3 vs 941), W6–W10, B1–B6.
 
 **Commit SHA:** TBD.
 

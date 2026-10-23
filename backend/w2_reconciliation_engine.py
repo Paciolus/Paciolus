@@ -25,7 +25,7 @@ figures via the per-request ``statutory_limits`` override (Sprint 793a) until th
 from __future__ import annotations
 
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from decimal import ROUND_HALF_UP, Decimal
 from enum import Enum
 from typing import Any, ClassVar
@@ -200,6 +200,12 @@ class DiscrepancyKind(str, Enum):
     HSA_OVER_LIMIT = "hsa_over_limit"
     RETIREMENT_OVER_LIMIT = "retirement_over_limit"
     FORM_941_MISMATCH = "form_941_mismatch"
+    # Sprint 826 (W3): the draft against what payroll actually withheld and
+    # deferred. Boxes 4 and 6 were only compared with a rate-based expectation,
+    # and Box 12 was never compared at all.
+    SS_TAX_WITHHELD_VS_PAYROLL = "ss_tax_withheld_vs_payroll"
+    MEDICARE_TAX_WITHHELD_VS_PAYROLL = "medicare_tax_withheld_vs_payroll"
+    BOX_12_VS_PAYROLL = "box_12_vs_payroll"
 
 
 # =============================================================================
@@ -713,6 +719,60 @@ def _check_employee(
             )
         )
 
+    # --- Draft vs payroll: tax actually withheld, and Box 12 (Sprint 826, W3) ---
+    for kind, box_label, drafted, payroll_value in (
+        (
+            DiscrepancyKind.SS_TAX_WITHHELD_VS_PAYROLL,
+            "box 4 SS tax",
+            w2.box_4_ss_tax_withheld,
+            employee.ss_tax_withheld,
+        ),
+        (
+            DiscrepancyKind.MEDICARE_TAX_WITHHELD_VS_PAYROLL,
+            "box 6 Medicare tax",
+            w2.box_6_medicare_tax_withheld,
+            employee.medicare_tax_withheld,
+        ),
+    ):
+        # Zero in payroll means "not supplied" — the rate-based checks above
+        # still cover the box.
+        if payroll_value != 0 and abs(drafted - payroll_value) > tolerance:
+            diff = drafted - payroll_value
+            issues.append(
+                Discrepancy(
+                    employee_id=employee.employee_id,
+                    employee_name=employee.employee_name,
+                    kind=kind,
+                    severity=_severity_for_diff(diff, tolerance),
+                    expected=payroll_value,
+                    actual=drafted,
+                    difference=diff,
+                    message=(
+                        f"W-2 {box_label} withheld (${drafted:,.2f}) differs from the "
+                        f"${payroll_value:,.2f} payroll actually withheld."
+                    ),
+                )
+            )
+    for code, drafted, payroll_value in (
+        ("D", w2.box_12_code_d_401k, employee.retirement_401k),
+        ("W", w2.box_12_code_w_hsa, employee.hsa_contributions),
+        ("S", w2.box_12_code_s_simple, employee.retirement_simple_ira),
+    ):
+        if abs(drafted - payroll_value) > tolerance:
+            diff = drafted - payroll_value
+            issues.append(
+                Discrepancy(
+                    employee_id=employee.employee_id,
+                    employee_name=employee.employee_name,
+                    kind=DiscrepancyKind.BOX_12_VS_PAYROLL,
+                    severity=_severity_for_diff(diff, tolerance),
+                    expected=payroll_value,
+                    actual=drafted,
+                    difference=diff,
+                    message=(f"W-2 box 12 code {code} (${drafted:,.2f}) differs from payroll (${payroll_value:,.2f})."),
+                )
+            )
+
     # --- HSA over-limit ---
     hsa_limit = _hsa_limit(employee.hsa_coverage, config)
     if employee.hsa_coverage != HsaCoverage.NONE and employee.hsa_contributions > hsa_limit:
@@ -736,11 +796,15 @@ def _check_employee(
         )
 
     # --- Retirement over-limit ---
-    if employee.retirement_plan_type:
-        retirement_total = (
-            employee.retirement_401k if employee.retirement_plan_type == "401k" else employee.retirement_simple_ira
-        )
-        limit = _retirement_limit(employee, config)
+    # Sprint 826 (W5): with no plan type the deferral went unchecked entirely —
+    # $30,000 of 401(k) deferrals at age 40 raised nothing. Infer the plan from
+    # which deferral field is populated.
+    plan_type = employee.retirement_plan_type or (
+        "401k" if employee.retirement_401k > 0 else "simple_ira" if employee.retirement_simple_ira > 0 else None
+    )
+    if plan_type:
+        retirement_total = employee.retirement_401k if plan_type == "401k" else employee.retirement_simple_ira
+        limit = _retirement_limit(replace(employee, retirement_plan_type=plan_type), config)
         if retirement_total > limit:
             over = retirement_total - limit
             issues.append(
@@ -754,7 +818,7 @@ def _check_employee(
                     difference=over,
                     message=(
                         f"Elective deferral ${retirement_total:,.2f} exceeds the "
-                        f"{employee.retirement_plan_type} limit of ${limit:,.2f} by "
+                        f"{plan_type} limit of ${limit:,.2f} by "
                         f"${over:,.2f}. Excess must be distributed by April 15."
                     ),
                 )
@@ -830,13 +894,29 @@ def reconcile_w2(config: W2ReconciliationConfig) -> W2ReconciliationResult:
     if config.tax_year < 2000 or config.tax_year > 2099:
         raise W2ReconciliationInputError(f"Tax year must be a 4-digit year between 2000 and 2099 ({config.tax_year})")
 
-    w2_by_id: dict[str, EmployeeW2Draft] = {w.employee_id: w for w in config.w2_drafts}
+    # Sprint 826 (W4): IDs compared stripped ("B1 " is B1), and duplicate or
+    # orphan drafts are reported. Keyed naively, a duplicate silently replaced
+    # the first draft while the W-3 below still summed both, and a draft for no
+    # payroll employee was summed into the W-3 with no finding at all.
+    def _key(employee_id: str) -> str:
+        return employee_id.strip()
+
+    draft_counts: dict[str, int] = defaultdict(int)
+    for w in config.w2_drafts:
+        draft_counts[_key(w.employee_id)] += 1
+    payroll_ids = {_key(e.employee_id) for e in config.employees}
+    duplicate_w2_drafts = sorted(k for k, n in draft_counts.items() if n > 1)
+    orphan_w2_drafts = sorted(k for k in draft_counts if k not in payroll_ids)
+
+    w2_by_id: dict[str, EmployeeW2Draft] = {}
+    for w in config.w2_drafts:
+        w2_by_id.setdefault(_key(w.employee_id), w)
 
     employee_discrepancies: list[Discrepancy] = []
     employees_missing_w2: list[str] = []
 
     for employee in config.employees:
-        w2 = w2_by_id.get(employee.employee_id)
+        w2 = w2_by_id.get(_key(employee.employee_id))
         if w2 is None:
             # Build a self-consistent default from payroll so the limit
             # checks still run even when no draft W-2 is supplied.
@@ -883,6 +963,8 @@ def reconcile_w2(config: W2ReconciliationConfig) -> W2ReconciliationResult:
     summary = {
         "employee_count": len(config.employees),
         "employees_missing_w2_draft": employees_missing_w2,
+        "duplicate_w2_drafts": duplicate_w2_drafts,
+        "orphan_w2_drafts": orphan_w2_drafts,
         "total_employee_discrepancies": len(employee_discrepancies),
         "total_form_941_mismatches": len(form_941_mismatches),
         "discrepancies_by_kind": dict(by_kind),
