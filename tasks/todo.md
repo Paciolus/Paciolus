@@ -17,6 +17,7 @@
 > Pre-April 2026 entries archived to [`tasks/archive/hotfix-log-pre-april-2026.md`](archive/hotfix-log-pre-april-2026.md).
 
 - [2026-10-23] Sprint 797 follow-up — `test_alembic_head_matches_base_metadata_foreign_keys` ran in-process and was therefore measuring another fixture's dialect. First push of this branch went green on both SQLite jobs and **red on PostgreSQL 15**, reporting `organizations.subscription_id`, `tool_activities.engagement_id` and `users.organization_id` as "in Alembic but not in model". **The drift was never real.** Those three are the ORM's `use_alter=True` FKs (they break the organizations → users → subscriptions cycle), and `use_alter` changes how `create_all()` emits a constraint per dialect: SQLite inlines it because it cannot `ALTER TABLE ADD CONSTRAINT`, PostgreSQL emits a separate ALTER. `Base.metadata` is process-global, so the session `db_engine` fixture's `create_all()` against Postgres left the shared metadata in a state where the test's *own* SQLite `create_all()` stopped emitting all three — and both halves of the test use SQLite, so only the models half lost them. Reproduced locally with a mock PG engine (no server): the old test fails with the three CI errors verbatim, the fixed one passes. Now runs in a clean subprocess, for the same reason — and with the same docstring warning — that `test_init_db_alone_creates_every_table` beside it already did. Sprint 797 learned that lesson for one test and not its neighbour. Files: `backend/tests/test_alembic_models_parity.py`, `tasks/todo.md`, `tasks/lessons.md`.
+- [2026-10-23] carry-forward consolidation — after PRs #198 + #199 merged (28 findings from the two 2026-10-22 reviews), recorded every known-unaddressed item in one `CARRIED FORWARD` block so the next session starts from a list rather than re-deriving one: the two items needing a practitioner or a roadmap call (793b's 2026 figures, A-8's §179/§168(k)/real-property scope), the four parked with owners named (T-1, T-2, T-5, D-6), the seven surfaces neither review examined — **auth/CSRF/JWT/injection/rate-limiting is the largest** — and three contrast items that were blocked on the route→theme map and are **now unblocked** because Sprint 809 built it. Also filed **Sprint 823**: measured that only 11 of the 18 tools have synthetic generators, and **six of the seven uncovered ones are exactly the tools Sprint 689 added** — the framework predates that 12→18 expansion and was never extended to it. Notes that `ceo-actions.md:65` cannot be executed as written, because 14 of the 18 tools do not take a trial balance. No code changed. Files: `tasks/todo.md`.
 - [2026-10-20] nightly audit artifacts — 2026-10-20 batch (daily brief + 6 sentinel JSONs + run_log) plus `.baseline.json` refreshed to the new QA Warden values (8,700 backend / 2,013 frontend, 0 failures — the first all-green baseline since 2026-05-31). Overall verdict RED on **Dependency Sentinel alone**: 68 backend / 22 frontend outdated, 5 security-relevant. Scanned for secrets before staging (no `sk_live`/`sk_test`/private-key/credentialed-URL matches). Files: `reports/nightly/*`.
 - [2026-10-20] worklist consolidation — assessed `reports/launch-readiness-assessment-2026-10-19.md` and the 2026-10-20 worklist in `SESSION_STATE.md`, re-verified every load-bearing claim against current source (all still true, including the three Sprint 779 liability targets, the 59.9% webhook coverage, the empty secret store and the 404 on `api.paciolus.com`), and filed the result as `reports/next-actions-2026-10-20.md` — seven tracks, ten findings neither document covered. **Three documents disagreed about the backup decision:** `SESSION_STATE.md` still carried the version deferred "before the second paying customer", justified by the premise Sprint 783 had just disproved, while `EXECUTIVE_BLOCKERS.md`, this file's DECISION block and the assessment addendum all said pre-launch. Since `AGENTS.md` makes `SESSION_STATE.md` the first file a session reads, the stale copy was the one being acted on — corrected, along with Sprint 778's heading, which contradicted its own scope item 1. Also filed Sprints **784** (tool-count cohesion 12 → 18; `backend/main.py:243` ships "12-Tool Audit Intelligence Suite" in the public OpenAPI description against a canonical 18), **785** (nine real-work PRs went `MERGEABLE` → `CONFLICTING` when the 10-19/20 merges rewrote this file; seven finished sprints stranded) and **786** (dependency currency, superseding 760/761 — both written in April and wrong in their specifics; includes reconciling `backend/venv`, which matches neither `requirements.txt` nor production yet is what the nightly measures). Sprint 741 marked unblocked: its prerequisite log read was impossible while prod returned 500 for 5.5 months. No code changed. Files: `reports/next-actions-2026-10-20.md`, `tasks/todo.md`, `SESSION_STATE.md`, `tasks/ceo-actions.md`.
 - [2026-10-19] review gate removed + two CEO-delegated decisions recorded — CEO confirmed a soft launch date and delegated the open decisions (`reports/launch-readiness-assessment-2026-10-19.md` §I). **(a) Branch protection:** `required_pull_request_reviews` removed from `main` via the Actions API; all 12 required status checks retained with `strict: true`. Rationale: GitHub forbids self-approving your own PR, so a 1-review requirement is unsatisfiable solo and every merge was clearing it with `gh pr merge --admin` — which, because `enforce_admins` is `false`, bypasses **the status checks too**, not just the review. The bypass was strictly more dangerous than the gate was useful. With reviews removed, merges take the normal path and CI genuinely blocks; `--admin` should no longer be needed, and needing it is now a signal. Note `required_linear_history` remains `true`, so merges must be **squash or rebase** — merge commits were only ever possible via the bypass. `enforce_admins` left `false` deliberately as a break-glass for a solo operator. **(b) Neon backup posture:** decided — see Sprint 778 and `tasks/EXECUTIVE_BLOCKERS.md`. No code changed.
@@ -189,6 +190,132 @@
 >    sort-then-cap; under the cap they flag different rows.
 > 4. **`engagement_dashboard_memo.py` and `shared/intercompany_resolver.py`** — ship or delete (817 item 3).
 > 5. **`reports/nightly/`** — 1,149 of 3,261 tracked files. Keep committing, or move to CI artifacts?
+
+> **CARRIED FORWARD — 2026-10-23.** Everything known and unaddressed after the two
+> 2026-10-22 reviews landed (PRs #198 + #199, 28 findings). Recorded here so the next
+> session starts from a complete list rather than re-deriving it. Nothing below is in
+> flight; each line is either a named sprint, a CEO decision, or an unexamined surface.
+>
+> **Needs a practitioner or a roadmap call — not engineering:**
+> - **Sprint 793b — 2026 statutory figures.** Live consequence: Sprint 811 made the W-2
+>   tool **refuse** a 2026 engagement unless the caller supplies the figures per request.
+>   That is deployed. It stays that way until 793b lands confirmed numbers.
+>   `test_no_table_claims_to_be_2026_until_sprint_793b` guards against adding an
+>   unconfirmed row in the meantime.
+> - **A-8 — depreciation coverage.** Absent today: 150% DB election for 3/5/7/10-year
+>   property, GDS straight-line election, ADS, real property (27.5-year residential,
+>   39-year nonresidential), mid-quarter for anything but 5-year, **§179**, and
+>   **§168(k) bonus** (no reference to either anywhere in the backend). Bonus and §179
+>   appear on most US fixed-asset schedules; real property covers every rental and
+>   commercial client. Needs figures *and* a scope decision.
+>
+> **Deliberately parked, with the owner named:**
+> - **T-1 — mypy baseline of 1,011 errors.** Parked by the 2026-10-20 worklist. The
+>   `Decimal/float boundary` entry in that baseline is the concerning one, given A-1
+>   through A-6 were all composition defects. Burn down per-module, starting with the
+>   engines that compute money.
+> - **T-5 — dependency drift.** Sprint 786 owns it. `argon2-cffi-bindings` 25.1 → 26.1
+>   is the priority (it hashes the export-share passcodes).
+> - **T-2 — coverage floors for the output layer.** Backend is 93.57% overall but the
+>   misses concentrate in what the customer receives: `excel_generator.py` 45.7%,
+>   `leadsheet_generator.py` 11.3%, `workbook_inspector.py` 18.6%,
+>   `population_profile_memo.py` 39.7%, `pdf/sections/diagnostic.py` 64.9%. Finding A-5
+>   was a defect in exactly this layer that a test would have caught.
+> - **D-6 — route-level loading and error states.** 62 pages, 20 `loading.tsx`, 9
+>   `error.tsx`, 1 `not-found.tsx`. 42 routes have no streaming skeleton. Prioritise the
+>   18 tool routes, where a long upload-and-analyse cycle is where a skeleton earns its
+>   place.
+>
+> **Now unblocked by work that just landed — worth doing early:**
+> - **48 × `text-oatmeal-700` fail WCAG AA on both page surfaces** (4.38:1 dark /
+>   3.89:1 light). No oatmeal shade reaches AA on the light page — oatmeal *is* the light
+>   palette — so each usage needs to know its surface. That was blocked on the route→theme
+>   map, and **Sprint 809 built it** (`frontend/src/lib/theme-routes.ts`, asserted against
+>   the filesystem). The blocker is gone; `scripts/lint_design_tokens.py` prints this
+>   exemption on every run and says in terms that it is **not permanent**.
+> - **`clay-500` on dark surfaces** (3.69:1) and `hover:text-sage-600` (2.85:1 on dark)
+>   are the same class and the same unblocking. The contrast gate deliberately does not
+>   flag either, because both pass on light and it had no theme map to decide with.
+>
+> **Surfaces neither 2026-10-22 review examined** (from the full-spectrum report's own
+> "what this review did not cover", with status updated):
+> 1. **Auth, CSRF, JWT, the 61 injection tests, rate limiting, the passcode throttle** —
+>    **the largest untouched surface across both reviews.** The DEC rated the area
+>    "Moderate" with these same items listed as uncovered. Nothing has looked at it.
+> 2. **Materiality cascade and the ISA 315 Appendix 1 RMM matrix** — not examined.
+> 3. **Benford's law application.** The thresholds were verified against Nigrini (2012)
+>    and match, and the three expected distributions are computed rather than tabulated —
+>    but the *application* of those thresholds was never exercised.
+> 4. **Real browser rendering.** Contrast, theming and overflow were computed from source
+>    and the compiled stylesheet, never observed. D-1's theme flash is now fixed and
+>    verified server-side in production (`/tools/trial-balance` and `/settings` serve
+>    `data-theme="light"`), so this is narrower than it was — but the 68 tables and the
+>    overflow wrappers have still never been looked at in a viewport.
+> 5. **Per-route bundle sizes.** Next 16 emits no size table. Total client JS is 2.9 MB
+>    across 110 chunks with a 347 KB largest chunk; First Load JS per route is unknown.
+> 6. **Production's schema** — the DEC's §6 item 1, and **substantially answered since**:
+>    Sprint 797's `alembic upgrade head` now gates startup on every boot and ran against
+>    production Postgres successfully on 2026-10-23 (deploy `dep-dbdphrrm8hqs73cprs3g`,
+>    live in 44s), so the chain and production agree. A confirming read is now cheap
+>    rather than load-bearing.
+> 7. **The other 14 tools' runtime behaviour** — now **Sprint 823** below.
+>
+> **Operational, small:** three stray untracked `nul` files (dated 2026-02-13) at the repo
+> root, `backend/` and `frontend/` crash `mypy`'s path resolver on Windows, so no local
+> whole-project mypy run is possible. Harmless in CI (Linux). Delete when convenient.
+
+### Sprint 823: Seven of the eighteen tools have never been exercised against realistic input
+**Status:** PENDING.
+**Priority:** **P1 for discovery** — not a known defect, but the highest-yield unexamined
+surface in the product. The full-spectrum review found three P1s in its first hour of doing
+exactly this, on fewer than 70 synthetic accounts.
+**Source:** `tasks/ceo-actions.md:65` + the coverage gap measured 2026-10-23.
+
+**The CEO action cannot be executed as written, which is probably why it sat.** It reads
+"run all 18 audit tools against a realistic sample trial balance" — but **14 of the 18 do
+not take a trial balance.** They take journal registers, invoice registers, payroll
+registers, W-2 drafts, 1099 data, fixed-asset schedules. The task needs one realistic
+dataset *per tool family*, not one TB.
+
+**Measured 2026-10-23.** `backend/tests/anomaly_framework/generators/` holds 27 modules and
+107 generator functions. Eleven of the eighteen tools already have deterministic generators:
+
+| Covered | Generator |
+|---|---|
+| trial_balance | 13 registered TB anomaly types |
+| journal_entry_testing | `je_generators.py` (13) |
+| ap_testing | `ap_generators.py` (14) |
+| revenue_testing | `revenue_generators.py` (17) |
+| ar_aging | `ar_generators.py` (12) |
+| payroll_testing | `payroll_generators.py` (12) |
+| inventory_testing | `inv_generators.py` (10) |
+| multi_period | `multi_period_generators.py` (7) |
+| bank_reconciliation | `bank_rec_generators.py` (5) |
+| three_way_match | `twm_generators.py` (5) |
+| statistical_sampling | `sampling_generators.py` (6) |
+
+**Seven have none** — and the pattern is the point:
+
+> `fixed_asset_testing` · `sod_checker` · `intercompany_elimination` ·
+> `w2_reconciliation` · `form_1099` · `book_to_tax` · `cash_flow_projector`
+
+**Six of those seven are exactly the tools Sprint 689 added** when the catalog went 12 → 18.
+The synthetic framework predates that expansion and was never extended to it. So the tools
+the framework has never looked at are the *newest* ones — the least-exercised code in the
+product, reached through a UI that presents them identically to the mature eleven.
+
+- [ ] Build a realistic fixture per uncovered tool, from each engine's own input dataclass
+      (the pattern used for `W2ReconciliationConfig` in Sprint 811)
+- [ ] Drive each of the seven engines end-to-end and record the output, not just the absence
+      of an exception — A-5 returned `0.0` happily for the life of the product
+- [ ] Register each generator in `tests/anomaly_framework/registry.py` and add its row to
+      `COVERAGE_MAP.md`, which `test_coverage_map.py` already enforces
+- [ ] File each abnormal output as a finding with its measurement, in the A-1…A-6 style
+- [ ] Then the remaining eleven, which have generators but whose *application* was never
+      exercised end-to-end either
+- [ ] **CEO, after the engineering half:** judge whether the output is professionally useful
+      to a practitioner. That part is not mechanisable and is the half the action item was
+      really asking for.
 
 ### Sprint 812: Nineteen rate-limited routes 500 on every call
 **Status:** PENDING.
