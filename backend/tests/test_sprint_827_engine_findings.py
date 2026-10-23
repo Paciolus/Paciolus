@@ -336,3 +336,22 @@ def test_short_life_declining_balance_asset_is_recalculated_not_skipped():
     assert test["entries_flagged"] == 1
     fully = _fa_recalc([_asset(1, 10_000.0, 10_000.0, "2024-01-01", 2, "Double-Declining Balance")])
     assert fully["entries_flagged"] == 0
+
+
+def test_lowest_balance_is_a_projected_balance_not_the_opening_one():
+    """C4: with inflows only, the "lowest balance" was the opening balance on
+    day 0 — a figure no projected day ever ended at."""
+    from datetime import date
+
+    from cash_flow_projector_engine import AgingBuckets, CashFlowConfig, project_cash_flow
+
+    forecast = project_cash_flow(
+        CashFlowConfig(
+            opening_balance=Decimal("100000"),
+            start_date=date(2027, 1, 4),
+            ar_aging=AgingBuckets(current=Decimal("50000")),
+        )
+    )
+    for scenario in forecast.scenarios.values():
+        assert scenario.horizon[30].lowest_balance == scenario.daily[0].ending_balance
+        assert scenario.horizon[30].lowest_balance > Decimal("100000")

@@ -84,5 +84,5 @@ Status column: **Fixed (824)** = remediated in Sprint 824; otherwise the sprint 
 |---|---|---|---|
 | C1 | P2 | "Monthly" recurring flows recur every 30 days, not on calendar months: Jan 31 rent lands Mar 2 and a whole payment drops out of the 90-day horizon. `cash_flow_projector_engine.py:338`. | Fixed (827) |
 | C2 | P2 | AP not paid in a scenario is never paid within the horizon, inflating ending cash (the scenario table drops the unpaid share instead of deferring it). | 827 |
-| C3–C6 | P3 | Displayed rows don't foot by cents (per-field rounding); `lowest_balance_day` defaults to day 0 at the opening balance; negative aging buckets netted in `ar_total` but ignored in the projection; overdrawn opening balance rejected. | 827 |
+| C3–C6 | P3 | Displayed rows don't foot by cents (per-field rounding); `lowest_balance_day` defaults to day 0 at the opening balance; negative aging buckets netted in `ar_total` but ignored in the projection; overdrawn opening balance rejected. | C4 fixed (827); C3, C5, C6 open |
 | — | ok | Verified correct: roll-forward holds at full precision; lowest balance, first negative day and min-cash breach trigger on the right day in every scenario; dates contiguous across Feb 29 2028; route rejects nan/inf. | — |
